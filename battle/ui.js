@@ -7,6 +7,7 @@ import { renderCreatureSVG, renderUnitSVG } from '../render/renderer.js';
 import { chimeraGenome } from '../splice/theater.js';
 import { step, playerActions, playerActive } from './engine.js';
 import { resolveBattle } from '../campaign/campaign.js';
+import * as sfx from '../audio/sfx.js';
 
 function bar(value, max, cls) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
@@ -65,9 +66,12 @@ export function renderArena(root, ctx, onDone) {
 
   root.querySelectorAll('button[data-action]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      step(battle, actions[Number(btn.dataset.action)], content);
+      const action = actions[Number(btn.dataset.action)];
+      if (action.type === 'capture') sfx.play('capture');
+      step(battle, action, content);
       ctx.save();
       if (battle.over) {
+        sfx.play(battle.outcome === 'win' ? 'win' : 'lose');
         const detail = resolveBattle(state, battle, content, ctx.now());
         ctx.save();
         onDone(detail);

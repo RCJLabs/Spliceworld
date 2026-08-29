@@ -4,9 +4,11 @@
 
 import { renderCreatureSVG } from '../render/renderer.js';
 import { GRADES, GRADE_INDEX } from './extract.js';
-import { chimeraGenome, isSettled, settleRemainingMs } from './theater.js';
-import { isInjured } from '../battle/engine.js';
+import { chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING } from './theater.js';
+import { isInjured, obediencePercent } from '../battle/engine.js';
 import { fmtDuration } from '../ranch/ui.js';
+
+let lastMsg = '';
 
 export function renderPensScreen(root, ctx) {
   const { state, content, now } = ctx;
@@ -23,12 +25,23 @@ export function renderPensScreen(root, ctx) {
           return `<li><span class="grade-badge grade-${token.grade}">${grade.name}</span> ${part.name} <span class="lineage">essence of ${token.donor.name} ★${token.donor.stars}</span></li>`;
         })
         .join('');
+      const obedience = obediencePercent(ch, t);
+      const trainReadyAt = (ch.lastTrainedAt ?? 0) + TRAINING.cooldownHours * 3600000;
+      const trainReady = t >= trainReadyAt;
       return `
         <section class="card animal-card">
           <div class="portrait">${portrait}</div>
           <div class="animal-info">
             <h4>${ch.name}</h4>
-            <p class="meta">${content.frames[ch.frame].name} chassis · instability ${ch.instability}/100 · bond ${ch.bond}</p>
+            <p class="meta">${content.frames[ch.frame].name} chassis · instability ${ch.instability}/100 · bond ${ch.bond}/100</p>
+            <p class="meta">Obedience: <strong>${obedience}%</strong>${
+              obedience < 100
+                ? ` — ${settled ? '' : 'unsettled; '}train to build bond${ch.instability > 0 ? ' (instability resists)' : ''}`
+                : ' — follows orders to the letter. Suspiciously eager, even.'
+            }</p>
+            <button type="button" class="care-train" data-train="${ch.id}" ${trainReady ? '' : 'disabled'}>
+              ${trainReady ? `🎯 Train ($${TRAINING.cost}, +${TRAINING.bondGain} bond)` : `Train (${fmtDuration(trainReadyAt - t)})`}
+            </button>
             <p class="settle ${settled ? 'settled' : ''}">${
               settled
                 ? 'Settled ✓ — cleared for deployment'
@@ -44,6 +57,16 @@ export function renderPensScreen(root, ctx) {
     .join('');
 
   root.innerHTML =
-    cards ||
-    `<section class="card"><p class="ranch-msg">No chimeras yet. The Surgery Theater accepts walk-ins.</p></section>`;
+    (lastMsg ? `<section class="card"><p class="ranch-msg">${lastMsg}</p></section>` : '') +
+    (cards ||
+      `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`);
+
+  root.querySelectorAll('button[data-train]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const result = trainChimera(state, btn.dataset.train, ctx.now());
+      lastMsg = result.msg;
+      ctx.save();
+      renderPensScreen(root, ctx);
+    });
+  });
 }

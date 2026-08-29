@@ -3,7 +3,7 @@
 // point for assaults and rescue raids (arena rendered via battle/ui).
 
 import { renderArena } from '../battle/ui.js';
-import { createBattle, isInjured } from '../battle/engine.js';
+import { createBattle, isInjured, obediencePercent } from '../battle/engine.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
 import {
@@ -137,7 +137,9 @@ function renderBriefing(root, ctx) {
     const injured = isInjured(ch, t);
     const note = injured
       ? `Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} left`
-      : isSettled(ch, t) ? 'ready' : 'unsettled — Rejection debuffs apply';
+      : isSettled(ch, t)
+        ? `ready · obedience ${obediencePercent(ch, t)}%`
+        : `unsettled — Rejection debuffs · obedience ${obediencePercent(ch, t)}%`;
     return `
       <label class="pick ${injured ? 'pick-injured' : ''}">
         <input type="checkbox" data-chimera="${ch.id}" ${draftTeam.includes(ch.id) ? 'checked' : ''} ${injured ? 'disabled' : ''}>

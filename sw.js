@@ -1,0 +1,69 @@
+// Service worker (M7): network-first with cache fallback. Fresh deploys win
+// whenever the network is up; offline play falls back to the last good
+// build. Bump CACHE with SAVE_VERSION-sized releases so stale caches drain.
+const CACHE = 'spliceworld-v8';
+
+const SHELL = [
+  '.',
+  'index.html',
+  'style.css',
+  'main.js',
+  'manifest.webmanifest',
+  'icon.svg',
+  'util/rng.js',
+  'save/save.js',
+  'render/renderer.js',
+  'data/loader.js',
+  'ranch/ranch.js',
+  'ranch/breeding.js',
+  'ranch/onboarding.js',
+  'ranch/ui.js',
+  'splice/extract.js',
+  'splice/extract-ui.js',
+  'splice/vault-ui.js',
+  'splice/physiology.js',
+  'splice/theater.js',
+  'splice/theater-ui.js',
+  'splice/pens-ui.js',
+  'splice/dex-ui.js',
+  'battle/engine.js',
+  'battle/ui.js',
+  'campaign/campaign.js',
+  'campaign/ui.js',
+  'audio/sfx.js',
+  'data/frames.json',
+  'data/parts.json',
+  'data/species.json',
+  'data/combos.json',
+  'data/enemies.json',
+  'data/keywords.json',
+  'data/regions.json',
+  'data/traits.json',
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request, { ignoreSearch: true }))
+  );
+});

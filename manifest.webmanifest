@@ -1,0 +1,15 @@
+{
+  "name": "Spliceworld",
+  "short_name": "Spliceworld",
+  "description": "Cartoony mad-geneticist ranch/splice/battle game. Ethically ambiguous genetics, family-friendly results.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#171426",
+  "theme_color": "#171426",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

@@ -13,6 +13,8 @@ import { renderPensScreen } from './splice/pens-ui.js';
 import { runExtraction } from './splice/extract-ui.js';
 import { renderWarRoomScreen } from './campaign/ui.js';
 import { tickCampaign } from './campaign/campaign.js';
+import { renderDexScreen } from './splice/dex-ui.js';
+import * as sfx from './audio/sfx.js';
 
 // Dev time-warp: ?warp=48 pretends 48 hours have passed. QA-only — the
 // warp lives in the URL, never in the save, so removing it can produce a
@@ -55,6 +57,7 @@ const SCREENS = {
   vault: (root) => renderVaultScreen(root, ctx),
   theater: (root) => renderTheaterScreen(root, ctx),
   battle: (root) => renderWarRoomScreen(root, ctx),
+  dex: (root) => renderDexScreen(root, ctx),
 };
 
 function showScreen(name) {
@@ -113,6 +116,26 @@ async function boot() {
   setInterval(() => {
     if (!document.hidden) tick();
   }, 30000);
+
+  // Audio: context on first gesture (autoplay policy), mute persisted.
+  sfx.setMuted(state.settings.muted);
+  const muteBtn = $('#mute');
+  const paintMute = () => { muteBtn.textContent = state.settings.muted ? '🔇' : '🔊'; };
+  paintMute();
+  document.addEventListener('pointerdown', () => sfx.initAudio(), { once: true });
+  muteBtn.addEventListener('click', () => {
+    state.settings.muted = !state.settings.muted;
+    sfx.setMuted(state.settings.muted);
+    saveGame(state);
+    paintMute();
+    if (!state.settings.muted) sfx.play('click');
+  });
+
+  // PWA: offline shell. Registration failure is never a problem worth
+  // showing anyone.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
 }
 
 boot();

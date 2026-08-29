@@ -10,6 +10,8 @@ import {
 } from './ranch.js';
 import { gradeFor } from '../splice/extract.js';
 import { canBreed, breedPair, hatchEgg, BREEDING } from './breeding.js';
+import { onboardingSteps, onboardingActive } from './onboarding.js';
+import * as sfx from '../audio/sfx.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -47,6 +49,23 @@ export function renderRanchScreen(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
   const upkeep = upkeepPerDay(state, content);
+
+  // Path to World Domination: the guided first loop, gone after conquest #1.
+  let onboarding = '';
+  if (onboardingActive(state)) {
+    const steps = onboardingSteps(state, content, t);
+    const current = steps.find((s) => !s.done);
+    onboarding = `
+      <section class="card onboarding">
+        <h3>🗺 Path to World Domination</h3>
+        <ol class="onboard-list">
+          ${steps
+            .map((s) => `<li class="${s.done ? 'done' : s === current ? 'current' : ''}">${s.done ? '✔' : s === current ? '→' : '·'} ${s.label}</li>`)
+            .join('')}
+        </ol>
+        ${current ? `<p class="fine-print">${current.hint}</p>` : ''}
+      </section>`;
+  }
 
   const head = `
     <section class="card">
@@ -149,7 +168,7 @@ export function renderRanchScreen(root, ctx) {
       </section>`;
   }).join('');
 
-  root.innerHTML = head + breeding + incubator + (cards || '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>');
+  root.innerHTML = onboarding + head + breeding + incubator + (cards || '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>');
 
   root.querySelector('#breed-a').addEventListener('change', (e) => {
     pickA = e.target.value;
@@ -176,6 +195,7 @@ export function renderRanchScreen(root, ctx) {
         if (result.ok) { pickA = ''; pickB = ''; }
       } else if (btn.dataset.act === 'hatch') {
         result = hatchEgg(ctx.state, btn.dataset.egg, content, t2);
+        if (result.ok) sfx.play('hatch');
       } else if (btn.dataset.act === 'extract') {
         ctx.onExtract?.(btn.dataset.animal);
         return; // the ceremony overlay owns the flow from here

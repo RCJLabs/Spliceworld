@@ -6,6 +6,7 @@ import { renderCreatureSVG, SLOTS } from '../render/renderer.js';
 import { GRADES, GRADE_INDEX } from './extract.js';
 import { analyze } from './physiology.js';
 import { spliceChimera, validateSplice, tokensFor } from './theater.js';
+import * as sfx from '../audio/sfx.js';
 
 const SLOT_LABELS = {
   head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
@@ -122,6 +123,7 @@ export function renderTheaterScreen(root, ctx) {
     const result = spliceChimera(state, draft.frame, draft.slots, content, ctx.now());
     lastMsg = result.msg;
     if (result.ok) {
+      sfx.play('splice');
       draft = { frame: draft.frame, slots: {} };
       ctx.save();
       showSpliceResult(ctx, result, () => renderTheaterScreen(root, ctx));

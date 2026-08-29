@@ -79,6 +79,15 @@ export function tickCampaign(state, content, now) {
 // containment intake, rescue resolution, news. UI calls THIS.
 export function resolveBattle(state, battle, content, now) {
   const context = battle.context ?? {};
+  // Splice-Dex: every unit that took the field is now a known quantity.
+  const seen = [
+    ...(content.encounters[battle.encounterId]?.waves ?? []),
+    battle.enemy.active?.refId,
+    ...(battle.captured ?? []),
+  ];
+  for (const unitId of seen) {
+    if (unitId && !state.dex.enemies.includes(unitId)) state.dex.enemies.push(unitId);
+  }
   const result = finishBattle(state, battle, content, now);
   const detail = { ...result, capturedChimera: null, freed: null, salvageUnits: battle.captured ?? [] };
 
@@ -162,6 +171,7 @@ export function salvageUnit(state, containmentIndex, content, now) {
     };
     state.inventory.parts.push(token);
     tokens.push(token);
+    if (!state.dex.parts.includes(partId)) state.dex.parts.push(partId);
   }
   pushNews(state, `${unit.name} dismantled with great enthusiasm. Enemy tech acquired.`);
   return {

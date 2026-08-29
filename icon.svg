@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Spliceworld app icon: procedural, like everything else here. -->
+  <rect width="512" height="512" rx="96" fill="#171426"/>
+  <circle cx="256" cy="256" r="180" fill="#221e38" stroke="#3a3463" stroke-width="10"/>
+  <!-- DNA helix, spliced mid-strand -->
+  <path d="M 176 116 C 256 176 256 216 176 276" fill="none" stroke="#a6e22e" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 336 116 C 256 176 256 216 336 276" fill="none" stroke="#b48bff" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 176 236 C 256 296 256 336 176 396" fill="none" stroke="#b48bff" stroke-width="26" stroke-linecap="round"/>
+  <path d="M 336 236 C 256 296 256 336 336 396" fill="none" stroke="#a6e22e" stroke-width="26" stroke-linecap="round"/>
+  <line x1="196" y1="152" x2="316" y2="152" stroke="#efeaff" stroke-width="14" stroke-linecap="round"/>
+  <line x1="212" y1="196" x2="300" y2="196" stroke="#efeaff" stroke-width="14" stroke-linecap="round"/>
+  <line x1="212" y1="316" x2="300" y2="316" stroke="#efeaff" stroke-width="14" stroke-linecap="round"/>
+  <line x1="196" y1="360" x2="316" y2="360" stroke="#efeaff" stroke-width="14" stroke-linecap="round"/>
+  <!-- googly eye rivet: the brand demands it -->
+  <circle cx="256" cy="256" r="34" fill="#efeaff" stroke="#2b2440" stroke-width="10"/>
+  <circle cx="266" cy="252" r="14" fill="#2b2440"/>
+</svg>

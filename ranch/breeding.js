@@ -138,6 +138,9 @@ export function hatchEgg(state, eggId, content, now) {
     lastCare: { feed: 0, groom: 0, exercise: 0, enrich: 0 },
   };
   state.ranch.stock.push(hatchling);
+  for (const trait of traits) {
+    if (!state.dex.traits.includes(trait)) state.dex.traits.push(trait);
+  }
   const notes = [
     `${hatchling.name} has hatched! Lineage: ${egg.parents.sire.name} ★${egg.parents.sire.stars} × ${egg.parents.dam.name} ★${egg.parents.dam.stars}.`,
   ];
