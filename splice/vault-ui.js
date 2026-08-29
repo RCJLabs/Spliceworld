@@ -36,7 +36,8 @@ export function renderVaultScreen(root, ctx) {
       .map((t) => {
         const part = content.parts[t.partId];
         const grade = GRADES[GRADE_INDEX[t.grade]];
-        return `<li><span class="grade-badge grade-${t.grade}">${grade.name}</span> ${part.name} <span class="lineage">essence of ${t.donor.name} ★${t.donor.stars}</span></li>`;
+        const traits = (t.traits ?? []).map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`).join('');
+        return `<li><span class="grade-badge grade-${t.grade}">${grade.name}</span> ${part.name}${traits} <span class="lineage">essence of ${t.donor.name} ★${t.donor.stars}</span></li>`;
       })
       .join('');
     return `<h3>${SLOT_LABELS[slot]}</h3><ul class="token-list">${rows}</ul>`;

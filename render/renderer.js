@@ -39,6 +39,7 @@ export function indexContent(raw) {
     keywords: raw.keywords ? byId(raw.keywords.keywords) : {},
     tagChart: raw.keywords ? raw.keywords.tagChart : [],
     regions: raw.regions ? byId(raw.regions.regions) : {},
+    traits: raw.traits ? byId(raw.traits.traits) : {},
     campaignMeta: raw.regions
       ? { threatGen2At: raw.regions.threatGen2At, rescueEncounter: raw.regions.rescueEncounter }
       : { threatGen2At: Infinity, rescueEncounter: null },

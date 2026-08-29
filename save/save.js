@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -58,6 +58,16 @@ const migrations = {
     }
     return save;
   },
+  // v7 (M6): breeding — incubator eggs, trait genotypes, lineage.
+  7: (save) => {
+    save.ranch.eggs = [];
+    save.ranch.eggCount = 0;
+    for (const animal of save.ranch.stock) {
+      animal.genotype = animal.genotype ?? {};
+      animal.parents = animal.parents ?? null;
+    }
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -72,7 +82,7 @@ export function newGameState() {
     // day one so data exists when the director lands post-v0.1.
     directorStats: { partUse: {}, tagUse: {}, dissections: [] },
     funds: TUNING.startingFunds,
-    ranch: { stock: [], penCapacity: TUNING.penStartCapacity, animalCount: 0, seeded: false },
+    ranch: { stock: [], penCapacity: TUNING.penStartCapacity, animalCount: 0, seeded: false, eggs: [], eggCount: 0 },
     lastTickAt: null,
     activeScreen: 'ranch',
     inventory: { vials: [], parts: [], tokenCount: 0 },

@@ -71,10 +71,16 @@ export function extractAnimal(state, animalId, content, now) {
   const tokens = [];
   for (const part of Object.values(content.parts)) {
     if (part.species !== animal.species) continue;
+    // Expressed heritable traits stamp into matching parts (M6): breeding
+    // compounds into combat the same way husbandry does.
+    const stamped = (animal.traits ?? []).filter((t) =>
+      (content.traits?.[t]?.slots ?? []).includes(part.slot)
+    );
     tokens.push({
       id: `t${inv.tokenCount++}`,
       partId: part.id,
       grade: grade.id,
+      traits: stamped,
       donor: { name: animal.name, species: animal.species, stars, extractedAt: now },
     });
   }
