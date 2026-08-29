@@ -7,19 +7,84 @@
       "slot": "head",
       "name": "Bear Head",
       "ability": "Maul",
-      "stats": {"power": 14, "hp": 6},
-      "phys": {"mass": 18, "draw": 4},
+      "stats": {
+        "power": 14,
+        "hp": 6
+      },
+      "phys": {
+        "mass": 18,
+        "draw": 4
+      },
       "tags": [],
-      "move": {"power": 55, "cost": 25, "acc": 95, "tags": [], "keywords": {}},
+      "move": {
+        "power": 55,
+        "cost": 25,
+        "acc": 95,
+        "tags": [],
+        "keywords": {}
+      },
       "shapes": [
-        { "type": "circle", "cx": 0, "cy": -46, "r": 13, "fill": "@secondary" },
-        { "type": "circle", "cx": 38, "cy": -48, "r": 13, "fill": "@primary" },
-        { "type": "circle", "cx": 20, "cy": -16, "r": 36, "fill": "@primary" },
-        { "type": "ellipse", "cx": 46, "cy": -4, "rx": 20, "ry": 14, "fill": "@accent" },
-        { "type": "ellipse", "cx": 57, "cy": -10, "rx": 8, "ry": 6, "fill": "@outline", "stroke": "none" },
-        { "type": "path", "d": "M 44 6 q 6 5 13 1", "fill": "none", "stroke": "@outline", "strokeWidth": 4 },
-        { "type": "circle", "cx": 28, "cy": -24, "r": 9, "fill": "@white", "strokeWidth": 4 },
-        { "type": "circle", "cx": 31, "cy": -23, "r": 4, "fill": "@outline", "stroke": "none" }
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -46,
+          "r": 13,
+          "fill": "@secondary"
+        },
+        {
+          "type": "circle",
+          "cx": 38,
+          "cy": -48,
+          "r": 13,
+          "fill": "@primary"
+        },
+        {
+          "type": "circle",
+          "cx": 20,
+          "cy": -16,
+          "r": 36,
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": 46,
+          "cy": -4,
+          "rx": 20,
+          "ry": 14,
+          "fill": "@accent"
+        },
+        {
+          "type": "ellipse",
+          "cx": 57,
+          "cy": -10,
+          "rx": 8,
+          "ry": 6,
+          "fill": "@outline",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M 44 6 q 6 5 13 1",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 4
+        },
+        {
+          "type": "circle",
+          "cx": 28,
+          "cy": -24,
+          "r": 9,
+          "fill": "@white",
+          "strokeWidth": 4
+        },
+        {
+          "type": "circle",
+          "cx": 31,
+          "cy": -23,
+          "r": 4,
+          "fill": "@outline",
+          "stroke": "none"
+        }
       ]
     },
     {
@@ -28,15 +93,53 @@
       "slot": "forelimbs",
       "name": "Bear Arms",
       "ability": "Haymaker",
-      "stats": {"power": 12},
-      "phys": {"mass": 16, "draw": 3},
+      "stats": {
+        "power": 12
+      },
+      "phys": {
+        "mass": 16,
+        "draw": 3
+      },
       "tags": [],
-      "move": {"power": 80, "cost": 35, "acc": 85, "tags": [], "keywords": {"recoil": 0.2}},
+      "move": {
+        "power": 80,
+        "cost": 35,
+        "acc": 85,
+        "tags": [],
+        "keywords": {
+          "recoil": 0.2
+        }
+      },
       "shapes": [
-        { "type": "rect", "x": -15, "y": -8, "width": 30, "height": 66, "rx": 14, "fill": "@primary" },
-        { "type": "ellipse", "cx": 1, "cy": 58, "rx": 17, "ry": 12, "fill": "@secondary" },
-        { "type": "polygon", "points": "13,50 24,53 16,62", "fill": "@white", "strokeWidth": 3 },
-        { "type": "polygon", "points": "6,59 17,62 8,70", "fill": "@white", "strokeWidth": 3 }
+        {
+          "type": "rect",
+          "x": -15,
+          "y": -8,
+          "width": 30,
+          "height": 66,
+          "rx": 14,
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": 1,
+          "cy": 58,
+          "rx": 17,
+          "ry": 12,
+          "fill": "@secondary"
+        },
+        {
+          "type": "polygon",
+          "points": "13,50 24,53 16,62",
+          "fill": "@white",
+          "strokeWidth": 3
+        },
+        {
+          "type": "polygon",
+          "points": "6,59 17,62 8,70",
+          "fill": "@white",
+          "strokeWidth": 3
+        }
       ]
     },
     {
@@ -45,15 +148,59 @@
       "slot": "hindlimbs",
       "name": "Bear Haunches",
       "ability": "Ground Stomp",
-      "stats": {"power": 6, "speed": 2, "hp": 4},
-      "phys": {"mass": 16, "draw": 3},
+      "stats": {
+        "power": 6,
+        "speed": 2,
+        "hp": 4
+      },
+      "phys": {
+        "mass": 16,
+        "draw": 3
+      },
       "tags": [],
-      "move": {"power": 45, "cost": 20, "acc": 95, "tags": ["Ground"], "keywords": {"stun": 0.2}},
+      "move": {
+        "power": 45,
+        "cost": 20,
+        "acc": 95,
+        "tags": [
+          "Ground"
+        ],
+        "keywords": {
+          "stun": 0.2
+        }
+      },
       "shapes": [
-        { "type": "ellipse", "cx": 0, "cy": 14, "rx": 21, "ry": 24, "fill": "@primary" },
-        { "type": "rect", "x": -12, "y": 20, "width": 24, "height": 42, "rx": 11, "fill": "@primary" },
-        { "type": "ellipse", "cx": 2, "cy": 60, "rx": 16, "ry": 11, "fill": "@secondary" },
-        { "type": "polygon", "points": "13,53 24,56 16,64", "fill": "@white", "strokeWidth": 3 }
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 14,
+          "rx": 21,
+          "ry": 24,
+          "fill": "@primary"
+        },
+        {
+          "type": "rect",
+          "x": -12,
+          "y": 20,
+          "width": 24,
+          "height": 42,
+          "rx": 11,
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": 2,
+          "cy": 60,
+          "rx": 16,
+          "ry": 11,
+          "fill": "@secondary"
+        },
+        {
+          "type": "polygon",
+          "points": "13,53 24,56 16,64",
+          "fill": "@white",
+          "strokeWidth": 3
+        }
       ]
     },
     {
@@ -62,12 +209,31 @@
       "slot": "tail",
       "name": "Bear Nub",
       "ability": "Nub Wiggle",
-      "stats": {"hp": 2},
-      "phys": {"mass": 2, "draw": 0},
+      "stats": {
+        "hp": 2
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 0
+      },
       "tags": [],
-      "move": {"power": 0, "cost": 10, "acc": 100, "tags": [], "keywords": {"powerUp": 1}},
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "powerUp": 1
+        }
+      },
       "shapes": [
-        { "type": "circle", "cx": -9, "cy": -3, "r": 11, "fill": "@secondary" }
+        {
+          "type": "circle",
+          "cx": -9,
+          "cy": -3,
+          "r": 11,
+          "fill": "@secondary"
+        }
       ]
     },
     {
@@ -76,14 +242,45 @@
       "slot": "hide",
       "name": "Bear Pelt",
       "ability": "Thick Fur",
-      "stats": {"armor": 8, "hp": 6},
-      "phys": {"mass": 14, "draw": 2},
+      "stats": {
+        "armor": 8,
+        "hp": 6
+      },
+      "phys": {
+        "mass": 14,
+        "draw": 2
+      },
       "tags": [],
       "move": null,
       "shapes": [
-        { "type": "path", "d": "M -70 -24 l 10 -10 l 7 12 l 10 -10 l 7 12 l 10 -10 l 7 12 l 10 -10 l 7 12 l 10 -10 l 7 12", "fill": "none", "stroke": "@secondary", "strokeWidth": 5, "opacity": 0.7 },
-        { "type": "ellipse", "cx": -30, "cy": 12, "rx": 14, "ry": 9, "fill": "@secondary", "stroke": "none", "opacity": 0.5 },
-        { "type": "ellipse", "cx": 34, "cy": -4, "rx": 10, "ry": 7, "fill": "@secondary", "stroke": "none", "opacity": 0.5 }
+        {
+          "type": "path",
+          "d": "M -70 -24 l 10 -10 l 7 12 l 10 -10 l 7 12 l 10 -10 l 7 12 l 10 -10 l 7 12 l 10 -10 l 7 12",
+          "fill": "none",
+          "stroke": "@secondary",
+          "strokeWidth": 5,
+          "opacity": 0.7
+        },
+        {
+          "type": "ellipse",
+          "cx": -30,
+          "cy": 12,
+          "rx": 14,
+          "ry": 9,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.5
+        },
+        {
+          "type": "ellipse",
+          "cx": 34,
+          "cy": -4,
+          "rx": 10,
+          "ry": 7,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.5
+        }
       ]
     },
     {
@@ -92,35 +289,133 @@
       "slot": "organ",
       "name": "Hibernation Gland",
       "ability": "Deep Snooze",
-      "stats": {"stamina": 10, "regen": 4},
-      "phys": {"mass": 6, "draw": 5},
+      "stats": {
+        "stamina": 10,
+        "regen": 4
+      },
+      "phys": {
+        "mass": 6,
+        "draw": 5
+      },
       "tags": [],
-      "move": {"power": 0, "cost": 0, "acc": 100, "tags": [], "keywords": {"staminaRestore": 35, "heal": 0.1}},
+      "move": {
+        "power": 0,
+        "cost": 0,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "staminaRestore": 35,
+          "heal": 0.1
+        }
+      },
       "shapes": [
-        { "type": "ellipse", "cx": 0, "cy": 0, "rx": 24, "ry": 15, "fill": "#f2b04e", "stroke": "none", "opacity": 0.3 },
-        { "type": "ellipse", "cx": 0, "cy": 0, "rx": 12, "ry": 8, "fill": "#f2b04e", "stroke": "none", "opacity": 0.5 },
-        { "type": "circle", "cx": 14, "cy": -10, "r": 3, "fill": "#f2b04e", "stroke": "none", "opacity": 0.5 },
-        { "type": "circle", "cx": 19, "cy": -16, "r": 2, "fill": "#f2b04e", "stroke": "none", "opacity": 0.4 }
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 0,
+          "rx": 24,
+          "ry": 15,
+          "fill": "#f2b04e",
+          "stroke": "none",
+          "opacity": 0.3
+        },
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 0,
+          "rx": 12,
+          "ry": 8,
+          "fill": "#f2b04e",
+          "stroke": "none",
+          "opacity": 0.5
+        },
+        {
+          "type": "circle",
+          "cx": 14,
+          "cy": -10,
+          "r": 3,
+          "fill": "#f2b04e",
+          "stroke": "none",
+          "opacity": 0.5
+        },
+        {
+          "type": "circle",
+          "cx": 19,
+          "cy": -16,
+          "r": 2,
+          "fill": "#f2b04e",
+          "stroke": "none",
+          "opacity": 0.4
+        }
       ]
     },
-
     {
       "id": "eagle_head",
       "species": "eagle",
       "slot": "head",
       "name": "Eagle Head",
       "ability": "Rend Peck",
-      "stats": {"power": 7, "speed": 3},
-      "phys": {"mass": 6, "draw": 2},
+      "stats": {
+        "power": 7,
+        "speed": 3
+      },
+      "phys": {
+        "mass": 6,
+        "draw": 2
+      },
       "tags": [],
-      "move": {"power": 40, "cost": 15, "acc": 100, "tags": [], "keywords": {}},
+      "move": {
+        "power": 40,
+        "cost": 15,
+        "acc": 100,
+        "tags": [],
+        "keywords": {}
+      },
       "shapes": [
-        { "type": "circle", "cx": 18, "cy": -20, "r": 30, "fill": "@secondary" },
-        { "type": "path", "d": "M 42 -30 C 60 -33 72 -27 73 -18 C 74 -10 66 -5 59 -9 C 62 -14 60 -18 45 -15 Z", "fill": "@accent", "strokeWidth": 4 },
-        { "type": "circle", "cx": 52, "cy": -23, "r": 2, "fill": "@outline", "stroke": "none" },
-        { "type": "circle", "cx": 26, "cy": -26, "r": 8, "fill": "@white", "strokeWidth": 4 },
-        { "type": "circle", "cx": 29, "cy": -25, "r": 3.5, "fill": "@outline", "stroke": "none" },
-        { "type": "path", "d": "M 13 -37 L 38 -31", "fill": "none", "stroke": "@outline", "strokeWidth": 4.5 }
+        {
+          "type": "circle",
+          "cx": 18,
+          "cy": -20,
+          "r": 30,
+          "fill": "@secondary"
+        },
+        {
+          "type": "path",
+          "d": "M 42 -30 C 60 -33 72 -27 73 -18 C 74 -10 66 -5 59 -9 C 62 -14 60 -18 45 -15 Z",
+          "fill": "@accent",
+          "strokeWidth": 4
+        },
+        {
+          "type": "circle",
+          "cx": 52,
+          "cy": -23,
+          "r": 2,
+          "fill": "@outline",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 26,
+          "cy": -26,
+          "r": 8,
+          "fill": "@white",
+          "strokeWidth": 4
+        },
+        {
+          "type": "circle",
+          "cx": 29,
+          "cy": -25,
+          "r": 3.5,
+          "fill": "@outline",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M 13 -37 L 38 -31",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 4.5
+        }
       ]
     },
     {
@@ -129,13 +424,42 @@
       "slot": "forelimbs",
       "name": "Eagle Wings",
       "ability": "Dive Bomb",
-      "stats": {"speed": 8},
-      "phys": {"mass": 10, "draw": 6, "lift": 90},
-      "tags": ["Airborne"],
-      "move": {"power": 70, "cost": 30, "acc": 90, "tags": ["Airborne"], "keywords": {"accUp": 1}},
+      "stats": {
+        "speed": 8
+      },
+      "phys": {
+        "mass": 10,
+        "draw": 6,
+        "lift": 90
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "move": {
+        "power": 70,
+        "cost": 30,
+        "acc": 90,
+        "tags": [
+          "Airborne"
+        ],
+        "keywords": {
+          "accUp": 1
+        }
+      },
       "shapes": [
-        { "type": "path", "d": "M 2 6 C -8 -22 -44 -74 -122 -104 C -132 -108 -138 -100 -130 -92 Q -137 -67 -112 -58 Q -110 -34 -86 -34 Q -77 -10 -52 -14 Q -37 10 -8 10 Z", "fill": "@primary", "transform": "translate(4 -26) rotate(14)" },
-        { "type": "path", "d": "M 2 2 C -6 -18 -30 -44 -74 -60 C -82 -62 -86 -56 -80 -50 Q -78 -34 -62 -32 Q -54 -14 -34 -12 Q -20 4 2 4 Z", "fill": "@secondary", "transform": "translate(4 -26) rotate(14)", "strokeWidth": 4 }
+        {
+          "type": "path",
+          "d": "M 2 6 C -8 -22 -44 -74 -122 -104 C -132 -108 -138 -100 -130 -92 Q -137 -67 -112 -58 Q -110 -34 -86 -34 Q -77 -10 -52 -14 Q -37 10 -8 10 Z",
+          "fill": "@primary",
+          "transform": "translate(4 -26) rotate(14)"
+        },
+        {
+          "type": "path",
+          "d": "M 2 2 C -6 -18 -30 -44 -74 -60 C -82 -62 -86 -56 -80 -50 Q -78 -34 -62 -32 Q -54 -14 -34 -12 Q -20 4 2 4 Z",
+          "fill": "@secondary",
+          "transform": "translate(4 -26) rotate(14)",
+          "strokeWidth": 4
+        }
       ]
     },
     {
@@ -144,17 +468,67 @@
       "slot": "hindlimbs",
       "name": "Eagle Talons",
       "ability": "Talon Grip",
-      "stats": {"power": 5, "speed": 4},
-      "phys": {"mass": 6, "draw": 2},
+      "stats": {
+        "power": 5,
+        "speed": 4
+      },
+      "phys": {
+        "mass": 6,
+        "draw": 2
+      },
       "tags": [],
-      "move": {"power": 35, "cost": 20, "acc": 95, "tags": [], "keywords": {"trap": true}},
+      "move": {
+        "power": 35,
+        "cost": 20,
+        "acc": 95,
+        "tags": [],
+        "keywords": {
+          "trap": true
+        }
+      },
       "shapes": [
-        { "type": "ellipse", "cx": 0, "cy": 12, "rx": 17, "ry": 19, "fill": "@primary" },
-        { "type": "rect", "x": -5, "y": 24, "width": 10, "height": 30, "rx": 4, "fill": "@accent", "strokeWidth": 4 },
-        { "type": "polygon", "points": "0,50 20,56 18,64 2,62", "fill": "@accent", "strokeWidth": 4 },
-        { "type": "polygon", "points": "-2,52 4,66 -7,66", "fill": "@accent", "strokeWidth": 4 },
-        { "type": "polygon", "points": "-2,52 -15,62 -8,67", "fill": "@accent", "strokeWidth": 4 },
-        { "type": "polygon", "points": "20,56 28,61 18,64", "fill": "@outline", "stroke": "none" }
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 12,
+          "rx": 17,
+          "ry": 19,
+          "fill": "@primary"
+        },
+        {
+          "type": "rect",
+          "x": -5,
+          "y": 24,
+          "width": 10,
+          "height": 30,
+          "rx": 4,
+          "fill": "@accent",
+          "strokeWidth": 4
+        },
+        {
+          "type": "polygon",
+          "points": "0,50 20,56 18,64 2,62",
+          "fill": "@accent",
+          "strokeWidth": 4
+        },
+        {
+          "type": "polygon",
+          "points": "-2,52 4,66 -7,66",
+          "fill": "@accent",
+          "strokeWidth": 4
+        },
+        {
+          "type": "polygon",
+          "points": "-2,52 -15,62 -8,67",
+          "fill": "@accent",
+          "strokeWidth": 4
+        },
+        {
+          "type": "polygon",
+          "points": "20,56 28,61 18,64",
+          "fill": "@outline",
+          "stroke": "none"
+        }
       ]
     },
     {
@@ -163,14 +537,41 @@
       "slot": "tail",
       "name": "Eagle Tailfan",
       "ability": "Tail Rudder",
-      "stats": {"speed": 4},
-      "phys": {"mass": 3, "draw": 1},
+      "stats": {
+        "speed": 4
+      },
+      "phys": {
+        "mass": 3,
+        "draw": 1
+      },
       "tags": [],
-      "move": {"power": 0, "cost": 10, "acc": 100, "tags": [], "keywords": {"evasionUp": 1}},
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      },
       "shapes": [
-        { "type": "path", "d": "M 0 -6 C -40 -11 -70 -9 -84 -3 C -89 4 -85 10 -76 10 C -48 9 -22 5 0 6 Z", "fill": "@primary", "transform": "rotate(17)" },
-        { "type": "path", "d": "M 0 -6 C -40 -11 -70 -9 -84 -3 C -89 4 -85 10 -76 10 C -48 9 -22 5 0 6 Z", "fill": "@primary", "transform": "rotate(-16)" },
-        { "type": "path", "d": "M 0 -6 C -40 -11 -70 -9 -84 -3 C -89 4 -85 10 -76 10 C -48 9 -22 5 0 6 Z", "fill": "@secondary" }
+        {
+          "type": "path",
+          "d": "M 0 -6 C -40 -11 -70 -9 -84 -3 C -89 4 -85 10 -76 10 C -48 9 -22 5 0 6 Z",
+          "fill": "@primary",
+          "transform": "rotate(17)"
+        },
+        {
+          "type": "path",
+          "d": "M 0 -6 C -40 -11 -70 -9 -84 -3 C -89 4 -85 10 -76 10 C -48 9 -22 5 0 6 Z",
+          "fill": "@primary",
+          "transform": "rotate(-16)"
+        },
+        {
+          "type": "path",
+          "d": "M 0 -6 C -40 -11 -70 -9 -84 -3 C -89 4 -85 10 -76 10 C -48 9 -22 5 0 6 Z",
+          "fill": "@secondary"
+        }
       ]
     },
     {
@@ -179,15 +580,51 @@
       "slot": "hide",
       "name": "Eagle Plumage",
       "ability": "Preened Feathers",
-      "stats": {"armor": 2, "speed": 3},
-      "phys": {"mass": 5, "draw": 1},
+      "stats": {
+        "armor": 2,
+        "speed": 3
+      },
+      "phys": {
+        "mass": 5,
+        "draw": 1
+      },
       "tags": [],
       "move": null,
       "shapes": [
-        { "type": "path", "d": "M -52 -10 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0", "fill": "none", "stroke": "@secondary", "strokeWidth": 4, "opacity": 0.8 },
-        { "type": "path", "d": "M -60 10 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0", "fill": "none", "stroke": "@secondary", "strokeWidth": 4, "opacity": 0.8 },
-        { "type": "path", "d": "M -52 30 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0", "fill": "none", "stroke": "@secondary", "strokeWidth": 4, "opacity": 0.8 },
-        { "type": "ellipse", "cx": 58, "cy": 6, "rx": 17, "ry": 22, "fill": "@secondary", "stroke": "none", "opacity": 0.55 }
+        {
+          "type": "path",
+          "d": "M -52 -10 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0",
+          "fill": "none",
+          "stroke": "@secondary",
+          "strokeWidth": 4,
+          "opacity": 0.8
+        },
+        {
+          "type": "path",
+          "d": "M -60 10 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0",
+          "fill": "none",
+          "stroke": "@secondary",
+          "strokeWidth": 4,
+          "opacity": 0.8
+        },
+        {
+          "type": "path",
+          "d": "M -52 30 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0",
+          "fill": "none",
+          "stroke": "@secondary",
+          "strokeWidth": 4,
+          "opacity": 0.8
+        },
+        {
+          "type": "ellipse",
+          "cx": 58,
+          "cy": 6,
+          "rx": 17,
+          "ry": 22,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.55
+        }
       ]
     },
     {
@@ -196,38 +633,152 @@
       "slot": "organ",
       "name": "Hollow-Bone Marrow",
       "ability": "Featherweight",
-      "stats": {"stamina": 8, "regen": 3, "speed": 2},
-      "phys": {"mass": 3, "draw": 3},
+      "stats": {
+        "stamina": 8,
+        "regen": 3,
+        "speed": 2
+      },
+      "phys": {
+        "mass": 3,
+        "draw": 3
+      },
       "tags": [],
       "move": null,
       "shapes": [
-        { "type": "ellipse", "cx": 0, "cy": 0, "rx": 24, "ry": 15, "fill": "#ffd66e", "stroke": "none", "opacity": 0.3 },
-        { "type": "ellipse", "cx": 0, "cy": 0, "rx": 12, "ry": 8, "fill": "#ffd66e", "stroke": "none", "opacity": 0.5 },
-        { "type": "circle", "cx": 14, "cy": -10, "r": 3, "fill": "#ffd66e", "stroke": "none", "opacity": 0.5 },
-        { "type": "circle", "cx": 19, "cy": -16, "r": 2, "fill": "#ffd66e", "stroke": "none", "opacity": 0.4 }
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 0,
+          "rx": 24,
+          "ry": 15,
+          "fill": "#ffd66e",
+          "stroke": "none",
+          "opacity": 0.3
+        },
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 0,
+          "rx": 12,
+          "ry": 8,
+          "fill": "#ffd66e",
+          "stroke": "none",
+          "opacity": 0.5
+        },
+        {
+          "type": "circle",
+          "cx": 14,
+          "cy": -10,
+          "r": 3,
+          "fill": "#ffd66e",
+          "stroke": "none",
+          "opacity": 0.5
+        },
+        {
+          "type": "circle",
+          "cx": 19,
+          "cy": -16,
+          "r": 2,
+          "fill": "#ffd66e",
+          "stroke": "none",
+          "opacity": 0.4
+        }
       ]
     },
-
     {
       "id": "goat_head",
       "species": "goat",
       "slot": "head",
       "name": "Goat Head",
       "ability": "Headbutt",
-      "stats": {"power": 8},
-      "phys": {"mass": 10, "draw": 2},
+      "stats": {
+        "power": 8
+      },
+      "phys": {
+        "mass": 10,
+        "draw": 2
+      },
       "tags": [],
-      "move": {"power": 50, "cost": 20, "acc": 95, "tags": [], "keywords": {"knockback": true}},
+      "move": {
+        "power": 50,
+        "cost": 20,
+        "acc": 95,
+        "tags": [],
+        "keywords": {
+          "knockback": true
+        }
+      },
       "shapes": [
-        { "type": "path", "d": "M 6 -38 C 2 -60 -10 -72 -26 -70 C -14 -62 -8 -50 -8 -38 Z", "fill": "@accent", "strokeWidth": 4 },
-        { "type": "ellipse", "cx": -4, "cy": -26, "rx": 13, "ry": 7, "fill": "@secondary", "transform": "rotate(-24 -4 -26)", "strokeWidth": 4 },
-        { "type": "ellipse", "cx": 16, "cy": -20, "rx": 26, "ry": 21, "fill": "@primary" },
-        { "type": "ellipse", "cx": 42, "cy": -10, "rx": 16, "ry": 12, "fill": "@primary" },
-        { "type": "path", "d": "M 22 -36 C 22 -58 12 -74 -6 -76 C 4 -64 10 -50 8 -36 Z", "fill": "@accent", "strokeWidth": 4 },
-        { "type": "polygon", "points": "36,0 49,0 43,17", "fill": "@secondary", "strokeWidth": 4 },
-        { "type": "circle", "cx": 50, "cy": -13, "r": 2.5, "fill": "@outline", "stroke": "none" },
-        { "type": "circle", "cx": 22, "cy": -26, "r": 9, "fill": "@white", "strokeWidth": 4 },
-        { "type": "rect", "x": 17, "y": -29, "width": 10, "height": 5.5, "rx": 2, "fill": "@outline", "stroke": "none" }
+        {
+          "type": "path",
+          "d": "M 6 -38 C 2 -60 -10 -72 -26 -70 C -14 -62 -8 -50 -8 -38 Z",
+          "fill": "@accent",
+          "strokeWidth": 4
+        },
+        {
+          "type": "ellipse",
+          "cx": -4,
+          "cy": -26,
+          "rx": 13,
+          "ry": 7,
+          "fill": "@secondary",
+          "transform": "rotate(-24 -4 -26)",
+          "strokeWidth": 4
+        },
+        {
+          "type": "ellipse",
+          "cx": 16,
+          "cy": -20,
+          "rx": 26,
+          "ry": 21,
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": 42,
+          "cy": -10,
+          "rx": 16,
+          "ry": 12,
+          "fill": "@primary"
+        },
+        {
+          "type": "path",
+          "d": "M 22 -36 C 22 -58 12 -74 -6 -76 C 4 -64 10 -50 8 -36 Z",
+          "fill": "@accent",
+          "strokeWidth": 4
+        },
+        {
+          "type": "polygon",
+          "points": "36,0 49,0 43,17",
+          "fill": "@secondary",
+          "strokeWidth": 4
+        },
+        {
+          "type": "circle",
+          "cx": 50,
+          "cy": -13,
+          "r": 2.5,
+          "fill": "@outline",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 22,
+          "cy": -26,
+          "r": 9,
+          "fill": "@white",
+          "strokeWidth": 4
+        },
+        {
+          "type": "rect",
+          "x": 17,
+          "y": -29,
+          "width": 10,
+          "height": 5.5,
+          "rx": 2,
+          "fill": "@outline",
+          "stroke": "none"
+        }
       ]
     },
     {
@@ -236,14 +787,52 @@
       "slot": "forelimbs",
       "name": "Goat Forelegs",
       "ability": "Trample Tap",
-      "stats": {"speed": 4},
-      "phys": {"mass": 8, "draw": 2},
+      "stats": {
+        "speed": 4
+      },
+      "phys": {
+        "mass": 8,
+        "draw": 2
+      },
       "tags": [],
-      "move": {"power": 30, "cost": 10, "acc": 100, "tags": [], "keywords": {"priority": true}},
+      "move": {
+        "power": 30,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "priority": true
+        }
+      },
       "shapes": [
-        { "type": "rect", "x": -9, "y": -6, "width": 18, "height": 58, "rx": 8, "fill": "@primary" },
-        { "type": "rect", "x": -10, "y": 48, "width": 20, "height": 14, "rx": 4, "fill": "#6b6257", "strokeWidth": 4 },
-        { "type": "line", "x1": 0, "y1": 50, "x2": 0, "y2": 62, "stroke": "@outline", "strokeWidth": 3 }
+        {
+          "type": "rect",
+          "x": -9,
+          "y": -6,
+          "width": 18,
+          "height": 58,
+          "rx": 8,
+          "fill": "@primary"
+        },
+        {
+          "type": "rect",
+          "x": -10,
+          "y": 48,
+          "width": 20,
+          "height": 14,
+          "rx": 4,
+          "fill": "#6b6257",
+          "strokeWidth": 4
+        },
+        {
+          "type": "line",
+          "x1": 0,
+          "y1": 50,
+          "x2": 0,
+          "y2": 62,
+          "stroke": "@outline",
+          "strokeWidth": 3
+        }
       ]
     },
     {
@@ -252,15 +841,59 @@
       "slot": "hindlimbs",
       "name": "Goat Kickers",
       "ability": "Mule Kick",
-      "stats": {"speed": 5, "power": 4},
-      "phys": {"mass": 10, "draw": 2},
+      "stats": {
+        "speed": 5,
+        "power": 4
+      },
+      "phys": {
+        "mass": 10,
+        "draw": 2
+      },
       "tags": [],
-      "move": {"power": 65, "cost": 25, "acc": 90, "tags": [], "keywords": {}},
+      "move": {
+        "power": 65,
+        "cost": 25,
+        "acc": 90,
+        "tags": [],
+        "keywords": {}
+      },
       "shapes": [
-        { "type": "ellipse", "cx": 0, "cy": 10, "rx": 17, "ry": 21, "fill": "@primary" },
-        { "type": "rect", "x": -8, "y": 22, "width": 16, "height": 32, "rx": 7, "fill": "@primary" },
-        { "type": "rect", "x": -9, "y": 50, "width": 18, "height": 13, "rx": 4, "fill": "#6b6257", "strokeWidth": 4 },
-        { "type": "line", "x1": 0, "y1": 52, "x2": 0, "y2": 63, "stroke": "@outline", "strokeWidth": 3 }
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 10,
+          "rx": 17,
+          "ry": 21,
+          "fill": "@primary"
+        },
+        {
+          "type": "rect",
+          "x": -8,
+          "y": 22,
+          "width": 16,
+          "height": 32,
+          "rx": 7,
+          "fill": "@primary"
+        },
+        {
+          "type": "rect",
+          "x": -9,
+          "y": 50,
+          "width": 18,
+          "height": 13,
+          "rx": 4,
+          "fill": "#6b6257",
+          "strokeWidth": 4
+        },
+        {
+          "type": "line",
+          "x1": 0,
+          "y1": 52,
+          "x2": 0,
+          "y2": 63,
+          "stroke": "@outline",
+          "strokeWidth": 3
+        }
       ]
     },
     {
@@ -269,12 +902,30 @@
       "slot": "tail",
       "name": "Goat Flicker",
       "ability": "Happy Flick",
-      "stats": {"speed": 1},
-      "phys": {"mass": 1, "draw": 0},
+      "stats": {
+        "speed": 1
+      },
+      "phys": {
+        "mass": 1,
+        "draw": 0
+      },
       "tags": [],
-      "move": {"power": 0, "cost": 5, "acc": 100, "tags": [], "keywords": {"staminaRestore": 15}},
+      "move": {
+        "power": 0,
+        "cost": 5,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "staminaRestore": 15
+        }
+      },
       "shapes": [
-        { "type": "path", "d": "M 2 6 C -12 4 -22 -6 -20 -24 C -12 -20 -2 -10 6 -2 Z", "fill": "@primary", "strokeWidth": 4 }
+        {
+          "type": "path",
+          "d": "M 2 6 C -12 4 -22 -6 -20 -24 C -12 -20 -2 -10 6 -2 Z",
+          "fill": "@primary",
+          "strokeWidth": 4
+        }
       ]
     },
     {
@@ -283,13 +934,35 @@
       "slot": "hide",
       "name": "Goat Scruff",
       "ability": "Scruffy Coat",
-      "stats": {"armor": 4, "hp": 4},
-      "phys": {"mass": 8, "draw": 1},
+      "stats": {
+        "armor": 4,
+        "hp": 4
+      },
+      "phys": {
+        "mass": 8,
+        "draw": 1
+      },
       "tags": [],
       "move": null,
       "shapes": [
-        { "type": "path", "d": "M -58 30 l 8 12 l 8 -10 l 8 12 l 8 -10 l 8 12 l 8 -10 l 8 12 l 8 -10 l 8 12 l 8 -10", "fill": "none", "stroke": "@accent", "strokeWidth": 5, "opacity": 0.8 },
-        { "type": "ellipse", "cx": -22, "cy": -18, "rx": 22, "ry": 12, "fill": "@accent", "stroke": "none", "opacity": 0.35 }
+        {
+          "type": "path",
+          "d": "M -58 30 l 8 12 l 8 -10 l 8 12 l 8 -10 l 8 12 l 8 -10 l 8 12 l 8 -10 l 8 12 l 8 -10",
+          "fill": "none",
+          "stroke": "@accent",
+          "strokeWidth": 5,
+          "opacity": 0.8
+        },
+        {
+          "type": "ellipse",
+          "cx": -22,
+          "cy": -18,
+          "rx": 22,
+          "ry": 12,
+          "fill": "@accent",
+          "stroke": "none",
+          "opacity": 0.35
+        }
       ]
     },
     {
@@ -298,38 +971,159 @@
       "slot": "organ",
       "name": "Iron Gut",
       "ability": "Eats Anything",
-      "stats": {"stamina": 12, "regen": 5},
-      "phys": {"mass": 5, "draw": 1},
+      "stats": {
+        "stamina": 12,
+        "regen": 5
+      },
+      "phys": {
+        "mass": 5,
+        "draw": 1
+      },
       "tags": [],
       "move": null,
       "shapes": [
-        { "type": "ellipse", "cx": 0, "cy": 0, "rx": 24, "ry": 15, "fill": "#d4c14f", "stroke": "none", "opacity": 0.3 },
-        { "type": "ellipse", "cx": 0, "cy": 0, "rx": 12, "ry": 8, "fill": "#d4c14f", "stroke": "none", "opacity": 0.5 },
-        { "type": "circle", "cx": 14, "cy": -10, "r": 3, "fill": "#d4c14f", "stroke": "none", "opacity": 0.5 },
-        { "type": "circle", "cx": 19, "cy": -16, "r": 2, "fill": "#d4c14f", "stroke": "none", "opacity": 0.4 }
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 0,
+          "rx": 24,
+          "ry": 15,
+          "fill": "#d4c14f",
+          "stroke": "none",
+          "opacity": 0.3
+        },
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 0,
+          "rx": 12,
+          "ry": 8,
+          "fill": "#d4c14f",
+          "stroke": "none",
+          "opacity": 0.5
+        },
+        {
+          "type": "circle",
+          "cx": 14,
+          "cy": -10,
+          "r": 3,
+          "fill": "#d4c14f",
+          "stroke": "none",
+          "opacity": 0.5
+        },
+        {
+          "type": "circle",
+          "cx": 19,
+          "cy": -16,
+          "r": 2,
+          "fill": "#d4c14f",
+          "stroke": "none",
+          "opacity": 0.4
+        }
       ]
     },
-
     {
       "id": "cobra_head",
       "species": "cobra",
       "slot": "head",
       "name": "Cobra Head",
       "ability": "Venom Fang",
-      "stats": {"power": 10, "speed": 2},
-      "phys": {"mass": 8, "draw": 3},
-      "tags": ["Venomous"],
-      "move": {"power": 40, "cost": 20, "acc": 95, "tags": ["Venomous"], "keywords": {"venom": 1}},
+      "stats": {
+        "power": 10,
+        "speed": 2
+      },
+      "phys": {
+        "mass": 8,
+        "draw": 3
+      },
+      "tags": [
+        "Venomous"
+      ],
+      "move": {
+        "power": 40,
+        "cost": 20,
+        "acc": 95,
+        "tags": [
+          "Venomous"
+        ],
+        "keywords": {
+          "venom": 1
+        }
+      },
       "shapes": [
-        { "type": "path", "d": "M 4 2 C -16 -22 -14 -60 8 -76 C 20 -84 36 -84 48 -76 C 70 -60 72 -22 52 2 Z", "fill": "@primary" },
-        { "type": "ellipse", "cx": 26, "cy": -46, "rx": 9, "ry": 12, "fill": "@secondary", "stroke": "none", "opacity": 0.9 },
-        { "type": "circle", "cx": 26, "cy": -63, "r": 4, "fill": "@secondary", "stroke": "none", "opacity": 0.9 },
-        { "type": "ellipse", "cx": 52, "cy": -12, "rx": 22, "ry": 13, "fill": "@primary" },
-        { "type": "ellipse", "cx": 50, "cy": -4, "rx": 15, "ry": 6, "fill": "@secondary", "stroke": "none", "opacity": 0.85 },
-        { "type": "polygon", "points": "60,0 67,0 63,10", "fill": "@white", "strokeWidth": 2.5 },
-        { "type": "path", "d": "M 73 -10 C 82 -8 88 -10 92 -14 M 92 -14 l 7 -5 M 92 -14 l 8 4", "fill": "none", "stroke": "#d9455f", "strokeWidth": 3.5 },
-        { "type": "circle", "cx": 54, "cy": -20, "r": 9.5, "fill": "@white", "strokeWidth": 4 },
-        { "type": "rect", "x": 52.5, "y": -27, "width": 4, "height": 14, "rx": 2, "fill": "@outline", "stroke": "none" }
+        {
+          "type": "path",
+          "d": "M 4 2 C -16 -22 -14 -60 8 -76 C 20 -84 36 -84 48 -76 C 70 -60 72 -22 52 2 Z",
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": 26,
+          "cy": -46,
+          "rx": 9,
+          "ry": 12,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.9
+        },
+        {
+          "type": "circle",
+          "cx": 26,
+          "cy": -63,
+          "r": 4,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.9
+        },
+        {
+          "type": "ellipse",
+          "cx": 52,
+          "cy": -12,
+          "rx": 22,
+          "ry": 13,
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": 50,
+          "cy": -4,
+          "rx": 15,
+          "ry": 6,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.85
+        },
+        {
+          "type": "polygon",
+          "points": "60,0 67,0 63,10",
+          "fill": "@white",
+          "strokeWidth": 2.5
+        },
+        {
+          "type": "path",
+          "d": "M 73 -10 C 82 -8 88 -10 92 -14 M 92 -14 l 7 -5 M 92 -14 l 8 4",
+          "fill": "none",
+          "stroke": "#d9455f",
+          "strokeWidth": 3.5
+        },
+        {
+          "type": "circle",
+          "cx": 54,
+          "cy": -20,
+          "r": 9.5,
+          "fill": "@white",
+          "strokeWidth": 4
+        },
+        {
+          "type": "rect",
+          "x": 52.5,
+          "y": -27,
+          "width": 4,
+          "height": 14,
+          "rx": 2,
+          "fill": "@outline",
+          "stroke": "none"
+        }
       ]
     },
     {
@@ -338,13 +1132,38 @@
       "slot": "tail",
       "name": "Cobra Coil",
       "ability": "Constrict",
-      "stats": {"power": 6, "speed": 3},
-      "phys": {"mass": 9, "draw": 2},
+      "stats": {
+        "power": 6,
+        "speed": 3
+      },
+      "phys": {
+        "mass": 9,
+        "draw": 2
+      },
       "tags": [],
-      "move": {"power": 30, "cost": 20, "acc": 95, "tags": [], "keywords": {"trap": true}},
+      "move": {
+        "power": 30,
+        "cost": 20,
+        "acc": 95,
+        "tags": [],
+        "keywords": {
+          "trap": true
+        }
+      },
       "shapes": [
-        { "type": "path", "d": "M 0 -14 C -50 -22 -86 -8 -98 14 C -104 28 -94 40 -80 36 C -86 30 -88 22 -82 18 C -68 6 -44 4 0 12 Z", "fill": "@primary" },
-        { "type": "path", "d": "M -8 -2 C -48 -8 -76 4 -86 18", "fill": "none", "stroke": "@secondary", "strokeWidth": 4.5, "opacity": 0.9 }
+        {
+          "type": "path",
+          "d": "M 0 -14 C -50 -22 -86 -8 -98 14 C -104 28 -94 40 -80 36 C -86 30 -88 22 -82 18 C -68 6 -44 4 0 12 Z",
+          "fill": "@primary"
+        },
+        {
+          "type": "path",
+          "d": "M -8 -2 C -48 -8 -76 4 -86 18",
+          "fill": "none",
+          "stroke": "@secondary",
+          "strokeWidth": 4.5,
+          "opacity": 0.9
+        }
       ]
     },
     {
@@ -353,15 +1172,48 @@
       "slot": "hide",
       "name": "Cobra Scales",
       "ability": "Molted Slip",
-      "stats": {"armor": 3, "speed": 3},
-      "phys": {"mass": 6, "draw": 1},
+      "stats": {
+        "armor": 3,
+        "speed": 3
+      },
+      "phys": {
+        "mass": 6,
+        "draw": 1
+      },
       "tags": [],
       "move": null,
       "shapes": [
-        { "type": "path", "d": "M -56 -14 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6", "fill": "none", "stroke": "@accent", "strokeWidth": 3.5, "opacity": 0.6 },
-        { "type": "path", "d": "M -60 6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6", "fill": "none", "stroke": "@accent", "strokeWidth": 3.5, "opacity": 0.6 },
-        { "type": "path", "d": "M -52 26 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6", "fill": "none", "stroke": "@accent", "strokeWidth": 3.5, "opacity": 0.6 },
-        { "type": "polygon", "points": "12,-32 22,-24 12,-16 2,-24", "fill": "@secondary", "stroke": "none", "opacity": 0.5 }
+        {
+          "type": "path",
+          "d": "M -56 -14 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6",
+          "fill": "none",
+          "stroke": "@accent",
+          "strokeWidth": 3.5,
+          "opacity": 0.6
+        },
+        {
+          "type": "path",
+          "d": "M -60 6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6",
+          "fill": "none",
+          "stroke": "@accent",
+          "strokeWidth": 3.5,
+          "opacity": 0.6
+        },
+        {
+          "type": "path",
+          "d": "M -52 26 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6",
+          "fill": "none",
+          "stroke": "@accent",
+          "strokeWidth": 3.5,
+          "opacity": 0.6
+        },
+        {
+          "type": "polygon",
+          "points": "12,-32 22,-24 12,-16 2,-24",
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.5
+        }
       ]
     },
     {
@@ -370,15 +1222,230 @@
       "slot": "organ",
       "name": "Venom Sac",
       "ability": "Extra Spicy",
-      "stats": {"stamina": 6, "regen": 2},
-      "phys": {"mass": 4, "draw": 4},
-      "tags": ["Venomous"],
+      "stats": {
+        "stamina": 6,
+        "regen": 2
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 4
+      },
+      "tags": [
+        "Venomous"
+      ],
       "move": null,
       "shapes": [
-        { "type": "ellipse", "cx": 0, "cy": 0, "rx": 24, "ry": 15, "fill": "#8fd14f", "stroke": "none", "opacity": 0.35 },
-        { "type": "ellipse", "cx": 0, "cy": 0, "rx": 12, "ry": 8, "fill": "#8fd14f", "stroke": "none", "opacity": 0.55 },
-        { "type": "circle", "cx": 14, "cy": -10, "r": 3, "fill": "#8fd14f", "stroke": "none", "opacity": 0.5 },
-        { "type": "circle", "cx": 19, "cy": -16, "r": 2, "fill": "#8fd14f", "stroke": "none", "opacity": 0.4 }
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 0,
+          "rx": 24,
+          "ry": 15,
+          "fill": "#8fd14f",
+          "stroke": "none",
+          "opacity": 0.35
+        },
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 0,
+          "rx": 12,
+          "ry": 8,
+          "fill": "#8fd14f",
+          "stroke": "none",
+          "opacity": 0.55
+        },
+        {
+          "type": "circle",
+          "cx": 14,
+          "cy": -10,
+          "r": 3,
+          "fill": "#8fd14f",
+          "stroke": "none",
+          "opacity": 0.5
+        },
+        {
+          "type": "circle",
+          "cx": 19,
+          "cy": -16,
+          "r": 2,
+          "fill": "#8fd14f",
+          "stroke": "none",
+          "opacity": 0.4
+        }
+      ]
+    },
+    {
+      "id": "riot_plating",
+      "species": "salvage",
+      "slot": "hide",
+      "name": "Riot Plating",
+      "ability": "Municipal Grade",
+      "stats": {
+        "armor": 10,
+        "hp": 5
+      },
+      "phys": {
+        "mass": 16,
+        "draw": 0
+      },
+      "tags": [
+        "Armored"
+      ],
+      "move": null,
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -60,
+          "y": -24,
+          "width": 34,
+          "height": 24,
+          "rx": 4,
+          "fill": "@primary",
+          "strokeWidth": 3.5,
+          "opacity": 0.9
+        },
+        {
+          "type": "rect",
+          "x": -18,
+          "y": -30,
+          "width": 34,
+          "height": 24,
+          "rx": 4,
+          "fill": "@primary",
+          "strokeWidth": 3.5,
+          "opacity": 0.9
+        },
+        {
+          "type": "rect",
+          "x": 24,
+          "y": -22,
+          "width": 34,
+          "height": 24,
+          "rx": 4,
+          "fill": "@primary",
+          "strokeWidth": 3.5,
+          "opacity": 0.9
+        },
+        {
+          "type": "rect",
+          "x": -40,
+          "y": 4,
+          "width": 34,
+          "height": 24,
+          "rx": 4,
+          "fill": "@secondary",
+          "strokeWidth": 3.5,
+          "opacity": 0.85
+        },
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 6,
+          "width": 34,
+          "height": 24,
+          "rx": 4,
+          "fill": "@secondary",
+          "strokeWidth": 3.5,
+          "opacity": 0.85
+        },
+        {
+          "type": "circle",
+          "cx": -52,
+          "cy": -18,
+          "r": 2.5,
+          "fill": "@accent",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -10,
+          "cy": -24,
+          "r": 2.5,
+          "fill": "@accent",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 32,
+          "cy": -16,
+          "r": 2.5,
+          "fill": "@accent",
+          "stroke": "none"
+        }
+      ]
+    },
+    {
+      "id": "v8_heart",
+      "species": "salvage",
+      "slot": "organ",
+      "name": "V8 Heart",
+      "ability": "Idle Menace",
+      "stats": {
+        "stamina": 14,
+        "regen": 6
+      },
+      "phys": {
+        "mass": 8,
+        "draw": 2
+      },
+      "tags": [],
+      "move": null,
+      "shapes": [
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 0,
+          "rx": 24,
+          "ry": 15,
+          "fill": "#e9c31f",
+          "stroke": "none",
+          "opacity": 0.3
+        },
+        {
+          "type": "rect",
+          "x": -12,
+          "y": -8,
+          "width": 24,
+          "height": 16,
+          "rx": 3,
+          "fill": "#6e7887",
+          "strokeWidth": 3,
+          "opacity": 0.85
+        },
+        {
+          "type": "rect",
+          "x": -9,
+          "y": -13,
+          "width": 5,
+          "height": 6,
+          "rx": 1,
+          "fill": "#9aa4b5",
+          "stroke": "none",
+          "opacity": 0.9
+        },
+        {
+          "type": "rect",
+          "x": -1,
+          "y": -13,
+          "width": 5,
+          "height": 6,
+          "rx": 1,
+          "fill": "#9aa4b5",
+          "stroke": "none",
+          "opacity": 0.9
+        },
+        {
+          "type": "rect",
+          "x": 7,
+          "y": -13,
+          "width": 5,
+          "height": 6,
+          "rx": 1,
+          "fill": "#9aa4b5",
+          "stroke": "none",
+          "opacity": 0.9
+        }
       ]
     }
   ]

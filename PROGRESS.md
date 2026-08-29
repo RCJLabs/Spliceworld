@@ -1,5 +1,27 @@
 # PROGRESS
 
+## Session 7 — M5: Campaign Shell ✅
+
+**Acceptance criterion:** losing a battle creates a rescue mission with a live timer — **passes**. A deliberate loss in the browser produced "Nibbles CAPTURED! 'Unauthorized peer review' scheduled in 18h" with a live countdown card + Rescue Raid button in the War Room; the countdown persists across reload; the rescue raid won and brought Nibbles home injured and fonder (+10 bond). Headless: window verified in the 12–24h range, still open after an hour, expiry path removes the creature and records the dissection.
+
+### What shipped
+- **Region strip** (`data/regions.json`): Greenfield County — 4 Gen 1 nodes (Old Barn → Downtown → Highway Checkpoint → Precinct HQ boss) + a Gen 2 National Guard Post gated behind Threat Gen 2. Nodes unlock in order; each grants income/day while held and notoriety when seized.
+- **Notoriety → Threat Generations**: conquest raises notoriety; crossing 60 (the boss tips it) announces Threat Gen 2 and unlocks the Gen 2 node. New Gen 2 units in data: Infantry Squad (Suppressing Fire), Jeep .50 (fast, fragile, salvageable).
+- **Income ticks**: held nodes pay per real-world day via `tickCampaign` timestamps (verified to the dollar after a 24h warp). The M1 stipend remains as the floor.
+- **Capture-on-loss → Dissection Countdown → Rescue Raid**: on a lost assault, one downed chimera is captured (seeded pick), leaves the roster, and gets a 12–24h real-world rescue window. The rescue raid (one themed template: Evidence Impound Lot) restores it — injured, +10 bond ("you came back for me"). Ignore the window: the creature is lost ("out-of-state research internship, involuntary") and the **dissection is recorded in the AI-director stub** for future counter-bias (§3.7).
+- **Containment Cannon + salvage**: the cannon charges from damage dealt *without* KO'ing (restraint minigame); at ≥100 charge it can capture weakened (≤40% HP) salvageable units — vehicles. Impounded units sit in Containment; salvaging yields **enemy-tech part tokens otherwise unobtainable**: Riot Plating (Armored hide) and V8 Heart (organ), under a new `salvage` pseudo-species with its own palette and set bonus.
+- **War Room screen** (replaces the Battle tab): notoriety/threat/territory header, region map, captive cards with live countdowns, Containment bays, news wire — and the assault/rescue briefing + arena flow lives inside it.
+- **News ticker reacts to the campaign**: conquests, captures, rescues, expiries, and threat-level changes push lines; the footer ticker shows the latest.
+- **SAVE_VERSION → 6** (campaign, news, dissections; in-flight v5 battles gain cannon/capture fields). v1→v6 chain tested headless + in-browser.
+
+### Known issues
+- Rescue raids can be retried without limit inside the window (no cost beyond injuries); consider a cooldown if it feels cheap.
+- Region contestation, rehabilitation of captured units, and the AI director acting on dissections remain post-v0.1 backlog per ROADMAP.
+- The aftermath's `.ranch-msg` line lives per-screen; battle summaries only show in the War Room's Last Sortie card.
+
+### Next session — M6: Breeding
+First task: pairing UI + incubation timers (eggs on timestamps), then genetics inheritance (stat potential = weighted parent average ± variance), family tree with stars, one mutation trait. Done when: two starred parents produce a measurably better egg.
+
 ## Session 6 — M4.5: Balance Harness ✅
 
 **Acceptance criterion:** it catches one broken combo planted on purpose — **passes**. `node tools/sim.js --plant` injects an Injection combo with power 500 / cost 0; the harness flags every build carrying it as `[OP] wins 100% in ~2 turns — nerf something` and exits nonzero if the plant escapes. Also asserted in the smoke suite.

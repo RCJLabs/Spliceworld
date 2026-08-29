@@ -85,6 +85,7 @@ export function combatantFromChimera(chimera, content, now) {
 export function combatantFromUnit(unit) {
   return {
     kind: 'unit',
+    capturable: !!unit.salvage?.length, // Containment Cannon targets
     refId: unit.id,
     name: unit.name,
     maxHp: unit.hp,
@@ -109,17 +110,23 @@ export function combatantFromUnit(unit) {
 
 // --- Battle lifecycle ---------------------------------------------------
 
-export function createBattle(chimeras, encounter, content, seed, now) {
+// context (optional): { kind: 'assault'|'rescue', nodeId, captiveId } —
+// campaign metadata the aftermath resolver acts on. The engine itself
+// only reads encounter data.
+export function createBattle(chimeras, encounter, content, seed, now, context = {}) {
   const battle = {
     seed,
     rollCount: 0,
     encounterId: encounter.id,
     encounterName: encounter.name,
     reward: encounter.reward,
+    context,
     turn: 1,
     over: false,
     outcome: null, // 'win' | 'loss' | 'fled'
     pendingReplace: false,
+    cannon: { charge: 0 }, // Containment Cannon: charged by damage dealt
+    captured: [], // unit ids bagged this battle
     player: { team: chimeras.map((c) => combatantFromChimera(c, content, now)), active: 0 },
     enemy: { queue: encounter.waves.slice(1), active: combatantFromUnit(content.enemies[encounter.waves[0]]) },
     log: [],
@@ -153,6 +160,12 @@ export function playerActions(battle) {
   const actions = me.moves
     .map((m, i) => ({ type: 'move', index: i, label: m.name, cost: m.cost, disabled: m.cost > me.stamina }))
     .filter((a) => !a.disabled);
+  // Containment Cannon: charged by restraint (damage without the KO),
+  // fires only at weakened capturable targets (ROADMAP §3.6).
+  const foe = battle.enemy.active;
+  if (foe.capturable && battle.cannon.charge >= 100 && foe.hp > 0 && foe.hp <= foe.maxHp * 0.4) {
+    actions.push({ type: 'capture', label: `Containment Cannon (${foe.name})` });
+  }
   actions.push({ type: 'rest', label: 'Catch Breath' });
   const trapped = me.status.trapped;
   if (!trapped) {
@@ -200,6 +213,10 @@ function attack(battle, atk, def, move, events, content) {
     }
     dmg = Math.max(1, Math.round(dmg));
     def.hp = Math.max(0, def.hp - dmg);
+    if (atk.kind === 'chimera' && def.hp > 0) {
+      // Restraint charges the cannon: damage dealt WITHOUT finishing.
+      battle.cannon.charge = Math.min(100, battle.cannon.charge + Math.round(dmg * 1.25));
+    }
     let line = `${atk.name} uses ${move.name} — ${dmg} damage`;
     if (mult > 1) line += ' (super effective!)';
     if (bypassArmor && def.armor > 0) line += ' (armor ignored!)';
@@ -418,6 +435,26 @@ export function step(battle, action, content) {
     battle.over = true;
     battle.outcome = 'fled';
     events.push(`You beat a tactical retreat. The kazoo plays taps.`);
+    battle.log.push(...events);
+    return events;
+  }
+
+  if (playerAction.type === 'capture') {
+    const foe = battle.enemy.active;
+    battle.cannon.charge = 0;
+    battle.captured.push(foe.refId);
+    events.push(`THWOOMP. The Containment Cannon fires — ${foe.name} poofs into the impound queue!`);
+    me.status.trapped = false;
+    if (battle.enemy.queue.length) {
+      const nextId = battle.enemy.queue.shift();
+      battle.enemy.active = combatantFromUnit(content.enemies[nextId]);
+      events.push(`Next wave: ${battle.enemy.active.name}!`);
+    } else {
+      battle.over = true;
+      battle.outcome = 'win';
+      events.push(`Victory! The area is yours (pending paperwork).`);
+    }
+    battle.turn++;
     battle.log.push(...events);
     return events;
   }

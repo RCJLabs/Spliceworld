@@ -447,6 +447,26 @@ main {
 .action-grid .act-flee, .action-grid .act-rest { color: var(--muted); }
 .action-grid .cost { color: var(--zap); font-size: 0.68rem; }
 
+/* --- War Room (M5) --- */
+
+.held-tag, .locked-tag {
+  flex: 0 0 auto;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+.held-tag { background: #2f4d16; color: var(--goo); border: 1px solid var(--goo); }
+.locked-tag { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+.node-held { opacity: 0.85; }
+.node-locked { opacity: 0.5; }
+.captive { border-color: var(--zap); }
+.captive .countdown { color: var(--zap); }
+.news-feed p { margin: 0 0 5px; font-size: 0.74rem; color: var(--text); opacity: 0.9; }
+.cannon-bar { margin-top: 5px; }
+.act-capture { border-color: var(--zap) !important; color: var(--zap); font-weight: 700; }
+
 .token-list { list-style: none; margin: 6px 0; padding: 0; text-align: left; }
 .token-list li {
   display: flex;

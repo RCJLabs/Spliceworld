@@ -396,6 +396,9 @@
           "fill": "#8a94a6",
           "stroke": "none"
         }
+      ],
+      "salvage": [
+        "v8_heart"
       ]
     },
     {
@@ -676,6 +679,201 @@
           "fill": "#8a94a6",
           "stroke": "none"
         }
+      ],
+      "salvage": [
+        "riot_plating",
+        "v8_heart"
+      ]
+    },
+    {
+      "id": "infantry_squad",
+      "name": "Infantry Squad",
+      "hp": 60,
+      "power": 11,
+      "armor": 6,
+      "speed": 10,
+      "stamina": 110,
+      "regen": 12,
+      "tags": [
+        "Organic"
+      ],
+      "koLine": "The Infantry Squad parachutes away in tight formation. Very professional.",
+      "moves": [
+        {
+          "name": "Suppressing Fire",
+          "power": 25,
+          "cost": 15,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "accDown": 1
+          }
+        },
+        {
+          "name": "Bayonet Poke",
+          "power": 45,
+          "cost": 18,
+          "acc": 95,
+          "tags": [],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -18,
+          "width": 52,
+          "height": 68,
+          "rx": 13,
+          "fill": "#4a5a3a"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 22,
+          "fill": "#d9a778"
+        },
+        {
+          "type": "path",
+          "d": "M -24 -48 A 24 24 0 0 1 24 -48 L 24 -40 L -24 -40 Z",
+          "fill": "#38452c"
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -6,
+          "width": 62,
+          "height": 9,
+          "rx": 4,
+          "fill": "#26233a"
+        },
+        {
+          "type": "polygon",
+          "points": "32,-6 44,-2 32,3",
+          "fill": "#26233a"
+        },
+        {
+          "type": "rect",
+          "x": -15,
+          "y": 50,
+          "width": 12,
+          "height": 30,
+          "rx": 5,
+          "fill": "#38452c"
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 50,
+          "width": 12,
+          "height": 30,
+          "rx": 5,
+          "fill": "#38452c"
+        }
+      ]
+    },
+    {
+      "id": "jeep_50",
+      "name": "Jeep .50",
+      "hp": 55,
+      "power": 15,
+      "armor": 4,
+      "speed": 18,
+      "stamina": 120,
+      "regen": 15,
+      "tags": [
+        "Vehicle"
+      ],
+      "salvage": [
+        "v8_heart"
+      ],
+      "koLine": "The Jeep .50 pops all four tires at once and sulks off on the rims.",
+      "moves": [
+        {
+          "name": "Fifty-Cal Rattle",
+          "power": 50,
+          "cost": 22,
+          "acc": 85,
+          "tags": [],
+          "keywords": {}
+        },
+        {
+          "name": "Handbrake Turn",
+          "power": 0,
+          "cost": 10,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "evasionUp": 1
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -78 30 L -72 -8 C -70 -18 -62 -24 -50 -24 L 30 -24 L 42 -8 L 70 -4 C 80 -2 84 6 84 14 L 84 30 Z",
+          "fill": "#5d6b46"
+        },
+        {
+          "type": "rect",
+          "x": -46,
+          "y": -20,
+          "width": 40,
+          "height": 14,
+          "rx": 4,
+          "fill": "#9fd8ff",
+          "opacity": 0.85
+        },
+        {
+          "type": "rect",
+          "x": -4,
+          "y": -52,
+          "width": 8,
+          "height": 30,
+          "rx": 3,
+          "fill": "#26233a"
+        },
+        {
+          "type": "rect",
+          "x": -14,
+          "y": -58,
+          "width": 44,
+          "height": 10,
+          "rx": 4,
+          "fill": "#26233a"
+        },
+        {
+          "type": "circle",
+          "cx": -46,
+          "cy": 34,
+          "r": 17,
+          "fill": "#26233a"
+        },
+        {
+          "type": "circle",
+          "cx": 50,
+          "cy": 34,
+          "r": 17,
+          "fill": "#26233a"
+        },
+        {
+          "type": "circle",
+          "cx": -46,
+          "cy": 34,
+          "r": 7,
+          "fill": "#8a94a6",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 50,
+          "cy": 34,
+          "r": 7,
+          "fill": "#8a94a6",
+          "stroke": "none"
+        }
       ]
     }
   ],
@@ -710,6 +908,39 @@
         "captain_clampdown"
       ],
       "reward": 300
+    },
+    {
+      "id": "checkpoint",
+      "name": "Highway Checkpoint",
+      "blurb": "Cones. So many cones.",
+      "waves": [
+        "tranq_team",
+        "net_trooper",
+        "police_cruiser"
+      ],
+      "reward": 200
+    },
+    {
+      "id": "military_response",
+      "name": "Military Response",
+      "blurb": "Gen 2: the professionals have professional opinions about your goat.",
+      "waves": [
+        "infantry_squad",
+        "jeep_50",
+        "infantry_squad"
+      ],
+      "reward": 350
+    },
+    {
+      "id": "rescue_impound",
+      "name": "Evidence Impound Lot",
+      "blurb": "Behind enemy lines. Your creature is in cell block C, past the vending machine.",
+      "waves": [
+        "net_trooper",
+        "riot_squad",
+        "police_cruiser"
+      ],
+      "reward": 0
     }
   ]
 }
