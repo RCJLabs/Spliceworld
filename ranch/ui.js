@@ -12,6 +12,7 @@ import { gradeFor } from '../splice/extract.js';
 import { canBreed, breedPair, hatchEgg, BREEDING } from './breeding.js';
 import { onboardingSteps, onboardingActive } from './onboarding.js';
 import * as sfx from '../audio/sfx.js';
+import { pickerField, bindPickers } from '../ui/picker.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -53,6 +54,23 @@ export function renderRanchScreen(root, ctx) {
   const upkeep = upkeepPerDay(state, content);
   const catalog = catalogFor(state, content);
   if (!catalog.some((sp) => sp.id === catalogPick)) catalogPick = catalog[0]?.id ?? '';
+  const catalogSpecies = catalog.find((sp) => sp.id === catalogPick) ?? null;
+
+  // 25 species and climbing: group the catalog by elemental class so the
+  // sheet reads like a menagerie, not a phone book.
+  const catalogGroups = ['ground', 'water', 'air', null].map((cls) => {
+    const rows = catalog.filter((sp) => (sp.class ?? null) === cls);
+    return {
+      label: cls ? `${content.classes[cls].icon} ${content.classes[cls].name}` : 'Unclassed',
+      options: rows.map((sp) => ({
+        id: sp.id,
+        label: sp.name,
+        mark: CLASS_MARK[sp.class] ?? '',
+        badge: `<span class="pick-price ${state.funds >= sp.mailOrderPrice ? '' : 'too-rich'}">$${sp.mailOrderPrice}</span>`,
+        sub: `${sp.role} · ${sp.tags.join(', ') || 'no tags'} · upkeep $${sp.upkeepPerDay}/day`,
+      })),
+    };
+  });
 
   // Path to World Domination: the guided first loop, gone after conquest #1.
   let onboarding = '';
@@ -83,13 +101,18 @@ export function renderRanchScreen(root, ctx) {
         <button type="button" data-act="pen">Expand pens +${TUNING.penUpgradeSize} — $${penUpgradeCost(state)}</button>
       </div>
       <div class="catalog">
-        <label class="slot"><span>Mail-Order Menagerie (${catalog.length} in stock)</span>
-          <select id="catalog-pick" ${catalog.length ? '' : 'disabled'}>
-            ${catalog.length
-              ? catalog.map((sp) => `<option value="${sp.id}" ${sp.id === catalogPick ? 'selected' : ''}>${sp.name} — $${sp.mailOrderPrice} · ${sp.role} · ${CLASS_MARK[sp.class] ?? ''}${sp.tags.join(', ') || 'no tags'}</option>`).join('')
-              : '<option>— conquer territory to open the catalog —</option>'}
-          </select>
-        </label>
+        ${pickerField({
+          id: 'catalog-pick',
+          label: 'Mail-Order Menagerie',
+          count: catalog.length || null,
+          value: catalogSpecies
+            ? `${CLASS_MARK[catalogSpecies.class] ?? ''}${catalogSpecies.name}`
+            : '— conquer territory to open the catalog —',
+          hint: catalogSpecies
+            ? `$${catalogSpecies.mailOrderPrice} · ${catalogSpecies.role} · ${catalogSpecies.tags.join(', ') || 'no tags'}`
+            : '',
+          disabled: !catalog.length,
+        })}
         <button type="button" data-act="order" ${catalog.length ? '' : 'disabled'}>Order</button>
       </div>
       <p class="ranch-msg">${lastMsg}</p>
@@ -103,17 +126,39 @@ export function renderRanchScreen(root, ctx) {
     return a && b.id !== a.id && b.species === a.species && b.sex !== a.sex;
   });
   if (!partnerPool.some((b) => b.id === pickB)) pickB = '';
-  const optionFor = (a) => `<option value="${a.id}">${a.name} ${a.sex === 'F' ? '♀' : '♂'} (${content.species[a.species].name})</option>`;
+  const parentRow = (a) => ({
+    id: a.id,
+    label: `${a.name} ${a.sex === 'F' ? '♀' : '♂'}`,
+    mark: CLASS_MARK[content.species[a.species].class] ?? '',
+    sub: `${content.species[a.species].name} · ${STAGE_LABELS[ageStage(a, content, t)]} · condition ${Math.round(a.condition)}`,
+  });
+  const parentGroups = (pool) => {
+    const bySpecies = new Map();
+    for (const a of pool) {
+      if (!bySpecies.has(a.species)) bySpecies.set(a.species, []);
+      bySpecies.get(a.species).push(a);
+    }
+    return [...bySpecies.entries()]
+      .sort((x, y) => (content.species[x[0]].name > content.species[y[0]].name ? 1 : -1))
+      .map(([sp, pool2]) => ({ label: content.species[sp].name, options: pool2.map(parentRow) }));
+  };
+  const parentField = (id, label, pick, pool, disabled) => {
+    const a = pool.find((x) => x.id === pick) ?? null;
+    return pickerField({
+      id,
+      label,
+      count: pool.length || null,
+      value: a ? `${a.name} ${a.sex === 'F' ? '♀' : '♂'}` : disabled ? 'Pick Parent A first' : pool.length ? '— choose —' : 'No eligible adults',
+      hint: a ? content.species[a.species].name : '',
+      disabled: disabled || !pool.length,
+    });
+  };
   const breeding = `
     <section class="card">
       <h3>Breeding Pen</h3>
       <div class="slot-grid">
-        <label class="slot"><span>Parent A</span>
-          <select id="breed-a"><option value="">— choose —</option>${eligible.map((a) => `<option value="${a.id}" ${a.id === pickA ? 'selected' : ''}>${a.name} ${a.sex === 'F' ? '♀' : '♂'} (${content.species[a.species].name})</option>`).join('')}</select>
-        </label>
-        <label class="slot"><span>Parent B</span>
-          <select id="breed-b" ${pickA ? '' : 'disabled'}><option value="">— choose —</option>${partnerPool.map((b) => `<option value="${b.id}" ${b.id === pickB ? 'selected' : ''}>${b.name} ${b.sex === 'F' ? '♀' : '♂'}</option>`).join('')}</select>
-        </label>
+        ${parentField('breed-a', 'Parent A', pickA, eligible, false)}
+        ${parentField('breed-b', 'Parent B', pickB, partnerPool, !pickA)}
       </div>
       <button type="button" class="big-btn" data-act="breed" ${pickA && pickB ? '' : 'disabled'}>💕 Introduce Them (science)</button>
     </section>`;
@@ -180,17 +225,28 @@ export function renderRanchScreen(root, ctx) {
 
   root.innerHTML = onboarding + head + breeding + incubator + (cards || '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>');
 
-  root.querySelector('#catalog-pick')?.addEventListener('change', (e) => {
-    catalogPick = e.target.value;
-  });
-  root.querySelector('#breed-a').addEventListener('change', (e) => {
-    pickA = e.target.value;
-    pickB = '';
-    renderRanchScreen(root, ctx);
-  });
-  root.querySelector('#breed-b').addEventListener('change', (e) => {
-    pickB = e.target.value;
-    renderRanchScreen(root, ctx);
+  bindPickers(root, {
+    'catalog-pick': () => ({
+      title: 'Mail-Order Menagerie',
+      subtitle: `Slush fund $${Math.floor(state.funds)}. Livestock arrives in an unmarked van, as tradition demands.`,
+      selectedId: catalogPick,
+      groups: catalogGroups,
+      onPick: (value) => { catalogPick = value; renderRanchScreen(root, ctx); },
+    }),
+    'breed-a': () => ({
+      title: 'Parent A',
+      subtitle: 'Adults only. The juveniles have homework.',
+      selectedId: pickA,
+      groups: parentGroups(eligible),
+      onPick: (value) => { pickA = value; pickB = ''; renderRanchScreen(root, ctx); },
+    }),
+    'breed-b': () => ({
+      title: 'Parent B',
+      subtitle: 'Same species, opposite sex. Genetics is picky about exactly two things.',
+      selectedId: pickB,
+      groups: parentGroups(partnerPool),
+      onPick: (value) => { pickB = value; renderRanchScreen(root, ctx); },
+    }),
   });
 
   root.querySelectorAll('button[data-act]').forEach((btn) => {

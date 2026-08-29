@@ -37,7 +37,7 @@ export function obedienceIgnoreChance(chimera, now) {
   const settled = isSettled(chimera, now);
   return Math.max(
     0,
-    Math.min(0.6, (settled ? 0 : 0.25) + (chimera.instability / 100) * 0.2 - (chimera.bond / 100) * 0.2)
+    Math.min(0.6, (settled ? 0 : 0.25) + ((chimera.instability ?? 0) / 100) * 0.2 - ((chimera.bond ?? 0) / 100) * 0.2)
   );
 }
 
@@ -55,7 +55,7 @@ export function combatantFromChimera(chimera, content, now) {
   const moves = [];
   for (const token of tokens) {
     const part = content.parts[token.partId];
-    if (!part.move) continue; // passive part — stats only
+    if (!part?.move) continue; // passive or retired part — stats only
     const gradeBonus = 1 + GRADE_INDEX[token.grade] * GRADE_MOVE_BONUS;
     moves.push({
       name: part.ability,
