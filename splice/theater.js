@@ -33,11 +33,11 @@ export function validateSplice(state, frameId, slotTokens, content) {
   return errors;
 }
 
-export function tokensFor(state, slotTokens) {
+export function tokensFor(state, slotTokens, content) {
   return Object.values(slotTokens)
     .filter(Boolean)
     .map((id) => state.inventory.parts.find((t) => t.id === id))
-    .filter(Boolean);
+    .filter((t) => t && (!content || content.parts[t.partId]));
 }
 
 export function spliceChimera(state, frameId, slotTokens, content, now) {

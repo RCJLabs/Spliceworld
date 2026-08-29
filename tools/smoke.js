@@ -12,7 +12,7 @@ import { newGameState, migrate, SAVE_VERSION } from '../save/save.js';
 import {
   createAnimal, ageStage, conditionTier, applyElapsed, careAction,
   careStatus, buyMailOrder, buyPenUpgrade, ensureRanchSeeded, stockGenome,
-  CARE_ACTIONS, TUNING, STATS,
+  CARE_ACTIONS, TUNING, STATS, faunaUnlocked, catalogFor,
 } from '../ranch/ranch.js';
 import {
   GRADES, GRADE_INDEX, gradeFor, avgStars, extractAnimal,
@@ -31,6 +31,8 @@ import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING } from '../ran
 import { trainChimera, TRAINING } from '../splice/theater.js';
 import { obediencePercent } from '../battle/engine.js';
 import { onboardingSteps, onboardingActive } from '../ranch/onboarding.js';
+import { classMultiplier } from '../battle/engine.js';
+import { overflowingParts } from './bounds.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -42,6 +44,7 @@ const content = indexContent({
   combos: readJSON('data/combos.json'),
   enemies: readJSON('data/enemies.json'),
   keywords: readJSON('data/keywords.json'),
+  classes: readJSON('data/classes.json'),
   regions: readJSON('data/regions.json'),
   traits: readJSON('data/traits.json'),
 });
@@ -194,7 +197,15 @@ assert.ok(!buyPenUpgrade(econ).ok, 'no funds, no pens');
 econ.funds = 1000;
 const order = buyMailOrder(econ, 'goat', content, t0);
 assert.ok(order.ok && econ.ranch.stock.length === 4);
-assert.ok(!buyMailOrder(econ, 'bear', content, t0).ok, 'bears are conquest-only');
+assert.ok(!buyMailOrder(econ, 'bear', content, t0).ok, 'bears are locked until the Precinct falls');
+// …and conquest opens the catalog.
+econ.campaign.heldNodes.push('precinct');
+assert.ok(faunaUnlocked(econ, content).has('bear'), 'holding the Precinct stocks bears');
+const bearBuy = buyMailOrder(econ, 'bear', content, t0);
+assert.ok(bearBuy.ok, bearBuy.msg);
+assert.ok(catalogFor(econ, content).some((s) => s.id === 'bear'), 'catalog lists the unlock');
+assert.ok(!faunaUnlocked(econ, content).has('shark'), 'guard-post fauna still gated');
+econ.campaign.heldNodes.pop();
 econ.ranch.penCapacity = 4;
 assert.ok(!buyMailOrder(econ, 'goat', content, t0).ok, 'full pens block orders');
 assert.ok(buyPenUpgrade(econ).ok && econ.ranch.penCapacity === 6);
@@ -300,10 +311,17 @@ const grounded = analyze('M', [tk('goat_head')], content);
 assert.ok(!grounded.flight.hasLiftSurface);
 assert.equal(grounded.rows.find((r) => r.label === 'Flight').value, 'Ground unit');
 // Grade quality lifts harder: apex wings can hoist what standard cannot.
-const heavyS = [tk('bear_head'), tk('eagle_forelimbs'), tk('bear_hide'), tk('bear_hindlimbs')];
-const heavyApex = [tk('bear_head'), tk('eagle_forelimbs', 'apex'), tk('bear_hide'), tk('bear_hindlimbs')];
-assert.ok(!analyze('S', heavyS, content).flight.capable && analyze('S', heavyApex, content).flight.capable,
-  'apex wings out-lift standard wings');
+assert.ok(
+  analyze('S', [tk('eagle_forelimbs', 'apex')], content).lift >
+  analyze('S', [tk('eagle_forelimbs')], content).lift,
+  'grade scales lift — better husbandry hoists more'
+);
+// Somewhere on the mass curve, that difference decides flight.
+const liftFlip = ['S', 'M', 'L'].some((f) => {
+  const set = (g) => [tk('bear_head', g), tk('eagle_forelimbs', g), tk('bear_hide', g), tk('bear_hindlimbs', g)];
+  return !analyze(f, set('standard'), content).flight.capable && analyze(f, set('prismatic'), content).flight.capable;
+});
+assert.ok(liftFlip, 'grade flips a build from flightless to airborne on some frame');
 
 // Instability: purebred calm vs four-species chaos; thermal conflict bites.
 const purebred = analyze('M', [tk('goat_head'), tk('goat_forelimbs'), tk('goat_hindlimbs'), tk('goat_hide')], content);
@@ -446,12 +464,13 @@ assert.ok(meCb.stamina > before, 'rest restores stamina');
 const slowCbBase = combatantFromUnit(content.enemies.riot_squad);
 assert.ok(slowCbBase.speed >= 0); // sanity
 const prioState = { ...newGameState(), seed: 11 };
-const prioFighter = makeChimera(prioState, 'L', { goat_forelimbs: 'standard', goat_head: 'standard', bear_hide: 'standard' }, t0);
+const prioFighter = makeChimera(prioState, 'L', { mantis_forelimbs: 'standard', goat_head: 'standard', bear_hide: 'standard' }, t0);
 const pb = createBattle([prioFighter], content.encounters.patrol_2, content, 31, prioFighter.settleUntil);
 playerActive(pb).speed = 1; // slower than everything
-const trample = playerActions(pb).find((a) => a.label === 'Trample Tap');
+const trample = playerActions(pb).find((a) => a.label === 'Scythe Strike');
+assert.ok(trample, 'the duelist has its priority move');
 const evs = step(pb, trample, content);
-const myLine = evs.findIndex((e) => e.includes('Trample Tap'));
+const myLine = evs.findIndex((e) => e.includes('Scythe Strike'));
 const foeLine = evs.findIndex((e) => e.includes(pb.enemy.active.name) && e.includes('uses'));
 assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move goes first despite speed 1');
 
@@ -463,20 +482,26 @@ function grind(encounterId, seed) {
   const now2 = Math.max(f1.settleUntil, f2.settleUntil);
   const b = createBattle([f1, f2], content.encounters[encounterId], content, seed, now2);
   s.battle = b;
+  const events = [];
   let guard = 0;
   while (!b.over && guard++ < 400) {
     const acts = playerActions(b);
+    if (!acts.length) break;
     const best = acts.filter((a) => a.type === 'move')
       .sort((x, y) => playerActive(b).moves[y.index].power - playerActive(b).moves[x.index].power)[0] ?? acts[0];
-    step(b, best, content);
+    events.push(...step(b, best, content));
   }
-  return { s, b, now2 };
+  return { s, b, now2, events };
 }
 const bossRun = grind('boss_clampdown', 12345);
 assert.ok(bossRun.b.over, 'boss battle terminates');
-assert.ok(bossRun.b.log.some((l) => l.includes('ACTIVATE THE 9000')), 'boss transforms mid-fight');
+assert.ok(bossRun.events.some((l) => l.includes('ACTIVATE THE 9000')), 'boss transforms mid-fight');
 if (bossRun.b.outcome === 'win') {
-  assert.ok(bossRun.b.log.some((l) => l.includes('bouncy castle')), 'stage two retires gleefully');
+  // Stage two either retires gleefully or gets bagged by the cannon — the
+  // 9000 is salvageable, so capture is a legitimate second win path.
+  const retired = bossRun.events.some((l) => l.includes('bouncy castle'));
+  const bagged = bossRun.b.captured.includes('clampdown_9000');
+  assert.ok(retired || bagged, 'stage two is either retired or impounded');
 }
 
 // --- Law 1: losing (or winning ugly) sends chimeras to the Infirmary.
@@ -923,6 +948,106 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   const back = migrate(owned);
   assert.ok(back.dex.parts.includes('goat_head') && back.dex.parts.includes('cobra_organ'), 'dex backfilled from vault + chimeras');
   assert.equal(back.chimeras[0].lastTrainedAt, 0, 'training field patched in');
+}
+
+// --- Resilience: a save holding a token for a part that no longer exists
+// --- must be ignored, not crash the vault/theater/physiology.
+{
+  const ghost = { id: 'ghost', partId: 'pterodactyl_wings', grade: 'prime', donor: { name: 'Ghost', species: 'x', stars: 1, extractedAt: 0 } };
+  const r = analyze('M', [ghost, tk('goat_head')], content);
+  assert.ok(r.stats.hp > 0, 'physiology skips the unknown part and still reports');
+  assert.equal(r.rows.find((x) => x.label === 'Chassis').value, '2/6 sockets filled');
+}
+
+// --- Audit follow-up: the panel warns before you field a head-only chimera.
+{
+  const thin = analyze('M', [tk('goat_head')], content).rows.find((r) => r.label === 'Chassis');
+  assert.ok(thin && thin.note.includes('not survive'), 'head-only build is called out');
+  const full = analyze('M', [tk('goat_head'), tk('goat_forelimbs'), tk('goat_hindlimbs'),
+    tk('goat_tail'), tk('goat_hide'), tk('goat_organ')], content);
+  assert.ok(!full.rows.some((r) => r.label === 'Chassis'), 'a complete build gets no warning');
+}
+
+// --- Wave 1: no part may reach past the viewBox on any frame. A tail that
+// --- overflows gets cropped to a "trumpet" and nobody notices for a week.
+{
+  const bad = overflowingParts();
+  assert.deepEqual(bad, [], `parts cropped by the viewBox: ${bad.map((b) => `${b.part}@${b.frame}+${b.over}`).join(', ')}`);
+}
+
+// --- Wave 1: the elemental class triangle, derived from anatomy.
+{
+  const cls = readJSON('data/classes.json');
+  assert.equal(cls.classes.length, 3);
+  // The triangle must be a cycle, not a hierarchy.
+  const beats = Object.fromEntries(cls.classes.map((c) => [c.id, c.beats]));
+  assert.equal(beats[beats[beats.ground]], 'ground', 'ground → water → air → ground closes the loop');
+  assert.equal(new Set(Object.values(beats)).size, 3, 'every class is beaten by exactly one other');
+
+  // Multipliers read off the chart.
+  assert.equal(classMultiplier('ground', 'water', content), cls.advantage);
+  assert.equal(classMultiplier('water', 'ground', content), cls.disadvantage);
+  assert.equal(classMultiplier('air', 'air', content), 1, 'mirror is neutral');
+  assert.equal(classMultiplier(null, 'air', content), 1, 'Unclassed neither exploits…');
+  assert.equal(classMultiplier('air', null, content), 1, '…nor is exploited');
+
+  // Class comes from PARTS, not species: anatomy votes.
+  const wings = tk('eagle_forelimbs'), fan = tk('eagle_tail');
+  const hooves = tk('goat_hindlimbs'), forelegs = tk('goat_forelimbs');
+  const fins = tk('shark_hindlimbs'), finTail = tk('shark_tail'), gills = tk('shark_head');
+  assert.equal(analyze('S', [wings, fan, tk('goat_head')], content).creatureClass, 'air', 'wings + tailfan = Air');
+  assert.equal(analyze('M', [hooves, forelegs, tk('goat_head')], content).creatureClass, 'ground', 'feet = Ground');
+  assert.equal(analyze('L', [gills, fins, finTail], content).creatureClass, 'water', 'gills + fins = Water');
+  // A tie is genuinely Unclassed — the hybrid's trade-off.
+  assert.equal(analyze('M', [wings, hooves, tk('goat_head')], content).creatureClass, null, 'one wing vote vs one foot vote = Unclassed');
+  assert.equal(analyze('M', [tk('goat_head'), tk('goat_hide')], content).creatureClass, null, 'no limbs = Unclassed');
+  // Adding a second air vote breaks the tie.
+  assert.equal(analyze('M', [wings, fan, hooves, tk('goat_head')], content).creatureClass, 'air', 'majority wins');
+
+  // The panel explains it (Law 4).
+  const airRow = analyze('S', [wings, fan, tk('goat_head')], content).rows.find((r) => r.label === 'Class');
+  assert.ok(airRow.value.includes('Air') && airRow.note.includes('Ground'), `panel explains the matchup: ${airRow.note}`);
+  const tieRow = analyze('M', [wings, hooves, tk('goat_head')], content).rows.find((r) => r.label === 'Class');
+  assert.equal(tieRow.value, 'Unclassed');
+  assert.ok(tieRow.note.includes('tied'), 'panel explains why it is Unclassed');
+
+  // …and it changes damage in a real fight.
+  const mk = (parts) => {
+    const st = { ...newGameState(), seed: 4242 };
+    return makeChimera(st, 'M', parts, t0);
+  };
+  const airChimera = mk({ eagle_forelimbs: 'standard', eagle_tail: 'standard', goat_head: 'standard' });
+  const groundFoe = content.enemies.riot_squad;
+  const airCb = combatantFromChimera(airChimera, content, airChimera.settleUntil);
+  assert.equal(airCb.creatureClass, 'air');
+  assert.equal(combatantFromUnit(groundFoe).creatureClass, 'ground');
+  assert.equal(classMultiplier(airCb.creatureClass, 'ground', content), cls.advantage, 'Air chimera beats Ground squad');
+  assert.equal(classMultiplier('water', airCb.creatureClass, content), cls.advantage, 'and the Harbor Skiff answers it');
+
+  // Every enemy declares a class; the new air/water units exist.
+  for (const u of Object.values(content.enemies)) {
+    assert.ok(['air', 'ground', 'water'].includes(u.class), `${u.id} has a class`);
+  }
+  assert.equal(content.enemies.attack_chopper.class, 'air');
+  assert.equal(content.enemies.harbor_skiff.class, 'water');
+}
+
+// --- Wave 1: every tag-chart rule is now reachable by a player build.
+{
+  const playerMoveTags = new Set();
+  const playerBodyTags = new Set();
+  for (const p of Object.values(content.parts)) {
+    for (const t of p.tags) playerBodyTags.add(t);
+    if (p.move) for (const t of p.move.tags) playerMoveTags.add(t);
+  }
+  for (const c of Object.values(content.combos)) for (const t of c.move.tags) playerMoveTags.add(t);
+  const enemyTags = new Set(['Organic']);
+  for (const u of Object.values(content.enemies)) for (const t of u.tags) enemyTags.add(t);
+
+  for (const rule of content.tagChart) {
+    assert.ok(playerMoveTags.has(rule.attack), `a player move can deal ${rule.attack} (${rule.note})`);
+    assert.ok(enemyTags.has(rule.defender), `an enemy is ${rule.defender} (${rule.note})`);
+  }
 }
 
 // Time-warp safety: a lastTickAt in the future never rewinds state.

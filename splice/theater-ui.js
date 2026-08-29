@@ -34,7 +34,7 @@ export function renderTheaterScreen(root, ctx) {
     if (!state.inventory.parts.some((t) => t.id === tokenId)) delete draft.slots[slot];
   }
 
-  const tokens = tokensFor(state, draft.slots);
+  const tokens = tokensFor(state, draft.slots, content);
   const report = analyze(draft.frame, tokens, content);
 
   const frameBtns = Object.values(content.frames)
@@ -45,22 +45,38 @@ export function renderTheaterScreen(root, ctx) {
     .join('');
 
   const chosen = new Set(Object.values(draft.slots).filter(Boolean));
+  const CLASS_MARK = { air: '🪽', ground: '🦶', water: '🌊' };
   const slotSelects = SLOTS.map((slot) => {
-    const options = state.inventory.parts
-      .filter((t) => content.parts[t.partId].slot === slot)
-      .sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade])
-      .map((t) => {
-        const part = content.parts[t.partId];
-        const grade = GRADES[GRADE_INDEX[t.grade]];
-        const taken = chosen.has(t.id) && draft.slots[slot] !== t.id;
-        return `<option value="${t.id}" ${draft.slots[slot] === t.id ? 'selected' : ''} ${taken ? 'disabled' : ''}>${part.name} · ${grade.name} (${t.donor.name} ★${t.donor.stars})</option>`;
+    // 150 parts do not fit in a flat list — group by species, best grade first.
+    const owned = state.inventory.parts.filter((t) => content.parts[t.partId]?.slot === slot);
+    const bySpecies = new Map();
+    for (const t of owned) {
+      const sp = content.parts[t.partId].species;
+      if (!bySpecies.has(sp)) bySpecies.set(sp, []);
+      bySpecies.get(sp).push(t);
+    }
+    const groups = [...bySpecies.entries()]
+      .sort((a, b) => (content.species[a[0]].name > content.species[b[0]].name ? 1 : -1))
+      .map(([sp, tokens]) => {
+        const opts = tokens
+          .sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade])
+          .map((t) => {
+            const part = content.parts[t.partId];
+            const grade = GRADES[GRADE_INDEX[t.grade]];
+            const taken = chosen.has(t.id) && draft.slots[slot] !== t.id;
+            const mark = part.classAffinity ? ` ${CLASS_MARK[part.classAffinity]}` : '';
+            return `<option value="${t.id}" ${draft.slots[slot] === t.id ? 'selected' : ''} ${taken ? 'disabled' : ''}>${part.name}${mark} · ${grade.name} (${t.donor.name} ★${t.donor.stars})</option>`;
+          })
+          .join('');
+        return `<optgroup label="${content.species[sp].name}">${opts}</optgroup>`;
       })
       .join('');
+    const count = owned.length;
     return `
-      <label class="slot"><span>${SLOT_LABELS[slot]}${slot === 'head' ? ' *' : ''}</span>
-        <select data-slot="${slot}">
-          <option value="">— empty socket —</option>
-          ${options}
+      <label class="slot"><span>${SLOT_LABELS[slot]}${slot === 'head' ? ' *' : ''}${count ? ` <em>${count}</em>` : ''}</span>
+        <select data-slot="${slot}" ${count ? '' : 'disabled'}>
+          <option value="">${count ? '— empty socket —' : '— none in the vault —'}</option>
+          ${groups}
         </select>
       </label>`;
   }).join('');
@@ -84,6 +100,11 @@ export function renderTheaterScreen(root, ctx) {
   root.innerHTML = `
     <section class="card stage-card">
       <h2>Surgery Theater</h2>
+      <p class="class-banner class-${report.creatureClass ?? 'none'}">${
+        report.creatureClass
+          ? `${content.classes[report.creatureClass].icon} ${content.classes[report.creatureClass].name} — beats ${content.classes[content.classes[report.creatureClass].beats].name}`
+          : '◇ Unclassed — neutral in every matchup'
+      }</p>
       <p class="recipe">${statLine}${report.tags.length ? ` · tags: ${report.tags.join(', ')}` : ''}</p>
       <div class="stage">${renderCreatureSVG(draftGenome(state, content), content, { idPrefix: 'thtr' })}</div>
       <p class="ranch-msg">${lastMsg}</p>

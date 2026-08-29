@@ -6,8 +6,8 @@ import { GRADES, GRADE_INDEX } from './extract.js';
 import { vialSVG } from './extract-ui.js';
 
 const SLOT_LABELS = {
-  head: 'Heads', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
-  tail: 'Tails', hide: 'Hides', organ: 'Organs',
+  head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
+  tail: 'Tail', hide: 'Hide', organ: 'Organ',
 };
 
 export function renderVaultScreen(root, ctx) {
@@ -23,25 +23,45 @@ export function renderVaultScreen(root, ctx) {
         .join('')}</ul>`
     : '<p class="ranch-msg">No essence on file. The centrifuge is bored.</p>';
 
-  const bySlot = new Map(SLOTS.map((s) => [s, []]));
-  for (const token of inv.parts) bySlot.get(content.parts[token.partId].slot)?.push(token);
-  for (const list of bySlot.values()) {
-    list.sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade]);
+  // With 150 possible parts a flat list is unreadable: collapse by species,
+  // newest/best first, and let the player open the one they care about.
+  const bySpecies = new Map();
+  for (const token of inv.parts) {
+    const known = content.parts[token.partId];
+    if (!known) continue; // token from a retired part — ignore, never crash
+    const sp = known.species;
+    if (!bySpecies.has(sp)) bySpecies.set(sp, []);
+    bySpecies.get(sp).push(token);
   }
-
-  const partSections = SLOTS.map((slot) => {
-    const tokens = bySlot.get(slot);
-    if (!tokens.length) return '';
-    const rows = tokens
-      .map((t) => {
-        const part = content.parts[t.partId];
-        const grade = GRADES[GRADE_INDEX[t.grade]];
-        const traits = (t.traits ?? []).map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`).join('');
-        return `<li><span class="grade-badge grade-${t.grade}">${grade.name}</span> ${part.name}${traits} <span class="lineage">essence of ${t.donor.name} ★${t.donor.stars}</span></li>`;
-      })
-      .join('');
-    return `<h3>${SLOT_LABELS[slot]}</h3><ul class="token-list">${rows}</ul>`;
-  }).join('');
+  const partSections = [...bySpecies.entries()]
+    .sort((a, b) => b[1].length - a[1].length || (content.species[a[0]].name > content.species[b[0]].name ? 1 : -1))
+    .map(([sp, tokens]) => {
+      const species = content.species[sp];
+      const best = tokens.reduce((m, t) => Math.max(m, GRADE_INDEX[t.grade]), 0);
+      const rows = SLOTS.map((slot) => {
+        const inSlot = tokens
+          .filter((t) => content.parts[t.partId].slot === slot)
+          .sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade]);
+        return inSlot
+          .map((t) => {
+            const part = content.parts[t.partId];
+            const grade = GRADES[GRADE_INDEX[t.grade]];
+            const traits = (t.traits ?? []).map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`).join('');
+            return `<li><span class="grade-badge grade-${t.grade}">${grade.name}</span> ${SLOT_LABELS[slot]}: ${part.name}${traits} <span class="lineage">${t.donor.name} ★${t.donor.stars}</span></li>`;
+          })
+          .join('');
+      }).join('');
+      return `
+        <details class="vault-species">
+          <summary>
+            <strong>${species.name}</strong>
+            <span class="lineage">${tokens.length} part${tokens.length === 1 ? '' : 's'}</span>
+            <span class="grade-badge grade-${GRADES[best].id}">${GRADES[best].name}</span>
+          </summary>
+          <ul class="token-list">${rows}</ul>
+        </details>`;
+    })
+    .join('');
 
   root.innerHTML = `
     <section class="card">
@@ -49,7 +69,7 @@ export function renderVaultScreen(root, ctx) {
       ${vials}
     </section>
     <section class="card">
-      <h3>Part Tokens</h3>
+      <h3>Part Tokens (${inv.parts.length})</h3>
       ${partSections || '<p class="ranch-msg">The vault echoes. Graduate someone.</p>'}
       <p class="fine-print">Every token remembers its donor forever. It&#39;s sentimental. And legally binding.</p>
     </section>`;

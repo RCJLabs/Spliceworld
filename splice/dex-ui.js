@@ -9,8 +9,9 @@ export function renderDexScreen(root, ctx) {
   const { state, content } = ctx;
   const dex = state.dex;
 
-  const speciesRows = Object.values(content.species)
-    .filter((sp) => !sp.synthetic)
+  const CLASS_ORDER = ['ground', 'water', 'air'];
+  const speciesByClass = (cls) => Object.values(content.species)
+    .filter((sp) => !sp.synthetic && sp.class === cls)
     .map((sp) => {
       const total = Object.values(content.parts).filter((p) => p.species === sp.id).length;
       const found = dex.parts.filter((p) => content.parts[p].species === sp.id).length;
@@ -22,6 +23,17 @@ export function renderDexScreen(root, ctx) {
         </div>`;
     })
     .join('');
+  const classSections = CLASS_ORDER.map((cls) => {
+    const def = content.classes[cls];
+    const cells = speciesByClass(cls);
+    const owned = Object.values(content.species).filter(
+      (sp) => !sp.synthetic && sp.class === cls &&
+        dex.parts.some((p) => content.parts[p].species === sp.id)
+    ).length;
+    const total = Object.values(content.species).filter((sp) => !sp.synthetic && sp.class === cls).length;
+    return `<h3>${def.icon} ${def.name} — beats ${content.classes[def.beats].name} <span class="lineage">${owned}/${total} met</span></h3>
+      <div class="dex-grid">${cells}</div>`;
+  }).join('');
   const salvageTotal = Object.values(content.parts).filter((p) => p.species === 'salvage').length;
   const salvageFound = dex.parts.filter((p) => content.parts[p].species === 'salvage').length;
 
@@ -59,8 +71,11 @@ export function renderDexScreen(root, ctx) {
 
   root.innerHTML = `
     <section class="card">
-      <h3>Species</h3>
-      <div class="dex-grid">${speciesRows}</div>
+      <h3>Class Triangle</h3>
+      <p class="fine-print">${CLASS_ORDER.map((c) => `${content.classes[c].icon} ${content.classes[c].name} beats ${content.classes[content.classes[c].beats].name}`).join(' · ')}. A chimera's class comes from its anatomy — ${CLASS_ORDER.map((c) => content.classes[c].cue).join('; ')} — and a tie leaves it Unclassed (neutral both ways).</p>
+    </section>
+    <section class="card">
+      ${classSections}
       <p class="fine-print">Enemy tech: ${salvageFound}/${salvageTotal} salvaged (Containment Cannon required).</p>
     </section>
     <section class="card">
