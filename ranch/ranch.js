@@ -51,7 +51,9 @@ export function createAnimal(state, speciesId, content, now) {
     birthAt: now,
     condition: TUNING.startCondition,
     potential, // hidden in UI until the Gene Scanner upgrade exists
-    traits: [], // heritable trait genes arrive with breeding (M6)
+    traits: [], // expressed trait ids (from genotype, see breeding.js)
+    genotype: {}, // trait alleles — mail-order stock arrives gene-plain
+    parents: null, // lineage snapshot; null = "origin: questionable paperwork"
     lastCare: { feed: 0, groom: 0, exercise: 0, enrich: 0 },
   };
 }
@@ -173,6 +175,10 @@ export function ensureRanchSeeded(state, content, now) {
   for (const speciesId of ['goat', 'goat', 'bear']) {
     state.ranch.stock.push(createAnimal(state, speciesId, content, now));
   }
+  // The starter goats are always a breedable pair — the first egg is a
+  // tutorial moment, not a dice roll.
+  state.ranch.stock[0].sex = 'F';
+  state.ranch.stock[1].sex = 'M';
 }
 
 // Purebred display genome for a stock animal — all of its species' parts on

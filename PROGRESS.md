@@ -1,5 +1,27 @@
 # PROGRESS
 
+## Session 8 — M6: Breeding ✅
+
+**Acceptance criterion:** two starred parents produce a measurably better egg — **passes**, proven by Monte Carlo in the smoke suite: 150 eggs from 5★×5★ parents average >4.4 stars vs. <2.8 from 2★×2★ (gap >1.5), and selective breeding beats the mail-order catalog baseline by >1 full star. Eggs are seed-deterministic (genetics decided at conception).
+
+### What shipped
+- **Breeding & incubation** (`ranch/breeding.js`, pure/seeded): pair two same-species, opposite-sex adults (juveniles refused; cross-species romance redirected to the Surgery Theater); incubator holds 3 eggs; eggs hatch by hand after a real-world timer (`incubationMinutes` per species — goat 30 min, bear 60, per the rarity-scaling rule). Hatching requires pen space.
+- **Transparent inheritance** (§3.2): each stat's potential = parent average ± mid-weighted variance with a gentle upward drift, clamped 1–5 — shallow to learn, deep to optimize.
+- **Heritable trait genes** (`data/traits.json`): 0–2 alleles per trait, dominant/recessive expression, each parent passes an allele with probability alleles/2. **Dense Bones** ships as the mutation-only trait — and it has teeth: expressed donors stamp head/hide tokens at extraction, and the physiology engine pays +3 Armor (verified end-to-end).
+- **Mutations** (8% at conception): stat surges or a spontaneous Dense Bones gene ("The lab denies responsibility"). Variant species remain post-v0.1.
+- **Family tree with stars** (v0.1 shallow form): every egg and hatchling records its parents' names + star ratings; animal cards show "child of Alfredo ★2.2 × Gordon ★3.6" (or "origin: questionable paperwork"). Mutated eggs "vibrate suspiciously" before hatching.
+- **Ranch UI**: Breeding Pen (partner select filters to compatible mates live), Incubator with palette-tinted procedural egg SVGs and countdowns, trait badges on cards. Starter goats are now always an F+M pair (the first egg is a tutorial moment, not a dice roll).
+- **SAVE_VERSION → 7** (eggs, genotypes, lineage). v1→v7 chain tested headless + in-browser.
+- Fix found by tests: `breedPair` labeled sire/dam by argument order rather than actual sex.
+
+### Known issues
+- Family tree is one generation deep (snapshot); a full ancestor browser is a Splice-Dex/M7+ candidate.
+- One trait ships; the allele machinery is generic — more traits are pure data.
+- Breeding has no cooldown; incubator slots are the only throttle (watch for degenerate egg-spam once eggs matter more).
+
+### Next session — M7: Polish & Ship v0.1
+First task: Splice-Dex screen (species/parts/combos/discoveries), then guided onboarding (first splice), obedience UX, ZzFX stingers, PWA manifest + service worker, TWA checklist. Done when: a stranger can go from empty ranch to first conquest without asking questions.
+
 ## Session 7 — M5: Campaign Shell ✅
 
 **Acceptance criterion:** losing a battle creates a rescue mission with a live timer — **passes**. A deliberate loss in the browser produced "Nibbles CAPTURED! 'Unauthorized peer review' scheduled in 18h" with a live countdown card + Rescue Raid button in the War Room; the countdown persists across reload; the rescue raid won and brought Nibbles home injured and fonder (+10 bond). Headless: window verified in the 12–24h range, still open after an hour, expiry path removes the creature and records the dissection.

@@ -43,6 +43,11 @@ export function analyze(frameId, tokens, content) {
     for (const [stat, v] of Object.entries(part.stats)) {
       stats[stat] = (stats[stat] ?? 0) + v * mult;
     }
+    for (const traitId of token.traits ?? []) {
+      for (const [stat, v] of Object.entries(content.traits?.[traitId]?.statBonus ?? {})) {
+        stats[stat] = (stats[stat] ?? 0) + v;
+      }
+    }
     mass += part.phys.mass;
     draw += part.phys.draw;
     lift += (part.phys.lift ?? 0) * mult;

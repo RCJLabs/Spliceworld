@@ -1,5 +1,5 @@
 {
-  "_doc": "Base fauna. Palettes drive part rendering via @primary/@secondary/@accent tokens. Tags feed the battle chart (M4). Ranch fields (M1): frame = which torso a purebred stock animal renders on; diet/feedCost = cost of one feed action; upkeepPerDay = housing drain while owned; mailOrderPrice = purchase price from the Mail-Order Menagerie catalog (null = conquest-only, arrives M5); growthHours = age-stage thresholds from birth (juvenile before adult). M3 fields: thermal = [minC, maxC] comfort band (a chimera's band is the intersection of its parts' species bands); setBonus = purebred bonus at 4+ parts of one species (effects wired in M4).",
+  "_doc": "Base fauna. Palettes drive part rendering via @primary/@secondary/@accent tokens. Tags feed the battle chart (M4). Ranch fields (M1): frame = which torso a purebred stock animal renders on; diet/feedCost = cost of one feed action; upkeepPerDay = housing drain while owned; mailOrderPrice = purchase price from the Mail-Order Menagerie catalog (null = conquest-only, arrives M5); growthHours = age-stage thresholds from birth (juvenile before adult). M3 fields: thermal = [minC, maxC] comfort band (a chimera's band is the intersection of its parts' species bands); setBonus = purebred bonus at 4+ parts of one species (effects wired in M4). M6: incubationMinutes = real-world egg timer (first eggs ~30min, scaling with rarity).",
   "species": [
     {
       "id": "bear",
@@ -28,7 +28,8 @@
       "setBonus": {
         "name": "Ursine Bulk",
         "desc": "+20% HP with 4+ bear parts"
-      }
+      },
+      "incubationMinutes": 60
     },
     {
       "id": "eagle",
@@ -59,7 +60,8 @@
       "setBonus": {
         "name": "Featherlight Frame",
         "desc": "+15% Speed with 4+ eagle parts"
-      }
+      },
+      "incubationMinutes": 45
     },
     {
       "id": "goat",
@@ -88,7 +90,8 @@
       "setBonus": {
         "name": "Cast-Iron Constitution",
         "desc": "Halved upkeep with 4+ goat parts"
-      }
+      },
+      "incubationMinutes": 30
     },
     {
       "id": "cobra",
@@ -119,7 +122,8 @@
       "setBonus": {
         "name": "Cold-Blooded Focus",
         "desc": "+1 Venom stack with 4+ cobra parts"
-      }
+      },
+      "incubationMinutes": 40
     },
     {
       "id": "salvage",
@@ -149,7 +153,8 @@
         "name": "Full Chrome",
         "desc": "+10% Armor with 4+ enemy-tech parts"
       },
-      "synthetic": true
+      "synthetic": true,
+      "incubationMinutes": 1
     }
   ]
 }
