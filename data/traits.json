@@ -1,0 +1,14 @@
+{
+  "_doc": "Heritable trait genes (M6, ROADMAP §3.2). Animals carry 0–2 alleles per trait (genotype); dominant traits express with 1+, recessive need 2. Each parent passes one allele with probability (alleles/2). mutationOnly traits enter the gene pool only via conception mutations. Mechanical teeth: when a donor expressing the trait is extracted, part tokens in the listed slots are stamped with it, and the physiology engine applies statBonus — husbandry and breeding both compound into combat. Adding traits must never require engine edits.",
+  "traits": [
+    {
+      "id": "dense_bones",
+      "name": "Dense Bones",
+      "desc": "Skeleton certified to municipal load-bearing standards. Head and hide parts extract with +3 Armor.",
+      "dominant": true,
+      "mutationOnly": true,
+      "slots": ["head", "hide"],
+      "statBonus": { "armor": 3 }
+    }
+  ]
+}

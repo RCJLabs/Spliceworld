@@ -12,7 +12,7 @@ import { newGameState, migrate, SAVE_VERSION } from '../save/save.js';
 import {
   createAnimal, ageStage, conditionTier, applyElapsed, careAction,
   careStatus, buyMailOrder, buyPenUpgrade, ensureRanchSeeded, stockGenome,
-  CARE_ACTIONS, TUNING,
+  CARE_ACTIONS, TUNING, STATS,
 } from '../ranch/ranch.js';
 import {
   GRADES, GRADE_INDEX, gradeFor, avgStars, extractAnimal,
@@ -27,6 +27,7 @@ import { runSim, plantBrokenCombo } from './sim.js';
 import {
   nodeStates, threatGen, incomePerDay, tickCampaign, resolveBattle, salvageUnit,
 } from '../campaign/campaign.js';
+import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING } from '../ranch/breeding.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -39,6 +40,7 @@ const content = indexContent({
   enemies: readJSON('data/enemies.json'),
   keywords: readJSON('data/keywords.json'),
   regions: readJSON('data/regions.json'),
+  traits: readJSON('data/traits.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -107,7 +109,7 @@ const v1Save = {
 const migrated = migrate(structuredClone(v1Save));
 assert.equal(migrated.saveVersion, SAVE_VERSION, 'v1 chains all the way up');
 assert.equal(migrated.funds, 300);
-assert.deepEqual(migrated.ranch, { stock: [], penCapacity: 4, animalCount: 0, seeded: false });
+assert.deepEqual(migrated.ranch, { stock: [], penCapacity: 4, animalCount: 0, seeded: false, eggs: [], eggCount: 0 });
 assert.deepEqual(migrated.inventory, { vials: [], parts: [], tokenCount: 0 });
 assert.equal(migrated.spliceCount, 3, 'migration preserves existing progress');
 assert.deepEqual(migrated.genome, acceptance, 'migration preserves the slab creature');
@@ -701,7 +703,129 @@ assert.equal(capLab.campaign.containment.length, 0);
 assert.ok(capLab.inventory.parts.some((tk) => tk.partId === 'v8_heart'), 'enemy tech in the vault');
 assert.ok(!salvageUnit(capLab, 5, content, t0).ok, 'empty bay refused');
 
-// --- v1 → v6 chain.
+// --- M6: breeding validation gates.
+function breedLab(seed = 606) {
+  const s = { ...newGameState(), seed };
+  s.ranch = { stock: [], penCapacity: 20, animalCount: 0, seeded: false, eggs: [], eggCount: 0 };
+  return s;
+}
+function stockAnimal(s, species, sex, stars, ageHours, id) {
+  const a = createAnimal(s, species, content, t0 - ageHours * HOUR);
+  a.sex = sex;
+  if (id) a.id = id;
+  for (const st of Object.keys(a.potential)) a.potential[st] = stars;
+  s.ranch.stock.push(a);
+  return a;
+}
+{
+  const s = breedLab();
+  const nanny = stockAnimal(s, 'goat', 'F', 3, 24);
+  const billy = stockAnimal(s, 'goat', 'M', 3, 24);
+  const bear = stockAnimal(s, 'bear', 'M', 3, 48);
+  const nanny2 = stockAnimal(s, 'goat', 'F', 3, 24);
+  const kid = stockAnimal(s, 'goat', 'M', 3, 1); // juvenile
+  assert.ok(canBreed(nanny, billy, s, content, t0).ok);
+  assert.ok(!canBreed(nanny, bear, s, content, t0).ok, 'no cross-species eggs');
+  assert.ok(!canBreed(nanny, nanny2, s, content, t0).ok, 'same-sex pair: friendship only');
+  assert.ok(!canBreed(nanny, kid, s, content, t0).ok, 'juveniles are off-limits');
+  assert.ok(!canBreed(nanny, nanny, s, content, t0).ok);
+  for (let i = 0; i < BREEDING.incubatorSlots; i++) {
+    assert.ok(breedPair(s, nanny.id, billy.id, content, t0).ok);
+  }
+  assert.ok(!breedPair(s, nanny.id, billy.id, content, t0).ok, 'incubator caps eggs');
+
+  // Incubation is a real timer: goat = 30min, no early hatching.
+  const egg = s.ranch.eggs[0];
+  assert.equal(egg.hatchAt - egg.laidAt, 30 * 60000, 'goat eggs take 30 minutes');
+  assert.ok(!hatchEgg(s, egg.id, content, egg.hatchAt - 1).ok, 'no peeking');
+  const hatched = hatchEgg(s, egg.id, content, egg.hatchAt + 1);
+  assert.ok(hatched.ok);
+  assert.equal(ageStage(hatched.hatchling, content, egg.hatchAt + 1), 'juvenile');
+  assert.deepEqual(hatched.hatchling.potential, egg.potential, 'genetics decided at conception');
+  assert.equal(hatched.hatchling.parents.sire.name, billy.name, 'family tree records the lineage');
+  // Pen capacity gates hatching.
+  s.ranch.penCapacity = s.ranch.stock.length;
+  assert.ok(!hatchEgg(s, s.ranch.eggs[0].id, content, t0 + HOUR).ok, 'no homeless hatchlings');
+  // Determinism: same seed + same egg counter → identical egg.
+  const s2 = breedLab();
+  stockAnimal(s2, 'goat', 'F', 3, 24, nanny.id);
+  stockAnimal(s2, 'goat', 'M', 3, 24, billy.id);
+  const eggA = breedPair(s2, nanny.id, billy.id, content, t0).egg;
+  const s3 = breedLab();
+  stockAnimal(s3, 'goat', 'F', 3, 24, nanny.id);
+  stockAnimal(s3, 'goat', 'M', 3, 24, billy.id);
+  const eggB = breedPair(s3, nanny.id, billy.id, content, t0).egg;
+  assert.deepEqual(eggA.potential, eggB.potential, 'eggs are seed-deterministic');
+}
+
+// --- M6 ACCEPTANCE: two starred parents produce a measurably better egg.
+function meanEggStars(stars, seedBase, n = 150) {
+  let total = 0;
+  let mutations = 0;
+  for (let i = 0; i < n; i++) {
+    const s = breedLab(seedBase + i);
+    const dam = stockAnimal(s, 'goat', 'F', stars, 24);
+    const sire = stockAnimal(s, 'goat', 'M', stars, 24);
+    const { egg } = breedPair(s, sire.id, dam.id, content, t0);
+    total += STATS.reduce((sum, st) => sum + egg.potential[st], 0) / STATS.length;
+    if (egg.mutationNote) mutations++;
+  }
+  return { mean: total / n, mutations };
+}
+const fiveStar = meanEggStars(5, 10000);
+const twoStar = meanEggStars(2, 20000);
+assert.ok(fiveStar.mean > 4.4, `5★ parents breed near the ceiling (${fiveStar.mean.toFixed(2)})`);
+assert.ok(twoStar.mean < 2.8, `2★ parents stay modest (${twoStar.mean.toFixed(2)})`);
+assert.ok(fiveStar.mean - twoStar.mean > 1.5, 'starred parents are MEASURABLY better');
+// And better than the mail-order lottery (E≈3):
+const s4 = breedLab(999);
+let catalogTotal = 0;
+for (let i = 0; i < 150; i++) {
+  const a = createAnimal(s4, 'goat', content, t0);
+  catalogTotal += STATS.reduce((sum, st) => sum + a.potential[st], 0) / STATS.length;
+}
+assert.ok(fiveStar.mean > catalogTotal / 150 + 1, 'selective breeding beats the catalog');
+// Mutation rate lands near the configured 8%.
+const totalMut = fiveStar.mutations + twoStar.mutations; // 300 eggs
+assert.ok(totalMut >= 8 && totalMut <= 50, `mutations occur at a sane rate (${totalMut}/300)`);
+
+// --- M6: trait genetics — Mendel with a lab coat.
+{
+  const s = breedLab(707);
+  const dam = stockAnimal(s, 'goat', 'F', 3, 24);
+  const sire = stockAnimal(s, 'goat', 'M', 3, 24);
+  sire.genotype = { dense_bones: 2 }; // homozygous sire passes always
+  sire.traits = expressedTraits(sire.genotype, content);
+  assert.deepEqual(sire.traits, ['dense_bones'], 'dominant trait expresses with one+ allele');
+  const { egg } = breedPair(s, sire.id, dam.id, content, t0);
+  assert.ok((egg.genotype.dense_bones ?? 0) >= 1, 'homozygous parent always passes the allele');
+  const kid = hatchEgg(s, egg.id, content, egg.hatchAt + 1).hatchling;
+  assert.ok(kid.traits.includes('dense_bones'), 'hatchling expresses the inherited trait');
+
+  // The trait has teeth: extraction stamps it, physiology pays it out.
+  kid.birthAt = t0 - 100 * HOUR; // fast-forward to elder for extraction
+  const res = extractAnimal(s, kid.id, content, t0);
+  const headTok = res.tokens.find((tk) => content.parts[tk.partId].slot === 'head');
+  const organTok = res.tokens.find((tk) => content.parts[tk.partId].slot === 'organ');
+  assert.deepEqual(headTok.traits, ['dense_bones'], 'head token stamped');
+  assert.deepEqual(organTok.traits, [], 'organ token unstamped (trait is head/hide only)');
+  const plain = { ...headTok, traits: [] };
+  const armorWith = analyze('M', [headTok], content).stats.armor;
+  const armorWithout = analyze('M', [plain], content).stats.armor;
+  assert.equal(armorWith - armorWithout, 3, 'Dense Bones = +3 armor in the physiology engine');
+}
+
+// Starter herd is always a breedable goat pair (tutorial guarantee).
+{
+  const s = { ...newGameState(), seed: 31337 };
+  ensureRanchSeeded(s, content, t0);
+  assert.equal(s.ranch.stock[0].sex, 'F');
+  assert.equal(s.ranch.stock[1].sex, 'M');
+  assert.equal(s.ranch.stock[0].species, 'goat');
+  assert.equal(s.ranch.stock[1].species, 'goat');
+}
+
+// --- v1 → v7 chain.
 const m5 = migrate(structuredClone(v1Save));
 assert.equal(m5.saveVersion, SAVE_VERSION);
 assert.equal(m5.battle, null);
@@ -709,7 +833,15 @@ assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
 assert.deepEqual(m5.campaign, { heldNodes: [], notoriety: 0, captives: [], containment: [], lastTickAt: null });
 assert.deepEqual(m5.news, []);
 assert.deepEqual(m5.directorStats.dissections, []);
-const v5WithBattle = { ...structuredClone(v1Save), saveVersion: 5, chimeras: [], battle: { enemy: { active: {} }, log: [] } };
+const v5WithBattle = {
+  ...structuredClone(v1Save),
+  saveVersion: 5,
+  chimeras: [],
+  funds: 300,
+  ranch: { stock: [], penCapacity: 4, animalCount: 0, seeded: false },
+  inventory: { vials: [], parts: [], tokenCount: 0 },
+  battle: { enemy: { active: {} }, log: [] },
+};
 const patched = migrate(v5WithBattle);
 assert.deepEqual(patched.battle.cannon, { charge: 0 }, 'in-flight v5 battles gain cannon fields');
 
