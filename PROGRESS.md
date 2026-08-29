@@ -1,5 +1,36 @@
 # PROGRESS
 
+## Session 10 — Art Quality Pass (post-v0.1) ✅
+
+The visual pass Evan flagged during M0. Content-only where possible: 24 parts and
+8 enemy units redrawn in data, plus two generic rendering techniques in the engine.
+No save version change, no gameplay change — every number is untouched.
+
+### What shipped
+- **Engine (generic, data-driven):** frames gained `shadow` (ground-contact ellipse
+  drawn behind the creature — they sit in the world instead of floating) and `form`
+  (volume shading clipped to the silhouette: belly occlusion + rim light along the
+  back). Flat-vector depth, no gradients, per-frame tunable.
+- **All 24 parts redrawn** (104 → 155 shapes): two googly eyes with catchlights on
+  every head (goat keeps its rectangular pupils, cobra its slit), layered muzzles and
+  inner ears, sheen highlights for form, clawed paws, jointed limbs with cleft hooves.
+- **Eagle wings reposed**: were reading as blades held aloft; now fold back along the
+  flank with a scalloped primary edge and layered coverts.
+- **Goat legs** thickened with knee joints and bigger hooves (was spindly).
+- **Organ art** now says something: hibernation gland has Zzz, iron gut has a gear,
+  venom sac a drip, hollow-bone marrow a feather arc.
+- **All 8 enemy units got faces**: organics have googly eyes and angry brows under the
+  brim; **vehicles have windshield eyes with furious eyebrows** — the Police Cruiser
+  and Clampdown 9000 now glare at you. Uniform detail added (lapels, belts, webbing,
+  Clampdown's red tie and gold buttons).
+- `tools/gallery.html` now renders the enemy roster too, so future art passes can QA
+  creatures and opposition on one page.
+
+### Verified
+Smoke suite green (art is data; every existing assertion still holds), gallery QA at
+several sizes, and in-app at 380px: Ranch portraits, Theater preview, and the arena —
+zero console errors, no overflow.
+
 ## Session 9 — M7: Polish & Ship v0.1 ✅ — **v0.1 COMPLETE**
 
 **Acceptance criterion:** a stranger can go from empty ranch to first conquest without asking questions — the "Path to World Domination" checklist on the Ranch walks the whole loop (care → graduate → splice → settle → conquer), derives purely from save state, highlights the current step with a plain-language hint pointing at the right tab, and retires itself after the first conquest. Verified in-browser: fresh save shows step 1; each real action advances it.

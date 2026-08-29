@@ -175,6 +175,11 @@ export function renderCreatureSVG(genome, content, { idPrefix = 'cw', condition 
   for (const [slot, socketName] of LAYERS) {
     if (slot === 'torso') {
       layers.push(`<g>${shapesToSVG(frame.torso, torsoPalette)}</g>`);
+      // Volume shading: flat-vector form, not gradients — occlusion at the
+      // belly, rim light along the back, clipped to the silhouette.
+      if (frame.form) {
+        layers.push(`<g clip-path="url(#${clipId})">${shapesToSVG(frame.form, torsoPalette)}</g>`);
+      }
       continue;
     }
     if (slot === 'organ' && condition === 'scruffy') {
@@ -202,6 +207,10 @@ export function renderCreatureSVG(genome, content, { idPrefix = 'cw', condition 
 
   const scale = frame.scale * extraScale;
   const frameScale = scale !== 1 ? ` transform="scale(${scale})"` : '';
+  const groundShadow = frame.shadow
+    ? `<ellipse cx="0" cy="${frame.shadow.cy}" rx="${frame.shadow.rx}" ry="${frame.shadow.ry}" ` +
+      `fill="${OUTLINE}" stroke="none" opacity="0.28"/>`
+    : '';
   const sparkles = condition === 'gleaming'
     ? SPARKLE_SPOTS.map(
         (p) =>
@@ -212,7 +221,7 @@ export function renderCreatureSVG(genome, content, { idPrefix = 'cw', condition 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-230 -230 460 440" role="img" aria-label="Spliced creature">` +
     `<defs><clipPath id="${clipId}">${silhouetteToSVG(frame.silhouette)}</clipPath></defs>` +
-    `<g${frameScale}>${layers.join('')}</g>` +
+    `<g${frameScale}>${groundShadow}${layers.join('')}</g>` +
     sparkles +
     `</svg>`
   );
