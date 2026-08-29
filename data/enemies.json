@@ -1,5 +1,5 @@
 {
-  "_doc": "Gen 1 human enemy roster (ROADMAP §3.6) + encounters. Units: stats, unit tags (Organic/Vehicle plus battle tags), moves (same schema as part moves), koLine (zero death language — soldiers parachute away, vehicles retire loudly), shapes (procedural SVG in unit-local space, viewBox -100 -110 200 220). transformInto = boss second stage. Encounters: ordered wave of unit ids + reward funds. Adding a unit or encounter must never require engine edits. Art (M7.5): organics carry googly eyes under the brim; vehicles get windshield eyes with angry brows — machines are characters too. class: the unit's elemental class for the RPS chart in data/classes.json.",
+  "_doc": "Gen 1 human enemy roster (ROADMAP §3.6) + encounters. Units: stats, unit tags (Organic/Vehicle plus battle tags), moves (same schema as part moves), koLine (zero death language — soldiers parachute away, vehicles retire loudly), shapes (procedural SVG in unit-local space, viewBox -100 -110 200 220). transformInto = boss second stage. Encounters: ordered wave of unit ids + reward funds. Adding a unit or encounter must never require engine edits. Art (M7.5): organics carry googly eyes under the brim; vehicles get windshield eyes with angry brows — machines are characters too. class: the unit's elemental class for the RPS chart in data/classes.json. tier + tierScale: the difficulty curve. Unit stats (hp/power/armor/stamina) are multiplied by tierScale[tier] at battle time, so one authored roster covers the whole campaign and a later encounter is genuinely harder without duplicating units. tierScale[0] is unused; tier 1 is the tutorial patrol. Rival chimeras carry their own powerScale instead (see rivals.json) and are never tier-scaled.",
   "units": [
     {
       "id": "riot_squad",
@@ -1904,7 +1904,8 @@
         "riot_squad",
         "net_trooper"
       ],
-      "reward": 80
+      "reward": 80,
+      "tier": 1
     },
     {
       "id": "patrol_2",
@@ -1915,7 +1916,8 @@
         "tranq_team",
         "police_cruiser"
       ],
-      "reward": 150
+      "reward": 150,
+      "tier": 2
     },
     {
       "id": "boss_clampdown",
@@ -1925,7 +1927,8 @@
         "riot_squad",
         "captain_clampdown"
       ],
-      "reward": 300
+      "reward": 300,
+      "tier": 4
     },
     {
       "id": "checkpoint",
@@ -1936,7 +1939,8 @@
         "net_trooper",
         "police_cruiser"
       ],
-      "reward": 200
+      "reward": 200,
+      "tier": 3
     },
     {
       "id": "military_response",
@@ -1947,7 +1951,8 @@
         "jeep_50",
         "infantry_squad"
       ],
-      "reward": 350
+      "reward": 350,
+      "tier": 5
     },
     {
       "id": "rescue_impound",
@@ -1958,7 +1963,8 @@
         "riot_squad",
         "police_cruiser"
       ],
-      "reward": 0
+      "reward": 0,
+      "tier": 3
     },
     {
       "id": "air_patrol",
@@ -1968,7 +1974,8 @@
         "jeep_50",
         "attack_chopper"
       ],
-      "reward": 300
+      "reward": 300,
+      "tier": 3
     },
     {
       "id": "harbor_watch",
@@ -1978,7 +1985,16 @@
         "infantry_squad",
         "harbor_skiff"
       ],
-      "reward": 280
+      "reward": 280,
+      "tier": 3
     }
+  ],
+  "tierScale": [
+    1,
+    0.75,
+    1.0,
+    1.45,
+    1.7,
+    2.0
   ]
 }

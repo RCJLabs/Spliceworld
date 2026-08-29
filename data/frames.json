@@ -1,5 +1,5 @@
 {
-  "_doc": "Frames = torsos. Each defines a size class, a torso drawing, a silhouette (clip target for hide overlays), and standardized attachment sockets. Any part fits any socket of its slot type. Socket = {x, y, angle, scale, shade?}. Part-local conventions: head faces +x with origin at the neck; limbs hang +y from origin at the shoulder/hip; tails extend -x from origin at the rump; hide draws in torso space (origin = torso center); organ draws at the belly socket. Torso shapes use the hide species' palette (@primary/@secondary/@accent) or a neutral gray when no hide is spliced. M3: phys = the frame's base mass and stat contributions before parts. M7.5 art: shadow = ground-contact ellipse drawn behind the creature; form = volume shading clipped to the silhouette (bottom occlusion + top rim light).",
+  "_doc": "Frames = torsos. Each defines a size class, a torso drawing, a silhouette (clip target for hide overlays), and standardized attachment sockets. Any part fits any socket of its slot type. Socket = {x, y, angle, scale, shade?}. Part-local conventions: head faces +x with origin at the neck; limbs hang +y from origin at the shoulder/hip; tails extend -x from origin at the rump; hide draws in torso space (origin = torso center); organ draws at the belly socket. Torso shapes use the hide species' palette (@primary/@secondary/@accent) or a neutral gray when no hide is spliced. M3: phys = the frame's base mass and stat contributions before parts. M7.5 art: shadow = ground-contact ellipse drawn behind the creature; form = volume shading clipped to the silhouette (bottom occlusion + top rim light). Balance pass: frame hp was the bulk of a creature's health (S55/M70/L105), which made empty sockets strictly better — you kept the HP and dropped the metabolic draw. Health now comes from the parts you install; the frame contributes a chassis floor, its mass, and its socket count.",
   "frames": [
     {
       "id": "S",
@@ -85,7 +85,7 @@
       },
       "phys": {
         "mass": 40,
-        "hp": 55,
+        "hp": 22,
         "stamina": 36,
         "regen": 7,
         "speed": 4
@@ -196,7 +196,7 @@
       },
       "phys": {
         "mass": 80,
-        "hp": 70,
+        "hp": 30,
         "stamina": 48,
         "regen": 9,
         "speed": 2
@@ -307,7 +307,7 @@
       },
       "phys": {
         "mass": 160,
-        "hp": 105,
+        "hp": 42,
         "stamina": 58,
         "regen": 11,
         "speed": 0

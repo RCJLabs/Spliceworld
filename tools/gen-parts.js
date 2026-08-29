@@ -75,13 +75,19 @@ const SIGNATURE = {
 };
 
 // Slot stat/phys bases, scaled by the species' role bias.
+// Balance pass: a chimera's health lives in its ANATOMY, not its chassis.
+// Frames were carrying ~95% of a creature's HP, which made empty sockets the
+// dominant strategy — you kept the health, dropped the metabolic draw, and the
+// panel's "this is barely a creature" warning was simply wrong. Frames now
+// grant a fraction of what they did (see frames.json) and every socket you
+// fill is worth real hit points.
 const SLOT_BASE = {
-  head:       { stats: { power: 10, hp: 4 },              phys: { mass: 12, draw: 3 } },
-  forelimbs:  { stats: { power: 9 },                      phys: { mass: 13, draw: 3 } },
-  hindlimbs:  { stats: { power: 5, speed: 3, hp: 3 },     phys: { mass: 13, draw: 3 } },
-  tail:       { stats: { speed: 3 },                      phys: { mass: 5, draw: 1 } },
-  hide:       { stats: { armor: 5, hp: 5 },               phys: { mass: 10, draw: 1 } },
-  organ:      { stats: { stamina: 10, regen: 4 },         phys: { mass: 5, draw: 3 } },
+  head:       { stats: { power: 10, hp: 12 },             phys: { mass: 12, draw: 3 } },
+  forelimbs:  { stats: { power: 9, hp: 9 },               phys: { mass: 13, draw: 3 } },
+  hindlimbs:  { stats: { power: 5, speed: 3, hp: 11 },    phys: { mass: 13, draw: 3 } },
+  tail:       { stats: { speed: 3, hp: 5 },               phys: { mass: 5, draw: 1 } },
+  hide:       { stats: { armor: 5, hp: 20 },              phys: { mass: 10, draw: 1 } },
+  organ:      { stats: { stamina: 10, regen: 4, hp: 7 },  phys: { mass: 5, draw: 3 } },
 };
 const ROLE_BIAS = {
   Power: { power: 1.5, speed: 0.7 }, Striker: { power: 1.25, speed: 1.2 },

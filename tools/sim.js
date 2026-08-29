@@ -1,7 +1,8 @@
 // M4.5 — Balance harness. Headless Monte Carlo over chimera builds vs. the
 // enemy roster, using the exact battle engine the browser runs (that's why
 // battle/ is DOM-free). Outputs win-rate tables and flags degenerate
-// builds. Run: node tools/sim.js [--builds=40] [--seeds=3] [--grade=standard] [--plant]
+// builds. Run:
+//   node tools/sim.js [--builds=40] [--seeds=3] [--grade=standard] [--team=1] [--plant]
 //
 // --plant injects a deliberately broken combo (Injection: power 500, cost 0)
 // and proves the harness catches it — the milestone's acceptance test.
@@ -75,9 +76,16 @@ function pilotAction(battle) {
 
 // `encounter` is an id from enemies.json or a generated encounter object
 // (rival duels are built at runtime, so they never live in a table).
-export function scriptedBattle(chimera, encounter, content, seed) {
+export function scriptedBattle(chimera, encounter, content, seed, teamSize = 1) {
   const enc = typeof encounter === 'string' ? content.encounters[encounter] : encounter;
-  const battle = createBattle([chimera], enc, content, seed, 1);
+  // The game hands the player a team of three, so tuning ENCOUNTERS against a
+  // lone chimera measures the wrong thing. teamSize fields N copies of the
+  // same build: still a controlled yardstick for comparing builds, but now at
+  // the scale the difficulty curve is actually supposed to answer.
+  const team = Array.from({ length: teamSize }, (_, i) =>
+    i === 0 ? chimera : { ...chimera, id: `${chimera.id}#${i}`, name: `${chimera.name} ${i + 1}` }
+  );
+  const battle = createBattle(team, enc, content, seed, 1);
   let guard = 0;
   while (!battle.over && guard++ < 300) {
     const action = pilotAction(battle);
@@ -109,6 +117,10 @@ export function sampleBuilds(content, n, seed) {
 
   for (const sp of Object.keys(content.species)) {
     const partIds = Object.values(content.parts).filter((p) => p.species === sp).map((p) => p.id);
+    // 'salvage' holds two enemy-tech parts, so its "purebred" is a two-socket
+    // stub the game never offers. It flagged TRASH in every report — noise,
+    // not a hole in the curve.
+    if (partIds.length < 4) continue;
     push(content.species[sp].frame, partIds);
   }
   for (const combo of Object.values(content.combos)) {
@@ -150,7 +162,7 @@ export function rivalEncounters(content, seed = 2026, defeats = 0) {
   });
 }
 
-export function runSim(content, { builds = 40, seedsPer = 3, grade = 'standard', seed = 2026 } = {}) {
+export function runSim(content, { builds = 40, seedsPer = 3, grade = 'standard', seed = 2026, teamSize = 1 } = {}) {
   const pool = sampleBuilds(content, builds, seed);
   const encounters = [
     ...Object.values(content.encounters),
@@ -169,7 +181,7 @@ export function runSim(content, { builds = 40, seedsPer = 3, grade = 'standard',
     for (const enc of encounterIds) {
       let encWins = 0;
       for (let s = 0; s < seedsPer; s++) {
-        const r = scriptedBattle(chimera, byId[enc], content, hashString(`b${i}e${enc}s${s}`));
+        const r = scriptedBattle(chimera, byId[enc], content, hashString(`b${i}e${enc}s${s}`), teamSize);
         games++;
         if (r.outcome === 'win') {
           wins++;
@@ -245,13 +257,16 @@ function main() {
     builds: Number(args.builds ?? 40),
     seedsPer: Number(args.seeds ?? 3),
     grade: args.grade ?? 'standard',
+    // The balance pass established a team of three as the honest yardstick for
+            // ENCOUNTER difficulty; solo (--team=1) stays available for comparing builds.
+    teamSize: Number(args.team ?? 3),
   };
   const t0 = Date.now();
   const { rows, flags, encounterIds } = runSim(content, opts);
 
   const short = (e) => (e.startsWith('rival_') ? '@' + e.slice(6) : e).slice(0, 9);
   const encHeads = encounterIds.map((e) => short(e).padStart(9)).join(' ');
-  console.log(`win-rate table (${rows.length} builds × ${encounterIds.length} encounters × ${opts.seedsPer} seeds, grade=${opts.grade})\n`);
+  console.log(`win-rate table (${rows.length} builds × ${encounterIds.length} encounters × ${opts.seedsPer} seeds, grade=${opts.grade}, team of ${opts.teamSize})\n`);
   console.log(`  win%  turns ${encHeads}  build`);
   for (const row of rows) {
     const enc = encounterIds.map((e) => pct(row.perEncounter[e]).padStart(9)).join(' ');

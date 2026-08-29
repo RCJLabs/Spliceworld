@@ -10,13 +10,13 @@ import { GRADE_INDEX } from '../splice/extract.js';
 import { isSettled } from '../splice/theater.js';
 
 const STAGE_STEP = 0.15;
-const STAGE_CAP = 3;
+const STAGE_CAP = 2; // setup matters, but stacking is not a strategy on its own
 const ARMOR_FACTOR = 0.7;
 const VENOM_TICK = 3;
 const VENOM_CAP = 5;
 const REST_FRACTION = 0.35;
 const REJECTION_MULT = 0.75;
-const GRADE_MOVE_BONUS = 0.15; // Apex/Prismatic "upgraded abilities": +15%/tier
+const GRADE_MOVE_BONUS = 0.12; // "upgraded abilities" — grades already scale stats, so this rides gently on top
 
 const INJURY_NAMES = [
   'Bruised Ego', 'Sprained Everything', 'Temporary Kazoo Phobia',
@@ -137,19 +137,30 @@ export function combatantFromChimera(chimera, content, now) {
   };
 }
 
-export function combatantFromUnit(unit) {
+// An encounter without a tier fights at its authored stats — tier is opt-in,
+// and tier 1 is a deliberately gentle tutorial band, not a default.
+export function tierScaleFor(encounter, content) {
+  if (encounter.rivalId || encounter.tier == null) return 1;
+  return content.tierScale?.[encounter.tier] ?? 1;
+}
+
+// scale: the encounter's tier multiplier (see enemies.json tierScale). One
+// authored roster covers the whole campaign — a Riot Squad at the Precinct is
+// the same unit that patrolled the barn, three tiers of budget later.
+export function combatantFromUnit(unit, scale = 1) {
+  const up = (n) => Math.max(1, Math.round(n * scale));
   return {
     kind: 'unit',
     capturable: unit.capturable ?? !!unit.salvage?.length, // Containment Cannon targets
     refId: unit.id,
     name: unit.name,
-    maxHp: unit.hp,
-    hp: unit.hp,
-    power: unit.power,
-    armor: unit.armor,
-    speed: unit.speed,
-    staminaMax: unit.stamina,
-    stamina: unit.stamina,
+    maxHp: up(unit.hp),
+    hp: up(unit.hp),
+    power: up(unit.power),
+    armor: up(unit.armor),
+    speed: unit.speed, // speed stays authored: the turn order is a design choice
+    staminaMax: up(unit.stamina),
+    stamina: up(unit.stamina),
     regen: unit.regen,
     tags: unit.tags,
     creatureClass: unit.class ?? null,
@@ -269,8 +280,14 @@ export function createBattle(chimeras, encounter, content, seed, now, context = 
       encounter.waves.filter((w) => typeof w !== 'string').map((u) => [u.id, u])
     ),
     player: { team: chimeras.map((c) => combatantFromChimera(c, content, now)), active: 0 },
-    enemy: { queue: encounter.waves.slice(1), active: combatantFromUnit(unitFor(content, encounter.waves[0])) },
+    enemy: { queue: encounter.waves.slice(1), active: combatantFromUnit(
+        unitFor(content, encounter.waves[0]),
+        tierScaleFor(encounter, content)
+      ) },
     barks: { ...(encounter.barks ?? {}) }, // rival monologue slots (§3.8)
+    // Rival chimeras arrive pre-scaled by their own powerScale, so tier
+    // scaling applies only to the authored human roster.
+    enemyScale: tierScaleFor(encounter, content),
     log: [],
   };
   if (battle.barks.intro) battle.log.push(`\u201c${battle.barks.intro}\u201d`);
@@ -459,7 +476,7 @@ function knockback(battle, target, events, content) {
     // generated record for a rival chimera that has no enemies.json entry.
     battle.enemy.queue.push(battle.units?.[target.refId] ?? target.refId);
     const nextId = battle.enemy.queue.shift();
-    battle.enemy.active = combatantFromUnit(unitFor(content, nextId));
+    battle.enemy.active = combatantFromUnit(unitFor(content, nextId), battle.enemyScale);
     events.push({ text: `${target.name} is punted out of formation! ${battle.enemy.active.name} scrambles in.`, kind: 'waveIn', target: 'enemy' });
   } else {
     const bench = livingBench(battle);
@@ -540,7 +557,7 @@ function handleEnemyKO(battle, events, content) {
   if (e.hp > 0) return;
   if (e.transformInto) {
     events.push({ text: e.transformLine, kind: 'ko', target: 'enemy' });
-    battle.enemy.active = combatantFromUnit(unitFor(content, e.transformInto));
+    battle.enemy.active = combatantFromUnit(unitFor(content, e.transformInto), battle.enemyScale);
     events.push({ text: `${battle.enemy.active.name} looms over the field!`, kind: 'waveIn', target: 'enemy', transform: true });
     return;
   }
@@ -551,7 +568,7 @@ function handleEnemyKO(battle, events, content) {
   }
   if (battle.enemy.queue.length) {
     const nextId = battle.enemy.queue.shift();
-    battle.enemy.active = combatantFromUnit(unitFor(content, nextId));
+    battle.enemy.active = combatantFromUnit(unitFor(content, nextId), battle.enemyScale);
     events.push({ text: `Next wave: ${battle.enemy.active.name}!`, kind: 'waveIn', target: 'enemy' });
     playerActive(battle).status.trapped = false;
   } else {
@@ -622,7 +639,7 @@ export function step(battle, action, content) {
     me.status.trapped = false;
     if (battle.enemy.queue.length) {
       const nextId = battle.enemy.queue.shift();
-      battle.enemy.active = combatantFromUnit(unitFor(content, nextId));
+      battle.enemy.active = combatantFromUnit(unitFor(content, nextId), battle.enemyScale);
       events.push({ text: `Next wave: ${battle.enemy.active.name}!`, kind: 'waveIn', target: 'enemy' });
     } else {
       battle.over = true;
