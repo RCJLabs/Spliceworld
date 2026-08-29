@@ -1,0 +1,16 @@
+{
+  "_doc": "Elemental classes (Wave 1). A chimera's class is DERIVED from its parts, never assigned: each part may carry classAffinity ('air' | 'ground' | 'water'), granted by anatomy — wings and airfoils give air, gills/fins/flippers give water, feet/paws/hooves/legs give ground. The class with the most parts wins; a tie leaves the creature Unclassed (neutral both directions), so committing to one anatomy buys the matchup edge while hybrids trade it for safety. chart: attacker class vs defender class -> damage multiplier. Enemies declare their class directly in enemies.json.",
+  "classes": [
+    { "id": "ground", "name": "Ground", "icon": "🦶", "cue": "feet, paws, hooves, walking legs", "beats": "water", "color": "#c9a86a" },
+    { "id": "water", "name": "Water", "icon": "🌊", "cue": "gills, fins, flippers", "beats": "air", "color": "#5fa8d3" },
+    { "id": "air", "name": "Air", "icon": "🪽", "cue": "wings, airfoils, gliding membranes", "beats": "ground", "color": "#b48bff" }
+  ],
+  "advantage": 1.5,
+  "disadvantage": 0.7,
+  "flavor": {
+    "ground_water": "Solid footing beats a flopping swimmer on dry land.",
+    "water_air": "A soaked flyer is a falling flyer.",
+    "air_ground": "You cannot punch what refuses to stay on the ground.",
+    "unclassed": "No dominant anatomy — nothing to exploit, nothing to be exploited."
+  }
+}

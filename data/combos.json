@@ -1,5 +1,5 @@
 {
-  "_doc": "Combo abilities (M3): splicing both listed parts onto one chimera discovers the combo, permanently logged in the save for the Splice-Dex (M7). Combat effects resolve through the keyword system in M4 — 'keyword' here is the design intent, display-only for now. ~12 combos at v0.1; 4 ship with M3. M4: each combo grants its move to chimeras built with both parts.",
+  "_doc": "Combo abilities (M3): splicing both listed parts onto one chimera discovers the combo, permanently logged in the save for the Splice-Dex (M7). Combat effects resolve through the keyword system in M4 — 'keyword' here is the design intent, display-only for now. The roadmap target of 12 combos ships with Wave 1. M4: each combo grants its move to chimeras built with both parts.",
   "combos": [
     {
       "id": "injection",
@@ -77,6 +77,176 @@
         "acc": 100,
         "tags": [],
         "keywords": {
+          "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "live_wire",
+      "name": "Live Wire",
+      "parts": [
+        "electric_eel_organ",
+        "shark_hide"
+      ],
+      "keyword": "Electric",
+      "desc": "Charge the water film on your own hide. Grounding is a suggestion.",
+      "move": {
+        "power": 78,
+        "cost": 32,
+        "acc": 95,
+        "tags": [
+          "Electric"
+        ],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "depth_charge",
+      "name": "Depth Charge",
+      "parts": [
+        "crocodile_head",
+        "tortoise_hide"
+      ],
+      "keyword": "Trap",
+      "desc": "Clamp down, sink, wait. The classic.",
+      "move": {
+        "power": 62,
+        "cost": 30,
+        "acc": 92,
+        "tags": [],
+        "keywords": {
+          "trap": true,
+          "ignoreArmor": true
+        }
+      }
+    },
+    {
+      "id": "thunderclap",
+      "name": "Thunderclap",
+      "parts": [
+        "bat_organ",
+        "rhino_head"
+      ],
+      "keyword": "Sonic",
+      "desc": "A charging horn and a shriek arrive together. Ears file complaints.",
+      "move": {
+        "power": 70,
+        "cost": 30,
+        "acc": 92,
+        "tags": [
+          "Sonic"
+        ],
+        "keywords": {
+          "accDown": 1
+        }
+      }
+    },
+    {
+      "id": "gas_lamp",
+      "name": "Gas Lamp",
+      "parts": [
+        "skunk_organ",
+        "anglerfish_head"
+      ],
+      "keyword": "Gas",
+      "desc": "Lure them in close, then make the air unlivable. Deeply unsporting.",
+      "move": {
+        "power": 44,
+        "cost": 26,
+        "acc": 100,
+        "tags": [
+          "Gas"
+        ],
+        "keywords": {
+          "accDown": 1,
+          "powerDown": 1
+        }
+      }
+    },
+    {
+      "id": "rolling_thunder",
+      "name": "Rolling Thunder",
+      "parts": [
+        "pangolin_hide",
+        "rhino_beetle_forelimbs"
+      ],
+      "keyword": "IgnoreArmor",
+      "desc": "Tuck into a ball, get thrown. Physics does the rest.",
+      "move": {
+        "power": 80,
+        "cost": 34,
+        "acc": 88,
+        "tags": [
+          "Ground"
+        ],
+        "keywords": {
+          "ignoreArmor": true,
+          "recoil": 0.15
+        }
+      }
+    },
+    {
+      "id": "pack_hunt",
+      "name": "Pack Hunt",
+      "parts": [
+        "wolf_organ",
+        "tiger_head"
+      ],
+      "keyword": "Rally",
+      "desc": "One howl, one pounce, zero warning.",
+      "move": {
+        "power": 64,
+        "cost": 26,
+        "acc": 95,
+        "tags": [
+          "Sonic"
+        ],
+        "keywords": {
+          "priority": true,
+          "powerUp": 1
+        }
+      }
+    },
+    {
+      "id": "ink_screen",
+      "name": "Ink Screen",
+      "parts": [
+        "octopus_organ",
+        "chameleon_hide"
+      ],
+      "keyword": "Camouflage",
+      "desc": "Ink the water, match the ink. Nobody has seen you in some time.",
+      "move": {
+        "power": 34,
+        "cost": 20,
+        "acc": 100,
+        "tags": [
+          "Gas"
+        ],
+        "keywords": {
+          "evasionUp": 2,
+          "accDown": 1
+        }
+      }
+    },
+    {
+      "id": "leap_year",
+      "name": "Leap Year",
+      "parts": [
+        "frog_hindlimbs",
+        "dragonfly_forelimbs"
+      ],
+      "keyword": "Priority",
+      "desc": "Springboard into a wingbeat. Briefly, gloriously airborne.",
+      "move": {
+        "power": 56,
+        "cost": 24,
+        "acc": 95,
+        "tags": [
+          "Airborne"
+        ],
+        "keywords": {
+          "priority": true,
           "evasionUp": 1
         }
       }

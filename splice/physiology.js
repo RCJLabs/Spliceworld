@@ -36,9 +36,11 @@ export function analyze(frameId, tokens, content) {
   const speciesCount = {};
   const gradeSet = new Set();
   const tags = new Set();
+  const classVotes = { air: 0, ground: 0, water: 0 };
 
   for (const token of tokens) {
     const part = content.parts[token.partId];
+    if (!part) continue; // retired part id — ignore rather than crash
     const mult = GRADES[GRADE_INDEX[token.grade]].mult;
     for (const [stat, v] of Object.entries(part.stats)) {
       stats[stat] = (stats[stat] ?? 0) + v * mult;
@@ -52,6 +54,7 @@ export function analyze(frameId, tokens, content) {
     draw += part.phys.draw;
     lift += (part.phys.lift ?? 0) * mult;
     speciesCount[part.species] = (speciesCount[part.species] ?? 0) + 1;
+    if (part.classAffinity) classVotes[part.classAffinity] += 1;
     gradeSet.add(token.grade);
     for (const t of part.tags) tags.add(t);
   }
@@ -118,6 +121,25 @@ export function analyze(frameId, tokens, content) {
         : `Lift ${lift} cannot hoist ${mass} mass. The wings flap. The creature stays. Physics sends its regards — try a lighter frame or fewer dense parts.`,
   });
 
+  // Elemental class: anatomy votes, majority rules, ties stay Unclassed.
+  const votes = Object.entries(classVotes).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  const topVotes = votes.length ? votes[0][1] : 0;
+  const leaders = votes.filter(([, n]) => n === topVotes);
+  const creatureClass = leaders.length === 1 ? leaders[0][0] : null;
+  const classDef = creatureClass ? content.classes?.[creatureClass] : null;
+  const voteText = votes.length
+    ? votes.map(([c, n]) => `${n}× ${content.classes?.[c]?.name ?? c}`).join(', ')
+    : 'no classifying anatomy';
+  rows.push({
+    label: 'Class',
+    value: classDef ? `${classDef.icon} ${classDef.name}` : 'Unclassed',
+    note: classDef
+      ? `${voteText} — ${classDef.cue} carry the vote. Strong against ${content.classes[classDef.beats].name}, weak to whatever beats it.`
+      : votes.length
+        ? `${voteText} — tied, so no class dominates. Neutral in every matchup: nothing to exploit, nothing to be exploited.`
+        : 'No wings, fins or feet installed. Neutral in every matchup.',
+  });
+
   // Purebred set bonus
   const purebredSpecies = Object.entries(speciesCount).find(([, n]) => n >= PHYS_TUNING.purebredAt)?.[0] ?? null;
   if (purebredSpecies) {
@@ -148,6 +170,22 @@ export function analyze(frameId, tokens, content) {
       `. Settling estimate: ~${Math.round(settlingMs / 60000)} min.`,
   });
 
+  // Chassis completeness — the audit found a head-only chimera is legal and
+  // measures a 0% win rate. Say so before they walk into a patrol with it.
+  const filled = tokens.length;
+  const emptySockets = 6 - filled;
+  if (emptySockets > 0) {
+    rows.push({
+      label: 'Chassis',
+      value: `${filled}/6 sockets filled`,
+      note: emptySockets >= 4
+        ? `${emptySockets} empty sockets. This is barely a creature — it will not survive contact with a patrol. One extraction gives you all six parts of a donor; use them.`
+        : emptySockets >= 2
+          ? `${emptySockets} empty sockets — survivable, but you are leaving stats on the table.`
+          : 'One empty socket. Close enough for government work.',
+    });
+  }
+
   // Combos present in this build
   const partIds = new Set(tokens.map((t) => t.partId));
   const combos = (content.combos ? Object.values(content.combos) : []).filter((c) =>
@@ -162,6 +200,8 @@ export function analyze(frameId, tokens, content) {
     regenNet,
     thermal: { min: tMin, max: tMax, ok: thermalOk },
     flight: { hasLiftSurface, lift, capable: canFly },
+    creatureClass,
+    classVotes,
     tags: [...tags],
     speciesCount,
     purebredSpecies,

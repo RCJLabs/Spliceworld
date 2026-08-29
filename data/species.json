@@ -1,5 +1,5 @@
 {
-  "_doc": "Base fauna. Palettes drive part rendering via @primary/@secondary/@accent tokens. Tags feed the battle chart (M4). Ranch fields (M1): frame = which torso a purebred stock animal renders on; diet/feedCost = cost of one feed action; upkeepPerDay = housing drain while owned; mailOrderPrice = purchase price from the Mail-Order Menagerie catalog (null = conquest-only, arrives M5); growthHours = age-stage thresholds from birth (juvenile before adult). M3 fields: thermal = [minC, maxC] comfort band (a chimera's band is the intersection of its parts' species bands); setBonus = purebred bonus at 4+ parts of one species (effects wired in M4). M6: incubationMinutes = real-world egg timer (first eggs ~30min, scaling with rarity).",
+  "_doc": "Base fauna (25 species, ROADMAP §4.1). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity — see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer.",
   "species": [
     {
       "id": "bear",
@@ -12,10 +12,12 @@
         "accent": "#e8c39e"
       },
       "frame": "L",
+      "class": "ground",
+      "archetype": "ursine",
       "diet": "Premium salmon budget",
       "feedCost": 10,
       "upkeepPerDay": 12,
-      "mailOrderPrice": null,
+      "mailOrderPrice": 260,
       "growthHours": {
         "adult": 12,
         "prime": 36,
@@ -25,11 +27,312 @@
         -20,
         15
       ],
+      "incubationMinutes": 60,
       "setBonus": {
         "name": "Ursine Bulk",
         "desc": "+20% HP with 4+ bear parts"
+      }
+    },
+    {
+      "id": "tiger",
+      "name": "Tiger",
+      "role": "Striker",
+      "tags": [],
+      "palette": {
+        "primary": "#e08a2e",
+        "secondary": "#b8641c",
+        "accent": "#f7e6c8"
       },
-      "incubationMinutes": 60
+      "frame": "M",
+      "class": "ground",
+      "archetype": "feline",
+      "diet": "Whatever it wants",
+      "feedCost": 11,
+      "upkeepPerDay": 13,
+      "mailOrderPrice": 300,
+      "growthHours": {
+        "adult": 11,
+        "prime": 32,
+        "elder": 90
+      },
+      "thermal": [
+        -5,
+        32
+      ],
+      "incubationMinutes": 55,
+      "setBonus": {
+        "name": "Ambush Instinct",
+        "desc": "+15% crit with 4+ tiger parts"
+      }
+    },
+    {
+      "id": "wolf",
+      "name": "Wolf",
+      "role": "Pack",
+      "tags": [
+        "Sonic"
+      ],
+      "palette": {
+        "primary": "#6b7480",
+        "secondary": "#4c5460",
+        "accent": "#d8dce2"
+      },
+      "frame": "M",
+      "class": "ground",
+      "archetype": "canine",
+      "diet": "Group dining plan",
+      "feedCost": 8,
+      "upkeepPerDay": 9,
+      "mailOrderPrice": 140,
+      "growthHours": {
+        "adult": 10,
+        "prime": 28,
+        "elder": 84
+      },
+      "thermal": [
+        -25,
+        18
+      ],
+      "incubationMinutes": 45,
+      "setBonus": {
+        "name": "Pack Tactics",
+        "desc": "+10% power per ally with 4+ wolf parts"
+      }
+    },
+    {
+      "id": "crocodile",
+      "name": "Crocodile",
+      "role": "Bruiser",
+      "tags": [
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#4a7c46",
+        "secondary": "#31562f",
+        "accent": "#c9d68a"
+      },
+      "frame": "L",
+      "class": "water",
+      "archetype": "reptile",
+      "diet": "Anything that gets close",
+      "feedCost": 9,
+      "upkeepPerDay": 11,
+      "mailOrderPrice": 320,
+      "growthHours": {
+        "adult": 14,
+        "prime": 40,
+        "elder": 100
+      },
+      "thermal": [
+        12,
+        38
+      ],
+      "incubationMinutes": 65,
+      "setBonus": {
+        "name": "Death Roll",
+        "desc": "+20% trap duration with 4+ croc parts"
+      }
+    },
+    {
+      "id": "gorilla",
+      "name": "Gorilla",
+      "role": "Grappler",
+      "tags": [],
+      "palette": {
+        "primary": "#4a4550",
+        "secondary": "#332f3a",
+        "accent": "#8a7f70"
+      },
+      "frame": "L",
+      "class": "ground",
+      "archetype": "ursine",
+      "diet": "Industrial produce",
+      "feedCost": 9,
+      "upkeepPerDay": 11,
+      "mailOrderPrice": 280,
+      "growthHours": {
+        "adult": 13,
+        "prime": 38,
+        "elder": 96
+      },
+      "thermal": [
+        5,
+        32
+      ],
+      "incubationMinutes": 60,
+      "setBonus": {
+        "name": "Iron Grip",
+        "desc": "+20% stun chance with 4+ gorilla parts"
+      }
+    },
+    {
+      "id": "rhino",
+      "name": "Rhino",
+      "role": "Charger",
+      "tags": [
+        "Armored"
+      ],
+      "palette": {
+        "primary": "#8a8f9c",
+        "secondary": "#666c78",
+        "accent": "#c4cad4"
+      },
+      "frame": "L",
+      "class": "ground",
+      "archetype": "horned",
+      "diet": "Bulk grass delivery",
+      "feedCost": 7,
+      "upkeepPerDay": 12,
+      "mailOrderPrice": 340,
+      "growthHours": {
+        "adult": 14,
+        "prime": 42,
+        "elder": 104
+      },
+      "thermal": [
+        8,
+        36
+      ],
+      "incubationMinutes": 70,
+      "setBonus": {
+        "name": "Unstoppable",
+        "desc": "charge moves cannot be interrupted with 4+ rhino parts"
+      }
+    },
+    {
+      "id": "pangolin",
+      "name": "Pangolin",
+      "role": "Tank",
+      "tags": [
+        "Armored"
+      ],
+      "palette": {
+        "primary": "#a8834a",
+        "secondary": "#7d5f33",
+        "accent": "#e0c893"
+      },
+      "frame": "M",
+      "class": "ground",
+      "archetype": "armored",
+      "diet": "Artisanal ants",
+      "feedCost": 6,
+      "upkeepPerDay": 7,
+      "mailOrderPrice": 220,
+      "growthHours": {
+        "adult": 10,
+        "prime": 30,
+        "elder": 84
+      },
+      "thermal": [
+        10,
+        34
+      ],
+      "incubationMinutes": 50,
+      "setBonus": {
+        "name": "Full Roll",
+        "desc": "+25% armor with 4+ pangolin parts"
+      }
+    },
+    {
+      "id": "tortoise",
+      "name": "Tortoise",
+      "role": "Wall",
+      "tags": [
+        "Armored",
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#6f7f4a",
+        "secondary": "#4e5a33",
+        "accent": "#c2b280"
+      },
+      "frame": "L",
+      "class": "water",
+      "archetype": "armored",
+      "diet": "Leafy greens, slowly",
+      "feedCost": 5,
+      "upkeepPerDay": 8,
+      "mailOrderPrice": 260,
+      "growthHours": {
+        "adult": 16,
+        "prime": 48,
+        "elder": 120
+      },
+      "thermal": [
+        6,
+        36
+      ],
+      "incubationMinutes": 75,
+      "setBonus": {
+        "name": "Fortress",
+        "desc": "reflect 15% damage with 4+ tortoise parts"
+      }
+    },
+    {
+      "id": "rhino_beetle",
+      "name": "Rhino Beetle",
+      "role": "Lifter",
+      "tags": [
+        "Armored"
+      ],
+      "palette": {
+        "primary": "#3b2f4a",
+        "secondary": "#241d2e",
+        "accent": "#8f7bb5"
+      },
+      "frame": "S",
+      "class": "ground",
+      "archetype": "insect",
+      "diet": "Fruit, sap, ambition",
+      "feedCost": 3,
+      "upkeepPerDay": 4,
+      "mailOrderPrice": 160,
+      "growthHours": {
+        "adult": 7,
+        "prime": 20,
+        "elder": 60
+      },
+      "thermal": [
+        14,
+        36
+      ],
+      "incubationMinutes": 35,
+      "setBonus": {
+        "name": "Leverage",
+        "desc": "ignore 25% armor with 4+ beetle parts"
+      }
+    },
+    {
+      "id": "ram",
+      "name": "Ram",
+      "role": "Breaker",
+      "tags": [],
+      "palette": {
+        "primary": "#c8b39a",
+        "secondary": "#9c8770",
+        "accent": "#e8dcc8"
+      },
+      "frame": "M",
+      "class": "ground",
+      "archetype": "horned",
+      "diet": "Hillside buffet",
+      "feedCost": 3,
+      "upkeepPerDay": 4,
+      "mailOrderPrice": 90,
+      "growthHours": {
+        "adult": 7,
+        "prime": 20,
+        "elder": 64
+      },
+      "thermal": [
+        -15,
+        26
+      ],
+      "incubationMinutes": 35,
+      "setBonus": {
+        "name": "Battering Line",
+        "desc": "+25% knockback with 4+ ram parts"
+      }
     },
     {
       "id": "eagle",
@@ -44,10 +347,12 @@
         "accent": "#e9a820"
       },
       "frame": "S",
+      "class": "air",
+      "archetype": "avian",
       "diet": "Free-range mice",
       "feedCost": 7,
       "upkeepPerDay": 8,
-      "mailOrderPrice": null,
+      "mailOrderPrice": 180,
       "growthHours": {
         "adult": 8,
         "prime": 24,
@@ -57,11 +362,252 @@
         -10,
         25
       ],
+      "incubationMinutes": 45,
       "setBonus": {
         "name": "Featherlight Frame",
         "desc": "+15% Speed with 4+ eagle parts"
+      }
+    },
+    {
+      "id": "bat",
+      "name": "Bat",
+      "role": "Disruptor",
+      "tags": [
+        "Airborne",
+        "Sonic"
+      ],
+      "palette": {
+        "primary": "#5a4560",
+        "secondary": "#3b2c40",
+        "accent": "#c9a7d6"
       },
-      "incubationMinutes": 45
+      "frame": "S",
+      "class": "air",
+      "archetype": "avian",
+      "diet": "Night-shift insects",
+      "feedCost": 4,
+      "upkeepPerDay": 5,
+      "mailOrderPrice": 120,
+      "growthHours": {
+        "adult": 7,
+        "prime": 20,
+        "elder": 60
+      },
+      "thermal": [
+        2,
+        30
+      ],
+      "incubationMinutes": 35,
+      "setBonus": {
+        "name": "Echo Field",
+        "desc": "+20% evasion with 4+ bat parts"
+      }
+    },
+    {
+      "id": "dragonfly",
+      "name": "Dragonfly",
+      "role": "Speedster",
+      "tags": [
+        "Airborne"
+      ],
+      "palette": {
+        "primary": "#3fa9a0",
+        "secondary": "#26706a",
+        "accent": "#d9f5f0"
+      },
+      "frame": "S",
+      "class": "air",
+      "archetype": "insect",
+      "diet": "Smaller insects, rudely",
+      "feedCost": 3,
+      "upkeepPerDay": 3,
+      "mailOrderPrice": 190,
+      "growthHours": {
+        "adult": 5,
+        "prime": 16,
+        "elder": 48
+      },
+      "thermal": [
+        12,
+        34
+      ],
+      "incubationMinutes": 30,
+      "setBonus": {
+        "name": "Blur",
+        "desc": "first strike guaranteed with 4+ dragonfly parts"
+      }
+    },
+    {
+      "id": "shark",
+      "name": "Shark",
+      "role": "Finisher",
+      "tags": [
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#7d8b99",
+        "secondary": "#56626e",
+        "accent": "#eef2f5"
+      },
+      "frame": "L",
+      "class": "water",
+      "archetype": "fish",
+      "diet": "Market-rate chum",
+      "feedCost": 12,
+      "upkeepPerDay": 14,
+      "mailOrderPrice": 420,
+      "growthHours": {
+        "adult": 13,
+        "prime": 38,
+        "elder": 96
+      },
+      "thermal": [
+        4,
+        26
+      ],
+      "incubationMinutes": 65,
+      "setBonus": {
+        "name": "Blood Scent",
+        "desc": "+25% damage to wounded with 4+ shark parts"
+      }
+    },
+    {
+      "id": "octopus",
+      "name": "Octopus",
+      "role": "Controller",
+      "tags": [
+        "Aquatic",
+        "Gas"
+      ],
+      "palette": {
+        "primary": "#b5548f",
+        "secondary": "#7d3562",
+        "accent": "#f2c4de"
+      },
+      "frame": "M",
+      "class": "water",
+      "archetype": "cephalopod",
+      "diet": "Shellfish, pried open",
+      "feedCost": 8,
+      "upkeepPerDay": 9,
+      "mailOrderPrice": 300,
+      "growthHours": {
+        "adult": 9,
+        "prime": 26,
+        "elder": 72
+      },
+      "thermal": [
+        2,
+        24
+      ],
+      "incubationMinutes": 45,
+      "setBonus": {
+        "name": "Eight Problems",
+        "desc": "+1 trap target with 4+ octopus parts"
+      }
+    },
+    {
+      "id": "electric_eel",
+      "name": "Electric Eel",
+      "role": "Mage",
+      "tags": [
+        "Electric",
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#4a5a3f",
+        "secondary": "#2e3a26",
+        "accent": "#f2e14a"
+      },
+      "frame": "M",
+      "class": "water",
+      "archetype": "fish",
+      "diet": "Charged snacks",
+      "feedCost": 7,
+      "upkeepPerDay": 8,
+      "mailOrderPrice": 360,
+      "growthHours": {
+        "adult": 10,
+        "prime": 30,
+        "elder": 80
+      },
+      "thermal": [
+        14,
+        32
+      ],
+      "incubationMinutes": 50,
+      "setBonus": {
+        "name": "Overcharge",
+        "desc": "+30% Electric damage with 4+ eel parts"
+      }
+    },
+    {
+      "id": "anglerfish",
+      "name": "Anglerfish",
+      "role": "Taunter",
+      "tags": [
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#2f3a4a",
+        "secondary": "#1b2430",
+        "accent": "#8ce0d8"
+      },
+      "frame": "S",
+      "class": "water",
+      "archetype": "fish",
+      "diet": "Whatever swims into the light",
+      "feedCost": 6,
+      "upkeepPerDay": 7,
+      "mailOrderPrice": 240,
+      "growthHours": {
+        "adult": 9,
+        "prime": 26,
+        "elder": 76
+      },
+      "thermal": [
+        0,
+        14
+      ],
+      "incubationMinutes": 45,
+      "setBonus": {
+        "name": "Deep Lure",
+        "desc": "taunt cannot be resisted with 4+ angler parts"
+      }
+    },
+    {
+      "id": "frog",
+      "name": "Frog",
+      "role": "Mobility",
+      "tags": [
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#6bbf59",
+        "secondary": "#47873a",
+        "accent": "#e8f5c8"
+      },
+      "frame": "S",
+      "class": "water",
+      "archetype": "amphibian",
+      "diet": "Flies, enthusiastically",
+      "feedCost": 2,
+      "upkeepPerDay": 3,
+      "mailOrderPrice": 70,
+      "growthHours": {
+        "adult": 6,
+        "prime": 18,
+        "elder": 56
+      },
+      "thermal": [
+        10,
+        32
+      ],
+      "incubationMinutes": 30,
+      "setBonus": {
+        "name": "Springloaded",
+        "desc": "+20% evasion with 4+ frog parts"
+      }
     },
     {
       "id": "goat",
@@ -74,6 +620,8 @@
         "accent": "#c9a86a"
       },
       "frame": "M",
+      "class": "ground",
+      "archetype": "horned",
       "diet": "Eats literally anything",
       "feedCost": 2,
       "upkeepPerDay": 3,
@@ -87,11 +635,143 @@
         -5,
         30
       ],
+      "incubationMinutes": 30,
       "setBonus": {
         "name": "Cast-Iron Constitution",
         "desc": "Halved upkeep with 4+ goat parts"
+      }
+    },
+    {
+      "id": "chameleon",
+      "name": "Chameleon",
+      "role": "Ghost",
+      "tags": [
+        "Camo"
+      ],
+      "palette": {
+        "primary": "#7fb069",
+        "secondary": "#548040",
+        "accent": "#f0e68c"
       },
-      "incubationMinutes": 30
+      "frame": "M",
+      "class": "ground",
+      "archetype": "reptile",
+      "diet": "Insects, eventually",
+      "feedCost": 5,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": 150,
+      "growthHours": {
+        "adult": 9,
+        "prime": 26,
+        "elder": 76
+      },
+      "thermal": [
+        16,
+        36
+      ],
+      "incubationMinutes": 45,
+      "setBonus": {
+        "name": "Full Cloak",
+        "desc": "evasion stacks twice with 4+ chameleon parts"
+      }
+    },
+    {
+      "id": "skunk",
+      "name": "Skunk",
+      "role": "Debuffer",
+      "tags": [
+        "Gas"
+      ],
+      "palette": {
+        "primary": "#2e2b3a",
+        "secondary": "#1c1a26",
+        "accent": "#f2f0f5"
+      },
+      "frame": "S",
+      "class": "ground",
+      "archetype": "mustelid",
+      "diet": "Cheap and unglamorous",
+      "feedCost": 3,
+      "upkeepPerDay": 4,
+      "mailOrderPrice": 80,
+      "growthHours": {
+        "adult": 7,
+        "prime": 20,
+        "elder": 64
+      },
+      "thermal": [
+        -8,
+        28
+      ],
+      "incubationMinutes": 35,
+      "setBonus": {
+        "name": "Lingering Cloud",
+        "desc": "debuffs last +1 turn with 4+ skunk parts"
+      }
+    },
+    {
+      "id": "porcupine",
+      "name": "Porcupine",
+      "role": "Punisher",
+      "tags": [],
+      "palette": {
+        "primary": "#6b5a48",
+        "secondary": "#493c2f",
+        "accent": "#d8c9a8"
+      },
+      "frame": "M",
+      "class": "ground",
+      "archetype": "armored",
+      "diet": "Bark and grievances",
+      "feedCost": 4,
+      "upkeepPerDay": 5,
+      "mailOrderPrice": 85,
+      "growthHours": {
+        "adult": 8,
+        "prime": 24,
+        "elder": 72
+      },
+      "thermal": [
+        -12,
+        26
+      ],
+      "incubationMinutes": 40,
+      "setBonus": {
+        "name": "Bramble",
+        "desc": "+50% thorns damage with 4+ porcupine parts"
+      }
+    },
+    {
+      "id": "mantis",
+      "name": "Mantis",
+      "role": "Duelist",
+      "tags": [],
+      "palette": {
+        "primary": "#86c232",
+        "secondary": "#5d8a1f",
+        "accent": "#e6f7c1"
+      },
+      "frame": "S",
+      "class": "ground",
+      "archetype": "insect",
+      "diet": "Live prey, politely",
+      "feedCost": 4,
+      "upkeepPerDay": 4,
+      "mailOrderPrice": 130,
+      "growthHours": {
+        "adult": 6,
+        "prime": 18,
+        "elder": 56
+      },
+      "thermal": [
+        14,
+        34
+      ],
+      "incubationMinutes": 30,
+      "setBonus": {
+        "name": "Duelist's Edge",
+        "desc": "+20% priority damage with 4+ mantis parts"
+      }
     },
     {
       "id": "cobra",
@@ -106,10 +786,12 @@
         "accent": "#2e5b34"
       },
       "frame": "S",
+      "class": "ground",
+      "archetype": "reptile",
       "diet": "Gourmet eggs, no questions",
       "feedCost": 6,
       "upkeepPerDay": 6,
-      "mailOrderPrice": null,
+      "mailOrderPrice": 170,
       "growthHours": {
         "adult": 10,
         "prime": 30,
@@ -119,11 +801,46 @@
         18,
         40
       ],
+      "incubationMinutes": 40,
       "setBonus": {
         "name": "Cold-Blooded Focus",
         "desc": "+1 Venom stack with 4+ cobra parts"
+      }
+    },
+    {
+      "id": "scorpion",
+      "name": "Scorpion",
+      "role": "Hybrid",
+      "tags": [
+        "Venomous",
+        "Armored"
+      ],
+      "palette": {
+        "primary": "#a35a2e",
+        "secondary": "#73391a",
+        "accent": "#e8b57a"
       },
-      "incubationMinutes": 40
+      "frame": "S",
+      "class": "ground",
+      "archetype": "insect",
+      "diet": "Anything it can pin",
+      "feedCost": 4,
+      "upkeepPerDay": 5,
+      "mailOrderPrice": 210,
+      "growthHours": {
+        "adult": 8,
+        "prime": 24,
+        "elder": 72
+      },
+      "thermal": [
+        20,
+        42
+      ],
+      "incubationMinutes": 40,
+      "setBonus": {
+        "name": "Chitin Guard",
+        "desc": "+15% armor and venom with 4+ scorpion parts"
+      }
     },
     {
       "id": "salvage",

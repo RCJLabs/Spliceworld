@@ -1,5 +1,64 @@
 # PROGRESS
 
+## Session 11 — Content Wave 1: 25 species + the class triangle ✅
+
+The audit's recommended next phase, taken further than scoped: the full roadmap
+roster, not a half-step to 10.
+
+### The class triangle (new core mechanic, ROADMAP §3.6b)
+- **Ground ≫ Water ≫ Air ≫ Ground** (×1.5 / ×0.7), in `data/classes.json`.
+- **Class is derived from anatomy, never assigned.** Parts carry `classAffinity`:
+  wings/membranes vote Air, gills/fins/flippers vote Water, feet/paws/hooves vote
+  Ground. Most votes wins; **a tie leaves the chimera Unclassed** — neutral both
+  ways. Committing to one anatomy buys the matchup edge, hybridising trades it for
+  safety. That's a genuine counterweight to instability, which pushes the other way.
+- The physiology panel names the class, shows the vote tally, and says what it
+  beats. Enemies declare a class; two new units (**Attack Chopper** air, **Harbor
+  Skiff** water) make the triangle cut both ways.
+- Measured working: a Ground build wins 100% vs the ground squad but **7% vs the
+  chopper**; an Air build crushes ground and drowns at 13% vs the skiff.
+
+### Content: 4 → 25 species, 24 → 150 parts
+- Full ROADMAP §4.1 roster with palettes, roles, tags, ranch economics, thermal
+  bands, set bonuses, incubation timers, and signature abilities.
+- **Parts are generated** by `tools/gen-parts.js` from the roster + an archetype
+  shape library (`tools/shapes.js`: 8 head families, 10 limb, 8 tail, 9 hide, 10
+  organ glyphs). A dev tool, not a build step — the game still loads static JSON.
+  Species #26 is now nearly free.
+- **The audit's headline finding is fixed: all 6 tag-chart rules are live.** Every
+  one was unreachable before; Electric/Sonic/Gas/Aquatic/Airborne now exist on both
+  sides. Asserted in smoke so it can't regress.
+- Combos 4 → **12** (the roadmap target), using the new roster.
+- **Fauna acquisition fixed** — eagle and cobra were previously unobtainable. Region
+  nodes now list `unlocksFauna`; conquest stocks the Mail-Order catalog.
+
+### UI reorganised for scale
+- **Theater**: parts grouped by species in `<optgroup>`s with class marks and
+  per-slot owned counts; a class banner above the stage.
+- **Vault**: collapsible per-species groups with counts and best grade, instead of
+  a flat wall of 150 tokens.
+- **Ranch**: the catalog is a select + Order button (25 species won't fit as buttons).
+- **Dex**: species grouped under the three classes with a triangle legend.
+
+### Bugs found and fixed
+- **Tails cropped by the viewBox** on the L frame — 14 parts silently rendered as a
+  "trumpet" taper. Rebuilt the tail library within a fit budget; `tools/bounds.js`
+  now guards every part on every frame, wired into smoke.
+- **A save holding a token for a retired part crashed the Vault and Theater.**
+  Content is data and evolves; unknown part ids are now skipped, not fatal.
+- `classes.json` was missing from the service-worker precache (offline would break);
+  cache key now busts on content releases, not just save-schema ones.
+- Closed the audit's onboarding finding: the panel warns on an under-built chassis
+  ("this is barely a creature — it will not survive contact with a patrol").
+- The sim's degeneracy detector was tuned for 3 encounters and stopped catching the
+  planted combo at 6; flags are now peer-relative (median-based) and catch it at
+  every sample size with no false positives on clean data.
+
+### Balance after the wave
+Grade ladder holds: mean win rate 12.3% → 25.3% → 40.2% → 69.0% (standard →
+prismatic). Prismatic now flags 15 OP builds of 40 — the top tier is probably too
+strong and wants a pass before Wave 2.
+
 ## Session 10b — v0.1 Audit ✅
 
 `docs/AUDIT-v0.1.md` — measured post-ship audit (sim runs, data introspection,

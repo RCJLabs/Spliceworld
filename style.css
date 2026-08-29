@@ -557,3 +557,55 @@ footer {
   text-align: center;
 }
 .ticker::before { content: "📡 BREAKING: "; color: var(--muted); }
+
+/* --- Wave 1: class banner, catalog, collapsible vault --- */
+.class-banner {
+  margin: 2px 0 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: inline-block;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--muted);
+}
+.class-ground { border-color: #c9a86a; color: #c9a86a; }
+.class-water { border-color: #5fa8d3; color: #5fa8d3; }
+.class-air { border-color: #b48bff; color: #b48bff; }
+
+.catalog { display: flex; gap: 8px; align-items: flex-end; margin-top: 8px; }
+.catalog .slot { flex: 1; min-width: 0; }
+.catalog button {
+  flex: 0 0 auto;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.catalog button:disabled { opacity: 0.45; cursor: default; }
+
+.slot span em { font-style: normal; color: var(--goo); }
+
+.vault-species {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+}
+.vault-species summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 2px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.vault-species summary::-webkit-details-marker { color: var(--muted); }
+.vault-species .token-list { margin-top: 0; }
+.vault-species .token-list li { background: var(--panel); font-size: 0.74rem; }

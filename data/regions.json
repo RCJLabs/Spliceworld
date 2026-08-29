@@ -1,5 +1,5 @@
 {
-  "_doc": "Campaign shell (M5): one region strip — nodes unlock in order, each is an encounter from enemies.json; winning holds the node, granting income per real-world day (timestamp-computed) and notoriety. Notoriety crossing threatGen2At announces Threat Generation 2 and unlocks nodes gated with 'threatGen': 2. rescueEncounter = the themed battle used for every rescue raid (v0.1 has one template). Adding regions/nodes must never require engine edits.",
+  "_doc": "Campaign shell (M5): one region strip — nodes unlock in order, each is an encounter from enemies.json; winning holds the node, granting income per real-world day (timestamp-computed) and notoriety. Notoriety crossing threatGen2At announces Threat Generation 2 and unlocks nodes gated with 'threatGen': 2. rescueEncounter = the themed battle used for every rescue raid (v0.1 has one template). Adding regions/nodes must never require engine edits. unlocksFauna: species ids added to the Mail-Order catalog when the node is held.",
   "threatGen2At": 60,
   "rescueEncounter": "rescue_impound",
   "regions": [
@@ -13,7 +13,11 @@
           "encounter": "patrol_1",
           "incomePerDay": 25,
           "notoriety": 10,
-          "blurb": "Your own back fence. Currently patrolled by people with clipboards."
+          "blurb": "Your own back fence. Currently patrolled by people with clipboards.",
+          "unlocksFauna": [
+            "porcupine",
+            "skunk"
+          ]
         },
         {
           "id": "downtown",
@@ -21,7 +25,12 @@
           "encounter": "patrol_2",
           "incomePerDay": 40,
           "notoriety": 15,
-          "blurb": "Two traffic lights and a very nervous mayor."
+          "blurb": "Two traffic lights and a very nervous mayor.",
+          "unlocksFauna": [
+            "wolf",
+            "chameleon",
+            "mantis"
+          ]
         },
         {
           "id": "checkpoint",
@@ -29,7 +38,13 @@
           "encounter": "checkpoint",
           "incomePerDay": 60,
           "notoriety": 15,
-          "blurb": "The county's only exit. The county's only cruiser lives here."
+          "blurb": "The county's only exit. The county's only cruiser lives here.",
+          "unlocksFauna": [
+            "eagle",
+            "cobra",
+            "frog",
+            "bat"
+          ]
         },
         {
           "id": "precinct",
@@ -38,7 +53,14 @@
           "incomePerDay": 100,
           "notoriety": 25,
           "boss": true,
-          "blurb": "Captain Clampdown's office. There is a tarp in the motor pool. It is humming."
+          "blurb": "Captain Clampdown's office. There is a tarp in the motor pool. It is humming.",
+          "unlocksFauna": [
+            "bear",
+            "tiger",
+            "gorilla",
+            "rhino_beetle",
+            "dragonfly"
+          ]
         },
         {
           "id": "guard_post",
@@ -47,7 +69,18 @@
           "incomePerDay": 80,
           "notoriety": 20,
           "threatGen": 2,
-          "blurb": "The county called someone with a bigger budget."
+          "blurb": "The county called someone with a bigger budget.",
+          "unlocksFauna": [
+            "rhino",
+            "pangolin",
+            "crocodile",
+            "shark",
+            "octopus",
+            "electric_eel",
+            "anglerfish",
+            "tortoise",
+            "scorpion"
+          ]
         }
       ]
     }

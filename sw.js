@@ -1,7 +1,7 @@
 // Service worker (M7): network-first with cache fallback. Fresh deploys win
 // whenever the network is up; offline play falls back to the last good
 // build. Bump CACHE with SAVE_VERSION-sized releases so stale caches drain.
-const CACHE = 'spliceworld-v8';
+const CACHE = 'spliceworld-v8-wave1';
 
 const SHELL = [
   '.',
@@ -39,6 +39,7 @@ const SHELL = [
   'data/keywords.json',
   'data/regions.json',
   'data/traits.json',
+  'data/classes.json',
 ];
 
 self.addEventListener('install', (event) => {

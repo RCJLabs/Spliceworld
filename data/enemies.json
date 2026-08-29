@@ -1,5 +1,5 @@
 {
-  "_doc": "Gen 1 human enemy roster (ROADMAP §3.6) + encounters. Units: stats, unit tags (Organic/Vehicle plus battle tags), moves (same schema as part moves), koLine (zero death language — soldiers parachute away, vehicles retire loudly), shapes (procedural SVG in unit-local space, viewBox -100 -110 200 220). transformInto = boss second stage. Encounters: ordered wave of unit ids + reward funds. Adding a unit or encounter must never require engine edits. Art (M7.5): organics carry googly eyes under the brim; vehicles get windshield eyes with angry brows — machines are characters too.",
+  "_doc": "Gen 1 human enemy roster (ROADMAP §3.6) + encounters. Units: stats, unit tags (Organic/Vehicle plus battle tags), moves (same schema as part moves), koLine (zero death language — soldiers parachute away, vehicles retire loudly), shapes (procedural SVG in unit-local space, viewBox -100 -110 200 220). transformInto = boss second stage. Encounters: ordered wave of unit ids + reward funds. Adding a unit or encounter must never require engine edits. Art (M7.5): organics carry googly eyes under the brim; vehicles get windshield eyes with angry brows — machines are characters too. class: the unit's elemental class for the RPS chart in data/classes.json.",
   "units": [
     {
       "id": "riot_squad",
@@ -189,7 +189,8 @@
           "fill": "#ffffff",
           "stroke": "none"
         }
-      ]
+      ],
+      "class": "ground"
     },
     {
       "id": "net_trooper",
@@ -374,7 +375,8 @@
           "stroke": "#2b2440",
           "strokeWidth": 4
         }
-      ]
+      ],
+      "class": "ground"
     },
     {
       "id": "tranq_team",
@@ -581,7 +583,8 @@
           "stroke": "#2b2440",
           "strokeWidth": 4
         }
-      ]
+      ],
+      "class": "ground"
     },
     {
       "id": "police_cruiser",
@@ -755,7 +758,8 @@
       ],
       "salvage": [
         "v8_heart"
-      ]
+      ],
+      "class": "ground"
     },
     {
       "id": "captain_clampdown",
@@ -1005,7 +1009,8 @@
           "stroke": "#2b2440",
           "strokeWidth": 4
         }
-      ]
+      ],
+      "class": "ground"
     },
     {
       "id": "clampdown_9000",
@@ -1217,7 +1222,8 @@
       "salvage": [
         "riot_plating",
         "v8_heart"
-      ]
+      ],
+      "class": "ground"
     },
     {
       "id": "infantry_squad",
@@ -1404,7 +1410,8 @@
           "stroke": "#2b2440",
           "strokeWidth": 4
         }
-      ]
+      ],
+      "class": "ground"
     },
     {
       "id": "jeep_50",
@@ -1570,6 +1577,321 @@
           "stroke": "#2b2440",
           "strokeWidth": 4
         }
+      ],
+      "class": "ground"
+    },
+    {
+      "id": "attack_chopper",
+      "name": "Attack Chopper",
+      "hp": 70,
+      "power": 16,
+      "armor": 6,
+      "speed": 17,
+      "stamina": 130,
+      "regen": 15,
+      "tags": [
+        "Vehicle",
+        "Airborne"
+      ],
+      "class": "air",
+      "salvage": [
+        "v8_heart"
+      ],
+      "koLine": "The Attack Chopper auto-rotates into a haystack. The pilot walks away whistling.",
+      "moves": [
+        {
+          "name": "Strafing Run",
+          "power": 52,
+          "cost": 24,
+          "acc": 88,
+          "tags": [
+            "Airborne"
+          ],
+          "keywords": {}
+        },
+        {
+          "name": "Rotor Wash",
+          "power": 22,
+          "cost": 14,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "accDown": 1
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -70,
+          "y": -4,
+          "width": 56,
+          "height": 9,
+          "rx": 4,
+          "fill": "#4a5a3a"
+        },
+        {
+          "type": "path",
+          "d": "M -20 12 C -20 -18 -2 -30 22 -30 C 52 -30 70 -14 70 6 C 70 20 52 28 22 28 C -4 28 -20 22 -20 12 Z",
+          "fill": "#5d6b46"
+        },
+        {
+          "type": "path",
+          "d": "M 30 -24 C 52 -24 66 -12 66 2 L 30 2 Z",
+          "fill": "#9fd8ff",
+          "opacity": 0.9
+        },
+        {
+          "type": "rect",
+          "x": -14,
+          "y": -46,
+          "width": 10,
+          "height": 18,
+          "rx": 3,
+          "fill": "#38452c"
+        },
+        {
+          "type": "rect",
+          "x": -96,
+          "y": -52,
+          "width": 190,
+          "height": 7,
+          "rx": 3.5,
+          "fill": "#38452c"
+        },
+        {
+          "type": "rect",
+          "x": -78,
+          "y": -16,
+          "width": 10,
+          "height": 26,
+          "rx": 4,
+          "fill": "#38452c"
+        },
+        {
+          "type": "path",
+          "d": "M -8 28 L -8 40 M 40 28 L 40 40 M -22 40 L 56 40",
+          "fill": "none",
+          "stroke": "#38452c",
+          "strokeWidth": 6
+        },
+        {
+          "type": "circle",
+          "cx": 20,
+          "cy": -14,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 22,
+          "cy": -14,
+          "r": 3.2,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 20.8,
+          "cy": -15.4,
+          "r": 1.1,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 46,
+          "cy": -12,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 48,
+          "cy": -12,
+          "r": 3.2,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 46.8,
+          "cy": -13.4,
+          "r": 1.1,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M 10 -22 L 28 -19",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 58 -20 L 40 -17",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "harbor_skiff",
+      "name": "Harbor Skiff",
+      "hp": 75,
+      "power": 14,
+      "armor": 8,
+      "speed": 12,
+      "stamina": 120,
+      "regen": 14,
+      "tags": [
+        "Vehicle",
+        "Aquatic"
+      ],
+      "class": "water",
+      "salvage": [
+        "v8_heart"
+      ],
+      "koLine": "The Harbor Skiff springs a leak, sighs, and settles into two feet of water.",
+      "moves": [
+        {
+          "name": "Deck Gun",
+          "power": 48,
+          "cost": 22,
+          "acc": 88,
+          "tags": [],
+          "keywords": {}
+        },
+        {
+          "name": "Water Cannon",
+          "power": 34,
+          "cost": 18,
+          "acc": 95,
+          "tags": [],
+          "keywords": {
+            "knockback": true
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -86 6 L 84 6 L 62 40 L -62 40 Z",
+          "fill": "#3d5a80"
+        },
+        {
+          "type": "rect",
+          "x": -40,
+          "y": -34,
+          "width": 64,
+          "height": 40,
+          "rx": 6,
+          "fill": "#2b3f5c"
+        },
+        {
+          "type": "rect",
+          "x": -32,
+          "y": -26,
+          "width": 48,
+          "height": 16,
+          "rx": 4,
+          "fill": "#9fd8ff",
+          "opacity": 0.9
+        },
+        {
+          "type": "rect",
+          "x": 34,
+          "y": -20,
+          "width": 9,
+          "height": 26,
+          "rx": 3,
+          "fill": "#8a94a6"
+        },
+        {
+          "type": "path",
+          "d": "M 38 -20 L 68 -12",
+          "fill": "none",
+          "stroke": "#26233a",
+          "strokeWidth": 7
+        },
+        {
+          "type": "path",
+          "d": "M -92 44 q 22 10 44 0 q 22 -10 44 0 q 22 10 44 0",
+          "fill": "none",
+          "stroke": "#5fa8d3",
+          "strokeWidth": 6,
+          "opacity": 0.8
+        },
+        {
+          "type": "circle",
+          "cx": -20,
+          "cy": -18,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -18,
+          "cy": -18,
+          "r": 3.2,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -19.2,
+          "cy": -19.4,
+          "r": 1.1,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 6,
+          "cy": -18,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 8,
+          "cy": -18,
+          "r": 3.2,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 6.8,
+          "cy": -19.4,
+          "r": 1.1,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -29 -26 L -12 -23",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 15 -26 L -1 -23",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
       ]
     }
   ],
@@ -1637,6 +1959,26 @@
         "police_cruiser"
       ],
       "reward": 0
+    },
+    {
+      "id": "air_patrol",
+      "name": "Air Patrol",
+      "blurb": "They called in something with rotors.",
+      "waves": [
+        "jeep_50",
+        "attack_chopper"
+      ],
+      "reward": 300
+    },
+    {
+      "id": "harbor_watch",
+      "name": "Harbor Watch",
+      "blurb": "The county remembered it owns a boat.",
+      "waves": [
+        "infantry_squad",
+        "harbor_skiff"
+      ],
+      "reward": 280
     }
   ]
 }

@@ -6,7 +6,7 @@ import { renderCreatureSVG } from '../render/renderer.js';
 import {
   CARE_ACTIONS, ageStage, nextStage, conditionTier, careStatus, careAction,
   penUpgradeCost, buyPenUpgrade, buyMailOrder, stockGenome, upkeepPerDay,
-  TUNING,
+  catalogFor, TUNING,
 } from './ranch.js';
 import { gradeFor } from '../splice/extract.js';
 import { canBreed, breedPair, hatchEgg, BREEDING } from './breeding.js';
@@ -33,6 +33,8 @@ export function fmtDuration(ms) {
 let lastMsg = 'The herd awaits your questionable attention.';
 let pickA = ''; // breeding pen draft (screen-local)
 let pickB = '';
+let catalogPick = '';
+const CLASS_MARK = { air: '🪽 ', ground: '🦶 ', water: '🌊 ' };
 
 function eggSVG(palette) {
   return (
@@ -49,6 +51,8 @@ export function renderRanchScreen(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
   const upkeep = upkeepPerDay(state, content);
+  const catalog = catalogFor(state, content);
+  if (!catalog.some((sp) => sp.id === catalogPick)) catalogPick = catalog[0]?.id ?? '';
 
   // Path to World Domination: the guided first loop, gone after conquest #1.
   let onboarding = '';
@@ -77,10 +81,16 @@ export function renderRanchScreen(root, ctx) {
       </div>
       <div class="ranch-actions">
         <button type="button" data-act="pen">Expand pens +${TUNING.penUpgradeSize} — $${penUpgradeCost(state)}</button>
-        ${Object.values(content.species)
-          .filter((s) => s.mailOrderPrice)
-          .map((s) => `<button type="button" data-act="order" data-species="${s.id}">Mail-order ${s.name} — $${s.mailOrderPrice}</button>`)
-          .join('')}
+      </div>
+      <div class="catalog">
+        <label class="slot"><span>Mail-Order Menagerie (${catalog.length} in stock)</span>
+          <select id="catalog-pick" ${catalog.length ? '' : 'disabled'}>
+            ${catalog.length
+              ? catalog.map((sp) => `<option value="${sp.id}" ${sp.id === catalogPick ? 'selected' : ''}>${sp.name} — $${sp.mailOrderPrice} · ${sp.role} · ${CLASS_MARK[sp.class] ?? ''}${sp.tags.join(', ') || 'no tags'}</option>`).join('')
+              : '<option>— conquer territory to open the catalog —</option>'}
+          </select>
+        </label>
+        <button type="button" data-act="order" ${catalog.length ? '' : 'disabled'}>Order</button>
       </div>
       <p class="ranch-msg">${lastMsg}</p>
     </section>`;
@@ -170,6 +180,9 @@ export function renderRanchScreen(root, ctx) {
 
   root.innerHTML = onboarding + head + breeding + incubator + (cards || '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>');
 
+  root.querySelector('#catalog-pick')?.addEventListener('change', (e) => {
+    catalogPick = e.target.value;
+  });
   root.querySelector('#breed-a').addEventListener('change', (e) => {
     pickA = e.target.value;
     pickB = '';
@@ -189,7 +202,7 @@ export function renderRanchScreen(root, ctx) {
       } else if (btn.dataset.act === 'pen') {
         result = buyPenUpgrade(ctx.state);
       } else if (btn.dataset.act === 'order') {
-        result = buyMailOrder(ctx.state, btn.dataset.species, content, t2);
+        result = buyMailOrder(ctx.state, catalogPick, content, t2);
       } else if (btn.dataset.act === 'breed') {
         result = breedPair(ctx.state, pickA, pickB, content, t2);
         if (result.ok) { pickA = ''; pickB = ''; }

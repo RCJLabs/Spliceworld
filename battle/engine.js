@@ -84,6 +84,7 @@ export function combatantFromChimera(chimera, content, now) {
     stamina: report.stats.stamina,
     regen: report.regenNet,
     tags: ['Organic', ...report.tags],
+    creatureClass: report.creatureClass,
     moves,
     rejection: !settled,
     ignoreChance: obedienceIgnoreChance(chimera, now),
@@ -107,6 +108,7 @@ export function combatantFromUnit(unit) {
     stamina: unit.stamina,
     regen: unit.regen,
     tags: unit.tags,
+    creatureClass: unit.class ?? null,
     moves: unit.moves.map((m) => ({ ...m })),
     koLine: unit.koLine,
     transformInto: unit.transformInto ?? null,
@@ -187,6 +189,15 @@ export function playerActions(battle) {
 
 // --- Resolution ---------------------------------------------------------
 
+// Ground ≫ Water ≫ Air ≫ Ground. Unclassed neither exploits nor is exploited.
+export function classMultiplier(atkClass, defClass, content) {
+  if (!atkClass || !defClass || atkClass === defClass) return 1;
+  const rules = content.classRules ?? { advantage: 1, disadvantage: 1 };
+  if (content.classes?.[atkClass]?.beats === defClass) return rules.advantage;
+  if (content.classes?.[defClass]?.beats === atkClass) return rules.disadvantage;
+  return 1;
+}
+
 function tagMultiplier(moveTags, defenderTags, chart) {
   let mult = 1;
   let ignoreArmor = false;
@@ -213,7 +224,8 @@ function attack(battle, atk, def, move, events, content) {
   if (move.power > 0 && mult === 0) {
     events.push(`${atk.name} uses ${move.name} — it has no effect on ${def.name}. (${chartNote(move.tags, def.tags, content)})`);
   } else if (move.power > 0) {
-    let dmg = move.power * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult;
+    const clsMult = classMultiplier(atk.creatureClass, def.creatureClass, content);
+    let dmg = move.power * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult * clsMult;
     dmg *= 0.9 + 0.2 * roll(battle);
     const bypassArmor = ignoreArmor || move.keywords.ignoreArmor;
     if (!bypassArmor) dmg -= def.armor * ARMOR_FACTOR;
@@ -229,6 +241,8 @@ function attack(battle, atk, def, move, events, content) {
     }
     let line = `${atk.name} uses ${move.name} — ${dmg} damage`;
     if (mult > 1) line += ' (super effective!)';
+    if (clsMult > 1) line += ` (${content.classes[atk.creatureClass].name} beats ${content.classes[def.creatureClass].name}!)`;
+    else if (clsMult < 1) line += ` (${content.classes[def.creatureClass].name} shrugs off ${content.classes[atk.creatureClass].name})`;
     if (bypassArmor && def.armor > 0) line += ' (armor ignored!)';
     events.push(line + '.');
     if (def.status.sleep) {

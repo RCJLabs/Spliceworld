@@ -152,9 +152,45 @@ export function buyPenUpgrade(state) {
   return { ok: true, msg: `Pens expanded to ${state.ranch.penCapacity}. The zoning board was not consulted.` };
 }
 
+// The Mail-Order catalog only stocks fauna your conquests have unlocked
+// (region nodes list `unlocksFauna`). Species with no price are never sold.
+export function faunaUnlocked(state, content) {
+  const open = new Set(
+    Object.values(content.species)
+      .filter((s) => s.mailOrderPrice && !s.synthetic && !isFaunaGated(s.id, content))
+      .map((s) => s.id)
+  );
+  for (const region of Object.values(content.regions)) {
+    for (const node of region.nodes) {
+      if (!state.campaign.heldNodes.includes(node.id)) continue;
+      for (const id of node.unlocksFauna ?? []) open.add(id);
+    }
+  }
+  return open;
+}
+
+function isFaunaGated(speciesId, content) {
+  for (const region of Object.values(content.regions)) {
+    for (const node of region.nodes) {
+      if ((node.unlocksFauna ?? []).includes(speciesId)) return true;
+    }
+  }
+  return false;
+}
+
+export function catalogFor(state, content) {
+  const open = faunaUnlocked(state, content);
+  return Object.values(content.species)
+    .filter((s) => s.mailOrderPrice && open.has(s.id))
+    .sort((a, b) => a.mailOrderPrice - b.mailOrderPrice);
+}
+
 export function buyMailOrder(state, speciesId, content, now) {
   const species = content.species[speciesId];
   if (!species?.mailOrderPrice) return { ok: false, msg: 'Not in the catalog. Conquest required.' };
+  if (!faunaUnlocked(state, content).has(speciesId)) {
+    return { ok: false, msg: `${species.name} stock is not in your territory yet. Conquer more of the map.` };
+  }
   if (state.ranch.stock.length >= state.ranch.penCapacity) {
     return { ok: false, msg: 'Pens are full. Expand before ordering more residents.' };
   }

@@ -25,6 +25,8 @@ export function loadSimContent() {
     combos: readJSON('data/combos.json'),
     enemies: readJSON('data/enemies.json'),
     keywords: readJSON('data/keywords.json'),
+    classes: readJSON('data/classes.json'),
+  classes: readJSON('data/classes.json'),
   });
 }
 
@@ -162,15 +164,34 @@ export function runSim(content, { builds = 40, seedsPer = 3, grade = 'standard',
   }
   rows.sort((a, b) => b.winRate - a.winRate);
 
+  // Degeneracy is relative: as the roster and encounter set grow, a fixed
+  // "wins 85%" bar stops catching glass cannons that one-shot everything but
+  // still lose to an alpha strike. Flag absolute monsters AND peer outliers.
+  const median = (xs) => {
+    const v = xs.filter((x) => x != null).sort((a, b) => a - b);
+    return v.length ? v[Math.floor(v.length / 2)] : null;
+  };
+  const medWin = median(rows.map((r) => r.winRate)) ?? 0;
+  const medTurns = median(rows.map((r) => r.avgWinTurns)) ?? 99;
+
   const flags = [];
   for (const row of rows) {
-    if (row.winRate >= 0.85 && (row.avgWinTurns ?? 99) <= 5) {
-      flags.push({ kind: 'OP', label: row.label, partIds: row.partIds, why: `wins ${pct(row.winRate)} in ~${row.avgWinTurns.toFixed(1)} turns — nerf something` });
+    const turns = row.avgWinTurns ?? 99;
+    const monster = row.winRate >= 0.85 && turns <= 5;
+    const oneShot = row.winRate > 0 && turns <= 2.5;
+    const outlier = row.winRate >= medWin + 0.3 && turns <= medTurns - 1.0;
+    if (monster || oneShot || outlier) {
+      const why = monster
+        ? `wins ${pct(row.winRate)} in ~${turns.toFixed(1)} turns — nerf something`
+        : oneShot
+          ? `deletes encounters in ~${turns.toFixed(1)} turns — check its damage numbers`
+          : `${pct(row.winRate)} vs peer median ${pct(medWin)} and ${turns.toFixed(1)} vs ${medTurns.toFixed(1)} turns — outlier`;
+      flags.push({ kind: 'OP', label: row.label, partIds: row.partIds, why });
     } else if (row.winRate === 0) {
       flags.push({ kind: 'TRASH', label: row.label, partIds: row.partIds, why: 'cannot win anything — dead content or a hole in the curve' });
     }
   }
-  return { rows, flags, encounterIds };
+  return { rows, flags, encounterIds, medWin, medTurns };
 }
 
 // The planted defect for the acceptance test: a combo move with absurd
