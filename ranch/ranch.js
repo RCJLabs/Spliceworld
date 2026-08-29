@@ -1,0 +1,192 @@
+// Ranch & stock system (M1). Pure functions over gameState — no DOM, no
+// Date.now(): callers pass `now` so offline elapsed time, tests, and the
+// dev time-warp all flow through the same code path (timestamps, never
+// intervals).
+
+import { rngStream, pick, randInt } from '../util/rng.js';
+
+export const STATS = ['hp', 'power', 'armor', 'speed', 'stamina'];
+export const AGE_STAGES = ['juvenile', 'adult', 'prime', 'elder'];
+export const CARE_ACTIONS = ['feed', 'groom', 'exercise', 'enrich'];
+
+export const TUNING = {
+  startCondition: 60,
+  careGain: 8, // per action
+  careCooldownHours: 20, // "daily-ish" without punishing time zones
+  decayPerHour: 0.4, // ≈9.6/day of neglect
+  conditionFloor: 25, // soft floor — absence never breaks anything
+  conditionMax: 100,
+  gleamingAt: 85, // sparkle overlay + label
+  scruffyAt: 45, // dirt overlay + label
+  stipendPerDay: 40, // placeholder income until region income lands (M5)
+  startingFunds: 300,
+  penStartCapacity: 4,
+  penUpgradeSize: 2,
+  penUpgradeBase: 250,
+  penUpgradeStep: 150,
+};
+
+const STOCK_NAMES = [
+  'Bessie', 'Gordon', 'Clementine', 'Waffles', 'Herbert', 'Petunia',
+  'Meatball', 'Agnes', 'Rufus', 'Marigold', 'Duncan', 'Prudence',
+  'Tater', 'Wilhelmina', 'Bartholomew', 'Pickles', 'Doreen', 'Alfredo',
+];
+
+const HOUR = 3600000;
+const DAY = 24 * HOUR;
+
+export function createAnimal(state, speciesId, content, now) {
+  const n = state.ranch.animalCount++;
+  const rng = rngStream(state.seed, 'animal', n);
+  const potential = {};
+  for (const stat of STATS) {
+    // 1–5 stars, mid-weighted: 2–4 common, 5 a genuine find.
+    potential[stat] = Math.max(1, Math.min(5, randInt(rng, 1, 3) + randInt(rng, 0, 2)));
+  }
+  return {
+    id: `a${n}`,
+    species: speciesId,
+    name: pick(rng, STOCK_NAMES),
+    sex: rng() < 0.5 ? 'F' : 'M',
+    birthAt: now,
+    condition: TUNING.startCondition,
+    potential, // hidden in UI until the Gene Scanner upgrade exists
+    traits: [], // heritable trait genes arrive with breeding (M6)
+    lastCare: { feed: 0, groom: 0, exercise: 0, enrich: 0 },
+  };
+}
+
+export function ageStage(animal, content, now) {
+  const g = content.species[animal.species].growthHours;
+  const hours = Math.max(0, now - animal.birthAt) / HOUR;
+  if (hours >= g.elder) return 'elder';
+  if (hours >= g.prime) return 'prime';
+  if (hours >= g.adult) return 'adult';
+  return 'juvenile';
+}
+
+// Time until the next stage, or null at elder. UI countdowns only.
+export function nextStage(animal, content, now) {
+  const g = content.species[animal.species].growthHours;
+  const stage = ageStage(animal, content, now);
+  if (stage === 'elder') return null;
+  const nextName = AGE_STAGES[AGE_STAGES.indexOf(stage) + 1];
+  return { stage: nextName, msRemaining: animal.birthAt + g[nextName] * HOUR - now };
+}
+
+export function conditionTier(condition) {
+  if (condition >= TUNING.gleamingAt) return 'gleaming';
+  if (condition <= TUNING.scruffyAt) return 'scruffy';
+  return 'fine';
+}
+
+// Advance all timestamp-driven effects since the last tick. Idempotent for
+// dt <= 0 (clock skew, time-warp removed) — never rewind anything.
+export function applyElapsed(state, content, now) {
+  const last = state.lastTickAt ?? now;
+  const dt = Math.max(0, now - last);
+  state.lastTickAt = now;
+  if (dt === 0) return;
+
+  const dtHours = dt / HOUR;
+  const dtDays = dt / DAY;
+
+  let upkeep = 0;
+  for (const animal of state.ranch.stock) {
+    animal.condition = Math.max(
+      TUNING.conditionFloor,
+      animal.condition - TUNING.decayPerHour * dtHours
+    );
+    upkeep += content.species[animal.species].upkeepPerDay;
+  }
+  state.funds = Math.max(0, state.funds + (TUNING.stipendPerDay - upkeep) * dtDays);
+}
+
+export function careStatus(animal, now) {
+  const status = {};
+  for (const action of CARE_ACTIONS) {
+    const readyAt = animal.lastCare[action] + TUNING.careCooldownHours * HOUR;
+    status[action] = { ready: now >= readyAt, msRemaining: Math.max(0, readyAt - now) };
+  }
+  return status;
+}
+
+export function careAction(state, animalId, action, content, now) {
+  const animal = state.ranch.stock.find((a) => a.id === animalId);
+  if (!animal) return { ok: false, msg: 'No such animal.' };
+  if (!CARE_ACTIONS.includes(action)) return { ok: false, msg: 'No such care action.' };
+  if (!careStatus(animal, now)[action].ready) {
+    return { ok: false, msg: `${animal.name} has had enough ${action} for now.` };
+  }
+  if (action === 'feed') {
+    const cost = content.species[animal.species].feedCost;
+    if (state.funds < cost) return { ok: false, msg: 'Slush fund is empty. Feeding requires funding.' };
+    state.funds -= cost;
+  }
+  animal.lastCare[action] = now;
+  animal.condition = Math.min(TUNING.conditionMax, animal.condition + TUNING.careGain);
+  return { ok: true, msg: careFlavor(action, animal.name) };
+}
+
+function careFlavor(action, name) {
+  switch (action) {
+    case 'feed': return `${name} ate with alarming enthusiasm.`;
+    case 'groom': return `${name} is now 12% shinier.`;
+    case 'exercise': return `${name} did several laps. Some were on purpose.`;
+    case 'enrich': return `${name} solved the puzzle feeder. The puzzle feeder lost.`;
+  }
+}
+
+export function penUpgradeCost(state) {
+  const bought = (state.ranch.penCapacity - TUNING.penStartCapacity) / TUNING.penUpgradeSize;
+  return TUNING.penUpgradeBase + TUNING.penUpgradeStep * bought;
+}
+
+export function buyPenUpgrade(state) {
+  const cost = penUpgradeCost(state);
+  if (state.funds < cost) return { ok: false, msg: 'Insufficient slush fund for pen expansion.' };
+  state.funds -= cost;
+  state.ranch.penCapacity += TUNING.penUpgradeSize;
+  return { ok: true, msg: `Pens expanded to ${state.ranch.penCapacity}. The zoning board was not consulted.` };
+}
+
+export function buyMailOrder(state, speciesId, content, now) {
+  const species = content.species[speciesId];
+  if (!species?.mailOrderPrice) return { ok: false, msg: 'Not in the catalog. Conquest required.' };
+  if (state.ranch.stock.length >= state.ranch.penCapacity) {
+    return { ok: false, msg: 'Pens are full. Expand before ordering more residents.' };
+  }
+  if (state.funds < species.mailOrderPrice) {
+    return { ok: false, msg: 'Insufficient slush fund. The catalog does not extend credit. Again.' };
+  }
+  state.funds -= species.mailOrderPrice;
+  const animal = createAnimal(state, speciesId, content, now);
+  state.ranch.stock.push(animal);
+  return { ok: true, msg: `${animal.name} the ${species.name} has arrived in a suspiciously ventilated crate.` };
+}
+
+// One-time starter herd for fresh AND migrated saves (migrations can't
+// reach content data, so seeding happens here on boot instead).
+export function ensureRanchSeeded(state, content, now) {
+  if (state.ranch.seeded) return;
+  state.ranch.seeded = true;
+  for (const speciesId of ['goat', 'goat', 'bear']) {
+    state.ranch.stock.push(createAnimal(state, speciesId, content, now));
+  }
+}
+
+// Purebred display genome for a stock animal — all of its species' parts on
+// its species' frame. The renderer stays species-blind.
+export function stockGenome(speciesId, content) {
+  const parts = {};
+  for (const part of Object.values(content.parts)) {
+    if (part.species === speciesId) parts[part.slot] = part.id;
+  }
+  return { frame: content.species[speciesId].frame, parts };
+}
+
+export function upkeepPerDay(state, content) {
+  return state.ranch.stock.reduce(
+    (sum, a) => sum + content.species[a.species].upkeepPerDay, 0
+  );
+}

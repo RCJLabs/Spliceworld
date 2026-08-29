@@ -1,0 +1,85 @@
+{
+  "_doc": "Combo abilities (M3): splicing both listed parts onto one chimera discovers the combo, permanently logged in the save for the Splice-Dex (M7). Combat effects resolve through the keyword system in M4 — 'keyword' here is the design intent, display-only for now. ~12 combos at v0.1; 4 ship with M3. M4: each combo grants its move to chimeras built with both parts.",
+  "combos": [
+    {
+      "id": "injection",
+      "name": "Injection",
+      "parts": [
+        "cobra_head",
+        "cobra_organ"
+      ],
+      "keyword": "Venom+",
+      "desc": "Every bite delivers a bonus Venom stack. The lab smells like regret.",
+      "move": {
+        "power": 50,
+        "cost": 25,
+        "acc": 95,
+        "tags": [
+          "Venomous"
+        ],
+        "keywords": {
+          "venom": 2
+        }
+      }
+    },
+    {
+      "id": "orbital_headbutt",
+      "name": "Orbital Headbutt",
+      "parts": [
+        "goat_head",
+        "eagle_forelimbs"
+      ],
+      "keyword": "IgnoreGuard",
+      "desc": "Gravity-assisted disagreement. Ignores Guard.",
+      "move": {
+        "power": 75,
+        "cost": 30,
+        "acc": 90,
+        "tags": [
+          "Airborne"
+        ],
+        "keywords": {
+          "ignoreGuard": true
+        }
+      }
+    },
+    {
+      "id": "squeeze_play",
+      "name": "Squeeze Play",
+      "parts": [
+        "bear_forelimbs",
+        "cobra_tail"
+      ],
+      "keyword": "Trap",
+      "desc": "A hug with a clause. Traps the target.",
+      "move": {
+        "power": 45,
+        "cost": 25,
+        "acc": 95,
+        "tags": [],
+        "keywords": {
+          "trap": true
+        }
+      }
+    },
+    {
+      "id": "slipstream",
+      "name": "Slipstream",
+      "parts": [
+        "cobra_hide",
+        "eagle_tail"
+      ],
+      "keyword": "EvasionUp",
+      "desc": "Strike, then simply decline to be there. Evasion up after attacking.",
+      "move": {
+        "power": 40,
+        "cost": 20,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      }
+    }
+  ]
+}

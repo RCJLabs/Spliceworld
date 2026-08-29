@@ -1,0 +1,133 @@
+# PROGRESS
+
+## Session 6 — M4.5: Balance Harness ✅
+
+**Acceptance criterion:** it catches one broken combo planted on purpose — **passes**. `node tools/sim.js --plant` injects an Injection combo with power 500 / cost 0; the harness flags every build carrying it as `[OP] wins 100% in ~2 turns — nerf something` and exits nonzero if the plant escapes. Also asserted in the smoke suite.
+
+### What shipped
+- **`tools/sim.js`** — headless Monte Carlo using the exact browser battle engine (the DOM-free rule paying off): seeded build sampling (all purebreds + all combo pairings + random mixes), a fixed naive greedy pilot as the yardstick, N seeds × all encounters per build. Outputs a win-rate table (overall + per encounter + avg turns) and flags `[OP]` (≥85% wins, ≤5 turns) and `[TRASH]` (0% everywhere) builds. ~500 battles in <50 ms. `npm run sim`, with `--builds/--seeds/--grade/--plant`.
+- **It immediately found two real problems:**
+  1. **Engine crash**: a KO or Knockback swapping a fighter mid-round let the other side's pre-chosen move index land on the replacement's different moveset (crash/wrong move). Fixed: actions are bound to the combatant they were chosen for; mid-round replacements drop stale orders (which also gives correct Pokémon behavior — a freshly swapped-in fighter doesn't act that round).
+  2. **Game-wide tuning failure**: at standard grade, *every* build lost *everything* (best: 33% overall). Data-only rebalance — frame HP/stamina/regen up (S 30→55 HP, M 50→70, L 80→105), Gen 1 enemy power/HP down ~25% — landed the intended curve: patrol 1 ≈75–100% for reasonable standard builds, patrol 2 partially open, boss ≈0% at standard but **100% for good apex builds** (the grade ladder is provably the power curve; asserted in smoke).
+- Smoke integration: clean data has no OP flags at standard; the planted combo is caught; apex raises the boss ceiling over standard.
+
+### Known issues / balance notes for the next pass
+- S-frame solo builds still flag TRASH at standard (glass chassis). Partly by design — scampers are flight/speed platforms and real play fields teams of 3 (the sim pilots solos) — but worth revisiting when temperament/set bonuses gain mechanics.
+- The pilot is deliberately naive (greedy biggest move); a smarter policy would shift absolute numbers but not the relative table.
+- Venom-heavy builds underperform vs. the cruiser/9000 by design (chart: Venomous ×0.5 vs Vehicle); watch that Gen 2 doesn't make venom dead.
+
+### Next session — M5: Campaign Shell
+First task: region strip in data (3 nodes + commander boss), notoriety Gen 1→2, income ticks while held; then capture-on-loss → dissection countdown → rescue raid template, Containment + salvage, news ticker reacting to events. Done when: losing a battle creates a rescue mission with a live timer.
+
+## Session 5 — M4: Battle Engine ✅
+
+**Acceptance criterion:** a full battle plays out and Law 1 fires — **passes**. Full battles run headless (deterministic, seed-reproducible logs) and in-browser through real buttons at 380px; every KO'd chimera leaves with an Infirmary timer that blocks redeployment (the browser QA run lost to the boss's second stage and both fighters landed in the Infirmary — the aftermath literally says "breed, raise, splice").
+
+### What shipped
+- **Battle engine** (`battle/engine.js`, pure/DOM-free/seeded): Pokémon structure — one active fighter per side, bench of up to 3, switching costs the turn, speed + Priority ordering. The battle object is plain serializable state inside the save (`SAVE_VERSION` 5): mid-battle reload resumes exactly (verified: same foe HP, same log, deterministic continuation via seed + rollCount).
+- **Physiology → combat, verbatim**: battle stats are the panel's numbers (HP/Power/Armor/Speed/Stamina pool, net regen minus metabolic draw — "runs hot" builds bleed stamina every turn). Moves cost stamina instead of PP; unaffordable moves drop off the menu; Catch Breath is always available.
+- **Moves come from parts**: each part's `move` (power/cost/acc/tags/keywords) in `parts.json`; hides + most organs are passive (stats only); combos grant their bonus move; grades upgrade moves (+15%/tier — the Apex/Prismatic "upgraded ability" rule).
+- **Keyword resolver**: recoil, venom (stacking, useless on Vehicles), stun, sleep, trap (blocks switching), guard, priority, charge (2-turn), ignoreArmor/ignoreGuard, knockback (rotates the other side's fighter), acc/power/evasion stages, staminaRestore, heal. Full ~30-keyword vocabulary listed in `data/keywords.json`; unimplemented ones are marked reserved.
+- **Data-driven tag chart** (`keywords.json`): Electric≫Aquatic, Ground misses Airborne, Sonic ignores Armor, Gas vs Vehicle = nothing, etc.
+- **Gen 1 enemies** (`data/enemies.json`): Riot Squad (Shield Wall), Net Trooper (Net Toss), Tranq Team (Sleep darts), Police Cruiser (Sonic siren, Vehicle/Armored) — all with procedural-SVG drawings and zero-death KO lines — plus **Captain Clampdown**, who slams a big red button mid-fight and transforms into The Clampdown 9000 (charge cannon). Encounters (2 patrols + boss) with wave lists and rewards.
+- **Rejection & obedience** (§3.5): deploying unsettled = −25% power/speed + raised command-ignore chance from instability (bond will lower it); ignoring chimeras improvise a move of their own.
+- **Battle screen**: briefing (team picker with ready/unsettled/Infirmary states + war record) → arena (sprites, HP/stamina bars, status icons, log, action grid) → aftermath.
+- **Law 1**: KO'd chimeras get cartoony injuries ("Bent Whiskers") with 2–4h Infirmary timers, shown in Pens, blocking deployment. Wins pay confiscated budget.
+
+### Known issues
+- Enemy AI is weighted-random; the M4.5 harness is the tool to tune it.
+- Capture (Containment Cannon, capture-on-loss → dissection countdown) is M5 — losses currently cost injuries + the record only.
+- Set bonuses (purebred) and temperament perks still display-only; wire them when M4.5 exposes balance numbers.
+- Battle briefing team draft is screen-local (unsaved), like the Theater draft.
+
+### Next session — M4.5: Balance Harness
+First task: `tools/sim.js` — Monte Carlo over part combos vs. the enemy roster using the same battle engine, win-rate tables, degenerate-build flags. Done when: it catches one broken combo planted on purpose.
+
+## Session 4 — M3: Surgery Theater ✅
+
+**Acceptance criterion:** the panel correctly explains why the flightless hippo can't fly — **passes**. Our hippo is apex eagle wings + dense bear parts on the L Rumbler frame: the Flight row reads "FLIGHTLESS — Lift 135 cannot hoist 218 mass… try a lighter frame or fewer dense parts," and switching the same build to the S frame live-flips it to "FLIGHT-CAPABLE — Lift 135 comfortably hoists 98 mass." Verified headless (assertions on the row text and numbers) and in-browser through the real selects.
+
+### What shipped
+- **Physiology data on all content**: every part now carries `stats` (hp/power/armor/speed/stamina/regen), `phys` (mass, metabolic draw, lift on wings), and its own `tags`; frames carry base `phys`; species carry `thermal` comfort bands and purebred `setBonus` definitions. New `data/combos.json` with 4 combo abilities (Injection, Orbital Headbutt, Squeeze Play, Slipstream — effects wire up via M4 keywords).
+- **Physiology engine** (`splice/physiology.js`, pure): computes power-to-weight, speed after mass penalty, stamina pool + net regen vs. draw ("runs HOT" warning), thermal band as the intersection of donor species bands (disjoint bands = thermal chaos → instability), flight (lift ≥ mass; grade multipliers apply to lift, so apex wings out-hoist standard), purebred detection, instability, settling forecast, combo detection — every metric returned as a row with a plain-language explanation (Law 4).
+- **Instability & settling**: (extra species ×18) + (extra grade tiers ×8) + thermal chaos 15 − purebred 20, clamped 0–100; settling = 30 min + up to 3.5 h. Chimeras carry `settleUntil` timestamps; Pens shows live countdowns; deploy-while-unsettled Rejection debuffs land in M4.
+- **The Theater replaces the M0 dev slab**: frame picker + slot selects listing only owned Vault tokens (grade + lineage in the label, cross-slot double-use blocked), live creature preview, live panel, SPLICE IT (head required). Tokens are consumed into the chimera; combo discoveries are permanent Splice-Dex entries with a toast.
+- **Pens screen**: chimera roster with portraits, instability/bond, settling state, full part manifest with lineage.
+- **SAVE_VERSION → 4** (chimeras, discoveredCombos; `slab` activeScreen migrates to `theater`; legacy `genome` field retained untouched). v1→v4 chain tested headless + in-browser.
+- Chimera naming is seed-deterministic; director stub now counts real spliced builds.
+
+### Known issues
+- Cobra's thermal band moved to [18,40] so bear+cobra genuinely conflict (was touching at exactly 15°).
+- Set bonuses, combo effects, Rejection debuffs, and stamina-burn are display/data only until the M4 battle engine consumes them.
+- Chimera names aren't renameable yet (obedience/bond UX is M7 territory).
+- Theater draft is screen-local and unsaved by design (an unspliced slab is a shopping cart).
+
+### Next session — M4: Battle Engine
+First task: DOM-free battle core (`battle/`) — turn loop, team of 3, switching, stamina costs from physiology, tag chart, keyword resolver — then Gen 1 human units in `enemies.json` and one commander boss with a second stage. Done when: a full battle plays out and Law 1 fires (injury or capture feeds back).
+
+## Session 3 — M2: Extractor & Grades ✅
+
+**Acceptance criterion:** raising a donor to Prime provably yields better parts than extracting a Juvenile — **passes** both headless (identical-genetics twins: juvenile extraction → Standard ×1.0, twin raised to Prime with care → Prime ×1.25; the formula-edge tests separately prove 3★ pampered Prime → Apex and 5★ perfect Prime → Prismatic) and in-browser through the real ceremony UI (juvenile goat → Standard tokens; second goat warped to Prime with care → Prime tokens, both side by side in the Vault).
+
+### What shipped
+- **Grade formula** (`splice/extract.js`, pure): score = (avg potential stars/5) × age factor (Juvenile 0.35 / Adult 0.75 / **Prime 1.0** / Elder 0.8) × (condition/100); thresholds Standard <0.35 ≤ Prime <0.55 ≤ Apex <0.75 ≤ Prismatic. Care has teeth: a neglected Prime donor grades Standard (Law 3). Grades carry stat multipliers (×1/×1.25/×1.5/×2) for the M4 battle engine; Apex/Prismatic ability upgrades also land in M4.
+- **Extraction**: donor leaves the herd permanently → 1 DNA vial + one token per species part, every token stamped with donor name, star rating, and timestamp ("essence of Bessie ★3.2" — lineage is forever).
+- **Graduation Ceremony overlay**: confirm (with grade forecast) → shake/flash/poof/"~ kazoo noises ~" (CSS keyframes; ZzFX stingers arrive M7) → results card. Zero death language throughout.
+- **Grade forecast on ranch cards** — the extract-now-vs-raise tension is visible live per animal.
+- **Gene Vault screen** (third tab): DNA vials + part tokens grouped by slot, sorted by grade, with inline-SVG vial icons.
+- **SAVE_VERSION → 3** (adds `inventory`); v1→v3 and v2→v3 migration chains tested headless and in-browser.
+- **Bug fixed**: author CSS (`display:flex` on `.screen`/`.overlay`) silently overrode the `[hidden]` attribute — screens stacked and the closed ceremony overlay kept dimming and swallowing real clicks (synthetic test clicks had masked it). Fixed with a global `[hidden]{display:none!important}`; verified with hit-tested CDP clicks.
+
+### Known issues
+- Chimera extraction (salvage at one grade degraded) deferred until chimeras exist as entities (M3 settling / M5 Containment).
+- Vials have no consumer yet (breeding/M6 candidate); they accumulate as flavor for now.
+- Vault is read-only; the Surgery Theater starts consuming tokens in M3.
+
+### Next session — M3: Surgery Theater
+First task: turn the Splice Slab into the real Surgery Theater consuming Vault tokens (slot UI limited to owned parts), then the physiology panel with explanations, instability, settling timers, purebred bonus, 4 combo abilities. Done when: the panel correctly explains why the flightless hippo can't fly.
+
+## Session 2 — M1: Ranch & Stock ✅
+
+**Acceptance criterion:** neglect and good care produce visibly different animals over two real days — **passes**, proven on simulated clocks two ways: headless (48h sim in `tools/smoke.js`: cared goat 97/gleaming with sparkles vs. neglected 41/scruffy with dirt overlay) and in-browser via the dev time-warp (`?warp=48`), where the same divergence shows on the Ranch screen through the real UI.
+
+### What shipped
+- **Stock data model** (`ranch/ranch.js`, pure/DOM-free): species, sex, age stage (Juvenile→Adult→Prime→Elder from `birthAt` timestamps), hidden 1–5★ genetic potential per battle stat (UI shows `?????` until the Gene Scanner upgrade exists), condition 0–100, empty `traits` awaiting M6.
+- **Care actions**: feed (costs funds per species diet) / groom / exercise / enrich, +8 condition each, 20h per-action cooldowns. Decay 0.4/h with a soft floor at 25 — absence never breaks anything (ROADMAP §8.3).
+- **Offline timers**: `applyElapsed(state, content, now)` computes decay, upkeep, and stipend from timestamps on load, focus, and a 30s display tick. Negative elapsed (clock skew / warp removal) is clamped to a no-op.
+- **Upkeep economy**: per-species `upkeepPerDay` + feed costs vs. a placeholder $40/day stipend (stands in for region income until M5). Starter herd (2 goats + 1 bear) runs $18/day — bears are deliberately expensive.
+- **Pens**: capacity 4, +2 per expansion at escalating cost. **Mail-Order Menagerie**: goat only ($60); other species are conquest-gated per ROADMAP.
+- **Ranch screen**: tabbed nav (Ranch | Splice Slab), econ header, per-animal cards with renderer-drawn purebred portraits (species→frame mapping in `species.json`), condition bars, stage countdowns, care buttons with live cooldown labels.
+- **Renderer**: generic condition overlays (dirt smudges clipped to torso when scruffy, sparkles when gleaming) + `extraScale` (juveniles render small). Still species-blind.
+- **SAVE_VERSION → 2** with the project's first real migration; verified against a genuine v1 save in-browser (progress, nickname, and slab genome preserved; ranch seeded; zero console errors).
+- Dev time-warp `?warp=<hours>` (URL-only, never saved) for QA of multi-day behavior.
+
+### Known issues
+- Stipend is a placeholder income source; replace with region income in M5.
+- Care-result messages live in `ranch/ui.js` (module state) — reset on reload, harmless.
+- Condition currently has no mechanical output beyond visuals/labels; its teeth arrive in M2 (extraction grade = genetics × age × condition).
+
+### Next session — M2: Extractor & Grades
+First task: grade formula (`Standard→Prime→Apex→Prismatic` from genetics × age stage × condition) + extraction flow with the comedic sequence, then part inventory with donor lineage tags. Done when: raising a donor to Prime provably yields better parts than extracting a Juvenile.
+
+## Session 1 — M0: Skeleton & Renderer Core ✅
+
+**Acceptance criterion:** a bear-headed, eagle-winged goat renders and persists across reload — **passes** (verified in headless Chromium at a 380px viewport: fresh save renders the acceptance creature; random splices + manual frame/slot edits survive reload with identical recipe, nickname, and save timestamp).
+
+### What shipped
+- Repo skeleton per CLAUDE.md: vanilla ES modules, no build step, `.nojekyll` for Pages, `package.json` is metadata only (`type: module` so Node tooling can import engine code — zero dependencies).
+- **Save system** (`save/save.js`): `SAVE_VERSION = 1`, localStorage, migration table, corrupt saves backed up instead of destroyed, newer-version saves refused.
+- **Seeded RNG** (`util/rng.js`): mulberry32 + FNV-1a labeled streams (`rngStream(seed, 'splice', n)`); world seed minted once per save.
+- **Genome→SVG renderer** (`render/renderer.js`): DOM-free string builder. 3 frames (S Scamper / M Trotter / L Rumbler) with standardized sockets (head, forelimb near/far, hindlimb near/far, tail, organ + hide overlay clipped to torso silhouette). Any part fits any socket; empty sockets are legal; far limbs auto-shaded; torso wears the hide species' palette (neutral lab-gray when bare).
+- **Content** (`data/*.json`): 4 species (bear, eagle, goat, cobra), 22 parts, all drawn as data-driven shape specs — engine has zero species knowledge. Part-local space conventions documented in `frames.json` `_doc`.
+- **Dev harness** (index.html): frame picker, per-slot part selects, seeded Random Splice, nickname + recipe line, news ticker, auto-save on every change. Mobile-first, no horizontal overflow at 380px.
+- **Tools**: `tools/smoke.js` (headless Node: content coherence, acceptance genome, every part × every frame, genome validation, RNG determinism, save migration) and `tools/gallery.html` (visual QA grid).
+- AI-director stat stub records part/tag usage per splice (ROADMAP §3.7 says ship the tracking now, act on it later).
+
+### Known issues
+- Eagle wing covert reads a bit shield-like; worth one more polish pass someday, not blocking.
+- Organ glow is subtle on light hides (goat) — revisit when organs get mechanics (M3).
+- Design docs still say "Splicework"/`RCJLabs/splicework`; repo is `spliceworld`. Game UI uses **Spliceworld**. Reconcile whenever Evan picks the final name.
+- GitHub Pages deploy happens when this lands on `main` (Pages must be enabled in repo settings, root of `main`).
+
+### Next session — M1: Ranch & Stock
+First task: stock data model (species, sex, age stage, genetic potential, condition) in `gameState`, then care actions and offline age/condition timers from timestamps. Done when: neglect and good care produce visibly different animals over two real days.

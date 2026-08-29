@@ -1,0 +1,125 @@
+{
+  "_doc": "Base fauna. Palettes drive part rendering via @primary/@secondary/@accent tokens. Tags feed the battle chart (M4). Ranch fields (M1): frame = which torso a purebred stock animal renders on; diet/feedCost = cost of one feed action; upkeepPerDay = housing drain while owned; mailOrderPrice = purchase price from the Mail-Order Menagerie catalog (null = conquest-only, arrives M5); growthHours = age-stage thresholds from birth (juvenile before adult). M3 fields: thermal = [minC, maxC] comfort band (a chimera's band is the intersection of its parts' species bands); setBonus = purebred bonus at 4+ parts of one species (effects wired in M4).",
+  "species": [
+    {
+      "id": "bear",
+      "name": "Bear",
+      "role": "Power",
+      "tags": [],
+      "palette": {
+        "primary": "#9c6b3f",
+        "secondary": "#7a5230",
+        "accent": "#e8c39e"
+      },
+      "frame": "L",
+      "diet": "Premium salmon budget",
+      "feedCost": 10,
+      "upkeepPerDay": 12,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 12,
+        "prime": 36,
+        "elder": 96
+      },
+      "thermal": [
+        -20,
+        15
+      ],
+      "setBonus": {
+        "name": "Ursine Bulk",
+        "desc": "+20% HP with 4+ bear parts"
+      }
+    },
+    {
+      "id": "eagle",
+      "name": "Eagle",
+      "role": "Aerial Striker",
+      "tags": [
+        "Airborne"
+      ],
+      "palette": {
+        "primary": "#6d573f",
+        "secondary": "#f5efe0",
+        "accent": "#e9a820"
+      },
+      "frame": "S",
+      "diet": "Free-range mice",
+      "feedCost": 7,
+      "upkeepPerDay": 8,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 8,
+        "prime": 24,
+        "elder": 72
+      },
+      "thermal": [
+        -10,
+        25
+      ],
+      "setBonus": {
+        "name": "Featherlight Frame",
+        "desc": "+15% Speed with 4+ eagle parts"
+      }
+    },
+    {
+      "id": "goat",
+      "name": "Goat",
+      "role": "Economy",
+      "tags": [],
+      "palette": {
+        "primary": "#ddd6c7",
+        "secondary": "#b3a98f",
+        "accent": "#c9a86a"
+      },
+      "frame": "M",
+      "diet": "Eats literally anything",
+      "feedCost": 2,
+      "upkeepPerDay": 3,
+      "mailOrderPrice": 60,
+      "growthHours": {
+        "adult": 6,
+        "prime": 18,
+        "elder": 60
+      },
+      "thermal": [
+        -5,
+        30
+      ],
+      "setBonus": {
+        "name": "Cast-Iron Constitution",
+        "desc": "Halved upkeep with 4+ goat parts"
+      }
+    },
+    {
+      "id": "cobra",
+      "name": "Cobra",
+      "role": "Poisoner",
+      "tags": [
+        "Venomous"
+      ],
+      "palette": {
+        "primary": "#5f8f52",
+        "secondary": "#cfe3a2",
+        "accent": "#2e5b34"
+      },
+      "frame": "S",
+      "diet": "Gourmet eggs, no questions",
+      "feedCost": 6,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 10,
+        "prime": 30,
+        "elder": 80
+      },
+      "thermal": [
+        18,
+        40
+      ],
+      "setBonus": {
+        "name": "Cold-Blooded Focus",
+        "desc": "+1 Venom stack with 4+ cobra parts"
+      }
+    }
+  ]
+}

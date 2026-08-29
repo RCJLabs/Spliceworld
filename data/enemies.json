@@ -1,0 +1,715 @@
+{
+  "_doc": "Gen 1 human enemy roster (ROADMAP §3.6) + encounters. Units: stats, unit tags (Organic/Vehicle plus battle tags), moves (same schema as part moves), koLine (zero death language — soldiers parachute away, vehicles retire loudly), shapes (procedural SVG in unit-local space, viewBox -100 -110 200 220). transformInto = boss second stage. Encounters: ordered wave of unit ids + reward funds. Adding a unit or encounter must never require engine edits.",
+  "units": [
+    {
+      "id": "riot_squad",
+      "name": "Riot Squad",
+      "hp": 50,
+      "power": 8,
+      "armor": 8,
+      "speed": 8,
+      "stamina": 100,
+      "regen": 12,
+      "tags": [
+        "Organic"
+      ],
+      "koLine": "The Riot Squad deploys emergency parachutes. Indoors. It works somehow.",
+      "moves": [
+        {
+          "name": "Baton Bonk",
+          "power": 35,
+          "cost": 15,
+          "acc": 95,
+          "tags": [],
+          "keywords": {}
+        },
+        {
+          "name": "Shield Wall",
+          "power": 0,
+          "cost": 10,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "guard": true
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -28,
+          "y": -20,
+          "width": 56,
+          "height": 70,
+          "rx": 14,
+          "fill": "#3d5a80"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -46,
+          "r": 24,
+          "fill": "#e8c39e"
+        },
+        {
+          "type": "path",
+          "d": "M -26 -50 A 26 26 0 0 1 26 -50 L 26 -42 L -26 -42 Z",
+          "fill": "#2b3f5c"
+        },
+        {
+          "type": "rect",
+          "x": -18,
+          "y": -52,
+          "width": 36,
+          "height": 14,
+          "rx": 5,
+          "fill": "#9fd8ff",
+          "opacity": 0.85
+        },
+        {
+          "type": "rect",
+          "x": -60,
+          "y": -34,
+          "width": 34,
+          "height": 84,
+          "rx": 12,
+          "fill": "#8a94a6"
+        },
+        {
+          "type": "rect",
+          "x": -52,
+          "y": -22,
+          "width": 18,
+          "height": 30,
+          "rx": 6,
+          "fill": "#c3cad6",
+          "stroke": "none"
+        },
+        {
+          "type": "rect",
+          "x": -16,
+          "y": 50,
+          "width": 12,
+          "height": 32,
+          "rx": 5,
+          "fill": "#2b3f5c"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 50,
+          "width": 12,
+          "height": 32,
+          "rx": 5,
+          "fill": "#2b3f5c"
+        }
+      ]
+    },
+    {
+      "id": "net_trooper",
+      "name": "Net Trooper",
+      "hp": 40,
+      "power": 7,
+      "armor": 3,
+      "speed": 13,
+      "stamina": 100,
+      "regen": 12,
+      "tags": [
+        "Organic"
+      ],
+      "koLine": "The Net Trooper is hoisted away by their own net. Poetic.",
+      "moves": [
+        {
+          "name": "Net Toss",
+          "power": 20,
+          "cost": 15,
+          "acc": 90,
+          "tags": [],
+          "keywords": {
+            "trap": true
+          }
+        },
+        {
+          "name": "Zap Prod",
+          "power": 35,
+          "cost": 20,
+          "acc": 95,
+          "tags": [
+            "Electric"
+          ],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -24,
+          "y": -18,
+          "width": 48,
+          "height": 66,
+          "rx": 13,
+          "fill": "#5a7a52"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 22,
+          "fill": "#e8c39e"
+        },
+        {
+          "type": "path",
+          "d": "M -22 -48 A 22 22 0 0 1 22 -48 L 22 -42 L -22 -42 Z",
+          "fill": "#42593c"
+        },
+        {
+          "type": "circle",
+          "cx": 48,
+          "cy": -20,
+          "r": 26,
+          "fill": "none",
+          "stroke": "#c9c4b8",
+          "strokeWidth": 3.5
+        },
+        {
+          "type": "path",
+          "d": "M 26 -36 L 70 -4 M 26 -4 L 70 -36 M 48 -46 L 48 6 M 22 -20 L 74 -20",
+          "fill": "none",
+          "stroke": "#c9c4b8",
+          "strokeWidth": 2.5
+        },
+        {
+          "type": "rect",
+          "x": -14,
+          "y": 48,
+          "width": 11,
+          "height": 30,
+          "rx": 5,
+          "fill": "#42593c"
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 48,
+          "width": 11,
+          "height": 30,
+          "rx": 5,
+          "fill": "#42593c"
+        }
+      ]
+    },
+    {
+      "id": "tranq_team",
+      "name": "Tranq Team",
+      "hp": 42,
+      "power": 7,
+      "armor": 3,
+      "speed": 11,
+      "stamina": 100,
+      "regen": 12,
+      "tags": [
+        "Organic"
+      ],
+      "koLine": "The Tranq Team accidentally darts itself and naps in a pile.",
+      "moves": [
+        {
+          "name": "Tranq Dart",
+          "power": 15,
+          "cost": 15,
+          "acc": 80,
+          "tags": [],
+          "keywords": {
+            "sleep": 0.6
+          }
+        },
+        {
+          "name": "Boot Scoot",
+          "power": 25,
+          "cost": 12,
+          "acc": 95,
+          "tags": [],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -24,
+          "y": -18,
+          "width": 48,
+          "height": 66,
+          "rx": 13,
+          "fill": "#e8e4da"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 22,
+          "fill": "#d9a778"
+        },
+        {
+          "type": "rect",
+          "x": -20,
+          "y": -70,
+          "width": 40,
+          "height": 16,
+          "rx": 7,
+          "fill": "#7ba3c8"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": -30,
+          "width": 46,
+          "height": 8,
+          "rx": 4,
+          "fill": "#7a5230"
+        },
+        {
+          "type": "polygon",
+          "points": "66,-30 78,-26 66,-22",
+          "fill": "#d9455f"
+        },
+        {
+          "type": "rect",
+          "x": -14,
+          "y": 48,
+          "width": 11,
+          "height": 30,
+          "rx": 5,
+          "fill": "#8a8578"
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 48,
+          "width": 11,
+          "height": 30,
+          "rx": 5,
+          "fill": "#8a8578"
+        }
+      ]
+    },
+    {
+      "id": "police_cruiser",
+      "name": "Police Cruiser",
+      "hp": 80,
+      "power": 12,
+      "armor": 12,
+      "speed": 14,
+      "stamina": 120,
+      "regen": 15,
+      "tags": [
+        "Vehicle",
+        "Armored"
+      ],
+      "koLine": "The Police Cruiser retires loudly, wheels spinning in protest.",
+      "moves": [
+        {
+          "name": "Ram",
+          "power": 45,
+          "cost": 20,
+          "acc": 90,
+          "tags": [],
+          "keywords": {}
+        },
+        {
+          "name": "Siren Blast",
+          "power": 25,
+          "cost": 15,
+          "acc": 100,
+          "tags": [
+            "Sonic"
+          ],
+          "keywords": {
+            "accDown": 1
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -80 30 L -70 -6 C -66 -18 -58 -24 -44 -24 L -10 -24 L 8 -44 L 52 -44 L 64 -24 L 72 -22 C 82 -20 86 -10 86 0 L 86 30 Z",
+          "fill": "#2b3f5c"
+        },
+        {
+          "type": "path",
+          "d": "M -6 -24 L 8 -40 L 48 -40 L 58 -24 Z",
+          "fill": "#9fd8ff",
+          "opacity": 0.9
+        },
+        {
+          "type": "rect",
+          "x": 16,
+          "y": -56,
+          "width": 16,
+          "height": 12,
+          "rx": 3,
+          "fill": "#d9455f"
+        },
+        {
+          "type": "rect",
+          "x": 32,
+          "y": -56,
+          "width": 16,
+          "height": 12,
+          "rx": 3,
+          "fill": "#7fb4ff"
+        },
+        {
+          "type": "rect",
+          "x": -66,
+          "y": 2,
+          "width": 130,
+          "height": 14,
+          "rx": 7,
+          "fill": "#e8e4da"
+        },
+        {
+          "type": "circle",
+          "cx": -44,
+          "cy": 34,
+          "r": 18,
+          "fill": "#26233a"
+        },
+        {
+          "type": "circle",
+          "cx": 48,
+          "cy": 34,
+          "r": 18,
+          "fill": "#26233a"
+        },
+        {
+          "type": "circle",
+          "cx": -44,
+          "cy": 34,
+          "r": 8,
+          "fill": "#8a94a6",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 48,
+          "cy": 34,
+          "r": 8,
+          "fill": "#8a94a6",
+          "stroke": "none"
+        }
+      ]
+    },
+    {
+      "id": "captain_clampdown",
+      "name": "Captain Clampdown",
+      "hp": 75,
+      "power": 11,
+      "armor": 6,
+      "speed": 10,
+      "stamina": 110,
+      "regen": 14,
+      "tags": [
+        "Organic"
+      ],
+      "koLine": "Captain Clampdown is promoted sideways, effective immediately.",
+      "transformInto": "clampdown_9000",
+      "transformLine": "Captain Clampdown slams a big red button: 'ACTIVATE THE 9000!'",
+      "moves": [
+        {
+          "name": "Megaphone Bark",
+          "power": 30,
+          "cost": 15,
+          "acc": 100,
+          "tags": [
+            "Sonic"
+          ],
+          "keywords": {
+            "accDown": 1
+          }
+        },
+        {
+          "name": "Overtime Order",
+          "power": 0,
+          "cost": 10,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "powerUp": 1
+          }
+        },
+        {
+          "name": "Citation Slap",
+          "power": 40,
+          "cost": 20,
+          "acc": 95,
+          "tags": [],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -20,
+          "width": 60,
+          "height": 72,
+          "rx": 15,
+          "fill": "#26456e"
+        },
+        {
+          "type": "rect",
+          "x": -34,
+          "y": -22,
+          "width": 16,
+          "height": 10,
+          "rx": 3,
+          "fill": "#e9a820"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": -22,
+          "width": 16,
+          "height": 10,
+          "rx": 3,
+          "fill": "#e9a820"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -48,
+          "r": 24,
+          "fill": "#e8c39e"
+        },
+        {
+          "type": "path",
+          "d": "M -28 -54 A 28 28 0 0 1 28 -54 L 28 -46 L -28 -46 Z",
+          "fill": "#1b3050"
+        },
+        {
+          "type": "rect",
+          "x": -24,
+          "y": -78,
+          "width": 48,
+          "height": 12,
+          "rx": 4,
+          "fill": "#1b3050"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -72,
+          "r": 5,
+          "fill": "#e9a820",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -14 -40 q 14 10 28 0",
+          "fill": "none",
+          "stroke": "#8a5a3b",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 30 -34 L 62 -46 L 62 -18 Z",
+          "fill": "#c9515f"
+        },
+        {
+          "type": "rect",
+          "x": -16,
+          "y": 52,
+          "width": 13,
+          "height": 30,
+          "rx": 5,
+          "fill": "#1b3050"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 52,
+          "width": 13,
+          "height": 30,
+          "rx": 5,
+          "fill": "#1b3050"
+        }
+      ]
+    },
+    {
+      "id": "clampdown_9000",
+      "name": "The Clampdown 9000",
+      "hp": 120,
+      "power": 15,
+      "armor": 14,
+      "speed": 7,
+      "stamina": 140,
+      "regen": 16,
+      "tags": [
+        "Vehicle",
+        "Armored"
+      ],
+      "koLine": "The Clampdown 9000 ejects its captain into a conveniently placed bouncy castle, then collapses into spare parts.",
+      "moves": [
+        {
+          "name": "Riot Cannon",
+          "power": 80,
+          "cost": 35,
+          "acc": 90,
+          "tags": [],
+          "keywords": {
+            "charge": true
+          }
+        },
+        {
+          "name": "Kettle Sweep",
+          "power": 40,
+          "cost": 20,
+          "acc": 95,
+          "tags": [],
+          "keywords": {
+            "trap": true
+          }
+        },
+        {
+          "name": "Warning Honk",
+          "power": 20,
+          "cost": 10,
+          "acc": 100,
+          "tags": [
+            "Sonic"
+          ],
+          "keywords": {
+            "accDown": 1
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -84 34 L -84 -20 C -84 -34 -74 -42 -60 -42 L 40 -42 C 58 -42 70 -34 76 -18 L 88 12 L 88 34 Z",
+          "fill": "#37415c"
+        },
+        {
+          "type": "path",
+          "d": "M -70 -42 L -50 -66 L 10 -66 L 24 -42 Z",
+          "fill": "#4a5878"
+        },
+        {
+          "type": "rect",
+          "x": -44,
+          "y": -62,
+          "width": 44,
+          "height": 14,
+          "rx": 4,
+          "fill": "#9fd8ff",
+          "opacity": 0.9
+        },
+        {
+          "type": "rect",
+          "x": -22,
+          "y": -80,
+          "width": 18,
+          "height": 14,
+          "rx": 4,
+          "fill": "#d9455f"
+        },
+        {
+          "type": "rect",
+          "x": -2,
+          "y": -80,
+          "width": 18,
+          "height": 14,
+          "rx": 4,
+          "fill": "#7fb4ff"
+        },
+        {
+          "type": "path",
+          "d": "M 88 34 L 88 -2 L 108 16 L 108 34 Z",
+          "fill": "#8a94a6"
+        },
+        {
+          "type": "path",
+          "d": "M 30 -30 L 74 -36 L 74 -20 L 34 -14 Z",
+          "fill": "#26233a"
+        },
+        {
+          "type": "circle",
+          "cx": -52,
+          "cy": 38,
+          "r": 20,
+          "fill": "#26233a"
+        },
+        {
+          "type": "circle",
+          "cx": 8,
+          "cy": 38,
+          "r": 20,
+          "fill": "#26233a"
+        },
+        {
+          "type": "circle",
+          "cx": 62,
+          "cy": 38,
+          "r": 20,
+          "fill": "#26233a"
+        },
+        {
+          "type": "circle",
+          "cx": -52,
+          "cy": 38,
+          "r": 8,
+          "fill": "#8a94a6",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 8,
+          "cy": 38,
+          "r": 8,
+          "fill": "#8a94a6",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 62,
+          "cy": 38,
+          "r": 8,
+          "fill": "#8a94a6",
+          "stroke": "none"
+        }
+      ]
+    }
+  ],
+  "encounters": [
+    {
+      "id": "patrol_1",
+      "name": "Precinct Patrol",
+      "blurb": "Two officers investigating 'suspicious kazoo noises.'",
+      "waves": [
+        "riot_squad",
+        "net_trooper"
+      ],
+      "reward": 80
+    },
+    {
+      "id": "patrol_2",
+      "name": "Downtown Response",
+      "blurb": "The city upgraded its concern to a cruiser.",
+      "waves": [
+        "riot_squad",
+        "tranq_team",
+        "police_cruiser"
+      ],
+      "reward": 150
+    },
+    {
+      "id": "boss_clampdown",
+      "name": "Captain Clampdown",
+      "blurb": "The precinct's finest, plus whatever is under that tarp.",
+      "waves": [
+        "riot_squad",
+        "captain_clampdown"
+      ],
+      "reward": 300
+    }
+  ]
+}
