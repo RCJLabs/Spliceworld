@@ -120,6 +120,36 @@
         "name": "Cold-Blooded Focus",
         "desc": "+1 Venom stack with 4+ cobra parts"
       }
+    },
+    {
+      "id": "salvage",
+      "name": "Enemy Tech",
+      "role": "Salvage",
+      "tags": [],
+      "palette": {
+        "primary": "#6e7887",
+        "secondary": "#9aa4b5",
+        "accent": "#e9c31f"
+      },
+      "frame": "M",
+      "diet": "Premium unleaded",
+      "feedCost": 1,
+      "upkeepPerDay": 1,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 1,
+        "prime": 2,
+        "elder": 3
+      },
+      "thermal": [
+        -40,
+        60
+      ],
+      "setBonus": {
+        "name": "Full Chrome",
+        "desc": "+10% Armor with 4+ enemy-tech parts"
+      },
+      "synthetic": true
     }
   ]
 }

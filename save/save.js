@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -44,6 +44,20 @@ const migrations = {
     for (const chimera of save.chimeras) chimera.injury = chimera.injury ?? null;
     return save;
   },
+  // v6 (M5): campaign shell — regions, notoriety, captives, containment,
+  // news. In-progress v5 battles gain the new cannon/capture fields.
+  6: (save) => {
+    save.campaign = { heldNodes: [], notoriety: 0, captives: [], containment: [], lastTickAt: null };
+    save.news = [];
+    save.directorStats.dissections = [];
+    if (save.battle) {
+      save.battle.context = save.battle.context ?? {};
+      save.battle.cannon = save.battle.cannon ?? { charge: 0 };
+      save.battle.captured = save.battle.captured ?? [];
+      if (save.battle.enemy?.active) save.battle.enemy.active.capturable = save.battle.enemy.active.capturable ?? false;
+    }
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -56,7 +70,7 @@ export function newGameState() {
     genome: null,
     // Stub for the AI director (ROADMAP §8.5): record tag/part usage from
     // day one so data exists when the director lands post-v0.1.
-    directorStats: { partUse: {}, tagUse: {} },
+    directorStats: { partUse: {}, tagUse: {}, dissections: [] },
     funds: TUNING.startingFunds,
     ranch: { stock: [], penCapacity: TUNING.penStartCapacity, animalCount: 0, seeded: false },
     lastTickAt: null,
@@ -67,6 +81,8 @@ export function newGameState() {
     discoveredCombos: [],
     battle: null,
     warRecord: { wins: 0, losses: 0 },
+    campaign: { heldNodes: [], notoriety: 0, captives: [], containment: [], lastTickAt: null },
+    news: [],
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations

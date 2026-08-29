@@ -11,7 +11,8 @@ import { renderVaultScreen } from './splice/vault-ui.js';
 import { renderTheaterScreen } from './splice/theater-ui.js';
 import { renderPensScreen } from './splice/pens-ui.js';
 import { runExtraction } from './splice/extract-ui.js';
-import { renderBattleScreen } from './battle/ui.js';
+import { renderWarRoomScreen } from './campaign/ui.js';
+import { tickCampaign } from './campaign/campaign.js';
 
 // Dev time-warp: ?warp=48 pretends 48 hours have passed. QA-only — the
 // warp lives in the URL, never in the save, so removing it can produce a
@@ -43,6 +44,7 @@ const ctx = {
   get content() { return content; },
   now: NOW,
   save: () => saveGame(state),
+  refreshTicker: () => updateTicker(),
   onExtract: (animalId) =>
     runExtraction($('#overlay'), ctx, animalId, () => showScreen(state.activeScreen)),
 };
@@ -52,7 +54,7 @@ const SCREENS = {
   pens: (root) => renderPensScreen(root, ctx),
   vault: (root) => renderVaultScreen(root, ctx),
   theater: (root) => renderTheaterScreen(root, ctx),
-  battle: (root) => renderBattleScreen(root, ctx),
+  battle: (root) => renderWarRoomScreen(root, ctx),
 };
 
 function showScreen(name) {
@@ -70,10 +72,19 @@ function showScreen(name) {
 // and on a slow display refresh (settling countdowns, care cooldowns).
 function tick() {
   applyElapsed(state, content, NOW());
+  tickCampaign(state, content, NOW());
   saveGame(state);
+  updateTicker();
   const name = state.activeScreen;
   const root = $(`#screen-${name}`);
   if (root && !root.hidden) SCREENS[name](root);
+}
+
+// Latest news leads; otherwise a seeded deadpan default.
+function updateTicker() {
+  $('#ticker').textContent = state.news.length
+    ? state.news[state.news.length - 1]
+    : TICKER_LINES[Math.abs(state.seed) % TICKER_LINES.length];
 }
 
 async function boot() {
@@ -90,7 +101,7 @@ async function boot() {
   ensureRanchSeeded(state, content, NOW());
   applyElapsed(state, content, NOW());
 
-  $('#ticker').textContent = TICKER_LINES[Math.abs(state.seed) % TICKER_LINES.length];
+  updateTicker();
   document.querySelectorAll('#tabs button').forEach((btn) => {
     btn.addEventListener('click', () => showScreen(btn.dataset.screen));
   });

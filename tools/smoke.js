@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import assert from 'node:assert/strict';
 import { indexContent, renderCreatureSVG, validateGenome, SLOTS } from '../render/renderer.js';
-import { rngStream } from '../util/rng.js';
+import { rngStream, hashString } from '../util/rng.js';
 import { newGameState, migrate, SAVE_VERSION } from '../save/save.js';
 import {
   createAnimal, ageStage, conditionTier, applyElapsed, careAction,
@@ -24,6 +24,9 @@ import {
   playerActions, playerActive, tagMultiplier, isInjured,
 } from '../battle/engine.js';
 import { runSim, plantBrokenCombo } from './sim.js';
+import {
+  nodeStates, threatGen, incomePerDay, tickCampaign, resolveBattle, salvageUnit,
+} from '../campaign/campaign.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -35,6 +38,7 @@ const content = indexContent({
   combos: readJSON('data/combos.json'),
   enemies: readJSON('data/enemies.json'),
   keywords: readJSON('data/keywords.json'),
+  regions: readJSON('data/regions.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -549,11 +553,165 @@ const bossAtApex = Math.max(...apex.rows.map((r) => r.perEncounter.boss_clampdow
 const bossAtStd = Math.max(...clean.rows.map((r) => r.perEncounter.boss_clampdown));
 assert.ok(bossAtApex > bossAtStd, `grades move the boss ceiling (${bossAtStd} → ${bossAtApex})`);
 
-// --- v1 → v5 chain.
+// --- M5: campaign data coherence.
+const region = Object.values(content.regions)[0];
+for (const node of region.nodes) {
+  assert.ok(content.encounters[node.encounter], `${node.id}: unknown encounter`);
+  assert.ok(node.incomePerDay > 0 && node.notoriety > 0, node.id);
+}
+assert.ok(content.encounters[content.campaignMeta.rescueEncounter], 'rescue template exists');
+for (const unit of Object.values(content.enemies)) {
+  for (const p of unit.salvage ?? []) assert.ok(content.parts[p], `${unit.id}: unknown salvage part ${p}`);
+}
+assert.ok(content.parts.riot_plating && content.parts.v8_heart, 'enemy-tech parts exist');
+assert.ok(content.species.salvage, 'salvage pseudo-species exists');
+
+// --- M5: node progression, income, threat generations.
+const camp = { ...newGameState(), seed: 777, funds: 0 };
+let states = nodeStates(camp, content);
+assert.equal(states[0].status, 'available');
+assert.ok(states.slice(1).every((s) => s.status === 'locked'), 'strip unlocks in order');
+camp.campaign.heldNodes.push('barn_perimeter');
+states = nodeStates(camp, content);
+assert.equal(states[1].status, 'available');
+assert.equal(states[4].status, 'locked', 'guard post needs Threat Gen 2');
+assert.equal(incomePerDay(camp, content), 25);
+camp.campaign.lastTickAt = t0;
+tickCampaign(camp, content, t0 + 2 * 24 * HOUR);
+assert.ok(Math.abs(camp.funds - 50) < 0.01, `held nodes pay income (${camp.funds})`);
+camp.campaign.notoriety = 65; // past threatGen2At
+assert.equal(threatGen(camp, content), 2);
+assert.equal(nodeStates(camp, content)[4].status, 'locked', 'still strip-gated behind the boss');
+
+// --- M5 ACCEPTANCE: losing a battle creates a rescue mission with a live timer.
+const m5lab = { ...newGameState(), seed: 505 };
+m5lab.campaign.lastTickAt = t0;
+const doomed = makeChimera(m5lab, 'S', { goat_head: 'standard', goat_tail: 'standard' }, t0);
+const strong1 = makeChimera(m5lab, 'L', { bear_head: 'prismatic', bear_forelimbs: 'prismatic', bear_hide: 'prismatic', bear_organ: 'prismatic' }, t0);
+const strong2 = makeChimera(m5lab, 'M', { goat_head: 'prismatic', goat_hindlimbs: 'prismatic', goat_organ: 'prismatic' }, t0);
+const tReady = Math.max(doomed.settleUntil, strong1.settleUntil, strong2.settleUntil);
+
+function autoplay(battle) {
+  let guard = 0;
+  while (!battle.over && guard++ < 400) {
+    const acts = playerActions(battle);
+    const cap = acts.find((a) => a.type === 'capture');
+    const best = cap ?? acts.filter((a) => a.type === 'move')
+      .sort((x, y) => playerActive(battle).moves[y.index].power - playerActive(battle).moves[x.index].power)[0] ?? acts[0];
+    step(battle, best, content);
+  }
+  return battle;
+}
+
+m5lab.battle = createBattle([doomed], content.encounters.boss_clampdown, content, 41, tReady, { kind: 'assault', nodeId: 'precinct' });
+autoplay(m5lab.battle);
+assert.equal(m5lab.battle.outcome, 'loss');
+const lossDetail = resolveBattle(m5lab, m5lab.battle, content, tReady);
+assert.equal(lossDetail.capturedChimera, doomed.name, 'a downed chimera is captured on loss');
+assert.equal(m5lab.campaign.captives.length, 1, 'rescue mission exists');
+const captive = m5lab.campaign.captives[0];
+assert.ok(!m5lab.chimeras.some((c) => c.id === doomed.id), 'captive left the roster');
+const windowH = (captive.deadline - tReady) / HOUR;
+assert.ok(windowH >= 12 && windowH <= 24, `live rescue window of ${windowH}h`);
+tickCampaign(m5lab, content, tReady + HOUR);
+assert.equal(m5lab.campaign.captives.length, 1, 'window still open — timer is live, not instant');
+assert.ok(m5lab.news.some((n) => n.includes('CAPTURED')), 'the ticker knows');
+
+// Rescue raid: win it, get the creature back (injured, fonder of you).
+m5lab.battle = createBattle([strong1, strong2], content.encounters[content.campaignMeta.rescueEncounter], content, 42, tReady + HOUR, { kind: 'rescue', captiveId: captive.id });
+autoplay(m5lab.battle);
+assert.equal(m5lab.battle.outcome, 'win', 'the prismatic rescue squad delivers');
+const rescueDetail = resolveBattle(m5lab, m5lab.battle, content, tReady + HOUR);
+assert.equal(rescueDetail.freed, doomed.name);
+assert.equal(m5lab.campaign.captives.length, 0);
+const freed = m5lab.chimeras.find((c) => c.id === doomed.id);
+assert.ok(freed && isInjured(freed, tReady + HOUR) && freed.bond === 10, 'home, bandaged, bonded');
+
+// Expiry path: ignore a captive past its deadline → lost + the enemy learns.
+const m5lab2 = { ...newGameState(), seed: 506 };
+m5lab2.campaign.lastTickAt = t0;
+const doomed2 = makeChimera(m5lab2, 'S', { cobra_head: 'standard' }, t0);
+m5lab2.battle = createBattle([doomed2], content.encounters.boss_clampdown, content, 43, doomed2.settleUntil, { kind: 'assault', nodeId: 'precinct' });
+autoplay(m5lab2.battle);
+assert.equal(m5lab2.battle.outcome, 'loss');
+resolveBattle(m5lab2, m5lab2.battle, content, doomed2.settleUntil);
+assert.equal(m5lab2.campaign.captives.length, 1);
+tickCampaign(m5lab2, content, doomed2.settleUntil + 25 * HOUR);
+assert.equal(m5lab2.campaign.captives.length, 0, 'the window closed');
+assert.equal(m5lab2.directorStats.dissections.length, 1, 'dissection recorded for the AI director');
+assert.ok(m5lab2.directorStats.dissections[0].partIds.includes('cobra_head'));
+assert.ok(m5lab2.news.some((n) => n.includes('internship')), 'zero death language, even in defeat');
+
+// --- M5: conquest holds nodes, pays, raises notoriety to Threat Gen 2.
+const conq = { ...newGameState(), seed: 900, funds: 0 };
+conq.campaign.lastTickAt = t0;
+const army = [
+  makeChimera(conq, 'L', { bear_head: 'prismatic', bear_forelimbs: 'prismatic', bear_hide: 'prismatic', bear_organ: 'prismatic' }, t0),
+  makeChimera(conq, 'M', { goat_head: 'prismatic', goat_hindlimbs: 'prismatic', goat_organ: 'prismatic' }, t0),
+  makeChimera(conq, 'M', { cobra_head: 'prismatic', cobra_organ: 'prismatic', goat_hindlimbs: 'prismatic' }, t0),
+];
+const tWar = Math.max(...army.map((c) => c.settleUntil));
+for (const { node } of nodeStates(conq, content)) {
+  if (node.threatGen === 2) continue;
+  const alive = () => conq.chimeras.filter((c) => !isInjured(c, tWar));
+  conq.battle = createBattle(alive(), content.encounters[node.encounter], content, hashString(node.id), tWar, { kind: 'assault', nodeId: node.id });
+  autoplay(conq.battle);
+  assert.equal(conq.battle.outcome, 'win', `prismatic army takes ${node.id}`);
+  resolveBattle(conq, conq.battle, content, tWar);
+  for (const c of conq.chimeras) c.injury = null; // field hospital, sim-side
+}
+assert.equal(conq.campaign.heldNodes.length, 4);
+assert.equal(conq.campaign.notoriety, 65);
+assert.equal(threatGen(conq, content), 2, 'boss conquest tips Threat Gen 2');
+assert.equal(nodeStates(conq, content)[4].status, 'available', 'Gen 2 node unlocked');
+assert.ok(conq.news.some((n) => n.includes('THREAT LEVEL UP')));
+assert.equal(incomePerDay(conq, content), 225);
+
+// --- M5: Containment Cannon + salvage.
+const capLab = { ...newGameState(), seed: 911 };
+// A tanky hunter with a deliberately weak jab — the restraint minigame.
+const hunter = makeChimera(capLab, 'L', { bear_head: 'prime', goat_forelimbs: 'prime', bear_hide: 'prime', goat_organ: 'prime' }, t0);
+const capEncounter = { id: 'test_capture', name: 'Impound Bait', waves: ['riot_squad', 'police_cruiser'], reward: 10 };
+let captured = false;
+for (let seed = 70; seed < 100 && !captured; seed++) {
+  capLab.battle = createBattle([hunter], capEncounter, content, seed, hunter.settleUntil, { kind: 'assault', nodeId: null });
+  let guard5 = 0;
+  while (!capLab.battle.over && guard5++ < 200) {
+    const acts = playerActions(capLab.battle);
+    const cap = acts.find((a) => a.type === 'capture');
+    if (cap) {
+      step(capLab.battle, cap, content);
+      captured = true;
+      continue;
+    }
+    const weakest = acts.filter((a) => a.type === 'move')
+      .sort((x, y) => playerActive(capLab.battle).moves[x.index].power - playerActive(capLab.battle).moves[y.index].power)
+      .find((a) => playerActive(capLab.battle).moves[a.index].power > 0);
+    step(capLab.battle, weakest ?? acts.find((a) => a.type === 'rest'), content);
+  }
+}
+assert.ok(captured, 'the cannon charged and fired');
+assert.deepEqual(capLab.battle.captured, ['police_cruiser']);
+const capDetail = resolveBattle(capLab, capLab.battle, content, hunter.settleUntil);
+assert.equal(capLab.campaign.containment.length, 1, 'impounded unit reached Containment');
+assert.ok(capDetail.outcome === 'win', 'capturing the last wave wins the battle');
+const salvaged = salvageUnit(capLab, 0, content, hunter.settleUntil);
+assert.ok(salvaged.ok && salvaged.tokens.length === 1 && salvaged.tokens[0].partId === 'v8_heart');
+assert.equal(capLab.campaign.containment.length, 0);
+assert.ok(capLab.inventory.parts.some((tk) => tk.partId === 'v8_heart'), 'enemy tech in the vault');
+assert.ok(!salvageUnit(capLab, 5, content, t0).ok, 'empty bay refused');
+
+// --- v1 → v6 chain.
 const m5 = migrate(structuredClone(v1Save));
 assert.equal(m5.saveVersion, SAVE_VERSION);
 assert.equal(m5.battle, null);
 assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
+assert.deepEqual(m5.campaign, { heldNodes: [], notoriety: 0, captives: [], containment: [], lastTickAt: null });
+assert.deepEqual(m5.news, []);
+assert.deepEqual(m5.directorStats.dissections, []);
+const v5WithBattle = { ...structuredClone(v1Save), saveVersion: 5, chimeras: [], battle: { enemy: { active: {} }, log: [] } };
+const patched = migrate(v5WithBattle);
+assert.deepEqual(patched.battle.cannon, { charge: 0 }, 'in-flight v5 battles gain cannon fields');
 
 // Time-warp safety: a lastTickAt in the future never rewinds state.
 const warp = freshRanchState();

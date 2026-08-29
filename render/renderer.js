@@ -38,6 +38,10 @@ export function indexContent(raw) {
     encounters: raw.enemies ? byId(raw.enemies.encounters) : {},
     keywords: raw.keywords ? byId(raw.keywords.keywords) : {},
     tagChart: raw.keywords ? raw.keywords.tagChart : [],
+    regions: raw.regions ? byId(raw.regions.regions) : {},
+    campaignMeta: raw.regions
+      ? { threatGen2At: raw.regions.threatGen2At, rescueEncounter: raw.regions.rescueEncounter }
+      : { threatGen2At: Infinity, rescueEncounter: null },
   };
 }
 
