@@ -18,7 +18,7 @@
   <div class="grid" id="grid"></div>
   <script type="module">
     import { loadContent } from '../data/loader.js';
-    import { renderCreatureSVG, SLOTS } from '../render/renderer.js';
+    import { renderCreatureSVG, renderUnitSVG, SLOTS } from '../render/renderer.js';
 
     const content = await loadContent('..');
     const grid = document.getElementById('grid');
@@ -51,6 +51,14 @@
     // Bare frames (no hide → neutral lab-gray).
     for (const frame of Object.keys(content.frames)) {
       cell(`bare frame ${frame}`, { frame, parts: {} });
+    }
+
+    // Enemy roster — same shape interpreter, literal palettes.
+    for (const unit of Object.values(content.enemies)) {
+      const div = document.createElement('div');
+      div.className = 'cell';
+      div.innerHTML = renderUnitSVG(unit) + `<p>${unit.name}</p>`;
+      grid.appendChild(div);
     }
   </script>
 </body>

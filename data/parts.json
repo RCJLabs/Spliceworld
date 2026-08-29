@@ -1,5 +1,5 @@
 {
-  "_doc": "Part tokens. M4: move = the part's battle move (null = passive part; its stats still count) with power/cost(stamina)/acc/tags/keywords per keywords.json. Every part = stat-free M0 stub (name, ability flavor) + a 'shapes' drawing spec interpreted by render/renderer.js. Shape types: path, ellipse, circle, rect, polygon, line. Color tokens @primary/@secondary/@accent resolve to the part's species palette; @outline/@white resolve globally. Filled shapes default to a thick @outline stroke unless stroke is set. Local space conventions live in frames.json _doc. Limb parts are drawn once per near/far socket by the engine.",
+  "_doc": "Part tokens. M4: move = the part's battle move (null = passive part; its stats still count) with power/cost(stamina)/acc/tags/keywords per keywords.json. Every part = stat-free M0 stub (name, ability flavor) + a 'shapes' drawing spec interpreted by render/renderer.js. Shape types: path, ellipse, circle, rect, polygon, line. Color tokens @primary/@secondary/@accent resolve to the part's species palette; @outline/@white resolve globally. Filled shapes default to a thick @outline stroke unless stroke is set. Local space conventions live in frames.json _doc. Limb parts are drawn once per near/far socket by the engine. Art style (M7.5): bold flat vector — thick @outline strokes on masses, thinner on detail; two googly eyes with catchlights on heads; @white low-opacity sheen for form; @secondary for muzzles/bellies, @accent for horns/beaks/claws.",
   "parts": [
     {
       "id": "bear_head",
@@ -26,63 +26,112 @@
       "shapes": [
         {
           "type": "circle",
-          "cx": 0,
-          "cy": -46,
-          "r": 13,
+          "cx": 4,
+          "cy": -50,
+          "r": 15,
           "fill": "@secondary"
         },
         {
           "type": "circle",
-          "cx": 38,
-          "cy": -48,
-          "r": 13,
+          "cx": 44,
+          "cy": -52,
+          "r": 15,
           "fill": "@primary"
         },
         {
           "type": "circle",
-          "cx": 20,
+          "cx": 44,
+          "cy": -52,
+          "r": 7,
+          "fill": "@accent",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 22,
           "cy": -16,
-          "r": 36,
+          "r": 38,
           "fill": "@primary"
         },
         {
           "type": "ellipse",
-          "cx": 46,
-          "cy": -4,
-          "rx": 20,
-          "ry": 14,
+          "cx": 8,
+          "cy": -36,
+          "rx": 21,
+          "ry": 13,
+          "fill": "@white",
+          "stroke": "none",
+          "opacity": 0.13
+        },
+        {
+          "type": "circle",
+          "cx": 48,
+          "cy": -30,
+          "r": 7,
+          "fill": "@white",
+          "strokeWidth": 3.5
+        },
+        {
+          "type": "circle",
+          "cx": 50,
+          "cy": -29,
+          "r": 3.2,
+          "fill": "@outline",
+          "stroke": "none"
+        },
+        {
+          "type": "ellipse",
+          "cx": 52,
+          "cy": 0,
+          "rx": 23,
+          "ry": 16,
           "fill": "@accent"
         },
         {
           "type": "ellipse",
-          "cx": 57,
+          "cx": 64,
           "cy": -10,
-          "rx": 8,
-          "ry": 6,
+          "rx": 10,
+          "ry": 7.5,
           "fill": "@outline",
           "stroke": "none"
         },
         {
           "type": "path",
-          "d": "M 44 6 q 6 5 13 1",
+          "d": "M 49 10 q 8 7 16 1",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 10 -34 q 12 -7 23 -2",
           "fill": "none",
           "stroke": "@outline",
           "strokeWidth": 4
         },
         {
           "type": "circle",
-          "cx": 28,
+          "cx": 24,
           "cy": -24,
-          "r": 9,
+          "r": 11.5,
           "fill": "@white",
-          "strokeWidth": 4
+          "strokeWidth": 4.5
         },
         {
           "type": "circle",
-          "cx": 31,
+          "cx": 28,
           "cy": -23,
-          "r": 4,
+          "r": 5,
           "fill": "@outline",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 26,
+          "cy": -26,
+          "r": 2,
+          "fill": "@white",
           "stroke": "none"
         }
       ]
@@ -112,31 +161,53 @@
       },
       "shapes": [
         {
-          "type": "rect",
-          "x": -15,
-          "y": -8,
-          "width": 30,
-          "height": 66,
-          "rx": 14,
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 2,
+          "rx": 20,
+          "ry": 21,
           "fill": "@primary"
         },
         {
+          "type": "rect",
+          "x": -16,
+          "y": -2,
+          "width": 32,
+          "height": 58,
+          "rx": 15,
+          "fill": "@primary"
+        },
+        {
+          "type": "path",
+          "d": "M -12 8 q 5 24 1 40",
+          "fill": "none",
+          "stroke": "@white",
+          "strokeWidth": 5,
+          "opacity": 0.13
+        },
+        {
           "type": "ellipse",
-          "cx": 1,
+          "cx": 2,
           "cy": 58,
-          "rx": 17,
-          "ry": 12,
+          "rx": 18,
+          "ry": 13,
           "fill": "@secondary"
         },
         {
           "type": "polygon",
-          "points": "13,50 24,53 16,62",
+          "points": "15,50 27,53 18,63",
           "fill": "@white",
           "strokeWidth": 3
         },
         {
           "type": "polygon",
-          "points": "6,59 17,62 8,70",
+          "points": "8,59 20,63 10,71",
+          "fill": "@white",
+          "strokeWidth": 3
+        },
+        {
+          "type": "polygon",
+          "points": "-2,62 8,68 -4,72",
           "fill": "@white",
           "strokeWidth": 3
         }
@@ -173,31 +244,47 @@
         {
           "type": "ellipse",
           "cx": 0,
-          "cy": 14,
-          "rx": 21,
-          "ry": 24,
-          "fill": "@primary"
-        },
-        {
-          "type": "rect",
-          "x": -12,
-          "y": 20,
-          "width": 24,
-          "height": 42,
-          "rx": 11,
+          "cy": 12,
+          "rx": 23,
+          "ry": 26,
           "fill": "@primary"
         },
         {
           "type": "ellipse",
-          "cx": 2,
+          "cx": -7,
+          "cy": 4,
+          "rx": 12,
+          "ry": 13,
+          "fill": "@white",
+          "stroke": "none",
+          "opacity": 0.12
+        },
+        {
+          "type": "rect",
+          "x": -13,
+          "y": 22,
+          "width": 26,
+          "height": 40,
+          "rx": 12,
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": 3,
           "cy": 60,
-          "rx": 16,
-          "ry": 11,
+          "rx": 17,
+          "ry": 12,
           "fill": "@secondary"
         },
         {
           "type": "polygon",
-          "points": "13,53 24,56 16,64",
+          "points": "14,53 26,56 17,65",
+          "fill": "@white",
+          "strokeWidth": 3
+        },
+        {
+          "type": "polygon",
+          "points": "6,61 17,65 7,72",
           "fill": "@white",
           "strokeWidth": 3
         }
@@ -228,11 +315,22 @@
       },
       "shapes": [
         {
-          "type": "circle",
-          "cx": -9,
-          "cy": -3,
-          "r": 11,
-          "fill": "@secondary"
+          "type": "ellipse",
+          "cx": -11,
+          "cy": -2,
+          "rx": 14,
+          "ry": 13,
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": -15,
+          "cy": -6,
+          "rx": 6,
+          "ry": 5,
+          "fill": "@white",
+          "stroke": "none",
+          "opacity": 0.16
         }
       ]
     },
@@ -255,31 +353,39 @@
       "shapes": [
         {
           "type": "path",
-          "d": "M -70 -24 l 10 -10 l 7 12 l 10 -10 l 7 12 l 10 -10 l 7 12 l 10 -10 l 7 12 l 10 -10 l 7 12",
+          "d": "M -76 -28 l 11 -12 l 8 14 l 11 -12 l 8 14 l 11 -12 l 8 14 l 11 -12 l 8 14 l 11 -12 l 8 14 l 11 -12 l 8 14",
           "fill": "none",
           "stroke": "@secondary",
-          "strokeWidth": 5,
-          "opacity": 0.7
+          "strokeWidth": 6,
+          "opacity": 0.8
         },
         {
-          "type": "ellipse",
-          "cx": -30,
-          "cy": 12,
-          "rx": 14,
-          "ry": 9,
-          "fill": "@secondary",
-          "stroke": "none",
+          "type": "path",
+          "d": "M -72 10 q 12 10 24 0 q 12 10 24 0 q 12 10 24 0 q 12 10 24 0",
+          "fill": "none",
+          "stroke": "@secondary",
+          "strokeWidth": 4.5,
           "opacity": 0.5
         },
         {
           "type": "ellipse",
-          "cx": 34,
-          "cy": -4,
-          "rx": 10,
-          "ry": 7,
+          "cx": -32,
+          "cy": 18,
+          "rx": 17,
+          "ry": 10,
           "fill": "@secondary",
           "stroke": "none",
-          "opacity": 0.5
+          "opacity": 0.45
+        },
+        {
+          "type": "ellipse",
+          "cx": 36,
+          "cy": -2,
+          "rx": 12,
+          "ry": 8,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.45
         }
       ]
     },
@@ -313,39 +419,37 @@
           "type": "ellipse",
           "cx": 0,
           "cy": 0,
-          "rx": 24,
-          "ry": 15,
+          "rx": 26,
+          "ry": 16,
           "fill": "#f2b04e",
           "stroke": "none",
-          "opacity": 0.3
+          "opacity": 0.28
         },
         {
           "type": "ellipse",
           "cx": 0,
           "cy": 0,
-          "rx": 12,
-          "ry": 8,
+          "rx": 13,
+          "ry": 9,
           "fill": "#f2b04e",
           "stroke": "none",
-          "opacity": 0.5
+          "opacity": 0.45
         },
         {
-          "type": "circle",
-          "cx": 14,
-          "cy": -10,
-          "r": 3,
-          "fill": "#f2b04e",
-          "stroke": "none",
-          "opacity": 0.5
+          "type": "path",
+          "d": "M 9 -14 h 11 l -11 12 h 12",
+          "fill": "none",
+          "stroke": "#f2b04e",
+          "strokeWidth": 2.5,
+          "opacity": 0.8
         },
         {
-          "type": "circle",
-          "cx": 19,
-          "cy": -16,
-          "r": 2,
-          "fill": "#f2b04e",
-          "stroke": "none",
-          "opacity": 0.4
+          "type": "path",
+          "d": "M 24 -28 h 8 l -8 9 h 9",
+          "fill": "none",
+          "stroke": "#f2b04e",
+          "strokeWidth": 2,
+          "opacity": 0.55
         }
       ]
     },
@@ -373,48 +477,87 @@
       },
       "shapes": [
         {
+          "type": "path",
+          "d": "M 4 -42 q 8 -20 26 -16 q -8 9 -6 19 z",
+          "fill": "@primary"
+        },
+        {
           "type": "circle",
-          "cx": 18,
+          "cx": 20,
           "cy": -20,
-          "r": 30,
+          "r": 31,
           "fill": "@secondary"
         },
         {
+          "type": "ellipse",
+          "cx": 8,
+          "cy": -34,
+          "rx": 16,
+          "ry": 10,
+          "fill": "@white",
+          "stroke": "none",
+          "opacity": 0.4
+        },
+        {
+          "type": "circle",
+          "cx": 45,
+          "cy": -30,
+          "r": 6.5,
+          "fill": "@white",
+          "strokeWidth": 3.5
+        },
+        {
+          "type": "circle",
+          "cx": 47,
+          "cy": -29,
+          "r": 3,
+          "fill": "@outline",
+          "stroke": "none"
+        },
+        {
           "type": "path",
-          "d": "M 42 -30 C 60 -33 72 -27 73 -18 C 74 -10 66 -5 59 -9 C 62 -14 60 -18 45 -15 Z",
+          "d": "M 44 -30 C 65 -33 77 -26 78 -16 C 79 -6 69 -1 61 -6 C 65 -12 62 -17 46 -14 Z",
           "fill": "@accent",
           "strokeWidth": 4
         },
         {
           "type": "circle",
-          "cx": 52,
+          "cx": 55,
           "cy": -23,
-          "r": 2,
+          "r": 2.5,
           "fill": "@outline",
           "stroke": "none"
         },
         {
           "type": "circle",
-          "cx": 26,
-          "cy": -26,
-          "r": 8,
+          "cx": 27,
+          "cy": -24,
+          "r": 10.5,
           "fill": "@white",
-          "strokeWidth": 4
+          "strokeWidth": 4.5
+        },
+        {
+          "type": "circle",
+          "cx": 31,
+          "cy": -23,
+          "r": 4.5,
+          "fill": "@outline",
+          "stroke": "none"
         },
         {
           "type": "circle",
           "cx": 29,
-          "cy": -25,
-          "r": 3.5,
-          "fill": "@outline",
+          "cy": -26,
+          "r": 1.8,
+          "fill": "@white",
           "stroke": "none"
         },
         {
           "type": "path",
-          "d": "M 13 -37 L 38 -31",
+          "d": "M 12 -38 L 40 -31",
           "fill": "none",
           "stroke": "@outline",
-          "strokeWidth": 4.5
+          "strokeWidth": 5
         }
       ]
     },
@@ -449,16 +592,70 @@
       "shapes": [
         {
           "type": "path",
-          "d": "M 2 6 C -8 -22 -44 -74 -122 -104 C -132 -108 -138 -100 -130 -92 Q -137 -67 -112 -58 Q -110 -34 -86 -34 Q -77 -10 -52 -14 Q -37 10 -8 10 Z",
+          "d": "M 4 10 C -10 -14 -46 -46 -112 -64 C -123 -67 -128 -58 -119 -51 Q -121 -33 -99 -31 Q -93 -12 -71 -15 Q -58 3 -34 1 Q -20 15 2 15 Z",
           "fill": "@primary",
-          "transform": "translate(4 -26) rotate(14)"
+          "transform": "translate(6 -20) rotate(-4)"
         },
         {
           "type": "path",
-          "d": "M 2 2 C -6 -18 -30 -44 -74 -60 C -82 -62 -86 -56 -80 -50 Q -78 -34 -62 -32 Q -54 -14 -34 -12 Q -20 4 2 4 Z",
+          "d": "M -116 -56 C -92 -42 -70 -30 -44 -22",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 3.5,
+          "opacity": 0.5,
+          "transform": "translate(6 -20) rotate(-4)"
+        },
+        {
+          "type": "path",
+          "d": "M -96 -30 C -76 -20 -54 -10 -30 -4",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 3.5,
+          "opacity": 0.4,
+          "transform": "translate(6 -20) rotate(-4)"
+        },
+        {
+          "type": "path",
+          "d": "M -68 -14 C -50 -6 -30 2 -10 6",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 3.5,
+          "opacity": 0.3,
+          "transform": "translate(6 -20) rotate(-4)"
+        },
+        {
+          "type": "path",
+          "d": "M 4 6 C -8 -12 -34 -34 -74 -44 C -82 -46 -86 -39 -79 -34 Q -80 -20 -62 -19 Q -55 -4 -36 -6 Q -22 6 2 8 Z",
           "fill": "@secondary",
-          "transform": "translate(4 -26) rotate(14)",
-          "strokeWidth": 4
+          "strokeWidth": 4,
+          "transform": "translate(6 -20) rotate(-4)"
+        },
+        {
+          "type": "path",
+          "d": "M -70 -36 q 16 12 34 20",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 3,
+          "opacity": 0.28,
+          "transform": "translate(6 -20) rotate(-4)"
+        },
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": -2,
+          "rx": 16,
+          "ry": 15,
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": -5,
+          "cy": -7,
+          "rx": 7,
+          "ry": 6,
+          "fill": "@white",
+          "stroke": "none",
+          "opacity": 0.16
         }
       ]
     },
@@ -490,42 +687,58 @@
         {
           "type": "ellipse",
           "cx": 0,
-          "cy": 12,
-          "rx": 17,
-          "ry": 19,
+          "cy": 10,
+          "rx": 18,
+          "ry": 20,
           "fill": "@primary"
         },
         {
+          "type": "ellipse",
+          "cx": -6,
+          "cy": 3,
+          "rx": 9,
+          "ry": 10,
+          "fill": "@white",
+          "stroke": "none",
+          "opacity": 0.13
+        },
+        {
           "type": "rect",
-          "x": -5,
+          "x": -5.5,
           "y": 24,
-          "width": 10,
+          "width": 11,
           "height": 30,
-          "rx": 4,
+          "rx": 5,
           "fill": "@accent",
           "strokeWidth": 4
         },
         {
           "type": "polygon",
-          "points": "0,50 20,56 18,64 2,62",
+          "points": "0,50 21,57 19,65 2,63",
           "fill": "@accent",
           "strokeWidth": 4
         },
         {
           "type": "polygon",
-          "points": "-2,52 4,66 -7,66",
+          "points": "-2,52 5,67 -8,67",
           "fill": "@accent",
           "strokeWidth": 4
         },
         {
           "type": "polygon",
-          "points": "-2,52 -15,62 -8,67",
+          "points": "-2,52 -16,63 -8,68",
           "fill": "@accent",
           "strokeWidth": 4
         },
         {
           "type": "polygon",
-          "points": "20,56 28,61 18,64",
+          "points": "21,57 30,62 19,65",
+          "fill": "@outline",
+          "stroke": "none"
+        },
+        {
+          "type": "polygon",
+          "points": "5,67 8,76 -1,70",
           "fill": "@outline",
           "stroke": "none"
         }
@@ -559,18 +772,26 @@
           "type": "path",
           "d": "M 0 -6 C -40 -11 -70 -9 -84 -3 C -89 4 -85 10 -76 10 C -48 9 -22 5 0 6 Z",
           "fill": "@primary",
-          "transform": "rotate(17)"
+          "transform": "rotate(19)"
         },
         {
           "type": "path",
           "d": "M 0 -6 C -40 -11 -70 -9 -84 -3 C -89 4 -85 10 -76 10 C -48 9 -22 5 0 6 Z",
           "fill": "@primary",
-          "transform": "rotate(-16)"
+          "transform": "rotate(-17)"
         },
         {
           "type": "path",
-          "d": "M 0 -6 C -40 -11 -70 -9 -84 -3 C -89 4 -85 10 -76 10 C -48 9 -22 5 0 6 Z",
+          "d": "M 0 -7 C -42 -12 -74 -10 -88 -3 C -93 5 -89 11 -79 11 C -50 10 -23 6 0 7 Z",
           "fill": "@secondary"
+        },
+        {
+          "type": "path",
+          "d": "M -12 0 C -40 -2 -62 -1 -80 3",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 3,
+          "opacity": 0.4
         }
       ]
     },
@@ -593,34 +814,34 @@
       "shapes": [
         {
           "type": "path",
-          "d": "M -52 -10 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0",
+          "d": "M -54 -12 q 9 11 18 0 q 9 11 18 0 q 9 11 18 0 q 9 11 18 0",
           "fill": "none",
           "stroke": "@secondary",
-          "strokeWidth": 4,
-          "opacity": 0.8
+          "strokeWidth": 4.5,
+          "opacity": 0.85
         },
         {
           "type": "path",
-          "d": "M -60 10 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0",
+          "d": "M -62 8 q 9 11 18 0 q 9 11 18 0 q 9 11 18 0 q 9 11 18 0 q 9 11 18 0",
           "fill": "none",
           "stroke": "@secondary",
-          "strokeWidth": 4,
-          "opacity": 0.8
+          "strokeWidth": 4.5,
+          "opacity": 0.85
         },
         {
           "type": "path",
-          "d": "M -52 30 q 8 10 16 0 q 8 10 16 0 q 8 10 16 0",
+          "d": "M -54 28 q 9 11 18 0 q 9 11 18 0 q 9 11 18 0 q 9 11 18 0",
           "fill": "none",
           "stroke": "@secondary",
-          "strokeWidth": 4,
+          "strokeWidth": 4.5,
           "opacity": 0.8
         },
         {
           "type": "ellipse",
           "cx": 58,
-          "cy": 6,
-          "rx": 17,
-          "ry": 22,
+          "cy": 4,
+          "rx": 18,
+          "ry": 23,
           "fill": "@secondary",
           "stroke": "none",
           "opacity": 0.55
@@ -649,26 +870,34 @@
           "type": "ellipse",
           "cx": 0,
           "cy": 0,
-          "rx": 24,
-          "ry": 15,
+          "rx": 26,
+          "ry": 16,
           "fill": "#ffd66e",
           "stroke": "none",
-          "opacity": 0.3
+          "opacity": 0.28
         },
         {
           "type": "ellipse",
           "cx": 0,
           "cy": 0,
-          "rx": 12,
-          "ry": 8,
+          "rx": 13,
+          "ry": 9,
           "fill": "#ffd66e",
           "stroke": "none",
-          "opacity": 0.5
+          "opacity": 0.45
+        },
+        {
+          "type": "path",
+          "d": "M -14 4 q 14 -12 28 0",
+          "fill": "none",
+          "stroke": "#ffd66e",
+          "strokeWidth": 3,
+          "opacity": 0.8
         },
         {
           "type": "circle",
-          "cx": 14,
-          "cy": -10,
+          "cx": 16,
+          "cy": -12,
           "r": 3,
           "fill": "#ffd66e",
           "stroke": "none",
@@ -676,8 +905,8 @@
         },
         {
           "type": "circle",
-          "cx": 19,
-          "cy": -16,
+          "cx": 22,
+          "cy": -19,
           "r": 2,
           "fill": "#ffd66e",
           "stroke": "none",
@@ -711,72 +940,132 @@
       "shapes": [
         {
           "type": "path",
-          "d": "M 6 -38 C 2 -60 -10 -72 -26 -70 C -14 -62 -8 -50 -8 -38 Z",
+          "d": "M 4 -36 C 0 -62 -12 -76 -30 -74 C -16 -64 -10 -50 -10 -36 Z",
           "fill": "@accent",
           "strokeWidth": 4
         },
         {
+          "type": "path",
+          "d": "M -8 -44 q -9 -10 -17 -14",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 2.5,
+          "opacity": 0.5
+        },
+        {
           "type": "ellipse",
-          "cx": -4,
-          "cy": -26,
-          "rx": 13,
-          "ry": 7,
+          "cx": -6,
+          "cy": -24,
+          "rx": 14,
+          "ry": 8,
           "fill": "@secondary",
-          "transform": "rotate(-24 -4 -26)",
+          "transform": "rotate(-24 -6 -24)",
           "strokeWidth": 4
         },
         {
           "type": "ellipse",
           "cx": 16,
           "cy": -20,
-          "rx": 26,
-          "ry": 21,
+          "rx": 27,
+          "ry": 22,
           "fill": "@primary"
         },
         {
           "type": "ellipse",
-          "cx": 42,
-          "cy": -10,
-          "rx": 16,
-          "ry": 12,
-          "fill": "@primary"
+          "cx": 8,
+          "cy": -32,
+          "rx": 15,
+          "ry": 8,
+          "fill": "@white",
+          "stroke": "none",
+          "opacity": 0.35
         },
         {
           "type": "path",
-          "d": "M 22 -36 C 22 -58 12 -74 -6 -76 C 4 -64 10 -50 8 -36 Z",
+          "d": "M 22 -34 C 22 -60 12 -78 -8 -80 C 4 -66 10 -50 8 -34 Z",
           "fill": "@accent",
           "strokeWidth": 4
         },
         {
+          "type": "path",
+          "d": "M 14 -48 q 6 -10 6 -18",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 2.5,
+          "opacity": 0.5
+        },
+        {
+          "type": "ellipse",
+          "cx": 44,
+          "cy": -8,
+          "rx": 18,
+          "ry": 14,
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": 54,
+          "cy": -13,
+          "rx": 6,
+          "ry": 4.5,
+          "fill": "@outline",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M 44 2 q 8 5 14 0",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 3.5
+        },
+        {
           "type": "polygon",
-          "points": "36,0 49,0 43,17",
+          "points": "34,4 48,4 41,22",
           "fill": "@secondary",
           "strokeWidth": 4
         },
         {
           "type": "circle",
-          "cx": 50,
-          "cy": -13,
-          "r": 2.5,
+          "cx": 42,
+          "cy": -24,
+          "r": 7,
+          "fill": "@white",
+          "strokeWidth": 3.5
+        },
+        {
+          "type": "rect",
+          "x": 39,
+          "y": -26.5,
+          "width": 8,
+          "height": 4.5,
+          "rx": 2,
           "fill": "@outline",
           "stroke": "none"
         },
         {
           "type": "circle",
-          "cx": 22,
-          "cy": -26,
-          "r": 9,
+          "cx": 21,
+          "cy": -24,
+          "r": 10.5,
           "fill": "@white",
-          "strokeWidth": 4
+          "strokeWidth": 4.5
         },
         {
           "type": "rect",
-          "x": 17,
-          "y": -29,
-          "width": 10,
-          "height": 5.5,
-          "rx": 2,
+          "x": 16.5,
+          "y": -27.5,
+          "width": 11,
+          "height": 6,
+          "rx": 2.5,
           "fill": "@outline",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 18,
+          "cy": -28,
+          "r": 1.8,
+          "fill": "@white",
           "stroke": "none"
         }
       ]
@@ -806,30 +1095,59 @@
       },
       "shapes": [
         {
-          "type": "rect",
-          "x": -9,
-          "y": -6,
-          "width": 18,
-          "height": 58,
-          "rx": 8,
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 0,
+          "rx": 15,
+          "ry": 16,
           "fill": "@primary"
         },
         {
           "type": "rect",
-          "x": -10,
-          "y": 48,
-          "width": 20,
-          "height": 14,
-          "rx": 4,
-          "fill": "#6b6257",
+          "x": -11,
+          "y": -4,
+          "width": 22,
+          "height": 34,
+          "rx": 10,
+          "fill": "@primary"
+        },
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": 30,
+          "rx": 11,
+          "ry": 11,
+          "fill": "@primary"
+        },
+        {
+          "type": "rect",
+          "x": -9.5,
+          "y": 28,
+          "width": 19,
+          "height": 25,
+          "rx": 8,
+          "fill": "@primary"
+        },
+        {
+          "type": "path",
+          "d": "M -7 2 q -2 18 0 26",
+          "fill": "none",
+          "stroke": "@white",
+          "strokeWidth": 4,
+          "opacity": 0.16
+        },
+        {
+          "type": "path",
+          "d": "M -12 51 h 24 l -2 15 h -20 z",
+          "fill": "#5b5349",
           "strokeWidth": 4
         },
         {
           "type": "line",
           "x1": 0,
-          "y1": 50,
+          "y1": 54,
           "x2": 0,
-          "y2": 62,
+          "y2": 66,
           "stroke": "@outline",
           "strokeWidth": 3
         }
@@ -861,36 +1179,48 @@
         {
           "type": "ellipse",
           "cx": 0,
-          "cy": 10,
-          "rx": 17,
-          "ry": 21,
+          "cy": 8,
+          "rx": 21,
+          "ry": 24,
           "fill": "@primary"
         },
         {
-          "type": "rect",
-          "x": -8,
-          "y": 22,
-          "width": 16,
-          "height": 32,
-          "rx": 7,
-          "fill": "@primary"
+          "type": "ellipse",
+          "cx": -7,
+          "cy": 0,
+          "rx": 11,
+          "ry": 12,
+          "fill": "@white",
+          "stroke": "none",
+          "opacity": 0.14
+        },
+        {
+          "type": "path",
+          "d": "M -10 24 q 10 9 20 0 l 0 9 q -10 9 -20 0 z",
+          "fill": "@primary",
+          "strokeWidth": 4
         },
         {
           "type": "rect",
-          "x": -9,
-          "y": 50,
-          "width": 18,
-          "height": 13,
-          "rx": 4,
-          "fill": "#6b6257",
+          "x": -10,
+          "y": 30,
+          "width": 20,
+          "height": 25,
+          "rx": 8,
+          "fill": "@primary"
+        },
+        {
+          "type": "path",
+          "d": "M -12 53 h 24 l -2 15 h -20 z",
+          "fill": "#5b5349",
           "strokeWidth": 4
         },
         {
           "type": "line",
           "x1": 0,
-          "y1": 52,
+          "y1": 56,
           "x2": 0,
-          "y2": 63,
+          "y2": 68,
           "stroke": "@outline",
           "strokeWidth": 3
         }
@@ -922,9 +1252,17 @@
       "shapes": [
         {
           "type": "path",
-          "d": "M 2 6 C -12 4 -22 -6 -20 -24 C -12 -20 -2 -10 6 -2 Z",
+          "d": "M 3 7 C -13 5 -25 -7 -22 -27 C -13 -22 -2 -11 7 -2 Z",
           "fill": "@primary",
           "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -4 0 q -8 -6 -12 -16",
+          "fill": "none",
+          "stroke": "@secondary",
+          "strokeWidth": 3,
+          "opacity": 0.7
         }
       ]
     },
@@ -947,21 +1285,31 @@
       "shapes": [
         {
           "type": "path",
-          "d": "M -58 30 l 8 12 l 8 -10 l 8 12 l 8 -10 l 8 12 l 8 -10 l 8 12 l 8 -10 l 8 12 l 8 -10",
+          "d": "M -60 30 l 9 13 l 9 -11 l 9 13 l 9 -11 l 9 13 l 9 -11 l 9 13 l 9 -11 l 9 13 l 9 -11",
           "fill": "none",
           "stroke": "@accent",
-          "strokeWidth": 5,
+          "strokeWidth": 5.5,
           "opacity": 0.8
         },
         {
           "type": "ellipse",
-          "cx": -22,
+          "cx": -24,
           "cy": -18,
-          "rx": 22,
-          "ry": 12,
+          "rx": 23,
+          "ry": 13,
           "fill": "@accent",
           "stroke": "none",
           "opacity": 0.35
+        },
+        {
+          "type": "ellipse",
+          "cx": 30,
+          "cy": 10,
+          "rx": 16,
+          "ry": 10,
+          "fill": "@accent",
+          "stroke": "none",
+          "opacity": 0.28
         }
       ]
     },
@@ -986,39 +1334,37 @@
           "type": "ellipse",
           "cx": 0,
           "cy": 0,
-          "rx": 24,
-          "ry": 15,
+          "rx": 26,
+          "ry": 16,
           "fill": "#d4c14f",
           "stroke": "none",
-          "opacity": 0.3
+          "opacity": 0.28
         },
         {
-          "type": "ellipse",
+          "type": "circle",
           "cx": 0,
           "cy": 0,
-          "rx": 12,
-          "ry": 8,
+          "r": 11,
           "fill": "#d4c14f",
           "stroke": "none",
-          "opacity": 0.5
+          "opacity": 0.45
         },
         {
           "type": "circle",
-          "cx": 14,
-          "cy": -10,
-          "r": 3,
+          "cx": 0,
+          "cy": 0,
+          "r": 5,
           "fill": "#d4c14f",
           "stroke": "none",
-          "opacity": 0.5
+          "opacity": 0.6
         },
         {
-          "type": "circle",
-          "cx": 19,
-          "cy": -16,
-          "r": 2,
-          "fill": "#d4c14f",
-          "stroke": "none",
-          "opacity": 0.4
+          "type": "path",
+          "d": "M -17 -6 h 6 M 11 -6 h 6 M -17 6 h 6 M 11 6 h 6 M 0 -15 v 5 M 0 10 v 5",
+          "fill": "none",
+          "stroke": "#d4c14f",
+          "strokeWidth": 3,
+          "opacity": 0.65
         }
       ]
     },
@@ -1053,41 +1399,58 @@
       "shapes": [
         {
           "type": "path",
-          "d": "M 4 2 C -16 -22 -14 -60 8 -76 C 20 -84 36 -84 48 -76 C 70 -60 72 -22 52 2 Z",
+          "d": "M 2 4 C -20 -22 -18 -62 6 -80 C 20 -90 38 -90 52 -80 C 76 -62 78 -22 56 4 Z",
           "fill": "@primary"
         },
         {
-          "type": "ellipse",
-          "cx": 26,
-          "cy": -46,
-          "rx": 9,
-          "ry": 12,
+          "type": "path",
+          "d": "M 12 -4 C -6 -26 -4 -56 16 -70 C 26 -76 36 -76 46 -70 C 66 -56 68 -26 50 -4 Z",
           "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.35
+        },
+        {
+          "type": "ellipse",
+          "cx": 29,
+          "cy": -48,
+          "rx": 11,
+          "ry": 14,
+          "fill": "@accent",
           "stroke": "none",
           "opacity": 0.9
         },
         {
           "type": "circle",
-          "cx": 26,
-          "cy": -63,
-          "r": 4,
-          "fill": "@secondary",
+          "cx": 29,
+          "cy": -67,
+          "r": 5,
+          "fill": "@accent",
           "stroke": "none",
           "opacity": 0.9
         },
         {
           "type": "ellipse",
-          "cx": 52,
-          "cy": -12,
-          "rx": 22,
-          "ry": 13,
+          "cx": 54,
+          "cy": -11,
+          "rx": 24,
+          "ry": 14,
           "fill": "@primary"
         },
         {
           "type": "ellipse",
           "cx": 50,
-          "cy": -4,
-          "rx": 15,
+          "cy": -17,
+          "rx": 13,
+          "ry": 6,
+          "fill": "@white",
+          "stroke": "none",
+          "opacity": 0.18
+        },
+        {
+          "type": "ellipse",
+          "cx": 52,
+          "cy": -2,
+          "rx": 16,
           "ry": 6,
           "fill": "@secondary",
           "stroke": "none",
@@ -1095,33 +1458,47 @@
         },
         {
           "type": "polygon",
-          "points": "60,0 67,0 63,10",
+          "points": "62,1 69,1 65,11",
+          "fill": "@white",
+          "strokeWidth": 2.5
+        },
+        {
+          "type": "polygon",
+          "points": "48,2 54,2 51,10",
           "fill": "@white",
           "strokeWidth": 2.5
         },
         {
           "type": "path",
-          "d": "M 73 -10 C 82 -8 88 -10 92 -14 M 92 -14 l 7 -5 M 92 -14 l 8 4",
+          "d": "M 76 -9 C 86 -7 92 -9 96 -13 M 96 -13 l 8 -6 M 96 -13 l 9 5",
           "fill": "none",
           "stroke": "#d9455f",
           "strokeWidth": 3.5
         },
         {
           "type": "circle",
-          "cx": 54,
+          "cx": 57,
           "cy": -20,
-          "r": 9.5,
+          "r": 10,
           "fill": "@white",
-          "strokeWidth": 4
+          "strokeWidth": 4.5
         },
         {
           "type": "rect",
-          "x": 52.5,
+          "x": 55,
           "y": -27,
-          "width": 4,
+          "width": 4.5,
           "height": 14,
           "rx": 2,
           "fill": "@outline",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 53,
+          "cy": -24,
+          "r": 1.8,
+          "fill": "@white",
           "stroke": "none"
         }
       ]
@@ -1161,8 +1538,16 @@
           "d": "M -8 -2 C -48 -8 -76 4 -86 18",
           "fill": "none",
           "stroke": "@secondary",
-          "strokeWidth": 4.5,
-          "opacity": 0.9
+          "strokeWidth": 5,
+          "opacity": 0.85
+        },
+        {
+          "type": "path",
+          "d": "M -20 -6 l 5 5 l -5 5 M -40 -6 l 5 5 l -5 5 M -60 0 l 5 5 l -5 5",
+          "fill": "none",
+          "stroke": "@accent",
+          "strokeWidth": 2.5,
+          "opacity": 0.55
         }
       ]
     },
@@ -1185,34 +1570,41 @@
       "shapes": [
         {
           "type": "path",
-          "d": "M -56 -14 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6",
+          "d": "M -58 -16 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7",
           "fill": "none",
           "stroke": "@accent",
-          "strokeWidth": 3.5,
+          "strokeWidth": 4,
           "opacity": 0.6
         },
         {
           "type": "path",
-          "d": "M -60 6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6",
+          "d": "M -62 4 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7",
           "fill": "none",
           "stroke": "@accent",
-          "strokeWidth": 3.5,
+          "strokeWidth": 4,
           "opacity": 0.6
         },
         {
           "type": "path",
-          "d": "M -52 26 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6 l 7 6 l 7 -6",
+          "d": "M -54 24 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7 l 8 -7 l 8 7",
           "fill": "none",
           "stroke": "@accent",
-          "strokeWidth": 3.5,
-          "opacity": 0.6
+          "strokeWidth": 4,
+          "opacity": 0.55
         },
         {
           "type": "polygon",
-          "points": "12,-32 22,-24 12,-16 2,-24",
+          "points": "14,-34 26,-24 14,-14 2,-24",
           "fill": "@secondary",
           "stroke": "none",
           "opacity": 0.5
+        },
+        {
+          "type": "polygon",
+          "points": "-30,-6 -20,2 -30,10 -40,2",
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.4
         }
       ]
     },
@@ -1239,35 +1631,32 @@
           "type": "ellipse",
           "cx": 0,
           "cy": 0,
-          "rx": 24,
-          "ry": 15,
+          "rx": 26,
+          "ry": 16,
           "fill": "#8fd14f",
           "stroke": "none",
-          "opacity": 0.35
+          "opacity": 0.32
         },
         {
-          "type": "ellipse",
-          "cx": 0,
-          "cy": 0,
-          "rx": 12,
-          "ry": 8,
+          "type": "path",
+          "d": "M 0 -12 C 10 -4 12 6 6 11 C 1 15 -6 13 -8 7 C -10 0 -6 -6 0 -12 Z",
+          "fill": "#8fd14f",
+          "stroke": "none",
+          "opacity": 0.6
+        },
+        {
+          "type": "circle",
+          "cx": 16,
+          "cy": -11,
+          "r": 3,
           "fill": "#8fd14f",
           "stroke": "none",
           "opacity": 0.55
         },
         {
           "type": "circle",
-          "cx": 14,
-          "cy": -10,
-          "r": 3,
-          "fill": "#8fd14f",
-          "stroke": "none",
-          "opacity": 0.5
-        },
-        {
-          "type": "circle",
-          "cx": 19,
-          "cy": -16,
+          "cx": 22,
+          "cy": -18,
           "r": 2,
           "fill": "#8fd14f",
           "stroke": "none",
@@ -1296,80 +1685,88 @@
       "shapes": [
         {
           "type": "rect",
-          "x": -60,
+          "x": -62,
+          "y": -26,
+          "width": 36,
+          "height": 26,
+          "rx": 5,
+          "fill": "@primary",
+          "strokeWidth": 3.5,
+          "opacity": 0.92
+        },
+        {
+          "type": "rect",
+          "x": -20,
+          "y": -32,
+          "width": 36,
+          "height": 26,
+          "rx": 5,
+          "fill": "@primary",
+          "strokeWidth": 3.5,
+          "opacity": 0.92
+        },
+        {
+          "type": "rect",
+          "x": 22,
           "y": -24,
-          "width": 34,
-          "height": 24,
-          "rx": 4,
+          "width": 36,
+          "height": 26,
+          "rx": 5,
           "fill": "@primary",
           "strokeWidth": 3.5,
-          "opacity": 0.9
+          "opacity": 0.92
         },
         {
           "type": "rect",
-          "x": -18,
-          "y": -30,
-          "width": 34,
-          "height": 24,
-          "rx": 4,
-          "fill": "@primary",
-          "strokeWidth": 3.5,
-          "opacity": 0.9
-        },
-        {
-          "type": "rect",
-          "x": 24,
-          "y": -22,
-          "width": 34,
-          "height": 24,
-          "rx": 4,
-          "fill": "@primary",
-          "strokeWidth": 3.5,
-          "opacity": 0.9
-        },
-        {
-          "type": "rect",
-          "x": -40,
+          "x": -42,
           "y": 4,
-          "width": 34,
-          "height": 24,
-          "rx": 4,
+          "width": 36,
+          "height": 26,
+          "rx": 5,
           "fill": "@secondary",
           "strokeWidth": 3.5,
-          "opacity": 0.85
+          "opacity": 0.88
         },
         {
           "type": "rect",
-          "x": 4,
+          "x": 2,
           "y": 6,
-          "width": 34,
-          "height": 24,
-          "rx": 4,
+          "width": 36,
+          "height": 26,
+          "rx": 5,
           "fill": "@secondary",
           "strokeWidth": 3.5,
-          "opacity": 0.85
+          "opacity": 0.88
+        },
+        {
+          "type": "path",
+          "d": "M -58 -22 h 28 M -16 -28 h 28 M 26 -20 h 28",
+          "fill": "none",
+          "stroke": "@white",
+          "strokeWidth": 2.5,
+          "opacity": 0.25
         },
         {
           "type": "circle",
-          "cx": -52,
+          "cx": -54,
           "cy": -18,
-          "r": 2.5,
+          "r": 2.8,
           "fill": "@accent",
           "stroke": "none"
         },
         {
           "type": "circle",
-          "cx": -10,
+          "cx": -12,
           "cy": -24,
-          "r": 2.5,
+          "r": 2.8,
           "fill": "@accent",
           "stroke": "none"
         },
         {
           "type": "circle",
-          "cx": 32,
+          "cx": 30,
           "cy": -16,
-          "r": 2.5,
+          "r": 2.8,
           "fill": "@accent",
           "stroke": "none"
         }
@@ -1396,55 +1793,72 @@
           "type": "ellipse",
           "cx": 0,
           "cy": 0,
-          "rx": 24,
-          "ry": 15,
+          "rx": 26,
+          "ry": 16,
           "fill": "#e9c31f",
           "stroke": "none",
           "opacity": 0.3
         },
         {
           "type": "rect",
-          "x": -12,
-          "y": -8,
-          "width": 24,
-          "height": 16,
+          "x": -13,
+          "y": -9,
+          "width": 26,
+          "height": 18,
           "rx": 3,
-          "fill": "#6e7887",
+          "fill": "@primary",
           "strokeWidth": 3,
-          "opacity": 0.85
-        },
-        {
-          "type": "rect",
-          "x": -9,
-          "y": -13,
-          "width": 5,
-          "height": 6,
-          "rx": 1,
-          "fill": "#9aa4b5",
-          "stroke": "none",
           "opacity": 0.9
         },
         {
           "type": "rect",
-          "x": -1,
-          "y": -13,
+          "x": -10,
+          "y": -14,
           "width": 5,
           "height": 6,
           "rx": 1,
-          "fill": "#9aa4b5",
+          "fill": "@secondary",
           "stroke": "none",
-          "opacity": 0.9
+          "opacity": 0.95
         },
         {
           "type": "rect",
-          "x": 7,
-          "y": -13,
+          "x": -2.5,
+          "y": -14,
           "width": 5,
           "height": 6,
           "rx": 1,
-          "fill": "#9aa4b5",
+          "fill": "@secondary",
           "stroke": "none",
-          "opacity": 0.9
+          "opacity": 0.95
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": -14,
+          "width": 5,
+          "height": 6,
+          "rx": 1,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.95
+        },
+        {
+          "type": "path",
+          "d": "M -9 -3 h 18 M -9 3 h 18",
+          "fill": "none",
+          "stroke": "@outline",
+          "strokeWidth": 2,
+          "opacity": 0.4
+        },
+        {
+          "type": "circle",
+          "cx": 19,
+          "cy": -11,
+          "r": 3,
+          "fill": "#e9c31f",
+          "stroke": "none",
+          "opacity": 0.5
         }
       ]
     }
