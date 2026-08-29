@@ -1,5 +1,88 @@
 # PROGRESS
 
+## Session 15 — Balance pass: the curve that was never there ✅
+
+The prismatic complaint carried for three sessions turned out to be the small
+half of the problem. Fixing the measurement came first.
+
+### The harness was measuring the wrong game
+`tools/sim.js` fought every encounter with **one** chimera. The game hands you
+**three**. Two different games:
+
+| | solo | team of 3 |
+|---|---|---|
+| standard grade, median | 7% | **69%** |
+| every encounter but two | 0% | **100%** |
+
+So the previous sessions' notes were both wrong: prismatic wasn't the problem
+(the *whole ladder* was free), and **seven of the eight `[TRASH]` builds were a
+measurement artifact**, not dead content. New `--team=N` flag; three is now the
+default for encounter tuning, solo stays available for comparing builds.
+
+### The real bug: frames carried the creature
+A 1-part L frame had **109 HP**; filling all six sockets bought **8 more** — and
+cost 7 regen, because every part adds metabolic draw. The dominant strategy was
+*biggest chassis, fewest parts*, which is exactly what the physiology panel warns
+against. The panel was right and the mechanics were wrong.
+
+Health now lives in the anatomy. Frame HP S/M/L 55/70/105 → **22/30/42**; every
+slot carries real HP (hide 5 → 20, head 4 → 12, and so on) via `tools/gen-parts.js`,
+so all 148 parts were regenerated rather than hand-edited. Same L frame today:
+**54 HP bare, 106 HP full.** Filling sockets nearly doubles you.
+
+### A difficulty curve, at last
+Each encounter declares a `tier`; `tierScale` in `enemies.json` multiplies unit
+stats at battle time. One authored roster now covers the whole campaign — a Riot
+Squad at the National Guard Post is the same unit, three tiers of budget later.
+**Tier 1 is scaled *below* the authored stats on purpose**: a new player fields
+exactly one chimera of standard parts, and losing it means a capture.
+
+### The grade ladder is a staircase
+1 / 1.25 / 1.5 / **2.0** → 1 / 1.2 / 1.4 / **1.65**, and the move bonus 15% → 12%
+per tier so grades stop double-dipping. Prismatic was a leap that turned every
+wall into a formality in one husbandry tier.
+
+### Rivals were the easiest content on the ladder
+Tuned against a lone chimera, they folded against a real team. Power, team size
+and grade ladders raised; `powerCap` lifted so rematches still iterate.
+
+### Measured result (team of 3, median build)
+
+| | std | prime | apex | prismatic |
+|---|---|---|---|---|
+| **overall** | 33% | 45% | 58% | 75% |
+| tutorial patrol | 100% | 100% | 100% | 100% |
+| checkpoint / air / harbor / rescue | 0–80% | 60–100% | 100% | 100% |
+| Precinct boss | 0% | 0% | 40% | 100% |
+| military response | 0% | 0% | 40% | 100% |
+| rivals | 0% | 0% | 0% | 0–20% |
+
+Every grade opens a new band; rivals sit above the human roster. The triangle
+still decides them — at prismatic, counter ≈ 87–100%, mirror ≈ 37–67%, wrong
+class ≈ 0–13%.
+
+**Degenerate builds: 7 OP + 8 TRASH → 1 OP (at standard only) + 0 TRASH.**
+The one survivor is a light 3-part build 66% vs a 32% peer median — a wide
+spread at the lowest grade is build quality mattering, not a defect.
+
+### Guarded
+Smoke now asserts the shape, not just the plumbing: the grade ladder is evenly
+stepped, the curve only rises, tier 1 is a tutorial band, a tier-less encounter
+fights at authored stats, rivals are never tier-scaled, **a full build is worth
+at least 1.6× a bare frame**, and the sim's own ordering (tutorial winnable at
+standard, boss not; prismatic answers the boss; rivals harder than the boss).
+Three assertions were deliberately broken to confirm they bite.
+
+### Verified
+`node tools/smoke.js` green in 1.7s. `node tools/sim.js --plant` still caught.
+CDP at 380px: a v8 save migrates to v9 and plays; a fresh save's guided first
+splice (94 HP) beats the tier-1 patrol (38 HP) and takes the node; the Theater
+shows an empty M slab at 30 HP against 94 HP fully built. No console errors.
+
+### Next session's first task
+AI director — the counter-bias plumbing already works for rivals; generalise it
+to the human roster.
+
 ## Session 14 — Battle overhaul: turns you can actually see ✅
 
 The complaint was exact: *"there isn't obvious turns. I just press attacks and

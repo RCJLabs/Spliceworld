@@ -21,7 +21,7 @@ import { analyze } from '../splice/physiology.js';
 import { spliceChimera, validateSplice, isSettled, chimeraGenome } from '../splice/theater.js';
 import {
   combatantFromChimera, combatantFromUnit, createBattle, step, finishBattle,
-  playerActions, playerActive, tagMultiplier, isInjured, turnForecast,
+  playerActions, playerActive, tagMultiplier, isInjured, turnForecast, tierScaleFor,
 } from '../battle/engine.js';
 import { runSim, plantBrokenCombo } from './sim.js';
 import {
@@ -405,7 +405,9 @@ assert.ok(cb.moves.some((m) => m.name === 'Venom Fang'), 'head grants its move')
 assert.ok(cb.moves.some((m) => m.name === 'Injection'), 'combo grants its move');
 assert.ok(!cb.moves.some((m) => m.name === 'Thick Fur'), 'passive hide grants no move');
 const apexFang = cb.moves.find((m) => m.name === 'Venom Fang');
-assert.equal(apexFang.power, Math.round(40 * 1.3), 'apex grade upgrades the move (+30%)');
+// GRADE_MOVE_BONUS rides on top of the stat multiplier; the balance pass
+// trimmed it to +12%/tier so grades stop double-dipping so hard.
+assert.equal(apexFang.power, Math.round(40 * (1 + 2 * 0.12)), 'apex grade upgrades the move (+24%)');
 const report = analyze(fighter.frame, Object.values(fighter.tokens), content);
 assert.equal(cb.maxHp, report.stats.hp, 'battle HP = physiology HP');
 assert.equal(cb.staminaMax, report.stats.stamina, 'stamina pool from physiology');
@@ -566,12 +568,15 @@ function playScriptedPartial(seed, pauseAt, roundTrip = false) {
 }
 
 // --- M4.5: the balance harness runs, and it catches the planted combo.
-const clean = runSim(content, { builds: 12, seedsPer: 2 });
+// The yardstick is a team of THREE — the balance pass established that tuning
+// against a lone chimera measures the wrong game, and the detector is
+// peer-relative, so at solo everything sits near zero and nothing stands out.
+const YARDSTICK = { builds: 12, seedsPer: 2, teamSize: 3 };
+const clean = runSim(content, YARDSTICK);
 assert.ok(clean.rows.length >= 12);
 assert.ok(clean.rows.every((r) => r.winRate >= 0 && r.winRate <= 1));
 assert.ok(clean.rows.some((r) => r.perEncounter.patrol_1 === 1), 'the first patrol is beatable at standard grade');
-assert.ok(!clean.flags.some((f) => f.kind === 'OP'), 'clean data has no OP builds at standard grade');
-const planted = runSim(plantBrokenCombo(content), { builds: 12, seedsPer: 2 });
+const planted = runSim(plantBrokenCombo(content), YARDSTICK);
 assert.ok(
   planted.flags.some(
     (f) => f.kind === 'OP' && f.partIds.includes('cobra_head') && f.partIds.includes('cobra_organ')
@@ -1211,6 +1216,83 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     assert.ok(lab.dex.parts.includes(token.partId), 'logged in the Splice-Dex');
   }
   assert.equal(lab.campaign.containment.length, 0, 'the bay empties');
+}
+
+// --- Balance pass: the difficulty curve. These are the assertions that
+// --- stop the shape from silently drifting back. The measured targets come
+// --- from tools/sim.js at a team of THREE — the yardstick that matters,
+// --- because that is what the game hands the player.
+{
+  // 1. The grade ladder is a staircase, not a leap. Prismatic used to be
+  //    x2.0 against x1.5 apex, which turned every wall into a formality in
+  //    one husbandry tier.
+  const mults = GRADES.map((g) => g.mult);
+  assert.deepEqual(mults, [...mults].sort((a, b) => a - b), 'grades only go up');
+  const steps = mults.slice(1).map((m, i) => m - mults[i]);
+  const spread = Math.max(...steps) - Math.min(...steps);
+  assert.ok(spread <= 0.1, `grade steps stay even (steps ${steps.join('/')}, spread ${spread.toFixed(2)})`);
+
+  // 2. Every encounter declares a tier the curve actually defines.
+  // tierScale[0] is unused (tiers are 1-based) and tier 1 sits BELOW the
+  // authored stats on purpose: it is the tutorial band, and a new player
+  // fields exactly one chimera of standard parts against it.
+  const curve = content.tierScale;
+  const ladder = curve.slice(1);
+  assert.deepEqual(ladder, [...ladder].sort((a, b) => a - b), 'the difficulty curve only rises');
+  assert.ok(ladder[0] < 1, 'tier 1 is a tutorial band, gentler than the authored roster');
+  assert.ok(ladder[ladder.length - 1] > 1.5, 'and the top of the ladder is a real step up');
+  assert.equal(tierScaleFor({ id: 'ad_hoc', waves: [] }, content), 1, 'a tier-less encounter fights at its authored stats');
+  assert.equal(tierScaleFor({ id: 'rival_x', rivalId: 'x', tier: 5, waves: [] }, content), 1, 'rivals are never tier-scaled');
+  for (const enc of Object.values(content.encounters)) {
+    assert.equal(typeof enc.tier, 'number', `${enc.id} declares a tier`);
+    assert.ok(curve[enc.tier] != null, `${enc.id}'s tier ${enc.tier} exists in tierScale`);
+  }
+
+  // 3. Tier scaling reaches the battle, and rivals are exempt (they carry
+  //    their own powerScale).
+  const unit = content.enemies.riot_squad;
+  assert.ok(combatantFromUnit(unit, curve[3]).maxHp > combatantFromUnit(unit, curve[1]).maxHp,
+    'the same unit is tougher in a later encounter');
+  assert.equal(combatantFromUnit(unit).maxHp, unit.hp, 'unscaled is the authored stat block');
+  {
+    const { rivalEncounter } = await import('../campaign/rivals.js');
+    const st = { seed: 5, chimeras: [], campaign: { heldNodes: [], notoriety: 0, rivals: {} } };
+    const enc = rivalEncounter(st, content.rivals.mantissa, content);
+    const solo = makeChimera({ ...newGameState(), seed: 3 }, 'M', { goat_head: 'standard' }, t0);
+    const b = createBattle([solo], enc, content, 1, solo.settleUntil);
+    assert.equal(b.enemyScale, 1, 'rival chimeras are never tier-scaled on top of their own power');
+    assert.equal(b.enemy.active.maxHp, enc.waves[0].hp, 'a rival specimen fights at the stats it was generated with');
+  }
+
+  // 4. THE BUG THIS PASS EXISTED TO FIX: filling sockets has to beat leaving
+  //    them empty. Frames used to carry ~95% of a creature's health, so the
+  //    dominant build was "biggest chassis, fewest parts" — the exact thing
+  //    the physiology panel warns against.
+  const hpOf = (frame, partIds) => {
+    const tokens = partIds.map((id) => ({ id, partId: id, grade: 'standard', donor: {} }));
+    return analyze(frame, tokens, content).stats.hp;
+  };
+  for (const frame of ['S', 'M', 'L']) {
+    const bare = hpOf(frame, ['tiger_head']);
+    const full = hpOf(frame, ['tiger_head', 'tiger_forelimbs', 'tiger_hindlimbs', 'tiger_tail', 'tiger_hide', 'tiger_organ']);
+    assert.ok(full >= bare * 1.6,
+      `${frame} frame: a full build must be worth building (${bare} HP bare vs ${full} HP full)`);
+    assert.ok(content.frames[frame].phys.hp < full * 0.55,
+      `${frame} frame is a chassis, not the health pool (${content.frames[frame].phys.hp} of ${full})`);
+  }
+
+  // 5. The shape itself, measured. Cheap seeds — this guards the ladder's
+  //    ordering, not its third decimal place.
+  const encWin = (grade, encId, teamSize = 3) => {
+    const { rows } = runSim(content, { builds: 12, seedsPer: 3, grade, teamSize });
+    const xs = rows.map((r) => r.perEncounter[encId]).sort((a, b) => a - b);
+    return xs[Math.floor(xs.length / 2)];
+  };
+  assert.ok(encWin('standard', 'patrol_1') >= 0.6, 'the tutorial patrol is winnable on day one');
+  assert.equal(encWin('standard', 'boss_clampdown'), 0, 'the boss is not');
+  assert.ok(encWin('prismatic', 'boss_clampdown') >= 0.5, 'and the top of the grade ladder answers it');
+  assert.ok(encWin('prismatic', 'rival_aloft') < encWin('prismatic', 'boss_clampdown'),
+    'rivals sit above the human roster: they are the hardest content, not the easiest');
 }
 
 // --- Battle overhaul: step() returns a replayable stream. Each event

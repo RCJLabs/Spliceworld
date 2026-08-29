@@ -36,6 +36,7 @@ export function indexContent(raw) {
     combos: raw.combos ? byId(raw.combos.combos) : {},
     enemies: raw.enemies ? byId(raw.enemies.units) : {},
     encounters: raw.enemies ? byId(raw.enemies.encounters) : {},
+    tierScale: raw.enemies?.tierScale ?? [1, 1],
     keywords: raw.keywords ? byId(raw.keywords.keywords) : {},
     tagChart: raw.keywords ? raw.keywords.tagChart : [],
     regions: raw.regions ? byId(raw.regions.regions) : {},
