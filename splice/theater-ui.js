@@ -7,6 +7,7 @@ import { GRADES, GRADE_INDEX } from './extract.js';
 import { analyze } from './physiology.js';
 import { spliceChimera, validateSplice, tokensFor } from './theater.js';
 import * as sfx from '../audio/sfx.js';
+import { pickerField, bindPickers } from '../ui/picker.js';
 
 const SLOT_LABELS = {
   head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
@@ -45,9 +46,10 @@ export function renderTheaterScreen(root, ctx) {
     .join('');
 
   const chosen = new Set(Object.values(draft.slots).filter(Boolean));
-  const CLASS_MARK = { air: '🪽', ground: '🦶', water: '🌊' };
-  const slotSelects = SLOTS.map((slot) => {
-    // 150 parts do not fit in a flat list — group by species, best grade first.
+  const CLASS_MARK = { air: '\u{1FABD}', ground: '\u{1F9B6}', water: '\u{1F30A}' };
+
+  // 150 parts across 25 species: grouped, and never through an OS dropdown.
+  const slotOptions = (slot) => {
     const owned = state.inventory.parts.filter((t) => content.parts[t.partId]?.slot === slot);
     const bySpecies = new Map();
     for (const t of owned) {
@@ -57,28 +59,41 @@ export function renderTheaterScreen(root, ctx) {
     }
     const groups = [...bySpecies.entries()]
       .sort((a, b) => (content.species[a[0]].name > content.species[b[0]].name ? 1 : -1))
-      .map(([sp, tokens]) => {
-        const opts = tokens
+      .map(([sp, tokens]) => ({
+        label: content.species[sp].name,
+        options: tokens
           .sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade])
           .map((t) => {
             const part = content.parts[t.partId];
             const grade = GRADES[GRADE_INDEX[t.grade]];
-            const taken = chosen.has(t.id) && draft.slots[slot] !== t.id;
-            const mark = part.classAffinity ? ` ${CLASS_MARK[part.classAffinity]}` : '';
-            return `<option value="${t.id}" ${draft.slots[slot] === t.id ? 'selected' : ''} ${taken ? 'disabled' : ''}>${part.name}${mark} · ${grade.name} (${t.donor.name} ★${t.donor.stars})</option>`;
-          })
-          .join('');
-        return `<optgroup label="${content.species[sp].name}">${opts}</optgroup>`;
-      })
-      .join('');
-    const count = owned.length;
-    return `
-      <label class="slot"><span>${SLOT_LABELS[slot]}${slot === 'head' ? ' *' : ''}${count ? ` <em>${count}</em>` : ''}</span>
-        <select data-slot="${slot}" ${count ? '' : 'disabled'}>
-          <option value="">${count ? '— empty socket —' : '— none in the vault —'}</option>
-          ${groups}
-        </select>
-      </label>`;
+            return {
+              id: t.id,
+              label: part.name,
+              mark: part.classAffinity ? CLASS_MARK[part.classAffinity] : '',
+              badge: `<span class="grade-badge grade-${t.grade}">${grade.name}</span>`,
+              sub: `${part.ability} \u00b7 essence of ${t.donor.name} \u2605${t.donor.stars}`,
+              disabled: chosen.has(t.id) && draft.slots[slot] !== t.id,
+            };
+          }),
+      }));
+    return { owned, groups };
+  };
+
+  const slotFields = SLOTS.map((slot) => {
+    const { owned } = slotOptions(slot);
+    const tokenId = draft.slots[slot];
+    const token = tokenId ? state.inventory.parts.find((t) => t.id === tokenId) : null;
+    const part = token ? content.parts[token.partId] : null;
+    return pickerField({
+      id: `slot-${slot}`,
+      label: `${SLOT_LABELS[slot]}${slot === 'head' ? ' *' : ''}`,
+      count: owned.length || null,
+      value: part
+        ? `${part.name}${part.classAffinity ? ' ' + CLASS_MARK[part.classAffinity] : ''}`
+        : owned.length ? 'Empty socket' : 'None in the vault',
+      hint: part ? `${GRADES[GRADE_INDEX[token.grade]].name} \u00b7 ${token.donor.name}` : '',
+      disabled: !owned.length,
+    });
   }).join('');
 
   const panelRows = report.rows
@@ -113,7 +128,7 @@ export function renderTheaterScreen(root, ctx) {
       <h3>Frame</h3>
       <div class="frame-picker" id="thtr-frames">${frameBtns}</div>
       <h3>Sockets (from the Vault)</h3>
-      <div class="slot-grid">${slotSelects}</div>
+      <div class="slot-grid">${slotFields}</div>
       <button id="thtr-splice" type="button" class="big-btn" ${errors.length ? 'disabled' : ''}>⚡ SPLICE IT</button>
       ${errors.length && tokens.length ? `<p class="fine-print">${errors.join(' ')}</p>` : ''}
     </section>
@@ -129,13 +144,20 @@ export function renderTheaterScreen(root, ctx) {
       renderTheaterScreen(root, ctx);
     });
   });
-  root.querySelectorAll('select[data-slot]').forEach((sel) => {
-    sel.addEventListener('change', () => {
-      if (sel.value) draft.slots[sel.dataset.slot] = sel.value;
-      else delete draft.slots[sel.dataset.slot];
-      renderTheaterScreen(root, ctx);
-    });
-  });
+  bindPickers(root, Object.fromEntries(SLOTS.map((slot) => [`slot-${slot}`, () => {
+    const { groups } = slotOptions(slot);
+    return {
+      title: SLOT_LABELS[slot],
+      subtitle: slot === 'head' ? 'A head is mandatory. Every abomination deserves googly eyes.' : 'Leave it empty if you like living dangerously.',
+      selectedId: draft.slots[slot] ?? '',
+      groups: [{ label: null, options: [{ id: '', label: 'Empty socket', sub: 'Nothing installed' }] }, ...groups],
+      onPick: (value) => {
+        if (value) draft.slots[slot] = value;
+        else delete draft.slots[slot];
+        renderTheaterScreen(root, ctx);
+      },
+    };
+  }])));
   root.querySelector('#thtr-splice').addEventListener('click', () => {
     const result = spliceChimera(state, draft.frame, draft.slots, content, ctx.now());
     lastMsg = result.msg;

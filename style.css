@@ -366,21 +366,6 @@ main {
 
 /* --- Battle (M4) --- */
 
-.pick {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 9px;
-  margin-bottom: 5px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-.pick-injured { opacity: 0.55; }
-.pick input { accent-color: var(--goo); }
-
 .encounter {
   display: flex;
   justify-content: space-between;
@@ -609,3 +594,169 @@ footer {
 .vault-species summary::-webkit-details-marker { color: var(--muted); }
 .vault-species .token-list { margin-top: 0; }
 .vault-species .token-list li { background: var(--panel); font-size: 0.74rem; }
+
+/* --- In-game pickers (replaces every native <select>/<input>) ------------
+   Nothing in this game may hand the player an OS dropdown: the Android
+   wheel and the iOS action sheet both break the Saturday-morning frame.
+   Fields below are buttons; the sheet is drawn with the game's own chrome. */
+
+.pick-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pick-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.pick-label em { font-style: normal; color: var(--goo); }
+.pick-button {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  text-align: left;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.pick-button:active { border-color: var(--goo); }
+.pick-button:disabled { opacity: 0.45; cursor: default; }
+.pick-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-hint {
+  grid-column: 1;
+  font-size: 0.68rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pick-caret { grid-column: 2; grid-row: 1 / span 2; color: var(--goo); font-size: 0.7rem; }
+.catalog .pick-field { flex: 1; min-width: 0; }
+
+.picker-host {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.pick-backdrop { position: absolute; inset: 0; background: rgba(13, 10, 26, 0.86); }
+.pick-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5);
+  animation: pick-rise 0.16s ease-out;
+}
+@keyframes pick-rise { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pick-sheet { animation: none; } }
+
+.pick-head {
+  position: relative;
+  padding: 12px 44px 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.pick-head h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--goo);
+}
+.pick-head .fine-print { margin: 4px 0 0; }
+.pick-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.pick-list { overflow-y: auto; padding: 8px; -webkit-overflow-scrolling: touch; }
+.pick-group + .pick-group { margin-top: 10px; }
+.pick-group h4 {
+  margin: 0 0 4px;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.pick-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+  margin-bottom: 5px;
+  padding: 9px 10px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.pick-row:disabled { opacity: 0.38; cursor: default; }
+.pick-row.is-selected { border-color: var(--goo); box-shadow: inset 3px 0 0 var(--goo); }
+.pick-row-main { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pick-row-label { font-weight: 700; }
+.pick-row-sub { font-size: 0.68rem; color: var(--muted); }
+.pick-mark { font-size: 0.9rem; }
+.pick-price { font-size: 0.7rem; color: var(--goo); font-weight: 700; }
+.pick-price.too-rich { color: #ff8a8a; }
+
+.toggle-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  margin-bottom: 5px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.toggle-row.is-on { border-color: var(--goo); }
+.toggle-row:disabled, .toggle-row.is-disabled { opacity: 0.5; cursor: default; }
+.toggle-box {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+  color: #17240a;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.toggle-row.is-on .toggle-box { background: var(--goo); border-color: var(--goo); }
+.toggle-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }

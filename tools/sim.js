@@ -26,7 +26,6 @@ export function loadSimContent() {
     enemies: readJSON('data/enemies.json'),
     keywords: readJSON('data/keywords.json'),
     classes: readJSON('data/classes.json'),
-  classes: readJSON('data/classes.json'),
   });
 }
 

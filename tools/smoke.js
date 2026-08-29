@@ -1050,6 +1050,28 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   }
 }
 
+// --- UI chrome: no native form control may reach the player. A <select> on
+// --- Android opens the OS wheel and an <input type=checkbox> draws the
+// --- platform's checkbox — both break the frame. Everything goes through
+// --- ui/picker.js instead, so guard the rule rather than trusting memory.
+{
+  const uiFiles = [
+    'index.html', 'ranch/ui.js', 'splice/theater-ui.js', 'splice/vault-ui.js',
+    'splice/pens-ui.js', 'splice/extract-ui.js', 'splice/dex-ui.js',
+    'campaign/ui.js', 'battle/ui.js',
+  ];
+  for (const f of uiFiles) {
+    const src = readFileSync(join(root, f), 'utf8');
+    assert.ok(!/<select\b/.test(src), `${f} renders no native <select>`);
+    assert.ok(!/<input\b/.test(src), `${f} renders no native <input>`);
+    assert.ok(!/<textarea\b/.test(src), `${f} renders no native <textarea>`);
+  }
+  // The sheet needs somewhere to mount, and the shell must ship the module.
+  const html = readFileSync(join(root, 'index.html'), 'utf8');
+  assert.ok(html.includes('id="picker"'), 'index.html hosts the picker sheet');
+  assert.ok(readFileSync(join(root, 'sw.js'), 'utf8').includes("'ui/picker.js'"), 'sw precaches ui/picker.js');
+}
+
 // Time-warp safety: a lastTickAt in the future never rewinds state.
 const warp = freshRanchState();
 ensureRanchSeeded(warp, content, t0);

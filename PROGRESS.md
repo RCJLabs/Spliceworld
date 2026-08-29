@@ -1,5 +1,56 @@
 # PROGRESS
 
+## Session 12 — In-game pickers: no more OS dropdowns ✅
+
+Wave 1 pushed the last native `<select>` past its limit — a 25-species catalog on
+Android opened the platform's grey scroll wheel over the game. Every native form
+control is now gone from the build.
+
+### `ui/picker.js` — one component, every choice
+- `pickerField()` renders a **button** styled as a form field (label, value, hint,
+  owned-count, caret). `openPicker()` opens a full-screen bottom sheet drawn with
+  the game's own panels: grouped rows, sub-lines, class marks, grade badges.
+- Closes on pick, backdrop tap, or **Escape**; scrolls the current selection into
+  view; never leaves a listener behind. `toggleRow()` replaces checkboxes.
+- Presentation only — callers own their state, so nothing about the save changed.
+  **`SAVE_VERSION` stays at 8.**
+
+### Converted
+- **Theater**: 6 slot sockets — grouped by species, best grade first, with the
+  ability and donor on each row.
+- **Ranch**: Mail-Order Menagerie, now **grouped by elemental class** with price,
+  role, tags and daily upkeep per row (and prices in red when you can't afford
+  them); both Breeding Pen parents, grouped by species with stage and condition.
+- **War Room**: strike-team checkboxes → toggle rows, now showing each chimera's
+  class icon — plus a new **"Opposition:"** line naming the classes you're about
+  to walk into, and a *"type advantage here"* note on the members who counter
+  them. The triangle is finally visible at the moment you pick a team.
+
+### Guarded
+- Smoke now greps every UI module for `<select>`, `<input>` and `<textarea>` and
+  fails if one comes back — plus asserts the `#picker` host exists and the service
+  worker precaches the module. The rule is enforced, not remembered.
+- Two robustness fixes found while testing hand-edited saves: a retired part id no
+  longer crashes `combatantFromChimera` (matching the guard physiology already
+  had), and a chimera missing `instability`/`bond` reads as 0 instead of `NaN%`.
+
+### Verified
+- CDP pass at 380px: **0 native controls anywhere**, no horizontal overflow, no
+  console errors, sheets open/pick/escape/backdrop-close correctly, breeding runs
+  end-to-end through the new pickers and the egg survives a reload.
+- `node tools/smoke.js` green (now with the no-native-controls guard);
+  `node tools/sim.js` unchanged at 960 battles.
+
+### Known issues
+- Prismatic grade still flags 15 OP builds of 40 — top tier wants a balance pass
+  before Wave 2 (carried over from Session 11).
+- Seven purebred aquatic/insect builds still flag `[TRASH]`; they're waiting on the
+  Theater Tier 2 slots, not on the UI.
+
+### Next session's first task
+Rival geneticists (audit's #1 deferred item) — now that there's a real part pool
+and a class triangle for them to build against.
+
 ## Session 11 — Content Wave 1: 25 species + the class triangle ✅
 
 The audit's recommended next phase, taken further than scoped: the full roadmap

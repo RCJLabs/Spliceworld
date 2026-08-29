@@ -6,6 +6,8 @@ import { renderArena } from '../battle/ui.js';
 import { createBattle, isInjured, obediencePercent } from '../battle/engine.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
+import { toggleRow } from '../ui/picker.js';
+import { analyze } from '../splice/physiology.js';
 import {
   nodeStates, threatGen, incomePerDay, salvageUnit, regionOf,
 } from './campaign.js';
@@ -133,6 +135,15 @@ function renderBriefing(root, ctx) {
   const t = now();
   const encounter = content.encounters[draftTarget.encounterId];
 
+  // What are we walking into? The class triangle only matters if the player
+  // can see the matchup before they commit a team.
+  const foeClasses = new Set(
+    encounter.waves.flat().map((u) => content.enemies[u]?.class).filter(Boolean)
+  );
+  const foeLine = foeClasses.size
+    ? [...foeClasses].map((c) => `${content.classes[c].icon} ${content.classes[c].name}`).join(', ')
+    : 'no declared class';
+
   const roster = state.chimeras.map((ch) => {
     const injured = isInjured(ch, t);
     const note = injured
@@ -140,17 +151,23 @@ function renderBriefing(root, ctx) {
       : isSettled(ch, t)
         ? `ready · obedience ${obediencePercent(ch, t)}%`
         : `unsettled — Rejection debuffs · obedience ${obediencePercent(ch, t)}%`;
-    return `
-      <label class="pick ${injured ? 'pick-injured' : ''}">
-        <input type="checkbox" data-chimera="${ch.id}" ${draftTeam.includes(ch.id) ? 'checked' : ''} ${injured ? 'disabled' : ''}>
-        <span><strong>${ch.name}</strong> · ${note}</span>
-      </label>`;
+    const chClass = analyze(ch.frame, Object.values(ch.tokens), content).creatureClass;
+    const cls = chClass ? content.classes[chClass] : null;
+    const edge = cls && foeClasses.has(cls.beats) ? ' · type advantage here' : '';
+    return toggleRow({
+      id: ch.id,
+      label: `${cls ? cls.icon + ' ' : '◇ '}${ch.name}`,
+      sub: `${note}${edge}`,
+      checked: draftTeam.includes(ch.id),
+      disabled: injured,
+    });
   }).join('');
 
   root.innerHTML = `
     <section class="card">
       <h3>${draftTarget.label}</h3>
       <p class="fine-print">${encounter.blurb} (${encounter.waves.length} waves${encounter.reward ? ` · $${encounter.reward}` : ''})</p>
+      <p class="fine-print">Opposition: ${foeLine}</p>
       <h3>Strike Team (up to 3)</h3>
       ${roster || '<p class="ranch-msg">No chimeras available. The Surgery Theater accepts walk-ins.</p>'}
       <div class="ceremony-btns">
@@ -159,14 +176,14 @@ function renderBriefing(root, ctx) {
       </div>
     </section>`;
 
-  root.querySelectorAll('input[data-chimera]').forEach((box) => {
-    box.addEventListener('change', () => {
-      const id = box.dataset.chimera;
-      if (box.checked) {
-        if (draftTeam.length >= 3) { box.checked = false; return; }
-        draftTeam.push(id);
-      } else {
+  root.querySelectorAll('button[data-toggle]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.toggle;
+      if (draftTeam.includes(id)) {
         draftTeam = draftTeam.filter((x) => x !== id);
+      } else {
+        if (draftTeam.length >= 3) return;
+        draftTeam.push(id);
       }
       renderBriefing(root, ctx);
     });
