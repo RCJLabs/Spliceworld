@@ -165,6 +165,85 @@ export function combatantFromUnit(unit) {
   };
 }
 
+// --- Event log ----------------------------------------------------------
+// The engine resolves a whole round at once, but a player who presses one
+// button and sees seven lines appear has not experienced a turn — they
+// have experienced a receipt. So every event carries a SNAPSHOT of the
+// battle at the instant it happened, and the UI replays them one beat at
+// a time. The engine stays synchronous and DOM-free; the drama is the
+// renderer's job.
+
+const copyStatus = (s) => ({ ...s });
+
+function sideOf(combatant) {
+  return combatant.kind === 'chimera' ? 'player' : 'enemy';
+}
+
+function snapshot(battle) {
+  const me = battle.player.team[battle.player.active];
+  const foe = battle.enemy.active;
+  const shot = (c) =>
+    c && {
+      name: c.name,
+      hp: c.hp,
+      maxHp: c.maxHp,
+      stamina: c.stamina,
+      staminaMax: c.staminaMax,
+      status: copyStatus(c.status),
+      stages: { ...c.stages },
+      refId: c.refId,
+      creatureClass: c.creatureClass ?? null,
+      rejection: !!c.rejection,
+    };
+  return {
+    turn: battle.turn,
+    activeIndex: battle.player.active,
+    player: shot(me),
+    enemy: shot(foe),
+    bench: battle.player.team.map((c) => ({ name: c.name, hp: c.hp, maxHp: c.maxHp })),
+    wavesLeft: battle.enemy.queue.length,
+    cannon: battle.cannon.charge,
+    pendingReplace: battle.pendingReplace,
+    over: battle.over,
+    outcome: battle.outcome,
+  };
+}
+
+// Accepts a plain string (most call sites) or an annotated event. Either
+// way it lands as an object with text + snapshot.
+function makeEvents(battle) {
+  const list = [];
+  return {
+    list,
+    get length() {
+      return list.length;
+    },
+    push(entry) {
+      const e = typeof entry === 'string' ? { text: entry } : { ...entry };
+      e.kind ??= 'info';
+      e.snap = snapshot(battle);
+      list.push(e);
+      return list.length;
+    },
+    texts() {
+      return list.map((e) => e.text);
+    },
+  };
+}
+
+// Who acts first, for the pre-turn readout. Priority moves override speed,
+// so this is the base forecast the UI shows before a move is chosen.
+export function turnForecast(battle) {
+  const me = battle.player.team[battle.player.active];
+  const foe = battle.enemy.active;
+  return {
+    playerSpeed: me.speed,
+    enemySpeed: foe.speed,
+    playerFirst: me.speed > foe.speed,
+    tied: me.speed === foe.speed,
+  };
+}
+
 // --- Battle lifecycle ---------------------------------------------------
 
 // context (optional): { kind: 'assault'|'rescue', nodeId, captiveId } —
@@ -266,15 +345,17 @@ export { tagMultiplier }; // exposed for tests and the M4.5 harness
 function attack(battle, atk, def, move, events, content) {
   atk.stamina = Math.max(0, atk.stamina - move.cost);
 
+  const from = sideOf(atk);
+  const at = sideOf(def);
   const hitChance = (move.acc / 100) * stageMult(atk.stages.acc) / stageMult(def.stages.evasion);
   if (roll(battle) > hitChance) {
-    events.push(`${atk.name} uses ${move.name} — it whiffs spectacularly!`);
+    events.push({ text: `${atk.name} uses ${move.name} — it whiffs spectacularly!`, kind: 'miss', actor: from, target: at, move: move.name });
     return;
   }
 
   const { mult, ignoreArmor } = tagMultiplier(move.tags, def.tags, content.tagChart);
   if (move.power > 0 && mult === 0) {
-    events.push(`${atk.name} uses ${move.name} — it has no effect on ${def.name}. (${chartNote(move.tags, def.tags, content)})`);
+    events.push({ text: `${atk.name} uses ${move.name} — it has no effect on ${def.name}. (${chartNote(move.tags, def.tags, content)})`, kind: 'immune', actor: from, target: at, move: move.name });
   } else if (move.power > 0) {
     const clsMult = classMultiplier(atk.creatureClass, def.creatureClass, content);
     let dmg = move.power * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult * clsMult;
@@ -296,18 +377,28 @@ function attack(battle, atk, def, move, events, content) {
     if (clsMult > 1) line += ` (${content.classes[atk.creatureClass].name} beats ${content.classes[def.creatureClass].name}!)`;
     else if (clsMult < 1) line += ` (${content.classes[def.creatureClass].name} shrugs off ${content.classes[atk.creatureClass].name})`;
     if (bypassArmor && def.armor > 0) line += ' (armor ignored!)';
-    events.push(line + '.');
+    events.push({
+      text: line + '.',
+      kind: 'damage',
+      actor: from,
+      target: at,
+      move: move.name,
+      amount: dmg,
+      mult: mult * clsMult,
+      classMult: clsMult,
+      tagMult: mult,
+    });
     if (def.status.sleep) {
       def.status.sleep = false;
-      events.push(`${def.name} is rudely awakened.`);
+      events.push({ text: `${def.name} is rudely awakened.`, kind: 'status', target: at });
     }
     if (move.keywords.recoil) {
       const r = Math.max(1, Math.round(dmg * move.keywords.recoil));
       atk.hp = Math.max(0, atk.hp - r);
-      events.push(`${atk.name} takes ${r} recoil. Worth it. Probably.`);
+      events.push({ text: `${atk.name} takes ${r} recoil. Worth it. Probably.`, kind: 'damage', actor: from, target: from, amount: r, recoil: true, mult: 1 });
     }
   } else {
-    events.push(`${atk.name} uses ${move.name}.`);
+    events.push({ text: `${atk.name} uses ${move.name}.`, kind: 'setup', actor: from, target: at, move: move.name });
   }
 
   const kw = move.keywords;
@@ -315,38 +406,38 @@ function attack(battle, atk, def, move, events, content) {
     if (def.tags.includes('Vehicle')) events.push(`Venom drips off the chassis. Machines remain unimpressed.`);
     else {
       def.status.venom = Math.min(VENOM_CAP, def.status.venom + kw.venom);
-      events.push(`${def.name} is envenomed (${def.status.venom} stack${def.status.venom > 1 ? 's' : ''}).`);
+      events.push({ text: `${def.name} is envenomed (${def.status.venom} stack${def.status.venom > 1 ? 's' : ''}).`, kind: 'debuff', target: at });
     }
   }
   if (kw.stun && def.hp > 0 && roll(battle) < kw.stun) {
     def.status.stun = true;
-    events.push(`${def.name} is seeing cartoon birdies — stunned!`);
+    events.push({ text: `${def.name} is seeing cartoon birdies — stunned!`, kind: 'debuff', target: at });
   }
   if (kw.sleep && def.hp > 0) {
     if (def.tags.includes('Vehicle')) events.push(`${def.name} has no bedtime. The dart pings off.`);
     else if (roll(battle) < kw.sleep) {
       def.status.sleep = true;
-      events.push(`${def.name} falls asleep mid-shift.`);
+      events.push({ text: `${def.name} falls asleep mid-shift.`, kind: 'debuff', target: at });
     }
   }
   if (kw.trap && def.hp > 0) {
     def.status.trapped = true;
-    events.push(`${def.name} is trapped — no switching out!`);
+    events.push({ text: `${def.name} is trapped — no switching out!`, kind: 'debuff', target: at });
   }
   if (kw.guard) {
     atk.status.guard = true;
-    events.push(`${atk.name} braces behind a guard.`);
+    events.push({ text: `${atk.name} braces behind a guard.`, kind: 'buff', target: from });
   }
-  if (kw.accUp) { atk.stages.acc = Math.min(STAGE_CAP, atk.stages.acc + kw.accUp); events.push(`${atk.name}'s accuracy sharpens.`); }
-  if (kw.accDown && def.hp > 0) { def.stages.acc = Math.max(-STAGE_CAP, def.stages.acc - kw.accDown); events.push(`${def.name}'s accuracy drops.`); }
-  if (kw.powerUp) { atk.stages.power = Math.min(STAGE_CAP, atk.stages.power + kw.powerUp); events.push(`${atk.name} flexes menacingly — power up!`); }
-  if (kw.powerDown && def.hp > 0) { def.stages.power = Math.max(-STAGE_CAP, def.stages.power - kw.powerDown); events.push(`${def.name}'s power wilts.`); }
-  if (kw.evasionUp) { atk.stages.evasion = Math.min(STAGE_CAP, atk.stages.evasion + kw.evasionUp); events.push(`${atk.name} gets slippery — evasion up!`); }
-  if (kw.staminaRestore) { atk.stamina = Math.min(atk.staminaMax, atk.stamina + kw.staminaRestore); events.push(`${atk.name} recovers ${kw.staminaRestore} stamina.`); }
+  if (kw.accUp) { atk.stages.acc = Math.min(STAGE_CAP, atk.stages.acc + kw.accUp); events.push({ text: `${atk.name}'s accuracy sharpens.`, kind: 'buff', target: from }); }
+  if (kw.accDown && def.hp > 0) { def.stages.acc = Math.max(-STAGE_CAP, def.stages.acc - kw.accDown); events.push({ text: `${def.name}'s accuracy drops.`, kind: 'debuff', target: at }); }
+  if (kw.powerUp) { atk.stages.power = Math.min(STAGE_CAP, atk.stages.power + kw.powerUp); events.push({ text: `${atk.name} flexes menacingly — power up!`, kind: 'buff', target: from }); }
+  if (kw.powerDown && def.hp > 0) { def.stages.power = Math.max(-STAGE_CAP, def.stages.power - kw.powerDown); events.push({ text: `${def.name}'s power wilts.`, kind: 'debuff', target: at }); }
+  if (kw.evasionUp) { atk.stages.evasion = Math.min(STAGE_CAP, atk.stages.evasion + kw.evasionUp); events.push({ text: `${atk.name} gets slippery — evasion up!`, kind: 'buff', target: from }); }
+  if (kw.staminaRestore) { atk.stamina = Math.min(atk.staminaMax, atk.stamina + kw.staminaRestore); events.push({ text: `${atk.name} recovers ${kw.staminaRestore} stamina.`, kind: 'buff', target: from }); }
   if (kw.heal) {
     const h = Math.round(atk.maxHp * kw.heal);
     atk.hp = Math.min(atk.maxHp, atk.hp + h);
-    events.push(`${atk.name} patches up ${h} HP.`);
+    events.push({ text: `${atk.name} patches up ${h} HP.`, kind: 'heal', target: from, amount: h });
   }
   if (kw.knockback && def.hp > 0) knockback(battle, def, events, content);
 }
@@ -361,7 +452,7 @@ function chartNote(moveTags, defTags, content) {
 function knockback(battle, target, events, content) {
   if (target.kind === 'unit') {
     if (battle.enemy.queue.length === 0) {
-      events.push(`${target.name} skids back but holds the line — no reinforcements to rotate in.`);
+      events.push({ text: `${target.name} skids back but holds the line — no reinforcements to rotate in.`, kind: 'info' });
       return;
     }
     // Re-queue by whatever the wave list uses: a roster id, or the whole
@@ -369,27 +460,27 @@ function knockback(battle, target, events, content) {
     battle.enemy.queue.push(battle.units?.[target.refId] ?? target.refId);
     const nextId = battle.enemy.queue.shift();
     battle.enemy.active = combatantFromUnit(unitFor(content, nextId));
-    events.push(`${target.name} is punted out of formation! ${battle.enemy.active.name} scrambles in.`);
+    events.push({ text: `${target.name} is punted out of formation! ${battle.enemy.active.name} scrambles in.`, kind: 'waveIn', target: 'enemy' });
   } else {
     const bench = livingBench(battle);
     if (!bench.length) {
-      events.push(`${target.name} staggers but has nowhere to go.`);
+      events.push({ text: `${target.name} staggers but has nowhere to go.`, kind: 'info' });
       return;
     }
     const swap = bench[Math.floor(roll(battle) * bench.length)];
     battle.player.active = swap.i;
-    events.push(`${target.name} is sent tumbling! ${swap.c.name} is shoved onto the field.`);
+    events.push({ text: `${target.name} is sent tumbling! ${swap.c.name} is shoved onto the field.`, kind: 'waveIn', target: 'player' });
   }
 }
 
 function actUnavailable(c, events) {
   if (c.status.sleep) {
-    events.push(`${c.name} is fast asleep. Adorable. Tactically ruinous.`);
+    events.push({ text: `${c.name} is fast asleep. Adorable. Tactically ruinous.`, kind: 'blocked', target: sideOf(c) });
     return true;
   }
   if (c.status.stun) {
     c.status.stun = false;
-    events.push(`${c.name} is stunned and loses the turn!`);
+    events.push({ text: `${c.name} is stunned and loses the turn!`, kind: 'blocked', target: sideOf(c) });
     return true;
   }
   return false;
@@ -406,7 +497,7 @@ function performMove(battle, side, moveIndex, events, content) {
   if (move.keywords.charge && atk.status.charging == null) {
     atk.status.charging = moveIndex;
     atk.stamina = Math.max(0, atk.stamina - Math.ceil(move.cost / 2));
-    events.push(`${atk.name} winds up ${move.name} — something enormous is coming.`);
+    events.push({ text: `${atk.name} winds up ${move.name} — something enormous is coming.`, kind: 'charge', actor: sideOf(atk), move: move.name });
     return;
   }
   if (atk.status.charging != null) atk.status.charging = null;
@@ -430,14 +521,14 @@ function endOfTurn(battle, events) {
     if (c.status.venom > 0) {
       const v = c.status.venom * VENOM_TICK;
       c.hp = Math.max(0, c.hp - v);
-      events.push(`Venom simmers: ${c.name} takes ${v}.`);
+      events.push({ text: `Venom simmers: ${c.name} takes ${v}.`, kind: 'damage', target: sideOf(c), amount: v, dot: true, mult: 1 });
     }
     if (c.status.sleep && roll(battle) < 0.5) {
       c.status.sleep = false;
-      events.push(`${c.name} wakes up, refreshed and furious.`);
+      events.push({ text: `${c.name} wakes up, refreshed and furious.`, kind: 'status', target: sideOf(c) });
     }
     c.stamina = Math.max(0, Math.min(c.staminaMax, c.stamina + c.regen));
-    if (c.regen < 0) events.push(`${c.name} runs hot — stamina bleeds ${-c.regen}.`);
+    if (c.regen < 0) events.push({ text: `${c.name} runs hot — stamina bleeds ${-c.regen}.`, kind: 'debuff', target: sideOf(c) });
   }
   // A trap only holds while the trapper stands.
   if (battle.enemy.active.hp <= 0) playerActive(battle).status.trapped = false;
@@ -448,12 +539,12 @@ function handleEnemyKO(battle, events, content) {
   const e = battle.enemy.active;
   if (e.hp > 0) return;
   if (e.transformInto) {
-    events.push(e.transformLine);
+    events.push({ text: e.transformLine, kind: 'ko', target: 'enemy' });
     battle.enemy.active = combatantFromUnit(unitFor(content, e.transformInto));
-    events.push(`${battle.enemy.active.name} looms over the field!`);
+    events.push({ text: `${battle.enemy.active.name} looms over the field!`, kind: 'waveIn', target: 'enemy', transform: true });
     return;
   }
-  events.push(e.koLine);
+  events.push({ text: e.koLine, kind: 'ko', target: 'enemy' });
   if (battle.enemy.queue.length === 1 && battle.barks?.midFight) {
     events.push(`\u201c${battle.barks.midFight}\u201d`);
     battle.barks.midFight = null; // once per fight
@@ -461,36 +552,36 @@ function handleEnemyKO(battle, events, content) {
   if (battle.enemy.queue.length) {
     const nextId = battle.enemy.queue.shift();
     battle.enemy.active = combatantFromUnit(unitFor(content, nextId));
-    events.push(`Next wave: ${battle.enemy.active.name}!`);
+    events.push({ text: `Next wave: ${battle.enemy.active.name}!`, kind: 'waveIn', target: 'enemy' });
     playerActive(battle).status.trapped = false;
   } else {
     battle.over = true;
     battle.outcome = 'win';
-    if (battle.barks?.defeat) events.push(`\u201c${battle.barks.defeat}\u201d`);
-    events.push(`Victory! The area is yours (pending paperwork).`);
+    if (battle.barks?.defeat) events.push({ text: `\u201c${battle.barks.defeat}\u201d`, kind: 'bark' });
+    events.push({ text: `Victory! The area is yours (pending paperwork).`, kind: 'victory' });
   }
 }
 
 function handlePlayerKO(battle, events) {
   const me = playerActive(battle);
   if (me.hp > 0) return;
-  events.push(`${me.name} is down — dramatic slow-motion flop!`);
+  events.push({ text: `${me.name} is down — dramatic slow-motion flop!`, kind: 'ko', target: 'player' });
   battle.enemy.active.status.trapped = false;
   if (livingBench(battle).length) {
     battle.pendingReplace = true;
-    events.push(`Choose a replacement.`);
+    events.push({ text: `Choose a replacement.`, kind: 'prompt' });
   } else {
     battle.over = true;
     battle.outcome = 'loss';
-    if (battle.barks?.victory) events.push(`\u201c${battle.barks.victory}\u201d`);
-    events.push(`The team is out. Regroup at the lab — the Infirmary awaits.`);
+    if (battle.barks?.victory) events.push({ text: `\u201c${battle.barks.victory}\u201d`, kind: 'bark' });
+    events.push({ text: `The team is out. Regroup at the lab — the Infirmary awaits.`, kind: 'defeat' });
   }
 }
 
 // One full round. `action` comes from playerActions().
 export function step(battle, action, content) {
   if (battle.over) return [];
-  const events = [];
+  const events = makeEvents(battle);
   const me = playerActive(battle);
 
   // Free replacement after a KO — the enemy does not get a bonus turn.
@@ -498,10 +589,10 @@ export function step(battle, action, content) {
     if (action.type !== 'switch') return [];
     battle.player.active = action.index;
     battle.pendingReplace = false;
-    events.push(`${playerActive(battle).name} takes the field!`);
-    if (playerActive(battle).rejection) events.push(`${playerActive(battle).name} is unsettled — Rejection applies.`);
-    battle.log.push(...events);
-    return events;
+    events.push({ text: `${playerActive(battle).name} takes the field!`, kind: 'waveIn', target: 'player' });
+    if (playerActive(battle).rejection) events.push({ text: `${playerActive(battle).name} is unsettled — Rejection applies.`, kind: 'debuff', target: 'player' });
+    battle.log.push(...events.texts());
+    return events.list;
   }
 
   // Obedience (§3.5): unsettled/unbonded chimeras sometimes freelance.
@@ -510,7 +601,7 @@ export function step(battle, action, content) {
     const affordable = me.moves.map((m, i) => ({ m, i })).filter(({ m }) => m.cost <= me.stamina);
     if (affordable.length) {
       const alt = affordable[Math.floor(roll(battle) * affordable.length)];
-      events.push(`${me.name} ignores orders and improvises!`);
+      events.push({ text: `${me.name} ignores orders and improvises!`, kind: 'disobey', target: 'player' });
       playerAction = { type: 'move', index: alt.i };
     }
   }
@@ -518,42 +609,42 @@ export function step(battle, action, content) {
   if (playerAction.type === 'flee') {
     battle.over = true;
     battle.outcome = 'fled';
-    events.push(`You beat a tactical retreat. The kazoo plays taps.`);
-    battle.log.push(...events);
-    return events;
+    events.push({ text: `You beat a tactical retreat. The kazoo plays taps.`, kind: 'flee' });
+    battle.log.push(...events.texts());
+    return events.list;
   }
 
   if (playerAction.type === 'capture') {
     const foe = battle.enemy.active;
     battle.cannon.charge = 0;
     battle.captured.push(foe.refId);
-    events.push(`THWOOMP. The Containment Cannon fires — ${foe.name} poofs into the impound queue!`);
+    events.push({ text: `THWOOMP. The Containment Cannon fires — ${foe.name} poofs into the impound queue!`, kind: 'capture', target: 'enemy' });
     me.status.trapped = false;
     if (battle.enemy.queue.length) {
       const nextId = battle.enemy.queue.shift();
       battle.enemy.active = combatantFromUnit(unitFor(content, nextId));
-      events.push(`Next wave: ${battle.enemy.active.name}!`);
+      events.push({ text: `Next wave: ${battle.enemy.active.name}!`, kind: 'waveIn', target: 'enemy' });
     } else {
       battle.over = true;
       battle.outcome = 'win';
-      if (battle.barks?.defeat) events.push(`\u201c${battle.barks.defeat}\u201d`);
-      events.push(`Victory! The area is yours (pending paperwork).`);
+      if (battle.barks?.defeat) events.push({ text: `\u201c${battle.barks.defeat}\u201d`, kind: 'bark' });
+      events.push({ text: `Victory! The area is yours (pending paperwork).`, kind: 'victory' });
     }
     battle.turn++;
-    battle.log.push(...events);
-    return events;
+    battle.log.push(...events.texts());
+    return events.list;
   }
 
   // Switching and resting resolve before moves (Pokémon convention).
   if (playerAction.type === 'switch') {
     battle.player.active = playerAction.index;
-    events.push(`${me.name} tags out. ${playerActive(battle).name} takes the field!`);
+    events.push({ text: `${me.name} tags out. ${playerActive(battle).name} takes the field!`, kind: 'waveIn', target: 'player' });
   } else if (playerAction.type === 'rest') {
     if (!actUnavailable(me, events)) {
       me.status.guard = false;
       const gain = Math.round(me.staminaMax * REST_FRACTION);
       me.stamina = Math.min(me.staminaMax, me.stamina + gain);
-      events.push(`${me.name} catches its breath: +${gain} stamina.`);
+      events.push({ text: `${me.name} catches its breath: +${gain} stamina.`, kind: 'rest', target: 'player' });
     }
   }
 
@@ -600,16 +691,16 @@ export function step(battle, action, content) {
     handlePlayerKO(battle, events);
   }
   battle.turn++;
-  battle.log.push(...events);
+  battle.log.push(...events.texts());
   if (battle.log.length > 60) battle.log.splice(0, battle.log.length - 60);
-  return events;
+  return events.list;
 }
 
 function restCombatant(c, events) {
   if (actUnavailable(c, events)) return;
   const gain = Math.round(c.staminaMax * REST_FRACTION);
   c.stamina = Math.min(c.staminaMax, c.stamina + gain);
-  events.push(`${c.name} catches its breath: +${gain} stamina.`);
+  events.push({ text: `${c.name} catches its breath: +${gain} stamina.`, kind: 'rest', target: sideOf(c) });
 }
 
 // Apply the outcome to the world: rewards, war record, and Law 1 —

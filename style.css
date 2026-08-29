@@ -390,19 +390,271 @@ main {
 }
 .encounter button:disabled { opacity: 0.4; cursor: default; }
 
+/* --- Arena (battle overhaul) -------------------------------------------
+   The engine resolves a round in one call; this stylesheet is what makes
+   it read as a sequence of turns. Everything animatable is a transform or
+   an opacity so a phone can hold 60fps, and every animation is switched
+   off wholesale under prefers-reduced-motion. */
+
 .arena { padding: 10px; }
-.arena-side { display: flex; gap: 8px; align-items: center; }
-.arena-foe { flex-direction: row; }
-.arena-me { flex-direction: row; margin-top: 6px; }
-.arena-sprite {
-  flex: 0 0 128px;
-  background: radial-gradient(circle at 50% 45%, #35305e 0%, var(--panel-2) 78%);
+
+.arena-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.turn-badge {
+  flex: 0 0 auto;
+  background: var(--goo);
+  color: #17240a;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.arena-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mode-tag {
+  flex: 0 0 auto;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--zap);
+  color: var(--zap);
+}
+.mode-rescue { border-color: #ffd66e; color: #ffd66e; }
+
+/* --- Fighter panels --- */
+
+.fighter {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  transition: opacity 0.3s;
+}
+.fighter-foe { border-color: #6b3a4a; }
+.fighter-me { border-color: #3d5a2a; }
+.fighter.is-down { opacity: 0.45; }
+
+.fighter-art {
+  position: relative;
+  flex: 0 0 108px;
+  width: 108px;
+  background: radial-gradient(circle at 50% 45%, #35305e 0%, var(--panel) 78%);
   border: 1px solid var(--line);
   border-radius: 10px;
 }
-.arena-sprite svg { display: block; width: 100%; height: auto; }
-.arena-info { flex: 1; min-width: 0; font-size: 0.85rem; }
-.arena-info .cond-bar { margin: 4px 0 1px; }
+.sprite-wrap { display: block; transform-origin: 50% 80%; }
+.sprite-wrap svg { display: block; width: 100%; height: auto; }
+.fighter-info { flex: 1; min-width: 0; font-size: 0.82rem; }
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+.name-row strong { font-size: 0.9rem; }
+.cls-chip {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.cls-chip.class-ground { border-color: #c9a86a; color: #c9a86a; }
+.cls-chip.class-water { border-color: #5fa8d3; color: #5fa8d3; }
+.cls-chip.class-air { border-color: #b48bff; color: #b48bff; }
+
+.wave-pips { display: flex; gap: 4px; margin: 2px 0 5px; }
+.pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+  border: 1px solid #4a4278;
+}
+.pip-now { background: #ff8a8a; border-color: #ff8a8a; }
+
+.meter {
+  height: 9px;
+  background: #17142c;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 3px 0 1px;
+}
+.meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fill-hp { background: linear-gradient(90deg, #7ed321, var(--goo)); }
+.fill-foe { background: linear-gradient(90deg, #ff6b6b, #ff9f6b); }
+.fill-sta { background: linear-gradient(90deg, #d8c24a, #ffe08a); }
+.fill-cannon { background: linear-gradient(90deg, #7b5cff, var(--zap)); }
+.meter-label { display: block; font-size: 0.66rem; color: var(--muted); }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.st-chip {
+  font-size: 0.58rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.st-bad { color: #ff9f9f; border-color: #6b3a4a; }
+.st-good { color: var(--goo); border-color: #3d5a2a; }
+
+/* --- The turn strip: the part that says whose move this is --- */
+
+.turn-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin: 6px 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #17142c;
+  border: 1px solid var(--line);
+  font-size: 0.7rem;
+}
+.turn-strip .phase-label {
+  flex: 0 0 auto;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.phase-player { border-color: var(--goo); }
+.phase-player .phase-label { background: var(--goo); color: #17240a; }
+.phase-enemy { border-color: #ff6b6b; }
+.phase-enemy .phase-label { background: #ff6b6b; color: #2b1218; }
+/* Two lines, clamped: the strip must not resize between beats or the whole
+   arena jitters, but one line loses too much of the sentence. */
+.phase-text {
+  min-width: 0;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+}
+.order-you { color: var(--goo); }
+.order-them { color: #ff9f9f; }
+.order-tie, .order-swap { color: var(--muted); }
+
+.cannon-row { margin-top: 6px; }
+
+.team-tray { display: flex; gap: 6px; margin-top: 8px; }
+.tray-slot {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #17142c;
+}
+.tray-name {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tray-active { border-color: var(--goo); }
+.tray-active .tray-name { color: var(--goo); }
+.tray-out { opacity: 0.4; }
+
+/* --- Floating combat numbers --- */
+
+.float-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.float {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translateX(-50%);
+  font-weight: 800;
+  font-size: 1.05rem;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+  animation: float-up 0.95s ease-out forwards;
+  white-space: nowrap;
+}
+.float-dmg { color: #ff8a8a; }
+.float-crit { color: #ffd66e; font-size: 1.35rem; }
+.float-weak { color: var(--muted); font-size: 0.9rem; }
+.float-heal { color: var(--goo); }
+.float-miss { color: #cfc7ff; font-size: 0.8rem; letter-spacing: 0.08em; }
+
+@keyframes float-up {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(0.7); }
+  18% { opacity: 1; transform: translate(-50%, -2px) scale(1.12); }
+  100% { opacity: 0; transform: translate(-50%, -46px) scale(1); }
+}
+
+/* --- Beat animations --- */
+
+@keyframes lunge-up { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-14px) scale(1.05); } }
+@keyframes lunge-down { 0%,100% { transform: translateY(0); } 40% { transform: translateY(14px) scale(1.05); } }
+@keyframes hit-shake {
+  0%,100% { transform: translateX(0); filter: none; }
+  15% { transform: translateX(-7px); filter: brightness(2.4) saturate(0.2); }
+  35% { transform: translateX(6px); filter: brightness(1.6); }
+  55% { transform: translateX(-4px); }
+  75% { transform: translateX(3px); }
+}
+@keyframes ko-flop {
+  0% { transform: none; opacity: 1; }
+  100% { transform: translateY(16px) rotate(-14deg) scale(0.86); opacity: 0.25; }
+}
+@keyframes wave-in {
+  0% { transform: translateX(26px) scale(0.8); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes pulse-good {
+  0%,100% { transform: none; filter: none; }
+  45% { transform: scale(1.08); filter: brightness(1.5) saturate(1.6); }
+}
+@keyframes pulse-bad {
+  0%,100% { transform: none; filter: none; }
+  45% { transform: scale(0.93); filter: brightness(0.7) saturate(0.4); }
+}
+
+.anim-lunge-up { animation: lunge-up 0.34s ease-out; }
+.anim-lunge-down { animation: lunge-down 0.34s ease-out; }
+.anim-hit { animation: hit-shake 0.42s ease-out; }
+.anim-ko { animation: ko-flop 0.7s ease-in forwards; }
+.anim-wavein { animation: wave-in 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.anim-buff { animation: pulse-good 0.4s ease-out; }
+.anim-debuff { animation: pulse-bad 0.4s ease-out; }
+
+/* --- Log --- */
 
 .battle-log {
   background: #131022;
@@ -410,27 +662,95 @@ main {
   border-radius: 8px;
   padding: 8px 10px;
   margin-bottom: 8px;
-  max-height: 150px;
+  height: 84px;
   overflow-y: auto;
 }
-.battle-log p { margin: 0 0 3px; font-size: 0.72rem; color: var(--text); opacity: 0.9; }
-.battle-log p:last-child { color: var(--goo); opacity: 1; }
+.battle-log p {
+  margin: 0 0 3px;
+  font-size: 0.72rem;
+  color: var(--text);
+  opacity: 0.85;
+  animation: log-in 0.25s ease-out;
+}
+.battle-log p:last-child { opacity: 1; }
+.battle-log .log-damage { color: #ffc9c9; }
+.battle-log .log-ko, .battle-log .log-victory { color: var(--goo); font-weight: 700; }
+.battle-log .log-defeat { color: #ff9f9f; font-weight: 700; }
+.battle-log .log-bark { color: var(--zap); font-style: italic; }
+.battle-log .log-waveIn { color: #ffd66e; }
+@keyframes log-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 0.85; transform: none; } }
+
+/* --- Actions --- */
 
 .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .action-grid .act {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  text-align: left;
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 9px 6px;
+  padding: 8px;
+  font: inherit;
   font-size: 0.78rem;
   cursor: pointer;
 }
+.action-grid .act:active { transform: translateY(1px); }
 .action-grid .act-move { border-color: var(--goo); }
 .action-grid .act-release { border-color: var(--goo); color: var(--goo); font-weight: 700; }
 .action-grid .act-flee, .action-grid .act-rest { color: var(--muted); }
+.act-name { font-weight: 700; line-height: 1.15; }
+.act-meta { display: flex; gap: 6px; align-items: baseline; }
+.act-pow { font-size: 0.72rem; color: #ff9f9f; font-weight: 700; }
+.act-util { color: var(--muted); font-weight: 400; }
 .action-grid .cost { color: var(--zap); font-size: 0.68rem; }
+.act-fx { display: flex; gap: 4px; flex-wrap: wrap; }
+.fx {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.fx-up { color: var(--goo); }
+.fx-down { color: #ffd66e; }
+.fx-null { color: #ff8a8a; }
+.fx-fast { color: var(--zap); }
+.fx-slow { color: var(--muted); }
+.act-capture { border-color: var(--zap) !important; color: var(--zap); font-weight: 700; }
+
+.resolving {
+  grid-column: 1 / -1;
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 14px;
+  font: inherit;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  background: transparent;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.resolving:active { color: var(--goo); border-color: var(--goo); }
+
+/* The fighter whose beat is playing gets the spotlight. */
+.fighter.is-acting { border-color: var(--goo); box-shadow: 0 0 0 1px var(--goo); }
+.fighter-foe.is-acting { border-color: #ff8a8a; box-shadow: 0 0 0 1px #ff8a8a; }
+
+@media (prefers-reduced-motion: reduce) {
+  .meter-fill { transition: none; }
+  .float,
+  .battle-log p,
+  .anim-lunge-up, .anim-lunge-down, .anim-hit, .anim-ko, .anim-wavein,
+  .anim-buff, .anim-debuff { animation: none; }
+}
 
 /* --- War Room (M5) --- */
 

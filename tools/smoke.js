@@ -21,7 +21,7 @@ import { analyze } from '../splice/physiology.js';
 import { spliceChimera, validateSplice, isSettled, chimeraGenome } from '../splice/theater.js';
 import {
   combatantFromChimera, combatantFromUnit, createBattle, step, finishBattle,
-  playerActions, playerActive, tagMultiplier, isInjured,
+  playerActions, playerActive, tagMultiplier, isInjured, turnForecast,
 } from '../battle/engine.js';
 import { runSim, plantBrokenCombo } from './sim.js';
 import {
@@ -471,8 +471,8 @@ playerActive(pb).speed = 1; // slower than everything
 const trample = playerActions(pb).find((a) => a.label === 'Scythe Strike');
 assert.ok(trample, 'the duelist has its priority move');
 const evs = step(pb, trample, content);
-const myLine = evs.findIndex((e) => e.includes('Scythe Strike'));
-const foeLine = evs.findIndex((e) => e.includes(pb.enemy.active.name) && e.includes('uses'));
+const myLine = evs.findIndex((e) => e.text.includes('Scythe Strike'));
+const foeLine = evs.findIndex((e) => e.text.includes(pb.enemy.active.name) && e.text.includes('uses'));
 assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move goes first despite speed 1');
 
 // --- Boss transforms into stage two, then falls for the win.
@@ -496,11 +496,11 @@ function grind(encounterId, seed) {
 }
 const bossRun = grind('boss_clampdown', 12345);
 assert.ok(bossRun.b.over, 'boss battle terminates');
-assert.ok(bossRun.events.some((l) => l.includes('ACTIVATE THE 9000')), 'boss transforms mid-fight');
+assert.ok(bossRun.events.some((e) => e.text.includes('ACTIVATE THE 9000')), 'boss transforms mid-fight');
 if (bossRun.b.outcome === 'win') {
   // Stage two either retires gleefully or gets bagged by the cannon — the
   // 9000 is salvageable, so capture is a legitimate second win path.
-  const retired = bossRun.events.some((l) => l.includes('bouncy castle'));
+  const retired = bossRun.events.some((l) => l.text.includes('bouncy castle'));
   const bagged = bossRun.b.captured.includes('clampdown_9000');
   assert.ok(retired || bagged, 'stage two is either retired or impounded');
 }
@@ -542,7 +542,7 @@ for (let i = 0; i < 60; i++) {
   const ob = createBattle([of], content.encounters.patrol_1, content, i, t0);
   const move = playerActions(ob).find((a) => a.type === 'move');
   const evs2 = step(ob, move, content);
-  if (evs2.some((e) => e.includes('ignores orders'))) ignores++;
+  if (evs2.some((e) => e.text.includes('ignores orders'))) ignores++;
 }
 assert.ok(ignores > 2 && ignores < 40, `obedience wavers believably (${ignores}/60 ignored)`);
 
@@ -1211,6 +1211,70 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     assert.ok(lab.dex.parts.includes(token.partId), 'logged in the Splice-Dex');
   }
   assert.equal(lab.campaign.containment.length, 0, 'the bay empties');
+}
+
+// --- Battle overhaul: step() returns a replayable stream. Each event
+// --- carries the state at the instant it happened, so the arena can show
+// --- one beat at a time instead of dumping a receipt. The harness and the
+// --- browser must agree on that stream, so assert its shape here.
+{
+  const s = { ...newGameState(), seed: 8181 };
+  const fighter = makeChimera(s, 'M', {
+    goat_head: 'prime', goat_forelimbs: 'prime', goat_hindlimbs: 'prime', goat_organ: 'prime',
+  }, t0);
+  const b = createBattle([fighter], content.encounters.patrol_1, content, 31, fighter.settleUntil);
+  const forecast = turnForecast(b);
+  assert.equal(typeof forecast.playerFirst, 'boolean', 'the UI can say who strikes first before you commit');
+  assert.equal(forecast.playerSpeed, playerActive(b).speed);
+  assert.equal(forecast.enemySpeed, b.enemy.active.speed);
+
+  const all = [];
+  let guard = 0;
+  while (!b.over && guard++ < 200) {
+    const acts = playerActions(b);
+    if (!acts.length) break;
+    const evs = step(b, acts.find((a) => a.type === 'move') ?? acts[0], content);
+    for (const e of evs) {
+      assert.equal(typeof e.text, 'string', 'every event still carries its log line');
+      assert.ok(e.kind, 'and a kind the renderer can animate');
+      assert.ok(e.snap, 'and a snapshot of the moment it happened');
+      const sn = e.snap;
+      assert.ok(sn.player && sn.enemy, 'snapshots hold both sides');
+      assert.ok(sn.player.hp <= sn.player.maxHp && sn.player.hp >= 0, 'with sane HP');
+      assert.ok(sn.enemy.hp <= sn.enemy.maxHp && sn.enemy.hp >= 0);
+      assert.ok(Array.isArray(sn.bench), 'and the bench, for the team tray');
+      assert.equal(typeof sn.wavesLeft, 'number');
+      assert.equal(typeof sn.cannon, 'number');
+    }
+    all.push(...evs);
+  }
+  assert.ok(all.length > 4, 'a fight produces a stream worth replaying');
+  assert.ok(all.some((e) => e.kind === 'damage' && e.amount > 0 && e.actor && e.target), 'damage beats name an attacker, a target and a number');
+  assert.ok(all.some((e) => e.kind === 'ko'), 'and somebody eventually goes down');
+  assert.ok(all.every((e) => e.kind !== 'damage' || typeof e.mult === 'number'), 'damage carries its effectiveness so the number can be coloured');
+
+  // The snapshot must be a COPY: replaying an old beat cannot show a status
+  // the fighter only picked up later. The last event's snapshot describes
+  // the combatant still standing, so mutating it is a direct test.
+  const fresh = { ...newGameState(), seed: 8282 };
+  const scout = makeChimera(fresh, 'M', { goat_head: 'prime', goat_forelimbs: 'prime' }, t0);
+  const b2 = createBattle([scout], content.encounters.patrol_1, content, 77, scout.settleUntil);
+  const beats = step(b2, playerActions(b2)[0], content);
+  const last = beats[beats.length - 1].snap;
+  const venomBefore = last.enemy.status.venom;
+  const hpBefore = last.enemy.hp;
+  b2.enemy.active.status.venom = 7;
+  b2.enemy.active.hp = 1;
+  assert.equal(last.enemy.status.venom, venomBefore, 'snapshots are frozen copies, not live references');
+  assert.equal(last.enemy.hp, hpBefore, 'and their numbers do not drift either');
+
+  // Snapshots track the log exactly — same order, same lines.
+  assert.deepEqual(all.map((e) => e.text).slice(-6), b.log.slice(-6), 'the stream and the log never disagree');
+
+  // Damage snapshots are taken AFTER the hit lands, so a bar driven from
+  // them shows the damage the number just announced.
+  const lethal = all.find((e) => e.kind === 'ko' && e.target === 'enemy');
+  assert.equal(lethal.snap.enemy.hp, 0, 'a KO beat shows an empty bar');
 }
 
 // --- UI chrome: no native form control may reach the player. A <select> on
