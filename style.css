@@ -760,3 +760,52 @@ footer {
 }
 .toggle-row.is-on .toggle-box { background: var(--goo); border-color: var(--goo); }
 .toggle-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+/* --- Rival Labs (§3.8) -------------------------------------------------- */
+
+.rival-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.rival-card.is-locked { opacity: 0.62; }
+.rival-portrait { flex: 0 0 104px; width: 104px; }
+.rival-portrait svg { width: 100%; height: auto; }
+.rival-redacted {
+  width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 1.6rem;
+}
+.rival-body { flex: 1; min-width: 0; }
+.rival-body strong { font-size: 0.92rem; }
+.rival-body p { margin: 3px 0; }
+.rival-body .class-banner { margin: 5px 0; }
+.rival-quote { font-size: 0.76rem; font-style: italic; color: var(--zap); }
+.rival-body button {
+  margin-top: 6px;
+  background: var(--zap);
+  color: #1a1030;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.rival-body .locked-tag { display: inline-block; margin-top: 6px; }
+/* The portrait stays beside the text even at 380px — a rival you cannot
+   see at a glance is just a button. */
+.rival-counter { color: #ffd66e; }
+@media (max-width: 400px) {
+  .rival-portrait { flex-basis: 92px; width: 92px; }
+}

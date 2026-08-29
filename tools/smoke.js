@@ -47,6 +47,7 @@ const content = indexContent({
   classes: readJSON('data/classes.json'),
   regions: readJSON('data/regions.json'),
   traits: readJSON('data/traits.json'),
+  rivals: readJSON('data/rivals.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -853,12 +854,12 @@ assert.ok(totalMut >= 8 && totalMut <= 50, `mutations occur at a sane rate (${to
   assert.equal(s.ranch.stock[1].species, 'goat');
 }
 
-// --- v1 → v7 chain.
+// --- v1 → v9 chain.
 const m5 = migrate(structuredClone(v1Save));
 assert.equal(m5.saveVersion, SAVE_VERSION);
 assert.equal(m5.battle, null);
 assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
-assert.deepEqual(m5.campaign, { heldNodes: [], notoriety: 0, captives: [], containment: [], lastTickAt: null });
+assert.deepEqual(m5.campaign, { heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, lastTickAt: null });
 assert.deepEqual(m5.news, []);
 assert.deepEqual(m5.directorStats.dissections, []);
 const v5WithBattle = {
@@ -1050,6 +1051,168 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   }
 }
 
+// --- Rivals (§3.8): geneticists who field CHIMERAS, generated from real
+// --- parts under the player's own physiology, gated so their counter-class
+// --- anatomy is always obtainable first, and iterating on every defeat.
+{
+  const { rivalStatus, rivalEncounter, rivalTeam, playerFavoredClass } = await import('../campaign/rivals.js');
+  const { unitFor } = await import('../battle/engine.js');
+  const mkState = (over = {}) => ({
+    seed: 4242,
+    chimeras: [],
+    campaign: { heldNodes: [], notoriety: 0, rivals: {}, captives: [], containment: [] },
+    ...over,
+  });
+
+  assert.ok(Object.keys(content.rivals).length >= 3, 'at least one rival per elemental class');
+  const classesCovered = new Set(Object.values(content.rivals).map((r) => r.classBias));
+  assert.deepEqual([...classesCovered].sort(), ['air', 'ground', 'water'], 'the ladder spans the whole triangle');
+
+  // Locked on a fresh save; the gate names what is missing.
+  const fresh = rivalStatus(mkState(), content);
+  assert.ok(fresh.every((r) => r.status === 'locked'), 'no rival is available on a fresh save');
+  assert.ok(fresh.every((r) => r.need.length), 'every locked rival says what it needs');
+
+  // Gate rule: you are never asked to beat a class before the anatomy that
+  // answers it is obtainable. A rival's counter-class parts must be unlocked
+  // by the nodes their gate requires (or available from the start).
+  const region = Object.values(content.regions)[0];
+  for (const rival of Object.values(content.rivals)) {
+    const counter = Object.values(content.classes).find((c) => c.beats === rival.classBias).id;
+    const gateIndex = Math.max(
+      ...rival.requiresNodes.map((id) => region.nodes.findIndex((n) => n.id === id))
+    );
+    // Use the real catalog rule, not a re-implementation of it.
+    const fauna = faunaUnlocked(
+      { campaign: { heldNodes: region.nodes.slice(0, gateIndex + 1).map((n) => n.id) } },
+      content
+    );
+    const counterParts = Object.values(content.parts).filter(
+      (p) => p.classAffinity === counter && fauna.has(p.species)
+    );
+    assert.ok(
+      counterParts.length >= 2,
+      `${rival.name} (${rival.classBias}) is gated behind fauna that can build ${counter} — found ${counterParts.length} parts`
+    );
+  }
+
+  // Fully unlocked: teams are generated, classed by anatomy, and stable.
+  const open = mkState({ campaign: { heldNodes: region.nodes.map((n) => n.id), notoriety: 999, rivals: { mantissa: { defeats: 1, losses: 0 }, aloft: { defeats: 1, losses: 0 } }, captives: [], containment: [] } });
+  for (const { rival, status } of rivalStatus(open, content)) {
+    assert.notEqual(status, 'locked', `${rival.name} opens once the ladder is cleared`);
+    const enc = rivalEncounter(open, rival, content);
+    assert.ok(enc.waves.length >= 2, `${rival.name} fields a team`);
+    for (const unit of enc.waves) {
+      assert.ok(unit.hp > 0 && unit.power > 0, 'generated units carry real stats');
+      assert.ok(unit.moves.length >= 2, 'generated units have moves from their anatomy');
+      assert.ok(unit.salvage.length === unit.salvageGrades.length, 'every salvage part carries its grade');
+      assert.ok(unit.genome.parts.head, 'a head is mandatory for rivals too');
+      for (const partId of unit.salvage) assert.ok(content.parts[partId], 'rivals only field real parts');
+      assert.equal(unitFor(content, unit), unit, 'inline units resolve to themselves');
+    }
+    // The lead specimen always flies the rival's own flag.
+    assert.equal(enc.waves[0].class, rival.classBias, `${rival.name}'s lead is ${rival.classBias}`);
+  }
+
+  // Determinism: the same save always faces the same team.
+  const a = JSON.stringify(rivalEncounter(open, content.rivals.trench, content));
+  const b = JSON.stringify(rivalEncounter(open, content.rivals.trench, content));
+  assert.equal(a, b, 'rival teams are seeded, not rolled fresh each render');
+
+  // Iteration: every defeat makes the lab stronger and the purse bigger.
+  const veteran = structuredClone(open);
+  veteran.campaign.rivals.trench = { defeats: 4, losses: 0 };
+  const before = rivalEncounter(open, content.rivals.trench, content);
+  const after = rivalEncounter(veteran, content.rivals.trench, content);
+  assert.ok(after.powerScale > before.powerScale, 'a beaten rival comes back stronger');
+  assert.ok(after.reward > before.reward, 'and pays more for the trouble');
+  assert.ok(after.waves.length >= before.waves.length, 'and eventually fields more');
+
+  // Counter-bias: a rival who reads your stable answers it. Feed a pure Air
+  // stable and the counter-biased rivals field Water in the second slot.
+  const airPart = (slot) => Object.values(content.parts).find((p) => p.slot === slot && p.classAffinity === 'air');
+  const airStable = structuredClone(open);
+  airStable.chimeras = [{
+    id: 'c1', name: 'Kite', frame: 'S',
+    tokens: {
+      head: { id: 'k0', partId: 'eagle_head', grade: 'prime', donor: {} },
+      forelimbs: { id: 'k1', partId: airPart('forelimbs').id, grade: 'prime', donor: {} },
+      tail: { id: 'k2', partId: airPart('tail').id, grade: 'prime', donor: {} },
+    },
+  }];
+  assert.equal(playerFavoredClass(airStable, content), 'air', 'the director reads the stable it can see');
+  const biased = rivalTeam(airStable, content.rivals.aloft, content);
+  assert.equal(biased.counterClass, 'water', 'and a counter-biasing rival builds what beats it');
+  assert.equal(biased.team[1].class, 'water', 'right down to the anatomy of the second specimen');
+  // Mantissa is the tutorial rival and stays honest.
+  assert.equal(rivalTeam(airStable, content.rivals.mantissa, content).counterClass, null);
+}
+
+// --- The rival payoff loop: cannon a rival's chimera, dismantle it, and
+// --- receive THEIR parts at THEIR grades. Enemy tech, except the enemy is
+// --- a person with opinions (ROADMAP §3.6 "Capture — theirs").
+{
+  const { rivalEncounter } = await import('../campaign/rivals.js');
+  const region = Object.values(content.regions)[0];
+  const lab = { ...newGameState(), seed: 77 };
+  lab.campaign.lastTickAt = t0;
+  lab.campaign.heldNodes = region.nodes.map((n) => n.id);
+  lab.campaign.notoriety = 999;
+  lab.campaign.rivals = { mantissa: { defeats: 0, losses: 0 } };
+  const hero = makeChimera(lab, 'L', {
+    gorilla_head: 'prismatic', gorilla_forelimbs: 'prismatic', gorilla_hindlimbs: 'prismatic',
+    pangolin_hide: 'prismatic', wolf_organ: 'prismatic',
+  }, t0);
+  const tRival = hero.settleUntil;
+
+  const encounter = rivalEncounter(lab, content.rivals.mantissa, content);
+  const battle = createBattle([hero], encounter, content, 9, tRival, {
+    kind: 'rival',
+    rivalId: 'mantissa',
+  });
+  assert.ok(battle.barks.intro, 'a rival duel opens with their monologue');
+  assert.ok(battle.log.some((l) => l.includes(content.rivals.mantissa.monologue.intro)), 'and it reaches the log');
+  assert.ok(Object.keys(battle.units).length === encounter.waves.length, 'generated units are indexed for containment');
+
+  // Restrain, then fire: soften the lead below 40% with the cannon charged.
+  const foe = battle.enemy.active;
+  assert.ok(foe.capturable, "a rival's chimera is a legal cannon target");
+  foe.hp = Math.floor(foe.maxHp * 0.3);
+  battle.cannon.charge = 100;
+  const capture = playerActions(battle).find((a) => a.type === 'capture');
+  assert.ok(capture, 'the cannon offers itself at a weakened rival specimen');
+  step(battle, capture, content);
+  assert.deepEqual(battle.captured, [foe.refId], 'the specimen is bagged');
+
+  // Clear the rest so the fight resolves as a win.
+  let guard = 0;
+  while (!battle.over && guard++ < 200) {
+    battle.enemy.active.hp = 0;
+    step(battle, playerActions(battle)[0] ?? { type: 'rest' }, content);
+  }
+  const detail = resolveBattle(lab, battle, content, tRival);
+  assert.equal(detail.outcome, 'win');
+  assert.equal(lab.campaign.rivals.mantissa.defeats, 1, 'the defeat is recorded so the lab iterates');
+  assert.equal(lab.campaign.containment.length, 1, 'the captured specimen reaches Containment');
+  const bay = lab.campaign.containment[0];
+  assert.ok(bay.unit, 'a generated unit rides along in the bay — enemies.json has no entry for it');
+  assert.ok(!content.enemies[bay.unitId], 'confirming there is nothing to look it up by');
+
+  const before = lab.inventory.parts.length;
+  const salvage = salvageUnit(lab, 0, content, tRival);
+  assert.ok(salvage.ok, salvage.msg);
+  const gained = lab.inventory.parts.slice(before);
+  assert.equal(gained.length, bay.unit.salvage.length, "every one of the rival's parts comes home");
+  for (const [i, token] of gained.entries()) {
+    assert.equal(token.partId, bay.unit.salvage[i]);
+    assert.equal(token.grade, bay.unit.salvageGrades[i], 'at the grade the rival actually raised');
+    assert.equal(token.donor.name, bay.unit.name, 'with lineage naming the specimen');
+    assert.ok(content.parts[token.partId], 'and they are real, splice-able parts');
+    assert.ok(lab.dex.parts.includes(token.partId), 'logged in the Splice-Dex');
+  }
+  assert.equal(lab.campaign.containment.length, 0, 'the bay empties');
+}
+
 // --- UI chrome: no native form control may reach the player. A <select> on
 // --- Android opens the OS wheel and an <input type=checkbox> draws the
 // --- platform's checkbox — both break the frame. Everything goes through
@@ -1080,4 +1243,4 @@ const condBefore = warp.ranch.stock[0].condition;
 applyElapsed(warp, content, t0);
 assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a no-op');
 
-console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);
+console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

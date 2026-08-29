@@ -41,6 +41,8 @@ export function indexContent(raw) {
     regions: raw.regions ? byId(raw.regions.regions) : {},
     traits: raw.traits ? byId(raw.traits.traits) : {},
     classes: raw.classes ? byId(raw.classes.classes) : {},
+    rivals: raw.rivals ? byId(raw.rivals.rivals) : {},
+    rivalMeta: raw.rivals ? raw.rivals.rematch : null,
     classRules: raw.classes ? { advantage: raw.classes.advantage, disadvantage: raw.classes.disadvantage } : { advantage: 1, disadvantage: 1 },
     campaignMeta: raw.regions
       ? { threatGen2At: raw.regions.threatGen2At, rescueEncounter: raw.regions.rescueEncounter }

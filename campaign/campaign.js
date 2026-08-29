@@ -6,6 +6,7 @@
 import { rngStream, pick, randInt } from '../util/rng.js';
 import { GRADES } from '../splice/extract.js';
 import { finishBattle } from '../battle/engine.js';
+import { recordRivalResult } from './rivals.js';
 
 const DAY = 86400000;
 const HOUR = 3600000;
@@ -86,15 +87,22 @@ export function resolveBattle(state, battle, content, now) {
     ...(battle.captured ?? []),
   ];
   for (const unitId of seen) {
+    // Generated rival chimeras aren't roster units — they have no Dex page.
+    if (typeof unitId !== 'string') continue;
     if (unitId && !state.dex.enemies.includes(unitId)) state.dex.enemies.push(unitId);
   }
   const result = finishBattle(state, battle, content, now);
   const detail = { ...result, capturedChimera: null, freed: null, salvageUnits: battle.captured ?? [] };
 
-  // Containment cannon prizes ride home regardless of outcome.
+  // Containment cannon prizes ride home regardless of outcome. A captured
+  // rival chimera has no enemies.json entry, so its generated record rides
+  // along in the bay — salvage reads whichever exists.
   for (const unitId of detail.salvageUnits) {
-    state.campaign.containment.push({ unitId, capturedAt: now });
-    pushNews(state, `${content.enemies[unitId].name} impounded in Containment. Finders keepers is the law here now.`);
+    const generated = battle.units?.[unitId] ?? null;
+    const unit = generated ?? content.enemies[unitId];
+    if (!unit) continue;
+    state.campaign.containment.push({ unitId, unit: generated, capturedAt: now });
+    pushNews(state, `${unit.name} impounded in Containment. Finders keepers is the law here now.`);
   }
 
   if (context.kind === 'rescue') {
@@ -110,6 +118,13 @@ export function resolveBattle(state, battle, content, now) {
       pushNews(state, `${chimera.name} rescued from the impound lot! Bond deepened. Paperwork ignored.`);
     }
     return detail;
+  }
+
+  // Rival duels: the lab keeps score, and the loser iterates.
+  if (context.kind === 'rival' && context.rivalId) {
+    const line = recordRivalResult(state, context.rivalId, result.outcome, content);
+    if (result.outcome !== 'fled') pushNews(state, line);
+    detail.rival = content.rivals[context.rivalId]?.name ?? null;
   }
 
   if (context.kind === 'assault' && result.outcome === 'win' && context.nodeId) {
@@ -157,17 +172,22 @@ export function resolveBattle(state, battle, content, now) {
 export function salvageUnit(state, containmentIndex, content, now) {
   const entry = state.campaign.containment[containmentIndex];
   if (!entry) return { ok: false, msg: 'Nothing in that bay.' };
-  const unit = content.enemies[entry.unitId];
+  const unit = entry.unit ?? content.enemies[entry.unitId];
+  if (!unit) return { ok: false, msg: 'That bay is empty and slightly damp.' };
   state.campaign.containment.splice(containmentIndex, 1);
   const rng = rngStream(state.seed, 'salvage', state.inventory.tokenCount);
   const tokens = [];
-  for (const partId of unit.salvage ?? []) {
-    const grade = pick(rng, ['standard', 'standard', 'prime']);
+  for (const [i, partId] of (unit.salvage ?? []).entries()) {
+    const part = content.parts[partId];
+    if (!part) continue; // retired part id — the rest of the bay still salvages
+    // A rival's chimera hands over the grades they actually raised; a
+    // vehicle's scrap rolls for it.
+    const grade = unit.salvageGrades?.[i] ?? pick(rng, ['standard', 'standard', 'prime']);
     const token = {
       id: `t${state.inventory.tokenCount++}`,
       partId,
       grade,
-      donor: { name: unit.name, species: 'salvage', stars: 3, extractedAt: now },
+      donor: { name: unit.name, species: part.species, stars: 3, extractedAt: now },
     };
     state.inventory.parts.push(token);
     tokens.push(token);

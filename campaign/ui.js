@@ -8,11 +8,21 @@ import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { toggleRow } from '../ui/picker.js';
 import { analyze } from '../splice/physiology.js';
+import { renderCreatureSVG } from '../render/renderer.js';
+import { rivalStatus, rivalEncounter } from './rivals.js';
 import {
   nodeStates, threatGen, incomePerDay, salvageUnit, regionOf,
 } from './campaign.js';
 
-let draftTarget = null; // { kind, nodeId?, captiveId?, encounterId }
+let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, label }
+
+// Static encounters live in enemies.json; a rival duel is generated from
+// the world seed and their record, so it is identical every time it is
+// resolved — briefing preview and battle always face the same team.
+function encounterFor(state, target, content) {
+  if (target.kind === 'rival') return rivalEncounter(state, content.rivals[target.rivalId], content);
+  return content.encounters[target.encounterId];
+}
 let draftTeam = [];
 let lastAftermath = null;
 
@@ -65,12 +75,49 @@ function renderMap(root, ctx) {
     </div>`).join('');
 
   const containment = state.campaign.containment.map((entry, i) => {
-    const unit = content.enemies[entry.unitId];
+    const unit = entry.unit ?? content.enemies[entry.unitId];
+    if (!unit) return '';
     return `
       <div class="encounter">
         <div><strong>${unit.name}</strong><br><span class="fine-print">salvage: ${(unit.salvage ?? [])
-          .map((p) => content.parts[p].name).join(', ')}</span></div>
+          .map((p) => content.parts[p]?.name).filter(Boolean).join(', ')}</span></div>
         <button type="button" data-salvage="${i}">Salvage</button>
+      </div>`;
+  }).join('');
+
+  // Rival Labs. Their chimeras are real genomes, so the card can just draw
+  // the lead specimen — no portrait art, same renderer as everything else.
+  const rivals = rivalStatus(state, content).map(({ rival, record, status, need }) => {
+    const cls = content.classes[rival.classBias];
+    const locked = status === 'locked';
+    const preview = locked ? null : rivalEncounter(state, rival, content);
+    const lead = preview?.waves[0];
+    const roster = preview
+      ? preview.waves
+          .map((u) => `${content.classes[u.class]?.icon ?? '◇'} ${u.name} <span class="lineage">HP ${u.hp} · PWR ${u.power}</span>`)
+          .join('<br>')
+      : '';
+    return `
+      <div class="rival-card ${locked ? 'is-locked' : ''}">
+        <div class="rival-portrait">${
+          lead ? renderCreatureSVG(lead.genome, content, { idPrefix: `rv-${rival.id}` }) : '<div class="rival-redacted">?</div>'
+        }</div>
+        <div class="rival-body">
+          <strong>${rival.name}</strong>
+          <p class="fine-print">${rival.title}</p>
+          <p class="class-banner class-${rival.classBias}">${cls.icon} ${cls.name} school — beats ${content.classes[cls.beats].name}</p>
+          <p class="rival-quote">&ldquo;${rival.philosophy}&rdquo;</p>
+          ${record.defeats || record.losses ? `<p class="fine-print">Record: ${record.defeats}W–${record.losses}L against you${record.defeats ? ` · iterated ${record.defeats}× since` : ''}</p>` : ''}
+          ${roster ? `<p class="fine-print">${roster}</p>` : ''}
+          ${preview?.counterClass && preview.counterClass !== rival.classBias
+            ? `<p class="fine-print rival-counter">⚠ They have read your stable and added ${content.classes[preview.counterClass].icon} ${content.classes[preview.counterClass].name}.</p>`
+            : ''}
+          ${
+            locked
+              ? `<span class="locked-tag">${need.join(' · ')}</span>`
+              : `<button type="button" data-rival="${rival.id}">${status === 'rematch' ? `Rematch — $${preview.reward}` : `Challenge — $${preview.reward}`}</button>`
+          }
+        </div>
       </div>`;
   }).join('');
 
@@ -91,6 +138,7 @@ function renderMap(root, ctx) {
       <h3>${region.name}</h3>
       ${nodes}
     </section>
+    ${rivals ? `<section class="card"><h3>🧫 Rival Labs</h3>${rivals}</section>` : ''}
     ${containment ? `<section class="card"><h3>Containment</h3>${containment}</section>` : ''}
     <section class="card">
       <h3>News Wire</h3>
@@ -101,6 +149,14 @@ function renderMap(root, ctx) {
     btn.addEventListener('click', () => {
       const node = region.nodes.find((n) => n.id === btn.dataset.node);
       draftTarget = { kind: 'assault', nodeId: node.id, encounterId: node.encounter, label: node.name };
+      draftTeam = [];
+      renderBriefing(root, ctx);
+    });
+  });
+  root.querySelectorAll('button[data-rival]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const rival = content.rivals[btn.dataset.rival];
+      draftTarget = { kind: 'rival', rivalId: rival.id, encounterId: `rival_${rival.id}`, label: rival.name };
       draftTeam = [];
       renderBriefing(root, ctx);
     });
@@ -133,12 +189,14 @@ function renderMap(root, ctx) {
 function renderBriefing(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
-  const encounter = content.encounters[draftTarget.encounterId];
+  const encounter = encounterFor(state, draftTarget, content);
 
   // What are we walking into? The class triangle only matters if the player
   // can see the matchup before they commit a team.
   const foeClasses = new Set(
-    encounter.waves.flat().map((u) => content.enemies[u]?.class).filter(Boolean)
+    encounter.waves
+      .map((u) => (typeof u === 'string' ? content.enemies[u] : u)?.class)
+      .filter(Boolean)
   );
   const foeLine = foeClasses.size
     ? [...foeClasses].map((c) => `${content.classes[c].icon} ${content.classes[c].name}`).join(', ')
@@ -166,8 +224,12 @@ function renderBriefing(root, ctx) {
   root.innerHTML = `
     <section class="card">
       <h3>${draftTarget.label}</h3>
-      <p class="fine-print">${encounter.blurb} (${encounter.waves.length} waves${encounter.reward ? ` · $${encounter.reward}` : ''})</p>
-      <p class="fine-print">Opposition: ${foeLine}</p>
+      <p class="${draftTarget.kind === 'rival' ? 'rival-quote' : 'fine-print'}">${
+        draftTarget.kind === 'rival' ? `&ldquo;${encounter.blurb}&rdquo;` : encounter.blurb
+      } <span class="fine-print">(${encounter.waves.length} ${draftTarget.kind === 'rival' ? 'specimens' : 'waves'}${encounter.reward ? ` · $${encounter.reward}` : ''})</span></p>
+      <p class="fine-print">Opposition: ${foeLine}${
+        foeClasses.size > 1 && encounter.counterClass ? ' — one of them was built to answer your stable' : ''
+      }</p>
       <h3>Strike Team (up to 3)</h3>
       ${roster || '<p class="ranch-msg">No chimeras available. The Surgery Theater accepts walk-ins.</p>'}
       <div class="ceremony-btns">
@@ -203,6 +265,7 @@ function renderBriefing(root, ctx) {
       kind: draftTarget.kind,
       nodeId: draftTarget.nodeId ?? null,
       captiveId: draftTarget.captiveId ?? null,
+      rivalId: draftTarget.rivalId ?? null,
     });
     ctx.save();
     renderWarRoomScreen(root, ctx);
@@ -211,6 +274,8 @@ function renderBriefing(root, ctx) {
 
 function aftermathText(detail) {
   const bits = [];
+  if (detail.rival && detail.outcome === 'win') bits.push(`${detail.rival} defeated.`);
+  else if (detail.rival && detail.outcome === 'loss') bits.push(`${detail.rival} wins this round.`);
   if (detail.outcome === 'win') bits.push(`Victory!${detail.reward ? ` Confiscated budget: $${detail.reward}.` : ''}`);
   else if (detail.outcome === 'fled') bits.push('Tactical scamper executed flawlessly.');
   else bits.push('Defeat.');

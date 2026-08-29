@@ -1,5 +1,72 @@
 # PROGRESS
 
+## Session 13 — Rival Geneticists ✅
+
+The audit's #1 deferred item, and the reason Wave 1's class triangle exists.
+
+### Rivals field chimeras, not stat blocks
+- `campaign/rivals.js` builds each rival's team from **real parts** and runs it
+  through **`splice/physiology.js` — the player's own physiology**. Their HP, tags
+  and elemental class are earned by anatomy, exactly like yours. A rival who fields
+  Water is Water *because of the gills*.
+- `battle/engine.js` grew two small seams: `unitFromGenome()` (genome → a record in
+  the `enemies.json` unit shape) and `unitFor()` (a wave entry may be an id *or* an
+  inline record). Everything downstream — capture, containment, salvage, knockback,
+  the arena — works unchanged. Move-building is now shared (`movesFromTokens`) so
+  a rival's chimera and yours can never drift apart.
+- The arena draws rival chimeras from their genome. **Zero new art.**
+
+### Three rivals, one ladder
+- Dr. Mantissa (Ground, insects) → Baroness Vesper Aloft (Air) → Prof. Abyssa
+  Trench (Water). Each one answers the class you just farmed off the last.
+- **Gates follow counter-part availability**: you are never asked to beat a class
+  before the anatomy that answers it is obtainable. Asserted in smoke against the
+  *real* `faunaUnlocked` rule — the test bites if a gate is moved.
+- Measured triangle (40 seeds/cell, 1 chimera vs their whole team):
+
+  | build | Mantissa (Gnd) | Aloft (Air) | Trench (Wtr) |
+  |---|---|---|---|
+  | Ground | 83% | **10%** | **85%** |
+  | Air | **98%** | 15% | **0%** |
+  | Water | 15% | **95%** | 78% |
+
+  Bring the counter and you win; bring the wrong class and you do not.
+
+### They iterate, and they read you
+- Every defeat raises their grade ladder, power scale, team size and purse.
+- `counterBias` rivals read your stable (the `directorStats` idea, finally acting)
+  and build the class that beats it — an all-Air stable makes Aloft field Water.
+  Mantissa, the tutorial rival, stays honest.
+- Monologue slots per §3.8 (intro / midFight / defeat / victory / dissectionTaunt)
+  as data; the engine only relays `encounter.barks`, so any encounter can have them.
+
+### The payoff loop
+- Cannon a rival's chimera → Containment → salvage yields **their parts at the
+  grades they actually raised**. Prismatic rival parts are a real prize, and the
+  only way to get some anatomy early. Verified end-to-end in smoke.
+
+### Save v9
+- `campaign.rivals` per-rival records; containment bays carry an optional inline
+  `unit` for generated specimens. Additive — old bays still resolve by `unitId`.
+  v1→v9 chain tested.
+
+### Verified
+- `node tools/smoke.js` green, with ~35 new rival assertions (three checked to
+  fail when deliberately broken). `node tools/sim.js` now fights rivals too: 1320
+  battles, 11 encounters.
+- CDP pass at 380px on a **migrated v8 save**: cards render with procedural
+  portraits, gates read correctly, challenge → briefing → duel → aftermath →
+  reload all clean; 0 native controls, no overflow, no console errors.
+
+### Known issues
+- Prismatic grade still flags OP builds — the balance pass is now two sessions
+  overdue and should come before Wave 2 content.
+- Rivals have no Splice-Dex page yet.
+
+### Next session's first task
+Either the prismatic balance pass, or AI director activation (rivals already prove
+the counter-bias plumbing works; the director generalises it to normal encounters).
+
 ## Session 12 — In-game pickers: no more OS dropdowns ✅
 
 Wave 1 pushed the last native `<select>` past its limit — a 25-species catalog on

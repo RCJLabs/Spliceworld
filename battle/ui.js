@@ -38,14 +38,20 @@ export function renderArena(root, ctx, onDone) {
 
   root.innerHTML = `
     <section class="card arena">
-      <p class="recipe">${battle.encounterName}${battle.context.kind === 'rescue' ? ' · RESCUE RAID' : ''}</p>
+      <p class="recipe">${battle.encounterName}${
+        battle.context.kind === 'rescue' ? ' · RESCUE RAID' : battle.context.kind === 'rival' ? ' · RIVAL DUEL' : ''
+      }</p>
       <div class="arena-side arena-foe">
         <div class="arena-info">
           <strong>${foe.name}</strong> ${statusLine(foe)}
           ${bar(foe.hp, foe.maxHp, 'tier-scruffy')}
           <span class="fine-print">HP ${foe.hp}/${foe.maxHp} · wave ${battle.enemy.queue.length + 1} remaining</span>
         </div>
-        <div class="arena-sprite">${renderUnitSVG(content.enemies[foe.refId] ?? { name: foe.name, shapes: [] })}</div>
+        <div class="arena-sprite">${
+          foe.genome
+            ? renderCreatureSVG(foe.genome, content, { idPrefix: 'foe' })
+            : renderUnitSVG(content.enemies[foe.refId] ?? { name: foe.name, shapes: [] })
+        }</div>
       </div>
       <div class="arena-side arena-me">
         <div class="arena-sprite">${myChimera ? renderCreatureSVG(chimeraGenome(myChimera, content), content, { idPrefix: 'arena' }) : ''}</div>

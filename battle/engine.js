@@ -47,11 +47,10 @@ export function obediencePercent(chimera, now) {
 
 // --- Combatant builders -------------------------------------------------
 
-export function combatantFromChimera(chimera, content, now) {
-  const tokens = Object.values(chimera.tokens);
-  const report = analyze(chimera.frame, tokens, content);
-  const settled = isSettled(chimera, now);
-
+// Moves come from anatomy: every part with a move contributes one, grade
+// sharpens it, and discovered combos add their own. Shared so a rival's
+// chimera is built by exactly the same rules as the player's (§3.8).
+export function movesFromTokens(tokens, report, content) {
   const moves = [];
   for (const token of tokens) {
     const part = content.parts[token.partId];
@@ -69,6 +68,51 @@ export function combatantFromChimera(chimera, content, now) {
   for (const combo of report.combos) {
     moves.push({ name: combo.name, ...combo.move });
   }
+  return moves;
+}
+
+// A genome fielded by someone who isn't the player. Produces a record in
+// the enemies.json unit shape, so combatantFromUnit and every downstream
+// system (capture, containment, salvage, the arena) work unchanged — the
+// only difference is that its numbers came from physiology, not a table.
+export function unitFromGenome(spec, content) {
+  const { id, name, frame, tokens, koLine, powerScale = 1, capturable = true } = spec;
+  const report = analyze(frame, tokens, content);
+  const scale = (n) => Math.max(1, Math.round(n * powerScale));
+  return {
+    id,
+    name,
+    hp: scale(report.stats.hp),
+    power: scale(report.stats.power),
+    armor: scale(report.stats.armor),
+    speed: Math.max(1, Math.round(report.stats.speed)),
+    stamina: scale(report.stats.stamina),
+    regen: report.regenNet,
+    tags: ['Organic', ...report.tags],
+    class: report.creatureClass,
+    moves: movesFromTokens(tokens, report, content),
+    koLine: koLine ?? `${name} bows theatrically and is airlifted out by its own support staff.`,
+    salvage: tokens.map((t) => t.partId),
+    // Dismantling a rival's chimera yields the grades they actually raised,
+    // which is the whole reason to fight one twice.
+    salvageGrades: tokens.map((t) => t.grade),
+    capturable,
+    // The arena draws this one from its genome — no sprite table needed.
+    genome: { frame, parts: Object.fromEntries(tokens.map((t) => [content.parts[t.partId].slot, t.partId])) },
+    physiology: { instability: report.instability, sockets: tokens.length, purebred: report.purebredSpecies },
+  };
+}
+
+// Waves may name a unit id or carry a generated unit record inline.
+export function unitFor(content, ref) {
+  return typeof ref === 'string' ? content.enemies[ref] : ref;
+}
+
+export function combatantFromChimera(chimera, content, now) {
+  const tokens = Object.values(chimera.tokens);
+  const report = analyze(chimera.frame, tokens, content);
+  const settled = isSettled(chimera, now);
+  const moves = movesFromTokens(tokens, report, content);
 
   const debuff = settled ? 1 : REJECTION_MULT;
   return {
@@ -96,7 +140,7 @@ export function combatantFromChimera(chimera, content, now) {
 export function combatantFromUnit(unit) {
   return {
     kind: 'unit',
-    capturable: !!unit.salvage?.length, // Containment Cannon targets
+    capturable: unit.capturable ?? !!unit.salvage?.length, // Containment Cannon targets
     refId: unit.id,
     name: unit.name,
     maxHp: unit.hp,
@@ -111,6 +155,7 @@ export function combatantFromUnit(unit) {
     creatureClass: unit.class ?? null,
     moves: unit.moves.map((m) => ({ ...m })),
     koLine: unit.koLine,
+    genome: unit.genome ?? null, // rival chimeras draw from anatomy, not a sprite table
     transformInto: unit.transformInto ?? null,
     transformLine: unit.transformLine ?? null,
     rejection: false,
@@ -139,11 +184,18 @@ export function createBattle(chimeras, encounter, content, seed, now, context = 
     pendingReplace: false,
     cannon: { charge: 0 }, // Containment Cannon: charged by damage dealt
     captured: [], // unit ids bagged this battle
+    // Generated units (rival chimeras) travel inline in the wave list;
+    // index them so containment can resolve a refId after the fight.
+    units: Object.fromEntries(
+      encounter.waves.filter((w) => typeof w !== 'string').map((u) => [u.id, u])
+    ),
     player: { team: chimeras.map((c) => combatantFromChimera(c, content, now)), active: 0 },
-    enemy: { queue: encounter.waves.slice(1), active: combatantFromUnit(content.enemies[encounter.waves[0]]) },
+    enemy: { queue: encounter.waves.slice(1), active: combatantFromUnit(unitFor(content, encounter.waves[0])) },
+    barks: { ...(encounter.barks ?? {}) }, // rival monologue slots (§3.8)
     log: [],
   };
-  battle.log.push(`${encounter.name}: ${content.enemies[encounter.waves[0]].name} moves in!`);
+  if (battle.barks.intro) battle.log.push(`\u201c${battle.barks.intro}\u201d`);
+  battle.log.push(`${encounter.name}: ${unitFor(content, encounter.waves[0]).name} moves in!`);
   const first = battle.player.team[0];
   if (first.rejection) battle.log.push(`${first.name} is unsettled — Rejection saps its power and speed.`);
   return battle;
@@ -312,9 +364,11 @@ function knockback(battle, target, events, content) {
       events.push(`${target.name} skids back but holds the line — no reinforcements to rotate in.`);
       return;
     }
-    battle.enemy.queue.push(target.refId); // sent to the back, returns later
+    // Re-queue by whatever the wave list uses: a roster id, or the whole
+    // generated record for a rival chimera that has no enemies.json entry.
+    battle.enemy.queue.push(battle.units?.[target.refId] ?? target.refId);
     const nextId = battle.enemy.queue.shift();
-    battle.enemy.active = combatantFromUnit(content.enemies[nextId]);
+    battle.enemy.active = combatantFromUnit(unitFor(content, nextId));
     events.push(`${target.name} is punted out of formation! ${battle.enemy.active.name} scrambles in.`);
   } else {
     const bench = livingBench(battle);
@@ -395,19 +449,24 @@ function handleEnemyKO(battle, events, content) {
   if (e.hp > 0) return;
   if (e.transformInto) {
     events.push(e.transformLine);
-    battle.enemy.active = combatantFromUnit(content.enemies[e.transformInto]);
+    battle.enemy.active = combatantFromUnit(unitFor(content, e.transformInto));
     events.push(`${battle.enemy.active.name} looms over the field!`);
     return;
   }
   events.push(e.koLine);
+  if (battle.enemy.queue.length === 1 && battle.barks?.midFight) {
+    events.push(`\u201c${battle.barks.midFight}\u201d`);
+    battle.barks.midFight = null; // once per fight
+  }
   if (battle.enemy.queue.length) {
     const nextId = battle.enemy.queue.shift();
-    battle.enemy.active = combatantFromUnit(content.enemies[nextId]);
+    battle.enemy.active = combatantFromUnit(unitFor(content, nextId));
     events.push(`Next wave: ${battle.enemy.active.name}!`);
     playerActive(battle).status.trapped = false;
   } else {
     battle.over = true;
     battle.outcome = 'win';
+    if (battle.barks?.defeat) events.push(`\u201c${battle.barks.defeat}\u201d`);
     events.push(`Victory! The area is yours (pending paperwork).`);
   }
 }
@@ -423,6 +482,7 @@ function handlePlayerKO(battle, events) {
   } else {
     battle.over = true;
     battle.outcome = 'loss';
+    if (battle.barks?.victory) events.push(`\u201c${battle.barks.victory}\u201d`);
     events.push(`The team is out. Regroup at the lab — the Infirmary awaits.`);
   }
 }
@@ -471,11 +531,12 @@ export function step(battle, action, content) {
     me.status.trapped = false;
     if (battle.enemy.queue.length) {
       const nextId = battle.enemy.queue.shift();
-      battle.enemy.active = combatantFromUnit(content.enemies[nextId]);
+      battle.enemy.active = combatantFromUnit(unitFor(content, nextId));
       events.push(`Next wave: ${battle.enemy.active.name}!`);
     } else {
       battle.over = true;
       battle.outcome = 'win';
+      if (battle.barks?.defeat) events.push(`\u201c${battle.barks.defeat}\u201d`);
       events.push(`Victory! The area is yours (pending paperwork).`);
     }
     battle.turn++;

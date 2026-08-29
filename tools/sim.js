@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path';
 import { indexContent } from '../render/renderer.js';
 import { analyze } from '../splice/physiology.js';
 import { createBattle, step, playerActions, playerActive } from '../battle/engine.js';
+import { rivalEncounter, rivalList } from '../campaign/rivals.js';
 import { mulberry32, hashString, pick } from '../util/rng.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -26,6 +27,7 @@ export function loadSimContent() {
     enemies: readJSON('data/enemies.json'),
     keywords: readJSON('data/keywords.json'),
     classes: readJSON('data/classes.json'),
+    rivals: readJSON('data/rivals.json'),
   });
 }
 
@@ -71,8 +73,11 @@ function pilotAction(battle) {
   return actions.find((a) => a.type === 'rest') ?? actions[0];
 }
 
-export function scriptedBattle(chimera, encounterId, content, seed) {
-  const battle = createBattle([chimera], content.encounters[encounterId], content, seed, 1);
+// `encounter` is an id from enemies.json or a generated encounter object
+// (rival duels are built at runtime, so they never live in a table).
+export function scriptedBattle(chimera, encounter, content, seed) {
+  const enc = typeof encounter === 'string' ? content.encounters[encounter] : encounter;
+  const battle = createBattle([chimera], enc, content, seed, 1);
   let guard = 0;
   while (!battle.over && guard++ < 300) {
     const action = pilotAction(battle);
@@ -129,9 +134,30 @@ export function sampleBuilds(content, n, seed) {
   return builds;
 }
 
+// Rival duels at their first-meeting tier. A rival with counterBias reads
+// the player's stable, so the harness gives it an empty one — we measure
+// the published matchup, not a build-specific counter.
+export function rivalEncounters(content, seed = 2026, defeats = 0) {
+  if (!content.rivals) return [];
+  const state = {
+    seed,
+    chimeras: [],
+    campaign: { heldNodes: [], notoriety: 0, rivals: {} },
+  };
+  return rivalList(content).map((rival) => {
+    state.campaign.rivals[rival.id] = { defeats, losses: 0, lastMetAt: null };
+    return rivalEncounter(state, rival, content);
+  });
+}
+
 export function runSim(content, { builds = 40, seedsPer = 3, grade = 'standard', seed = 2026 } = {}) {
   const pool = sampleBuilds(content, builds, seed);
-  const encounterIds = Object.keys(content.encounters);
+  const encounters = [
+    ...Object.values(content.encounters),
+    ...rivalEncounters(content, seed),
+  ];
+  const encounterIds = encounters.map((e) => e.id);
+  const byId = Object.fromEntries(encounters.map((e) => [e.id, e]));
   const rows = [];
 
   for (const [i, build] of pool.entries()) {
@@ -143,7 +169,7 @@ export function runSim(content, { builds = 40, seedsPer = 3, grade = 'standard',
     for (const enc of encounterIds) {
       let encWins = 0;
       for (let s = 0; s < seedsPer; s++) {
-        const r = scriptedBattle(chimera, enc, content, hashString(`b${i}e${enc}s${s}`));
+        const r = scriptedBattle(chimera, byId[enc], content, hashString(`b${i}e${enc}s${s}`));
         games++;
         if (r.outcome === 'win') {
           wins++;
@@ -223,7 +249,8 @@ function main() {
   const t0 = Date.now();
   const { rows, flags, encounterIds } = runSim(content, opts);
 
-  const encHeads = encounterIds.map((e) => e.padStart(9)).join(' ');
+  const short = (e) => (e.startsWith('rival_') ? '@' + e.slice(6) : e).slice(0, 9);
+  const encHeads = encounterIds.map((e) => short(e).padStart(9)).join(' ');
   console.log(`win-rate table (${rows.length} builds × ${encounterIds.length} encounters × ${opts.seedsPer} seeds, grade=${opts.grade})\n`);
   console.log(`  win%  turns ${encHeads}  build`);
   for (const row of rows) {
