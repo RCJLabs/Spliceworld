@@ -2,7 +2,7 @@
 
 ## Session 3 — M2: Extractor & Grades ✅
 
-**Acceptance criterion:** raising a donor to Prime provably yields better parts than extracting a Juvenile — **passes** both headless (identical-genetics twins: juvenile extraction → Standard ×1.0, twin raised to Prime with care → Apex ×1.5) and in-browser through the real ceremony UI (juvenile goat → Standard tokens; second goat warped to Prime with care → Prime tokens, both side by side in the Vault).
+**Acceptance criterion:** raising a donor to Prime provably yields better parts than extracting a Juvenile — **passes** both headless (identical-genetics twins: juvenile extraction → Standard ×1.0, twin raised to Prime with care → Prime ×1.25; the formula-edge tests separately prove 3★ pampered Prime → Apex and 5★ perfect Prime → Prismatic) and in-browser through the real ceremony UI (juvenile goat → Standard tokens; second goat warped to Prime with care → Prime tokens, both side by side in the Vault).
 
 ### What shipped
 - **Grade formula** (`splice/extract.js`, pure): score = (avg potential stars/5) × age factor (Juvenile 0.35 / Adult 0.75 / **Prime 1.0** / Elder 0.8) × (condition/100); thresholds Standard <0.35 ≤ Prime <0.55 ≤ Apex <0.75 ≤ Prismatic. Care has teeth: a neglected Prime donor grades Standard (Law 3). Grades carry stat multipliers (×1/×1.25/×1.5/×2) for the M4 battle engine; Apex/Prismatic ability upgrades also land in M4.
