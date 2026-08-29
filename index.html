@@ -14,21 +14,30 @@
     <p class="tagline">Ethically ambiguous genetics. Family-friendly results.™</p>
   </header>
 
-  <main>
-    <section class="card stage-card">
-      <h2 id="nickname">…</h2>
-      <p id="recipe" class="recipe"></p>
-      <div id="creature-stage" class="stage" aria-live="polite"></div>
-      <p id="save-info" class="save-info"></p>
-    </section>
+  <nav class="tabs" id="tabs">
+    <button type="button" data-screen="ranch">Ranch</button>
+    <button type="button" data-screen="slab">Splice Slab</button>
+  </nav>
 
-    <section class="card">
-      <h3>Frame</h3>
-      <div id="frame-picker" class="frame-picker"></div>
-      <h3>Sockets</h3>
-      <div id="slot-grid" class="slot-grid"></div>
-      <button id="btn-random" type="button" class="big-btn">⚡ Random Splice</button>
-    </section>
+  <main>
+    <div id="screen-ranch" class="screen" hidden></div>
+
+    <div id="screen-slab" class="screen" hidden>
+      <section class="card stage-card">
+        <h2 id="nickname">…</h2>
+        <p id="recipe" class="recipe"></p>
+        <div id="creature-stage" class="stage" aria-live="polite"></div>
+        <p id="save-info" class="save-info"></p>
+      </section>
+
+      <section class="card">
+        <h3>Frame</h3>
+        <div id="frame-picker" class="frame-picker"></div>
+        <h3>Sockets</h3>
+        <div id="slot-grid" class="slot-grid"></div>
+        <button id="btn-random" type="button" class="big-btn">⚡ Random Splice</button>
+      </section>
+    </div>
   </main>
 
   <footer>

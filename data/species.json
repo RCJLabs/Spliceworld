@@ -1,33 +1,57 @@
 {
-  "_doc": "Base fauna. Palettes drive part rendering via @primary/@secondary/@accent tokens. Tags feed the battle chart (M4). Ranch fields (upkeep, diet) arrive in M1 — do not stub them here early.",
+  "_doc": "Base fauna. Palettes drive part rendering via @primary/@secondary/@accent tokens. Tags feed the battle chart (M4). Ranch fields (M1): frame = which torso a purebred stock animal renders on; diet/feedCost = cost of one feed action; upkeepPerDay = housing drain while owned; mailOrderPrice = purchase price from the Mail-Order Menagerie catalog (null = conquest-only, arrives M5); growthHours = age-stage thresholds from birth (juvenile before adult).",
   "species": [
     {
       "id": "bear",
       "name": "Bear",
       "role": "Power",
       "tags": [],
-      "palette": { "primary": "#9c6b3f", "secondary": "#7a5230", "accent": "#e8c39e" }
+      "palette": { "primary": "#9c6b3f", "secondary": "#7a5230", "accent": "#e8c39e" },
+      "frame": "L",
+      "diet": "Premium salmon budget",
+      "feedCost": 10,
+      "upkeepPerDay": 12,
+      "mailOrderPrice": null,
+      "growthHours": { "adult": 12, "prime": 36, "elder": 96 }
     },
     {
       "id": "eagle",
       "name": "Eagle",
       "role": "Aerial Striker",
       "tags": ["Airborne"],
-      "palette": { "primary": "#6d573f", "secondary": "#f5efe0", "accent": "#e9a820" }
+      "palette": { "primary": "#6d573f", "secondary": "#f5efe0", "accent": "#e9a820" },
+      "frame": "S",
+      "diet": "Free-range mice",
+      "feedCost": 7,
+      "upkeepPerDay": 8,
+      "mailOrderPrice": null,
+      "growthHours": { "adult": 8, "prime": 24, "elder": 72 }
     },
     {
       "id": "goat",
       "name": "Goat",
       "role": "Economy",
       "tags": [],
-      "palette": { "primary": "#ddd6c7", "secondary": "#b3a98f", "accent": "#c9a86a" }
+      "palette": { "primary": "#ddd6c7", "secondary": "#b3a98f", "accent": "#c9a86a" },
+      "frame": "M",
+      "diet": "Eats literally anything",
+      "feedCost": 2,
+      "upkeepPerDay": 3,
+      "mailOrderPrice": 60,
+      "growthHours": { "adult": 6, "prime": 18, "elder": 60 }
     },
     {
       "id": "cobra",
       "name": "Cobra",
       "role": "Poisoner",
       "tags": ["Venomous"],
-      "palette": { "primary": "#5f8f52", "secondary": "#cfe3a2", "accent": "#2e5b34" }
+      "palette": { "primary": "#5f8f52", "secondary": "#cfe3a2", "accent": "#2e5b34" },
+      "frame": "S",
+      "diet": "Gourmet eggs, no questions",
+      "feedCost": 6,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": null,
+      "growthHours": { "adult": 10, "prime": 30, "elder": 80 }
     }
   ]
 }

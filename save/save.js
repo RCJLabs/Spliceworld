@@ -3,14 +3,25 @@
 // migration function below. Never reset player saves.
 
 import { newWorldSeed } from '../util/rng.js';
+import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
-// Example for the future:
-//   2: (save) => { save.ranch = { stock: [] }; return save; },
-const migrations = {};
+// Migrations run before content data is loaded, so they only shape state;
+// anything needing content/RNG (e.g. starter herd) happens on boot via
+// seeded flags (see ranch.ensureRanchSeeded).
+const migrations = {
+  // v2 (M1): ranch, stock, and the upkeep economy.
+  2: (save) => {
+    save.funds = 300;
+    save.ranch = { stock: [], penCapacity: 4, animalCount: 0, seeded: false };
+    save.lastTickAt = null;
+    save.activeScreen = 'ranch';
+    return save;
+  },
+};
 
 export function newGameState() {
   return {
@@ -23,8 +34,14 @@ export function newGameState() {
     // Stub for the AI director (ROADMAP §8.5): record tag/part usage from
     // day one so data exists when the director lands post-v0.1.
     directorStats: { partUse: {}, tagUse: {} },
+    funds: TUNING.startingFunds,
+    ranch: { stock: [], penCapacity: TUNING.penStartCapacity, animalCount: 0, seeded: false },
+    lastTickAt: null,
+    activeScreen: 'ranch',
   };
 }
+// (The v2 migration above keeps hardcoded values on purpose: migrations
+// reproduce the historical schema even if TUNING drifts later.)
 
 export function migrate(save) {
   if (typeof save.saveVersion !== 'number') {

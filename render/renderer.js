@@ -123,9 +123,25 @@ export function validateGenome(genome, content) {
   return errors;
 }
 
+// Care-state overlays (M1): generic, species-blind. Dirt smudges draw in
+// torso space (clipped like a hide); sparkles draw in viewBox space.
+const DIRT_SHAPES = [
+  { type: 'ellipse', cx: -34, cy: 22, rx: 16, ry: 9, fill: '#6e5a3f', stroke: 'none', opacity: 0.4 },
+  { type: 'ellipse', cx: 28, cy: -12, rx: 12, ry: 7, fill: '#6e5a3f', stroke: 'none', opacity: 0.35 },
+  { type: 'ellipse', cx: 2, cy: 40, rx: 10, ry: 6, fill: '#5c4a33', stroke: 'none', opacity: 0.4 },
+];
+const SPARKLE_PATH = 'M 0 -12 L 3 -3 L 12 0 L 3 3 L 0 12 L -3 3 L -12 0 L -3 -3 Z';
+const SPARKLE_SPOTS = [
+  { x: -128, y: -118, s: 1 },
+  { x: 138, y: -86, s: 0.7 },
+  { x: -158, y: 36, s: 0.8 },
+];
+
 // Returns a complete inline-<svg> string for the given genome.
 // idPrefix keeps defs ids unique when several creatures share a document.
-export function renderCreatureSVG(genome, content, { idPrefix = 'cw' } = {}) {
+// condition: null | 'gleaming' | 'scruffy' (see ranch.conditionTier).
+// extraScale multiplies the frame scale (juvenile portraits render small).
+export function renderCreatureSVG(genome, content, { idPrefix = 'cw', condition = null, extraScale = 1 } = {}) {
   const errors = validateGenome(genome, content);
   if (errors.length) throw new Error('Bad genome: ' + errors.join('; '));
 
@@ -141,6 +157,11 @@ export function renderCreatureSVG(genome, content, { idPrefix = 'cw' } = {}) {
     if (slot === 'torso') {
       layers.push(`<g>${shapesToSVG(frame.torso, torsoPalette)}</g>`);
       continue;
+    }
+    if (slot === 'organ' && condition === 'scruffy') {
+      // Dirt sits just under the near limbs, clipped like a hide overlay —
+      // drawn whether or not an organ is spliced.
+      layers.push(`<g clip-path="url(#${clipId})">${shapesToSVG(DIRT_SHAPES, NEUTRAL_PALETTE)}</g>`);
     }
     const partId = genome.parts[slot];
     if (!partId) continue;
@@ -160,11 +181,20 @@ export function renderCreatureSVG(genome, content, { idPrefix = 'cw' } = {}) {
     );
   }
 
-  const frameScale = frame.scale !== 1 ? ` transform="scale(${frame.scale})"` : '';
+  const scale = frame.scale * extraScale;
+  const frameScale = scale !== 1 ? ` transform="scale(${scale})"` : '';
+  const sparkles = condition === 'gleaming'
+    ? SPARKLE_SPOTS.map(
+        (p) =>
+          `<path d="${SPARKLE_PATH}" fill="#ffe9a3" stroke="none" opacity="0.9" ` +
+          `transform="translate(${p.x} ${p.y}) scale(${p.s})"/>`
+      ).join('')
+    : '';
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-230 -230 460 440" role="img" aria-label="Spliced creature">` +
     `<defs><clipPath id="${clipId}">${silhouetteToSVG(frame.silhouette)}</clipPath></defs>` +
     `<g${frameScale}>${layers.join('')}</g>` +
+    sparkles +
     `</svg>`
   );
 }

@@ -35,6 +35,33 @@ h1 span { color: var(--zap); }
 
 .tagline { margin: 2px 0 0; font-size: 0.78rem; color: var(--muted); }
 
+.tabs {
+  display: flex;
+  gap: 6px;
+  max-width: 560px;
+  margin: 8px auto 0;
+  padding: 0 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.tabs button {
+  flex: 1;
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  padding: 10px 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.tabs button.active { color: var(--goo); border-color: var(--goo); }
+
+.screen { display: flex; flex-direction: column; gap: 12px; }
+
 main {
   flex: 1;
   width: 100%;
@@ -133,6 +160,84 @@ main {
   cursor: pointer;
 }
 .big-btn:active { transform: translateY(1px); }
+
+/* --- Ranch screen --- */
+
+.econ-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+  text-align: center;
+}
+.econ-row .econ-label {
+  display: block;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.econ-row strong { font-size: 0.95rem; color: var(--text); }
+
+.ranch-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ranch-actions button {
+  flex: 1 1 150px;
+  min-width: 0;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.ranch-msg { margin: 10px 0 0; font-size: 0.75rem; color: var(--zap); font-style: italic; }
+
+.animal-card { display: flex; gap: 10px; align-items: flex-start; }
+.portrait {
+  flex: 0 0 108px;
+  background: radial-gradient(circle at 50% 45%, #35305e 0%, var(--panel-2) 75%);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.portrait svg { display: block; width: 100%; height: auto; }
+
+.animal-info { flex: 1; min-width: 0; }
+.animal-info h4 { margin: 0; font-size: 1rem; color: var(--goo); }
+.animal-info .sex { color: var(--zap); font-weight: 400; }
+.animal-info .meta { margin: 2px 0; font-size: 0.68rem; color: var(--muted); }
+
+.cond-bar {
+  height: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 6px 0 2px;
+}
+.cond-fill { height: 100%; border-radius: 5px; }
+.tier-gleaming { background: var(--goo); }
+.tier-fine { background: #d8c94f; }
+.tier-scruffy { background: #d9455f; }
+.cond-label { margin: 0 0 4px; font-size: 0.68rem; color: var(--muted); }
+
+.care-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px; }
+.care-row button {
+  min-width: 0;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.care-row button:disabled { opacity: 0.45; cursor: default; }
+
+@media (max-width: 420px) {
+  .animal-card { flex-direction: column; }
+  .portrait { flex-basis: auto; width: 100%; max-width: 220px; align-self: center; }
+}
 
 footer {
   border-top: 1px solid var(--line);

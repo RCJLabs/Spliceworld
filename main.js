@@ -6,6 +6,14 @@ import { loadContent } from './data/loader.js';
 import { loadSave, saveGame, SAVE_VERSION } from './save/save.js';
 import { renderCreatureSVG, SLOTS } from './render/renderer.js';
 import { rngStream, pick } from './util/rng.js';
+import { ensureRanchSeeded, applyElapsed } from './ranch/ranch.js';
+import { renderRanchScreen } from './ranch/ui.js';
+
+// Dev time-warp: ?warp=48 pretends 48 hours have passed. QA-only — the
+// warp lives in the URL, never in the save, so removing it can produce a
+// lastTickAt in the future; applyElapsed clamps that to zero elapsed.
+const WARP_MS = (Number(new URLSearchParams(location.search).get('warp')) || 0) * 3600000;
+const NOW = () => Date.now() + WARP_MS;
 
 const SLOT_LABELS = {
   head: 'Head',
@@ -24,6 +32,9 @@ const NICKNAMES = [
 
 const TICKER_LINES = [
   'Local zoo reports goat shortage. Authorities baffled.',
+  'Feed store owner retires early, thanks "one extremely loyal customer."',
+  'Study finds ranch animals happiest when brushed by cackling owners.',
+  'Mail-order livestock industry booming. Postal service requests hazard pay.',
   'Area geneticist "just asking questions" about eagle wingspans.',
   'Hardware store sells out of googly eyes. No one is asking why.',
   'Weather service issues advisory for "unusually confident livestock."',
@@ -166,11 +177,37 @@ function buildControls() {
   $('#btn-random').addEventListener('click', randomSplice);
 }
 
+const ranchCtx = {
+  get state() { return state; },
+  get content() { return content; },
+  now: NOW,
+  save: () => saveGame(state),
+};
+
+function showScreen(name) {
+  state.activeScreen = name;
+  saveGame(state);
+  $('#screen-ranch').hidden = name !== 'ranch';
+  $('#screen-slab').hidden = name !== 'slab';
+  document.querySelectorAll('#tabs button').forEach((b) => {
+    b.classList.toggle('active', b.dataset.screen === name);
+  });
+  if (name === 'ranch') tickRanch();
+}
+
+// Timestamps, not intervals: recompute elapsed effects on load, on focus,
+// and on a slow display refresh while the ranch is visible.
+function tickRanch() {
+  applyElapsed(state, content, NOW());
+  saveGame(state);
+  if (!$('#screen-ranch').hidden) renderRanchScreen($('#screen-ranch'), ranchCtx);
+}
+
 async function boot() {
   try {
     content = await loadContent('.');
   } catch (err) {
-    $('#creature-stage').innerHTML =
+    document.querySelector('main').innerHTML =
       `<p class="boot-error">Could not load content data (${err.message}). ` +
       `If you opened index.html directly, serve it instead: <code>python3 -m http.server</code></p>`;
     return;
@@ -183,10 +220,24 @@ async function boot() {
     recordDirectorStats(state.genome);
   }
   state.nickname ??= 'Chompers';
+  ensureRanchSeeded(state, content, NOW());
+  applyElapsed(state, content, NOW());
 
   buildControls();
   $('#ticker').textContent = TICKER_LINES[0];
   persistAndPaint();
+
+  document.querySelectorAll('#tabs button').forEach((btn) => {
+    btn.addEventListener('click', () => showScreen(btn.dataset.screen));
+  });
+  showScreen(state.activeScreen === 'slab' ? 'slab' : 'ranch');
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) tickRanch();
+  });
+  setInterval(() => {
+    if (!document.hidden) tickRanch();
+  }, 30000);
 }
 
 boot();
