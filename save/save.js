@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -26,6 +26,16 @@ const migrations = {
     save.inventory = { vials: [], parts: [], tokenCount: 0 };
     return save;
   },
+  // v4 (M3): chimeras + Splice-Dex combo discoveries. The old dev-slab
+  // screen became the Theater; the legacy free-form `genome` field is
+  // retained untouched (never destroy player data), just no longer shown.
+  4: (save) => {
+    save.chimeras = [];
+    save.chimeraCount = 0;
+    save.discoveredCombos = [];
+    if (save.activeScreen === 'slab') save.activeScreen = 'theater';
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -44,6 +54,9 @@ export function newGameState() {
     lastTickAt: null,
     activeScreen: 'ranch',
     inventory: { vials: [], parts: [], tokenCount: 0 },
+    chimeras: [],
+    chimeraCount: 0,
+    discoveredCombos: [],
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations

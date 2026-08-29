@@ -1,0 +1,33 @@
+{
+  "_doc": "Combo abilities (M3): splicing both listed parts onto one chimera discovers the combo, permanently logged in the save for the Splice-Dex (M7). Combat effects resolve through the keyword system in M4 — 'keyword' here is the design intent, display-only for now. ~12 combos at v0.1; 4 ship with M3.",
+  "combos": [
+    {
+      "id": "injection",
+      "name": "Injection",
+      "parts": ["cobra_head", "cobra_organ"],
+      "keyword": "Venom+",
+      "desc": "Every bite delivers a bonus Venom stack. The lab smells like regret."
+    },
+    {
+      "id": "orbital_headbutt",
+      "name": "Orbital Headbutt",
+      "parts": ["goat_head", "eagle_forelimbs"],
+      "keyword": "IgnoreGuard",
+      "desc": "Gravity-assisted disagreement. Ignores Guard."
+    },
+    {
+      "id": "squeeze_play",
+      "name": "Squeeze Play",
+      "parts": ["bear_forelimbs", "cobra_tail"],
+      "keyword": "Trap",
+      "desc": "A hug with a clause. Traps the target."
+    },
+    {
+      "id": "slipstream",
+      "name": "Slipstream",
+      "parts": ["cobra_hide", "eagle_tail"],
+      "keyword": "EvasionUp",
+      "desc": "Strike, then simply decline to be there. Evasion up after attacking."
+    }
+  ]
+}

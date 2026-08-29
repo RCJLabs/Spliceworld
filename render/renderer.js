@@ -33,6 +33,7 @@ export function indexContent(raw) {
     frames: byId(raw.frames.frames),
     parts: byId(raw.parts.parts),
     species: byId(raw.species.species),
+    combos: raw.combos ? byId(raw.combos.combos) : {},
   };
 }
 

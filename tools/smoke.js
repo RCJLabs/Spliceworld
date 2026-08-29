@@ -17,6 +17,8 @@ import {
 import {
   GRADES, GRADE_INDEX, gradeFor, avgStars, extractAnimal,
 } from '../splice/extract.js';
+import { analyze } from '../splice/physiology.js';
+import { spliceChimera, validateSplice, isSettled, chimeraGenome } from '../splice/theater.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -25,6 +27,7 @@ const content = indexContent({
   frames: readJSON('data/frames.json'),
   parts: readJSON('data/parts.json'),
   species: readJSON('data/species.json'),
+  combos: readJSON('data/combos.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -255,6 +258,84 @@ star5.birthAt = t0 - content.species.goat.growthHours.prime * HOUR;
 star5.condition = 100;
 assert.equal(gradeFor(star5, content, t0).id, 'prismatic', 'the perfect goat exists');
 assert.equal(Math.round(avgStars(star5)), 5);
+
+// --- M3 acceptance: the panel explains why the flightless hippo can't fly.
+// Our hippo: eagle wings on the L Rumbler frame stacked with dense parts.
+const tk = (partId, grade = 'standard') => ({
+  id: `tk-${partId}-${grade}`, partId, grade,
+  donor: { name: 'Testie', species: partId.split('_')[0], stars: 3, extractedAt: t0 },
+});
+const hippoTokens = [tk('bear_head'), tk('eagle_forelimbs'), tk('bear_hindlimbs'), tk('bear_hide')];
+const hippo = analyze('L', hippoTokens, content);
+assert.ok(hippo.flight.hasLiftSurface && !hippo.flight.capable, 'wings on a rumbler: flightless');
+const flightRow = hippo.rows.find((r) => r.label === 'Flight');
+assert.equal(flightRow.value, 'FLIGHTLESS');
+assert.ok(
+  flightRow.note.includes(`Lift ${hippo.lift}`) && flightRow.note.includes(`${hippo.mass} mass`),
+  `panel explains with the actual numbers: "${flightRow.note}"`
+);
+assert.ok(hippo.lift < hippo.mass);
+
+// The same wings on a light build fly; no wings stays grounded politely.
+const lightBird = analyze('S', [tk('eagle_head'), tk('eagle_forelimbs')], content);
+assert.ok(lightBird.flight.capable, `light build flies (lift ${lightBird.flight.lift} vs mass ${lightBird.mass})`);
+assert.equal(lightBird.rows.find((r) => r.label === 'Flight').value, 'FLIGHT-CAPABLE');
+const grounded = analyze('M', [tk('goat_head')], content);
+assert.ok(!grounded.flight.hasLiftSurface);
+assert.equal(grounded.rows.find((r) => r.label === 'Flight').value, 'Ground unit');
+// Grade quality lifts harder: apex wings can hoist what standard cannot.
+const heavyS = [tk('bear_head'), tk('eagle_forelimbs'), tk('bear_hide'), tk('bear_hindlimbs')];
+const heavyApex = [tk('bear_head'), tk('eagle_forelimbs', 'apex'), tk('bear_hide'), tk('bear_hindlimbs')];
+assert.ok(!analyze('S', heavyS, content).flight.capable && analyze('S', heavyApex, content).flight.capable,
+  'apex wings out-lift standard wings');
+
+// Instability: purebred calm vs four-species chaos; thermal conflict bites.
+const purebred = analyze('M', [tk('goat_head'), tk('goat_forelimbs'), tk('goat_hindlimbs'), tk('goat_hide')], content);
+assert.equal(purebred.purebredSpecies, 'goat');
+assert.equal(purebred.instability, 0, 'purebred set steadies the splice');
+assert.ok(purebred.rows.some((r) => r.label === 'Purebred bonus' && r.value === 'Cast-Iron Constitution'));
+const chaos = analyze('M', [tk('bear_head'), tk('eagle_forelimbs', 'apex'), tk('goat_hindlimbs'), tk('cobra_hide', 'prime')], content);
+assert.ok(chaos.instability > purebred.instability);
+assert.ok(!chaos.thermal.ok, 'bear + cobra cannot agree on a temperature');
+assert.ok(chaos.settlingMs > purebred.settlingMs, 'instability stretches settling');
+assert.ok(chaos.settlingMs <= 4 * HOUR + 1);
+
+// --- Splicing: tokens leave the vault, chimera settles on a timer.
+const lab = { ...newGameState(), seed: 321 };
+lab.inventory.parts = [tk('cobra_head'), tk('cobra_organ'), tk('goat_hindlimbs'), tk('goat_head')];
+assert.ok(validateSplice(lab, 'M', {}, content).length, 'headless splices are rejected');
+const born = spliceChimera(
+  lab, 'S',
+  { head: 'tk-cobra_head-standard', organ: 'tk-cobra_organ-standard', hindlimbs: 'tk-goat_hindlimbs-standard' },
+  content, t0
+);
+assert.ok(born.ok, born.msg);
+assert.equal(lab.inventory.parts.length, 1, 'consumed tokens left the vault');
+assert.equal(lab.chimeras.length, 1);
+const c = lab.chimeras[0];
+assert.ok(!isSettled(c, t0) && isSettled(c, c.settleUntil), 'settling flips exactly on time');
+assert.ok(c.settleUntil - c.createdAt >= 30 * 60000, 'settling has a 30min floor');
+assert.deepEqual(lab.discoveredCombos, ['injection'], 'cobra head + venom sac discovers Injection');
+assert.equal(born.newCombos[0].name, 'Injection');
+const svgChim = renderCreatureSVG(chimeraGenome(c, content), content, { idPrefix: 'chz' });
+assert.ok(svgChim.length > 200, 'chimera renders from its tokens');
+// Splicing the same combo again is not a re-discovery.
+lab.inventory.parts.push(tk('cobra_head', 'prime'), tk('cobra_organ', 'prime'));
+const again = spliceChimera(lab, 'S', { head: 'tk-cobra_head-prime', organ: 'tk-cobra_organ-prime' }, content, t0);
+assert.ok(again.ok && again.newCombos.length === 0 && lab.discoveredCombos.length === 1);
+// Determinism: same seed & order → same chimera names.
+const lab2 = { ...newGameState(), seed: 321 };
+lab2.inventory.parts = [tk('goat_head')];
+const born2 = spliceChimera(lab2, 'M', { head: 'tk-goat_head-standard' }, content, t0);
+assert.equal(born2.chimera.name, born.chimera.name, 'chimera naming is seed-deterministic');
+
+// --- v1 → v4 chain still carries everything forward.
+const m4 = migrate(structuredClone(v1Save));
+assert.equal(m4.saveVersion, SAVE_VERSION);
+assert.deepEqual(m4.chimeras, []);
+assert.deepEqual(m4.discoveredCombos, []);
+const slabUser = migrate({ ...structuredClone(v2Save), activeScreen: 'slab' });
+assert.equal(slabUser.activeScreen, 'theater', 'slab dwellers wake up in the Theater');
 
 // Time-warp safety: a lastTickAt in the future never rewinds state.
 const warp = freshRanchState();

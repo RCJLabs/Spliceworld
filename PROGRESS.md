@@ -1,5 +1,27 @@
 # PROGRESS
 
+## Session 4 — M3: Surgery Theater ✅
+
+**Acceptance criterion:** the panel correctly explains why the flightless hippo can't fly — **passes**. Our hippo is apex eagle wings + dense bear parts on the L Rumbler frame: the Flight row reads "FLIGHTLESS — Lift 135 cannot hoist 218 mass… try a lighter frame or fewer dense parts," and switching the same build to the S frame live-flips it to "FLIGHT-CAPABLE — Lift 135 comfortably hoists 98 mass." Verified headless (assertions on the row text and numbers) and in-browser through the real selects.
+
+### What shipped
+- **Physiology data on all content**: every part now carries `stats` (hp/power/armor/speed/stamina/regen), `phys` (mass, metabolic draw, lift on wings), and its own `tags`; frames carry base `phys`; species carry `thermal` comfort bands and purebred `setBonus` definitions. New `data/combos.json` with 4 combo abilities (Injection, Orbital Headbutt, Squeeze Play, Slipstream — effects wire up via M4 keywords).
+- **Physiology engine** (`splice/physiology.js`, pure): computes power-to-weight, speed after mass penalty, stamina pool + net regen vs. draw ("runs HOT" warning), thermal band as the intersection of donor species bands (disjoint bands = thermal chaos → instability), flight (lift ≥ mass; grade multipliers apply to lift, so apex wings out-hoist standard), purebred detection, instability, settling forecast, combo detection — every metric returned as a row with a plain-language explanation (Law 4).
+- **Instability & settling**: (extra species ×18) + (extra grade tiers ×8) + thermal chaos 15 − purebred 20, clamped 0–100; settling = 30 min + up to 3.5 h. Chimeras carry `settleUntil` timestamps; Pens shows live countdowns; deploy-while-unsettled Rejection debuffs land in M4.
+- **The Theater replaces the M0 dev slab**: frame picker + slot selects listing only owned Vault tokens (grade + lineage in the label, cross-slot double-use blocked), live creature preview, live panel, SPLICE IT (head required). Tokens are consumed into the chimera; combo discoveries are permanent Splice-Dex entries with a toast.
+- **Pens screen**: chimera roster with portraits, instability/bond, settling state, full part manifest with lineage.
+- **SAVE_VERSION → 4** (chimeras, discoveredCombos; `slab` activeScreen migrates to `theater`; legacy `genome` field retained untouched). v1→v4 chain tested headless + in-browser.
+- Chimera naming is seed-deterministic; director stub now counts real spliced builds.
+
+### Known issues
+- Cobra's thermal band moved to [18,40] so bear+cobra genuinely conflict (was touching at exactly 15°).
+- Set bonuses, combo effects, Rejection debuffs, and stamina-burn are display/data only until the M4 battle engine consumes them.
+- Chimera names aren't renameable yet (obedience/bond UX is M7 territory).
+- Theater draft is screen-local and unsaved by design (an unspliced slab is a shopping cart).
+
+### Next session — M4: Battle Engine
+First task: DOM-free battle core (`battle/`) — turn loop, team of 3, switching, stamina costs from physiology, tag chart, keyword resolver — then Gen 1 human units in `enemies.json` and one commander boss with a second stage. Done when: a full battle plays out and Law 1 fires (injury or capture feeds back).
+
 ## Session 3 — M2: Extractor & Grades ✅
 
 **Acceptance criterion:** raising a donor to Prime provably yields better parts than extracting a Juvenile — **passes** both headless (identical-genetics twins: juvenile extraction → Standard ×1.0, twin raised to Prime with care → Prime ×1.25; the formula-edge tests separately prove 3★ pampered Prime → Apex and 5★ perfect Prime → Prismatic) and in-browser through the real ceremony UI (juvenile goat → Standard tokens; second goat warped to Prime with care → Prime tokens, both side by side in the Vault).
