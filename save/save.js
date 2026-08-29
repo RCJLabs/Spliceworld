@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -105,6 +105,15 @@ const migrations = {
     save.directorStats.dissections ??= [];
     return save;
   },
+  // v11 (Theater Tier II): facility upgrade levels. The L-class Rumbler
+  // chassis used to be free to everyone, so anyone who has already built on
+  // one is GRANDFATHERED to Tier II rather than having a frame taken away —
+  // never reset player progress, and never quietly delete it either.
+  11: (save) => {
+    const builtLarge = save.chimeras.some((c) => c.frame === 'L');
+    save.facility = { theater: builtLarge ? 2 : 1 };
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -132,6 +141,7 @@ export function newGameState() {
     news: [],
     settings: { muted: false },
     dex: { parts: [], enemies: [], traits: [] },
+    facility: { theater: 1 },
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations

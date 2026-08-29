@@ -13,6 +13,7 @@ import { canBreed, breedPair, hatchEgg, BREEDING } from './breeding.js';
 import { onboardingSteps, onboardingActive } from './onboarding.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
+import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade } from '../splice/facility.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -36,6 +37,48 @@ let pickA = ''; // breeding pen draft (screen-local)
 let pickB = '';
 let catalogPick = '';
 const CLASS_MARK = { air: '🪽 ', ground: '🦶 ', water: '🌊 ' };
+
+// Facility upgrades (ROADMAP §3.10). Every level here has to expand what
+// you can CREATE — a bigger chassis, another bay — never just a bigger
+// number (Law 2).
+function facilityCard(state, content) {
+  const rows = tracks(content).map((track) => {
+    const level = facilityLevel(state, track.id);
+    const current = levelData(content, track.id, level);
+    const up = nextUpgrade(state, content, track.id);
+    const blockedNode = up?.blockers.find((b) => b.kind === 'node');
+    const short = up?.blockers.find((b) => b.kind === 'funds');
+    return `
+      <div class="facility-row">
+        <div class="facility-head">
+          <strong>${track.icon} ${current?.name ?? track.name}</strong>
+          <span class="lineage">level ${level}${up ? '' : ' · maxed'}</span>
+        </div>
+        <p class="fine-print">${current?.blurb ?? ''}</p>
+        ${up ? `
+          <div class="facility-next">
+            <div>
+              <strong>${up.level.name}</strong>
+              <p class="fine-print">${up.level.blurb}</p>
+              ${blockedNode ? `<p class="fine-print locked-note">Needs ${nodeName(content, blockedNode.nodeId)} held.</p>` : ''}
+              ${short ? `<p class="fine-print locked-note">Short by $${short.short}.</p>` : ''}
+            </div>
+            <button type="button" data-act="upgrade" data-track="${track.id}" ${up.affordable ? '' : 'disabled'}>
+              $${up.level.cost}
+            </button>
+          </div>` : ''}
+      </div>`;
+  }).join('');
+  return `<section class="card"><h3>🏚 Facility</h3>${rows}</section>`;
+}
+
+function nodeName(content, nodeId) {
+  for (const region of Object.values(content.regions ?? {})) {
+    const node = region.nodes.find((n) => n.id === nodeId);
+    if (node) return node.name;
+  }
+  return nodeId;
+}
 
 function eggSVG(palette) {
   return (
@@ -116,7 +159,8 @@ export function renderRanchScreen(root, ctx) {
         <button type="button" data-act="order" ${catalog.length ? '' : 'disabled'}>Order</button>
       </div>
       <p class="ranch-msg">${lastMsg}</p>
-    </section>`;
+    </section>
+    ${facilityCard(state, content)}`;
 
   // Breeding Pen: adults of one species, opposite sexes. The egg does the rest.
   const eligible = state.ranch.stock.filter((a) => ageStage(a, content, t) !== 'juvenile');
@@ -257,6 +301,12 @@ export function renderRanchScreen(root, ctx) {
         result = careAction(ctx.state, btn.dataset.animal, btn.dataset.care, content, t2);
       } else if (btn.dataset.act === 'pen') {
         result = buyPenUpgrade(ctx.state);
+      } else if (btn.dataset.act === 'upgrade') {
+        result = buyUpgrade(ctx.state, content, btn.dataset.track);
+        if (result.ok) {
+          sfx.play('splice');
+          if (result.news) ctx.pushNews?.(result.news);
+        }
       } else if (btn.dataset.act === 'order') {
         result = buyMailOrder(ctx.state, catalogPick, content, t2);
       } else if (btn.dataset.act === 'breed') {

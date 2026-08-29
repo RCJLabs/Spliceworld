@@ -49,6 +49,7 @@ const content = indexContent({
   traits: readJSON('data/traits.json'),
   rivals: readJSON('data/rivals.json'),
   director: readJSON('data/director.json'),
+  facility: readJSON('data/facility.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -383,12 +384,24 @@ for (const enc of Object.values(content.encounters)) {
 }
 
 // --- M4: physiology → combatant mapping (moves from parts + combos).
+// Test helper: builds a chimera directly. These labs are about battles and
+// physiology, not about the shop, so the Theater is fully equipped — the
+// facility gate has its own block below, where it is the subject.
 function makeChimera(state2, frame, partGrades, now) {
+  state2.facility = { theater: 2 };
   for (const [pid, grade] of Object.entries(partGrades)) {
     state2.inventory.parts.push({ id: `bt-${pid}`, partId: pid, grade, donor: { name: 'Donor', species: pid.split('_')[0], stars: 3, extractedAt: now } });
   }
+  const used = new Set();
   const slots = Object.fromEntries(
-    Object.keys(partGrades).map((pid) => [content.parts[pid].slot, `bt-${pid}`])
+    Object.keys(partGrades).map((pid) => {
+      const slot = content.parts[pid].slot;
+      let socketId = slot;
+      let n = 2;
+      while (used.has(socketId)) socketId = `${slot}${n++}`;
+      used.add(socketId);
+      return [socketId, `bt-${pid}`];
+    })
   );
   const res = spliceChimera(state2, frame, slots, content, now);
   assert.ok(res.ok, res.msg);
@@ -1217,6 +1230,98 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     assert.ok(lab.dex.parts.includes(token.partId), 'logged in the Splice-Dex');
   }
   assert.equal(lab.campaign.containment.length, 0, 'the bay empties');
+}
+
+// --- Theater Tier II (§3.4 "Organ ×1, ×2 at Theater Tier 2" + §3.10 menu
+// --- upgrades). A purchase that expands what you can CREATE, not a number
+// --- that goes up: the L-class chassis and a second organ bay.
+{
+  const {
+    theaterGrants, facilityLevel, nextUpgrade, buyUpgrade, levelData,
+  } = await import('../splice/facility.js');
+  const { SOCKETS, slotOfSocket } = await import('../render/renderer.js');
+
+  // Socket ids vs slot types: every socket resolves to a slot a part declares.
+  assert.ok(SOCKETS.includes('organ2'), 'the second organ bay exists as a socket');
+  assert.equal(slotOfSocket('organ2'), 'organ', 'and an organ part is what fits it');
+  for (const socketId of SOCKETS) {
+    assert.ok(SLOTS.includes(slotOfSocket(socketId)), `${socketId} resolves to a real slot type`);
+  }
+  for (const frame of Object.values(content.frames)) {
+    assert.ok(frame.sockets.organ2, `${frame.id} carries the organ2 bay — geometry is not the gate`);
+  }
+
+  const fresh = { ...newGameState(), seed: 1234 };
+  assert.equal(facilityLevel(fresh, 'theater'), 1, 'a new lab starts at Tier I');
+  const tier1 = theaterGrants(fresh, content);
+  assert.deepEqual(tier1.frames, ['S', 'M'], 'Tier I is S and M — the Rumbler is bought, not given');
+  assert.ok(!tier1.sockets.includes('organ2'), 'and one organ bay');
+
+  // The gate: money AND territory. Law 2 — conquest expands creation.
+  fresh.funds = 100000;
+  const gated = nextUpgrade(fresh, content, 'theater');
+  assert.ok(gated.blockers.some((b) => b.kind === 'node'), 'all the money in the world will not skip the conquest');
+  assert.ok(!buyUpgrade(fresh, content, 'theater').ok);
+  fresh.campaign.heldNodes = ['barn_perimeter', 'downtown', 'checkpoint'];
+  fresh.funds = 10;
+  assert.ok(nextUpgrade(fresh, content, 'theater').blockers.some((b) => b.kind === 'funds'), 'nor will the conquest skip the money');
+  assert.ok(!buyUpgrade(fresh, content, 'theater').ok);
+
+  const cost = levelData(content, 'theater', 2).cost;
+  fresh.funds = cost + 5;
+  const bought = buyUpgrade(fresh, content, 'theater');
+  assert.ok(bought.ok, bought.msg);
+  assert.equal(fresh.funds, 5, 'and it charges you');
+  assert.equal(facilityLevel(fresh, 'theater'), 2);
+  assert.equal(nextUpgrade(fresh, content, 'theater'), null, 'Tier II is the top of the track for now');
+
+  const tier2 = theaterGrants(fresh, content);
+  assert.ok(tier2.frames.includes('L'), 'Tier II buys the Rumbler chassis');
+  assert.ok(tier2.sockets.includes('organ2'), 'and the second organ bay');
+
+  // The Theater enforces both, and says why.
+  const stocked = { ...newGameState(), seed: 55 };
+  stocked.inventory.parts = ['goat_head', 'wolf_organ', 'goat_organ'].map((partId, i) => ({
+    id: `t${i}`, partId, grade: 'standard', donor: { name: 'Doris', species: 'goat', stars: 3, extractedAt: 0 },
+  }));
+  const tier1Errors = validateSplice(stocked, 'L', { head: 't0', organ: 't1', organ2: 't2' }, content);
+  assert.ok(tier1Errors.some((e) => e.includes(content.frames.L.name)), 'Tier I refuses the Rumbler, by name');
+  assert.ok(tier1Errors.some((e) => e.includes('organ2')), 'and refuses the second bay, separately');
+  assert.equal(validateSplice(stocked, 'M', { head: 't0', organ: 't1' }, content).length, 0, 'what it does own still splices');
+
+  stocked.facility = { theater: 2 };
+  assert.deepEqual(validateSplice(stocked, 'L', { head: 't0', organ: 't1', organ2: 't2' }, content), [],
+    'Tier II accepts the Rumbler with two organs');
+  // A part still has to fit the bay it is put in.
+  assert.ok(validateSplice(stocked, 'L', { head: 't0', organ2: 't0' }, content).some((e) => e.includes('does not fit')));
+
+  // The build that comes out is a real seven-socket creature.
+  const two = spliceChimera(stocked, 'L', { head: 't0', organ: 't1', organ2: 't2' }, content, t0);
+  assert.ok(two.ok, two.msg);
+  assert.equal(Object.keys(two.chimera.tokens).length, 3);
+  assert.equal(two.chimera.tokens.organ2.partId, 'goat_organ', 'the second bay is stored under its own socket id');
+  assert.deepEqual(validateGenome(chimeraGenome(two.chimera, content), content), [], 'and it renders as a legal genome');
+  assert.ok(renderCreatureSVG(chimeraGenome(two.chimera, content), content).includes('<svg'));
+
+  // Two organs beat one — that is what the money bought.
+  const tk = (partId) => ({ id: 'x' + partId, partId, grade: 'apex', donor: { name: 'D', species: 'x', stars: 3, extractedAt: 0 } });
+  const one = analyze('L', [tk('gorilla_head'), tk('gorilla_hide'), tk('gorilla_organ')], content, 6);
+  const both = analyze('L', [tk('gorilla_head'), tk('gorilla_hide'), tk('gorilla_organ'), tk('wolf_organ')], content, 7);
+  assert.ok(both.stats.stamina > one.stats.stamina, 'a second bay is more stamina');
+  assert.ok(both.stats.hp > one.stats.hp, 'and more creature');
+  assert.ok(both.mass > one.mass, 'and more to carry');
+  assert.equal(both.rows.find((r) => r.label === 'Chassis').value, '4/7 sockets filled',
+    'and the panel counts the bay it can actually fill');
+
+  // Duplicate organs stack stats but must not hand the player two identical
+  // buttons — Tier II makes that possible for the first time.
+  const twins = { id: 'tw', name: 'Twins', frame: 'L', settleUntil: 0, instability: 0, bond: 100, injury: null,
+    tokens: { head: tk('gorilla_head'), organ: tk('wolf_organ'), organ2: tk('wolf_organ') } };
+  const cb = combatantFromChimera(twins, content, 1);
+  const names = cb.moves.map((m) => m.name);
+  assert.equal(new Set(names).size, names.length, 'no duplicated move buttons');
+  const single = combatantFromChimera({ ...twins, tokens: { head: tk('gorilla_head'), organ: tk('wolf_organ') } }, content, 1);
+  assert.ok(cb.staminaMax > single.staminaMax, 'but the stats still stack');
 }
 
 // --- AI Director (§3.7): the world studies you and answers. The tracking

@@ -1,5 +1,84 @@
 # PROGRESS
 
+## Session 17 — Theater Tier II, and a Facility to buy it from ✅
+
+ROADMAP §3.4 has always said "Organ ×1, **×2 at Theater Tier 2**", and §3.10 has
+always said upgrades are menu purchases. Both landed together, because a second
+organ bay you are simply handed is not an upgrade — it is a balance change.
+
+### Socket ids, not slot types
+The genome was `{ frame, parts: { slot: partId } }`, so a second organ had
+nowhere to go. Now `parts` is keyed by **socket id**: usually the same string as
+the slot type, except where a frame offers more than one bay. `organ2` resolves
+to slot type `organ` via `slotOfSocket()`.
+
+The payoff is that **every genome ever saved is still a valid genome** — old
+saves simply never mention `organ2`. `validateGenome`, `validateSplice` and
+`spliceChimera` all moved to socket ids; `spliceChimera` in particular now keys
+`chimera.tokens` by the socket the player *chose*, not the part's slot, or two
+organs would quietly collapse into one bay.
+
+### A Facility, not a hardcoded tier
+`data/facility.json` declares tracks of levels, each carrying `grants`. The
+Surgery Theater asks what frames and sockets it may build with; it does not
+know what a "tier" is. Adding Tier III, or the Gene Scanner and Extractor
+tracks §3.10 names, is a JSON edit.
+
+- **Tier I — Card Table & Optimism**: S and M frames, six bays.
+- **Tier II — The Rumbler Rig** ($900, requires holding the Highway
+  Checkpoint): the **L-class chassis** and the **second organ bay**.
+
+Gated on money **and** territory, because Law 2 says conquest must expand
+creation. All the money in the world will not skip the objective, and the
+objective will not skip the money — both asserted.
+
+### Never take a frame away
+The L frame used to be free to everyone. Rather than repossess it, the v11
+migration **grandfathers** any save that has ever built on one straight to Tier
+II. Verified in the browser both ways: a v10 save with an L chimera lands on
+Tier II, one without lands on Tier I.
+
+### What the money buys, measured
++5pp at standard, **+9pp at prime and apex**, +4pp at prismatic (team of three,
+median build) — a real upgrade that does not break the curve the last session
+built. No new degenerate builds at any grade. On one creature: an apex gorilla
+Rumbler goes 146→155 HP and 72→86 stamina with a wolf organ in the second bay,
+for 5 more mass.
+
+Two bays of the *same* organ stack their stats but no longer produce two
+identical move buttons — Tier II made that possible for the first time.
+
+### Details that would have been bugs
+- The physiology panel's Chassis row counts the bays you can actually fill, so
+  it says `6/7` at Tier II instead of quietly congratulating you at `6/6`.
+- `tools/bounds.js` now checks every socket a slot can occupy, not one per slot
+  type, so a badly-placed future bay is caught the same way a cropped tail was.
+- A draft holding a locked frame or bay corrects itself silently instead of
+  erroring at the player.
+
+### Verified
+`node tools/smoke.js` green with a new Tier II block — socket/slot resolution,
+every frame carrying the bay, the two-part gate, the Theater refusing the
+Rumbler *by name* and the second bay *separately*, a seven-socket splice that
+renders, and the stat/move contract. Four assertions deliberately broken to
+confirm they bite. `node tools/bounds.js` clean; `--plant` still caught.
+
+CDP at 380px: both migration paths, the locked Facility card naming both
+blockers, the purchase (funds charged, news line, track maxed), the Theater at
+Tier I with the Rumbler struck through, then Tier II with seven bays — filled
+all seven, spliced, and the creature renders with **both organ glyphs visible**.
+
+### Known issues
+- The Facility has exactly one track. Gene Scanner, Extractor efficiency,
+  Infirmary speed and Containment Cannon mk2 are all the same shape when their
+  systems are ready for them.
+- `organ2` is the only extra bay; a Tier III with a second hide or forelimb pair
+  would need socket geometry, not new plumbing.
+
+### Next session's first task
+Open. The remaining backlog is variants via mutation, rehabilitation of
+captured chimeras, and region contestation.
+
 ## Session 16 — AI Director: the world studies you ✅
 
 The tracking stub has been collecting `directorStats` since M0 on the promise

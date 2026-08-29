@@ -1136,3 +1136,41 @@ footer {
 .dossier { border-color: #6b5a2a; }
 .dossier h3 { color: #ffd66e; }
 .dossier strong { color: var(--text); }
+
+/* --- Facility upgrades (§3.10) ------------------------------------------ */
+
+.facility-row {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.facility-row:last-child { margin-bottom: 0; }
+.facility-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.facility-head strong { font-size: 0.86rem; }
+.facility-next {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+.facility-next > div { flex: 1; min-width: 0; }
+.facility-next strong { font-size: 0.8rem; color: var(--goo); }
+.facility-next button {
+  flex: 0 0 auto;
+  background: var(--goo);
+  color: #17240a;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.facility-next button:disabled { background: var(--panel); color: var(--muted); cursor: default; }
+.locked-note { color: #ffd66e; }
+.tier-line { font-size: 0.7rem; color: var(--muted); margin: 2px 0 8px; }
+.frame-picker button.locked { opacity: 0.4; cursor: default; }

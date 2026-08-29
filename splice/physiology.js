@@ -25,7 +25,10 @@ const P2W_RATINGS = [
 
 // tokens: array of vault tokens ({partId, grade, donor}). Grade multiplies
 // the part's stat block — husbandry compounds all the way into combat.
-export function analyze(frameId, tokens, content) {
+// socketCount: how many bays this build could fill, so the Chassis row is
+// honest at Theater Tier II (seven, with the second organ bay) as well as
+// Tier I (six).
+export function analyze(frameId, tokens, content, socketCount = 6) {
   const frame = content.frames[frameId];
   const rows = [];
 
@@ -173,11 +176,11 @@ export function analyze(frameId, tokens, content) {
   // Chassis completeness — the audit found a head-only chimera is legal and
   // measures a 0% win rate. Say so before they walk into a patrol with it.
   const filled = tokens.length;
-  const emptySockets = 6 - filled;
+  const emptySockets = Math.max(0, socketCount - filled);
   if (emptySockets > 0) {
     rows.push({
       label: 'Chassis',
-      value: `${filled}/6 sockets filled`,
+      value: `${filled}/${socketCount} sockets filled`,
       note: emptySockets >= 4
         ? `${emptySockets} empty sockets. This is barely a creature — it will not survive contact with a patrol. One extraction gives you all six parts of a donor; use them.`
         : emptySockets >= 2

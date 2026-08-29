@@ -1,0 +1,36 @@
+{
+  "_doc": "Facility upgrades (ROADMAP §3.10): menu purchases that expand what you can CREATE, never what you can grind (Law 2 — every conquest reward must expand creation). A track is an ordered list of levels; you buy them in order, each gated by money and usually by territory. `grants` is read by the systems that care: the Surgery Theater reads frames and sockets, so unlocking the Rumbler chassis and the second organ bay is a data edit, not an engine one. Levels beyond the last are simply absent — adding Tier III means appending an object here. Other tracks named in §3.10 (Gene Scanner, Extractor efficiency, Infirmary speed, Containment Cannon mk2) drop into the same shape.",
+  "tracks": [
+    {
+      "id": "theater",
+      "name": "Surgery Theater",
+      "icon": "⚗",
+      "screen": "theater",
+      "levels": [
+        {
+          "level": 1,
+          "name": "Tier I — Card Table & Optimism",
+          "cost": 0,
+          "blurb": "A folding table, a desk lamp, and a signed waiver you wrote yourself.",
+          "grants": {
+            "frames": ["S", "M"],
+            "sockets": ["head", "forelimbs", "hindlimbs", "tail", "hide", "organ"]
+          }
+        },
+        {
+          "level": 2,
+          "name": "Tier II — The Rumbler Rig",
+          "cost": 900,
+          "requiresNodes": ["checkpoint"],
+          "blurb": "A gantry, a winch, and a second organ bay. Unlocks the L-class Rumbler chassis and lets you install TWO organs — metabolism, or a second ability, or both if you can carry the mass.",
+          "unlockLine": "Surgery Theater upgraded to Tier II. The gantry arrived on a flatbed and the neighbours have stopped asking.",
+          "news": "Farm supply store reports a run on industrial winches. \"Big year for barns,\" says owner, unconvincingly.",
+          "grants": {
+            "frames": ["S", "M", "L"],
+            "sockets": ["head", "forelimbs", "hindlimbs", "tail", "hide", "organ", "organ2"]
+          }
+        }
+      ]
+    }
+  ]
+}

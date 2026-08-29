@@ -6,7 +6,19 @@
 // space (conventions documented in data/frames.json _doc). Any part fits
 // any socket of its slot — that contract is what makes splicing free-form.
 
+// SLOT TYPES: what kind of part something is. A part declares one of these.
 export const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+
+// SOCKET IDS: where a part is installed. Usually the same string as the slot
+// type — except where a frame offers more than one bay for a kind of part.
+// Surgery Theater Tier II opens `organ2` (ROADMAP §3.4: "Organ ×1, ×2 at
+// Theater Tier 2"). Keeping socket ids string-keyed means every genome ever
+// saved is still a valid genome: old saves simply never mention organ2.
+export const SOCKETS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ', 'organ2'];
+
+export function slotOfSocket(socketId) {
+  return socketId.replace(/\d+$/, '');
+}
 
 const OUTLINE = '#2b2440';
 const WHITE = '#ffffff';
@@ -15,12 +27,15 @@ const STROKE_DEFAULT = 5;
 
 // Painter's order, back to front. Slot 'forelimbs'/'hindlimbs' render into
 // both their _far and _near sockets.
+// [socket id in the genome, socket name on the frame]. Draw order is the
+// creature's depth order, back to front.
 const LAYERS = [
   ['forelimbs', 'forelimb_far'],
   ['hindlimbs', 'hindlimb_far'],
   ['tail', 'tail'],
   ['torso', null],
   ['hide', null],
+  ['organ2', 'organ2'],
   ['organ', 'organ'],
   ['hindlimbs', 'hindlimb_near'],
   ['forelimbs', 'forelimb_near'],
@@ -46,6 +61,7 @@ export function indexContent(raw) {
     rivalMeta: raw.rivals ? raw.rivals.rematch : null,
     directorRules: raw.director ? byId(raw.director.counters) : {},
     directorMeta: raw.director ? raw.director.tuning : null,
+    facility: raw.facility ? byId(raw.facility.tracks) : {},
     classRules: raw.classes ? { advantage: raw.classes.advantage, disadvantage: raw.classes.disadvantage } : { advantage: 1, disadvantage: 1 },
     campaignMeta: raw.regions
       ? { threatGen2At: raw.regions.threatGen2At, rescueEncounter: raw.regions.rescueEncounter }
@@ -139,12 +155,14 @@ function partPalette(part, content) {
 export function validateGenome(genome, content) {
   const errors = [];
   if (!content.frames[genome.frame]) errors.push(`Unknown frame: ${genome.frame}`);
-  for (const [slot, partId] of Object.entries(genome.parts ?? {})) {
-    if (!SLOTS.includes(slot)) errors.push(`Unknown slot: ${slot}`);
+  for (const [socketId, partId] of Object.entries(genome.parts ?? {})) {
+    if (!SOCKETS.includes(socketId)) errors.push(`Unknown socket: ${socketId}`);
     if (partId == null) continue;
     const part = content.parts[partId];
     if (!part) errors.push(`Unknown part: ${partId}`);
-    else if (part.slot !== slot) errors.push(`${partId} is a ${part.slot} part, not ${slot}`);
+    else if (part.slot !== slotOfSocket(socketId)) {
+      errors.push(`${partId} is a ${part.slot} part, not ${slotOfSocket(socketId)}`);
+    }
   }
   return errors;
 }

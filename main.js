@@ -12,7 +12,7 @@ import { renderTheaterScreen } from './splice/theater-ui.js';
 import { renderPensScreen } from './splice/pens-ui.js';
 import { runExtraction } from './splice/extract-ui.js';
 import { renderWarRoomScreen } from './campaign/ui.js';
-import { tickCampaign } from './campaign/campaign.js';
+import { tickCampaign, pushNews } from './campaign/campaign.js';
 import { renderDexScreen } from './splice/dex-ui.js';
 import * as sfx from './audio/sfx.js';
 
@@ -47,6 +47,7 @@ const ctx = {
   now: NOW,
   save: () => saveGame(state),
   refreshTicker: () => updateTicker(),
+  pushNews: (line) => { pushNews(state, line); updateTicker(); },
   onExtract: (animalId) =>
     runExtraction($('#overlay'), ctx, animalId, () => showScreen(state.activeScreen)),
 };
