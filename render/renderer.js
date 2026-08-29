@@ -34,7 +34,20 @@ export function indexContent(raw) {
     parts: byId(raw.parts.parts),
     species: byId(raw.species.species),
     combos: raw.combos ? byId(raw.combos.combos) : {},
+    enemies: raw.enemies ? byId(raw.enemies.units) : {},
+    encounters: raw.enemies ? byId(raw.enemies.encounters) : {},
+    keywords: raw.keywords ? byId(raw.keywords.keywords) : {},
+    tagChart: raw.keywords ? raw.keywords.tagChart : [],
   };
+}
+
+// Human units and vehicles: same shape interpreter, literal palettes.
+export function renderUnitSVG(unit) {
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-110 -110 220 220" role="img" aria-label="${esc(unit.name)}">` +
+    `<g>${unit.shapes.map((s) => shapeToSVG(s, NEUTRAL_PALETTE)).join('')}</g>` +
+    `</svg>`
+  );
 }
 
 function resolveColor(token, palette) {

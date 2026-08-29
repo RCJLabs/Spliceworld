@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -36,6 +36,14 @@ const migrations = {
     if (save.activeScreen === 'slab') save.activeScreen = 'theater';
     return save;
   },
+  // v5 (M4): battles. Serialized in-progress battle (survives reload),
+  // win/loss record, and Infirmary injuries on chimeras (Law 1).
+  5: (save) => {
+    save.battle = null;
+    save.warRecord = { wins: 0, losses: 0 };
+    for (const chimera of save.chimeras) chimera.injury = chimera.injury ?? null;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -57,6 +65,8 @@ export function newGameState() {
     chimeras: [],
     chimeraCount: 0,
     discoveredCombos: [],
+    battle: null,
+    warRecord: { wins: 0, losses: 0 },
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations

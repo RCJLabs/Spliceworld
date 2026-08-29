@@ -65,6 +65,7 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
     instability: report.instability,
     bond: 0, // raised via training/feeding — M5+ (§3.5)
     temperament: null, // seeded on settling — later milestone
+    injury: null, // Infirmary timer set by battle aftermath (Law 1)
   };
   state.chimeras.push(chimera);
 

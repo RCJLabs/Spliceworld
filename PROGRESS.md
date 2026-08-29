@@ -1,5 +1,29 @@
 # PROGRESS
 
+## Session 5 — M4: Battle Engine ✅
+
+**Acceptance criterion:** a full battle plays out and Law 1 fires — **passes**. Full battles run headless (deterministic, seed-reproducible logs) and in-browser through real buttons at 380px; every KO'd chimera leaves with an Infirmary timer that blocks redeployment (the browser QA run lost to the boss's second stage and both fighters landed in the Infirmary — the aftermath literally says "breed, raise, splice").
+
+### What shipped
+- **Battle engine** (`battle/engine.js`, pure/DOM-free/seeded): Pokémon structure — one active fighter per side, bench of up to 3, switching costs the turn, speed + Priority ordering. The battle object is plain serializable state inside the save (`SAVE_VERSION` 5): mid-battle reload resumes exactly (verified: same foe HP, same log, deterministic continuation via seed + rollCount).
+- **Physiology → combat, verbatim**: battle stats are the panel's numbers (HP/Power/Armor/Speed/Stamina pool, net regen minus metabolic draw — "runs hot" builds bleed stamina every turn). Moves cost stamina instead of PP; unaffordable moves drop off the menu; Catch Breath is always available.
+- **Moves come from parts**: each part's `move` (power/cost/acc/tags/keywords) in `parts.json`; hides + most organs are passive (stats only); combos grant their bonus move; grades upgrade moves (+15%/tier — the Apex/Prismatic "upgraded ability" rule).
+- **Keyword resolver**: recoil, venom (stacking, useless on Vehicles), stun, sleep, trap (blocks switching), guard, priority, charge (2-turn), ignoreArmor/ignoreGuard, knockback (rotates the other side's fighter), acc/power/evasion stages, staminaRestore, heal. Full ~30-keyword vocabulary listed in `data/keywords.json`; unimplemented ones are marked reserved.
+- **Data-driven tag chart** (`keywords.json`): Electric≫Aquatic, Ground misses Airborne, Sonic ignores Armor, Gas vs Vehicle = nothing, etc.
+- **Gen 1 enemies** (`data/enemies.json`): Riot Squad (Shield Wall), Net Trooper (Net Toss), Tranq Team (Sleep darts), Police Cruiser (Sonic siren, Vehicle/Armored) — all with procedural-SVG drawings and zero-death KO lines — plus **Captain Clampdown**, who slams a big red button mid-fight and transforms into The Clampdown 9000 (charge cannon). Encounters (2 patrols + boss) with wave lists and rewards.
+- **Rejection & obedience** (§3.5): deploying unsettled = −25% power/speed + raised command-ignore chance from instability (bond will lower it); ignoring chimeras improvise a move of their own.
+- **Battle screen**: briefing (team picker with ready/unsettled/Infirmary states + war record) → arena (sprites, HP/stamina bars, status icons, log, action grid) → aftermath.
+- **Law 1**: KO'd chimeras get cartoony injuries ("Bent Whiskers") with 2–4h Infirmary timers, shown in Pens, blocking deployment. Wins pay confiscated budget.
+
+### Known issues
+- Enemy AI is weighted-random; the M4.5 harness is the tool to tune it.
+- Capture (Containment Cannon, capture-on-loss → dissection countdown) is M5 — losses currently cost injuries + the record only.
+- Set bonuses (purebred) and temperament perks still display-only; wire them when M4.5 exposes balance numbers.
+- Battle briefing team draft is screen-local (unsaved), like the Theater draft.
+
+### Next session — M4.5: Balance Harness
+First task: `tools/sim.js` — Monte Carlo over part combos vs. the enemy roster using the same battle engine, win-rate tables, degenerate-build flags. Done when: it catches one broken combo planted on purpose.
+
 ## Session 4 — M3: Surgery Theater ✅
 
 **Acceptance criterion:** the panel correctly explains why the flightless hippo can't fly — **passes**. Our hippo is apex eagle wings + dense bear parts on the L Rumbler frame: the Flight row reads "FLIGHTLESS — Lift 135 cannot hoist 218 mass… try a lighter frame or fewer dense parts," and switching the same build to the S frame live-flips it to "FLIGHT-CAPABLE — Lift 135 comfortably hoists 98 mass." Verified headless (assertions on the row text and numbers) and in-browser through the real selects.

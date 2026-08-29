@@ -19,6 +19,10 @@ import {
 } from '../splice/extract.js';
 import { analyze } from '../splice/physiology.js';
 import { spliceChimera, validateSplice, isSettled, chimeraGenome } from '../splice/theater.js';
+import {
+  combatantFromChimera, combatantFromUnit, createBattle, step, finishBattle,
+  playerActions, playerActive, tagMultiplier, isInjured,
+} from '../battle/engine.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -28,6 +32,8 @@ const content = indexContent({
   parts: readJSON('data/parts.json'),
   species: readJSON('data/species.json'),
   combos: readJSON('data/combos.json'),
+  enemies: readJSON('data/enemies.json'),
+  keywords: readJSON('data/keywords.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -337,6 +343,198 @@ assert.deepEqual(m4.discoveredCombos, []);
 const slabUser = migrate({ ...structuredClone(v2Save), activeScreen: 'slab' });
 assert.equal(slabUser.activeScreen, 'theater', 'slab dwellers wake up in the Theater');
 
+// --- M4: enemies data coherence.
+for (const unit of Object.values(content.enemies)) {
+  assert.ok(unit.hp > 0 && unit.moves.length > 0 && unit.koLine && unit.shapes.length, unit.id);
+  if (unit.transformInto) assert.ok(content.enemies[unit.transformInto], `${unit.id} transform target`);
+}
+for (const enc of Object.values(content.encounters)) {
+  for (const w of enc.waves) assert.ok(content.enemies[w], `${enc.id}: unknown unit ${w}`);
+}
+
+// --- M4: physiology → combatant mapping (moves from parts + combos).
+function makeChimera(state2, frame, partGrades, now) {
+  for (const [pid, grade] of Object.entries(partGrades)) {
+    state2.inventory.parts.push({ id: `bt-${pid}`, partId: pid, grade, donor: { name: 'Donor', species: pid.split('_')[0], stars: 3, extractedAt: now } });
+  }
+  const slots = Object.fromEntries(
+    Object.keys(partGrades).map((pid) => [content.parts[pid].slot, `bt-${pid}`])
+  );
+  const res = spliceChimera(state2, frame, slots, content, now);
+  assert.ok(res.ok, res.msg);
+  return res.chimera;
+}
+const war = { ...newGameState(), seed: 4242 };
+const fighter = makeChimera(war, 'M', {
+  cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'standard',
+  cobra_organ: 'standard', bear_hide: 'standard', goat_tail: 'standard',
+}, t0);
+const settledAt = fighter.settleUntil;
+let cb = combatantFromChimera(fighter, content, settledAt);
+assert.ok(!cb.rejection && cb.ignoreChance >= 0);
+assert.ok(cb.moves.some((m) => m.name === 'Venom Fang'), 'head grants its move');
+assert.ok(cb.moves.some((m) => m.name === 'Injection'), 'combo grants its move');
+assert.ok(!cb.moves.some((m) => m.name === 'Thick Fur'), 'passive hide grants no move');
+const apexFang = cb.moves.find((m) => m.name === 'Venom Fang');
+assert.equal(apexFang.power, Math.round(40 * 1.3), 'apex grade upgrades the move (+30%)');
+const report = analyze(fighter.frame, Object.values(fighter.tokens), content);
+assert.equal(cb.maxHp, report.stats.hp, 'battle HP = physiology HP');
+assert.equal(cb.staminaMax, report.stats.stamina, 'stamina pool from physiology');
+assert.equal(cb.regen, report.regenNet, 'regen minus metabolic draw carries into battle');
+// Rejection: same chimera before settling fights weaker.
+const unsettledCb = combatantFromChimera(fighter, content, fighter.createdAt);
+assert.ok(unsettledCb.rejection && unsettledCb.power < cb.power && unsettledCb.speed < cb.speed);
+assert.ok(unsettledCb.ignoreChance > cb.ignoreChance, 'unsettled chimeras obey less');
+
+// --- Tag chart: data-driven effectiveness.
+assert.equal(tagMultiplier(['Ground'], ['Airborne'], content.tagChart).mult, 0, 'Ground misses Airborne');
+assert.equal(tagMultiplier(['Electric'], ['Aquatic'], content.tagChart).mult, 2, 'Electric ≫ Aquatic');
+assert.ok(tagMultiplier(['Sonic'], ['Armored'], content.tagChart).ignoreArmor, 'Sonic ignores Armor');
+assert.equal(tagMultiplier(['Gas'], ['Vehicle'], content.tagChart).mult, 0, 'vehicles do not breathe');
+assert.equal(tagMultiplier([], ['Armored'], content.tagChart).mult, 1);
+
+// --- Deterministic full battle: same seed + same script → same outcome.
+function playScripted(seed) {
+  const s = { ...newGameState(), seed: 4242 };
+  const f = makeChimera(s, 'M', {
+    cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'standard',
+    cobra_organ: 'standard', bear_hide: 'standard', goat_tail: 'standard',
+  }, t0);
+  const b = createBattle([f], content.encounters.patrol_1, content, seed, f.settleUntil);
+  let guard = 0;
+  while (!b.over && guard++ < 200) {
+    const acts = playerActions(b);
+    assert.ok(acts.length, 'always at least one legal action');
+    // Greedy: strongest affordable damaging move, else first action.
+    const best = acts.filter((a) => a.type === 'move')
+      .sort((a, b2) => playerActive(b).moves[b2.index].power - playerActive(b).moves[a.index].power)[0] ?? acts[0];
+    step(b, best, content);
+  }
+  assert.ok(b.over, 'battle terminates');
+  return b;
+}
+const runA = playScripted(777);
+const runB = playScripted(777);
+assert.deepEqual(runA.log, runB.log, 'battles are reproducible from a seed');
+assert.notDeepEqual(playScripted(778).log, runA.log, 'different seed, different fight');
+assert.ok(runA.log.some((l) => l.includes('parachutes') || l.includes('hoisted')), 'zero death language: they leave in style');
+
+// --- Stamina economy: costs drain, unaffordable moves vanish, rest restores.
+const stamState = { ...newGameState(), seed: 9 };
+const stamFighter = makeChimera(stamState, 'S', { bear_forelimbs: 'standard', goat_head: 'standard' }, t0);
+const sb = createBattle([stamFighter], content.encounters.patrol_1, content, 5, stamFighter.settleUntil);
+const meCb = playerActive(sb);
+meCb.stamina = 12; // below Haymaker's 35
+const actsNow = playerActions(sb);
+assert.ok(!actsNow.some((a) => a.label === 'Haymaker'), 'unaffordable moves are off the menu');
+assert.ok(actsNow.some((a) => a.type === 'rest'), 'Catch Breath is always there');
+const before = meCb.stamina;
+step(sb, actsNow.find((a) => a.type === 'rest'), content);
+assert.ok(meCb.stamina > before, 'rest restores stamina');
+
+// --- Priority beats speed; switching costs the turn.
+const slowCbBase = combatantFromUnit(content.enemies.riot_squad);
+assert.ok(slowCbBase.speed >= 0); // sanity
+const prioState = { ...newGameState(), seed: 11 };
+const prioFighter = makeChimera(prioState, 'L', { goat_forelimbs: 'standard', goat_head: 'standard', bear_hide: 'standard' }, t0);
+const pb = createBattle([prioFighter], content.encounters.patrol_2, content, 31, prioFighter.settleUntil);
+playerActive(pb).speed = 1; // slower than everything
+const trample = playerActions(pb).find((a) => a.label === 'Trample Tap');
+const evs = step(pb, trample, content);
+const myLine = evs.findIndex((e) => e.includes('Trample Tap'));
+const foeLine = evs.findIndex((e) => e.includes(pb.enemy.active.name) && e.includes('uses'));
+assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move goes first despite speed 1');
+
+// --- Boss transforms into stage two, then falls for the win.
+function grind(encounterId, seed) {
+  const s = { ...newGameState(), seed: 99, funds: 0 };
+  const f1 = makeChimera(s, 'L', { bear_head: 'prismatic', bear_forelimbs: 'prismatic', bear_hide: 'prismatic', bear_organ: 'prismatic' }, t0);
+  const f2 = makeChimera(s, 'M', { goat_head: 'prismatic', goat_hindlimbs: 'prismatic', goat_organ: 'prismatic' }, t0);
+  const now2 = Math.max(f1.settleUntil, f2.settleUntil);
+  const b = createBattle([f1, f2], content.encounters[encounterId], content, seed, now2);
+  s.battle = b;
+  let guard = 0;
+  while (!b.over && guard++ < 400) {
+    const acts = playerActions(b);
+    const best = acts.filter((a) => a.type === 'move')
+      .sort((x, y) => playerActive(b).moves[y.index].power - playerActive(b).moves[x.index].power)[0] ?? acts[0];
+    step(b, best, content);
+  }
+  return { s, b, now2 };
+}
+const bossRun = grind('boss_clampdown', 12345);
+assert.ok(bossRun.b.over, 'boss battle terminates');
+assert.ok(bossRun.b.log.some((l) => l.includes('ACTIVATE THE 9000')), 'boss transforms mid-fight');
+if (bossRun.b.outcome === 'win') {
+  assert.ok(bossRun.b.log.some((l) => l.includes('bouncy castle')), 'stage two retires gleefully');
+}
+
+// --- Law 1: losing (or winning ugly) sends chimeras to the Infirmary.
+const law1 = grind('patrol_1', 55);
+const result = finishBattle(law1.s, law1.b, content, law1.now2);
+assert.equal(law1.s.battle, null, 'battle cleared after aftermath');
+if (result.outcome === 'win') assert.ok(law1.s.funds > 0, 'victory pays');
+const koCount = law1.b.player.team.filter((c) => c.hp <= 0).length;
+assert.equal(result.injuries.length, koCount, 'every KO becomes an Infirmary stay');
+for (const inj of result.injuries) {
+  const ch = law1.s.chimeras.find((x) => x.name === inj.chimera);
+  assert.ok(isInjured(ch, law1.now2), 'injured now');
+  assert.ok(!isInjured(ch, ch.injury.until + 1), 'and healed after the timer');
+}
+
+// A guaranteed loss also feeds back (weak unsettled fighter vs the boss).
+const loseState = { ...newGameState(), seed: 66 };
+const weakling = makeChimera(loseState, 'S', { goat_tail: 'standard', goat_head: 'standard' }, t0);
+const lb = createBattle([weakling], content.encounters.boss_clampdown, content, 8, t0); // unsettled: t0 < settleUntil
+assert.ok(playerActive(lb).rejection, 'deploying before settling brings Rejection');
+loseState.battle = lb;
+let guard = 0;
+while (!lb.over && guard++ < 300) {
+  const acts = playerActions(lb);
+  step(lb, acts[0], content);
+}
+assert.equal(lb.outcome, 'loss');
+const lossResult = finishBattle(loseState, lb, content, t0);
+assert.equal(lossResult.injuries.length, 1, 'the fallen get Infirmary timers');
+assert.equal(loseState.warRecord.losses, 1);
+
+// --- Obedience: high-instability unsettled chimeras freelance sometimes.
+let ignores = 0;
+for (let i = 0; i < 60; i++) {
+  const os = { ...newGameState(), seed: 1000 + i };
+  const of = makeChimera(os, 'M', { cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'prime' }, t0);
+  const ob = createBattle([of], content.encounters.patrol_1, content, i, t0);
+  const move = playerActions(ob).find((a) => a.type === 'move');
+  const evs2 = step(ob, move, content);
+  if (evs2.some((e) => e.includes('ignores orders'))) ignores++;
+}
+assert.ok(ignores > 2 && ignores < 40, `obedience wavers believably (${ignores}/60 ignored)`);
+
+// --- Mid-battle serialization: JSON round-trip continues identically.
+const serA = playScriptedPartial(4321, 3);
+const serB = playScriptedPartial(4321, 3, true);
+assert.deepEqual(serA.log, serB.log, 'save/reload mid-battle changes nothing');
+function playScriptedPartial(seed, pauseAt, roundTrip = false) {
+  const s = { ...newGameState(), seed: 4242 };
+  const f = makeChimera(s, 'M', { cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'standard', cobra_organ: 'standard', bear_hide: 'standard', goat_tail: 'standard' }, t0);
+  let b = createBattle([f], content.encounters.patrol_2, content, seed, f.settleUntil);
+  let guard = 0;
+  while (!b.over && guard++ < 200) {
+    if (guard === pauseAt && roundTrip) b = JSON.parse(JSON.stringify(b));
+    const acts = playerActions(b);
+    const best = acts.filter((a) => a.type === 'move')
+      .sort((x, y) => playerActive(b).moves[y.index].power - playerActive(b).moves[x.index].power)[0] ?? acts[0];
+    step(b, best, content);
+  }
+  return b;
+}
+
+// --- v1 → v5 chain.
+const m5 = migrate(structuredClone(v1Save));
+assert.equal(m5.saveVersion, SAVE_VERSION);
+assert.equal(m5.battle, null);
+assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
+
 // Time-warp safety: a lastTickAt in the future never rewinds state.
 const warp = freshRanchState();
 ensureRanchSeeded(warp, content, t0);
@@ -345,4 +543,4 @@ const condBefore = warp.ranch.stock[0].condition;
 applyElapsed(warp, content, t0);
 assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a no-op');
 
-console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · save v${SAVE_VERSION} · M1 care divergence: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: juvenile ${resA.grade.id} vs raised ${resB.grade.id}`);
+console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

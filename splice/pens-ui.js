@@ -5,6 +5,7 @@
 import { renderCreatureSVG } from '../render/renderer.js';
 import { GRADES, GRADE_INDEX } from './extract.js';
 import { chimeraGenome, isSettled, settleRemainingMs } from './theater.js';
+import { isInjured } from '../battle/engine.js';
 import { fmtDuration } from '../ranch/ui.js';
 
 export function renderPensScreen(root, ctx) {
@@ -30,9 +31,12 @@ export function renderPensScreen(root, ctx) {
             <p class="meta">${content.frames[ch.frame].name} chassis · instability ${ch.instability}/100 · bond ${ch.bond}</p>
             <p class="settle ${settled ? 'settled' : ''}">${
               settled
-                ? 'Settled ✓ — ready for deployment (pending the invention of battles)'
+                ? 'Settled ✓ — cleared for deployment'
                 : `Settling… ${fmtDuration(settleRemainingMs(ch, t))} remaining. No sudden noises.`
             }</p>
+            ${isInjured(ch, t)
+              ? `<p class="settle">🩹 Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} of dramatic convalescing left.</p>`
+              : ''}
             <ul class="token-list">${manifest}</ul>
           </div>
         </section>`;

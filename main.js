@@ -11,6 +11,7 @@ import { renderVaultScreen } from './splice/vault-ui.js';
 import { renderTheaterScreen } from './splice/theater-ui.js';
 import { renderPensScreen } from './splice/pens-ui.js';
 import { runExtraction } from './splice/extract-ui.js';
+import { renderBattleScreen } from './battle/ui.js';
 
 // Dev time-warp: ?warp=48 pretends 48 hours have passed. QA-only — the
 // warp lives in the URL, never in the save, so removing it can produce a
@@ -51,6 +52,7 @@ const SCREENS = {
   pens: (root) => renderPensScreen(root, ctx),
   vault: (root) => renderVaultScreen(root, ctx),
   theater: (root) => renderTheaterScreen(root, ctx),
+  battle: (root) => renderBattleScreen(root, ctx),
 };
 
 function showScreen(name) {
