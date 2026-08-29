@@ -17,10 +17,6 @@ const SLOT_LABELS = {
 let draft = { frame: 'M', slots: {} };
 let lastMsg = 'The slab is sterile-ish. Select parts from the vault.';
 
-export function resetTheaterDraft() {
-  draft = { frame: 'M', slots: {} };
-}
-
 function draftGenome(state, content) {
   const parts = {};
   for (const [slot, tokenId] of Object.entries(draft.slots)) {

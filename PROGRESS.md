@@ -1,5 +1,30 @@
 # PROGRESS
 
+## Session 10b — v0.1 Audit ✅
+
+`docs/AUDIT-v0.1.md` — measured post-ship audit (sim runs, data introspection,
+coverage mapping), not impressions.
+
+**Headline:** the engine is ahead of the content, and the gap now has mechanical
+consequences — **5 of 6 tag-chart rules are unreachable in play** because the
+4-species roster doesn't carry Aquatic/Electric/Sonic/Gas. ROADMAP §3.6's "the type
+chart emerges from what you built" is currently non-functional, and it stalls the
+AI director (nothing to counter-bias) and combo design (pool too small).
+
+**Also found:** the minimum legal splice (head only) has a **0% win rate** at the
+first node — a literal-minded new player can build a chimera that cannot win. Fix
+before the next content wave.
+
+**Healthy:** grade ladder measured at 10% → 44% mean win rate standard → prismatic
+(husbandry is provably the progression axis); enemy-tech salvage tops the apex table,
+validating the Containment Cannon minigame; no OP builds at standard; save discipline
+(7 migrations, v1→v8 tested) and the DOM-free core are the codebase's best assets.
+
+**Recommendation:** next phase is **Content Wave 1 (species 4 → 10)** — six species
+picked to make every dead chart rule live, plus an Airborne enemy — ahead of the §9
+backlog, because rivals/director/Theater-T2 all consume content variety rather than
+create it. Removed one dead export (`resetTheaterDraft`) while in there.
+
 ## Session 10 — Art Quality Pass (post-v0.1) ✅
 
 The visual pass Evan flagged during M0. Content-only where possible: 24 parts and
