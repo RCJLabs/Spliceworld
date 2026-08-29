@@ -1,5 +1,85 @@
 # PROGRESS
 
+## Session 16 — AI Director: the world studies you ✅
+
+The tracking stub has been collecting `directorStats` since M0 on the promise
+that something would eventually read it. This is that session.
+
+### What it reads
+Three inputs, in rising order of how much they sting:
+1. **your live stable** — and per *creature*, by the same majority vote the
+   battle engine uses, not per part. That distinction is the whole mechanic:
+   ~32 parts vote Ground against Air's 4, so a part-count read calls every
+   stable "Ground" and diversifying buys you nothing. (`rivals.js` had the
+   same bug; both now share one definition.)
+2. **your splice history** (`directorStats.partUse`), for tags.
+3. **every dissection you let complete** — weighted as exactly one creature
+   you are still fielding. Enough to tip a balanced stable back into being
+   legible; not so much that a single loss is a permanent tax.
+
+### What it does
+`data/director.json` declares seven counter-rules — what each *reads* (player
+tags and/or a class) and which roster units answer it. The director rewrites
+**one wave slot**, under hard constraints found by measuring, not by guessing:
+
+- **Never the opening beat, the final wave, or anything that transforms.** The
+  first draft cheerfully swapped Captain Clampdown out of his own boss fight.
+- **Never a mercy rule.** It replaces the *flimsiest* expendable slot and only
+  with something at least as heavy; if nothing there is expendable it sends an
+  **extra** wave instead. The first draft made `air_patrol` go 23% → 90% for an
+  Armored build by replacing the helicopter with a counter that was weaker.
+- **A budget, not a tier threshold.** It starts with one encounter — the
+  hardest, where the budget is — and reaches further down as you take territory
+  and lose creatures. Tiers are lumpy (four encounters share tier 3) and
+  crossing one wholesale turned a pressure into a **-22pp wall**.
+
+### Measured
+Tax on the median build, all-Ground stable, team of 3, apex: **-2pp** early
+(1 encounter adapted) rising to **-20pp** deep in a campaign with dissections on
+file (6 adapted). Against the stable it actually read, on the encounter it
+rewrote: Ground 98% → 75%, Water 35% → 10% on `military_response`.
+
+**The escape hatch works, and it is the point:**
+
+| stable | reads | tax |
+|---|---|---|
+| committed to one class | that class | **-13 to -16pp** |
+| one of each | nothing — no dominant class | **-2pp** |
+| one of each, after losing one | the dissected class | **-16pp** |
+| pivoted away after the loss | nothing again | **-2pp** |
+
+### Legible by construction (Law 4)
+A director you cannot see is a difficulty knob. So: a **dossier** in the War
+Room showing what they have filed on you and whether they are acting on it, an
+**intel line** in the briefing naming the swap before you commit a team, and a
+**news wire** item the first time each countermeasure reaches the field
+("County leases a helicopter. The invoice line reads 'anti-goat measures.'").
+
+### Save v10
+`directorStats.announced` so a rule only makes the papers once. Additive; the
+rest of `directorStats` is untouched and its history is exactly what the
+director reads. v1→v10 chain tested.
+
+### Verified
+`node tools/smoke.js` green with a new director block — gating, the per-creature
+class read, the escape hatch, the dissection weighting, reach growth, boss
+protection, the never-a-mercy-rule contract (with a synthetic stacked encounter,
+because the live roster rarely exercises it), one-shot news, and that being
+predictable actually costs you. Three assertions deliberately broken to confirm
+they bite. CDP at 380px: v9 → v10 migration, dossier, intel line, the swapped
+wave reaching the battle, the news item, and all four escape-hatch states.
+
+### Known issues
+- The director only ever swaps one slot; multi-slot pressure and per-*unit*
+  counter-loadouts (the roadmap's "flak trucks and net batteries") are still
+  a single unit each.
+- Rivals still counter-bias through their own path rather than the director's;
+  they now share the class read, which is the first half of merging them.
+
+### Next session's first task
+Open. The audit's remaining backlog is Theater Tier 2 / L-frame slots, variants
+via mutation, and region contestation.
+
 ## Session 15 — Balance pass: the curve that was never there ✅
 
 The prismatic complaint carried for three sessions turned out to be the small

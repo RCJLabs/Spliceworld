@@ -1,0 +1,103 @@
+{
+  "_doc": "AI Director (ROADMAP §3.7). The world studies you: it reads the anatomy you actually field, the parts you keep splicing, and — most sharply — every chimera you let the enemy dissect, then biases the next encounter toward whatever answers you. Each rule declares what it READS (player tags and/or an elemental class) and which roster units answer it; the director swaps ONE wave slot, never the opening beat and never the tutorial tier, so an encounter stays recognisably itself. Everything here is data: adding a counter is a JSON edit, and a rule whose units do not exist is simply skipped. intel is what the briefing tells you — the director must always be legible, never a silent difficulty knob (Law 4). The director's REACH starts at the top tier and works down as you take territory and lose creatures, so a legible stable is pressured at the hard end of the ladder first rather than everywhere at once. It never cuts an encounter's opening beat, its final wave, or a unit that transforms — a boss fight must still contain its boss.",
+  "tuning": {
+    "minSamples": 4,
+    "biasAt": 0.3,
+    "minTier": 2,
+    "liveStableWeight": 3,
+    "spliceHistoryWeight": 1,
+    "dissectionWeight": 3,
+    "reachBase": 1,
+    "reachPerNode": 0.5,
+    "reachPerDissection": 0.75
+  },
+  "counters": [
+    {
+      "id": "airborne",
+      "reads": {
+        "tags": [
+          "Airborne"
+        ]
+      },
+      "units": [
+        "net_trooper"
+      ],
+      "intel": "Requisition logs mention \"a great deal of netting.\" They know your things fly.",
+      "news": "Police quartermaster orders 400m of netting. No reason given. Locals nervous."
+    },
+    {
+      "id": "aquatic",
+      "reads": {
+        "tags": [
+          "Aquatic"
+        ]
+      },
+      "units": [
+        "net_trooper"
+      ],
+      "intel": "Somebody has been reading about conductivity. Expect prods.",
+      "news": "Precinct buys every cattle prod in the county. \"Unrelated to the fish thing,\" says spokesperson."
+    },
+    {
+      "id": "armored",
+      "reads": {
+        "tags": [
+          "Armored"
+        ]
+      },
+      "units": [
+        "captain_clampdown"
+      ],
+      "intel": "They have stopped trying to punch through the plating and started shouting at it.",
+      "news": "Captain Clampdown requisitions a louder megaphone. Armour plating reportedly \"unbothered, for now.\""
+    },
+    {
+      "id": "chemical",
+      "reads": {
+        "tags": [
+          "Gas",
+          "Venomous"
+        ]
+      },
+      "units": [
+        "police_cruiser",
+        "jeep_50"
+      ],
+      "intel": "They are sending things that do not breathe. Rude, but effective.",
+      "news": "Motor pool doubles its order. \"Engines don't inhale,\" reads the internal memo we absolutely did not steal."
+    },
+    {
+      "id": "ground_stable",
+      "reads": {
+        "class": "ground"
+      },
+      "units": [
+        "attack_chopper"
+      ],
+      "intel": "Air support. Because everything you field insists on standing on the ground.",
+      "news": "County leases a helicopter. The invoice line reads \"anti-goat measures.\""
+    },
+    {
+      "id": "air_stable",
+      "reads": {
+        "class": "air"
+      },
+      "units": [
+        "harbor_skiff"
+      ],
+      "intel": "Water cannons. Somebody worked out that a soaked flyer is a falling flyer.",
+      "news": "Harbour patrol reassigned inland. Nobody will explain the water cannons."
+    },
+    {
+      "id": "water_stable",
+      "reads": {
+        "class": "water"
+      },
+      "units": [
+        "infantry_squad"
+      ],
+      "intel": "Boots. Lots of boots. They intend to fight this one on dry land.",
+      "news": "National Guard issues waders and a strongly worded pamphlet about ponds."
+    }
+  ]
+}

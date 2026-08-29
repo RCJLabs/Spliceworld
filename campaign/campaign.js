@@ -7,6 +7,7 @@ import { rngStream, pick, randInt } from '../util/rng.js';
 import { GRADES } from '../splice/extract.js';
 import { finishBattle } from '../battle/engine.js';
 import { recordRivalResult } from './rivals.js';
+import { directorNews } from './director.js';
 
 const DAY = 86400000;
 const HOUR = 3600000;
@@ -93,6 +94,12 @@ export function resolveBattle(state, battle, content, now) {
   }
   const result = finishBattle(state, battle, content, now);
   const detail = { ...result, capturedChimera: null, freed: null, salvageUnits: battle.captured ?? [] };
+
+  // The AI director announces itself in the wire the first time a given
+  // counter-rule reaches the field. The player should learn that the world
+  // is adapting from the news, not from a spreadsheet.
+  const directedLine = directorNews(state, context.directed);
+  if (directedLine) pushNews(state, directedLine);
 
   // Containment cannon prizes ride home regardless of outcome. A captured
   // rival chimera has no enemies.json entry, so its generated record rides

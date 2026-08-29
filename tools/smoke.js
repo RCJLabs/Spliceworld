@@ -23,7 +23,7 @@ import {
   combatantFromChimera, combatantFromUnit, createBattle, step, finishBattle,
   playerActions, playerActive, tagMultiplier, isInjured, turnForecast, tierScaleFor,
 } from '../battle/engine.js';
-import { runSim, plantBrokenCombo } from './sim.js';
+import { runSim, plantBrokenCombo, makeSimChimera, scriptedBattle } from './sim.js';
 import {
   nodeStates, threatGen, incomePerDay, tickCampaign, resolveBattle, salvageUnit,
 } from '../campaign/campaign.js';
@@ -48,6 +48,7 @@ const content = indexContent({
   regions: readJSON('data/regions.json'),
   traits: readJSON('data/traits.json'),
   rivals: readJSON('data/rivals.json'),
+  director: readJSON('data/director.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -1216,6 +1217,144 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     assert.ok(lab.dex.parts.includes(token.partId), 'logged in the Splice-Dex');
   }
   assert.equal(lab.campaign.containment.length, 0, 'the bay empties');
+}
+
+// --- AI Director (§3.7): the world studies you and answers. The tracking
+// --- data has existed since M0; this is the session it started acting.
+{
+  const {
+    directorProfile, directorRead, directEncounter, directorNews, directorReach, classOfParts,
+  } = await import('../campaign/director.js');
+
+  const P = {
+    ground: ['gorilla_head', 'gorilla_forelimbs', 'gorilla_hindlimbs', 'tiger_tail', 'pangolin_hide', 'wolf_organ'],
+    air: ['eagle_head', 'eagle_forelimbs', 'eagle_tail', 'eagle_hide', 'eagle_organ'],
+    water: ['shark_head', 'shark_forelimbs', 'shark_hindlimbs', 'shark_tail', 'shark_hide', 'electric_eel_organ'],
+  };
+  const chim = (id, parts) => ({
+    id, name: id, frame: 'L',
+    tokens: Object.fromEntries(parts.map((p) => [content.parts[p].slot, { id: id + p, partId: p, grade: 'apex', donor: {} }])),
+  });
+  const lab = (chimeras, dissections = [], nodes = 8) => ({
+    seed: 4242,
+    chimeras,
+    directorStats: { partUse: {}, tagUse: {}, announced: [], dissections: dissections.map((parts, i) => ({ chimera: 'Lost' + i, partIds: parts, at: 1 })) },
+    campaign: { heldNodes: Array.from({ length: nodes }, (_, i) => 'n' + i) },
+  });
+
+  // Class is read per CREATURE, by the same majority vote the battle engine
+  // uses. Counting part affinities would be a structural lie — Ground sits
+  // on far more parts than Air, so every stable would read Ground and
+  // diversifying would buy nothing.
+  const affinities = { air: 0, ground: 0, water: 0 };
+  for (const part of Object.values(content.parts)) if (part.classAffinity) affinities[part.classAffinity]++;
+  assert.ok(affinities.ground > affinities.air * 2, 'the part pool really is Ground-skewed — hence the per-creature read');
+  assert.equal(classOfParts(P.air, content), 'air');
+  assert.equal(classOfParts(P.water, content), 'water');
+  assert.equal(classOfParts([], content), null, 'no anatomy, no read');
+
+  // Gating: nothing to go on, the tutorial, and rival duels are all off limits.
+  const blank = lab([], [], 0);
+  assert.equal(directorRead(blank, content).rule, null, 'the world needs data before it has a plan');
+  assert.ok(!directEncounter(blank, content.encounters.checkpoint, content).directed, 'and it does not adapt without one');
+  const committed = lab([chim('a', P.ground), chim('b', P.ground), chim('c', P.ground)]);
+  assert.ok(!directEncounter(committed, content.encounters.patrol_1, content).directed, 'the tutorial patrol is never adapted');
+  assert.ok(!directEncounter(committed, { id: 'r', rivalId: 'x', tier: 5, waves: ['a', 'b'] }, content).directed,
+    'rival duels do their own counter-biasing');
+
+  // It reads a committed stable and sends the class that answers it.
+  const read = directorRead(committed, content);
+  assert.equal(read.profile.favoredClass, 'ground');
+  assert.equal(read.rule.id, 'ground_stable');
+  assert.equal(read.rule.reads.class, 'ground');
+  assert.ok(read.rule.units.some((u) => content.enemies[u].class === 'air'),
+    'and the unit it sends actually beats Ground');
+
+  // THE ESCAPE HATCH: a stable it cannot read costs nothing to field.
+  const mixed = lab([chim('a', P.ground), chim('b', P.air), chim('c', P.water)]);
+  assert.equal(directorProfile(mixed, content).favoredClass, null, 'one of each reads as nothing — that is the hybrid reward');
+  assert.notEqual(directorRead(mixed, content).rule?.id, 'ground_stable');
+
+  // A dissection counts for exactly one creature you are still fielding —
+  // enough to tip a balanced stable back into being legible, not enough to
+  // be a permanent tax you cannot escape.
+  const bereaved = lab([chim('a', P.ground), chim('b', P.air), chim('c', P.water)], [P.ground]);
+  assert.equal(directorProfile(bereaved, content).favoredClass, 'ground', 'the enemy took notes on what they dissected');
+  const pivoted = lab([chim('b', P.air), chim('c', P.water)], [P.ground]);
+  assert.equal(directorProfile(pivoted, content).favoredClass, null, 'stop fielding it and the read goes away again');
+
+  // Reach: one encounter at first, more as you take ground and lose creatures.
+  const early = directorReach(lab([chim('a', P.ground)], [], 0), content);
+  const late = directorReach(lab([chim('a', P.ground)], [P.ground, P.ground], 8), content);
+  assert.equal(early.budget, 1, 'it starts with the hardest encounter only');
+  assert.ok(late.budget > early.budget, 'and reaches further down as the campaign escalates');
+  assert.ok(early.ids.every((id) => late.ids.includes(id)), 'the reach only grows, it never shuffles');
+  const reachedTiers = late.ids.map((id) => content.encounters[id].tier);
+  assert.equal(reachedTiers[0], Math.max(...reachedTiers), 'hardest first — the big budgets adapt before the beat cops');
+
+  // The adaptation itself: seeded, legible, and never a mercy rule.
+  const enc = directEncounter(committed, content.encounters.checkpoint, content);
+  assert.ok(enc.directed, 'a committed stable gets answered');
+  assert.ok(enc.directed.intel, 'and told about it before it commits a team');
+  assert.equal(JSON.stringify(enc), JSON.stringify(directEncounter(committed, content.encounters.checkpoint, content)),
+    'the same save always faces the same adaptation');
+  assert.equal(enc.waves[0], content.encounters.checkpoint.waves[0], 'the encounter still opens the way it was authored');
+  const heft = (id) => content.enemies[id].hp + content.enemies[id].power * 3 + content.enemies[id].armor * 2;
+  for (const e of Object.values(content.encounters)) {
+    const d = directEncounter(lab([chim('a', P.ground)], [P.ground, P.ground]), e, content);
+    if (!d.directed) continue;
+    assert.ok(d.waves.length >= e.waves.length, `${e.id}: the director never shortens a fight`);
+    if (d.directed.replaced) {
+      assert.ok(heft(d.directed.unitId) >= heft(d.directed.replaced),
+        `${e.id}: never swaps a tough unit for a weaker "counter" — that is a mercy rule, not an adaptation`);
+      assert.ok(!content.enemies[d.directed.replaced].transformInto,
+        `${e.id}: a boss fight must still contain its boss`);
+      assert.notEqual(d.directed.replaced, e.waves[e.waves.length - 1],
+        `${e.id}: the commander is not a mook`);
+    }
+  }
+
+  // A targeted case, because the live roster rarely exercises it: given a
+  // heavyweight sitting in a middle slot, the director must take the flimsy
+  // one. Swapping the Clampdown 9000 out for a helicopter would be a mercy
+  // rule wearing an adaptation's coat.
+  {
+    const stacked = {
+      id: 'stacked_test', name: 'Stacked', tier: 3, reward: 0,
+      waves: ['riot_squad', 'clampdown_9000', 'net_trooper', 'police_cruiser'],
+    };
+    // Register it so the reach gate can see it, and hand the director a
+    // campaign far enough along that its budget covers everything.
+    const withStacked = { ...content, encounters: { ...content.encounters, stacked_test: stacked } };
+    const late = lab([chim('a', P.ground), chim('b', P.ground), chim('c', P.ground)], [], 20);
+    const d = directEncounter(late, stacked, withStacked);
+    assert.ok(d.directed, 'a tier-3 encounter in reach gets adapted');
+    assert.equal(d.directed.replaced, 'net_trooper', 'it takes the flimsiest expendable slot');
+    assert.equal(d.waves[1], 'clampdown_9000', 'and leaves the heavyweight standing');
+    assert.equal(d.waves[3], 'police_cruiser', 'and the final wave alone');
+  }
+
+  // It announces itself in the wire — once per rule, then it is old news.
+  const wire = lab([chim('a', P.ground)]);
+  wire.news = [];
+  const directed = directEncounter(wire, content.encounters.military_response, content).directed;
+  assert.ok(directorNews(wire, directed), 'the first time a countermeasure lands, it makes the papers');
+  assert.equal(directorNews(wire, directed), null, 'the second time it is just Tuesday');
+  assert.ok(wire.directorStats.announced.includes(directed.ruleId));
+
+  // And it bites: the stable it read loses ground on the encounter it rewrote.
+  {
+    const hero = makeSimChimera('L', P.ground, 'apex', content);
+    const plain = content.encounters.military_response;
+    const adapted = directEncounter(committed, plain, content);
+    assert.ok(adapted.directed, 'the hardest encounter is always in reach');
+    const rate = (e, tag) => {
+      let w = 0;
+      for (let i = 0; i < 24; i++) if (scriptedBattle(hero, e, content, hashString(`dir${tag}${i}`), 3).outcome === 'win') w++;
+      return w / 24;
+    };
+    assert.ok(rate(adapted, 'd') < rate(plain, 'p'), 'being predictable costs you');
+  }
 }
 
 // --- Balance pass: the difficulty curve. These are the assertions that

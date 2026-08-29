@@ -1129,3 +1129,10 @@ footer {
 @media (max-width: 400px) {
   .rival-portrait { flex-basis: 92px; width: 92px; }
 }
+
+/* --- AI Director (§3.7) ------------------------------------------------- */
+
+.intel-line { color: #ffd66e; }
+.dossier { border-color: #6b5a2a; }
+.dossier h3 { color: #ffd66e; }
+.dossier strong { color: var(--text); }

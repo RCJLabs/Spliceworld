@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -94,6 +94,17 @@ const migrations = {
     }
     return save;
   },
+  // v10 (AI Director): the world now acts on the tracking data it has been
+  // collecting since M0. `announced` keeps a counter-rule from making the
+  // news wire twice; the rest of directorStats is unchanged and its history
+  // is exactly what the director reads.
+  10: (save) => {
+    save.directorStats.announced = [];
+    save.directorStats.partUse ??= {};
+    save.directorStats.tagUse ??= {};
+    save.directorStats.dissections ??= [];
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -106,7 +117,7 @@ export function newGameState() {
     genome: null,
     // Stub for the AI director (ROADMAP §8.5): record tag/part usage from
     // day one so data exists when the director lands post-v0.1.
-    directorStats: { partUse: {}, tagUse: {}, dissections: [] },
+    directorStats: { partUse: {}, tagUse: {}, dissections: [], announced: [] },
     funds: TUNING.startingFunds,
     ranch: { stock: [], penCapacity: TUNING.penStartCapacity, animalCount: 0, seeded: false, eggs: [], eggCount: 0 },
     lastTickAt: null,

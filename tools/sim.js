@@ -29,6 +29,7 @@ export function loadSimContent() {
     keywords: readJSON('data/keywords.json'),
     classes: readJSON('data/classes.json'),
     rivals: readJSON('data/rivals.json'),
+    director: readJSON('data/director.json'),
   });
 }
 
