@@ -11,6 +11,7 @@
 
 import { rngStream, pick } from '../util/rng.js';
 import { unitFromGenome } from '../battle/engine.js';
+import { directorProfile } from './director.js';
 
 // Slots a rival will try to fill, in the order they commit to them. Head
 // first (mandatory), then the limbs that carry classAffinity votes.
@@ -54,17 +55,11 @@ export function rivalStatus(state, content) {
 // counterBias build the class that beats it — the first real use of the
 // director stats we have been recording since M0.
 export function playerFavoredClass(state, content) {
-  const votes = { air: 0, ground: 0, water: 0 };
-  for (const chimera of state.chimeras) {
-    for (const token of Object.values(chimera.tokens)) {
-      const affinity = content.parts[token.partId]?.classAffinity;
-      if (affinity) votes[affinity] += 1;
-    }
-  }
-  const ranked = Object.entries(votes).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
-  if (!ranked.length) return null;
-  if (ranked.length > 1 && ranked[0][1] === ranked[1][1]) return null; // no read
-  return ranked[0][0];
+  // Delegates to the director so there is exactly one answer to "what class
+  // is this player" — and so it counts CREATURES, not part affinities.
+  // Ground affinity sits on ~32 parts against Air's 4, so a part-count read
+  // says "Ground" about almost any stable, and diversifying buys nothing.
+  return directorProfile(state, content).favoredClass;
 }
 
 function counterClassOf(target, content) {

@@ -10,6 +10,7 @@ import { toggleRow } from '../ui/picker.js';
 import { analyze } from '../splice/physiology.js';
 import { renderCreatureSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
+import { directEncounter, directorRead } from './director.js';
 import {
   nodeStates, threatGen, incomePerDay, salvageUnit, regionOf,
 } from './campaign.js';
@@ -21,7 +22,8 @@ let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, l
 // resolved — briefing preview and battle always face the same team.
 function encounterFor(state, target, content) {
   if (target.kind === 'rival') return rivalEncounter(state, content.rivals[target.rivalId], content);
-  return content.encounters[target.encounterId];
+  // The AI director gets a look at every human encounter before you do.
+  return directEncounter(state, content.encounters[target.encounterId], content);
 }
 let draftTeam = [];
 let lastAftermath = null;
@@ -121,6 +123,25 @@ function renderMap(root, ctx) {
       </div>`;
   }).join('');
 
+  // What the world has learned. Shown whether or not it is acting on it yet,
+  // because "they are studying you" is the threat, not the swap.
+  const read = directorRead(state, content);
+  const dossier = read.profile.samples >= (content.directorMeta?.minSamples ?? 4)
+    ? `<section class="card dossier">
+        <h3>🛰 Their Dossier On You</h3>
+        <p class="fine-print">${
+          read.profile.topTags.length
+            ? `Filed under: ${read.profile.topTags.map((t) => `<strong>${t.tag}</strong> ${Math.round(t.share * 100)}%`).join(' · ')}`
+            : 'No pattern yet. Keep them guessing.'
+        }${read.profile.favoredClass ? ` · stable reads <strong>${content.classes[read.profile.favoredClass].icon} ${content.classes[read.profile.favoredClass].name}</strong>` : ' · no dominant class'}</p>
+        <p class="fine-print">${
+          read.rule
+            ? `⚠ Countermeasures in the field: ${read.rule.intel}`
+            : 'They have a file but no plan yet. Give them fewer ideas.'
+        }${read.profile.dissections ? ` They have completed ${read.profile.dissections} unauthorized peer review${read.profile.dissections === 1 ? '' : 's'} — that is where most of this came from.` : ''}</p>
+      </section>`
+    : '';
+
   const news = state.news.slice(-5).reverse().map((n) => `<p>📡 ${n}</p>`).join('');
 
   root.innerHTML = `
@@ -138,6 +159,7 @@ function renderMap(root, ctx) {
       <h3>${region.name}</h3>
       ${nodes}
     </section>
+    ${dossier}
     ${rivals ? `<section class="card"><h3>🧫 Rival Labs</h3>${rivals}</section>` : ''}
     ${containment ? `<section class="card"><h3>Containment</h3>${containment}</section>` : ''}
     <section class="card">
@@ -230,6 +252,11 @@ function renderBriefing(root, ctx) {
       <p class="fine-print">Opposition: ${foeLine}${
         foeClasses.size > 1 && encounter.counterClass ? ' — one of them was built to answer your stable' : ''
       }</p>
+      ${encounter.directed ? `<p class="fine-print intel-line">🛰 Intel: ${encounter.directed.intel} <strong>${content.enemies[encounter.directed.unitId].name}</strong> ${
+        encounter.directed.added
+          ? 'is riding along — they sent extra.'
+          : `has replaced the ${content.enemies[encounter.directed.replaced].name}.`
+      }</p>` : ''}
       <h3>Strike Team (up to 3)</h3>
       ${roster || '<p class="ranch-msg">No chimeras available. The Surgery Theater accepts walk-ins.</p>'}
       <div class="ceremony-btns">
@@ -262,6 +289,7 @@ function renderBriefing(root, ctx) {
     const battleNo = state.warRecord.wins + state.warRecord.losses + 1;
     const seed = (state.seed ^ Math.imul(battleNo, 0x9e3779b9)) >>> 0;
     state.battle = createBattle(team, encounter, content, seed, ctx.now(), {
+      directed: encounter.directed ?? null,
       kind: draftTarget.kind,
       nodeId: draftTarget.nodeId ?? null,
       captiveId: draftTarget.captiveId ?? null,
