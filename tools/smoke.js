@@ -23,6 +23,7 @@ import {
   combatantFromChimera, combatantFromUnit, createBattle, step, finishBattle,
   playerActions, playerActive, tagMultiplier, isInjured,
 } from '../battle/engine.js';
+import { runSim, plantBrokenCombo } from './sim.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -528,6 +529,25 @@ function playScriptedPartial(seed, pauseAt, roundTrip = false) {
   }
   return b;
 }
+
+// --- M4.5: the balance harness runs, and it catches the planted combo.
+const clean = runSim(content, { builds: 12, seedsPer: 2 });
+assert.ok(clean.rows.length >= 12);
+assert.ok(clean.rows.every((r) => r.winRate >= 0 && r.winRate <= 1));
+assert.ok(clean.rows.some((r) => r.perEncounter.patrol_1 === 1), 'the first patrol is beatable at standard grade');
+assert.ok(!clean.flags.some((f) => f.kind === 'OP'), 'clean data has no OP builds at standard grade');
+const planted = runSim(plantBrokenCombo(content), { builds: 12, seedsPer: 2 });
+assert.ok(
+  planted.flags.some(
+    (f) => f.kind === 'OP' && f.partIds.includes('cobra_head') && f.partIds.includes('cobra_organ')
+  ),
+  'the harness catches a deliberately broken combo'
+);
+// Grades are the power curve: apex builds crack encounters standard cannot.
+const apex = runSim(content, { builds: 8, seedsPer: 2, grade: 'apex' });
+const bossAtApex = Math.max(...apex.rows.map((r) => r.perEncounter.boss_clampdown));
+const bossAtStd = Math.max(...clean.rows.map((r) => r.perEncounter.boss_clampdown));
+assert.ok(bossAtApex > bossAtStd, `grades move the boss ceiling (${bossAtStd} → ${bossAtApex})`);
 
 // --- v1 → v5 chain.
 const m5 = migrate(structuredClone(v1Save));

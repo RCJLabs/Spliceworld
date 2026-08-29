@@ -1,5 +1,24 @@
 # PROGRESS
 
+## Session 6 — M4.5: Balance Harness ✅
+
+**Acceptance criterion:** it catches one broken combo planted on purpose — **passes**. `node tools/sim.js --plant` injects an Injection combo with power 500 / cost 0; the harness flags every build carrying it as `[OP] wins 100% in ~2 turns — nerf something` and exits nonzero if the plant escapes. Also asserted in the smoke suite.
+
+### What shipped
+- **`tools/sim.js`** — headless Monte Carlo using the exact browser battle engine (the DOM-free rule paying off): seeded build sampling (all purebreds + all combo pairings + random mixes), a fixed naive greedy pilot as the yardstick, N seeds × all encounters per build. Outputs a win-rate table (overall + per encounter + avg turns) and flags `[OP]` (≥85% wins, ≤5 turns) and `[TRASH]` (0% everywhere) builds. ~500 battles in <50 ms. `npm run sim`, with `--builds/--seeds/--grade/--plant`.
+- **It immediately found two real problems:**
+  1. **Engine crash**: a KO or Knockback swapping a fighter mid-round let the other side's pre-chosen move index land on the replacement's different moveset (crash/wrong move). Fixed: actions are bound to the combatant they were chosen for; mid-round replacements drop stale orders (which also gives correct Pokémon behavior — a freshly swapped-in fighter doesn't act that round).
+  2. **Game-wide tuning failure**: at standard grade, *every* build lost *everything* (best: 33% overall). Data-only rebalance — frame HP/stamina/regen up (S 30→55 HP, M 50→70, L 80→105), Gen 1 enemy power/HP down ~25% — landed the intended curve: patrol 1 ≈75–100% for reasonable standard builds, patrol 2 partially open, boss ≈0% at standard but **100% for good apex builds** (the grade ladder is provably the power curve; asserted in smoke).
+- Smoke integration: clean data has no OP flags at standard; the planted combo is caught; apex raises the boss ceiling over standard.
+
+### Known issues / balance notes for the next pass
+- S-frame solo builds still flag TRASH at standard (glass chassis). Partly by design — scampers are flight/speed platforms and real play fields teams of 3 (the sim pilots solos) — but worth revisiting when temperament/set bonuses gain mechanics.
+- The pilot is deliberately naive (greedy biggest move); a smarter policy would shift absolute numbers but not the relative table.
+- Venom-heavy builds underperform vs. the cruiser/9000 by design (chart: Venomous ×0.5 vs Vehicle); watch that Gen 2 doesn't make venom dead.
+
+### Next session — M5: Campaign Shell
+First task: region strip in data (3 nodes + commander boss), notoriety Gen 1→2, income ticks while held; then capture-on-loss → dissection countdown → rescue raid template, Containment + salvage, news ticker reacting to events. Done when: losing a battle creates a rescue mission with a live timer.
+
 ## Session 5 — M4: Battle Engine ✅
 
 **Acceptance criterion:** a full battle plays out and Law 1 fires — **passes**. Full battles run headless (deterministic, seed-reproducible logs) and in-browser through real buttons at 380px; every KO'd chimera leaves with an Infirmary timer that blocks redeployment (the browser QA run lost to the boss's second stage and both fighters landed in the Infirmary — the aftermath literally says "breed, raise, splice").

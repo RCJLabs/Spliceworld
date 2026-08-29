@@ -446,12 +446,20 @@ export function step(battle, action, content) {
     const ePri = (em?.keywords.priority ? 100 : 0) + battle.enemy.active.speed;
     const playerFirst = pPri > ePri || (pPri === ePri && roll(battle) < 0.5);
 
+    // Bind each action to the combatant it was chosen for: if a KO or a
+    // Knockback rotates in a replacement mid-round, the stale action is
+    // dropped — fresh fighters don't inherit someone else's orders.
+    const plannedPlayer = playerActive(battle);
+    const plannedEnemy = battle.enemy.active;
     const order = playerFirst
       ? [['player', playerMoveIndex], ['enemy', enemyMove]]
       : [['enemy', enemyMove], ['player', playerMoveIndex]];
     for (const [side, idx] of order) {
       if (battle.over) break;
-      if (idx < 0) restCombatant(side === 'player' ? playerActive(battle) : battle.enemy.active, events);
+      const current = side === 'player' ? playerActive(battle) : battle.enemy.active;
+      const planned = side === 'player' ? plannedPlayer : plannedEnemy;
+      if (current !== planned) continue; // swapped in mid-round: needs a moment
+      if (idx < 0) restCombatant(current, events);
       else performMove(battle, side, idx, events, content);
       handleEnemyKO(battle, events, content);
       handlePlayerKO(battle, events);
