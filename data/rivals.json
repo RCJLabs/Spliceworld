@@ -1,0 +1,105 @@
+{
+  "_doc": "Rival geneticists (ROADMAP §3.8). requiresNodes gates each rival on the conquest that puts their COUNTER-class anatomy in your reach — you are never asked to beat Air before wings exist for you too; requiresRivals chains the ladder. Rivals field CHIMERAS, not human units: campaign/rivals.js builds each rival's team from real parts and runs it through the same physiology the player uses (splice/physiology.js), so a rival's stats, tags and elemental class are earned by anatomy exactly like yours. classBias picks the anatomy they commit to; the ladder is ordered so each rival counters the class you just farmed off the last one (Ground → Air → Water → back to Ground), which is what makes keeping a stable better than perfecting one build. Beating a rival puts their chimeras in Containment; salvaging one yields THEIR parts — the roadmap's 'enemy tech is otherwise unobtainable', except here it is other people's genetics. Rivals iterate: every defeat raises their grade ladder and power, and counterBias lets them answer whatever class you field most. monologue follows the §3.8 schema (intro / midFight / defeat / victory / dissectionTaunt) — one-line barks now, prose later, no refactor.",
+  "rematch": {
+    "powerPerDefeat": 0.09,
+    "powerCap": 1.6,
+    "gradeLadder": ["standard", "prime", "apex", "prismatic"],
+    "teamGrowthEvery": 2,
+    "teamCap": 3
+  },
+  "rivals": [
+    {
+      "id": "mantissa",
+      "name": "Dr. Mantissa",
+      "title": "Chief Entomologist, Hexapod Futures",
+      "philosophy": "Six legs. Always six legs. Anything fewer is sentimentality.",
+      "portraitSeed": 4711,
+      "classBias": "ground",
+      "favoredTags": ["Venomous", "Armored"],
+      "favoredSpecies": ["mantis", "scorpion", "rhino_beetle", "cobra", "dragonfly"],
+      "frames": ["S", "M", "S"],
+      "teamSize": 2,
+      "powerScale": 0.92,
+      "grades": ["standard", "prime"],
+      "requiresNodes": ["checkpoint"],
+      "requiresRivals": [],
+      "notorietyAt": 40,
+      "reward": 260,
+      "notoriety": 20,
+      "counterBias": false,
+      "nameParts": {
+        "prefixes": ["Instar", "Chitin", "Molt", "Thorax", "Pupa", "Carapace"],
+        "suffixes": ["Prime", "Mk II", "Seven", "Ultra", "Alpha", "Nine"]
+      },
+      "monologue": {
+        "intro": "Ah — the goat person. I have read your paperwork. It is atrocious. My arthropods will explain why.",
+        "midFight": "You are improvising. I ANNOTATED. There is a difference and it is about to become obvious.",
+        "defeat": "Fine! FINE. Take my specimens. They were a rough draft anyway. The next instar will be less polite.",
+        "victory": "Peer review complete. Findings: you need more legs. Considerably more legs.",
+        "dissectionTaunt": "Your creature is in my lab. It has been given a name tag and a very small chair."
+      }
+    },
+    {
+      "id": "aloft",
+      "name": "Baroness Vesper Aloft",
+      "title": "Aloft Aeronautical Genetics, Chair of Everything",
+      "philosophy": "Legs are luggage. I have simply stopped packing them.",
+      "portraitSeed": 8102,
+      "classBias": "air",
+      "favoredTags": ["Airborne", "Sonic"],
+      "favoredSpecies": ["eagle", "bat", "dragonfly"],
+      "frames": ["S", "S", "M"],
+      "teamSize": 2,
+      "powerScale": 1.12,
+      "grades": ["prime", "prime", "apex"],
+      "requiresNodes": ["guard_post"],
+      "requiresRivals": ["mantissa"],
+      "notorietyAt": 70,
+      "reward": 420,
+      "notoriety": 25,
+      "counterBias": true,
+      "nameParts": {
+        "prefixes": ["Cirrus", "Zephyr", "Vespertine", "Updraft", "Stratus", "Aileron"],
+        "suffixes": ["the Untethered", "III", "of the Thermals", "Ascendant", "Mk IV", "the Unlanded"]
+      },
+      "monologue": {
+        "intro": "How lovely. You brought things that touch the ground. I brought things that decline to.",
+        "midFight": "You keep swinging at where I was. It is charming. It is also the whole problem.",
+        "defeat": "Grounded. Me. GROUNDED. Keep the wings — I have blueprints and an unhealthy amount of free time.",
+        "victory": "Do give my regards to the horizon. You will be looking at it for some time.",
+        "dissectionTaunt": "Your creature is up here with me now. The view is spectacular. The paperwork is not."
+      }
+    },
+    {
+      "id": "trench",
+      "name": "Professor Abyssa Trench",
+      "title": "Director, Marianas Applied Wetworks",
+      "philosophy": "Pressure is just the universe insisting on rigor.",
+      "portraitSeed": 2288,
+      "classBias": "water",
+      "favoredTags": ["Aquatic", "Electric"],
+      "favoredSpecies": ["shark", "electric_eel", "anglerfish", "octopus", "crocodile", "frog"],
+      "frames": ["M", "L", "M"],
+      "teamSize": 2,
+      "powerScale": 0.98,
+      "grades": ["prime", "prime", "apex"],
+      "requiresNodes": ["guard_post"],
+      "requiresRivals": ["aloft"],
+      "notorietyAt": 85,
+      "reward": 700,
+      "notoriety": 35,
+      "counterBias": true,
+      "nameParts": {
+        "prefixes": ["Hadal", "Benthic", "Sump", "Chasm", "Brine", "Fathom"],
+        "suffixes": ["Zero", "the Drowned", "XI", "Deepwake", "Mk VII", "the Patient"]
+      },
+      "monologue": {
+        "intro": "Eleven kilometres down, nothing hurries and nothing forgives. I brought some of it with me.",
+        "midFight": "You are running out of air. Metaphorically. For now.",
+        "defeat": "Extraordinary. Wholly unreplicated, of course. Bring your notebook next time — I intend to iterate.",
+        "victory": "The pressure differential did most of the work. I merely stood here being correct.",
+        "dissectionTaunt": "Your creature is in a tank. It is being observed. It is, in fairness, being fed."
+      }
+    }
+  ]
+}

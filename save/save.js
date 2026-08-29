@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -81,6 +81,19 @@ const migrations = {
     for (const chimera of save.chimeras) chimera.lastTrainedAt = chimera.lastTrainedAt ?? 0;
     return save;
   },
+  // v9 (Rivals): rival geneticists keep a per-rival record so their labs
+  // can iterate on you. Containment bays gain an optional inline `unit`
+  // for captured rival chimeras, whose stats are generated rather than
+  // listed in enemies.json — existing bays keep resolving by unitId.
+  9: (save) => {
+    save.campaign.rivals = {};
+    for (const entry of save.campaign.containment) entry.unit = entry.unit ?? null;
+    if (save.battle) {
+      save.battle.units = save.battle.units ?? {};
+      save.battle.barks = save.battle.barks ?? {};
+    }
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -104,7 +117,7 @@ export function newGameState() {
     discoveredCombos: [],
     battle: null,
     warRecord: { wins: 0, losses: 0 },
-    campaign: { heldNodes: [], notoriety: 0, captives: [], containment: [], lastTickAt: null },
+    campaign: { heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, lastTickAt: null },
     news: [],
     settings: { muted: false },
     dex: { parts: [], enemies: [], traits: [] },
