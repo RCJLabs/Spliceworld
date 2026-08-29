@@ -3,8 +3,9 @@
 // combo discoveries. Presentation lives in theater-ui.js.
 
 import { rngStream, pick } from '../util/rng.js';
-import { SLOTS } from '../render/renderer.js';
+import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { analyze } from './physiology.js';
+import { theaterGrants } from './facility.js';
 
 const CHIMERA_NAMES = [
   'Chompers', 'Beefsquawk', 'Sir Hornsalot', 'Dr. Fluffles', 'Snack Hazard',
@@ -12,22 +13,31 @@ const CHIMERA_NAMES = [
   'Gnawthaniel', 'Fangela', 'Beaklash', 'Goatzilla', 'Hissterica',
 ];
 
-// slotTokens: { slot: tokenId | null }. Heads are mandatory — every
-// abomination deserves googly eyes.
+// slotTokens: { socketId: tokenId | null }. Heads are mandatory — every
+// abomination deserves googly eyes. Which frames and sockets are legal is a
+// facility question (§3.10): Tier II buys the Rumbler chassis and the second
+// organ bay, so the Theater asks rather than assumes.
 export function validateSplice(state, frameId, slotTokens, content) {
   const errors = [];
+  const grants = theaterGrants(state, content);
   if (!content.frames[frameId]) errors.push(`Unknown frame: ${frameId}`);
+  else if (!grants.frames.includes(frameId)) {
+    errors.push(`The ${content.frames[frameId].name} needs a bigger Theater than you own.`);
+  }
   if (!slotTokens.head) errors.push('A head is required. Company policy.');
   const seen = new Set();
-  for (const [slot, tokenId] of Object.entries(slotTokens)) {
+  for (const [socketId, tokenId] of Object.entries(slotTokens)) {
     if (!tokenId) continue;
-    if (!SLOTS.includes(slot)) errors.push(`Unknown slot: ${slot}`);
+    if (!SOCKETS.includes(socketId)) errors.push(`Unknown socket: ${socketId}`);
+    else if (!grants.sockets.includes(socketId)) {
+      errors.push(`The ${socketId} bay is not installed yet — upgrade the Surgery Theater.`);
+    }
     if (seen.has(tokenId)) errors.push(`Token ${tokenId} used twice.`);
     seen.add(tokenId);
     const token = state.inventory.parts.find((t) => t.id === tokenId);
     if (!token) errors.push(`Token ${tokenId} is not in the vault.`);
-    else if (content.parts[token.partId].slot !== slot) {
-      errors.push(`${content.parts[token.partId].name} does not fit the ${slot} socket.`);
+    else if (content.parts[token.partId].slot !== slotOfSocket(socketId)) {
+      errors.push(`${content.parts[token.partId].name} does not fit the ${socketId} socket.`);
     }
   }
   return errors;
@@ -45,7 +55,7 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
   if (errors.length) return { ok: false, msg: errors.join(' ') };
 
   const tokens = tokensFor(state, slotTokens);
-  const report = analyze(frameId, tokens, content);
+  const report = analyze(frameId, tokens, content, theaterGrants(state, content).sockets.length);
 
   // Tokens leave the vault and live inside the chimera (salvage can
   // recover a degraded subset later — that flow lands with Containment).
@@ -58,8 +68,15 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
     id: `c${n}`,
     name: pick(rng, CHIMERA_NAMES),
     frame: frameId,
-    // slot → token (full token kept: grades and lineage travel with it)
-    tokens: Object.fromEntries(tokens.map((t) => [content.parts[t.partId].slot, t])),
+    // socket id → token (full token kept: grades and lineage travel with it).
+    // Keyed by the SOCKET the player chose, not the part's slot type, or two
+    // organs would collapse into one bay.
+    tokens: Object.fromEntries(
+      Object.entries(slotTokens)
+        .filter(([, tokenId]) => tokenId)
+        .map(([socketId, tokenId]) => [socketId, tokens.find((t) => t.id === tokenId)])
+        .filter(([, token]) => token)
+    ),
     createdAt: now,
     settleUntil: now + report.settlingMs,
     instability: report.instability,

@@ -52,11 +52,24 @@ export function obediencePercent(chimera, now) {
 // chimera is built by exactly the same rules as the player's (§3.8).
 export function movesFromTokens(tokens, report, content) {
   const moves = [];
+  // Two bays of the same organ stack their STATS but must not hand the
+  // player two identical buttons (Theater Tier II makes that possible for
+  // the first time). Keep the better copy.
+  const byName = new Map();
+  const add = (move) => {
+    const seen = byName.get(move.name);
+    if (seen) {
+      if (move.power > seen.power) Object.assign(seen, move);
+      return;
+    }
+    byName.set(move.name, move);
+    moves.push(move);
+  };
   for (const token of tokens) {
     const part = content.parts[token.partId];
     if (!part?.move) continue; // passive or retired part — stats only
     const gradeBonus = 1 + GRADE_INDEX[token.grade] * GRADE_MOVE_BONUS;
-    moves.push({
+    add({
       name: part.ability,
       power: Math.round(part.move.power * gradeBonus),
       cost: part.move.cost,
@@ -66,7 +79,7 @@ export function movesFromTokens(tokens, report, content) {
     });
   }
   for (const combo of report.combos) {
-    moves.push({ name: combo.name, ...combo.move });
+    add({ name: combo.name, ...combo.move });
   }
   return moves;
 }

@@ -2,16 +2,17 @@
 // physiology panel explain the consequences live, then splice. Replaces the
 // M0 free-form dev slab — every part here is an owned token with lineage.
 
-import { renderCreatureSVG, SLOTS } from '../render/renderer.js';
+import { renderCreatureSVG, slotOfSocket } from '../render/renderer.js';
 import { GRADES, GRADE_INDEX } from './extract.js';
 import { analyze } from './physiology.js';
 import { spliceChimera, validateSplice, tokensFor } from './theater.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
+import { theaterGrants, facilityLevel, levelData, nextUpgrade } from './facility.js';
 
 const SLOT_LABELS = {
   head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
-  tail: 'Tail', hide: 'Hide', organ: 'Organ',
+  tail: 'Tail', hide: 'Hide', organ: 'Organ', organ2: 'Organ II',
 };
 
 // Screen-local draft (not saved: an unspliced slab is just a shopping cart).
@@ -35,21 +36,34 @@ export function renderTheaterScreen(root, ctx) {
     if (!state.inventory.parts.some((t) => t.id === tokenId)) delete draft.slots[slot];
   }
 
+  // The Theater builds with whatever the facility has installed (§3.10).
+  const grants = theaterGrants(state, content);
+  const sockets = grants.sockets;
+  // A draft made before a downgrade, or carrying a locked frame, quietly
+  // corrects itself rather than erroring at the player.
+  for (const socketId of Object.keys(draft.slots)) {
+    if (!sockets.includes(socketId)) delete draft.slots[socketId];
+  }
+  if (!grants.frames.includes(draft.frame)) draft.frame = grants.frames[0];
+
   const tokens = tokensFor(state, draft.slots, content);
-  const report = analyze(draft.frame, tokens, content);
+  const report = analyze(draft.frame, tokens, content, sockets.length);
 
   const frameBtns = Object.values(content.frames)
-    .map(
-      (f) =>
-        `<button type="button" data-frame="${f.id}" class="${f.id === draft.frame ? 'active' : ''}" title="${f.flavor}">${f.sizeClass} · ${f.name}</button>`
-    )
+    .map((f) => {
+      const owned = grants.frames.includes(f.id);
+      return `<button type="button" data-frame="${f.id}" class="${f.id === draft.frame ? 'active' : ''}${owned ? '' : ' locked'}" ${
+        owned ? '' : 'disabled'
+      } title="${owned ? f.flavor : 'Needs a bigger Surgery Theater.'}">${f.sizeClass} · ${f.name}${owned ? '' : ' 🔒'}</button>`;
+    })
     .join('');
 
   const chosen = new Set(Object.values(draft.slots).filter(Boolean));
   const CLASS_MARK = { air: '\u{1FABD}', ground: '\u{1F9B6}', water: '\u{1F30A}' };
 
   // 150 parts across 25 species: grouped, and never through an OS dropdown.
-  const slotOptions = (slot) => {
+  const slotOptions = (socketId) => {
+    const slot = slotOfSocket(socketId);
     const owned = state.inventory.parts.filter((t) => content.parts[t.partId]?.slot === slot);
     const bySpecies = new Map();
     for (const t of owned) {
@@ -72,21 +86,21 @@ export function renderTheaterScreen(root, ctx) {
               mark: part.classAffinity ? CLASS_MARK[part.classAffinity] : '',
               badge: `<span class="grade-badge grade-${t.grade}">${grade.name}</span>`,
               sub: `${part.ability} \u00b7 essence of ${t.donor.name} \u2605${t.donor.stars}`,
-              disabled: chosen.has(t.id) && draft.slots[slot] !== t.id,
+              disabled: chosen.has(t.id) && draft.slots[socketId] !== t.id,
             };
           }),
       }));
     return { owned, groups };
   };
 
-  const slotFields = SLOTS.map((slot) => {
-    const { owned } = slotOptions(slot);
-    const tokenId = draft.slots[slot];
+  const slotFields = sockets.map((socketId) => {
+    const { owned } = slotOptions(socketId);
+    const tokenId = draft.slots[socketId];
     const token = tokenId ? state.inventory.parts.find((t) => t.id === tokenId) : null;
     const part = token ? content.parts[token.partId] : null;
     return pickerField({
-      id: `slot-${slot}`,
-      label: `${SLOT_LABELS[slot]}${slot === 'head' ? ' *' : ''}`,
+      id: `slot-${socketId}`,
+      label: `${SLOT_LABELS[socketId]}${socketId === 'head' ? ' *' : ''}`,
       count: owned.length || null,
       value: part
         ? `${part.name}${part.classAffinity ? ' ' + CLASS_MARK[part.classAffinity] : ''}`
@@ -125,6 +139,12 @@ export function renderTheaterScreen(root, ctx) {
       <p class="ranch-msg">${lastMsg}</p>
     </section>
     <section class="card">
+      <p class="tier-line">${
+        levelData(content, 'theater', facilityLevel(state, 'theater'))?.name ?? 'Surgery Theater'
+      }${(() => {
+        const up = nextUpgrade(state, content, 'theater');
+        return up ? ` · next: ${up.level.name} — $${up.level.cost}, bought at the Ranch` : ' · fully equipped';
+      })()}</p>
       <h3>Frame</h3>
       <div class="frame-picker" id="thtr-frames">${frameBtns}</div>
       <h3>Sockets (from the Vault)</h3>
@@ -144,16 +164,20 @@ export function renderTheaterScreen(root, ctx) {
       renderTheaterScreen(root, ctx);
     });
   });
-  bindPickers(root, Object.fromEntries(SLOTS.map((slot) => [`slot-${slot}`, () => {
-    const { groups } = slotOptions(slot);
+  bindPickers(root, Object.fromEntries(sockets.map((socketId) => [`slot-${socketId}`, () => {
+    const { groups } = slotOptions(socketId);
     return {
-      title: SLOT_LABELS[slot],
-      subtitle: slot === 'head' ? 'A head is mandatory. Every abomination deserves googly eyes.' : 'Leave it empty if you like living dangerously.',
-      selectedId: draft.slots[slot] ?? '',
+      title: SLOT_LABELS[socketId],
+      subtitle: socketId === 'head'
+        ? 'A head is mandatory. Every abomination deserves googly eyes.'
+        : socketId === 'organ2'
+          ? 'The second bay. More metabolism, or a second ability — if the frame can carry the mass.'
+          : 'Leave it empty if you like living dangerously.',
+      selectedId: draft.slots[socketId] ?? '',
       groups: [{ label: null, options: [{ id: '', label: 'Empty socket', sub: 'Nothing installed' }] }, ...groups],
       onPick: (value) => {
-        if (value) draft.slots[slot] = value;
-        else delete draft.slots[slot];
+        if (value) draft.slots[socketId] = value;
+        else delete draft.slots[socketId];
         renderTheaterScreen(root, ctx);
       },
     };

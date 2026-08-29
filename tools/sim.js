@@ -30,6 +30,7 @@ export function loadSimContent() {
     classes: readJSON('data/classes.json'),
     rivals: readJSON('data/rivals.json'),
     director: readJSON('data/director.json'),
+    facility: readJSON('data/facility.json'),
   });
 }
 
@@ -37,16 +38,23 @@ export function loadSimContent() {
 // measures the BUILD, not husbandry or obedience noise.
 export function makeSimChimera(frame, partIds, grade, content) {
   const tokens = {};
+  // Socket ids, not slot types: a Tier II build carries two organs, so the
+  // second one lands in `organ2` instead of overwriting the first.
+  const used = new Set();
   for (const pid of partIds) {
     const part = content.parts[pid];
-    tokens[part.slot] = {
+    let socketId = part.slot;
+    let n = 2;
+    while (used.has(socketId)) socketId = `${part.slot}${n++}`;
+    used.add(socketId);
+    tokens[socketId] = {
       id: `sim-${pid}`,
       partId: pid,
       grade,
       donor: { name: 'Simulacrum', species: part.species, stars: 3, extractedAt: 0 },
     };
   }
-  const report = analyze(frame, Object.values(tokens), content);
+  const report = analyze(frame, Object.values(tokens), content, Object.keys(tokens).length);
   return {
     id: `sim-${frame}-${partIds.join('+')}`,
     name: 'Simulacrum',
@@ -147,6 +155,22 @@ export function sampleBuilds(content, n, seed) {
   return builds;
 }
 
+// Every build in the pool, given the second organ bay Theater Tier II buys.
+// The point of the comparison is what the UPGRADE is worth, so the second
+// organ is added to the build rather than replacing anything.
+export function withSecondOrgan(builds, content, seed = 7) {
+  const rng = mulberry32(hashString(`organ2:${seed}`));
+  const organs = Object.values(content.parts).filter((p) => p.slot === 'organ').map((p) => p.id);
+  return builds.map((b) => {
+    const already = b.partIds.filter((id) => content.parts[id].slot === 'organ');
+    if (already.length >= 2) return b;
+    let extra = pick(rng, organs);
+    for (let i = 0; i < 8 && already.includes(extra); i++) extra = pick(rng, organs);
+    if (already.includes(extra)) return b;
+    return { ...b, partIds: [...b.partIds, extra] };
+  });
+}
+
 // Rival duels at their first-meeting tier. A rival with counterBias reads
 // the player's stable, so the harness gives it an empty one — we measure
 // the published matchup, not a build-specific counter.
@@ -163,8 +187,8 @@ export function rivalEncounters(content, seed = 2026, defeats = 0) {
   });
 }
 
-export function runSim(content, { builds = 40, seedsPer = 3, grade = 'standard', seed = 2026, teamSize = 1 } = {}) {
-  const pool = sampleBuilds(content, builds, seed);
+export function runSim(content, { builds = 40, seedsPer = 3, grade = 'standard', seed = 2026, teamSize = 1, pool: givenPool = null } = {}) {
+  const pool = givenPool ?? sampleBuilds(content, builds, seed);
   const encounters = [
     ...Object.values(content.encounters),
     ...rivalEncounters(content, seed),

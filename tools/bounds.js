@@ -24,21 +24,32 @@ function ext(shapes) {
   }
   return {x0,x1,y0,y1};
 }
-const SOCK = { head:'head', forelimbs:'forelimb_far', hindlimbs:'hindlimb_far', tail:'tail', organ:'organ' };
+// Every socket a slot type can occupy — a part must fit in ALL of them, so
+// adding a bay (Theater Tier II's organ2) is covered without a code edit.
+const SOCK = {
+  head: ['head'],
+  forelimbs: ['forelimb_far', 'forelimb_near'],
+  hindlimbs: ['hindlimb_far', 'hindlimb_near'],
+  tail: ['tail'],
+  organ: ['organ', 'organ2'],
+};
 export function overflowingParts() {
 const bad = [];
 for (const p of parts) {
   if (p.slot === 'hide') continue;
   const e = ext(p.shapes);
   for (const f of frames) {
-    const sock = f.sockets[SOCK[p.slot]];
+   for (const sockName of SOCK[p.slot] ?? []) {
+    const sock = f.sockets[sockName];
+    if (!sock) continue;
     const S = f.scale, k = sock.scale ?? 1;
     const reach = {
       left:  Math.abs((e.x0*k + sock.x) * S), right: Math.abs((e.x1*k + sock.x) * S),
       up:    Math.abs((e.y0*k + sock.y) * S), down:  Math.abs((e.y1*k + sock.y) * S),
     };
     const worst = Math.max(reach.left, reach.right, reach.up, reach.down);
-    if (worst > VB) bad.push({ part: p.id, frame: f.id, over: Math.round(worst - VB) });
+    if (worst > VB) bad.push({ part: p.id, frame: f.id, socket: sockName, over: Math.round(worst - VB) });
+   }
   }
 }
 return bad;
