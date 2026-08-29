@@ -1,12 +1,18 @@
-// Arena renderer. The engine resolves a whole round in one synchronous
-// call, which is right for the harness and wrong for a human: pressing one
-// button and watching seven lines appear at once does not read as a turn.
+// Arena renderer. Two jobs, both about making a fight read as a fight.
 //
-// So this module is a PLAYER, not a printer. step() hands back events that
-// each carry a snapshot of the battle at that instant; we walk them one
-// beat at a time, driving the HUD from each snapshot and animating what
-// the beat means. The shell is built once per turn and then mutated in
-// place — re-rendering mid-playback would cancel every animation.
+// 1. PLAYBACK. The engine resolves a whole round in one synchronous call,
+//    which is right for the harness and wrong for a human. step() hands
+//    back events that each carry a snapshot of the battle at that instant;
+//    we walk them one beat at a time, driving the HUD from each snapshot.
+//    The shell is built once per turn and then mutated in place —
+//    re-rendering mid-playback would cancel every animation.
+//
+// 2. STAGING. One screen, no scrolling, laid out the way a turn-based
+//    creature battle has been laid out since 1996: the foe up and to the
+//    right, you down and to the left, both facing each other, a message
+//    box under the field and the command menu under that. Everything that
+//    used to be a stacked panel is now either an overlay on the field or
+//    one tap away, because a battle you have to scroll is not a battle.
 
 import { renderCreatureSVG, renderUnitSVG } from '../render/renderer.js';
 import { chimeraGenome } from '../splice/theater.js';
@@ -15,6 +21,7 @@ import {
   tagMultiplier, classMultiplier,
 } from './engine.js';
 import { resolveBattle } from '../campaign/campaign.js';
+import { openPicker } from '../ui/picker.js';
 import * as sfx from '../audio/sfx.js';
 
 // Beat lengths. Kept here so the whole fight's pacing is one edit away.
@@ -36,77 +43,76 @@ let playing = false; // guards clicks while a round resolves
 
 // --- Small view helpers -------------------------------------------------
 
-function bar(value, max, cls, extra = '') {
+function bar(value, max, cls) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
-  return `<div class="meter ${extra}"><div class="meter-fill ${cls}" style="width:${pct}%"></div></div>`;
+  return `<div class="meter"><div class="meter-fill ${cls}" style="width:${pct}%"></div></div>`;
 }
+
+const CLASS_ICON = { ground: '🦶', water: '🌊', air: '🪽' };
 
 function classChip(creatureClass, content) {
-  if (!creatureClass) return '<span class="cls-chip cls-none">◇ Unclassed</span>';
+  if (!creatureClass) return '<span class="cls-chip">◇</span>';
   const c = content.classes[creatureClass];
-  return `<span class="cls-chip class-${creatureClass}">${c.icon} ${c.name}</span>`;
+  return `<span class="cls-chip class-${creatureClass}" title="${c.name} — beats ${content.classes[c.beats].name}">${CLASS_ICON[creatureClass]}</span>`;
 }
 
-const STATUS_CHIPS = [
-  ['venom', (c) => `☠ venom ×${c.status.venom}`, 'bad'],
-  ['sleep', () => '💤 asleep', 'bad'],
-  ['stun', () => '✶ stunned', 'bad'],
-  ['trapped', () => '⛓ trapped', 'bad'],
-  ['guard', () => '🛡 guarding', 'good'],
+// Status as icons, not sentences: the HP box has no room for prose and the
+// message box is already saying it out loud.
+const STATUS_ICONS = [
+  ['venom', (c) => `☠${c.status.venom > 1 ? c.status.venom : ''}`, 'bad', 'Envenomed'],
+  ['sleep', () => '💤', 'bad', 'Asleep'],
+  ['stun', () => '✶', 'bad', 'Stunned'],
+  ['trapped', () => '⛓', 'bad', 'Trapped — cannot switch'],
+  ['guard', () => '🛡', 'good', 'Guarding'],
 ];
 
-function statusChips(c) {
+function statusIcons(c) {
   if (!c) return '';
-  const bits = STATUS_CHIPS.filter(([k]) => c.status[k]).map(
-    ([, label, tone]) => `<span class="st-chip st-${tone}">${label(c)}</span>`
+  const bits = STATUS_ICONS.filter(([k]) => c.status[k]).map(
+    ([, label, tone, title]) => `<i class="st st-${tone}" title="${title}">${label(c)}</i>`
   );
-  if (c.status.charging != null) bits.push('<span class="st-chip st-good">⏳ charging</span>');
-  if (c.rejection) bits.push('<span class="st-chip st-bad">⚠ rejection</span>');
+  if (c.status.charging != null) bits.push('<i class="st st-good" title="Winding up">⏳</i>');
+  if (c.rejection) bits.push('<i class="st st-bad" title="Unsettled — Rejection debuffs">⚠</i>');
   for (const [stat, label] of [['power', 'PWR'], ['acc', 'ACC'], ['evasion', 'EVA']]) {
     const n = c.stages?.[stat] ?? 0;
-    if (n) bits.push(`<span class="st-chip st-${n > 0 ? 'good' : 'bad'}">${label} ${n > 0 ? '+' : ''}${n}</span>`);
+    if (n) bits.push(`<i class="st st-${n > 0 ? 'good' : 'bad'}" title="${label} ${n > 0 ? '+' : ''}${n}">${label[0]}${n > 0 ? '↑' : '↓'}</i>`);
   }
   return bits.join('');
 }
 
-// Wave pips: how many fighters the other side still has to throw at you.
-function wavePips(remaining) {
-  const total = remaining + 1;
-  return Array.from({ length: total }, (_, i) => `<span class="pip ${i === 0 ? 'pip-now' : ''}"></span>`).join('');
-}
-
-function teamTray(battle) {
-  return battle.player.team
-    .map((c, i) => {
-      const state = c.hp <= 0 ? 'out' : i === battle.player.active ? 'active' : 'ready';
-      return `<span class="tray-slot tray-${state}" title="${c.name}">
-        <span class="tray-name">${c.name}</span>
-        ${bar(c.hp, c.maxHp, 'fill-hp')}
-      </span>`;
-    })
-    .join('');
-}
+// How many fighters each side still has standing. The foe's is a row of
+// pips on their box; yours doubles as the bench, so a KO'd slot goes dark.
+const pips = (list) =>
+  list.map((ok) => `<i class="pip ${ok ? '' : 'pip-out'}"></i>`).join('');
 
 // What a move will actually do to the thing standing in front of you.
 // This is where the tag chart and the class triangle stop being lore.
-function effectFor(move, me, foe, content) {
+function effectOf(move, me, foe, content) {
   const { mult, ignoreArmor } = tagMultiplier(move.tags, foe.tags, content.tagChart);
   const cls = classMultiplier(me.creatureClass, foe.creatureClass, content);
   const total = mult * cls;
   const chips = [];
   if (move.power > 0) {
-    if (total === 0) chips.push('<span class="fx fx-null">no effect</span>');
-    else if (total > 1.05) chips.push(`<span class="fx fx-up">×${total.toFixed(total % 1 ? 1 : 0)}</span>`);
-    else if (total < 0.95) chips.push(`<span class="fx fx-down">×${total.toFixed(1)}</span>`);
+    if (total === 0) chips.push(['null', 'no effect']);
+    else if (total > 1.05) chips.push(['up', `×${total.toFixed(total % 1 ? 1 : 0)}`]);
+    else if (total < 0.95) chips.push(['down', `×${total.toFixed(1)}`]);
   }
-  if (ignoreArmor || move.keywords?.ignoreArmor) chips.push('<span class="fx fx-up">armor ✗</span>');
-  if (move.keywords?.priority) chips.push('<span class="fx fx-fast">⚡ first</span>');
-  if (move.keywords?.charge) chips.push('<span class="fx fx-slow">2-turn</span>');
-  return chips.join('');
+  if (ignoreArmor || move.keywords?.ignoreArmor) chips.push(['up', 'armor ✗']);
+  if (move.keywords?.priority) chips.push(['fast', '⚡']);
+  if (move.keywords?.charge) chips.push(['slow', '2-turn']);
+  return chips;
 }
 
-const cannonText = (charge, capturable) =>
-  `Containment Cannon ${charge}%${capturable ? ' — fires at ≤40% HP' : ' — nothing capturable here'}`;
+const fxHtml = (chips) => chips.map(([k, t]) => `<span class="fx fx-${k}">${t}</span>`).join('');
+
+// Enemy units are drawn in a tight viewBox; creatures in a generous one.
+// The zoom that makes a chimera fill its slot would crop a Riot Squad's
+// head off, so the slot is told which it is holding.
+function spriteKind(side, refId, ctx, battle) {
+  if (side !== 'enemy') return 'creature';
+  const unit = battle.units?.[refId] ?? ctx.content.enemies[refId];
+  return unit?.genome ? 'creature' : 'unit';
+}
 
 function spriteFor(side, refId, ctx, battle) {
   const { state, content } = ctx;
@@ -121,6 +127,20 @@ function spriteFor(side, refId, ctx, battle) {
   return chimera ? renderCreatureSVG(chimeraGenome(chimera, content), content, { idPrefix: `me-${refId}` }) : '';
 }
 
+function hpBox(side, c, content, extra = '') {
+  return `
+    <div class="hp-box hp-${side}" id="${side}-box">
+      <div class="hp-name">
+        <strong id="${side}-name">${c.name}</strong>
+        ${classChip(c.creatureClass, content)}
+        <span class="hp-pips" id="${side}-pips"></span>
+      </div>
+      ${bar(c.hp, c.maxHp, side === 'me' ? 'fill-hp' : 'fill-foe')}
+      <div class="hp-read"><span id="${side}-hp">${c.hp}/${c.maxHp}</span><span class="st-row" id="${side}-st">${statusIcons(c)}</span></div>
+      ${extra}
+    </div>`;
+}
+
 // --- The shell ----------------------------------------------------------
 
 export function renderArena(root, ctx, onDone) {
@@ -130,101 +150,162 @@ export function renderArena(root, ctx, onDone) {
   const foe = battle.enemy.active;
   const actions = playerActions(battle);
   const order = turnForecast(battle);
+  document.body.classList.add('in-battle');
 
-  const modeTag =
-    battle.context.kind === 'rescue' ? '<span class="mode-tag mode-rescue">RESCUE RAID</span>'
-      : battle.context.kind === 'rival' ? '<span class="mode-tag mode-rival">RIVAL DUEL</span>'
+  const mode =
+    battle.context.kind === 'rescue' ? '<span class="mode-tag mode-rescue">RESCUE</span>'
+      : battle.context.kind === 'rival' ? '<span class="mode-tag mode-rival">RIVAL</span>'
         : '';
 
-  const orderLine = battle.pendingReplace
-    ? '<span class="order-swap">Send in a replacement — the enemy waits (grudgingly)</span>'
+  const prompt = battle.pendingReplace
+    ? '<span class="ord-swap">Send in a replacement.</span>'
     : order.tied
-      ? `<span class="order-tie">Dead heat at ${order.playerSpeed} speed — coin toss for first strike</span>`
+      ? `What now? <span class="ord-tie">Dead heat at ${order.playerSpeed} speed.</span>`
       : order.playerFirst
-        ? `<span class="order-you">⚡ You strike first — ${order.playerSpeed} speed vs ${order.enemySpeed}</span>`
-        : `<span class="order-them">⚠ They strike first — ${order.enemySpeed} speed vs your ${order.playerSpeed}</span>`;
+        ? `What now? <span class="ord-you">⚡ You are faster (${order.playerSpeed} vs ${order.enemySpeed}).</span>`
+        : `What now? <span class="ord-them">⚠ They are faster (${order.enemySpeed} vs ${order.playerSpeed}).</span>`;
 
-  const actionBtns = actions
-    .map((a, i) => {
-      if (a.type !== 'move' && a.type !== 'release') {
-        return `<button type="button" data-action="${i}" class="act act-${a.type}">${a.label}</button>`;
-      }
-      const move = me.moves[a.type === 'release' ? me.status.charging : a.index];
-      return `<button type="button" data-action="${i}" class="act act-${a.type}">
-        <span class="act-name">${a.label}</span>
-        <span class="act-meta">${move.power > 0 ? `<span class="act-pow">${move.power}</span>` : '<span class="act-pow act-util">util</span>'}<span class="cost">${move.cost}⚡</span></span>
-        <span class="act-fx">${effectFor(move, me, foe, content)}</span>
-      </button>`;
+  root.innerHTML = `
+    <section class="arena">
+      <div class="stage" id="stage">
+        <div class="stage-bar">
+          <span class="turn-badge">TURN ${battle.turn}</span>
+          <span class="stage-title">${battle.encounterName}</span>
+          ${mode}
+        </div>
+
+        ${hpBox('foe', foe, content)}
+
+        <div class="slot slot-foe kind-${spriteKind('enemy', foe.refId, ctx, battle)}" id="foe-slot">
+          <div class="platform"></div>
+          <div class="sprite-zoom"><div class="sprite" id="foe-sprite">${spriteFor('enemy', foe.refId, ctx, battle)}</div></div>
+          <div class="float-layer"></div>
+        </div>
+
+        <div class="slot slot-me" id="me-slot">
+          <div class="platform"></div>
+          <div class="sprite-zoom"><div class="sprite" id="me-sprite">${spriteFor('player', me.refId, ctx, battle)}</div></div>
+          <div class="float-layer"></div>
+        </div>
+
+        ${hpBox('me', me, content, `
+          <div class="sta-line">${bar(me.stamina, me.staminaMax, 'fill-sta')}<span id="me-sta">${me.stamina}/${me.staminaMax}⚡</span></div>
+          <div class="cannon-line" id="cannon-line">${bar(battle.cannon.charge, 100, 'fill-cannon')}<span id="cannon-read">${battle.cannon.charge}%</span></div>`)}
+      </div>
+
+      <div class="msg-box" id="msg-box">
+        <p class="msg-text" id="msg-text">${prompt}</p>
+        <button type="button" class="msg-log" id="msg-log" aria-label="Battle log">▤</button>
+      </div>
+
+      <div class="cmd" id="cmd">${commandHtml(battle, actions, me, foe, content)}</div>
+    </section>`;
+
+  wireCommands(root, ctx, onDone, actions, me, foe);
+  root.querySelector('#msg-log').addEventListener('click', () => showLog(battle));
+  paintPips(root, battle.player.team.map((c) => c.hp > 0), battle.enemy.queue.length + 1);
+  root.querySelector('#cannon-line').classList.toggle('is-idle', !battle.cannon.charge && !foe.capturable);
+}
+
+// The command menu. Four move cells like every creature battler ever made,
+// with the overflow behind one more tap rather than a taller screen.
+function commandHtml(battle, actions, me, foe, content) {
+  if (battle.pendingReplace) {
+    return `<div class="move-grid">${actions
+      .map((a, i) => `<button type="button" class="mv mv-swap" data-action="${i}">
+        <span class="mv-name">${a.label}</span><span class="mv-sub">send in</span></button>`)
+      .join('')}</div>`;
+  }
+
+  const moves = actions.filter((a) => a.type === 'move' || a.type === 'release');
+  const shown = moves.length > 4 ? moves.slice(0, 3) : moves.slice(0, 4);
+  const cells = shown.map((a) => {
+    const i = actions.indexOf(a);
+    const move = me.moves[a.type === 'release' ? me.status.charging : a.index];
+    return `<button type="button" class="mv ${a.type === 'release' ? 'mv-release' : ''}" data-action="${i}">
+      <span class="mv-name">${a.label}</span>
+      <span class="mv-sub">${move.power > 0 ? `<b>${move.power}</b>` : '<i>util</i>'} · ${move.cost}⚡ ${fxHtml(effectOf(move, me, foe, content))}</span>
+    </button>`;
+  });
+  if (moves.length > 4) {
+    cells.push(`<button type="button" class="mv mv-more" data-more="1">
+      <span class="mv-name">More moves</span><span class="mv-sub">${moves.length - 3} others</span></button>`);
+  }
+  while (cells.length < 4) cells.push('<span class="mv mv-empty"></span>');
+
+  const util = actions
+    .filter((a) => ['rest', 'switch', 'flee', 'capture'].includes(a.type))
+    .slice(0, 4)
+    .map((a) => {
+      const i = actions.indexOf(a);
+      const icon = { rest: '❑', switch: '⇄', flee: '↩', capture: '◎' }[a.type];
+      const label = { rest: 'Breath', switch: 'Switch', flee: 'Retreat', capture: 'Cannon' }[a.type];
+      return `<button type="button" class="ut ut-${a.type}" data-action="${i}"><b>${icon}</b> ${label}</button>`;
     })
     .join('');
 
-  root.innerHTML = `
-    <section class="card arena">
-      <div class="arena-top">
-        <span class="turn-badge">TURN ${battle.turn}</span>
-        <span class="arena-title">${battle.encounterName}</span>
-        ${modeTag}
-      </div>
+  return `<div class="move-grid">${cells.join('')}</div><div class="util-row">${util}</div>`;
+}
 
-      <div class="fighter fighter-foe" id="foe-panel">
-        <div class="fighter-art" id="foe-art">
-          <div class="sprite-wrap">${spriteFor('enemy', foe.refId, ctx, battle)}</div>
-          <div class="float-layer" id="foe-floats"></div>
-        </div>
-        <div class="fighter-info">
-          <div class="name-row"><strong id="foe-name">${foe.name}</strong>${classChip(foe.creatureClass, content)}</div>
-          <div class="wave-pips" id="foe-pips">${wavePips(battle.enemy.queue.length)}</div>
-          ${bar(foe.hp, foe.maxHp, 'fill-foe')}
-          <span class="meter-label" id="foe-hp">HP ${foe.hp}/${foe.maxHp}</span>
-          ${bar(foe.stamina, foe.staminaMax, 'fill-sta')}
-          <span class="meter-label" id="foe-sta">STA ${foe.stamina}/${foe.staminaMax}</span>
-          <div class="chip-row" id="foe-status">${statusChips(foe)}</div>
-        </div>
-      </div>
-
-      <div class="turn-strip" id="turn-strip">${orderLine}</div>
-
-      <div class="fighter fighter-me" id="me-panel">
-        <div class="fighter-info">
-          <div class="name-row"><strong id="me-name">${me.name}</strong>${classChip(me.creatureClass, content)}</div>
-          ${bar(me.hp, me.maxHp, 'fill-hp')}
-          <span class="meter-label" id="me-hp">HP ${me.hp}/${me.maxHp}</span>
-          ${bar(me.stamina, me.staminaMax, 'fill-sta')}
-          <span class="meter-label" id="me-sta">STA ${me.stamina}/${me.staminaMax}${me.regen < 0 ? ' · runs hot' : ''}</span>
-          <div class="chip-row" id="me-status">${statusChips(me)}</div>
-        </div>
-        <div class="fighter-art" id="me-art">
-          <div class="sprite-wrap">${spriteFor('player', me.refId, ctx, battle)}</div>
-          <div class="float-layer" id="me-floats"></div>
-        </div>
-      </div>
-
-      <div class="cannon-row" id="cannon-row">
-        ${bar(battle.cannon.charge, 100, 'fill-cannon')}
-        <span class="meter-label" id="cannon-label">${cannonText(battle.cannon.charge, foe.capturable)}</span>
-      </div>
-
-      <div class="team-tray" id="team-tray">${teamTray(battle)}</div>
-    </section>
-
-    <section class="card">
-      <div class="battle-log" id="battle-log">${battle.log
-        .slice(-6)
-        .map((l) => `<p class="${l.startsWith('\u201c') ? 'log-bark' : ''}">${l}</p>`)
-        .join('')}</div>
-      <div class="action-grid" id="action-grid">${actionBtns}</div>
-    </section>`;
-
-  root.querySelectorAll('button[data-action]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (playing) return;
-      const action = actions[Number(btn.dataset.action)];
-      if (action.type === 'capture') sfx.play('capture');
-      const events = step(battle, action, content);
-      ctx.save();
-      playRound(root, ctx, onDone, events);
+function wireCommands(root, ctx, onDone, actions, me, foe) {
+  const { state, content } = ctx;
+  const battle = state.battle;
+  const fire = (action) => {
+    if (playing) return;
+    if (action.type === 'capture') sfx.play('capture');
+    const events = step(battle, action, content);
+    ctx.save();
+    playRound(root, ctx, onDone, events);
+  };
+  root.querySelectorAll('[data-action]').forEach((btn) => {
+    btn.addEventListener('click', () => fire(actions[Number(btn.dataset.action)]));
+  });
+  root.querySelector('[data-more]')?.addEventListener('click', () => {
+    const moves = actions.filter((a) => a.type === 'move' || a.type === 'release');
+    openPicker({
+      title: 'Every move',
+      subtitle: `${me.name} · ${me.stamina}/${me.staminaMax}⚡ in the tank`,
+      selectedId: '',
+      groups: [{
+        label: null,
+        options: moves.map((a) => {
+          const move = me.moves[a.type === 'release' ? me.status.charging : a.index];
+          return {
+            id: String(actions.indexOf(a)),
+            label: a.label,
+            badge: fxHtml(effectOf(move, me, foe, content)),
+            sub: `${move.power > 0 ? `power ${move.power}` : 'utility'} · ${move.cost}⚡ · ${move.acc}% accurate${move.tags.length ? ` · ${move.tags.join(', ')}` : ''}`,
+          };
+        }),
+      }],
+      onPick: (value) => value && fire(actions[Number(value)]),
     });
   });
+}
+
+// The log lives one tap away instead of eating a third of the screen.
+function showLog(battle) {
+  const overlay = document.querySelector('#overlay');
+  overlay.hidden = false;
+  overlay.innerHTML = `
+    <div class="ceremony card log-sheet">
+      <h3>Battle log — turn ${battle.turn}</h3>
+      <div class="battle-log">${battle.log.slice(-40).map((l) => `<p class="${l.startsWith('“') ? 'log-bark' : ''}">${l}</p>`).join('')}</div>
+      <button type="button" id="log-done" class="big-btn">Back to it</button>
+    </div>`;
+  const list = overlay.querySelector('.battle-log');
+  list.scrollTop = list.scrollHeight;
+  overlay.querySelector('#log-done').addEventListener('click', () => {
+    overlay.hidden = true;
+    overlay.innerHTML = '';
+  });
+}
+
+function paintPips(root, playerAlive, foeLeft) {
+  const foePips = root.querySelector('#foe-pips');
+  const mePips = root.querySelector('#me-pips');
+  if (foePips) foePips.innerHTML = pips(Array.from({ length: foeLeft }, () => true));
+  if (mePips) mePips.innerHTML = pips(playerAlive);
 }
 
 // --- Playback -----------------------------------------------------------
@@ -232,17 +313,16 @@ export function renderArena(root, ctx, onDone) {
 function playRound(root, ctx, onDone, events) {
   const { state, content } = ctx;
   const battle = state.battle;
-  const grid = root.querySelector('#action-grid');
-  const strip = root.querySelector('#turn-strip');
-  const log = root.querySelector('#battle-log');
+  const cmd = root.querySelector('#cmd');
+  const msg = root.querySelector('#msg-text');
   const instant = reducedMotion();
 
   playing = true;
   let skipped = false;
   let timer = null;
-  if (grid) {
-    grid.innerHTML = '<button type="button" class="resolving">resolving the round… ▶ tap to skip</button>';
-    grid.querySelector('.resolving').addEventListener('click', () => {
+  if (cmd) {
+    cmd.innerHTML = '<button type="button" class="resolving">resolving… ▶ tap to skip</button>';
+    cmd.querySelector('.resolving').addEventListener('click', () => {
       if (skipped) return;
       skipped = true;
       clearTimeout(timer); // flush now, not at the end of the current beat
@@ -256,6 +336,7 @@ function playRound(root, ctx, onDone, events) {
       sfx.play(battle.outcome === 'win' ? 'win' : 'lose');
       const detail = resolveBattle(state, battle, content, ctx.now());
       ctx.save();
+      document.body.classList.remove('in-battle');
       onDone(detail);
     } else {
       renderArena(root, ctx, onDone);
@@ -266,127 +347,110 @@ function playRound(root, ctx, onDone, events) {
   function next() {
     if (i >= events.length) return finish();
     // Skipping does not cheat: every remaining beat still runs, it just
-    // runs now. The log and the HUD end up exactly where they would have.
+    // runs now. The HUD ends up exactly where it would have.
     if (skipped || instant) {
-      while (i < events.length) applyBeat(root, ctx, battle, events[i++], strip, log);
+      while (i < events.length) applyBeat(root, ctx, battle, events[i++], msg);
       return finish();
     }
     const e = events[i++];
-    applyBeat(root, ctx, battle, e, strip, log);
+    applyBeat(root, ctx, battle, e, msg);
     timer = setTimeout(next, beatFor(e.kind));
   }
   next();
 }
 
-const PHASE_LABEL = {
-  player: 'YOUR MOVE',
-  enemy: 'ENEMY MOVE',
-};
-
-function applyBeat(root, ctx, battle, e, strip, log) {
+function applyBeat(root, ctx, battle, e, msg) {
   const snap = e.snap;
   const q = (sel) => root.querySelector(sel);
 
-  // 1. Phase banner — the beat that makes turns legible.
-  if (strip) {
-    const actor = e.actor ?? (e.kind === 'ko' || e.kind === 'damage' ? (e.target === 'player' ? 'enemy' : 'player') : null);
-    strip.className = `turn-strip ${actor ? `phase-${actor}` : 'phase-none'}`;
-    strip.innerHTML = actor
-      ? `<span class="phase-label">${PHASE_LABEL[actor]}</span><span class="phase-text">${e.text}</span>`
-      : `<span class="phase-text">${e.text}</span>`;
-  }
-
-  // 1b. Spotlight the fighter whose beat this is.
-  for (const [side, sel] of [['enemy', '#foe-panel'], ['player', '#me-panel']]) {
-    q(sel)?.classList.toggle('is-acting', !!e.actor && e.actor === side);
+  // 1. The line, in the box under the field.
+  if (msg) {
+    msg.className = `msg-text msg-${e.kind}`;
+    msg.textContent = e.text;
   }
 
   // 2. Sprites, if this beat swapped somebody in.
   if (e.kind === 'waveIn' || e.kind === 'capture') {
-    for (const [side, sel] of [['enemy', '#foe-art'], ['player', '#me-art']]) {
+    for (const [side, sel] of [['enemy', '#foe-sprite'], ['player', '#me-sprite']]) {
       const holder = q(sel);
-      const refId = snap[side]?.refId;
+      const refId = snap[side === 'enemy' ? 'enemy' : 'player']?.refId;
       if (!holder || !refId || holder.dataset.ref === refId) continue;
-      const wrap = holder.querySelector('.sprite-wrap');
-      wrap.innerHTML = spriteFor(side, refId, ctx, battle);
+      holder.innerHTML = spriteFor(side, refId, ctx, battle);
       holder.dataset.ref = refId;
-      animate(wrap, 'anim-wavein');
+      holder.closest('.slot')?.classList.remove('kind-unit', 'kind-creature');
+      holder.closest('.slot')?.classList.add(`kind-${spriteKind(side, refId, ctx, battle)}`);
+      animate(holder, 'anim-wavein');
     }
   }
 
-  // 3. Bars, labels, chips — straight from the snapshot.
-  paintSide(q('#foe-name'), q('#foe-hp'), q('#foe-sta'), q('#foe-status'), q('#foe-panel'), snap.enemy, 0);
-  paintSide(q('#me-name'), q('#me-hp'), q('#me-sta'), q('#me-status'), q('#me-panel'), snap.player, 0);
-  const pips = q('#foe-pips');
-  if (pips) pips.innerHTML = wavePips(snap.wavesLeft);
-  const cannon = q('#cannon-row .meter-fill');
-  if (cannon) cannon.style.width = `${snap.cannon}%`;
-  const cannonLabel = q('#cannon-label');
-  if (cannonLabel) cannonLabel.textContent = cannonText(snap.cannon, battle.enemy.active?.capturable);
-  const tray = q('#team-tray');
-  if (tray) {
-    tray.innerHTML = snap.bench
-      .map((c, n) => {
-        const st = c.hp <= 0 ? 'out' : n === snap.activeIndex ? 'active' : 'ready';
-        return `<span class="tray-slot tray-${st}"><span class="tray-name">${c.name}</span>${bar(c.hp, c.maxHp, 'fill-hp')}</span>`;
-      })
-      .join('');
+  // 3. Boxes, straight from the snapshot.
+  paintBox(root, 'foe', snap.enemy);
+  paintBox(root, 'me', snap.player);
+  const meSta = q('#me-sta');
+  if (meSta && snap.player) {
+    meSta.textContent = `${snap.player.stamina}/${snap.player.staminaMax}⚡`;
+    const staFill = q('#me-box .fill-sta');
+    if (staFill) staFill.style.width = `${(snap.player.stamina / snap.player.staminaMax) * 100}%`;
   }
+  const cannonFill = q('#cannon-line .meter-fill');
+  if (cannonFill) cannonFill.style.width = `${snap.cannon}%`;
+  const cannonRead = q('#cannon-read');
+  if (cannonRead) cannonRead.textContent = `${snap.cannon}%`;
+  q('#cannon-line')?.classList.toggle('is-idle', !snap.cannon && !battle.enemy.active?.capturable);
+  paintPips(root, snap.bench.map((c) => c.hp > 0), snap.wavesLeft + 1);
 
-  // 4. The animation this beat means.
-  const foeArt = q('#foe-art');
-  const meArt = q('#me-art');
-  const artOf = (side) => (side === 'enemy' ? foeArt : meArt);
+  // 4. The animation this beat means. They face each other, so a lunge is
+  //    horizontal: toward the other one, and back.
+  const meSprite = q('#me-sprite');
+  const foeSprite = q('#foe-sprite');
+  const spriteOf = (side) => (side === 'enemy' ? foeSprite : meSprite);
+  const slotOf = (side) => (side === 'enemy' ? q('#foe-slot') : q('#me-slot'));
 
-  if (e.kind === 'damage' && !e.recoil && !e.dot && e.actor) {
-    animate(artOf(e.actor)?.querySelector('.sprite-wrap'), e.actor === 'player' ? 'anim-lunge-up' : 'anim-lunge-down');
+  if ((e.kind === 'damage' && !e.recoil && !e.dot && e.actor) || e.kind === 'miss' || e.kind === 'immune') {
+    // The foe's zoom wrapper is mirrored, so "forward" already reads as
+    // "toward the other one" for both sides.
+    animate(spriteOf(e.actor), 'anim-lunge-fwd');
   }
   if (e.kind === 'damage') {
-    const art = artOf(e.target);
-    animate(art?.querySelector('.sprite-wrap'), 'anim-hit');
-    float(art, `-${e.amount}`, e.mult > 1.05 ? 'float-crit' : e.mult < 0.95 ? 'float-weak' : 'float-dmg');
+    animate(spriteOf(e.target), 'anim-hit');
+    float(slotOf(e.target), `-${e.amount}`, e.mult > 1.05 ? 'float-crit' : e.mult < 0.95 ? 'float-weak' : 'float-dmg');
+    if (e.mult > 1.05) flash(q('#stage'), 'stage-crit');
     sfx.play(e.mult > 1.05 ? 'bigHit' : e.mult < 0.95 ? 'weakHit' : 'hit');
   } else if (e.kind === 'heal') {
-    float(artOf(e.target), `+${e.amount}`, 'float-heal');
+    float(slotOf(e.target), `+${e.amount}`, 'float-heal');
     sfx.play('buff');
   } else if (e.kind === 'miss' || e.kind === 'immune') {
-    animate(artOf(e.actor)?.querySelector('.sprite-wrap'), e.actor === 'player' ? 'anim-lunge-up' : 'anim-lunge-down');
-    float(artOf(e.target), e.kind === 'miss' ? 'MISS' : 'NO EFFECT', 'float-miss');
+    float(slotOf(e.target), e.kind === 'miss' ? 'MISS' : 'NO EFFECT', 'float-miss');
     sfx.play('miss');
   } else if (e.kind === 'ko') {
-    animate(artOf(e.target)?.querySelector('.sprite-wrap'), 'anim-ko');
+    animate(spriteOf(e.target), 'anim-ko');
     sfx.play('ko');
   } else if (e.kind === 'buff' || e.kind === 'rest') {
-    animate(artOf(e.target)?.querySelector('.sprite-wrap'), 'anim-buff');
+    animate(spriteOf(e.target), 'anim-buff');
     sfx.play('buff');
   } else if (e.kind === 'debuff' || e.kind === 'disobey') {
-    animate(artOf(e.target)?.querySelector('.sprite-wrap'), 'anim-debuff');
+    animate(spriteOf(e.target), 'anim-debuff');
     sfx.play('debuff');
   } else if (e.kind === 'waveIn') {
     sfx.play('waveIn');
   }
-
-  // 5. The log still gets every line, for anyone reading rather than watching.
-  if (log) {
-    const p = document.createElement('p');
-    p.textContent = e.text;
-    p.className = `log-${e.kind}`;
-    log.appendChild(p);
-    while (log.children.length > 8) log.removeChild(log.firstChild);
-    log.scrollTop = log.scrollHeight;
-  }
 }
 
-function paintSide(nameEl, hpEl, staEl, statusEl, panel, c, _i) {
-  if (!c || !panel) return;
-  const meters = panel.querySelectorAll('.meter-fill');
-  if (nameEl) nameEl.textContent = c.name;
-  if (meters[0]) meters[0].style.width = `${Math.max(0, (c.hp / c.maxHp) * 100)}%`;
-  if (meters[1]) meters[1].style.width = `${Math.max(0, (c.stamina / c.staminaMax) * 100)}%`;
-  if (hpEl) hpEl.textContent = `HP ${c.hp}/${c.maxHp}`;
-  if (staEl) staEl.textContent = `STA ${c.stamina}/${c.staminaMax}`;
-  if (statusEl) statusEl.innerHTML = statusChips(c);
-  panel.classList.toggle('is-down', c.hp <= 0);
+function paintBox(root, side, c) {
+  if (!c) return;
+  const box = root.querySelector(`#${side}-box`);
+  if (!box) return;
+  const name = box.querySelector(`#${side}-name`);
+  const hp = box.querySelector(`#${side}-hp`);
+  const fill = box.querySelector('.meter-fill');
+  if (name) name.textContent = c.name;
+  if (hp) hp.textContent = `${c.hp}/${c.maxHp}`;
+  if (fill) fill.style.width = `${Math.max(0, (c.hp / c.maxHp) * 100)}%`;
+  const st = box.querySelector(`#${side}-st`);
+  if (st) st.innerHTML = statusIcons(c);
+  box.classList.toggle('is-low', c.hp > 0 && c.hp / c.maxHp <= 0.25);
+  const slot = root.querySelector(`#${side === 'foe' ? 'foe' : 'me'}-slot`);
+  slot?.classList.toggle('is-down', c.hp <= 0);
 }
 
 // Restart a CSS animation by removing and re-adding the class.
@@ -396,6 +460,12 @@ function animate(el, cls) {
   void el.offsetWidth; // reflow: the class must actually leave the element
   el.classList.add(cls);
   el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+}
+
+function flash(el, cls) {
+  if (!el || reducedMotion()) return;
+  el.classList.add(cls);
+  setTimeout(() => el.classList.remove(cls), 200);
 }
 
 function float(host, text, cls) {
