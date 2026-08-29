@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -114,6 +114,14 @@ const migrations = {
     save.facility = { theater: builtLarge ? 2 : 1 };
     return save;
   },
+  // v12 (Variants): the Splice-Dex records variant species you have bred.
+  // Migrations run before content loads, so they only shape state — the
+  // backfill from stock the player already owns happens on boot (see
+  // ranch.ensureDexVariants), the same way the starter herd does.
+  12: (save) => {
+    save.dex.variants = [];
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -140,7 +148,7 @@ export function newGameState() {
     campaign: { heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, lastTickAt: null },
     news: [],
     settings: { muted: false },
-    dex: { parts: [], enemies: [], traits: [] },
+    dex: { parts: [], enemies: [], traits: [], variants: [] },
     facility: { theater: 1 },
   };
 }

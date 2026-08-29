@@ -1174,3 +1174,21 @@ footer {
 .locked-note { color: #ffd66e; }
 .tier-line { font-size: 0.7rem; color: var(--muted); margin: 2px 0 8px; }
 .frame-picker button.locked { opacity: 0.4; cursor: default; }
+
+/* --- Variants (§3.2) ---------------------------------------------------- */
+
+.variant-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid #ffd66e;
+  color: #ffd66e;
+  vertical-align: middle;
+}
+.variant-row { display: flex; gap: 10px; align-items: center; padding: 6px 0; }
+.variant-portrait { flex: 0 0 72px; width: 72px; }
+.variant-portrait svg { width: 100%; height: auto; }
+.variant-locked .variant-portrait { filter: grayscale(1) brightness(0.4); }
+.variant-locked { opacity: 0.72; }

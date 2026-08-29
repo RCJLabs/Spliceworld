@@ -9,7 +9,7 @@ import {
   catalogFor, TUNING,
 } from './ranch.js';
 import { gradeFor } from '../splice/extract.js';
-import { canBreed, breedPair, hatchEgg, BREEDING } from './breeding.js';
+import { canBreed, breedPair, hatchEgg, BREEDING, isVariant, baseSpecies } from './breeding.js';
 import { onboardingSteps, onboardingActive } from './onboarding.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
@@ -37,6 +37,30 @@ let pickA = ''; // breeding pen draft (screen-local)
 let pickB = '';
 let catalogPick = '';
 const CLASS_MARK = { air: '🪽 ', ground: '🦶 ', water: '🌊 ' };
+
+// A variant hatching is the rarest thing the ranch produces (ROADMAP §3.2),
+// so it gets the ceremony treatment rather than a line in the message strip.
+function showVariantCeremony(ctx, result, onClose) {
+  const { content } = ctx;
+  const species = content.species[result.variant];
+  const overlay = document.querySelector('#overlay');
+  overlay.hidden = false;
+  overlay.innerHTML = `
+    <div class="ceremony card">
+      <h3>${result.firstOfItsKind ? '✦ NEW VARIANT SPECIES' : '✦ THE LINE HOLDS'}</h3>
+      <div class="grad-portrait">${renderCreatureSVG(stockGenome(species.id, content), content, { idPrefix: 'variant' })}</div>
+      <p><strong>${result.hatchling.name}</strong> — ${species.name}</p>
+      <p class="fine-print">${species.flavor ?? ''}</p>
+      <p class="fine-print">Same stock as the ${content.species[species.variantOf].name}, and it breeds true: pair two and the line continues. Its parts carry ${species.tags.join(' and ') || 'no tags'} — and its own numbers.</p>
+      ${result.firstOfItsKind ? '<p class="combo-toast">✦ Logged in the Splice-Dex.</p>' : ''}
+      <button type="button" id="variant-done" class="big-btn">Astonishing</button>
+    </div>`;
+  overlay.querySelector('#variant-done').addEventListener('click', () => {
+    overlay.hidden = true;
+    overlay.innerHTML = '';
+    onClose();
+  });
+}
 
 // Facility upgrades (ROADMAP §3.10). Every level here has to expand what
 // you can CREATE — a bigger chassis, another bay — never just a bigger
@@ -165,9 +189,15 @@ export function renderRanchScreen(root, ctx) {
   // Breeding Pen: adults of one species, opposite sexes. The egg does the rest.
   const eligible = state.ranch.stock.filter((a) => ageStage(a, content, t) !== 'juvenile');
   if (!eligible.some((a) => a.id === pickA)) pickA = '';
+  // Same STOCK, not the same species string: an Alpine Ram is still a ram,
+  // and crossing a lucky mutant back into the good line is the point of it
+  // (canBreed has always allowed this — the picker was hiding it).
   const partnerPool = eligible.filter((b) => {
     const a = eligible.find((x) => x.id === pickA);
-    return a && b.id !== a.id && b.species === a.species && b.sex !== a.sex;
+    return (
+      a && b.id !== a.id && b.sex !== a.sex &&
+      baseSpecies(b.species, content) === baseSpecies(a.species, content)
+    );
   });
   if (!partnerPool.some((b) => b.id === pickB)) pickB = '';
   const parentRow = (a) => ({
@@ -211,12 +241,17 @@ export function renderRanchScreen(root, ctx) {
   const eggCards = state.ranch.eggs.map((egg) => {
     const species = content.species[egg.species];
     const ready = t >= egg.hatchAt;
+    // The egg shows its BASE stock: a variant is a surprise you earn at the
+    // moment of hatching, not something the incubator spoils.
+    const shown = content.species[species.variantOf ?? species.id];
     return `
       <div class="encounter">
         <div class="egg-wrap">${eggSVG(species.palette)}</div>
         <div style="flex:1;min-width:0">
-          <strong>${species.name} egg</strong><br>
-          <span class="fine-print">of ${egg.parents.sire.name} ★${egg.parents.sire.stars} × ${egg.parents.dam.name} ★${egg.parents.dam.stars}${egg.mutationNote ? ' · the egg vibrates suspiciously' : ''}</span>
+          <strong>${shown.name} egg</strong><br>
+          <span class="fine-print">of ${egg.parents.sire.name} ★${egg.parents.sire.stars} × ${egg.parents.dam.name} ★${egg.parents.dam.stars}${
+            egg.mutationNote || egg.variantNote ? ' · the egg vibrates suspiciously' : ''
+          }</span>
         </div>
         <button type="button" data-act="hatch" data-egg="${egg.id}" ${ready ? '' : 'disabled'}>${ready ? 'Hatch!' : fmtDuration(egg.hatchAt - t)}</button>
       </div>`;
@@ -250,7 +285,9 @@ export function renderRanchScreen(root, ctx) {
       <section class="card animal-card">
         <div class="portrait">${portrait}</div>
         <div class="animal-info">
-          <h4>${animal.name} <span class="sex">${animal.sex === 'F' ? '♀' : '♂'}</span>${(animal.traits ?? [])
+          <h4>${animal.name} <span class="sex">${animal.sex === 'F' ? '♀' : '♂'}</span>${
+            isVariant(animal.species, content) ? ' <span class="variant-badge">✦ variant</span>' : ''
+          }${(animal.traits ?? [])
             .map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`)
             .join('')}</h4>
           <p class="meta">${species.name} · ${STAGE_LABELS[stage]}${next ? ` · ${STAGE_LABELS[next.stage]} in ${fmtDuration(next.msRemaining)}` : ''}</p>
@@ -314,7 +351,15 @@ export function renderRanchScreen(root, ctx) {
         if (result.ok) { pickA = ''; pickB = ''; }
       } else if (btn.dataset.act === 'hatch') {
         result = hatchEgg(ctx.state, btn.dataset.egg, content, t2);
-        if (result.ok) sfx.play('hatch');
+        if (result.ok) {
+          sfx.play(result.firstOfItsKind ? 'graduate' : 'hatch');
+          if (result.variant) {
+            lastMsg = result.msg;
+            ctx.save();
+            showVariantCeremony(ctx, result, () => renderRanchScreen(root, ctx));
+            return;
+          }
+        }
       } else if (btn.dataset.act === 'extract') {
         ctx.onExtract?.(btn.dataset.animal);
         return; // the ceremony overlay owns the flow from here

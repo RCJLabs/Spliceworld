@@ -219,6 +219,17 @@ export function ensureRanchSeeded(state, content, now) {
 
 // Purebred display genome for a stock animal — all of its species' parts on
 // its species' frame. The renderer stays species-blind.
+// Variant stock the player already owns counts as discovered — a save that
+// predates the Splice-Dex's variant page should not have to re-earn it.
+export function ensureDexVariants(state, content) {
+  state.dex.variants ??= [];
+  for (const animal of state.ranch.stock) {
+    if (content.species[animal.species]?.variantOf && !state.dex.variants.includes(animal.species)) {
+      state.dex.variants.push(animal.species);
+    }
+  }
+}
+
 export function stockGenome(speciesId, content) {
   const parts = {};
   for (const part of Object.values(content.parts)) {

@@ -55,14 +55,15 @@ export function movesFromTokens(tokens, report, content) {
   // Two bays of the same organ stack their STATS but must not hand the
   // player two identical buttons (Theater Tier II makes that possible for
   // the first time). Keep the better copy.
-  const byName = new Map();
+  // Only collapse moves that are ACTUALLY the same. Matching on name alone
+  // quietly deleted every species' Ground-tagged hindlimb move, because the
+  // generic forelimb and hindlimb abilities shared a name.
+  const sig = (m) => `${m.name}|${m.power}|${m.cost}|${m.acc}|${m.tags.join(',')}|${JSON.stringify(m.keywords)}`;
+  const seen = new Set();
   const add = (move) => {
-    const seen = byName.get(move.name);
-    if (seen) {
-      if (move.power > seen.power) Object.assign(seen, move);
-      return;
-    }
-    byName.set(move.name, move);
+    const key = sig(move);
+    if (seen.has(key)) return;
+    seen.add(key);
     moves.push(move);
   };
   for (const token of tokens) {
