@@ -30,6 +30,8 @@ let lastAftermath = null;
 
 export function renderWarRoomScreen(root, ctx) {
   const { state } = ctx;
+  // Battle mode locks the shell to one screen; every other view scrolls.
+  if (!state.battle) document.body.classList.remove('in-battle');
   if (state.battle) {
     renderArena(root, ctx, (detail) => {
       lastAftermath = aftermathText(detail);

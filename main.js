@@ -63,6 +63,8 @@ const SCREENS = {
 
 function showScreen(name) {
   if (!SCREENS[name]) name = 'ranch';
+  // The single-screen battle layout locks the shell; leaving it unlocks.
+  if (name !== 'battle') document.body.classList.remove('in-battle');
   state.activeScreen = name;
   saveGame(state);
   for (const s of Object.keys(SCREENS)) $(`#screen-${s}`).hidden = s !== name;

@@ -1,5 +1,53 @@
 # PROGRESS
 
+## Session 19 — The arena is one screen ✅
+
+The complaint was that a fight was a scrolling column of panels, not a fight.
+It is now laid out the way turn-based creature battles have been laid out since
+1996.
+
+### Staging
+- Foe **up and to the right**, you **down and to the left**, each on a lit
+  platform. Both **face each other**: everything is drawn facing right, so the
+  foe's zoom wrapper is mirrored — and because the sprite is that wrapper's
+  child, one set of keyframes reads correctly on both sides (three flipped
+  keyframe copies deleted).
+- HP boxes are **overlaid on the field** in the opposite corners, Pokémon-style:
+  name, class chip, remaining-fighter pips, HP bar, status as icons. Yours adds
+  stamina, and the Containment Cannon bar only when there is something to
+  capture.
+- A zoom wrapper crops the renderer's generous viewBox padding so a chimera
+  fills its slot — and enemy *units*, whose viewBox is already tight, are told
+  apart by a `kind-` class so a Riot Squad does not get its helmet cropped off.
+
+### One screen, no scrolling
+`body.in-battle` locks the shell to `100dvh`, hides the tagline, shrinks the
+header and tabs, and lets the stage flex. Everything that used to be a stacked
+panel is now an overlay or one tap away:
+- the **battle log** moved behind a ▤ button on the message box,
+- the **team tray** became pips on your HP box,
+- **moves past four** live behind a "More moves" cell that opens the existing
+  picker sheet, with the same effectiveness badges.
+
+Verified to fit with the command menu fully on screen at **320×568, 360×640,
+390×780 and 412×915** — the stage flexes from 279px to 594px.
+
+### The command menu
+A 2×2 of moves (name, power, cost, and what it will actually do to the fighter
+in front of you) over a utility row of Breath / Switch / Retreat / Cannon.
+`pendingReplace` swaps the grid for the bench; a charging move gets its own
+release cell.
+
+### Verified
+`node tools/smoke.js` and `node tools/bounds.js` green (the engine is
+untouched — this is a renderer change). CDP: a patrol and a rival duel end to
+end, floats and KO animation firing, the More-moves sheet, the log sheet,
+`in-battle` cleanly removed when the fight ends or you change tabs, and no
+console errors at any of the four viewports.
+
+### Next
+Colour schemes: five palettes for the whole game, to pick from.
+
 ## Session 18 — Variants via mutation ✅
 
 The third kind of mutation, deferred since M6 with a comment in `breeding.js`
