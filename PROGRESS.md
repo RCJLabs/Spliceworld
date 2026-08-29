@@ -1,5 +1,26 @@
 # PROGRESS
 
+## Session 9 — M7: Polish & Ship v0.1 ✅ — **v0.1 COMPLETE**
+
+**Acceptance criterion:** a stranger can go from empty ranch to first conquest without asking questions — the "Path to World Domination" checklist on the Ranch walks the whole loop (care → graduate → splice → settle → conquer), derives purely from save state, highlights the current step with a plain-language hint pointing at the right tab, and retires itself after the first conquest. Verified in-browser: fresh save shows step 1; each real action advances it.
+
+### What shipped
+- **Splice-Dex** (sixth tab, "Dex"): species roster with portraits and part-collection counts, combo abilities with undiscovered entries as ??? bait, trait genes, and an enemy field guide (silhouetted ??? until fought). Discovery tracking (`state.dex`) records at extraction, salvage, battle resolution, and hatching; the v8 migration backfills it from anything a save already owns.
+- **Guided onboarding** (`ranch/onboarding.js`, pure): the five-step checklist above. No tutorial flags, no scripted cage.
+- **Obedience UX**: Pens cards show live obedience % with the reason ("unsettled", "instability resists") and a **Train** action (+8 bond, $5, 20h cooldown) — bond finally has a lever besides rescues; War Room briefings show obedience per fighter.
+- **Audio stingers** (`audio/sfx.js`): splice, graduation (with kazoo-adjacent slide), hatch, win/lose fanfares, Containment Cannon thwoomp. Hand-rolled WebAudio (~90 lines) instead of vendoring ZzFX — same joy, zero third-party code pasted from memory; every call fails silently. Mute toggle in the footer, persisted in the save.
+- **PWA**: `manifest.webmanifest` (standalone, portrait, procedural SVG icon with a googly-eye rivet) + `sw.js` service worker (network-first, cache fallback, version-stamped to `SAVE_VERSION`, precache list verified against the real file tree by the smoke test). Registered on load; installable from the deployed site.
+- **TWA checklist** (`docs/TWA.md`): Bubblewrap steps, assetlinks, Play Console notes.
+- Tab bar now six: Ranch · Pens · Vault · Splice · War · Dex (fits 380px).
+- **SAVE_VERSION → 8** (settings, dex, chimera training); v1→v8 chain tested.
+
+### Known issues / v0.2 candidates
+- ROADMAP §9 backlog stands: rival geneticists, AI director activation (dissection + usage data is already banked), L-frame Theater T2, full combo set, variants, rehabilitation, region contestation, monologue pass, chaos-breeding, async ghosts.
+- Play Store listing needs raster exports of `icon.svg` (see TWA.md).
+- The art-quality pass Evan flagged: all shapes are data, so it's a content-only sweep.
+
+**v0.1 definition (ROADMAP §5) is fully shipped: all nine milestones, M0–M7.**
+
 ## Session 8 — M6: Breeding ✅
 
 **Acceptance criterion:** two starred parents produce a measurably better egg — **passes**, proven by Monte Carlo in the smoke suite: 150 eggs from 5★×5★ parents average >4.4 stars vs. <2.8 from 2★×2★ (gap >1.5), and selective breeding beats the mail-order catalog baseline by >1 full star. Eggs are seed-deterministic (genetics decided at conception).

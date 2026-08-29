@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -68,6 +68,19 @@ const migrations = {
     }
     return save;
   },
+  // v8 (M7): Splice-Dex tracking, settings, chimera training. The dex
+  // backfills from what the save already owns — no discovery is lost.
+  8: (save) => {
+    save.settings = { muted: false };
+    save.dex = { parts: [], enemies: [], traits: [] };
+    const seenParts = new Set([
+      ...save.inventory.parts.map((t) => t.partId),
+      ...save.chimeras.flatMap((c) => Object.values(c.tokens).map((t) => t.partId)),
+    ]);
+    save.dex.parts = [...seenParts];
+    for (const chimera of save.chimeras) chimera.lastTrainedAt = chimera.lastTrainedAt ?? 0;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -93,6 +106,8 @@ export function newGameState() {
     warRecord: { wins: 0, losses: 0 },
     campaign: { heldNodes: [], notoriety: 0, captives: [], containment: [], lastTickAt: null },
     news: [],
+    settings: { muted: false },
+    dex: { parts: [], enemies: [], traits: [] },
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations

@@ -28,6 +28,9 @@ import {
   nodeStates, threatGen, incomePerDay, tickCampaign, resolveBattle, salvageUnit,
 } from '../campaign/campaign.js';
 import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING } from '../ranch/breeding.js';
+import { trainChimera, TRAINING } from '../splice/theater.js';
+import { obediencePercent } from '../battle/engine.js';
+import { onboardingSteps, onboardingActive } from '../ranch/onboarding.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -844,6 +847,83 @@ const v5WithBattle = {
 };
 const patched = migrate(v5WithBattle);
 assert.deepEqual(patched.battle.cannon, { charge: 0 }, 'in-flight v5 battles gain cannon fields');
+
+// --- M7: Splice-Dex recording rides the existing flows.
+assert.ok(m2sim.dex.parts.includes('goat_head'), 'extraction records dex parts');
+assert.ok(m5lab.dex.enemies.includes('riot_squad') && m5lab.dex.enemies.includes('captain_clampdown'), 'battles record dex enemies');
+assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
+
+// --- M7: training raises bond; obedience rises with it.
+{
+  const s = { ...newGameState(), seed: 808, funds: 100 };
+  const trainee = makeChimera(s, 'M', { cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'prime' }, t0);
+  const tSet = trainee.settleUntil;
+  const before = obediencePercent(trainee, tSet);
+  const r1 = trainChimera(s, trainee.id, tSet);
+  assert.ok(r1.ok && trainee.bond === TRAINING.bondGain);
+  assert.ok(!trainChimera(s, trainee.id, tSet + HOUR).ok, 'training has a cooldown');
+  assert.ok(trainChimera(s, trainee.id, tSet + 21 * HOUR).ok, 'cooldown expires');
+  assert.ok(obediencePercent(trainee, tSet) > before, 'bond raises obedience');
+  s.funds = 0;
+  assert.ok(!trainChimera(s, trainee.id, tSet + 48 * HOUR).ok, 'treats cost money');
+  const unsettledPct = obediencePercent(trainee, trainee.createdAt);
+  assert.ok(unsettledPct < obediencePercent(trainee, tSet), 'unsettled chimeras obey less');
+}
+
+// --- M7: onboarding derives purely from state.
+{
+  const s = { ...newGameState(), seed: 55 };
+  ensureRanchSeeded(s, content, t0);
+  assert.ok(onboardingActive(s));
+  let steps = onboardingSteps(s, content, t0);
+  assert.equal(steps.filter((x) => x.done).length, 0);
+  assert.equal(steps.find((x) => !x.done).label, 'Care for an animal');
+  careAction(s, s.ranch.stock[0].id, 'groom', content, t0);
+  steps = onboardingSteps(s, content, t0);
+  assert.ok(steps[0].done && !steps[1].done);
+  s.ranch.stock[0].birthAt = t0 - 100 * HOUR;
+  extractAnimal(s, s.ranch.stock[0].id, content, t0);
+  assert.ok(onboardingSteps(s, content, t0)[1].done, 'extraction advances the path');
+  s.campaign.heldNodes.push('barn_perimeter');
+  assert.ok(!onboardingActive(s), 'the checklist retires after first conquest');
+  assert.ok(onboardingActive(conq) === false, 'conquered fixtures agree');
+}
+
+// --- M7: PWA shell — manifest valid, sw precache list matches real files.
+{
+  const manifest = JSON.parse(readFileSync(join(root, 'manifest.webmanifest'), 'utf8'));
+  assert.ok(manifest.name === 'Spliceworld' && manifest.display === 'standalone' && manifest.icons.length);
+  const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+  assert.ok(sw.includes(`spliceworld-v${SAVE_VERSION}`), 'sw cache version tracks SAVE_VERSION');
+  const shellFiles = [...sw.matchAll(/'([^']+\.(?:js|json|css|html|svg|webmanifest))'/g)].map((m) => m[1]);
+  assert.ok(shellFiles.length > 20, 'precache list is populated');
+  for (const f of shellFiles) {
+    assert.ok(readFileSync(join(root, f)), `sw precaches a real file: ${f}`);
+  }
+  readFileSync(join(root, 'icon.svg')); // exists
+  readFileSync(join(root, 'docs/TWA.md'));
+}
+
+// --- M7: v8 migration backfills the dex from owned tokens.
+{
+  const v7ish = migrate(structuredClone(v1Save)); // gives v8 empty everything
+  assert.deepEqual(v7ish.settings, { muted: false });
+  assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [] });
+  const richV7 = { ...structuredClone(v1Save) };
+  const chain = migrate(richV7); // walk to v8 baseline shape…
+  // …then simulate a v7 save that owned things:
+  const owned = {
+    ...structuredClone(chain),
+    saveVersion: 7,
+    inventory: { vials: [], tokenCount: 2, parts: [{ id: 't0', partId: 'goat_head', grade: 'prime', donor: {} }] },
+    chimeras: [{ id: 'c0', tokens: { organ: { partId: 'cobra_organ' } }, bond: 0 }],
+  };
+  delete owned.settings;
+  delete owned.dex;
+  const back = migrate(owned);
+  assert.ok(back.dex.parts.includes('goat_head') && back.dex.parts.includes('cobra_organ'), 'dex backfilled from vault + chimeras');
+  assert.equal(back.chimeras[0].lastTrainedAt, 0, 'training field patched in');
+}
 
 // Time-warp safety: a lastTickAt in the future never rewinds state.
 const warp = freshRanchState();

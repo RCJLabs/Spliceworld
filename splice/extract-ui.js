@@ -5,6 +5,7 @@
 import { renderCreatureSVG } from '../render/renderer.js';
 import { stockGenome, conditionTier } from '../ranch/ranch.js';
 import { extractAnimal, gradeFor } from './extract.js';
+import * as sfx from '../audio/sfx.js';
 
 const CEREMONY_MS = 2100;
 
@@ -42,6 +43,7 @@ export function runExtraction(overlay, ctx, animalId, onDone) {
 }
 
 function playCeremony(overlay, ctx, result, onDone) {
+  sfx.play('graduate');
   const stage = overlay.querySelector('.grad-portrait');
   overlay.querySelector('.ceremony-btns').remove();
   overlay.querySelector('.fine-print').textContent = '~ kazoo noises ~';

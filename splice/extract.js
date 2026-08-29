@@ -85,6 +85,9 @@ export function extractAnimal(state, animalId, content, now) {
     });
   }
   inv.parts.push(...tokens);
+  for (const token of tokens) {
+    if (!state.dex.parts.includes(token.partId)) state.dex.parts.push(token.partId);
+  }
 
   return {
     ok: true,

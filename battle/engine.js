@@ -31,6 +31,20 @@ function roll(battle) {
   return rngStream(battle.seed, 'roll', battle.rollCount++)();
 }
 
+// Obedience (§3.5): the only place player control wavers, and care fixes
+// it — settling removes the big penalty, bond cancels instability.
+export function obedienceIgnoreChance(chimera, now) {
+  const settled = isSettled(chimera, now);
+  return Math.max(
+    0,
+    Math.min(0.6, (settled ? 0 : 0.25) + (chimera.instability / 100) * 0.2 - (chimera.bond / 100) * 0.2)
+  );
+}
+
+export function obediencePercent(chimera, now) {
+  return Math.round((1 - obedienceIgnoreChance(chimera, now)) * 100);
+}
+
 // --- Combatant builders -------------------------------------------------
 
 export function combatantFromChimera(chimera, content, now) {
@@ -72,11 +86,7 @@ export function combatantFromChimera(chimera, content, now) {
     tags: ['Organic', ...report.tags],
     moves,
     rejection: !settled,
-    // Obedience (§3.5): instability risks it, bond earns it back.
-    ignoreChance: Math.max(
-      0,
-      Math.min(0.6, (settled ? 0 : 0.25) + (chimera.instability / 100) * 0.2 - (chimera.bond / 100) * 0.2)
-    ),
+    ignoreChance: obedienceIgnoreChance(chimera, now),
     stages: { acc: 0, evasion: 0, power: 0 },
     status: { venom: 0, sleep: false, stun: false, guard: false, charging: null },
   };

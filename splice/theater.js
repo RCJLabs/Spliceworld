@@ -66,6 +66,7 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
     bond: 0, // raised via training/feeding — M5+ (§3.5)
     temperament: null, // seeded on settling — later milestone
     injury: null, // Infirmary timer set by battle aftermath (Law 1)
+    lastTrainedAt: 0,
   };
   state.chimeras.push(chimera);
 
@@ -101,4 +102,19 @@ export function isSettled(chimera, now) {
 
 export function settleRemainingMs(chimera, now) {
   return Math.max(0, chimera.settleUntil - now);
+}
+
+// Training (M7 obedience UX): bond is earned, not assigned (§3.5).
+export const TRAINING = { cost: 5, bondGain: 8, cooldownHours: 20 };
+
+export function trainChimera(state, chimeraId, now) {
+  const chimera = state.chimeras.find((c) => c.id === chimeraId);
+  if (!chimera) return { ok: false, msg: 'No such chimera.' };
+  const readyAt = (chimera.lastTrainedAt ?? 0) + TRAINING.cooldownHours * 3600000;
+  if (now < readyAt) return { ok: false, msg: `${chimera.name} needs a break between sessions.` };
+  if (state.funds < TRAINING.cost) return { ok: false, msg: 'Training treats cost money. The good ones, anyway.' };
+  state.funds -= TRAINING.cost;
+  chimera.lastTrainedAt = now;
+  chimera.bond = Math.min(100, chimera.bond + TRAINING.bondGain);
+  return { ok: true, msg: `${chimera.name} nails the obstacle course and earns a treat. Bond ${chimera.bond}/100.` };
 }

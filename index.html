@@ -4,8 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Spliceworld — Splice Slab</title>
+  <meta name="theme-color" content="#171426">
+  <title>Spliceworld</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🧬</text></svg>">
 </head>
 <body>
@@ -18,8 +20,9 @@
     <button type="button" data-screen="ranch">Ranch</button>
     <button type="button" data-screen="pens">Pens</button>
     <button type="button" data-screen="vault">Vault</button>
-    <button type="button" data-screen="theater">Theater</button>
-    <button type="button" data-screen="battle">War Room</button>
+    <button type="button" data-screen="theater">Splice</button>
+    <button type="button" data-screen="battle">War</button>
+    <button type="button" data-screen="dex">Dex</button>
   </nav>
 
   <main>
@@ -28,12 +31,14 @@
     <div id="screen-vault" class="screen" hidden></div>
     <div id="screen-theater" class="screen" hidden></div>
     <div id="screen-battle" class="screen" hidden></div>
+    <div id="screen-dex" class="screen" hidden></div>
   </main>
 
   <div id="overlay" class="overlay" hidden></div>
 
   <footer>
     <p id="ticker" class="ticker"></p>
+    <button type="button" id="mute" class="mute-btn" aria-label="Toggle sound">…</button>
   </footer>
 
   <script type="module" src="main.js"></script>
