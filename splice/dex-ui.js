@@ -11,7 +11,7 @@ export function renderDexScreen(root, ctx) {
 
   const CLASS_ORDER = ['ground', 'water', 'air'];
   const speciesByClass = (cls) => Object.values(content.species)
-    .filter((sp) => !sp.synthetic && sp.class === cls)
+    .filter((sp) => !sp.synthetic && !sp.variantOf && sp.class === cls)
     .map((sp) => {
       const total = Object.values(content.parts).filter((p) => p.species === sp.id).length;
       const found = dex.parts.filter((p) => content.parts[p].species === sp.id).length;
@@ -69,6 +69,30 @@ export function renderDexScreen(root, ctx) {
   const discovered = state.discoveredCombos.length;
   const comboTotal = Object.keys(content.combos).length;
 
+  // Variants (§3.2): bred, never bought. Locked entries show the silhouette
+  // and what stock it comes from — enough to know a line exists and to go
+  // looking for it, not enough to spoil the hatch.
+  const bred = state.dex.variants ?? [];
+  const variants = Object.values(content.species).filter((sp) => sp.variantOf);
+  const variantRows = variants
+    .map((sp) => {
+      const found = bred.includes(sp.id);
+      const base = content.species[sp.variantOf];
+      return `
+        <div class="variant-row ${found ? '' : 'variant-locked'}">
+          <div class="variant-portrait">${renderCreatureSVG(stockGenome(sp.id, content), content, { idPrefix: `var-${sp.id}`, extraScale: 0.8 })}</div>
+          <div style="flex:1;min-width:0">
+            <strong>${found ? sp.name : '???'}</strong>
+            ${found ? `<span class="variant-badge">✦ bred</span>` : ''}
+            <p class="fine-print">${found ? sp.flavor : `A rumoured mutation of the ${base.name} line.`}</p>
+            <p class="fine-print">${content.classes[sp.class].icon} ${content.classes[sp.class].name}${
+              found ? ` · ${sp.tags.join(', ') || 'no tags'} · ${sp.setBonus.name}` : ` · from ${base.name} stock`
+            }</p>
+          </div>
+        </div>`;
+    })
+    .join('');
+
   root.innerHTML = `
     <section class="card">
       <h3>Class Triangle</h3>
@@ -77,6 +101,11 @@ export function renderDexScreen(root, ctx) {
     <section class="card">
       ${classSections}
       <p class="fine-print">Enemy tech: ${salvageFound}/${salvageTotal} salvaged (Containment Cannon required).</p>
+    </section>
+    <section class="card">
+      <h3>✦ Variants (${bred.length}/${variants.length} bred)</h3>
+      <p class="fine-print">Variant species are never sold. They surface as rare mutations in the incubator — and once one hatches, it breeds true. Pair two and the line continues.</p>
+      ${variantRows}
     </section>
     <section class="card">
       <h3>Combo Abilities (${discovered}/${comboTotal})</h3>

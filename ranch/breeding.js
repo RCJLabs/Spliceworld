@@ -12,6 +12,14 @@ import { avgStars } from '../splice/extract.js';
 export const BREEDING = {
   incubatorSlots: 3,
   mutationChance: 0.08,
+  // Of the mutations that fire, this share is a VARIANT SPECIES rather than
+  // a stat spike or a trait gene — the rarest branch, and only when the
+  // stock has a variant to become (ROADMAP §3.2).
+  variantShare: 0.3,
+  // Heredity is what turns one lucky egg into a line. A variant parent
+  // passes the variant on; two of them almost always do.
+  variantFromOne: 0.5,
+  variantFromBoth: 0.9,
   // variance on each stat: mid-weighted with a gentle upward drift so
   // selective breeding feels like progress, not a coin flip.
   varianceTable: [
@@ -20,6 +28,22 @@ export const BREEDING = {
     [1.01, 1],
   ],
 };
+
+// The stock a species descends from. A variant breeds true with its base —
+// an Alpine Ram is still a ram, and keeping them in one gene pool is what
+// lets you cross a lucky mutant back into your good line.
+export function baseSpecies(speciesId, content) {
+  return content.species[speciesId]?.variantOf ?? speciesId;
+}
+
+export function variantsOf(speciesId, content) {
+  const root = baseSpecies(speciesId, content);
+  return Object.values(content.species).filter((s) => s.variantOf === root);
+}
+
+export function isVariant(speciesId, content) {
+  return !!content.species[speciesId]?.variantOf;
+}
 
 export function expressedTraits(genotype, content) {
   const out = [];
@@ -33,7 +57,9 @@ export function expressedTraits(genotype, content) {
 export function canBreed(sire, dam, state, content, now) {
   if (!sire || !dam) return { ok: false, msg: 'Two consenting adults required.' };
   if (sire.id === dam.id) return { ok: false, msg: 'Biology says no.' };
-  if (sire.species !== dam.species) return { ok: false, msg: 'Cross-species romance is what the Surgery Theater is for.' };
+  if (baseSpecies(sire.species, content) !== baseSpecies(dam.species, content)) {
+    return { ok: false, msg: 'Cross-species romance is what the Surgery Theater is for.' };
+  }
   if (sire.sex === dam.sex) return { ok: false, msg: 'This pairing will produce excellent friendship and zero eggs.' };
   for (const a of [sire, dam]) {
     if (ageStage(a, content, now) === 'juvenile') return { ok: false, msg: `${a.name} is too young. Come back after adulthood.` };
@@ -78,12 +104,37 @@ export function breedPair(state, sireId, damId, content, now) {
     if (alleles > 0) genotype[trait.id] = alleles;
   }
 
-  // Mutations (rare): a stat spike, or a novel mutation-only trait gene.
-  // (Variant species are the third kind — post-v0.1 per ROADMAP.)
+  // Species: heredity first. A variant parent passes its line on; two of
+  // them nearly always do. This is what turns one lucky egg into a stable.
+  const variantParents = [sire, dam].filter((a) => isVariant(a.species, content));
+  let species = baseSpecies(sire.species, content);
+  let variantNote = null;
+  if (variantParents.length === 2 && variantParents[0].species === variantParents[1].species) {
+    if (rng() < BREEDING.variantFromBoth) species = variantParents[0].species;
+  } else if (variantParents.length) {
+    // Mixed pairing: the variant is on the table, one parent's worth.
+    const carrier = pick(rng, variantParents);
+    if (rng() < BREEDING.variantFromOne) species = carrier.species;
+  }
+  if (species !== baseSpecies(sire.species, content)) {
+    variantNote = `The line holds: this one is ${content.species[species].name} stock.`;
+  }
+
+  // Mutations (rare): a stat spike, a novel mutation-only trait gene, or —
+  // rarest — a VARIANT SPECIES out of ordinary stock (ROADMAP §3.2).
   let mutationNote = null;
   if (rng() < BREEDING.mutationChance) {
     const mutable = Object.values(content.traits).filter((t) => t.mutationOnly);
-    if (rng() < 0.5 && mutable.length) {
+    const candidates = variantsOf(sire.species, content).filter((v) => v.id !== species);
+    const roll = rng();
+    if (roll < BREEDING.variantShare && candidates.length) {
+      const variant = pick(rng, candidates);
+      species = variant.id;
+      variantNote = null; // the mutation note says it louder
+      mutationNote =
+        `MUTATION — VARIANT SPECIES: the egg is ${content.species[variant.id].name}. ` +
+        `${content.species[variant.id].flavor} Nobody at this facility is qualified to explain it.`;
+    } else if (rng() < 0.5 && mutable.length) {
       const trait = pick(rng, mutable);
       genotype[trait.id] = Math.min(2, (genotype[trait.id] ?? 0) + 1);
       mutationNote = `Mutation: a ${trait.name} gene appeared from nowhere. The lab denies responsibility.`;
@@ -96,10 +147,12 @@ export function breedPair(state, sireId, damId, content, now) {
 
   const egg = {
     id: `e${n}`,
-    species: sire.species,
+    species,
+    variant: isVariant(species, content) ? species : null,
+    variantNote,
     sex: rng() < 0.5 ? 'F' : 'M',
     laidAt: now,
-    hatchAt: now + content.species[sire.species].incubationMinutes * 60000,
+    hatchAt: now + content.species[species].incubationMinutes * 60000,
     potential,
     genotype,
     mutationNote,
@@ -141,12 +194,23 @@ export function hatchEgg(state, eggId, content, now) {
   for (const trait of traits) {
     if (!state.dex.traits.includes(trait)) state.dex.traits.push(trait);
   }
+  // A variant is a permanent Splice-Dex trophy the first time it appears.
+  let firstOfItsKind = false;
+  if (isVariant(egg.species, content)) {
+    state.dex.variants ??= [];
+    if (!state.dex.variants.includes(egg.species)) {
+      state.dex.variants.push(egg.species);
+      firstOfItsKind = true;
+    }
+  }
+
   const notes = [
     `${hatchling.name} has hatched! Lineage: ${egg.parents.sire.name} ★${egg.parents.sire.stars} × ${egg.parents.dam.name} ★${egg.parents.dam.stars}.`,
   ];
+  if (egg.variantNote) notes.push(egg.variantNote);
   if (egg.mutationNote) notes.push(egg.mutationNote);
   if (traits.length) notes.push(`Expressed traits: ${traits.map((t) => content.traits[t].name).join(', ')}.`);
-  return { ok: true, hatchling, msg: notes.join(' ') };
+  return { ok: true, hatchling, variant: isVariant(egg.species, content) ? egg.species : null, firstOfItsKind, msg: notes.join(' ') };
 }
 
 const HATCHLING_NAMES = [

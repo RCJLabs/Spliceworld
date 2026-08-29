@@ -5,7 +5,7 @@
 
 import { loadContent } from './data/loader.js';
 import { loadSave, saveGame } from './save/save.js';
-import { ensureRanchSeeded, applyElapsed } from './ranch/ranch.js';
+import { ensureRanchSeeded, ensureDexVariants, applyElapsed } from './ranch/ranch.js';
 import { renderRanchScreen } from './ranch/ui.js';
 import { renderVaultScreen } from './splice/vault-ui.js';
 import { renderTheaterScreen } from './splice/theater-ui.js';
@@ -103,6 +103,7 @@ async function boot() {
 
   state = loadSave();
   ensureRanchSeeded(state, content, NOW());
+  ensureDexVariants(state, content);
   applyElapsed(state, content, NOW());
 
   updateTicker();

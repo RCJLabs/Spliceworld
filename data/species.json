@@ -1,5 +1,5 @@
 {
-  "_doc": "Base fauna (25 species, ROADMAP §4.1). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity — see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer.",
+  "_doc": "Base fauna (25 species, ROADMAP §4.1). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity — see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP §3.2): a species with `variantOf` is the same stock, mutated — it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them — variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads — a variant whose identity only shows up on the defending side is a dead mechanic.",
   "species": [
     {
       "id": "bear",
@@ -872,6 +872,307 @@
       },
       "synthetic": true,
       "incubationMinutes": 1
+    },
+    {
+      "id": "alpine_ram",
+      "name": "Alpine Ram",
+      "variantOf": "ram",
+      "role": "Punisher",
+      "tags": [
+        "Armored"
+      ],
+      "palette": {
+        "primary": "#dfe6ee",
+        "secondary": "#a8b6c6",
+        "accent": "#f6fbff"
+      },
+      "frame": "M",
+      "class": "ground",
+      "archetype": "horned",
+      "diet": "Hillside buffet",
+      "feedCost": 4,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 7,
+        "prime": 20,
+        "elder": 64
+      },
+      "thermal": [
+        -32,
+        14
+      ],
+      "incubationMinutes": 52,
+      "setBonus": {
+        "name": "Avalanche",
+        "desc": "+35% knockback with 4+ alpine ram parts"
+      },
+      "flavor": "Bred on a mountain nobody authorised.",
+      "statMult": {
+        "armor": 1.5,
+        "hp": 1.3,
+        "power": 1.3,
+        "speed": 0.9
+      },
+      "shapeTweak": {
+        "head": {
+          "horn": "curl",
+          "skull": 34
+        },
+        "hide": "plate"
+      }
+    },
+    {
+      "id": "abyssal_shark",
+      "name": "Abyssal Shark",
+      "variantOf": "shark",
+      "role": "Punisher",
+      "tags": [
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#2f3a52",
+        "secondary": "#1b2233",
+        "accent": "#7fe3ff"
+      },
+      "frame": "L",
+      "class": "water",
+      "archetype": "fish",
+      "diet": "Market-rate chum",
+      "feedCost": 9,
+      "upkeepPerDay": 13,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 13,
+        "prime": 38,
+        "elder": 96
+      },
+      "thermal": [
+        -2,
+        12
+      ],
+      "incubationMinutes": 68,
+      "setBonus": {
+        "name": "Crush Depth",
+        "desc": "ignore 25% of armor with 4+ abyssal shark parts"
+      },
+      "flavor": "Eleven kilometres of pressure, wearing a face.",
+      "statMult": {
+        "power": 1.3,
+        "armor": 1.5,
+        "speed": 0.7,
+        "regen": 0.6
+      },
+      "shapeTweak": {
+        "head": {
+          "lure": true,
+          "teeth": true,
+          "gills": true,
+          "eyeR": 13
+        }
+      }
+    },
+    {
+      "id": "storm_eagle",
+      "name": "Thunderhead Eagle",
+      "variantOf": "eagle",
+      "role": "Aerial Striker",
+      "tags": [
+        "Airborne",
+        "Electric"
+      ],
+      "palette": {
+        "primary": "#5b6b8c",
+        "secondary": "#39425c",
+        "accent": "#ffe66e"
+      },
+      "frame": "S",
+      "class": "air",
+      "archetype": "avian",
+      "diet": "Free-range mice",
+      "feedCost": 7,
+      "upkeepPerDay": 9,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 8,
+        "prime": 24,
+        "elder": 72
+      },
+      "thermal": [
+        -18,
+        28
+      ],
+      "incubationMinutes": 54,
+      "setBonus": {
+        "name": "Static Wake",
+        "desc": "Electric strikes double against Aquatic with 4+ thunderhead parts"
+      },
+      "flavor": "Nests in weather. Weather has complained.",
+      "statMult": {
+        "speed": 1.3,
+        "power": 1.1,
+        "hp": 0.75
+      },
+      "shapeTweak": {
+        "fore": {
+          "span": 126
+        }
+      },
+      "moveTag": "Electric"
+    },
+    {
+      "id": "glider_skunk",
+      "name": "Glider Skunk",
+      "variantOf": "skunk",
+      "role": "Mobility",
+      "tags": [
+        "Gas",
+        "Airborne"
+      ],
+      "palette": {
+        "primary": "#4a4258",
+        "secondary": "#2c2739",
+        "accent": "#c9f56e"
+      },
+      "frame": "S",
+      "class": "air",
+      "archetype": "mustelid",
+      "diet": "Cheap and unglamorous",
+      "feedCost": 4,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 7,
+        "prime": 20,
+        "elder": 64
+      },
+      "thermal": [
+        -8,
+        30
+      ],
+      "incubationMinutes": 44,
+      "setBonus": {
+        "name": "Downwind",
+        "desc": "Gas moves ignore evasion with 4+ glider skunk parts"
+      },
+      "flavor": "Grew a patagium out of spite. Now it drifts, malevolently.",
+      "statMult": {
+        "speed": 1.3,
+        "power": 0.7,
+        "hp": 0.7,
+        "armor": 0.7
+      },
+      "affinity": {
+        "forelimbs": "air",
+        "tail": "air"
+      },
+      "shapeTweak": {
+        "fore": [
+          "membrane",
+          {
+            "span": 96
+          }
+        ],
+        "tail": [
+          "fan",
+          {
+            "spread": 16
+          }
+        ]
+      }
+    },
+    {
+      "id": "iron_tortoise",
+      "name": "Iron Tortoise",
+      "variantOf": "tortoise",
+      "role": "Wall",
+      "tags": [
+        "Armored",
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#6b6f74",
+        "secondary": "#43474c",
+        "accent": "#b9c3cc"
+      },
+      "frame": "L",
+      "class": "water",
+      "archetype": "armored",
+      "diet": "Leafy greens, slowly",
+      "feedCost": 5,
+      "upkeepPerDay": 8,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 16,
+        "prime": 48,
+        "elder": 120
+      },
+      "thermal": [
+        -6,
+        34
+      ],
+      "incubationMinutes": 75,
+      "setBonus": {
+        "name": "Anvil Doctrine",
+        "desc": "reflect 20% of blocked damage with 4+ iron tortoise parts"
+      },
+      "flavor": "Mineralised. Slowly. On purpose, it insists.",
+      "statMult": {
+        "armor": 2.0,
+        "hp": 1.4,
+        "speed": 0.45,
+        "stamina": 0.8
+      },
+      "shapeTweak": {
+        "hide": "plate"
+      }
+    },
+    {
+      "id": "pale_cobra",
+      "name": "Pale Cobra",
+      "variantOf": "cobra",
+      "role": "Poisoner",
+      "tags": [
+        "Venomous"
+      ],
+      "palette": {
+        "primary": "#efe7dd",
+        "secondary": "#c9bcae",
+        "accent": "#ff6b8a"
+      },
+      "frame": "S",
+      "class": "ground",
+      "archetype": "reptile",
+      "diet": "Gourmet eggs, no questions",
+      "feedCost": 5,
+      "upkeepPerDay": 7,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 10,
+        "prime": 30,
+        "elder": 80
+      },
+      "thermal": [
+        10,
+        40
+      ],
+      "incubationMinutes": 50,
+      "setBonus": {
+        "name": "Second Dose",
+        "desc": "venom applies twice with 4+ pale cobra parts"
+      },
+      "flavor": "No pigment, no patience, considerably more venom.",
+      "statMult": {
+        "power": 1.35,
+        "hp": 0.7,
+        "armor": 0.6
+      },
+      "shapeTweak": {
+        "head": {
+          "hood": 1.15,
+          "fangs": true
+        }
+      }
     }
   ]
 }

@@ -131,12 +131,33 @@ const round1 = (n) => Math.max(1, Math.round(n));
 function statsFor(slot, sp) {
   const bias = ROLE_BIAS[sp.role] ?? {};
   const out = {};
-  for (const [k, v] of Object.entries(SLOT_BASE[slot].stats)) out[k] = round1(v * (bias[k] ?? 1));
+  for (const [k, v] of Object.entries(SLOT_BASE[slot].stats)) {
+    // Variants multiply on top of their role bias — that is where the trade
+    // lives (an Iron Tortoise is 2x armour and half the speed).
+    out[k] = round1(v * (bias[k] ?? 1) * (sp.statMult?.[k] ?? 1));
+  }
+  return out;
+}
+
+// A variant is the same stock, mutated: it inherits the base's BUILD entry
+// and applies `shapeTweak` on top, so it is recognisably its parent without
+// being a straight recolour. A tweak is either a params patch ({horn:'curl'})
+// or a whole family swap (['membrane',{span:96}] — the Glider Skunk's
+// patagium, which is the mutation the species is named for).
+function buildFor(sp) {
+  const base = BUILD[sp.variantOf ?? sp.id];
+  if (!sp.shapeTweak) return base;
+  const out = { ...base };
+  for (const [key, tweak] of Object.entries(sp.shapeTweak)) {
+    if (key === 'hide' || key === 'glow' || key === 'glyph') { out[key] = tweak; continue; }
+    if (Array.isArray(tweak)) out[key] = tweak;
+    else out[key] = [base[key][0], { ...base[key][1], ...tweak }];
+  }
   return out;
 }
 
 function shapesFor(slot, sp) {
-  const b = BUILD[sp.id];
+  const b = buildFor(sp);
   if (slot === 'head') return HEADS[b.head[0]](b.head[1]);
   if (slot === 'forelimbs') return b.fore ? LIMBS[b.fore[0]](b.fore[1]) : null;
   if (slot === 'hindlimbs') return b.hind ? LIMBS[b.hind[0]](b.hind[1]) : null;
@@ -152,7 +173,10 @@ const AFFINITY_FAMILY = {
   paw: 'ground', hoof: 'ground', bugleg: 'ground', talon: 'ground', scythe: 'ground',
 };
 function affinityFor(slot, sp) {
-  const b = BUILD[sp.id];
+  // A variant may rewrite what a slot votes for — the Glider Skunk's
+  // patagium makes its forelimbs Air, which is the entire point of it.
+  if (sp.affinity && slot in sp.affinity) return sp.affinity[slot];
+  const b = buildFor(sp);
   if (slot === 'forelimbs' && b.fore) return AFFINITY_FAMILY[b.fore[0]] ?? null;
   if (slot === 'hindlimbs' && b.hind) return AFFINITY_FAMILY[b.hind[0]] ?? null;
   if (slot === 'tail') return AFFINITY_FAMILY[b.tail[0]] ?? null;
@@ -174,8 +198,9 @@ const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
 const parts = [];
 for (const sp of species) {
   if (sp.synthetic) continue;
-  const b = BUILD[sp.id];
-  const [sigSlot, sigName, sigAbility, sigMove] = SIGNATURE[sp.id];
+  const root = sp.variantOf ?? sp.id; // a variant borrows its base's tables
+  const b = buildFor(sp);
+  const [sigSlot, sigName, sigAbility, sigMove] = SIGNATURE[root];
   for (const slot of SLOTS) {
     const shapes = shapesFor(slot, sp);
     if (!shapes) continue; // species genuinely lacks this anatomy (cobra limbs)
@@ -184,14 +209,23 @@ for (const sp of species) {
       : slot === 'hindlimbs' ? SLOT_NAMES[b.hind[0]]?.hindlimbs
       : slot === 'tail' ? TAIL_NAMES[b.tail[0]]
       : slot === 'hide' ? HIDE_NAMES[b.hide]
-      : slot === 'organ' ? ORGAN_NAMES[sp.id][0] : 'Head';
-    const name = isSig ? sigName : slot === 'organ' ? famName : `${sp.name} ${famName}`;
+      : slot === 'organ' ? ORGAN_NAMES[root][0] : 'Head';
+    const name = isSig
+      ? (sp.variantOf ? `${sp.name} ${famName === 'Head' ? 'Head' : famName}` : sigName)
+      : slot === 'organ' ? famName : `${sp.name} ${famName}`;
     const ability = isSig ? sigAbility
       : slot === 'tail' ? TAIL_ABIL[b.tail[0]]
       : slot === 'hide' ? HIDE_ABIL[b.hide]
-      : slot === 'organ' ? ORGAN_NAMES[sp.id][1]
-      : slot === 'head' ? `${sp.name} Bite` : `${sp.name} Strike`;
-    const move = isSig ? sigMove : GENERIC_MOVE[slot](sp);
+      : slot === 'organ' ? ORGAN_NAMES[root][1]
+      : slot === 'head' ? `${sp.name} Bite`
+        : slot === 'hindlimbs' ? `${sp.name} Kick`
+          : `${sp.name} Strike`;
+    let move = isSig ? sigMove : GENERIC_MOVE[slot](sp);
+    // A variant's `moveTag` rides on its damaging moves — the tag chart reads
+    // the ATTACK side, so this is where "Thunderhead" stops being a paint job.
+    if (move && sp.moveTag && move.power > 0 && !move.tags.includes(sp.moveTag)) {
+      move = { ...move, tags: [...move.tags, sp.moveTag] };
+    }
     const phys = { ...SLOT_BASE[slot].phys };
     const aff = affinityFor(slot, sp);
     if (aff === 'air' && slot === 'forelimbs') phys.lift = 90;

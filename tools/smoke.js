@@ -953,7 +953,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 {
   const v7ish = migrate(structuredClone(v1Save)); // gives v8 empty everything
   assert.deepEqual(v7ish.settings, { muted: false });
-  assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [] });
+  assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [], variants: [] });
   const richV7 = { ...structuredClone(v1Save) };
   const chain = migrate(richV7); // walk to v8 baseline shape…
   // …then simulate a v7 save that owned things:
@@ -1230,6 +1230,174 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     assert.ok(lab.dex.parts.includes(token.partId), 'logged in the Splice-Dex');
   }
   assert.equal(lab.campaign.containment.length, 0, 'the bay empties');
+}
+
+// --- Variants via mutation (§3.2). A variant is the same stock, mutated:
+// --- it inherits its base's anatomy, carries its own numbers and colours,
+// --- is BRED rather than bought, and breeds true once you have one.
+{
+  const { baseSpecies, variantsOf, isVariant, breedPair, hatchEgg, canBreed, BREEDING } =
+    await import('../ranch/breeding.js');
+
+  const variants = Object.values(content.species).filter((sp) => sp.variantOf);
+  assert.ok(variants.length >= 5, 'the roster multiplier actually multiplies');
+
+  for (const v of variants) {
+    const base = content.species[v.variantOf];
+    assert.ok(base, `${v.id} descends from a real species`);
+    assert.ok(!base.variantOf, 'a variant of a variant is not a thing');
+    assert.equal(v.frame, base.frame, `${v.id} keeps its base's chassis`);
+    // Bred, never bought — that is the whole identity.
+    assert.equal(v.mailOrderPrice, null, `${v.id} is not for sale`);
+    // THE SIDEGRADE CONTRACT: a variant that is better at everything makes
+    // its base species dead content the moment you breed one.
+    const mult = v.statMult ?? {};
+    assert.ok(Object.values(mult).some((m) => m < 1),
+      `${v.id} gives something up (statMult ${JSON.stringify(mult)})`);
+    assert.ok(Object.values(mult).some((m) => m > 1), `${v.id} gains something too`);
+    // It has a body, and that body renders.
+    const parts = Object.values(content.parts).filter((p) => p.species === v.id);
+    assert.ok(parts.length >= 4, `${v.id} has parts of its own`);
+    assert.deepEqual(
+      parts.map((p) => p.slot).sort(),
+      Object.values(content.parts).filter((p) => p.species === v.variantOf).map((p) => p.slot).sort(),
+      `${v.id} has exactly its base's anatomy`
+    );
+    assert.ok(renderCreatureSVG(stockGenome(v.id, content), content).includes('<svg'));
+    // Its own colours, not its base's.
+    assert.notDeepEqual(v.palette, base.palette, `${v.id} does not look like its parent`);
+  }
+
+  // A variant is never in the catalog, at any stage of the campaign.
+  const rich = { ...newGameState(), seed: 3 };
+  rich.campaign.heldNodes = Object.values(content.regions)[0].nodes.map((n) => n.id);
+  assert.ok(!catalogFor(rich, content).some((sp) => sp.variantOf), 'variants never reach the Mail-Order catalog');
+  assert.ok(![...faunaUnlocked(rich, content)].some((id) => content.species[id].variantOf));
+
+  // Lineage helpers.
+  assert.equal(baseSpecies('alpine_ram', content), 'ram');
+  assert.equal(baseSpecies('ram', content), 'ram');
+  assert.ok(isVariant('alpine_ram', content) && !isVariant('ram', content));
+  assert.ok(variantsOf('ram', content).some((v) => v.id === 'alpine_ram'));
+  assert.deepEqual(variantsOf('alpine_ram', content), variantsOf('ram', content), 'a variant shares its base\'s gene pool');
+
+  // Breeding: an Alpine Ram is still a ram, so it crosses back into the line.
+  const lab = { ...newGameState(), seed: 4242 };
+  const adult = (id, species, sex) => ({
+    id, species, sex, name: id, birthAt: t0 - 400 * HOUR, condition: 90,
+    potential: { hp: 4, power: 4, armor: 4, speed: 4, stamina: 4 },
+    genotype: {}, traits: [], lastCare: {},
+  });
+  lab.ranch.penCapacity = 40;
+  lab.ranch.stock = [adult('r1', 'ram', 'F'), adult('r2', 'ram', 'M'),
+    adult('v1', 'alpine_ram', 'F'), adult('v2', 'alpine_ram', 'M'),
+    adult('g1', 'goat', 'M')];
+  assert.ok(canBreed(lab.ranch.stock[0], lab.ranch.stock[3], lab, content, t0).ok,
+    'a ram and an alpine ram are the same stock');
+  assert.ok(!canBreed(lab.ranch.stock[0], lab.ranch.stock[4], lab, content, t0).ok,
+    'a ram and a goat are still not');
+
+  // The breeding UI filters partners by base stock, not by species string —
+  // canBreed has always allowed the cross, and the picker used to hide it.
+  for (const a of lab.ranch.stock) {
+    for (const b of lab.ranch.stock) {
+      const allowed = canBreed(a, b, lab, content, t0).ok;
+      const sameStock = baseSpecies(a.species, content) === baseSpecies(b.species, content);
+      const pickable = a.id !== b.id && a.sex !== b.sex && sameStock;
+      assert.equal(allowed, pickable, `${a.id}+${b.id}: the rule and the picker's filter agree`);
+    }
+  }
+
+  // Heredity: two Alpine Rams breed true most of the time.
+  const speciesOver = (sireId, damId, n) => {
+    const counts = {};
+    for (let i = 0; i < n; i++) {
+      const s2 = { ...newGameState(), seed: 900 + i };
+      s2.ranch.penCapacity = 40;
+      s2.ranch.stock = structuredClone(lab.ranch.stock);
+      const res = breedPair(s2, sireId, damId, content, t0);
+      assert.ok(res.ok, res.msg);
+      counts[res.egg.species] = (counts[res.egg.species] ?? 0) + 1;
+    }
+    return counts;
+  };
+  const trueBreeding = speciesOver('v2', 'v1', 60);
+  assert.ok((trueBreeding.alpine_ram ?? 0) / 60 > 0.7,
+    `two Alpine Rams breed true (${JSON.stringify(trueBreeding)})`);
+  const crossed = speciesOver('v2', 'r1', 60);
+  assert.ok((crossed.alpine_ram ?? 0) > 5 && (crossed.ram ?? 0) > 5,
+    `a cross gives both, so the line is worth keeping either way (${JSON.stringify(crossed)})`);
+
+  // Mutation: ordinary stock can, rarely, produce a variant from nowhere.
+  const fromNothing = speciesOver('r2', 'r1', 400);
+  const mutants = fromNothing.alpine_ram ?? 0;
+  assert.ok(mutants > 0, 'a variant can appear out of ordinary stock');
+  assert.ok(mutants / 400 < 0.1, `and it stays rare (${mutants}/400)`);
+
+  // The hatch is a Splice-Dex trophy, once.
+  const hatchLab = { ...newGameState(), seed: 7 };
+  hatchLab.ranch.penCapacity = 40;
+  hatchLab.ranch.stock = structuredClone(lab.ranch.stock);
+  const eggRes = breedPair(hatchLab, 'v2', 'v1', content, t0);
+  assert.equal(eggRes.egg.species, 'alpine_ram');
+  assert.equal(eggRes.egg.variant, 'alpine_ram');
+  const hatched = hatchEgg(hatchLab, eggRes.egg.id, content, eggRes.egg.hatchAt);
+  assert.ok(hatched.ok, hatched.msg);
+  assert.equal(hatched.hatchling.species, 'alpine_ram');
+  assert.equal(hatched.variant, 'alpine_ram');
+  assert.ok(hatched.firstOfItsKind, 'the first of its kind is announced');
+  assert.deepEqual(hatchLab.dex.variants, ['alpine_ram']);
+  const again = breedPair(hatchLab, 'v2', 'v1', content, t0);
+  const hatched2 = hatchEgg(hatchLab, again.egg.id, content, again.egg.hatchAt);
+  if (hatched2.variant) assert.ok(!hatched2.firstOfItsKind, 'the second is just livestock');
+
+  // Extraction of a variant yields VARIANT parts, not its base's.
+  const exLab = { ...newGameState(), seed: 11 };
+  exLab.ranch.stock = [adult('x1', 'alpine_ram', 'F')];
+  const grad = extractAnimal(exLab, 'x1', content, t0);
+  assert.ok(grad.ok, grad.msg);
+  assert.ok(grad.tokens.every((tk) => content.parts[tk.partId].species === 'alpine_ram'),
+    'an Alpine Ram graduates into Alpine Ram parts');
+
+  // A variant may rewrite what a slot votes for — and Air needed the parts.
+  const airParts = Object.values(content.parts).filter((p) => p.classAffinity === 'air');
+  assert.ok(airParts.some((p) => content.species[p.species].variantOf),
+    'a variant contributes to the scarcest class');
+  assert.ok(airParts.length >= 7, `Air is no longer four parts in the whole game (${airParts.length})`);
+  assert.equal(
+    Object.values(content.parts).find((p) => p.id === 'glider_skunk_forelimbs').classAffinity,
+    'air',
+    'the patagium is the mutation, and it votes Air'
+  );
+
+  // A variant's identity has to reach its MOVES where the chart reads them.
+  const stormMoves = Object.values(content.parts)
+    .filter((p) => p.species === 'storm_eagle' && p.move?.power > 0);
+  assert.ok(stormMoves.every((p) => p.move.tags.includes('Electric')),
+    'the Thunderhead actually attacks with Electric');
+  assert.ok(!Object.values(content.parts)
+    .some((p) => p.species === 'eagle' && p.move?.tags.includes('Electric')),
+    'and its base does not');
+}
+
+// --- Regression: the generic forelimb and hindlimb abilities must stay
+// --- distinguishable. They once shared a name, so the Tier II duplicate-move
+// --- guard silently deleted every species' Ground-tagged kick.
+{
+  for (const sp of Object.values(content.species)) {
+    if (sp.synthetic) continue;
+    const fore = content.parts[`${sp.id}_forelimbs`];
+    const hind = content.parts[`${sp.id}_hindlimbs`];
+    if (!fore || !hind) continue;
+    assert.notEqual(fore.ability, hind.ability, `${sp.id}: arms and legs are different moves`);
+  }
+  const tk = (partId) => ({ id: 'k' + partId, partId, grade: 'apex', donor: {} });
+  const full = combatantFromChimera({
+    id: 'r', name: 'R', frame: 'M', settleUntil: 0, instability: 0, bond: 100, injury: null,
+    tokens: { head: tk('ram_head'), forelimbs: tk('ram_forelimbs'), hindlimbs: tk('ram_hindlimbs') },
+  }, content, 1);
+  assert.equal(full.moves.length, 3, 'a head, arms and legs are three moves');
+  assert.ok(full.moves.some((m) => m.tags.includes('Ground')), 'and the kick keeps its Ground tag');
 }
 
 // --- Theater Tier II (§3.4 "Organ ×1, ×2 at Theater Tier 2" + §3.10 menu

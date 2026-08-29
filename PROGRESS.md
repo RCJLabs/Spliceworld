@@ -1,5 +1,88 @@
 # PROGRESS
 
+## Session 18 — Variants via mutation ✅
+
+The third kind of mutation, deferred since M6 with a comment in `breeding.js`
+that said so. §3.2: *"very rarely a variant species (Alpine Ram from Ram,
+Abyssal Shark from Shark) — variants are the cheap roster multiplier."*
+
+### Six species for six JSON objects
+A variant declares `variantOf` and **inherits its base's anatomy** through
+`tools/gen-parts.js` — same shape families, same signature ability — while
+carrying its own palette, tags, thermal band, set bonus and `statMult`. Roster
+25 → **31 species, 148 → 182 parts**, no new shape code.
+
+| variant | from | it becomes | it gives up |
+|---|---|---|---|
+| Alpine Ram | Ram | +50% armour, +30% HP, Armored | speed |
+| Abyssal Shark | Shark | +50% armour, +30% power | speed, regen |
+| Thunderhead Eagle | Eagle | **Electric on every strike** | a quarter of its HP |
+| Glider Skunk | Skunk | a patagium: its limbs vote **Air** | power, HP, armour |
+| Iron Tortoise | Tortoise | double armour, +40% HP | half its speed |
+| Pale Cobra | Cobra | +35% power | HP and armour |
+
+### The sidegrade contract
+A variant that is better at everything makes its base **dead content** the moment
+you breed one. So smoke asserts every variant gives something up *and* gains
+something, and measures it: purebred variant vs purebred base at apex, team of
+three, gave Ram 62% / Alpine 64%, Shark 73% / Abyssal 73%, Cobra 3% / Pale 2%.
+
+Two failed that bar on the first pass and were re-tuned rather than shipped:
+- **Alpine Ram at 48% vs 62%** — Wall role × `statMult` double-dipped the same
+  stat, so it hit softer *and* slower. It is a Punisher now, with its damage
+  back at parity and armour/HP as the actual trade.
+- **Glider Skunk at 0% everywhere** — a blanket `moveTag: Gas` put Gas on every
+  damaging move, and Gas does **zero** to vehicles, which are half the roster.
+  Its real mutation is the patagium; Gas stayed on the Stink Gland where it
+  belongs. It sits at 90% now — below the Eagle among Air builds, which is the
+  honest comparison once a variant changes class.
+
+### Bred, never bought
+`mailOrderPrice: null` on all six, asserted against the live catalog rule. They
+arrive as the rarest branch of the existing mutation roll (30% of the 8% that
+fires, and only where the stock has a variant to become) — measured at **under
+10% of eggs from ordinary parents over 400 rolls**.
+
+Then heredity does the work the roadmap wanted: **a variant breeds true.** Two
+Alpine Rams give an Alpine Ram >70% of the time; a cross with a plain Ram gives
+both, so a lucky mutant is worth crossing back into a good line rather than
+kept in a corner. `canBreed` compares **base stock**, so an Alpine Ram is still
+a ram.
+
+### A regression this phase surfaced
+The generic forelimb and hindlimb abilities shared a name (`Goat Strike`), and
+last session's duplicate-move guard matched on name alone — so **every species
+had been quietly losing its Ground-tagged kick**. Hindlimbs got their own name
+(`Goat Kick`), the guard now matches the whole move, and smoke asserts arms and
+legs are different moves for every species.
+
+### It also fixed a structural shortage
+Air had **four parts in the entire game** — flagged twice in earlier sessions.
+The Glider Skunk's patagium and the Thunderhead's wings take it to **eight**.
+
+### Verified
+`node tools/smoke.js` green with a new variants block: the sidegrade contract,
+anatomy inheritance, never-in-the-catalog, lineage helpers, the picker and the
+breeding rule agreeing on who may pair, true-breeding rates, mutation rarity,
+the Dex trophy firing once, variant extraction, and the move-name regression.
+Four assertions deliberately broken to confirm they bite. `bounds` clean, the
+difficulty curve unmoved by a 24% bigger roster (33/47/62/75), `--plant` caught.
+
+CDP at 380px: v11→v12 migration, the Dex trophy case locked (0/6) then unlocked,
+a variant pair breeding and hatching, both ceremonies (**NEW VARIANT SPECIES**
+and **THE LINE HOLDS**), the incubator naming base stock so the hatch is not
+spoiled, and extraction yielding Alpine Ram parts.
+
+### Known issues
+- A variant that changes class changes matchups by a lot — the triangle doing
+  its job, but it means Glider Skunk vs Skunk is not a like-for-like comparison.
+  The AI director does read such a stable as Air and answers it.
+- Pale Cobra inherits the cobra's limbless corner: both are weak purebreds.
+
+### Next session's first task
+Open. Remaining backlog: rehabilitation of captured chimeras, region
+contestation, and the monologue/story pass.
+
 ## Session 17 — Theater Tier II, and a Facility to buy it from ✅
 
 ROADMAP §3.4 has always said "Organ ×1, **×2 at Theater Tier 2**", and §3.10 has
