@@ -1,0 +1,33 @@
+{
+  "_doc": "Base fauna. Palettes drive part rendering via @primary/@secondary/@accent tokens. Tags feed the battle chart (M4). Ranch fields (upkeep, diet) arrive in M1 — do not stub them here early.",
+  "species": [
+    {
+      "id": "bear",
+      "name": "Bear",
+      "role": "Power",
+      "tags": [],
+      "palette": { "primary": "#9c6b3f", "secondary": "#7a5230", "accent": "#e8c39e" }
+    },
+    {
+      "id": "eagle",
+      "name": "Eagle",
+      "role": "Aerial Striker",
+      "tags": ["Airborne"],
+      "palette": { "primary": "#6d573f", "secondary": "#f5efe0", "accent": "#e9a820" }
+    },
+    {
+      "id": "goat",
+      "name": "Goat",
+      "role": "Economy",
+      "tags": [],
+      "palette": { "primary": "#ddd6c7", "secondary": "#b3a98f", "accent": "#c9a86a" }
+    },
+    {
+      "id": "cobra",
+      "name": "Cobra",
+      "role": "Poisoner",
+      "tags": ["Venomous"],
+      "palette": { "primary": "#5f8f52", "secondary": "#cfe3a2", "accent": "#2e5b34" }
+    }
+  ]
+}

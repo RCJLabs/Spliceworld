@@ -1,0 +1,74 @@
+{
+  "_doc": "Frames = torsos. Each defines a size class, a torso drawing, a silhouette (clip target for hide overlays), and standardized attachment sockets. Any part fits any socket of its slot type. Socket = {x, y, angle, scale, shade?}. Part-local conventions: head faces +x with origin at the neck; limbs hang +y from origin at the shoulder/hip; tails extend -x from origin at the rump; hide draws in torso space (origin = torso center); organ draws at the belly socket. Torso shapes use the hide species' palette (@primary/@secondary/@accent) or a neutral gray when no hide is spliced.",
+  "frames": [
+    {
+      "id": "S",
+      "name": "Scamper Frame",
+      "sizeClass": "S",
+      "flavor": "Compact chassis. Fits in a backpack. Legally a carry-on.",
+      "scale": 0.78,
+      "torso": [
+        { "type": "ellipse", "cx": 0, "cy": 18, "rx": 64, "ry": 48, "fill": "@primary", "stroke": "@outline" },
+        { "type": "ellipse", "cx": 8, "cy": 34, "rx": 40, "ry": 24, "fill": "@secondary", "stroke": "none", "opacity": 0.5 }
+      ],
+      "silhouette": [
+        { "type": "ellipse", "cx": 0, "cy": 18, "rx": 64, "ry": 48 }
+      ],
+      "sockets": {
+        "head": { "x": 50, "y": -14, "angle": -6, "scale": 0.85 },
+        "forelimb_near": { "x": 30, "y": 44, "angle": 0, "scale": 0.8 },
+        "forelimb_far": { "x": 42, "y": 38, "angle": 0, "scale": 0.8, "shade": true },
+        "hindlimb_near": { "x": -30, "y": 44, "angle": 0, "scale": 0.8 },
+        "hindlimb_far": { "x": -42, "y": 38, "angle": 0, "scale": 0.8, "shade": true },
+        "tail": { "x": -60, "y": 6, "angle": 8, "scale": 0.85 },
+        "organ": { "x": 4, "y": 30, "angle": 0, "scale": 0.8 }
+      }
+    },
+    {
+      "id": "M",
+      "name": "Trotter Frame",
+      "sizeClass": "M",
+      "flavor": "The classic quadruped platform. Ranch-tested, minion-approved.",
+      "scale": 1,
+      "torso": [
+        { "type": "path", "d": "M -92 6 C -96 -28 -60 -46 -10 -46 C 44 -46 90 -30 94 4 C 97 34 66 62 -2 62 C -62 62 -89 40 -92 6 Z", "fill": "@primary", "stroke": "@outline" },
+        { "type": "ellipse", "cx": 6, "cy": 40, "rx": 56, "ry": 22, "fill": "@secondary", "stroke": "none", "opacity": 0.5 }
+      ],
+      "silhouette": [
+        { "type": "path", "d": "M -92 6 C -96 -28 -60 -46 -10 -46 C 44 -46 90 -30 94 4 C 97 34 66 62 -2 62 C -62 62 -89 40 -92 6 Z" }
+      ],
+      "sockets": {
+        "head": { "x": 76, "y": -26, "angle": -8, "scale": 1 },
+        "forelimb_near": { "x": 46, "y": 52, "angle": 0, "scale": 1 },
+        "forelimb_far": { "x": 60, "y": 45, "angle": 0, "scale": 1, "shade": true },
+        "hindlimb_near": { "x": -48, "y": 52, "angle": 0, "scale": 1 },
+        "hindlimb_far": { "x": -62, "y": 45, "angle": 0, "scale": 1, "shade": true },
+        "tail": { "x": -88, "y": 0, "angle": 6, "scale": 1 },
+        "organ": { "x": 2, "y": 34, "angle": 0, "scale": 1 }
+      }
+    },
+    {
+      "id": "L",
+      "name": "Rumbler Frame",
+      "sizeClass": "L",
+      "flavor": "Heavy-duty chassis with shoulder hump. Doors are a suggestion.",
+      "scale": 1.22,
+      "torso": [
+        { "type": "path", "d": "M -108 10 C -114 -30 -76 -52 -20 -54 C 8 -76 62 -74 82 -48 C 104 -38 112 -16 110 8 C 107 42 72 70 -6 70 C -72 70 -104 46 -108 10 Z", "fill": "@primary", "stroke": "@outline" },
+        { "type": "ellipse", "cx": 4, "cy": 46, "rx": 66, "ry": 26, "fill": "@secondary", "stroke": "none", "opacity": 0.5 }
+      ],
+      "silhouette": [
+        { "type": "path", "d": "M -108 10 C -114 -30 -76 -52 -20 -54 C 8 -76 62 -74 82 -48 C 104 -38 112 -16 110 8 C 107 42 72 70 -6 70 C -72 70 -104 46 -108 10 Z" }
+      ],
+      "sockets": {
+        "head": { "x": 92, "y": -38, "angle": -5, "scale": 1.1 },
+        "forelimb_near": { "x": 56, "y": 60, "angle": 0, "scale": 1.15 },
+        "forelimb_far": { "x": 72, "y": 52, "angle": 0, "scale": 1.15, "shade": true },
+        "hindlimb_near": { "x": -58, "y": 60, "angle": 0, "scale": 1.15 },
+        "hindlimb_far": { "x": -74, "y": 52, "angle": 0, "scale": 1.15, "shade": true },
+        "tail": { "x": -104, "y": 2, "angle": 6, "scale": 1.1 },
+        "organ": { "x": 0, "y": 40, "angle": 0, "scale": 1.1 }
+      }
+    }
+  ]
+}

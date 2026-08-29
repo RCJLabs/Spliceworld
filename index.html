@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Spliceworld — Splice Slab</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🧬</text></svg>">
+</head>
+<body>
+  <header>
+    <h1>SPLICE<span>WORLD</span></h1>
+    <p class="tagline">Ethically ambiguous genetics. Family-friendly results.™</p>
+  </header>
+
+  <main>
+    <section class="card stage-card">
+      <h2 id="nickname">…</h2>
+      <p id="recipe" class="recipe"></p>
+      <div id="creature-stage" class="stage" aria-live="polite"></div>
+      <p id="save-info" class="save-info"></p>
+    </section>
+
+    <section class="card">
+      <h3>Frame</h3>
+      <div id="frame-picker" class="frame-picker"></div>
+      <h3>Sockets</h3>
+      <div id="slot-grid" class="slot-grid"></div>
+      <button id="btn-random" type="button" class="big-btn">⚡ Random Splice</button>
+    </section>
+  </main>
+
+  <footer>
+    <p id="ticker" class="ticker"></p>
+  </footer>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

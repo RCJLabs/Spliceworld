@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spliceworld — Part Gallery (dev)</title>
+  <style>
+    body { background: #171426; color: #efeaff; font-family: system-ui, sans-serif; margin: 12px; }
+    h1 { font-size: 1rem; color: #a6e22e; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .cell { background: #2b2650; border-radius: 10px; padding: 6px; }
+    .cell p { margin: 2px 0 0; font-size: 0.7rem; color: #9d95c7; text-align: center; }
+    svg { width: 100%; height: auto; display: block; }
+  </style>
+</head>
+<body>
+  <h1>Part gallery — renderer QA, not a game screen</h1>
+  <div class="grid" id="grid"></div>
+  <script type="module">
+    import { loadContent } from '../data/loader.js';
+    import { renderCreatureSVG, SLOTS } from '../render/renderer.js';
+
+    const content = await loadContent('..');
+    const grid = document.getElementById('grid');
+    let n = 0;
+
+    function cell(label, genome) {
+      const div = document.createElement('div');
+      div.className = 'cell';
+      div.innerHTML = renderCreatureSVG(genome, content, { idPrefix: 'g' + n++ }) + `<p>${label}</p>`;
+      grid.appendChild(div);
+    }
+
+    // Acceptance creature, in all three frames.
+    for (const frame of Object.keys(content.frames)) {
+      cell(`acceptance · frame ${frame}`, {
+        frame,
+        parts: { head: 'bear_head', forelimbs: 'eagle_forelimbs', hindlimbs: 'goat_hindlimbs', tail: 'goat_tail', hide: 'goat_hide', organ: 'goat_organ' },
+      });
+    }
+
+    // Purebreds: every species' full kit on the M frame.
+    for (const sp of Object.keys(content.species)) {
+      const parts = {};
+      for (const part of Object.values(content.parts)) {
+        if (part.species === sp) parts[part.slot] = part.id;
+      }
+      cell(`purebred ${sp}`, { frame: 'M', parts });
+    }
+
+    // Bare frames (no hide → neutral lab-gray).
+    for (const frame of Object.keys(content.frames)) {
+      cell(`bare frame ${frame}`, { frame, parts: {} });
+    }
+  </script>
+</body>
+</html>

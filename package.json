@@ -1,0 +1,10 @@
+{
+  "name": "spliceworld",
+  "private": true,
+  "type": "module",
+  "description": "Cartoony mad-geneticist ranch/splice/battle game. Vanilla ES modules, no build step, no dependencies.",
+  "scripts": {
+    "smoke": "node tools/smoke.js",
+    "serve": "python3 -m http.server 8000"
+  }
+}
