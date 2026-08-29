@@ -8,6 +8,7 @@ import {
   penUpgradeCost, buyPenUpgrade, buyMailOrder, stockGenome, upkeepPerDay,
   TUNING,
 } from './ranch.js';
+import { gradeFor } from '../splice/extract.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -79,7 +80,9 @@ export function renderRanchScreen(root, ctx) {
           <div class="cond-bar"><div class="cond-fill tier-${tier}" style="width:${Math.round(animal.condition)}%"></div></div>
           <p class="cond-label">Condition ${Math.round(animal.condition)} · ${TIER_BLURBS[tier]}</p>
           <p class="meta">Diet: ${species.diet} · Genes: ????? (Gene Scanner required)</p>
+          <p class="meta">Graduation forecast: <span class="grade-badge grade-${gradeFor(animal, content, t).id}">${gradeFor(animal, content, t).name}</span></p>
           <div class="care-row">${buttons}</div>
+          <button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}">🎓 Extract (graduate ${animal.name})</button>
         </div>
       </section>`;
   }).join('');
@@ -96,6 +99,9 @@ export function renderRanchScreen(root, ctx) {
         result = buyPenUpgrade(ctx.state);
       } else if (btn.dataset.act === 'order') {
         result = buyMailOrder(ctx.state, btn.dataset.species, content, t2);
+      } else if (btn.dataset.act === 'extract') {
+        ctx.onExtract?.(btn.dataset.animal);
+        return; // the ceremony overlay owns the flow from here
       }
       if (result) lastMsg = result.msg;
       ctx.save();

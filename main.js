@@ -8,6 +8,8 @@ import { renderCreatureSVG, SLOTS } from './render/renderer.js';
 import { rngStream, pick } from './util/rng.js';
 import { ensureRanchSeeded, applyElapsed } from './ranch/ranch.js';
 import { renderRanchScreen } from './ranch/ui.js';
+import { runExtraction } from './splice/extract-ui.js';
+import { renderVaultScreen } from './splice/vault-ui.js';
 
 // Dev time-warp: ?warp=48 pretends 48 hours have passed. QA-only — the
 // warp lives in the URL, never in the save, so removing it can produce a
@@ -182,17 +184,22 @@ const ranchCtx = {
   get content() { return content; },
   now: NOW,
   save: () => saveGame(state),
+  onExtract: (animalId) =>
+    runExtraction($('#overlay'), ranchCtx, animalId, () => showScreen(state.activeScreen)),
 };
 
+const SCREENS = ['ranch', 'vault', 'slab'];
+
 function showScreen(name) {
+  if (!SCREENS.includes(name)) name = 'ranch';
   state.activeScreen = name;
   saveGame(state);
-  $('#screen-ranch').hidden = name !== 'ranch';
-  $('#screen-slab').hidden = name !== 'slab';
+  for (const s of SCREENS) $(`#screen-${s}`).hidden = s !== name;
   document.querySelectorAll('#tabs button').forEach((b) => {
     b.classList.toggle('active', b.dataset.screen === name);
   });
   if (name === 'ranch') tickRanch();
+  if (name === 'vault') renderVaultScreen($('#screen-vault'), ranchCtx);
 }
 
 // Timestamps, not intervals: recompute elapsed effects on load, on focus,
@@ -230,7 +237,7 @@ async function boot() {
   document.querySelectorAll('#tabs button').forEach((btn) => {
     btn.addEventListener('click', () => showScreen(btn.dataset.screen));
   });
-  showScreen(state.activeScreen === 'slab' ? 'slab' : 'ranch');
+  showScreen(state.activeScreen);
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) tickRanch();

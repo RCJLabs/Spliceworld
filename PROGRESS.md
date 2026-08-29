@@ -1,5 +1,26 @@
 # PROGRESS
 
+## Session 3 — M2: Extractor & Grades ✅
+
+**Acceptance criterion:** raising a donor to Prime provably yields better parts than extracting a Juvenile — **passes** both headless (identical-genetics twins: juvenile extraction → Standard ×1.0, twin raised to Prime with care → Apex ×1.5) and in-browser through the real ceremony UI (juvenile goat → Standard tokens; second goat warped to Prime with care → Prime tokens, both side by side in the Vault).
+
+### What shipped
+- **Grade formula** (`splice/extract.js`, pure): score = (avg potential stars/5) × age factor (Juvenile 0.35 / Adult 0.75 / **Prime 1.0** / Elder 0.8) × (condition/100); thresholds Standard <0.35 ≤ Prime <0.55 ≤ Apex <0.75 ≤ Prismatic. Care has teeth: a neglected Prime donor grades Standard (Law 3). Grades carry stat multipliers (×1/×1.25/×1.5/×2) for the M4 battle engine; Apex/Prismatic ability upgrades also land in M4.
+- **Extraction**: donor leaves the herd permanently → 1 DNA vial + one token per species part, every token stamped with donor name, star rating, and timestamp ("essence of Bessie ★3.2" — lineage is forever).
+- **Graduation Ceremony overlay**: confirm (with grade forecast) → shake/flash/poof/"~ kazoo noises ~" (CSS keyframes; ZzFX stingers arrive M7) → results card. Zero death language throughout.
+- **Grade forecast on ranch cards** — the extract-now-vs-raise tension is visible live per animal.
+- **Gene Vault screen** (third tab): DNA vials + part tokens grouped by slot, sorted by grade, with inline-SVG vial icons.
+- **SAVE_VERSION → 3** (adds `inventory`); v1→v3 and v2→v3 migration chains tested headless and in-browser.
+- **Bug fixed**: author CSS (`display:flex` on `.screen`/`.overlay`) silently overrode the `[hidden]` attribute — screens stacked and the closed ceremony overlay kept dimming and swallowing real clicks (synthetic test clicks had masked it). Fixed with a global `[hidden]{display:none!important}`; verified with hit-tested CDP clicks.
+
+### Known issues
+- Chimera extraction (salvage at one grade degraded) deferred until chimeras exist as entities (M3 settling / M5 Containment).
+- Vials have no consumer yet (breeding/M6 candidate); they accumulate as flavor for now.
+- Vault is read-only; the Surgery Theater starts consuming tokens in M3.
+
+### Next session — M3: Surgery Theater
+First task: turn the Splice Slab into the real Surgery Theater consuming Vault tokens (slot UI limited to owned parts), then the physiology panel with explanations, instability, settling timers, purebred bonus, 4 combo abilities. Done when: the panel correctly explains why the flightless hippo can't fly.
+
 ## Session 2 — M1: Ranch & Stock ✅
 
 **Acceptance criterion:** neglect and good care produce visibly different animals over two real days — **passes**, proven on simulated clocks two ways: headless (48h sim in `tools/smoke.js`: cared goat 97/gleaming with sparkles vs. neglected 41/scruffy with dirt overlay) and in-browser via the dev time-warp (`?warp=48`), where the same divergence shows on the Ranch screen through the real UI.

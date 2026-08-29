@@ -16,11 +16,13 @@
 
   <nav class="tabs" id="tabs">
     <button type="button" data-screen="ranch">Ranch</button>
+    <button type="button" data-screen="vault">Vault</button>
     <button type="button" data-screen="slab">Splice Slab</button>
   </nav>
 
   <main>
     <div id="screen-ranch" class="screen" hidden></div>
+    <div id="screen-vault" class="screen" hidden></div>
 
     <div id="screen-slab" class="screen" hidden>
       <section class="card stage-card">
@@ -39,6 +41,8 @@
       </section>
     </div>
   </main>
+
+  <div id="overlay" class="overlay" hidden></div>
 
   <footer>
     <p id="ticker" class="ticker"></p>

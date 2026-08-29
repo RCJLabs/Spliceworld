@@ -14,6 +14,9 @@ import {
   careStatus, buyMailOrder, buyPenUpgrade, ensureRanchSeeded, stockGenome,
   CARE_ACTIONS, TUNING,
 } from '../ranch/ranch.js';
+import {
+  GRADES, GRADE_INDEX, gradeFor, avgStars, extractAnimal,
+} from '../splice/extract.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -88,11 +91,16 @@ const v1Save = {
   directorStats: { partUse: { bear_head: 3 }, tagUse: {} },
 };
 const migrated = migrate(structuredClone(v1Save));
-assert.equal(migrated.saveVersion, 2);
+assert.equal(migrated.saveVersion, SAVE_VERSION, 'v1 chains all the way up');
 assert.equal(migrated.funds, 300);
 assert.deepEqual(migrated.ranch, { stock: [], penCapacity: 4, animalCount: 0, seeded: false });
+assert.deepEqual(migrated.inventory, { vials: [], parts: [], tokenCount: 0 });
 assert.equal(migrated.spliceCount, 3, 'migration preserves existing progress');
 assert.deepEqual(migrated.genome, acceptance, 'migration preserves the slab creature');
+const v2Save = { ...structuredClone(v1Save), saveVersion: 2, funds: 512, ranch: { stock: [], penCapacity: 6, animalCount: 2, seeded: true }, lastTickAt: 1, activeScreen: 'slab' };
+const m2 = migrate(structuredClone(v2Save));
+assert.equal(m2.saveVersion, SAVE_VERSION);
+assert.equal(m2.funds, 512, 'v2→v3 leaves ranch/economy untouched');
 
 // --- M1 ranch: species carry the required husbandry data.
 for (const sp of Object.values(content.species)) {
@@ -181,6 +189,73 @@ assert.deepEqual(herdA.ranch.stock, herdB.ranch.stock);
 ensureRanchSeeded(herdA, content, t0 + HOUR);
 assert.equal(herdA.ranch.stock.length, 3, 'seeding is one-time');
 
+// --- M2 acceptance: same donor, Juvenile vs. raised-to-Prime extraction.
+const m2sim = freshRanchState();
+const donorA = createAnimal(m2sim, 'goat', content, t0);
+const donorB = structuredClone(donorA); // genetically identical twin
+donorB.id = 'a-twin';
+m2sim.ranch.stock.push(donorA, donorB);
+
+// A goes straight into the Extractor as a fresh Juvenile.
+const juvenileGrade = gradeFor(donorA, content, t0);
+const resA = extractAnimal(m2sim, donorA.id, content, t0);
+assert.ok(resA.ok);
+assert.equal(resA.grade.id, 'standard', `juvenile extraction is Standard (got ${resA.grade.id})`);
+
+// B is raised to Prime with diligent care (goat: prime at 18h).
+for (let hour = 1; hour <= 20; hour++) {
+  const now = t0 + hour * HOUR;
+  applyElapsed(m2sim, content, now);
+  for (const action of CARE_ACTIONS) {
+    if (careStatus(donorB, now)[action].ready) careAction(m2sim, donorB.id, action, content, now);
+  }
+}
+const tB = t0 + 20 * HOUR;
+assert.equal(ageStage(donorB, content, tB), 'prime');
+const resB = extractAnimal(m2sim, donorB.id, content, tB);
+assert.ok(resB.ok);
+assert.ok(
+  GRADE_INDEX[resB.grade.id] > GRADE_INDEX[resA.grade.id],
+  `raised donor beats juvenile: ${resB.grade.id} > ${resA.grade.id}`
+);
+assert.ok(resB.grade.mult > resA.grade.mult, 'higher grade carries a bigger stat multiplier');
+
+// Extraction bookkeeping: donor leaves the herd, lineage is permanent.
+assert.equal(m2sim.ranch.stock.length, 0, 'both donors graduated out of the herd');
+const goatPartCount = Object.values(content.parts).filter((p) => p.species === 'goat').length;
+assert.equal(resA.tokens.length, goatPartCount, 'one token per species part');
+assert.equal(m2sim.inventory.parts.length, goatPartCount * 2);
+assert.equal(m2sim.inventory.vials.length, 2);
+for (const token of m2sim.inventory.parts) {
+  assert.equal(token.donor.name, donorA.name, 'token remembers its donor');
+  assert.ok(token.donor.stars > 0 && content.parts[token.partId]);
+}
+const ids = m2sim.inventory.parts.map((t) => t.id).concat(m2sim.inventory.vials.map((v) => v.id));
+assert.equal(new Set(ids).size, ids.length, 'token ids are unique');
+assert.ok(!extractAnimal(m2sim, 'nope', content, tB).ok, 'unknown animal refused');
+
+// Grade formula edges: care has teeth (Law 3), Prime is the peak, and
+// Prismatic demands genetics + timing + husbandry all at once.
+const model = structuredClone(donorA);
+for (const stat of Object.keys(model.potential)) model.potential[stat] = 3;
+const at = (stage, cond) => {
+  const a = structuredClone(model);
+  const g = content.species.goat.growthHours;
+  a.birthAt = t0 - (stage === 'juvenile' ? 0 : g[stage] * HOUR);
+  a.condition = cond;
+  return gradeFor(a, content, t0).id;
+};
+assert.equal(at('prime', 95), 'apex', '3★ pampered Prime → Apex');
+assert.equal(at('prime', 41), 'standard', 'neglect voids a Prime donor (care has teeth)');
+assert.equal(at('adult', 95), 'prime', 'well-kept Adult sits between');
+assert.ok(GRADE_INDEX[at('elder', 95)] < GRADE_INDEX[at('prime', 95)], 'past peak: Elder < Prime');
+const star5 = structuredClone(model);
+for (const stat of Object.keys(star5.potential)) star5.potential[stat] = 5;
+star5.birthAt = t0 - content.species.goat.growthHours.prime * HOUR;
+star5.condition = 100;
+assert.equal(gradeFor(star5, content, t0).id, 'prismatic', 'the perfect goat exists');
+assert.equal(Math.round(avgStars(star5)), 5);
+
 // Time-warp safety: a lastTickAt in the future never rewinds state.
 const warp = freshRanchState();
 ensureRanchSeeded(warp, content, t0);
@@ -189,4 +264,4 @@ const condBefore = warp.ranch.stock[0].condition;
 applyElapsed(warp, content, t0);
 assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a no-op');
 
-console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · save v${SAVE_VERSION} · M1 care divergence: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)}`);
+console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · save v${SAVE_VERSION} · M1 care divergence: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: juvenile ${resA.grade.id} vs raised ${resB.grade.id}`);

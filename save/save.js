@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -19,6 +19,11 @@ const migrations = {
     save.ranch = { stock: [], penCapacity: 4, animalCount: 0, seeded: false };
     save.lastTickAt = null;
     save.activeScreen = 'ranch';
+    return save;
+  },
+  // v3 (M2): the Extractor's output — DNA vials and part tokens with lineage.
+  3: (save) => {
+    save.inventory = { vials: [], parts: [], tokenCount: 0 };
     return save;
   },
 };
@@ -38,6 +43,7 @@ export function newGameState() {
     ranch: { stock: [], penCapacity: TUNING.penStartCapacity, animalCount: 0, seeded: false },
     lastTickAt: null,
     activeScreen: 'ranch',
+    inventory: { vials: [], parts: [], tokenCount: 0 },
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations
