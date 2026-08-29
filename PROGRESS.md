@@ -1,5 +1,64 @@
 # PROGRESS
 
+## Session 14 — Battle overhaul: turns you can actually see ✅
+
+The complaint was exact: *"there isn't obvious turns. I just press attacks and
+get attacked at the same time."* True — the engine resolved a whole round in one
+synchronous call and the arena printed the receipt. Fixed at the seam, not with
+a rewrite.
+
+### `step()` now returns a replayable stream
+- Every event carries `{ text, kind, actor, target, amount, mult, snap }` where
+  **`snap` is a frozen snapshot of the battle at that instant** — both fighters'
+  HP/stamina/status/stages, the bench, waves left, cannon charge.
+- One helper (`makeEvents`) wraps the log, so ~64 `events.push('…')` call sites
+  kept working untouched; only the beats worth animating got annotated.
+- The engine stays synchronous and DOM-free — `tools/sim.js` is unaffected.
+- New export `turnForecast(battle)` so the UI can say who strikes first *before*
+  you commit to a move.
+
+### The arena is a player, not a printer
+- Beats replay on a timer (620ms for a hit, 900ms for a KO, 1.1s for a rival's
+  monologue), driving the HUD **from each snapshot** rather than from live state.
+- A **phase strip** names whose beat it is — `YOUR MOVE` / `ENEMY MOVE` — and the
+  acting fighter's panel takes the spotlight. That is the fix for "no obvious turns".
+- Floating damage numbers, coloured by effectiveness (crit gold, resisted grey,
+  MISS / NO EFFECT). Lunge, hit-shake, KO flop, wave-in slide, buff/debuff pulse.
+- Actions lock during playback with **▶ tap to skip** — an immediate flush that
+  runs every remaining beat at once, so skipping never changes the outcome.
+- Ten combat stingers added to the WebAudio synth (hit / bigHit / weakHit / miss /
+  buff / debuff / ko / waveIn).
+
+### HUD rebuilt
+- Turn badge, encounter title, RIVAL DUEL / RESCUE RAID mode tag.
+- Class chips on **both** fighters, stamina bar on the enemy too, wave pips,
+  status chips (venom stacks, sleep, stun, trapped, guard, stage changes),
+  a **team tray** with live HP for the bench.
+- **Per-move effectiveness against the fighter in front of you**: `×1.5`,
+  `no effect`, `armor ✗`, `⚡ first`, `2-turn`. The tag chart and the class
+  triangle stop being lore you have to memorise.
+- `prefers-reduced-motion` resolves the round instantly with no floats and no
+  animation classes — verified in the browser, not assumed.
+
+### Verified
+- `node tools/smoke.js` green with a new block asserting the stream's shape:
+  every event has text/kind/snap, snapshots are frozen **copies** (test bites if
+  `copyStatus` is removed), a KO beat shows an empty bar, and the stream and the
+  log never disagree. Two assertions deliberately broken to confirm they fail.
+- `node tools/sim.js` unchanged: 1320 battles. `--plant` still caught.
+- CDP at 380px: beats arrive one at a time with correct phase labels, floats and
+  sprite animations fire, skip flushes in ~20ms, ten log kinds observed across a
+  boss fight, all six tabs clean on a fresh save. No console errors, no overflow.
+
+### Known issues
+- Prismatic balance pass still pending — **next**.
+- Enemy AI is still "mild preference for damage"; it will get smarter with the
+  director.
+
+### Next session's first task
+The balance pass (prismatic tier + the seven `[TRASH]` purebred builds), then the
+AI director.
+
 ## Session 13 — Rival Geneticists ✅
 
 The audit's #1 deferred item, and the reason Wave 1's class triangle exists.

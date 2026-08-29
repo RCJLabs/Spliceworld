@@ -59,6 +59,22 @@ const STINGERS = {
     { type: 'sawtooth', from: 300, to: 110, dur: 0.5, vol: 0.09 },
     { type: 'sawtooth', from: 150, to: 60, at: 0.4, dur: 0.5, vol: 0.08 },
   ],
+  // Combat beats (battle overhaul): one voice each, so a long round of
+  // playback stays a rhythm section rather than an argument.
+  hit: [{ type: 'square', from: 260, to: 90, dur: 0.09, vol: 0.09 }],
+  bigHit: [
+    { type: 'sawtooth', from: 340, to: 70, dur: 0.16, vol: 0.12 },
+    { type: 'square', from: 180, to: 60, at: 0.04, dur: 0.14, vol: 0.07 },
+  ],
+  weakHit: [{ type: 'triangle', from: 200, to: 140, dur: 0.08, vol: 0.05 }],
+  miss: [{ type: 'triangle', from: 520, to: 900, dur: 0.09, vol: 0.05 }],
+  buff: [{ type: 'triangle', from: 440, to: 880, dur: 0.12, vol: 0.06 }],
+  debuff: [{ type: 'triangle', from: 520, to: 220, dur: 0.14, vol: 0.06 }],
+  ko: [
+    { type: 'sawtooth', from: 300, to: 60, dur: 0.3, vol: 0.1 },
+    { type: 'square', from: 150, to: 50, at: 0.1, dur: 0.25, vol: 0.06 },
+  ],
+  waveIn: [{ type: 'square', from: 300, to: 620, dur: 0.13, vol: 0.07 }],
   capture: [
     { type: 'sine', from: 80, to: 40, dur: 0.3, vol: 0.16 },
     { type: 'triangle', from: 1200, to: 2000, at: 0.28, dur: 0.1, vol: 0.07 },
