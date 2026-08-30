@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 13;
+export const SAVE_VERSION = 14;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -135,6 +135,21 @@ const migrations = {
     });
     return save;
   },
+  // v14 (Region contestation): the coalition can come back for a node you
+  // already hold. `contested` holds the live counter-offensives, and
+  // `nextContestAt` is a scheduled timestamp rather than a per-tick roll —
+  // null means "not eligible yet", and the first tick that finds the save
+  // eligible sets it. `defences` is the per-node record that makes them
+  // slower to try the same place twice. Nothing already held is touched:
+  // an existing empire simply becomes contestable when its threat
+  // generation says so.
+  14: (save) => {
+    save.campaign.contested = [];
+    save.campaign.nextContestAt = null;
+    save.campaign.defences = {};
+    save.campaign.contestCount = 0;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -158,7 +173,11 @@ export function newGameState() {
     discoveredCombos: [],
     battle: null,
     warRecord: { wins: 0, losses: 0 },
-    campaign: { heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, lastTickAt: null },
+    campaign: {
+      heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {},
+      contested: [], nextContestAt: null, defences: {}, contestCount: 0,
+      lastTickAt: null,
+    },
     news: [],
     settings: { muted: false },
     dex: { parts: [], enemies: [], traits: [], variants: [] },

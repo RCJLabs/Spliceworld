@@ -16,8 +16,9 @@ import {
   rehabRemainingMs, sessionReadyAt,
 } from './rehab.js';
 import { GRADES, GRADE_INDEX } from '../splice/extract.js';
+import { contestOn, contestEncounter, contestRemainingMs, defencesOf } from './contest.js';
 import {
-  nodeStates, threatGen, incomePerDay, salvageUnit, regionOf,
+  nodeStates, threatGen, incomePerDay, incomeSuspended, salvageUnit, regionOf,
 } from './campaign.js';
 
 let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, label }
@@ -27,8 +28,14 @@ let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, l
 // resolved — briefing preview and battle always face the same team.
 function encounterFor(state, target, content) {
   if (target.kind === 'rival') return rivalEncounter(state, content.rivals[target.rivalId], content);
+  // A defence is the node's own encounter, escalated — built fresh from
+  // the live contest so the briefing and the battle always agree.
+  const base =
+    target.kind === 'defend'
+      ? contestEncounter(state, content, contestOn(state, target.nodeId))
+      : content.encounters[target.encounterId];
   // The AI director gets a look at every human encounter before you do.
-  return directEncounter(state, content.encounters[target.encounterId], content);
+  return base ? directEncounter(state, base, content) : null;
 }
 let draftTeam = [];
 let lastAftermath = null;
@@ -59,6 +66,7 @@ function renderMap(root, ctx) {
   const region = regionOf(content);
   const gen = threatGen(state, content);
   const income = incomePerDay(state, content);
+  const suspended = incomeSuspended(state, content);
 
   const nodes = nodeStates(state, content).map(({ node, status }) => {
     const encounter = content.encounters[node.encounter];
@@ -67,13 +75,32 @@ function renderMap(root, ctx) {
         ? `<button type="button" data-node="${node.id}">Assault</button>`
         : status === 'held'
           ? `<span class="held-tag">HELD +$${node.incomePerDay}/d</span>`
-          : `<span class="locked-tag">${(node.threatGen ?? 1) > gen ? 'needs Threat Gen 2' : 'locked'}</span>`;
+          : status === 'contested'
+            ? `<span class="contested-tag">CONTESTED −$${node.incomePerDay}/d</span>`
+            : `<span class="locked-tag">${(node.threatGen ?? 1) > gen ? 'needs Threat Gen 2' : 'locked'}</span>`;
     return `
       <div class="encounter node-${status}">
         <div><strong>${node.name}</strong>${node.boss ? ' 👑' : ''} <span class="lineage">${encounter.waves.length} waves · $${encounter.reward}</span><br>
         <span class="fine-print">${node.blurb}</span></div>
         ${btn}
       </div>`;
+  }).join('');
+
+  // A counter-offensive is time-critical and costs money every hour it
+  // stands, so it gets an alert of its own rather than a quieter row on
+  // the map (which also marks it).
+  const contests = (state.campaign.contested ?? []).map((c) => {
+    const node = region.nodes.find((n) => n.id === c.nodeId);
+    if (!node) return '';
+    const held = defencesOf(state, c.nodeId);
+    return `
+    <div class="encounter contested">
+      <div><strong>${node.name}</strong> <span class="lineage">counter-offensive</span><br>
+      <span class="fine-print"><strong class="countdown">${fmtDuration(contestRemainingMs(c, t))}</strong> to hold the line · <strong>$${node.incomePerDay}/day</strong> suspended until you do${
+        held ? ` · you have held it ${held}× already` : ''
+      }.</span></div>
+      <button type="button" data-defend="${c.nodeId}">🛡 Defend</button>
+    </div>`;
   }).join('');
 
   const captives = state.campaign.captives.map((cap) => `
@@ -148,10 +175,13 @@ function renderMap(root, ctx) {
       <div class="econ-row">
         <div><span class="econ-label">Notoriety</span><strong>${state.campaign.notoriety}</strong></div>
         <div><span class="econ-label">Threat Gen</span><strong>${gen}</strong></div>
-        <div><span class="econ-label">Territory</span><strong>+$${income}/day</strong></div>
+        <div><span class="econ-label">Territory</span><strong>+$${income}/day</strong>${
+          suspended ? `<span class="econ-suspended">−$${suspended} contested</span>` : ''
+        }</div>
         <div><span class="econ-label">Record</span><strong>${state.warRecord.wins}W–${state.warRecord.losses}L</strong></div>
       </div>
     </section>
+    ${contests ? `<section class="card contest-card"><h3>🛡 Counter-Offensive</h3>${contests}</section>` : ''}
     ${captives ? `<section class="card"><h3>⏳ Captured — Rescue Windows</h3>${captives}</section>` : ''}
     <section class="card">
       <h3>${region.name}</h3>
@@ -177,6 +207,14 @@ function renderMap(root, ctx) {
     btn.addEventListener('click', () => {
       const rival = content.rivals[btn.dataset.rival];
       draftTarget = { kind: 'rival', rivalId: rival.id, encounterId: `rival_${rival.id}`, label: rival.name };
+      draftTeam = [];
+      renderBriefing(root, ctx);
+    });
+  });
+  root.querySelectorAll('button[data-defend]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const node = region.nodes.find((n) => n.id === btn.dataset.defend);
+      draftTarget = { kind: 'defend', nodeId: node.id, encounterId: node.encounter, label: `Defend ${node.name}` };
       draftTeam = [];
       renderBriefing(root, ctx);
     });
@@ -300,6 +338,15 @@ function renderBriefing(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
   const encounter = encounterFor(state, draftTarget, content);
+  // The window can close while the briefing is open (a tick fires on
+  // focus). There is nothing left to defend, so say so rather than
+  // rendering a battle against undefined.
+  if (!encounter) {
+    lastAftermath = 'The convoy arrived while you were choosing a team. That one is theirs for now.';
+    draftTarget = null;
+    renderMap(root, ctx);
+    return;
+  }
 
   // What are we walking into? The class triangle only matters if the player
   // can see the matchup before they commit a team.
@@ -340,6 +387,7 @@ function renderBriefing(root, ctx) {
       <p class="fine-print">Opposition: ${foeLine}${
         foeClasses.size > 1 && encounter.counterClass ? ' — one of them was built to answer your stable' : ''
       }</p>
+      ${encounter.contestOf ? `<p class="fine-print contest-intel">🛡 ${encounter.intel}</p>` : ''}
       ${encounter.directed ? `<p class="fine-print intel-line">🛰 Intel: ${encounter.directed.intel} <strong>${content.enemies[encounter.directed.unitId].name}</strong> ${
         encounter.directed.added
           ? 'is riding along — they sent extra.'
@@ -382,6 +430,11 @@ function renderBriefing(root, ctx) {
       nodeId: draftTarget.nodeId ?? null,
       captiveId: draftTarget.captiveId ?? null,
       rivalId: draftTarget.rivalId ?? null,
+      // The wave list as actually launched. A derived encounter (a
+      // defence) and a director-rewritten one are both absent from
+      // enemies.json, so the aftermath cannot look them up afterwards —
+      // the Splice-Dex and the defence's salvage both read this.
+      waveIds: encounter.waves.filter((w) => typeof w === 'string'),
     });
     ctx.save();
     renderWarRoomScreen(root, ctx);
@@ -395,6 +448,8 @@ function aftermathText(detail) {
   if (detail.outcome === 'win') bits.push(`Victory!${detail.reward ? ` Confiscated budget: $${detail.reward}.` : ''}`);
   else if (detail.outcome === 'fled') bits.push('Tactical scamper executed flawlessly.');
   else bits.push('Defeat.');
+  if (detail.defended === true) bits.push(`${detail.node} holds.${detail.wreckage ? ` A ${detail.wreckage} was left behind and is now in Containment.` : ''}`);
+  else if (detail.defended === false) bits.push(`${detail.node} is theirs again. It can be retaken.`);
   if (detail.freed) bits.push(`${detail.freed} is home safe (and slightly dramatic about it).`);
   if (detail.capturedChimera) bits.push(`${detail.capturedChimera} was CAPTURED — a rescue window is open in the War Room.`);
   if (detail.salvageUnits.length) bits.push(`Impounded: ${detail.salvageUnits.length} unit(s) for Containment.`);

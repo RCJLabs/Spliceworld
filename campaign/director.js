@@ -169,7 +169,12 @@ export function directEncounter(state, encounter, content) {
   const t = tuningOf(content);
   if (!encounter || encounter.rivalId) return encounter;
   if (encounter.tier == null || encounter.tier < t.minTier) return encounter;
-  if (!directorReach(state, content).ids.includes(encounter.id)) return encounter;
+  // A derived encounter (a contested node's defence) is reached through
+  // the encounter it was derived from — it is the same enemy at the same
+  // place, and a counter-offensive is the last thing the world should be
+  // forbidden from adapting.
+  const reachId = encounter.baseId ?? encounter.id;
+  if (!directorReach(state, content).ids.includes(reachId)) return encounter;
   if (encounter.waves.length < 2) return encounter;
 
   const { rule, score, profile } = directorRead(state, content);
@@ -177,7 +182,7 @@ export function directEncounter(state, encounter, content) {
 
   // Seeded on the node, so the same save always faces the same adaptation
   // and a reload mid-briefing shows the identical opposition.
-  const rng = rngStream(state.seed, `director:${encounter.id}`, profile.dissections);
+  const rng = rngStream(state.seed, `director:${reachId}`, profile.dissections);
   const pool = rule.units.filter((u) => content.enemies[u]);
   const unitId = pick(rng, pool);
 
