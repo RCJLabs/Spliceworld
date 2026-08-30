@@ -5741,7 +5741,7 @@
       ],
       "classAffinity": "water",
       "move": {
-        "power": 64,
+        "power": 50,
         "cost": 28,
         "acc": 92,
         "tags": [],
@@ -11137,7 +11137,7 @@
       ],
       "classAffinity": "water",
       "move": {
-        "power": 64,
+        "power": 50,
         "cost": 28,
         "acc": 92,
         "tags": [],

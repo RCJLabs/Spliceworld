@@ -1,5 +1,91 @@
 # PROGRESS
 
+## Session 33 — R22: an enemy AI with a policy ✅
+
+**Acceptance criterion:** the same roster plays measurably better and the
+all-grade balance gate still passes — **passes** (7–13pp per contested
+matchup; 0 `[OP]` and 0 `[TRASH]` across 4 grades × 10 pools at `seedsPer`
+12 **and** 16).
+
+### One scorer, both sides
+
+`enemyChooseMove` was a coin flip with a 75% lean toward damage. It is now
+`battle/ai.js`: a single scorer that reads expected damage through the chart
+and the class triangle, values a kill above the damage on it, prices every
+status against whether it is *already there*, and keeps stamina in reserve.
+
+It sits on a new `previewMove()` — the same arithmetic `attack()` runs, with
+the dice taken out. That makes it the one source of truth for "what does this
+button do", which the AI reads to choose and R28's battle UI will read to
+explain. Smoke asserts the two agree to within 8% over 100+ swings.
+
+**Skill is a dial, not a switch.** Encounter tier drives it (0.15 at a beat
+patrol, 0.85 at a Gen-2 response, 0.9 for rivals), so the difficulty curve
+gains a dimension that costs no new content.
+
+| contested matchup | vs random | vs the policy | worth |
+|---|---|---|---|
+| boss / bear | 85% | 76% | 9pp |
+| boss / shark | 78% | 49% | 29pp |
+| military / bear | 39% | 27% | 13pp |
+| air patrol / bear | 98% | 89% | 9pp |
+
+### The pilot got the same brain — and that mattered more
+
+R20 recorded that the greedy pilot never pressed a low-power or defensive
+move, so those could never be priced. Giving the harness the same policy
+closed that, and immediately **exposed a real outlier**: the shark purebred
+at 77% against a 45% median at Prime. Frenzy was priced at 64 power back when
+it was decoration; the first pilot able to press it found it. Re-priced to
+50 — under a plain 52-power Strike at full health, above it once the target
+is hurt, which is what a finisher should read like.
+
+### The bug that cost a whole class
+
+Air collapsed from 34% to **13%** at Standard. Three hypotheses were wrong
+before measurement found it — it was not the enemy (a dumb enemy gave the
+same 13%), not the rest heuristic, not the stamina penalty, and not the 20%
+random branch.
+
+Counting presses found it in one line: on a fragile Air build the pilot
+pressed a **capped, zero-power evasion buff 545 times across 80 fights and
+won none of them**, where the old greedy rule — which had no way to *choose*
+a setup move — rested, recovered, and won half. Once a stage caps it scores
+zero, but a 10-stamina buff stays affordable long after the 20-stamina attack
+does not, so the pilot chain-cast it and never climbed back.
+
+Two rules fix it: never spend a turn on a move worth nothing, and when
+*nothing that hits* is affordable, a buff must clear a bar to beat resting.
+The same build now wins **66%**, against greedy's 51%.
+
+| class spread | before R22 | after |
+|---|---|---|
+| standard | 20pp | **12pp** |
+| prime | 19pp | **9pp** |
+| apex | 26pp | **16pp** |
+| prismatic | 24pp | **20pp** |
+
+Better play on both sides made the *class balance* read more honestly than
+it ever has — R18's work shows through once neither side is flailing.
+
+### Known issues
+- **Smoke is 13.7s → 27.3s.** The policy evaluates every move every turn, and
+  the gate is 4 grades × 6 pools × 40 builds × 11 encounters × 8 seeds. Worth
+  it for now; if it grows again, trim the gate's pools before its grades.
+- **The pilot does not switch.** It picks moves only, so a bad class matchup
+  is played out rather than tagged out — which understates any build with a
+  bench answer. The next honest step for the yardstick.
+- The boss-transform test now pins `aiSkill = 0`. Captain Clampdown with a
+  policy opens on accDown and stays on its best swing, which ends a thin squad
+  before stage two — a real difficulty change, but that assertion is about a
+  KO trigger, not difficulty.
+- `SAVE_VERSION` **21 → 22** (`battle.aiSkill`), with a migration; sw cache
+  `spliceworld-v22-ai`.
+
+### Next session — first task
+R21 (Splice-Dex completeness) is small and is the last correctness item, or
+R28 (battle readability) which can now lean on `previewMove`.
+
 ## Session 32 — R20: wire the dead keywords ✅
 
 **Acceptance criterion:** every keyword in `keywords.json` is either on a move

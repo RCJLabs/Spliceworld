@@ -5,6 +5,7 @@
 // deterministically (rolls derive from seed + rollCount).
 
 import { rngStream, pick } from '../util/rng.js';
+import { chooseMoveIndex, skillFor } from './ai.js';
 import { analyze } from '../splice/physiology.js';
 import { GRADE_INDEX } from '../splice/extract.js';
 import { isSettled } from '../splice/theater.js';
@@ -305,6 +306,36 @@ function makeEvents(battle) {
 
 // Who acts first, for the pre-turn readout. Priority moves override speed,
 // so this is the base forecast the UI shows before a move is chosen.
+// What a move would do, with the dice taken out: the same arithmetic attack()
+// runs, at mean variance and without the conditional crit. One source of
+// truth for "what does this button do" — the AI reads it to choose, and the
+// battle UI will read it to explain (R28). Deterministic, so calling it never
+// disturbs the seeded stream.
+export function previewMove(atk, def, move, content) {
+  const mine = againstTags(atk.scars, def.tags);
+  const theirs = againstTags(def.scars, atk.tags);
+  const locked = !!move.keywords.ignoreEvasion;
+  const hitChance = Math.max(0, Math.min(1, locked
+    ? (move.acc + mine.acc) / 100 * stageMult(atk.stages.acc)
+    : ((move.acc + mine.acc) / 100) * stageMult(atk.stages.acc) / stageMult(def.stages.evasion) * (1 - theirs.evasion)));
+  const { mult, ignoreArmor } = tagMultiplier(move.tags, def.tags, content.tagChart);
+  const clsMult = classMultiplier(atk.creatureClass, def.creatureClass, content);
+  if (!(move.power > 0) || mult === 0) {
+    return { damage: 0, hitChance, lethal: false, tagMult: mult, classMult: clsMult, immune: move.power > 0 && mult === 0 };
+  }
+  const hits = move.keywords.multiHit ? (2 + Math.max(1, move.keywords.multiHit - 1)) / 2 : 1;
+  let one = move.power * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult * clsMult;
+  one *= 1 + (atk.perks?.power ?? 0);
+  one *= 1 + mine.power;
+  one *= 1 - theirs.armor;
+  if (move.keywords.frenzy) one *= 1 + FRENZY_SCALE * (1 - def.hp / Math.max(1, def.maxHp));
+  if (move.keywords.rage) one *= 1 + RAGE_SCALE * (1 - atk.hp / Math.max(1, atk.maxHp));
+  if (!(ignoreArmor || move.keywords.ignoreArmor)) one -= def.armor * ARMOR_FACTOR;
+  if (def.status.guard && !move.keywords.ignoreGuard) one *= 1 - 0.5 * (1 - (def.perks?.guardLoss ?? 0));
+  const damage = Math.max(1, Math.round(one)) * hits;
+  return { damage, hitChance, lethal: damage >= def.hp, tagMult: mult, classMult: clsMult, immune: false };
+}
+
 export function turnForecast(battle) {
   const me = battle.player.team[battle.player.active];
   const foe = battle.enemy.active;
@@ -361,6 +392,9 @@ export function createBattle(chimeras, encounter, content, seed, now, context = 
     // Rival chimeras arrive pre-scaled by their own powerScale, so tier
     // scaling applies only to the authored human roster.
     enemyScale: tierScaleFor(encounter, content),
+    // How well the opposition plays, fixed at the top of the fight so a
+    // mid-battle reload resumes against the same opponent it started against.
+    aiSkill: skillFor(encounter),
     log: [],
   };
   // Call, then response. A duel that is only ever monologued AT is a wall
@@ -732,17 +766,14 @@ function performMove(battle, side, moveIndex, events, content) {
   attack(battle, atk, def, move, events, content);
 }
 
-function enemyChooseMove(battle) {
-  const e = battle.enemy.active;
-  if (e.status.charging != null) return e.status.charging;
-  const affordable = e.moves.map((m, i) => ({ m, i })).filter(({ m }) => m.cost <= e.stamina);
-  if (!affordable.length) return -1; // rest
-  // Mild preference for damage; setup moves get picked sometimes.
-  const damaging = affordable.filter(({ m }) => m.power > 0);
-  // Taunted, it can only think about hitting the thing that provoked it.
-  if (e.status.taunted > 0 && damaging.length) return damaging[Math.floor(roll(battle) * damaging.length)].i;
-  const pool = roll(battle) < 0.75 && damaging.length ? damaging : affordable;
-  return pool[Math.floor(roll(battle) * pool.length)].i;
+// The opposition thinks now (R22). How hard it thinks is the encounter's
+// tier — a beat cop still flails, a Gen-2 response team does not — so the
+// difficulty curve gains a dimension that costs no new content.
+function enemyChooseMove(battle, content) {
+  return chooseMoveIndex(
+    battle, battle.enemy.active, playerActive(battle), content,
+    battle.aiSkill ?? 0.5, () => roll(battle)
+  );
 }
 
 function endOfTurn(battle, events) {
@@ -897,7 +928,7 @@ export function step(battle, action, content) {
     }
   }
 
-  const enemyMove = enemyChooseMove(battle);
+  const enemyMove = enemyChooseMove(battle, content);
   const playerMoves = playerAction.type === 'move' || playerAction.type === 'release';
   const playerMoveIndex = playerAction.type === 'release' ? playerActive(battle).status.charging : playerAction.index;
 

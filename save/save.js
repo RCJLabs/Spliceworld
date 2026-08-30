@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 21;
+export const SAVE_VERSION = 22;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -237,6 +237,14 @@ const migrations = {
       for (const c of save.battle.player?.team ?? []) fresh(c);
       fresh(save.battle.enemy?.active);
     }
+    return save;
+  },
+  // v22 (R22): the opposition plays to a skill dial fixed when the fight
+  // starts. A battle saved before this predates the dial; it resumes at the
+  // midpoint rather than inheriting whatever today's tier table says, so a
+  // reload cannot change the opponent you committed a team against.
+  22: (save) => {
+    if (save.battle) save.battle.aiSkill = save.battle.aiSkill ?? 0.5;
     return save;
   },
 };

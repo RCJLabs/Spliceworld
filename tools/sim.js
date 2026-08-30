@@ -15,7 +15,8 @@ import { seedTemperament } from '../splice/temperament.js';
 import { analyze } from '../splice/physiology.js';
 import { createBattle, step, playerActions, playerActive } from '../battle/engine.js';
 import { rivalEncounter, rivalList } from '../campaign/rivals.js';
-import { mulberry32, hashString, pick } from '../util/rng.js';
+import { mulberry32, hashString, pick, rngStream } from '../util/rng.js';
+import { chooseMoveIndex } from '../battle/ai.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -80,17 +81,27 @@ export function makeSimChimera(frame, partIds, grade, content) {
   return chimera;
 }
 
-// Greedy pilot: strongest affordable damaging move, else rest. Deliberately
-// naive and identical for every build — a fixed yardstick.
-function pilotAction(battle) {
+// The pilot plays the same policy the opposition does (R22), at a fixed
+// skill so it stays a yardstick rather than a variable.
+//
+// It used to be greedy on raw power, and that quietly decided what the
+// harness could measure: a 20-power Multi-Hit or a defensive move was never
+// pressed, so it was never priced, so no build that depended on one could be
+// evaluated. A yardstick that cannot hold half the toolbox is measuring the
+// toolbox, not the builds.
+const PILOT_SKILL = 0.8;
+
+function pilotAction(battle, content) {
   const actions = playerActions(battle);
   if (!actions.length) return null;
   const release = actions.find((a) => a.type === 'release');
   if (release) return release;
-  const moves = actions.filter((a) => a.type === 'move');
   const me = playerActive(battle);
-  moves.sort((a, b) => me.moves[b.index].power - me.moves[a.index].power);
-  if (moves.length && me.moves[moves[0].index].power > 0) return moves[0];
+  const idx = chooseMoveIndex(battle, me, battle.enemy.active, content, PILOT_SKILL, () => rngStream(battle.seed, 'pilot', battle.rollCount++)());
+  if (idx >= 0) {
+    const move = actions.find((a) => a.type === 'move' && a.index === idx);
+    if (move) return move;
+  }
   return actions.find((a) => a.type === 'rest') ?? actions[0];
 }
 
@@ -108,7 +119,7 @@ export function scriptedBattle(chimera, encounter, content, seed, teamSize = 1) 
   const battle = createBattle(team, enc, content, seed, 1);
   let guard = 0;
   while (!battle.over && guard++ < 300) {
-    const action = pilotAction(battle);
+    const action = pilotAction(battle, content);
     if (!action) break;
     step(battle, action, content);
   }
