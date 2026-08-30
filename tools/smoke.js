@@ -602,6 +602,52 @@ assert.ok(
   ),
   'the harness catches a deliberately broken combo'
 );
+
+// --- Balance gate: the harness's OWN verdict is now a build failure.
+//
+// The sim reported `L · wolf:organ + tiger:head + …` as an [OP] outlier on
+// every run for a dozen sessions and nothing acted on it. A report nobody is
+// obliged to read is not a guard, so the report is asserted here. It was
+// Pack Hunt: 64 power for 26 stamina at 95 acc — the best damage-per-stamina
+// of all twelve combos WHILE carrying priority and a compounding powerUp.
+// Every peer pays for its upside (live_wire buys top efficiency with no
+// keywords at all); Pack Hunt took both, so a two-part combo owned the game.
+//
+// Six pools, not one: sampleBuilds fills a combo's spare sockets at random,
+// so one pool only decides which fillers Pack Hunt happens to wear — the
+// same combo swings between rank 1 and rank 41 of 43 on filler alone.
+//
+// seedsPer 4, not the sim's default 3: at three battles per encounter a win
+// rate can only land on 0/33/67/100%, and that quantisation on its own
+// flags a clean roster.
+const BALANCE_POOLS = [2026, 77, 1312, 4242, 99, 5];
+const degenerate = [];
+for (const poolSeed of BALANCE_POOLS) {
+  const { flags } = runSim(content, { builds: 40, seedsPer: 4, teamSize: 3, seed: poolSeed });
+  for (const f of flags) if (f.kind === 'OP') degenerate.push(`pool ${poolSeed}: ${f.label} — ${f.why}`);
+}
+assert.equal(
+  degenerate.length,
+  0,
+  `no build may dominate the roster:\n  ${degenerate.join('\n  ')}`
+);
+
+// The opposite failure, and the reason Pack Hunt was re-priced rather than
+// simply shrunk: a combo weaker than the parts that unlock it is dead
+// content — the player discovers it and then never presses it. Charge and
+// recoil moves are excluded because they buy their power with a drawback,
+// so they are not a like-for-like comparison.
+for (const combo of Object.values(content.combos)) {
+  const rivalPower = combo.parts
+    .map((id) => content.parts[id])
+    .filter((part) => part?.move && !part.move.keywords?.charge && !part.move.keywords?.recoil)
+    .reduce((best, part) => Math.max(best, part.move.power), -1);
+  assert.ok(
+    combo.move.power > rivalPower,
+    `combo ${combo.id} (${combo.move.power} power) must beat the best drawback-free move ` +
+      `among its own parts (${rivalPower}) or it is dead content`
+  );
+}
 // Grades are the power curve: each tier opens the boss further.
 //
 // Measured on the MEAN across builds, not the max. A max over a couple of

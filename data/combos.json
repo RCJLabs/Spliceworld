@@ -195,9 +195,9 @@
       "keyword": "Rally",
       "desc": "One howl, one pounce, zero warning.",
       "move": {
-        "power": 64,
-        "cost": 26,
-        "acc": 95,
+        "power": 58,
+        "cost": 28,
+        "acc": 92,
         "tags": [
           "Sonic"
         ],

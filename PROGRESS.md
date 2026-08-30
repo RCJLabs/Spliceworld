@@ -1,5 +1,109 @@
 # PROGRESS
 
+## Session 28 — The balance gate ✅
+
+**Acceptance criterion:** the sim reports no degenerate builds, and
+re-introducing the old numbers fails the build rather than printing a
+warning — **passes** (`node tools/sim.js` ends "no degenerate builds
+flagged."; restoring 64/26/95 fails `tools/smoke.js` naming both pools).
+
+### The flag that ran for a dozen sessions
+
+`tools/sim.js` had printed the same verdict on every run since M4.5:
+
+```
+[OP] L · wolf:organ + tiger:head + scorpion:hindlimbs [standard]
+     — 68% vs peer median 32% and 6.8 vs 9.2 turns — outlier
+```
+
+Nobody was obliged to read it, so nobody did. That is the actual defect;
+the overtuned combo is just what it was pointing at.
+
+### Diagnosis — three wrong answers first
+
+Worth recording, because each wrong answer *looked* measured:
+
+1. **"It's the double buff."** `wolf_organ`'s Rally Howl is the only part in
+   all 184 with a two-axis buff. But variants that stripped it to one axis,
+   and that tripled its cost, came back **byte-identical** — the sim's greedy
+   pilot picks by power, and Rally Howl is power 0. It is never pressed.
+2. **"It's the stamina economy."** Every part adds metabolic draw; only
+   organs add regen, so the 3-part build nets +6/turn against a 6-part
+   purebred's +1. Across the full 43-build pool `corr(winRate, regenNet)`
+   is **0.048**. It is not the mechanism.
+3. **"It's `tiger_head`'s Pounce."** Patching its power, cost *and* accuracy
+   changed nothing at all. That impossibility was the tell.
+
+The build's near-twin settled it: `L · skunk:organ + anglerfish:head +
+tiger:hindlimbs` has an almost identical stat block (regenNet 6, stamina 70,
+power 20, speed 1, mass 190) and wins **16%**. The difference was never the
+stats. `sampleBuilds` generates a build from every combo, and this one is
+the **`pack_hunt` combo** — wolf_organ + tiger_head — plus a random filler.
+Every part-level patch was a no-op because the pilot only ever pressed the
+combo move.
+
+### The fix: price it, don't shrink it
+
+Pack Hunt was 64 power for 26 stamina at 95 accuracy — the **best
+damage-per-stamina of all twelve combos (2.34)** while also carrying
+priority *and* a compounding powerUp. The roster's own pricing is visible
+once the ladder is sorted: `live_wire` buys the top efficiency (2.32) with
+**no keywords at all**, and every keyword-carrying combo sits below it.
+Pack Hunt took both.
+
+**64/26/95 → 58/28/92** (efficiency 2.34 → 1.91, seventh of twelve, below
+`leap_year` whose priority+evasion is the weaker pair). It keeps its
+identity — priority and the Rally powerUp — and stays a real upgrade over
+its own Pounce.
+
+| | win% | turns | rank | `[OP]` in 10 pools |
+|---|---|---|---|---|
+| before | 69% | 6.9 | 1 / 43 | **2** |
+| after | 57% | 7.1 | 5 / 43 | **0** |
+
+Accuracy did the last of the work deliberately. At 95 the build cleared the
+detector by **0.5pp** — one content change from flaking. Cutting power
+further instead would have made the move cost more than it returns and
+turned a discovered combo into a trap, so 92 (matching `thunderclap` and
+`depth_charge`) buys **+7.3pp** of headroom without that.
+
+### The guard
+
+Two assertions in `tools/smoke.js`, both verified to fail when broken:
+
+- **The harness's verdict is now a build failure.** Six pools, because the
+  sampler fills a combo's spare sockets at random and one pool only decides
+  which fillers a combo wears — the same combo swings between rank 1 and
+  rank 41 of 43 on filler alone. `seedsPer: 4`, not the sim's default 3: at
+  three battles per encounter a win rate can only land on 0/33/67/100%, and
+  that quantisation flags a clean roster on its own.
+- **The opposite failure.** A combo weaker than the drawback-free moves of
+  the parts that unlock it is dead content. This is the assertion that ruled
+  out the cheaper nerfs.
+
+Smoke goes 2.5s → 3.2s.
+
+### Known issues
+- **Combo moves don't get the grade bonus part moves do.** `GRADE_MOVE_BONUS`
+  scales a part's move 12% per grade; a combo's move is flat. So a Prismatic
+  Pounce is 71 against Pack Hunt's 58, and the combo stops being the right
+  button. This is systemic and pre-existing — **7 of 12 combos** are already
+  overtaken by their own parts at Prime or Apex, Pack Hunt among them before
+  this change. The smoke assertion only checks base power, because making it
+  grade-aware would fail the whole roster today. Best candidate for the next
+  balance phase.
+- Two `[TRASH]` builds (2 of 10 pools) — randomly-sampled 3-part builds that
+  win nothing. Pre-existing and unrelated; the gate asserts on `[OP]` only.
+- `combos.json`'s `_doc` says discoveries are "permanently logged in the save
+  for the Splice-Dex", but `dex` has `parts`/`enemies`/`traits`/`variants` and
+  no `combos` — they surface at splice time and are never persisted.
+- No save-schema change this session, so `SAVE_VERSION` stays **19**.
+
+### Next session — first task
+Decide the combo/grade interaction above: either give combo moves their own
+grade scaling and re-run the balance table, or state in data that combos are
+deliberately flat and re-price the seven that fall behind.
+
 ## Session 27 — Screen density ✅
 
 Nineteen waves of features had quietly stacked **thirteen cards into one
