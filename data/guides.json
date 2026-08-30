@@ -2,6 +2,28 @@
   "_doc": "First-use field guides (ROADMAP R29). Onboarding shipped in M7 as a five-step Path to World Domination and then eight more systems shipped behind it, unguided. Every guide here is DERIVED FROM SAVE STATE — there are no tutorial flags to migrate and nothing is scripted. A guide has two condition lists: `reachable` (the system exists for this player yet) and `done` (they have used it). It shows only when reachable AND not done, so a tip can never fire before its system is reachable and can never nag about something already understood. Conditions are either { path, min, default } — a dotted path into the save, compared by number, array length or key count — or { helper } for the handful that need real derivation (a breedable pair, an injured chimera, an open contest); the helper registry lives in ranch/onboarding.js and is the engine's own knowledge of its systems. Adding a guide for a system the engine can already detect is a pure data edit. `screen` is which tab it appears on; `order` breaks ties when more than one is ready. A player can dismiss one, which is the only piece of this that touches the save (`guidesSeen`).",
   "guides": [
     {
+      "id": "stable",
+      "screen": "battle",
+      "order": 39,
+      "icon": "👥",
+      "title": "A patrol is three bodies, and so are you",
+      "body": "Combat is one creature per side at a time over a queue, so a three-unit patrol means grinding three health bars down with one of yours. Measured: the second node is unwinnable with one chimera and comfortable with three. If the briefing says <em>Not survivable</em>, it has run the fight and it means it — go and graduate another donor.",
+      "reachable": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "chimeras",
+          "min": 3,
+          "default": 0
+        }
+      ]
+    },
+    {
       "id": "breeding",
       "screen": "ranch",
       "order": 10,

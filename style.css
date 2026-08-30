@@ -1008,6 +1008,44 @@ body.in-battle .ticker { font-size: 0.66rem; }
   color: var(--warn);
 }
 
+/* --- The briefing forecast (A1) ---------------------------------------
+   The number on the screen is the number that lands (R28's rule), applied
+   to the map: the fight is actually run before it is described. */
+.forecast {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--well);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.forecast strong { color: var(--text); }
+.forecast .fine-print { display: block; margin-top: 3px; }
+.forecast-walkover { border-color: var(--accent); }
+.forecast-walkover strong { color: var(--accent); }
+.forecast-favoured { border-color: var(--hp); }
+.forecast-favoured strong { color: var(--hp); }
+.forecast-even { border-color: var(--warn); }
+.forecast-even strong { color: var(--warn); }
+.forecast-losing { border-color: var(--danger-2); }
+.forecast-losing strong { color: var(--danger-soft); }
+.forecast-hopeless {
+  border-color: var(--danger);
+  background: var(--danger-2);
+  color: var(--on-accent);
+}
+.forecast-hopeless strong, .forecast-hopeless .fine-print { color: #fff; }
+
+/* The launch is never blocked — a player is entitled to throw one goat at a
+   police cruiser, and A2 makes sure it cannot cost them the run. It just
+   stops looking like the recommended action. */
+.big-btn.is-illadvised {
+  background: var(--panel-2);
+  color: var(--danger-soft);
+  border: 1px solid var(--danger-2);
+}
+
 /* A rival's file on you (R27): quiet when they have learned nothing,
    loud once they have started building for you specifically. */
 .rival-file { color: var(--muted); }

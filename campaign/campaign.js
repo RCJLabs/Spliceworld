@@ -269,7 +269,19 @@ export function resolveBattle(state, battle, content, now) {
 
   // Capture-on-loss: one downed chimera is taken. Dissection countdown
   // starts — real-world 9–18h, always with a rescue window (house rule).
-  if (result.outcome === 'loss' && state.chimeras.length) {
+  //
+  // A2: never your LAST one. The house rule has always been that a captured
+  // creature gets a rescue window, and a rescue raid needs a team — so
+  // taking the only chimera on the roster leaves a nine-hour countdown the
+  // player has no way to enter. Vault empty too, because those parts went
+  // into the creature that just got taken. That is not a setback, it is the
+  // run ending quietly while a timer runs down.
+  //
+  // So the last one comes home instead: hurt, out for a while, and still
+  // yours. Everything downstream of a capture — the dissection clock, the
+  // rival taunt, the director's notes — only ever fires on a roster that
+  // can still answer it.
+  if (result.outcome === 'loss' && state.chimeras.length > 1) {
     const downedIds = battle.player.team.filter((c) => c.hp <= 0).map((c) => c.refId);
     const candidates = state.chimeras.filter((c) => downedIds.includes(c.id));
     if (candidates.length) {
@@ -291,6 +303,27 @@ export function resolveBattle(state, battle, content, now) {
       pushNews(state, `${taken.name} CAPTURED! "Unauthorized peer review" scheduled in ${hours}h. Mount a rescue.`);
       const taunt = rivalLine(content, captive.captor, 'dissectionTaunt', { creature: taken.name });
       if (taunt) pushNews(state, taunt);
+    }
+  } else if (result.outcome === 'loss' && state.chimeras.length === 1) {
+    // The last one on the roster. It drags itself home rather than being
+    // taken, and the Infirmary timer is the whole of the punishment.
+    const only = state.chimeras[0];
+    const downed = battle.player.team.some((c) => c.refId === only.id && c.hp <= 0);
+    if (downed) {
+      // finishBattle has already opened an Infirmary timer on anything that
+      // went down, which is the right mechanic and the whole of the
+      // punishment here — this branch only has to make sure the creature
+      // was not ALSO taken, and to say why.
+      only.injury ??= {
+        name: 'Dragged Itself Home',
+        until: now + Math.round(3 * infirmaryGrants(state, content).healScale * HOUR),
+      };
+      detail.lastStand = only.name;
+      pushNews(
+        state,
+        `${only.name} is the last one on the roster, and the coalition could not quite hold on to it. ` +
+          `It limped back through the fence at dawn, furious and filthy. Infirmary.`
+      );
     }
   }
 

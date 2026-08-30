@@ -34,6 +34,7 @@ const SHELL = [
   'splice/dex-ui.js',
   'battle/ai.js',
   'battle/readout.js',
+  'battle/forecast.js',
   'battle/engine.js',
   'battle/ui.js',
   'campaign/campaign.js',

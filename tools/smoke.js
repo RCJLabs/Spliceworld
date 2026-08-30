@@ -27,6 +27,7 @@ import {
 import {
   runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent,
   regionBench, ARCHETYPES, facilityPayback, labAt, scoutedBy, fightRival,
+  ladderBench, ladderRate, STARTER_BUILD,
 } from './sim.js';
 import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
 import {
@@ -38,8 +39,10 @@ import { trainChimera, TRAINING } from '../splice/theater.js';
 import { obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
 import {
   onboardingSteps, onboardingActive, guideStates, guideForScreen, dismissGuide, GUIDE_HELPERS,
+  STABLE, pathOwnsScreen,
 } from '../ranch/onboarding.js';
 import { isOpen } from '../ui/cards.js';
+import { forecast } from '../battle/forecast.js';
 import {
   rivalDossier, rivalTeam, rivalRecord, scoutStable, counterTier, rivalEncounter,
 } from '../campaign/rivals.js';
@@ -1440,6 +1443,10 @@ assert.ok(freed && isInjured(freed, tReady + HOUR) && freed.bond === 10, 'home, 
 const m5lab2 = { ...newGameState(), seed: 506 };
 m5lab2.campaign.lastTickAt = t0;
 const doomed2 = makeChimera(m5lab2, 'S', { cobra_head: 'standard' }, t0);
+// A2: the last chimera on a roster is never taken, so a capture fixture
+// needs somebody left at home. Not deployed — just alive, which is the
+// whole condition.
+makeChimera(m5lab2, 'S', { goat_head: 'standard' }, t0);
 m5lab2.battle = createBattle([doomed2], content.encounters.boss_clampdown, content, 43, doomed2.settleUntil, { kind: 'assault', nodeId: 'precinct' });
 autoplay(m5lab2.battle);
 assert.equal(m5lab2.battle.outcome, 'loss');
@@ -1702,8 +1709,20 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   s.ranch.stock[0].birthAt = t0 - 100 * HOUR;
   extractAnimal(s, s.ranch.stock[0].id, content, t0);
   assert.ok(onboardingSteps(s, content, t0)[1].done, 'extraction advances the path');
+  // A1: the Path no longer retires at the first conquest, because the wall
+  // is the node AFTER it. Combat is one active per side over a queue, so a
+  // three-unit patrol is three health bars against your one — measured, the
+  // second node is 0% with one chimera and 84% with three. The checklist
+  // now walks the player to a stable before it lets go.
   s.campaign.heldNodes.push('barn_perimeter');
-  assert.ok(!onboardingActive(s), 'the checklist retires after first conquest');
+  assert.ok(onboardingActive(s), 'one conquest and one chimera is not a finished tutorial');
+  const steps2 = onboardingSteps(s, content, t0);
+  const last = steps2[steps2.length - 1];
+  assert.equal(last.label, 'Build a stable of three', 'and the Path now ends on the stable');
+  assert.equal(last.done, false, 'which this save has not built');
+  assert.ok(/one health bar against three/.test(last.hint), 'in the terms that actually decide the fight');
+  s.chimeras = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  assert.ok(!onboardingActive(s), 'a stable and a conquest retires it');
   assert.ok(onboardingActive(conq) === false, 'conquered fixtures agree');
 }
 
@@ -3432,6 +3451,9 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     lost.campaign.lastTickAt = t0;
     setPhilosophy(lost, 'collector');
     const doomed = makeChimera(lost, 'S', { goat_head: 'standard' }, t0);
+    // A2: a lone chimera is never taken, so a capture fixture keeps a
+    // spare on the roster.
+    makeChimera(lost, 'S', { ram_head: 'standard' }, t0);
     const tLoss = doomed.settleUntil;
     lost.battle = createBattle([doomed], rivalEncounter(lost, content.rivals.trench, content), content, 9, tLoss, {
       kind: 'rival', rivalId: 'trench',
@@ -4617,6 +4639,154 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 const pctOf = (x) => `${Math.round(x * 100)}%`;
 const classOfSpecies = (id) => content.species[id]?.class ?? null;
 
+// --- A1/A2: the solo cliff, and never being stranded on it -------------
+//
+// The audit measured the second node of the campaign at a flat 0% for a
+// player with one chimera and 79% with three, and found the cause was not
+// numeric: combat is one active per side over a queue, so three enemy
+// bodies means grinding three health bars with one of your own. patrol_2 at
+// TIER-1 stats and three waves is still 0%; the same fight at full tier-2
+// stats and two waves is 28%. Bodies, not numbers — so no stat pass fixes
+// it, and the fix is that the game has to SAY so and must never strand the
+// player who finds out late.
+{
+  const region = Object.values(content.regions)[0];
+
+  // --- The curve the audit found is still the curve. If a future balance
+  // pass flattens it, this section's whole premise is gone and it should
+  // fail loudly rather than keep guarding a problem that moved.
+  const curve = ladderBench(content, { seedsPer: 24 });
+  const first = curve[0];
+  const second = curve[1];
+  assert.ok(first.bySize[0] >= 0.9, `the first node is a solo win (${pctOf(first.bySize[0])})`);
+  assert.ok(second.bySize[0] <= 0.05, `the second is not (${pctOf(second.bySize[0])} solo)`);
+  assert.ok(second.bySize[2] >= 0.5,
+    `and it is a real fight with a stable (${pctOf(second.bySize[2])} at three) — bodies, not numbers`);
+
+  // --- THE FIX. The briefing runs the actual fight and reports what it
+  // found, so the game can no longer present an unwinnable assault as
+  // though it were a choice. Two properties, and the second matters more:
+  //
+  //   1. a fight that cannot be won must be called unwinnable, and
+  //   2. a fight that CAN be won must never be called unwinnable —
+  //
+  // because that verdict is the only one that tells a player to walk away,
+  // and a false one costs them a fight they would have taken.
+  for (const node of region.nodes) {
+    for (const size of [1, 2, 3]) {
+      const truth = ladderRate(content, node.encounter, size, { seedsPer: 32 });
+      const team = Array.from({ length: size }, (_, i) => ({
+        ...makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'standard', content),
+        id: `fc${i}`,
+      }));
+      const f = forecast(team, content.encounters[node.encounter], content, 2026, 1);
+      const where = `${node.id} with ${size}`;
+      if (truth === 0) {
+        assert.equal(f.band.id, 'hopeless',
+          `${where}: a 0% fight must be called unwinnable, not ${f.band.label} (${pctOf(f.winRate)})`);
+      }
+      if (truth >= 0.4) {
+        assert.notEqual(f.band.id, 'hopeless',
+          `${where}: ${pctOf(truth)} is winnable and must never be called unwinnable`);
+      }
+      assert.equal(f.waves, content.encounters[node.encounter].waves.length, `${where}: the wave count is real`);
+      assert.equal(f.outnumberedBy, Math.max(0, f.waves - size), `${where}: and the game says who is outnumbered`);
+    }
+  }
+
+  // Determinism: a reload mid-briefing must not reroll the verdict.
+  //
+  // Measured against a matchup with real variance in it, not a 0% one —
+  // two chimeras at the Checkpoint sits around 45%, so an unseeded forecast
+  // gives a different answer every render. patrol_2 solo would pass this
+  // test with `Math.random()` driving the seeds, because 0% is 0% however
+  // you roll it.
+  {
+    const team = [0, 1].map((i) => ({
+      ...makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'standard', content), id: `d${i}`,
+    }));
+    const enc = content.encounters.checkpoint;
+    const runs = [0, 1, 2, 3, 4].map(() => forecast(team, enc, content, 77, 1).winRate);
+    assert.equal(new Set(runs).size, 1,
+      `the same team, seed and fight forecasts the same way every time (${runs.map(pctOf).join(' ')})`);
+    assert.ok(runs[0] > 0 && runs[0] < 1,
+      `and the fixture has variance to detect (${pctOf(runs[0])}) — a 0% matchup would pass this blind`);
+    // A different world seed is a different world, and may legitimately
+    // differ; what must not differ is the same one twice.
+    assert.equal(forecast(team, enc, content, 77, 1).winRate, runs[0]);
+  }
+  // An empty team is a real state (the briefing renders before you pick).
+  assert.equal(forecast([], content.encounters.patrol_1, content, 1, 1).band.id, 'hopeless');
+
+  // --- The Path now walks to a stable, and the stable is the number the
+  // ladder actually needs.
+  {
+    const s = { ...newGameState(), seed: 606 };
+    ensureRanchSeeded(s, content, t0);
+    assert.equal(STABLE, 3, 'the number the harness has fought at since M4.5');
+    assert.ok(second.bySize[STABLE - 1] > second.bySize[0],
+      'and it is the number that turns the wall into a fight');
+    // The starter herd has to be able to BUILD what the Path asks for, or
+    // the checklist ends on a step the player cannot take.
+    assert.ok(s.ranch.stock.length >= STABLE,
+      `the starter herd can supply the stable (${s.ranch.stock.length} animals for ${STABLE} chimeras)`);
+    const steps = onboardingSteps(s, content, t0);
+    assert.equal(steps[steps.length - 1].label, 'Build a stable of three', 'the Path ends on it');
+    s.campaign.heldNodes = ['barn_perimeter'];
+    assert.ok(onboardingActive(s), 'and does not retire at the first conquest any more');
+    assert.ok(!pathOwnsScreen(s), 'though it does hand the screen back, so field notes can start');
+    s.chimeras = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    assert.ok(!onboardingActive(s), 'a stable plus a conquest finishes it');
+  }
+}
+
+// --- A2: the last one on the roster is never taken --------------------
+// A rescue raid needs a team. Take the only chimera a player owns and the
+// nine-hour window has no door in it — the vault is empty too, because
+// those parts went into the creature that just got taken.
+{
+  const mk = (lab, head) => makeChimera(lab, 'S', { [head]: 'standard' }, t0);
+  const lose = (lab, team) => {
+    const battle = createBattle(team, content.encounters.patrol_2, content, 21, t0, {
+      kind: 'assault', nodeId: 'downtown',
+    });
+    battle.over = true;
+    battle.outcome = 'loss';
+    for (const c of battle.player.team) c.hp = 0;
+    return resolveBattle(lab, battle, content, t0 + HOUR);
+  };
+
+  // Two on the roster: the capture works exactly as it always has.
+  const pair = { ...newGameState(), seed: 4141 };
+  pair.campaign.lastTickAt = t0;
+  const a = mk(pair, 'goat_head');
+  mk(pair, 'ram_head');
+  const took = lose(pair, [a]);
+  assert.ok(took.capturedChimera, 'with a spare at home, they still take one');
+  assert.equal(pair.chimeras.length, 1, 'and it leaves the roster');
+  assert.equal(pair.campaign.captives.length, 1, 'with a rescue window');
+
+  // One on the roster: it comes home instead.
+  const solo = { ...newGameState(), seed: 4141 };
+  solo.campaign.lastTickAt = t0;
+  const only = mk(solo, 'goat_head');
+  const held = lose(solo, [only]);
+  assert.equal(held.capturedChimera, null, 'the last one is not taken');
+  assert.equal(solo.campaign.captives.length, 0, 'so there is no window to fail to enter');
+  assert.equal(solo.chimeras.length, 1, 'it is still yours');
+  assert.ok(solo.chimeras[0].injury, 'and it is hurt, which is the whole of the punishment');
+  assert.equal(held.lastStand, only.name, 'the aftermath says so');
+  assert.ok(solo.news.some((n) => /limped back|last one on the roster/.test(n)),
+    'and the wire tells the story rather than reporting a rule');
+  // Zero death language, in the worst moment the game has.
+  assert.ok(!solo.news.some((n) => /\b(dead|died|kill|killed|dies)\b/i.test(n)));
+
+  // The state the audit actually found: a lone chimera, an empty vault, and
+  // a loss. It must always leave something the player can act on.
+  assert.equal(solo.inventory.parts.length, 0, 'vault spent on the creature');
+  assert.ok(solo.chimeras.length > 0, 'and the roster is never empty after a loss');
+}
+
 // --- R27: a rival who has beaten you twice has read you ---------------
 //
 // The criterion is "a rival you have beaten twice fields something built to
@@ -4846,6 +5016,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   // so, which is the only mechanism that keeps "every shipped system" true
   // a year from now.
   const SHIPPED_SYSTEMS = [
+    'stable',
     'breeding', 'incubator', 'genes', 'pairing', 'facility', 'upkeep', 'catalog',
     'temperament', 'bond', 'infirmary', 'scars',
     'combos', 'chaos',
@@ -4891,7 +5062,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   }
 
   const STEPS = [
-    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs']],
+    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable']],
     ['the herd grows up', () => { for (const a of lab.ranch.stock) a.birthAt = t0 - 200 * HOUR; }, ['breeding']],
     ['an egg is laid', () => { lab.ranch.eggCount = 1; lab.ranch.eggs = [{ id: 'e0' }]; }, ['incubator', 'genes']],
     ['a chimera exists', () => {
