@@ -6,6 +6,8 @@ import { renderArena } from '../battle/ui.js';
 import { createBattle, isInjured, obediencePercent } from '../battle/engine.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
+import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
+import { guideForScreen } from '../ranch/onboarding.js';
 import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import { analyze } from '../splice/physiology.js';
@@ -17,7 +19,7 @@ import {
   rehabRemainingMs, sessionReadyAt,
 } from './rehab.js';
 import { GRADES, GRADE_INDEX } from '../splice/extract.js';
-import { contestOn, contestEncounter, contestRemainingMs, defencesOf } from './contest.js';
+import { contestOn, contestEncounter, contestRemainingMs, defencesOf, isContested } from './contest.js';
 import {
   operationList, activeOp, opOdds, opReady, opCooldownEndsAt, opRemainingMs,
   startOperation, abortOperation, heatNow, opTuning,
@@ -144,6 +146,12 @@ function renderMap(root, ctx) {
   // hides where you are going is a map you cannot plan against. Its nodes
   // stay folded away until it opens, so the strip you are actually fighting
   // in is never buried under three you cannot reach.
+  // The strip you are actually fighting in is the first open one you have
+  // not finished. That one starts unfolded; everything else — conquered,
+  // or still locked — starts shut, because five strips at four nodes each
+  // is a very long column to scroll past to reach the news. A player's own
+  // choice always overrides the guess.
+  const frontier = map.find((r) => r.open && r.held < r.region.nodes.length)?.region.id ?? null;
   const regions = map.map(({ region, open, blockers, nodes: nodeRows, held }) => {
     const rows = open ? nodeRows.map(({ node, status }) => {
       const encounter = content.encounters[node.encounter];
@@ -162,14 +170,24 @@ function renderMap(root, ctx) {
           ${btn}
         </div>`;
     }).join('') : '';
-    return `
-      <section class="card region-card ${open ? '' : 'is-locked'}">
-        <h3>${region.name} <span class="region-progress">${held}/${region.nodes.length}</span></h3>
-        ${region.subtitle ? `<p class="fine-print region-sub">${region.subtitle}</p>` : ''}
-        ${open
-          ? `${region.demand ? `<p class="region-demand">🧬 ${region.demand}</p>` : ''}${rows}`
-          : `<p class="region-locked">🔒 ${blockers.map((b) => b.label).join(' · ')}</p>`}
-      </section>`;
+    const contestedHere = region.nodes.filter((n) => isContested(state, n.id)).length;
+    const body = open
+      ? `${region.demand ? `<p class="region-demand">🧬 ${region.demand}</p>` : ''}${rows}`
+      : `<p class="region-locked">🔒 ${blockers.map((b) => b.label).join(' · ')}</p>`;
+    const summary = open
+      ? held === region.nodes.length
+        ? 'Held end to end.'
+        : `${region.nodes.length - held} node${region.nodes.length - held === 1 ? '' : 's'} still theirs.`
+      : `🔒 ${blockers.map((b) => b.label).join(' · ')}`;
+    return collapsibleCard({
+      id: `region:${region.id}`,
+      title: `${region.name}${region.subtitle ? ` <span class="fine-print region-sub">${region.subtitle}</span>` : ''}`,
+      badge: `${contestedHere ? '🛡 ' : ''}${held}/${region.nodes.length}`,
+      summary,
+      body,
+      open: isOpen(state, `region:${region.id}`, open && region.id === frontier),
+      extraClass: `region-card ${open ? '' : 'is-locked'}`,
+    });
   }).join('');
 
   // A counter-offensive is time-critical and costs money every hour it
@@ -294,8 +312,11 @@ function renderMap(root, ctx) {
     ${contests ? `<section class="card contest-card"><h3>🛡 Counter-Offensive</h3>${contests}</section>` : ''}
     ${captives ? `<section class="card captive-alert"><h3>⏳ Captured — Rescue Windows</h3>${captives}</section>` : ''}
     ${subtabBar(state)}
+    ${fieldNote(guideForScreen(state, content, t, 'battle'))}
     ${views[warTab] ?? views.map}`;
 
+  bindFieldNote(root, ctx, () => renderMap(root, ctx));
+  bindFolds(root, ctx, () => renderMap(root, ctx));
   root.querySelectorAll('button[data-war-tab]').forEach((btn) => {
     btn.addEventListener('click', () => {
       warTab = btn.dataset.warTab;

@@ -1,5 +1,108 @@
 # PROGRESS
 
+## Session 40 — R29: every system gets one note, and the long screens fold ✅
+
+**Acceptance criterion:** every shipped system has a first-use guide derived
+from state, and none fires before its system is reachable — **passes**,
+checked by walking one save forward through **eighteen milestones** and
+asserting at each that the notes it lights are exactly the ones that
+milestone makes real, and that none of them was live a step earlier.
+
+### 22 field guides, all derived, none persisted
+
+Onboarding shipped in M7 as a five-step Path ending at the first conquest.
+Eight more systems shipped behind it — breeding, the chaos vat,
+rehabilitation, the jobs board, contestation, scars, temperament, the Dex —
+and then R25 and R26 added five regions, six facility tracks and an upkeep
+economy. None of it was mentioned anywhere.
+
+| screen | notes |
+|---|---|
+| Ranch | breeding · incubator · genes · pairing · facility · upkeep · catalogue |
+| Pens | temperament · bond · infirmary · scars |
+| Splice | combos · chaos vat |
+| War Room | jobs · containment · rehab · rivals · rescue · contest · regions · director |
+| Dex | the Dex itself |
+
+A guide carries two condition lists — `reachable` (does this system exist
+for this player) and `done` (have they used it) — and shows only when
+reachable **and** not done. That makes *"none fires before its system is
+reachable"* a property of the **data** rather than a rule someone has to
+remember. Conditions are either a dotted save path with a minimum (counted
+by array length, key count or value) or, for the dozen needing real
+derivation, a named helper. The helper registry is the engine's own
+knowledge of its systems, so a note for something it can already see is a
+pure data edit.
+
+Two smaller rules earn their keep. **One note per screen**, lowest order
+first — a wall of tips is wallpaper. And **the Path owns the screen until
+the first conquest**, because two tutorials at once is one tutorial too
+many.
+
+### Fold-away cards
+
+R25 and R26 had made two screens very long: six facility tracks and five
+region strips in one column. Both fold now, and the state lives in the save
+so a fold survives the reload the Definition of Done requires.
+
+Each card picks its own default and a player's choice always overrides it:
+
+- **Facility** starts shut behind a one-line summary of what is worth
+  opening it for — *"4 ready to buy · 5 upgrades left, from $700."*
+- **The War Room** opens the strip you are actually fighting in and shuts
+  the ones you have finished or cannot reach. Greenfield collapses to
+  *"Held end to end"*; the locked regions keep their price of entry visible.
+
+The War Room went from a 3,280px scroll to 2,826px with more structure, not
+less.
+
+### Two assertions that passed while the thing they guarded was broken
+
+The break battery is the only reason these were found, and both failed the
+same way — **the assertion derived its expectation from the thing under
+test**:
+
+- *"The Path owns the screen"* was checked against a **fresh** save, which
+  has nothing ready anyway. Deleting the suppression changed nothing, so
+  the test passed. It now runs against a save with a settled chimera, a
+  laid egg and no conquest — several notes genuinely live underneath.
+- *"A screen shows the lowest-order note"* compared `guideForScreen` to the
+  first entry of `guideStates`, which sorts with the same comparator.
+  Reversing the sort flipped both and the assertion held. The expected note
+  is computed from the authored `order` in the content file now.
+
+### Guards, each verified to fail when broken
+
+| break | caught by |
+|---|---|
+| a guide fires from turn one | the milestone walk |
+| a shipped system loses its note | the coverage roll |
+| a guide has no way to be finished | it would nag forever |
+| a guide points at a screen that does not exist | screen validity |
+| the Path stops owning the screen | *(after the fix above)* |
+| a screen shows the wrong note first | *(after the fix above)* |
+| dismissing a note does nothing | dismissal sticks |
+| a stored fold state is ignored | a stored value always wins |
+| the v25 migration forgets the fold record | migrated saves get an empty record |
+| two guides share an order | the queue is deterministic |
+
+### Known issues
+
+- The coverage roll (`SHIPPED_SYSTEMS`) is a hand-maintained literal. That
+  is deliberate — it forces a future phase to come and say it shipped
+  something — but it is the one part of this that can rot silently if
+  somebody edits it instead of adding a note.
+- Save **v25**: `guidesSeen` and `ui.collapsed`, plus the four R25 facility
+  tracks named explicitly in `newGameState` (they already read as level 1;
+  a save listing two of six just looked half-configured).
+
+### Next session — first task
+
+R27 (rival geneticists as a ladder) is the last of the audited queue: three
+rivals that counter-bias through their own path rather than the director's
+banked usage data. *Done when: a rival you have beaten twice fields
+something built to answer your actual stable.*
+
 ## Session 39 — R25: four more tracks to buy, and a stable that costs money to keep ✅
 
 **Acceptance criterion:** money has a second sink that changes the loop, and

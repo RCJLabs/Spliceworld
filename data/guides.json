@@ -1,0 +1,456 @@
+{
+  "_doc": "First-use field guides (ROADMAP R29). Onboarding shipped in M7 as a five-step Path to World Domination and then eight more systems shipped behind it, unguided. Every guide here is DERIVED FROM SAVE STATE — there are no tutorial flags to migrate and nothing is scripted. A guide has two condition lists: `reachable` (the system exists for this player yet) and `done` (they have used it). It shows only when reachable AND not done, so a tip can never fire before its system is reachable and can never nag about something already understood. Conditions are either { path, min, default } — a dotted path into the save, compared by number, array length or key count — or { helper } for the handful that need real derivation (a breedable pair, an injured chimera, an open contest); the helper registry lives in ranch/onboarding.js and is the engine's own knowledge of its systems. Adding a guide for a system the engine can already detect is a pure data edit. `screen` is which tab it appears on; `order` breaks ties when more than one is ready. A player can dismiss one, which is the only piece of this that touches the save (`guidesSeen`).",
+  "guides": [
+    {
+      "id": "breeding",
+      "screen": "ranch",
+      "order": 10,
+      "icon": "💕",
+      "title": "Two adults make a third",
+      "body": "Two grown animals of the same stock — one of each sex — can be paired in the Breeding Pen. The egg inherits their stats, their genes, and occasionally something neither of them had.",
+      "reachable": [
+        {
+          "helper": "breedablePair"
+        }
+      ],
+      "done": [
+        {
+          "path": "ranch.eggCount",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "incubator",
+      "screen": "ranch",
+      "order": 11,
+      "icon": "🥚",
+      "title": "Eggs hatch on their own clock",
+      "body": "The Incubator counts down in real time whether the app is open or not. Come back and hit Hatch — the hatchling needs a free pen, so keep one spare.",
+      "reachable": [
+        {
+          "path": "ranch.eggs",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "helper": "bredAnimalInPens"
+        }
+      ]
+    },
+    {
+      "id": "genes",
+      "screen": "ranch",
+      "order": 12,
+      "icon": "🧬",
+      "title": "Half of what an animal has, it does not show",
+      "body": "A dominant gene shows in the animal that carries it. A recessive needs two copies, so it can travel invisibly for generations. The Gene Scanner is how you stop guessing.",
+      "reachable": [
+        {
+          "path": "ranch.eggCount",
+          "min": 1,
+          "default": 0
+        },
+        {
+          "helper": "carrierInPens"
+        }
+      ],
+      "done": [
+        {
+          "path": "ranch.eggCount",
+          "min": 3,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "pairing",
+      "screen": "ranch",
+      "order": 13,
+      "icon": "🔬",
+      "title": "The Suite does the Punnett square",
+      "body": "Pick both parents in the Breeding Pen and the Predictive Pairing Suite prints the real odds: what the egg will CARRY, and what it will actually SHOW. Those are different numbers, and the gap is where breeding programmes live.",
+      "reachable": [
+        {
+          "path": "facility.scanner",
+          "min": 3,
+          "default": 1
+        }
+      ],
+      "done": [
+        {
+          "path": "ranch.eggCount",
+          "min": 4,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "facility",
+      "screen": "ranch",
+      "order": 14,
+      "icon": "🏚",
+      "title": "The lab is upgradeable",
+      "body": "Six tracks, each bought in order, each gated by money and usually by territory. They buy things you cannot otherwise have: a bigger chassis, a second organ bay, a machine that reads alleles. Money has nowhere better to go.",
+      "reachable": [
+        {
+          "helper": "facilityAffordable"
+        }
+      ],
+      "done": [
+        {
+          "helper": "anyTrackUpgraded"
+        }
+      ]
+    },
+    {
+      "id": "upkeep",
+      "screen": "ranch",
+      "order": 15,
+      "icon": "💸",
+      "title": "Everything you own eats",
+      "body": "Stock costs its species upkeep; a chimera costs whatever its chassis, its part grades and its instability add up to — a prismatic monster runs seven times a plain one. Watch NET, not income. If it goes red, take a node or graduate something.",
+      "reachable": [
+        {
+          "path": "chimeras",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 2,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "catalog",
+      "screen": "ranch",
+      "order": 16,
+      "icon": "📦",
+      "title": "The catalogue grows by conquest",
+      "body": "Mail-Order only stocks fauna your territory reaches. Every node you take adds species, and the exotic ones live in the later regions — which is the real reason to keep pushing the map.",
+      "reachable": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "ranch.animalCount",
+          "min": 4,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "temperament",
+      "screen": "pens",
+      "order": 20,
+      "icon": "🎭",
+      "title": "They settle in with opinions",
+      "body": "A chimera that finishes settling acquires a temperament on two axes. It changes how it fights and what raises its bond — a Skittish one dodges, a Bullish one will not be told. You get what you get; you work with it.",
+      "reachable": [
+        {
+          "helper": "chimeraTempered"
+        }
+      ],
+      "done": [
+        {
+          "path": "warRecord.wins",
+          "min": 3,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "bond",
+      "screen": "pens",
+      "order": 21,
+      "icon": "🤝",
+      "title": "Obedience is earned, not assumed",
+      "body": "A chimera with a low bond ignores orders mid-fight and does something else instead. Train and feed it in the Pens between sorties. Bond is the difference between a weapon and an opinion.",
+      "reachable": [
+        {
+          "path": "chimeras",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "helper": "bondedChimera"
+        }
+      ]
+    },
+    {
+      "id": "infirmary",
+      "screen": "pens",
+      "order": 22,
+      "icon": "🩹",
+      "title": "An injury is a clock, and a decision",
+      "body": "A hurt chimera sits out until the timer runs down. TREAT it and the injury leaves no trace; leave it and it may set into a permanent scar. The Infirmary sells certainty, not healing.",
+      "reachable": [
+        {
+          "helper": "chimeraInjured"
+        }
+      ],
+      "done": [
+        {
+          "helper": "injuryTreated"
+        }
+      ]
+    },
+    {
+      "id": "scars",
+      "screen": "pens",
+      "order": 23,
+      "icon": "🩻",
+      "title": "A scar cuts both ways",
+      "body": "Every scar gives something and takes something — slower but tougher, worse against vehicles but better against everything else. Some are net good for a build, which makes \"leave it and see\" a real strategy rather than a mistake.",
+      "reachable": [
+        {
+          "helper": "chimeraScarred"
+        }
+      ],
+      "done": [
+        {
+          "path": "chimeras",
+          "min": 3,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "combos",
+      "screen": "theater",
+      "order": 30,
+      "icon": "✦",
+      "title": "Some parts know each other",
+      "body": "Certain part pairings unlock a combo move nothing else can produce. They are not listed anywhere until you find one — the Splice-Dex keeps the ones you have, with silhouettes of the ones you have not.",
+      "reachable": [
+        {
+          "path": "inventory.parts",
+          "min": 3,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "discoveredCombos",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "chaos",
+      "screen": "theater",
+      "order": 31,
+      "icon": "🧫",
+      "title": "The vat crosses two chimeras",
+      "body": "Chaos-breeding takes two of your own chimeras and gestates a third out of both. It costs time and leaves the parents exhausted, and what comes out is genuinely unpredictable — which is the point.",
+      "reachable": [
+        {
+          "helper": "vatEligible"
+        }
+      ],
+      "done": [
+        {
+          "path": "vatCount",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "screen": "battle",
+      "order": 40,
+      "icon": "💼",
+      "title": "Not every job is a fight",
+      "body": "The Jobs board sends one chimera out on a timer for money, livestock or parts — no battle, no risk of capture. It is the floor under a bad run, and it raises Heat, which the world notices.",
+      "reachable": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "campaign.opCount",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "containment",
+      "screen": "battle",
+      "order": 41,
+      "icon": "⛓",
+      "title": "You can bring one home",
+      "body": "Charging the Containment Cannon in a fight impounds an enemy. In the bay it becomes two futures and you pick one: dismantle it for enemy tech you cannot get any other way, or rehabilitate it onto your own roster.",
+      "reachable": [
+        {
+          "path": "campaign.containment",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "helper": "containmentUsed"
+        }
+      ]
+    },
+    {
+      "id": "rehab",
+      "screen": "battle",
+      "order": 42,
+      "icon": "🧸",
+      "title": "Their monster can become yours",
+      "body": "The Reorientation Wing turns an impounded specimen into a member of your stable — someone else’s anatomy, someone else’s grades, on your team. It runs on a clock and a curriculum; skip the sessions and it graduates wary.",
+      "reachable": [
+        {
+          "path": "facility.containment",
+          "min": 2,
+          "default": 1
+        }
+      ],
+      "done": [
+        {
+          "helper": "rehabilitatedChimera"
+        }
+      ]
+    },
+    {
+      "id": "rivals",
+      "screen": "battle",
+      "order": 43,
+      "icon": "🧫",
+      "title": "Other people do this too",
+      "body": "Rival labs field chimeras of their own and keep score. Beat one twice and it iterates — it reads your stable and builds something to answer it, which is the most direct feedback the game gives you on your own habits.",
+      "reachable": [
+        {
+          "helper": "rivalAvailable"
+        }
+      ],
+      "done": [
+        {
+          "helper": "rivalBeaten"
+        }
+      ]
+    },
+    {
+      "id": "rescue",
+      "screen": "battle",
+      "order": 44,
+      "icon": "⏳",
+      "title": "Nothing is ever really gone",
+      "body": "Lose a fight and one downed chimera is taken, with a countdown to an \"unauthorized peer review\". Mount a rescue raid before it expires and you get it back with a deeper bond. There is always a window. Use it.",
+      "reachable": [
+        {
+          "path": "campaign.captives",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "warRecord.losses",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "contest",
+      "screen": "battle",
+      "order": 45,
+      "icon": "🛡",
+      "title": "They come back for it",
+      "body": "Territory is not permanent. Once the coalition escalates, it counter-attacks a node you hold — the same garrison, stronger, and the node pays nothing while the convoy is on the road. Hold the line and the wreckage is yours.",
+      "reachable": [
+        {
+          "helper": "contestOpen"
+        }
+      ],
+      "done": [
+        {
+          "helper": "nodeDefended"
+        }
+      ]
+    },
+    {
+      "id": "regions",
+      "screen": "battle",
+      "order": 46,
+      "icon": "🗺",
+      "title": "Each region asks a different question",
+      "body": "The strips are not the same fight with bigger numbers. Kestrel Reach is Airborne, so your Ground-tagged moves miss entirely; the Drowned Quarter answers to boots; the Foundry is armour, where Sonic is the only thing that gets through. Read the line under each region name.",
+      "reachable": [
+        {
+          "helper": "secondRegionOpen"
+        }
+      ],
+      "done": [
+        {
+          "helper": "secondRegionHeld"
+        }
+      ]
+    },
+    {
+      "id": "director",
+      "screen": "battle",
+      "order": 47,
+      "icon": "🛰",
+      "title": "The world is taking notes",
+      "body": "Field the same anatomy often enough and the opposition starts bringing an answer to it. Their dossier on you is on the Labs tab. A stable of one class is legible; a mixed one is not.",
+      "reachable": [
+        {
+          "path": "warRecord.wins",
+          "min": 4,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "warRecord.wins",
+          "min": 12,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "dex",
+      "screen": "dex",
+      "order": 50,
+      "icon": "📖",
+      "title": "Everything you have ever found",
+      "body": "The Splice-Dex keeps every part, combo, enemy, gene and variant you have discovered — and shows silhouettes of the ones you have not, with where to look. It is the completion list and the hint system at once.",
+      "reachable": [
+        {
+          "path": "dex.parts",
+          "min": 6,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "dex.parts",
+          "min": 40,
+          "default": 0
+        }
+      ]
+    }
+  ]
+}

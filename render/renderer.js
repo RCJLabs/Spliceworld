@@ -71,6 +71,9 @@ export function indexContent(raw) {
     chaosMeta: raw.chaos ? raw.chaos.tuning : null,
     scars: raw.scars ? byId(raw.scars.scars) : {},
     scarMeta: raw.scars ? raw.scars.tuning : null,
+    // First-use field guides (R29), keyed by id and kept in authored order
+    // by their own `order` field rather than by object insertion.
+    guides: raw.guides ? byId(raw.guides.guides) : {},
     temperamentMeta: raw.temperament ? raw.temperament.tuning : null,
     temperamentByRole: raw.temperament ? raw.temperament.byRole : null,
     temperamentBySpecies: raw.temperament ? raw.temperament.bySpecies : null,

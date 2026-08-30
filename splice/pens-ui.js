@@ -13,6 +13,8 @@ import { pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import {
   activeVat, vatPlan, vatRemainingMs, startVat, cancelVat, isExhausted, chaosTuning,
 } from './chaos.js';
+import { fieldNote, bindFieldNote } from '../ui/cards.js';
+import { guideForScreen } from '../ranch/onboarding.js';
 
 let lastMsg = '';
 let vatPick = { a: null, b: null };
@@ -177,12 +179,14 @@ export function renderPensScreen(root, ctx) {
     })
     .join('');
 
-  root.innerHTML =
+  const note = fieldNote(guideForScreen(state, content, t, 'pens'));
+  root.innerHTML = note +
     (lastMsg ? `<section class="card"><p class="ranch-msg">${lastMsg}</p></section>` : '') +
     vatCard(state, content, t) +
     (cards ||
       `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`);
 
+  bindFieldNote(root, ctx, () => renderPensScreen(root, ctx));
   bindVat(root, ctx, () => renderPensScreen(root, ctx));
   // Dismantling is irreversible and returns less than it consumed, so the
   // sheet shows the EXACT parts that will come back — seeded on the

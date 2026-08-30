@@ -13,13 +13,14 @@ import {
   canBreed, breedPair, hatchEgg, BREEDING, isVariant, baseSpecies, incubatorSlots,
   pairingForecast, expressedTraits,
 } from './breeding.js';
-import { onboardingSteps, onboardingActive } from './onboarding.js';
+import { onboardingSteps, onboardingActive, guideForScreen } from './onboarding.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
 import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade } from '../splice/facility.js';
 import { nodeName } from '../campaign/map.js';
 import { scannerGrants } from '../splice/facility.js';
 import { incomePerDay } from '../campaign/campaign.js';
+import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -72,6 +73,17 @@ function showVariantCeremony(ctx, result, onClose) {
 // you can CREATE — a bigger chassis, another bay — never just a bigger
 // number (Law 2).
 function facilityCard(state, content) {
+  const open = isOpen(state, 'facility', false);
+  const upgrades = tracks(content)
+    .map((track) => nextUpgrade(state, content, track.id))
+    .filter(Boolean);
+  const affordable = upgrades.filter((u) => u.affordable);
+  const cheapest = upgrades.length ? Math.min(...upgrades.map((u) => u.level.cost)) : 0;
+  const summary = upgrades.length
+    ? `${affordable.length ? `<strong>${affordable.length} ready to buy</strong> · ` : ''}${upgrades.length} upgrade${
+        upgrades.length === 1 ? '' : 's'
+      } left, from $${cheapest}.`
+    : 'Every track maxed. There is nothing left to buy and that is its own kind of sad.';
   const rows = tracks(content).map((track) => {
     const level = facilityLevel(state, track.id);
     const current = levelData(content, track.id, level);
@@ -99,7 +111,14 @@ function facilityCard(state, content) {
           </div>` : ''}
       </div>`;
   }).join('');
-  return `<section class="card"><h3>🏚 Facility</h3>${rows}</section>`;
+  return collapsibleCard({
+    id: 'facility',
+    title: '🏚 Facility',
+    badge: affordable.length ? `${affordable.length} ready` : `${upgrades.length || '—'}`,
+    summary,
+    body: rows,
+    open,
+  });
 }
 
 // What the pens print where it used to say "????? (Gene Scanner required)".
@@ -361,7 +380,15 @@ export function renderRanchScreen(root, ctx) {
       </section>`;
   }).join('');
 
-  root.innerHTML = onboarding + head + breeding + incubator + (cards || '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>');
+  // The field note sits under the Path (which owns the screen until the
+  // first conquest) and above everything else, because a note nobody
+  // scrolls to is a note nobody reads.
+  const note = fieldNote(guideForScreen(state, content, t, 'ranch'));
+
+  root.innerHTML = onboarding + note + head + breeding + incubator + (cards || '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>');
+  const again = () => renderRanchScreen(root, ctx);
+  bindFieldNote(root, ctx, again);
+  bindFolds(root, ctx, again);
 
   bindPickers(root, {
     'catalog-pick': () => ({
