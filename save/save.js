@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 12;
+export const SAVE_VERSION = 13;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -122,6 +122,19 @@ const migrations = {
     save.dex.variants = [];
     return save;
   },
+  // v13 (Rehabilitation): the Containment facility track, and bays that can
+  // hold a behavioural programme instead of a bandsaw. Existing bays gain a
+  // stable id — the War Room addresses them by id now that one bay can sit
+  // in the Reorientation Wing while the list around it changes — and an
+  // empty `rehab`. Nothing already impounded is disturbed.
+  13: (save) => {
+    save.facility.containment = 1;
+    save.campaign.containment.forEach((entry, i) => {
+      entry.id ??= `bay-${i}-${entry.capturedAt ?? 0}`;
+      entry.rehab = entry.rehab ?? null;
+    });
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -149,7 +162,7 @@ export function newGameState() {
     news: [],
     settings: { muted: false },
     dex: { parts: [], enemies: [], traits: [], variants: [] },
-    facility: { theater: 1 },
+    facility: { theater: 1, containment: 1 },
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations

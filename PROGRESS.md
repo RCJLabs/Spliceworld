@@ -1,5 +1,72 @@
 # PROGRESS
 
+## Session 20 — Rehabilitation ✅
+
+§3.6 always promised a captured chimera two futures — "salvage its engineered
+parts **or**, post-v0.1, rehabilitate it into your roster." Only the bandsaw
+was built. Now the other one is.
+
+### The fork
+A Containment bay shows both offers with their real numbers before any money
+moves:
+
+| | costs | yields |
+|---|---|---|
+| **Salvage** | nothing, instantly | its parts, at the grades its old lab raised |
+| **Rehabilitate** | a fee, a real-world clock, and those parts | the whole creature |
+
+Picking one forecloses the other: a specimen in the programme cannot also be
+dismantled, and pulling out returns it to the bench but not the fee.
+
+### It is a facility purchase, not a new system
+The whole feature is gated by a **Containment track in `facility.json`** — the
+same shape the Surgery Theater already uses, so `nextUpgrade`/`buyUpgrade` and
+the Ranch's Facility card picked it up with zero engine edits. Tier II (the
+Reorientation Wing, $700, needs the Checkpoint — exactly when rival chimeras
+first become capturable) unlocks it; Tier III (the Enrichment Annexe, $1800,
+needs the Precinct) halves the clock and takes a third off the fee. `grants`
+carries `rehab` / `hourScale` / `feeScale`; `tuning` carries the rest.
+
+### Two knobs, deliberately separate
+- **The clock releases it.** Length scales off the specimen's power and
+  instability. Enrol one and forget about it and it still graduates — bond 0,
+  and it will freelance on you until you train it.
+- **The sessions decide who walks out.** Each buys bond and shaves
+  instability.
+
+The first draft let sessions take hours off the clock *as well*, which quietly
+made the **shortest** programmes — the scrappiest, easiest specimens — the ones
+you could invest in least, because the curriculum no longer fit inside them.
+Smoke caught it on session 4. The gap between sessions is now a share of the
+programme's own length, so the whole curriculum always fits however short the
+programme is, and the clock never moves.
+
+### What graduates
+A real chimera, not a trophy. It keeps its name (it was somebody before you met
+it), its chassis, and its grades; its parts become vault-shaped tokens whose
+lineage names the specimen, so it extracts and salvages later like anything you
+built. It arrives **settled** — the programme was the settling — and **wary**:
+its old instability plus a wariness penalty, minus whatever the sessions bought.
+
+The pitch is that it is off-menu. The acceptance test rehabilitates Professor
+Trench's L-frame specimen and then asserts the player's own Tier I Theater
+would refuse to assemble it.
+
+### Kept honest
+16 new smoke assertions, every one verified to **fail** when the code it guards
+is broken — including the two-organ socket guard, which no rival build
+exercises, so it got a fixture of its own. Browser pass at 380 and 320px: the
+fork, the countdown, an enrichment session, a reload mid-programme, a warp past
+the deadline into the Pens, and a v12 save migrated live (legacy bays gain ids
+and still salvage). One real bug found and fixed: the "needs the Reorientation
+Wing" pill inherited `flex: 0 0 auto` from the node tags and walked the page
+sideways at 380px.
+
+Save **v13**. `sw` cache `spliceworld-v13-rehab`.
+
+### Next session's first task
+Region contestation — the coalition counter-attacking a held node.
+
 ## Session 19b — Colour tokens, five schemes, and Biohazard shipped ✅
 
 Every colour in the game is now a semantic token. 83 hardcoded hexes had crept
