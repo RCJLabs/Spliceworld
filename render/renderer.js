@@ -63,6 +63,8 @@ export function indexContent(raw) {
     directorMeta: raw.director ? raw.director.tuning : null,
     facility: raw.facility ? byId(raw.facility.tracks) : {},
     philosophies: raw.philosophies ? byId(raw.philosophies.philosophies) : {},
+    operations: raw.operations ? byId(raw.operations.operations) : {},
+    operationMeta: raw.operations ? raw.operations.tuning : null,
     labNames: raw.philosophies ? raw.philosophies.labNames : null,
     classRules: raw.classes ? { advantage: raw.classes.advantage, disadvantage: raw.classes.disadvantage } : { advantage: 1, disadvantage: 1 },
     campaignMeta: raw.regions

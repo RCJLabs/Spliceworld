@@ -1358,6 +1358,28 @@ footer {
 }
 #msg-box:has(.bark-msg) { cursor: pointer; }
 
+/* --- Jobs board ----------------------------------------------------------
+   Non-combat work. It sits above the map and reads in the game's "money"
+   colour rather than its "war" colour, because the whole point is that
+   this is the route that does not involve losing a fight. */
+
+.jobs-card { border-color: var(--accent-dim); }
+.job-row { align-items: flex-start; }
+.job-row.is-cooling { opacity: 0.55; }
+.job-odds { display: block; margin-top: 2px; color: var(--goo); }
+.job-row .lineage { display: block; margin-top: 1px; }
+.job-row button { background: var(--goo); color: var(--on-accent); }
+.job-live { border-color: var(--goo); }
+.job-live .countdown { color: var(--goo); }
+.job-abort {
+  background: var(--panel) !important;
+  color: var(--muted) !important;
+  border: 1px solid var(--line) !important;
+}
+.job-report.is-win { border-color: var(--goo); }
+.job-report.is-bust { border-color: var(--warn-dim); }
+.heat-high { color: var(--danger-soft); }
+
 /* --- Your dossier (§3.8) -------------------------------------------------
    Deliberately the same furniture as a rival card: same quote styling,
    same fine print. The player is a villain in the same schema. */

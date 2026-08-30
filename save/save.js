@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 15;
+export const SAVE_VERSION = 16;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -168,6 +168,20 @@ const migrations = {
     }
     return save;
   },
+  // v16 (Jobs board): non-combat operations. `operation` is the one job in
+  // flight (its outcome sealed at launch so a reload cannot reroll it),
+  // `opCooldowns` keeps a job quiet after it runs, and `opReport` holds the
+  // result until the player has actually seen it — a job that finishes
+  // while they are away must still be reportable when they come back.
+  16: (save) => {
+    save.campaign.operation = null;
+    save.campaign.opCooldowns = {};
+    save.campaign.opCount = 0;
+    save.campaign.opReport = null;
+    save.campaign.heat = 0;
+    save.campaign.heatAt = null;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -194,6 +208,7 @@ export function newGameState() {
     campaign: {
       heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {},
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,
+      operation: null, opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
       lastTickAt: null,
     },
     news: [],

@@ -51,6 +51,7 @@ const content = indexContent({
   director: readJSON('data/director.json'),
   facility: readJSON('data/facility.json'),
   philosophies: readJSON('data/philosophies.json'),
+  operations: readJSON('data/operations.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -882,6 +883,7 @@ assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
 assert.deepEqual(m5.campaign, {
   heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {},
   contested: [], nextContestAt: null, defences: {}, contestCount: 0,
+  operation: null, opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
   lastTickAt: null,
 });
 // Stronger than the literal above and self-maintaining: a migration that
@@ -2680,6 +2682,235 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     const old = structuredClone(v1Save);
     const up = migrate(old);
     assert.deepEqual(up.profile, { named: false, title: null, name: null, lab: null, philosophy: null });
+  }
+}
+
+// --- Operations, a.k.a. the Jobs board. It exists because the campaign
+// --- had no floor: every route to money and to new fauna ran through
+// --- winning battles, so a player who kept losing had $22/day, a catalog
+// --- of exactly two species, and no path at all to the Water or Air
+// --- anatomy the class triangle says they need in order to stop losing.
+{
+  const {
+    operationList, opTuning, opOdds, startOperation, abortOperation,
+    tickOperations, opReady, opCooldownEndsAt, activeOp, heatNow, addHeat, heatPenalty,
+  } = await import('../campaign/operations.js');
+  const ot = opTuning(content);
+  const ops = operationList(content);
+
+  // Content coherence.
+  assert.ok(ops.length >= 5, 'there is a board, not a button');
+  const TAGS = new Set(Object.values(content.parts).flatMap((p) => p.tags));
+  for (const op of ops) {
+    assert.ok(op.hours > 0 && op.cooldownHours > 0, `${op.id} has a clock`);
+    assert.ok(op.funds[1] > op.funds[0] && op.funds[0] > 0, `${op.id} pays a range`);
+    assert.ok(['none', 'optional', 'required'].includes(op.crew), `${op.id} declares its crew rule`);
+    assert.ok(op.baseChance > 0 && op.baseChance < 1, `${op.id} is neither free nor impossible`);
+    assert.ok(op.success && op.failure && op.blurb, `${op.id} is written, not stubbed`);
+    for (const tag of op.demands.tags ?? []) assert.ok(TAGS.has(tag), `${op.id}: no part carries the tag ${tag}`);
+    if (op.demands.class) assert.ok(content.classes[op.demands.class], `${op.id}: unknown class`);
+    for (const sp of op.livestock?.species ?? []) {
+      assert.ok(content.species[sp], `${op.id}: unknown species ${sp}`);
+      assert.ok(content.species[sp].mailOrderPrice, `${op.id}: ${sp} must be a real, rearable animal`);
+    }
+  }
+
+  const lab = (seed = 800, { chimera = null, funds = 300 } = {}) => {
+    const s = { ...newGameState(), seed, funds };
+    ensureRanchSeeded(s, content, t0);
+    s.campaign.lastTickAt = t0;
+    s.lastTickAt = t0;
+    if (chimera) {
+      const slots = {};
+      for (const partId of chimera) {
+        const id = `t${s.inventory.tokenCount++}`;
+        s.inventory.parts.push({ id, partId, grade: 'standard', donor: { name: 'Bessie', species: content.parts[partId].species, stars: 2, extractedAt: 0 } });
+        slots[content.parts[partId].slot] = id;
+      }
+      const res = spliceChimera(s, 'M', slots, content, t0);
+      assert.ok(res.ok, res.msg);
+      res.chimera.settleUntil = t0;
+    }
+    return s;
+  };
+  const GOAT = ['goat_head', 'goat_forelimbs', 'goat_hindlimbs', 'goat_hide', 'goat_organ'];
+  const SHARK = ['shark_head', 'shark_forelimbs', 'shark_hindlimbs', 'shark_hide', 'shark_organ'];
+
+  // RULE 1 — something is ALWAYS runnable. No territory, no notoriety, no
+  // chimera, no anatomy. This is the floor, and it is the whole point.
+  {
+    const broke = lab(801, { funds: 0 });
+    broke.chimeras = [];
+    assert.deepEqual(broke.campaign.heldNodes, [], 'no territory');
+    const runnable = ops.filter((op) => !opOdds(broke, op, null, content, t0).blocked);
+    assert.ok(runnable.length >= 2, `a player with nothing can still run ${runnable.length} job(s)`);
+    for (const op of runnable) {
+      const odds = opOdds(broke, op, null, content, t0);
+      assert.ok(odds.chance >= 0.4, `${op.id} is worth attempting solo (${odds.chance.toFixed(2)})`);
+    }
+    const started = startOperation(broke, runnable[0].id, null, content, t0);
+    assert.ok(started.ok, started.msg);
+    assert.ok(activeOp(broke), 'and it is under way');
+  }
+
+  // RULE 2 — failure never costs a creature. You cannot punish a losing
+  // player for trying to stop losing.
+  {
+    let failures = 0;
+    for (let seed = 0; seed < 120 && failures < 25; seed++) {
+      const s = lab(2000 + seed, { chimera: GOAT });
+      const before = s.chimeras.length;
+      const stockBefore = s.ranch.stock.length;
+      startOperation(s, 'reptile_house', s.chimeras[0].id, content, t0);
+      const out = tickOperations(s, content, t0 + 99 * HOUR);
+      if (out.result.success) continue;
+      failures++;
+      assert.equal(s.chimeras.length, before, 'a failed job never loses the creature');
+      assert.equal(s.ranch.stock.length, stockBefore, 'nor anything in the pens');
+      assert.equal(s.campaign.captives.length, 0, 'and nobody is captured');
+      assert.equal(out.result.funds, 0, 'it simply pays nothing');
+    }
+    assert.ok(failures >= 20, `the sample actually contained failures (${failures})`);
+  }
+
+  // RULE 3 — demands improve the odds, they never gate the job. Requiring
+  // Aquatic anatomy before you may rob the aquarium that would GIVE you
+  // Aquatic anatomy is the same spiral in a smaller hat.
+  {
+    const plain = lab(803, { chimera: GOAT });
+    const swimmer = lab(804, { chimera: SHARK });
+    const aquarium = content.operations.aquarium;
+    const dry = opOdds(plain, aquarium, plain.chimeras[0], content, t0);
+    const wet = opOdds(swimmer, aquarium, swimmer.chimeras[0], content, t0);
+    assert.equal(dry.blocked, null, 'a goat may attempt the aquarium');
+    assert.ok(dry.chance >= 0.4, `and has a real chance of it (${dry.chance.toFixed(2)})`);
+    assert.ok(wet.chance > dry.chance + 0.15, `but the right anatomy is worth having (${dry.chance.toFixed(2)} → ${wet.chance.toFixed(2)})`);
+    assert.ok(wet.reasons.some((r) => r.text.includes('Aquatic')), 'and the briefing says why');
+    // A job that names a crew still needs one.
+    assert.ok(opOdds(plain, aquarium, null, content, t0).blocked, 'somebody has to actually go');
+  }
+
+  // RULE 4 — heat is the price, and it is a mechanic rather than a nerf:
+  // it only bites the player running jobs back to back.
+  {
+    const s = lab(805, { chimera: GOAT });
+    assert.equal(heatNow(s, content, t0), 0, 'a fresh county is calm');
+    const cold = opOdds(s, content.operations.feed_coop, null, content, t0).chance;
+    startOperation(s, 'petting_zoo', null, content, t0);
+    assert.ok(heatNow(s, content, t0) > 0, 'a job leaves the county twitchy');
+    const hot = opOdds(s, content.operations.feed_coop, null, content, t0).chance;
+    assert.ok(hot < cold, 'which costs you on the next one');
+    // …and it decays in real time, exponentially, so it settles at a level
+    // that scales with how hard you are pushing instead of pinning to the
+    // cap or draining to nothing (which is what linear decay did).
+    const h0 = heatNow(s, content, t0);
+    const half = heatNow(s, content, t0 + ot.heatHalfLifeHours * HOUR);
+    assert.ok(Math.abs(half - h0 / 2) < 0.5, 'one half-life halves it');
+    assert.ok(heatNow(s, content, t0 + 200 * HOUR) < 1, 'and it always goes away eventually');
+    assert.ok(heatPenalty(s, content, t0) > 0 && heatPenalty(s, content, t0) <= ot.heatPenalty);
+  }
+
+  // The outcome is sealed at LAUNCH. Deciding it at resolution would let a
+  // reload reroll a bad job, which is the one thing a timer-based game
+  // must never allow.
+  {
+    const s = lab(806, { chimera: GOAT });
+    startOperation(s, 'county_fair', s.chimeras[0].id, content, t0);
+    const sealed = structuredClone(activeOp(s).outcome);
+    const reloaded = JSON.parse(JSON.stringify(s));
+    assert.deepEqual(activeOp(reloaded).outcome, sealed, 'a reload cannot reroll it');
+    const a = tickOperations(reloaded, content, t0 + 99 * HOUR).result;
+    const b = tickOperations(structuredClone(s), content, t0 + 99 * HOUR).result;
+    assert.equal(a.success, b.success);
+    assert.equal(a.funds, b.funds);
+  }
+
+  // One job at a time, cooldowns hold, and calling one off costs the
+  // cooldown but nothing else.
+  {
+    const s = lab(807, { chimera: GOAT });
+    assert.ok(startOperation(s, 'feed_coop', null, content, t0).ok);
+    assert.ok(!startOperation(s, 'petting_zoo', null, content, t0).ok, 'one job at a time');
+    const funds = s.funds;
+    assert.ok(abortOperation(s, content).ok);
+    assert.equal(activeOp(s), null);
+    assert.equal(s.funds, funds, 'calling it off costs no money');
+    assert.equal(s.chimeras.length, 1, 'and no creature');
+    assert.ok(!opReady(s, 'feed_coop', t0), 'but the job goes quiet for a while');
+    assert.ok(!startOperation(s, 'feed_coop', null, content, t0).ok, 'and refuses to restart');
+    assert.ok(opReady(s, 'feed_coop', opCooldownEndsAt(s, 'feed_coop')), 'until the cooldown is up');
+  }
+
+  // ACCEPTANCE: a player who never wins a battle can still reach the
+  // anatomy the class triangle says they need. Before this board, every
+  // Water and Air species sat behind a conquest.
+  {
+    const gated = Object.values(content.species).filter((sp) => sp.mailOrderPrice && !sp.variantOf);
+    const openAtStart = catalogFor(lab(808), content).map((sp) => sp.id);
+    assert.deepEqual(openAtStart.sort(), ['goat', 'ram'], 'the catalog really is two species with no territory');
+
+    const reachable = new Set(ops.flatMap((op) => op.livestock?.species ?? []));
+    const classOf = (speciesId) =>
+      Object.values(content.parts)
+        .filter((p) => p.species === speciesId && p.classAffinity)
+        .map((p) => p.classAffinity)[0] ?? null;
+    for (const cls of ['water', 'air']) {
+      const viaJobs = [...reachable].filter((sp) => classOf(sp) === cls);
+      assert.ok(viaJobs.length, `${cls} anatomy is reachable without winning a battle (${viaJobs.join(', ')})`);
+      assert.ok(
+        viaJobs.every((sp) => !openAtStart.includes(sp)),
+        `and it is anatomy the catalog would not have sold them`
+      );
+    }
+
+    // Run it for real: a broke, node-less player with one goat chimera
+    // robs the aquarium until something wet turns up.
+    const s = lab(809, { chimera: GOAT, funds: 0 });
+    let now = t0;
+    let got = null;
+    for (let i = 0; i < 40 && !got; i++) {
+      if (!activeOp(s) && opReady(s, 'aquarium', now)) {
+        startOperation(s, 'aquarium', s.chimeras[0].id, content, now);
+      }
+      now += 6 * HOUR;
+      tickCampaign(s, content, now);
+      const rep = s.campaign.opReport;
+      if (rep?.animal) got = rep.animal;
+      s.campaign.opReport = null;
+    }
+    assert.ok(got, 'the aquarium eventually hands over something');
+    assert.ok(content.species[got.species], 'a real animal');
+    assert.ok(s.ranch.stock.some((a) => a.id === got.id), 'that is actually in the pens');
+    assert.ok(s.funds > 0, 'and they are no longer broke');
+    assert.deepEqual(s.campaign.heldNodes, [], 'having won precisely nothing');
+    // …and it is breedable stock like any other, which is the point.
+    assert.ok(got.genotype && got.potential, 'with the husbandry fields a bred animal has');
+  }
+
+  // Conquest must stay the better deal, or this replaces the game instead
+  // of supporting it: a job hands you ONE animal, sometimes, on a timer,
+  // where holding a node puts the whole species in the catalog to buy.
+  {
+    const conquered = lab(810);
+    conquered.campaign.heldNodes = region.nodes.map((n) => n.id);
+    const openNow = catalogFor(conquered, content).map((sp) => sp.id);
+    assert.ok(openNow.length > 20, `conquest opens the catalog properly (${openNow.length} species)`);
+    const jobSpecies = new Set(ops.flatMap((op) => op.livestock?.species ?? []));
+    // Measured over the WHOLE campaign rather than at an arbitrary
+    // midpoint: early on the jobs deliberately overlap the catalog, because
+    // handing a stuck player the ENTRY animal of each class is the entire
+    // reason this board exists. The question that matters is whether
+    // conquest still reaches most of the roster, and it does.
+    const exclusive = openNow.filter((sp) => !jobSpecies.has(sp));
+    assert.ok(
+      exclusive.length >= openNow.length * 0.55,
+      `and most of the roster is still beyond any job (${exclusive.length}/${openNow.length})`
+    );
+    // The premium fauna in particular stays behind a conquest: the jobs
+    // hand over the ENTRY animal of each class, never the best one.
+    const jobPrices = [...jobSpecies].map((sp) => content.species[sp].mailOrderPrice);
+    const best = Math.max(...Object.values(content.species).filter((sp) => sp.mailOrderPrice && !sp.variantOf).map((sp) => sp.mailOrderPrice));
+    assert.ok(Math.max(...jobPrices) < best * 0.7, `no job reaches the top of the catalog (best stolen $${Math.max(...jobPrices)} vs $${best})`);
   }
 }
 

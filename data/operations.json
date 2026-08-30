@@ -1,0 +1,235 @@
+{
+  "_doc": "Operations — non-combat missions (the Jobs board in the War Room). WHY THIS EXISTS: before it, every route to money and to new fauna ran through winning battles. Held nodes paid income, battles paid purses, and `unlocksFauna` gated the Mail-Order catalog, so a player who lost had $22/day, a catalog containing exactly two species (Goat and Ram), and NO path to Water or Air anatomy — which is what the class triangle says you need in order to stop losing. That is a spiral with no floor, and this is the floor. Rules the set is built around: (1) at least one job must ALWAYS be runnable — no held nodes, no notoriety, no chimera, no anatomy; (2) failure never costs a creature, only time and a bruise, because a losing player cannot be punished for trying to stop losing; (3) `demands` IMPROVE the odds, they never gate the job — asking for Aquatic anatomy before you can rob the aquarium that would give you Aquatic anatomy is the same circle again; (4) heat is the price: every job raises notoriety, which is what makes the world harder, so this is a trade rather than free money. Conquest stays the better deal — it puts a species in the catalog to buy instantly and repeatedly, where a job hands you one animal, sometimes, on a timer, with the police getting interested.",
+  "tuning": {
+    "soloPenalty": 0.18,
+    "tagBonus": 0.22,
+    "classBonus": 0.12,
+    "statBonus": 0.14,
+    "statPer": 60,
+    "minChance": 0.15,
+    "maxChance": 0.95,
+    "injuryHours": [
+      2,
+      5
+    ],
+    "unsettledPenalty": 0.15,
+    "_doc": "HEAT is what stops this being a printing press, and it is deliberately a mechanic rather than a nerf: trimming payouts would punish the broke player this whole board exists for, while heat only ever bites the player running jobs back to back. Every job adds heatPerJob + heatPerNotoriety x its notoriety — the FLAT part is the important half, because it means frequency itself costs, not just ambition. Decay is EXPONENTIAL (heatHalfLifeHours), not linear: linear decay is bang-bang, since heat either drains to zero or pins at the cap with nothing in between, whereas a half-life gives a smooth equilibrium that scales with how hard you are pushing. Measured: a once-a-day player launches at about 4 heat (odds essentially untouched), a player checking in three times a day at about 25, and one cycling jobs all evening at about 50 — a fifth off every success roll until they let the county calm down.",
+    "heatPerNotoriety": 3,
+    "heatPenalty": 0.35,
+    "heatMax": 100,
+    "heatPerJob": 5,
+    "heatHalfLifeHours": 18
+  },
+  "operations": [
+    {
+      "id": "petting_zoo",
+      "name": "The Petting Zoo Job",
+      "icon": "🐐",
+      "blurb": "A municipal petting zoo with one bored attendant and a gate latch a determined toddler has already defeated twice.",
+      "hours": 2,
+      "cooldownHours": 6,
+      "crew": "optional",
+      "baseChance": 0.72,
+      "demands": {
+        "tags": [
+          "Camo"
+        ],
+        "class": null,
+        "stat": "speed"
+      },
+      "notoriety": 1,
+      "funds": [
+        35,
+        75
+      ],
+      "livestock": {
+        "chance": 0.4,
+        "species": [
+          "goat",
+          "ram"
+        ]
+      },
+      "success": "You leave a polite note and an entirely fictional receipt.",
+      "failure": "The attendant was not bored. The attendant was WAITING. You leave without incident and without livestock.",
+      "news": "Petting zoo reports one (1) goat unaccounted for. Attendant describes suspect as \"determined\"."
+    },
+    {
+      "id": "feed_coop",
+      "name": "Feed Co-op Skim",
+      "icon": "🌾",
+      "blurb": "The agricultural co-op weighs everything twice and records it once. There is a margin in that, and the margin is yours.",
+      "hours": 4,
+      "cooldownHours": 9,
+      "crew": "optional",
+      "baseChance": 0.7,
+      "demands": {
+        "tags": [],
+        "class": null,
+        "stat": "speed"
+      },
+      "notoriety": 1,
+      "funds": [
+        70,
+        125
+      ],
+      "livestock": null,
+      "success": "The books balance. They balance beautifully. They balance towards you.",
+      "failure": "The co-op has hired an accountant with a suspicious mind and a calculator with a receipt roll.",
+      "news": "Agricultural co-op announces \"routine\" audit. Announcement is described by staff as \"not routine\"."
+    },
+    {
+      "id": "grant_application",
+      "name": "The Grant Application",
+      "icon": "📄",
+      "blurb": "A regional innovation fund with a generous budget and, crucially, no biologists on the review panel. This one is entirely legal. Mostly legal. It is a grey area and you are wearing a lab coat.",
+      "hours": 20,
+      "cooldownHours": 30,
+      "crew": "none",
+      "baseChance": 0.8,
+      "demands": {
+        "tags": [],
+        "class": null,
+        "stat": null
+      },
+      "notoriety": 0,
+      "funds": [
+        280,
+        460
+      ],
+      "livestock": null,
+      "success": "Funded. The panel particularly admired the diagrams, which were of a goat.",
+      "failure": "Rejected. The panel had, it turns out, exactly one biologist, and she has questions.",
+      "news": "Regional innovation fund backs local agritech venture. Fund declines to specify which agri, or indeed which tech."
+    },
+    {
+      "id": "county_fair",
+      "name": "County Fair Livestock Tent",
+      "icon": "🎪",
+      "blurb": "Prize animals, rosettes, and a security cordon made entirely of bunting. Something large and confident could simply walk out with a winner.",
+      "hours": 6,
+      "cooldownHours": 10,
+      "crew": "required",
+      "baseChance": 0.55,
+      "demands": {
+        "tags": [
+          "Armored"
+        ],
+        "class": "ground",
+        "stat": "power"
+      },
+      "notoriety": 3,
+      "funds": [
+        120,
+        220
+      ],
+      "livestock": {
+        "chance": 0.55,
+        "species": [
+          "ram",
+          "skunk",
+          "porcupine"
+        ]
+      },
+      "success": "You take the Grand Champion and, out of pure spite, its rosette.",
+      "failure": "The tent collapses. Everyone is fine. Nobody is impressed.",
+      "news": "County fair cancels livestock judging. Grand Champion \"reassigned to private research,\" says nobody official."
+    },
+    {
+      "id": "aquarium",
+      "name": "The Aquarium Night Shift",
+      "icon": "🐙",
+      "blurb": "Twelve tanks, one night watchman, and a service corridor that floods on purpose. Something that swims would find this easy. Something that does not can still get wet and try.",
+      "hours": 8,
+      "cooldownHours": 14,
+      "crew": "required",
+      "baseChance": 0.48,
+      "demands": {
+        "tags": [
+          "Aquatic"
+        ],
+        "class": "water",
+        "stat": "stamina"
+      },
+      "notoriety": 4,
+      "funds": [
+        150,
+        270
+      ],
+      "livestock": {
+        "chance": 0.6,
+        "species": [
+          "frog",
+          "anglerfish"
+        ]
+      },
+      "success": "Nothing was harmed. Several things were RELOCATED, at speed, in a cooler.",
+      "failure": "The service corridor flooded on purpose and you were in it. You have been asked not to return.",
+      "news": "Municipal aquarium down one exhibit. Staff insist the tank lid was \"definitely on\"."
+    },
+    {
+      "id": "aviary",
+      "name": "Aviary Skylight",
+      "icon": "🦅",
+      "blurb": "A domed aviary with a skylight that opens for ventilation and closes on a timer nobody has serviced since the nineties.",
+      "hours": 8,
+      "cooldownHours": 14,
+      "crew": "required",
+      "baseChance": 0.48,
+      "demands": {
+        "tags": [
+          "Airborne"
+        ],
+        "class": "air",
+        "stat": "speed"
+      },
+      "notoriety": 4,
+      "funds": [
+        150,
+        270
+      ],
+      "livestock": {
+        "chance": 0.6,
+        "species": [
+          "bat",
+          "eagle"
+        ]
+      },
+      "success": "In and out through the roof. The birds seemed to approve, which was unsettling.",
+      "failure": "The skylight timer chose tonight, of all nights, to work perfectly.",
+      "news": "Aviary reports skylight fault and one absent raptor. Ornithologists \"deeply concerned and quietly impressed\"."
+    },
+    {
+      "id": "reptile_house",
+      "name": "The Reptile House",
+      "icon": "🦎",
+      "blurb": "Heated glass, thick gloves, and a keeper who counts the enclosures twice a night. Nothing in here wants to be carried, which is the whole difficulty.",
+      "hours": 10,
+      "cooldownHours": 18,
+      "crew": "required",
+      "baseChance": 0.45,
+      "demands": {
+        "tags": [
+          "Venomous",
+          "Armored"
+        ],
+        "class": null,
+        "stat": "armor"
+      },
+      "notoriety": 5,
+      "funds": [
+        190,
+        340
+      ],
+      "livestock": {
+        "chance": 0.6,
+        "species": [
+          "cobra",
+          "tortoise"
+        ]
+      },
+      "success": "Everything is accounted for except the things you took, which are accounted for by you.",
+      "failure": "The keeper counted twice. The keeper always counts twice. You knew this.",
+      "news": "Reptile house locks down after inventory discrepancy. Keeper: \"I counted. I always count.\""
+    }
+  ]
+}

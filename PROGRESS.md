@@ -1,5 +1,82 @@
 # PROGRESS
 
+## Session 23 — The Jobs board ✅
+
+The complaint was "I keep losing so I have no money to get new animals to
+breed." That is not a difficulty problem, it is a **structural** one, and
+measuring it first made the shape of the fix obvious.
+
+### What the numbers said
+A player holding no nodes has:
+
+| | |
+|---|---|
+| net income | **$22/day** (a $40 stipend minus $18 upkeep) |
+| Mail-Order catalog | **exactly two species** — Goat and Ram |
+| route to Water anatomy | none |
+| route to Air anatomy | none |
+
+Every Water and Air species is gated behind `checkpoint`, `precinct` or
+`guard_post`. So a losing player cannot obtain the counter-class anatomy the
+class triangle says they need in order to stop losing. A spiral with no floor.
+
+### The board
+Seven heists, on real-world timers, paying money **and livestock**. Four rules,
+all load-bearing and all asserted in smoke:
+
+1. **Something is always runnable** — no territory, no notoriety, no chimera,
+   no particular anatomy. Three of the seven can be run by going yourself.
+2. **Failure never costs a creature.** Time and a bruise, nothing else. You
+   cannot punish a losing player for trying to stop losing.
+3. **`demands` improve the odds; they never gate the job.** Requiring Aquatic
+   anatomy before you may rob the aquarium that would *give* you Aquatic
+   anatomy is the same circle in a smaller hat. A plain goat chimera robs the
+   aquarium at 62%; a shark build does it at 95%.
+4. **Heat is the price** — and a mechanic, not a nerf. Trimming payouts to cap
+   the ceiling would have punished exactly the broke player this board is for.
+
+### Two tuning passes worth recording
+**Heat had to become exponential.** Linear decay is bang-bang: heat either
+drains to zero or pins at the cap depending on which side of the drain rate
+your job rate happens to sit, with no useful middle. A half-life gives a smooth
+equilibrium that scales with how hard you push. Measured at launch:
+
+| cadence | heat | odds | 7-day take |
+|---|---|---|---|
+| once a day | 6 | 70% | $889 |
+| three times a day | 23 | 63% | $1,751 |
+| cycling all evening | 32 | 60% | $2,974 |
+
+Diminishing returns for the grinder, nothing at all for the casual player, and
+full territory ($1,575/week) is still passive and still gates the catalog, the
+facility tiers and the rivals.
+
+**The loot lists had to be trimmed.** My first draft let the aquarium yield
+Octopus and the reptile house yield Crocodile — both `guard_post` fauna — and a
+smoke assertion caught that conquest was then adding almost nothing to the
+catalog. Jobs now hand over the **entry** animal of each class (Frog, Bat,
+Eagle, Cobra) and conquest keeps the good stuff. Over the whole campaign, 60%
+of the catalog is still beyond any job, and nothing stealable is within 70% of
+the top price.
+
+### Does it work?
+A broke, node-less player with one plain goat chimera, checking in once a day,
+has **$889 and four animals after a week** against $150 and no options before.
+Checking in three times a day they have Water and Air stock inside two days —
+which is to say, the game becomes playable again from a standing start.
+
+25 new smoke assertions, each verified to fail when the code it guards is
+broken. Browser pass at 380 and 320px: the board above the map, the crew sheet
+showing per-candidate odds *and why*, a job in flight, a warp to the report,
+the stolen animal in the pens, and a v15 save migrated live. No console errors.
+One UI fix along the way: seven four-line rows turned the board into a wall, so
+the blurbs moved to the crew sheet where they are read at the decision point.
+
+Save **v16**; `sw` cache `spliceworld-v16-jobs`.
+
+### Next session's first task
+Chaos-breeding of chimeras.
+
 ## Session 22 — The monologue pass ✅
 
 §3.8 has said this since the roadmap was written: *"Player profile uses the
