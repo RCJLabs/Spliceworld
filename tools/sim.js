@@ -30,6 +30,11 @@ export function loadSimContent() {
     enemies: readJSON('data/enemies.json'),
     keywords: readJSON('data/keywords.json'),
     classes: readJSON('data/classes.json'),
+    // The harness was blind to both of these: traits never reached
+    // physiology or movesFromTokens here, so a gene could not be measured
+    // at all, and campaignMeta fell back to its empty default.
+    traits: readJSON('data/traits.json'),
+    regions: readJSON('data/regions.json'),
     rivals: readJSON('data/rivals.json'),
     director: readJSON('data/director.json'),
     facility: readJSON('data/facility.json'),

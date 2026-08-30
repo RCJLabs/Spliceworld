@@ -1,15 +1,15 @@
 {
-  "_doc": "Facility upgrades (ROADMAP §3.10): menu purchases that expand what you can CREATE, never what you can grind (Law 2 — every conquest reward must expand creation). A track is an ordered list of levels; you buy them in order, each gated by money and usually by territory. `grants` is read by the systems that care: the Surgery Theater reads frames and sockets, the Containment bay reads `rehab` and its scales, so unlocking the Rumbler chassis, the second organ bay, or the Reorientation Wing is a data edit, not an engine one. Levels beyond the last are simply absent — adding Tier III means appending an object here. Other tracks named in §3.10 (Gene Scanner, Extractor efficiency, Infirmary speed, Containment Cannon mk2) drop into the same shape.",
+  "_doc": "Facility upgrades (ROADMAP \u00a73.10): menu purchases that expand what you can CREATE, never what you can grind (Law 2 \u2014 every conquest reward must expand creation). A track is an ordered list of levels; you buy them in order, each gated by money and usually by territory. `grants` is read by the systems that care: the Surgery Theater reads frames and sockets, the Containment bay reads `rehab` and its scales, so unlocking the Rumbler chassis, the second organ bay, or the Reorientation Wing is a data edit, not an engine one. Levels beyond the last are simply absent \u2014 adding Tier III means appending an object here. Other tracks named in \u00a73.10 (Gene Scanner, Extractor efficiency, Infirmary speed, Containment Cannon mk2) drop into the same shape.",
   "tracks": [
     {
       "id": "theater",
       "name": "Surgery Theater",
-      "icon": "⚗",
+      "icon": "\u2697",
       "screen": "theater",
       "levels": [
         {
           "level": 1,
-          "name": "Tier I — Card Table & Optimism",
+          "name": "Tier I \u2014 Card Table & Optimism",
           "cost": 0,
           "blurb": "A folding table, a desk lamp, and a signed waiver you wrote yourself.",
           "grants": {
@@ -29,12 +29,12 @@
         },
         {
           "level": 2,
-          "name": "Tier II — The Rumbler Rig",
+          "name": "Tier II \u2014 The Rumbler Rig",
           "cost": 900,
           "requiresNodes": [
             "checkpoint"
           ],
-          "blurb": "A gantry, a winch, and a second organ bay. Unlocks the L-class Rumbler chassis and lets you install TWO organs — metabolism, or a second ability, or both if you can carry the mass.",
+          "blurb": "A gantry, a winch, and a second organ bay. Unlocks the L-class Rumbler chassis and lets you install TWO organs \u2014 metabolism, or a second ability, or both if you can carry the mass.",
           "unlockLine": "Surgery Theater upgraded to Tier II. The gantry arrived on a flatbed and the neighbours have stopped asking.",
           "news": "Farm supply store reports a run on industrial winches. \"Big year for barns,\" says owner, unconvincingly.",
           "grants": {
@@ -59,14 +59,14 @@
     {
       "id": "containment",
       "name": "Containment",
-      "icon": "⛓",
+      "icon": "\u26d3",
       "screen": "battle",
       "tuning": {
-        "_doc": "Rehabilitation constants (§3.6: salvage it OR rehabilitate it into your roster). Hours and fee are read off the specimen so a rival's apex monster is a longer, dearer programme than a scrappy one; `hourScale`/`feeScale` on a level make the whole track cheaper as you invest in it. The two knobs are deliberately orthogonal: the CLOCK releases the specimen, the SESSIONS decide who walks out. sessionGapFraction is a share of the programme's own length rather than a fixed cooldown, so the full curriculum always fits inside the programme — otherwise the scrappiest specimens, whose programmes are shortest, would be the hardest ones to befriend.",
-        "baseHours": 6,
+        "_doc": "Rehabilitation constants (\u00a73.6: salvage it OR rehabilitate it into your roster). Hours and fee are read off the specimen so a rival's apex monster is a longer, dearer programme than a scrappy one; `hourScale`/`feeScale` on a level make the whole track cheaper as you invest in it. The two knobs are deliberately orthogonal: the CLOCK releases the specimen, the SESSIONS decide who walks out. sessionGapFraction is a share of the programme's own length rather than a fixed cooldown, so the full curriculum always fits inside the programme \u2014 otherwise the scrappiest specimens, whose programmes are shortest, would be the hardest ones to befriend.",
+        "baseHours": 4.5,
         "hoursPerPower": 0.09,
         "hoursPerInstability": 0.05,
-        "maxHours": 30,
+        "maxHours": 22.5,
         "baseFee": 60,
         "feePerPower": 2.2,
         "wariness": 25,
@@ -81,19 +81,19 @@
           "level": 1,
           "name": "Holding Bay & A Very Firm Door",
           "cost": 0,
-          "blurb": "One reinforced pen, one padlock, one folding chair for staring contests. Anything you impound can be dismantled for its parts — and that is the only thing it can be.",
+          "blurb": "One reinforced pen, one padlock, one folding chair for staring contests. Anything you impound can be dismantled for its parts \u2014 and that is the only thing it can be.",
           "grants": {
             "rehab": false
           }
         },
         {
           "level": 2,
-          "name": "Tier II — The Reorientation Wing",
+          "name": "Tier II \u2014 The Reorientation Wing",
           "cost": 700,
           "requiresNodes": [
             "checkpoint"
           ],
-          "blurb": "Soft lighting, enrichment toys, and a motivational poster of you. Lets you REHABILITATE a captured chimera into your own roster instead of taking it apart — someone else's anatomy, someone else's grades, on your team.",
+          "blurb": "Soft lighting, enrichment toys, and a motivational poster of you. Lets you REHABILITATE a captured chimera into your own roster instead of taking it apart \u2014 someone else's anatomy, someone else's grades, on your team.",
           "unlockLine": "Reorientation Wing open for business. The first intake has already chewed the motivational poster.",
           "news": "County shelter reports unusual new competitor: \"They keep taking the scary ones,\" says volunteer, relieved.",
           "grants": {
@@ -104,7 +104,7 @@
         },
         {
           "level": 3,
-          "name": "Tier III — The Enrichment Annexe",
+          "name": "Tier III \u2014 The Enrichment Annexe",
           "cost": 1800,
           "requiresNodes": [
             "precinct"

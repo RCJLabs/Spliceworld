@@ -83,13 +83,23 @@ export function movesFromTokens(tokens, report, content) {
     const part = content.parts[token.partId];
     if (!part?.move) continue; // passive or retired part — stats only
     const gradeBonus = 1 + GRADE_INDEX[token.grade] * GRADE_MOVE_BONUS;
+    // A trait can change what a part DOES, not only what it weighs (R24).
+    // Stat bonuses alone made every gene feel like the same gene with a
+    // different number on it; a venom gland that actually envenoms is a
+    // different creature. Merged under the part's own keywords so a part
+    // that already envenoms is not quietly overwritten by a weaker gene.
+    let keywords = part.move.keywords;
+    for (const traitId of token.traits ?? []) {
+      const extra = content.traits?.[traitId]?.moveKeywords;
+      if (extra) keywords = { ...extra, ...keywords };
+    }
     add({
       name: part.ability,
       power: Math.round(part.move.power * gradeBonus),
       cost: part.move.cost,
       acc: part.move.acc,
       tags: part.move.tags,
-      keywords: part.move.keywords,
+      keywords,
     });
   }
   // A combo is emergent anatomy, so it takes a grade too — the BEST one

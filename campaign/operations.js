@@ -43,11 +43,11 @@ const DEFAULTS = {
   statPer: 60,
   minChance: 0.15,
   maxChance: 0.95,
-  injuryHours: [2, 5],
+  injuryHours: [1.5, 3.75],
   unsettledPenalty: 0.15,
   heatPerJob: 5,
   heatPerNotoriety: 3,
-  heatHalfLifeHours: 18,
+  heatHalfLifeHours: 13.5,
   heatPenalty: 0.35,
   heatMax: 100,
 };

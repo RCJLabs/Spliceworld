@@ -1,5 +1,5 @@
 {
-  "_doc": "Campaign shell (M5): one region strip — nodes unlock in order, each is an encounter from enemies.json; winning holds the node, granting income per real-world day (timestamp-computed) and notoriety. Notoriety crossing threatGen2At announces Threat Generation 2 and unlocks nodes gated with 'threatGen': 2. rescueEncounter = the themed battle used for every rescue raid (v0.1 has one template). Adding regions/nodes must never require engine edits. unlocksFauna: species ids added to the Mail-Order catalog when the node is held. Region contestation (§3.9 'coalition counter-offensives can contest held regions'): once the threat generation named in `contestation.startsAtGen` is reached, the coalition periodically comes BACK for a node you already hold. The schedule is a timestamp (nextContestAt), never a per-tick dice roll, so how often you open the app cannot change how often you are attacked; and the defence window starts the moment you SEE the contest, so being away never costs you a node you were never given the chance to defend. Adding a region must never require engine edits, and neither does tuning this.",
+  "_doc": "Campaign shell (M5): one region strip \u2014 nodes unlock in order, each is an encounter from enemies.json; winning holds the node, granting income per real-world day (timestamp-computed) and notoriety. Notoriety crossing threatGen2At announces Threat Generation 2 and unlocks nodes gated with 'threatGen': 2. rescueEncounter = the themed battle used for every rescue raid (v0.1 has one template). Adding regions/nodes must never require engine edits. unlocksFauna: species ids added to the Mail-Order catalog when the node is held. Region contestation (\u00a73.9 'coalition counter-offensives can contest held regions'): once the threat generation named in `contestation.startsAtGen` is reached, the coalition periodically comes BACK for a node you already hold. The schedule is a timestamp (nextContestAt), never a per-tick dice roll, so how often you open the app cannot change how often you are attacked; and the defence window starts the moment you SEE the contest, so being away never costs you a node you were never given the chance to defend. Adding a region must never require engine edits, and neither does tuning this.",
   "threatGen2At": 60,
   "rescueEncounter": "rescue_impound",
   "regions": [
@@ -86,15 +86,15 @@
     }
   ],
   "contestation": {
-    "_doc": "startsAtGen/minHeld gate the whole system so early play is untouched. cooldownHours is the gap between counter-offensives, lengthened by cooldownPerDefenceHours for every successful defence of that node — they learn. windowHours is how long you have once you see it. The defence reuses the node's OWN encounter at `escalation` above its authored strength, growing by escalationPerDefence every time you hold the place: a continuous dial rather than a tier step, because the authored tier ladder is deliberately lumpy (a tier is a band of CONTENT) and +1 tier on an already-top-tier boss is a wall while +1 on a mid encounter is a shrug. A new region therefore costs zero new encounter data, and the ramp is endless and self-paced. rewardScale multiplies the node encounter's reward; holding the line also impounds one of the attacking units, because a conquest reward has to expand what you can CREATE (Law 2) and enemy tech is how this one does. Measured against the balance harness's yardstick team of three at prismatic: a first defence runs 100/98/88/12/42% across the five Greenfield nodes against 100/100/93/30/55% for the original assault.",
+    "_doc": "startsAtGen/minHeld gate the whole system so early play is untouched. cooldownHours is the gap between counter-offensives, lengthened by cooldownPerDefenceHours for every successful defence of that node \u2014 they learn. windowHours is how long you have once you see it. The defence reuses the node's OWN encounter at `escalation` above its authored strength, growing by escalationPerDefence every time you hold the place: a continuous dial rather than a tier step, because the authored tier ladder is deliberately lumpy (a tier is a band of CONTENT) and +1 tier on an already-top-tier boss is a wall while +1 on a mid encounter is a shrug. A new region therefore costs zero new encounter data, and the ramp is endless and self-paced. rewardScale multiplies the node encounter's reward; holding the line also impounds one of the attacking units, because a conquest reward has to expand what you can CREATE (Law 2) and enemy tech is how this one does. Measured against the balance harness's yardstick team of three at prismatic: a first defence runs 100/98/88/12/42% across the five Greenfield nodes against 100/100/93/30/55% for the original assault.",
     "startsAtGen": 2,
     "minHeld": 2,
     "maxConcurrent": 1,
-    "firstDelayHours": 6,
-    "cooldownHours": 20,
-    "cooldownPerDefenceHours": 7,
+    "firstDelayHours": 4.5,
+    "cooldownHours": 15.0,
+    "cooldownPerDefenceHours": 5.25,
     "jitter": 0.25,
-    "windowHours": 18,
+    "windowHours": 13.5,
     "escalation": 0.1,
     "escalationPerDefence": 0.1,
     "rewardScale": 1.6,

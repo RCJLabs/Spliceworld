@@ -126,7 +126,7 @@ export function settleRemainingMs(chimera, now) {
 }
 
 // Training (M7 obedience UX): bond is earned, not assigned (§3.5).
-export const TRAINING = { cost: 5, bondGain: 8, cooldownHours: 20 };
+export const TRAINING = { cost: 5, bondGain: 8, cooldownHours: 15 };
 
 export function trainChimera(state, chimeraId, now, content) {
   const chimera = state.chimeras.find((c) => c.id === chimeraId);

@@ -1,5 +1,76 @@
 # PROGRESS
 
+## Session 37 — R24: mutation traits, and every timer cut by a quarter ✅
+
+**Acceptance criterion:** two equally-starred parents can produce visibly
+different offspring, and the difference shows in a fight — **passes**: on a
+contested matchup the twelve genes range from **−8pp to +24pp**.
+
+### Every real-world clock is 25% shorter
+
+Applied across the board, data and the code defaults that mirror it: care and
+training cooldowns 20h → 15h, settling 30min → 22.5min, incubation (goat
+30 → 22min), the seven jobs and their cooldowns, chaos gestation, rehab
+programmes, contest windows 18h → 13.5h, the rescue window 12–24h → 9–18h,
+heat half-life, infirmary. One `facility.json` block hid its hours under
+`tracks[].tuning` and was missed by the first pass — caught by checking the
+output rather than trusting the script.
+
+The smoke banner moved on its own as a result: `care 97 → 99` and grades
+`standard/prime → standard/apex`, because more care now fits the same window
+and better condition means a better extraction. The cut is doing what it was
+asked to.
+
+### The gene pool
+
+The allele machinery has been generic since M6 — dominant/recessive, Mendel
+inheritance, extraction stamping tokens by slot — and **exactly one trait
+used it**. Twelve now, each with a real trade-off:
+
+| | |
+|---|---|
+| circulating (7) | Dense Bones, Hollow Bones, Deep Lungs, Thick Hide, Hyperthyroid, Second Wind, Glass Jaw |
+| mutation-only (5) | Venom Gland, Barbed Skin, Keen Eye, Clotting Factor, Pack Instinct |
+
+Two things were quietly wrong underneath, and neither was in the phase's
+description:
+
+- **Traits could only arrive by mutation.** Mail-order stock is gene-plain,
+  so with twelve genes each would surface about once in two hundred eggs and
+  the Splice-Dex would read `???` forever. `wildChance` puts seven into
+  ordinary stock: you can find a carrier, pair carriers, and breed a
+  recessive up — which is the Mendel machinery finally being worth having.
+  Measured at 36–59 carriers per 400 head.
+- **The harness never loaded `traits.json`.** `tools/sim.js` has been blind
+  to genes for four sessions, so every measurement would have quietly
+  compared a build against itself. Smoke now asserts the harness loads the
+  same gene pool the game does.
+
+`moveKeywords` lets a gene change what a part *does* — a Venom Gland that
+actually envenoms is a different creature from +3 Armor with a different
+name. Merged **under** the part's own keywords, so a gene never overwrites
+what a part already did.
+
+### One gene was a trap, and the fix was R23's lesson again
+`Clotting Factor` rode a `regen` keyword onto an organ move and measured
+**−26pp** on a contested fight — negative in every matchup tested. Two
+re-prices changed nothing, because the keyword was pressed once per fight
+either way; the cost was the turn, not the number. A gene that is a trap
+everywhere is not a trade-off, so it pays in durability instead: **−26pp →
++24pp**.
+
+### Known issues
+- `Hollow Bones` sits at −8pp on the one contested bench used here. It is a
+  speed-for-HP trade and should win elsewhere, but that is asserted nowhere.
+- Trait effects are still measured one gene at a time; nothing checks a
+  *combination*, and stacking two on one chimera is legal.
+- No save-schema change — `genotype` already existed and gains only entries.
+  `SAVE_VERSION` stays **23**.
+
+### Next session — first task
+R26 (a second region) is the largest remaining content gap; R25, R27 and R29
+are the rest of the queue.
+
 ## Session 36 — R23: active hides and organs ✅
 
 **Acceptance criterion:** a hide and an organ each change how a fight is
