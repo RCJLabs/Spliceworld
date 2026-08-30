@@ -1,5 +1,37 @@
 # PROGRESS
 
+## Session 19b — Colour tokens and five schemes 🎨 (awaiting a pick)
+
+Every colour in the game is now a semantic token. 83 hardcoded hexes had crept
+into `style.css` over eighteen sessions; they are all gone, replaced by a
+palette of surfaces (ink / panel / panel-2 / well), roles (danger / warn / hp /
+sta) and the three class colours. `--goo` and `--zap` survive as aliases so 200
+existing rules did not need rewriting.
+
+**A scheme is one block of variables.** Five ship in `style.css`:
+
+| id | character |
+|---|---|
+| `lab` | today's palette — indigo, acid green, violet |
+| `biohazard` | charcoal, toxic lime, hazard amber |
+| `vivarium` | sea-navy, aqua, hot magenta |
+| `blueprint` | slate, cyan, warm cream on ochre |
+| `saturday` | warm plum, tangerine, mint |
+
+`main.js` applies `settings.theme` on boot; `?theme=` previews any of them
+without touching a save. **Nothing has been adopted as the default yet** — the
+comparison went out as an artifact for Evan to pick from.
+
+One rule the schemes are built around: the **class colours stay
+distinguishable in every one**. Ground/Water/Air is a mechanic, so it never
+collapses into a scheme's accent. That is also the argument against keeping
+`lab`: its violet is both the brand's second colour *and* the Air class.
+
+### Next session's first task
+Adopt whichever scheme Evan picks (a one-line default), then the remaining
+backlog: rehabilitation of captured chimeras, region contestation, the
+monologue pass.
+
 ## Session 19 — The arena is one screen ✅
 
 The complaint was that a fight was a scrolling column of panels, not a fight.

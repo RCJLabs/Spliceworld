@@ -61,6 +61,16 @@ const SCREENS = {
   dex: (root) => renderDexScreen(root, ctx),
 };
 
+// Colour scheme. `settings.theme` picks one of the blocks in style.css;
+// ?theme= overrides it for previews without touching the save.
+const THEMES = ['lab', 'biohazard', 'vivarium', 'blueprint', 'saturday'];
+function applyTheme() {
+  const override = new URLSearchParams(location.search).get('theme');
+  const name = override ?? state.settings?.theme ?? 'lab';
+  if (name === 'lab' || !THEMES.includes(name)) delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = name;
+}
+
 function showScreen(name) {
   if (!SCREENS[name]) name = 'ranch';
   // The single-screen battle layout locks the shell; leaving it unlocks.
@@ -104,6 +114,7 @@ async function boot() {
   }
 
   state = loadSave();
+  applyTheme();
   ensureRanchSeeded(state, content, NOW());
   ensureDexVariants(state, content);
   applyElapsed(state, content, NOW());
