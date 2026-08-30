@@ -1,7 +1,7 @@
 {
-  "_doc": "Rival geneticists (ROADMAP §3.8). requiresNodes gates each rival on the conquest that puts their COUNTER-class anatomy in your reach — you are never asked to beat Air before wings exist for you too; requiresRivals chains the ladder. Rivals field CHIMERAS, not human units: campaign/rivals.js builds each rival's team from real parts and runs it through the same physiology the player uses (splice/physiology.js), so a rival's stats, tags and elemental class are earned by anatomy exactly like yours. classBias picks the anatomy they commit to; the ladder is ordered so each rival counters the class you just farmed off the last one (Ground → Air → Water → back to Ground), which is what makes keeping a stable better than perfecting one build. Beating a rival puts their chimeras in Containment; salvaging one yields THEIR parts — the roadmap's 'enemy tech is otherwise unobtainable', except here it is other people's genetics. Rivals iterate: every defeat raises their grade ladder and power, and counterBias lets them answer whatever class you field most. monologue follows the §3.8 schema and is now PROSE rather than placeholder barks. Slots: intro/midFight/defeat/victory fire inside the duel, interleaved with the player's own lines from philosophies.json so a rival fight is a conversation rather than a wall of one-liners; dissectionTaunt fires in the news wire when they take one of your chimeras and dissectionDone when the rescue window closes on it; defection fires when you REHABILITATE one of their specimens onto your roster; rematch fires when they iterate after a defeat. Templates take {creature} and {name}. Adding a slot means adding a key here and a caller — never an engine change. Balance pass: rivals were tuned against a lone chimera and folded against the team of three the game actually gives you — they were the EASIEST content on the ladder. powerScale/teamSize/grades now put them at the top of it, with the class triangle deciding: bring the counter and you win ~90%, mirror ~40-65%, bring what they counter and you lose.",
+  "_doc": "Rival geneticists (ROADMAP §3.8). requiresNodes gates each rival on the conquest that puts their COUNTER-class anatomy in your reach — you are never asked to beat Air before wings exist for you too; requiresRivals chains the ladder. Rivals field CHIMERAS, not human units: campaign/rivals.js builds each rival's team from real parts and runs it through the same physiology the player uses (splice/physiology.js), so a rival's stats, tags and elemental class are earned by anatomy exactly like yours. classBias picks the anatomy they commit to; the ladder is ordered so each rival counters the class you just farmed off the last one (Ground → Air → Water → back to Ground), which is what makes keeping a stable better than perfecting one build. Beating a rival puts their chimeras in Containment; salvaging one yields THEIR parts — the roadmap's 'enemy tech is otherwise unobtainable', except here it is other people's genetics. Rivals iterate on THEIR OWN OBSERVATIONS (R27): every duel writes into that rival's scouting file — the classes you brought, the move tags you leaned on, the parts you kept using — and nothing else feeds it. Every defeat raises their grade ladder and power AND advances their counter tier, so a rival you have beaten twice fields anatomy chosen to blunt the stable that beat them. counterBias only decides whether they react from the FIRST rematch or wait for the second. monologue follows the §3.8 schema and is now PROSE rather than placeholder barks. Slots: intro/midFight/defeat/victory fire inside the duel, interleaved with the player's own lines from philosophies.json so a rival fight is a conversation rather than a wall of one-liners; dissectionTaunt fires in the news wire when they take one of your chimeras and dissectionDone when the rescue window closes on it; defection fires when you REHABILITATE one of their specimens onto your roster; rematch fires when they iterate after a defeat. Templates take {creature} and {name}. Adding a slot means adding a key here and a caller — never an engine change. Balance pass: rivals were tuned against a lone chimera and folded against the team of three the game actually gives you — they were the EASIEST content on the ladder. powerScale/teamSize/grades now put them at the top of it, with the class triangle deciding: bring the counter and you win ~90%, mirror ~40-65%, bring what they counter and you lose.",
   "rematch": {
-    "powerPerDefeat": 0.09,
+    "powerPerDefeat": 0.05,
     "powerCap": 2.8,
     "gradeLadder": [
       "standard",
@@ -10,7 +10,62 @@
       "prismatic"
     ],
     "teamGrowthEvery": 2,
-    "teamCap": 3
+    "teamCap": 3,
+    "_doc": "Escalation and scouting (R27). A rival's ladder is driven by `defeats` — how many times YOU have beaten THEM — and by their own scouting file, which records what you actually fielded against them and nothing else. That is the difference from the AI director: the director watches your whole stable continuously from banked usage data, a rival only ever sees what walked into their lab. Tiers: 0 = the build they publish; 1 = they answer your class with one specimen (only rivals with counterBias react this early); 2 = the class counter moves to their LEAD and they pick anatomy that blunts your most-used move tag; 3 = they field one of your own signature parts back at you. `counters` is the anatomy table, keyed on the move tag you lean on: seek/avoid are part tags, and the reasons are the real chart in keywords.json — Ground misses Airborne outright, Electric doubles on Aquatic, Sonic ignores Armor so armour spent against it is wasted, Gas is x1.5 on Organic and every chimera is Organic, so the only answer to it is to be harder to kill.",
+    "classCounterTier": 1,
+    "anatomyCounterTier": 2,
+    "mirrorTier": 3,
+    "tierAtDefeats": [
+      0,
+      1,
+      2,
+      2,
+      3
+    ],
+    "minFightsToCounter": 1,
+    "counters": [
+      {
+        "when": "Ground",
+        "seek": [
+          "Airborne"
+        ],
+        "avoid": [],
+        "intel": "Airborne stock — your Ground-tagged moves will swing through empty air."
+      },
+      {
+        "when": "Electric",
+        "seek": [],
+        "avoid": [
+          "Aquatic"
+        ],
+        "intel": "Nothing wet in the tank this time — they have stopped handing you double damage."
+      },
+      {
+        "when": "Sonic",
+        "seek": [],
+        "avoid": [
+          "Armored"
+        ],
+        "intel": "They have stripped the plating. Sonic ignores armour, so armour against you was money wasted."
+      },
+      {
+        "when": "Gas",
+        "seek": [
+          "Armored"
+        ],
+        "avoid": [],
+        "intel": "Plated up. They cannot stop breathing, so they have decided to be harder to finish instead."
+      },
+      {
+        "when": "Venomous",
+        "seek": [
+          "Armored"
+        ],
+        "avoid": [],
+        "intel": "Plated up, and taking the stacks on the chin."
+      }
+    ],
+    "gradeStepEvery": 3
   },
   "rivals": [
     {

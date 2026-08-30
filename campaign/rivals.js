@@ -11,7 +11,7 @@
 
 import { rngStream, pick } from '../util/rng.js';
 import { unitFromGenome } from '../battle/engine.js';
-import { directorProfile } from './director.js';
+import { analyze } from '../splice/physiology.js';
 import { rivalLine } from './monologue.js';
 
 // Slots a rival will try to fill, in the order they commit to them. Head
@@ -52,15 +52,56 @@ export function rivalStatus(state, content) {
   });
 }
 
-// The player's dominant class, from what they actually field. Rivals with
-// counterBias build the class that beats it — the first real use of the
-// director stats we have been recording since M0.
-export function playerFavoredClass(state, content) {
-  // Delegates to the director so there is exactly one answer to "what class
-  // is this player" — and so it counts CREATURES, not part affinities.
-  // Ground affinity sits on ~32 parts against Air's 4, so a part-count read
-  // says "Ground" about almost any stable, and diversifying buys nothing.
-  return directorProfile(state, content).favoredClass;
+// --- Scouting (R27) ------------------------------------------------------
+//
+// A rival used to counter you by asking the AI director what class you
+// favoured. That is the wrong source: the director watches your WHOLE
+// stable, continuously, from usage banked since M0 — it is the world
+// noticing you. A rival is one person in one building who has only ever
+// seen what walked through their door.
+//
+// So each rival keeps their own file, written only by duels against them.
+// Two rivals who have fought you at different times hold different reads,
+// which is the point: their counters are personal, not a shared broadcast.
+
+const bump = (bag, key, n = 1) => { if (key) bag[key] = (bag[key] ?? 0) + n; };
+const topOf = (bag) => {
+  const rows = Object.entries(bag ?? {}).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  return rows.length ? rows[0][0] : null;
+};
+
+export function emptyFile() {
+  return { fights: 0, classes: {}, moveTags: {}, parts: {} };
+}
+
+// Record one duel. `deployed` is the chimeras the player actually brought —
+// not the stable they own, which a rival has no way of seeing.
+export function scoutStable(state, rivalId, deployed, content) {
+  state.campaign.rivals ??= {};
+  const record = (state.campaign.rivals[rivalId] ??= { defeats: 0, losses: 0, lastMetAt: null });
+  const file = (record.scouted ??= emptyFile());
+  file.fights += 1;
+  for (const chimera of deployed ?? []) {
+    const tokens = Object.values(chimera.tokens ?? {});
+    if (!tokens.length) continue;
+    const report = analyze(chimera.frame, tokens, content, tokens.length);
+    bump(file.classes, report.creatureClass);
+    for (const token of tokens) {
+      bump(file.parts, token.partId);
+      for (const tag of content.parts[token.partId]?.move?.tags ?? []) bump(file.moveTags, tag);
+    }
+  }
+  return file;
+}
+
+// How far along a rival's counter ladder they are, from how many times you
+// have beaten them. Everyone reaches the anatomy tier by the second defeat;
+// `counterBias` only decides whether they react from the first.
+export function counterTier(rival, meta, defeats) {
+  const ladder = meta.tierAtDefeats ?? [0, 1, 2, 2, 3];
+  let tier = ladder[Math.min(defeats, ladder.length - 1)];
+  if (tier === (meta.classCounterTier ?? 1) && !rival.counterBias) tier = 0;
+  return tier;
 }
 
 function counterClassOf(target, content) {
@@ -68,12 +109,66 @@ function counterClassOf(target, content) {
   return Object.values(content.classes).find((c) => c.beats === target)?.id ?? null;
 }
 
+// Everything a rival has worked out about you, and what they intend to do
+// about it. Pure — the briefing screen and the team builder read the same
+// answer, so what the player is warned about is what they actually face.
+export function rivalDossier(state, rival, content) {
+  const meta = content.rivalMeta;
+  const record = rivalRecord(state, rival.id);
+  const file = record.scouted ?? emptyFile();
+  const tier = counterTier(rival, meta, record.defeats);
+  const enough = file.fights >= (meta.minFightsToCounter ?? 1);
+
+  const topClass = topOf(file.classes);
+  const topTag = topOf(file.moveTags);
+  const counterClass = tier >= (meta.classCounterTier ?? 1) && enough
+    ? counterClassOf(topClass, content)
+    : null;
+  const rule = tier >= (meta.anatomyCounterTier ?? 2) && enough
+    ? (meta.counters ?? []).find((c) => c.when === topTag) ?? null
+    : null;
+  const mirror = tier >= (meta.mirrorTier ?? 3) && enough ? topOf(file.parts) : null;
+
+  return {
+    tier,
+    fights: file.fights,
+    topClass,
+    topTag,
+    counterClass,
+    seek: rule?.seek ?? [],
+    avoid: rule?.avoid ?? [],
+    mirror,
+    intel: rule?.intel ?? null,
+    // Whether the LEAD specimen is the one built for you rather than the one
+    // flying their flag. This is about the TIER, not about whether a class
+    // counter exists: an unclassed stable gives them nothing to answer on
+    // the triangle, but they can still lead with anatomy that blunts your
+    // kit — and if the answer went to the second specimen instead, a rival
+    // would quietly stop reacting to exactly the builds that are hardest to
+    // read.
+    counterLeads: tier >= (meta.anatomyCounterTier ?? 2),
+  };
+}
+
+// Kept for callers that only want the headline. Reads the rival's own file
+// rather than the director, which is the whole change.
+export function playerFavoredClass(state, content, rivalId) {
+  const record = rivalRecord(state, rivalId);
+  return topOf(record.scouted?.classes ?? {});
+}
+
 // Grade ladder: a rival who keeps losing keeps upgrading.
 function gradeFor(rival, meta, defeats, index, rng) {
   const base = rival.grades[Math.min(index, rival.grades.length - 1)];
   const ladder = meta.gradeLadder;
   const at = ladder.indexOf(base);
-  const stepped = Math.min(ladder.length - 1, at + Math.floor(defeats / 2));
+  // Grade steps every third defeat, not every second (R27). Stacked on the
+  // power ramp AND the counter tier, a step at two turned the first real
+  // rematch into a wall: the anatomy that cleared a rival at 92-100% cleared
+  // the same rival at 0-8% two defeats later, which is not a ladder, it is
+  // a door. The escalation now leaves room for the COUNTER to be the thing
+  // that makes a rematch hard.
+  const stepped = Math.min(ladder.length - 1, at + Math.floor(defeats / (meta.gradeStepEvery ?? 3)));
   // A little spread so a team isn't uniform — but never below its base.
   return rng() < 0.75 ? ladder[stepped] : ladder[Math.max(at, stepped - 1)];
 }
@@ -83,7 +178,7 @@ function gradeFor(rival, meta, defeats, index, rng) {
 // with no acceptable candidate is left EMPTY on purpose — that is how an
 // Air specialist ends up with no hind legs, and physiology charges them
 // for it exactly as it would charge the player.
-function chooseParts(rival, targetClass, content, rng) {
+function chooseParts(rival, targetClass, content, rng, dossier = null) {
   const byId = Object.values(content.parts).filter((p) => p.species !== 'salvage');
   // A rival's philosophy usually supplies the anatomy they want. When it
   // cannot — an aviarist ordered to field Water has no gills in the house —
@@ -117,9 +212,41 @@ function chooseParts(rival, targetClass, content, rng) {
     if (!pool && offClass.length && classVotes >= 2) pool = offClass;
     if (!pool || !pool.length) continue;
 
+    // The anatomy counter (R27). A rival at tier 2 has read which tag you
+    // actually swing and picks limbs that blunt it: Airborne against a
+    // Ground kit, nothing wet against Electric, nothing plated against
+    // Sonic. Applied as a PREFERENCE inside the slot's existing pool, so a
+    // rival never abandons their own philosophy to chase you — they are
+    // still an aviarist, they are just an aviarist who has met you.
+    if (dossier) {
+      const wanted = pool.filter((p) => {
+        const tags = p.tags ?? [];
+        if (dossier.avoid.some((t) => tags.includes(t))) return false;
+        if (dossier.seek.length) return dossier.seek.some((t) => tags.includes(t));
+        return true;
+      });
+      if (wanted.length) pool = wanted;
+      else if (dossier.avoid.length) {
+        // Nothing in this slot seeks what they want, but they can still
+        // decline what hurts.
+        const safe = pool.filter((p) => !dossier.avoid.some((t) => (p.tags ?? []).includes(t)));
+        if (safe.length) pool = safe;
+      }
+    }
+
     const part = pick(rng, pool);
     if (part.classAffinity === targetClass) classVotes += 1;
     tokens.push(part);
+  }
+
+  // The mirror (tier 3): one of your own signature parts, fielded back at
+  // you. It replaces whatever they had in that socket — a lab that has lost
+  // to the same head four times will simply take the head.
+  if (dossier?.mirror && content.parts[dossier.mirror]) {
+    const mine = content.parts[dossier.mirror];
+    const at = tokens.findIndex((t) => t.slot === mine.slot);
+    if (at >= 0) tokens[at] = mine;
+    else tokens.push(mine);
   }
   return tokens;
 }
@@ -141,7 +268,8 @@ export function rivalTeam(state, rival, content) {
   const record = rivalRecord(state, rival.id);
   const rng = rngStream(state.seed, `rival:${rival.id}`, record.defeats);
 
-  const counter = rival.counterBias ? counterClassOf(playerFavoredClass(state, content), content) : null;
+  const dossier = rivalDossier(state, rival, content);
+  const counter = dossier.counterClass;
   const powerScale = Math.min(
     meta.powerCap,
     rival.powerScale * (1 + record.defeats * meta.powerPerDefeat)
@@ -154,11 +282,16 @@ export function rivalTeam(state, rival, content) {
   const team = [];
   const names = new Set();
   for (let i = 0; i < size; i++) {
-    // The lead specimen always flies the rival's flag; a counter-biased
-    // rival answers your stable with its second.
-    const targetClass = i === 1 && counter ? counter : rival.classBias;
+    // Tier 1: the lead still flies their flag and the SECOND specimen
+    // answers you. Tier 2 and up: the counter moves to the lead, because a
+    // lab that has lost to you twice has stopped treating you as a variable
+    // and started treating you as the problem.
+    const counterSlot = dossier.counterLeads ? 0 : 1;
+    const targetClass = counter && i === counterSlot ? counter : rival.classBias;
     const frame = rival.frames[Math.min(i, rival.frames.length - 1)];
-    const parts = chooseParts(rival, targetClass, content, rng);
+    // Only the specimen built to answer you carries the anatomy counter;
+    // the rest of the lab is still the lab.
+    const parts = chooseParts(rival, targetClass, content, rng, i === counterSlot ? dossier : null);
     const tokens = parts.map((part, n) => ({
       id: `${rival.id}-${i}-${n}`,
       partId: part.id,
@@ -181,12 +314,12 @@ export function rivalTeam(state, rival, content) {
       )
     );
   }
-  return { team, powerScale, counterClass: counter };
+  return { team, powerScale, counterClass: counter, dossier };
 }
 
 // A full encounter in the enemies.json shape, with the units inline.
 export function rivalEncounter(state, rival, content) {
-  const { team, powerScale, counterClass } = rivalTeam(state, rival, content);
+  const { team, powerScale, counterClass, dossier } = rivalTeam(state, rival, content);
   const record = rivalRecord(state, rival.id);
   const rematch = record.defeats > 0;
   return {
@@ -199,6 +332,7 @@ export function rivalEncounter(state, rival, content) {
     barks: rival.monologue,
     powerScale,
     counterClass,
+    dossier,
   };
 }
 

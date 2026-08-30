@@ -6,7 +6,7 @@
 import { rngStream, pick, randInt } from '../util/rng.js';
 import { GRADES } from '../splice/extract.js';
 import { finishBattle } from '../battle/engine.js';
-import { recordRivalResult } from './rivals.js';
+import { recordRivalResult, scoutStable } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';
 import { tickContests, resolveContest, isContested } from './contest.js';
@@ -200,6 +200,15 @@ export function resolveBattle(state, battle, content, now) {
 
   // Rival duels: the lab keeps score, and the loser iterates.
   if (context.kind === 'rival' && context.rivalId) {
+    // They saw what you brought — and only what you brought (R27). A rival
+    // is one person in one building, not the AI director; their file is
+    // written by the duels they were actually present for, including the
+    // ones they won, because losing to a stable is the best possible reason
+    // to study it.
+    const deployed = battle.player.team
+      .map((c) => state.chimeras.find((ch) => ch.id === c.refId))
+      .filter(Boolean);
+    scoutStable(state, context.rivalId, deployed, content);
     const line = recordRivalResult(state, context.rivalId, result.outcome, content);
     if (result.outcome !== 'fled') pushNews(state, line);
     detail.rival = content.rivals[context.rivalId]?.name ?? null;

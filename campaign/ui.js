@@ -126,6 +126,43 @@ export function renderWarRoomScreen(root, ctx) {
   else renderMap(root, ctx);
 }
 
+// What a rival has worked out about you (R27), in their words rather than a
+// stat block. The player is warned BEFORE committing a team, because a
+// counter you cannot see coming is a coin flip rather than a decision — and
+// this is the same dossier object the team builder used, so what is on the
+// card is what is on the field.
+function rivalFile(dossier, content) {
+  if (!dossier || !dossier.fights) return '';
+  if (!dossier.tier) {
+    return `<p class="fine-print rival-file">🗂 ${dossier.fights} duel${
+      dossier.fights === 1 ? '' : 's'
+    } on file. They have not changed anything yet.</p>`;
+  }
+  // Written as sentences rather than a stat block: what they know, then
+  // what they have done about it.
+  const read = [];
+  if (dossier.topClass) {
+    const cls = content.classes[dossier.topClass];
+    read.push(`filed under ${cls.icon} ${cls.name}`);
+  }
+  if (dossier.topTag) read.push(`swinging ${dossier.topTag}`);
+
+  const done = [];
+  if (dossier.counterClass) {
+    const cls = content.classes[dossier.counterClass];
+    done.push(`${dossier.counterLeads ? 'Leading with' : 'Answering with'} ${cls.icon} ${cls.name}.`);
+  }
+  // The intel lines are authored as whole sentences already.
+  if (dossier.intel) done.push(dossier.intel);
+  if (dossier.mirror) {
+    done.push(`They are fielding your own ${content.parts[dossier.mirror]?.name ?? 'anatomy'} back at you.`);
+  }
+  return `
+    <p class="fine-print rival-counter">⚠ ${dossier.fights} duel${dossier.fights === 1 ? '' : 's'} on file${
+      read.length ? `, ${read.join(', ')}` : ''
+    }. ${done.length ? done.join(' ') : 'They are iterating.'}</p>`;
+}
+
 // --- The map ------------------------------------------------------------
 
 function renderMap(root, ctx) {
@@ -240,9 +277,7 @@ function renderMap(root, ctx) {
           <p class="rival-quote">&ldquo;${rival.philosophy}&rdquo;</p>
           ${record.defeats || record.losses ? `<p class="fine-print">Record: ${record.defeats}W–${record.losses}L against you${record.defeats ? ` · iterated ${record.defeats}× since` : ''}</p>` : ''}
           ${roster ? `<p class="fine-print">${roster}</p>` : ''}
-          ${preview?.counterClass && preview.counterClass !== rival.classBias
-            ? `<p class="fine-print rival-counter">⚠ They have read your stable and added ${content.classes[preview.counterClass].icon} ${content.classes[preview.counterClass].name}.</p>`
-            : ''}
+          ${rivalFile(preview?.dossier, content)}
           ${
             locked
               ? `<span class="locked-tag">${need.join(' · ')}</span>`
