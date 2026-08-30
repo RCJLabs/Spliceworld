@@ -52,6 +52,7 @@ const content = indexContent({
   facility: readJSON('data/facility.json'),
   philosophies: readJSON('data/philosophies.json'),
   operations: readJSON('data/operations.json'),
+  chaos: readJSON('data/chaos.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -2911,6 +2912,327 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     const jobPrices = [...jobSpecies].map((sp) => content.species[sp].mailOrderPrice);
     const best = Math.max(...Object.values(content.species).filter((sp) => sp.mailOrderPrice && !sp.variantOf).map((sp) => sp.mailOrderPrice));
     assert.ok(Math.max(...jobPrices) < best * 0.7, `no job reaches the top of the catalog (best stolen $${Math.max(...jobPrices)} vs $${best})`);
+  }
+}
+
+// --- Chaos-breeding: two finished chimeras into a vat, one genome out
+// --- that neither of them was. Ranch breeding pairs two ANIMALS of one
+// --- species and produces a predictable hybrid; this is the other thing,
+// --- and the problem it has to solve is economic rather than genetic.
+{
+  const {
+    chaosTuning, vatPlan, startVat, cancelVat, tickVat, activeVat,
+    isExhausted, gradeStepsOf, vatRemainingMs,
+  } = await import('../splice/chaos.js');
+  const ct = chaosTuning(content);
+
+  const vatLab = (seed, grade = 'prime') => {
+    const s = { ...newGameState(), seed, funds: 9999 };
+    s.facility = { theater: 2, containment: 1 };
+    s.dex.parts = Object.keys(content.parts).filter((p) => content.parts[p].species !== 'salvage');
+    const mk = (frame, partIds) => {
+      const slots = {};
+      for (const partId of partIds) {
+        const id = `t${s.inventory.tokenCount++}`;
+        s.inventory.parts.push({ id, partId, grade, donor: { name: 'Bessie', species: content.parts[partId].species, stars: 5, extractedAt: 0 } });
+        slots[content.parts[partId].slot] = id;
+      }
+      const res = spliceChimera(s, frame, slots, content, t0);
+      assert.ok(res.ok, res.msg);
+      res.chimera.settleUntil = t0;
+      return res.chimera;
+    };
+    mk('M', ['goat_head', 'goat_forelimbs', 'goat_hindlimbs', 'goat_hide', 'goat_organ']);
+    mk('M', ['wolf_head', 'wolf_forelimbs', 'wolf_hindlimbs', 'wolf_hide', 'wolf_organ']);
+    return s;
+  };
+  const gradeOf = (c) => Object.values(c.tokens).map((tk) => GRADE_INDEX[tk.grade]);
+  const powerOf = (c) => {
+    const rep = analyze(c.frame, Object.values(c.tokens), content);
+    return rep.stats.hp + rep.stats.power * 3 + rep.stats.armor * 2;
+  };
+
+  // Content coherence.
+  assert.ok(content.chaosNames?.length >= 8, 'the vat has names for what it produces');
+  for (const key of ['start', 'decant', 'chaos', 'socket', 'news']) {
+    assert.ok(content.chaosLines?.[key], `the ${key} line is written`);
+  }
+  assert.ok(ct.gradeDownChance > ct.gradeUpChance, 'regression is likelier than hybrid vigour');
+
+  // Gates: two DIFFERENT, settled, rested, uninjured chimeras.
+  {
+    const s = vatLab(900);
+    const [a, b] = s.chimeras;
+    assert.ok(vatPlan(s, a.id, b.id, content, t0).ok);
+    assert.ok(!vatPlan(s, a.id, a.id, content, t0).ok, 'it needs two different ones');
+    assert.ok(!vatPlan(s, a.id, 'nope', content, t0).ok, 'and two real ones');
+    a.settleUntil = t0 + 99 * HOUR;
+    assert.ok(!vatPlan(s, a.id, b.id, content, t0).ok, 'an unsettled chimera stays out of the vat');
+    a.settleUntil = t0;
+    a.injury = { name: 'x', until: t0 + HOUR };
+    assert.ok(!vatPlan(s, a.id, b.id, content, t0).ok, 'so does an injured one');
+  }
+
+  // THE economic rule. A chimera costs vault tokens permanently and carries
+  // no upkeep, so an offspring bought with only money and time would be a
+  // duplication glitch. The price is paid in GRADES, on both parents, and
+  // it is not recoverable.
+  {
+    const s = vatLab(901, 'prismatic');
+    const [a, b] = s.chimeras;
+    const before = [...gradeOf(a), ...gradeOf(b)];
+    const plan = vatPlan(s, a.id, b.id, content, t0);
+    assert.equal(plan.gradeSteps, before.filter((g) => g > 0).length, 'the plan quotes the real cost');
+    assert.ok(plan.fee > 0 && plan.hours > 0);
+    const funds = s.funds;
+
+    assert.ok(startVat(s, a.id, b.id, content, t0).ok);
+    assert.equal(s.funds, funds - plan.fee, 'the fee is charged');
+    const after = [...gradeOf(a), ...gradeOf(b)];
+    assert.deepEqual(after, before.map((g) => Math.max(0, g - 1)), 'every part on both parents drops one grade');
+    // …but the CHILD was conceived from the parents as they were before
+    // they paid. Degrade first and the offspring inherits the damage, the
+    // operation becomes strictly destructive, and nobody would ever use
+    // the vat. This pins the ordering so a refactor cannot quietly undo it.
+    const decanted = tickVat(s, content, t0 + 999 * HOUR).child;
+    assert.ok(decanted, 'it decanted');
+    const kidGrade = gradeOf(decanted).reduce((x, y) => x + y, 0) / gradeOf(decanted).length;
+    const parentGrade = after.reduce((x, y) => x + y, 0) / after.length;
+    assert.ok(
+      kidGrade > parentGrade,
+      `the child comes out better than the parents it cost (${kidGrade.toFixed(2)} vs ${parentGrade.toFixed(2)})`
+    );
+    // And the whole exchange is still deflationary: ten grade steps in,
+    // about five out.
+    assert.ok(
+      gradeOf(decanted).length < before.length,
+      'because one creature came out of two'
+    );
+    assert.ok(isExhausted(a, t0) && isExhausted(b, t0), 'and they both need time off');
+    assert.ok(!isExhausted(a, t0 + (ct.exhaustionHours + 1) * HOUR), 'which does run out');
+
+    // Draining it does NOT give the grades back, and the message says so.
+    const later = t0 + 999 * HOUR;
+    assert.ok(startVat(s, a.id, b.id, content, later).ok, 'a second gestation, to drain');
+    const paid = [...gradeOf(a), ...gradeOf(b)];
+    const paidFunds = s.funds;
+    const drained = cancelVat(s);
+    assert.ok(drained.ok);
+    assert.equal(activeVat(s), null, 'the vat is empty again');
+    assert.deepEqual([...gradeOf(a), ...gradeOf(b)], paid, 'cancelling gives back not one grade');
+    assert.equal(s.funds, paidFunds, 'nor the fee');
+    assert.equal(s.chimeras.length, 3, 'and nothing is decanted from a drained vat');
+  }
+
+  // Standard-grade parents have nothing left to give, so the fee is what
+  // stops cheap junk being free.
+  {
+    const s = vatLab(902, 'standard');
+    const [a, b] = s.chimeras;
+    const plan = vatPlan(s, a.id, b.id, content, t0);
+    assert.equal(plan.gradeSteps, 0, 'nothing left to degrade');
+    assert.ok(plan.fee > 0, 'but it still costs money');
+  }
+
+  // The conception is sealed when the parents go in: a reload must never
+  // be able to reroll a gestation.
+  {
+    const s = vatLab(903);
+    startVat(s, s.chimeras[0].id, s.chimeras[1].id, content, t0);
+    const sealed = structuredClone(s.vat.conception);
+    const reloaded = JSON.parse(JSON.stringify(s));
+    assert.deepEqual(reloaded.vat.conception, sealed);
+    const x = tickVat(reloaded, content, t0 + 99 * HOUR).child;
+    const y = tickVat(structuredClone(s), content, t0 + 99 * HOUR).child;
+    assert.deepEqual(
+      Object.entries(x.tokens).map(([k, v]) => [k, v.partId, v.grade]),
+      Object.entries(y.tokens).map(([k, v]) => [k, v.partId, v.grade]),
+      'the same genome comes out either way'
+    );
+    assert.equal(x.frame, y.frame);
+  }
+
+  // Decanting produces a real chimera: it renders, it fights, and its
+  // parts are real vault-shaped tokens.
+  {
+    const s = vatLab(904);
+    const [a, b] = s.chimeras;
+    startVat(s, a.id, b.id, content, t0);
+    assert.equal(tickVat(s, content, t0 + 1).child, null, 'not before the clock');
+    assert.ok(activeVat(s), 'still gestating');
+    const out = tickVat(s, content, t0 + 99 * HOUR);
+    const child = out.child;
+    assert.ok(child, 'something is decanted');
+    assert.equal(activeVat(s), null, 'and the vat is free');
+    assert.ok(s.chimeras.includes(child), 'it joins the roster');
+    assert.ok(out.news.length, 'and it makes the wire');
+    assert.ok(Object.keys(child.tokens).length >= 2);
+    for (const [socketId, token] of Object.entries(child.tokens)) {
+      assert.ok(content.parts[token.partId], 'a real part');
+      assert.equal(content.parts[token.partId].slot, socketId.replace(/\d+$/, ''), 'in a socket that fits');
+      assert.ok(token.id && token.grade && token.donor, 'as a proper vault-shaped token');
+      assert.ok(s.dex.parts.includes(token.partId), 'logged in the Splice-Dex');
+    }
+    assert.equal(child.bond, 0, 'nobody has raised it yet');
+    assert.ok(child.settleUntil > t0 + 99 * HOUR, 'and it has to settle like anything else');
+    assert.ok(child.instability >= ct.extraInstability, 'it is measurably unrulier for having been assembled by nobody');
+    assert.deepEqual(child.vatBorn.parents, [a.name, b.name], 'and it remembers where it came from');
+    assert.ok(renderCreatureSVG(chimeraGenome(child, content), content).startsWith('<svg'), 'it draws');
+    const fighter = combatantFromChimera(child, content, child.settleUntil);
+    assert.ok(fighter.hp > 0 && fighter.moves.length, 'and it fights');
+  }
+
+  // ACCEPTANCE, part 1: a line DECAYS. This is what stops the vat being a
+  // duplication economy — breed your best repeatedly and you get more
+  // chimeras, each one worse, until you cross fresh stock back in.
+  {
+    const s = vatLab(905, 'prismatic');
+    let now = t0;
+    const founders = s.chimeras.map(powerOf);
+    const gen0 = Math.max(...founders);
+    let last = null;
+    for (let gen = 0; gen < 5; gen++) {
+      const rested = s.chimeras
+        .filter((c) => now >= (c.exhaustedUntil ?? 0) && now >= c.settleUntil)
+        .sort((x, y) => powerOf(y) - powerOf(x));
+      if (rested.length < 2) break;
+      const plan = vatPlan(s, rested[0].id, rested[1].id, content, now);
+      if (!plan.ok) break;
+      startVat(s, rested[0].id, rested[1].id, content, now);
+      now += plan.hours * HOUR + 1000;
+      last = tickVat(s, content, now).child;
+      now += (ct.exhaustionHours + 1) * HOUR;
+      for (const c of s.chimeras) c.settleUntil = Math.min(c.settleUntil, now);
+    }
+    assert.ok(last, 'five generations ran');
+    assert.ok(powerOf(last) < gen0, `the line is weaker than its founders (${Math.round(powerOf(last))} vs ${Math.round(gen0)})`);
+    const roster = s.chimeras.flatMap(gradeOf);
+    assert.ok(
+      roster.reduce((x, y) => x + y, 0) / roster.length < GRADE_INDEX.prismatic,
+      'and the whole roster has slid down the grade ladder'
+    );
+  }
+
+  // ACCEPTANCE, part 2: the vat does not read your permits, and it is a
+  // lottery rather than a downgrade machine. Measured over many seeds
+  // because any single gestation proves nothing.
+  {
+    let beat = 0, chaos = 0, newSocket = 0, newFrame = 0, runs = 0;
+    for (let seed = 0; seed < 200; seed++) {
+      const s = vatLab(3000 + seed);
+      const [a, b] = s.chimeras;
+      const best = Math.max(powerOf(a), powerOf(b));
+      const sockets = new Set([...Object.keys(a.tokens), ...Object.keys(b.tokens)]);
+      if (!startVat(s, a.id, b.id, content, t0).ok) continue;
+      const child = tickVat(s, content, t0 + 99 * HOUR).child;
+      if (!child) continue;
+      runs++;
+      if (powerOf(child) > best) beat++;
+      if (child.vatBorn.chaosParts.length) chaos++;
+      if (Object.keys(child.tokens).some((k) => !sockets.has(k))) newSocket++;
+      if (child.frame !== a.frame && child.frame !== b.frame) newFrame++;
+    }
+    assert.ok(runs > 150, 'the sample ran');
+    // A lottery: usually a sidegrade tilted down, sometimes a winner.
+    assert.ok(beat / runs > 0.03, `a child can beat its best parent (${Math.round((beat / runs) * 100)}%)`);
+    assert.ok(beat / runs < 0.4, `but usually does not (${Math.round((beat / runs) * 100)}%)`);
+    assert.ok(chaos / runs > 0.2, `chaos parts turn up often enough to matter (${Math.round((chaos / runs) * 100)}%)`);
+    // The clause that makes this more than recombination. It measured ZERO
+    // before extraSocketChance existed, because the union of two
+    // five-socket parents is, inevitably, five sockets.
+    assert.ok(
+      newSocket / runs > 0.05,
+      `the vat can install a socket neither parent had (${Math.round((newSocket / runs) * 100)}%)`
+    );
+    assert.ok(newFrame > 0, 'and occasionally a frame neither parent used');
+  }
+
+  // Hybrid vigour is real, not just a tuning value nobody reads: a token
+  // can come out a grade ABOVE the parent it was inherited from.
+  {
+    let up = 0, down = 0, sampled = 0;
+    for (let seed = 0; seed < 200; seed++) {
+      const s = vatLab(4000 + seed);
+      const [a, b] = s.chimeras;
+      const parentGrade = {};
+      for (const [socketId, tk] of Object.entries(a.tokens)) parentGrade[socketId] = GRADE_INDEX[tk.grade];
+      for (const [socketId, tk] of Object.entries(b.tokens)) parentGrade[socketId] = GRADE_INDEX[tk.grade];
+      if (!startVat(s, a.id, b.id, content, t0).ok) continue;
+      const child = tickVat(s, content, t0 + 99 * HOUR).child;
+      if (!child) continue;
+      for (const [socketId, tk] of Object.entries(child.tokens)) {
+        if (parentGrade[socketId] == null) continue; // a socket the vat added
+        sampled++;
+        if (GRADE_INDEX[tk.grade] > parentGrade[socketId]) up++;
+        if (GRADE_INDEX[tk.grade] < parentGrade[socketId]) down++;
+      }
+    }
+    assert.ok(sampled > 500, 'the sample ran');
+    assert.ok(up > 0, 'a part can come out better than the parent it came from');
+    assert.ok(down > up, `but regression is the commoner way (${down} down vs ${up} up)`);
+  }
+
+  // A socket only ONE parent filled does not always carry over — this is
+  // where a child comes out simpler than either parent, and it is the
+  // honest half of "chaos". Needs asymmetric parents to test at all: two
+  // five-socket builds share every socket, so the rule never runs.
+  {
+    let kept = 0, dropped = 0;
+    for (let seed = 0; seed < 200; seed++) {
+      const s = { ...newGameState(), seed: 6000 + seed, funds: 9999 };
+      s.facility = { theater: 2, containment: 1 };
+      s.dex.parts = Object.keys(content.parts).filter((p) => content.parts[p].species !== 'salvage');
+      const mk = (partIds) => {
+        const slots = {};
+        for (const partId of partIds) {
+          const id = `t${s.inventory.tokenCount++}`;
+          s.inventory.parts.push({ id, partId, grade: 'prime', donor: { name: 'X', species: content.parts[partId].species, stars: 5, extractedAt: 0 } });
+          slots[content.parts[partId].slot] = id;
+        }
+        const res = spliceChimera(s, 'M', slots, content, t0);
+        res.chimera.settleUntil = t0;
+        return res.chimera;
+      };
+      // Only one of them has a tail.
+      const a = mk(['goat_head', 'goat_forelimbs', 'goat_tail']);
+      const b = mk(['wolf_head', 'wolf_forelimbs']);
+      if (!startVat(s, a.id, b.id, content, t0).ok) continue;
+      const child = tickVat(s, content, t0 + 99 * HOUR).child;
+      if (!child) continue;
+      // Ignore the rare gestation where the vat installed its own tail.
+      if (child.vatBorn.extraSockets.includes('tail')) continue;
+      if (child.tokens.tail) kept++; else dropped++;
+    }
+    assert.ok(kept > 0 && dropped > 0, `a one-parent socket sometimes carries and sometimes does not (${kept} kept, ${dropped} dropped)`);
+    assert.ok(kept > dropped, `though it usually carries (${kept} vs ${dropped})`);
+  }
+
+  // The wild card draws from the SPLICE-DEX, not from the whole roster. A
+  // vat that hands a day-one player a shark spine is not chaotic, it is
+  // broken — the chaos is only ever anatomy you have already seen.
+  {
+    const known = new Set();
+    let chaosSeen = 0;
+    for (let seed = 0; seed < 120; seed++) {
+      const s = vatLab(5000 + seed);
+      // A player who has only ever met goats and wolves.
+      s.dex.parts = Object.keys(content.parts).filter(
+        (p) => ['goat', 'wolf'].includes(content.parts[p].species)
+      );
+      for (const p of s.dex.parts) known.add(p);
+      const [a, b] = s.chimeras;
+      if (!startVat(s, a.id, b.id, content, t0).ok) continue;
+      const child = tickVat(s, content, t0 + 99 * HOUR).child;
+      if (!child) continue;
+      for (const partId of child.vatBorn.chaosParts) {
+        chaosSeen++;
+        assert.ok(known.has(partId), `the vat produced ${partId}, which this player has never seen`);
+      }
+      for (const socketId of child.vatBorn.extraSockets) {
+        assert.ok(known.has(child.tokens[socketId].partId), 'and neither did it install one');
+      }
+    }
+    assert.ok(chaosSeen > 10, `the sample actually contained wild cards (${chaosSeen})`);
   }
 }
 

@@ -1358,6 +1358,25 @@ footer {
 }
 #msg-box:has(.bark-msg) { cursor: pointer; }
 
+/* --- The Chaos Vat (chimera breeding) -----------------------------------
+   The price is permanent and paid in grades, so it gets warning colour and
+   its own line rather than sitting in the fine print with everything else. */
+
+.vat-card { border-color: var(--accent-2-dim); }
+.vat-card .pick-field { margin-top: 8px; }
+.vat-card .big-btn { margin-top: 10px; }
+.vat-card .countdown { color: var(--zap); }
+.vat-price {
+  margin: 10px 0 4px;
+  padding: 8px 10px;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--warn);
+  background: var(--warn-dim);
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+}
+
 /* --- Jobs board ----------------------------------------------------------
    Non-combat work. It sits above the map and reads in the game's "money"
    colour rather than its "war" colour, because the whole point is that

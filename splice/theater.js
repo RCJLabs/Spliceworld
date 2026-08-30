@@ -84,6 +84,7 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
     temperament: null, // seeded on settling — later milestone
     injury: null, // Infirmary timer set by battle aftermath (Law 1)
     lastTrainedAt: 0,
+    exhaustedUntil: 0, // recovery after a turn in the chaos vat
   };
   state.chimeras.push(chimera);
 

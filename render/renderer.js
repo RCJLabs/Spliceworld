@@ -65,6 +65,9 @@ export function indexContent(raw) {
     philosophies: raw.philosophies ? byId(raw.philosophies.philosophies) : {},
     operations: raw.operations ? byId(raw.operations.operations) : {},
     operationMeta: raw.operations ? raw.operations.tuning : null,
+    chaosMeta: raw.chaos ? raw.chaos.tuning : null,
+    chaosNames: raw.chaos ? raw.chaos.names : null,
+    chaosLines: raw.chaos ? raw.chaos.lines : null,
     labNames: raw.philosophies ? raw.philosophies.labNames : null,
     classRules: raw.classes ? { advantage: raw.classes.advantage, disadvantage: raw.classes.disadvantage } : { advantage: 1, disadvantage: 1 },
     campaignMeta: raw.regions

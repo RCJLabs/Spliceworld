@@ -1,5 +1,74 @@
 # PROGRESS
 
+## Session 24 — Chaos-breeding ✅
+
+Ranch breeding pairs two **animals** of one species and produces a predictable
+hybrid of their stats. The Chaos Vat is the other thing: two finished
+**chimeras** go in and a genome neither of them was comes out.
+
+### The problem is economic, not genetic
+A chimera costs vault tokens permanently, and — unlike livestock — carries no
+upkeep. So an offspring bought with only money and time is a duplication
+glitch: breed two, breed the two you got, field an army you never paid for.
+
+The price is therefore paid in **grades**, which is this game's real power
+currency. Both parents permanently drop one grade on every part. A five-socket
+pair gives up ten grade steps and returns five, so the exchange is strictly
+deflationary and a line running on its own output slides down the ladder:
+
+| generation | child power vs founders |
+|---|---|
+| 1 | 96% |
+| 3 | 85% |
+| 6 | 80% |
+
+Six generations took a pair of prismatic founders to a roster averaging
+standard/prime. The only way back up is crossing freshly-raised, well-graded
+stock back in — which is exactly the ranch loop the whole game is built on.
+
+**One ordering detail is load-bearing** and now has a comment and an assertion
+holding it in place: the child is conceived from the parents *before* they pay.
+Degrade first and the offspring inherits the damage, the operation becomes
+strictly destructive, and nobody would ever use the vat.
+
+### Why you would do it anyway
+**The vat does not read your permits.** Measured over 200 gestations:
+
+| | |
+|---|---|
+| child beats its best parent | 7–16% (max seen: 130%) |
+| carries a part from neither parent | 54% |
+| gains a socket neither parent had | 19% |
+| comes out on a frame neither parent used | 7% |
+
+That socket clause is the one that makes this more than recombination — a
+second organ bay before you own Theater Tier II. It measured **zero** before I
+added it, because the union of two five-socket parents is, inevitably, five
+sockets. The wild cards draw from the **Splice-Dex**, so chaos is always
+anatomy you have already seen and never a gift from the end of the game.
+
+An emergent nicety worth recording: prismatic parents beat their best parent
+only 7% of the time against prime's 16%, because prismatic can only degrade.
+**Chaos-breeding is for the middle of your roster, not the top.**
+
+### Kept honest
+~30 new smoke assertions, each verified to fail when the code it guards is
+broken. Four needed fixing rather than the code: my fixture gave both parents
+identical sockets (so the carry-over rule never ran), granted the full parts
+list as the Dex (so the wild-card pool was untestable), and left the
+cancel-refund check loose enough to pass either way. Browser pass at 380 and
+320px: the two donor pickers, the price warning, sealing, the countdown,
+decanting into the Pens, and a v16 save migrated live. No console errors.
+
+Save **v17**; `sw` cache `spliceworld-v17-chaos`.
+
+### Next session's first task
+The post-v0.1 backlog is empty. Still unbuilt from the main spec: **chimera
+extraction** (§3.3 — "chimeras can also be extracted, returns a subset of
+parts, one grade degraded"), which is the other way to recycle a chimera and
+would pair naturally with the vat; and **temperament** (§3.5), which every
+chimera carries as `null` and nothing has ever set.
+
 ## Session 23 — The Jobs board ✅
 
 The complaint was "I keep losing so I have no money to get new animals to
@@ -75,7 +144,7 @@ the blurbs moved to the crew sheet where they are read at the decision point.
 Save **v16**; `sw` cache `spliceworld-v16-jobs`.
 
 ### Next session's first task
-Chaos-breeding of chimeras.
+Chaos-breeding of chimeras. *(Shipped in Session 24.)*
 
 ## Session 22 — The monologue pass ✅
 

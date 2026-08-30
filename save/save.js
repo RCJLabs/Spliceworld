@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 16;
+export const SAVE_VERSION = 17;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -182,6 +182,16 @@ const migrations = {
     save.campaign.heatAt = null;
     return save;
   },
+  // v17 (Chaos-breeding): the vat. `vat` is the one gestation in flight —
+  // its conception sealed at the moment the parents went in, so a reload
+  // cannot reroll it — and every chimera gains an `exhaustedUntil`, since
+  // giving a grade away is meant to cost a recovery as well.
+  17: (save) => {
+    save.vat = null;
+    save.vatCount = 0;
+    for (const chimera of save.chimeras) chimera.exhaustedUntil = chimera.exhaustedUntil ?? 0;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -218,6 +228,9 @@ export function newGameState() {
     // The §3.8 profile: the player's half of the story schema. Unnamed
     // until they choose — nothing in this game waits behind a form.
     profile: { named: false, title: null, name: null, lab: null, philosophy: null },
+    // Chaos-breeding: one gestation at a time.
+    vat: null,
+    vatCount: 0,
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations
