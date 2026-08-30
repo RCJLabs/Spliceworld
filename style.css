@@ -1008,6 +1008,105 @@ body.in-battle .ticker { font-size: 0.66rem; }
   color: var(--warn);
 }
 
+/* --- Field notes and fold-away cards (R29) ----------------------------
+   One note at a time, dismissable, and never while the Path to World
+   Domination still owns the screen. */
+.field-note {
+  border-left: 3px solid var(--accent-2);
+  background: var(--panel-2);
+}
+.field-note-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.field-note-head strong {
+  font-size: 0.86rem;
+  color: var(--accent-2);
+  line-height: 1.3;
+}
+.field-note p {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+.field-note-dismiss {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.field-note-dismiss:hover { color: var(--text); border-color: var(--muted); }
+
+.foldable { padding-top: 0; padding-bottom: 0; }
+.foldable.is-open { padding-bottom: 12px; }
+.fold-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.fold-caret {
+  flex: 0 0 auto;
+  width: 14px;
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+.fold-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+/* A subtitle riding inside the title keeps its own casing and weight. */
+.fold-title .fine-print {
+  display: block;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-style: italic;
+}
+.fold-badge {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.fold-summary {
+  margin: -4px 0 12px;
+  padding-left: 22px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.fold-summary strong { color: var(--accent); }
+.foldable.is-locked .fold-title { color: var(--muted); }
+.foldable.is-locked .fold-summary { color: var(--warn); font-weight: 700; }
+
 /* --- Facility depth: what your money bought (R25) --------------------- */
 .net-positive { color: var(--hp); }
 .net-negative { color: var(--danger-soft); }

@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 24;
+export const SAVE_VERSION = 25;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -299,6 +299,31 @@ const migrations = {
     save.campaign.defences ??= {};
     return save;
   },
+
+  // v25 (R29): two small pieces of remembered UI. `guidesSeen` is the only
+  // thing the field-guide system persists at all — every other question it
+  // asks ("has this player bred anything? is a bay occupied? is a contest
+  // running?") is derived from the save it is already reading, which is why
+  // there are no tutorial flags here to go stale. This one exists solely so
+  // a player can wave a note away without having to actually use the system
+  // it describes.
+  //
+  // `ui.collapsed` remembers which cards someone folded shut. Both default
+  // empty, so a save that predates them behaves exactly as it did.
+  25: (save) => {
+    save.guidesSeen ??= [];
+    save.ui ??= { collapsed: {} };
+    save.ui.collapsed ??= {};
+    // R25 added four facility tracks. facilityLevel() already reads a
+    // missing track as level 1, so nothing was broken — but a save whose
+    // `facility` object names only two of six tracks is a save that reads
+    // as half-configured to anything inspecting it directly.
+    save.facility ??= {};
+    for (const id of ['theater', 'containment', 'incubator', 'extractor', 'scanner', 'infirmary']) {
+      save.facility[id] ??= 1;
+    }
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -331,7 +356,12 @@ export function newGameState() {
     news: [],
     settings: { muted: false },
     dex: { parts: [], enemies: [], traits: [], variants: [] },
-    facility: { theater: 1, containment: 1 },
+    facility: { theater: 1, containment: 1, incubator: 1, extractor: 1, scanner: 1, infirmary: 1 },
+    // Field-guide notes the player has waved away (R29). The guides
+    // themselves are derived; this is the only thing they persist.
+    guidesSeen: [],
+    // Remembered UI: which cards are folded shut.
+    ui: { collapsed: {} },
     // The §3.8 profile: the player's half of the story schema. Unnamed
     // until they choose — nothing in this game waits behind a form.
     profile: { named: false, title: null, name: null, lab: null, philosophy: null },

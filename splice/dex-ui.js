@@ -5,6 +5,8 @@
 import { renderCreatureSVG, renderUnitSVG } from '../render/renderer.js';
 import { stockGenome } from '../ranch/ranch.js';
 import { rivalList, rivalRecord } from '../campaign/rivals.js';
+import { fieldNote, bindFieldNote } from '../ui/cards.js';
+import { guideForScreen } from '../ranch/onboarding.js';
 
 export function renderDexScreen(root, ctx) {
   const { state, content } = ctx;
@@ -138,6 +140,7 @@ export function renderDexScreen(root, ctx) {
     .join('');
 
   root.innerHTML = `
+    ${fieldNote(guideForScreen(state, content, ctx.now?.() ?? Date.now(), 'dex'))}
     <section class="card">
       <h3>Class Triangle</h3>
       <p class="fine-print">${CLASS_ORDER.map((c) => `${content.classes[c].icon} ${content.classes[c].name} beats ${content.classes[content.classes[c].beats].name}`).join(' · ')}. A chimera's class comes from its anatomy — ${CLASS_ORDER.map((c) => content.classes[c].cue).join('; ')} — and a tie leaves it Unclassed (neutral both ways).</p>
@@ -168,4 +171,5 @@ export function renderDexScreen(root, ctx) {
       <div class="dex-grid">${enemyRows}</div>
       <p class="fine-print">Every entry remembers you too. That's the AI director's notebook.</p>
     </section>`;
+  bindFieldNote(root, ctx, () => renderDexScreen(root, ctx));
 }

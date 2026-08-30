@@ -36,7 +36,10 @@ import {
 import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING, pairingForecast } from '../ranch/breeding.js';
 import { trainChimera, TRAINING } from '../splice/theater.js';
 import { obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
-import { onboardingSteps, onboardingActive } from '../ranch/onboarding.js';
+import {
+  onboardingSteps, onboardingActive, guideStates, guideForScreen, dismissGuide, GUIDE_HELPERS,
+} from '../ranch/onboarding.js';
+import { isOpen } from '../ui/cards.js';
 import { classMultiplier } from '../battle/engine.js';
 import { overflowingParts } from './bounds.js';
 import { renderDexScreen } from '../splice/dex-ui.js';
@@ -63,6 +66,7 @@ const content = indexContent({
   chaos: readJSON('data/chaos.json'),
   temperament: readJSON('data/temperament.json'),
   scars: readJSON('data/scars.json'),
+  guides: readJSON('data/guides.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -4579,6 +4583,224 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 
 const pctOf = (x) => `${Math.round(x * 100)}%`;
 const classOfSpecies = (id) => content.species[id]?.class ?? null;
+
+// --- R29: every shipped system gets one first-use note ----------------
+//
+// Onboarding shipped in M7 as a five-step Path ending at the first
+// conquest, and then eight more systems shipped behind it — breeding, the
+// chaos vat, rehabilitation, the jobs board, contestation, scars,
+// temperament, the Dex — followed by five regions, six facility tracks and
+// an upkeep economy. All of it unguided.
+//
+// "Every shipped system has a first-use guide derived from state, and none
+// fires before its system is reachable." Both halves are checkable, and
+// both are checked by walking a save forward one system at a time.
+{
+  const guides = Object.values(content.guides);
+  const SCREENS = ['ranch', 'pens', 'theater', 'battle', 'dex'];
+
+  // --- Shape. A guide with no `done` nags forever; one with no `reachable`
+  // fires on turn one, which is the exact failure the phase exists to fix.
+  for (const g of guides) {
+    assert.ok(SCREENS.includes(g.screen), `${g.id}: lives on a real screen (${g.screen})`);
+    assert.ok(g.title && g.body && g.icon, `${g.id}: has something to say`);
+    assert.ok(g.body.length > 80, `${g.id}: says enough to be worth a card`);
+    assert.ok(g.reachable?.length, `${g.id}: declares when its system exists`);
+    assert.ok(g.done?.length, `${g.id}: declares when it has been understood, or it nags forever`);
+    for (const cond of [...g.reachable, ...g.done]) {
+      if (cond.helper) {
+        assert.ok(GUIDE_HELPERS[cond.helper], `${g.id}: helper ${cond.helper} exists`);
+      } else {
+        assert.ok(typeof cond.path === 'string' && cond.path.includes('.') === cond.path.includes('.'),
+          `${g.id}: ${JSON.stringify(cond)} reads a save path`);
+      }
+    }
+  }
+  assert.equal(new Set(guides.map((g) => g.id)).size, guides.length, 'guide ids are unique');
+  assert.equal(new Set(guides.map((g) => g.order)).size, guides.length, 'orders are unique, so the queue is deterministic');
+  for (const screen of SCREENS) {
+    assert.ok(guides.some((g) => g.screen === screen), `${screen} has at least one note`);
+  }
+
+  // --- COVERAGE. A hand-maintained roll of what this game has shipped. It
+  // is deliberately a literal list rather than something derived: the whole
+  // point is that a future phase adding a system has to come here and say
+  // so, which is the only mechanism that keeps "every shipped system" true
+  // a year from now.
+  const SHIPPED_SYSTEMS = [
+    'breeding', 'incubator', 'genes', 'pairing', 'facility', 'upkeep', 'catalog',
+    'temperament', 'bond', 'infirmary', 'scars',
+    'combos', 'chaos',
+    'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director',
+    'dex',
+  ];
+  const covered = new Set(guides.map((g) => g.id));
+  const missing = SHIPPED_SYSTEMS.filter((id) => !covered.has(id));
+  assert.deepEqual(missing, [], `every shipped system has a note (missing: ${missing.join(', ')})`);
+  const orphans = [...covered].filter((id) => !SHIPPED_SYSTEMS.includes(id));
+  assert.deepEqual(orphans, [], `and every note names a system on the roll (${orphans.join(', ')})`);
+
+  // --- THE CRITERION. Walk one save forward, switching on one system at a
+  // time, and check each note appears at exactly the step that makes its
+  // system real — never before it.
+  const lab = { ...newGameState(), seed: 4242 };
+  ensureRanchSeeded(lab, content, t0);
+  const readyNow = () => new Set(
+    guideStates(lab, content, t0).filter((r) => r.status === 'ready').map((r) => r.guide.id)
+  );
+
+  // Nothing at all while the Path still owns the screen. Two tutorials at
+  // once is one tutorial too many.
+  //
+  // Tested against a save that HAS ready notes rather than a fresh one: a
+  // brand-new save has nothing ready anyway, so asserting over it would
+  // pass whether the suppression works or not. This lab has a settled
+  // chimera and an egg — several notes are live — and has conquered
+  // nothing, so the Path still owns every screen.
+  {
+    const onPath = { ...newGameState(), seed: 99 };
+    ensureRanchSeeded(onPath, content, t0);
+    for (const a of onPath.ranch.stock) a.birthAt = t0 - 200 * HOUR;
+    onPath.ranch.eggCount = 2;
+    onPath.chimeras = [{ id: 'c1', frame: 'M', tokens: {}, settleUntil: 0, bond: 5, temperament: { a: 1 }, scars: [] }];
+    assert.ok(onboardingActive(onPath), 'nothing conquered, so the Path is still running');
+    const live = guideStates(onPath, content, t0).filter((r) => r.status === 'ready');
+    assert.ok(live.length >= 3, `and notes are genuinely ready underneath it (${live.length})`);
+    for (const screen of SCREENS) {
+      assert.equal(guideForScreen(onPath, content, t0, screen), null,
+        `${screen}: the Path owns the screen, so no field note fires under it`);
+    }
+  }
+
+  const STEPS = [
+    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs']],
+    ['the herd grows up', () => { for (const a of lab.ranch.stock) a.birthAt = t0 - 200 * HOUR; }, ['breeding']],
+    ['an egg is laid', () => { lab.ranch.eggCount = 1; lab.ranch.eggs = [{ id: 'e0' }]; }, ['incubator', 'genes']],
+    ['a chimera exists', () => {
+      lab.chimeras = [{ id: 'c1', frame: 'M', tokens: {}, settleUntil: 0, bond: 5, temperament: { a: 1 }, scars: [] }];
+    }, ['upkeep', 'temperament', 'bond']],
+    ['parts in the vault', () => {
+      lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
+    }, ['combos']],
+    ['a second settled chimera', () => {
+      lab.chimeras.push({ id: 'c2', frame: 'M', tokens: {}, settleUntil: 0, bond: 5, scars: [] });
+    }, ['chaos']],
+    ['something gets hurt', () => { lab.chimeras[0].injury = { name: 'Sprained Everything', until: t0 + HOUR }; }, ['infirmary']],
+    ['and it sets badly', () => { lab.chimeras[0].scars = ['gun_shy']; }, ['scars']],
+    ['a bay is occupied', () => { lab.campaign.containment = [{ id: 'bay-0', unitId: 'riot_squad' }]; }, ['containment']],
+    // Money alone does not open the Facility note: every track past level 1
+    // is gated on territory as well, which is the point of the track. And it
+    // has to come BEFORE the Wing, because buying any upgrade is precisely
+    // what retires this note.
+    ['money and a second node', () => { lab.funds = 5000; lab.campaign.heldNodes.push('downtown'); }, ['facility']],
+    ['the Reorientation Wing opens', () => { lab.facility.containment = 2; }, ['rehab']],
+    ['a captive to rescue', () => {
+      lab.campaign.captives = [{ id: 'cap-1', chimera: { name: 'Gerald' }, deadline: t0 + 9 * HOUR }];
+    }, ['rescue']],
+    ['a few wins on the board', () => { lab.warRecord = { wins: 4, losses: 1 }; }, ['director']],
+    ['the Dex fills up', () => { lab.dex.parts = Object.keys(content.parts).slice(0, 8); }, ['dex']],
+    // Dr. Mantissa is gated on the Highway Checkpoint, so the rival note
+    // opens on the same push that opens Kestrel Reach.
+    ['Greenfield falls', () => {
+      lab.campaign.heldNodes = ['barn_perimeter', 'downtown', 'checkpoint', 'precinct'];
+      lab.campaign.notoriety = 65;
+    }, ['regions', 'rivals']],
+    ['a convoy is on the road', () => {
+      lab.campaign.contested = [{ nodeId: 'downtown', deadline: t0 + 13 * HOUR }];
+    }, ['contest']],
+    ['the Pairing Suite is installed', () => { lab.facility.scanner = 3; }, ['pairing']],
+  ];
+
+  const firstSeen = {};
+  let before = readyNow();
+  for (const [label, mutate, expected] of STEPS) {
+    for (const id of expected) {
+      assert.ok(!before.has(id),
+        `"${id}" must not fire before ${label} — that is the whole criterion`);
+    }
+    mutate();
+    const after = readyNow();
+    for (const id of expected) {
+      assert.ok(after.has(id), `${label}: unlocks the "${id}" note`);
+      firstSeen[id] = label;
+    }
+    // A step may retire notes (breeding is done once an egg exists) but it
+    // must never light one it was not supposed to.
+    const surprises = [...after].filter((id) => !before.has(id) && !expected.includes(id));
+    assert.deepEqual(surprises, [],
+      `${label}: lights exactly what it should (also lit: ${surprises.join(', ')})`);
+    before = after;
+  }
+  assert.equal(Object.keys(firstSeen).length, guides.length,
+    `every note is reachable somewhere in a real campaign (${guides.length - Object.keys(firstSeen).length} never fired)`);
+
+  // --- One at a time, lowest `order` first. Several notes are ready at once
+  // by the end of that walk.
+  //
+  // The expected note is computed from the AUTHORED order in the content
+  // file, not from guideStates' own sort — deriving it from the thing under
+  // test is how an assertion passes no matter which way the sort runs.
+  {
+    const readySet = readyNow();
+    for (const screen of SCREENS) {
+      const candidates = guides
+        .filter((g) => g.screen === screen && readySet.has(g.id))
+        .sort((a, b) => a.order - b.order);
+      const shown = guideForScreen(lab, content, t0, screen);
+      if (!candidates.length) {
+        assert.equal(shown, null, `${screen}: nothing ready, nothing shown`);
+      } else {
+        assert.equal(shown?.id, candidates[0].id,
+          `${screen}: shows the lowest-order ready note (${candidates[0].id}), not ${shown?.id ?? 'nothing'}`);
+      }
+    }
+  }
+
+  // --- Dismissal is the only thing this system persists, and it sticks.
+  const ranchNote = guideForScreen(lab, content, t0, 'ranch');
+  assert.ok(ranchNote, 'the ranch has a note to dismiss');
+  dismissGuide(lab, ranchNote.id);
+  assert.notEqual(guideForScreen(lab, content, t0, 'ranch')?.id, ranchNote.id, 'dismissing it moves on');
+  assert.ok(lab.guidesSeen.includes(ranchNote.id), 'and the save remembers');
+  // …and a dismissed note never comes back, even though its system is still unused.
+  assert.equal(
+    guideStates(lab, content, t0).find((r) => r.guide.id === ranchNote.id).status,
+    'dismissed',
+    'a waved-away note stays waved away'
+  );
+}
+
+// --- R29: fold-away cards remember their state ------------------------
+// R25 and R26 made two screens very long — six facility tracks and five
+// region strips in one column. Collapse state lives in the save rather than
+// a module variable, so folding a card shut survives the reload the
+// Definition of Done requires every feature to survive.
+{
+  const lab = { ...newGameState() };
+  // Absent means "use the card's own judgement", which is how the War Room
+  // can open the strip you are fighting in and shut the four you are not.
+  assert.equal(isOpen(lab, 'facility', false), false, 'no stored value defers to the default');
+  assert.equal(isOpen(lab, 'region:kestrel', true), true, 'in both directions');
+  lab.ui.collapsed['facility'] = false;
+  assert.equal(isOpen(lab, 'facility', false), true, 'a stored value always wins');
+  lab.ui.collapsed['region:kestrel'] = true;
+  assert.equal(isOpen(lab, 'region:kestrel', true), false, 'in both directions');
+
+  // It survives the round trip, which is the only reason it is in the save.
+  const reloaded = migrate(structuredClone(lab));
+  assert.equal(isOpen(reloaded, 'facility', false), true, 'and it survives a reload');
+  assert.equal(isOpen(reloaded, 'region:kestrel', true), false);
+
+  // A save from before any of this reads as "use the defaults" rather than
+  // throwing on a missing object.
+  const old = migrate(structuredClone({ ...newGameState(), saveVersion: 24, ui: undefined, guidesSeen: undefined }));
+  assert.deepEqual(old.ui.collapsed, {}, 'a migrated save gets an empty fold record');
+  assert.deepEqual(old.guidesSeen, [], 'and no dismissed notes');
+  assert.equal(isOpen(old, 'facility', false), false, 'so every card falls back to its own default');
+  for (const id of ['theater', 'containment', 'incubator', 'extractor', 'scanner', 'infirmary']) {
+    assert.equal(old.facility[id], 1, `${id} reads as level 1 in a migrated save`);
+  }
+}
 
 // --- R25: the second money sink, and what each track buys --------------
 //

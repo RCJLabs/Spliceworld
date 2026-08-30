@@ -9,6 +9,8 @@ import { spliceChimera, validateSplice, tokensFor } from './theater.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
 import { theaterGrants, facilityLevel, levelData, nextUpgrade } from './facility.js';
+import { fieldNote, bindFieldNote } from '../ui/cards.js';
+import { guideForScreen } from '../ranch/onboarding.js';
 
 const SLOT_LABELS = {
   head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
@@ -127,6 +129,7 @@ export function renderTheaterScreen(root, ctx) {
   const statLine = `HP ${report.stats.hp} · PWR ${report.stats.power} · ARM ${report.stats.armor} · SPD ${report.stats.speed} · STA ${report.stats.stamina}`;
 
   root.innerHTML = `
+    ${fieldNote(guideForScreen(state, content, ctx.now?.() ?? Date.now(), 'theater'))}
     <section class="card stage-card">
       <h2>Surgery Theater</h2>
       <p class="class-banner class-${report.creatureClass ?? 'none'}">${
@@ -157,6 +160,7 @@ export function renderTheaterScreen(root, ctx) {
       ${panelRows}
       ${comboRows}
     </section>`;
+  bindFieldNote(root, ctx, () => renderTheaterScreen(root, ctx));
 
   root.querySelectorAll('#thtr-frames button').forEach((btn) => {
     btn.addEventListener('click', () => {
