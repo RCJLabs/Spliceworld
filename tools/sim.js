@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { indexContent } from '../render/renderer.js';
+import { seedTemperament } from '../splice/temperament.js';
 import { analyze } from '../splice/physiology.js';
 import { createBattle, step, playerActions, playerActive } from '../battle/engine.js';
 import { rivalEncounter, rivalList } from '../campaign/rivals.js';
@@ -34,6 +35,7 @@ export function loadSimContent() {
   philosophies: readJSON('data/philosophies.json'),
   operations: readJSON('data/operations.json'),
   chaos: readJSON('data/chaos.json'),
+  temperament: readJSON('data/temperament.json'),
   });
 }
 
@@ -58,7 +60,7 @@ export function makeSimChimera(frame, partIds, grade, content) {
     };
   }
   const report = analyze(frame, Object.values(tokens), content, Object.keys(tokens).length);
-  return {
+  const chimera = {
     id: `sim-${frame}-${partIds.join('+')}`,
     name: 'Simulacrum',
     frame,
@@ -67,9 +69,14 @@ export function makeSimChimera(frame, partIds, grade, content) {
     settleUntil: 0, // settled
     instability: report.instability,
     bond: 100, // fully bonded — obedience is not under test here
-    temperament: null,
+    // Settled chimeras have opinions (§3.5), and the harness has to measure
+    // the game the player actually plays — a null temperament would make
+    // every perk invisible to the balance pass.
+    temperament: null, // replaced below, once the id exists
     injury: null,
   };
+  chimera.temperament = seedTemperament(chimera, content, 0x5EED);
+  return chimera;
 }
 
 // Greedy pilot: strongest affordable damaging move, else rest. Deliberately

@@ -8,6 +8,7 @@ import { rngStream, pick } from '../util/rng.js';
 import { analyze } from '../splice/physiology.js';
 import { GRADE_INDEX } from '../splice/extract.js';
 import { isSettled } from '../splice/theater.js';
+import { perksOf, driftFromBattle } from '../splice/temperament.js';
 
 const STAGE_STEP = 0.15;
 const STAGE_CAP = 2; // setup matters, but stacking is not a strategy on its own
@@ -17,6 +18,10 @@ const VENOM_CAP = 5;
 const REST_FRACTION = 0.35;
 const REJECTION_MULT = 0.75;
 const GRADE_MOVE_BONUS = 0.12; // "upgraded abilities" — grades already scale stats, so this rides gently on top
+
+// A combatant with no temperament — every enemy unit, and any chimera
+// still settling — behaves exactly as it did before §3.5 landed.
+const NEUTRAL_PERKS = { critChance: 0, critMult: 1.5, lastStandAt: 0.3, evasion: 0, power: 0, guardLoss: 0, regen: 0 };
 
 const INJURY_NAMES = [
   'Bruised Ego', 'Sprained Everything', 'Temporary Kazoo Phobia',
@@ -146,6 +151,9 @@ export function combatantFromChimera(chimera, content, now) {
     moves,
     rejection: !settled,
     ignoreChance: obedienceIgnoreChance(chimera, now),
+    // Temperament (§3.5): passive stat effects, never a loss of control.
+    // Enemy units get the neutral set, so nothing about them changes.
+    perks: perksOf(chimera, content),
     stages: { acc: 0, evasion: 0, power: 0 },
     status: { venom: 0, sleep: false, stun: false, guard: false, charging: null },
   };
@@ -194,6 +202,7 @@ export function combatantFromUnit(unit, scale = 1) {
     transformLine: unit.transformLine ?? null,
     rejection: false,
     ignoreChance: 0,
+    perks: NEUTRAL_PERKS,
     stages: { acc: 0, evasion: 0, power: 0 },
     status: { venom: 0, sleep: false, stun: false, guard: false, charging: null },
   };
@@ -408,7 +417,10 @@ function attack(battle, atk, def, move, events, content) {
 
   const from = sideOf(atk);
   const at = sideOf(def);
-  const hitChance = (move.acc / 100) * stageMult(atk.stages.acc) / stageMult(def.stages.evasion);
+  // Skittish creatures are hard to pin down on the opening exchange.
+  const jumpy = battle.turn === 1 ? (def.perks?.evasion ?? 0) : 0;
+  const hitChance =
+    (move.acc / 100) * stageMult(atk.stages.acc) / stageMult(def.stages.evasion) * (1 - jumpy);
   if (roll(battle) > hitChance) {
     events.push({ text: `${atk.name} uses ${move.name} — it whiffs spectacularly!`, kind: 'miss', actor: from, target: at, move: move.name });
     return;
@@ -421,11 +433,18 @@ function attack(battle, atk, def, move, events, content) {
     const clsMult = classMultiplier(atk.creatureClass, def.creatureClass, content);
     let dmg = move.power * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult * clsMult;
     dmg *= 0.9 + 0.2 * roll(battle);
+    dmg *= 1 + (atk.perks?.power ?? 0); // Fierce
+    // Brave: cornered, it starts landing telling blows.
+    const cornered = atk.maxHp > 0 && atk.hp / atk.maxHp <= (atk.perks?.lastStandAt ?? 0);
+    const crit = cornered && (atk.perks?.critChance ?? 0) > 0 && roll(battle) < atk.perks.critChance;
+    if (crit) dmg *= atk.perks.critMult;
     const bypassArmor = ignoreArmor || move.keywords.ignoreArmor;
     if (!bypassArmor) dmg -= def.armor * ARMOR_FACTOR;
     if (def.status.guard && !move.keywords.ignoreGuard) {
-      dmg /= 2;
-      events.push(`${def.name}'s guard absorbs half the blow.`);
+      // A Fierce creature guards badly — it would rather be hitting.
+      const absorbed = 0.5 * (1 - (def.perks?.guardLoss ?? 0));
+      dmg *= 1 - absorbed;
+      events.push(`${def.name}'s guard absorbs ${Math.round(absorbed * 100)}% of the blow.`);
     }
     dmg = Math.max(1, Math.round(dmg));
     def.hp = Math.max(0, def.hp - dmg);
@@ -434,6 +453,7 @@ function attack(battle, atk, def, move, events, content) {
       battle.cannon.charge = Math.min(100, battle.cannon.charge + Math.round(dmg * 1.25));
     }
     let line = `${atk.name} uses ${move.name} — ${dmg} damage`;
+    if (crit) line += ' — CORNERED AND FURIOUS!';
     if (mult > 1) line += ' (super effective!)';
     if (clsMult > 1) line += ` (${content.classes[atk.creatureClass].name} beats ${content.classes[def.creatureClass].name}!)`;
     else if (clsMult < 1) line += ` (${content.classes[def.creatureClass].name} shrugs off ${content.classes[atk.creatureClass].name})`;
@@ -588,7 +608,11 @@ function endOfTurn(battle, events) {
       c.status.sleep = false;
       events.push({ text: `${c.name} wakes up, refreshed and furious.`, kind: 'status', target: sideOf(c) });
     }
-    c.stamina = Math.max(0, Math.min(c.staminaMax, c.stamina + c.regen));
+    // Gentle creatures pace themselves. Expressed as a share of the
+    // stamina POOL rather than a flat number, so it means the same thing
+    // to a small creature as to a large one.
+    const calm = Math.round((c.perks?.regen ?? 0) * (c.staminaMax / 10));
+    c.stamina = Math.max(0, Math.min(c.staminaMax, c.stamina + c.regen + calm));
     if (c.regen < 0) events.push({ text: `${c.name} runs hot — stamina bleeds ${-c.regen}.`, kind: 'debuff', target: sideOf(c) });
   }
   // A trap only holds while the trapper stands.
@@ -771,6 +795,13 @@ function restCombatant(c, events) {
 // KO'd chimeras leave with Infirmary timers the ranch must absorb.
 export function finishBattle(state, battle, content, now) {
   const injuries = [];
+  // Temperament drifts with a career (§3.5 "drifted by how you raise
+  // them"): winning makes a creature fiercer, going down makes it warier.
+  for (const c of battle.player.team) {
+    const chimera = state.chimeras.find((ch) => ch.id === c.refId);
+    if (!chimera) continue;
+    driftFromBattle(chimera, content, { won: battle.outcome === 'win', knockedOut: c.hp <= 0 });
+  }
   for (const c of battle.player.team) {
     if (c.hp > 0) continue;
     const chimera = state.chimeras.find((ch) => ch.id === c.refId);

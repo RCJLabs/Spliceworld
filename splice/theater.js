@@ -6,6 +6,7 @@ import { rngStream, pick } from '../util/rng.js';
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { analyze } from './physiology.js';
 import { theaterGrants } from './facility.js';
+import { driftFromTraining } from './temperament.js';
 
 const CHIMERA_NAMES = [
   'Chompers', 'Beefsquawk', 'Sir Hornsalot', 'Dr. Fluffles', 'Snack Hazard',
@@ -125,7 +126,7 @@ export function settleRemainingMs(chimera, now) {
 // Training (M7 obedience UX): bond is earned, not assigned (§3.5).
 export const TRAINING = { cost: 5, bondGain: 8, cooldownHours: 20 };
 
-export function trainChimera(state, chimeraId, now) {
+export function trainChimera(state, chimeraId, now, content) {
   const chimera = state.chimeras.find((c) => c.id === chimeraId);
   if (!chimera) return { ok: false, msg: 'No such chimera.' };
   const readyAt = (chimera.lastTrainedAt ?? 0) + TRAINING.cooldownHours * 3600000;
@@ -134,5 +135,7 @@ export function trainChimera(state, chimeraId, now) {
   state.funds -= TRAINING.cost;
   chimera.lastTrainedAt = now;
   chimera.bond = Math.min(100, chimera.bond + TRAINING.bondGain);
+  // Trust makes a creature braver, and gentler with it (§3.5).
+  driftFromTraining(chimera, content);
   return { ok: true, msg: `${chimera.name} nails the obstacle course and earns a treat. Bond ${chimera.bond}/100.` };
 }

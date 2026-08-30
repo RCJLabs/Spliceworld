@@ -1358,6 +1358,25 @@ footer {
 }
 #msg-box:has(.bark-msg) { cursor: pointer; }
 
+/* Dismantling sits beside training because they are the two things you can
+   do TO a chimera; it is styled quieter because it is the irreversible one. */
+/* Temperament is what the creature IS, so it reads in the accent rather
+   than as another grey stat line. */
+.temperament { color: var(--goo); }
+.temperament strong { letter-spacing: 0.02em; }
+.pen-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pen-actions .care-train { margin: 0; }
+.pen-dismantle {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* --- The Chaos Vat (chimera breeding) -----------------------------------
    The price is permanent and paid in grades, so it gets warning colour and
    its own line rather than sitting in the fine print with everything else. */

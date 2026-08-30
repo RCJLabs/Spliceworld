@@ -3,11 +3,12 @@
 // later milestones — for now the pens are a proud, slightly humming nursery.
 
 import { renderCreatureSVG } from '../render/renderer.js';
-import { GRADES, GRADE_INDEX } from './extract.js';
+import { GRADES, GRADE_INDEX, salvagePreview, extractChimera } from './extract.js';
 import { chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING } from './theater.js';
 import { isInjured, obediencePercent } from '../battle/engine.js';
+import { describe as describeTemperament } from './temperament.js';
 import { fmtDuration } from '../ranch/ui.js';
-import { pickerField, bindPickers } from '../ui/picker.js';
+import { pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import {
   activeVat, vatPlan, vatRemainingMs, startVat, cancelVat, isExhausted, chaosTuning,
 } from './chaos.js';
@@ -130,14 +131,26 @@ export function renderPensScreen(root, ctx) {
           <div class="animal-info">
             <h4>${ch.name}</h4>
             <p class="meta">${content.frames[ch.frame].name} chassis · instability ${ch.instability}/100 · bond ${ch.bond}/100</p>
+            ${(() => {
+              const temp = describeTemperament(ch, content);
+              if (!temp) {
+                return settled ? '' : '<p class="meta temperament">Temperament: still forming.</p>';
+              }
+              return `<p class="meta temperament"><strong>${temp.label}</strong>${
+                temp.perks.length ? ` — ${temp.perks.join('; ')}` : ' — no strong feelings about anything'
+              }</p>`;
+            })()}
             <p class="meta">Obedience: <strong>${obedience}%</strong>${
               obedience < 100
                 ? ` — ${settled ? '' : 'unsettled; '}train to build bond${ch.instability > 0 ? ' (instability resists)' : ''}`
                 : ' — follows orders to the letter. Suspiciously eager, even.'
             }</p>
-            <button type="button" class="care-train" data-train="${ch.id}" ${trainReady ? '' : 'disabled'}>
-              ${trainReady ? `🎯 Train ($${TRAINING.cost}, +${TRAINING.bondGain} bond)` : `Train (${fmtDuration(trainReadyAt - t)})`}
-            </button>
+            <div class="pen-actions">
+              <button type="button" class="care-train" data-train="${ch.id}" ${trainReady ? '' : 'disabled'}>
+                ${trainReady ? `🎯 Train ($${TRAINING.cost}, +${TRAINING.bondGain} bond)` : `Train (${fmtDuration(trainReadyAt - t)})`}
+              </button>
+              <button type="button" class="pen-dismantle" data-dismantle="${ch.id}">🔧 Dismantle</button>
+            </div>
             ${isExhausted(ch, t) ? `<p class="settle">🧪 Recovering from the vat — ${fmtDuration(ch.exhaustedUntil - t)} left.</p>` : ''}
             ${ch.vatBorn ? `<p class="fine-print">Decanted from ${ch.vatBorn.parents.join(' × ')}.</p>` : ''}
             <p class="settle ${settled ? 'settled' : ''}">${
@@ -161,9 +174,46 @@ export function renderPensScreen(root, ctx) {
       `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`);
 
   bindVat(root, ctx, () => renderPensScreen(root, ctx));
+  // Dismantling is irreversible and returns less than it consumed, so the
+  // sheet shows the EXACT parts that will come back — seeded on the
+  // chimera, so the preview and the outcome can never disagree.
+  root.querySelectorAll('button[data-dismantle]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const ch = state.chimeras.find((c) => c.id === btn.dataset.dismantle);
+      if (!ch) return;
+      const preview = salvagePreview(state, ch, content);
+      const kept = preview.tokens
+        .map((tk) => `${content.parts[tk.partId].name} (${GRADES[GRADE_INDEX[tk.grade]].name}, was ${GRADES[GRADE_INDEX[tk.wasGrade]].name})`)
+        .join(', ');
+      const lost = preview.lose
+        .map((socketId) => content.parts[ch.tokens[socketId].partId]?.name)
+        .filter(Boolean)
+        .join(', ');
+      openPicker({
+        title: `Dismantle ${ch.name}?`,
+        subtitle: `${ch.name} leaves the roster for good. Salvage, not recycling: you get some of it back, a grade poorer.<br><br><strong>Recovered:</strong> ${kept}${
+          lost ? `<br><br><strong>Lost:</strong> ${lost}` : ''
+        }`,
+        groups: [{
+          label: null,
+          options: [
+            { id: 'go', label: `🔧 Dismantle ${ch.name}`, sub: `${preview.tokens.length} of ${Object.keys(ch.tokens).length} parts return to the vault` },
+            { id: 'no', label: 'Leave them alone', sub: 'They are having a nice time' },
+          ],
+        }],
+        selectedId: '',
+        onPick: (value) => {
+          if (value !== 'go') return;
+          lastMsg = extractChimera(state, ch.id, content, ctx.now()).msg;
+          ctx.save();
+          renderPensScreen(root, ctx);
+        },
+      });
+    });
+  });
   root.querySelectorAll('button[data-train]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const result = trainChimera(state, btn.dataset.train, ctx.now());
+      const result = trainChimera(state, btn.dataset.train, ctx.now(), content);
       lastMsg = result.msg;
       ctx.save();
       renderPensScreen(root, ctx);

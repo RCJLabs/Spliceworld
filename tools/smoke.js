@@ -29,7 +29,7 @@ import {
 } from '../campaign/campaign.js';
 import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING } from '../ranch/breeding.js';
 import { trainChimera, TRAINING } from '../splice/theater.js';
-import { obediencePercent } from '../battle/engine.js';
+import { obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
 import { onboardingSteps, onboardingActive } from '../ranch/onboarding.js';
 import { classMultiplier } from '../battle/engine.js';
 import { overflowingParts } from './bounds.js';
@@ -53,6 +53,7 @@ const content = indexContent({
   philosophies: readJSON('data/philosophies.json'),
   operations: readJSON('data/operations.json'),
   chaos: readJSON('data/chaos.json'),
+  temperament: readJSON('data/temperament.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -600,11 +601,22 @@ assert.ok(
   ),
   'the harness catches a deliberately broken combo'
 );
-// Grades are the power curve: apex builds crack encounters standard cannot.
-const apex = runSim(content, { builds: 8, seedsPer: 2, grade: 'apex' });
-const bossAtApex = Math.max(...apex.rows.map((r) => r.perEncounter.boss_clampdown));
-const bossAtStd = Math.max(...clean.rows.map((r) => r.perEncounter.boss_clampdown));
-assert.ok(bossAtApex > bossAtStd, `grades move the boss ceiling (${bossAtStd} → ${bossAtApex})`);
+// Grades are the power curve: each tier opens the boss further.
+//
+// Measured on the MEAN across builds, not the max. A max over a couple of
+// seeds saturates the instant one lucky build goes two-for-two — it was
+// reporting "100% at standard grade" off two coin flips, and duly broke the
+// moment anything nudged the RNG stream. The mean is what the claim
+// actually means, and it checks the whole ladder instead of one step.
+const bossMean = (res) =>
+  res.rows.reduce((sum, r) => sum + r.perEncounter.boss_clampdown, 0) / res.rows.length;
+const ladder = ['standard', 'prime', 'apex'].map((grade) =>
+  bossMean(runSim(content, { builds: 10, seedsPer: 4, grade, teamSize: 3 }))
+);
+assert.ok(
+  ladder[1] > ladder[0] && ladder[2] > ladder[1],
+  `each grade opens the boss further (${ladder.map((x) => Math.round(x * 100) + '%').join(' → ')})`
+);
 
 // --- M5: campaign data coherence.
 const region = Object.values(content.regions)[0];
@@ -3233,6 +3245,305 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
       }
     }
     assert.ok(chaosSeen > 10, `the sample actually contained wild cards (${chaosSeen})`);
+  }
+}
+
+// --- Chimera extraction (§3.3 "chimeras can also be extracted — returns a
+// --- SUBSET of parts, one grade degraded. Salvage, not free recycling").
+// --- The Surgery Theater's missing undo: splicing consumed vault tokens
+// --- permanently, so a chimera was a one-way sink.
+{
+  const { salvagePreview, extractChimera, CHIMERA_SALVAGE } = await import('../splice/extract.js');
+
+  const dismLab = (seed, grade = 'apex') => {
+    const s = { ...newGameState(), seed, funds: 500 };
+    s.facility = { theater: 2, containment: 1 };
+    const slots = {};
+    for (const partId of ['goat_head', 'goat_forelimbs', 'goat_hindlimbs', 'goat_tail', 'goat_hide', 'goat_organ']) {
+      const id = `t${s.inventory.tokenCount++}`;
+      s.inventory.parts.push({ id, partId, grade, donor: { name: 'Bessie', species: 'goat', stars: 4, extractedAt: 0 } });
+      slots[content.parts[partId].slot] = id;
+    }
+    const res = spliceChimera(s, 'M', slots, content, t0);
+    assert.ok(res.ok, res.msg);
+    res.chimera.settleUntil = t0;
+    return s;
+  };
+
+  // Salvage, not recycling: SOME of it back, a grade poorer.
+  {
+    const s = dismLab(700);
+    const ch = s.chimeras[0];
+    const sockets = Object.keys(ch.tokens).length;
+    const preview = salvagePreview(s, ch, content);
+    assert.ok(preview.tokens.length >= 1 && preview.tokens.length < sockets, `a subset comes back (${preview.tokens.length}/${sockets})`);
+    assert.equal(preview.tokens.length + preview.lose.length, sockets, 'and the rest is accounted for');
+    for (const spec of preview.tokens) {
+      assert.equal(GRADE_INDEX[spec.grade], GRADE_INDEX[spec.wasGrade] - 1, 'each one a grade poorer');
+    }
+    // Deterministic, so the confirmation a player is shown cannot disagree
+    // with what they get.
+    assert.deepEqual(salvagePreview(s, ch, content), preview, 'the preview is stable');
+
+    const before = s.inventory.parts.length;
+    const out = extractChimera(s, ch.id, content, t0);
+    assert.ok(out.ok, out.msg);
+    assert.equal(s.chimeras.length, 0, 'the chimera leaves the roster for good');
+    assert.equal(s.inventory.parts.length, before + preview.tokens.length, 'and only the subset reaches the vault');
+    for (const [i, token] of s.inventory.parts.slice(before).entries()) {
+      assert.equal(token.partId, preview.tokens[i].partId, 'exactly what the preview promised');
+      assert.equal(token.grade, preview.tokens[i].grade);
+      assert.equal(token.donor.name, 'Bessie', 'lineage survives the creature');
+      assert.ok(s.dex.parts.includes(token.partId));
+    }
+    // The recovered tokens are real: they can be spliced straight back.
+    const slots = Object.fromEntries(
+      s.inventory.parts.slice(before).map((tk) => [content.parts[tk.partId].slot, tk.id])
+    );
+    if (slots.head) assert.deepEqual(validateSplice(s, 'M', slots, content), [], 'and they build');
+  }
+
+  // Standard-grade parts have nothing left to lose, so salvage floors out
+  // rather than deleting them.
+  {
+    const s = dismLab(701, 'standard');
+    const preview = salvagePreview(s, s.chimeras[0], content);
+    for (const spec of preview.tokens) assert.equal(spec.grade, 'standard', 'the floor holds');
+  }
+
+  // Guards: not mid-battle, and not while they are in the vat.
+  {
+    const s = dismLab(702);
+    s.battle = { fake: true };
+    assert.ok(!extractChimera(s, s.chimeras[0].id, content, t0).ok, 'not during a battle');
+    s.battle = null;
+    s.vat = { parents: [s.chimeras[0].id], parentNames: ['x'], until: t0 + 99 * HOUR, conception: {} };
+    assert.ok(!extractChimera(s, s.chimeras[0].id, content, t0).ok, 'nor while they are in the vat');
+    s.vat = null;
+    assert.ok(extractChimera(s, s.chimeras[0].id, content, t0).ok, 'otherwise, fine');
+    assert.ok(!extractChimera(s, 'nope', content, t0).ok, 'and an unknown id is refused');
+  }
+
+  // It is a LOSS overall — that is what makes it salvage. Never a way to
+  // launder a build into a better one.
+  {
+    let recovered = 0, consumed = 0;
+    for (let seed = 0; seed < 60; seed++) {
+      const s = dismLab(1500 + seed, 'prismatic');
+      const ch = s.chimeras[0];
+      consumed += Object.values(ch.tokens).reduce((sum, tk) => sum + GRADE_INDEX[tk.grade] + 1, 0);
+      const before = s.inventory.parts.length;
+      extractChimera(s, ch.id, content, t0);
+      recovered += s.inventory.parts.slice(before).reduce((sum, tk) => sum + GRADE_INDEX[tk.grade] + 1, 0);
+    }
+    assert.ok(recovered < consumed * 0.75, `dismantling returns well under what it consumed (${recovered} vs ${consumed})`);
+  }
+}
+
+// --- Temperament (§3.5): two axes, seeded by the dominant donor species
+// --- and drifted by how you raise them. The field has carried `null` and a
+// --- comment promising "seeded on settling" since M3.
+{
+  const {
+    seedTemperament, ensureTemperaments, describe, perksOf, dominantSpecies,
+    biasFor, driftFromTraining, driftFromBattle, tempTuning,
+  } = await import('../splice/temperament.js');
+  const tt = tempTuning(content);
+
+  // Content coherence: every species' role has a bias, and the axes stay
+  // inside the range the labels are written for.
+  for (const species of Object.values(content.species)) {
+    const bias = biasFor(species.id, content);
+    assert.ok(bias, `${species.id} has a temperament bias`);
+    for (const axis of ['nerve', 'temper']) {
+      assert.ok(Number.isFinite(bias[axis]), `${species.id}.${axis} is a number`);
+      assert.ok(Math.abs(bias[axis]) <= 100, `${species.id}.${axis} is in range`);
+    }
+  }
+  for (const axis of ['nerve', 'temper']) {
+    for (const band of ['high', 'low', 'mid']) {
+      assert.ok(content.temperamentLabels[axis][band].name, `${axis}.${band} is labelled`);
+      assert.ok(content.temperamentLabels[axis][band].perk, 'and its perk is described');
+    }
+  }
+
+  const tempLab = (seed, partIds, grade = 'prime') => {
+    const s = { ...newGameState(), seed, funds: 500 };
+    const slots = {};
+    for (const partId of partIds) {
+      const id = `t${s.inventory.tokenCount++}`;
+      s.inventory.parts.push({ id, partId, grade, donor: { name: 'X', species: content.parts[partId].species, stars: 4, extractedAt: 0 } });
+      slots[content.parts[partId].slot] = id;
+    }
+    const res = spliceChimera(s, 'M', slots, content, t0);
+    assert.ok(res.ok, res.msg);
+    return s;
+  };
+
+  // It is SEEDED BY THE ANATOMY. A bear-heavy build is fierce because it is
+  // mostly bear — the same promise class and tags already make.
+  {
+    const s = tempLab(710, ['bear_head', 'bear_forelimbs', 'bear_hindlimbs', 'bear_hide', 'goat_organ']);
+    const ch = s.chimeras[0];
+    assert.equal(dominantSpecies(ch, content), 'bear', 'the dominant donor is the one that put the most parts in');
+    // …by COUNT, not by name. A wolf-heavy build carrying one bear part is
+    // a wolf, and alphabetical order would say otherwise.
+    const wolfish = tempLab(717, ['wolf_head', 'wolf_forelimbs', 'wolf_hindlimbs', 'wolf_hide', 'bear_organ']);
+    assert.equal(dominantSpecies(wolfish.chimeras[0], content), 'wolf', 'four wolf parts beat one bear part');
+    assert.equal(ch.temperament, null, 'an unsettled chimera has no opinions yet');
+    assert.deepEqual(ensureTemperaments(s, content, t0), [], 'and does not get any while it settles');
+    ch.settleUntil = t0;
+    const seeded = ensureTemperaments(s, content, t0);
+    assert.equal(seeded.length, 1, 'settling is when it acquires them');
+    assert.equal(ch.temperament.from, 'bear');
+    const bias = biasFor('bear', content);
+    assert.ok(Math.abs(ch.temperament.nerve - bias.nerve) <= tt.spread + 1, 'near its species bias');
+    assert.ok(Math.abs(ch.temperament.temper - bias.temper) <= tt.spread + 1);
+    assert.deepEqual(ensureTemperaments(s, content, t0), [], 'and it only happens once');
+    // Seeded, so the same save always produces the same animal.
+    assert.deepEqual(seedTemperament(ch, content, s.seed), seedTemperament(ch, content, s.seed));
+
+    const shown = describe(ch, content);
+    assert.ok(shown.label.includes('·'), `it reads as two axes (${shown.label})`);
+  }
+
+  // A tortoise build and a shark build are different animals.
+  {
+    const calm = tempLab(711, ['tortoise_head', 'tortoise_forelimbs', 'tortoise_hindlimbs', 'tortoise_hide']);
+    const savage = tempLab(712, ['shark_head', 'shark_forelimbs', 'shark_hindlimbs', 'shark_hide']);
+    for (const s of [calm, savage]) { s.chimeras[0].settleUntil = t0; ensureTemperaments(s, content, t0); }
+    assert.ok(
+      savage.chimeras[0].temperament.temper > calm.chimeras[0].temperament.temper + 40,
+      'the shark is markedly fiercer than the tortoise'
+    );
+    assert.equal(describe(savage.chimeras[0], content).temper.id, 'fierce');
+    assert.equal(describe(calm.chimeras[0], content).temper.id, 'gentle');
+  }
+
+  // Perks are PASSIVE STAT EFFECTS ONLY. §3.5's "never removes player
+  // control" rules out anything that takes a turn away — obedience already
+  // occupies that space and is the only thing allowed to.
+  {
+    const s = tempLab(713, ['shark_head', 'shark_forelimbs', 'shark_hindlimbs', 'shark_hide']);
+    const ch = s.chimeras[0];
+    ch.settleUntil = t0;
+    ensureTemperaments(s, content, t0);
+    const perks = perksOf(ch, content);
+    assert.deepEqual(
+      Object.keys(perks).sort(),
+      ['critChance', 'critMult', 'evasion', 'guardLoss', 'lastStandAt', 'power', 'regen'],
+      'the perk surface is stats and nothing else'
+    );
+    assert.ok(perks.power > 0, 'a fierce creature hits harder');
+    assert.ok(perks.guardLoss > 0, 'and guards worse for it');
+    // …and the combatant carries them, while enemy units carry nothing.
+    const mine = combatantFromChimera(ch, content, t0);
+    assert.ok(mine.perks.power > 0);
+    assert.equal(mine.ignoreChance, obedienceIgnoreChance(ch, t0), 'control is still obedience’s job alone');
+    const theirs = combatantFromUnit(content.enemies.riot_squad);
+    assert.equal(theirs.perks.power, 0, 'nothing about the opposition changed');
+    assert.equal(theirs.perks.critChance, 0);
+  }
+
+  // Expressed only past the threshold, and scaled by how far past — one
+  // point over the line is not a whole perk.
+  {
+    const s = tempLab(714, ['goat_head', 'goat_forelimbs']);
+    const ch = s.chimeras[0];
+    ch.temperament = { nerve: 0, temper: 0, from: 'goat' };
+    assert.equal(perksOf(ch, content).power, 0, 'an even creature gets nothing');
+    assert.equal(describe(ch, content).perks.length, 0, 'and is described as having no strong feelings');
+    ch.temperament.temper = tt.expressAt;
+    assert.equal(perksOf(ch, content).power, 0, 'crossing the line is worth nothing on its own');
+    ch.temperament.temper = 100;
+    assert.ok(Math.abs(perksOf(ch, content).power - tt.fiercePowerAt100) < 1e-9, 'the extreme is worth the full perk');
+    ch.temperament.temper = Math.round((100 + tt.expressAt) / 2);
+    assert.ok(Math.abs(perksOf(ch, content).power - tt.fiercePowerAt100 / 2) < 0.01, 'and halfway is worth half');
+  }
+
+  // DRIFT: every existing verb now shapes who the creature becomes.
+  {
+    const s = tempLab(715, ['goat_head', 'goat_forelimbs', 'goat_hindlimbs']);
+    const ch = s.chimeras[0];
+    ch.settleUntil = t0;
+    ensureTemperaments(s, content, t0);
+    const before = { ...ch.temperament };
+
+    driftFromTraining(ch, content);
+    assert.equal(ch.temperament.nerve, before.nerve + tt.driftTrainNerve, 'training makes them braver');
+    assert.equal(ch.temperament.temper, before.temper + tt.driftTrainTemper, 'and gentler with it');
+
+    driftFromBattle(ch, content, { won: true, knockedOut: false });
+    assert.equal(ch.temperament.temper, before.temper + tt.driftTrainTemper + tt.driftPerWin, 'winning makes them fiercer');
+    driftFromBattle(ch, content, { won: false, knockedOut: true });
+    assert.equal(ch.temperament.nerve, before.nerve + tt.driftTrainNerve + tt.driftPerKO, 'going down makes them warier');
+
+    // The axes are bounded, so a long career cannot run away.
+    for (let i = 0; i < 200; i++) driftFromBattle(ch, content, { won: true, knockedOut: true });
+    assert.ok(Math.abs(ch.temperament.temper) <= 100 && Math.abs(ch.temperament.nerve) <= 100, 'and bounded');
+  }
+
+  // …and it happens through the verbs the player actually uses, not just
+  // when the drift functions are called directly.
+  {
+    const s = tempLab(718, ['goat_head', 'goat_forelimbs', 'goat_hindlimbs'], 'apex');
+    const ch = s.chimeras[0];
+    ch.settleUntil = t0;
+    ensureTemperaments(s, content, t0);
+    s.funds = 500;
+
+    const nerveBefore = ch.temperament.nerve;
+    const trained = trainChimera(s, ch.id, t0, content);
+    assert.ok(trained.ok, trained.msg);
+    assert.ok(ch.temperament.nerve > nerveBefore, 'TRAINING shapes them, through trainChimera itself');
+
+    // A won battle, resolved the way the game resolves one.
+    const temperBefore = ch.temperament.temper;
+    s.campaign.lastTickAt = t0;
+    s.battle = createBattle([ch], content.encounters.patrol_1, content, 3, t0, { kind: 'assault', nodeId: null });
+    let guard = 0;
+    while (!s.battle.over && guard++ < 200) {
+      s.battle.enemy.active.hp = 0;
+      step(s.battle, playerActions(s.battle)[0] ?? { type: 'rest' }, content);
+    }
+    assert.equal(s.battle.outcome, 'win');
+    resolveBattle(s, s.battle, content, t0);
+    assert.ok(ch.temperament.temper > temperBefore, 'and A CAREER shapes them, through the real aftermath');
+  }
+
+  // ACCEPTANCE: the perks actually reach the fight. A Fierce creature hits
+  // measurably harder than the identical creature without the temperament.
+  {
+    const mk = (temper) => {
+      const s = tempLab(716, ['bear_head', 'bear_forelimbs', 'bear_hindlimbs', 'bear_hide'], 'apex');
+      const ch = s.chimeras[0];
+      ch.settleUntil = t0;
+      ch.temperament = { nerve: 0, temper, from: 'bear' };
+      return { s, ch };
+    };
+    const damageOver = (temper, seeds = 24) => {
+      let total = 0;
+      for (let seed = 0; seed < seeds; seed++) {
+        const { s, ch } = mk(temper);
+        const battle = createBattle([ch], content.encounters.patrol_1, content, seed + 1, t0, {});
+        const foe = battle.enemy.active;
+        // The foe has to SURVIVE the hit or the measurement reads the next
+        // wave's health instead of the damage dealt — which is exactly how
+        // this returned an identical number for both temperaments first time.
+        foe.maxHp = 9999;
+        foe.hp = 9999;
+        const hp0 = foe.hp;
+        const act = playerActions(battle).filter((a) => a.type === 'move')
+          .sort((x, y) => playerActive(battle).moves[y.index].power - playerActive(battle).moves[x.index].power)[0];
+        step(battle, act, content);
+        total += hp0 - battle.enemy.active.hp;
+      }
+      return total / seeds;
+    };
+    const even = damageOver(0);
+    const fierce = damageOver(100);
+    assert.ok(fierce > even, `a Fierce creature hits harder in the actual engine (${even.toFixed(1)} → ${fierce.toFixed(1)})`);
+    assert.ok(fierce < even * 1.4, 'but not absurdly so');
   }
 }
 

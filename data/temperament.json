@@ -1,0 +1,67 @@
+{
+  "_doc": "Temperament (ROADMAP §3.5): two axes, Skittish–Brave (`nerve`) and Gentle–Fierce (`temper`), each -100..+100. Seeded at SETTLING from the chimera's dominant donor species — the one that contributed the most parts — because §3.5 says temperament comes from the anatomy, and then DRIFTED by how you raise it: training makes a creature braver and gentler, winning makes it fiercer, being knocked out makes it warier. Biases are keyed by species ROLE rather than by species, so a designer can say 'Walls are calm and steady' once instead of thirty-two times; `bySpecies` overrides where a particular animal has a character its role does not capture. Perks are passive stat effects only — §3.5's 'never removes player control' rules out anything that takes a turn away, which is what obedience already does and what this must not duplicate.",
+  "tuning": {
+    "spread": 22,
+    "expressAt": 30,
+    "driftCap": 100,
+    "lastStandAt": 0.3,
+    "critChanceAt100": 0.35,
+    "critMult": 1.5,
+    "evasionAt100": 0.3,
+    "fiercePowerAt100": 0.18,
+    "fierceGuardAt100": 0.5,
+    "gentleRegenAt100": 0.6,
+    "driftPerWin": 5,
+    "driftPerKO": -7,
+    "driftTrainNerve": 4,
+    "driftTrainTemper": -3
+  },
+  "byRole": {
+    "Power": { "nerve": 45, "temper": 60 },
+    "Striker": { "nerve": 55, "temper": 75 },
+    "Pack": { "nerve": 40, "temper": 55 },
+    "Bruiser": { "nerve": 50, "temper": 80 },
+    "Grappler": { "nerve": 45, "temper": 40 },
+    "Charger": { "nerve": 70, "temper": 65 },
+    "Tank": { "nerve": 20, "temper": -30 },
+    "Wall": { "nerve": 30, "temper": -55 },
+    "Lifter": { "nerve": 25, "temper": 10 },
+    "Breaker": { "nerve": 60, "temper": 50 },
+    "Aerial Striker": { "nerve": 50, "temper": 60 },
+    "Disruptor": { "nerve": -40, "temper": -10 },
+    "Speedster": { "nerve": -25, "temper": 5 },
+    "Finisher": { "nerve": 65, "temper": 85 },
+    "Controller": { "nerve": 10, "temper": -20 },
+    "Mage": { "nerve": 5, "temper": 25 },
+    "Taunter": { "nerve": 35, "temper": 45 },
+    "Mobility": { "nerve": -35, "temper": -40 },
+    "Economy": { "nerve": 15, "temper": -15 },
+    "Ghost": { "nerve": -55, "temper": -25 },
+    "Debuffer": { "nerve": -30, "temper": 20 },
+    "Punisher": { "nerve": -20, "temper": 35 },
+    "Duelist": { "nerve": 40, "temper": 70 },
+    "Poisoner": { "nerve": 20, "temper": 45 },
+    "Hybrid": { "nerve": 25, "temper": 55 },
+    "Salvage": { "nerve": 0, "temper": 0 }
+  },
+  "bySpecies": {
+    "alpine_ram": { "nerve": 65, "temper": 40 },
+    "abyssal_shark": { "nerve": 40, "temper": 90 },
+    "storm_eagle": { "nerve": 70, "temper": 55 },
+    "glider_skunk": { "nerve": -45, "temper": 10 },
+    "iron_tortoise": { "nerve": 55, "temper": -60 },
+    "pale_cobra": { "nerve": -15, "temper": 60 }
+  },
+  "labels": {
+    "nerve": {
+      "high": { "id": "brave", "name": "Brave", "perk": "fights harder cornered — lands telling blows below 30% health" },
+      "low": { "id": "skittish", "name": "Skittish", "perk": "hard to hit on the opening exchange" },
+      "mid": { "id": "steady", "name": "Steady", "perk": "no strong feelings either way" }
+    },
+    "temper": {
+      "high": { "id": "fierce", "name": "Fierce", "perk": "hits harder, guards worse" },
+      "low": { "id": "gentle", "name": "Gentle", "perk": "paces itself — recovers stamina faster" },
+      "mid": { "id": "even", "name": "Even", "perk": "takes it as it comes" }
+    }
+  }
+}
