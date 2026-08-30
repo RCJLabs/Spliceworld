@@ -10,6 +10,7 @@ import { recordRivalResult } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';
 import { tickContests, resolveContest, isContested } from './contest.js';
+import { playerLine, rivalLine } from './monologue.js';
 
 const DAY = 86400000;
 const HOUR = 3600000;
@@ -73,7 +74,16 @@ export function tickCampaign(state, content, now) {
   // Rehabilitation graduates on its own clock, checked every tick rather
   // than only when time has visibly passed — a programme can finish while
   // the tab is open (an enrichment session can take the last hour off it).
-  for (const line of tickRehab(state, content, now).news) pushNews(state, line);
+  const rehabbed = tickRehab(state, content, now);
+  for (const line of rehabbed.news) pushNews(state, line);
+  for (const chimera of rehabbed.graduates) {
+    // Two beats, in the order that reads best: you say what you did, and
+    // then the lab you took it from says what they think of that.
+    const mine = playerLine(state, content, 'graduation', { creature: chimera.name });
+    if (mine) pushNews(state, mine);
+    const theirs = rivalLine(content, chimera.rehabilitated?.rivalId, 'defection', { creature: chimera.name });
+    if (theirs) pushNews(state, theirs);
+  }
 
   // Counter-offensives resolve before income is paid, so a node lost
   // during a long absence does not also pay for the days it was gone.
@@ -101,7 +111,11 @@ export function tickCampaign(state, content, now) {
       partIds: Object.values(captive.chimera.tokens).map((t) => t.partId),
       at: captive.deadline,
     });
-    pushNews(state, `${captive.chimera.name} has been transferred to an out-of-state research internship (involuntary). The enemy took notes.`);
+    pushNews(
+      state,
+      rivalLine(content, captive.captor, 'dissectionDone', { creature: captive.chimera.name }) ??
+        `${captive.chimera.name} has been transferred to an out-of-state research internship (involuntary). The enemy took notes.`
+    );
   }
 }
 
@@ -142,10 +156,15 @@ export function resolveBattle(state, battle, content, now) {
       id: `bay-${state.campaign.containment.length}-${now}`,
       unitId,
       unit: generated,
+      rivalId: context.rivalId ?? null,
       capturedAt: now,
       rehab: null,
     });
-    pushNews(state, `${unit.name} impounded in Containment. Finders keepers is the law here now.`);
+    pushNews(
+      state,
+      playerLine(state, content, 'capture', { creature: unit.name }) ??
+        `${unit.name} impounded in Containment. Finders keepers is the law here now.`
+    );
   }
 
   if (context.kind === 'rescue') {
@@ -177,6 +196,8 @@ export function resolveBattle(state, battle, content, now) {
       state.campaign.heldNodes.push(node.id);
       state.campaign.notoriety += node.notoriety;
       pushNews(state, `${node.name} seized. Income +$${node.incomePerDay}/day. Locals adjusting surprisingly well.`);
+      const claim = playerLine(state, content, 'conquest', { node: node.name });
+      if (claim) pushNews(state, claim);
       if (threatGen(state, content) > genBefore) {
         pushNews(state, `THREAT LEVEL UP: the military is now returning your calls. Threat Generation 2.`);
       }
@@ -236,10 +257,15 @@ export function resolveBattle(state, battle, content, now) {
         chimera: taken,
         capturedAt: now,
         deadline: now + hours * HOUR,
+        // Losing to a rival is personal. Remember which one, so the taunt
+        // in the wire has an author and the countdown has a villain.
+        captor: context.rivalId ?? null,
       };
       state.campaign.captives.push(captive);
       detail.capturedChimera = taken.name;
       pushNews(state, `${taken.name} CAPTURED! "Unauthorized peer review" scheduled in ${hours}h. Mount a rescue.`);
+      const taunt = rivalLine(content, captive.captor, 'dissectionTaunt', { creature: taken.name });
+      if (taunt) pushNews(state, taunt);
     }
   }
 

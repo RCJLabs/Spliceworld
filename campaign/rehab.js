@@ -23,6 +23,7 @@
 
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { grantsOf } from '../splice/facility.js';
+import { playerLine } from './monologue.js';
 
 const HOUR = 3600000;
 
@@ -177,7 +178,11 @@ export function startRehab(state, ref, content, now) {
     ok: true,
     plan,
     msg: `${plan.unit.name} enters the Reorientation Wing. ${plan.hours}h of soft lighting and unearned trust begins.`,
-    news: `${plan.unit.name} has been enrolled in a private behavioural programme. Its former employer has not been notified.`,
+    // An array, because the wire gets the event AND your opinion of it.
+    news: [
+      `${plan.unit.name} has been enrolled in a private behavioural programme. Its former employer has not been notified.`,
+      playerLine(state, content, 'rehab', { creature: plan.unit.name }),
+    ].filter(Boolean),
   };
 }
 
@@ -257,7 +262,9 @@ function graduate(state, entry, content, now) {
     temperament: null,
     injury: null,
     lastTrainedAt: 0,
-    rehabilitated: { from: entry.unitId ?? unit.id, at: now, sessions: rehab.sessions },
+    // Whose lab it came out of, so the right villain can complain about
+    // losing it (§3.8 `defection`).
+    rehabilitated: { from: entry.unitId ?? unit.id, rivalId: entry.rivalId ?? null, at: now, sessions: rehab.sessions },
   };
   state.chimeras.push(chimera);
   return chimera;

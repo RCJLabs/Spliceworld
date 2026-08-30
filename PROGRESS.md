@@ -1,5 +1,82 @@
 # PROGRESS
 
+## Session 22 — The monologue pass ✅
+
+§3.8 has said this since the roadmap was written: *"Player profile uses the
+same schema (name your geneticist, pick a philosophy tagline) — the villain-
+monologue feature drops in later with zero refactoring."* Later arrived, and
+it did drop in without a refactor, which is the nicest thing you can say about
+a schema you wrote nineteen sessions ago.
+
+### You are now somebody
+A **Your Dossier** card sits next to the Rival Labs — deliberately the same
+furniture, because the player is a villain in the same schema. It carries a
+title, a name, a lab and a **philosophy**: five voices (Improver, Collector,
+Showman, Naturalist, Engineer), each with its own tagline and its own set of
+monologue slots.
+
+**A philosophy is narrative only, and smoke enforces it** — it asserts a
+philosophy object carries exactly `id / name / tagline / blurb / monologue` and
+nothing else. Anatomy is where this game keeps its mechanics; a stat bonus
+hiding inside a flavour menu would be the exact invisible modifier the class
+triangle was built to replace.
+
+**Names are rolled, not typed.** No screen in this game may render a native
+form control, and on a phone a seeded generator beats a keyboard anyway: the
+picker offers six candidates from ~2,300 with a re-roll, and the same roll
+always offers the same six so a reload mid-choice is safe.
+
+### A duel is now a conversation
+The rival opens, you answer, and both lines are attributed by name — a log of
+anonymous quotation marks tells you nothing about who is gloating. The exchange
+is kept as `battle.opening` as well as in the log, because a story beat you can
+only find by opening a log overlay is a story beat nobody reads: it takes over
+the message box before turn 1 and taps away. A patrol gets none of this; you do
+not monologue at a riot squad.
+
+### Every slot has a caller now
+`dissectionTaunt` had been sitting in `rivals.json` for **three sessions with no
+caller** — written, shipped, never once seen by a player. So the pass added the
+slots the events actually needed and wired all of them:
+
+| slot | fires |
+|---|---|
+| `intro` / `victory` / `defeat` | the duel, both voices |
+| `dissectionTaunt` | a rival takes one of your chimeras |
+| `dissectionDone` | the rescue window closes on it |
+| `defection` | you rehabilitate one of *their* specimens |
+| `rematch` | they iterate after another defeat |
+| `conquest` / `capture` / `rehab` / `graduation` | your voice, in the news wire |
+
+And the assertion that stops it happening again: **every monologue slot must be
+reached by a caller in the source**, checked statically. Two lines were already
+dead when I wrote it — the player's `rehab` slot and `startRehab`'s own news
+line, which the War Room was dropping on the floor.
+
+### Two bugs found along the way
+- **`campaign/rehab.js` and `campaign/contest.js` were never added to the
+  service worker precache** — shipped in the last two sessions, and the offline
+  shell would have failed on both. The existing assertion only checked
+  *precached → exists*; it now checks both directions, and the reverse check is
+  the one that bites.
+- Three of my own new assertions were **vacuous**: half these lines open with
+  `{creature}`, so "text before the first placeholder" was the empty string and
+  `includes('')` is always true. Replaced with a fragment helper that takes the
+  longest literal chunk and asserts it found one.
+
+Also worth recording: the browser QA was reading a **stale `battle/ui.js`** out
+of Chromium's HTTP cache for part of this session. Not a product bug — the
+service worker is network-first — but the QA harness now disables the HTTP
+cache, and the previous two sessions' browser results were re-run and confirmed
+under it.
+
+25 new smoke assertions, each verified to fail when the code it guards is
+broken. Save **v15**; `sw` cache `spliceworld-v15-monologue`.
+
+### Next session's first task
+The post-v0.1 backlog is down to chaos-breeding of chimeras and async ghost
+defences. Neither is started; both want a design conversation first.
+
 ## Session 21 — Region contestation ✅
 
 Conquest was one-way. You took a node, it paid income, and that was the end of
@@ -73,8 +150,7 @@ errors.
 Save **v14**. `sw` cache `spliceworld-v14-contest`.
 
 ### Next session's first task
-The monologue/story pass on the rival profile schema — the last item in the
-post-v0.1 backlog.
+The monologue/story pass on the rival profile schema. *(Shipped in Session 22.)*
 
 ## Session 20 — Rehabilitation ✅
 

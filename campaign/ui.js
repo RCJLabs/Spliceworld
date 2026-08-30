@@ -6,7 +6,7 @@ import { renderArena } from '../battle/ui.js';
 import { createBattle, isInjured, obediencePercent } from '../battle/engine.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
-import { toggleRow } from '../ui/picker.js';
+import { toggleRow, pickerField, bindPickers } from '../ui/picker.js';
 import { analyze } from '../splice/physiology.js';
 import { renderCreatureSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
@@ -17,6 +17,9 @@ import {
 } from './rehab.js';
 import { GRADES, GRADE_INDEX } from '../splice/extract.js';
 import { contestOn, contestEncounter, contestRemainingMs, defencesOf } from './contest.js';
+import {
+  profileOf, philosophyList, rollIdentities, setIdentity, setPhilosophy, duelBarks,
+} from './monologue.js';
 import {
   nodeStates, threatGen, incomePerDay, incomeSuspended, salvageUnit, regionOf,
 } from './campaign.js';
@@ -188,6 +191,7 @@ function renderMap(root, ctx) {
       ${nodes}
     </section>
     ${dossier}
+    ${dossierCard(state, content)}
     ${rivals ? `<section class="card"><h3>🧫 Rival Labs</h3>${rivals}</section>` : ''}
     ${containment ? `<section class="card"><h3>Containment</h3>${containment}</section>` : ''}
     <section class="card">
@@ -195,6 +199,7 @@ function renderMap(root, ctx) {
       <div class="news-feed">${news || '<p class="fine-print">All quiet. Suspiciously quiet.</p>'}</div>
     </section>`;
 
+  bindDossier(root, ctx, () => renderMap(root, ctx));
   root.querySelectorAll('button[data-node]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const node = region.nodes.find((n) => n.id === btn.dataset.node);
@@ -235,7 +240,9 @@ function renderMap(root, ctx) {
   const bayAction = (attr, run) => {
     root.querySelectorAll(`button[data-${attr}]`).forEach((btn) => {
       btn.addEventListener('click', () => {
-        lastAftermath = run(btn.dataset[attr]).msg;
+        const result = run(btn.dataset[attr]);
+        lastAftermath = result.msg;
+        for (const line of result.news ?? []) ctx.pushNews(line);
         ctx.save();
         renderMap(root, ctx);
       });
@@ -245,6 +252,93 @@ function renderMap(root, ctx) {
   bayAction('rehab', (id) => startRehab(state, id, content, ctx.now()));
   bayAction('session', (id) => rehabSession(state, id, content, ctx.now()));
   bayAction('cancel', (id) => cancelRehab(state, id, content));
+}
+
+// --- Your dossier --------------------------------------------------------
+
+// §3.8's other half. The rivals have carried a name, a title and a
+// philosophy since they were written; this is the player's, on the same
+// schema, which is what makes the monologue drop in without a refactor.
+//
+// A philosophy is NARRATIVE ONLY and the card says so out loud, because a
+// menu that looks like a build choice and is not would be worse than no
+// menu at all.
+let identityRoll = 0;
+
+function dossierCard(state, content) {
+  const me = profileOf(state, content);
+  return `
+    <section class="card dossier-mine">
+      <h3>🧾 Your Dossier</h3>
+      <p class="dossier-name">${me.named ? `${me.title} ${me.name}` : 'Unregistered Operator'}</p>
+      <p class="fine-print">${me.named ? `of ${me.lab}` : 'The paperwork has not been filed. The paperwork will never be filed.'}</p>
+      <p class="rival-quote">&ldquo;${me.philosophy?.tagline ?? ''}&rdquo;</p>
+      <p class="fine-print">${me.philosophy?.blurb ?? ''}</p>
+      ${pickerField({
+        id: 'me-identity',
+        label: 'Name on the door',
+        value: me.named ? `${me.title} ${me.name}` : 'Choose a name',
+        hint: me.lab,
+      })}
+      ${pickerField({
+        id: 'me-philosophy',
+        label: 'Philosophy',
+        value: me.philosophy?.name ?? '—',
+        hint: 'Flavour only — your anatomy is where the mechanics live',
+      })}
+    </section>`;
+}
+
+function bindDossier(root, ctx, redraw) {
+  const { state, content } = ctx;
+  bindPickers(root, {
+    'me-identity': () => ({
+      title: 'Name on the door',
+      subtitle: 'Rolled, not typed — this game does not open the phone keyboard for anybody.',
+      groups: [
+        {
+          label: null,
+          options: rollIdentities(content, state.seed + identityRoll, 6).map((id) => ({
+            id: id.id,
+            label: `${id.title} ${id.name}`,
+            sub: `of ${id.lab}`,
+          })),
+        },
+        { label: null, options: [{ id: '__reroll', label: '🎲 Roll a different set', sub: 'None of these. Try again.' }] },
+      ],
+      selectedId: '',
+      onPick: (value) => {
+        if (value === '__reroll') {
+          identityRoll += 1;
+        } else {
+          const chosen = rollIdentities(content, state.seed + identityRoll, 6).find((i) => i.id === value);
+          if (chosen) setIdentity(state, { title: chosen.title, name: chosen.name, lab: chosen.lab });
+        }
+        ctx.save();
+        redraw();
+      },
+    }),
+    'me-philosophy': () => ({
+      title: 'Philosophy',
+      subtitle: 'What you tell people at parties. Changes what you SAY, never what you roll.',
+      groups: [
+        {
+          label: null,
+          options: philosophyList(content).map((ph) => ({
+            id: ph.id,
+            label: ph.name,
+            sub: ph.tagline,
+          })),
+        },
+      ],
+      selectedId: profileOf(state, content).philosophy?.id ?? '',
+      onPick: (value) => {
+        setPhilosophy(state, value);
+        ctx.save();
+        redraw();
+      },
+    }),
+  });
 }
 
 // --- Containment ---------------------------------------------------------
@@ -435,6 +529,20 @@ function renderBriefing(root, ctx) {
       // enemies.json, so the aftermath cannot look them up afterwards —
       // the Splice-Dex and the defence's salvage both read this.
       waveIds: encounter.waves.filter((w) => typeof w === 'string'),
+      // §3.8: a rival duel is a scene, so the player's half of it is
+      // handed to the engine as data. Everything else fights in silence.
+      ...(draftTarget.kind === 'rival'
+        ? {
+            playerBarks: duelBarks(state, content, content.rivals[draftTarget.rivalId]),
+            speakers: {
+              enemy: content.rivals[draftTarget.rivalId]?.name ?? 'The opposition',
+              // Mirror the rivals: they speak as "Dr. Mantissa", not as
+              // "Chief Entomologist, Hexapod Futures". The full title
+              // belongs on the dossier card, not in every line of dialogue.
+              player: profileOf(state, content).named ? profileOf(state, content).name : 'You',
+            },
+          }
+        : {}),
     });
     ctx.save();
     renderWarRoomScreen(root, ctx);
