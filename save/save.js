@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 18;
+export const SAVE_VERSION = 19;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -199,6 +199,18 @@ const migrations = {
   // temperament.ensureTemperaments), the same way the starter herd does.
   18: (save) => {
     for (const chimera of save.chimeras) chimera.temperament = chimera.temperament ?? null;
+    return save;
+  },
+  // v19 (Injury scarring): §3.5's "untreated injuries can scar into
+  // permanent trait tradeoffs". Nobody is retroactively scarred for
+  // injuries they took before the Infirmary sold treatment — everyone
+  // starts clean, and `injuryCount` seeds the roll from here on.
+  19: (save) => {
+    for (const chimera of save.chimeras) {
+      chimera.scars = chimera.scars ?? [];
+      chimera.injuryCount = chimera.injuryCount ?? 0;
+      chimera.injuriesTreated = chimera.injuriesTreated ?? 0;
+    }
     return save;
   },
 };

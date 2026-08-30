@@ -86,6 +86,8 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
     injury: null, // Infirmary timer set by battle aftermath (Law 1)
     lastTrainedAt: 0,
     exhaustedUntil: 0, // recovery after a turn in the chaos vat
+    scars: [], // set by untreated injuries (§3.5)
+    injuryCount: 0,
   };
   state.chimeras.push(chimera);
 

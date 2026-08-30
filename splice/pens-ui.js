@@ -7,6 +7,7 @@ import { GRADES, GRADE_INDEX, salvagePreview, extractChimera } from './extract.j
 import { chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING } from './theater.js';
 import { isInjured, obediencePercent } from '../battle/engine.js';
 import { describe as describeTemperament } from './temperament.js';
+import { scarsOf, describeScar, treatInjury, treatmentCost } from './scars.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import {
@@ -159,8 +160,17 @@ export function renderPensScreen(root, ctx) {
                 : `Settling… ${fmtDuration(settleRemainingMs(ch, t))} remaining. No sudden noises.`
             }</p>
             ${isInjured(ch, t)
-              ? `<p class="settle">🩹 Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} of dramatic convalescing left.</p>`
+              ? `<p class="settle">🩹 Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} of dramatic convalescing left.</p>
+                 <p class="fine-print scar-warn">Left to itself it may set badly and stay that way. Treating it costs money and guarantees it will not.</p>
+                 <button type="button" class="care-train" data-treat="${ch.id}">🩺 Treat ($${treatmentCost(ch, content, t)})</button>`
               : ''}
+            ${(() => {
+              const scars = scarsOf(ch, content).map((sc) => describeScar(sc, ch.name));
+              if (!scars.length) return '';
+              return `<ul class="token-list scar-list">${scars
+                .map((sc) => `<li><strong>${sc.name}</strong> <span class="lineage">${sc.summary}</span><br><span class="fine-print">${sc.line}</span></li>`)
+                .join('')}</ul>`;
+            })()}
             <ul class="token-list">${manifest}</ul>
           </div>
         </section>`;
@@ -209,6 +219,13 @@ export function renderPensScreen(root, ctx) {
           renderPensScreen(root, ctx);
         },
       });
+    });
+  });
+  root.querySelectorAll('button[data-treat]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      lastMsg = treatInjury(state, btn.dataset.treat, content, ctx.now()).msg;
+      ctx.save();
+      renderPensScreen(root, ctx);
     });
   });
   root.querySelectorAll('button[data-train]').forEach((btn) => {

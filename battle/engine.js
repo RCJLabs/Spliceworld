@@ -9,6 +9,7 @@ import { analyze } from '../splice/physiology.js';
 import { GRADE_INDEX } from '../splice/extract.js';
 import { isSettled } from '../splice/theater.js';
 import { perksOf, driftFromBattle } from '../splice/temperament.js';
+import { flatModifiers, scarEffects, againstTags } from '../splice/scars.js';
 
 const STAGE_STEP = 0.15;
 const STAGE_CAP = 2; // setup matters, but stacking is not a strategy on its own
@@ -134,6 +135,10 @@ export function combatantFromChimera(chimera, content, now) {
   const moves = movesFromTokens(tokens, report, content);
 
   const debuff = settled ? 1 : REJECTION_MULT;
+  // Scars that apply to everyone land on the stats here; the ones that
+  // only apply to particular opponents ride along and are resolved when
+  // the engine knows who is on the other side (§3.5).
+  const flat = flatModifiers(chimera, content);
   return {
     kind: 'chimera',
     refId: chimera.id,
@@ -142,10 +147,10 @@ export function combatantFromChimera(chimera, content, now) {
     hp: report.stats.hp,
     power: Math.round(report.stats.power * debuff),
     armor: report.stats.armor,
-    speed: Math.round(report.stats.speed * debuff),
+    speed: Math.max(1, Math.round(report.stats.speed * debuff) + flat.speed),
     staminaMax: report.stats.stamina,
     stamina: report.stats.stamina,
-    regen: report.regenNet,
+    regen: report.regenNet + flat.regen,
     tags: ['Organic', ...report.tags],
     creatureClass: report.creatureClass,
     moves,
@@ -154,6 +159,7 @@ export function combatantFromChimera(chimera, content, now) {
     // Temperament (§3.5): passive stat effects, never a loss of control.
     // Enemy units get the neutral set, so nothing about them changes.
     perks: perksOf(chimera, content),
+    scars: scarEffects(chimera, content),
     stages: { acc: 0, evasion: 0, power: 0 },
     status: { venom: 0, sleep: false, stun: false, guard: false, charging: null },
   };
@@ -203,6 +209,7 @@ export function combatantFromUnit(unit, scale = 1) {
     rejection: false,
     ignoreChance: 0,
     perks: NEUTRAL_PERKS,
+    scars: [],
     stages: { acc: 0, evasion: 0, power: 0 },
     status: { venom: 0, sleep: false, stun: false, guard: false, charging: null },
   };
@@ -417,10 +424,20 @@ function attack(battle, atk, def, move, events, content) {
 
   const from = sideOf(atk);
   const at = sideOf(def);
+  // Scars that only mean something against a particular kind of opponent
+  // resolve here, once the engine knows who is on the other side. This is
+  // where "fears jeeps" becomes a number.
+  const mine = againstTags(atk.scars, def.tags);
+  const theirs = againstTags(def.scars, atk.tags);
+
   // Skittish creatures are hard to pin down on the opening exchange.
   const jumpy = battle.turn === 1 ? (def.perks?.evasion ?? 0) : 0;
   const hitChance =
-    (move.acc / 100) * stageMult(atk.stages.acc) / stageMult(def.stages.evasion) * (1 - jumpy);
+    ((move.acc + mine.acc) / 100) *
+    stageMult(atk.stages.acc) /
+    stageMult(def.stages.evasion) *
+    (1 - jumpy) *
+    (1 - theirs.evasion);
   if (roll(battle) > hitChance) {
     events.push({ text: `${atk.name} uses ${move.name} — it whiffs spectacularly!`, kind: 'miss', actor: from, target: at, move: move.name });
     return;
@@ -434,6 +451,8 @@ function attack(battle, atk, def, move, events, content) {
     let dmg = move.power * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult * clsMult;
     dmg *= 0.9 + 0.2 * roll(battle);
     dmg *= 1 + (atk.perks?.power ?? 0); // Fierce
+    dmg *= 1 + mine.power; // a scar that changed how it fights THESE
+    dmg *= 1 - theirs.armor; // …and one that changed how it takes them
     // Brave: cornered, it starts landing telling blows.
     const cornered = atk.maxHp > 0 && atk.hp / atk.maxHp <= (atk.perks?.lastStandAt ?? 0);
     const crit = cornered && (atk.perks?.critChance ?? 0) > 0 && roll(battle) < atk.perks.critChance;

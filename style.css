@@ -1360,6 +1360,12 @@ footer {
 
 /* Dismantling sits beside training because they are the two things you can
    do TO a chimera; it is styled quieter because it is the irreversible one. */
+/* A scar is character, not damage: the list reads like a CV rather than a
+   warning, and only the untreated-injury nudge is amber. */
+.scar-warn { color: var(--warn); }
+.scar-list { margin-top: 6px; }
+.scar-list strong { color: var(--zap); }
+
 /* Temperament is what the creature IS, so it reads in the accent rather
    than as another grey stat line. */
 .temperament { color: var(--goo); }

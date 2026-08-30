@@ -15,6 +15,7 @@ import { renderWarRoomScreen } from './campaign/ui.js';
 import { tickCampaign, pushNews } from './campaign/campaign.js';
 import { tickVat } from './splice/chaos.js';
 import { ensureTemperaments } from './splice/temperament.js';
+import { tickScars } from './splice/scars.js';
 import { renderDexScreen } from './splice/dex-ui.js';
 import * as sfx from './audio/sfx.js';
 
@@ -96,6 +97,8 @@ function tick() {
   for (const line of tickVat(state, content, NOW()).news) pushNews(state, line);
   // A chimera that has finished settling acquires opinions (§3.5).
   ensureTemperaments(state, content, NOW());
+  // An injury left to run its course may set badly and stay (§3.5).
+  for (const line of tickScars(state, content, NOW()).news) pushNews(state, line);
   tickCampaign(state, content, NOW());
   saveGame(state);
   updateTicker();

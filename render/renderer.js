@@ -66,6 +66,8 @@ export function indexContent(raw) {
     operations: raw.operations ? byId(raw.operations.operations) : {},
     operationMeta: raw.operations ? raw.operations.tuning : null,
     chaosMeta: raw.chaos ? raw.chaos.tuning : null,
+    scars: raw.scars ? byId(raw.scars.scars) : {},
+    scarMeta: raw.scars ? raw.scars.tuning : null,
     temperamentMeta: raw.temperament ? raw.temperament.tuning : null,
     temperamentByRole: raw.temperament ? raw.temperament.byRole : null,
     temperamentBySpecies: raw.temperament ? raw.temperament.bySpecies : null,
