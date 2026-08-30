@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 14;
+export const SAVE_VERSION = 15;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -150,6 +150,24 @@ const migrations = {
     save.campaign.contestCount = 0;
     return save;
   },
+  // v15 (Monologue pass): the player gets the same profile schema the
+  // rivals have had since §3.8 was written. `philosophy` is left NULL
+  // rather than stamped with today's default, so changing the default
+  // stays a one-line change instead of something every existing lab is
+  // pinned against (the same rule the colour scheme follows). Captives
+  // remember who took them so the right villain can gloat about it, and
+  // containment bays remember whose lab a specimen came from so the
+  // right villain can complain when you win it over.
+  15: (save) => {
+    save.profile = { named: false, title: null, name: null, lab: null, philosophy: null };
+    for (const captive of save.campaign.captives) captive.captor = captive.captor ?? null;
+    for (const entry of save.campaign.containment) entry.rivalId = entry.rivalId ?? null;
+    if (save.battle) {
+      save.battle.playerBarks = save.battle.playerBarks ?? {};
+      save.battle.speakers = save.battle.speakers ?? {};
+    }
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -182,6 +200,9 @@ export function newGameState() {
     settings: { muted: false },
     dex: { parts: [], enemies: [], traits: [], variants: [] },
     facility: { theater: 1, containment: 1 },
+    // The §3.8 profile: the player's half of the story schema. Unnamed
+    // until they choose — nothing in this game waits behind a form.
+    profile: { named: false, title: null, name: null, lab: null, philosophy: null },
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations

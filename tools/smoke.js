@@ -2,7 +2,7 @@
 // requirement the M4.5 balance harness will lean on) and that all content
 // data is coherent. Run: node tools/smoke.js
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import assert from 'node:assert/strict';
@@ -50,6 +50,7 @@ const content = indexContent({
   rivals: readJSON('data/rivals.json'),
   director: readJSON('data/director.json'),
   facility: readJSON('data/facility.json'),
+  philosophies: readJSON('data/philosophies.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -957,6 +958,27 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   for (const f of shellFiles) {
     assert.ok(readFileSync(join(root, f)), `sw precaches a real file: ${f}`);
   }
+  // …and the other direction, which is the one that actually bites. The
+  // check above only ever caught a DELETED file; two modules shipped in
+  // consecutive sessions without being precached at all, which breaks the
+  // offline shell in exactly the situation a PWA exists for.
+  const NOT_SHIPPED = new Set(['sw.js', 'package.json']);
+  const runtimeFiles = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+      const rel = dir ? `${dir}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (['tools', 'docs', 'node_modules', '.git'].includes(rel)) continue;
+        walk(rel);
+      } else if (/\.(js|json|css|html|webmanifest)$/.test(entry.name) && !NOT_SHIPPED.has(rel)) {
+        runtimeFiles.push(rel);
+      }
+    }
+  };
+  walk('');
+  const precached = new Set(shellFiles);
+  const unshipped = runtimeFiles.filter((f) => !precached.has(f));
+  assert.deepEqual(unshipped, [], `every runtime file is precached (missing: ${unshipped.join(', ')})`);
   readFileSync(join(root, 'icon.svg')); // exists
   readFileSync(join(root, 'docs/TWA.md'));
 }
@@ -1228,6 +1250,9 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   const bay = lab.campaign.containment[0];
   assert.ok(bay.unit, 'a generated unit rides along in the bay — enemies.json has no entry for it');
   assert.ok(!content.enemies[bay.unitId], 'confirming there is nothing to look it up by');
+  // …and whose lab it came out of, so the right villain can complain when
+  // you eventually win it over (§3.8 `defection`).
+  assert.equal(bay.rivalId, 'mantissa', 'the bay remembers who built it');
 
   const before = lab.inventory.parts.length;
   const salvage = salvageUnit(lab, 0, content, tRival);
@@ -2364,6 +2389,297 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     assert.ok(!s.campaign.heldNodes.includes(nodeId), 'losing the defence loses the node');
     assert.equal(defencesOf(s, nodeId), 0, 'and buys no credit');
     assert.ok(s.campaign.nextContestAt > t0 + 12 * HOUR, 'they regroup either way');
+  }
+}
+
+// --- The monologue pass (§3.8 "Rivals & Story Architecture"). The rivals
+// --- have carried a profile schema since they were written; the player
+// --- now has the same one, and the slots are wired to the events that
+// --- should trigger them instead of sitting in the JSON being admired.
+{
+  const {
+    fill, profileOf, philosophyList, philosophyOf, playerLine, rivalLine,
+    rollIdentities, setIdentity, setPhilosophy, duelBarks, DEFAULT_PHILOSOPHY,
+  } = await import('../campaign/monologue.js');
+  const { rivalEncounter } = await import('../campaign/rivals.js');
+  const { startRehab, tickRehab, rehabPlan } = await import('../campaign/rehab.js');
+
+  const PLACEHOLDERS = new Set(['rival', 'creature', 'node', 'lab', 'name']);
+  // A distinctive literal fragment of a template, for asserting that THIS
+  // line reached the wire. Taking the text before the first placeholder is
+  // a trap — half of these lines OPEN with {creature}, and an empty prefix
+  // makes `includes()` vacuously true, which is exactly how three of these
+  // assertions passed while guarding nothing.
+  const fragment = (template) => {
+    const best = template.split(/\{\w+\}/).map((x) => x.trim()).sort((a, b) => b.length - a.length)[0];
+    assert.ok(best && best.length >= 12, `no distinctive literal in: ${template}`);
+    return best;
+  };
+  const philosophies = philosophyList(content);
+  const rivals = Object.values(content.rivals);
+
+  // Content coherence: one schema, no ragged edges. A slot that exists for
+  // one voice and not another is a line that silently never fires.
+  assert.ok(philosophies.length >= 3, 'the player has a real choice of voice');
+  const playerSlots = Object.keys(philosophies[0].monologue).sort();
+  for (const ph of philosophies) {
+    assert.deepEqual(Object.keys(ph.monologue).sort(), playerSlots, `${ph.id} carries the same slots as the rest`);
+    assert.ok(ph.tagline && ph.blurb && ph.name, `${ph.id} is a complete profile`);
+    for (const [slot, text] of Object.entries(ph.monologue)) {
+      assert.ok(text.length > 30, `${ph.id}.${slot} is prose, not a placeholder`);
+      for (const [, key] of text.matchAll(/\{(\w+)\}/g)) {
+        assert.ok(PLACEHOLDERS.has(key), `${ph.id}.${slot} uses an unknown placeholder {${key}}`);
+      }
+    }
+  }
+  const rivalSlots = Object.keys(rivals[0].monologue).sort();
+  for (const r of rivals) {
+    assert.deepEqual(Object.keys(r.monologue).sort(), rivalSlots, `${r.id} carries the same slots as the rest`);
+    for (const [slot, text] of Object.entries(r.monologue)) {
+      assert.ok(text.length > 30, `${r.id}.${slot} is prose, not a placeholder`);
+      for (const [, key] of text.matchAll(/\{(\w+)\}/g)) {
+        assert.ok(PLACEHOLDERS.has(key), `${r.id}.${slot} uses an unknown placeholder {${key}}`);
+      }
+    }
+  }
+
+  // A philosophy is NARRATIVE ONLY. If a flavour menu ever grows a stat
+  // block it becomes an invisible modifier, which is the exact thing the
+  // class triangle was built to replace.
+  for (const ph of philosophies) {
+    assert.deepEqual(
+      Object.keys(ph).sort(),
+      ['blurb', 'id', 'monologue', 'name', 'tagline'],
+      `${ph.id} carries story and nothing else`
+    );
+  }
+
+  // THE assertion this pass exists for. dissectionTaunt sat in rivals.json
+  // for three sessions with no caller — written, shipped, never once seen
+  // by a player. Every slot must be REACHED by code.
+  {
+    const sources = ['campaign/campaign.js', 'campaign/rivals.js', 'campaign/rehab.js',
+      'campaign/ui.js', 'campaign/monologue.js', 'battle/engine.js']
+      .map((f) => readFileSync(join(root, f), 'utf8'))
+      .join('\n');
+    for (const slot of new Set([...playerSlots, ...rivalSlots])) {
+      // A caller either asks for the slot by name (playerLine(…, 'rehab'))
+      // or reads it off the bark bundle (battle.barks.midFight).
+      assert.ok(
+        new RegExp(`(['"\`]${slot}['"\`]|\\.${slot}\\b)`).test(sources),
+        `monologue slot "${slot}" is never asked for by any caller — it is dead prose`
+      );
+    }
+  }
+
+  // Templating: known keys substitute, unknown keys are left visible so a
+  // typo reads oddly instead of printing "undefined" at the player.
+  assert.equal(fill('{a} and {b}', { a: 'x', b: 'y' }), 'x and y');
+  assert.equal(fill('{a} and {nope}', { a: 'x' }), 'x and {nope}');
+  assert.equal(fill(null, {}), null, 'a missing slot is silence, not a crash');
+
+  // An unnamed lab is still a lab: nothing in this game waits behind a form.
+  {
+    const fresh = { ...newGameState(), seed: 12 };
+    const me = profileOf(fresh, content);
+    assert.equal(me.named, false);
+    assert.ok(me.name && me.lab && me.title, 'and it still has something to print');
+    assert.equal(philosophyOf(fresh, content).id, DEFAULT_PHILOSOPHY, 'with a default voice');
+    assert.equal(fresh.profile.philosophy, null, 'that is NOT stamped into the save — the default can still move');
+    assert.ok(playerLine(fresh, content, 'conquest', { node: 'Somewhere' }), 'so its lines still fire');
+  }
+
+  // Names are rolled, seeded, and distinct — no keyboard, no duplicates.
+  {
+    const a = rollIdentities(content, 99, 6);
+    assert.equal(a.length, 6);
+    assert.equal(new Set(a.map((i) => i.name)).size, 6, 'six distinct candidates');
+    // One roll of six from a few hundred names collides only ~5% of the
+    // time, so a single sample does not test the dedupe at all.
+    for (let seed = 0; seed < 200; seed++) {
+      const roll = rollIdentities(content, seed, 6);
+      assert.equal(new Set(roll.map((i) => i.name)).size, 6, `roll ${seed} offers no duplicate names`);
+    }
+    assert.deepEqual(rollIdentities(content, 99, 6), a, 'the same roll always offers the same list');
+    assert.notDeepEqual(rollIdentities(content, 100, 6).map((i) => i.name), a.map((i) => i.name), 'a re-roll offers new ones');
+
+    const s = { ...newGameState(), seed: 5 };
+    setIdentity(s, a[0]);
+    assert.equal(profileOf(s, content).named, true);
+    assert.equal(profileOf(s, content).name, a[0].name);
+    setPhilosophy(s, 'showman');
+    assert.equal(philosophyOf(s, content).id, 'showman');
+    assert.equal(profileOf(s, content).name, a[0].name, 'and changing one does not clear the other');
+  }
+
+  // ACCEPTANCE, part 1: a rival duel is a CONVERSATION. Both voices, both
+  // attributed, so the log is a scene rather than a row of anonymous
+  // quotation marks.
+  {
+    const lab = { ...newGameState(), seed: 3131 };
+    lab.campaign.lastTickAt = t0;
+    lab.campaign.heldNodes = region.nodes.map((n) => n.id);
+    lab.campaign.notoriety = 999;
+    lab.campaign.rivals = { mantissa: { defeats: 0, losses: 0 } };
+    setIdentity(lab, { title: 'Doctor', name: 'Wren Vex', lab: 'Better Animals Ltd.' });
+    setPhilosophy(lab, 'showman');
+    const hero = makeChimera(lab, 'L', {
+      bear_head: 'prismatic', bear_forelimbs: 'prismatic', bear_hide: 'prismatic', bear_organ: 'prismatic',
+    }, t0);
+    const rival = content.rivals.mantissa;
+    const encounter = rivalEncounter(lab, rival, content);
+    const barks = duelBarks(lab, content, rival);
+    assert.ok(barks.intro.includes(rival.name), "the player's opener names who they are talking to");
+
+    const battle = createBattle([hero], encounter, content, 7, hero.settleUntil, {
+      kind: 'rival', rivalId: 'mantissa',
+      playerBarks: barks,
+      speakers: { enemy: rival.name, player: 'Doctor Wren Vex' },
+    });
+    const opening = battle.log.join('\n');
+    assert.ok(opening.includes(`${rival.name}: `), 'the rival speaks, by name');
+    assert.ok(opening.includes('Doctor Wren Vex: '), 'and so do you, by name');
+    assert.ok(
+      opening.indexOf(`${rival.name}: `) < opening.indexOf('Doctor Wren Vex: '),
+      'call, then response — they open, you answer'
+    );
+    // The exchange is kept as its own list so the arena can put it in the
+    // message box. An opening the player has to open a log overlay to find
+    // is an opening nobody reads.
+    assert.equal(battle.opening.length, 2, 'both halves of the exchange are addressable');
+    assert.ok(battle.opening[0].startsWith(`${rival.name}: `));
+    assert.ok(battle.opening[1].startsWith('Doctor Wren Vex: '));
+    // The wave announcement must not look like something the rival said —
+    // it used to be "Dr. Mantissa: Thorax Ultra moves in!", which reads as
+    // dialogue now that dialogue is attributed exactly that way.
+    const waveIn = battle.log.find((l) => l.includes('moves in!'));
+    assert.ok(waveIn && !waveIn.includes(`${rival.name}: `), `the wave-in is narration, not speech: ${waveIn}`);
+
+    // Fight it out: their defeat line and your victory line both land.
+    let guard = 0;
+    while (!battle.over && guard++ < 300) {
+      battle.enemy.active.hp = 0;
+      step(battle, playerActions(battle)[0] ?? { type: 'rest' }, content);
+    }
+    assert.equal(battle.outcome, 'win');
+    const full = battle.log.join('\n');
+    assert.ok(full.includes(fragment(rival.monologue.defeat)), 'the rival concedes in their own words');
+    assert.ok(
+      full.includes(fragment(content.philosophies.showman.monologue.victory)),
+      'and you get the last word, in yours'
+    );
+
+    // A patrol is not a scene: silence unless somebody was handed lines.
+    const quiet = createBattle([hero], content.encounters.patrol_1, content, 7, hero.settleUntil, { kind: 'assault' });
+    assert.deepEqual(quiet.playerBarks, {}, 'no monologuing at a riot squad');
+    assert.deepEqual(quiet.opening, [], 'and no opening exchange to sit through');
+    assert.ok(!quiet.log.join('\n').includes('Doctor Wren Vex'), 'the log stays clean');
+  }
+
+  // ACCEPTANCE, part 2: the slots fire on the events they were written
+  // for, in the news wire, across the whole game rather than three fights.
+  {
+    const lab = { ...newGameState(), seed: 4141, funds: 6000 };
+    lab.campaign.lastTickAt = t0;
+    setPhilosophy(lab, 'collector');
+    const ph = content.philosophies.collector;
+    const say = (slot) => fragment(ph.monologue[slot]);
+
+    // Conquest speaks.
+    lab.campaign.heldNodes = [];
+    const army = [makeChimera(lab, 'L', {
+      bear_head: 'prismatic', bear_forelimbs: 'prismatic', bear_hide: 'prismatic', bear_organ: 'prismatic',
+    }, t0)];
+    const tWar = army[0].settleUntil;
+    lab.battle = createBattle(army, content.encounters.patrol_1, content, 21, tWar, { kind: 'assault', nodeId: 'barn_perimeter' });
+    autoplay(lab.battle);
+    assert.equal(lab.battle.outcome, 'win');
+    resolveBattle(lab, lab.battle, content, tWar);
+    assert.ok(lab.news.some((n) => n.includes('Old Barn Perimeter') && n.includes(say('conquest'))), 'taking a node is worth saying something about');
+
+    // Losing a chimera TO A RIVAL is personal: the taunt has an author,
+    // and the wire says so when the window closes on it.
+    const lost = { ...newGameState(), seed: 5151 };
+    lost.campaign.lastTickAt = t0;
+    setPhilosophy(lost, 'collector');
+    const doomed = makeChimera(lost, 'S', { goat_head: 'standard' }, t0);
+    const tLoss = doomed.settleUntil;
+    lost.battle = createBattle([doomed], rivalEncounter(lost, content.rivals.trench, content), content, 9, tLoss, {
+      kind: 'rival', rivalId: 'trench',
+    });
+    let g2 = 0;
+    while (!lost.battle.over && g2++ < 300) {
+      lost.battle.player.team[0].hp = 0;
+      step(lost.battle, playerActions(lost.battle)[0] ?? { type: 'rest' }, content);
+    }
+    assert.equal(lost.battle.outcome, 'loss');
+    resolveBattle(lost, lost.battle, content, tLoss);
+    const captive = lost.campaign.captives[0];
+    assert.ok(captive, 'they took one');
+    assert.equal(captive.captor, 'trench', 'and the save remembers who');
+    assert.ok(
+      lost.news.some((n) => n.includes(fragment(content.rivals.trench.monologue.dissectionTaunt))),
+      'so the right villain gloats about it'
+    );
+    // …and again, differently, when the rescue window closes.
+    lost.news = [];
+    tickCampaign(lost, content, captive.deadline);
+    assert.equal(lost.campaign.captives.length, 0);
+    assert.ok(
+      lost.news.some((n) => n.includes(fragment(content.rivals.trench.monologue.dissectionDone))),
+      'the peer review concludes in their voice, not a generic one'
+    );
+
+    // Rehabilitating a rival's specimen: you say what you did, and the lab
+    // you took it from says what they think of that.
+    const won = { ...newGameState(), seed: 6161, funds: 6000 };
+    won.campaign.lastTickAt = t0;
+    won.facility.containment = 2;
+    setPhilosophy(won, 'collector');
+    won.campaign.rivals = { aloft: { defeats: 0, losses: 0 } };
+    won.campaign.heldNodes = region.nodes.map((n) => n.id);
+    won.campaign.notoriety = 999;
+    const spec = rivalEncounter(won, content.rivals.aloft, content).waves[0];
+    won.campaign.containment.push({
+      id: 'bay-m', unitId: spec.id, unit: spec, rivalId: 'aloft', capturedAt: t0, rehab: null,
+    });
+    const started = startRehab(won, 'bay-m', content, t0);
+    assert.ok(started.ok, started.msg);
+    assert.ok(
+      started.news.some((n) => n.includes(say('rehab'))),
+      'enrolling one is worth saying something about too'
+    );
+    const plan = rehabPlan(won, won.campaign.containment[0], content);
+    won.news = [];
+    tickCampaign(won, content, t0 + (plan?.hours ?? 24) * HOUR + HOUR);
+    assert.equal(won.chimeras.length, 1, 'it graduated');
+    const grad = won.chimeras[0].name;
+    assert.ok(
+      won.news.some((n) => n.includes(say('graduation')) && n.includes(grad)),
+      'you say what you did, and name who you did it to'
+    );
+    assert.ok(
+      won.news.some((n) => n.includes(fragment(content.rivals.aloft.monologue.defection))),
+      'and the Baroness has OPINIONS about losing it'
+    );
+  }
+
+  // A rival who keeps losing announces it in their own voice rather than
+  // as a scoreboard line.
+  {
+    const s = { ...newGameState(), seed: 71 };
+    s.campaign.rivals = { mantissa: { defeats: 1, losses: 0 } };
+    const { recordRivalResult } = await import('../campaign/rivals.js');
+    const line = recordRivalResult(s, 'mantissa', 'win', content);
+    assert.equal(line, content.rivals.mantissa.monologue.rematch, 'the second defeat is theirs to comment on');
+    assert.ok(rivalLine(content, 'nobody', 'rematch') === null, 'an unknown rival is silence, not a crash');
+  }
+
+  // v15 migration.
+  {
+    const old = structuredClone(v1Save);
+    const up = migrate(old);
+    assert.deepEqual(up.profile, { named: false, title: null, name: null, lab: null, philosophy: null });
   }
 }
 

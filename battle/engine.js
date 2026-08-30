@@ -278,6 +278,13 @@ export function turnForecast(battle) {
   };
 }
 
+// A monologue line, attributed. Without a speaker the log is a row of
+// anonymous quotation marks and the reader cannot tell who is gloating.
+function barkLine(battle, who, line) {
+  const speaker = battle.speakers?.[who];
+  return speaker ? `${speaker}: \u201c${line}\u201d` : `\u201c${line}\u201d`;
+}
+
 // --- Battle lifecycle ---------------------------------------------------
 
 // context (optional): { kind: 'assault'|'rescue', nodeId, captiveId } —
@@ -308,13 +315,27 @@ export function createBattle(chimeras, encounter, content, seed, now, context = 
         tierScaleFor(encounter, content)
       ) },
     barks: { ...(encounter.barks ?? {}) }, // rival monologue slots (§3.8)
+    // The player's half of the conversation, handed in by the caller. The
+    // engine stays a data consumer: it emits whatever lines it was given
+    // and has no opinion about who is talking or why.
+    playerBarks: { ...(context.playerBarks ?? {}) },
+    speakers: { ...(context.speakers ?? {}) },
     // Rival chimeras arrive pre-scaled by their own powerScale, so tier
     // scaling applies only to the authored human roster.
     enemyScale: tierScaleFor(encounter, content),
     log: [],
   };
-  if (battle.barks.intro) battle.log.push(`\u201c${battle.barks.intro}\u201d`);
-  battle.log.push(`${encounter.name}: ${unitFor(content, encounter.waves[0]).name} moves in!`);
+  // Call, then response. A duel that is only ever monologued AT is a wall
+  // of one-liners; two voices make it a scene. Kept as its own list as
+  // well as in the log, because an opening exchange the player can only
+  // find by opening the log overlay is an opening exchange nobody reads.
+  battle.opening = [];
+  if (battle.barks.intro) battle.opening.push(barkLine(battle, 'enemy', battle.barks.intro));
+  if (battle.playerBarks.intro) battle.opening.push(barkLine(battle, 'player', battle.playerBarks.intro));
+  battle.log.push(...battle.opening);
+  // An em dash, not a colon: with barks now attributed as "Name: …", a
+  // colon here made the wave announcement read as something the rival said.
+  battle.log.push(`${encounter.name} — ${unitFor(content, encounter.waves[0]).name} moves in!`);
   const first = battle.player.team[0];
   if (first.rejection) battle.log.push(`${first.name} is unsettled — Rejection saps its power and speed.`);
   return battle;
@@ -586,7 +607,7 @@ function handleEnemyKO(battle, events, content) {
   }
   events.push({ text: e.koLine, kind: 'ko', target: 'enemy' });
   if (battle.enemy.queue.length === 1 && battle.barks?.midFight) {
-    events.push(`\u201c${battle.barks.midFight}\u201d`);
+    events.push(barkLine(battle, 'enemy', battle.barks.midFight));
     battle.barks.midFight = null; // once per fight
   }
   if (battle.enemy.queue.length) {
@@ -597,7 +618,8 @@ function handleEnemyKO(battle, events, content) {
   } else {
     battle.over = true;
     battle.outcome = 'win';
-    if (battle.barks?.defeat) events.push({ text: `\u201c${battle.barks.defeat}\u201d`, kind: 'bark' });
+    if (battle.barks?.defeat) events.push({ text: barkLine(battle, 'enemy', battle.barks.defeat), kind: 'bark' });
+    if (battle.playerBarks?.victory) events.push({ text: barkLine(battle, 'player', battle.playerBarks.victory), kind: 'bark' });
     events.push({ text: `Victory! The area is yours (pending paperwork).`, kind: 'victory' });
   }
 }
@@ -613,7 +635,8 @@ function handlePlayerKO(battle, events) {
   } else {
     battle.over = true;
     battle.outcome = 'loss';
-    if (battle.barks?.victory) events.push({ text: `\u201c${battle.barks.victory}\u201d`, kind: 'bark' });
+    if (battle.barks?.victory) events.push({ text: barkLine(battle, 'enemy', battle.barks.victory), kind: 'bark' });
+    if (battle.playerBarks?.defeat) events.push({ text: barkLine(battle, 'player', battle.playerBarks.defeat), kind: 'bark' });
     events.push({ text: `The team is out. Regroup at the lab — the Infirmary awaits.`, kind: 'defeat' });
   }
 }
@@ -667,7 +690,8 @@ export function step(battle, action, content) {
     } else {
       battle.over = true;
       battle.outcome = 'win';
-      if (battle.barks?.defeat) events.push({ text: `\u201c${battle.barks.defeat}\u201d`, kind: 'bark' });
+      if (battle.barks?.defeat) events.push({ text: barkLine(battle, 'enemy', battle.barks.defeat), kind: 'bark' });
+      if (battle.playerBarks?.victory) events.push({ text: barkLine(battle, 'player', battle.playerBarks.victory), kind: 'bark' });
       events.push({ text: `Victory! The area is yours (pending paperwork).`, kind: 'victory' });
     }
     battle.turn++;

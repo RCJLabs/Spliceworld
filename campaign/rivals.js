@@ -12,6 +12,7 @@
 import { rngStream, pick } from '../util/rng.js';
 import { unitFromGenome } from '../battle/engine.js';
 import { directorProfile } from './director.js';
+import { rivalLine } from './monologue.js';
 
 // Slots a rival will try to fill, in the order they commit to them. Head
 // first (mandatory), then the limbs that carry classAffinity votes.
@@ -210,9 +211,16 @@ export function recordRivalResult(state, rivalId, outcome, content) {
   if (outcome === 'win') {
     record.defeats += 1;
     state.campaign.notoriety += rival.notoriety;
-    return record.defeats === 1
-      ? `${rival.name} defeated. Their lab is already ordering more petri dishes — and better ones.`
-      : `${rival.name} beaten again (${record.defeats}×). They are taking this personally and it shows in the budget.`;
+    if (record.defeats === 1) {
+      return `${rival.name} defeated. Their lab is already ordering more petri dishes — and better ones.`;
+    }
+    // Every rematch after the first is announced in their OWN voice: a
+    // lab that keeps losing to you should sound like it, not like a
+    // scoreboard (§3.8 `rematch`).
+    return (
+      rivalLine(content, rivalId, 'rematch') ??
+      `${rival.name} beaten again (${record.defeats}×). They are taking this personally and it shows in the budget.`
+    );
   }
   record.losses += 1;
   return `${rival.name} wins the exchange and issues a press release about it. Rude.`;

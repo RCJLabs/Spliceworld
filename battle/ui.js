@@ -40,6 +40,11 @@ const reducedMotion = () =>
   globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 let playing = false; // guards clicks while a round resolves
+// How much of the opening exchange the player has read. Keyed to the
+// battle so a reload mid-duel replays it rather than skipping it, and a
+// new fight always starts from the first line.
+let openingKey = null;
+let openingSeen = 0;
 
 // --- Small view helpers -------------------------------------------------
 
@@ -157,7 +162,16 @@ export function renderArena(root, ctx, onDone) {
       : battle.context.kind === 'rival' ? '<span class="mode-tag mode-rival">RIVAL</span>'
         : '';
 
-  const prompt = battle.pendingReplace
+  // The opening exchange owns the message box until it is read: a story
+  // beat the player has to open a log overlay to find is a story beat
+  // nobody sees.
+  const key = `${battle.encounterId}:${battle.seed}`;
+  if (openingKey !== key) { openingKey = key; openingSeen = 0; }
+  const opening = battle.turn === 1 && !battle.over ? (battle.opening ?? [])[openingSeen] ?? null : null;
+
+  const prompt = opening
+    ? `<span class="bark-msg">${opening}</span><span class="bark-next">tap ▸</span>`
+    : battle.pendingReplace
     ? '<span class="ord-swap">Send in a replacement.</span>'
     : order.tied
       ? `What now? <span class="ord-tie">Dead heat at ${order.playerSpeed} speed.</span>`
@@ -193,7 +207,7 @@ export function renderArena(root, ctx, onDone) {
           <div class="cannon-line" id="cannon-line">${bar(battle.cannon.charge, 100, 'fill-cannon')}<span id="cannon-read">${battle.cannon.charge}%</span></div>`)}
       </div>
 
-      <div class="msg-box" id="msg-box">
+      <div class="msg-box ${opening ? 'is-bark' : ''}" id="msg-box">
         <p class="msg-text" id="msg-text">${prompt}</p>
         <button type="button" class="msg-log" id="msg-log" aria-label="Battle log">▤</button>
       </div>
@@ -202,6 +216,13 @@ export function renderArena(root, ctx, onDone) {
     </section>`;
 
   wireCommands(root, ctx, onDone, actions, me, foe);
+  if (opening) {
+    root.querySelector('#msg-box').addEventListener('click', (e) => {
+      if (e.target.closest('#msg-log')) return; // the log button keeps its own job
+      openingSeen += 1;
+      renderArena(root, ctx, onDone);
+    });
+  }
   root.querySelector('#msg-log').addEventListener('click', () => showLog(battle));
   paintPips(root, battle.player.team.map((c) => c.hp > 0), battle.enemy.queue.length + 1);
   root.querySelector('#cannon-line').classList.toggle('is-idle', !battle.cannon.charge && !foe.capturable);

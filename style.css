@@ -1335,6 +1335,44 @@ footer {
   font-weight: 600;
 }
 
+/* The opening exchange takes over the message box before the first turn,
+   so a duel starts as dialogue rather than as a speed forecast. */
+/* A combat readout is two clamped lines; a monologue is prose and gets the
+   room to be read. The box grows into the stage (which is flex:1) rather
+   than clipping mid-sentence, and scrolls rather than growing past it. */
+.msg-box.is-bark { align-items: flex-start; }
+.msg-box.is-bark .msg-text {
+  display: block;
+  -webkit-line-clamp: none;
+  overflow-y: auto;
+  max-height: 28vh;
+}
+.bark-msg { display: block; color: var(--text); font-style: italic; line-height: 1.4; }
+.bark-next {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--goo);
+}
+#msg-box:has(.bark-msg) { cursor: pointer; }
+
+/* --- Your dossier (§3.8) -------------------------------------------------
+   Deliberately the same furniture as a rival card: same quote styling,
+   same fine print. The player is a villain in the same schema. */
+
+.dossier-mine { border-color: var(--accent-dim); }
+.dossier-name {
+  margin: 2px 0 0;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--goo);
+  letter-spacing: 0.01em;
+}
+.dossier-mine .rival-quote { margin: 8px 0 4px; }
+.dossier-mine .pick-field { margin-top: 8px; }
+
 /* --- AI Director (§3.7) ------------------------------------------------- */
 
 .intel-line { color: var(--warn); }

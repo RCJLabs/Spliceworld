@@ -1,0 +1,112 @@
+{
+  "_doc": "The PLAYER's half of the §3.8 profile schema. It is deliberately the same shape as a rival's: a name, a title, a philosophy, and monologue slots — which is what §3.8 means by 'the villain-monologue feature drops in later with zero refactoring'. A philosophy is NARRATIVE ONLY and must stay that way: anatomy is where this game keeps its mechanics, and a build choice hiding inside a flavour menu would be exactly the kind of invisible stat the class triangle was built to replace. Slots: intro/victory/defeat fire in a rival duel as the other half of a conversation; conquest, capture, rehab and graduation fire in the news wire, so the voice you picked turns up across the whole game rather than only in three fights. Templates take {rival}, {creature}, {node} and {lab}. Names are ROLLED rather than typed: no screen in this game may render a native form control (see tools/smoke.js), and a seeded generator suits a procedural game better than a keyboard on a phone.",
+  "labNames": {
+    "titles": [
+      "Director",
+      "Chief Geneticist",
+      "Principal Investigator",
+      "Head of Applied Biology",
+      "Professor Emeritus (Self-Appointed)",
+      "Founder & Chief Splicing Officer",
+      "Curator of Living Prototypes",
+      "Doctor"
+    ],
+    "firsts": [
+      "Ambrose", "Delphine", "Corvin", "Vesta", "Emory", "Sable",
+      "Peregrine", "Wren", "Thaddeus", "Ilse", "Rook", "Marlowe",
+      "Octavia", "Bertram", "Nessa", "Caspian", "Prudence", "Alaric"
+    ],
+    "lasts": [
+      "Quillfeather", "Hark", "Moss", "Vandergrift", "Slaughterbeck",
+      "Pinch", "Ravensworth", "Grimble", "Thackery", "Ossuary",
+      "Bellweather", "Crane", "Vex", "Fennimore", "Stackhouse", "Bream"
+    ],
+    "labs": [
+      "Applied Chimerics",
+      "the Greenfield Institute",
+      "Better Animals Ltd.",
+      "the Second Draft Foundation",
+      "Consolidated Livestock Futures",
+      "the Barn Annexe",
+      "Provisional Zoology",
+      "the Committee for Interesting Outcomes"
+    ]
+  },
+  "philosophies": [
+    {
+      "id": "improver",
+      "name": "The Improver",
+      "tagline": "Nature shipped a draft. I am the editor.",
+      "blurb": "You are not doing anything strange. You are doing proofreading, with a scalpel, on a species.",
+      "monologue": {
+        "intro": "{rival}. Good. I have been meaning to have a look at your work — it has a great deal of promise and a great many typos.",
+        "victory": "Corrections applied. {rival}, I would suggest a second pass, but I have taken the specimen you would need for it.",
+        "defeat": "Noted, filed, and underlined twice. {rival}, that was version one. You will not enjoy version two.",
+        "conquest": "{node} is now under revision. Nothing has been destroyed. Several things have been IMPROVED, which locals may find more alarming.",
+        "capture": "The {creature} is coming home for a second opinion. It will not be a kind one, but it will be thorough.",
+        "rehab": "{creature} came to us badly annotated. Six hours of patient work later, it is legible.",
+        "graduation": "{creature} leaves the programme with a clean bibliography and, at last, a straight spine."
+      }
+    },
+    {
+      "id": "collector",
+      "name": "The Collector",
+      "tagline": "Every animal is a part I do not have yet.",
+      "blurb": "You love them all. That is precisely the problem, and the county has begun to notice.",
+      "monologue": {
+        "intro": "Oh, {rival}, you have brought me PRESENTS. You did not have to. You did not, in fairness, agree to.",
+        "victory": "Catalogued. {rival}, do bring the rest of the set next time — I am three specimens off a complete row.",
+        "defeat": "You kept them. Fine. I know where they live now, {rival}, and I am extremely patient.",
+        "conquest": "{node} acquired. Everything in it is also, by a definition I invented, acquired.",
+        "capture": "The {creature}! I have wanted one of those since page forty of the catalogue.",
+        "rehab": "{creature} is not a prisoner. {creature} is an ACQUISITION, and acquisitions get the good enclosure.",
+        "graduation": "{creature} has been added to the collection and, more importantly, has stopped trying to leave it."
+      }
+    },
+    {
+      "id": "showman",
+      "name": "The Showman",
+      "tagline": "Science is a spectacle or it is a filing cabinet.",
+      "blurb": "The work is excellent. The lighting is better. You have never once made an entrance through a door.",
+      "monologue": {
+        "intro": "Ladies, gentlemen, and {rival} — tonight, for one night only, in this actual field: the future of animals.",
+        "victory": "AND SCENE. Thank you, {rival}, you were a wonderful sport and a magnificent volunteer.",
+        "defeat": "A soft opening! Merely a soft opening, {rival}. The reviews will be kinder once I fix the second act.",
+        "conquest": "{node} taken to rapturous applause from an audience of me and one very confused postman.",
+        "capture": "The {creature} joins the company! Standing ovation, no notes, someone get it a dressing room.",
+        "rehab": "{creature} arrives from a rival production. We do not poach. We AUDITION, retroactively.",
+        "graduation": "{creature} takes its first bow to enormous applause. Some of it was even from outside the building."
+      }
+    },
+    {
+      "id": "naturalist",
+      "name": "The Naturalist",
+      "tagline": "I am not playing god. God simply left the door open.",
+      "blurb": "You speak softly, you love the countryside, and you have made several things that live in it now.",
+      "monologue": {
+        "intro": "Hello, {rival}. Isn't it a lovely morning. I have brought some friends who would very much like to meet you.",
+        "victory": "There now. {rival}, nothing was hurt that will not walk it off, and everything learned a great deal.",
+        "defeat": "That's quite all right. {rival}, the countryside is very patient, and so, it turns out, am I.",
+        "conquest": "{node} has been returned to nature. A nature I designed, admittedly, but the birdsong is genuine.",
+        "capture": "The {creature} is coming to live with us. It will have a pond. It has earned a pond.",
+        "rehab": "{creature} was raised in a laboratory and has never once seen a hedge. We shall be correcting that.",
+        "graduation": "{creature} has settled in beautifully and now follows the feed bucket like anybody else."
+      }
+    },
+    {
+      "id": "engineer",
+      "name": "The Engineer",
+      "tagline": "Feelings are fine. Tolerances are better.",
+      "blurb": "You did not set out to build monsters. You set out to build correctly, and this is where correctly leads.",
+      "monologue": {
+        "intro": "{rival}. Your specimens are within tolerance. Barely. I have brought mine, which are not merely within it but ANNOYED about the margin.",
+        "victory": "Load tested to failure. Not mine. {rival}, your margins were optimistic and now they are documented.",
+        "defeat": "Failure logged. Root cause identified. {rival}, the fix is scheduled and you are on the ticket.",
+        "conquest": "{node} brought up to spec. Three inspections failed it last year. It will not fail mine.",
+        "capture": "The {creature} is structurally interesting and is coming back to the shop for a teardown.",
+        "rehab": "{creature} was built to somebody else's spec. It is a good spec. It is not, however, MY spec.",
+        "graduation": "{creature} passes final inspection. Torque correct, gait even, disposition acceptable."
+      }
+    }
+  ]
+}
