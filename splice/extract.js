@@ -6,6 +6,7 @@
 
 import { ageStage } from '../ranch/ranch.js';
 import { STATS } from '../ranch/ranch.js';
+import { rngStream } from '../util/rng.js';
 
 // Stat multipliers feed the battle engine in M4; Apex/Prismatic ability
 // upgrades land with the keyword resolver, also M4.
@@ -101,5 +102,96 @@ export function extractAnimal(state, animalId, content, now) {
     tokens,
     donorName: animal.name,
     msg: `${animal.name} has ascended to ${grade.name}-grade essence (pending assembly).`,
+  };
+}
+
+// --- Chimera salvage (ROADMAP §3.3) --------------------------------------
+//
+// "Chimeras (yours or captured) can also be extracted — returns a SUBSET of
+// parts, one grade degraded. Salvage, not free recycling."
+//
+// This is the Surgery Theater's missing undo. Splicing consumes vault
+// tokens permanently, so until now a chimera was a one-way sink: a build
+// you regretted, a chaos-vat reject, or a rehabilitated creature carrying
+// anatomy you wanted elsewhere all just sat there. Now they come apart.
+//
+// The two costs are what stop it being free recycling: you get back only
+// some of what went in, and what comes back is a grade poorer. Which parts
+// survive is seeded on the chimera itself, so the preview a player is
+// shown before they commit is exactly what they will get, and reloading
+// cannot reroll it.
+export const CHIMERA_SALVAGE = { keepMin: 0.5, keepMax: 0.8 };
+
+// What dismantling this chimera would actually return. Deterministic, so
+// the confirmation and the outcome can never disagree (Law 4).
+export function salvagePreview(state, chimera, content) {
+  const sockets = Object.keys(chimera?.tokens ?? {});
+  if (!sockets.length) return { keep: [], lose: [], tokens: [] };
+  const rng = rngStream(state.seed, `dismantle:${chimera.id}`, 0);
+  const span = CHIMERA_SALVAGE.keepMax - CHIMERA_SALVAGE.keepMin;
+  const keepCount = Math.max(1, Math.round(sockets.length * (CHIMERA_SALVAGE.keepMin + rng() * span)));
+
+  // Shuffle by seeded key rather than sorting on rng() directly: a
+  // comparator that calls the stream is not a stable ordering.
+  const ordered = sockets
+    .map((socketId) => ({ socketId, key: rng() }))
+    .sort((a, b) => a.key - b.key)
+    .map((x) => x.socketId);
+  const keep = ordered.slice(0, keepCount);
+  const lose = ordered.slice(keepCount);
+
+  const tokens = keep.map((socketId) => {
+    const token = chimera.tokens[socketId];
+    return {
+      socketId,
+      partId: token.partId,
+      grade: GRADES[Math.max(0, GRADE_INDEX[token.grade] - 1)].id,
+      wasGrade: token.grade,
+      traits: token.traits ?? [],
+      donor: token.donor,
+    };
+  });
+  return { keep, lose, tokens };
+}
+
+export function extractChimera(state, chimeraId, content, now) {
+  const idx = state.chimeras.findIndex((c) => c.id === chimeraId);
+  if (idx === -1) return { ok: false, msg: 'No such chimera.' };
+  if (state.battle) return { ok: false, msg: 'Not while a battle is in progress. Finish the fight.' };
+  if ((state.vat?.parents ?? []).includes(chimeraId)) {
+    return { ok: false, msg: 'That one is in the vat. One indignity at a time.' };
+  }
+  const chimera = state.chimeras[idx];
+  const preview = salvagePreview(state, chimera, content);
+  if (!preview.tokens.length) return { ok: false, msg: 'There is nothing in there to recover.' };
+
+  state.chimeras.splice(idx, 1);
+  const inv = state.inventory;
+  const tokens = preview.tokens.map((spec) => ({
+    id: `t${inv.tokenCount++}`,
+    partId: spec.partId,
+    grade: spec.grade,
+    traits: spec.traits,
+    // The lineage survives the creature: a part recovered from Chompers
+    // still remembers the goat Chompers was built out of.
+    donor: spec.donor ?? { name: chimera.name, species: content.parts[spec.partId].species, stars: 3, extractedAt: now },
+  }));
+  inv.parts.push(...tokens);
+  for (const token of tokens) {
+    if (!state.dex.parts.includes(token.partId)) state.dex.parts.push(token.partId);
+  }
+
+  const lostNames = preview.lose
+    .map((socketId) => content.parts[chimera.tokens[socketId].partId]?.name)
+    .filter(Boolean);
+  return {
+    ok: true,
+    tokens,
+    lost: lostNames,
+    name: chimera.name,
+    msg:
+      `${chimera.name} has been honourably disassembled. ` +
+      `${tokens.length} part${tokens.length === 1 ? '' : 's'} back in the vault, one grade the worse for it` +
+      `${lostNames.length ? `; ${lostNames.join(', ')} did not survive the paperwork.` : '.'}`,
   };
 }

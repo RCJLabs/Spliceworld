@@ -1,5 +1,86 @@
 # PROGRESS
 
+## Session 25 — Chimera extraction & temperament ✅
+
+Two promises from the main spec that were written into the roadmap and then
+never built.
+
+### Extraction (§3.3)
+> "Chimeras (yours or captured) can also be extracted — returns a **subset** of
+> parts, one grade degraded. Salvage, not free recycling."
+
+This is the Surgery Theater's missing undo. Splicing consumes vault tokens
+permanently, so until now a chimera was a **one-way sink**: a build you
+regretted, a chaos-vat reject, or a rehabilitated creature carrying anatomy you
+wanted somewhere else all just sat in the Pens forever.
+
+Two costs keep it honest — you get back only 50–80% of the sockets, and what
+comes back is a grade poorer. Measured over 60 dismantles of prismatic
+six-part chimeras, **the vault gets back well under three-quarters of the grade
+value that went in**. Which parts survive is seeded on the chimera itself, so
+the confirmation sheet lists exactly what you will get, by name and by
+was-grade, and reloading cannot reroll it.
+
+### Temperament (§3.5)
+> "temperament on two axes (Brave–Skittish, Fierce–Gentle), seeded by dominant
+> donor species + drifted by how you raise them … Never removes player control."
+
+Every chimera has carried `temperament: null` since M3 behind a comment saying
+"seeded on settling — later milestone". It now is.
+
+**Seeded by the anatomy.** The dominant donor species — whichever put in the
+most parts — supplies the bias, so a shark build comes out Fierce because it is
+mostly shark. Biases are keyed by species **role** rather than by species, so a
+designer writes "Walls are calm and steady" once instead of thirty-two times,
+with `bySpecies` overrides where a particular animal has character its role
+misses.
+
+**Drifted by how you raise them.** Every existing verb now shapes who the
+creature becomes: training makes them braver and gentler, winning makes them
+fiercer, going down makes them warier. Both axes are bounded, so a long career
+cannot run away.
+
+**Perks are passive stat effects only** — §3.5's "never removes player control"
+rules out anything that takes a turn away, which is obedience's job and only
+obedience's. Brave lands telling blows below 30% health; Skittish is hard to
+hit on the opening exchange; Fierce hits harder but guards worse; Gentle paces
+itself and recovers stamina faster. They express only past a threshold and
+scale with how far past — one point over the line is worth nothing.
+
+Balance impact, measured against the identical roster with temperament
+disabled: **mean +1.2pp win rate, max +12pp**, and much of that spread is RNG
+stream divergence rather than the perks (the crit check consumes a roll). The
+Fierce guard penalty is a real cost, so defensive builds lose a little where
+aggressive ones gain.
+
+### One fragile old test, replaced
+The grade-ladder assertion compared the **maximum** boss win rate across builds
+at two seeds per build. That saturates the instant one lucky build goes
+two-for-two — it was reporting "100% at standard grade" off two coin flips, and
+duly broke the moment anything nudged the RNG stream. It now compares the
+**mean** across the whole ladder, which is what the claim actually means and
+checks three steps instead of one: 5% → 20% → 47% → 73% from standard to
+prismatic.
+
+### Kept honest
+~40 new smoke assertions, each verified to fail when the code it guards is
+broken. Four needed the *test* fixing: my drift checks called the drift
+functions directly rather than through `trainChimera` and the battle aftermath
+(so breaking either call site went unnoticed), the dominance fixture happened
+to be alphabetical as well as dominant, and the damage measurement read the
+*next wave's* health because the target died in one hit. Browser pass at 380
+and 320px: temperament on the Pens cards, the dismantle sheet with its exact
+preview, and a v17 save migrating and seeding temperaments on the next tick. No
+console errors.
+
+Save **v18**; `sw` cache `spliceworld-v18-temperament`.
+
+### Next session's first task
+Both backlogs are now clear. What remains unbuilt from the spec: **injury
+scarring** (§3.5 — "untreated injuries can scar into permanent trait
+tradeoffs"), and **async ghost defences**, which the roadmap has always marked
+multiplayer-later.
+
 ## Session 24 — Chaos-breeding ✅
 
 Ranch breeding pairs two **animals** of one species and produces a predictable

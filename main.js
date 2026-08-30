@@ -14,6 +14,7 @@ import { runExtraction } from './splice/extract-ui.js';
 import { renderWarRoomScreen } from './campaign/ui.js';
 import { tickCampaign, pushNews } from './campaign/campaign.js';
 import { tickVat } from './splice/chaos.js';
+import { ensureTemperaments } from './splice/temperament.js';
 import { renderDexScreen } from './splice/dex-ui.js';
 import * as sfx from './audio/sfx.js';
 
@@ -93,6 +94,8 @@ function showScreen(name) {
 function tick() {
   applyElapsed(state, content, NOW());
   for (const line of tickVat(state, content, NOW()).news) pushNews(state, line);
+  // A chimera that has finished settling acquires opinions (§3.5).
+  ensureTemperaments(state, content, NOW());
   tickCampaign(state, content, NOW());
   saveGame(state);
   updateTicker();

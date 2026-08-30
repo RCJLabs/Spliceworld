@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 17;
+export const SAVE_VERSION = 18;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -190,6 +190,15 @@ const migrations = {
     save.vat = null;
     save.vatCount = 0;
     for (const chimera of save.chimeras) chimera.exhaustedUntil = chimera.exhaustedUntil ?? 0;
+    return save;
+  },
+  // v18 (Temperament): the field has existed since M3 carrying null and a
+  // comment promising it would be seeded later. Left null here on purpose —
+  // migrations cannot reach content data, so every already-settled chimera
+  // acquires its temperament on the next tick instead (see
+  // temperament.ensureTemperaments), the same way the starter herd does.
+  18: (save) => {
+    for (const chimera of save.chimeras) chimera.temperament = chimera.temperament ?? null;
     return save;
   },
 };
