@@ -1,5 +1,134 @@
 # PROGRESS
 
+## Session 38 — R26: five regions, and a ladder that asks five questions ✅
+
+**Acceptance criterion:** taking Greenfield opens a region whose fights need
+different anatomy than the one that won the first — **passes**, measured
+rather than asserted by hand: in every later region a build that cleared
+Greenfield falls **32–67pp**, stable across seven independent base seeds.
+
+### The map
+
+| | Greenfield County | Kestrel Reach | The Drowned Quarter | The Foundry Belt | The Compliance Spire |
+|---|---|---|---|---|---|
+| identity | Ground, Organic | Airborne, Air class | Aquatic, Water class | Vehicle + Armored, all three classes | all three classes, no plating theme |
+| answers to | Air | **Water** | **Ground** | **armour-piercing** | nothing in particular |
+| bench champion (apex) | — | gills 100% | boots 100% | noise 75% | flat, top 58–66% |
+
+Five strips, 21 nodes, 24 encounters, 40 units, a Threat Generation ladder
+that reaches 3, and five new enemy-tech parts — one dropped by each region.
+
+### The engine was the blocker, not the content
+
+`regionOf(content)` returned `regions[0]` and four systems reached past it.
+Contestation picked its defence target, its node names and the defending
+encounter from the first county alone, so a counter-offensive could never
+have landed anywhere else — the very system §8 names as the endless-mode
+content engine stopped working at the county line. Gating, lookups and the
+Threat ladder now live in one pure module, `campaign/map.js`, shared by
+contest.js, the director and the War Room.
+
+Two things the phase description never mentioned turned out to be
+load-bearing:
+
+- **The AI director's reach** is "the hardest encounters, up to a budget."
+  That is a fine definition of where the world adapts with one county;
+  across five it spent the entire budget rewriting the Compliance Spire
+  while the player was still arguing with a parking warden in Greenfield.
+  Scoped to open regions.
+- **Redistributing fauna is the one content edit that can rob a live save.**
+  A player holding the Guard Post owned nine species that moved three
+  regions out. Save **v24** grants them permanently (`faunaGranted`), so the
+  catalog can only ever grow — and any future reshuffle is safe for the same
+  reason. Verified in the browser on a rolled-back v23 save: all 23 species
+  survive, no console errors.
+
+### Four attempts at the rotation, and what each one got wrong
+
+1. **Draft one handed every later region to the same anatomy that won
+   Greenfield.** The Foundry because half its units swung **Ground-tagged**
+   moves, which miss an Airborne build outright — so "fly" was still the
+   answer three regions later. A tipper, a wrench and a ladle were never
+   ground attacks anyway.
+2. **Draft two made it class-mixed and turned it into a wall** — nothing
+   cleared it above 19%. A region everything loses measures as little as a
+   region everything wins.
+3. **Draft three found the cause**: the new units had been authored at boss
+   scale and then tier-multiplied on top. A tier-6 hauler came out at 253 HP
+   behind 41 armour. They sit in the shipped roster's band now, and the tier
+   ladder does the escalating; the Foundry's identity survives as armour
+   *relative to its peers*, not as a big number.
+4. **Armour-piercing had to become earnable BEFORE the region that demands
+   it**, or the demand is a wall with the key inside. Hence `foghorn_array`,
+   salvaged from the Drowned Quarter's flagship — and priced twice, because
+   at 44 power the pilot never pressed it over a 70-power forelimb.
+
+A mixed strip is intrinsically the harder fight at equal tier, because a
+mono-class strip hands the right anatomy a free ×1.5 that a mixed one cannot.
+The tier ladder compensates: the Drowned Quarter firmed up, the Foundry and
+the Spire stepped down.
+
+### Two bugs the new content exposed in old code
+
+- **`sampleBuilds` built impossible chimeras.** It made a "purebred" from
+  every part of a species, which was a no-op while every species carried
+  exactly one part per socket. Enemy tech is a catch-all, and R26 grew it to
+  three organs and two hides — so the harness assembled an eight-socket
+  creature the game cannot offer, and that creature promptly flagged as the
+  most degenerate build in the pool. A yardstick has to measure builds a
+  player could hold.
+- **The War Room's headline row collided with itself.** At full conquest it
+  reads `+$2385/day` beside `128W–12L`, and at 380px those two overlapped
+  mid-glyph — while every measurement in the suite reported four cells of
+  equal height, because overflowing text does not change a box. Two columns
+  on phone widths, and the breakpoint is now pinned in smoke.
+
+### What did not work
+
+`seedsPer 4` on the balance gate. R26 tripled the encounter set and with it
+that gate's runtime, so 4 was tried again on the theory that three times the
+encounters buys back half the seeds. It does not: the detector is
+peer-*relative*, and thinning the sample fattens both tails, so 4 immediately
+flagged a build that 8 and 12 both call clean. The suite is slower than it
+was (≈75s). That is the price of a bigger world, and it is cheaper than a
+gate that lies.
+
+### Guards, each verified to fail when broken
+
+Eleven new assertions, every one confirmed by deliberately breaking the thing
+it guards:
+
+| break | caught by |
+|---|---|
+| Kestrel stops being an air region | the anatomy-drop gate (drop falls to 20pp) |
+| the air fauna moves past Greenfield's boss | the playability guarantee |
+| a region requires a node from a *later* region | ladder reachability |
+| Threat Gen 3 removed | the ladder has three rungs |
+| a Gen-3 node placed before the map banks 320 | the gen-gate reachability walk |
+| two nodes share one encounter | encounter ownership |
+| the Foundry unlocks nothing new to build | Law 2 |
+| the Spire becomes solvable by one anatomy | the finale's flatness bar |
+| a region gets no boss | strip structure |
+| the migration stops grandfathering | a migrated save keeps what it earned |
+| the econ breakpoint drifts back to 360px | the CSS breakpoint pin |
+
+### Known issues
+
+- **Income outruns its sinks.** Full conquest pays **$2,385/day** against a
+  catalog whose priciest animal is $260. R25 (facility depth) is the second
+  money sink and is now overdue rather than optional.
+- **Contestation still starts at Gen 2 and caps at one concurrent
+  offensive.** Across 21 held nodes that is a very quiet map. Tuning only —
+  no engine work — but it wants a pass.
+- The smoke suite takes ≈75s, up from ≈35s, almost entirely in the
+  all-grade balance gate now that there are 24 encounters to sample.
+
+### Next session — first task
+
+R25 (facility depth): the economy now generates far more money than it has
+anywhere to go, and R26 made that acute rather than theoretical. R27 and R29
+are the rest of the queue.
+
 ## Session 37 — R24: mutation traits, and every timer cut by a quarter ✅
 
 **Acceptance criterion:** two equally-starred parents can produce visibly

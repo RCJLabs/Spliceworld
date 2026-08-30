@@ -24,10 +24,11 @@ import {
   playerActions, playerActive, tagMultiplier, isInjured, turnForecast, tierScaleFor,
   movesFromTokens, previewMove,
 } from '../battle/engine.js';
-import { runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent } from './sim.js';
+import { runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent, regionBench, ARCHETYPES } from './sim.js';
 import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
 import {
-  nodeStates, threatGen, incomePerDay, tickCampaign, resolveBattle, salvageUnit,
+  nodeStates, threatGen, threatLadder, regionStates, regionBlockers, regionOpen,
+  incomePerDay, tickCampaign, resolveBattle, salvageUnit,
 } from '../campaign/campaign.js';
 import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING } from '../ranch/breeding.js';
 import { trainChimera, TRAINING } from '../splice/theater.js';
@@ -1236,6 +1237,15 @@ assert.ok(
 // calls clean at Prime is flagged by both 8 and 12. Sampling that hides an
 // outlier is worse than no gate at all.
 //
+// R26 tripled the encounter set (8 -> 24) and with it this gate's runtime,
+// and 4 was tried again on the theory that what the flag reads is a build's
+// AGGREGATE rate, so three times the encounters should buy back half the
+// seeds. It does not: the detector is peer-RELATIVE, and thinning the sample
+// fattens the tails on both sides of the median, so 4 immediately flagged
+// `L · wolf:organ + tiger:head + alpine:ram_hindlimbs` at Prime and Apex —
+// a build 8 and 12 both call clean. The suite is slower than it was. That is
+// the price of a bigger world, and it is cheaper than a gate that lies.
+//
 // Run at EVERY grade, not just Standard. R17 found a real Prime outlier that
 // a Standard-only gate had never once looked at: the class triangle only
 // bites once damage is high enough for a 1.5x to decide a fight, so grades
@@ -1340,6 +1350,10 @@ assert.ok(
 
 // --- M5: campaign data coherence.
 const region = Object.values(content.regions)[0];
+// "Conquer everything" means the whole map now, not the first county —
+// R26 gave the campaign five region strips, so a fixture that only holds
+// Greenfield is a fixture testing a fifth of the game.
+const ALL_NODE_IDS = Object.values(content.regions).flatMap((r) => r.nodes.map((n) => n.id));
 for (const node of region.nodes) {
   assert.ok(content.encounters[node.encounter], `${node.id}: unknown encounter`);
   assert.ok(node.incomePerDay > 0 && node.notoriety > 0, node.id);
@@ -1615,7 +1629,7 @@ assert.equal(m5.saveVersion, SAVE_VERSION);
 assert.equal(m5.battle, null);
 assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
 assert.deepEqual(m5.campaign, {
-  heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {},
+  heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
   contested: [], nextContestAt: null, defences: {}, contestCount: 0,
   operation: null, opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
   lastTickAt: null,
@@ -1865,7 +1879,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // Gate rule: you are never asked to beat a class before the anatomy that
   // answers it is obtainable. A rival's counter-class parts must be unlocked
   // by the nodes their gate requires (or available from the start).
-  const region = Object.values(content.regions)[0];
+  const region = Object.values(content.regions)[0]; // Greenfield, for the node-order fixtures
   for (const rival of Object.values(content.rivals)) {
     const counter = Object.values(content.classes).find((c) => c.beats === rival.classBias).id;
     const gateIndex = Math.max(
@@ -1886,7 +1900,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   }
 
   // Fully unlocked: teams are generated, classed by anatomy, and stable.
-  const open = mkState({ campaign: { heldNodes: region.nodes.map((n) => n.id), notoriety: 999, rivals: { mantissa: { defeats: 1, losses: 0 }, aloft: { defeats: 1, losses: 0 } }, captives: [], containment: [] } });
+  const open = mkState({ campaign: { heldNodes: [...ALL_NODE_IDS], notoriety: 999, rivals: { mantissa: { defeats: 1, losses: 0 }, aloft: { defeats: 1, losses: 0 } }, captives: [], containment: [] } });
   for (const { rival, status } of rivalStatus(open, content)) {
     assert.notEqual(status, 'locked', `${rival.name} opens once the ladder is cleared`);
     const enc = rivalEncounter(open, rival, content);
@@ -1942,10 +1956,10 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 // --- a person with opinions (ROADMAP §3.6 "Capture — theirs").
 {
   const { rivalEncounter } = await import('../campaign/rivals.js');
-  const region = Object.values(content.regions)[0];
+  const region = Object.values(content.regions)[0]; // Greenfield, for the node-order fixtures
   const lab = { ...newGameState(), seed: 77 };
   lab.campaign.lastTickAt = t0;
-  lab.campaign.heldNodes = region.nodes.map((n) => n.id);
+  lab.campaign.heldNodes = [...ALL_NODE_IDS];
   lab.campaign.notoriety = 999;
   lab.campaign.rivals = { mantissa: { defeats: 0, losses: 0 } };
   const hero = makeChimera(lab, 'L', {
@@ -2019,13 +2033,13 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   const { renderCreatureSVG: draw } = await import('../render/renderer.js');
   const HOUR = 3600000;
   const tune = rehabTuning(content);
-  const region = Object.values(content.regions)[0];
+  const region = Object.values(content.regions)[0]; // Greenfield, for the node-order fixtures
 
   // A lab holding one captured rival specimen, ready to decide about it.
   const bayLab = (rivalId = 'mantissa', waveIndex = 0) => {
     const lab = { ...newGameState(), seed: 4242, funds: 6000 };
     lab.campaign.lastTickAt = t0;
-    lab.campaign.heldNodes = region.nodes.map((n) => n.id);
+    lab.campaign.heldNodes = [...ALL_NODE_IDS];
     lab.campaign.notoriety = 999;
     lab.campaign.rivals = { [rivalId]: { defeats: 0, losses: 0 } };
     const unit = rivalEncounter(lab, content.rivals[rivalId], content).waves[waveIndex];
@@ -2314,7 +2328,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 
   // A variant is never in the catalog, at any stage of the campaign.
   const rich = { ...newGameState(), seed: 3 };
-  rich.campaign.heldNodes = Object.values(content.regions)[0].nodes.map((n) => n.id);
+  rich.campaign.heldNodes = [...ALL_NODE_IDS];
   assert.ok(!catalogFor(rich, content).some((sp) => sp.variantOf), 'variants never reach the Mail-Order catalog');
   assert.ok(![...faunaUnlocked(rich, content)].some((id) => content.species[id].variantOf));
 
@@ -3293,7 +3307,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   {
     const lab = { ...newGameState(), seed: 3131 };
     lab.campaign.lastTickAt = t0;
-    lab.campaign.heldNodes = region.nodes.map((n) => n.id);
+    lab.campaign.heldNodes = [...ALL_NODE_IDS];
     lab.campaign.notoriety = 999;
     lab.campaign.rivals = { mantissa: { defeats: 0, losses: 0 } };
     setIdentity(lab, { title: 'Doctor', name: 'Wren Vex', lab: 'Better Animals Ltd.' });
@@ -3412,7 +3426,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     won.facility.containment = 2;
     setPhilosophy(won, 'collector');
     won.campaign.rivals = { aloft: { defeats: 0, losses: 0 } };
-    won.campaign.heldNodes = region.nodes.map((n) => n.id);
+    won.campaign.heldNodes = [...ALL_NODE_IDS];
     won.campaign.notoriety = 999;
     const spec = rivalEncounter(won, content.rivals.aloft, content).waves[0];
     won.campaign.containment.push({
@@ -3665,7 +3679,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // where holding a node puts the whole species in the catalog to buy.
   {
     const conquered = lab(810);
-    conquered.campaign.heldNodes = region.nodes.map((n) => n.id);
+    conquered.campaign.heldNodes = [...ALL_NODE_IDS];
     const openNow = catalogFor(conquered, content).map((sp) => sp.id);
     assert.ok(openNow.length > 20, `conquest opens the catalog properly (${openNow.length} species)`);
     const jobSpecies = new Set(ops.flatMap((op) => op.livestock?.species ?? []));
@@ -4558,6 +4572,320 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   }
   // …and the fallback means an unknown tab can never render nothing.
   assert.ok(template.includes('?? views.map'), 'an unrecognised tab falls back to the map rather than a blank screen');
+}
+
+const pctOf = (x) => `${Math.round(x * 100)}%`;
+const classOfSpecies = (id) => content.species[id]?.class ?? null;
+
+// --- R26: five regions, and the only claim that matters --------------
+//
+// The acceptance criterion is not "there are more fights". It is that
+// taking Greenfield opens a region whose fights need DIFFERENT ANATOMY
+// than the one that won the first. So this section measures it, using
+// tools/sim.js's region bench: five archetypes, each a legal build
+// committing to one axis of the combat model, run over every node of
+// every strip.
+//
+// The bar is set below what seven independent base seeds actually produce
+// (numbers in the comments), because a gate with no headroom is a gate
+// that fails on a Tuesday for no reason.
+{
+  // Two independent base seeds at sixteen games a cell. Seven seeds were
+  // walked by hand while the bars below were set (the observed ranges are
+  // quoted at each one); two is what the suite can afford to run every time.
+  const BENCH_SEEDS = [2026, 4242];
+  const SEEDS_PER = 16;
+  const arch = Object.keys(ARCHETYPES);
+
+  // Every archetype must be buildable out of parts that still exist —
+  // otherwise the instrument silently measures a smaller creature.
+  for (const [key, a] of Object.entries(ARCHETYPES)) {
+    assert.ok(content.frames[a.frame], `${key}: frame ${a.frame} exists`);
+    const slots = new Set();
+    for (const id of a.partIds) {
+      assert.ok(content.parts[id], `${key}: part ${id} exists`);
+      assert.ok(!slots.has(content.parts[id].slot), `${key}: one part per socket (${id})`);
+      slots.add(content.parts[id].slot);
+    }
+    assert.ok(slots.has('head'), `${key}: has a head (engine rule)`);
+  }
+
+  for (const benchSeed of BENCH_SEEDS) {
+    const rows = regionBench(content, { grade: 'apex', seedsPer: SEEDS_PER, seed: benchSeed, stable: false });
+    assert.equal(rows.length, 5, 'five regions on the bench');
+    const [greenfield, ...later] = rows;
+    const rateIn = (row, key) => row.byArchetype[key].winRate;
+
+    // Greenfield is the tutorial county and is meant to be forgiving: more
+    // than one anatomy clears it. That set is the baseline the criterion
+    // measures every later region against.
+    const clearers = arch.filter((k) => rateIn(greenfield, k) >= 0.8);
+    assert.ok(clearers.length >= 2,
+      `Greenfield takes more than one answer (${clearers.map((k) => `${k} ${pctOf(rateIn(greenfield, k))}`).join(', ')})`);
+
+    for (const row of later) {
+      // THE CRITERION. Something that walked through Greenfield has to hit
+      // a wall here, or this strip is just Greenfield with bigger numbers.
+      // Observed across seven seeds: 32-45pp (Kestrel), 57-67 (Drowned),
+      // 56-61 (Foundry), 36-42 (Spire).
+      const drop = Math.max(...clearers.map((k) => rateIn(greenfield, k) - rateIn(row, k)));
+      assert.ok(drop >= 0.25,
+        `${row.region.id}: a build that cleared Greenfield must fall over here (worst drop ${Math.round(drop * 100)}pp)`);
+    }
+
+    const rank = (row) => arch.map((k) => rateIn(row, k)).sort((a, b) => b - a);
+
+    // Three of the four later strips ask a SPECIFIC question, and each asks
+    // a different one. Observed spreads: 13-19, 17-27, 20-33pp.
+    const shaped = later.filter((r) => r.region.answer !== 'mixed');
+    assert.equal(shaped.length, 3, 'three shaped regions and one that is deliberately not');
+    for (const row of shaped) {
+      const [top, second] = rank(row);
+      assert.ok(top - second >= 0.1,
+        `${row.region.id}: one anatomy answers it decisively (+${Math.round((top - second) * 100)}pp over the next)`);
+    }
+    const champions = new Set(shaped.map((r) => r.champion));
+    assert.equal(champions.size, 3,
+      `and the three answers are three different anatomies (${shaped.map((r) => `${r.region.id}=${r.champion}`).join(' ')})`);
+
+    // The finale's claim is the opposite one: nothing is comfortable, and no
+    // single build runs away with it. Observed top 58-66%, spread 2-8pp.
+    const finale = later.find((r) => r.region.answer === 'mixed');
+    const [fTop, fSecond] = rank(finale);
+    assert.ok(fTop <= 0.75, `${finale.region.id}: no mono-build strolls through the finale (best ${pctOf(fTop)})`);
+    assert.ok(fTop - fSecond <= 0.15,
+      `${finale.region.id}: and no single anatomy owns it (+${Math.round((fTop - fSecond) * 100)}pp)`);
+  }
+
+  // Reachability, measured at the grade a player plausibly holds when each
+  // region opens. A ladder whose fourth rung cannot be climbed is not a
+  // ladder. Observed champions: 63-71, 89-95, 83-94, 66-72, 58-66%.
+  for (const region of Object.values(content.regions)) {
+    assert.ok(['standard', 'prime', 'apex', 'prismatic'].includes(region.benchGrade),
+      `${region.id} declares a bench grade`);
+    const [row] = regionBench(content, {
+      grade: region.benchGrade, seedsPer: SEEDS_PER, seed: 2026, only: [region.id], stable: false,
+    });
+    const best = row.byArchetype[row.champion].winRate;
+    assert.ok(best >= 0.5,
+      `${region.id} is clearable at ${region.benchGrade} (best ${pctOf(best)} — ${row.champion})`);
+  }
+}
+
+// --- R26: the region ladder's structure -------------------------------
+// The measurement above proves the fights differ. These prove the map they
+// hang on cannot be authored into a dead end, because "adding a region must
+// never require an engine edit" only holds if the data is checkable.
+{
+  const regions = Object.values(content.regions);
+  const nodeIds = new Set();
+  const encounterUse = {};
+  assert.ok(regions.length >= 5, `five region strips (${regions.length})`);
+
+  for (const [i, region] of regions.entries()) {
+    assert.ok(region.name && region.demand && region.answer, `${region.id}: named, and says what it asks for`);
+    assert.ok(region.nodes.length >= 4, `${region.id}: a strip, not a stub`);
+    for (const node of region.nodes) {
+      assert.ok(!nodeIds.has(node.id), `node id ${node.id} is unique across the whole map`);
+      nodeIds.add(node.id);
+      assert.ok(content.encounters[node.encounter], `${node.id} -> a real encounter`);
+      (encounterUse[node.encounter] ??= []).push(node.id);
+      assert.ok(node.incomePerDay > 0 && node.notoriety > 0, `${node.id} pays and is noticed`);
+      assert.ok(node.blurb, `${node.id} has a blurb`);
+    }
+    assert.ok(region.nodes.some((n) => n.boss), `${region.id} ends on a boss`);
+
+    // The ladder is reachable: a region may only require nodes that appear
+    // in an EARLIER strip, or the map contains a region nothing can open.
+    const earlier = new Set(regions.slice(0, i).flatMap((r) => r.nodes.map((n) => n.id)));
+    for (const nodeId of region.requires?.nodes ?? []) {
+      assert.ok(earlier.has(nodeId), `${region.id} requires ${nodeId}, which an earlier region provides`);
+    }
+    assert.equal(i === 0, !region.requires, 'the first region is the only one that opens for free');
+  }
+
+  // Two nodes sharing an encounter would let the AI director and the
+  // contestation system disagree about which place they are defending.
+  for (const [encId, users] of Object.entries(encounterUse)) {
+    assert.equal(users.length, 1, `${encId} belongs to exactly one node (${users.join(', ')})`);
+  }
+
+  // Every tier a node reaches for has a scale behind it.
+  for (const enc of Object.values(content.encounters)) {
+    if (enc.tier == null) continue;
+    assert.ok(content.tierScale[enc.tier] != null, `${enc.id}: tier ${enc.tier} has a scale`);
+    for (const unitId of enc.waves) assert.ok(content.enemies[unitId], `${enc.id} -> ${unitId} exists`);
+  }
+
+  // THE PLAYABILITY GUARANTEE: a region may never ask for an anatomy the
+  // catalog cannot sell you by the time you have to answer it. Walk the
+  // ladder in order and, at each region's BOSS, check that the class which
+  // answers that region is already in the Mail-Order list.
+  //
+  // The boss rather than the region entrance, because Greenfield is the
+  // one region you enter owning nothing: it hands you wings at its third
+  // node, which is exactly the shape a tutorial should have — you meet the
+  // problem, then you are shown the answer, then you are tested on it.
+  {
+    const held = [];
+    for (const region of regions) {
+      const bossAt = region.nodes.findIndex((n) => n.boss);
+      for (const [i, node] of region.nodes.entries()) {
+        if (i === bossAt && region.answer !== 'mixed') {
+          const base = newGameState();
+          const state = { ...base, campaign: { ...base.campaign, heldNodes: [...held], notoriety: 9999 } };
+          const answering = catalogFor(state, content)
+            .map((sp) => sp.id)
+            .filter((id) => classOfSpecies(id) === region.answer);
+          assert.ok(answering.length > 0,
+            `${region.id} answers to ${region.answer}, and the catalog sells it before ${node.id} (${answering.slice(0, 4).join(', ') || 'NOTHING'})`);
+        }
+        held.push(node.id);
+      }
+    }
+  }
+
+  // LAW 2: a conquest has to expand what you can CREATE, not just what you
+  // own. Every region past the first introduces something new to build
+  // with — fauna in the catalog, or enemy tech you can only get by taking
+  // the place apart.
+  const seenSpecies = new Set();
+  const seenTech = new Set();
+  for (const [i, region] of regions.entries()) {
+    const fauna = region.nodes.flatMap((n) => n.unlocksFauna ?? []).filter((id) => !seenSpecies.has(id));
+    const tech = region.nodes
+      .flatMap((n) => content.encounters[n.encounter].waves)
+      .flatMap((unitId) => {
+        const out = [];
+        let unit = content.enemies[unitId];
+        for (let hops = 0; unit && hops < 4; hops++) {
+          out.push(...(unit.salvage ?? []));
+          unit = content.enemies[unit.transformInto];
+        }
+        return out;
+      })
+      .filter((id) => !seenTech.has(id));
+    assert.ok(fauna.length + tech.length > 0,
+      `${region.id} teaches you to build something new (${[...fauna, ...tech].join(', ') || 'NOTHING'})`);
+    for (const id of fauna) seenSpecies.add(id);
+    for (const id of tech) seenTech.add(id);
+    if (i > 0) void 0;
+  }
+  for (const id of seenTech) assert.ok(content.parts[id], `salvage ${id} is a real part`);
+}
+
+// --- R26: redistributing fauna must never repossess it ----------------
+// Spreading the catalog across five regions is the one content edit that can
+// take something away from a live save: a player holding the Guard Post owned
+// nine species that now live three regions out. The v24 migration grants
+// whatever the v23 table would have opened, permanently, and the catalog can
+// only ever grow from there.
+{
+  const v23 = {
+    ...newGameState(),
+    saveVersion: 23,
+    campaign: { ...newGameState().campaign, heldNodes: ['barn_perimeter', 'downtown', 'checkpoint', 'precinct', 'guard_post'], notoriety: 85 },
+  };
+  delete v23.campaign.faunaGranted;
+  const migrated = migrate(structuredClone(v23));
+  assert.equal(migrated.saveVersion, SAVE_VERSION);
+
+  // Everything the v23 table opened at those five nodes.
+  const OWED = [
+    'porcupine', 'skunk', 'wolf', 'chameleon', 'mantis', 'eagle', 'cobra', 'frog', 'bat',
+    'bear', 'tiger', 'gorilla', 'rhino_beetle', 'dragonfly', 'rhino', 'pangolin', 'crocodile',
+    'shark', 'octopus', 'electric_eel', 'anglerfish', 'tortoise', 'scorpion',
+  ];
+  const catalog = new Set(catalogFor(migrated, content).map((sp) => sp.id));
+  const lost = OWED.filter((id) => !catalog.has(id));
+  assert.deepEqual(lost, [], `a migrated save keeps every species it had earned (lost: ${lost.join(', ')})`);
+
+  // Five of those now live in regions this save has never seen, which is the
+  // whole point — without the grant they would have vanished from the shop.
+  const moved = ['shark', 'octopus', 'electric_eel', 'anglerfish', 'tortoise'];
+  const fresh = { ...newGameState(), campaign: { ...newGameState().campaign, heldNodes: [...v23.campaign.heldNodes], notoriety: 85 } };
+  const freshCatalog = new Set(catalogFor(fresh, content).map((sp) => sp.id));
+  for (const id of moved) {
+    assert.ok(!freshCatalog.has(id), `${id} really did move out of Greenfield (otherwise this test proves nothing)`);
+  }
+
+  // The grant is additive, never a replacement. A save that held the whole
+  // county was owed the whole catalog, so it gains nothing further — which is
+  // exactly right, and also proves nothing about additivity. A save that
+  // stopped at Downtown is the one that shows it: it keeps its five, and
+  // taking Greenfield's remaining nodes still opens the rest.
+  migrated.campaign.heldNodes.push('crop_strip', 'radio_mast', 'cloudbase', 'aerodrome', 'sunken_marina');
+  const grown = new Set(catalogFor(migrated, content).map((sp) => sp.id));
+  for (const id of catalog) assert.ok(grown.has(id), `${id} survives further conquest`);
+
+  const partial = { ...newGameState(), saveVersion: 23,
+    campaign: { ...newGameState().campaign, heldNodes: ['barn_perimeter', 'downtown'], notoriety: 25 } };
+  delete partial.campaign.faunaGranted;
+  const early = migrate(structuredClone(partial));
+  const owedEarly = ['porcupine', 'skunk', 'wolf', 'chameleon', 'mantis'];
+  assert.deepEqual([...early.campaign.faunaGranted].sort(), [...owedEarly].sort(),
+    'a half-conquered save is granted exactly what it had earned');
+  const beforeCatalog = new Set(catalogFor(early, content).map((sp) => sp.id));
+  early.campaign.heldNodes.push('checkpoint', 'precinct');
+  const afterCatalog = new Set(catalogFor(early, content).map((sp) => sp.id));
+  for (const id of beforeCatalog) assert.ok(afterCatalog.has(id), `${id} survives conquest`);
+  assert.ok(afterCatalog.size > beforeCatalog.size,
+    `and conquest still adds to it (${beforeCatalog.size} -> ${afterCatalog.size})`);
+}
+
+// --- The War Room's headline row must not collide with itself ---------
+// Four columns fitted while the numbers were small. A fully conquered map
+// reads "+$2385/day" beside "128W-12L", and at 380px those two overlapped
+// mid-glyph — while every measurement in this suite reported four cells of
+// equal height, because overflowing text does not change a box. The fix is
+// two columns on phone widths; this pins the breakpoint above the 380px the
+// Definition of Done names, so it cannot drift back down.
+{
+  const css = readFileSync(join(root, 'style.css'), 'utf8');
+  const m = css.match(/@media \(max-width: (\d+)px\) \{\s*\.econ-row \{ grid-template-columns: repeat\(2/);
+  assert.ok(m, 'the econ row still has a two-column breakpoint');
+  assert.ok(Number(m[1]) >= 380, `and it fires at or above 380px (found ${m[1]}px)`);
+}
+
+// --- R26: the Threat Generation ladder --------------------------------
+{
+  const ladder = threatLadder(content);
+  assert.ok(ladder.length >= 3, `three Threat Generations (${ladder.map((r) => r.gen).join(', ')})`);
+  assert.equal(ladder[0].at, 0, 'Generation 1 is where everybody starts');
+  for (let i = 1; i < ladder.length; i++) {
+    assert.ok(ladder[i].at > ladder[i - 1].at, 'the ladder climbs');
+    assert.ok(ladder[i].gen === ladder[i - 1].gen + 1, 'and it climbs one rung at a time');
+    assert.ok(ladder[i].announce, `Gen ${ladder[i].gen} announces itself in the wire`);
+  }
+
+  const gen = (notoriety) => threatGen({ campaign: { notoriety } }, content);
+  assert.equal(gen(0), 1);
+  for (const rung of ladder.slice(1)) {
+    assert.equal(gen(rung.at - 1), rung.gen - 1, `just short of ${rung.at} is still Gen ${rung.gen - 1}`);
+    assert.equal(gen(rung.at), rung.gen, `${rung.at} notoriety is Gen ${rung.gen}`);
+  }
+
+  // Every gen-gated node must be reachable: the notoriety banked by
+  // everything that opens BEFORE it has to clear the rung it asks for,
+  // or the node is a locked door with the key inside.
+  const regions = Object.values(content.regions);
+  let banked = 0;
+  for (const region of regions) {
+    for (const node of region.nodes) {
+      const need = node.threatGen ?? 1;
+      const at = ladder.find((r) => r.gen === need)?.at ?? 0;
+      assert.ok(banked >= at,
+        `${node.id} needs Gen ${need} (${at}), and the map before it banks ${banked}`);
+      banked += node.notoriety;
+    }
+    const req = region.requires ?? {};
+    if (req.threatGen) {
+      const at = ladder.find((r) => r.gen === req.threatGen)?.at ?? 0;
+      const before = regions.slice(0, regions.indexOf(region)).flatMap((r) => r.nodes)
+        .reduce((sum, n) => sum + n.notoriety, 0);
+      assert.ok(before >= at, `${region.id} needs Gen ${req.threatGen} (${at}), and the strips before it bank ${before}`);
+    }
+  }
 }
 
 // Time-warp safety: a lastTickAt in the future never rewinds state.

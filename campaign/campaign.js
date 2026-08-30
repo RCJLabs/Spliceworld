@@ -12,6 +12,11 @@ import { tickRehab, findBay } from './rehab.js';
 import { tickContests, resolveContest, isContested } from './contest.js';
 import { playerLine, rivalLine } from './monologue.js';
 import { tickOperations } from './operations.js';
+import {
+  regionList, allNodes, nodeById, regionOfNode,
+  threatGen as mapThreatGen, threatLadder, threatRung, nextThreatRung,
+  regionBlockers, regionOpen, nodeStates as mapNodeStates, regionStates as mapRegionStates,
+} from './map.js';
 
 const DAY = 86400000;
 const HOUR = 3600000;
@@ -21,42 +26,40 @@ export function pushNews(state, line) {
   if (state.news.length > 12) state.news.splice(0, state.news.length - 12);
 }
 
+// Map lookups live in map.js so contest.js can share them without the two
+// modules importing each other; re-exported here because the War Room has
+// always reached for the campaign module.
+export { regionList, allNodes, nodeById, regionOfNode };
+
+// Kept for the handful of callers that just want somewhere to start.
 export function regionOf(content) {
-  return Object.values(content.regions)[0]; // v0.1: one region strip
+  return regionList(content)[0];
 }
 
-export function threatGen(state, content) {
-  return state.campaign.notoriety >= content.campaignMeta.threatGen2At ? 2 : 1;
+// Gating and the Threat ladder live in map.js so contest.js and the AI
+// director can share them without importing this module; re-exported here
+// because the War Room has always reached for the campaign module. The two
+// wrappers thread the contest list through, which map.js deliberately does
+// not know about.
+export { threatLadder, threatRung, nextThreatRung, regionBlockers, regionOpen };
+export const threatGen = mapThreatGen;
+
+const contestedIds = (state) => (state.campaign.contested ?? []).map((c) => c.nodeId);
+
+export function nodeStates(state, content, region = regionOf(content)) {
+  return mapNodeStates(state, content, region, contestedIds(state));
 }
 
-// Node states: 'held' | 'available' | 'locked'. Nodes unlock in strip
-// order; threatGen-gated nodes also need the notoriety to exist.
-export function nodeStates(state, content) {
-  const region = regionOf(content);
-  const gen = threatGen(state, content);
-  const out = [];
-  let previousTaken = true; // the first node is always reachable
-  for (const node of region.nodes) {
-    let status;
-    if (state.campaign.heldNodes.includes(node.id)) {
-      // Still held — facility gates and rival unlocks must not blink out
-      // while a convoy is on the road — but it reads differently, and it
-      // stops paying.
-      status = isContested(state, node.id) ? 'contested' : 'held';
-    } else if ((node.threatGen ?? 1) > gen) status = 'locked';
-    else status = previousTaken ? 'available' : 'locked';
-    out.push({ node, status });
-    previousTaken = state.campaign.heldNodes.includes(node.id);
-  }
-  return out;
+export function regionStates(state, content) {
+  return mapRegionStates(state, content, contestedIds(state));
 }
 
 // What territory actually pays. A contested node is suspended, which is
 // the sting that makes a counter-offensive worth answering before the
 // window closes — the node itself is recoverable, the lost days are not.
 export function incomePerDay(state, content) {
-  const region = regionOf(content);
-  return region.nodes
+  return allNodes(content)
+    .map((e) => e.node)
     .filter((n) => state.campaign.heldNodes.includes(n.id) && !isContested(state, n.id))
     .reduce((sum, n) => sum + n.incomePerDay, 0);
 }
@@ -64,8 +67,8 @@ export function incomePerDay(state, content) {
 // What it would pay with the line held — for a War Room that can show the
 // player what the convoy is costing them.
 export function incomeSuspended(state, content) {
-  const region = regionOf(content);
-  return region.nodes
+  return allNodes(content)
+    .map((e) => e.node)
     .filter((n) => isContested(state, n.id))
     .reduce((sum, n) => sum + n.incomePerDay, 0);
 }
@@ -203,7 +206,7 @@ export function resolveBattle(state, battle, content, now) {
   }
 
   if (context.kind === 'assault' && result.outcome === 'win' && context.nodeId) {
-    const node = regionOf(content).nodes.find((n) => n.id === context.nodeId);
+    const node = nodeById(content, context.nodeId);
     if (node && !state.campaign.heldNodes.includes(node.id)) {
       const genBefore = threatGen(state, content);
       state.campaign.heldNodes.push(node.id);
@@ -221,7 +224,7 @@ export function resolveBattle(state, battle, content, now) {
   // expand what you can CREATE rather than just what you own (Law 2), so
   // the wreckage goes to Containment: enemy tech, salvage, new parts.
   if (context.kind === 'defend' && context.nodeId) {
-    const node = regionOf(content).nodes.find((n) => n.id === context.nodeId);
+    const node = nodeById(content, context.nodeId);
     const { news, held } = resolveContest(state, content, context.nodeId, result.outcome, now);
     if (news) pushNews(state, news);
     detail.defended = held;

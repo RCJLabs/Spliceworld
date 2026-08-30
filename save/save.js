@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 23;
+export const SAVE_VERSION = 24;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -266,6 +266,39 @@ const migrations = {
     }
     return save;
   },
+
+  // v24 (R26): the map went from one county to five, and the fauna that
+  // used to pile up on Greenfield's last two nodes was spread across the
+  // new regions to give each conquest something to unlock. Redistribution
+  // is the one kind of content edit that CAN take something away from an
+  // existing save: a player holding the Guard Post owned nine species that
+  // now live three regions further out.
+  //
+  // So it doesn't. `faunaGranted` is a permanent, additive grant computed
+  // from the table as it stood in v23 against the nodes this save actually
+  // holds — the catalog can only ever grow. Any future reshuffle of
+  // unlocksFauna is safe for the same reason.
+  24: (save) => {
+    const V23_UNLOCKS = {
+      barn_perimeter: ['porcupine', 'skunk'],
+      downtown: ['wolf', 'chameleon', 'mantis'],
+      checkpoint: ['eagle', 'cobra', 'frog', 'bat'],
+      precinct: ['bear', 'tiger', 'gorilla', 'rhino_beetle', 'dragonfly'],
+      guard_post: [
+        'rhino', 'pangolin', 'crocodile', 'shark', 'octopus',
+        'electric_eel', 'anglerfish', 'tortoise', 'scorpion',
+      ],
+    };
+    save.campaign ??= {};
+    const granted = new Set(save.campaign.faunaGranted ?? []);
+    for (const nodeId of save.campaign.heldNodes ?? []) {
+      for (const id of V23_UNLOCKS[nodeId] ?? []) granted.add(id);
+    }
+    save.campaign.faunaGranted = [...granted];
+    save.campaign.contested ??= [];
+    save.campaign.defences ??= {};
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -290,7 +323,7 @@ export function newGameState() {
     battle: null,
     warRecord: { wins: 0, losses: 0 },
     campaign: {
-      heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {},
+      heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,
       operation: null, opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
       lastTickAt: null,

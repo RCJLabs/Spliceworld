@@ -14,6 +14,7 @@ import { onboardingSteps, onboardingActive } from './onboarding.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
 import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade } from '../splice/facility.js';
+import { nodeName } from '../campaign/map.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -94,14 +95,6 @@ function facilityCard(state, content) {
       </div>`;
   }).join('');
   return `<section class="card"><h3>🏚 Facility</h3>${rows}</section>`;
-}
-
-function nodeName(content, nodeId) {
-  for (const region of Object.values(content.regions ?? {})) {
-    const node = region.nodes.find((n) => n.id === nodeId);
-    if (node) return node.name;
-  }
-  return nodeId;
 }
 
 function eggSVG(palette) {

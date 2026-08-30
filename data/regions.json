@@ -1,11 +1,34 @@
 {
-  "_doc": "Campaign shell (M5): one region strip \u2014 nodes unlock in order, each is an encounter from enemies.json; winning holds the node, granting income per real-world day (timestamp-computed) and notoriety. Notoriety crossing threatGen2At announces Threat Generation 2 and unlocks nodes gated with 'threatGen': 2. rescueEncounter = the themed battle used for every rescue raid (v0.1 has one template). Adding regions/nodes must never require engine edits. unlocksFauna: species ids added to the Mail-Order catalog when the node is held. Region contestation (\u00a73.9 'coalition counter-offensives can contest held regions'): once the threat generation named in `contestation.startsAtGen` is reached, the coalition periodically comes BACK for a node you already hold. The schedule is a timestamp (nextContestAt), never a per-tick dice roll, so how often you open the app cannot change how often you are attacked; and the defence window starts the moment you SEE the contest, so being away never costs you a node you were never given the chance to defend. Adding a region must never require engine edits, and neither does tuning this.",
+  "_doc": "Campaign shell (M5, five regions since R26): an ordered list of region strips. Nodes unlock in order WITHIN their region; a region itself opens when its `requires` block is satisfied ({ nodes: [...] held, threatGen: N, notoriety: N } — all optional, all ANDed), so the ladder is data and adding a sixth region needs no engine edit. Each node is an encounter from enemies.json; winning holds it, granting income per real-world day (timestamp-computed) and notoriety. threatGens is the Threat Generation ladder — [{gen, at, name, announce}] — replacing the single threatGen2At threshold, which is still read as a fallback so a pre-R26 save sees the world it left. Crossing a rung announces it and unlocks nodes gated with 'threatGen': N. rescueEncounter = the themed battle used for every rescue raid. unlocksFauna: species ids added to the Mail-Order catalog when the node is held. `answer` names the class that beats the region's dominant enemy class ('mixed' where none does) and `demand` says it in the player's language on the map; smoke checks `answer` against the actual rosters AND checks that fauna of that class is already purchasable when the region opens, so the ladder can never ask for anatomy the catalog cannot sell. Region contestation (§3.9 'coalition counter-offensives can contest held regions'): once the threat generation named in `contestation.startsAtGen` is reached, the coalition periodically comes BACK for a node you already hold — anywhere on the map, not just the first region. The schedule is a timestamp (nextContestAt), never a per-tick dice roll, so how often you open the app cannot change how often you are attacked; and the defence window starts the moment you SEE the contest, so being away never costs you a node you were never given the chance to defend. Adding a region must never require engine edits, and neither does tuning this. `benchGrade` is the part grade a player plausibly holds when the region opens; the balance harness scores each strip at its own grade so no cell is measured saturated at one end or floored at the other.",
+  "threatGens": [
+    {
+      "gen": 1,
+      "at": 0,
+      "name": "Local Nuisance",
+      "announce": null
+    },
+    {
+      "gen": 2,
+      "at": 60,
+      "name": "Threat Generation 2",
+      "announce": "THREAT LEVEL UP: the military is now returning your calls. Threat Generation 2."
+    },
+    {
+      "gen": 3,
+      "at": 320,
+      "name": "Threat Generation 3",
+      "announce": "THREAT LEVEL UP: a Compliance Spire has been erected in your honour. Threat Generation 3."
+    }
+  ],
   "threatGen2At": 60,
   "rescueEncounter": "rescue_impound",
   "regions": [
     {
       "id": "greenfield",
       "name": "Greenfield County",
+      "subtitle": "Home. Such as it is.",
+      "demand": "Boots on the ground, mostly. They walk everywhere and they walk in straight lines.",
+      "answer": "air",
       "nodes": [
         {
           "id": "barn_perimeter",
@@ -41,9 +64,8 @@
           "blurb": "The county's only exit. The county's only cruiser lives here.",
           "unlocksFauna": [
             "eagle",
-            "cobra",
-            "frog",
-            "bat"
+            "bat",
+            "dragonfly"
           ]
         },
         {
@@ -52,14 +74,13 @@
           "encounter": "boss_clampdown",
           "incomePerDay": 100,
           "notoriety": 25,
+          "blurb": "Captain Clampdown’s office. There is a tarp in the motor pool. It is humming.",
           "boss": true,
-          "blurb": "Captain Clampdown's office. There is a tarp in the motor pool. It is humming.",
           "unlocksFauna": [
             "bear",
             "tiger",
             "gorilla",
-            "rhino_beetle",
-            "dragonfly"
+            "cobra"
           ]
         },
         {
@@ -68,30 +89,243 @@
           "encounter": "military_response",
           "incomePerDay": 80,
           "notoriety": 20,
-          "threatGen": 2,
           "blurb": "The county called someone with a bigger budget.",
+          "threatGen": 2,
           "unlocksFauna": [
-            "rhino",
-            "pangolin",
-            "crocodile",
-            "shark",
-            "octopus",
-            "electric_eel",
-            "anglerfish",
-            "tortoise",
+            "frog",
+            "crocodile"
+          ]
+        }
+      ],
+      "benchGrade": "standard"
+    },
+    {
+      "id": "kestrel",
+      "name": "Kestrel Reach",
+      "subtitle": "The sky over the county, and everyone in it.",
+      "demand": "Everything here is Airborne — your Ground-tagged moves swing through empty air. Their class is Air, so Water anatomy owns them.",
+      "answer": "water",
+      "requires": {
+        "nodes": [
+          "precinct"
+        ]
+      },
+      "nodes": [
+        {
+          "id": "crop_strip",
+          "name": "Crop-Duster Strip",
+          "encounter": "kestrel_strip",
+          "incomePerDay": 55,
+          "notoriety": 20,
+          "blurb": "A grass runway, two hangars, and a great deal of unearned confidence.",
+          "unlocksFauna": [
+            "rhino"
+          ]
+        },
+        {
+          "id": "radio_mast",
+          "name": "Radio Mast",
+          "encounter": "kestrel_mast",
+          "incomePerDay": 70,
+          "notoriety": 22,
+          "blurb": "Whoever holds the mast holds the weather report, and thus morale.",
+          "unlocksFauna": [
+            "pangolin"
+          ]
+        },
+        {
+          "id": "cloudbase",
+          "name": "Cloudbase Depot",
+          "encounter": "kestrel_depot",
+          "incomePerDay": 85,
+          "notoriety": 25,
+          "blurb": "Everything here is bolted to the ceiling, which should have been a clue.",
+          "unlocksFauna": [
+            "rhino_beetle"
+          ]
+        },
+        {
+          "id": "aerodrome",
+          "name": "The Aerodrome",
+          "encounter": "kestrel_aerodrome",
+          "incomePerDay": 120,
+          "notoriety": 35,
+          "blurb": "Aeronaut Prime has a scarf, a hangar, and something enormous under a tarp.",
+          "boss": true,
+          "unlocksFauna": [
             "scorpion"
           ]
         }
-      ]
+      ],
+      "benchGrade": "prime"
+    },
+    {
+      "id": "drowned",
+      "name": "The Drowned Quarter",
+      "subtitle": "The harbour district, at high tide, permanently.",
+      "demand": "Aquatic and Water class throughout — Ground anatomy walks all over them, and Electric doubles on anything wet. Bring boots, not gills: their generators read Aquatic as a target.",
+      "answer": "ground",
+      "requires": {
+        "nodes": [
+          "aerodrome"
+        ]
+      },
+      "nodes": [
+        {
+          "id": "sunken_marina",
+          "name": "Sunken Marina",
+          "encounter": "drowned_marina",
+          "incomePerDay": 80,
+          "notoriety": 25,
+          "blurb": "The pontoons are underneath the boats now. Nobody wants to discuss it.",
+          "unlocksFauna": [
+            "shark"
+          ]
+        },
+        {
+          "id": "spillway_locks",
+          "name": "Spillway Locks",
+          "encounter": "drowned_locks",
+          "incomePerDay": 95,
+          "notoriety": 25,
+          "blurb": "Whoever owns the locks owns which streets are streets today.",
+          "unlocksFauna": [
+            "octopus"
+          ]
+        },
+        {
+          "id": "dredge_yard",
+          "name": "Dredge Yard",
+          "encounter": "drowned_dredge",
+          "incomePerDay": 110,
+          "notoriety": 30,
+          "blurb": "They have wired the whole yard to the water. On purpose. Bring boots.",
+          "unlocksFauna": [
+            "electric_eel",
+            "anglerfish"
+          ]
+        },
+        {
+          "id": "harbor_rig",
+          "name": "Harbormaster’s Rig",
+          "encounter": "drowned_rig",
+          "incomePerDay": 145,
+          "notoriety": 40,
+          "blurb": "The Harbormaster has a whistle, a grudge, and a crane the size of a church.",
+          "boss": true,
+          "unlocksFauna": [
+            "tortoise"
+          ]
+        }
+      ],
+      "benchGrade": "prime"
+    },
+    {
+      "id": "foundry",
+      "name": "The Foundry Belt",
+      "subtitle": "Where the coalition’s vehicles come from.",
+      "demand": "Vehicle and Armored, wall to wall. Gas does nothing to a machine and Venom is half-wasted — Sonic ignores their plating, and they are Ground class, so Air anatomy still flies over the top.",
+      "answer": "air",
+      "requires": {
+        "nodes": [
+          "harbor_rig"
+        ]
+      },
+      "nodes": [
+        {
+          "id": "slag_gate",
+          "name": "Slag Gate",
+          "encounter": "foundry_gate",
+          "incomePerDay": 115,
+          "notoriety": 30,
+          "blurb": "A gate made of gates. The foreman has laminated the rules."
+        },
+        {
+          "id": "rolling_mill",
+          "name": "Rolling Mill",
+          "encounter": "foundry_mill",
+          "incomePerDay": 125,
+          "notoriety": 30,
+          "blurb": "Everything in here is either red hot or armour-plated. Frequently both."
+        },
+        {
+          "id": "motor_pool",
+          "name": "The Motor Pool",
+          "encounter": "foundry_motorpool",
+          "incomePerDay": 140,
+          "notoriety": 35,
+          "blurb": "Every vehicle you have ever annoyed, parked in tidy rows, freshly painted."
+        },
+        {
+          "id": "crucible_floor",
+          "name": "Crucible Floor",
+          "encounter": "foundry_crucible",
+          "incomePerDay": 180,
+          "notoriety": 45,
+          "blurb": "Smelter Prime pours a fresh chassis while you watch. It is meant for you.",
+          "boss": true,
+          "threatGen": 3
+        }
+      ],
+      "benchGrade": "apex"
+    },
+    {
+      "id": "spire",
+      "name": "The Compliance Spire",
+      "subtitle": "Head office. They have a lanyard policy.",
+      "demand": "All three classes on one ladder — no single anatomy answers the whole building. Bring a stable, not a team.",
+      "answer": "mixed",
+      "requires": {
+        "nodes": [
+          "crucible_floor"
+        ],
+        "threatGen": 3
+      },
+      "nodes": [
+        {
+          "id": "spire_reception",
+          "name": "Spire Reception",
+          "encounter": "spire_lobby",
+          "incomePerDay": 150,
+          "notoriety": 35,
+          "blurb": "Please take a number. The number is a summons."
+        },
+        {
+          "id": "records_annex",
+          "name": "Records Annex",
+          "encounter": "spire_records",
+          "incomePerDay": 165,
+          "notoriety": 35,
+          "blurb": "Every unkind thing anyone has written about you, alphabetised."
+        },
+        {
+          "id": "rooftop_pad",
+          "name": "Rooftop Pad",
+          "encounter": "spire_rooftop",
+          "incomePerDay": 185,
+          "notoriety": 40,
+          "blurb": "The helipad, the water tanks, and a really committed accountant."
+        },
+        {
+          "id": "boardroom",
+          "name": "The Boardroom",
+          "encounter": "spire_boardroom",
+          "incomePerDay": 260,
+          "notoriety": 60,
+          "blurb": "Director Prime would like to walk you through the slides. All of them.",
+          "boss": true
+        }
+      ],
+      "benchGrade": "apex"
     }
   ],
   "contestation": {
-    "_doc": "startsAtGen/minHeld gate the whole system so early play is untouched. cooldownHours is the gap between counter-offensives, lengthened by cooldownPerDefenceHours for every successful defence of that node \u2014 they learn. windowHours is how long you have once you see it. The defence reuses the node's OWN encounter at `escalation` above its authored strength, growing by escalationPerDefence every time you hold the place: a continuous dial rather than a tier step, because the authored tier ladder is deliberately lumpy (a tier is a band of CONTENT) and +1 tier on an already-top-tier boss is a wall while +1 on a mid encounter is a shrug. A new region therefore costs zero new encounter data, and the ramp is endless and self-paced. rewardScale multiplies the node encounter's reward; holding the line also impounds one of the attacking units, because a conquest reward has to expand what you can CREATE (Law 2) and enemy tech is how this one does. Measured against the balance harness's yardstick team of three at prismatic: a first defence runs 100/98/88/12/42% across the five Greenfield nodes against 100/100/93/30/55% for the original assault.",
+    "_doc": "startsAtGen/minHeld gate the whole system so early play is untouched. cooldownHours is the gap between counter-offensives, lengthened by cooldownPerDefenceHours for every successful defence of that node — they learn. windowHours is how long you have once you see it. The defence reuses the node's OWN encounter at `escalation` above its authored strength, growing by escalationPerDefence every time you hold the place: a continuous dial rather than a tier step, because the authored tier ladder is deliberately lumpy (a tier is a band of CONTENT) and +1 tier on an already-top-tier boss is a wall while +1 on a mid encounter is a shrug. A new region therefore costs zero new encounter data, and the ramp is endless and self-paced. rewardScale multiplies the node encounter's reward; holding the line also impounds one of the attacking units, because a conquest reward has to expand what you can CREATE (Law 2) and enemy tech is how this one does. Measured against the balance harness's yardstick team of three at prismatic: a first defence runs 100/98/88/12/42% across the five Greenfield nodes against 100/100/93/30/55% for the original assault.",
     "startsAtGen": 2,
     "minHeld": 2,
     "maxConcurrent": 1,
     "firstDelayHours": 4.5,
-    "cooldownHours": 15.0,
+    "cooldownHours": 15,
     "cooldownPerDefenceHours": 5.25,
     "jitter": 0.25,
     "windowHours": 13.5,

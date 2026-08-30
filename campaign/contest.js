@@ -22,6 +22,7 @@
 // can be assaulted again.
 
 import { rngStream } from '../util/rng.js';
+import { allNodes, nodeById, nodeName } from './map.js';
 
 const HOUR = 3600000;
 
@@ -94,10 +95,10 @@ function scheduleNext(state, content, now, extraHours = 0) {
 // almost every counter-offensive landed on the one you were least able
 // to answer. Probing anywhere spreads the difficulty the way the strip
 // already spreads it.
-function chooseNode(state, content, region) {
-  const candidates = region.nodes.filter(
-    (n) => state.campaign.heldNodes.includes(n.id) && !isContested(state, n.id)
-  );
+function chooseNode(state, content) {
+  const candidates = allNodes(content)
+    .map((e) => e.node)
+    .filter((n) => state.campaign.heldNodes.includes(n.id) && !isContested(state, n.id));
   if (!candidates.length) return null;
   const rng = rngStream(state.seed, 'contest:node', state.campaign.contestCount ?? 0);
   return candidates[Math.floor(rng() * candidates.length) % candidates.length];
@@ -123,8 +124,7 @@ export function escalationOf(state, content, nodeId) {
 export function contestEncounter(state, content, contest) {
   if (!contest) return null;
   const t = contestTuning(content);
-  const region = Object.values(content.regions)[0];
-  const node = region.nodes.find((n) => n.id === contest.nodeId);
+  const node = nodeById(content, contest.nodeId);
   const base = content.encounters[node?.encounter];
   if (!base) return null;
   const escalation = escalationOf(state, content, contest.nodeId);
@@ -152,8 +152,7 @@ export function tickContests(state, content, now, gen) {
   const cam = state.campaign;
   cam.contested ??= [];
   cam.defences ??= {};
-  const region = Object.values(content.regions)[0];
-  const nameOf = (id) => region.nodes.find((n) => n.id === id)?.name ?? id;
+  const nameOf = (id) => nodeName(content, id);
   const news = [];
 
   // Open at most ONE per tick. A player returning from a week away should
@@ -163,7 +162,7 @@ export function tickContests(state, content, now, gen) {
       // Eligibility has just appeared: give them a beat before the first one.
       cam.nextContestAt = now + Math.round(t.firstDelayHours * HOUR);
     } else if (now >= cam.nextContestAt) {
-      const node = chooseNode(state, content, region);
+      const node = chooseNode(state, content);
       if (node) {
         cam.contestCount = (cam.contestCount ?? 0) + 1;
         cam.contested.push({
@@ -197,8 +196,7 @@ export function tickContests(state, content, now, gen) {
 // keeps running.
 export function resolveContest(state, content, nodeId, outcome, now) {
   const t = contestTuning(content);
-  const region = Object.values(content.regions)[0];
-  const nodeName = region.nodes.find((n) => n.id === nodeId)?.name ?? nodeId;
+  const name = nodeName(content, nodeId);
   const contest = contestOn(state, nodeId);
   if (!contest || outcome === 'fled') return { news: null, held: null };
 
@@ -207,9 +205,9 @@ export function resolveContest(state, content, nodeId, outcome, now) {
     state.campaign.defences[nodeId] = defencesOf(state, nodeId) + 1;
     state.campaign.notoriety += t.notoriety;
     scheduleNext(state, content, now, defencesOf(state, nodeId) * t.cooldownPerDefenceHours);
-    return { news: line(t.news.held, nodeName), held: true };
+    return { news: line(t.news.held, name), held: true };
   }
   state.campaign.heldNodes = state.campaign.heldNodes.filter((id) => id !== nodeId);
   scheduleNext(state, content, now);
-  return { news: line(t.news.lost, nodeName), held: false };
+  return { news: line(t.news.lost, name), held: false };
 }

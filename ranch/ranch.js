@@ -189,6 +189,10 @@ export function faunaUnlocked(state, content) {
       for (const id of node.unlocksFauna ?? []) open.add(id);
     }
   }
+  // Grandfathered stock (save v24): species a save could already buy under
+  // an earlier unlocksFauna table. The catalog only ever grows — moving a
+  // species to a later region must never repossess it.
+  for (const id of state.campaign.faunaGranted ?? []) open.add(id);
   return open;
 }
 

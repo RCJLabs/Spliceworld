@@ -15,6 +15,7 @@
 // A director you cannot see is just a difficulty knob (Law 4).
 
 import { rngStream, pick } from '../util/rng.js';
+import { reachableEncounterIds } from './map.js';
 
 const DEFAULT_TUNING = {
   minSamples: 4,
@@ -149,8 +150,14 @@ export function directorRead(state, content) {
 // cops do. Ties break on id so the list is stable across reloads.
 export function directorReach(state, content) {
   const t = tuningOf(content);
+  // Only what the player can actually walk to today. "Hardest first" was a
+  // fine definition of where the world adapts while there was one county;
+  // across five regions it would spend the whole budget rewriting the
+  // Compliance Spire while the player is still arguing with a parking
+  // warden in Greenfield.
+  const reachable = new Set(reachableEncounterIds(state, content));
   const eligible = Object.values(content.encounters ?? {})
-    .filter((e) => (e.tier ?? 0) >= t.minTier)
+    .filter((e) => (e.tier ?? 0) >= t.minTier && reachable.has(e.id))
     .sort((a, b) => (b.tier ?? 0) - (a.tier ?? 0) || (a.id < b.id ? -1 : 1));
   const budget = Math.min(
     eligible.length,

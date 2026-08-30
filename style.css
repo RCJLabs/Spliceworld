@@ -275,7 +275,16 @@ main {
   gap: 6px;
   text-align: center;
 }
-@media (max-width: 360px) {
+/* A grid item's default min-width is auto, so an unbreakable value steals
+   width from its neighbours: at full conquest "+$2,385/day" pushed the
+   Threat Gen column narrow enough to break its own label in half. */
+.econ-row > div { min-width: 0; }
+/* Two columns well before 360px. Four fitted while the numbers were small,
+   but a fully conquered map reads "+$2385/day" beside "128W-12L" and at
+   380px those two collide into each other mid-glyph — which every
+   assertion in the suite happily reported as four cells of equal height.
+   Screenshots catch what getBoundingClientRect does not. */
+@media (max-width: 430px) {
   .econ-row { grid-template-columns: repeat(2, 1fr); gap: 8px 6px; }
 }
 .econ-row .econ-label {
@@ -950,6 +959,53 @@ body.in-battle .ticker { font-size: 0.66rem; }
   font-size: 0.66rem;
   font-weight: 700;
   color: var(--danger-soft);
+}
+.econ-next {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* --- The five-region map (R26) ---------------------------------------
+   Each strip is its own card. A locked one keeps its name and its price of
+   entry but folds its nodes away, so the region you are actually fighting
+   in is never buried under three you cannot reach. */
+.region-card h3 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.region-progress {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.region-sub {
+  margin: -4px 0 8px;
+  font-style: italic;
+}
+.region-demand {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--accent);
+  background: var(--well);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+.region-card.is-locked { opacity: 0.72; }
+.region-card.is-locked h3 { color: var(--muted); }
+.region-locked {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--warn);
 }
 
 /* --- Breeding & Incubator (M6) --- */

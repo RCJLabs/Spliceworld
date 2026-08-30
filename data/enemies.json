@@ -1,5 +1,5 @@
 {
-  "_doc": "Gen 1 human enemy roster (ROADMAP \u00a73.6) + encounters. Units: stats, unit tags (Organic/Vehicle plus battle tags), moves (same schema as part moves), koLine (zero death language \u2014 soldiers parachute away, vehicles retire loudly), shapes (procedural SVG in unit-local space, viewBox -100 -110 200 220). transformInto = boss second stage. Encounters: ordered wave of unit ids + reward funds. Adding a unit or encounter must never require engine edits. Art (M7.5): organics carry googly eyes under the brim; vehicles get windshield eyes with angry brows \u2014 machines are characters too. class: the unit's elemental class for the RPS chart in data/classes.json. tier + tierScale: the difficulty curve. Unit stats (hp/power/armor/stamina) are multiplied by tierScale[tier] at battle time, so one authored roster covers the whole campaign and a later encounter is genuinely harder without duplicating units. tierScale[0] is unused; tier 1 is the tutorial patrol. Rival chimeras carry their own powerScale instead (see rivals.json) and are never tier-scaled.",
+  "_doc": "Gen 1 human enemy roster (ROADMAP §3.6) + encounters. Units: stats, unit tags (Organic/Vehicle plus battle tags), moves (same schema as part moves), koLine (zero death language — soldiers parachute away, vehicles retire loudly), shapes (procedural SVG in unit-local space, viewBox -100 -110 200 220). transformInto = boss second stage. Encounters: ordered wave of unit ids + reward funds. Adding a unit or encounter must never require engine edits. Art (M7.5): organics carry googly eyes under the brim; vehicles get windshield eyes with angry brows — machines are characters too. class: the unit's elemental class for the RPS chart in data/classes.json. tier + tierScale: the difficulty curve. Unit stats (hp/power/armor/stamina) are multiplied by tierScale[tier] at battle time, so one authored roster covers the whole campaign and a later encounter is genuinely harder without duplicating units. tierScale[0] is unused; tier 1 is the tutorial patrol and tier 8 is the Compliance Spire. Rival chimeras carry their own powerScale instead (see rivals.json) and are never tier-scaled.",
   "units": [
     {
       "id": "riot_squad",
@@ -3047,6 +3047,3885 @@
           "fill": "#1d232c"
         }
       ]
+    },
+    {
+      "id": "crop_duster",
+      "name": "Crop Duster",
+      "hp": 56,
+      "power": 12,
+      "armor": 4,
+      "speed": 16,
+      "stamina": 110,
+      "regen": 13,
+      "tags": [
+        "Vehicle",
+        "Airborne"
+      ],
+      "class": "air",
+      "salvage": [
+        "rotor_limbs"
+      ],
+      "koLine": "The Crop Duster lands in a field it was already spraying and taxis away in disgrace.",
+      "moves": [
+        {
+          "name": "Dusting Run",
+          "power": 44,
+          "cost": 20,
+          "acc": 92,
+          "tags": [
+            "Gas"
+          ],
+          "keywords": {}
+        },
+        {
+          "name": "Barnstorm",
+          "power": 30,
+          "cost": 14,
+          "acc": 100,
+          "tags": [
+            "Airborne"
+          ],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -84 -30 L 84 -30",
+          "fill": "none",
+          "stroke": "#c8b45a",
+          "strokeWidth": 8
+        },
+        {
+          "type": "path",
+          "d": "M -34 8 C -34 -14 -12 -24 16 -24 C 50 -24 72 -10 72 4 C 72 18 50 26 16 26 C -14 26 -34 20 -34 8 Z",
+          "fill": "#e2c85c"
+        },
+        {
+          "type": "path",
+          "d": "M -34 6 L -70 -2 L -70 14 L -30 18 Z",
+          "fill": "#c8a83e"
+        },
+        {
+          "type": "path",
+          "d": "M -70 6 L -92 -6 M -70 10 L -92 22",
+          "fill": "none",
+          "stroke": "#c8a83e",
+          "strokeWidth": 7
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -46,
+          "width": 62,
+          "height": 12,
+          "rx": 5,
+          "fill": "#c8a83e"
+        },
+        {
+          "type": "path",
+          "d": "M 34 -18 C 56 -18 68 -8 68 2 L 34 2 Z",
+          "fill": "#9fd8ff",
+          "opacity": 0.9
+        },
+        {
+          "type": "path",
+          "d": "M -18 26 L -18 40 M 34 26 L 34 40 M -30 40 L 50 40",
+          "fill": "none",
+          "stroke": "#8d7526",
+          "strokeWidth": 6
+        },
+        {
+          "type": "ellipse",
+          "cx": -46,
+          "cy": 4,
+          "rx": 5,
+          "ry": 22,
+          "fill": "#d8d2c0",
+          "opacity": 0.75
+        },
+        {
+          "type": "circle",
+          "cx": 30,
+          "cy": -6,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 32,
+          "cy": -6,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 30.8,
+          "cy": -7.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 54,
+          "cy": -4,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 56,
+          "cy": -4,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 54.8,
+          "cy": -5.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M 20 -20 L 37 -13",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 64 -18 L 47 -11",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "mast_climber",
+      "name": "Mast Climber",
+      "hp": 48,
+      "power": 10,
+      "armor": 4,
+      "speed": 15,
+      "stamina": 105,
+      "regen": 12,
+      "tags": [
+        "Organic",
+        "Airborne"
+      ],
+      "class": "air",
+      "koLine": "The Mast Climber abseils down at speed, waves, and is not seen again this evening.",
+      "moves": [
+        {
+          "name": "Cable Whip",
+          "power": 38,
+          "cost": 16,
+          "acc": 95,
+          "tags": [],
+          "keywords": {
+            "accDown": 1
+          }
+        },
+        {
+          "name": "Rappel Kick",
+          "power": 30,
+          "cost": 12,
+          "acc": 100,
+          "tags": [
+            "Airborne"
+          ],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M 34 -84 L 34 40",
+          "fill": "none",
+          "stroke": "#7f8896",
+          "strokeWidth": 7
+        },
+        {
+          "type": "path",
+          "d": "M 34 -60 C 10 -50 -6 -26 -6 -14",
+          "fill": "none",
+          "stroke": "#d9d3c2",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -16 44 L -16 56 M 16 44 L 16 56",
+          "fill": "none",
+          "stroke": "#3f4d33",
+          "strokeWidth": 9
+        },
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -18,
+          "width": 52,
+          "height": 66,
+          "rx": 14,
+          "fill": "#5c6f4a"
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#3f4d33"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#3f4d33"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 24,
+          "fill": "#e8c39e"
+        },
+        {
+          "type": "path",
+          "d": "M -26 -48 A 26 26 0 0 1 26 -48 L 26 -40 L -26 -40 Z",
+          "fill": "#33402a"
+        },
+        {
+          "type": "circle",
+          "cx": -9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -7,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -8.2,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 11,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9.8,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -19 -55 L -2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 19 -55 L 2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -28 -4 L -46 12 L -30 26",
+          "fill": "none",
+          "stroke": "#3f4d33",
+          "strokeWidth": 7
+        },
+        {
+          "type": "circle",
+          "cx": -46,
+          "cy": 12,
+          "r": 7,
+          "fill": "#d9d3c2"
+        }
+      ]
+    },
+    {
+      "id": "balloon_relay",
+      "name": "Balloon Relay",
+      "hp": 70,
+      "power": 8,
+      "armor": 5,
+      "speed": 7,
+      "stamina": 120,
+      "regen": 15,
+      "tags": [
+        "Vehicle",
+        "Airborne"
+      ],
+      "class": "air",
+      "koLine": "The Balloon Relay deflates over four dignified seconds and drapes itself over a barn.",
+      "moves": [
+        {
+          "name": "Signal Boost",
+          "power": 0,
+          "cost": 12,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "rally": 1
+          }
+        },
+        {
+          "name": "Ballast Drop",
+          "power": 34,
+          "cost": 18,
+          "acc": 90,
+          "tags": [],
+          "keywords": {
+            "knockback": true
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": -38,
+          "rx": 56,
+          "ry": 62,
+          "fill": "#d0603f"
+        },
+        {
+          "type": "path",
+          "d": "M -56 -38 C -40 -50 -20 -56 0 -56 C 20 -56 40 -50 56 -38",
+          "fill": "#e8825f",
+          "stroke": "none",
+          "opacity": 0.55
+        },
+        {
+          "type": "path",
+          "d": "M -34 12 L -18 44 M 34 12 L 18 44",
+          "fill": "none",
+          "stroke": "#5b4a3a",
+          "strokeWidth": 5
+        },
+        {
+          "type": "rect",
+          "x": -22,
+          "y": 42,
+          "width": 44,
+          "height": 30,
+          "rx": 6,
+          "fill": "#8d6f4e"
+        },
+        {
+          "type": "path",
+          "d": "M 0 42 L 0 -100",
+          "fill": "none",
+          "stroke": "#7f8896",
+          "strokeWidth": 4
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -100,
+          "r": 6,
+          "fill": "#e9c31f"
+        },
+        {
+          "type": "circle",
+          "cx": -16,
+          "cy": -44,
+          "r": 9,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -14,
+          "cy": -44,
+          "r": 4.140000000000001,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -15.2,
+          "cy": -45.8,
+          "r": 1.44,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 16,
+          "cy": -44,
+          "r": 9,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 18,
+          "cy": -44,
+          "r": 4.140000000000001,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 16.8,
+          "cy": -45.8,
+          "r": 1.44,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -28 -60 L -7 -53",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 28 -60 L 7 -53",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "aeronaut_prime",
+      "name": "Aeronaut Prime",
+      "hp": 76,
+      "power": 13,
+      "armor": 6,
+      "speed": 18,
+      "stamina": 130,
+      "regen": 15,
+      "tags": [
+        "Organic",
+        "Airborne"
+      ],
+      "class": "air",
+      "transformInto": "stratofortress",
+      "koLine": "Aeronaut Prime hurls the goggles to the deck and reaches, theatrically, for a very large lever.",
+      "moves": [
+        {
+          "name": "Wingover",
+          "power": 46,
+          "cost": 22,
+          "acc": 92,
+          "tags": [
+            "Airborne"
+          ],
+          "keywords": {}
+        },
+        {
+          "name": "Thermal Ride",
+          "power": 0,
+          "cost": 12,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "evasionUp": 1
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -6 -6 C -34 -22 -74 -30 -96 -18 C -78 -2 -44 8 -6 8 Z",
+          "fill": "#8c6f4a"
+        },
+        {
+          "type": "path",
+          "d": "M 6 -6 C 34 -22 74 -30 96 -18 C 78 -2 44 8 6 8 Z",
+          "fill": "#8c6f4a"
+        },
+        {
+          "type": "path",
+          "d": "M -16 44 L -16 56 M 16 44 L 16 56",
+          "fill": "none",
+          "stroke": "#4b331f",
+          "strokeWidth": 9
+        },
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -18,
+          "width": 52,
+          "height": 66,
+          "rx": 14,
+          "fill": "#6d4c33"
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#4b331f"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#4b331f"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 24,
+          "fill": "#e8c39e"
+        },
+        {
+          "type": "path",
+          "d": "M -28 -50 A 28 28 0 0 1 28 -50 L 28 -42 L -28 -42 Z",
+          "fill": "#4b331f"
+        },
+        {
+          "type": "circle",
+          "cx": -9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -7,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -8.2,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 11,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9.8,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -19 -55 L -2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 19 -55 L 2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -24 -44 L 24 -44",
+          "fill": "none",
+          "stroke": "#9fd8ff",
+          "strokeWidth": 9,
+          "opacity": 0.85
+        },
+        {
+          "type": "path",
+          "d": "M -12 12 L 12 12 L 6 34 L -6 34 Z",
+          "fill": "#c8a83e"
+        }
+      ]
+    },
+    {
+      "id": "stratofortress",
+      "name": "Stratofortress",
+      "hp": 118,
+      "power": 16,
+      "armor": 13,
+      "speed": 9,
+      "stamina": 150,
+      "regen": 16,
+      "tags": [
+        "Vehicle",
+        "Airborne",
+        "Armored"
+      ],
+      "class": "air",
+      "salvage": [
+        "rotor_limbs",
+        "v8_heart"
+      ],
+      "salvageGrades": [
+        "prime",
+        "standard"
+      ],
+      "koLine": "The Stratofortress sheds every panel it owns and glides, with enormous dignity, into a reservoir.",
+      "moves": [
+        {
+          "name": "Bomb Bay",
+          "power": 60,
+          "cost": 28,
+          "acc": 86,
+          "tags": [],
+          "keywords": {}
+        },
+        {
+          "name": "Flak Curtain",
+          "power": 24,
+          "cost": 16,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "multiHit": 3
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -92 6 C -92 -12 -50 -22 0 -22 C 56 -22 92 -10 92 4 C 92 18 56 28 0 28 C -52 28 -92 20 -92 6 Z",
+          "fill": "#6b7482"
+        },
+        {
+          "type": "path",
+          "d": "M -70 -20 L -10 -62 L 22 -62 L -22 -20 Z",
+          "fill": "#565f6c"
+        },
+        {
+          "type": "path",
+          "d": "M 62 -14 C 84 -14 90 -6 90 2 L 62 2 Z",
+          "fill": "#9fd8ff",
+          "opacity": 0.9
+        },
+        {
+          "type": "ellipse",
+          "cx": -46,
+          "cy": 22,
+          "rx": 20,
+          "ry": 12,
+          "fill": "#565f6c"
+        },
+        {
+          "type": "ellipse",
+          "cx": 14,
+          "cy": 24,
+          "rx": 20,
+          "ry": 12,
+          "fill": "#565f6c"
+        },
+        {
+          "type": "path",
+          "d": "M -46 34 L -46 46 M 14 36 L 14 48 M -66 48 L 40 48",
+          "fill": "none",
+          "stroke": "#3f4650",
+          "strokeWidth": 7
+        },
+        {
+          "type": "rect",
+          "x": -20,
+          "y": 12,
+          "width": 40,
+          "height": 10,
+          "rx": 3,
+          "fill": "#3f4650"
+        },
+        {
+          "type": "circle",
+          "cx": 52,
+          "cy": -4,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 54,
+          "cy": -4,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 52.8,
+          "cy": -5.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 78,
+          "cy": -2,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 80,
+          "cy": -2,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 78.8,
+          "cy": -3.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M 41 -19 L 60 -12",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 89 -17 L 70 -10",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "sluice_hound",
+      "name": "Sluice Hound",
+      "hp": 54,
+      "power": 11,
+      "armor": 4,
+      "speed": 14,
+      "stamina": 110,
+      "regen": 13,
+      "tags": [
+        "Organic",
+        "Aquatic"
+      ],
+      "class": "water",
+      "koLine": "The Sluice Hound is retrieved by its handler, sopping and unrepentant, and taken home for a towel.",
+      "moves": [
+        {
+          "name": "Undertow Bite",
+          "power": 40,
+          "cost": 18,
+          "acc": 92,
+          "tags": [],
+          "keywords": {
+            "bleed": 1
+          }
+        },
+        {
+          "name": "Wake Slap",
+          "power": 28,
+          "cost": 12,
+          "acc": 100,
+          "tags": [],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -66 10 C -66 -12 -40 -24 -6 -24 C 34 -24 60 -10 60 8 C 60 24 34 34 -6 34 C -42 34 -66 26 -66 10 Z",
+          "fill": "#3f7f8c"
+        },
+        {
+          "type": "path",
+          "d": "M -66 8 L -94 -12 L -88 22 Z",
+          "fill": "#2d5f6a"
+        },
+        {
+          "type": "path",
+          "d": "M -10 -24 C -4 -46 12 -50 20 -38",
+          "fill": "#2d5f6a"
+        },
+        {
+          "type": "path",
+          "d": "M -30 32 L -30 46 M 24 32 L 24 46",
+          "fill": "none",
+          "stroke": "#2d5f6a",
+          "strokeWidth": 8
+        },
+        {
+          "type": "path",
+          "d": "M 40 -18 C 58 -20 66 -6 60 6",
+          "fill": "#2d5f6a"
+        },
+        {
+          "type": "circle",
+          "cx": 20,
+          "cy": -6,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 22,
+          "cy": -6,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 20.8,
+          "cy": -7.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 46,
+          "cy": -4,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 48,
+          "cy": -4,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 46.8,
+          "cy": -5.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M 10 -20 L 27 -13",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 56 -18 L 39 -11",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 30 16 L 56 16",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4,
+          "opacity": 0.8
+        }
+      ]
+    },
+    {
+      "id": "hydrofoil_lance",
+      "name": "Hydrofoil Lance",
+      "hp": 66,
+      "power": 15,
+      "armor": 6,
+      "speed": 19,
+      "stamina": 120,
+      "regen": 14,
+      "tags": [
+        "Vehicle",
+        "Aquatic"
+      ],
+      "class": "water",
+      "salvage": [
+        "hydro_jets"
+      ],
+      "koLine": "The Hydrofoil Lance beaches itself on a boat ramp and idles there, mortified.",
+      "moves": [
+        {
+          "name": "Foil Ram",
+          "power": 52,
+          "cost": 24,
+          "acc": 88,
+          "tags": [],
+          "keywords": {
+            "knockback": true
+          }
+        },
+        {
+          "name": "Spray Curtain",
+          "power": 22,
+          "cost": 12,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "accDown": 1
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -80 4 L 66 -6 C 84 -4 84 12 66 16 L -76 22 Z",
+          "fill": "#d8dde4"
+        },
+        {
+          "type": "path",
+          "d": "M -80 4 L 66 -6 C 84 -4 84 6 66 6 L -78 12 Z",
+          "fill": "#eef2f6",
+          "stroke": "none",
+          "opacity": 0.7
+        },
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -34,
+          "width": 56,
+          "height": 30,
+          "rx": 8,
+          "fill": "#3b6ea8"
+        },
+        {
+          "type": "path",
+          "d": "M 6 -30 L 28 -30 L 28 -10 L 6 -10 Z",
+          "fill": "#9fd8ff",
+          "opacity": 0.9
+        },
+        {
+          "type": "path",
+          "d": "M -34 22 L -46 52 M 30 20 L 44 50 M -58 52 L 62 50",
+          "fill": "none",
+          "stroke": "#7f8896",
+          "strokeWidth": 6
+        },
+        {
+          "type": "path",
+          "d": "M 70 -18 L 96 -2 L 70 8 Z",
+          "fill": "#3b6ea8"
+        },
+        {
+          "type": "circle",
+          "cx": -14,
+          "cy": -22,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -12,
+          "cy": -22,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -13.2,
+          "cy": -23.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 10,
+          "cy": -22,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 12,
+          "cy": -22,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 10.8,
+          "cy": -23.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -24 -36 L -7 -29",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 20 -36 L 3 -29",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "eel_generator",
+      "name": "Eel Generator",
+      "hp": 74,
+      "power": 12,
+      "armor": 11,
+      "speed": 8,
+      "stamina": 125,
+      "regen": 14,
+      "tags": [
+        "Vehicle",
+        "Aquatic",
+        "Armored"
+      ],
+      "class": "water",
+      "salvage": [
+        "riot_plating"
+      ],
+      "koLine": "The Eel Generator trips its own breaker, sighs a shower of sparks, and powers down for the night.",
+      "moves": [
+        {
+          "name": "Live Wire",
+          "power": 44,
+          "cost": 22,
+          "acc": 90,
+          "tags": [
+            "Electric"
+          ],
+          "keywords": {}
+        },
+        {
+          "name": "Earthing Rod",
+          "power": 0,
+          "cost": 12,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "guard": true
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -60,
+          "y": -26,
+          "width": 118,
+          "height": 62,
+          "rx": 10,
+          "fill": "#4c5a52"
+        },
+        {
+          "type": "rect",
+          "x": -46,
+          "y": -16,
+          "width": 40,
+          "height": 34,
+          "rx": 5,
+          "fill": "#2f3a35"
+        },
+        {
+          "type": "path",
+          "d": "M -40 -8 L -22 -8 M -40 2 L -22 2 M -40 12 L -22 12",
+          "fill": "none",
+          "stroke": "#e9c31f",
+          "strokeWidth": 4
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": -52,
+          "width": 20,
+          "height": 28,
+          "rx": 4,
+          "fill": "#7f8896"
+        },
+        {
+          "type": "path",
+          "d": "M 20 -52 L 20 -76",
+          "fill": "none",
+          "stroke": "#7f8896",
+          "strokeWidth": 5
+        },
+        {
+          "type": "path",
+          "d": "M 20 -76 L 8 -58 L 24 -60 L 12 -40",
+          "fill": "none",
+          "stroke": "#e9c31f",
+          "strokeWidth": 6
+        },
+        {
+          "type": "path",
+          "d": "M -60 36 L -60 50 M 56 36 L 56 50 M -74 50 L 70 50",
+          "fill": "none",
+          "stroke": "#2f3a35",
+          "strokeWidth": 7
+        },
+        {
+          "type": "circle",
+          "cx": 14,
+          "cy": -6,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 16,
+          "cy": -6,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 14.8,
+          "cy": -7.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 40,
+          "cy": -6,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 42,
+          "cy": -6,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 40.8,
+          "cy": -7.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M 3 -21 L 22 -14",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 51 -21 L 32 -14",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "harbormaster",
+      "name": "The Harbormaster",
+      "hp": 80,
+      "power": 14,
+      "armor": 7,
+      "speed": 12,
+      "stamina": 135,
+      "regen": 15,
+      "tags": [
+        "Organic",
+        "Aquatic"
+      ],
+      "class": "water",
+      "transformInto": "leviathan_dredge",
+      "koLine": "The Harbormaster blows a whistle nobody obeys and climbs, grimly, into something much larger.",
+      "moves": [
+        {
+          "name": "Grapnel Haul",
+          "power": 44,
+          "cost": 20,
+          "acc": 92,
+          "tags": [],
+          "keywords": {
+            "trap": true
+          }
+        },
+        {
+          "name": "Foghorn",
+          "power": 34,
+          "cost": 16,
+          "acc": 100,
+          "tags": [
+            "Sonic"
+          ],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -16 44 L -16 56 M 16 44 L 16 56",
+          "fill": "none",
+          "stroke": "#1b3a4f",
+          "strokeWidth": 9
+        },
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -18,
+          "width": 52,
+          "height": 66,
+          "rx": 14,
+          "fill": "#28506b"
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#1b3a4f"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#1b3a4f"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 24,
+          "fill": "#e8c39e"
+        },
+        {
+          "type": "path",
+          "d": "M -30 -52 A 30 26 0 0 1 30 -52 L 30 -44 L -30 -44 Z",
+          "fill": "#12293a"
+        },
+        {
+          "type": "circle",
+          "cx": -9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -7,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -8.2,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 11,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9.8,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -19 -55 L -2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 19 -55 L 2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -32 -44 L 32 -44",
+          "fill": "none",
+          "stroke": "#e9c31f",
+          "strokeWidth": 5
+        },
+        {
+          "type": "path",
+          "d": "M 26 -10 L 62 -22 L 66 -12 L 30 2 Z",
+          "fill": "#c9a86a"
+        },
+        {
+          "type": "path",
+          "d": "M 62 -26 C 78 -26 78 -6 62 -6",
+          "fill": "none",
+          "stroke": "#7f8896",
+          "strokeWidth": 6
+        },
+        {
+          "type": "path",
+          "d": "M -28 10 L 28 10",
+          "fill": "none",
+          "stroke": "#e9c31f",
+          "strokeWidth": 4,
+          "opacity": 0.9
+        }
+      ]
+    },
+    {
+      "id": "leviathan_dredge",
+      "name": "Leviathan Dredge",
+      "hp": 124,
+      "power": 17,
+      "armor": 14,
+      "speed": 6,
+      "stamina": 155,
+      "regen": 16,
+      "tags": [
+        "Vehicle",
+        "Aquatic",
+        "Armored"
+      ],
+      "class": "water",
+      "salvage": [
+        "foghorn_array",
+        "hydro_jets"
+      ],
+      "salvageGrades": [
+        "prime",
+        "prime"
+      ],
+      "koLine": "The Leviathan Dredge settles onto a sandbar and becomes, effective immediately, a wildlife sanctuary.",
+      "moves": [
+        {
+          "name": "Bucket Chain",
+          "power": 26,
+          "cost": 16,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "multiHit": 3
+          }
+        },
+        {
+          "name": "Hull Slam",
+          "power": 62,
+          "cost": 30,
+          "acc": 84,
+          "tags": [],
+          "keywords": {
+            "knockback": true
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -94 -6 L 84 -18 C 96 -14 96 22 84 26 L -90 34 Z",
+          "fill": "#3d5a52"
+        },
+        {
+          "type": "rect",
+          "x": -52,
+          "y": -56,
+          "width": 54,
+          "height": 52,
+          "rx": 8,
+          "fill": "#2b423c"
+        },
+        {
+          "type": "rect",
+          "x": -40,
+          "y": -46,
+          "width": 22,
+          "height": 20,
+          "rx": 3,
+          "fill": "#9fd8ff",
+          "opacity": 0.9
+        },
+        {
+          "type": "path",
+          "d": "M 10 -18 L 46 -70 L 84 -54",
+          "fill": "none",
+          "stroke": "#7f8896",
+          "strokeWidth": 8
+        },
+        {
+          "type": "path",
+          "d": "M 84 -54 L 96 -34 L 70 -32 Z",
+          "fill": "#5c6b62"
+        },
+        {
+          "type": "path",
+          "d": "M -70 -2 L -70 30 M -40 -4 L -40 32 M -10 -8 L -10 30",
+          "fill": "none",
+          "stroke": "#2b423c",
+          "strokeWidth": 4,
+          "opacity": 0.6
+        },
+        {
+          "type": "circle",
+          "cx": 20,
+          "cy": -2,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 22,
+          "cy": -2,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 20.8,
+          "cy": -3.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 48,
+          "cy": 0,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 50,
+          "cy": 0,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 48.8,
+          "cy": -1.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M 9 -17 L 28 -10",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 59 -15 L 40 -8",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "slag_hauler",
+      "name": "Slag Hauler",
+      "hp": 88,
+      "power": 13,
+      "armor": 15,
+      "speed": 6,
+      "stamina": 130,
+      "regen": 14,
+      "tags": [
+        "Vehicle",
+        "Armored"
+      ],
+      "class": "ground",
+      "salvage": [
+        "blast_shield"
+      ],
+      "koLine": "The Slag Hauler tips its load in the wrong place and retires, loudly, behind a wall of steam.",
+      "moves": [
+        {
+          "name": "Tipper Dump",
+          "power": 50,
+          "cost": 24,
+          "acc": 88,
+          "tags": [],
+          "keywords": {}
+        },
+        {
+          "name": "Plate Up",
+          "power": 0,
+          "cost": 12,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "guard": true
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -86 -2 L 30 -2 L 46 22 L -86 22 Z",
+          "fill": "#6a6257"
+        },
+        {
+          "type": "path",
+          "d": "M -84 -4 L 26 -4 L 26 -44 L -70 -44 Z",
+          "fill": "#8a7f6c"
+        },
+        {
+          "type": "path",
+          "d": "M -78 -38 L 18 -38 L 18 -10 L -78 -10 Z",
+          "fill": "#c4552a",
+          "stroke": "none",
+          "opacity": 0.85
+        },
+        {
+          "type": "rect",
+          "x": 30,
+          "y": -34,
+          "width": 44,
+          "height": 40,
+          "rx": 8,
+          "fill": "#4e4a42"
+        },
+        {
+          "type": "rect",
+          "x": 42,
+          "y": -26,
+          "width": 24,
+          "height": 18,
+          "rx": 3,
+          "fill": "#9fd8ff",
+          "opacity": 0.85
+        },
+        {
+          "type": "circle",
+          "cx": -58,
+          "cy": 30,
+          "r": 18,
+          "fill": "#3a3733"
+        },
+        {
+          "type": "circle",
+          "cx": -58,
+          "cy": 30,
+          "r": 8,
+          "fill": "#7f8896"
+        },
+        {
+          "type": "circle",
+          "cx": 6,
+          "cy": 30,
+          "r": 18,
+          "fill": "#3a3733"
+        },
+        {
+          "type": "circle",
+          "cx": 6,
+          "cy": 30,
+          "r": 8,
+          "fill": "#7f8896"
+        },
+        {
+          "type": "circle",
+          "cx": 52,
+          "cy": 30,
+          "r": 16,
+          "fill": "#3a3733"
+        },
+        {
+          "type": "circle",
+          "cx": 52,
+          "cy": 30,
+          "r": 7,
+          "fill": "#7f8896"
+        },
+        {
+          "type": "circle",
+          "cx": 44,
+          "cy": -20,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 46,
+          "cy": -20,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 44.8,
+          "cy": -21.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 64,
+          "cy": -20,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 66,
+          "cy": -20,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 64.8,
+          "cy": -21.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M 34 -34 L 51 -27",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 74 -34 L 57 -27",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "arc_welder_rig",
+      "name": "Arc Welder Rig",
+      "hp": 68,
+      "power": 14,
+      "armor": 11,
+      "speed": 11,
+      "stamina": 120,
+      "regen": 14,
+      "tags": [
+        "Vehicle",
+        "Armored"
+      ],
+      "class": "ground",
+      "salvage": [
+        "arc_coil"
+      ],
+      "koLine": "The Arc Welder Rig welds itself to the floor and, on reflection, stays there.",
+      "moves": [
+        {
+          "name": "Arc Flash",
+          "power": 46,
+          "cost": 22,
+          "acc": 90,
+          "tags": [
+            "Electric"
+          ],
+          "keywords": {}
+        },
+        {
+          "name": "Spatter",
+          "power": 22,
+          "cost": 12,
+          "acc": 96,
+          "tags": [],
+          "keywords": {
+            "multiHit": 2
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -64,
+          "y": -20,
+          "width": 106,
+          "height": 48,
+          "rx": 10,
+          "fill": "#7a6a3f"
+        },
+        {
+          "type": "rect",
+          "x": -52,
+          "y": -46,
+          "width": 42,
+          "height": 30,
+          "rx": 6,
+          "fill": "#5c5030"
+        },
+        {
+          "type": "rect",
+          "x": -44,
+          "y": -40,
+          "width": 22,
+          "height": 16,
+          "rx": 3,
+          "fill": "#9fd8ff",
+          "opacity": 0.85
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": -40,
+          "width": 34,
+          "height": 22,
+          "rx": 4,
+          "fill": "#4a4128"
+        },
+        {
+          "type": "path",
+          "d": "M 34 -30 C 62 -30 66 -8 82 -6",
+          "fill": "none",
+          "stroke": "#3a3320",
+          "strokeWidth": 6
+        },
+        {
+          "type": "path",
+          "d": "M 82 -6 L 96 -18 L 92 2 Z",
+          "fill": "#e9c31f"
+        },
+        {
+          "type": "circle",
+          "cx": 88,
+          "cy": -8,
+          "r": 9,
+          "fill": "#fff3b0",
+          "stroke": "none",
+          "opacity": 0.6
+        },
+        {
+          "type": "circle",
+          "cx": -40,
+          "cy": 30,
+          "r": 15,
+          "fill": "#3a3733"
+        },
+        {
+          "type": "circle",
+          "cx": 20,
+          "cy": 30,
+          "r": 15,
+          "fill": "#3a3733"
+        },
+        {
+          "type": "circle",
+          "cx": 4,
+          "cy": -6,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 6,
+          "cy": -6,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 4.8,
+          "cy": -7.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 30,
+          "cy": -6,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 32,
+          "cy": -6,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 30.8,
+          "cy": -7.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -6 -20 L 11 -13",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 40 -20 L 23 -13",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "foreman_ordnance",
+      "name": "Foreman Ordnance",
+      "hp": 64,
+      "power": 12,
+      "armor": 8,
+      "speed": 10,
+      "stamina": 118,
+      "regen": 14,
+      "tags": [
+        "Organic"
+      ],
+      "class": "ground",
+      "koLine": "Foreman Ordnance files a grievance against your entire existence and clocks out early.",
+      "moves": [
+        {
+          "name": "Clipboard Rally",
+          "power": 0,
+          "cost": 14,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "rally": 1
+          }
+        },
+        {
+          "name": "Wrench Hook",
+          "power": 40,
+          "cost": 18,
+          "acc": 92,
+          "tags": [],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -16 44 L -16 56 M 16 44 L 16 56",
+          "fill": "none",
+          "stroke": "#8f5f16",
+          "strokeWidth": 9
+        },
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -18,
+          "width": 52,
+          "height": 66,
+          "rx": 14,
+          "fill": "#c98a2b"
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#8f5f16"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#8f5f16"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 24,
+          "fill": "#e8c39e"
+        },
+        {
+          "type": "path",
+          "d": "M -28 -50 A 28 28 0 0 1 28 -50 L 28 -42 L -28 -42 Z",
+          "fill": "#f2c14e"
+        },
+        {
+          "type": "circle",
+          "cx": -9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -7,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -8.2,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 11,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9.8,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -19 -55 L -2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 19 -55 L 2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -2,
+          "width": 52,
+          "height": 12,
+          "rx": 2,
+          "fill": "#f2c14e",
+          "opacity": 0.9
+        },
+        {
+          "type": "path",
+          "d": "M 30 -6 L 52 -6 L 52 30 L 30 30 Z",
+          "fill": "#d9d3c2"
+        },
+        {
+          "type": "path",
+          "d": "M 34 2 L 48 2 M 34 12 L 48 12 M 34 22 L 44 22",
+          "fill": "none",
+          "stroke": "#7f8896",
+          "strokeWidth": 3
+        },
+        {
+          "type": "path",
+          "d": "M -32 4 L -52 18",
+          "fill": "none",
+          "stroke": "#7f8896",
+          "strokeWidth": 8
+        }
+      ]
+    },
+    {
+      "id": "smelter_prime",
+      "name": "Smelter Prime",
+      "hp": 82,
+      "power": 14,
+      "armor": 9,
+      "speed": 11,
+      "stamina": 138,
+      "regen": 15,
+      "tags": [
+        "Organic"
+      ],
+      "class": "ground",
+      "transformInto": "crucible_9000",
+      "koLine": "Smelter Prime slams a very red button labelled DO NOT and steps back with obvious relish.",
+      "moves": [
+        {
+          "name": "Ingot Toss",
+          "power": 46,
+          "cost": 22,
+          "acc": 90,
+          "tags": [],
+          "keywords": {}
+        },
+        {
+          "name": "Blast Furnace",
+          "power": 34,
+          "cost": 16,
+          "acc": 95,
+          "tags": [
+            "Gas"
+          ],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -16 44 L -16 56 M 16 44 L 16 56",
+          "fill": "none",
+          "stroke": "#4f2213",
+          "strokeWidth": 9
+        },
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -18,
+          "width": 52,
+          "height": 66,
+          "rx": 14,
+          "fill": "#7d3b22"
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#4f2213"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#4f2213"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 24,
+          "fill": "#e8c39e"
+        },
+        {
+          "type": "path",
+          "d": "M -30 -54 A 30 28 0 0 1 30 -54 L 30 -44 L -30 -44 Z",
+          "fill": "#c4552a"
+        },
+        {
+          "type": "circle",
+          "cx": -9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -7,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -8.2,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 11,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9.8,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -19 -55 L -2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 19 -55 L 2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -34 -46 L 34 -46 L 30 -32 L -30 -32 Z",
+          "fill": "#ffd27a",
+          "opacity": 0.55
+        },
+        {
+          "type": "path",
+          "d": "M 28 -8 C 52 -14 62 4 50 18 C 42 26 30 22 28 12 Z",
+          "fill": "#c4552a"
+        },
+        {
+          "type": "circle",
+          "cx": 46,
+          "cy": 4,
+          "r": 8,
+          "fill": "#ffd27a",
+          "stroke": "none",
+          "opacity": 0.7
+        },
+        {
+          "type": "path",
+          "d": "M -30 14 L 30 14",
+          "fill": "none",
+          "stroke": "#c4552a",
+          "strokeWidth": 4,
+          "opacity": 0.8
+        }
+      ]
+    },
+    {
+      "id": "crucible_9000",
+      "name": "CRUCIBLE-9000",
+      "hp": 132,
+      "power": 18,
+      "armor": 17,
+      "speed": 7,
+      "stamina": 165,
+      "regen": 17,
+      "tags": [
+        "Vehicle",
+        "Armored"
+      ],
+      "class": "ground",
+      "salvage": [
+        "arc_coil",
+        "blast_shield"
+      ],
+      "salvageGrades": [
+        "prime",
+        "prime"
+      ],
+      "koLine": "CRUCIBLE-9000 vents every drop of coolant it owns and retires in a cloud you can see from the ranch.",
+      "moves": [
+        {
+          "name": "Pour Cycle",
+          "power": 66,
+          "cost": 30,
+          "acc": 86,
+          "tags": [
+            "Gas"
+          ],
+          "keywords": {}
+        },
+        {
+          "name": "Ram Plate",
+          "power": 40,
+          "cost": 20,
+          "acc": 94,
+          "tags": [],
+          "keywords": {
+            "ignoreGuard": true
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -80 -14 L 76 -14 L 88 30 L -90 30 Z",
+          "fill": "#5b4a3a"
+        },
+        {
+          "type": "rect",
+          "x": -58,
+          "y": -66,
+          "width": 92,
+          "height": 54,
+          "rx": 10,
+          "fill": "#6e5a45"
+        },
+        {
+          "type": "path",
+          "d": "M -46 -58 L 22 -58 L 22 -24 L -46 -24 Z",
+          "fill": "#c4552a",
+          "stroke": "none",
+          "opacity": 0.9
+        },
+        {
+          "type": "path",
+          "d": "M -30 -24 C -18 -6 6 -6 16 -24",
+          "fill": "#ffd27a",
+          "opacity": 0.7
+        },
+        {
+          "type": "rect",
+          "x": 38,
+          "y": -52,
+          "width": 34,
+          "height": 38,
+          "rx": 6,
+          "fill": "#4a3d30"
+        },
+        {
+          "type": "path",
+          "d": "M 46 -76 L 46 -52 M 64 -80 L 64 -52",
+          "fill": "none",
+          "stroke": "#4a3d30",
+          "strokeWidth": 8
+        },
+        {
+          "type": "circle",
+          "cx": -56,
+          "cy": 34,
+          "r": 18,
+          "fill": "#332b23"
+        },
+        {
+          "type": "circle",
+          "cx": -8,
+          "cy": 34,
+          "r": 18,
+          "fill": "#332b23"
+        },
+        {
+          "type": "circle",
+          "cx": 44,
+          "cy": 34,
+          "r": 18,
+          "fill": "#332b23"
+        },
+        {
+          "type": "circle",
+          "cx": -24,
+          "cy": -44,
+          "r": 9,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -22,
+          "cy": -44,
+          "r": 4.140000000000001,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -23.2,
+          "cy": -45.8,
+          "r": 1.44,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 4,
+          "cy": -44,
+          "r": 9,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 6,
+          "cy": -44,
+          "r": 4.140000000000001,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 4.8,
+          "cy": -45.8,
+          "r": 1.44,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -36 -61 L -15 -54",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 16 -61 L -5 -54",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "compliance_marshal",
+      "name": "Compliance Marshal",
+      "hp": 74,
+      "power": 13,
+      "armor": 8,
+      "speed": 13,
+      "stamina": 128,
+      "regen": 14,
+      "tags": [
+        "Organic"
+      ],
+      "class": "ground",
+      "koLine": "The Compliance Marshal serves themself a notice of withdrawal and honours it immediately.",
+      "moves": [
+        {
+          "name": "Cease And Desist",
+          "power": 44,
+          "cost": 20,
+          "acc": 94,
+          "tags": [
+            "Sonic"
+          ],
+          "keywords": {}
+        },
+        {
+          "name": "Taser Protocol",
+          "power": 26,
+          "cost": 14,
+          "acc": 96,
+          "tags": [],
+          "keywords": {
+            "stun": 0.3
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -16 44 L -16 56 M 16 44 L 16 56",
+          "fill": "none",
+          "stroke": "#1c1f33",
+          "strokeWidth": 9
+        },
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -18,
+          "width": 52,
+          "height": 66,
+          "rx": 14,
+          "fill": "#2f3350"
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#1c1f33"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#1c1f33"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 24,
+          "fill": "#e8c39e"
+        },
+        {
+          "type": "path",
+          "d": "M -28 -52 A 28 28 0 0 1 28 -52 L 28 -42 L -28 -42 Z",
+          "fill": "#1c1f33"
+        },
+        {
+          "type": "circle",
+          "cx": -9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -7,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -8.2,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 11,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9.8,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -19 -55 L -2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 19 -55 L 2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -14 -8 L 0 -18 L 14 -8 L 8 12 L -8 12 Z",
+          "fill": "#d9c04a"
+        },
+        {
+          "type": "path",
+          "d": "M 28 -4 L 56 -4 L 56 6 L 28 6 Z",
+          "fill": "#d9d3c2"
+        },
+        {
+          "type": "path",
+          "d": "M 56 1 L 84 1",
+          "fill": "none",
+          "stroke": "#7f8896",
+          "strokeWidth": 5
+        },
+        {
+          "type": "path",
+          "d": "M -30 -44 L 30 -44",
+          "fill": "none",
+          "stroke": "#d9c04a",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "mandate_swarm",
+      "name": "Mandate Swarm",
+      "hp": 58,
+      "power": 11,
+      "armor": 5,
+      "speed": 21,
+      "stamina": 118,
+      "regen": 14,
+      "tags": [
+        "Vehicle",
+        "Airborne"
+      ],
+      "class": "air",
+      "salvage": [
+        "mandate_horn"
+      ],
+      "koLine": "The Mandate Swarm runs out of battery mid-sentence and rains gently into a hedge.",
+      "moves": [
+        {
+          "name": "Subpoena Storm",
+          "power": 20,
+          "cost": 14,
+          "acc": 96,
+          "tags": [],
+          "keywords": {
+            "multiHit": 3
+          }
+        },
+        {
+          "name": "Redaction Beam",
+          "power": 0,
+          "cost": 12,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "accDown": 2
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "ellipse",
+          "cx": -54,
+          "cy": -46,
+          "rx": 17.6,
+          "ry": 7.2,
+          "fill": "#4b5060"
+        },
+        {
+          "type": "path",
+          "d": "M -74.8 -55.6 L -33.2 -55.6",
+          "fill": "none",
+          "stroke": "#8d93a5",
+          "strokeWidth": 3.2
+        },
+        {
+          "type": "circle",
+          "cx": -54,
+          "cy": -36.4,
+          "r": 3.2,
+          "fill": "#e9c31f",
+          "stroke": "none"
+        },
+        {
+          "type": "ellipse",
+          "cx": 46,
+          "cy": -56,
+          "rx": 15.399999999999999,
+          "ry": 6.3,
+          "fill": "#4b5060"
+        },
+        {
+          "type": "path",
+          "d": "M 27.8 -64.4 L 64.2 -64.4",
+          "fill": "none",
+          "stroke": "#8d93a5",
+          "strokeWidth": 2.8
+        },
+        {
+          "type": "circle",
+          "cx": 46,
+          "cy": -47.6,
+          "r": 2.8,
+          "fill": "#e9c31f",
+          "stroke": "none"
+        },
+        {
+          "type": "ellipse",
+          "cx": -38,
+          "cy": 34,
+          "rx": 14.3,
+          "ry": 5.8500000000000005,
+          "fill": "#4b5060"
+        },
+        {
+          "type": "path",
+          "d": "M -54.900000000000006 26.2 L -21.099999999999998 26.2",
+          "fill": "none",
+          "stroke": "#8d93a5",
+          "strokeWidth": 2.6
+        },
+        {
+          "type": "circle",
+          "cx": -38,
+          "cy": 41.8,
+          "r": 2.6,
+          "fill": "#e9c31f",
+          "stroke": "none"
+        },
+        {
+          "type": "ellipse",
+          "cx": 58,
+          "cy": 22,
+          "rx": 13.2,
+          "ry": 5.3999999999999995,
+          "fill": "#4b5060"
+        },
+        {
+          "type": "path",
+          "d": "M 42.4 14.8 L 73.6 14.8",
+          "fill": "none",
+          "stroke": "#8d93a5",
+          "strokeWidth": 2.4
+        },
+        {
+          "type": "circle",
+          "cx": 58,
+          "cy": 29.2,
+          "r": 2.4,
+          "fill": "#e9c31f",
+          "stroke": "none"
+        },
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": -6,
+          "rx": 34,
+          "ry": 16,
+          "fill": "#5c6274"
+        },
+        {
+          "type": "path",
+          "d": "M -48 -26 L 48 -26",
+          "fill": "none",
+          "stroke": "#8d93a5",
+          "strokeWidth": 6
+        },
+        {
+          "type": "path",
+          "d": "M -30 -22 L -14 -10 M 30 -22 L 14 -10",
+          "fill": "none",
+          "stroke": "#8d93a5",
+          "strokeWidth": 5
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": 14,
+          "r": 7,
+          "fill": "#e9c31f",
+          "stroke": "none",
+          "opacity": 0.85
+        },
+        {
+          "type": "circle",
+          "cx": -13,
+          "cy": -10,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -11,
+          "cy": -10,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -12.2,
+          "cy": -11.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 13,
+          "cy": -10,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 15,
+          "cy": -10,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 13.8,
+          "cy": -11.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -24 -25 L -5 -18",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 24 -25 L 5 -18",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "audit_diver",
+      "name": "Audit Diver",
+      "hp": 68,
+      "power": 12,
+      "armor": 7,
+      "speed": 14,
+      "stamina": 124,
+      "regen": 14,
+      "tags": [
+        "Organic",
+        "Aquatic"
+      ],
+      "class": "water",
+      "koLine": "The Audit Diver surfaces, gives a thumbs up nobody asked for, and is towed away by a colleague.",
+      "moves": [
+        {
+          "name": "Forensic Grip",
+          "power": 42,
+          "cost": 20,
+          "acc": 92,
+          "tags": [],
+          "keywords": {
+            "trap": true
+          }
+        },
+        {
+          "name": "Ledger Sweep",
+          "power": 30,
+          "cost": 14,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "staminaDrain": 18
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -16 44 L -16 56 M 16 44 L 16 56",
+          "fill": "none",
+          "stroke": "#142b36",
+          "strokeWidth": 9
+        },
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -18,
+          "width": 52,
+          "height": 66,
+          "rx": 14,
+          "fill": "#20404f"
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#142b36"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#142b36"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 24,
+          "fill": "#20404f"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 27,
+          "fill": "#c9d6dc",
+          "opacity": 0.55
+        },
+        {
+          "type": "circle",
+          "cx": -9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -7,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -8.2,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 11,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9.8,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -19 -55 L -2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 19 -55 L 2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 24,
+          "fill": "#1a3541"
+        },
+        {
+          "type": "rect",
+          "x": -40,
+          "y": -20,
+          "width": 18,
+          "height": 32,
+          "rx": 4,
+          "fill": "#c9a83e"
+        },
+        {
+          "type": "path",
+          "d": "M -22 -6 C -8 -14 -2 -22 0 -30",
+          "fill": "none",
+          "stroke": "#7f8896",
+          "strokeWidth": 4
+        },
+        {
+          "type": "circle",
+          "cx": -9,
+          "cy": -44,
+          "r": 6,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -7,
+          "cy": -44,
+          "r": 2.7600000000000002,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -8.2,
+          "cy": -45.2,
+          "r": 0.96,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9,
+          "cy": -44,
+          "r": 6,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 11,
+          "cy": -44,
+          "r": 2.7600000000000002,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9.8,
+          "cy": -45.2,
+          "r": 0.96,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -18 -56 L -3 -49",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 18 -56 L 3 -49",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -26 -60 L -14 -70 M 26 -60 L 14 -70",
+          "fill": "none",
+          "stroke": "#c9d6dc",
+          "strokeWidth": 4,
+          "opacity": 0.7
+        }
+      ]
+    },
+    {
+      "id": "director_prime",
+      "name": "Director Prime",
+      "hp": 88,
+      "power": 15,
+      "armor": 9,
+      "speed": 13,
+      "stamina": 145,
+      "regen": 16,
+      "tags": [
+        "Organic"
+      ],
+      "class": "ground",
+      "transformInto": "the_compliance_engine",
+      "koLine": "Director Prime declares the meeting adjourned and descends, on a platform, into the floor.",
+      "moves": [
+        {
+          "name": "Executive Order",
+          "power": 48,
+          "cost": 22,
+          "acc": 94,
+          "tags": [
+            "Sonic"
+          ],
+          "keywords": {}
+        },
+        {
+          "name": "Performance Review",
+          "power": 0,
+          "cost": 14,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "powerDown": 1
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -16 44 L -16 56 M 16 44 L 16 56",
+          "fill": "none",
+          "stroke": "#0f1220",
+          "strokeWidth": 9
+        },
+        {
+          "type": "rect",
+          "x": -26,
+          "y": -18,
+          "width": 52,
+          "height": 66,
+          "rx": 14,
+          "fill": "#1e2233"
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#0f1220"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": -6,
+          "width": 12,
+          "height": 34,
+          "rx": 6,
+          "fill": "#0f1220"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -44,
+          "r": 24,
+          "fill": "#e8c39e"
+        },
+        {
+          "type": "circle",
+          "cx": -9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -7,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -8.2,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9,
+          "cy": -42,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 11,
+          "cy": -42,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 9.8,
+          "cy": -43.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -19 -55 L -2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 19 -55 L 2 -48",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -12 -18 L 0 -8 L 12 -18 L 8 16 L -8 16 Z",
+          "fill": "#8f2f3a"
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -22,
+          "width": 60,
+          "height": 10,
+          "rx": 2,
+          "fill": "#0f1220"
+        },
+        {
+          "type": "path",
+          "d": "M -22 -46 L -2 -46 M 2 -46 L 22 -46",
+          "fill": "none",
+          "stroke": "#9fd8ff",
+          "strokeWidth": 5,
+          "opacity": 0.8
+        },
+        {
+          "type": "circle",
+          "cx": -11,
+          "cy": -44,
+          "r": 10,
+          "fill": "#9fd8ff",
+          "opacity": 0.28
+        },
+        {
+          "type": "circle",
+          "cx": 11,
+          "cy": -44,
+          "r": 10,
+          "fill": "#9fd8ff",
+          "opacity": 0.28
+        },
+        {
+          "type": "path",
+          "d": "M 30 -2 L 60 -2 L 60 26 L 30 26 Z",
+          "fill": "#5b4a3a"
+        },
+        {
+          "type": "path",
+          "d": "M 34 10 L 56 10",
+          "fill": "none",
+          "stroke": "#c9a83e",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "the_compliance_engine",
+      "name": "THE COMPLIANCE ENGINE",
+      "hp": 145,
+      "power": 19,
+      "armor": 18,
+      "speed": 8,
+      "stamina": 175,
+      "regen": 18,
+      "tags": [
+        "Vehicle",
+        "Armored"
+      ],
+      "class": "ground",
+      "salvage": [
+        "mandate_horn",
+        "v8_heart"
+      ],
+      "salvageGrades": [
+        "apex",
+        "prime"
+      ],
+      "koLine": "THE COMPLIANCE ENGINE files for an extension, is denied, and shuts down in alphabetical order.",
+      "moves": [
+        {
+          "name": "Final Notice",
+          "power": 70,
+          "cost": 30,
+          "acc": 86,
+          "tags": [
+            "Sonic"
+          ],
+          "keywords": {}
+        },
+        {
+          "name": "Terms Of Service",
+          "power": 30,
+          "cost": 16,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "powerDown": 1
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -88 34 L -70 -48 L 70 -48 L 88 34 Z",
+          "fill": "#2a2e42"
+        },
+        {
+          "type": "rect",
+          "x": -56,
+          "y": -36,
+          "width": 112,
+          "height": 46,
+          "rx": 8,
+          "fill": "#383d57"
+        },
+        {
+          "type": "rect",
+          "x": -40,
+          "y": -28,
+          "width": 18,
+          "height": 30,
+          "rx": 2,
+          "fill": "#9fd8ff",
+          "opacity": 0.75
+        },
+        {
+          "type": "rect",
+          "x": -14,
+          "y": -28,
+          "width": 18,
+          "height": 30,
+          "rx": 2,
+          "fill": "#9fd8ff",
+          "opacity": 0.75
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": -28,
+          "width": 18,
+          "height": 30,
+          "rx": 2,
+          "fill": "#9fd8ff",
+          "opacity": 0.75
+        },
+        {
+          "type": "rect",
+          "x": 38,
+          "y": -28,
+          "width": 18,
+          "height": 30,
+          "rx": 2,
+          "fill": "#9fd8ff",
+          "opacity": 0.75
+        },
+        {
+          "type": "path",
+          "d": "M -70 -48 L 0 -92 L 70 -48 Z",
+          "fill": "#1c2033"
+        },
+        {
+          "type": "circle",
+          "cx": 0,
+          "cy": -66,
+          "r": 13,
+          "fill": "#d9c04a"
+        },
+        {
+          "type": "path",
+          "d": "M -18 -66 L -34 -66 M 18 -66 L 34 -66",
+          "fill": "none",
+          "stroke": "#d9c04a",
+          "strokeWidth": 5
+        },
+        {
+          "type": "path",
+          "d": "M -74 34 L 74 34",
+          "fill": "none",
+          "stroke": "#1c2033",
+          "strokeWidth": 8
+        },
+        {
+          "type": "circle",
+          "cx": -22,
+          "cy": 22,
+          "r": 11,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -20,
+          "cy": 22,
+          "r": 5.0600000000000005,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -21.2,
+          "cy": 19.8,
+          "r": 1.76,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 22,
+          "cy": 22,
+          "r": 11,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 24,
+          "cy": 22,
+          "r": 5.0600000000000005,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 22.8,
+          "cy": 19.8,
+          "r": 1.76,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -36 3 L -11 10",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 36 3 L 11 10",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "gantry_crane",
+      "name": "Gantry Crane",
+      "hp": 78,
+      "power": 14,
+      "armor": 14,
+      "speed": 10,
+      "stamina": 128,
+      "regen": 14,
+      "tags": [
+        "Vehicle",
+        "Airborne",
+        "Armored"
+      ],
+      "class": "air",
+      "salvage": [
+        "blast_shield"
+      ],
+      "koLine": "The Gantry Crane drops everything it is holding, including its own hook, and parks itself at the far wall.",
+      "moves": [
+        {
+          "name": "Magnet Drop",
+          "power": 52,
+          "cost": 26,
+          "acc": 88,
+          "tags": [],
+          "keywords": {
+            "knockback": true
+          }
+        },
+        {
+          "name": "Rail Sweep",
+          "power": 30,
+          "cost": 15,
+          "acc": 96,
+          "tags": [],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -96 -74 L 96 -74",
+          "fill": "none",
+          "stroke": "#6b7482",
+          "strokeWidth": 12
+        },
+        {
+          "type": "path",
+          "d": "M -78 -68 L -78 44 M 74 -68 L 74 44",
+          "fill": "none",
+          "stroke": "#565f6c",
+          "strokeWidth": 9
+        },
+        {
+          "type": "path",
+          "d": "M -78 -20 L 74 -20",
+          "fill": "none",
+          "stroke": "#565f6c",
+          "strokeWidth": 5,
+          "opacity": 0.6
+        },
+        {
+          "type": "rect",
+          "x": -30,
+          "y": -66,
+          "width": 60,
+          "height": 34,
+          "rx": 8,
+          "fill": "#8a6f2e"
+        },
+        {
+          "type": "rect",
+          "x": -18,
+          "y": -58,
+          "width": 24,
+          "height": 16,
+          "rx": 3,
+          "fill": "#9fd8ff",
+          "opacity": 0.85
+        },
+        {
+          "type": "path",
+          "d": "M 0 -32 L 0 6",
+          "fill": "none",
+          "stroke": "#3f4650",
+          "strokeWidth": 5
+        },
+        {
+          "type": "path",
+          "d": "M -26 6 L 26 6 L 16 34 L -16 34 Z",
+          "fill": "#8a6f2e"
+        },
+        {
+          "type": "path",
+          "d": "M -30 40 L 30 40",
+          "fill": "none",
+          "stroke": "#3f4650",
+          "strokeWidth": 6
+        },
+        {
+          "type": "circle",
+          "cx": -46,
+          "cy": 8,
+          "r": 7,
+          "fill": "#e9c31f",
+          "stroke": "none",
+          "opacity": 0.8
+        },
+        {
+          "type": "circle",
+          "cx": -12,
+          "cy": -52,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -10,
+          "cy": -52,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -11.2,
+          "cy": -53.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 14,
+          "cy": -52,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 16,
+          "cy": -52,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 14.8,
+          "cy": -53.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -22 -66 L -5 -59",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 24 -66 L 7 -59",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "quench_rig",
+      "name": "Quench Rig",
+      "hp": 82,
+      "power": 12,
+      "armor": 15,
+      "speed": 8,
+      "stamina": 130,
+      "regen": 15,
+      "tags": [
+        "Vehicle",
+        "Aquatic",
+        "Armored"
+      ],
+      "class": "water",
+      "salvage": [
+        "arc_coil"
+      ],
+      "koLine": "The Quench Rig boils itself dry, emits one enormous sigh of steam, and retires behind the cloud.",
+      "moves": [
+        {
+          "name": "Quench Bath",
+          "power": 48,
+          "cost": 24,
+          "acc": 90,
+          "tags": [],
+          "keywords": {
+            "slow": true
+          }
+        },
+        {
+          "name": "Steam Blast",
+          "power": 34,
+          "cost": 16,
+          "acc": 94,
+          "tags": [
+            "Gas"
+          ],
+          "keywords": {}
+        }
+      ],
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -70,
+          "y": -18,
+          "width": 132,
+          "height": 54,
+          "rx": 12,
+          "fill": "#4a5560"
+        },
+        {
+          "type": "path",
+          "d": "M -58 -10 L 46 -10 L 46 26 L -58 26 Z",
+          "fill": "#26303a"
+        },
+        {
+          "type": "path",
+          "d": "M -50 6 q 24 -12 48 0 q 24 12 40 0",
+          "fill": "none",
+          "stroke": "#5fa8d3",
+          "strokeWidth": 6,
+          "opacity": 0.85
+        },
+        {
+          "type": "rect",
+          "x": -24,
+          "y": -50,
+          "width": 46,
+          "height": 32,
+          "rx": 6,
+          "fill": "#5c6874"
+        },
+        {
+          "type": "path",
+          "d": "M -8 -50 L -8 -80 M 10 -50 L 10 -74",
+          "fill": "none",
+          "stroke": "#5c6874",
+          "strokeWidth": 8
+        },
+        {
+          "type": "ellipse",
+          "cx": -8,
+          "cy": -84,
+          "rx": 15,
+          "ry": 10,
+          "fill": "#d8dde4",
+          "stroke": "none",
+          "opacity": 0.55
+        },
+        {
+          "type": "ellipse",
+          "cx": 12,
+          "cy": -80,
+          "rx": 11,
+          "ry": 8,
+          "fill": "#d8dde4",
+          "stroke": "none",
+          "opacity": 0.4
+        },
+        {
+          "type": "path",
+          "d": "M -60 36 L -60 50 M 52 36 L 52 50 M -74 50 L 66 50",
+          "fill": "none",
+          "stroke": "#26303a",
+          "strokeWidth": 7
+        },
+        {
+          "type": "circle",
+          "cx": -14,
+          "cy": -38,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -12,
+          "cy": -38,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -13.2,
+          "cy": -39.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 8,
+          "cy": -38,
+          "r": 7,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 10,
+          "cy": -38,
+          "r": 3.22,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 8.8,
+          "cy": -39.4,
+          "r": 1.12,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -24 -52 L -7 -45",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 18 -52 L 1 -45",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
     }
   ],
   "encounters": [
@@ -3141,14 +7020,200 @@
       ],
       "reward": 280,
       "tier": 3
+    },
+    {
+      "id": "kestrel_strip",
+      "name": "Crop-Duster Strip",
+      "tier": 3,
+      "waves": [
+        "crop_duster",
+        "mast_climber"
+      ],
+      "reward": 260,
+      "blurb": "A grass runway, two hangars, and a great deal of unearned confidence."
+    },
+    {
+      "id": "kestrel_mast",
+      "name": "Radio Mast",
+      "tier": 4,
+      "waves": [
+        "mast_climber",
+        "falconry_unit",
+        "balloon_relay"
+      ],
+      "reward": 320,
+      "blurb": "Whoever holds the mast holds the weather report, and thus morale."
+    },
+    {
+      "id": "kestrel_depot",
+      "name": "Cloudbase Depot",
+      "tier": 4,
+      "waves": [
+        "surveillance_drone",
+        "crop_duster",
+        "gunship_80"
+      ],
+      "reward": 380,
+      "blurb": "Everything here is bolted to the ceiling, which should have been a clue."
+    },
+    {
+      "id": "kestrel_aerodrome",
+      "name": "The Aerodrome",
+      "tier": 5,
+      "waves": [
+        "attack_chopper",
+        "aeronaut_prime"
+      ],
+      "reward": 480,
+      "blurb": "Aeronaut Prime has a scarf, a hangar, and something enormous under a tarp."
+    },
+    {
+      "id": "drowned_marina",
+      "name": "Sunken Marina",
+      "tier": 4,
+      "waves": [
+        "harbor_diver",
+        "sluice_hound"
+      ],
+      "reward": 340,
+      "blurb": "The pontoons are underneath the boats now. Nobody wants to discuss it."
+    },
+    {
+      "id": "drowned_locks",
+      "name": "Spillway Locks",
+      "tier": 5,
+      "waves": [
+        "hydrofoil_lance",
+        "water_cannon_truck"
+      ],
+      "reward": 400,
+      "blurb": "Whoever owns the locks owns which streets are streets today."
+    },
+    {
+      "id": "drowned_dredge",
+      "name": "Dredge Yard",
+      "tier": 5,
+      "waves": [
+        "eel_generator",
+        "dredger_barge",
+        "harbor_skiff"
+      ],
+      "reward": 460,
+      "blurb": "They have wired the whole yard to the water. On purpose. Bring boots."
+    },
+    {
+      "id": "drowned_rig",
+      "name": "Harbormaster's Rig",
+      "tier": 6,
+      "waves": [
+        "sluice_hound",
+        "harbormaster"
+      ],
+      "reward": 560,
+      "blurb": "The Harbormaster has a whistle, a grudge, and a crane the size of a church."
+    },
+    {
+      "id": "foundry_gate",
+      "name": "Slag Gate",
+      "tier": 4,
+      "waves": [
+        "quench_rig",
+        "slag_hauler",
+        "gantry_crane"
+      ],
+      "reward": 480,
+      "blurb": "A gate made of gates. The foreman has laminated the rules."
+    },
+    {
+      "id": "foundry_mill",
+      "name": "Rolling Mill",
+      "tier": 4,
+      "waves": [
+        "foreman_ordnance",
+        "arc_welder_rig",
+        "quench_rig"
+      ],
+      "reward": 520,
+      "blurb": "Everything in here is either red hot or armour-plated. Frequently both."
+    },
+    {
+      "id": "foundry_motorpool",
+      "name": "The Motor Pool",
+      "tier": 5,
+      "waves": [
+        "gantry_crane",
+        "quench_rig",
+        "clampdown_9000"
+      ],
+      "reward": 580,
+      "blurb": "Every vehicle you have ever annoyed, parked in tidy rows, freshly painted."
+    },
+    {
+      "id": "foundry_crucible",
+      "name": "Crucible Floor",
+      "tier": 5,
+      "waves": [
+        "arc_welder_rig",
+        "smelter_prime"
+      ],
+      "reward": 720,
+      "blurb": "Smelter Prime pours a fresh chassis while you watch. It is meant for you."
+    },
+    {
+      "id": "spire_lobby",
+      "name": "Spire Reception",
+      "tier": 5,
+      "waves": [
+        "audit_diver",
+        "compliance_marshal"
+      ],
+      "reward": 640,
+      "blurb": "Please take a number. The number is a summons."
+    },
+    {
+      "id": "spire_records",
+      "name": "Records Annex",
+      "tier": 5,
+      "waves": [
+        "mandate_swarm",
+        "compliance_marshal"
+      ],
+      "reward": 700,
+      "blurb": "Every unkind thing anyone has written about you, alphabetised."
+    },
+    {
+      "id": "spire_rooftop",
+      "name": "Rooftop Pad",
+      "tier": 6,
+      "waves": [
+        "gunship_80",
+        "audit_diver",
+        "compliance_marshal"
+      ],
+      "reward": 780,
+      "blurb": "The helipad, the water tanks, and a really committed accountant."
+    },
+    {
+      "id": "spire_boardroom",
+      "name": "The Boardroom",
+      "tier": 6,
+      "waves": [
+        "mandate_swarm",
+        "director_prime"
+      ],
+      "reward": 980,
+      "blurb": "Director Prime would like to walk you through the slides. All of them."
     }
   ],
   "tierScale": [
     1,
     0.75,
-    1.0,
+    1,
     1.45,
     1.7,
-    2.0
+    2,
+    2.3,
+    2.6,
+    2.9
   ]
 }
