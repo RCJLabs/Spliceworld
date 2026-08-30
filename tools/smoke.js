@@ -500,6 +500,89 @@ const myLine = evs.findIndex((e) => e.text.includes('Scythe Strike'));
 const foeLine = evs.findIndex((e) => e.text.includes(pb.enemy.active.name) && e.text.includes('uses'));
 assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move goes first despite speed 1');
 
+// --- R23: two of six sockets used to contribute nothing to play.
+//
+// Every hide was a passive stat stick (0 of 32 carried a move) and most
+// organs were too, and the passive ones were NOT compensated with better
+// stats — 21.3 against 22.1 for the active ones. It was an omission, not a
+// trade-off.
+{
+  for (const slot of ['hide', 'organ']) {
+    const dead = Object.values(content.parts).filter((p) => p.slot === slot && !p.move);
+    assert.deepEqual(dead.map((p) => p.id), [],
+      `every ${slot} must do something on a turn — these are still stat sticks: ${dead.map((p) => p.id).join(', ')}`);
+  }
+
+  // And they have to be worth the TURN, which is the part that took three
+  // attempts. Pressed is not the same as useful: the first pricing was
+  // pressed constantly and cost 10.8pp on contested fights, because a turn
+  // not attacking is worth about fifty damage and the effects returned far
+  // less. Measured with the build's own hide and organ actives stripped out.
+  const armoured = makeSimChimera('M',
+    ['tortoise_head','tortoise_forelimbs','tortoise_hindlimbs','tortoise_tail','tortoise_hide','tortoise_organ'],
+    'standard', content);
+  const winRate = (strip) => {
+    let wins = 0;
+    for (let i = 0; i < 60; i++) {
+      const b = createBattle([armoured, { ...armoured, id: 'a', name: 'A' }, { ...armoured, id: 'b', name: 'B' }],
+        content.encounters.patrol_2, content, hashString(`r23${i}`), 0);
+      if (strip) for (const c of b.player.team) c.moves = c.moves.filter((m) => m.power > 0);
+      let g = 0;
+      while (!b.over && g++ < 300) {
+        const acts = playerActions(b);
+        if (!acts.length) break;
+        const me = playerActive(b);
+        const idx = chooseMoveIndex(b, me, b.enemy.active, content, 1, () => rngStream(b.seed, 'p', b.rollCount++)());
+        const act = (idx >= 0 && acts.find((a) => a.type === 'move' && a.index === idx))
+          || acts.find((a) => a.type === 'rest') || acts[0];
+        step(b, act, content);
+      }
+      if (b.outcome === 'win') wins++;
+    }
+    return wins / 60;
+  };
+  const withActives = winRate(false);
+  const without = winRate(true);
+  assert.ok(withActives - without >= 0.25,
+    `a hide and an organ must change how a fight is played: ${(without * 100).toFixed(0)}% without them, ` +
+      `${(withActives * 100).toFixed(0)}% with — a ${((withActives - without) * 100).toFixed(0)}pp difference`);
+
+  // Nor may an archetype be decoration — R20's rule, applied to the actives
+  // rather than the keywords under them.
+  const seen = new Set();
+  const NOUNS = ['Bristles', 'Vanish', 'Slipskin', 'Screen', 'Slow Mend', 'Knit', 'Leech', 'Focus', 'Surge', 'Spike'];
+  for (const partIds of [
+    ['tortoise_head','tortoise_forelimbs','tortoise_hindlimbs','tortoise_tail','tortoise_hide','tortoise_organ'],
+    ['skunk_head','skunk_forelimbs','skunk_hindlimbs','skunk_tail','skunk_hide','skunk_organ'],
+    ['shark_head','shark_forelimbs','shark_hindlimbs','shark_tail','shark_hide','shark_organ'],
+  ]) {
+    const hero = makeSimChimera('M', partIds, 'standard', content);
+    for (const encId of ['patrol_2', 'checkpoint', 'harbor_watch']) {
+      const b = createBattle([hero, { ...hero, id: 'a', name: 'A' }], content.encounters[encId], content, hashString(`arch${partIds[0]}${encId}`), 0);
+      let g = 0;
+      while (!b.over && g++ < 200) {
+        const acts = playerActions(b);
+        if (!acts.length) break;
+        const me = playerActive(b);
+        const idx = chooseMoveIndex(b, me, b.enemy.active, content, 1, () => rngStream(b.seed, 'p', b.rollCount++)());
+        const act = (idx >= 0 && acts.find((a) => a.type === 'move' && a.index === idx))
+          || acts.find((a) => a.type === 'rest') || acts[0];
+        if (act.type === 'move') {
+          const name = me.moves[act.index].name;
+          for (const n of NOUNS) if (name.endsWith(n)) seen.add(n);
+        }
+        step(b, act, content);
+      }
+    }
+  }
+  // Two is what these three builds can honestly show; the full sweep across
+  // the whole pool at both grades presses all ten archetypes, and lives in
+  // the phase's measurements rather than in a 13-second smoke run. The guard
+  // here is against the actives going unpressed ENTIRELY, which is what the
+  // first two prices did.
+  assert.ok(seen.size >= 2, `hide and organ actives must actually get pressed — only saw ${[...seen].join(', ') || 'none'}`);
+}
+
 // --- R28: the number on the button is the number that lands.
 //
 // The audit that queued this was too strong again — the UI already drew class

@@ -27,18 +27,53 @@ export function skillFor(encounter) {
 // How much a status is worth is mostly "is it already there" — the single
 // biggest thing the old chooser got wrong was re-applying what it had just
 // applied.
-function utilityScore(move, atk, def, allies) {
+// What the other side is about to do to you, in damage rather than in stat
+// points. Defensive utility priced against `def.power` (a stat around 8) was
+// worth a quarter of what it should be against a move that actually lands
+// thirty, so guard, thorns and evasion only ever got pressed by accident —
+// twenty of R23's new actives were never pressed once.
+function incomingDamage(atk, def, content) {
+  let worst = 0;
+  for (const m of def.moves) {
+    if (!(m.power > 0)) continue;
+    const p = previewMove(def, atk, m, content);
+    worst = Math.max(worst, p.damage * p.hitChance);
+  }
+  return worst || def.power;
+}
+
+// Exported so the battle UI can surface the utility move that is actually
+// worth a button, rather than whichever one happens to sit earliest in
+// socket order — which was the tail, every time, on every six-part build.
+export function utilityValue(move, atk, def, content) {
+  const allies = 1;
+  const incoming = incomingDamage(atk, def, content);
+  const window = Math.min(1, (atk.hp / Math.max(1, incoming)) / 4);
+  return utilityScore(move, atk, def, allies, incoming, window);
+}
+
+function utilityScore(move, atk, def, allies, incoming, window) {
   const kw = move.keywords ?? {};
   const missingHp = atk.maxHp - atk.hp;
   const staminaRoom = atk.staminaMax - atk.stamina;
   let v = 0;
 
   if (kw.heal) v += Math.min(atk.maxHp * kw.heal, missingHp) * 1.1;
-  if (kw.regen && !atk.status.regen) v += atk.maxHp * kw.regen * 2.2;
+  if (kw.regen && !atk.status.regen) v += atk.maxHp * kw.regen * 2.2 * window;
   if (kw.staminaRestore) v += Math.min(kw.staminaRestore, staminaRoom) * 0.7;
-  if (kw.staminaDrain) v += Math.min(kw.staminaDrain, def.stamina) * 0.5;
-  if (kw.guard && !atk.status.guard) v += def.power * 1.6;
-  if (kw.thorns && !atk.status.thorns) v += def.power * 1.2;
+  if (kw.staminaDrain) {
+    const cheapest = Math.min(Infinity, ...def.moves.filter((m) => m.power > 0).map((m) => m.cost));
+    const strands = def.stamina - kw.staminaDrain < cheapest;
+    v += Math.min(kw.staminaDrain, def.stamina) * (strands ? 1.8 : 0.4);
+  }
+  // Each priced against what is actually coming in, and against how much of
+  // it the effect turns away.
+  // Guard is cheap here on purpose: it blocks one hit and costs a whole turn,
+  // and performMove clears it at the start of your own action so it never
+  // reads as already-up. Priced at half a hit it out-scored attacking every
+  // turn and turtled the fight away.
+  if (kw.guard && !atk.status.guard) v += incoming * 0.25;
+  if (kw.thorns && !atk.status.thorns) v += incoming * kw.thorns * 3 * window;
 
   // Stages are worth nothing once capped, and worth less the closer the
   // fight is to over — a power-up on a foe about to fall is a wasted turn.
@@ -46,10 +81,13 @@ function utilityScore(move, atk, def, allies) {
   const longFight = Math.min(1, def.hp / Math.max(1, def.maxHp * 0.5));
   if (kw.powerUp) v += room(atk.stages.power, true) * 9 * longFight;
   if (kw.accUp) v += room(atk.stages.acc, true) * 6 * longFight;
-  if (kw.evasionUp) v += room(atk.stages.evasion, true) * 6 * longFight;
+  // An evasion stage persists for the whole fight, so it is worth what it
+  // turns away over the REST of it, not what it saves this turn: a stage is
+  // ~23% fewer hits landed, across the several turns still to come.
+  if (kw.evasionUp) v += room(atk.stages.evasion, true) * incoming * 0.28 * longFight * window;
   if (kw.rally) v += room(atk.stages.power, true) * 7 * longFight * Math.max(1, allies);
   if (kw.powerDown) v += room(def.stages.power, false) * 7 * longFight;
-  if (kw.accDown) v += room(def.stages.acc, false) * 6 * longFight;
+  if (kw.accDown) v += room(def.stages.acc, false) * incoming * 0.1 * longFight;
   if (kw.slow && def.speed > 1) v += def.speed * 1.4;
 
   // Control: only ever worth applying to something it is not already on.
@@ -64,13 +102,13 @@ function utilityScore(move, atk, def, allies) {
 }
 
 // Everything that is not the damage itself: finishing, tempo, and the cost.
-function scoreMove(battle, atk, def, move, content, allies) {
+function scoreMove(battle, atk, def, move, content, allies, incoming, window) {
   const p = previewMove(atk, def, move, content);
   let score = p.damage * p.hitChance;
   // A kill is worth more than the damage on it — it ends the turn the foe
   // would have taken. Weighted by the odds of actually landing it.
   if (p.lethal) score += (def.hp + 24) * p.hitChance;
-  score += utilityScore(move, atk, def, allies) * p.hitChance;
+  score += utilityScore(move, atk, def, allies, incoming, window) * p.hitChance;
   if (p.immune) score = 0;
   // Charge spends a turn before it does anything; only worth it well ahead.
   if (move.keywords.charge) score *= 0.55;
@@ -104,9 +142,16 @@ export function chooseMoveIndex(battle, atk, def, content, skill, rollFn) {
   }
 
   const allies = battle.player?.team?.filter((c) => c.hp > 0).length ?? 1;
+  const incoming = incomingDamage(atk, def, content);
+  // An investment is only worth its payoff WINDOW. Thorns, evasion and regen
+  // all pay out over the turns still to come, so a creature with three turns
+  // left in it should not buy a five-turn return — measured as the difference
+  // between a tortoise (+63pp with its hide active) and an eagle (-18pp),
+  // where the fragile build was talked into spending turns it did not have.
+  const window = Math.min(1, (atk.hp / Math.max(1, incoming)) / 4);
   let best = null;
   for (const { m, i } of options) {
-    const score = scoreMove(battle, atk, def, m, content, allies);
+    const score = scoreMove(battle, atk, def, m, content, allies, incoming, window);
     if (!best || score > best.score) best = { score, i };
   }
   // If the best thing on the table is worth nothing, breathe instead. This is

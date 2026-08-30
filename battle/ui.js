@@ -20,6 +20,7 @@ import {
   step, playerActions, playerActive, turnForecast,
 } from './engine.js';
 import { moveReadout } from './readout.js';
+import { utilityValue } from './ai.js';
 import { resolveBattle } from '../campaign/campaign.js';
 import { openPicker } from '../ui/picker.js';
 import * as sfx from '../audio/sfx.js';
@@ -223,7 +224,31 @@ function commandHtml(battle, actions, me, foe, content) {
   }
 
   const moves = actions.filter((a) => a.type === 'move' || a.type === 'release');
-  const shown = moves.length > 4 ? moves.slice(0, 3) : moves.slice(0, 4);
+  // Which moves earn the four buttons. It used to be the first four in
+  // SOCKET order — head, forelimbs, hindlimbs, tail, hide, organ — so on a
+  // six-part chimera the hide and organ actives were always the two that
+  // fell off the end, behind "more". R23 gave those sockets something to do
+  // and this is where the player would never have found it.
+  //
+  // So: the hardest swings, plus one utility, which is enough to know the
+  // option exists. Ties break on socket order, so the buttons stay put
+  // rather than reshuffling under a thumb.
+  const shown = (() => {
+    if (moves.length <= 4) return moves.slice(0, 4);
+    const rank = (a) => {
+      const m = me.moves[a.type === 'release' ? me.status.charging : a.index];
+      return { a, m, dmg: m.power > 0 ? moveReadout(m, me, foe, content).damage ?? 0 : -1 };
+    };
+    const ranked = moves.map(rank);
+    const hits = ranked.filter((r) => r.dmg >= 0).sort((x, y) => y.dmg - x.dmg);
+    // Ranked by what the utility is worth right now — so a heal surfaces when
+    // you are hurt and the plating surfaces when something is hitting hard,
+    // instead of the tail winning every time by being socket three.
+    const utils = ranked.filter((r) => r.dmg < 0)
+      .sort((x, y) => utilityValue(y.m, me, foe, content) - utilityValue(x.m, me, foe, content));
+    const picked = [...hits.slice(0, utils.length ? 2 : 3), ...utils.slice(0, 1)];
+    return moves.filter((a) => picked.some((r) => r.a === a)).slice(0, 3);
+  })();
   const cells = shown.map((a) => {
     const i = actions.indexOf(a);
     const move = me.moves[a.type === 'release' ? me.status.charging : a.index];
