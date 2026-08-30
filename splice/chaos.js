@@ -274,6 +274,8 @@ export function tickVat(state, content, now) {
     injury: null,
     lastTrainedAt: 0,
     exhaustedUntil: 0,
+    scars: [],
+    injuryCount: 0,
     vatBorn: { parents: vat.parentNames, at: now, chaosParts, extraSockets },
   };
   state.chimeras.push(child);

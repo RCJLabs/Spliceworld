@@ -36,6 +36,7 @@ export function loadSimContent() {
   operations: readJSON('data/operations.json'),
   chaos: readJSON('data/chaos.json'),
   temperament: readJSON('data/temperament.json'),
+  scars: readJSON('data/scars.json'),
   });
 }
 

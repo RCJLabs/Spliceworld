@@ -54,6 +54,7 @@ const content = indexContent({
   operations: readJSON('data/operations.json'),
   chaos: readJSON('data/chaos.json'),
   temperament: readJSON('data/temperament.json'),
+  scars: readJSON('data/scars.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
@@ -3544,6 +3545,220 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     const fierce = damageOver(100);
     assert.ok(fierce > even, `a Fierce creature hits harder in the actual engine (${even.toFixed(1)} → ${fierce.toFixed(1)})`);
     assert.ok(fierce < even * 1.4, 'but not absurdly so');
+  }
+}
+
+// --- Injury scarring (§3.5: "untreated injuries can scar into permanent
+// --- trait tradeoffs"). An injury has always opened an Infirmary timer and
+// --- then quietly expired. Now there is something to do about it, and a
+// --- consequence for not doing it.
+{
+  const {
+    scarTuning, scarList, scarsOf, flatModifiers, scarEffects, againstTags,
+    describeScar, treatInjury, treatmentCost, tickScars,
+  } = await import('../splice/scars.js');
+  const st = scarTuning(content);
+  const scars = scarList(content);
+
+  // Content coherence, and the rule the whole design rests on: EVERY scar
+  // is two-sided. A scar is character, not a punishment — which is what
+  // makes "leave it and see" a real choice rather than a mistake.
+  const UNIT_TAGS = new Set(Object.values(content.enemies).flatMap((u) => u.tags));
+  assert.ok(scars.length >= 6, 'there is a pool worth rolling from');
+  for (const scar of scars) {
+    assert.ok(scar.name && scar.line?.includes('{name}'), `${scar.id} is written and names the creature`);
+    const values = Object.values(scar.effects);
+    assert.ok(values.length >= 2, `${scar.id} has at least two effects`);
+    assert.ok(values.some((v) => v > 0), `${scar.id} gives something`);
+    assert.ok(values.some((v) => v < 0), `${scar.id} takes something — no scar is a pure penalty, or a free upgrade`);
+    for (const tag of scar.vs ?? []) {
+      assert.ok(UNIT_TAGS.has(tag), `${scar.id}: nothing in the enemy roster carries the tag ${tag}`);
+    }
+  }
+  // The roadmap's own example has to be expressible.
+  const jeep = content.scars.jeep_shy;
+  assert.ok(jeep && jeep.vs.includes('Vehicle') && jeep.effects.evasion > 0 && jeep.effects.acc < 0,
+    'ROADMAP §3.5’s "fears jeeps: +Evasion vs. vehicles, −Accuracy vs. vehicles" is data');
+
+  const scarLab = (seed) => {
+    const s = { ...newGameState(), seed, funds: 2000 };
+    const slots = {};
+    for (const partId of ['bear_head', 'bear_forelimbs', 'bear_hindlimbs', 'bear_hide']) {
+      const id = `t${s.inventory.tokenCount++}`;
+      s.inventory.parts.push({ id, partId, grade: 'apex', donor: { name: 'X', species: 'bear', stars: 4, extractedAt: 0 } });
+      slots[content.parts[partId].slot] = id;
+    }
+    const res = spliceChimera(s, 'M', slots, content, t0);
+    assert.ok(res.ok, res.msg);
+    res.chimera.settleUntil = t0;
+    return s;
+  };
+  const hurt = (ch, hours = 4) => { ch.injury = { name: 'Sprained Everything', until: t0 + hours * HOUR }; };
+
+  // Treatment buys CERTAINTY, not healing: the injury still had to happen,
+  // and what you are paying for is that it leaves nothing behind.
+  {
+    const s = scarLab(760);
+    const ch = s.chimeras[0];
+    hurt(ch);
+    const early = treatmentCost(ch, content, t0);
+    const late = treatmentCost(ch, content, t0 + 3 * HOUR);
+    assert.ok(early > late, `an early visit costs more than sweeping up at the end (${early} → ${late})`);
+
+    const funds = s.funds;
+    const out = treatInjury(s, ch.id, content, t0);
+    assert.ok(out.ok, out.msg);
+    assert.equal(s.funds, funds - early, 'and it is charged');
+    assert.equal(ch.injury, null, 'the injury is gone');
+    assert.ok(!isInjured(ch, t0), 'and they are cleared for deployment');
+    // …and it cannot scar, because there is nothing left to scar.
+    for (let i = 0; i < 50; i++) tickScars(s, content, t0 + (i + 1) * HOUR);
+    assert.deepEqual(ch.scars, [], 'a treated injury never sets badly');
+    assert.equal(ch.injuriesTreated, 1, 'the record remembers you paid');
+
+    assert.ok(!treatInjury(s, ch.id, content, t0).ok, 'nothing to treat twice');
+    hurt(ch);
+    assert.ok(!treatInjury(s, ch.id, content, t0 + 99 * HOUR).ok, 'and too late is too late');
+    s.funds = 0;
+    assert.ok(!treatInjury(s, ch.id, content, t0).ok, 'the Infirmary does not take promises');
+  }
+
+  // Left alone, an injury runs its course and may set. Either way the
+  // creature is deployable again — a scar is not a second injury.
+  {
+    let scarredRuns = 0;
+    let cleanRuns = 0;
+    for (let seed = 0; seed < 120; seed++) {
+      const s = scarLab(2500 + seed);
+      const ch = s.chimeras[0];
+      hurt(ch);
+      assert.deepEqual(tickScars(s, content, t0 + HOUR).scarred, [], 'nothing resolves while it is still healing');
+      assert.ok(isInjured(ch, t0 + HOUR));
+      const out = tickScars(s, content, t0 + 5 * HOUR);
+      assert.equal(ch.injury, null, 'the injury always clears when its time is up');
+      assert.ok(!isInjured(ch, t0 + 5 * HOUR), 'and a scar never keeps them benched');
+      if (out.scarred.length) {
+        scarredRuns++;
+        assert.equal(out.news.length, 1, 'a scar makes the wire');
+        assert.ok(out.news[0].includes(ch.name), 'and names the creature');
+        assert.equal(ch.scars.length, 1);
+      } else {
+        cleanRuns++;
+        assert.deepEqual(ch.scars, []);
+      }
+    }
+    assert.ok(scarredRuns > 0 && cleanRuns > 0, `it is a risk, not a certainty (${scarredRuns} scarred, ${cleanRuns} clean of 120)`);
+    const rate = scarredRuns / 120;
+    assert.ok(Math.abs(rate - st.scarChance) < 0.12, `and lands near the tuned rate (${(rate * 100).toFixed(0)}% vs ${st.scarChance * 100}%)`);
+  }
+
+  // Bounded: never the same scar twice, never more than the cap.
+  {
+    // Across many careers, because three draws from a pool of ten collide
+    // about a quarter of the time — one career proves nothing.
+    let everScarred = 0;
+    for (let seed = 0; seed < 80; seed++) {
+      const s = scarLab(4400 + seed);
+      const ch = s.chimeras[0];
+      for (let i = 0; i < 40; i++) {
+        hurt(ch);
+        tickScars(s, content, t0 + (i + 1) * 10 * HOUR);
+      }
+      assert.ok(ch.scars.length <= st.maxScars, `at most ${st.maxScars} scars (${ch.scars.length})`);
+      assert.equal(new Set(ch.scars).size, ch.scars.length, `never the same scar twice (${ch.scars.join(', ')})`);
+      if (ch.scars.length) everScarred++;
+    }
+    assert.ok(everScarred > 70, `and forty injuries do leave a mark (${everScarred}/80 careers)`);
+  }
+
+  // ACCEPTANCE: "fears jeeps" is a real number in a real fight. The same
+  // creature, the same seed, the same move — against a Vehicle and against
+  // something Organic — behaves differently, and ONLY against the Vehicle.
+  {
+    // 200 seeds, not 30: the gap this is asserting is about nine points,
+    // which a thirty-sample run can lose in the noise entirely.
+    const measure = (scarIds, foeId, seeds = 200) => {
+      let hits = 0, damage = 0, tries = 0;
+      for (let seed = 0; seed < seeds; seed++) {
+        const s = scarLab(3300 + seed);
+        const ch = s.chimeras[0];
+        ch.scars = scarIds;
+        const enc = { id: 'probe', name: 'Probe', waves: [foeId], reward: 0 };
+        const battle = createBattle([ch], enc, content, seed + 1, t0, {});
+        const foe = battle.enemy.active;
+        foe.maxHp = 99999;
+        foe.hp = 99999;
+        const before = foe.hp;
+        const act = playerActions(battle).filter((a) => a.type === 'move')
+          .sort((x, y) => playerActive(battle).moves[y.index].power - playerActive(battle).moves[x.index].power)[0];
+        step(battle, act, content);
+        tries++;
+        const dealt = before - battle.enemy.active.hp;
+        if (dealt > 0) { hits++; damage += dealt; }
+      }
+      return { hitRate: hits / tries, avg: damage / Math.max(1, hits) };
+    };
+    // police_cruiser is a Vehicle; riot_squad is Organic.
+    const cleanVsVan = measure([], 'police_cruiser');
+    const shyVsVan = measure(['jeep_shy'], 'police_cruiser');
+    const cleanVsMen = measure([], 'riot_squad');
+    const shyVsMen = measure(['jeep_shy'], 'riot_squad');
+    assert.ok(
+      shyVsVan.hitRate < cleanVsVan.hitRate,
+      `a jeep-shy creature misses vans more (${(cleanVsVan.hitRate * 100).toFixed(0)}% → ${(shyVsVan.hitRate * 100).toFixed(0)}%)`
+    );
+    assert.equal(
+      shyVsMen.hitRate,
+      cleanVsMen.hitRate,
+      'and is completely unchanged against everything else — the scar is about VANS'
+    );
+
+    // The other half of the same scar: it is harder to hit, but only by a van.
+    const hitBy = (scarIds, foeId, seeds = 150) => {
+      let landed = 0;
+      for (let seed = 0; seed < seeds; seed++) {
+        const s = scarLab(3400 + seed);
+        const ch = s.chimeras[0];
+        ch.scars = scarIds;
+        const enc = { id: 'probe', name: 'Probe', waves: [foeId], reward: 0 };
+        const battle = createBattle([ch], enc, content, seed + 7, t0, {});
+        const me = playerActive(battle);
+        me.maxHp = 99999;
+        me.hp = 99999;
+        const before = me.hp;
+        step(battle, { type: 'rest' }, content);
+        if (playerActive(battle).hp < before) landed++;
+      }
+      return landed / seeds;
+    };
+    const takenClean = hitBy([], 'police_cruiser');
+    const takenShy = hitBy(['jeep_shy'], 'police_cruiser');
+    assert.ok(takenShy < takenClean, `and dodges them better (${(takenClean * 100).toFixed(0)}% → ${(takenShy * 100).toFixed(0)}% landed)`);
+  }
+
+  // Unconditional scars reach the stats directly, and enemies carry none.
+  {
+    const s = scarLab(762);
+    const ch = s.chimeras[0];
+    const base = combatantFromChimera(ch, content, t0);
+    ch.scars = ['reinforced_limp'];
+    const limped = combatantFromChimera(ch, content, t0);
+    assert.equal(limped.speed, Math.max(1, base.speed + content.scars.reinforced_limp.effects.speed), 'a flat scar moves the stat');
+    assert.deepEqual(flatModifiers({ scars: ['jeep_shy'] }, content), { speed: 0, regen: 0 }, 'a conditional one does not');
+    assert.deepEqual(combatantFromUnit(content.enemies.riot_squad).scars, [], 'and the opposition has no scars at all');
+    // Summing: two scars against one opponent add up; the wrong tag adds nothing.
+    const both = againstTags(scarEffects({ scars: ['jeep_shy', 'kazoo_tinnitus'] }, content), ['Vehicle']);
+    const onlyRinging = againstTags(scarEffects({ scars: ['jeep_shy', 'kazoo_tinnitus'] }, content), ['Organic']);
+    assert.ok(both.acc < onlyRinging.acc, 'the van scar only counts against vans');
+    assert.equal(onlyRinging.acc, content.scars.kazoo_tinnitus.effects.acc, 'leaving just the unconditional one');
+  }
+
+  // It reads as character: a description a player can act on.
+  {
+    const shown = describeScar(content.scars.jeep_shy, 'Chompers');
+    assert.ok(shown.line.startsWith('Chompers'), 'the line is about this creature');
+    assert.ok(shown.summary.includes('vs Vehicle'), `and says what it applies to (${shown.summary})`);
+    assert.ok(/evasion/.test(shown.summary) && /accuracy/.test(shown.summary), 'and states both sides of the trade');
   }
 }
 

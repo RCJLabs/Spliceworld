@@ -1,5 +1,68 @@
 # PROGRESS
 
+## Session 26 — Injury scarring ✅
+
+> §3.5: "Battle injuries → Infirmary timer; untreated injuries can scar into
+> permanent trait tradeoffs (cartoony: 'Chompers now fears jeeps. +Evasion vs.
+> vehicles, −Accuracy vs. vehicles')."
+
+An injury has always opened a timer and then quietly expired. There was nothing
+to do about it and no consequence for doing nothing. Now there is both.
+
+### The choice
+**Treat it** at the Infirmary and it clears clean — the bill scales with how
+much of the injury is left, so an early visit costs more than sweeping up at
+the end. What you are buying is *certainty*, not healing.
+
+**Leave it** and there is a 34% chance it sets badly and stays.
+
+### Every scar is two-sided
+This is the whole design, and smoke enforces it: a scar must give something
+*and* take something. That makes a scar **character rather than damage** — so a
+player who slept through the treatment window gets something interesting, not
+something ruinous, and because several scars are net *good* for a particular
+build, "leave it and see" is a real strategy rather than a mistake.
+
+Ten scars, four of them narrowed by a `vs` tag, which is what makes the
+roadmap's own example literally expressible as data:
+
+> **Jeep Shyness** — +14% evasion, −10 accuracy *vs Vehicle*
+> "Goatzilla has developed strong opinions about anything with an engine, and
+> gives it a wide, twitchy berth."
+
+Measured in the real engine over 200 fights: a jeep-shy creature hits a Police
+Cruiser **79% → 70%** of the time and is hit back measurably less — and is
+**exactly, identically unchanged** against a Riot Squad. The scar is about
+vans.
+
+Bounded, too: never the same scar twice, never more than three, and a scar
+never keeps a creature benched — the injury always clears on schedule either
+way.
+
+### Kept honest
+~35 new smoke assertions, each verified to fail when the code it guards is
+broken. Two needed the *test* fixing rather than the code, and both were the
+same mistake — **sample size**:
+
+- The accuracy assertion ran 30 fights to detect a 9-point gap. With the code
+  deliberately broken it still passed, because the RNG stream diverges slightly
+  and 30 samples is noise. At 200 it catches it cleanly (79% vs 80% broken).
+- The no-duplicate-scars check ran one career. Three draws from a pool of ten
+  collide about a quarter of the time, so one career proves nothing; it now
+  runs eighty.
+
+The bidirectional service-worker precache check added two sessions ago earned
+its keep immediately — it caught `data/scars.json` and `splice/scars.js` before
+I had got round to adding them.
+
+Save **v19**; `sw` cache `spliceworld-v19-scars`. Nobody is retroactively
+scarred for injuries taken before the Infirmary sold treatment.
+
+### Next session's first task
+Every clause of the v0.1 spec is now built. The only remaining roadmap item is
+**async ghost defences**, which has always been marked "multiplayer — later";
+a full plan for that is written up separately.
+
 ## Session 25 — Chimera extraction & temperament ✅
 
 Two promises from the main spec that were written into the roadmap and then

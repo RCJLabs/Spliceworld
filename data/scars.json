@@ -1,0 +1,75 @@
+{
+  "_doc": "Injury scarring (ROADMAP §3.5: 'untreated injuries can scar into permanent trait tradeoffs'). A battle injury opens an Infirmary timer; pay to treat it and it clears clean, ignore it and there is a chance it sets badly and stays. EVERY SCAR IS TWO-SIDED, which is the whole design: a scar is character, not a punishment, so missing a treatment window is interesting rather than ruinous — and some scars are net GOOD for a given build, which makes 'leave it and see' a real choice rather than a mistake. `vs` narrows an effect to opponents carrying one of those tags, which is what makes the roadmap's own example ('Chompers now fears jeeps: +Evasion vs. vehicles, −Accuracy vs. vehicles') expressible as data. Effects: acc is percentage points on the move roll; evasion is a fraction off the attacker's chance to connect; power and armor are fractions of damage dealt and taken; speed and regen are flat additions to the stat. Adding a scar is one object here and nothing else.",
+  "tuning": {
+    "scarChance": 0.34,
+    "maxScars": 3,
+    "treatBase": 25,
+    "treatPerHour": 18
+  },
+  "scars": [
+    {
+      "id": "jeep_shy",
+      "name": "Jeep Shyness",
+      "line": "{name} has developed strong opinions about anything with an engine, and gives it a wide, twitchy berth.",
+      "vs": ["Vehicle"],
+      "effects": { "evasion": 0.14, "acc": -10 }
+    },
+    {
+      "id": "uniform_grudge",
+      "name": "Grudge Against Uniforms",
+      "line": "{name} has learned what a clipboard means and no longer waits to find out which kind.",
+      "vs": ["Organic"],
+      "effects": { "power": 0.12, "armor": -0.1 }
+    },
+    {
+      "id": "kazoo_tinnitus",
+      "name": "Kazoo Tinnitus",
+      "line": "There is a ringing. {name} cannot locate the ringing. {name} has stopped trusting the middle distance.",
+      "effects": { "acc": -6, "evasion": 0.07 }
+    },
+    {
+      "id": "sky_wariness",
+      "name": "Sky Wariness",
+      "line": "{name} now checks upward first, every time, before doing literally anything else.",
+      "vs": ["Airborne"],
+      "effects": { "evasion": 0.16, "power": -0.1 }
+    },
+    {
+      "id": "reinforced_limp",
+      "name": "Reinforced Limp",
+      "line": "It set crooked and it set STRONG. {name} moves like weather and arrives like furniture.",
+      "effects": { "armor": 0.1, "speed": -2 }
+    },
+    {
+      "id": "wound_memory",
+      "name": "Wound Memory",
+      "line": "{name} remembers exactly how that felt and has decided to be the one doing it from now on.",
+      "effects": { "power": 0.1, "regen": -1 }
+    },
+    {
+      "id": "brine_grudge",
+      "name": "Salt-Water Grudge",
+      "line": "Something wet was involved. {name} has not forgiven the sea, or anything that reminds it of the sea.",
+      "vs": ["Aquatic"],
+      "effects": { "power": 0.18, "acc": -8 }
+    },
+    {
+      "id": "overcompensating_jaw",
+      "name": "Overcompensating Jaw",
+      "line": "{name} bites harder now. {name} also misses more, because {name} bites harder now.",
+      "effects": { "power": 0.09, "acc": -7 }
+    },
+    {
+      "id": "chipped_plating",
+      "name": "Chipped Plating",
+      "line": "Lighter, in the way that losing pieces of yourself is technically lighter. {name} is noticeably quicker about it.",
+      "effects": { "armor": -0.08, "speed": 3 }
+    },
+    {
+      "id": "learned_flinch",
+      "name": "Learned Flinch",
+      "line": "{name} has acquired a flinch. It is a very good flinch. It is not a helpful flinch when attacking.",
+      "effects": { "evasion": 0.09, "power": -0.07 }
+    }
+  ]
+}
