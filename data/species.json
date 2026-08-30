@@ -1,5 +1,5 @@
 {
-  "_doc": "Base fauna (25 species, ROADMAP \u00a74.1). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity \u2014 see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP \u00a73.2): a species with `variantOf` is the same stock, mutated \u2014 it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them \u2014 variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads \u2014 a variant whose identity only shows up on the defending side is a dead mechanic.",
+  "_doc": "Base fauna (34 species; 40 animals with variants, ROADMAP \u00a74.1 and audit \u00a79.2 A3). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity \u2014 see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP \u00a73.2): a species with `variantOf` is the same stock, mutated \u2014 it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them \u2014 variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads \u2014 a variant whose identity only shows up on the defending side is a dead mechanic.",
   "species": [
     {
       "id": "bear",
@@ -840,6 +840,319 @@
       "setBonus": {
         "name": "Chitin Guard",
         "desc": "+15% armor and venom with 4+ scorpion parts"
+      }
+    },
+    {
+      "id": "goose",
+      "name": "Sentry Goose",
+      "role": "Taunter",
+      "tags": [
+        "Airborne",
+        "Sonic"
+      ],
+      "palette": {
+        "primary": "#e8e3d4",
+        "secondary": "#4d5247",
+        "accent": "#e8901c"
+      },
+      "frame": "M",
+      "class": "air",
+      "archetype": "avian",
+      "diet": "Bread, and grievances",
+      "feedCost": 4,
+      "upkeepPerDay": 5,
+      "mailOrderPrice": 95,
+      "growthHours": {
+        "adult": 6,
+        "prime": 20,
+        "elder": 60
+      },
+      "thermal": [
+        -20,
+        26
+      ],
+      "incubationMinutes": 26,
+      "setBonus": {
+        "name": "Unprovoked",
+        "desc": "+12% Power with 4+ goose parts"
+      }
+    },
+    {
+      "id": "moth",
+      "name": "Atlas Moth",
+      "role": "Debuffer",
+      "tags": [
+        "Airborne",
+        "Gas"
+      ],
+      "palette": {
+        "primary": "#9b6f4e",
+        "secondary": "#e8cfa8",
+        "accent": "#c2553f"
+      },
+      "frame": "S",
+      "class": "air",
+      "archetype": "lepidopteran",
+      "diet": "Nothing at all, alarmingly",
+      "feedCost": 3,
+      "upkeepPerDay": 4,
+      "mailOrderPrice": 120,
+      "growthHours": {
+        "adult": 5,
+        "prime": 16,
+        "elder": 48
+      },
+      "thermal": [
+        5,
+        34
+      ],
+      "incubationMinutes": 24,
+      "setBonus": {
+        "name": "Wing Scales",
+        "desc": "+15% Evasion with 4+ moth parts"
+      }
+    },
+    {
+      "id": "heron",
+      "name": "Marsh Heron",
+      "role": "Finisher",
+      "tags": [
+        "Airborne"
+      ],
+      "palette": {
+        "primary": "#8fa3ad",
+        "secondary": "#eef3f5",
+        "accent": "#f0c14b"
+      },
+      "frame": "M",
+      "class": "air",
+      "archetype": "avian",
+      "diet": "Anything that swims past",
+      "feedCost": 6,
+      "upkeepPerDay": 7,
+      "mailOrderPrice": 165,
+      "growthHours": {
+        "adult": 8,
+        "prime": 24,
+        "elder": 70
+      },
+      "thermal": [
+        -5,
+        30
+      ],
+      "incubationMinutes": 33,
+      "setBonus": {
+        "name": "Standing Still",
+        "desc": "+12% Accuracy with 4+ heron parts"
+      }
+    },
+    {
+      "id": "owl",
+      "name": "Barn Owl",
+      "role": "Ghost",
+      "tags": [
+        "Airborne",
+        "Sonic"
+      ],
+      "palette": {
+        "primary": "#c8b48f",
+        "secondary": "#f6efe2",
+        "accent": "#3f3a33"
+      },
+      "frame": "S",
+      "class": "air",
+      "archetype": "avian",
+      "diet": "Voles, whole",
+      "feedCost": 6,
+      "upkeepPerDay": 7,
+      "mailOrderPrice": 175,
+      "growthHours": {
+        "adult": 8,
+        "prime": 24,
+        "elder": 72
+      },
+      "thermal": [
+        -12,
+        27
+      ],
+      "incubationMinutes": 32,
+      "setBonus": {
+        "name": "Fringed Feathers",
+        "desc": "+10% Accuracy and Evasion with 4+ owl parts"
+      }
+    },
+    {
+      "id": "falcon",
+      "name": "Peregrine Falcon",
+      "role": "Aerial Striker",
+      "tags": [
+        "Airborne"
+      ],
+      "palette": {
+        "primary": "#5a6472",
+        "secondary": "#f2e9d8",
+        "accent": "#e0a33a"
+      },
+      "frame": "S",
+      "class": "air",
+      "archetype": "avian",
+      "diet": "Whatever was flying underneath",
+      "feedCost": 8,
+      "upkeepPerDay": 9,
+      "mailOrderPrice": 210,
+      "growthHours": {
+        "adult": 7,
+        "prime": 22,
+        "elder": 66
+      },
+      "thermal": [
+        -15,
+        28
+      ],
+      "incubationMinutes": 30,
+      "setBonus": {
+        "name": "Terminal Velocity",
+        "desc": "+18% Speed with 4+ falcon parts"
+      }
+    },
+    {
+      "id": "jellyfish",
+      "name": "Moon Jelly",
+      "role": "Poisoner",
+      "tags": [
+        "Aquatic",
+        "Venomous"
+      ],
+      "palette": {
+        "primary": "#b9c6e8",
+        "secondary": "#8fa6d6",
+        "accent": "#e3a7d8"
+      },
+      "frame": "S",
+      "class": "water",
+      "archetype": "cnidarian",
+      "diet": "Plankton and misfortune",
+      "feedCost": 2,
+      "upkeepPerDay": 3,
+      "mailOrderPrice": 110,
+      "growthHours": {
+        "adult": 4,
+        "prime": 14,
+        "elder": 44
+      },
+      "thermal": [
+        0,
+        30
+      ],
+      "incubationMinutes": 22,
+      "setBonus": {
+        "name": "No Central Anything",
+        "desc": "+20% Venom duration with 4+ jelly parts"
+      }
+    },
+    {
+      "id": "pufferfish",
+      "name": "Pufferfish",
+      "role": "Punisher",
+      "tags": [
+        "Aquatic",
+        "Venomous",
+        "Armored"
+      ],
+      "palette": {
+        "primary": "#d6c463",
+        "secondary": "#5f6b4a",
+        "accent": "#e4e0cd"
+      },
+      "frame": "S",
+      "class": "water",
+      "archetype": "fish",
+      "diet": "Crustaceans, crunched",
+      "feedCost": 5,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": 140,
+      "growthHours": {
+        "adult": 6,
+        "prime": 19,
+        "elder": 58
+      },
+      "thermal": [
+        8,
+        32
+      ],
+      "incubationMinutes": 28,
+      "setBonus": {
+        "name": "Full Inflation",
+        "desc": "+18% Armor with 4+ puffer parts"
+      }
+    },
+    {
+      "id": "otter",
+      "name": "River Otter",
+      "role": "Mobility",
+      "tags": [
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#6b4f38",
+        "secondary": "#d8c4a6",
+        "accent": "#8fbcd4"
+      },
+      "frame": "S",
+      "class": "water",
+      "archetype": "mustelid",
+      "diet": "Shellfish, and the rock to open it",
+      "feedCost": 6,
+      "upkeepPerDay": 7,
+      "mailOrderPrice": 150,
+      "growthHours": {
+        "adult": 7,
+        "prime": 21,
+        "elder": 64
+      },
+      "thermal": [
+        -5,
+        26
+      ],
+      "incubationMinutes": 31,
+      "setBonus": {
+        "name": "Never Still",
+        "desc": "+15% Stamina regen with 4+ otter parts"
+      }
+    },
+    {
+      "id": "armadillo",
+      "name": "Screaming Armadillo",
+      "role": "Wall",
+      "tags": [
+        "Armored",
+        "Sonic"
+      ],
+      "palette": {
+        "primary": "#9c8f7c",
+        "secondary": "#6a6154",
+        "accent": "#d8a86b"
+      },
+      "frame": "M",
+      "class": "ground",
+      "archetype": "armored",
+      "diet": "Grubs, and the soil around them",
+      "feedCost": 5,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": 130,
+      "growthHours": {
+        "adult": 8,
+        "prime": 24,
+        "elder": 70
+      },
+      "thermal": [
+        2,
+        34
+      ],
+      "incubationMinutes": 30,
+      "setBonus": {
+        "name": "Tucked",
+        "desc": "+16% Armor with 4+ armadillo parts"
       }
     },
     {

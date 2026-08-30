@@ -39,7 +39,8 @@
           "blurb": "Your own back fence. Currently patrolled by people with clipboards.",
           "unlocksFauna": [
             "porcupine",
-            "skunk"
+            "skunk",
+            "goose"
           ]
         },
         {
@@ -93,7 +94,8 @@
           "threatGen": 2,
           "unlocksFauna": [
             "frog",
-            "crocodile"
+            "crocodile",
+            "otter"
           ]
         }
       ],
@@ -119,7 +121,8 @@
           "notoriety": 20,
           "blurb": "A grass runway, two hangars, and a great deal of unearned confidence.",
           "unlocksFauna": [
-            "rhino"
+            "rhino",
+            "heron"
           ]
         },
         {
@@ -130,7 +133,8 @@
           "notoriety": 22,
           "blurb": "Whoever holds the mast holds the weather report, and thus morale.",
           "unlocksFauna": [
-            "pangolin"
+            "pangolin",
+            "owl"
           ]
         },
         {
@@ -141,7 +145,8 @@
           "notoriety": 25,
           "blurb": "Everything here is bolted to the ceiling, which should have been a clue.",
           "unlocksFauna": [
-            "rhino_beetle"
+            "rhino_beetle",
+            "moth"
           ]
         },
         {
@@ -179,7 +184,8 @@
           "notoriety": 25,
           "blurb": "The pontoons are underneath the boats now. Nobody wants to discuss it.",
           "unlocksFauna": [
-            "shark"
+            "shark",
+            "pufferfish"
           ]
         },
         {
@@ -190,7 +196,8 @@
           "notoriety": 25,
           "blurb": "Whoever owns the locks owns which streets are streets today.",
           "unlocksFauna": [
-            "octopus"
+            "octopus",
+            "jellyfish"
           ]
         },
         {
@@ -238,7 +245,10 @@
           "encounter": "foundry_gate",
           "incomePerDay": 115,
           "notoriety": 30,
-          "blurb": "A gate made of gates. The foreman has laminated the rules."
+          "blurb": "A gate made of gates. The foreman has laminated the rules.",
+          "unlocksFauna": [
+            "armadillo"
+          ]
         },
         {
           "id": "rolling_mill",
@@ -254,7 +264,10 @@
           "encounter": "foundry_motorpool",
           "incomePerDay": 140,
           "notoriety": 35,
-          "blurb": "Every vehicle you have ever annoyed, parked in tidy rows, freshly painted."
+          "blurb": "Every vehicle you have ever annoyed, parked in tidy rows, freshly painted.",
+          "unlocksFauna": [
+            "falcon"
+          ]
         },
         {
           "id": "crucible_floor",

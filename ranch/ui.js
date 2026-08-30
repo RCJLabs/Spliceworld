@@ -172,7 +172,7 @@ export function renderRanchScreen(root, ctx) {
   if (!catalog.some((sp) => sp.id === catalogPick)) catalogPick = catalog[0]?.id ?? '';
   const catalogSpecies = catalog.find((sp) => sp.id === catalogPick) ?? null;
 
-  // 25 species and climbing: group the catalog by elemental class so the
+  // 40 animals and climbing: group the catalog by elemental class so the
   // sheet reads like a menagerie, not a phone book.
   const catalogGroups = ['ground', 'water', 'air', null].map((cls) => {
     const rows = catalog.filter((sp) => (sp.class ?? null) === cls);

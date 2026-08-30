@@ -1,5 +1,132 @@
 # PROGRESS
 
+## Session 44 — A3: forty animals, and Air anatomy to build them out of ✅
+
+**Acceptance criterion:** an Air or a Water specialist is as buildable as a
+Ground one, *measured as parts-per-slot per class rather than as a species
+count* — **passes.**
+
+### The pool, which is the thing that was actually broken
+
+Class comes from anatomy, so the roster count was never the number that
+mattered. Affinity-bearing parts, by slot:
+
+| slot | ground | water | air | → | ground | water | air |
+|---|---|---|---|---|---|---|---|
+| head | 0 | 4 | **0** | → | 4 | 6 | 7 |
+| forelimbs | 16 | 7 | 6 | → | 17 | 9 | 11 |
+| hindlimbs | 20 | 9 | **0** | → | 19 | 12 | 6 |
+| tail | 0 | 5 | 3 | → | 1 | 8 | 8 |
+| **total** | **36** | **25** | **9** | → | **41** | **35** | **32** |
+
+(hide and organ vote for nothing, for any class, by design)
+
+**4.0× spread → 1.28×.** Air held nothing at all in two of the four voting
+sockets, so an Air build borrowed somebody's legs and then lost the vote it
+borrowed them for. Nine more birds donating nine more wings would have moved
+the headline number and fixed none of that, which is why the criterion is
+per-slot.
+
+Three rules did the work, and only one of them is "new content":
+
+- **A talon votes Air.** A raptor's foot is a grappling hook that touches the
+  ground at the end of a dive; pricing it as a walking leg is why the Bat —
+  wings *and* talons — read as **Unclassed**.
+- **A head votes where the anatomy is class-defining.** Gills already did.
+  Now a bell swims, a beak on a hollow skull flies, and a horned skull is
+  something you brace and shove with. Most heads still vote nothing.
+- **New families:** `paddle` and `rudder` and `drift` (water), `hindwing` and
+  `streamer` (air), `stilt` and `scute` (ground).
+
+### The Ground tag was a free x0 and every hindlimb had it
+
+`Ground` appears in exactly one row of the tag chart — *Ground moves miss
+Airborne (×0)* — and in no row where it helps. The generic hindlimb move
+carried it unconditionally, so a **shark's hindfin** and an **eagle's talon**
+both whiffed completely against anything with wings. It now follows the
+anatomy: 28 hindlimbs carried it, 19 do.
+
+### The generator had drifted, and running it would have reverted four phases
+
+`data/parts.json` is emitted by `tools/gen-parts.js`. Nobody had run it since
+R20, and in the meantime **78 moves and 57 abilities** had been hand-authored
+straight into the JSON — R20's keywords, R23's hide and organ actives, a
+hand nerf of Shark Frenzy from 64 to 50, a re-tune of Rally Howl. The first
+regeneration silently reverted all of it. Two separate faults:
+
+- The salvage loop promised to "preserve them verbatim" and then explicitly
+  `delete`d `classAffinity` on the way out, so **`rotor_limbs` and
+  `hydro_jets` lost their votes** on any regeneration.
+- Everything else was simply absent from the generator.
+
+Both folded back in: `KEYWORD_MOVES` (by part id — the Thunderhead's head
+does *not* carry its base's Lock-On, and keying by species would have given
+it one), and `HIDE_ACTIVE` / `ORGAN_ACTIVE` / `ACTIVES`, where the numbers
+live once and the *kind* is chosen per species. The generator now reproduces
+the committed data exactly, except the 20 changes A3 intends.
+
+### Balance barely moved, which is the point
+
+Region bench, 8 seeds, prime grade — before → after:
+
+| region | boots | wings | gills | fumes | noise |
+|---|---|---|---|---|---|
+| greenfield | 73→73% | 83→83% | 65→68% | 57→57% | 83→83% |
+| kestrel | 25→25% | **59→66%** | 97→94% | 44→50% | 72→72% |
+| drowned | 88→88% | 25→25% | 56→56% | 25→25% | 63→63% |
+| foundry | 28→28% | 19→19% | 13→16% | 0→0% | 19→19% |
+| spire | 50→50% | 31→31% | 22→22% | 28→28% | 53→53% |
+
+`wings` gains 7pp in the air region — it is pure Air now and its kick has
+stopped whiffing. Nothing else shifts more than 3pp.
+
+### Two assertions that were not measuring what they claimed
+
+- **"Actives get pressed" was on a knife edge.** Three builds, needing two
+  distinct archetypes, seeing exactly two — and *which* two depended on the
+  seed string and on whether a build's kick happened to whiff. Untagging the
+  hindlimbs moved one build off a whiff and onto its kick and the guard went
+  red with nothing about the actives having changed. It now sweeps the whole
+  pool at both grades: 40 species, 0.3s, a stronger guard and a stable one.
+  It also surfaced a **known gap, deliberately left visible**: the AI never
+  presses Slipskin, Vanish, Screen or Focus. They cost a turn of not
+  attacking, and `chooseMoveIndex` values damage. That is a pricing problem
+  for its own phase; the floor is set below it rather than asserted away.
+- **"The part pool really is Ground-skewed"** was the *justification* for
+  reading class per creature — and A3 makes it false. The rule is still
+  right for a better reason (a census counts parts; what fights is
+  creatures), so the guard now pins the balanced pool and the per-creature
+  read separately.
+
+And the class-triangle cases had been padding their sockets with a **goat
+head**, which A3 turned into a third voter. Swapped for a bear's, with the
+mute-ness asserted rather than assumed.
+
+### Also shipped
+
+- **Seven combos** reaching eight of the nine new animals — Full Spectrum,
+  Powder Keg, Nettle Curtain, Screaming Roll, High Water Mark, Deterrent
+  Display, Shell Game. Each verified to out-damage the best drawback-free
+  move of its own two parts at all sixteen grade assignments (304 checks).
+- The Foundry paid **no fauna at all** before this; it now unlocks the
+  Screaming Armadillo and the Peregrine Falcon.
+- Every new hide and organ is an active. Pufferfish "Inflate" (guard +
+  thorns) and the Screaming Armadillo's "Screaming Fit" (Sonic) are
+  signatures; the rest take their species' kind.
+
+### Known issues
+
+- Smoke is now ~3 minutes, up from ~80 seconds: several sweeps are
+  per-species and the roster grew 29%.
+- The four evasion/accuracy actives are still never pressed by the AI.
+- Ground has exactly **one** affinity-bearing tail (the armadillo's scute).
+  Every class has *something* in every voting slot, but ground's identity is
+  still its limbs.
+
+**Next session's first task:** A4 — a player who opens the game with money,
+a stable and a lost fight should have three distinct things they can do
+right now.
+
 ## Session 43 — A1/A2: the solo cliff, and the dead end under it ✅
 
 **Acceptance criterion:** the ladder is beatable at every team size the game

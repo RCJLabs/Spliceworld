@@ -42,6 +42,20 @@ const BUILD = {
   mantis:       B(['bug',{eyeR:15,horn:false}], ['scythe',{}], ['bugleg',{len:56}], ['whip',{len:54}], 'chitin', '#e6f7c1', 'spark'),
   cobra:        B(['reptile',{jaw:44,hood:true,fangs:true}], null, null, ['coil',{}], 'scale', '#8fd14f', 'drip'),
   scorpion:     B(['bug',{eyeR:12,mandibles:true,antennae:false}], ['scythe',{}], ['bugleg',{len:48}], ['sting',{len:66}], 'chitin', '#e8b57a', 'drip'),
+  // A3 (audit §9.2). Nine more animals, weighted where the audit found the
+  // hole: Air owned six forelimbs and three tails in the entire game, and
+  // NOTHING in the head or hindlimb sockets, so every Air build had to
+  // borrow somebody else's legs and then lost the vote it was borrowing
+  // them for. Five of these fly.
+  heron:        B(['bird',{beak:'spear',crest:false,eyeR:10}], ['wing',{span:112}], ['stilt',{len:78}], ['fan',{spread:15}], 'down', '#cfe3ea', 'eye'),
+  falcon:       B(['bird',{beak:'hook',crest:false,eyeR:11}], ['wing',{span:126}], ['talon',{len:50}], ['fan',{spread:14}], 'feather', '#ffd08a', 'bolt'),
+  owl:          B(['bird',{beak:'hook',crest:false,disc:true,eyeR:13}], ['wing',{span:120}], ['talon',{len:48}], ['fan',{spread:22}], 'down', '#f5e7c8', 'howl'),
+  goose:        B(['bird',{beak:'straight',crest:false,eyeR:11}], ['wing',{span:116}], ['paddle',{len:44}], ['fan',{spread:17}], 'feather', '#ffb347', 'howl'),
+  moth:         B(['moth',{eyeR:16}], ['membrane',{span:108}], ['hindwing',{span:86}], ['streamer',{len:66}], 'down', '#e8c8a0', 'cloud'),
+  otter:        B(['mammal',{snout:20,ear:'small',skull:25,eyeR:12,teeth:true}], ['paddle',{len:42}], ['paddle',{len:46}], ['rudder',{len:60}], 'slick', '#9fd6ef', 'wave'),
+  jellyfish:    B(['bell',{eyeR:15}], ['tentacle',{len:66}], ['tentacle',{len:72}], ['drift',{len:60}], 'jelly', '#dcd0ff', 'drip'),
+  pufferfish:   B(['fish',{teeth:true,gills:true,eyeR:14}], ['fin',{len:40}], ['fin',{len:42}], ['finTail',{len:50}], 'spine', '#ffe86b', 'drip'),
+  armadillo:    B(['mammal',{snout:26,ear:'pointed',skull:24,eyeR:9}], ['paw',{mass:15,len:44,claws:3}], ['paw',{mass:16,len:42,claws:2}], ['scute',{len:56}], 'band', '#d8b98a', 'howl'),
 };
 
 // Signature abilities from ROADMAP §4.1: [slot, part name, ability, move].
@@ -49,7 +63,7 @@ const M = (power, cost, acc, tags, keywords) => ({ power, cost, acc, tags, keywo
 const SIGNATURE = {
   bear:         ['forelimbs', 'Bear Arms', 'Haymaker', M(80, 35, 85, [], { recoil: 0.2 })],
   tiger:        ['head', 'Tiger Head', 'Pounce', M(52, 22, 95, [], { priority: true })],
-  wolf:         ['organ', 'Howl Bladder', 'Rally Howl', M(0, 15, 100, ['Sonic'], { powerUp: 1, accUp: 1 })],
+  wolf:         ['organ', 'Howl Bladder', 'Rally Howl', M(0, 18, 100, ['Sonic'], { rally: 1, accUp: 1 })],
   crocodile:    ['head', 'Croc Jaws', 'Chomp Lock', M(58, 28, 90, [], { trap: true })],
   gorilla:      ['forelimbs', 'Gorilla Arms', 'Suplex', M(70, 32, 90, [], { stun: 0.35 })],
   rhino:        ['head', 'Rhino Horn', 'Rhino Rush', M(95, 34, 90, ['Ground'], { charge: true })],
@@ -60,7 +74,7 @@ const SIGNATURE = {
   eagle:        ['forelimbs', 'Eagle Wings', 'Dive Bomb', M(70, 30, 90, ['Airborne'], { accUp: 1 })],
   bat:          ['organ', 'Echo Chamber', 'Echo Shriek', M(28, 16, 100, ['Sonic'], { accDown: 1 })],
   dragonfly:    ['forelimbs', 'Dragonfly Wings', 'Flicker', M(44, 18, 100, ['Airborne'], { evasionUp: 1, priority: true })],
-  shark:        ['head', 'Shark Jaws', 'Frenzy', M(64, 28, 92, [], { frenzy: true })],
+  shark:        ['head', 'Shark Jaws', 'Frenzy', M(50, 28, 92, [], { frenzy: true })],
   octopus:      ['forelimbs', 'Eight Arms', 'Eight-Grip', M(40, 24, 95, [], { trap: true })],
   electric_eel: ['organ', 'Electric Organ', 'Discharge', M(72, 32, 95, ['Electric'], {})],
   anglerfish:   ['head', 'Angler Head', 'Lure Light', M(30, 18, 100, [], { taunt: true, accDown: 1 })],
@@ -72,6 +86,15 @@ const SIGNATURE = {
   mantis:       ['forelimbs', 'Mantis Scythes', 'Scythe Strike', M(58, 24, 95, [], { priority: true })],
   cobra:        ['head', 'Cobra Head', 'Venom Fang', M(40, 20, 95, ['Venomous'], { venom: 1 })],
   scorpion:     ['tail', 'Scorpion Sting', 'Sting', M(48, 22, 95, ['Venomous'], { venom: 1 })],
+  heron:        ['head', 'Heron Bill', 'Spearfishing', M(58, 26, 97, [], { ignoreEvasion: true })],
+  falcon:       ['forelimbs', 'Falcon Wings', 'Stoop', M(84, 36, 88, ['Airborne'], { priority: true })],
+  owl:          ['organ', 'Facial Disc', 'Sound Map', M(26, 16, 100, ['Sonic'], { accUp: 1, evasionUp: 1 })],
+  goose:        ['head', 'Goose Head', 'Unprovoked', M(36, 18, 100, ['Sonic'], { taunt: true, accDown: 1 })],
+  moth:         ['organ', 'Scale Powder', 'Powder Burst', M(28, 20, 100, ['Gas'], { accDown: 1, evasionUp: 1 })],
+  otter:        ['forelimbs', 'Otter Paws', 'Rock Trick', M(56, 24, 96, [], { ignoreArmor: true })],
+  jellyfish:    ['tail', 'Stinging Threads', 'Drift Net', M(32, 18, 100, ['Venomous'], { venom: 2, slow: 1 })],
+  pufferfish:   ['hide', 'Inflation Reflex', 'Inflate', M(0, 16, 100, [], { guard: true, thorns: 0.3 })],
+  armadillo:    ['organ', 'Scream Bladder', 'Screaming Fit', M(30, 18, 100, ['Sonic'], { powerDown: 1, accDown: 1 })],
 };
 
 // Slot stat/phys bases, scaled by the species' role bias.
@@ -110,11 +133,16 @@ const SLOT_NAMES = {
   wing: { forelimbs: 'Wings' }, membrane: { forelimbs: 'Wings' }, fin: { forelimbs: 'Fins', hindlimbs: 'Hindfins' },
   tentacle: { forelimbs: 'Tentacles', hindlimbs: 'Lower Arms' }, bugleg: { forelimbs: 'Foreclaws', hindlimbs: 'Hindlegs' },
   scythe: { forelimbs: 'Scythes' }, talon: { hindlimbs: 'Talons' }, hop: { forelimbs: 'Forelimbs', hindlimbs: 'Springlegs' },
+  paddle: { forelimbs: 'Paddles', hindlimbs: 'Webbed Feet' }, hindwing: { hindlimbs: 'Hindwings' }, stilt: { hindlimbs: 'Stilts' },
 };
-const TAIL_NAMES = { bushy: 'Brush Tail', nub: 'Nub', whip: 'Whip Tail', finTail: 'Tail Fin', fan: 'Tailfan', sting: 'Sting', coil: 'Coil', flick: 'Flicker' };
-const HIDE_NAMES = { fur: 'Pelt', stripes: 'Striped Coat', feather: 'Plumage', scale: 'Scales', plate: 'Plating', quill: 'Quill Coat', chitin: 'Chitin', slick: 'Slick Hide', camo: 'Camo Hide' };
-const TAIL_ABIL = { bushy: 'Counterbalance', nub: 'Nub Wiggle', whip: 'Whip Crack', finTail: 'Tail Drive', fan: 'Tail Rudder', sting: 'Sting', coil: 'Constrict', flick: 'Happy Flick' };
-const HIDE_ABIL = { fur: 'Thick Fur', stripes: 'Broken Outline', feather: 'Preened Feathers', scale: 'Molted Slip', plate: 'Plate Armour', quill: 'Quill Coat', chitin: 'Chitin Guard', slick: 'Slick Coat', camo: 'Camouflage' };
+const TAIL_NAMES = { bushy: 'Brush Tail', nub: 'Nub', whip: 'Whip Tail', finTail: 'Tail Fin', fan: 'Tailfan', sting: 'Sting', coil: 'Coil', flick: 'Flicker',
+  rudder: 'Rudder Tail', streamer: 'Wing Streamers', drift: 'Stinging Threads', scute: 'Banded Tail' };
+const HIDE_NAMES = { fur: 'Pelt', stripes: 'Striped Coat', feather: 'Plumage', scale: 'Scales', plate: 'Plating', quill: 'Quill Coat', chitin: 'Chitin', slick: 'Slick Hide', camo: 'Camo Hide',
+  down: 'Down', spine: 'Spine Coat', band: 'Banded Shell', jelly: 'Jelly Mantle' };
+const TAIL_ABIL = { bushy: 'Counterbalance', nub: 'Nub Wiggle', whip: 'Whip Crack', finTail: 'Tail Drive', fan: 'Tail Rudder', sting: 'Sting', coil: 'Constrict', flick: 'Happy Flick',
+  rudder: 'Course Correction', streamer: 'Streamer Flutter', drift: 'Drift Net', scute: 'Armoured Sweep' };
+const HIDE_ABIL = { fur: 'Thick Fur', stripes: 'Broken Outline', feather: 'Preened Feathers', scale: 'Molted Slip', plate: 'Plate Armour', quill: 'Quill Coat', chitin: 'Chitin Guard', slick: 'Slick Coat', camo: 'Camouflage',
+  down: 'Muffling Down', spine: 'Spine Coat', band: 'Banded Shell', jelly: 'Pass-Through' };
 const ORGAN_NAMES = {
   bear: ['Hibernation Gland', 'Deep Snooze'], tiger: ['Predator Eye', 'Target Lock'], wolf: ['Howl Bladder', 'Rally Howl'],
   crocodile: ['Cold Heart', 'Slow Metabolism'], gorilla: ['Barrel Lungs', 'Second Wind'], rhino: ['Charge Gland', 'Wind-Up'],
@@ -125,6 +153,81 @@ const ORGAN_NAMES = {
   goat: ['Iron Gut', 'Eats Anything'], chameleon: ['Chromatophores', 'Blend'], skunk: ['Stink Gland', 'Stink Cloud'],
   porcupine: ['Bristle Root', 'Bristle'], mantis: ['Duelist Ganglion', 'Read the Blade'], cobra: ['Venom Sac', 'Extra Spicy'],
   scorpion: ['Venom Bulb', 'Top-Up'],
+  heron: ['Patience Gland', 'Stand Perfectly Still'], falcon: ['Dive Reflex', 'Terminal Velocity'],
+  owl: ['Facial Disc', 'Sound Map'], goose: ['Grudge Sac', 'Hold a Grudge'],
+  moth: ['Scale Powder', 'Powder Burst'], otter: ['Play Drive', 'Never Still'],
+  jellyfish: ['Nerve Net', 'No Central Anything'], pufferfish: ['Inflation Sac', 'Puff Up'],
+  armadillo: ['Scream Bladder', 'Screaming Fit'],
+};
+
+// R20 wired the dead keywords onto specific parts by hand, straight into
+// data/parts.json — so this generator, which had not been run since, would
+// have quietly reverted all of it. Keyed by part id rather than by species
+// because that is how R20 authored it: the Thunderhead's head does NOT
+// carry its base's Lock-On.
+const KEYWORD_MOVES = {
+  tiger_forelimbs:     M(46, 24, 92, [], { bleed: 1 }),
+  crocodile_forelimbs: M(46, 24, 92, [], { slow: 0.3 }),
+  gorilla_head:        M(42, 22, 95, [], { rage: true }),
+  eagle_head:          M(42, 22, 95, [], { ignoreEvasion: true }),
+  bat_forelimbs:       M(20, 22, 92, [], { multiHit: 3 }),
+  octopus_head:        M(42, 22, 95, [], { staminaDrain: 12 }),
+  porcupine_forelimbs: M(44, 24, 92, [], { thorns: 0.25 }),
+};
+
+// R23: every hide and every organ does something on a turn. A stat stick
+// the player can never press is a number wearing a part's name. The KIND is
+// chosen per species; the numbers live here once, so tuning "Bristles"
+// tunes it in all twenty places. A species whose SIGNATURE is its hide or
+// its organ overrides this and uses the signature instead.
+const HIDE_ACTIVE = {
+  bristles: { label: 'Bristles', move: M(0, 14, 100, [], { thorns: 0.45 }) },
+  slipskin: { label: 'Slipskin', move: M(0, 10, 100, [], { evasionUp: 1 }) },
+  screen:   { label: 'Screen', move: M(0, 12, 100, ['Gas'], { accDown: 1 }) },
+  vanish:   { label: 'Vanish', move: M(0, 12, 100, [], { evasionUp: 2 }) },
+};
+const ORGAN_ACTIVE = {
+  spike:    { label: 'Spike', move: M(0, 14, 100, [], { powerUp: 1 }) },
+  slowMend: { label: 'Slow Mend', move: M(0, 18, 100, [], { regen: 0.09 }) },
+  knit:     { label: 'Knit', move: M(0, 22, 100, [], { heal: 0.3 }) },
+  focus:    { label: 'Focus', move: M(0, 12, 100, [], { accUp: 1 }) },
+  leech:    { label: 'Leech', move: M(0, 14, 100, [], { staminaDrain: 20 }) },
+  surge:    { label: 'Surge', move: M(0, 18, 100, [], { rally: 1 }) },
+  gut:      { label: 'Gut', move: M(0, 10, 100, [], { staminaRestore: 18 }) },
+};
+// Where a species earned a name for its active instead of "<Species> <Kind>".
+const ACTIVE_ABILITY = {
+  goat_organ: 'Second Stomach', tortoise_organ: 'Shell Rebuild', frog_organ: 'Cutaneous Mend',
+  heron_organ: 'Stand Perfectly Still', falcon_organ: 'Terminal Velocity',
+  goose_organ: 'Hold a Grudge', otter_organ: 'Never Still',
+  jellyfish_organ: 'No Central Anything', pufferfish_organ: 'Puff Up',
+};
+// [hide kind, organ kind]; null where the species' signature covers the slot.
+const ACTIVES = {
+  bear:         ['bristles', 'spike'],     tiger:        ['bristles', 'spike'],
+  wolf:         ['bristles', null],        crocodile:    ['slipskin', 'knit'],
+  gorilla:      ['bristles', 'spike'],     rhino:        ['bristles', 'slowMend'],
+  pangolin:     ['bristles', 'slowMend'],  tortoise:     ['bristles', 'knit'],
+  rhino_beetle: ['bristles', 'slowMend'],  ram:          ['bristles', 'spike'],
+  eagle:        ['slipskin', 'focus'],     bat:          ['slipskin', null],
+  dragonfly:    ['slipskin', 'focus'],     shark:        ['slipskin', 'knit'],
+  octopus:      ['screen', 'knit'],        electric_eel: ['bristles', null],
+  anglerfish:   ['slipskin', 'knit'],      frog:         ['slipskin', 'slowMend'],
+  goat:         ['bristles', 'gut'],       chameleon:    ['vanish', 'spike'],
+  skunk:        ['screen', null],          porcupine:    ['bristles', 'spike'],
+  mantis:       ['bristles', 'spike'],     cobra:        ['bristles', 'leech'],
+  scorpion:     ['bristles', 'slowMend'],
+  // A3
+  heron:        ['slipskin', 'focus'],     falcon:       ['slipskin', 'focus'],
+  owl:          ['slipskin', null],        goose:        ['slipskin', 'spike'],
+  moth:         ['slipskin', null],        otter:        ['slipskin', 'slowMend'],
+  jellyfish:    ['vanish', 'slowMend'],    pufferfish:   [null, 'spike'],
+  armadillo:    ['bristles', null],
+  // Variants pick their own — a Thunderhead's organ rallies where its base's
+  // merely focuses, and its hide is a different hide.
+  alpine_ram:   ['bristles', 'slowMend'],  abyssal_shark: ['slipskin', 'knit'],
+  storm_eagle:  ['bristles', 'surge'],     glider_skunk:  ['screen', null],
+  iron_tortoise:['bristles', 'slowMend'],  pale_cobra:    ['bristles', 'leech'],
 };
 
 const round1 = (n) => Math.max(1, Math.round(n));
@@ -167,11 +270,24 @@ function shapesFor(slot, sp) {
 }
 
 // Anatomy decides the class: wings→air, fins/gills→water, feet→ground.
+//
+// A3 moved one existing family and added six. `talon` used to vote Ground,
+// on the reading that a foot is a foot; but a raptor's foot is a grappling
+// hook that only touches the earth at the end of a dive, and pricing it as
+// a walking leg is what made the Bat — wings AND talons — read as
+// Unclassed, and what left the Air column with zero hindlimbs.
 const AFFINITY_FAMILY = {
-  wing: 'air', membrane: 'air', fan: 'air',
-  fin: 'water', finTail: 'water', hop: 'water',
-  paw: 'ground', hoof: 'ground', bugleg: 'ground', talon: 'ground', scythe: 'ground',
+  wing: 'air', membrane: 'air', fan: 'air', talon: 'air', hindwing: 'air', streamer: 'air',
+  fin: 'water', finTail: 'water', hop: 'water', paddle: 'water', rudder: 'water', drift: 'water',
+  paw: 'ground', hoof: 'ground', bugleg: 'ground', scythe: 'ground', stilt: 'ground', scute: 'ground',
 };
+// A head votes only where the anatomy is class-defining, which is why most
+// heads do not vote at all: gills breathe water and a bell swims in it, a
+// beak on a hollow skull is flight kit, and a horned skull is a thing you
+// brace against the ground and shove with.
+const HEAD_AFFINITY = { fish: 'water', bell: 'water', bird: 'air', moth: 'air', horned: 'ground' };
+// Flight SURFACES grant lift; a talon votes Air but does not hold anything up.
+const LIFT_FAMILY = { wing: 90, membrane: 90, hindwing: 55 };
 function affinityFor(slot, sp) {
   // A variant may rewrite what a slot votes for — the Glider Skunk's
   // patagium makes its forelimbs Air, which is the entire point of it.
@@ -180,16 +296,21 @@ function affinityFor(slot, sp) {
   if (slot === 'forelimbs' && b.fore) return AFFINITY_FAMILY[b.fore[0]] ?? null;
   if (slot === 'hindlimbs' && b.hind) return AFFINITY_FAMILY[b.hind[0]] ?? null;
   if (slot === 'tail') return AFFINITY_FAMILY[b.tail[0]] ?? null;
-  // Gilled heads breathe water — that counts.
-  if (slot === 'head' && b.head[0] === 'fish') return 'water';
+  if (slot === 'head') return HEAD_AFFINITY[b.head[0]] ?? null;
   return null;
 }
 
+// The Ground ATTACK tag is pure downside: the only chart row it appears in
+// is "Ground moves miss Airborne (x0)", and there is no row where it helps.
+// Every hindlimb in the game carried it, so a shark's hindfin and an
+// eagle's talon both whiffed completely against anything with wings. It
+// now follows the anatomy: a limb that votes Ground swings Ground, and a
+// talon delivered at the bottom of a dive does not.
 const GENERIC_MOVE = {
-  head: (sp) => M(46, 22, 95, [], {}),
-  forelimbs: (sp) => M(52, 24, 92, [], {}),
-  hindlimbs: (sp) => M(44, 20, 95, ['Ground'], {}),
-  tail: (sp) => M(0, 10, 100, [], { evasionUp: 1 }),
+  head: (sp, aff) => M(46, 22, 95, [], {}),
+  forelimbs: (sp, aff) => M(52, 24, 92, [], {}),
+  hindlimbs: (sp, aff) => M(44, 20, 95, aff === 'ground' ? ['Ground'] : [], {}),
+  tail: (sp, aff) => M(0, 10, 100, [], { evasionUp: 1 }),
   hide: () => null,
   organ: () => null,
 };
@@ -213,22 +334,35 @@ for (const sp of species) {
     const name = isSig
       ? (sp.variantOf ? `${sp.name} ${famName === 'Head' ? 'Head' : famName}` : sigName)
       : slot === 'organ' ? famName : `${sp.name} ${famName}`;
-    const ability = isSig ? sigAbility
+    let ability = isSig ? sigAbility
       : slot === 'tail' ? TAIL_ABIL[b.tail[0]]
       : slot === 'hide' ? HIDE_ABIL[b.hide]
       : slot === 'organ' ? ORGAN_NAMES[root][1]
       : slot === 'head' ? `${sp.name} Bite`
         : slot === 'hindlimbs' ? `${sp.name} Kick`
           : `${sp.name} Strike`;
-    let move = isSig ? sigMove : GENERIC_MOVE[slot](sp);
+    const aff = affinityFor(slot, sp);
+    let move = isSig ? sigMove : GENERIC_MOVE[slot](sp, aff);
+    // Hides and organs have no generic move, so an unsigned one falls to its
+    // species' active kind (R23). A signature with a real move always wins.
+    if ((slot === 'hide' || slot === 'organ') && !move) {
+      const kinds = ACTIVES[sp.id];
+      if (!kinds) throw new Error(`${sp.id} has no hide/organ actives — every one of them must do something`);
+      const kind = kinds[slot === 'hide' ? 0 : 1];
+      if (!kind) throw new Error(`${sp.id}.${slot} has neither a signature move nor an active kind`);
+      const def = (slot === 'hide' ? HIDE_ACTIVE : ORGAN_ACTIVE)[kind];
+      move = def.move;
+      ability = ACTIVE_ABILITY[`${sp.id}_${slot}`] ?? `${sp.name} ${def.label}`;
+    }
+    if (KEYWORD_MOVES[`${sp.id}_${slot}`]) move = KEYWORD_MOVES[`${sp.id}_${slot}`];
     // A variant's `moveTag` rides on its damaging moves — the tag chart reads
     // the ATTACK side, so this is where "Thunderhead" stops being a paint job.
     if (move && sp.moveTag && move.power > 0 && !move.tags.includes(sp.moveTag)) {
       move = { ...move, tags: [...move.tags, sp.moveTag] };
     }
     const phys = { ...SLOT_BASE[slot].phys };
-    const aff = affinityFor(slot, sp);
-    if (aff === 'air' && slot === 'forelimbs') phys.lift = 90;
+    const liftFamily = slot === 'forelimbs' ? b.fore?.[0] : slot === 'hindlimbs' ? b.hind?.[0] : null;
+    if (aff === 'air' && LIFT_FAMILY[liftFamily]) phys.lift = LIFT_FAMILY[liftFamily];
     const part = {
       id: `${sp.id}_${slot}`, species: sp.id, slot, name, ability,
       stats: statsFor(slot, sp), phys, tags: [...sp.tags],
@@ -240,20 +374,29 @@ for (const sp of species) {
 }
 
 // Enemy-tech salvage parts are hand-authored; preserve them verbatim.
+// VERBATIM MEANS VERBATIM: this used to strip classAffinity off every
+// salvage part on the way out, so a rotor arm that votes Air voted nothing
+// the next time anybody ran the generator. Salvage is content, not output.
 const existing = JSON.parse(readFileSync(join(root, 'data/parts.json'), 'utf8'));
 const salvage = existing.parts.filter((p) => p.species === 'salvage');
-for (const p of salvage) if (!('classAffinity' in p)) p.classAffinity = undefined;
 
 const out = {
-  _doc: existing._doc.split(' Art style')[0] +
+  // Built from a CANONICAL base, not by appending to whatever the last run
+  // left behind. The old form did `existing._doc.split(' Art style')[0] + …`,
+  // which re-appended the Wave 1 paragraph on every regeneration — twenty-one
+  // copies of it had piled up by the time anybody looked.
+  _doc: existing._doc.split(' Wave 1: parts are generated')[0] +
     ' Wave 1: parts are generated by tools/gen-parts.js from the species roster and the' +
     ' archetype shape library (tools/shapes.js) — a dev tool, not a build step; the game' +
     ' loads this JSON as-is. classAffinity is the anatomy that votes for a chimera\'s' +
-    ' elemental class (see data/classes.json). Art style: bold flat vector — thick @outline' +
+    ' elemental class (see data/classes.json). Hand-authored content lives in the' +
+    ' generator too — R20\'s keyword moves and R23\'s hide and organ actives — because a' +
+    ' generator that reverts four phases of tuning the next time somebody runs it is a' +
+    ' trap. Art style: bold flat vector — thick @outline' +
     ' strokes on masses, thinner on detail; two googly eyes with catchlights on heads;' +
     ' @white low-opacity sheen for form; @secondary for muzzles/bellies, @accent for' +
     ' horns/beaks/claws.',
-  parts: [...parts, ...salvage.map((p) => { const q = { ...p }; delete q.classAffinity; return q; })],
+  parts: [...parts, ...salvage],
 };
 writeFileSync(join(root, 'data/parts.json'), JSON.stringify(out, null, 2) + '\n');
 const shapeCount = out.parts.reduce((n, p) => n + p.shapes.length, 0);
