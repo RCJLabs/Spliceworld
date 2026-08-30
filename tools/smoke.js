@@ -22,9 +22,10 @@ import { spliceChimera, validateSplice, isSettled, chimeraGenome } from '../spli
 import {
   combatantFromChimera, combatantFromUnit, createBattle, step, finishBattle,
   playerActions, playerActive, tagMultiplier, isInjured, turnForecast, tierScaleFor,
-  movesFromTokens,
+  movesFromTokens, previewMove,
 } from '../battle/engine.js';
 import { runSim, plantBrokenCombo, makeSimChimera, scriptedBattle } from './sim.js';
+import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
 import {
   nodeStates, threatGen, incomePerDay, tickCampaign, resolveBattle, salvageUnit,
 } from '../campaign/campaign.js';
@@ -497,6 +498,148 @@ const myLine = evs.findIndex((e) => e.text.includes('Scythe Strike'));
 const foeLine = evs.findIndex((e) => e.text.includes(pb.enemy.active.name) && e.text.includes('uses'));
 assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move goes first despite speed 1');
 
+// --- R22: the opposition thinks, and thinking is worth something.
+//
+// The old chooser was a coin flip with a 75% lean toward damage: no
+// targeting, no finishing, no reading the chart. The claim this phase makes
+// is that the policy PLAYS BETTER, so the test is a head-to-head — the same
+// units, the same hero, the same seeds, the dial at 0 against the dial at 1.
+// Anything less measures that the code runs, not that it is any good.
+{
+  const HERO = {
+    bear: ['bear_head','bear_forelimbs','bear_hindlimbs','bear_tail','bear_hide','bear_organ'],
+    shark: ['shark_head','shark_forelimbs','shark_hindlimbs','shark_tail','shark_hide','shark_organ'],
+  };
+  // CONTESTED pairs only. Most matchups are 100% either way at apex, and a
+  // cell that is already decided cannot show a difference in play — averaging
+  // them in just buries the signal under fights nobody could lose.
+  const DUELS = [
+    ['boss_clampdown', 'bear'], ['boss_clampdown', 'shark'],
+    ['military_response', 'bear'], ['air_patrol', 'bear'],
+  ];
+  const playerWinRate = (hero, encId, skill, n, tag) => {
+    let wins = 0;
+    for (let i = 0; i < n; i++) {
+      const b = createBattle([hero, { ...hero, id: 'a', name: 'A' }, { ...hero, id: 'b', name: 'B' }],
+        content.encounters[encId], content, hashString(`aiskill${tag}${i}`), 0);
+      b.aiSkill = skill;
+      let g = 0;
+      while (!b.over && g++ < 300) {
+        const acts = playerActions(b);
+        const mv = acts.filter((a) => a.type === 'move')
+          .sort((x, y) => playerActive(b).moves[y.index].power - playerActive(b).moves[x.index].power)[0]
+          ?? acts.find((a) => a.type === 'rest') ?? acts[0];
+        if (!mv) break;
+        step(b, mv, content);
+      }
+      if (b.outcome === 'win') wins++;
+    }
+    return wins / n;
+  };
+  let gain = 0;
+  const detail = [];
+  for (const [encId, heroName] of DUELS) {
+    const hero = makeSimChimera('M', HERO[heroName], 'apex', content);
+    const dumb = playerWinRate(hero, encId, 0, 150, `${encId}${heroName}`);
+    const sharp = playerWinRate(hero, encId, 1, 150, `${encId}${heroName}`);
+    gain += dumb - sharp;
+    detail.push(`${encId}/${heroName} ${(dumb * 100).toFixed(0)}% → ${(sharp * 100).toFixed(0)}%`);
+  }
+  const mean = gain / DUELS.length;
+  // Measured at ~10pp per contested cell. The bar sits at 4pp: four cells at
+  // 150 samples put the standard error of the mean near 2.5pp, so this is
+  // clear of noise without being a restatement of one lucky matchup. An
+  // earlier 60-sample read of a single cell showed the policy LOSING by 5pp
+  // and flipped to +9pp at 400 — one cell at small N proves nothing.
+  assert.ok(mean >= 0.04,
+    `the policy must beat the coin flip by a real margin — mean ${(mean * 100).toFixed(1)}pp: ${detail.join('; ')}`);
+
+  // The pilot is a YARDSTICK, and a yardstick that wastes turns measures the
+  // wrong thing. The first draft of the policy scored a capped evasion buff
+  // above resting, so on a fragile Air build it chain-cast a 10-stamina buff
+  // it could still afford instead of resting toward the 20-stamina attack it
+  // could not — 545 presses across 80 fights, and a 51% win rate became 0%.
+  // Whatever else the policy does, it must not lose to the naive rule it
+  // replaced.
+  {
+    const flier = makeSimChimera('S', ['eagle_head','eagle_forelimbs','eagle_hindlimbs','eagle_tail','eagle_hide','eagle_organ'], 'standard', content);
+    const fly = (usePolicy) => {
+      let wins = 0;
+      for (let i = 0; i < 60; i++) {
+        const b = createBattle([flier, { ...flier, id: 'a', name: 'A' }, { ...flier, id: 'b', name: 'B' }],
+          content.encounters.patrol_2, content, hashString(`pilot${i}`), 0);
+        b.aiSkill = 0; // the pilot is what is under test, not the opposition
+        let g = 0;
+        while (!b.over && g++ < 300) {
+          const acts = playerActions(b);
+          if (!acts.length) break;
+          const me = playerActive(b);
+          let act;
+          if (usePolicy) {
+            const idx = chooseMoveIndex(b, me, b.enemy.active, content, 1, () => rngStream(b.seed, 'p', b.rollCount++)());
+            act = (idx >= 0 && acts.find((a) => a.type === 'move' && a.index === idx))
+              || acts.find((a) => a.type === 'rest') || acts[0];
+          } else {
+            const mv = acts.filter((a) => a.type === 'move').sort((x, y) => me.moves[y.index].power - me.moves[x.index].power)[0];
+            act = (mv && me.moves[mv.index].power > 0) ? mv : (acts.find((a) => a.type === 'rest') ?? acts[0]);
+          }
+          step(b, act, content);
+        }
+        if (b.outcome === 'win') wins++;
+      }
+      return wins / 60;
+    };
+    const greedy = fly(false);
+    const policy = fly(true);
+    assert.ok(policy >= greedy,
+      `the policy pilot must not be worse than the greedy rule it replaced: greedy ${(greedy * 100).toFixed(0)}%, policy ${(policy * 100).toFixed(0)}%`);
+  }
+
+  // The dial is the difficulty curve's new dimension, and it comes from tier
+  // rather than new data. A beat cop must not fight like a response team.
+  assert.ok(skillFor(content.encounters.patrol_1) < skillFor(content.encounters.military_response),
+    'a tier-1 patrol plays worse than a tier-5 response');
+  assert.equal(skillFor({ rivalId: 'mantissa' }), RIVAL_SKILL, 'a rival brings its A game');
+
+  // previewMove is the shared source of truth — the AI chooses on it and the
+  // battle UI will explain with it (R28) — so it has to agree with what
+  // attack() actually does, or both of them are confidently wrong.
+  {
+    const pvHero = makeSimChimera('M', HERO.shark, 'apex', content);
+    // A dummy that never guards and never dies: guard halves a hit, so a
+    // target that braces turns this into a measurement of when it braced.
+    const still = {
+      // Heavily plated on purpose: the armor term is the easiest half of the
+      // formula to drop, and at armor 7 the difference hides inside the
+      // tolerance. At 22 it does not.
+      id: 'pvdummy', name: 'Sandbag', class: null, hp: 999999, power: 1, armor: 22, speed: 1,
+      stamina: 999, regen: 99, tags: ['Organic'], koLine: 'The Sandbag sags.',
+      moves: [{ name: 'Nudge', power: 1, cost: 1, acc: 100, tags: [], keywords: {} }],
+      shapes: [{ type: 'circle', cx: 0, cy: 0, r: 40, fill: '#888888' }],
+    };
+    const pvContent = { ...content, enemies: { ...content.enemies, pvdummy: still } };
+    const b = createBattle([pvHero], { id: 'pv', name: 'Preview', waves: ['pvdummy'], reward: 0 },
+      pvContent, 5150, pvHero.settleUntil);
+    const move = playerActive(b).moves.find((m) => m.power > 0 && !m.keywords.multiHit && !m.keywords.frenzy);
+    const idx = playerActive(b).moves.indexOf(move);
+    const predicted = previewMove(playerActive(b), b.enemy.active, move, pvContent).damage;
+    let total = 0, swings = 0;
+    for (let i = 0; i < 120 && !b.over; i++) {
+      const before = b.enemy.active.hp;
+      playerActive(b).stamina = playerActive(b).staminaMax;
+      step(b, { type: 'move', index: idx }, pvContent);
+      const dealt = before - b.enemy.active.hp;
+      if (dealt > 0) { total += dealt; swings++; }
+    }
+    const actual = total / Math.max(1, swings);
+    assert.ok(swings >= 40, `the preview bench needs a real sample, got ${swings} swings`);
+    // The engine rolls +/-10% variance per swing; over 40+ swings the mean
+    // lands well inside 8%.
+    assert.ok(Math.abs(actual - predicted) / predicted < 0.08,
+      `previewMove must match the engine: predicted ${predicted.toFixed(1)}, engine dealt ${actual.toFixed(1)} over ${swings} swings`);
+  }
+}
+
 // --- R20: no keyword may be decoration.
 //
 // `taunt` and `frenzy` shipped on real PLAYER parts — anglerfish "Lure Light"
@@ -646,6 +789,14 @@ function grind(encounterId, seed) {
   const f2 = makeChimera(s, 'M', { goat_head: 'prismatic', goat_hindlimbs: 'prismatic', goat_organ: 'prismatic' }, t0);
   const now2 = Math.max(f1.settleUntil, f2.settleUntil);
   const b = createBattle([f1, f2], content.encounters[encounterId], content, seed, now2);
+  // What is under test here is the TRANSFORM, so the dial is pinned rather
+  // than left to whatever the tier says today. R22 gave Captain Clampdown a
+  // policy and it now opens with accDown and stays on its best swing, which
+  // is enough to end a thin squad before stage two ever appears — a real
+  // difficulty change, recorded in PROGRESS, but not what this assertion is
+  // for. Pinning also stops future AI tuning from silently breaking a test
+  // about a KO trigger.
+  b.aiSkill = 0;
   s.battle = b;
   const events = [];
   let guard = 0;
