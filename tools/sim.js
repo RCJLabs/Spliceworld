@@ -112,6 +112,20 @@ function pilotAction(battle, content) {
 
 // `encounter` is an id from enemies.json or a generated encounter object
 // (rival duels are built at runtime, so they never live in a table).
+// A team of three DIFFERENT chimeras, for the one question a cloned team
+// cannot answer: whether a strip demands a stable rather than a build.
+export function scriptedStableBattle(chimeras, encounter, content, seed) {
+  const enc = typeof encounter === 'string' ? content.encounters[encounter] : encounter;
+  const battle = createBattle(chimeras, enc, content, seed, 1);
+  let guard = 0;
+  while (!battle.over && guard++ < 300) {
+    const action = pilotAction(battle, content);
+    if (!action) break;
+    step(battle, action, content);
+  }
+  return { outcome: battle.outcome ?? 'stall', turns: battle.turn };
+}
+
 export function scriptedBattle(chimera, encounter, content, seed, teamSize = 1) {
   const enc = typeof encounter === 'string' ? content.encounters[encounter] : encounter;
   // The game hands the player a team of three, so tuning ENCOUNTERS against a
@@ -152,10 +166,18 @@ export function sampleBuilds(content, n, seed) {
   };
 
   for (const sp of Object.keys(content.species)) {
-    const partIds = Object.values(content.parts).filter((p) => p.species === sp).map((p) => p.id);
-    // 'salvage' holds two enemy-tech parts, so its "purebred" is a two-socket
-    // stub the game never offers. It flagged TRASH in every report — noise,
-    // not a hole in the curve.
+    // One part per socket. Every natural species carries exactly one of
+    // each, so this used to be a no-op — but 'salvage' is a catch-all for
+    // enemy tech and R26 grew it to three organs and two hides. Taken
+    // whole it built an eight-socket chimera the game cannot assemble, and
+    // that impossible build promptly flagged as the most degenerate thing
+    // in the pool. A yardstick has to measure builds a player could hold.
+    const owned = Object.values(content.parts).filter((p) => p.species === sp);
+    const bySocket = {};
+    for (const part of owned) bySocket[part.slot] ??= part.id;
+    const partIds = Object.values(bySocket);
+    // A species with fewer than four sockets filled is a stub, not a
+    // purebred; it flagged TRASH in every report — noise, not a hole.
     if (partIds.length < 4) continue;
     push(content.species[sp].frame, partIds);
   }
@@ -196,6 +218,123 @@ export function withSecondOrgan(builds, content, seed = 7) {
     if (already.includes(extra)) return b;
     return { ...b, partIds: [...b.partIds, extra] };
   });
+}
+
+// --- The region bench (R26) --------------------------------------------
+//
+// R26's acceptance criterion is not "there are more fights", it is "taking
+// Greenfield opens a region whose fights need DIFFERENT ANATOMY than the
+// one that won the first". That is a measurement, not an opinion, so here
+// is the instrument.
+//
+// Four archetypes, each a legal build out of parts the player can actually
+// obtain, each committing to one axis of the combat model:
+//
+//   boots  — Ground class, blunt. Its head move is Ground-tagged, so it
+//            swings through anything Airborne and hits nothing.
+//   wings  — Air class, Airborne moves. Beats Ground, loses to Water.
+//   gills  — Water class, and tagged Aquatic, which is a liability of its
+//            own: Electric doubles on anything wet.
+//   fumes  — unclassed on purpose, playing tags instead: Gas is ×1.5 on
+//            Organic and ×0 on a Vehicle, Venom is halved on one.
+//   noise  — armour-piercing, giving up the class triangle for Sonic.
+//
+// A region that all four clear equally is a region that asked for nothing.
+export const ARCHETYPES = {
+  boots: {
+    name: 'Boots on the Ground',
+    frame: 'M',
+    partIds: ['rhino_head', 'gorilla_forelimbs', 'rhino_hindlimbs', 'bear_tail', 'pangolin_hide', 'bear_organ'],
+  },
+  wings: {
+    name: 'Wings',
+    frame: 'M',
+    partIds: ['eagle_head', 'eagle_forelimbs', 'eagle_hindlimbs', 'eagle_tail', 'bat_hide', 'bear_organ'],
+  },
+  gills: {
+    name: 'Gills',
+    frame: 'M',
+    partIds: ['shark_head', 'shark_forelimbs', 'shark_hindlimbs', 'shark_tail', 'tortoise_hide', 'bear_organ'],
+  },
+  fumes: {
+    name: 'Fumigation',
+    frame: 'M',
+    partIds: ['cobra_head', 'octopus_forelimbs', 'octopus_hindlimbs', 'scorpion_tail', 'skunk_hide', 'skunk_organ'],
+  },
+  //   noise  — armour-piercing. Sonic ignores Armor outright, which is the
+  //            only thing that answers a region built entirely out of
+  //            plating. Its organ is enemy tech, salvaged from the region
+  //            before the one that demands it.
+  noise: {
+    name: 'Dead Reckoning',
+    frame: 'M',
+    // One ground limb and one water limb, so the affinities tie and the
+    // build comes out Unclassed. That is deliberate: an archetype meant to
+    // isolate the armour-piercing axis must not also be carrying a class
+    // advantage, or the bench cannot tell which of the two it measured.
+    partIds: ['wolf_head', 'gorilla_forelimbs', 'frog_hindlimbs', 'wolf_tail', 'pangolin_hide', 'foghorn_array'],
+  },
+};
+
+// One of each class plus the armour-piercer, which is what a player who has
+// been through four regions actually keeps in the pens.
+export function stableFor(grade, content) {
+  return ['boots', 'wings', 'gills'].map((key) =>
+    makeSimChimera(ARCHETYPES[key].frame, ARCHETYPES[key].partIds, grade, content)
+  );
+}
+
+// The encounters a region actually fields, in node order.
+export function regionEncounterIds(region) {
+  return region.nodes.map((n) => n.encounter);
+}
+
+// Win rate per (region, archetype). teamSize 3 because that is the team the
+// game hands the player, and a region is scored across all of its nodes —
+// a strip you can half-clear is still a strip that asked you a question.
+export function regionBench(content, { seedsPer = 4, grade = 'prime', teamSize = 3, seed = 2026, only = null, stable: withStable = true } = {}) {
+  const regions = Object.values(content.regions ?? {}).filter((r) => !only || only.includes(r.id));
+  const rows = [];
+  for (const region of regions) {
+    const encounters = regionEncounterIds(region);
+    const byArchetype = {};
+    for (const [key, arch] of Object.entries(ARCHETYPES)) {
+      const chimera = makeSimChimera(arch.frame, arch.partIds, grade, content);
+      let wins = 0;
+      let games = 0;
+      const perEncounter = {};
+      for (const encId of encounters) {
+        let encWins = 0;
+        for (let s = 0; s < seedsPer; s++) {
+          const r = scriptedBattle(chimera, content.encounters[encId], content, hashString(`r${region.id}${key}${encId}${s}${seed}`), teamSize);
+          games++;
+          if (r.outcome === 'win') { wins++; encWins++; }
+        }
+        perEncounter[encId] = encWins / seedsPer;
+      }
+      byArchetype[key] = { winRate: wins / games, perEncounter };
+    }
+    // …and the same strip fought by a STABLE: three different chimeras
+    // instead of three of one. Every earlier region has an anatomy that
+    // answers it, so specialising should beat hedging there; the Compliance
+    // Spire fields all three classes on one ladder, and is the one place
+    // that should reward bringing a bench.
+    let sWins = 0;
+    let sGames = 0;
+    if (withStable) {
+      const stable = stableFor(grade, content);
+      for (const encId of encounters) {
+        for (let s = 0; s < seedsPer; s++) {
+          const r = scriptedStableBattle(stable, content.encounters[encId], content, hashString(`s${region.id}${encId}${s}${seed}`));
+          sGames++;
+          if (r.outcome === 'win') sWins++;
+        }
+      }
+    }
+    const champion = Object.entries(byArchetype).sort((a, b) => b[1].winRate - a[1].winRate)[0][0];
+    rows.push({ region, byArchetype, champion, stableWinRate: sGames ? sWins / sGames : null });
+  }
+  return rows;
 }
 
 // Rival duels at their first-meeting tier. A rival with counterBias reads

@@ -25,7 +25,8 @@ import {
   profileOf, philosophyList, rollIdentities, setIdentity, setPhilosophy, duelBarks,
 } from './monologue.js';
 import {
-  nodeStates, threatGen, incomePerDay, incomeSuspended, salvageUnit, regionOf,
+  regionStates, threatGen, threatRung, nextThreatRung,
+  incomePerDay, incomeSuspended, salvageUnit, nodeById,
 } from './campaign.js';
 
 let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, label }
@@ -127,34 +128,50 @@ export function renderWarRoomScreen(root, ctx) {
 function renderMap(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
-  const region = regionOf(content);
   const gen = threatGen(state, content);
   const income = incomePerDay(state, content);
   const suspended = incomeSuspended(state, content);
+  const map = regionStates(state, content);
+  const nextRung = nextThreatRung(state, content);
 
-  const nodes = nodeStates(state, content).map(({ node, status }) => {
-    const encounter = content.encounters[node.encounter];
-    const btn =
-      status === 'available'
-        ? `<button type="button" data-node="${node.id}">Assault</button>`
-        : status === 'held'
-          ? `<span class="held-tag">HELD +$${node.incomePerDay}/d</span>`
-          : status === 'contested'
-            ? `<span class="contested-tag">CONTESTED −$${node.incomePerDay}/d</span>`
-            : `<span class="locked-tag">${(node.threatGen ?? 1) > gen ? 'needs Threat Gen 2' : 'locked'}</span>`;
+  // Five strips instead of one (R26). A locked region still shows its name,
+  // its identity and the one thing standing between you and it — a map that
+  // hides where you are going is a map you cannot plan against. Its nodes
+  // stay folded away until it opens, so the strip you are actually fighting
+  // in is never buried under three you cannot reach.
+  const regions = map.map(({ region, open, blockers, nodes: nodeRows, held }) => {
+    const rows = open ? nodeRows.map(({ node, status }) => {
+      const encounter = content.encounters[node.encounter];
+      const btn =
+        status === 'available'
+          ? `<button type="button" data-node="${node.id}">Assault</button>`
+          : status === 'held'
+            ? `<span class="held-tag">HELD +$${node.incomePerDay}/d</span>`
+            : status === 'contested'
+              ? `<span class="contested-tag">CONTESTED −$${node.incomePerDay}/d</span>`
+              : `<span class="locked-tag">${(node.threatGen ?? 1) > gen ? `needs Threat Gen ${node.threatGen}` : 'locked'}</span>`;
+      return `
+        <div class="encounter node-${status}">
+          <div><strong>${node.name}</strong>${node.boss ? ' 👑' : ''} <span class="lineage">${encounter.waves.length} waves · $${encounter.reward}</span><br>
+          <span class="fine-print">${node.blurb}</span></div>
+          ${btn}
+        </div>`;
+    }).join('') : '';
     return `
-      <div class="encounter node-${status}">
-        <div><strong>${node.name}</strong>${node.boss ? ' 👑' : ''} <span class="lineage">${encounter.waves.length} waves · $${encounter.reward}</span><br>
-        <span class="fine-print">${node.blurb}</span></div>
-        ${btn}
-      </div>`;
+      <section class="card region-card ${open ? '' : 'is-locked'}">
+        <h3>${region.name} <span class="region-progress">${held}/${region.nodes.length}</span></h3>
+        ${region.subtitle ? `<p class="fine-print region-sub">${region.subtitle}</p>` : ''}
+        ${open
+          ? `${region.demand ? `<p class="region-demand">🧬 ${region.demand}</p>` : ''}${rows}`
+          : `<p class="region-locked">🔒 ${blockers.map((b) => b.label).join(' · ')}</p>`}
+      </section>`;
   }).join('');
 
   // A counter-offensive is time-critical and costs money every hour it
   // stands, so it gets an alert of its own rather than a quieter row on
   // the map (which also marks it).
   const contests = (state.campaign.contested ?? []).map((c) => {
-    const node = region.nodes.find((n) => n.id === c.nodeId);
+    const node = nodeById(content, c.nodeId);
     if (!node) return '';
     const held = defencesOf(state, c.nodeId);
     return `
@@ -236,11 +253,7 @@ function renderMap(root, ctx) {
   const wire = [...state.news].reverse().map((n) => `<p>📡 ${n}</p>`).join('');
 
   const views = {
-    map: `
-      <section class="card">
-        <h3>${region.name}</h3>
-        ${nodes}
-      </section>`,
+    map: regions,
     jobs: jobsCard(state, ctx, t),
     labs: `
       ${dossier}
@@ -261,7 +274,9 @@ function renderMap(root, ctx) {
     <section class="card">
       <div class="econ-row">
         <div><span class="econ-label">Notoriety</span><strong>${state.campaign.notoriety}</strong></div>
-        <div><span class="econ-label">Threat Gen</span><strong>${gen}</strong></div>
+        <div><span class="econ-label">Threat Gen</span><strong>${gen}</strong>${
+          nextRung ? `<span class="econ-next">Gen ${nextRung.gen} at ${nextRung.at}</span>` : ''
+        }</div>
         <div><span class="econ-label">Territory</span><strong>+$${income}/day</strong>${
           suspended ? `<span class="econ-suspended">−$${suspended} contested</span>` : ''
         }</div>
@@ -283,7 +298,7 @@ function renderMap(root, ctx) {
   bindJobs(root, ctx, () => renderMap(root, ctx));
   root.querySelectorAll('button[data-node]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const node = region.nodes.find((n) => n.id === btn.dataset.node);
+      const node = nodeById(content, btn.dataset.node);
       draftTarget = { kind: 'assault', nodeId: node.id, encounterId: node.encounter, label: node.name };
       draftTeam = [];
       renderBriefing(root, ctx);
@@ -299,7 +314,7 @@ function renderMap(root, ctx) {
   });
   root.querySelectorAll('button[data-defend]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const node = region.nodes.find((n) => n.id === btn.dataset.defend);
+      const node = nodeById(content, btn.dataset.defend);
       draftTarget = { kind: 'defend', nodeId: node.id, encounterId: node.encounter, label: `Defend ${node.name}` };
       draftTeam = [];
       renderBriefing(root, ctx);

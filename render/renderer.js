@@ -78,11 +78,14 @@ export function indexContent(raw) {
     classRules: raw.classes ? { advantage: raw.classes.advantage, disadvantage: raw.classes.disadvantage } : { advantage: 1, disadvantage: 1 },
     campaignMeta: raw.regions
       ? {
+          // The Threat Generation ladder (R26). threatGen2At is kept beside
+          // it as the fallback a pre-ladder regions.json still reads by.
+          threatGens: raw.regions.threatGens ?? null,
           threatGen2At: raw.regions.threatGen2At,
           rescueEncounter: raw.regions.rescueEncounter,
           contestation: raw.regions.contestation ?? null,
         }
-      : { threatGen2At: Infinity, rescueEncounter: null, contestation: null },
+      : { threatGens: null, threatGen2At: Infinity, rescueEncounter: null, contestation: null },
   };
 }
 
