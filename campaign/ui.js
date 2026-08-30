@@ -4,6 +4,7 @@
 
 import { renderArena } from '../battle/ui.js';
 import { createBattle, isInjured, obediencePercent } from '../battle/engine.js';
+import { forecast } from '../battle/forecast.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
@@ -773,6 +774,31 @@ function renderBriefing(root, ctx) {
     });
   }).join('');
 
+  // The forecast (A1). The audit found the second node of the campaign at a
+  // flat 0% for a player with one chimera — and 84% with three — for a
+  // reason no wave count on the screen communicates: combat is one active
+  // per side over a queue, so three enemy bodies means grinding three
+  // health bars with one of your own. So the briefing runs the fight,
+  // seven-and-twenty times, with the real engine and the real AI, and says
+  // what it found. It refuses nothing; it just stops the game presenting an
+  // unwinnable fight as though it were a choice.
+  const picked = draftTeam
+    .map((id) => state.chimeras.find((c) => c.id === id))
+    .filter((c) => c && !isInjured(c, t));
+  const fc = picked.length ? forecast(picked, encounter, content, state.seed, t) : null;
+  const odds = fc
+    ? `
+      <p class="forecast forecast-${fc.band.id}">
+        <strong>${fc.band.label}</strong> — about ${Math.round(fc.winRate * 100)}% ·
+        ${picked.length} against ${fc.waves}${
+          fc.outnumberedBy > 0
+            ? ` · <strong>outnumbered ${picked.length}v${fc.waves}</strong>`
+            : ''
+        }
+        <span class="fine-print">${fc.band.hint}</span>
+      </p>`
+    : '<p class="fine-print">Pick a team and the lab will run the numbers.</p>';
+
   root.innerHTML = `
     <section class="card">
       <h3>${draftTarget.label}</h3>
@@ -790,8 +816,13 @@ function renderBriefing(root, ctx) {
       }</p>` : ''}
       <h3>Strike Team (up to 3)</h3>
       ${roster || '<p class="ranch-msg">No chimeras available. The Surgery Theater accepts walk-ins.</p>'}
+      ${odds}
       <div class="ceremony-btns">
-        <button type="button" id="wr-launch" class="big-btn" ${draftTeam.length ? '' : 'disabled'}>⚔ Launch</button>
+        <button type="button" id="wr-launch" class="big-btn${
+          fc && fc.band.id === 'hopeless' ? ' is-illadvised' : ''
+        }" ${draftTeam.length ? '' : 'disabled'}>⚔ ${
+          fc && fc.band.id === 'hopeless' ? 'Launch anyway' : 'Launch'
+        }</button>
         <button type="button" id="wr-back">Back</button>
       </div>
     </section>`;

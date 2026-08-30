@@ -1,5 +1,104 @@
 # PROGRESS
 
+## Session 43 — A1/A2: the solo cliff, and the dead end under it ✅
+
+**Acceptance criterion:** the ladder is beatable at every team size the game
+will let a player field, *or the game refuses to send them into a fight it
+knows they cannot win* — **passes** on the second clause, asserted over
+every node of the first region at all three team sizes: **every true 0% is
+called unwinnable, and no fight at 40% or better ever is.**
+
+### The cause was structural, and that decided the fix
+
+| team | Old Barn | Downtown | Checkpoint | Precinct | Guard Post |
+|---|---|---|---|---|---|
+| **1** | 100% | **0%** | **0%** | 0% | 0% |
+| 3 | 100% | **79%** | 100% | 0% | 0% |
+
+Combat is one active per side over a queue, so three enemy bodies means
+grinding three health bars down with one of your own. The diagnosis that
+mattered:
+
+- `patrol_2` at **tier-1 stats with three waves**: still **0%**
+- `patrol_2` at **full tier-2 stats with two waves**: **28%**
+
+**Bodies, not numbers.** No stat pass moves it. I modelled a garrison that
+scales to the force you bring and **rejected it on the measurement**: it put
+node 2 at 25% solo but 22% at two, so growing your stable made the fight
+*harder*, and it quietly removed the reason to keep a stable at all.
+
+### So the game says so
+
+`battle/forecast.js` runs the actual fight on the briefing screen — real
+engine, real AI on both sides, 32 replays, ~8ms — and reports a band. It
+refuses nothing; the launch button just stops looking like the recommended
+action and reads **"Launch anyway"**.
+
+**`runs = 32` is load-bearing.** At 7, a matchup that is truly ~45% read
+0%, 57%, 14%, 43% and 29% across five base seeds — the *verdict* was being
+decided by sampling noise. A forecast that calls a coin-flip "not
+survivable" costs a player a fight they would have won, so the walk-away
+verdict is the one that must never be wrong in that direction.
+
+And the Path to World Domination, which retired **one node before the
+wall**, now walks to a stable of three — the number the harness has fought
+at since M4.5, said out loud for the first time. The starter herd is exactly
+three animals, so the answer was always already in the pens.
+
+### A2 — the dead end
+
+Before: lose node 2 with your only creature and it was captured, roster
+empty, vault empty (those parts went into the creature that was just taken),
+and the rescue raid needed a team you no longer had. Nine-hour window, no
+door.
+
+Now the last one on a roster drags itself home instead. Verified in the
+browser, not just the harness — lost the fight, and:
+
+> *Gerald is the last one on the roster, and the coalition could not quite
+> hold on to it. It limped back through the fence at dawn, furious and
+> filthy. Infirmary.*
+
+Roster 1, captives 0. A capture with a spare at home still works exactly as
+it did — asserted both ways, because the mechanic is good and only its edge
+was broken.
+
+### Two of my own assertions were weak, and the battery found them
+
+- **The determinism test used a 0% matchup.** Swapping the seeded runs for
+  `Math.random()` changed nothing, because 0% is 0% however you roll it. It
+  runs against a ~45% fixture now, and asserts the fixture *has* variance so
+  it can never go blind again.
+- **The "never calls a winnable fight unwinnable" mutation was too weak** to
+  trip its own assertion. The assertion was right; the break was not.
+
+Also caught: two mutations in the battery silently no-op'd on a quote
+mismatch and were reported as passes. Re-run with the real anchors, both
+caught.
+
+### Guards, each verified to fail when broken
+
+Ten: every fight called unwinnable · an unwinnable fight called winnable ·
+the forecast sampled too thin · the forecast rerolling per render · the
+outnumbered count dropped · the last chimera taken again · captures stopping
+entirely · the Path dropping the stable step · the Path retiring at the
+first conquest · the stable field note removed.
+
+### Known issues
+
+- The A1 fix is informational, not a rebalance. Node 2 is still 0% solo —
+  the game now says so before you commit, and A2 means finding out cannot
+  cost you the run. If playtesting says that is still too blunt a wall,
+  the lever is content (A3's air and water species) rather than stats.
+- The forecast costs ~8ms per briefing render, recomputed on every team
+  toggle. Fine at 380px; worth watching if the team cap ever grows.
+
+### Next session — first task
+
+**A3** — nine new species to 40 animals, weighted 5 air / 3 water / 1
+ground. It is the largest remaining item and it is the lever that would let
+a smaller stable clear the early ladder on anatomy rather than bodies.
+
 ## Session 42 — Second audit (A1–A10) 🔍
 
 No code shipped. Ten queue items, each with the evidence that put it there.

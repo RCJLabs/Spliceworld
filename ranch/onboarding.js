@@ -58,10 +58,40 @@ export function onboardingSteps(state, content, now) {
       hint: 'War tab → assault the first node with your settled chimera. The clipboards never stood a chance.',
       done: conquered,
     },
+    // A1. The Path used to end one node before a wall it never mentioned.
+    // Combat is one active per side over a queue, so three enemy bodies
+    // means grinding three health bars with one of your own — measured, the
+    // second node is 0% with one chimera and 84% with three, and no amount
+    // of stat-tuning moves that because it is a question of BODIES. The
+    // starter herd is exactly three animals, so the answer is already in
+    // the pens; nothing ever said so.
+    {
+      label: 'Build a stable of three',
+      hint: 'One chimera cannot out-last a three-unit patrol — it is one health bar against three. Graduate your other two starter animals and splice them. (Restock the pens after: a goat is $60.)',
+      done: state.chimeras.length >= STABLE,
+    },
   ];
 }
 
+// How many creatures the campaign is actually built around. The balance
+// harness has fought at three since M4.5; this is the same number, said out
+// loud to the player for the first time.
+export const STABLE = 3;
+
+// Whether the checklist still has something to say. A1 extended it past
+// the first conquest, because the wall is the node AFTER that one.
 export function onboardingActive(state) {
+  return state.campaign.heldNodes.length === 0 || state.chimeras.length < STABLE;
+}
+
+// Whether the Path still OWNS the screen, which is a different question and
+// has a different answer. R29 suppresses field notes under the checklist so
+// a new player is never reading two tutorials at once — but that rule was
+// written when the Path ended at the first conquest. Now that it runs on to
+// the stable, keying the suppression to `onboardingActive` would hold every
+// note in the game hostage to a step a player can reasonably take their
+// time over. The first conquest is still the handover.
+export function pathOwnsScreen(state) {
   return state.campaign.heldNodes.length === 0;
 }
 
@@ -177,7 +207,7 @@ export function guideStates(state, content, now) {
 export function guideForScreen(state, content, now, screen) {
   // The Path owns the screen until the first conquest — two tutorials at
   // once is one tutorial too many.
-  if (onboardingActive(state)) return null;
+  if (pathOwnsScreen(state)) return null;
   return (
     guideStates(state, content, now).find(
       (row) => row.status === 'ready' && row.guide.screen === screen

@@ -221,6 +221,48 @@ export function withSecondOrgan(builds, content, seed = 7) {
   });
 }
 
+// --- The ladder bench (A1) ---------------------------------------------
+//
+// Every gate in this suite has fought at `teamSize 3` since M4.5, on the
+// correct reasoning that tuning against a lone chimera measures the wrong
+// game. That was true and it quietly became the reason nobody ever looked
+// at what a SOLO player faces — which is where the audit found the second
+// node of the campaign sitting at a flat 0%.
+//
+// The cause is structural, not numeric: combat is one active per side over
+// a queue, so three enemy bodies means grinding three health bars down with
+// one of your own. patrol_2 at tier-1 stats and three waves is still 0%;
+// the same encounter at full tier-2 stats and two waves is 28%. No stat
+// pass moves that. So this bench measures the ladder at the team sizes a
+// player can actually field, and the fix it guards is INFORMATIONAL — the
+// game has to say so, and must never strand the player who finds out late.
+
+// The build a new player actually has: their starter herd, graduated.
+export const STARTER_BUILD = {
+  frame: 'M',
+  partIds: ['goat_head', 'goat_forelimbs', 'goat_hindlimbs', 'goat_tail', 'goat_hide', 'goat_organ'],
+};
+
+// Win rate for `size` copies of a plain starter chimera against one node.
+export function ladderRate(content, encounterId, size, { grade = 'standard', seedsPer = 24, seed = 0 } = {}) {
+  const enc = content.encounters[encounterId];
+  let wins = 0;
+  for (let i = 0; i < seedsPer; i++) {
+    const c = makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, grade, content);
+    if (scriptedBattle(c, enc, content, hashString(`ladder${encounterId}${size}${i}${seed}`), size).outcome === 'win') wins++;
+  }
+  return wins / seedsPer;
+}
+
+// The whole first region, at every team size the game will let you field.
+export function ladderBench(content, { region = null, grade = 'standard', seedsPer = 24 } = {}) {
+  const strip = region ?? Object.values(content.regions)[0];
+  return strip.nodes.map((node) => ({
+    node,
+    bySize: [1, 2, 3].map((size) => ladderRate(content, node.encounter, size, { grade, seedsPer })),
+  }));
+}
+
 // --- The rival bench (R27) ---------------------------------------------
 //
 // R27's criterion is "a rival you have beaten twice fields something built
