@@ -47,6 +47,63 @@ function encounterFor(state, target, content) {
 let draftTeam = [];
 let lastAftermath = null;
 
+// --- Sub-navigation -------------------------------------------------------
+//
+// The War Room accumulated thirteen cards over nineteen waves — jobs,
+// counter-offensives, captives, the strip, two dossiers, rival labs,
+// containment and the wire, stacked into one column on a 380px phone. It
+// is now five views behind a tab bar.
+//
+// The rule the layout is built around: ALERTS NEVER GO BEHIND A TAB. A
+// rescue window and a counter-offensive both carry live countdowns that
+// cost you a creature or a node when they run out, so hiding one on
+// another view would recreate exactly the failure mode contestation was
+// designed to avoid. They sit above the tabs, on every view.
+//
+// Deliberately module state rather than saved state: it survives the
+// re-render on every tick and every action, which is what matters, and it
+// costs no save migration to do it that way.
+const WAR_TABS = [
+  { id: 'map', icon: '🗺', label: 'Map' },
+  { id: 'jobs', icon: '💼', label: 'Jobs' },
+  { id: 'labs', icon: '🧫', label: 'Labs' },
+  { id: 'bays', icon: '⛓', label: 'Bays' },
+  { id: 'wire', icon: '📡', label: 'Wire' },
+];
+let warTab = 'map';
+
+// A badge is a promise that something is waiting, so only two things earn
+// one: a job report nobody has read, and a bay with something in it.
+// Everything else would be decoration, and a decoration on a tab teaches
+// players to ignore the badges that matter.
+function tabBadge(state, id) {
+  if (id === 'jobs') {
+    if (state.campaign.opReport) return { text: '!', kind: 'alert' };
+    if (activeOp(state)) return { text: '⏳', kind: 'busy' };
+    return null;
+  }
+  if (id === 'bays') {
+    const n = state.campaign.containment?.length ?? 0;
+    return n ? { text: String(n), kind: 'count' } : null;
+  }
+  return null;
+}
+
+function subtabBar(state) {
+  return `
+    <nav class="subtabs" id="war-subtabs">
+      ${WAR_TABS.map((tab) => {
+        const badge = tabBadge(state, tab.id);
+        return `
+          <button type="button" data-war-tab="${tab.id}" class="${warTab === tab.id ? 'is-on' : ''}">
+            <span class="subtab-icon" aria-hidden="true">${tab.icon}</span>
+            <span class="subtab-label">${tab.label}</span>
+            ${badge ? `<span class="subtab-badge badge-${badge.kind}">${badge.text}</span>` : ''}
+          </button>`;
+      }).join('')}
+    </nav>`;
+}
+
 export function renderWarRoomScreen(root, ctx) {
   const { state } = ctx;
   // Battle mode locks the shell to one screen; every other view scrolls.
@@ -174,7 +231,30 @@ function renderMap(root, ctx) {
       </section>`
     : '';
 
-  const news = state.news.slice(-5).reverse().map((n) => `<p>📡 ${n}</p>`).join('');
+  // The wire has its own view now, so it shows everything it keeps
+  // rather than the last five lines squeezed under the map.
+  const wire = [...state.news].reverse().map((n) => `<p>📡 ${n}</p>`).join('');
+
+  const views = {
+    map: `
+      <section class="card">
+        <h3>${region.name}</h3>
+        ${nodes}
+      </section>`,
+    jobs: jobsCard(state, ctx, t),
+    labs: `
+      ${dossier}
+      ${dossierCard(state, content)}
+      ${rivals ? `<section class="card"><h3>🧫 Rival Labs</h3>${rivals}</section>` : ''}`,
+    bays: containment
+      ? `<section class="card"><h3>⛓ Containment</h3>${containment}</section>`
+      : `<section class="card"><h3>⛓ Containment</h3><p class="ranch-msg">The bays are empty. Charge the Containment Cannon in a fight and bring something home.</p></section>`,
+    wire: `
+      <section class="card">
+        <h3>📡 News Wire</h3>
+        <div class="news-feed">${wire || '<p class="fine-print">All quiet. Suspiciously quiet.</p>'}</div>
+      </section>`,
+  };
 
   root.innerHTML = `
     ${lastAftermath ? `<section class="card"><h3>Last Sortie</h3><p class="ranch-msg">${lastAftermath}</p></section>` : ''}
@@ -189,21 +269,16 @@ function renderMap(root, ctx) {
       </div>
     </section>
     ${contests ? `<section class="card contest-card"><h3>🛡 Counter-Offensive</h3>${contests}</section>` : ''}
-    ${captives ? `<section class="card"><h3>⏳ Captured — Rescue Windows</h3>${captives}</section>` : ''}
-    ${jobsCard(state, ctx, t)}
-    <section class="card">
-      <h3>${region.name}</h3>
-      ${nodes}
-    </section>
-    ${dossier}
-    ${dossierCard(state, content)}
-    ${rivals ? `<section class="card"><h3>🧫 Rival Labs</h3>${rivals}</section>` : ''}
-    ${containment ? `<section class="card"><h3>Containment</h3>${containment}</section>` : ''}
-    <section class="card">
-      <h3>News Wire</h3>
-      <div class="news-feed">${news || '<p class="fine-print">All quiet. Suspiciously quiet.</p>'}</div>
-    </section>`;
+    ${captives ? `<section class="card captive-alert"><h3>⏳ Captured — Rescue Windows</h3>${captives}</section>` : ''}
+    ${subtabBar(state)}
+    ${views[warTab] ?? views.map}`;
 
+  root.querySelectorAll('button[data-war-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      warTab = btn.dataset.warTab;
+      renderMap(root, ctx);
+    });
+  });
   bindDossier(root, ctx, () => renderMap(root, ctx));
   bindJobs(root, ctx, () => renderMap(root, ctx));
   root.querySelectorAll('button[data-node]').forEach((btn) => {

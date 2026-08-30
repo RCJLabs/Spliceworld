@@ -1,5 +1,64 @@
 # PROGRESS
 
+## Session 27 — Screen density ✅
+
+Nineteen waves of features had quietly stacked **thirteen cards into one
+scrolling column** in the War Room: the econ row, counter-offensives, captives,
+the jobs board, the region strip, their dossier, your dossier, rival labs,
+containment and the news wire. Measured on a 380px phone with a busy late-game
+save, that was **3,884px of scroll**.
+
+### Five views behind a tab bar
+
+| tab | holds |
+|---|---|
+| **Map** | the region strip and its assaults |
+| **Jobs** | the operations board and heat |
+| **Labs** | both dossiers and Rival Labs |
+| **Bays** | containment and rehabilitation |
+| **Wire** | the full news feed |
+
+Median view is now **1,107px — a 71% reduction**; the heaviest (Labs) is
+1,781px. The bar is sticky, so a long view is navigable from anywhere in it.
+
+### The rule the whole layout rests on
+**Alerts never go behind a tab.** A rescue window and a counter-offensive both
+carry live countdowns that cost a creature or a node when they run out — hiding
+either on a view the player is not looking at would recreate exactly the
+failure mode region contestation was designed to avoid. The econ row and both
+alerts sit above the bar and render on every view.
+
+Smoke enforces it by scanning `campaign/ui.js`: the alerts must not appear
+inside the view map, must still be rendered, and must appear *before*
+`subtabBar` in the template. Every tab in the bar must have a view behind it,
+and an unrecognised tab must fall back to the map rather than a blank screen.
+All five guards verified to fail when broken — including one that adds a sixth
+tab with nothing behind it.
+
+### Badges are a promise
+Only two things earn one: an **unread job report** and an **occupied bay**. A
+badge on every tab teaches players to ignore the badges that matter, so Map,
+Labs and Wire carry none.
+
+### Two things fixed along the way
+- The econ row used `auto-fit, minmax(90px)`, which drops to three columns at
+  380px and leaves **Record dangling alone on a second row** beside an empty
+  half. Invisible before; conspicuous the moment the card became permanent
+  chrome above the tabs. Now four fixed columns, two at very narrow widths.
+- The alert cards' chrome is paid for on all five views, so their padding and
+  heading margins were tightened. Worth 44px off every screen.
+
+Tab state is deliberately module-level rather than saved: it survives the
+re-render on every tick and every action, which is what matters, and costs no
+save migration to do it that way. **No save version change in this phase.**
+
+### Next session's first task
+Open, and worth picking from: the balance harness has flagged the same
+degenerate build every run for a dozen sessions (`wolf:organ + tiger:head +
+scorpion:hindlimbs`, 67% against a 30% peer median); onboarding still ends at
+first conquest and predates fourteen shipped systems; and audio is still a
+handful of ZzFX stingers.
+
 ## Session 26 — Injury scarring ✅
 
 > §3.5: "Battle injuries → Infirmary timer; untreated injuries can scar into

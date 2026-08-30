@@ -3762,6 +3762,45 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   }
 }
 
+// --- War Room sub-navigation. Thirteen cards in one column became five
+// --- views behind a tab bar, and the whole restructure rests on one rule:
+// --- ALERTS NEVER GO BEHIND A TAB.
+{
+  const src = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
+  const viewsAt = src.indexOf('const views = {');
+  const htmlAt = src.indexOf('root.innerHTML');
+  const handlerAt = src.indexOf("button[data-war-tab]");
+  assert.ok(viewsAt > 0 && htmlAt > viewsAt && handlerAt > htmlAt, 'the War Room still has a view map, a template and a tab handler');
+
+  const viewMap = src.slice(viewsAt, htmlAt);
+  const template = src.slice(htmlAt, handlerAt);
+
+  // A rescue window and a counter-offensive both carry live countdowns
+  // that cost a creature or a node when they run out. Putting either
+  // inside a tab view would recreate exactly the failure mode region
+  // contestation was designed to avoid.
+  for (const alert of ['contests', 'captives']) {
+    assert.ok(
+      !viewMap.includes('${' + alert),
+      `the ${alert} alert must not live inside a tab view — it would be invisible from four of the five`
+    );
+    assert.ok(template.includes('${' + alert), `the ${alert} alert is still rendered`);
+    assert.ok(
+      template.indexOf('${' + alert) < template.indexOf('${subtabBar'),
+      `and sits above the tab bar, so it shows on every view`
+    );
+  }
+
+  // Every tab the bar offers has somewhere to go.
+  const ids = [...src.matchAll(/\{ id: '(\w+)', icon:/g)].map((m) => m[1]);
+  assert.ok(ids.length >= 4, `the bar has tabs (${ids.join(', ')})`);
+  for (const id of ids) {
+    assert.ok(new RegExp(`(^|\\W)${id}:`).test(viewMap), `tab "${id}" has a view`);
+  }
+  // …and the fallback means an unknown tab can never render nothing.
+  assert.ok(template.includes('?? views.map'), 'an unrecognised tab falls back to the map rather than a blank screen');
+}
+
 // Time-warp safety: a lastTickAt in the future never rewinds state.
 const warp = freshRanchState();
 ensureRanchSeeded(warp, content, t0);
