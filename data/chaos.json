@@ -1,0 +1,45 @@
+{
+  "_doc": "Chaos-breeding (ROADMAP §9 backlog). Ranch breeding pairs two ANIMALS of one species and produces a predictable hybrid of their stats. This is the other thing: two finished CHIMERAS go into a vat and what comes out is a genome neither of them was, assembled by nobody. THE ECONOMY IS THE DESIGN PROBLEM. A chimera costs vault tokens permanently, and chimeras carry no upkeep, so an offspring that costs only money and time would be a duplication glitch — you would breed an army for free. The cost is therefore paid in GRADES, which is the game's real power currency: both parents permanently drop one grade on every token ('they gave a lot of themselves'). That makes a line get weaker each generation unless you keep injecting freshly-raised high-grade stock, which is exactly the ranch loop this game is about. Standard-grade parents cannot degrade further, so the fee scales with parent quality to stop cheap junk being free. WHAT MAKES IT WORTH DOING: the vat does not read your permits. It can hand you a socket layout your Surgery Theater is not licensed to build, a frame you do not own, and — via chaosChance — a part from neither parent, drawn from the Splice-Dex so it is always something you have SEEN and never a gift from the end of the game.",
+  "tuning": {
+    "gestationBaseHours": 5,
+    "gestationPerSocketHours": 1.5,
+    "feeBase": 90,
+    "feePerGradeStep": 55,
+    "exhaustionHours": 20,
+    "carryChance": 0.78,
+    "chaosChance": 0.16,
+    "frameChaosChance": 0.12,
+    "extraSocketChance": 0.18,
+    "gradeUpChance": 0.08,
+    "gradeDownChance": 0.22,
+    "extraInstability": 14,
+    "minSockets": 2
+  },
+  "names": [
+    "Second Draft",
+    "The Compromise",
+    "Unnamed Variable",
+    "Committee Decision",
+    "Emergent Property",
+    "The Sequel",
+    "Load-Bearing Mistake",
+    "Untitled Folder",
+    "Regression To The Mean",
+    "Statistical Anomaly",
+    "The Understudy",
+    "Best Guess",
+    "Rounding Error",
+    "Provisional Kevin",
+    "The Long Shot",
+    "Working Title",
+    "Fourth Attempt",
+    "Peer-Reviewed Accident"
+  ],
+  "lines": {
+    "start": "{a} and {b} are lowered into the vat. They give a great deal of themselves and receive, in return, a shared and slightly baffled expression.",
+    "decant": "{child} is decanted. It has {sockets} working parts, {n} of which anybody planned.",
+    "chaos": "The vat improvised. {child} has arrived carrying {part}, which came from neither parent and is not currently accounted for.",
+    "news": "Rural veterinarian reports \"an entirely new sound\" coming from a barn. Declines to elaborate. Declines, in fact, to return.",
+    "socket": "{child} came out with a {slot} nobody installed. The vat has, in its own way, gone shopping."
+  }
+}

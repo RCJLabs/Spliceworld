@@ -13,6 +13,7 @@ import { renderPensScreen } from './splice/pens-ui.js';
 import { runExtraction } from './splice/extract-ui.js';
 import { renderWarRoomScreen } from './campaign/ui.js';
 import { tickCampaign, pushNews } from './campaign/campaign.js';
+import { tickVat } from './splice/chaos.js';
 import { renderDexScreen } from './splice/dex-ui.js';
 import * as sfx from './audio/sfx.js';
 
@@ -91,6 +92,7 @@ function showScreen(name) {
 // and on a slow display refresh (settling countdowns, care cooldowns).
 function tick() {
   applyElapsed(state, content, NOW());
+  for (const line of tickVat(state, content, NOW()).news) pushNews(state, line);
   tickCampaign(state, content, NOW());
   saveGame(state);
   updateTicker();

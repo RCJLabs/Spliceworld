@@ -33,6 +33,7 @@ export function loadSimContent() {
     facility: readJSON('data/facility.json'),
   philosophies: readJSON('data/philosophies.json'),
   operations: readJSON('data/operations.json'),
+  chaos: readJSON('data/chaos.json'),
   });
 }
 
