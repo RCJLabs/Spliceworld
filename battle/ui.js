@@ -18,8 +18,8 @@ import { renderCreatureSVG, renderUnitSVG } from '../render/renderer.js';
 import { chimeraGenome } from '../splice/theater.js';
 import {
   step, playerActions, playerActive, turnForecast,
-  tagMultiplier, classMultiplier,
 } from './engine.js';
+import { moveReadout } from './readout.js';
 import { resolveBattle } from '../campaign/campaign.js';
 import { openPicker } from '../ui/picker.js';
 import * as sfx from '../audio/sfx.js';
@@ -92,22 +92,6 @@ const pips = (list) =>
 
 // What a move will actually do to the thing standing in front of you.
 // This is where the tag chart and the class triangle stop being lore.
-function effectOf(move, me, foe, content) {
-  const { mult, ignoreArmor } = tagMultiplier(move.tags, foe.tags, content.tagChart);
-  const cls = classMultiplier(me.creatureClass, foe.creatureClass, content);
-  const total = mult * cls;
-  const chips = [];
-  if (move.power > 0) {
-    if (total === 0) chips.push(['null', 'no effect']);
-    else if (total > 1.05) chips.push(['up', `×${total.toFixed(total % 1 ? 1 : 0)}`]);
-    else if (total < 0.95) chips.push(['down', `×${total.toFixed(1)}`]);
-  }
-  if (ignoreArmor || move.keywords?.ignoreArmor) chips.push(['up', 'armor ✗']);
-  if (move.keywords?.priority) chips.push(['fast', '⚡']);
-  if (move.keywords?.charge) chips.push(['slow', '2-turn']);
-  return chips;
-}
-
 const fxHtml = (chips) => chips.map(([k, t]) => `<span class="fx fx-${k}">${t}</span>`).join('');
 
 // Enemy units are drawn in a tight viewBox; creatures in a generous one.
@@ -243,9 +227,12 @@ function commandHtml(battle, actions, me, foe, content) {
   const cells = shown.map((a) => {
     const i = actions.indexOf(a);
     const move = me.moves[a.type === 'release' ? me.status.charging : a.index];
+    const r = moveReadout(move, me, foe, content);
     return `<button type="button" class="mv ${a.type === 'release' ? 'mv-release' : ''}" data-action="${i}">
-      <span class="mv-name">${a.label}</span>
-      <span class="mv-sub">${move.power > 0 ? `<b>${move.power}</b>` : '<i>util</i>'} · ${move.cost}⚡ ${fxHtml(effectOf(move, me, foe, content))}</span>
+      <span class="mv-name">${a.label}${r.lethal ? '<span class="mv-lethal" title="This should graduate them">✓</span>' : ''}</span>
+      <span class="mv-sub">${r.immune ? '<i>—</i>' : r.damage != null ? `<b>~${r.damage}</b>` : '<i>util</i>'}${
+        r.hitChance < 100 ? `<span class="mv-acc">(${r.hitChance}%)</span>` : ''
+      } · ${move.cost}⚡ ${fxHtml(r.chips)}</span>
     </button>`;
   });
   if (moves.length > 4) {
@@ -291,11 +278,18 @@ function wireCommands(root, ctx, onDone, actions, me, foe) {
         label: null,
         options: moves.map((a) => {
           const move = me.moves[a.type === 'release' ? me.status.charging : a.index];
+          const r = moveReadout(move, me, foe, content);
           return {
             id: String(actions.indexOf(a)),
             label: a.label,
-            badge: fxHtml(effectOf(move, me, foe, content)),
-            sub: `${move.power > 0 ? `power ${move.power}` : 'utility'} · ${move.cost}⚡ · ${move.acc}% accurate${move.tags.length ? ` · ${move.tags.join(', ')}` : ''}`,
+            badge: fxHtml(r.chips),
+            // The full picker has room to show the arithmetic, so it does:
+            // what the swing is worth against THIS opponent, and the listed
+            // power it came from, which is how the two stop looking like a
+            // contradiction when armor eats half of it.
+            sub: `${r.immune ? 'no effect here' : r.damage != null ? `~${r.damage} damage${r.lethal ? ' — should finish' : ''}` : 'utility'} · ${move.cost}⚡ · ${r.hitChance}% to land${
+              move.power > 0 ? ` · listed ${move.power}` : ''
+            }${move.tags.length ? ` · ${move.tags.join(', ')}` : ''}`,
           };
         }),
       }],
