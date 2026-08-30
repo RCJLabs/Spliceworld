@@ -1,5 +1,85 @@
 # PROGRESS
 
+## Session 29 — Combo grade scaling ✅
+
+**Acceptance criterion:** no combo is overtaken by the drawback-free moves of
+its own parts at any grade, and Standard balance is provably untouched —
+**passes** (192 grade assignments asserted through `movesFromTokens`;
+Standard win-rate table byte-identical before and after).
+
+### The reward that stopped being one
+
+`GRADE_MOVE_BONUS` sharpens a part's move 12% per grade. A combo's move was
+flat. So a well-raised chimera watched its discovery fall behind the parts
+that made it:
+
+| Pack Hunt | before | after |
+|---|---|---|
+| Standard | 58 vs Pounce 52 ✅ | 58 vs 52 ✅ |
+| Prime | 58 vs **58** ❌ | 65 vs 58 ✅ |
+| Apex | 58 vs **64** ❌ | 72 vs 64 ✅ |
+| Prismatic | 58 vs **71** ❌ | 79 vs 71 ✅ |
+
+Not just Pack Hunt: **7 of 12 combos** went dead at Prime or Apex.
+
+### Why the best grade, not the average
+
+A combo is emergent anatomy, so it takes a grade too — **the best one among
+the parts that unlock it**. That is not generosity, it is the only rule that
+holds. A part's move scales by *its own* grade, so if the combo scales by
+anything less than the largest, the better half of the pair overtakes the
+combo it belongs to. Measured across every grade assignment in the roster:
+
+| rule | dead assignments |
+|---|---|
+| min (weakest link) | 31 of 192 |
+| mean | 10 of 192 |
+| **max** | **0 of 192** |
+
+And provably so: `combo > max(parts)` at base, and scaling both sides by the
+same bonus cannot reorder them. All three variants are pinned in smoke —
+reverting to flat, to min, or to mean each fails by name.
+
+**Standard grade is untouched by construction** (grade index 0 → bonus 1.0),
+which the win-rate table confirms: identical medians, identical flags. The
+change only reaches chimeras someone actually raised.
+
+### The gate was under-sampling
+
+Checking the other grades turned up something worse than the bug being
+fixed. R16's gate runs at Standard with `seedsPer: 4`. At Prime:
+
+| seedsPer | `[OP]` flags across 10 pools |
+|---|---|
+| 4 | 0 |
+| 8 | 1 |
+| 12 | 3 |
+
+The clean result was under-sampling, not a clean roster — the same failure
+mode that produced three vacuous assertions two sessions ago. The gate now
+runs at `seedsPer: 8`. Smoke goes 3.2s → 4.0s.
+
+### Known issues
+- **A pre-existing Prime outlier, deliberately not fixed here.** The
+  `storm_eagle` purebred is the strongest build in the pool at every grade
+  (mean rank 1.5/43 at Prime, +28.6pp over the median) and flags `[OP]` in
+  3 of 10 pools at `seedsPer: 12`. It is **not** this change's doing: it
+  carries no combo, and its win rate is 78% both before and after. It is a
+  variant-species tuning question — storm_eagle trades 2–4 HP per part for
+  +1 power and +1 speed, and it is Air, which beats Ground — so re-pricing
+  it is its own pass, not a line in this one.
+- **The `[OP]` gate therefore still runs at Standard only.** Extending it to
+  every grade would need that outlier fixed first; a gate that passes only
+  because it samples too coarsely to see a known outlier certifies something
+  false, which is exactly what this session found. Next phase gets both.
+- Two `[TRASH]` builds (2 of 10 pools) — randomly-sampled 3-part builds that
+  win nothing. Pre-existing, unrelated.
+- No save-schema change, so `SAVE_VERSION` stays **19**.
+
+### Next session — first task
+Re-price the `storm_eagle` variant against the Air matchup until Prime is
+clean at `seedsPer: 12`, then extend the `[OP]` gate to all four grades.
+
 ## Session 28 — The balance gate ✅
 
 **Acceptance criterion:** the sim reports no degenerate builds, and
