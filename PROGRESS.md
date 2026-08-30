@@ -1,6 +1,6 @@
 # PROGRESS
 
-## Session 19b — Colour tokens and five schemes 🎨 (awaiting a pick)
+## Session 19b — Colour tokens, five schemes, and Biohazard shipped ✅
 
 Every colour in the game is now a semantic token. 83 hardcoded hexes had crept
 into `style.css` over eighteen sessions; they are all gone, replaced by a
@@ -18,9 +18,12 @@ existing rules did not need rewriting.
 | `blueprint` | slate, cyan, warm cream on ochre |
 | `saturday` | warm plum, tangerine, mint |
 
-`main.js` applies `settings.theme` on boot; `?theme=` previews any of them
-without touching a save. **Nothing has been adopted as the default yet** — the
-comparison went out as an artifact for Evan to pick from.
+**Biohazard is the shipped scheme.** It lives in `:root` rather than behind an
+attribute, so a fresh load paints it before any JS runs and the manifest's
+`theme_color` has something true to point at. The old indigo moved to
+`[data-theme="lab"]`, and `settings.theme` / `?theme=` still reach all five —
+the default deliberately is *not* recorded into saves, so changing it stays a
+one-line change rather than something every existing lab is pinned against.
 
 One rule the schemes are built around: the **class colours stay
 distinguishable in every one**. Ground/Water/Air is a mechanic, so it never
@@ -28,9 +31,8 @@ collapses into a scheme's accent. That is also the argument against keeping
 `lab`: its violet is both the brand's second colour *and* the Air class.
 
 ### Next session's first task
-Adopt whichever scheme Evan picks (a one-line default), then the remaining
-backlog: rehabilitation of captured chimeras, region contestation, the
-monologue pass.
+The remaining backlog: rehabilitation of captured chimeras, region
+contestation, the monologue pass.
 
 ## Session 19 — The arena is one screen ✅
 

@@ -63,11 +63,14 @@ const SCREENS = {
 
 // Colour scheme. `settings.theme` picks one of the blocks in style.css;
 // ?theme= overrides it for previews without touching the save.
-const THEMES = ['lab', 'biohazard', 'vivarium', 'blueprint', 'saturday'];
+// Biohazard is the shipped scheme and lives in :root, so it needs no stamp —
+// which also means a fresh load paints it before this ever runs.
+const BASE_THEME = 'biohazard';
+const THEMES = [BASE_THEME, 'lab', 'vivarium', 'blueprint', 'saturday'];
 function applyTheme() {
   const override = new URLSearchParams(location.search).get('theme');
-  const name = override ?? state.settings?.theme ?? 'lab';
-  if (name === 'lab' || !THEMES.includes(name)) delete document.documentElement.dataset.theme;
+  const name = override ?? state.settings?.theme ?? BASE_THEME;
+  if (name === BASE_THEME || !THEMES.includes(name)) delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = name;
 }
 

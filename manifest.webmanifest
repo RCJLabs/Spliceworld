@@ -6,10 +6,20 @@
   "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#171426",
-  "theme_color": "#171426",
+  "background_color": "#12120f",
+  "theme_color": "#12120f",
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
   ]
 }
