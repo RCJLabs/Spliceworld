@@ -623,17 +623,51 @@ assert.ok(
 // a clean roster. 4 was the other error — it under-samples, and a roster it
 // calls clean at Prime is flagged by both 8 and 12. Sampling that hides an
 // outlier is worse than no gate at all.
+//
+// Run at EVERY grade, not just Standard. R17 found a real Prime outlier that
+// a Standard-only gate had never once looked at: the class triangle only
+// bites once damage is high enough for a 1.5x to decide a fight, so grades
+// are exactly where a matchup problem shows up first.
 const BALANCE_POOLS = [2026, 77, 1312, 4242, 99, 5];
+const BALANCE_GRADES = ['standard', 'prime', 'apex', 'prismatic'];
 const degenerate = [];
-for (const poolSeed of BALANCE_POOLS) {
-  const { flags } = runSim(content, { builds: 40, seedsPer: 8, teamSize: 3, seed: poolSeed });
-  for (const f of flags) if (f.kind === 'OP') degenerate.push(`pool ${poolSeed}: ${f.label} — ${f.why}`);
+for (const grade of BALANCE_GRADES) {
+  for (const poolSeed of BALANCE_POOLS) {
+    const { flags } = runSim(content, { builds: 40, seedsPer: 8, teamSize: 3, grade, seed: poolSeed });
+    for (const f of flags) if (f.kind === 'OP') degenerate.push(`${grade} pool ${poolSeed}: ${f.label} — ${f.why}`);
+  }
 }
 assert.equal(
   degenerate.length,
   0,
   `no build may dominate the roster:\n  ${degenerate.join('\n  ')}`
 );
+
+// R18: the enemy roster's class mix IS the class balance. Each player class
+// preys on exactly one enemy class (Ground >> Water >> Air >> Ground), so a
+// roster that is 90% one class — which this one was — turns the triangle
+// from a choice into a ranking: Air was a permanent double-advantage and
+// Water a permanent double-penalty, which is what made the best Air build
+// top every pool. Even thirds is NOT the answer and was measured to be
+// worse (20pp spread vs 12pp): the tag chart stacks its own asymmetries on
+// top, Ground moves missing Airborne entirely being the big one. Ground
+// stays the plurality; what matters is that no class is nearly absent.
+const roster = {};
+for (const e of Object.values(content.encounters)) {
+  for (const ref of e.waves) {
+    const unit = typeof ref === 'string' ? content.enemies[ref] : ref;
+    roster[unit.class] = (roster[unit.class] ?? 0) + 1;
+  }
+}
+const rosterTotal = Object.values(roster).reduce((a, b) => a + b, 0);
+for (const cls of Object.keys(content.classes)) {
+  const share = (roster[cls] ?? 0) / rosterTotal;
+  assert.ok(
+    share >= 0.15,
+    `enemy roster is ${(share * 100).toFixed(0)}% ${cls} — under 15% and the class triangle ` +
+      `stops being a choice for whoever counters it (mix: ${JSON.stringify(roster)})`
+  );
+}
 
 // The opposite failure, and the reason Pack Hunt was re-priced rather than
 // simply shrunk: a combo weaker than the parts that unlock it is dead

@@ -1,5 +1,95 @@
 # PROGRESS
 
+## Session 30 — The class triangle, and the gate at every grade ✅
+
+**Acceptance criterion:** no class is a strict upgrade over another, the
+roster is clean at every grade under sampling well past what the gate uses,
+and the old roster fails the build — **passes** (0 `[OP]` across 4 grades ×
+10 pools at `seedsPer` 12 *and* 16; restoring the old roster fails smoke,
+naming the storm_eagle Prime outlier by name).
+
+### It was never a storm_eagle problem
+
+R17 handed over a `storm_eagle` purebred topping every pool. The first
+measurement killed the obvious fix:
+
+| enemy roster | share |
+|---|---|
+| **ground** | **90%** |
+| air | 5% |
+| water | 5% |
+
+Six of eight encounters were pure Ground. With Ground ≫ Water ≫ Air ≫
+Ground, that is not rock-paper-scissors, it is a ranking — Air dealt ×1.5
+*and* took ×0.7 against nearly everything; Water did the reverse. Forcing a
+build's class and holding its stats fixed:
+
+| build | as air | as ground | as water | unclassed |
+|---|---|---|---|---|
+| storm_eagle | 77% | 64% | 48% | 61% |
+| eagle | 78% | 55% | 51% | 58% |
+| tiger | 82% | 73% | 61% | 73% |
+
+Class was worth **+16 to +20pp**; Water was a **−10 to −13pp** tax. And
+plain `eagle` already matched storm_eagle at 78%, so nerfing the variant
+would have promoted its parent and changed nothing.
+
+### Six units, not a nerf
+
+`surveillance_drone`, `falconry_unit`, `gunship_80` (air) and
+`water_cannon_truck`, `harbor_diver`, `dredger_barge` (water) — procedural
+SVG, pure data, no engine edits. Roster 10 → 16 units, mix **90/5/5 →
+50/25/25**:
+
+| grade | air/ground/water spread — before | after |
+|---|---|---|
+| standard | 17pp | **6pp** |
+| prime | 24pp | **7pp** |
+| apex | — | 13pp |
+| prismatic | — | 12pp |
+
+storm_eagle drops from rank 1–2 at every grade to **rank 8/43** at Standard,
+without one of its numbers being touched.
+
+**Even thirds is wrong** and was measured, not assumed: 35/35/30 gives a
+20pp spread against 50/25/25's 12pp. The tag chart stacks asymmetries on top
+of the triangle — Ground moves miss Airborne *entirely* — so the enemy mix
+that equalises the classes is not the one that looks symmetrical.
+
+### Two things the change broke, and what they taught
+
+- **The AI director became a mercy rule.** It may only ever make a fight
+  harder, and guards that by stat weight — but `weight` cannot see move
+  keywords. `gunship_80` at weight 118 was beating attack_chopper's 130
+  because of one keyword: `knockback` alone was worth **~35pp** (removing it
+  took the encounter from 46% to 80%). Rather than gut the unit, the strong
+  new units now sit in the opening and final slots, which the director may
+  never cut, so the slot it *can* swap is one its counters genuinely
+  outclass. `military_response` holds at 48% (was 45%) and the director's
+  adaptation takes it to 10%.
+- **The tutorial must stay class-neutral.** An Air unit in tier 1 punished
+  every Ground starter on the first fight. `patrol_1` is all-Ground again;
+  the triangle starts at tier 2.
+
+### Known issues
+- **Vehicle share rose 35% → 45%**, because Air and Water fiction is
+  inherently vehicular (choppers, boats, trucks) and only two of the six new
+  units could plausibly be Organic. Gas does ×0 to Vehicles, so pure-Gas
+  builds are worse off. Mid-change this cost 4 `[TRASH]` builds; the final
+  roster is back to **1**, the same one that failed before this session, but
+  the pressure is real. Fix is more Organic air/water units, not a tag change.
+- **The director's `weight` heuristic is blind to keywords.** Worked around
+  by slot placement, not fixed. A unit whose kit outclasses its stats can
+  still turn an adaptation into a mercy. Pricing keywords into `weight` is
+  the real fix.
+- Smoke goes 4.0s → 9.9s: the gate is now 4 grades × 6 pools × 8 seeds.
+- No save-schema change, so `SAVE_VERSION` stays **19**.
+
+### Next session — first task
+Price keywords into the director's `weight` so slot placement stops being
+load-bearing, then add one Organic air and one Organic water unit to pull
+Vehicle share back toward 35%.
+
 ## Session 29 — Combo grade scaling ✅
 
 **Acceptance criterion:** no combo is overtaken by the drawback-free moves of
