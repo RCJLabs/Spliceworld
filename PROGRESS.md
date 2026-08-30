@@ -1,5 +1,65 @@
 # PROGRESS
 
+## Session 35 — R28: battle readability ✅
+
+**Acceptance criterion:** a new player can predict super-effective before
+pressing, at 380px — **passes** (verified on screen, not just in the DOM).
+
+### The audit over-claimed, again
+
+R28 was queued as *"`turnForecast` returns speed and nothing else… the player
+gets no pre-commit signal"*. Half wrong. `turnForecast` does only return
+speed, but the battle UI never used it for that — it already drew **class
+chips on both fighters** and an effectiveness multiplier chip.
+
+That is two phases running (R21, R28) where the audit claimed more than the
+code deserved. The pattern is the same both times: I read one symbol, found
+nothing, and wrote down "missing" instead of "not here". Naming it because it
+is cheap to keep doing.
+
+### What was actually wrong: the number was a lie
+
+The button printed `move.power` — the raw data value. That is not what lands.
+Armor, power stages, scars, perks, guard, Frenzy, Rage and Multi-Hit all sit
+between the two. **A 52-power swing into 22 armor is not a 52**, and R22 had
+already built `previewMove` to compute the honest figure for the AI. The
+player was reading a different board from the opposition.
+
+`battle/readout.js` is DOM-free on purpose — the numbers are what the
+criterion is about, so smoke tests them directly instead of scraping HTML:
+
+> **Eagle Bite ✓** · ~84 (95%) · 22⚡ · `Air ▸`
+
+- **Expected damage**, not listed power, with the chance to land beside it.
+- **A finisher mark** when the swing should end it.
+- **Class and tag split apart.** The old chip multiplied them together and
+  printed one number, so "×1.5" never said whether it was the triangle or the
+  chart — which is the half a new player is trying to learn.
+- Immunity reads as *no effect*, never as a small number.
+
+### Two things only the screenshot caught
+
+Both passed every assertion I had written, which is the point of looking:
+
+1. **`~8495%`.** Damage and accuracy ran together into a third number. My
+   regex `/~\d+/` matched it perfectly happily. Now `~84 (95%)`, and smoke
+   fails on a four-digit run-together.
+2. **The finisher mark was a red ✕**, which conventionally reads as
+   *unavailable* — the exact opposite of "this one closes it". Now a green
+   ✓, and the tooltip says *graduate* rather than anything the tone rules ban.
+
+### Known issues
+- Against a badly outmatched opponent every move earns the finisher mark, so
+  it stops distinguishing anything. Accurate, but noise at that end.
+- The overflow picker only appears with five or more moves, so its longer
+  "listed 52 · 95% to land" line is unexercised in the common case.
+- No save-schema change: the readout is pure display. `SAVE_VERSION` stays
+  **23**.
+
+### Next session — first task
+R23 (active hides and organs), which R20 already made a down payment on with
+three utility organ moves, or R26 (a second region), the largest content gap.
+
 ## Session 34 — R21: Splice-Dex completeness ✅
 
 **Acceptance criterion:** everything the game announces is findable again

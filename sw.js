@@ -32,6 +32,7 @@ const SHELL = [
   'splice/pens-ui.js',
   'splice/dex-ui.js',
   'battle/ai.js',
+  'battle/readout.js',
   'battle/engine.js',
   'battle/ui.js',
   'campaign/campaign.js',

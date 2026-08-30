@@ -36,6 +36,7 @@ import { onboardingSteps, onboardingActive } from '../ranch/onboarding.js';
 import { classMultiplier } from '../battle/engine.js';
 import { overflowingParts } from './bounds.js';
 import { renderDexScreen } from '../splice/dex-ui.js';
+import { moveReadout } from '../battle/readout.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -498,6 +499,77 @@ const evs = step(pb, trample, content);
 const myLine = evs.findIndex((e) => e.text.includes('Scythe Strike'));
 const foeLine = evs.findIndex((e) => e.text.includes(pb.enemy.active.name) && e.text.includes('uses'));
 assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move goes first despite speed 1');
+
+// --- R28: the number on the button is the number that lands.
+//
+// The audit that queued this was too strong again — the UI already drew class
+// chips on both fighters and an effectiveness multiplier. What it did NOT do
+// was use previewMove: the button printed `move.power`, the raw data value,
+// which is not what arrives once armor, stages, scars, perks, guard, Frenzy,
+// Rage and Multi-Hit have had their say. A 52-power swing into 22 armor is
+// not a 52, and a readout that lies is worse than no readout.
+{
+  const reader = makeSimChimera('M', ['bear_head','bear_forelimbs','bear_hindlimbs','bear_tail','bear_hide','bear_organ'], 'apex', content);
+  const plated = {
+    id: 'platedog', name: 'Plate Dog', class: null, hp: 999999, power: 1, armor: 24, speed: 1,
+    stamina: 999, regen: 99, tags: ['Organic'], koLine: 'The Plate Dog clanks off.',
+    moves: [{ name: 'Nudge', power: 1, cost: 1, acc: 100, tags: [], keywords: {} }],
+    shapes: [{ type: 'circle', cx: 0, cy: 0, r: 40, fill: '#888888' }],
+  };
+  const rContent = { ...content, enemies: { ...content.enemies, platedog: plated } };
+  const b = createBattle([reader], { id: 'ro', name: 'Readout', waves: ['platedog'], reward: 0 },
+    rContent, 909, reader.settleUntil);
+  const me = playerActive(b), foe = b.enemy.active;
+  const move = me.moves.find((m) => m.power > 0 && !m.keywords.multiHit && !m.keywords.frenzy);
+  const idx = me.moves.indexOf(move);
+  const shown = moveReadout(move, me, foe, rContent);
+
+  // The button must not simply be echoing the data value back.
+  assert.ok(Math.abs(shown.damage - move.power) > 4,
+    `against 24 armor the readout must differ from the listed power — showed ${shown.damage} for a ${move.power}-power move`);
+
+  let total = 0, swings = 0;
+  for (let i = 0; i < 120 && !b.over; i++) {
+    const before = b.enemy.active.hp;
+    playerActive(b).stamina = playerActive(b).staminaMax;
+    step(b, { type: 'move', index: idx }, rContent);
+    const dealt = before - b.enemy.active.hp;
+    if (dealt > 0) { total += dealt; swings++; }
+  }
+  const actual = total / Math.max(1, swings);
+  assert.ok(swings >= 40, `the readout bench needs a real sample, got ${swings}`);
+  assert.ok(Math.abs(actual - shown.damage) / shown.damage < 0.08,
+    `the button promised ~${shown.damage} and the engine dealt ${actual.toFixed(1)} over ${swings} swings`);
+
+  // Two numbers on one line need a separator, or they read as a third
+  // number: "~84" beside "95%" rendered as "8495%" the first time, and a
+  // regex looking for /~\d+/ matched it perfectly happily.
+  assert.ok(shown.hitChance >= 0 && shown.hitChance <= 100, 'hit chance is a percentage');
+  const line = `~${shown.damage}${shown.hitChance < 100 ? `(${shown.hitChance}%)` : ''}`;
+  assert.ok(!/^~\d{4,}/.test(line),
+    `damage and accuracy must not run together into one number: "${line}"`);
+
+  // THE CRITERION: super-effective has to be predictable BEFORE pressing, and
+  // legible as to why. The old chip multiplied class and tag into one number,
+  // so "×1.5" never said which of the two it was — the half a new player is
+  // actually trying to learn.
+  const air = makeSimChimera('S', ['eagle_head','eagle_forelimbs','eagle_hindlimbs','eagle_tail','eagle_hide','eagle_organ'], 'standard', content);
+  const ground = combatantFromUnit(content.enemies.riot_squad);
+  const airMe = combatantFromChimera(air, content, air.settleUntil);
+  const adv = moveReadout(airMe.moves.find((m) => m.power > 0), airMe, ground, content);
+  assert.ok(adv.classMult > 1, 'Air into Ground is the advantage the triangle promises');
+  assert.ok(adv.chips.some(([kind, text]) => kind === 'up' && text.includes(content.classes.air.name)),
+    `the advantage must be named on the button, not merged into a bare number: ${JSON.stringify(adv.chips)}`);
+
+  // And an immunity has to read as one rather than as a small number.
+  const flyer = combatantFromUnit(content.enemies.falconry_unit);
+  const groundMove = airMe.moves.find((m) => m.tags.includes('Ground'));
+  if (groundMove) {
+    const none = moveReadout(groundMove, airMe, flyer, content);
+    assert.ok(none.immune && none.damage === null,
+      'a Ground move into an Airborne target must read as no effect, not as a number');
+  }
+}
 
 // --- R21: everything the game announces is findable again afterwards.
 //

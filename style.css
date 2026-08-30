@@ -780,6 +780,15 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .fx-null { color: var(--danger); }
 .fx-fast { color: var(--zap); }
 .fx-slow { color: var(--muted); }
+/* R28: the honest number needs room to breathe next to the cost, and the
+   finisher mark has to read at a glance without shouting. */
+/* Parenthesised and spaced on purpose: "~84" next to "95%" with a hairline
+   gap renders as "8495%", which is exactly the unreadable thing this phase
+   exists to remove. */
+.mv-acc { font-size: 0.82em; color: var(--muted); margin-left: 0.35em; }
+/* A finisher is good news for the player, so it is not a red cross — that
+   reads as "unavailable" and means the opposite of what it says. */
+.mv-lethal { color: var(--goo); margin-left: 0.3em; font-weight: 700; }
 
 .util-row { display: grid; grid-auto-flow: column; gap: 6px; }
 .ut {
