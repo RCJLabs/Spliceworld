@@ -1,5 +1,74 @@
 # PROGRESS
 
+## Session 36 — R23: active hides and organs ✅
+
+**Acceptance criterion:** a hide and an organ each change how a fight is
+played — **passes**: an armoured build wins **37% without** its hide and
+organ actives and **99% with** them.
+
+### The premise held this time
+
+Checked first, after two phases of over-claiming. Every hide was a passive
+stat stick — **0 of 32** carried a move — and most organs were too. And the
+passive parts were **not** compensated with better stats (21.3 total against
+22.1 for the active ones), so this was an omission, not a designed
+trade-off.
+
+All 64 sockets now carry an active, from one priced vocabulary keyed off tags
+the parts already had, so a species added later inherits one for free and
+re-tuning is one edit rather than fifty-six.
+
+### Pricing them took three passes, and two were wrong
+
+1. **First pass: pressed, and a trap.** The actives were used constantly and
+   cost **−10.8pp** on contested fights — some cells −33pp. A turn not
+   attacking is worth about fifty damage, and the effects returned far less,
+   so the AI was talking builds into losing trades. *Pressed is not the same
+   as useful.*
+2. **`guard` is structurally wrong for a hide.** It lasts only until your
+   next action, and `performMove` clears it at the start of that action — so
+   it never reads as already-up. The AI guarded **386 times across 60 fights
+   and lost every one**. Hide actives have to **persist** to be worth a turn,
+   so the fifteen guard hides became thorns.
+3. **Then price them to be worth the turn** (thorns 0.25 → 0.45, heal → 0.30,
+   regen → 0.09): −10.8pp became **+2.0pp**.
+4. **Then scale the investment to its payoff window.** Thorns, evasion and
+   regen pay out over the turns still to come, so a creature with three turns
+   left should not buy a five-turn return. That was the difference between a
+   tortoise (+62pp) and an eagle (−18pp) — the fragile build was being talked
+   into spending turns it did not have. `+2.0pp` became **+6.1pp**, and the
+   eagle cells went from −18/−12 to 0/+5.
+
+### The part only a screenshot could find
+
+Everything above passed, and the player still could not see any of it. Six
+moves, four buttons, and the UI showed the first three **in socket order** —
+head, forelimbs, hindlimbs, tail, hide, organ. The two sockets this phase
+existed to activate are the exact two that fall off the end.
+
+The buttons now show the hardest swings plus **one utility, ranked by what it
+is worth right now** — so the plating surfaces when something is hitting hard
+and a heal surfaces when you are hurt, instead of the tail winning the slot
+every time by being socket three.
+
+### Balance
+0 `[OP]` and 0 `[TRASH]` at all four grades, headroom **+8.8 to +14.8pp** —
+the best the table has been. Difficulty stable (38/48/58/70), and class
+spread improved again at every grade.
+
+### Known issues
+- Only one utility slot exists on the main row, so on a six-part build the
+  organ active still sits behind "more". Correct given four buttons, but the
+  organ is the quieter half of this phase.
+- Archetype use is very uneven — Bristles 511 presses across a full sweep,
+  Leech and Focus 2 each. None is decoration, but some are much more niche
+  than others.
+- No save-schema change: parts are content. `SAVE_VERSION` stays **23**.
+
+### Next session — first task
+R26 (a second region) is the largest remaining content gap; R24, R25, R27 and
+R29 are the rest of the queue.
+
 ## Session 35 — R28: battle readability ✅
 
 **Acceptance criterion:** a new player can predict super-effective before

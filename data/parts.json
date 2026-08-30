@@ -359,7 +359,7 @@
       "species": "bear",
       "slot": "hide",
       "name": "Bear Pelt",
-      "ability": "Thick Fur",
+      "ability": "Bear Bristles",
       "stats": {
         "armor": 5,
         "hp": 20
@@ -369,7 +369,15 @@
         "draw": 1
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -414,7 +422,7 @@
       "species": "bear",
       "slot": "organ",
       "name": "Hibernation Gland",
-      "ability": "Deep Snooze",
+      "ability": "Bear Spike",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -425,7 +433,15 @@
         "draw": 3
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "powerUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -820,7 +836,7 @@
       "species": "tiger",
       "slot": "hide",
       "name": "Tiger Striped Coat",
-      "ability": "Broken Outline",
+      "ability": "Tiger Bristles",
       "stats": {
         "armor": 5,
         "hp": 20
@@ -830,7 +846,15 @@
         "draw": 1
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -857,7 +881,7 @@
       "species": "tiger",
       "slot": "organ",
       "name": "Predator Eye",
-      "ability": "Target Lock",
+      "ability": "Tiger Spike",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -868,7 +892,15 @@
         "draw": 3
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "powerUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -1267,7 +1299,7 @@
       "species": "wolf",
       "slot": "hide",
       "name": "Wolf Pelt",
-      "ability": "Thick Fur",
+      "ability": "Wolf Bristles",
       "stats": {
         "armor": 5,
         "hp": 20
@@ -1279,7 +1311,15 @@
       "tags": [
         "Sonic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -1733,7 +1773,7 @@
       "species": "crocodile",
       "slot": "hide",
       "name": "Crocodile Scales",
-      "ability": "Molted Slip",
+      "ability": "Crocodile Slipskin",
       "stats": {
         "armor": 5,
         "hp": 24
@@ -1745,7 +1785,15 @@
       "tags": [
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -1785,7 +1833,7 @@
       "species": "crocodile",
       "slot": "organ",
       "name": "Cold Heart",
-      "ability": "Slow Metabolism",
+      "ability": "Crocodile Knit",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -1798,7 +1846,15 @@
       "tags": [
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 22,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "heal": 0.3
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -2179,7 +2235,7 @@
       "species": "gorilla",
       "slot": "hide",
       "name": "Gorilla Pelt",
-      "ability": "Thick Fur",
+      "ability": "Gorilla Bristles",
       "stats": {
         "armor": 5,
         "hp": 23
@@ -2189,7 +2245,15 @@
         "draw": 1
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -2234,7 +2298,7 @@
       "species": "gorilla",
       "slot": "organ",
       "name": "Barrel Lungs",
-      "ability": "Second Wind",
+      "ability": "Gorilla Spike",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -2245,7 +2309,15 @@
         "draw": 3
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "powerUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -2636,7 +2708,7 @@
       "species": "rhino",
       "slot": "hide",
       "name": "Rhino Plating",
-      "ability": "Plate Armour",
+      "ability": "Rhino Bristles",
       "stats": {
         "armor": 7,
         "hp": 20
@@ -2648,7 +2720,15 @@
       "tags": [
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -2686,7 +2766,7 @@
       "species": "rhino",
       "slot": "organ",
       "name": "Charge Gland",
-      "ability": "Wind-Up",
+      "ability": "Rhino Slow Mend",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -2699,7 +2779,15 @@
       "tags": [
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "regen": 0.09
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -3079,7 +3167,7 @@
       "species": "pangolin",
       "slot": "hide",
       "name": "Pangolin Scales",
-      "ability": "Roll Up",
+      "ability": "Pangolin Bristles",
       "stats": {
         "armor": 9,
         "hp": 26
@@ -3091,7 +3179,15 @@
       "tags": [
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -3129,7 +3225,7 @@
       "species": "pangolin",
       "slot": "organ",
       "name": "Curl Reflex",
-      "ability": "Tuck",
+      "ability": "Pangolin Slow Mend",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -3142,7 +3238,15 @@
       "tags": [
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "regen": 0.09
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -3482,7 +3586,7 @@
       "species": "tortoise",
       "slot": "hide",
       "name": "Shell Fortress",
-      "ability": "Shell Fortress",
+      "ability": "Tortoise Bristles",
       "stats": {
         "armor": 11,
         "hp": 28
@@ -3495,7 +3599,15 @@
         "Armored",
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -3553,7 +3665,7 @@
         "acc": 100,
         "tags": [],
         "keywords": {
-          "heal": 0.18
+          "heal": 0.3
         }
       },
       "shapes": [
@@ -3859,7 +3971,7 @@
       "species": "rhino_beetle",
       "slot": "hide",
       "name": "Rhino Beetle Chitin",
-      "ability": "Chitin Guard",
+      "ability": "Rhino Beetle Bristles",
       "stats": {
         "armor": 6,
         "hp": 20
@@ -3871,7 +3983,15 @@
       "tags": [
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -3898,7 +4018,7 @@
       "species": "rhino_beetle",
       "slot": "organ",
       "name": "Lift Sac",
-      "ability": "Leverage",
+      "ability": "Rhino Beetle Slow Mend",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -3911,7 +4031,15 @@
       "tags": [
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "regen": 0.09
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -4312,7 +4440,7 @@
       "species": "ram",
       "slot": "hide",
       "name": "Ram Pelt",
-      "ability": "Thick Fur",
+      "ability": "Ram Bristles",
       "stats": {
         "armor": 5,
         "hp": 20
@@ -4322,7 +4450,15 @@
         "draw": 1
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -4367,7 +4503,7 @@
       "species": "ram",
       "slot": "organ",
       "name": "Impact Cushion",
-      "ability": "Shake It Off",
+      "ability": "Ram Spike",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -4378,7 +4514,15 @@
         "draw": 3
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "powerUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -4773,7 +4917,7 @@
       "species": "eagle",
       "slot": "hide",
       "name": "Eagle Plumage",
-      "ability": "Preened Feathers",
+      "ability": "Eagle Slipskin",
       "stats": {
         "armor": 5,
         "hp": 17
@@ -4785,7 +4929,15 @@
       "tags": [
         "Airborne"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -4828,7 +4980,7 @@
       "species": "eagle",
       "slot": "organ",
       "name": "Hollow-Bone Marrow",
-      "ability": "Featherweight",
+      "ability": "Eagle Focus",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -4841,7 +4993,15 @@
       "tags": [
         "Airborne"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 12,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "accUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -5236,7 +5396,7 @@
       "species": "bat",
       "slot": "hide",
       "name": "Bat Pelt",
-      "ability": "Thick Fur",
+      "ability": "Bat Slipskin",
       "stats": {
         "armor": 5,
         "hp": 16
@@ -5249,7 +5409,15 @@
         "Airborne",
         "Sonic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -5638,7 +5806,7 @@
       "species": "dragonfly",
       "slot": "hide",
       "name": "Dragonfly Chitin",
-      "ability": "Chitin Guard",
+      "ability": "Dragonfly Slipskin",
       "stats": {
         "armor": 5,
         "hp": 14
@@ -5650,7 +5818,15 @@
       "tags": [
         "Airborne"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -5677,7 +5853,7 @@
       "species": "dragonfly",
       "slot": "organ",
       "name": "Flight Motor",
-      "ability": "Overclock",
+      "ability": "Dragonfly Focus",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -5690,7 +5866,15 @@
       "tags": [
         "Airborne"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 12,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "accUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -6010,7 +6194,7 @@
       "species": "shark",
       "slot": "hide",
       "name": "Shark Slick Hide",
-      "ability": "Slick Coat",
+      "ability": "Shark Slipskin",
       "stats": {
         "armor": 4,
         "hp": 20
@@ -6022,7 +6206,15 @@
       "tags": [
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -6077,7 +6269,7 @@
       "species": "shark",
       "slot": "organ",
       "name": "Blood Sense",
-      "ability": "Scent of Weakness",
+      "ability": "Shark Knit",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -6090,7 +6282,15 @@
       "tags": [
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 22,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "heal": 0.3
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -6440,7 +6640,7 @@
       "species": "octopus",
       "slot": "hide",
       "name": "Octopus Slick Hide",
-      "ability": "Slick Coat",
+      "ability": "Octopus Screen",
       "stats": {
         "armor": 5,
         "hp": 20
@@ -6453,7 +6653,17 @@
         "Aquatic",
         "Gas"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 12,
+        "acc": 100,
+        "tags": [
+          "Gas"
+        ],
+        "keywords": {
+          "accDown": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -6508,7 +6718,7 @@
       "species": "octopus",
       "slot": "organ",
       "name": "Ink Sac",
-      "ability": "Ink",
+      "ability": "Octopus Knit",
       "stats": {
         "stamina": 12,
         "regen": 4,
@@ -6522,7 +6732,15 @@
         "Aquatic",
         "Gas"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 22,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "heal": 0.3
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -6844,7 +7062,7 @@
       "species": "electric_eel",
       "slot": "hide",
       "name": "Electric Eel Slick Hide",
-      "ability": "Slick Coat",
+      "ability": "Electric Eel Bristles",
       "stats": {
         "armor": 5,
         "hp": 17
@@ -6857,7 +7075,15 @@
         "Electric",
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -7277,7 +7503,7 @@
       "species": "anglerfish",
       "slot": "hide",
       "name": "Anglerfish Slick Hide",
-      "ability": "Slick Coat",
+      "ability": "Anglerfish Slipskin",
       "stats": {
         "armor": 5,
         "hp": 24
@@ -7289,7 +7515,15 @@
       "tags": [
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -7344,7 +7578,7 @@
       "species": "anglerfish",
       "slot": "organ",
       "name": "Deep Lantern",
-      "ability": "Lure Light",
+      "ability": "Anglerfish Knit",
       "stats": {
         "stamina": 12,
         "regen": 4,
@@ -7357,7 +7591,15 @@
       "tags": [
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 22,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "heal": 0.3
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -7720,7 +7962,7 @@
       "species": "frog",
       "slot": "hide",
       "name": "Frog Slick Hide",
-      "ability": "Slick Coat",
+      "ability": "Frog Slipskin",
       "stats": {
         "armor": 5,
         "hp": 17
@@ -7732,7 +7974,15 @@
       "tags": [
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -7806,7 +8056,7 @@
         "acc": 100,
         "tags": [],
         "keywords": {
-          "regen": 0.06
+          "regen": 0.09
         }
       },
       "shapes": [
@@ -8206,7 +8456,7 @@
       "species": "goat",
       "slot": "hide",
       "name": "Goat Pelt",
-      "ability": "Thick Fur",
+      "ability": "Goat Bristles",
       "stats": {
         "armor": 5,
         "hp": 20
@@ -8216,7 +8466,15 @@
         "draw": 1
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -8601,7 +8859,7 @@
       "species": "chameleon",
       "slot": "hide",
       "name": "Camo Hide",
-      "ability": "Camouflage",
+      "ability": "Chameleon Vanish",
       "stats": {
         "armor": 5,
         "hp": 20
@@ -8613,7 +8871,15 @@
       "tags": [
         "Camo"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 12,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 2
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -8650,7 +8916,7 @@
       "species": "chameleon",
       "slot": "organ",
       "name": "Chromatophores",
-      "ability": "Blend",
+      "ability": "Chameleon Spike",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -8663,7 +8929,15 @@
       "tags": [
         "Camo"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "powerUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -9054,7 +9328,7 @@
       "species": "skunk",
       "slot": "hide",
       "name": "Skunk Pelt",
-      "ability": "Thick Fur",
+      "ability": "Skunk Screen",
       "stats": {
         "armor": 5,
         "hp": 20
@@ -9066,7 +9340,17 @@
       "tags": [
         "Gas"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 12,
+        "acc": 100,
+        "tags": [
+          "Gas"
+        ],
+        "keywords": {
+          "accDown": 1
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -9529,7 +9813,7 @@
       "species": "porcupine",
       "slot": "hide",
       "name": "Quill Coat",
-      "ability": "Quill Coat",
+      "ability": "Porcupine Bristles",
       "stats": {
         "armor": 8,
         "hp": 23
@@ -9539,7 +9823,15 @@
         "draw": 1
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -9574,7 +9866,7 @@
       "species": "porcupine",
       "slot": "organ",
       "name": "Bristle Root",
-      "ability": "Bristle",
+      "ability": "Porcupine Spike",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -9585,7 +9877,15 @@
         "draw": 3
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "powerUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -9896,7 +10196,7 @@
       "species": "mantis",
       "slot": "hide",
       "name": "Mantis Chitin",
-      "ability": "Chitin Guard",
+      "ability": "Mantis Bristles",
       "stats": {
         "armor": 5,
         "hp": 16
@@ -9906,7 +10206,15 @@
         "draw": 1
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -9933,7 +10241,7 @@
       "species": "mantis",
       "slot": "organ",
       "name": "Duelist Ganglion",
-      "ability": "Read the Blade",
+      "ability": "Mantis Spike",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -9944,7 +10252,15 @@
         "draw": 3
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "powerUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -10182,7 +10498,7 @@
       "species": "cobra",
       "slot": "hide",
       "name": "Cobra Scales",
-      "ability": "Molted Slip",
+      "ability": "Cobra Bristles",
       "stats": {
         "armor": 5,
         "hp": 20
@@ -10194,7 +10510,15 @@
       "tags": [
         "Venomous"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -10234,7 +10558,7 @@
       "species": "cobra",
       "slot": "organ",
       "name": "Venom Sac",
-      "ability": "Extra Spicy",
+      "ability": "Cobra Leech",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -10247,7 +10571,15 @@
       "tags": [
         "Venomous"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "staminaDrain": 20
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -10561,7 +10893,7 @@
       "species": "scorpion",
       "slot": "hide",
       "name": "Scorpion Chitin",
-      "ability": "Chitin Guard",
+      "ability": "Scorpion Bristles",
       "stats": {
         "armor": 6,
         "hp": 20
@@ -10574,7 +10906,15 @@
         "Venomous",
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -10601,7 +10941,7 @@
       "species": "scorpion",
       "slot": "organ",
       "name": "Venom Bulb",
-      "ability": "Top-Up",
+      "ability": "Scorpion Slow Mend",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -10615,7 +10955,15 @@
         "Venomous",
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "regen": 0.09
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -11014,7 +11362,7 @@
       "species": "alpine_ram",
       "slot": "hide",
       "name": "Alpine Ram Plating",
-      "ability": "Plate Armour",
+      "ability": "Alpine Ram Bristles",
       "stats": {
         "armor": 11,
         "hp": 30
@@ -11026,7 +11374,15 @@
       "tags": [
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -11064,7 +11420,7 @@
       "species": "alpine_ram",
       "slot": "organ",
       "name": "Impact Cushion",
-      "ability": "Shake It Off",
+      "ability": "Alpine Ram Slow Mend",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -11077,7 +11433,15 @@
       "tags": [
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "regen": 0.09
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -11429,7 +11793,7 @@
       "species": "abyssal_shark",
       "slot": "hide",
       "name": "Abyssal Shark Slick Hide",
-      "ability": "Slick Coat",
+      "ability": "Abyssal Shark Slipskin",
       "stats": {
         "armor": 11,
         "hp": 23
@@ -11441,7 +11805,15 @@
       "tags": [
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -11496,7 +11868,7 @@
       "species": "abyssal_shark",
       "slot": "organ",
       "name": "Blood Sense",
-      "ability": "Scent of Weakness",
+      "ability": "Abyssal Shark Knit",
       "stats": {
         "stamina": 10,
         "regen": 2,
@@ -11509,7 +11881,15 @@
       "tags": [
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 22,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "heal": 0.3
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -11909,7 +12289,7 @@
       "species": "storm_eagle",
       "slot": "hide",
       "name": "Thunderhead Eagle Plumage",
-      "ability": "Preened Feathers",
+      "ability": "Thunderhead Eagle Bristles",
       "stats": {
         "armor": 5,
         "hp": 13
@@ -11922,7 +12302,15 @@
         "Airborne",
         "Electric"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -11965,7 +12353,7 @@
       "species": "storm_eagle",
       "slot": "organ",
       "name": "Hollow-Bone Marrow",
-      "ability": "Featherweight",
+      "ability": "Thunderhead Eagle Surge",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -11979,7 +12367,15 @@
         "Airborne",
         "Electric"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "rally": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -12359,7 +12755,7 @@
       "species": "glider_skunk",
       "slot": "hide",
       "name": "Glider Skunk Pelt",
-      "ability": "Thick Fur",
+      "ability": "Glider Skunk Screen",
       "stats": {
         "armor": 4,
         "hp": 12
@@ -12372,7 +12768,17 @@
         "Gas",
         "Airborne"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 12,
+        "acc": 100,
+        "tags": [
+          "Gas"
+        ],
+        "keywords": {
+          "accDown": 1
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -12792,7 +13198,7 @@
       "species": "iron_tortoise",
       "slot": "hide",
       "name": "Iron Tortoise Plating",
-      "ability": "Shell Fortress",
+      "ability": "Iron Tortoise Bristles",
       "stats": {
         "armor": 21,
         "hp": 39
@@ -12805,7 +13211,15 @@
         "Armored",
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -12843,7 +13257,7 @@
       "species": "iron_tortoise",
       "slot": "organ",
       "name": "Slow Heart",
-      "ability": "Endure",
+      "ability": "Iron Tortoise Slow Mend",
       "stats": {
         "stamina": 8,
         "regen": 4,
@@ -12857,7 +13271,15 @@
         "Armored",
         "Aquatic"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "regen": 0.09
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -13103,7 +13525,7 @@
       "species": "pale_cobra",
       "slot": "hide",
       "name": "Pale Cobra Scales",
-      "ability": "Molted Slip",
+      "ability": "Pale Cobra Bristles",
       "stats": {
         "armor": 3,
         "hp": 14
@@ -13115,7 +13537,15 @@
       "tags": [
         "Venomous"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "path",
@@ -13155,7 +13585,7 @@
       "species": "pale_cobra",
       "slot": "organ",
       "name": "Venom Sac",
-      "ability": "Extra Spicy",
+      "ability": "Pale Cobra Leech",
       "stats": {
         "stamina": 10,
         "regen": 4,
@@ -13168,7 +13598,15 @@
       "tags": [
         "Venomous"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "staminaDrain": 20
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
@@ -13204,7 +13642,7 @@
       "species": "salvage",
       "slot": "hide",
       "name": "Riot Plating",
-      "ability": "Municipal Grade",
+      "ability": "Enemy Tech Bristles",
       "stats": {
         "armor": 10,
         "hp": 5
@@ -13216,7 +13654,15 @@
       "tags": [
         "Armored"
       ],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      },
       "shapes": [
         {
           "type": "rect",
@@ -13312,7 +13758,7 @@
       "species": "salvage",
       "slot": "organ",
       "name": "V8 Heart",
-      "ability": "Idle Menace",
+      "ability": "Enemy Tech Spike",
       "stats": {
         "stamina": 14,
         "regen": 6
@@ -13322,7 +13768,15 @@
         "draw": 2
       },
       "tags": [],
-      "move": null,
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "powerUp": 1
+        }
+      },
       "shapes": [
         {
           "type": "ellipse",
