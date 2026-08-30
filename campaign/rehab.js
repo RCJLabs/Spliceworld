@@ -31,10 +31,10 @@ const HOUR = 3600000;
 // coherent numbers; data/facility.json is the real source (Law: all
 // content is data).
 const DEFAULT_TUNING = {
-  baseHours: 6,
+  baseHours: 4.5,
   hoursPerPower: 0.09,
   hoursPerInstability: 0.05,
-  maxHours: 30,
+  maxHours: 22.5,
   baseFee: 60,
   feePerPower: 2.2,
   wariness: 25,

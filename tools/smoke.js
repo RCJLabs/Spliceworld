@@ -24,7 +24,7 @@ import {
   playerActions, playerActive, tagMultiplier, isInjured, turnForecast, tierScaleFor,
   movesFromTokens, previewMove,
 } from '../battle/engine.js';
-import { runSim, plantBrokenCombo, makeSimChimera, scriptedBattle } from './sim.js';
+import { runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent } from './sim.js';
 import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
 import {
   nodeStates, threatGen, incomePerDay, tickCampaign, resolveBattle, salvageUnit,
@@ -499,6 +499,93 @@ const evs = step(pb, trample, content);
 const myLine = evs.findIndex((e) => e.text.includes('Scythe Strike'));
 const foeLine = evs.findIndex((e) => e.text.includes(pb.enemy.active.name) && e.text.includes('uses'));
 assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move goes first despite speed 1');
+
+// --- R24: a dozen genes, each paying for what it gives.
+//
+// The allele machinery was generic from M6 and exactly one trait used it, so
+// Mendel had nothing to be Mendel about. Two things were also quietly wrong:
+// traits entered the pool ONLY through conception mutations, so a dozen of
+// them would each surface about once in two hundred eggs; and the balance
+// harness never loaded traits.json at all, so a gene could not be measured.
+{
+  const traits = Object.values(content.traits);
+  assert.ok(traits.length >= 10, `a gene pool needs genes, got ${traits.length}`);
+
+  // THE DESIGN RULE, asserted rather than remembered: every trait pays for
+  // what it gives. A gene that is pure upside is a stat stick with a name on.
+  for (const t of traits) {
+    const bonuses = Object.values(t.statBonus ?? {});
+    assert.ok(bonuses.some((v) => v > 0) || t.moveKeywords,
+      `${t.id} gives nothing`);
+    assert.ok(bonuses.some((v) => v < 0),
+      `${t.id} costs nothing — every trait pays for what it gives`);
+  }
+
+  // Circulating genes have to actually circulate, or the Splice-Dex reads
+  // ??? forever and breeding for one is impossible.
+  const farm = { ...newGameState(), seed: 4242 };
+  farm.ranch = { stock: [], penCapacity: 999, animalCount: 0, seeded: false, eggs: [], eggCount: 0 };
+  const carriers = {};
+  for (let i = 0; i < 400; i++) {
+    for (const [id, n] of Object.entries(createAnimal(farm, 'goat', content, t0).genotype)) {
+      if (n > 0) carriers[id] = (carriers[id] ?? 0) + 1;
+    }
+  }
+  for (const t of traits) {
+    // The two routes into the gene pool are exclusive: a gene is either out
+    // there to be found or it arrives as a mutation. Both at once means the
+    // "mutation only" label is a lie on the Splice-Dex.
+    assert.ok(!(t.mutationOnly && t.wildChance),
+      `${t.id} is mutationOnly and also seeded into wild stock — pick one`);
+    if (t.wildChance) {
+      assert.ok(carriers[t.id] > 0,
+        `${t.id} has a wildChance but never turned up in 400 head of stock`);
+    } else {
+      assert.ok(!carriers[t.id],
+        `${t.id} is mutationOnly and must not be sitting in mail-order stock`);
+    }
+  }
+
+  // THE CRITERION: the difference shows in a fight. Same build, same grade,
+  // one gene apart, on a contested matchup — a saturated one shows nothing,
+  // which is why checkpoint (94% either way) was the wrong bench.
+  const PARTS = ['bear_head','bear_forelimbs','bear_hindlimbs','bear_tail','bear_hide','bear_organ'];
+  const fight = (traitId) => {
+    const hero = makeSimChimera('M', PARTS, 'standard', content);
+    if (traitId) {
+      for (const tok of Object.values(hero.tokens)) {
+        if (content.traits[traitId].slots.includes(content.parts[tok.partId].slot)) tok.traits = [traitId];
+      }
+    }
+    let wins = 0;
+    for (let i = 0; i < 80; i++) {
+      const b = createBattle([hero, { ...hero, id: 'a', name: 'A' }, { ...hero, id: 'b', name: 'B' }],
+        content.encounters.air_patrol, content, hashString(`t24${traitId}${i}`), 0);
+      let g = 0;
+      while (!b.over && g++ < 300) {
+        const acts = playerActions(b);
+        if (!acts.length) break;
+        const me = playerActive(b);
+        const idx = chooseMoveIndex(b, me, b.enemy.active, content, 1, () => rngStream(b.seed, 'p', b.rollCount++)());
+        const act = (idx >= 0 && acts.find((a) => a.type === 'move' && a.index === idx))
+          || acts.find((a) => a.type === 'rest') || acts[0];
+        step(b, act, content);
+      }
+      if (b.outcome === 'win') wins++;
+    }
+    return wins / 80;
+  };
+  const plain = fight(null);
+  const gene = fight('venom_gland');
+  assert.ok(Math.abs(gene - plain) >= 0.10,
+    `a gene must show in a fight: ${(plain * 100).toFixed(0)}% plain vs ${(gene * 100).toFixed(0)}% with a Venom Gland`);
+
+  // And the harness must be able to SEE traits, which for four sessions it
+  // could not — tools/sim.js never loaded traits.json, so every measurement
+  // above would have quietly compared a build against itself.
+  assert.ok(Object.keys(loadSimContent().traits ?? {}).length === traits.length,
+    'the balance harness must load the same gene pool the game does');
+}
 
 // --- R23: two of six sockets used to contribute nothing to play.
 //
@@ -1430,9 +1517,10 @@ function stockAnimal(s, species, sex, stars, ageHours, id) {
   }
   assert.ok(!breedPair(s, nanny.id, billy.id, content, t0).ok, 'incubator caps eggs');
 
-  // Incubation is a real timer: goat = 30min, no early hatching.
+  // Incubation is a real timer: goat = 22min after R24's 25% cut across
+  // every real-world clock in the game, and still no early hatching.
   const egg = s.ranch.eggs[0];
-  assert.equal(egg.hatchAt - egg.laidAt, 30 * 60000, 'goat eggs take 30 minutes');
+  assert.equal(egg.hatchAt - egg.laidAt, 22 * 60000, 'goat eggs take 22 minutes');
   assert.ok(!hatchEgg(s, egg.id, content, egg.hatchAt - 1).ok, 'no peeking');
   const hatched = hatchEgg(s, egg.id, content, egg.hatchAt + 1);
   assert.ok(hatched.ok);

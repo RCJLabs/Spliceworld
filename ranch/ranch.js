@@ -12,7 +12,7 @@ export const CARE_ACTIONS = ['feed', 'groom', 'exercise', 'enrich'];
 export const TUNING = {
   startCondition: 60,
   careGain: 8, // per action
-  careCooldownHours: 20, // "daily-ish" without punishing time zones
+  careCooldownHours: 15, // "daily-ish" without punishing time zones
   decayPerHour: 0.4, // ≈9.6/day of neglect
   conditionFloor: 25, // soft floor — absence never breaks anything
   conditionMax: 100,
@@ -35,6 +35,22 @@ const STOCK_NAMES = [
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
 
+// One allele on a hit, and a second only on a second hit — so a carrier is
+// common, an expressing homozygote is not, and a recessive is something you
+// have to actually breed for.
+function wildGenotype(rng, content) {
+  const genotype = {};
+  for (const trait of Object.values(content?.traits ?? {})) {
+    const chance = trait.wildChance ?? 0;
+    if (!chance) continue;
+    let alleles = 0;
+    if (rng() < chance) alleles++;
+    if (alleles && rng() < chance) alleles++;
+    if (alleles) genotype[trait.id] = alleles;
+  }
+  return genotype;
+}
+
 export function createAnimal(state, speciesId, content, now) {
   const n = state.ranch.animalCount++;
   const rng = rngStream(state.seed, 'animal', n);
@@ -52,7 +68,14 @@ export function createAnimal(state, speciesId, content, now) {
     condition: TUNING.startCondition,
     potential, // hidden in UI until the Gene Scanner upgrade exists
     traits: [], // expressed trait ids (from genotype, see breeding.js)
-    genotype: {}, // trait alleles — mail-order stock arrives gene-plain
+    // R24: ordinary stock carries the ordinary genes. Traits used to enter
+    // the pool ONLY through conception mutations, so with a dozen of them
+    // each would surface about once in two hundred eggs and the Splice-Dex
+    // would read ??? forever. A trait with a `wildChance` circulates instead:
+    // you can find a carrier, pair carriers, and breed a recessive up — which
+    // is the Mendel machinery finally being worth having. The exotic ones
+    // stay `mutationOnly` and keep their thunderclap.
+    genotype: wildGenotype(rng, content),
     parents: null, // lineage snapshot; null = "origin: questionable paperwork"
     lastCare: { feed: 0, groom: 0, exercise: 0, enrich: 0 },
   };

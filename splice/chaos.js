@@ -29,11 +29,11 @@ import { isSettled } from './theater.js';
 const HOUR = 3600000;
 
 const DEFAULTS = {
-  gestationBaseHours: 5,
-  gestationPerSocketHours: 1.5,
+  gestationBaseHours: 3.75,
+  gestationPerSocketHours: 1.13,
   feeBase: 90,
   feePerGradeStep: 55,
-  exhaustionHours: 20,
+  exhaustionHours: 15,
   carryChance: 0.78,
   chaosChance: 0.16,
   frameChaosChance: 0.12,

@@ -256,7 +256,7 @@ export function resolveBattle(state, battle, content, now) {
   }
 
   // Capture-on-loss: one downed chimera is taken. Dissection countdown
-  // starts — real-world 12–24h, always with a rescue window (house rule).
+  // starts — real-world 9–18h, always with a rescue window (house rule).
   if (result.outcome === 'loss' && state.chimeras.length) {
     const downedIds = battle.player.team.filter((c) => c.hp <= 0).map((c) => c.refId);
     const candidates = state.chimeras.filter((c) => downedIds.includes(c.id));
@@ -264,7 +264,7 @@ export function resolveBattle(state, battle, content, now) {
       const rng = rngStream(state.seed, 'capture', state.warRecord.losses);
       const taken = pick(rng, candidates);
       state.chimeras = state.chimeras.filter((c) => c !== taken);
-      const hours = randInt(rng, 12, 24);
+      const hours = randInt(rng, 9, 18);
       const captive = {
         id: `cap-${taken.id}-${now}`,
         chimera: taken,

@@ -1,14 +1,184 @@
 {
-  "_doc": "Heritable trait genes (M6, ROADMAP §3.2). Animals carry 0–2 alleles per trait (genotype); dominant traits express with 1+, recessive need 2. Each parent passes one allele with probability (alleles/2). mutationOnly traits enter the gene pool only via conception mutations. Mechanical teeth: when a donor expressing the trait is extracted, part tokens in the listed slots are stamped with it, and the physiology engine applies statBonus — husbandry and breeding both compound into combat. Adding traits must never require engine edits.",
+  "_doc": "Heritable trait genes (M6, ROADMAP \u00a73.2). Animals carry 0-2 alleles per trait (genotype); dominant traits express with 1+, recessive need 2. Each parent passes one allele with probability (alleles/2). R24: `wildChance` puts a gene into ordinary mail-order stock so it can be FOUND and bred up -- which is what makes the Mendel machinery worth having; `mutationOnly` traits stay out of the pool and arrive only as a conception mutation. Mechanical teeth: when a donor expressing the trait is extracted, part tokens in the listed slots are stamped with it; `statBonus` is applied by the physiology engine and `moveKeywords` is merged into those parts' moves, under the part's own keywords so a gene never overwrites what a part already did. Every trait pays for what it gives. Adding traits must never require engine edits.",
   "traits": [
     {
       "id": "dense_bones",
       "name": "Dense Bones",
-      "desc": "Skeleton certified to municipal load-bearing standards. Head and hide parts extract with +3 Armor.",
+      "desc": "Skeleton certified to municipal load-bearing standards. Head and hide parts extract with +3 Armor, and carry the weight.",
+      "dominant": true,
+      "wildChance": 0.1,
+      "slots": [
+        "head",
+        "hide"
+      ],
+      "statBonus": {
+        "armor": 3,
+        "speed": -1
+      }
+    },
+    {
+      "id": "hollow_bones",
+      "name": "Hollow Bones",
+      "desc": "Aeronautically sound, structurally optimistic. Limbs come out quick and brittle.",
+      "dominant": true,
+      "wildChance": 0.1,
+      "slots": [
+        "forelimbs",
+        "hindlimbs"
+      ],
+      "statBonus": {
+        "speed": 4,
+        "hp": -4
+      }
+    },
+    {
+      "id": "deep_lungs",
+      "name": "Deep Lungs",
+      "desc": "Organ bays that treat a fight as a long walk. More in the tank, slower to refill.",
+      "dominant": false,
+      "wildChance": 0.14,
+      "slots": [
+        "organ"
+      ],
+      "statBonus": {
+        "stamina": 12,
+        "regen": -1
+      }
+    },
+    {
+      "id": "thick_hide",
+      "name": "Thick Hide",
+      "desc": "Upholstery, essentially. Hides plate up and the creature stops hurrying.",
+      "dominant": false,
+      "wildChance": 0.14,
+      "slots": [
+        "hide"
+      ],
+      "statBonus": {
+        "armor": 4,
+        "speed": -2
+      }
+    },
+    {
+      "id": "hyperthyroid",
+      "name": "Hyperthyroid",
+      "desc": "Everything at once, all the time. Heads and organs hit harder on a shorter fuse.",
+      "dominant": false,
+      "wildChance": 0.12,
+      "slots": [
+        "head",
+        "organ"
+      ],
+      "statBonus": {
+        "power": 4,
+        "stamina": -10
+      }
+    },
+    {
+      "id": "second_wind",
+      "name": "Second Wind",
+      "desc": "An organ that quietly refuses to be tired. Costs a little muscle to run.",
+      "dominant": false,
+      "wildChance": 0.12,
+      "slots": [
+        "organ"
+      ],
+      "statBonus": {
+        "regen": 3,
+        "power": -2
+      }
+    },
+    {
+      "id": "glass_jaw",
+      "name": "Glass Jaw",
+      "desc": "Spectacular offence, structurally regrettable. Recessive, and the lab keeps breeding it by accident.",
+      "dominant": false,
+      "wildChance": 0.16,
+      "slots": [
+        "head"
+      ],
+      "statBonus": {
+        "power": 6,
+        "hp": -7
+      }
+    },
+    {
+      "id": "venom_gland",
+      "name": "Venom Gland",
+      "desc": "A duct where no duct was ordered. Head parts envenom on contact.",
       "dominant": true,
       "mutationOnly": true,
-      "slots": ["head", "hide"],
-      "statBonus": { "armor": 3 }
+      "slots": [
+        "head"
+      ],
+      "moveKeywords": {
+        "venom": 1
+      },
+      "statBonus": {
+        "power": -2
+      }
+    },
+    {
+      "id": "barbed_skin",
+      "name": "Barbed Skin",
+      "desc": "Touching it is a decision. Hide parts return a share of what they take.",
+      "dominant": true,
+      "mutationOnly": true,
+      "slots": [
+        "hide"
+      ],
+      "moveKeywords": {
+        "thorns": 0.2
+      },
+      "statBonus": {
+        "speed": -1
+      }
+    },
+    {
+      "id": "keen_eye",
+      "name": "Keen Eye",
+      "desc": "Sees the dodge before it happens. Head parts stop being dodged.",
+      "dominant": false,
+      "mutationOnly": true,
+      "slots": [
+        "head"
+      ],
+      "moveKeywords": {
+        "ignoreEvasion": true
+      },
+      "statBonus": {
+        "hp": -3
+      }
+    },
+    {
+      "id": "clotting_factor",
+      "name": "Clotting Factor",
+      "desc": "Knits itself back together between arguments. Organ parts carry +10 HP and a little less hurry.",
+      "dominant": false,
+      "mutationOnly": true,
+      "slots": [
+        "organ"
+      ],
+      "statBonus": {
+        "hp": 10,
+        "speed": -2
+      }
+    },
+    {
+      "id": "pack_instinct",
+      "name": "Pack Instinct",
+      "desc": "Cannot be told it is fighting alone. Organ parts lift the whole side.",
+      "dominant": false,
+      "mutationOnly": true,
+      "slots": [
+        "organ"
+      ],
+      "moveKeywords": {
+        "rally": 1
+      },
+      "statBonus": {
+        "armor": -2
+      }
     }
   ]
 }
