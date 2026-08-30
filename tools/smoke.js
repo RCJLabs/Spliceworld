@@ -35,6 +35,7 @@ import { obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
 import { onboardingSteps, onboardingActive } from '../ranch/onboarding.js';
 import { classMultiplier } from '../battle/engine.js';
 import { overflowingParts } from './bounds.js';
+import { renderDexScreen } from '../splice/dex-ui.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -497,6 +498,82 @@ const evs = step(pb, trample, content);
 const myLine = evs.findIndex((e) => e.text.includes('Scythe Strike'));
 const foeLine = evs.findIndex((e) => e.text.includes(pb.enemy.active.name) && e.text.includes('uses'));
 assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move goes first despite speed 1');
+
+// --- R21: everything the game announces is findable again afterwards.
+//
+// The audit that queued this phase was WRONG about its headline: combos are
+// persisted, in `state.discoveredCombos` since the v4 migration, and the dex
+// has always drawn them. Grepping for `dex.combos` and stopping there is how
+// a non-bug gets scheduled. What was genuinely missing: rivals kept a full
+// record — defeats, losses, when you last met — and had no page anywhere you
+// could go back to, and lineage stopped at one generation.
+//
+// So the rule is stated once, over the RENDERED dex rather than the fields
+// behind it: a discovery the player was told about has to still be there.
+{
+  const lab = { ...newGameState(), seed: 4321 };
+  // One of each announceable discovery.
+  lab.discoveredCombos = ['pack_hunt'];
+  lab.dex.parts = ['wolf_organ', 'riot_plating'];
+  lab.dex.enemies = ['riot_squad'];
+  lab.dex.traits = ['dense_bones'];
+  lab.dex.variants = ['alpine_ram'];
+  lab.campaign.rivals = { mantissa: { defeats: 2, losses: 1, lastMetAt: t0 } };
+
+  const root = { innerHTML: '' }; // the dex renders to a string; no DOM needed
+  renderDexScreen(root, { state: lab, content });
+  const page = root.innerHTML;
+
+  const FINDABLE = [
+    ['a discovered combo', content.combos.pack_hunt.name],
+    ['a met enemy', content.enemies.riot_squad.name],
+    ['a bred variant', content.species.alpine_ram.name],
+    ['a known trait gene', content.traits.dense_bones.name],
+    ['a rival you have fought', content.rivals.mantissa.name],
+    ["that rival's record", '2 graduated'],
+  ];
+  for (const [what, needle] of FINDABLE) {
+    assert.ok(page.includes(needle),
+      `${what} must still be findable in the Splice-Dex — no sign of "${needle}"`);
+  }
+  // And the other half: a rival never met is a rumour, not a spoiler.
+  assert.ok(!page.includes(content.rivals.aloft.name),
+    'a rival you have never met must not be named in the dex');
+  assert.ok(page.includes('???'), 'undiscovered entries still read as bait');
+}
+
+// --- R21: lineage keeps two generations, and cannot keep three.
+{
+  const farm = breedLab(909);
+  const pair = (a, b, when) => {
+    const res = breedPair(farm, a.id, b.id, content, when);
+    assert.ok(res.ok, res.msg);
+    const hatched = hatchEgg(farm, res.egg.id, content, res.egg.hatchAt);
+    assert.ok(hatched.ok, hatched.msg);
+    return hatched.hatchling;
+  };
+  const g1a = stockAnimal(farm, 'goat', 'M', 4, 900, 'g1a');
+  const g1b = stockAnimal(farm, 'goat', 'F', 4, 900, 'g1b');
+  const g2 = pair(g1a, g1b, t0);
+  const mate = stockAnimal(farm, 'goat', 'F', 4, 900, 'mate');
+  g2.sex = 'M';                  // hatchling sex is a coin flip; pin it
+  g2.birthAt = t0 - 900 * HOUR;  // and grown enough to breed
+  const g3 = pair(g2, mate, t0 + HOUR);
+
+  assert.ok(g3.parents.sire.name && g3.parents.dam.name, 'a child knows its parents');
+  const grandparents = [g3.parents.sire, g3.parents.dam].flatMap((s) => [s.sire, s.dam]).filter(Boolean);
+  assert.ok(grandparents.length >= 2, `the tree reaches grandparents, got ${grandparents.length}`);
+  assert.ok(grandparents.some((gp) => gp.name === g1a.name || gp.name === g1b.name),
+    'and they are the right ones');
+  // THE CAP, and it is structural rather than a rule to remember: a
+  // grandparent is copied as name and stars only, so there is nowhere for a
+  // great-grandparent to live. An unbounded tree doubles every generation in
+  // a save that is never reset.
+  for (const gp of grandparents) {
+    assert.deepEqual(Object.keys(gp).sort(), ['name', 'stars'],
+      `lineage must stop at two generations — a grandparent carried ${Object.keys(gp).join(', ')}`);
+  }
+}
 
 // --- R22: the opposition thinks, and thinking is worth something.
 //

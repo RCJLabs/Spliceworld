@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 22;
+export const SAVE_VERSION = 23;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -245,6 +245,25 @@ const migrations = {
   // reload cannot change the opponent you committed a team against.
   22: (save) => {
     if (save.battle) save.battle.aiSkill = save.battle.aiSkill ?? 0.5;
+    return save;
+  },
+  // v23 (R21): lineage keeps two generations. Animals bred before this have
+  // parents but no grandparents; they get explicit nulls rather than missing
+  // keys, so the family tree renders one shape whatever era bred the animal.
+  23: (save) => {
+    const fill = (side) => {
+      if (!side) return;
+      side.sire = side.sire ?? null;
+      side.dam = side.dam ?? null;
+    };
+    for (const animal of save.ranch?.stock ?? []) {
+      fill(animal.parents?.sire);
+      fill(animal.parents?.dam);
+    }
+    for (const egg of save.ranch?.eggs ?? []) {
+      fill(egg.parents?.sire);
+      fill(egg.parents?.dam);
+    }
     return save;
   },
 };

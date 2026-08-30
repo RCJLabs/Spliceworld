@@ -76,6 +76,19 @@ function rollVariance(rng) {
   return 0;
 }
 
+// One tier of ancestry, flattened. Grandparents arrive as names and stars
+// only — deliberately no `sire`/`dam` of their own, which is what caps the
+// tree at two generations forever.
+function lineageSnapshot(animal) {
+  const gp = (side) => (side ? { name: side.name, stars: side.stars } : null);
+  return {
+    name: animal.name,
+    stars: Math.round(avgStars(animal) * 10) / 10,
+    sire: gp(animal.parents?.sire),
+    dam: gp(animal.parents?.dam),
+  };
+}
+
 export function breedPair(state, sireId, damId, content, now) {
   const sire = state.ranch.stock.find((a) => a.id === sireId);
   const dam = state.ranch.stock.find((a) => a.id === damId);
@@ -157,9 +170,15 @@ export function breedPair(state, sireId, damId, content, now) {
     genotype,
     mutationNote,
     // Labels follow actual sex, not argument order.
+    //
+    // Two generations, and bounded BY CONSTRUCTION rather than by a rule
+    // someone has to remember: the snapshot copies a grandparent's name and
+    // stars but never its own `sire`/`dam`, so lineage cannot grow a third
+    // tier no matter how many generations a line runs. An unbounded tree in
+    // a save that is never reset doubles every time you breed.
     parents: (([father, mother]) => ({
-      sire: { name: father.name, stars: Math.round(avgStars(father) * 10) / 10 },
-      dam: { name: mother.name, stars: Math.round(avgStars(mother) * 10) / 10 },
+      sire: lineageSnapshot(father),
+      dam: lineageSnapshot(mother),
     }))(sire.sex === 'M' ? [sire, dam] : [dam, sire]),
   };
   state.ranch.eggs.push(egg);
