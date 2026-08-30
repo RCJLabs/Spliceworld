@@ -8,6 +8,7 @@ import { GRADES } from '../splice/extract.js';
 import { finishBattle } from '../battle/engine.js';
 import { recordRivalResult } from './rivals.js';
 import { directorNews } from './director.js';
+import { tickRehab, findBay } from './rehab.js';
 
 const DAY = 86400000;
 const HOUR = 3600000;
@@ -52,6 +53,11 @@ export function incomePerDay(state, content) {
 
 // Elapsed campaign effects: held-node income and dissection deadlines.
 export function tickCampaign(state, content, now) {
+  // Rehabilitation graduates on its own clock, checked every tick rather
+  // than only when time has visibly passed — a programme can finish while
+  // the tab is open (an enrichment session can take the last hour off it).
+  for (const line of tickRehab(state, content, now).news) pushNews(state, line);
+
   const last = state.campaign.lastTickAt ?? now;
   const dt = Math.max(0, now - last);
   state.campaign.lastTickAt = now;
@@ -108,7 +114,13 @@ export function resolveBattle(state, battle, content, now) {
     const generated = battle.units?.[unitId] ?? null;
     const unit = generated ?? content.enemies[unitId];
     if (!unit) continue;
-    state.campaign.containment.push({ unitId, unit: generated, capturedAt: now });
+    state.campaign.containment.push({
+      id: `bay-${state.campaign.containment.length}-${now}`,
+      unitId,
+      unit: generated,
+      capturedAt: now,
+      rehab: null,
+    });
     pushNews(state, `${unit.name} impounded in Containment. Finders keepers is the law here now.`);
   }
 
@@ -176,12 +188,19 @@ export function resolveBattle(state, battle, content, now) {
 
 // Dismantle a captured unit into enemy-tech part tokens (one grade spread,
 // seeded). Enemy tech is otherwise unobtainable (ROADMAP §3.6).
-export function salvageUnit(state, containmentIndex, content, now) {
-  const entry = state.campaign.containment[containmentIndex];
+// `ref` is a bay index or a bay id — the War Room passes ids now that a
+// bay can sit in the Reorientation Wing while the list around it changes.
+export function salvageUnit(state, ref, content, now) {
+  const entry = findBay(state, ref);
   if (!entry) return { ok: false, msg: 'Nothing in that bay.' };
   const unit = entry.unit ?? content.enemies[entry.unitId];
   if (!unit) return { ok: false, msg: 'That bay is empty and slightly damp.' };
-  state.campaign.containment.splice(containmentIndex, 1);
+  // Rehab and salvage are the two futures §3.6 offers, and picking one is
+  // the point — you cannot quietly do both.
+  if (entry.rehab) {
+    return { ok: false, msg: `${unit.name} is in the Reorientation Wing. End the programme first if you would rather have the parts.` };
+  }
+  state.campaign.containment = state.campaign.containment.filter((b) => b !== entry);
   const rng = rngStream(state.seed, 'salvage', state.inventory.tokenCount);
   const tokens = [];
   for (const [i, partId] of (unit.salvage ?? []).entries()) {

@@ -1259,6 +1259,52 @@ footer {
   .rival-portrait { flex-basis: 92px; width: 92px; }
 }
 
+/* --- Containment & Rehabilitation (§3.6) --------------------------------
+   A bay is a fork, not a button: salvage and rehabilitation sit side by
+   side with their real numbers so the choice is legible before any money
+   moves (Law 4). Amber is the bandsaw, lime is the ball pit. */
+
+.bay-card { border-color: var(--accent-2-dim); }
+/* The renderer pads its viewBox generously so no part can clip. In a
+   104px column that leaves the specimen swimming, so the bay crops in on
+   it the same way the arena does. */
+.bay-card .rival-portrait {
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--well);
+}
+.bay-card .rival-portrait svg { transform: scale(1.4); }
+.bay-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+.bay-card .bay-btns button { margin-top: 0; }
+.bay-card .bay-btns button:disabled { opacity: 0.4; cursor: default; }
+/* The pill is `flex: 0 0 auto` everywhere else, which is right for a two-word
+   tag beside a node. This one is a sentence, so it has to be allowed to
+   shrink and wrap or it walks the whole page sideways at 380px. */
+.bay-card .bay-btns .locked-tag {
+  margin-top: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  border-radius: 8px;
+  text-align: center;
+  line-height: 1.35;
+}
+.bay-card .bay-rehab { background: var(--goo); color: var(--on-accent); }
+/* Amber is their deadline (a captive's dissection clock); lime is yours. */
+.bay-card .countdown { color: var(--goo); }
+.bay-card .bay-cancel {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font-weight: 600;
+}
+
 /* --- AI Director (§3.7) ------------------------------------------------- */
 
 .intel-line { color: var(--warn); }

@@ -12,6 +12,11 @@ import { renderCreatureSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
 import { directEncounter, directorRead } from './director.js';
 import {
+  bayUnit, rehabPlan, rehabTuning, startRehab, rehabSession, cancelRehab,
+  rehabRemainingMs, sessionReadyAt,
+} from './rehab.js';
+import { GRADES, GRADE_INDEX } from '../splice/extract.js';
+import {
   nodeStates, threatGen, incomePerDay, salvageUnit, regionOf,
 } from './campaign.js';
 
@@ -78,16 +83,7 @@ function renderMap(root, ctx) {
       <button type="button" data-rescue="${cap.id}">Rescue Raid</button>
     </div>`).join('');
 
-  const containment = state.campaign.containment.map((entry, i) => {
-    const unit = entry.unit ?? content.enemies[entry.unitId];
-    if (!unit) return '';
-    return `
-      <div class="encounter">
-        <div><strong>${unit.name}</strong><br><span class="fine-print">salvage: ${(unit.salvage ?? [])
-          .map((p) => content.parts[p]?.name).filter(Boolean).join(', ')}</span></div>
-        <button type="button" data-salvage="${i}">Salvage</button>
-      </div>`;
-  }).join('');
+  const containment = state.campaign.containment.map((entry) => bayCard(state, entry, content, t)).join('');
 
   // Rival Labs. Their chimeras are real genomes, so the card can just draw
   // the lead specimen — no portrait art, same renderer as everything else.
@@ -198,14 +194,104 @@ function renderMap(root, ctx) {
       renderBriefing(root, ctx);
     });
   });
-  root.querySelectorAll('button[data-salvage]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const result = salvageUnit(state, Number(btn.dataset.salvage), content, ctx.now());
-      lastAftermath = result.msg;
-      ctx.save();
-      renderMap(root, ctx);
+  const bayAction = (attr, run) => {
+    root.querySelectorAll(`button[data-${attr}]`).forEach((btn) => {
+      btn.addEventListener('click', () => {
+        lastAftermath = run(btn.dataset[attr]).msg;
+        ctx.save();
+        renderMap(root, ctx);
+      });
     });
-  });
+  };
+  bayAction('salvage', (id) => salvageUnit(state, id, content, ctx.now()));
+  bayAction('rehab', (id) => startRehab(state, id, content, ctx.now()));
+  bayAction('session', (id) => rehabSession(state, id, content, ctx.now()));
+  bayAction('cancel', (id) => cancelRehab(state, id, content));
+}
+
+// --- Containment ---------------------------------------------------------
+
+// A bay offers the two futures §3.6 promises, side by side and with real
+// numbers on both, because the whole point is that it is a CHOICE: take it
+// apart for enemy tech you cannot otherwise get, or spend time and money
+// on a creature you could not otherwise build.
+function bayCard(state, entry, content, t) {
+  const unit = bayUnit(entry, content);
+  if (!unit) return '';
+  const plan = rehabPlan(state, entry, content);
+  const portrait = unit.genome
+    ? renderCreatureSVG(unit.genome, content, { idPrefix: `bay-${entry.id ?? unit.id}` })
+    : '<div class="rival-redacted">⛓</div>';
+  const cls = unit.class ? content.classes[unit.class] : null;
+  const body = entry.rehab
+    ? programmeHtml(state, entry, unit, content, t)
+    : offerHtml(state, entry, plan, unit, content);
+
+  return `
+    <div class="rival-card bay-card">
+      <div class="rival-portrait">${portrait}</div>
+      <div class="rival-body">
+        <strong>${unit.name}</strong>
+        <p class="fine-print">${cls ? `${cls.icon} ${cls.name}` : '◇ Unclassed'} · HP ${unit.hp} · PWR ${unit.power} · ARM ${unit.armor}</p>
+        ${body}
+      </div>
+    </div>`;
+}
+
+function offerHtml(state, entry, plan, unit, content) {
+  // A badge per part turned a six-part specimen into six lines of PRIME.
+  // The grades are the interesting part but there are usually only one or
+  // two of them, so count them once and then just name the anatomy.
+  const byGrade = new Map();
+  const names = [];
+  for (const [i, partId] of (unit.salvage ?? []).entries()) {
+    const part = content.parts[partId];
+    if (!part) continue;
+    const grade = unit.salvageGrades?.[i] ?? 'standard';
+    byGrade.set(grade, (byGrade.get(grade) ?? 0) + 1);
+    names.push(part.name);
+  }
+  const badges = [...byGrade.entries()]
+    .sort((a, b) => GRADE_INDEX[b[0]] - GRADE_INDEX[a[0]])
+    .map(([id, n]) => `<span class="grade-badge grade-${id}">${GRADES[GRADE_INDEX[id]].name}</span>${n > 1 ? ` ×${n}` : ''}`)
+    .join(' ');
+  const salvageList = names.length ? `${badges} — ${names.join(', ')}` : '';
+
+  return `
+    <p class="fine-print">🔧 <strong>Salvage</strong> → ${salvageList || 'nothing recoverable'}</p>
+    ${plan.possible
+      ? `<p class="fine-print">🫂 <strong>Rehabilitate</strong> → joins the roster whole, on a ${content.frames[unit.genome.frame]?.name ?? unit.genome.frame} chassis, at the grades its old lab raised. ${plan.hours}h · $${plan.fee} · arrives settled but wary (instability ${plan.instability}, bond 0).</p>`
+      : `<p class="fine-print locked-note">${plan.reason}</p>`}
+    <div class="bay-btns">
+      <button type="button" data-salvage="${entry.id}">🔧 Salvage</button>
+      ${plan.possible
+        ? plan.enabled
+          ? `<button type="button" class="bay-rehab" data-rehab="${entry.id}" ${state.funds >= plan.fee ? '' : 'disabled'}>🫂 Rehabilitate — $${plan.fee}</button>`
+          : '<span class="locked-tag">needs the Reorientation Wing — Ranch › Facility</span>'
+        : ''}
+    </div>`;
+}
+
+function programmeHtml(state, entry, unit, content, t) {
+  const tune = rehabTuning(content);
+  const readyAt = sessionReadyAt(entry, content);
+  const maxed = entry.rehab.sessions >= tune.maxSessions;
+  const ready = t >= readyAt;
+  return `
+    <p class="fine-print">⏳ Reorientation: <strong class="countdown">${fmtDuration(rehabRemainingMs(entry, t))}</strong> remaining · bond ${entry.rehab.bond}/100 · instability ${entry.rehab.instability}/100 · sessions ${entry.rehab.sessions}/${tune.maxSessions}</p>
+    <p class="fine-print">${entry.rehab.sessions
+      ? 'It has stopped watching the door and started watching you, which is progress of a kind.'
+      : 'The clock alone will graduate it — just wary of you. Sessions are what buy the bond.'}</p>
+    <div class="bay-btns">
+      <button type="button" data-session="${entry.id}" ${ready && !maxed && state.funds >= tune.sessionCost ? '' : 'disabled'}>${
+        maxed
+          ? 'Curriculum complete'
+          : ready
+            ? `🎯 Enrichment session ($${tune.sessionCost})`
+            : `Next session in ${fmtDuration(readyAt - t)}`
+      }</button>
+      <button type="button" class="bay-cancel" data-cancel="${entry.id}">End programme</button>
+    </div>`;
 }
 
 // --- Briefing / team picker ---------------------------------------------

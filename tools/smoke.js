@@ -1232,6 +1232,277 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   assert.equal(lab.campaign.containment.length, 0, 'the bay empties');
 }
 
+// --- Rehabilitation (§3.6): the OTHER future a captured chimera has.
+// --- Salvage is instant and certain and hands you enemy tech. Rehab costs
+// --- real-world time, money and those same parts, and pays out a whole
+// --- creature you could not have built. Both must stay worth choosing.
+{
+  const { rivalEncounter } = await import('../campaign/rivals.js');
+  const {
+    rehabPlan, rehabGrants, rehabTuning, startRehab, rehabSession,
+    cancelRehab, tickRehab, rehabDone, sessionReadyAt,
+  } = await import('../campaign/rehab.js');
+  const { buyUpgrade } = await import('../splice/facility.js');
+  const { renderCreatureSVG: draw } = await import('../render/renderer.js');
+  const HOUR = 3600000;
+  const tune = rehabTuning(content);
+  const region = Object.values(content.regions)[0];
+
+  // A lab holding one captured rival specimen, ready to decide about it.
+  const bayLab = (rivalId = 'mantissa', waveIndex = 0) => {
+    const lab = { ...newGameState(), seed: 4242, funds: 6000 };
+    lab.campaign.lastTickAt = t0;
+    lab.campaign.heldNodes = region.nodes.map((n) => n.id);
+    lab.campaign.notoriety = 999;
+    lab.campaign.rivals = { [rivalId]: { defeats: 0, losses: 0 } };
+    const unit = rivalEncounter(lab, content.rivals[rivalId], content).waves[waveIndex];
+    lab.campaign.containment.push({ id: 'bay-a', unitId: unit.id, unit, capturedAt: t0, rehab: null });
+    return { lab, unit, bay: lab.campaign.containment[0] };
+  };
+
+  // The Reorientation Wing is a purchase, not a given: level 1 Containment
+  // only owns a bandsaw, and says so.
+  {
+    const { lab } = bayLab();
+    assert.equal(lab.facility.containment, 1, 'a new lab starts with the holding bay only');
+    assert.equal(rehabGrants(lab, content).enabled, false, 'and cannot rehabilitate anything');
+    const refused = startRehab(lab, 'bay-a', content, t0);
+    assert.ok(!refused.ok, 'rehab is refused before the wing is built');
+    assert.match(refused.msg, /Reorientation Wing/, 'and the refusal names what is missing');
+    assert.equal(lab.funds, 6000, 'a refused programme charges nothing');
+
+    // It buys through the SAME facility track machinery as the Theater —
+    // adding it was a data edit, so the engine must not have learned a
+    // second way to sell an upgrade.
+    const bought = buyUpgrade(lab, content, 'containment');
+    assert.ok(bought.ok, bought.msg);
+    assert.equal(lab.facility.containment, 2);
+    assert.equal(rehabGrants(lab, content).enabled, true, 'the wing unlocks rehabilitation');
+  }
+
+  // You cannot befriend a van. A unit with no genome has no body plan to
+  // rebuild, and the bay says why instead of offering a dead button.
+  {
+    const { lab } = bayLab();
+    lab.facility.containment = 2;
+    lab.campaign.containment.push({ id: 'bay-van', unitId: 'police_cruiser', unit: null, capturedAt: t0, rehab: null });
+    const plan = rehabPlan(lab, lab.campaign.containment[1], content);
+    assert.equal(plan.possible, false, 'a vehicle cannot be rehabilitated');
+    assert.ok(plan.reason && plan.reason.length > 10, 'and the bay explains itself');
+    assert.ok(!startRehab(lab, 'bay-van', content, t0).ok, 'starting one is refused');
+    // …but it is still perfectly good salvage.
+    assert.ok(salvageUnit(lab, 'bay-van', content, t0).ok, 'the bandsaw still works on it');
+  }
+
+  // The offer carries real numbers before any money moves (Law 4).
+  {
+    const { lab, bay, unit } = bayLab();
+    lab.facility.containment = 2;
+    const plan = rehabPlan(lab, bay, content);
+    assert.ok(plan.possible, plan.reason ?? '');
+    assert.equal(
+      plan.instability,
+      Math.min(100, Math.round(unit.physiology.instability + tune.wariness)),
+      'it arrives warier than its old lab built it'
+    );
+    assert.ok(plan.hours >= 1 && plan.hours <= tune.maxHours, 'the programme has a bounded length');
+    assert.ok(plan.fee > 0, 'and a price');
+    assert.equal(Object.keys(plan.sockets).length, unit.salvage.length, 'every recovered part has a bay to sit in');
+
+    // Tier III is the reason to keep investing in the track.
+    lab.facility.containment = 3;
+    const t3 = rehabPlan(lab, bay, content);
+    assert.ok(t3.hours < plan.hours, 'the Enrichment Annexe is faster');
+    assert.ok(t3.fee < plan.fee, 'and cheaper');
+  }
+
+
+  // A donor with two organs must fill organ AND organ2 rather than write
+  // one over the other, and anything with nowhere left to sit is left
+  // behind rather than crashing the intake. No rival builds this today —
+  // which is exactly why the guard needs a test of its own.
+  {
+    const { unitFromGenome } = await import('../battle/engine.js');
+    const organs = Object.values(content.parts).filter((p) => p.slot === 'organ').slice(0, 3);
+    const head = Object.values(content.parts).find((p) => p.slot === 'head');
+    assert.equal(organs.length, 3, 'the fixture needs three distinct organs');
+    const tokens = [head, ...organs].map((part, i) => ({
+      id: `tw${i}`,
+      partId: part.id,
+      grade: 'prime',
+      donor: { name: 'Twin Gut', species: part.species, stars: 5, extractedAt: 0 },
+    }));
+    const unit = unitFromGenome({ id: 'twin_gut', name: 'Twin Gut', frame: 'M', tokens }, content);
+    const lab = { ...newGameState(), seed: 5, funds: 6000 };
+    lab.facility.containment = 2;
+    lab.campaign.containment.push({ id: 'bay-twin', unitId: unit.id, unit, capturedAt: t0, rehab: null });
+
+    const plan = rehabPlan(lab, lab.campaign.containment[0], content);
+    assert.ok(plan.possible, plan.reason ?? '');
+    assert.deepEqual(Object.keys(plan.sockets).sort(), ['head', 'organ', 'organ2'], 'both organs get their own bay');
+    assert.equal(plan.skipped.length, 1, 'and the third has nowhere to go');
+    startRehab(lab, 'bay-twin', content, t0);
+    const ch = tickRehab(lab, content, t0 + plan.hours * HOUR).graduates[0];
+    assert.equal(Object.keys(ch.tokens).length, 3, 'the graduate keeps everything that fit');
+    assert.notEqual(ch.tokens.organ.partId, ch.tokens.organ2.partId, 'as two different organs, not one written twice');
+  }
+
+  // Enrolling spends the fee, occupies the bay, and forecloses salvage:
+  // §3.6 offers two futures and you pick ONE.
+  {
+    const { lab, bay } = bayLab();
+    lab.facility.containment = 2;
+    const plan = rehabPlan(lab, bay, content);
+    const funds = lab.funds;
+    const started = startRehab(lab, 'bay-a', content, t0);
+    assert.ok(started.ok, started.msg);
+    assert.equal(lab.funds, funds - plan.fee, 'the intake fee is charged');
+    assert.equal(bay.rehab.until, t0 + plan.hours * HOUR, 'the clock is a timestamp, not an interval');
+    const blocked = salvageUnit(lab, 'bay-a', content, t0);
+    assert.ok(!blocked.ok, 'a specimen in the programme cannot also be dismantled');
+    assert.equal(lab.campaign.containment.length, 1, 'and it is still in its bay');
+    assert.ok(!startRehab(lab, 'bay-a', content, t0).ok, 'nor enrolled twice');
+  }
+
+  // Pulling out is always allowed — nothing the player owns is destroyed —
+  // but the fee is spent and the message admits it.
+  {
+    const { lab, bay } = bayLab();
+    lab.facility.containment = 2;
+    const plan = rehabPlan(lab, bay, content);
+    startRehab(lab, 'bay-a', content, t0);
+    const funds = lab.funds;
+    const stopped = cancelRehab(lab, 'bay-a', content);
+    assert.ok(stopped.ok, stopped.msg);
+    assert.equal(bay.rehab, null, 'the bay is idle again');
+    assert.equal(lab.funds, funds, `and the $${plan.fee} is not refunded`);
+    assert.ok(salvageUnit(lab, 'bay-a', content, t0).ok, 'salvage is back on the table');
+  }
+
+  // The clock alone graduates it. A player who enrols one and forgets about
+  // it still gets a creature — just one that has no reason to like them.
+  let waryBond = null;
+  let waryInstability = null;
+  {
+    const { lab, bay, unit } = bayLab();
+    lab.facility.containment = 2;
+    const plan = rehabPlan(lab, bay, content);
+    startRehab(lab, 'bay-a', content, t0);
+    const done = t0 + plan.hours * HOUR;
+
+    assert.equal(rehabDone(bay, done - 1), false, 'not a minute early');
+    assert.equal(tickRehab(lab, content, done - 1).graduates.length, 0);
+    assert.equal(lab.chimeras.length, 0, 'and nothing has joined the roster yet');
+
+    const out = tickRehab(lab, content, done);
+    assert.equal(out.graduates.length, 1, 'the programme completes on its deadline');
+    assert.equal(out.news.length, 1, 'and it makes the wire');
+    assert.equal(lab.campaign.containment.length, 0, 'the bay empties');
+    assert.equal(lab.chimeras.length, 1, 'a chimera walks out of it');
+
+    const ch = lab.chimeras[0];
+    waryBond = ch.bond;
+    waryInstability = ch.instability;
+    assert.equal(ch.name, unit.name, 'it keeps its name — it was somebody before you met it');
+    assert.equal(ch.frame, unit.genome.frame, 'on the chassis its old lab built it on');
+    assert.equal(ch.bond, 0, 'and no affection for you whatsoever');
+    assert.equal(ch.instability, plan.instability, 'carrying the wariness the plan quoted');
+    assert.ok(isSettled(ch, done), 'the programme WAS the settling — it deploys immediately');
+    assert.equal(ch.injury, null);
+    assert.equal(ch.rehabilitated.sessions, 0, 'the record remembers it was never worked with');
+
+    // The parts came home whole: same ids, same grades, lineage intact.
+    const gotIds = Object.values(ch.tokens).map((tk) => tk.partId);
+    assert.deepEqual(gotIds.slice().sort(), unit.salvage.slice().sort(), "every one of its parts is present");
+    for (const [socketId, tk] of Object.entries(ch.tokens)) {
+      const i = unit.salvage.indexOf(tk.partId);
+      assert.equal(tk.grade, unit.salvageGrades[i], 'at the grade its old lab raised');
+      assert.equal(tk.donor.name, unit.name, 'with lineage naming where it came from');
+      assert.equal(content.parts[tk.partId].slot, socketId.replace(/\d+$/, ''), 'in a socket that fits');
+      assert.ok(lab.dex.parts.includes(tk.partId), 'and logged in the Splice-Dex');
+    }
+
+    // It is a real creature, not a record: it draws and it fights.
+    assert.ok(draw(chimeraGenome(ch, content), content).startsWith('<svg'), 'a rehabilitated chimera renders');
+    const fighter = combatantFromChimera(ch, content, done);
+    assert.ok(fighter.hp > 0 && fighter.moves.length, 'and can take the field');
+    assert.ok(fighter.ignoreChance > 0, 'though it will freelance until you earn its trust');
+  }
+
+  // Sessions are what the programme is actually FOR: the clock releases it,
+  // the sessions decide who walks out.
+  {
+    const { lab, bay } = bayLab();
+    lab.facility.containment = 2;
+    const plan = rehabPlan(lab, bay, content);
+    startRehab(lab, 'bay-a', content, t0);
+    const untilBefore = bay.rehab.until;
+
+    const first = rehabSession(lab, 'bay-a', content, t0);
+    assert.ok(first.ok, first.msg);
+    assert.equal(bay.rehab.bond, tune.sessionBond, 'a session buys bond');
+    assert.equal(bay.rehab.instability, plan.instability - tune.sessionStability, 'and calms it down');
+    assert.equal(bay.rehab.until, untilBefore, 'but never moves the release date — the clock is the other knob');
+
+    assert.ok(!rehabSession(lab, 'bay-a', content, t0).ok, 'and not twice in a row');
+    // The whole curriculum must fit inside the programme, however short it
+    // is. It once did not, which made the easiest specimens the hardest
+    // ones to befriend.
+    for (let i = 1; i < tune.maxSessions; i++) {
+      const when = sessionReadyAt(bay, content);
+      assert.ok(when < bay.rehab.until, `session ${i + 1} is still reachable before graduation`);
+      assert.ok(rehabSession(lab, 'bay-a', content, when).ok, `session ${i + 1} lands after the gap`);
+    }
+    assert.equal(bay.rehab.sessions, tune.maxSessions);
+    const capped = rehabSession(lab, 'bay-a', content, sessionReadyAt(bay, content));
+    assert.ok(!capped.ok, 'the curriculum runs out');
+
+    const out = tickRehab(lab, content, bay.rehab.until);
+    const ch = out.graduates[0];
+    assert.ok(ch, 'a fully-worked specimen still graduates');
+    assert.equal(ch.bond, tune.maxSessions * tune.sessionBond, 'arriving with the bond it was given');
+    assert.ok(ch.bond > waryBond, 'which is more than the one nobody visited');
+    assert.ok(ch.instability < waryInstability, 'and steadier, too');
+    assert.ok(
+      obediencePercent(ch, bay.rehab.until) > obediencePercent({ ...ch, bond: waryBond, instability: waryInstability }, bay.rehab.until),
+      'so it actually follows orders better — the sessions bought something real'
+    );
+  }
+
+  // ACCEPTANCE: the two futures are genuinely different, and rehabilitation
+  // hands you something your own Theater could not have produced.
+  {
+    // Trench fields her second specimen on an L-class chassis, which a
+    // Tier I Theater is not licensed to build on.
+    const { lab: cut, unit } = bayLab('trench', 1);
+    const { lab: keep } = bayLab('trench', 1);
+    cut.facility.containment = 2;
+    keep.facility.containment = 2;
+    assert.equal(unit.genome.frame, 'L', 'the specimen under test is an L-frame');
+
+    const salvage = salvageUnit(cut, 'bay-a', content, t0);
+    assert.ok(salvage.ok, salvage.msg);
+    assert.equal(cut.chimeras.length, 0, 'salvage yields parts and no creature');
+    assert.equal(cut.inventory.parts.length, unit.salvage.length);
+
+    const plan = rehabPlan(keep, keep.campaign.containment[0], content);
+    startRehab(keep, 'bay-a', content, t0);
+    const ch = tickRehab(keep, content, t0 + plan.hours * HOUR).graduates[0];
+    assert.equal(keep.inventory.parts.length, 0, 'rehab yields a creature and no parts');
+    assert.equal(keep.chimeras.length, 1);
+
+    // Same specimen, two outcomes, and the outcome you kept is off-menu:
+    // the player's own Theater cannot legally assemble this chimera.
+    const asBuild = Object.fromEntries(
+      Object.entries(ch.tokens).map(([socketId, tk]) => [socketId, tk.id])
+    );
+    for (const tk of Object.values(ch.tokens)) keep.inventory.parts.push(tk);
+    const errors = validateSplice(keep, ch.frame, asBuild, content);
+    assert.ok(errors.length, 'the Theater at Tier I could not have built this creature');
+    assert.ok(errors.some((e) => /Theater/.test(e)), `and it is the chassis that stops it: ${errors.join(' ')}`);
+  }
+}
+
 // --- Variants via mutation (§3.2). A variant is the same stock, mutated:
 // --- it inherits its base's anatomy, carries its own numbers and colours,
 // --- is BRED rather than bought, and breeds true once you have one.
