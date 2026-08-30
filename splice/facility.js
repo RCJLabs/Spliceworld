@@ -31,6 +31,48 @@ export function grantsOf(state, content, trackId) {
   );
 }
 
+// The named readers. Every system that a facility track touches asks for
+// its own grants through one of these rather than reaching into the data,
+// so a track can gain a level, or a whole new knob, without any of them
+// learning what a "tier" is. Each default is the world as it stood before
+// R25 shipped: a save with no facility record, or a Node tool holding a
+// partial content bundle, behaves exactly as it always did.
+export function incubatorGrants(state, content) {
+  const g = grantsOf(state, content, 'incubator');
+  return { slots: g.slots ?? 3, hourScale: g.hourScale ?? 1, mutationBonus: g.mutationBonus ?? 0 };
+}
+
+export function extractorGrants(state, content) {
+  const g = grantsOf(state, content, 'extractor');
+  return { gradeBonus: g.gradeBonus ?? 0 };
+}
+
+export function scannerGrants(state, content) {
+  const g = grantsOf(state, content, 'scanner');
+  return { genotype: !!g.genotype, pairing: !!g.pairing };
+}
+
+export function infirmaryGrants(state, content) {
+  const g = grantsOf(state, content, 'infirmary');
+  return {
+    healScale: g.healScale ?? 1,
+    treatScale: g.treatScale ?? 1,
+    scarChanceScale: g.scarChanceScale ?? 1,
+  };
+}
+
+const UPKEEP_DEFAULTS = {
+  frameBase: { S: 3, M: 5, L: 9 },
+  frameFallback: 5,
+  gradeCost: { standard: 1, prime: 5, apex: 12, prismatic: 22 },
+  drawCost: 0.35,
+  instabilityCost: 0.08,
+};
+
+export function upkeepTuning(content) {
+  return { ...UPKEEP_DEFAULTS, ...(content.upkeepMeta ?? {}) };
+}
+
 // What the Surgery Theater may build with right now.
 export function theaterGrants(state, content) {
   const g = grantsOf(state, content, 'theater');

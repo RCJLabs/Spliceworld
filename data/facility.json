@@ -1,15 +1,15 @@
 {
-  "_doc": "Facility upgrades (ROADMAP \u00a73.10): menu purchases that expand what you can CREATE, never what you can grind (Law 2 \u2014 every conquest reward must expand creation). A track is an ordered list of levels; you buy them in order, each gated by money and usually by territory. `grants` is read by the systems that care: the Surgery Theater reads frames and sockets, the Containment bay reads `rehab` and its scales, so unlocking the Rumbler chassis, the second organ bay, or the Reorientation Wing is a data edit, not an engine one. Levels beyond the last are simply absent \u2014 adding Tier III means appending an object here. Other tracks named in \u00a73.10 (Gene Scanner, Extractor efficiency, Infirmary speed, Containment Cannon mk2) drop into the same shape.",
+  "_doc": "Facility upgrades (ROADMAP §3.10): menu purchases that expand what you can CREATE, never what you can grind (Law 2 — every conquest reward must expand creation). A track is an ordered list of levels; you buy them in order, each gated by money and usually by territory. `grants` is read by the systems that care: the Surgery Theater reads frames and sockets, the Containment bay reads `rehab` and its scales, so unlocking the Rumbler chassis, the second organ bay, or the Reorientation Wing is a data edit, not an engine one. Levels beyond the last are simply absent — adding Tier III means appending an object here. Other tracks named in §3.10 (Gene Scanner, Extractor efficiency, Infirmary speed, Containment Cannon mk2) drop into the same shape.",
   "tracks": [
     {
       "id": "theater",
       "name": "Surgery Theater",
-      "icon": "\u2697",
+      "icon": "⚗",
       "screen": "theater",
       "levels": [
         {
           "level": 1,
-          "name": "Tier I \u2014 Card Table & Optimism",
+          "name": "Tier I — Card Table & Optimism",
           "cost": 0,
           "blurb": "A folding table, a desk lamp, and a signed waiver you wrote yourself.",
           "grants": {
@@ -29,12 +29,12 @@
         },
         {
           "level": 2,
-          "name": "Tier II \u2014 The Rumbler Rig",
+          "name": "Tier II — The Rumbler Rig",
           "cost": 900,
           "requiresNodes": [
             "checkpoint"
           ],
-          "blurb": "A gantry, a winch, and a second organ bay. Unlocks the L-class Rumbler chassis and lets you install TWO organs \u2014 metabolism, or a second ability, or both if you can carry the mass.",
+          "blurb": "A gantry, a winch, and a second organ bay. Unlocks the L-class Rumbler chassis and lets you install TWO organs — metabolism, or a second ability, or both if you can carry the mass.",
           "unlockLine": "Surgery Theater upgraded to Tier II. The gantry arrived on a flatbed and the neighbours have stopped asking.",
           "news": "Farm supply store reports a run on industrial winches. \"Big year for barns,\" says owner, unconvincingly.",
           "grants": {
@@ -59,10 +59,10 @@
     {
       "id": "containment",
       "name": "Containment",
-      "icon": "\u26d3",
+      "icon": "⛓",
       "screen": "battle",
       "tuning": {
-        "_doc": "Rehabilitation constants (\u00a73.6: salvage it OR rehabilitate it into your roster). Hours and fee are read off the specimen so a rival's apex monster is a longer, dearer programme than a scrappy one; `hourScale`/`feeScale` on a level make the whole track cheaper as you invest in it. The two knobs are deliberately orthogonal: the CLOCK releases the specimen, the SESSIONS decide who walks out. sessionGapFraction is a share of the programme's own length rather than a fixed cooldown, so the full curriculum always fits inside the programme \u2014 otherwise the scrappiest specimens, whose programmes are shortest, would be the hardest ones to befriend.",
+        "_doc": "Rehabilitation constants (§3.6: salvage it OR rehabilitate it into your roster). Hours and fee are read off the specimen so a rival's apex monster is a longer, dearer programme than a scrappy one; `hourScale`/`feeScale` on a level make the whole track cheaper as you invest in it. The two knobs are deliberately orthogonal: the CLOCK releases the specimen, the SESSIONS decide who walks out. sessionGapFraction is a share of the programme's own length rather than a fixed cooldown, so the full curriculum always fits inside the programme — otherwise the scrappiest specimens, whose programmes are shortest, would be the hardest ones to befriend.",
         "baseHours": 4.5,
         "hoursPerPower": 0.09,
         "hoursPerInstability": 0.05,
@@ -81,19 +81,19 @@
           "level": 1,
           "name": "Holding Bay & A Very Firm Door",
           "cost": 0,
-          "blurb": "One reinforced pen, one padlock, one folding chair for staring contests. Anything you impound can be dismantled for its parts \u2014 and that is the only thing it can be.",
+          "blurb": "One reinforced pen, one padlock, one folding chair for staring contests. Anything you impound can be dismantled for its parts — and that is the only thing it can be.",
           "grants": {
             "rehab": false
           }
         },
         {
           "level": 2,
-          "name": "Tier II \u2014 The Reorientation Wing",
+          "name": "Tier II — The Reorientation Wing",
           "cost": 700,
           "requiresNodes": [
             "checkpoint"
           ],
-          "blurb": "Soft lighting, enrichment toys, and a motivational poster of you. Lets you REHABILITATE a captured chimera into your own roster instead of taking it apart \u2014 someone else's anatomy, someone else's grades, on your team.",
+          "blurb": "Soft lighting, enrichment toys, and a motivational poster of you. Lets you REHABILITATE a captured chimera into your own roster instead of taking it apart — someone else's anatomy, someone else's grades, on your team.",
           "unlockLine": "Reorientation Wing open for business. The first intake has already chewed the motivational poster.",
           "news": "County shelter reports unusual new competitor: \"They keep taking the scary ones,\" says volunteer, relieved.",
           "grants": {
@@ -104,7 +104,7 @@
         },
         {
           "level": 3,
-          "name": "Tier III \u2014 The Enrichment Annexe",
+          "name": "Tier III — The Enrichment Annexe",
           "cost": 1800,
           "requiresNodes": [
             "precinct"
@@ -119,6 +119,218 @@
           }
         }
       ]
+    },
+    {
+      "id": "incubator",
+      "name": "Incubator",
+      "icon": "🥚",
+      "screen": "ranch",
+      "levels": [
+        {
+          "level": 1,
+          "name": "Three Drawers And A Lamp",
+          "cost": 0,
+          "blurb": "Three warm drawers, one desk lamp, and a hand-lettered sign reading DO NOT OPEN.",
+          "grants": {
+            "slots": 3,
+            "hourScale": 1,
+            "mutationBonus": 0
+          }
+        },
+        {
+          "level": 2,
+          "name": "Tier II — The Egg Wall",
+          "cost": 900,
+          "requiresNodes": [
+            "downtown"
+          ],
+          "blurb": "Five bays on a thermostat that actually works. Eggs come out a fifth sooner and, because a stable temperature is where odd things happen, they mutate a third more often.",
+          "unlockLine": "Egg Wall installed. Five bays, one thermostat, and a hum you will get used to.",
+          "news": "Hardware store sells out of thermostats. \"Someone is building something,\" says clerk, correctly.",
+          "grants": {
+            "slots": 5,
+            "hourScale": 0.8,
+            "mutationBonus": 0.35
+          }
+        },
+        {
+          "level": 3,
+          "name": "Tier III — Hatchery Row",
+          "cost": 3200,
+          "requiresNodes": [
+            "aerodrome"
+          ],
+          "blurb": "Eight bays, individually climate-controlled, humming in harmony. Incubation runs at half time and very nearly twice as many eggs come out carrying something nobody put there — which is where variants and the mutation-only genes come from.",
+          "unlockLine": "Hatchery Row online. It sings at 3am. Nobody has decided whether that is a problem.",
+          "news": "Neighbours report \"a low chord, at night, from the old Cook place.\" Sleep quality otherwise unaffected.",
+          "grants": {
+            "slots": 8,
+            "hourScale": 0.5,
+            "mutationBonus": 0.9
+          }
+        }
+      ]
+    },
+    {
+      "id": "extractor",
+      "name": "Extractor",
+      "icon": "🧪",
+      "screen": "extract",
+      "levels": [
+        {
+          "level": 1,
+          "name": "Hand-Cranked & Hopeful",
+          "cost": 0,
+          "blurb": "A centrifuge you turn yourself. Grade is whatever the animal brought to the table.",
+          "grants": {
+            "gradeBonus": 0
+          }
+        },
+        {
+          "level": 2,
+          "name": "Tier II — Servo-Assisted Draw",
+          "cost": 1400,
+          "requiresNodes": [
+            "precinct"
+          ],
+          "blurb": "A motor, a cold trap, and a draw that stops bruising the sample. Every extraction grades a little better than the animal strictly earned.",
+          "unlockLine": "Servo-Assisted Draw fitted. You will never crank anything again and you are at peace with that.",
+          "news": "Dairy equipment supplier reports \"an unusual customer with very specific centrifuge needs.\"",
+          "grants": {
+            "gradeBonus": 0.08
+          }
+        },
+        {
+          "level": 3,
+          "name": "Tier III — Cryogenic Column",
+          "cost": 4200,
+          "requiresNodes": [
+            "harbor_rig"
+          ],
+          "blurb": "Liquid nitrogen, a column the height of the barn, and a grade forecast that flatters everybody.",
+          "unlockLine": "Cryogenic Column commissioned. The barn is now the second-coldest place in the county.",
+          "news": "Industrial gas depot notes record nitrogen order. \"Ice cream,\" said the customer. It was not ice cream.",
+          "grants": {
+            "gradeBonus": 0.18
+          }
+        }
+      ]
+    },
+    {
+      "id": "scanner",
+      "name": "Gene Scanner",
+      "icon": "🔬",
+      "screen": "ranch",
+      "levels": [
+        {
+          "level": 1,
+          "name": "Squinting At It Thoughtfully",
+          "cost": 0,
+          "blurb": "You can tell a lot from an animal by looking at it. You can tell nothing at all about its alleles.",
+          "grants": {
+            "genotype": false,
+            "pairing": false
+          }
+        },
+        {
+          "level": 2,
+          "name": "Tier II — Bench Sequencer",
+          "cost": 1600,
+          "requiresNodes": [
+            "crop_strip"
+          ],
+          "blurb": "Reads what an animal CARRIES, not just what it shows. Every recessive in the pens becomes visible — which is the difference between breeding and hoping.",
+          "unlockLine": "Bench Sequencer calibrated. Half the herd is carrying something and you finally know which half.",
+          "news": "Regional lab reports theft of one sequencer. Thief left exact payment in cash and a thank-you note.",
+          "grants": {
+            "genotype": true,
+            "pairing": false
+          }
+        },
+        {
+          "level": 3,
+          "name": "Tier III — Predictive Pairing Suite",
+          "cost": 4600,
+          "requiresNodes": [
+            "crucible_floor"
+          ],
+          "blurb": "Runs the Punnett square for you: pick two parents and it tells you, to the percent, what the egg can carry and what it will actually express. Breeding stops being a prayer.",
+          "unlockLine": "Pairing Suite online. It has opinions about your breeding programme and they are unkind.",
+          "news": "Statistics department reports missing workstation. \"It was doing something with goats,\" says nobody.",
+          "grants": {
+            "genotype": true,
+            "pairing": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "infirmary",
+      "name": "Infirmary",
+      "icon": "🩹",
+      "screen": "pens",
+      "levels": [
+        {
+          "level": 1,
+          "name": "A Bucket And A Kind Word",
+          "cost": 0,
+          "blurb": "One cot, one bucket, and a great deal of encouragement. Convalescence takes as long as it takes.",
+          "grants": {
+            "healScale": 1,
+            "treatScale": 1,
+            "scarChanceScale": 1
+          }
+        },
+        {
+          "level": 2,
+          "name": "Tier II — Veterinary Bay",
+          "cost": 1100,
+          "requiresNodes": [
+            "radio_mast"
+          ],
+          "blurb": "Proper lighting, proper splints, proper drugs. Injuries clear in two thirds the time and treatment costs less.",
+          "unlockLine": "Veterinary Bay open. There is a chart on the wall and somebody is updating it.",
+          "news": "Veterinary wholesaler notes a new bulk account. Species field left blank. Twice.",
+          "grants": {
+            "healScale": 0.66,
+            "treatScale": 0.8,
+            "scarChanceScale": 1
+          }
+        },
+        {
+          "level": 3,
+          "name": "Tier III — Regenerative Suite",
+          "cost": 3600,
+          "requiresNodes": [
+            "dredge_yard"
+          ],
+          "blurb": "Tanks, tubes, and a tissue printer. Injuries clear in under half the time, treatment is cheap, and an untreated one sets badly far less often.",
+          "unlockLine": "Regenerative Suite commissioned. Something in tank three is watching you back.",
+          "news": "Medical supply firm reports its largest ever order of \"unspecified growth medium.\" Delivery went to a barn.",
+          "grants": {
+            "healScale": 0.45,
+            "treatScale": 0.6,
+            "scarChanceScale": 0.6
+          }
+        }
+      ]
     }
-  ]
+  ],
+  "upkeep": {
+    "_doc": "Daily upkeep. Stock animals pay their species' upkeepPerDay (unchanged). A chimera pays for the chassis it rides, the grade of every part bolted to it, and the power those parts draw — all three read off data the genome already carries, so a new part, grade or frame is priced automatically. Instability is a surcharge because a creature trying to come apart needs watching. The spread across grades is deliberately steep (1 -> 22 per part) and the flat terms deliberately small: a first standard chimera costs about $21/day against a $40 stipend, and building it also takes an animal OUT of the herd, so building one can never bankrupt a player who has not conquered anything yet (the R11 floor), while a stable of prismatic monsters runs past $150/day each and genuinely requires territory. Net income (territory + stipend - upkeep) is what the player actually banks, and every screen that shows money shows it, because a treadmill you cannot see is just a number that will not go up.",
+    "frameBase": {
+      "S": 3,
+      "M": 5,
+      "L": 9
+    },
+    "frameFallback": 5,
+    "gradeCost": {
+      "standard": 1,
+      "prime": 5,
+      "apex": 12,
+      "prismatic": 22
+    },
+    "drawCost": 0.35,
+    "instabilityCost": 0.08
+  }
 }

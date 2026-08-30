@@ -62,6 +62,9 @@ export function indexContent(raw) {
     directorRules: raw.director ? byId(raw.director.counters) : {},
     directorMeta: raw.director ? raw.director.tuning : null,
     facility: raw.facility ? byId(raw.facility.tracks) : {},
+    // Daily upkeep constants (R25). Kept beside the facility because the
+    // tracks below are what a player buys with what upkeep leaves them.
+    upkeepMeta: raw.facility ? raw.facility.upkeep ?? null : null,
     philosophies: raw.philosophies ? byId(raw.philosophies.philosophies) : {},
     operations: raw.operations ? byId(raw.operations.operations) : {},
     operationMeta: raw.operations ? raw.operations.tuning : null,

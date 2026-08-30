@@ -12,7 +12,7 @@ import { newGameState, migrate, SAVE_VERSION } from '../save/save.js';
 import {
   createAnimal, ageStage, conditionTier, applyElapsed, careAction,
   careStatus, buyMailOrder, buyPenUpgrade, ensureRanchSeeded, stockGenome,
-  CARE_ACTIONS, TUNING, STATS, faunaUnlocked, catalogFor,
+  CARE_ACTIONS, TUNING, STATS, faunaUnlocked, catalogFor, upkeepPerDay, chimeraUpkeep,
 } from '../ranch/ranch.js';
 import {
   GRADES, GRADE_INDEX, gradeFor, avgStars, extractAnimal,
@@ -24,13 +24,16 @@ import {
   playerActions, playerActive, tagMultiplier, isInjured, turnForecast, tierScaleFor,
   movesFromTokens, previewMove,
 } from '../battle/engine.js';
-import { runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent, regionBench, ARCHETYPES } from './sim.js';
+import {
+  runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent,
+  regionBench, ARCHETYPES, facilityPayback, labAt,
+} from './sim.js';
 import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
 import {
-  nodeStates, threatGen, threatLadder, regionStates, regionBlockers, regionOpen,
+  nodeStates, threatGen, threatLadder, regionStates, regionBlockers, regionOpen, nodeById,
   incomePerDay, tickCampaign, resolveBattle, salvageUnit,
 } from '../campaign/campaign.js';
-import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING } from '../ranch/breeding.js';
+import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING, pairingForecast } from '../ranch/breeding.js';
 import { trainChimera, TRAINING } from '../splice/theater.js';
 import { obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
 import { onboardingSteps, onboardingActive } from '../ranch/onboarding.js';
@@ -4576,6 +4579,160 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 
 const pctOf = (x) => `${Math.round(x * 100)}%`;
 const classOfSpecies = (id) => content.species[id]?.class ?? null;
+
+// --- R25: the second money sink, and what each track buys --------------
+//
+// "Money has a second sink that changes the loop, and each track pays back
+// measurably." The first half is arithmetic — the tracks cost what they
+// cost. The second half is a claim, so it is measured, by tools/sim.js
+// running the game's own breeding rule, grade thresholds and clocks.
+{
+  const pay = facilityPayback(content);
+
+  // Every track must be a ladder that goes somewhere, and every level-1
+  // must be free — a facility that opens by charging you for what you
+  // already had is a facility that punishes a live save for existing.
+  const NEW_TRACKS = ['incubator', 'extractor', 'scanner', 'infirmary'];
+  for (const id of [...NEW_TRACKS, 'theater', 'containment']) {
+    const track = content.facility[id];
+    assert.ok(track, `${id} track exists`);
+    assert.equal(track.levels[0].cost, 0, `${id} level 1 is the world as it already was, at no charge`);
+    assert.ok(track.levels.every((l, i) => l.level === i + 1), `${id} levels are contiguous`);
+    for (const level of track.levels.slice(1)) {
+      assert.ok(level.cost > 0 && level.blurb && level.grants, `${id} L${level.level} is priced and described`);
+      assert.ok(level.unlockLine && level.news, `${id} L${level.level} says something when it lands`);
+      for (const nodeId of level.requiresNodes ?? []) {
+        assert.ok(nodeById(content, nodeId), `${id} L${level.level} gates on a real node (${nodeId})`);
+      }
+    }
+    // Costs climb; a later tier is never the cheaper buy.
+    for (let i = 2; i < track.levels.length; i++) {
+      assert.ok(track.levels[i].cost > track.levels[i - 1].cost, `${id} L${i + 1} costs more than L${i}`);
+    }
+  }
+
+  // The sink has to be big enough to matter against what R26's map pays.
+  const sink = Object.values(content.facility)
+    .flatMap((t) => t.levels.map((l) => l.cost))
+    .reduce((a, b) => a + b, 0);
+  assert.ok(sink >= 18000, `the facility is a real sink ($${sink} across every track)`);
+
+  // --- Incubator. Bays are NOT the payback: pen capacity is the real
+  // bottleneck, so queueing more eggs changes nothing on its own. What has
+  // to move is how often an egg carries something nobody bred for, because
+  // that is where variants and the mutation-only genes enter the game.
+  const inc = pay.incubator;
+  assert.ok(inc[2].slots > inc[0].slots, `bays grow (${inc[0].slots} -> ${inc[2].slots})`);
+  assert.ok(inc[2].hoursPerEgg < inc[0].hoursPerEgg, 'and eggs come out sooner');
+  assert.ok(inc[2].mutationsPer100 >= inc[0].mutationsPer100 * 1.6,
+    `Hatchery Row genuinely changes what hatches (${inc[0].mutationsPer100.toFixed(1)} -> ${inc[2].mutationsPer100.toFixed(1)} mutations per 100 eggs)`);
+
+  // --- Extractor. The same donor population, graded by three different
+  // machines. Measured: prime+ 50 -> 72%, apex+ 4 -> 13%.
+  const ext = pay.extractor;
+  assert.ok(ext[1].primePlus > ext[0].primePlus && ext[2].primePlus > ext[1].primePlus,
+    `each Extractor tier grades better (${ext.map((x) => Math.round(x.primePlus * 100) + '%').join(' -> ')})`);
+  assert.ok(ext[2].apexPlus >= ext[0].apexPlus * 2,
+    `and the top tier at least doubles apex yield (${Math.round(ext[0].apexPlus * 100)}% -> ${Math.round(ext[2].apexPlus * 100)}%)`);
+  // It is a thumb on the scale, not a replacement for husbandry: a neglected
+  // runt must not grade prismatic because you bought a centrifuge.
+  const runt = { species: 'goat', condition: 30, birthAt: 0, potential: { hp: 1, power: 1, armor: 1, speed: 1, stamina: 1 } };
+  assert.equal(gradeFor(runt, content, t0, labAt({ extractor: 3 })).id, 'standard',
+    'the best Extractor in the world cannot launder a neglected runt');
+
+  // --- Gene Scanner. It sells information, so its payback is search speed:
+  // pairings needed to fix a recessive, blind versus informed. Measured
+  // 111-400 blind against 5-8 informed.
+  assert.ok(pay.scanner.length >= 2, 'there are recessives to hunt');
+  for (const row of pay.scanner) {
+    assert.ok(row.informed * 3 <= row.blind,
+      `${row.trait}: the Suite is at least three times the breeder blind luck is (${row.blind.toFixed(1)} -> ${row.informed.toFixed(1)} pairings)`);
+  }
+  // And the numbers it quotes are the numbers the game actually breeds by.
+  {
+    const dominant = Object.values(content.traits).find((tr) => tr.dominant);
+    const recessive = Object.values(content.traits).find((tr) => !tr.dominant);
+    const carrier = { genotype: { [dominant.id]: 1, [recessive.id]: 1 } };
+    const rows = pairingForecast(carrier, carrier, content);
+    const dom = rows.find((r) => r.trait.id === dominant.id);
+    const rec = rows.find((r) => r.trait.id === recessive.id);
+    // Two heterozygotes: 3/4 of offspring carry, 1/4 are homozygous.
+    assert.ok(Math.abs(dom.carrier - 0.75) < 1e-9, `carrier odds are Mendel's (${dom.carrier})`);
+    assert.ok(Math.abs(dom.express - 0.75) < 1e-9, 'a dominant shows the moment it is carried');
+    assert.ok(Math.abs(rec.express - 0.25) < 1e-9, 'a recessive needs both copies');
+    assert.ok(rec.carrier > rec.express, 'and the gap between carrying and showing is the whole game');
+    // A pairing with nothing to say says nothing, rather than a wall of 0%.
+    assert.deepEqual(pairingForecast({ genotype: {} }, { genotype: {} }, content), []);
+  }
+
+  // --- Infirmary. Time and certainty, not power.
+  const inf = pay.infirmary;
+  assert.ok(inf[2].meanDowntimeHours <= inf[0].meanDowntimeHours * 0.6,
+    `the Regenerative Suite more than a third off convalescence (${inf[0].meanDowntimeHours.toFixed(1)}h -> ${inf[2].meanDowntimeHours.toFixed(1)}h)`);
+  assert.ok(inf[2].scarChance < inf[0].scarChance, 'and an untreated injury sets badly less often');
+  assert.ok(inf[2].scarChance > 0,
+    'but never zero — treatment stays the only guarantee, or the Infirmary stops selling certainty and starts giving it away');
+  assert.ok(inf[2].treatScale < inf[0].treatScale, 'and treating one costs less');
+}
+
+// --- R25: a stable is no longer free to own ---------------------------
+// Chimeras cost nothing to keep until R25, so territory income was a score
+// rather than a budget: the only question money ever asked was how long you
+// were willing to wait.
+{
+  const build = (grade, frame = 'M') =>
+    makeSimChimera(frame, ARCHETYPES.boots.partIds, grade, content);
+
+  const byGrade = ['standard', 'prime', 'apex', 'prismatic'].map((g) => chimeraUpkeep(build(g), content));
+  for (let i = 1; i < byGrade.length; i++) {
+    assert.ok(byGrade[i] > byGrade[i - 1], `upkeep climbs with grade (${byGrade.join(' -> ')})`);
+  }
+  assert.ok(byGrade[3] >= byGrade[0] * 4,
+    `and a prismatic specimen is a premium animal (\$${byGrade[0]} -> \$${byGrade[3]}/day)`);
+
+  // THE FLOOR (R11's rule, and the reason the flat terms are small): the
+  // onboarding path is care -> extract -> splice -> battle -> conquer, so a
+  // player reaches their first chimera having conquered NOTHING. If that
+  // creature costs more than the stipend can carry, the guided first loop
+  // walks a new player straight into insolvency.
+  //
+  // Modelled the way the game actually gets there: graduating an animal
+  // takes it OUT of the herd, so the herd shrinks as the chimera arrives.
+  const starter = { ...newGameState() };
+  ensureRanchSeeded(starter, content, t0);
+  starter.ranch.stock[0].birthAt = t0 - 100 * HOUR;
+  extractAnimal(starter, starter.ranch.stock[0].id, content, t0);
+  starter.chimeras = [build('standard')];
+  const drain = upkeepPerDay(starter, content);
+  assert.ok(drain < TUNING.stipendPerDay,
+    `the first chimera stays inside the stipend (\$${drain} vs \$${TUNING.stipendPerDay})`);
+
+  // …and a shelf of prismatic monsters does not. That is the whole point:
+  // the top of the game has to need the territory R26 built.
+  const rich = { ...newGameState() };
+  ensureRanchSeeded(rich, content, t0);
+  rich.chimeras = Array.from({ length: 6 }, () => build('prismatic', 'L'));
+  const heavy = upkeepPerDay(rich, content);
+  assert.ok(heavy > TUNING.stipendPerDay * 8,
+    `six prismatic Rumblers need territory, not a stipend (\$${heavy}/day)`);
+
+  // The drain is charged, not merely reported. A chimera-only lab with no
+  // stock still pays.
+  const ticking = { ...newGameState(), lastTickAt: t0, funds: 5000 };
+  ticking.chimeras = [build('prismatic')];
+  applyElapsed(ticking, content, t0 + 24 * HOUR);
+  const expected = 5000 + TUNING.stipendPerDay - chimeraUpkeep(ticking.chimeras[0], content);
+  assert.ok(Math.abs(ticking.funds - expected) < 1,
+    `a day of upkeep actually leaves the account (\$${Math.round(ticking.funds)} vs \$${Math.round(expected)})`);
+
+  // And it can never dig a hole: funds floor at zero, because a player who
+  // was away for a fortnight must come back to a poor lab, not a ruined one.
+  const broke = { ...newGameState(), lastTickAt: t0, funds: 10 };
+  broke.chimeras = Array.from({ length: 4 }, () => build('prismatic', 'L'));
+  applyElapsed(broke, content, t0 + 30 * 24 * HOUR);
+  assert.equal(broke.funds, 0, 'absence empties the account and stops there');
+  assert.equal(broke.chimeras.length, 4, 'and never costs a creature');
+}
 
 // --- R26: five regions, and the only claim that matters --------------
 //

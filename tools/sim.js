@@ -220,6 +220,157 @@ export function withSecondOrgan(builds, content, seed = 7) {
   });
 }
 
+// --- The facility bench (R25) ------------------------------------------
+//
+// R25's criterion is "money has a second sink that changes the loop, AND
+// each track pays back measurably". The first half is arithmetic; the
+// second is a claim, so here is the instrument that settles it. Every
+// number below runs the game's own code — the real breeding rule, the real
+// grade thresholds, the real incubation clock — against the same content
+// the browser loads.
+
+import { gradeFor, GRADE_INDEX } from '../splice/extract.js';
+import { pairingForecast, expressedTraits, incubatorSlots, BREEDING } from '../ranch/breeding.js';
+
+const BREEDING_MUTATION = BREEDING.mutationChance;
+import {
+  incubatorGrants, extractorGrants, scannerGrants, infirmaryGrants,
+} from '../splice/facility.js';
+
+const HOUR_MS = 3600000;
+
+// A bare state good enough for the pure readers. `facility` is the only
+// field any of them consults.
+export function labAt(levels = {}) {
+  return { seed: 2026, funds: 1e9, facility: { ...levels }, ranch: { stock: [], eggs: [] }, chimeras: [], campaign: { heldNodes: [], notoriety: 0 } };
+}
+
+// Eggs per real-world day: bays divided by how long a bay is occupied.
+// Both halves of the track move it, which is the point of buying it.
+export function incubatorThroughput(state, content) {
+  const g = incubatorGrants(state, content);
+  const slots = incubatorSlots(state, content);
+  const species = Object.values(content.species).filter((sp) => sp.incubationMinutes);
+  const meanHours = species.reduce((sum, sp) => sum + sp.incubationMinutes / 60, 0) / species.length;
+  const occupied = meanHours * g.hourScale;
+  return {
+    slots,
+    hoursPerEgg: occupied,
+    eggsPerDay: (slots * 24) / occupied,
+    // The number that actually changes the loop. Bays are not the
+    // bottleneck — pen capacity is — so what the track has to be worth is
+    // how often an egg comes out carrying something nobody bred for.
+    mutationsPer100: 100 * BREEDING_MUTATION * (1 + g.mutationBonus),
+  };
+}
+
+// What share of a representative donor population grades prime or better.
+// The animals are held fixed across levels, so the only thing moving is
+// the draw.
+export function extractorYield(state, content, { donors = 240, seed = 7 } = {}) {
+  const rng = mulberry32(hashString(`extractor:${seed}`));
+  const speciesIds = Object.values(content.species).filter((sp) => sp.mailOrderPrice).map((sp) => sp.id);
+  const counts = { standard: 0, prime: 0, apex: 0, prismatic: 0 };
+  for (let i = 0; i < donors; i++) {
+    const sp = pick(rng, speciesIds);
+    const animal = {
+      species: sp,
+      condition: 55 + rng() * 45,
+      birthAt: -1e9, // long since prime
+      potential: Object.fromEntries(['hp', 'power', 'armor', 'speed', 'stamina'].map((k) => [k, 1 + Math.floor(rng() * 5)])),
+    };
+    counts[gradeFor(animal, content, 0, state).id]++;
+  }
+  const better = (id) => Object.entries(counts)
+    .filter(([g]) => GRADE_INDEX[g] >= GRADE_INDEX[id])
+    .reduce((sum, [, n]) => sum + n, 0) / donors;
+  return { counts, primePlus: better('prime'), apexPlus: better('apex') };
+}
+
+// How many pairings it takes to breed an animal that EXPRESSES a chosen
+// recessive, picking blind versus picking with the Gene Scanner's numbers.
+// Both runs use the same inheritance rule the game breeds by; the only
+// difference is whether the breeder can see what the parents carry.
+export function generationsToFix(content, { traitId, informed, seed = 11, herd = 8, cap = 400 } = {}) {
+  const trait = content.traits[traitId];
+  const rng = mulberry32(hashString(`fix:${traitId}:${informed}:${seed}`));
+  const pool = [];
+  for (let i = 0; i < herd; i++) {
+    // A founding herd carrying the gene at its wild rate, both sexes.
+    let alleles = 0;
+    if (rng() < (trait.wildChance ?? 0.1)) alleles++;
+    if (alleles && rng() < (trait.wildChance ?? 0.1)) alleles++;
+    pool.push({ id: `f${i}`, sex: i % 2 ? 'M' : 'F', genotype: alleles ? { [traitId]: alleles } : {} });
+  }
+  // Seed one carrier, or a blind run can be unwinnable through no fault of
+  // the strategy — the question is how fast you get there, not whether the
+  // founding roll was kind.
+  if (!pool.some((a) => (a.genotype[traitId] ?? 0) > 0)) pool[0].genotype[traitId] = 1;
+
+  for (let n = 0; n < cap; n++) {
+    if (pool.some((a) => expressedTraits(a.genotype, content).includes(traitId))) return n;
+    const males = pool.filter((a) => a.sex === 'M');
+    const females = pool.filter((a) => a.sex === 'F');
+    if (!males.length || !females.length) return cap;
+    let sire = pick(rng, males);
+    let dam = pick(rng, females);
+    if (informed) {
+      // The Suite's own numbers, used the way a breeder would use them.
+      let best = -1;
+      for (const m of males) for (const f of females) {
+        const row = pairingForecast(m, f, content).find((r) => r.trait.id === traitId);
+        const score = row ? row.express * 2 + row.carrier : 0;
+        if (score > best) { best = score; sire = m; dam = f; }
+      }
+    }
+    // The engine's rule: each parent passes one allele with probability
+    // alleles/2 (ranch/breeding.js, breedPair).
+    let alleles = 0;
+    for (const parent of [sire, dam]) {
+      const has = parent.genotype?.[traitId] ?? 0;
+      if (has > 0 && rng() < has / 2) alleles++;
+    }
+    const child = { id: `c${n}`, sex: rng() < 0.5 ? 'M' : 'F', genotype: alleles ? { [traitId]: alleles } : {} };
+    pool.push(child);
+    if (pool.length > herd + 6) pool.splice(0, 1); // a working herd, not a museum
+  }
+  return cap;
+}
+
+// Downtime and scarring, the two things the Infirmary sells against.
+export function infirmaryPayback(state, content) {
+  const g = infirmaryGrants(state, content);
+  const meanBattleHours = 3 * g.healScale; // engine: (2 + rng()*2) * healScale
+  const scarTuning = { scarChance: 0.34, ...(content.scarMeta ?? {}) };
+  return {
+    meanDowntimeHours: meanBattleHours,
+    scarChance: scarTuning.scarChance * g.scarChanceScale,
+    treatScale: g.treatScale,
+  };
+}
+
+// One table: what every level of every track is actually worth.
+export function facilityPayback(content) {
+  const at = (track, level) => labAt({ [track]: level });
+  const rows = { incubator: [], extractor: [], scanner: [], infirmary: [] };
+  for (const level of [1, 2, 3]) {
+    rows.incubator.push({ level, ...incubatorThroughput(at('incubator', level), content) });
+    rows.extractor.push({ level, ...extractorYield(at('extractor', level), content) });
+    rows.infirmary.push({ level, ...infirmaryPayback(at('infirmary', level), content) });
+  }
+  // The Scanner sells information, so its payback is measured as search
+  // speed: how many pairings a breeder needs to fix a recessive when they
+  // can see what the herd carries, against when they cannot.
+  const recessives = Object.values(content.traits).filter((t) => !t.dominant && t.wildChance);
+  for (const trait of recessives.slice(0, 3)) {
+    const runs = [0, 1, 2, 3, 4, 5, 6, 7];
+    const mean = (informed) =>
+      runs.reduce((sum, seed) => sum + generationsToFix(content, { traitId: trait.id, informed, seed }), 0) / runs.length;
+    rows.scanner.push({ trait: trait.id, blind: mean(false), informed: mean(true) });
+  }
+  return rows;
+}
+
 // --- The region bench (R26) --------------------------------------------
 //
 // R26's acceptance criterion is not "there are more fights", it is "taking

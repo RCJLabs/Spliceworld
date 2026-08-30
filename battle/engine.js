@@ -11,6 +11,7 @@ import { GRADE_INDEX } from '../splice/extract.js';
 import { isSettled } from '../splice/theater.js';
 import { perksOf, driftFromBattle } from '../splice/temperament.js';
 import { flatModifiers, scarEffects, againstTags } from '../splice/scars.js';
+import { infirmaryGrants } from '../splice/facility.js';
 
 const STAGE_STEP = 0.15;
 const STAGE_CAP = 2; // setup matters, but stacking is not a strategy on its own
@@ -1009,7 +1010,10 @@ export function finishBattle(state, battle, content, now) {
     const chimera = state.chimeras.find((ch) => ch.id === c.refId);
     if (!chimera) continue;
     const rng = rngStream(state.seed, 'injury', state.warRecord.wins + state.warRecord.losses + injuries.length);
-    const hours = 2 + rng() * 2;
+    // The Infirmary track shortens convalescence (R25). It buys TIME, not
+    // outcomes: the scar roll is still a roll, and treating an injury is
+    // still what guarantees it leaves no trace.
+    const hours = (2 + rng() * 2) * infirmaryGrants(state, content).healScale;
     chimera.injury = {
       name: pick(rng, INJURY_NAMES),
       until: now + Math.round(hours * 3600000),

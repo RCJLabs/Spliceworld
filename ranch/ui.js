@@ -9,12 +9,17 @@ import {
   catalogFor, TUNING,
 } from './ranch.js';
 import { gradeFor } from '../splice/extract.js';
-import { canBreed, breedPair, hatchEgg, BREEDING, isVariant, baseSpecies } from './breeding.js';
+import {
+  canBreed, breedPair, hatchEgg, BREEDING, isVariant, baseSpecies, incubatorSlots,
+  pairingForecast, expressedTraits,
+} from './breeding.js';
 import { onboardingSteps, onboardingActive } from './onboarding.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
 import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade } from '../splice/facility.js';
 import { nodeName } from '../campaign/map.js';
+import { scannerGrants } from '../splice/facility.js';
+import { incomePerDay } from '../campaign/campaign.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -97,6 +102,32 @@ function facilityCard(state, content) {
   return `<section class="card"><h3>🏚 Facility</h3>${rows}</section>`;
 }
 
+// What the pens print where it used to say "????? (Gene Scanner required)".
+// That line shipped in M6 advertising a machine that did not exist, which
+// is the most conspicuous kind of unkept promise: the game itself telling
+// the player about a feature nobody had built.
+//
+// A carrier is written differently from an expresser on purpose — one copy
+// of a recessive is invisible in the animal and decisive in its offspring,
+// and that distinction IS the breeding game.
+function genesLine(animal, content, scanner) {
+  if (!scanner.genotype) return '????? <span class="locked-note">(Gene Scanner required)</span>';
+  const carried = Object.entries(animal.genotype ?? {}).filter(([, n]) => n > 0);
+  if (!carried.length) return '<span class="genes-clean">nothing remarkable</span>';
+  const expressed = new Set(expressedTraits(animal.genotype, content));
+  return carried
+    .map(([id, n]) => {
+      const trait = content.traits?.[id];
+      if (!trait) return null;
+      const shown = expressed.has(id);
+      return `<span class="gene-chip ${shown ? 'is-expressed' : 'is-carrier'}">${trait.name} ${n === 2 ? '××' : '×'}${
+        shown ? '' : ' <em>carrier</em>'
+      }</span>`;
+    })
+    .filter(Boolean)
+    .join(' ');
+}
+
 function eggSVG(palette) {
   return (
     `<svg viewBox="0 0 60 76" class="egg" aria-hidden="true">` +
@@ -112,6 +143,12 @@ export function renderRanchScreen(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
   const upkeep = upkeepPerDay(state, content);
+  // What the operation actually banks. Upkeep used to be stock-only and
+  // chimeras were free, so this number could never go negative and nobody
+  // had to look at it. It can now.
+  const territory = incomePerDay(state, content);
+  const net = Math.round(TUNING.stipendPerDay + territory - upkeep);
+  const scanner = scannerGrants(state, content);
   const catalog = catalogFor(state, content);
   if (!catalog.some((sp) => sp.id === catalogPick)) catalogPick = catalog[0]?.id ?? '';
   const catalogSpecies = catalog.find((sp) => sp.id === catalogPick) ?? null;
@@ -153,8 +190,9 @@ export function renderRanchScreen(root, ctx) {
     <section class="card">
       <div class="econ-row">
         <div><span class="econ-label">Slush fund</span><strong>$${Math.floor(state.funds)}</strong></div>
-        <div><span class="econ-label">Stipend</span><strong>+$${TUNING.stipendPerDay}/day</strong></div>
+        <div><span class="econ-label">Income</span><strong>+$${TUNING.stipendPerDay + territory}/day</strong></div>
         <div><span class="econ-label">Upkeep</span><strong>−$${upkeep}/day</strong></div>
+        <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${net < 0 ? '−' : '+'}$${Math.abs(net)}/day</strong></div>
         <div><span class="econ-label">Pens</span><strong>${state.ranch.stock.length}/${state.ranch.penCapacity}</strong></div>
       </div>
       <div class="ranch-actions">
@@ -220,6 +258,31 @@ export function renderRanchScreen(root, ctx) {
       disabled: disabled || !pool.length,
     });
   };
+  // The Predictive Pairing Suite (Gene Scanner Tier III). Inheritance here
+  // is a closed form, not a simulation, so these are real percentages —
+  // and the carrier/expresses split is the whole of the breeding game made
+  // visible: one copy of a recessive shows up in no animal and decides
+  // every one of its grandchildren.
+  const sireA = pickA ? state.ranch.stock.find((a) => a.id === pickA) : null;
+  const damB = pickB ? state.ranch.stock.find((a) => a.id === pickB) : null;
+  let forecast = '';
+  if (scanner.pairing && sireA && damB) {
+    const rows = pairingForecast(sireA, damB, content);
+    forecast = `
+      <div class="pairing-forecast">
+        <p class="econ-label">🔬 Predicted offspring</p>
+        ${rows.length
+          ? rows.map((r) => `
+            <div class="pairing-row">
+              <span>${r.trait.name} <em>${r.trait.dominant ? 'dominant' : 'recessive'}</em></span>
+              <span class="pairing-odds">carries <strong>${Math.round(r.carrier * 100)}%</strong> · shows <strong>${Math.round(r.express * 100)}%</strong></span>
+            </div>`).join('')
+          : '<p class="fine-print">Neither of them is carrying anything. This pairing produces a very ordinary animal, quickly.</p>'}
+      </div>`;
+  } else if (scanner.pairing) {
+    forecast = '<p class="fine-print">Pick both parents and the Suite will run the numbers.</p>';
+  }
+
   const breeding = `
     <section class="card">
       <h3>Breeding Pen</h3>
@@ -227,6 +290,7 @@ export function renderRanchScreen(root, ctx) {
         ${parentField('breed-a', 'Parent A', pickA, eligible, false)}
         ${parentField('breed-b', 'Parent B', pickB, partnerPool, !pickA)}
       </div>
+      ${forecast}
       <button type="button" class="big-btn" data-act="breed" ${pickA && pickB ? '' : 'disabled'}>💕 Introduce Them (science)</button>
     </section>`;
 
@@ -251,7 +315,7 @@ export function renderRanchScreen(root, ctx) {
   }).join('');
   const incubator = `
     <section class="card">
-      <h3>Incubator (${state.ranch.eggs.length}/${BREEDING.incubatorSlots})</h3>
+      <h3>Incubator (${state.ranch.eggs.length}/${incubatorSlots(state, content)})</h3>
       ${eggCards || '<p class="ranch-msg">No eggs. The incubator hums expectantly.</p>'}
     </section>`;
 
@@ -289,7 +353,7 @@ export function renderRanchScreen(root, ctx) {
             : 'origin: questionable paperwork'}</p>
           <div class="cond-bar"><div class="cond-fill tier-${tier}" style="width:${Math.round(animal.condition)}%"></div></div>
           <p class="cond-label">Condition ${Math.round(animal.condition)} · ${TIER_BLURBS[tier]}</p>
-          <p class="meta">Diet: ${species.diet} · Genes: ????? (Gene Scanner required)</p>
+          <p class="meta">Diet: ${species.diet} · Genes: ${genesLine(animal, content, scanner)}</p>
           <p class="meta">Graduation forecast: <span class="grade-badge grade-${gradeFor(animal, content, t).id}">${gradeFor(animal, content, t).name}</span></p>
           <div class="care-row">${buttons}</div>
           <button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}">🎓 Extract (graduate ${animal.name})</button>

@@ -6,6 +6,7 @@ import { renderArena } from '../battle/ui.js';
 import { createBattle, isInjured, obediencePercent } from '../battle/engine.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
+import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import { analyze } from '../splice/physiology.js';
 import { renderCreatureSVG } from '../render/renderer.js';
@@ -133,6 +134,10 @@ function renderMap(root, ctx) {
   const suspended = incomeSuspended(state, content);
   const map = regionStates(state, content);
   const nextRung = nextThreatRung(state, content);
+  // Territory is gross. What the lab banks is territory plus the stipend
+  // minus what the stable eats, and since R25 the stable eats plenty.
+  const upkeep = upkeepPerDay(state, content);
+  const net = Math.round(TUNING.stipendPerDay + income - upkeep);
 
   // Five strips instead of one (R26). A locked region still shows its name,
   // its identity and the one thing standing between you and it — a map that
@@ -280,6 +285,9 @@ function renderMap(root, ctx) {
         <div><span class="econ-label">Territory</span><strong>+$${income}/day</strong>${
           suspended ? `<span class="econ-suspended">−$${suspended} contested</span>` : ''
         }</div>
+        <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${
+          net < 0 ? '−' : '+'
+        }$${Math.abs(net)}/day</strong><span class="econ-next">after $${upkeep} upkeep</span></div>
         <div><span class="econ-label">Record</span><strong>${state.warRecord.wins}W–${state.warRecord.losses}L</strong></div>
       </div>
     </section>

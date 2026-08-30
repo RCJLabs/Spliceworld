@@ -1008,6 +1008,57 @@ body.in-battle .ticker { font-size: 0.66rem; }
   color: var(--warn);
 }
 
+/* --- Facility depth: what your money bought (R25) --------------------- */
+.net-positive { color: var(--hp); }
+.net-negative { color: var(--danger-soft); }
+
+.gene-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  margin: 1px 2px 1px 0;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--muted);
+}
+.gene-chip.is-expressed {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.gene-chip em { font-style: normal; opacity: 0.75; font-weight: 400; }
+.genes-clean { color: var(--muted); }
+
+.pairing-forecast {
+  margin: 8px 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--well);
+  border: 1px solid var(--line);
+}
+.pairing-forecast .econ-label {
+  margin: 0 0 6px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.pairing-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 10px;
+  font-size: 0.72rem;
+  padding: 3px 0;
+  border-top: 1px solid var(--line);
+}
+.pairing-row:first-of-type { border-top: 0; }
+.pairing-row em { font-style: normal; color: var(--muted); font-size: 0.66rem; }
+.pairing-odds { color: var(--muted); font-variant-numeric: tabular-nums; }
+.pairing-odds strong { color: var(--text); }
+
 /* --- Breeding & Incubator (M6) --- */
 .egg-wrap { flex: 0 0 44px; }
 .egg { width: 44px; height: auto; display: block; }

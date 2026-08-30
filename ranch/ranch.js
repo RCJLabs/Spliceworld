@@ -4,6 +4,7 @@
 // intervals).
 
 import { rngStream, pick, randInt } from '../util/rng.js';
+import { upkeepTuning } from '../splice/facility.js';
 
 export const STATS = ['hp', 'power', 'armor', 'speed', 'stamina'];
 export const AGE_STAGES = ['juvenile', 'adult', 'prime', 'elder'];
@@ -116,14 +117,13 @@ export function applyElapsed(state, content, now) {
   const dtHours = dt / HOUR;
   const dtDays = dt / DAY;
 
-  let upkeep = 0;
   for (const animal of state.ranch.stock) {
     animal.condition = Math.max(
       TUNING.conditionFloor,
       animal.condition - TUNING.decayPerHour * dtHours
     );
-    upkeep += content.species[animal.species].upkeepPerDay;
   }
+  const upkeep = upkeepPerDay(state, content);
   state.funds = Math.max(0, state.funds + (TUNING.stipendPerDay - upkeep) * dtDays);
 }
 
@@ -265,8 +265,42 @@ export function stockGenome(speciesId, content) {
   return { frame: content.species[speciesId].frame, parts };
 }
 
-export function upkeepPerDay(state, content) {
+// What one chimera costs to keep, per real-world day. Every term is read
+// off data the genome already carries, so a new part, a new grade or a new
+// frame is priced the moment it is authored:
+//
+//   the CHASSIS it rides (a Rumbler eats more than a terrier),
+//   the GRADE of every part bolted to it (a prismatic specimen is a
+//     premium animal and is billed like one),
+//   the POWER those parts draw (phys.draw was already the number for "how
+//     hard is this thing to run"), and
+//   its INSTABILITY, because a creature trying to come apart needs
+//     watching, and watching costs money.
+//
+// Chimeras were free to own until R25, which made territory income a score
+// rather than a budget: nothing you built ever cost you anything to keep,
+// so the only question money asked was how long you were willing to wait.
+export function chimeraUpkeep(chimera, content) {
+  const t = upkeepTuning(content);
+  let cost = t.frameBase[chimera.frame] ?? t.frameFallback;
+  for (const token of Object.values(chimera.tokens ?? {})) {
+    cost += t.gradeCost[token.grade] ?? t.gradeCost.standard;
+    cost += (content.parts[token.partId]?.phys?.draw ?? 0) * t.drawCost;
+  }
+  cost += (chimera.instability ?? 0) * t.instabilityCost;
+  return Math.round(cost);
+}
+
+export function stockUpkeepPerDay(state, content) {
   return state.ranch.stock.reduce(
     (sum, a) => sum + content.species[a.species].upkeepPerDay, 0
   );
+}
+
+export function chimeraUpkeepPerDay(state, content) {
+  return (state.chimeras ?? []).reduce((sum, c) => sum + chimeraUpkeep(c, content), 0);
+}
+
+export function upkeepPerDay(state, content) {
+  return stockUpkeepPerDay(state, content) + chimeraUpkeepPerDay(state, content);
 }
