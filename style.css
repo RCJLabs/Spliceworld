@@ -1,43 +1,47 @@
 /* Spliceworld — mad-lab theme. Mobile-first: must hold together at 380px. */
 
 :root {
-  /* --- Semantic palette. A colour scheme is one block of these. ---------
+  /* --- Semantic palette: BIOHAZARD, the shipped scheme. -----------------
+     A containment facility that has stopped filing paperwork: charcoal so
+     dark it reads as unlit, with toxic lime and hazard amber doing all the
+     talking. The alternates live in [data-theme] blocks below.
+
      Surfaces run ink (page) -> panel (card) -> panel-2 (raised) -> well
      (sunken). accent is the brand/action colour, accent-2 the secondary.
      danger/warn/hp/sta are role colours; the three class colours belong to
      the elemental triangle and should stay distinguishable in any scheme. */
-  --ink: #171426;
-  --panel: #221e38;
-  --panel-2: #2b2650;
-  --well: #131022;
-  --line: #3a3463;
-  --text: #efeaff;
-  --muted: #9d95c7;
+  --ink: #12120f;
+  --panel: #1c1c17;
+  --panel-2: #26261e;
+  --well: #0d0d0b;
+  --line: #3a3a2c;
+  --text: #f2f0e3;
+  --muted: #a8a48c;
 
-  --accent: #a6e22e;
-  --accent-2: #b48bff;
-  --on-accent: #17240a;
-  --accent-dim: #2f4d16;
-  --on-accent-2: #1a1030;
-  --accent-2-dim: #3a2c58;
+  --accent: #c8f000;
+  --accent-2: #ff9d1e;
+  --on-accent: #1a2000;
+  --accent-dim: #34400a;
+  --on-accent-2: #241300;
+  --accent-2-dim: #4a2f08;
 
-  --danger: #ff8a8a;
-  --danger-2: #ff6b6b;
-  --danger-soft: #ff9f9f;
-  --warn: #ffd66e;
-  --warn-dim: #6b5a2a;
-  --hp: #7ed321;
-  --sta: #d8c24a;
-  --sta-2: #ffe08a;
+  --danger: #ff6b5b;
+  --danger-2: #e34a3a;
+  --danger-soft: #ff9a8f;
+  --warn: #ffc93c;
+  --warn-dim: #5c4a12;
+  --hp: #9ad60c;
+  --sta: #d8a520;
+  --sta-2: #ffd166;
 
-  --cls-ground: #c9a86a;
-  --cls-water: #5fa8d3;
-  --cls-air: #b48bff;
+  --cls-ground: #d1a25a;
+  --cls-water: #4fc3d9;
+  --cls-air: #b98cff;
 
-  --stage-glow: #2a2550;
-  --stage-a: #1d1936;
-  --stage-b: #241f42;
-  --stage-c: #2c2650;
+  --stage-glow: #33331f;
+  --stage-a: #17170f;
+  --stage-b: #1f1f15;
+  --stage-c: #29291d;
 
   /* Legacy aliases: the original two brand names are used all over the
      stylesheet and in a couple of comments. Keep them pointing at the
@@ -52,17 +56,17 @@
    elemental triangle is a mechanic, not decoration, so Ground/Water/Air
    must never blend into a scheme's accent. */
 
-/* 2. BIOHAZARD — containment facility. Charcoal, hazard amber, toxic lime. */
-:root[data-theme="biohazard"] {
-  --ink: #12120f; --panel: #1c1c17; --panel-2: #26261e; --well: #0d0d0b;
-  --line: #3a3a2c; --text: #f2f0e3; --muted: #a8a48c;
-  --accent: #c8f000; --on-accent: #1a2000; --accent-dim: #34400a;
-  --accent-2: #ff9d1e; --on-accent-2: #241300; --accent-2-dim: #4a2f08;
-  --danger: #ff6b5b; --danger-2: #e34a3a; --danger-soft: #ff9a8f;
-  --warn: #ffc93c; --warn-dim: #5c4a12;
-  --hp: #9ad60c; --sta: #d8a520; --sta-2: #ffd166;
-  --cls-ground: #d1a25a; --cls-water: #4fc3d9; --cls-air: #b98cff;
-  --stage-glow: #33331f; --stage-a: #17170f; --stage-b: #1f1f15; --stage-c: #29291d;
+/* 2. LAB STANDARD — the original indigo, acid green and electric violet. */
+:root[data-theme="lab"] {
+  --ink: #171426; --panel: #221e38; --panel-2: #2b2650; --well: #131022;
+  --line: #3a3463; --text: #efeaff; --muted: #9d95c7;
+  --accent: #a6e22e; --on-accent: #17240a; --accent-dim: #2f4d16;
+  --accent-2: #b48bff; --on-accent-2: #1a1030; --accent-2-dim: #3a2c58;
+  --danger: #ff8a8a; --danger-2: #ff6b6b; --danger-soft: #ff9f9f;
+  --warn: #ffd66e; --warn-dim: #6b5a2a;
+  --hp: #7ed321; --sta: #d8c24a; --sta-2: #ffe08a;
+  --cls-ground: #c9a86a; --cls-water: #5fa8d3; --cls-air: #b48bff;
+  --stage-glow: #2a2550; --stage-a: #1d1936; --stage-b: #241f42; --stage-c: #2c2650;
 }
 
 /* 3. VIVARIUM — Saturday morning by way of 1987. Teal, aqua, hot magenta. */
