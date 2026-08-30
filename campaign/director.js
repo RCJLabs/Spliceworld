@@ -200,6 +200,21 @@ export function directEncounter(state, encounter, content) {
   // profile — swapping one Vehicle for another Vehicle against a Gas build
   // changes the sprite and nothing else.
   const alreadyCounters = (id) => rule.units.includes(id);
+  // `weight` predicts a unit's real threat well across the roster (measured
+  // at r=0.958) but the guarantee it is asked for is PAIRWISE, and no
+  // correlation that good is free of local inversions. Three encounter x
+  // rule pairings were measured turning an adaptation into a mercy rule,
+  // and every one of them shares a cause `weight` cannot see: it reads
+  // hp/power/armor and never looks at what the unit actually swings.
+  // gunship_80 (weight 118, a 58-power move) reads flimsier than
+  // attack_chopper (130, 52) and is not. So a slot that hits harder than
+  // the counter coming in is never expendable, whatever the stat line says
+  // — which takes mercy rules from three to none with no margin constant
+  // to tune, and costs only 5 of 21 swaps.
+  const bestMove = (id) => {
+    const u = content.enemies[id];
+    return u ? Math.max(0, ...u.moves.map((m) => m.power)) : 0;
+  };
   // A commander is not a mook. Never cut the opening beat, the final wave,
   // or anything that transforms — a boss fight that no longer contains its
   // boss is not an adaptation, it is a content bug.
@@ -208,7 +223,8 @@ export function directEncounter(state, encounter, content) {
     i < encounter.waves.length - 1 &&
     !content.enemies[id]?.transformInto &&
     id !== unitId &&
-    weight(id) <= weight(unitId);
+    weight(id) <= weight(unitId) &&
+    bestMove(id) <= bestMove(unitId);
   const candidates = encounter.waves
     .map((id, i) => ({ id, i }))
     .filter(expendable)

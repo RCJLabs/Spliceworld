@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 19;
+export const SAVE_VERSION = 20;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -211,6 +211,14 @@ const migrations = {
       chimera.injuryCount = chimera.injuryCount ?? 0;
       chimera.injuriesTreated = chimera.injuriesTreated ?? 0;
     }
+    return save;
+  },
+  // v20: Knockback can no longer rotate the same side two turns running —
+  // it was an unbounded lock, not a tempo move. An in-progress battle gains
+  // the turn-stamp that enforces it; a save mid-fight resumes with nobody
+  // recently punted, which is the safe reading.
+  20: (save) => {
+    if (save.battle) save.battle.knockedAt = save.battle.knockedAt ?? {};
     return save;
   },
 };

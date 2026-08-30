@@ -1,5 +1,101 @@
 # PROGRESS
 
+## Session 31 — The knockback lock, and what the director actually needed ✅
+
+**Acceptance criterion:** a Knockback attacker cannot deny every action, the
+director never makes a fight easier with wave order free again, and no
+adaptation is protected by where a unit happens to sit — **passes** (R18's
+slot workaround reverted and `military_response` still goes 55% → 3% under
+adaptation; all three guards fail smoke when broken).
+
+### The keyword pricing found a bug instead
+
+R18 asked for keyword prices in the director's `weight`. Measuring them, on
+one control unit, one keyword at a time:
+
+| keyword | Δ player win |
+|---|---|
+| **knockback** | **−88.7pp** |
+| evasionUp | −3.0pp |
+| accDown | −2.0pp |
+| everything else | ≤ −2pp |
+
+That is not a balance number. Knockback rotates the target's side, and the
+round loop then drops that side's planned action — correct for a KO, because
+the fighter is gone. For a rotation the fighter is alive on the bench, so a
+faster attacker with Knockback denied the player **every action for the
+entire fight**. The log is unambiguous: thirteen turns, enemy on
+`131/131 hp`, the player acting exactly once — when the last chimera had
+nowhere left to be shoved.
+
+A side rotated last turn can no longer be rotated again this turn. It stays
+a real tempo move (it still costs a full action) but the worst case is now
+losing every other action. Same fight: **loss in 13 turns → win in 5**.
+
+### The premise didn't survive the fix
+
+With the lock gone, every keyword prices between 0 and −3pp — knockback
+included, at −2.0pp. So there was nothing to price in. Checking the
+heuristic itself against measured threat across the roster:
+
+| formula | corr with real threat |
+|---|---|
+| **current** `hp + power*3 + armor*2` | **0.958** |
+| + best move power | 0.964 |
+| + best move + keyword count | 0.962 |
+
+`weight` was never the problem. But the director's promise is *pairwise*,
+and r=0.958 still leaves local inversions — `gunship_80` (weight 118, a
+58-power move) reads flimsier than `attack_chopper` (130, 52) and is not.
+So: one guard, not a reweighting. **A slot that hits harder than the counter
+coming in is never expendable.** Measured across every encounter × rule
+pairing:
+
+| guards | mercy rules | swaps kept |
+|---|---|---|
+| none (R18) | 3 | 21 |
+| move power | **0** | **16** |
+| class only | 1 | 11 |
+| class + move | 0 | 9 |
+
+**R18's slot workaround is reverted.** `military_response` has its strong
+unit back in the swappable middle slot, and the director now correctly
+appends instead of swapping: 55% → 3%. Wave order is no longer load-bearing.
+
+### A guard I wrote and then deleted
+
+A class guard (never trade an Air slot that counters a Ground stable for a
+Ground one) looked well-motivated — it was one of the three measured
+mercies. Removing it from the code changed nothing, which is how a guard
+rots into dead code, so it got checked properly: through the real director,
+`ground_stable` always outranks `chemical` for a Ground stable and answers
+with an Air unit, so the guard **cannot fire**. My "proof" that it was
+reachable had hand-picked the counter and bypassed rule selection. The move
+guard alone gets 0 mercies and keeps *more* swaps. Deleted.
+
+### Vehicle share
+Two Organic units — `rappel_team` (air) and `fire_brigade` (water), both
+land-plausible so they are not stuck in harbour encounters. Vehicle share
+45% → **40%**.
+
+### Known issues
+- **40%, not the 35% R18 asked for.** Reaching 35% meant trading the impound
+  lot's cruiser and the checkpoint's truck for weaker organics, and that cost
+  10pp of Standard difficulty (median 34% → 44%). Difficulty is worth more
+  than the round number, so it stopped at 40% with the median back at 37%.
+- **`weight` still ignores keywords**, by measurement rather than oversight —
+  pricing them in made the correlation worse. The move guard covers every
+  observed failure, but a future unit whose *keywords* rather than move power
+  outclass a counter could still slip through. Knockback was exactly that
+  case and is now capped; the general blind spot remains.
+- `SAVE_VERSION` **19 → 20** for `battle.knockedAt`, with a migration; sw
+  cache is `spliceworld-v20-knockback`.
+- Smoke 9.9s → 12.9s (the no-mercy sweep measures every encounter × rule).
+
+### Next session — first task
+Onboarding past the first conquest, or the ZzFX audio pass — both have been
+open since M7 and neither is blocked.
+
 ## Session 30 — The class triangle, and the gate at every grade ✅
 
 **Acceptance criterion:** no class is a strict upgrade over another, the
