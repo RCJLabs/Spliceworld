@@ -6,7 +6,7 @@ import { renderArena } from '../battle/ui.js';
 import { createBattle, isInjured, obediencePercent } from '../battle/engine.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
-import { toggleRow, pickerField, bindPickers } from '../ui/picker.js';
+import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import { analyze } from '../splice/physiology.js';
 import { renderCreatureSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
@@ -17,6 +17,10 @@ import {
 } from './rehab.js';
 import { GRADES, GRADE_INDEX } from '../splice/extract.js';
 import { contestOn, contestEncounter, contestRemainingMs, defencesOf } from './contest.js';
+import {
+  operationList, activeOp, opOdds, opReady, opCooldownEndsAt, opRemainingMs,
+  startOperation, abortOperation, heatNow, opTuning,
+} from './operations.js';
 import {
   profileOf, philosophyList, rollIdentities, setIdentity, setPhilosophy, duelBarks,
 } from './monologue.js';
@@ -186,6 +190,7 @@ function renderMap(root, ctx) {
     </section>
     ${contests ? `<section class="card contest-card"><h3>🛡 Counter-Offensive</h3>${contests}</section>` : ''}
     ${captives ? `<section class="card"><h3>⏳ Captured — Rescue Windows</h3>${captives}</section>` : ''}
+    ${jobsCard(state, ctx, t)}
     <section class="card">
       <h3>${region.name}</h3>
       ${nodes}
@@ -200,6 +205,7 @@ function renderMap(root, ctx) {
     </section>`;
 
   bindDossier(root, ctx, () => renderMap(root, ctx));
+  bindJobs(root, ctx, () => renderMap(root, ctx));
   root.querySelectorAll('button[data-node]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const node = region.nodes.find((n) => n.id === btn.dataset.node);
@@ -338,6 +344,147 @@ function bindDossier(root, ctx, redraw) {
         redraw();
       },
     }),
+  });
+}
+
+// --- The Jobs board ------------------------------------------------------
+
+// Non-combat work: the answer to a campaign where every route to money and
+// to new fauna ran through winning battles. It sits ABOVE the map on
+// purpose — it is the first thing a broke player should see, because a
+// broke player is exactly who it is for.
+
+const pct = (n) => `${Math.round(n * 100)}%`;
+
+function jobsCard(state, ctx, t) {
+  const { content } = ctx;
+  const jobs = operationList(content);
+  if (!jobs.length) return '';
+  const run = activeOp(state);
+  const heat = Math.round(heatNow(state, content, t));
+  const report = state.campaign.opReport;
+
+  const heatLine = `<p class="fine-print">Heat <strong class="${heat > 55 ? 'heat-high' : ''}">${heat}/100</strong> — ${
+    heat > 55
+      ? 'the county is extremely awake. Everything is harder until it is not.'
+      : heat > 20
+        ? 'somebody has started noticing a pattern.'
+        : 'nobody is looking for you. Yet.'
+  }</p>`;
+
+  if (run) {
+    const op = content.operations[run.opId];
+    const who = state.chimeras.find((c) => c.id === run.chimeraId);
+    return `
+      <section class="card jobs-card">
+        <h3>💼 Job In Progress</h3>
+        <div class="encounter job-live">
+          <div><strong>${op.icon} ${op.name}</strong><br>
+          <span class="fine-print">Back in <strong class="countdown">${fmtDuration(opRemainingMs(state, t))}</strong> · ${
+            who ? who.name : 'you went yourself'
+          } · odds were ${pct(run.chance)}</span></div>
+          <button type="button" class="job-abort" data-abort="1">Call it off</button>
+        </div>
+        ${heatLine}
+      </section>`;
+  }
+
+  const rows = jobs.map((op) => {
+    const ready = opReady(state, op.id, t);
+    const crew = op.crew === 'none' ? null : state.chimeras.find((c) => !isInjured(c, t)) ?? null;
+    const odds = opOdds(state, op, crew, content, t);
+    const loot = [
+      `$${op.funds[0]}–${op.funds[1]}`,
+      op.livestock ? `${pct(op.livestock.chance)} livestock` : null,
+    ].filter(Boolean).join(' · ');
+    // The blurb is good writing and it lives in the crew sheet, not here:
+    // seven four-line rows above the map turned the board into a wall and
+    // pushed the entire campaign off the screen.
+    return `
+      <div class="encounter job-row ${ready ? '' : 'is-cooling'}">
+        <div><strong>${op.icon} ${op.name}</strong> <span class="lineage">${op.hours}h · ${loot}</span>
+        <span class="fine-print job-odds">${
+          odds.blocked ? `⚠ ${odds.blocked}` : `Best odds: <strong>${pct(odds.chance)}</strong>`
+        }${op.notoriety ? ` · +${op.notoriety} heat` : ' · draws no attention at all'}</span></div>
+        ${ready
+          ? `<button type="button" data-job="${op.id}" ${odds.blocked ? 'disabled' : ''}>Run it</button>`
+          : `<span class="locked-tag">quiet for ${fmtDuration(opCooldownEndsAt(state, op.id) - t)}</span>`}
+      </div>`;
+  }).join('');
+
+  const reportHtml = report
+    ? `<div class="encounter job-report ${report.success ? 'is-win' : 'is-bust'}">
+        <div><strong>${report.success ? '✔' : '✘'} ${report.name}</strong><br>
+        <span class="fine-print">${report.msg}${report.funds ? ` <strong>+$${report.funds}</strong>.` : ''}${
+          report.animal ? ` <strong>${report.animal.name}</strong> the ${content.species[report.animal.species].name} is in the pens.` : ''
+        }${report.overCapacity ? ' The pens are over capacity and everyone is cross about it.' : ''}${
+          report.injured ? ` ${report.injured} is in the Infirmary, sulking.` : ''
+        }</span></div>
+        <button type="button" data-dismiss="1">OK</button>
+      </div>`
+    : '';
+
+  return `
+    <section class="card jobs-card">
+      <h3>💼 Jobs</h3>
+      ${reportHtml}
+      ${rows}
+      ${heatLine}
+    </section>`;
+}
+
+function bindJobs(root, ctx, redraw) {
+  const { state, content } = ctx;
+  const t = ctx.now();
+  root.querySelectorAll('button[data-dismiss]').forEach((btn) => {
+    btn.addEventListener('click', () => { state.campaign.opReport = null; ctx.save(); redraw(); });
+  });
+  root.querySelectorAll('button[data-abort]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      lastAftermath = abortOperation(state, content).msg;
+      ctx.save();
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-job]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const op = content.operations[btn.dataset.job];
+      // The crew sheet is where the anatomy pays off: every candidate
+      // shows the odds IT would give and why, so picking the right
+      // creature is a decision rather than a guess (Law 4).
+      const options = [];
+      if (op.crew !== 'required') {
+        const solo = opOdds(state, op, null, content, t);
+        options.push({ id: '__solo', label: 'Go yourself', sub: `${pct(solo.chance)} — no anatomy, no alibi` });
+      }
+      for (const ch of state.chimeras) {
+        const injured = isInjured(ch, t);
+        const odds = opOdds(state, op, ch, content, t);
+        const why = odds.reasons
+          .map((r) => `${r.delta > 0 ? '+' : ''}${Math.round(r.delta * 100)} ${r.text}`)
+          .join(' · ');
+        options.push({
+          id: ch.id,
+          label: `${pct(odds.chance)} — ${ch.name}`,
+          sub: injured ? 'in the Infirmary' : why || 'brings nothing in particular to this one',
+          disabled: injured,
+        });
+      }
+      openPicker({
+        title: op.name,
+        subtitle: `${op.blurb}<br><br>${op.hours}h · ${
+          op.demands.tags.length ? `wants ${op.demands.tags.join(' or ')} anatomy` : 'no particular anatomy'
+        }${op.demands.class ? ` · favours a ${op.demands.class} build` : ''}. Anatomy improves the odds; it never bars the door.`,
+        groups: [{ label: null, options }],
+        selectedId: '',
+        onPick: (value) => {
+          const result = startOperation(state, op.id, value === '__solo' ? null : value, content, ctx.now());
+          lastAftermath = result.msg;
+          ctx.save();
+          redraw();
+        },
+      });
+    });
   });
 }
 

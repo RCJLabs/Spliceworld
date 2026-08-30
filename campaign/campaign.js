@@ -11,6 +11,7 @@ import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';
 import { tickContests, resolveContest, isContested } from './contest.js';
 import { playerLine, rivalLine } from './monologue.js';
+import { tickOperations } from './operations.js';
 
 const DAY = 86400000;
 const HOUR = 3600000;
@@ -74,6 +75,18 @@ export function tickCampaign(state, content, now) {
   // Rehabilitation graduates on its own clock, checked every tick rather
   // than only when time has visibly passed — a programme can finish while
   // the tab is open (an enrichment session can take the last hour off it).
+  // A job that finished while the player was away is reported when they
+  // come back, not silently banked.
+  const job = tickOperations(state, content, now);
+  for (const line of job.news) pushNews(state, line);
+  if (job.result) {
+    state.campaign.opReport = job.result;
+    if (job.result.success) {
+      const boast = playerLine(state, content, 'capture', { creature: job.result.animal?.name ?? 'the prize' });
+      if (job.result.animal && boast) pushNews(state, boast);
+    }
+  }
+
   const rehabbed = tickRehab(state, content, now);
   for (const line of rehabbed.news) pushNews(state, line);
   for (const chimera of rehabbed.graduates) {
