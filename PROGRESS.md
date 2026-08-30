@@ -1,5 +1,115 @@
 # PROGRESS
 
+## Session 39 — R25: four more tracks to buy, and a stable that costs money to keep ✅
+
+**Acceptance criterion:** money has a second sink that changes the loop, and
+each track pays back measurably — **passes**, measured by `facilityPayback`
+running the game's own breeding rule, grade thresholds and clocks.
+
+| track | what it buys | measured payback |
+|---|---|---|
+| **Incubator** | 3 → 8 bays, half the incubation, and a mutation rate | **8.0 → 15.2** mutations per 100 eggs |
+| **Extractor** | a cleaner draw | prime+ **50% → 72%**, apex+ **4% → 13%** |
+| **Gene Scanner** | what an animal carries, then what a pairing will produce | **111–400 → 5–8** pairings to fix a recessive |
+| **Infirmary** | time and certainty | **3.0h → 1.35h** downtime, scars 34% → 20%, treatment at 60% |
+
+The facility went from **$3,400 to $24,000** of purchasable depth. One of the
+four was a promise the game was already making out loud: the pens have
+printed `Genes: ????? (Gene Scanner required)` since M6, advertising a
+machine nobody had built.
+
+### The other half: a stable is no longer free to own
+
+R26 made this urgent rather than optional — full conquest paid **$2,385/day**
+into a game whose priciest animal costs $260. Chimeras cost **nothing** to
+keep until now, which made territory income a score rather than a budget:
+the only question money ever asked was how long you were willing to wait.
+
+A chimera is billed for the chassis it rides, the grade of every part bolted
+to it, the power those parts draw, and its instability — four terms, all read
+off data the genome already carries, so a new part, grade or frame is priced
+the moment it is authored.
+
+| | standard | prime | apex | prismatic |
+|---|---|---|---|---|
+| upkeep/day | **$21** | $46 | $88 | **$147** |
+
+The spread is steep on purpose and the flat terms small, so the treadmill
+bites at the top and not at the bottom:
+
+| stage | income | upkeep | net |
+|---|---|---|---|
+| opening, one standard chimera | $40 | $35 | **+$5/day** |
+| Greenfield held, three primes | $345 | $159 | +$186/day |
+| four regions, six apex Rumblers | $1,665 | $603 | +$1,062/day |
+| full map, eight prismatic Rumblers | $2,425 | $1,280 | **+$1,145/day** |
+
+Upkeep at full conquest is **53% of income**. You cannot simply stockpile any
+more, which is the point.
+
+### Two things measurement caught that assumption would not have
+
+- **Incubator bays are not the bottleneck — pen capacity is.** 3 → 8 bays
+  changes nothing on its own: you can queue eight eggs and still only keep
+  four animals. The track had to buy something that changes the loop, so it
+  buys a **mutation rate** — which is where variants and the mutation-only
+  genes enter the game at all (R24).
+- **The Gene Scanner was about to sell something free.** Its top tier was
+  going to unlock a graduation forecast that has been on the pens screen
+  since M2. It sells the thing still genuinely hidden instead: the Punnett
+  odds for a *pairing*, carrier against expresses, computed in closed form
+  from the same rule `expressedTraits` applies. Two heterozygotes read
+  75%/75% dominant and 75%/25% recessive — textbook, and asserted as such.
+
+### The floor held, but only just
+
+The onboarding path is care → extract → splice → battle → conquer, so a
+player reaches their first chimera having conquered **nothing**. The first
+draft priced that creature at $54/day against a $40 stipend — the guided
+first loop walking a new player straight into insolvency. The fixture that
+caught it was also wrong in the other direction: building a chimera
+*consumes* an animal, so the herd shrinks as the creature arrives. Both
+fixed; the assertion now models the real path and passes at $36 against $40.
+
+Funds still floor at zero and nothing is ever repossessed — a player away for
+a fortnight comes back to a poor lab, not a ruined one. Asserted over thirty
+simulated days of absence with four prismatic Rumblers eating.
+
+### Guards, each verified to fail when broken
+
+Eleven new assertions, every one confirmed against a deliberate break:
+
+| break | caught by |
+|---|---|
+| the Extractor stops improving grades | each tier grades better |
+| the Incubator stops changing what hatches | mutations per 100 eggs |
+| the Infirmary stops shortening convalescence | downtime hours |
+| the Infirmary gives certainty away free | scar chance is never zero |
+| upkeep stops caring about grade | upkeep climbs with grade |
+| a first chimera is priced out of the stipend | the R11 floor |
+| `applyElapsed` stops charging for chimeras | a day of upkeep leaves the account |
+| the funds floor is removed | absence empties and stops |
+| the forecast forgets recessives need two copies | a recessive needs both copies |
+| a facility level 1 starts charging rent | level 1 is free |
+| a track gates on a node that does not exist | facility gates reference real nodes |
+
+### Known issues
+
+- **The econ row is five cells in a two-column grid**, so Pens sits alone on
+  a third row. Legible, slightly ragged.
+- The smoke suite is ≈80s. The R25 bench adds ~2s; the rest is R26's
+  encounter set.
+- No save migration was needed — every new value is derived, nothing new is
+  persisted — so `SAVE_VERSION` stays at 24. The service-worker cache name
+  still had to change, or a returning player keeps the old shell.
+
+### Next session — first task
+
+R27 (rival geneticists as a ladder) or R29 (onboarding for the eight
+unguided systems). R29 is the stronger case now: R25 and R26 between them
+added five regions, six facility tracks and an upkeep economy, none of which
+the guided first loop mentions.
+
 ## Session 38 — R26: five regions, and a ladder that asks five questions ✅
 
 **Acceptance criterion:** taking Greenfield opens a region whose fights need

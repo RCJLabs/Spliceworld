@@ -7,6 +7,7 @@
 import { ageStage } from '../ranch/ranch.js';
 import { STATS } from '../ranch/ranch.js';
 import { rngStream } from '../util/rng.js';
+import { extractorGrants } from './facility.js';
 
 // Stat multipliers feed the battle engine in M4; Apex/Prismatic ability
 // upgrades land with the keyword resolver, also M4.
@@ -36,15 +37,23 @@ export function avgStars(animal) {
   return sum / STATS.length;
 }
 
-export function gradeScore(animal, content, now) {
+// The three things a donor brings to the table: what it inherited, how far
+// along it is, and how well it has been kept. `state` is optional — a
+// caller with no save (the balance harness, a preview built from raw data)
+// gets the animal's own score, which is what the game did before R25.
+export function gradeScore(animal, content, now, state = null) {
   const genetics = avgStars(animal) / 5;
   const age = AGE_FACTOR[ageStage(animal, content, now)];
   const condition = animal.condition / 100;
-  return genetics * age * condition;
+  // The Extractor track buys a cleaner draw: the same animal grades a
+  // little better than it strictly earned. It is a thumb on the scale, not
+  // a replacement for husbandry — the score still has to get there.
+  const bonus = state ? extractorGrants(state, content).gradeBonus : 0;
+  return genetics * age * condition * (1 + bonus);
 }
 
-export function gradeFor(animal, content, now) {
-  const score = gradeScore(animal, content, now);
+export function gradeFor(animal, content, now, state = null) {
+  const score = gradeScore(animal, content, now, state);
   for (const [id, min] of THRESHOLDS) {
     if (score >= min) return GRADES[GRADE_INDEX[id]];
   }
@@ -58,7 +67,7 @@ export function extractAnimal(state, animalId, content, now) {
   if (idx === -1) return { ok: false, msg: 'No such animal.' };
   const animal = state.ranch.stock[idx];
   const species = content.species[animal.species];
-  const grade = gradeFor(animal, content, now);
+  const grade = gradeFor(animal, content, now, state);
   const stars = Math.round(avgStars(animal) * 10) / 10;
 
   state.ranch.stock.splice(idx, 1);

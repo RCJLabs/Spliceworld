@@ -14,6 +14,7 @@
 // mistake. The Infirmary sells certainty, not power.
 
 import { rngStream, pick } from '../util/rng.js';
+import { infirmaryGrants } from './facility.js';
 
 const HOUR = 3600000;
 
@@ -95,11 +96,14 @@ export function describeScar(scar, chimeraName) {
 // costs more than sweeping up at the end. The Infirmary is selling
 // CERTAINTY, not healing: what you are buying is the guarantee that it
 // does not set badly.
-export function treatmentCost(chimera, content, now) {
+// `state` is optional so a preview built without a save still prices an
+// injury the way the game always did.
+export function treatmentCost(chimera, content, now, state = null) {
   const t = scarTuning(content);
   if (!chimera?.injury) return 0;
   const hoursLeft = Math.max(0, (chimera.injury.until - now) / HOUR);
-  return Math.round(t.treatBase + hoursLeft * t.treatPerHour);
+  const scale = state ? infirmaryGrants(state, content).treatScale : 1;
+  return Math.round((t.treatBase + hoursLeft * t.treatPerHour) * scale);
 }
 
 export function treatInjury(state, chimeraId, content, now) {
@@ -109,7 +113,7 @@ export function treatInjury(state, chimeraId, content, now) {
   if (now >= chimera.injury.until) {
     return { ok: false, msg: 'Too late — that one has already healed, one way or the other.' };
   }
-  const cost = treatmentCost(chimera, content, now);
+  const cost = treatmentCost(chimera, content, now, state);
   if (state.funds < cost) return { ok: false, msg: `Short by $${Math.ceil(cost - state.funds)}. The Infirmary does not take promises.` };
 
   state.funds -= cost;
@@ -139,7 +143,11 @@ export function tickScars(state, content, now) {
 
     chimera.injuryCount = (chimera.injuryCount ?? 0) + 1;
     const rng = rngStream(state.seed, `scar:${chimera.id}`, chimera.injuryCount);
-    if (rng() >= t.scarChance) continue;
+    // A Regenerative Suite does not stop an untreated injury setting badly,
+    // it makes it rarer. Treatment is still the only guarantee — the
+    // Infirmary sells certainty, and a track that sold certainty for free
+    // would retire the decision this whole system exists to pose.
+    if (rng() >= t.scarChance * infirmaryGrants(state, content).scarChanceScale) continue;
     // Never the same scar twice on one creature.
     const available = pool.filter((s) => !chimera.scars.includes(s.id));
     if (!available.length) continue;

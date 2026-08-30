@@ -32,6 +32,7 @@ import { rngStream, pick } from '../util/rng.js';
 import { analyze } from '../splice/physiology.js';
 import { isSettled } from '../splice/theater.js';
 import { createAnimal } from '../ranch/ranch.js';
+import { infirmaryGrants } from '../splice/facility.js';
 
 const HOUR = 3600000;
 
@@ -271,7 +272,7 @@ export function tickOperations(state, content, now) {
     const chimera = state.chimeras.find((c) => c.id === run.chimeraId);
     if (chimera && injuryRoll < 0.5) {
       const hours = t.injuryHours[0] + injuryRoll * 2 * (t.injuryHours[1] - t.injuryHours[0]);
-      chimera.injury = { name: 'Undignified Exit', until: now + Math.round(hours * HOUR) };
+      chimera.injury = { name: 'Undignified Exit', until: now + Math.round(hours * infirmaryGrants(state, content).healScale * HOUR) };
       result.injured = chimera.name;
     }
   }

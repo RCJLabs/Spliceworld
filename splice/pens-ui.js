@@ -162,7 +162,7 @@ export function renderPensScreen(root, ctx) {
             ${isInjured(ch, t)
               ? `<p class="settle">🩹 Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} of dramatic convalescing left.</p>
                  <p class="fine-print scar-warn">Left to itself it may set badly and stay that way. Treating it costs money and guarantees it will not.</p>
-                 <button type="button" class="care-train" data-treat="${ch.id}">🩺 Treat ($${treatmentCost(ch, content, t)})</button>`
+                 <button type="button" class="care-train" data-treat="${ch.id}">🩺 Treat ($${treatmentCost(ch, content, t, state)})</button>`
               : ''}
             ${(() => {
               const scars = scarsOf(ch, content).map((sc) => describeScar(sc, ch.name));
