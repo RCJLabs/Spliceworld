@@ -1,5 +1,81 @@
 # PROGRESS
 
+## Session 21 — Region contestation ✅
+
+Conquest was one-way. You took a node, it paid income, and that was the end of
+the story — territory was a number that only went up, which is exactly the
+shape endless mode goes stale in (§8, risk 5). The coalition now comes back
+for it.
+
+### Two rules, both load-bearing
+- **The schedule is a timestamp, not a per-tick roll.** Rolling on each tick
+  would mean a player who opens the app ten times an evening gets attacked ten
+  times as often — the frequency would measure their habits, not the world.
+  Smoke asserts that fifty ticks inside the window open nothing.
+- **The window starts when you SEE it.** Come back from a week away and the
+  convoy is arriving *now*, with your full 18 hours ahead of you. Losing a node
+  to a window you were never shown is the kind of surprise the rescue-window
+  house rule exists to forbid. A week away produces exactly one counter-
+  offensive, not fifty.
+
+### The fight
+The defence is the node's **own garrison**, escalated — no new encounter data,
+which is the whole reason this can be the endless-mode content engine. The
+escalation grows every time you hold the same place, so the ramp is opt-in and
+self-paced instead of front-loaded.
+
+**The escalation had to become a continuous dial.** The first draft stepped the
+authored tier by one and added a reinforcement wave. Measured against the
+harness's yardstick team of three at prismatic, that was catastrophic:
+
+| node | assault | +1 tier & +1 wave | +10%, same garrison |
+|---|---|---|---|
+| Old Barn | 100% | 25% | 100% |
+| Downtown | 100% | 0% | 98% |
+| Checkpoint | 93% | 22% | 88% |
+| Precinct HQ | 30% | 0% | 12% |
+| Guard Post | 55% | 3% | 42% |
+
+The tier ladder is a ladder of *content* and its rungs are deliberately uneven,
+so it is the wrong dial for "the same fight, but harder": +1 tier on an
+already-top-tier boss is a wall while +1 on a mid encounter is a shrug. The
+engine's `tierScaleFor` now honours a `scaleOverride`, and a defence is the
+authored scale × 1.10, +0.10 per successful defence.
+
+**Node choice went uniform, too.** Weighting it by income reads beautifully —
+"they go for the throat" — and plays badly: your richest node is the commander's
+HQ, which is also the hardest fight on the ladder, so almost every counter-
+offensive landed on the one you were least able to answer.
+
+### Stakes
+Contested income is **suspended** — that is the sting, and it is why answering
+beats ignoring even when you could retake the node later. Holding the line pays
+a 1.6× purse, notoriety, and **the wreckage**: one vehicle from the garrison
+goes to Containment, because a conquest reward has to expand what you can
+*build* with (Law 2). A garrison of people leaves nothing behind, which is
+correct; a commander does, once you follow his transform, so what you impound
+at the Precinct is the Clampdown 9000 you actually beat.
+
+Lose the defence, or let the window close, and the node drops back onto the map
+as an ordinary objective. A setback, never a deletion.
+
+### Kept honest
+25 new smoke assertions, every one verified to fail when the code it guards is
+broken. Three of them didn't discriminate on the first pass — the concurrency
+cap was never actually tested, the wreckage transform chain was never reached,
+and the Splice-Dex assertion was already satisfied by the conquest that set the
+fixture up. Fixed the tests, not the code. Browser pass at 380 and 320px: the
+alert card, the map state, the suspended-income line, the briefing quoting
+110% strength, a real defence launching into the arena at `enemyScale 1.595`,
+and the window closing to take the node. v13 → v14 migrated live, no console
+errors.
+
+Save **v14**. `sw` cache `spliceworld-v14-contest`.
+
+### Next session's first task
+The monologue/story pass on the rival profile schema — the last item in the
+post-v0.1 backlog.
+
 ## Session 20 — Rehabilitation ✅
 
 §3.6 always promised a captured chimera two futures — "salvage its engineered
@@ -65,7 +141,8 @@ sideways at 380px.
 Save **v13**. `sw` cache `spliceworld-v13-rehab`.
 
 ### Next session's first task
-Region contestation — the coalition counter-attacking a held node.
+Region contestation — the coalition counter-attacking a held node. *(Shipped
+in Session 21.)*
 
 ## Session 19b — Colour tokens, five schemes, and Biohazard shipped ✅
 

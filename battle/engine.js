@@ -153,8 +153,17 @@ export function combatantFromChimera(chimera, content, now) {
 
 // An encounter without a tier fights at its authored stats — tier is opt-in,
 // and tier 1 is a deliberately gentle tutorial band, not a default.
+//
+// `scaleOverride` lets a DERIVED encounter escalate continuously instead of
+// stepping a whole tier. The authored ladder is deliberately lumpy (a tier
+// is a band of content), which makes it the wrong dial for "the same fight,
+// but harder": +1 tier on an already-top-tier boss is a wall, and +1 on a
+// mid encounter is a shrug. Region contestation needs a knob it can turn a
+// little, and turn again every time you hold the line.
 export function tierScaleFor(encounter, content) {
-  if (encounter.rivalId || encounter.tier == null) return 1;
+  if (encounter.rivalId) return 1;
+  if (encounter.scaleOverride != null) return encounter.scaleOverride;
+  if (encounter.tier == null) return 1;
   return content.tierScale?.[encounter.tier] ?? 1;
 }
 

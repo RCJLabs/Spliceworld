@@ -901,6 +901,36 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .cannon-bar { margin-top: 5px; }
 .act-capture { border-color: var(--zap) !important; color: var(--zap); font-weight: 700; }
 
+/* --- Region contestation (§3.9) -----------------------------------------
+   The coalition coming back for a node reads in the same visual language
+   as a dissection countdown — red, a live clock, one button — because it
+   is the same kind of thing: a window you can answer or lose. */
+
+.contest-card { border-color: var(--danger-2); }
+.contest-card h3 { color: var(--danger-soft); }
+.encounter.contested { border-color: var(--danger-2); }
+.encounter.contested .countdown { color: var(--danger-soft); }
+.encounter.contested button { background: var(--danger); color: var(--on-accent); }
+.contested-tag {
+  flex: 0 0 auto;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--danger-soft);
+  border: 1px solid var(--danger-2);
+}
+.node-contested { border-color: var(--danger-2); }
+.contest-intel { color: var(--danger-soft); }
+.econ-suspended {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--danger-soft);
+}
+
 /* --- Breeding & Incubator (M6) --- */
 .egg-wrap { flex: 0 0 44px; }
 .egg { width: 44px; height: auto; display: block; }

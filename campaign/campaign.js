@@ -9,6 +9,7 @@ import { finishBattle } from '../battle/engine.js';
 import { recordRivalResult } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';
+import { tickContests, resolveContest, isContested } from './contest.js';
 
 const DAY = 86400000;
 const HOUR = 3600000;
@@ -35,8 +36,12 @@ export function nodeStates(state, content) {
   let previousTaken = true; // the first node is always reachable
   for (const node of region.nodes) {
     let status;
-    if (state.campaign.heldNodes.includes(node.id)) status = 'held';
-    else if ((node.threatGen ?? 1) > gen) status = 'locked';
+    if (state.campaign.heldNodes.includes(node.id)) {
+      // Still held — facility gates and rival unlocks must not blink out
+      // while a convoy is on the road — but it reads differently, and it
+      // stops paying.
+      status = isContested(state, node.id) ? 'contested' : 'held';
+    } else if ((node.threatGen ?? 1) > gen) status = 'locked';
     else status = previousTaken ? 'available' : 'locked';
     out.push({ node, status });
     previousTaken = state.campaign.heldNodes.includes(node.id);
@@ -44,10 +49,22 @@ export function nodeStates(state, content) {
   return out;
 }
 
+// What territory actually pays. A contested node is suspended, which is
+// the sting that makes a counter-offensive worth answering before the
+// window closes — the node itself is recoverable, the lost days are not.
 export function incomePerDay(state, content) {
   const region = regionOf(content);
   return region.nodes
-    .filter((n) => state.campaign.heldNodes.includes(n.id))
+    .filter((n) => state.campaign.heldNodes.includes(n.id) && !isContested(state, n.id))
+    .reduce((sum, n) => sum + n.incomePerDay, 0);
+}
+
+// What it would pay with the line held — for a War Room that can show the
+// player what the convoy is costing them.
+export function incomeSuspended(state, content) {
+  const region = regionOf(content);
+  return region.nodes
+    .filter((n) => isContested(state, n.id))
     .reduce((sum, n) => sum + n.incomePerDay, 0);
 }
 
@@ -57,6 +74,13 @@ export function tickCampaign(state, content, now) {
   // than only when time has visibly passed — a programme can finish while
   // the tab is open (an enrichment session can take the last hour off it).
   for (const line of tickRehab(state, content, now).news) pushNews(state, line);
+
+  // Counter-offensives resolve before income is paid, so a node lost
+  // during a long absence does not also pay for the days it was gone.
+  // (Income over a long gap is still charged at the CURRENT holdings —
+  // the model has always been that simple, and a contest opening
+  // mid-absence starts its window now, not then.)
+  for (const line of tickContests(state, content, now, threatGen(state, content))) pushNews(state, line);
 
   const last = state.campaign.lastTickAt ?? now;
   const dt = Math.max(0, now - last);
@@ -89,7 +113,7 @@ export function resolveBattle(state, battle, content, now) {
   const context = battle.context ?? {};
   // Splice-Dex: every unit that took the field is now a known quantity.
   const seen = [
-    ...(content.encounters[battle.encounterId]?.waves ?? []),
+    ...(context.waveIds ?? content.encounters[battle.encounterId]?.waves ?? []),
     battle.enemy.active?.refId,
     ...(battle.captured ?? []),
   ];
@@ -155,6 +179,44 @@ export function resolveBattle(state, battle, content, now) {
       pushNews(state, `${node.name} seized. Income +$${node.incomePerDay}/day. Locals adjusting surprisingly well.`);
       if (threatGen(state, content) > genBefore) {
         pushNews(state, `THREAT LEVEL UP: the military is now returning your calls. Threat Generation 2.`);
+      }
+    }
+  }
+
+  // A counter-offensive fought to a conclusion. Holding the line has to
+  // expand what you can CREATE rather than just what you own (Law 2), so
+  // the wreckage goes to Containment: enemy tech, salvage, new parts.
+  if (context.kind === 'defend' && context.nodeId) {
+    const node = regionOf(content).nodes.find((n) => n.id === context.nodeId);
+    const { news, held } = resolveContest(state, content, context.nodeId, result.outcome, now);
+    if (news) pushNews(state, news);
+    detail.defended = held;
+    detail.node = node?.name ?? null;
+    if (held) {
+      // A garrison of people leaves nothing behind to impound — they
+      // walk off, loudly, and that is fine. A vehicle does; and a
+      // commander's second stage is the thing you actually beat, so
+      // follow the transform to find it.
+      const wreckable = [];
+      for (const id of context.waveIds ?? []) {
+        let unit = content.enemies[id];
+        for (let hops = 0; unit && hops < 4; hops++) {
+          if (unit.salvage?.length) { wreckable.push(unit.id); break; }
+          unit = content.enemies[unit.transformInto];
+        }
+      }
+      if (wreckable.length) {
+        const rng = rngStream(state.seed, 'wreckage', state.campaign.contestCount ?? 0);
+        const unitId = pick(rng, wreckable);
+        state.campaign.containment.push({
+          id: `bay-${state.campaign.containment.length}-${now}`,
+          unitId,
+          unit: null,
+          capturedAt: now,
+          rehab: null,
+        });
+        detail.wreckage = content.enemies[unitId].name;
+        pushNews(state, `Salvage crews work through the night at ${node?.name ?? 'the line'}. One ${content.enemies[unitId].name} is now, legally speaking, scrap you own.`);
       }
     }
   }

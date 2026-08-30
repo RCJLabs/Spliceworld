@@ -64,8 +64,12 @@ export function indexContent(raw) {
     facility: raw.facility ? byId(raw.facility.tracks) : {},
     classRules: raw.classes ? { advantage: raw.classes.advantage, disadvantage: raw.classes.disadvantage } : { advantage: 1, disadvantage: 1 },
     campaignMeta: raw.regions
-      ? { threatGen2At: raw.regions.threatGen2At, rescueEncounter: raw.regions.rescueEncounter }
-      : { threatGen2At: Infinity, rescueEncounter: null },
+      ? {
+          threatGen2At: raw.regions.threatGen2At,
+          rescueEncounter: raw.regions.rescueEncounter,
+          contestation: raw.regions.contestation ?? null,
+        }
+      : { threatGen2At: Infinity, rescueEncounter: null, contestation: null },
   };
 }
 

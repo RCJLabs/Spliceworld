@@ -878,7 +878,19 @@ const m5 = migrate(structuredClone(v1Save));
 assert.equal(m5.saveVersion, SAVE_VERSION);
 assert.equal(m5.battle, null);
 assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
-assert.deepEqual(m5.campaign, { heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, lastTickAt: null });
+assert.deepEqual(m5.campaign, {
+  heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {},
+  contested: [], nextContestAt: null, defences: {}, contestCount: 0,
+  lastTickAt: null,
+});
+// Stronger than the literal above and self-maintaining: a migration that
+// forgets a field a NEW game gets is the classic way an old save starts
+// throwing on a screen it used to render.
+assert.deepEqual(
+  Object.keys(m5.campaign).sort(),
+  Object.keys(newGameState().campaign).sort(),
+  'a fully migrated save has exactly the campaign shape a new game does'
+);
 assert.deepEqual(m5.news, []);
 assert.deepEqual(m5.directorStats.dissections, []);
 const v5WithBattle = {
@@ -2062,6 +2074,297 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   const html = readFileSync(join(root, 'index.html'), 'utf8');
   assert.ok(html.includes('id="picker"'), 'index.html hosts the picker sheet');
   assert.ok(readFileSync(join(root, 'sw.js'), 'utf8').includes("'ui/picker.js'"), 'sw precaches ui/picker.js');
+}
+
+// --- Region contestation (§3.9 "coalition counter-offensives can contest
+// --- held regions"). Conquest used to be one-way, which is the shape
+// --- endless mode goes stale in. Now they come back for it.
+{
+  const {
+    contestTuning, tickContests, contestOn, isContested, contestEncounter,
+    resolveContest, contestEligible, defencesOf, escalationOf,
+  } = await import('../campaign/contest.js');
+  const { incomeSuspended } = await import('../campaign/campaign.js');
+  const ct = contestTuning(content);
+
+  // Content coherence: every reinforcement is a real unit.
+  assert.ok(content.campaignMeta.contestation, 'regions.json carries a contestation block');
+  assert.ok(ct.escalation > 0, 'a defence is harder than the assault that took the place');
+  assert.ok(ct.escalationPerDefence > 0, 'and harder again every time you hold it');
+  assert.ok(ct.rewardScale > 1, 'and pays more than the original');
+  assert.ok(ct.windowHours > 0 && ct.cooldownHours > ct.windowHours, 'the window closes well before the next one opens');
+  assert.ok(ct.intel.includes('{pct}'), 'the intel line quotes the strength');
+  for (const key of ['opened', 'held', 'lost', 'expired']) {
+    assert.ok(ct.news[key]?.includes('{node}'), `the ${key} wire line names the node`);
+  }
+
+  // An empire at Threat Gen 2 holding four nodes, cloned per test.
+  const empire = () => {
+    const s = structuredClone(conq);
+    s.campaign.lastTickAt = t0;
+    s.campaign.contested = [];
+    s.campaign.nextContestAt = null;
+    s.campaign.defences = {};
+    s.campaign.contestCount = 0;
+    s.funds = 0;
+    s.news = [];
+    for (const c of s.chimeras) c.injury = null;
+    return s;
+  };
+
+  // Early play is untouched: no threat generation, no counter-offensive.
+  {
+    const young = { ...newGameState(), seed: 31 };
+    young.campaign.heldNodes = ['barn_perimeter', 'downtown'];
+    assert.equal(threatGen(young, content), 1);
+    assert.equal(contestEligible(young, content, 1), false, 'gen 1 is not contestable');
+    assert.deepEqual(tickContests(young, content, t0 + 500 * HOUR, 1), [], 'and nothing ever fires');
+    assert.equal(young.campaign.nextContestAt, null, 'not even a schedule');
+    // Nor with the generation but without the territory.
+    const lonely = { ...newGameState(), seed: 32 };
+    lonely.campaign.heldNodes = ['barn_perimeter'];
+    assert.equal(contestEligible(lonely, content, 2), false, `one node is under the ${ct.minHeld}-node floor`);
+  }
+
+  // THE load-bearing rule: the schedule is a timestamp, not a per-tick
+  // roll. A player who opens the app fifty times an evening must not be
+  // attacked fifty times as often — otherwise the frequency measures
+  // their habits instead of the world.
+  {
+    const s = empire();
+    assert.deepEqual(tickContests(s, content, t0, 2), [], 'the first tick only schedules');
+    assert.equal(s.campaign.nextContestAt, t0 + ct.firstDelayHours * HOUR, 'a beat before the first one');
+    let opened = 0;
+    for (let i = 0; i < 50; i++) {
+      opened += tickContests(s, content, t0 + i * 60000, 2).length;
+    }
+    assert.equal(opened, 0, 'fifty ticks inside the window open nothing');
+    assert.equal(s.campaign.contested.length, 0);
+    assert.equal(s.campaign.nextContestAt, t0 + ct.firstDelayHours * HOUR, 'and the schedule never moved');
+  }
+
+  // The window starts when you SEE it. Come back from a week away and the
+  // convoy is arriving now, with the whole window ahead of you — losing a
+  // node you were never given a chance to defend is exactly the surprise
+  // the rescue-window house rule forbids.
+  let contestedNodeId = null;
+  {
+    const s = empire();
+    tickContests(s, content, t0, 2);
+    const away = t0 + 7 * 24 * HOUR;
+    const news = tickContests(s, content, away, 2);
+    assert.equal(s.campaign.contested.length, 1, 'a week away means exactly one counter-offensive, not fifty');
+    assert.equal(news.length, 1, 'and one wire line');
+    const c = s.campaign.contested[0];
+    contestedNodeId = c.nodeId;
+    assert.equal(c.deadline, away + ct.windowHours * HOUR, 'the window opens when the player does');
+    assert.ok(c.deadline > away, 'so it cannot already have expired');
+    assert.equal(s.campaign.nextContestAt, null, 'the next one is scheduled when this resolves');
+    assert.ok(s.campaign.heldNodes.includes(c.nodeId), 'the node is still HELD while contested');
+    assert.equal(nodeStates(s, content).find((n) => n.node.id === c.nodeId).status, 'contested');
+
+    // …and it costs money every hour it stands.
+    const node = region.nodes.find((n) => n.id === c.nodeId);
+    assert.equal(incomeSuspended(s, content), node.incomePerDay);
+    assert.equal(incomePerDay(s, content), 225 - node.incomePerDay, 'a contested node earns nothing');
+    assert.equal(s.campaign.contested.length, 1);
+    // Force another to fall due while this one still stands: the cap, not
+    // the schedule, has to be what stops it.
+    s.campaign.nextContestAt = away;
+    assert.deepEqual(tickContests(s, content, away + HOUR, 2), [], 'only one convoy at a time');
+    assert.equal(s.campaign.contested.length, 1);
+  }
+
+  // Ignore the window and they take it — but the node comes back on the
+  // map, so it is a setback, never a deletion.
+  {
+    const s = empire();
+    tickContests(s, content, t0, 2);
+    tickContests(s, content, t0 + 10 * HOUR, 2);
+    const c = s.campaign.contested[0];
+    assert.deepEqual(tickContests(s, content, c.deadline - 1, 2), [], 'not a minute early');
+    assert.ok(s.campaign.heldNodes.includes(c.nodeId));
+    const news = tickContests(s, content, c.deadline, 2);
+    assert.equal(news.length, 1);
+    assert.ok(news[0].includes(region.nodes.find((n) => n.id === c.nodeId).name), 'the wire names what you lost');
+    assert.ok(!s.campaign.heldNodes.includes(c.nodeId), 'the node is gone');
+    assert.equal(s.campaign.contested.length, 0);
+    assert.ok(s.campaign.nextContestAt > c.deadline, 'and the next one is on the books');
+    // Retakeable: it is an ordinary objective again.
+    const status = nodeStates(s, content).find((n) => n.node.id === c.nodeId).status;
+    assert.ok(status === 'available' || status === 'locked', `a lost node returns to the map (${status})`);
+  }
+
+  // The defence is the node's OWN encounter, escalated — which is why a
+  // new region costs zero new encounter data.
+  {
+    const s = empire();
+    tickContests(s, content, t0, 2);
+    tickContests(s, content, t0 + 10 * HOUR, 2);
+    const c = s.campaign.contested[0];
+    const node = region.nodes.find((n) => n.id === c.nodeId);
+    const base = content.encounters[node.encounter];
+    const enc = contestEncounter(s, content, c);
+    assert.equal(enc.baseId, base.id, 'the director reaches it through the encounter it came from');
+    assert.deepEqual(enc.waves, base.waves, 'the same garrison, not a new encounter to author');
+    assert.ok(enc.reward > base.reward, 'and worth more than the original assault');
+    assert.equal(enc.escalation, 1 + ct.escalation);
+    assert.ok(
+      tierScaleFor(enc, content) > tierScaleFor(base, content),
+      'but stronger than the garrison you beat — and it reaches the stat scale'
+    );
+    // The escalation is a CONTINUOUS dial, not a tier step. The authored
+    // ladder is a ladder of content and its rungs are uneven: +1 tier
+    // took the boss node's defence from 30% to 5% against the harness's
+    // yardstick team while barely touching the mid nodes.
+    assert.ok(
+      Math.abs(tierScaleFor(enc, content) / tierScaleFor(base, content) - (1 + ct.escalation)) < 1e-6,
+      'every node escalates by the same proportion'
+    );
+    assert.ok(enc.intel.includes(String(Math.round((1 + ct.escalation) * 100))), 'and the briefing says how much stronger');
+    // Deterministic: the same save always faces the same convoy.
+    assert.deepEqual(contestEncounter(s, content, c), enc, 'seeded from the world, not the clock');
+  }
+
+  // ACCEPTANCE: a held node can be taken off you and won back — income
+  // stops, the defence is fightable, and holding the line pays out in
+  // something you can BUILD with (Law 2), not just money.
+  {
+    const s = empire();
+    // Pinned to the Checkpoint rather than taking whatever the seed
+    // offers: it is a real mid-ladder garrison WITH a vehicle in it, so
+    // this exercises a fight worth fighting and the impound that pays
+    // for it. The seeded choice itself is covered above.
+    s.campaign.contestCount = 1;
+    s.campaign.contested = [{ nodeId: 'checkpoint', startedAt: t0, deadline: t0 + 18 * HOUR, gen: 2 }];
+    const c = s.campaign.contested[0];
+    const node = region.nodes.find((n) => n.id === c.nodeId);
+    const full = 225;
+    assert.equal(incomePerDay(s, content), full - node.incomePerDay, 'the money stops first');
+
+    const enc = contestEncounter(s, content, c);
+    const bays = s.campaign.containment.length;
+    const notoriety = s.campaign.notoriety;
+    // A derived encounter is not in enemies.json, so the aftermath cannot
+    // look its waves up afterwards. Clear the Dex the conquest filled, or
+    // this proves nothing.
+    s.dex.enemies = [];
+    s.battle = createBattle(s.chimeras.slice(0, 3), enc, content, hashString('defend'), t0 + 10 * HOUR, {
+      kind: 'defend',
+      nodeId: c.nodeId,
+      waveIds: enc.waves.filter((w) => typeof w === 'string'),
+    });
+    autoplay(s.battle);
+    assert.equal(s.battle.outcome, 'win', 'the prismatic army holds the line');
+    const detail = resolveBattle(s, s.battle, content, t0 + 11 * HOUR);
+
+    assert.equal(detail.defended, true);
+    assert.equal(detail.node, node.name);
+    assert.ok(s.campaign.heldNodes.includes(c.nodeId), 'the node is still yours');
+    assert.equal(s.campaign.contested.length, 0, 'the counter-offensive is over');
+    assert.equal(incomePerDay(s, content), full, 'and the money comes back on');
+    assert.equal(defencesOf(s, c.nodeId), 1, 'the defence is on the record');
+    assert.equal(s.campaign.notoriety, notoriety + ct.notoriety, 'holding it is notorious');
+    assert.ok(s.campaign.nextContestAt > t0 + 11 * HOUR, 'they will be back');
+    // Law 2: holding the line has to expand what you can BUILD with, not
+    // just what you own. A garrison with a vehicle in it leaves that
+    // vehicle behind — and a garrison of people walks away, which is
+    // both correct and the reason this is asserted conditionally.
+    const hasWreck = enc.waves.some((id) => {
+      let u = content.enemies[id];
+      for (let hops = 0; u && hops < 4; hops++) {
+        if (u.salvage?.length) return true;
+        u = content.enemies[u.transformInto];
+      }
+      return false;
+    });
+    // The cannon may also have bagged something during the fight; the
+    // wreckage is impounded after those, so it is the last bay.
+    assert.equal(
+      s.campaign.containment.length,
+      bays + detail.salvageUnits.length + (hasWreck ? 1 : 0),
+      'the wreckage is impounded on top of anything the cannon took'
+    );
+    if (hasWreck) {
+      assert.ok(detail.wreckage, `and the aftermath names it (${detail.wreckage})`);
+      const wreck = s.campaign.containment[s.campaign.containment.length - 1];
+      assert.equal(content.enemies[wreck.unitId].name, detail.wreckage, 'the bay holds what the aftermath named');
+      assert.ok(content.enemies[wreck.unitId]?.salvage?.length, 'it is something with parts in it');
+      assert.equal(wreck.rehab, null, 'arriving as an ordinary bay');
+      assert.ok(salvageUnit(s, wreck.id, content, t0 + 11 * HOUR).ok, 'and it goes straight to the bandsaw');
+    }
+    // Whatever the garrison was made of, the defence pays more than the
+    // assault that first took the place.
+    assert.ok(detail.reward > content.encounters[node.encounter].reward, 'and the purse is bigger');
+    for (const u of enc.waves) assert.ok(s.dex.enemies.includes(u), 'a derived encounter still fills the Splice-Dex');
+    // Hold it and the next convoy is stronger again — the endless ramp
+    // §3.9 asks for, opt-in and self-paced rather than front-loaded.
+    assert.ok(
+      escalationOf(s, content, c.nodeId) > enc.escalation,
+      'a place you keep holding is a place they keep escalating'
+    );
+
+    // Hold it a second time and they take longer to work up to a third.
+    const afterOne = s.campaign.nextContestAt - (t0 + 11 * HOUR);
+    s.campaign.contested = [{ nodeId: c.nodeId, startedAt: t0, deadline: t0 + 99 * HOUR, gen: 2 }];
+    resolveContest(s, content, c.nodeId, 'win', t0 + 11 * HOUR);
+    assert.equal(defencesOf(s, c.nodeId), 2);
+    assert.ok(
+      s.campaign.nextContestAt - (t0 + 11 * HOUR) > afterOne,
+      'a place you keep holding is a place they work up to more slowly'
+    );
+  }
+
+
+  // The commander's SECOND STAGE is the thing you actually beat, so the
+  // wreckage follows the transform. Resolved directly rather than through
+  // an escalated boss fight, which the yardstick army does not win.
+  {
+    const s = empire();
+    s.campaign.contested = [{ nodeId: 'precinct', startedAt: t0, deadline: t0 + 18 * HOUR, gen: 2 }];
+    const bays = s.campaign.containment.length;
+    const staged = {
+      encounterId: 'contest_precinct',
+      reward: 100,
+      outcome: 'win',
+      context: { kind: 'defend', nodeId: 'precinct', waveIds: ['riot_squad', 'captain_clampdown'] },
+      player: { team: [] },
+      enemy: { active: null },
+      captured: [],
+      units: {},
+      log: [],
+    };
+    assert.deepEqual(content.enemies.riot_squad.salvage ?? [], [], 'a squad of people leaves nothing to impound');
+    assert.deepEqual(content.enemies.captain_clampdown.salvage ?? [], [], 'and neither does the commander, until he is a vehicle');
+    const d = resolveBattle(s, staged, content, t0 + HOUR);
+    assert.equal(d.defended, true);
+    assert.equal(s.campaign.containment.length, bays + 1);
+    assert.equal(
+      d.wreckage,
+      content.enemies[content.enemies.captain_clampdown.transformInto].name,
+      'so the bay holds the Clampdown 9000, which is what was actually left in the car park'
+    );
+  }
+
+  // Losing the defence hands the node over; scampering settles nothing.
+  {
+    const s = empire();
+    tickContests(s, content, t0, 2);
+    tickContests(s, content, t0 + 10 * HOUR, 2);
+    const nodeId = s.campaign.contested[0].nodeId;
+
+    const fled = resolveContest(s, content, nodeId, 'fled', t0 + 11 * HOUR);
+    assert.equal(fled.held, null, 'a tactical scamper does not resolve a siege');
+    assert.ok(isContested(s, nodeId), 'the convoy is still out there');
+    assert.ok(s.campaign.heldNodes.includes(nodeId));
+
+    const lost = resolveContest(s, content, nodeId, 'loss', t0 + 12 * HOUR);
+    assert.equal(lost.held, false);
+    assert.ok(lost.news.includes(region.nodes.find((n) => n.id === nodeId).name));
+    assert.ok(!s.campaign.heldNodes.includes(nodeId), 'losing the defence loses the node');
+    assert.equal(defencesOf(s, nodeId), 0, 'and buys no credit');
+    assert.ok(s.campaign.nextContestAt > t0 + 12 * HOUR, 'they regroup either way');
+  }
 }
 
 // Time-warp safety: a lastTickAt in the future never rewinds state.
