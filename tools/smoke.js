@@ -497,6 +497,107 @@ const myLine = evs.findIndex((e) => e.text.includes('Scythe Strike'));
 const foeLine = evs.findIndex((e) => e.text.includes(pb.enemy.active.name) && e.text.includes('uses'));
 assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move goes first despite speed 1');
 
+// --- R20: no keyword may be decoration.
+//
+// `taunt` and `frenzy` shipped on real PLAYER parts — anglerfish "Lure Light"
+// and shark "Frenzy" at 64 power — against keywords `keywords.json` itself
+// marked "Reserved (post-M4)". The engine never read either, so the button
+// lied. Thirteen more were reserved and eleven were on nothing at all.
+//
+// The half that matters is BEHAVIOURAL, not a grep for the name: a comment
+// mentioning `frenzy` would satisfy any textual check. So every keyword is
+// bolted onto a control move and the fight is replayed on the same seed with
+// and without it. An inert keyword consumes no rolls and changes no state,
+// so the two logs come back identical — which is exactly the bug, and it
+// fails here.
+{
+  const CONTROL = { name: 'Control Swing', power: 30, cost: 8, acc: 100, tags: [], keywords: {} };
+  const dummy = {
+    id: 'kwdummy', name: 'Practice Dummy', class: 'ground', hp: 400, power: 9, armor: 6,
+    speed: 5, stamina: 300, regen: 8, tags: ['Organic'], koLine: 'The Dummy is retired.',
+    moves: [
+      { name: 'Prod', power: 22, cost: 8, acc: 100, tags: [], keywords: {} },
+      // It braces for real rather than having the flag forced on, because
+      // performMove clears the attacker's own guard: a hand-set flag is gone
+      // again before the player ever swings at it.
+      { name: 'Brace', power: 0, cost: 6, acc: 100, tags: [], keywords: { guard: true } },
+    ],
+    shapes: [{ type: 'circle', cx: 0, cy: 0, r: 40, fill: '#888888' }],
+  };
+  const kwContent = { ...content, enemies: { ...content.enemies, kwdummy: dummy } };
+  const kwState = { ...newGameState(), seed: 2020 };
+  const solo = makeChimera(kwState, 'M', {
+    bear_head: 'standard', bear_forelimbs: 'standard', bear_hide: 'standard', bear_organ: 'standard',
+  }, t0);
+  const play = (keywords, condition = null) => {
+    const team = [solo, { ...solo, id: `${solo.id}#1`, name: 'Second' }, { ...solo, id: `${solo.id}#2`, name: 'Third' }];
+    const b = createBattle(team, { id: 'kw', name: 'Keyword Bench', waves: ['kwdummy'], reward: 0, tier: 3 },
+      kwContent, 4242, solo.settleUntil);
+    // One move, ours, so the keyword under test is the only variable.
+    for (const c of b.player.team) c.moves = [{ ...CONTROL, keywords }];
+    // Hard to pin down, so ignoreEvasion has something to bypass. Nothing
+    // clears an evasion stage, so once is enough — whereas a bench that never
+    // creates the condition reports a live keyword as decoration, which is a
+    // false alarm rather than a finding.
+    b.enemy.active.stages.evasion = 2;
+    let guard = 0;
+    while (!b.over && guard++ < 26) {
+      if (condition) condition(b);
+      const acts = playerActions(b);
+      const swing = acts.find((a) => a.type === 'move') ?? acts.find((a) => a.type === 'rest') ?? acts[0];
+      if (!swing) break;
+      step(b, swing, kwContent);
+    }
+    return b.log.join('\n');
+  };
+  // Two keywords only mean anything against a condition the bench has to
+  // create, and the baseline has to run under the SAME condition or the
+  // comparison measures the setup instead of the keyword. Guard is the awkward
+  // one: performMove clears the attacker's own guard, so it only stands while
+  // the guarding side has not acted yet — which means the player has to swing
+  // first, so this cannot just be forced on in the shared bench without
+  // making `priority` untestable.
+  const CONDITION = {
+    ignoreGuard: (b) => {
+      for (const c of b.player.team) c.speed = 99;
+      b.enemy.active.speed = 1;
+      b.enemy.active.status.guard = true;
+    },
+  };
+  const baseline = play({});
+  const SAMPLE = {
+    recoil: 0.3, venom: 2, stun: 1, sleep: 1, trap: true, guard: true, priority: true,
+    charge: true, ignoreArmor: true, ignoreGuard: true, knockback: true, accUp: 2, accDown: 2,
+    powerUp: 2, powerDown: 2, evasionUp: 2, staminaRestore: 30, heal: 0.3, bleed: 3, slow: 0.5,
+    taunt: true, thorns: 0.5, multiHit: 4, frenzy: true, rally: 2, regen: 0.2, rage: true,
+    staminaDrain: 40, ignoreEvasion: true,
+  };
+  const inert = [];
+  for (const kw of Object.keys(content.keywords)) {
+    assert.ok(kw in SAMPLE, `keywords.json gained "${kw}" with no bench value — add one here`);
+    const cond = CONDITION[kw] ?? null;
+    const control = cond ? play({}, cond) : baseline;
+    if (play({ [kw]: SAMPLE[kw] }, cond) === control) inert.push(kw);
+  }
+  assert.deepEqual(inert, [], `these keywords changed nothing at all — they are decoration: ${inert.join(', ')}`);
+
+  // And the other half: a keyword nothing carries is content that never
+  // reaches a player, which is how `heal` and `staminaRestore` sat wired but
+  // unreachable since M4 (organs almost never carry a move).
+  const carried = new Set();
+  for (const part of Object.values(content.parts)) {
+    for (const k of Object.keys(part.move?.keywords ?? {})) carried.add(k);
+  }
+  for (const combo of Object.values(content.combos)) {
+    for (const k of Object.keys(combo.move.keywords ?? {})) carried.add(k);
+  }
+  for (const unit of Object.values(content.enemies)) {
+    for (const m of unit.moves) for (const k of Object.keys(m.keywords ?? {})) carried.add(k);
+  }
+  const orphans = Object.keys(content.keywords).filter((k) => !carried.has(k));
+  assert.deepEqual(orphans, [], `no move in the game carries these: ${orphans.join(', ')}`);
+}
+
 // --- Knockback is a tempo move, not a lock.
 //
 // Knockback rotates the target's side, and the round loop drops that side's
