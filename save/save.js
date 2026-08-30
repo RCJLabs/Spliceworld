@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 25;
+export const SAVE_VERSION = 26;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -321,6 +321,23 @@ const migrations = {
     save.facility ??= {};
     for (const id of ['theater', 'containment', 'incubator', 'extractor', 'scanner', 'infirmary']) {
       save.facility[id] ??= 1;
+    }
+    return save;
+  },
+
+  // v26 (R27): each rival keeps its own scouting file. A rival used to
+  // counter you by asking the AI director what class you favoured, which is
+  // the wrong source — the director reads your whole stable continuously
+  // from usage banked since M0, and a rival is one person in one building
+  // who has only ever seen what walked through their door.
+  //
+  // Seeded EMPTY on purpose, even for a rival you have already beaten five
+  // times. Back-filling from the director would be inventing observations
+  // they never made, and the first thing the player would notice is a rival
+  // countering a stable it has never met.
+  26: (save) => {
+    for (const record of Object.values(save.campaign?.rivals ?? {})) {
+      record.scouted ??= { fights: 0, classes: {}, moveTags: {}, parts: {} };
     }
     return save;
   },

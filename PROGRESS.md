@@ -1,5 +1,117 @@
 # PROGRESS
 
+## Session 41 — R27: a rival who has beaten you twice has read you ✅
+
+**Acceptance criterion:** a rival you have beaten twice fields something
+built to answer your actual stable — **passes**, and measured in a way that
+cannot be fooled by the difficulty ramp.
+
+**This closes the audited queue: R20–R29, all ten shipped.**
+
+### The wrong source
+
+A rival used to counter you by asking the AI director what class you
+favoured. That is the wrong source, and it is the reason this line was on
+the queue at all: the director reads your **whole stable, continuously**,
+from usage banked since M0 — it is the world noticing you. A rival is one
+person in one building who has only ever seen what walked through their
+door.
+
+Each rival now keeps their own file, written by duels against them and by
+nothing else. Two rivals who met you at different times hold different
+reads. Owning an Air stable tells a rival nothing until you bring it through
+their door, and what one rival learns is filed in one lab.
+
+They record what was **deployed**, not what is owned — a stable of five
+where you only ever send the same one is a stable a rival knows a fifth of.
+And the file is written on every duel including the ones they win, because
+losing to a stable is the best possible reason to study it.
+
+### The ladder
+
+| defeats | what they field |
+|---|---|
+| 0 | the build they publish |
+| 1 | one specimen answers your class — only `counterBias` rivals react this early |
+| **2** | **the counter moves to their lead, and they pick anatomy that blunts your most-used move tag** |
+| 3+ | they field one of your own signature parts back at you |
+
+The anatomy table is data, keyed on the tag you actually swing, and the
+reasons are the real chart: Ground misses Airborne outright, Electric
+doubles on Aquatic, Sonic ignores Armor so plate bought against it was
+money wasted.
+
+### Measuring it, without being fooled by the ramp
+
+The trap is obvious once you look for it: a rival at two defeats is **also**
+stronger and better graded, so *"the rematch got harder"* proves nothing at
+all. So the instrument holds the escalation fixed and varies only the file —
+two copies of the same rival, both beaten exactly twice, both at identical
+power and grade, one having spent those duels watching the archetype that
+beats them and one watching something else entirely.
+
+| rival | the anatomy that beats them | vs the rival that studied someone else | vs the rival that studied **it** | penalty |
+|---|---|---|---|---|
+| Dr. Mantissa | wings | 68% | 47% | **26pp** |
+| Baroness Aloft | gills | 97% | 57% | **40pp** |
+| Prof. Trench | boots | 50% | 4% | **40pp** |
+
+Averaged over six world seeds — a rival's team is re-rolled per defeat
+count, so a single seed swings 0–75pp while the mean is steady. And the
+rematch is hard because they **learned** you, not because the numbers went
+up: across the ladder the counter costs **35pp** against the ramp's 15pp.
+
+### The defect the measurement exposed
+
+Building the instrument immediately showed that the old escalation — a grade
+step every second defeat on top of a 9%-per-defeat power climb — turned the
+first real rematch into **a door rather than a rung**. The anatomy that
+cleared a rival at 92–100% cleared the same rival at 0–8% two defeats later,
+which is not a ladder. Softened to a step every third defeat at 5%, so the
+thing that makes a rematch hard is the counter rather than the ramp.
+
+A second, smaller one: the counter only led the team when there was a class
+to counter, so an **unclassed** stable — the hardest kind to read — quietly
+made rivals stop reacting. The lead is decided by the tier now.
+
+### Guards, each verified to fail when broken
+
+Eleven, and one of them only exists because the battery found the hole:
+every assertion tested `scoutStable` **directly**, so removing the call in
+`resolveBattle` changed nothing and the suite stayed green. That is exactly
+the line a refactor drops silently, and it now has an end-to-end assertion
+that resolves a real duel and checks the file was written.
+
+| break | caught by |
+|---|---|
+| rivals stop countering entirely | the counter-class assertion |
+| the anatomy counter is ignored | the mirror is really on the field |
+| the counter never reaches the lead | two defeats puts it in front |
+| a rival reads the whole stable again | a chimera left at home was never seen |
+| the file is shared between rivals | a read is personal, not a broadcast |
+| duels stop being recorded | *(the end-to-end assertion above)* |
+| the tutorial rival reacts too early | Mantissa lets the first rematch go |
+| the escalation goes back to a wall | the criterion's own margin collapses |
+| the mirror tier never fires | four defeats and they take your anatomy |
+| the v26 migration invents observations | a rival beaten five times has still never watched you |
+
+### Known issues
+
+- Per-seed variance on the counter is wide (0–75pp), so the gate averages
+  over six world seeds. Within one save it is deterministic, so this is
+  world-to-world variety rather than noise the player can feel.
+- `fumes` and `noise` lose to every rival at every tier, so their rows in
+  the bench measure nothing. They are still worth running: an archetype that
+  cannot win is exactly where a counter would be invisible.
+
+### Next session — first task
+
+The audited queue is empty. The honest next move is **another full audit of
+the shipped code** in the shape that produced R20–R29 — three of those ten
+turned out to have the wrong headline once someone looked, and there are now
+five regions, six facility tracks, an upkeep economy, 22 field guides and a
+rival scouting system that have never been audited by anybody.
+
 ## Session 40 — R29: every system gets one note, and the long screens fold ✅
 
 **Acceptance criterion:** every shipped system has a first-use guide derived

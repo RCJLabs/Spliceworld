@@ -221,6 +221,82 @@ export function withSecondOrgan(builds, content, seed = 7) {
   });
 }
 
+// --- The rival bench (R27) ---------------------------------------------
+//
+// R27's criterion is "a rival you have beaten twice fields something built
+// to answer your ACTUAL STABLE". The trap in measuring that is obvious once
+// you look for it: a rival at two defeats is also stronger and better
+// graded, so "the rematch is harder" proves nothing at all.
+//
+// So the instrument holds the escalation fixed and varies only the file.
+// Two copies of the same rival, both beaten exactly twice, both at the same
+// power and grade — one has spent those duels watching archetype A, the
+// other watching archetype B. Then A fights both. If the counter is real, A
+// does measurably worse against the rival that studied A.
+
+import { rivalDossier, rivalTeam, scoutStable, rivalRecord } from '../campaign/rivals.js';
+
+// A rival who has fought `archetype` `fights` times and lost `defeats` of
+// them. Everything else about the save is identical.
+export function scoutedBy(content, rivalId, archetypeKey, { defeats = 2, fights = 2, grade = 'apex', seed = 2026 } = {}) {
+  const arch = ARCHETYPES[archetypeKey];
+  const state = {
+    seed,
+    chimeras: [],
+    campaign: { heldNodes: [], notoriety: 999, rivals: {} },
+  };
+  const chimera = makeSimChimera(arch.frame, arch.partIds, grade, content);
+  for (let i = 0; i < fights; i++) scoutStable(state, rivalId, [chimera], content);
+  // `fights: 0` is the "they have never met you" case, so the record may not
+  // exist yet — that is a legitimate state, not a missing setup step.
+  const record = (state.campaign.rivals[rivalId] ??= { defeats: 0, losses: 0, lastMetAt: null });
+  record.defeats = defeats;
+  return state;
+}
+
+// Win rate of one archetype against one rival's current team.
+export function fightRival(content, state, rivalId, archetypeKey, { grade = 'apex', seedsPer = 12, teamSize = 3 } = {}) {
+  const arch = ARCHETYPES[archetypeKey];
+  const chimera = makeSimChimera(arch.frame, arch.partIds, grade, content);
+  const encounter = rivalEncounter(state, content.rivals[rivalId], content);
+  let wins = 0;
+  for (let i = 0; i < seedsPer; i++) {
+    const r = scriptedBattle(chimera, encounter, content, hashString(`rv${rivalId}${archetypeKey}${i}`), teamSize);
+    if (r.outcome === 'win') wins++;
+  }
+  return wins / seedsPer;
+}
+
+// The whole table: for each rival, how much worse each archetype does
+// against the version of that rival which studied IT, versus the version
+// that studied somebody else.
+export function rivalCounterBench(content, { grade = 'apex', seedsPer = 12, others = null } = {}) {
+  const keys = Object.keys(ARCHETYPES);
+  const rows = [];
+  for (const rival of Object.values(content.rivals)) {
+    for (const mine of keys) {
+      const studiedMe = scoutedBy(content, rival.id, mine, { grade });
+      const versus = (others ?? keys.filter((k) => k !== mine));
+      const againstMe = fightRival(content, studiedMe, rival.id, mine, { grade, seedsPer });
+      // The same rival, same defeats, studying somebody else entirely.
+      const elsewhere = versus.map((other) => {
+        const studiedThem = scoutedBy(content, rival.id, other, { grade });
+        return fightRival(content, studiedThem, rival.id, mine, { grade, seedsPer });
+      });
+      const naive = elsewhere.reduce((a, b) => a + b, 0) / (elsewhere.length || 1);
+      rows.push({
+        rival: rival.id,
+        archetype: mine,
+        againstMe,
+        naive,
+        penalty: naive - againstMe,
+        dossier: rivalDossier(studiedMe, rival, content),
+      });
+    }
+  }
+  return rows;
+}
+
 // --- The facility bench (R25) ------------------------------------------
 //
 // R25's criterion is "money has a second sink that changes the loop, AND

@@ -1008,6 +1008,10 @@ body.in-battle .ticker { font-size: 0.66rem; }
   color: var(--warn);
 }
 
+/* A rival's file on you (R27): quiet when they have learned nothing,
+   loud once they have started building for you specifically. */
+.rival-file { color: var(--muted); }
+
 /* --- Field notes and fold-away cards (R29) ----------------------------
    One note at a time, dismissable, and never while the Path to World
    Domination still owns the screen. */

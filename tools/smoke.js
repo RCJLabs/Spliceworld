@@ -26,7 +26,7 @@ import {
 } from '../battle/engine.js';
 import {
   runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent,
-  regionBench, ARCHETYPES, facilityPayback, labAt,
+  regionBench, ARCHETYPES, facilityPayback, labAt, scoutedBy, fightRival,
 } from './sim.js';
 import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
 import {
@@ -40,6 +40,9 @@ import {
   onboardingSteps, onboardingActive, guideStates, guideForScreen, dismissGuide, GUIDE_HELPERS,
 } from '../ranch/onboarding.js';
 import { isOpen } from '../ui/cards.js';
+import {
+  rivalDossier, rivalTeam, rivalRecord, scoutStable, counterTier, rivalEncounter,
+} from '../campaign/rivals.js';
 import { classMultiplier } from '../battle/engine.js';
 import { overflowingParts } from './bounds.js';
 import { renderDexScreen } from '../splice/dex-ui.js';
@@ -1865,7 +1868,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 // --- parts under the player's own physiology, gated so their counter-class
 // --- anatomy is always obtainable first, and iterating on every defeat.
 {
-  const { rivalStatus, rivalEncounter, rivalTeam, playerFavoredClass } = await import('../campaign/rivals.js');
+  const { rivalStatus, rivalEncounter, rivalTeam, playerFavoredClass, scoutStable } = await import('../campaign/rivals.js');
   const { unitFor } = await import('../battle/engine.js');
   const mkState = (over = {}) => ({
     seed: 4242,
@@ -1920,7 +1923,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
       for (const partId of unit.salvage) assert.ok(content.parts[partId], 'rivals only field real parts');
       assert.equal(unitFor(content, unit), unit, 'inline units resolve to themselves');
     }
-    // The lead specimen always flies the rival's own flag.
+    // With no scouting file on record, the lead flies the rival's own flag.
     assert.equal(enc.waves[0].class, rival.classBias, `${rival.name}'s lead is ${rival.classBias}`);
   }
 
@@ -1938,24 +1941,54 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   assert.ok(after.reward > before.reward, 'and pays more for the trouble');
   assert.ok(after.waves.length >= before.waves.length, 'and eventually fields more');
 
-  // Counter-bias: a rival who reads your stable answers it. Feed a pure Air
-  // stable and the counter-biased rivals field Water in the second slot.
+  // R27: a rival counters from THEIR OWN FILE, and the file is written by
+  // duels — not by looking in your pens. Owning an Air stable tells a rival
+  // nothing until you bring it through their door.
   const airPart = (slot) => Object.values(content.parts).find((p) => p.slot === slot && p.classAffinity === 'air');
-  const airStable = structuredClone(open);
-  airStable.chimeras = [{
+  const kite = {
     id: 'c1', name: 'Kite', frame: 'S',
     tokens: {
       head: { id: 'k0', partId: 'eagle_head', grade: 'prime', donor: {} },
       forelimbs: { id: 'k1', partId: airPart('forelimbs').id, grade: 'prime', donor: {} },
       tail: { id: 'k2', partId: airPart('tail').id, grade: 'prime', donor: {} },
     },
-  }];
-  assert.equal(playerFavoredClass(airStable, content), 'air', 'the director reads the stable it can see');
+  };
+  const airStable = structuredClone(open);
+  airStable.chimeras = [kite];
+  assert.equal(playerFavoredClass(airStable, content, 'aloft'), null,
+    'a rival who has never met you has nothing on you, however full your pens are');
+  assert.equal(rivalTeam(airStable, content.rivals.aloft, content).counterClass, null,
+    'and so builds the lab they published');
+
+  // Now fight them with it. The file is theirs alone.
+  scoutStable(airStable, 'aloft', [kite], content);
+  assert.equal(playerFavoredClass(airStable, content, 'aloft'), 'air', 'the duel is what teaches them');
+  assert.equal(playerFavoredClass(airStable, content, 'trench'), null,
+    "and it teaches nobody else — a rival's read is personal, not a broadcast");
+
   const biased = rivalTeam(airStable, content.rivals.aloft, content);
-  assert.equal(biased.counterClass, 'water', 'and a counter-biasing rival builds what beats it');
+  assert.equal(biased.counterClass, 'water', 'a counter-biasing rival builds what beats what it saw');
   assert.equal(biased.team[1].class, 'water', 'right down to the anatomy of the second specimen');
-  // Mantissa is the tutorial rival and stays honest.
-  assert.equal(rivalTeam(airStable, content.rivals.mantissa, content).counterClass, null);
+  assert.equal(biased.team[0].class, content.rivals.aloft.classBias,
+    'at one defeat the lead still flies their own flag');
+
+  // Beaten twice, the counter moves to the LEAD — the criterion.
+  const twice = structuredClone(airStable);
+  twice.campaign.rivals.aloft.defeats = 2;
+  const answered = rivalTeam(twice, content.rivals.aloft, content);
+  assert.equal(answered.dossier.tier, 2, 'two defeats is the anatomy tier');
+  assert.equal(answered.team[0].class, 'water', 'and the lead specimen is now the answer to you');
+
+  // Dr. Mantissa does not react to the first rematch (counterBias false),
+  // but the second defeat brings everyone to the table.
+  const mantissaOnce = structuredClone(airStable);
+  mantissaOnce.campaign.rivals.mantissa = { defeats: 1, losses: 0, scouted: structuredClone(airStable.campaign.rivals.aloft.scouted) };
+  assert.equal(rivalTeam(mantissaOnce, content.rivals.mantissa, content).counterClass, null,
+    'the tutorial rival lets the first rematch go');
+  const mantissaTwice = structuredClone(mantissaOnce);
+  mantissaTwice.campaign.rivals.mantissa.defeats = 2;
+  assert.equal(rivalTeam(mantissaTwice, content.rivals.mantissa, content).counterClass, 'water',
+    'but nobody lets the second one go');
 }
 
 // --- The rival payoff loop: cannon a rival's chimera, dismantle it, and
@@ -4583,6 +4616,191 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 
 const pctOf = (x) => `${Math.round(x * 100)}%`;
 const classOfSpecies = (id) => content.species[id]?.class ?? null;
+
+// --- R27: a rival who has beaten you twice has read you ---------------
+//
+// The criterion is "a rival you have beaten twice fields something built to
+// answer your ACTUAL STABLE", and the trap in measuring it is obvious once
+// you look: a rival at two defeats is also stronger and better graded, so
+// "the rematch got harder" proves nothing whatsoever.
+//
+// So the instrument holds the escalation fixed and varies only the file.
+// Two copies of the same rival, both beaten exactly twice, both at the same
+// power and grade — one spent those duels watching the archetype that beats
+// them, the other watching something else entirely. Then that archetype
+// fights both. The gap between the two is the counter, and nothing else.
+{
+  const RIVAL_SEEDS = [2026, 77, 1312, 4242, 99, 5];
+  const G = 'prismatic';
+  const keys = Object.keys(ARCHETYPES);
+
+  // --- The scouting file is written by DUELS, and by nothing else. This is
+  // the whole difference from the AI director, which reads the stable you
+  // own from usage banked since M0. A rival is one person in one building.
+  {
+    const lab = { ...newGameState(), seed: 4242 };
+    const kite = makeSimChimera(ARCHETYPES.wings.frame, ARCHETYPES.wings.partIds, 'apex', content);
+    lab.chimeras = [kite];
+    assert.equal(rivalDossier(lab, content.rivals.aloft, content).topClass, null,
+      'owning a stable tells a rival nothing — they have to have met it');
+    scoutStable(lab, 'aloft', [kite], content);
+    const file = lab.campaign.rivals.aloft.scouted;
+    assert.equal(file.fights, 1, 'one duel, one entry');
+    assert.ok(file.classes.air > 0, 'and they wrote down what class walked in');
+    assert.ok(Object.keys(file.parts).length >= 4, 'and which parts it was wearing');
+    assert.equal(rivalDossier(lab, content.rivals.trench, content).topClass, null,
+      "and it is filed in ONE lab — a rival's read is personal, not a broadcast");
+
+    // They record what was DEPLOYED, not what is owned. A stable of five
+    // where you only ever send the same one is a stable a rival knows one
+    // fifth of, and that asymmetry is the whole point of the file.
+    const bench = makeSimChimera(ARCHETYPES.boots.frame, ARCHETYPES.boots.partIds, 'apex', content);
+    lab.chimeras = [kite, bench];
+    scoutStable(lab, 'aloft', [kite], content);
+    assert.ok(!file.classes.ground,
+      'a chimera left at home was never seen, however loudly it sits in the pens');
+    // Losing to a stable is the best possible reason to study it, so the
+    // file is written on every duel rather than only on defeats.
+    assert.equal(rivalRecord(lab, 'aloft').defeats, 0, 'nothing was won here');
+    assert.ok(file.fights > 0, 'and they took notes anyway');
+  }
+
+  // --- The ladder. Everyone reaches the anatomy tier by the second defeat;
+  // counterBias only decides whether they react to the first.
+  for (const rival of Object.values(content.rivals)) {
+    assert.equal(counterTier(rival, content.rivalMeta, 0), 0, `${rival.id} publishes an honest opening build`);
+    assert.ok(counterTier(rival, content.rivalMeta, 2) >= content.rivalMeta.anatomyCounterTier,
+      `${rival.id} reaches the anatomy tier at two defeats — that IS the criterion`);
+    assert.ok(counterTier(rival, content.rivalMeta, 4) >= counterTier(rival, content.rivalMeta, 2),
+      `${rival.id}'s ladder never goes backwards`);
+  }
+  assert.equal(counterTier(content.rivals.mantissa, content.rivalMeta, 1), 0,
+    'the tutorial rival lets the first rematch go');
+  assert.ok(counterTier(content.rivals.aloft, content.rivalMeta, 1) > 0,
+    'a counter-biasing one does not');
+
+  // --- The mechanism, checked directly rather than inferred from win rates.
+  // A rival who has watched a Ground kit twice brings Airborne anatomy,
+  // because Ground-tagged moves miss Airborne outright.
+  {
+    const st = scoutedBy(content, 'trench', 'boots', { grade: G, defeats: 2 });
+    const dossier = rivalDossier(st, content.rivals.trench, content);
+    assert.equal(dossier.topTag, 'Ground', 'they noticed what you actually swing');
+    assert.deepEqual(dossier.seek, ['Airborne'], 'and looked up the answer to it');
+    assert.ok(dossier.counterLeads, 'at two defeats the counter leads the team');
+    const { team } = rivalTeam(st, content.rivals.trench, content);
+    assert.ok(team[0].tags.includes('Airborne'),
+      `the lead specimen actually took off (${team[0].tags.join(', ')})`);
+    assert.equal(team[0].class, 'air', 'and flies the class that beats what they saw');
+
+    // Avoidance is the other half: a Sonic kit ignores armour, so armour
+    // spent against it is money wasted, and they stop spending it.
+    const vsNoise = scoutedBy(content, 'trench', 'noise', { grade: G, defeats: 2 });
+    const noiseDossier = rivalDossier(vsNoise, content.rivals.trench, content);
+    assert.equal(noiseDossier.topTag, 'Sonic');
+    assert.deepEqual(noiseDossier.avoid, ['Armored'], 'they stop buying plate against a Sonic kit');
+    const armoured = (t) => t.team.filter((u) => u.tags.includes('Armored')).length;
+    assert.ok(armoured(rivalTeam(vsNoise, content.rivals.trench, content)) <= armoured(rivalTeam(st, content.rivals.trench, content)),
+      'and the plate count goes down, not up');
+
+    // …and at tier 3 they simply take one of your parts.
+    const grudge = structuredClone(vsNoise);
+    grudge.campaign.rivals.trench.defeats = 4;
+    const mirrored = rivalDossier(grudge, content.rivals.trench, content);
+    assert.ok(mirrored.mirror && content.parts[mirrored.mirror], 'four defeats and they field your own anatomy');
+    assert.ok(rivalTeam(grudge, content.rivals.trench, content).team[0].salvage.includes(mirrored.mirror),
+      `and it is really on the field (${mirrored.mirror})`);
+  }
+
+  // --- THE CRITERION, measured. Averaged over six world seeds: a rival's
+  // team is re-rolled per defeat count, so a single seed swings widely
+  // (0-75pp) while the mean is steady.
+  const ANSWERS = {};
+  const penalties = [];
+  const escalations = [];
+  for (const rival of Object.values(content.rivals)) {
+    // Whichever archetype beats them before they know anything about you.
+    const fresh = keys.map((k) => [k, fightRival(
+      content, scoutedBy(content, rival.id, k, { grade: G, defeats: 0, fights: 0 }), rival.id, k,
+      { grade: G, seedsPer: 12 }
+    )]).sort((a, b) => b[1] - a[1]);
+    const [answer, freshRate] = fresh[0];
+    ANSWERS[rival.id] = answer;
+    assert.ok(freshRate >= 0.5,
+      `${rival.id} is beatable by the right anatomy before they learn you (${answer} ${pctOf(freshRate)})`);
+
+    const other = keys.find((k) => k !== answer);
+    let studiedMe = 0;
+    let studiedThem = 0;
+    for (const seed of RIVAL_SEEDS) {
+      studiedMe += fightRival(content, scoutedBy(content, rival.id, answer, { grade: G, defeats: 2, seed }), rival.id, answer, { grade: G, seedsPer: 12 });
+      studiedThem += fightRival(content, scoutedBy(content, rival.id, other, { grade: G, defeats: 2, seed }), rival.id, answer, { grade: G, seedsPer: 12 });
+    }
+    studiedMe /= RIVAL_SEEDS.length;
+    studiedThem /= RIVAL_SEEDS.length;
+    const penalty = studiedThem - studiedMe;
+    penalties.push(penalty);
+    escalations.push(freshRate - studiedThem);
+
+    // Observed means: 26pp (Mantissa), 40pp (Aloft), 40pp (Trench).
+    assert.ok(penalty >= 0.15,
+      `${rival.id}: beaten twice, they answer the stable that did it — ${answer} drops ${pctOf(studiedThem)} -> ${pctOf(studiedMe)} (${Math.round(penalty * 100)}pp) against the same rival at the same power`);
+  }
+
+  // And the rematch is hard because they LEARNED you, not because the
+  // numbers went up: across the ladder the counter costs more than the
+  // escalation does. Observed 35pp of counter against 15pp of ramp.
+  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  assert.ok(mean(penalties) > mean(escalations),
+    `the counter outweighs the power ramp (${Math.round(mean(penalties) * 100)}pp vs ${Math.round(mean(escalations) * 100)}pp)`);
+
+  // --- The wiring, end to end. Everything above tests scoutStable
+  // directly; this is the only assertion that proves resolveBattle actually
+  // CALLS it, which is precisely the line a refactor drops without anything
+  // going red.
+  {
+    const lab = { ...newGameState(), seed: 909 };
+    lab.campaign.heldNodes = [...ALL_NODE_IDS];
+    lab.campaign.notoriety = 999;
+    lab.campaign.lastTickAt = t0;
+    const hero = makeChimera(lab, 'L', {
+      bear_head: 'prismatic', bear_forelimbs: 'prismatic', bear_hide: 'prismatic', bear_organ: 'prismatic',
+    }, t0);
+    const encounter = rivalEncounter(lab, content.rivals.mantissa, content);
+    const battle = createBattle([hero], encounter, content, 11, hero.settleUntil, {
+      kind: 'rival', rivalId: 'mantissa',
+    });
+    assert.equal(rivalRecord(lab, 'mantissa').scouted, undefined, 'nothing on file before the bell');
+    battle.over = true;
+    battle.outcome = 'loss';
+    resolveBattle(lab, battle, content, t0 + HOUR);
+    const file = lab.campaign.rivals.mantissa.scouted;
+    assert.ok(file?.fights >= 1, 'the duel wrote into their file');
+    assert.ok(Object.keys(file.parts).length >= 3,
+      'and it recorded the anatomy that walked in, not a summary of it');
+    assert.ok(file.parts.bear_head >= 1, `including the head you led with (${Object.keys(file.parts).join(', ')})`);
+  }
+
+  // A save from before any of this starts with an EMPTY file, even for a
+  // rival already beaten five times. Back-filling from the director would
+  // be inventing observations they never made, and the first thing a player
+  // would notice is a rival countering a stable it has never met.
+  {
+    const veteran = { ...newGameState(), saveVersion: 25 };
+    veteran.campaign.rivals = { trench: { defeats: 5, losses: 2, lastMetAt: t0 } };
+    const migrated = migrate(structuredClone(veteran));
+    const file = migrated.campaign.rivals.trench.scouted;
+    assert.deepEqual(file, { fights: 0, classes: {}, moveTags: {}, parts: {} },
+      'a rival beaten five times before R27 has still never watched you fight');
+    assert.equal(rivalDossier(migrated, content.rivals.trench, content).counterClass, null,
+      'so they field the lab they published until you show them something');
+  }
+
+  // The three rivals answer to three different anatomies, which is what
+  // makes keeping a stable better than perfecting one build.
+  assert.equal(new Set(Object.values(ANSWERS)).size, 3,
+    `each rival has its own answer (${Object.entries(ANSWERS).map(([r, a]) => `${r}=${a}`).join(' ')})`);
+}
 
 // --- R29: every shipped system gets one first-use note ----------------
 //
