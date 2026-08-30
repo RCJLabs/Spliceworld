@@ -1,46 +1,188 @@
 {
-  "_doc": "The ability keyword system (ROADMAP §4.2): every move = power/cost/acc + 1-2 keywords + numbers, no bespoke scripts. battle/engine.js resolves keyword semantics; this file is the design reference (names/descriptions) plus the data-driven tag chart. Move keyword params: recoil (fraction of damage dealt, self), venom (stacks added), stun/sleep (proc chance), trap/guard/priority/charge/ignoreArmor/ignoreGuard/knockback (true), accUp/accDown/powerUp/powerDown/evasionUp (stat stages, ±15%/stage), staminaRestore (flat), heal (fraction of max HP). tagChart rules: attacker move tag vs defender tag -> mult (0 = misses entirely) or rule 'ignoreArmor'.",
+  "_doc": "The ability keyword system (ROADMAP \u00a74.2): every move = power/cost/acc + 1-2 keywords + numbers, no bespoke scripts. battle/engine.js resolves keyword semantics; this file is the design reference (names/descriptions) plus the data-driven tag chart. Move keyword params: recoil (fraction of damage dealt, self), venom (stacks added), stun/sleep (proc chance), trap/guard/priority/charge/ignoreArmor/ignoreGuard/knockback (true), accUp/accDown/powerUp/powerDown/evasionUp (stat stages, \u00b115%/stage), staminaRestore (flat), heal (fraction of max HP). tagChart rules: attacker move tag vs defender tag -> mult (0 = misses entirely) or rule 'ignoreArmor'. R20: every keyword here is implemented in battle/engine.js AND carried by at least one move \u2014 smoke asserts both, so \"Reserved\" entries can never accumulate again. Dropped as redundant: reflect (duplicate of thorns); camouflage (duplicate of evasionUp); aoe (the fight is one active per side over a queue; nothing to splash); suppression (already expressible as accDown + multiHit).",
   "keywords": [
-    { "id": "recoil", "name": "Recoil", "desc": "The attacker takes a fraction of dealt damage. Enthusiasm has costs." },
-    { "id": "venom", "name": "Venom", "desc": "Stacking end-of-turn damage (cap 5). Useless against machinery." },
-    { "id": "stun", "name": "Stun", "desc": "Chance the target loses its next turn." },
-    { "id": "sleep", "name": "Sleep", "desc": "Chance the target naps until it wakes (50%/turn) or is hit." },
-    { "id": "trap", "name": "Trap", "desc": "Target cannot switch out while the trapper stays active." },
-    { "id": "guard", "name": "Guard", "desc": "Halves damage taken until the user's next action." },
-    { "id": "priority", "name": "Priority", "desc": "Moves first regardless of Speed." },
-    { "id": "charge", "name": "Charge", "desc": "Spends a turn winding up, hits like a freight train on the next." },
-    { "id": "ignoreArmor", "name": "Ignore Armor", "desc": "Damage bypasses Armor." },
-    { "id": "ignoreGuard", "name": "Ignore Guard", "desc": "Damage bypasses Guard." },
-    { "id": "knockback", "name": "Knockback", "desc": "Forces the target's side to rotate in a different fighter." },
-    { "id": "accUp", "name": "Accuracy Up", "desc": "Raises the user's accuracy stage." },
-    { "id": "accDown", "name": "Accuracy Down", "desc": "Lowers the target's accuracy stage." },
-    { "id": "powerUp", "name": "Power Up", "desc": "Raises the user's power stage." },
-    { "id": "powerDown", "name": "Power Down", "desc": "Lowers the target's power stage." },
-    { "id": "evasionUp", "name": "Evasion Up", "desc": "Raises the user's evasion stage." },
-    { "id": "staminaRestore", "name": "Stamina Restore", "desc": "Refills stamina. Deep breaths. Snack break." },
-    { "id": "heal", "name": "Heal", "desc": "Restores a fraction of max HP." },
-    { "id": "bleed", "name": "Bleed", "desc": "Reserved (post-M4)." },
-    { "id": "slow", "name": "Slow", "desc": "Reserved (post-M4)." },
-    { "id": "taunt", "name": "Taunt", "desc": "Reserved (post-M4)." },
-    { "id": "reflect", "name": "Reflect", "desc": "Reserved (post-M4)." },
-    { "id": "thorns", "name": "Thorns", "desc": "Reserved (post-M4)." },
-    { "id": "multiHit", "name": "Multi-Hit", "desc": "Reserved (post-M4)." },
-    { "id": "frenzy", "name": "Frenzy", "desc": "Reserved (post-M4)." },
-    { "id": "rally", "name": "Rally", "desc": "Reserved (post-M4)." },
-    { "id": "camouflage", "name": "Camouflage", "desc": "Reserved (post-M4)." },
-    { "id": "regen", "name": "Regen", "desc": "Reserved (post-M4)." },
-    { "id": "rage", "name": "Rage", "desc": "Reserved (post-M4)." },
-    { "id": "staminaDrain", "name": "Stamina Drain", "desc": "Reserved (post-M4)." },
-    { "id": "ignoreEvasion", "name": "Lock-On", "desc": "Reserved (post-M4)." },
-    { "id": "aoe", "name": "AoE", "desc": "Reserved (post-M4)." },
-    { "id": "suppression", "name": "Suppression", "desc": "Reserved (post-M4) — accuracy-down barrages." }
+    {
+      "id": "recoil",
+      "name": "Recoil",
+      "desc": "The attacker takes a fraction of dealt damage. Enthusiasm has costs."
+    },
+    {
+      "id": "venom",
+      "name": "Venom",
+      "desc": "Stacking end-of-turn damage (cap 5). Useless against machinery."
+    },
+    {
+      "id": "stun",
+      "name": "Stun",
+      "desc": "Chance the target loses its next turn."
+    },
+    {
+      "id": "sleep",
+      "name": "Sleep",
+      "desc": "Chance the target naps until it wakes (50%/turn) or is hit."
+    },
+    {
+      "id": "trap",
+      "name": "Trap",
+      "desc": "Target cannot switch out while the trapper stays active."
+    },
+    {
+      "id": "guard",
+      "name": "Guard",
+      "desc": "Halves damage taken until the user's next action."
+    },
+    {
+      "id": "priority",
+      "name": "Priority",
+      "desc": "Moves first regardless of Speed."
+    },
+    {
+      "id": "charge",
+      "name": "Charge",
+      "desc": "Spends a turn winding up, hits like a freight train on the next."
+    },
+    {
+      "id": "ignoreArmor",
+      "name": "Ignore Armor",
+      "desc": "Damage bypasses Armor."
+    },
+    {
+      "id": "ignoreGuard",
+      "name": "Ignore Guard",
+      "desc": "Damage bypasses Guard."
+    },
+    {
+      "id": "knockback",
+      "name": "Knockback",
+      "desc": "Forces the target's side to rotate in a different fighter."
+    },
+    {
+      "id": "accUp",
+      "name": "Accuracy Up",
+      "desc": "Raises the user's accuracy stage."
+    },
+    {
+      "id": "accDown",
+      "name": "Accuracy Down",
+      "desc": "Lowers the target's accuracy stage."
+    },
+    {
+      "id": "powerUp",
+      "name": "Power Up",
+      "desc": "Raises the user's power stage."
+    },
+    {
+      "id": "powerDown",
+      "name": "Power Down",
+      "desc": "Lowers the target's power stage."
+    },
+    {
+      "id": "evasionUp",
+      "name": "Evasion Up",
+      "desc": "Raises the user's evasion stage."
+    },
+    {
+      "id": "staminaRestore",
+      "name": "Stamina Restore",
+      "desc": "Refills stamina. Deep breaths. Snack break."
+    },
+    {
+      "id": "heal",
+      "name": "Heal",
+      "desc": "Restores a fraction of max HP."
+    },
+    {
+      "id": "bleed",
+      "name": "Bleed",
+      "desc": "Stacking end-of-turn damage (cap 4). Unlike Venom it works on machinery."
+    },
+    {
+      "id": "slow",
+      "name": "Slow",
+      "desc": "Cuts the target's Speed for the rest of the fight."
+    },
+    {
+      "id": "taunt",
+      "name": "Taunt",
+      "desc": "The target can only choose moves that hit back \u2014 no breather, no tag-out."
+    },
+    {
+      "id": "thorns",
+      "name": "Thorns",
+      "desc": "The user returns a share of any damage it takes. Touching it is a decision."
+    },
+    {
+      "id": "multiHit",
+      "name": "Multi-Hit",
+      "desc": "Strikes 2..N times at the listed power each, armor applying to every hit."
+    },
+    {
+      "id": "frenzy",
+      "name": "Frenzy",
+      "desc": "Damage grows as the TARGET's health falls. Blood in the water."
+    },
+    {
+      "id": "rally",
+      "name": "Rally",
+      "desc": "Raises the power stage of the user's whole side, not just the one swinging."
+    },
+    {
+      "id": "regen",
+      "name": "Regen",
+      "desc": "Restores a share of max HP at end of turn for three turns."
+    },
+    {
+      "id": "rage",
+      "name": "Rage",
+      "desc": "Damage grows as the USER's own health falls."
+    },
+    {
+      "id": "staminaDrain",
+      "name": "Stamina Drain",
+      "desc": "Takes stamina off the target and gives the user half of it."
+    },
+    {
+      "id": "ignoreEvasion",
+      "name": "Lock-On",
+      "desc": "Ignores every way of not being there: evasion stage, Skittish, scars."
+    }
   ],
   "tagChart": [
-    { "attack": "Electric", "defender": "Aquatic", "mult": 2, "note": "Electric ≫ Aquatic" },
-    { "attack": "Ground", "defender": "Airborne", "mult": 0, "note": "Ground moves miss Airborne" },
-    { "attack": "Sonic", "defender": "Armored", "rule": "ignoreArmor", "note": "Sonic ignores Armor" },
-    { "attack": "Gas", "defender": "Organic", "mult": 1.5, "note": "Gas ≫ organic" },
-    { "attack": "Gas", "defender": "Vehicle", "mult": 0, "note": "Vehicles do not breathe" },
-    { "attack": "Venomous", "defender": "Vehicle", "mult": 0.5, "note": "You cannot poison a bumper" }
+    {
+      "attack": "Electric",
+      "defender": "Aquatic",
+      "mult": 2,
+      "note": "Electric \u226b Aquatic"
+    },
+    {
+      "attack": "Ground",
+      "defender": "Airborne",
+      "mult": 0,
+      "note": "Ground moves miss Airborne"
+    },
+    {
+      "attack": "Sonic",
+      "defender": "Armored",
+      "rule": "ignoreArmor",
+      "note": "Sonic ignores Armor"
+    },
+    {
+      "attack": "Gas",
+      "defender": "Organic",
+      "mult": 1.5,
+      "note": "Gas \u226b organic"
+    },
+    {
+      "attack": "Gas",
+      "defender": "Vehicle",
+      "mult": 0,
+      "note": "Vehicles do not breathe"
+    },
+    {
+      "attack": "Venomous",
+      "defender": "Vehicle",
+      "mult": 0.5,
+      "note": "You cannot poison a bumper"
+    }
   ]
 }

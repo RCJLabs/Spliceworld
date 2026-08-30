@@ -14,6 +14,12 @@ import { flatModifiers, scarEffects, againstTags } from '../splice/scars.js';
 const STAGE_STEP = 0.15;
 const STAGE_CAP = 2; // setup matters, but stacking is not a strategy on its own
 const ARMOR_FACTOR = 0.7;
+const FRENZY_SCALE = 0.8; // Frenzy at the target's last sliver: +80% damage
+const RAGE_SCALE = 0.6;   // Rage at the user's last sliver: +60%
+const BLEED_CAP = 4;
+const BLEED_TICK = 4;
+const REGEN_TURNS = 3;
+const TAUNT_TURNS = 2;
 const VENOM_TICK = 3;
 const VENOM_CAP = 5;
 const REST_FRACTION = 0.35;
@@ -177,7 +183,7 @@ export function combatantFromChimera(chimera, content, now) {
     perks: perksOf(chimera, content),
     scars: scarEffects(chimera, content),
     stages: { acc: 0, evasion: 0, power: 0 },
-    status: { venom: 0, sleep: false, stun: false, guard: false, charging: null },
+    status: { venom: 0, bleed: 0, sleep: false, stun: false, guard: false, charging: null, thorns: 0, regen: null, taunted: 0 },
   };
 }
 
@@ -227,7 +233,7 @@ export function combatantFromUnit(unit, scale = 1) {
     perks: NEUTRAL_PERKS,
     scars: [],
     stages: { acc: 0, evasion: 0, power: 0 },
-    status: { venom: 0, sleep: false, stun: false, guard: false, charging: null },
+    status: { venom: 0, bleed: 0, sleep: false, stun: false, guard: false, charging: null, thorns: 0, regen: null, taunted: 0 },
   };
 }
 
@@ -402,6 +408,14 @@ export function playerActions(battle) {
   if (foe.capturable && battle.cannon.charge >= 100 && foe.hp > 0 && foe.hp <= foe.maxHp * 0.4) {
     actions.push({ type: 'capture', label: `Containment Cannon (${foe.name})` });
   }
+  // Taunted, the only things on the table are the ones that involve hitting
+  // the creature waving at you. It never removes the CHOICE (§3.5 — that is
+  // obedience's job and only obedience's), it removes the options that are
+  // not fighting: no breather, no tagging out, no leaving.
+  if (me.status.taunted > 0) {
+    const swings = actions.filter((a) => a.type === 'move' && me.moves[a.index].power > 0);
+    if (swings.length) return swings;
+  }
   actions.push({ type: 'rest', label: 'Catch Breath' });
   const trapped = me.status.trapped;
   if (!trapped) {
@@ -448,12 +462,17 @@ function attack(battle, atk, def, move, events, content) {
 
   // Skittish creatures are hard to pin down on the opening exchange.
   const jumpy = battle.turn === 1 ? (def.perks?.evasion ?? 0) : 0;
-  const hitChance =
-    ((move.acc + mine.acc) / 100) *
-    stageMult(atk.stages.acc) /
-    stageMult(def.stages.evasion) *
-    (1 - jumpy) *
-    (1 - theirs.evasion);
+  // Lock-On answers every way of not being there at once — the evasion
+  // stage, a Skittish temperament, and a scar that taught it to duck.
+  // Anything less and the keyword loses to whichever dodge it forgot.
+  const locked = !!move.keywords.ignoreEvasion;
+  const hitChance = locked
+    ? (move.acc + mine.acc) / 100 * stageMult(atk.stages.acc)
+    : ((move.acc + mine.acc) / 100) *
+      stageMult(atk.stages.acc) /
+      stageMult(def.stages.evasion) *
+      (1 - jumpy) *
+      (1 - theirs.evasion);
   if (roll(battle) > hitChance) {
     events.push({ text: `${atk.name} uses ${move.name} — it whiffs spectacularly!`, kind: 'miss', actor: from, target: at, move: move.name });
     return;
@@ -464,30 +483,50 @@ function attack(battle, atk, def, move, events, content) {
     events.push({ text: `${atk.name} uses ${move.name} — it has no effect on ${def.name}. (${chartNote(move.tags, def.tags, content)})`, kind: 'immune', actor: from, target: at, move: move.name });
   } else if (move.power > 0) {
     const clsMult = classMultiplier(atk.creatureClass, def.creatureClass, content);
-    let dmg = move.power * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult * clsMult;
-    dmg *= 0.9 + 0.2 * roll(battle);
-    dmg *= 1 + (atk.perks?.power ?? 0); // Fierce
-    dmg *= 1 + mine.power; // a scar that changed how it fights THESE
-    dmg *= 1 - theirs.armor; // …and one that changed how it takes them
     // Brave: cornered, it starts landing telling blows.
     const cornered = atk.maxHp > 0 && atk.hp / atk.maxHp <= (atk.perks?.lastStandAt ?? 0);
     const crit = cornered && (atk.perks?.critChance ?? 0) > 0 && roll(battle) < atk.perks.critChance;
-    if (crit) dmg *= atk.perks.critMult;
     const bypassArmor = ignoreArmor || move.keywords.ignoreArmor;
-    if (!bypassArmor) dmg -= def.armor * ARMOR_FACTOR;
+    // Multi-Hit strikes 2..N times at the move's LISTED power each, and every
+    // strike runs the whole pipeline — armor included. That is the point of
+    // the keyword rather than an oversight: a flurry is worse than one big
+    // swing into plating and better into a bare target, so the data tunes it
+    // by listing a small per-hit power.
+    const hits = move.keywords.multiHit
+      ? 2 + Math.floor(roll(battle) * Math.max(1, move.keywords.multiHit - 1))
+      : 1;
+    let dmg = 0;
+    for (let hit = 0; hit < hits; hit++) {
+      let one = move.power * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult * clsMult;
+      one *= 0.9 + 0.2 * roll(battle);
+      one *= 1 + (atk.perks?.power ?? 0); // Fierce
+      one *= 1 + mine.power; // a scar that changed how it fights THESE
+      one *= 1 - theirs.armor; // …and one that changed how it takes them
+      // Frenzy reads the TARGET's blood in the water; Rage reads its own.
+      // Two halves of the same idea, kept apart so a shark and a cornered
+      // gorilla do not feel like the same creature.
+      if (move.keywords.frenzy) one *= 1 + FRENZY_SCALE * (1 - def.hp / Math.max(1, def.maxHp));
+      if (move.keywords.rage) one *= 1 + RAGE_SCALE * (1 - atk.hp / Math.max(1, atk.maxHp));
+      if (crit) one *= atk.perks.critMult;
+      if (!bypassArmor) one -= def.armor * ARMOR_FACTOR;
+      if (def.status.guard && !move.keywords.ignoreGuard) {
+        const absorbed = 0.5 * (1 - (def.perks?.guardLoss ?? 0));
+        one *= 1 - absorbed;
+      }
+      dmg += Math.max(1, Math.round(one));
+    }
     if (def.status.guard && !move.keywords.ignoreGuard) {
       // A Fierce creature guards badly — it would rather be hitting.
       const absorbed = 0.5 * (1 - (def.perks?.guardLoss ?? 0));
-      dmg *= 1 - absorbed;
       events.push(`${def.name}'s guard absorbs ${Math.round(absorbed * 100)}% of the blow.`);
     }
-    dmg = Math.max(1, Math.round(dmg));
     def.hp = Math.max(0, def.hp - dmg);
     if (atk.kind === 'chimera' && def.hp > 0) {
       // Restraint charges the cannon: damage dealt WITHOUT finishing.
       battle.cannon.charge = Math.min(100, battle.cannon.charge + Math.round(dmg * 1.25));
     }
     let line = `${atk.name} uses ${move.name} — ${dmg} damage`;
+    if (hits > 1) line += ` across ${hits} hits`;
     if (crit) line += ' — CORNERED AND FURIOUS!';
     if (mult > 1) line += ' (super effective!)';
     if (clsMult > 1) line += ` (${content.classes[atk.creatureClass].name} beats ${content.classes[def.creatureClass].name}!)`;
@@ -512,6 +551,13 @@ function attack(battle, atk, def, move, events, content) {
       const r = Math.max(1, Math.round(dmg * move.keywords.recoil));
       atk.hp = Math.max(0, atk.hp - r);
       events.push({ text: `${atk.name} takes ${r} recoil. Worth it. Probably.`, kind: 'damage', actor: from, target: from, amount: r, recoil: true, mult: 1 });
+    }
+    // Thorns belongs to the DEFENDER, so it resolves here rather than in the
+    // keyword block: whoever chose to touch the porcupine pays for it.
+    if (def.status.thorns > 0 && atk.hp > 0) {
+      const t = Math.max(1, Math.round(dmg * def.status.thorns));
+      atk.hp = Math.max(0, atk.hp - t);
+      events.push({ text: `${def.name} is covered in spines — ${atk.name} takes ${t} back.`, kind: 'damage', actor: at, target: from, amount: t, mult: 1 });
     }
   } else {
     events.push({ text: `${atk.name} uses ${move.name}.`, kind: 'setup', actor: from, target: at, move: move.name });
@@ -556,6 +602,47 @@ function attack(battle, atk, def, move, events, content) {
     events.push({ text: `${atk.name} patches up ${h} HP.`, kind: 'heal', target: from, amount: h });
   }
   if (kw.knockback && def.hp > 0) knockback(battle, def, events, content);
+  // Bleed is Venom for things that do not breathe. The chart zeroes Venomous
+  // against a chassis on purpose; a severed hydraulic line is the answer, so
+  // this ticks on anything with hit points.
+  if (kw.bleed && def.hp > 0) {
+    def.status.bleed = Math.min(BLEED_CAP, (def.status.bleed ?? 0) + kw.bleed);
+    events.push({ text: `${def.name} is leaking something. Oil, ichor, morale.`, kind: 'debuff', target: at });
+  }
+  if (kw.staminaDrain && def.hp > 0) {
+    const d = Math.min(def.stamina, kw.staminaDrain);
+    def.stamina -= d;
+    atk.stamina = Math.min(atk.staminaMax, atk.stamina + Math.round(d / 2));
+    events.push({ text: `${atk.name} siphons ${d} stamina off ${def.name}.`, kind: 'debuff', target: at });
+  }
+  if (kw.slow && def.hp > 0) {
+    const before = def.speed;
+    def.speed = Math.max(1, Math.round(def.speed * (1 - kw.slow)));
+    if (def.speed < before) events.push({ text: `${def.name} bogs down — speed ${before} → ${def.speed}.`, kind: 'debuff', target: at });
+  }
+  if (kw.thorns) {
+    atk.status.thorns = Math.max(atk.status.thorns ?? 0, kw.thorns);
+    events.push({ text: `${atk.name} bristles. Touching it is now a decision.`, kind: 'buff', target: from });
+  }
+  if (kw.regen) {
+    atk.status.regen = { amount: kw.regen, turns: REGEN_TURNS };
+    events.push({ text: `${atk.name} starts knitting itself back together.`, kind: 'buff', target: from });
+  }
+  // Rally is the one keyword that reaches past the active fighter. The enemy
+  // queue holds ids rather than combatants, so on that side it lands on the
+  // active only — which is the honest reading of "the ones actually here".
+  if (kw.rally) {
+    const squad = from === 'player' ? battle.player.team.filter((c) => c.hp > 0) : [atk];
+    for (const c of squad) c.stages.power = Math.min(STAGE_CAP, c.stages.power + kw.rally);
+    events.push({ text: `${atk.name} rallies the whole outfit — everyone stands taller.`, kind: 'buff', target: from });
+  }
+  // Taunt does not take the turn away (§3.5: never remove player control) —
+  // it takes the OPTIONS away. You may still choose, but only from the
+  // things that involve hitting the creature waving at you.
+  if (kw.taunt && def.hp > 0) {
+    def.status.taunted = TAUNT_TURNS;
+    events.push({ text: `${def.name} is thoroughly provoked and cannot think about anything else.`, kind: 'debuff', target: at });
+  }
 }
 
 function chartNote(moveTags, defTags, content) {
@@ -652,6 +739,8 @@ function enemyChooseMove(battle) {
   if (!affordable.length) return -1; // rest
   // Mild preference for damage; setup moves get picked sometimes.
   const damaging = affordable.filter(({ m }) => m.power > 0);
+  // Taunted, it can only think about hitting the thing that provoked it.
+  if (e.status.taunted > 0 && damaging.length) return damaging[Math.floor(roll(battle) * damaging.length)].i;
   const pool = roll(battle) < 0.75 && damaging.length ? damaging : affordable;
   return pool[Math.floor(roll(battle) * pool.length)].i;
 }
@@ -664,6 +753,18 @@ function endOfTurn(battle, events) {
       c.hp = Math.max(0, c.hp - v);
       events.push({ text: `Venom simmers: ${c.name} takes ${v}.`, kind: 'damage', target: sideOf(c), amount: v, dot: true, mult: 1 });
     }
+    if (c.status.bleed > 0) {
+      const b = c.status.bleed * BLEED_TICK;
+      c.hp = Math.max(0, c.hp - b);
+      events.push({ text: `${c.name} is still leaking: ${b}.`, kind: 'damage', target: sideOf(c), amount: b, dot: true, mult: 1 });
+    }
+    if (c.status.regen) {
+      const h = Math.max(1, Math.round(c.maxHp * c.status.regen.amount));
+      c.hp = Math.min(c.maxHp, c.hp + h);
+      events.push({ text: `${c.name} knits ${h} HP back.`, kind: 'heal', target: sideOf(c), amount: h });
+      if (--c.status.regen.turns <= 0) c.status.regen = null;
+    }
+    if (c.status.taunted > 0) c.status.taunted -= 1;
     if (c.status.sleep && roll(battle) < 0.5) {
       c.status.sleep = false;
       events.push({ text: `${c.name} wakes up, refreshed and furious.`, kind: 'status', target: sideOf(c) });

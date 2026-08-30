@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 20;
+export const SAVE_VERSION = 21;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -219,6 +219,24 @@ const migrations = {
   // recently punted, which is the safe reading.
   20: (save) => {
     if (save.battle) save.battle.knockedAt = save.battle.knockedAt ?? {};
+    return save;
+  },
+  // v21 (R20): every keyword is live, and four of them carry battle status —
+  // bleed, thorns, regen and taunt. A fight saved mid-swing predates them, so
+  // the combatants get the neutral values rather than `undefined` leaking
+  // into arithmetic the next time endOfTurn runs.
+  21: (save) => {
+    const fresh = (c) => {
+      if (!c?.status) return;
+      c.status.bleed = c.status.bleed ?? 0;
+      c.status.thorns = c.status.thorns ?? 0;
+      c.status.regen = c.status.regen ?? null;
+      c.status.taunted = c.status.taunted ?? 0;
+    };
+    if (save.battle) {
+      for (const c of save.battle.player?.team ?? []) fresh(c);
+      fresh(save.battle.enemy?.active);
+    }
     return save;
   },
 };

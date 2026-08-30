@@ -1,5 +1,83 @@
 # PROGRESS
 
+## Session 32 — R20: wire the dead keywords ✅
+
+**Acceptance criterion:** every keyword in `keywords.json` is either on a move
+AND implemented, or gone — with a smoke invariant so it cannot rot again —
+**passes** (29 keywords, 0 unimplemented, 0 uncarried; all three break paths
+fail the build).
+
+### The button was lying
+
+`taunt` and `frenzy` sat on shipped **player** parts — anglerfish "Lure Light"
+and shark "Frenzy" at 64 power, one of the biggest moves in the game — against
+keywords `keywords.json` itself labelled **"Reserved (post-M4)"**. The engine
+never read either. Content had been authored against keywords that were never
+built, and nothing in the project could see it.
+
+The full count: **18 implemented, 15 not; 11 on no move at all.** Two of those
+— `heal` and `staminaRestore` — had been wired since M4 and unreachable the
+whole time, because organs almost never carry a move (5 of 32).
+
+### What shipped
+
+| | |
+|---|---|
+| implemented | `taunt` `frenzy` `rage` `bleed` `multiHit` `staminaDrain` `ignoreEvasion` `thorns` `slow` `rally` `regen` |
+| deleted as redundant | `reflect` (= thorns) · `camouflage` (= evasionUp) · `aoe` (one active per side over a queue — nothing to splash) · `suppression` (= accDown + multiHit) |
+| given a home | 11 placements, each on the species the keyword already describes |
+
+Frenzy reads the **target's** wounds, Rage the **user's own** — two halves of
+one idea kept apart so a shark and a cornered gorilla do not feel like the
+same creature. Rally finally does what `wolf_organ`'s "Rally Howl" and the
+Pack Hunt combo's `"keyword": "Rally"` have claimed since M3: it buffs the
+whole side. Multi-Hit runs the *whole* pipeline per strike, armor included,
+so a flurry is worse into plating and better into a bare target.
+
+`heal`, `regen` and `staminaRestore` got the three utility organ moves they
+always needed (Shell Rebuild, Cutaneous Mend, Second Stomach) — the smallest
+slice of R23 the invariant required.
+
+### The invariant is behavioural, not a grep
+
+A textual check for `frenzy` in the engine passes on a *comment*. So every
+keyword is bolted onto a control move and the same fight is replayed on the
+same seed with and without it. **An inert keyword consumes no rolls and
+changes no state, so the two logs come back identical** — which is exactly
+the bug, and it fails.
+
+Two keywords needed their own setup, and finding that out mattered:
+`ignoreGuard` and `ignoreEvasion` have nothing to bypass unless the target is
+guarding and evasive, and a bench that never creates the condition reports a
+**live** keyword as decoration. Guard is the awkward one — `performMove`
+clears the attacker's own guard, so it only stands while the guarding side has
+not acted, which means the player must swing first, which would have made
+`priority` untestable in the shared bench. Each conditional keyword now gets a
+matched baseline under the same condition.
+
+### Balance
+0 `[OP]` across 4 grades × 10 pools at `seedsPer` 12 **and** 16, headroom
+4.4–6.7pp. `[TRASH]` went **1 → 0** at every grade: the newly-live keywords
+gave the weak builds something to do.
+
+### Known issues
+- **The sim never presses the new defensive or low-power moves.** The pilot is
+  greedy on raw power, so Multi-Hit (20 power × 2–3) and the thorns move (44)
+  lose to a plain 46-power bite and are never sampled — their balance
+  contribution is untested. Squarely R22's territory; the browser QA drives
+  them by name instead.
+- **Rally Howl changed hands**: `powerUp` on self became `rally` on the whole
+  side, and it is Pack Hunt's parent part. Balance holds today, but that combo
+  has been re-tuned once already — watch it.
+- Three organ moves is a down payment on R23, not the phase.
+- `SAVE_VERSION` **20 → 21** (`bleed`/`thorns`/`regen`/`taunted` on battle
+  status), with a migration; sw cache `spliceworld-v21-keywords`.
+- Smoke 12.9s → 13.7s.
+
+### Next session — first task
+R21 (Splice-Dex completeness) is the other correctness item and is small.
+R22 (enemy AI) is the big one and would also fix the sampling gap above.
+
 ## Session 31 — The knockback lock, and what the director actually needed ✅
 
 **Acceptance criterion:** a Knockback attacker cannot deny every action, the
