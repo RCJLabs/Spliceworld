@@ -85,8 +85,24 @@ export function movesFromTokens(tokens, report, content) {
       keywords: part.move.keywords,
     });
   }
+  // A combo is emergent anatomy, so it takes a grade too — the BEST one
+  // among the parts that unlock it. Anything less breaks the rule that a
+  // combo must out-power the parts it is made of: a part's own move scales
+  // by its own grade, so a min- or mean-graded combo gets overtaken by the
+  // Prismatic half of its own pair and the player stops pressing the thing
+  // they were rewarded with. Across every grade assignment in the roster,
+  // min leaves 31 of 192 dead and mean 10; max leaves none, and provably
+  // so — combo > max(parts) at base, and scaling both by the same
+  // (largest) bonus cannot reorder them.
+  const gradeOfPart = {};
+  for (const token of tokens) {
+    const g = GRADE_INDEX[token.grade] ?? 0;
+    gradeOfPart[token.partId] = Math.max(gradeOfPart[token.partId] ?? 0, g);
+  }
   for (const combo of report.combos) {
-    add({ name: combo.name, ...combo.move });
+    const grade = Math.max(0, ...combo.parts.map((id) => gradeOfPart[id] ?? 0));
+    const gradeBonus = 1 + grade * GRADE_MOVE_BONUS;
+    add({ ...combo.move, name: combo.name, power: Math.round(combo.move.power * gradeBonus) });
   }
   return moves;
 }

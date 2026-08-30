@@ -22,6 +22,7 @@ import { spliceChimera, validateSplice, isSettled, chimeraGenome } from '../spli
 import {
   combatantFromChimera, combatantFromUnit, createBattle, step, finishBattle,
   playerActions, playerActive, tagMultiplier, isInjured, turnForecast, tierScaleFor,
+  movesFromTokens,
 } from '../battle/engine.js';
 import { runSim, plantBrokenCombo, makeSimChimera, scriptedBattle } from './sim.js';
 import {
@@ -617,13 +618,15 @@ assert.ok(
 // so one pool only decides which fillers Pack Hunt happens to wear — the
 // same combo swings between rank 1 and rank 41 of 43 on filler alone.
 //
-// seedsPer 4, not the sim's default 3: at three battles per encounter a win
-// rate can only land on 0/33/67/100%, and that quantisation on its own
-// flags a clean roster.
+// seedsPer 8, not the sim's default 3: at three battles per encounter a win
+// rate can only land on 0/33/67/100%, and that quantisation on its own flags
+// a clean roster. 4 was the other error — it under-samples, and a roster it
+// calls clean at Prime is flagged by both 8 and 12. Sampling that hides an
+// outlier is worse than no gate at all.
 const BALANCE_POOLS = [2026, 77, 1312, 4242, 99, 5];
 const degenerate = [];
 for (const poolSeed of BALANCE_POOLS) {
-  const { flags } = runSim(content, { builds: 40, seedsPer: 4, teamSize: 3, seed: poolSeed });
+  const { flags } = runSim(content, { builds: 40, seedsPer: 8, teamSize: 3, seed: poolSeed });
   for (const f of flags) if (f.kind === 'OP') degenerate.push(`pool ${poolSeed}: ${f.label} — ${f.why}`);
 }
 assert.equal(
@@ -637,17 +640,41 @@ assert.equal(
 // content — the player discovers it and then never presses it. Charge and
 // recoil moves are excluded because they buy their power with a drawback,
 // so they are not a like-for-like comparison.
+//
+// Checked at EVERY grade assignment, not just Standard, and through
+// movesFromTokens rather than by re-doing the arithmetic here — the point of
+// the rule is what the player's move list actually says. A part's move used
+// to scale 12% per grade while its combo stayed flat, so a Prismatic Pounce
+// (71) overtook the Pack Hunt (58) it belongs to and the reward became the
+// wrong button: 7 of 12 combos went dead at Prime or Apex. A combo now takes
+// the BEST grade among the parts that unlock it, which is the only rule that
+// holds — min leaves 31 of these 192 assignments dead, mean 10, max none.
+const GRADE_IDS = GRADES.map((g) => g.id);
+let gradeAssignmentsChecked = 0;
 for (const combo of Object.values(content.combos)) {
-  const rivalPower = combo.parts
-    .map((id) => content.parts[id])
-    .filter((part) => part?.move && !part.move.keywords?.charge && !part.move.keywords?.recoil)
-    .reduce((best, part) => Math.max(best, part.move.power), -1);
-  assert.ok(
-    combo.move.power > rivalPower,
-    `combo ${combo.id} (${combo.move.power} power) must beat the best drawback-free move ` +
-      `among its own parts (${rivalPower}) or it is dead content`
-  );
+  for (let mask = 0; mask < GRADE_IDS.length ** combo.parts.length; mask++) {
+    const grades = combo.parts.map((_, i) => GRADE_IDS[Math.floor(mask / GRADE_IDS.length ** i) % GRADE_IDS.length]);
+    const tokens = combo.parts.map((partId, i) => ({
+      id: `dead-${partId}`, partId, grade: grades[i],
+      donor: { name: 'Simulacrum', species: content.parts[partId].species, stars: 3, extractedAt: 0 },
+    }));
+    const moves = movesFromTokens(tokens, analyze('M', tokens, content), content);
+    const comboMove = moves.find((m) => m.name === combo.name);
+    assert.ok(comboMove, `combo ${combo.id} reaches the move list`);
+    // Charge and recoil moves buy their power with a drawback, so they are
+    // not a like-for-like comparison.
+    const rivalPower = moves
+      .filter((m) => m !== comboMove && !m.keywords?.charge && !m.keywords?.recoil)
+      .reduce((best, m) => Math.max(best, m.power), -1);
+    assert.ok(
+      comboMove.power > rivalPower,
+      `combo ${combo.id} at grades [${grades}] is ${comboMove.power} power but a drawback-free ` +
+        `move of its own parts is ${rivalPower} — the combo is dead content at that grade`
+    );
+    gradeAssignmentsChecked++;
+  }
 }
+assert.equal(gradeAssignmentsChecked, 192, 'every combo × grade assignment was actually checked');
 // Grades are the power curve: each tier opens the boss further.
 //
 // Measured on the MEAN across builds, not the max. A max over a couple of
