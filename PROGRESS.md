@@ -1,5 +1,77 @@
 # PROGRESS
 
+## Session 34 — R21: Splice-Dex completeness ✅
+
+**Acceptance criterion:** everything the game announces is findable again
+afterwards — **passes**, asserted over the *rendered* dex rather than the
+fields behind it.
+
+### First: the phase's own premise was wrong
+
+R20 recorded, and R21 was queued on, "combos are never persisted to the dex
+despite `combos.json`'s `_doc` claiming it". **That is false.** Combos are
+persisted in `state.discoveredCombos` — a top-level field since the **v4**
+migration — and the dex has drawn them all along, with `???` bait for the
+undiscovered. The `_doc` was telling the truth; I grepped for `dex.combos`,
+found nothing, and scheduled a session to fix a bug that did not exist.
+
+Recording it rather than quietly dropping it, because the failure mode is
+worth naming: an audit that greps for one spelling of a thing will invent
+work. The other two claims held.
+
+### Rival dossiers
+
+A rival's whole record — defeats, losses, when you last met — was kept in
+`campaign.rivals` and surfaced **nowhere you could return to**. There is no
+rival UI file at all; they appear as a live War Room card and then they are
+gone. A rival you beat three regions ago should be lookupable.
+
+The dex now carries a dossier per rival: their title and philosophy, what
+they favour, whether they read your stable — and, because it should brief
+rather than just score, **what they will bring next**, derived from the same
+numbers `rivalTeam` uses:
+
+> **Dr. Mantissa** · 2 graduated · 1 lost to them
+> Next time: 3 in the field at ×1.89 power.
+
+A rival you have never met stays `???` — a rumour, not a spoiler, and smoke
+fails if an unmet rival is ever named.
+
+### Lineage: two generations, bounded by construction
+
+The family tree was a one-generation snapshot. It now reaches grandparents —
+and the cap is **structural rather than a rule someone has to remember**: the
+snapshot copies a grandparent's name and stars but never its own `sire`/`dam`,
+so there is nowhere for a third tier to live. An unbounded tree doubles every
+generation in a save that is never reset, and this save is never reset.
+
+Smoke breeds three generations and asserts a grandparent carries exactly
+`['name', 'stars']` — the assertion fails the moment someone spreads the
+whole object in.
+
+### The invariant
+Stated once over the rendered page: plant one of each announceable discovery
+— combo, enemy, variant, trait gene, rival with a record — render the dex to
+a string (it needs no DOM), and require each to still be there. All three
+break paths fail the build.
+
+### Known issues
+- **QA lesson, not a product bug**: `innerText` omits below-the-fold content
+  in headless Chrome, so the combo check failed while the entry rendered
+  perfectly. `textContent` proves presence; a layout probe (88×14px,
+  `visibility: visible`) proves it is on screen. Worth remembering before
+  "the UI is broken" gets written down again.
+- Operations keep only `campaign.opReport`, the last one. A jobs history is
+  the same class of gap as the rival one was, and is not covered here.
+- Scars are findable on a living chimera in the Pens; a graduated one takes
+  its history with it.
+- `SAVE_VERSION` **22 → 23** (grandparent fields normalised), with a
+  migration; sw cache `spliceworld-v23-dex`.
+
+### Next session — first task
+R28 (battle readability) can now lean on R22's `previewMove`, or R23 (active
+hides and organs), which R20 already made a down payment on.
+
 ## Session 33 — R22: an enemy AI with a policy ✅
 
 **Acceptance criterion:** the same roster plays measurably better and the

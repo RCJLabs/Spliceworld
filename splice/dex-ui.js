@@ -4,6 +4,7 @@
 
 import { renderCreatureSVG, renderUnitSVG } from '../render/renderer.js';
 import { stockGenome } from '../ranch/ranch.js';
+import { rivalList, rivalRecord } from '../campaign/rivals.js';
 
 export function renderDexScreen(root, ctx) {
   const { state, content } = ctx;
@@ -93,6 +94,49 @@ export function renderDexScreen(root, ctx) {
     })
     .join('');
 
+  // Rival dossiers. Their whole record — defeats, losses, when you last met,
+  // how far they have escalated since — was already kept in the save and
+  // shown nowhere you could go back to. A rival you beat three regions ago
+  // should be lookupable, and one you have never met should read as a rumour
+  // rather than a spoiler.
+  const meta = content.rivalMeta ?? {};
+  const rivalRows = rivalList(content)
+    .map((rival) => {
+      const rec = rivalRecord(state, rival.id);
+      const met = rec.defeats > 0 || rec.losses > 0 || rec.lastMetAt != null;
+      if (!met) {
+        return `
+          <div class="variant-row variant-locked">
+            <div style="flex:1;min-width:0">
+              <strong>???</strong>
+              <p class="fine-print">Someone out there is buying the same parts you are.</p>
+            </div>
+          </div>`;
+      }
+      // What they will bring NEXT — the same numbers rivalTeam derives, so
+      // the dossier is a briefing rather than a scoreboard.
+      const scale = Math.min(meta.powerCap ?? 99, rival.powerScale * (1 + rec.defeats * (meta.powerPerDefeat ?? 0)));
+      const squad = Math.min(meta.teamCap ?? 3, rival.teamSize + Math.floor(rec.defeats / (meta.teamGrowthEvery ?? 2)));
+      const tally = [
+        rec.defeats ? `${rec.defeats} graduated` : null,
+        rec.losses ? `${rec.losses} lost to them` : null,
+      ].filter(Boolean).join(' · ') || 'met, undecided';
+      return `
+        <div class="variant-row">
+          <div style="flex:1;min-width:0">
+            <strong>${rival.name}</strong>
+            <span class="variant-badge">${tally}</span>
+            <p class="fine-print">${rival.title}</p>
+            <p class="fine-print">“${rival.philosophy}”</p>
+            <p class="fine-print">Favours ${content.classes[rival.classBias]?.name ?? 'no class'}${
+              rival.favoredTags?.length ? ` · ${rival.favoredTags.join(', ')}` : ''
+            }${rival.counterBias ? ' · reads your stable' : ''}</p>
+            <p class="fine-print">Next time: ${squad} in the field at ×${scale.toFixed(2)} power.</p>
+          </div>
+        </div>`;
+    })
+    .join('');
+
   root.innerHTML = `
     <section class="card">
       <h3>Class Triangle</h3>
@@ -114,6 +158,10 @@ export function renderDexScreen(root, ctx) {
     <section class="card">
       <h3>Trait Genes</h3>
       <ul class="token-list">${traitRows}</ul>
+    </section>
+    <section class="card">
+      <h3>Rival Geneticists (${rivalList(content).filter((r) => { const x = rivalRecord(state, r.id); return x.defeats > 0 || x.losses > 0 || x.lastMetAt != null; }).length}/${rivalList(content).length} met)</h3>
+      ${rivalRows}
     </section>
     <section class="card">
       <h3>Field Guide — Opposition</h3>
