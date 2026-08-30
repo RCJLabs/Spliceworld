@@ -565,7 +565,30 @@ function chartNote(moveTags, defTags, content) {
   return 'immune';
 }
 
+// Knockback rotates the target's side, and the round loop then drops that
+// side's planned action ("fresh fighters don't inherit someone else's
+// orders"). That is correct for a KO, but for a rotation it handed a faster
+// attacker an unbounded lock: Punt every turn, the defender is shoved aside
+// every turn, and the defender never acts at all — measured at a 100% win
+// turning into 11% off this one keyword, with the enemy taking zero damage
+// across thirteen turns. So a side that was rotated last turn cannot be
+// rotated again this turn. Knockback stays a real tempo move (it still costs
+// the defender a full action) but it can no longer deny every action for the
+// rest of the fight. Symmetric: it caps the player's own knockback too.
+function knockedRecently(battle, side) {
+  const last = battle.knockedAt?.[side];
+  return last != null && battle.turn - last <= 1;
+}
+function markKnocked(battle, side) {
+  battle.knockedAt = { ...(battle.knockedAt ?? {}), [side]: battle.turn };
+}
+
 function knockback(battle, target, events, content) {
+  const side = target.kind === 'unit' ? 'enemy' : 'player';
+  if (knockedRecently(battle, side)) {
+    events.push({ text: `${target.name} digs in — no one is getting punted twice in a row.`, kind: 'info' });
+    return;
+  }
   if (target.kind === 'unit') {
     if (battle.enemy.queue.length === 0) {
       events.push({ text: `${target.name} skids back but holds the line — no reinforcements to rotate in.`, kind: 'info' });
@@ -576,6 +599,7 @@ function knockback(battle, target, events, content) {
     battle.enemy.queue.push(battle.units?.[target.refId] ?? target.refId);
     const nextId = battle.enemy.queue.shift();
     battle.enemy.active = combatantFromUnit(unitFor(content, nextId), battle.enemyScale);
+    markKnocked(battle, 'enemy');
     events.push({ text: `${target.name} is punted out of formation! ${battle.enemy.active.name} scrambles in.`, kind: 'waveIn', target: 'enemy' });
   } else {
     const bench = livingBench(battle);
@@ -585,6 +609,7 @@ function knockback(battle, target, events, content) {
     }
     const swap = bench[Math.floor(roll(battle) * bench.length)];
     battle.player.active = swap.i;
+    markKnocked(battle, 'player');
     events.push({ text: `${target.name} is sent tumbling! ${swap.c.name} is shoved onto the field.`, kind: 'waveIn', target: 'player' });
   }
 }

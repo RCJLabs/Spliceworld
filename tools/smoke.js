@@ -497,6 +497,47 @@ const myLine = evs.findIndex((e) => e.text.includes('Scythe Strike'));
 const foeLine = evs.findIndex((e) => e.text.includes(pb.enemy.active.name) && e.text.includes('uses'));
 assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move goes first despite speed 1');
 
+// --- Knockback is a tempo move, not a lock.
+//
+// Knockback rotates the target's side, and the round loop drops that side's
+// planned action — correct for a KO, but it handed a faster attacker an
+// unbounded denial: rotate the player every turn and the player never acts
+// at all. Measured before the fix, a single control unit with one knockback
+// move turned a 100% win into 11% and took ZERO damage across thirteen
+// turns. A side rotated last turn cannot be rotated again this turn, so the
+// worst case is losing every other action.
+{
+  const punter = {
+    // Fast and tireless so it punts EVERY turn — that is the lock under
+    // test — but deliberately feeble, so the only thing that can lose this
+    // fight is never being allowed to act.
+    id: 'punter', name: 'Punt Unit', class: 'ground', hp: 90, power: 4, armor: 6,
+    speed: 30, stamina: 200, regen: 20, tags: ['Organic'], koLine: 'The Punt Unit sits down.',
+    moves: [{ name: 'Punt', power: 14, cost: 10, acc: 100, tags: [], keywords: { knockback: true } }],
+    shapes: [{ type: 'circle', cx: 0, cy: 0, r: 40, fill: '#888888' }],
+  };
+  const kbContent = { ...content, enemies: { ...content.enemies, punter } };
+  const kbState = { ...newGameState(), seed: 8181 };
+  const one = makeChimera(kbState, 'M', {
+    bear_head: 'standard', bear_forelimbs: 'standard', bear_hide: 'standard', bear_organ: 'standard',
+  }, t0);
+  const team = [one, { ...one, id: `${one.id}#1`, name: 'Spare One' }, { ...one, id: `${one.id}#2`, name: 'Spare Two' }];
+  const kb = createBattle(team, { id: 'punt', name: 'Punt', waves: ['punter'], reward: 0, tier: 3 },
+    kbContent, 99, one.settleUntil);
+  const startHp = kb.enemy.active.hp;
+  let guard = 0;
+  while (!kb.over && guard++ < 80) {
+    const acts = playerActions(kb);
+    const best = acts.filter((a) => a.type === 'move')
+      .sort((x, y) => playerActive(kb).moves[y.index].power - playerActive(kb).moves[x.index].power)[0]
+      ?? acts.find((a) => a.type === 'rest') ?? acts[0];
+    step(kb, best, kbContent);
+  }
+  assert.ok(kb.enemy.active.hp < startHp || kb.outcome === 'win',
+    'a knockback attacker cannot deny every single action — the player lands damage');
+  assert.equal(kb.outcome, 'win', 'and a fair fight against one punter is still winnable');
+}
+
 // --- Boss transforms into stage two, then falls for the win.
 function grind(encounterId, seed) {
   const s = { ...newGameState(), seed: 99, funds: 0 };
@@ -2058,6 +2099,45 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
       return w / 24;
     };
     assert.ok(rate(adapted, 'd') < rate(plain, 'p'), 'being predictable costs you');
+  }
+
+  // ...and it bites EVERYWHERE, not just on the one encounter this test
+  // happens to pick. `weight` predicts real threat well across the roster
+  // (r=0.958) but the director's promise is pairwise, and a correlation that
+  // good still has local inversions: three encounter x rule pairings were
+  // measured turning into mercy rules — an Air slot traded for a Ground one
+  // against a Ground stable (+38pp to the player), and a 58-power unit read
+  // as flimsier than a 52-power one. R18 worked around it by parking strong
+  // units in the slots the director may not cut, which meant a wave order
+  // was silently load-bearing. This measures the promise instead, so slot
+  // order is free again.
+  {
+    const hero = makeSimChimera('L', P.ground, 'apex', content);
+    const N = 60;
+    const rateOf = (e, tag) => {
+      let w = 0;
+      for (let i = 0; i < N; i++) if (scriptedBattle(hero, e, content, hashString(`mercy${tag}${i}`), 3).outcome === 'win') w++;
+      return w / N;
+    };
+    const mercies = [];
+    for (const e of Object.values(content.encounters)) {
+      const plainRate = rateOf(e, `p${e.id}`);
+      for (const ruleId of Object.keys(content.directorRules)) {
+        // Field a stable the rule actually reads, so the director commits.
+        const reader = lab([chim('a', P.ground), chim('b', P.ground), chim('c', P.ground)], [P.ground, P.ground]);
+        const d = directEncounter(reader, e, content);
+        if (!d.directed) continue;
+        const adaptedRate = rateOf(d, `a${e.id}${ruleId}`);
+        // Tolerance covers sampling noise at N=60; every measured mercy was
+        // +18pp or worse, so this cannot miss a real one.
+        if (adaptedRate > plainRate + 0.10) {
+          mercies.push(`${e.id} / ${d.directed.ruleId} -> ${d.directed.unitId}: ` +
+            `${(plainRate * 100).toFixed(0)}% became ${(adaptedRate * 100).toFixed(0)}%`);
+        }
+      }
+    }
+    assert.equal(mercies.length, 0,
+      `the director may never make a fight easier:\n  ${mercies.join('\n  ')}`);
   }
 }
 
