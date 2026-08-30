@@ -1,5 +1,86 @@
 # PROGRESS
 
+## Session 42 — Second audit (A1–A10) 🔍
+
+No code shipped. Ten queue items, each with the evidence that put it there.
+
+### The player report was not a difficulty complaint
+
+*"I have 1 chimera and keep failing the 1 mission I can do."* Measured, on a
+standard-grade purebred against the Greenfield ladder:
+
+| team | Old Barn | Downtown | Checkpoint | Precinct | Guard Post |
+|---|---|---|---|---|---|
+| **1** | 97% | **0%** | **0%** | 0% | 0% |
+| 2 | 100% | 9% | 50% | 0% | 0% |
+| **3** | 100% | **69%** | 97% | 0% | 0% |
+
+The second node is not hard with one chimera. It is **arithmetically
+impossible**, and it is a comfortable fight with three. Every balance number
+in the ROADMAP was measured at `teamSize 3` — M4.5 established that tuning
+against a lone chimera measures the wrong game, which was true, and quietly
+became the reason nobody ever looked at what a solo player faces.
+
+The Path to World Domination retires at "Conquer the Old Barn Perimeter" —
+**one node before the wall** — and nothing anywhere says the answer is a
+second creature.
+
+And the failure mode underneath it is worse. Verified end to end: lose that
+node with your only chimera and it is captured, the roster is empty, the
+vault is empty because you spent those parts splicing it, and **the rescue
+raid requires a team you no longer have**. Nine-hour timer, no door.
+
+### Two things checked and found innocent
+
+- **Jobs do award animals** — 40–60% on a success, 29% per attempt overall
+  on the good ones. The report of never getting one was bad luck, not a
+  bug. What is true is that the rate is nowhere visible.
+- **Obedience is not broken.** My first measurement showed bond 0 and bond
+  100 producing identical results, which looked like a dead mechanic. It is
+  not: a *settled purebred* ignores 0% of orders either way, so the fixture
+  could not see it. An unsettled mixed build ignores 45%.
+
+### The roster, counted
+
+| | ground | water | air |
+|---|---|---|---|
+| buyable species | 15 | 7 | **3** |
+| class-affinity parts | 36 | 25 | **9** |
+
+Air's nine parts are six forelimbs and three tails. There is **no** air
+affinity on any head, hindlimb, hide or organ in the game, so an Air chimera
+can carry at most two air parts and must dilute itself with somebody else's
+legs. That is why R26's `wings` archetype needed hand-construction.
+
+Related: **29 of 46 tagged moves are Ground**; every other tag has 3–5. R26
+built five regions on that chart, and R25 had to invent `foghorn_array`
+mid-phase because the armour-piercing answer to the Foundry did not exist in
+the buyable pool.
+
+And **24 of 190 parts appear in a combo**. Eleven species have none at all,
+including all six chaos variants — the rarest things the game produces have
+nothing to discover.
+
+### The queue
+
+| | item |
+|---|---|
+| **A1** | The solo cliff — the ladder is tuned for three and the game gives you one |
+| **A2** | Never stranded at zero chimeras |
+| **A3** | Nine new species to 40 animals, weighted 5 air / 3 water / 1 ground |
+| **A4** | More to do per visit — one job at a time on 4.5–22.5h cooldowns |
+| **A5** | Parts for the tag chart |
+| **A6** | Combos for the other 87% |
+| **A7** | Obedience on the briefing screen |
+| **A8** | The harness must measure a solo player |
+| **A9** | A fourth frame |
+| **A10** | Timer-cut stragglers (`injuryHours [2,5]` missed R24's cut) |
+
+### Next session — first task
+
+**A1**, and A2 belongs in the same phase: they are one experience. Fixing the
+curve without closing the dead end just means losing more slowly.
+
 ## Session 41 — R27: a rival who has beaten you twice has read you ✅
 
 **Acceptance criterion:** a rival you have beaten twice fields something
