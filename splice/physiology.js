@@ -12,8 +12,8 @@ export const PHYS_TUNING = {
   instabilityPerExtraGrade: 8,
   instabilityThermalChaos: 15,
   purebredStability: 20,
-  settleBaseMs: 22.5 * 60000, // 30 min floor…
-  settleMaxExtraMs: 2.6 * 3600000, // …plus up to 3.5h at instability 100
+  settleBaseMs: 22.5 * 60000, // 22.5 min floor…
+  settleMaxExtraMs: 2.6 * 3600000, // …plus up to 2.6h at instability 100
 };
 
 const P2W_RATINGS = [

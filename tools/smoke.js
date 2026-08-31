@@ -6693,6 +6693,153 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   }
 }
 
+// --- A10: every real-world clock, reconciled ---------------------------
+//
+// R24 cut every wall-clock timer by a quarter. The item named one survivor
+// (`operations.json` still carrying `injuryHours: [2, 5]` against a code
+// default already at [1.5, 3.75]) and the audit found the mechanism behind
+// it, plus two more of the same shape:
+//
+//   1. CODE DEFAULT vs DATA DRIFT. Seven modules merge {...DEFAULTS, ...data}
+//      so a Node tool with a partial bundle still behaves. The data always
+//      wins, so a default that disagrees with it is a lie that never runs --
+//      and a global retune that edits one and not the other leaves no trace.
+//      That is exactly how injuryHours survived: the cut touched the code.
+//   2. `growthHours` was cut for ZERO of 32 species while `incubationMinutes`
+//      was cut for all of them -- the egg timer shortened, the growing-up
+//      timer left alone, in the same pipeline.
+//   3. The rehab formula's per-unit coefficients were missed while its base
+//      and cap were cut, so that clock fell only to 0.86-0.93 -- and least of
+//      all for the strongest units, which are the ones you wait longest on.
+{
+  const { opTuning } = await import('../campaign/operations.js');
+  const { chaosTuning } = await import('../splice/chaos.js');
+  const { upkeepTuning } = await import('../splice/facility.js');
+  const { scarTuning } = await import('../splice/scars.js');
+
+  // 1. THE INVARIANT THAT WOULD HAVE CAUGHT IT. Every knob a module defaults
+  //    AND the data also sets must agree. Calling each tuning function with
+  //    an empty bundle yields the pure code defaults; the data is read
+  //    straight from the file it merges from.
+  const PAIRS = [
+    ['operations', opTuning, content.operationMeta],
+    ['chaos', chaosTuning, content.chaosMeta],
+    ['upkeep', upkeepTuning, content.upkeepMeta],
+    ['scars', scarTuning, content.scarMeta],
+  ];
+  // Numbers only. Copy strings are SUPPOSED to differ — the data is the
+  // source of truth for wording and the code default is a fallback for a
+  // partial bundle. Numbers are what a retune touches.
+  const numeric = (v) =>
+    typeof v === 'number' ||
+    (Array.isArray(v) && v.length && v.every((x) => typeof x === 'number')) ||
+    (v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).length &&
+     Object.values(v).every((x) => typeof x === 'number'));
+  let compared = 0;
+  for (const [name, fn, data] of PAIRS) {
+    const defaults = fn({});
+    for (const [k, v] of Object.entries(data ?? {})) {
+      if (!(k in defaults) || !numeric(v) || !numeric(defaults[k])) continue;
+      compared++;
+      assert.deepEqual(v, defaults[k],
+        `${name}.${k}: the data and the code default disagree (${JSON.stringify(v)} vs ${JSON.stringify(defaults[k])}) — the data wins, so the default is a lie`);
+    }
+  }
+  assert.ok(compared >= 12, `enough knobs are actually double-declared to make this check mean something (${compared})`);
+
+  // The two that do not go through a tuning() helper, checked directly.
+  {
+    const { contestTuning } = await import('../campaign/contest.js');
+    const dc = content.campaignMeta?.contestation ?? {};
+    for (const [k, v] of Object.entries(dc)) {
+      if (!(k in contestTuning({})) || !numeric(v)) continue;
+      assert.deepEqual(v, contestTuning({})[k], `contest.${k}: data and code default disagree`);
+    }
+    const { rehabTuning } = await import('../campaign/rehab.js');
+    const dr = content.facility?.containment?.tuning ?? {};
+    for (const [k, v] of Object.entries(dr)) {
+      if (!(k in rehabTuning({})) || !numeric(v)) continue;
+      assert.deepEqual(v, rehabTuning({})[k], `rehab.${k}: data and code default disagree`);
+    }
+  }
+
+  // 2. THE ROLL. Every real-world clock in the data, by path and value. It
+  //    is deliberately a literal, like R29's SHIPPED_SYSTEMS: a new clock has
+  //    to come here and say so, and the next global retune gets one list to
+  //    walk plus a suite that names every value it missed. R24 had neither,
+  //    which is the whole reason A10 exists.
+  const CLOCKS = {
+    'chaos.tuning.gestationBaseHours': 3.75,
+    'chaos.tuning.gestationPerSocketHours': 1.12,
+    'chaos.tuning.exhaustionHours': 15,
+    'facility.containment.baseHours': 4.5,
+    'facility.containment.maxHours': 22.5,
+    'facility.containment.hoursPerPower': 0.0675,
+    'facility.containment.hoursPerInstability': 0.0375,
+    'operations.heatHalfLifeHours': 13.5,
+    'operations.injuryHours.min': 1.5,
+    'operations.injuryHours.max': 3.75,
+    'contestation.firstDelayHours': 4.5,
+    'contestation.cooldownHours': 15,
+    'contestation.cooldownPerDefenceHours': 5.25,
+    'contestation.windowHours': 13.5,
+  };
+  const actual = {
+    'chaos.tuning.gestationBaseHours': content.chaosMeta.gestationBaseHours,
+    'chaos.tuning.gestationPerSocketHours': content.chaosMeta.gestationPerSocketHours,
+    'chaos.tuning.exhaustionHours': content.chaosMeta.exhaustionHours,
+    'facility.containment.baseHours': content.facility.containment.tuning.baseHours,
+    'facility.containment.maxHours': content.facility.containment.tuning.maxHours,
+    'facility.containment.hoursPerPower': content.facility.containment.tuning.hoursPerPower,
+    'facility.containment.hoursPerInstability': content.facility.containment.tuning.hoursPerInstability,
+    'operations.heatHalfLifeHours': content.operationMeta.heatHalfLifeHours,
+    'operations.injuryHours.min': content.operationMeta.injuryHours[0],
+    'operations.injuryHours.max': content.operationMeta.injuryHours[1],
+    'contestation.firstDelayHours': content.campaignMeta.contestation.firstDelayHours,
+    'contestation.cooldownHours': content.campaignMeta.contestation.cooldownHours,
+    'contestation.cooldownPerDefenceHours': content.campaignMeta.contestation.cooldownPerDefenceHours,
+    'contestation.windowHours': content.campaignMeta.contestation.windowHours,
+  };
+  for (const [k, want] of Object.entries(CLOCKS)) {
+    assert.equal(actual[k], want, `${k} drifted from the roll (${actual[k]} vs ${want})`);
+  }
+  // Every job carries two clocks of its own, and they are the ones a player
+  // waits on most, so they are rolled per job rather than in bulk.
+  const JOB_CLOCKS = {
+    county_fair: [1.5, 4.5], aquarium: [3, 6.75], vault_job: [15, 22.5],
+    aviary: [4.5, 7.5], reptile_house: [6, 10.5], safari_park: [6, 10.5],
+    research_station: [7.5, 13.5],
+  };
+  for (const [id, [hours, cooldown]] of Object.entries(JOB_CLOCKS)) {
+    const op = content.operations[id];
+    assert.ok(op, `${id} is still a job`);
+    assert.equal(op.hours, hours, `${id}.hours drifted from the roll`);
+    assert.equal(op.cooldownHours, cooldown, `${id}.cooldownHours drifted from the roll`);
+  }
+  assert.equal(Object.keys(content.operations).length, Object.keys(JOB_CLOCKS).length,
+    'a new job has to come to the roll and declare its clocks');
+
+  // 3. SPECIES GROWTH. `incubationMinutes` was cut and `growthHours` was not,
+  //    in the same pipeline. Now both are on the same scale — except `elder`,
+  //    which is deliberately exempt and has to STAY exempt: it is when the
+  //    extraction penalty lands (AGE_FACTOR 0.8 against prime's 1.0), so
+  //    shortening it would make every animal in every live save decline
+  //    sooner. Cutting the waits and not the penalty widens the prime window
+  //    rather than narrowing it, which is the direction a retune may move.
+  for (const sp of Object.values(content.species)) {
+    const g = sp.growthHours;
+    assert.ok(g.adult >= 1 && g.adult < g.prime && g.prime < g.elder,
+      `${sp.id}: growth stages are ordered and non-zero (${g.adult}/${g.prime}/${g.elder})`);
+    assert.ok(g.elder - g.prime >= g.prime - g.adult,
+      `${sp.id}: the prime window is not the shortest stage (${g.prime}->${g.elder})`);
+  }
+  // The goat is the tutorial animal and its clock is quoted in the guides,
+  // so it is pinned rather than merely well-ordered.
+  assert.deepEqual(content.species.goat.growthHours, { adult: 5, prime: 14, elder: 60 },
+    'the goat clock is the one the onboarding quotes');
+  assert.equal(content.species.goat.incubationMinutes, 22, 'and so is its egg timer');
+}
+
 // Time-warp safety: a lastTickAt in the future never rewinds state.
 const warp = freshRanchState();
 ensureRanchSeeded(warp, content, t0);

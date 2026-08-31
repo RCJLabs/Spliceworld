@@ -32,8 +32,8 @@ const HOUR = 3600000;
 // content is data).
 const DEFAULT_TUNING = {
   baseHours: 4.5,
-  hoursPerPower: 0.09,
-  hoursPerInstability: 0.05,
+  hoursPerPower: 0.0675,
+  hoursPerInstability: 0.0375,
   maxHours: 22.5,
   baseFee: 60,
   feePerPower: 2.2,

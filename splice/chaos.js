@@ -30,7 +30,7 @@ const HOUR = 3600000;
 
 const DEFAULTS = {
   gestationBaseHours: 3.75,
-  gestationPerSocketHours: 1.13,
+  gestationPerSocketHours: 1.12,
   feeBase: 90,
   feePerGradeStep: 55,
   exhaustionHours: 15,
