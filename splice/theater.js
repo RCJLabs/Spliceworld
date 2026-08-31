@@ -7,6 +7,9 @@ import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { analyze } from './physiology.js';
 import { theaterGrants } from './facility.js';
 import { driftFromTraining } from './temperament.js';
+import { MOVE_SLOTS, activeMoves } from '../battle/moves.js';
+import { defaultMoveset } from '../battle/moves.js';
+import { movesFromTokens } from '../battle/engine.js';
 
 const CHIMERA_NAMES = [
   'Chompers', 'Beefsquawk', 'Sir Hornsalot', 'Dr. Fluffles', 'Snack Hazard',
@@ -93,10 +96,20 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
     temperament: null, // seeded on settling — later milestone
     injury: null, // Infirmary timer set by battle aftermath (Law 1)
     lastTrainedAt: 0,
+    // R30: what it can press, out of everything its anatomy knows. Stamped
+    // at birth so the four slots are a thing the player owns from the first
+    // fight rather than something the engine improvises each time.
+    moveset: [],
+    lastMoveTrainAt: 0,
     exhaustedUntil: 0, // recovery after a turn in the chaos vat
     scars: [], // set by untreated injuries (§3.5)
     injuryCount: 0,
   };
+  // The default pick, so a new creature walks out knowing which four it
+  // fights with. Computed here rather than left to the engine's top-up
+  // because the player is about to be shown it, and a moveset that only
+  // exists at battle time is one they cannot retrain before the fight.
+  chimera.moveset = defaultMoveset(movesFromTokens(tokens, report, content));
   state.chimeras.push(chimera);
 
   // Combo discoveries are permanent Splice-Dex entries.
@@ -148,6 +161,72 @@ export function trainChimera(state, chimeraId, now, content) {
   // Trust makes a creature braver, and gentler with it (§3.5).
   driftFromTraining(chimera, content);
   return { ok: true, msg: `${chimera.name} nails the obstacle course and earns a treat. Bond ${chimera.bond}/100.` };
+}
+
+// --- R30: four slots, and you retrain to change them --------------------
+//
+// A chimera KNOWS every move its anatomy grants. It can press four. Swapping
+// one in means giving one up, which is the whole point: a combo you just
+// discovered has to be worth more than whatever it displaces, and a build
+// with four attacks and no answer to armour is a choice you made rather
+// than a list you were handed.
+//
+// Priced with the training idiom that already exists (bond training), so
+// there is no second economy to learn: a small fee and a shared cooldown.
+// Deliberately cheap and deliberately NOT permanent — forgetting a move you
+// can still see in the list would be a trap, and A6's lesson was that a
+// reward you cannot press is not a reward.
+export const MOVE_TRAINING = { cost: 8, cooldownHours: 3.75 };
+
+export function moveTrainingReady(chimera, now, content) {
+  const t = { ...MOVE_TRAINING, ...(content?.moveTrainingMeta ?? {}) };
+  const readyAt = (chimera.lastMoveTrainAt ?? 0) + t.cooldownHours * 3600000;
+  return { ready: now >= readyAt, readyAt, msRemaining: Math.max(0, readyAt - now), cost: t.cost };
+}
+
+// `known` is what the genome grants (battle/moves.js knownMoves); `next` is
+// the ids the player wants in the four slots.
+export function setMoveset(state, chimeraId, next, known, now, content) {
+  const chimera = state.chimeras.find((c) => c.id === chimeraId);
+  if (!chimera) return { ok: false, msg: 'No such chimera.' };
+  const ids = [...new Set(next ?? [])];
+  const legal = new Set(known.map((m) => m.id));
+  const unknown = ids.filter((id) => !legal.has(id));
+  if (unknown.length) return { ok: false, msg: 'That is not a move this one knows.' };
+  if (!ids.length) return { ok: false, msg: 'A creature with no moves is a very expensive pet.' };
+  if (ids.length > MOVE_SLOTS) {
+    return { ok: false, msg: `Four slots. Something has to go.` };
+  }
+  // Reordering what it already carries is free — the cost is for LEARNING,
+  // not for deciding which button sits where.
+  //
+  // "What it already carries" is the EFFECTIVE moveset, not the stored
+  // array. A save migrated from before R30 stores an empty one and is
+  // topped up from the default pick at battle time, so comparing against
+  // the raw field would tell that player their creature is learning all
+  // four moves it has been fighting with for weeks — and charge them.
+  const current = new Set(activeMoves(known, chimera.moveset).map((m) => m.id));
+  const learning = ids.filter((id) => !current.has(id));
+  if (!learning.length) {
+    chimera.moveset = ids;
+    return { ok: true, msg: `${chimera.name} shuffles its repertoire.`, free: true };
+  }
+  const t = moveTrainingReady(chimera, now, content);
+  if (!t.ready) return { ok: false, msg: `${chimera.name} has had enough drilling for now.` };
+  if (state.funds < t.cost) {
+    return { ok: false, msg: `Short by $${Math.ceil(t.cost - state.funds)}. Treats are not free.` };
+  }
+  state.funds -= t.cost;
+  chimera.lastMoveTrainAt = now;
+  chimera.moveset = ids;
+  const dropped = [...current].filter((id) => !ids.includes(id));
+  const name = (id) => known.find((m) => m.id === id)?.name ?? 'something';
+  return {
+    ok: true,
+    msg: dropped.length
+      ? `${chimera.name} learns ${learning.map(name).join(' and ')}, and promptly forgets ${dropped.map(name).join(' and ')}.`
+      : `${chimera.name} learns ${learning.map(name).join(' and ')}.`,
+  };
 }
 
 // --- A6: what an undiscovered combo is allowed to tell you --------------

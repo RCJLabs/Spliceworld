@@ -12,6 +12,7 @@ import { isSettled } from '../splice/theater.js';
 import { perksOf, driftFromBattle } from '../splice/temperament.js';
 import { flatModifiers, scarEffects, againstTags } from '../splice/scars.js';
 import { infirmaryGrants } from '../splice/facility.js';
+import { MOVE_SLOTS, activeMoves, defaultPick, partMoveId, comboMoveId } from './moves.js';
 
 const STAGE_STEP = 0.15;
 const STAGE_CAP = 2; // setup matters, but stacking is not a strategy on its own
@@ -120,6 +121,11 @@ export function movesFromTokens(tokens, report, content) {
       acc: part.move.acc,
       tags: part.move.tags,
       keywords,
+      // R30: identity is where the move came from, so a saved moveset
+      // survives a grade change or a trait that rewrites its keywords.
+      source: partMoveId(token.partId),
+      id: partMoveId(token.partId),
+      sourceLabel: part.name ?? part.ability,
     });
   }
   // A combo is emergent anatomy, so it takes a grade too — the BEST one
@@ -139,7 +145,9 @@ export function movesFromTokens(tokens, report, content) {
   for (const combo of report.combos) {
     const grade = Math.max(0, ...combo.parts.map((id) => gradeOfPart[id] ?? 0));
     const gradeBonus = 1 + grade * GRADE_MOVE_BONUS;
-    add({ ...combo.move, name: combo.name, power: Math.round(combo.move.power * gradeBonus) });
+    add({ ...combo.move, name: combo.name, power: Math.round(combo.move.power * gradeBonus),
+      source: comboMoveId(combo.id), id: comboMoveId(combo.id),
+      sourceLabel: `${combo.name} (combo)` });
   }
   return moves;
 }
@@ -185,7 +193,12 @@ export function combatantFromChimera(chimera, content, now) {
   const tokens = Object.values(chimera.tokens);
   const report = analyze(chimera.frame, tokens, content);
   const settled = isSettled(chimera, now);
-  const moves = movesFromTokens(tokens, report, content);
+  // R30: anatomy says what it KNOWS; the moveset says what it can press.
+  // Four slots, combos included. A saved moveset is filtered against what
+  // the genome still grants and topped up from the default pick, so a
+  // re-splice or a lost part can never leave a creature with two buttons.
+  const known = movesFromTokens(tokens, report, content);
+  const moves = activeMoves(known, chimera.moveset);
 
   const debuff = settled ? 1 : REJECTION_MULT;
   // Scars that apply to everyone land on the stats here; the ones that
