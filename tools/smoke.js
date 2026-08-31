@@ -1660,7 +1660,7 @@ assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
 assert.deepEqual(m5.campaign, {
   heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
   contested: [], nextContestAt: null, defences: {}, contestCount: 0,
-  operation: null, opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
+  operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
   lastTickAt: null,
 });
 // Stronger than the literal above and self-maintaining: a migration that
@@ -5771,6 +5771,127 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
       assert.ok(before >= at, `${region.id} needs Gen ${req.threatGen} (${at}), and the strips before it bank ${before}`);
     }
   }
+}
+
+// --- A4: a visit is more than one click and a wait -------------------
+//
+// The audit filed this as "there is one thing to do per visit and it is on
+// a cooldown". Measured against the state the criterion names, that was
+// WRONG — five things were open. But four of the five were purchases (buy
+// an animal, buy pen space, buy a training session, buy your way out of the
+// Infirmary) and the fifth was a fifteen-hour job. Nothing a player could
+// do produced a next thing to do.
+//
+// So the gate is not a count. Three ways to spend the same money is one
+// idea wearing three hats, and a criterion that a bank balance can satisfy
+// measures the bank balance.
+{
+  const { agenda, agendaShape, AGENDA } = await import('../ranch/agenda.js');
+  const { startOperation, activeOps, jobSlots, crewedOps, opTuning: opTune, tickOperations: tickOps } =
+    await import('../campaign/operations.js');
+  const { extractAnimal } = await import('../splice/extract.js');
+
+  const stableOf = (now, hurt) => ['a', 'b', 'c'].map((k, i) => ({
+    id: 'c' + k, name: 'Chimera ' + k, frame: 'M', bond: 40, xp: 0, level: 2,
+    settledAt: t0 - 40 * HOUR, temperament: { nerve: 0, temper: 0 },
+    ...(hurt ? { injury: { name: 'Dragged Itself Home', until: now + 3 * HOUR } } : {}),
+    tokens: Object.fromEntries(SLOTS.map((sl) => [sl, {
+      id: `t${i}${sl}`, partId: `goat_${sl}`, grade: 'standard',
+      donor: { name: 'D', species: 'goat', stars: 3, extractedAt: t0 },
+    }])),
+  }));
+
+  // Every entry has to be reachable in principle, or the panel is a list of
+  // things that are permanently greyed out.
+  // The screen ids are read out of main.js's own SCREENS map rather than
+  // listed here, because showScreen() falls back to the Ranch for anything
+  // it does not recognise — so a wrong id renders a button that looks wired
+  // and quietly does nothing. That is exactly what shipped in the first cut
+  // of this panel: `war` and `splice` are tab LABELS; the keys are `battle`
+  // and `theater`, and every row silently went home to the Ranch.
+  const shell = readFileSync(join(root, 'main.js'), 'utf8');
+  const screensBlock = shell.slice(shell.indexOf('const SCREENS = {'));
+  const realScreens = [...screensBlock.slice(0, screensBlock.indexOf('};')).matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1]);
+  assert.ok(realScreens.length >= 5, `found the shell's screen map (${realScreens.join(', ')})`);
+  for (const item of AGENDA) {
+    assert.ok(item.id && item.label && item.hint, `${item.id}: says what it is`);
+    assert.ok(['work', 'campaign', 'spend'].includes(item.kind), `${item.id}: has a kind`);
+    assert.ok(realScreens.includes(item.screen),
+      `${item.id} points at a screen the shell actually has (${item.screen} not in ${realScreens.join(', ')})`);
+  }
+
+  // THE CRITERION: money, a stable, and a lost fight — everyone hurt, and
+  // the one job they launched still out.
+  const now = t0 + 2 * HOUR;
+  const lost = freshRanchState();
+  ensureRanchSeeded(lost, content, t0);
+  lost.funds = 900;
+  lost.campaign.heldNodes = ['barn_perimeter'];
+  lost.chimeras = stableOf(now, true);
+  lost.campaign.operations = [{
+    opId: 'petting_zoo', chimeraId: null, startedAt: now - HOUR, until: now + HOUR / 2,
+    chance: 0.5, outcome: { success: false, funds: 0, species: null, injuryRoll: 1 },
+  }];
+  for (const a of lost.ranch.stock) for (const k of Object.keys(a.lastCare)) a.lastCare[k] = now;
+
+  const shape = agendaShape(lost, content, now);
+  const listed = shape.open.map((i) => `${i.kind}:${i.id}`).join(' ');
+  assert.ok(shape.count >= 3, `three distinct things to do (${shape.count}: ${listed})`);
+  assert.ok(shape.kinds.length >= 3,
+    `and they are three KINDS of thing, not three ways to spend the same money (${listed})`);
+  assert.ok(shape.productive >= 1,
+    `at least one of them makes something rather than spending (${listed})`);
+
+  // Rule 1 of the jobs board, which A4 broke and then fixed: something is
+  // ALWAYS runnable. Slots scale with the creatures fit to work, so a stable
+  // entirely in the Infirmary has none — and the crewless job must not need
+  // one, or the guarantee dies exactly where it is needed.
+  assert.equal(jobSlots(lost, content, now), 0, 'a stable in the Infirmary crews nothing');
+  assert.ok(shape.open.some((i) => i.id === 'job'), 'and paperwork is still on the board');
+  const paper = startOperation(lost, 'grant_application', null, content, now);
+  assert.ok(paper.ok, `the crewless job actually starts: ${paper.msg}`);
+  assert.equal(activeOps(lost).length, 2, 'alongside the one already out');
+
+  // THE POINT: a thing you can do produces a NEXT thing to do. Before A4 the
+  // husbandry loop — graduate a donor, splice what comes out — was shut for
+  // the first six to twelve hours of every save, because every starter
+  // animal was born the moment the app first opened.
+  const before = agenda(lost, content, now).map((i) => i.id);
+  assert.ok(before.includes('graduate'), `a donor is grown on day one (${before.join(', ')})`);
+  assert.ok(!before.includes('splice'), 'and the vault is empty until you use it');
+  const donor = lost.ranch.stock.find((a) => ageStage(a, content, now) !== 'juvenile');
+  const grad = extractAnimal(lost, donor.id, content, now);
+  assert.ok(grad.ok, `graduating works: ${grad.msg}`);
+  const after = agenda(lost, content, now).map((i) => i.id);
+  assert.ok(after.includes('splice'), `and it opens the next thing (${after.join(', ')})`);
+
+  // Concurrency scales with the stable, and stops. A board that grows without
+  // limit is an idle game, and conquest has to stay the better deal.
+  const fit = freshRanchState();
+  ensureRanchSeeded(fit, content, t0);
+  fit.funds = 900;
+  fit.chimeras = stableOf(now, false);
+  assert.equal(jobSlots(fit, content, now), 3, 'three fit creatures, three crews');
+  fit.chimeras = [...stableOf(now, false), { ...stableOf(now, false)[0], id: 'cd', name: 'Chimera d' }];
+  assert.equal(jobSlots(fit, content, now), opTune(content).maxJobs, 'and it caps');
+
+  // Two crewed jobs at once, and the same creature cannot be in both places.
+  const two = freshRanchState();
+  ensureRanchSeeded(two, content, t0);
+  two.funds = 900;
+  two.chimeras = stableOf(now, false);
+  assert.ok(startOperation(two, 'county_fair', 'ca', content, now).ok, 'first crewed job');
+  assert.equal(startOperation(two, 'aquarium', 'ca', content, now).ok, false, 'the same crew cannot go twice');
+  assert.ok(startOperation(two, 'aquarium', 'cb', content, now).ok, 'a second creature can');
+  assert.equal(crewedOps(two, content).length, 2, 'two crews out');
+  assert.ok(startOperation(two, 'aviary', 'cc', content, now).ok, 'and a third, at the cap');
+  assert.equal(startOperation(two, 'reptile_house', 'ca', content, now).ok, false, 'but not a fourth');
+
+  // Several finishing at once must ALL resolve. Dropping the rest would be a
+  // reward the player earned and cannot see.
+  const done = tickOps(two, content, now + 99 * HOUR);
+  assert.equal(done.results.length, 3, `every finished job resolves (${done.results.length})`);
+  assert.equal(activeOps(two).length, 0, 'and the board empties');
 }
 
 // Time-warp safety: a lastTickAt in the future never rewinds state.

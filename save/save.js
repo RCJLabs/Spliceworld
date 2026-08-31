@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 26;
+export const SAVE_VERSION = 27;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -341,6 +341,15 @@ const migrations = {
     }
     return save;
   },
+  // v27 (A4): the Jobs board runs as wide as the stable does, so the one
+  // slot becomes a list. A job that was in flight when the save was written
+  // stays in flight — it keeps its clock, its sealed outcome and its crew.
+  27: (save) => {
+    save.campaign ??= {};
+    save.campaign.operations = save.campaign.operation ? [save.campaign.operation] : [];
+    delete save.campaign.operation;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -367,7 +376,7 @@ export function newGameState() {
     campaign: {
       heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,
-      operation: null, opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
+      operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
       lastTickAt: null,
     },
     news: [],

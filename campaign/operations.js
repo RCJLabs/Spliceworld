@@ -17,7 +17,17 @@
 //   3. `demands` improve the odds; they never gate the job. Requiring
 //      Aquatic anatomy before you may rob the aquarium that would GIVE
 //      you Aquatic anatomy is the same circle in a smaller hat.
-//   4. Heat is the price, and it is a MECHANIC rather than a nerf. Every
+//   4. A job needs a CREW, so the board runs as wide as your stable does
+//      (A4). It used to be one job at a time, full stop, which meant a
+//      session was: check timers, launch the one job, fight once, wait —
+//      and if the fight was lost, there was nothing left but four different
+//      ways to spend money. Slots now scale with the creatures who are fit
+//      to work, floored at one so the crewless paperwork job is ALWAYS
+//      runnable (rule 1) and capped so a large stable does not turn the
+//      board into an idle-game payout tap. Growing a stable was already the
+//      answer to A1's solo cliff; this makes it the answer to the empty
+//      evening as well.
+//   5. Heat is the price, and it is a MECHANIC rather than a nerf. Every
 //      job leaves the county twitchy; heat decays in real time and, while
 //      it lasts, subtracts from the odds of everything. Trimming payouts
 //      to cap the ceiling would have punished exactly the broke player
@@ -51,6 +61,10 @@ const DEFAULTS = {
   heatHalfLifeHours: 13.5,
   heatPenalty: 0.35,
   heatMax: 100,
+  // A4. One slot per creature fit to work, floored at one and capped here.
+  // The cap is the thing that keeps conquest the better deal: past three you
+  // are meant to be taking nodes, not running a courier service.
+  maxJobs: 3,
 };
 
 export function opTuning(content) {
@@ -61,8 +75,65 @@ export function operationList(content) {
   return Object.values(content.operations ?? {});
 }
 
+// Every job currently in flight. `operations` is the v27 shape; a save that
+// predates it is migrated, so nothing here has to read the old single slot.
+export function activeOps(state) {
+  return state.campaign.operations ?? [];
+}
+
+// The first one, for the call sites that only ever wanted "is anything
+// running" — and for the report line, which shows one job at a time.
 export function activeOp(state) {
-  return state.campaign.operation ?? null;
+  return activeOps(state)[0] ?? null;
+}
+
+// THREE LANES, because "one job at a time" was one rule doing three jobs.
+//
+//   crewed    — a creature is carried somewhere. One lane per creature fit
+//               to work, capped by tuning. Zero is a legal answer: a stable
+//               entirely in the Infirmary cannot carry anything anywhere.
+//   solo      — you go yourself. Exactly one, always. This is what keeps a
+//               player with NO chimeras able to run a job at all, which is
+//               rule 1 and predates A4.
+//   paperwork — a `crew: 'none'` job. Nobody goes anywhere, so it occupies
+//               no lane; the one-run-per-job rule is the only limit it needs.
+//
+// The floor used to sit on the crewed lane instead, and that was wrong in
+// exactly the state this board exists for: lose a fight with a job already
+// out and the floor was occupied, so the thing guaranteed to be runnable
+// was not runnable.
+export function jobSlots(state, content, now) {
+  const t = opTuning(content);
+  const fit = state.chimeras.filter((c) => !(c.injury && now < c.injury.until)).length;
+  return Math.min(t.maxJobs, fit);
+}
+
+const laneOf = (run, content) =>
+  content.operations?.[run.opId]?.crew === 'none' ? 'paper' : run.chimeraId ? 'crewed' : 'solo';
+
+// The jobs in flight that are actually occupying a creature.
+export function crewedOps(state, content) {
+  return activeOps(state).filter((r) => laneOf(r, content) === 'crewed');
+}
+
+// The one you are personally out doing.
+export function soloOps(state, content) {
+  return activeOps(state).filter((r) => laneOf(r, content) === 'solo');
+}
+
+// Whether `opId` could be launched right now, ignoring cooldowns and odds —
+// the lane question only. Shared so the board, the agenda and the launcher
+// cannot disagree about who is free.
+export function laneFree(state, content, now, op, chimera) {
+  if (op.crew === 'none') return true;
+  if (chimera) return crewedOps(state, content).length < jobSlots(state, content, now);
+  return soloOps(state, content).length < 1;
+}
+
+// The creatures who could crew a NEW job right now.
+export function freeCrew(state, now) {
+  const busy = new Set(activeOps(state).map((r) => r.chimeraId).filter(Boolean));
+  return state.chimeras.filter((c) => !busy.has(c.id) && !(c.injury && now < c.injury.until));
 }
 
 // How twitchy the county is right now. Stored as a value plus the moment
@@ -103,8 +174,8 @@ export function opReady(state, opId, now) {
   return now >= opCooldownEndsAt(state, opId);
 }
 
-export function opRemainingMs(state, now) {
-  const run = activeOp(state);
+export function opRemainingMs(state, now, opId = null) {
+  const run = opId ? activeOps(state).find((r) => r.opId === opId) : activeOp(state);
   return run ? Math.max(0, run.until - now) : 0;
 }
 
@@ -174,12 +245,22 @@ export function startOperation(state, opId, chimeraId, content, now) {
   const t = opTuning(content);
   const op = content.operations?.[opId];
   if (!op) return { ok: false, msg: 'No such job.' };
-  if (activeOp(state)) return { ok: false, msg: 'One job at a time. You are a mastermind, not a franchise.' };
+  const running = activeOps(state);
+  if (running.some((r) => r.opId === opId)) return { ok: false, msg: 'That job is already under way.' };
+
   if (!opReady(state, opId, now)) return { ok: false, msg: 'That one needs to go quiet for a while.' };
 
   const chimera = chimeraId ? state.chimeras.find((c) => c.id === chimeraId) : null;
   if (chimeraId && !chimera) return { ok: false, msg: 'That one is not on the roster.' };
   if (op.crew === 'none' && chimera) return { ok: false, msg: 'This one is paperwork. Nobody needs to be carried anywhere.' };
+  if (chimera && running.some((r) => r.chimeraId === chimera.id)) {
+    return { ok: false, msg: `${chimera.name} is already out on a job.` };
+  }
+  if (!laneFree(state, content, now, op, chimera)) {
+    return { ok: false, msg: chimera
+      ? 'Every crew you have is already out. Bring one home, or grow the stable.'
+      : 'You are already out doing something. You are one person.' };
+  }
   const odds = opOdds(state, op, chimera, content, now);
   if (odds.blocked) return { ok: false, msg: odds.blocked };
 
@@ -195,7 +276,7 @@ export function startOperation(state, opId, chimeraId, content, now) {
   // just ambition. Four small jobs a day heat the county up as surely as
   // one big one.
   addHeat(state, content, now, t.heatPerJob + (op.notoriety ?? 0) * t.heatPerNotoriety);
-  state.campaign.operation = {
+  const run = {
     opId,
     chimeraId: chimera?.id ?? null,
     startedAt: now,
@@ -204,9 +285,10 @@ export function startOperation(state, opId, chimeraId, content, now) {
     // Sealed at launch, opened at resolution.
     outcome: { success, funds, species, injuryRoll },
   };
+  state.campaign.operations = [...running, run];
   return {
     ok: true,
-    run: state.campaign.operation,
+    run,
     odds,
     msg: `${op.name} is under way. ${op.hours}h. Do not wait up.`,
   };
@@ -214,11 +296,11 @@ export function startOperation(state, opId, chimeraId, content, now) {
 
 // Pull out before the clock runs down. The job is off, the cooldown still
 // applies, and nothing is gained — but nothing is lost either.
-export function abortOperation(state, content) {
-  const run = activeOp(state);
+export function abortOperation(state, content, opId = null) {
+  const run = opId ? activeOps(state).find((r) => r.opId === opId) : activeOp(state);
   if (!run) return { ok: false, msg: 'Nothing is running.' };
   const op = content.operations?.[run.opId];
-  state.campaign.operation = null;
+  state.campaign.operations = activeOps(state).filter((r) => r !== run);
   state.campaign.opCooldowns ??= {};
   state.campaign.opCooldowns[run.opId] = run.startedAt + Math.round((op?.cooldownHours ?? 6) * HOUR);
   return { ok: true, msg: `${op?.name ?? 'The job'} called off. Everyone comes home. Nobody is paid.` };
@@ -227,11 +309,25 @@ export function abortOperation(state, content) {
 // Elapsed operations, computed on load like every other timer. Returns the
 // wire lines rather than pushing them, so this module never has to know
 // campaign.js exists.
+// Resolves EVERY job whose clock has run out, not just the first — with
+// several in flight, a player who is away for a day comes back to all of
+// them finished, and quietly dropping the rest would be a reward they earned
+// and cannot see. Returns `results` (all of them, oldest first) alongside
+// `result` (the newest), because the report card shows one at a time.
 export function tickOperations(state, content, now) {
-  const run = activeOp(state);
-  if (!run || now < run.until) return { news: [], result: null };
+  const news = [];
+  const results = [];
+  for (const run of activeOps(state).filter((r) => now >= r.until).sort((a, b) => a.until - b.until)) {
+    const one = resolveOperation(state, content, now, run);
+    news.push(...one.news);
+    if (one.result) results.push(one.result);
+  }
+  return { news, results, result: results[results.length - 1] ?? null };
+}
+
+function resolveOperation(state, content, now, run) {
   const op = content.operations?.[run.opId];
-  state.campaign.operation = null;
+  state.campaign.operations = activeOps(state).filter((r) => r !== run);
   state.campaign.opCooldowns ??= {};
   state.campaign.opCooldowns[run.opId] = now + Math.round((op?.cooldownHours ?? 6) * HOUR);
   if (!op) return { news: [], result: null }; // job retired from the data

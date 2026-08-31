@@ -13,7 +13,7 @@ import {
   canBreed, breedPair, hatchEgg, BREEDING, isVariant, baseSpecies, incubatorSlots,
   pairingForecast, expressedTraits,
 } from './breeding.js';
-import { onboardingSteps, onboardingActive, guideForScreen } from './onboarding.js';
+import { onboardingSteps, onboardingActive, guideForScreen, pathOwnsScreen } from './onboarding.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
 import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade } from '../splice/facility.js';
@@ -21,6 +21,7 @@ import { nodeName } from '../campaign/map.js';
 import { scannerGrants } from '../splice/facility.js';
 import { incomePerDay } from '../campaign/campaign.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
+import { agendaShape } from './agenda.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -205,6 +206,40 @@ export function renderRanchScreen(root, ctx) {
       </section>`;
   }
 
+  // A4: what is actually open right now, from the same module the smoke
+  // suite scores a save with — so the screen and the acceptance criterion
+  // cannot drift apart. Grouped by KIND, because the finding that queued
+  // this phase was not that a losing player had nothing to do; it was that
+  // everything they had was a way to spend money.
+  const shape = agendaShape(state, content, t);
+  const KINDS = [
+    ['work', '🧪 Make something'],
+    ['campaign', '🗺 Push on the world'],
+    ['spend', '💵 Spend money'],
+  ];
+  const rightNow = collapsibleCard({
+    id: 'right-now',
+    title: '☑ Right Now',
+    badge: `<span class="pill">${shape.count} open</span>`,
+    summary: shape.productive
+      ? `${shape.productive} of them make something.`
+      : 'All of them are ways to spend money — which is the state this panel exists to show you.',
+    // Folded by default only while the Path to World Domination still owns
+    // the screen: on visit one that guide IS the agenda, and two lists
+    // saying the same thing is worse than either. Once the Path retires,
+    // this is what replaces it, so it opens.
+    open: isOpen(state, 'right-now', !pathOwnsScreen(state)),
+    body: KINDS.map(([kind, heading]) => {
+      const items = shape.open.filter((i) => i.kind === kind);
+      if (!items.length) return '';
+      return `<p class="agenda-head">${heading}</p>` + items.map((i) => `
+        <button type="button" class="agenda-row" data-goto="${i.screen}">
+          <span class="agenda-label">${i.label}</span>
+          <span class="fine-print">${i.hint}</span>
+        </button>`).join('');
+    }).join('') || '<p class="fine-print">Nothing is open. Everything is on a timer — come back shortly.</p>',
+  });
+
   const head = `
     <section class="card">
       <div class="econ-row">
@@ -385,10 +420,13 @@ export function renderRanchScreen(root, ctx) {
   // scrolls to is a note nobody reads.
   const note = fieldNote(guideForScreen(state, content, t, 'ranch'));
 
-  root.innerHTML = onboarding + note + head + breeding + incubator + (cards || '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>');
+  root.innerHTML = onboarding + note + rightNow + head + breeding + incubator + (cards || '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>');
   const again = () => renderRanchScreen(root, ctx);
   bindFieldNote(root, ctx, again);
   bindFolds(root, ctx, again);
+  root.querySelectorAll('button[data-goto]').forEach((btn) => {
+    btn.addEventListener('click', () => ctx.goto?.(btn.dataset.goto));
+  });
 
   bindPickers(root, {
     'catalog-pick': () => ({

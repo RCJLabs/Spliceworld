@@ -242,6 +242,20 @@ export function ensureRanchSeeded(state, content, now) {
   // tutorial moment, not a dice roll.
   state.ranch.stock[0].sex = 'F';
   state.ranch.stock[1].sex = 'M';
+  // A4: the bear arrives GROWN. Every starter used to be born the moment the
+  // app first opened, which shut the loop the whole game is built around —
+  // graduate a donor, splice what comes out — for the first six to twelve
+  // hours of a save. That is exactly the window a new player is in when they
+  // hit the second node and lose, and in that window their only remaining
+  // verbs were four different ways to spend money.
+  //
+  // Backdating the birth rather than granting a free part keeps every
+  // downstream rule honest: it ages normally from here, its condition still
+  // decides the grade it graduates at, and caring for it first still pays.
+  // The two goats stay newborn, so the husbandry timers are still a thing
+  // the player learns — there is simply one door open on day one.
+  const grown = state.ranch.stock[2];
+  grown.birthAt = now - Math.round(content.species[grown.species].growthHours.adult * HOUR);
 }
 
 // Purebred display genome for a stock animal — all of its species' parts on

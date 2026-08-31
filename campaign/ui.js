@@ -22,7 +22,7 @@ import {
 import { GRADES, GRADE_INDEX } from '../splice/extract.js';
 import { contestOn, contestEncounter, contestRemainingMs, defencesOf, isContested } from './contest.js';
 import {
-  operationList, activeOp, opOdds, opReady, opCooldownEndsAt, opRemainingMs,
+  operationList, activeOp, activeOps, jobSlots, freeCrew, laneFree, soloOps, crewedOps, opOdds, opReady, opCooldownEndsAt, opRemainingMs,
   startOperation, abortOperation, heatNow, opTuning,
 } from './operations.js';
 import {
@@ -515,7 +515,17 @@ function jobsCard(state, ctx, t) {
   const { content } = ctx;
   const jobs = operationList(content);
   if (!jobs.length) return '';
-  const run = activeOp(state);
+  const runs = activeOps(state);
+  // Count the lanes separately or the arithmetic lies: a solo job with no
+  // stable read as "1/0 crews out", and the board offered "-1 of 0 crews
+  // free". Crews are creatures; you are not one of them.
+  const slots = jobSlots(state, content, t);
+  const crewsOut = crewedOps(state, content).length;
+  const youOut = soloOps(state, content).length > 0;
+  const crewLine = [
+    slots ? `${slots - crewsOut} of ${slots} ${slots === 1 ? 'crew' : 'crews'} free` : 'no crews fit to work',
+    youOut ? 'you are out' : 'you are available',
+  ].join(' · ');
   const heat = Math.round(heatNow(state, content, t));
   const report = state.campaign.opReport;
 
@@ -527,27 +537,41 @@ function jobsCard(state, ctx, t) {
         : 'nobody is looking for you. Yet.'
   }</p>`;
 
-  if (run) {
-    const op = content.operations[run.opId];
-    const who = state.chimeras.find((c) => c.id === run.chimeraId);
-    return `
+  // A job in flight no longer hides the board. It used to return here, so
+  // launching one thing removed the only screen that showed you what else
+  // there was — which is half of why a visit felt like one click and a wait.
+  const liveCard = runs.length ? `
       <section class="card jobs-card">
-        <h3>💼 Job In Progress</h3>
+        <h3>💼 ${runs.length === 1 ? 'Job In Progress' : `${runs.length} Jobs In Progress`}</h3>
+        ${runs.map((run) => {
+          const op = content.operations[run.opId];
+          const who = state.chimeras.find((c) => c.id === run.chimeraId);
+          return `
         <div class="encounter job-live">
           <div><strong>${op.icon} ${op.name}</strong><br>
-          <span class="fine-print">Back in <strong class="countdown">${fmtDuration(opRemainingMs(state, t))}</strong> · ${
+          <span class="fine-print">Back in <strong class="countdown">${fmtDuration(opRemainingMs(state, t, run.opId))}</strong> · ${
             who ? who.name : 'you went yourself'
           } · odds were ${pct(run.chance)}</span></div>
-          <button type="button" class="job-abort" data-abort="1">Call it off</button>
-        </div>
+          <button type="button" class="job-abort" data-abort="${run.opId}">Call it off</button>
+        </div>`;
+        }).join('')}
         ${heatLine}
-      </section>`;
-  }
+      </section>` : '';
 
+  const free = freeCrew(state, t);
   const rows = jobs.map((op) => {
-    const ready = opReady(state, op.id, t);
-    const crew = op.crew === 'none' ? null : state.chimeras.find((c) => !isInjured(c, t)) ?? null;
+    const out = runs.some((r) => r.opId === op.id);
+    const ready = opReady(state, op.id, t) && !out;
+    const crew = op.crew === 'none' ? null : free[0] ?? null;
     const odds = opOdds(state, op, crew, content, t);
+    // Three lanes (operations.js): carried by a creature, done by you, or
+    // paperwork. Saying WHICH lane is full is the honest reason; a greyed-out
+    // button with no explanation is the thing R29 was about.
+    // Short, because this sits in a flex row next to the job's title and a
+    // long string turns the whole row into one word per line at 380px.
+    const noSlot = laneFree(state, content, t, op, crew) || laneFree(state, content, t, op, null)
+      ? null
+      : crew ? 'no crew free' : 'you are out';
     const loot = [
       `$${op.funds[0]}–${op.funds[1]}`,
       op.livestock ? `${pct(op.livestock.chance)} livestock` : null,
@@ -561,9 +585,13 @@ function jobsCard(state, ctx, t) {
         <span class="fine-print job-odds">${
           odds.blocked ? `⚠ ${odds.blocked}` : `Best odds: <strong>${pct(odds.chance)}</strong>`
         }${op.notoriety ? ` · +${op.notoriety} heat` : ' · draws no attention at all'}</span></div>
-        ${ready
-          ? `<button type="button" data-job="${op.id}" ${odds.blocked ? 'disabled' : ''}>Run it</button>`
-          : `<span class="locked-tag">quiet for ${fmtDuration(opCooldownEndsAt(state, op.id) - t)}</span>`}
+        ${out
+          ? '<span class="locked-tag">out right now</span>'
+          : !opReady(state, op.id, t)
+            ? `<span class="locked-tag">quiet for ${fmtDuration(opCooldownEndsAt(state, op.id) - t)}</span>`
+            : noSlot
+              ? `<span class="locked-tag">${noSlot}</span>`
+              : `<button type="button" data-job="${op.id}" ${odds.blocked ? 'disabled' : ''}>Run it</button>`}
       </div>`;
   }).join('');
 
@@ -580,11 +608,13 @@ function jobsCard(state, ctx, t) {
     : '';
 
   return `
+    ${liveCard}
     <section class="card jobs-card">
       <h3>💼 Jobs</h3>
+      <p class="fine-print job-slots">${crewLine}</p>
       ${reportHtml}
       ${rows}
-      ${heatLine}
+      ${runs.length ? '' : heatLine}
     </section>`;
 }
 
@@ -596,7 +626,7 @@ function bindJobs(root, ctx, redraw) {
   });
   root.querySelectorAll('button[data-abort]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      lastAftermath = abortOperation(state, content).msg;
+      lastAftermath = abortOperation(state, content, btn.dataset.abort).msg;
       ctx.save();
       redraw();
     });

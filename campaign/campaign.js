@@ -80,13 +80,23 @@ export function tickCampaign(state, content, now) {
   // the tab is open (an enrichment session can take the last hour off it).
   // A job that finished while the player was away is reported when they
   // come back, not silently banked.
+  // Several jobs can be in flight at once (A4), so several can finish while
+  // the player is away. The report card shows one at a time; the rest are
+  // summarised into the wire, because a reward they earned and cannot see is
+  // a reward they will assume is broken.
   const job = tickOperations(state, content, now);
   for (const line of job.news) pushNews(state, line);
-  if (job.result) {
-    state.campaign.opReport = job.result;
-    if (job.result.success) {
-      const boast = playerLine(state, content, 'capture', { creature: job.result.animal?.name ?? 'the prize' });
-      if (job.result.animal && boast) pushNews(state, boast);
+  if (job.results.length) {
+    state.campaign.opReport = job.results[0];
+    for (const res of job.results) {
+      if (!res.success) continue;
+      const boast = playerLine(state, content, 'capture', { creature: res.animal?.name ?? 'the prize' });
+      if (res.animal && boast) pushNews(state, boast);
+    }
+    for (const extra of job.results.slice(1)) {
+      pushNews(state, extra.success
+        ? `${extra.name} also paid out: $${extra.funds}${extra.animal ? `, and ${extra.animal.name} came back in the van` : ''}.`
+        : `${extra.name} came to nothing, which happens.`);
     }
   }
 
