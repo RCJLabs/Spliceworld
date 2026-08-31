@@ -133,6 +133,17 @@ export const GUIDE_HELPERS = {
     );
   },
   bredAnimalInPens: (state) => state.ranch.stock.some((a) => a.parents),
+  // A9. The lift equation only becomes a decision once the player owns a
+  // part that MAKES lift — 61 parts say Airborne, twelve of them fly — so
+  // this asks for a wing rather than for parts in general. Retired once
+  // they have actually bolted one on, which is the moment the Physiology
+  // Panel starts answering the question for them.
+  liftPartInVault: (state, content) =>
+    (state.inventory?.parts ?? []).some((t) => content.parts[t.partId]?.phys?.lift),
+  flierBuilt: (state, content) =>
+    (state.chimeras ?? []).some((c) =>
+      Object.values(c.tokens ?? {}).some((t) => content.parts[t.partId]?.phys?.lift)
+    ),
   carrierInPens: (state, content) =>
     state.ranch.stock.some((a) => {
       const carried = Object.entries(a.genotype ?? {}).filter(([, n]) => n > 0);

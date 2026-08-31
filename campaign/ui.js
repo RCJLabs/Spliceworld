@@ -30,7 +30,7 @@ import {
 } from './monologue.js';
 import {
   regionStates, threatGen, threatRung, nextThreatRung,
-  incomePerDay, incomeSuspended, salvageUnit, nodeById,
+  incomePerDay, incomeSuspended, regionBonusPerDay, regionComplete, salvageUnit, nodeById, regionOfNode,
 } from './campaign.js';
 
 let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, label }
@@ -172,6 +172,7 @@ function renderMap(root, ctx) {
   const gen = threatGen(state, content);
   const income = incomePerDay(state, content);
   const suspended = incomeSuspended(state, content);
+  const bonus = regionBonusPerDay(state, content);
   const map = regionStates(state, content);
   const nextRung = nextThreatRung(state, content);
   // Territory is gross. What the lab banks is territory plus the stipend
@@ -191,6 +192,7 @@ function renderMap(root, ctx) {
   // choice always overrides the guess.
   const frontier = map.find((r) => r.open && r.held < r.region.nodes.length)?.region.id ?? null;
   const regions = map.map(({ region, open, blockers, nodes: nodeRows, held }) => {
+    const contestedHere = region.nodes.filter((n) => isContested(state, n.id)).length;
     const rows = open ? nodeRows.map(({ node, status }) => {
       const encounter = content.encounters[node.encounter];
       const btn =
@@ -208,14 +210,25 @@ function renderMap(root, ctx) {
           ${btn}
         </div>`;
     }).join('') : '';
-    const contestedHere = region.nodes.filter((n) => isContested(state, n.id)).length;
     const body = open
       ? `${region.demand ? `<p class="region-demand">🧬 ${region.demand}</p>` : ''}${rows}`
       : `<p class="region-locked">🔒 ${blockers.map((b) => b.label).join(' · ')}</p>`;
+    // A9: the strip bonus needs saying on the strip, not only in the econ
+    // row — "one node left" is a different sentence when finishing it pays
+    // a standing bonus, and a contest that suspends one is worth answering
+    // for more than the node it took.
+    const paying = region.completionBonus && regionComplete(state, content, region);
+    const strip = region.completionBonus
+      ? paying
+        ? ` Strip bonus +$${region.completionBonus}/day.`
+        : contestedHere
+          ? ` Strip bonus of $${region.completionBonus}/day suspended.`
+          : ` Take the strip for +$${region.completionBonus}/day.`
+      : '';
     const summary = open
       ? held === region.nodes.length
-        ? 'Held end to end.'
-        : `${region.nodes.length - held} node${region.nodes.length - held === 1 ? '' : 's'} still theirs.`
+        ? `Held end to end.${strip}`
+        : `${region.nodes.length - held} node${region.nodes.length - held === 1 ? '' : 's'} still theirs.${strip}`
       : `🔒 ${blockers.map((b) => b.label).join(' · ')}`;
     return collapsibleCard({
       id: `region:${region.id}`,
@@ -235,10 +248,19 @@ function renderMap(root, ctx) {
     const node = nodeById(content, c.nodeId);
     if (!node) return '';
     const held = defencesOf(state, c.nodeId);
+    // A9: a contest inside a completed strip suspends the strip bonus too,
+    // and that is usually the bigger number by far — the alert has to say so
+    // or the player reads "$40/day" and lets a $150 bonus lapse.
+    const strip = regionOfNode(content, c.nodeId);
+    const bonusAtRisk = strip?.completionBonus
+      && strip.nodes.every((n) => state.campaign.heldNodes.includes(n.id))
+      ? strip.completionBonus : 0;
     return `
     <div class="encounter contested">
       <div><strong>${node.name}</strong> <span class="lineage">counter-offensive</span><br>
-      <span class="fine-print"><strong class="countdown">${fmtDuration(contestRemainingMs(c, t))}</strong> to hold the line · <strong>$${node.incomePerDay}/day</strong> suspended until you do${
+      <span class="fine-print"><strong class="countdown">${fmtDuration(contestRemainingMs(c, t))}</strong> to hold the line · <strong>$${node.incomePerDay + bonusAtRisk}/day</strong> suspended until you do${
+        bonusAtRisk ? ` (the node plus ${strip.name}'s $${bonusAtRisk} strip bonus)` : ''
+      }${
         held ? ` · you have held it ${held}× already` : ''
       }.</span></div>
       <button type="button" data-defend="${c.nodeId}">🛡 Defend</button>
@@ -337,6 +359,8 @@ function renderMap(root, ctx) {
           nextRung ? `<span class="econ-next">Gen ${nextRung.gen} at ${nextRung.at}</span>` : ''
         }</div>
         <div><span class="econ-label">Territory</span><strong>+$${income}/day</strong>${
+          bonus ? `<span class="econ-next">incl. +$${bonus} strip bonus</span>` : ''
+        }${
           suspended ? `<span class="econ-suspended">−$${suspended} contested</span>` : ''
         }</div>
         <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${

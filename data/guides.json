@@ -116,7 +116,7 @@
       "order": 14,
       "icon": "🏚",
       "title": "The lab is upgradeable",
-      "body": "Six tracks, each bought in order, each gated by money and usually by territory. They buy things you cannot otherwise have: a bigger chassis, a second organ bay, a machine that reads alleles. Money has nowhere better to go.",
+      "body": "Six tracks, each bought in order, each gated by money and usually by territory. They buy things you cannot otherwise have: two more chassis at opposite ends of the scale, a second organ bay, a machine that reads alleles. Money has nowhere better to go.",
       "reachable": [
         {
           "helper": "facilityAffordable"
@@ -293,6 +293,24 @@
       ]
     },
     {
+      "id": "flight",
+      "screen": "theater",
+      "order": 29,
+      "icon": "🪶",
+      "title": "Wings are a promise. Lift is the receipt.",
+      "body": "Bird anatomy says AIRBORNE on the part. Your creature only gets it if the lift you installed can hoist the mass you built — the Flight row does that sum for you. It is worth doing: ground-level attacks swing straight underneath anything actually in the air, and the coalition throws a lot of them. The lighter the chassis, the cheaper the promise. The Kite gets off the ground on plain standard parts; the Rumbler never gets off the ground at all.",
+      "reachable": [
+        {
+          "helper": "liftPartInVault"
+        }
+      ],
+      "done": [
+        {
+          "helper": "flierBuilt"
+        }
+      ]
+    },
+    {
       "id": "jobs",
       "screen": "battle",
       "order": 40,
@@ -418,7 +436,7 @@
       "order": 46,
       "icon": "🗺",
       "title": "Each region asks a different question",
-      "body": "The strips are not the same fight with bigger numbers. Kestrel Reach is Airborne, so your Ground-tagged moves miss entirely; the Drowned Quarter answers to boots; the Foundry is armour, where Sonic is the only thing that gets through. Read the line under each region name.",
+      "body": "The strips are not the same fight with bigger numbers. Kestrel Reach is Airborne, so your Ground-tagged moves miss entirely — and flying buys you nothing there, because almost nothing in the Reach fights from the ground. The Foundry is the opposite: armour, Sonic, and enough tippers and ram plates that a creature actually in the air is untouchable by a third of what they throw. Read the line under each region name.",
       "reachable": [
         {
           "helper": "secondRegionOpen"

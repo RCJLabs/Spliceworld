@@ -34,11 +34,12 @@
           "requiresNodes": [
             "checkpoint"
           ],
-          "blurb": "A gantry, a winch, and a second organ bay. Unlocks the L-class Rumbler chassis and lets you install TWO organs — metabolism, or a second ability, or both if you can carry the mass.",
-          "unlockLine": "Surgery Theater upgraded to Tier II. The gantry arrived on a flatbed and the neighbours have stopped asking.",
+          "blurb": "A gantry, a winch, and a second organ bay. Unlocks TWO chassis at once — the L-class Rumbler and the A-class Kite — and lets you install two organs. The Rumbler carries anything and flies never; the Kite is a flying wing with no back legs, light enough to get airborne on plain standard-grade parts. Ground-level attacks swing straight under anything actually in the air.",
+          "unlockLine": "Surgery Theater upgraded to Tier II. The gantry arrived on a flatbed, the wind tunnel arrived in seven boxes, and the neighbours have stopped asking.",
           "news": "Farm supply store reports a run on industrial winches. \"Big year for barns,\" says owner, unconvincingly.",
           "grants": {
             "frames": [
+              "A",
               "S",
               "M",
               "L"
@@ -321,7 +322,8 @@
     "frameBase": {
       "S": 3,
       "M": 5,
-      "L": 9
+      "L": 9,
+      "A": 4
     },
     "frameFallback": 5,
     "gradeCost": {

@@ -40,13 +40,16 @@ export function renderTheaterScreen(root, ctx) {
 
   // The Theater builds with whatever the facility has installed (§3.10).
   const grants = theaterGrants(state, content);
-  const sockets = grants.sockets;
   // A draft made before a downgrade, or carrying a locked frame, quietly
   // corrects itself rather than erroring at the player.
+  if (!grants.frames.includes(draft.frame)) draft.frame = grants.frames[0];
+  // A9: which bays this build actually has is the facility AND the chassis.
+  // Switching to the Kite drops the hindlimb the player had loaded rather
+  // than leaving a part wedged in a socket the frame does not have.
+  const sockets = theaterGrants(state, content, draft.frame).sockets;
   for (const socketId of Object.keys(draft.slots)) {
     if (!sockets.includes(socketId)) delete draft.slots[socketId];
   }
-  if (!grants.frames.includes(draft.frame)) draft.frame = grants.frames[0];
 
   const tokens = tokensFor(state, draft.slots, content);
   const report = analyze(draft.frame, tokens, content, sockets.length);

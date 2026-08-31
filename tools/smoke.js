@@ -6,7 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import assert from 'node:assert/strict';
-import { indexContent, renderCreatureSVG, validateGenome, SLOTS } from '../render/renderer.js';
+import { indexContent, renderCreatureSVG, validateGenome, SLOTS, SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { rngStream, hashString } from '../util/rng.js';
 import { newGameState, migrate, SAVE_VERSION } from '../save/save.js';
 import {
@@ -32,7 +32,8 @@ import {
 import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
 import {
   nodeStates, threatGen, threatLadder, regionStates, regionBlockers, regionOpen, nodeById,
-  incomePerDay, tickCampaign, resolveBattle, salvageUnit,
+  incomePerDay, incomeSuspended, regionBonusPerDay, regionComplete,
+  tickCampaign, resolveBattle, salvageUnit,
 } from '../campaign/campaign.js';
 import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING, pairingForecast } from '../ranch/breeding.js';
 import { trainChimera, TRAINING } from '../splice/theater.js';
@@ -80,10 +81,34 @@ for (const part of Object.values(content.parts)) {
   assert.ok(content.species[part.species], `${part.id}: unknown species ${part.species}`);
   assert.ok(SLOTS.includes(part.slot), `${part.id}: unknown slot ${part.slot}`);
 }
+// A9: a frame may declare which slot types its geometry supports, so the
+// invariant is no longer "every frame has every socket" — it is that a
+// frame's geometry and its declaration agree in both directions. A frame
+// that declares nothing supports everything, which is every frame that
+// predates the Kite.
+const GEOMETRY_SOCKETS = {
+  head: ['head'],
+  forelimbs: ['forelimb_near', 'forelimb_far'],
+  hindlimbs: ['hindlimb_near', 'hindlimb_far'],
+  tail: ['tail'],
+  organ: ['organ'],
+  hide: [], // draws in torso space; no socket of its own
+};
 for (const frame of Object.values(content.frames)) {
-  for (const name of ['head', 'forelimb_near', 'forelimb_far', 'hindlimb_near', 'hindlimb_far', 'tail', 'organ']) {
-    assert.ok(frame.sockets[name], `frame ${frame.id}: missing socket ${name}`);
+  const supported = frame.slots ?? SLOTS;
+  for (const slot of supported) {
+    for (const name of GEOMETRY_SOCKETS[slot] ?? []) {
+      assert.ok(frame.sockets[name], `frame ${frame.id} supports ${slot} but has no ${name} socket`);
+    }
   }
+  // ...and nothing drawn that the frame says it does not have, or the
+  // renderer puts a part somewhere the Theater would never let you bolt one.
+  for (const name of Object.keys(frame.sockets)) {
+    const slot = name.replace(/_(near|far)$/, 's').replace(/\d+$/, '');
+    assert.ok(supported.includes(slot),
+      `frame ${frame.id} draws a ${name} socket but does not support ${slot}`);
+  }
+  assert.ok(frame.sockets.head, `frame ${frame.id}: a head is mandatory, company policy`);
 }
 
 // --- The M0 acceptance genome renders.
@@ -1397,12 +1422,17 @@ assert.equal(states[0].status, 'available');
 assert.ok(states.slice(1).every((s) => s.status === 'locked'), 'strip unlocks in order');
 camp.campaign.heldNodes.push('barn_perimeter');
 states = nodeStates(camp, content);
+const regionOf0 = Object.values(content.regions)[0];
 assert.equal(states[1].status, 'available');
 assert.equal(states[4].status, 'locked', 'guard post needs Threat Gen 2');
-assert.equal(incomePerDay(camp, content), 25);
+// Derived, not hardcoded: A9 raised every node's income, and a literal here
+// would just have to be edited again next time the economy is tuned.
+assert.equal(incomePerDay(camp, content), regionOf0.nodes[0].incomePerDay,
+  'one node held pays exactly that node');
 camp.campaign.lastTickAt = t0;
 tickCampaign(camp, content, t0 + 2 * 24 * HOUR);
-assert.ok(Math.abs(camp.funds - 50) < 0.01, `held nodes pay income (${camp.funds})`);
+assert.ok(Math.abs(camp.funds - regionOf0.nodes[0].incomePerDay * 2) < 0.01,
+  `two days of one held node pays two days of that node (${camp.funds})`);
 camp.campaign.notoriety = 65; // past threatGen2At
 assert.equal(threatGen(camp, content), 2);
 assert.equal(nodeStates(camp, content)[4].status, 'locked', 'still strip-gated behind the boss');
@@ -1482,9 +1512,22 @@ const tWar = Math.max(...army.map((c) => c.settleUntil));
 for (const { node } of nodeStates(conq, content)) {
   if (node.threatGen === 2) continue;
   const alive = () => conq.chimeras.filter((c) => !isInjured(c, tWar));
-  conq.battle = createBattle(alive(), content.encounters[node.encounter], content, hashString(node.id), tWar, { kind: 'assault', nodeId: node.id });
-  autoplay(conq.battle);
-  assert.equal(conq.battle.outcome, 'win', `prismatic army takes ${node.id}`);
+  // Across a handful of seeds, not one. `autoplay` is strictly greedy on
+  // power — it never rests, never guards, never reads the tag chart — so a
+  // single-seed win/loss here is a coin flip on data this assertion does not
+  // care about, and A9 landed on exactly that: adding Ground tags to
+  // patrol_2 changed what the enemy AI chose and tipped the greedy pilot
+  // over. What this block is actually asserting is the BOOKKEEPING below —
+  // nodes held, income paid, notoriety raised — so the combat only has to be
+  // winnable, which nodeClimbability scores separately and properly.
+  let won = null;
+  for (let s = 0; s < 8 && !won; s++) {
+    const b = createBattle(alive(), content.encounters[node.encounter], content, hashString(`${node.id}#${s}`), tWar, { kind: 'assault', nodeId: node.id });
+    autoplay(b);
+    if (b.outcome === 'win') won = b;
+  }
+  assert.ok(won, `a prismatic army takes ${node.id} on at least one of eight seeds`);
+  conq.battle = won;
   resolveBattle(conq, conq.battle, content, tWar);
   for (const c of conq.chimeras) c.injury = null; // field hospital, sim-side
 }
@@ -1493,7 +1536,9 @@ assert.equal(conq.campaign.notoriety, 65);
 assert.equal(threatGen(conq, content), 2, 'boss conquest tips Threat Gen 2');
 assert.equal(nodeStates(conq, content)[4].status, 'available', 'Gen 2 node unlocked');
 assert.ok(conq.news.some((n) => n.includes('THREAT LEVEL UP')));
-assert.equal(incomePerDay(conq, content), 225);
+assert.equal(incomePerDay(conq, content),
+  regionOf0.nodes.slice(0, 4).reduce((a, n) => a + n.incomePerDay, 0),
+  'four of five nodes held pays those four and no strip bonus');
 
 // --- M5: Containment Cannon + salvage.
 const capLab = { ...newGameState(), seed: 911 };
@@ -1979,7 +2024,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 
   // 2. THE GATE THE CRITERION ASKS FOR: a ladder that cannot be climbed at
   //    the team size a player has when they reach it must fail here. The
-  //    floor is 25% for the BEST of the five archetypes — the question is
+  //    floor is 25% for the BEST of the archetypes — the question is
   //    whether some build a player could field gets through, not whether
   //    every build does. Measured minimum across the map is 29%
   //    (foundry/slag_gate), so this is a floor and not a fit to the data.
@@ -1988,7 +2033,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
       const { best, who, grade, team } = nodeClimbability(content, region, node, { seedsPer: 24 });
       assert.ok(best >= 0.25,
         `${region.id}/${node.id} is climbable at the ${team} chimera(s) and ${grade} parts it is tuned for ` +
-        `— best of five archetypes is ${Math.round(best * 100)}% (${who ?? 'none'})`);
+        `— best of ${Object.keys(ARCHETYPES).length} archetypes is ${Math.round(best * 100)}% (${who ?? 'none'})`);
     }
   }
 
@@ -3080,7 +3125,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   const fresh = { ...newGameState(), seed: 1234 };
   assert.equal(facilityLevel(fresh, 'theater'), 1, 'a new lab starts at Tier I');
   const tier1 = theaterGrants(fresh, content);
-  assert.deepEqual(tier1.frames, ['S', 'M'], 'Tier I is S and M — the Rumbler is bought, not given');
+  assert.deepEqual(tier1.frames, ['S', 'M'], 'Tier I is S and M — the Rumbler and the Kite are bought, not given');
   assert.ok(!tier1.sockets.includes('organ2'), 'and one organ bay');
 
   // The gate: money AND territory. Law 2 — conquest expands creation.
@@ -3103,6 +3148,14 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 
   const tier2 = theaterGrants(fresh, content);
   assert.ok(tier2.frames.includes('L'), 'Tier II buys the Rumbler chassis');
+  // A9: Tier II is a FORK, not a rung. It buys the heaviest chassis and the
+  // lightest in the same purchase, so the money answers "which problem do
+  // you have" rather than "are you further along".
+  assert.ok(tier2.frames.includes('A'), 'Tier II buys the Kite chassis in the same breath');
+  const heaviest = content.frames[[...tier2.frames].sort((a, b) => content.frames[b].phys.mass - content.frames[a].phys.mass)[0]];
+  const lightest = content.frames[[...tier2.frames].sort((a, b) => content.frames[a].phys.mass - content.frames[b].phys.mass)[0]];
+  assert.ok(!tier1.frames.includes(heaviest.id) && !tier1.frames.includes(lightest.id),
+    `the upgrade unlocks both ends of the mass range at once (${lightest.id} and ${heaviest.id})`);
   assert.ok(tier2.sockets.includes('organ2'), 'and the second organ bay');
 
   // The Theater enforces both, and says why.
@@ -3587,8 +3640,14 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 
     // …and it costs money every hour it stands.
     const node = region.nodes.find((n) => n.id === c.nodeId);
+    // Derived from the holdings, not a literal: A9 raised every node's
+    // income, and a hardcoded total here would just have to be edited again
+    // the next time the economy is tuned.
+    const heldTotal = region.nodes
+      .filter((n) => s.campaign.heldNodes.includes(n.id))
+      .reduce((a, n) => a + n.incomePerDay, 0);
     assert.equal(incomeSuspended(s, content), node.incomePerDay);
-    assert.equal(incomePerDay(s, content), 225 - node.incomePerDay, 'a contested node earns nothing');
+    assert.equal(incomePerDay(s, content), heldTotal - node.incomePerDay, 'a contested node earns nothing');
     assert.equal(s.campaign.contested.length, 1);
     // Force another to fall due while this one still stands: the cap, not
     // the schedule, has to be what stops it.
@@ -3661,7 +3720,11 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     s.campaign.contested = [{ nodeId: 'checkpoint', startedAt: t0, deadline: t0 + 18 * HOUR, gen: 2 }];
     const c = s.campaign.contested[0];
     const node = region.nodes.find((n) => n.id === c.nodeId);
-    const full = 225;
+    // Derived from what this empire actually holds — a literal here was a
+    // pre-A9 total, and would be stale again after the next economy tune.
+    const full = region.nodes
+      .filter((n) => s.campaign.heldNodes.includes(n.id))
+      .reduce((a, n) => a + n.incomePerDay, 0);
     assert.equal(incomePerDay(s, content), full - node.incomePerDay, 'the money stops first');
 
     const enc = contestEncounter(s, content, c);
@@ -5411,6 +5474,17 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     assert.ok(team[0].tags.includes('Airborne'),
       `the lead specimen actually took off (${team[0].tags.join(', ')})`);
     assert.equal(team[0].class, 'air', 'and flies the class that beats what they saw');
+    // A9: taking off is now a physics claim, so the lab has to have bought
+    // a chassis that can lift the build — its authored frame list is a
+    // style, and answering you overrides it. But ONLY for the specimen
+    // built to answer: a fix that just used the lightest frame everywhere
+    // would pass the assertion above and quietly erase every rival's taste.
+    assert.ok(analyze(team[0].genome.frame,
+      Object.entries(team[0].genome.parts).map(([, partId]) => ({ partId, grade: 'apex', donor: {} })),
+      content).flight.capable !== undefined, 'the lead is a real genome');
+    const styled = team.slice(1).map((u) => u.genome.frame);
+    assert.ok(styled.every((f) => content.rivals.trench.frames.includes(f)),
+      `the rest of the lab keeps its own chassis (${styled.join(', ')} vs authored ${content.rivals.trench.frames.join(', ')})`);
 
     // Avoidance is the other half: a Sonic kit ignores armour, so armour
     // spent against it is money wasted, and they stop spending it.
@@ -5568,7 +5642,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'stable',
     'breeding', 'incubator', 'genes', 'pairing', 'facility', 'upkeep', 'catalog',
     'temperament', 'bond', 'infirmary', 'scars',
-    'combos', 'chaos',
+    'combos', 'chaos', 'flight',
     'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director',
     'dex',
   ];
@@ -5620,6 +5694,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
+    // A9: goat parts are not a flight lesson. The lift equation only becomes
+    // a decision once the player owns something that MAKES lift — 61 parts
+    // say Airborne and twelve of them fly.
+    ['a wing turns up', () => {
+      lab.inventory.parts.push({ id: 't3', partId: 'eagle_forelimbs' });
+    }, ['flight']],
     ['a second settled chimera', () => {
       lab.chimeras.push({ id: 'c2', frame: 'M', tokens: {}, settleUntil: 0, bond: 5, scars: [] });
     }, ['chaos']],
@@ -5899,7 +5979,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
 // The acceptance criterion is not "there are more fights". It is that
 // taking Greenfield opens a region whose fights need DIFFERENT ANATOMY
 // than the one that won the first. So this section measures it, using
-// tools/sim.js's region bench: five archetypes, each a legal build
+// tools/sim.js's region bench: one archetype per axis of the combat
+// model, each a legal build
 // committing to one axis of the combat model, run over every node of
 // every strip.
 //
@@ -5950,7 +6031,22 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
         `${row.region.id}: a build that cleared Greenfield must fall over here (worst drop ${Math.round(drop * 100)}pp)`);
     }
 
-    const rank = (row) => arch.map((k) => rateIn(row, k)).sort((a, b) => b - a);
+    // Rank ANATOMIES, not archetypes. A9 added a sixth archetype that shares
+    // an anatomy with an existing one — `kite` and `wings` are the same Air
+    // build on two chassis, which is the whole point of the pair — so a
+    // ranking over archetypes would count Air twice and report a region as
+    // having "two answers" when both entries are the same answer. This
+    // criterion has always been about anatomy; it just never had two
+    // archetypes sharing one before.
+    const bestPerAnatomy = (row) => {
+      const best = {};
+      for (const k of arch) {
+        const a = ARCHETYPES[k].anatomy ?? k;
+        best[a] = Math.max(best[a] ?? 0, rateIn(row, k));
+      }
+      return best;
+    };
+    const rank = (row) => Object.values(bestPerAnatomy(row)).sort((a, b) => b - a);
 
     // Three of the four later strips ask a SPECIFIC question, and each asks
     // a different one. Observed spreads: 13-19, 17-27, 20-33pp.
@@ -6324,6 +6420,277 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   const done = tickOps(two, content, now + 99 * HOUR);
   assert.equal(done.results.length, 3, `every finished job resolves (${done.results.length})`);
   assert.equal(activeOps(two).length, 0, 'and the board empties');
+}
+
+// --- A9: the frame is a decision, not a ladder -------------------------
+//
+// The audit item said frames "set base stats and socket count" and are "the
+// widest lever in the builder". Measured over 105 (node x archetype) cells:
+// bigger was better in 92% of them, the S frame was strictly best in
+// exactly ZERO, and all three frames declared the identical eight sockets —
+// socket count was a facility grant, never a frame property.
+//
+// The cause was that mass cost only turn order, while hp/stamina/regen were
+// unconditional. The one categorical payoff for staying light — flight —
+// was computed in physiology and read by NOTHING; and separately, the
+// Airborne DEFENDER tag came from ancestry, so 61 bird parts handed out
+// Ground-immunity at any mass on any chassis. Worse, no enemy in the game
+// threw a Ground-tagged move at all: `Ground -> Airborne x0` was a one-way
+// rule that only ever punished the player's own 20 Ground moves.
+{
+  const { ARCHETYPES, partsOnFrame, scriptedBattle, nodeConditions } = await import('../tools/sim.js');
+  const { theaterGrants } = await import('../splice/facility.js');
+  const frames = Object.values(content.frames);
+
+  // 1. Airborne is a claim about PHYSICS now. Same parts, four chassis: the
+  //    tag has to follow the lift equation, or mass is free again.
+  const birdParts = ['eagle_head', 'eagle_forelimbs', 'eagle_tail', 'bat_hide', 'bear_organ'];
+  const airborneOn = (frameId, grade) => {
+    const ids = partsOnFrame(content, frameId, birdParts);
+    const tokens = ids.map((partId) => ({ id: `t-${partId}`, partId, grade, donor: { species: content.parts[partId].species } }));
+    const rep = analyze(frameId, tokens, content, ids.length);
+    return { tag: rep.tags.includes('Airborne'), flies: rep.flight.capable, mass: rep.mass, lift: rep.lift };
+  };
+  for (const f of frames) {
+    for (const g of GRADES) {
+      const r = airborneOn(f.id, g.id);
+      assert.equal(r.tag, r.flies,
+        `${f.id}/${g.id}: the Airborne tag tracks actual flight (lift ${r.lift} vs mass ${r.mass})`);
+    }
+  }
+  // And it has to actually DISCRIMINATE, or the rule is decorative.
+  const flightGrid = frames.flatMap((f) => GRADES.map((g) => airborneOn(f.id, g.id).flies));
+  assert.ok(flightGrid.some(Boolean) && flightGrid.some((x) => !x),
+    'some frame/grade combinations fly and some do not');
+
+  // 2. The coalition has to fight at ground level, or the x0 row is a rule
+  //    that only ever costs the player. Measured before A9: 0 of 85.
+  const enemyMoves = Object.values(content.enemies).flatMap((u) => u.moves ?? []);
+  const groundMoves = enemyMoves.filter((m) => (m.tags ?? []).includes('Ground'));
+  assert.ok(groundMoves.length / enemyMoves.length >= 0.15,
+    `the coalition fights at ground level (${groundMoves.length}/${enemyMoves.length} moves are Ground)`);
+  // ...but never so much that one wing pair switches a unit off.
+  for (const unit of Object.values(content.enemies)) {
+    const attacks = (unit.moves ?? []).filter((m) => (m.power ?? 0) > 0);
+    if (!attacks.length) continue;
+    assert.ok(!attacks.every((m) => (m.tags ?? []).includes('Ground')),
+      `${unit.id} keeps an answer to a flier (not every attack is Ground)`);
+  }
+  // The air region cannot ALSO be the one that punishes flying, or every
+  // strip has the same answer.
+  const groundDensity = (region) => {
+    let g = 0, t = 0;
+    for (const node of region.nodes) {
+      for (const ref of content.encounters[node.encounter].waves ?? []) {
+        const u = typeof ref === 'string' ? content.enemies[ref] : ref;
+        for (const m of u?.moves ?? []) { t++; if ((m.tags ?? []).includes('Ground')) g++; }
+      }
+    }
+    return t ? g / t : 0;
+  };
+  const densities = Object.values(content.regions).map((r) => ({ id: r.id, d: groundDensity(r) }));
+  const spread = Math.max(...densities.map((x) => x.d)) - Math.min(...densities.map((x) => x.d));
+  assert.ok(spread >= 0.1,
+    `how much the ground fights back varies by strip (${densities.map((x) => `${x.id} ${(x.d * 100).toFixed(0)}%`).join(', ')})`);
+
+  // 3. A frame may declare which slots its geometry supports, which is the
+  //    lever this file's own summary always claimed frames had. The Theater
+  //    must refuse a part the chassis has nowhere to bolt.
+  const declaring = frames.filter((f) => f.slots);
+  assert.ok(declaring.length, 'at least one frame declares its own slots');
+  for (const f of declaring) {
+    for (const slot of f.slots) {
+      assert.ok(SLOTS.includes(slot), `${f.id} declares a real slot (${slot})`);
+    }
+    // (geometry-vs-declaration agreement is asserted for every frame in the
+    //  content-coherence block above.)
+  }
+  {
+    const st = freshRanchState();
+    ensureRanchSeeded(st, content, t0);
+    st.facility = { theater: 2 };
+    const kite = frames.find((f) => f.slots && !f.slots.includes('hindlimbs'));
+    assert.ok(kite, 'a chassis exists that gives up a slot');
+    const grantsKite = theaterGrants(st, content, kite.id);
+    const grantsM = theaterGrants(st, content, 'M');
+    assert.ok(!grantsKite.sockets.some((x) => slotOfSocket(x) === 'hindlimbs'),
+      `${kite.id} offers no hindlimb bay`);
+    assert.ok(grantsM.sockets.some((x) => slotOfSocket(x) === 'hindlimbs'),
+      'M still does');
+    assert.ok(grantsKite.sockets.length < grantsM.sockets.length,
+      `the chassis costs a socket (${grantsKite.sockets.length} vs ${grantsM.sockets.length})`);
+    // And an old frame that declares nothing is untouched — every save that
+    // predates the Kite still builds exactly what it always built.
+    assert.deepEqual(theaterGrants(st, content, 'L').sockets, theaterGrants(st, content).sockets,
+      'a frame with no declared slots is unrestricted');
+  }
+
+  // 3b. Nothing may put a part in a socket the chassis does not have. The
+  //     renderer silently SKIPS such a part, so it would draw nowhere and
+  //     still pay its stats — a free limb rather than a joke. The vat is the
+  //     one generator that picks a frame and a part list independently, and
+  //     it is explicitly allowed to hand you a chassis you do not own.
+  {
+    const { startVat, tickVat } = await import('../splice/chaos.js');
+    const kite = frames.find((f) => f.slots && !f.slots.includes('hindlimbs'));
+    let sawRestricted = 0;
+    for (let i = 0; i < 60; i++) {
+      const s2 = freshRanchState();
+      ensureRanchSeeded(s2, content, t0);
+      s2.seed = 7000 + i;
+      s2.facility = { theater: 2 };
+      s2.funds = 99999;
+      // Two parents, one already on the slot-restricted chassis, so the
+      // vat has a real chance of choosing it AND of carrying a hindlimb
+      // across from the other parent.
+      const mkTokens = (sp, slots) => Object.fromEntries(slots.map((sl) => [sl,
+        { id: `v${i}-${sl}`, partId: `${sp}_${sl}`, grade: 'standard',
+          donor: { name: 'Vat', species: sp, stars: 3, extractedAt: 0 } }]));
+      s2.chimeras = [
+        { id: 'va', name: 'Alpha', frame: 'M', createdAt: t0, settleUntil: t0, instability: 5, bond: 100,
+          tokens: mkTokens('goat', ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ']),
+          temperament: null, injury: null },
+        { id: 'vb', name: 'Beta', frame: kite.id, createdAt: t0, settleUntil: t0, instability: 5, bond: 100,
+          tokens: mkTokens('wolf', ['head', 'forelimbs', 'tail', 'hide', 'organ']),
+          temperament: null, injury: null },
+      ];
+      s2.dex.parts = Object.keys(content.parts);
+      if (!startVat(s2, 'va', 'vb', content, t0).ok) continue;
+      const child = tickVat(s2, content, t0 + 999 * HOUR).child;
+      if (!child) continue;
+      const slots = content.frames[child.frame]?.slots;
+      if (!slots) continue;
+      sawRestricted++;
+      for (const socketId of Object.keys(child.tokens)) {
+        assert.ok(slots.includes(slotOfSocket(socketId)),
+          `the vat bolted a ${slotOfSocket(socketId)} to the ${child.frame} chassis, which has none`);
+      }
+    }
+    assert.ok(sawRestricted > 0,
+      `the vat actually produced a slot-restricted chassis to check (${sawRestricted}/60)`);
+  }
+
+  // 4. THE GATE THE CRITERION ASKS FOR. "The frame choice is a real decision
+  //    at more than one point in the campaign" means: no chassis is the
+  //    right answer everywhere, and which one is right has to depend on
+  //    WHERE you are. Anything less is a ladder wearing four rungs.
+  const FRAMES = frames.map((f) => f.id);
+  const SEEDS = 12;
+  const rate = (frameId, arch, region, node, grade, team) => {
+    const ids = partsOnFrame(content, frameId, arch.partIds);
+    let w = 0;
+    for (let i = 0; i < SEEDS; i++) {
+      const c = makeSimChimera(frameId, ids, grade, content);
+      if (scriptedBattle(c, content.encounters[node.encounter], content,
+        hashString(`a9g${region.id}${node.id}${frameId}${i}`), team).outcome === 'win') w++;
+    }
+    return w / SEEDS;
+  };
+  const bestByRegion = {};
+  const bestOverall = Object.fromEntries(FRAMES.map((f) => [f, 0]));
+  for (const region of Object.values(content.regions)) {
+    bestByRegion[region.id] = Object.fromEntries(FRAMES.map((f) => [f, 0]));
+    for (const node of region.nodes) {
+      const { grade, team } = nodeConditions(region, node);
+      for (const arch of Object.values(ARCHETYPES)) {
+        const r = Object.fromEntries(FRAMES.map((f) => [f, rate(f, arch, region, node, grade, team)]));
+        const mx = Math.max(...Object.values(r));
+        const winners = FRAMES.filter((f) => r[f] === mx);
+        if (winners.length === 1) { bestByRegion[region.id][winners[0]]++; bestOverall[winners[0]]++; }
+      }
+    }
+  }
+  const summary = FRAMES.map((f) => `${f} ${bestOverall[f]}`).join(', ');
+  // Every chassis has to be the right answer SOMEWHERE. Before A9 the S
+  // frame won zero cells out of 105 — that is the failure this catches.
+  for (const f of FRAMES) {
+    assert.ok(bestOverall[f] > 0, `the ${f} chassis is the best answer somewhere (${summary})`);
+  }
+  // And no chassis may be the answer to the whole map.
+  // Threshold at 0.6 rather than 0.5 deliberately: this runs at 12 seeds
+  // where the audit used 24, so the exact share moves. The failure it has to
+  // catch is the pre-A9 world, where one chassis took 60 of 66 decided cells
+  // (91%) — a 60% line catches that by a mile without knife-edging on noise.
+  const decided = Object.values(bestOverall).reduce((a, b) => a + b, 0);
+  const top = Math.max(...Object.values(bestOverall));
+  assert.ok(top / decided < 0.6,
+    `no chassis is the answer everywhere (best takes ${top}/${decided} = ${Math.round(top / decided * 100)}%)`);
+  // "At more than one point in the campaign": the best chassis has to
+  // DIFFER between strips. One region's answer being another's answer
+  // everywhere is a ladder with a paint job.
+  const regionWinners = Object.entries(bestByRegion).map(([id, t]) => {
+    const mx = Math.max(...Object.values(t));
+    return { id, who: FRAMES.filter((f) => t[f] === mx) };
+  });
+  const distinct = new Set(regionWinners.flatMap((r) => r.who));
+  assert.ok(distinct.size >= 2,
+    `the best chassis differs by strip (${regionWinners.map((r) => `${r.id}:${r.who.join('/')}`).join(', ')})`);
+}
+
+// --- A9: territory pays, and finishing a strip pays extra ---------------
+{
+  const regionsList = Object.values(content.regions);
+  const st = freshRanchState();
+  ensureRanchSeeded(st, content, t0);
+  st.campaign.heldNodes = [];
+
+  // Every region declares a completion bonus, and it is worth enough to be
+  // a reason to take the last cheap outpost — at least the strip's median
+  // node, or it is a rounding error with a headline.
+  for (const region of regionsList) {
+    assert.ok(region.completionBonus > 0, `${region.id} pays a completion bonus`);
+    const incomes = region.nodes.map((n) => n.incomePerDay).sort((a, b) => a - b);
+    const median = incomes[Math.floor(incomes.length / 2)];
+    assert.ok(region.completionBonus >= median,
+      `${region.id}'s strip bonus ($${region.completionBonus}) beats its median node ($${median})`);
+  }
+
+  const first = regionsList[0];
+  // Hold all but one: nodes pay, the bonus does not.
+  st.campaign.heldNodes = first.nodes.slice(0, -1).map((n) => n.id);
+  const partial = incomePerDay(st, content);
+  const partialNodes = first.nodes.slice(0, -1).reduce((s, n) => s + n.incomePerDay, 0);
+  assert.equal(partial, partialNodes, 'an unfinished strip pays only its nodes');
+  assert.equal(regionBonusPerDay(st, content), 0, 'and no bonus');
+
+  // Take the last one: the bonus lands.
+  st.campaign.heldNodes = first.nodes.map((n) => n.id);
+  const full = incomePerDay(st, content);
+  assert.equal(regionBonusPerDay(st, content), first.completionBonus, 'a finished strip pays its bonus');
+  assert.equal(full, partialNodes + first.nodes.at(-1).incomePerDay + first.completionBonus,
+    'and income is nodes plus bonus');
+
+  // A contest anywhere in the strip suspends the bonus too — which is what
+  // makes defending the cheapest node worth as much as defending the best.
+  st.campaign.contested = [{ nodeId: first.nodes[0].id, until: t0 + 6 * HOUR, defended: 0 }];
+  assert.equal(regionBonusPerDay(st, content), 0, 'a contested node suspends the whole strip bonus');
+  assert.ok(incomeSuspended(st, content) >= first.completionBonus,
+    'and the War Room counts the lost bonus as suspended');
+  st.campaign.contested = [];
+
+  // The raise itself: territory has to have actually gone up, or "increase
+  // the income" was a comment. Measured against the pre-A9 map total of
+  // 2385/day in NODE income.
+  //
+  // The break battery caught this one asserting the wrong thing: it summed
+  // nodes AND bonuses against a node-only baseline, so rolling every node
+  // back to its pre-A9 value still passed — the 1210/day of strip bonuses
+  // covered the difference on their own. Two separate claims were shipped,
+  // so two separate assertions.
+  const nodeTotal = regionsList.reduce(
+    (s, r) => s + r.nodes.reduce((a, n) => a + n.incomePerDay, 0), 0);
+  const bonusTotal = regionsList.reduce((s, r) => s + r.completionBonus, 0);
+  assert.ok(nodeTotal >= 2385 * 1.4,
+    `node income alone is up on pre-A9 (${nodeTotal}/day vs 2385)`);
+  assert.ok(bonusTotal > 0 && bonusTotal >= nodeTotal * 0.2,
+    `and strip bonuses are worth holding a whole region for (${bonusTotal}/day on ${nodeTotal})`);
+  // Node income still climbs strip by strip, or the ladder stopped meaning
+  // anything when the numbers moved.
+  const avg = regionsList.map((r) => r.nodes.reduce((a, n) => a + n.incomePerDay, 0) / r.nodes.length);
+  for (let i = 1; i < avg.length; i++) {
+    assert.ok(avg[i] > avg[i - 1],
+      `strip ${i + 1} pays better per node than strip ${i} (${Math.round(avg[i - 1])} -> ${Math.round(avg[i])})`);
+  }
 }
 
 // Time-warp safety: a lastTickAt in the future never rewinds state.

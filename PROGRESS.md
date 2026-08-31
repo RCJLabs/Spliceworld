@@ -1,5 +1,204 @@
 # PROGRESS
 
+## Session 50 — A9: the frame was a ladder, not a lever ✅
+
+**Acceptance criterion:** the frame choice is a real decision at more than
+one point in the campaign — **passes**, after an audit found the item's
+premise wrong twice and turned up a bigger hole underneath it.
+
+### The item was wrong twice
+
+- *"Frames set base stats and socket count"* — the socket half is **false**.
+  All three frames declared the **identical eight sockets**; socket count is
+  a *facility* grant (`theaterGrants`), never a frame property.
+- *"the widest lever in the builder"* — it was not a lever at all. Measured
+  over 105 (node × archetype) cells at each node's own A8 bench conditions:
+
+| | frames strictly best |
+|---|---|
+| S | **0 of 105** |
+| M | 6 |
+| L | **60 (57%)** |
+| tie | 39 |
+
+  **Bigger was better in 92% of cells.** A ladder, and the only "choice" was
+  whether you had bought the $900 Tier II yet.
+
+### Two causes, and the second is the interesting one
+
+**Mass cost only turn order.** hp, stamina and regen are unconditional;
+speed decides nothing but who swings first. So mass was nearly free.
+
+**The one payoff for staying light was inert.** `flight.capable` was
+computed in `physiology.js` and read by *nothing*. Chasing that turned up
+the real hole: the `Airborne` **defender** tag came from **ancestry** —
+61 parts carry it, only **12 make lift** — so a full bird build bolted to a
+160-mass Rumbler was immune to Ground moves while sitting on the ground.
+**66 of 90** purebred bird builds claimed Ground-immunity they could not
+cash.
+
+And it never mattered anyway, because:
+
+| direction | Ground attacks | Airborne defenders |
+|---|---|---|
+| player → coalition | **20 parts** | 12 enemy units |
+| coalition → player | **0 of 85 moves** | 61 parts |
+
+`Ground → Airborne ×0` was a **one-way rule**. It had never fired against a
+player once, in the whole campaign. A5 gave the player parts for the tag
+chart; nobody ever gave the chart to the coalition.
+
+### What shipped
+
+1. **`Airborne` is a claim about physics**, not ancestry: the tag survives
+   only where lift ≥ mass. Mass now has a categorical cost.
+2. **The coalition fights at ground level** — 19 of 85 authored moves (was
+   **0**), never every attack on a unit (a flier answers *part* of a fight),
+   densest in the Drowned Quarter at 35% and deliberately sparse in
+   air-region Kestrel at 10%.
+3. **The frame ladder is compressed** so the chassis is a floor, not the
+   bulk: L's free lunch over M went from +12hp/+10 stamina to +6/+6.
+4. **The A-class Kite** — a flying wing at 18 mass, genuinely airborne on
+   plain **standard** parts where S needs prime and M and L never leave the
+   ground. It pays with **`slots`**: a frame may declare which slot types its
+   geometry supports, the Theater intersects that with what the facility
+   installed, and the Kite has no hindquarters. This is the lever the file's
+   own summary always claimed frames had.
+5. **Tier II buys both ends of the mass range at once** — the heaviest
+   chassis and the lightest — so the upgrade asks *which problem do you have*
+   rather than *are you further along*.
+6. **Income:** every node +50% (2385 → 3585/day), and `completionBonus` pays
+   per day for holding a whole strip uncontested (+1210 across the map).
+
+### The lift ladder, which is the whole decision
+
+| chassis | mass | flies at |
+|---|---|---|
+| A Kite | 18 | **standard** |
+| S Scamper | 40 | prime |
+| M Trotter | 80 | never (one wing pair) |
+| L Rumbler | 160 | never |
+
+### The result
+
+| | best-frame cells |
+|---|---|
+| A | 9 |
+| S | 13 |
+| M | 11 |
+| L | 33 |
+| tie | 60 |
+
+Every chassis is now the right answer somewhere — S went from **zero of 105**
+to 13 — and L's share of decided cells fell from **91% to 50%**. The best
+chassis differs by strip (the Foundry's is M, Greenfield's and the Spire's
+is L, the Drowned Quarter splits A and L), which is what "more than one point
+in the campaign" has to mean. The ladder still climbs.
+
+### Two corrections I had to make to my own first answer
+
+**The Foundry.** My first pass made it the densest ground-fighting strip, and
+its own identity (R26) is *armour*, answered by Sonic. R26's gate caught it:
+the Foundry's margin over its runner-up had fallen from a pre-A9 **+25 to
++30pp** to **+6 to +13**. I checked that against the pre-A9 tree rather than
+tuning to green, and Kestrel and Drowned came back byte-identical — so the
+damage was Foundry-specific and mine. The strip where flying pays must not be
+one whose question is already answered, so the ground-level fighting moved
+out: it is densest in the **Drowned Quarter** now (35% of moves) and thinnest
+in air-region **Kestrel** (10%). The Foundry is back to +25/+30.
+
+**The kite archetype.** I first gave it falcon parts where its peer `wings`
+carries eagle — so it was measuring the parts, not the chassis. It now runs
+the *same* loadout as `wings` minus the hindlimb the Kite cannot bolt, which
+is the only honest way to ask A9's question.
+
+### One thing the audit found that was not the frame
+
+The M5 conquest test flipped to a loss. Isolated against the original data
+file by file — new frames only, new enemies only, both — the cause was
+**not** the frame retune. It was the new Ground tags changing what the enemy
+AI chose, against smoke's `autoplay`, which is strictly greedy on power (it
+never rests, never guards, never reads the tag chart) and is a *worse* pilot
+than the game's own policy. The same army wins that fight 40/40 under the
+real policy, and the node scores 88% under its own bench conditions.
+
+Swapping in the real policy fixed `downtown` and broke `precinct` — which is
+the tell that the problem was never the pilot but the **single seed**. That
+loop's actual assertions are the bookkeeping underneath (nodes held, income
+paid, notoriety raised); the combat only has to be *winnable*, and
+`nodeClimbability` scores that separately and properly. So it now sweeps
+eight seeds and requires a win on at least one. `autoplay` is unchanged, so
+nothing else in the suite moved.
+
+### The rule applied symmetrically, and caught the rival AI too
+
+R27's rivals counter a Ground kit by fielding **Airborne** anatomy — that is
+the mechanism, checked directly rather than inferred from win rates. But
+rival specimens are built through the same `analyze()` the player's are, and
+`trench` fields M and L chassis, so the moment Airborne became a physics
+claim its counter-pick **bought wings and stayed on the ground**. Exactly the
+mistake the new rules punish the player for.
+
+A rival's authored `frames` list is a *style*; answering you is a *decision*.
+The countering specimen now takes the lightest chassis that actually lifts
+its build — so a lab that has lost to you twice turns up flying a **Kite**,
+for the same reason you would. Every other specimen keeps the lab's own
+taste, and there is a gate for that: a lazy fix that used the lightest frame
+everywhere would pass "the lead took off" while quietly erasing every
+rival's character.
+
+### Four income literals, all of them stale
+
+Deriving the raise turned up four assertions that had quietly become
+constants — `25`, `225`, `225` again, and a two-day payout of `50`. Each was
+correct when written and silently wrong the moment the economy moved. All
+five income assertions read from the holdings now.
+
+### The break battery
+
+Ten deliberate breaks, each on its own copy of the repo so they could not
+collide. Nine caught first time; the tenth found a hole in my own gate.
+
+| break | caught by |
+|---|---|
+| Airborne back to ancestry | *M/standard: the tag tracks actual flight (lift 90 vs mass 125)* |
+| every Ground tag stripped | *the coalition fights at ground level (0/85 moves are Ground)* |
+| one unit's every attack Ground | *police_cruiser keeps an answer to a flier* |
+| **the pre-A9 frame ladder restored** | ***the S chassis is the best answer somewhere (A 8, S 0, M 11, L 45)*** |
+| the Kite keeps its legs | *at least one frame declares its own slots* |
+| a region forgets its bonus | *drowned pays a completion bonus* |
+| the bonus survives a contest | *a contested node suspends the whole strip bonus* |
+| the vat ignores chassis geometry | *the vat bolted a hindlimbs to the A chassis, which has none* |
+| a frame lies about its geometry | *frame A supports hindlimbs but has no hindlimb_near socket* |
+| income rolled back to pre-A9 | **MISSED** → *node income alone is up on pre-A9 (2391/day vs 2385)* |
+
+The fourth row is the one that matters: restoring the old frame ladder
+reproduces the exact defect A9 exists to fix — **S best in zero cells**.
+
+And the miss was worth having. The income gate asserted "the whole map pays
+more than it did" by summing nodes **and** bonuses against a **node-only**
+baseline, so rolling every node back to its pre-A9 value still passed — the
+$1210/day of strip bonuses covered the gap on their own. Two claims shipped,
+so it is two assertions now, and the re-broken run fails as it should.
+
+### Known issues
+
+- The overall "no chassis is the answer everywhere" gate runs at 12 seeds
+  where the audit used 24; the load-bearing assertions are "every chassis
+  wins somewhere" and "the strips disagree", which are far from their
+  thresholds.
+- Suite is **166s**, essentially unchanged — the four-frame sweep is 6048
+  battles and costs about two seconds. A 3-second `a9-preflight` script now
+  runs the cheap half of the gate, because three of this session's cycles
+  were spent discovering a data slip 160 seconds at a time.
+- The Kite is available only from Theater Tier II, and its edge is largest
+  early. Worth revisiting whether it should be a Tier I option.
+- Obedience remains honestly reported and nearly worthless (A7's leftover).
+- `benchTeam` still records the ladder as it is (A8's leftover).
+
+**Next session's first task:** A10 — reconcile every real-world clock in the
+data against R24's 25% timer cut.
+
 ## Session 49 — A8: benchTeam, and an audit that came first ✅
 
 **Acceptance criterion:** the balance gate fails on a ladder that cannot be

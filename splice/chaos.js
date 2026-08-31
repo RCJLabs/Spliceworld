@@ -173,7 +173,18 @@ function conceive(plan, state, content, rng, t) {
   const frames = Object.keys(content.frames ?? {});
   if (frames.length && rng() < t.frameChaosChance) frame = pick(rng, frames);
 
-  return { frame, parts, chaosParts, extraSockets };
+  // A9: a frame may have nowhere to bolt a given slot (the Kite has no
+  // hindquarters). The vat is allowed to be a lunatic, not to violate
+  // geometry — a part in a socket the chassis lacks would draw nowhere and
+  // still pay its stats, which is a free limb rather than a joke.
+  const slots = content.frames?.[frame]?.slots;
+  if (slots) {
+    for (const socketId of Object.keys(parts)) {
+      if (!slots.includes(slotOfSocket(socketId))) delete parts[socketId];
+    }
+  }
+
+  return { frame, parts, chaosParts, extraSockets: extraSockets.filter((sid) => parts[sid]) };
 }
 
 export function startVat(state, sireId, damId, content, now) {

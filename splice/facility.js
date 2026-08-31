@@ -5,7 +5,7 @@
 // systems that care read them. The Surgery Theater asks this module what it
 // is allowed to build with; it does not know what a "tier" is.
 
-import { SOCKETS } from '../render/renderer.js';
+import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 
 export function tracks(content) {
   return Object.values(content.facility ?? {});
@@ -74,14 +74,23 @@ export function upkeepTuning(content) {
 }
 
 // What the Surgery Theater may build with right now.
-export function theaterGrants(state, content) {
+//
+// A9: the chassis gets a vote. The facility says which bays you have
+// INSTALLED; the frame says which ones it has anywhere to bolt them. The
+// Kite is a flying wing with no hindquarters, so `hindlimbs` is not a
+// purchase it is missing, it is geometry it does not have. A frame that
+// declares no `slots` supports all of them, so S, M and L — and every save
+// that predates the Kite — behave exactly as they always did.
+export function theaterGrants(state, content, frameId = null) {
   const g = grantsOf(state, content, 'theater');
+  const sockets = g.sockets ?? SOCKETS;
+  const frameSlots = frameId ? content.frames?.[frameId]?.slots : null;
   return {
     // No facility data at all (a Node tool with a partial content bundle)
     // means "everything" rather than "nothing" — never lock a player out
     // because a file failed to load.
     frames: g.frames ?? Object.keys(content.frames ?? {}),
-    sockets: g.sockets ?? SOCKETS,
+    sockets: frameSlots ? sockets.filter((s) => frameSlots.includes(slotOfSocket(s))) : sockets,
   };
 }
 

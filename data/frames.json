@@ -1,6 +1,124 @@
 {
-  "_doc": "Frames = torsos. Each defines a size class, a torso drawing, a silhouette (clip target for hide overlays), and standardized attachment sockets. Any part fits any socket of its slot type. Socket = {x, y, angle, scale, shade?}. Part-local conventions: head faces +x with origin at the neck; limbs hang +y from origin at the shoulder/hip; tails extend -x from origin at the rump; hide draws in torso space (origin = torso center); organ draws at the belly socket. Torso shapes use the hide species' palette (@primary/@secondary/@accent) or a neutral gray when no hide is spliced. M3: phys = the frame's base mass and stat contributions before parts. M7.5 art: shadow = ground-contact ellipse drawn behind the creature; form = volume shading clipped to the silhouette (bottom occlusion + top rim light). Balance pass: frame hp was the bulk of a creature's health (S55/M70/L105), which made empty sockets strictly better — you kept the HP and dropped the metabolic draw. Health now comes from the parts you install; the frame contributes a chassis floor, its mass, and its socket count. organ2 is the second organ bay, unlocked by Surgery Theater Tier II (see facility.json). Every frame carries the socket; whether the player may fill it is a facility question, not a geometry one.",
+  "_doc": "Frames = torsos. Each defines a size class, a torso drawing, a silhouette (clip target for hide overlays), and standardized attachment sockets. Any part fits any socket of its slot type. Socket = {x, y, angle, scale, shade?}. Part-local conventions: head faces +x with origin at the neck; limbs hang +y from origin at the shoulder/hip; tails extend -x from origin at the rump; hide draws in torso space (origin = torso center); organ draws at the belly socket. Torso shapes use the hide species' palette (@primary/@secondary/@accent) or a neutral gray when no hide is spliced. M3: phys = the frame's base mass and stat contributions before parts. M7.5 art: shadow = ground-contact ellipse drawn behind the creature; form = volume shading clipped to the silhouette (bottom occlusion + top rim light). Balance pass: frame hp was the bulk of a creature's health (S55/M70/L105), which made empty sockets strictly better — you kept the HP and dropped the metabolic draw. Health now comes from the parts you install; the frame contributes a chassis floor, its mass, and its socket count. organ2 is the second organ bay, unlocked by Surgery Theater Tier II (see facility.json). Every frame carries the socket; whether the player may fill it is a facility question, not a geometry one. A9: frames were a LADDER, not a lever — measured over 105 (node x archetype) cells, bigger was better in 92% of them and the S frame was strictly best in exactly none. The cause was that mass cost only turn order while hp/stamina/regen were unconditional, and the one categorical payoff for staying light — flight — was computed here and read by nothing. Two fixes: the Airborne DEFENDER tag now requires lift >= mass (see physiology.js), and the frame stat spread is compressed so the chassis is a floor rather than the bulk (L's free lunch over M went from +12hp/+10stamina to +6/+6). `slots` is the fourth lever and the one this file's own summary always claimed to have: a frame may declare which slot types its geometry supports, and the Theater intersects that with what the facility has installed. A frame with no `slots` supports all of them, so every save that predates the Kite is untouched.",
   "frames": [
+    {
+      "id": "A",
+      "name": "Kite Frame",
+      "sizeClass": "A",
+      "flavor": "A flying wing with a spine bolted through it. No back legs, no apologies.",
+      "scale": 0.9,
+      "torso": [
+        {
+          "type": "path",
+          "d": "M 96 4 C 92 -20 52 -36 -6 -34 C -66 -32 -102 -14 -104 6 C -106 26 -70 44 -6 46 C 54 48 92 30 96 4 Z",
+          "fill": "@primary",
+          "stroke": "@outline"
+        },
+        {
+          "type": "path",
+          "d": "M 58 16 C 20 32 -40 34 -84 18 C -44 30 20 32 58 16 Z",
+          "fill": "@accent",
+          "stroke": "none",
+          "opacity": 0.55
+        },
+        {
+          "type": "ellipse",
+          "cx": -2,
+          "cy": 22,
+          "rx": 52,
+          "ry": 14,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.5
+        }
+      ],
+      "silhouette": [
+        {
+          "type": "path",
+          "d": "M 96 4 C 92 -20 52 -36 -6 -34 C -66 -32 -102 -14 -104 6 C -106 26 -70 44 -6 46 C 54 48 92 30 96 4 Z"
+        }
+      ],
+      "slots": [
+        "head",
+        "forelimbs",
+        "tail",
+        "hide",
+        "organ"
+      ],
+      "sockets": {
+        "head": {
+          "x": 80,
+          "y": -18,
+          "angle": -6,
+          "scale": 0.92
+        },
+        "forelimb_near": {
+          "x": 26,
+          "y": 32,
+          "angle": 0,
+          "scale": 0.95
+        },
+        "forelimb_far": {
+          "x": 42,
+          "y": 24,
+          "angle": 0,
+          "scale": 0.95,
+          "shade": true
+        },
+        "tail": {
+          "x": -98,
+          "y": 6,
+          "angle": 8,
+          "scale": 0.92
+        },
+        "organ": {
+          "x": -6,
+          "y": 20,
+          "angle": 0,
+          "scale": 0.86
+        },
+        "organ2": {
+          "x": -44,
+          "y": 10,
+          "angle": 0,
+          "scale": 0.7
+        }
+      },
+      "phys": {
+        "mass": 18,
+        "hp": 24,
+        "stamina": 44,
+        "regen": 9,
+        "speed": 6
+      },
+      "shadow": {
+        "cy": 104,
+        "rx": 92,
+        "ry": 11
+      },
+      "form": [
+        {
+          "type": "ellipse",
+          "cx": 4,
+          "cy": 74,
+          "rx": 92,
+          "ry": 34,
+          "fill": "#2b2440",
+          "stroke": "none",
+          "opacity": 0.16
+        },
+        {
+          "type": "ellipse",
+          "cx": -14,
+          "cy": -20,
+          "rx": 56,
+          "ry": 18,
+          "fill": "#ffffff",
+          "stroke": "none",
+          "opacity": 0.12
+        }
+      ]
+    },
     {
       "id": "S",
       "name": "Scamper Frame",
@@ -91,9 +209,9 @@
       },
       "phys": {
         "mass": 40,
-        "hp": 22,
-        "stamina": 36,
-        "regen": 7,
+        "hp": 28,
+        "stamina": 42,
+        "regen": 8,
         "speed": 4
       },
       "shadow": {
@@ -325,8 +443,8 @@
       },
       "phys": {
         "mass": 160,
-        "hp": 42,
-        "stamina": 58,
+        "hp": 36,
+        "stamina": 54,
         "regen": 11,
         "speed": 0
       },

@@ -287,7 +287,7 @@ export function scoutedBy(content, rivalId, archetypeKey, { defeats = 2, fights 
     chimeras: [],
     campaign: { heldNodes: [], notoriety: 999, rivals: {} },
   };
-  const chimera = makeSimChimera(arch.frame, arch.partIds, grade, content);
+  const chimera = makeSimChimera(arch.frame, partsOnFrame(content, arch.frame, arch.partIds), grade, content);
   for (let i = 0; i < fights; i++) scoutStable(state, rivalId, [chimera], content);
   // `fights: 0` is the "they have never met you" case, so the record may not
   // exist yet — that is a legitimate state, not a missing setup step.
@@ -299,7 +299,7 @@ export function scoutedBy(content, rivalId, archetypeKey, { defeats = 2, fights 
 // Win rate of one archetype against one rival's current team.
 export function fightRival(content, state, rivalId, archetypeKey, { grade = 'apex', seedsPer = 12, teamSize = 3 } = {}) {
   const arch = ARCHETYPES[archetypeKey];
-  const chimera = makeSimChimera(arch.frame, arch.partIds, grade, content);
+  const chimera = makeSimChimera(arch.frame, partsOnFrame(content, arch.frame, arch.partIds), grade, content);
   const encounter = rivalEncounter(state, content.rivals[rivalId], content);
   let wins = 0;
   for (let i = 0; i < seedsPer; i++) {
@@ -512,21 +512,25 @@ export function facilityPayback(content) {
 // A region that all four clear equally is a region that asked for nothing.
 export const ARCHETYPES = {
   boots: {
+    anatomy: 'ground',
     name: 'Boots on the Ground',
     frame: 'M',
     partIds: ['rhino_head', 'gorilla_forelimbs', 'rhino_hindlimbs', 'bear_tail', 'pangolin_hide', 'bear_organ'],
   },
   wings: {
+    anatomy: 'air',
     name: 'Wings',
     frame: 'M',
     partIds: ['eagle_head', 'eagle_forelimbs', 'eagle_hindlimbs', 'eagle_tail', 'bat_hide', 'bear_organ'],
   },
   gills: {
+    anatomy: 'water',
     name: 'Gills',
     frame: 'M',
     partIds: ['shark_head', 'shark_forelimbs', 'shark_hindlimbs', 'shark_tail', 'tortoise_hide', 'bear_organ'],
   },
   fumes: {
+    anatomy: 'gas',
     name: 'Fumigation',
     frame: 'M',
     partIds: ['cobra_head', 'octopus_forelimbs', 'octopus_hindlimbs', 'scorpion_tail', 'skunk_hide', 'skunk_organ'],
@@ -535,7 +539,24 @@ export const ARCHETYPES = {
   //            only thing that answers a region built entirely out of
   //            plating. Its organ is enemy tech, salvaged from the region
   //            before the one that demands it.
+  // A9. Five archetypes all fielded on the M frame, which is exactly why
+  // the audit found the frame was never a decision: nothing in the bench
+  // ever asked the question. `kite` is the build the Kite chassis exists
+  // for — five parts, one wing pair, light enough to be genuinely airborne
+  // at plain standard grade, which makes every Ground-tagged enemy move
+  // swing under it.
+  kite: {
+    anatomy: 'air',
+    name: 'Kite',
+    frame: 'A',
+    // Deliberately the SAME loadout as `wings`, minus the hindlimb the
+    // chassis has nowhere to bolt. The two archetypes then differ by
+    // exactly one thing — the frame — which is the question A9 exists to
+    // ask. Giving the Kite better parts would have measured the parts.
+    partIds: ['eagle_head', 'eagle_forelimbs', 'eagle_tail', 'bat_hide', 'bear_organ'],
+  },
   noise: {
+    anatomy: 'sonic',
     name: 'Dead Reckoning',
     frame: 'M',
     // One ground limb and one water limb, so the affinities tie and the
@@ -550,7 +571,7 @@ export const ARCHETYPES = {
 // been through four regions actually keeps in the pens.
 export function stableFor(grade, content) {
   return ['boots', 'wings', 'gills'].map((key) =>
-    makeSimChimera(ARCHETYPES[key].frame, ARCHETYPES[key].partIds, grade, content)
+    makeSimChimera(ARCHETYPES[key].frame, partsOnFrame(content, ARCHETYPES[key].frame, ARCHETYPES[key].partIds), grade, content)
   );
 }
 
@@ -571,16 +592,25 @@ export function nodeConditions(region, node) {
   };
 }
 
-// Is this node climbable AT ALL under those conditions? Best of the five
+// Is this node climbable AT ALL under those conditions? Best of the
 // archetypes rather than the average: the question is whether some build a
 // player could reasonably field gets through, not whether every one does.
+// A frame may declare which slot types its geometry supports (A9). Fielding
+// an archetype on a chassis that has nowhere to bolt one of its parts is not
+// a legal build, so the harness drops it rather than measuring a creature
+// the Theater would refuse.
+export function partsOnFrame(content, frame, partIds) {
+  const slots = content.frames[frame]?.slots;
+  return slots ? partIds.filter((id) => slots.includes(content.parts[id].slot)) : partIds;
+}
+
 export function nodeClimbability(content, region, node, { seedsPer = 24 } = {}) {
   const { grade, team } = nodeConditions(region, node);
   let best = 0, who = null;
   for (const [key, arch] of Object.entries(ARCHETYPES)) {
     let wins = 0;
     for (let s = 0; s < seedsPer; s++) {
-      const chimera = makeSimChimera(arch.frame, arch.partIds, grade, content);
+      const chimera = makeSimChimera(arch.frame, partsOnFrame(content, arch.frame, arch.partIds), grade, content);
       const r = scriptedBattle(chimera, content.encounters[node.encounter], content,
         hashString(`climb${region.id}${node.id}${key}${s}`), team);
       if (r.outcome === 'win') wins++;
@@ -600,7 +630,7 @@ export function regionBench(content, { seedsPer = 4, grade = 'prime', teamSize =
     const encounters = regionEncounterIds(region);
     const byArchetype = {};
     for (const [key, arch] of Object.entries(ARCHETYPES)) {
-      const chimera = makeSimChimera(arch.frame, arch.partIds, grade, content);
+      const chimera = makeSimChimera(arch.frame, partsOnFrame(content, arch.frame, arch.partIds), grade, content);
       let wins = 0;
       let games = 0;
       const perEncounter = {};
@@ -665,7 +695,7 @@ export function runSim(content, { builds = 40, seedsPer = 3, grade = 'standard',
   const rows = [];
 
   for (const [i, build] of pool.entries()) {
-    const chimera = makeSimChimera(build.frame, build.partIds, grade, content);
+    const chimera = makeSimChimera(build.frame, partsOnFrame(content, build.frame, build.partIds), grade, content);
     const perEncounter = {};
     let wins = 0;
     let games = 0;
