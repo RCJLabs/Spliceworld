@@ -1879,3 +1879,14 @@ footer {
 }
 /* A4: the crew/solo lane line under the Jobs header. */
 .job-slots { margin: -4px 0 8px; }
+/* A6: the keyword a silhouetted combo grants — the reason to go looking. */
+.combo-keyword {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--accent-2);
+  font-size: 0.68rem;
+  font-weight: 700;
+}

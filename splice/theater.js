@@ -141,3 +141,43 @@ export function trainChimera(state, chimeraId, now, content) {
   driftFromTraining(chimera, content);
   return { ok: true, msg: `${chimera.name} nails the obstacle course and earns a treat. Bond ${chimera.bond}/100.` };
 }
+
+// --- A6: what an undiscovered combo is allowed to tell you --------------
+//
+// Every undiscovered combo used to render the same sentence — "an
+// undiscovered pairing lurks in the parts bin…" — nineteen identical rows
+// that named nothing. A silhouette is supposed to be BAIT: a lead you can
+// act on. Nineteen copies of "there is something somewhere" is a wall.
+//
+// So a hint reveals in layers, and what it reveals depends on what the
+// player has actually handled (state.dex.parts — every part ever seen,
+// which survives spending the token):
+//
+//   nothing seen  → the two SLOTS and the keyword. "a hindlimb and a head,
+//                   and it knocks things over." Enough to rummage with.
+//   one half seen → that half by NAME, plus the other's slot. This is the
+//                   real lead: you own one end of it and now you know.
+//   both seen     → both names. You are holding the answer and have not
+//                   noticed; the Dex should say so rather than smirk.
+//
+// DOM-free so the Dex screen and the smoke suite read the same function.
+const SLOT_WORDS = {
+  head: 'a head', forelimbs: 'a pair of forelimbs', hindlimbs: 'a pair of hindlimbs',
+  tail: 'a tail', hide: 'a hide', organ: 'an organ',
+};
+
+export function comboHint(combo, state, content) {
+  const seen = new Set(state.dex?.parts ?? []);
+  const halves = combo.parts.map((id) => ({ part: content.parts[id], seen: seen.has(id) }));
+  const known = halves.filter((h) => h.seen).length;
+  const label = (h) => (h.seen ? h.part.name : SLOT_WORDS[h.part.slot] ?? `a ${h.part.slot}`);
+  return {
+    known,
+    // The keyword is always shown: it is the reason to go looking, and it
+    // gives away nothing about WHICH parts.
+    keyword: combo.keyword,
+    text: known === 2
+      ? `${label(halves[0])} + ${label(halves[1])} — you have handled both. Put them on the same creature.`
+      : `${label(halves[0])} + ${label(halves[1])}`,
+  };
+}

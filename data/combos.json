@@ -1,5 +1,5 @@
 {
-  "_doc": "Combo abilities (M3): splicing both listed parts onto one chimera discovers the combo, permanently logged in the save for the Splice-Dex (M7). Combat effects resolve through the keyword system in M4 — 'keyword' here is the design intent, display-only for now. The roadmap target of 12 combos shipped with Wave 1; audit A3 added seven more alongside the nine new species, because content that arrives with no combinations is a longer list rather than a deeper game. M4: each combo grants its move to chimeras built with both parts. A combo must beat the best drawback-free move of the two parts that unlock it AT EVERY GRADE ASSIGNMENT, or the player discovers it and never presses it again — smoke checks all of them.",
+  "_doc": "Combo abilities (M3): splicing both listed parts onto one chimera discovers the combo, permanently logged in the save for the Splice-Dex (M7). Combat effects resolve through the keyword system in M4 — 'keyword' here is the design intent, display-only for now. The roadmap target of 12 combos shipped with Wave 1; audit A3 added seven more alongside the nine new species, because content that arrives with no combinations is a longer list rather than a deeper game. Audit A6 added eight more, chosen so that EVERY species can appear in at least one — eleven could not, including all six chaos variants, which are the rarest things the game produces and had nothing to find. They are also weighted to the slots the first nineteen neglected: those put one hindlimb part into a combo and ten organs. M4: each combo grants its move to chimeras built with both parts. A combo must beat the best drawback-free move of the two parts that unlock it AT EVERY GRADE ASSIGNMENT, or the player discovers it and never presses it again — smoke checks all of them.",
   "combos": [
     {
       "id": "injection",
@@ -398,6 +398,165 @@
         "tags": [],
         "keywords": {
           "ignoreArmor": true,
+          "accDown": 1
+        }
+      }
+    },
+    {
+      "id": "full_contact",
+      "name": "Full Contact",
+      "parts": [
+        "gorilla_hindlimbs",
+        "ram_head"
+      ],
+      "keyword": "Knockback",
+      "desc": "A gorilla’s haunches supplying the legs, a ram’s skull supplying the point. Nobody involved is thinking.",
+      "move": {
+        "power": 86,
+        "cost": 34,
+        "acc": 90,
+        "tags": [],
+        "keywords": {
+          "knockback": true,
+          "stun": 0.25
+        }
+      }
+    },
+    {
+      "id": "bramble_thresher",
+      "name": "Bramble Thresher",
+      "parts": [
+        "porcupine_forelimbs",
+        "mantis_organ"
+      ],
+      "keyword": "Bleed",
+      "desc": "A duelist’s ganglion reading the opening, and a fistful of quills going into it.",
+      "move": {
+        "power": 68,
+        "cost": 30,
+        "acc": 93,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.3,
+          "bleed": 1
+        }
+      }
+    },
+    {
+      "id": "double_dose",
+      "name": "Double Dose",
+      "parts": [
+        "scorpion_tail",
+        "pale_cobra_hide"
+      ],
+      "keyword": "Venom+",
+      "desc": "Two unrelated venoms, delivered together, interacting in ways the paperwork calls “promising”.",
+      "move": {
+        "power": 74,
+        "cost": 30,
+        "acc": 95,
+        "tags": [
+          "Venomous"
+        ],
+        "keywords": {
+          "venom": 3
+        }
+      }
+    },
+    {
+      "id": "switchback",
+      "name": "Switchback",
+      "parts": [
+        "alpine_ram_hindlimbs",
+        "goat_organ"
+      ],
+      "keyword": "Priority",
+      "desc": "Mountain footing and a stomach that runs on gravel. It is already above you.",
+      "move": {
+        "power": 68,
+        "cost": 28,
+        "acc": 96,
+        "tags": [],
+        "keywords": {
+          "priority": true
+        }
+      }
+    },
+    {
+      "id": "ball_lightning",
+      "name": "Ball Lightning",
+      "parts": [
+        "storm_eagle_organ",
+        "electric_eel_hide"
+      ],
+      "keyword": "Electric",
+      "desc": "A thunderhead’s temper earthed through an eel’s skin. It hangs in the air for a moment first, which is the worst part.",
+      "move": {
+        "power": 60,
+        "cost": 28,
+        "acc": 95,
+        "tags": [
+          "Electric"
+        ],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "lights_out",
+      "name": "Lights Out",
+      "parts": [
+        "abyssal_shark_tail",
+        "anglerfish_head"
+      ],
+      "keyword": "Accuracy Down",
+      "desc": "The little light goes out. Then something much larger arrives at the place you were looking.",
+      "move": {
+        "power": 52,
+        "cost": 24,
+        "acc": 97,
+        "tags": [],
+        "keywords": {
+          "accDown": 1,
+          "ignoreEvasion": true
+        }
+      }
+    },
+    {
+      "id": "siege_engine",
+      "name": "Siege Engine",
+      "parts": [
+        "iron_tortoise_hindlimbs",
+        "rhino_organ"
+      ],
+      "keyword": "IgnoreArmor",
+      "desc": "Plating that walks, wound up by a gland that only knows one speed. Walls are a scheduling problem.",
+      "move": {
+        "power": 68,
+        "cost": 30,
+        "acc": 92,
+        "tags": [],
+        "keywords": {
+          "ignoreArmor": true
+        }
+      }
+    },
+    {
+      "id": "downwind",
+      "name": "Downwind",
+      "parts": [
+        "glider_skunk_hindlimbs",
+        "bat_forelimbs"
+      ],
+      "keyword": "Gas",
+      "desc": "It gets above you, and then it is patient about the weather.",
+      "move": {
+        "power": 68,
+        "cost": 30,
+        "acc": 92,
+        "tags": [
+          "Gas"
+        ],
+        "keywords": {
           "accDown": 1
         }
       }

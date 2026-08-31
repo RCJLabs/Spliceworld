@@ -4,6 +4,7 @@
 
 import { renderCreatureSVG, renderUnitSVG } from '../render/renderer.js';
 import { stockGenome } from '../ranch/ranch.js';
+import { comboHint } from './theater.js';
 import { rivalList, rivalRecord } from '../campaign/rivals.js';
 import { fieldNote, bindFieldNote } from '../ui/cards.js';
 import { guideForScreen } from '../ranch/onboarding.js';
@@ -43,9 +44,14 @@ export function renderDexScreen(root, ctx) {
   const comboRows = Object.values(content.combos)
     .map((combo) => {
       const found = state.discoveredCombos.includes(combo.id);
-      return found
-        ? `<li><span class="grade-badge grade-prismatic">${combo.name}</span> ${combo.desc} <span class="lineage">${combo.parts.map((p) => content.parts[p].name).join(' + ')}</span></li>`
-        : `<li><span class="grade-badge grade-standard">???</span> <span class="lineage">an undiscovered pairing lurks in the parts bin…</span></li>`;
+      if (found) {
+        return `<li><span class="grade-badge grade-prismatic">${combo.name}</span> ${combo.desc} <span class="lineage">${combo.parts.map((p) => content.parts[p].name).join(' + ')}</span></li>`;
+      }
+      // A6: a silhouette has to point at something. These all used to read
+      // "an undiscovered pairing lurks in the parts bin…" — twenty-seven
+      // identical rows naming nothing at all.
+      const hint = comboHint(combo, state, content);
+      return `<li><span class="grade-badge ${hint.known === 2 ? 'grade-apex' : 'grade-standard'}">???</span> <span class="combo-keyword">${hint.keyword}</span> <span class="lineage">${hint.text}</span></li>`;
     })
     .join('');
 

@@ -1355,7 +1355,7 @@ for (const combo of Object.values(content.combos)) {
     gradeAssignmentsChecked++;
   }
 }
-assert.equal(gradeAssignmentsChecked, 304, 'every combo × grade assignment was actually checked');
+assert.equal(gradeAssignmentsChecked, 432, 'every combo × grade assignment was actually checked');
 // Grades are the power curve: each tier opens the boss further.
 //
 // Measured on the MEAN across builds, not the max. A max over a couple of
@@ -1937,6 +1937,86 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
       `${part.id} swings a Ground move but its anatomy votes ${part.classAffinity ?? 'nothing'} — ` +
         'a Ground tag on anything but a ground limb is a free x0 against fliers');
   }
+}
+
+// --- A6: a combo for everybody, and a silhouette that points ---------
+//
+// 34 of 244 parts were in a combo and ELEVEN species were in none at all —
+// gorilla, ram, porcupine, mantis, scorpion, and every one of the six chaos
+// variants, which are the rarest things the game produces and had nothing
+// to find. Combos are the discovery layer; most of the roster was not part
+// of it.
+{
+  const { comboHint } = await import('../splice/theater.js');
+  const { SOCKETS } = await import('../render/renderer.js');
+  const combos = Object.values(content.combos);
+  const partOf = (id) => content.parts[id];
+
+  // 1. EVERY ANIMAL CAN BE IN A COMBO. Variants included: they are the
+  //    hardest things to obtain, so having nothing to discover on one is
+  //    the worst version of this bug, not an acceptable edge case.
+  const inCombo = new Set(combos.flatMap((c) => c.parts));
+  const covered = new Set([...inCombo].map((id) => partOf(id).species));
+  const naked = Object.values(content.species)
+    .filter((sp) => !sp.synthetic && !covered.has(sp.id)).map((sp) => sp.id);
+  assert.deepEqual(naked, [], `every animal appears in a combo (missing: ${naked.join(', ')})`);
+
+  // 2. Both halves of a combo must be REAL and in DIFFERENT sockets — a
+  //    chimera has one of each, so a same-slot pair is undiscoverable.
+  for (const combo of combos) {
+    assert.equal(combo.parts.length, 2, `${combo.id} pairs exactly two parts`);
+    for (const id of combo.parts) assert.ok(partOf(id), `${combo.id} names a real part (${id})`);
+    // A same-slot pair is only discoverable where the slot has a SECOND
+    // socket, and exactly one does: Theater Tier II adds `organ2`. This
+    // caught A3's Full Spectrum (owl_organ + bat_organ) on the first run,
+    // and the data was right — that combo is gated behind Tier II, not
+    // impossible. Any other doubled slot would be undiscoverable content.
+    const slots = combo.parts.map((id) => partOf(id).slot);
+    const doubled = SOCKETS.filter((sk) => /\d$/.test(sk)).map((sk) => sk.replace(/\d+$/, ''));
+    assert.ok(slots[0] !== slots[1] || doubled.includes(slots[0]),
+      `${combo.id} is wearable: ${slots.join(' + ')} — only ${doubled.join('/')} has a second socket`);
+    assert.ok(combo.keyword && combo.desc && combo.name, `${combo.id} says what it is`);
+  }
+
+  // 3. The combo pool may not pile into the support slots. The first
+  //    nineteen put TEN organ parts and exactly ONE hindlimb into a combo,
+  //    which is the same shape A5 found in the tag chart.
+  const bySlot = {};
+  for (const id of inCombo) bySlot[partOf(id).slot] = (bySlot[partOf(id).slot] ?? 0) + 1;
+  for (const slot of SLOTS) {
+    assert.ok((bySlot[slot] ?? 0) >= 4,
+      `combos reach the ${slot} socket (${bySlot[slot] ?? 0}) — ${JSON.stringify(bySlot)}`);
+  }
+
+  // 4. A SILHOUETTE HAS TO POINT AT SOMETHING. Every undiscovered combo used
+  //    to render the same sentence, so the Dex showed twenty-seven identical
+  //    rows that named nothing. The hint reveals in layers, keyed to the
+  //    parts the player has actually handled.
+  const blank = { dex: { parts: [] }, discoveredCombos: [] };
+  const sample = combos[0];
+  const cold = comboHint(sample, blank, content);
+  assert.equal(cold.known, 0);
+  assert.ok(cold.keyword, 'a cold hint still names the keyword — that is the reason to go looking');
+  for (const id of sample.parts) {
+    assert.ok(!cold.text.includes(partOf(id).name), 'and it does not give the parts away');
+  }
+  // Distinctness is the whole point: no two silhouettes may read alike.
+  const coldTexts = combos.map((c) => `${comboHint(c, blank, content).keyword}|${comboHint(c, blank, content).text}`);
+  assert.ok(new Set(coldTexts).size >= combos.length * 0.6,
+    `silhouettes are mostly distinguishable from each other (${new Set(coldTexts).size}/${combos.length} unique)`);
+
+  // Handle one half and the Dex names that half, and only that half.
+  const half = { dex: { parts: [sample.parts[0]] }, discoveredCombos: [] };
+  const warm = comboHint(sample, half, content);
+  assert.equal(warm.known, 1);
+  assert.ok(warm.text.includes(partOf(sample.parts[0]).name), 'the half you have handled is named');
+  assert.ok(!warm.text.includes(partOf(sample.parts[1]).name), 'the half you have not is still a slot');
+
+  // Handle both and it stops being coy — you are holding the answer.
+  const hot = comboHint(sample, { dex: { parts: sample.parts }, discoveredCombos: [] }, content);
+  assert.equal(hot.known, 2);
+  for (const id of sample.parts) assert.ok(hot.text.includes(partOf(id).name), 'both halves named');
+  assert.ok(/same creature/i.test(hot.text), 'and it says what to do about it');
 }
 
 // --- A5: the tag chart has to be reachable, and swingable ------------
