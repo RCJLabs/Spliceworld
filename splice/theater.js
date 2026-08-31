@@ -20,7 +20,7 @@ const CHIMERA_NAMES = [
 // organ bay, so the Theater asks rather than assumes.
 export function validateSplice(state, frameId, slotTokens, content) {
   const errors = [];
-  const grants = theaterGrants(state, content);
+  const grants = theaterGrants(state, content, frameId);
   if (!content.frames[frameId]) errors.push(`Unknown frame: ${frameId}`);
   else if (!grants.frames.includes(frameId)) {
     errors.push(`The ${content.frames[frameId].name} needs a bigger Theater than you own.`);
@@ -31,7 +31,15 @@ export function validateSplice(state, frameId, slotTokens, content) {
     if (!tokenId) continue;
     if (!SOCKETS.includes(socketId)) errors.push(`Unknown socket: ${socketId}`);
     else if (!grants.sockets.includes(socketId)) {
-      errors.push(`The ${socketId} bay is not installed yet — upgrade the Surgery Theater.`);
+      // Two different "no": the facility has not bought the bay, or this
+      // chassis has nowhere to put it. Say which, or the player upgrades
+      // the Theater and nothing changes.
+      const chassis = content.frames[frameId]?.slots;
+      errors.push(
+        chassis && !chassis.includes(slotOfSocket(socketId))
+          ? `The ${content.frames[frameId].name} has no ${slotOfSocket(socketId)} to bolt that to.`
+          : `The ${socketId} bay is not installed yet — upgrade the Surgery Theater.`
+      );
     }
     if (seen.has(tokenId)) errors.push(`Token ${tokenId} used twice.`);
     seen.add(tokenId);
@@ -56,7 +64,7 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
   if (errors.length) return { ok: false, msg: errors.join(' ') };
 
   const tokens = tokensFor(state, slotTokens);
-  const report = analyze(frameId, tokens, content, theaterGrants(state, content).sockets.length);
+  const report = analyze(frameId, tokens, content, theaterGrants(state, content, frameId).sockets.length);
 
   // Tokens leave the vault and live inside the chimera (salvage can
   // recover a degraded subset later — that flow lands with Containment).

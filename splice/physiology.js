@@ -28,6 +28,20 @@ const P2W_RATINGS = [
 // socketCount: how many bays this build could fill, so the Chassis row is
 // honest at Theater Tier II (seven, with the second organ bay) as well as
 // Tier I (six).
+// A9. Airborne was a claim about ANCESTRY: 61 parts carry the tag, only 12
+// of them make lift, so a full bird build bolted to a 160-mass Rumbler was
+// immune to every Ground move while sitting firmly on the ground. Measured:
+// 66 of 90 purebred bird builds claimed Ground-immunity they could not
+// cash. That is why the frame was never a decision — mass cost you turn
+// order and nothing else, so bigger was simply better on 92% of the map.
+// Airborne is now a claim about PHYSICS: the tag survives only on a build
+// whose lift can actually hoist its mass. Bird anatomy still SAYS Airborne
+// on the part; the creature has to earn it.
+function airborneTags(tags, canFly) {
+  const list = [...tags];
+  return canFly ? list : list.filter((t) => t !== 'Airborne');
+}
+
 export function analyze(frameId, tokens, content, socketCount = 6) {
   const frame = content.frames[frameId];
   const rows = [];
@@ -120,8 +134,8 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
     note: !hasLiftSurface
       ? 'No lift surfaces installed. The ground remains a loyal friend.'
       : canFly
-        ? `Lift ${lift} comfortably hoists ${mass} mass. Cleared for takeoff.`
-        : `Lift ${lift} cannot hoist ${mass} mass. The wings flap. The creature stays. Physics sends its regards — try a lighter frame or fewer dense parts.`,
+        ? `Lift ${lift} comfortably hoists ${mass} mass. Cleared for takeoff — and AIRBORNE in the field, so ground-level attacks swing underneath it.`
+        : `Lift ${lift} cannot hoist ${mass} mass. The wings flap. The creature stays, and so does the Airborne tag — bird anatomy claims it, physics awards it. Try a lighter frame or fewer dense parts.`,
   });
 
   // Elemental class: anatomy votes, majority rules, ties stay Unclassed.
@@ -205,7 +219,7 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
     flight: { hasLiftSurface, lift, capable: canFly },
     creatureClass,
     classVotes,
-    tags: [...tags],
+    tags: airborneTags(tags, canFly),
     speciesCount,
     purebredSpecies,
     instability,

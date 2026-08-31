@@ -407,7 +407,9 @@
           "power": 25,
           "cost": 12,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         }
       ],
@@ -606,7 +608,9 @@
           "power": 45,
           "cost": 20,
           "acc": 90,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         },
         {
@@ -804,7 +808,9 @@
           "power": 40,
           "cost": 20,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         }
       ],
@@ -1042,7 +1048,9 @@
           "power": 40,
           "cost": 20,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "trap": true
           }
@@ -1254,7 +1262,9 @@
           "power": 45,
           "cost": 18,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         }
       ],
@@ -1443,7 +1453,9 @@
           "power": 0,
           "cost": 10,
           "acc": 100,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "evasionUp": 1
           }
@@ -2489,7 +2501,9 @@
           "power": 46,
           "cost": 22,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         },
         {
@@ -2673,7 +2687,9 @@
           "power": 34,
           "cost": 18,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         }
       ],
@@ -2809,7 +2825,9 @@
           "power": 44,
           "cost": 22,
           "acc": 85,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "ignoreArmor": true
           }
@@ -3231,7 +3249,9 @@
           "power": 38,
           "cost": 16,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "accDown": 1
           }
@@ -3901,7 +3921,9 @@
           "power": 28,
           "cost": 12,
           "acc": 100,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         }
       ],
@@ -4031,7 +4053,9 @@
           "power": 52,
           "cost": 24,
           "acc": 88,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "knockback": true
           }
@@ -4339,7 +4363,9 @@
           "power": 44,
           "cost": 20,
           "acc": 92,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "trap": true
           }
@@ -4535,7 +4561,9 @@
           "power": 62,
           "cost": 30,
           "acc": 84,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "knockback": true
           }
@@ -4676,7 +4704,9 @@
           "power": 50,
           "cost": 24,
           "acc": 88,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         },
         {
@@ -4869,7 +4899,9 @@
           "power": 22,
           "cost": 12,
           "acc": 96,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "multiHit": 2
           }
@@ -5405,7 +5437,9 @@
           "power": 40,
           "cost": 20,
           "acc": 94,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "ignoreGuard": true
           }
@@ -5572,7 +5606,9 @@
           "power": 26,
           "cost": 14,
           "acc": 96,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "stun": 0.3
           }
@@ -5976,7 +6012,9 @@
           "power": 30,
           "cost": 14,
           "acc": 100,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "staminaDrain": 18
           }
@@ -6615,7 +6653,9 @@
           "power": 30,
           "cost": 15,
           "acc": 96,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         }
       ],
@@ -6780,7 +6820,9 @@
           "power": 48,
           "cost": 24,
           "acc": 90,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "slow": true
           }
