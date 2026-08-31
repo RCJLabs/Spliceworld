@@ -51,6 +51,7 @@ import { classMultiplier } from '../battle/engine.js';
 import { overflowingParts } from './bounds.js';
 import { renderDexScreen } from '../splice/dex-ui.js';
 import { moveReadout } from '../battle/readout.js';
+import { defaultMoveset } from '../battle/moves.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -658,6 +659,20 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
   const armoured = makeSimChimera('M',
     ['tortoise_head','tortoise_forelimbs','tortoise_hindlimbs','tortoise_tail','tortoise_hide','tortoise_organ'],
     'standard', content);
+  // R30: makeSimChimera stamps the BENCH moveset, which is attack-led on
+  // purpose — A8's floor and R26's margins are statements about the content,
+  // so the harness fields what a tuned player brings. This test is about
+  // something else: whether a hide and an organ change a fight. Its subject
+  // is the actives, so it has to field them. That is the default pick, which
+  // for a tortoise (three untagged attacks, three actives) keeps one swing
+  // and all three actives — 78% here against 0% for the attack-led loadout,
+  // which is the finding R30 was nearly shipped without.
+  {
+    const tk = Object.values(armoured.tokens);
+    armoured.moveset = defaultMoveset(
+      movesFromTokens(tk, analyze(armoured.frame, tk, content), content)
+    );
+  }
   const winRate = (strip) => {
     let wins = 0;
     for (let i = 0; i < 60; i++) {
@@ -703,6 +718,16 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
     for (const [grade, encId] of [['standard', 'patrol_2'], ['standard', 'checkpoint'], ['standard', 'harbor_watch'],
       ['apex', 'patrol_2'], ['apex', 'checkpoint'], ['apex', 'harbor_watch']]) {
       const hero = makeSimChimera('M', partIds, grade, content);
+      // R30: the question here is whether an active is worth PRESSING when a
+      // creature carries it — so the creature has to carry it. The bench
+      // moveset is attack-led by design (it measures the content, not the
+      // picker), which would field none of these and turn this gate into a
+      // tautology about slot allocation. The default pick is what a player
+      // is handed, and it keeps the actives worth having.
+      {
+        const tk = Object.values(hero.tokens);
+        hero.moveset = defaultMoveset(movesFromTokens(tk, analyze('M', tk, content), content));
+      }
       const b = createBattle([hero, { ...hero, id: 'a', name: 'A' }], content.encounters[encId], content, hashString(`arch${speciesId}${encId}${grade}`), 0);
       let g = 0;
       while (!b.over && g++ < 200) {
@@ -752,7 +777,15 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
   const b = createBattle([reader], { id: 'ro', name: 'Readout', waves: ['platedog'], reward: 0 },
     rContent, 909, reader.settleUntil);
   const me = playerActive(b), foe = b.enemy.active;
-  const move = me.moves.find((m) => m.power > 0 && !m.keywords.multiHit && !m.keywords.frenzy);
+  // A PLAIN swing: this bench compares the button's promise against what
+  // the engine actually deals over 120 presses, so anything that changes
+  // damage per press or ends the fight early is noise. Recoil joined the
+  // exclusions in R30 — the bear's four now lead with Haymaker (99 power,
+  // 20% recoil), which kills the reader in five swings and left the sample
+  // at 5 instead of 40.
+  const plain = (m) => m.power > 0 && !Object.keys(m.keywords ?? {}).length;
+  const move = me.moves.find(plain)
+    ?? me.moves.find((m) => m.power > 0 && !m.keywords.multiHit && !m.keywords.frenzy && !m.keywords.recoil);
   const idx = me.moves.indexOf(move);
   const shown = moveReadout(move, me, foe, rContent);
 

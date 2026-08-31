@@ -9,6 +9,7 @@ import {
   setMoveset, moveTrainingReady,
 } from './theater.js';
 import { MOVE_SLOTS, activeMoves, moveSummary, moveDetail } from '../battle/moves.js';
+import { toggleRow } from '../ui/picker.js';
 import { movesFromTokens } from '../battle/engine.js';
 import { analyze } from './physiology.js';
 
@@ -292,20 +293,22 @@ export function renderPensScreen(root, ctx) {
               <button type="button" class="pick-close" data-close="1" aria-label="Close">&#10005;</button>
             </div>
             <p class="ranch-msg" id="mv-count">${chosen.size}/${MOVE_SLOTS} slots filled${full ? ' — uncheck one to swap' : ''}</p>
-            <div class="pick-list">${known.map((m) => {
-              const on = chosen.has(m.id);
-              return `<label class="pick-row ${on ? 'is-selected' : ''}">
-                <input type="checkbox" data-mv="${m.id}" ${on ? 'checked' : ''} ${!on && full ? 'disabled' : ''}>
-                <span class="pick-row-main"><span class="pick-row-label">${m.name}</span>
-                <span class="pick-row-sub">${m.power > 0 ? `${m.power} power` : 'utility'} · ${m.cost}⚡ · ${m.acc}% · ${moveSummary(m, content)}</span></span>
-              </label>`;
-            }).join('')}</div>
+            <div class="pick-list">${known.map((m) => toggleRow({
+              id: m.id,
+              label: m.name,
+              sub: `${m.power > 0 ? `${m.power} power` : 'utility'} · ${m.cost}⚡ · ${m.acc}% · ${moveSummary(m, content)}`,
+              checked: chosen.has(m.id),
+              // At four, the only move left is to drop one — which is the
+              // mechanic, so the sheet stops rather than scolding.
+              disabled: !chosen.has(m.id) && full,
+            })).join('')}</div>
             <button type="button" class="care-train" id="mv-save" ${chosen.size ? '' : 'disabled'}>Train it</button>
           </div>`;
         overlay.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { overlay.hidden = true; }));
-        overlay.querySelectorAll('input[data-mv]').forEach((cb) => {
-          cb.addEventListener('change', () => {
-            if (cb.checked) chosen.add(cb.dataset.mv); else chosen.delete(cb.dataset.mv);
+        overlay.querySelectorAll('[data-toggle]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.toggle;
+            if (chosen.has(id)) chosen.delete(id); else chosen.add(id);
             draw();
           });
         });
