@@ -7067,6 +7067,34 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     assert.ok(learned.ok, learned.msg);
     assert.equal(st.funds, 500 - MOVE_TRAINING.cost, 'and spends it');
     assert.ok(/forgets/.test(learned.msg), `the swap says what was given up (${learned.msg})`);
+    // THE MIGRATED SAVE. A v27 chimera stores `moveset: []` and is topped
+    // up from the default pick at battle time, so it has been fighting with
+    // four moves it never chose. Comparing against the STORED array tells
+    // that player they are learning all four and charges them for it — the
+    // browser QA caught this, and the battery then proved the suite could
+    // not. It is checked here now.
+    {
+      const old = { ...ch, id: 'migrated', moveset: [], lastMoveTrainAt: 0 };
+      st.chimeras.push(old);
+      const oldKnown = knownOf(old);
+      const carried = activeMoves(oldKnown, old.moveset).map((m) => m.id);
+      assert.equal(carried.length, MOVE_SLOTS, 'a migrated chimera still fields four');
+      const before = st.funds;
+      // Re-picking exactly what it is already fighting with is not learning.
+      const same = setMoveset(st, 'migrated', carried, oldKnown, t0 + 500 * HOUR, content);
+      assert.ok(same.ok && same.free,
+        'a migrated save is not charged for the moves it already had');
+      assert.equal(st.funds, before, 'and its funds are untouched');
+      // One genuine swap costs once, and names one move each way.
+      const fresh2 = oldKnown.find((m) => !carried.includes(m.id));
+      const one = setMoveset(st, 'migrated', [fresh2.id, ...carried.slice(0, MOVE_SLOTS - 1)],
+        oldKnown, t0 + 500 * HOUR, content);
+      assert.ok(one.ok, one.msg);
+      assert.equal(st.funds, before - MOVE_TRAINING.cost, 'one swap, one fee');
+      assert.equal((one.msg.match(/ and /g) ?? []).length, 0,
+        `and it reports ONE move learned, not four (${one.msg})`);
+    }
+
     // ...and immediately after, the cooldown bites.
     const again = fresh.find((m) => !swap.includes(m.id));
     assert.equal(setMoveset(st, ch.id, [again.id, ...swap.slice(0, MOVE_SLOTS - 1)], fresh, t0 + 400 * HOUR, content).ok,
