@@ -1,5 +1,5 @@
 {
-  "_doc": "Combo abilities (M3): splicing both listed parts onto one chimera discovers the combo, permanently logged in the save for the Splice-Dex (M7). Combat effects resolve through the keyword system in M4 — 'keyword' here is the design intent, display-only for now. The roadmap target of 12 combos ships with Wave 1. M4: each combo grants its move to chimeras built with both parts.",
+  "_doc": "Combo abilities (M3): splicing both listed parts onto one chimera discovers the combo, permanently logged in the save for the Splice-Dex (M7). Combat effects resolve through the keyword system in M4 — 'keyword' here is the design intent, display-only for now. The roadmap target of 12 combos shipped with Wave 1; audit A3 added seven more alongside the nine new species, because content that arrives with no combinations is a longer list rather than a deeper game. M4: each combo grants its move to chimeras built with both parts. A combo must beat the best drawback-free move of the two parts that unlock it AT EVERY GRADE ASSIGNMENT, or the player discovers it and never presses it again — smoke checks all of them.",
   "combos": [
     {
       "id": "injection",
@@ -248,6 +248,157 @@
         "keywords": {
           "priority": true,
           "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "full_spectrum",
+      "name": "Full Spectrum",
+      "parts": [
+        "owl_organ",
+        "bat_organ"
+      ],
+      "keyword": "Sonic",
+      "desc": "A facial disc and an echo chamber wired in series. It hears the shape of you and then tells you about it.",
+      "move": {
+        "power": 48,
+        "cost": 24,
+        "acc": 100,
+        "tags": [
+          "Sonic"
+        ],
+        "keywords": {
+          "accUp": 1,
+          "accDown": 1
+        }
+      }
+    },
+    {
+      "id": "powder_keg",
+      "name": "Powder Keg",
+      "parts": [
+        "moth_organ",
+        "skunk_organ"
+      ],
+      "keyword": "Gas",
+      "desc": "Wing scales and musk, aerosolised together. The lab has been evacuated twice.",
+      "move": {
+        "power": 50,
+        "cost": 26,
+        "acc": 100,
+        "tags": [
+          "Gas"
+        ],
+        "keywords": {
+          "accDown": 1,
+          "powerDown": 1
+        }
+      }
+    },
+    {
+      "id": "nettle_curtain",
+      "name": "Nettle Curtain",
+      "parts": [
+        "jellyfish_tail",
+        "cobra_hide"
+      ],
+      "keyword": "Slow",
+      "desc": "Stinging threads on a shed skin, hung across the arena. Walking into it is a choice you make once.",
+      "move": {
+        "power": 54,
+        "cost": 26,
+        "acc": 100,
+        "tags": [
+          "Venomous"
+        ],
+        "keywords": {
+          "venom": 2,
+          "slow": 1
+        }
+      }
+    },
+    {
+      "id": "screaming_roll",
+      "name": "Screaming Roll",
+      "parts": [
+        "armadillo_hide",
+        "armadillo_organ"
+      ],
+      "keyword": "IgnoreArmor",
+      "desc": "It tucks. It screams. It arrives anyway. Plate armour is not rated for this.",
+      "move": {
+        "power": 46,
+        "cost": 22,
+        "acc": 95,
+        "tags": [
+          "Sonic"
+        ],
+        "keywords": {
+          "ignoreArmor": true,
+          "powerDown": 1
+        }
+      }
+    },
+    {
+      "id": "high_water_mark",
+      "name": "High Water Mark",
+      "parts": [
+        "heron_head",
+        "falcon_organ"
+      ],
+      "keyword": "Lock-On",
+      "desc": "A wader’s patience bolted to a stooping reflex. It waits, and then it does not.",
+      "move": {
+        "power": 88,
+        "cost": 36,
+        "acc": 97,
+        "tags": [
+          "Airborne"
+        ],
+        "keywords": {
+          "ignoreEvasion": true
+        }
+      }
+    },
+    {
+      "id": "deterrent_display",
+      "name": "Deterrent Display",
+      "parts": [
+        "pufferfish_hide",
+        "goose_head"
+      ],
+      "keyword": "Taunt",
+      "desc": "Inflate to twice your size and honk about it. Nobody has ever walked away from this politely.",
+      "move": {
+        "power": 56,
+        "cost": 26,
+        "acc": 100,
+        "tags": [
+          "Sonic"
+        ],
+        "keywords": {
+          "taunt": true,
+          "thorns": 0.2
+        }
+      }
+    },
+    {
+      "id": "shell_game",
+      "name": "Shell Game",
+      "parts": [
+        "otter_forelimbs",
+        "octopus_organ"
+      ],
+      "keyword": "IgnoreArmor",
+      "desc": "An otter with a rock and an ink sac to hide the wind-up. Somewhere under one of these is a fist.",
+      "move": {
+        "power": 84,
+        "cost": 32,
+        "acc": 96,
+        "tags": [],
+        "keywords": {
+          "ignoreArmor": true,
+          "accDown": 1
         }
       }
     }

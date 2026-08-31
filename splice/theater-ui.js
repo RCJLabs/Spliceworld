@@ -63,7 +63,7 @@ export function renderTheaterScreen(root, ctx) {
   const chosen = new Set(Object.values(draft.slots).filter(Boolean));
   const CLASS_MARK = { air: '\u{1FABD}', ground: '\u{1F9B6}', water: '\u{1F30A}' };
 
-  // 150 parts across 25 species: grouped, and never through an OS dropdown.
+  // 236 parts across 40 animals: grouped, and never through an OS dropdown.
   const slotOptions = (socketId) => {
     const slot = slotOfSocket(socketId);
     const owned = state.inventory.parts.filter((t) => content.parts[t.partId]?.slot === slot);

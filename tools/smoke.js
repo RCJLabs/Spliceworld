@@ -650,16 +650,24 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
 
   // Nor may an archetype be decoration — R20's rule, applied to the actives
   // rather than the keywords under them.
-  const seen = new Set();
+  //
+  // A3 replaced the three-build sample this used to run on. That sample was
+  // sitting on exactly its own threshold: it saw two archetypes, needed two,
+  // and which two it saw depended on the seed string and on whether a
+  // build's kick happened to whiff. Untagging the non-Ground hindlimbs moved
+  // one build off a whiff and onto its kick, and the guard went red without
+  // anything about the actives having changed. It now sweeps the WHOLE pool
+  // at both grades — 40 species, 0.3s — which is both a stronger guard and a
+  // stable one.
   const NOUNS = ['Bristles', 'Vanish', 'Slipskin', 'Screen', 'Slow Mend', 'Knit', 'Leech', 'Focus', 'Surge', 'Spike'];
-  for (const partIds of [
-    ['tortoise_head','tortoise_forelimbs','tortoise_hindlimbs','tortoise_tail','tortoise_hide','tortoise_organ'],
-    ['skunk_head','skunk_forelimbs','skunk_hindlimbs','skunk_tail','skunk_hide','skunk_organ'],
-    ['shark_head','shark_forelimbs','shark_hindlimbs','shark_tail','shark_hide','shark_organ'],
-  ]) {
-    const hero = makeSimChimera('M', partIds, 'standard', content);
-    for (const encId of ['patrol_2', 'checkpoint', 'harbor_watch']) {
-      const b = createBattle([hero, { ...hero, id: 'a', name: 'A' }], content.encounters[encId], content, hashString(`arch${partIds[0]}${encId}`), 0);
+  const pressed = new Map();
+  for (const speciesId of new Set(Object.values(content.parts).filter((p) => p.species !== 'salvage').map((p) => p.species))) {
+    const partIds = SLOTS.map((sl) => `${speciesId}_${sl}`).filter((id) => content.parts[id]);
+    if (partIds.length < 4) continue;
+    for (const [grade, encId] of [['standard', 'patrol_2'], ['standard', 'checkpoint'], ['standard', 'harbor_watch'],
+      ['apex', 'patrol_2'], ['apex', 'checkpoint'], ['apex', 'harbor_watch']]) {
+      const hero = makeSimChimera('M', partIds, grade, content);
+      const b = createBattle([hero, { ...hero, id: 'a', name: 'A' }], content.encounters[encId], content, hashString(`arch${speciesId}${encId}${grade}`), 0);
       let g = 0;
       while (!b.over && g++ < 200) {
         const acts = playerActions(b);
@@ -670,18 +678,22 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
           || acts.find((a) => a.type === 'rest') || acts[0];
         if (act.type === 'move') {
           const name = me.moves[act.index].name;
-          for (const n of NOUNS) if (name.endsWith(n)) seen.add(n);
+          for (const n of NOUNS) if (name.endsWith(n)) pressed.set(n, (pressed.get(n) ?? 0) + 1);
         }
         step(b, act, content);
       }
     }
   }
-  // Two is what these three builds can honestly show; the full sweep across
-  // the whole pool at both grades presses all ten archetypes, and lives in
-  // the phase's measurements rather than in a 13-second smoke run. The guard
-  // here is against the actives going unpressed ENTIRELY, which is what the
-  // first two prices did.
-  assert.ok(seen.size >= 2, `hide and organ actives must actually get pressed — only saw ${[...seen].join(', ') || 'none'}`);
+  const tally = [...pressed.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}:${v}`).join(' ');
+  assert.ok(pressed.size >= 5, `hide and organ actives must actually get pressed — only ${pressed.size} archetypes ever were (${tally || 'none'})`);
+  assert.ok([...pressed.values()].reduce((a, b) => a + b, 0) >= 40,
+    `and pressed often enough to be a real button, not a rounding error (${tally})`);
+  // KNOWN GAP, not a regression: the AI never presses the three evasion
+  // actives (Slipskin, Vanish, Screen) or, since A3 stopped its kick
+  // whiffing, Focus. They are priced as turns spent not attacking, and
+  // chooseMoveIndex values damage. That is an AI/pricing problem for its own
+  // phase — the floor here is set below it deliberately so it stays visible
+  // rather than being asserted away.
 }
 
 // --- R28: the number on the button is the number that lands.
@@ -1343,7 +1355,7 @@ for (const combo of Object.values(content.combos)) {
     gradeAssignmentsChecked++;
   }
 }
-assert.equal(gradeAssignmentsChecked, 192, 'every combo × grade assignment was actually checked');
+assert.equal(gradeAssignmentsChecked, 304, 'every combo × grade assignment was actually checked');
 // Grades are the power curve: each tier opens the boss further.
 //
 // Measured on the MEAN across builds, not the max. A max over a couple of
@@ -1808,6 +1820,94 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   assert.deepEqual(bad, [], `parts cropped by the viewBox: ${bad.map((b) => `${b.part}@${b.frame}+${b.over}`).join(', ')}`);
 }
 
+// --- A3: forty animals, and Air anatomy you can build a creature out of
+//
+// The audit measured the pool and found 36 Ground-affinity parts, 25 Water
+// and 9 Air — and those nine Air parts were six forelimbs and three tails.
+// Air had NOTHING in the head, hindlimb, hide or organ sockets anywhere in
+// the game, so an Air specialist could not be assembled out of Air anatomy:
+// it borrowed somebody's legs, and the borrowed legs voted against it.
+//
+// The criterion is deliberately NOT a species count. Nine more birds that
+// all donate wings would move the headline number and change nothing, so
+// this gate is per SLOT.
+{
+  const { classOfParts } = await import('../campaign/director.js');
+  const VOTING = ['head', 'forelimbs', 'hindlimbs', 'tail'];
+  const CLASSES = ['ground', 'water', 'air'];
+
+  const animals = Object.values(content.species).filter((sp) => !sp.synthetic);
+  assert.equal(animals.length, 40, `forty animals (${animals.length})`);
+
+  const pool = Object.fromEntries(CLASSES.map((c) => [c, {}]));
+  for (const part of Object.values(content.parts)) {
+    if (!part.classAffinity) continue;
+    (pool[part.classAffinity][part.slot] ??= []).push(part);
+  }
+  const per = (cls, slot) => pool[cls][slot] ?? [];
+  const total = (cls) => VOTING.reduce((n, slot) => n + per(cls, slot).length, 0);
+  const shape = CLASSES.map((c) => `${c} ${total(c)} (${VOTING.map((sl) => per(c, sl).length).join('/')})`).join('  ');
+
+  // 1. No slot is structurally closed to a class. This is the one that was
+  //    false: Air scored zero in two of these four.
+  for (const cls of CLASSES) {
+    for (const slot of VOTING) {
+      assert.ok(per(cls, slot).length >= 1, `${cls} has no ${slot} anywhere in the game — ${shape}`);
+    }
+  }
+  // 2. And the two that were starved have real CHOICE in each slot, not one
+  //    forced part standing in for a column.
+  for (const cls of ['water', 'air']) {
+    for (const slot of VOTING) {
+      assert.ok(per(cls, slot).length >= 5,
+        `${cls} ${slot} is ${per(cls, slot).length} part(s) — that is a single build, not an archetype — ${shape}`);
+    }
+  }
+  // 3. The pools are comparable. It was 4.0x; anything past 1.5x means one
+  //    class is the default again and the other two are flavour.
+  const totals = CLASSES.map(total);
+  assert.ok(Math.max(...totals) / Math.min(...totals) <= 1.5,
+    `the class pools are within a half of each other — ${shape}`);
+
+  // 4. Buildable in practice, not only on the spreadsheet: for each class,
+  //    fill all four voting sockets with parts that vote it, taken from
+  //    DIFFERENT species — a purebred proves nothing about splicing — and
+  //    check the engine reads the result as that class.
+  for (const cls of CLASSES) {
+    const used = new Set();
+    const picked = VOTING.map((slot) => {
+      const part = per(cls, slot).find((c) => !used.has(c.species)) ?? per(cls, slot)[0];
+      used.add(part.species);
+      return part.id;
+    });
+    assert.ok(used.size >= 3, `${cls} can be built from at least three donors (${[...used].join(', ')})`);
+    assert.equal(classOfParts(picked, content), cls, `and the engine reads it as ${cls}: ${picked.join(' + ')}`);
+  }
+
+  // 5. Every new animal is REACHABLE. A species with a price that no node
+  //    unlocks would be on sale from turn one and quietly break the "the
+  //    catalog is two species with no territory" floor the jobs board rests
+  //    on; a species with no price and no node is unobtainable.
+  const unlocked = new Set(Object.values(content.regions).flatMap((r) => r.nodes).flatMap((n) => n.unlocksFauna ?? []));
+  for (const sp of animals) {
+    if (sp.variantOf) continue; // variants are bred, never bought
+    assert.ok(sp.mailOrderPrice, `${sp.id} has a catalog price`);
+    assert.ok(unlocked.has(sp.id) || ['goat', 'ram'].includes(sp.id),
+      `${sp.id} is unlocked by conquering something`);
+  }
+
+  // 6. The Ground attack tag is pure downside — its only row in the chart is
+  //    "Ground moves miss Airborne (x0)" and there is no row where it helps.
+  //    Every hindlimb in the game used to carry it, so a shark's hindfin and
+  //    an eagle's talon both whiffed completely against anything with wings.
+  for (const part of Object.values(content.parts)) {
+    if (!part.move?.tags?.includes('Ground')) continue;
+    assert.ok(part.classAffinity === 'ground',
+      `${part.id} swings a Ground move but its anatomy votes ${part.classAffinity ?? 'nothing'} — ` +
+        'a Ground tag on anything but a ground limb is a free x0 against fliers');
+  }
+}
+
 // --- Wave 1: the elemental class triangle, derived from anatomy.
 {
   const cls = readJSON('data/classes.json');
@@ -1825,22 +1925,31 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   assert.equal(classMultiplier('air', null, content), 1, '…nor is exploited');
 
   // Class comes from PARTS, not species: anatomy votes.
+  //
+  // The filler head is a BEAR's, not a goat's. These cases each want a head
+  // in the socket that does not touch the count, and A3 gave horned skulls a
+  // Ground vote — so the goat head this used to pad with silently became a
+  // third voter and quietly changed what every one of them was measuring.
   const wings = tk('eagle_forelimbs'), fan = tk('eagle_tail');
   const hooves = tk('goat_hindlimbs'), forelegs = tk('goat_forelimbs');
   const fins = tk('shark_hindlimbs'), finTail = tk('shark_tail'), gills = tk('shark_head');
-  assert.equal(analyze('S', [wings, fan, tk('goat_head')], content).creatureClass, 'air', 'wings + tailfan = Air');
-  assert.equal(analyze('M', [hooves, forelegs, tk('goat_head')], content).creatureClass, 'ground', 'feet = Ground');
+  const mute = tk('bear_head'); // a snout is not class-defining anatomy
+  assert.equal(content.parts.bear_head.classAffinity ?? null, null, 'and it really is mute');
+  assert.equal(content.parts.goat_head.classAffinity, 'ground', 'while a horned skull is something you brace and shove with');
+  assert.equal(content.parts.eagle_head.classAffinity, 'air', 'and a beak on a hollow skull is flight kit');
+  assert.equal(analyze('S', [wings, fan, mute], content).creatureClass, 'air', 'wings + tailfan = Air');
+  assert.equal(analyze('M', [hooves, forelegs, mute], content).creatureClass, 'ground', 'feet = Ground');
   assert.equal(analyze('L', [gills, fins, finTail], content).creatureClass, 'water', 'gills + fins = Water');
   // A tie is genuinely Unclassed — the hybrid's trade-off.
-  assert.equal(analyze('M', [wings, hooves, tk('goat_head')], content).creatureClass, null, 'one wing vote vs one foot vote = Unclassed');
-  assert.equal(analyze('M', [tk('goat_head'), tk('goat_hide')], content).creatureClass, null, 'no limbs = Unclassed');
+  assert.equal(analyze('M', [wings, hooves, mute], content).creatureClass, null, 'one wing vote vs one foot vote = Unclassed');
+  assert.equal(analyze('M', [mute, tk('goat_hide')], content).creatureClass, null, 'no voting anatomy = Unclassed');
   // Adding a second air vote breaks the tie.
-  assert.equal(analyze('M', [wings, fan, hooves, tk('goat_head')], content).creatureClass, 'air', 'majority wins');
+  assert.equal(analyze('M', [wings, fan, hooves, mute], content).creatureClass, 'air', 'majority wins');
 
   // The panel explains it (Law 4).
-  const airRow = analyze('S', [wings, fan, tk('goat_head')], content).rows.find((r) => r.label === 'Class');
+  const airRow = analyze('S', [wings, fan, mute], content).rows.find((r) => r.label === 'Class');
   assert.ok(airRow.value.includes('Air') && airRow.note.includes('Ground'), `panel explains the matchup: ${airRow.note}`);
-  const tieRow = analyze('M', [wings, hooves, tk('goat_head')], content).rows.find((r) => r.label === 'Class');
+  const tieRow = analyze('M', [wings, hooves, mute], content).rows.find((r) => r.label === 'Class');
   assert.equal(tieRow.value, 'Unclassed');
   assert.ok(tieRow.note.includes('tied'), 'panel explains why it is Unclassed');
 
@@ -2633,12 +2742,20 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   });
 
   // Class is read per CREATURE, by the same majority vote the battle engine
-  // uses. Counting part affinities would be a structural lie — Ground sits
-  // on far more parts than Air, so every stable would read Ground and
-  // diversifying would buy nothing.
+  // uses, never by counting part affinities across a stable.
+  //
+  // The original reason was that the pool was 36 Ground parts to 9 Air, so a
+  // census would have read every stable as Ground. A3 fixed the pool, which
+  // means the ORIGINAL justification is now false — and the rule is still
+  // right for a better reason: a census counts parts, and what fights is
+  // creatures. A three-creature stable of one Air specialist and two
+  // two-vote Ground hybrids is an Air-and-Ground stable however the parts
+  // add up. So the guard now pins the balanced pool (which A3 is on the hook
+  // for keeping) and the per-creature read separately.
   const affinities = { air: 0, ground: 0, water: 0 };
   for (const part of Object.values(content.parts)) if (part.classAffinity) affinities[part.classAffinity]++;
-  assert.ok(affinities.ground > affinities.air * 2, 'the part pool really is Ground-skewed — hence the per-creature read');
+  const spread = Math.max(...Object.values(affinities)) / Math.min(...Object.values(affinities));
+  assert.ok(spread <= 1.5, `no class is the default any more — ${JSON.stringify(affinities)} is a ${spread.toFixed(2)}x spread`);
   assert.equal(classOfParts(P.air, content), 'air');
   assert.equal(classOfParts(P.water, content), 'water');
   assert.equal(classOfParts([], content), null, 'no anatomy, no read');

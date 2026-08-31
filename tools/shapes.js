@@ -69,14 +69,21 @@ const HEADS = {
         : [po('2,-30 -6,-64 14,-38', A, { strokeWidth: 4 }), po('20,-30 30,-66 34,-34', A, { strokeWidth: 4 })];
     return [...horns.slice(0, 1), ...s, ...horns.slice(1)];
   },
-  bird({ beak = 'hook', crest = true, eyeR = 10.5 }) {
+  bird({ beak = 'hook', crest = true, eyeR = 10.5, disc = false }) {
     const s = [];
     if (crest) s.push(pa('M 4 -42 q 8 -20 26 -16 q -8 9 -6 19 z', P));
     s.push(ci(20, -20, 31, S), sheen(8, -34, 16, 10, 0.34));
+    // An owl's facial disc: two dishes of stiff feathers that aim sound at
+    // the ears. Drawn under the eyes so the googly pair still reads on top.
+    if (disc) s.push(ci(26, -26, 22, W, { stroke: 'none', opacity: 0.5 }),
+                     ci(48, -30, 17, W, { stroke: 'none', opacity: 0.4 }),
+                     li('M 6 -24 q 20 24 42 6', A, 3, { opacity: 0.5 }));
     s.push(...eye(45, -30, 6.5));
     s.push(beak === 'hook'
       ? pa('M 44 -30 C 65 -33 77 -26 78 -16 C 79 -6 69 -1 61 -6 C 65 -12 62 -17 46 -14 Z', A, { strokeWidth: 4 })
-      : pa('M 44 -26 L 82 -18 L 44 -8 Z', A, { strokeWidth: 4 }));
+      : beak === 'spear'
+        ? pa('M 44 -25 L 84 -18 L 44 -10 Z', A, { strokeWidth: 4 })
+        : pa('M 44 -26 L 82 -18 L 44 -8 Z', A, { strokeWidth: 4 }));
     s.push(ci(55, -23, 2.5, O, { stroke: 'none' }));
     s.push(li('M 12 -38 L 40 -31', O, 5));
     s.push(...eye(27, -24, eyeR));
@@ -118,6 +125,34 @@ const HEADS = {
     if (mandibles) s.push(pa('M 48 -4 C 62 0 70 8 66 16 C 62 10 54 8 46 8 Z', A, { strokeWidth: 3.5 }),
                           pa('M 48 -10 C 64 -12 74 -6 72 2 C 66 -4 58 -4 48 -2 Z', A, { strokeWidth: 3.5 }));
     return s;
+  },
+  // A moth's head is a fur ball with feathered antennae and a coiled
+  // proboscis — no mandibles, nothing to bite with. Air's first head.
+  moth({ eyeR = 15, plume = true }) {
+    const s = [];
+    if (plume) {
+      s.push(li('M 16 -34 C 26 -58 46 -66 62 -62', O, 3.5), li('M 26 -30 C 40 -50 60 -54 72 -46', O, 3.5));
+      s.push(li('M 24 -44 l -8 -5 M 33 -52 l -8 -5 M 43 -58 l -7 -6 M 53 -61 l -5 -7', O, 2.5, { opacity: 0.7 }));
+      s.push(li('M 37 -41 l -7 -6 M 48 -47 l -6 -6 M 58 -50 l -5 -7', O, 2.5, { opacity: 0.55 }));
+    }
+    s.push(ci(22, -18, 30, P), sheen(10, -32, 15, 9, 0.2));
+    s.push(li('M -2 -4 q 12 -14 24 -15 q 13 -1 24 6', S, 8, { opacity: 0.6 }));
+    s.push(...eye(46, -24, eyeR * 0.6));
+    s.push(li('M 44 2 C 60 6 64 20 53 24 C 44 26 42 16 49 15', A, 3.5));
+    s.push(...eye(24, -22, eyeR));
+    return s;
+  },
+  // A jellyfish's bell is the swimming organ, so it votes Water the same
+  // way a gilled head does.
+  bell({ eyeR = 14 }) {
+    return [
+      pa('M -2 4 C -6 -32 14 -58 38 -58 C 62 -58 82 -32 78 4 Z', P, { opacity: 0.92 }),
+      li('M -2 4 q 10 12 20 0 q 10 12 20 0 q 10 12 20 0 q 10 12 16 0', P, 5.5, { opacity: 0.9 }),
+      sheen(22, -36, 17, 11, 0.24),
+      li('M 16 -46 C 9 -28 9 -12 14 0 M 38 -51 C 36 -30 36 -12 38 0 M 60 -46 C 67 -28 67 -12 62 0', S, 3.5, { opacity: 0.55 }),
+      ...eye(55, -26, eyeR * 0.7),
+      ...eye(29, -23, eyeR),
+    ];
   },
   blob({ eyeR = 16 }) {
     return [pa('M 2 0 C -6 -34 14 -66 40 -66 C 66 -66 84 -36 74 -2 C 66 22 14 24 2 0 Z', P),
@@ -204,6 +239,43 @@ const LIMBS = {
             po(`-2,${len - 2} -16,${len + 9} -8,${len + 14}`, A, { strokeWidth: 4 }),
             po(`21,${len + 3} 30,${len + 8} 19,${len + 11}`, O, { stroke: 'none' })];
   },
+  // Webbed foot / flipper. Water's answer to the paw, and the reason a
+  // goose reads as half-flier, half-swimmer.
+  paddle({ len = 46, webs = 3 }) {
+    const s = [el(0, 2, 16, 17, P), rc(-9, 0, 18, len - 6, 8, P),
+               li(`M -6 8 q 3 ${len * 0.35} 0 ${len * 0.55}`, W, 4.5, { opacity: 0.14 }),
+               pa(`M -20 ${len} q 20 -10 40 0 q -6 20 -20 20 q -14 0 -20 -20 z`, S, { strokeWidth: 4 })];
+    for (let i = 1; i < webs; i++) {
+      const x = -20 + (40 / webs) * i;
+      s.push(li(`M ${x} ${len + 2} L ${x * 0.5} ${len + 19}`, O, 2.5, { opacity: 0.55 }));
+    }
+    return s;
+  },
+  // An insect's hindwing: smaller than the forewing, eyespot on the lobe.
+  // A flight surface in the HINDLIMB socket, which is the slot Air did not
+  // have a single part in before A3.
+  hindwing({ span = 84 }) {
+    const T = 'translate(2 -8) rotate(7)';
+    return [
+      pa(`M 2 6 C -10 -8 -34 -26 ${-span} -34 C ${-span - 9} -35 ${-span - 12} -26 ${-span - 3} -21 Q ${-span + 14} -6 ${-span + 30} -2 Q ${-span + 50} 12 -24 12 Q -12 18 2 16 Z`, P, { transform: T, opacity: 0.93 }),
+      li(`M -4 4 C -30 -6 -56 -18 ${-span - 1} -28`, O, 3, { opacity: 0.45, transform: T }),
+      li(`M -4 8 C -26 4 -50 0 ${-span + 20} -6`, O, 3, { opacity: 0.32, transform: T }),
+      ci(-span + 12, -12, 9, A, { strokeWidth: 3.5, transform: T }),
+      ci(-span + 12, -12, 3.5, O, { stroke: 'none', transform: T }),
+      el(0, 0, 12, 12, P),
+    ];
+  },
+  // A wader's leg: all shin, splayed toes, made for standing in water and
+  // walking out of it. Honest Ground anatomy on an Air bird.
+  stilt({ len = 76 }) {
+    return [el(0, 0, 13, 14, P), rc(-6, -2, 12, len * 0.5, 6, P),
+            el(0, len * 0.5, 8.5, 8.5, P),
+            rc(-4.5, len * 0.5, 9, len * 0.5, 4, A),
+            li(`M -2 6 q -2 ${len * 0.18} 0 ${len * 0.28}`, W, 3.5, { opacity: 0.14 }),
+            po(`0,${len} 24,${len + 4} 22,${len + 11} 0,${len + 8}`, A, { strokeWidth: 3.5 }),
+            po(`0,${len} -20,${len + 6} -18,${len + 13} 0,${len + 8}`, A, { strokeWidth: 3.5 }),
+            li(`M 0 ${len + 3} L -3 ${len + 16}`, A, 3)];
+  },
   hop({ len = 50 }) {
     return [el(0, 8, 22, 24, P), sheen(-7, 0, 11, 12, 0.14),
             pa(`M -10 22 q 12 10 22 0 l 0 10 q -12 10 -22 0 z`, P, { strokeWidth: 4 }),
@@ -238,6 +310,40 @@ const TAILS = {
     pa('M 0 -6 C -34 -10 -59 -8 -70 -2 C -74 4 -71 9 -63 9 C -40 8 -18 5 0 6 Z', S),
     li('M -10 0 C -32 -2 -50 -1 -64 2', O, 3, { opacity: 0.4 }),
   ],
+  // Otter rudder: thick at the base, flattened, steers rather than balances.
+  rudder: ({ len = 58 }) => [
+    pa(`M 2 -12 C ${-len * 0.4} -19 ${-len} -13 ${-len - 9} -2 C ${-len} 11 ${-len * 0.4} 17 2 12 Z`, P, { strokeWidth: 4.5 }),
+    li(`M -8 -3 C ${-len * 0.5} -8 ${-len + 4} -7 ${-len - 3} -2`, S, 5, { opacity: 0.7 }),
+    sheen(-20, -6, 13, 5, 0.13),
+  ],
+  // A moth's hindwing streamers: two trailing lobes that make it read as a
+  // flier from behind. Air, in the tail socket.
+  streamer: ({ len = 64 }) => [
+    pa(`M 0 -8 C ${-len * 0.4} -20 ${-len * 0.8} -27 ${-len} -14 C ${-len * 0.7} -8 ${-len * 0.35} -2 0 2 Z`, P, { strokeWidth: 4 }),
+    pa(`M 0 4 C ${-len * 0.4} 7 ${-len * 0.8} 17 ${-len - 5} 31 C ${-len * 0.68} 19 ${-len * 0.32} 12 0 10 Z`, S, { strokeWidth: 4 }),
+    li(`M -6 -2 C ${-len * 0.5} -9 ${-len * 0.78} -13 ${-len + 5} -14`, O, 3, { opacity: 0.4 }),
+    ci(-len * 0.45, -11, 6, A, { strokeWidth: 3 }),
+  ],
+  // Trailing stinging threads. Not a tail so much as everything below the bell.
+  drift: ({ len = 70 }) => [
+    li(`M 0 -8 C ${-len * 0.4} -14 ${-len * 0.7} 2 ${-len} 6`, P, 6, { opacity: 0.9 }),
+    li(`M 0 0 C ${-len * 0.45} 0 ${-len * 0.75} 14 ${-len - 4} 23`, P, 5, { opacity: 0.75 }),
+    li(`M 0 6 C ${-len * 0.4} 12 ${-len * 0.7} 23 ${-len + 3} 35`, S, 4, { opacity: 0.7 }),
+    li(`M 0 10 C ${-len * 0.3} 18 ${-len * 0.55} 31 ${-len * 0.7} 41`, S, 3.5, { opacity: 0.55 }),
+    ci(-len, 6, 4, A, { stroke: 'none', opacity: 0.8 }),
+    ci(-len - 4, 23, 3.5, A, { stroke: 'none', opacity: 0.65 }),
+  ],
+  // A banded, armoured tail — ballast for something that walks. Ground's
+  // only tail, and it should read as heavy.
+  scute: ({ len = 54 }) => {
+    const s = [pa(`M 2 -8 C ${-len * 0.5} -13 ${-len} -7 ${-len - 10} 3 C ${-len} 11 ${-len * 0.5} 11 2 8 Z`, P, { strokeWidth: 4.5 })];
+    for (let i = 1; i <= 4; i++) {
+      const x = -len * (i / 5) - 6;
+      s.push(li(`M ${x} ${-7 + i} L ${x - 2} ${9 - i * 0.5}`, A, 4, { opacity: 0.8 - i * 0.06 }));
+    }
+    s.push(sheen(-16, -4, 10, 4, 0.12));
+    return s;
+  },
   // Scorpion sting: arches up over the back, tip forward.
   sting: ({ len = 66 }) => [
     pa(`M 0 -4 C -18 -8 -34 -22 -42 -40 C -46 -52 -36 -60 -28 -52 C -24 -36 -12 -22 2 -14 Z`, P, { strokeWidth: 4.5 }),
@@ -302,6 +408,35 @@ const HIDES = {
     li('M -60 6 q 30 14 60 0 q 30 -14 58 0', W, 4, { opacity: 0.16 }),
     ci(-40, 20, 7, S, { stroke: 'none', opacity: 0.3 }),
     ci(6, -34, 6, S, { stroke: 'none', opacity: 0.3 }),
+  ],
+  down: () => [
+    el(-34, -14, 26, 16, S, { stroke: 'none', opacity: 0.4 }),
+    el(14, -22, 30, 15, S, { stroke: 'none', opacity: 0.32 }),
+    el(-6, 22, 34, 14, S, { stroke: 'none', opacity: 0.28 }),
+    li('M -52 -30 l 3 8 M -30 -34 l 3 8 M -8 -36 l 2 8 M 14 -32 l 3 8 M 36 -26 l 4 8', A, 3, { opacity: 0.5 }),
+    li('M -44 6 l 3 8 M -20 10 l 2 8 M 4 12 l 3 8 M 28 8 l 3 8', A, 3, { opacity: 0.4 }),
+    li('M -60 -8 q 30 12 60 0 q 28 -12 56 0', W, 4, { opacity: 0.14 }),
+  ],
+  spine: () => [
+    li('M -60 -24 l -6 -14 M -38 -32 l -3 -15 M -14 -36 l 0 -15 M 10 -34 l 3 -15 M 34 -28 l 6 -14 M 54 -18 l 11 -12', A, 4.5, { opacity: 0.9 }),
+    li('M -70 -2 l -14 -4 M 60 -2 l 14 -4 M -64 18 l -13 6 M 54 18 l 13 6', A, 4.5, { opacity: 0.8 }),
+    li('M -46 30 l -4 13 M -20 36 l -1 14 M 6 36 l 2 14 M 32 30 l 5 13', A, 4.5, { opacity: 0.72 }),
+    el(-8, 22, 34, 13, S, { stroke: 'none', opacity: 0.32 }),
+  ],
+  band: () => [
+    pa('M -46 -34 q 8 34 0 68 l 17 0 q -8 -34 0 -68 z', S, { strokeWidth: 3, opacity: 0.85 }),
+    pa('M -20 -38 q 8 38 0 76 l 17 0 q -8 -38 0 -76 z', S, { strokeWidth: 3, opacity: 0.78 }),
+    pa('M 6 -38 q 8 38 0 76 l 17 0 q -8 -38 0 -76 z', S, { strokeWidth: 3, opacity: 0.72 }),
+    pa('M 32 -34 q 7 34 0 68 l 16 0 q -7 -34 0 -68 z', S, { strokeWidth: 3, opacity: 0.66 }),
+    li('M -68 -18 q 12 20 0 40', A, 4, { opacity: 0.6 }),
+  ],
+  jelly: () => [
+    el(-18, -12, 34, 22, W, { stroke: 'none', opacity: 0.22 }),
+    el(26, 8, 26, 17, W, { stroke: 'none', opacity: 0.16 }),
+    li('M -62 -6 q 30 16 62 0 q 30 -16 58 0', S, 4.5, { opacity: 0.5 }),
+    li('M -54 16 q 28 14 56 0 q 26 -14 52 0', S, 3.5, { opacity: 0.38 }),
+    ci(-30, 16, 8, A, { stroke: 'none', opacity: 0.3 }),
+    ci(18, -26, 7, A, { stroke: 'none', opacity: 0.26 }),
   ],
   camo: () => [
     pa('M -60 -20 q 18 -16 34 -2 q 10 14 -6 20 q -22 6 -28 -18 z', S, { stroke: 'none', opacity: 0.45 }),
