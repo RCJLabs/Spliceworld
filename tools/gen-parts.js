@@ -165,8 +165,29 @@ const ORGAN_NAMES = {
 // have quietly reverted all of it. Keyed by part id rather than by species
 // because that is how R20 authored it: the Thunderhead's head does NOT
 // carry its base's Lock-On.
+//
+// A5 added the second half of it. Two of the five attack tags — Sonic and
+// Gas — existed ONLY on heads, organs and hides: support slots, capped at 62
+// and 28 power. So neither could ever be a creature's MAIN attack, and both
+// are tags the region ladder asks for (Sonic is the only thing that goes
+// through armour, and the Foundry is 9/11 Armored at armor 11–15). Four
+// parts move them into damage slots, on the species whose identity they
+// already are.
 const KEYWORD_MOVES = {
   tiger_forelimbs:     M(46, 24, 92, [], { bleed: 1 }),
+  // A5 — Sonic you can actually swing. Priced under the generic 52 because
+  // ignoring armour outright is worth a few points of power.
+  goose_forelimbs:     M(48, 24, 92, ['Sonic'], {}),
+  armadillo_tail:      M(40, 20, 95, ['Sonic'], {}),
+  // A5 — Gas in a damage slot. Gas is x1.5 on Organic and x0 on Vehicle, so
+  // leaning on it is a real trade rather than a free upgrade: the same build
+  // that shreds Greenfield does nothing at all to the Foundry.
+  skunk_tail:          M(42, 22, 95, ['Gas'], { accDown: 1 }),
+  moth_forelimbs:      M(46, 24, 92, ['Gas'], { evasionUp: 1 }),
+  // Electric could only be swung from a limb by somebody who had BRED a
+  // Thunderhead Eagle — both carriers were storm_eagle, a chaos variant. An
+  // eel's whole body is the organ, so its tail is an honest second door.
+  electric_eel_tail:   M(50, 26, 95, ['Electric'], {}),
   crocodile_forelimbs: M(46, 24, 92, [], { slow: 0.3 }),
   gorilla_head:        M(42, 22, 95, [], { rage: true }),
   eagle_head:          M(42, 22, 95, [], { ignoreEvasion: true }),
@@ -196,6 +217,15 @@ const ORGAN_ACTIVE = {
   gut:      { label: 'Gut', move: M(0, 10, 100, [], { staminaRestore: 18 }) },
 };
 // Where a species earned a name for its active instead of "<Species> <Kind>".
+// Names for the A5 damage-slot moves, so they read as the thing the species
+// is famous for rather than as "<Species> Strike".
+const KEYWORD_ABILITY = {
+  electric_eel_tail: 'Live Wire',
+  goose_forelimbs: 'Wing Buffet',
+  armadillo_tail: 'Shell Knock',
+  skunk_tail: 'Business End',
+  moth_forelimbs: 'Scale Storm',
+};
 const ACTIVE_ABILITY = {
   goat_organ: 'Second Stomach', tortoise_organ: 'Shell Rebuild', frog_organ: 'Cutaneous Mend',
   heron_organ: 'Stand Perfectly Still', falcon_organ: 'Terminal Velocity',
@@ -354,7 +384,10 @@ for (const sp of species) {
       move = def.move;
       ability = ACTIVE_ABILITY[`${sp.id}_${slot}`] ?? `${sp.name} ${def.label}`;
     }
-    if (KEYWORD_MOVES[`${sp.id}_${slot}`]) move = KEYWORD_MOVES[`${sp.id}_${slot}`];
+    if (KEYWORD_MOVES[`${sp.id}_${slot}`]) {
+      move = KEYWORD_MOVES[`${sp.id}_${slot}`];
+      ability = KEYWORD_ABILITY[`${sp.id}_${slot}`] ?? ability;
+    }
     // A variant's `moveTag` rides on its damaging moves — the tag chart reads
     // the ATTACK side, so this is where "Thunderhead" stops being a paint job.
     if (move && sp.moveTag && move.power > 0 && !move.tags.includes(sp.moveTag)) {
