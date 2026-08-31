@@ -1,5 +1,92 @@
 # PROGRESS
 
+## Session 48 — A7: obedience, priced ✅
+
+**Acceptance criterion:** the number that decides whether your orders happen
+is on the screen where you choose who fights — **passes**, though not in the
+way the item expected, because measurement disagreed with both halves of its
+premise.
+
+### It was never invisible
+
+Every roster row on the briefing screen already printed `obedience N%`. The
+audit's premise was simply out of date.
+
+### And it is not decisive
+
+The audit read the ignore *percentage* — 45% sounds enormous — without
+measuring what it buys. The original reading also confounded two things: an
+unsettled creature carries **both** a big ignore chance **and** Rejection
+(×0.75 power and speed), so the damage was being attributed to the wrong one.
+
+Holding settling fixed so Rejection never fires, and replaying the real
+engine **300 times a cell at pilot skill 1.0**:
+
+| ignore chance | 0% | 20% | 40% | 60% (the cap) |
+|---|---|---|---|---|
+| patrol_2 | 95% | 96% | 91% | 86% |
+| checkpoint | 100% | 100% | 99% | 96% |
+
+**Twenty per cent — the realistic figure for a settled mixed build at zero
+bond — is worth one to three points, inside the noise.** Even the cap costs
+about nine. I checked it at pilot skill 0.8 and 1.0 in case the forecast's AI
+was simply too weak for a random substitution to hurt it; same answer.
+
+The reason is structural: **a disobeying creature substitutes another move
+from its own list.** With five or six mostly-damaging moves, a random one is
+usually nearly as good. It costs a little optimisation and never a turn.
+
+### So: not "display it harder"
+
+**One.** An ignore now actually changes the move. The improvisation pool
+included the move that had just been *ordered*, so roughly one ignore in five
+printed *"ignores orders and improvises!"* and then did exactly what it was
+told — a line of combat log that was not true.
+
+**Two.** The briefing *prices* it. `forecast()` takes `obedient: true`, which
+replays the same fight with disobedience switched off and **nothing else
+changed**, so the gap between the two win rates is what this team's obedience
+costs against this encounter:
+
+> **Obedience 40%** — worth about **6 points** of win chance here. Train them,
+> or let them settle.
+
+A team that cannot disobey gets no line at all and pays nothing for the extra
+replays. Verified in the browser: Steady alone (100%) shows nothing; adding
+Havoc (40%) produces the line above.
+
+That is the criterion satisfied in substance rather than in letter — the
+number is not just present, it is convertible into a decision — and it stays
+honest at whatever this mechanic is eventually worth.
+
+### The break battery
+
+| break | caught by |
+|---|---|
+| the improvisation pool includes the ordered move again | *never "improvises" into the move it was just ordered to use* |
+| the obedient replay perturbs power and Rejection too | *a team that never disobeys forecasts identically either way* |
+| the obedient replay sets ignoreChance to 1 instead of 0 | *switching disobedience off never makes a team worse* |
+
+The second is the one that matters: it is what stops the screen reporting
+sampling noise as a cost.
+
+I also lost both engine edits mid-battery to a `git checkout -- battle/engine.js`
+used to undo a mutation — the same trap as earlier in this run. Re-applied and
+re-verified.
+
+### Known issues
+
+- **Obedience is now honestly reported and still nearly worthless.** At the
+  values the game actually produces it is a 1–3 point effect, so as a system
+  it is close to decorative. Making it matter is a combat retune — a separate
+  decision, not something to slip into a display phase.
+- Rejection (×0.75 power and speed) is the penalty that actually bites, and
+  the briefing names it without quantifying it. The same forecast-delta trick
+  would price it.
+
+**Next session's first task:** A8 — the balance harness fights at a team of
+three and never measures the solo player the game actually starts you as.
+
 ## Session 47 — A6: a combo for everybody, and a silhouette that points ✅
 
 **Acceptance criterion:** every species can appear in at least one combo, and
