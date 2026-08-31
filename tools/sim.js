@@ -564,7 +564,23 @@ export const ARCHETYPES = {
     anatomy: 'gas',
     name: 'Fumigation',
     frame: 'M',
-    partIds: ['cobra_head', 'octopus_forelimbs', 'octopus_hindlimbs', 'scorpion_tail', 'skunk_hide', 'skunk_organ'],
+    // Same discipline as `noise` below, and for the same reason: one water
+    // limb and one ground limb, so the affinities tie and the build is
+    // Unclassed. It used to be Unclassed by ACCIDENT — two octopus tentacles
+    // and a cobra head, none of which were in any affinity table. R32 put
+    // tentacles in one (an octopus voting for nothing was a bug), and the
+    // Gas axis silently became a second Water build: it rode the same
+    // triangle advantage as `gills` and jumped from 72% to 94% in Kestrel,
+    // closing that region's identity margin to 6pp. An archetype that
+    // isolates one axis must not carry a class advantage as well.
+    //
+    // The tie comes from a WING rather than a leg on purpose. A ground limb
+    // votes Ground and therefore swings a Ground-tagged move, which is a
+    // fifth attack tag competing for four move slots — and the one it pushed
+    // out was the Gas answer this archetype exists to measure. Scale Storm
+    // is a Gas attack whose anatomy votes Air, so it buys the tie and feeds
+    // the axis with the same part.
+    partIds: ['cobra_head', 'moth_forelimbs', 'octopus_hindlimbs', 'scorpion_tail', 'skunk_hide', 'skunk_organ'],
   },
   //   noise  — armour-piercing. Sonic ignores Armor outright, which is the
   //            only thing that answers a region built entirely out of

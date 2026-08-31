@@ -90,7 +90,12 @@ export function renderTheaterScreen(root, ctx) {
               label: part.name,
               mark: part.classAffinity ? CLASS_MARK[part.classAffinity] : '',
               badge: `<span class="grade-badge grade-${t.grade}">${grade.name}</span>`,
-              sub: `${part.ability} \u00b7 essence of ${t.donor.name} \u2605${t.donor.stars}`,
+              // R32 made mass the currency the chassis decision is priced in — a
+              // rhino head is 32 and a moth head is 1 — so the number has to be on
+              // the part, not only in the panel after you have already fitted it.
+              sub: `${part.ability} \u00b7 ${part.phys.mass} mass${
+                part.phys.lift ? ` \u00b7 ${Math.round(part.phys.lift * grade.mult)} lift` : ''
+              } \u00b7 essence of ${t.donor.name} \u2605${t.donor.stars}`,
               disabled: chosen.has(t.id) && draft.slots[socketId] !== t.id,
             };
           }),

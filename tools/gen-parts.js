@@ -13,6 +13,7 @@ import { HEADS, LIMBS, TAILS, HIDES, organ, GLYPHS } from './shapes.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const species = JSON.parse(readFileSync(join(root, 'data/species.json'), 'utf8')).species;
+const speciesById = Object.fromEntries(species.map((s) => [s.id, s]));
 
 // family + params per slot, plus the organ glow colour and glyph.
 const B = (head, fore, hind, tail, hide, glow, glyph) => ({ head, fore, hind, tail, hide, glow, glyph });
@@ -29,7 +30,7 @@ const BUILD = {
   ram:          B(['horned',{horn:'curl'}], ['hoof',{len:50}], ['hoof',{len:54}], ['flick',{}], 'fur', '#e8dcc8', 'gear'),
   eagle:        B(['bird',{beak:'hook'}], ['wing',{span:118}], ['talon',{}], ['fan',{spread:19}], 'feather', '#ffd66e', 'feather'),
   bat:          B(['mammal',{snout:14,ear:'pointed',skull:24,eyeR:12,teeth:true}], ['membrane',{span:104}], ['talon',{len:44}], ['nub',{}], 'fur', '#c9a7d6', 'howl'),
-  dragonfly:    B(['bug',{eyeR:17,mandibles:false}], ['membrane',{span:112}], ['bugleg',{len:46}], ['whip',{len:56}], 'chitin', '#d9f5f0', 'spark'),
+  dragonfly:    B(['bug',{eyeR:17,mandibles:false}], ['membrane',{span:112}], ['hindwing',{span:84}], ['whip',{len:56}], 'chitin', '#d9f5f0', 'spark'),
   shark:        B(['fish',{teeth:true,gills:true,eyeR:11}], ['fin',{len:56}], ['fin',{len:52}], ['finTail',{len:62}], 'slick', '#eef2f5', 'wave'),
   octopus:      B(['blob',{}], ['tentacle',{len:64}], ['tentacle',{len:58}], ['whip',{len:56}], 'slick', '#f2c4de', 'cloud'),
   electric_eel: B(['fish',{teeth:false,gills:true,eyeR:10}], ['fin',{len:46}], ['fin',{len:44}], ['finTail',{len:62}], 'slick', '#f2e14a', 'bolt'),
@@ -112,6 +113,45 @@ const SLOT_BASE = {
   hide:       { stats: { armor: 5, hp: 20 },              phys: { mass: 10, draw: 1 } },
   organ:      { stats: { stamina: 10, regen: 4, hp: 7 },  phys: { mass: 5, draw: 3 } },
 };
+
+// R32. Mass used to be a CONSTANT. Every one of the 41 species' anatomy
+// totalled exactly 58 — a rhino's head weighed what a moth's head weighed,
+// a plate hide weighed what a jelly mantle weighed — because SLOT_BASE was
+// the whole story. That was survivable while mass only bought turn order.
+// A9 changed the stakes: mass now gates flight outright (lift >= mass) and
+// costs a point of speed per 50, so mass is the currency the chassis
+// decision is priced in, and every animal was paying the same price.
+//
+// Two multipliers, and between them a part finally says what it is:
+//
+//   BULK   — what the ANIMAL weighs (data/species.json `bulk`). A variant
+//            inherits its base's unless it declares its own, which is how a
+//            Glider Skunk gets to be lighter than the skunk it came from.
+//   DENSITY— what the PART is made of, keyed on the shape family it is
+//            drawn from. A wing is a hollow spar under a membrane; a plate
+//            hide is armour. They should never have massed the same.
+//
+// Lift scales with bulk too, but as bulk^(2/3): lift follows wing AREA, and
+// area goes as mass^(2/3). That is what keeps a purebred flier flying while
+// still failing the moment you bolt somebody else's skull to it — and it is
+// why a moth gets airborne on nothing while a swan needs a runway.
+const DENSITY = {
+  head: { horned: 1.4, reptile: 1.15, mammal: 1, fish: 0.95, amphib: 0.8, bug: 0.7, blob: 0.7, bird: 0.5, moth: 0.35, bell: 0.3 },
+  limb: { paw: 1.15, hoof: 1.1, hop: 1.05, scythe: 0.85, fin: 0.85, paddle: 0.85, tentacle: 0.8, talon: 0.6, stilt: 0.55, bugleg: 0.55, wing: 0.45, membrane: 0.4, hindwing: 0.35 },
+  tail: { scute: 1.3, coil: 1.15, finTail: 1, rudder: 0.95, sting: 0.9, whip: 0.85, bushy: 0.7, nub: 0.5, drift: 0.5, flick: 0.45, fan: 0.45, streamer: 0.35 },
+  hide: { plate: 1.8, band: 1.45, scale: 1.15, quill: 1.1, spine: 1.05, fur: 1, stripes: 1, camo: 0.9, chitin: 0.85, slick: 0.85, feather: 0.45, down: 0.35, jelly: 0.3 },
+};
+function bulkFor(sp, byId) {
+  return sp.bulk ?? (sp.variantOf ? byId[sp.variantOf]?.bulk : undefined) ?? 1;
+}
+function densityFor(slot, b) {
+  if (slot === 'head') return DENSITY.head[b.head[0]] ?? 1;
+  if (slot === 'forelimbs') return DENSITY.limb[b.fore?.[0]] ?? 1;
+  if (slot === 'hindlimbs') return DENSITY.limb[b.hind?.[0]] ?? 1;
+  if (slot === 'tail') return DENSITY.tail[b.tail[0]] ?? 1;
+  if (slot === 'hide') return DENSITY.hide[b.hide] ?? 1;
+  return 1; // an organ is an organ
+}
 const ROLE_BIAS = {
   Power: { power: 1.5, speed: 0.7 }, Striker: { power: 1.25, speed: 1.2 },
   Pack: { power: 1.1, speed: 1.1 }, Bruiser: { power: 1.35, hp: 1.2, speed: 0.8 },
@@ -306,18 +346,31 @@ function shapesFor(slot, sp) {
 // hook that only touches the earth at the end of a dive, and pricing it as
 // a walking leg is what made the Bat — wings AND talons — read as
 // Unclassed, and what left the Air column with zero hindlimbs.
+//
+// R32 closed the three species that voted for NOTHING. An octopus — the most
+// aquatic animal on the roster — was Unclassed, because `tentacle` and a
+// `blob` head were in no table; so were both cobras, whose only classifying
+// anatomy is the coil they move on. A species whose declared class its own
+// body cannot vote for is a species the class system does not apply to.
 const AFFINITY_FAMILY = {
   wing: 'air', membrane: 'air', fan: 'air', talon: 'air', hindwing: 'air', streamer: 'air',
   fin: 'water', finTail: 'water', hop: 'water', paddle: 'water', rudder: 'water', drift: 'water',
+  tentacle: 'water',
   paw: 'ground', hoof: 'ground', bugleg: 'ground', scythe: 'ground', stilt: 'ground', scute: 'ground',
+  coil: 'ground',
 };
 // A head votes only where the anatomy is class-defining, which is why most
 // heads do not vote at all: gills breathe water and a bell swims in it, a
 // beak on a hollow skull is flight kit, and a horned skull is a thing you
 // brace against the ground and shove with.
-const HEAD_AFFINITY = { fish: 'water', bell: 'water', bird: 'air', moth: 'air', horned: 'ground' };
+const HEAD_AFFINITY = { fish: 'water', bell: 'water', blob: 'water', bird: 'air', moth: 'air', horned: 'ground' };
 // Flight SURFACES grant lift; a talon votes Air but does not hold anything up.
 const LIFT_FAMILY = { wing: 90, membrane: 90, hindwing: 55 };
+// Lift follows wing AREA, and area goes as mass^(2/3) — which is why a moth
+// gets off the ground on nothing and a swan needs a runway. Without the
+// exponent, lift scaled linearly with bulk and every flier landed within four
+// mass of its own ceiling; small fliers could not amortise the chassis.
+const LIFT_EXPONENT = 2 / 3;
 function affinityFor(slot, sp) {
   // A variant may rewrite what a slot votes for — the Glider Skunk's
   // patagium makes its forelimbs Air, which is the entire point of it.
@@ -344,6 +397,31 @@ const GENERIC_MOVE = {
   hide: () => null,
   organ: () => null,
 };
+// What the limb actually DOES, so an unsigned part is named for its anatomy
+// rather than for its slot. The generic names were "<Species> Strike" and
+// "<Species> Kick" across the board, which gave the roster a Moth Kick thrown
+// by a hindwing, an Owl Strike thrown by a wing, and a Heron Bite delivered by
+// a spear-shaped bill.
+// A string is the same verb in both sockets; an object splits them, because a
+// front paw swipes and a back one kicks.
+const LIMB_VERB = {
+  wing: 'Wing Beat', membrane: 'Wing Beat', hindwing: 'Downbeat', talon: 'Talon Rake',
+  stilt: 'Stilt Jab', scythe: 'Scythe Strike',
+  // Anything a species can wear in BOTH sockets has to split, or the two
+  // parts land on the same name and the second one reads as a duplicate.
+  hop: { forelimbs: 'Grab', hindlimbs: 'Kick' },
+  paw: { forelimbs: 'Swipe', hindlimbs: 'Kick' },
+  hoof: { forelimbs: 'Stomp', hindlimbs: 'Kick' },
+  fin: { forelimbs: 'Fin Slash', hindlimbs: 'Fin Thrust' },
+  paddle: { forelimbs: 'Paddle Slap', hindlimbs: 'Flipper Kick' },
+  tentacle: { forelimbs: 'Tentacle Lash', hindlimbs: 'Arm Wrap' },
+  bugleg: { forelimbs: 'Foreclaw Jab', hindlimbs: 'Leg Sweep' },
+};
+const limbVerb = (family, slot) => {
+  const v = LIMB_VERB[family];
+  return typeof v === 'string' ? v : v?.[slot];
+};
+const HEAD_VERB = { bird: 'Peck', moth: 'Proboscis Jab', bug: 'Mandible Snap', bell: 'Sting', blob: 'Beak', horned: 'Headbutt' };
 const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
 
 const parts = [];
@@ -364,13 +442,13 @@ for (const sp of species) {
     const name = isSig
       ? (sp.variantOf ? `${sp.name} ${famName === 'Head' ? 'Head' : famName}` : sigName)
       : slot === 'organ' ? famName : `${sp.name} ${famName}`;
+    const limbFamily = slot === 'forelimbs' ? b.fore?.[0] : slot === 'hindlimbs' ? b.hind?.[0] : null;
     let ability = isSig ? sigAbility
       : slot === 'tail' ? TAIL_ABIL[b.tail[0]]
       : slot === 'hide' ? HIDE_ABIL[b.hide]
       : slot === 'organ' ? ORGAN_NAMES[root][1]
-      : slot === 'head' ? `${sp.name} Bite`
-        : slot === 'hindlimbs' ? `${sp.name} Kick`
-          : `${sp.name} Strike`;
+      : slot === 'head' ? `${sp.name} ${HEAD_VERB[b.head[0]] ?? 'Bite'}`
+        : `${sp.name} ${limbVerb(limbFamily, slot) ?? (slot === 'hindlimbs' ? 'Kick' : 'Strike')}`;
     const aff = affinityFor(slot, sp);
     let move = isSig ? sigMove : GENERIC_MOVE[slot](sp, aff);
     // Hides and organs have no generic move, so an unsigned one falls to its
@@ -393,9 +471,22 @@ for (const sp of species) {
     if (move && sp.moveTag && move.power > 0 && !move.tags.includes(sp.moveTag)) {
       move = { ...move, tags: [...move.tags, sp.moveTag] };
     }
-    const phys = { ...SLOT_BASE[slot].phys };
+    const bulk = bulkFor(sp, speciesById);
+    const density = densityFor(slot, b);
+    const base = SLOT_BASE[slot].phys;
+    const phys = {
+      mass: round1(base.mass * bulk * density),
+      // Draw is deliberately NOT scaled. It was, briefly, on Kleiber's law —
+      // and it cost the `gills` archetype four stamina a turn, dropping
+      // kestrel/cloudbase from 54% to 21% and breaking A8's climbability
+      // floor. Draw is the STAMINA economy (R23's actives and A5's move
+      // costs are priced against it) and the upkeep bill; mass and lift are
+      // the physics this phase is about. Rescaling it retunes every long
+      // fight in the game as a side effect of a flight change.
+      draw: base.draw,
+    };
     const liftFamily = slot === 'forelimbs' ? b.fore?.[0] : slot === 'hindlimbs' ? b.hind?.[0] : null;
-    if (aff === 'air' && LIFT_FAMILY[liftFamily]) phys.lift = LIFT_FAMILY[liftFamily];
+    if (aff === 'air' && LIFT_FAMILY[liftFamily]) phys.lift = round1(LIFT_FAMILY[liftFamily] * Math.pow(bulk, LIFT_EXPONENT));
     const part = {
       id: `${sp.id}_${slot}`, species: sp.id, slot, name, ability,
       stats: statsFor(slot, sp), phys, tags: [...sp.tags],
@@ -425,7 +516,11 @@ const out = {
     ' elemental class (see data/classes.json). Hand-authored content lives in the' +
     ' generator too — R20\'s keyword moves and R23\'s hide and organ actives — because a' +
     ' generator that reverts four phases of tuning the next time somebody runs it is a' +
-    ' trap. Art style: bold flat vector — thick @outline' +
+    ' trap. R32: phys.mass, phys.draw and phys.lift are no longer slot constants —' +
+    ' every one of the 41 species used to total exactly 58 mass — but the species\' `bulk`' +
+    ' (what the animal weighs) times a DENSITY keyed on the part\'s shape family (what it is' +
+    ' made of). A wing is a hollow spar under a membrane; a plate hide is armour; they never' +
+    ' should have massed the same. Art style: bold flat vector — thick @outline' +
     ' strokes on masses, thinner on detail; two googly eyes with catchlights on heads;' +
     ' @white low-opacity sheen for form; @secondary for muzzles/bellies, @accent for' +
     ' horns/beaks/claws.',
