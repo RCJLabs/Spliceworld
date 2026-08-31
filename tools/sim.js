@@ -13,7 +13,7 @@ import { dirname, join } from 'node:path';
 import { indexContent } from '../render/renderer.js';
 import { seedTemperament } from '../splice/temperament.js';
 import { analyze } from '../splice/physiology.js';
-import { createBattle, step, playerActions, playerActive } from '../battle/engine.js';
+import { createBattle, step, playerActions, playerActive, movesFromTokens } from '../battle/engine.js';
 import { rivalEncounter, rivalList } from '../campaign/rivals.js';
 import { mulberry32, hashString, pick, rngStream } from '../util/rng.js';
 import { chooseMoveIndex } from '../battle/ai.js';
@@ -49,6 +49,33 @@ export function loadSimContent() {
 
 // A lab-perfect chimera: settled, fully bonded, uniform grade — so the sim
 // measures the BUILD, not husbandry or obedience noise.
+// R30 gave chimeras four move slots, which put a question to the harness:
+// whose moveset is it measuring? `defaultPick` is a SUGGESTION the player
+// retrains — gating the ladder on it would measure my picker, not the
+// content. So the bench fields the archetype's best four, attack-led, which
+// is what a player who has tuned their creature actually brings. A8's 25%
+// floor and R26's region margins are statements about the CONTENT, and this
+// keeps them that way.
+export function benchMoveset(known) {
+  const attacks = known.filter((m) => m.power > 0).sort((a, b) => b.power - a.power);
+  const utils = known.filter((m) => m.power === 0);
+  const picked = [];
+  const seenTag = new Set();
+  // Tag answers first — a Gas build without its Gas move is a worse generic
+  // build, and the tag chart is what the regions are built around.
+  for (const m of attacks) {
+    const tag = (m.tags ?? []).join(',');
+    if (seenTag.has(tag)) continue;
+    seenTag.add(tag);
+    picked.push(m);
+  }
+  for (const m of [...attacks, ...utils]) {
+    if (picked.length >= 4) break;
+    if (!picked.includes(m)) picked.push(m);
+  }
+  return picked.slice(0, 4).map((m) => m.source);
+}
+
 export function makeSimChimera(frame, partIds, grade, content) {
   const tokens = {};
   // Socket ids, not slot types: a Tier II build carries two organs, so the
@@ -84,6 +111,9 @@ export function makeSimChimera(frame, partIds, grade, content) {
     injury: null,
   };
   chimera.temperament = seedTemperament(chimera, content, 0x5EED);
+  chimera.moveset = benchMoveset(
+    movesFromTokens(Object.values(tokens), report, content).map((m) => ({ ...m, id: m.source }))
+  );
   return chimera;
 }
 

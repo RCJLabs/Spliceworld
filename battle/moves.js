@@ -35,7 +35,7 @@ export function knownMoves(chimera, content, movesFrom) {
 // grade change. Anything missing is topped up from the default pick, so a
 // chimera is never left holding three buttons or none.
 export function activeMoves(known, moveset) {
-  const byId = new Map(known.map((m) => [m.id, m]));
+  const byId = new Map(known.map((m) => [m.id ?? m.source, m]));
   const picked = [];
   for (const id of moveset ?? []) {
     const m = byId.get(id);
@@ -58,24 +58,40 @@ export function activeMoves(known, moveset) {
 export function defaultPick(known) {
   const attacks = known.filter((m) => m.power > 0).sort((a, b) => b.power - a.power);
   const utils = known.filter((m) => m.power === 0);
+
+  // One attack per TAG, strongest first. The tag is the tag chart, so a move
+  // carrying one nobody else carries is this build's whole answer to a row
+  // of it — dropping the Gas move because it is the weakest number turns a
+  // Gas build into a worse version of a generic one.
+  //
+  // What this deliberately does NOT do is then fill the rest with attacks.
+  // Two moves sharing a tag are the same swing at a different number, and
+  // measured on a pure tortoise (three untagged attacks, three actives)
+  // filling with attacks scores 0% against patrol_2 where keeping the
+  // actives scores 78%, against 87% for all six moves at once. The first
+  // heal is worth more than the third identical swing.
   const picked = [];
   const seenTag = new Set();
   for (const m of attacks) {
-    const tag = m.tags?.[0] ?? '';
+    const tag = (m.tags ?? []).join(',');
     if (seenTag.has(tag)) continue;
     seenTag.add(tag);
     picked.push(m);
+    if (picked.length >= MOVE_SLOTS - 1) break; // always leave room for one active
   }
-  for (const m of attacks) if (!picked.includes(m)) picked.push(m);
-  // One utility, and the pick is by what it does rather than by socket
-  // order — a heal or a guard beats a third evasion buff.
-  const UTILITY_RANK = ['heal', 'guard', 'regen', 'staminaRestore', 'rally', 'powerUp', 'thorns', 'evasionUp', 'accUp'];
-  const bestUtil = utils.slice().sort((a, b) => rankOf(b, UTILITY_RANK) - rankOf(a, UTILITY_RANK))[0];
-  const out = picked.slice(0, bestUtil ? MOVE_SLOTS - 1 : MOVE_SLOTS);
-  if (bestUtil) out.push(bestUtil);
-  // A build with fewer than four moves keeps whatever it has.
-  for (const m of known) if (out.length < MOVE_SLOTS && !out.includes(m)) out.push(m);
-  return out.slice(0, MOVE_SLOTS);
+
+  // Then the utility actually worth carrying — a heal or a guard before a
+  // third evasion buff — and only then more of the same-tag attacks.
+  const UTILITY_RANK = ['heal', 'regen', 'guard', 'thorns', 'staminaRestore', 'rally', 'powerUp', 'accUp', 'evasionUp'];
+  for (const m of utils.slice().sort((a, b) => rankOf(b, UTILITY_RANK) - rankOf(a, UTILITY_RANK))) {
+    if (picked.length >= MOVE_SLOTS) break;
+    picked.push(m);
+  }
+  for (const m of [...attacks, ...utils]) {
+    if (picked.length >= MOVE_SLOTS) break;
+    if (!picked.includes(m)) picked.push(m);
+  }
+  return picked.slice(0, MOVE_SLOTS);
 }
 
 const rankOf = (move, order) => {

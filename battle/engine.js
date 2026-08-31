@@ -124,6 +124,7 @@ export function movesFromTokens(tokens, report, content) {
       // R30: identity is where the move came from, so a saved moveset
       // survives a grade change or a trait that rewrites its keywords.
       source: partMoveId(token.partId),
+      id: partMoveId(token.partId),
       sourceLabel: part.name ?? part.ability,
     });
   }
@@ -145,7 +146,8 @@ export function movesFromTokens(tokens, report, content) {
     const grade = Math.max(0, ...combo.parts.map((id) => gradeOfPart[id] ?? 0));
     const gradeBonus = 1 + grade * GRADE_MOVE_BONUS;
     add({ ...combo.move, name: combo.name, power: Math.round(combo.move.power * gradeBonus),
-      source: comboMoveId(combo.id), sourceLabel: `${combo.name} (combo)` });
+      source: comboMoveId(combo.id), id: comboMoveId(combo.id),
+      sourceLabel: `${combo.name} (combo)` });
   }
   return moves;
 }
