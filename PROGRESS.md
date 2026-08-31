@@ -1,5 +1,97 @@
 # PROGRESS
 
+## Session 49 — A8: benchTeam, and an audit that came first ✅
+
+**Acceptance criterion:** the balance gate fails on a ladder that cannot be
+climbed at the team size a player has when they reach it — **passes**, after
+the audit established that the phrase "the team size a player has" was not
+defined anywhere, which made the criterion undecidable.
+
+### The item was wrong twice
+
+- *"`runSim` defaults to `teamSize 3`"* — it defaults to **1**. The callers
+  pass 3.
+- *"nothing in the suite looks at the team sizes the game will actually hand
+  somebody"* — **A1 already sweeps [1, 2, 3]**, and asserts forecast honesty
+  at all three. But only over the **first strip**.
+
+The gap was **scope**: five nodes covered, sixteen not.
+
+### What the unmeasured sixteen looked like
+
+Best of five archetypes, each strip at its own bench grade:
+
+| strip | team 1 | team 2 | team 3 |
+|---|---|---|---|
+| greenfield | walls at precinct, guard_post | wall at guard_post | clear |
+| kestrel | wall at aerodrome | 8% at aerodrome | clear |
+| drowned | walls at dredge_yard, harbor_rig | wall at harbor_rig | clear |
+| foundry | **0% on all four nodes** | wall at motor_pool | clear |
+| spire | walls at rooftop_pad, boardroom | walls at both | clear |
+
+**The ladder is climbable only at exactly three.**
+
+### But the forecast is honest about all of it
+
+315 cells — 5 strips × every node × 3 sizes × 5 builds — **zero false "not
+survivable"**. The forecast never tells a player to walk away from a fight
+they would win.
+
+Two apparent misses were **my own undersampling**, not defects:
+greenfield/checkpoint ×2 reads 0/32 but is truly **2.0% over 400 runs**, and
+the forecast calls it hopeless on all five base seeds; kestrel/cloudbase ×2
+is truly **4.5%**, sitting exactly on the 5% band boundary, so it flaps
+between `hopeless` and `losing` as it should.
+
+### So the criterion needed a decision, not a gate
+
+Without a declared team size, any gate would have asserted whatever the
+balance happened to be — the vacuous-assertion failure mode this project
+keeps catching. `benchTeam` makes it a **declaration**, per node with a
+per-strip default, exactly as `benchGrade` already declares the parts a
+player arrives with. Derived from measurement: the smallest team at which the
+best archetype clears the node with room to spare.
+
+Measuring it turned up **a second finding of the same shape**: `benchGrade`
+is per-*strip*, but a strip is not reached all at once. Greenfield's Guard
+Post sits behind Threat Gen 2 and runs **4% at `standard`, 48% at `prime`,
+96% at `apex`** — so scoring it at the strip's opening grade was measuring a
+fight nobody has. Both knobs are now per-node overridable, and guard_post
+declares `prime`.
+
+### The gates
+
+1. Every node declares a team the game can field (the briefing caps a strike
+   team at three) and a real grade — and `benchTeam` must actually vary, or
+   it is "3" wearing a data structure.
+2. The first node of the campaign is a **solo** fight.
+3. Every node is climbable at the team and grade it is tuned for: floor 25%
+   for the best of five archetypes, against a measured map minimum of 29%.
+4. The forecast never calls a winnable fight unwinnable, **at every size on
+   every strip** — 315 cells, 105 of them solo, which is the "measure a solo
+   player" the item asked for.
+
+### The break battery
+
+| break | caught by |
+|---|---|
+| motor_pool declares team 1 | *is climbable at the 1 chimera(s) and apex parts it is tuned for — best of five is 0%* |
+| boardroom declares a team of five | *declares a team the game can field (5)* |
+| the campaign opens demanding a stable | *the first node of the campaign is a solo fight* |
+| the forecast's hopeless band swallows everything under 50% | *drowned/sunken_marina wings x2: called unwinnable but truly 42%* |
+
+### Known issues
+
+- Smoke is **196s**, up from ~160s.
+- `benchTeam` records the ladder as it is. If a future balance pass makes a
+  node easier, the declaration will be stale in the safe direction (the gate
+  still passes) — it catches regressions, not improvements.
+- **A wall at team-of-2 remains by design**: dropping below three means "go
+  rebuild", which A2 and A4 make always possible without winning a fight, and
+  which the forecast warns about. That was a design call, not a measurement.
+
+**Next session's first task:** A9 — a fourth frame.
+
 ## Session 48 — A7: obedience, priced ✅
 
 **Acceptance criterion:** the number that decides whether your orders happen
