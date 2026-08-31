@@ -7091,8 +7091,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
         oldKnown, t0 + 500 * HOUR, content);
       assert.ok(one.ok, one.msg);
       assert.equal(st.funds, before - MOVE_TRAINING.cost, 'one swap, one fee');
-      assert.equal((one.msg.match(/ and /g) ?? []).length, 0,
-        `and it reports ONE move learned, not four (${one.msg})`);
+      // Assert the STATE, not the prose. The first version of this counted
+      // " and " in the message and failed on the correct message, because
+      // "learns X, and promptly forgets Y" contains one legitimately.
+      const learnedNow = old.moveset.filter((mid) => !carried.includes(mid));
+      assert.equal(learnedNow.length, 1,
+        `exactly one move was learned, not four (${learnedNow.join(', ')} — "${one.msg}")`);
+      assert.equal(old.moveset.length, MOVE_SLOTS, 'and it still carries four');
     }
 
     // ...and immediately after, the cooldown bites.
