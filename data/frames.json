@@ -43,8 +43,7 @@
         "forelimbs",
         "tail",
         "hide",
-        "organ",
-        "organ2"
+        "organ"
       ],
       "sockets": {
         "head": {
