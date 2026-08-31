@@ -14,6 +14,7 @@ import { runExtraction } from './splice/extract-ui.js';
 import { renderWarRoomScreen } from './campaign/ui.js';
 import { tickCampaign, pushNews } from './campaign/campaign.js';
 import { tickVat } from './splice/chaos.js';
+import { tickResequencer } from './splice/resequencer.js';
 import { ensureTemperaments } from './splice/temperament.js';
 import { tickScars } from './splice/scars.js';
 import { renderDexScreen } from './splice/dex-ui.js';
@@ -98,6 +99,9 @@ function showScreen(name) {
 function tick() {
   applyElapsed(state, content, NOW());
   for (const line of tickVat(state, content, NOW()).news) pushNews(state, line);
+  // A resequencing run finishes on its own clock, whether or not anyone is
+  // watching — and waits politely if the pens are full.
+  for (const line of tickResequencer(state, content, NOW()).news) pushNews(state, line);
   // A chimera that has finished settling acquires opinions (§3.5).
   ensureTemperaments(state, content, NOW());
   // An injury left to run its course may set badly and stay (§3.5).

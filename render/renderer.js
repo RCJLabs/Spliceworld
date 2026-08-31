@@ -69,6 +69,7 @@ export function indexContent(raw) {
     operations: raw.operations ? byId(raw.operations.operations) : {},
     operationMeta: raw.operations ? raw.operations.tuning : null,
     chaosMeta: raw.chaos ? raw.chaos.tuning : null,
+    resequencerMeta: raw.resequencer ? raw.resequencer.tuning : null,
     scars: raw.scars ? byId(raw.scars.scars) : {},
     scarMeta: raw.scars ? raw.scars.tuning : null,
     // First-use field guides (R29), keyed by id and kept in authored order
@@ -80,6 +81,7 @@ export function indexContent(raw) {
     temperamentLabels: raw.temperament ? raw.temperament.labels : null,
     chaosNames: raw.chaos ? raw.chaos.names : null,
     chaosLines: raw.chaos ? raw.chaos.lines : null,
+    resequencerLines: raw.resequencer ? raw.resequencer.lines : null,
     labNames: raw.philosophies ? raw.philosophies.labNames : null,
     classRules: raw.classes ? { advantage: raw.classes.advantage, disadvantage: raw.classes.disadvantage } : { advantage: 1, disadvantage: 1 },
     campaignMeta: raw.regions

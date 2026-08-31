@@ -6760,6 +6760,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   const { chaosTuning } = await import('../splice/chaos.js');
   const { upkeepTuning } = await import('../splice/facility.js');
   const { scarTuning } = await import('../splice/scars.js');
+  const { resequencerTuning } = await import('../splice/resequencer.js');
 
   // 1. THE INVARIANT THAT WOULD HAVE CAUGHT IT. Every knob a module defaults
   //    AND the data also sets must agree. Calling each tuning function with
@@ -6770,6 +6771,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['chaos', chaosTuning, content.chaosMeta],
     ['upkeep', upkeepTuning, content.upkeepMeta],
     ['scars', scarTuning, content.scarMeta],
+    ['resequencer', resequencerTuning, content.resequencerMeta],
   ];
   // Numbers only. Copy strings are SUPPOSED to differ — the data is the
   // source of truth for wording and the code default is a fallback for a
@@ -6827,6 +6829,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'contestation.cooldownHours': 15,
     'contestation.cooldownPerDefenceHours': 5.25,
     'contestation.windowHours': 13.5,
+    'resequencer.hours': 2,
   };
   const actual = {
     'chaos.tuning.gestationBaseHours': content.chaosMeta.gestationBaseHours,
@@ -6843,6 +6846,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'contestation.cooldownHours': content.campaignMeta.contestation.cooldownHours,
     'contestation.cooldownPerDefenceHours': content.campaignMeta.contestation.cooldownPerDefenceHours,
     'contestation.windowHours': content.campaignMeta.contestation.windowHours,
+    'resequencer.hours': content.resequencerMeta.hours,
   };
   for (const [k, want] of Object.entries(CLOCKS)) {
     assert.equal(actual[k], want, `${k} drifted from the roll (${actual[k]} vs ${want})`);
@@ -7161,6 +7165,192 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     const gasNote = moveDetail({ name: 'x', power: 10, cost: 1, acc: 100, tags: ['Gas'], keywords: {} }, content).tagNotes;
     assert.ok(gasNote.some((n) => /Organic/.test(n) && /Vehicle/.test(n)),
       `Gas explains both of its chart rows (${gasNote.join(' ')})`);
+  }
+}
+
+// --- R31: the Resequencer, which is what a DNA vial is FOR ------------
+//
+// A vial has been produced by every extraction since M2 and read by
+// NOTHING. The Gene Vault listed them and that was the end of it: a pile of
+// inventory that grew forever and did nothing. Worse, it hid a real loss —
+// `potential` and `genotype` live on the animal, so graduating your best
+// recessive carrier destroyed those genes. Extraction was the one
+// irreversible act in the game.
+{
+  const {
+    resequencePlan, startResequence, cancelResequence, tickResequencer,
+    activeResequence, resequencerTuning,
+  } = await import('../splice/resequencer.js');
+
+  const donorState = (seed, tweak = {}) => {
+    const st = { ...newGameState(), seed };
+    ensureRanchSeeded(st, content, t0);
+    const a = st.ranch.stock[0];
+    a.birthAt = t0 - 200 * HOUR;
+    Object.assign(a, tweak);
+    return { st, a };
+  };
+
+  // 1. THE VIAL CARRIES THE DONOR. Without this the feature cannot exist:
+  //    a vial that stores only a star average cannot grow anybody back.
+  {
+    const { st, a } = donorState(9001, {
+      genotype: { dense_bones: 2 },
+      potential: { hp: 5, power: 4, armor: 4, speed: 3, stamina: 4 },
+    });
+    const vial = extractAnimal(st, a.id, content, t0).vial;
+    assert.deepEqual(vial.genotype, { dense_bones: 2 }, 'the vial banks the donor genotype');
+    assert.deepEqual(vial.potential, { hp: 5, power: 4, armor: 4, speed: 3, stamina: 4 },
+      'and its star potential');
+    // ...and it is a COPY. Aliasing the animal's object would let anything
+    // that touched the vial edit a creature that has already left the herd.
+    assert.notEqual(vial.genotype, a.genotype, 'banked by value, not by reference');
+  }
+
+  // 2. THE ODDS ARE QUOTED BEFORE THE PLAYER COMMITS. This game shows its
+  //    arithmetic (R28, A7); a one-in-four loss nobody was told about is a
+  //    different feature from one they accepted.
+  {
+    const { st, a } = donorState(9002, { potential: { hp: 5, power: 5, armor: 5, speed: 5, stamina: 5 } });
+    const vial = extractAnimal(st, a.id, content, t0).vial;
+    const plan = resequencePlan(st, vial.id, content, t0);
+    assert.ok(plan.ok, plan.msg);
+    const t = resequencerTuning(content);
+    assert.equal(plan.successChance, t.successBase, 'the take chance is quoted');
+    assert.ok(plan.hours > 0, 'and the clock');
+    assert.ok(plan.mutationChance > 0 && plan.mutationChance < 1, 'and the odds of a new gene');
+    // Quality buys UPSIDE, not safety: a better vial mutates more often and
+    // fails exactly as often.
+    const { st: st2, a: a2 } = donorState(9003, { potential: { hp: 1, power: 1, armor: 1, speed: 1, stamina: 1 } });
+    const poor = resequencePlan(st2, extractAnimal(st2, a2.id, content, t0).vial.id, content, t0);
+    assert.ok(plan.mutationChance > poor.mutationChance,
+      `a five-star vial is likelier to throw a new gene (${plan.mutationChance.toFixed(2)} vs ${poor.mutationChance.toFixed(2)})`);
+    assert.equal(plan.successChance, poor.successChance,
+      'but it is no safer — quality is upside, not insurance');
+  }
+
+  // 3. THE OUTCOME IS SEALED AT LAUNCH. Reloading must not reroll a failure
+  //    into a success — the same law the vat and the jobs board run under.
+  {
+    const { st, a } = donorState(9004);
+    const vial = extractAnimal(st, a.id, content, t0).vial;
+    startResequence(st, vial.id, content, t0);
+    const sealed = JSON.stringify(activeResequence(st).outcome);
+    const reloaded = JSON.parse(JSON.stringify(st));
+    assert.equal(JSON.stringify(reloaded.resequencer.outcome), sealed,
+      'the outcome survives a save/load unchanged');
+    assert.equal(st.inventory.vials.length, 0, 'and the vial is committed, not held');
+  }
+
+  // 4. THE DONOR COMES BACK WHOLE. This is the entire point: the genes that
+  //    used to be destroyed by extraction are the ones that must return.
+  {
+    let took = 0, mutated = 0, keptTheGene = 0, runs = 200;
+    for (let i = 0; i < runs; i++) {
+      const { st, a } = donorState(9100 + i, {
+        genotype: { dense_bones: 2 },
+        potential: { hp: 4, power: 4, armor: 4, speed: 4, stamina: 4 },
+      });
+      const vial = extractAnimal(st, a.id, content, t0).vial;
+      const donorName = vial.donorName;
+      startResequence(st, vial.id, content, t0);
+      const res = tickResequencer(st, content, t0 + 99 * HOUR);
+      if (!res.result?.ok) continue;
+      took++;
+      if (res.result.mutated) mutated++;
+      const back = res.result.animal;
+      assert.equal(back.species, vial.species, 'the same species comes back');
+      assert.equal(back.name, donorName, 'under the same name');
+      if ((back.genotype.dense_bones ?? 0) >= 2) keptTheGene++;
+      assert.ok(st.ranch.stock.includes(back), 'and it lands in the pens');
+    }
+    const t = resequencerTuning(content);
+    assert.ok(Math.abs(took / runs - t.successBase) < 0.12,
+      `about ${Math.round(t.successBase * 100)}% take (${took}/${runs})`);
+    assert.ok(took - keptTheGene <= mutated,
+      `the donor's recessive survives every run that did not mutate it away (${keptTheGene}/${took})`);
+    assert.ok(mutated > 0, `and some runs throw a new gene (${mutated}/${took})`);
+  }
+
+  // 5. A FAILURE COSTS THE VIAL AND NOTHING ELSE. No creature is harmed —
+  //    the house rule since R11 is that failure costs time and a bruise.
+  {
+    let checked = 0;
+    for (let i = 0; i < 60 && checked < 1; i++) {
+      const { st, a } = donorState(9300 + i);
+      const vial = extractAnimal(st, a.id, content, t0).vial;
+      const herd = st.ranch.stock.length;
+      const funds = st.funds;
+      startResequence(st, vial.id, content, t0);
+      if (activeResequence(st).outcome.succeeded) continue;
+      const res = tickResequencer(st, content, t0 + 99 * HOUR);
+      checked++;
+      assert.equal(res.result.ok, false, 'a collapsed run reports failure');
+      assert.equal(st.resequencer, null, 'and clears');
+      assert.equal(st.ranch.stock.length, herd, 'the herd is untouched');
+      assert.equal(st.funds, funds, 'and so is the money');
+      assert.equal(st.inventory.vials.length, 0, 'the vial is spent, which is the risk');
+      assert.ok(res.news.length, 'and the wire says so');
+    }
+    assert.equal(checked, 1, 'a failing run was actually found to check');
+  }
+
+  // 6. ABORTING RETURNS THE SAMPLE, NOT THE OUTCOME. Writing the outcome
+  //    back would let a player abort-cycle a mutation into the vial for
+  //    free — they cannot see the roll, but the genome would still ratchet
+  //    upward on every aborted run. Measured before the fix: a 3/3/3/3/3
+  //    donor walked to 3/4/4/5/3 over 60 cycles without completing one.
+  {
+    const { st, a } = donorState(9500, {
+      genotype: { dense_bones: 1 },
+      potential: { hp: 3, power: 3, armor: 3, speed: 3, stamina: 3 },
+    });
+    const vial = extractAnimal(st, a.id, content, t0).vial;
+    const before = JSON.stringify({ p: vial.potential, g: vial.genotype });
+    for (let i = 0; i < 40; i++) {
+      assert.ok(startResequence(st, st.inventory.vials[0].id, content, t0).ok, 'restartable');
+      assert.equal(st.inventory.vials.length, 0, 'the vial is in the machine');
+      assert.ok(cancelResequence(st, content).ok, 'and comes back on abort');
+      assert.equal(st.inventory.vials.length, 1, 'exactly once');
+    }
+    const after = JSON.stringify({ p: st.inventory.vials[0].potential, g: st.inventory.vials[0].genotype });
+    assert.equal(after, before, `40 abort cycles change nothing (${before} vs ${after})`);
+  }
+
+  // 7. A FULL PEN WAITS. Losing a successful decant to a housekeeping
+  //    problem the player could not see coming is exactly the surprise this
+  //    project's house rules forbid.
+  {
+    let checked = 0;
+    for (let i = 0; i < 40 && !checked; i++) {
+      const { st, a } = donorState(9700 + i);
+      const vial = extractAnimal(st, a.id, content, t0).vial;
+      startResequence(st, vial.id, content, t0);
+      if (!activeResequence(st).outcome.succeeded) continue;
+      while (st.ranch.stock.length < st.ranch.penCapacity) {
+        st.ranch.stock.push(createAnimal(st, 'goat', content, t0));
+      }
+      const res = tickResequencer(st, content, t0 + 99 * HOUR);
+      checked++;
+      assert.ok(res.waiting, 'a full pen makes the run wait');
+      assert.ok(activeResequence(st), 'the run is still in flight');
+      assert.equal(res.result, null, 'and nothing was decanted');
+      // Free a pen and it comes out.
+      st.ranch.stock.pop();
+      const after = tickResequencer(st, content, t0 + 99 * HOUR);
+      assert.ok(after.result?.ok, 'freeing a pen releases it');
+      assert.equal(activeResequence(st), null, 'and the machine clears');
+    }
+    assert.equal(checked, 1, 'a successful run was found to stall');
+  }
+
+  // 8. ONE AT A TIME, and only on a vial you own.
+  {
+    const { st, a } = donorState(9900);
+    const vial = extractAnimal(st, a.id, content, t0).vial;
+    assert.equal(resequencePlan(st, 'v-nonsense', content, t0).ok, false, 'an unknown vial is refused');
+    assert.ok(startResequence(st, vial.id, content, t0).ok);
+    assert.equal(startResequence(st, vial.id, content, t0).ok, false, 'the machine takes one at a time');
   }
 }
 
