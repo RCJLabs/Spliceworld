@@ -559,6 +559,37 @@ export function regionEncounterIds(region) {
   return region.nodes.map((n) => n.encounter);
 }
 
+// A8. The conditions a player actually arrives at a node with. `benchGrade`
+// and `benchTeam` are declared per strip and overridable per node, because a
+// strip is not reached all at once — Greenfield's Guard Post sits behind
+// Threat Gen 2 and is 4% at the strip's `standard` grade against 48% at
+// `prime`, which is what a player brings to it.
+export function nodeConditions(region, node) {
+  return {
+    grade: node.benchGrade ?? region.benchGrade ?? 'prime',
+    team: node.benchTeam ?? region.benchTeam ?? 3,
+  };
+}
+
+// Is this node climbable AT ALL under those conditions? Best of the five
+// archetypes rather than the average: the question is whether some build a
+// player could reasonably field gets through, not whether every one does.
+export function nodeClimbability(content, region, node, { seedsPer = 24 } = {}) {
+  const { grade, team } = nodeConditions(region, node);
+  let best = 0, who = null;
+  for (const [key, arch] of Object.entries(ARCHETYPES)) {
+    let wins = 0;
+    for (let s = 0; s < seedsPer; s++) {
+      const chimera = makeSimChimera(arch.frame, arch.partIds, grade, content);
+      const r = scriptedBattle(chimera, content.encounters[node.encounter], content,
+        hashString(`climb${region.id}${node.id}${key}${s}`), team);
+      if (r.outcome === 'win') wins++;
+    }
+    if (wins / seedsPer > best) { best = wins / seedsPer; who = key; }
+  }
+  return { best, who, grade, team };
+}
+
 // Win rate per (region, archetype). teamSize 3 because that is the team the
 // game hands the player, and a region is scored across all of its nodes —
 // a strip you can half-clear is still a strip that asked you a question.

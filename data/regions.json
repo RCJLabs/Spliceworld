@@ -1,5 +1,5 @@
 {
-  "_doc": "Campaign shell (M5, five regions since R26): an ordered list of region strips. Nodes unlock in order WITHIN their region; a region itself opens when its `requires` block is satisfied ({ nodes: [...] held, threatGen: N, notoriety: N } — all optional, all ANDed), so the ladder is data and adding a sixth region needs no engine edit. Each node is an encounter from enemies.json; winning holds it, granting income per real-world day (timestamp-computed) and notoriety. threatGens is the Threat Generation ladder — [{gen, at, name, announce}] — replacing the single threatGen2At threshold, which is still read as a fallback so a pre-R26 save sees the world it left. Crossing a rung announces it and unlocks nodes gated with 'threatGen': N. rescueEncounter = the themed battle used for every rescue raid. unlocksFauna: species ids added to the Mail-Order catalog when the node is held. `answer` names the class that beats the region's dominant enemy class ('mixed' where none does) and `demand` says it in the player's language on the map; smoke checks `answer` against the actual rosters AND checks that fauna of that class is already purchasable when the region opens, so the ladder can never ask for anatomy the catalog cannot sell. Region contestation (§3.9 'coalition counter-offensives can contest held regions'): once the threat generation named in `contestation.startsAtGen` is reached, the coalition periodically comes BACK for a node you already hold — anywhere on the map, not just the first region. The schedule is a timestamp (nextContestAt), never a per-tick dice roll, so how often you open the app cannot change how often you are attacked; and the defence window starts the moment you SEE the contest, so being away never costs you a node you were never given the chance to defend. Adding a region must never require engine edits, and neither does tuning this. `benchGrade` is the part grade a player plausibly holds when the region opens; the balance harness scores each strip at its own grade so no cell is measured saturated at one end or floored at the other.",
+  "_doc": "Campaign shell (M5, five regions since R26): an ordered list of region strips. Nodes unlock in order WITHIN their region; a region itself opens when its `requires` block is satisfied ({ nodes: [...] held, threatGen: N, notoriety: N } — all optional, all ANDed), so the ladder is data and adding a sixth region needs no engine edit. Each node is an encounter from enemies.json; winning holds it, granting income per real-world day (timestamp-computed) and notoriety. threatGens is the Threat Generation ladder — [{gen, at, name, announce}] — replacing the single threatGen2At threshold, which is still read as a fallback so a pre-R26 save sees the world it left. Crossing a rung announces it and unlocks nodes gated with 'threatGen': N. rescueEncounter = the themed battle used for every rescue raid. unlocksFauna: species ids added to the Mail-Order catalog when the node is held. `answer` names the class that beats the region's dominant enemy class ('mixed' where none does) and `demand` says it in the player's language on the map; smoke checks `answer` against the actual rosters AND checks that fauna of that class is already purchasable when the region opens, so the ladder can never ask for anatomy the catalog cannot sell. Region contestation (§3.9 'coalition counter-offensives can contest held regions'): once the threat generation named in `contestation.startsAtGen` is reached, the coalition periodically comes BACK for a node you already hold — anywhere on the map, not just the first region. The schedule is a timestamp (nextContestAt), never a per-tick dice roll, so how often you open the app cannot change how often you are attacked; and the defence window starts the moment you SEE the contest, so being away never costs you a node you were never given the chance to defend. Adding a region must never require engine edits, and neither does tuning this. `benchGrade` is the part grade a player plausibly holds when the region opens, and `benchTeam` (audit A8) is the number of chimeras the node is tuned for; the balance harness scores each node at ITS OWN grade and team so no cell is measured saturated at one end or floored at the other. Both are per-node overridable, because a strip is not reached all at once: guard_post sits behind Threat Gen 2 and is 4% at the strip's `standard` grade but 48% at `prime`, which is what a player actually brings to it. benchTeam is the answer to \"the team size a player has when they reach it\" — without it that phrase is undecidable, and A8's gate would just be asserting whatever the balance happened to be. Measured, not wished: it is the smallest team at which the best of the five harness archetypes clears the node with room to spare.",
   "threatGens": [
     {
       "gen": 1,
@@ -41,7 +41,8 @@
             "porcupine",
             "skunk",
             "goose"
-          ]
+          ],
+          "benchTeam": 1
         },
         {
           "id": "downtown",
@@ -54,7 +55,8 @@
             "wolf",
             "chameleon",
             "mantis"
-          ]
+          ],
+          "benchTeam": 2
         },
         {
           "id": "checkpoint",
@@ -67,7 +69,8 @@
             "eagle",
             "bat",
             "dragonfly"
-          ]
+          ],
+          "benchTeam": 2
         },
         {
           "id": "precinct",
@@ -82,7 +85,8 @@
             "tiger",
             "gorilla",
             "cobra"
-          ]
+          ],
+          "benchTeam": 3
         },
         {
           "id": "guard_post",
@@ -96,7 +100,9 @@
             "frog",
             "crocodile",
             "otter"
-          ]
+          ],
+          "benchTeam": 3,
+          "benchGrade": "prime"
         }
       ],
       "benchGrade": "standard"
@@ -123,7 +129,8 @@
           "unlocksFauna": [
             "rhino",
             "heron"
-          ]
+          ],
+          "benchTeam": 1
         },
         {
           "id": "radio_mast",
@@ -135,7 +142,8 @@
           "unlocksFauna": [
             "pangolin",
             "owl"
-          ]
+          ],
+          "benchTeam": 1
         },
         {
           "id": "cloudbase",
@@ -147,7 +155,8 @@
           "unlocksFauna": [
             "rhino_beetle",
             "moth"
-          ]
+          ],
+          "benchTeam": 1
         },
         {
           "id": "aerodrome",
@@ -159,7 +168,8 @@
           "boss": true,
           "unlocksFauna": [
             "scorpion"
-          ]
+          ],
+          "benchTeam": 3
         }
       ],
       "benchGrade": "prime"
@@ -186,7 +196,8 @@
           "unlocksFauna": [
             "shark",
             "pufferfish"
-          ]
+          ],
+          "benchTeam": 1
         },
         {
           "id": "spillway_locks",
@@ -198,7 +209,8 @@
           "unlocksFauna": [
             "octopus",
             "jellyfish"
-          ]
+          ],
+          "benchTeam": 1
         },
         {
           "id": "dredge_yard",
@@ -210,7 +222,8 @@
           "unlocksFauna": [
             "electric_eel",
             "anglerfish"
-          ]
+          ],
+          "benchTeam": 2
         },
         {
           "id": "harbor_rig",
@@ -222,7 +235,8 @@
           "boss": true,
           "unlocksFauna": [
             "tortoise"
-          ]
+          ],
+          "benchTeam": 3
         }
       ],
       "benchGrade": "prime"
@@ -248,7 +262,8 @@
           "blurb": "A gate made of gates. The foreman has laminated the rules.",
           "unlocksFauna": [
             "armadillo"
-          ]
+          ],
+          "benchTeam": 2
         },
         {
           "id": "rolling_mill",
@@ -256,7 +271,8 @@
           "encounter": "foundry_mill",
           "incomePerDay": 125,
           "notoriety": 30,
-          "blurb": "Everything in here is either red hot or armour-plated. Frequently both."
+          "blurb": "Everything in here is either red hot or armour-plated. Frequently both.",
+          "benchTeam": 2
         },
         {
           "id": "motor_pool",
@@ -267,7 +283,8 @@
           "blurb": "Every vehicle you have ever annoyed, parked in tidy rows, freshly painted.",
           "unlocksFauna": [
             "falcon"
-          ]
+          ],
+          "benchTeam": 3
         },
         {
           "id": "crucible_floor",
@@ -277,7 +294,8 @@
           "notoriety": 45,
           "blurb": "Smelter Prime pours a fresh chassis while you watch. It is meant for you.",
           "boss": true,
-          "threatGen": 3
+          "threatGen": 3,
+          "benchTeam": 2
         }
       ],
       "benchGrade": "apex"
@@ -301,7 +319,8 @@
           "encounter": "spire_lobby",
           "incomePerDay": 150,
           "notoriety": 35,
-          "blurb": "Please take a number. The number is a summons."
+          "blurb": "Please take a number. The number is a summons.",
+          "benchTeam": 2
         },
         {
           "id": "records_annex",
@@ -309,7 +328,8 @@
           "encounter": "spire_records",
           "incomePerDay": 165,
           "notoriety": 35,
-          "blurb": "Every unkind thing anyone has written about you, alphabetised."
+          "blurb": "Every unkind thing anyone has written about you, alphabetised.",
+          "benchTeam": 1
         },
         {
           "id": "rooftop_pad",
@@ -317,7 +337,8 @@
           "encounter": "spire_rooftop",
           "incomePerDay": 185,
           "notoriety": 40,
-          "blurb": "The helipad, the water tanks, and a really committed accountant."
+          "blurb": "The helipad, the water tanks, and a really committed accountant.",
+          "benchTeam": 3
         },
         {
           "id": "boardroom",
@@ -326,7 +347,8 @@
           "incomePerDay": 260,
           "notoriety": 60,
           "blurb": "Director Prime would like to walk you through the slides. All of them.",
-          "boss": true
+          "boss": true,
+          "benchTeam": 3
         }
       ],
       "benchGrade": "apex"
