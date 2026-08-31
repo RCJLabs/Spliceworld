@@ -2000,10 +2000,18 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   for (const id of sample.parts) {
     assert.ok(!cold.text.includes(partOf(id).name), 'and it does not give the parts away');
   }
-  // Distinctness is the whole point: no two silhouettes may read alike.
-  const coldTexts = combos.map((c) => `${comboHint(c, blank, content).keyword}|${comboHint(c, blank, content).text}`);
-  assert.ok(new Set(coldTexts).size >= combos.length * 0.6,
-    `silhouettes are mostly distinguishable from each other (${new Set(coldTexts).size}/${combos.length} unique)`);
+  // Distinctness is the whole point, and it has to be asserted on the TEXT
+  // as well as on the pair. A first version keyed only on `keyword|text`,
+  // and a deliberate break that made every unseen half read "something"
+  // sailed through it — 17 distinct keywords were carrying the whole test
+  // on their own, so the part the hint is actually FOR went unguarded.
+  const coldAll = combos.map((c) => comboHint(c, blank, content));
+  const texts = new Set(coldAll.map((h) => h.text));
+  const pairs = new Set(coldAll.map((h) => `${h.keyword}|${h.text}`));
+  assert.ok(texts.size >= 12,
+    `the silhouette TEXT varies on its own, without leaning on the keyword (${texts.size}/${combos.length} unique)`);
+  assert.ok(pairs.size >= combos.length * 0.9,
+    `and almost every silhouette as a whole is distinguishable (${pairs.size}/${combos.length} unique)`);
 
   // Handle one half and the Dex names that half, and only that half.
   const half = { dex: { parts: [sample.parts[0]] }, discoveredCombos: [] };

@@ -1,5 +1,109 @@
 # PROGRESS
 
+## Session 47 — A6: a combo for everybody, and a silhouette that points ✅
+
+**Acceptance criterion:** every species can appear in at least one combo, and
+the Dex's silhouettes point at something real — **passes on both halves.**
+
+### Half one: eleven species had nothing to find
+
+34 of 244 parts were in a combo, and **eleven species were in none at all** —
+gorilla, ram, porcupine, mantis, scorpion, and **every one of the six chaos
+variants**, which are the rarest things the game produces. Combos are the
+discovery layer; most of the roster was not in it.
+
+Eight new combos, chosen so each covers uncovered species and so the slot
+spread stops leaning on organs — the first nineteen put **ten organ parts and
+exactly one hindlimb** into a combo, which is the same shape A5 found in the
+tag chart:
+
+| combo | pair | slots |
+|---|---|---|
+| Full Contact | gorilla haunches + ram head | hindlimbs + head |
+| Bramble Thresher | porcupine arms + duelist ganglion | forelimbs + organ |
+| Double Dose | scorpion sting + pale cobra hide | tail + hide |
+| Switchback | alpine ram kickers + iron gut | hindlimbs + organ |
+| Ball Lightning | thunderhead surge + eel hide | organ + hide |
+| Lights Out | abyssal shark tail + angler head | tail + head |
+| Siege Engine | iron tortoise hindfins + charge gland | hindlimbs + organ |
+| Downwind | glider skunk haunches + bat wings | hindlimbs + forelimbs |
+
+**Every animal is now in a combo**, parts coverage is 34 → 49, and hindlimbs
+in a combo went **1 → 5**.
+
+### Half two: the silhouettes named nothing
+
+All 19 undiscovered combos rendered the *same sentence* — "an undiscovered
+pairing lurks in the parts bin…". A silhouette is supposed to be bait; 19
+identical rows saying "there is something somewhere" is a wall.
+
+`comboHint()` in `splice/theater.js` reveals in layers, keyed to the parts the
+player has actually handled (`dex.parts`, which survives spending the token),
+and is DOM-free so the Dex and the smoke suite read the same function:
+
+- **nothing handled** → the keyword and the two slots: *`Venom+` · a head + an organ*. Enough to rummage with, and it gives away no part.
+- **one half handled** → that half by name: *`Knockback` · Gorilla Haunches + a head*. The actual lead.
+- **both handled** → *`Bleed` · Porcupine Arms + Duelist Ganglion — you have handled both. Put them on the same creature.* You are holding the answer; the Dex should say so rather than smirk.
+
+All 27 cold hints are distinct from each other.
+
+### The harness rejected the first pricing, twice
+
+`porcupine_hide + mantis_forelimbs` floors at **79** — Scythe Strike at
+prismatic — and the combo gate requires a combo to beat its own parts at every
+grade. So every legal combo on that pair was ≥80 power and drawback-free, and
+`tools/sim.js` flagged it as an outlier at **56–57% against a peer median of
+23–25%**. Dropping the keywords and the power to 82 did not help; the *pair*
+was wrong, not the number. `porcupine_forelimbs + mantis_organ` floors at 60,
+and the combo sits at 68 with thorns and bleed. Clean at 3, 8 and 12 seeds.
+
+### My own gate caught a thing I had wrong
+
+The first version asserted that a combo's two parts must be in *different*
+slots — "one creature cannot wear two organs" — and it immediately failed on
+A3's **Full Spectrum** (owl organ + bat organ). The data was right and the
+assertion was wrong: Theater Tier II adds an `organ2` bay, so an organ pair is
+discoverable, just gated. The gate now reads the real socket list and allows a
+doubled slot exactly where a second socket exists.
+
+### The break battery, and the assertion it exposed as hollow
+
+| break | caught by |
+|---|---|
+| a species loses its only combo | *every animal appears in a combo (missing: alpine_ram)* |
+| a combo pairs two single-socket slots | *switchback is wearable: hindlimbs + hindlimbs — only organ has a second socket* |
+| combos drain out of the hindlimb socket | *combos reach the hindlimbs socket (0)* |
+| the cold hint stops naming its keyword | *a cold hint still names the keyword* |
+| a cold hint leaks both part names | *and it does not give the parts away* |
+| **every silhouette reads alike again** | **MISSED at first** |
+
+The last one is the finding. I made every unseen half render the word
+"something", so all 27 cold hints read `something + something` — the exact
+bug A6 exists to fix — **and the suite passed.** The distinctness assertion
+keyed on `keyword|text`, and 17 distinct keywords were carrying the whole
+test on their own, so the part the hint is actually *for* went unguarded.
+
+Now asserted separately: the **text** must vary on its own (≥12 distinct of
+27, measured at 17), and the pair must be ≥90% unique (measured 26/27). The
+same break now fails with *the silhouette TEXT varies on its own, without
+leaning on the keyword (1/27 unique)*.
+
+One earlier attempt at that break was also just wrong: flattening the whole
+`text` expression broke the one-half-handled branch too, so it tripped *the
+half you have handled is named* instead — caught by A6, but not by the
+assertion under test.
+
+### Known issues
+
+- Two combos (Full Spectrum, Powder Keg) need Theater Tier II, so their
+  silhouettes read "an organ + an organ" to a player who cannot yet build
+  them. Honest, but the hint does not say "you need a second bay".
+- Combo coverage is 20% of parts. Every *species* is reachable now; most
+  individual parts still are not.
+
+**Next session's first task:** A7 — put obedience on the screen where a team
+is actually committed.
+
 ## Session 46 — A5: a tag you cannot reach, and a tag you cannot swing ✅
 
 **Acceptance criterion:** no tag the region ladder depends on is carried by
