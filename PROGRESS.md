@@ -1,5 +1,186 @@
 # PROGRESS
 
+## Session 54 — R32: a part finally says what animal it came from ✅
+
+**Acceptance criterion:** part mass expresses the animal, every purebred flier
+flies on its own chassis and none flies on a big one, every species' anatomy
+votes for its declared class, and the cobra rides a chassis that fits it —
+**passes**, at `SAVE_VERSION` 29 (no schema change).
+
+### Mass was a constant, and A9 had made it the currency
+
+Every one of the 41 species' anatomy totalled **exactly 58 mass**. Not
+approximately — exactly, because `SLOT_BASE` was the whole story: head 12,
+forelimbs 13, hindlimbs 13, tail 5, hide 10, organ 5. A rhino's head massed
+what a moth's head massed. A plate hide massed what a jelly mantle massed.
+
+That was harmless while mass only bought turn order. **A9 changed the
+stakes**: mass now gates flight outright (`lift >= mass`) and costs a point of
+speed per 50 — so the widest decision in the builder was being priced in a
+currency that carried no information about the creature.
+
+Three consequences fell out of it:
+
+- **Zero of 41 species lived on the Kite frame** A9 had just shipped.
+- **No purebred flier could fly on its own chassis** once mass meant anything.
+- The **cobra**, which has no limbs at all, rode a quadruped chassis that drew
+  two empty limb sockets.
+
+### What shipped
+
+| | |
+|---|---|
+| `species.bulk` | what the ANIMAL weighs — 0.3 (moth) to 1.9 (rhino) |
+| `DENSITY` | what the PART is made of, keyed on its shape family |
+| lift | scales `bulk^(2/3)` — wing AREA, not wing mass |
+| Scamper mass | 40 → **28** (the chassis is a floor, not the bulk) |
+| cobra + pale cobra | → the **A-class Kite** |
+| six species | armadillo, chameleon, pangolin, porcupine, goose, heron → S |
+
+Part mass now spans **1 to 34** instead of six constants. A rhino's horn is 32
+and a moth's head is 1, and the number is on the part in the Theater picker so
+you can see the trade before you fit it.
+
+**Every purebred flier now flies on its own chassis, and none flies on an M or
+an L.** Swap in the heaviest head or hide on the roster and the Scamper says
+no — the Kite is what you buy to carry that weight aloft, and it clears half
+those loads.
+
+### Three species had no classifying anatomy at all
+
+The **octopus** — the most aquatic animal on the roster — was **Unclassed**,
+because `tentacle` and a `blob` head were in no affinity table. So were both
+**cobras**, whose only classifying anatomy is the coil they move on. And the
+**dragonfly** tied itself out of Air, 1 vote to 1, on a pair of bug legs.
+
+The dragonfly turned out to be a content error rather than a tuning one: **a
+dragonfly has four wings.** Its hind pair are now hindwings, which votes Air
+natively, carries lift, and needed no per-species override.
+
+All 41 species' anatomy now votes for the class they are declared as.
+
+### And a wing does not kick
+
+Every unsigned limb was named for its **socket**: `<Species> Strike` in front,
+`<Species> Kick` behind, across the whole roster. The game shipped a **Moth
+Kick delivered by a hindwing**, an Owl Strike thrown by a wing, and a Heron
+Bite from a spear-shaped bill. Limb and head verbs now follow the anatomy —
+Wing Beat, Downbeat, Talon Rake, Stilt Jab, Paddle Slap, Peck, Headbutt — and
+a paw is split by socket, because a front one swipes and a back one kicks.
+
+### Four things this phase got wrong first, and how each was caught
+
+**I scaled metabolic draw with bulk** (Kleiber's law, `bulk^0.75`) because it
+sounded right. It cost the `gills` archetype four stamina a turn and dropped
+kestrel/cloudbase from **54% to 21%**, breaking A8's climbability floor. Draw
+is the *stamina economy* — R23's actives and A5's move costs are priced
+against it — and mass is the *physics*. Rescaling one as a side effect of the
+other retunes every long fight in the game. Cut entirely.
+
+**The Storm Eagle broke the dominance gate** at apex — 82% against a peer
+median of 51%. It was not new: the baseline measures it at **76%, already the
+roster's best build at every grade**, sitting just under the +30pp bar. R32's
+six points tipped it. Its trade was `speed 1.3 / power 1.1 / hp 0.75` for
+Airborne, Electric on every move, and a set bonus — which is not a trade, and
+CLAUDE.md says a variant that is strictly better makes its base dead content.
+Now `speed 1.25 / hp 0.65 / armor 0.7 / stamina 0.85`: still the best build in
+the game, at 72% rather than 82%, and it has to land its hits before it runs
+out of breath.
+
+*(Noted while in there, not fixed: `setBonus` is read by the physiology panel
+and the Dex and by **nothing in the battle engine**. All 41 purebred set
+bonuses are flavour text. That is its own phase.)*
+
+**The harness's Gas axis quietly became a second Water build.** `fumes` was
+built from two octopus tentacles and a cobra head — none of which were in any
+affinity table, so it came out Unclassed *by accident*. Giving tentacles a
+vote (the octopus fix, above) made it Water-classed, so in Kestrel it rode the
+same triangle advantage as `gills` and jumped **72% to 94%**, closing that
+region's identity margin to 6pp and breaking R26's gate. The `noise` archetype
+already documents the rule — *"one ground limb and one water limb, so the
+affinities tie… an archetype meant to isolate one axis must not also be
+carrying a class advantage"* — `fumes` just never had it applied.
+
+Applying it with a *leg* then broke a different gate: a ground limb votes
+Ground and therefore swings a Ground-tagged move, which is a fifth attack tag
+competing for R30's four move slots — and the one it evicted was the Gas
+answer the archetype exists to measure. The tie now comes from a **wing**:
+Scale Storm is a Gas attack whose anatomy votes Air, so one part buys the tie
+and feeds the axis. Kestrel is back to 14pp on both bench seeds.
+
+**A9's frame-ladder gate turned out to be resolving on coin flips.** It fired
+— "the best chassis differs by strip", and R32 made it L everywhere. Measured
+at 4x the sampling on **both** trees, the picture is identical: L takes **41 of
+~75** decided cells before R32 and 41 after, and the per-strip winner is L on
+four strips and an A/L tie on the fifth in each. At the gate's own 12 seeds the
+*pre-R32* tree came out level on three of five strips (kestrel 3-3, drowned
+3-3, spire 4-4), so the assertion had been passing by counting a tie as a
+second answer. R32 did not move the ladder; it moved a tie.
+
+The gate now samples at 48 (5.3s against 2.0s) and asserts what A9 actually
+cares about and the data actually supports: **no strip is a one-chassis
+strip** — something other than the map's best must win at least a fifth of
+each region's decided cells. Measured minimum 29% here, 35% pre-R32, against
+the pre-A9 world this exists to catch, which would leave about 9%.
+
+**And the break battery found a gate that could not fail.** Flattening every
+`DENSITY` to 1 was caught only by the flight gates four sections down — never
+by the mass ones, because with density flat, mass still varies *by bulk*: the
+animals still differ in size. Divide bulk out and what is left is the
+material, and that is now its own assertion: within one slot, the densest part
+must outweigh the flimsiest by 2.5x with bulk removed. Measured 3.0x
+(forelimbs) to 6.5x (hide); flat density gives 1.14x to 1.50x, all rounding.
+
+Two smaller ones, both caught by gates written for earlier phases: the
+dragonfly's new hindwing overflowed the viewBox by 12px on the L chassis
+(Wave 1's bounds check — span 96 to 84), and the anatomy-derived limb verbs
+collided wherever a species wears the same family front and back, so a
+tortoise had two parts called "Fin Slash". Families that appear in both
+sockets now split, the way `paw` does.
+
+### The break battery
+
+Eleven deliberate breaks, each run against an isolated worktree; every one
+had to make the suite fail, and fail on the assertion that guards it.
+
+| break | verdict |
+|---|---|
+| mass back to a slot constant (the pre-R32 world) | CAUGHT |
+| every DENSITY flattened to 1 | CAUGHT *(by the gate this battery forced me to write)* |
+| a heron put on the Kite, which has no stilt socket | CAUGHT |
+| tentacles and a blob head stop voting | CAUGHT |
+| the coil stops voting | CAUGHT |
+| the dragonfly back to two wings and bug legs | CAUGHT |
+| the Scamper back to 40 mass | CAUGHT |
+| lift linear in bulk again (no wing-area exponent) | CAUGHT |
+| wing lift 90 → 260 | CAUGHT-ELSEWHERE — see below |
+| wing lift 90 → 110 (the narrow version) | CAUGHT |
+| every limb named for its socket again | CAUGHT |
+
+Two of them taught me something. **Flat density** was caught only by the
+flight gates four sections down — the mass gates could not see it, because
+density and bulk both move mass and only bulk was being asserted. That became
+its own assertion (above), and the re-run caught it there.
+
+**Wing lift 90 → 260** was too big a break: at that lift *nothing* is
+grounded, so A9's older "some frame/grade combinations fly and some do not"
+fired first and my own gate never got a turn. A break that overshoots proves
+the suite works and proves nothing about the assertion you wrote. Re-run at
+110 — measured to be the value where A9's check still passes but 14 of 20
+heavy-import builds wrongly clear the Scamper — and R32's gate is the one that
+fails.
+
+### Known gaps
+
+- Flight status is only visible in the Theater while building. An existing
+  chimera's Pens card shows chassis, instability and bond — not whether it
+  actually gets off the ground. A9 shipped it that way; R32 did not change it.
+
+### Next session's first task
+
+`setBonus` — wire the purebred bonuses into the battle engine, or delete the
+claim from the panel. Forty-one species promise a reward that never arrives.
+
 ## Session 53 — R31: the Resequencer, which is what a vial is FOR ✅
 
 **Acceptance criterion:** a DNA vial does something, and what it does uses

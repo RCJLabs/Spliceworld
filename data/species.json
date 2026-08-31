@@ -1,5 +1,5 @@
 {
-  "_doc": "Base fauna (34 species; 40 animals with variants, ROADMAP §4.1 and audit §9.2 A3). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity — see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP §3.2): a species with `variantOf` is the same stock, mutated — it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them — variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads — a variant whose identity only shows up on the defending side is a dead mechanic.",
+  "_doc": "Base fauna (34 species; 40 animals with variants, ROADMAP §4.1 and audit §9.2 A3). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity — see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP §3.2): a species with `variantOf` is the same stock, mutated — it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them — variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads — a variant whose identity only shows up on the defending side is a dead mechanic. R32: `bulk` is what the ANIMAL weighs, and it is the multiplier tools/gen-parts.js applies to every part's mass and lift. Before it, mass was a constant — all 41 species' anatomy totalled exactly 58, so a rhino's head massed what a moth's head massed. That was harmless while mass only bought turn order; A9 made mass gate flight (lift >= mass) and cost a point of speed per 50, which meant the game's widest build decision was priced in a currency carrying no information about the creature. Lift follows bulk^(2/3) — wing AREA, not wing mass, which is why a moth gets airborne on nothing and a swan needs a runway. Metabolic draw is deliberately NOT scaled: it was, briefly, and it cost the harness's `gills` archetype four stamina a turn and dropped kestrel/cloudbase from 54% to 21%. Draw is the stamina economy and the upkeep bill; mass and lift are the physics. A variant inherits its base's bulk unless the mutation IS a weight change: an Iron Tortoise is heavier than the tortoise, a Glider Skunk lighter than the skunk, because a patagium is only worth having on something light. `frame` was reassessed at the same time: the cobras have no limbs and rode a quadruped chassis, so they now ride the A-class Kite, and six species whose frame flattered their size (armadillo, chameleon, pangolin, porcupine, goose, heron) dropped to the Scamper.",
   "species": [
     {
       "id": "bear",
@@ -12,6 +12,7 @@
         "accent": "#e8c39e"
       },
       "frame": "L",
+      "bulk": 1.5,
       "class": "ground",
       "archetype": "ursine",
       "diet": "Premium salmon budget",
@@ -44,6 +45,7 @@
         "accent": "#f7e6c8"
       },
       "frame": "M",
+      "bulk": 1.25,
       "class": "ground",
       "archetype": "feline",
       "diet": "Whatever it wants",
@@ -78,6 +80,7 @@
         "accent": "#d8dce2"
       },
       "frame": "M",
+      "bulk": 0.95,
       "class": "ground",
       "archetype": "canine",
       "diet": "Group dining plan",
@@ -112,6 +115,7 @@
         "accent": "#c9d68a"
       },
       "frame": "L",
+      "bulk": 1.6,
       "class": "water",
       "archetype": "reptile",
       "diet": "Anything that gets close",
@@ -144,6 +148,7 @@
         "accent": "#8a7f70"
       },
       "frame": "L",
+      "bulk": 1.4,
       "class": "ground",
       "archetype": "ursine",
       "diet": "Industrial produce",
@@ -178,6 +183,7 @@
         "accent": "#c4cad4"
       },
       "frame": "L",
+      "bulk": 1.9,
       "class": "ground",
       "archetype": "horned",
       "diet": "Bulk grass delivery",
@@ -211,7 +217,8 @@
         "secondary": "#7d5f33",
         "accent": "#e0c893"
       },
-      "frame": "M",
+      "frame": "S",
+      "bulk": 0.7,
       "class": "ground",
       "archetype": "armored",
       "diet": "Artisanal ants",
@@ -247,6 +254,7 @@
         "accent": "#c2b280"
       },
       "frame": "L",
+      "bulk": 1.3,
       "class": "water",
       "archetype": "armored",
       "diet": "Leafy greens, slowly",
@@ -281,6 +289,7 @@
         "accent": "#8f7bb5"
       },
       "frame": "S",
+      "bulk": 0.4,
       "class": "ground",
       "archetype": "insect",
       "diet": "Fruit, sap, ambition",
@@ -313,6 +322,7 @@
         "accent": "#e8dcc8"
       },
       "frame": "M",
+      "bulk": 1.0,
       "class": "ground",
       "archetype": "horned",
       "diet": "Hillside buffet",
@@ -347,6 +357,7 @@
         "accent": "#e9a820"
       },
       "frame": "S",
+      "bulk": 0.65,
       "class": "air",
       "archetype": "avian",
       "diet": "Free-range mice",
@@ -382,6 +393,7 @@
         "accent": "#c9a7d6"
       },
       "frame": "S",
+      "bulk": 0.4,
       "class": "air",
       "archetype": "avian",
       "diet": "Night-shift insects",
@@ -416,6 +428,7 @@
         "accent": "#d9f5f0"
       },
       "frame": "S",
+      "bulk": 0.3,
       "class": "air",
       "archetype": "insect",
       "diet": "Smaller insects, rudely",
@@ -450,6 +463,7 @@
         "accent": "#eef2f5"
       },
       "frame": "L",
+      "bulk": 1.5,
       "class": "water",
       "archetype": "fish",
       "diet": "Market-rate chum",
@@ -485,6 +499,7 @@
         "accent": "#f2c4de"
       },
       "frame": "M",
+      "bulk": 0.85,
       "class": "water",
       "archetype": "cephalopod",
       "diet": "Shellfish, pried open",
@@ -520,6 +535,7 @@
         "accent": "#f2e14a"
       },
       "frame": "M",
+      "bulk": 0.85,
       "class": "water",
       "archetype": "fish",
       "diet": "Charged snacks",
@@ -554,6 +570,7 @@
         "accent": "#8ce0d8"
       },
       "frame": "S",
+      "bulk": 0.5,
       "class": "water",
       "archetype": "fish",
       "diet": "Whatever swims into the light",
@@ -588,6 +605,7 @@
         "accent": "#e8f5c8"
       },
       "frame": "S",
+      "bulk": 0.45,
       "class": "water",
       "archetype": "amphibian",
       "diet": "Flies, enthusiastically",
@@ -620,6 +638,7 @@
         "accent": "#c9a86a"
       },
       "frame": "M",
+      "bulk": 0.95,
       "class": "ground",
       "archetype": "horned",
       "diet": "Eats literally anything",
@@ -653,7 +672,8 @@
         "secondary": "#548040",
         "accent": "#f0e68c"
       },
-      "frame": "M",
+      "frame": "S",
+      "bulk": 0.5,
       "class": "ground",
       "archetype": "reptile",
       "diet": "Insects, eventually",
@@ -688,6 +708,7 @@
         "accent": "#f2f0f5"
       },
       "frame": "S",
+      "bulk": 0.6,
       "class": "ground",
       "archetype": "mustelid",
       "diet": "Cheap and unglamorous",
@@ -719,7 +740,8 @@
         "secondary": "#493c2f",
         "accent": "#d8c9a8"
       },
-      "frame": "M",
+      "frame": "S",
+      "bulk": 0.7,
       "class": "ground",
       "archetype": "armored",
       "diet": "Bark and grievances",
@@ -752,6 +774,7 @@
         "accent": "#e6f7c1"
       },
       "frame": "S",
+      "bulk": 0.4,
       "class": "ground",
       "archetype": "insect",
       "diet": "Live prey, politely",
@@ -785,7 +808,8 @@
         "secondary": "#cfe3a2",
         "accent": "#2e5b34"
       },
-      "frame": "S",
+      "frame": "A",
+      "bulk": 0.6,
       "class": "ground",
       "archetype": "reptile",
       "diet": "Gourmet eggs, no questions",
@@ -821,6 +845,7 @@
         "accent": "#e8b57a"
       },
       "frame": "S",
+      "bulk": 0.5,
       "class": "ground",
       "archetype": "insect",
       "diet": "Anything it can pin",
@@ -855,7 +880,8 @@
         "secondary": "#4d5247",
         "accent": "#e8901c"
       },
-      "frame": "M",
+      "frame": "S",
+      "bulk": 0.65,
       "class": "air",
       "archetype": "avian",
       "diet": "Bread, and grievances",
@@ -891,6 +917,7 @@
         "accent": "#c2553f"
       },
       "frame": "S",
+      "bulk": 0.3,
       "class": "air",
       "archetype": "lepidopteran",
       "diet": "Nothing at all, alarmingly",
@@ -924,7 +951,8 @@
         "secondary": "#eef3f5",
         "accent": "#f0c14b"
       },
-      "frame": "M",
+      "frame": "S",
+      "bulk": 0.6,
       "class": "air",
       "archetype": "avian",
       "diet": "Anything that swims past",
@@ -960,6 +988,7 @@
         "accent": "#3f3a33"
       },
       "frame": "S",
+      "bulk": 0.55,
       "class": "air",
       "archetype": "avian",
       "diet": "Voles, whole",
@@ -994,6 +1023,7 @@
         "accent": "#e0a33a"
       },
       "frame": "S",
+      "bulk": 0.55,
       "class": "air",
       "archetype": "avian",
       "diet": "Whatever was flying underneath",
@@ -1029,6 +1059,7 @@
         "accent": "#e3a7d8"
       },
       "frame": "S",
+      "bulk": 0.35,
       "class": "water",
       "archetype": "cnidarian",
       "diet": "Plankton and misfortune",
@@ -1065,6 +1096,7 @@
         "accent": "#e4e0cd"
       },
       "frame": "S",
+      "bulk": 0.5,
       "class": "water",
       "archetype": "fish",
       "diet": "Crustaceans, crunched",
@@ -1099,6 +1131,7 @@
         "accent": "#8fbcd4"
       },
       "frame": "S",
+      "bulk": 0.7,
       "class": "water",
       "archetype": "mustelid",
       "diet": "Shellfish, and the rock to open it",
@@ -1133,7 +1166,8 @@
         "secondary": "#6a6154",
         "accent": "#d8a86b"
       },
-      "frame": "M",
+      "frame": "S",
+      "bulk": 0.6,
       "class": "ground",
       "archetype": "armored",
       "diet": "Grubs, and the soil around them",
@@ -1249,6 +1283,7 @@
         "accent": "#7fe3ff"
       },
       "frame": "L",
+      "bulk": 1.6,
       "class": "water",
       "archetype": "fish",
       "diet": "Market-rate chum",
@@ -1322,9 +1357,10 @@
       },
       "flavor": "Nests in weather. Weather has complained.",
       "statMult": {
-        "speed": 1.3,
-        "power": 1.1,
-        "hp": 0.75
+        "speed": 1.25,
+        "hp": 0.65,
+        "armor": 0.7,
+        "stamina": 0.85
       },
       "shapeTweak": {
         "fore": {
@@ -1348,6 +1384,7 @@
         "accent": "#c9f56e"
       },
       "frame": "S",
+      "bulk": 0.5,
       "class": "air",
       "archetype": "mustelid",
       "diet": "Cheap and unglamorous",
@@ -1409,6 +1446,7 @@
         "accent": "#b9c3cc"
       },
       "frame": "L",
+      "bulk": 1.7,
       "class": "water",
       "archetype": "armored",
       "diet": "Leafy greens, slowly",
@@ -1453,7 +1491,7 @@
         "secondary": "#c9bcae",
         "accent": "#ff6b8a"
       },
-      "frame": "S",
+      "frame": "A",
       "class": "ground",
       "archetype": "reptile",
       "diet": "Gourmet eggs, no questions",
