@@ -1939,6 +1939,94 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   }
 }
 
+// --- A7: obedience, priced ---------------------------------------------
+//
+// The audit filed this as "obedience is decisive and invisible until it
+// costs you", and measurement disagreed with BOTH halves.
+//
+// It was never invisible: every roster row on the briefing screen already
+// printed it. And it is not decisive — holding settling fixed so Rejection
+// never fires, and replaying the real engine 300 times a cell at pilot
+// skill 1.0, a 20% ignore chance is worth one to three points and even the
+// 60% cap costs about nine. A disobeying creature substitutes another move
+// from its OWN list, so it loses a little optimisation and never a turn.
+//
+// So the fix is not to display the number harder. It is to make the number
+// mean something: the briefing replays the fight with disobedience switched
+// off and shows the difference, which stays honest at whatever this
+// mechanic is eventually worth.
+{
+  const { obedienceIgnoreChance, obediencePercent } = await import('../battle/engine.js');
+  const { forecast } = await import('../battle/forecast.js');
+
+  const mk = (id, { bond = 100, settled = true, instability = 0 } = {}) => ({
+    id, name: id, frame: 'M', bond, instability,
+    settleUntil: settled ? t0 - HOUR : t0 + 40 * HOUR,
+    temperament: { nerve: 0, temper: 0 }, injury: null,
+    tokens: Object.fromEntries(SLOTS.map((sl) => [sl, {
+      id: `${id}${sl}`, partId: `goat_${sl}`, grade: 'standard',
+      donor: { name: 'D', species: 'goat', stars: 3, extractedAt: t0 },
+    }])),
+  });
+
+  // The formula still says what §3.5 says: settling removes the big
+  // penalty, bond cancels instability, and care can always reach zero.
+  assert.equal(obedienceIgnoreChance(mk('a'), t0), 0, 'a settled, bonded creature always obeys');
+  assert.equal(obediencePercent(mk('a'), t0), 100);
+  assert.ok(obedienceIgnoreChance(mk('b', { settled: false }), t0) > 0, 'an unsettled one does not');
+  assert.ok(
+    obedienceIgnoreChance(mk('c', { bond: 0, instability: 100 }), t0)
+    > obedienceIgnoreChance(mk('d', { bond: 100, instability: 100 }), t0),
+    'and bond is the lever the player has'
+  );
+  assert.ok(obedienceIgnoreChance(mk('e', { bond: 0, instability: 1000 }), t0) <= 0.6,
+    'the ignore chance is capped, so no build is ever uncontrollable');
+
+  // AN IGNORE MUST ACTUALLY CHANGE THE MOVE. The improvisation pool used to
+  // include the move that had just been ordered, so roughly one ignore in
+  // five printed "ignores orders and improvises!" and then did exactly what
+  // it was told — a combat log line that was not true.
+  {
+    const wild = mk('w', { bond: 0, instability: 1000 });
+    const b = createBattle([wild], content.encounters.patrol_1, content, 4242, t0);
+    b.player.team[0].ignoreChance = 1; // every order is ignored
+    const before = b.player.team[0].moves.map((m) => m.name);
+    let disobeyed = 0, sameMove = 0;
+    for (let i = 0; i < 40 && !b.over; i++) {
+      const acts = playerActions(b);
+      const move = acts.find((a) => a.type === 'move');
+      if (!move) break;
+      const ordered = before[move.index];
+      const evs = step(b, move, content);
+      if (evs.some((e) => e.kind === 'disobey')) {
+        disobeyed++;
+        if (evs.some((e) => e.text?.includes(ordered) && /uses|swings/i.test(e.text ?? ''))) sameMove++;
+      }
+    }
+    assert.ok(disobeyed > 0, 'a creature at ignoreChance 1 does disobey');
+    assert.equal(sameMove, 0, 'and never "improvises" into the move it was just ordered to use');
+  }
+
+  // THE BRIEFING'S NUMBER IS A MEASUREMENT. Same team, same encounter, the
+  // only difference being whether disobedience fires: the gap is the price.
+  {
+    const team = [0, 1, 2].map((i) => mk('t' + i, { bond: 0, instability: 1000 }));
+    const enc = content.encounters.patrol_2;
+    const real = forecast(team, enc, content, 7, t0, { runs: 64 });
+    const perfect = forecast(team, enc, content, 7, t0, { runs: 64, obedient: true });
+    assert.ok(perfect.winRate >= real.winRate - 0.02,
+      `switching disobedience off never makes a team worse (${real.winRate} → ${perfect.winRate})`);
+    // A team that cannot disobey must price at exactly zero, or the screen
+    // would be reporting sampling noise as a cost.
+    const obedient = [0, 1, 2].map((i) => mk('o' + i));
+    assert.equal(obedienceIgnoreChance(obedient[0], t0), 0);
+    const a = forecast(obedient, enc, content, 7, t0, { runs: 32 });
+    const b2 = forecast(obedient, enc, content, 7, t0, { runs: 32, obedient: true });
+    assert.equal(a.winRate, b2.winRate,
+      'a team that never disobeys forecasts identically either way — the briefing shows it nothing');
+  }
+}
+
 // --- A6: a combo for everybody, and a silhouette that points ---------
 //
 // 34 of 244 parts were in a combo and ELEVEN species were in none at all —

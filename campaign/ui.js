@@ -3,7 +3,7 @@
 // point for assaults and rescue raids (arena rendered via battle/ui).
 
 import { renderArena } from '../battle/ui.js';
-import { createBattle, isInjured, obediencePercent } from '../battle/engine.js';
+import { createBattle, isInjured, obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
 import { forecast } from '../battle/forecast.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
@@ -816,6 +816,35 @@ function renderBriefing(root, ctx) {
     .map((id) => state.chimeras.find((c) => c.id === id))
     .filter((c) => c && !isInjured(c, t));
   const fc = picked.length ? forecast(picked, encounter, content, state.seed, t) : null;
+
+  // A7: obedience as a DECISION, not a percentage. The audit filed this as
+  // "the number that decides whether your orders happen is not on the screen
+  // where you choose who fights" — but it was: every roster row already
+  // prints it. What no player could do was convert it into anything. So
+  // measure it instead: replay the same fight with disobedience switched
+  // off, and the gap between the two win rates is what this team's
+  // obedience is costing against THIS encounter. It is honest at whatever
+  // the mechanic turns out to be worth — which, measured, is one to three
+  // points at realistic values and about nine at the 60% cap.
+  //
+  // Only computed when somebody on the team can actually disobey, so a
+  // fully bonded, settled team pays nothing for the extra 32 replays.
+  const disobedient = picked.filter((c) => obedienceIgnoreChance(c, t) > 0);
+  const fcObedient = fc && disobedient.length
+    ? forecast(picked, encounter, content, state.seed, t, { obedient: true })
+    : null;
+  const obedienceCost = fcObedient ? Math.round((fcObedient.winRate - fc.winRate) * 100) : 0;
+  const worstObedience = disobedient.length
+    ? Math.min(...disobedient.map((c) => obediencePercent(c, t)))
+    : 100;
+  const obedienceLine = disobedient.length
+    ? `<span class="fine-print obedience-cost${obedienceCost >= 5 ? ' is-costly' : ''}">Obedience ${worstObedience}% — ${
+        obedienceCost >= 3
+          ? `worth about <strong>${obedienceCost} points</strong> of win chance here. Train them, or let them settle.`
+          : 'costing nothing measurable in this fight.'
+      }</span>`
+    : '';
+
   const odds = fc
     ? `
       <p class="forecast forecast-${fc.band.id}">
@@ -826,6 +855,7 @@ function renderBriefing(root, ctx) {
             : ''
         }
         <span class="fine-print">${fc.band.hint}</span>
+        ${obedienceLine}
       </p>`
     : '<p class="fine-print">Pick a team and the lab will run the numbers.</p>';
 
