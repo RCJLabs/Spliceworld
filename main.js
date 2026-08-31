@@ -53,6 +53,9 @@ const ctx = {
   pushNews: (line) => { pushNews(state, line); updateTicker(); },
   onExtract: (animalId) =>
     runExtraction($('#overlay'), ctx, animalId, () => showScreen(state.activeScreen)),
+  // A4: the Right Now panel lists things that live on other screens, so it
+  // needs to be able to send you to one. Screen switching is the shell's job.
+  goto: (name) => showScreen(name),
 };
 
 const SCREENS = {

@@ -1837,3 +1837,45 @@ footer {
 .variant-portrait svg { width: 100%; height: auto; }
 .variant-locked .variant-portrait { filter: grayscale(1) brightness(0.4); }
 .variant-locked { opacity: 0.72; }
+
+/* --- A4: the Right Now panel -------------------------------------------
+   A list of what is actually open, grouped by what KIND of thing it is.
+   Rows are buttons because every one of them goes somewhere; they are
+   full-width and stacked so the panel reads the same at 380px as it does
+   on a desktop, which is where it will mostly be read. */
+.agenda-head {
+  margin: 10px 0 4px;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.agenda-head:first-child { margin-top: 2px; }
+.agenda-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.agenda-row:hover, .agenda-row:focus-visible { border-color: var(--accent); }
+.agenda-label { display: block; font-weight: 700; }
+.agenda-row .fine-print { display: block; margin-top: 2px; }
+.pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+/* A4: the crew/solo lane line under the Jobs header. */
+.job-slots { margin: -4px 0 8px; }

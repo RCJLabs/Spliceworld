@@ -1,5 +1,132 @@
 # PROGRESS
 
+## Session 45 — A4: open the loop that was already there ✅
+
+**Acceptance criterion:** a player who opens the game with money, a stable
+and a lost fight still has three distinct things they can do right now —
+**passes**, and the criterion had to be sharpened before it meant anything.
+
+### The audit's premise was wrong, and the truth was worse
+
+The item was filed as *"there is one thing to do per visit and it is on a
+cooldown"*. I built an instrument that enumerates every action the game would
+accept from the exact state the criterion names, and measured **five things
+open, not zero**. But:
+
+| open, before | what it actually is |
+|---|---|
+| Order from the catalog | spend money |
+| Expand the pens | spend money |
+| Train a chimera | spend money |
+| Buy someone out of the Infirmary | spend money |
+| Run a job | one 15-hour job on a 22.5h cooldown |
+
+Four of five were purchases and the fifth was a wait. **Nothing a player
+could do produced a next thing to do** — and six systems were dark, because
+the loop the whole game is built around (graduate a donor → splice what comes
+out) is shut for the first **six to twelve hours** of every save. The starter
+herd is born the moment the app first opens; nothing can graduate until it
+reaches adult. That is precisely the window the player who filed this report
+was living in.
+
+So the fix is not more jobs.
+
+### 1. The starter bear arrives grown
+
+Its birth is **backdated**, not a free part granted, so every downstream rule
+stays honest: it ages normally from there, its condition still decides the
+grade it graduates at, and caring for it first still pays. The two goats stay
+newborn, so the husbandry timers are still something the player learns —
+there is simply one door open on day one.
+
+### 2. Three lanes, because "one job at a time" was one rule doing three jobs
+
+- **crewed** — one lane per creature fit to work, capped at 3.
+- **solo** — you go yourself. Exactly one, always. This is what keeps a player
+  with *no* chimeras able to run a job at all, which is rule 1 and predates A4.
+- **paperwork** — `crew: 'none'` occupies no lane.
+
+The first cut floored the *crewed* lane at one instead, and smoke caught that
+it broke rule 1 in exactly the state this board exists for: lose a fight with
+a job already out and the floor was occupied, so the thing guaranteed to be
+runnable was not runnable. A job in flight also no longer hides the board —
+launching one thing used to remove the only screen showing what else there was.
+
+### 3. `ranch/agenda.js` — one definition of "what can I do"
+
+DOM-free, so the Ranch's **Right Now** panel and the smoke suite score a save
+with the same code and the criterion cannot drift away from the screen. Every
+item carries a `kind`, which is the half that matters:
+
+> **spend** — money leaves, something arrives.
+> **work** — you make something: a part, an egg, a creature, a better one.
+> **campaign** — you push on the world.
+
+**Measured, criterion state: 5 open / 1 productive / 2 kinds → 6 open / 2
+productive / 3 kinds.** And the thesis, demonstrated rather than asserted:
+graduating the donor turns `graduate` into `splice`. A thing you can do
+produces a next thing to do.
+
+### The bug only the browser could catch
+
+Every Right Now row pointed at a screen id **that does not exist**.
+`showScreen()` silently falls back to the Ranch for anything it does not
+recognise, so `war` and `splice` — which are tab *labels*, not keys; the keys
+are `battle` and `theater` — rendered buttons that looked perfectly wired and
+did nothing at all. Smoke now reads the real `SCREENS` map out of `main.js`
+and checks every row against it, so the ids cannot drift again.
+
+Two more the screenshot caught and no assertion would have: a solo job with
+no stable rendered **"1/0 crews out"**, and the board offered **"-1 of 0 crews
+free"** — the arithmetic was mixing lanes. And a long "you are already out
+doing something" tag turned a job row into one word per line at 380px, which
+is the R25 econ-row lesson arriving for the third time.
+
+### Save v27
+
+`campaign.operation` (one slot) becomes `campaign.operations` (a list). A job
+in flight when the save was written keeps its clock, its sealed outcome and
+its crew — verified in the browser by hand-writing a v26 save with a running
+job and reloading.
+
+### The break battery, and the hole it found
+
+Eight mutations, then one more.
+
+| break | caught by |
+|---|---|
+| starter herd back to all-newborn | the criterion — *three KINDS of thing* (`work:graduate` is gone from the list it prints) |
+| the crewless job needs a crew slot again | the criterion — *three KINDS of thing* (`campaign:job` is gone) |
+| an agenda row points at a screen the shell lacks | *job points at a screen the shell actually has (war not in ranch, pens, vault, theater, battle, dex)* |
+| every item becomes a purchase | *three KINDS of thing* |
+| concurrency reverts to one job | *three fit creatures, three crews* |
+| only the first finished job resolves | *every finished job resolves* |
+| the same creature in two places | *the same crew cannot go twice* |
+| **the migration forgets the in-flight job** | **MISSED — the whole suite passed** |
+
+The first two are caught by the *criterion* rather than by their own
+diagnostic, because the criterion is asserted first and each break removes
+the only item of its kind. That is the right outcome and the failure message
+is the proof: it prints the surviving list, and exactly the item that change
+is responsible for is missing from it.
+
+The miss was real. A v27 migration that simply wrote `operations = []`
+**passed everything**, because every other assertion only ever checked the
+*shape* of a migrated save — that it has the right keys — and never that a
+job which was in flight is still in flight. Now asserted: same op, same crew,
+same clock, and the outcome sealed at launch that a reload must not reroll.
+Re-broken afterwards to confirm it fires.
+
+### Known issues
+
+- The Path to World Domination and Right Now overlap on visit one, so Right
+  Now stays folded until the Path retires. Two lists saying the same thing is
+  worse than either.
+- Smoke is ~3 minutes.
+
+**Next session's first task:** A5 — no tag the region ladder depends on
+should be carried by fewer parts than the ladder asks for.
+
 ## Session 44 — A3: forty animals, and Air anatomy to build them out of ✅
 
 **Acceptance criterion:** an Air or a Water specialist is as buildable as a
