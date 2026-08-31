@@ -114,6 +114,56 @@ mute-ness asserted rather than assumed.
   thorns) and the Screaming Armadillo's "Screaming Fit" (Sonic) are
   signatures; the rest take their species' kind.
 
+### The break battery, including the two breaks that were wrong
+
+Twelve mutations, each run against the suite; every A3 assertion fails when
+the thing it guards is broken.
+
+| break | caught by |
+|---|---|
+| ground loses its only tail | rule 1 — *ground has no tail anywhere in the game* |
+| talons vote Ground again | rule 2 — *air hindlimbs is 1 part(s)* |
+| water pool thinned past 1.5× | rule 3 — *the class pools are within a half of each other* |
+| every air vote flipped to ground | rule 1 — *air has no head anywhere in the game* |
+| all air anatomy from one donor | rule 4 — *air can be built from at least three donors* |
+| goose unreachable | rule 5 — *goose is unlocked by conquering something* |
+| Ground tag back on every kick | rule 6 — *crocodile_hindlimbs swings a Ground move but its anatomy votes water* |
+| horned heads stop voting | rule 1 — *ground has no head anywhere in the game* |
+| one animal goes missing | the count — *forty animals (39)* |
+| one combo disappears | `gradeAssignmentsChecked` |
+| a combo priced below its own parts | *high_water_mark … is 10 power but a drawback-free move of its own parts is 58* |
+| every hide active priced out | caught **elsewhere** — by R23's own win-rate guard directly above it, which is the stronger assertion and fires first |
+
+Three of those took two attempts, and the reasons are worth keeping:
+
+- **Two breaks were the wrong size.** Dropping paddle/rudder/drift left Water
+  at 30 against Ground's 41 — a 1.37× spread, *inside* the 1.5× the gate
+  allows. Stripping Water entirely then tripped rule 1 before rule 3 could
+  speak. Only trimming each Water slot to exactly five isolates rule 3.
+- **One break was masked by a crash.** Deleting the armadillo left the
+  `screaming_roll` combo pointing at a part that no longer existed, so the
+  suite died on a `TypeError` long before the count assertion — and a harness
+  that greps for `AssertionError` reported that as a *pass*.
+- So the last five run through a probe that lifts the A3 block's **actual
+  source out of `smoke.js`** and executes it against mutated content, rather
+  than a re-implementation that could drift. It carries a control on
+  unmutated content — which is what caught the probe's own first version
+  being broken (a relative import resolving from the wrong directory), a
+  failure that would otherwise have read as five clean catches.
+
+### Two self-inflicted process faults, recorded because they nearly shipped
+
+- The break scripts chained themselves with `while pgrep -f "a3-breaks.sh"`,
+  which **matches the waiting process's own command line** — both waiters
+  deadlocked on themselves. One survivor then mutated `species.json`,
+  `combos.json` and `smoke.js` in the window between my verifying the tree
+  and committing it, so the first push was missing the armadillo. Caught by
+  re-diffing against the backup afterwards; amended.
+- `tools/gen-parts.js` built its `_doc` by appending to whatever the previous
+  run left behind, so the Wave 1 paragraph had accumulated **twenty-one
+  copies**. Now built from a canonical base and verified idempotent across
+  two consecutive runs.
+
 ### Known issues
 
 - Smoke is now ~3 minutes, up from ~80 seconds: several sweeps are
