@@ -1663,6 +1663,37 @@ assert.deepEqual(m5.campaign, {
   operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
   lastTickAt: null,
 });
+// v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
+// when the save was written has to survive the move — it keeps its clock,
+// its sealed outcome and its crew. The deliberate-break battery caught this
+// as a hole: a migration that simply wrote `operations = []` passed the
+// whole suite, because every other assertion only ever looked at the SHAPE.
+{
+  const v26 = structuredClone(v1Save);
+  v26.saveVersion = 26;
+  v26.campaign = {
+    ...(v26.campaign ?? {}),
+    operation: {
+      opId: 'aquarium', chimeraId: 'c1', startedAt: t0, until: t0 + 6 * HOUR,
+      chance: 0.62, outcome: { success: true, funds: 180, species: 'frog', injuryRoll: 0.9 },
+    },
+  };
+  const moved = migrate(v26);
+  assert.equal(moved.campaign.operation, undefined, 'the single slot is gone');
+  assert.equal(moved.campaign.operations.length, 1, 'and the job that was out is still out');
+  const run = moved.campaign.operations[0];
+  assert.equal(run.opId, 'aquarium');
+  assert.equal(run.chimeraId, 'c1', 'with the same crew');
+  assert.equal(run.until, t0 + 6 * HOUR, 'and the same clock');
+  assert.deepEqual(run.outcome, { success: true, funds: 180, species: 'frog', injuryRoll: 0.9 },
+    'and the outcome sealed at launch, which a reload must not reroll');
+  // A save with nothing running migrates to an empty board, not to [null].
+  const idle = structuredClone(v1Save);
+  idle.saveVersion = 26;
+  idle.campaign = { ...(idle.campaign ?? {}), operation: null };
+  assert.deepEqual(migrate(idle).campaign.operations, [], 'and an idle board stays idle');
+}
+
 // Stronger than the literal above and self-maintaining: a migration that
 // forgets a field a NEW game gets is the classic way an old save starts
 // throwing on a screen it used to render.
