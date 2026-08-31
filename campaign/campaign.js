@@ -54,23 +54,57 @@ export function regionStates(state, content) {
   return mapRegionStates(state, content, contestedIds(state));
 }
 
+// A9: holding an entire strip pays a standing bonus on top of its nodes —
+// worth about the region's best single node, so clearing the last cheap
+// outpost in a region is worth more than its own line on the ledger says.
+// A region only counts while every node is held AND none is contested,
+// which is what makes defending the cheapest node in a completed strip as
+// urgent as defending the richest.
+export function regionComplete(state, content, region) {
+  return region.nodes.every(
+    (n) => state.campaign.heldNodes.includes(n.id) && !isContested(state, n.id)
+  );
+}
+
+// [{ region, bonus }] for every strip currently paying its completion
+// bonus. Data-driven: a region with no `completionBonus` simply pays none,
+// so adding a sixth region needs no engine edit.
+export function completedRegions(state, content) {
+  return regionList(content)
+    .filter((r) => r.completionBonus && regionComplete(state, content, r))
+    .map((r) => ({ region: r, bonus: r.completionBonus }));
+}
+
+export function regionBonusPerDay(state, content) {
+  return completedRegions(state, content).reduce((sum, r) => sum + r.bonus, 0);
+}
+
 // What territory actually pays. A contested node is suspended, which is
 // the sting that makes a counter-offensive worth answering before the
 // window closes — the node itself is recoverable, the lost days are not.
 export function incomePerDay(state, content) {
-  return allNodes(content)
+  const nodes = allNodes(content)
     .map((e) => e.node)
     .filter((n) => state.campaign.heldNodes.includes(n.id) && !isContested(state, n.id))
     .reduce((sum, n) => sum + n.incomePerDay, 0);
+  return nodes + regionBonusPerDay(state, content);
 }
 
 // What it would pay with the line held — for a War Room that can show the
-// player what the convoy is costing them.
+// player what the convoy is costing them. A contest inside a completed
+// strip suspends the strip's bonus too, so that has to be counted here or
+// the "suspended" figure understates what the convoy is actually taking.
 export function incomeSuspended(state, content) {
-  return allNodes(content)
+  const nodes = allNodes(content)
     .map((e) => e.node)
     .filter((n) => isContested(state, n.id))
     .reduce((sum, n) => sum + n.incomePerDay, 0);
+  const bonusLost = regionList(content)
+    .filter((r) => r.completionBonus)
+    .filter((r) => r.nodes.every((n) => state.campaign.heldNodes.includes(n.id)))
+    .filter((r) => !regionComplete(state, content, r))
+    .reduce((sum, r) => sum + r.completionBonus, 0);
+  return nodes + bonusLost;
 }
 
 // Elapsed campaign effects: held-node income and dissection deadlines.

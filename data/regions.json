@@ -1,5 +1,5 @@
 {
-  "_doc": "Campaign shell (M5, five regions since R26): an ordered list of region strips. Nodes unlock in order WITHIN their region; a region itself opens when its `requires` block is satisfied ({ nodes: [...] held, threatGen: N, notoriety: N } — all optional, all ANDed), so the ladder is data and adding a sixth region needs no engine edit. Each node is an encounter from enemies.json; winning holds it, granting income per real-world day (timestamp-computed) and notoriety. threatGens is the Threat Generation ladder — [{gen, at, name, announce}] — replacing the single threatGen2At threshold, which is still read as a fallback so a pre-R26 save sees the world it left. Crossing a rung announces it and unlocks nodes gated with 'threatGen': N. rescueEncounter = the themed battle used for every rescue raid. unlocksFauna: species ids added to the Mail-Order catalog when the node is held. `answer` names the class that beats the region's dominant enemy class ('mixed' where none does) and `demand` says it in the player's language on the map; smoke checks `answer` against the actual rosters AND checks that fauna of that class is already purchasable when the region opens, so the ladder can never ask for anatomy the catalog cannot sell. Region contestation (§3.9 'coalition counter-offensives can contest held regions'): once the threat generation named in `contestation.startsAtGen` is reached, the coalition periodically comes BACK for a node you already hold — anywhere on the map, not just the first region. The schedule is a timestamp (nextContestAt), never a per-tick dice roll, so how often you open the app cannot change how often you are attacked; and the defence window starts the moment you SEE the contest, so being away never costs you a node you were never given the chance to defend. Adding a region must never require engine edits, and neither does tuning this. `benchGrade` is the part grade a player plausibly holds when the region opens, and `benchTeam` (audit A8) is the number of chimeras the node is tuned for; the balance harness scores each node at ITS OWN grade and team so no cell is measured saturated at one end or floored at the other. Both are per-node overridable, because a strip is not reached all at once: guard_post sits behind Threat Gen 2 and is 4% at the strip's `standard` grade but 48% at `prime`, which is what a player actually brings to it. benchTeam is the answer to \"the team size a player has when they reach it\" — without it that phrase is undecidable, and A8's gate would just be asserting whatever the balance happened to be. Measured, not wished: it is the smallest team at which the best of the five harness archetypes clears the node with room to spare.",
+  "_doc": "Campaign shell (M5, five regions since R26): an ordered list of region strips. Nodes unlock in order WITHIN their region; a region itself opens when its `requires` block is satisfied ({ nodes: [...] held, threatGen: N, notoriety: N } — all optional, all ANDed), so the ladder is data and adding a sixth region needs no engine edit. Each node is an encounter from enemies.json; winning holds it, granting income per real-world day (timestamp-computed) and notoriety. threatGens is the Threat Generation ladder — [{gen, at, name, announce}] — replacing the single threatGen2At threshold, which is still read as a fallback so a pre-R26 save sees the world it left. Crossing a rung announces it and unlocks nodes gated with 'threatGen': N. rescueEncounter = the themed battle used for every rescue raid. unlocksFauna: species ids added to the Mail-Order catalog when the node is held. `answer` names the class that beats the region's dominant enemy class ('mixed' where none does) and `demand` says it in the player's language on the map; smoke checks `answer` against the actual rosters AND checks that fauna of that class is already purchasable when the region opens, so the ladder can never ask for anatomy the catalog cannot sell. Region contestation (§3.9 'coalition counter-offensives can contest held regions'): once the threat generation named in `contestation.startsAtGen` is reached, the coalition periodically comes BACK for a node you already hold — anywhere on the map, not just the first region. The schedule is a timestamp (nextContestAt), never a per-tick dice roll, so how often you open the app cannot change how often you are attacked; and the defence window starts the moment you SEE the contest, so being away never costs you a node you were never given the chance to defend. Adding a region must never require engine edits, and neither does tuning this. `benchGrade` is the part grade a player plausibly holds when the region opens, and `benchTeam` (audit A8) is the number of chimeras the node is tuned for; the balance harness scores each node at ITS OWN grade and team so no cell is measured saturated at one end or floored at the other. Both are per-node overridable, because a strip is not reached all at once: guard_post sits behind Threat Gen 2 and is 4% at the strip's `standard` grade but 48% at `prime`, which is what a player actually brings to it. benchTeam is the answer to \"the team size a player has when they reach it\" — without it that phrase is undecidable, and A8's gate would just be asserting whatever the balance happened to be. Measured, not wished: it is the smallest team at which the best of the harness archetypes clears the node with room to spare. Income (A9): every node's incomePerDay was raised by half — the wait to afford the Surgery Theater's Tier II gantry ran about eight days of held territory, which is a long time to look at a locked chassis. `completionBonus` is paid per day for holding EVERY node of a region with none of them contested; it is worth roughly the strip's best single node, so finishing a region reads as earning a sixth location. It is suspended the moment a counter-offensive contests any node in the strip, which is what makes defending the cheapest node in a completed region worth as much as defending the richest.",
   "threatGens": [
     {
       "gen": 1,
@@ -34,7 +34,7 @@
           "id": "barn_perimeter",
           "name": "Old Barn Perimeter",
           "encounter": "patrol_1",
-          "incomePerDay": 25,
+          "incomePerDay": 40,
           "notoriety": 10,
           "blurb": "Your own back fence. Currently patrolled by people with clipboards.",
           "unlocksFauna": [
@@ -48,7 +48,7 @@
           "id": "downtown",
           "name": "Downtown Greenfield",
           "encounter": "patrol_2",
-          "incomePerDay": 40,
+          "incomePerDay": 60,
           "notoriety": 15,
           "blurb": "Two traffic lights and a very nervous mayor.",
           "unlocksFauna": [
@@ -62,7 +62,7 @@
           "id": "checkpoint",
           "name": "Highway Checkpoint",
           "encounter": "checkpoint",
-          "incomePerDay": 60,
+          "incomePerDay": 90,
           "notoriety": 15,
           "blurb": "The county's only exit. The county's only cruiser lives here.",
           "unlocksFauna": [
@@ -76,7 +76,7 @@
           "id": "precinct",
           "name": "Precinct HQ",
           "encounter": "boss_clampdown",
-          "incomePerDay": 100,
+          "incomePerDay": 150,
           "notoriety": 25,
           "blurb": "Captain Clampdown’s office. There is a tarp in the motor pool. It is humming.",
           "boss": true,
@@ -92,7 +92,7 @@
           "id": "guard_post",
           "name": "National Guard Post",
           "encounter": "military_response",
-          "incomePerDay": 80,
+          "incomePerDay": 120,
           "notoriety": 20,
           "blurb": "The county called someone with a bigger budget.",
           "threatGen": 2,
@@ -105,7 +105,8 @@
           "benchGrade": "prime"
         }
       ],
-      "benchGrade": "standard"
+      "benchGrade": "standard",
+      "completionBonus": 150
     },
     {
       "id": "kestrel",
@@ -123,7 +124,7 @@
           "id": "crop_strip",
           "name": "Crop-Duster Strip",
           "encounter": "kestrel_strip",
-          "incomePerDay": 55,
+          "incomePerDay": 80,
           "notoriety": 20,
           "blurb": "A grass runway, two hangars, and a great deal of unearned confidence.",
           "unlocksFauna": [
@@ -136,7 +137,7 @@
           "id": "radio_mast",
           "name": "Radio Mast",
           "encounter": "kestrel_mast",
-          "incomePerDay": 70,
+          "incomePerDay": 105,
           "notoriety": 22,
           "blurb": "Whoever holds the mast holds the weather report, and thus morale.",
           "unlocksFauna": [
@@ -149,7 +150,7 @@
           "id": "cloudbase",
           "name": "Cloudbase Depot",
           "encounter": "kestrel_depot",
-          "incomePerDay": 85,
+          "incomePerDay": 130,
           "notoriety": 25,
           "blurb": "Everything here is bolted to the ceiling, which should have been a clue.",
           "unlocksFauna": [
@@ -162,7 +163,7 @@
           "id": "aerodrome",
           "name": "The Aerodrome",
           "encounter": "kestrel_aerodrome",
-          "incomePerDay": 120,
+          "incomePerDay": 180,
           "notoriety": 35,
           "blurb": "Aeronaut Prime has a scarf, a hangar, and something enormous under a tarp.",
           "boss": true,
@@ -172,7 +173,8 @@
           "benchTeam": 3
         }
       ],
-      "benchGrade": "prime"
+      "benchGrade": "prime",
+      "completionBonus": 180
     },
     {
       "id": "drowned",
@@ -190,7 +192,7 @@
           "id": "sunken_marina",
           "name": "Sunken Marina",
           "encounter": "drowned_marina",
-          "incomePerDay": 80,
+          "incomePerDay": 120,
           "notoriety": 25,
           "blurb": "The pontoons are underneath the boats now. Nobody wants to discuss it.",
           "unlocksFauna": [
@@ -203,7 +205,7 @@
           "id": "spillway_locks",
           "name": "Spillway Locks",
           "encounter": "drowned_locks",
-          "incomePerDay": 95,
+          "incomePerDay": 140,
           "notoriety": 25,
           "blurb": "Whoever owns the locks owns which streets are streets today.",
           "unlocksFauna": [
@@ -216,7 +218,7 @@
           "id": "dredge_yard",
           "name": "Dredge Yard",
           "encounter": "drowned_dredge",
-          "incomePerDay": 110,
+          "incomePerDay": 165,
           "notoriety": 30,
           "blurb": "They have wired the whole yard to the water. On purpose. Bring boots.",
           "unlocksFauna": [
@@ -229,7 +231,7 @@
           "id": "harbor_rig",
           "name": "Harbormaster’s Rig",
           "encounter": "drowned_rig",
-          "incomePerDay": 145,
+          "incomePerDay": 220,
           "notoriety": 40,
           "blurb": "The Harbormaster has a whistle, a grudge, and a crane the size of a church.",
           "boss": true,
@@ -239,7 +241,8 @@
           "benchTeam": 3
         }
       ],
-      "benchGrade": "prime"
+      "benchGrade": "prime",
+      "completionBonus": 220
     },
     {
       "id": "foundry",
@@ -257,7 +260,7 @@
           "id": "slag_gate",
           "name": "Slag Gate",
           "encounter": "foundry_gate",
-          "incomePerDay": 115,
+          "incomePerDay": 170,
           "notoriety": 30,
           "blurb": "A gate made of gates. The foreman has laminated the rules.",
           "unlocksFauna": [
@@ -269,7 +272,7 @@
           "id": "rolling_mill",
           "name": "Rolling Mill",
           "encounter": "foundry_mill",
-          "incomePerDay": 125,
+          "incomePerDay": 190,
           "notoriety": 30,
           "blurb": "Everything in here is either red hot or armour-plated. Frequently both.",
           "benchTeam": 2
@@ -278,7 +281,7 @@
           "id": "motor_pool",
           "name": "The Motor Pool",
           "encounter": "foundry_motorpool",
-          "incomePerDay": 140,
+          "incomePerDay": 210,
           "notoriety": 35,
           "blurb": "Every vehicle you have ever annoyed, parked in tidy rows, freshly painted.",
           "unlocksFauna": [
@@ -290,7 +293,7 @@
           "id": "crucible_floor",
           "name": "Crucible Floor",
           "encounter": "foundry_crucible",
-          "incomePerDay": 180,
+          "incomePerDay": 270,
           "notoriety": 45,
           "blurb": "Smelter Prime pours a fresh chassis while you watch. It is meant for you.",
           "boss": true,
@@ -298,7 +301,8 @@
           "benchTeam": 2
         }
       ],
-      "benchGrade": "apex"
+      "benchGrade": "apex",
+      "completionBonus": 270
     },
     {
       "id": "spire",
@@ -317,7 +321,7 @@
           "id": "spire_reception",
           "name": "Spire Reception",
           "encounter": "spire_lobby",
-          "incomePerDay": 150,
+          "incomePerDay": 225,
           "notoriety": 35,
           "blurb": "Please take a number. The number is a summons.",
           "benchTeam": 2
@@ -326,7 +330,7 @@
           "id": "records_annex",
           "name": "Records Annex",
           "encounter": "spire_records",
-          "incomePerDay": 165,
+          "incomePerDay": 250,
           "notoriety": 35,
           "blurb": "Every unkind thing anyone has written about you, alphabetised.",
           "benchTeam": 1
@@ -335,7 +339,7 @@
           "id": "rooftop_pad",
           "name": "Rooftop Pad",
           "encounter": "spire_rooftop",
-          "incomePerDay": 185,
+          "incomePerDay": 280,
           "notoriety": 40,
           "blurb": "The helipad, the water tanks, and a really committed accountant.",
           "benchTeam": 3
@@ -344,14 +348,15 @@
           "id": "boardroom",
           "name": "The Boardroom",
           "encounter": "spire_boardroom",
-          "incomePerDay": 260,
+          "incomePerDay": 390,
           "notoriety": 60,
           "blurb": "Director Prime would like to walk you through the slides. All of them.",
           "boss": true,
           "benchTeam": 3
         }
       ],
-      "benchGrade": "apex"
+      "benchGrade": "apex",
+      "completionBonus": 390
     }
   ],
   "contestation": {
