@@ -65,8 +65,8 @@
       "tuning": {
         "_doc": "Rehabilitation constants (§3.6: salvage it OR rehabilitate it into your roster). Hours and fee are read off the specimen so a rival's apex monster is a longer, dearer programme than a scrappy one; `hourScale`/`feeScale` on a level make the whole track cheaper as you invest in it. The two knobs are deliberately orthogonal: the CLOCK releases the specimen, the SESSIONS decide who walks out. sessionGapFraction is a share of the programme's own length rather than a fixed cooldown, so the full curriculum always fits inside the programme — otherwise the scrappiest specimens, whose programmes are shortest, would be the hardest ones to befriend.",
         "baseHours": 4.5,
-        "hoursPerPower": 0.09,
-        "hoursPerInstability": 0.05,
+        "hoursPerPower": 0.0675,
+        "hoursPerInstability": 0.0375,
         "maxHours": 22.5,
         "baseFee": 60,
         "feePerPower": 2.2,

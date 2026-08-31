@@ -62,7 +62,7 @@ export function infirmaryGrants(state, content) {
 }
 
 const UPKEEP_DEFAULTS = {
-  frameBase: { S: 3, M: 5, L: 9 },
+  frameBase: { A: 4, S: 3, M: 5, L: 9 },
   frameFallback: 5,
   gradeCost: { standard: 1, prime: 5, apex: 12, prismatic: 22 },
   drawCost: 0.35,

@@ -1,5 +1,5 @@
 {
-  "_doc": "Base fauna (34 species; 40 animals with variants, ROADMAP \u00a74.1 and audit \u00a79.2 A3). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity \u2014 see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP \u00a73.2): a species with `variantOf` is the same stock, mutated \u2014 it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them \u2014 variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads \u2014 a variant whose identity only shows up on the defending side is a dead mechanic.",
+  "_doc": "Base fauna (34 species; 40 animals with variants, ROADMAP §4.1 and audit §9.2 A3). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity — see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP §3.2): a species with `variantOf` is the same stock, mutated — it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them — variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads — a variant whose identity only shows up on the defending side is a dead mechanic.",
   "species": [
     {
       "id": "bear",
@@ -19,8 +19,8 @@
       "upkeepPerDay": 12,
       "mailOrderPrice": 260,
       "growthHours": {
-        "adult": 12,
-        "prime": 36,
+        "adult": 9,
+        "prime": 27,
         "elder": 96
       },
       "thermal": [
@@ -51,8 +51,8 @@
       "upkeepPerDay": 13,
       "mailOrderPrice": 300,
       "growthHours": {
-        "adult": 11,
-        "prime": 32,
+        "adult": 8,
+        "prime": 24,
         "elder": 90
       },
       "thermal": [
@@ -85,8 +85,8 @@
       "upkeepPerDay": 9,
       "mailOrderPrice": 140,
       "growthHours": {
-        "adult": 10,
-        "prime": 28,
+        "adult": 8,
+        "prime": 21,
         "elder": 84
       },
       "thermal": [
@@ -119,8 +119,8 @@
       "upkeepPerDay": 11,
       "mailOrderPrice": 320,
       "growthHours": {
-        "adult": 14,
-        "prime": 40,
+        "adult": 11,
+        "prime": 30,
         "elder": 100
       },
       "thermal": [
@@ -151,8 +151,8 @@
       "upkeepPerDay": 11,
       "mailOrderPrice": 280,
       "growthHours": {
-        "adult": 13,
-        "prime": 38,
+        "adult": 10,
+        "prime": 29,
         "elder": 96
       },
       "thermal": [
@@ -185,8 +185,8 @@
       "upkeepPerDay": 12,
       "mailOrderPrice": 340,
       "growthHours": {
-        "adult": 14,
-        "prime": 42,
+        "adult": 11,
+        "prime": 32,
         "elder": 104
       },
       "thermal": [
@@ -219,8 +219,8 @@
       "upkeepPerDay": 7,
       "mailOrderPrice": 220,
       "growthHours": {
-        "adult": 10,
-        "prime": 30,
+        "adult": 8,
+        "prime": 23,
         "elder": 84
       },
       "thermal": [
@@ -254,8 +254,8 @@
       "upkeepPerDay": 8,
       "mailOrderPrice": 260,
       "growthHours": {
-        "adult": 16,
-        "prime": 48,
+        "adult": 12,
+        "prime": 36,
         "elder": 120
       },
       "thermal": [
@@ -288,8 +288,8 @@
       "upkeepPerDay": 4,
       "mailOrderPrice": 160,
       "growthHours": {
-        "adult": 7,
-        "prime": 20,
+        "adult": 5,
+        "prime": 15,
         "elder": 60
       },
       "thermal": [
@@ -320,8 +320,8 @@
       "upkeepPerDay": 4,
       "mailOrderPrice": 90,
       "growthHours": {
-        "adult": 7,
-        "prime": 20,
+        "adult": 5,
+        "prime": 15,
         "elder": 64
       },
       "thermal": [
@@ -354,8 +354,8 @@
       "upkeepPerDay": 8,
       "mailOrderPrice": 180,
       "growthHours": {
-        "adult": 8,
-        "prime": 24,
+        "adult": 6,
+        "prime": 18,
         "elder": 72
       },
       "thermal": [
@@ -389,8 +389,8 @@
       "upkeepPerDay": 5,
       "mailOrderPrice": 120,
       "growthHours": {
-        "adult": 7,
-        "prime": 20,
+        "adult": 5,
+        "prime": 15,
         "elder": 60
       },
       "thermal": [
@@ -423,8 +423,8 @@
       "upkeepPerDay": 3,
       "mailOrderPrice": 190,
       "growthHours": {
-        "adult": 5,
-        "prime": 16,
+        "adult": 4,
+        "prime": 12,
         "elder": 48
       },
       "thermal": [
@@ -457,8 +457,8 @@
       "upkeepPerDay": 14,
       "mailOrderPrice": 420,
       "growthHours": {
-        "adult": 13,
-        "prime": 38,
+        "adult": 10,
+        "prime": 29,
         "elder": 96
       },
       "thermal": [
@@ -492,8 +492,8 @@
       "upkeepPerDay": 9,
       "mailOrderPrice": 300,
       "growthHours": {
-        "adult": 9,
-        "prime": 26,
+        "adult": 7,
+        "prime": 20,
         "elder": 72
       },
       "thermal": [
@@ -527,8 +527,8 @@
       "upkeepPerDay": 8,
       "mailOrderPrice": 360,
       "growthHours": {
-        "adult": 10,
-        "prime": 30,
+        "adult": 8,
+        "prime": 23,
         "elder": 80
       },
       "thermal": [
@@ -561,8 +561,8 @@
       "upkeepPerDay": 7,
       "mailOrderPrice": 240,
       "growthHours": {
-        "adult": 9,
-        "prime": 26,
+        "adult": 7,
+        "prime": 20,
         "elder": 76
       },
       "thermal": [
@@ -595,8 +595,8 @@
       "upkeepPerDay": 3,
       "mailOrderPrice": 70,
       "growthHours": {
-        "adult": 6,
-        "prime": 18,
+        "adult": 5,
+        "prime": 14,
         "elder": 56
       },
       "thermal": [
@@ -627,8 +627,8 @@
       "upkeepPerDay": 3,
       "mailOrderPrice": 60,
       "growthHours": {
-        "adult": 6,
-        "prime": 18,
+        "adult": 5,
+        "prime": 14,
         "elder": 60
       },
       "thermal": [
@@ -661,8 +661,8 @@
       "upkeepPerDay": 6,
       "mailOrderPrice": 150,
       "growthHours": {
-        "adult": 9,
-        "prime": 26,
+        "adult": 7,
+        "prime": 20,
         "elder": 76
       },
       "thermal": [
@@ -695,8 +695,8 @@
       "upkeepPerDay": 4,
       "mailOrderPrice": 80,
       "growthHours": {
-        "adult": 7,
-        "prime": 20,
+        "adult": 5,
+        "prime": 15,
         "elder": 64
       },
       "thermal": [
@@ -727,8 +727,8 @@
       "upkeepPerDay": 5,
       "mailOrderPrice": 85,
       "growthHours": {
-        "adult": 8,
-        "prime": 24,
+        "adult": 6,
+        "prime": 18,
         "elder": 72
       },
       "thermal": [
@@ -759,8 +759,8 @@
       "upkeepPerDay": 4,
       "mailOrderPrice": 130,
       "growthHours": {
-        "adult": 6,
-        "prime": 18,
+        "adult": 5,
+        "prime": 14,
         "elder": 56
       },
       "thermal": [
@@ -793,8 +793,8 @@
       "upkeepPerDay": 6,
       "mailOrderPrice": 170,
       "growthHours": {
-        "adult": 10,
-        "prime": 30,
+        "adult": 8,
+        "prime": 23,
         "elder": 80
       },
       "thermal": [
@@ -828,8 +828,8 @@
       "upkeepPerDay": 5,
       "mailOrderPrice": 210,
       "growthHours": {
-        "adult": 8,
-        "prime": 24,
+        "adult": 6,
+        "prime": 18,
         "elder": 72
       },
       "thermal": [
@@ -863,8 +863,8 @@
       "upkeepPerDay": 5,
       "mailOrderPrice": 95,
       "growthHours": {
-        "adult": 6,
-        "prime": 20,
+        "adult": 5,
+        "prime": 15,
         "elder": 60
       },
       "thermal": [
@@ -898,8 +898,8 @@
       "upkeepPerDay": 4,
       "mailOrderPrice": 120,
       "growthHours": {
-        "adult": 5,
-        "prime": 16,
+        "adult": 4,
+        "prime": 12,
         "elder": 48
       },
       "thermal": [
@@ -932,8 +932,8 @@
       "upkeepPerDay": 7,
       "mailOrderPrice": 165,
       "growthHours": {
-        "adult": 8,
-        "prime": 24,
+        "adult": 6,
+        "prime": 18,
         "elder": 70
       },
       "thermal": [
@@ -967,8 +967,8 @@
       "upkeepPerDay": 7,
       "mailOrderPrice": 175,
       "growthHours": {
-        "adult": 8,
-        "prime": 24,
+        "adult": 6,
+        "prime": 18,
         "elder": 72
       },
       "thermal": [
@@ -1001,8 +1001,8 @@
       "upkeepPerDay": 9,
       "mailOrderPrice": 210,
       "growthHours": {
-        "adult": 7,
-        "prime": 22,
+        "adult": 5,
+        "prime": 17,
         "elder": 66
       },
       "thermal": [
@@ -1036,8 +1036,8 @@
       "upkeepPerDay": 3,
       "mailOrderPrice": 110,
       "growthHours": {
-        "adult": 4,
-        "prime": 14,
+        "adult": 3,
+        "prime": 11,
         "elder": 44
       },
       "thermal": [
@@ -1072,8 +1072,8 @@
       "upkeepPerDay": 6,
       "mailOrderPrice": 140,
       "growthHours": {
-        "adult": 6,
-        "prime": 19,
+        "adult": 5,
+        "prime": 14,
         "elder": 58
       },
       "thermal": [
@@ -1106,8 +1106,8 @@
       "upkeepPerDay": 7,
       "mailOrderPrice": 150,
       "growthHours": {
-        "adult": 7,
-        "prime": 21,
+        "adult": 5,
+        "prime": 16,
         "elder": 64
       },
       "thermal": [
@@ -1141,8 +1141,8 @@
       "upkeepPerDay": 6,
       "mailOrderPrice": 130,
       "growthHours": {
-        "adult": 8,
-        "prime": 24,
+        "adult": 6,
+        "prime": 18,
         "elder": 70
       },
       "thermal": [
@@ -1207,8 +1207,8 @@
       "upkeepPerDay": 6,
       "mailOrderPrice": null,
       "growthHours": {
-        "adult": 7,
-        "prime": 20,
+        "adult": 5,
+        "prime": 15,
         "elder": 64
       },
       "thermal": [
@@ -1256,8 +1256,8 @@
       "upkeepPerDay": 13,
       "mailOrderPrice": null,
       "growthHours": {
-        "adult": 13,
-        "prime": 38,
+        "adult": 10,
+        "prime": 29,
         "elder": 96
       },
       "thermal": [
@@ -1307,8 +1307,8 @@
       "upkeepPerDay": 9,
       "mailOrderPrice": null,
       "growthHours": {
-        "adult": 8,
-        "prime": 24,
+        "adult": 6,
+        "prime": 18,
         "elder": 72
       },
       "thermal": [
@@ -1355,8 +1355,8 @@
       "upkeepPerDay": 6,
       "mailOrderPrice": null,
       "growthHours": {
-        "adult": 7,
-        "prime": 20,
+        "adult": 5,
+        "prime": 15,
         "elder": 64
       },
       "thermal": [
@@ -1416,8 +1416,8 @@
       "upkeepPerDay": 8,
       "mailOrderPrice": null,
       "growthHours": {
-        "adult": 16,
-        "prime": 48,
+        "adult": 12,
+        "prime": 36,
         "elder": 120
       },
       "thermal": [
@@ -1461,8 +1461,8 @@
       "upkeepPerDay": 7,
       "mailOrderPrice": null,
       "growthHours": {
-        "adult": 10,
-        "prime": 30,
+        "adult": 8,
+        "prime": 23,
         "elder": 80
       },
       "thermal": [

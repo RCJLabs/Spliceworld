@@ -1,5 +1,128 @@
 # PROGRESS
 
+## Session 51 — A10: every clock reconciled, and the mechanism found ✅
+
+**Acceptance criterion:** one pass reconciles every real-world clock in the
+data against the cut that was supposed to have touched it — **passes**, and
+the pass leaves two gates behind so the next retune cannot repeat it.
+
+### The named straggler was real, and it was the small one
+
+`operations.json` did still carry `injuryHours: [2, 5]`. The audit found
+**why**, which turned out to be the useful part.
+
+Seven modules merge `{...CODE_DEFAULTS, ...data}` so a Node tool holding a
+partial content bundle still behaves. **The data always wins**, so a code
+default that disagrees with it never runs — and a global retune that edits
+one side and not the other leaves no trace at all. R24's cut touched
+`campaign/operations.js` (already `[1.5, 3.75]`) and missed the JSON.
+
+### Two bigger ones were hiding behind it
+
+| clock | R24 cut it? |
+|---|---|
+| `incubationMinutes` | **all 32 species** |
+| `growthHours` | **zero of 32** |
+
+The egg timer shortened; the growing-up timer — the same pipeline, one stage
+later — did not. **123 values today** against `injuryHours`' two.
+
+*My first pass keyed species by array index, and A3's nine additions had
+reordered the file, so that comparison was meaningless — it "found" that the
+goat's growth was uncut when the goat had simply moved. Keyed by id it is
+unambiguous.*
+
+And the **rehab formula's per-unit coefficients** were missed while its base
+and cap were cut, so that clock fell only to **0.86–0.93** — and least of all
+for the strongest units, which are the ones you wait longest on:
+
+| unit (power, instability) | pre-R24 | after R24 | now |
+|---|---|---|---|
+| (40, 20) | 10.6h | 9.1h (0.858) | 7.95h (0.750) |
+| (140, 80) | 22.6h | 21.1h (**0.934**) | 16.95h (0.750) |
+
+### `elder` is exempt on purpose, and gated to stay that way
+
+`adult` and `prime` are **waits** — cut them and the player gets there
+sooner. `elder` is when the **extraction penalty** lands (`AGE_FACTOR` 0.8
+against prime's 1.0). Shortening it would make every animal in every live
+save decline sooner: taking something away from saves already in flight,
+which is the Ascent rule's spirit if not its letter.
+
+So the rule is *cut the clocks a player waits on, never the one that takes
+something away* — which **widens** the prime window instead of narrowing it.
+Measured in the browser on a save that already existed: a goat born 6h ago
+reads *Adult · Prime in 8h*, and the prime window went 42h → **46h**.
+
+### The gates, which are the point of the phase
+
+1. **Every numeric knob a module defaults AND the data sets must agree.**
+   60 compared. Copy strings are excluded deliberately — the data is the
+   source of truth for wording and the default is only a fallback, so a
+   `blurb` differing is correct where a number differing is a bug. *This is
+   the invariant that would have caught `injuryHours`.*
+2. **A hand-maintained roll of every real-world clock**, R29's
+   `SHIPPED_SYSTEMS` idiom applied to time: a new clock has to come here and
+   say so, and the next global retune gets one list to walk plus a suite that
+   names every value it missed. R24 had neither.
+3. Growth stages stay ordered and the prime window stays the longest stage,
+   so a future retune cannot quietly shorten the one clock that is a penalty.
+
+### The gate caught a live drift on its first run, and it was mine
+
+A9 added the Kite to `frameBase` in `data/facility.json` and **not** to
+`UPKEEP_DEFAULTS` in `splice/facility.js`, so a partial bundle would have
+priced the new chassis at the fallback (5) instead of 4. Same bug class,
+introduced by me two sessions ago, caught the first time the check ran.
+
+### One more of my own
+
+The job roll's first draft paired job ids with clocks read off the *indexed*
+R24 diff rather than off the file, so `county_fair` was rolled with
+`petting_zoo`'s numbers. The suite caught it; read from the source, all seven
+match.
+
+### The break battery
+
+Seven breaks, all caught — but two of them **for the wrong reason**, which
+was a gap inside A10's own gate.
+
+| break | caught by |
+|---|---|
+| `injuryHours` back to `[2, 5]` | *the data and the code default disagree — the data wins, so the default is a lie* |
+| growth reverted to pre-cut | *salvage: growth stages ordered* ← weak |
+| rehab coefficients un-cut | *rehab.hoursPerPower: data and code default disagree* |
+| a numeric knob gains a value in data only | *upkeep.gradeCost: the data and the code default disagree* |
+| `elder` cut for every species | *the goat clock is the one the onboarding quotes* ← weak |
+| a new job arrives unrolled | *a new job has to come to the roll and declare its clocks* |
+| a rolled clock drifts | *the window closes well before the next one opens* |
+
+Reverting growth was caught only by the goat's pin and by a rounding
+artefact on the synthetic `salvage` species; cutting `elder` only by the
+goat's pin. Both mean a retune touching **any of the other 39 animals**
+would have sailed straight through — the exact shape of the bug this phase
+exists to close, sitting inside the gate meant to close it.
+
+So the roll now carries all 41 species × `[adult, prime, elder, egg]`
+instead of one pinned animal and an ordering rule. Re-broken, including a
+case the old gate provably missed:
+
+| re-break | caught by |
+|---|---|
+| `elder` cut for every species | *bear growth drifted from the roll (`{adult:9, prime:27, elder:72}`)* |
+| **the tiger alone reverted** | ***tiger growth drifted from the roll (`{adult:11, prime:32, elder:90}`)*** |
+
+### Known issues
+
+- `treatPerHour` ($18 per hour of injury remaining) is a **price**, not a
+  clock, so the cut left it alone — but shorter injuries mean treatment got
+  quietly cheaper. Not A10's business; worth a look in an economy pass.
+- The roll is per-value and hand-maintained. That is the point, but it does
+  mean a deliberate retune touches two places.
+
+**Next session's first task:** the audit queue A1–A10 is complete. Next is
+whatever the roadmap's remaining §6 milestones call for.
+
 ## Session 50 — A9: the frame was a ladder, not a lever ✅
 
 **Acceptance criterion:** the frame choice is a real decision at more than
