@@ -1,9 +1,19 @@
 // Gene Vault screen: DNA vials and extracted part tokens with lineage.
-// Read-only in M2 — the Surgery Theater starts consuming these in M3.
+// Part tokens went to the Surgery Theater in M3. Vials went NOWHERE until
+// R31 — every extraction produced one and this screen listed it, forever.
+// The Resequencer is what spends them, and it lives here because this is
+// where the player already goes to look at them.
 
 import { SLOTS } from '../render/renderer.js';
 import { GRADES, GRADE_INDEX } from './extract.js';
 import { vialSVG } from './extract-ui.js';
+import {
+  resequencePlan, startResequence, cancelResequence,
+  activeResequence, resequenceRemainingMs, resequencerTuning,
+} from './resequencer.js';
+import { fmtDuration } from '../ranch/ui.js';
+
+let lastMsg = '';
 
 const SLOT_LABELS = {
   head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
@@ -14,14 +24,39 @@ export function renderVaultScreen(root, ctx) {
   const { state, content } = ctx;
   const inv = state.inventory;
 
+  const t = ctx.now();
+  const run = activeResequence(state);
+  const penRoom = state.ranch.stock.length < state.ranch.penCapacity;
+
   const vials = inv.vials.length
     ? `<ul class="token-list">${inv.vials
         .map((v) => {
           const sp = content.species[v.species];
-          return `<li>${vialSVG(sp.palette.accent)} ${sp.name} essence <span class="lineage">from ${v.donorName} ★${v.stars}</span></li>`;
+          const plan = resequencePlan(state, v.id, content, t);
+          return `<li>${vialSVG(sp.palette.accent)} ${sp.name} essence <span class="lineage">from ${v.donorName} ★${v.stars}</span>${
+            plan.ok
+              ? `<br><span class="fine-print">${Math.round(plan.successChance * 100)}% to take · ${
+                  Math.round(plan.mutationChance * 100)}% chance of a new gene · ${plan.hours}h</span>
+                 <button type="button" class="care-train" data-reseq="${v.id}">🧬 Resequence</button>`
+              : run ? '' : ''
+          }</li>`;
         })
         .join('')}</ul>`
     : '<p class="ranch-msg">No essence on file. The centrifuge is bored.</p>';
+
+  // The run in flight, with its clock and the one thing that can stall it.
+  const runCard = run
+    ? `<section class="card">
+        <h3>🧬 Resequencer</h3>
+        <p class="ranch-msg">Rebuilding <strong>${run.donorName}</strong> — ${content.species[run.species].name}, ★${run.stars}.</p>
+        <p class="settle">${
+          resequenceRemainingMs(state, t) > 0
+            ? `<strong class="countdown">${fmtDuration(resequenceRemainingMs(state, t))}</strong> to go.`
+            : penRoom ? 'Decanting…' : 'Ready — and the pens are full. Free one and it comes out. Nothing is lost while it waits.'
+        }</p>
+        <button type="button" class="pen-dismantle" id="reseq-cancel">Abort (the vial goes back in the rack)</button>
+      </section>`
+    : '';
 
   // With 150 possible parts a flat list is unreadable: collapse by species,
   // newest/best first, and let the player open the one they care about.
@@ -64,8 +99,13 @@ export function renderVaultScreen(root, ctx) {
     .join('');
 
   root.innerHTML = `
+    ${lastMsg ? `<section class="card"><p class="ranch-msg">${lastMsg}</p></section>` : ''}
+    ${runCard}
     <section class="card">
-      <h3>DNA Vials</h3>
+      <h3>DNA Vials (${inv.vials.length})</h3>
+      <p class="fine-print">A vial is the whole donor — its stars and its genes. Resequencing grows that animal back${
+        run ? '' : '; the vial is spent whether or not it takes'
+      }. It is the only way an extraction is not forever.</p>
       ${vials}
     </section>
     <section class="card">
@@ -73,4 +113,18 @@ export function renderVaultScreen(root, ctx) {
       ${partSections || '<p class="ranch-msg">The vault echoes. Graduate someone.</p>'}
       <p class="fine-print">Every token remembers its donor forever. It&#39;s sentimental. And legally binding.</p>
     </section>`;
+
+  root.querySelectorAll('button[data-reseq]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const res = startResequence(state, btn.dataset.reseq, content, ctx.now());
+      lastMsg = res.msg;
+      ctx.save();
+      renderVaultScreen(root, ctx);
+    });
+  });
+  root.querySelector('#reseq-cancel')?.addEventListener('click', () => {
+    lastMsg = cancelResequence(state, content).msg;
+    ctx.save();
+    renderVaultScreen(root, ctx);
+  });
 }

@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 28;
+export const SAVE_VERSION = 29;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -365,6 +365,17 @@ const migrations = {
     }
     return save;
   },
+
+  // v29 (R31): the Resequencer. Vials existed from M2 and were read by
+  // nothing; spending one now grows the donor back. Old vials kept only a
+  // star average, so they are left as they are — resequencer.js rebuilds
+  // stats to match, which means a vial banked two years ago is worth
+  // exactly what it always said it was worth. Nothing is taken from anyone.
+  29: (save) => {
+    save.resequencer ??= null;
+    save.resequenceCount ??= 0;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -383,6 +394,8 @@ export function newGameState() {
     lastTickAt: null,
     activeScreen: 'ranch',
     inventory: { vials: [], parts: [], tokenCount: 0 },
+    resequencer: null,
+    resequenceCount: 0,
     chimeras: [],
     chimeraCount: 0,
     discoveredCombos: [],

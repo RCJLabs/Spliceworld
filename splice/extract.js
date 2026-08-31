@@ -73,12 +73,19 @@ export function extractAnimal(state, animalId, content, now) {
   state.ranch.stock.splice(idx, 1);
   const inv = state.inventory;
 
+  // R31: the vial carries the whole donor, because that is what a vial IS.
+  // `potential` and `genotype` used to leave with the animal, which made
+  // extraction the one irreversible act in the game — graduate your best
+  // recessive carrier and those genes were gone. The Resequencer can grow
+  // this donor back now, so the essence has to actually be in here.
   const vial = {
     id: `v${inv.tokenCount++}`,
     species: animal.species,
     donorName: animal.name,
     stars,
     extractedAt: now,
+    potential: { ...animal.potential },
+    genotype: { ...(animal.genotype ?? {}) },
   };
   inv.vials.push(vial);
 

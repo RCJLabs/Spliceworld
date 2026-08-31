@@ -1,0 +1,17 @@
+{
+  "_doc": "The Resequencer (R31). A DNA vial has existed since M2 and was read by NOTHING — extraction produced one every time and the Gene Vault listed them, forever, as a growing pile of inventory that did nothing. This is what spends them. A vial is the whole donor's essence, so spending one grows that donor back: same species, same star potential, same genotype — which matters because extraction was previously the one irreversible act in the game. Graduate your best recessive carrier and those genes were gone. Now they are banked. THE TRADE, and it is deliberately a real one: the run takes real-world hours, the vial is consumed either way, and one in four collapses. `successBase` is the flat odds; quality does not buy safety, it buys UPSIDE — `mutationBase + stars * mutationPerStar` is the chance the returning animal comes back with a gene neither it nor its donor had, so banking a five-star vial is worth more than banking four ordinary ones. The Incubator track governs both halves (it is an incubation): `hourScale` shortens the run and `mutationBonus` multiplies the mutation odds, exactly as it does for breeding, so the track gains a second reason to exist without a single new facility knob. Outcome is SEALED at launch from a seeded stream, like the vat and the jobs board: reloading the app cannot reroll a failure into a success.",
+  "tuning": {
+    "hours": 2,
+    "successBase": 0.75,
+    "mutationBase": 0.06,
+    "mutationPerStar": 0.05
+  },
+  "lines": {
+    "start": "The vial goes into the resequencer. Two hours, and either a familiar face or a very expensive smell.",
+    "success": "The tank clears. It is unmistakably the same animal, blinking at a world that graduated it.",
+    "successMutated": "The tank clears — and something is different this time.",
+    "failure": "The resequencer produces a sound nobody has heard before and then produces nothing at all. The vial is spent. Science is like that.",
+    "cancel": "Resequencer drained. The vial went back in the rack, no worse for the experience.",
+    "penFull": "It is ready to decant and there is nowhere to put it. Free a pen and come back — nothing is lost while it waits."
+  }
+}

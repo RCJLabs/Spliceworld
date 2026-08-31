@@ -44,6 +44,7 @@ export function loadSimContent() {
   temperament: readJSON('data/temperament.json'),
   scars: readJSON('data/scars.json'),
   guides: readJSON('data/guides.json'),
+  resequencer: readJSON('data/resequencer.json'),
   });
 }
 

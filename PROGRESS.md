@@ -1,5 +1,95 @@
 # PROGRESS
 
+## Session 53 — R31: the Resequencer, which is what a vial is FOR ✅
+
+**Acceptance criterion:** a DNA vial does something, and what it does uses
+what a vial actually is — **passes**, at `SAVE_VERSION` 29.
+
+### Vials were write-only, and they were hiding a real loss
+
+A vial has been produced by **every extraction since M2** and read by
+**nothing**. `extract.js` pushed one, the Gene Vault listed it, and that was
+the end of it — a pile of inventory that grew forever and did nothing.
+
+Worse, it concealed the one genuinely irreversible act in the game.
+`potential` and `genotype` live on the *animal*, so graduating your best
+recessive carrier **destroyed those genes**. There was no way back.
+
+### What shipped
+
+Spending a vial grows that donor back.
+
+| | |
+|---|---|
+| clock | **2 real hours**, shortened by the Incubator's `hourScale` (1h at Tier III) |
+| takes | **75%**, flat |
+| new gene | **6% + 5%/star**, times the Incubator's `mutationBonus` |
+| sealed | at launch, from a seeded stream |
+
+**Quality buys upside, never safety.** A five-star vial mutates far more
+often and fails exactly as often — banking a good one is worth more than
+banking four ordinary ones, and no amount of quality makes the risk go away.
+
+The Incubator governs both halves because a resequencing *is* an incubation,
+so that track gained a second reason to exist without one new facility knob.
+
+Vials now bank `potential` and `genotype`. Vials written before R31 kept only
+a star average, so those rebuild stats to match it — **a vial banked long ago
+is worth exactly what it always said it was worth.**
+
+### Measured over 400 runs
+
+- **72% took** (against 75% authored)
+- **29% of successes** threw a new gene
+- **the donor's recessive survived 286 of 286 successes** — the whole point
+
+### Four bugs, three of them mine and one a near-miss
+
+**1. Aborting banked the mutation.** Cancel wrote the *post-mutation* genome
+back into the vial, so abort-cycling was a free ratchet.
+
+**2. The fix didn't work, because I aliased instead of copying.** I took a
+reference to the vial's own `potential` and mutated it in place, so the
+sample was contaminated before it was ever copied. Measured: **60 abort
+cycles walked a 3/3/3/3/3 donor to 3/4/4/5/3** without completing a run.
+
+**3. Migration 29 didn't return the save.** `migrate` does `save = fn(save)`,
+so a missing `return` turns the whole save into `undefined` on load — every
+existing player's game, gone on the next boot. All 28 other migrations
+return correctly; this was mine alone.
+
+**4. Neither tool loaded the new data file.** `resequencerTuning` falls back
+to code defaults when the data is absent, so **my probe had been running on
+defaults rather than the shipped JSON the whole time**. It gave the right
+answer for the wrong reason — had I tuned the file, the probe would have kept
+reporting the old numbers. The suite caught it by reading
+`content.resequencerMeta` directly instead of through the fallback.
+
+### House rules honoured
+
+- **A full pen makes a finished run WAIT** rather than losing the animal.
+  Losing a successful decant to a housekeeping problem the player could not
+  see coming is exactly the surprise this project forbids.
+- **Aborting returns the vial**, unharmed. A cancel that ate it would make
+  starting one a trap.
+- **The odds are quoted before committing** — *"75% to take · 28% chance of a
+  new gene · 2h"* — because a one-in-four loss nobody was told about is a
+  different feature from one they accepted.
+- The new clock joined **A10's roll** and the code-default agreement gate.
+
+### Known issues
+
+- One machine, one run. Deliberate for now, but a player with twenty vials
+  will feel the queue.
+- The Resequencer has no facility track of its own; it rides the Incubator's.
+  That is thrifty, but it means there is no way to buy *down* the 25%.
+
+**Next session's first task:** the frames/parts/abilities reassessment. The
+audit is already open and has its first finding — the **cobra carries only
+four parts** (no forelimbs, no hindlimbs, because snakes have neither) yet
+sits on the **S frame, which draws two empty limb sockets**. Three of 41
+species have an incomplete body plan, and **zero species use the Kite**.
+
 ## Session 52 — R30: four moves, and every one of them legible ✅
 
 **Acceptance criterion:** a chimera fights with exactly four moves it was
