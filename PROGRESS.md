@@ -138,6 +138,38 @@ collided wherever a species wears the same family front and back, so a
 tortoise had two parts called "Fin Slash". Families that appear in both
 sockets now split, the way `paw` does.
 
+### The break battery
+
+Eleven deliberate breaks, each run against an isolated worktree; every one
+had to make the suite fail, and fail on the assertion that guards it.
+
+| break | verdict |
+|---|---|
+| mass back to a slot constant (the pre-R32 world) | CAUGHT |
+| every DENSITY flattened to 1 | CAUGHT *(by the gate this battery forced me to write)* |
+| a heron put on the Kite, which has no stilt socket | CAUGHT |
+| tentacles and a blob head stop voting | CAUGHT |
+| the coil stops voting | CAUGHT |
+| the dragonfly back to two wings and bug legs | CAUGHT |
+| the Scamper back to 40 mass | CAUGHT |
+| lift linear in bulk again (no wing-area exponent) | CAUGHT |
+| wing lift 90 → 260 | CAUGHT-ELSEWHERE — see below |
+| wing lift 90 → 110 (the narrow version) | CAUGHT |
+| every limb named for its socket again | CAUGHT |
+
+Two of them taught me something. **Flat density** was caught only by the
+flight gates four sections down — the mass gates could not see it, because
+density and bulk both move mass and only bulk was being asserted. That became
+its own assertion (above), and the re-run caught it there.
+
+**Wing lift 90 → 260** was too big a break: at that lift *nothing* is
+grounded, so A9's older "some frame/grade combinations fly and some do not"
+fired first and my own gate never got a turn. A break that overshoots proves
+the suite works and proves nothing about the assertion you wrote. Re-run at
+110 — measured to be the value where A9's check still passes but 14 of 20
+heavy-import builds wrongly clear the Scamper — and R32's gate is the one that
+fails.
+
 ### Known gaps
 
 - Flight status is only visible in the Theater while building. An existing
