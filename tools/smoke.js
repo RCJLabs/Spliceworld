@@ -6669,11 +6669,21 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   st.campaign.contested = [];
 
   // The raise itself: territory has to have actually gone up, or "increase
-  // the income" was a comment. Measured against the pre-A9 map total.
-  const mapTotal = regionsList.reduce(
-    (s, r) => s + r.nodes.reduce((a, n) => a + n.incomePerDay, 0) + r.completionBonus, 0);
-  assert.ok(mapTotal >= 2385 * 1.5,
-    `the whole map pays more than it did (${mapTotal}/day vs 2385 before A9)`);
+  // the income" was a comment. Measured against the pre-A9 map total of
+  // 2385/day in NODE income.
+  //
+  // The break battery caught this one asserting the wrong thing: it summed
+  // nodes AND bonuses against a node-only baseline, so rolling every node
+  // back to its pre-A9 value still passed — the 1210/day of strip bonuses
+  // covered the difference on their own. Two separate claims were shipped,
+  // so two separate assertions.
+  const nodeTotal = regionsList.reduce(
+    (s, r) => s + r.nodes.reduce((a, n) => a + n.incomePerDay, 0), 0);
+  const bonusTotal = regionsList.reduce((s, r) => s + r.completionBonus, 0);
+  assert.ok(nodeTotal >= 2385 * 1.4,
+    `node income alone is up on pre-A9 (${nodeTotal}/day vs 2385)`);
+  assert.ok(bonusTotal > 0 && bonusTotal >= nodeTotal * 0.2,
+    `and strip bonuses are worth holding a whole region for (${bonusTotal}/day on ${nodeTotal})`);
   // Node income still climbs strip by strip, or the ladder stopped meaning
   // anything when the numbers moved.
   const avg = regionsList.map((r) => r.nodes.reduce((a, n) => a + n.incomePerDay, 0) / r.nodes.length);
