@@ -27,7 +27,7 @@ import {
 import {
   runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent,
   regionBench, ARCHETYPES, facilityPayback, labAt, scoutedBy, fightRival,
-  ladderBench, ladderRate, STARTER_BUILD,
+  ladderBench, ladderRate, STARTER_BUILD, partsOnFrame,
 } from './sim.js';
 import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
 import {
@@ -7005,11 +7005,19 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ensureRanchSeeded(st, content, t0);
     st.facility = { theater: 2 };
     const grade = 'prime';
-    st.inventory.parts = ['cobra_head', 'cobra_organ', 'gorilla_forelimbs', 'rhino_hindlimbs', 'bear_tail', 'pangolin_hide']
+    // Seven parts filling seven bays, so the build knows more moves than it
+    // can carry: cobra head + cobra organ is the Injection combo, and the
+    // second organ bay takes a DIFFERENT organ (the same token cannot be
+    // installed twice — the Theater says so, and it is right).
+    st.inventory.parts = ['cobra_head', 'cobra_organ', 'bear_organ', 'gorilla_forelimbs', 'rhino_hindlimbs', 'bear_tail', 'pangolin_hide']
       .map((partId, i) => ({ id: `mv${i}`, partId, grade,
         donor: { name: 'Doris', species: content.parts[partId].species, stars: 3, extractedAt: t0 } }));
-    const slots = Object.fromEntries(st.inventory.parts.map((tk) => [content.parts[tk.partId].slot, tk.id]));
-    slots.organ2 = st.inventory.parts.find((tk) => content.parts[tk.partId].slot === 'organ' && tk.partId === 'cobra_organ')?.id ?? slots.organ;
+    const byPart = Object.fromEntries(st.inventory.parts.map((tk) => [tk.partId, tk.id]));
+    const slots = {
+      head: byPart.cobra_head, forelimbs: byPart.gorilla_forelimbs,
+      hindlimbs: byPart.rhino_hindlimbs, tail: byPart.bear_tail,
+      hide: byPart.pangolin_hide, organ: byPart.cobra_organ, organ2: byPart.bear_organ,
+    };
     const res = spliceChimera(st, 'M', slots, content, t0);
     assert.ok(res.ok, res.msg);
     const ch = res.chimera;

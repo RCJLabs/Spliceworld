@@ -1,5 +1,98 @@
 # PROGRESS
 
+## Session 52 — R30: four moves, and every one of them legible ✅
+
+**Acceptance criterion:** a chimera fights with exactly four moves it was
+trained to know, every move says what it does, and holding one explains it
+in full — **passes**, at `SAVE_VERSION` 28.
+
+### Two complaints, one cause
+
+Anatomy handed a chimera **one move per part plus every combo it unlocked**
+— six or seven buttons. The battle grid has four cells. So since R28 it
+showed **three moves and a "More moves" button**: a four-slot grid
+apologising for a creature that did not have four moves.
+
+And **110 of the roster's 271 moves — 41% — carry no power at all**. Every
+one of them rendered as the word `util`. The sentence explaining what
+`Nub Wiggle` does was sitting in `keywords.json` and was shown to nobody.
+
+### What shipped
+
+- **The cap is real.** Four slots, **combos competing for them** — a combo
+  you choose to carry is what makes discovering one a question rather than a
+  free button.
+- **Identity is origin, not stats.** A move is `p:bear_tail` or
+  `c:injection`, so a moveset survives a grade upgrade or a trait rewriting
+  its keywords.
+- **Descriptions live in data.** Each keyword gained an `effect` template
+  filled with that move's own magnitude, so *"Returns 45% of any damage you
+  take to whatever dealt it"* is generated rather than written twice.
+- **Retraining** costs $8 and a shared cooldown. Reordering what it already
+  carries is free; learning is not, and the message names what it gave up:
+  *"Doorstop learns Tortoise Bite, and promptly forgets Tortoise Strike."*
+- **A long press** (350ms, or right-click) opens the whole thing — the
+  arithmetic against the creature in front of you, the tag chart spelled
+  out, one line per keyword.
+
+### Four bugs found by building it
+
+**1. The moveset was never being honoured.** `movesFromTokens` emitted
+`.source`; `activeMoves` looked up `.id`. Every lookup missed and everything
+fell back to the default pick — in the harness, the pens screen and the
+battle screen alike. I had already reported "balance holds, no retune
+needed" off that measurement; it was measuring code that wasn't running.
+**A8's climbability floor is what exposed it**: 13% against a 25% gate.
+
+**2. The default pick flooded spare slots with attacks.** A pure tortoise
+went from **87% to 0%** — it had one attack and three defensive moves, and
+the picker replaced its shell with a second bite. **R23's own gate caught
+it**, not my archetype sweep, because every archetype is attack-led.
+
+**3. Fixing that dropped `fumes`' Gas move** — the one thing that archetype
+exists for. The tag IS the chart; power does not get a vote on whether you
+keep your answer to a chart row.
+
+**4. A migrated save was charged for moves it already had.** The browser QA
+caught it: comparing against the **stored** moveset rather than the
+effective one told a v27 player their creature was learning all four moves
+it had been fighting with for weeks.
+
+### Balance, measured with movesets genuinely in effect
+
+| | pre-R30 | now | gate |
+|---|---|---|---|
+| map minimum climbability | 38% | **29%** | ≥25% |
+| kestrel margin | +17/+16 | +14 | ≥10 |
+| drowned margin | +23/+27 | +14–23 | ≥10 |
+| foundry margin | +30/+25 | +14–30 | ≥10 |
+| distinct champions | 3 | **3** | 3 |
+
+The harness now fields each archetype's **tuned** four via `benchMoveset`
+rather than the default pick. A8's floor and R26's margins are statements
+about the **content**; gating them on my picker would have measured the
+picker instead. `defaultPick` is gated separately, on its own terms.
+
+### Three house rules the suite enforced
+
+- The service worker cache version tracks `SAVE_VERSION`, and a new module
+  that is not precached breaks the offline shell.
+- UI files may not render native `<input>` — the project ships `toggleRow`
+  for exactly this, and using it meant no new CSS.
+- R28's readout bench presses one move 120 times and needs 40 landed swings;
+  the bear's new four led with a 99-power recoil move that killed the reader
+  in five, so that fixture now picks a plain, keyword-free swing.
+
+### Known issues
+
+- `defaultPick` is a suggestion, not an optimum. It keeps every tag answer
+  and one utility, which is defensible for a creature you have not tuned —
+  but a player who never opens the retrain sheet is fielding a compromise.
+- Enemy and rival units are unaffected: their movesets are authored, and
+  they still field everything they carry.
+
+**Next session's first task:** whatever §6 calls for next.
+
 ## Session 51 — A10: every clock reconciled, and the mechanism found ✅
 
 **Acceptance criterion:** one pass reconciles every real-world clock in the

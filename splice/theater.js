@@ -7,7 +7,7 @@ import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { analyze } from './physiology.js';
 import { theaterGrants } from './facility.js';
 import { driftFromTraining } from './temperament.js';
-import { MOVE_SLOTS } from '../battle/moves.js';
+import { MOVE_SLOTS, activeMoves } from '../battle/moves.js';
 import { defaultMoveset } from '../battle/moves.js';
 import { movesFromTokens } from '../battle/engine.js';
 
@@ -199,7 +199,13 @@ export function setMoveset(state, chimeraId, next, known, now, content) {
   }
   // Reordering what it already carries is free — the cost is for LEARNING,
   // not for deciding which button sits where.
-  const current = new Set(chimera.moveset ?? []);
+  //
+  // "What it already carries" is the EFFECTIVE moveset, not the stored
+  // array. A save migrated from before R30 stores an empty one and is
+  // topped up from the default pick at battle time, so comparing against
+  // the raw field would tell that player their creature is learning all
+  // four moves it has been fighting with for weeks — and charge them.
+  const current = new Set(activeMoves(known, chimera.moveset).map((m) => m.id));
   const learning = ids.filter((id) => !current.has(id));
   if (!learning.length) {
     chimera.moveset = ids;
