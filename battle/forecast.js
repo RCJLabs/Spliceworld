@@ -79,7 +79,12 @@ function pilot(battle, content) {
 // 10ms and makes a false "not survivable" on a 45% matchup astronomically
 // unlikely (0.55^32), which is the one verdict here that must never be
 // wrong in that direction.
-export function forecast(team, encounter, content, seed = 1, now = 0, { runs = 32 } = {}) {
+// `obedient: true` replays the same fight with the team's disobedience
+// switched off — nothing else changed, so the difference between the two
+// win rates IS the price of obedience for this team against this encounter.
+// That is what the briefing shows, rather than a bare percentage that a
+// player has no way to convert into a decision.
+export function forecast(team, encounter, content, seed = 1, now = 0, { runs = 32, obedient = false } = {}) {
   if (!team?.length || !encounter) {
     return { winRate: 0, runs: 0, band: bandFor(0), turns: null, waves: encounter?.waves?.length ?? 0 };
   }
@@ -89,6 +94,7 @@ export function forecast(team, encounter, content, seed = 1, now = 0, { runs = 3
     // Seeded off the real battle seed so a reload shows the same forecast,
     // and offset per run so the seven are genuinely different fights.
     const battle = createBattle(team, encounter, content, (seed ^ Math.imul(i + 1, 0x9e3779b9)) >>> 0, now);
+    if (obedient) for (const c of battle.player.team) c.ignoreChance = 0;
     let guard = 0;
     while (!battle.over && guard++ < TURN_GUARD) {
       const action = pilot(battle, content);

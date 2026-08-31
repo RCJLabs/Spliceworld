@@ -47,6 +47,25 @@ function roll(battle) {
 
 // Obedience (§3.5): the only place player control wavers, and care fixes
 // it — settling removes the big penalty, bond cancels instability.
+//
+// A7 MEASURED WHAT THIS IS WORTH, because the audit called it "decisive"
+// and it is not. Holding settling fixed so Rejection never fires, and
+// replaying the real engine 300 times a cell at pilot skill 1.0:
+//
+//     ignore chance     0%     20%     40%     60%
+//     patrol_2         95%     96%     91%     86%
+//
+// Twenty per cent — the realistic figure for a settled mixed build at zero
+// bond — is worth one to three points, inside the noise. Even the 60% cap
+// costs about nine. The reason is structural: a disobeying creature
+// substitutes another move from its OWN list, so with five or six mostly
+// damaging moves it loses a little optimisation and never a turn. Rejection
+// (x0.75 power and speed while unsettled) is the far larger penalty, and
+// the two were being read together because an unsettled creature has both.
+//
+// The briefing screen now shows what obedience costs THIS team on THIS
+// fight rather than a bare percentage, so the number stays honest at
+// whatever this mechanic is eventually worth.
 export function obedienceIgnoreChance(chimera, now) {
   const settled = isSettled(chimera, now);
   return Math.max(
@@ -888,7 +907,14 @@ export function step(battle, action, content) {
   // Obedience (§3.5): unsettled/unbonded chimeras sometimes freelance.
   let playerAction = action;
   if (action.type === 'move' && me.ignoreChance > 0 && roll(battle) < me.ignoreChance) {
-    const affordable = me.moves.map((m, i) => ({ m, i })).filter(({ m }) => m.cost <= me.stamina);
+    // The improvised move must not be the one that was ORDERED. It used to
+    // be drawn from every affordable move including that one, so roughly one
+    // ignore in five printed "ignores orders and improvises!" and then did
+    // exactly what it was told — a line of combat log that was simply not
+    // true. (A7 measured the whole mechanic while it was at it: see
+    // obedienceIgnoreChance.)
+    const affordable = me.moves.map((m, i) => ({ m, i }))
+      .filter(({ m, i }) => m.cost <= me.stamina && i !== action.index);
     if (affordable.length) {
       const alt = affordable[Math.floor(roll(battle) * affordable.length)];
       events.push({ text: `${me.name} ignores orders and improvises!`, kind: 'disobey', target: 'player' });
