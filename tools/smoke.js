@@ -1939,6 +1939,129 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   }
 }
 
+// --- A5: the tag chart has to be reachable, and swingable ------------
+//
+// R25 invented `foghorn_array` — a 62-power Sonic organ — because the
+// armour-piercing answer to the Foundry did not exist in the buyable pool.
+// It then wired it as salvage from `leviathan_dredge`, a unit that appears
+// in NO encounter anywhere, so no player could ever obtain it — while
+// tools/sim.js went on benching the Foundry with it. Both halves of that are
+// gated here.
+{
+  const chart = content.tagChart;
+  const ATTACK_TAGS = [...new Set(chart.map((r) => r.attack))];
+  const enemies = readJSON('data/enemies.json');
+  const encounters = Object.fromEntries((enemies.encounters ?? []).map((e) => [e.id, e]));
+  const unitsById = Object.fromEntries((enemies.units ?? []).map((u) => [u.id, u]));
+  const regionsList = Object.values(content.regions);
+
+  const wavesOf = (encId) => (encounters[encId]?.waves ?? []).flat();
+  const nodeEncounters = new Set(regionsList.flatMap((r) => r.nodes.map((n) => n.encounter)));
+  const inAnyEncounter = new Set(Object.values(encounters).flatMap((e) => (e.waves ?? []).flat()));
+  const directorUnits = new Set(Object.values(content.director?.counters ?? readJSON('data/director.json').counters ?? [])
+    .flatMap((c) => c.units ?? []));
+
+  // 1. NO ORPHAN SALVAGE. Every enemy-tech part must have at least ONE
+  //    fielded source. Per PART, not per unit: rotor_limbs is promised by
+  //    both crop_duster and the parked stratofortress, and that is fine —
+  //    what killed foghorn_array was that its ONLY source was parked.
+  const fielded = (id) => inAnyEncounter.has(id) || directorUnits.has(id);
+  const salvageParts = new Set(Object.values(unitsById).flatMap((u) => u.salvage ?? []));
+  for (const partId of salvageParts) {
+    assert.ok(content.parts[partId], `every promised part exists (${partId})`);
+    const sources = Object.values(unitsById).filter((u) => (u.salvage ?? []).includes(partId));
+    assert.ok(sources.some((u) => fielded(u.id)),
+      `${partId} has a fielded source — its only sources are ${sources.map((u) => u.id).join(', ')}, ` +
+      'and none of them appears in any encounter, so no player can obtain it');
+  }
+  // And every salvage part in the data is promised by somebody at all.
+  for (const part of Object.values(content.parts)) {
+    if (part.species !== 'salvage') continue;
+    assert.ok(salvageParts.has(part.id), `${part.id} is dropped by some unit`);
+  }
+
+  // 2. Dead units may not accumulate. These four are drafted at boss scale
+  //    (hp 118–145, armor 13–18) and do not fit any strip they could join
+  //    without a rescale, so they are parked rather than fielded — but the
+  //    LIST is pinned, so a fifth cannot appear unnoticed the way
+  //    leviathan_dredge did.
+  const unfielded = Object.values(unitsById).filter((u) => !fielded(u.id)).map((u) => u.id).sort();
+  assert.deepEqual(unfielded,
+    ['crucible_9000', 'leviathan_dredge', 'stratofortress', 'the_compliance_engine'],
+    `the parked units are exactly the four known ones (${unfielded.join(', ')})`);
+
+
+  // 3. A TAG YOU CANNOT SWING IS NOT AN ANSWER. Sonic and Gas used to exist
+  //    only on heads, organs and hides — support slots — so neither could be
+  //    a creature's main attack, and Sonic is the only thing in the game that
+  //    goes through armour.
+  const DAMAGE_SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail'];
+  for (const tag of ATTACK_TAGS) {
+    const carriers = Object.values(content.parts).filter((p) => p.move?.tags?.includes(tag) && p.move.power > 0);
+    const swingable = carriers.filter((p) => DAMAGE_SLOTS.includes(p.slot));
+    assert.ok(swingable.length >= 2,
+      `${tag} is swingable from a damage slot (${swingable.length}: ${swingable.map((p) => `${p.id}@${p.move.power}`).join(', ') || 'none'})`);
+    assert.ok(Math.max(...swingable.map((p) => p.move.power)) >= 40,
+      `${tag}'s best damage-slot move is worth pressing (${Math.max(...swingable.map((p) => p.move.power))})`);
+  }
+
+  // 4. REACHABILITY AT THE DOOR — for the tags the ladder actually DEPENDS
+  //    on, which is a narrower set than "tags that help here".
+  //
+  //    The class triangle already hands out a x1.5, so a chart MULTIPLIER is
+  //    a nicer way to do something the player could do anyway: Gas x1.5 on
+  //    an organic roster, Electric x2 on an aquatic one. Bonuses, not
+  //    requirements — and a first draft of this gate demanded three Gas parts
+  //    before the tutorial strip, which is absurd, because Greenfield is
+  //    beatable at 55-83% by every archetype without a whiff of Gas.
+  //
+  //    The one effect nothing else in the game reproduces is `ignoreArmor`.
+  //    Armour is a flat subtraction; no class advantage goes through it. So a
+  //    strip whose roster is mostly Armored genuinely depends on Sonic, and
+  //    that is the case R25 hit and patched with a part nobody could obtain.
+  const RULE_TAGS = chart.filter((r) => r.rule).map((r) => r);
+  const speciesUpTo = (i) => {
+    const open = new Set(['goat', 'ram']);
+    for (const r of regionsList.slice(0, i)) for (const n of r.nodes) for (const sp of (n.unlocksFauna ?? [])) open.add(sp);
+    return open;
+  };
+  const salvageUpTo = (i) => {
+    const open = new Set();
+    for (const r of regionsList.slice(0, i)) {
+      for (const n of r.nodes) for (const uid of wavesOf(n.encounter)) {
+        for (const pid of (unitsById[uid]?.salvage ?? [])) open.add(pid);
+      }
+    }
+    return open;
+  };
+  let dependencies = 0;
+  for (const [i, region] of regionsList.entries()) {
+    const units = region.nodes.flatMap((n) => wavesOf(n.encounter)).map((id) => unitsById[id]).filter(Boolean);
+    for (const row of RULE_TAGS) {
+      const share = units.filter((u) => (u.tags ?? []).includes(row.defender)).length / units.length;
+      if (share < 0.5) continue; // not what this strip is made of
+      dependencies++;
+      const fauna = speciesUpTo(i), scrap = salvageUpTo(i);
+      const reach = Object.values(content.parts).filter((p) =>
+        p.move?.tags?.includes(row.attack) && p.move.power > 0 && (fauna.has(p.species) || scrap.has(p.id)));
+      assert.ok(reach.length >= 3,
+        `${region.id} is ${Math.round(share * 100)}% ${row.defender} and only ${row.attack} ignores it, ` +
+        `but a player can hold ${reach.length} part(s) carrying ${row.attack} when the strip opens ` +
+        `(${reach.map((p) => p.id).join(', ') || 'none'}) — a team is three creatures`);
+      // …and at least one of them has to be worth pressing against the armour
+      // it is meant to go through. A 26-power honk is not an answer to a
+      // roster wearing 11 to 15 points of plate.
+      const armour = units.filter((u) => (u.tags ?? []).includes(row.defender)).map((u) => u.armor ?? 0);
+      const median = armour.sort((a, b) => a - b)[Math.floor(armour.length / 2)] ?? 0;
+      const best = Math.max(...reach.map((p) => p.move.power));
+      assert.ok(best >= median * 3,
+        `${region.id}: the best reachable ${row.attack} attack is ${best} power against a median ${median} armour — ` +
+        'the player is better off swinging something else and eating the plate');
+    }
+  }
+  assert.ok(dependencies >= 1, 'at least one strip actually depends on a chart rule, or this gate proves nothing');
+}
+
 // --- Wave 1: the elemental class triangle, derived from anatomy.
 {
   const cls = readJSON('data/classes.json');

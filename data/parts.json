@@ -9264,7 +9264,7 @@
       "species": "skunk",
       "slot": "tail",
       "name": "Skunk Brush Tail",
-      "ability": "Counterbalance",
+      "ability": "Business End",
       "stats": {
         "speed": 3,
         "hp": 5
@@ -9277,12 +9277,14 @@
         "Gas"
       ],
       "move": {
-        "power": 0,
-        "cost": 10,
-        "acc": 100,
-        "tags": [],
+        "power": 42,
+        "cost": 22,
+        "acc": 95,
+        "tags": [
+          "Gas"
+        ],
         "keywords": {
-          "evasionUp": 1
+          "accDown": 1
         }
       },
       "shapes": [
@@ -11107,7 +11109,7 @@
       "species": "goose",
       "slot": "forelimbs",
       "name": "Sentry Goose Wings",
-      "ability": "Sentry Goose Strike",
+      "ability": "Wing Buffet",
       "stats": {
         "power": 7,
         "hp": 11
@@ -11123,10 +11125,12 @@
       ],
       "classAffinity": "air",
       "move": {
-        "power": 52,
+        "power": 48,
         "cost": 24,
         "acc": 92,
-        "tags": [],
+        "tags": [
+          "Sonic"
+        ],
         "keywords": {}
       },
       "shapes": [
@@ -11606,7 +11610,7 @@
       "species": "moth",
       "slot": "forelimbs",
       "name": "Atlas Moth Wings",
-      "ability": "Atlas Moth Strike",
+      "ability": "Scale Storm",
       "stats": {
         "power": 7,
         "hp": 9
@@ -11622,11 +11626,15 @@
       ],
       "classAffinity": "air",
       "move": {
-        "power": 52,
+        "power": 46,
         "cost": 24,
         "acc": 92,
-        "tags": [],
-        "keywords": {}
+        "tags": [
+          "Gas"
+        ],
+        "keywords": {
+          "evasionUp": 1
+        }
       },
       "shapes": [
         {
@@ -15164,7 +15172,7 @@
       "species": "armadillo",
       "slot": "tail",
       "name": "Screaming Armadillo Banded Tail",
-      "ability": "Armoured Sweep",
+      "ability": "Shell Knock",
       "stats": {
         "speed": 2,
         "hp": 7
@@ -15179,13 +15187,13 @@
       ],
       "classAffinity": "ground",
       "move": {
-        "power": 0,
-        "cost": 10,
-        "acc": 100,
-        "tags": [],
-        "keywords": {
-          "evasionUp": 1
-        }
+        "power": 40,
+        "cost": 20,
+        "acc": 95,
+        "tags": [
+          "Sonic"
+        ],
+        "keywords": {}
       },
       "shapes": [
         {
