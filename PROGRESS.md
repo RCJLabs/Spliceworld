@@ -82,6 +82,36 @@ R24 diff rather than off the file, so `county_fair` was rolled with
 `petting_zoo`'s numbers. The suite caught it; read from the source, all seven
 match.
 
+### The break battery
+
+Seven breaks, all caught — but two of them **for the wrong reason**, which
+was a gap inside A10's own gate.
+
+| break | caught by |
+|---|---|
+| `injuryHours` back to `[2, 5]` | *the data and the code default disagree — the data wins, so the default is a lie* |
+| growth reverted to pre-cut | *salvage: growth stages ordered* ← weak |
+| rehab coefficients un-cut | *rehab.hoursPerPower: data and code default disagree* |
+| a numeric knob gains a value in data only | *upkeep.gradeCost: the data and the code default disagree* |
+| `elder` cut for every species | *the goat clock is the one the onboarding quotes* ← weak |
+| a new job arrives unrolled | *a new job has to come to the roll and declare its clocks* |
+| a rolled clock drifts | *the window closes well before the next one opens* |
+
+Reverting growth was caught only by the goat's pin and by a rounding
+artefact on the synthetic `salvage` species; cutting `elder` only by the
+goat's pin. Both mean a retune touching **any of the other 39 animals**
+would have sailed straight through — the exact shape of the bug this phase
+exists to close, sitting inside the gate meant to close it.
+
+So the roll now carries all 41 species × `[adult, prime, elder, egg]`
+instead of one pinned animal and an ordering rule. Re-broken, including a
+case the old gate provably missed:
+
+| re-break | caught by |
+|---|---|
+| `elder` cut for every species | *bear growth drifted from the roll (`{adult:9, prime:27, elder:72}`)* |
+| **the tiger alone reverted** | ***tiger growth drifted from the roll (`{adult:11, prime:32, elder:90}`)*** |
+
 ### Known issues
 
 - `treatPerHour` ($18 per hour of injury remaining) is a **price**, not a
