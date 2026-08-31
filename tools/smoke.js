@@ -3720,7 +3720,11 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     s.campaign.contested = [{ nodeId: 'checkpoint', startedAt: t0, deadline: t0 + 18 * HOUR, gen: 2 }];
     const c = s.campaign.contested[0];
     const node = region.nodes.find((n) => n.id === c.nodeId);
-    const full = 225;
+    // Derived from what this empire actually holds — a literal here was a
+    // pre-A9 total, and would be stale again after the next economy tune.
+    const full = region.nodes
+      .filter((n) => s.campaign.heldNodes.includes(n.id))
+      .reduce((a, n) => a + n.incomePerDay, 0);
     assert.equal(incomePerDay(s, content), full - node.incomePerDay, 'the money stops first');
 
     const enc = contestEncounter(s, content, c);
@@ -5470,6 +5474,17 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     assert.ok(team[0].tags.includes('Airborne'),
       `the lead specimen actually took off (${team[0].tags.join(', ')})`);
     assert.equal(team[0].class, 'air', 'and flies the class that beats what they saw');
+    // A9: taking off is now a physics claim, so the lab has to have bought
+    // a chassis that can lift the build — its authored frame list is a
+    // style, and answering you overrides it. But ONLY for the specimen
+    // built to answer: a fix that just used the lightest frame everywhere
+    // would pass the assertion above and quietly erase every rival's taste.
+    assert.ok(analyze(team[0].genome.frame,
+      Object.entries(team[0].genome.parts).map(([, partId]) => ({ partId, grade: 'apex', donor: {} })),
+      content).flight.capable !== undefined, 'the lead is a real genome');
+    const styled = team.slice(1).map((u) => u.genome.frame);
+    assert.ok(styled.every((f) => content.rivals.trench.frames.includes(f)),
+      `the rest of the lab keeps its own chassis (${styled.join(', ')} vs authored ${content.rivals.trench.frames.join(', ')})`);
 
     // Avoidance is the other half: a Sonic kit ignores armour, so armour
     // spent against it is money wasted, and they stop spending it.
@@ -5627,7 +5642,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'stable',
     'breeding', 'incubator', 'genes', 'pairing', 'facility', 'upkeep', 'catalog',
     'temperament', 'bond', 'infirmary', 'scars',
-    'combos', 'chaos',
+    'combos', 'chaos', 'flight',
     'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director',
     'dex',
   ];

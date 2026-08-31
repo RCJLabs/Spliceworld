@@ -112,6 +112,30 @@ paid, notoriety raised); the combat only has to be *winnable*, and
 eight seeds and requires a win on at least one. `autoplay` is unchanged, so
 nothing else in the suite moved.
 
+### The rule applied symmetrically, and caught the rival AI too
+
+R27's rivals counter a Ground kit by fielding **Airborne** anatomy — that is
+the mechanism, checked directly rather than inferred from win rates. But
+rival specimens are built through the same `analyze()` the player's are, and
+`trench` fields M and L chassis, so the moment Airborne became a physics
+claim its counter-pick **bought wings and stayed on the ground**. Exactly the
+mistake the new rules punish the player for.
+
+A rival's authored `frames` list is a *style*; answering you is a *decision*.
+The countering specimen now takes the lightest chassis that actually lifts
+its build — so a lab that has lost to you twice turns up flying a **Kite**,
+for the same reason you would. Every other specimen keeps the lab's own
+taste, and there is a gate for that: a lazy fix that used the lightest frame
+everywhere would pass "the lead took off" while quietly erasing every
+rival's character.
+
+### Four income literals, all of them stale
+
+Deriving the raise turned up four assertions that had quietly become
+constants — `25`, `225`, `225` again, and a two-day payout of `50`. Each was
+correct when written and silently wrong the moment the economy moved. All
+five income assertions read from the holdings now.
+
 ### Known issues
 
 - The overall "no chassis is the answer everywhere" gate runs at 12 seeds

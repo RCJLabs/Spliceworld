@@ -288,7 +288,6 @@ export function rivalTeam(state, rival, content) {
     // and started treating you as the problem.
     const counterSlot = dossier.counterLeads ? 0 : 1;
     const targetClass = counter && i === counterSlot ? counter : rival.classBias;
-    const frame = rival.frames[Math.min(i, rival.frames.length - 1)];
     // Only the specimen built to answer you carries the anatomy counter;
     // the rest of the lab is still the lab.
     const parts = chooseParts(rival, targetClass, content, rng, i === counterSlot ? dossier : null);
@@ -298,6 +297,23 @@ export function rivalTeam(state, rival, content) {
       grade: gradeFor(rival, meta, record.defeats, i, rng),
       donor: { name: rival.name, species: part.species, stars: 5, extractedAt: 0 },
     }));
+    // A9: a rival's authored `frames` list is their STYLE; answering you is
+    // a decision. Since Airborne became a claim about physics rather than
+    // ancestry, a lab that looked up "get above their Ground kit" and then
+    // bolted the wings to its usual Rumbler has bought wings and stayed on
+    // the ground — the exact mistake the rules now punish the player for.
+    // So the countering specimen takes the lightest chassis that actually
+    // gets this build off the ground, and every other specimen keeps the
+    // lab's own taste.
+    let frame = rival.frames[Math.min(i, rival.frames.length - 1)];
+    const wantsAir = i === counterSlot && (dossier.seek ?? []).includes('Airborne');
+    if (wantsAir && !analyze(frame, tokens, content).flight.capable) {
+      const lifted = Object.values(content.frames)
+        .slice()
+        .sort((a, b) => a.phys.mass - b.phys.mass)
+        .find((f) => analyze(f.id, tokens, content).flight.capable);
+      if (lifted) frame = lifted.id;
+    }
     const name = creatureName(rival, rng, names);
     names.add(name);
     team.push(
