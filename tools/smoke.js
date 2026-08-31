@@ -1939,6 +1939,96 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   }
 }
 
+// --- A8: the harness measures the team a player actually has ----------
+//
+// The audit said `runSim` defaults to teamSize 3 and that nothing in the
+// suite looks at real team sizes. Both were wrong: runSim defaults to ONE,
+// and A1 already sweeps [1, 2, 3] — but only over the first strip. The gap
+// was scope, and what it hid is that the ladder is climbable only at
+// exactly three: at two, four of five strips have a 0% node, and the whole
+// Foundry is unwinnable solo.
+//
+// Whether that is a bug depends on "the team size a player has when they
+// reach it", which was undefined anywhere in the data — so the criterion
+// was undecidable and any gate would have been asserting whatever the
+// balance happened to be. `benchTeam` (per node, defaulting per strip)
+// makes it a declaration, the way `benchGrade` already declares the parts
+// a player arrives with.
+{
+  const { nodeConditions, nodeClimbability } = await import('../tools/sim.js');
+  const regionsList = Object.values(content.regions);
+
+  // 1. Every node declares what it expects, and expects something the game
+  //    can actually give: the briefing caps a strike team at three.
+  for (const region of regionsList) {
+    for (const node of region.nodes) {
+      const { team, grade } = nodeConditions(region, node);
+      assert.ok(Number.isInteger(team) && team >= 1 && team <= 3,
+        `${node.id} declares a team the game can field (${team})`);
+      assert.ok(GRADES.some((g) => g.id === grade), `${node.id} declares a real grade (${grade})`);
+    }
+  }
+  // The first strip has to START at one, or the game is asking for a stable
+  // before it has handed the player the means to build one.
+  assert.equal(nodeConditions(regionsList[0], regionsList[0].nodes[0]).team, 1,
+    'the first node of the campaign is a solo fight');
+  // And a solo declaration has to exist somewhere later too, or benchTeam is
+  // just "3" wearing a data structure.
+  const declared = regionsList.flatMap((r) => r.nodes.map((n) => nodeConditions(r, n).team));
+  assert.ok(new Set(declared).size >= 2, `benchTeam actually varies (${[...new Set(declared)].sort().join(', ')})`);
+
+  // 2. THE GATE THE CRITERION ASKS FOR: a ladder that cannot be climbed at
+  //    the team size a player has when they reach it must fail here. The
+  //    floor is 25% for the BEST of the five archetypes — the question is
+  //    whether some build a player could field gets through, not whether
+  //    every build does. Measured minimum across the map is 29%
+  //    (foundry/slag_gate), so this is a floor and not a fit to the data.
+  for (const region of regionsList) {
+    for (const node of region.nodes) {
+      const { best, who, grade, team } = nodeClimbability(content, region, node, { seedsPer: 24 });
+      assert.ok(best >= 0.25,
+        `${region.id}/${node.id} is climbable at the ${team} chimera(s) and ${grade} parts it is tuned for ` +
+        `— best of five archetypes is ${Math.round(best * 100)}% (${who ?? 'none'})`);
+    }
+  }
+
+  // 3. AND THE FORECAST STAYS HONEST AT EVERY SIZE ON EVERY STRIP. A1
+  //    asserted this over the first strip; the other four were never
+  //    checked. The direction that matters is the false negative: calling a
+  //    winnable fight unwinnable costs a player a fight they would have
+  //    taken, and it is the only verdict that tells them to walk away.
+  let cells = 0, soloCells = 0;
+  for (const region of regionsList) {
+    const grade = region.benchGrade ?? 'prime';
+    for (const node of region.nodes) {
+      for (const size of [1, 2, 3]) {
+        for (const [key, arch] of Object.entries(ARCHETYPES)) {
+          let wins = 0;
+          const runs = 24;
+          for (let s = 0; s < runs; s++) {
+            const c = makeSimChimera(arch.frame, arch.partIds, grade, content);
+            if (scriptedBattle(c, content.encounters[node.encounter], content,
+              hashString(`a8${region.id}${node.id}${key}${size}${s}`), size).outcome === 'win') wins++;
+          }
+          const truth = wins / runs;
+          const team = Array.from({ length: size }, (_, i) => ({
+            ...makeSimChimera(arch.frame, arch.partIds, grade, content), id: `a8f${i}`,
+          }));
+          const f = forecast(team, content.encounters[node.encounter], content, 2026, 1);
+          cells++;
+          if (size === 1) soloCells++;
+          assert.ok(!(f.band.id === 'hopeless' && truth >= 0.4),
+            `${region.id}/${node.id} ${key} x${size}: called unwinnable but truly ` +
+            `${Math.round(truth * 100)}% — that verdict is the one that must never be wrong`);
+        }
+      }
+    }
+  }
+  assert.ok(soloCells >= 100, `the suite really does measure a solo player (${soloCells} solo cells)`);
+  assert.equal(cells, regionsList.reduce((n, r) => n + r.nodes.length, 0) * 3 * Object.keys(ARCHETYPES).length,
+    'every strip x node x team size x archetype was checked');
+}
+
 // --- A7: obedience, priced ---------------------------------------------
 //
 // The audit filed this as "obedience is decisive and invisible until it
