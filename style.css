@@ -1893,3 +1893,16 @@ footer {
 /* A7: what this team's obedience costs against this encounter. */
 .obedience-cost { display: block; margin-top: 4px; }
 .obedience-cost.is-costly { color: var(--accent-2); }
+
+/* R30 — a move says what it does, and holding it says everything.
+   The grid was always four cells; until now the creature had six moves and
+   the fourth cell was a "More moves" button. */
+.mv-util .mv-sub i { font-style: normal; color: var(--ink-dim, #9a93b5); }
+.move-sheet { padding: 14px 16px 18px; }
+.move-sheet h4 {
+  margin: 14px 0 6px; font-size: 0.78rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-dim, #9a93b5);
+}
+.move-sheet .econ-row { margin-top: 10px; }
+ul.move-effects { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+ul.move-effects li { font-size: 0.92rem; line-height: 1.45; }

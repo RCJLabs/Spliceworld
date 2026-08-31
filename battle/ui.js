@@ -20,9 +20,15 @@ import {
   step, playerActions, playerActive, turnForecast,
 } from './engine.js';
 import { moveReadout } from './readout.js';
-import { utilityValue } from './ai.js';
 import { resolveBattle } from '../campaign/campaign.js';
 import { openPicker } from '../ui/picker.js';
+import { moveSummary, moveDetail } from './moves.js';
+
+// Move names and keyword sentences are authored content, not player input,
+// but they land in innerHTML and an apostrophe in a name should not be able
+// to shape the markup around it.
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 import * as sfx from '../audio/sfx.js';
 
 // Beat lengths. Kept here so the whole fight's pacing is one edit away.
@@ -233,37 +239,27 @@ function commandHtml(battle, actions, me, foe, content) {
   // So: the hardest swings, plus one utility, which is enough to know the
   // option exists. Ties break on socket order, so the buttons stay put
   // rather than reshuffling under a thumb.
-  const shown = (() => {
-    if (moves.length <= 4) return moves.slice(0, 4);
-    const rank = (a) => {
-      const m = me.moves[a.type === 'release' ? me.status.charging : a.index];
-      return { a, m, dmg: m.power > 0 ? moveReadout(m, me, foe, content).damage ?? 0 : -1 };
-    };
-    const ranked = moves.map(rank);
-    const hits = ranked.filter((r) => r.dmg >= 0).sort((x, y) => y.dmg - x.dmg);
-    // Ranked by what the utility is worth right now — so a heal surfaces when
-    // you are hurt and the plating surfaces when something is hitting hard,
-    // instead of the tail winning every time by being socket three.
-    const utils = ranked.filter((r) => r.dmg < 0)
-      .sort((x, y) => utilityValue(y.m, me, foe, content) - utilityValue(x.m, me, foe, content));
-    const picked = [...hits.slice(0, utils.length ? 2 : 3), ...utils.slice(0, 1)];
-    return moves.filter((a) => picked.some((r) => r.a === a)).slice(0, 3);
-  })();
-  const cells = shown.map((a) => {
+  // R30: four slots, and the creature actually has four. This block used to
+  // rank six or seven moves down to three and add a "More moves" button — a
+  // four-slot grid apologising for anatomy that handed out more buttons than
+  // it could show. The moveset is the cap now, so every move a creature
+  // carries is on screen, in the order the player trained it.
+  const cells = moves.map((a) => {
     const i = actions.indexOf(a);
     const move = me.moves[a.type === 'release' ? me.status.charging : a.index];
     const r = moveReadout(move, me, foe, content);
-    return `<button type="button" class="mv ${a.type === 'release' ? 'mv-release' : ''}" data-action="${i}">
+    // What it DOES, not the word "util". 41% of the roster's moves are
+    // power-0, and every one of them used to render as three grey letters.
+    const says = move.power > 0
+      ? (r.immune ? '<i>no effect</i>' : `<b>~${r.damage}</b>`)
+      : `<i>${esc(moveSummary(move, content))}</i>`;
+    return `<button type="button" class="mv ${a.type === 'release' ? 'mv-release' : ''}${move.power > 0 ? '' : ' mv-util'}" data-action="${i}" data-detail="${a.type === 'release' ? me.status.charging : a.index}">
       <span class="mv-name">${a.label}${r.lethal ? '<span class="mv-lethal" title="This should graduate them">✓</span>' : ''}</span>
-      <span class="mv-sub">${r.immune ? '<i>—</i>' : r.damage != null ? `<b>~${r.damage}</b>` : '<i>util</i>'}${
-        r.hitChance < 100 ? `<span class="mv-acc">(${r.hitChance}%)</span>` : ''
+      <span class="mv-sub">${says}${
+        move.power > 0 && r.hitChance < 100 ? `<span class="mv-acc">(${r.hitChance}%)</span>` : ''
       } · ${move.cost}⚡ ${fxHtml(r.chips)}</span>
     </button>`;
   });
-  if (moves.length > 4) {
-    cells.push(`<button type="button" class="mv mv-more" data-more="1">
-      <span class="mv-name">More moves</span><span class="mv-sub">${moves.length - 3} others</span></button>`);
-  }
   while (cells.length < 4) cells.push('<span class="mv mv-empty"></span>');
 
   const util = actions
@@ -293,34 +289,63 @@ function wireCommands(root, ctx, onDone, actions, me, foe) {
   root.querySelectorAll('[data-action]').forEach((btn) => {
     btn.addEventListener('click', () => fire(actions[Number(btn.dataset.action)]));
   });
-  root.querySelector('[data-more]')?.addEventListener('click', () => {
-    const moves = actions.filter((a) => a.type === 'move' || a.type === 'release');
-    openPicker({
-      title: 'Every move',
-      subtitle: `${me.name} · ${me.stamina}/${me.staminaMax}⚡ in the tank`,
-      selectedId: '',
-      groups: [{
-        label: null,
-        options: moves.map((a) => {
-          const move = me.moves[a.type === 'release' ? me.status.charging : a.index];
-          const r = moveReadout(move, me, foe, content);
-          return {
-            id: String(actions.indexOf(a)),
-            label: a.label,
-            badge: fxHtml(r.chips),
-            // The full picker has room to show the arithmetic, so it does:
-            // what the swing is worth against THIS opponent, and the listed
-            // power it came from, which is how the two stop looking like a
-            // contradiction when armor eats half of it.
-            sub: `${r.immune ? 'no effect here' : r.damage != null ? `~${r.damage} damage${r.lethal ? ' — should finish' : ''}` : 'utility'} · ${move.cost}⚡ · ${r.hitChance}% to land${
-              move.power > 0 ? ` · listed ${move.power}` : ''
-            }${move.tags.length ? ` · ${move.tags.join(', ')}` : ''}`,
-          };
-        }),
-      }],
-      onPick: (value) => value && fire(actions[Number(value)]),
-    });
+  // R30: hold a move to find out what it does. Every move used to be a name
+  // and a number; the keyword sentences existed in keywords.json and were
+  // shown to nobody. A long press (or a right-click, for the desktop build)
+  // opens the whole thing: the arithmetic, the tags spelled out against the
+  // chart, and one line per keyword with this move's own magnitudes in it.
+  const HOLD_MS = 350;
+  root.querySelectorAll('[data-detail]').forEach((btn) => {
+    const idx = Number(btn.dataset.detail);
+    let timer = null;
+    let held = false;
+    const open = () => { held = true; showMoveDetail(me.moves[idx], me, foe, content); };
+    const start = () => { held = false; timer = setTimeout(open, HOLD_MS); };
+    const stop = () => { clearTimeout(timer); };
+    btn.addEventListener('pointerdown', start);
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointerleave', stop);
+    btn.addEventListener('pointercancel', stop);
+    // A hold must not also fire the move it was explaining.
+    btn.addEventListener('click', (e) => { if (held) { e.stopPropagation(); e.preventDefault(); held = false; } }, true);
+    btn.addEventListener('contextmenu', (e) => { e.preventDefault(); open(); });
   });
+}
+
+// R30: the whole truth about one move. Reached by holding its button.
+// Everything here was already computed or already written down — the
+// arithmetic in moveReadout (R28), the keyword sentences in keywords.json,
+// the tag chart in the same file — and none of it was ever on screen.
+function showMoveDetail(move, me, foe, content) {
+  const d = moveDetail(move, content);
+  const r = moveReadout(move, me, foe, content);
+  const overlay = document.querySelector('#overlay');
+  overlay.hidden = false;
+  const stat = (label, value) => `<div><span class="econ-label">${label}</span><strong>${value}</strong></div>`;
+  overlay.innerHTML = `
+    <div class="sheet move-sheet">
+      <div class="pick-head">
+        <h3>${esc(d.name)}</h3>
+        <p class="fine-print">${d.kind === 'attack' ? 'Attack' : 'Utility'}${d.source ? ` · from ${esc(d.source)}` : ''}</p>
+        <button type="button" class="pick-close" data-close="1" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="econ-row">
+        ${d.power > 0 ? stat('Listed power', d.power) : stat('Power', '—')}
+        ${stat('Stamina', `${d.cost}⚡`)}
+        ${stat('Accuracy', `${d.acc}%`)}
+      </div>
+      ${d.power > 0 ? `<p class="ranch-msg">Against ${esc(foe.name)} right now: <strong>${
+        r.immune ? 'no effect at all' : `about ${r.damage} damage`
+      }</strong>, landing ${r.hitChance}% of the time.${r.lethal ? ' This should finish them.' : ''}</p>` : ''}
+      ${d.effects.length ? `<h4>What it does</h4><ul class="move-effects">${
+        d.effects.map((e) => `<li><strong>${esc(e.name)}</strong> — ${esc(e.text)}</li>`).join('')
+      }</ul>` : `<p class="fine-print">${d.power > 0 ? 'No special effects — it just hits.' : 'No effect. Which is itself a finding.'}</p>`}
+      ${d.tagNotes.length ? `<h4>Tags</h4><ul class="move-effects">${
+        d.tagNotes.map((t) => `<li>${esc(t)}</li>`).join('')
+      }</ul>` : ''}
+    </div>`;
+  overlay.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { overlay.hidden = true; }));
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.hidden = true; }, { once: true });
 }
 
 // The log lives one tap away instead of eating a third of the screen.

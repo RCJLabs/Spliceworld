@@ -4,7 +4,21 @@
 
 import { renderCreatureSVG } from '../render/renderer.js';
 import { GRADES, GRADE_INDEX, salvagePreview, extractChimera } from './extract.js';
-import { chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING } from './theater.js';
+import {
+  chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING,
+  setMoveset, moveTrainingReady,
+} from './theater.js';
+import { MOVE_SLOTS, activeMoves, moveSummary, moveDetail } from '../battle/moves.js';
+import { movesFromTokens } from '../battle/engine.js';
+import { analyze } from './physiology.js';
+
+// Everything this genome grants, which is what the four slots are chosen
+// FROM. One definition, shared with the battle screen and the harness.
+function knownMovesOf(chimera, content) {
+  const tokens = Object.values(chimera.tokens);
+  return movesFromTokens(tokens, analyze(chimera.frame, tokens, content), content)
+    .map((m) => ({ ...m, id: m.source }));
+}
 import { isInjured, obediencePercent } from '../battle/engine.js';
 import { describe as describeTemperament } from './temperament.js';
 import { scarsOf, describeScar, treatInjury, treatmentCost } from './scars.js';
@@ -148,6 +162,31 @@ export function renderPensScreen(root, ctx) {
                 ? ` — ${settled ? '' : 'unsettled; '}train to build bond${ch.instability > 0 ? ' (instability resists)' : ''}`
                 : ' — follows orders to the letter. Suspiciously eager, even.'
             }</p>
+            ${(() => {
+              // R30. A chimera knows every move its anatomy grants and can
+              // press four. This is where you choose which four, and it is
+              // on the pens card rather than the briefing screen because it
+              // is husbandry: the same place you build bond and treat scars.
+              const known = knownMovesOf(ch, content);
+              const active = activeMoves(known, ch.moveset);
+              const activeIds = new Set(active.map((m) => m.id));
+              const mt = moveTrainingReady(ch, t, content);
+              return `
+              <div class="moveset">
+                <p class="meta"><strong>Moves</strong> <span class="lineage">${active.length}/${MOVE_SLOTS} slots · knows ${known.length}</span></p>
+                <ul class="token-list move-list">${active.map((m) => `
+                  <li><strong>${m.name}</strong> <span class="lineage">${m.power > 0 ? `${m.power} power` : 'utility'} · ${m.cost}⚡</span>
+                  <br><span class="fine-print">${moveSummary(m, content)}</span></li>`).join('')}</ul>
+                ${known.length > MOVE_SLOTS ? `
+                  <button type="button" class="care-train" data-moves="${ch.id}" ${mt.ready ? '' : 'disabled'}>
+                    ${mt.ready
+                      ? `🧠 Retrain moves ($${mt.cost})`
+                      : `Retrain moves (${fmtDuration(mt.msRemaining)})`}
+                  </button>
+                  <p class="fine-print">${known.length - active.length} more it knows and cannot currently press. Swapping one in means giving one up.</p>`
+                  : '<p class="fine-print">It knows every move it can carry. Splice it something new to give it a choice.</p>'}
+              </div>`;
+            })()}
             <div class="pen-actions">
               <button type="button" class="care-train" data-train="${ch.id}" ${trainReady ? '' : 'disabled'}>
                 ${trainReady ? `🎯 Train ($${TRAINING.cost}, +${TRAINING.bondGain} bond)` : `Train (${fmtDuration(trainReadyAt - t)})`}
@@ -232,6 +271,63 @@ export function renderPensScreen(root, ctx) {
       renderPensScreen(root, ctx);
     });
   });
+  // R30: the retraining sheet. Every move the creature knows, four
+  // checkable, and it will not let you leave with five or with none —
+  // "something has to go" is the mechanic, so the sheet says which.
+  root.querySelectorAll('button[data-moves]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const ch = state.chimeras.find((c) => c.id === btn.dataset.moves);
+      if (!ch) return;
+      const known = knownMovesOf(ch, content);
+      const chosen = new Set(activeMoves(known, ch.moveset).map((m) => m.id));
+      const overlay = document.querySelector('#overlay');
+      overlay.hidden = false;
+      const draw = () => {
+        const full = chosen.size >= MOVE_SLOTS;
+        overlay.innerHTML = `
+          <div class="sheet move-sheet">
+            <div class="pick-head">
+              <h3>${ch.name}'s repertoire</h3>
+              <p class="fine-print">Pick ${MOVE_SLOTS}. It knows ${known.length}. Learning one costs $${moveTrainingReady(ch, ctx.now(), content).cost} and a rest; reordering is free.</p>
+              <button type="button" class="pick-close" data-close="1" aria-label="Close">&#10005;</button>
+            </div>
+            <p class="ranch-msg" id="mv-count">${chosen.size}/${MOVE_SLOTS} slots filled${full ? ' — uncheck one to swap' : ''}</p>
+            <div class="pick-list">${known.map((m) => {
+              const on = chosen.has(m.id);
+              return `<label class="pick-row ${on ? 'is-selected' : ''}">
+                <input type="checkbox" data-mv="${m.id}" ${on ? 'checked' : ''} ${!on && full ? 'disabled' : ''}>
+                <span class="pick-row-main"><span class="pick-row-label">${m.name}</span>
+                <span class="pick-row-sub">${m.power > 0 ? `${m.power} power` : 'utility'} · ${m.cost}⚡ · ${m.acc}% · ${moveSummary(m, content)}</span></span>
+              </label>`;
+            }).join('')}</div>
+            <button type="button" class="care-train" id="mv-save" ${chosen.size ? '' : 'disabled'}>Train it</button>
+          </div>`;
+        overlay.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { overlay.hidden = true; }));
+        overlay.querySelectorAll('input[data-mv]').forEach((cb) => {
+          cb.addEventListener('change', () => {
+            if (cb.checked) chosen.add(cb.dataset.mv); else chosen.delete(cb.dataset.mv);
+            draw();
+          });
+        });
+        overlay.querySelector('#mv-save')?.addEventListener('click', () => {
+          const res = setMoveset(state, ch.id, [...chosen], known, ctx.now(), content);
+          if (res.ok) {
+            overlay.hidden = true;
+            lastMsg = res.msg;
+            ctx.save();
+            renderPensScreen(root, ctx);
+            return;
+          }
+          // A refusal is answered in place — closing the sheet on a failure
+          // would hide the reason it failed.
+          const note = overlay.querySelector('#mv-count');
+          if (note) note.textContent = res.msg;
+        });
+      };
+      draw();
+    });
+  });
+
   root.querySelectorAll('button[data-train]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const result = trainChimera(state, btn.dataset.train, ctx.now(), content);

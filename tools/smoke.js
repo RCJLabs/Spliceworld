@@ -463,10 +463,21 @@ const fighter = makeChimera(war, 'M', {
 const settledAt = fighter.settleUntil;
 let cb = combatantFromChimera(fighter, content, settledAt);
 assert.ok(!cb.rejection && cb.ignoreChance >= 0);
-assert.ok(cb.moves.some((m) => m.name === 'Venom Fang'), 'head grants its move');
-assert.ok(cb.moves.some((m) => m.name === 'Injection'), 'combo grants its move');
-assert.ok(!cb.moves.some((m) => m.name === 'Thick Fur'), 'passive hide grants no move');
-const apexFang = cb.moves.find((m) => m.name === 'Venom Fang');
+// R30 split these two questions apart, and they were always two questions:
+// what ANATOMY grants, and which four of them the creature can press. This
+// block is about the former — `combatantFromChimera` now fields a moveset,
+// and on this build Venom Fang honestly loses its slot to Injection, the
+// stronger Venomous combo built out of the same head.
+const granted = movesFromTokens(
+  Object.values(fighter.tokens),
+  analyze(fighter.frame, Object.values(fighter.tokens), content),
+  content
+);
+assert.ok(granted.some((m) => m.name === 'Venom Fang'), 'head grants its move');
+assert.ok(granted.some((m) => m.name === 'Injection'), 'combo grants its move');
+assert.ok(!granted.some((m) => m.name === 'Thick Fur'), 'passive hide grants no move');
+assert.equal(cb.moves.length, 4, 'and it fights with four of them');
+const apexFang = granted.find((m) => m.name === 'Venom Fang');
 // GRADE_MOVE_BONUS rides on top of the stat multiplier; the balance pass
 // trimmed it to +12%/tier so grades stop double-dipping so hard.
 assert.equal(apexFang.power, Math.round(40 * (1 + 2 * 0.12)), 'apex grade upgrades the move (+24%)');
@@ -6891,6 +6902,192 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   }
   assert.equal(Object.keys(content.species).length, Object.keys(GROWTH).length,
     'a new species has to come to the roll and declare its clocks');
+}
+
+// --- R30: four moves, and every one of them says what it does ----------
+//
+// Anatomy handed a chimera one move per part plus every combo it unlocked —
+// six or seven buttons, and 41% of the roster's 271 moves are power-0
+// utility. The battle screen could not fit them, so since R28 it showed
+// THREE plus a "More moves" button: a four-slot grid apologising for a
+// creature that did not have four moves. And a utility move rendered as the
+// word "util" and nothing else, so "Nub Wiggle · 10⚡" never told anyone it
+// raises evasion — the sentence existed in keywords.json and was shown to
+// nobody.
+{
+  const {
+    MOVE_SLOTS, activeMoves, defaultPick, defaultMoveset,
+    moveSummary, moveDetail, keywordEffect,
+  } = await import('../battle/moves.js');
+  const { movesFromTokens, combatantFromChimera } = await import('../battle/engine.js');
+  const { setMoveset, moveTrainingReady, MOVE_TRAINING } = await import('../splice/theater.js');
+
+  const knownOf = (ch) => {
+    const tokens = Object.values(ch.tokens);
+    return movesFromTokens(tokens, analyze(ch.frame, tokens, content), content)
+      .map((m) => ({ ...m, id: m.source }));
+  };
+
+  // 1. EVERY move in the game can say what it does. This is the criterion's
+  //    first half, and it is checked over the whole roster rather than a
+  //    sample: a part authored tomorrow with a keyword nobody described
+  //    fails here.
+  let utility = 0, total = 0;
+  for (const part of Object.values(content.parts)) {
+    if (!part.move) continue;
+    total++;
+    if (part.move.power === 0) utility++;
+    const move = { ...part.move, name: part.ability };
+    const summary = moveSummary(move, content);
+    assert.ok(summary && summary.length > 3, `${part.id}: its move says something (${summary})`);
+    for (const [k, v] of Object.entries(part.move.keywords ?? {})) {
+      const line = keywordEffect(k, v, content);
+      assert.ok(line, `${part.id}: keyword ${k} has an effect sentence in keywords.json`);
+      // The magnitude has to actually reach the sentence, or every Venom
+      // move reads the same regardless of how much venom it applies.
+      assert.ok(!/\{n\}|\{pct\}/.test(line), `${part.id}/${k}: the magnitude was substituted (${line})`);
+    }
+  }
+  for (const combo of Object.values(content.combos)) {
+    for (const [k, v] of Object.entries(combo.move.keywords ?? {})) {
+      assert.ok(keywordEffect(k, v, content), `combo ${combo.id}: keyword ${k} is described`);
+    }
+  }
+  assert.ok(utility / total > 0.3,
+    `utility moves really are most of the problem (${utility}/${total} carry no power)`);
+  // ...and a utility move's summary must not be the generic fallback, or
+  // "util" has just been replaced by a longer way of saying nothing.
+  for (const part of Object.values(content.parts)) {
+    if (!part.move || part.move.power > 0) continue;
+    const summary = moveSummary({ ...part.move, name: part.ability }, content);
+    assert.notEqual(summary, 'Does nothing on its own.',
+      `${part.id} is a utility move, so it must describe its effect`);
+  }
+
+  // 2. THE CAP IS REAL. A chimera fields exactly four moves, whatever its
+  //    anatomy grants — including combos, which compete for the slots
+  //    rather than riding along free.
+  {
+    const st = freshRanchState();
+    ensureRanchSeeded(st, content, t0);
+    st.facility = { theater: 2 };
+    const grade = 'prime';
+    st.inventory.parts = ['cobra_head', 'cobra_organ', 'gorilla_forelimbs', 'rhino_hindlimbs', 'bear_tail', 'pangolin_hide']
+      .map((partId, i) => ({ id: `mv${i}`, partId, grade,
+        donor: { name: 'Doris', species: content.parts[partId].species, stars: 3, extractedAt: t0 } }));
+    const slots = Object.fromEntries(st.inventory.parts.map((tk) => [content.parts[tk.partId].slot, tk.id]));
+    slots.organ2 = st.inventory.parts.find((tk) => content.parts[tk.partId].slot === 'organ' && tk.partId === 'cobra_organ')?.id ?? slots.organ;
+    const res = spliceChimera(st, 'M', slots, content, t0);
+    assert.ok(res.ok, res.msg);
+    const ch = res.chimera;
+    const known = knownOf(ch);
+    assert.ok(known.length > MOVE_SLOTS,
+      `this build knows more than it can carry (${known.length}), or the cap is not under test`);
+    assert.equal(ch.moveset.length, MOVE_SLOTS, 'a fresh chimera is born with four chosen');
+    const unit = combatantFromChimera(ch, content, t0);
+    assert.equal(unit.moves.length, MOVE_SLOTS,
+      `it fights with exactly ${MOVE_SLOTS} (${unit.moves.map((m) => m.name).join(', ')})`);
+
+    // A combo is a move like any other: it can be carried and it can be cut.
+    const combo = known.find((m) => m.id.startsWith('c:'));
+    if (combo) {
+      const without = known.filter((m) => m.id !== combo.id).slice(0, MOVE_SLOTS).map((m) => m.id);
+      const r = setMoveset(st, ch.id, without, known, t0 + 99 * HOUR, content);
+      assert.ok(r.ok, r.msg);
+      assert.ok(!combatantFromChimera(ch, content, t0).moves.some((m) => m.name === combo.name),
+        'a combo can be left out — it competes for a slot rather than riding along');
+    }
+
+    // 3. LEARNING COSTS, AND SOMETHING HAS TO GO.
+    const fresh = knownOf(ch);
+    const five = fresh.slice(0, MOVE_SLOTS + 1).map((m) => m.id);
+    assert.equal(setMoveset(st, ch.id, five, fresh, t0 + 200 * HOUR, content).ok, false,
+      'five moves is refused');
+    assert.equal(setMoveset(st, ch.id, [], fresh, t0 + 200 * HOUR, content).ok, false,
+      'and so is none');
+    assert.equal(setMoveset(st, ch.id, ['p:not_a_part'], fresh, t0 + 200 * HOUR, content).ok, false,
+      'and so is a move it does not know');
+
+    // Reordering what it already carries is free; learning is not.
+    const carried = activeMoves(fresh, ch.moveset).map((m) => m.id);
+    const fundsBefore = st.funds;
+    const shuffle = setMoveset(st, ch.id, [...carried].reverse(), fresh, t0 + 300 * HOUR, content);
+    assert.ok(shuffle.ok && shuffle.free, 'reordering the four it has is free');
+    assert.equal(st.funds, fundsBefore, 'and costs nothing');
+
+    const newOne = fresh.find((m) => !carried.includes(m.id));
+    assert.ok(newOne, 'there is something left to learn');
+    const swap = [newOne.id, ...carried.slice(0, MOVE_SLOTS - 1)];
+    st.funds = 0;
+    assert.equal(setMoveset(st, ch.id, swap, fresh, t0 + 400 * HOUR, content).ok, false,
+      'learning a move needs money');
+    st.funds = 500;
+    const learned = setMoveset(st, ch.id, swap, fresh, t0 + 400 * HOUR, content);
+    assert.ok(learned.ok, learned.msg);
+    assert.equal(st.funds, 500 - MOVE_TRAINING.cost, 'and spends it');
+    assert.ok(/forgets/.test(learned.msg), `the swap says what was given up (${learned.msg})`);
+    // ...and immediately after, the cooldown bites.
+    const again = fresh.find((m) => !swap.includes(m.id));
+    assert.equal(setMoveset(st, ch.id, [again.id, ...swap.slice(0, MOVE_SLOTS - 1)], fresh, t0 + 400 * HOUR, content).ok,
+      false, 'a second lesson has to wait');
+    assert.ok(!moveTrainingReady(ch, t0 + 400 * HOUR, content).ready, 'which is what the button reports');
+  }
+
+  // 4. A MOVESET CAN NEVER LEAVE A CREATURE SHORT. Parts leave — a
+  //    re-splice, a lost token, a save written before this system existed.
+  //    Whatever the moveset says, four buttons come out.
+  {
+    const st = freshRanchState();
+    ensureRanchSeeded(st, content, t0);
+    st.inventory.parts = ['bear_head', 'bear_forelimbs', 'bear_hindlimbs', 'bear_tail', 'bear_hide', 'bear_organ']
+      .map((partId, i) => ({ id: `k${i}`, partId, grade: 'standard',
+        donor: { name: 'Doris', species: 'bear', stars: 3, extractedAt: t0 } }));
+    const slots = Object.fromEntries(st.inventory.parts.map((tk) => [content.parts[tk.partId].slot, tk.id]));
+    const ch = spliceChimera(st, 'M', slots, content, t0).chimera;
+    const known = knownOf(ch);
+    for (const bad of [undefined, [], ['p:nonsense'], ['p:bear_head'], known.map((m) => m.id)]) {
+      const got = activeMoves(known, bad);
+      assert.equal(got.length, Math.min(MOVE_SLOTS, known.length),
+        `a moveset of ${JSON.stringify(bad)} still yields four`);
+      assert.equal(new Set(got.map((m) => m.id)).size, got.length, 'and no duplicates');
+    }
+  }
+
+  // 5. THE DEFAULT PICK IS NOT "THE FOUR BIGGEST NUMBERS". A build with four
+  //    attacks and no answer to armour is worse than one that kept its
+  //    Sonic, so the pick takes the best of each tag first. Checked on the
+  //    harness archetypes, whose whole purpose is to commit to one axis.
+  for (const [key, arch] of Object.entries(ARCHETYPES)) {
+    const ids = partsOnFrame(content, arch.frame, arch.partIds);
+    const ch = makeSimChimera(arch.frame, ids, 'prime', content);
+    const known = knownOf(ch);
+    const picked = defaultPick(known);
+    assert.equal(picked.length, Math.min(MOVE_SLOTS, known.length), `${key}: four picked`);
+    const knownTags = new Set(known.filter((m) => m.power > 0).flatMap((m) => m.tags ?? []));
+    const pickedTags = new Set(picked.filter((m) => m.power > 0).flatMap((m) => m.tags ?? []));
+    for (const tag of knownTags) {
+      assert.ok(pickedTags.has(tag),
+        `${key}: the default pick keeps its ${tag} answer (${picked.map((m) => m.name).join(', ')})`);
+    }
+    assert.ok(picked.some((m) => m.power > 0), `${key}: and something that hits`);
+  }
+
+  // 6. THE DETAIL SHEET HAS SOMETHING TO SHOW for every move a player can
+  //    hold down, and the tag notes are read off the chart rather than
+  //    remembered — so a new row in keywords.json turns up here for free.
+  {
+    const ch = makeSimChimera('M', partsOnFrame(content, 'M', ARCHETYPES.fumes.partIds), 'prime', content);
+    for (const move of knownOf(ch)) {
+      const d = moveDetail(move, content);
+      assert.ok(d.name && d.cost >= 0 && d.acc > 0, `${move.name}: the sheet has its numbers`);
+      assert.ok(d.effects.length || d.power > 0,
+        `${move.name}: a utility move must have at least one effect to explain`);
+      for (const e of d.effects) assert.ok(e.name && e.text, `${move.name}: each effect is named and explained`);
+    }
+    const gasNote = moveDetail({ name: 'x', power: 10, cost: 1, acc: 100, tags: ['Gas'], keywords: {} }, content).tagNotes;
+    assert.ok(gasNote.some((n) => /Organic/.test(n) && /Vehicle/.test(n)),
+      `Gas explains both of its chart rows (${gasNote.join(' ')})`);
+  }
 }
 
 // Time-warp safety: a lastTickAt in the future never rewinds state.

@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 27;
+export const SAVE_VERSION = 28;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -348,6 +348,21 @@ const migrations = {
     save.campaign ??= {};
     save.campaign.operations = save.campaign.operation ? [save.campaign.operation] : [];
     delete save.campaign.operation;
+    return save;
+  },
+
+  // v28 (R30): four move slots. Anatomy still says what a chimera KNOWS;
+  // `moveset` says which four it can press. Existing chimeras are given the
+  // default pick rather than an empty list — nobody loads a save to find
+  // their creature has forgotten how to fight — and because the pick needs
+  // content this migration only stamps the field as absent-but-known. The
+  // engine tops any short or stale moveset up from the default, so a save
+  // that arrives here with no moveset behaves exactly as it did before.
+  28: (save) => {
+    for (const chimera of save.chimeras ?? []) {
+      if (!Array.isArray(chimera.moveset)) chimera.moveset = [];
+      chimera.lastMoveTrainAt ??= 0;
+    }
     return save;
   },
 };
