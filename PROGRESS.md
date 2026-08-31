@@ -123,6 +123,14 @@ strip** — something other than the map's best must win at least a fifth of
 each region's decided cells. Measured minimum 29% here, 35% pre-R32, against
 the pre-A9 world this exists to catch, which would leave about 9%.
 
+**And the break battery found a gate that could not fail.** Flattening every
+`DENSITY` to 1 was caught only by the flight gates four sections down — never
+by the mass ones, because with density flat, mass still varies *by bulk*: the
+animals still differ in size. Divide bulk out and what is left is the
+material, and that is now its own assertion: within one slot, the densest part
+must outweigh the flimsiest by 2.5x with bulk removed. Measured 3.0x
+(forelimbs) to 6.5x (hide); flat density gives 1.14x to 1.50x, all rounding.
+
 Two smaller ones, both caught by gates written for earlier phases: the
 dragonfly's new hindwing overflowed the viewBox by 12px on the L chassis
 (Wave 1's bounds check — span 96 to 84), and the anatomy-derived limb verbs

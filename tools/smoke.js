@@ -7409,6 +7409,25 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(new Set(v).size >= 5, `${slot} mass varies by species (${new Set(v).size} distinct values)`);
   }
 
+  // 1b. And DENSITY has to carry its own half. The two assertions above pass
+  //     on `bulk` alone — flatten every DENSITY to 1 and mass still varies,
+  //     because the animals still differ in size. The break battery found
+  //     exactly that: flattening density was caught only by the flight gates,
+  //     four sections down, and never by the mass ones. Divide bulk out and
+  //     what is left is the material: within one slot, the densest part must
+  //     outweigh the flimsiest by well more than their animals explain.
+  //     Measured 3.0x (forelimbs) to 6.5x (hide); flat density gives 1.0x.
+  const bulkOf = (id) => content.species[id]?.bulk
+    ?? (content.species[id]?.variantOf ? content.species[content.species[id].variantOf]?.bulk : undefined) ?? 1;
+  for (const slot of ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide']) {
+    const d = natural.flatMap((s) => partsOf(s.id).filter((p) => p.slot === slot))
+      .map((p) => p.phys.mass / bulkOf(p.species));
+    const ratio = Math.max(...d) / Math.min(...d);
+    assert.ok(ratio >= 2.5,
+      `${slot}: what the part is MADE of moves its mass, not just how big the animal is ` +
+      `(densest/flimsiest = ${ratio.toFixed(1)}x with bulk divided out)`);
+  }
+
   // 2. Every species' parts fit the chassis it is declared on. The cobra has
   //    no limbs and rode a quadruped frame; now it rides the Kite. A species
   //    whose parts a frame cannot hold would silently lose them.
