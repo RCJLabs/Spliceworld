@@ -75,6 +75,7 @@ const content = indexContent({
   temperament: readJSON('data/temperament.json'),
   scars: readJSON('data/scars.json'),
   guides: readJSON('data/guides.json'),
+  resequencer: readJSON('data/resequencer.json'),
 });
 
 // --- Content coherence: every part references a real species + slot.
