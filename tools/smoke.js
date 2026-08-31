@@ -6806,9 +6806,9 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   // Every job carries two clocks of its own, and they are the ones a player
   // waits on most, so they are rolled per job rather than in bulk.
   const JOB_CLOCKS = {
-    county_fair: [1.5, 4.5], aquarium: [3, 6.75], vault_job: [15, 22.5],
-    aviary: [4.5, 7.5], reptile_house: [6, 10.5], safari_park: [6, 10.5],
-    research_station: [7.5, 13.5],
+    petting_zoo: [1.5, 4.5], feed_coop: [3, 6.75], grant_application: [15, 22.5],
+    county_fair: [4.5, 7.5], aquarium: [6, 10.5], aviary: [6, 10.5],
+    reptile_house: [7.5, 13.5],
   };
   for (const [id, [hours, cooldown]] of Object.entries(JOB_CLOCKS)) {
     const op = content.operations[id];
@@ -6833,11 +6833,64 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     assert.ok(g.elder - g.prime >= g.prime - g.adult,
       `${sp.id}: the prime window is not the shortest stage (${g.prime}->${g.elder})`);
   }
-  // The goat is the tutorial animal and its clock is quoted in the guides,
-  // so it is pinned rather than merely well-ordered.
-  assert.deepEqual(content.species.goat.growthHours, { adult: 5, prime: 14, elder: 60 },
-    'the goat clock is the one the onboarding quotes');
-  assert.equal(content.species.goat.incubationMinutes, 22, 'and so is its egg timer');
+  // ...and every species' four clocks are rolled, not just well-ordered.
+  // The break battery is why: reverting growth to its pre-A10 scale was
+  // caught only by the goat's pin and by a rounding artefact on the
+  // synthetic  species, which means a retune that reverted any
+  // OTHER animal would have sailed through — the exact shape of the bug
+  // this phase exists to close. 41 species x [adult, prime, elder, egg].
+  const GROWTH = {
+    bear: [9, 27, 96, 45],
+    tiger: [8, 24, 90, 41],
+    wolf: [8, 21, 84, 34],
+    crocodile: [11, 30, 100, 49],
+    gorilla: [10, 29, 96, 45],
+    rhino: [11, 32, 104, 52],
+    pangolin: [8, 23, 84, 38],
+    tortoise: [12, 36, 120, 56],
+    rhino_beetle: [5, 15, 60, 26],
+    ram: [5, 15, 64, 26],
+    eagle: [6, 18, 72, 34],
+    bat: [5, 15, 60, 26],
+    dragonfly: [4, 12, 48, 22],
+    shark: [10, 29, 96, 49],
+    octopus: [7, 20, 72, 34],
+    electric_eel: [8, 23, 80, 38],
+    anglerfish: [7, 20, 76, 34],
+    frog: [5, 14, 56, 22],
+    goat: [5, 14, 60, 22],
+    chameleon: [7, 20, 76, 34],
+    skunk: [5, 15, 64, 26],
+    porcupine: [6, 18, 72, 30],
+    mantis: [5, 14, 56, 22],
+    cobra: [8, 23, 80, 30],
+    scorpion: [6, 18, 72, 30],
+    goose: [5, 15, 60, 26],
+    moth: [4, 12, 48, 24],
+    heron: [6, 18, 70, 33],
+    owl: [6, 18, 72, 32],
+    falcon: [5, 17, 66, 30],
+    jellyfish: [3, 11, 44, 22],
+    pufferfish: [5, 14, 58, 28],
+    otter: [5, 16, 64, 31],
+    armadillo: [6, 18, 70, 30],
+    salvage: [1, 2, 3, 1],
+    alpine_ram: [5, 15, 64, 39],
+    abyssal_shark: [10, 29, 96, 51],
+    storm_eagle: [6, 18, 72, 40],
+    glider_skunk: [5, 15, 64, 33],
+    iron_tortoise: [12, 36, 120, 56],
+    pale_cobra: [8, 23, 80, 38],
+  };
+  for (const [id, [adult, prime, elder, egg]] of Object.entries(GROWTH)) {
+    const sp = content.species[id];
+    assert.ok(sp, `${id} is still a species`);
+    assert.deepEqual(sp.growthHours, { adult, prime, elder },
+      `${id} growth drifted from the roll (${JSON.stringify(sp.growthHours)})`);
+    assert.equal(sp.incubationMinutes, egg, `${id} egg timer drifted from the roll`);
+  }
+  assert.equal(Object.keys(content.species).length, Object.keys(GROWTH).length,
+    'a new species has to come to the roll and declare its clocks');
 }
 
 // Time-warp safety: a lastTickAt in the future never rewinds state.
