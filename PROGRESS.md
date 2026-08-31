@@ -154,12 +154,45 @@ constants — `25`, `225`, `225` again, and a two-day payout of `50`. Each was
 correct when written and silently wrong the moment the economy moved. All
 five income assertions read from the holdings now.
 
+### The break battery
+
+Ten deliberate breaks, each on its own copy of the repo so they could not
+collide. Nine caught first time; the tenth found a hole in my own gate.
+
+| break | caught by |
+|---|---|
+| Airborne back to ancestry | *M/standard: the tag tracks actual flight (lift 90 vs mass 125)* |
+| every Ground tag stripped | *the coalition fights at ground level (0/85 moves are Ground)* |
+| one unit's every attack Ground | *police_cruiser keeps an answer to a flier* |
+| **the pre-A9 frame ladder restored** | ***the S chassis is the best answer somewhere (A 8, S 0, M 11, L 45)*** |
+| the Kite keeps its legs | *at least one frame declares its own slots* |
+| a region forgets its bonus | *drowned pays a completion bonus* |
+| the bonus survives a contest | *a contested node suspends the whole strip bonus* |
+| the vat ignores chassis geometry | *the vat bolted a hindlimbs to the A chassis, which has none* |
+| a frame lies about its geometry | *frame A supports hindlimbs but has no hindlimb_near socket* |
+| income rolled back to pre-A9 | **MISSED** → *node income alone is up on pre-A9 (2391/day vs 2385)* |
+
+The fourth row is the one that matters: restoring the old frame ladder
+reproduces the exact defect A9 exists to fix — **S best in zero cells**.
+
+And the miss was worth having. The income gate asserted "the whole map pays
+more than it did" by summing nodes **and** bonuses against a **node-only**
+baseline, so rolling every node back to its pre-A9 value still passed — the
+$1210/day of strip bonuses covered the gap on their own. Two claims shipped,
+so it is two assertions now, and the re-broken run fails as it should.
+
 ### Known issues
 
 - The overall "no chassis is the answer everywhere" gate runs at 12 seeds
   where the audit used 24; the load-bearing assertions are "every chassis
   wins somewhere" and "the strips disagree", which are far from their
   thresholds.
+- Suite is **166s**, essentially unchanged — the four-frame sweep is 6048
+  battles and costs about two seconds. A 3-second `a9-preflight` script now
+  runs the cheap half of the gate, because three of this session's cycles
+  were spent discovering a data slip 160 seconds at a time.
+- The Kite is available only from Theater Tier II, and its edge is largest
+  early. Worth revisiting whether it should be a Tier I option.
 - Obedience remains honestly reported and nearly worthless (A7's leftover).
 - `benchTeam` still records the ladder as it is (A8's leftover).
 
