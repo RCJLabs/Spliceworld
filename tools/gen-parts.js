@@ -184,6 +184,10 @@ const KEYWORD_MOVES = {
   // that shreds Greenfield does nothing at all to the Foundry.
   skunk_tail:          M(42, 22, 95, ['Gas'], { accDown: 1 }),
   moth_forelimbs:      M(46, 24, 92, ['Gas'], { evasionUp: 1 }),
+  // Electric could only be swung from a limb by somebody who had BRED a
+  // Thunderhead Eagle — both carriers were storm_eagle, a chaos variant. An
+  // eel's whole body is the organ, so its tail is an honest second door.
+  electric_eel_tail:   M(50, 26, 95, ['Electric'], {}),
   crocodile_forelimbs: M(46, 24, 92, [], { slow: 0.3 }),
   gorilla_head:        M(42, 22, 95, [], { rage: true }),
   eagle_head:          M(42, 22, 95, [], { ignoreEvasion: true }),
@@ -216,6 +220,7 @@ const ORGAN_ACTIVE = {
 // Names for the A5 damage-slot moves, so they read as the thing the species
 // is famous for rather than as "<Species> Strike".
 const KEYWORD_ABILITY = {
+  electric_eel_tail: 'Live Wire',
   goose_forelimbs: 'Wing Buffet',
   armadillo_tail: 'Shell Knock',
   skunk_tail: 'Business End',

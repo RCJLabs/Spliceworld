@@ -1991,18 +1991,30 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     `the parked units are exactly the four known ones (${unfielded.join(', ')})`);
 
 
-  // 3. A TAG YOU CANNOT SWING IS NOT AN ANSWER. Sonic and Gas used to exist
-  //    only on heads, organs and hides — support slots — so neither could be
-  //    a creature's main attack, and Sonic is the only thing in the game that
-  //    goes through armour.
-  const DAMAGE_SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail'];
+  // 3. A TAG YOU CANNOT SWING IS NOT AN ANSWER — and the slot that matters
+  //    is a LIMB.
+  //
+  //    The first cut of this asked for carriers in any "damage slot",
+  //    counting the head, and a deliberate break sailed straight through it:
+  //    Sonic already had mandate_horn (60) and goose_head (36) in the head
+  //    socket, so it was swingable by that definition all along. The claim
+  //    was wrong, not the code. What Sonic and Gas actually lacked was any
+  //    carrier in forelimbs, hindlimbs or tail — Gas could not be swung at
+  //    all (hide and organ only), and Sonic only ever from the head, where
+  //    the one worth pressing is Spire salvage, a strip PAST the armour wall
+  //    it answers.
+  //
+  //    Limbs are also where a build's damage actually lives: a head is one
+  //    socket competing with the species' signature, and every chimera has
+  //    three limb sockets.
+  const LIMB_SLOTS = ['forelimbs', 'hindlimbs', 'tail'];
   for (const tag of ATTACK_TAGS) {
     const carriers = Object.values(content.parts).filter((p) => p.move?.tags?.includes(tag) && p.move.power > 0);
-    const swingable = carriers.filter((p) => DAMAGE_SLOTS.includes(p.slot));
-    assert.ok(swingable.length >= 2,
-      `${tag} is swingable from a damage slot (${swingable.length}: ${swingable.map((p) => `${p.id}@${p.move.power}`).join(', ') || 'none'})`);
-    assert.ok(Math.max(...swingable.map((p) => p.move.power)) >= 40,
-      `${tag}'s best damage-slot move is worth pressing (${Math.max(...swingable.map((p) => p.move.power))})`);
+    const limbs = carriers.filter((p) => LIMB_SLOTS.includes(p.slot));
+    assert.ok(limbs.length >= 2,
+      `${tag} can be swung from a limb (${limbs.length}: ${limbs.map((p) => `${p.id}@${p.move.power}`).join(', ') || 'none'})`);
+    assert.ok(Math.max(...limbs.map((p) => p.move.power)) >= 40,
+      `${tag}'s best limb move is worth pressing (${Math.max(...limbs.map((p) => p.move.power))})`);
   }
 
   // 4. REACHABILITY AT THE DOOR — for the tags the ladder actually DEPENDS

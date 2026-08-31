@@ -1,5 +1,157 @@
 # PROGRESS
 
+## Session 46 — A5: a tag you cannot reach, and a tag you cannot swing ✅
+
+**Acceptance criterion:** no tag the region ladder depends on is carried by
+fewer parts than the ladder asks for — **passes**, and getting there meant
+defining "depends on" properly first.
+
+### 1. The armour-piercing answer could not be obtained by anybody
+
+R25 invented `foghorn_array` — a 62-power Sonic organ — because the Foundry
+Belt is **9 of 11 Armored at armor 11–15** and nothing in the buyable pool
+went through plate. It then wired it as salvage from `leviathan_dredge`,
+**a unit that appears in no encounter anywhere**. So the part existed, the
+unit existed, and the two were never connected to the map.
+
+Meanwhile `tools/sim.js` kept benching the Foundry with it. Measured share of
+damage dealt in the Foundry by the `noise` archetype:
+
+| organ | Sonic move's share of damage |
+|---|---|
+| `foghorn_array` (62) — the shipped bench, unobtainable | **68%** |
+| `owl_organ` (26) — the best a player could hold | **26%**, with 71% coming from a Suplex that eats full armour |
+
+So the archetype *does* isolate the armour-piercing axis, exactly as its
+comment claims — but only when built from a part nobody can have.
+
+`foghorn_array` now drops from `eel_generator`: Drowned-exclusive,
+Vehicle+Aquatic+Armored, the strip immediately before the one it answers.
+`dredger_barge` was the first choice and was **wrong** — it also patrols
+Greenfield's Guard Post, which would have put the strongest Sonic attack in
+the game a whole region before Kestrel. Caught by re-running the provenance
+audit rather than by reasoning.
+
+### 2. Two of the five tags could not be swung at all
+
+| tag | slots it lived in, before |
+|---|---|
+| Electric | organ 72/46 · head 46 · forelimbs 70 · hindlimbs 44 |
+| Venomous | head 40/40 · tail 48/32 |
+| **Sonic** | organ 62/30/28/26/0 · head 60/36 — **no limb, at all** |
+| **Gas** | hide 0/0/0 · organ 28/24/24 — **no limb, and nothing above 28** |
+
+I first wrote this up as "Sonic and Gas exist only on support slots", and the
+break battery disproved it: a **head is a damage slot**, and Sonic already had
+`mandate_horn` (60) and `goose_head` (36) there, so the first gate sailed
+straight through a break that removed both of A5's new Sonic parts. The claim
+was wrong, not the code.
+
+The accurate statement is narrower and more useful. Neither tag had **any
+limb carrier** — forelimbs, hindlimbs or tail — which is where a build's
+damage actually lives: a head is one socket competing with the species'
+signature, and every chimera has three limb sockets. Gas could not be swung
+at all; Sonic only from a head, and the one worth pressing is Spire salvage,
+a strip *past* the armour wall it answers.
+Four parts move them into damage slots, on the species whose identity they
+already are: **Wing Buffet** (goose forelimbs, 48/Sonic), **Shell Knock**
+(armadillo tail, 40/Sonic), **Business End** (skunk tail, 42/Gas), **Scale
+Storm** (moth forelimbs, 46/Gas). Priced under the generic 52, because
+ignoring armour and ×1.5 on organics are worth a few points.
+
+### What that buys, measured
+
+Same grades, team of three, 8 seeds a node:
+
+| build | greenfield | kestrel | drowned | foundry | spire |
+|---|---|---|---|---|---|
+| noise (the shipped bench) | 55% | 72% | 63% | 59% | 59% |
+| **sonic bruiser (A5 parts)** | 73% | 75% | 25% | **78%** | 66% |
+| sonic, no salvage | 73% | 63% | 22% | **63%** | 53% |
+| gas bruiser (A5 parts) | 55% | 63% | 28% | **6%** | 50% |
+
+The armour region has an answer a player can build, and it works *without*
+the salvage part too — so it is not a one-part dependency. Gas collapsing to
+6% in the Foundry is the trade working: Gas is ×0 against Vehicle.
+
+**The five shipped archetypes could not see any of this.** Not one uses a
+Sonic or Gas damage part, so `regionBench` is byte-identical before and
+after. A bench that cannot see a change to the axis it claims to measure is
+its own finding.
+
+### Defining "depends on", which took two attempts
+
+The first gate asked, per region, "which chart tag has the biggest edge on
+this roster?" and then demanded three reachable carriers of it. It failed
+**Greenfield** — 62% Organic, so Gas wins the edge — and demanded three Gas
+parts before the tutorial strip. That is absurd: every archetype clears
+Greenfield at 55–83% with no Gas at all.
+
+The fix is a real distinction. **The class triangle already hands out a
+×1.5**, so a chart *multiplier* is a nicer way to do something the player
+could do anyway. The one effect nothing else in the game reproduces is
+`ignoreArmor` — armour is a flat subtraction and no class advantage goes
+through it. So the gate now binds only where a strip is majority-Armored,
+which is the case R25 actually hit.
+
+### Gates
+
+- Every enemy-tech part has at least one **fielded** source — per *part*, not
+  per unit. `rotor_limbs` is promised by both `crop_duster` and the parked
+  `stratofortress`, which is fine; what killed `foghorn_array` was that its
+  only source was parked. (The first draft got this wrong and failed on
+  `rotor_limbs`.)
+- Every chart tag is swingable from a damage slot at 40+ power.
+- For a majority-Armored strip: three carriers of the piercing tag reachable
+  when it opens, at a power worth pressing against its median armour.
+
+### The break battery
+
+| break | caught by |
+|---|---|
+| `foghorn_array` back to its parked-only source (R25's actual bug) | *foghorn_array has a fielded source — its only sources are leviathan_dredge…* |
+| Sonic loses its limb carriers | *Sonic can be swung from a limb (0: none)* |
+| Gas loses its limb carriers | same, for Gas |
+| every reachable Sonic attack is feeble | *Sonic's best limb move is worth pressing (20)* |
+| the Sonic fauna unlocks a strip **later** than the armour wall | *foundry is 82% Armored and only Sonic ignores it, but a player can hold 2 part(s) … when the strip opens (bat_organ, foghorn_array)* |
+| a fifth unit falls off the map | *the parked units are exactly the four known ones (audit_diver, …)* |
+
+Four of the six took a second attempt, and all four were **bad breaks, not
+bad assertions**:
+
+- Removing A5's Sonic parts passed, because the gate counted heads. That one
+  was a genuine error in my claim and the gate was rewritten around limbs.
+- Weakening the Sonic pool *by removing its salvage source* tripped the
+  orphan-salvage gate first, which is the more important assertion — so the
+  power clause had to be isolated by weakening the moves instead.
+- Removing `harbor_skiff` from every wave changed nothing, because the
+  **director** fields it as a counter-rule unit, so it was never parked.
+- Removing `hydrofoil_lance` tripped orphan-salvage instead, because it was
+  the only fielded source of `hydro_jets`. Isolating the parked-list
+  assertion needed a unit with no salvage and no director rule.
+
+One mutation was also simply broken: `waves` entries are sometimes a bare
+string rather than an array, so the first version iterated the *characters*
+of a unit id and the suite failed with `unknown unit r,i,o,t,_,s,q,u,a,d`.
+
+### Known issues
+
+- **Four units are parked** — `crucible_9000`, `leviathan_dredge`,
+  `stratofortress`, `the_compliance_engine`, all drafted at boss scale
+  (hp 118–145, armor 13–18), too heavy for any strip they could join without
+  a rescale. The list is pinned by an assertion so a fifth cannot fall off
+  the map unnoticed the way `leviathan_dredge` did. Fielding them properly is
+  a balance job, not a data job.
+- The archetype bench needs a Sonic-damage and a Gas-damage archetype, or it
+  stays blind to this axis.
+- **Electric's limb carriers were both `storm_eagle`** — a chaos variant you
+  must *breed*, never buy — so the tag was swingable only by someone who had
+  already run the vat. `electric_eel_tail` "Live Wire" (50/Electric) is the
+  base-species door.
+
+**Next session's first task:** A6 — every species should appear in at least
+one combo, and the Dex's silhouettes should point at something real.
+
 ## Session 45 — A4: open the loop that was already there ✅
 
 **Acceptance criterion:** a player who opens the game with money, a stable

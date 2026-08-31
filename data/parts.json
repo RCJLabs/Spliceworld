@@ -6996,7 +6996,7 @@
       "species": "electric_eel",
       "slot": "tail",
       "name": "Electric Eel Tail Fin",
-      "ability": "Tail Drive",
+      "ability": "Live Wire",
       "stats": {
         "speed": 3,
         "hp": 4
@@ -7011,13 +7011,13 @@
       ],
       "classAffinity": "water",
       "move": {
-        "power": 0,
-        "cost": 10,
-        "acc": 100,
-        "tags": [],
-        "keywords": {
-          "evasionUp": 1
-        }
+        "power": 50,
+        "cost": 26,
+        "acc": 95,
+        "tags": [
+          "Electric"
+        ],
+        "keywords": {}
       },
       "shapes": [
         {
