@@ -512,21 +512,25 @@ export function facilityPayback(content) {
 // A region that all four clear equally is a region that asked for nothing.
 export const ARCHETYPES = {
   boots: {
+    anatomy: 'ground',
     name: 'Boots on the Ground',
     frame: 'M',
     partIds: ['rhino_head', 'gorilla_forelimbs', 'rhino_hindlimbs', 'bear_tail', 'pangolin_hide', 'bear_organ'],
   },
   wings: {
+    anatomy: 'air',
     name: 'Wings',
     frame: 'M',
     partIds: ['eagle_head', 'eagle_forelimbs', 'eagle_hindlimbs', 'eagle_tail', 'bat_hide', 'bear_organ'],
   },
   gills: {
+    anatomy: 'water',
     name: 'Gills',
     frame: 'M',
     partIds: ['shark_head', 'shark_forelimbs', 'shark_hindlimbs', 'shark_tail', 'tortoise_hide', 'bear_organ'],
   },
   fumes: {
+    anatomy: 'gas',
     name: 'Fumigation',
     frame: 'M',
     partIds: ['cobra_head', 'octopus_forelimbs', 'octopus_hindlimbs', 'scorpion_tail', 'skunk_hide', 'skunk_organ'],
@@ -542,11 +546,17 @@ export const ARCHETYPES = {
   // at plain standard grade, which makes every Ground-tagged enemy move
   // swing under it.
   kite: {
+    anatomy: 'air',
     name: 'Kite',
     frame: 'A',
-    partIds: ['falcon_head', 'eagle_forelimbs', 'falcon_tail', 'bat_hide', 'bear_organ'],
+    // Deliberately the SAME loadout as `wings`, minus the hindlimb the
+    // chassis has nowhere to bolt. The two archetypes then differ by
+    // exactly one thing — the frame — which is the question A9 exists to
+    // ask. Giving the Kite better parts would have measured the parts.
+    partIds: ['eagle_head', 'eagle_forelimbs', 'eagle_tail', 'bat_hide', 'bear_organ'],
   },
   noise: {
+    anatomy: 'sonic',
     name: 'Dead Reckoning',
     frame: 'M',
     // One ground limb and one water limb, so the affinities tie and the

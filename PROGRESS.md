@@ -42,7 +42,7 @@ And it never mattered anyway, because:
 | direction | Ground attacks | Airborne defenders |
 |---|---|---|
 | player → coalition | **20 parts** | 12 enemy units |
-| coalition → player | **0 of 127 moves** | 61 parts |
+| coalition → player | **0 of 85 moves** | 61 parts |
 
 `Ground → Airborne ×0` was a **one-way rule**. It had never fired against a
 player once, in the whole campaign. A5 gave the player parts for the tag
@@ -52,9 +52,10 @@ chart; nobody ever gave the chart to the coalition.
 
 1. **`Airborne` is a claim about physics**, not ancestry: the tag survives
    only where lift ≥ mass. Mass now has a categorical cost.
-2. **The coalition fights at ground level** — 31 of 127 moves (was 0), never
-   every attack on a unit (a flier answers *part* of a fight), densest in the
-   Foundry and deliberately sparse in air-region Kestrel.
+2. **The coalition fights at ground level** — 19 of 85 authored moves (was
+   **0**), never every attack on a unit (a flier answers *part* of a fight),
+   densest in the Drowned Quarter at 35% and deliberately sparse in
+   air-region Kestrel at 10%.
 3. **The frame ladder is compressed** so the chassis is a floor, not the
    bulk: L's free lunch over M went from +12hp/+10 stamina to +6/+6.
 4. **The A-class Kite** — a flying wing at 18 mass, genuinely airborne on
@@ -82,17 +83,34 @@ chart; nobody ever gave the chart to the coalition.
 
 | | best-frame cells |
 |---|---|
-| A | 17 |
-| S | 12 |
-| M | 9 |
+| A | 9 |
+| S | 13 |
+| M | 11 |
 | L | 33 |
-| tie | 55 |
+| tie | 60 |
 
-Every chassis is now the right answer somewhere; L's share fell from 57% to
-26%. And **the answer differs by strip** — the Foundry's is the Kite,
-Kestrel's is M or L — which is what "more than one point in the campaign"
-has to mean. The ladder still climbs: map minimum **38%** against A8's 25%
-floor (it was 29%).
+Every chassis is now the right answer somewhere — S went from **zero of 105**
+to 13 — and L's share of decided cells fell from **91% to 50%**. The best
+chassis differs by strip (the Foundry's is M, Greenfield's and the Spire's
+is L, the Drowned Quarter splits A and L), which is what "more than one point
+in the campaign" has to mean. The ladder still climbs.
+
+### Two corrections I had to make to my own first answer
+
+**The Foundry.** My first pass made it the densest ground-fighting strip, and
+its own identity (R26) is *armour*, answered by Sonic. R26's gate caught it:
+the Foundry's margin over its runner-up had fallen from a pre-A9 **+25 to
++30pp** to **+6 to +13**. I checked that against the pre-A9 tree rather than
+tuning to green, and Kestrel and Drowned came back byte-identical — so the
+damage was Foundry-specific and mine. The strip where flying pays must not be
+one whose question is already answered, so the ground-level fighting moved
+out: it is densest in the **Drowned Quarter** now (35% of moves) and thinnest
+in air-region **Kestrel** (10%). The Foundry is back to +25/+30.
+
+**The kite archetype.** I first gave it falcon parts where its peer `wings`
+carries eagle — so it was measuring the parts, not the chassis. It now runs
+the *same* loadout as `wings` minus the hindlimb the Kite cannot bolt, which
+is the only honest way to ask A9's question.
 
 ### One thing the audit found that was not the frame
 

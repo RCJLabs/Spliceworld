@@ -301,16 +301,12 @@
       "body": "Bird anatomy says AIRBORNE on the part. Your creature only gets it if the lift you installed can hoist the mass you built — the Flight row does that sum for you. It is worth doing: ground-level attacks swing straight underneath anything actually in the air, and the coalition throws a lot of them. The lighter the chassis, the cheaper the promise. The Kite gets off the ground on plain standard parts; the Rumbler never gets off the ground at all.",
       "reachable": [
         {
-          "path": "inventory.parts",
-          "min": 1,
-          "default": 0
+          "helper": "liftPartInVault"
         }
       ],
       "done": [
         {
-          "path": "chimeras",
-          "min": 2,
-          "default": 0
+          "helper": "flierBuilt"
         }
       ]
     },

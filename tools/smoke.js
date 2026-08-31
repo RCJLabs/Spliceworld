@@ -5694,6 +5694,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
+    // A9: goat parts are not a flight lesson. The lift equation only becomes
+    // a decision once the player owns something that MAKES lift — 61 parts
+    // say Airborne and twelve of them fly.
+    ['a wing turns up', () => {
+      lab.inventory.parts.push({ id: 't3', partId: 'eagle_forelimbs' });
+    }, ['flight']],
     ['a second settled chimera', () => {
       lab.chimeras.push({ id: 'c2', frame: 'M', tokens: {}, settleUntil: 0, bond: 5, scars: [] });
     }, ['chaos']],
@@ -6025,7 +6031,22 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
         `${row.region.id}: a build that cleared Greenfield must fall over here (worst drop ${Math.round(drop * 100)}pp)`);
     }
 
-    const rank = (row) => arch.map((k) => rateIn(row, k)).sort((a, b) => b - a);
+    // Rank ANATOMIES, not archetypes. A9 added a sixth archetype that shares
+    // an anatomy with an existing one — `kite` and `wings` are the same Air
+    // build on two chassis, which is the whole point of the pair — so a
+    // ranking over archetypes would count Air twice and report a region as
+    // having "two answers" when both entries are the same answer. This
+    // criterion has always been about anatomy; it just never had two
+    // archetypes sharing one before.
+    const bestPerAnatomy = (row) => {
+      const best = {};
+      for (const k of arch) {
+        const a = ARCHETYPES[k].anatomy ?? k;
+        best[a] = Math.max(best[a] ?? 0, rateIn(row, k));
+      }
+      return best;
+    };
+    const rank = (row) => Object.values(bestPerAnatomy(row)).sort((a, b) => b - a);
 
     // Three of the four later strips ask a SPECIFIC question, and each asks
     // a different one. Observed spreads: 13-19, 17-27, 20-33pp.
@@ -6443,7 +6464,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'some frame/grade combinations fly and some do not');
 
   // 2. The coalition has to fight at ground level, or the x0 row is a rule
-  //    that only ever costs the player. Measured before A9: 0 of 127.
+  //    that only ever costs the player. Measured before A9: 0 of 85.
   const enemyMoves = Object.values(content.enemies).flatMap((u) => u.moves ?? []);
   const groundMoves = enemyMoves.filter((m) => (m.tags ?? []).includes('Ground'));
   assert.ok(groundMoves.length / enemyMoves.length >= 0.15,

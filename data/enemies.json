@@ -4704,9 +4704,7 @@
           "power": 50,
           "cost": 24,
           "acc": 88,
-          "tags": [
-            "Ground"
-          ],
+          "tags": [],
           "keywords": {}
         },
         {
@@ -4899,9 +4897,7 @@
           "power": 22,
           "cost": 12,
           "acc": 96,
-          "tags": [
-            "Ground"
-          ],
+          "tags": [],
           "keywords": {
             "multiHit": 2
           }
@@ -6820,9 +6816,7 @@
           "power": 48,
           "cost": 24,
           "acc": 90,
-          "tags": [
-            "Ground"
-          ],
+          "tags": [],
           "keywords": {
             "slow": true
           }
