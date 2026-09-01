@@ -291,6 +291,26 @@ export function renderRanchScreen(root, ctx) {
 
   // Breeding Pen: adults of one species, opposite sexes. The egg does the rest.
   const eligible = state.ranch.stock.filter((a) => ageStage(a, content, t) !== 'juvenile');
+  // R47. Measured at 380px, this card is 223px whether or not it can do
+  // anything — and it cannot until two adults of one stock and opposite
+  // sexes are standing in the pens, which on a fresh save is hours away.
+  // 223px of disabled pickers was the clearest dead weight in the Ranch's
+  // ~1,600px of chrome, so it folds: SHUT when there is no pairing to make,
+  // open the moment there is.
+  //
+  // The open/shut decision is made HERE, above the body, because R44's rule
+  // applies to this card too: a shut fold must not build what it is not
+  // showing. The pickers walk the whole herd to group it by species.
+  const pairable = new Map();
+  for (const a of eligible) {
+    const stock = baseSpecies(a.species, content);
+    const seen = pairable.get(stock) ?? new Set();
+    seen.add(a.sex);
+    pairable.set(stock, seen);
+  }
+  const canPair = [...pairable.values()].some((sexes) => sexes.size > 1);
+  const incubatorFull = state.ranch.eggs.length >= incubatorSlots(state, content);
+  const breedingOpen = isOpen(state, 'breeding-pen', canPair && !incubatorFull);
   if (!eligible.some((a) => a.id === pickA)) pickA = '';
   // Same STOCK, not the same species string: an Alpine Ram is still a ram,
   // and crossing a lucky mutant back into the good line is the point of it
@@ -355,22 +375,6 @@ export function renderRanchScreen(root, ctx) {
     forecast = '<p class="fine-print">Pick both parents and the Suite will run the numbers.</p>';
   }
 
-  // R47. Measured at 380px, this card is 223px whether or not it can do
-  // anything — and it cannot do anything until two adults of one stock and
-  // opposite sexes are standing in the pens, which on a fresh save is hours
-  // away. 223px of disabled pickers is the clearest dead weight in the
-  // Ranch's ~1,600px of chrome, so it folds: SHUT when there is no pairing
-  // to make, and open the moment there is. A card that cannot act should
-  // not cost more than the sentence explaining why.
-  const pairable = new Map();
-  for (const a of eligible) {
-    const stock = baseSpecies(a.species, content);
-    const seen = pairable.get(stock) ?? new Set();
-    seen.add(a.sex);
-    pairable.set(stock, seen);
-  }
-  const canPair = [...pairable.values()].some((sexes) => sexes.size > 1);
-  const incubatorFull = state.ranch.eggs.length >= incubatorSlots(state, content);
   const breedingSummary = incubatorFull
     ? 'The incubator is full. Hatch something first.'
     : !eligible.length
@@ -385,8 +389,8 @@ export function renderRanchScreen(root, ctx) {
       ? '<span class="pen-ready">pairing available</span>'
       : `<span class="pen-wait">${eligible.length} adult${eligible.length === 1 ? '' : 's'}</span>`,
     summary: breedingSummary,
-    open: isOpen(state, 'breeding-pen', canPair && !incubatorFull),
-    body: `
+    open: breedingOpen,
+    body: !breedingOpen ? '' : `
       <div class="slot-grid">
         ${parentField('breed-a', 'Parent A', pickA, eligible, false)}
         ${parentField('breed-b', 'Parent B', pickB, partnerPool, !pickA)}

@@ -10020,6 +10020,15 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const kids = draw(ranch([{ ageHours: 0, sex: 'F' }, { ageHours: 0, sex: 'M' }]));
     assert.ok(!/data-fold="breeding-pen" aria-expanded="true"/.test(kids), 'juveniles are not adults');
 
+    // Nor does a pair of different STOCK. Every other case in this gate is
+    // goats, so without this one a card that ignored species entirely would
+    // pass — the R34 lesson about a fixture that cannot express the thing
+    // it is meant to test.
+    const crossed = draw(ranch([{ sex: 'F', species: 'goat' }, { sex: 'M', species: 'bear' }]));
+    assert.ok(!/data-fold="breeding-pen" aria-expanded="true"/.test(crossed),
+      'a goat and a bear are not a pairing');
+    assert.ok(/2 adults, no pair/.test(crossed), 'and it says so');
+
     // …and the moment a real pairing exists it opens on its own.
     const pair = draw(ranch([{ sex: 'F' }, { sex: 'M' }]));
     assert.ok(/data-fold="breeding-pen" aria-expanded="true"/.test(pair),
