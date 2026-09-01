@@ -114,27 +114,45 @@ ever starts building a neighbour's portraits.
 
 ### The break battery
 
-Fifteen breaks, run against the full suite in an isolated worktree.
-**Baseline green; verdicts pending at time of writing** — this table is
-updated with the result rather than assumed.
+Fifteen breaks, each run against the full suite in an isolated worktree.
+**All fifteen caught.**
 
 | break | verdict |
 |---|---|
-| all five tabs render at once (the pre-R45 column) | pending |
-| completion drops below the bar | pending |
-| salvage folded into the parts count | pending |
-| a rival you only lost to stops counting as met | pending |
-| every tab wears a badge | pending |
-| a tab in the bar with no view behind it | pending |
-| no fallback, so an unknown tab renders blank | pending |
-| the bar goes back to five hardcoded columns | pending |
-| `bindSubtabs` reads the wrong dataset key | pending |
-| a heading over an empty list | pending |
-| combos back in content order | pending |
-| the field guide ungrouped again | pending |
-| a whole class drops out of the guide | pending |
-| `ui/tabs.js` falls out of the offline shell | pending |
-| War Room alerts go behind its bar (R15's rule) | pending |
+| all five tabs render at once (the pre-R45 column) | CAUGHT |
+| completion drops below the bar | CAUGHT |
+| salvage folded into the parts count | CAUGHT |
+| a rival you only lost to stops counting as met | CAUGHT |
+| every tab wears a badge | CAUGHT |
+| a tab in the bar with no view behind it | CAUGHT (R21 first — see below) |
+| no fallback, so an unknown tab renders blank | CAUGHT |
+| the bar goes back to five hardcoded columns | CAUGHT |
+| `bindSubtabs` reads the wrong dataset key | CAUGHT (R21 first — see below) |
+| a heading over an empty list | CAUGHT |
+| combos back in content order | CAUGHT |
+| the field guide ungrouped again | CAUGHT |
+| a whole class drops out of the guide | CAUGHT |
+| `ui/tabs.js` falls out of the offline shell | CAUGHT |
+| War Room alerts go behind its bar (R15's rule) | CAUGHT |
+
+Break 13 is the one worth pointing at: dropping Air out of the grouped
+field guide is caught by **the per-tab portrait count** — the gate I had
+to rewrite after getting it wrong — which reads `foes: 28` where it owes
+40. The loose ratio it replaced would have sailed straight past that.
+
+**Two breaks were caught by a sibling, not by their own gate.** R21's
+findability gate sits ~8,700 lines earlier in `smoke.js`, so breaking the
+view map (6) or the dataset key (9) makes the Dex unbrowsable and R21
+fires first. That proves *something* catches them; it does not prove the
+R45 gate written for them would. Run alone against the same worktree
+(R43's isolation pattern):
+
+| isolated | break 6 | break 9 |
+|---|---|---|
+| gate 5 — every tab has a view | **FAIL** `tab "genes" has a view` | PASS |
+| shared bar — a click reports the tab id | PASS | **FAIL** `not undefined` |
+
+Each fires for its own break and only its own. Neither gate is hollow.
 
 ### Verified
 
