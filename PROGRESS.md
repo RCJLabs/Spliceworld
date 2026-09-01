@@ -99,26 +99,50 @@ broader reading.
 
 ### The break battery
 
-Fourteen breaks, each run against the full suite in an isolated worktree.
-**Verdicts pending at time of writing** — this table is updated with the
-result rather than assumed.
+Fifteen breaks, each run against the full suite in an isolated worktree.
+**All caught.**
 
 | break | verdict |
 |---|---|
-| the Breeding Pen is not a fold | pending |
-| the Breeding Pen always opens | pending |
-| the Breeding Pen never opens on its own | pending |
-| a pairing ignores sex | pending |
-| a pairing ignores stock | pending |
-| a full incubator gives the wrong reason | pending |
-| purchases go back to full rows | pending |
-| a spend chip goes nowhere | pending |
-| a spend chip loses its hint | pending |
-| work items become chips too | pending |
-| the economy is five cells again | pending |
-| Net loses its derivation | pending |
-| the subtitle shows the wrong upkeep | pending |
-| a shut Right Now still builds its rows | pending |
+| the Breeding Pen is not a fold | CAUGHT |
+| the Breeding Pen always opens | CAUGHT |
+| the Breeding Pen never opens on its own | CAUGHT |
+| a pairing ignores sex | CAUGHT |
+| a pairing ignores stock | CAUGHT |
+| a full incubator gives the wrong reason | CAUGHT |
+| purchases go back to full rows | CAUGHT |
+| a spend chip goes nowhere | CAUGHT |
+| a spend chip loses its hint | CAUGHT |
+| work items become chips too | CAUGHT |
+| the economy is five cells again | CAUGHT |
+| Net loses its derivation | CAUGHT |
+| the subtitle shows the wrong upkeep | CAUGHT |
+| a shut Breeding Pen still builds its body | CAUGHT |
+| a shut Right Now still builds its rows | CAUGHT |
+
+Three of these earn a note.
+
+**Break 5 (`a pairing ignores stock`) is only catchable because the
+fixture was fixed first.** Every other case in that gate is goats, so a
+card that ignored species entirely would have sailed through — the R34
+failure exactly. Adding a goat-and-a-bear case before running the battery
+is what turned a hollow assertion into a real one.
+
+**Break 13 (`the subtitle shows the wrong upkeep`) is the one that guards
+the economy rather than the layout.** The gate compares the printed
+subtitle against `upkeepPerDay`, so a presentation change cannot quietly
+alter what the number means.
+
+**Breaks 14 and 15 re-break the defects this phase actually shipped in its
+first cut** — both shut folds building their bodies. They are in the
+battery rather than taken on trust precisely because I got them wrong
+once already.
+
+The battery also caught its own staleness before costing anything: after
+the open/shut decisions were hoisted, three break anchors no longer
+existed, and `assert old in s` stopped the run on break 2 instead of
+silently applying nothing. Every anchor is now checked against the real
+files before the run starts.
 
 ### Verified
 
