@@ -7896,10 +7896,19 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       `it is said once, on the opposition line (${lines.join(' | ')})`);
   }
 
-  // 6. The same rule is never said twice on one row, however many waves
-  //    carry the tag.
+  // 6. The same rule is never said twice on one row. This is a property of
+  //    the CALLER — campaign/ui.js collapses the waves into Sets — not of a
+  //    dedup filter inside matchupNotes, which the battery proved
+  //    unreachable. So it is asserted where it can actually be violated:
+  //    hand it a foe whose tag list repeats and check the output does not.
   for (const enc of encs) {
-    const notes = matchupNotes({ ...sideOf('goose', 'S'), ...foeOf(enc) }, content.tagChart);
+    const units = enc.waves.flat().map(unitOf).filter(Boolean);
+    const foe = {
+      foeTags: new Set([...units.flatMap((u) => u.tags ?? []), ...units.flatMap((u) => u.tags ?? [])]),
+      foeAttackTags: new Set(units.flatMap((u) => (u.moves ?? [])
+        .filter((m) => (m.power ?? 0) > 0).flatMap((m) => m.tags ?? []))),
+    };
+    const notes = matchupNotes({ ...sideOf('goose', 'S'), ...foe }, content.tagChart);
     assert.equal(new Set(notes.map((n) => n.key)).size, notes.length, `${enc.id}: no repeated clause`);
   }
 

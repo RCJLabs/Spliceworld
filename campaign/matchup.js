@@ -70,10 +70,14 @@ export function matchupNotes({ myTags, myAttackTags, foeTags, foeAttackTags }, c
       });
     }
   }
-  // Deduplicate: several waves can carry the same tag, and the same rule
-  // said twice is noise rather than emphasis.
-  const seen = new Set();
-  return notes.filter((n) => !seen.has(n.key) && seen.add(n.key));
+  // No deduplication here, deliberately. The first cut had a filter and a
+  // comment claiming "several waves can carry the same tag" — but the caller
+  // collapses waves into Sets before this is ever reached, and the chart is
+  // walked exactly once, so a repeated key cannot arise. Measured across all
+  // 24 encounters against a maximal tag set: zero duplicates. The break
+  // battery reported removing the filter as a MISS, which is what dead code
+  // guarded by a gate looks like.
+  return notes;
 }
 
 // The opposition's tags, and what each one means for whoever you send.
