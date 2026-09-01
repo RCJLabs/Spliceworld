@@ -40,7 +40,7 @@ import {
 } from './chaos.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { bandedHtml } from '../ui/roster.js';
-import { sparCharges, sparPartners } from '../campaign/sparring.js';
+import { canSpar } from '../campaign/sparring.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 
 let lastMsg = '';
@@ -326,18 +326,17 @@ export function renderPensScreen(root, ctx) {
   // not a card, because R47 spent a phase establishing that a card has to
   // earn its height. It reads the same derivation the map's button does,
   // so the two cannot disagree about how many charges you have.
-  const partners = sparPartners(state, content);
-  const spar = sparCharges(state, t, content);
-  const sparLine = !partners.length ? '' : `
-    <p class="spar-line${spar.ready ? ' is-ready' : ''}">
+  const spar = canSpar(state, content, t);
+  const sparWhy = {
+    'no-charge': () => `re-chalking — ${fmtDuration(spar.msToNext)}`,
+    'nobody-fit': () => 'nobody fit to send',
+  };
+  const sparLine = spar.reason === 'no-garrison' ? '' : `
+    <p class="spar-line${spar.ok ? ' is-ready' : ''}">
       <span>🥊 Sparring Ring</span>
       <strong>${spar.charges}/${spar.max}</strong>
       <span class="fine-print">${
-        spar.full
-          ? 'full — spend them'
-          : spar.ready
-            ? `+1 in ${fmtDuration(spar.msToNext)}`
-            : `re-chalking — ${fmtDuration(spar.msToNext)}`
+        (sparWhy[spar.reason] ?? (() => (spar.full ? 'full — spend them' : `+1 in ${fmtDuration(spar.msToNext)}`)))()
       }</span>
       <button type="button" class="spar-goto" data-goto="battle">Ring →</button>
     </p>`;

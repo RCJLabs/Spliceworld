@@ -39,7 +39,7 @@ import { activeVat, vatPlan } from '../splice/chaos.js';
 import { operationList, opReady, activeOps, laneFree } from '../campaign/operations.js';
 import { reachableEncounterIds } from '../campaign/map.js';
 import { isInjured } from '../battle/engine.js';
-import { sparCharges, sparPartners } from '../campaign/sparring.js';
+import { sparCharges, canSpar } from '../campaign/sparring.js';
 
 const HOUR = 3600000;
 const fit = (state, now) => state.chimeras.filter((c) => !isInjured(c, now));
@@ -105,9 +105,7 @@ export const AGENDA = [
       const { charges } = sparCharges(state, now, content);
       return `${charges} charge${charges === 1 ? '' : 's'} in the ring — free xp against a garrison you already hold.`;
     },
-    ready: (state, content, now) => fit(state, now).length > 0
-      && sparPartners(state, content).length > 0
-      && sparCharges(state, now, content).ready,
+    ready: (state, content, now) => canSpar(state, content, now).ok,
   },
   {
     id: 'job', kind: 'campaign', screen: 'battle', label: 'Run a job',

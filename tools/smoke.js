@@ -10144,7 +10144,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 {
   const { renderPensScreen } = await import('../splice/pens-ui.js');
   const { AGENDA } = await import('../ranch/agenda.js');
-  const { sparCharges, sparPartners } = await import('../campaign/sparring.js');
+  const { sparCharges, sparPartners, canSpar } = await import('../campaign/sparring.js');
   const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null });
   const HOUR = 3600000;
   const B = { head: 'rhino_head', forelimbs: 'gorilla_forelimbs', hindlimbs: 'rhino_hindlimbs',
@@ -10286,6 +10286,41 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const src = readFileSync(join(root, 'splice/pens-ui.js'), 'utf8');
     assert.ok(/from '\.\.\/campaign\/sparring\.js'/.test(src),
       'the Pens reads sparCharges rather than recomputing it');
+
+    // 4b. THE ONE BROWSER QA FOUND. The bucket being full is only half of
+    //     "can I spar": the first cut of this line reported "3/3 — full,
+    //     spend them" in the ready colour while the only chimera was in the
+    //     Infirmary, and the agenda — correctly — offered nothing. Two
+    //     surfaces disagreeing about whether an action is available is the
+    //     exact failure this phase exists to prevent, so both now read one
+    //     predicate.
+    const benched = sparrer();
+    benched.chimeras = [chimera(0, { injury: { name: 'Bent Whiskers', until: t0 + 2 * HOUR } })];
+    const gate = canSpar(benched, content, t0);
+    assert.equal(gate.reason, 'nobody-fit', 'the predicate names why');
+    assert.ok(!gate.ok, 'and refuses');
+    assert.equal(gate.charges, c.max, 'even though the bucket is full');
+
+    const page2 = draw(benched);
+    assert.ok(page2.includes('spar-line'), 'the Pens still reports the bucket');
+    assert.ok(page2.includes(`${c.max}/${c.max}`), 'with the charges it really has');
+    assert.ok(!page2.includes('spar-line is-ready'), 'but does not say GO');
+    assert.ok(page2.includes('nobody fit to send'), 'it says what is missing instead');
+    assert.ok(!page2.includes('spend them'), 'and never tells you to spend what you cannot');
+    // The two surfaces now agree, which is the assertion that matters.
+    const onAgenda = !!agendaShape(benched, content, t0).open.find((i) => i.id === 'spar');
+    assert.equal(onAgenda, gate.ok, 'the agenda and the predicate agree');
+    assert.equal(page2.includes('spar-line is-ready'), gate.ok, 'and so does the Pens');
+    for (const st2 of [sparrer(), benched, (() => { const x = sparrer(); x.campaign.heldNodes = []; return x; })()]) {
+      const g = canSpar(st2, content, t0);
+      assert.equal(
+        !!agendaShape(st2, content, t0).open.find((i) => i.id === 'spar'), g.ok,
+        `agenda matches the predicate (${g.reason ?? 'ok'})`
+      );
+      const p2 = draw(st2);
+      assert.equal(p2.includes('spar-line is-ready'), g.ok,
+        `and the Pens matches it too (${g.reason ?? 'ok'})`);
+    }
     assert.equal(newGameState().saveVersion, SAVE_VERSION, 'and none of this touched the schema');
   }
 }

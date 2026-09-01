@@ -21,6 +21,7 @@
 import { rngStream, pick } from '../util/rng.js';
 import { regionList } from './map.js';
 import { trainingTuning } from '../battle/veterancy.js';
+import { isInjured } from '../battle/engine.js';
 
 const MINUTE = 60000;
 
@@ -74,6 +75,27 @@ export function sparReady(state, now, content) {
 // A derived encounter, seeded off the save so a reload offers the same
 // spar. `scaleOverride` is the same dial contestation escalates with,
 // pointed the other way.
+// R48 — "can I spar right now" as ONE answer, because three screens were
+// about to grow three opinions of it. The bucket is only half the question:
+// a full ring is no use with no garrison to spar and nobody fit to send,
+// and browser QA caught the Pens cheerfully reporting "3/3 — spend them"
+// while the only chimera was in the Infirmary and the agenda, correctly,
+// said nothing. A readout that tells you to do something you cannot do is
+// worse than no readout.
+export function canSpar(state, content, now) {
+  const charges = sparCharges(state, now, content);
+  const partners = sparPartners(state, content);
+  const fit = (state.chimeras ?? []).filter((c) => !isInjured(c, now));
+  const reason = !partners.length
+    ? 'no-garrison'
+    : !fit.length
+      ? 'nobody-fit'
+      : !charges.ready
+        ? 'no-charge'
+        : null;
+  return { ...charges, partners: partners.length, fit: fit.length, ok: reason === null, reason };
+}
+
 export function sparEncounter(state, content, nodeId, now) {
   const node = sparPartners(state, content).find((n) => n.id === nodeId);
   if (!node) return { ok: false, msg: 'You can only spar a garrison you own.' };
