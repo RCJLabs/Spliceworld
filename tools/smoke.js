@@ -84,6 +84,7 @@ const content = indexContent({
   regions: readJSON('data/regions.json'),
   traits: readJSON('data/traits.json'),
   rivals: readJSON('data/rivals.json'),
+  training: readJSON('data/training.json'),
   director: readJSON('data/director.json'),
   facility: readJSON('data/facility.json'),
   philosophies: readJSON('data/philosophies.json'),
@@ -8751,6 +8752,207 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const before = done.news.length;
     tickCampaign(done, content, t0 + HOUR);
     assert.equal(done.news.length, before, 'and never says it twice');
+  }
+}
+
+// --- R41: a chimera you keep.
+//
+// The phase brief arrived as a player report, verbatim: "I have like 9
+// chimeras and no combination of them could ever beat the war missions I'm
+// on", and "a chimera you create at the beginning of the game should be
+// able to last the entire game." The game's only ladder out of a wall was
+// to REPLACE the creatures — raise better donors, extract better parts,
+// splice again — and R13 even built the dismantler for it. Nothing made
+// the creature you already had stronger for having fought, fifteen names
+// covered a stable the game pushes past nine, and none of them could be
+// changed.
+{
+  const { levelOf, levelMult, xpProgress, xpForBattle, trainingTuning, maxLevel } = await import('../battle/veterancy.js');
+  const { sparEncounter, sparReady, startSpar, sparPartners } = await import('../campaign/sparring.js');
+  const { renameCreature } = await import('../splice/theater.js');
+  const { pickFresh } = await import('../util/rng.js');
+  const tune = trainingTuning(content);
+
+  // 1. THE CRITERION, measured with the real engine: a day-one Standard
+  //    build at max level takes the final boss of the campaign. Grades are
+  //    what a creature is built from; levels are what it has been through —
+  //    and the second axis must actually reach the end of the game, or
+  //    "lasts the entire game" is a slogan.
+  {
+    const veterans = (key, xp) => {
+      const a = ARCHETYPES[key];
+      return Array.from({ length: 3 }, (_, i) => {
+        const c = makeSimChimera(a.frame, partsOnFrame(content, a.frame, a.partIds), 'standard', content);
+        c.id = `${key}${i}`; c.name = `${key}${i}`; c.bond = 100; c.settleUntil = 0; c.xp = xp;
+        return c;
+      });
+    };
+    const capXp = tune.levels[tune.levels.length - 1];
+    const boardroom = content.encounters.spire_boardroom;
+    const fresh = forecast(veterans('wings', 0), boardroom, content, 2026, 0, { runs: 16 }).winRate;
+    const seasoned = forecast(veterans('wings', capXp), boardroom, content, 2026, 0, { runs: 16 }).winRate;
+    assert.ok(fresh < 0.1, `a fresh day-one team cannot take The Boardroom (${Math.round(fresh * 100)}%)`);
+    assert.ok(seasoned >= 0.4, `the same team at max level can (${Math.round(seasoned * 100)}%)`);
+    // …and levels do not erase the matchup: the wrong build stays wrong.
+    const wrong = forecast(veterans('kite', capXp), boardroom, content, 2026, 0, { runs: 16 }).winRate;
+    assert.ok(wrong < 0.2, `while the wrong anatomy at max level still loses (${Math.round(wrong * 100)}%) — levels season a build, they do not replace it`);
+  }
+
+  // 2. Level is derived from xp — one source of truth, monotone, capped.
+  {
+    assert.equal(levelOf(0, content), 0, 'a fresh splice is level 0');
+    assert.equal(levelOf(tune.levels[0], content), 1, 'the first threshold is level 1');
+    assert.equal(levelOf(10 * tune.levels[tune.levels.length - 1], content), maxLevel(content), 'and xp past the cap stays at the cap');
+    let prev = -1;
+    for (let xp = 0; xp <= tune.levels[tune.levels.length - 1] + 50; xp += 10) {
+      const l = levelOf(xp, content);
+      assert.ok(l >= prev, 'level never goes down as xp rises');
+      prev = l;
+    }
+    const prog = xpProgress(tune.levels[0] + 5, content);
+    assert.equal(prog.level, 1, 'progress reports the level');
+    assert.equal(prog.into, 5, 'and the distance into it');
+  }
+
+  // 3. Veterancy never touches speed. Turn order is anatomy — A9 and R32
+  //    priced flight and speed in mass and lift — and no amount of drilling
+  //    changes what a creature is made of.
+  {
+    const a = ARCHETYPES.boots;
+    const fresh = makeSimChimera(a.frame, partsOnFrame(content, a.frame, a.partIds), 'standard', content);
+    fresh.id = 'v0'; fresh.name = 'v0'; fresh.bond = 100; fresh.settleUntil = 0; fresh.xp = 0;
+    const vet = { ...fresh, id: 'v1', name: 'v1', xp: tune.levels[tune.levels.length - 1] };
+    const c0 = combatantFromChimera(fresh, content, 0);
+    const c1 = combatantFromChimera(vet, content, 0);
+    assert.equal(c1.speed, c0.speed, 'a max-level veteran acts exactly as fast as the day it was spliced');
+    for (const stat of ['maxHp', 'power', 'armor', 'staminaMax']) {
+      assert.ok(c1[stat] > c0[stat], `${stat} grows with level (${c0[stat]} -> ${c1[stat]})`);
+    }
+    const want = levelMult(maxLevel(content), content);
+    assert.ok(Math.abs(c1.maxHp / c0.maxHp - want) < 0.03, `by the tuned multiplier (${(c1.maxHp / c0.maxHp).toFixed(2)} vs ${want})`);
+  }
+
+  // 4. XP pays for what was actually stood against. A win pays full for the
+  //    waves faced; a loss on wave one pays for one wave, at lossFraction —
+  //    but it PAYS, because a walled player grinding losses into levels is
+  //    the ladder out of the wall working as designed.
+  {
+    const fake = (outcome, queueLeft, kind = 'assault') => ({
+      outcome, waveCount: 3, enemyScale: 1, context: { kind },
+      enemy: { queue: new Array(queueLeft) }, player: { team: [] },
+    });
+    const win = xpForBattle(fake('win', 0), content);
+    const earlyLoss = xpForBattle(fake('loss', 2), content);
+    const spar = xpForBattle(fake('win', 0, 'sparring'), content);
+    assert.equal(win, Math.round(tune.xpPerWave * 3), `a 3-wave win pays 3 waves (${win})`);
+    assert.equal(earlyLoss, Math.round(tune.xpPerWave * 1 * tune.lossFraction), `a wave-one loss pays one wave at lossFraction (${earlyLoss})`);
+    assert.ok(earlyLoss > 0, 'and never zero');
+    assert.equal(spar, Math.round(win * tune.sparringFraction), `sparring pays sparringFraction (${spar})`);
+  }
+
+  // 5. The Sparring Ring: only a held garrison, scaled DOWN, zero purse,
+  //    seeded, and on a clock.
+  {
+    const lab = { ...newGameState(), seed: 41 };
+    ensureRanchSeeded(lab, content, t0);
+    assert.equal(sparPartners(lab, content).length, 0, 'nothing to spar before a conquest');
+    lab.campaign.heldNodes = ['barn_perimeter', 'precinct'];
+    assert.equal(sparPartners(lab, content).length, 2, 'held nodes are the partners');
+    assert.ok(!sparEncounter(lab, content, 'downtown', t0).ok, 'a node you do not hold refuses');
+    const offer = sparEncounter(lab, content, 'precinct', t0);
+    assert.ok(offer.ok, 'a held one offers');
+    assert.equal(offer.encounter.reward, 0, 'a spar has no purse');
+    const baseScale = tierScaleFor(content.encounters.boss_clampdown, content);
+    assert.ok(offer.encounter.scaleOverride < baseScale,
+      `and fights below the strength you actually beat there (${offer.encounter.scaleOverride} < ${baseScale})`);
+    const again = sparEncounter(lab, content, 'precinct', t0);
+    assert.equal(again.encounter.blurb, offer.encounter.blurb, 'a reload offers the same spar (seeded)');
+    startSpar(lab, t0);
+    assert.ok(!sparEncounter(lab, content, 'precinct', t0 + 1).ok, 'the ring has a cooldown');
+    assert.ok(sparEncounter(lab, content, 'precinct', t0 + tune.sparCooldownHours * HOUR + 1).ok, 'that expires');
+  }
+
+  // 6. Nobody impounds a sparring partner, and the cannon does not fire on
+  //    a drill. Through resolveBattle — the path the game walks — not by
+  //    reading the guard's source.
+  {
+    const lab = { ...newGameState(), seed: 42 };
+    ensureRanchSeeded(lab, content, t0);
+    lab.campaign.heldNodes = ['barn_perimeter'];
+    const a = ARCHETYPES.boots;
+    const mk = (id) => {
+      const c = makeSimChimera(a.frame, partsOnFrame(content, a.frame, a.partIds), 'standard', content);
+      c.id = id; c.name = id; c.bond = 100; c.settleUntil = 0; c.xp = 0; return c;
+    };
+    lab.chimeras = [mk('s1'), mk('s2')];
+    const offer = sparEncounter(lab, content, 'barn_perimeter', t0);
+    const battle = createBattle([lab.chimeras[0]], offer.encounter, content, 7, t0, { kind: 'sparring' });
+    battle.outcome = 'loss';
+    battle.over = true;
+    battle.player.team[0].hp = 0;
+    battle.captured = ['patrol_officer'];
+    const before = lab.campaign.containment.length;
+    resolveBattle(lab, battle, content, t0);
+    assert.equal(lab.chimeras.length, 2, 'a sparring loss costs no creature');
+    assert.equal(lab.campaign.captives.length, 0, 'no rescue window opens');
+    assert.equal(lab.campaign.containment.length, before, 'and the cannon bags nothing from a drill');
+    assert.ok(lab.chimeras[0].xp > 0, 'while the xp still lands');
+  }
+
+  // 7. Names: the pool prefers a name nobody is wearing, and a full pool
+  //    repeats as a lineage, never a duplicate.
+  {
+    const rng = rngStream(99, 'names', 0);
+    const pool = ['A', 'B', 'C'];
+    const seen = [];
+    for (let i = 0; i < 3; i++) seen.push(pickFresh(rng, pool, seen));
+    assert.deepEqual([...seen].sort(), ['A', 'B', 'C'], 'three picks from three names never collide');
+    const fourth = pickFresh(rng, pool, seen);
+    assert.ok(/^(A|B|C) II$/.test(fourth), `the fourth arrives as a lineage (${fourth})`);
+    // And the real pools got the room the report asked for.
+    const theater = readFileSync(join(root, 'splice/theater.js'), 'utf8');
+    const chimeraNames = [...theater.slice(theater.indexOf('const CHIMERA_NAMES')).matchAll(/'((?:[^'\\]|\\.)+)'/g)].map((m) => m[1]);
+    assert.ok(new Set(chimeraNames.slice(0, 120)).size >= 100, `the chimera pool holds 100+ distinct names (${new Set(chimeraNames.slice(0, 120)).size})`);
+  }
+
+  // 8. Rename: free, instant, sanitised at write — names are interpolated
+  //    into markup all over the game, so markup never gets to BE a name.
+  {
+    const lab = { ...newGameState(), seed: 43 };
+    lab.chimeras = [{ id: 'c0', name: 'Chompers', tokens: {} }];
+    assert.ok(renameCreature(lab.chimeras, 'c0', '  Sir Chomps-a-Lot  ').ok, 'a rename lands');
+    assert.equal(lab.chimeras[0].name, 'Sir Chomps-a-Lot', 'trimmed');
+    renameCreature(lab.chimeras, 'c0', '<img src=x onerror=alert(1)>Rex');
+    assert.equal(lab.chimeras[0].name, 'img src=x onerror=alert(1)Rex'.slice(0, 24), 'markup is stripped, not stored');
+    assert.ok(!lab.chimeras[0].name.includes('<'), 'no angle brackets survive');
+    assert.ok(!renameCreature(lab.chimeras, 'c0', '   ').ok, 'whitespace is not a name');
+    assert.equal(lab.chimeras[0].name.includes('<'), false, 'and the old name survives a refusal');
+  }
+
+  // 9. The migration: every creature arrives at level 0 — which is exactly
+  //    yesterday's power — including chimeras sitting in a rival's holding
+  //    cell, and nothing else is touched.
+  {
+    const old = { ...newGameState(), saveVersion: 30, funds: 777 };
+    delete old.sparCount; delete old.lastSparAt;
+    old.chimeras = [{ id: 'c1', name: 'Vet', tokens: {} }];
+    old.campaign = { ...old.campaign, captives: [{ id: 'cap1', chimera: { id: 'c2', name: 'Hostage', tokens: {} } }] };
+    const done = migrate(old);
+    assert.equal(done.saveVersion, SAVE_VERSION, 'comes forward');
+    assert.equal(done.chimeras[0].xp, 0, 'roster chimeras get xp');
+    assert.equal(done.campaign.captives[0].chimera.xp, 0, 'so do captives — a rescue must not return a crash');
+    assert.equal(done.funds, 777, 'nothing else touched');
+    assert.equal(done.sparCount, 0, 'and the ring starts unwound');
+  }
+
+  // 10. The harness benches are undisturbed: a sim chimera with no xp is
+  //     level 0, so every [OP] gate and ladder measurement above ran at the
+  //     exact power it ran at last release.
+  {
+    const a = ARCHETYPES.boots;
+    const c = makeSimChimera(a.frame, partsOnFrame(content, a.frame, a.partIds), 'standard', content);
+    c.id = 'z'; c.name = 'z'; c.bond = 100; c.settleUntil = 0;
+    assert.equal(combatantFromChimera(c, content, 0).level, 0, 'no xp means level 0 means yesterday\'s numbers');
   }
 }
 

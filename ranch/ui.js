@@ -9,6 +9,8 @@ import {
   catalogFor, TUNING,
 } from './ranch.js';
 import { gradeFor, gradeOutlook, outlookLine } from '../splice/extract.js';
+import { renameCreature } from '../splice/theater.js';
+import { openPrompt } from '../ui/picker.js';
 import {
   canBreed, breedPair, hatchEgg, BREEDING, isVariant, baseSpecies, incubatorSlots,
   pairingForecast, expressedTraits,
@@ -399,7 +401,7 @@ export function renderRanchScreen(root, ctx) {
       <section class="card animal-card">
         <div class="portrait">${portrait}</div>
         <div class="animal-info">
-          <h4>${animal.name} <span class="sex">${animal.sex === 'F' ? '♀' : '♂'}</span>${
+          <h4>${animal.name} <button type="button" class="rename-btn" data-rename="${animal.id}" aria-label="Rename ${animal.name}">✏️</button> <span class="sex">${animal.sex === 'F' ? '♀' : '♂'}</span>${
             isVariant(animal.species, content) ? ' <span class="variant-badge">✦ variant</span>' : ''
           }${(animal.traits ?? [])
             .map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`)
@@ -428,6 +430,20 @@ export function renderRanchScreen(root, ctx) {
 
   root.innerHTML = onboarding + note + rightNow + head + breeding + incubator + (cards || '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>');
   const again = () => renderRanchScreen(root, ctx);
+  root.querySelectorAll('button[data-rename]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      openPrompt({
+        title: 'Rename the asset',
+        label: 'The herd registry will show:',
+        value: ctx.state.ranch.stock.find((a) => a.id === btn.dataset.rename)?.name ?? '',
+        onSubmit: (value) => {
+          const res = renameCreature(ctx.state.ranch.stock, btn.dataset.rename, value);
+          if (res.ok) ctx.save();
+          again();
+        },
+      });
+    });
+  });
   bindFieldNote(root, ctx, again);
   bindFolds(root, ctx, again);
   root.querySelectorAll('button[data-goto]').forEach((btn) => {

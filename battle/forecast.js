@@ -214,6 +214,8 @@ export function diagnose(team, encounter, content, seed = 1, now = 0, { canBring
     // ageing. Either way the advice pointed some players at the one thing
     // that would not work. The Ranch card decomposes it per animal now, so
     // this line sends them there instead of guessing on their behalf.
-    text: 'Hand them every matchup above and this is still a loss — these creatures are not strong enough yet. Better parts come from better donors; each animal on the Ranch says what is holding its grade down.',
+    // R41 adds the second lever. Before it, the only way up from here was
+    // to replace the team; now the team can also outgrow the wall.
+    text: 'Hand them every matchup above and this is still a loss — these creatures are not strong enough yet. Spar a garrison you hold and level them up, or raise better donors for better parts; the Ranch says what is holding each grade down.',
   };
 }

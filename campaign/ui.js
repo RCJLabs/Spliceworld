@@ -14,6 +14,7 @@ import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js'
 // the player to build three. A second `3` typed in here is how those four
 // numbers drift apart.
 import { guideForScreen, STABLE as TEAM_CAP } from '../ranch/onboarding.js';
+import { sparEncounter, sparReady, startSpar } from './sparring.js';
 import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import { renderCreatureSVG } from '../render/renderer.js';
@@ -43,8 +44,12 @@ let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, l
 // Static encounters live in enemies.json; a rival duel is generated from
 // the world seed and their record, so it is identical every time it is
 // resolved — briefing preview and battle always face the same team.
-function encounterFor(state, target, content) {
+function encounterFor(state, target, content, now) {
   if (target.kind === 'rival') return rivalEncounter(state, content.rivals[target.rivalId], content);
+  // R41: a spar is a derived rematch at reduced scale, and the director
+  // does NOT get a look at it — a drill that adapts to you is a second
+  // front, and the ring exists to not be one.
+  if (target.kind === 'sparring') return sparEncounter(state, content, target.nodeId, now).encounter ?? null;
   // A defence is the node's own encounter, escalated — built fresh from
   // the live contest so the briefing and the battle always agree.
   const base =
@@ -195,6 +200,8 @@ function renderMap(root, ctx) {
   // or still locked — starts shut, because five strips at four nodes each
   // is a very long column to scroll past to reach the news. A player's own
   // choice always overrides the guess.
+  // R41: one gate for every Spar button — the ring has one clock.
+  const sparGate = sparReady(state, t, content);
   const frontier = map.find((r) => r.open && r.held < r.region.nodes.length)?.region.id ?? null;
   const regions = map.map(({ region, open, blockers, nodes: nodeRows, held }) => {
     const contestedHere = region.nodes.filter((n) => isContested(state, n.id)).length;
@@ -204,7 +211,10 @@ function renderMap(root, ctx) {
         status === 'available'
           ? `<button type="button" data-node="${node.id}">Assault</button>`
           : status === 'held'
-            ? `<span class="held-tag">HELD +$${node.incomePerDay}/d</span>`
+            ? `<span class="held-tag">HELD +$${node.incomePerDay}/d</span>
+               <button type="button" class="spar-btn" data-spar="${node.id}" ${sparGate.ready ? '' : 'disabled'}>🥊 ${
+                 sparGate.ready ? 'Spar' : fmtDuration(sparGate.msRemaining)
+               }</button>`
             : status === 'contested'
               ? `<span class="contested-tag">CONTESTED −$${node.incomePerDay}/d</span>`
               : `<span class="locked-tag">${(node.threatGen ?? 1) > gen ? `needs Threat Gen ${node.threatGen}` : 'locked'}</span>`;
@@ -404,6 +414,14 @@ function renderMap(root, ctx) {
   });
   bindDossier(root, ctx, () => renderMap(root, ctx));
   bindJobs(root, ctx, () => renderMap(root, ctx));
+  root.querySelectorAll('button[data-spar]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const node = nodeById(content, btn.dataset.spar);
+      if (!node) return;
+      draftTarget = { kind: 'sparring', nodeId: node.id, encounterId: node.encounter, label: `Sparring — ${node.name}` };
+      renderWarRoomScreen(root, ctx);
+    })
+  );
   root.querySelectorAll('button[data-node]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const node = nodeById(content, btn.dataset.node);
@@ -806,7 +824,7 @@ function programmeHtml(state, entry, unit, content, t) {
 function renderBriefing(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
-  const encounter = encounterFor(state, draftTarget, content);
+  const encounter = encounterFor(state, draftTarget, content, t);
   // The window can close while the briefing is open (a tick fires on
   // focus). There is nothing left to defend, so say so rather than
   // rendering a battle against undefined.
@@ -886,7 +904,7 @@ function renderBriefing(root, ctx) {
       : '';
     return toggleRow({
       id: ch.id,
-      label: `${cls ? cls.icon + ' ' : '◇ '}${ch.name}`,
+      label: `${cls ? cls.icon + ' ' : '◇ '}${ch.name}${cb.level > 0 ? ` <span class="level-chip">Lv ${cb.level}</span>` : ''}`,
       sub: `${note}${edge}${chart}`,
       checked: draftTeam.includes(ch.id),
       disabled: injured,
@@ -1007,6 +1025,7 @@ function renderBriefing(root, ctx) {
       .map((id) => state.chimeras.find((c) => c.id === id))
       .filter((c) => c && !isInjured(c, ctx.now()));
     if (!team.length) return;
+    if (draftTarget.kind === 'sparring') startSpar(state, ctx.now());
     const battleNo = state.warRecord.wins + state.warRecord.losses + 1;
     const seed = (state.seed ^ Math.imul(battleNo, 0x9e3779b9)) >>> 0;
     state.battle = createBattle(team, encounter, content, seed, ctx.now(), {
@@ -1052,6 +1071,13 @@ function aftermathText(detail) {
   if (detail.freed) bits.push(`${detail.freed} is home safe (and slightly dramatic about it).`);
   if (detail.capturedChimera) bits.push(`${detail.capturedChimera} was CAPTURED — a rescue window is open in the War Room.`);
   if (detail.salvageUnits.length) bits.push(`Impounded: ${detail.salvageUnits.length} unit(s) for Containment.`);
+  // R41: what the fight paid in experience — the number that stays on the
+  // creature. Level-ups get their own sentence; a rank earned is news.
+  if (detail.xp?.length) {
+    bits.push(`+${detail.xp[0].gained} xp each.`);
+    const ranked = detail.xp.filter((r) => r.leveled);
+    if (ranked.length) bits.push(ranked.map((r) => `${r.name} reaches Level ${r.level}!`).join(' '));
+  }
   const treatable = detail.injuries.filter((i) => i.chimera !== detail.capturedChimera);
   if (treatable.length) bits.push(treatable.map((i) => `${i.chimera} → Infirmary (${i.injury.name}).`).join(' '));
   return bits.join(' ');

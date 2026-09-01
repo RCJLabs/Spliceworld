@@ -2062,3 +2062,53 @@ button.dex-cell:focus-visible {
   background: linear-gradient(180deg, var(--accent-dim), transparent 70%);
 }
 .dominion-card h3 { color: var(--accent); }
+
+/* --- R41: veterancy, the Sparring Ring, and names ----------------------
+   Levels are what a creature has been through; the chip and bar sit beside
+   the chassis line so building and seasoning read as the two halves of the
+   same creature. The rename pencil is quiet — the name is the feature. */
+.level-chip {
+  font-size: 0.72em;
+  font-weight: 700;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.5rem;
+  color: var(--bg);
+  background: var(--accent);
+  vertical-align: middle;
+}
+.level-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.xp-bar {
+  display: inline-block;
+  width: 6.5rem;
+  height: 0.4rem;
+  border-radius: 0.2rem;
+  background: var(--panel-2, rgba(255,255,255,0.08));
+  overflow: hidden;
+  vertical-align: middle;
+}
+.xp-fill { display: block; height: 100%; background: var(--accent); }
+.xp-cap { font-size: 0.72em; font-weight: 700; color: var(--accent); letter-spacing: 0.08em; }
+.rename-btn {
+  background: none;
+  border: none;
+  padding: 0 0.15rem;
+  font-size: 0.8em;
+  cursor: pointer;
+  opacity: 0.55;
+}
+.rename-btn:hover, .rename-btn:focus { opacity: 1; }
+.spar-btn { margin-left: 0.35rem; }
+.prompt-label { display: block; padding: 0.4rem 0.2rem 0.8rem; }
+.prompt-input {
+  display: block;
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.55rem 0.6rem;
+  font: inherit;
+  font-size: 1.05rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 0.5rem;
+  box-sizing: border-box;
+}
