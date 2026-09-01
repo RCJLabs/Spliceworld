@@ -9585,7 +9585,9 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // Anchored on the group markup, not the words: "Discovered" also
     // appears in the field note's own copy, and a gate that matches a bare
     // substring is a gate that passes for the wrong reason.
-    const groupAt = (html, label) => html.indexOf(`<p class="dex-group">${label} `);
+    // R46 renamed the class: it stopped being Dex-only the moment the
+    // Ranch and the Pens used the same heading.
+    const groupAt = (html, label) => html.indexOf(`<p class="list-group">${label} `);
     const readyAt = groupAt(page, 'Both halves in hand');
     const foundAt = groupAt(page, 'Discovered');
     const restAt = groupAt(page, 'Still rumoured');
