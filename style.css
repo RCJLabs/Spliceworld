@@ -2053,3 +2053,12 @@ button.dex-cell:focus-visible {
   border-left: 2px solid var(--accent-2);
   color: var(--text);
 }
+
+/* --- R40: the county is yours -------------------------------------------
+   A standing state, not an ending: R9's counter-offensives keep arriving,
+   so this reads as a banner over a live map rather than a end card. */
+.dominion-card {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, var(--accent-dim), transparent 70%);
+}
+.dominion-card h3 { color: var(--accent); }

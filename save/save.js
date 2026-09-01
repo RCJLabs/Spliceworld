@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 29;
+export const SAVE_VERSION = 30;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -376,6 +376,19 @@ const migrations = {
     save.resequenceCount ??= 0;
     return save;
   },
+
+  // v30 (R40): the campaign had an end and never said so. `dominionAt` is
+  // the timestamp the county was first wholly held, and the only reason it
+  // is stored is to fire the moment ONCE rather than on every render.
+  //
+  // Deliberately null on migrate rather than backfilled, including for a
+  // save that already holds all 21 nodes: that player earned the moment and
+  // never got it, so they get it on their next load. Nothing is taken from
+  // anyone — the field is additive and every other value is untouched.
+  30: (save) => {
+    save.dominionAt ??= null;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -401,6 +414,8 @@ export function newGameState() {
     discoveredCombos: [],
     battle: null,
     warRecord: { wins: 0, losses: 0 },
+    // R40: when the whole county was first held. Null until it is.
+    dominionAt: null,
     campaign: {
       heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,

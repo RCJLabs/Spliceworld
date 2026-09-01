@@ -3926,7 +3926,10 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   const { rivalEncounter } = await import('../campaign/rivals.js');
   const { startRehab, tickRehab, rehabPlan } = await import('../campaign/rehab.js');
 
-  const PLACEHOLDERS = new Set(['rival', 'creature', 'node', 'lab', 'name']);
+  // R40 adds `nodes`: the engineer's dominion line names how many nodes
+  // the county has, and typing the number into the prose would be a second
+  // opinion that a sixth region silently makes wrong.
+  const PLACEHOLDERS = new Set(['rival', 'creature', 'node', 'lab', 'name', 'nodes']);
   // A distinctive literal fragment of a template, for asserting that THIS
   // line reached the wire. Taking the text before the first placeholder is
   // a trap — half of these lines OPEN with {creature}, and an empty prefix
@@ -8557,6 +8560,131 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(/const DATA_NOTES = \{/.test(src), 'the content map exists');
     const files = readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json'));
     assert.ok(files.length >= 19, `and there is content to map (${files.length} files)`);
+  }
+}
+
+// --- R40: the campaign had an end and never said so.
+//
+// Twenty-one nodes, twenty-four encounters, five regions and three rival
+// labs. Taking The Boardroom — the last node of the last region, past
+// Director Prime — ran the same three lines as taking the Old Barn
+// Perimeter: "seized", the player's conquest bark, and on to the next
+// thing. Nothing anywhere read "every node held": `regionComplete` existed
+// per strip and there was no campaign-level equivalent, and the monologue
+// system's slots stopped at a per-node `conquest`.
+//
+// It is a milestone, NOT a win state. ROADMAP §8's fifth risk is endless
+// mode going stale, and its mitigation — the director, variants and R9's
+// counter-offensives — keeps running afterwards. Everything below is
+// written to that: the moment fires once, and it says out loud that they
+// keep coming.
+{
+  const { dominion, claimDominion } = await import('../campaign/campaign.js');
+  const everyNode = Object.values(content.regions).flatMap((r) => r.nodes.map((n) => n.id));
+
+  const lab = () => {
+    const st = { ...newGameState(), seed: 40 };
+    st.campaign.rivals = {};
+    return st;
+  };
+
+  // 1. THE CRITERION. The last node is not the first node.
+  {
+    const first = lab();
+    first.campaign.heldNodes = [];
+    assert.equal(claimDominion(first, content, t0), null, 'the first node is not dominion');
+
+    const last = lab();
+    last.campaign.heldNodes = everyNode.slice(0, -1);
+    assert.equal(claimDominion(last, content, t0), null, 'nor is the twentieth');
+    last.campaign.heldNodes = [...everyNode];
+    const won = claimDominion(last, content, t0);
+    assert.ok(won, 'the twenty-first is');
+    assert.equal(won.nodesTotal, everyNode.length, `and it counts the real map (${won.nodesTotal})`);
+    assert.equal(last.dominionAt, t0, 'and the save remembers when');
+  }
+
+  // 2. It fires exactly ONCE. A milestone that re-announces itself on every
+  //    render is a bug wearing a party hat.
+  {
+    const st = lab();
+    st.campaign.heldNodes = [...everyNode];
+    assert.ok(claimDominion(st, content, t0), 'the first call lands');
+    assert.equal(claimDominion(st, content, t0 + HOUR), null, 'the second does not');
+    assert.equal(st.dominionAt, t0, 'and the timestamp is the original');
+  }
+
+  // 3. Derived from the roster, never a number typed into the engine. Add a
+  //    sixth region and dominion simply moves further away.
+  {
+    const st = lab();
+    st.campaign.heldNodes = [...everyNode];
+    assert.ok(dominion(st, content).complete, 'complete against the real map');
+    const bigger = {
+      ...content,
+      regions: { ...content.regions, annex: { id: 'annex', name: 'The Annex', nodes: [{ id: 'annex_1', name: 'Annex', encounter: 'patrol_1' }] } },
+    };
+    assert.equal(dominion(st, bigger).complete, false,
+      'a new strip un-completes it without an engine edit');
+    assert.equal(dominion(st, bigger).nodesTotal, everyNode.length + 1, 'and the total follows the data');
+  }
+
+  // 4. Losing a node to a counter-offensive does not retract it. R9 puts a
+  //    lost node back on the map to retake; un-saying something the player
+  //    was already told would be worse than never saying it.
+  {
+    const st = lab();
+    st.campaign.heldNodes = [...everyNode];
+    claimDominion(st, content, t0);
+    st.campaign.heldNodes = everyNode.slice(0, -1);
+    assert.equal(st.dominionAt, t0, 'the claim survives losing a node');
+    assert.equal(dominion(st, content).complete, false, 'while the live reading is honest about it');
+    assert.equal(dominion(st, content).nodesHeld, everyNode.length - 1, 'and says how many are gone');
+  }
+
+  // 5. Every voice has the line, and it reaches the wire through the same
+  //    machinery every other bark uses — no bespoke path for the finale.
+  {
+    const { playerLine } = await import('../campaign/monologue.js');
+    for (const ph of Object.values(content.philosophies)) {
+      assert.ok(ph.monologue.dominion, `${ph.id} has a dominion line`);
+    }
+    const st = lab();
+    const line = playerLine(st, content, 'dominion', { nodes: everyNode.length });
+    assert.ok(line && line.length > 30, `and it fills (${line})`);
+    assert.ok(!/\{\w+\}/.test(line), `with nothing left unsubstituted (${line})`);
+  }
+
+  // 6. The engineer names the map's size and does not type the number.
+  {
+    const eng = content.philosophies.engineer.monologue.dominion;
+    assert.ok(/\{nodes\}/.test(eng), 'the count is a placeholder');
+    assert.ok(!/\b21\b|twenty-one/i.test(eng), 'and not a literal that a sixth region makes wrong');
+  }
+
+  // 7. It is a milestone, not an ending: the same breath says the coalition
+  //    keeps coming, because R9 is what stops the map going quiet.
+  {
+    const src = readFileSync(join(root, 'campaign/campaign.js'), 'utf8');
+    assert.ok(/Counter-offensives continue/.test(src),
+      'the announcement says the fighting continues');
+    assert.ok(!/game over|the end|you win/i.test(src), 'and never calls it an ending');
+  }
+
+  // 8. The save carries it, and an old one migrates without losing anything.
+  {
+    assert.equal(SAVE_VERSION, 30, 'the schema change bumped the version');
+    assert.equal(newGameState().dominionAt, null, 'a fresh save has not won yet');
+    const old = { ...newGameState(), saveVersion: 29, funds: 1234 };
+    delete old.dominionAt;
+    const migrated = migrate(old);
+    assert.equal(migrated.saveVersion, SAVE_VERSION, 'an old save comes forward');
+    assert.equal(migrated.dominionAt, null, 'with the new field');
+    assert.equal(migrated.funds, 1234, 'and nothing of theirs touched');
+    // A player who already holds everything gets the moment on next load
+    // rather than being quietly skipped for having finished too early.
+    const done = migrate({ ...old, campaign: { ...old.campaign, heldNodes: [...everyNode] } });
+    assert.ok(claimDominion(done, content, t0), 'a save that already won is not cheated of it');
   }
 }
 
