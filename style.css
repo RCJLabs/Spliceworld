@@ -1906,3 +1906,63 @@ footer {
 .move-sheet .econ-row { margin-top: 10px; }
 ul.move-effects { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
 ul.move-effects li { font-size: 0.92rem; line-height: 1.45; }
+
+/* --- R33: the chimera dossier -------------------------------------------
+   Everything physiology knows, folded into the pens card. Shut by default:
+   the card already carries a portrait, temperament, obedience, four move
+   slots and a parts manifest, and at 380px a ninth block open-by-default
+   pushes the buttons off the first screen. The summary line carries class,
+   flight and speed — the three facts worth a glance without opening it. */
+.dossier {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 6px 0;
+  padding: 1px 8px;
+}
+.dossier summary {
+  padding: 6px 2px;
+  font-size: 0.76rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+.dossier summary::-webkit-details-marker { color: var(--muted); }
+.dossier-sum { color: var(--text); }
+.dossier-rows {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+}
+.dossier-rows li {
+  display: grid;
+  /* Label and value on one line, the explanation under both — the note is
+     the part that does the teaching and it needs the full column width. */
+  grid-template-columns: minmax(0, auto) 1fr;
+  gap: 2px 8px;
+  background: var(--panel);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.dossier-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  align-self: baseline;
+}
+.dossier-value {
+  font-size: 0.82rem;
+  color: var(--accent);
+  justify-self: end;
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dossier-note {
+  grid-column: 1 / -1;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
