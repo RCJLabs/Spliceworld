@@ -10266,7 +10266,16 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 
     // It is a LINE, not a card — R47 established that a card has to earn
     // its height, and a status readout is not a card's worth of screen.
-    assert.ok(!/<section[^>]*>\s*<p class="spar-line"/.test(page), 'not wrapped in a card of its own');
+    // Anchored on what precedes the line rather than on a class string:
+    // the first cut of this assertion required `class="spar-line"` with a
+    // closing quote, so in the ready state — where the class is
+    // `spar-line is-ready` — it could not fail at all. A gate that cannot
+    // fail for the common case is not a gate.
+    const lineAt = page.indexOf('<p class="spar-line');
+    assert.ok(lineAt > 0, 'the line is on the page');
+    const before = page.slice(Math.max(0, lineAt - 80), lineAt);
+    assert.ok(!/<section[^>]*>\s*$/.test(before),
+      `the ring is a line, not a card of its own (…${before.slice(-46)})`);
 
     // A player with no garrison to spar has no ring, and is not told about
     // a feature they cannot use.

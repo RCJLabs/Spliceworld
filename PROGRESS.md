@@ -74,32 +74,52 @@ the War Room.
 
 ### The break battery
 
-Fifteen breaks, each run against the full suite in an isolated worktree.
-**Verdicts pending at time of writing** — updated with the result rather
-than assumed.
+Fifteen breaks, each run against the full suite in an isolated worktree,
+plus one re-run. **All caught.**
 
 | break | verdict |
 |---|---|
-| the agenda has no spar entry | pending |
-| a spar is filed as spending | pending |
-| the spar entry routes nowhere real | pending |
-| the spar hint cannot name the count | pending |
-| a function hint is never resolved | pending |
-| a spar is offered with no charges | pending |
-| a spar is offered with no garrison | pending |
-| a spar is offered with nothing to send | pending |
-| the agenda forks its own spar test | pending |
-| the Pens forks its own spar test | pending |
-| the Pens loses the ring | pending |
-| the Pens invents its own charge count | pending |
-| the Pens advertises a ring you cannot use | pending |
-| the Pens ring button goes nowhere | pending |
-| the ring becomes a card again | pending |
+| the agenda has no spar entry | CAUGHT |
+| a spar is filed as spending | CAUGHT |
+| the spar entry routes nowhere real | CAUGHT (R39's screen-map gate, first) |
+| the spar hint cannot name the count | CAUGHT |
+| a function hint is never resolved | CAUGHT |
+| a spar is offered with no charges | CAUGHT |
+| a spar is offered with no garrison | CAUGHT |
+| a spar is offered with nothing to send | CAUGHT |
+| the agenda forks its own spar test | CAUGHT |
+| the Pens forks its own spar test | CAUGHT |
+| the Pens loses the ring | CAUGHT |
+| the Pens invents its own charge count | CAUGHT |
+| the Pens advertises a ring you cannot use | CAUGHT |
+| the Pens ring button goes nowhere | CAUGHT |
+| the ring becomes a card again | **MISSED** → gate rewritten, CAUGHT |
 
-Two of those — *the agenda forks its own spar test* and *the Pens forks
-its own* — exist because that is precisely how the two surfaces disagreed
-in the first cut. A defect the phase actually shipped earns a break rather
-than a promise.
+**The miss was a HOLLOW GATE this time**, which is worth separating from
+R44's and R46's misses — those were bad breaks, where the gate could
+always have failed and the break simply changed nothing. This one could
+not fail at all. The assertion was:
+
+```js
+!/<section[^>]*>\s*<p class="spar-line"/.test(page)
+```
+
+…which demands a closing quote immediately after `spar-line`. In the ready
+state the class is `spar-line is-ready`, so the pattern never matched and
+the assertion passed no matter what the markup did. Same family as R34's
+and R45's: **a pattern narrower than the thing under test**. It anchors on
+what PRECEDES the line now rather than on a class string, and re-run
+against the same break it fails immediately on
+`the ring is a line, not a card of its own (…<section class="card">)`.
+
+Two of the fifteen — *the agenda forks its own spar test* and *the Pens
+forks its own* — exist because that is exactly how the two surfaces
+disagreed in the first cut. A defect the phase actually shipped earns a
+break rather than a promise.
+
+Break 3 was caught by R39's screen-map gate before the R48 one it was
+written for; the R48 assertion covers the same ground and simply runs
+later in the file.
 
 ### Verified
 
