@@ -1,5 +1,5 @@
 {
-  "_doc": "Base fauna (34 species; 40 animals with variants, ROADMAP §4.1 and audit §9.2 A3). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity — see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP §3.2): a species with `variantOf` is the same stock, mutated — it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them — variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads — a variant whose identity only shows up on the defending side is a dead mechanic. R32: `bulk` is what the ANIMAL weighs, and it is the multiplier tools/gen-parts.js applies to every part's mass and lift. Before it, mass was a constant — all 41 species' anatomy totalled exactly 58, so a rhino's head massed what a moth's head massed. That was harmless while mass only bought turn order; A9 made mass gate flight (lift >= mass) and cost a point of speed per 50, which meant the game's widest build decision was priced in a currency carrying no information about the creature. Lift follows bulk^(2/3) — wing AREA, not wing mass, which is why a moth gets airborne on nothing and a swan needs a runway. Metabolic draw is deliberately NOT scaled: it was, briefly, and it cost the harness's `gills` archetype four stamina a turn and dropped kestrel/cloudbase from 54% to 21%. Draw is the stamina economy and the upkeep bill; mass and lift are the physics. A variant inherits its base's bulk unless the mutation IS a weight change: an Iron Tortoise is heavier than the tortoise, a Glider Skunk lighter than the skunk, because a patagium is only worth having on something light. `frame` was reassessed at the same time: the cobras have no limbs and rode a quadruped chassis, so they now ride the A-class Kite, and six species whose frame flattered their size (armadillo, chameleon, pangolin, porcupine, goose, heron) dropped to the Scamper.",
+  "_doc": "Base fauna (34 species; 40 animals with variants, ROADMAP §4.1 and audit §9.2 A3). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity — see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP §3.2): a species with `variantOf` is the same stock, mutated — it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them — variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads — a variant whose identity only shows up on the defending side is a dead mechanic. R32: `bulk` is what the ANIMAL weighs, and it is the multiplier tools/gen-parts.js applies to every part's mass and lift. Before it, mass was a constant — all 41 species' anatomy totalled exactly 58, so a rhino's head massed what a moth's head massed. That was harmless while mass only bought turn order; A9 made mass gate flight (lift >= mass) and cost a point of speed per 50, which meant the game's widest build decision was priced in a currency carrying no information about the creature. Lift follows bulk^(2/3) — wing AREA, not wing mass, which is why a moth gets airborne on nothing and a swan needs a runway. Metabolic draw is deliberately NOT scaled: it was, briefly, and it cost the harness's `gills` archetype four stamina a turn and dropped kestrel/cloudbase from 54% to 21%. Draw is the stamina economy and the upkeep bill; mass and lift are the physics. A variant inherits its base's bulk unless the mutation IS a weight change: an Iron Tortoise is heavier than the tortoise, a Glider Skunk lighter than the skunk, because a patagium is only worth having on something light. `frame` was reassessed at the same time: the cobras have no limbs and rode a quadruped chassis, so they now ride the A-class Kite, and six species whose frame flattered their size (armadillo, chameleon, pangolin, porcupine, goose, heron) dropped to the Scamper. R34: `setBonus.effect` is what makes the purebred bonus real. Every species declared a name and a sentence, and NOTHING read either — physiology computed `purebredSpecies`, handed it to the combatant as `physiology.purebred`, and the battle engine never looked. Measured on matched builds first (same frame, same grade, the same six sockets, bond 100 on both), a purebred build TRAILED a mixed one by 0.1 to 1.8pp across six frame x grade cells: the set was a cost with no payment, because purebred's one wired benefit — 20 less instability — buys nothing once bond cancels the disobedience term, which it does in full at bond 100. So the bonus is not a buff that threatens mixing; it is the missing payment. Three dials, all of them things the engine already reads every turn, so a 42nd species is a data edit and never an engine one: `stats` multiplies the combatant's base numbers, `perks` adds to the temperament perk block, and `keywords` multiplies the NUMERIC value of that keyword wherever it appears on this creature's moves (a boolean keyword has no dial and is left alone). Every `desc` states exactly what its effect does, because the previous ones did not: 14 of the 41 promised a percentage on a keyword that is a boolean — '+20% trap duration' on a trap that has no duration — and those were rewritten rather than faked. Measured after: purebred goes from -0.9pp to +1.3pp, ahead in all six cells, which is a reason to chase a set and not a reason to stop mixing.",
   "species": [
     {
       "id": "bear",
@@ -31,7 +31,12 @@
       "incubationMinutes": 45,
       "setBonus": {
         "name": "Ursine Bulk",
-        "desc": "+20% HP with 4+ bear parts"
+        "desc": "+20% HP",
+        "effect": {
+          "stats": {
+            "hp": 1.2
+          }
+        }
       }
     },
     {
@@ -64,7 +69,12 @@
       "incubationMinutes": 41,
       "setBonus": {
         "name": "Ambush Instinct",
-        "desc": "+15% crit with 4+ tiger parts"
+        "desc": "Bleed bites twice as deep",
+        "effect": {
+          "keywords": {
+            "bleed": 2
+          }
+        }
       }
     },
     {
@@ -99,7 +109,12 @@
       "incubationMinutes": 34,
       "setBonus": {
         "name": "Pack Tactics",
-        "desc": "+10% power per ally with 4+ wolf parts"
+        "desc": "+10% damage on every attack",
+        "effect": {
+          "perks": {
+            "power": 0.1
+          }
+        }
       }
     },
     {
@@ -134,7 +149,12 @@
       "incubationMinutes": 49,
       "setBonus": {
         "name": "Death Roll",
-        "desc": "+20% trap duration with 4+ croc parts"
+        "desc": "Slow cuts 60% more Speed",
+        "effect": {
+          "keywords": {
+            "slow": 1.6
+          }
+        }
       }
     },
     {
@@ -167,7 +187,12 @@
       "incubationMinutes": 45,
       "setBonus": {
         "name": "Iron Grip",
-        "desc": "+20% stun chance with 4+ gorilla parts"
+        "desc": "+50% stun chance",
+        "effect": {
+          "keywords": {
+            "stun": 1.5
+          }
+        }
       }
     },
     {
@@ -202,7 +227,12 @@
       "incubationMinutes": 52,
       "setBonus": {
         "name": "Unstoppable",
-        "desc": "charge moves cannot be interrupted with 4+ rhino parts"
+        "desc": "+15% Power",
+        "effect": {
+          "stats": {
+            "power": 1.15
+          }
+        }
       }
     },
     {
@@ -237,7 +267,12 @@
       "incubationMinutes": 38,
       "setBonus": {
         "name": "Full Roll",
-        "desc": "+25% armor with 4+ pangolin parts"
+        "desc": "+25% Armor",
+        "effect": {
+          "stats": {
+            "armor": 1.25
+          }
+        }
       }
     },
     {
@@ -273,7 +308,12 @@
       "incubationMinutes": 56,
       "setBonus": {
         "name": "Fortress",
-        "desc": "reflect 15% damage with 4+ tortoise parts"
+        "desc": "+30% Armor",
+        "effect": {
+          "stats": {
+            "armor": 1.3
+          }
+        }
       }
     },
     {
@@ -308,7 +348,12 @@
       "incubationMinutes": 26,
       "setBonus": {
         "name": "Leverage",
-        "desc": "ignore 25% armor with 4+ beetle parts"
+        "desc": "+15% Power",
+        "effect": {
+          "stats": {
+            "power": 1.15
+          }
+        }
       }
     },
     {
@@ -341,7 +386,12 @@
       "incubationMinutes": 26,
       "setBonus": {
         "name": "Battering Line",
-        "desc": "+25% knockback with 4+ ram parts"
+        "desc": "+15% Power",
+        "effect": {
+          "stats": {
+            "power": 1.15
+          }
+        }
       }
     },
     {
@@ -376,7 +426,12 @@
       "incubationMinutes": 34,
       "setBonus": {
         "name": "Featherlight Frame",
-        "desc": "+15% Speed with 4+ eagle parts"
+        "desc": "+15% Speed",
+        "effect": {
+          "stats": {
+            "speed": 1.15
+          }
+        }
       }
     },
     {
@@ -412,7 +467,12 @@
       "incubationMinutes": 26,
       "setBonus": {
         "name": "Echo Field",
-        "desc": "+20% evasion with 4+ bat parts"
+        "desc": "Multi-Hit lands half again as many blows",
+        "effect": {
+          "keywords": {
+            "multiHit": 1.5
+          }
+        }
       }
     },
     {
@@ -447,7 +507,12 @@
       "incubationMinutes": 22,
       "setBonus": {
         "name": "Blur",
-        "desc": "first strike guaranteed with 4+ dragonfly parts"
+        "desc": "+20% Speed",
+        "effect": {
+          "stats": {
+            "speed": 1.2
+          }
+        }
       }
     },
     {
@@ -482,7 +547,12 @@
       "incubationMinutes": 49,
       "setBonus": {
         "name": "Blood Scent",
-        "desc": "+25% damage to wounded with 4+ shark parts"
+        "desc": "+20% crit chance once cornered",
+        "effect": {
+          "perks": {
+            "critChance": 0.2
+          }
+        }
       }
     },
     {
@@ -518,7 +588,12 @@
       "incubationMinutes": 34,
       "setBonus": {
         "name": "Eight Problems",
-        "desc": "+1 trap target with 4+ octopus parts"
+        "desc": "Stamina Drain takes 60% more",
+        "effect": {
+          "keywords": {
+            "staminaDrain": 1.6
+          }
+        }
       }
     },
     {
@@ -554,7 +629,12 @@
       "incubationMinutes": 38,
       "setBonus": {
         "name": "Overcharge",
-        "desc": "+30% Electric damage with 4+ eel parts"
+        "desc": "+15% Power",
+        "effect": {
+          "stats": {
+            "power": 1.15
+          }
+        }
       }
     },
     {
@@ -589,7 +669,12 @@
       "incubationMinutes": 34,
       "setBonus": {
         "name": "Deep Lure",
-        "desc": "taunt cannot be resisted with 4+ angler parts"
+        "desc": "Accuracy Down drops two stages, not one",
+        "effect": {
+          "keywords": {
+            "accDown": 2
+          }
+        }
       }
     },
     {
@@ -624,7 +709,12 @@
       "incubationMinutes": 22,
       "setBonus": {
         "name": "Springloaded",
-        "desc": "+20% evasion with 4+ frog parts"
+        "desc": "Evasion Up rises two stages, not one",
+        "effect": {
+          "keywords": {
+            "evasionUp": 2
+          }
+        }
       }
     },
     {
@@ -657,7 +747,12 @@
       "incubationMinutes": 22,
       "setBonus": {
         "name": "Cast-Iron Constitution",
-        "desc": "Halved upkeep with 4+ goat parts"
+        "desc": "+30% Stamina",
+        "effect": {
+          "stats": {
+            "stamina": 1.3
+          }
+        }
       }
     },
     {
@@ -692,7 +787,12 @@
       "incubationMinutes": 34,
       "setBonus": {
         "name": "Full Cloak",
-        "desc": "evasion stacks twice with 4+ chameleon parts"
+        "desc": "Evasion Up rises two stages, not one",
+        "effect": {
+          "keywords": {
+            "evasionUp": 2
+          }
+        }
       }
     },
     {
@@ -727,7 +827,12 @@
       "incubationMinutes": 26,
       "setBonus": {
         "name": "Lingering Cloud",
-        "desc": "debuffs last +1 turn with 4+ skunk parts"
+        "desc": "Accuracy Down drops two stages, not one",
+        "effect": {
+          "keywords": {
+            "accDown": 2
+          }
+        }
       }
     },
     {
@@ -760,7 +865,12 @@
       "incubationMinutes": 30,
       "setBonus": {
         "name": "Bramble",
-        "desc": "+50% thorns damage with 4+ porcupine parts"
+        "desc": "+50% Thorns",
+        "effect": {
+          "keywords": {
+            "thorns": 1.5
+          }
+        }
       }
     },
     {
@@ -793,7 +903,12 @@
       "incubationMinutes": 22,
       "setBonus": {
         "name": "Duelist's Edge",
-        "desc": "+20% priority damage with 4+ mantis parts"
+        "desc": "+15% Power",
+        "effect": {
+          "stats": {
+            "power": 1.15
+          }
+        }
       }
     },
     {
@@ -828,7 +943,12 @@
       "incubationMinutes": 30,
       "setBonus": {
         "name": "Cold-Blooded Focus",
-        "desc": "+1 Venom stack with 4+ cobra parts"
+        "desc": "Venom applies twice the stacks",
+        "effect": {
+          "keywords": {
+            "venom": 2
+          }
+        }
       }
     },
     {
@@ -864,7 +984,15 @@
       "incubationMinutes": 30,
       "setBonus": {
         "name": "Chitin Guard",
-        "desc": "+15% armor and venom with 4+ scorpion parts"
+        "desc": "+15% Armor and +50% Venom",
+        "effect": {
+          "stats": {
+            "armor": 1.15
+          },
+          "keywords": {
+            "venom": 1.5
+          }
+        }
       }
     },
     {
@@ -900,7 +1028,12 @@
       "incubationMinutes": 26,
       "setBonus": {
         "name": "Unprovoked",
-        "desc": "+12% Power with 4+ goose parts"
+        "desc": "+12% Power",
+        "effect": {
+          "stats": {
+            "power": 1.12
+          }
+        }
       }
     },
     {
@@ -936,7 +1069,12 @@
       "incubationMinutes": 24,
       "setBonus": {
         "name": "Wing Scales",
-        "desc": "+15% Evasion with 4+ moth parts"
+        "desc": "+15% evasion on the opening turn",
+        "effect": {
+          "perks": {
+            "evasion": 0.15
+          }
+        }
       }
     },
     {
@@ -971,7 +1109,12 @@
       "incubationMinutes": 33,
       "setBonus": {
         "name": "Standing Still",
-        "desc": "+12% Accuracy with 4+ heron parts"
+        "desc": "+12% Power",
+        "effect": {
+          "stats": {
+            "power": 1.12
+          }
+        }
       }
     },
     {
@@ -1007,7 +1150,13 @@
       "incubationMinutes": 32,
       "setBonus": {
         "name": "Fringed Feathers",
-        "desc": "+10% Accuracy and Evasion with 4+ owl parts"
+        "desc": "Accuracy Up and Evasion Up rise two stages",
+        "effect": {
+          "keywords": {
+            "accUp": 2,
+            "evasionUp": 2
+          }
+        }
       }
     },
     {
@@ -1042,7 +1191,12 @@
       "incubationMinutes": 30,
       "setBonus": {
         "name": "Terminal Velocity",
-        "desc": "+18% Speed with 4+ falcon parts"
+        "desc": "+18% Speed",
+        "effect": {
+          "stats": {
+            "speed": 1.18
+          }
+        }
       }
     },
     {
@@ -1078,7 +1232,13 @@
       "incubationMinutes": 22,
       "setBonus": {
         "name": "No Central Anything",
-        "desc": "+20% Venom duration with 4+ jelly parts"
+        "desc": "+50% Venom and Slow",
+        "effect": {
+          "keywords": {
+            "venom": 1.5,
+            "slow": 1.5
+          }
+        }
       }
     },
     {
@@ -1115,7 +1275,12 @@
       "incubationMinutes": 28,
       "setBonus": {
         "name": "Full Inflation",
-        "desc": "+18% Armor with 4+ puffer parts"
+        "desc": "+18% Armor",
+        "effect": {
+          "stats": {
+            "armor": 1.18
+          }
+        }
       }
     },
     {
@@ -1150,7 +1315,12 @@
       "incubationMinutes": 31,
       "setBonus": {
         "name": "Never Still",
-        "desc": "+15% Stamina regen with 4+ otter parts"
+        "desc": "Recovers extra stamina every turn",
+        "effect": {
+          "perks": {
+            "regen": 0.4
+          }
+        }
       }
     },
     {
@@ -1186,7 +1356,12 @@
       "incubationMinutes": 30,
       "setBonus": {
         "name": "Tucked",
-        "desc": "+16% Armor with 4+ armadillo parts"
+        "desc": "+16% Armor",
+        "effect": {
+          "stats": {
+            "armor": 1.16
+          }
+        }
       }
     },
     {
@@ -1215,7 +1390,12 @@
       ],
       "setBonus": {
         "name": "Full Chrome",
-        "desc": "+10% Armor with 4+ enemy-tech parts"
+        "desc": "+10% Armor",
+        "effect": {
+          "stats": {
+            "armor": 1.1
+          }
+        }
       },
       "synthetic": true,
       "incubationMinutes": 1
@@ -1252,7 +1432,12 @@
       "incubationMinutes": 39,
       "setBonus": {
         "name": "Avalanche",
-        "desc": "+35% knockback with 4+ alpine ram parts"
+        "desc": "+20% Power",
+        "effect": {
+          "stats": {
+            "power": 1.2
+          }
+        }
       },
       "flavor": "Bred on a mountain nobody authorised.",
       "statMult": {
@@ -1302,7 +1487,12 @@
       "incubationMinutes": 51,
       "setBonus": {
         "name": "Crush Depth",
-        "desc": "ignore 25% of armor with 4+ abyssal shark parts"
+        "desc": "+20% Power",
+        "effect": {
+          "stats": {
+            "power": 1.2
+          }
+        }
       },
       "flavor": "Eleven kilometres of pressure, wearing a face.",
       "statMult": {
@@ -1353,7 +1543,12 @@
       "incubationMinutes": 40,
       "setBonus": {
         "name": "Static Wake",
-        "desc": "Electric strikes double against Aquatic with 4+ thunderhead parts"
+        "desc": "Accuracy Up rises two stages, not one",
+        "effect": {
+          "keywords": {
+            "accUp": 2
+          }
+        }
       },
       "flavor": "Nests in weather. Weather has complained.",
       "statMult": {
@@ -1403,7 +1598,13 @@
       "incubationMinutes": 33,
       "setBonus": {
         "name": "Downwind",
-        "desc": "Gas moves ignore evasion with 4+ glider skunk parts"
+        "desc": "Accuracy Down and Power Down drop two stages",
+        "effect": {
+          "keywords": {
+            "accDown": 2,
+            "powerDown": 2
+          }
+        }
       },
       "flavor": "Grew a patagium out of spite. Now it drifts, malevolently.",
       "statMult": {
@@ -1465,7 +1666,12 @@
       "incubationMinutes": 56,
       "setBonus": {
         "name": "Anvil Doctrine",
-        "desc": "reflect 20% of blocked damage with 4+ iron tortoise parts"
+        "desc": "+35% Armor",
+        "effect": {
+          "stats": {
+            "armor": 1.35
+          }
+        }
       },
       "flavor": "Mineralised. Slowly. On purpose, it insists.",
       "statMult": {
@@ -1510,7 +1716,12 @@
       "incubationMinutes": 38,
       "setBonus": {
         "name": "Second Dose",
-        "desc": "venom applies twice with 4+ pale cobra parts"
+        "desc": "Venom applies twice the stacks",
+        "effect": {
+          "keywords": {
+            "venom": 2
+          }
+        }
       },
       "flavor": "No pigment, no patience, considerably more venom.",
       "statMult": {

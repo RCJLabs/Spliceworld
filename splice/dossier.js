@@ -160,17 +160,22 @@ export function dossierRows(report, content) {
     });
   }
 
-  // 8. Purebred. Stated as what it VERIFIABLY does — the instability
-  //    discount physiology actually applies. The named set bonus in
-  //    species.json is read by the panel and the Dex and by nothing in the
-  //    battle engine, so the dossier does not promise it.
+  // 8. Purebred. R33 refused to name the set bonus here, because all 41 were
+  //    read by the panel and the Dex and by nothing in the battle engine —
+  //    quoting one would have been a lie about what the creature does. R34
+  //    wired them, so the dossier says it: the NAME the player is chasing,
+  //    what it actually does, and the instability discount that was the only
+  //    real part of it before.
   if (report.purebredSpecies) {
     const sp = content.species[report.purebredSpecies];
+    const bonus = sp.setBonus;
     rows.push({
       key: 'purebred',
       label: 'Purebred',
-      value: sp.name,
-      note: `${report.speciesCount[report.purebredSpecies]} ${sp.name} parts pulling together — steadier than a mixed build by 20 instability.`,
+      value: bonus?.effect ? bonus.name : sp.name,
+      note: `${report.speciesCount[report.purebredSpecies]} ${sp.name} parts pulling together${
+        bonus?.effect ? ` — ${bonus.desc}` : ''
+      }, and steadier than a mixed build by 20 instability.`,
     });
   }
 
