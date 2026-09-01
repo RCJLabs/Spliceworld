@@ -1,0 +1,57 @@
+{
+  "_doc": "R42: The Gauntlet — the post-dominion tier. Four boss-scale units (stratofortress, leviathan_dredge, crucible_9000, the_compliance_engine) were drafted at R25 with full stat blocks, moves, shapes, salvage and KO lines, and A5 measured that they fit no strip without a rescale — so they sat parked behind a pinned gate for seventeen phases. A veteran stable is the thing they fit: R41's trajectory math says a creature that fights the whole campaign arrives at dominion at L8, and a realistic diet caps it at L10 near the finale. Stages unlock in order, the first when the county is yours (dominionAt, R40); each is one derived encounter — authored escorts, then the boss — with no node, no income and no notoriety: prestige fights, with the purse and whatever the Containment Cannon can bag (capturing THE COMPLIANCE ENGINE is the intended jackpot — its salvage carries the game's only apex mandate_horn). scaleOverride is tuned with the harness against prime-grade L8-L10 stables, benched per stage; the director does not rewrite a Gauntlet fight, because these ARE the coalition's answer. Adding a fifth stage must never require engine edits.",
+  "stages": [
+    {
+      "id": "gauntlet_strato",
+      "unitId": "stratofortress",
+      "name": "Exhibition I — The Stratofortress",
+      "blurb": "The coalition has been keeping something in a hangar upstate. The hangar is now empty and the sky is full.",
+      "escorts": [
+        "falconry_unit",
+        "attack_chopper"
+      ],
+      "reward": 400,
+      "scaleOverride": 2.4,
+      "news": "EXHIBITION MATCH: local geneticist versus the airborne mortgage of an entire county. Tickets free, attendance mandatory."
+    },
+    {
+      "id": "gauntlet_dredge",
+      "unitId": "leviathan_dredge",
+      "name": "Exhibition II — The Leviathan Dredge",
+      "blurb": "It has been dredging the same harbour for forty years. Today it is dredging in your direction.",
+      "escorts": [
+        "harbor_diver",
+        "dredger_barge"
+      ],
+      "reward": 500,
+      "scaleOverride": 3.2,
+      "news": "EXHIBITION MATCH: the harbour's largest resident takes a personal day. Swimmers advised to be elsewhere, permanently."
+    },
+    {
+      "id": "gauntlet_crucible",
+      "unitId": "crucible_9000",
+      "name": "Exhibition III — CRUCIBLE-9000",
+      "blurb": "The Foundry's founding furnace, on treads. It does not make steel anymore. It makes examples.",
+      "escorts": [
+        "water_cannon_truck",
+        "riot_squad"
+      ],
+      "reward": 650,
+      "scaleOverride": 2.5,
+      "news": "EXHIBITION MATCH: CRUCIBLE-9000 leaves the Foundry for the first time since its warranty expired. Roads pre-melted for its convenience."
+    },
+    {
+      "id": "gauntlet_engine",
+      "unitId": "the_compliance_engine",
+      "name": "Exhibition IV — THE COMPLIANCE ENGINE",
+      "blurb": "Head office's final asset. It has your file. It has everyone's file. It is, in the fullest sense, the paperwork.",
+      "escorts": [
+        "compliance_marshal",
+        "mandate_swarm"
+      ],
+      "reward": 900,
+      "scaleOverride": 2.8,
+      "news": "FINAL EXHIBITION: THE COMPLIANCE ENGINE has been signed out of storage. The signature took four days."
+    }
+  ]
+}

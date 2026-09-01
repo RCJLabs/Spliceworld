@@ -4,6 +4,7 @@
 // timers are timestamps; tickCampaign computes elapsed effects on load.
 
 import { rngStream, pick, randInt } from '../util/rng.js';
+import { recordGauntletWin, gauntletComplete } from './gauntlet.js';
 import { GRADES } from '../splice/extract.js';
 import { finishBattle } from '../battle/engine.js';
 import { recordRivalResult, scoutStable } from './rivals.js';
@@ -373,6 +374,21 @@ export function resolveBattle(state, battle, content, now) {
     const line = recordRivalResult(state, context.rivalId, result.outcome, content);
     if (result.outcome !== 'fled') pushNews(state, line);
     detail.rival = content.rivals[context.rivalId]?.name ?? null;
+  }
+
+  // R42: a Gauntlet stage. No node, no income, no notoriety — the win is
+  // recorded, announced, and the card advances. The containment loop above
+  // has already run, so a boss the cannon bagged is in a bay AND beaten.
+  if (context.kind === 'gauntlet' && result.outcome === 'win') {
+    const stage = recordGauntletWin(state, content, battle.encounterId);
+    if (stage) {
+      pushNews(state, stage.news);
+      const boast = playerLine(state, content, 'gauntlet', { creature: content.enemies[stage.unitId]?.name ?? stage.name });
+      if (boast) pushNews(state, boast);
+      if (gauntletComplete(state, content)) {
+        pushNews(state, 'THE GAUNTLET IS CLEARED. The coalition has nothing left in storage. Somewhere, a procurement officer starts a very long memo.');
+      }
+    }
   }
 
   if (context.kind === 'assault' && result.outcome === 'win' && context.nodeId) {

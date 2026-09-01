@@ -1,5 +1,118 @@
 # PROGRESS
 
+## Session 64 — R42: The Gauntlet ✅
+
+**Acceptance criterion:** after the county is yours, the coalition sends
+what it was saving — and a veteran stable is the thing that can meet it —
+**passes, measured**, at `SAVE_VERSION` **32**.
+
+### The audit first killed my own pitch
+
+I went in expecting to recommend *"make the world answer veterancy"* — the
+worry that R41's levels would trivialise everything. Measured, half of that
+premise died: **the rival ladder holds** (a standard L10 stable wins 3–22%
+against fresh rivals, 0–6% against iterated ones), and the mid-map softens
+exactly the way any earned progression should. What the game actually
+lacked was the other end: a stable that clears the Boardroom had rivals,
+counter-offensives, and *nothing else* — while four boss-scale units sat
+parked in `enemies.json` with full stat blocks, moves, procedural shapes,
+salvage manifests and KO lines, drafted at R25 and pinned by A5's gate as
+fitting no strip without a rescale, for **seventeen phases**.
+
+R41 built the thing they fit. The trajectory math says so: a creature that
+fights every node assault reaches **L8 at dominion** (L3 by end of
+Greenfield, L5 at Kestrel), and a realistic diet — losses, defences, eight
+spars — caps it at **L10 right at the finale**. No curve retune needed. The
+Gauntlet is the tier that starts where the map ends.
+
+### Four exhibitions, in order
+
+The card appears under the dominion banner the moment the county is yours:
+Stratofortress, Leviathan Dredge, CRUCIBLE-9000, THE COMPLIANCE ENGINE —
+each one derived encounter, authored escorts first, the boss walking on
+last. No node behind it, no income, **no notoriety** (an exhibition is not
+a conquest). The purse is real, the Containment Cannon works — bagging THE
+COMPLIANCE ENGINE is the intended jackpot, since its salvage carries the
+game's only **apex `mandate_horn`** — and the director does not rewrite a
+Gauntlet fight, because these *are* the coalition's answer. Each stage win
+fires a philosophy line through R10's machinery; the fourth closes the set
+on the wire.
+
+### Tuned against the stables that will actually fight it
+
+The first draft (scale 1.35–1.6) was a walkover across every cell — 100%s
+everywhere — because "boss-scale authored stats" mean nothing to a prime
+L10 team. Swept upward and pinned per stage (2.4 / 3.2 / 2.5 / 2.8):
+
+| stage | prime L8 | prime L10 | apex **L0** (fresh) | apex L10 |
+|---|---|---|---|---|
+| Stratofortress | 44% | 84% | **3%** | 97% |
+| Leviathan Dredge | 34% | 75% | 0% | 100% |
+| CRUCIBLE-9000 | 28% | 50% | 0% | 88% |
+| THE COMPLIANCE ENGINE | 6% | 47% | 0% | 88% |
+
+The thesis, measured: **a fresh apex-grade stable fails Exhibition I at
+3%.** Entry to the Gauntlet is what a team has been through, not what was
+bought for it — grades cannot skip the queue that levels built.
+
+### A5's pin closes to empty
+
+The parked-units gate spent seventeen phases asserting *"the parked units
+are exactly the four known ones."* It now asserts the list is **empty** —
+every drafted unit is fielded somewhere (encounter, director, or Gauntlet)
+— and a newly drafted unit must arrive with a stage or an encounter or
+fail the build the day it lands. The gate's original purpose, finally able
+to say yes.
+
+### The break battery
+
+Thirteen breaks, thirteen caught, no misses.
+
+| break | verdict |
+|---|---|
+| the Gauntlet opens before the county is yours | CAUGHT |
+| the card stops going in order | CAUGHT |
+| a beaten stage re-opens (trophy farming) | CAUGHT |
+| the boss walks on first | CAUGHT |
+| the exhibitions get gentle (pre-tuning scale) | CAUGHT — *"a fresh apex stable does not (94%)"* |
+| the finale becomes a wall | CAUGHT — *"(0%)"* |
+| a win pays notoriety like a conquest | CAUGHT *(the battery's log line came back blank; reproduced by hand to confirm it fails on its own assertion)* |
+| the win stops being recorded | CAUGHT |
+| sparring's guard leaks over the Gauntlet | CAUGHT (sibling — the leak kills win-recording first) |
+| a stage names a phantom unit | CAUGHT (A5's pin, same protection) |
+| the migration forgets the shelf | CAUGHT |
+| a unit goes back to being parked | CAUGHT |
+| the SW forgets `campaign/gauntlet.js` | CAUGHT |
+
+### Verified
+
+- Full suite green; seven R42 gate blocks (the criterion at both ends,
+  order enforcement, data resolution, resolve-path recording, the cannon
+  jackpot, migration, UI wiring).
+- Browser QA at 380px, both halves: a mono-Ground veteran team fought
+  Exhibition I and **lost honestly** — R37's diagnosis fired with *"the
+  class triangle is costing you about 63 points here"* — shelf unchanged,
+  card held. A flier team re-ran it at *Favoured — 88%*, won, and the card
+  showed 🏆 with Exhibition II open. Zero console errors, no sideways
+  scroll, pre-dominion card correctly absent, v31 winner migrates to an
+  open Exhibition I.
+- R41's keyed loader paid rent: adding gauntlet.json to the browser was
+  one list entry.
+
+### Known gaps
+
+- The Gauntlet has no rematch after victory — a beaten exhibition is a
+  highlight reel, deliberately, but a "replay for no reward" toggle might
+  be wanted someday.
+- Trophies appear on the card and the wire, not in the Dex.
+- Rivals still do not level (measured non-urgent this phase, but a
+  max-level stable at 0–6% against iterated rivals means the ladder now
+  out-scales veterans — the opposite imbalance may deserve a look).
+
+### Next session's first task
+
+Whatever the player reports after taking a veteran stable through it.
+
 ## Session 63 — R41: a chimera you keep ✅
 
 **Acceptance criterion:** a chimera you create at the beginning of the game

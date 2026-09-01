@@ -74,7 +74,8 @@
         "capture": "The {creature} is coming home for a second opinion. It will not be a kind one, but it will be thorough.",
         "rehab": "{creature} came to us badly annotated. Six hours of patient work later, it is legible.",
         "graduation": "{creature} leaves the programme with a clean bibliography and, at last, a straight spine.",
-        "dominion": "Every node in the county, revised. I am told this is called winning; I would call it a first edition. The corrections continue."
+        "dominion": "Every node in the county, revised. I am told this is called winning; I would call it a first edition. The corrections continue.",
+        "gauntlet": "{creature}, annotated, corrected, and returned to sender. The coalition's masterpiece needed a second draft. It got one."
       }
     },
     {
@@ -90,7 +91,8 @@
         "capture": "The {creature}! I have wanted one of those since page forty of the catalogue.",
         "rehab": "{creature} is not a prisoner. {creature} is an ACQUISITION, and acquisitions get the good enclosure.",
         "graduation": "{creature} has been added to the collection and, more importantly, has stopped trying to leave it.",
-        "dominion": "The whole county, catalogued and shelved. There are gaps, of course. There are always gaps. That is what makes it a collection."
+        "dominion": "The whole county, catalogued and shelved. There are gaps, of course. There are always gaps. That is what makes it a collection.",
+        "gauntlet": "{creature}. Signed, dated, witnessed, and entered into the permanent collection under 'Theirs, Formerly'."
       }
     },
     {
@@ -106,7 +108,8 @@
         "capture": "The {creature} joins the company! Standing ovation, no notes, someone get it a dressing room.",
         "rehab": "{creature} arrives from a rival production. We do not poach. We AUDITION, retroactively.",
         "graduation": "{creature} takes its first bow to enormous applause. Some of it was even from outside the building.",
-        "dominion": "The county is MINE, and I want it on record that nobody watched the middle bit. Doesn't matter. Curtain up on the encore."
+        "dominion": "The county is MINE, and I want it on record that nobody watched the middle bit. Doesn't matter. Curtain up on the encore.",
+        "gauntlet": "AND FOR MY NEXT TRICK — {creature}, ladies and gentlemen! They built it in secret and I beat it in public!"
       }
     },
     {
@@ -122,7 +125,8 @@
         "capture": "The {creature} is coming to live with us. It will have a pond. It has earned a pond.",
         "rehab": "{creature} was raised in a laboratory and has never once seen a hedge. We shall be correcting that.",
         "graduation": "{creature} has settled in beautifully and now follows the feed bucket like anybody else.",
-        "dominion": "The county has been returned to its natural state, which is to say mine. Nature does not stop, and neither, apparently, do they."
+        "dominion": "The county has been returned to its natural state, which is to say mine. Nature does not stop, and neither, apparently, do they.",
+        "gauntlet": "{creature} has been rewilded, in the sense that it is now scrap, and scrap is a habitat. Nature thanks you."
       }
     },
     {
@@ -138,7 +142,8 @@
         "capture": "The {creature} is structurally interesting and is coming back to the shop for a teardown.",
         "rehab": "{creature} was built to somebody else's spec. It is a good spec. It is not, however, MY spec.",
         "graduation": "{creature} passes final inspection. Torque correct, gait even, disposition acceptable.",
-        "dominion": "All {nodes} nodes, load-bearing and mine. Tolerances hold. Note for the log: the coalition is a renewable input, not a solved problem."
+        "dominion": "All {nodes} nodes, load-bearing and mine. Tolerances hold. Note for the log: the coalition is a renewable input, not a solved problem.",
+        "gauntlet": "{creature}: load tested to failure. Documenting the failure mode was a pleasure. It was 'me'."
       }
     }
   ]
