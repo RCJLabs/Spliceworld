@@ -1,5 +1,131 @@
 # PROGRESS
 
+## Session 61 — R39: the gate that checked five of six screens ✅
+
+**Acceptance criterion:** the suite derives what it checks from the game, and
+the Vault is no longer the screen nobody was told about — **passes**, at
+`SAVE_VERSION` 29 (no schema change).
+
+### Three defects, stacked, each hiding the one beneath it
+
+R29 shipped the rule *"one first-use note per shipped system"* and two
+hand-written lists to enforce it. One of them was wrong the day it was
+typed:
+
+```js
+const SCREENS = ['ranch', 'pens', 'theater', 'battle', 'dex'];
+```
+
+The game has **six**. The missing one is the **Vault** — which is also the
+only screen in the game with no note at all, so the assertion that exists to
+catch exactly that could never fire. And the suite already knew how to
+derive the real list: the A4 agenda gate reads it out of `main.js`. Two
+lists, one derived and one hand-kept, and the hand-kept one is the one that
+went stale.
+
+Underneath it sat a **real, shipped, unguided system**. The Resequencer
+(R31) has a data file, a module, a Vault card, a save field and a tick in
+the shell — and it arrived *two phases after* the one-note rule with no note.
+Invisible, because the omission was in the roll and in the notes alike.
+
+And underneath **that**: the Vault had **no field-note slot at all**. Five
+screen modules wire `guideForScreen` and `bindFieldNote`; the Vault wired
+neither. A note there could not have been shown even once it existed.
+
+That third one was found by **browser QA, not by the suite** — the note was
+written, the gates were green, and nothing appeared on the screen. Worth
+recording: two of these three would have stayed invisible to a passing test
+run.
+
+### What shipped
+
+**`shellScreenMap()` is the one derivation**, following `main.js` from the
+screen id to its render function to the module that exports it. Both gates
+that needed a screen list read it. The moment it went in, the suite failed on
+`vault has at least one note` — the phase proving itself.
+
+**A gate that follows that chain** and asserts each screen's module can show
+a note, asks for its **own** screen's note, and lets the player dismiss it.
+Derived, so a seventh screen is held to the rule without anyone adding it
+anywhere. *(My first draft of this gate made a second copy of the derivation
+and the "only one place knows how to find the shell map" assertion caught
+me — the gate doing precisely its job, to my face.)*
+
+**The Resequencer's note**, on the Vault:
+
+> **A vial is the whole animal, banked**
+> Every graduation leaves a DNA vial, and for a long time that was a pile of
+> inventory that did nothing. The Resequencer spends one to grow that donor
+> *back* — same species, same star potential, same hidden genes… A run takes
+> 2 hours, the vial is spent either way, and one in four collapses.
+
+Reachable on the first vial, retiring on `state.resequenceCount` — a field
+the save already had, so a note costs no schema. The numbers in the body are
+gated against `resequencer.json`, so tuning and prose cannot drift apart.
+
+**`DATA_NOTES`** maps every content file to the note that teaches it or an
+explicit exemption with a reason. A new `data/*.json` now fails the build
+until somebody decides which it is. This does **not** make the roll
+self-writing — "system" is not derivable from source — it makes forgetting
+loud instead of silent, which is the actual failure being fixed.
+
+### The break battery, twice, and a contamination bug of mine
+
+Nineteen breaks across two runs. **No misses.**
+
+| break | verdict |
+|---|---|
+| the screen list goes back to being typed out | CAUGHT (R29 sibling) |
+| the Vault note is deleted | CAUGHT |
+| a sixth screen ships unguided (the *next* Vault) | CAUGHT |
+| the two gates fork the derivation again | CAUGHT |
+| a note points at a screen the shell lacks | CAUGHT (R29 sibling) |
+| the tuning drifts from the note | CAUGHT (R31 sibling) |
+| the note never retires | CAUGHT |
+| the note fires before a vial exists | CAUGHT (criterion walk) |
+| the SW forgets `resequencer.json` | CAUGHT |
+| **A** the Vault loses its slot again | CAUGHT |
+| **B** the Vault renders another screen's note | CAUGHT |
+| **C** the note cannot be dismissed | CAUGHT |
+| **D** the note text misquotes the run time | CAUGHT |
+| **E** the note stops stating the odds | CAUGHT |
+| **F** an unmapped content file, precached | CAUGHT |
+| **G** the map points at a phantom note | CAUGHT |
+
+**The first run contaminated itself.** `git checkout -- .` restores tracked
+files and does not delete untracked ones, so the `data/workshop.json` a
+break created survived into the two breaks after it — both of which then
+reported *"missing: data/workshop.json"* rather than their own signal. Those
+two results were discarded and re-run with `git clean -fd` in the restore
+step. Seven of the first twelve also landed on older sibling gates that fire
+earlier, so the second battery isolates my own assertions: it breaks the
+*note text* rather than the tuning, and precaches the stray file so the
+service-worker gate does not answer first.
+
+### Verified
+
+- Full suite green; seven R39 gate blocks.
+- Browser QA at 380px: the Vault shows nothing with no vial, shows the note
+  the moment one arrives, and drops it after one run. Dismissible, no
+  sideways scroll.
+- Zero console errors on a fresh save and on a v8 save migrated to v29 with
+  every screen visited.
+
+### Known gaps
+
+- `SHIPPED_SYSTEMS` still exists as a hand-kept list beside `DATA_NOTES`.
+  The two overlap; the roll could probably be derived from the map now, and
+  was left alone rather than refactored blind at the end of a phase.
+- A system with no data file of its own (training, dismantle, the dossier)
+  is still invisible to `DATA_NOTES` — the map keys off content files, and
+  not every system has one.
+- Stars are still not shown on an animal's own card (R38's gap, untouched).
+
+### Next session's first task
+
+Fold `SHIPPED_SYSTEMS` into `DATA_NOTES` so there is one list, or take R38's
+leftover and show an animal its own stars.
+
 ## Session 60 — R38: "Standard" is three different animals ✅
 
 **Acceptance criterion:** the graduation forecast says what is holding a
