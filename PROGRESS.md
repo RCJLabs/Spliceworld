@@ -1,5 +1,132 @@
 # PROGRESS
 
+## Session 70 — R48: the Sparring Ring you can see ✅
+
+**Acceptance criterion:** the charge bucket is legible wherever you would
+act on it, and every surface derives it from one place —
+**passes, measured in the browser**. No schema change; `SAVE_VERSION`
+stays **33**.
+
+### A resource nobody could see
+
+R41 built the ring on a player report — "no combination of them could beat
+the missions in front of them" — and R43 turned it into a three-charge
+bucket on the same player's report that one spar per 45 minutes was too
+slow to be a ladder. Then `sparCharges()` was read in exactly **one
+place**: the button on the War Room map.
+
+So `ranch/agenda.js`, whose own header calls it *"the single place that
+knows what a player can actually DO"*, had **zero** mentions of sparring —
+and the Pens, the screen you visit to make a creature better, never
+mentioned the three free sources of xp sitting in your pocket.
+
+### Three changes
+
+- **The agenda knows the ring exists.** A `spar` entry, filed as **work**
+  rather than campaign: a spar pays no purse, earns no notoriety and
+  cannot take a node. It makes a better creature, which is what `work`
+  means in that module.
+- **A hint may be a function of the save.** The entry's whole value is a
+  *number* — "3 charges in the ring" is a reason to go, "you can spar" is
+  not — and a static string cannot say three. Strings pass through
+  untouched, so all thirteen entries written before this read exactly as
+  they did.
+- **The Pens shows the bucket as one LINE, not a card.** R47 spent a whole
+  phase establishing that a card has to earn its height; a status readout
+  does not.
+
+### Browser QA found the thing the gates did not
+
+The first cut had the Pens read the charge bucket directly. With a full
+ring and the only chimera in the Infirmary it reported:
+
+> 🥊 Sparring Ring **3/3** · full — spend them
+
+…in the ready colour, while the agenda — correctly — offered nothing.
+**Two surfaces disagreeing about whether an action is available is the
+exact failure this phase exists to prevent**, and my gate had only checked
+that the counts matched, not that the *verdicts* did.
+
+`canSpar()` in `sparring.js` answers it once — charges, a garrison to
+spar, somebody fit to send — and names which is missing. Both surfaces
+read it, and a gate now asserts they agree across every reason:
+
+| state | Pens | agenda |
+|---|---|---|
+| full bucket, garrison, fit chimera | `3/3 full — spend them` **ready** | offered, "3 charges" |
+| one charge spent | `2/3 +1 in 10m` **ready** | offered, "2 charges" |
+| bucket empty | `0/3 re-chalking — 10m` | withheld |
+| no garrison held | absent entirely | withheld |
+| only fighter in the Infirmary | `3/3 nobody fit to send` | withheld |
+
+### Two errors of mine, caught before they were claims
+
+- **`shellScreenMap()` returns objects, not screen names**, so my
+  route-check gate would have compared a string against a list of records
+  and passed for the wrong reason. It uses `shellScreens()` now.
+- **A `content ? t0 : t0` ternary** in a gate fixture, which does nothing
+  at all. Removed rather than left as decoration.
+
+A third was in the QA script rather than the game: it looked for the
+active tab by `is-on` when the shell uses `active`, so a working
+navigation reported `?`. Fixed, and the Ring button demonstrably lands on
+the War Room.
+
+### The break battery
+
+Fifteen breaks, each run against the full suite in an isolated worktree.
+**Verdicts pending at time of writing** — updated with the result rather
+than assumed.
+
+| break | verdict |
+|---|---|
+| the agenda has no spar entry | pending |
+| a spar is filed as spending | pending |
+| the spar entry routes nowhere real | pending |
+| the spar hint cannot name the count | pending |
+| a function hint is never resolved | pending |
+| a spar is offered with no charges | pending |
+| a spar is offered with no garrison | pending |
+| a spar is offered with nothing to send | pending |
+| the agenda forks its own spar test | pending |
+| the Pens forks its own spar test | pending |
+| the Pens loses the ring | pending |
+| the Pens invents its own charge count | pending |
+| the Pens advertises a ring you cannot use | pending |
+| the Pens ring button goes nowhere | pending |
+| the ring becomes a card again | pending |
+
+Two of those — *the agenda forks its own spar test* and *the Pens forks
+its own* — exist because that is precisely how the two surfaces disagreed
+in the first cut. A defect the phase actually shipped earns a break rather
+than a promise.
+
+### Verified
+
+- Full suite green; four R48 gate blocks.
+- Browser QA at 380px across five states, table above; the Ring button
+  lands on the War Room, the map's own badge reads the same count as the
+  Pens, zero console errors.
+- No schema change; `SAVE_VERSION` stays **33**.
+
+### Known gaps
+
+- **The map's spar button still builds its own label** from `sparCharges`
+  rather than `canSpar`, so it can read "Spar 3" while nobody is fit to
+  send. It is disabled correctly by the briefing flow, so this is a wording
+  gap rather than a broken affordance — but it is the third surface and it
+  should read the predicate too.
+- The agenda's rows remain the Ranch's largest chrome cost, by design
+  (R47).
+- Trophies still are not in the Dex (R42), and `SHIPPED_SYSTEMS` in
+  `smoke.js` is still hand-kept (R39).
+
+### Next session's first task
+
+Point the War Room's spar button at `canSpar()` as well, so all three
+surfaces read one predicate — the gap this phase closed for two of them
+and left open for the third.
+
 ## Session 69 — R47: the Ranch chrome earns its height ✅
 
 **Acceptance criterion:** every card above the herd justifies its space in
