@@ -9178,9 +9178,21 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     startSpar(st, t0, content);
     startSpar(st, t0, content);
     assert.equal(sparCharges(st, t0, content).charges, 0, 'three spent leaves none');
-    assert.equal(sparCharges(st, t0 + regen + 1, content).charges, 1,
-      'and the first comes back one regen later, not one window later');
+    assert.equal(sparCharges(st, t0 + regen + 1, content).charges, 1, 'the first comes back one regen later');
     assert.equal(sparCharges(st, t0 + 2 * regen + 1, content).charges, 2, 'then the second');
+    // The assertion that actually separates PUSHING the refill from
+    // RESTARTING it: time-to-full after a partial spend must be one regen
+    // per charge owed, not a fresh whole window. An isolation run proved
+    // the charge-ladder checks above pass under a restart break — the way
+    // back up looks identical either way, and only the total gives it away.
+    const partial = lab();
+    startSpar(partial, t0, content);
+    startSpar(partial, t0, content);
+    assert.equal(sparCharges(partial, t0, content).msToFull, 2 * regen,
+      'two spent is two regens from full, not a whole window');
+    startSpar(partial, t0 + regen, content);
+    assert.equal(sparCharges(partial, t0 + regen, content).msToFull, 2 * regen,
+      'and a third spar an hour into the ladder adds one regen, not three');
   }
 
   // 4. The countdown shown is the SHORT one. A player staring at an empty
