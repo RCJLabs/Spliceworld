@@ -2133,3 +2133,13 @@ button.dex-cell:focus-visible {
   color: var(--bg);
   background: var(--accent);
 }
+
+/* --- R44: the Pens fold ------------------------------------------------
+   A stable is a list you scan before it is a creature you open. The shut
+   row carries the clocks that cost you something when they run out —
+   R15's rule, on the screen that grew past the War Room. */
+.pen-fold .fold-summary { color: var(--text-dim); }
+.pen-alert { color: var(--accent-2); font-weight: 700; }
+.pen-ready { color: var(--text-dim); }
+.pen-fold.pen-hurt { border-color: var(--accent-2); }
+.pen-fold .animal-card { border: none; padding: 0; margin: 0; background: none; }

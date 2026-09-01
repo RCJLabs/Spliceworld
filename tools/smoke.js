@@ -7734,6 +7734,10 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(made.chimera.settleUntil > t0, 'and carries the settling clock the real shape has');
 
     const root = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+    // R44 folded the Pens: a creature is a summary row until you open it,
+    // and a shut fold builds no card at all. So this opens the one under
+    // test first — which is what a player does before reading a dossier.
+    s2.ui = { collapsed: { [`pen-${made.chimera.id}`]: false } };
     renderPensScreen(root, { state: s2, content, now: () => t0, save: () => {} });
     assert.ok(root.innerHTML.includes('class="dossier"'), 'the pens card renders a dossier');
     assert.ok(!/<details class="dossier" open/.test(root.innerHTML), 'folded shut by default');
@@ -9240,6 +9244,129 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(/sparCharges\(state, t, content\)/.test(src), 'the map reads the bucket');
     assert.ok(/sparGate\.charges/.test(src), 'and the button shows the count');
     assert.ok(/sparGate\.msToNext/.test(src), 'with the short countdown when empty');
+  }
+}
+
+// --- R44: the Pens at nine chimeras.
+//
+// Measured at 380px before the fix: one chimera card is 1081px — taller
+// than the phone it renders on — so a stable of nine made the Pens
+// 10,470px, thirteen screens of scrolling, growing 1081px per creature
+// forever. R15 rebuilt the entire War Room for being 3,884px; this was
+// 2.7x worse than the screen that phase was written to rescue, and R41
+// made keeping creatures the whole point of the game, so it only grew.
+//
+// Same fix and the same machinery R29 already shipped: fold each creature
+// to a summary row. R15's rule carries over intact — ALERTS NEVER HIDE —
+// so both clocks that cost a player something ride on the SHUT row.
+{
+  const { renderPensScreen } = await import('../splice/pens-ui.js');
+  // A DOM stub with no-op queries: the screen renders to a string, and
+  // every binder gets an empty list rather than a crash.
+  const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null });
+  const B = { head: 'rhino_head', forelimbs: 'gorilla_forelimbs', hindlimbs: 'rhino_hindlimbs',
+    tail: 'bear_tail', hide: 'pangolin_hide', organ: 'bear_organ' };
+  const stable = (n, extra = () => ({})) => {
+    const st = { ...newGameState(), seed: 44 };
+    st.chimeras = Array.from({ length: n }, (_, i) => ({
+      id: `g${i}`, name: `Unit ${i + 1}`, frame: 'M',
+      tokens: Object.fromEntries(Object.entries(B).map(([k, v]) =>
+        [k, { id: `t${i}${k}`, partId: v, grade: 'prime', donor: { name: 'Bessie', stars: 4 } }])),
+      settleUntil: 0, bond: 100, scars: [], temperament: null,
+      lastTrainedAt: 0, moveset: [], lastMoveTrainAt: 0, xp: 0, injury: null,
+      ...extra(i),
+    }));
+    st.chimeraCount = n;
+    return st;
+  };
+  const draw = (st) => {
+    const root = stub();
+    renderPensScreen(root, { state: st, content, now: () => t0, save: () => {} });
+    return root.innerHTML;
+  };
+
+  // 1. THE CRITERION. Every creature is a fold, and folds are SHUT — so a
+  //    stable costs a row each rather than a screen each.
+  {
+    const st = stable(9);
+    const page = draw(st);
+    for (const ch of st.chimeras) {
+      assert.ok(page.includes(`data-fold="pen-${ch.id}"`), `${ch.name} is a fold`);
+    }
+    assert.equal((page.match(/data-fold="pen-/g) ?? []).length, 9, 'nine creatures, nine folds');
+    assert.equal((page.match(/aria-expanded="true"/g) ?? []).length, 0, 'and none of them opens by default');
+    // The cost of the tenth creature is a ROW, not a card. The suite cannot
+    // measure pixels, so it measures the thing that drives them: the
+    // marginal markup a creature adds while shut, against what one costs
+    // open. (The pixel figures live in PROGRESS, from the browser: 10,470px
+    // to 1,339px at nine.)
+    const one = draw(stable(1)).length;
+    const nine = page.length;
+    const marginalShut = (nine - one) / 8;
+    const opened = stable(1);
+    opened.ui = { collapsed: { 'pen-g0': false } };
+    const openCard = draw(opened).length - one;
+    assert.ok(openCard > 5000, `an open card is the heavy thing (${openCard} chars)`);
+    assert.ok(marginalShut < openCard * 0.1,
+      `a shut creature costs a fraction of an open one (${Math.round(marginalShut)} vs ${openCard})`);
+  }
+
+  // 2. ALERTS NEVER HIDE — R15's rule, on the screen that outgrew the one
+  //    it was written for. Both clocks cost a creature when they run out,
+  //    so both are on the SHUT row.
+  {
+    const hurt = stable(3, (i) => (i === 1 ? { injury: { name: 'Bent Whiskers', until: t0 + 42 * 60000 } } : {}));
+    const page = draw(hurt);
+    const row = page.slice(page.indexOf('data-fold="pen-g1"'), page.indexOf('data-fold="pen-g2"'));
+    assert.ok(/⚕/.test(row), `an injured creature wears its Infirmary mark on the shut row (${row.slice(0, 200)})`);
+    assert.ok(/42m|41m/.test(row), 'with the countdown, not just the mark');
+
+    const settling = stable(2, (i) => (i === 0 ? { settleUntil: t0 + 90 * 60000 } : {}));
+    const page2 = draw(settling);
+    const row2 = page2.slice(page2.indexOf('data-fold="pen-g0"'), page2.indexOf('data-fold="pen-g1"'));
+    assert.ok(/⏳/.test(row2), 'and an unsettled one wears its settling clock');
+    assert.ok(/1h/.test(row2), 'with its countdown too');
+  }
+
+  // 3. The shut row is worth reading on its own: what it is, how far it has
+  //    come, and whether it will do as it is told.
+  {
+    const page = draw(stable(2));
+    assert.ok(/Lv \d+/.test(page), 'the summary carries the level');
+    assert.ok(/bond \d+\/100/.test(page), 'the bond');
+    assert.ok(/obedience \d+%/.test(page), 'and the obedience');
+  }
+
+  // 4. Folding HID nothing. Everything the long card carried is still
+  //    there when you open it — this is a layout change, not a feature cut.
+  //    Asserted on an OPEN fold, because a shut one deliberately builds
+  //    nothing at all.
+  {
+    const st = stable(1);
+    st.ui = { collapsed: { 'pen-g0': false } };
+    const page = draw(st);
+    for (const [what, needle] of [
+      ['the dossier', 'dossier'],
+      ['the care buttons', 'data-train'],
+      ['the move list', 'class="moveset"'],
+      ['the parts manifest', 'essence of Bessie'],
+      ['the rename control', 'data-rename'],
+      ['the dismantle route', 'data-dismantle'],
+    ]) {
+      assert.ok(page.includes(needle), `${what} survives the fold (${needle})`);
+    }
+  }
+
+  // 5. It opens, and the open state persists in the save's existing UI
+  //    bag — a layout preference must not cost a schema migration.
+  {
+    const st = stable(3);
+    st.ui = { collapsed: { 'pen-g1': false } };
+    const page = draw(st);
+    const row = page.slice(page.indexOf('data-fold="pen-g1"'));
+    assert.ok(row.startsWith('data-fold="pen-g1" aria-expanded="true"'), 'the opened one is open');
+    assert.equal((page.match(/aria-expanded="true"/g) ?? []).length, 1, 'and only that one');
+    assert.equal(newGameState().saveVersion, SAVE_VERSION, 'with no version bump for a fold');
   }
 }
 

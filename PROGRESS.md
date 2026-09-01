@@ -1,5 +1,133 @@
 # PROGRESS
 
+## Session 66 — R44: the Pens at nine chimeras ✅
+
+**Acceptance criterion:** a full stable fits a phone, and nothing
+time-critical hides — **passes, measured in the browser**. No schema
+change; `SAVE_VERSION` stays **33**.
+
+### The audit killed my first candidate outright
+
+R42 left a note that iterated rivals *out-scaled* a max-level stable
+(0–6%). Re-measured across grade × level, that note was **wrong** — and
+wrong in an instructive way. Mantissa and Trench scale properly with
+veterancy (84% and 69% at prime L10). Baroness Aloft sat at 0–6%
+everywhere… against `wings+noise+boots`. She is the **Air** rival:
+
+| team vs Aloft (prime) | L0 | L5 | L10 |
+|---|---|---|---|
+| wings+noise+boots | 0% | 0% | 6% |
+| **gills×3 (Water)** | 9% | 75% | **100%** |
+
+Aloft is a **class puzzle, not a wall** — exactly what R27 specified
+("ladder gated so each rival's counter-class anatomy is obtainable
+first"). My R42 note had generalised from one team composition. Corrected
+here rather than fixed in code, because there was nothing to fix.
+
+### What the player's own situation pointed at instead
+
+Nine chimeras. Measured at 380px, one chimera card is **1081px — taller
+than the phone it renders on**:
+
+| stable | before | after |
+|---|---|---|
+| 1 | 1,529px | 800px |
+| 3 | 3,915px | 871px |
+| **9** | **10,470px** (13.1 screens) | **1,339px** (1.7) |
+| 12 | 13,748px (17.2) | 1,573px (2.0) |
+
+R15 rebuilt the entire War Room for being **3,884px**. The Pens had grown
+to **2.7× worse than the screen that phase was written to rescue** — and
+R41 made keeping creatures the whole point, so it grows 1081px per
+creature, forever.
+
+### The same fix, with the machinery already in the box
+
+R29 shipped `collapsibleCard` / `bindFolds` / `isOpen`, persisting in
+`state.ui.collapsed` — which is **already in the save**, so a layout
+preference costs no migration. Each creature folds to a summary row:
+
+> ▸ **UNIT 4**  ⚕ 42m
+> 🦶 Lv 0 · bond 100/100 · obedience 100%
+
+R15's rule carries over intact — **ALERTS NEVER HIDE**. Both clocks that
+cost a player something ride on the *shut* row: the Infirmary countdown
+and the settling clock, browser-verified as `Unit 2 ⏳ 1h 30m` and
+`Unit 4 ⚕ 42m`, with the hurt row outlined in the alert colour.
+
+### A shut fold builds nothing
+
+The first cut hid the body behind an attribute, and **the size gate caught
+it**: a portrait is ~12KB of inline SVG, so twelve shut creatures would
+have meant 145KB of DOM rendering nothing. A shut fold now builds no
+portrait, no manifest, no card at all. The browser confirms **zero `<svg>`
+elements while shut**, and one the moment a fold opens.
+
+That is the gate earning its place rather than rubber-stamping: my first
+assertion was arithmetically wrong (nine rows cannot fit inside 3× a
+one-row page), and rewriting it to measure *marginal* cost is what
+surfaced the real inefficiency underneath.
+
+### One older gate had to move
+
+R33's dossier gate asserted the pens card renders a dossier — true when
+every card was always open. It now opens the fold first, which is what a
+player does before reading a dossier. A layout change that invalidates an
+old gate's *setup* is not the same as one that invalidates its claim.
+
+### The break battery
+
+Nine breaks, plus one re-run. All caught.
+
+| break | verdict |
+|---|---|
+| the fold goes away (the pre-R44 wall) | CAUGHT |
+| every fold ships open | CAUGHT |
+| a shut fold builds the portrait anyway | **MISSED** → re-run as 3b, CAUGHT |
+| the Infirmary clock hides | CAUGHT (sibling, same block) |
+| the settling clock hides | CAUGHT |
+| the shut row stops being worth reading | CAUGHT |
+| opening one opens them all | CAUGHT (sibling) |
+| the fold state stops persisting | CAUGHT (R29's own gate) |
+| opening drops the card contents | CAUGHT |
+| **3b** a shut fold ships the whole card, merely hidden | CAUGHT |
+
+**The miss was a bad break, not a hollow gate** — the same shape as R41's
+identical-curve break. It only restored *computing* the portrait, while
+the body still discarded it when shut, so the rendered output never
+changed and nothing observable regressed. Rewritten to emit the card while
+shut, it is caught immediately — by the gate's guard clause ("an open card
+is the heavy thing"), which is precisely the symptom: if shut folds ship
+the card, *opening* one stops adding weight.
+
+Worth separating from a hollow gate, which asserts something that cannot
+fail. This gate could always fail; the break simply did not break
+anything.
+
+### Verified
+
+- Full suite green; five R44 gate blocks.
+- Browser QA at 380px with nine chimeras: shut page 1,339px, zero
+  portraits built; opening one yields exactly one open fold, one portrait,
+  the dossier and the care controls; the state survives a reload; both
+  alert rows keep their countdowns; no sideways scroll, zero console
+  errors.
+
+### Known gaps
+
+- **The Dex is now the longest screen at 7,113px** — it inherited the
+  title the Pens just gave up. It is a reference screen rather than a
+  working one, which is a weaker case for folding, but it is next on this
+  particular list.
+- The Ranch is 3,388px with a full pen and uses the same 1081px-card
+  shape; it has not been measured against a *large* herd.
+- Nothing sorts the stable — nine rows are nine rows, in splice order.
+
+### Next session's first task
+
+Measure the Ranch against a full pen the way this phase measured the Pens,
+or fold the Dex.
+
 ## Session 65 — R43: the Sparring Ring holds charges ✅
 
 **Acceptance criterion:** three spars every thirty minutes — **passes,
