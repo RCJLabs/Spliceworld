@@ -89,26 +89,42 @@ exit code alone.)
 
 ### The break battery
 
-Fourteen breaks, each run against the full suite in an isolated worktree.
-**Verdicts pending at time of writing** — this table is updated with the
-result rather than assumed.
+Fourteen breaks, each run against the full suite in an isolated worktree,
+plus one re-run. **All caught.**
 
 | break | verdict |
 |---|---|
-| every Ranch animal ships open (the pre-R46 wall) | pending |
-| a shut Ranch fold builds the portrait anyway | pending |
-| the Prime countdown leaves the shut row | pending |
-| the Ranch summary row goes blank | pending |
-| the Ranch is unbanded again | pending |
-| the Ranch bands run backwards | pending |
-| the Pens are unbanded again | pending |
-| the Pens bands run backwards | pending |
-| an unbanded creature vanishes | pending |
-| a heading over an empty band | pending |
-| bands stop rendering in declaration order | pending |
-| the Pens Infirmary clock leaves the shut row | pending |
-| `ui/roster.js` falls out of the offline shell | pending |
-| the Dex forks its own heading again | pending |
+| every Ranch animal ships open (the pre-R46 wall) | CAUGHT |
+| a shut Ranch fold builds the portrait anyway | **MISSED** → re-run as 2b, CAUGHT |
+| the Prime countdown leaves the shut row | CAUGHT |
+| the Ranch summary row goes blank | CAUGHT |
+| the Ranch is unbanded again | CAUGHT |
+| the Ranch bands run backwards | CAUGHT |
+| the Pens are unbanded again | CAUGHT |
+| the Pens bands run backwards | CAUGHT |
+| an unbanded creature vanishes | CAUGHT |
+| a heading over an empty band | CAUGHT |
+| bands stop rendering in declaration order | CAUGHT |
+| the Pens Infirmary clock leaves the shut row | CAUGHT |
+| `ui/roster.js` falls out of the offline shell | CAUGHT |
+| the Dex forks its own heading again | CAUGHT |
+| **2b** a shut Ranch fold ships the whole card, merely hidden | CAUGHT |
+
+**The miss was a bad break, not a hollow gate — and it is the same miss
+R44 recorded, in the same place.** Restoring the portrait *computation*
+while shut changes nothing observable, because `body` discards it: the
+rendered output is byte-identical, so no gate could fail. Rewritten to
+emit the card while shut, it is caught at once — on `no extract button
+either`, which is precisely the symptom.
+
+Worth separating from a hollow gate, which asserts something that cannot
+fail. This gate could always fail; the break simply did not break
+anything. That the identical mistake recurred two phases later is the
+argument for running the battery at all rather than reasoning about it.
+
+Break 12 also shows the repaired slice working: it now reports real
+content (`data-fold="pen-g1" aria-expanded="false">`) where the old
+order-dependent version returned the empty string that exposed it.
 
 ### Verified
 
