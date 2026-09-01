@@ -7780,4 +7780,140 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+
+// --- R35: the other matchup layer, on the screen where you choose --------
+//
+// The briefing showed the class triangle and nothing else about the
+// matchup: a class icon per row, the opposition's classes, a "type
+// advantage here" flag. Measured across the 24 encounters, the TAG chart is
+// live in 96% of them (Vehicle in 19, Airborne in 13, Armored and Aquatic in
+// 11 each) and 71% throw at least one Ground move — and isolated with the
+// same build on both sides of the chart, `Ground misses Airborne` is worth
+// 3.7pp to a flier and `Sonic ignores Armor` 7.4pp against armour. (Measured
+// the confounded way first, comparing an A-frame build against an M-frame
+// one, it looked like flight HURT: that comparison changes stats, sockets
+// and mass, so it measured the chassis rather than the rule.)
+{
+  const { matchupNotes, attackTags, foeTagLines } = await import('../campaign/matchup.js');
+  const { foeTagClause, effectWord } = await import('../battle/tagtext.js');
+  const { combatantFromChimera } = await import('../battle/engine.js');
+  const { makeSimChimera, partsOnFrame } = await import('../tools/sim.js');
+  const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+  const partOf = (sp, slot) => Object.values(content.parts).find((p) => p.species === sp && p.slot === slot);
+  const unitOf = (u) => (typeof u === 'string' ? content.enemies[u] : u);
+  const foeOf = (enc) => {
+    const units = enc.waves.flat().map(unitOf).filter(Boolean);
+    return {
+      foeTags: new Set(units.flatMap((u) => u.tags ?? [])),
+      foeAttackTags: new Set(units.flatMap((u) => (u.moves ?? [])
+        .filter((m) => (m.power ?? 0) > 0).flatMap((m) => m.tags ?? []))),
+    };
+  };
+  const sideOf = (sp, frame) => {
+    const ids = partsOnFrame(content, frame, SLOTS.map((s) => partOf(sp, s)?.id).filter(Boolean));
+    const cb = combatantFromChimera(makeSimChimera(frame, ids, 'prime', content), content, t0);
+    return { myTags: new Set(cb.tags), myAttackTags: attackTags(cb.moves) };
+  };
+
+  // 1. The layer is worth showing at all. If the chart stopped applying to
+  //    the roster, this whole section would be decoration.
+  const encs = Object.values(content.encounters);
+  const tagged = encs.filter((e) => [...foeOf(e).foeTags].some((t) => t !== 'Organic'));
+  assert.ok(tagged.length / encs.length >= 0.5,
+    `the tag chart is live in most encounters (${tagged.length}/${encs.length})`);
+
+  // 2. The rules are READ from the chart, never restated. Add a row and it
+  //    has to reach both the opposition list and a roster row.
+  {
+    const chart = [...content.tagChart, { attack: 'Sonic', defender: 'Aquatic', mult: 4, note: 'test' }];
+    const lines = foeTagLines(new Set(['Aquatic']), chart);
+    assert.ok(lines.some((l) => /Sonic/.test(l) && /4/.test(l)),
+      `a new chart row reaches the opposition list with no engine edit (${lines.join(' | ')})`);
+    const notes = matchupNotes({
+      myTags: new Set(['Organic']), myAttackTags: new Set(['Sonic']),
+      foeTags: new Set(['Aquatic']), foeAttackTags: new Set(),
+    }, chart);
+    assert.ok(notes.some((n) => n.kind === 'good' && /Sonic/.test(n.text)),
+      'and reaches a roster row too');
+  }
+
+  // 3. THE GATE THE PHASE EXISTS FOR. The two rules measured as worth 3.7pp
+  //    and 7.4pp have to actually appear against the encounters where they
+  //    fire — that is the whole point of putting them on this screen.
+  {
+    const groundy = encs.filter((e) => foeOf(e).foeAttackTags.has('Ground'));
+    assert.ok(groundy.length, 'some encounter throws a Ground move');
+    const flier = sideOf('eagle', 'A');
+    assert.ok(flier.myTags.has('Airborne'), 'the eagle on a Kite is airborne (R32)');
+    const notes = matchupNotes({ ...flier, ...foeOf(groundy[0]) }, content.tagChart);
+    assert.ok(notes.some((n) => n.kind === 'good' && /miss/.test(n.text)),
+      `a flier is told their Ground attacks miss it (${notes.map((n) => n.text).join('; ')})`);
+
+    const armoured = encs.filter((e) => foeOf(e).foeTags.has('Armored'));
+    assert.ok(armoured.length, 'some encounter is armoured');
+    const sonic = { myTags: new Set(['Organic']), myAttackTags: new Set(['Sonic']) };
+    const armourNotes = matchupNotes({ ...sonic, ...foeOf(armoured[0]) }, content.tagChart);
+    assert.ok(armourNotes.some((n) => n.kind === 'good' && /armour/.test(n.text)),
+      'a Sonic build is told it goes through their armour');
+  }
+
+  // 4. Losses are shown as loudly as wins. A briefing that lists only
+  //    upsides is a sales brochure, and A1's lesson was that the game must
+  //    not present a losing pick as a choice.
+  {
+    const airborneFoe = encs.find((e) => foeOf(e).foeTags.has('Airborne'));
+    assert.ok(airborneFoe, 'some encounter fields an airborne unit');
+    const grounder = sideOf('rhino', 'L');
+    assert.ok(grounder.myAttackTags.has('Ground'), 'a rhino swings Ground');
+    const notes = matchupNotes({ ...grounder, ...foeOf(airborneFoe) }, content.tagChart);
+    assert.ok(notes.some((n) => n.kind === 'bad' && /nothing/.test(n.text)),
+      'a Ground build is warned its attacks do nothing to an airborne foe');
+  }
+
+  // 5. A note that fires for EVERY possible pick is not information for
+  //    choosing. Every chimera is stamped Organic by the engine, so
+  //    "their Gas hits it harder" appeared on all four rows of nearly every
+  //    encounter until it moved to the opposition line.
+  {
+    const gassy = encs.find((e) => foeOf(e).foeAttackTags.has('Gas'));
+    assert.ok(gassy, 'some encounter throws Gas');
+    const foe = foeOf(gassy);
+    for (const [sp, frame] of [['eagle', 'A'], ['rhino', 'L'], ['octopus', 'M']]) {
+      const notes = matchupNotes({ ...sideOf(sp, frame), ...foe }, content.tagChart);
+      // On the KEY, not the text. A note's text names only the attacking
+      // tag — "their Gas hits it harder" — so grepping it for the defender
+      // tag could never fail, and the break battery duly reported this as a
+      // MISS when the suppression was removed.
+      assert.ok(!notes.some((n) => /:Organic$/.test(n.key)),
+        `${sp}: a rule every chimera triggers is not a roster-row note (${notes.map((n) => n.key).join(', ')})`);
+    }
+    // On the phrase only the UNIVERSAL line carries. Grepping for "Organic"
+    // matched the ordinary per-tag line too — most opposition is itself
+    // Organic — so this passed whether or not the universal rule was
+    // reported at all. The battery reported it as a MISS.
+    const lines = foeTagLines(foe.foeTags, content.tagChart, foe.foeAttackTags);
+    assert.ok(lines.some((l) => /everything you own/.test(l)),
+      `it is said once, on the opposition line (${lines.join(' | ')})`);
+  }
+
+  // (There is no "no repeated clause" gate. There was one, twice: the first
+  //  guarded a dedup filter the battery proved unreachable, and the rewrite
+  //  built a Set from a doubled array, which the Set collapses. matchupNotes
+  //  takes Sets by contract and walks the chart once, so a repeated key
+  //  cannot be produced — the property is unviolatable, and a gate that
+  //  cannot fail is worse than no gate, because it reads like coverage.)
+
+  // 7. The dossier and the briefing read ONE implementation of the chart.
+  //    Two copies is how a chart goes stale.
+  {
+    const rule = { attack: 'Sonic', defender: 'Armored', rule: 'ignoreArmor' };
+    assert.ok(/armour/.test(effectWord(rule)), 'the shared phrasing handles ignoreArmor');
+    assert.ok(foeTagClause('Armored', content.tagChart)?.includes('Sonic'),
+      'and the defender-side clause names the answer');
+    const src = readFileSync(join(root, 'splice/dossier.js'), 'utf8');
+    assert.ok(src.includes("from '../battle/tagtext.js'"), 'the dossier imports the shared phrasing');
+    assert.ok(!/ignoreArmor'\) return 'go straight/.test(src), 'and does not keep its own copy');
+  }
+}
+
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

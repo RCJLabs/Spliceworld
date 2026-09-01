@@ -1,5 +1,163 @@
 # PROGRESS
 
+## Session 57 — R35: the other matchup layer, on the screen where you choose ✅
+
+**Acceptance criterion:** the strike-team picker shows what you need to pick
+with — **passes**, at `SAVE_VERSION` 29 (no schema change).
+
+### First, the premise was wrong again
+
+Last session's note said the briefing "shows a chimera's class and nothing
+else." It does not. It already showed a class icon per row, obedience,
+injury state, a **type advantage** flag, and the opposition's classes — A7
+and A1 had both been through here. The class triangle was covered.
+
+The gap was the **other** matchup layer.
+
+### The tag chart decides fights and was invisible
+
+| | |
+|---|---|
+| encounters carrying a tag beyond Organic | **23 of 24 (96%)** |
+| encounters throwing at least one Ground move | **17 of 24 (71%)** |
+| tag spread | Vehicle 19, Airborne 13, Armored 11, Aquatic 11 |
+
+**Priced wrong the first time.** Comparing an eagle build on the A frame
+against the same parts on M made flight look *harmful* — 53% against 56%.
+That comparison changes stats, sockets and mass, so it measured the chassis,
+not the rule. Isolated properly, same build on both sides of the chart with
+only the rule toggled:
+
+| rule | on | off | worth |
+|---|---|---|---|
+| Ground misses Airborne | 53% | 49% | **+3.7pp** |
+| Sonic ignores Armor | 32% | 24% | **+7.4pp** |
+
+A layer worth 4–7pp, live in 96% of fights, with nothing about it on the
+screen where you commit a team.
+
+### What shipped
+
+The opposition lists its tags **from your chair** — *"Armored: your Sonic
+goes straight through it"*, *"Airborne: your Ground does nothing"* — and
+every roster row says what the chart actually does between that creature and
+this enemy, using the four moves it can press:
+
+> 🪽 **Kite Eagle** — ready · obedience 100% · beats their Ground
+> ✔ their Ground attacks miss it entirely
+>
+> 🪽 **Sentry Goose** — ready · obedience 100% · beats their Ground
+> ✔ their Ground attacks miss it entirely ✔ Sonic goes through their armour
+>
+> 🦶 **Big Unit** — ready · obedience 100% · beats their Water
+> ✘ its Ground attacks do nothing to Airborne
+
+**Losses get the same space as wins.** A briefing that lists only upsides is
+a sales brochure, and A1's lesson was that the game must not present a losing
+pick as a choice.
+
+### Two things the work turned up on its own
+
+**A note that fires for every pick is not information for picking.** "Their
+Gas hits it harder" appeared on all four rows of nearly every encounter,
+because the engine stamps `Organic` on every chimera — true, and useless for
+choosing between them. It is said once on the opposition line now.
+
+**And "type advantage here" is true of every row in 21% of encounters** —
+Slag Gate among them, which is how the screenshot caught it. It discriminates
+in the other 79%, so it stays; it names the class now (*"beats their
+Ground"*), which informs in both cases.
+
+### One implementation of the chart
+
+R33 wrote the chart's sentences for the dossier; R35 needed them again from
+the defender's chair. They live in `battle/tagtext.js` and both screens read
+them, because two copies of a chart is how a chart goes stale. A gate adds a
+chart row and proves it reaches the opposition list *and* a roster row with
+no engine edit.
+
+### The break battery, and a pattern in how I write gates
+
+Nine breaks, plus four serial re-runs once the gates were fixed. Every break
+lands.
+
+| break | verdict |
+|---|---|
+| incoming chart rules go silent | CAUGHT |
+| outgoing chart rules go silent | CAUGHT (sibling R35 assertion, same path) |
+| losses stop being reported — only upsides | CAUGHT |
+| a new chart row is ignored | CAUGHT |
+| the Organic suppression is removed | CAUGHT *(after the gate was fixed)* |
+| the universal rule vanishes from the opposition line | CAUGHT *(after the gate was fixed)* |
+| the dossier forks the chart | CAUGHT (R33's dossier gate, same property) |
+| the briefing renders no opposition tags | CAUGHT |
+| the SW forgets `campaign/matchup.js` | CAUGHT |
+
+It found **three gates of mine that could not fail, and one piece of dead
+code** — a better haul than the code changes.
+
+Ten breaks, then five re-runs. It found **three gates of mine that could not
+fail, and one piece of dead code** — a better haul than the code changes.
+
+**Two hollow gates, one mistake, twice.** Both asserted on a substring that
+appears in more places than the thing under test:
+
+- The Organic-suppression gate grepped a note's **text** for "Organic". A
+  note's text names only the attacking tag — *"their Gas hits it harder"* —
+  while the defender tag lives in the `key`. It could never fail.
+- The opposition-line gate grepped for "Organic" too, and `foeTagLines`
+  emits an ordinary per-tag line for Organic whenever the **opposition** is
+  Organic, which most of it is. It passed whether or not the universal rule
+  was reported at all. It matches *"everything you own"* now — a phrase only
+  the universal line carries.
+
+That is four such gates across R34 and R35, all the same failure. Worth
+naming as a pattern in how I write assertions rather than fixing four times
+and moving on.
+
+**One gate guarding code that could not run.** The dedup filter in
+`matchupNotes` carried a comment claiming "several waves can carry the same
+tag" — but `campaign/ui.js` collapses the waves into Sets before the function
+is reached, and the chart is walked once, so a repeated key cannot arise.
+Measured across all 24 encounters against a maximal tag set: zero
+duplicates. A comment I had not verified, guarding unreachable code, checked
+by a gate that could not fail. All three found by one break. The filter is
+gone and the gate now asserts the property where it *can* be violated.
+
+Two breaks were caught by sibling assertions rather than the one named —
+stubbing the shared chart trips R33's dossier gate first, which is the same
+property from the other chair.
+
+**And a third that could not fail in either of two shapes.** The "no repeated
+clause" gate first guarded the dead dedup filter; rewritten to test the
+caller, it built a `Set` from a doubled array — which the Set collapses
+before the function sees it. `matchupNotes` takes Sets by contract and walks
+the chart once, so the property is unviolatable. The gate is deleted rather
+than reshaped a third time: a gate that cannot fail is worse than no gate,
+because it reads like coverage.
+
+*(Procedural notes, both mine. I raced my own battery — moved HEAD in the
+break worktree while four breaks were mid-flight — and then let three queued
+jobs run the re-run script concurrently against one worktree, interleaving
+the log. Both sets of results were discarded and the affected breaks re-run
+serially on a settled tree, rather than reported from output I could not
+trust.)*
+
+### Known gaps
+
+- The battle screen shows a class chip but still no tag chips — the matchup
+  is explained before the fight and during the fight only through damage
+  numbers.
+- R34's set bonus is named on the Pens card and the Dex, not on the briefing.
+  It is a passive, and the row is already carrying obedience, class and up to
+  two chart clauses at 380px.
+
+### Next session's first task
+
+The Dex. It lists what you have collected; it does not say what any of it is
+*for*. With R32's mass, R33's dossier rows and R34's set bonuses all real
+now, the Dex is the one screen still describing the roster as a stamp album.
+
 ## Session 56 — R34: the purebred set bonus, which nothing read ✅
 
 **Acceptance criterion:** going purebred does something the battle engine
