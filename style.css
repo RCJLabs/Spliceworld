@@ -2033,3 +2033,23 @@ button.dex-cell:focus-visible {
   color: var(--text);
 }
 .forecast .why-outnumbered { border-left-color: var(--accent); }
+
+/* --- R38: what is holding a grade down ---------------------------------
+   The forecast was one word for an animal with three inputs. The headroom
+   chip is the hook that makes a card worth reading twice; the outlook line
+   under it is what the player acts on. */
+.headroom {
+  font-size: 0.75em;
+  font-weight: 700;
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.5rem;
+  color: var(--bg);
+  background: var(--accent);
+  vertical-align: middle;
+}
+.outlook { margin-top: 0.15rem; color: var(--text-dim); }
+.outlook.giving-up {
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--accent-2);
+  color: var(--text);
+}

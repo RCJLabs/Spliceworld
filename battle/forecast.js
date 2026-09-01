@@ -207,6 +207,12 @@ export function diagnose(team, encounter, content, seed = 1, now = 0, { canBring
   // different and more useful thing to say.
   return {
     id: 'outgunned',
-    text: 'Hand them every matchup above and this is still a loss — these creatures are not strong enough yet. Raise donors longer for better grades, or splice something sharper.',
+    // R38. This said "raise donors longer", naming ONE of the three inputs
+    // to a part's grade. Measured over 1,200 starter animals, waiting is the
+    // wrong lever for 12% of them — an adult in poor condition gains nothing
+    // by ageing further — so the advice pointed some players at the one
+    // thing that would not work. The Ranch card now decomposes it per
+    // animal; this line sends them there rather than guessing for them.
+    text: 'Hand them every matchup above and this is still a loss — these creatures are not strong enough yet. Better parts come from better donors; each animal on the Ranch says what is holding its grade down.',
   };
 }

@@ -2,9 +2,29 @@
   "_doc": "First-use field guides (ROADMAP R29). Onboarding shipped in M7 as a five-step Path to World Domination and then eight more systems shipped behind it, unguided. Every guide here is DERIVED FROM SAVE STATE — there are no tutorial flags to migrate and nothing is scripted. A guide has two condition lists: `reachable` (the system exists for this player yet) and `done` (they have used it). It shows only when reachable AND not done, so a tip can never fire before its system is reachable and can never nag about something already understood. Conditions are either { path, min, default } — a dotted path into the save, compared by number, array length or key count — or { helper } for the handful that need real derivation (a breedable pair, an injured chimera, an open contest); the helper registry lives in ranch/onboarding.js and is the engine's own knowledge of its systems. Adding a guide for a system the engine can already detect is a pure data edit. `screen` is which tab it appears on; `order` breaks ties when more than one is ready. A player can dismiss one, which is the only piece of this that touches the save (`guidesSeen`).",
   "guides": [
     {
-      "id": "breeding",
+      "id": "grades",
       "screen": "ranch",
       "order": 10,
+      "icon": "🎓",
+      "title": "A grade is three things, and you control two",
+      "body": "Every part a donor becomes is stamped <em>Standard</em>, <em>Prime</em>, <em>Apex</em> or <em>Prismatic</em>, and the grade is genetics × age × condition. Genetics you can only breed for. The other two are yours: an animal at its Prime, kept in good condition, grades two tiers above the same animal extracted young and neglected — and it is the same animal. Each card says what its own grade is waiting on, and what it would be worth if you fixed it. Graduating early is allowed and sometimes right; doing it by accident is not.",
+      "reachable": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "helper": "gradedPartOwned"
+        }
+      ]
+    },
+    {
+      "id": "breeding",
+      "screen": "ranch",
+      "order": 11,
       "icon": "💕",
       "title": "Two adults make a third",
       "body": "Two grown animals of the same stock — one of each sex — can be paired in the Breeding Pen. The egg inherits their stats, their genes, and occasionally something neither of them had.",
@@ -24,7 +44,7 @@
     {
       "id": "incubator",
       "screen": "ranch",
-      "order": 11,
+      "order": 12,
       "icon": "🥚",
       "title": "Eggs hatch on their own clock",
       "body": "The Incubator counts down in real time whether the app is open or not. Come back and hit Hatch — the hatchling needs a free pen, so keep one spare.",
@@ -44,7 +64,7 @@
     {
       "id": "genes",
       "screen": "ranch",
-      "order": 12,
+      "order": 13,
       "icon": "🧬",
       "title": "Half of what an animal has, it does not show",
       "body": "A dominant gene shows in the animal that carries it. A recessive needs two copies, so it can travel invisibly for generations. The Gene Scanner is how you stop guessing.",
@@ -69,7 +89,7 @@
     {
       "id": "pairing",
       "screen": "ranch",
-      "order": 13,
+      "order": 14,
       "icon": "🔬",
       "title": "The Suite does the Punnett square",
       "body": "Pick both parents in the Breeding Pen and the Predictive Pairing Suite prints the real odds: what the egg will CARRY, and what it will actually SHOW. Those are different numbers, and the gap is where breeding programmes live.",
@@ -91,7 +111,7 @@
     {
       "id": "facility",
       "screen": "ranch",
-      "order": 14,
+      "order": 15,
       "icon": "🏚",
       "title": "The lab is upgradeable",
       "body": "Six tracks, each bought in order, each gated by money and usually by territory. They buy things you cannot otherwise have: two more chassis at opposite ends of the scale, a second organ bay, a machine that reads alleles. Money has nowhere better to go.",
@@ -109,7 +129,7 @@
     {
       "id": "upkeep",
       "screen": "ranch",
-      "order": 15,
+      "order": 16,
       "icon": "💸",
       "title": "Everything you own eats",
       "body": "Stock costs its species upkeep; a chimera costs whatever its chassis, its part grades and its instability add up to — a prismatic monster runs seven times a plain one. Watch NET, not income. If it goes red, take a node or graduate something.",
@@ -131,7 +151,7 @@
     {
       "id": "catalog",
       "screen": "ranch",
-      "order": 16,
+      "order": 17,
       "icon": "📦",
       "title": "The catalogue grows by conquest",
       "body": "Mail-Order only stocks fauna your territory reaches. Every node you take adds species, and the exotic ones live in the later regions — which is the real reason to keep pushing the map.",
