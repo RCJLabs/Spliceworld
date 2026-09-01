@@ -50,6 +50,8 @@ import {
 import { classMultiplier } from '../battle/engine.js';
 import { overflowingParts } from './bounds.js';
 import { renderDexScreen } from '../splice/dex-ui.js';
+import { dexProgress } from '../splice/dexentry.js';
+import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { moveReadout } from '../battle/readout.js';
 import { defaultMoveset } from '../battle/moves.js';
 
@@ -856,6 +858,34 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
   }
 }
 
+// The Dex renders to a string, but since R45 it renders ONE TAB at a time,
+// so a gate that reads it has to be able to change tabs. bindSubtabs asks
+// the root for its tab buttons and registers a click handler on each; this
+// stub hands back fakes and keeps the handlers, which is what lets the
+// harness walk all five views without a DOM. Shared by the R21 findability
+// gate and R45's own, so both agree on what "the Dex" is.
+const DEX_TAB_IDS = ['roster', 'variants', 'combos', 'genes', 'foes'];
+function dexPages(state) {
+  const handlers = new Map();
+  const root = {
+    innerHTML: '',
+    querySelector: () => null,
+    querySelectorAll: (sel) => (sel !== 'button[data-dex-tab]' ? [] : DEX_TAB_IDS.map((id) => ({
+      dataset: { dexTab: id },
+      addEventListener: (_e, fn) => handlers.set(id, fn),
+    }))),
+  };
+  renderDexScreen(root, { state, content, now: () => t0, save: () => {} });
+  const out = {};
+  for (const id of DEX_TAB_IDS) {
+    assert.ok(handlers.has(id), `the Dex bar binds tab "${id}"`);
+    handlers.get(id)();
+    out[id] = root.innerHTML;
+  }
+  handlers.get('roster')(); // leave the module state where a player would find it
+  return out;
+}
+
 // --- R21: everything the game announces is findable again afterwards.
 //
 // The audit that queued this phase was WRONG about its headline: combos are
@@ -877,9 +907,10 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
   lab.dex.variants = ['alpine_ram'];
   lab.campaign.rivals = { mantissa: { defeats: 2, losses: 1, lastMetAt: t0 } };
 
-  const root = { innerHTML: '' }; // the dex renders to a string; no DOM needed
-  renderDexScreen(root, { state: lab, content });
-  const page = root.innerHTML;
+  // R45 put the Dex behind tabs, so "findable" became a claim about the
+  // NAV, not about one string. Walking every tab is the stronger form of
+  // the same rule: a discovery has to be reachable from somewhere.
+  const page = Object.values(dexPages(lab)).join('\n');
 
   const FINDABLE = [
     ['a discovered combo', content.combos.pack_hunt.name],
@@ -5287,7 +5318,9 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   const src = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
   const viewsAt = src.indexOf('const views = {');
   const htmlAt = src.indexOf('root.innerHTML');
-  const handlerAt = src.indexOf("button[data-war-tab]");
+  // R45 moved the binding into ui/tabs.js, so the template region now ends
+  // where bindSubtabs starts rather than at an inline querySelectorAll.
+  const handlerAt = src.indexOf("bindSubtabs(root, 'war-tab'");
   assert.ok(viewsAt > 0 && htmlAt > viewsAt && handlerAt > htmlAt, 'the War Room still has a view map, a template and a tab handler');
 
   const viewMap = src.slice(viewsAt, htmlAt);
@@ -5304,7 +5337,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     );
     assert.ok(template.includes('${' + alert), `the ${alert} alert is still rendered`);
     assert.ok(
-      template.indexOf('${' + alert) < template.indexOf('${subtabBar'),
+      template.indexOf('${' + alert) < template.indexOf('${warSubtabBar'),
       `and sits above the tab bar, so it shows on every view`
     );
   }
@@ -9368,6 +9401,307 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal((page.match(/aria-expanded="true"/g) ?? []).length, 1, 'and only that one');
     assert.equal(newGameState().saveVersion, SAVE_VERSION, 'with no version bump for a fold');
   }
+}
+
+// --- R45: the Dex at twelve screens.
+//
+// Measured at 380px before the fix: 7,113px on a fresh save and 9,998px
+// late — 12.5 phone screens, 80 inline SVGs, one column. Finding the trait
+// list meant scrolling past forty species portraits every time, and every
+// species added since A3 made it worse.
+//
+// Tabs, not R44's folds. The Pens is a working screen — you go there to act
+// on one creature, so a shut summary row is the right default. The Dex is a
+// reference screen: you go there to LOOK SOMETHING UP, and a page where
+// every section starts shut is a worse place to browse than a long one.
+// R15's War Room bar is the precedent, and its rule comes with it —
+// COMPLETION NEVER GOES BEHIND A TAB, because completion is the reason the
+// screen exists.
+{
+  const DEX_IDS = DEX_TAB_IDS;
+  const CLASS_ORDER_FOR_DEX = ['ground', 'water', 'air'];
+  const everything = () => {
+    const st = { ...newGameState(), seed: 45 };
+    st.dex = {
+      parts: Object.keys(content.parts),
+      traits: Object.keys(content.traits),
+      enemies: Object.keys(content.enemies),
+      variants: Object.values(content.species).filter((sp) => sp.variantOf).map((sp) => sp.id),
+    };
+    st.discoveredCombos = Object.keys(content.combos);
+    st.campaign.rivals = Object.fromEntries(
+      Object.keys(content.rivals).map((id) => [id, { defeats: 1, losses: 0, lastMetAt: 1 }])
+    );
+    return st;
+  };
+  // Each pages() call renders the whole Dex six times over, and the roster
+  // alone is 34 inline creature SVGs — so the two standard saves are drawn
+  // once and reused rather than rebuilt per assertion.
+  const pages = dexPages;
+  const FRESH_PAGES = pages(newGameState());
+  const FULL_PAGES = pages(everything());
+
+  // 1. THE CRITERION. One tab's content is on the page, and the other four
+  //    are not — including their portraits, which are the expensive part.
+  //    Not "hidden": absent.
+  {
+    const page = FULL_PAGES;
+    const marks = {
+      roster: 'Class Triangle',
+      variants: '✦ Variants',
+      combos: 'Combo Abilities',
+      genes: 'Trait Genes',
+      foes: 'Field Guide — Opposition',
+    };
+    for (const id of DEX_IDS) {
+      assert.ok(page[id].includes(marks[id]), `tab "${id}" renders its own section`);
+      for (const other of DEX_IDS) {
+        if (other === id) continue;
+        assert.ok(
+          !page[id].includes(marks[other]),
+          `tab "${id}" does not also build "${other}" — a hidden tab that still renders costs everything a single column cost`
+        );
+      }
+    }
+    // The measurable half of that claim, stated per tab rather than as a
+    // ratio: fully discovered, the old single column drew every portrait in
+    // the game at once — the 34-species roster AND the 40-unit field guide,
+    // 80 inline SVGs. Each tab now draws exactly its own, which is the
+    // assertion that fails if a view ever starts building a neighbour's.
+    const svgs = Object.fromEntries(DEX_IDS.map((id) => [id, (page[id].match(/<svg/g) ?? []).length]));
+    const owed = {
+      roster: Object.values(content.species).filter((sp) => !sp.synthetic && !sp.variantOf).length,
+      variants: Object.values(content.species).filter((sp) => sp.variantOf).length,
+      combos: 0,
+      genes: 0,
+      foes: Object.keys(content.enemies).length,
+    };
+    assert.deepEqual(svgs, owed, `each tab draws its own portraits and no others (${JSON.stringify(svgs)})`);
+    const total = Object.values(svgs).reduce((a, b) => a + b, 0);
+    assert.ok(total >= 70, `the collection is all still drawn, across the tabs (${total})`);
+    assert.ok(
+      svgs.roster > 20 && svgs.foes > 20 && Math.max(...Object.values(svgs)) < total,
+      `the two galleries are both real and no longer share a page (${JSON.stringify(svgs)})`
+    );
+  }
+
+  // 2. COMPLETION NEVER GOES BEHIND A TAB. It sits above the bar, so it is
+  //    on all five views — and so does the field note, which is this
+  //    screen's only expiring thing.
+  {
+    const page = FRESH_PAGES.roster;
+    const barAt = page.indexOf('data-dex-tab');
+    assert.ok(barAt > 0, 'the bar rendered');
+    assert.ok(page.indexOf('dex-progress') > 0 && page.indexOf('dex-progress') < barAt,
+      'the completion strip is above the tab bar');
+    assert.ok(page.indexOf('dex-chips') < barAt, 'and so are its per-category counts');
+    const every = FRESH_PAGES;
+    for (const id of DEX_IDS) {
+      const p = every[id];
+      assert.ok(p.indexOf('dex-progress') < p.indexOf('data-dex-tab'),
+        `completion shows on the "${id}" view too`);
+    }
+  }
+
+  // 3. The counts are the collection's, not a second opinion about it.
+  //    A fresh save is at zero of everything; a finished one is at all of
+  //    it; and salvage is its OWN row rather than folded into parts,
+  //    because a player without the Containment Cannon has not failed to
+  //    find those eight — the column is not open to them yet.
+  {
+    const zero = dexProgress(newGameState(), content);
+    assert.equal(zero.found, 0, 'a fresh save has catalogued nothing');
+    assert.equal(zero.pct, 0, 'and reads 0%');
+    assert.ok(zero.total > 300, `out of the whole collection (${zero.total})`);
+    for (const row of zero.rows) assert.ok(row.total > 0, `${row.label} counts something`);
+
+    const all = dexProgress(everything(), content);
+    assert.equal(all.found, all.total, 'a finished save has catalogued everything');
+    assert.equal(all.pct, 100, 'and reads 100%');
+
+    const salvage = zero.rows.find((r) => r.id === 'salvage');
+    const parts = zero.rows.find((r) => r.id === 'parts');
+    assert.ok(salvage && salvage.total > 0, 'salvage is its own row');
+    const organic = Object.values(content.parts).filter((p) => p.species !== 'salvage').length;
+    assert.equal(parts.total, organic, 'and is not also counted inside parts');
+
+    // The rival row reads the campaign record through rivals.js, so the Dex
+    // and the War Room cannot disagree about who you have met.
+    const met = { ...newGameState(), seed: 45 };
+    met.campaign.rivals = { [Object.keys(content.rivals)[0]]: { defeats: 0, losses: 1, lastMetAt: null } };
+    const one = dexProgress(met, content).rows.find((r) => r.id === 'rivals');
+    assert.equal(one.found, 1, 'a rival you lost to still counts as met');
+  }
+
+  // 4. The only badge a tab earns is "nothing left here". A count of what
+  //    you are missing would sit on every tab from the first minute, and a
+  //    badge that is always lit is a badge nobody reads.
+  {
+    const zero = dexProgress(newGameState(), content);
+    assert.ok(
+      DEX_IDS.every((id) => !zero.byTab[id]?.complete),
+      'a fresh save has no completed tab'
+    );
+    const all = dexProgress(everything(), content);
+    assert.ok(
+      DEX_IDS.every((id) => all.byTab[id]?.complete),
+      `a finished save has every tab complete (${JSON.stringify(all.byTab)})`
+    );
+    for (const id of DEX_IDS) assert.ok(all.byTab[id], `tab "${id}" has counts of its own`);
+    const page = FULL_PAGES.roster;
+    assert.ok(page.includes('subtab-badge'), 'and the finished tabs are marked on the bar');
+    assert.ok(!FRESH_PAGES.roster.includes('subtab-badge'), 'while a fresh one is not');
+  }
+
+  // 4b. The two long lists are ordered by what you would DO about a row,
+  //     not by content order. Twenty-seven combos in file order buried the
+  //     two you had found among the twenty-five you had not — and buried
+  //     the ones you could splice tonight with the ones you have no parts
+  //     for. comboHint already knew which was which and the list ignored it.
+  {
+    // A save that has met both halves of exactly one combo and discovered
+    // a different one: the three groups have to separate those two rows.
+    const target = Object.values(content.combos)[0];
+    const other = Object.values(content.combos).find((c) =>
+      c.id !== target.id && !c.parts.some((p) => target.parts.includes(p)));
+    assert.ok(other, 'the roster has two combos that share no part');
+    const st = { ...newGameState(), seed: 45 };
+    st.dex = { parts: [...target.parts], traits: [], enemies: [], variants: [] };
+    st.discoveredCombos = [other.id];
+    const page = pages(st).combos;
+
+    // Anchored on the group markup, not the words: "Discovered" also
+    // appears in the field note's own copy, and a gate that matches a bare
+    // substring is a gate that passes for the wrong reason.
+    const groupAt = (html, label) => html.indexOf(`<p class="dex-group">${label} `);
+    const readyAt = groupAt(page, 'Both halves in hand');
+    const foundAt = groupAt(page, 'Discovered');
+    const restAt = groupAt(page, 'Still rumoured');
+    assert.ok(readyAt > 0 && foundAt > 0 && restAt > 0,
+      `all three groups are on the page (${readyAt}/${foundAt}/${restAt})`);
+    assert.ok(readyAt < foundAt && foundAt < restAt,
+      'what you could splice tonight comes first, then what you know, then what you cannot reach');
+    // …and the rows land in the right ones.
+    assert.ok(page.slice(readyAt, foundAt).includes('you have handled both'),
+      'the combo whose halves you own is in the actionable group');
+    assert.ok(page.slice(foundAt, restAt).includes(other.name),
+      'and the one you discovered is in the discovered group');
+
+    // A heading over nothing is worse than no heading, so an empty group
+    // is not rendered at all — which is most saves for two of the three.
+    const zero = FRESH_PAGES.combos;
+    assert.equal(groupAt(zero, 'Discovered'), -1, 'a fresh save has no "Discovered" heading over an empty list');
+    assert.equal(groupAt(zero, 'Both halves in hand'), -1, 'nor an empty actionable group');
+    assert.ok(groupAt(zero, 'Still rumoured') > 0, 'but the group it does have is labelled');
+    const all = FULL_PAGES.combos;
+    assert.equal(groupAt(all, 'Still rumoured'), -1, 'and a finished save has nothing left to rumour');
+    assert.ok(groupAt(all, 'Discovered') > 0, 'only what it found');
+    // Same rule on the gene list.
+    assert.equal(groupAt(FRESH_PAGES.genes, 'Sequenced'), -1, 'no empty gene group either');
+    assert.ok(groupAt(FULL_PAGES.genes, 'Sequenced') > 0, 'and the full one is labelled');
+    assert.equal(groupAt(FULL_PAGES.genes, 'Not yet expressed'), -1, 'with no empty tail');
+  }
+
+  // 4c. The Dex has two galleries and only one of them was organised. The
+  //     roster has grouped species by class since Wave 1; the field guide
+  //     listed forty units in file order. Both group by the same triangle
+  //     now, because the triangle is what you came to look up.
+  {
+    const page = FULL_PAGES.foes;
+    // Anchored on the guide's own heading markup. "Ground" also appears in
+    // a rival dossier's "Favours Ground" line further up the same page, and
+    // a gate that searches for the bare word measures that instead.
+    const head = (cls) =>
+      `<h3>${content.classes[cls].icon} ${content.classes[cls].name} <span class="lineage">`;
+    const at = (needle) => page.indexOf(needle);
+    const heads = CLASS_ORDER_FOR_DEX.map((c) => [c, at(head(c))]);
+    for (const [c, i2] of heads) assert.ok(i2 > 0, `the guide has a ${c} heading`);
+    assert.deepEqual(
+      [...heads].sort((a, b) => a[1] - b[1]).map((h) => h[0]),
+      CLASS_ORDER_FOR_DEX,
+      `and they run in the roster's order (${JSON.stringify(heads)})`
+    );
+
+    // Every unit is under the heading for its own class — the failure mode
+    // of a grouped gallery is a unit that quietly stops being listed.
+    for (const [ci, cls] of CLASS_ORDER_FOR_DEX.entries()) {
+      const start = at(head(cls));
+      const next = heads.map((h) => h[1]).filter((x) => x > start);
+      const end = next.length ? Math.min(...next) : page.length;
+      for (const u of Object.values(content.enemies).filter((u) => u.class === cls)) {
+        const k = at(`<strong>${u.name}</strong>`);
+        assert.ok(k > start && k < end,
+          `${u.name} is listed under ${content.classes[cls].name} (${k} not in ${start}..${end})`);
+      }
+      assert.ok(ci >= 0);
+    }
+    const listed = Object.values(content.enemies).filter((u) => at(`<strong>${u.name}</strong>`) > 0).length;
+    assert.equal(listed, Object.keys(content.enemies).length,
+      `every unit survives the grouping (${listed})`);
+    // Grouping the roster by class is what R45 copied here; if that ever
+    // stops being true this gate is comparing the guide to nothing.
+    for (const c of CLASS_ORDER_FOR_DEX) {
+      assert.ok(
+        FULL_PAGES.roster.includes(`<h3>${content.classes[c].icon} ${content.classes[c].name} — beats `),
+        `the roster still groups by ${c}`
+      );
+    }
+  }
+
+  // 5. Every tab the bar offers has somewhere to go, and an unrecognised
+  //    one renders the roster rather than a blank screen. (R39's lesson:
+  //    a nav gate that checks the tabs it happens to know about is the
+  //    gate that missed a whole screen.)
+  {
+    const src = readFileSync(join(root, 'splice/dex-ui.js'), 'utf8');
+    const ids = [...src.matchAll(/\{ id: '(\w+)', icon:/g)].map((m) => m[1]);
+    assert.deepEqual(ids, DEX_IDS, `the bar's tabs are the ones under test (${ids.join(', ')})`);
+    const viewsAt = src.indexOf('const VIEWS = {');
+    const viewMap = src.slice(viewsAt, src.indexOf('};', viewsAt));
+    assert.ok(viewsAt > 0, 'the Dex has a view map');
+    for (const id of ids) assert.ok(new RegExp(`(^|\\W)${id}:`).test(viewMap), `tab "${id}" has a view`);
+    assert.ok(src.includes('?? VIEWS.roster'), 'an unrecognised tab falls back to the roster');
+  }
+
+  // 6. Which tab you are on is module state, like the War Room's. A layout
+  //    preference must not cost a schema migration.
+  assert.equal(newGameState().saveVersion, SAVE_VERSION, 'no version bump for a tab bar');
+}
+
+// --- R45: one tab bar, two screens. The War Room's bar was bespoke to the
+// War Room and hardcoded to five columns; the Dex needed the same nav, and
+// two copies of a nav is how two screens drift apart.
+{
+  const bar = subtabBar({
+    tabs: [{ id: 'a', icon: '1', label: 'A' }, { id: 'b', icon: '2', label: 'B' }, { id: 'c', icon: '3', label: 'C' }],
+    active: 'b',
+    attr: 'demo-tab',
+  });
+  // The column count follows the tabs. Both shipped bars happen to have
+  // five, so only a third count proves the grid is no longer hardcoded.
+  assert.ok(bar.includes('--subtab-n:3'), `a three-tab bar splits into three (${bar.slice(0, 90)})`);
+  assert.equal((bar.match(/data-demo-tab=/g) ?? []).length, 3, 'one button per tab');
+  assert.ok(bar.includes('data-demo-tab="b" class="is-on"'), 'the active tab is the lit one');
+  assert.equal((bar.match(/is-on/g) ?? []).length, 1, 'and only it');
+  assert.ok(!bar.includes('subtab-badge'), 'no badge unless the caller asks for one');
+  const badged = subtabBar({
+    tabs: [{ id: 'a', icon: '1', label: 'A' }, { id: 'b', icon: '2', label: 'B' }],
+    active: 'a', attr: 'demo-tab', badgeFor: (id) => (id === 'b' ? { text: '!', kind: 'alert' } : null),
+  });
+  assert.equal((badged.match(/subtab-badge/g) ?? []).length, 1, 'and exactly the one it asks for');
+  assert.ok(badged.includes('badge-alert'), 'carrying the kind it asked for');
+
+  // bindSubtabs derives the dataset key from the attribute name, which is
+  // the one thing about this that is easy to get wrong by hand.
+  const picked = [];
+  const fake = {
+    querySelectorAll: (sel) => (sel === 'button[data-demo-tab]'
+      ? [{ dataset: { demoTab: 'c' }, addEventListener: (_e, fn) => fn() }]
+      : []),
+  };
+  bindSubtabs(fake, 'demo-tab', (id) => picked.push(id));
+  assert.deepEqual(picked, ['c'], 'a click reports the tab id, not undefined');
+  bindSubtabs(null, 'demo-tab', () => assert.fail('no root, no crash'));
 }
 
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

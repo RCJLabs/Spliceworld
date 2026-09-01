@@ -679,6 +679,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .fill-foe { background: linear-gradient(90deg, var(--danger-2), var(--danger-2)); }
 .fill-sta { background: linear-gradient(90deg, var(--sta), var(--sta-2)); }
 .fill-cannon { background: linear-gradient(90deg, var(--accent-2), var(--zap)); }
+.fill-dex { background: linear-gradient(90deg, var(--accent-2), var(--goo)); }
 
 .hp-read {
   display: flex;
@@ -1228,6 +1229,34 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .dex-cell strong { display: block; margin-top: 2px; }
 .dex-cell .fine-print { display: block; }
 .dex-unknown { opacity: 0.55; }
+
+/* R45 — completion stays above the tab bar, because "how much of this have
+   I found" is the whole reason the Dex is a screen and not a menu. Chips
+   wrap rather than scroll: eight of them at 380px is three rows, and a row
+   you have to swipe sideways is a row nobody reads. */
+.dex-progress { padding-bottom: 8px; }
+.dex-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.dex-chip {
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--well);
+  color: var(--muted);
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+.dex-chip strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.dex-chip-done { border-color: var(--goo); color: var(--goo); }
+.dex-chip-done strong { color: var(--goo); }
+.dex-group {
+  margin: 10px 0 3px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dex-group:first-child { margin-top: 4px; }
 .dex-portrait svg { width: 100%; height: auto; display: block; }
 .dex-mystery {
   font-size: 2.4rem;
@@ -1682,7 +1711,7 @@ footer {
   top: 0;
   z-index: 6;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--subtab-n, 5), 1fr);
   gap: 4px;
   margin: 0 0 10px;
   padding: 6px;

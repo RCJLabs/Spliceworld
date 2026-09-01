@@ -1,5 +1,185 @@
 # PROGRESS
 
+## Session 67 — R45: the Dex at twelve screens ✅
+
+**Acceptance criterion:** every part of the Dex is reachable without a
+twelve-screen scroll, and completion is visible from all of it —
+**passes, measured in the browser**. No schema change; `SAVE_VERSION`
+stays **33**.
+
+### The screen R44 handed over
+
+R44 closed by naming the Dex as the longest screen in the game, and it
+was. Measured at 380px:
+
+| | fresh save | late game |
+|---|---|---|
+| **before** | **7,113px** (8.9 screens) | **9,998px** (12.5) |
+
+Forty inline creature SVGs and forty enemy units in one column. Looking up
+a trait gene meant scrolling past the entire species roster every time.
+
+### Tabs, not folds — and the reason matters
+
+R44 fixed the Pens with folds. The Pens is a **working** screen: you go
+there to act on one creature, so a shut summary row is the right default.
+The Dex is a **reference** screen — you go there to look something up, and
+a page where every section starts shut is a *worse* place to browse than a
+long one. R15's War Room bar is the precedent, and its rule travels with
+it: **completion never goes behind a tab**, because completion is the
+reason the screen exists.
+
+Five tabs, and each one builds only when it is the active one — a hidden
+tab costs nothing, which is where the weight actually went:
+
+| tab | fresh | late |
+|---|---|---|
+| 🧬 Roster | 2,901px (3.6) | 2,922px (3.7) |
+| ✦ Variants | 1,037px (1.3) | 1,128px (1.4) |
+| ⚡ Combos | 1,379px (1.7) | 2,907px (3.6) |
+| 🧪 Genes | 837px (1.0) | 1,356px (1.7) |
+| 👁 Foes | 2,708px (3.4) | **3,539px (4.4)** |
+
+Worst case **12.5 screens → 4.4**, and three of five tabs are under two.
+The 80 portraits split 34 / 6 / 0 / 0 / 40; the two galleries never render
+on the same page again.
+
+**Five tabs is the ceiling, measured, not guessed.** At five columns a
+button is 64.8px wide and the word "Variants" renders at 61px. There is no
+headroom for a sixth, which is why Rivals shares the Foes tab rather than
+getting its own — and why the Foes tab is the one still over four screens.
+
+### The bar was bespoke to one screen
+
+`subtabBar` already existed — inside `campaign/ui.js`, hardcoded to
+`repeat(5, 1fr)`. It moved to **`ui/tabs.js`** with the column count driven
+by `tabs.length`, and the War Room now reads the same implementation
+(`bindSubtabs` too, which derives the dataset key from the attribute name —
+the one part of this that is easy to get wrong by hand). Same rule as
+R35's `tagtext.js`, R39's `shellScreens`, R44's `collapsibleCard`: two
+copies of a nav is how two screens drift apart.
+
+### Completion is new, not just relocated
+
+The Dex never had an overall readout. `dexProgress()` in `dexentry.js` is
+DOM-free and derives all of it — **0/366 on a fresh save, 366/366 when
+finished** — as a meter plus eight chips above the bar. Salvage is its own
+row rather than folded into parts: a player without the Containment Cannon
+has not *failed to find* those eight, the column is not open to them yet.
+Rival counts come through `rivalRecord()` so the Dex and the War Room
+cannot disagree about who you have met.
+
+The only badge a tab earns is **"nothing left here"** (✓). A count of what
+you are missing would sit on every tab from the first minute, and a badge
+that is always lit is a badge nobody reads.
+
+### Two lists that were only ever in file order
+
+Twenty-seven combos in content order buried the two you had found among
+the twenty-five you had not — and buried the ones you could splice tonight
+among the ones you have no parts for. `comboHint` already knew the
+difference (it says *"you have handled both, put them on the same
+creature"*) and the list ignored it. Three groups, in the order you would
+act on them: **Both halves in hand · Discovered · Still rumoured**. Genes
+get the same treatment. An empty group renders nothing at all.
+
+The **field guide** was the Dex's other gallery and the only one that was
+not organised — forty cells in file order. It groups by the same class
+triangle the roster has used since Wave 1, because the triangle is what you
+came to look up: knowing the Falconry Unit is Air is the point.
+
+### The gates caught my own refactor twice
+
+Extracting the bar broke two existing gates immediately, both correctly:
+
+1. **The precache gate.** `ui/tabs.js` shipped without going into `sw.js`'s
+   SHELL — exactly the offline-shell hole that gate was written for after
+   two modules slipped through in consecutive sessions.
+2. **R15's War Room gate**, which sliced the source between `root.innerHTML`
+   and the inline `button[data-war-tab]` handler to isolate the region above
+   the bar. The handler is `bindSubtabs` now, so the anchor moved. The
+   *claim* did not: alerts still must sit above the bar, and a break that
+   moves the captives alert below it is still caught.
+
+R21's findability gate needed the bigger rethink. "A discovery you were
+told about is still findable in the Dex" used to read one rendered string;
+under tabs it is a claim about the **nav**, so the harness now walks all
+five views through a stub that can actually be clicked. Stronger form of
+the same rule.
+
+**One of my own gates was wrong.** I asserted "at least three tabs draw no
+portraits" — there are two. Rather than loosen the number I replaced it
+with the exact per-tab counts derived from content, which fails if any view
+ever starts building a neighbour's portraits.
+
+### The break battery
+
+Fifteen breaks, each run against the full suite in an isolated worktree.
+**All fifteen caught.**
+
+| break | verdict |
+|---|---|
+| all five tabs render at once (the pre-R45 column) | CAUGHT |
+| completion drops below the bar | CAUGHT |
+| salvage folded into the parts count | CAUGHT |
+| a rival you only lost to stops counting as met | CAUGHT |
+| every tab wears a badge | CAUGHT |
+| a tab in the bar with no view behind it | CAUGHT (R21 first — see below) |
+| no fallback, so an unknown tab renders blank | CAUGHT |
+| the bar goes back to five hardcoded columns | CAUGHT |
+| `bindSubtabs` reads the wrong dataset key | CAUGHT (R21 first — see below) |
+| a heading over an empty list | CAUGHT |
+| combos back in content order | CAUGHT |
+| the field guide ungrouped again | CAUGHT |
+| a whole class drops out of the guide | CAUGHT |
+| `ui/tabs.js` falls out of the offline shell | CAUGHT |
+| War Room alerts go behind its bar (R15's rule) | CAUGHT |
+
+Break 13 is the one worth pointing at: dropping Air out of the grouped
+field guide is caught by **the per-tab portrait count** — the gate I had
+to rewrite after getting it wrong — which reads `foes: 28` where it owes
+40. The loose ratio it replaced would have sailed straight past that.
+
+**Two breaks were caught by a sibling, not by their own gate.** R21's
+findability gate sits ~8,700 lines earlier in `smoke.js`, so breaking the
+view map (6) or the dataset key (9) makes the Dex unbrowsable and R21
+fires first. That proves *something* catches them; it does not prove the
+R45 gate written for them would. Run alone against the same worktree
+(R43's isolation pattern):
+
+| isolated | break 6 | break 9 |
+|---|---|---|
+| gate 5 — every tab has a view | **FAIL** `tab "genes" has a view` | PASS |
+| shared bar — a click reports the tab id | PASS | **FAIL** `not undefined` |
+
+Each fires for its own break and only its own. Neither gate is hollow.
+
+### Verified
+
+- Full suite green; six R45 gate blocks plus the shared-bar block.
+- Browser QA at 380px on a fresh save and a fully-catalogued one: every
+  tab measured above, zero console errors on both, no sideways scroll, no
+  button overflow, the species sheet still opens with its six part rows.
+- The tab you are on survives leaving the screen and coming back, and
+  resets to Roster on a reload — module state, like the War Room's, which
+  is why a layout preference costs no migration.
+
+### Known gaps
+
+- **Foes is still 4.4 screens late.** A 40-cell gallery is inherently
+  tall, and there is no room for a sixth tab to split Rivals off (see the
+  61px-in-64.8px measurement above). Grouping made it navigable, not short.
+- The Ranch is 3,388px with a full pen and has never been measured against
+  a *large* herd — carried over from R44.
+- Nothing sorts the stable — carried over from R44.
+- Trophies still are not in the Dex (R42), and `SHIPPED_SYSTEMS` in
+  `smoke.js` is still hand-kept rather than folded into `DATA_NOTES` (R39).
+
+### Next session's first task
+
+Measure the Ranch against a full pen the way R44 measured the Pens and R45
+measured the Dex — it is the last unmeasured long screen.
+
 ## Session 66 — R44: the Pens at nine chimeras ✅
 
 **Acceptance criterion:** a full stable fits a phone, and nothing

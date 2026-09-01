@@ -13,6 +13,7 @@
 // bulk R32 made decide flight. This is that entry.
 
 import { PHYS_TUNING } from './physiology.js';
+import { rivalList, rivalRecord } from '../campaign/rivals.js';
 
 // A weight class in words, derived from the roster rather than hardcoded,
 // so it stays true if the bulks are ever retuned. R32's lesson: the number
@@ -78,4 +79,54 @@ export function speciesParts(sp, content, dexParts = []) {
     });
   }
   return out;
+}
+
+// R45 — the Dex is going behind tabs, and completion is the one thing that
+// must not go with it: "how much of this have I found" is why the screen
+// exists. Derived here rather than in the view so the harness can assert
+// the counts without a DOM, and so the strip above the tab bar and any
+// per-tab badge read the same numbers.
+//
+// Salvage is its own row and not folded into parts: those eight are gated
+// behind the Containment Cannon, so a player without one has not FAILED to
+// find them — that column is not open to them yet, and a completion figure
+// that says otherwise is lying about the game.
+export function dexProgress(state, content) {
+  const dex = state.dex ?? {};
+  const parts = dex.parts ?? [];
+  const base = Object.values(content.species).filter((sp) => !sp.synthetic && !sp.variantOf);
+  const variants = Object.values(content.species).filter((sp) => sp.variantOf);
+  const organicParts = Object.values(content.parts).filter((p) => p.species !== 'salvage');
+  const salvageParts = Object.values(content.parts).filter((p) => p.species === 'salvage');
+  const rivals = rivalList(content);
+  // Through rivalRecord, not state.campaign.rivals directly: where the
+  // record lives is that module's business, and a second opinion about it
+  // here is how the Dex ends up disagreeing with the War Room.
+  const metRival = (r) => {
+    const rec = rivalRecord(state, r.id);
+    return rec.defeats > 0 || rec.losses > 0 || rec.lastMetAt != null;
+  };
+
+  const rows = [
+    { id: 'species', tab: 'roster', label: 'Species', found: base.filter((sp) => parts.some((p) => content.parts[p]?.species === sp.id)).length, total: base.length },
+    { id: 'parts', tab: 'roster', label: 'Parts', found: parts.filter((p) => content.parts[p] && content.parts[p].species !== 'salvage').length, total: organicParts.length },
+    { id: 'salvage', tab: 'roster', label: 'Salvage', found: parts.filter((p) => content.parts[p]?.species === 'salvage').length, total: salvageParts.length },
+    { id: 'variants', tab: 'variants', label: 'Variants', found: (dex.variants ?? []).length, total: variants.length },
+    { id: 'combos', tab: 'combos', label: 'Combos', found: (state.discoveredCombos ?? []).length, total: Object.keys(content.combos).length },
+    { id: 'traits', tab: 'genes', label: 'Genes', found: (dex.traits ?? []).length, total: Object.keys(content.traits).length },
+    { id: 'rivals', tab: 'foes', label: 'Rivals', found: rivals.filter(metRival).length, total: rivals.length },
+    { id: 'enemies', tab: 'foes', label: 'Foes', found: (dex.enemies ?? []).length, total: Object.keys(content.enemies).length },
+  ];
+
+  const found = rows.reduce((n, r) => n + Math.min(r.found, r.total), 0);
+  const total = rows.reduce((n, r) => n + r.total, 0);
+  // Per-tab completion, so a tab can say "done" without the view recounting.
+  const byTab = {};
+  for (const r of rows) {
+    const t = (byTab[r.tab] ??= { found: 0, total: 0 });
+    t.found += Math.min(r.found, r.total);
+    t.total += r.total;
+  }
+  for (const t of Object.values(byTab)) t.complete = t.total > 0 && t.found >= t.total;
+  return { rows, found, total, pct: total ? Math.round((found / total) * 100) : 0, byTab };
 }
