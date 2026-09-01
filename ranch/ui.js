@@ -220,6 +220,10 @@ export function renderRanchScreen(root, ctx) {
     ['campaign', '🗺 Push on the world'],
     ['spend', '💵 Spend money'],
   ];
+  // R47: decided above the body, for the same reason the Breeding Pen is —
+  // a shut fold must not build what it is not showing, and this is the
+  // biggest card on the screen.
+  const rightNowOpen = isOpen(state, 'right-now', !pathOwnsScreen(state));
   const rightNow = collapsibleCard({
     id: 'right-now',
     title: '☑ Right Now',
@@ -231,7 +235,7 @@ export function renderRanchScreen(root, ctx) {
     // the screen: on visit one that guide IS the agenda, and two lists
     // saying the same thing is worse than either. Once the Path retires,
     // this is what replaces it, so it opens.
-    open: isOpen(state, 'right-now', !pathOwnsScreen(state)),
+    open: rightNowOpen,
     // R47. Measured at 380px this card is 678px open — 42% of the Ranch's
     // chrome — because every open item got a full-width row with a wrapping
     // hint, at ~86px each. The module this reads from already says what to
@@ -240,7 +244,7 @@ export function renderRanchScreen(root, ctx) {
     // hats". So `spend` gets chips rather than rows. Nothing is hidden and
     // every click survives; the difference is that a purchase no longer
     // takes the same space as a thing you make.
-    body: KINDS.map(([kind, heading]) => {
+    body: !rightNowOpen ? '' : KINDS.map(([kind, heading]) => {
       const items = shape.open.filter((i) => i.kind === kind);
       if (!items.length) return '';
       if (kind === 'spend') {
