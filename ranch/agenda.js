@@ -39,6 +39,7 @@ import { activeVat, vatPlan } from '../splice/chaos.js';
 import { operationList, opReady, activeOps, laneFree } from '../campaign/operations.js';
 import { reachableEncounterIds } from '../campaign/map.js';
 import { isInjured } from '../battle/engine.js';
+import { sparCharges, sparPartners } from '../campaign/sparring.js';
 
 const HOUR = 3600000;
 const fit = (state, now) => state.chimeras.filter((c) => !isInjured(c, now));
@@ -88,6 +89,25 @@ export const AGENDA = [
       }
       return false;
     },
+  },
+  {
+    // R48. The ring was built for the player report that "no combination of
+    // them could beat the missions in front of them", and then the only
+    // thing that ever mentioned it was a button on the map — so the module
+    // whose entire job is to say what is open said nothing about three
+    // charges sitting in the player's pocket.
+    //
+    // `work`, not `campaign`: a spar pays no purse and no notoriety and
+    // cannot take a node. It makes a better creature, which is what `work`
+    // means here.
+    id: 'spar', kind: 'work', screen: 'battle', label: 'Spar a garrison',
+    hint: (state, content, now) => {
+      const { charges } = sparCharges(state, now, content);
+      return `${charges} charge${charges === 1 ? '' : 's'} in the ring — free xp against a garrison you already hold.`;
+    },
+    ready: (state, content, now) => fit(state, now).length > 0
+      && sparPartners(state, content).length > 0
+      && sparCharges(state, now, content).ready,
   },
   {
     id: 'job', kind: 'campaign', screen: 'battle', label: 'Run a job',
@@ -146,7 +166,15 @@ export const AGENDA = [
 export function agenda(state, content, now) {
   return AGENDA.filter((item) => {
     try { return !!item.ready(state, content, now); } catch { return false; }
-  }).map(({ id, kind, screen, label, hint }) => ({ id, kind, screen, label, hint }));
+  }).map(({ id, kind, screen, label, hint }) => ({
+    id, kind, screen, label,
+    // R48: a hint may be a function of the save, because the entry that
+    // needed adding is one whose whole value is a NUMBER — "3 charges in
+    // the ring" is a reason to go, "you can spar" is not. Strings pass
+    // through untouched, so every entry written before this still reads
+    // exactly as it did.
+    hint: typeof hint === 'function' ? hint(state, content, now) : hint,
+  }));
 }
 
 // The shape of it, which is the half the criterion cares about: three ways to
