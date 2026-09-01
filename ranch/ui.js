@@ -24,6 +24,7 @@ import { scannerGrants } from '../splice/facility.js';
 import { incomePerDay } from '../campaign/campaign.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { agendaShape } from './agenda.js';
+import { bandedHtml } from '../ui/roster.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -375,18 +376,42 @@ export function renderRanchScreen(root, ctx) {
       ${eggCards || '<p class="ranch-msg">No eggs. The incubator hums expectantly.</p>'}
     </section>`;
 
-  const cards = state.ranch.stock.map((animal) => {
+  // R46. Measured at 380px, one animal card is 514px and the Ranch grew by
+  // exactly that per head: 3,269px at four, 7,438px at twelve, 11,607px at
+  // twenty — 14.5 screens, and the pens expand without a ceiling, so it
+  // only gets worse. (R44's note that the Ranch "uses the same 1081px card
+  // shape" as the Pens was wrong: a Ranch card is less than half that. The
+  // shape was fine; the multiplication was the problem.)
+  //
+  // Same fix as the Pens, same machinery, and the same rule with it —
+  // ALERTS NEVER HIDE. The clock that costs you something here is the one
+  // R38 was written about: an animal that ages past Prime loses grade, and
+  // nothing else on this screen has a deadline. It rides on the SHUT row.
+  const careReadyCount = (animal) => CARE_ACTIONS.filter((a) => careStatus(animal, t)[a].ready).length;
+  const RANCH_BANDS = [
+    { id: 'graduate', label: 'Ready to graduate' },
+    { id: 'care', label: 'Needs care' },
+    { id: 'growing', label: 'Growing' },
+  ];
+  const bandOf = (animal) => {
+    const stage = ageStage(animal, content, t);
+    if (stage === 'prime' || stage === 'elder') return 'graduate';
+    return careReadyCount(animal) ? 'care' : 'growing';
+  };
+
+  const cards = bandedHtml(state.ranch.stock, RANCH_BANDS, bandOf, (animal) => {
     const species = content.species[animal.species];
     const stage = ageStage(animal, content, t);
     const next = nextStage(animal, content, t);
     const tier = conditionTier(animal.condition);
     const care = careStatus(animal, t);
-    const portrait = renderCreatureSVG(stockGenome(animal.species, content), content, {
+    const open = isOpen(state, `ranch-${animal.id}`, false);
+    const portrait = !open ? '' : renderCreatureSVG(stockGenome(animal.species, content), content, {
       idPrefix: `pt-${animal.id}`,
       condition: tier === 'fine' ? null : tier,
       extraScale: STAGE_SCALE[stage],
     });
-    const buttons = CARE_ACTIONS.map((action) => {
+    const buttons = !open ? '' : CARE_ACTIONS.map((action) => {
       const cost = action === 'feed' ? ` $${species.feedCost}` : '';
       const label = care[action].ready
         ? `${CARE_LABELS[action]}${cost}`
@@ -396,8 +421,27 @@ export function renderRanchScreen(root, ctx) {
 
     // R38. One word said the same thing about three different animals.
     const outlook = gradeOutlook(animal, content, t, state);
+    const ready = careReadyCount(animal);
 
-    return `
+    // The badge is the one thing that must survive the fold, so it carries
+    // the most expensive thing to miss: at Prime there is a countdown to
+    // ageing out of it, and that is real grade lost. Care being ready is a
+    // prompt, not a deadline, so it ranks under it and still shows in the
+    // summary line either way.
+    const badge = stage === 'prime' && next
+      ? `<span class="pen-alert">🎓 Prime for ${fmtDuration(next.msRemaining)}</span>`
+      : stage === 'elder'
+        ? '<span class="pen-alert">🎓 past its Prime</span>'
+        : ready
+          ? `<span class="pen-ready">${ready} care ready</span>`
+          : next
+            ? `<span class="pen-wait">⏳ ${STAGE_LABELS[next.stage]} in ${fmtDuration(next.msRemaining)}</span>`
+            : '<span class="pen-ready">ready</span>';
+    const summary = `${CLASS_MARK[species.class] ?? ''}${species.name} · ${STAGE_LABELS[stage]} · condition ${Math.round(animal.condition)} · ${gradeFor(animal, content, t).name}${
+      ready ? ` · ${ready} care ready` : ''
+    }`;
+
+    const body = !open ? '' : `
       <section class="card animal-card">
         <div class="portrait">${portrait}</div>
         <div class="animal-info">
@@ -421,7 +465,19 @@ export function renderRanchScreen(root, ctx) {
           <button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}">🎓 Extract (graduate ${animal.name})</button>
         </div>
       </section>`;
-  }).join('');
+
+    return collapsibleCard({
+      id: `ranch-${animal.id}`,
+      title: `${animal.name} <span class="sex">${animal.sex === 'F' ? '♀' : '♂'}</span>${
+        isVariant(animal.species, content) ? ' <span class="variant-badge">✦</span>' : ''
+      }`,
+      badge,
+      summary,
+      body,
+      open,
+      extraClass: 'pen-fold',
+    });
+  });
 
   // The field note sits under the Path (which owns the screen until the
   // first conquest) and above everything else, because a note nobody

@@ -1248,7 +1248,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .dex-chip strong { color: var(--text); font-variant-numeric: tabular-nums; }
 .dex-chip-done { border-color: var(--goo); color: var(--goo); }
 .dex-chip-done strong { color: var(--goo); }
-.dex-group {
+.list-group {
   margin: 10px 0 3px;
   font-size: 0.62rem;
   font-weight: 700;
@@ -1256,7 +1256,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   text-transform: uppercase;
   color: var(--muted);
 }
-.dex-group:first-child { margin-top: 4px; }
+.list-group:first-child { margin-top: 4px; }
 .dex-portrait svg { width: 100%; height: auto; display: block; }
 .dex-mystery {
   font-size: 2.4rem;
@@ -2170,5 +2170,6 @@ button.dex-cell:focus-visible {
 .pen-fold .fold-summary { color: var(--text-dim); }
 .pen-alert { color: var(--accent-2); font-weight: 700; }
 .pen-ready { color: var(--text-dim); }
+.pen-wait { color: var(--muted); }
 .pen-fold.pen-hurt { border-color: var(--accent-2); }
 .pen-fold .animal-card { border: none; padding: 0; margin: 0; background: none; }

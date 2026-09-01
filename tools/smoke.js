@@ -9318,6 +9318,18 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     return root.innerHTML;
   };
 
+  // R46 banded this screen, so a creature's row is no longer at a position
+  // you can predict from its id — the injured one now sorts to the end.
+  // Slicing from a creature's own fold header to whatever header comes
+  // next asserts the same thing without assuming the order.
+  const rowOf = (html, id) => {
+    const from = html.indexOf(`data-fold="pen-${id}"`);
+    assert.ok(from > 0, `pen-${id} is on the page`);
+    const next = html.indexOf('data-fold="pen-', from + 1);
+    return html.slice(from, next > 0 ? next : html.length);
+  };
+
+
   // 1. THE CRITERION. Every creature is a fold, and folds are SHUT — so a
   //    stable costs a row each rather than a screen each.
   {
@@ -9350,13 +9362,13 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   {
     const hurt = stable(3, (i) => (i === 1 ? { injury: { name: 'Bent Whiskers', until: t0 + 42 * 60000 } } : {}));
     const page = draw(hurt);
-    const row = page.slice(page.indexOf('data-fold="pen-g1"'), page.indexOf('data-fold="pen-g2"'));
+    const row = rowOf(page, 'g1');
     assert.ok(/⚕/.test(row), `an injured creature wears its Infirmary mark on the shut row (${row.slice(0, 200)})`);
     assert.ok(/42m|41m/.test(row), 'with the countdown, not just the mark');
 
     const settling = stable(2, (i) => (i === 0 ? { settleUntil: t0 + 90 * 60000 } : {}));
     const page2 = draw(settling);
-    const row2 = page2.slice(page2.indexOf('data-fold="pen-g0"'), page2.indexOf('data-fold="pen-g1"'));
+    const row2 = rowOf(page2, 'g0');
     assert.ok(/⏳/.test(row2), 'and an unsettled one wears its settling clock');
     assert.ok(/1h/.test(row2), 'with its countdown too');
   }
@@ -9702,6 +9714,227 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   bindSubtabs(fake, 'demo-tab', (id) => picked.push(id));
   assert.deepEqual(picked, ['c'], 'a click reports the tab id, not undefined');
   bindSubtabs(null, 'demo-tab', () => assert.fail('no root, no crash'));
+}
+
+// --- R46: the Ranch at twenty animals, and an order for both stables.
+//
+// R44 fixed the Pens and left a note that the Ranch "uses the same 1081px
+// card shape". That was WRONG, and measuring is what caught it: a Ranch
+// animal card is 514px, less than half a Pens card. The shape was never
+// the problem — the multiplication was. Measured at 380px the Ranch ran
+// 1,689px at one animal and grew by exactly 514px a head:
+//
+//     4 -> 3,269px   8 -> 5,346px   12 -> 7,438px   20 -> 11,607px (14.5 screens)
+//
+// and `penUpgradeSize: 2` has no ceiling, so it never stops growing. Same
+// fix as the Pens, same machinery, same rule: ALERTS NEVER HIDE.
+{
+  const { renderRanchScreen } = await import('../ranch/ui.js');
+  const { renderPensScreen } = await import('../splice/pens-ui.js');
+  const { banded, bandHead } = await import('../ui/roster.js');
+  const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null });
+  const HOUR = 3600000;
+
+  // A herd whose ages are chosen, not inherited: createAnimal backdates
+  // birthAt, so asking for an animal PAST its prime hours is how a gate
+  // gets an animal at Prime rather than hoping one turns up.
+  const herd = (specs) => {
+    const st = { ...newGameState(), seed: 46, funds: 99999 };
+    st.ranch.penCapacity = Math.max(specs.length, st.ranch.penCapacity);
+    st.ranch.stock = specs.map(({ ageHours = 0, condition = 80, care = {} }) => {
+      const a = createAnimal(st, 'goat', content, t0 - ageHours * HOUR);
+      a.condition = condition;
+      a.care = { ...(a.care ?? {}), ...care };
+      return a;
+    });
+    return st;
+  };
+  const drawRanch = (st) => {
+    const root = stub();
+    renderRanchScreen(root, { state: st, content, now: () => t0, save: () => {}, refreshTicker: () => {} });
+    return root.innerHTML;
+  };
+  const goat = content.species.goat.growthHours;
+
+  // 1. THE CRITERION. Every animal is a fold, every fold is SHUT, and a
+  //    shut fold builds NO PORTRAIT — the same measurement that mattered
+  //    in the Pens, because a portrait is ~12KB of inline SVG and twenty
+  //    of them is a quarter-megabyte of DOM rendering nothing.
+  {
+    const page = drawRanch(herd(Array.from({ length: 20 }, () => ({}))));
+    const folds = [...page.matchAll(/data-fold="ranch-([^"]+)"/g)].map((m) => m[1]);
+    assert.equal(folds.length, 20, `every animal is a fold (${folds.length})`);
+    assert.equal(new Set(folds).size, 20, 'and each one only once');
+    assert.equal((page.match(/data-fold="ranch-[^"]*" aria-expanded="true"/g) ?? []).length, 0,
+      'a twenty-head Ranch opens nothing by default');
+    assert.equal((page.match(/<svg/g) ?? []).length, 0,
+      'and draws no creature portraits at all while shut');
+    // The care buttons and the extract route are the expensive interior;
+    // a shut row must not be shipping them either.
+    assert.ok(!page.includes('data-act="care"'), 'no care buttons behind a shut fold');
+    assert.ok(!page.includes('data-act="extract"'), 'no extract button either');
+
+    // Marginal cost is the number that actually decides whether this
+    // scales: one more animal must cost a ROW, not a card.
+    const one = drawRanch(herd([{}])).length;
+    const two = drawRanch(herd([{}, {}])).length;
+    const twenty = page.length;
+    const perHead = (twenty - one) / 19;
+    assert.ok(perHead < (two - one) * 1.5, 'each extra head costs a constant row');
+    assert.ok(twenty < one * 3,
+      `twenty animals is not twenty cards (${one} -> ${twenty} chars, ${Math.round(perHead)}/head)`);
+  }
+
+  // 2. ALERTS NEVER HIDE. The only deadline on this screen is R38's: an
+  //    animal that ages out of Prime loses grade, and there is no getting
+  //    it back. That countdown rides on the SHUT row.
+  {
+    const st = herd([
+      { ageHours: goat.prime + 1 },                 // at Prime — the clock that costs
+      { ageHours: goat.elder + 1 },                 // past it
+      { ageHours: 0 },                              // juvenile
+    ]);
+    const page = drawRanch(st);
+    assert.ok(!page.includes('aria-expanded="true"'), 'nothing is open');
+    assert.ok(/Prime for /.test(page), 'the at-Prime countdown is on a shut row');
+    assert.ok(page.includes('past its Prime'), 'and an animal that aged out says so');
+    // The countdown is a real duration, not a placeholder.
+    const shown = page.match(/Prime for ([^<]+)</)?.[1] ?? '';
+    assert.ok(/\d/.test(shown), `and it is an actual time (${shown})`);
+    // Condition and the grade forecast are on the shut row too: they are
+    // what tells you whether the animal is worth graduating at all.
+    assert.ok(/condition \d+/.test(page), 'the shut row carries condition');
+  }
+
+  // 3. The order is what you would DO about a row, and every animal is in
+  //    exactly one band. R44 left "nothing sorts the stable" as a known
+  //    gap; nine rows in splice order is no order at all.
+  {
+    const st = herd([
+      { ageHours: 0, condition: 50 },               // growing
+      { ageHours: goat.prime + 1 },                 // graduate
+      { ageHours: 0, condition: 50 },               // growing
+    ]);
+    const page = drawRanch(st);
+    const at = (label) => page.indexOf(`<p class="list-group">${label} `);
+    assert.ok(at('Ready to graduate') > 0, 'the graduate band is on the page');
+    assert.ok(at('Growing') > 0, 'and the growing band');
+    assert.ok(at('Ready to graduate') < at('Growing'),
+      'what you can act on comes before what is only waiting');
+    // Every animal survives the banding — the failure mode grouping adds.
+    for (const a of st.ranch.stock) {
+      assert.ok(page.includes(`data-fold="ranch-${a.id}"`), `${a.name} is still listed`);
+    }
+    // An empty band renders nothing at all.
+    const allGrowing = drawRanch(herd([{ ageHours: 0 }, { ageHours: 0 }]));
+    assert.equal(allGrowing.indexOf('<p class="list-group">Ready to graduate '), -1,
+      'no heading over an empty band');
+    assert.ok(allGrowing.includes('<p class="list-group">Growing '), 'the band it has is labelled');
+  }
+
+  // 4. Nothing was lost behind the fold. Opening one restores the whole
+  //    card — the same check R44 had to add for the Pens.
+  {
+    const st = herd([{ ageHours: goat.prime + 1 }, { ageHours: 0 }]);
+    const id = st.ranch.stock[0].id;
+    st.ui = { collapsed: { [`ranch-${id}`]: false } };
+    const page = drawRanch(st);
+    assert.equal((page.match(/data-fold="ranch-[^"]*" aria-expanded="true"/g) ?? []).length, 1,
+      'exactly one animal is open');
+    for (const [what, needle] of [
+      ['the portrait', '<svg'],
+      ['the care buttons', 'data-act="care"'],
+      ['the extract route', 'data-act="extract"'],
+      ['the rename control', 'data-rename'],
+      ['the condition bar', 'cond-fill'],
+      ["R38's outlook line", 'class="fine-print outlook"'],
+    ]) {
+      assert.ok(page.includes(needle), `${what} survives the fold (${needle})`);
+    }
+    assert.equal((page.match(/<svg/g) ?? []).length, 1, 'and only the open one draws a portrait');
+    assert.equal(newGameState().saveVersion, SAVE_VERSION, 'with no version bump for a fold');
+  }
+
+  // 5. The Pens got the same ordering — R44's outstanding gap. Training is
+  //    what you came for, so it sorts first; the two clocks sort last and
+  //    still carry their countdowns on the shut row, which is what makes
+  //    ordering them last different from hiding them.
+  {
+    const B = { head: 'rhino_head', forelimbs: 'gorilla_forelimbs', hindlimbs: 'rhino_hindlimbs',
+      bear_tail: 'bear_tail', hide: 'pangolin_hide', organ: 'bear_organ' };
+    const mk = (i, extra) => ({
+      id: `c${i}`, name: `Unit ${i}`, frame: 'M',
+      tokens: Object.fromEntries(['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'].map((k) => [
+        k, { id: `t${i}${k}`, partId: B[k] ?? B[`bear_${k}`] ?? 'bear_tail', grade: 'prime', donor: { name: 'Bessie', stars: 4 } },
+      ])),
+      settleUntil: 0, bond: 100, scars: [], temperament: null,
+      lastTrainedAt: 0, moveset: [], lastMoveTrainAt: 0, xp: 0, injury: null,
+      ...extra,
+    });
+    const st = { ...newGameState(), seed: 46 };
+    st.chimeras = [
+      mk(1, { injury: { until: t0 + 3 * HOUR } }),          // on a clock
+      mk(2, { lastTrainedAt: t0 }),                          // ready, cooling down
+      mk(3, {}),                                             // can train now
+      mk(4, { settleUntil: t0 + 2 * HOUR }),                 // on a clock
+    ];
+    st.chimeraCount = 4;
+    const root = stub();
+    renderPensScreen(root, { state: st, content, now: () => t0, save: () => {} });
+    const page = root.innerHTML;
+    const at = (label) => page.indexOf(`<p class="list-group">${label} `);
+    assert.ok(at('Can train now') > 0 && at('Ready') > 0 && at('On a clock') > 0,
+      `all three Pens bands are on the page (${at('Can train now')}/${at('Ready')}/${at('On a clock')})`);
+    assert.ok(at('Can train now') < at('Ready') && at('Ready') < at('On a clock'),
+      'trainable first, then idle, then waiting');
+    const posOf = (id) => page.indexOf(`data-fold="pen-${id}"`);
+    assert.ok(posOf('c3') < posOf('c2'), 'the trainable one sorts above the cooling-down one');
+    assert.ok(posOf('c2') < posOf('c1') && posOf('c2') < posOf('c4'), 'and both sort above the clocks');
+    for (const c of st.chimeras) assert.ok(posOf(c.id) > 0, `${c.name} survives the banding`);
+    // R44's rule, re-checked under the new order: the clocks are still on
+    // the shut rows, so sorting them last did not bury them.
+    assert.ok(/⚕ /.test(page), 'the Infirmary countdown still shows while shut');
+    assert.ok(/⏳ /.test(page), 'and the settling countdown');
+    assert.equal((page.match(/aria-expanded="true"/g) ?? []).length, 0, 'with nothing open');
+  }
+
+  // 6. The shared ordering itself. A creature whose band is not recognised
+  //    lands in the last band rather than vanishing — a row that stops
+  //    being listed is the failure mode banding introduces, and it must
+  //    fail loudly here rather than quietly in a screen.
+  {
+    const bands = [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }];
+    const out = banded([1, 2, 3, 4], bands, (n) => (n % 2 ? 'a' : 'nonsense'));
+    assert.deepEqual(out.map((b) => [b.id, b.items]), [['a', [1, 3]], ['b', [2, 4]]],
+      'unknown bands fall into the last one rather than being dropped');
+    assert.equal(
+      banded([1, 2], bands, () => 'a').length, 1,
+      'and an empty band is not returned at all'
+    );
+    assert.deepEqual(banded([], bands, () => 'a'), [], 'nothing in, nothing out');
+    // Order is the declaration order, and it is stable within a band.
+    const three = [{ id: 'x', label: 'X' }, { id: 'y', label: 'Y' }, { id: 'z', label: 'Z' }];
+    assert.deepEqual(
+      banded(['z1', 'x1', 'y1', 'x2'], three, (s2) => s2[0]).map((b) => b.items),
+      [['x1', 'x2'], ['y1'], ['z1']],
+      'bands render in declaration order, items in list order'
+    );
+    assert.ok(bandHead('Growing', 3).includes('<p class="list-group">Growing '), 'the heading names the band');
+    assert.ok(bandHead('Growing', 3).includes('>3<'), 'and carries its count');
+  }
+
+  // 7. One implementation, three screens. The Dex, the Ranch and the Pens
+  //    all read ui/roster.js — the heading class stopped being `dex-group`
+  //    the moment two other screens used it.
+  {
+    for (const f of ['splice/dex-ui.js', 'ranch/ui.js', 'splice/pens-ui.js']) {
+      const src = readFileSync(join(root, f), 'utf8');
+      assert.ok(/from '\.\.\/ui\/roster\.js'/.test(src), `${f} reads the shared ordering`);
+    }
+    const css = readFileSync(join(root, 'style.css'), 'utf8');
+    assert.ok(css.includes('.list-group {'), 'the heading has a style');
+    assert.ok(!css.includes('.dex-group'), 'and no Dex-only name survives it');
+  }
 }
 
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);
