@@ -35,6 +35,7 @@ import {
 import {
   regionStates, threatGen, threatRung, nextThreatRung,
   incomePerDay, incomeSuspended, regionBonusPerDay, regionComplete, salvageUnit, nodeById, regionOfNode,
+  dominionBanner,
 } from './campaign.js';
 
 let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, label }
@@ -354,7 +355,21 @@ function renderMap(root, ctx) {
       </section>`,
   };
 
+  // R40. The news wire says it once; this says it for good. A player who
+  // was away when the burst scrolled past would otherwise never learn that
+  // the run they finished was finished. Phrased as a standing state rather
+  // than an ending, because R9's counter-offensives keep arriving.
+  const banner = dominionBanner(state, content);
+  const dominionCard = banner
+    ? `<section class="card dominion-card">
+        <h3>🏴 ${banner.title}</h3>
+        <p>${banner.body}</p>
+        <p class="fine-print">${banner.note}</p>
+      </section>`
+    : '';
+
   root.innerHTML = `
+    ${dominionCard}
     ${lastAftermath ? `<section class="card"><h3>Last Sortie</h3><p class="ranch-msg">${lastAftermath}</p></section>` : ''}
     <section class="card">
       <div class="econ-row">

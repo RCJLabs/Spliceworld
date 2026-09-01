@@ -1,5 +1,162 @@
 # PROGRESS
 
+## Session 62 — R40: the campaign had an end and never said so ✅
+
+**Acceptance criterion:** taking the last node is not the same event as
+taking the first — **passes**, at `SAVE_VERSION` **30** (schema bumped, with
+a migration).
+
+### The audit, and three premises that did not survive it
+
+The balance harness runs clean — *"no degenerate builds flagged"*, 5,508
+battles in 1.8s — so this was not a numbers phase. Three things I went
+looking for turned out to be fine:
+
+- **Unreachable species?** None. All 40 have a route in: 34 mail-order, 32
+  by conquest, 6 bred, 10 from job loot.
+- **Dead enemy units?** Four are unfielded — `crucible_9000`,
+  `leviathan_dredge`, `stratofortress`, `the_compliance_engine` — and A5
+  already knows, pins the list deliberately, and would fail the build if a
+  fifth appeared. The existing gate caught my premise for me.
+- **No final boss?** There is one. The Boardroom fields Director Prime.
+
+What is missing is what happens **after** you beat him.
+
+### Twenty-one nodes and nothing at the end of them
+
+Taking The Boardroom — the last node of the last region, past Director
+Prime — ran the same three lines as taking the Old Barn Perimeter:
+
+```
+Precinct HQ seized. Income +$150/day. Locals adjusting surprisingly well.
+{the player's conquest bark}
+```
+
+`regionComplete` existed per strip; there was **no campaign-level
+equivalent**, and nothing anywhere read "every node held". The monologue
+system's slots stopped at a per-node `conquest`. Twenty-one nodes,
+twenty-four encounters, five regions and three rival labs, and the run
+terminated in silence.
+
+### It is a milestone, not a win state
+
+ROADMAP §8's fifth risk is endless mode going stale, and its mitigation —
+the director, variants, and R9's counter-offensives — keeps running. So the
+announcement says so in the same breath:
+
+> **THE COUNTY IS YOURS.** All 21 nodes held. Somewhere, a regional manager
+> is updating a spreadsheet with shaking hands.
+> *{the player's dominion line}*
+> The coalition does not concede. It reschedules. Counter-offensives continue.
+
+And a standing banner on the map, so a player who was away when the wire
+scrolled past still learns the run they finished was finished. It stays put
+when a node is lost and says so rather than pretending: *"1 back in
+coalition hands. Take it again."*
+
+Everything is derived from the roster. Add a sixth region and dominion
+simply moves further away; the engineer's line names the count with
+`{nodes}` rather than typing 21, which a gate enforces.
+
+### `SAVE_VERSION` 29 → 30
+
+The one stored field is `dominionAt`, and its only job is to make the moment
+fire **once** rather than every render. It is null on migrate rather than
+backfilled, deliberately: a player who already holds all 21 earned the
+moment and never got it, so they get it on their next load. Additive; every
+other value untouched.
+
+### Browser QA caught the bug the suite could not
+
+`claimDominion` fired only where a node is **taken**. A player already
+holding all twenty-one — anyone migrating from v29 having finished the map —
+has **no node left to take**, and would never be told. The banner never
+appeared.
+
+The gate for exactly that case called `claimDominion` directly and passed,
+while the game never reached the call. `announceDominion` is now called from
+the capture path *and* from `tickCampaign` (a no-op on every other tick), and
+the gate asserts through the tick.
+
+That is the second phase running where the browser found what the suite
+could not — R39's Vault had no field-note slot at all under the same
+conditions: note written, gates green, nothing on screen.
+
+### The break battery, twice
+
+Twenty-one breaks across three runs. **Five came back MISSED, every one of them my gate rather than the code**, and all five are fixed with the re-runs recorded:
+
+| break | verdict |
+|---|---|
+| the last node goes back to being the first | CAUGHT |
+| it fires on every render | CAUGHT |
+| the node count is typed into the engine | CAUGHT |
+| losing a node retracts the claim | **MISSED** → CAUGHT |
+| a voice loses its line | CAUGHT |
+| the engineer types the count into the prose | CAUGHT (sibling) |
+| it is announced as an ending | CAUGHT |
+| the schema changes with no version bump | CAUGHT (sibling) |
+| the migration forgets the field | CAUGHT (sibling) |
+| a save that already won is skipped | **MISSED** → CAUGHT |
+| the banner is dropped from the map | **MISSED** → CAUGHT |
+| the SW cache stops tracking `SAVE_VERSION` | CAUGHT |
+| **10c** the tick stops announcing | CAUGHT |
+| **11c** the banner shows before the claim | CAUGHT |
+| **11d** the banner hides the losses | CAUGHT |
+| **11e** the view forks the wording | **MISSED** → CAUGHT |
+
+**Three gates had setups that never reached the code they guard** — the same
+family in three shapes, all in one phase:
+
+- Gate 4 changed `heldNodes` and read `dominionAt` back **without
+  re-entering** the code a retraction would live in.
+- Gate 9 called `claimDominion` **directly** instead of the load path, and
+  so passed while the game never reached the call at all.
+- Gate 9's second half reused its fixture — and **`migrate` mutates and
+  returns the same object**, so the first call left the save stamped v30 and
+  the second migrated nothing. That one came back MISSED *twice* before I
+  stopped guessing and applied the break by hand to watch it work.
+
+All three now enter through `tickCampaign` or a fresh fixture. Two of the
+break scripts also gained `assert old in s`, so a break that fails to apply
+reports itself instead of masquerading as a passing suite.
+
+Distinct from R38's hollow gate (right property, fixture that could not
+express it) and from R34/R35's (a substring appearing in more places than the
+thing under test). This one is: **right property, wrong entry point.**
+
+**Two were holes rather than hollow gates.** Nothing asserted the banner
+rendered at all, and nothing asserted the view used the shared wording — a
+break replacing the body with *"All done. Nice one."* passed clean. `renderWarRoomScreen` touches `document.body` and cannot run
+headless, and grepping the view's source for a template literal tests the
+spelling of the code rather than what a player reads — so the content moved
+into `dominionBanner()`, DOM-free, the same move R38 made with
+`outlookLine()`.
+
+### Verified
+
+- Full suite green; nine R40 gate blocks.
+- Browser QA at 380px: no banner on a fresh or mid-campaign save; it fires on
+  a v29 save migrated holding all 21; it survives losing a node and reports
+  the loss. No sideways scroll.
+- Zero console errors on a fresh save and on a **v29 → v30** migration with
+  every screen visited.
+
+### Known gaps
+
+- Beating all three rival labs is reported in the banner but is not a moment
+  of its own — the map is the campaign and the ladder runs beside it.
+- The four parked boss-scale units are still parked. THE COMPLIANCE ENGINE
+  and CRUCIBLE-9000 are drafted at hp 118–145 and fit no strip without a
+  rescale; a post-dominion tier is where they would belong.
+- `SHIPPED_SYSTEMS` still sits beside `DATA_NOTES` (R39's leftover).
+- Stars still are not shown on an animal's own card (R38's leftover).
+
+### Next session's first task
+
+A post-dominion escalation that fields the four parked units, or clear one
+of the two standing leftovers.
+
 ## Session 61 — R39: the gate that checked five of six screens ✅
 
 **Acceptance criterion:** the suite derives what it checks from the game, and

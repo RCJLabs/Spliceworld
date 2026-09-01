@@ -66,6 +66,105 @@ export function regionComplete(state, content, region) {
   );
 }
 
+// --- R40: the campaign has an end, and never said so --------------------
+//
+// Taking The Boardroom — the last node of the last region, past Director
+// Prime — ran the same three lines as taking the Old Barn Perimeter:
+// "seized", the player's conquest bark, and on to the next thing. Nothing
+// anywhere read "every node held". Twenty-one nodes, twenty-four
+// encounters, five regions and three rival labs, and the run terminated in
+// silence.
+//
+// This is deliberately NOT a win state that ends anything. ROADMAP §8's
+// fifth risk is endless mode going stale, and its mitigation is the
+// director, variants and R9's counter-offensives — all of which keep
+// running. What was missing is the moment the arc closes, said once.
+//
+// Derived from the roster, never from a count typed here: add a sixth
+// region and dominion simply moves further away.
+export function dominion(state, content) {
+  // allNodes returns { node, region } pairs, not bare nodes.
+  const nodes = allNodes(content).map((e) => e.node);
+  const held = nodes.filter((n) => state.campaign.heldNodes.includes(n.id));
+  const rivals = Object.values(content.rivals ?? {});
+  const beaten = rivals.filter((r) => (state.campaign.rivals?.[r.id]?.defeats ?? 0) > 0);
+  return {
+    nodesHeld: held.length,
+    nodesTotal: nodes.length,
+    rivalsBeaten: beaten.length,
+    rivalsTotal: rivals.length,
+    // The MAP is the campaign; the rival ladder runs beside it (R27) and is
+    // reported rather than required. Contested nodes still count as held —
+    // losing one to a counter-offensive must not retract something the
+    // player was already told, and R9 puts it back on the map to retake.
+    complete: nodes.length > 0 && held.length === nodes.length,
+    // Reported separately so the screen can say "and every rival too"
+    // without the two being welded into one condition.
+    rivalsAllBeaten: rivals.length > 0 && beaten.length === rivals.length,
+  };
+}
+
+// The moment, fired exactly once. `dominionAt` is the only thing that makes
+// it once rather than every render, which is what SAVE_VERSION 30 buys.
+export function claimDominion(state, content, now) {
+  if (state.dominionAt) return null;
+  const d = dominion(state, content);
+  if (!d.complete) return null;
+  state.dominionAt = now;
+  return d;
+}
+
+// What the standing banner says. DOM-free and here rather than in the view,
+// so it can be asserted directly — `renderWarRoomScreen` touches
+// document.body and cannot run headless, and a gate that greps the view's
+// source for a template literal tests the spelling of the code rather than
+// what the player reads.
+//
+// Null until the moment has actually been claimed, which is what keeps the
+// banner off the map for everyone who has not finished.
+export function dominionBanner(state, content) {
+  if (!state.dominionAt) return null;
+  const d = dominion(state, content);
+  const lost = d.nodesTotal - d.nodesHeld;
+  const openLabs = d.rivalsTotal - d.rivalsBeaten;
+  return {
+    title: 'The County Is Yours',
+    body: `All ${d.nodesTotal} nodes held${
+      d.rivalsAllBeaten ? `, all ${d.rivalsTotal} rival labs beaten` : ''
+    }. The paperwork alone will outlive everyone involved.`,
+    // Honest about the live map without retracting what was earned: R9 will
+    // take nodes back, and the banner says so rather than quietly lying.
+    note: (lost > 0
+      ? `${lost} back in coalition hands. Take ${lost === 1 ? 'it' : 'them'} again.`
+      : 'They keep coming for it. That is the arrangement.')
+      + (openLabs > 0
+        ? ` · ${openLabs} rival lab${openLabs === 1 ? '' : 's'} still open for business.`
+        : ''),
+  };
+}
+
+// …and the announcement, so the two callers cannot drift.
+//
+// There ARE two callers, and the browser is what proved it: firing this only
+// where a node is taken means a player who already holds all twenty-one —
+// anyone migrating in from v29 having finished the map — has no node left to
+// take and would never be told. The smoke gate for that case called
+// claimDominion directly and passed while the game itself never reached it,
+// which is a gate testing a function rather than the path a player walks.
+export function announceDominion(state, content, now) {
+  const won = claimDominion(state, content, now);
+  if (!won) return null;
+  pushNews(state, `THE COUNTY IS YOURS. All ${won.nodesTotal} nodes held.${
+    won.rivalsAllBeaten ? ` All ${won.rivalsTotal} rival labs beaten.` : ''
+  } Somewhere, a regional manager is updating a spreadsheet with shaking hands.`);
+  const boast = playerLine(state, content, 'dominion', { nodes: won.nodesTotal });
+  if (boast) pushNews(state, boast);
+  // Said in the same breath, because R9 means this is a milestone and not an
+  // ending: the coalition keeps coming for what you hold.
+  pushNews(state, 'The coalition does not concede. It reschedules. Counter-offensives continue.');
+  return won;
+}
+
 // [{ region, bonus }] for every strip currently paying its completion
 // bonus. Data-driven: a region with no `completionBonus` simply pays none,
 // so adding a sixth region needs no engine edit.
@@ -118,6 +217,12 @@ export function tickCampaign(state, content, now) {
   // the player is away. The report card shows one at a time; the rest are
   // summarised into the wire, because a reward they earned and cannot see is
   // a reward they will assume is broken.
+  // R40. Anyone who arrives already holding the map — a v29 save that
+  // finished the campaign before there was anything to say about it — has no
+  // node left to take, so the capture path can never fire for them. A no-op
+  // on every other tick.
+  announceDominion(state, content, now);
+
   const job = tickOperations(state, content, now);
   for (const line of job.news) pushNews(state, line);
   if (job.results.length) {
@@ -267,6 +372,8 @@ export function resolveBattle(state, battle, content, now) {
       pushNews(state, `${node.name} seized. Income +$${node.incomePerDay}/day. Locals adjusting surprisingly well.`);
       const claim = playerLine(state, content, 'conquest', { node: node.name });
       if (claim) pushNews(state, claim);
+      // R40. The twenty-first node is not the first one.
+      announceDominion(state, content, now);
       if (threatGen(state, content) > genBefore) {
         pushNews(state, `THREAT LEVEL UP: the military is now returning your calls. Threat Generation 2.`);
       }
