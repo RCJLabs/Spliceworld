@@ -200,10 +200,13 @@ export function diagnose(team, encounter, content, seed = 1, now = 0, { canBring
   // Neither layer is what is wrong, so it is the creatures. This is the
   // honest answer at Precinct HQ for a Ground stable, and it is the one the
   // old string never gave: 0% at Standard, 28% at Prime, on the same team.
+  // Worded to agree with the roster rows above it. Those list every chart
+  // rule that applies, so a flat "not a matchup problem" reads as a
+  // contradiction of three ✘ lines the player is looking at. It is not one:
+  // the rules apply AND lifting them does not save the fight, which is a
+  // different and more useful thing to say.
   return {
     id: 'outgunned',
-    text: canBringMore || base.outnumberedBy > 0
-      ? 'Neither the classes nor the tags are what is wrong — these creatures are not strong enough yet. Raise donors longer for better grades.'
-      : 'Not a matchup problem — these creatures are not strong enough yet. Raise donors longer for better grades, or splice something sharper.',
+    text: 'Hand them every matchup above and this is still a loss — these creatures are not strong enough yet. Raise donors longer for better grades, or splice something sharper.',
   };
 }

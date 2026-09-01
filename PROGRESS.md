@@ -1,5 +1,146 @@
 # PROGRESS
 
+## Session 59 — R37: the lesson is behind the wall it explains ✅
+
+**Acceptance criterion:** a player whose team cannot answer the node in front
+of them is told why, in terms they can act on — **passes**, at `SAVE_VERSION`
+29 (no schema change).
+
+### The premise was wrong twice, and measurement caught it both times
+
+I pitched this phase as *"the 24 guides teach you to run a ranch and never
+how to win a fight"*, with a table of six mechanics at zero coverage.
+
+**Wrong once.** The `regions` note states the tag chart outright — *"Kestrel
+Reach is Airborne, so your Ground-tagged moves miss entirely."* Combat is
+taught. But it is gated on `secondRegionOpen`, which means holding **Precinct
+HQ**, which is the wall it explains. Same for `director` at four war wins.
+The lessons sit behind the door they are the key to.
+
+**Wrong twice.** I then assumed Precinct was a *class* wall. It is not — not
+for the team that hits it. Three standard-grade chimeras, one layer lifted at
+a time, 32 replays each:
+
+| archetype | base | class off | chart off | at Prime |
+|---|---|---|---|---|
+| boots (Ground) | 0% | 0% | 3% | **28%** |
+| wings (Air) | **91%** | **0%** | 91% | 100% |
+| gills (Water) | 0% | **16%** | 0% | 0% |
+
+A Ground team loses there on **grade**. A flying team wins on **class and
+nothing else** — 91% collapses to 0% the moment the triangle is lifted off
+it. Water is the only one the triangle is actually costing.
+
+### The defect that finding exposed
+
+The briefing already ran the real fight 32 times (A1) and then explained the
+verdict with **one of two constant strings**:
+
+> *Not survivable — This team cannot win this fight. It is not close — **bring
+> more creatures**.*
+
+`campaign/ui.js` caps a strike team at three. For a player who already has
+three — which the Path explicitly tells them to build — that is advice **the
+screen itself refuses to accept**. And it was shown to all six archetypes
+above, whose actual causes differ.
+
+### What shipped
+
+**`diagnose()` measures the cause instead of guessing it.** The same
+instrument A7 used for obedience: replay the same fight with the class layer
+lifted, then with the tag layer lifted, and name a cause only when removing
+it actually moves the win rate. Verified against the table above —
+
+| team at Precinct | says |
+|---|---|
+| boots ×3, at the cap | *Hand them every matchup above and this is still a loss — these creatures are not strong enough yet.* |
+| gills ×3 | *The class triangle is costing you about 16 points here.* |
+| noise ×3 | *Their tags are blanking your attacks — worth about 13 points.* |
+| boots ×1 | *You are 1 against 2. Bring another body.* — A1's answer, kept |
+| wings ×3 | nothing; it wins |
+
+The bands now **describe**; only the diagnosis prescribes. `even` lost its
+"bring another body if you have one" too — the same defect in gentler form.
+
+**The class chip reports both directions.** R35 put losses beside wins on the
+tag notes and left the class chip upside-only — `beats their Water` when the
+triangle favoured you, and an **empty string** when it did not, on the layer
+worth 16–20pp against the chart's 3.7–7.4pp. A row now reads:
+
+> 🦶 **Big Unit 1** — ready · obedience 100%
+> ✘ their Air beats its Ground
+> ✘ its Ground attacks do nothing to Airborne ✘ their Sonic goes through its armour
+
+**Two lesson notes, reachable at the first conquest** — before both walls.
+`triangle` retires when the player *demonstrates* it (two classes in the
+stable, derived from anatomy, never stored), not when they have walked far
+enough. `chart` retires at eight wins.
+
+### Two things the work turned up
+
+**`runs` was a trap and is gone.** I first ran the diagnosis gate at 12
+replays to keep the suite quick, and it named the wrong cause: the 16-point
+class effect on a Water team fell under the floor and read as *"your
+creatures are too weak"* — sending the player after the one fix that does not
+work. That is the identical lesson `runs = 32` is documented for one layer
+up. `diagnose` no longer takes the parameter.
+
+**The R29 roll is hand-maintained.** I claimed the suite had no gate for
+"every shipped system has a note." It has one — `SHIPPED_SYSTEMS` in
+`tools/smoke.js` — but it is a list a human keeps, so six phases shipped past
+it without the gate noticing. It caught both new notes immediately, which is
+the half of it that works.
+
+### The break battery
+
+Twelve breaks. Every gate fails when the thing it guards is broken.
+
+| break | verdict |
+|---|---|
+| the bands prescribe again (the pre-R37 world) | CAUGHT |
+| the diagnosis goes away entirely | CAUGHT |
+| a team at the cap is told to bring more (*the actual bug*) | CAUGHT |
+| A1's real case loses its answer | CAUGHT |
+| the cause is asserted from the chart instead of measured | CAUGHT |
+| `classBlind` becomes a no-op | CAUGHT |
+| the class chip goes back to upside-only | CAUGHT |
+| the triangle is hardcoded in the chip | CAUGHT |
+| the lessons go back behind the wall they explain | CAUGHT (R29's criterion walk, same property) |
+| a lesson note is deleted | CAUGHT |
+| the lesson retires on progress, not demonstration | CAUGHT |
+| the briefing keeps its own copy of the cap | CAUGHT |
+
+Two of the messages are worth keeping. Break 3 reproduces the bug in its own
+words — *"You are 3 against 2. Bring another body"* — and break 5, which
+asserts the cause from the chart instead of measuring it, produces the
+giveaway of every unmeasured diagnosis: *"the class triangle is costing you
+about **0** points here."*
+
+### Verified
+
+- Full suite green.
+- Browser QA at 380px on the real wall: three Ground chimeras at Precinct HQ
+  render three ✘ class/tag lines apiece, the red verdict card, and the why
+  line; an Air stable renders `✔ beats their Ground ✘ their Water beats its
+  Air` on one row. No sideways scroll, zero console errors.
+- Zero console errors on a fresh save and on a v8 save migrated to v29.
+
+### Known gaps
+
+- `diagnose` runs three forecasts (96 replays) on a losing verdict. Only on
+  losing and hopeless, and only when a team is picked, but it is the most
+  expensive thing the briefing does.
+- The `even` band lost its prescription and did not gain a diagnosis — an
+  even fight is arguably where knowing the lever helps most, but it is also
+  the band players see most often, and the replays are not free.
+- `SHIPPED_SYSTEMS` is still a hand-kept list.
+- Grades have no lesson note, and the Guard Post is a pure grade wall
+  (0% at Standard, 53–67% at Prime for the same teams).
+
+### Next session's first task
+
+The `grades` lesson, or make the shipped-systems roll derive itself.
+
 ## Session 58 — R36: the Dex says what the roster is for ✅
 
 **Acceptance criterion:** a base species entry is worth opening — **passes**,
