@@ -1,5 +1,158 @@
 # PROGRESS
 
+## Session 58 — R36: the Dex says what the roster is for ✅
+
+**Acceptance criterion:** a base species entry is worth opening — **passes**,
+at `SAVE_VERSION` 29 (no schema change).
+
+### The premise was wrong again, in the usual direction
+
+My own audit note called the Dex "a stamp album." It is not. It has seven
+sections and most of them are generous: rival dossiers carry what that rival
+will field **next**, undiscovered combos carry A6's hints, the field guide
+carries 40 enemy units with their tags, and 12 trait genes and 27 combos have
+their own entries. Calling the whole screen thin was lazy.
+
+The thin part was one section — and it happened to be the one the entire
+game is spent filling.
+
+### A base species showed less than a mutation of itself
+
+The 34 base cells rendered exactly this:
+
+```
+Bear
+Power
+parts 0/6
+```
+
+A name, a role, a count. Meanwhile a **variant** of that same bear — six of
+them in the game — showed its class, its tags and its set bonus name. So did
+the enemy field guide. The roster you spend the game collecting was the
+least-documented thing in its own catalogue, and none of the last four
+phases had reached it:
+
+| shipped | where it shows | in the base Dex cell |
+|---|---|---|
+| R32 bulk (0.3 moth → 1.9 rhino), which decides flight | nowhere | ✘ |
+| R34 set bonuses, all 41 wired into the engine | variant cells, name only | ✘ |
+| R35 tags, on the briefing and the field guide | variant + enemy cells | ✘ |
+| thermal band, diet | care screens | ✘ |
+
+### Where the depth had to go
+
+`.dex-grid` is `minmax(100px, 1fr)` — three columns at 380px. *"Unstoppable
+— +15% Power, with 4+ Rhino parts"* does not fit in a 100px column, and
+widening the grid to make it fit would cost the at-a-glance sweep of 34
+animals that is the grid's whole job.
+
+So the split is: **the cell gains its tags** (parity with the variants and
+the field guide, and it fits), and everything else goes into a **tap-to-open
+sheet** through R31's existing picker, which already renders read-only HTML
+in its `subtitle` for the dismantle flow.
+
+> **COBRA**
+> 🦶 Ground · Poisoner · light
+> Tags: Venomous
+> **Cold-Blooded Focus** — Venom applies twice the stacks, with 4+ Cobra parts
+> Comfortable 18° to 40° · eats gourmet eggs, no questions
+>
+> **PARTS — 4/4 MET**
+> **Cobra Head** — Venom Fang · 40 power · 8 mass
+> **Cobra Coil** — Constrict · 3 mass
+> **Cobra Scales** — Cobra Bristles · 7 mass
+> **Venom Sac** — Cobra Leech · 3 mass
+
+Four rows, not six. The cobra has no limbs, and a snake entry with two blank
+limb slots is a bug wearing a straight face.
+
+An unmet part names the **slot** and withholds the part — *"Hide — not yet
+extracted"* — because "you are missing a hide" is a lead and "???" is not.
+
+### Three places the entry could have kept a second opinion, and doesn't
+
+`data/*.json` and the engine own these numbers; the Dex reads them.
+
+- **The purebred threshold.** I first typed `4+` into the sheet. That is a
+  copy of `PHYS_TUNING.purebredAt`, and it would go on promising four the
+  day physiology wanted five. It reads the constant now.
+- **Part mass and lift.** Quoted from `part.phys`, never recomputed. Lift is
+  printed only where the part makes some — 8 of 34 species have a
+  lift-bearing part, and *"0 lift"* on a rhino horn is noise, not data.
+- **The weight word.** `featherweight / light / middleweight / heavy` are
+  quartiles of the roster's own bulks, not a hardcoded table. Double every
+  bulk in `species.json` and the words are unchanged; retune one animal and
+  its word moves on its own.
+
+### One thing the work turned up
+
+**Three species were being weighed against animals that have no build.**
+`weightWord` first polled every non-synthetic species — which includes the
+six bred variants, three of which (`alpine_ram`, `storm_eagle`, `pale_cobra`)
+carry no `bulk` of their own and fall back to 1.0. Three phantom 1.0s stacked
+in the middle of a 34-animal scale, and demoted the **ram, eagle and goose**
+a class each. Scoped to the base roster, with a gate that fails if the
+variants come back.
+
+### The break battery
+
+Twelve breaks. Every gate fails when the thing it guards is broken.
+
+| break | verdict |
+|---|---|
+| the cell goes back to a div — entry unreachable | CAUGHT |
+| the cell drops its tags again | CAUGHT |
+| the set bonus is a name with no effect | CAUGHT |
+| the threshold is typed in rather than read | CAUGHT |
+| the weight word becomes a fixed bulk table | CAUGHT |
+| the scale counts the bulkless variants again | CAUGHT |
+| an unextracted part is named outright | CAUGHT |
+| an unextracted part is a blank | CAUGHT |
+| mass is recomputed instead of quoted | CAUGHT |
+| zero lift is reported as a feature | CAUGHT |
+| the cobra gets two empty limb rows | CAUGHT |
+| the SW forgets `splice/dexentry.js` | CAUGHT |
+
+**One gate is structural, and says so.** The threshold gate checks the
+rendered text *and* greps `dexentry.js` for a literal `4+`. With
+`purebredAt` currently at 4, a hardcoded `4+` renders identically — only the
+grep can catch it. That is a real limit of the gate, not a hidden one:
+raising `purebredAt` would make the text check bite, and until then the grep
+is the whole of it.
+
+*(Procedural note, mine again: I ran the suite by hand inside the break
+worktree while the battery was still working through it — the same racing
+mistake as last session, from misreading a `nohup ... &` wrapper's exit code
+as the battery's. Nothing was corrupted, since the manual run only read, and
+its result matched the battery's own for that break; but I stopped touching
+the tree and let it finish rather than reporting from output I could not be
+sure of.)*
+
+### Verified
+
+- Full suite green — 244 parts · 4 frames · 41 species · 40 enemy units.
+- Browser QA at 380px: 34 cells, all open; sheet fits (`scrollWidth ≤ 380`),
+  no sideways scroll; closes on backdrop, close button and Escape.
+- Zero console errors on a fresh save, and on a v8 save migrated to v29 with
+  every screen visited and an entry opened afterwards.
+- Save/load survives a reload mid-feature — the sheet is read-only and holds
+  no state, and the parts it lists come from `state.dex.parts`.
+
+### Known gaps
+
+- Variants (`alpine_ram`, `storm_eagle`, `pale_cobra` and three others) still
+  render as the old rich cells and do not open a sheet. They already show
+  class, tags and set bonus name; what they lack is the effect text and the
+  parts list.
+- Three of the six variants carry no `bulk` of their own, so they have no
+  weight class to show even if they did open.
+- The enemy field guide's 40 units show tags but no numbers.
+
+### Next session's first task
+
+Decide between finishing the variants' entries (small, closes the asymmetry
+this phase created in the other direction) and the next audit pass.
+
 ## Session 57 — R35: the other matchup layer, on the screen where you choose ✅
 
 **Acceptance criterion:** the strike-team picker shows what you need to pick
@@ -95,9 +248,6 @@ lands.
 
 It found **three gates of mine that could not fail, and one piece of dead
 code** — a better haul than the code changes.
-
-Ten breaks, then five re-runs. It found **three gates of mine that could not
-fail, and one piece of dead code** — a better haul than the code changes.
 
 **Two hollow gates, one mistake, twice.** Both asserted on a substring that
 appears in more places than the thing under test:
