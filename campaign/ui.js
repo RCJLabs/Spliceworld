@@ -7,6 +7,7 @@ import { createBattle, isInjured, obediencePercent, obedienceIgnoreChance, comba
 import { forecast, diagnose } from '../battle/forecast.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
+import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js';
 // STABLE is the cap, not a coincidence: A1 measured the campaign at three
@@ -108,19 +109,16 @@ function tabBadge(state, id) {
   return null;
 }
 
-function subtabBar(state) {
-  return `
-    <nav class="subtabs" id="war-subtabs">
-      ${WAR_TABS.map((tab) => {
-        const badge = tabBadge(state, tab.id);
-        return `
-          <button type="button" data-war-tab="${tab.id}" class="${warTab === tab.id ? 'is-on' : ''}">
-            <span class="subtab-icon" aria-hidden="true">${tab.icon}</span>
-            <span class="subtab-label">${tab.label}</span>
-            ${badge ? `<span class="subtab-badge badge-${badge.kind}">${badge.text}</span>` : ''}
-          </button>`;
-      }).join('')}
-    </nav>`;
+// R45 extracted the bar itself to ui/tabs.js — the Dex needed the same
+// nav, and two copies of it is how two screens drift apart.
+function warSubtabBar(state) {
+  return subtabBar({
+    tabs: WAR_TABS,
+    active: warTab,
+    attr: 'war-tab',
+    id: 'war-subtabs',
+    badgeFor: (id) => tabBadge(state, id),
+  });
 }
 
 export function renderWarRoomScreen(root, ctx) {
@@ -425,17 +423,15 @@ function renderMap(root, ctx) {
     </section>
     ${contests ? `<section class="card contest-card"><h3>🛡 Counter-Offensive</h3>${contests}</section>` : ''}
     ${captives ? `<section class="card captive-alert"><h3>⏳ Captured — Rescue Windows</h3>${captives}</section>` : ''}
-    ${subtabBar(state)}
+    ${warSubtabBar(state)}
     ${fieldNote(guideForScreen(state, content, t, 'battle'))}
     ${views[warTab] ?? views.map}`;
 
   bindFieldNote(root, ctx, () => renderMap(root, ctx));
   bindFolds(root, ctx, () => renderMap(root, ctx));
-  root.querySelectorAll('button[data-war-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      warTab = btn.dataset.warTab;
-      renderMap(root, ctx);
-    });
+  bindSubtabs(root, 'war-tab', (id) => {
+    warTab = id;
+    renderMap(root, ctx);
   });
   bindDossier(root, ctx, () => renderMap(root, ctx));
   bindJobs(root, ctx, () => renderMap(root, ctx));
