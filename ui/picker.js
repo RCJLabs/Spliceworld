@@ -80,6 +80,47 @@ export function openPicker({ title, subtitle, groups, selectedId, onPick }) {
   host.querySelector('.pick-row.is-selected')?.scrollIntoView({ block: 'center' });
 }
 
+// R41: a one-field text sheet in the same chrome as the picker — the OS
+// keyboard is unavoidable for typing a name, but the sheet around it is
+// still ours. Enter submits, Escape and backdrop cancel.
+export function openPrompt({ title, label, value = '', maxLength = 24, onSubmit }) {
+  closePicker();
+  const host = document.querySelector('#picker');
+  if (!host) return;
+  host.hidden = false;
+  host.innerHTML = `
+    <div class="pick-backdrop" data-close="1"></div>
+    <div class="pick-sheet" role="dialog" aria-modal="true" aria-label="${title}">
+      <div class="pick-head">
+        <h3>${title}</h3>
+        <button type="button" class="pick-close" data-close="1" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="pick-list">
+        <label class="prompt-label">${label}
+          <input type="text" class="prompt-input" maxlength="${maxLength}" autocomplete="off" spellcheck="false">
+        </label>
+        <button type="button" class="big-btn" id="prompt-go">Make it official</button>
+      </div>
+    </div>`;
+  const input = host.querySelector('.prompt-input');
+  input.value = value;
+  const submit = () => {
+    const v = input.value;
+    closePicker();
+    onSubmit(v);
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') closePicker();
+    if (e.key === 'Enter') submit();
+  };
+  document.addEventListener('keydown', onKey);
+  openSheet = { host, onKey };
+  host.querySelectorAll('[data-close]').forEach((el) => el.addEventListener('click', () => closePicker()));
+  host.querySelector('#prompt-go').addEventListener('click', submit);
+  input.focus();
+  input.select();
+}
+
 export function closePicker() {
   if (!openSheet) return;
   document.removeEventListener('keydown', openSheet.onKey);

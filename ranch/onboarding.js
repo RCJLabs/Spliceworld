@@ -138,6 +138,13 @@ export const GUIDE_HELPERS = {
   // R38. The grade lesson retires on proof rather than on a count: a part in
   // the vault that came out above Standard is a donor the player actually
   // raised, which is the whole thing the note is teaching.
+  // R41: the veterancy lesson retires on proof — a creature that has
+  // actually climbed a level, which takes a few fights.
+  leveledChimera: (state, content) =>
+    (state.chimeras ?? []).some((c) => {
+      const levels = content.trainingMeta?.levels ?? [];
+      return levels.length > 0 && (c.xp ?? 0) >= levels[0];
+    }),
   gradedPartOwned: (state) =>
     (state.inventory?.parts ?? []).some((t) => (GRADE_INDEX[t.grade] ?? 0) > 0),
   // R37. The class lesson retires when the player DEMONSTRATES it rather

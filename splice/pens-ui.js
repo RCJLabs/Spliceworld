@@ -13,6 +13,8 @@ import { toggleRow } from '../ui/picker.js';
 import { movesFromTokens } from '../battle/engine.js';
 import { analyze } from './physiology.js';
 import { dossierRows, dossierSummary } from './dossier.js';
+import { xpProgress, maxLevel } from '../battle/veterancy.js';
+import { renameCreature } from './theater.js';
 
 // Everything this genome grants, which is what the four slots are chosen
 // FROM. One definition, shared with the battle screen and the harness.
@@ -32,7 +34,7 @@ import { isInjured, obediencePercent } from '../battle/engine.js';
 import { describe as describeTemperament } from './temperament.js';
 import { scarsOf, describeScar, treatInjury, treatmentCost } from './scars.js';
 import { fmtDuration } from '../ranch/ui.js';
-import { pickerField, bindPickers, openPicker } from '../ui/picker.js';
+import { pickerField, bindPickers, openPicker, openPrompt } from '../ui/picker.js';
 import {
   activeVat, vatPlan, vatRemainingMs, startVat, cancelVat, isExhausted, chaosTuning,
 } from './chaos.js';
@@ -155,7 +157,18 @@ export function renderPensScreen(root, ctx) {
         <section class="card animal-card">
           <div class="portrait">${portrait}</div>
           <div class="animal-info">
-            <h4>${ch.name}</h4>
+            <h4>${ch.name} <button type="button" class="rename-btn" data-rename="${ch.id}" aria-label="Rename ${ch.name}">✏️</button></h4>
+            ${(() => {
+              // R41: what it has been through, beside what it is built from.
+              const prog = xpProgress(ch.xp ?? 0, content);
+              const bar = prog.atCap
+                ? '<span class="xp-cap">MAX</span>'
+                : `<span class="xp-bar"><span class="xp-fill" style="width:${Math.round((prog.into / Math.max(1, prog.span)) * 100)}%"></span></span>
+                   <span class="fine-print">${prog.into}/${prog.span} xp</span>`;
+              return `<p class="meta level-row"><strong class="level-chip">Lv ${prog.level}</strong>${
+                prog.atCap ? ` <span class="fine-print">of ${maxLevel(content)} — a finished veteran</span>` : ''
+              } ${bar}</p>`;
+            })()}
             <p class="meta">${content.frames[ch.frame].name} chassis · instability ${ch.instability}/100 · bond ${ch.bond}/100</p>
             ${(() => {
               // R33. Everything physiology knows, on the creature rather than
@@ -254,6 +267,25 @@ export function renderPensScreen(root, ctx) {
     vatCard(state, content, t) +
     (cards ||
       `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`);
+
+  // R41: a creature you keep for a whole campaign is a creature you name.
+  root.querySelectorAll('button[data-rename]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const ch = state.chimeras.find((c) => c.id === btn.dataset.rename);
+      if (!ch) return;
+      openPrompt({
+        title: 'Rename the specimen',
+        label: 'It will answer to (eventually):',
+        value: ch.name,
+        onSubmit: (value) => {
+          const res = renameCreature(state.chimeras, ch.id, value);
+          if (res.ok) ctx.save();
+          lastMsg = res.msg;
+          renderPensScreen(root, ctx);
+        },
+      });
+    });
+  });
 
   bindFieldNote(root, ctx, () => renderPensScreen(root, ctx));
   bindVat(root, ctx, () => renderPensScreen(root, ctx));

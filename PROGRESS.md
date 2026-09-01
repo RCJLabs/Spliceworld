@@ -1,5 +1,152 @@
 # PROGRESS
 
+## Session 63 — R41: a chimera you keep ✅
+
+**Acceptance criterion:** a chimera you create at the beginning of the game
+can last the entire game — **passes, measured**, at `SAVE_VERSION` **31**
+(schema bumped, with a migration).
+
+### The brief was a player report, verbatim
+
+> *"I have like 9 chimeras and no combination of them could ever beat the
+> war missions I'm on. We need ways to train them… Each chimera needs xp
+> and levels as well… A chimera you create at the beginning of the game
+> should be able to last the entire game."*
+
+He was right about the shape of the game. The only ladder out of a wall was
+to **replace** the creatures — raise better donors, extract better parts,
+splice again — and R13 even built the dismantler for it. Nothing made the
+creature you already had stronger for having fought. On top of that:
+fifteen chimera names covered a stable the game pushes past nine, and none
+of them could be changed.
+
+### Veterancy: grades build a creature; levels season it
+
+Every battle a chimera walks out of pays xp — **win or lose**, sized by the
+waves actually reached × the opposition's scale, because a walled player
+grinding losses into levels is the ladder out of the wall working as
+designed. Level is *derived* from xp (one source of truth, no stored level
+to disagree with it) and multiplies hp, power, armour and stamina.
+
+**Never speed.** Turn order is anatomy — A9 and R32 priced flight and speed
+in mass and lift — and no amount of drilling changes what a creature is
+made of. A max-level veteran acts exactly as fast as the day it was
+spliced, and a gate holds it there.
+
+### Tuned against the measured finale, not stat parity
+
+Grade also sharpens *moves* (+12%/step), so equal stats are not an equal
+fight — the first dial (0.045) left a max-level day-one team at 25% against
+the endgame. The shipped dial is **0.05** (L10 = +50%):
+
+| | fresh (L0) | max level (L10) |
+|---|---|---|
+| day-one Standard **wings** team vs The Boardroom | 0% | **63%** |
+| fresh **Apex** team of the same build, for scale | 44% | — |
+| day-one **kite / noise** vs The Boardroom | 0% | **0%** |
+| Standard boots vs Precinct (the report's wall) | 0% | 34% @ **L3** · 50% @ **L5** |
+
+0.06 was measured and rejected: 94% at the finale, matchups washed out.
+Levels reward the right anatomy — they do not replace it. And every
+pre-existing bench in the harness runs at level 0, so all of R16–R19's
+degeneracy gates measure exactly what they measured last release.
+
+### The Sparring Ring
+
+Every held node grows a 🥊 button: a seeded, scaled-down rematch against
+the garrison you already beat there — half xp, **zero purse, zero
+notoriety**, and the capture pipeline is exempted *before* the containment
+loop, because a cannon that fires on a 0.75-scale drill with no stakes is a
+free capture farm. Injuries stay real (the QA run's walkover spar sent Sir
+Chomps-a-Lot to the Infirmary with Bent Whiskers, which is exactly the
+tone). One shared 45-minute clock across the ring, so real assaults stay
+the better evening.
+
+The briefing, forecast and R37 diagnosis all run on the spar through the
+same path an assault takes — and the losing diagnosis now names the new
+lever: *spar a garrison you hold and level them up, or raise better
+donors.* The director does not get a look at a drill.
+
+### Names, and the right to change them
+
+120 chimera names (was 15), 80 stock names (was 18), and `pickFresh`
+prefers a name nobody on the roster is wearing — a fully spoken-for pool
+repeats as a *lineage* (Chompers II), never a duplicate. Every creature
+card grows a ✏️: a one-field sheet in the picker's own chrome, sanitised at
+write because names are interpolated into markup all over the game — markup
+never gets to *be* a name.
+
+### The bug browser QA caught — third phase running
+
+The pens card told a level-0 chimera it was *"a finished veteran"*. Only in
+the browser: `data/loader.js` destructured **twenty fetched files into
+nineteen positional names**, and a destructure that comes up short does not
+error — training.json was in the list, fetched, and silently dropped, so
+the page ran on fallback tuning with an empty level curve. It was the
+*fourth* loader spot this phase needed (sim, renderer index, smoke,
+browser), and the only one whose failure was invisible. The loader now
+builds its object keyed by the same names it fetches, so a listed file
+reaches `indexContent` by construction — the bug class is dead, not
+patched.
+
+### Migration (the Ascent rule, sacred)
+
+v30 → v31: `xp ??= 0` on every chimera **including captives sitting in a
+rival's holding cell** — a rescue must not return a crash — plus the ring's
+clock and counter. Level 0 is exactly yesterday's power; nothing is taken
+from anyone.
+
+### The break battery
+
+Thirteen breaks, all caught (two by sibling assertions in the same block).
+
+| break | verdict |
+|---|---|
+| the engine stops reading levels (the pre-R41 world) | CAUGHT |
+| veterancy starts touching speed | CAUGHT |
+| the engine keeps its own curve, differing from data | CAUGHT *(first attempt hardcoded the identical curve — a bad break, not a hollow gate; re-run with one that disagrees)* |
+| a loss pays nothing | CAUGHT (sibling) |
+| a loss pays for waves never reached | CAUGHT |
+| the spar keeps the node's purse | CAUGHT |
+| the spar fights at full strength | CAUGHT |
+| a sparring loss feeds the capture pipeline | CAUGHT |
+| the ring loses its cooldown | CAUGHT |
+| names go back to colliding | CAUGHT |
+| a rename stores markup | CAUGHT (sibling) |
+| the migration forgets captives | CAUGHT |
+| the SW forgets `battle/veterancy.js` | CAUGHT |
+
+The battery runner now refuses a break that fails to apply — `assert old in
+s` on every patch — which is R40's silently-unapplied-break lesson promoted
+into the harness itself.
+
+### Verified
+
+- Full suite green; ten R41 gate blocks, the criterion measured with the
+  real engine at both ends (fresh fails the finale, seasoned takes it, the
+  wrong anatomy seasoned still fails).
+- Browser QA at 380px, on the player's own shape — a v30 save with nine
+  identical Ground chimeras and three held nodes: migrates clean, renames
+  stick, a spar runs end to end (*"Victory! +7 xp each."*), the cooldown
+  chip counts down, no purse line, zero console errors, no sideways scroll.
+
+### Known gaps
+
+- Rival chimeras and rehabilitated captives have no xp of their own —
+  rivals scale by `powerScale`, so a max-level stable will eventually want
+  the rival ladder re-benched with veterans in mind.
+- Sparring draws only from a node's authored encounter — the director's
+  rewritten versions never appear in the ring (deliberate, but it means the
+  ring teaches yesterday's coalition).
+- The xp bar has no place on the battle screen itself — you learn what a
+  fight paid only in the aftermath line.
+
+### Next session's first task
+
+Play-test the trajectory: how many evenings from the report's position
+(nine standard chimeras, three nodes) to Precinct falling — and re-bench
+the rival ladder against a leveled stable.
+
 ## Session 62 — R40: the campaign had an end and never said so ✅
 
 **Acceptance criterion:** taking the last node is not the same event as

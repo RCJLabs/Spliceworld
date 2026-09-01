@@ -310,6 +310,18 @@ export function resolveBattle(state, battle, content, now) {
   const directedLine = directorNews(state, context.directed);
   if (directedLine) pushNews(state, directedLine);
 
+  // R41: a spar ends here. Nobody impounds a sparring partner — the cannon
+  // does not fire on a drill (a 0.75-scale garrison with no stakes would be
+  // a free capture farm) — and a loss costs an Infirmary timer (finishBattle
+  // already opened one) and nothing else: capture is the stake of a real
+  // front, and the ring exists precisely so a walled player can fight
+  // without betting a creature on it.
+  if (context.kind === 'sparring') {
+    detail.salvageUnits = [];
+    if (result.outcome === 'win') pushNews(state, 'Sparring session concluded. The garrison applauds politely and re-chalks the ring.');
+    return detail;
+  }
+
   // Containment cannon prizes ride home regardless of outcome. A captured
   // rival chimera has no enemies.json entry, so its generated record rides
   // along in the bay — salvage reads whichever exists.

@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 30;
+export const SAVE_VERSION = 31;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -389,6 +389,21 @@ const migrations = {
     save.dominionAt ??= null;
     return save;
   },
+
+  // v31 (R41): veterancy and the Sparring Ring. Every existing chimera
+  // starts at 0 xp — there is no honest way to reconstruct what a creature
+  // has been through from a win/loss total that never said who fought — and
+  // that is not a demotion: level 0 is exactly the power every chimera had
+  // yesterday, and the ring is open. Nothing is taken from anyone.
+  31: (save) => {
+    for (const c of save.chimeras ?? []) c.xp ??= 0;
+    for (const captive of save.campaign?.captives ?? []) {
+      if (captive.chimera) captive.chimera.xp ??= 0;
+    }
+    save.sparCount ??= 0;
+    save.lastSparAt ??= 0;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -416,6 +431,9 @@ export function newGameState() {
     warRecord: { wins: 0, losses: 0 },
     // R40: when the whole county was first held. Null until it is.
     dominionAt: null,
+    // R41: the Sparring Ring's clock and seed counter.
+    sparCount: 0,
+    lastSparAt: 0,
     campaign: {
       heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,
