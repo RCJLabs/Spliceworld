@@ -220,6 +220,10 @@ export function renderRanchScreen(root, ctx) {
     ['campaign', '🗺 Push on the world'],
     ['spend', '💵 Spend money'],
   ];
+  // R47: decided above the body, for the same reason the Breeding Pen is —
+  // a shut fold must not build what it is not showing, and this is the
+  // biggest card on the screen.
+  const rightNowOpen = isOpen(state, 'right-now', !pathOwnsScreen(state));
   const rightNow = collapsibleCard({
     id: 'right-now',
     title: '☑ Right Now',
@@ -231,10 +235,22 @@ export function renderRanchScreen(root, ctx) {
     // the screen: on visit one that guide IS the agenda, and two lists
     // saying the same thing is worse than either. Once the Path retires,
     // this is what replaces it, so it opens.
-    open: isOpen(state, 'right-now', !pathOwnsScreen(state)),
-    body: KINDS.map(([kind, heading]) => {
+    open: rightNowOpen,
+    // R47. Measured at 380px this card is 678px open — 42% of the Ranch's
+    // chrome — because every open item got a full-width row with a wrapping
+    // hint, at ~86px each. The module this reads from already says what to
+    // do about that: "three things you can buy is not three things to do",
+    // and "three ways to spend the same money is one idea wearing three
+    // hats". So `spend` gets chips rather than rows. Nothing is hidden and
+    // every click survives; the difference is that a purchase no longer
+    // takes the same space as a thing you make.
+    body: !rightNowOpen ? '' : KINDS.map(([kind, heading]) => {
       const items = shape.open.filter((i) => i.kind === kind);
       if (!items.length) return '';
+      if (kind === 'spend') {
+        return `<p class="agenda-head">${heading}</p><div class="agenda-chips">` + items.map((i) => `
+          <button type="button" class="agenda-chip" data-goto="${i.screen}" title="${i.hint}">${i.label}</button>`).join('') + '</div>';
+      }
       return `<p class="agenda-head">${heading}</p>` + items.map((i) => `
         <button type="button" class="agenda-row" data-goto="${i.screen}">
           <span class="agenda-label">${i.label}</span>
@@ -243,13 +259,16 @@ export function renderRanchScreen(root, ctx) {
     }).join('') || '<p class="fine-print">Nothing is open. Everything is on a timer — come back shortly.</p>',
   });
 
+  // R47. Income, Upkeep and Net were three cells showing one subtraction —
+  // the same "one idea wearing three hats" the agenda warns about — and at
+  // 380px five cells wrapped to three rows, 106px of them. R40 already
+  // solved this in the War Room: Net is the number, its derivation is its
+  // subtitle. Three cells now, and the Ranch reads like the War Room.
   const head = `
     <section class="card">
       <div class="econ-row">
         <div><span class="econ-label">Slush fund</span><strong>$${Math.floor(state.funds)}</strong></div>
-        <div><span class="econ-label">Income</span><strong>+$${TUNING.stipendPerDay + territory}/day</strong></div>
-        <div><span class="econ-label">Upkeep</span><strong>−$${upkeep}/day</strong></div>
-        <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${net < 0 ? '−' : '+'}$${Math.abs(net)}/day</strong></div>
+        <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${net < 0 ? '−' : '+'}$${Math.abs(net)}/day</strong><span class="econ-next">+$${TUNING.stipendPerDay + territory} in, −$${upkeep} upkeep</span></div>
         <div><span class="econ-label">Pens</span><strong>${state.ranch.stock.length}/${state.ranch.penCapacity}</strong></div>
       </div>
       <div class="ranch-actions">
@@ -276,6 +295,26 @@ export function renderRanchScreen(root, ctx) {
 
   // Breeding Pen: adults of one species, opposite sexes. The egg does the rest.
   const eligible = state.ranch.stock.filter((a) => ageStage(a, content, t) !== 'juvenile');
+  // R47. Measured at 380px, this card is 223px whether or not it can do
+  // anything — and it cannot until two adults of one stock and opposite
+  // sexes are standing in the pens, which on a fresh save is hours away.
+  // 223px of disabled pickers was the clearest dead weight in the Ranch's
+  // ~1,600px of chrome, so it folds: SHUT when there is no pairing to make,
+  // open the moment there is.
+  //
+  // The open/shut decision is made HERE, above the body, because R44's rule
+  // applies to this card too: a shut fold must not build what it is not
+  // showing. The pickers walk the whole herd to group it by species.
+  const pairable = new Map();
+  for (const a of eligible) {
+    const stock = baseSpecies(a.species, content);
+    const seen = pairable.get(stock) ?? new Set();
+    seen.add(a.sex);
+    pairable.set(stock, seen);
+  }
+  const canPair = [...pairable.values()].some((sexes) => sexes.size > 1);
+  const incubatorFull = state.ranch.eggs.length >= incubatorSlots(state, content);
+  const breedingOpen = isOpen(state, 'breeding-pen', canPair && !incubatorFull);
   if (!eligible.some((a) => a.id === pickA)) pickA = '';
   // Same STOCK, not the same species string: an Alpine Ram is still a ram,
   // and crossing a lucky mutant back into the good line is the point of it
@@ -340,16 +379,29 @@ export function renderRanchScreen(root, ctx) {
     forecast = '<p class="fine-print">Pick both parents and the Suite will run the numbers.</p>';
   }
 
-  const breeding = `
-    <section class="card">
-      <h3>Breeding Pen</h3>
+  const breedingSummary = incubatorFull
+    ? 'The incubator is full. Hatch something first.'
+    : !eligible.length
+      ? 'Nobody is old enough yet. Adults only — the paperwork is very clear.'
+      : !canPair
+        ? `${eligible.length} adult${eligible.length === 1 ? '' : 's'}, no pair. Two of one stock, opposite sexes.`
+        : 'A pairing is available.';
+  const breeding = collapsibleCard({
+    id: 'breeding-pen',
+    title: 'Breeding Pen',
+    badge: canPair && !incubatorFull
+      ? '<span class="pen-ready">pairing available</span>'
+      : `<span class="pen-wait">${eligible.length} adult${eligible.length === 1 ? '' : 's'}</span>`,
+    summary: breedingSummary,
+    open: breedingOpen,
+    body: !breedingOpen ? '' : `
       <div class="slot-grid">
         ${parentField('breed-a', 'Parent A', pickA, eligible, false)}
         ${parentField('breed-b', 'Parent B', pickB, partnerPool, !pickA)}
       </div>
       ${forecast}
-      <button type="button" class="big-btn" data-act="breed" ${pickA && pickB ? '' : 'disabled'}>💕 Introduce Them (science)</button>
-    </section>`;
+      <button type="button" class="big-btn" data-act="breed" ${pickA && pickB ? '' : 'disabled'}>💕 Introduce Them (science)</button>`,
+  });
 
   // Incubator: eggs on real-world timers, hatched by hand.
   const eggCards = state.ranch.eggs.map((egg) => {

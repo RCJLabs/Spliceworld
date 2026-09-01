@@ -1,5 +1,175 @@
 # PROGRESS
 
+## Session 69 — R47: the Ranch chrome earns its height ✅
+
+**Acceptance criterion:** every card above the herd justifies its space in
+every game state — **asked and answered, measured in the browser**. No
+schema change; `SAVE_VERSION` stays **33**.
+
+### The question R46 left, and the answer it got
+
+R46 folded the herd and noted that the cards *above* it had never been
+asked to justify their height. Measured at 380px they were **1,023px on a
+fresh save and 1,597px once the Path retires — 71% of the whole screen at
+four animals**.
+
+Asking got a mixed answer, which is the useful kind. Most of them earn it.
+Two did not, and one was doing the same thing the codebase already warns
+about in writing:
+
+| card | before | after | verdict |
+|---|---|---|---|
+| Breeding Pen | 223px always | 66–80px shut · 233px when pairable | **didn't earn it** |
+| Right Now | 678px | 580px | purchases were taking a project's width |
+| economy row | 106px, 5 cells | 79px, 3 cells | **one subtraction, printed three times** |
+| field note | 248px | unchanged | earns it — one tip, dismissible (R29) |
+| facility | 66px shut | unchanged | earns it |
+| Incubator | 64px empty | unchanged | earns it — carries the hatch clocks |
+| Path | 223px | unchanged | earns it — and it *does* retire (see below) |
+
+| state | chrome before | after |
+|---|---|---|
+| fresh, 0 animals | 1,023px | **853px** (−17%) |
+| fresh, 2 animals | 965px | **781px** (−19%) |
+| mid, 4 animals | 1,597px | **1,482px** (−7%) |
+| late, 12 animals | 1,739px | **1,624px** (−7%) |
+
+The win is concentrated early, and that is where it should be: a fresh
+save has the smallest herd and the worst chrome ratio.
+
+### A card that cannot act
+
+The Breeding Pen needs two adults of one stock and opposite sexes. On a
+fresh save that is hours away, and until then it was 223px of disabled
+pickers on every single visit. It folds now — shut when there is no
+pairing (or the incubator is full), with **one line saying which**, and it
+opens by itself the moment a pairing exists.
+
+> ▸ **Breeding Pen**  2 adults
+> 2 adults, no pair. Two of one stock, opposite sexes.
+
+### "Three things you can buy is not three things to do"
+
+That sentence is in `agenda.js`'s own header, and the card was rendering a
+purchase at the same width as a thing you make. `spend` items are chips
+now. **Nothing is hidden** — every open item keeps its click and its
+destination; a chip carries its hint in `title`. The change is the shape
+of the list, not its length.
+
+### One subtraction, printed three times
+
+Income, Upkeep and Net were three cells of the same arithmetic, wrapping
+to 106px at 380px. R40 already settled this in the War Room: Net is the
+number, its derivation is the subtitle. The Ranch reads the same way now,
+and the two screens stopped disagreeing about how to present money.
+
+### My own gates found the same defect twice
+
+`collapsibleCard` puts its body in a hidden div, so a shut fold that
+*builds* a body ships it anyway. R44 established that rule for the Pens.
+I broke it twice in one phase, in both cards I touched — and the R47 gates
+caught both:
+
+1. **Breeding Pen** — `so it ships no pickers and no button`. The shut
+   card was still building two picker fields that walk the whole herd to
+   group it by species, plus the pairing forecast and the breed button.
+2. **Right Now** — `shutting it costs nothing to render`. Same defect, the
+   biggest card on the screen.
+
+Both fixed by hoisting the open/shut decision above the body. Worth being
+precise about what that bought: those bodies were already `hidden`, so
+this is a **render-cost fix, not a height fix** — the pixel numbers above
+do not move because of it.
+
+### Two fixture errors of mine, caught before they became claims
+
+- **The Path looked like it never retired.** It showed at 12 animals with
+  200 notoriety, which reads as a bug. It is not: `onboardingActive` is
+  `heldNodes.length === 0 || chimeras.length < 3`, and my late-game state
+  had territory but *no chimeras*. Correct behaviour, wrong fixture.
+- **The first measurement measured the same screen four times.** `SET(0)`
+  emptied `ranch.stock`, and every later state read from it, bailed out
+  with `NO STOCK` and changed nothing — four identical readings that
+  looked like a finding. The harness now captures a prototype animal once
+  and warns when a setup does not take.
+
+One R46 gate also needed scoping: it asserted `nothing is open` when its
+claim was about the **herd**, and the new Breeding Pen fold trips the
+broader reading.
+
+### The break battery
+
+Fifteen breaks, each run against the full suite in an isolated worktree.
+**All caught.**
+
+| break | verdict |
+|---|---|
+| the Breeding Pen is not a fold | CAUGHT |
+| the Breeding Pen always opens | CAUGHT |
+| the Breeding Pen never opens on its own | CAUGHT |
+| a pairing ignores sex | CAUGHT |
+| a pairing ignores stock | CAUGHT |
+| a full incubator gives the wrong reason | CAUGHT |
+| purchases go back to full rows | CAUGHT |
+| a spend chip goes nowhere | CAUGHT |
+| a spend chip loses its hint | CAUGHT |
+| work items become chips too | CAUGHT |
+| the economy is five cells again | CAUGHT |
+| Net loses its derivation | CAUGHT |
+| the subtitle shows the wrong upkeep | CAUGHT |
+| a shut Breeding Pen still builds its body | CAUGHT |
+| a shut Right Now still builds its rows | CAUGHT |
+
+Three of these earn a note.
+
+**Break 5 (`a pairing ignores stock`) is only catchable because the
+fixture was fixed first.** Every other case in that gate is goats, so a
+card that ignored species entirely would have sailed through — the R34
+failure exactly. Adding a goat-and-a-bear case before running the battery
+is what turned a hollow assertion into a real one.
+
+**Break 13 (`the subtitle shows the wrong upkeep`) is the one that guards
+the economy rather than the layout.** The gate compares the printed
+subtitle against `upkeepPerDay`, so a presentation change cannot quietly
+alter what the number means.
+
+**Breaks 14 and 15 re-break the defects this phase actually shipped in its
+first cut** — both shut folds building their bodies. They are in the
+battery rather than taken on trust precisely because I got them wrong
+once already.
+
+The battery also caught its own staleness before costing anything: after
+the open/shut decisions were hoisted, three break anchors no longer
+existed, and `assert old in s` stopped the run on break 2 instead of
+silently applying nothing. Every anchor is now checked against the real
+files before the run starts.
+
+### Verified
+
+- Full suite green; four R47 gate blocks.
+- Browser QA at 380px across five states — fresh/0, fresh/2, mid/4 with
+  the Path running, mid/4 retired, late/12 with eggs — zero console errors
+  in every one, no sideways scroll.
+- No schema change; `SAVE_VERSION` stays **33**.
+
+### Known gaps
+
+- **The agenda's own rows are the remaining cost and they are not fat.**
+  Six open actions, five with a hint that wraps to two lines, ~65px each.
+  Cutting the hint would cut A4's reason for existing, so the card stays
+  foldable and the player decides. Stated here so a later session does not
+  have to re-derive it.
+- **Foes in the Dex is still 4.4 screens late** — carried over from R45.
+- Trophies still are not in the Dex (R42), and `SHIPPED_SYSTEMS` in
+  `smoke.js` is still hand-kept (R39).
+
+### Next session's first task
+
+The Dex's Foes tab is the last measured screen still over four screens,
+and R45 established there is no room for a sixth tab to split it. Either
+find the height inside the 40-cell gallery or decide it is a gallery and
+close the note.
+
 ## Session 68 — R46: the Ranch at twenty animals ✅
 
 **Acceptance criterion:** a full herd fits a phone, nothing time-critical
