@@ -1896,6 +1896,20 @@ footer {
 .agenda-row:hover, .agenda-row:focus-visible { border-color: var(--accent); }
 .agenda-label { display: block; font-weight: 700; }
 .agenda-row .fine-print { display: block; margin-top: 2px; }
+/* R47: a purchase is not a project. Spend items keep every click and stop
+   taking a full row each — the distinction agenda.js already draws. */
+.agenda-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.agenda-chip {
+  padding: 6px 11px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+.agenda-chip:hover, .agenda-chip:focus-visible { border-color: var(--accent); }
 .pill {
   display: inline-block;
   padding: 1px 8px;

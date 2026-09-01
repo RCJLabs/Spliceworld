@@ -35,7 +35,7 @@ import {
   incomePerDay, incomeSuspended, regionBonusPerDay, regionComplete,
   tickCampaign, resolveBattle, salvageUnit,
 } from '../campaign/campaign.js';
-import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING, pairingForecast } from '../ranch/breeding.js';
+import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING, pairingForecast, incubatorSlots } from '../ranch/breeding.js';
 import { trainChimera, TRAINING } from '../splice/theater.js';
 import { obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
 import {
@@ -51,6 +51,7 @@ import { classMultiplier } from '../battle/engine.js';
 import { overflowingParts } from './bounds.js';
 import { renderDexScreen } from '../splice/dex-ui.js';
 import { dexProgress } from '../splice/dexentry.js';
+import { agendaShape } from '../ranch/agenda.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { moveReadout } from '../battle/readout.js';
 import { defaultMoveset } from '../battle/moves.js';
@@ -9803,7 +9804,11 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       { ageHours: 0 },                              // juvenile
     ]);
     const page = drawRanch(st);
-    assert.ok(!page.includes('aria-expanded="true"'), 'nothing is open');
+    // Scoped to the animal folds: R47 made the Breeding Pen a fold too, and
+    // it opens when a pairing is available. This gate's claim was always
+    // about the HERD, not about every fold on the screen.
+    assert.equal((page.match(/data-fold="ranch-[^"]*" aria-expanded="true"/g) ?? []).length, 0,
+      'no animal is open');
     assert.ok(/Prime for /.test(page), 'the at-Prime countdown is on a shut row');
     assert.ok(page.includes('past its Prime'), 'and an animal that aged out says so');
     // The countdown is a real duration, not a placeholder.
@@ -9951,6 +9956,166 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const css = readFileSync(join(root, 'style.css'), 'utf8');
     assert.ok(css.includes('.list-group {'), 'the heading has a style');
     assert.ok(!css.includes('.dex-group'), 'and no Dex-only name survives it');
+  }
+}
+
+// --- R47: the Ranch chrome earns its height.
+//
+// R46 folded the herd and left a note that the cards ABOVE it had never
+// been asked to justify their space. Measured at 380px they are 965px on a
+// fresh save and 1,597px once the Path retires — 71% of the whole screen
+// at four animals. Asking the question got a mixed answer, which is the
+// useful kind: most of them earn it, two did not.
+//
+//   Breeding Pen  223px whether or not a pairing exists
+//   Right Now     678px, because three purchases each took a full row
+//   econ row      106px, because Income / Upkeep / Net is one subtraction
+//                 shown three times — the exact thing agenda.js warns about
+{
+  const { renderRanchScreen } = await import('../ranch/ui.js');
+  const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null });
+  const HOUR = 3600000;
+  const draw = (st) => {
+    const root = stub();
+    renderRanchScreen(root, { state: st, content, now: () => t0, save: () => {}, refreshTicker: () => {} });
+    return root.innerHTML;
+  };
+  const goat = content.species.goat.growthHours;
+  // A herd with explicit sexes, because whether a pairing EXISTS is the
+  // whole of what the Breeding Pen's default turns on and createAnimal
+  // picks sex from the seed.
+  const ranch = (specs) => {
+    const st = { ...newGameState(), seed: 47, funds: 9999 };
+    st.ranch.penCapacity = Math.max(specs.length, 4);
+    st.ranch.stock = specs.map(({ ageHours = goat.prime + 1, sex = 'F', species = 'goat' }) => {
+      const a = createAnimal(st, species, content, t0 - ageHours * HOUR);
+      a.sex = sex;
+      return a;
+    });
+    return st;
+  };
+
+  // 1. THE CRITERION, first half. A card that cannot act does not cost more
+  //    than the sentence explaining why. The Breeding Pen needs two adults
+  //    of one stock and opposite sexes; until then it was 223px of disabled
+  //    pickers on every visit.
+  {
+    const none = draw(ranch([]));
+    assert.ok(none.includes('data-fold="breeding-pen"'), 'the Breeding Pen is a fold');
+    assert.ok(!/data-fold="breeding-pen" aria-expanded="true"/.test(none),
+      'and it is shut when there is nobody to breed');
+    assert.ok(!none.includes('data-act="breed"'), 'so it ships no pickers and no button');
+    assert.ok(none.includes('Adults only'), 'and says why, in one line');
+
+    // One adult, or two of the same sex, is still no pairing.
+    const solo = draw(ranch([{ sex: 'F' }]));
+    assert.ok(!/data-fold="breeding-pen" aria-expanded="true"/.test(solo), 'one adult is not a pair');
+    assert.ok(/1 adult,/.test(solo), `and the summary counts them (${solo.match(/>[^<]*adult[^<]*</)?.[0]})`);
+    const sameSex = draw(ranch([{ sex: 'F' }, { sex: 'F' }]));
+    assert.ok(!/data-fold="breeding-pen" aria-expanded="true"/.test(sameSex),
+      'two of one sex is not a pair either');
+    assert.ok(/2 adults, no pair/.test(sameSex), 'and it says so rather than showing dead pickers');
+
+    // Juveniles do not count, which is the other half of "eligible".
+    const kids = draw(ranch([{ ageHours: 0, sex: 'F' }, { ageHours: 0, sex: 'M' }]));
+    assert.ok(!/data-fold="breeding-pen" aria-expanded="true"/.test(kids), 'juveniles are not adults');
+
+    // …and the moment a real pairing exists it opens on its own.
+    const pair = draw(ranch([{ sex: 'F' }, { sex: 'M' }]));
+    assert.ok(/data-fold="breeding-pen" aria-expanded="true"/.test(pair),
+      'a pairing opens the card without being asked');
+    assert.ok(pair.includes('data-act="breed"'), 'and the button is back');
+    assert.ok(pair.includes('pairing available'), 'with a badge that says so');
+
+    // A full incubator is the other reason it cannot act, and it is a
+    // different sentence because it is a different fix.
+    const full = ranch([{ sex: 'F' }, { sex: 'M' }]);
+    full.ranch.eggs = Array.from({ length: incubatorSlots(full, content) }, (_, i) => ({
+      id: `e${i}`, species: 'goat', hatchAt: t0 + HOUR,
+      parents: { sire: { name: 'A', stars: 3 }, dam: { name: 'B', stars: 3 } }, genotype: {},
+    }));
+    const page = draw(full);
+    assert.ok(!/data-fold="breeding-pen" aria-expanded="true"/.test(page),
+      'a full incubator shuts it too');
+    assert.ok(page.includes('incubator is full'), 'and names that reason, not the other one');
+  }
+
+  // 2. A purchase is not a project. agenda.js says it twice in its own
+  //    header — "three things you can buy is not three things to do" — and
+  //    the card rendered all three the same width anyway.
+  {
+    const st = ranch([{ sex: 'F' }, { sex: 'M' }]);
+    st.funds = 99999;
+    st.campaign.heldNodes = ['patrol_1'];
+    const page = draw(st);
+    const shape = agendaShape(st, content, t0);
+    const spend = shape.open.filter((i) => i.kind === 'spend');
+    const work = shape.open.filter((i) => i.kind !== 'spend');
+    assert.ok(spend.length >= 2, `this save has purchases open (${spend.map((i) => i.id)})`);
+    assert.ok(work.length >= 1, `and something to make (${work.map((i) => i.id)})`);
+
+    const chips = [...page.matchAll(/class="agenda-chip"[^>]*>([^<]*)</g)].map((m) => m[1]);
+    const rows = [...page.matchAll(/class="agenda-row"[^>]*>\s*<span class="agenda-label">([^<]*)</g)].map((m) => m[1]);
+    assert.equal(chips.length, spend.length, `every purchase is a chip (${chips})`);
+    assert.equal(rows.length, work.length, `and everything else keeps its row (${rows})`);
+    // NOTHING IS HIDDEN. The point is the shape of the list, not its length:
+    // every open item still has a click, and it still goes somewhere.
+    for (const item of shape.open) {
+      assert.ok(page.includes(`>${item.label}<`) || page.includes(`${item.label}</span>`),
+        `"${item.label}" is still on the agenda`);
+    }
+    const gotos = [...page.matchAll(/data-goto="(\w+)"/g)].map((m) => m[1]);
+    assert.equal(gotos.length, shape.open.length, 'one destination per open item, chips included');
+    for (const item of shape.open) {
+      assert.ok(gotos.includes(item.screen), `"${item.label}" still routes to ${item.screen}`);
+    }
+    // And the hint survives on the chip, where a title is the only room
+    // left for it.
+    for (const item of spend) {
+      assert.ok(page.includes(`title="${item.hint}"`), `"${item.label}" keeps its hint`);
+    }
+  }
+
+  // 3. One subtraction, shown once. R40 already settled this in the War
+  //    Room — Net is the number, its derivation is the subtitle — and the
+  //    Ranch was still printing Income, Upkeep and Net as three cells.
+  {
+    const page = draw(ranch([{ sex: 'F' }, { sex: 'M' }]));
+    const row = page.slice(page.indexOf('class="econ-row"'), page.indexOf('ranch-actions'));
+    const cells = (row.match(/<span class="econ-label">/g) ?? []).length;
+    assert.equal(cells, 3, `the economy reads as three cells, not five (${cells})`);
+    assert.ok(/econ-label">Net</.test(row), 'Net is one of them');
+    assert.ok(/econ-next/.test(row), 'with its derivation as a subtitle');
+    assert.ok(/upkeep/.test(row), 'that still names upkeep');
+    assert.ok(!/econ-label">Income</.test(row), 'and Income is not its own cell any more');
+    assert.ok(!/econ-label">Upkeep</.test(row), 'nor Upkeep');
+    // The numbers themselves did not move — this is a layout change, and a
+    // layout change that quietly alters the economy would be a bug.
+    const st = ranch([{ sex: 'F' }, { sex: 'M' }]);
+    const up = upkeepPerDay(st, content);
+    assert.ok(row.includes(`−$${up} upkeep`), `and the upkeep shown is the real one ($${up})`);
+    assert.ok(/class="econ-label">Slush fund</.test(row), 'the slush fund survived');
+    assert.ok(/class="econ-label">Pens</.test(row), 'and so did the pen count');
+  }
+
+  // 4. What the phase did NOT cut, stated so a later session does not have
+  //    to re-derive it. The agenda's own rows are the expensive part and
+  //    they are expensive because they teach: six open actions, five of
+  //    them with a hint that wraps to two lines. Cutting the hint would be
+  //    cutting A4's whole reason for existing, so the card stays foldable
+  //    and the player decides.
+  {
+    const st = ranch([{ sex: 'F' }, { sex: 'M' }]);
+    st.funds = 99999;
+    st.campaign.heldNodes = ['patrol_1'];
+    const page = draw(st);
+    assert.ok(page.includes('data-fold="right-now"'), 'Right Now is still a fold the player controls');
+    const shut = { ...st, ui: { collapsed: { 'right-now': true } } };
+    const shutPage = draw(shut);
+    assert.ok(!shutPage.includes('class="agenda-row"'), 'shutting it costs nothing to render');
+    assert.ok(!shutPage.includes('class="agenda-chip"'), 'chips included');
+    assert.ok(shutPage.includes('open</span>'), 'and the count stays on the shut row');
+    assert.equal(newGameState().saveVersion, SAVE_VERSION, 'none of this touched the schema');
   }
 }
 
