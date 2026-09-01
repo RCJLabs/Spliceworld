@@ -4,12 +4,16 @@
 
 import { renderArena } from '../battle/ui.js';
 import { createBattle, isInjured, obediencePercent, obedienceIgnoreChance, combatantFromChimera } from '../battle/engine.js';
-import { forecast } from '../battle/forecast.js';
+import { forecast, diagnose } from '../battle/forecast.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
-import { matchupNotes, attackTags, foeTagLines } from './matchup.js';
-import { guideForScreen } from '../ranch/onboarding.js';
+import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js';
+// STABLE is the cap, not a coincidence: A1 measured the campaign at three
+// bodies, the harness has fought at three since M4.5, and the Path tells
+// the player to build three. A second `3` typed in here is how those four
+// numbers drift apart.
+import { guideForScreen, STABLE as TEAM_CAP } from '../ranch/onboarding.js';
 import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import { renderCreatureSVG } from '../render/renderer.js';
@@ -841,8 +845,15 @@ function renderBriefing(root, ctx) {
     // where it stops being information and becomes decoration. It
     // discriminates in the other 79%, so it stays; saying which class costs
     // nothing and tells you something in both cases.
-    const edge = cls && foeClasses.has(cls.beats)
-      ? ` · beats their ${content.classes[cls.beats].name}`
+    // R37. This used to be `beats their Water` when the triangle favoured
+    // the row and an EMPTY STRING when it did not — R35 put losses beside
+    // wins on the tag notes and left the class chip a sales brochure, on
+    // the bigger of the two layers (16-20pp against 3.7-7.4pp). Silence is
+    // not the same as "no problem", and it was silent at exactly the wrong
+    // moment. Both directions now, rendered like the tag notes below.
+    const clsNotes = classNotes(cb.creatureClass, foeClasses, content.classes);
+    const edge = clsNotes.length
+      ? '<br>' + clsNotes.map((n) => `<span class="matchup ${n.kind}">${n.kind === 'good' ? '✔' : '✘'} ${n.text}</span>`).join(' ')
       : '';
     // What the tag chart does between THIS creature and THIS enemy — using
     // the four moves it can actually press, because a move it knows and
@@ -908,6 +919,14 @@ function renderBriefing(root, ctx) {
       }</span>`
     : '';
 
+  // R37. On a losing verdict, say WHY — measured, not from a constant
+  // string. The briefing caps a team at three, so the old hopeless hint
+  // ("bring more creatures") was, for a player who already had three,
+  // advice the screen itself refuses to accept. Only computed on a verdict
+  // that needs it, the same way the obedience replay is.
+  const canBringMore = picked.length < TEAM_CAP &&
+    state.chimeras.some((c) => !draftTeam.includes(c.id) && !isInjured(c, t) && isSettled(c, t));
+  const why = fc ? diagnose(picked, encounter, content, state.seed, t, { canBringMore }) : null;
   const odds = fc
     ? `
       <p class="forecast forecast-${fc.band.id}">
@@ -918,6 +937,7 @@ function renderBriefing(root, ctx) {
             : ''
         }
         <span class="fine-print">${fc.band.hint}</span>
+        ${why ? `<span class="fine-print why why-${why.id}">${why.text}</span>` : ''}
         ${obedienceLine}
       </p>`
     : '<p class="fine-print">Pick a team and the lab will run the numbers.</p>';
@@ -957,7 +977,7 @@ function renderBriefing(root, ctx) {
       if (draftTeam.includes(id)) {
         draftTeam = draftTeam.filter((x) => x !== id);
       } else {
-        if (draftTeam.length >= 3) return;
+        if (draftTeam.length >= TEAM_CAP) return;
         draftTeam.push(id);
       }
       renderBriefing(root, ctx);

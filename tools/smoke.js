@@ -5684,7 +5684,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   // so, which is the only mechanism that keeps "every shipped system" true
   // a year from now.
   const SHIPPED_SYSTEMS = [
-    'stable',
+    // R37. These two are lessons rather than features — no screen to visit,
+    // no button to press, just the two charts that decide fights. They are
+    // on the roll for the same reason everything else is: so that removing
+    // the note fails the build.
+    'stable', 'triangle', 'chart',
     'breeding', 'incubator', 'genes', 'pairing', 'facility', 'upkeep', 'catalog',
     'temperament', 'bond', 'infirmary', 'scars',
     'combos', 'chaos', 'flight',
@@ -5730,7 +5734,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   }
 
   const STEPS = [
-    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable']],
+    // R37. The two lessons light with `stable`, on the first conquest, and
+    // that is the whole point of them: both walls they explain are ahead of
+    // this moment, and the note that explains a wall must be reachable
+    // before it. They queue behind `stable` in order, because one note at a
+    // time is the rule and bodies is the first wall (node 2, measured 0%
+    // solo and 100% at three).
+    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable', 'triangle', 'chart']],
     ['the herd grows up', () => { for (const a of lab.ranch.stock) a.birthAt = t0 - 200 * HOUR; }, ['breeding']],
     ['an egg is laid', () => { lab.ranch.eggCount = 1; lab.ranch.eggs = [{ id: 'e0' }]; }, ['incubator', 'genes']],
     ['a chimera exists', () => {
@@ -8041,6 +8051,157 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       }
       assert.ok(cell.includes(content.species[id].role), `${id}: and keeps the role it always had`);
     }
+  }
+}
+
+// --- R37: the lesson is behind the wall it explains.
+//
+// The premise this phase started from was wrong twice over, and the
+// measurements are what corrected it both times.
+//
+// Wrong once: "the guides never teach combat". They do — the `regions` note
+// states the tag chart outright. But it is gated on `secondRegionOpen`,
+// which means holding Precinct HQ, which is the wall it explains.
+//
+// Wrong twice: "at Precinct a Ground team loses on class". It does not.
+// Three standard chimeras against boss_clampdown, one layer lifted at a
+// time:
+//
+//   archetype   base   class off   chart off   at Prime
+//   boots (G)     0%          0%          3%        28%
+//   wings (A)    91%          0%         91%       100%
+//   gills (W)     0%         16%          0%         0%
+//
+// Ground loses on GRADE. Air wins on class and nothing else. And the
+// briefing told all of them the same thing — "bring more creatures" —
+// while capping a team at three, so for anyone who already had three it was
+// advice the screen itself refuses to accept.
+{
+  const { diagnose, forecast: fc37, BANDS } = await import('../battle/forecast.js');
+  const { classNotes } = await import('../campaign/matchup.js');
+  const { STABLE: CAP } = await import('../ranch/onboarding.js');
+
+  const squad = (key, grade, n) => {
+    const a = ARCHETYPES[key];
+    return Array.from({ length: n }, (_, i) => {
+      const c = makeSimChimera(a.frame, partsOnFrame(content, a.frame, a.partIds), grade, content);
+      c.id = `${key}-${i}`; c.name = `${a.name} ${i + 1}`; c.bond = 100; c.settleUntil = 0;
+      return c;
+    });
+  };
+  const precinct = content.encounters.boss_clampdown;
+  const dx = (team, opts = {}) => diagnose(team, precinct, content, 2026, 0, opts);
+
+  // 1. THE CRITERION. A full team on a hopeless verdict is never told to
+  //    bring another body, because the briefing will not accept one.
+  {
+    const full = squad('boots', 'standard', CAP);
+    const d = dx(full, { canBringMore: false });
+    assert.ok(d, 'a hopeless verdict comes with a reason');
+    assert.notEqual(d.id, 'outnumbered',
+      `a team at the cap of ${CAP} is never told to bring more (${d.id}: ${d.text})`);
+    assert.ok(!/bring (more|another)/i.test(d.text),
+      `and the words are not there either (${d.text})`);
+  }
+
+  // 2. …and the one case where that advice IS followable still gets it.
+  //    A1's wall is real and this must not have thrown it away.
+  {
+    const solo = squad('boots', 'standard', 1);
+    const d = dx(solo, { canBringMore: true });
+    assert.equal(d.id, 'outnumbered', `one body against two still gets A1's answer (${d?.id})`);
+  }
+
+  // 3. The layer named is the layer measurably costing them — not the one
+  //    the class chart would guess. At Precinct the triangle is worth 0pp
+  //    to a Ground team and 16pp to a Water one, and the diagnosis has to
+  //    tell those two apart.
+  {
+    const ground = dx(squad('boots', 'standard', CAP), { canBringMore: false });
+    assert.equal(ground.id, 'outgunned',
+      `Ground at Precinct is a grade problem, not a class one (${ground.id}: ${ground.text})`);
+    const water = dx(squad('gills', 'standard', CAP), { canBringMore: false });
+    assert.equal(water.id, 'outclassed',
+      `Water at Precinct is the class one (${water.id}: ${water.text})`);
+  }
+
+  // 4. A winning verdict says nothing. The diagnosis is for a loss; firing
+  //    it on a walkover would be three replays and a lecture nobody needs.
+  {
+    const air = squad('wings', 'standard', CAP);
+    const f = fc37(air, precinct, content, 2026, 0);
+    assert.ok(f.winRate > 0.65, `a flier walks Precinct (${Math.round(f.winRate * 100)}%)`);
+    assert.equal(dx(air, { canBringMore: true }), null, 'and is told nothing, because nothing is wrong');
+  }
+
+  // 5. The bands no longer prescribe. Two constant strings told every losing
+  //    matchup in the game the same thing; whatever the diagnosis says now,
+  //    it must not be baked into the band.
+  for (const band of BANDS) {
+    assert.ok(!/bring (more|another)/i.test(band.hint),
+      `${band.id}: the band describes, the diagnosis prescribes (${band.hint})`);
+  }
+
+  // 6. The class chip works in both directions. R35 put losses beside wins
+  //    on the tag notes and left this one upside-only.
+  {
+    const foes = new Set(['air']);
+    const bad = classNotes('ground', foes, content.classes);
+    assert.ok(bad.some((n) => n.kind === 'bad' && /Air/.test(n.text)),
+      `a Ground row facing Air is told so (${JSON.stringify(bad)})`);
+    const good = classNotes('ground', new Set(['water']), content.classes);
+    assert.ok(good.some((n) => n.kind === 'good'), 'and keeps the upside it always had');
+    // Read from classes.json, never restated: flip who beats whom and the
+    // chip has to follow.
+    const flipped = { ...content.classes, ground: { ...content.classes.ground, beats: 'air' } };
+    assert.ok(classNotes('ground', new Set(['air']), flipped).some((n) => n.kind === 'good'),
+      'the chip reads the triangle from data rather than naming classes in code');
+  }
+
+  // 7. Both lessons are reachable at the FIRST conquest — before the walls
+  //    they explain. This is the phase in one assertion: `regions` states
+  //    the tag chart and is gated on holding Precinct, so the note that
+  //    explains the wall sits behind it.
+  {
+    const early = { ...newGameState(), seed: 37 };
+    ensureRanchSeeded(early, content, t0);
+    early.campaign.heldNodes = ['barn_perimeter'];
+    const states = guideStates(early, content, t0);
+    for (const id of ['triangle', 'chart']) {
+      const row = states.find((r) => r.guide.id === id);
+      assert.ok(row && row.status === 'ready',
+        `${id} is reachable at the first node, before the wall it explains (${row?.status})`);
+    }
+    // And the note that is gated behind the wall is still gated — this gate
+    // would otherwise pass by accident if everything were reachable at once.
+    assert.equal(states.find((r) => r.guide.id === 'regions').status, 'locked',
+      'while the region note stays behind the second region, which is what it is about');
+  }
+
+  // 8. The class lesson retires when the player DEMONSTRATES it, not when
+  //    they have walked far enough.
+  {
+    const mono = { ...newGameState(), seed: 38 };
+    ensureRanchSeeded(mono, content, t0);
+    mono.campaign.heldNodes = ['barn_perimeter'];
+    const build = (key) => {
+      const a = ARCHETYPES[key];
+      const c = makeSimChimera(a.frame, partsOnFrame(content, a.frame, a.partIds), 'standard', content);
+      return { id: key, name: key, frame: c.frame, tokens: c.tokens, settleUntil: 0, bond: 100, scars: [] };
+    };
+    mono.chimeras = [build('boots'), build('boots')];
+    const stateOf = (st) => guideStates(st, content, t0).find((r) => r.guide.id === 'triangle').status;
+    assert.equal(stateOf(mono), 'ready', 'a stable that is all one class still needs the lesson');
+    mono.chimeras.push(build('wings'));
+    assert.equal(stateOf(mono), 'done', 'and stops being told once it is fielding two classes');
+  }
+
+  // 9. One number for the team cap. A second `3` typed into the briefing is
+  //    how the cap, the Path's target and the harness drift apart.
+  {
+    const src = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
+    assert.ok(!/draftTeam\.length >= 3\b/.test(src), 'the briefing reads the cap rather than restating it');
+    assert.ok(/TEAM_CAP/.test(src), 'and names it');
   }
 }
 

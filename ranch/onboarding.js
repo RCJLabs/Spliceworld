@@ -22,6 +22,7 @@ import { regionList, regionOpen } from '../campaign/map.js';
 import { nextUpgrade, tracks } from '../splice/facility.js';
 import { rivalStatus } from '../campaign/rivals.js';
 import { expressedTraits } from './breeding.js';
+import { analyze } from '../splice/physiology.js';
 
 export function onboardingSteps(state, content, now) {
   const caredOnce = state.ranch.stock.some((a) =>
@@ -133,6 +134,18 @@ export const GUIDE_HELPERS = {
     );
   },
   bredAnimalInPens: (state) => state.ranch.stock.some((a) => a.parents),
+  // R37. The class lesson retires when the player DEMONSTRATES it rather
+  // than on a node count: two chimeras whose anatomy votes different ways.
+  // Derived, never stored — a chimera's class comes from its parts, so a
+  // resequenced creature changes class and this answer changes with it.
+  mixedClassStable: (state, content) => {
+    const classes = new Set(
+      (state.chimeras ?? [])
+        .map((c) => analyze(c.frame, Object.values(c.tokens ?? {}), content)?.creatureClass)
+        .filter(Boolean)
+    );
+    return classes.size >= 2;
+  },
   // A9. The lift equation only becomes a decision once the player owns a
   // part that MAKES lift — 61 parts say Airborne, twelve of them fly — so
   // this asks for a wing rather than for parts in general. Retired once

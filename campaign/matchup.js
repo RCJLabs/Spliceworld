@@ -112,3 +112,38 @@ function effectWordShort(rule) {
   if (rule.mult < 1) return 'is halved';
   return `hits ${rule.mult}× as hard`;
 }
+
+// --- R37: the class layer, both directions ------------------------------
+//
+// R35 put losses beside wins on the tag notes and did not touch the class
+// chip beside them, which stayed upside-only: `beats their Water` when the
+// triangle favours you, and an EMPTY STRING when it does not. Silence reads
+// as fine.
+//
+// That silence sits on the bigger of the two layers. R18 measured the class
+// edge at 16-20pp; the chart rules are worth 3.7-7.4pp. And it is silent at
+// exactly the wrong moment: Precinct HQ, the node that gates the second
+// region, is 0% for a Ground stable and 0% for a Water one at standard
+// grade, against 75-83% for Air. A player is not told they cannot win it;
+// they are told nothing, four times, and then they lose.
+export function classNotes(myClass, foeClasses, classes) {
+  if (!myClass || !classes?.[myClass]) return [];
+  const me = classes[myClass];
+  const notes = [];
+  if (foeClasses.has(me.beats)) {
+    notes.push({ kind: 'good', key: `cls:${myClass}:${me.beats}`, text: `beats their ${classes[me.beats].name}` });
+  }
+  // The other direction, which nothing said: whoever beats ME, standing
+  // in front of me. Named rather than flagged, because "disadvantage here"
+  // does not tell you what to bring instead.
+  for (const foe of foeClasses) {
+    if (classes[foe]?.beats === myClass) {
+      notes.push({
+        kind: 'bad',
+        key: `cls:${foe}:${myClass}`,
+        text: `their ${classes[foe].name} beats its ${me.name}`,
+      });
+    }
+  }
+  return notes;
+}

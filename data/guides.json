@@ -2,28 +2,6 @@
   "_doc": "First-use field guides (ROADMAP R29). Onboarding shipped in M7 as a five-step Path to World Domination and then eight more systems shipped behind it, unguided. Every guide here is DERIVED FROM SAVE STATE — there are no tutorial flags to migrate and nothing is scripted. A guide has two condition lists: `reachable` (the system exists for this player yet) and `done` (they have used it). It shows only when reachable AND not done, so a tip can never fire before its system is reachable and can never nag about something already understood. Conditions are either { path, min, default } — a dotted path into the save, compared by number, array length or key count — or { helper } for the handful that need real derivation (a breedable pair, an injured chimera, an open contest); the helper registry lives in ranch/onboarding.js and is the engine's own knowledge of its systems. Adding a guide for a system the engine can already detect is a pure data edit. `screen` is which tab it appears on; `order` breaks ties when more than one is ready. A player can dismiss one, which is the only piece of this that touches the save (`guidesSeen`).",
   "guides": [
     {
-      "id": "stable",
-      "screen": "battle",
-      "order": 39,
-      "icon": "👥",
-      "title": "A patrol is three bodies, and so are you",
-      "body": "Combat is one creature per side at a time over a queue, so a three-unit patrol means grinding three health bars down with one of yours. Measured: the second node is unwinnable with one chimera and comfortable with three. If the briefing says <em>Not survivable</em>, it has run the fight and it means it — go and graduate another donor.",
-      "reachable": [
-        {
-          "path": "campaign.heldNodes",
-          "min": 1,
-          "default": 0
-        }
-      ],
-      "done": [
-        {
-          "path": "chimeras",
-          "min": 3,
-          "default": 0
-        }
-      ]
-    },
-    {
       "id": "breeding",
       "screen": "ranch",
       "order": 10,
@@ -251,6 +229,24 @@
       ]
     },
     {
+      "id": "flight",
+      "screen": "theater",
+      "order": 29,
+      "icon": "🪶",
+      "title": "Wings are a promise. Lift is the receipt.",
+      "body": "Bird anatomy says AIRBORNE on the part. Your creature only gets it if the lift you installed can hoist the mass you built — the Flight row does that sum for you. It is worth doing: ground-level attacks swing straight underneath anything actually in the air, and the coalition throws a lot of them. The lighter the chassis, the cheaper the promise. The Kite gets off the ground on plain standard parts; the Rumbler never gets off the ground at all.",
+      "reachable": [
+        {
+          "helper": "liftPartInVault"
+        }
+      ],
+      "done": [
+        {
+          "helper": "flierBuilt"
+        }
+      ]
+    },
+    {
       "id": "combos",
       "screen": "theater",
       "order": 30,
@@ -293,27 +289,73 @@
       ]
     },
     {
-      "id": "flight",
-      "screen": "theater",
-      "order": 29,
-      "icon": "🪶",
-      "title": "Wings are a promise. Lift is the receipt.",
-      "body": "Bird anatomy says AIRBORNE on the part. Your creature only gets it if the lift you installed can hoist the mass you built — the Flight row does that sum for you. It is worth doing: ground-level attacks swing straight underneath anything actually in the air, and the coalition throws a lot of them. The lighter the chassis, the cheaper the promise. The Kite gets off the ground on plain standard parts; the Rumbler never gets off the ground at all.",
+      "id": "stable",
+      "screen": "battle",
+      "order": 39,
+      "icon": "👥",
+      "title": "A patrol is three bodies, and so are you",
+      "body": "Combat is one creature per side at a time over a queue, so a three-unit patrol means grinding three health bars down with one of yours. Measured: the second node is unwinnable with one chimera and comfortable with three. If the briefing says <em>Not survivable</em>, it has run the fight and it means it — go and graduate another donor.",
       "reachable": [
         {
-          "helper": "liftPartInVault"
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
         }
       ],
       "done": [
         {
-          "helper": "flierBuilt"
+          "path": "chimeras",
+          "min": 3,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "triangle",
+      "screen": "battle",
+      "order": 40,
+      "icon": "🔺",
+      "title": "Ground, Water, Air — and one of them is wrong",
+      "body": "Every creature's class comes from its <em>anatomy</em>, not its name: paws and hooves vote Ground, gills and fins vote Water, wings and talons vote Air. Ground beats Water, Water beats Air, Air beats Ground. It is the biggest single thing in a fight — measured at Precinct HQ, a flying team wins nine times in ten and the same team with the triangle switched off wins none. If the briefing calls a fight hopeless and your creatures are strong enough, you are on the wrong corner of it. Build something that votes differently.",
+      "reachable": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "helper": "mixedClassStable"
+        }
+      ]
+    },
+    {
+      "id": "chart",
+      "screen": "battle",
+      "order": 41,
+      "icon": "🏷",
+      "title": "Tags are the other half, and some of them are zeroes",
+      "body": "Under the classes sits a second chart, and it deals in absolutes rather than percentages. A Ground-tagged move does <strong>nothing at all</strong> to anything Airborne — not less, nothing. Electric doubles into Aquatic, Sonic goes straight through Armored, and Gas is wasted on a Vehicle. The briefing lists every rule that applies before you commit: the opposition's tags sit under their name, and each of your creatures says what the chart does between it and them. Read the ✘ lines. They are the ones that cost you.",
+      "reachable": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "warRecord.wins",
+          "min": 8,
+          "default": 0
         }
       ]
     },
     {
       "id": "jobs",
       "screen": "battle",
-      "order": 40,
+      "order": 42,
       "icon": "💼",
       "title": "Not every job is a fight",
       "body": "The Jobs board sends one chimera out on a timer for money, livestock or parts — no battle, no risk of capture. It is the floor under a bad run, and it raises Heat, which the world notices.",
@@ -335,7 +377,7 @@
     {
       "id": "containment",
       "screen": "battle",
-      "order": 41,
+      "order": 43,
       "icon": "⛓",
       "title": "You can bring one home",
       "body": "Charging the Containment Cannon in a fight impounds an enemy. In the bay it becomes two futures and you pick one: dismantle it for enemy tech you cannot get any other way, or rehabilitate it onto your own roster.",
@@ -355,7 +397,7 @@
     {
       "id": "rehab",
       "screen": "battle",
-      "order": 42,
+      "order": 44,
       "icon": "🧸",
       "title": "Their monster can become yours",
       "body": "The Reorientation Wing turns an impounded specimen into a member of your stable — someone else’s anatomy, someone else’s grades, on your team. It runs on a clock and a curriculum; skip the sessions and it graduates wary.",
@@ -375,7 +417,7 @@
     {
       "id": "rivals",
       "screen": "battle",
-      "order": 43,
+      "order": 45,
       "icon": "🧫",
       "title": "Other people do this too",
       "body": "Rival labs field chimeras of their own and keep score. Beat one twice and it iterates — it reads your stable and builds something to answer it, which is the most direct feedback the game gives you on your own habits.",
@@ -393,7 +435,7 @@
     {
       "id": "rescue",
       "screen": "battle",
-      "order": 44,
+      "order": 46,
       "icon": "⏳",
       "title": "Nothing is ever really gone",
       "body": "Lose a fight and one downed chimera is taken, with a countdown to an \"unauthorized peer review\". Mount a rescue raid before it expires and you get it back with a deeper bond. There is always a window. Use it.",
@@ -415,7 +457,7 @@
     {
       "id": "contest",
       "screen": "battle",
-      "order": 45,
+      "order": 47,
       "icon": "🛡",
       "title": "They come back for it",
       "body": "Territory is not permanent. Once the coalition escalates, it counter-attacks a node you hold — the same garrison, stronger, and the node pays nothing while the convoy is on the road. Hold the line and the wreckage is yours.",
@@ -433,7 +475,7 @@
     {
       "id": "regions",
       "screen": "battle",
-      "order": 46,
+      "order": 48,
       "icon": "🗺",
       "title": "Each region asks a different question",
       "body": "The strips are not the same fight with bigger numbers. Kestrel Reach is Airborne, so your Ground-tagged moves miss entirely — and flying buys you nothing there, because almost nothing in the Reach fights from the ground. The Foundry is the opposite: armour, Sonic, and enough tippers and ram plates that a creature actually in the air is untouchable by a third of what they throw. Read the line under each region name.",
@@ -451,7 +493,7 @@
     {
       "id": "director",
       "screen": "battle",
-      "order": 47,
+      "order": 49,
       "icon": "🛰",
       "title": "The world is taking notes",
       "body": "Field the same anatomy often enough and the opposition starts bringing an answer to it. Their dossier on you is on the Labs tab. A stable of one class is legible; a mixed one is not.",
