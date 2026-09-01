@@ -7736,10 +7736,18 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 
   // 5. A boolean keyword has no dial, and scaling one must not corrupt it —
   //    `trap: true` times 2 is not a thing.
+  //
+  //    The first version of this could not fail. It handed the cobra's real
+  //    effect a move carrying `trap`, and the cobra's effect names only
+  //    `venom` — and applySetBonus iterates the EFFECT's keys, not the
+  //    move's, so the boolean was never in reach of the code being tested.
+  //    The break battery caught it as a MISSED. The effect has to name the
+  //    boolean for the guard to be under test at all.
   {
-    const move = { name: 'x', power: 10, keywords: { trap: true, venom: 1 } };
-    const fake = { moves: [move], perks: {}, hp: 10 };
-    applySetBonus(fake, 'cobra', content);
+    const c3 = structuredClone(content);
+    c3.species.cobra.setBonus.effect = { keywords: { trap: 2, venom: 2 } };
+    const fake = { moves: [{ name: 'x', power: 10, keywords: { trap: true, venom: 1 } }], perks: {}, hp: 10 };
+    applySetBonus(fake, 'cobra', c3);
     assert.equal(fake.moves[0].keywords.trap, true, 'a boolean keyword survives scaling untouched');
     assert.equal(fake.moves[0].keywords.venom, 2, 'and the numeric one beside it still scales');
   }
@@ -7761,9 +7769,14 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const off = structuredClone(content);
     for (const sp of Object.values(off.species)) delete sp.setBonus?.effect;
     const base = combatantFromChimera(makeSimChimera('M', mixed, 'prime', off), off, t0);
+    // All THREE dials, not just the stats: a keyword-only leak changes no
+    // stat at all, so a stats-only assertion here would wave it through.
     for (const k of ['hp', 'power', 'armor', 'speed', 'stamina']) {
       assert.equal(cb[k], base[k], `six species in the mix earns no set bonus (${k})`);
     }
+    assert.deepEqual(cb.perks, base.perks, 'six species in the mix earns no set perk');
+    assert.deepEqual(cb.moves.map((m) => m.keywords), base.moves.map((m) => m.keywords),
+      'six species in the mix earns no set keyword');
   }
 }
 
