@@ -8283,14 +8283,30 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 
   // 4. An elder is never told to wait for a prime it is already past.
+  //
+  //    The genetics here are PINNED, and the first version of this gate was
+  //    hollow without them. An elder's age factor is 0.8 against a prime's
+  //    1.0, so deleting the elder handling only shows up on an animal whose
+  //    score straddles a grade threshold at those two values — the dealt
+  //    herd happened not to, and the break battery duly reported a MISS.
+  //    3.0★ puts it at 0.48 (Prime) as an elder and 0.60 (Apex) if it could
+  //    somehow grow into its prime, so the mistake has somewhere to show.
   {
     const st = herd();
-    const old = { ...st.ranch.stock[0], birthAt: t0 - 400 * HOURS, condition: 100 };
+    const genes = Object.fromEntries(STATS.map((k) => [k, 3]));
+    const old = { ...st.ranch.stock[0], potential: genes, birthAt: t0 - 400 * HOURS, condition: 100 };
     const o = gradeOutlook(old, content, t0, st);
     assert.equal(o.stage, 'elder', 'the fixture is an elder');
+    assert.equal(o.headroom, 0, 'an elder in good condition has nothing left to gain');
     assert.equal(o.needsAge, false, 'an elder is not told to grow up');
     const line = outlookLine(o, 'it');
     assert.ok(/past its prime/.test(line), `and is told why waiting costs (${line})`);
+    assert.ok(!/fully grown/.test(line), `never that it should grow (${line})`);
+    // The same animal one stage younger DOES have the wait ahead of it, so
+    // the gate above is discriminating on the elder rule and not on genes.
+    const younger = { ...old, birthAt: t0 - 6 * HOURS };
+    assert.ok(gradeOutlook(younger, content, t0, st).needsAge,
+      'while the same genes at an earlier stage are still told to grow');
   }
 
   // 5. "Nothing more to wait for" is said only when it is true, and the
@@ -8326,7 +8342,24 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       'the graduation confirm prices the decision in grades');
   }
 
-  // 8. And R37's line no longer names one lever for a three-input number.
+  // 8. The grades note retires on PROOF — a part above Standard in the
+  //    vault, which is a donor the player actually raised — and not on a
+  //    count of anything. Without this the helper could return a constant
+  //    and nothing would notice; the break battery reported exactly that.
+  {
+    const lab = { ...newGameState(), seed: 380 };
+    ensureRanchSeeded(lab, content, t0);
+    lab.campaign.heldNodes = ['barn_perimeter'];
+    const stateOf = () => guideStates(lab, content, t0).find((r) => r.guide.id === 'grades').status;
+    lab.inventory.parts = [{ id: 'p0', partId: 'goat_head', grade: 'standard' }];
+    assert.equal(stateOf(), 'ready',
+      'a vault holding only Standard parts still needs the grade lesson');
+    lab.inventory.parts.push({ id: 'p1', partId: 'goat_tail', grade: 'prime' });
+    assert.equal(stateOf(), 'done',
+      'and it retires the moment one donor was raised past Standard');
+  }
+
+  // 9. And R37's line no longer names one lever for a three-input number.
   {
     const { diagnose } = await import('../battle/forecast.js');
     const src = readFileSync(join(root, 'battle/forecast.js'), 'utf8');
