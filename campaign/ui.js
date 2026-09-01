@@ -3,15 +3,15 @@
 // point for assaults and rescue raids (arena rendered via battle/ui).
 
 import { renderArena } from '../battle/ui.js';
-import { createBattle, isInjured, obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
+import { createBattle, isInjured, obediencePercent, obedienceIgnoreChance, combatantFromChimera } from '../battle/engine.js';
 import { forecast } from '../battle/forecast.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
+import { matchupNotes, attackTags, foeTagLines } from './matchup.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
-import { analyze } from '../splice/physiology.js';
 import { renderCreatureSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
 import { directEncounter, directorRead } from './director.js';
@@ -809,6 +809,20 @@ function renderBriefing(root, ctx) {
     ? [...foeClasses].map((c) => `${content.classes[c].icon} ${content.classes[c].name}`).join(', ')
     : 'no declared class';
 
+  // R35. The class triangle was the only matchup layer on this screen. The
+  // OTHER one — the tag chart — is live in 96% of the 24 encounters (Vehicle
+  // in 19, Airborne in 13, Armored and Aquatic in 11 each) and 71% of them
+  // throw a Ground move. Isolated with the same build on both sides of the
+  // chart, `Ground misses Airborne` is worth 3.7pp to a flier and `Sonic
+  // ignores Armor` 7.4pp against armour. None of it was here.
+  const foeUnits = encounter.waves.flat()
+    .map((u) => (typeof u === 'string' ? content.enemies[u] : u))
+    .filter(Boolean);
+  const foeTags = new Set(foeUnits.flatMap((u) => u.tags ?? []));
+  const foeAttackTags = new Set(foeUnits
+    .flatMap((u) => (u.moves ?? []).filter((m) => (m.power ?? 0) > 0).flatMap((m) => m.tags ?? [])));
+  const tagLines = foeTagLines(foeTags, content.tagChart, foeAttackTags);
+
   const roster = state.chimeras.map((ch) => {
     const injured = isInjured(ch, t);
     const note = injured
@@ -816,13 +830,38 @@ function renderBriefing(root, ctx) {
       : isSettled(ch, t)
         ? `ready · obedience ${obediencePercent(ch, t)}%`
         : `unsettled — Rejection debuffs · obedience ${obediencePercent(ch, t)}%`;
-    const chClass = analyze(ch.frame, Object.values(ch.tokens), content).creatureClass;
-    const cls = chClass ? content.classes[chClass] : null;
-    const edge = cls && foeClasses.has(cls.beats) ? ' · type advantage here' : '';
+    // One combatant per row, not a combatant AND a separate analyze: the
+    // combatant already carries the class the icon needs, and building it
+    // twice per chimera per render is work nobody sees.
+    const cb = combatantFromChimera(ch, content, t);
+    const cls = cb.creatureClass ? content.classes[cb.creatureClass] : null;
+    // Name the class it beats, not just that it beats something. Measured
+    // across the 24 encounters against a one-of-each stable, "type advantage
+    // here" is true of EVERY row in 21% of them — Slag Gate among them —
+    // where it stops being information and becomes decoration. It
+    // discriminates in the other 79%, so it stays; saying which class costs
+    // nothing and tells you something in both cases.
+    const edge = cls && foeClasses.has(cls.beats)
+      ? ` · beats their ${content.classes[cls.beats].name}`
+      : '';
+    // What the tag chart does between THIS creature and THIS enemy — using
+    // the four moves it can actually press, because a move it knows and
+    // cannot field answers nothing. Losses are shown as loudly as wins: a
+    // briefing that lists only upsides is a sales brochure, and A1's lesson
+    // was that the game must not present a losing pick as a choice.
+    const notes = matchupNotes({
+      myTags: new Set(cb.tags),
+      myAttackTags: attackTags(cb.moves),
+      foeTags,
+      foeAttackTags,
+    }, content.tagChart);
+    const chart = notes.length
+      ? '<br>' + notes.map((n) => `<span class="matchup ${n.kind}">${n.kind === 'good' ? '✔' : '✘'} ${n.text}</span>`).join(' ')
+      : '';
     return toggleRow({
       id: ch.id,
       label: `${cls ? cls.icon + ' ' : '◇ '}${ch.name}`,
-      sub: `${note}${edge}`,
+      sub: `${note}${edge}${chart}`,
       checked: draftTeam.includes(ch.id),
       disabled: injured,
     });
@@ -892,6 +931,7 @@ function renderBriefing(root, ctx) {
       <p class="fine-print">Opposition: ${foeLine}${
         foeClasses.size > 1 && encounter.counterClass ? ' — one of them was built to answer your stable' : ''
       }</p>
+      ${tagLines.length ? `<ul class="foe-tags">${tagLines.map((l) => `<li>${l}</li>`).join('')}</ul>` : ''}
       ${encounter.contestOf ? `<p class="fine-print contest-intel">🛡 ${encounter.intel}</p>` : ''}
       ${encounter.directed ? `<p class="fine-print intel-line">🛰 Intel: ${encounter.directed.intel} <strong>${content.enemies[encounter.directed.unitId].name}</strong> ${
         encounter.directed.added

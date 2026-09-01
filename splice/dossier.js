@@ -23,6 +23,8 @@
 // Same numbers, different voice — and because they come from the same
 // report, the panel and the dossier can never disagree about a fact.
 
+import { tagRules } from '../battle/tagtext.js';
+
 const P2W_WORD = [
   [0.35, 'explosive'],
   [0.22, 'strong'],
@@ -30,30 +32,9 @@ const P2W_WORD = [
   [0, 'straining'],
 ];
 
-// A tag only means something if the reader knows what it does. The rules
-// live in data/keywords.json `tagChart`, so they are READ rather than
-// restated: hardcoding "Electric hits Aquatic twice as hard" here would be
-// a second copy of the chart that goes stale the first time somebody edits
-// the real one. A tag with no chart row is reported as carrying no rule,
-// which is the truth rather than a blank.
-// The chart's own `note` is a table caption ("Gas \u226b organic") and reads
-// like one in a sentence, so the clause is built from the MECHANICS instead —
-// still read from the data, never a second copy of it.
-function effectWord(rule) {
-  if (rule.rule === 'ignoreArmor') return 'go straight through armour';
-  if (rule.mult === 0) return 'do nothing at all';
-  if (rule.mult < 1) return `do ${rule.mult === 0.5 ? 'half' : `${rule.mult}\u00d7`} damage`;
-  if (rule.mult === 1.5) return 'do half again';
-  return `do ${rule.mult}\u00d7 damage`;
-}
-function tagRules(tag, chart) {
-  return {
-    taking: chart.filter((r) => r.defender === tag)
-      .map((r) => `${r.attack} attacks ${effectWord(r)} against it`),
-    dealing: chart.filter((r) => r.attack === tag)
-      .map((r) => `its ${r.attack} attacks ${effectWord(r)} to anything ${r.defender}`),
-  };
-}
+// The tag chart's sentences live in battle/tagtext.js: R35 needed the same
+// rules on the briefing screen, from the defender's chair, and two copies of
+// a chart is how a chart goes stale.
 
 export function dossierRows(report, content) {
   const rows = [];
