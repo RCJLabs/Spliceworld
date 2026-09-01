@@ -35,14 +35,14 @@ const TURN_GUARD = 300;
 export const BANDS = [
   { id: 'walkover', floor: 0.9, label: 'Walkover', hint: 'They have not brought enough.' },
   { id: 'favoured', floor: 0.65, label: 'Favoured', hint: 'This should hold.' },
-  { id: 'even', floor: 0.4, label: 'Even fight', hint: 'It could go either way. Bring another body if you have one.' },
-  { id: 'losing', floor: 0.05, label: 'Losing fight', hint: 'You are outnumbered or outclassed. Expect to lose this one.' },
+  { id: 'even', floor: 0.4, label: 'Even fight', hint: 'It could go either way.' },
+  { id: 'losing', floor: 0.05, label: 'Losing fight', hint: 'Expect to lose this one.' },
   // Reserved for genuinely near-zero, and the floor is low on purpose. This
   // is the only verdict that tells a player to walk away, so it has to be
   // the one verdict that is never overclaimed: a one-in-five fight is a bad
   // idea, not an impossible one, and calling it impossible would cost the
   // player a fight they could have won.
-  { id: 'hopeless', floor: 0, label: 'Not survivable', hint: 'This team cannot win this fight. It is not close — bring more creatures.' },
+  { id: 'hopeless', floor: 0, label: 'Not survivable', hint: 'This team cannot win this fight, and it is not close.' },
 ];
 
 export function bandFor(winRate) {
@@ -84,7 +84,7 @@ function pilot(battle, content) {
 // win rates IS the price of obedience for this team against this encounter.
 // That is what the briefing shows, rather than a bare percentage that a
 // player has no way to convert into a decision.
-export function forecast(team, encounter, content, seed = 1, now = 0, { runs = 32, obedient = false } = {}) {
+export function forecast(team, encounter, content, seed = 1, now = 0, { runs = 32, obedient = false, classBlind = false, chartBlind = false } = {}) {
   if (!team?.length || !encounter) {
     return { winRate: 0, runs: 0, band: bandFor(0), turns: null, waves: encounter?.waves?.length ?? 0 };
   }
@@ -95,6 +95,17 @@ export function forecast(team, encounter, content, seed = 1, now = 0, { runs = 3
     // and offset per run so the seven are genuinely different fights.
     const battle = createBattle(team, encounter, content, (seed ^ Math.imul(i + 1, 0x9e3779b9)) >>> 0, now);
     if (obedient) for (const c of battle.player.team) c.ignoreChance = 0;
+    // R37. The same trick as `obedient`, aimed at the other layer.
+    // `classMultiplier` returns 1 the moment either side has no class, so
+    // dropping the PLAYER's class lifts the triangle off this team in both
+    // directions — their edge and their penalty alike. The gap between the
+    // two win rates is therefore what the class triangle is worth to this
+    // team against this encounter, measured rather than asserted.
+    if (classBlind) for (const c of battle.player.team) c.creatureClass = null;
+    if (chartBlind) for (const c of battle.player.team) {
+      c.tags = [];
+      for (const m of c.moves ?? []) m.tags = [];
+    }
     let guard = 0;
     while (!battle.over && guard++ < TURN_GUARD) {
       const action = pilot(battle, content);
@@ -116,5 +127,83 @@ export function forecast(team, encounter, content, seed = 1, now = 0, { runs = 3
     // The line the audit exists because of: how many bodies each side has.
     // One health bar against three is the whole of A1.
     outnumberedBy: Math.max(0, encounter.waves.length - team.length),
+  };
+}
+
+// --- R37: why you are losing, measured ----------------------------------
+//
+// The two losing bands used to carry a prescription apiece — "bring another
+// body if you have one" and "bring more creatures" — and a constant string
+// can only be right by luck. Measured at Precinct HQ, the node that gates
+// the second region, with three standard-grade chimeras:
+//
+//   archetype   base   class off   chart off   at prime
+//   boots (G)     0%          0%          3%        28%
+//   wings (A)    91%          0%         91%       100%
+//   gills (W)     0%         16%          0%         0%
+//
+// Nothing there is a shortage of bodies, and the briefing caps a team at
+// three regardless — so "bring more creatures" was advice the game itself
+// refuses to accept. What actually decides it: for a flier, the triangle
+// and nothing else (91% collapses to 0% with the class layer lifted); for a
+// Ground team, grade (0% to 28% at Prime).
+//
+// So the hint is measured the same way A7 measured obedience: replay the
+// same fight with one layer switched off and read the difference. Nothing
+// here is asserted from the class chart or the tag chart — a layer is named
+// only when taking it away actually moves this team's win rate.
+
+// How much a layer has to be worth before it is named as the cause. Below
+// this it is noise on 32 replays, and naming it would send the player after
+// the wrong fix — the failure this whole function exists to stop.
+const CAUSE_FLOOR = 0.1;
+
+// `runs` is deliberately NOT a parameter here. The first version of this
+// gate ran the diagnosis at 12 replays to keep the suite quick, and it
+// named the wrong cause: the class layer is worth a measured 16 points to a
+// Water team at Precinct, and at 12 samples that lands under the floor and
+// reads as "your creatures are too weak" — sending the player after the one
+// fix that does not work. It is the same lesson `runs = 32` above is
+// written down for, one layer up, and a knob that quietly degrades an
+// answer is worse than no knob.
+export function diagnose(team, encounter, content, seed = 1, now = 0, { canBringMore = false } = {}) {
+  const runs = 32;
+  const base = forecast(team, encounter, content, seed, now, { runs });
+  if (base.band.id !== 'losing' && base.band.id !== 'hopeless') return null;
+
+  // The one prescription that is free to check and the only one A1's
+  // original wall actually needed: they are short a body AND have one to
+  // bring. Both halves matter — telling a player at the cap to bring more
+  // is the bug this replaces.
+  if (base.outnumberedBy > 0 && canBringMore) {
+    return {
+      id: 'outnumbered',
+      text: `You are ${team.length} against ${base.waves}. Bring another body — one health bar cannot outlast three.`,
+    };
+  }
+
+  const classGain = forecast(team, encounter, content, seed, now, { runs, classBlind: true }).winRate - base.winRate;
+  const chartGain = forecast(team, encounter, content, seed, now, { runs, chartBlind: true }).winRate - base.winRate;
+
+  if (classGain >= CAUSE_FLOOR && classGain >= chartGain) {
+    return {
+      id: 'outclassed',
+      text: `The class triangle is costing you about ${Math.round(classGain * 100)} points here. Something of another class does better against these.`,
+    };
+  }
+  if (chartGain >= CAUSE_FLOOR) {
+    return {
+      id: 'outchartered',
+      text: `Their tags are blanking your attacks — worth about ${Math.round(chartGain * 100)} points. Check the opposition list and bring moves they cannot ignore.`,
+    };
+  }
+  // Neither layer is what is wrong, so it is the creatures. This is the
+  // honest answer at Precinct HQ for a Ground stable, and it is the one the
+  // old string never gave: 0% at Standard, 28% at Prime, on the same team.
+  return {
+    id: 'outgunned',
+    text: canBringMore || base.outnumberedBy > 0
+      ? 'Neither the classes nor the tags are what is wrong — these creatures are not strong enough yet. Raise donors longer for better grades.'
+      : 'Not a matchup problem — these creatures are not strong enough yet. Raise donors longer for better grades, or splice something sharper.',
   };
 }
