@@ -2185,5 +2185,35 @@ button.dex-cell:focus-visible {
 .pen-alert { color: var(--accent-2); font-weight: 700; }
 .pen-ready { color: var(--text-dim); }
 .pen-wait { color: var(--muted); }
+
+/* R48: the spar bucket, as one line rather than a card. It is a stable-wide
+   resource, so it sits above the creatures rather than on any one of them. */
+.spar-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 7px 11px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.spar-line strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.spar-line.is-ready { border-color: var(--goo); }
+.spar-line.is-ready strong { color: var(--goo); }
+.spar-line .fine-print { flex: 1; min-width: 0; }
+.spar-goto {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+.spar-goto:hover, .spar-goto:focus-visible { border-color: var(--accent); }
 .pen-fold.pen-hurt { border-color: var(--accent-2); }
 .pen-fold .animal-card { border: none; padding: 0; margin: 0; background: none; }

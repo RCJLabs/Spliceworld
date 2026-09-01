@@ -52,6 +52,7 @@ import { overflowingParts } from './bounds.js';
 import { renderDexScreen } from '../splice/dex-ui.js';
 import { dexProgress } from '../splice/dexentry.js';
 import { agendaShape } from '../ranch/agenda.js';
+import { trainingTuning } from '../battle/veterancy.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { moveReadout } from '../battle/readout.js';
 import { defaultMoveset } from '../battle/moves.js';
@@ -10125,6 +10126,211 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(!shutPage.includes('class="agenda-chip"'), 'chips included');
     assert.ok(shutPage.includes('open</span>'), 'and the count stays on the shut row');
     assert.equal(newGameState().saveVersion, SAVE_VERSION, 'none of this touched the schema');
+  }
+}
+
+// --- R48: the Sparring Ring you can see.
+//
+// R41 built the ring for a player report — "no combination of them could
+// beat the missions in front of them" — and R43 turned it into a three
+// charge bucket on the same player's report that one spar per 45 minutes
+// was too slow to be a ladder. Then `sparCharges()` was read in exactly
+// ONE place: the button on the War Room map.
+//
+// So `ranch/agenda.js`, the module whose header calls it "the single place
+// that knows what a player can actually DO", had no idea sparring existed,
+// and the Pens — the screen you visit to make a creature better — never
+// mentioned the three free sources of xp in the player's pocket.
+{
+  const { renderPensScreen } = await import('../splice/pens-ui.js');
+  const { AGENDA } = await import('../ranch/agenda.js');
+  const { sparCharges, sparPartners, canSpar } = await import('../campaign/sparring.js');
+  const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null });
+  const HOUR = 3600000;
+  const B = { head: 'rhino_head', forelimbs: 'gorilla_forelimbs', hindlimbs: 'rhino_hindlimbs',
+    tail: 'bear_tail', hide: 'pangolin_hide', organ: 'bear_organ' };
+  const chimera = (i, extra = {}) => ({
+    id: `s${i}`, name: `Unit ${i + 1}`, frame: 'M',
+    tokens: Object.fromEntries(Object.entries(B).map(([k, v]) =>
+      [k, { id: `t${i}${k}`, partId: v, grade: 'prime', donor: { name: 'Bessie', stars: 4 } }])),
+    settleUntil: 0, bond: 100, scars: [], temperament: null,
+    lastTrainedAt: 0, moveset: [], lastMoveTrainAt: 0, xp: 0, injury: null, ...extra,
+  });
+  // A save that CAN spar: a held node with a real encounter behind it, a
+  // fighter who is not in the Infirmary, and a full bucket.
+  const sparrer = (over = {}) => {
+    const st = { ...newGameState(), seed: 48, funds: 500 };
+    st.chimeras = [chimera(0)];
+    st.chimeraCount = 1;
+    const node = Object.values(content.regions)
+      .flatMap((r) => r.nodes).find((n) => content.encounters[n.encounter]);
+    assert.ok(node, 'the world has a node with an encounter behind it');
+    st.campaign.heldNodes = [node.id];
+    return Object.assign(st, over);
+  };
+
+  // 1. THE CRITERION. The agenda names the ring when the ring is open.
+  {
+    const st = sparrer();
+    assert.ok(sparPartners(st, content).length > 0, 'the fixture holds a garrison to spar');
+    assert.ok(sparCharges(st, t0, content).ready, 'and its bucket has a charge');
+
+    const open = agendaShape(st, content, t0).open;
+    const spar = open.find((i) => i.id === 'spar');
+    assert.ok(spar, `the agenda offers a spar (${open.map((i) => i.id)})`);
+    assert.equal(spar.kind, 'work',
+      'as WORK — a spar pays no purse and no notoriety and cannot take a node');
+    // The screen key has to be a real one; showScreen falls back to the
+    // Ranch silently, so a wrong id here looks wired and does nothing.
+    assert.ok(shellScreens().includes(spar.screen), `and routes somewhere real (${spar.screen})`);
+  }
+
+  // 2. The hint carries the NUMBER, which is the whole reason this entry
+  //    was worth adding. "You can spar" is not a reason to go; "3 charges"
+  //    is. Static strings could not say it, so a hint may now be a function
+  //    of the save — and every entry written before this still reads as a
+  //    plain string.
+  {
+    const st = sparrer();
+    const full = sparCharges(st, t0, content);
+    const spar = agendaShape(st, content, t0).open.find((i) => i.id === 'spar');
+    assert.equal(typeof spar.hint, 'string', 'a resolved hint is still a string');
+    assert.ok(spar.hint.includes(`${full.charges} charge`), `and names the count (${spar.hint})`);
+
+    // Spend one and the hint follows the bucket down rather than repeating.
+    const spent = sparrer();
+    spent.sparRefillAt = t0 + trainingTuning(content).sparRegenMinutes * 60000;
+    const after = sparCharges(spent, t0, content);
+    assert.ok(after.charges < full.charges, `spending moved the bucket (${full.charges} -> ${after.charges})`);
+    const hint2 = agendaShape(spent, content, t0).open.find((i) => i.id === 'spar')?.hint ?? '';
+    assert.ok(hint2.includes(`${after.charges} charge`), `and the hint moved with it (${hint2})`);
+    assert.notEqual(hint2, spar.hint, 'so two different states do not read identically');
+    // Singular reads as singular. A "1 charges" is the tell that nobody
+    // looked at the string this gate exists to make worth reading.
+    if (after.charges === 1) assert.ok(/\b1 charge\b/.test(hint2), `singular (${hint2})`);
+
+    // Every other entry is untouched by the change.
+    const strings = AGENDA.filter((a) => a.id !== 'spar');
+    assert.ok(strings.length > 10, 'there are plenty of them');
+    for (const a of strings) {
+      assert.equal(typeof a.hint, 'string', `"${a.id}" still declares a plain string hint`);
+    }
+    for (const item of agendaShape({ ...newGameState(), funds: 99999 }, content, t0).open) {
+      assert.equal(typeof item.hint, 'string', `"${item.id}" resolves to a string`);
+      assert.ok(item.hint.length > 0, `"${item.id}" says something`);
+    }
+  }
+
+  // 3. It is offered only when it can actually be taken. An agenda that
+  //    lists a click you cannot make is worse than one that stays quiet.
+  {
+    const has = (st, now = t0) => !!agendaShape(st, content, now).open.find((i) => i.id === 'spar');
+
+    const noNode = sparrer();
+    noNode.campaign.heldNodes = [];
+    assert.ok(!has(noNode), 'no held garrison, no spar');
+
+    const noFighter = sparrer();
+    noFighter.chimeras = [];
+    assert.ok(!has(noFighter), 'nothing to send, no spar');
+
+    const hurt = sparrer();
+    hurt.chimeras = [chimera(0, { injury: { name: 'Bent Whiskers', until: t0 + 2 * HOUR } })];
+    assert.ok(!has(hurt), 'the only fighter is in the Infirmary, so no spar');
+
+    const empty = sparrer();
+    const t = trainingTuning(content);
+    empty.sparRefillAt = t0 + t.sparCharges * t.sparRegenMinutes * 60000;
+    assert.equal(sparCharges(empty, t0, content).charges, 0, 'the fixture drained the bucket');
+    assert.ok(!has(empty), 'an empty bucket is not an open action');
+    // …and it comes back on its own, which is the point of a bucket.
+    assert.ok(has(empty, t0 + t.sparRegenMinutes * 60000 + 1000),
+      'one regen later it is on the agenda again');
+  }
+
+  // 4. The Pens shows the bucket, reading the SAME derivation as the map's
+  //    button — one implementation, so the two screens cannot disagree
+  //    about how many charges you have.
+  {
+    const draw = (st, now = t0) => {
+      const root = stub();
+      renderPensScreen(root, { state: st, content, now: () => now, save: () => {}, goto: () => {} });
+      return root.innerHTML;
+    };
+    const st = sparrer();
+    const page = draw(st);
+    const c = sparCharges(st, t0, content);
+    assert.ok(page.includes('spar-line'), 'the Pens carries the ring');
+    assert.ok(page.includes(`${c.charges}/${c.max}`), `with the real count (${c.charges}/${c.max})`);
+    assert.ok(page.includes('data-goto="battle"'), 'and a way to get there');
+
+    // It is a LINE, not a card — R47 established that a card has to earn
+    // its height, and a status readout is not a card's worth of screen.
+    // Anchored on what precedes the line rather than on a class string:
+    // the first cut of this assertion required `class="spar-line"` with a
+    // closing quote, so in the ready state — where the class is
+    // `spar-line is-ready` — it could not fail at all. A gate that cannot
+    // fail for the common case is not a gate.
+    const lineAt = page.indexOf('<p class="spar-line');
+    assert.ok(lineAt > 0, 'the line is on the page');
+    const before = page.slice(Math.max(0, lineAt - 80), lineAt);
+    assert.ok(!/<section[^>]*>\s*$/.test(before),
+      `the ring is a line, not a card of its own (…${before.slice(-46)})`);
+
+    // A player with no garrison to spar has no ring, and is not told about
+    // a feature they cannot use.
+    const noNode = sparrer();
+    noNode.campaign.heldNodes = [];
+    assert.ok(!draw(noNode).includes('spar-line'), 'no held garrison, no ring on the Pens');
+
+    // The count is derived, not stored: the same save read later shows more.
+    const t = trainingTuning(content);
+    const drained = sparrer();
+    drained.sparRefillAt = t0 + t.sparCharges * t.sparRegenMinutes * 60000;
+    assert.ok(draw(drained).includes(`0/${c.max}`), 'an empty bucket reads empty');
+    assert.ok(draw(drained, t0 + t.sparRegenMinutes * 60000 + 1000).includes(`1/${c.max}`),
+      'and one regen later it reads one, off the same timestamp');
+    // The two screens agree because they run the same function; if the Pens
+    // ever grew its own opinion this is what would catch it.
+    const src = readFileSync(join(root, 'splice/pens-ui.js'), 'utf8');
+    assert.ok(/from '\.\.\/campaign\/sparring\.js'/.test(src),
+      'the Pens reads sparCharges rather than recomputing it');
+
+    // 4b. THE ONE BROWSER QA FOUND. The bucket being full is only half of
+    //     "can I spar": the first cut of this line reported "3/3 — full,
+    //     spend them" in the ready colour while the only chimera was in the
+    //     Infirmary, and the agenda — correctly — offered nothing. Two
+    //     surfaces disagreeing about whether an action is available is the
+    //     exact failure this phase exists to prevent, so both now read one
+    //     predicate.
+    const benched = sparrer();
+    benched.chimeras = [chimera(0, { injury: { name: 'Bent Whiskers', until: t0 + 2 * HOUR } })];
+    const gate = canSpar(benched, content, t0);
+    assert.equal(gate.reason, 'nobody-fit', 'the predicate names why');
+    assert.ok(!gate.ok, 'and refuses');
+    assert.equal(gate.charges, c.max, 'even though the bucket is full');
+
+    const page2 = draw(benched);
+    assert.ok(page2.includes('spar-line'), 'the Pens still reports the bucket');
+    assert.ok(page2.includes(`${c.max}/${c.max}`), 'with the charges it really has');
+    assert.ok(!page2.includes('spar-line is-ready'), 'but does not say GO');
+    assert.ok(page2.includes('nobody fit to send'), 'it says what is missing instead');
+    assert.ok(!page2.includes('spend them'), 'and never tells you to spend what you cannot');
+    // The two surfaces now agree, which is the assertion that matters.
+    const onAgenda = !!agendaShape(benched, content, t0).open.find((i) => i.id === 'spar');
+    assert.equal(onAgenda, gate.ok, 'the agenda and the predicate agree');
+    assert.equal(page2.includes('spar-line is-ready'), gate.ok, 'and so does the Pens');
+    for (const st2 of [sparrer(), benched, (() => { const x = sparrer(); x.campaign.heldNodes = []; return x; })()]) {
+      const g = canSpar(st2, content, t0);
+      assert.equal(
+        !!agendaShape(st2, content, t0).open.find((i) => i.id === 'spar'), g.ok,
+        `agenda matches the predicate (${g.reason ?? 'ok'})`
+      );
+      const p2 = draw(st2);
+      assert.equal(p2.includes('spar-line is-ready'), g.ok,
+        `and the Pens matches it too (${g.reason ?? 'ok'})`);
+    }
+    assert.equal(newGameState().saveVersion, SAVE_VERSION, 'and none of this touched the schema');
   }
 }
 
