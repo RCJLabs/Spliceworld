@@ -7530,7 +7530,18 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const by = Object.fromEntries(rows.map((r) => [r.key, r]));
     assert.equal(by.speed.value, String(rep.stats.speed), `${sp}: dossier speed matches the report`);
     assert.ok(by.stamina.value.startsWith(String(rep.stats.stamina)), `${sp}: dossier stamina pool matches`);
-    assert.ok(by.flight.note.includes(String(rep.mass)), `${sp}: the flight row quotes the real mass`);
+    // A creature with no lift surface has no lift EQUATION, so the flight row
+    // has nothing to quote — the first cut of this assertion demanded the
+    // mass there anyway and failed on the rhino, which is a ground unit and
+    // correct. Where there IS an equation, both sides of it have to be real.
+    if (rep.flight.hasLiftSurface) {
+      assert.ok(by.flight.note.includes(String(rep.mass)) && by.flight.note.includes(String(rep.lift)),
+        `${sp}: the flight row quotes the real lift and mass`);
+    }
+    // Mass has to reach the player SOMEWHERE regardless — it is the number
+    // R32 made decisive and the one nothing outside the Theater showed.
+    assert.ok(rows.some((r) => r.note.includes(String(rep.mass))),
+      `${sp}: the dossier states the creature's mass`);
     const cls = rep.creatureClass ? content.classes[rep.creatureClass].name : null;
     assert.ok(cls ? by.class.value.includes(cls) : by.class.value.includes('Unclassed'),
       `${sp}: dossier class matches the report`);
