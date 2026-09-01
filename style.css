@@ -1999,3 +1999,23 @@ ul.move-effects li { font-size: 0.92rem; line-height: 1.45; }
 }
 .matchup.good { color: var(--accent); background: var(--accent-dim); }
 .matchup.bad { color: var(--accent-2); background: var(--accent-2-dim); }
+
+/* --- R36: the species cell is a button now ------------------------------
+   The 34 base species carried a name, a role and a count — strictly less
+   than the Dex showed for a variant of the same animal. The cell gains its
+   tags (what variants and the field guide already show) and opens a sheet
+   for the rest, because a 100px grid column cannot hold a set bonus and its
+   effect. Inherits .dex-cell; this is the affordance only. */
+button.dex-cell {
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-color: var(--line);
+}
+button.dex-cell:hover,
+button.dex-cell:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
