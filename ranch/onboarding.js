@@ -23,6 +23,7 @@ import { nextUpgrade, tracks } from '../splice/facility.js';
 import { rivalStatus } from '../campaign/rivals.js';
 import { expressedTraits } from './breeding.js';
 import { analyze } from '../splice/physiology.js';
+import { GRADE_INDEX } from '../splice/extract.js';
 
 export function onboardingSteps(state, content, now) {
   const caredOnce = state.ranch.stock.some((a) =>
@@ -134,6 +135,11 @@ export const GUIDE_HELPERS = {
     );
   },
   bredAnimalInPens: (state) => state.ranch.stock.some((a) => a.parents),
+  // R38. The grade lesson retires on proof rather than on a count: a part in
+  // the vault that came out above Standard is a donor the player actually
+  // raised, which is the whole thing the note is teaching.
+  gradedPartOwned: (state) =>
+    (state.inventory?.parts ?? []).some((t) => (GRADE_INDEX[t.grade] ?? 0) > 0),
   // R37. The class lesson retires when the player DEMONSTRATES it rather
   // than on a node count: two chimeras whose anatomy votes different ways.
   // Derived, never stored — a chimera's class comes from its parts, so a

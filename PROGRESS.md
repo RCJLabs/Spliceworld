@@ -1,5 +1,140 @@
 # PROGRESS
 
+## Session 60 — R38: "Standard" is three different animals ✅
+
+**Acceptance criterion:** the graduation forecast says what is holding a
+grade down and what the animal is worth if you fix it — **passes**, at
+`SAVE_VERSION` 29 (no schema change).
+
+### The premise, for once, held up — and got sharper
+
+ROADMAP §3.3 calls the timing tension — extract a Juvenile now, or raise it
+to Prime with good care — **"the ranch's central economic decision."** Both
+screens that touch it printed one word:
+
+> Graduation forecast: **Standard**
+
+Three inputs (genetics × age × condition), one verdict, and no way back from
+the verdict to the input you could change. The card shows all three raw
+numbers — age stage, a condition bar, a genes line — and never connects any
+of them to the grade.
+
+A starter herd makes the case without any arithmetic. All three read
+`Standard`:
+
+| animal | ★ | age | shows | if grown | if grown + kept | ceiling |
+|---|---|---|---|---|---|---|
+| Gordon the Goat | 3.60 | juvenile | Standard | Prime | **Apex** | Apex |
+| Alfredo the Goat | 2.20 | juvenile | Standard | Standard | **Prime** | Prime |
+| Agnes the Bear | 2.80 | **adult** | Standard | **Standard** | **Apex** | Apex |
+
+Agnes is already grown. Waiting does nothing for her; care alone is worth two
+grades. Measured across **1,200 starter animals** over 400 seeds: every
+single one sits below its own ceiling — 25% by one grade, 68% by two, 7% by
+three. **None is at its cap.** 91% are capped below Prismatic by genetics,
+and in 69% of herds the three animals do not all want the same thing.
+
+### What shipped
+
+`gradeOutlook()` decomposes the forecast: the ceiling, whether age or
+condition is what still stands between, **the condition number that actually
+buys it**, and whether genetics has capped it. `outlookLine()` is the one
+sentence both screens render — the ceremony and the ranch card — because two
+copies of an explanation is how two screens end up disagreeing about the same
+animal.
+
+> **Pickles** · Condition 60 · Graduation forecast: **Standard** `+2`
+> *Apex once Pickles is fully grown (14h) and at condition 81+. Waiting alone gets you Prime.*
+
+The condition is a **number**, not "look after it", because `Condition 60` is
+printed two lines above it and a number is something you can act on. The
+ceremony prices the decision in what it costs: *"Graduating now gives up 2
+grades."*
+
+Three cases the sentence has to get right, and does: an **elder** is told
+*"past its prime, so waiting from here only costs upkeep"* and never told to
+grow; an animal at its ceiling is told *"time and care are done — anything
+better has to be bred, not raised"*; and the breeding lever is named **only**
+once husbandry is spent, never while there is still care to do.
+
+### It caught a mistake I shipped last session
+
+R37's losing verdict said *"Raise donors longer for better grades"* — one of
+the three inputs, named blind. Measured: for **12%** of starter animals,
+waiting alone raises the grade by nothing at all and care is the only lever
+that moves it; for **6%**, reaching the ceiling needs no further ageing.
+Either way I had pointed some players at the one thing that would not work —
+the same defect as the *"bring more creatures"* I replaced it with, one
+session later. It now sends them to the Ranch, where the answer is per
+animal.
+
+*(Two numbers because they answer two different questions — "does waiting
+raise this grade at all" and "does the ceiling still need age". Both are in
+the source, each labelled with its question.)*
+
+### The break battery, and two hollow gates of mine
+
+Twelve breaks. **Two came back MISSED, both my gates rather than the code**,
+and both are fixed with the re-runs recorded.
+
+| break | verdict |
+|---|---|
+| the outlook drifts from the forecast the screens showed | CAUGHT |
+| every animal is told the same thing (the pre-R38 world) | CAUGHT (sibling assertion) |
+| a grown, neglected animal is told to wait | CAUGHT |
+| the condition number is a guess, not the threshold | CAUGHT |
+| the condition number rounds the wrong way | CAUGHT |
+| an elder is told to wait for a prime it is past | **MISSED** → CAUGHT after fix |
+| the breeding lever is named while care still has work | CAUGHT (sibling assertion) |
+| the ranch card rebuilds the wording instead of sharing it | CAUGHT |
+| the ceremony stops pricing what you give up | CAUGHT |
+| R37's single-lever advice comes back | CAUGHT |
+| the grades note is deleted | CAUGHT |
+| the note retires without the player ever raising one | **MISSED** → CAUGHT after fix |
+
+**The elder gate was hollow because of its fixture, not its assertion.** An
+elder's age factor is 0.8 against a prime's 1.0, so deleting the elder rule
+only shows up on an animal whose score straddles a grade threshold between
+those two values — and the dealt herd happened not to. The genes are pinned
+at 3.0★ now (0.48 → Prime as an elder, 0.60 → Apex if it could grow into its
+prime), with a younger control proving the gate discriminates on the elder
+rule rather than on genetics.
+
+**The second was a gate that did not exist.** Nothing asserted the grades
+note retires on proof, so `gradedPartOwned` could have returned a constant
+and the suite would not have noticed.
+
+That is a different failure from the four hollow gates of R34/R35 — those
+asserted on a substring that appeared in more places than the thing under
+test. This one asserted the right property on a fixture that could not
+express it. Worth distinguishing: the fix is a better fixture, not a better
+assertion.
+
+### Verified
+
+- Full suite green; nine R38 gate blocks.
+- Browser QA at 380px: three starter cards each carry a `+2` chip and their
+  own line (condition 81+, 92+, 81+); the ceremony reads *"Graduating now
+  gives up 2 grades"* and fits; a grown, well-kept herd flips to *"time and
+  care are done"*. No sideways scroll.
+- Zero console errors on a fresh save and on a v8 save migrated to v29 with
+  every screen visited.
+
+### Known gaps
+
+- Stars are still not shown on an animal's own card — the outlook names the
+  genetic ceiling but never the number behind it. The Gene Scanner gates
+  trait visibility; whether it should gate stars too is undecided.
+- `SHIPPED_SYSTEMS` in the suite is still a hand-kept list, so a system that
+  ships with no note and no roll entry stays invisible to it. Flagged in R37,
+  still true.
+- The Guard Post is a pure grade wall and now has a lesson, but nothing links
+  the two: the briefing does not say "this is what better grades buy you".
+
+### Next session's first task
+
+Make the shipped-systems roll derive itself, or show an animal its own stars.
+
 ## Session 59 — R37: the lesson is behind the wall it explains ✅
 
 **Acceptance criterion:** a player whose team cannot answer the node in front

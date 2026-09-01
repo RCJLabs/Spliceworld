@@ -207,6 +207,13 @@ export function diagnose(team, encounter, content, seed = 1, now = 0, { canBring
   // different and more useful thing to say.
   return {
     id: 'outgunned',
-    text: 'Hand them every matchup above and this is still a loss — these creatures are not strong enough yet. Raise donors longer for better grades, or splice something sharper.',
+    // R38. This said "raise donors longer", naming ONE of the three inputs
+    // to a part's grade. Measured over 1,200 starter animals: for 12%,
+    // waiting alone raises the grade by nothing at all and care is the only
+    // lever that moves it; for 6%, the ceiling itself needs no further
+    // ageing. Either way the advice pointed some players at the one thing
+    // that would not work. The Ranch card decomposes it per animal now, so
+    // this line sends them there instead of guessing on their behalf.
+    text: 'Hand them every matchup above and this is still a loss — these creatures are not strong enough yet. Better parts come from better donors; each animal on the Ranch says what is holding its grade down.',
   };
 }

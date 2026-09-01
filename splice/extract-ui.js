@@ -4,7 +4,7 @@
 
 import { renderCreatureSVG } from '../render/renderer.js';
 import { stockGenome, conditionTier } from '../ranch/ranch.js';
-import { extractAnimal, gradeFor } from './extract.js';
+import { extractAnimal, gradeFor, gradeOutlook, outlookLine } from './extract.js';
 import * as sfx from '../audio/sfx.js';
 
 const CEREMONY_MS = 2100;
@@ -15,6 +15,9 @@ export function runExtraction(overlay, ctx, animalId, onDone) {
   if (!animal) return;
   const species = content.species[animal.species];
   const grade = gradeFor(animal, content, ctx.now());
+  // R38. This is the screen where §3.3's "central economic decision" is
+  // actually made, and it offered one word and no second term.
+  const outlook = gradeOutlook(animal, content, ctx.now(), state);
   const portrait = renderCreatureSVG(stockGenome(animal.species, content), content, {
     idPrefix: 'grad',
     condition: (() => { const t = conditionTier(animal.condition); return t === 'fine' ? null : t; })(),
@@ -28,6 +31,11 @@ export function runExtraction(overlay, ctx, animalId, onDone) {
       <p>Enroll <strong>${animal.name}</strong> the ${species.name} in the graduation ceremony?</p>
       <p class="fine-print">Forecast: <span class="grade-badge grade-${grade.id}">${grade.name}</span> essence.
       This is permanent. ${animal.name} will become parts. Gleefully.</p>
+      ${outlook.headroom > 0
+        ? `<p class="fine-print outlook giving-up">Graduating now gives up ${outlook.headroom} grade${
+            outlook.headroom === 1 ? '' : 's'
+          }: ${outlookLine(outlook, animal.name)}</p>`
+        : `<p class="fine-print outlook">${outlookLine(outlook, animal.name)}</p>`}
       <div class="ceremony-btns">
         <button type="button" id="grad-go" class="big-btn">🎓 Graduate</button>
         <button type="button" id="grad-no">Not yet</button>

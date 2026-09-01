@@ -8,7 +8,7 @@ import {
   penUpgradeCost, buyPenUpgrade, buyMailOrder, stockGenome, upkeepPerDay,
   catalogFor, TUNING,
 } from './ranch.js';
-import { gradeFor } from '../splice/extract.js';
+import { gradeFor, gradeOutlook, outlookLine } from '../splice/extract.js';
 import {
   canBreed, breedPair, hatchEgg, BREEDING, isVariant, baseSpecies, incubatorSlots,
   pairingForecast, expressedTraits,
@@ -392,6 +392,9 @@ export function renderRanchScreen(root, ctx) {
       return `<button type="button" data-act="care" data-animal="${animal.id}" data-care="${action}" ${care[action].ready ? '' : 'disabled'}>${label}</button>`;
     }).join('');
 
+    // R38. One word said the same thing about three different animals.
+    const outlook = gradeOutlook(animal, content, t, state);
+
     return `
       <section class="card animal-card">
         <div class="portrait">${portrait}</div>
@@ -408,7 +411,10 @@ export function renderRanchScreen(root, ctx) {
           <div class="cond-bar"><div class="cond-fill tier-${tier}" style="width:${Math.round(animal.condition)}%"></div></div>
           <p class="cond-label">Condition ${Math.round(animal.condition)} · ${TIER_BLURBS[tier]}</p>
           <p class="meta">Diet: ${species.diet} · Genes: ${genesLine(animal, content, scanner)}</p>
-          <p class="meta">Graduation forecast: <span class="grade-badge grade-${gradeFor(animal, content, t).id}">${gradeFor(animal, content, t).name}</span></p>
+          <p class="meta">Graduation forecast: <span class="grade-badge grade-${gradeFor(animal, content, t).id}">${gradeFor(animal, content, t).name}</span>${
+            outlook.headroom > 0 ? ` <span class="headroom">+${outlook.headroom}</span>` : ''
+          }</p>
+          <p class="fine-print outlook">${outlookLine(outlook, animal.name)}</p>
           <div class="care-row">${buttons}</div>
           <button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}">🎓 Extract (graduate ${animal.name})</button>
         </div>

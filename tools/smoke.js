@@ -5689,7 +5689,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // on the roll for the same reason everything else is: so that removing
     // the note fails the build.
     'stable', 'triangle', 'chart',
-    'breeding', 'incubator', 'genes', 'pairing', 'facility', 'upkeep', 'catalog',
+    'grades', 'breeding', 'incubator', 'genes', 'pairing', 'facility', 'upkeep', 'catalog',
     'temperament', 'bond', 'infirmary', 'scars',
     'combos', 'chaos', 'flight',
     'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director',
@@ -5740,7 +5740,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // before it. They queue behind `stable` in order, because one note at a
     // time is the rule and bodies is the first wall (node 2, measured 0%
     // solo and 100% at three).
-    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable', 'triangle', 'chart']],
+    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable', 'triangle', 'chart', 'grades']],
+    // R38's note lights here too: the grade decision is live from the first
+    // animal the player owns, and every starter animal is already below its
+    // own ceiling — measured, all 1,200 of them across 400 seeds.
     ['the herd grows up', () => { for (const a of lab.ranch.stock) a.birthAt = t0 - 200 * HOUR; }, ['breeding']],
     ['an egg is laid', () => { lab.ranch.eggCount = 1; lab.ranch.eggs = [{ id: 'e0' }]; }, ['incubator', 'genes']],
     ['a chimera exists', () => {
@@ -8202,6 +8205,167 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const src = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
     assert.ok(!/draftTeam\.length >= 3\b/.test(src), 'the briefing reads the cap rather than restating it');
     assert.ok(/TEAM_CAP/.test(src), 'and names it');
+  }
+}
+
+// --- R38: "Standard" is three different animals.
+//
+// ROADMAP §3.3 calls the timing tension — extract a Juvenile now, or raise
+// it to Prime with good care — "the ranch's central economic decision".
+// Both screens that touched it printed one word.
+//
+// A starter herd makes the case on its own. All three read `Standard`:
+//
+//   Gordon  3.6★ juvenile cond 60 -> Apex,  needs 14h AND condition 77+
+//   Alfredo 2.2★ juvenile cond 60 -> Prime, capped there by its genes
+//   Agnes   2.8★ ADULT    cond 60 -> Apex,  and ageing further alone does nothing
+//
+// Measured across 1,200 starter animals: 100% are below their own ceiling,
+// 68% by two grades and 7% by three. None is at its cap.
+{
+  const { gradeOutlook, outlookLine, gradeFor, GRADES, GRADE_INDEX: GI } = await import('../splice/extract.js');
+  const HOURS = 3600000;
+  const herd = () => {
+    const st = { ...newGameState(), seed: 7 };
+    ensureRanchSeeded(st, content, t0);
+    return st;
+  };
+
+  // 1. THE CRITERION. Every starter animal is told what its grade is
+  //    waiting on — and the answer is not the same for all of them, which
+  //    is the whole reason one word was not enough.
+  {
+    const st = herd();
+    const rows = st.ranch.stock.map((a) => ({ a, o: gradeOutlook(a, content, t0, st) }));
+    assert.ok(rows.every(({ a, o }) => o.current.id === gradeFor(a, content, t0, st).id),
+      'the outlook agrees with the forecast the screens already showed');
+    assert.ok(rows.every(({ o }) => o.headroom > 0),
+      'every starter animal has headroom above what its card says');
+    const shapes = new Set(rows.map(({ o }) => `${o.needsAge}/${o.needsCondition}/${o.best.id}`));
+    assert.ok(shapes.size > 1,
+      `and they do not all want the same thing (${[...shapes].join(' | ')})`);
+    for (const { a, o } of rows) {
+      const line = outlookLine(o, a.name);
+      assert.ok(line.includes(o.best.name), `${a.name}: the line names the ceiling`);
+      assert.ok(line.includes(a.name), 'and the animal it is about');
+    }
+  }
+
+  // 2. An adult in poor condition is NOT told to wait. This is the case
+  //    R37's own advice got wrong — "raise donors longer" does nothing for
+  //    it — and 12% of starter animals are in it.
+  {
+    const st = herd();
+    const agnes = st.ranch.stock.find((a) => content.species[a.species].name === 'Bear');
+    assert.ok(agnes, 'the starter herd has a bear');
+    const grown = { ...agnes, birthAt: t0 - (content.species[agnes.species].growthHours.prime + 1) * HOURS };
+    const o = gradeOutlook(grown, content, t0, st);
+    assert.ok(o.headroom > 0, 'a fully grown, badly kept animal is still below its ceiling');
+    assert.equal(o.needsAge, false, 'and is not told to wait — it has already waited');
+    assert.ok(o.needsCondition, 'it is told the thing that would actually work');
+    assert.ok(!/grown/.test(outlookLine(o, 'it')), `and the sentence does not say grown (${outlookLine(o, 'it')})`);
+  }
+
+  // 3. The condition it names is the condition that actually buys the
+  //    ceiling — a number the card can be compared against, not "look
+  //    after it".
+  {
+    const st = herd();
+    for (const a of st.ranch.stock) {
+      const o = gradeOutlook(a, content, t0, st);
+      if (!o.needsCondition) continue;
+      const at = (c) => gradeFor({ ...a, birthAt: t0 - (content.species[a.species].growthHours.prime + 1) * HOURS, condition: c }, content, t0, st);
+      assert.equal(at(o.conditionNeeded).id, o.best.id,
+        `${a.name}: condition ${o.conditionNeeded} reaches ${o.best.name}`);
+      assert.notEqual(at(o.conditionNeeded - 1).id, o.best.id,
+        `${a.name}: and one point below it does not — the number is the real threshold`);
+    }
+  }
+
+  // 4. An elder is never told to wait for a prime it is already past.
+  //
+  //    The genetics here are PINNED, and the first version of this gate was
+  //    hollow without them. An elder's age factor is 0.8 against a prime's
+  //    1.0, so deleting the elder handling only shows up on an animal whose
+  //    score straddles a grade threshold at those two values — the dealt
+  //    herd happened not to, and the break battery duly reported a MISS.
+  //    3.0★ puts it at 0.48 (Prime) as an elder and 0.60 (Apex) if it could
+  //    somehow grow into its prime, so the mistake has somewhere to show.
+  {
+    const st = herd();
+    const genes = Object.fromEntries(STATS.map((k) => [k, 3]));
+    const old = { ...st.ranch.stock[0], potential: genes, birthAt: t0 - 400 * HOURS, condition: 100 };
+    const o = gradeOutlook(old, content, t0, st);
+    assert.equal(o.stage, 'elder', 'the fixture is an elder');
+    assert.equal(o.headroom, 0, 'an elder in good condition has nothing left to gain');
+    assert.equal(o.needsAge, false, 'an elder is not told to grow up');
+    const line = outlookLine(o, 'it');
+    assert.ok(/past its prime/.test(line), `and is told why waiting costs (${line})`);
+    assert.ok(!/fully grown/.test(line), `never that it should grow (${line})`);
+    // The same animal one stage younger DOES have the wait ahead of it, so
+    // the gate above is discriminating on the elder rule and not on genes.
+    const younger = { ...old, birthAt: t0 - 6 * HOURS };
+    assert.ok(gradeOutlook(younger, content, t0, st).needsAge,
+      'while the same genes at an earlier stage are still told to grow');
+  }
+
+  // 5. "Nothing more to wait for" is said only when it is true, and the
+  //    breeding lever is named only once husbandry is spent.
+  {
+    const st = herd();
+    const best = st.ranch.stock
+      .map((a) => ({ a, o: gradeOutlook({ ...a, birthAt: t0 - (content.species[a.species].growthHours.prime + 1) * HOURS, condition: 100 }, content, t0, st) }))
+      .find(({ o }) => o.headroom === 0);
+    assert.ok(best, 'a grown, well-kept starter animal is at its ceiling');
+    assert.ok(best.o.cappedByGenes, 'and a starter animal is capped short of Prismatic');
+    assert.ok(/bred, not raised/.test(outlookLine(best.o, 'it')),
+      `so the next lever named is breeding (${outlookLine(best.o, 'it')})`);
+    // …and never named while care or time still has something to give.
+    const early = gradeOutlook(st.ranch.stock[0], content, t0, st);
+    assert.ok(!/bred, not raised/.test(outlookLine(early, 'it')),
+      'but not while there is still husbandry left to do');
+  }
+
+  // 6. Both screens read ONE implementation. Two copies of an explanation
+  //    is how two screens end up disagreeing about the same animal.
+  for (const file of ['ranch/ui.js', 'splice/extract-ui.js']) {
+    const src = readFileSync(join(root, file), 'utf8');
+    assert.ok(/outlookLine\(/.test(src), `${file} renders the shared sentence`);
+    assert.ok(!/needsCondition\s*\?/.test(src), `${file} does not rebuild the wording locally`);
+  }
+
+  // 7. The ceremony says what graduating now gives up — this is the screen
+  //    where the decision is actually taken.
+  {
+    const src = readFileSync(join(root, 'splice/extract-ui.js'), 'utf8');
+    assert.ok(/gives up \$\{outlook\.headroom\}/.test(src),
+      'the graduation confirm prices the decision in grades');
+  }
+
+  // 8. The grades note retires on PROOF — a part above Standard in the
+  //    vault, which is a donor the player actually raised — and not on a
+  //    count of anything. Without this the helper could return a constant
+  //    and nothing would notice; the break battery reported exactly that.
+  {
+    const lab = { ...newGameState(), seed: 380 };
+    ensureRanchSeeded(lab, content, t0);
+    lab.campaign.heldNodes = ['barn_perimeter'];
+    const stateOf = () => guideStates(lab, content, t0).find((r) => r.guide.id === 'grades').status;
+    lab.inventory.parts = [{ id: 'p0', partId: 'goat_head', grade: 'standard' }];
+    assert.equal(stateOf(), 'ready',
+      'a vault holding only Standard parts still needs the grade lesson');
+    lab.inventory.parts.push({ id: 'p1', partId: 'goat_tail', grade: 'prime' });
+    assert.equal(stateOf(), 'done',
+      'and it retires the moment one donor was raised past Standard');
+  }
+
+  // 9. And R37's line no longer names one lever for a three-input number.
+  {
+    const { diagnose } = await import('../battle/forecast.js');
+    const src = readFileSync(join(root, 'battle/forecast.js'), 'utf8');
+    assert.ok(!/Raise donors longer/.test(src),
+      'the losing verdict no longer prescribes the lever that is wrong for 12% of animals');
+    assert.equal(typeof diagnose, 'function', 'and the diagnosis is still there');
   }
 }
 
