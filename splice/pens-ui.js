@@ -38,7 +38,7 @@ import { pickerField, bindPickers, openPicker, openPrompt } from '../ui/picker.j
 import {
   activeVat, vatPlan, vatRemainingMs, startVat, cancelVat, isExhausted, chaosTuning,
 } from './chaos.js';
-import { fieldNote, bindFieldNote } from '../ui/cards.js';
+import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 
 let lastMsg = '';
@@ -142,8 +142,15 @@ export function renderPensScreen(root, ctx) {
   const cards = state.chimeras
     .map((ch) => {
       const settled = isSettled(ch, t);
-      const portrait = renderCreatureSVG(chimeraGenome(ch, content), content, { idPrefix: `pen-${ch.id}` });
-      const manifest = Object.entries(ch.tokens)
+      // R44: a shut fold builds NOTHING heavy. A portrait is ~12KB of
+      // inline SVG, so twelve shut creatures would otherwise mean 145KB of
+      // DOM that renders nothing — hiding it with an attribute costs the
+      // phone the same as showing it.
+      const open = isOpen(state, `pen-${ch.id}`, false);
+      const portrait = open
+        ? renderCreatureSVG(chimeraGenome(ch, content), content, { idPrefix: `pen-${ch.id}` })
+        : '';
+      const manifest = !open ? '' : Object.entries(ch.tokens)
         .map(([slot, token]) => {
           const part = content.parts[token.partId];
           const grade = GRADES[GRADE_INDEX[token.grade]];
@@ -153,7 +160,31 @@ export function renderPensScreen(root, ctx) {
       const obedience = obediencePercent(ch, t);
       const trainReadyAt = (ch.lastTrainedAt ?? 0) + TRAINING.cooldownHours * 3600000;
       const trainReady = t >= trainReadyAt;
-      return `
+      // R44. Measured at 380px: one chimera card is 1081px — taller than the
+      // phone — so nine of them made the Pens 10,470px, thirteen screens of
+      // scrolling. R15 rebuilt the War Room for being 3,884px; this was
+      // 2.7x worse than the screen that phase was written to rescue, and
+      // R41 made keeping creatures the whole point, so it only grows.
+      //
+      // Same fix, same machinery: fold each creature to a summary row and
+      // open the one you are working on. R15's rule carries over — ALERTS
+      // NEVER HIDE — so the Infirmary clock and the settling clock are on
+      // the shut row, in the badge, where they cost a creature if missed.
+      const prog = xpProgress(ch.xp ?? 0, content);
+      const cls = reportOf(ch, content).creatureClass;
+      const clsIcon = cls ? content.classes[cls].icon : '◇';
+      const hurt = isInjured(ch, t);
+      const badge = hurt
+        ? `<span class="pen-alert">⚕ ${fmtDuration(ch.injury.until - t)}</span>`
+        : !settled
+          ? `<span class="pen-alert">⏳ ${fmtDuration(ch.settleUntil - t)}</span>`
+          : trainReady
+            ? '<span class="pen-ready">ready · can train</span>'
+            : '<span class="pen-ready">ready</span>';
+      const summary = `${clsIcon} Lv ${prog.level} · bond ${ch.bond}/100 · obedience ${obedience}%${
+        scarsOf(ch, content).length ? ` · ${scarsOf(ch, content).length} scar${scarsOf(ch, content).length === 1 ? '' : 's'}` : ''
+      }`;
+      const body = !open ? '' : `
         <section class="card animal-card">
           <div class="portrait">${portrait}</div>
           <div class="animal-info">
@@ -258,6 +289,17 @@ export function renderPensScreen(root, ctx) {
             <ul class="token-list">${manifest}</ul>
           </div>
         </section>`;
+      return collapsibleCard({
+        id: `pen-${ch.id}`,
+        title: `${ch.name}`,
+        badge,
+        summary,
+        body,
+        // Shut by default: the summary row carries what a glance needs, and
+        // a stable is a list you scan before it is a creature you open.
+        open,
+        extraClass: `pen-fold${hurt ? ' pen-hurt' : ''}${settled ? '' : ' pen-settling'}`,
+      });
     })
     .join('');
 
@@ -287,6 +329,7 @@ export function renderPensScreen(root, ctx) {
     });
   });
 
+  bindFolds(root, ctx, () => renderPensScreen(root, ctx));
   bindFieldNote(root, ctx, () => renderPensScreen(root, ctx));
   bindVat(root, ctx, () => renderPensScreen(root, ctx));
   // Dismantling is irreversible and returns less than it consumed, so the
