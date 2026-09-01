@@ -54,6 +54,15 @@ import { moveReadout } from '../battle/readout.js';
 import { defaultMoveset } from '../battle/moves.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+// The screens the shell actually renders, read from `main.js` rather than
+// restated. R39: two gates needed this list, one derived it and one typed
+// it out, and the typed one was missing the Vault.
+function shellScreens() {
+  const shell = readFileSync(join(root, 'main.js'), 'utf8');
+  const block = shell.slice(shell.indexOf('const SCREENS = {'));
+  return [...block.slice(0, block.indexOf('};')).matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1]);
+}
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 
 const content = indexContent({
@@ -5653,7 +5662,14 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
 // both are checked by walking a save forward one system at a time.
 {
   const guides = Object.values(content.guides);
-  const SCREENS = ['ranch', 'pens', 'theater', 'battle', 'dex'];
+  // R39. This was a hand-written list of five, and the game has six. The
+  // one it left out was the VAULT — which is also the only screen in the
+  // game with no field note at all, so the gate that exists to catch
+  // exactly that could not see it. Worse, the suite already knew how to
+  // derive the real list: the A4 agenda gate below reads `main.js`'s
+  // SCREENS map for the same reason. Two lists, one hand-kept, and the
+  // hand-kept one is the one that went stale.
+  const SCREENS = shellScreens();
 
   // --- Shape. A guide with no `done` nags forever; one with no `reachable`
   // fires on turn one, which is the exact failure the phase exists to fix.
@@ -5690,12 +5706,65 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // the note fails the build.
     'stable', 'triangle', 'chart',
     'grades', 'breeding', 'incubator', 'genes', 'pairing', 'facility', 'upkeep', 'catalog',
+    // R39. The Vault had no note of any kind, and the Resequencer (R31) was
+    // a fully shipped system — data file, module, UI, a tick in main.js —
+    // that arrived two phases after R29's "one note per system" rule with
+    // none. Neither list noticed, because the omission was in both.
+    'resequencer',
     'temperament', 'bond', 'infirmary', 'scars',
     'combos', 'chaos', 'flight',
     'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director',
     'dex',
   ];
   const covered = new Set(guides.map((g) => g.id));
+
+  // R39. SHIPPED_SYSTEMS below is a list a human keeps, and the Resequencer
+  // proves what that costs: R31 shipped it with a data file, a module, a
+  // Vault card and a tick in the shell, two phases after R29's "one note per
+  // shipped system" rule — and neither the roll nor the note existed, so the
+  // gate had nothing to compare and said nothing.
+  //
+  // "System" is not derivable from the source in general. What IS derivable
+  // is that every content file has been LOOKED AT: each one either names the
+  // note that teaches it, or is exempted here with the reason. A new
+  // data/*.json therefore fails this build until somebody decides which it
+  // is. That does not make the roll self-writing — it makes forgetting it
+  // loud instead of silent, which is the actual failure being fixed.
+  const DATA_NOTES = {
+    'chaos.json': 'chaos',
+    'combos.json': 'combos',
+    'director.json': 'director',
+    'facility.json': 'facility',
+    'operations.json': 'jobs',
+    'regions.json': 'regions',
+    'resequencer.json': 'resequencer',
+    'rivals.json': 'rivals',
+    'scars.json': 'scars',
+    'temperament.json': 'temperament',
+    'traits.json': 'genes',
+    'keywords.json': 'chart',
+    'classes.json': 'triangle',
+    // Reference content rather than a system with a first-use moment: the
+    // player meets these THROUGH the systems above, and the Dex is where
+    // they are read back.
+    'frames.json': null,
+    'parts.json': null,
+    'species.json': null,
+    'enemies.json': null,
+    'philosophies.json': null,
+    'guides.json': null,
+  };
+  {
+    const files = readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json')).sort();
+    const unlisted = files.filter((f) => !(f in DATA_NOTES));
+    assert.deepEqual(unlisted, [],
+      `every content file either names the note that teaches it or is exempted (unlisted: ${unlisted.join(', ')})`);
+    for (const [file, note] of Object.entries(DATA_NOTES)) {
+      assert.ok(files.includes(file), `${file} is still in data/ (drop it from the map if it went)`);
+      if (note) assert.ok(covered.has(note), `${file} points at a note that exists (${note})`);
+    }
+  }
+
   const missing = SHIPPED_SYSTEMS.filter((id) => !covered.has(id));
   assert.deepEqual(missing, [], `every shipped system has a note (missing: ${missing.join(', ')})`);
   const orphans = [...covered].filter((id) => !SHIPPED_SYSTEMS.includes(id));
@@ -5752,6 +5821,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
+    // R39. A graduation leaves a vial as well as parts, and the vial is the
+    // only thing the Resequencer will accept — so this is the exact moment
+    // its note becomes true. The walk never held one before, which is why
+    // the Vault could go six phases with nothing to say.
+    ['and the vial it came with', () => {
+      lab.inventory.vials = [{ id: 'v0', species: 'goat', donorName: 'Bessie', stars: 3 }];
+    }, ['resequencer']],
     // A9: goat parts are not a flight lesson. The lift equation only becomes
     // a decision once the player owns something that MAKES lift — 61 parts
     // say Airborne and twelve of them fly.
@@ -6395,9 +6471,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   // and quietly does nothing. That is exactly what shipped in the first cut
   // of this panel: `war` and `splice` are tab LABELS; the keys are `battle`
   // and `theater`, and every row silently went home to the Ranch.
-  const shell = readFileSync(join(root, 'main.js'), 'utf8');
-  const screensBlock = shell.slice(shell.indexOf('const SCREENS = {'));
-  const realScreens = [...screensBlock.slice(0, screensBlock.indexOf('};')).matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1]);
+  const realScreens = shellScreens();
   assert.ok(realScreens.length >= 5, `found the shell's screen map (${realScreens.join(', ')})`);
   for (const item of AGENDA) {
     assert.ok(item.id && item.label && item.hint, `${item.id}: says what it is`);
@@ -8366,6 +8440,96 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(!/Raise donors longer/.test(src),
       'the losing verdict no longer prescribes the lever that is wrong for 12% of animals');
     assert.equal(typeof diagnose, 'function', 'and the diagnosis is still there');
+  }
+}
+
+// --- R39: the gate that checked five of six screens.
+//
+// R29 shipped the rule "one first-use note per shipped system" and two lists
+// to enforce it. Both were typed out by hand, and one of them was wrong on
+// the day it was written: `SCREENS` named ranch, pens, theater, battle and
+// dex. The game has six. The missing one is the VAULT — which is also the
+// only screen in the game with no note at all, so the gate that exists to
+// catch precisely that could not see it.
+//
+// Underneath it sat a real, shipped, unguided system. The Resequencer (R31)
+// has a data file, a module, a Vault card, a save field and a tick in the
+// shell, and it arrived two phases AFTER the one-note-per-system rule with
+// no note — invisible because the omission was in the roll and the notes
+// alike. The suite already knew how to derive the true screen list: the A4
+// agenda gate reads it out of `main.js`. Two lists, one derived and one
+// hand-kept, and the hand-kept one is the one that went stale.
+{
+  const screens = shellScreens();
+  const guides = Object.values(content.guides);
+
+  // 1. THE CRITERION. The list the guide gate checks comes from the shell,
+  //    so a screen cannot be checked-for-notes by being left off a list.
+  {
+    assert.ok(screens.includes('vault'), `the derived list has the Vault (${screens.join(', ')})`);
+    assert.equal(screens.length, 6, `and all six screens (${screens.join(', ')})`);
+    const src = readFileSync(join(root, 'tools/smoke.js'), 'utf8');
+    assert.ok(!/const SCREENS = \['ranch'/.test(src),
+      'the guide gate no longer types the screen list out by hand');
+    // One derivation, not two: the agenda gate and the guide gate read the
+    // same helper, because two copies is how they disagreed in the first place.
+    assert.equal(src.match(/const SCREENS = \{/g)?.length ?? 0, 1,
+      'and only one place in the suite knows how to find the shell map');
+  }
+
+  // 2. Every screen the shell renders has something to say. This is the
+  //    assertion that was already written and could not fire.
+  for (const screen of screens) {
+    assert.ok(guides.some((g) => g.screen === screen),
+      `${screen} has at least one note`);
+  }
+
+  // 3. …and no note points at a screen the shell does not have. A note on a
+  //    screen id that does not exist is a note nobody will ever be shown.
+  for (const g of guides) {
+    assert.ok(screens.includes(g.screen),
+      `${g.id} sits on a screen the shell actually renders (${g.screen})`);
+  }
+
+  // 4. The Resequencer's note is true of the Resequencer. A note that
+  //    misdescribes its system is worse than none, and this one quotes
+  //    numbers that live in data.
+  {
+    const note = guides.find((g) => g.id === 'resequencer');
+    assert.ok(note, 'the Resequencer has a note');
+    assert.equal(note.screen, 'vault', 'on the screen it lives on');
+    const tuning = content.resequencerMeta;
+    assert.ok(note.body.includes(`${tuning.hours} hours`),
+      `and quotes the real run time (${tuning.hours}h)`);
+    const failPct = Math.round((1 - tuning.successBase) * 100);
+    assert.equal(failPct, 25, `one run in four is the real failure rate (${failPct}%)`);
+    assert.ok(/one in four/.test(note.body), 'which the note states in words');
+  }
+
+  // 5. It becomes reachable exactly when a vial does, and retires on the
+  //    save field the engine already keeps — no new schema for a note.
+  {
+    const lab = { ...newGameState(), seed: 390 };
+    ensureRanchSeeded(lab, content, t0);
+    lab.campaign.heldNodes = ['barn_perimeter'];
+    const stateOf = () => guideStates(lab, content, t0).find((r) => r.guide.id === 'resequencer').status;
+    assert.equal(stateOf(), 'locked', 'with no vial there is nothing to teach');
+    lab.inventory.vials = [{ id: 'v0', species: 'goat', donorName: 'Bessie', stars: 3 }];
+    assert.equal(stateOf(), 'ready', 'the first vial makes it real');
+    lab.resequenceCount = 1;
+    assert.equal(stateOf(), 'done', 'and running one retires it');
+    assert.equal(newGameState().resequenceCount ?? 0, 0, 'on a field the save already had');
+  }
+
+  // 6. Every content file has been looked at. This cannot derive what a
+  //    "system" is, and does not pretend to — it makes a new data/*.json
+  //    fail the build until somebody says which it is, so the next
+  //    Resequencer is loud rather than silent.
+  {
+    const src = readFileSync(join(root, 'tools/smoke.js'), 'utf8');
+    assert.ok(/const DATA_NOTES = \{/.test(src), 'the content map exists');
+    const files = readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json'));
+    assert.ok(files.length >= 19, `and there is content to map (${files.length} files)`);
   }
 }
 

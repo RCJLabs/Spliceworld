@@ -249,6 +249,28 @@
       ]
     },
     {
+      "id": "resequencer",
+      "screen": "vault",
+      "order": 28,
+      "icon": "🧬",
+      "title": "A vial is the whole animal, banked",
+      "body": "Every graduation leaves a DNA vial, and for a long time that was a pile of inventory that did nothing. The Resequencer spends one to grow that donor <em>back</em> — same species, same star potential, same hidden genes. That matters because graduating used to be the one thing you could not undo: extract your best recessive carrier and those genes left the herd with it. A run takes 2 hours of real time, the vial is spent either way, and one in four collapses. A better vial does not buy safety — it buys the chance the animal comes back carrying something neither it nor its donor had.",
+      "reachable": [
+        {
+          "path": "inventory.vials",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "resequenceCount",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
       "id": "flight",
       "screen": "theater",
       "order": 29,
