@@ -7,6 +7,8 @@ import { stockGenome } from '../ranch/ranch.js';
 import { comboHint } from './theater.js';
 import { rivalList, rivalRecord } from '../campaign/rivals.js';
 import { fieldNote, bindFieldNote } from '../ui/cards.js';
+import { openPicker } from '../ui/picker.js';
+import { speciesLines, speciesParts } from './dexentry.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 
 export function renderDexScreen(root, ctx) {
@@ -19,12 +21,17 @@ export function renderDexScreen(root, ctx) {
     .map((sp) => {
       const total = Object.values(content.parts).filter((p) => p.species === sp.id).length;
       const found = dex.parts.filter((p) => content.parts[p].species === sp.id).length;
+      // R36. The cell stays scannable — a 100px grid column cannot carry a
+      // set bonus and its effect — and gains the tags, which is what the
+      // variants and the enemy field guide already show and the base roster
+      // did not. The depth is one tap away rather than crammed in here.
       return `
-        <div class="dex-cell">
+        <button type="button" class="dex-cell dex-open" data-species="${sp.id}">
           <div class="dex-portrait">${renderCreatureSVG(stockGenome(sp.id, content), content, { idPrefix: `dex-${sp.id}`, extraScale: 0.85 })}</div>
           <strong>${sp.name}</strong>
-          <span class="fine-print">${sp.role} · parts ${found}/${total}</span>
-        </div>`;
+          <span class="fine-print">${sp.role}${sp.tags.length ? ` · ${sp.tags.join(', ')}` : ''}</span>
+          <span class="fine-print">parts ${found}/${total}</span>
+        </button>`;
     })
     .join('');
   const classSections = CLASS_ORDER.map((cls) => {
@@ -178,4 +185,31 @@ export function renderDexScreen(root, ctx) {
       <p class="fine-print">Every entry remembers you too. That's the AI director's notebook.</p>
     </section>`;
   bindFieldNote(root, ctx, () => renderDexScreen(root, ctx));
+
+  // Tap a species for the entry the grid has no room for: what it is, what
+  // four of its parts buy you, and which of its six you have actually met.
+  // A read-only sheet, so `onPick` closes and does nothing.
+  root.querySelectorAll?.('button[data-species]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const sp = content.species[btn.dataset.species];
+      if (!sp) return;
+      const parts = speciesParts(sp, content, state.dex.parts);
+      openPicker({
+        title: sp.name,
+        subtitle: speciesLines(sp, content).join('<br>'),
+        groups: [{
+          label: `Parts — ${parts.filter((p) => p.found).length}/${parts.length} met`,
+          options: parts.map((p) => ({
+            id: p.id,
+            label: p.label,
+            sub: p.sub,
+            badge: p.found ? '' : '<span class="grade-badge grade-standard">???</span>',
+            disabled: true,
+          })),
+        }],
+        selectedId: '',
+        onPick: () => {},
+      });
+    });
+  });
 }

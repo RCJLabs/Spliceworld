@@ -7916,4 +7916,132 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+// --- R36: the Dex says what the roster is for.
+//
+// The audit that queued this phase called the Dex a stamp album. Wrong
+// again: it has seven sections, and most are generous — rival dossiers
+// carry what that rival fields NEXT, undiscovered combos carry A6's hints,
+// the enemy field guide carries tags. The thin part was the one thing the
+// whole game is spent collecting. A base species cell read `name · role ·
+// parts n/6`, while a VARIANT of that same animal showed its class, its
+// tags and its set bonus. The base roster showed strictly less than its own
+// mutations, and nothing the last four phases made real — R32's bulk,
+// R34's set bonuses, R35's tags — had reached it.
+{
+  const { speciesLines, speciesParts, weightWord } = await import('../splice/dexentry.js');
+  const { PHYS_TUNING } = await import('../splice/physiology.js');
+  const baseSpecies = Object.values(content.species).filter((sp) => !sp.synthetic && !sp.variantOf);
+  assert.equal(baseSpecies.length, 34, 'the base roster is 34 animals');
+
+  // 1. A base species is never told less about itself than a mutation of it
+  //    is. Stated over the four facts a variant cell already carried.
+  for (const sp of baseSpecies) {
+    const text = speciesLines(sp, content).join(' | ');
+    assert.ok(text.includes(content.classes[sp.class].name), `${sp.id}: the entry names its class`);
+    assert.ok(text.includes(sp.role), `${sp.id}: and its role`);
+    for (const tag of sp.tags ?? []) {
+      assert.ok(text.includes(tag), `${sp.id}: and every tag it fights with (${tag})`);
+    }
+    assert.ok(sp.setBonus && text.includes(sp.setBonus.name), `${sp.id}: and the set it can complete`);
+    // The name alone is what the variant cells already showed, and it is not
+    // enough: "Ursine Bulk" does not tell you it is +18% HP.
+    assert.ok(text.includes(sp.setBonus.desc), `${sp.id}: and what that set DOES, not just what it is called`);
+  }
+
+  // 2. The bonus arrives with the threshold that earns it, read from the
+  //    engine rather than restated. A `4+` typed into the Dex would keep
+  //    promising four the day physiology wanted five.
+  {
+    const bear = speciesLines(content.species.bear, content).join(' | ');
+    assert.ok(bear.includes(`${PHYS_TUNING.purebredAt}+ Bear parts`),
+      `the entry quotes the real purebred threshold (${bear})`);
+    const src = readFileSync(join(root, 'splice/dexentry.js'), 'utf8');
+    assert.ok(!/with 4\+/.test(src), 'and does not keep a second opinion about it');
+  }
+
+  // 3. The weight word is derived from the roster, not a hardcoded table of
+  //    bulk numbers. Double every animal and the ORDER is untouched, so the
+  //    words must be untouched too — a fixed table would call all 34 heavy.
+  {
+    const words = baseSpecies.map((sp) => weightWord(sp, baseSpecies));
+    assert.equal(new Set(words).size, 4, `all four weight classes are earned by someone (${[...new Set(words)].join(', ')})`);
+    const doubled = baseSpecies.map((sp) => ({ ...sp, bulk: sp.bulk * 2 }));
+    const after = doubled.map((sp) => weightWord(sp, doubled));
+    assert.deepEqual(after, words, 'retuning every bulk in the same proportion does not reshuffle the weight classes');
+    const byBulk = [...baseSpecies].sort((a, b) => a.bulk - b.bulk);
+    assert.equal(weightWord(byBulk[0], baseSpecies), 'featherweight', 'the lightest animal is a featherweight');
+    assert.equal(weightWord(byBulk[byBulk.length - 1], baseSpecies), 'heavy', 'and the heaviest is heavy');
+    // And the scale is the 34 animals it describes. Three of the six bred
+    // variants carry no bulk of their own; counting them stacks phantom
+    // 1.0s in the middle and demotes the ram, the eagle and the goose a
+    // class each.
+    for (const sp of baseSpecies) {
+      const shown = speciesLines(sp, content)[0];
+      assert.ok(shown.endsWith(weightWord(sp, baseSpecies)),
+        `${sp.id}: the entry weighs it against the roster, not against animals with no build of their own (${shown})`);
+    }
+  }
+
+  // 4. An unmet part is a LEAD, not a spoiler and not a blank. It names the
+  //    slot you are missing and withholds the part.
+  {
+    const rows = speciesParts(content.species.bear, content, []);
+    assert.equal(rows.length, 6, 'a bear entry lists all six of its slots');
+    const cobra = speciesParts(content.species.cobra, content, []);
+    assert.equal(cobra.length, 4, 'and a cobra lists the four it actually has — no empty limb rows');
+    for (const row of rows) {
+      const part = content.parts[row.id];
+      assert.ok(!row.label.includes(part.name) && !row.sub.includes(part.ability),
+        `${row.id}: an unextracted part is not named or spoiled (${row.label} / ${row.sub})`);
+      assert.ok(new RegExp(row.slot, 'i').test(row.label),
+        `${row.id}: but the slot you are missing is (${row.label})`);
+    }
+    const met = speciesParts(content.species.bear, content, rows.map((r) => r.id));
+    for (const row of met) {
+      assert.ok(row.found && row.label === content.parts[row.id].name,
+        `${row.id}: once extracted it is named outright`);
+    }
+  }
+
+  // 5. The numbers R32 made real reach the entry, quoted from the part
+  //    rather than recomputed. Mass for everyone; lift only where the part
+  //    generates it, because "0 lift" on a rhino horn is noise.
+  {
+    const eagle = content.species.eagle;
+    const flier = speciesParts(eagle, content, Object.values(content.parts).filter((p) => p.species === 'eagle').map((p) => p.id));
+    for (const row of flier) {
+      assert.ok(row.sub.includes(`${content.parts[row.id].phys.mass} mass`),
+        `${row.id}: quotes the part's own mass`);
+    }
+    assert.ok(flier.some((r) => /\d+ lift/.test(r.sub)), 'an eagle wing quotes the lift it makes');
+    const rhino = speciesParts(content.species.rhino, content, Object.values(content.parts).filter((p) => p.species === 'rhino').map((p) => p.id));
+    assert.ok(!rhino.some((r) => /lift/.test(r.sub)), 'a rhino part does not report zero lift as a feature');
+  }
+
+  // 6. And the entry is reachable: every base species in the grid is a
+  //    control that opens it, and the cell itself carries the tags the
+  //    variants and the field guide already showed.
+  {
+    const lab = { ...newGameState(), seed: 36 };
+    lab.dex.parts = ['bear_head'];
+    const host = { innerHTML: '' };
+    renderDexScreen(host, { state: lab, content });
+    const page = host.innerHTML;
+    for (const sp of baseSpecies) {
+      assert.ok(page.includes(`data-species="${sp.id}"`), `${sp.id}'s cell opens its entry`);
+    }
+    assert.ok(/<button[^>]*data-species="bear"/.test(page), 'the cell is a real control, not a div with a hook on it');
+    // The portrait is a few thousand characters of inline SVG, so the cell is
+    // taken as everything up to its closing tag rather than a fixed window.
+    for (const id of ['cobra', 'eagle', 'rhino']) {
+      const at = page.indexOf(`data-species="${id}"`);
+      const cell = page.slice(at, page.indexOf('</button>', at)).replace(/<svg[\s\S]*?<\/svg>/g, '');
+      for (const tag of content.species[id].tags) {
+        assert.ok(cell.includes(tag), `a base species cell shows its tags too (${id}: ${tag}) — ${cell}`);
+      }
+      assert.ok(cell.includes(content.species[id].role), `${id}: and keeps the role it always had`);
+    }
+  }
+}
+
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);
