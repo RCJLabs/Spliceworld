@@ -160,7 +160,7 @@ export function unitFromGenome(spec, content) {
   const { id, name, frame, tokens, koLine, powerScale = 1, capturable = true } = spec;
   const report = analyze(frame, tokens, content);
   const scale = (n) => Math.max(1, Math.round(n * powerScale));
-  return {
+  const unit = {
     id,
     name,
     hp: scale(report.stats.hp),
@@ -182,6 +182,66 @@ export function unitFromGenome(spec, content) {
     genome: { frame, parts: Object.fromEntries(tokens.map((t) => [content.parts[t.partId].slot, t.partId])) },
     physiology: { instability: report.instability, sockets: tokens.length, purebred: report.purebredSpecies },
   };
+  // A rival who committed to one animal earns the same set the player does.
+  // The unit record is the enemies.json shape, so the bonus has to land on
+  // the STATS here rather than on a combatant that does not exist yet;
+  // `perks` are the neutral block for units, and keyword scaling rides the
+  // moves, both of which this shape already carries.
+  return applySetBonus(unit, report.purebredSpecies, content);
+}
+
+// R34 — the purebred set bonus, which every species declared and nothing
+// read. All 41 `setBonus` entries were prose: physiology computed
+// `purebredSpecies`, passed it to the combatant as `physiology.purebred`,
+// and the engine never looked at it. Measured before wiring it, on matched
+// builds — same frame, same grade, same six sockets, same bond — a purebred
+// build *trailed* a mixed one by 0.1 to 1.8pp across six frame x grade
+// cells. That is the honest brief: a set bonus is not a buff that threatens
+// mixing, it is the missing payment for a cost players were already paying.
+// (Purebred's one wired benefit, -20 instability, buys nothing in a fight:
+// bond cancels the disobedience term outright, so a bonded creature got
+// literally nothing for giving up its pick of parts.)
+//
+// Three dials, all of them things the engine already reads every turn, so
+// a 42nd species is a data edit and never an engine one:
+//
+//   stats    — multiplies the combatant's base numbers (hp, power, armor,
+//              speed, stamina, regen)
+//   perks    — adds to the temperament perk block (critChance, evasion,
+//              power, regen, guardLoss, lastStandAt)
+//   keywords — multiplies the NUMERIC value of that keyword wherever it
+//              appears on this creature's moves, so "Venom applies twice
+//              the stacks" is the venom keyword doing twice as much rather
+//              than a special case with the cobra's name on it.
+export function applySetBonus(combatant, purebredSpecies, content) {
+  const effect = purebredSpecies ? content.species[purebredSpecies]?.setBonus?.effect : null;
+  if (!effect) return combatant;
+  for (const [stat, mult] of Object.entries(effect.stats ?? {})) {
+    if (typeof combatant[stat] !== 'number') continue;
+    combatant[stat] = Math.max(1, Math.round(combatant[stat] * mult));
+  }
+  // maxHp tracks hp, or the bar starts the fight already dented.
+  if (effect.stats?.hp) combatant.maxHp = combatant.hp;
+  if (effect.stats?.stamina) combatant.staminaMax = combatant.stamina;
+  if (effect.perks) {
+    combatant.perks = { ...combatant.perks };
+    for (const [perk, add] of Object.entries(effect.perks)) {
+      combatant.perks[perk] = (combatant.perks[perk] ?? 0) + add;
+    }
+  }
+  if (effect.keywords) {
+    combatant.moves = combatant.moves.map((move) => {
+      let touched = null;
+      for (const [kw, mult] of Object.entries(effect.keywords)) {
+        const v = move.keywords?.[kw];
+        if (typeof v !== 'number') continue; // a boolean keyword has no dial
+        touched ??= { ...move, keywords: { ...move.keywords } };
+        touched.keywords[kw] = v * mult;
+      }
+      return touched ?? move;
+    });
+  }
+  return combatant;
 }
 
 // Waves may name a unit id or carry a generated unit record inline.
@@ -205,7 +265,7 @@ export function combatantFromChimera(chimera, content, now) {
   // only apply to particular opponents ride along and are resolved when
   // the engine knows who is on the other side (§3.5).
   const flat = flatModifiers(chimera, content);
-  return {
+  const combatant = {
     kind: 'chimera',
     refId: chimera.id,
     name: chimera.name,
@@ -229,6 +289,7 @@ export function combatantFromChimera(chimera, content, now) {
     stages: { acc: 0, evasion: 0, power: 0 },
     status: { venom: 0, bleed: 0, sleep: false, stun: false, guard: false, charging: null, thorns: 0, regen: null, taunted: 0 },
   };
+  return applySetBonus(combatant, report.purebredSpecies, content);
 }
 
 // An encounter without a tier fights at its authored stats — tier is opt-in,
@@ -274,7 +335,11 @@ export function combatantFromUnit(unit, scale = 1) {
     transformLine: unit.transformLine ?? null,
     rejection: false,
     ignoreChance: 0,
-    perks: NEUTRAL_PERKS,
+    // A unit built from a genome may carry a purebred set that granted
+    // perks (unitFromGenome applies it there, because the unit record is
+    // the enemies.json shape and has no combatant yet). Authored units have
+    // none and get the neutral block exactly as before.
+    perks: unit.perks ? { ...NEUTRAL_PERKS, ...unit.perks } : NEUTRAL_PERKS,
     scars: [],
     stages: { acc: 0, evasion: 0, power: 0 },
     status: { venom: 0, bleed: 0, sleep: false, stun: false, guard: false, charging: null, thorns: 0, regen: null, taunted: 0 },

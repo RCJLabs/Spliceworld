@@ -7588,16 +7588,18 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(!/whatever beats it/.test(row.note), `${sp}: and does not punt on it`);
   }
 
-  // 5. The dossier must not promise the purebred SET BONUS. It is read by
-  //    the panel and the Dex and by nothing in the battle engine — all 41
-  //    are prose — so a dossier that quoted one would be lying about what
-  //    the creature does. It states the instability discount instead, which
-  //    physiology actually applies.
+  // 5. The dossier names the purebred set bonus. R33 REFUSED to, and was
+  //    right to: all 41 were prose, so quoting one would have been a lie
+  //    about what the creature does. R34 wired them into the engine, so the
+  //    assertion flips — the promise now has to appear, because a real
+  //    payoff the player cannot see is the same dead content wearing a
+  //    different hat.
   const pure = dossierRows(build('S', 'eagle'), content).find((r) => r.key === 'purebred');
   assert.ok(pure, 'a purebred build says so');
-  assert.ok(!pure.note.includes(content.species.eagle.setBonus.desc),
-    'the dossier does not quote a set bonus the engine never reads');
-  assert.ok(/instability/.test(pure.note), 'it states the effect physiology does apply');
+  assert.equal(pure.value, content.species.eagle.setBonus.name, 'and names the set it earned');
+  assert.ok(pure.note.includes(content.species.eagle.setBonus.desc),
+    'and states what the bonus actually does');
+  assert.ok(/instability/.test(pure.note), 'without dropping the instability discount');
 
   // 6. The shut fold has to carry the facts worth a glance, or nobody opens it.
   const sum = dossierSummary(build('S', 'eagle'), content);
@@ -7630,6 +7632,135 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(root.innerHTML.includes('Airborne'), 'and the flying eagle says so on its card');
     // Nothing on that card may print a NaN at the player.
     assert.ok(!/NaN/.test(root.innerHTML), 'no NaN reaches the pens card');
+  }
+}
+
+
+// --- R34: the purebred set bonus, which nothing read ---------------------
+//
+// All 41 species declared a `setBonus`. Physiology computed
+// `purebredSpecies`, handed it to the combatant as `physiology.purebred`,
+// and the engine never looked at it: the Dex printed the name, the panel
+// printed the prose, and the fight ignored both.
+//
+// Measured on matched builds before wiring it — same frame, same grade, the
+// same six sockets, bond 100 on each — a purebred build TRAILED a mixed one
+// by 0.1 to 1.8pp across six frame x grade cells (mean -0.9pp). It was a
+// cost with no payment: purebred's only wired benefit, -20 instability,
+// buys nothing once bond cancels the disobedience term, which it does in
+// full at bond 100.
+{
+  const { applySetBonus, combatantFromChimera } = await import('../battle/engine.js');
+  const { makeSimChimera, partsOnFrame } = await import('../tools/sim.js');
+  const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+  const partOf = (sp, slot) => Object.values(content.parts).find((p) => p.species === sp && p.slot === slot);
+  const natural = Object.values(content.species).filter((s) => !s.synthetic);
+
+  // 1. Every species declares an effect, and every effect uses only dials
+  //    the engine actually reads. A bonus in an unknown dial is the same
+  //    dead prose in a new shape.
+  const STATS = new Set(['hp', 'power', 'armor', 'speed', 'stamina', 'regen']);
+  const PERKS = new Set(['critChance', 'critMult', 'lastStandAt', 'evasion', 'power', 'guardLoss', 'regen']);
+  const KEYWORDS = new Set(content.keywordDefs?.map?.((k) => k.id) ?? Object.keys(content.keywords ?? {}));
+  for (const s of natural) {
+    const b = s.setBonus;
+    assert.ok(b?.name && b?.desc, `${s.id} declares a set bonus`);
+    assert.ok(b.effect && Object.keys(b.effect).length, `${s.id}'s set bonus does something`);
+    for (const dial of Object.keys(b.effect)) {
+      assert.ok(['stats', 'perks', 'keywords'].includes(dial), `${s.id}: ${dial} is a dial the engine reads`);
+    }
+    for (const k of Object.keys(b.effect.stats ?? {})) assert.ok(STATS.has(k), `${s.id}: ${k} is a real stat`);
+    for (const k of Object.keys(b.effect.perks ?? {})) assert.ok(PERKS.has(k), `${s.id}: ${k} is a real perk`);
+    if (KEYWORDS.size) {
+      for (const k of Object.keys(b.effect.keywords ?? {})) assert.ok(KEYWORDS.has(k), `${s.id}: ${k} is a real keyword`);
+    }
+  }
+
+  // 2. THE GATE THE PHASE EXISTS FOR. Every bonus has to change the
+  //    creature that earned it, on the moveset it actually fields. The
+  //    first draft of this data failed here on SIX species — wolf, tortoise,
+  //    goat, heron, storm eagle, iron tortoise — because the keyword each
+  //    one scaled lived on a utility move that loses R30's four-slot
+  //    competition, so the bonus was dead on arrival exactly like the prose
+  //    it replaced.
+  const dead = [];
+  for (const s of natural) {
+    const ids = SLOTS.map((slot) => partOf(s.id, slot)?.id).filter(Boolean);
+    if (ids.length < 4) continue;
+    const fit = partsOnFrame(content, s.frame, ids);
+    const on = combatantFromChimera(makeSimChimera(s.frame, fit, 'prime', content), content, t0);
+    const off = structuredClone(content);
+    delete off.species[s.id].setBonus.effect;
+    const base = combatantFromChimera(makeSimChimera(s.frame, fit, 'prime', off), off, t0);
+    const eff = s.setBonus.effect;
+    const moved = ['hp', 'power', 'armor', 'speed', 'stamina'].some((k) => on[k] !== base[k])
+      || Object.keys(eff.perks ?? {}).some((k) => on.perks[k] !== base.perks[k])
+      || on.moves.some((m, i) => Object.keys(eff.keywords ?? {})
+        .some((k) => m.keywords?.[k] !== base.moves[i]?.keywords?.[k]));
+    if (!moved) dead.push(`${s.id} (${s.setBonus.name})`);
+  }
+  assert.deepEqual(dead, [], `every set bonus changes the creature that earned it: ${dead.join(', ')}`);
+
+  // 3. It only pays at the threshold. Three parts of a species is not a set.
+  //    Comparing a three-part build against a four-part one is NOT the test
+  //    — the fourth part carries twenty base hit points of its own, so that
+  //    comparison passes with the bonus switched off entirely. The property
+  //    is that the EFFECT is what changes, at four and not at three.
+  {
+    const off = structuredClone(content);
+    for (const sp of Object.values(off.species)) delete sp.setBonus?.effect;
+    const hp = (ids, c) => combatantFromChimera(makeSimChimera('M', ids, 'prime', c), c, t0).hp;
+    const three = ['head', 'forelimbs', 'hindlimbs'].map((slot) => partOf('bear', slot).id);
+    const four = [...three, partOf('bear', 'hide').id];
+    assert.equal(hp(three, content), hp(three, off), 'three bear parts is not a set and earns nothing');
+    assert.ok(hp(four, content) > hp(four, off), 'the fourth part is what turns the bonus on');
+  }
+
+  // 4. The mechanism is GENERAL — a bonus nobody has authored yet works
+  //    without an engine edit, which is the whole reason it is three dials
+  //    and not forty-one special cases.
+  {
+    const c2 = structuredClone(content);
+    c2.species.bear.setBonus.effect = { stats: { armor: 3 }, perks: { critChance: 0.5 }, keywords: { thorns: 9 } };
+    const ids = SLOTS.map((slot) => partOf('bear', slot).id);
+    const made = combatantFromChimera(makeSimChimera('M', ids, 'prime', c2), c2, t0);
+    const plain = combatantFromChimera(makeSimChimera('M', ids, 'prime', content), content, t0);
+    assert.ok(made.armor > plain.armor * 2, 'an invented stat dial lands');
+    assert.ok(made.perks.critChance >= 0.5, 'an invented perk dial lands');
+    assert.ok(made.moves.some((m, i) => (m.keywords?.thorns ?? 0) > (plain.moves[i]?.keywords?.thorns ?? 0)),
+      'an invented keyword dial lands');
+  }
+
+  // 5. A boolean keyword has no dial, and scaling one must not corrupt it —
+  //    `trap: true` times 2 is not a thing.
+  {
+    const move = { name: 'x', power: 10, keywords: { trap: true, venom: 1 } };
+    const fake = { moves: [move], perks: {}, hp: 10 };
+    applySetBonus(fake, 'cobra', content);
+    assert.equal(fake.moves[0].keywords.trap, true, 'a boolean keyword survives scaling untouched');
+    assert.equal(fake.moves[0].keywords.venom, 2, 'and the numeric one beside it still scales');
+  }
+
+  // 6. It must not silently dent the health bar: scaling hp has to carry
+  //    maxHp with it, or a purebred starts every fight already wounded.
+  for (const s of natural.filter((x) => x.setBonus.effect.stats?.hp || x.setBonus.effect.stats?.stamina)) {
+    const ids = SLOTS.map((slot) => partOf(s.id, slot)?.id).filter(Boolean);
+    if (ids.length < 4) continue;
+    const cb = combatantFromChimera(makeSimChimera(s.frame, partsOnFrame(content, s.frame, ids), 'prime', content), content, t0);
+    assert.equal(cb.hp, cb.maxHp, `${s.id} starts at full health`);
+    assert.equal(cb.stamina, cb.staminaMax, `${s.id} starts at full stamina`);
+  }
+
+  // 7. A mixed build gets nothing, which is what makes the set a decision.
+  {
+    const mixed = ['bear_head', 'tiger_forelimbs', 'wolf_hindlimbs', 'goat_tail', 'ram_hide', 'otter_organ'];
+    const cb = combatantFromChimera(makeSimChimera('M', mixed, 'prime', content), content, t0);
+    const off = structuredClone(content);
+    for (const sp of Object.values(off.species)) delete sp.setBonus?.effect;
+    const base = combatantFromChimera(makeSimChimera('M', mixed, 'prime', off), off, t0);
+    for (const k of ['hp', 'power', 'armor', 'speed', 'stamina']) {
+      assert.equal(cb[k], base[k], `six species in the mix earns no set bonus (${k})`);
+    }
   }
 }
 
