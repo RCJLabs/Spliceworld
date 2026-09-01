@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 31;
+export const SAVE_VERSION = 32;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -404,6 +404,14 @@ const migrations = {
     save.lastSparAt ??= 0;
     return save;
   },
+
+  // v32 (R42): The Gauntlet. One additive list — which exhibitions have
+  // fallen. A save that already holds the county finds the first stage
+  // open on load, exactly as a new winner would.
+  32: (save) => {
+    save.gauntletBeaten ??= [];
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -434,6 +442,8 @@ export function newGameState() {
     // R41: the Sparring Ring's clock and seed counter.
     sparCount: 0,
     lastSparAt: 0,
+    // R42: which Gauntlet exhibitions have fallen.
+    gauntletBeaten: [],
     campaign: {
       heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,

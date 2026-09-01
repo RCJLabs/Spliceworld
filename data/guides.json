@@ -580,6 +580,28 @@
       ]
     },
     {
+      "id": "gauntlet",
+      "screen": "battle",
+      "order": 51,
+      "icon": "🏟",
+      "title": "They were saving these",
+      "body": "Hold the whole county and the coalition stops pretending its storage is empty: four exhibition matches, in order, against the machines they never dared field. No territory changes hands and no notoriety accrues — the purse is real, the Containment Cannon works, and a bagged exhibit salvages like nothing else in the game. These fights are sized for veterans. If the forecast says you are not ready, the Sparring Ring is still open.",
+      "reachable": [
+        {
+          "path": "dominionAt",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "gauntletBeaten",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
       "id": "dex",
       "screen": "dex",
       "order": 55,

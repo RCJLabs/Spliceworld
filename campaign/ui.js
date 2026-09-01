@@ -15,6 +15,7 @@ import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js'
 // numbers drift apart.
 import { guideForScreen, STABLE as TEAM_CAP } from '../ranch/onboarding.js';
 import { sparEncounter, sparReady, startSpar } from './sparring.js';
+import { gauntletState, gauntletEncounter } from './gauntlet.js';
 import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import { renderCreatureSVG } from '../render/renderer.js';
@@ -50,6 +51,9 @@ function encounterFor(state, target, content, now) {
   // does NOT get a look at it — a drill that adapts to you is a second
   // front, and the ring exists to not be one.
   if (target.kind === 'sparring') return sparEncounter(state, content, target.nodeId, now).encounter ?? null;
+  // R42: a Gauntlet stage. The director does not rewrite it — this IS the
+  // coalition's answer.
+  if (target.kind === 'gauntlet') return gauntletEncounter(state, content, target.stageId).encounter ?? null;
   // A defence is the node's own encounter, escalated — built fresh from
   // the live contest so the briefing and the battle always agree.
   const base =
@@ -378,8 +382,27 @@ function renderMap(root, ctx) {
       </section>`
     : '';
 
+  // R42: the Gauntlet card. Only ever rendered once the county is yours —
+  // before that the coalition is still pretending it has nothing in storage.
+  const gauntletCard = state.dominionAt
+    ? (() => {
+        const rows = gauntletState(state, content).map(({ stage, status }) => `
+          <div class="encounter gauntlet-${status}">
+            <div><strong>${stage.name}</strong>${status === 'beaten' ? ' 🏆' : ''} <span class="lineage">${stage.escorts.length + 1} waves · $${stage.reward}</span><br>
+            <span class="fine-print">${status === 'locked' ? 'The card goes in order.' : stage.blurb}</span></div>
+            ${status === 'open' ? `<button type="button" data-gauntlet="${stage.id}">Answer</button>` : status === 'beaten' ? '<span class="held-tag">BEATEN</span>' : '<span class="locked-tag">locked</span>'}
+          </div>`).join('');
+        return `<section class="card gauntlet-card">
+          <h3>🏟 The Gauntlet</h3>
+          <p class="fine-print">The county is yours, so the coalition has stopped pretending its storage is empty. Four exhibitions, in order. No territory changes hands — only reputations.</p>
+          ${rows}
+        </section>`;
+      })()
+    : '';
+
   root.innerHTML = `
     ${dominionCard}
+    ${gauntletCard}
     ${lastAftermath ? `<section class="card"><h3>Last Sortie</h3><p class="ranch-msg">${lastAftermath}</p></section>` : ''}
     <section class="card">
       <div class="econ-row">
@@ -414,6 +437,14 @@ function renderMap(root, ctx) {
   });
   bindDossier(root, ctx, () => renderMap(root, ctx));
   bindJobs(root, ctx, () => renderMap(root, ctx));
+  root.querySelectorAll('button[data-gauntlet]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const row = gauntletState(state, content).find((r) => r.stage.id === btn.dataset.gauntlet);
+      if (!row || row.status !== 'open') return;
+      draftTarget = { kind: 'gauntlet', stageId: row.stage.id, encounterId: row.stage.id, label: row.stage.name };
+      renderWarRoomScreen(root, ctx);
+    })
+  );
   root.querySelectorAll('button[data-spar]').forEach((btn) =>
     btn.addEventListener('click', () => {
       const node = nodeById(content, btn.dataset.spar);

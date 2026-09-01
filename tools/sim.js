@@ -38,6 +38,7 @@ export function loadSimContent() {
     // zero curve — which is the right DEFAULT for the [OP] gates, but the
     // tuning probes need the real curve to measure it at all.
     training: readJSON('data/training.json'),
+    gauntlet: readJSON('data/gauntlet.json'),
     regions: readJSON('data/regions.json'),
     rivals: readJSON('data/rivals.json'),
     director: readJSON('data/director.json'),

@@ -71,6 +71,7 @@ export function indexContent(raw) {
     chaosMeta: raw.chaos ? raw.chaos.tuning : null,
     resequencerMeta: raw.resequencer ? raw.resequencer.tuning : null,
     trainingMeta: raw.training ? raw.training.tuning : null,
+    gauntlet: raw.gauntlet ? raw.gauntlet.stages : [],
     sparBlurbs: raw.training ? raw.training.sparBlurbs : null,
     scars: raw.scars ? byId(raw.scars.scars) : {},
     scarMeta: raw.scars ? raw.scars.tuning : null,

@@ -2112,3 +2112,10 @@ button.dex-cell:focus-visible {
   border-radius: 0.5rem;
   box-sizing: border-box;
 }
+
+/* --- R42: The Gauntlet --------------------------------------------------
+   Exhibition rows in the map's own idiom; the beaten state borrows the
+   held-tag because a trophy is territory of a different kind. */
+.gauntlet-card { border-color: var(--accent-2); }
+.gauntlet-card h3 { color: var(--accent-2); }
+.gauntlet-locked { opacity: 0.55; }

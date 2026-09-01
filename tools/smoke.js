@@ -85,6 +85,7 @@ const content = indexContent({
   traits: readJSON('data/traits.json'),
   rivals: readJSON('data/rivals.json'),
   training: readJSON('data/training.json'),
+  gauntlet: readJSON('data/gauntlet.json'),
   director: readJSON('data/director.json'),
   facility: readJSON('data/facility.json'),
   philosophies: readJSON('data/philosophies.json'),
@@ -2354,15 +2355,19 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     assert.ok(salvageParts.has(part.id), `${part.id} is dropped by some unit`);
   }
 
-  // 2. Dead units may not accumulate. These four are drafted at boss scale
-  //    (hp 118–145, armor 13–18) and do not fit any strip they could join
-  //    without a rescale, so they are parked rather than fielded — but the
-  //    LIST is pinned, so a fifth cannot appear unnoticed the way
-  //    leviathan_dredge did.
-  const unfielded = Object.values(unitsById).filter((u) => !fielded(u.id)).map((u) => u.id).sort();
-  assert.deepEqual(unfielded,
-    ['crucible_9000', 'leviathan_dredge', 'stratofortress', 'the_compliance_engine'],
-    `the parked units are exactly the four known ones (${unfielded.join(', ')})`);
+  // 2. Dead units may not accumulate. Four boss-scale units sat parked
+  //    behind a pinned list here for seventeen phases — drafted at R25,
+  //    measured by this very gate as fitting no strip without a rescale.
+  //    R42 built the strip they fit: the Gauntlet fields all four, so the
+  //    pin is now EMPTY, and a newly drafted unit must arrive with a stage
+  //    or an encounter or fail this build the day it lands.
+  const gauntletUnits = new Set(
+    (content.gauntlet ?? []).flatMap((stage) => [stage.unitId, ...(stage.escorts ?? [])])
+  );
+  const fieldedNow = (id) => fielded(id) || gauntletUnits.has(id);
+  const unfielded = Object.values(unitsById).filter((u) => !fieldedNow(u.id)).map((u) => u.id).sort();
+  assert.deepEqual(unfielded, [],
+    `every drafted unit is fielded somewhere — encounter, director, or Gauntlet (parked: ${unfielded.join(', ')})`);
 
 
   // 3. A TAG YOU CANNOT SWING IS NOT AN ANSWER — and the slot that matters
@@ -5725,7 +5730,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'resequencer',
     'temperament', 'bond', 'infirmary', 'scars',
     'combos', 'chaos', 'flight',
-    'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director',
+    'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director', 'gauntlet',
     'dex',
   ];
   const covered = new Set(guides.map((g) => g.id));
@@ -5751,6 +5756,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'regions.json': 'regions',
     'resequencer.json': 'resequencer',
     'training.json': 'veterans',
+    'gauntlet.json': 'gauntlet',
     'rivals.json': 'rivals',
     'scars.json': 'scars',
     'temperament.json': 'temperament',
@@ -5874,6 +5880,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
       lab.campaign.contested = [{ nodeId: 'downtown', deadline: t0 + 13 * HOUR }];
     }, ['contest']],
     ['the Pairing Suite is installed', () => { lab.facility.scanner = 3; }, ['pairing']],
+    // R42: the county falls, and the coalition's storage opens.
+    ['the county is theirs', () => { lab.dominionAt = t0; }, ['gauntlet']],
   ];
 
   const firstSeen = {};
@@ -8953,6 +8961,151 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const c = makeSimChimera(a.frame, partsOnFrame(content, a.frame, a.partIds), 'standard', content);
     c.id = 'z'; c.name = 'z'; c.bond = 100; c.settleUntil = 0;
     assert.equal(combatantFromChimera(c, content, 0).level, 0, 'no xp means level 0 means yesterday\'s numbers');
+  }
+}
+
+// --- R42: The Gauntlet.
+//
+// Four boss-scale units — full stat blocks, moves, shapes, salvage and KO
+// lines — sat parked behind A5's pinned gate for seventeen phases because
+// they fit no strip without a rescale. R41 built the thing they fit: a
+// veteran stable. The trajectory math says a creature that fights the whole
+// campaign reaches L8 at dominion; the Gauntlet is the tier that starts
+// where the map ends, and A5's parked-units pin is now EMPTY.
+{
+  const { gauntletStages, gauntletState, gauntletEncounter, gauntletComplete, recordGauntletWin } = await import('../campaign/gauntlet.js');
+  const { trainingTuning } = await import('../battle/veterancy.js');
+  const tune = trainingTuning(content);
+  const stages = gauntletStages(content);
+  const vets = (grade, lvl) => ['wings', 'noise', 'boots'].map((key, i) => {
+    const a = ARCHETYPES[key];
+    const c = makeSimChimera(a.frame, partsOnFrame(content, a.frame, a.partIds), grade, content);
+    c.id = key + i; c.name = key + i; c.bond = 100; c.settleUntil = 0;
+    c.xp = lvl === 0 ? 0 : tune.levels[lvl - 1];
+    return c;
+  });
+  const winner = () => {
+    const st = { ...newGameState(), seed: 420 };
+    st.dominionAt = t0;
+    return st;
+  };
+
+  // 1. THE CRITERION, measured. A veteran prime stable climbs a real
+  //    ladder — beatable at every rung, free at none — while a FRESH
+  //    apex-grade stable fails the first stage outright: the Gauntlet is
+  //    entered on what a team has been through, not on what was bought
+  //    for it.
+  {
+    const st = winner();
+    const first = gauntletEncounter(st, content, stages[0].id).encounter;
+    const seasoned = forecast(vets('prime', 10), first, content, 2026, 0, { runs: 16 }).winRate;
+    const bought = forecast(vets('apex', 0), first, content, 2026, 0, { runs: 16 }).winRate;
+    assert.ok(seasoned >= 0.55, `a prime L10 stable takes Exhibition I (${Math.round(seasoned * 100)}%)`);
+    assert.ok(bought < 0.2, `a fresh apex stable does not (${Math.round(bought * 100)}%) — grades alone do not buy entry`);
+    st.gauntletBeaten = stages.slice(0, -1).map((x) => x.id);
+    const finale = gauntletEncounter(st, content, stages[stages.length - 1].id).encounter;
+    const atEnd = forecast(vets('prime', 10), finale, content, 2026, 0, { runs: 16 }).winRate;
+    assert.ok(atEnd >= 0.25 && atEnd <= 0.75, `and the finale is a fight, not a formality or a wall (${Math.round(atEnd * 100)}%)`);
+  }
+
+  // 2. The card goes in order, opens only when the county is yours, and a
+  //    trophy is permanent.
+  {
+    const st = { ...newGameState(), seed: 421 };
+    assert.ok(gauntletState(st, content).every((r) => r.status === 'locked'), 'all locked before dominion');
+    assert.ok(!gauntletEncounter(st, content, stages[0].id).ok, 'and the first refuses to open early');
+    st.dominionAt = t0;
+    const rows = gauntletState(st, content);
+    assert.equal(rows[0].status, 'open', 'dominion opens exactly the first');
+    assert.ok(rows.slice(1).every((r) => r.status === 'locked'), 'the rest wait their turn');
+    assert.ok(!gauntletEncounter(st, content, stages[1].id).ok, 'stage two refuses while stage one stands');
+    st.gauntletBeaten = [stages[0].id];
+    assert.equal(gauntletState(st, content)[1].status, 'open', 'a win advances the card');
+    assert.ok(!gauntletEncounter(st, content, stages[0].id).ok, 'a beaten stage does not re-open');
+    assert.equal(gauntletComplete(st, content), false, 'one trophy is not the set');
+    st.gauntletBeaten = stages.map((x) => x.id);
+    assert.equal(gauntletComplete(st, content), true, 'four is');
+  }
+
+  // 3. Every stage resolves entirely from data: real units, the boss walks
+  //    on last, the purse is the data's, and scaleOverride is the only
+  //    difficulty dial (tier must be null or the engine reads two).
+  for (const stage of stages) {
+    const st = winner();
+    st.gauntletBeaten = stages.slice(0, stages.indexOf(stage)).map((x) => x.id);
+    const enc = gauntletEncounter(st, content, stage.id).encounter;
+    for (const w of enc.waves) assert.ok(content.enemies[w], `${stage.id}: ${w} is a real unit`);
+    assert.equal(enc.waves[enc.waves.length - 1], stage.unitId, `${stage.id}: the boss walks on last`);
+    assert.equal(enc.reward, stage.reward, `${stage.id}: the purse is the data's`);
+    assert.equal(enc.tier, null, `${stage.id}: scaleOverride is the only dial`);
+    assert.ok(enc.scaleOverride > 1.5, `${stage.id}: and it is set for veterans (${enc.scaleOverride})`);
+  }
+
+  // 4. A win is recorded once, announced once, and the fourth closes the
+  //    set — through resolveBattle, the path the game walks.
+  {
+    const st = winner();
+    ensureRanchSeeded(st, content, t0);
+    st.gauntletBeaten = stages.slice(0, -1).map((x) => x.id);
+    const finale = stages[stages.length - 1];
+    const enc = gauntletEncounter(st, content, finale.id).encounter;
+    const team = vets('prime', 10);
+    st.chimeras = team;
+    const battle = createBattle([team[0]], enc, content, 7, t0, { kind: 'gauntlet' });
+    battle.outcome = 'win'; battle.over = true;
+    const notorietyBefore = st.campaign.notoriety;
+    resolveBattle(st, battle, content, t0);
+    assert.ok(st.gauntletBeaten.includes(finale.id), 'the win is recorded');
+    assert.equal(st.campaign.notoriety, notorietyBefore, 'with no notoriety — an exhibition is not a conquest');
+    const news = st.news.map((n) => n.text ?? n).join(' | ');
+    assert.ok(news.includes(finale.news), `the stage news reaches the wire`);
+    assert.ok(/THE GAUNTLET IS CLEARED/.test(news), 'and the fourth closes the set');
+    const before = st.news.length;
+    const again = createBattle([team[0]], enc, content, 8, t0, { kind: 'gauntlet' });
+    again.outcome = 'win'; again.over = true;
+    resolveBattle(st, again, content, t0 + HOUR);
+    assert.equal(st.gauntletBeaten.filter((id) => id === finale.id).length, 1, 'a trophy is counted once');
+  }
+
+  // 5. The Containment Cannon works in the Gauntlet — bagging the exhibit
+  //    is the intended jackpot, unlike sparring where the guard turns it
+  //    off. Through resolveBattle again.
+  {
+    const st = winner();
+    ensureRanchSeeded(st, content, t0);
+    const enc = gauntletEncounter(st, content, stages[0].id).encounter;
+    const team = vets('prime', 10);
+    st.chimeras = team;
+    const battle = createBattle([team[0]], enc, content, 9, t0, { kind: 'gauntlet' });
+    battle.outcome = 'win'; battle.over = true;
+    battle.captured = [stages[0].unitId];
+    resolveBattle(st, battle, content, t0);
+    assert.ok(st.campaign.containment.some((b) => b.unitId === stages[0].unitId),
+      'a bagged exhibit lands in a bay');
+  }
+
+  // 6. Migration: a v31 save comes forward with an empty trophy shelf and
+  //    nothing else touched; a save already holding the county finds the
+  //    first stage open on load.
+  {
+    const old = { ...newGameState(), saveVersion: 31, funds: 555, dominionAt: t0 };
+    delete old.gauntletBeaten;
+    const done = migrate(old);
+    assert.equal(done.saveVersion, SAVE_VERSION, 'comes forward');
+    assert.deepEqual(done.gauntletBeaten, [], 'with an empty shelf');
+    assert.equal(done.funds, 555, 'and nothing else touched');
+    assert.equal(gauntletState(done, content)[0].status, 'open', 'a standing winner finds Exhibition I open');
+  }
+
+  // 7. The map renders the card from the shared state, and the briefing
+  //    resolves a gauntlet target without the director touching it.
+  {
+    const src = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
+    assert.ok(/gauntletState\(state, content\)/.test(src), 'the card reads the shared state');
+    assert.ok(/data-gauntlet/.test(src), 'and each open stage is a control');
+    assert.ok(/kind === 'gauntlet'\) return gauntletEncounter/.test(src.replace(/\s+/g, ' ')) ||
+              /target\.kind === 'gauntlet'/.test(src), 'the briefing resolves a gauntlet target');
+    assert.ok(!/directEncounter\(state, gauntletEncounter/.test(src), 'and the director does not rewrite it');
   }
 }
 
