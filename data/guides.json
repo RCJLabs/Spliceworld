@@ -395,9 +395,34 @@
       ]
     },
     {
-      "id": "jobs",
+      "id": "veterans",
       "screen": "battle",
       "order": 42,
+      "icon": "🥊",
+      "title": "What they survive makes them stronger",
+      "body": "Every battle a chimera walks out of pays experience — win or lose, sized by what it actually stood against — and its <em>level</em> multiplies hp, power, armour and stamina. Never speed: how fast a creature acts is anatomy, and no amount of drilling changes what it is made of. Grades are what a creature is built from; levels are what it has been through, and they are the reason the one you spliced on day one can still be on the card at the end. Walled? Open the <strong>Sparring Ring</strong>: a scaled-down rematch against a garrison you already hold — half the experience, no purse, and nobody impounds a sparring partner.",
+      "reachable": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
+        },
+        {
+          "path": "chimeras",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "helper": "leveledChimera"
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "screen": "battle",
+      "order": 43,
       "icon": "💼",
       "title": "Not every job is a fight",
       "body": "The Jobs board sends one chimera out on a timer for money, livestock or parts — no battle, no risk of capture. It is the floor under a bad run, and it raises Heat, which the world notices.",
@@ -419,7 +444,7 @@
     {
       "id": "containment",
       "screen": "battle",
-      "order": 43,
+      "order": 44,
       "icon": "⛓",
       "title": "You can bring one home",
       "body": "Charging the Containment Cannon in a fight impounds an enemy. In the bay it becomes two futures and you pick one: dismantle it for enemy tech you cannot get any other way, or rehabilitate it onto your own roster.",
@@ -439,7 +464,7 @@
     {
       "id": "rehab",
       "screen": "battle",
-      "order": 44,
+      "order": 45,
       "icon": "🧸",
       "title": "Their monster can become yours",
       "body": "The Reorientation Wing turns an impounded specimen into a member of your stable — someone else’s anatomy, someone else’s grades, on your team. It runs on a clock and a curriculum; skip the sessions and it graduates wary.",
@@ -459,7 +484,7 @@
     {
       "id": "rivals",
       "screen": "battle",
-      "order": 45,
+      "order": 46,
       "icon": "🧫",
       "title": "Other people do this too",
       "body": "Rival labs field chimeras of their own and keep score. Beat one twice and it iterates — it reads your stable and builds something to answer it, which is the most direct feedback the game gives you on your own habits.",
@@ -477,7 +502,7 @@
     {
       "id": "rescue",
       "screen": "battle",
-      "order": 46,
+      "order": 47,
       "icon": "⏳",
       "title": "Nothing is ever really gone",
       "body": "Lose a fight and one downed chimera is taken, with a countdown to an \"unauthorized peer review\". Mount a rescue raid before it expires and you get it back with a deeper bond. There is always a window. Use it.",
@@ -499,7 +524,7 @@
     {
       "id": "contest",
       "screen": "battle",
-      "order": 47,
+      "order": 48,
       "icon": "🛡",
       "title": "They come back for it",
       "body": "Territory is not permanent. Once the coalition escalates, it counter-attacks a node you hold — the same garrison, stronger, and the node pays nothing while the convoy is on the road. Hold the line and the wreckage is yours.",
@@ -517,7 +542,7 @@
     {
       "id": "regions",
       "screen": "battle",
-      "order": 48,
+      "order": 49,
       "icon": "🗺",
       "title": "Each region asks a different question",
       "body": "The strips are not the same fight with bigger numbers. Kestrel Reach is Airborne, so your Ground-tagged moves miss entirely — and flying buys you nothing there, because almost nothing in the Reach fights from the ground. The Foundry is the opposite: armour, Sonic, and enough tippers and ram plates that a creature actually in the air is untouchable by a third of what they throw. Read the line under each region name.",
@@ -535,7 +560,7 @@
     {
       "id": "director",
       "screen": "battle",
-      "order": 49,
+      "order": 50,
       "icon": "🛰",
       "title": "The world is taking notes",
       "body": "Field the same anatomy often enough and the opposition starts bringing an answer to it. Their dossier on you is on the Labs tab. A stable of one class is legible; a mixed one is not.",
@@ -557,7 +582,7 @@
     {
       "id": "dex",
       "screen": "dex",
-      "order": 50,
+      "order": 55,
       "icon": "📖",
       "title": "Everything you have ever found",
       "body": "The Splice-Dex keeps every part, combo, enemy, gene and variant you have discovered — and shows silhouettes of the ones you have not, with where to look. It is the completion list and the hint system at once.",

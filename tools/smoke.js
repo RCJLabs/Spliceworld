@@ -5715,7 +5715,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // no button to press, just the two charts that decide fights. They are
     // on the roll for the same reason everything else is: so that removing
     // the note fails the build.
-    'stable', 'triangle', 'chart',
+    'stable', 'triangle', 'chart', 'veterans',
     'grades', 'breeding', 'incubator', 'genes', 'pairing', 'facility', 'upkeep', 'catalog',
     // R39. The Vault had no note of any kind, and the Resequencer (R31) was
     // a fully shipped system — data file, module, UI, a tick in main.js —
@@ -5749,6 +5749,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'operations.json': 'jobs',
     'regions.json': 'regions',
     'resequencer.json': 'resequencer',
+    'training.json': 'veterans',
     'rivals.json': 'rivals',
     'scars.json': 'scars',
     'temperament.json': 'temperament',
@@ -5828,7 +5829,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['an egg is laid', () => { lab.ranch.eggCount = 1; lab.ranch.eggs = [{ id: 'e0' }]; }, ['incubator', 'genes']],
     ['a chimera exists', () => {
       lab.chimeras = [{ id: 'c1', frame: 'M', tokens: {}, settleUntil: 0, bond: 5, temperament: { a: 1 }, scars: [] }];
-    }, ['upkeep', 'temperament', 'bond']],
+    }, ['upkeep', 'temperament', 'bond', 'veterans']],
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
@@ -8709,7 +8710,10 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 
   // 9. The save carries it, and an old one migrates without losing anything.
   {
-    assert.equal(SAVE_VERSION, 30, 'the schema change bumped the version');
+    // A floor, not a pin: R41's own bump tripped this when it was
+    // `equal(SAVE_VERSION, 30)`, and a gate that fails on every LATER
+    // schema change is asserting the calendar, not the rule.
+    assert.ok(SAVE_VERSION >= 30, 'the schema change bumped the version');
     assert.equal(newGameState().dominionAt, null, 'a fresh save has not won yet');
     const old = { ...newGameState(), saveVersion: 29, funds: 1234 };
     delete old.dominionAt;

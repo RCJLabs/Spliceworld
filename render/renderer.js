@@ -70,6 +70,8 @@ export function indexContent(raw) {
     operationMeta: raw.operations ? raw.operations.tuning : null,
     chaosMeta: raw.chaos ? raw.chaos.tuning : null,
     resequencerMeta: raw.resequencer ? raw.resequencer.tuning : null,
+    trainingMeta: raw.training ? raw.training.tuning : null,
+    sparBlurbs: raw.training ? raw.training.sparBlurbs : null,
     scars: raw.scars ? byId(raw.scars.scars) : {},
     scarMeta: raw.scars ? raw.scars.tuning : null,
     // First-use field guides (R29), keyed by id and kept in authored order

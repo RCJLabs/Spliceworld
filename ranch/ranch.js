@@ -3,7 +3,7 @@
 // dev time-warp all flow through the same code path (timestamps, never
 // intervals).
 
-import { rngStream, pick, randInt } from '../util/rng.js';
+import { rngStream, pick, randInt, pickFresh } from '../util/rng.js';
 import { upkeepTuning } from '../splice/facility.js';
 
 export const STATS = ['hp', 'power', 'armor', 'speed', 'stamina'];
@@ -28,9 +28,23 @@ export const TUNING = {
 };
 
 const STOCK_NAMES = [
+  // R41: eighteen names across a ranch the game restocks constantly meant
+  // half the pens answered to the same thing. Eighty now, and createAnimal
+  // prefers one no animal in the pens is wearing.
   'Bessie', 'Gordon', 'Clementine', 'Waffles', 'Herbert', 'Petunia',
   'Meatball', 'Agnes', 'Rufus', 'Marigold', 'Duncan', 'Prudence',
   'Tater', 'Wilhelmina', 'Bartholomew', 'Pickles', 'Doreen', 'Alfredo',
+  'Mabel', 'Reginald', 'Turnip', 'Blossom', 'Cornelius', 'Fern',
+  'Stanley', 'Beatrix', 'Dumpling', 'Ainsley', 'Parsnip', 'Gladys',
+  'Mortimer', 'Sprout', 'Henrietta', 'Biscuit', 'Ferdinand', 'Nutmeg',
+  'Percival', 'Clover', 'Waldo', 'Primrose', 'Chester', 'Dot',
+  'Leopold', 'Sausage', 'Miriam', 'Conker', 'Ethel', 'Radish',
+  'Humphrey', 'Pearl', 'Bramble', 'Winifred', 'Otis', 'Petal',
+  'Norbert', 'Maple', 'Cyril', 'Butters', 'Ramona', 'Pretzel',
+  'Ignatius', 'Daisy-Second', 'Grover', 'Pumpkin', 'Enid', 'Scooter',
+  'Thaddeus', 'Juniper', 'Boris', 'Marmalade', 'Sylvia', 'Crouton',
+  'Archibald', 'Poppy', 'Nigel', 'Toffee', 'Ursula', 'Gherkin',
+  'Cuthbert', 'Bonnie',
 ];
 
 const HOUR = 3600000;
@@ -63,7 +77,7 @@ export function createAnimal(state, speciesId, content, now) {
   return {
     id: `a${n}`,
     species: speciesId,
-    name: pick(rng, STOCK_NAMES),
+    name: pickFresh(rng, STOCK_NAMES, state.ranch.stock.map((a) => a.name)),
     sex: rng() < 0.5 ? 'F' : 'M',
     birthAt: now,
     condition: TUNING.startCondition,

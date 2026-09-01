@@ -2,7 +2,7 @@
 // tokens onto a frame, birth a chimera, start its settling timer, log any
 // combo discoveries. Presentation lives in theater-ui.js.
 
-import { rngStream, pick } from '../util/rng.js';
+import { rngStream, pick, pickFresh } from '../util/rng.js';
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { analyze } from './physiology.js';
 import { theaterGrants } from './facility.js';
@@ -12,9 +12,39 @@ import { defaultMoveset } from '../battle/moves.js';
 import { movesFromTokens } from '../battle/engine.js';
 
 const CHIMERA_NAMES = [
+  // R41: fifteen names for a stable the game encourages past nine was a
+  // collision machine — the player report said so in as many words. A
+  // hundred and twenty now, and the picker below prefers one nobody on the
+  // roster is wearing before it ever repeats.
   'Chompers', 'Beefsquawk', 'Sir Hornsalot', 'Dr. Fluffles', 'Snack Hazard',
   'Captain Wiggles', 'Exhibit A', 'Prototype Dave', 'Ms. Chaos', 'The Intern',
   'Gnawthaniel', 'Fangela', 'Beaklash', 'Goatzilla', 'Hissterica',
+  'Lord Nibbleton', 'Baroness Bitey', 'Chairman Meow-ish', 'Grievous Bodily Charm',
+  'Sergeant Snoot', 'The Redacted', 'Patch Notes', 'Warranty Void', 'Beta Test',
+  'Oops All Talons', 'Professor Pinch', 'Duchess Thrash', 'Big Mistake',
+  'Lil Catastrophe', 'The Allegation', 'Cuddles (Sic)', 'Nurse Shark-ish',
+  'Gorepuff', 'Velocirapscallion', 'Sir Slithersby', 'Madame Mauls',
+  'The Nibbler', 'Grand Moff Waddle', 'Bitey McBiteface', 'Clawdia',
+  'Fluffernaut', 'Rumblewick', 'The Vice Chair', 'Shreddie Mercury',
+  'Count Snackula', 'Princess Ruckus', 'Gary the Unwise', 'The Second Draft',
+  'Menace II Sobriety', 'Hushpuppy', 'Ballistic Missy', 'The Loud One',
+  'Doctor Gnash', 'Twitchy Pete', 'Her Wormship', 'Colonel Custard',
+  'Sneak Preview', 'The Fine Print', 'Kaboomerang', 'Wet Bandit',
+  'Lord of the Wings', 'Chewbarker', 'Attila the Hen-ish', 'Clawful Thinking',
+  'Napoleon Bitey-parte', 'The Auditor', 'Toothgrinder', 'Miss Conduct',
+  'Squawkward', 'Rip Van Twinkle', 'The Understudy', 'Overbite Prime',
+  'Deputy Chomp', 'Fangsy Malone', 'Ol\' Thrashbasket', 'The Ampersand',
+  'Gustave the Unpleasant', 'Whisker Business', 'Pinchella', 'Brutus Jr. Jr.',
+  'The Contingency', 'Marquis de Slobber', 'Rowdy Piper', 'Sizzlean',
+  'Grumblesnout', 'The Petting Zoo Incident', 'Vlad the Inhaler', 'Snarls Barkley',
+  'Empress Wiggle', 'Test Subject Nine', 'The Better Idea', 'Chompsky Honk',
+  'Barometer', 'Fluff Supreme', 'Gnashville', 'The Bad Batch',
+  'Precious Cargo', 'Sir Loin', 'Widget', 'The Escape Clause',
+  'Hazmat', 'Belligerent Randy', 'Momentum', 'The Fifth Opinion',
+  'Crimebeak', 'Snugglor the Devourer', 'Halfway Harold', 'The Live Wire',
+  'Postmortimer', 'Quibbles', 'Rampage Rita', 'Soft Serve',
+  'The Tuesday Problem', 'Unlicensed Kevin', 'Vim', 'The Growing Concern',
+  'Wallop', 'Yikes von Hindenclaw', 'Zoomies', 'The Final Form',
 ];
 
 // slotTokens: { socketId: tokenId | null }. Heads are mandatory — every
@@ -78,7 +108,7 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
   const rng = rngStream(state.seed, 'chimera', n);
   const chimera = {
     id: `c${n}`,
-    name: pick(rng, CHIMERA_NAMES),
+    name: pickFresh(rng, CHIMERA_NAMES, state.chimeras.map((c) => c.name)),
     frame: frameId,
     // socket id → token (full token kept: grades and lineage travel with it).
     // Keyed by the SOCKET the player chose, not the part's slot type, or two
@@ -96,6 +126,8 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
     temperament: null, // seeded on settling — later milestone
     injury: null, // Infirmary timer set by battle aftermath (Law 1)
     lastTrainedAt: 0,
+    // R41: what it has been through. Grades build a creature; this seasons it.
+    xp: 0,
     // R30: what it can press, out of everything its anatomy knows. Stamped
     // at birth so the four slots are a thing the player owns from the first
     // fight rather than something the engine improvises each time.
@@ -147,6 +179,20 @@ export function settleRemainingMs(chimera, now) {
 }
 
 // Training (M7 obedience UX): bond is earned, not assigned (§3.5).
+// R41: a creature you keep for a whole campaign is a creature you get to
+// name. Free, instant, and sanitised rather than escaped-at-forty-callsites:
+// names are interpolated into markup all over the game, so the honest fix is
+// to never store markup in one.
+export function renameCreature(list, id, rawName) {
+  const target = (list ?? []).find((c) => c.id === id);
+  if (!target) return { ok: false, msg: 'No such creature.' };
+  const name = String(rawName ?? '').replace(/[<>&"'`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
+  if (!name) return { ok: false, msg: 'A name needs at least one printable character. House rules.' };
+  const old = target.name;
+  target.name = name;
+  return { ok: true, msg: `${old} is now ${name}. The paperwork has been amended and partially eaten.`, name };
+}
+
 export const TRAINING = { cost: 5, bondGain: 8, cooldownHours: 15 };
 
 export function trainChimera(state, chimeraId, now, content) {

@@ -4,7 +4,7 @@
 import { indexContent } from '../render/renderer.js';
 
 export async function loadContent(base = '.') {
-  const files = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament', 'scars', 'guides', 'resequencer'];
+  const files = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament', 'scars', 'guides', 'resequencer', 'training'];
   const [frames, parts, species, combos, enemies, keywords, regions, traits, classes, rivals, director, facility, philosophies, operations, chaos, temperament, scars, guides, resequencer] = await Promise.all(
     files.map(async (name) => {
       const res = await fetch(`${base}/data/${name}.json`);

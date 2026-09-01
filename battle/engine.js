@@ -6,6 +6,7 @@
 
 import { rngStream, pick } from '../util/rng.js';
 import { chooseMoveIndex, skillFor } from './ai.js';
+import { levelOf, levelMult, grantBattleXp } from './veterancy.js';
 import { analyze } from '../splice/physiology.js';
 import { GRADE_INDEX } from '../splice/extract.js';
 import { isSettled } from '../splice/theater.js';
@@ -265,17 +266,23 @@ export function combatantFromChimera(chimera, content, now) {
   // only apply to particular opponents ride along and are resolved when
   // the engine knows who is on the other side (§3.5).
   const flat = flatModifiers(chimera, content);
+  // R41: veterancy. Level multiplies hp, power, armor and stamina — what a
+  // creature has been through — and never speed, which is anatomy (mass and
+  // lift priced it in A9/R32 and levels must not scramble the turn order
+  // the body earned). Grades build the creature; levels season it.
+  const vet = levelMult(levelOf(chimera.xp ?? 0, content), content);
   const combatant = {
     kind: 'chimera',
     refId: chimera.id,
     name: chimera.name,
-    maxHp: report.stats.hp,
-    hp: report.stats.hp,
-    power: Math.round(report.stats.power * debuff),
-    armor: report.stats.armor,
+    level: levelOf(chimera.xp ?? 0, content),
+    maxHp: Math.round(report.stats.hp * vet),
+    hp: Math.round(report.stats.hp * vet),
+    power: Math.round(report.stats.power * debuff * vet),
+    armor: Math.round(report.stats.armor * vet),
     speed: Math.max(1, Math.round(report.stats.speed * debuff) + flat.speed),
-    staminaMax: report.stats.stamina,
-    stamina: report.stats.stamina,
+    staminaMax: Math.round(report.stats.stamina * vet),
+    stamina: Math.round(report.stats.stamina * vet),
     regen: report.regenNet + flat.regen,
     tags: ['Organic', ...report.tags],
     creatureClass: report.creatureClass,
@@ -473,6 +480,9 @@ export function createBattle(chimeras, encounter, content, seed, now, context = 
     rollCount: 0,
     encounterId: encounter.id,
     encounterName: encounter.name,
+    // R41: the authored wave count, for sizing xp — the queue is spent by
+    // the time anyone asks.
+    waveCount: encounter.waves.length,
     reward: encounter.reward,
     context,
     turn: 1,
@@ -1124,6 +1134,10 @@ export function finishBattle(state, battle, content, now) {
     };
     injuries.push({ chimera: chimera.name, injury: chimera.injury });
   }
+  // R41: everyone on the card learns something — win or lose, because a
+  // walled player grinding losses into levels is the ladder out of the wall
+  // working as designed.
+  const xp = grantBattleXp(state, battle, content);
   if (battle.outcome === 'win') {
     state.funds += battle.reward;
     state.warRecord.wins++;
@@ -1131,7 +1145,7 @@ export function finishBattle(state, battle, content, now) {
     state.warRecord.losses++;
   }
   state.battle = null;
-  return { outcome: battle.outcome, reward: battle.outcome === 'win' ? battle.reward : 0, injuries };
+  return { outcome: battle.outcome, reward: battle.outcome === 'win' ? battle.reward : 0, injuries, xp };
 }
 
 export function isInjured(chimera, now) {

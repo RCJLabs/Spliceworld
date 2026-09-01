@@ -47,3 +47,19 @@ export function newWorldSeed() {
   }
   return (Date.now() ^ (performance?.now?.() * 1000 || 0)) >>> 0;
 }
+
+// R41: pick, but prefer a value nobody in `taken` is already using — only
+// when the whole pool is spoken for does a repeat happen, and then as a
+// lineage (Chompers II) rather than a duplicate. Fifteen chimera names over
+// a nine-creature stable was a collision machine, per the player report
+// that queued the phase.
+export function pickFresh(rng, pool, taken) {
+  const inUse = new Set(taken);
+  const free = pool.filter((v) => !inUse.has(v));
+  if (free.length) return pick(rng, free);
+  const base = pick(rng, pool);
+  for (const numeral of ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']) {
+    if (!inUse.has(`${base} ${numeral}`)) return `${base} ${numeral}`;
+  }
+  return `${base} ${1 + Math.floor(rng() * 998)}`;
+}
