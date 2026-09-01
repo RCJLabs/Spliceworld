@@ -114,6 +114,35 @@ export function claimDominion(state, content, now) {
   return d;
 }
 
+// What the standing banner says. DOM-free and here rather than in the view,
+// so it can be asserted directly — `renderWarRoomScreen` touches
+// document.body and cannot run headless, and a gate that greps the view's
+// source for a template literal tests the spelling of the code rather than
+// what the player reads.
+//
+// Null until the moment has actually been claimed, which is what keeps the
+// banner off the map for everyone who has not finished.
+export function dominionBanner(state, content) {
+  if (!state.dominionAt) return null;
+  const d = dominion(state, content);
+  const lost = d.nodesTotal - d.nodesHeld;
+  const openLabs = d.rivalsTotal - d.rivalsBeaten;
+  return {
+    title: 'The County Is Yours',
+    body: `All ${d.nodesTotal} nodes held${
+      d.rivalsAllBeaten ? `, all ${d.rivalsTotal} rival labs beaten` : ''
+    }. The paperwork alone will outlive everyone involved.`,
+    // Honest about the live map without retracting what was earned: R9 will
+    // take nodes back, and the banner says so rather than quietly lying.
+    note: (lost > 0
+      ? `${lost} back in coalition hands. Take ${lost === 1 ? 'it' : 'them'} again.`
+      : 'They keep coming for it. That is the arrangement.')
+      + (openLabs > 0
+        ? ` · ${openLabs} rival lab${openLabs === 1 ? '' : 's'} still open for business.`
+        : ''),
+  };
+}
+
 // …and the announcement, so the two callers cannot drift.
 //
 // There ARE two callers, and the browser is what proved it: firing this only

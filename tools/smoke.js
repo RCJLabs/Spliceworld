@@ -8637,6 +8637,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     st.campaign.heldNodes = [...everyNode];
     claimDominion(st, content, t0);
     st.campaign.heldNodes = everyNode.slice(0, -1);
+    // Through the tick, because that is what runs after a node is lost. The
+    // first version of this gate mutated heldNodes and read the field back
+    // without re-entering the code a retraction would live in, so a break
+    // that nulled `dominionAt` on an incomplete map sailed through it — the
+    // same mistake as the migration gate below, twice in one phase.
+    tickCampaign(st, content, t0 + HOUR);
     assert.equal(st.dominionAt, t0, 'the claim survives losing a node');
     assert.equal(dominion(st, content).complete, false, 'while the live reading is honest about it');
     assert.equal(dominion(st, content).nodesHeld, everyNode.length - 1, 'and says how many are gone');
@@ -8662,7 +8668,31 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(!/\b21\b|twenty-one/i.test(eng), 'and not a literal that a sixth region makes wrong');
   }
 
-  // 7. It is a milestone, not an ending: the same breath says the coalition
+  // 7. The standing banner: it is on the map once claimed, off it before,
+  //    and honest about nodes lost back to the coalition without retracting
+  //    what was earned. Asserted on the content rather than the view's
+  //    source, because renderWarRoomScreen touches document.body and a grep
+  //    for a template literal tests the spelling of the code rather than
+  //    what the player reads.
+  {
+    const { dominionBanner } = await import('../campaign/campaign.js');
+    const st = lab();
+    st.campaign.heldNodes = [...everyNode];
+    assert.equal(dominionBanner(st, content), null, 'no banner before the moment is claimed');
+    claimDominion(st, content, t0);
+    const b = dominionBanner(st, content);
+    assert.ok(b, 'and one after');
+    assert.ok(b.body.includes(String(everyNode.length)), `it counts the real map (${b.body})`);
+    assert.ok(/keep coming/.test(b.note), `and says the fighting continues (${b.note})`);
+    st.campaign.heldNodes = everyNode.slice(0, -2);
+    const after = dominionBanner(st, content);
+    assert.ok(after, 'losing nodes does not take the banner away');
+    assert.ok(/2 back in coalition hands/.test(after.note),
+      `but it says how many are gone (${after.note})`);
+    assert.ok(/them again/.test(after.note), 'and counts in plural when it should');
+  }
+
+  // 8. It is a milestone, not an ending: the same breath says the coalition
   //    keeps coming, because R9 is what stops the map going quiet.
   {
     const src = readFileSync(join(root, 'campaign/campaign.js'), 'utf8');
@@ -8671,7 +8701,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(!/game over|the end|you win/i.test(src), 'and never calls it an ending');
   }
 
-  // 8. The save carries it, and an old one migrates without losing anything.
+  // 9. The save carries it, and an old one migrates without losing anything.
   {
     assert.equal(SAVE_VERSION, 30, 'the schema change bumped the version');
     assert.equal(newGameState().dominionAt, null, 'a fresh save has not won yet');
