@@ -7896,21 +7896,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       `it is said once, on the opposition line (${lines.join(' | ')})`);
   }
 
-  // 6. The same rule is never said twice on one row. This is a property of
-  //    the CALLER — campaign/ui.js collapses the waves into Sets — not of a
-  //    dedup filter inside matchupNotes, which the battery proved
-  //    unreachable. So it is asserted where it can actually be violated:
-  //    hand it a foe whose tag list repeats and check the output does not.
-  for (const enc of encs) {
-    const units = enc.waves.flat().map(unitOf).filter(Boolean);
-    const foe = {
-      foeTags: new Set([...units.flatMap((u) => u.tags ?? []), ...units.flatMap((u) => u.tags ?? [])]),
-      foeAttackTags: new Set(units.flatMap((u) => (u.moves ?? [])
-        .filter((m) => (m.power ?? 0) > 0).flatMap((m) => m.tags ?? []))),
-    };
-    const notes = matchupNotes({ ...sideOf('goose', 'S'), ...foe }, content.tagChart);
-    assert.equal(new Set(notes.map((n) => n.key)).size, notes.length, `${enc.id}: no repeated clause`);
-  }
+  // (There is no "no repeated clause" gate. There was one, twice: the first
+  //  guarded a dedup filter the battery proved unreachable, and the rewrite
+  //  built a Set from a doubled array, which the Set collapses. matchupNotes
+  //  takes Sets by contract and walks the chart once, so a repeated key
+  //  cannot be produced — the property is unviolatable, and a gate that
+  //  cannot fail is worse than no gate, because it reads like coverage.)
 
   // 7. The dossier and the briefing read ONE implementation of the chart.
   //    Two copies is how a chart goes stale.
