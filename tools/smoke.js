@@ -7721,13 +7721,16 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //    and not forty-one special cases.
   {
     const c2 = structuredClone(content);
-    c2.species.bear.setBonus.effect = { stats: { armor: 3 }, perks: { critChance: 0.5 }, keywords: { thorns: 9 } };
+    // `recoil`, not `thorns`: a bear's thorns live on its hide active, which
+    // loses R30's four-slot competition, so scaling it would prove nothing —
+    // the same trap that killed six bonuses in this data's first draft.
+    c2.species.bear.setBonus.effect = { stats: { armor: 3 }, perks: { critChance: 0.5 }, keywords: { recoil: 9 } };
     const ids = SLOTS.map((slot) => partOf('bear', slot).id);
     const made = combatantFromChimera(makeSimChimera('M', ids, 'prime', c2), c2, t0);
     const plain = combatantFromChimera(makeSimChimera('M', ids, 'prime', content), content, t0);
     assert.ok(made.armor > plain.armor * 2, 'an invented stat dial lands');
     assert.ok(made.perks.critChance >= 0.5, 'an invented perk dial lands');
-    assert.ok(made.moves.some((m, i) => (m.keywords?.thorns ?? 0) > (plain.moves[i]?.keywords?.thorns ?? 0)),
+    assert.ok(made.moves.some((m, i) => (m.keywords?.recoil ?? 0) > (plain.moves[i]?.keywords?.recoil ?? 0)),
       'an invented keyword dial lands');
   }
 
