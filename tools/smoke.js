@@ -7887,8 +7887,13 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       assert.ok(!notes.some((n) => /:Organic$/.test(n.key)),
         `${sp}: a rule every chimera triggers is not a roster-row note (${notes.map((n) => n.key).join(', ')})`);
     }
-    assert.ok(foeTagLines(foe.foeTags, content.tagChart, foe.foeAttackTags)
-      .some((l) => /Organic/.test(l)), 'it is said once, on the opposition line');
+    // On the phrase only the UNIVERSAL line carries. Grepping for "Organic"
+    // matched the ordinary per-tag line too — most opposition is itself
+    // Organic — so this passed whether or not the universal rule was
+    // reported at all. The battery reported it as a MISS.
+    const lines = foeTagLines(foe.foeTags, content.tagChart, foe.foeAttackTags);
+    assert.ok(lines.some((l) => /everything you own/.test(l)),
+      `it is said once, on the opposition line (${lines.join(' | ')})`);
   }
 
   // 6. The same rule is never said twice on one row, however many waves
