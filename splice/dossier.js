@@ -111,7 +111,13 @@ export function dossierRows(report, content) {
     key: 'p2w',
     label: 'Power-to-weight',
     value: `${p2w.toFixed(2)}`,
-    note: `${report.stats.power} power moving ${report.mass} mass — ${P2W_WORD.find(([m]) => p2w >= m)[1]}.`,
+    // Total by construction. `find` on a NaN matches nothing — NaN >= 0 is
+    // false — and indexing the miss THREW, which on a display module means
+    // the whole Pens screen goes blank rather than one wrong number showing.
+    // The break battery found this by feeding it a NaN on purpose.
+    note: `${report.stats.power} power moving ${report.mass} mass — ${
+      (P2W_WORD.find(([m]) => p2w >= m) ?? P2W_WORD[P2W_WORD.length - 1])[1]
+    }.`,
   });
 
   // 5. The stamina economy. A build that runs a deficit loses long fights
