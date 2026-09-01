@@ -8683,8 +8683,24 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(migrated.funds, 1234, 'and nothing of theirs touched');
     // A player who already holds everything gets the moment on next load
     // rather than being quietly skipped for having finished too early.
+    //
+    // Asserted through tickCampaign — the thing that actually runs on load —
+    // and NOT by calling claimDominion directly. The first version of this
+    // gate did exactly that and passed while the game never reached the
+    // call: dominion was only claimed where a node is TAKEN, and a player
+    // holding all twenty-one has no node left to take. The browser found it;
+    // the gate could not, because it was testing a function rather than the
+    // path a player walks.
     const done = migrate({ ...old, campaign: { ...old.campaign, heldNodes: [...everyNode] } });
-    assert.ok(claimDominion(done, content, t0), 'a save that already won is not cheated of it');
+    assert.equal(done.dominionAt, null, 'they arrive not yet told');
+    tickCampaign(done, content, t0);
+    assert.equal(done.dominionAt, t0, 'and the tick that runs on load tells them');
+    assert.ok(done.news.some((n) => /THE COUNTY IS YOURS/.test(n.text ?? n)),
+      `and it reaches the wire (${JSON.stringify(done.news.slice(-3))})`);
+    // …once, not on every tick thereafter.
+    const before = done.news.length;
+    tickCampaign(done, content, t0 + HOUR);
+    assert.equal(done.news.length, before, 'and never says it twice');
   }
 }
 

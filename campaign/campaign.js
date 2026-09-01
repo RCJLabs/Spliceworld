@@ -114,6 +114,28 @@ export function claimDominion(state, content, now) {
   return d;
 }
 
+// …and the announcement, so the two callers cannot drift.
+//
+// There ARE two callers, and the browser is what proved it: firing this only
+// where a node is taken means a player who already holds all twenty-one —
+// anyone migrating in from v29 having finished the map — has no node left to
+// take and would never be told. The smoke gate for that case called
+// claimDominion directly and passed while the game itself never reached it,
+// which is a gate testing a function rather than the path a player walks.
+export function announceDominion(state, content, now) {
+  const won = claimDominion(state, content, now);
+  if (!won) return null;
+  pushNews(state, `THE COUNTY IS YOURS. All ${won.nodesTotal} nodes held.${
+    won.rivalsAllBeaten ? ` All ${won.rivalsTotal} rival labs beaten.` : ''
+  } Somewhere, a regional manager is updating a spreadsheet with shaking hands.`);
+  const boast = playerLine(state, content, 'dominion', { nodes: won.nodesTotal });
+  if (boast) pushNews(state, boast);
+  // Said in the same breath, because R9 means this is a milestone and not an
+  // ending: the coalition keeps coming for what you hold.
+  pushNews(state, 'The coalition does not concede. It reschedules. Counter-offensives continue.');
+  return won;
+}
+
 // [{ region, bonus }] for every strip currently paying its completion
 // bonus. Data-driven: a region with no `completionBonus` simply pays none,
 // so adding a sixth region needs no engine edit.
@@ -166,6 +188,12 @@ export function tickCampaign(state, content, now) {
   // the player is away. The report card shows one at a time; the rest are
   // summarised into the wire, because a reward they earned and cannot see is
   // a reward they will assume is broken.
+  // R40. Anyone who arrives already holding the map — a v29 save that
+  // finished the campaign before there was anything to say about it — has no
+  // node left to take, so the capture path can never fire for them. A no-op
+  // on every other tick.
+  announceDominion(state, content, now);
+
   const job = tickOperations(state, content, now);
   for (const line of job.news) pushNews(state, line);
   if (job.results.length) {
@@ -315,20 +343,8 @@ export function resolveBattle(state, battle, content, now) {
       pushNews(state, `${node.name} seized. Income +$${node.incomePerDay}/day. Locals adjusting surprisingly well.`);
       const claim = playerLine(state, content, 'conquest', { node: node.name });
       if (claim) pushNews(state, claim);
-      // R40. The twenty-first node is not the first one. Fired here rather
-      // than on a tick because this is the only place a node is ever taken,
-      // and `claimDominion` is a no-op every other time it is called.
-      const won = claimDominion(state, content, now);
-      if (won) {
-        pushNews(state, `THE COUNTY IS YOURS. All ${won.nodesTotal} nodes held.${
-          won.rivalsAllBeaten ? ` All ${won.rivalsTotal} rival labs beaten.` : ''
-        } Somewhere, a regional manager is updating a spreadsheet with shaking hands.`);
-        const boast = playerLine(state, content, 'dominion', { nodes: won.nodesTotal });
-        if (boast) pushNews(state, boast);
-        // Said in the same breath, because R9 means this is a milestone and
-        // not an ending: the coalition keeps coming for what you hold.
-        pushNews(state, 'The coalition does not concede. It reschedules. Counter-offensives continue.');
-      }
+      // R40. The twenty-first node is not the first one.
+      announceDominion(state, content, now);
       if (threatGen(state, content) > genBefore) {
         pushNews(state, `THREAT LEVEL UP: the military is now returning your calls. Threat Generation 2.`);
       }
