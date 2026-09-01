@@ -1,5 +1,146 @@
 # PROGRESS
 
+## Session 55 — R33: the chimera dossier ✅
+
+**Acceptance criterion:** from the Pens screen, a player can see everything
+`analyze()` knows about a creature they already own — **passes**, at
+`SAVE_VERSION` 29 (no schema change).
+
+### The panel talks to a builder and stops at the door
+
+`physiology.analyze()` computes eight rows, and the Theater shows them
+**while you build**. Measured across the four screens a player sees *after*
+the creature exists:
+
+| | reaches the player? |
+|---|---|
+| Class | ✓ war room briefing (icon, "type advantage here"), battle (class chip) |
+| Instability | ✓ pens card |
+| Stamina pool | ~ the battle bar — never regen against draw |
+| **Flight** | **nowhere** |
+| **Speed** | **nowhere** — one tie-breaker line in battle |
+| **Mass, lift, power-to-weight** | **nowhere** |
+| **Thermal band** | **nowhere** |
+| **Field tags** | **nowhere** |
+
+R32 had just made the first of those decide a fight, and the second cost a
+point per 50 mass. Six invisible numbers had become six invisible
+**decisions**.
+
+*(I told Evan "you can't see whether it flies or what class it is" before
+measuring. The class half was wrong — it is on two screens. Flight and every
+number were the real gap.)*
+
+### It is not a re-render of `report.rows`
+
+Three of the panel's eight notes are written for somebody still building,
+and are wrong for somebody looking at what they made:
+
+- **Flight** — *"Try a lighter frame or fewer dense parts."* You cannot
+  re-frame a chimera that already exists.
+- **Instability** — *"Settling estimate: ~N min."* Stale the moment it settles.
+- **Chassis** — *"One extraction gives you all six parts of a donor; use
+  them."* Advice for a build still on the bench.
+
+So `splice/dossier.js` composes its own copy from the report's **structured
+fields**. Same numbers, different voice — and because both read one report
+they can never disagree about a fact, which is the first thing gated.
+
+DOM-free, like `battle/moves.js` before it, so the suite asserts every line
+without a browser.
+
+### Two things it refuses to do
+
+**It does not restate the tag chart.** The first draft hardcoded "Electric
+hits Aquatic twice as hard" — a second copy of `data/keywords.json` that goes
+stale the first time anyone edits the real one, and exactly the trap
+CLAUDE.md's *all content is data* rule exists to prevent. Rules are read from
+the chart and phrased from their mechanics, so a new row reaches the player
+with no engine edit. There is a gate that adds one to prove it.
+
+**It does not promise the purebred set bonus.** All 41 are read by the panel
+and the Dex and by **nothing in the battle engine**. A dossier quoting one
+would be lying about what the creature does, so it states the instability
+discount physiology actually applies.
+
+### And it names the class that beats you
+
+Physiology's own note ends *"weak to whatever beats it"* — the one fact a
+player cannot work out from the screen. The triangle is a cycle in the data,
+so who beats you is a lookup, not a constant.
+
+### What browser QA caught that no gate would have
+
+The card printed **`Settling… NaNd NaNh remaining`** beside a perfectly good
+dossier. Not a shipped bug — all four chimera-creation paths set `settleUntil`
+correctly — but my hand-authored test fixture had invented `settledAt`, so it
+was a shape the game never produces. **A fixture that has drifted from the
+real shape tests the fixture.** It now goes through `spliceChimera` like a
+player would, and the gate asserts no `NaN` reaches the card at all.
+
+### And what my own gate got wrong
+
+It demanded every flight row quote the creature's mass, and failed on the
+rhino — which has no lift surface, so no lift *equation*, so nothing to
+quote. The assertion was wrong, not the code. It now checks both sides of the
+equation where there is one, and separately that mass reaches the player
+somewhere in the dossier regardless.
+
+### Shape
+
+Folded shut by default. At 380px the pens card runs **1099px closed and
+1573px open**, and it already carries a portrait, temperament, obedience, four
+move slots and a parts manifest. The summary line carries class, flight and
+speed — the three facts worth a glance. No new field-note guide: the summary
+is always visible, so discovery is a design property rather than a tip, and
+`ui/cards.js` is right that a wall of tips is wallpaper.
+
+### The break battery
+
+Twelve deliberate breaks against an isolated worktree; every one made the
+suite fail, and after two re-targets every one failed on the assertion that
+guards it.
+
+| break | verdict |
+|---|---|
+| dossier speed drifts from the report | CAUGHT |
+| flightless collapses into ground unit | CAUGHT |
+| the airborne row becomes a badge with no consequence | CAUGHT |
+| the tag chart stops reaching the dossier | CAUGHT |
+| the class row punts on the counter | CAUGHT |
+| the dossier quotes the dead set bonus | CAUGHT |
+| the shut summary says nothing | CAUGHT |
+| the fold ships open | CAUGHT |
+| the dossier is dropped from the card | CAUGHT |
+| the settling clock goes missing | overshoot — see below |
+| a NaN in the dossier's own arithmetic | CAUGHT (after a real fix) |
+| the SW forgets the module | CAUGHT — `every runtime file is precached (missing: splice/dossier.js)` |
+
+**Removing the settling clock overshot**, exactly as R32's lift break did: an
+M3-era gate ("settling flips exactly on time") catches it long before a card
+is ever rendered, so the NaN assertion never got a turn. Re-run as a NaN in a
+number the dossier computes itself — and *that* found a real defect rather
+than landing cleanly. `P2W_WORD.find(([m]) => p2w >= m)[1]` **threw** on a
+NaN, because `NaN >= 0` is false at every threshold and indexing the miss
+raises. On a display module that blanks the whole Pens roster rather than
+showing one wrong number, which is strictly worse: a visible bad value is
+something a gate can catch; an exception takes the screen with it. The lookup
+is total now, and the break lands on the NaN gate.
+
+### Known gaps
+
+- The war room briefing still shows class only. A creature that cannot fly
+  into an Airborne-heavy node is a fact the dossier now states and the
+  briefing still does not.
+
+### Next session's first task
+
+`setBonus`. Forty-one species promise a purebred reward that never fires, and
+the dossier now has to route around it. Wire them or delete the claim — but
+note the measurement first: purebred builds already run ~7pp ahead of mixed
+ones in the harness, so each bonus needs a real cost or mixing becomes dead
+content.
+
 ## Session 54 — R32: a part finally says what animal it came from ✅
 
 **Acceptance criterion:** part mass expresses the animal, every purebred flier
