@@ -1,5 +1,106 @@
 # PROGRESS
 
+## Session 65 — R43: the Sparring Ring holds charges ✅
+
+**Acceptance criterion:** three spars every thirty minutes — **passes,
+walked rather than multiplied**, at `SAVE_VERSION` **33**.
+
+### The ask, and what it actually changes
+
+> *"Allow more sparring. 3 spars every 30 minutes."*
+
+R41 shipped the ring at one spar per 45 minutes, deliberately conservative
+— the worry was a risk-free grind loop (§8, risk 5). Played, that was the
+wrong side to err on: an evening bought **one** drill, so a walled player
+went back to losing the same assault, which is precisely the trap the ring
+was built to be the ladder out of.
+
+Three charges, one back every ten minutes. The xp per spar is
+**unchanged**, so what moved is session pacing, not the curve — one real
+assault is still worth more than one drill, and the grind ceiling is still
+a ceiling. It is just a ceiling you can reach in one sitting.
+
+### A bucket, not a cooldown
+
+Charges beat a shorter cooldown for the case that actually hurts: someone
+returning after a break finds **all three waiting** and can spend them back
+to back, rather than being metered one at a time by a clock that started
+while they were away.
+
+All of it derived from **one stored timestamp** — `sparRefillAt`, the
+moment the bucket next stands completely full — because timers here are
+timestamps and nothing runs in the background. A reload, a closed tab and
+a week away all compute the same ring. Spending *pushes* that stamp one
+regen later rather than restarting it, which is what keeps three-in-a-row
+costing ten minutes to the next charge instead of thirty.
+
+The button carries the count (`🥊 Spar 3`) and, when empty, the **short**
+countdown — a player staring at an empty ring wants "next in 9m", not
+"full in 29m".
+
+### Migration
+
+v32 → v33: `sparRefillAt ??= 0`, and the old `lastSparAt` cooldown stamp is
+deleted. Everyone arrives with a **full ring** rather than a converted
+cooldown — converting would be arithmetic nobody asked for, and would
+leave some players mid-wait on a mechanic that no longer exists.
+
+### The break battery, and a weak gate it could not see
+
+Ten breaks, **zero misses** — but five were caught by sibling assertions
+running earlier in the file, which meant several of my own R43 assertions
+had never proven themselves. Rather than accept the tally, I ran an
+**isolation harness**: a scratch copy of the modules with each break
+applied, running *only* the R43 assertions.
+
+That found one my battery could not: **"spending restarts the clock"
+passed gate 3.** Under that break the first spar jumps straight to a
+full-window refill, and the ladder back up — one charge per regen — looks
+*identical* to correct behaviour, so every charge-count check agreed. What
+separates pushing from restarting is the **total**: two spent must be two
+regens from full, not a fresh whole window. Gate 3 asserts `msToFull` now,
+and the isolation run confirms it fails under exactly that break.
+
+| break | verdict |
+|---|---|
+| the ring goes back to one charge | CAUGHT |
+| the rate is halved (regen wrong) | CAUGHT |
+| spending restarts the clock | CAUGHT (gate 1; **gate 3 rewritten** after isolation) |
+| charges overflow past the cap | CAUGHT (sibling) |
+| the empty ring never re-opens | CAUGHT (sibling) |
+| the button shows the long countdown | CAUGHT |
+| the button stops showing the count | CAUGHT |
+| the ring ticks in the background | CAUGHT (sibling) |
+| the migration converts instead of filling | CAUGHT |
+| the old stamp is left behind | CAUGHT |
+
+The lesson is about batteries, not about this feature: **a whole-suite
+break tells you the suite noticed, not that the gate you wrote noticed.**
+When siblings fire first, isolate.
+
+### Verified
+
+- Full suite green; seven R43 gate blocks.
+- Browser QA at 380px, the whole arc: a v32 save **mid-cooldown** migrates
+  to `🥊 Spar 3`; three spars back to back walk the button `3 → 2 → 1 → 9m`
+  and disable it; ten minutes back on the clock returns exactly one
+  (`Spar 1`); the full window returns three. Zero console errors, no
+  sideways scroll.
+
+### Known gaps
+
+- Charges are global, not per-node — sparring three different garrisons
+  draws on one bucket. Intentional (the ring is the player's time, not the
+  garrison's), but worth revisiting if partners ever get identities.
+- Nothing surfaces the bucket outside the map's Spar buttons; a player on
+  another tab cannot see it refilling.
+
+### Next session's first task
+
+Still the playtest: take a veteran stable through the Gauntlet now that
+levelling is reachable in a single sitting, and report what the pacing
+feels like from the inside.
+
 ## Session 64 — R42: The Gauntlet ✅
 
 **Acceptance criterion:** after the county is yours, the coalition sends

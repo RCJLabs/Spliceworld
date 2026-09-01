@@ -2119,3 +2119,17 @@ button.dex-cell:focus-visible {
 .gauntlet-card { border-color: var(--accent-2); }
 .gauntlet-card h3 { color: var(--accent-2); }
 .gauntlet-locked { opacity: 0.55; }
+
+/* --- R43: the ring holds charges ---------------------------------------
+   The count sits inside the Spar button rather than beside it — one glance
+   answers both "can I?" and "how many?". */
+.spar-charges {
+  display: inline-block;
+  min-width: 1.1em;
+  padding: 0 0.25em;
+  margin-left: 0.15em;
+  border-radius: 0.6em;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--accent);
+}

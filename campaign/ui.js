@@ -14,7 +14,7 @@ import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js'
 // the player to build three. A second `3` typed in here is how those four
 // numbers drift apart.
 import { guideForScreen, STABLE as TEAM_CAP } from '../ranch/onboarding.js';
-import { sparEncounter, sparReady, startSpar } from './sparring.js';
+import { sparEncounter, sparCharges, startSpar } from './sparring.js';
 import { gauntletState, gauntletEncounter } from './gauntlet.js';
 import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
@@ -204,8 +204,10 @@ function renderMap(root, ctx) {
   // or still locked — starts shut, because five strips at four nodes each
   // is a very long column to scroll past to reach the news. A player's own
   // choice always overrides the guess.
-  // R41: one gate for every Spar button — the ring has one clock.
-  const sparGate = sparReady(state, t, content);
+  // R41: one gate for every Spar button — the ring has one bucket.
+  // R43: and it holds charges, so the button says how many rather than
+  // just whether.
+  const sparGate = sparCharges(state, t, content);
   const frontier = map.find((r) => r.open && r.held < r.region.nodes.length)?.region.id ?? null;
   const regions = map.map(({ region, open, blockers, nodes: nodeRows, held }) => {
     const contestedHere = region.nodes.filter((n) => isContested(state, n.id)).length;
@@ -217,7 +219,7 @@ function renderMap(root, ctx) {
           : status === 'held'
             ? `<span class="held-tag">HELD +$${node.incomePerDay}/d</span>
                <button type="button" class="spar-btn" data-spar="${node.id}" ${sparGate.ready ? '' : 'disabled'}>🥊 ${
-                 sparGate.ready ? 'Spar' : fmtDuration(sparGate.msRemaining)
+                 sparGate.ready ? `Spar <span class="spar-charges">${sparGate.charges}</span>` : fmtDuration(sparGate.msToNext)
                }</button>`
             : status === 'contested'
               ? `<span class="contested-tag">CONTESTED −$${node.incomePerDay}/d</span>`
@@ -1056,7 +1058,7 @@ function renderBriefing(root, ctx) {
       .map((id) => state.chimeras.find((c) => c.id === id))
       .filter((c) => c && !isInjured(c, ctx.now()));
     if (!team.length) return;
-    if (draftTarget.kind === 'sparring') startSpar(state, ctx.now());
+    if (draftTarget.kind === 'sparring') startSpar(state, ctx.now(), content);
     const battleNo = state.warRecord.wins + state.warRecord.losses + 1;
     const seed = (state.seed ^ Math.imul(battleNo, 0x9e3779b9)) >>> 0;
     state.battle = createBattle(team, encounter, content, seed, ctx.now(), {
