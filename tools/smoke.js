@@ -8690,6 +8690,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(/2 back in coalition hands/.test(after.note),
       `but it says how many are gone (${after.note})`);
     assert.ok(/them again/.test(after.note), 'and counts in plural when it should');
+    // …and the view renders THAT, rather than its own words. Without this a
+    // break that replaced the body with "All done. Nice one." sailed through.
+    const src = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
+    assert.ok(/\$\{banner\.body\}/.test(src), 'the map renders the shared body');
+    assert.ok(/\$\{banner\.note\}/.test(src), 'and the shared note');
+    assert.ok(!/nodes held\$\{/.test(src), 'and does not rebuild the sentence locally');
   }
 
   // 8. It is a milestone, not an ending: the same breath says the coalition
@@ -8721,7 +8727,17 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // holding all twenty-one has no node left to take. The browser found it;
     // the gate could not, because it was testing a function rather than the
     // path a player walks.
-    const done = migrate({ ...old, campaign: { ...old.campaign, heldNodes: [...everyNode] } });
+    // A FRESH v29 fixture, not `old` again: `migrate` mutates and returns
+    // the same object, so reusing it hands the second call a save already
+    // stamped v30 — the while loop does nothing and the migration under
+    // test never runs. The battery reported this as a MISS twice before the
+    // cause was found, which is the third gate this phase whose setup did
+    // not reach the code it was written to guard.
+    const winner = { ...newGameState(), saveVersion: 29 };
+    delete winner.dominionAt;
+    winner.campaign = { ...winner.campaign, heldNodes: [...everyNode] };
+    const done = migrate(winner);
+    assert.equal(done.saveVersion, SAVE_VERSION, 'the winner comes forward too');
     assert.equal(done.dominionAt, null, 'they arrive not yet told');
     tickCampaign(done, content, t0);
     assert.equal(done.dominionAt, t0, 'and the tick that runs on load tells them');
