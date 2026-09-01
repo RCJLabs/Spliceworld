@@ -12,6 +12,12 @@ import {
   activeResequence, resequenceRemainingMs, resequencerTuning,
 } from './resequencer.js';
 import { fmtDuration } from '../ranch/ui.js';
+// R39. The Vault was the one screen with no field-note slot at all — five
+// screens wired this and the sixth did not, so a note here could not have
+// been shown even if one had existed. The suite's hand-written screen list
+// happened to omit `vault` too, so nothing ever asked.
+import { fieldNote, bindFieldNote } from '../ui/cards.js';
+import { guideForScreen } from '../ranch/onboarding.js';
 
 let lastMsg = '';
 
@@ -99,6 +105,7 @@ export function renderVaultScreen(root, ctx) {
     .join('');
 
   root.innerHTML = `
+    ${fieldNote(guideForScreen(state, content, t, 'vault'))}
     ${lastMsg ? `<section class="card"><p class="ranch-msg">${lastMsg}</p></section>` : ''}
     ${runCard}
     <section class="card">
@@ -127,4 +134,5 @@ export function renderVaultScreen(root, ctx) {
     ctx.save();
     renderVaultScreen(root, ctx);
   });
+  bindFieldNote(root, ctx, () => renderVaultScreen(root, ctx));
 }

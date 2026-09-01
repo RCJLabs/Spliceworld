@@ -58,11 +58,19 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // The screens the shell actually renders, read from `main.js` rather than
 // restated. R39: two gates needed this list, one derived it and one typed
 // it out, and the typed one was missing the Vault.
-function shellScreens() {
+function shellScreenMap() {
   const shell = readFileSync(join(root, 'main.js'), 'utf8');
   const block = shell.slice(shell.indexOf('const SCREENS = {'));
-  return [...block.slice(0, block.indexOf('};')).matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1]);
+  const body = block.slice(0, block.indexOf('};'));
+  return [...body.matchAll(/^\s{2}(\w+): \(root\) => (\w+)\(/gm)].map(([, screen, fn]) => {
+    // …and on to the module that exports it, so a gate can ask what that
+    // file does rather than what a list says about it.
+    const imp = shell.match(new RegExp(`import \\{[^}]*\\b${fn}\\b[^}]*\\} from '([^']+)'`));
+    return { screen, fn, file: imp ? imp[1].replace(/^\.\//, '') : null };
+  });
 }
+
+const shellScreens = () => shellScreenMap().map((e) => e.screen);
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 
 const content = indexContent({
@@ -8484,6 +8492,25 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       `${screen} has at least one note`);
   }
 
+  // 3. Every screen can actually SHOW a note. This is the defect under the
+  //    defect: the Vault was not merely missing a note, it had no field-note
+  //    slot at all — five screen modules wired `guideForScreen` and the
+  //    sixth did not, so a note here could not have appeared even once it
+  //    existed. Derived by following `main.js` from the screen id to the
+  //    render function to the module that exports it, so a seventh screen is
+  //    held to the same rule without anyone adding it to a list.
+  {
+    const map = shellScreenMap();
+    assert.equal(map.length, screens.length, 'every screen entry names a render function');
+    for (const { screen, fn, file } of map) {
+      assert.ok(file, `${screen}: found where ${fn} comes from`);
+      const src = readFileSync(join(root, file), 'utf8');
+      assert.ok(src.includes('guideForScreen'), `${screen} (${file}) can show a field note at all`);
+      assert.ok(src.includes(`'${screen}'`), `${screen} (${file}) asks for its OWN screen's note`);
+      assert.ok(src.includes('bindFieldNote'), `${screen} (${file}) lets the player dismiss it`);
+    }
+  }
+
   // 3. …and no note points at a screen the shell does not have. A note on a
   //    screen id that does not exist is a note nobody will ever be shown.
   for (const g of guides) {
@@ -8491,7 +8518,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       `${g.id} sits on a screen the shell actually renders (${g.screen})`);
   }
 
-  // 4. The Resequencer's note is true of the Resequencer. A note that
+  // 5. The Resequencer's note is true of the Resequencer. A note that
   //    misdescribes its system is worse than none, and this one quotes
   //    numbers that live in data.
   {
@@ -8506,7 +8533,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(/one in four/.test(note.body), 'which the note states in words');
   }
 
-  // 5. It becomes reachable exactly when a vial does, and retires on the
+  // 6. It becomes reachable exactly when a vial does, and retires on the
   //    save field the engine already keeps — no new schema for a note.
   {
     const lab = { ...newGameState(), seed: 390 };
@@ -8521,7 +8548,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(newGameState().resequenceCount ?? 0, 0, 'on a field the save already had');
   }
 
-  // 6. Every content file has been looked at. This cannot derive what a
+  // 7. Every content file has been looked at. This cannot derive what a
   //    "system" is, and does not pretend to — it makes a new data/*.json
   //    fail the build until somebody says which it is, so the next
   //    Resequencer is loud rather than silent.
