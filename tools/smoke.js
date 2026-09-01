@@ -7502,4 +7502,124 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+
+// --- R33: the chimera dossier ------------------------------------------
+//
+// The Physiology Panel computes eight rows and the Theater shows them WHILE
+// YOU BUILD. Measured across the four screens a player sees after the
+// creature exists: class reaches them (the briefing icon, the battle chip)
+// and instability reaches them (the pens card); flight, speed, mass, lift,
+// power-to-weight, the thermal band and the field tags reached them
+// NOWHERE. R32 had just made the first of those decide a fight.
+{
+  const { dossierRows, dossierSummary } = await import('../splice/dossier.js');
+  const { renderPensScreen } = await import('../splice/pens-ui.js');
+  const build = (frame, species) => {
+    const ids = Object.values(content.parts).filter((p) => p.species === species).map((p) => p.id);
+    return analyze(frame, ids.map((id) => tk(id)), content, ids.length);
+  };
+
+  // 1. Every row the dossier states has to be a number the PANEL agrees
+  //    with. They are written in different voices on purpose — the panel
+  //    advises a builder, the dossier describes a creature — and the whole
+  //    point of reading one report is that the two can never disagree about
+  //    a fact.
+  for (const [frame, sp] of [['S', 'eagle'], ['L', 'rhino'], ['M', 'octopus'], ['A', 'cobra']]) {
+    const rep = build(frame, sp);
+    const rows = dossierRows(rep, content);
+    const by = Object.fromEntries(rows.map((r) => [r.key, r]));
+    assert.equal(by.speed.value, String(rep.stats.speed), `${sp}: dossier speed matches the report`);
+    assert.ok(by.stamina.value.startsWith(String(rep.stats.stamina)), `${sp}: dossier stamina pool matches`);
+    assert.ok(by.flight.note.includes(String(rep.mass)), `${sp}: the flight row quotes the real mass`);
+    const cls = rep.creatureClass ? content.classes[rep.creatureClass].name : null;
+    assert.ok(cls ? by.class.value.includes(cls) : by.class.value.includes('Unclassed'),
+      `${sp}: dossier class matches the report`);
+  }
+
+  // 2. Flight is the row this phase exists for, and it has to say which of
+  //    the three states the creature is actually in.
+  const flightOf = (frame, sp) => dossierRows(build(frame, sp), content).find((r) => r.key === 'flight');
+  assert.ok(flightOf('S', 'eagle').value.includes('Airborne'), 'a flying eagle is reported airborne');
+  assert.ok(flightOf('L', 'eagle').value === 'Flightless',
+    'eagle anatomy on a Rumbler is reported flightless, not grounded-by-design');
+  assert.equal(flightOf('L', 'rhino').value, 'Ground unit', 'a rhino is a ground unit, not a failed flier');
+  // ...and the airborne one has to explain the consequence, or the row is a badge.
+  assert.ok(/underneath|under it/.test(flightOf('S', 'eagle').note),
+    'the airborne row says what being airborne DOES');
+
+  // 3. The tag rules are READ from data/keywords.json's chart, never
+  //    restated. Add a row to the chart and the dossier must pick it up; the
+  //    failure this catches is a second copy of the chart going stale.
+  {
+    const withRule = structuredClone(content);
+    withRule.tagChart = [...content.tagChart,
+      { attack: 'Sonic', defender: 'Airborne', mult: 3, note: 'test row' }];
+    const rows = dossierRows(build('S', 'eagle'), withRule);
+    const field = rows.find((r) => r.key === 'tags');
+    assert.ok(field && /Sonic attacks do 3/.test(field.note),
+      `a new chart row reaches the dossier without an engine edit (${field?.note})`);
+    // And the real chart's rules are all present for a creature that has them.
+    const real = dossierRows(build('M', 'octopus'), content).find((r) => r.key === 'tags');
+    for (const rule of content.tagChart.filter((r) => r.attack === 'Gas')) {
+      assert.ok(real.note.includes(rule.defender),
+        `the octopus's Gas rules name ${rule.defender}`);
+    }
+  }
+
+  // 4. The class row names the class that beats it. Physiology's own note
+  //    says "weak to whatever beats it", which is the one fact a player
+  //    cannot work out from the screen.
+  for (const [frame, sp] of [['S', 'eagle'], ['M', 'octopus'], ['L', 'rhino']]) {
+    const rep = build(frame, sp);
+    const row = dossierRows(rep, content).find((r) => r.key === 'class');
+    const beatenBy = Object.values(content.classes).find((c) => c.beats === rep.creatureClass);
+    assert.ok(row.note.includes(beatenBy.name), `${sp}: the class row names ${beatenBy.name} as the counter`);
+    assert.ok(!/whatever beats it/.test(row.note), `${sp}: and does not punt on it`);
+  }
+
+  // 5. The dossier must not promise the purebred SET BONUS. It is read by
+  //    the panel and the Dex and by nothing in the battle engine — all 41
+  //    are prose — so a dossier that quoted one would be lying about what
+  //    the creature does. It states the instability discount instead, which
+  //    physiology actually applies.
+  const pure = dossierRows(build('S', 'eagle'), content).find((r) => r.key === 'purebred');
+  assert.ok(pure, 'a purebred build says so');
+  assert.ok(!pure.note.includes(content.species.eagle.setBonus.desc),
+    'the dossier does not quote a set bonus the engine never reads');
+  assert.ok(/instability/.test(pure.note), 'it states the effect physiology does apply');
+
+  // 6. The shut fold has to carry the facts worth a glance, or nobody opens it.
+  const sum = dossierSummary(build('S', 'eagle'), content);
+  assert.ok(/Air/.test(sum) && /Airborne/.test(sum) && /speed \d/.test(sum),
+    `the summary carries class, flight and speed (${sum})`);
+
+  // 7. It renders on the pens screen, folded, for a chimera the GAME made.
+  //    Hand-authoring the object was the first attempt and it quietly built
+  //    a shape the game never produces — `settleUntil` missing, so browser QA
+  //    showed "Settling... NaNd NaNh remaining" beside a perfectly good
+  //    dossier. A fixture that has drifted from the real shape tests the
+  //    fixture, so this one goes through spliceChimera like a player would.
+  {
+    const { spliceChimera } = await import('../splice/theater.js');
+    const s2 = { ...newGameState(), seed: 909 };
+    ensureRanchSeeded(s2, content, t0);
+    const parts = Object.values(content.parts).filter((p) => p.species === 'eagle');
+    s2.inventory.parts = parts.map((p, i) => ({
+      id: `d${i}`, partId: p.id, grade: 'prime', traits: [],
+      donor: { name: 'Test', species: 'eagle', stars: 3, extractedAt: 0 },
+    }));
+    const made = spliceChimera(s2, 'S', Object.fromEntries(parts.map((p, i) => [p.slot, `d${i}`])), content, t0);
+    assert.ok(made.ok, `the fixture splices cleanly (${made.msg ?? ''})`);
+    assert.ok(made.chimera.settleUntil > t0, 'and carries the settling clock the real shape has');
+
+    const root = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+    renderPensScreen(root, { state: s2, content, now: () => t0, save: () => {} });
+    assert.ok(root.innerHTML.includes('class="dossier"'), 'the pens card renders a dossier');
+    assert.ok(!/<details class="dossier" open/.test(root.innerHTML), 'folded shut by default');
+    assert.ok(root.innerHTML.includes('Airborne'), 'and the flying eagle says so on its card');
+    // Nothing on that card may print a NaN at the player.
+    assert.ok(!/NaN/.test(root.innerHTML), 'no NaN reaches the pens card');
+  }
+}
+
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

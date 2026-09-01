@@ -12,9 +12,17 @@ import { MOVE_SLOTS, activeMoves, moveSummary, moveDetail } from '../battle/move
 import { toggleRow } from '../ui/picker.js';
 import { movesFromTokens } from '../battle/engine.js';
 import { analyze } from './physiology.js';
+import { dossierRows, dossierSummary } from './dossier.js';
 
 // Everything this genome grants, which is what the four slots are chosen
 // FROM. One definition, shared with the battle screen and the harness.
+// R33. `analyze` is already run per chimera for the move list; the dossier
+// reads the SAME report, so the two can never disagree about a number.
+function reportOf(chimera, content) {
+  const tokens = Object.values(chimera.tokens ?? {});
+  return analyze(chimera.frame, tokens, content, tokens.length);
+}
+
 function knownMovesOf(chimera, content) {
   const tokens = Object.values(chimera.tokens);
   return movesFromTokens(tokens, analyze(chimera.frame, tokens, content), content)
@@ -149,6 +157,27 @@ export function renderPensScreen(root, ctx) {
           <div class="animal-info">
             <h4>${ch.name}</h4>
             <p class="meta">${content.frames[ch.frame].name} chassis · instability ${ch.instability}/100 · bond ${ch.bond}/100</p>
+            ${(() => {
+              // R33. Everything physiology knows, on the creature rather than
+              // on the bench. Measured before building it: of the eight rows
+              // the Theater shows while you build, only class and instability
+              // reached a player afterwards — flight, speed, mass, lift,
+              // power-to-weight, the thermal band and the field tags reached
+              // them nowhere, and R32 had just made the first of those
+              // decisive. Folded shut by default: the card is already long,
+              // and the summary carries the three facts worth a glance.
+              const rep = reportOf(ch, content);
+              const rows = dossierRows(rep, content)
+                .map((r) => `<li><span class="dossier-label">${r.label}</span>` +
+                  `<strong class="dossier-value">${r.value}</strong>` +
+                  `<span class="dossier-note">${r.note}</span></li>`)
+                .join('');
+              return `
+                <details class="dossier">
+                  <summary><span class="dossier-sum">${dossierSummary(rep, content)}</span></summary>
+                  <ul class="dossier-rows">${rows}</ul>
+                </details>`;
+            })()}
             ${(() => {
               const temp = describeTemperament(ch, content);
               if (!temp) {
