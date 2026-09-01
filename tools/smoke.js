@@ -7880,8 +7880,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const foe = foeOf(gassy);
     for (const [sp, frame] of [['eagle', 'A'], ['rhino', 'L'], ['octopus', 'M']]) {
       const notes = matchupNotes({ ...sideOf(sp, frame), ...foe }, content.tagChart);
-      assert.ok(!notes.some((n) => /Organic/.test(n.text)),
-        `${sp}: a rule every chimera triggers is not a roster-row note`);
+      // On the KEY, not the text. A note's text names only the attacking
+      // tag — "their Gas hits it harder" — so grepping it for the defender
+      // tag could never fail, and the break battery duly reported this as a
+      // MISS when the suppression was removed.
+      assert.ok(!notes.some((n) => /:Organic$/.test(n.key)),
+        `${sp}: a rule every chimera triggers is not a roster-row note (${notes.map((n) => n.key).join(', ')})`);
     }
     assert.ok(foeTagLines(foe.foeTags, content.tagChart, foe.foeAttackTags)
       .some((l) => /Organic/.test(l)), 'it is said once, on the opposition line');
