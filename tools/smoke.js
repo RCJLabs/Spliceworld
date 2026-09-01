@@ -9740,13 +9740,19 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // A herd whose ages are chosen, not inherited: createAnimal backdates
   // birthAt, so asking for an animal PAST its prime hours is how a gate
   // gets an animal at Prime rather than hoping one turns up.
+  //
+  // `caredAt` matters more than it looks: createAnimal stamps lastCare with
+  // ZEROES, not with the creation time, so every animal is care-ready from
+  // the moment it exists. A fixture that does not say otherwise produces a
+  // herd that is entirely "Needs care" — correct behaviour, and the thing
+  // the gate below originally got wrong by assuming a fresh animal is idle.
   const herd = (specs) => {
     const st = { ...newGameState(), seed: 46, funds: 99999 };
     st.ranch.penCapacity = Math.max(specs.length, st.ranch.penCapacity);
-    st.ranch.stock = specs.map(({ ageHours = 0, condition = 80, care = {} }) => {
+    st.ranch.stock = specs.map(({ ageHours = 0, condition = 80, caredAt = null }) => {
       const a = createAnimal(st, 'goat', content, t0 - ageHours * HOUR);
       a.condition = condition;
-      a.care = { ...(a.care ?? {}), ...care };
+      if (caredAt !== null) for (const k of Object.keys(a.lastCare)) a.lastCare[k] = caredAt;
       return a;
     });
     return st;
@@ -9813,25 +9819,34 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //    gap; nine rows in splice order is no order at all.
   {
     const st = herd([
-      { ageHours: 0, condition: 50 },               // growing
+      { ageHours: 0, condition: 50, caredAt: t0 },  // growing — just cared for
       { ageHours: goat.prime + 1 },                 // graduate
-      { ageHours: 0, condition: 50 },               // growing
+      { ageHours: 0, condition: 50 },               // needs care (lastCare is 0)
     ]);
     const page = drawRanch(st);
     const at = (label) => page.indexOf(`<p class="list-group">${label} `);
-    assert.ok(at('Ready to graduate') > 0, 'the graduate band is on the page');
-    assert.ok(at('Growing') > 0, 'and the growing band');
-    assert.ok(at('Ready to graduate') < at('Growing'),
+    const order = ['Ready to graduate', 'Needs care', 'Growing'].map(at);
+    for (const [i, label] of ['Ready to graduate', 'Needs care', 'Growing'].entries()) {
+      assert.ok(order[i] > 0, `the "${label}" band is on the page`);
+    }
+    assert.deepEqual([...order].sort((a, b) => a - b), order,
       'what you can act on comes before what is only waiting');
     // Every animal survives the banding — the failure mode grouping adds.
     for (const a of st.ranch.stock) {
       assert.ok(page.includes(`data-fold="ranch-${a.id}"`), `${a.name} is still listed`);
     }
     // An empty band renders nothing at all.
-    const allGrowing = drawRanch(herd([{ ageHours: 0 }, { ageHours: 0 }]));
+    const allGrowing = drawRanch(herd([{ ageHours: 0, caredAt: t0 }, { ageHours: 0, caredAt: t0 }]));
     assert.equal(allGrowing.indexOf('<p class="list-group">Ready to graduate '), -1,
       'no heading over an empty band');
+    assert.equal(allGrowing.indexOf('<p class="list-group">Needs care '), -1, 'nor over the care band');
     assert.ok(allGrowing.includes('<p class="list-group">Growing '), 'the band it has is labelled');
+    // …and the reverse, which is what the first cut of this gate got wrong:
+    // a herd nobody has touched is ALL care-ready, because lastCare starts
+    // at zero rather than at the animal's creation time.
+    const untouched = drawRanch(herd([{ ageHours: 0 }, { ageHours: 0 }]));
+    assert.ok(untouched.includes('<p class="list-group">Needs care '), 'a fresh herd is all care-ready');
+    assert.equal(untouched.indexOf('<p class="list-group">Growing '), -1, 'with nothing idle');
   }
 
   // 4. Nothing was lost behind the fold. Opening one restores the whole
