@@ -21,6 +21,7 @@ import { comboHint } from './theater.js';
 import { rivalList, rivalRecord } from '../campaign/rivals.js';
 import { fieldNote, bindFieldNote } from '../ui/cards.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
+import { bandHead } from '../ui/roster.js';
 import { openPicker } from '../ui/picker.js';
 import { speciesLines, speciesParts, dexProgress } from './dexentry.js';
 import { guideForScreen } from '../ranch/onboarding.js';
@@ -116,11 +117,10 @@ function variantsView(state, content) {
 
 // A labelled run of rows, skipped entirely when it is empty — an early
 // save has no discoveries and a finished one has no rumours, and a heading
-// over nothing is worse than no heading.
+// over nothing is worse than no heading. R46 moved the heading itself to
+// ui/roster.js, where the Ranch and the Pens read the same one.
 function group(label, rows) {
-  return rows.length
-    ? `<p class="dex-group">${label} <span class="lineage">${rows.length}</span></p><ul class="token-list">${rows.join('')}</ul>`
-    : '';
+  return rows.length ? bandHead(label, rows.length) + `<ul class="token-list">${rows.join('')}</ul>` : '';
 }
 
 // --- Combos. The tallest list in the Dex late (2,492px on its own), which

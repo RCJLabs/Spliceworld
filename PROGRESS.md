@@ -1,5 +1,156 @@
 # PROGRESS
 
+## Session 68 — R46: the Ranch at twenty animals ✅
+
+**Acceptance criterion:** a full herd fits a phone, nothing time-critical
+hides, and both stables are navigable rather than merely short —
+**passes, measured in the browser**. No schema change; `SAVE_VERSION`
+stays **33**.
+
+### The audit corrected my own R44 note
+
+R44 closed by saying the Ranch "uses the same 1081px card shape" as the
+Pens. **That was wrong, and measuring is what caught it** — a Ranch animal
+card is **514px**, less than half a Pens card. The shape was never the
+problem. The multiplication was:
+
+| herd | before | after |
+|---|---|---|
+| 1 | 1,689px (2.1 screens) | 1,293px (1.6) |
+| 4 | 3,269px (4.1) | 1,609px (2.0) |
+| 8 | 5,346px (6.7) | 1,951px (2.4) |
+| 12 | 7,438px (9.3) | 2,321px (2.9) |
+| **20** | **11,607px (14.5)** | **3,019px (3.8)** |
+
+Exactly 514px a head, and `penUpgradeSize: 2` has no ceiling, so it never
+stopped growing. **Marginal cost per animal: 514px → 91px.**
+
+### The fold, and the one clock that had to survive it
+
+Same machinery as R44, same rule with it — **ALERTS NEVER HIDE**. The Ranch
+has exactly one deadline and it is the one R38 was written about: an animal
+that ages out of Prime loses grade and does not get it back. That countdown
+rides on the shut row:
+
+> ▸ **Beast 3** ♀   🎓 Prime for 1d 6h
+> 🦶 Goat · Prime · condition 54 · Standard · 4 care ready
+
+Care being ready is a *prompt*, not a deadline, so it ranks under the Prime
+clock in the badge and still shows in the summary line either way. A shut
+fold builds **no portrait, no care buttons, no extract route** — browser-
+verified at **zero `<svg>` elements** with twenty animals shut, and exactly
+one the moment a fold opens.
+
+### An order for both stables
+
+R44 left "nothing sorts the stable" as a known gap. R45 answered the same
+problem in the Dex by grouping combos into what you would *do* about a row.
+`ui/roster.js` is that rule, shared, so three screens cannot drift into
+different opinions about it:
+
+- **Ranch** — Ready to graduate · Needs care · Growing
+- **Pens** — Can train now · Ready · On a clock
+
+Sorting the Pens' clocks *last* is only defensible because R44 already put
+their countdowns on the shut rows. Browser-verified at nine chimeras:
+`Can train now 4 | Ready 3 | On a clock 2`, with `⏳ 1h 30m` and `⚕ 42m`
+still legible on rows that never opened.
+
+An unrecognised band falls into the **last** band rather than being
+dropped — a creature that quietly stops being listed is the failure mode
+banding introduces, and it has its own gate.
+
+### Two gates broke, and both were right
+
+1. **R44's Infirmary gate** sliced the page between `pen-g1` and `pen-g2`,
+   which assumed render order — and banding moves the injured one to the
+   end, so the slice came back empty. Same class as R45's War Room anchor:
+   the *setup* was invalidated, not the claim. It now slices from a
+   creature's own fold header to whichever header comes next, which is
+   order-independent and strictly stronger.
+2. **R45's group gate** anchored on `<p class="dex-group">`. The class
+   stopped being Dex-only the moment two more screens used it, so it is
+   `list-group` now and the gate follows it.
+
+### My own fixture was wrong about the game
+
+The first banding gate assumed a fresh animal has nothing to do. It does
+not: **`createAnimal` stamps `lastCare` with zeroes, not with the creation
+time**, so every animal is care-ready from the moment it exists and an
+untouched herd is *entirely* "Needs care". That is correct behaviour — you
+should be able to feed something you just bought — and the gate was the
+thing that was wrong. It now asserts both directions.
+
+(A second self-inflicted one worth recording: `pkill -f "tools/smoke.js"`
+matches its own shell's command line, so one edit round silently made no
+change at all. Same family as R41's no-op `replace` — the defence is that
+every patch asserts its anchor and the result gets checked, never the
+exit code alone.)
+
+### The break battery
+
+Fourteen breaks, each run against the full suite in an isolated worktree,
+plus one re-run. **All caught.**
+
+| break | verdict |
+|---|---|
+| every Ranch animal ships open (the pre-R46 wall) | CAUGHT |
+| a shut Ranch fold builds the portrait anyway | **MISSED** → re-run as 2b, CAUGHT |
+| the Prime countdown leaves the shut row | CAUGHT |
+| the Ranch summary row goes blank | CAUGHT |
+| the Ranch is unbanded again | CAUGHT |
+| the Ranch bands run backwards | CAUGHT |
+| the Pens are unbanded again | CAUGHT |
+| the Pens bands run backwards | CAUGHT |
+| an unbanded creature vanishes | CAUGHT |
+| a heading over an empty band | CAUGHT |
+| bands stop rendering in declaration order | CAUGHT |
+| the Pens Infirmary clock leaves the shut row | CAUGHT |
+| `ui/roster.js` falls out of the offline shell | CAUGHT |
+| the Dex forks its own heading again | CAUGHT |
+| **2b** a shut Ranch fold ships the whole card, merely hidden | CAUGHT |
+
+**The miss was a bad break, not a hollow gate — and it is the same miss
+R44 recorded, in the same place.** Restoring the portrait *computation*
+while shut changes nothing observable, because `body` discards it: the
+rendered output is byte-identical, so no gate could fail. Rewritten to
+emit the card while shut, it is caught at once — on `no extract button
+either`, which is precisely the symptom.
+
+Worth separating from a hollow gate, which asserts something that cannot
+fail. This gate could always fail; the break simply did not break
+anything. That the identical mistake recurred two phases later is the
+argument for running the battery at all rather than reasoning about it.
+
+Break 12 also shows the repaired slice working: it now reports real
+content (`data-fold="pen-g1" aria-expanded="false">`) where the old
+order-dependent version returned the empty string that exposed it.
+
+### Verified
+
+- Full suite green; seven R46 gate blocks.
+- Browser QA at 380px: the Ranch curve above at 1/4/8/12/20 animals, zero
+  console errors, no sideways scroll; opening one fold restores the
+  portrait, all four care buttons and the extract route, and the open
+  state survives a reload.
+- The Pens at nine chimeras: 1,295px, three bands in the right order, both
+  countdowns on shut rows, nothing open.
+
+### Known gaps
+
+- The Ranch's chrome — Path, Right Now, economy, Breeding Pen, Incubator —
+  is ~1,175px before the first animal, which is now most of the screen at
+  small herds. Nothing measured whether all five deserve that space.
+- **Foes in the Dex is still 4.4 screens late** — carried over from R45.
+- Trophies still are not in the Dex (R42), and `SHIPPED_SYSTEMS` in
+  `smoke.js` is still hand-kept rather than folded into `DATA_NOTES` (R39).
+
+### Next session's first task
+
+Measure the Ranch's five chrome cards the way this phase measured its
+herd: at a small herd they are the screen, and none of them has been
+asked to justify its height.
+
 ## Session 67 — R45: the Dex at twelve screens ✅
 
 **Acceptance criterion:** every part of the Dex is reachable without a

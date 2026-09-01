@@ -39,6 +39,7 @@ import {
   activeVat, vatPlan, vatRemainingMs, startVat, cancelVat, isExhausted, chaosTuning,
 } from './chaos.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
+import { bandedHtml } from '../ui/roster.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 
 let lastMsg = '';
@@ -139,8 +140,23 @@ export function renderPensScreen(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
 
-  const cards = state.chimeras
-    .map((ch) => {
+  // R46. R44 folded these and left the order alone — nine rows in splice
+  // order, which is no order at all once you have nine. Same rule as the
+  // Dex's combos and the Ranch's herd: group by what you would DO about a
+  // row. Training is the thing you came here for, so it goes first; the
+  // two clocks go last, and go there carrying their countdowns on the shut
+  // row, so ordering them last is not the same as hiding them.
+  const PEN_BANDS = [
+    { id: 'train', label: 'Can train now' },
+    { id: 'ready', label: 'Ready' },
+    { id: 'clock', label: 'On a clock' },
+  ];
+  const penBand = (ch) => {
+    if (isInjured(ch, t) || !isSettled(ch, t)) return 'clock';
+    return t >= (ch.lastTrainedAt ?? 0) + TRAINING.cooldownHours * 3600000 ? 'train' : 'ready';
+  };
+
+  const cards = bandedHtml(state.chimeras, PEN_BANDS, penBand, (ch) => {
       const settled = isSettled(ch, t);
       // R44: a shut fold builds NOTHING heavy. A portrait is ~12KB of
       // inline SVG, so twelve shut creatures would otherwise mean 145KB of
@@ -300,8 +316,7 @@ export function renderPensScreen(root, ctx) {
         open,
         extraClass: `pen-fold${hurt ? ' pen-hurt' : ''}${settled ? '' : ' pen-settling'}`,
       });
-    })
-    .join('');
+  });
 
   const note = fieldNote(guideForScreen(state, content, t, 'pens'));
   root.innerHTML = note +

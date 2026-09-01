@@ -16,6 +16,7 @@ const SHELL = [
   'ui/picker.js',
   'ui/cards.js',
   'ui/tabs.js',
+  'ui/roster.js',
   'data/loader.js',
   'ranch/ranch.js',
   'ranch/breeding.js',
