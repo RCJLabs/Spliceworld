@@ -22,7 +22,7 @@ import { rngStream, pick } from '../util/rng.js';
 import { regionList } from './map.js';
 import { trainingTuning } from '../battle/veterancy.js';
 
-const HOUR = 3600000;
+const MINUTE = 60000;
 
 // The nodes a player can spar against: held, with a real encounter behind
 // them. Contested nodes still count — the garrison drilling you is the same
@@ -33,10 +33,42 @@ export function sparPartners(state, content) {
     .filter((n) => state.campaign.heldNodes.includes(n.id));
 }
 
-export function sparReady(state, now, content) {
+// R43 — the ring holds CHARGES, not a single cooldown.
+//
+// One spar per 45 minutes was too slow to be the ladder the ring was built
+// to be: a player who sat down for an evening got one drill and went back
+// to losing the same assault. Three charges, one back every ten minutes —
+// a sustained three per half hour, and someone returning after a break
+// finds all three waiting and can spend them back to back.
+//
+// Derived from ONE timestamp, because timers here are timestamps and
+// nothing runs in the background (house rule). `sparRefillAt` is the moment
+// the bucket would next stand completely full; everything else is read off
+// it, so a reload, a closed tab and a week away all compute the same
+// answer. A refill time in the past simply means full.
+export function sparCharges(state, now, content) {
   const t = trainingTuning(content);
-  const readyAt = (state.lastSparAt ?? 0) + t.sparCooldownHours * HOUR;
-  return { ready: now >= readyAt, readyAt, msRemaining: Math.max(0, readyAt - now) };
+  const max = Math.max(1, t.sparCharges);
+  const regen = Math.max(1, t.sparRegenMinutes) * MINUTE;
+  const refillAt = state.sparRefillAt ?? 0;
+  const outstanding = Math.max(0, Math.ceil((refillAt - now) / regen));
+  const charges = Math.max(0, max - Math.min(max, outstanding));
+  return {
+    charges,
+    max,
+    ready: charges > 0,
+    full: charges >= max,
+    // Time to the next charge, and to a full bucket. Both are for the
+    // button: a player staring at an empty ring wants the short number.
+    msToNext: charges >= max ? 0 : Math.max(0, refillAt - now - (outstanding - 1) * regen),
+    msToFull: Math.max(0, refillAt - now),
+  };
+}
+
+// Kept as the old name for every caller that only asks "can I?".
+export function sparReady(state, now, content) {
+  const c = sparCharges(state, now, content);
+  return { ready: c.ready, readyAt: now + c.msToNext, msRemaining: c.msToNext, charges: c.charges, max: c.max };
 }
 
 // A derived encounter, seeded off the save so a reload offers the same
@@ -46,7 +78,7 @@ export function sparEncounter(state, content, nodeId, now) {
   const node = sparPartners(state, content).find((n) => n.id === nodeId);
   if (!node) return { ok: false, msg: 'You can only spar a garrison you own.' };
   const gate = sparReady(state, now, content);
-  if (!gate.ready) return { ok: false, msg: 'The ring is being re-chalked. Give it a minute.' };
+  if (!gate.ready) return { ok: false, msg: 'The ring is being re-chalked. Another sparring partner warms up shortly.' };
   const t = trainingTuning(content);
   const base = content.encounters[node.encounter];
   if (!base) return { ok: false, msg: 'That garrison has nothing to spar with.' };
@@ -70,7 +102,13 @@ export function sparEncounter(state, content, nodeId, now) {
 }
 
 // Call when the fight is actually launched, not when it is offered.
-export function startSpar(state, now) {
+// Spend one. From a full bucket the clock starts now; from a partly-spent
+// one it pushes the existing refill later, which is what keeps the regen
+// steady rather than restarting it on every spar.
+export function startSpar(state, now, content) {
+  const t = trainingTuning(content);
+  const regen = Math.max(1, t.sparRegenMinutes) * MINUTE;
   state.sparCount = (state.sparCount ?? 0) + 1;
-  state.lastSparAt = now;
+  const refillAt = state.sparRefillAt ?? 0;
+  state.sparRefillAt = Math.max(refillAt, now) + regen;
 }

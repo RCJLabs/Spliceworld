@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 32;
+export const SAVE_VERSION = 33;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -412,6 +412,21 @@ const migrations = {
     save.gauntletBeaten ??= [];
     return save;
   },
+
+  // v33 (R43): the Sparring Ring became a charge bucket — three held, one
+  // back every ten minutes — so the single `lastSparAt` cooldown stamp
+  // becomes `sparRefillAt`, the moment the bucket next stands full.
+  //
+  // Everyone arrives with a FULL ring rather than having their old
+  // cooldown converted. Converting would be arithmetic nobody asked for
+  // and would leave some players mid-wait on a mechanic that no longer
+  // exists; the ring is the ladder out of a wall, and handing it over
+  // full is the generous reading. Nothing is taken from anyone.
+  33: (save) => {
+    save.sparRefillAt ??= 0;
+    delete save.lastSparAt;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -439,9 +454,10 @@ export function newGameState() {
     warRecord: { wins: 0, losses: 0 },
     // R40: when the whole county was first held. Null until it is.
     dominionAt: null,
-    // R41: the Sparring Ring's clock and seed counter.
+    // R41/R43: the Sparring Ring's seed counter, and the moment its charge
+    // bucket next stands full (0 = full now).
     sparCount: 0,
-    lastSparAt: 0,
+    sparRefillAt: 0,
     // R42: which Gauntlet exhibitions have fallen.
     gauntletBeaten: [],
     campaign: {

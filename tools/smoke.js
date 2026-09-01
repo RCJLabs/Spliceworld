@@ -8776,7 +8776,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // changed.
 {
   const { levelOf, levelMult, xpProgress, xpForBattle, trainingTuning, maxLevel } = await import('../battle/veterancy.js');
-  const { sparEncounter, sparReady, startSpar, sparPartners } = await import('../campaign/sparring.js');
+  const { sparEncounter, sparCharges, startSpar, sparPartners } = await import('../campaign/sparring.js');
   const { renameCreature } = await import('../splice/theater.js');
   const { pickFresh } = await import('../util/rng.js');
   const tune = trainingTuning(content);
@@ -8875,9 +8875,16 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       `and fights below the strength you actually beat there (${offer.encounter.scaleOverride} < ${baseScale})`);
     const again = sparEncounter(lab, content, 'precinct', t0);
     assert.equal(again.encounter.blurb, offer.encounter.blurb, 'a reload offers the same spar (seeded)');
-    startSpar(lab, t0);
-    assert.ok(!sparEncounter(lab, content, 'precinct', t0 + 1).ok, 'the ring has a cooldown');
-    assert.ok(sparEncounter(lab, content, 'precinct', t0 + tune.sparCooldownHours * HOUR + 1).ok, 'that expires');
+    // R43: the ring holds charges. Spending every one closes it; a single
+    // regen tick re-opens it.
+    const MIN = 60000;
+    for (let i = 0; i < tune.sparCharges; i++) {
+      assert.ok(sparEncounter(lab, content, 'precinct', t0).ok, `charge ${i + 1} of ${tune.sparCharges} is spendable`);
+      startSpar(lab, t0, content);
+    }
+    assert.ok(!sparEncounter(lab, content, 'precinct', t0 + 1).ok, 'and an empty ring closes');
+    assert.ok(sparEncounter(lab, content, 'precinct', t0 + tune.sparRegenMinutes * MIN + 1).ok,
+      'one regen tick re-opens it');
   }
 
   // 6. Nobody impounds a sparring partner, and the cannon does not fire on
@@ -9106,6 +9113,121 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(/kind === 'gauntlet'\) return gauntletEncounter/.test(src.replace(/\s+/g, ' ')) ||
               /target\.kind === 'gauntlet'/.test(src), 'the briefing resolves a gauntlet target');
     assert.ok(!/directEncounter\(state, gauntletEncounter/.test(src), 'and the director does not rewrite it');
+  }
+}
+
+// --- R43: the ring holds charges.
+//
+// The player's report: one spar per 45 minutes was too slow to be the
+// ladder the ring was built to be — an evening bought one drill. Three
+// charges, one back every ten minutes: a sustained three per half hour,
+// burstable to three by anyone returning after a break. The xp per spar is
+// untouched, so what moved is session pacing, not the curve.
+//
+// All of it derived from ONE stored timestamp, because timers here are
+// timestamps and nothing runs in the background.
+{
+  const { sparCharges, startSpar, sparEncounter } = await import('../campaign/sparring.js');
+  const { trainingTuning } = await import('../battle/veterancy.js');
+  const tune = trainingTuning(content);
+  const MIN = 60000;
+  const regen = tune.sparRegenMinutes * MIN;
+  const lab = () => {
+    const st = { ...newGameState(), seed: 43 };
+    ensureRanchSeeded(st, content, t0);
+    st.campaign.heldNodes = ['barn_perimeter'];
+    return st;
+  };
+
+  // 1. THE CRITERION, in the player's own words: three spars every thirty
+  //    minutes. Asserted as the sustained rate, not as the constants —
+  //    charges × regen is what a player actually experiences.
+  {
+    assert.equal(tune.sparCharges * tune.sparRegenMinutes, 30,
+      `the bucket refills a full load every 30 minutes (${tune.sparCharges} × ${tune.sparRegenMinutes}min)`);
+    assert.equal(tune.sparCharges, 3, 'and holds three');
+    // Walked, not just multiplied: spend everything, wait the window, and
+    // the ring must hand over exactly three again.
+    const st = lab();
+    let spent = 0;
+    while (sparCharges(st, t0, content).ready) { startSpar(st, t0, content); spent++; }
+    assert.equal(spent, 3, 'three back to back from a standing start');
+    const after = sparCharges(st, t0 + 30 * MIN, content);
+    assert.equal(after.charges, 3, 'and three again half an hour later');
+  }
+
+  // 2. A full bucket is a burst. Someone who has been away all day finds
+  //    three waiting, not one — that is the whole point of charges over a
+  //    cooldown.
+  {
+    const st = lab();
+    st.sparRefillAt = t0 - 5 * 3600000; // yesterday
+    const c = sparCharges(st, t0, content);
+    assert.equal(c.charges, c.max, 'a long absence fills the ring, it does not overflow it');
+    assert.ok(c.full && c.ready, 'and it reads as full');
+  }
+
+  // 3. Spending is steady, not restarting. Each spar pushes the refill one
+  //    regen later — a third spar must not reset the clock the first two
+  //    started, or three-in-a-row would cost thirty minutes of waiting
+  //    instead of ten.
+  {
+    const st = lab();
+    startSpar(st, t0, content);
+    assert.equal(sparCharges(st, t0, content).charges, 2, 'one spent leaves two');
+    startSpar(st, t0, content);
+    startSpar(st, t0, content);
+    assert.equal(sparCharges(st, t0, content).charges, 0, 'three spent leaves none');
+    assert.equal(sparCharges(st, t0 + regen + 1, content).charges, 1,
+      'and the first comes back one regen later, not one window later');
+    assert.equal(sparCharges(st, t0 + 2 * regen + 1, content).charges, 2, 'then the second');
+  }
+
+  // 4. The countdown shown is the SHORT one. A player staring at an empty
+  //    ring wants "next in 10m", not "full in 30m".
+  {
+    const st = lab();
+    for (let i = 0; i < 3; i++) startSpar(st, t0, content);
+    const c = sparCharges(st, t0, content);
+    assert.ok(c.msToNext > 0 && c.msToNext <= regen, `the next charge is within one regen (${Math.round(c.msToNext / MIN)}min)`);
+    assert.ok(c.msToFull > c.msToNext, 'while a full bucket is further off');
+    assert.equal(Math.round(c.msToFull / MIN), 30, 'exactly the window away, from empty');
+  }
+
+  // 5. Nothing ticks. The bucket is a pure function of the stored stamp and
+  //    the clock, so a closed tab, a reload and a week away all agree.
+  {
+    const st = lab();
+    startSpar(st, t0, content);
+    const snapshot = JSON.parse(JSON.stringify(st));
+    const live = sparCharges(st, t0 + 3 * MIN, content);
+    const reloaded = sparCharges(snapshot, t0 + 3 * MIN, content);
+    assert.deepEqual(reloaded, live, 'a reload computes the same ring');
+    const src = readFileSync(join(root, 'campaign/sparring.js'), 'utf8');
+    assert.ok(!/setInterval|setTimeout/.test(src), 'and nothing in the ring runs in the background');
+  }
+
+  // 6. Migration: the old one-shot stamp is gone and everyone arrives with
+  //    a full ring — including a player who was mid-cooldown on a mechanic
+  //    that no longer exists.
+  {
+    const old = { ...newGameState(), saveVersion: 32, funds: 99 };
+    delete old.sparRefillAt;
+    old.lastSparAt = t0; // mid-wait under the old rules
+    const done = migrate(old);
+    assert.equal(done.saveVersion, SAVE_VERSION, 'comes forward');
+    assert.equal(done.lastSparAt, undefined, 'the old cooldown stamp is gone');
+    assert.equal(sparCharges(done, t0, content).charges, tune.sparCharges,
+      'and the ring is handed over full rather than converted');
+    assert.equal(done.funds, 99, 'nothing else touched');
+  }
+
+  // 7. The button says how many, and the map reads the shared bucket.
+  {
+    const src = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
+    assert.ok(/sparCharges\(state, t, content\)/.test(src), 'the map reads the bucket');
+    assert.ok(/sparGate\.charges/.test(src), 'and the button shows the count');
+    assert.ok(/sparGate\.msToNext/.test(src), 'with the short countdown when empty');
   }
 }
 
