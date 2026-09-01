@@ -1,5 +1,145 @@
 # PROGRESS
 
+## Session 56 — R34: the purebred set bonus, which nothing read ✅
+
+**Acceptance criterion:** going purebred does something the battle engine
+actually reads, priced so mixing stays worth doing — **passes**, at
+`SAVE_VERSION` 29 (no schema change).
+
+### Forty-one promises, zero mechanism
+
+Every species declared a `setBonus`. Physiology computed `purebredSpecies`,
+handed it to the combatant as `physiology.purebred`, and **the engine never
+looked at it.** The Dex printed the name, the panel printed the prose, and
+the fight ignored both.
+
+### The brief inverted under measurement — twice
+
+I told Evan purebred was already **7pp ahead**, so bonuses would need a real
+cost or mixing would die. Then I corrected that to **2.1pp**. Both were
+artifacts of the sim's build sampler: purebreds average **5.9 sockets** and
+the mixed pool **3.6**, so I was measuring socket count wearing a purebred
+label.
+
+Matched builds — same frame, same grade, the same six sockets, bond 100 on
+each — say the opposite:
+
+| | purebred | mixed | gap |
+|---|---|---|---|
+| M / standard | 32.2% | 33.0% | −0.8pp |
+| M / prime | 44.5% | 44.4% | +0.1pp |
+| M / apex | 59.0% | 60.2% | −1.2pp |
+| L / standard | 35.2% | 36.4% | −1.2pp |
+| L / prime | 47.9% | 48.7% | −0.8pp |
+| L / apex | 60.9% | 62.7% | −1.8pp |
+
+**Purebred trailed, everywhere.** Of course it did — a mixed build picks the
+best head, the best hide and the best organ from anywhere; a purebred takes
+what one animal gives. And purebred's one wired benefit, −20 instability,
+**buys nothing in a fight**: instability feeds a disobedience roll that bond
+cancels outright, and at bond 100 the term is zero. Going purebred was a cost
+with no payment.
+
+So the set bonus is not a buff that threatens mixing. It is the payment.
+
+### Three dials, and a 42nd species is a data edit
+
+`setBonus.effect` speaks only in things the engine already reads every turn:
+
+| dial | what it does |
+|---|---|
+| `stats` | multiplies the combatant's base numbers |
+| `perks` | adds to the temperament perk block |
+| `keywords` | multiplies the numeric value of that keyword on this creature's moves |
+
+A boolean keyword has no dial and is left alone — `trap: true` times two is
+not a thing, and there is a gate that says so. Rivals who commit to one
+animal earn their set too.
+
+### Fourteen of the promises were unimplementable as written
+
+"+20% trap duration" on a trap with no duration. "+25% knockback" on a
+boolean. "ignore 25% armor" on a beetle whose signature move **already**
+ignores armour outright, so the bonus was redundant even in prose. Every
+`desc` is rewritten to state what its effect does; every **name** is kept.
+
+### The first draft reproduced the bug it was fixing
+
+Six bonuses — wolf, tortoise, goat, heron, storm eagle, iron tortoise —
+scaled a keyword living on a **utility move that loses R30's four-slot
+competition.** Dead on arrival, exactly like the prose they replaced. Found
+by probing every species rather than assuming; those six pay in stats or
+perks instead, and gate 2 now proves all 41 change the creature that earned
+them.
+
+Then **the gate written to prove the mechanism hit the same trap**: it
+invented a bonus scaling `thorns` on a bear, and a bear's thorns are on its
+hide active, which it never presses. It scales `recoil` now.
+
+### Measured after
+
+| | before | after |
+|---|---|---|
+| purebred vs mixed, mean of six cells | **−0.9pp** | **+1.3pp** |
+| cells where purebred leads | 1 of 6 | **6 of 6** |
+| dominance flags across 24 pools | 0 | **0** |
+
+A real reason to chase a set; not a reason to stop mixing. The Storm Eagle
+is no longer even the roster's top build — that is the mantis, at 75%
+against a 51% median.
+
+### The break battery, which found two gates that could not fail
+
+Thirteen deliberate breaks against an isolated worktree. The first pass came
+back **7 clean, 2 overshoots and 1 MISS** — and the miss was the point of the
+exercise. Final: **8 caught by the assertion that guards them, 4 overshoots
+covering 2 load-bearing properties, 0 unguarded.**
+
+**Scaling booleans came back MISSED.** The guard says `trap: true` times two
+is not a thing; the gate handed the cobra's real effect a move carrying
+`trap`. But `applySetBonus` iterates the **effect's** keys, not the move's,
+and the cobra's effect names only `venom` — so the boolean was never within
+reach of the code under test. A gate that cannot fail is decoration. It now
+invents an effect that names the boolean.
+
+**And the mixed-build gate compared stats only**, so a keyword-only leak — a
+bonus reaching a mixed build without touching a single stat — would have
+walked straight through. It compares all three dials now. That one was found
+by writing the isolating re-run for break 9 and noticing it would miss.
+
+**Two properties turned out not to be isolable at all**, and that is worth
+recording rather than papering over: the four-part threshold, and the rule
+that a mixed build collects nothing.
+
+Leaking a *stat* bonus to every build breaks the older "battle HP =
+physiology HP" identity first; re-run as a keyword-only leak, it trips R24's
+"a gene must show in a fight" instead, because handing every build a bonus
+perturbs the measurement that gate takes. And the threshold behaves the same way:
+lowering `purebredAt` trips an M3 settling gate (the −20 instability discount moves with it); holding
+`purebredStability` at zero to compensate then trips R26's region-identity
+gate instead, because handing *every* build a set bonus collapses a strip's
+margin. The property is guarded — verified by hand, 3 parts reads 68 hp with
+the bonus on and 68 with it off, 4 parts reads 110 against 92 — but it is
+load-bearing enough that every break large enough to violate it violates
+something broader first. That is a well-defended property, not a hollow gate;
+the distinction from break 8's genuine MISS is the whole reason to say which
+is which.
+
+### Known gaps
+
+- `goat`'s original promise was *halved upkeep* — an economy effect, not a
+  battle one, and the only bonus whose natural home is `ranch.js`. It pays in
+  Stamina instead. Wiring upkeep-shaped bonuses is a separate, smaller phase.
+- The bonus is invisible mid-fight. The dossier and the panel name it before
+  the fight; the battle log never says "Fortress absorbed that."
+
+### Next session's first task
+
+The war room briefing shows a chimera's class and nothing else — not whether
+it can fly into an Airborne node, not the set it is carrying. R33 put those
+facts on the Pens card; the screen where you pick a strike team still does
+not have them.
+
 ## Session 55 — R33: the chimera dossier ✅
 
 **Acceptance criterion:** from the Pens screen, a player can see everything
