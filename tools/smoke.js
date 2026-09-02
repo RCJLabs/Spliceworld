@@ -11960,9 +11960,15 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // not waved through as a directory, and checked below for liveness — an
     // exemption for something that no longer exists is how a list like this
     // rots into a blanket.
+    //
+    // This list started at SIX and four of them were wrong: incubatorThroughput,
+    // extractorYield, infirmaryPayback and rivalEncounters are all called
+    // inside sim.js, spread into a row as `...extractorYield(...)`, and the
+    // scan that built the list skipped anything preceded by a dot. An
+    // exemption for something that was never an orphan is a hole dug for no
+    // reason, so the list is the two that are really there.
     const HAND_RUN = {
-      'tools/sim.js': ['withSecondOrgan', 'rivalCounterBench', 'incubatorThroughput',
-        'extractorYield', 'infirmaryPayback', 'rivalEncounters'],
+      'tools/sim.js': ['withSecondOrgan', 'rivalCounterBench'],
     };
     const exportsOf = (text) => {
       const names = new Set();
@@ -12035,7 +12041,11 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
           && new RegExp(`\\b${ns.alias}\\.${name}\\b`).test(source.get(ns.file)));
         // Its own file counts too: an export used internally is a wide
         // interface, not dead content, and this gate is about the dead kind.
-        const here = [...text.matchAll(new RegExp(`(^|[^\\w$.])${name}\\b`, 'g'))].length;
+        // No `.` exclusion here: `...extractorYield(x)` and `obj.thing()` are
+        // both uses, and a regex written to skip property access called a
+        // function that sim.js spreads into a row DEAD. Over-counting toward
+        // "this has a reader" is the safe direction for a build failure.
+        const here = [...text.matchAll(new RegExp(`(^|[^\\w$])${name}\\b`, 'g'))].length;
         if (!imported && !viaNamespace && here <= 1) orphans.push(`${file}:${name}`);
       }
     }
