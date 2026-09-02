@@ -4,6 +4,7 @@
 // timers are timestamps; tickCampaign computes elapsed effects on load.
 
 import { rngStream, pick, randInt } from '../util/rng.js';
+import { pushNews, emitNews, newsFor } from './wire.js';
 import { recordGauntletWin, gauntletComplete } from './gauntlet.js';
 import { GRADES } from '../splice/extract.js';
 import { finishBattle } from '../battle/engine.js';
@@ -22,10 +23,11 @@ import {
 const DAY = 86400000;
 const HOUR = 3600000;
 
-export function pushNews(state, line) {
-  state.news.push(line);
-  if (state.news.length > 12) state.news.splice(0, state.news.length - 12);
-}
+// R62: the wire moved to campaign/wire.js, which owns both the buffer and
+// the copy. Re-exported because main.js pushes the lines that other systems
+// hand it (a job report, a rehab graduation) and should not have to know
+// which module holds the buffer.
+export { pushNews, emitNews };
 
 // Map lookups live in map.js so contest.js can share them without the two
 // modules importing each other; re-exported here because the War Room has
@@ -155,14 +157,15 @@ export function dominionBanner(state, content) {
 export function announceDominion(state, content, now) {
   const won = claimDominion(state, content, now);
   if (!won) return null;
-  pushNews(state, `THE COUNTY IS YOURS. All ${won.nodesTotal} nodes held.${
-    won.rivalsAllBeaten ? ` All ${won.rivalsTotal} rival labs beaten.` : ''
-  } Somewhere, a regional manager is updating a spreadsheet with shaking hands.`);
+  emitNews(state, content, 'dominion', {
+    nodes: won.nodesTotal,
+    rivals: won.rivalsAllBeaten ? ` All ${won.rivalsTotal} rival labs beaten.` : '',
+  });
   const boast = playerLine(state, content, 'dominion', { nodes: won.nodesTotal });
   if (boast) pushNews(state, boast);
   // Said in the same breath, because R9 means this is a milestone and not an
   // ending: the coalition keeps coming for what you hold.
-  pushNews(state, 'The coalition does not concede. It reschedules. Counter-offensives continue.');
+  emitNews(state, content, 'dominion_continues');
   return won;
 }
 
@@ -279,8 +282,8 @@ export function tickCampaign(state, content, now) {
     });
     pushNews(
       state,
-      rivalLine(content, captive.captor, 'dissectionDone', { creature: captive.chimera.name }) ??
-        `${captive.chimera.name} has been transferred to an out-of-state research internship (involuntary). The enemy took notes.`
+      rivalLine(content, captive.captor, 'dissectionDone', { creature: captive.chimera.name })
+        ?? newsFor(state, content, 'dissection_done', { creature: captive.chimera.name })
     );
   }
 }
@@ -335,7 +338,7 @@ export function resolveBattle(state, battle, content, now) {
   // without betting a creature on it.
   if (context.kind === 'sparring') {
     detail.salvageUnits = [];
-    if (result.outcome === 'win') pushNews(state, 'Sparring session concluded. The garrison applauds politely and re-chalks the ring.');
+    if (result.outcome === 'win') emitNews(state, content, 'spar_done');
     return detail;
   }
 
@@ -356,8 +359,8 @@ export function resolveBattle(state, battle, content, now) {
     });
     pushNews(
       state,
-      playerLine(state, content, 'capture', { creature: unit.name }) ??
-        `${unit.name} impounded in Containment. Finders keepers is the law here now.`
+      playerLine(state, content, 'capture', { creature: unit.name })
+        ?? newsFor(state, content, 'capture_ours', { creature: unit.name })
     );
   }
 
@@ -371,7 +374,7 @@ export function resolveBattle(state, battle, content, now) {
       chimera.bond = Math.min(100, chimera.bond + 10); // "you came back for me!"
       state.chimeras.push(chimera);
       detail.freed = chimera.name;
-      pushNews(state, `${chimera.name} rescued from the impound lot! Bond deepened. Paperwork ignored.`);
+      emitNews(state, content, 'rescued', { creature: chimera.name });
     }
     return detail;
   }
@@ -402,7 +405,7 @@ export function resolveBattle(state, battle, content, now) {
       const boast = playerLine(state, content, 'gauntlet', { creature: content.enemies[stage.unitId]?.name ?? stage.name });
       if (boast) pushNews(state, boast);
       if (gauntletComplete(state, content)) {
-        pushNews(state, 'THE GAUNTLET IS CLEARED. The coalition has nothing left in storage. Somewhere, a procurement officer starts a very long memo.');
+        emitNews(state, content, 'gauntlet_cleared');
       }
     }
   }
@@ -413,13 +416,17 @@ export function resolveBattle(state, battle, content, now) {
       const genBefore = threatGen(state, content);
       state.campaign.heldNodes.push(node.id);
       state.campaign.notoriety += node.notoriety;
-      pushNews(state, `${node.name} seized. Income +$${node.incomePerDay}/day. Locals adjusting surprisingly well.`);
+      emitNews(state, content, 'node_seized', { node: node.name, income: node.incomePerDay });
       const claim = playerLine(state, content, 'conquest', { node: node.name });
       if (claim) pushNews(state, claim);
       // R40. The twenty-first node is not the first one.
       announceDominion(state, content, now);
-      if (threatGen(state, content) > genBefore) {
-        pushNews(state, `THREAT LEVEL UP: the military is now returning your calls. Threat Generation 2.`);
+      const genNow = threatGen(state, content);
+      if (genNow > genBefore) {
+        // R62: the rung's own line, from regions.json. This used to print a
+        // hardcoded Generation 2 sentence whatever rung you had reached.
+        const rung = (content.campaignMeta?.threatGens ?? []).find((r) => r.gen === genNow);
+        if (rung?.announce) emitNews(state, content, 'threat_rung', { announce: rung.announce });
       }
     }
   }
@@ -457,7 +464,8 @@ export function resolveBattle(state, battle, content, now) {
           rehab: null,
         });
         detail.wreckage = content.enemies[unitId].name;
-        pushNews(state, `Salvage crews work through the night at ${node?.name ?? 'the line'}. One ${content.enemies[unitId].name} is now, legally speaking, scrap you own.`);
+        emitNews(state, content, 'salvaged',
+          { node: node?.name ?? 'the line', unit: content.enemies[unitId].name });
       }
     }
   }
@@ -495,7 +503,7 @@ export function resolveBattle(state, battle, content, now) {
       };
       state.campaign.captives.push(captive);
       detail.capturedChimera = taken.name;
-      pushNews(state, `${taken.name} CAPTURED! "Unauthorized peer review" scheduled in ${hours}h. Mount a rescue.`);
+      emitNews(state, content, 'chimera_captured', { creature: taken.name, hours });
       const taunt = rivalLine(content, captive.captor, 'dissectionTaunt', { creature: taken.name });
       if (taunt) pushNews(state, taunt);
     }
@@ -514,11 +522,7 @@ export function resolveBattle(state, battle, content, now) {
         until: now + Math.round(3 * infirmaryGrants(state, content).healScale * HOUR),
       };
       detail.lastStand = only.name;
-      pushNews(
-        state,
-        `${only.name} is the last one on the roster, and the coalition could not quite hold on to it. ` +
-          `It limped back through the fence at dawn, furious and filthy. Infirmary.`
-      );
+      emitNews(state, content, 'last_stand', { creature: only.name });
     }
   }
 
@@ -560,7 +564,7 @@ export function salvageUnit(state, ref, content, now) {
     tokens.push(token);
     if (!state.dex.parts.includes(partId)) state.dex.parts.push(partId);
   }
-  pushNews(state, `${unit.name} dismantled with great enthusiasm. Enemy tech acquired.`);
+  emitNews(state, content, 'dismantled', { unit: unit.name });
   return {
     ok: true,
     tokens,

@@ -24,6 +24,7 @@
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { grantsOf } from '../splice/facility.js';
 import { playerLine } from './monologue.js';
+import { newsFor } from './wire.js';
 
 const HOUR = 3600000;
 
@@ -180,7 +181,7 @@ export function startRehab(state, ref, content, now) {
     msg: `${plan.unit.name} enters the Reorientation Wing. ${plan.hours}h of soft lighting and unearned trust begins.`,
     // An array, because the wire gets the event AND your opinion of it.
     news: [
-      `${plan.unit.name} has been enrolled in a private behavioural programme. Its former employer has not been notified.`,
+      newsFor(state, content, 'rehab_enrolled', { creature: plan.unit.name }),
       playerLine(state, content, 'rehab', { creature: plan.unit.name }),
     ].filter(Boolean),
   };
@@ -281,12 +282,24 @@ export function tickRehab(state, content, now) {
     state.campaign.containment = state.campaign.containment.filter((b) => b !== entry);
     const chimera = graduate(state, entry, content, now);
     graduates.push(chimera);
+    // Three outcomes, three events: how much attention the programme got is
+    // the thing being said, so it is the event id rather than a branch
+    // choosing between three sentences written here.
+    //
+    // Each id is written out at its own call site rather than computed into
+    // a variable, because "the event id is a literal you can grep" is what
+    // lets the suite run the invariant both ways — an id assembled at
+    // runtime has copy nothing can prove is reachable.
+    // The params are written out too, for the same reason as the ids: a line
+    // that asks for {creature} and an emitter that supplies it are two
+    // readers of one contract, and the suite can only check that contract
+    // where both ends are visible at the call site.
     news.push(
       entry.rehab.sessions >= 3
-        ? `${chimera.name} graduates the Reorientation Wing with honours and follows you around the yard.`
+        ? newsFor(state, content, 'rehab_graduated_honours', { creature: chimera.name })
         : entry.rehab.sessions === 0
-          ? `${chimera.name} completes the programme unsupervised and joins the roster. It is watching you. Always watching.`
-          : `${chimera.name} graduates the Reorientation Wing and reports for duty, cautiously.`
+          ? newsFor(state, content, 'rehab_graduated_alone', { creature: chimera.name })
+          : newsFor(state, content, 'rehab_graduated', { creature: chimera.name })
     );
   }
   return { news, graduates };
