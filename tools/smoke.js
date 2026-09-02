@@ -11598,9 +11598,17 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(/if \(muted \|\| !ctx/.test(sfxSrc), 'play() refuses while muted');
     assert.ok(/export function setMuted/.test(sfxSrc), 'and the toggle reaches it');
     // Every stinger goes through the one gate, so a new one cannot arrive
-    // with its own path around the mute.
-    const plays = (sfxSrc.match(/function play\(/g) ?? []).length;
-    assert.equal(plays, 1, 'there is exactly one way to make a noise');
+    // with its own path around the mute. Asserted as ONE PATH TO SOUND
+    // rather than one function named `play`: the battery added
+    // `playUnmuted`, where `function play` is not followed by `(`, and a
+    // name-count sailed past a genuine bypass.
+    const fns = sfxSrc.split(/\n(?=(?:export )?function )/);
+    const synths = fns.filter((chunk) => /[^a-zA-Z]voice\(/.test(chunk)
+      && !/^(?:export )?function voice\b/.test(chunk.trim()));
+    assert.equal(synths.length, 1,
+      `exactly one function reaches the synth (${synths.map((c) => (c.match(/function (\w+)/) ?? [])[1]).join(', ')})`);
+    assert.ok(/^(?:export )?function play\b/.test(synths[0].trim()),
+      'and it is the one that checks the mute');
   }
 }
 
