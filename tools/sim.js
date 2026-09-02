@@ -14,6 +14,7 @@ import { indexContent } from '../render/renderer.js';
 import { seedTemperament } from '../splice/temperament.js';
 import { analyze } from '../splice/physiology.js';
 import { createBattle, step, playerActions, playerActive, movesFromTokens } from '../battle/engine.js';
+import { knownMoves } from '../battle/moves.js';
 import { rivalEncounter, rivalList } from '../campaign/rivals.js';
 import { mulberry32, hashString, pick, rngStream } from '../util/rng.js';
 import { chooseMoveIndex } from '../battle/ai.js';
@@ -118,7 +119,7 @@ export function makeSimChimera(frame, partIds, grade, content) {
   };
   chimera.temperament = seedTemperament(chimera, content, 0x5EED);
   chimera.moveset = benchMoveset(
-    movesFromTokens(Object.values(tokens), report, content).map((m) => ({ ...m, id: m.source }))
+    knownMoves(chimera, content, () => movesFromTokens(Object.values(tokens), report, content))
   );
   return chimera;
 }
