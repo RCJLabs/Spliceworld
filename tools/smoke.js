@@ -11389,8 +11389,10 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       assert.equal(renderRivalSVG(rival, content.classes), renderRivalSVG(rival, content.classes),
         `${rival.id} draws the same face twice`);
     }
-    const faces = new Set(rivals.map((r) => renderRivalSVG(r, content.classes)));
-    assert.equal(faces.size, rivals.length, `every rival has their own face (${faces.size}/${rivals.length})`);
+    const features = new Set(rivals.map((r) => JSON.stringify(
+      rivalPortraitShapes({ ...r, classBias: 'ground' }, content.classes))));
+    assert.equal(features.size, rivals.length,
+      `every rival has their own FACE, not merely their own name and colour (${features.size}/${rivals.length})`);
     // The seed is what varies the features — not the name, not the order.
     // Asserted on the shapes at a FIXED class, because the colour is
     // deliberately the rival's and not the seed's.
