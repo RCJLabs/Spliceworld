@@ -4,7 +4,7 @@
 // tokens now; legacy `genome` data stays in old saves, unshown.
 
 import { loadContent } from './data/loader.js';
-import { loadSave, saveGame } from './save/save.js';
+import { loadSave, saveGame, exportSave, exportFilename, importSave, adoptSave } from './save/save.js';
 import { ensureRanchSeeded, ensureDexVariants, applyElapsed } from './ranch/ranch.js';
 import { renderRanchScreen } from './ranch/ui.js';
 import { renderVaultScreen } from './splice/vault-ui.js';
@@ -163,6 +163,60 @@ async function boot() {
     paintMute();
     if (!state.settings.muted) sfx.play('click');
   });
+
+  // R54: the save file panel. The three verbs live in save.js and are
+  // DOM-free; everything here is the door, not the lock.
+  const saveFileBtn = $('#savefile');
+  const openSaveFile = (note = '') => {
+    const overlay = $('#overlay');
+    overlay.hidden = false;
+    overlay.innerHTML = `
+      <div class="ceremony card">
+        <h3>💾 Save File</h3>
+        <p class="fine-print">This game lives in this browser. Clear the site data, change phones, or
+          reinstall, and it is gone — unless you have carried it out first.</p>
+        ${note ? `<p class="ranch-msg" id="sf-note">${note}</p>` : ''}
+        <button type="button" id="sf-export" class="big-btn">⬇ Download my save</button>
+        <p class="fine-print">Importing replaces the game in progress. The one it replaces is kept
+          in this browser as a backup, and if it cannot be kept the import is refused instead.</p>
+        <label for="sf-file" class="care-train" id="sf-pick">⬆ Load a save file…</label>
+        <input type="file" id="sf-file" accept="application/json,.json" hidden>
+        <button type="button" id="sf-close" class="pen-dismantle">Close</button>
+      </div>`;
+    overlay.querySelector('#sf-close').addEventListener('click', () => {
+      overlay.hidden = true;
+      overlay.innerHTML = '';
+    });
+    overlay.querySelector('#sf-export').addEventListener('click', () => {
+      const blob = new Blob([exportSave(state)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = exportFilename(state);
+      a.click();
+      // Revoked on the next frame: revoking synchronously races the
+      // download in some browsers and silently produces an empty file.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      sfx.play('click');
+      const el = overlay.querySelector('.fine-print');
+      if (el) el.textContent = `Saved as ${exportFilename(state)}. Keep it somewhere that is not this phone.`;
+    });
+    overlay.querySelector('#sf-file').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const read = await file.text().catch(() => null);
+      if (read === null) return openSaveFile('That file could not be read.');
+      const parsed = importSave(read);
+      if (!parsed.ok) return openSaveFile(parsed.msg);
+      const written = adoptSave(parsed.save);
+      if (!written.ok) return openSaveFile(written.msg);
+      // Reload rather than swapping state in place: every screen, timer and
+      // module-level cache in the game was built against the old save, and
+      // a boot is the one path already proven to set all of them up.
+      location.reload();
+    });
+  };
+  saveFileBtn.addEventListener('click', () => openSaveFile());
 
   // PWA: offline shell. Registration failure is never a problem worth
   // showing anyone.

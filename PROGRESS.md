@@ -1,5 +1,129 @@
 # PROGRESS
 
+## Session 76 — R54: a save that can leave the browser ✅
+
+**Acceptance criterion:** a save can leave the browser and come back, an
+import can never destroy the game already in progress, and every refusal
+says which rule it broke — **passes, measured in a real browser**. No schema
+change; `SAVE_VERSION` stays **34**.
+
+First phase of the third audited queue (ROADMAP §9.3, R54–R62), which this
+session also wrote.
+
+### Nobody had built the door
+
+A grep for any export, download or backup path returned **zero**.
+`SAVE_VERSION` and the migration table protect a save from *this code*
+changing under it; nothing protected it from the browser it lives in, from
+a new phone, or from installing the TWA. For a project whose defining rule
+is that a save is sacred and is never reset, that is the largest hole in
+the rule. Size was never the obstacle — a completionist save is **~38 KB
+against a ~5 MB budget**.
+
+### Three verbs, none of which touch the DOM
+
+`exportSave` wraps the save with its app id, format and version;
+`importSave` parses, identifies, refuses or migrates; `adoptSave` installs
+it. All three live in `save/save.js` and are DOM-free, so the harness
+exercises every path — including the ones a browser only reaches when it is
+full or locked down — without a browser. `main.js` holds the door and none
+of the lock.
+
+**Every refusal names the rule it broke**: `not-json`, `not-spliceworld`,
+`no-version`, `from-the-future`, `migration-failed`. A player only ever
+meets one when something has already gone wrong, which is exactly when
+"invalid file" is most expensive — it cannot tell a typo from a lost
+campaign. A **bare save is accepted** alongside the wrapper: someone's raw
+`localStorage` dump is plainly readable, and refusing it would be pedantry
+rather than safety.
+
+### The rule the feature exists for
+
+An import is the only operation in the game that replaces a running save,
+so the running save is set aside first — the same backup key `loadSave` has
+always used for a corrupt one, applied to a deliberate act.
+
+**And if that backup cannot be written, the import is refused rather than
+completed.** A full disk loses the import, never the campaign. That is the
+one outcome this phase exists to prevent, so it fails closed.
+
+Adoption reboots rather than swapping state under the running screens:
+every screen, timer and module-level cache was built against the old save,
+and boot is the one path already proven to set all of them up.
+
+### Browser QA, 380px, console clean
+
+| check | result |
+|---|---|
+| footer buttons | `savefile 301–334`, `mute 339–372`, no overlap, ticker clear at 296 |
+| export | `spliceworld-the-gurgling-annexe-v34-2026-09-02.json`, real blob, 3,718 bytes |
+| import a different save | live `funds 4321 → 9999`, **backup kept** (`funds=4321 seed=777`), page reloaded |
+| junk file | *"That file is not JSON. The centrifuge declines to spin it."* — live save untouched |
+
+Driven through the real `<input type="file">` with a real `File`, and the
+real anchor download intercepted at `HTMLAnchorElement.prototype.click` —
+the two things the headless harness structurally cannot reach.
+
+Two shell fixes came with it: both footer buttons were absolutely
+positioned at the same right edge and would have **stacked**, and the
+ticker's reserved gutter widened to match. `sw.js` CACHE bumped so stale
+shells drain.
+
+### The break battery, and the accident in it
+
+Twelve breaks. **Eleven caught; the one miss was a bad break that found a
+real gap** — which is the most useful thing that happened this phase.
+
+| break | verdict |
+|---|---|
+| the import stops setting the running game aside | CAUGHT |
+| a failed backup no longer refuses the import | CAUGHT |
+| a save from a newer build is accepted | **MISSED — bad break** |
+| 3b. …aimed at `importSave` specifically | **CAUGHT** |
+| 3c. …aimed at `loadSave`, the one break 3 hit | **CAUGHT** (by the gate below) |
+| every refusal collapses to one reason | CAUGHT |
+| the import stops migrating | CAUGHT |
+| the round trip quietly loses a field | CAUGHT |
+| the filename stops carrying the version | CAUGHT |
+| any object with a `saveVersion` is a save | CAUGHT |
+| the shell loses the button | CAUGHT |
+| adoption stops rebooting | CAUGHT |
+
+**`if (save.saveVersion > SAVE_VERSION) {` appears TWICE, character for
+character** — `loadSave`'s at line 535 and `importSave`'s at 615 — and the
+break's `replace(..., 1)` patched the first. `importSave`'s check was never
+touched, so its gate never had a chance to fire. A bad break, cleanly.
+
+But the suite **passed with `loadSave`'s refusal disabled**. That check has
+guarded the boot path since M0 and *nothing has ever asserted it*: a save
+from a newer build must not load into an older one, and must be kept rather
+than destroyed when refused. Not R54's code, but R54's rule, and R54's
+battery is what noticed. Both halves are gated now, and 3c confirms the
+gate fires rather than merely looking right.
+
+The lesson is narrower than "check your breaks": **a `replace(old, new, 1)`
+against a string that is not unique is a silent mis-aim**, and the battery
+reports it as a gate failure. Worth anchoring breaks on the surrounding
+line, not the interesting one.
+
+### Known gaps
+
+- The export writes a plain file. Anyone who edits one can hand themselves
+  a prismatic stable — deliberately not defended, because a single-player
+  local save has nothing to protect and a checksum would only make an
+  honest recovery harder.
+- Old backups accumulate under `spliceworld_save_backup_*` and nothing
+  prunes them. At ~38 KB against ~5 MB it is 100+ imports before this
+  matters, and pruning is how a rescue disappears.
+- R55 is what makes this feature complete: a reset is only safe once a
+  player can carry the first run out.
+
+### Next session's first task
+
+**R55 — A second run.** `newGameState()` is reachable only from a missing
+or corrupt save; there is no reset anywhere in the UI. Now that a save can
+leave the browser, starting over stops being destructive.
+
 ## Session 75 — R53: one Vault shelf per animal ✅
 
 **Acceptance criterion:** the Vault is one shelf per animal, and a

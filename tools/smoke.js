@@ -10984,4 +10984,171 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+// R54. A save that cannot leave the browser is one cleared-site-data away
+// from gone. `SAVE_VERSION` and the migration table protect a save from THIS
+// CODE changing under it; nothing protected it from the browser it lives in,
+// a new phone, or installing the TWA — a grep for any export, download or
+// backup path returned ZERO. Size was never the obstacle: a completionist
+// save is ~38 KB against a ~5 MB budget.
+//
+// The refusals get the most gates here on purpose. A player only ever meets
+// one when something has already gone wrong, which is exactly when a vague
+// "invalid file" is most expensive and least testable by hand.
+{
+  const { exportSave, exportFilename, importSave, adoptSave, loadSave } = await import('../save/save.js');
+
+  // A localStorage stand-in, so adoption can be driven into the states a
+  // real browser only reaches when it is full or locked down.
+  const fakeStore = ({ full = false, locked = false, seeded = null } = {}) => {
+    const map = new Map();
+    if (seeded !== null) map.set('spliceworld_save', seeded);
+    return {
+      map,
+      getItem: (k) => { if (locked) throw new Error('denied'); return map.has(k) ? map.get(k) : null; },
+      setItem: (k, v) => {
+        if (full) throw new Error('QuotaExceededError');
+        map.set(k, v);
+      },
+    };
+  };
+
+  // 1. A save goes out and comes back the same save.
+  {
+    const st = { ...newGameState(), seed: 54, funds: 1234, spliceCount: 7 };
+    st.dex.beaten = ['riot_squad'];
+    const back = importSave(exportSave(st));
+    assert.ok(back.ok, `a freshly exported save imports (${back.msg ?? ''})`);
+    assert.deepEqual(back.save, st, 'and is byte-for-byte the save that left');
+    // A bare save — someone's raw localStorage dump — is readable too.
+    const bare = importSave(JSON.stringify(st));
+    assert.ok(bare.ok, 'and so is an unwrapped save');
+    assert.deepEqual(bare.save, st, 'with the same result');
+  }
+
+  // 2. The file is named for a human looking at a downloads folder later.
+  {
+    const st = { ...newGameState(), seed: 54 };
+    st.profile = { ...st.profile, lab: 'The Gurgling Annexe' };
+    const name = exportFilename(st, Date.UTC(2026, 8, 2));
+    assert.ok(name.startsWith('spliceworld-the-gurgling-annexe-'), `the lab names the file (${name})`);
+    assert.ok(name.includes(`v${SAVE_VERSION}`), 'and the version is in it');
+    assert.ok(name.endsWith('2026-09-02.json'), `and the day (${name})`);
+    // An unnamed lab still produces a legal filename rather than a stray dash.
+    const anon = exportFilename({ ...newGameState(), seed: 1 }, Date.UTC(2026, 8, 2));
+    assert.ok(/^spliceworld-lab-v\d+-\d{4}-\d{2}-\d{2}\.json$/.test(anon), `an unnamed lab still names a file (${anon})`);
+  }
+
+  // 3. Every refusal is its own reason. A player who is told "invalid file"
+  //    cannot tell a typo from a lost campaign.
+  {
+    const cases = [
+      ['not-json', 'this is not json{'],
+      ['not-json', '[1, 2, 3]'],
+      ['not-json', 'null'],
+      ['not-spliceworld', JSON.stringify({ app: 'ascent', save: { saveVersion: 1, seed: 1 } })],
+      ['not-spliceworld', JSON.stringify({ app: 'spliceworld', save: 'nope' })],
+      ['no-version', JSON.stringify({ seed: 12 })],
+      ['not-spliceworld', JSON.stringify({ saveVersion: SAVE_VERSION })],
+      ['from-the-future', JSON.stringify({ saveVersion: SAVE_VERSION + 1, seed: 3 })],
+    ];
+    const seen = new Set();
+    for (const [reason, text] of cases) {
+      const r = importSave(text);
+      assert.equal(r.ok, false, `refused: ${text.slice(0, 40)}`);
+      assert.equal(r.reason, reason, `for the right reason (${text.slice(0, 40)})`);
+      assert.ok(r.msg && r.msg.length > 20, `and says so in words (${r.reason}: ${r.msg})`);
+      seen.add(reason);
+    }
+    assert.ok(seen.size >= 4, `several distinct refusals are exercised (${[...seen].join(', ')})`);
+  }
+
+  // 4. An OLD save imports, because that is most of the point — the file in
+  //    the downloads folder is by definition from an older build.
+  {
+    const old = { ...structuredClone(newGameState()), saveVersion: 33 };
+    delete old.dex.beaten;
+    const r = importSave(JSON.stringify(old));
+    assert.ok(r.ok, `a v33 export still loads (${r.msg ?? ''})`);
+    assert.equal(r.save.saveVersion, SAVE_VERSION, 'brought forward to this build');
+    assert.equal(r.from, 33, 'and remembers where it came from');
+    assert.deepEqual(r.save.dex.beaten, [], 'through the same migration a local save would take');
+  }
+
+  // 5. THE CRITERION. An import can never destroy the game it replaces.
+  {
+    const running = JSON.stringify({ ...newGameState(), seed: 111, funds: 999 });
+    const incoming = { ...newGameState(), seed: 222 };
+
+    const store = fakeStore({ seeded: running });
+    const ok = adoptSave(incoming, store);
+    assert.ok(ok.ok, 'an import lands');
+    assert.equal(ok.replaced, true, 'and knows it replaced something');
+    assert.equal(JSON.parse(store.map.get('spliceworld_save')).seed, 222, 'the new save is live');
+    const backups = [...store.map.keys()].filter((k) => k.startsWith('spliceworld_save_backup_'));
+    assert.equal(backups.length, 1, 'and the old one was set aside');
+    assert.equal(JSON.parse(store.map.get(backups[0])).seed, 111, 'intact, seed and all');
+
+    // The half that matters: if the old save CANNOT be set aside, the import
+    // is refused rather than completed. A full disk loses the import, never
+    // the campaign.
+    const full = fakeStore({ seeded: running, full: true });
+    const refused = adoptSave(incoming, full);
+    assert.equal(refused.ok, false, 'a full disk refuses the import');
+    assert.equal(refused.reason, 'backup-failed', 'naming the reason');
+    assert.equal(full.map.get('spliceworld_save'), running, 'and the running game is untouched');
+
+    // A browser that will not hand over storage at all is a refusal too,
+    // not a silent overwrite.
+    const locked = adoptSave(incoming, fakeStore({ locked: true }));
+    assert.equal(locked.ok, false, 'locked storage refuses');
+    assert.equal(locked.reason, 'no-storage', 'naming that reason instead');
+
+    // A first import with nothing to replace needs no backup and still lands.
+    const empty = fakeStore();
+    const fresh = adoptSave(incoming, empty);
+    assert.ok(fresh.ok && fresh.replaced === false, 'importing into an empty browser works');
+    assert.equal([...empty.map.keys()].filter((k) => k.includes('_backup_')).length, 0,
+      'with no backup of nothing');
+  }
+
+  // 5b. loadSave's OWN refusal of a newer-than-code save — which this
+  //    phase's battery found ungated, by accident. Break 3 aimed at
+  //    importSave's version check and hit this one instead: the two lines
+  //    are character-for-character identical and loadSave's comes first in
+  //    the file, so a `replace(..., 1)` silently patched the wrong one. The
+  //    suite passed.
+  //
+  //    It is not R54's code — it has guarded the boot path since M0 — but it
+  //    is R54's rule, that a save from the future is never mangled by an
+  //    older build, and it turns out nothing has ever asserted it. So it is
+  //    R54's gate now.
+  {
+    const ahead = { ...newGameState(), saveVersion: SAVE_VERSION + 1, seed: 4242 };
+    const map = new Map([['spliceworld_save', JSON.stringify(ahead)]]);
+    const store = { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, v) };
+    const err = console.error;
+    console.error = () => {}; // loadSave narrates the refusal; the gate does not need it
+    let loaded;
+    try { loaded = loadSave(store); } finally { console.error = err; }
+    assert.equal(loaded.saveVersion, SAVE_VERSION, 'a save from a newer build does not load into an older one');
+    assert.notEqual(loaded.seed, 4242, 'the newer save is not adopted');
+    const kept = [...map.keys()].filter((k) => k.includes('_backup_'));
+    assert.equal(kept.length, 1, 'and it is kept rather than destroyed');
+    assert.equal(JSON.parse(map.get(kept[0])).saveVersion, SAVE_VERSION + 1, 'exactly as it arrived');
+  }
+
+  // 6. The door is reachable. The three verbs are useless if the shell has
+  //    no handle on them, and this is the only assertion that would notice.
+  {
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+    assert.ok(/id="savefile"/.test(html), 'the shell has a save-file button');
+    const shell = readFileSync(join(root, 'main.js'), 'utf8');
+    for (const fn of ['exportSave', 'exportFilename', 'importSave', 'adoptSave']) {
+      assert.ok(new RegExp(`\\b${fn}\\b`).test(shell), `and main.js wires ${fn}`);
+    }
+    assert.ok(/adoptSave\(/.test(shell) && /location\.reload\(\)/.test(shell),
+      'and reboots after adopting rather than swapping state under the running screens');
+  }
+}
+
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);
