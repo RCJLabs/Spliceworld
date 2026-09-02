@@ -12143,8 +12143,10 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     ];
     const allowed = (text) => IDIOMS.some(([phrase]) => text.includes(phrase));
     const hits = [];
+    let scanned = 0;
     const walkJSON = (node, file, path) => {
       if (typeof node === 'string') {
+        scanned += 1;
         if (BANNED.test(node) && !allowed(node)) hits.push(`data/${file}:${path} "${node.slice(0, 60)}"`);
         BANNED.lastIndex = 0;
         return;
@@ -12157,9 +12159,18 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
         }
       }
     };
-    for (const f of readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json'))) {
+    // The walk has to actually cover the content. A break that quietly
+    // dropped species.json out of this loop found nothing and passed, which
+    // is a gate reporting on a file it never opened.
+    const dataFiles = readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json'));
+    assert.ok(dataFiles.length >= 20, `every data file is in the walk (${dataFiles.length})`);
+    for (const must of ['species.json', 'parts.json', 'enemies.json']) {
+      assert.ok(dataFiles.includes(must), `${must} is one of them`);
+    }
+    for (const f of dataFiles) {
       walkJSON(JSON.parse(readFileSync(join(root, 'data', f), 'utf8')), f, '');
     }
+    assert.ok(scanned > 2000, `and the walk actually read the strings in them (${scanned})`);
     // …and the strings the engine prints. Comments are shop talk too, so they
     // come out first: this rule is about what a player reads.
     const stripComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
