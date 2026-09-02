@@ -10794,4 +10794,131 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+// R52. The Vault and the Surgery Theater were the last two long screens
+// never measured the way R44 measured the Pens, R45 the Dex and R46/R47 the
+// Ranch. Measured at 380px across five inventories, from nothing extracted
+// to a completionist's 41 graduations:
+//
+//   inventory        Vault          DNA Vials card    Part Tokens card
+//   nothing            260px            133px              115px
+//   3 graduations      673px            447px              214px
+//   10               1,723px          1,210px              501px
+//   25               3,973px          2,845px            1,116px
+//   41               5,999px          4,502px            1,485px   (7.5 screens)
+//
+// The vials card was SEVENTY-FIVE PERCENT of the screen for forty items,
+// while the token list directly below it carried 244 in 1,485px. The
+// difference was never the volume: the tokens fold by species and the vials
+// never did. Folding them the same way takes the completionist Vault to
+// 3,044px (3.8 screens) and the vials card to 1,547px, a 66% cut, with the
+// small-rack case byte-identical to what shipped.
+//
+// The Theater needed nothing. It measured 1,630px at EVERY one of those five
+// inventories — its sockets are capped by the chassis and its panel is
+// fixed — so gate 5 below turns "does not grow" from a note into a build
+// failure rather than inventing work for it.
+{
+  const { renderVaultScreen } = await import('../splice/vault-ui.js');
+  const { renderTheaterScreen } = await import('../splice/theater-ui.js');
+  const { startResequence, activeResequence } = await import('../splice/resequencer.js');
+
+  const el = () => ({ addEventListener() {}, classList: { add() {}, remove() {} },
+    dataset: {}, querySelector: () => null, querySelectorAll: () => [] });
+  const stub = () => ({ innerHTML: '', querySelector: () => el(),
+    querySelectorAll: () => [], classList: { add() {}, remove() {} } });
+  const baseSpecies = Object.values(content.species).filter((sp) => !sp.synthetic && !sp.variantOf);
+
+  const withVials = (n) => {
+    const st = { ...newGameState(), seed: 52 };
+    st.inventory.vials = [];
+    for (let i = 0; i < n; i++) {
+      st.inventory.vials.push({ id: `v${i}`, species: baseSpecies[i % baseSpecies.length].id,
+        donorName: `Donor ${i + 1}`, stars: 3 + (i % 3) * 0.5, traits: [] });
+    }
+    return st;
+  };
+  const vault = (st) => {
+    const root = stub();
+    renderVaultScreen(root, { state: st, content, now: () => t0, save: () => {} });
+    return root.innerHTML;
+  };
+  const count = (html, re) => (html.match(re) || []).length;
+
+  // 1. The fold turns on where the measurement says it should, and the small
+  //    rack keeps rendering flat. FLAT, not open-by-default: the first cut
+  //    rendered open <details> below the threshold and took three vials from
+  //    447px to 575px, because an open fold still pays for its summary.
+  {
+    const flat = vault(withVials(4));
+    const folded = vault(withVials(5));
+    assert.equal(count(flat, /<details/g), 0, 'four vials render flat, as they always did');
+    assert.ok(count(folded, /<details/g) > 0, 'five vials fold');
+    assert.ok(/<ul class="token-list">/.test(flat), 'and the flat list is still a list');
+  }
+
+  // 2. Folding is a layout change and must drop nothing. Every vial keeps a
+  //    row and — the half that matters — its Resequence button, which is the
+  //    only way a vial is ever spent.
+  {
+    for (const n of [1, 4, 5, 12, 40]) {
+      const html = vault(withVials(n));
+      assert.equal(count(html, /data-reseq="/g), n, `${n} vials, ${n} ways to spend one`);
+      assert.equal(count(html, /<li>/g), n, `and ${n} rows`);
+      assert.ok(html.includes(`DNA Vials (${n})`), 'with the heading agreeing');
+    }
+  }
+
+  // 3. A vial whose species left the roster is skipped rather than thrown
+  //    on — the token loop beside it has always done this, and the grouping
+  //    pass would otherwise crash on a null species.
+  {
+    const st = withVials(6);
+    st.inventory.vials.push({ id: 'ghost', species: 'not_a_species', donorName: 'Nobody', stars: 3, traits: [] });
+    const html = vault(st);
+    assert.equal(count(html, /data-reseq="/g), 6, 'six real vials survive a retired seventh');
+    assert.ok(!html.includes('not_a_species'), 'and the retired one is not drawn');
+  }
+
+  // 4. R15's rule reaches this screen too: the Resequencer's countdown is
+  //    the one thing here that costs something if missed, and it must not be
+  //    reachable only by opening a fold. It is a card of its own ABOVE the
+  //    rack, so assert the position rather than the presence.
+  {
+    const st = withVials(9);
+    const res = startResequence(st, 'v0', content, t0);
+    assert.ok(activeResequence(st), `a run is in flight (${res.msg ?? ''})`);
+    const html = vault(st);
+    const run = html.indexOf('Resequencer');
+    const firstFold = html.indexOf('<details');
+    assert.notEqual(run, -1, 'the run card renders while a run is in flight');
+    assert.ok(firstFold === -1 || run < firstFold, 'and never behind a fold');
+  }
+
+  // 5. The Theater does not grow with the Vault. Measured flat at 1,630px
+  //    across all five inventories; asserted here as markup, because a
+  //    socket count capped by the chassis is the REASON it is flat and a
+  //    later phase listing owned tokens inline would break both at once.
+  {
+    const theater = (n) => {
+      const st = { ...newGameState(), seed: 52 };
+      const parts = Object.values(content.parts).filter((p) => p.species !== 'salvage');
+      st.inventory.parts = [];
+      for (let i = 0; i < n; i++) {
+        const part = parts[i % parts.length];
+        st.inventory.parts.push({ id: `t${i}`, partId: part.id, grade: 'prime',
+          donor: { name: 'Donor', stars: 4 }, traits: [] });
+      }
+      st.inventory.tokenCount = n;
+      const root = stub();
+      renderTheaterScreen(root, { state: st, content, now: () => t0, save: () => {}, goto: () => {} });
+      return root.innerHTML.length;
+    };
+    const small = theater(6);
+    const huge = theater(244);
+    assert.ok(small > 2000, `the Theater renders something (${small})`);
+    assert.ok(Math.abs(huge - small) / small < 0.02,
+      `and does not grow with the vault: ${small} chars at 6 tokens, ${huge} at 244`);
+  }
+}
+
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

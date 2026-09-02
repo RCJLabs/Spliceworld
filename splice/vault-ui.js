@@ -34,20 +34,56 @@ export function renderVaultScreen(root, ctx) {
   const run = activeResequence(state);
   const penRoom = state.ranch.stock.length < state.ranch.penCapacity;
 
-  const vials = inv.vials.length
-    ? `<ul class="token-list">${inv.vials
-        .map((v) => {
-          const sp = content.species[v.species];
-          const plan = resequencePlan(state, v.id, content, t);
-          return `<li>${vialSVG(sp.palette.accent)} ${sp.name} essence <span class="lineage">from ${v.donorName} ★${v.stars}</span>${
-            plan.ok
-              ? `<br><span class="fine-print">${Math.round(plan.successChance * 100)}% to take · ${
-                  Math.round(plan.mutationChance * 100)}% chance of a new gene · ${plan.hours}h</span>
-                 <button type="button" class="care-train" data-reseq="${v.id}">🧬 Resequence</button>`
-              : run ? '' : ''
-          }</li>`;
-        })
-        .join('')}</ul>`
+  // R52. Measured at 380px: this card was 4,502px of a 5,999px Vault at a
+  // completionist's inventory — 75% of the screen for FORTY items, while
+  // the token list directly below it carried 244 in 1,485px. The whole
+  // difference is that the tokens fold by species and the vials never did.
+  // R31 gave each vial a plan line and a Resequence button and left the
+  // list flat, so the card grew a live button per vial forever.
+  //
+  // Same fold, same class, same screen — the inconsistency was the bug.
+  const vialRow = (v) => {
+    const sp = content.species[v.species];
+    const plan = resequencePlan(state, v.id, content, t);
+    return `<li>${vialSVG(sp.palette.accent)} ${sp.name} essence <span class="lineage">from ${v.donorName} ★${v.stars}</span>${
+      plan.ok
+        ? `<br><span class="fine-print">${Math.round(plan.successChance * 100)}% to take · ${
+            Math.round(plan.mutationChance * 100)}% chance of a new gene · ${plan.hours}h</span>
+           <button type="button" class="care-train" data-reseq="${v.id}">🧬 Resequence</button>`
+        : ''
+    }</li>`;
+  };
+  const vialsBySpecies = new Map();
+  for (const v of inv.vials) {
+    // A vial whose species left the roster is skipped rather than thrown on,
+    // matching what the token loop below has always done.
+    if (!content.species[v.species]) continue;
+    if (!vialsBySpecies.has(v.species)) vialsBySpecies.set(v.species, []);
+    vialsBySpecies.get(v.species).push(v);
+  }
+  // Flat while the rack is small, and FLAT rather than open-by-default: an
+  // open <details> still pays for its summary row, which the first cut of
+  // this measured the hard way — three vials went 447px to 575px because
+  // three open folds added three summaries and saved nothing. Below the
+  // threshold the card renders exactly what it always did.
+  const vials = inv.vials.length <= 4
+    ? (inv.vials.length
+        ? `<ul class="token-list">${inv.vials.filter((v) => content.species[v.species]).map(vialRow).join('')}</ul>`
+        : '<p class="ranch-msg">No essence on file. The centrifuge is bored.</p>')
+    : vialsBySpecies.size
+    ? [...vialsBySpecies.entries()]
+        .map(([id, vs]) => ({ sp: content.species[id], vs, best: vs.reduce((m, v) => Math.max(m, v.stars), 0) }))
+        .sort((a, b) => b.best - a.best || (a.sp.name > b.sp.name ? 1 : -1))
+        .map(({ sp, vs, best }) => `
+          <details class="vault-species">
+            <summary>
+              <strong>${sp.name}</strong>
+              <span class="lineage">${vs.length} vial${vs.length === 1 ? '' : 's'}</span>
+              <span class="star-badge">★${best.toFixed(1)}</span>
+            </summary>
+            <ul class="token-list">${vs.map(vialRow).join('')}</ul>
+          </details>`)
+        .join('')
     : '<p class="ranch-msg">No essence on file. The centrifuge is bored.</p>';
 
   // The run in flight, with its clock and the one thing that can stall it.
