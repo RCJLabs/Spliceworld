@@ -1,5 +1,165 @@
 # PROGRESS
 
+## Session 73 — R51: the field guide records outcomes ✅
+
+**Acceptance criterion:** the Dex says what you *beat*, not just what you
+saw — and a save that already cleared the Gauntlet keeps its trophies —
+**passes, measured in the browser**. `SAVE_VERSION` **33 → 34**, additive,
+with a migration.
+
+### The queued note was aimed at the wrong hole, twice
+
+R42 left *"Trophies appear on the card and the wire, not in the Dex."*
+Audited before writing anything, both halves were already handled:
+
+1. **The four bosses were already in the Dex.** `stratofortress`,
+   `leviathan_dredge`, `crucible_9000` and `the_compliance_engine` are four
+   of the forty cells in the field guide, logged like any other unit.
+2. **The beaten record was never lost.** The War Room's Gauntlet card
+   renders `BEATEN` permanently once dominion is held.
+
+So a trophy gallery in the Dex would have duplicated a card that already
+exists and never goes away — the same duplication R50 refused to ship.
+
+### The real hole is older and wider than the note
+
+`dex.enemies` has been a **sighting log** since R21, and a unit logs itself
+just as readily while flattening you. A player who won a fight and one who
+was carried out of it had **identical Dex entries** — under a card whose
+own closing line promises *"Every entry remembers you too."*
+
+`dex.beaten` is the second dimension: every unit that took the field in a
+battle you won. **A spar does not count**, on R41's existing ruling that a
+drill has no stakes — the ring only ever fields a garrison from a node you
+already took, so counting the drill would add nothing true.
+
+### The migration recovers what the save can prove and invents nothing
+
+The shelf arrives **empty**, and empty is the honest value: nothing in any
+previous save recorded *which* units a player beat (`warRecord` is a global
+tally), so backfilling would mean inventing a history.
+
+The Gauntlet is the one recoverable thing and it needs **no migration at
+all**. `gauntletBeaten` has held those exhibitions since v32, so
+`beatenUnits()` reads both records — and beating a stage beat its escorts
+too, which is derivable rather than guessable. A save that cleared
+Exhibition I years ago keeps its trophies without a single fabricated
+entry.
+
+### Completion deliberately did not move
+
+A `beaten 0/40` row would have dropped **every existing save's percentage**
+for a column no save ever recorded and no player can retroactively fill.
+That is the salvage reasoning (a figure that misrepresents the player's
+position is lying about the game), pointed at a different column. Beaten is
+a second dimension on the guide, not a completion axis — and gate 6 holds
+that decision in place.
+
+### Measured in the browser, 380px, console clean
+
+| state | field guide header | cells |
+|---|---|---|
+| fresh save | `0/40 logged` | — |
+| ten met, none beaten | `10/40 logged` | `Riot Squad → logged` |
+| ten met, four beaten | `10/40 logged · 4 beaten` | `Riot Squad → ✓ beaten [marked]` |
+| v33 save, Exhibition I cleared, 40 wins | `40/40 logged · 3 beaten` | shelf: `🏟 1/4 exhibitions answered: Stratofortress` |
+| same, county not held | `40/40 logged · 3 beaten` | shelf absent |
+
+No horizontal overflow in any state.
+
+### Three things the process caught rather than shipped
+
+**A hollow assertion, before the battery.** The first gate 3 asserted
+`logged.includes('logged')` — which the card header (`N/40 logged`)
+satisfies on *every page ever rendered*. Caught by reading the markup the
+header emits. R34, R35, R45 and R48 each shipped that mistake and found it
+in the battery; this is the second phase running where it was caught by
+reading instead.
+
+**QA found a seam the gates did not.** Row 5 above: with `dominionAt`
+cleared, the shelf correctly hides but the boss *cells* stay marked. That
+state is unreachable in play — `dominionAt` is never un-set, and the four
+bosses appear in no encounter and no director counter, so one can only take
+the field through a stage dominion already gates. **A fixture artefact, not
+a leak.** But "unreachable" is a fact about the DATA that a later phase
+could quietly falsify, so it is now two assertions rather than a comment.
+
+**The anti-hollow guard on those loops earned itself on its first run.**
+`content.director.counters` is not the runtime shape — `indexContent` keys
+them by id into `directorRules` — so without the emptiness check the loop
+would have iterated over nothing and passed while guarding nothing.
+
+### The break battery
+
+Thirteen breaks, each run against the full suite in an isolated worktree.
+**All caught.**
+
+| break | verdict |
+|---|---|
+| a loss fills the shelf | CAUGHT |
+| a drill counts as a trophy | CAUGHT |
+| the cell stops distinguishing beaten from logged | CAUGHT |
+| the beaten cell loses its mark | CAUGHT |
+| the migration invents a history | CAUGHT |
+| `beatenUnits` forgets the Gauntlet | CAUGHT |
+| `beatenUnits` forgets the escorts | CAUGHT |
+| the shelf ignores the spoiler rule | CAUGHT |
+| beaten becomes a completion row | CAUGHT — by **R45's dexProgress gate**, a sibling |
+| 9b. …with R45's fixture satisfied | **CAUGHT** |
+| a boss lands in an ordinary patrol | CAUGHT — by the **balance harness**, a sibling |
+| 10b. …in `rescue_impound` instead | CAUGHT — by **M5's rescue gate**, a sibling |
+| 10c. …in an encounter nothing fights | **CAUGHT** |
+| the director may requisition a boss | **CAUGHT** |
+
+**Three sibling catches, and they are the interesting rows.** A sibling
+catch proves *something* objects, not that the gate this phase added does.
+Break 9 died on R45's `a finished save has catalogued everything`, which
+sits earlier in the file and short-circuits the run; 9b fills R45's own
+`everything()` fixture so only gate 6 can speak, and it does — `the shelf
+is not a completion row`.
+
+Break 10 took **two** isolation attempts, which is itself the finding:
+every *referenced* encounter is fought by some gate. `patrol_1` made the
+opening node unclimbable (the balance harness scored it at 13%);
+`rescue_impound` broke M5's rescue. 10c therefore invents `ghost_patrol` —
+an encounter nothing points at, so no node, no rescue and no fight — and
+the new assertion finally speaks for itself: `no Gauntlet boss fields
+outside the Gauntlet (stratofortress in ghost_patrol)`.
+
+### Two existing gates fired unprompted
+
+Bumping `SAVE_VERSION` tripped **`sw.js` CACHE tracks SAVE_VERSION**, and
+adding a dex field tripped **M7's v8 migration shape test**. Both are
+anchor moves — the claims are untouched, the setups moved — and both are
+free evidence that those gates work, since neither was provoked on purpose.
+
+### Verified
+
+- Full suite green; six R51 gate blocks.
+- Browser QA at 380px across five states, table above; zero console errors
+  on a fresh save and on a genuine v33 migration.
+- `SAVE_VERSION` **34**, additive, migration tested from v1 and v33.
+
+### Known gaps
+
+- The Gauntlet rematch toggle (R42) is still unbuilt — R42 called a beaten
+  exhibition "a highlight reel, deliberately", so this is a preference
+  rather than a defect.
+- The agenda's rows remain the Ranch's largest chrome cost, by design
+  (R47).
+- `dex.beaten` records the win but not *when*, so the guide cannot say "you
+  beat this one three regions ago" the way a rival dossier can. Noted
+  rather than built: a timestamp per unit is a schema decision that should
+  wait until something wants to read it.
+
+### Next session's first task
+
+Nothing is queued. The oldest standing notes are the Gauntlet rematch
+toggle (a preference) and per-unit timestamps (speculative), so the honest
+next move is a fresh audit rather than a carried-over note — the Vault and
+the Surgery Theater are the two long screens never measured the way R44–R47
+measured the Pens, the Dex and the Ranch.
+
 ## Session 72 — R50: a new module has to declare itself ✅
 
 **Acceptance criterion:** a system cannot ship without somebody deciding
