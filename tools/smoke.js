@@ -10745,7 +10745,34 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const after = withTrophy(t0);
     assert.ok(!before.includes('gauntlet-shelf'), 'no shelf before dominion');
     assert.ok(!before.includes(content.enemies[stages[0].unitId].name),
-      'and the boss is not named to a player who has never held the county');
+      'and nothing else names the boss — the shelf was its only source on this page');
+
+    // The shelf is only half of why a pre-dominion player cannot see these
+    // four. The other half is that a boss cannot be SEEN at all before the
+    // Gauntlet opens, because no encounter fields one and the director
+    // cannot requisition one — which is a fact about the DATA, and exactly
+    // the kind a later phase could quietly falsify by dropping a boss into
+    // a regular wave. Browser QA at 380px is what pointed at this seam:
+    // force `dex.enemies` to hold all forty units and clear `dominionAt`,
+    // and the boss cells stay marked beaten while the shelf correctly
+    // hides. That state is unreachable in play, so it is a fixture
+    // artefact rather than a leak — but only for as long as these two
+    // assertions keep holding.
+    const bossIds = new Set(stages.map((st) => st.unitId));
+    const encIds = Object.keys(content.encounters);
+    assert.ok(encIds.length > 5, 'there are encounters to check');
+    for (const encId of encIds) {
+      for (const wave of content.encounters[encId].waves ?? []) {
+        assert.ok(!bossIds.has(wave), `no Gauntlet boss fields outside the Gauntlet (${wave} in ${encId})`);
+      }
+    }
+    const counters = Object.values(content.directorRules ?? {});
+    assert.ok(counters.length > 3, 'and director counters to check');
+    for (const counter of counters) {
+      for (const unit of counter.units ?? []) {
+        assert.ok(!bossIds.has(unit), `and the director cannot requisition one (${unit} in ${counter.id})`);
+      }
+    }
     assert.ok(after.includes('gauntlet-shelf'), 'the shelf appears once the county is held');
     assert.ok(after.includes(content.enemies[stages[0].unitId].name), 'and names what fell');
   }
