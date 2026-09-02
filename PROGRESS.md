@@ -72,27 +72,38 @@ anchor moves this run of phases keeps producing.
 ### The break battery
 
 Twelve breaks, each run against the full suite in an isolated worktree.
-**Verdicts pending at time of writing** — updated with the result rather
-than assumed.
+**All caught.**
 
 | break | verdict |
 |---|---|
-| the button reads the bucket alone | pending |
-| the button is enabled on charges | pending |
-| the button stops naming the reason | pending |
-| every refusal blames fitness | pending |
-| the countdown becomes a word | pending |
-| a ready button stops counting | pending |
-| the War Room forks the predicate | pending |
-| the Pens forks the predicate | pending |
-| the agenda forks the predicate | pending |
-| the predicate ignores fitness | pending |
-| the predicate ignores charges | pending |
-| the War Room needs a document again | pending |
+| the button reads the bucket alone | CAUGHT |
+| the button is enabled on charges | CAUGHT |
+| the button stops naming the reason | CAUGHT |
+| every refusal blames fitness | CAUGHT |
+| the countdown becomes a word | CAUGHT (R43's gate 7) |
+| a ready button stops counting | CAUGHT (R43's gate 7) |
+| the War Room forks the predicate | CAUGHT |
+| the Pens forks the predicate | CAUGHT |
+| the agenda forks the predicate | CAUGHT |
+| the predicate ignores fitness | CAUGHT |
+| the predicate ignores charges | CAUGHT |
+| the War Room needs a document again | CAUGHT |
 
-Three of them break `canSpar` at its source rather than at a screen —
-if the predicate itself is wrong, all three surfaces agree on the wrong
-answer together, and a gate that only checks agreement would pass.
+**Breaks 10 and 11 are the ones this phase's design invites.** Every other
+break damages one surface, and the agreement gate catches it because the
+three stop matching. Break the PREDICATE instead and all three agree on
+the wrong answer together — an agreement-only gate sails past that. They
+are caught by the per-reason assertions (`nothing to send, no spar`, `an
+empty bucket is not an open action`), which is why those exist alongside
+the agreement loop rather than being folded into it.
+
+Breaks 5 and 6 were caught by **R43's own gate 7** — the one whose anchor
+moved this phase. It still guards exactly what it always did: the button
+says how many, and shows a countdown when empty.
+
+Break 12 fails with `ReferenceError: document is not defined` rather than
+an assertion, which is the honest signal: undo the guard and the harness
+cannot render the screen at all.
 
 ### Verified
 
