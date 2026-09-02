@@ -53,39 +53,6 @@ export function renderVaultScreen(root, ctx) {
         : ''
     }</li>`;
   };
-  const vialsBySpecies = new Map();
-  for (const v of inv.vials) {
-    // A vial whose species left the roster is skipped rather than thrown on,
-    // matching what the token loop below has always done.
-    if (!content.species[v.species]) continue;
-    if (!vialsBySpecies.has(v.species)) vialsBySpecies.set(v.species, []);
-    vialsBySpecies.get(v.species).push(v);
-  }
-  // Flat while the rack is small, and FLAT rather than open-by-default: an
-  // open <details> still pays for its summary row, which the first cut of
-  // this measured the hard way — three vials went 447px to 575px because
-  // three open folds added three summaries and saved nothing. Below the
-  // threshold the card renders exactly what it always did.
-  const vials = inv.vials.length <= 4
-    ? (inv.vials.length
-        ? `<ul class="token-list">${inv.vials.filter((v) => content.species[v.species]).map(vialRow).join('')}</ul>`
-        : '<p class="ranch-msg">No essence on file. The centrifuge is bored.</p>')
-    : vialsBySpecies.size
-    ? [...vialsBySpecies.entries()]
-        .map(([id, vs]) => ({ sp: content.species[id], vs, best: vs.reduce((m, v) => Math.max(m, v.stars), 0) }))
-        .sort((a, b) => b.best - a.best || (a.sp.name > b.sp.name ? 1 : -1))
-        .map(({ sp, vs, best }) => `
-          <details class="vault-species">
-            <summary>
-              <strong>${sp.name}</strong>
-              <span class="lineage">${vs.length} vial${vs.length === 1 ? '' : 's'}</span>
-              <span class="star-badge">★${best.toFixed(1)}</span>
-            </summary>
-            <ul class="token-list">${vs.map(vialRow).join('')}</ul>
-          </details>`)
-        .join('')
-    : '<p class="ranch-msg">No essence on file. The centrifuge is bored.</p>';
-
   // The run in flight, with its clock and the one thing that can stall it.
   const runCard = run
     ? `<section class="card">
@@ -100,44 +67,80 @@ export function renderVaultScreen(root, ctx) {
       </section>`
     : '';
 
-  // With 150 possible parts a flat list is unreadable: collapse by species,
-  // newest/best first, and let the player open the one they care about.
-  const bySpecies = new Map();
+  // R53. The Vault used to be two cards that both listed the SAME ~34
+  // species names — R52 measured them at 1,547px and 1,485px, near-identical
+  // halves of one screen, each a fold per animal. The split was historical:
+  // vials arrived in M2 and parts in M2, and nothing ever asked whether a
+  // player thinks in "vials" and "parts" or in animals. They think in
+  // animals — an extraction produces one vial AND that animal's parts, from
+  // the same donor, in the same moment.
+  //
+  // One shelf per species, holding everything that came off that animal.
+  const shelf = new Map();
+  const bay = (id) => {
+    if (!shelf.has(id)) shelf.set(id, { vials: [], tokens: [] });
+    return shelf.get(id);
+  };
+  for (const v of inv.vials) {
+    // Retired species are skipped rather than thrown on, as R52 established
+    // for vials and the token loop has always done.
+    if (content.species[v.species]) bay(v.species).vials.push(v);
+  }
   for (const token of inv.parts) {
     const known = content.parts[token.partId];
-    if (!known) continue; // token from a retired part — ignore, never crash
-    const sp = known.species;
-    if (!bySpecies.has(sp)) bySpecies.set(sp, []);
-    bySpecies.get(sp).push(token);
+    if (known && content.species[known.species]) bay(known.species).tokens.push(token);
   }
-  const partSections = [...bySpecies.entries()]
-    .sort((a, b) => b[1].length - a[1].length || (content.species[a[0]].name > content.species[b[0]].name ? 1 : -1))
-    .map(([sp, tokens]) => {
-      const species = content.species[sp];
-      const best = tokens.reduce((m, t) => Math.max(m, GRADE_INDEX[t.grade]), 0);
-      const rows = SLOTS.map((slot) => {
-        const inSlot = tokens
-          .filter((t) => content.parts[t.partId].slot === slot)
-          .sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade]);
-        return inSlot
-          .map((t) => {
-            const part = content.parts[t.partId];
-            const grade = GRADES[GRADE_INDEX[t.grade]];
-            const traits = (t.traits ?? []).map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`).join('');
-            return `<li><span class="grade-badge grade-${t.grade}">${grade.name}</span> ${SLOT_LABELS[slot]}: ${part.name}${traits} <span class="lineage">${t.donor.name} ★${t.donor.stars}</span></li>`;
-          })
-          .join('');
-      }).join('');
-      return `
-        <details class="vault-species">
-          <summary>
-            <strong>${species.name}</strong>
-            <span class="lineage">${tokens.length} part${tokens.length === 1 ? '' : 's'}</span>
-            <span class="grade-badge grade-${GRADES[best].id}">${GRADES[best].name}</span>
-          </summary>
-          <ul class="token-list">${rows}</ul>
-        </details>`;
-    })
+
+  const tokenRows = (tokens) => SLOTS.map((slot) => tokens
+    .filter((t) => content.parts[t.partId].slot === slot)
+    .sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade])
+    .map((t) => {
+      const part = content.parts[t.partId];
+      const grade = GRADES[GRADE_INDEX[t.grade]];
+      const traits = (t.traits ?? []).map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`).join('');
+      return `<li><span class="grade-badge grade-${t.grade}">${grade.name}</span> ${SLOT_LABELS[slot]}: ${part.name}${traits} <span class="lineage">${t.donor.name} ★${t.donor.stars}</span></li>`;
+    }).join('')).join('');
+
+  // Every bay closed, at every size — no threshold, which is the part R52
+  // could not have. R52 kept a small rack FLAT so a new player could see
+  // their vial without tapping, and that was right when a fold hid nothing
+  // but one line. A bay hides an animal's whole parts list, so opening the
+  // short shelf measured at 1,357px against the two-card layout's 673px:
+  // the old rule, applied to the new fold, doubled the screen it was meant
+  // to protect.
+  //
+  // What made it safe to drop is that the summary now CARRIES the holdings
+  // — "Goat · 1 vial · 6 parts · ★4.0 · APEX" — so a closed bay still
+  // answers what you own; you open it to act, not to look. And the
+  // Resequencer does not depend on a fold to be found: guides.json has
+  // taught it on this screen since R31.
+  const bays = [...shelf.entries()]
+    .map(([id, held]) => ({
+      sp: content.species[id],
+      ...held,
+      stars: held.vials.reduce((m, v) => Math.max(m, v.stars), 0),
+      grade: held.tokens.reduce((m, t) => Math.max(m, GRADE_INDEX[t.grade]), -1),
+    }))
+    // A bay holding a vial sorts first: a vial is the only thing on this
+    // screen with a button, and an actionable shelf outranks a full one.
+    .sort((a, b) => (b.vials.length > 0) - (a.vials.length > 0)
+      || b.stars - a.stars
+      || b.tokens.length - a.tokens.length
+      || (a.sp.name > b.sp.name ? 1 : -1))
+    .map(({ sp, vials, tokens, stars, grade }) => `
+      <details class="vault-species">
+        <summary>
+          <strong>${sp.name}</strong>
+          <span class="lineage">${[
+            vials.length ? `${vials.length} vial${vials.length === 1 ? '' : 's'}` : '',
+            tokens.length ? `${tokens.length} part${tokens.length === 1 ? '' : 's'}` : '',
+          ].filter(Boolean).join(' · ')}</span>
+          ${vials.length ? `<span class="star-badge">★${stars.toFixed(1)}</span>` : ''}
+          ${grade >= 0 ? `<span class="grade-badge grade-${GRADES[grade].id}">${GRADES[grade].name}</span>` : ''}
+        </summary>
+        ${vials.length ? `<ul class="token-list">${vials.map(vialRow).join('')}</ul>` : ''}
+        ${tokens.length ? `<ul class="token-list">${tokenRows(tokens)}</ul>` : ''}
+      </details>`)
     .join('');
 
   root.innerHTML = `
@@ -145,15 +148,13 @@ export function renderVaultScreen(root, ctx) {
     ${lastMsg ? `<section class="card"><p class="ranch-msg">${lastMsg}</p></section>` : ''}
     ${runCard}
     <section class="card">
-      <h3>DNA Vials (${inv.vials.length})</h3>
+      <h3>Gene Vault</h3>
+      <p class="fine-print">${inv.vials.length} vial${inv.vials.length === 1 ? '' : 's'} · ${
+        inv.parts.length} part token${inv.parts.length === 1 ? '' : 's'}, shelved by the animal they came off.</p>
+      ${bays || '<p class="ranch-msg">The vault echoes. Graduate someone.</p>'}
       <p class="fine-print">A vial is the whole donor — its stars and its genes. Resequencing grows that animal back${
         run ? '' : '; the vial is spent whether or not it takes'
       }. It is the only way an extraction is not forever.</p>
-      ${vials}
-    </section>
-    <section class="card">
-      <h3>Part Tokens (${inv.parts.length})</h3>
-      ${partSections || '<p class="ranch-msg">The vault echoes. Graduate someone.</p>'}
       <p class="fine-print">Every token remembers its donor forever. It&#39;s sentimental. And legally binding.</p>
     </section>`;
 
