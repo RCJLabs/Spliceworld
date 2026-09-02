@@ -5811,6 +5811,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'enemies.json': null,
     'philosophies.json': null,
     'guides.json': null,
+    // R62: the wire's copy is not a system with a first-use moment — it is
+    // the voice every system above speaks in, met through all of them and
+    // never on its own. Its own gate is the two-way one: every event has
+    // copy, every line has an emitter.
+    'news.json': null,
   };
   {
     const files = readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json')).sort();
