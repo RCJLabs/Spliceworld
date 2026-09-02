@@ -10909,6 +10909,39 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(count(html, /<details/g), 6, 'and neither opens a bay of its own');
   }
 
+  // 3b. The bay summary carries the holdings — which is the ENTIRE argument
+  //    for closing every bay at every size. Break 5 of R53's battery stripped
+  //    that line and NOTHING FAILED: gate 2's count-line assertion was being
+  //    satisfied by the card SUBTITLE ("40 vials · 244 part tokens"), not by
+  //    the summary, so the property the fold rests on was unguarded. Same
+  //    shape as R51's `logged.includes('logged')` — asserting against the
+  //    page when the claim is about one element — so this one slices the
+  //    summary out and reads inside it.
+  {
+    const sp = baseSpecies[0];
+    const own = Object.values(content.parts).filter((pt) => pt.species === sp.id);
+    assert.ok(own.length >= 2, `${sp.name} has parts to shelve (${own.length})`);
+    const st = { ...newGameState(), seed: 53 };
+    st.inventory.vials = [{ id: 'v0', species: sp.id, donorName: 'Bessie', stars: 3.2, traits: [] }];
+    st.inventory.parts = own.map((pt, i) => ({ id: `t${i}`, partId: pt.id, grade: 'standard',
+      donor: { name: 'Bessie', stars: 3.2 }, traits: [] }));
+    const html = vault(st);
+    const at = html.indexOf('<summary>');
+    assert.notEqual(at, -1, 'the bay has a summary');
+    const summary = html.slice(at, html.indexOf('</summary>', at));
+    assert.ok(summary.includes(sp.name), 'which names the animal');
+    assert.ok(summary.includes('1 vial'), `and says what is in it: vials (${summary.replace(/<[^>]+>/g, ' ').trim()})`);
+    assert.ok(summary.includes(`${own.length} part`), 'and parts');
+    assert.ok(summary.includes('★3.2'), 'and ranks the vial by its donor');
+    assert.ok(/grade-badge/.test(summary), 'and the parts by their best grade');
+    // A bay with only one half says only that half — no "0 parts".
+    const vialOnly = { ...st, inventory: { ...st.inventory, parts: [] } };
+    const only = vault(vialOnly);
+    const onlySummary = only.slice(only.indexOf('<summary>'), only.indexOf('</summary>'));
+    assert.ok(onlySummary.includes('1 vial'), 'a vial-only bay still says so');
+    assert.ok(!/0 part/.test(onlySummary), 'and does not advertise an empty half');
+  }
+
   // 4. R15's rule reaches this screen too: the Resequencer's countdown is
   //    the one thing here that costs something if missed, and it must not be
   //    reachable only by opening a fold. It is a card of its own ABOVE the
