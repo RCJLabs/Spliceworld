@@ -5923,10 +5923,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
       `every module either names the note that teaches its system or is exempted (unlisted: ${unlisted.join(', ')})`);
     for (const [file, note] of Object.entries(MODULE_NOTES)) {
       assert.ok(modules.includes(file), `${file} is still on disk (drop it from the map if it went)`);
-      if (note) {
-        assert.ok(covered.has(note), `${file} points at a note that exists (${note})`);
-        assert.ok(SHIPPED_SYSTEMS.includes(note), `${file} points at a system on the roll (${note})`);
-      }
+      // Only the one test: `missing` and `orphans` below prove the roll and
+      // the note ids are the SAME SET, so "names a system on the roll" is
+      // not a second condition — it is this one spelled differently. An
+      // assertion that cannot fail on its own is not a gate.
+      if (note) assert.ok(covered.has(note), `${file} points at a note that exists (${note})`);
     }
     // The map must not be all exemptions: if a future edit blanks the
     // system half, this gate would still pass while guarding nothing.
