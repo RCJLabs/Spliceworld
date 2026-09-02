@@ -1,5 +1,130 @@
 # PROGRESS
 
+## Session 77 — R55: a second run ✅
+
+**Acceptance criterion:** a player can start over without clearing site
+data, and cannot do it by accident — **passes, measured in a real
+browser**. No schema change; `SAVE_VERSION` stays **34**.
+
+### The audit found a category, not a button
+
+`newGameState()` existed and nothing in the UI could reach it, so the only
+way to start over was to clear site data — indistinguishable from losing
+your game by accident. The sacred rule is that a save is never *destroyed
+by a migration*; it was never that a player may only ever have one run.
+
+Building it forced a distinction the save has always had and never named.
+**Three fields are not part of the run:**
+
+- `settings` — a device preference. Wiping it un-mutes somebody's phone
+  because they started a new game.
+- `guidesSeen` — 22 field notes already dismissed. R37 put every lesson
+  behind the wall it explains, so a fresh save re-fires all of them as the
+  player re-reaches each system. That is the tedium tax on run two.
+- `ui.collapsed` — which cards they like shut.
+
+`CARRIED_ACROSS_RUNS` names them, and the gate asserts **the list**, not
+only its current members, so a fourth entry has to be a decision rather
+than a slip.
+
+### That category is a correction to R54, shipped the session before
+
+`adoptSave` wrote an imported save wholesale, so **importing a muted
+friend's save muted your phone**. One list now answers "what is a run" for
+both the reset and the import, because two answers is exactly how the two
+paths drift apart. A deliberate change to behaviour shipped one phase ago,
+made because R55 is what forced the category to exist.
+
+### Cannot happen by accident, cannot destroy what it replaces
+
+Two taps, and the second is reached only after the first says out loud what
+it costs — chimeras, animals, part tokens, nodes held, days — with the
+download button repeated **inside** the confirmation, because "there is a
+backup in this browser" is not a plan a player can hold.
+
+An **empty** run skips the dialogue. Confirming the destruction of nothing
+is how a player learns to tap through the confirmation that guards a real
+run.
+
+The reset goes through the same `adoptSave` R54 built, so the outgoing run
+is set aside first and the reset is **refused outright** if it cannot be.
+`downloadSave()` was extracted rather than duplicated: the confirmation is
+where it matters most, so it must not be the copy that drifts.
+
+### Browser QA, 380px, console clean
+
+| step | result |
+|---|---|
+| fresh save | resets immediately, no dialogue |
+| played save | `⚠ Start a new run?` · *"2 chimeras, 3 animals on the ranch, 4 part tokens, 2 nodes held, over 37 days"* · run still live |
+| cancel | back on the panel, chimeras still 2 |
+| download inside the confirmation | `spliceworld-lab-v34-2026-09-02.json` |
+| confirm | chimeras 0, nodes 0, funds 300, **1 backup holding the played run** |
+| carried | `muted=true`, `guidesSeen=2`, `folds=1`; the mute button still reads 🔇 |
+
+One number needed disambiguating rather than reporting: post-reset stock
+read **3**, which could have been the old herd surviving. It is
+`goat/Miriam, goat/Poppy, bear/Nigel` — M1's starter herd, freshly seeded —
+while the backup holds the old `bear, tiger, wolf`.
+
+**The first QA run failed, and it was the fixture rather than the game.** I
+seeded `{id:'a1'}` animals with no `species`, so `stockUpkeepPerDay` threw
+on every render and took the overlay down with it — a broken fixture
+reading exactly like a broken feature. R46 made the same mistake about the
+same screen.
+
+### The break battery
+
+Twelve breaks. **Ten caught outright; two real gaps, and they are the same
+mistake twice.**
+
+| break | verdict |
+|---|---|
+| the reset keeps the run | CAUGHT |
+| the reset wipes the device preferences too | CAUGHT |
+| a fourth field crosses the boundary silently | CAUGHT |
+| carried values are shared references | CAUGHT |
+| the new run reuses the old world seed | CAUGHT |
+| the confirmation miscounts what is at stake | CAUGHT |
+| every run reads as empty, skipping the confirmation | CAUGHT |
+| the reset sets nothing aside | **MISSED — a real gap** |
+| 8 (rerun, now gated) | **CAUGHT** |
+| one tap ends the run | **MISSED — a real gap** |
+| 9 (rerun, now gated) | **CAUGHT** |
+| the import clobbers device preferences again | CAUGHT |
+
+**Neither miss was a bad break.** Break 8 replaced the shell's `adoptSave`
+call with a direct `localStorage.setItem`: the gate exercised `adoptSave`
+itself and never asserted that the shell *uses* it — R49's lesson, that a
+shared mechanism needs every reader asserted and not only the mechanism.
+Break 9 replaced the *call* to `confirmNewRun` and left its definition
+standing, so a regex over the whole file still matched — R51's
+`logged.includes('logged')` in different clothes.
+
+Both are now asserted where the claim lives: the reset handler is sliced
+out of `main.js` and read inside, both reset paths must go through
+`adoptSave`, and the shell may not touch `localStorage` at all.
+
+**One process fix shipped with the battery.** After R54's break 3 silently
+patched an identical earlier line, `patch()` now asserts its anchor is
+**unique** and fails loudly on a mis-aim rather than reporting it as a gate
+failure.
+
+### Known gaps
+
+- The reset keeps `guidesSeen`, so a player who genuinely wants the
+  tutorials again has no way to ask for them. Deliberate — re-teaching
+  somebody who has already read them is the larger insult — but a "show me
+  the field notes again" toggle would close it properly.
+- Backups still accumulate under `spliceworld_save_backup_*` and nothing
+  prunes them (carried from R54).
+
+### Next session's first task
+
+**R56 — the playthrough has never been walked.** Every measurement is a
+slice; nothing walks one seeded save from an empty ranch to dominion and
+reports the pacing curve.
+
 ## Session 76 — R54: a save that can leave the browser ✅
 
 **Acceptance criterion:** a save can leave the browser and come back, an
