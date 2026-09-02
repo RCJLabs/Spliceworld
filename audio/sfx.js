@@ -75,11 +75,66 @@ const STINGERS = {
     { type: 'square', from: 150, to: 50, at: 0.1, dur: 0.25, vol: 0.06 },
   ],
   waveIn: [{ type: 'square', from: 300, to: 620, dur: 0.13, vol: 0.07 }],
+  // R59 — the four moments outside the arena.
+  alarm: [
+    { type: 'sawtooth', from: 520, to: 300, dur: 0.18, vol: 0.10 },
+    { type: 'sawtooth', from: 520, to: 300, at: 0.22, dur: 0.18, vol: 0.10 },
+  ],
+  conquest: [
+    { type: 'square', from: 330, to: 494, dur: 0.12, vol: 0.09 },
+    { type: 'square', from: 494, to: 660, at: 0.11, dur: 0.16, vol: 0.09 },
+    { type: 'triangle', from: 660, to: 990, at: 0.24, dur: 0.22, vol: 0.07 },
+  ],
+  report: [
+    { type: 'triangle', from: 880, to: 1180, dur: 0.09, vol: 0.06 },
+    { type: 'triangle', from: 1180, to: 1320, at: 0.10, dur: 0.12, vol: 0.05 },
+  ],
+  decant: [
+    { type: 'sine', from: 180, to: 520, dur: 0.30, vol: 0.09 },
+    { type: 'square', from: 700, to: 520, at: 0.30, dur: 0.10, vol: 0.07 },
+  ],
   capture: [
     { type: 'sine', from: 80, to: 40, dur: 0.3, vol: 0.16 },
     { type: 'triangle', from: 1200, to: 2000, at: 0.28, dur: 0.1, vol: 0.07 },
   ],
 };
+
+// R59 — the game was scored for its fights and silent everywhere else.
+// Fifteen call sites, NINE of them in battle/ui.js: taking a node, a
+// counter-offensive landing on one you hold, a job coming back and a
+// resequenced donor decanting all happened without a sound.
+//
+// The mapper lives here rather than being sprinkled across four screens,
+// because "what deserves a sound" is one decision and four copies of it
+// drift. It reads a snapshot of scalars, so it is DOM-free and the suite can
+// assert every cue without a browser or an AudioContext.
+//
+// The rule these four share: a sound marks a change in your POSITION —
+// something arrived, completed, or was taken from you. Navigation and taps
+// are not events; the game already has one `click` and does not need more.
+export function watchSignals(state) {
+  return {
+    nodes: state?.campaign?.heldNodes?.length ?? 0,
+    contested: state?.campaign?.contested?.length ?? 0,
+    report: state?.campaign?.opReport ? 1 : 0,
+    stock: state?.ranch?.stock?.length ?? 0,
+    resequencing: state?.resequencer ? 1 : 0,
+  };
+}
+
+export function cuesFor(before, after) {
+  if (!before || !after) return [];
+  const cues = [];
+  // The alarm comes first because it is the only one with a deadline: a
+  // contested node is lost if it is not defended in its window.
+  if (after.contested > before.contested) cues.push('alarm');
+  if (after.nodes > before.nodes) cues.push('conquest');
+  if (after.report > before.report) cues.push('report');
+  // A run that ended WITH an animal arriving decanted; one that ended
+  // without is an abort, which the player did on purpose and already saw.
+  if (before.resequencing && !after.resequencing && after.stock > before.stock) cues.push('decant');
+  return cues;
+}
 
 export function play(name) {
   if (muted || !ctx || !STINGERS[name]) return;

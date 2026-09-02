@@ -11525,4 +11525,83 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+// R59. The game was scored for its fights and silent everywhere else:
+// fifteen `sfx.play()` call sites, NINE of them in battle/ui.js. Taking a
+// node, a counter-offensive landing on one you hold, a job coming back and a
+// resequenced donor decanting all happened without a sound.
+//
+// (The audit nearly filed a sixteenth finding. `waveIn` looked unplayed
+// because the grep matching stinger names used `[a-z]+` and the capital I
+// hid it. All fifteen fire; the problem was only ever where.)
+{
+  const { watchSignals, cuesFor } = await import('../audio/sfx.js');
+  const sfxSrc = readFileSync(join(root, 'audio/sfx.js'), 'utf8');
+  const defined = [...sfxSrc.slice(sfxSrc.indexOf('const STINGERS'), sfxSrc.indexOf('export function play'))
+    .matchAll(/^  ([a-zA-Z]+):/gm)].map((m) => m[1]);
+
+  // 1. Every cue the mapper can emit is a stinger that exists. A cue naming
+  //    a sound nobody wrote is silence that looks wired.
+  {
+    const base = { campaign: { heldNodes: [], contested: [], opReport: null }, ranch: { stock: [1, 2] }, resequencer: null };
+    const every = cuesFor(
+      watchSignals({ ...base, resequencer: { id: 'r' } }),
+      watchSignals({ campaign: { heldNodes: ['n'], contested: ['c'], opReport: { id: 'r' } }, ranch: { stock: [1, 2, 3] }, resequencer: null })
+    );
+    assert.deepEqual(every, ['alarm', 'conquest', 'report', 'decant'],
+      `all four cues fire when all four things happen (${every.join(', ')})`);
+    for (const cue of every) {
+      assert.ok(defined.includes(cue), `${cue} is a stinger that exists`);
+    }
+  }
+
+  // 2. Nothing happening is silent. A cue on every tick is worse than no
+  //    cue: tick() runs every 30 seconds whether or not anyone did anything.
+  {
+    const idle = watchSignals({ campaign: { heldNodes: ['a'], contested: [], opReport: null }, ranch: { stock: [1] }, resequencer: null });
+    assert.deepEqual(cuesFor(idle, idle), [], 'an idle tick says nothing');
+    assert.deepEqual(cuesFor(null, idle), [], 'and the first tick of a session has nothing to compare to');
+    // Losing things is not a cue either — the wire already says so, and a
+    // fanfare for a node being taken off you would be the wrong feeling.
+    const fewer = watchSignals({ campaign: { heldNodes: [], contested: [], opReport: null }, ranch: { stock: [1] }, resequencer: null });
+    assert.deepEqual(cuesFor(idle, fewer), [], 'and a node lost is not announced with a chime');
+  }
+
+  // 3. The decant/abort distinction, which is the one judgement in the
+  //    mapper: a run that ended WITH an animal arriving decanted; one that
+  //    ended without is an abort the player did on purpose and already saw.
+  {
+    const running = watchSignals({ campaign: { heldNodes: [], contested: [], opReport: null }, ranch: { stock: [2] }, resequencer: { id: 'r' } });
+    const decanted = watchSignals({ campaign: { heldNodes: [], contested: [], opReport: null }, ranch: { stock: [1, 2, 3] }, resequencer: null });
+    const aborted = watchSignals({ campaign: { heldNodes: [], contested: [], opReport: null }, ranch: { stock: [2] }, resequencer: null });
+    assert.deepEqual(cuesFor(running, decanted), ['decant'], 'a finished run is announced');
+    assert.deepEqual(cuesFor(running, aborted), [], 'an aborted one is not');
+  }
+
+  // 4. THE CRITERION: the moments outside the arena are scored, and the
+  //    shell is what plays them — asserted on the source, because the cue
+  //    firing is a browser behaviour the harness cannot hear.
+  {
+    const shell = readFileSync(join(root, 'main.js'), 'utf8');
+    const at = shell.indexOf('function tick()');
+    assert.notEqual(at, -1, 'tick exists');
+    const body = shell.slice(at, shell.indexOf('\n}', at));
+    assert.ok(/watchSignals\(state\)/.test(body), 'tick snapshots before the systems advance');
+    assert.ok(/cuesFor\(/.test(body) && /sfx\.play\(cue\)/.test(body), 'and plays what changed');
+    assert.equal((body.match(/watchSignals\(state\)/g) ?? []).length, 2,
+      'snapshotting both sides of the tick, not just one');
+  }
+
+  // 5. The mute toggle still silences everything. A sound that ignores it is
+  //    worse than no sound, and these four are the first that fire without
+  //    the player having touched anything.
+  {
+    assert.ok(/if \(muted \|\| !ctx/.test(sfxSrc), 'play() refuses while muted');
+    assert.ok(/export function setMuted/.test(sfxSrc), 'and the toggle reaches it');
+    // Every stinger goes through the one gate, so a new one cannot arrive
+    // with its own path around the mute.
+    const plays = (sfxSrc.match(/function play\(/g) ?? []).length;
+    assert.equal(plays, 1, 'there is exactly one way to make a noise');
+  }
+}
+
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

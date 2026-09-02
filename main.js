@@ -19,6 +19,7 @@ import { ensureTemperaments } from './splice/temperament.js';
 import { tickScars } from './splice/scars.js';
 import { renderDexScreen } from './splice/dex-ui.js';
 import * as sfx from './audio/sfx.js';
+import { watchSignals, cuesFor } from './audio/sfx.js';
 
 // Dev time-warp: ?warp=48 pretends 48 hours have passed. QA-only — the
 // warp lives in the URL, never in the save, so removing it can produce a
@@ -97,6 +98,11 @@ function showScreen(name) {
 // Timestamps, not intervals: recompute elapsed effects on load, on focus,
 // and on a slow display refresh (settling countdowns, care cooldowns).
 function tick() {
+  // R59: what deserves a sound is decided in one place (audio/sfx.js) from a
+  // snapshot of scalars. tick() is where every passive system advances, so
+  // it is the only place that can see a job come back or a node fall while
+  // nobody was looking.
+  const beforeCues = watchSignals(state);
   applyElapsed(state, content, NOW());
   for (const line of tickVat(state, content, NOW()).news) pushNews(state, line);
   // A resequencing run finishes on its own clock, whether or not anyone is
@@ -109,6 +115,7 @@ function tick() {
   tickCampaign(state, content, NOW());
   saveGame(state);
   updateTicker();
+  for (const cue of cuesFor(beforeCues, watchSignals(state))) sfx.play(cue);
   const name = state.activeScreen;
   const root = $(`#screen-${name}`);
   if (root && !root.hidden) SCREENS[name](root);
