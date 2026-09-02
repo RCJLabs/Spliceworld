@@ -10995,7 +10995,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // one when something has already gone wrong, which is exactly when a vague
 // "invalid file" is most expensive and least testable by hand.
 {
-  const { exportSave, exportFilename, importSave, adoptSave } = await import('../save/save.js');
+  const { exportSave, exportFilename, importSave, adoptSave, loadSave } = await import('../save/save.js');
 
   // A localStorage stand-in, so adoption can be driven into the states a
   // real browser only reaches when it is full or locked down.
@@ -11109,6 +11109,32 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(fresh.ok && fresh.replaced === false, 'importing into an empty browser works');
     assert.equal([...empty.map.keys()].filter((k) => k.includes('_backup_')).length, 0,
       'with no backup of nothing');
+  }
+
+  // 5b. loadSave's OWN refusal of a newer-than-code save — which this
+  //    phase's battery found ungated, by accident. Break 3 aimed at
+  //    importSave's version check and hit this one instead: the two lines
+  //    are character-for-character identical and loadSave's comes first in
+  //    the file, so a `replace(..., 1)` silently patched the wrong one. The
+  //    suite passed.
+  //
+  //    It is not R54's code — it has guarded the boot path since M0 — but it
+  //    is R54's rule, that a save from the future is never mangled by an
+  //    older build, and it turns out nothing has ever asserted it. So it is
+  //    R54's gate now.
+  {
+    const ahead = { ...newGameState(), saveVersion: SAVE_VERSION + 1, seed: 4242 };
+    const map = new Map([['spliceworld_save', JSON.stringify(ahead)]]);
+    const store = { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, v) };
+    const err = console.error;
+    console.error = () => {}; // loadSave narrates the refusal; the gate does not need it
+    let loaded;
+    try { loaded = loadSave(store); } finally { console.error = err; }
+    assert.equal(loaded.saveVersion, SAVE_VERSION, 'a save from a newer build does not load into an older one');
+    assert.notEqual(loaded.seed, 4242, 'the newer save is not adopted');
+    const kept = [...map.keys()].filter((k) => k.includes('_backup_'));
+    assert.equal(kept.length, 1, 'and it is kept rather than destroyed');
+    assert.equal(JSON.parse(map.get(kept[0])).saveVersion, SAVE_VERSION + 1, 'exactly as it arrived');
   }
 
   // 6. The door is reachable. The three verbs are useless if the shell has
