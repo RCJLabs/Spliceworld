@@ -9609,7 +9609,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       variants: Object.values(content.species).filter((sp) => sp.variantOf).length,
       combos: 0,
       genes: 0,
-      foes: Object.keys(content.enemies).length,
+      foes: Object.keys(content.enemies).length + Object.keys(content.rivals).length,
     };
     assert.deepEqual(svgs, owed, `each tab draws its own portraits and no others (${JSON.stringify(svgs)})`);
     const total = Object.values(svgs).reduce((a, b) => a + b, 0);
@@ -11353,6 +11353,92 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   const again = campaignWalk(content, { seed: 2026, days: 45 });
   assert.deepEqual(again.at, walk.at, 'the walk is reproducible from its seed');
   assert.equal(again.warRecord.wins, walk.warRecord.wins, 'down to the fights');
+}
+
+// R57. `portraitSeed` was authored on every rival at R27 and had ZERO
+// references in any .js file. campaign/ui.js drew the rival's LEAD CHIMERA
+// into a slot it calls `.rival-portrait`, so three villains with a title, a
+// philosophy, a monologue set and an escalating dossier were represented on
+// screen by their pet, and the Dex dossier carried no art at all.
+{
+  const { renderRivalSVG, rivalPortraitShapes } = await import('../render/renderer.js');
+  const { rivalList: rivalsOf } = await import('../campaign/rivals.js');
+  const rivals = rivalsOf(content);
+
+  // 1. The waiting field is the one doing the work. A rival with no seed
+  //    still draws rather than throwing, because a fourth rival authored
+  //    without one should get a face and not a stack trace.
+  {
+    for (const rival of rivals) {
+      assert.ok(typeof rival.portraitSeed === 'number', `${rival.id} carries a portraitSeed`);
+      const svg = renderRivalSVG(rival, content.classes);
+      assert.ok(svg.startsWith('<svg') && svg.includes('</svg>'), `${rival.id} renders`);
+      assert.ok(svg.includes(`aria-label="${rival.name}"`), 'and says whose face it is');
+      assert.ok(rivalPortraitShapes(rival, content.classes).length >= 10,
+        `${rival.id} is drawn from real shapes`);
+    }
+    assert.ok(renderRivalSVG({ name: 'Nobody', classBias: 'ground' }, content.classes).startsWith('<svg'),
+      'a rival authored without a seed still gets a face');
+  }
+
+  // 2. Seeded means seeded: same rival, same face, every device and reload.
+  //    And three rivals must not share one face, which is the failure a
+  //    seeded generator actually has.
+  {
+    for (const rival of rivals) {
+      assert.equal(renderRivalSVG(rival, content.classes), renderRivalSVG(rival, content.classes),
+        `${rival.id} draws the same face twice`);
+    }
+    const faces = new Set(rivals.map((r) => renderRivalSVG(r, content.classes)));
+    assert.equal(faces.size, rivals.length, `every rival has their own face (${faces.size}/${rivals.length})`);
+    // The seed is what varies the features — not the name, not the order.
+    // Asserted on the shapes at a FIXED class, because the colour is
+    // deliberately the rival's and not the seed's.
+    const twins = rivals.map((r) => JSON.stringify(
+      rivalPortraitShapes({ ...r, portraitSeed: 999, classBias: 'ground' }, content.classes)));
+    assert.equal(new Set(twins).size, 1, 'the same seed picks the same features whoever wears it');
+    const tints = rivals.map((r) => JSON.stringify(
+      rivalPortraitShapes({ ...r, portraitSeed: 999 }, content.classes)));
+    assert.ok(new Set(tints).size > 1, 'while the class still tints them apart');
+  }
+
+  // 3. The picture carries the one thing about a rival that decides a fight.
+  {
+    for (const rival of rivals) {
+      const colour = content.classes[rival.classBias]?.color;
+      assert.ok(colour, `${rival.id} has a class colour`);
+      assert.ok(renderRivalSVG(rival, content.classes).includes(colour),
+        `${rival.id}'s portrait is tinted by the class it fights with (${rival.classBias})`);
+    }
+  }
+
+  // 4. The spoiler rule. R21 made an unmet rival read as a rumour rather
+  //    than a dossier; a face is exactly the kind of thing that leaks one.
+  {
+    const unmet = dexPages({ ...newGameState(), seed: 57 }).foes;
+    for (const rival of rivals) {
+      assert.ok(!unmet.includes(rival.name), `${rival.id} is not named before you meet them`);
+    }
+    const met = { ...newGameState(), seed: 57 };
+    met.campaign.rivals = { [rivals[0].id]: { defeats: 1, losses: 0, lastMetAt: t0 } };
+    const page = dexPages(met).foes;
+    assert.ok(page.includes(rivals[0].name), 'a rival you have fought is named');
+    assert.ok(page.includes(`aria-label="${rivals[0].name}"`), 'and has a face in the dossier');
+    assert.ok(!page.includes(`aria-label="${rivals[1].name}"`),
+      'while the one you have never met still has neither');
+  }
+
+  // 5. The War Room slot draws the RIVAL. The chimera is not dropped — it is
+  //    roster information — but it stops being the thing called a portrait.
+  {
+    const war = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
+    const at = war.indexOf('class="rival-portrait"');
+    assert.notEqual(at, -1, 'the War Room still has a portrait slot');
+    const slot = war.slice(at, war.indexOf('rival-body', at));
+    assert.ok(/renderRivalSVG\(/.test(slot), 'and it draws the rival');
+    assert.ok(/rival-lead/.test(slot), 'with what they lead with kept alongside');
+    assert.ok(/locked \?/.test(slot), 'and a locked rival still redacted');
+  }
 }
 
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

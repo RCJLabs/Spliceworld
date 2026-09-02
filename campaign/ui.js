@@ -19,7 +19,7 @@ import { sparEncounter, canSpar, startSpar } from './sparring.js';
 import { gauntletState, gauntletEncounter } from './gauntlet.js';
 import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
-import { renderCreatureSVG } from '../render/renderer.js';
+import { renderCreatureSVG, renderRivalSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
 import { directEncounter, directorRead } from './director.js';
 import {
@@ -332,9 +332,12 @@ function renderMap(root, ctx) {
       : '';
     return `
       <div class="rival-card ${locked ? 'is-locked' : ''}">
-        <div class="rival-portrait">${
-          lead ? renderCreatureSVG(lead.genome, content, { idPrefix: `rv-${rival.id}` }) : '<div class="rival-redacted">?</div>'
-        }</div>
+        <div class="rival-portrait">
+          ${locked ? '<div class="rival-redacted">?</div>' : renderRivalSVG(rival, content.classes)}
+          ${lead && !locked
+            ? `<div class="rival-lead" title="What they lead with">${renderCreatureSVG(lead.genome, content, { idPrefix: `rv-${rival.id}` })}</div>`
+            : ''}
+        </div>
         <div class="rival-body">
           <strong>${rival.name}</strong>
           <p class="fine-print">${rival.title}</p>
