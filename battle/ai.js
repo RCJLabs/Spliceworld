@@ -42,15 +42,12 @@ function incomingDamage(atk, def, content) {
   return worst || def.power;
 }
 
-// Exported so the battle UI can surface the utility move that is actually
-// worth a button, rather than whichever one happens to sit earliest in
-// socket order — which was the tail, every time, on every six-part build.
-export function utilityValue(move, atk, def, content) {
-  const allies = 1;
-  const incoming = incomingDamage(atk, def, content);
-  const window = Math.min(1, (atk.hp / Math.max(1, incoming)) / 4);
-  return utilityScore(move, atk, def, allies, incoming, window);
-}
+// R61: `utilityValue` stood here, exported so the battle UI could rank which
+// utility move earned one of the four buttons. R30 removed the question — the
+// moveset is the cap now, so every move a creature carries is on screen in
+// the order it was trained, and nothing needs ranking. The wrapper outlived
+// the problem by thirty phases because nothing was watching for an export
+// with no reader. That is what this phase's gate is for.
 
 function utilityScore(move, atk, def, allies, incoming, window) {
   const kw = move.keywords ?? {};

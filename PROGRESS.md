@@ -1,5 +1,220 @@
 # PROGRESS
 
+## Session 83 — R61: no orphan content ✅
+
+**Acceptance criterion:** a dead export, an unread data field and a banned word
+are each a build failure — and the gate is written last, after R57 and R58
+have cleared the instances it would otherwise fail on. **Passes.** No schema
+change; `SAVE_VERSION` stays **34**.
+
+### The queue named three findings; the best one was not among them
+
+`utilityValue` was real, and it is not what the queue thought. Its own comment
+says it was exported so the battle UI could rank which utility move earned one
+of four buttons — *"whichever one happens to sit earliest in socket order,
+which was the tail, every time, on every six-part build"*. **R30 deleted that
+question:** the moveset is the cap now, so every move a creature carries is on
+screen in the order it was trained, and nothing needs ranking. So this is not
+an unbuilt feature. It is a **fossil of a problem another phase solved**, and
+it sat there for thirty phases because nothing was watching. Removed, with the
+reason kept where it stood.
+
+Then the scan found a second dead export the queue never named, and it is the
+better one:
+
+> `knownMoves` in `battle/moves.js` is one line, and its comment says it exists
+> to **be** the single definition of what a genome grants — *"so this asks it
+> rather than reimplementing the rules."* Nothing called it.
+
+The rule had **four copies**: the Pens (where a player actually picks the
+four), `tools/sim.js`, `tools/smoke.js`, and the orphaned original. Wired all
+three to it rather than deleting it — deleting the canonical definition and
+leaving three copies is backwards. R49's shape exactly, one layer down.
+
+**"Death Roll" is now "Spin Cycle."** The crocodile move *is* the spin, so the
+joke survives the tone rule intact. CLAUDE.md states zero death language as an
+absolute, not a preference, and this was the one place the game broke it.
+
+### The gates, and what each one names on the old tree
+
+Written last, as the queue asked. Each was run against the tree as it stood
+**before R58**, where every instance still existed:
+
+| gate | on the pre-R58 tree | today |
+|---|---|---|
+| every export has a reader | `utilityValue` — and `setMuted`, dead until R59 wired it | clean |
+| every authored section reaches runtime | exactly `classes.json:flavor` | clean |
+| zero death language | exactly `species.json "Death Roll"` | clean |
+
+Gate 2 is R58's bug as an assertion: `indexContent` is a hand-written
+projection, so a section a data file authors reaches runtime only if somebody
+remembered to pick it up. It compares the 44 authored sections against what
+the indexed content actually exposes.
+
+One trap inside it, and it is the R56/R58 lesson again: **a scalar matches
+anything holding the same number.** `classes.advantage` "reached"
+`temperamentMeta.critMult` purely because both are the same float. A
+value-only match is not evidence, so for a scalar the destination has to carry
+the same name.
+
+### Gate 1 took three attempts, and the two failures are the lesson
+
+**Attempt 1 — "the identifier appears in another file."** That counts a
+*mention*, not a call. Two things went wrong at once: naming an instrument in
+the gate's own exemption list made it look called, and a comment in
+`theater.js` — `// \`known\` is what the genome grants (battle/moves.js
+knownMoves)` — had been hiding a genuine dead export for thirty phases. The
+gate would have passed while the thing it exists to catch sat in plain sight.
+
+**Attempt 2 — blank the comments first, then look.** Worse. `tools/smoke.js`
+contains `/*` inside a regex literal, so the block-comment stripper ran from
+there to the next `*/` and ate its own assertions, reporting **four healthy
+exports as dead**. A gate that mangles the file it is reading is not stricter,
+it is louder.
+
+**Attempt 3 — resolve the import graph.** Ask who actually imports the name,
+including through a namespace import, because `sfx.initAudio()` is a reader
+and a regex written to skip property access says it is not.
+
+Same shape as the three the last sessions recorded (R55's `confirmNewRun`
+regex, R57's whole-SVG comparison, R59's function-name count): **assert the
+thing, not a stand-in for it.** The difference here is that the stand-in was
+inside the gate whose whole job is to catch stand-ins.
+
+### The exemption lists have to stay live
+
+Two lists, and both are the kind of thing that rots into a blanket:
+
+- `tools/sim.js` holds six hand-run balance instruments — `extractorYield`,
+  `infirmaryPayback` and four more — that the developer calls from `node -e`
+  to answer one question. "No importer" is their normal state, not rot, and
+  deleting somebody's instruments is not this phase's call. Named
+  individually, never waved through as a directory.
+- Three idioms carry no death sense in use: **"Dead Reckoning"** (navigation),
+  **"Dead heat"** (racing), **"executed flawlessly"** (carried out — and it is
+  about running away).
+
+Both lists are checked for **liveness**: a renamed instrument or an idiom
+nobody writes any more fails the build rather than lingering as a hole with
+nothing behind it. And the idioms are exact **phrases**, never bare words, so
+allowing "Dead Reckoning" cannot let "the beast is dead" through.
+
+### Reported, deliberately not gated
+
+**26 exports are used only inside their own module** — `closePicker` (9 uses),
+`livingBench` (5), `announceDominion` (3) and 23 more. That is a wider
+interface than needed, not dead content, and the criterion says *dead*. A gate
+demanding 26 mechanical edits for no player-visible reason is a gate people
+learn to route around. Recorded here instead.
+
+### The break battery: twelve breaks, four real gaps, all four mine
+
+| # | break | verdict |
+|---|---|---|
+| 1 | a new export arrives with nothing calling it | CAUGHT |
+| 2 | a dead export hides behind a mention in a comment | CAUGHT |
+| 3 | the exemption list waves through a shipped module | **MISSED** → fixed → CAUGHT |
+| 4 | an exemption goes stale — the instrument is renamed | CAUGHT |
+| 4b | an exemption names something that never existed | CAUGHT |
+| 5 | a new authored section is never indexed (R58 exactly) | CAUGHT |
+| 6 | an existing section stops being indexed | CAUGHT *(sibling; isolated below)* |
+| 7 | a scalar section is indexed under another name | CAUGHT *(sibling; isolated below)* |
+| 8 | the banned word returns to authored content | CAUGHT |
+| 9 | death language arrives in an engine string | CAUGHT |
+| 10 | the idiom list is widened into a bare word | **MISSED** → fixed → CAUGHT |
+| 11 | an idiom exemption goes stale | **MISSED** → fixed → CAUGHT |
+| 12 | a data file drops out of the walk | **MISSED** → fixed → CAUGHT |
+
+Breaks 6 and 7 were caught by older gates that fire earlier — R58's own
+line-survival assertion, and a combat assertion that went to 0% when the class
+multiplier lost its name. Re-run against gate 2 alone, it names them itself:
+`dropped: classes.json:flavor` and `dropped: classes.json:advantage`.
+
+**Every one of the four misses was the same defect, and I wrote all four.**
+
+- **3** — the exemption list would silence any export at all. The reason for
+  the exemption ("a hand-run balance instrument") can only be true of a
+  developer tool, so that is now what bounds its scope: a shipped module
+  cannot claim it.
+- **10** — *"exact phrases, never bare words"* was a **comment**. The battery
+  added `['Death', 'shush']` and every "Death Roll" in the game went quiet. An
+  entry must now contain a space and carry a word beyond the banned one.
+- **11** — the liveness check counted the suite's own source, so listing
+  `'Dead heat'` in `smoke.js` was evidence that `'Dead heat'` was still used
+  somewhere. **This is the identical self-satisfaction I had already found and
+  fixed in the HAND_RUN list two gates earlier, reproduced one gate later by
+  the same hand.**
+- **12** — dropping `species.json` from the walk made the gate report clean on
+  a file it never opened. The file list is a checked value now: twenty files
+  minimum, three named explicitly, and a floor on strings actually read.
+
+### The pattern, sharpened
+
+The last three sessions logged *assert the thing, not a stand-in for it*
+(R55's `confirmNewRun` regex, R57's whole-SVG comparison, R59's function-name
+count). R60 added: a gate anchored to a screen's **source text** breaks on its
+setup, never its claim.
+
+This phase adds the version that stings, because it is about gates themselves:
+
+> **An exemption list is content, and content needs a reader.** Mine kept
+> being its own. A list that satisfies its own liveness check, or that
+> silences the rule it is an exception to, is not an exception — it is the
+> rule switched off, written in a place nobody re-reads.
+
+The gate whose entire job is catching authored content with no reader shipped
+three drafts with exactly that bug inside it. It took the battery to find each
+one, which is the argument for running a battery on a gate at all.
+
+### Browser QA, 380px, console clean
+
+The crocodile's bonus reads **"Spin Cycle — Slow cuts 60% more Speed"** out of
+the content the browser actually loaded, and a sweep of that loaded content
+for death language returns one hit: `parts.json Dead Reckoning`, the exempted
+navigation idiom. Nothing else.
+
+The Pens is where the wiring landed, and an empty Pens would have read as a
+passing one — so a creature was seeded rather than assumed:
+
+```
+Moves 4/4 slots · knows 6
+Rhino Rush · Suplex · Pangolin Bristles · Bear Spike
+2 more it knows and cannot currently press. Swapping one in means giving one up.
+```
+
+That count and that sentence are computed from `knownMovesOf`, which now reads
+the shared definition. 1,438px, no horizontal overflow, no console messages.
+
+One thing in the screenshot that is **not** a finding: the card reads
+`instability undefined/100`. That is the hand-built QA creature missing a
+field every real chimera gets at splice time (`theater.js:124`), not a shipped
+bug — recorded so the next person reading the shot does not chase it.
+
+### Next session's first task
+
+**R62 — the news wire, as a system.** The overhaul, and the one finding with a
+hard convention behind it. CLAUDE.md: *"All content is data. Adding content
+must never require engine edits. If it does, the engine is wrong — fix the
+engine."* The wire breaks it outright: **19 player-facing news strings are
+hardcoded inside engine modules** against 33 authored lines in `/data`, so the
+game's own voice is half data and half engine.
+
+R61 leaves it better armed than it found it: gate 3 already walks every string
+literal in every shipped module, so it knows where those 19 live.
+
+### Standing leftovers
+
+- The campaign plateau is still unexplained (R56).
+- The agenda has no entry for **defending** a contested node (R56). R59 gave
+  that moment a sound, R60 made its cost honest, and the walker still cannot
+  answer it.
+- The duel still doesn't show a rival face (R57).
+- Briefing chips still say "beats their Water" with no reason (R58).
+- `campaign/ui.js` is still the largest module at 1,019 lines (R60), and
+  splitting its markup means moving five pieces of shared module state.
+- **26 exports are used only inside their own module.** Reported by this
+  phase's scan, deliberately not gated: a wide interface is not dead content.
+
 ## Session 82 — R60: the War Room's decisions, out where they can be tested ✅
 
 **Acceptance criterion:** the War Room's logic is DOM-free and testable the

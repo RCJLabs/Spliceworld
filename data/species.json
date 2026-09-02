@@ -148,7 +148,7 @@
       ],
       "incubationMinutes": 49,
       "setBonus": {
-        "name": "Death Roll",
+        "name": "Spin Cycle",
         "desc": "Slow cuts 60% more Speed",
         "effect": {
           "keywords": {

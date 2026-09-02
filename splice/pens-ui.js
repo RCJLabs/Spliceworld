@@ -8,7 +8,7 @@ import {
   chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING,
   setMoveset, moveTrainingReady,
 } from './theater.js';
-import { MOVE_SLOTS, activeMoves, moveSummary, moveDetail } from '../battle/moves.js';
+import { MOVE_SLOTS, activeMoves, knownMoves, moveSummary, moveDetail } from '../battle/moves.js';
 import { toggleRow } from '../ui/picker.js';
 import { movesFromTokens } from '../battle/engine.js';
 import { analyze } from './physiology.js';
@@ -25,10 +25,14 @@ function reportOf(chimera, content) {
   return analyze(chimera.frame, tokens, content, tokens.length);
 }
 
+// R61: the mapping used to be reimplemented here. `knownMoves` in
+// battle/moves.js was written to BE the single definition — its own comment
+// says so — and nothing called it, so the rule had four copies and the
+// canonical one was the orphan. This is the shape R49 and R58 both had.
 function knownMovesOf(chimera, content) {
   const tokens = Object.values(chimera.tokens);
-  return movesFromTokens(tokens, analyze(chimera.frame, tokens, content), content)
-    .map((m) => ({ ...m, id: m.source }));
+  return knownMoves(chimera, content, () =>
+    movesFromTokens(tokens, analyze(chimera.frame, tokens, content), content));
 }
 import { isInjured, obediencePercent } from '../battle/engine.js';
 import { describe as describeTemperament } from './temperament.js';

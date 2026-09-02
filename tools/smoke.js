@@ -55,7 +55,7 @@ import { agendaShape } from '../ranch/agenda.js';
 import { trainingTuning } from '../battle/veterancy.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { moveReadout } from '../battle/readout.js';
-import { defaultMoveset } from '../battle/moves.js';
+import { defaultMoveset, knownMoves } from '../battle/moves.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -7239,10 +7239,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   const { movesFromTokens, combatantFromChimera } = await import('../battle/engine.js');
   const { setMoveset, moveTrainingReady, MOVE_TRAINING } = await import('../splice/theater.js');
 
+  // R61: reads the shared definition rather than a fourth copy of it.
   const knownOf = (ch) => {
     const tokens = Object.values(ch.tokens);
-    return movesFromTokens(tokens, analyze(ch.frame, tokens, content), content)
-      .map((m) => ({ ...m, id: m.source }));
+    return knownMoves(ch, content, () =>
+      movesFromTokens(tokens, analyze(ch.frame, tokens, content), content));
   };
 
   // 1. EVERY move in the game can say what it does. This is the criterion's
@@ -11921,6 +11922,295 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const partial = holdKestrel([]);
     partial.campaign.heldNodes = partial.campaign.heldNodes.slice(0, 2);
     assert.equal(stripState(partial, content, kestrel, 0), 'available', 'an unfinished strip offers it');
+  }
+}
+
+// --- R61: no orphan content.
+//
+// Three findings and the gate that would have caught all of them. R20 wired
+// dead keywords, R57 found rival portraits nothing drew, R58 found class
+// flavor nothing could read — three phases spent on the same species of bug,
+// AUTHORED CONTENT WITH NO READER, and nothing in the suite was watching for
+// it. R50's MODULE_NOTES catches an unclassified module; nothing caught an
+// unreferenced export, a section that never reaches runtime, or a word the
+// tone rules ban outright.
+{
+  const SKIP_DIRS = new Set(['node_modules', '.git', 'docs']);
+  const jsFiles = [];
+  const walkJs = (dir) => {
+    for (const e of readdirSync(dir ? join(root, dir) : root, { withFileTypes: true })) {
+      const rel = dir ? `${dir}/${e.name}` : e.name;
+      if (e.isDirectory()) { if (!SKIP_DIRS.has(rel)) walkJs(rel); }
+      else if (e.name.endsWith('.js')) jsFiles.push(rel);
+    }
+  };
+  walkJs('');
+  const source = new Map(jsFiles.map((f) => [f, readFileSync(join(root, f), 'utf8')]));
+
+  // --- 1. Every export has a reader.
+  //
+  // `utilityValue` in battle/ai.js was exported for a battle-UI ranking that
+  // R30 made unnecessary — the moveset is the cap now, so every move a
+  // creature carries is already on screen. The wrapper outlived the problem
+  // by thirty phases with nothing watching.
+  {
+    // tools/sim.js is a library of hand-run balance instruments: the
+    // developer calls them from `node -e` to answer one question, so "no
+    // importer" is their normal state rather than rot. Named individually,
+    // not waved through as a directory, and checked below for liveness — an
+    // exemption for something that no longer exists is how a list like this
+    // rots into a blanket.
+    //
+    // This list started at SIX and four of them were wrong: incubatorThroughput,
+    // extractorYield, infirmaryPayback and rivalEncounters are all called
+    // inside sim.js, spread into a row as `...extractorYield(...)`, and the
+    // scan that built the list skipped anything preceded by a dot. An
+    // exemption for something that was never an orphan is a hole dug for no
+    // reason, so the list is the two that are really there.
+    const HAND_RUN = {
+      'tools/sim.js': ['withSecondOrgan', 'rivalCounterBench'],
+    };
+    const exportsOf = (text) => {
+      const names = new Set();
+      for (const m of text.matchAll(/^export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)) names.add(m[1]);
+      for (const m of text.matchAll(/^export\s+(?:const|let|class)\s+([A-Za-z_$][\w$]*)/gm)) names.add(m[1]);
+      for (const m of text.matchAll(/^export\s*\{([^}]*)\}/gm)) {
+        for (const part of m[1].split(',')) {
+          const name = part.trim().split(/\s+as\s+/).pop().trim();
+          if (name) names.add(name);
+        }
+      }
+      return names;
+    };
+    // A READER IMPORTS IT. Two weaker tests were tried and both were wrong:
+    // "the identifier appears in another file" counts a MENTION, so naming
+    // `extractorYield` in HAND_RUN below made it look called; and blanking
+    // comments with a regex first corrupts any file that contains `/*`
+    // inside a literal — this one does, so it ate its own assertions and
+    // reported four healthy exports as dead. So: resolve the import graph
+    // and ask who actually imports the name.
+    const dirOf = (f) => f.includes('/') ? f.slice(0, f.lastIndexOf('/')) : '';
+    const resolve = (from, spec) => {
+      if (!spec.startsWith('.')) return null;
+      const parts = `${dirOf(from)}/${spec}`.split('/');
+      const out = [];
+      for (const part of parts) {
+        if (part === '.' || part === '') continue;
+        if (part === '..') out.pop();
+        else out.push(part);
+      }
+      return out.join('/');
+    };
+    // name -> set of modules importing it, and the modules each file pulls in
+    // wholesale (`import * as sfx`), whose exports are then read as `sfx.x`.
+    const importsOf = new Map(); // "module\u0000name" -> true
+    const namespaces = []; // { file, target, alias }
+    for (const [file, text] of source) {
+      for (const m of text.matchAll(/import\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g)) {
+        const target = resolve(file, m[2]);
+        if (!target) continue;
+        for (const part of m[1].split(',')) {
+          const name = part.trim().split(/\s+as\s+/)[0].trim();
+          if (name) importsOf.set(`${target}\u0000${name}`, true);
+        }
+      }
+      // `const { a, b } = await import('./x.js')` — how the suite loads things.
+      for (const m of text.matchAll(/\{([^}]*)\}\s*=\s*await\s+import\(\s*['"]([^'"]+)['"]/g)) {
+        const target = resolve(file, m[2]);
+        if (!target) continue;
+        for (const part of m[1].split(',')) {
+          const name = part.trim().split(/\s*:\s*/)[0].trim();
+          if (name) importsOf.set(`${target}\u0000${name}`, true);
+        }
+      }
+      for (const m of text.matchAll(/import\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*['"]([^'"]+)['"]/g)) {
+        const target = resolve(file, m[2]);
+        if (target) namespaces.push({ file, target, alias: m[1] });
+      }
+    }
+    const orphans = [];
+    let total = 0;
+    for (const [file, text] of source) {
+      const key = file.replace(/\.js$/, '.js');
+      for (const name of exportsOf(text)) {
+        total += 1;
+        if (HAND_RUN[file]?.includes(name)) continue;
+        const imported = importsOf.has(`${key}\u0000${name}`);
+        // …or reached through a namespace import: `sfx.initAudio()`.
+        const viaNamespace = namespaces.some((ns) => ns.target === key
+          && new RegExp(`\\b${ns.alias}\\.${name}\\b`).test(source.get(ns.file)));
+        // Its own file counts too: an export used internally is a wide
+        // interface, not dead content, and this gate is about the dead kind.
+        // No `.` exclusion here: `...extractorYield(x)` and `obj.thing()` are
+        // both uses, and a regex written to skip property access called a
+        // function that sim.js spreads into a row DEAD. Over-counting toward
+        // "this has a reader" is the safe direction for a build failure.
+        const here = [...text.matchAll(new RegExp(`(^|[^\\w$])${name}\\b`, 'g'))].length;
+        if (!imported && !viaNamespace && here <= 1) orphans.push(`${file}:${name}`);
+      }
+    }
+    assert.ok(total > 300, `the scan actually found the exports (${total})`);
+    assert.deepEqual(orphans, [],
+      `every export has a reader somewhere (dead: ${orphans.join(', ')})`);
+
+    // The exemption's REASON is what bounds its SCOPE. "A hand-run balance
+    // instrument the developer calls from `node -e`" can only be true of a
+    // developer tool, so a shipped module can never claim it — without this,
+    // HAND_RUN is a general switch for silencing any export at all, which is
+    // what the battery caught it being.
+    for (const file of Object.keys(HAND_RUN)) {
+      assert.ok(file.startsWith('tools/'),
+        `only a hand-run tool can claim this exemption (${file} cannot)`);
+    }
+    // The exemptions are live. A name that has since been deleted or renamed
+    // must come off the list, or the list stops describing the repo.
+    for (const [file, names] of Object.entries(HAND_RUN)) {
+      const text = source.get(file);
+      assert.ok(text, `${file} is still on disk`);
+      for (const name of names) {
+        assert.ok(new RegExp(`export function ${name}\\b`).test(text),
+          `${file} still exports ${name} (drop it from HAND_RUN if it went)`);
+      }
+    }
+  }
+
+  // --- 2. Every section a data file authors reaches runtime.
+  //
+  // THE R58 GATE. classes.json had carried four authored lines since the
+  // triangle shipped, and `indexContent` kept only the class list and the two
+  // multipliers — so `flavor` was dropped at index time and never reached
+  // runtime at all. A reader written before that phase would have found
+  // nothing there to read. Run against the tree as it stood before R58, this
+  // gate names `classes.json flavor` and nothing else.
+  {
+    const raw = {};
+    for (const f of readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json'))) {
+      raw[f.replace('.json', '')] = JSON.parse(readFileSync(join(root, 'data', f), 'utf8'));
+    }
+    const indexed = indexContent(raw);
+    const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const asId = (arr) => Object.fromEntries(arr.map((x) => [x.id, x]));
+
+    // Everything the indexed content exposes, one and two levels deep, which
+    // is where indexContent puts things.
+    const exposed = [];
+    for (const [k, v] of Object.entries(indexed)) {
+      exposed.push([k, v]);
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        for (const [k2, v2] of Object.entries(v)) exposed.push([`${k}.${k2}`, v2]);
+      }
+    }
+    const dropped = [];
+    let sections = 0;
+    for (const [file, doc] of Object.entries(raw)) {
+      for (const [key, value] of Object.entries(doc)) {
+        if (key === '_doc') continue; // a note to the developer, not content
+        sections += 1;
+        const candidates = [value];
+        if (Array.isArray(value) && value.every((x) => x && typeof x === 'object' && 'id' in x)) {
+          candidates.push(asId(value));
+        }
+        const hits = exposed.filter(([, v]) => candidates.some((c) => eq(c, v)));
+        // A scalar matches anything holding the same number, so a value-only
+        // match is not evidence: `classes.advantage` "reaches"
+        // `temperamentMeta.critMult` purely because both are 1.5. For a
+        // scalar the destination has to carry the same name.
+        const named = hits.some(([path]) => path.split('.').pop() === key);
+        const scalar = value === null || typeof value !== 'object';
+        if (!named && (scalar || !hits.length)) dropped.push(`${file}.json:${key}`);
+      }
+    }
+    assert.ok(sections >= 40, `the scan actually walked the data (${sections} sections)`);
+    assert.deepEqual(dropped, [],
+      `every authored section reaches runtime (dropped: ${dropped.join(', ')})`);
+  }
+
+  // --- 3. Zero death language.
+  //
+  // CLAUDE.md states it as an absolute, not a preference: extraction is
+  // "graduation", KO'd soldiers parachute away, vehicles retire loudly.
+  // species.json named a crocodile set bonus "Death Roll" anyway.
+  {
+    const BANNED = /\b(death|deaths|dead|deadly|die|dies|died|dying|kill|kills|killed|killing|killer|corpse|corpses|slain|slay|slays|fatal|fatally|fatality|deceased|perish|perishes|perished|murder|murdered|execute|executed|execution)\b/gi;
+    // Exact PHRASES, never bare words, so allowing one idiom cannot allow the
+    // word anywhere else — "Dead Reckoning" passing does not let "the beast
+    // is dead" through. Each carries no death sense in use; each is checked
+    // for liveness below, so a stale exemption fails rather than lingering.
+    const IDIOMS = [
+      ['Dead Reckoning', 'navigation, not dying — a parts.json ability'],
+      ['Dead heat', 'racing, for a tie on speed'],
+      ['executed flawlessly', 'carried out — and it is about running away'],
+    ];
+    const allowed = (text) => IDIOMS.some(([phrase]) => text.includes(phrase));
+    const hits = [];
+    let scanned = 0;
+    const walkJSON = (node, file, path) => {
+      if (typeof node === 'string') {
+        scanned += 1;
+        if (BANNED.test(node) && !allowed(node)) hits.push(`data/${file}:${path} "${node.slice(0, 60)}"`);
+        BANNED.lastIndex = 0;
+        return;
+      }
+      if (Array.isArray(node)) return node.forEach((v, i) => walkJSON(v, file, `${path}[${i}]`));
+      if (node && typeof node === 'object') {
+        for (const [k, v] of Object.entries(node)) {
+          if (k === '_doc') continue; // shop talk; the rule is about player text
+          walkJSON(v, file, path ? `${path}.${k}` : k);
+        }
+      }
+    };
+    // The walk has to actually cover the content. A break that quietly
+    // dropped species.json out of this loop found nothing and passed, which
+    // is a gate reporting on a file it never opened.
+    const dataFiles = readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json'));
+    assert.ok(dataFiles.length >= 20, `every data file is in the walk (${dataFiles.length})`);
+    for (const must of ['species.json', 'parts.json', 'enemies.json']) {
+      assert.ok(dataFiles.includes(must), `${must} is one of them`);
+    }
+    for (const f of dataFiles) {
+      walkJSON(JSON.parse(readFileSync(join(root, 'data', f), 'utf8')), f, '');
+    }
+    assert.ok(scanned > 2000, `and the walk actually read the strings in them (${scanned})`);
+    // …and the strings the engine prints. Comments are shop talk too, so they
+    // come out first: this rule is about what a player reads.
+    const stripComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    const STRINGS = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g;
+    for (const [file, text] of source) {
+      if (file.startsWith('tools/')) continue; // the harness talks to me, not to a player
+      for (const m of stripComments(text).matchAll(STRINGS)) {
+        const lit = m[1] ?? m[2] ?? m[3] ?? '';
+        if (BANNED.test(lit) && !allowed(lit)) hits.push(`${file}: "${lit.slice(0, 60)}"`);
+        BANNED.lastIndex = 0;
+      }
+    }
+    assert.deepEqual(hits, [], `zero death language (${hits.join(' | ')})`);
+
+    // An exemption must be a PHRASE, and the comment above saying so was not
+    // worth anything until this asserted it: the battery widened the list to
+    // `['Death', 'shush']` and every "Death Roll" in the game went quiet,
+    // because a bare banned word as an exemption is the rule switched off.
+    for (const [phrase, why] of IDIOMS) {
+      assert.ok(/\s/.test(phrase), `"${phrase}" is a phrase, not a bare word (${why})`);
+      const rest = phrase.replace(BANNED, ' ').trim();
+      BANNED.lastIndex = 0;
+      assert.ok(rest.length > 0,
+        `"${phrase}" carries a word beyond the banned one, or it exempts the word itself`);
+    }
+
+    // Every idiom on the list is still somewhere in the repo. An exemption
+    // for a phrase nobody writes any more is a hole with nothing behind it.
+    //
+    // THE SUITE'S OWN SOURCE DOES NOT COUNT. Listing "Dead heat" here made
+    // the list evidence for itself, so renaming the only real use of it in
+    // battle/ui.js left the exemption standing — the same self-satisfaction
+    // the HAND_RUN list had, reproduced one gate later.
+    const haystack = [...source].filter(([f]) => f !== 'tools/smoke.js')
+      .map(([, t]) => t).join('\n')
+      + readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json'))
+        .map((f) => readFileSync(join(root, 'data', f), 'utf8')).join('\n');
+    for (const [phrase, why] of IDIOMS) {
+      assert.ok(haystack.includes(phrase), `the "${phrase}" exemption still applies to something (${why})`);
+    }
   }
 }
 
