@@ -10844,16 +10844,28 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   };
   const count = (html, re) => (html.match(re) || []).length;
 
-  // 1. The fold turns on where the measurement says it should, and the small
-  //    rack keeps rendering flat. FLAT, not open-by-default: the first cut
-  //    rendered open <details> below the threshold and took three vials from
-  //    447px to 575px, because an open fold still pays for its summary.
+  // 1. R53 RETIRED R52's threshold rather than re-anchoring it. R52 kept a
+  //    rack of four or fewer FLAT so a new player saw their vial without
+  //    tapping, which was right while a fold hid one line. A bay hides an
+  //    animal's whole parts list, and opening the short shelf measured at
+  //    1,357px against the two-card layout's 673px — the old rule, applied
+  //    to the new fold, doubled the screen it existed to protect.
+  //
+  //    So the claim is now the opposite one, and it is stronger for having
+  //    no threshold in it: every bay is closed, at every size.
   {
-    const flat = vault(withVials(4));
-    const folded = vault(withVials(5));
-    assert.equal(count(flat, /<details/g), 0, 'four vials render flat, as they always did');
-    assert.ok(count(folded, /<details/g) > 0, 'five vials fold');
-    assert.ok(/<ul class="token-list">/.test(flat), 'and the flat list is still a list');
+    for (const n of [1, 4, 5, 40]) {
+      const html = vault(withVials(n));
+      assert.ok(count(html, /<details/g) > 0, `${n} vials still shelve`);
+      assert.equal(count(html, /<details class="vault-species" open/g), 0,
+        `and no bay opens itself at ${n} vials`);
+    }
+    // One card, not two: the merge is the phase, so assert it rather than
+    // trusting the heights to imply it.
+    const one = vault(withVials(6));
+    assert.ok(!one.includes('DNA Vials ('), 'the vials no longer have a card of their own');
+    assert.ok(!one.includes('Part Tokens ('), 'nor the tokens');
+    assert.ok(one.includes('Gene Vault'), 'there is one shelf');
   }
 
   // 2. Folding is a layout change and must drop nothing. Every vial keeps a
@@ -10863,8 +10875,23 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     for (const n of [1, 4, 5, 12, 40]) {
       const html = vault(withVials(n));
       assert.equal(count(html, /data-reseq="/g), n, `${n} vials, ${n} ways to spend one`);
-      assert.equal(count(html, /<li>/g), n, `and ${n} rows`);
-      assert.ok(html.includes(`DNA Vials (${n})`), 'with the heading agreeing');
+      assert.equal(count(html, / essence/g), n, `and ${n} vial rows`);
+      assert.ok(html.includes(`${n} vial${n === 1 ? '' : 's'} ·`), 'with the count line agreeing');
+    }
+    // And the half the merge could quietly lose: a part token has to come
+    // through the shelf too, since it changed cards to get here.
+    {
+      const st = withVials(3);
+      const parts = Object.values(content.parts).filter((pt) => pt.species !== 'salvage').slice(0, 24);
+      st.inventory.parts = parts.map((pt, i) => ({ id: `p${i}`, partId: pt.id, grade: 'prime',
+        donor: { name: 'Donor', stars: 4 }, traits: [] }));
+      const html = vault(st);
+      assert.equal(count(html, /<li>/g), 3 + parts.length,
+        `three vials and ${parts.length} parts, all shelved`);
+      assert.ok(html.includes(`${parts.length} part token`), 'and the count line says so');
+      for (const pt of parts.slice(0, 6)) {
+        assert.ok(html.includes(pt.name), `${pt.name} survived the merge`);
+      }
     }
   }
 
@@ -10874,9 +10901,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   {
     const st = withVials(6);
     st.inventory.vials.push({ id: 'ghost', species: 'not_a_species', donorName: 'Nobody', stars: 3, traits: [] });
+    st.inventory.parts = [{ id: 'pghost', partId: 'not_a_part', grade: 'prime', donor: { name: 'Nobody', stars: 3 }, traits: [] }];
     const html = vault(st);
     assert.equal(count(html, /data-reseq="/g), 6, 'six real vials survive a retired seventh');
     assert.ok(!html.includes('not_a_species'), 'and the retired one is not drawn');
+    assert.ok(!html.includes('not_a_part'), 'nor a token whose part left the roster');
+    assert.equal(count(html, /<details/g), 6, 'and neither opens a bay of its own');
   }
 
   // 4. R15's rule reaches this screen too: the Resequencer's countdown is
