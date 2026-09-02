@@ -11257,12 +11257,30 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(refused.ok, false, 'a reset that cannot be backed up is refused');
     assert.equal(refused.reason, 'backup-failed', 'for that reason');
 
-    // The view must not be able to reach the destructive act in one tap.
+    // The view must not be able to reach the destructive act in one tap —
+    // and this is asserted on the HANDLER, not on the file. The battery's
+    // break 9 replaced the CALL to confirmNewRun and left the definition
+    // standing, so a regex over the whole source still matched and the
+    // suite passed on a one-tap reset. R51's `logged.includes('logged')`
+    // wearing different clothes.
     const shell = readFileSync(join(root, 'main.js'), 'utf8');
-    assert.ok(/confirmNewRun/.test(shell), 'the shell has a confirmation step');
+    const at = shell.indexOf("querySelector('#sf-reset')");
+    assert.notEqual(at, -1, 'the panel binds the reset button');
+    const handler = shell.slice(at, shell.indexOf("querySelector('#sf-file')", at));
+    assert.ok(/confirmNewRun\(\)/.test(handler), 'and that button leads to the confirmation');
+    assert.ok(/runSummary\(state\)\.empty/.test(handler),
+      'skipping it only when there is nothing to lose');
     assert.ok(/id="sf-go"/.test(shell) && /id="sf-back"/.test(shell), 'with a way through and a way out');
-    assert.ok(/runSummary\(state\)\.empty/.test(shell),
-      'and only skips the confirmation when there is nothing to lose');
+
+    // And every reset path goes through adoptSave, which is what sets the
+    // outgoing run aside. Break 8 wrote localStorage directly from the
+    // shell: the mechanism was gated, its USE was not — R49's lesson, that
+    // a shared predicate needs every reader asserted, not just the
+    // predicate.
+    assert.equal((shell.match(/adoptSave\(startNewRun\(state\)\)/g) ?? []).length, 2,
+      'both reset paths — confirmed and empty — go through adoptSave');
+    assert.ok(!/localStorage/.test(shell),
+      'and the shell never touches storage itself: every write goes through save.js');
   }
 
   // 5. R54's import learns the same category. This is a change to shipped
