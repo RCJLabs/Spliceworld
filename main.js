@@ -4,7 +4,7 @@
 // tokens now; legacy `genome` data stays in old saves, unshown.
 
 import { loadContent } from './data/loader.js';
-import { loadSave, saveGame, exportSave, exportFilename, importSave, adoptSave } from './save/save.js';
+import { loadSave, saveGame, exportSave, exportFilename, importSave, adoptSave, startNewRun, runSummary } from './save/save.js';
 import { ensureRanchSeeded, ensureDexVariants, applyElapsed } from './ranch/ranch.js';
 import { renderRanchScreen } from './ranch/ui.js';
 import { renderVaultScreen } from './splice/vault-ui.js';
@@ -167,6 +167,21 @@ async function boot() {
   // R54: the save file panel. The three verbs live in save.js and are
   // DOM-free; everything here is the door, not the lock.
   const saveFileBtn = $('#savefile');
+  // One downloader, two callers: the panel and the reset confirmation. The
+  // confirmation is where it matters most, so it cannot be the copy that
+  // drifts.
+  const downloadSave = () => {
+    const blob = new Blob([exportSave(state)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = exportFilename(state);
+    a.click();
+    // Revoked on the next frame: revoking synchronously races the download
+    // in some browsers and silently produces an empty file.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    sfx.play('click');
+  };
   const openSaveFile = (note = '') => {
     const overlay = $('#overlay');
     overlay.hidden = false;
@@ -181,25 +196,29 @@ async function boot() {
           in this browser as a backup, and if it cannot be kept the import is refused instead.</p>
         <label for="sf-file" class="care-train" id="sf-pick">⬆ Load a save file…</label>
         <input type="file" id="sf-file" accept="application/json,.json" hidden>
-        <button type="button" id="sf-close" class="pen-dismantle">Close</button>
+        <hr class="sf-rule">
+        <button type="button" id="sf-reset" class="pen-dismantle">Start a new run…</button>
+        <button type="button" id="sf-close" class="care-train">Close</button>
       </div>`;
     overlay.querySelector('#sf-close').addEventListener('click', () => {
       overlay.hidden = true;
       overlay.innerHTML = '';
     });
     overlay.querySelector('#sf-export').addEventListener('click', () => {
-      const blob = new Blob([exportSave(state)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = exportFilename(state);
-      a.click();
-      // Revoked on the next frame: revoking synchronously races the
-      // download in some browsers and silently produces an empty file.
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      sfx.play('click');
+      downloadSave();
       const el = overlay.querySelector('.fine-print');
       if (el) el.textContent = `Saved as ${exportFilename(state)}. Keep it somewhere that is not this phone.`;
+    });
+    overlay.querySelector('#sf-reset').addEventListener('click', () => {
+      // Nothing to lose means nothing to confirm: a dialogue that guards an
+      // empty ranch is how a player learns to tap through the one that
+      // guards a real run.
+      if (runSummary(state).empty) {
+        const written = adoptSave(startNewRun(state));
+        if (!written.ok) return openSaveFile(written.msg);
+        return location.reload();
+      }
+      confirmNewRun();
     });
     overlay.querySelector('#sf-file').addEventListener('change', async (e) => {
       const file = e.target.files?.[0];
@@ -216,6 +235,38 @@ async function boot() {
       location.reload();
     });
   };
+  // R55: the reset. Two taps, and the second one is only ever reached after
+  // the first has said out loud what it costs — with the download button
+  // repeated inside the confirmation, because "there is a backup in this
+  // browser" is not a plan a player can hold.
+  const confirmNewRun = () => {
+    const overlay = $('#overlay');
+    const sum = runSummary(state);
+    overlay.hidden = false;
+    overlay.innerHTML = `
+      <div class="ceremony card">
+        <h3>⚠ Start a new run?</h3>
+        <p class="ranch-msg">This ends the current one: <strong>${sum.chimeras}</strong> chimera${sum.chimeras === 1 ? '' : 's'},
+          <strong>${sum.animals}</strong> animal${sum.animals === 1 ? '' : 's'} on the ranch,
+          <strong>${sum.parts}</strong> part token${sum.parts === 1 ? '' : 's'},
+          <strong>${sum.nodes}</strong> node${sum.nodes === 1 ? '' : 's'} held, over ${sum.days} day${sum.days === 1 ? '' : 's'}.</p>
+        <p class="fine-print">The run is kept in this browser as a backup — but a backup you cannot
+          see is not a plan. Take the file first.</p>
+        <button type="button" id="sf-export2" class="big-btn">⬇ Download it first</button>
+        <p class="fine-print">Your sound setting and the field notes you have already read carry over.
+          Everything else starts again from an empty ranch.</p>
+        <button type="button" id="sf-go" class="pen-dismantle">Yes, start over</button>
+        <button type="button" id="sf-back" class="care-train">Cancel</button>
+      </div>`;
+    overlay.querySelector('#sf-back').addEventListener('click', () => openSaveFile());
+    overlay.querySelector('#sf-export2').addEventListener('click', () => downloadSave());
+    overlay.querySelector('#sf-go').addEventListener('click', () => {
+      const written = adoptSave(startNewRun(state));
+      if (!written.ok) return openSaveFile(written.msg);
+      location.reload();
+    });
+  };
+
   saveFileBtn.addEventListener('click', () => openSaveFile());
 
   // PWA: offline shell. Registration failure is never a problem worth

@@ -11151,4 +11151,161 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+// R55. A reset was reachable only by clearing site data — which is
+// indistinguishable from losing your game by accident. `newGameState()`
+// existed and nothing in the UI could reach it. The sacred rule is that a
+// save is never DESTROYED by a migration; it was never that a player may
+// only have one run.
+//
+// Building it forced a category the save has always had and never named:
+// three fields are not part of the run. R54 shipped without that category
+// and therefore wrote an imported save wholesale, so importing a muted
+// friend's save muted your phone. One list now answers "what is a run" for
+// both paths, because two answers is how they drift.
+{
+  const { startNewRun, runSummary, adoptSave, CARRIED_ACROSS_RUNS } = await import('../save/save.js');
+
+  const played = (now = t0) => {
+    const st = { ...newGameState(), seed: 55, funds: 9000, createdAt: now - 37 * 24 * 3600000 };
+    st.chimeras = [{ id: 'c1' }, { id: 'c2' }];
+    st.chimeraCount = 2;
+    st.ranch.stock = [{ id: 'a1' }, { id: 'a2' }, { id: 'a3' }];
+    st.campaign.heldNodes = ['barn_perimeter', 'greenfield_silos'];
+    st.inventory.parts = [{ id: 'p1' }, { id: 'p2' }];
+    st.dex.enemies = ['riot_squad'];
+    st.gauntletBeaten = ['gauntlet_strato'];
+    st.settings.muted = true;
+    st.guidesSeen = ['resequencer', 'breeding'];
+    st.ui.collapsed = { 'right-now': true };
+    return st;
+  };
+
+  // 1. A new run is new. Everything the player built is gone, including the
+  //    things that are easy to forget because no screen shows them.
+  {
+    const before = played();
+    const after = startNewRun(before);
+    assert.notEqual(after.seed, before.seed, 'a new run gets a new world seed');
+    for (const [what, got] of [
+      ['chimeras', after.chimeras.length], ['stock', after.ranch.stock.length],
+      ['held nodes', after.campaign.heldNodes.length], ['part tokens', after.inventory.parts.length],
+      ['dex sightings', after.dex.enemies.length], ['gauntlet trophies', after.gauntletBeaten.length],
+    ]) assert.equal(got, 0, `${what} do not survive a reset`);
+    assert.equal(after.funds, newGameState().funds, 'and the money is the starting stipend again');
+    assert.equal(after.dominionAt, null, 'the county is not yours any more');
+    assert.equal(after.saveVersion, SAVE_VERSION, 'at the current schema');
+  }
+
+  // 2. The three things that are NOT the run survive it. This is the half a
+  //    reset gets wrong by default: wiping `settings` un-mutes somebody's
+  //    phone because they started a new game, and wiping `guidesSeen`
+  //    re-teaches 22 field notes to a player who has already read them.
+  {
+    const before = played();
+    const after = startNewRun(before);
+    assert.equal(after.settings.muted, true, 'a muted phone stays muted through a reset');
+    assert.deepEqual(after.guidesSeen, ['resequencer', 'breeding'], 'and the lessons stay read');
+    assert.deepEqual(after.ui.collapsed, { 'right-now': true }, 'and the folds stay folded');
+    // The list is the contract, so assert the list rather than only its
+    // current members — a fourth entry added without thought should show up
+    // here as a decision rather than as a silent carry.
+    assert.deepEqual(CARRIED_ACROSS_RUNS, ['settings', 'guidesSeen', 'ui'],
+      'and exactly those three cross a run boundary');
+    // Mutating the new run must not reach back into the old one.
+    after.guidesSeen.push('another');
+    assert.equal(before.guidesSeen.length, 2, 'the carried values are copies, not references');
+  }
+
+  // 3. The confirmation has to say what it costs, so the numbers it says are
+  //    derived here rather than counted by hand in the view.
+  {
+    const sum = runSummary(played(t0), t0);
+    assert.deepEqual(
+      { chimeras: sum.chimeras, animals: sum.animals, nodes: sum.nodes, parts: sum.parts, days: sum.days },
+      { chimeras: 2, animals: 3, nodes: 2, parts: 2, days: 37 },
+      `the confirmation counts what is at stake (${JSON.stringify(sum)})`
+    );
+    assert.equal(sum.empty, false, 'a played run is not empty');
+    // And a fresh save has nothing to lose. A dialogue guarding an empty
+    // ranch is how a player learns to tap through the one guarding a real
+    // run, so the empty case is allowed to skip it.
+    assert.equal(runSummary(newGameState(), t0).empty, true, 'a fresh save is empty');
+    assert.equal(runSummary(newGameState(), t0).days, 0, 'and zero days old');
+  }
+
+  // 4. THE CRITERION, second half: a reset cannot happen by accident, and
+  //    cannot destroy the run it replaces. It goes through the same
+  //    adoptSave R54 built, so the outgoing run is set aside — and refused
+  //    outright if it cannot be.
+  {
+    const before = played();
+    const map = new Map([['spliceworld_save', JSON.stringify(before)]]);
+    const store = { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, v) };
+    const done = adoptSave(startNewRun(before), store);
+    assert.ok(done.ok, 'a reset lands');
+    const live = JSON.parse(map.get('spliceworld_save'));
+    assert.equal(live.chimeras.length, 0, 'the new run is live');
+    const kept = [...map.keys()].filter((k) => k.includes('_backup_'));
+    assert.equal(kept.length, 1, 'and the run it ended was set aside');
+    assert.equal(JSON.parse(map.get(kept[0])).chimeras.length, 2, 'whole');
+
+    const full = {
+      getItem: () => JSON.stringify(before),
+      setItem: () => { throw new Error('QuotaExceededError'); },
+    };
+    const refused = adoptSave(startNewRun(before), full);
+    assert.equal(refused.ok, false, 'a reset that cannot be backed up is refused');
+    assert.equal(refused.reason, 'backup-failed', 'for that reason');
+
+    // The view must not be able to reach the destructive act in one tap —
+    // and this is asserted on the HANDLER, not on the file. The battery's
+    // break 9 replaced the CALL to confirmNewRun and left the definition
+    // standing, so a regex over the whole source still matched and the
+    // suite passed on a one-tap reset. R51's `logged.includes('logged')`
+    // wearing different clothes.
+    const shell = readFileSync(join(root, 'main.js'), 'utf8');
+    const at = shell.indexOf("querySelector('#sf-reset')");
+    assert.notEqual(at, -1, 'the panel binds the reset button');
+    const handler = shell.slice(at, shell.indexOf("querySelector('#sf-file')", at));
+    assert.ok(/confirmNewRun\(\)/.test(handler), 'and that button leads to the confirmation');
+    assert.ok(/runSummary\(state\)\.empty/.test(handler),
+      'skipping it only when there is nothing to lose');
+    assert.ok(/id="sf-go"/.test(shell) && /id="sf-back"/.test(shell), 'with a way through and a way out');
+
+    // And every reset path goes through adoptSave, which is what sets the
+    // outgoing run aside. Break 8 wrote localStorage directly from the
+    // shell: the mechanism was gated, its USE was not — R49's lesson, that
+    // a shared predicate needs every reader asserted, not just the
+    // predicate.
+    assert.equal((shell.match(/adoptSave\(startNewRun\(state\)\)/g) ?? []).length, 2,
+      'both reset paths — confirmed and empty — go through adoptSave');
+    assert.ok(!/localStorage/.test(shell),
+      'and the shell never touches storage itself: every write goes through save.js');
+  }
+
+  // 5. R54's import learns the same category. This is a change to shipped
+  //    behaviour, made because R55 is what forced the category to exist:
+  //    before it, importing a muted friend's save muted your phone.
+  {
+    const local = played();
+    const incoming = { ...newGameState(), seed: 999 };
+    incoming.settings.muted = false;
+    incoming.guidesSeen = [];
+    const map = new Map([['spliceworld_save', JSON.stringify(local)]]);
+    const store = { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, v) };
+    assert.ok(adoptSave(incoming, store).ok, 'the import lands');
+    const live = JSON.parse(map.get('spliceworld_save'));
+    assert.equal(live.seed, 999, 'the imported run is the live one');
+    assert.equal(live.settings.muted, true, 'but this phone stays muted');
+    assert.deepEqual(live.guidesSeen, ['resequencer', 'breeding'], 'and remembers what it has been taught');
+    // With no local save there is nothing to carry, and the import stands
+    // entirely on its own rather than inventing defaults.
+    const fresh = new Map();
+    const bare = { getItem: () => null, setItem: (k, v) => fresh.set(k, v) };
+    assert.ok(adoptSave(incoming, bare).ok, 'an import into an empty browser lands');
+    assert.equal(JSON.parse(fresh.get('spliceworld_save')).settings.muted, false,
+      'carrying nothing, because there was nothing to carry');
+  }
+}
+
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

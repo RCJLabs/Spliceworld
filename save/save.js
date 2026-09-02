@@ -633,6 +633,52 @@ export function importSave(text) {
 // completed. An import that destroys the game it replaced is the one
 // outcome this feature exists to prevent, so a full disk loses the import,
 // never the save.
+// R55 — a reset was reachable only by clearing site data, which is
+// indistinguishable from losing your game by accident. The sacred rule is
+// that a save is never DESTROYED by migration; it was never that a player
+// may only ever have one run.
+//
+// Building it forced a category the save has always had and never named:
+// three fields are not part of the run at all. `settings` is a device
+// preference — wiping it un-mutes somebody's phone because they started a
+// new game. `guidesSeen` is 22 field notes already dismissed, and R37 put
+// every lesson behind the wall it explains, so a fresh save re-fires all of
+// them as the player re-reaches each system. `ui.collapsed` is which cards
+// they like shut.
+//
+// The list governs BOTH a reset and an import, because two answers to "what
+// is a run" is how the two paths drift apart.
+export const CARRIED_ACROSS_RUNS = ['settings', 'guidesSeen', 'ui'];
+
+function carryForward(fresh, previous) {
+  for (const key of CARRIED_ACROSS_RUNS) {
+    if (previous?.[key] !== undefined) fresh[key] = structuredClone(previous[key]);
+  }
+  return fresh;
+}
+
+export function startNewRun(state) {
+  return carryForward(newGameState(), state);
+}
+
+// What the confirmation has to say out loud. DOM-free so the numbers a
+// player is asked to give up are asserted rather than eyeballed.
+export function runSummary(state, now = Date.now()) {
+  const days = state?.createdAt ? Math.max(0, Math.floor((now - state.createdAt) / 86400000)) : 0;
+  return {
+    chimeras: state?.chimeras?.length ?? 0,
+    animals: state?.ranch?.stock?.length ?? 0,
+    nodes: state?.campaign?.heldNodes?.length ?? 0,
+    parts: state?.inventory?.parts?.length ?? 0,
+    days,
+    // A brand-new save has nothing to lose, and asking a player to confirm
+    // the destruction of nothing is how a confirmation stops being read.
+    empty: (state?.chimeras?.length ?? 0) === 0
+      && (state?.ranch?.stock?.length ?? 0) === 0
+      && (state?.campaign?.heldNodes?.length ?? 0) === 0,
+  };
+}
+
 export function adoptSave(save, storage = globalThis.localStorage) {
   let current = null;
   try {
@@ -650,8 +696,17 @@ export function adoptSave(save, storage = globalThis.localStorage) {
       };
     }
   }
+  // R55: device preferences do not travel with a run. Importing a muted
+  // friend's save must not mute this phone, and the same list decides it
+  // that decides what survives a reset.
+  let landing = save;
+  if (current) {
+    try {
+      landing = carryForward({ ...save }, JSON.parse(current));
+    } catch { /* unreadable local save — the import stands on its own */ }
+  }
   try {
-    storage.setItem(STORAGE_KEY, JSON.stringify(save));
+    storage.setItem(STORAGE_KEY, JSON.stringify(landing));
   } catch (err) {
     return { ok: false, reason: 'write-failed', msg: `The save could not be written: ${err.message}` };
   }
