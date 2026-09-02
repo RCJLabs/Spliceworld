@@ -14,6 +14,7 @@
 
 import { PHYS_TUNING } from './physiology.js';
 import { rivalList, rivalRecord } from '../campaign/rivals.js';
+import { gauntletStages } from '../campaign/gauntlet.js';
 
 // A weight class in words, derived from the roster rather than hardcoded,
 // so it stays true if the bulks are ever retuned. R32's lesson: the number
@@ -77,6 +78,27 @@ export function speciesParts(sp, content, dexParts = []) {
           } · ${part.phys.mass} mass`
         : 'graduate one of these and it lands in the vault',
     });
+  }
+  return out;
+}
+
+// R51 — "have I beaten this" has TWO live records, so it gets one predicate.
+// `dex.beaten` is stamped from v34 forward. `gauntletBeaten` has held the
+// Gauntlet's four exhibitions since R42, which is why a save that cleared
+// them before v34 keeps its trophies without the migration inventing a
+// single thing: an exhibition you beat means the boss AND its escorts went
+// down, and that is derivable rather than guessable.
+//
+// Read through gauntletStages() rather than content.gauntlet, because where
+// the stage list lives is that module's business — R49's lesson about the
+// spar predicate, applied before the second reader exists rather than after.
+export function beatenUnits(state, content) {
+  const out = new Set(state.dex?.beaten ?? []);
+  const cleared = new Set(state.gauntletBeaten ?? []);
+  for (const stage of gauntletStages(content)) {
+    if (!cleared.has(stage.id)) continue;
+    out.add(stage.unitId);
+    for (const escort of stage.escorts ?? []) out.add(escort);
   }
   return out;
 }

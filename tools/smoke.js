@@ -1951,7 +1951,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 {
   const v7ish = migrate(structuredClone(v1Save)); // gives v8 empty everything
   assert.deepEqual(v7ish.settings, { muted: false });
-  assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [], variants: [] });
+  assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [], variants: [], beaten: [] });
   const richV7 = { ...structuredClone(v1Save) };
   const chain = migrate(richV7); // walk to v8 baseline shape…
   // …then simulate a v7 save that owned things:
@@ -10591,6 +10591,179 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(!/sparCharges\(/.test(war),
       'and the War Room no longer computes the bucket for itself');
     assert.equal(newGameState().saveVersion, SAVE_VERSION, 'with no schema change');
+  }
+}
+
+// R51. The field guide has logged sightings since R21 and has never once
+// recorded an OUTCOME. `dex.enemies` is stamped for every unit that took the
+// field — which a unit also does while flattening you — so a player who was
+// carried out of a fight and a player who won it had identical Dex entries,
+// under a card whose own closing line promises "every entry remembers you
+// too."
+//
+// (R42's note asked for Gauntlet trophies in the Dex. Audited: those four
+// bosses were ALREADY four of the forty cells here, logged like any other
+// unit, and the beaten record was never lost either — the War Room card
+// renders BEATEN permanently once dominion is held. The hole was narrower
+// and wider at once: not the Gauntlet, but the fact that no unit anywhere
+// in the guide recorded whether you won.)
+{
+  const { beatenUnits } = await import('../splice/dexentry.js');
+  const { gauntletStages } = await import('../campaign/gauntlet.js');
+
+  const B = { head: 'rhino_head', forelimbs: 'gorilla_forelimbs', hindlimbs: 'rhino_hindlimbs',
+    tail: 'bear_tail', hide: 'pangolin_hide', organ: 'bear_organ' };
+  const fighter = (i, grade) => ({
+    id: `r51_${i}`, name: `Unit ${i + 1}`, frame: 'M',
+    tokens: Object.fromEntries(Object.entries(B).map(([k, v]) =>
+      [k, { id: `r51t${i}${k}`, partId: v, grade, donor: { name: 'Bessie', stars: 4 } }])),
+    settleUntil: 0, bond: 100, scars: [], temperament: null,
+    lastTrainedAt: 0, moveset: [], lastMoveTrainAt: 0, xp: 0, injury: null,
+  });
+  const node = Object.values(content.regions).flatMap((r) => r.nodes)
+    .find((n) => content.encounters[n.encounter]);
+  assert.ok(node, 'a node with an encounter behind it');
+  const enc = content.encounters[node.encounter];
+
+  // Fight the same encounter twice — once with a team that wins it, once
+  // with one that cannot — and read the shelf after each.
+  const fightFor = (outcome, team, ctx = { kind: 'assault', nodeId: node.id }) => {
+    for (let seed = 0; seed < 24; seed++) {
+      const st = { ...newGameState(), seed: 51, funds: 500 };
+      st.chimeras = team.map((c) => structuredClone(c));
+      st.chimeraCount = st.chimeras.length;
+      const b = createBattle(st.chimeras, enc, content, hashString(`r51#${outcome}#${seed}`), t0, ctx);
+      autoplay(b);
+      if (b.outcome !== outcome) continue;
+      st.battle = b;
+      resolveBattle(st, b, content, t0);
+      return st;
+    }
+    return null;
+  };
+
+  // 1. A win records what it beat. A loss records nothing but the sighting.
+  {
+    const win = fightFor('win', [fighter(0, 'prismatic'), fighter(1, 'prismatic'), fighter(2, 'prismatic')]);
+    assert.ok(win, 'a prismatic team takes the first node on one of 24 seeds');
+    const loss = fightFor('loss', [fighter(0, 'standard')]);
+    assert.ok(loss, 'and a lone standard chimera loses it on one of 24 seeds');
+
+    assert.ok(win.dex.beaten.length > 0, 'a win writes to the beaten shelf');
+    for (const unitId of enc.waves) {
+      assert.ok(win.dex.enemies.includes(unitId), `${unitId} is logged after the win`);
+      assert.ok(win.dex.beaten.includes(unitId), `and ${unitId} is marked beaten`);
+    }
+    // The half that makes the column mean anything: losing logs the unit
+    // and claims nothing. Without this the shelf is just `dex.enemies`
+    // under a second name.
+    assert.ok(loss.dex.enemies.length > 0, 'a loss still logs the sighting');
+    assert.deepEqual(loss.dex.beaten, [], 'and claims nothing beaten');
+  }
+
+  // 2. A spar is a drill, and a drill is not a trophy. R41 already ruled the
+  //    cannon does not fire on one; the same reasoning says the shelf does
+  //    not fill from one either.
+  {
+    const spar = fightFor('win', [fighter(0, 'prismatic'), fighter(1, 'prismatic'), fighter(2, 'prismatic')],
+      { kind: 'sparring' });
+    assert.ok(spar, 'a prismatic team wins a drill');
+    assert.ok(spar.dex.enemies.length > 0, 'the drill still logs its sightings');
+    assert.deepEqual(spar.dex.beaten, [], 'but a drill fills no shelf');
+  }
+
+  // 3. Three states in the guide, not two — and the middle one is the whole
+  //    point: a unit you have met but not beaten must read differently from
+  //    one you have.
+  {
+    const unit = Object.values(content.enemies)[0];
+    const page = (dex) => dexPages({ ...newGameState(), dex: { parts: [], enemies: [], beaten: [], traits: [], variants: [], ...dex } }).foes;
+    // The cell, not the page. The card header prints "N/40 logged" on every
+    // page ever rendered, so asserting `page.includes('logged')` would be an
+    // assertion that cannot fail — the R34/R35/R45/R48 mistake, caught here
+    // by reading the markup the header actually emits.
+    // Anchored on the cell's own <strong>, not the bare name: a unit's name
+    // appears FIRST in its portrait's aria-label, and slicing from there to
+    // the next </div> stops at the portrait and never reaches the label the
+    // assertions are about.
+    const cellFor = (html, name) => {
+      const at = html.indexOf(`<strong>${name}</strong>`);
+      assert.notEqual(at, -1, `${name} is named in a cell`);
+      const open = html.lastIndexOf('<div class="dex-cell', at);
+      assert.notEqual(open, -1, `${name} sits in a cell`);
+      const close = html.indexOf('</span>', at);
+      return html.slice(open, close === -1 ? html.indexOf('</div>', at) : close + 7);
+    };
+    const unseen = page({});
+    const logged = page({ enemies: [unit.id] });
+    const won = page({ enemies: [unit.id], beaten: [unit.id] });
+    assert.ok(!unseen.includes(unit.name), 'an unmet unit is not named');
+    const loggedCell = cellFor(logged, unit.name);
+    const wonCell = cellFor(won, unit.name);
+    assert.ok(loggedCell.includes('logged'), 'a met unit reads as logged in its own cell');
+    assert.ok(!loggedCell.includes('beaten'), 'a unit that beat you is not a trophy');
+    assert.ok(wonCell.includes('✓ beaten'), 'a unit you beat says so');
+    assert.ok(wonCell.includes('dex-beaten'), 'and its cell is marked');
+    assert.ok(!wonCell.includes('>logged'), 'a beaten cell does not also say logged');
+  }
+
+  // 4. The migration recovers what the save can PROVE and invents nothing.
+  //    `gauntletBeaten` has held the four exhibitions since v32, so a save
+  //    that cleared them keeps its trophies; nothing in any old save recorded
+  //    which ordinary units it beat, so that column arrives empty rather than
+  //    backfilled from `warRecord`.
+  {
+    const stages = gauntletStages(content);
+    assert.ok(stages.length >= 2, 'the Gauntlet has stages to recover');
+    const old = { ...structuredClone(newGameState()), saveVersion: 33 };
+    delete old.dex.beaten;
+    old.gauntletBeaten = [stages[0].id];
+    old.warRecord = { wins: 40, losses: 2 };
+    old.dex.enemies = Object.keys(content.enemies);
+    const up = migrate(old);
+    assert.equal(up.saveVersion, SAVE_VERSION, 'v33 comes forward');
+    assert.deepEqual(up.dex.beaten, [], 'with an empty shelf — 40 wins prove nothing about WHICH units');
+    const shelf = beatenUnits(up, content);
+    assert.ok(shelf.has(stages[0].unitId), 'but a cleared exhibition keeps its boss');
+    for (const escort of stages[0].escorts) {
+      assert.ok(shelf.has(escort), `and its escort ${escort} — beating the stage beat them too`);
+    }
+    assert.ok(!shelf.has(stages[1].unitId), 'while an exhibition never answered stays unbeaten');
+  }
+
+  // 5. The shelf obeys R42's spoiler rule. The War Room's Gauntlet card only
+  //    exists once the county is yours; a Dex naming four bosses to a player
+  //    mid-campaign would be a spoiler wearing a trophy's clothes.
+  {
+    const stages = gauntletStages(content);
+    const withTrophy = (dominionAt) => {
+      const st = { ...newGameState(), dominionAt };
+      st.gauntletBeaten = [stages[0].id];
+      return dexPages(st).foes;
+    };
+    const before = withTrophy(null);
+    const after = withTrophy(t0);
+    assert.ok(!before.includes('gauntlet-shelf'), 'no shelf before dominion');
+    assert.ok(!before.includes(content.enemies[stages[0].unitId].name),
+      'and the boss is not named to a player who has never held the county');
+    assert.ok(after.includes('gauntlet-shelf'), 'the shelf appears once the county is held');
+    assert.ok(after.includes(content.enemies[stages[0].unitId].name), 'and names what fell');
+  }
+
+  // 6. Completion did not move, and that is a decision rather than an
+  //    oversight. A "beaten 0/40" row would have dropped every existing
+  //    save's percentage for something no save ever recorded — the salvage
+  //    reasoning above, pointed at a column the player cannot retroactively
+  //    fill. Beaten is a second dimension on the guide, not a completion axis.
+  {
+    const bare = { ...newGameState(), seed: 7 };
+    const full = structuredClone(bare);
+    full.dex.beaten = Object.keys(content.enemies);
+    const a = dexProgress(bare, content);
+    const b = dexProgress(full, content);
+    assert.ok(!a.rows.some((r) => r.id === 'beaten'), 'the shelf is not a completion row');
+    assert.equal(a.total, b.total, 'so the denominator cannot move with it');
+    assert.equal(a.pct, b.pct, 'and a veteran save reads exactly as it did at v33');
   }
 }
 

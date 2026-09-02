@@ -1229,6 +1229,20 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .dex-cell strong { display: block; margin-top: 2px; }
 .dex-cell .fine-print { display: block; }
 .dex-unknown { opacity: 0.55; }
+/* R51 — the third state of a field-guide cell. "Logged" is a sighting and a
+   unit logs itself just as readily while beating you, so a beaten one is
+   marked rather than merely present. The border carries it: the grid is
+   100px cells at 380px and a badge would cost a row of height across all
+   forty. */
+.dex-beaten {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-dim);
+}
+.dex-beaten .fine-print { color: var(--accent); }
+.gauntlet-shelf {
+  margin: 0 0 8px;
+  color: var(--accent-2);
+}
 
 /* R45 — completion stays above the tab bar, because "how much of this have
    I found" is the whole reason the Dex is a screen and not a menu. Chips

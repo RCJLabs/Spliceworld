@@ -303,6 +303,22 @@ export function resolveBattle(state, battle, content, now) {
     if (unitId && !state.dex.enemies.includes(unitId)) state.dex.enemies.push(unitId);
   }
   const result = finishBattle(state, battle, content, now);
+
+  // R51: and every unit that took the field in a battle you WON is now a
+  // unit you have beaten. Same ids, gated on the outcome — the guide has
+  // logged sightings since R21 and never once recorded who won.
+  //
+  // A spar does not count. R41 already ruled that a drill has no stakes
+  // (the cannon does not fire on one), and the ring only ever fields a
+  // garrison from a node you took — so the units in it are ones you beat
+  // for real on the way in. Counting the drill would add nothing true.
+  if (result.outcome === 'win' && context.kind !== 'sparring') {
+    state.dex.beaten ??= [];
+    for (const unitId of seen) {
+      if (typeof unitId !== 'string') continue;
+      if (!state.dex.beaten.includes(unitId)) state.dex.beaten.push(unitId);
+    }
+  }
   const detail = { ...result, capturedChimera: null, freed: null, salvageUnits: battle.captured ?? [] };
 
   // The AI director announces itself in the wire the first time a given

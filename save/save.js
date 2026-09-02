@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 33;
+export const SAVE_VERSION = 34;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -427,6 +427,25 @@ const migrations = {
     delete save.lastSparAt;
     return save;
   },
+
+  // v34 (R51): the field guide learns outcomes. One additive list, empty on
+  // arrival — and empty is the honest value. Nothing in any previous save
+  // recorded WHICH units a player beat (`warRecord` is a global tally), so
+  // backfilling it would mean inventing a history, and leaving a veteran
+  // player's shelf blank is a truth rather than a loss: the guide still
+  // holds every sighting it ever did, and the next fight starts filling
+  // the new column.
+  //
+  // The Gauntlet is the one exception and it needs no migration at all.
+  // `gauntletBeaten` has recorded those four exhibitions since v32, so
+  // `beatenUnits()` reads it alongside this list and a save that cleared
+  // the Gauntlet years ago keeps its trophies. Recovering what the save can
+  // actually prove, and inventing nothing it cannot, is the whole rule.
+  34: (save) => {
+    save.dex ??= {};
+    save.dex.beaten ??= [];
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -468,7 +487,10 @@ export function newGameState() {
     },
     news: [],
     settings: { muted: false },
-    dex: { parts: [], enemies: [], traits: [], variants: [] },
+    // R51: `beaten` is the field guide's second dimension — `enemies` is a
+    // sighting log and always was, so a unit that flattened you read
+    // exactly like one you flattened.
+    dex: { parts: [], enemies: [], beaten: [], traits: [], variants: [] },
     facility: { theater: 1, containment: 1, incubator: 1, extractor: 1, scanner: 1, infirmary: 1 },
     // Field-guide notes the player has waved away (R29). The guides
     // themselves are derived; this is the only thing they persist.
