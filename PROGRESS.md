@@ -1,5 +1,127 @@
 # PROGRESS
 
+## Session 75 — R53: one Vault shelf per animal ✅
+
+**Acceptance criterion:** the Vault is one shelf per animal, and a
+completionist's inventory fits a phone — **passes, measured in the
+browser**. No schema change; `SAVE_VERSION` stays **34**.
+
+### My own recorded objection was wrong
+
+R52 left this as a decision rather than a task, and left the argument
+against it in my own words: *merging would make "what can I splice with"
+harder to scan.* Built and measured, that is false. **Both halves were
+already a fold per species**, so the taps needed to reach a part are
+unchanged — what changed is that the same animal stopped occupying a row in
+each of two cards.
+
+The split was historical, not designed. An extraction produces one vial
+**and** that animal's parts, from the same donor, in the same moment. Only
+the screen pretended they were separate collections.
+
+### Measured at 380px
+
+| inventory | R51 | R52 (two cards) | R53 (one shelf) |
+|---|---|---|---|
+| nothing extracted | 260px | 260px | **224px** |
+| 3 graduations | 673px | 673px | **330px** |
+| 10 | 1,723px | 1,052px | **638px** |
+| 25 | 3,973px | 2,297px | **1,302px** |
+| **41 (completionist)** | **5,999px (7.5)** | 3,044px (3.8) | **1,788px (2.2)** |
+
+Bays halve: 68 folds become 34, because one animal is one bay.
+
+### R52's threshold is retired, not re-anchored
+
+R52 kept a rack of four or fewer **flat**, so a new player saw their vial
+without tapping. That was right while a fold hid one line. A bay hides an
+animal's whole parts list — and applying the old rule to the new fold
+measured **1,357px against the two-card layout's 673px**. The rule doubled
+the screen it existed to protect.
+
+So every bay is now closed, at every size. **No threshold at all**, which is
+a simpler rule and a smaller screen. Two things make it safe:
+
+1. **The summary carries the holdings** — `Goat · 1 vial · 6 parts · ★4.0 ·
+   APEX` — so a closed bay still answers what you own. You open it to act,
+   not to look. A first graduation reads `Bear 1 vial · 6 parts ★3.2
+   Standard`: one row that says exactly what that animal produced.
+2. **The Resequencer never depended on a fold to be found.** `guides.json`
+   has taught it on this screen since R31, so the visible button was not
+   what made the feature discoverable.
+
+Bays holding a vial sort first, because a vial is the only thing on this
+screen with a button.
+
+### Browser QA, 380px, console clean
+
+The shapes that matter are the **diverged** ones — a real mid-game vault has
+had the Resequencer spend from one half and the Theater from the other, so
+the two halves stop lining up.
+
+| state | Vault | bays | buttons |
+|---|---|---|---|
+| 3 graduations, halves overlap | 330px (0.4) | 3 | 3 |
+| **diverged** — vials 0–4, parts 3–9 | 619px (0.8) | 10 | 5 |
+| all vials spent — parts only | 696px (0.9) | 12 | 0 |
+| all parts spliced — vials only | 708px (0.9) | 12 | 12 |
+| completionist | 1,788px (2.2) | 34 | 40 |
+| + resequence in flight | 1,902px (2.4) | 34 | 0 |
+
+Summaries degrade correctly in every one: `Wolf 1 vial ★4.0` where only a
+vial remains, `Gorilla 1 vial · 6 parts ★3.5 Prismatic` where both do,
+`Bat 6 parts Prismatic` where the vial is spent — never `0 parts`. No
+horizontal overflow anywhere.
+
+### The break battery
+
+Ten breaks. **Six caught outright, one real gap, one bad break** — and the
+two misses are different animals, which is the point of separating them.
+
+| break | verdict |
+|---|---|
+| every bay opens itself again | CAUGHT |
+| the shelf loses the parts half | CAUGHT |
+| the shelf loses the vials half | CAUGHT |
+| a bay keeps only its first token | CAUGHT |
+| the summary stops carrying the holdings | **MISSED — a real gap** |
+| 5 (rerun, now gated) | **CAUGHT** |
+| the retired-part guard comes off | CAUGHT — `TypeError` |
+| the countdown moves inside the shelf card | **MISSED — a bad break** |
+| 7b. …moves INSIDE a bay | **CAUGHT** — `and never behind a fold` |
+| the two cards come back | CAUGHT |
+
+**Break 5 was a real gap, and an important one.** "The summary carries the
+holdings" is the *entire* argument for closing every bay, and nothing
+asserted it: the count-line assertion beside it was being satisfied by the
+card SUBTITLE (`40 vials · 244 part tokens`), not by any summary. Strip the
+holdings line and the suite stayed green — 34 bare species names would have
+shipped. Same shape as R51's `logged.includes('logged')`: asserting against
+the whole page when the claim is about one element. The new gate slices the
+summary out and reads inside it, and also checks a one-sided bay says only
+its own half.
+
+**Break 7 was a bad break, not a gap.** It moved `${runCard}` inside the
+Gene Vault card but still *above* every bay — so the countdown was never
+behind a fold and R15's rule genuinely still held. 7b puts it inside a bay
+body, which is what the break was named after, and R52's gate fires on the
+first run.
+
+### Known gaps
+
+- The bay sort is by vial-first, then stars, then part count, then name.
+  Finding a *specific* animal in 34 bays is a scan either way, but a filter
+  or a jump-to-letter would help a completionist. Not built; no measurement
+  says it hurts yet.
+- The Gauntlet rematch toggle (R42) remains a preference, still unbuilt.
+- `dex.beaten` records the win but not when (R51).
+
+### Next session's first task
+
+Nothing queued. Every long screen has been measured (Pens R44, Dex R45,
+Ranch R46/R47, Vault and Theater R52, Vault again R53), so the next session
+picks its own subject rather than inheriting one.
+
 ## Session 74 — R52: the Vault at a completionist's inventory ✅
 
 **Acceptance criterion:** the last two unmeasured long screens are measured,
