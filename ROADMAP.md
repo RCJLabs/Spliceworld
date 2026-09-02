@@ -330,3 +330,103 @@ complaint. It is A1, and A1 is the worst thing in the game.
 - **R31 — The Resequencer: what a DNA vial is actually for (shipped).** A vial has been produced by **every extraction since M2 and read by nothing** — `extract.js` pushed one, the Gene Vault listed it, and that was the end of it. Worse, it concealed the one genuinely irreversible act in the game: `potential` and `genotype` live on the *animal*, so graduating your best recessive carrier **destroyed those genes** with no way back.
   Spending a vial now grows that donor back — same species, same star potential, same genotype. **2 real hours** (shortened by the Incubator's existing `hourScale`), **75% to take**, and a **new-gene chance of 6% + 5%/star** multiplied by the Incubator's `mutationBonus`. Quality buys **upside, never safety**: a five-star vial mutates far more often and fails exactly as often, so banking a good one beats banking four ordinary ones and no amount of quality removes the risk. The Incubator governs both halves because a resequencing *is* an incubation — that track gained a second reason to exist without one new facility knob. The outcome is **sealed at launch** from a seeded stream, like the vat and the jobs board, so reloading cannot reroll a failure into a success. Vials written before R31 kept only a star average and rebuild stats to match it, so a vial banked long ago is worth exactly what it always said. *Done when: a vial does something, and what it does uses what a vial actually is* — measured over 400 runs, **72% took, 29% of successes threw a new gene, and the donor's recessive survived 286 of 286 successes.**
   **Four bugs, three mine.** Aborting wrote the *post-mutation* genome back into the vial, making abort-cycling a free ratchet; the fix then failed because I had taken a **reference** to the vial's `potential` and mutated it in place, so the sample was contaminated before it was copied — 60 abort cycles walked a 3/3/3/3/3 donor to 3/4/4/5/3 without completing a run. **Migration 29 did not return the save**, and `migrate` does `save = fn(save)`, so a missing return turns every existing player's save into `undefined` on load — all 28 other migrations return correctly. And **neither the harness nor the suite loaded the new data file**: `resequencerTuning` falls back to code defaults, so my probe had been measuring defaults rather than the shipped JSON and giving the right answer for the wrong reason. House rules held: a **full pen makes a finished run wait** rather than losing the animal, **aborting returns the vial** unharmed, and the odds are **quoted before the player commits**.
+
+### 9.3 Third audit (R54–R62)
+Run after R53, against a game whose roadmap was finished: M0–M7 shipped,
+waves R1–R19 shipped, §9.1 and §9.2 both closed, and ten consecutive phases
+(R44–R53) spent on screen density and the harness. Same rule as the first
+two audits: every line names the evidence that put it there, and the
+evidence is a number or a grep wherever one was gettable.
+
+**Ten findings, nine phases.** Two of the findings are one-line fixes and
+share a phase with the gate that would have caught them, because padding a
+one-liner into a session is how a queue starts lying about its own size.
+The overhaul is deliberately last: it is the largest, and four of the
+phases before it delete work it would otherwise have to carry.
+
+One correction belongs at the top, because the audit nearly shipped it as a
+finding: **"the game is silent" is false.** `audio/sfx.js` is imported as a
+namespace by five modules, so a grep for `playSfx|sfx(` returns nothing and
+every `sfx.play()` call is invisible to it. Checked before filing.
+
+- **R54 — Saves you can carry.** `grep` for any export, download or backup
+  path returns **zero**. The whole game lives in one browser profile's
+  `localStorage`: clear site data, switch phones, or install the TWA and it
+  is gone. For a project whose defining rule is that a save is sacred and
+  is never reset, nothing protects one from the browser. Size is not the
+  obstacle — a completionist save is **~38 KB against a ~5 MB budget**.
+  *Done when: a save can leave the browser and come back, an import can
+  never destroy the game already in progress, and every refusal says which
+  rule it broke.*
+- **R55 — A second run.** `newGameState()` is reachable only from a missing
+  or corrupt save; there is no reset anywhere in the UI. The sacred rule is
+  about never DESTROYING a save through migration — it was never about
+  denying a player a second playthrough. Pairs with R54, which is what
+  makes a reset safe: you can carry the first run out before starting the
+  next. *Done when: a player can start over without clearing site data, and
+  cannot do it by accident.*
+- **R56 — The playthrough has never been walked.** Every measurement this
+  project owns is a slice: `runSim` benches a build, `ladderBench` a
+  ladder, `regionBench` a strip, `facilityPayback` a track. Nothing walks
+  ONE seeded save from an empty ranch to dominion and asks about pacing —
+  real time elapsed, whether money is ever the binding constraint, where a
+  player stalls with nothing runnable. R41's "L8 at dominion, L10 on a
+  realistic diet" is an assumption the entire late game rests on and it has
+  never been walked end to end. *Done when: the harness plays a whole
+  campaign headless and reports the curve, and one deliberately broken
+  economy number fails the build.*
+- **R57 — Three villains with no face.** `portraitSeed` is authored on all
+  three rivals and has **zero references in any `.js` file**.
+  `campaign/ui.js:336` draws the rival's LEAD CHIMERA; the rival is never
+  drawn. They carry a title, a philosophy, a monologue set and an
+  escalating dossier, and are represented on screen by their pet. The
+  renderer already draws creatures and units from data. *Done when: a rival
+  has a face, it is procedural and seeded from the field that has been
+  waiting for it, and the Dex dossier and the duel both use it.*
+- **R58 — The triangle never says why.** `classes.json` carries three
+  authored lines — `ground_water`: *"Solid footing beats a flopping swimmer
+  on dry land."*, `water_air`, `air_ground` — and **nothing reads them**.
+  The engine prints "Ground beats Water!" and swallows the reason. Exactly
+  R20's dead-keyword shape: authored content with no caller. *Done when:
+  the reason appears where the multiplier does, and smoke asserts every
+  matchup line has a reader.*
+- **R59 — Audio outside the arena.** Fifteen `sfx.play()` call sites,
+  **nine of them in `battle/ui.js`**. The War Room, Pens, Vault and Dex are
+  entirely silent: taking a node, beating a rival, a chimera levelling, a
+  resequence decanting all make no sound. Fourteen stingers exist and
+  combat uses most of them. *Done when: the moments that matter outside a
+  fight are scored, and the mute toggle still silences all of it.*
+- **R60 — Split the War Room.** `campaign/ui.js` is **1,136 lines**, the
+  largest module in the repo and the largest screen by a wide margin: five
+  tab views in one file, and the only screen that needed a `document` guard
+  (R49) before the harness could render it. The Dex had its logic split
+  into `dexentry.js` and its bar into `ui/tabs.js`; the War Room, which is
+  where both patterns came from, never got the equivalent. *Done when: the
+  War Room's logic is DOM-free and testable the way `dexProgress` is, with
+  no change to what the screen renders.*
+- **R61 — No orphan content.** Three findings and the gate that would have
+  caught all of them. `utilityValue` in `battle/ai.js` is exported and
+  appears exactly once in the repo — its own declaration. `species.json`
+  names a crocodile move **"Death Roll"**, against CLAUDE.md's *"Zero death
+  language"*, which is stated as absolute rather than as a preference. And
+  R57 and R58 above are the same species of bug: authored content with no
+  reader. R50's `MODULE_NOTES` catches an unclassified MODULE; nothing
+  catches an unreferenced EXPORT or an unread DATA KEY. *Done when: a dead
+  export, an unread data field and a banned word are each a build failure —
+  and the gate is written last, after R57 and R58 have cleared the
+  instances it would otherwise fail on.*
+- **R62 — The news wire, as a system.** The overhaul, and the one finding
+  with a hard convention behind it. CLAUDE.md: *"All content is data.
+  Adding content must never require engine edits. If it does, the engine is
+  wrong — fix the engine."* The wire violates it outright: **19
+  player-facing news strings are hardcoded inside engine modules**
+  (`'THE GAUNTLET IS CLEARED…'`, `` `${node.name} seized. Income +$…` ``)
+  against 33 authored lines in `/data`. So the game's own voice is half
+  engine and half content, and a new world-reaction is an engine edit.
+  The overhaul: engines emit `{event, params}` and never a sentence;
+  `news.json` owns every phrasing, with variants per event so the world
+  stops repeating itself and a weighting by the player's philosophy, whose
+  machinery R10 already built for the rivals. *Done when: a new world
+  reaction is a JSON edit, no engine module contains a player-facing
+  sentence, and smoke asserts every emitted event id has copy AND every
+  line has an emitter — R20's invariant, pointed at the wire.*
