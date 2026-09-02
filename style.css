@@ -1385,6 +1385,17 @@ footer {
 .vault-species summary::-webkit-details-marker { color: var(--muted); }
 .vault-species .token-list { margin-top: 0; }
 .vault-species .token-list li { background: var(--panel); font-size: 0.74rem; }
+/* R52 — a vial fold ranks by its best donor the way a token fold ranks by
+   its best grade. Borrowing .grade-badge for stars would have been a lie
+   about what the number is. */
+.star-badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-2-dim);
+  color: var(--accent-2);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
 
 /* --- In-game pickers (replaces every native <select>/<input>) ------------
    Nothing in this game may hand the player an OS dropdown: the Android
