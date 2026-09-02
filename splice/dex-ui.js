@@ -15,7 +15,7 @@
 // actual saving: a hidden tab costs nothing, and the portraits are the
 // expensive part.
 
-import { renderCreatureSVG, renderUnitSVG } from '../render/renderer.js';
+import { renderCreatureSVG, renderUnitSVG, renderRivalSVG } from '../render/renderer.js';
 import { stockGenome } from '../ranch/ranch.js';
 import { comboHint } from './theater.js';
 import { rivalList, rivalRecord } from '../campaign/rivals.js';
@@ -208,6 +208,7 @@ function foesView(state, content) {
       ].filter(Boolean).join(' · ') || 'met, undecided';
       return `
         <div class="variant-row">
+          <div class="rival-face">${renderRivalSVG(rival, content.classes)}</div>
           <div style="flex:1;min-width:0">
             <strong>${rival.name}</strong>
             <span class="variant-badge">${tally}</span>

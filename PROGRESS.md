@@ -1,5 +1,118 @@
 # PROGRESS
 
+## Session 79 — R57: the rivals get their own faces ✅
+
+**Acceptance criterion:** a rival has a face, it is procedural and seeded
+from the field that has been waiting for it, and the Dex dossier and the War
+Room both use it — **passes, verified by looking at it**. No schema change;
+`SAVE_VERSION` stays **34**.
+
+### Three villains represented on screen by their pet
+
+`portraitSeed` was authored on all three rivals at R27 and had **zero
+references in any `.js` file**. `campaign/ui.js` drew the rival's LEAD
+CHIMERA into a slot it calls `.rival-portrait` — so a cast with titles,
+philosophies, monologue sets and escalating dossiers was depicted by their
+creatures, and the Dex dossier carried no art at all.
+
+### Procedural, seeded, and built on what already existed
+
+The same rival draws the same face on every device and every reload, and a
+fourth rival is three JSON fields rather than an art commission. Tinted by
+`classBias`, so the picture carries the one thing about a rival that decides
+a fight.
+
+Built on the **same shape vocabulary and the same `shapeToSVG`** every enemy
+unit already uses — the enemy roster is full of procedurally drawn people in
+riot gear, so the drawing system existed. **No new module**, so R50's
+`MODULE_NOTES` needs no entry.
+
+### Two defects found by LOOKING, which no assertion would have caught
+
+- **Every rival came out bald.** The first cut drew hair as an arc band from
+  y −22 to −34, inside a head rect starting at −46, so it rendered as a
+  sliver behind the face. Shape counts and SVG lengths were all healthy.
+- **A brow tilt of −8..8 is not an expression, it is a rounding error.** All
+  three wore the same face. Widened to −14..14, with the mouth agreeing.
+
+The crown reads as hair on some seeds and a surgical cap on others. For a
+cast of lab villains both are right, so it is named for what it covers
+rather than for one reading.
+
+### The War Room slot draws the rival now
+
+The face is the portrait; what a rival **leads with** is kept underneath at
+half size, because that is roster information rather than identity. Measured
+at 380px: an unlocked card goes ~207px → ~260px, **+98px across the Labs
+tab** for three villains gaining identities. Recorded as a number so a later
+session can revisit it with evidence rather than taste — the lead creature is
+also named with HP/PWR in the roster line below it, which is the argument for
+dropping it if the tab ever needs the height back.
+
+### Browser QA, 380px, console clean
+
+| surface | result |
+|---|---|
+| Dex › Foes | 3 rival rows, **1 face** (the met rival), 2 still `???` |
+| War Room › Labs | Mantissa and Aloft with faces + leads; **Trench locked and redacted** |
+| overflow | none |
+
+**The first QA run proved nothing and I nearly reported it as a pass.** My
+fixture gave one node and 60 notoriety, so every rival was LOCKED, the War
+Room drew three redaction boxes, and the portrait was never exercised.
+Mantissa needs a `checkpoint` node and 40 notoriety; Aloft needs
+`guard_post` and 70. Unlocking two and leaving Trench locked puts both
+states on screen at once.
+
+### The break battery
+
+Eight breaks. **All caught — but one only after the gate it exposed was
+fixed.**
+
+| break | verdict |
+|---|---|
+| the seed is ignored, so every rival wears one face | **MISSED — a real gap** |
+| 1 (rerun, gate fixed) | **CAUGHT** — `their own FACE, not merely their own name and colour (1/3)` |
+| the portrait stops carrying the class | CAUGHT |
+| the face is not reproducible | CAUGHT |
+| the Dex leaks a face for a rival never met | CAUGHT |
+| the War Room portrait goes back to the pet | CAUGHT |
+| a rival with no seed crashes instead of drawing | CAUGHT — `TypeError` |
+| the portrait stops naming whose face it is | CAUGHT |
+
+**Break 1 is the phase's real lesson, and it is the third time this session.**
+The distinctness gate compared **whole rendered SVGs**, which differ by
+`aria-label` (the name) and by the class tint even when every rival shares
+one seed. So "every rival has their own face" was satisfied by the NAME and
+the COLOUR — the seed could be ignored entirely and the suite stayed green.
+That is R51's `logged.includes('logged')` again: an assertion true of the
+rendered output and silent about the claim. It now compares the shapes at a
+fixed class, so only the features the seed picks can satisfy it.
+
+Worth noting the near-miss on the same theme: **an assertion of mine was
+wrong about my own design** and was corrected before the battery ran. I had
+claimed the same seed draws an identical SVG across rivals. It does not and
+should not — the label carries the name and the tint carries `classBias`,
+both deliberately.
+
+R45's per-tab portrait gate moved its anchor: the foes tab legitimately
+draws its 40 units **and** its 3 dossier faces. Derived from content rather
+than bumped to 43, so a fourth rival moves the number by itself.
+
+### Known gaps
+
+- The duel does not show the face. The roadmap entry named the Dex and the
+  duel; the duel's call-and-response is text in the message box, and putting
+  a portrait there is a battle-screen layout change that deserves its own
+  measurement rather than a drive-by.
+- The `+98px` on the Labs tab is unexamined beyond being recorded.
+
+### Next session's first task
+
+**R58 — the triangle never says why.** `classes.json` carries three authored
+lines explaining each matchup and nothing reads them; the engine prints
+"Ground beats Water!" and swallows the reason.
+
 ## Session 78 — R56: the playthrough, walked ✅
 
 **Acceptance criterion:** the harness plays a whole campaign headless and

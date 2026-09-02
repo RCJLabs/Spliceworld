@@ -101,6 +101,99 @@ export function indexContent(raw) {
 }
 
 // Human units and vehicles: same shape interpreter, literal palettes.
+// R57 — the rivals had a `portraitSeed` on every one of them since R27 and
+// ZERO references to it in any .js file. campaign/ui.js draws the rival's
+// LEAD CHIMERA into a slot it calls `.rival-portrait`, so three named
+// villains with a title, a philosophy, a monologue set and an escalating
+// dossier were represented on screen by their pet.
+//
+// Procedural and seeded, because that is what the waiting field is for: the
+// same rival draws the same face on every device and every reload, and a
+// fourth rival is three JSON fields rather than an art commission.
+//
+// Tinted by `classBias`, so the picture carries the one thing about a rival
+// that decides a fight. Same shape vocabulary and the same shapeToSVG as
+// every enemy unit — a second drawing system would have been the real cost.
+
+const SKINS = ['#e8c39e', '#c68642', '#8d5524', '#f1d2b6', '#a86b3c'];
+// Reads as hair or as a surgical cap depending on the seed. Both are
+// correct for this cast, so the palette serves both.
+const CROWNS = ['#2b2440', '#6b4423', '#b8b0a0', '#8c2f39', '#d8d3c4'];
+
+// A tiny seeded stream. The renderer has never needed randomness before and
+// should not grow a dependency on util/rng for five draws.
+function portraitRng(seed) {
+  let a = (seed >>> 0) || 1;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function rivalPortraitShapes(rival, classes = {}) {
+  const rng = portraitRng(rival.portraitSeed ?? 1);
+  const pick = (arr) => arr[Math.floor(rng() * arr.length)];
+  const skin = pick(SKINS);
+  const hair = pick(CROWNS);
+  const accent = classes[rival.classBias]?.color ?? '#8a8578';
+  const coat = '#f2f0ea';
+  const eyewear = Math.floor(rng() * 3); // 0 goggles, 1 round glasses, 2 none
+  const browTilt = -14 + Math.floor(rng() * 29); // the whole expression
+  const jaw = 34 + Math.floor(rng() * 8);
+  const eyeGap = 15 + Math.floor(rng() * 5);
+  const shapes = [];
+
+  // Shoulders and lab coat, with the class stripe on the lapel.
+  shapes.push({ type: 'path', d: 'M -84 110 C -84 56 -44 40 0 40 C 44 40 84 56 84 110 Z', fill: coat });
+  shapes.push({ type: 'path', d: `M -20 44 L 0 78 L 20 44 L 8 40 L 0 52 L -8 40 Z`, fill: accent });
+  shapes.push({ type: 'rect', x: -10, y: 20, width: 20, height: 28, rx: 7, fill: skin });
+
+  // Head, hair, and a pair of genuinely googly eyes under whatever is on
+  // the face — the house style since M0.
+  shapes.push({ type: 'rect', x: -jaw, y: -46, width: jaw * 2, height: 74, rx: 26, fill: skin });
+  const bareHeaded = rng() < 0.22;
+  if (!bareHeaded) {
+    shapes.push({ type: 'rect', x: -jaw, y: -48, width: jaw * 2, height: 18 + Math.floor(rng() * 9), rx: 20, fill: hair });
+  }
+  for (const side of [-1, 1]) {
+    shapes.push({ type: 'circle', cx: side * eyeGap, cy: -8, r: 9, fill: '#ffffff' });
+    shapes.push({ type: 'circle', cx: side * eyeGap + Math.round(rng() * 4 - 2), cy: -6, r: 4, fill: '#2b2440', stroke: 'none' });
+    shapes.push({
+      type: 'path',
+      d: `M ${side * eyeGap - 9} ${-20 + side * browTilt * 0.45} L ${side * eyeGap + 9} ${-22 - side * browTilt * 0.45}`,
+      fill: 'none', stroke: '@outline', strokeWidth: 4,
+    });
+  }
+  if (eyewear === 0) {
+    shapes.push({ type: 'rect', x: -jaw + 2, y: -20, width: (jaw - 2) * 2, height: 24, rx: 10, fill: accent, opacity: 0.35 });
+    shapes.push({ type: 'rect', x: -jaw + 2, y: -24, width: (jaw - 2) * 2, height: 7, rx: 3, fill: '#5a5468', stroke: 'none' });
+  } else if (eyewear === 1) {
+    for (const side of [-1, 1]) {
+      shapes.push({ type: 'circle', cx: side * eyeGap, cy: -8, r: 13, fill: 'none', stroke: '@outline' });
+    }
+    shapes.push({ type: 'path', d: `M ${-eyeGap + 13} -8 L ${eyeGap - 13} -8`, fill: 'none', stroke: '@outline', strokeWidth: 3 });
+  }
+  // A mouth that agrees with the eyebrows: villains smile when they mean it.
+  shapes.push({
+    type: 'path',
+    d: browTilt > 3
+      ? `M -13 13 Q 0 ${21 + browTilt * 0.35} 13 13`
+      : `M -13 ${19 + browTilt * 0.2} Q 0 ${11 - browTilt * 0.2} 13 ${19 + browTilt * 0.2}`,
+    fill: 'none', stroke: '@outline', strokeWidth: 4,
+  });
+  return shapes;
+}
+
+export function renderRivalSVG(rival, classes = {}) {
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-110 -110 220 220" role="img" aria-label="${esc(rival.name)}">` +
+    `<g>${rivalPortraitShapes(rival, classes).map((sh) => shapeToSVG(sh, NEUTRAL_PALETTE)).join('')}</g>` +
+    `</svg>`
+  );
+}
+
 export function renderUnitSVG(unit) {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-110 -110 220 220" role="img" aria-label="${esc(unit.name)}">` +

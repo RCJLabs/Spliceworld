@@ -1589,6 +1589,11 @@ footer {
 .rival-card.is-locked { opacity: 0.62; }
 .rival-portrait { flex: 0 0 104px; width: 104px; }
 .rival-portrait svg { width: 100%; height: auto; }
+/* R57 — the face is the portrait; what they LEAD WITH sits under it at half
+   size, because it is roster information rather than identity. */
+.rival-lead { width: 56%; margin: 2px auto 0; opacity: 0.9; }
+.rival-face { flex: 0 0 46px; width: 46px; }
+.rival-face svg { width: 100%; height: auto; }
 .rival-redacted {
   width: 100%;
   aspect-ratio: 1;
