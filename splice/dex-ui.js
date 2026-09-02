@@ -23,7 +23,8 @@ import { fieldNote, bindFieldNote } from '../ui/cards.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { bandHead } from '../ui/roster.js';
 import { openPicker } from '../ui/picker.js';
-import { speciesLines, speciesParts, dexProgress } from './dexentry.js';
+import { speciesLines, speciesParts, dexProgress, beatenUnits } from './dexentry.js';
+import { gauntletStages } from '../campaign/gauntlet.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 
 const CLASS_ORDER = ['ground', 'water', 'air'];
@@ -226,13 +227,19 @@ function foesView(state, content) {
   // the same class triangle the roster does, because the triangle is how
   // you pick what to send: knowing the Falconry Unit is Air is the whole
   // reason to look it up.
+  // R51: a cell has three states now, not two. "Logged" meant a unit took
+  // the field — which it also does while flattening you — so the guide read
+  // identically whether you won or were carried out. Beaten is the column
+  // that says which.
+  const beaten = beatenUnits(state, content);
   const cell = (unit) => {
     const met = state.dex.enemies.includes(unit.id);
+    const won = beaten.has(unit.id);
     return `
-        <div class="dex-cell ${met ? '' : 'dex-unknown'}">
+        <div class="dex-cell ${met ? '' : 'dex-unknown'}${won ? ' dex-beaten' : ''}">
           <div class="dex-portrait">${met ? renderUnitSVG(unit) : '<div class="dex-mystery">?</div>'}</div>
           <strong>${met ? unit.name : '???'}</strong>
-          ${met ? `<span class="fine-print">${unit.tags.join(' · ') || 'Organic'}</span>` : ''}
+          ${met ? `<span class="fine-print">${won ? '✓ beaten' : 'logged'} · ${unit.tags.join(' · ') || 'Organic'}</span>` : ''}
         </div>`;
   };
   const units = Object.values(content.enemies);
@@ -241,12 +248,29 @@ function foesView(state, content) {
     if (!inClass.length) return '';
     const def = content.classes[cls];
     const met = inClass.filter((u) => state.dex.enemies.includes(u.id)).length;
-    return `<h3>${def.icon} ${def.name} <span class="lineage">${met}/${inClass.length} logged</span></h3>
+    const won = inClass.filter((u) => beaten.has(u.id)).length;
+    return `<h3>${def.icon} ${def.name} <span class="lineage">${met}/${inClass.length} logged${won ? ` · ${won} beaten` : ''}</span></h3>
       <div class="dex-grid">${inClass.map(cell).join('')}</div>`;
   }).join('');
   // A unit whose class is not one of the three would vanish from a grouped
   // guide, so it gets its own run rather than being silently dropped.
   const unclassed = units.filter((u) => !CLASS_ORDER.includes(u.class));
+
+  // R42 left a note that its trophies lived on the War Room card and in the
+  // wire but not here. They do now — as one line, because the four bosses
+  // are already four of the forty cells below and a second gallery of the
+  // same units would be the duplication R50 refused to ship.
+  //
+  // Gated on dominionAt exactly as the War Room card is: the Gauntlet does
+  // not exist before the county is yours, and a Dex that named four unbeaten
+  // bosses to a player mid-campaign would be a spoiler, not a trophy shelf.
+  const stages = gauntletStages(content);
+  const cleared = stages.filter((st) => (state.gauntletBeaten ?? []).includes(st.id));
+  const gauntletShelf = state.dominionAt && stages.length
+    ? `<p class="fine-print gauntlet-shelf">🏟 The Gauntlet — ${cleared.length}/${stages.length} exhibitions answered${
+        cleared.length ? `: ${cleared.map((st) => content.enemies[st.unitId]?.name ?? st.name).join(', ')}` : ''
+      }</p>`
+    : '';
 
   return `
     <section class="card">
@@ -254,7 +278,10 @@ function foesView(state, content) {
       ${rivalRows}
     </section>
     <section class="card">
-      <h3>Field Guide — Opposition (${state.dex.enemies.length}/${units.length} logged)</h3>
+      <h3>Field Guide — Opposition (${state.dex.enemies.length}/${units.length} logged${
+        beaten.size ? ` · ${beaten.size} beaten` : ''
+      })</h3>
+      ${gauntletShelf}
       ${enemyRows}
       ${unclassed.length ? `<h3>Unclassed <span class="lineage">${unclassed.length}</span></h3><div class="dex-grid">${unclassed.map(cell).join('')}</div>` : ''}
       <p class="fine-print">Every entry remembers you too. That's the AI director's notebook.</p>
