@@ -12043,6 +12043,15 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.deepEqual(orphans, [],
       `every export has a reader somewhere (dead: ${orphans.join(', ')})`);
 
+    // The exemption's REASON is what bounds its SCOPE. "A hand-run balance
+    // instrument the developer calls from `node -e`" can only be true of a
+    // developer tool, so a shipped module can never claim it — without this,
+    // HAND_RUN is a general switch for silencing any export at all, which is
+    // what the battery caught it being.
+    for (const file of Object.keys(HAND_RUN)) {
+      assert.ok(file.startsWith('tools/'),
+        `only a hand-run tool can claim this exemption (${file} cannot)`);
+    }
     // The exemptions are live. A name that has since been deleted or renamed
     // must come off the list, or the list stops describing the repo.
     for (const [file, names] of Object.entries(HAND_RUN)) {
