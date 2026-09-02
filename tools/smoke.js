@@ -102,6 +102,26 @@ const content = indexContent({
   news: readJSON('data/news.json'),
 });
 
+// R62: a line on the wire is one of the phrasings news.json authors for that
+// event. Asserted by matching the authored line's literal fragments in order,
+// so a gate about "did the world say this" survives a rewording and does not
+// quietly pin the copy to whatever phrase somebody grepped for once.
+const saysEvent = (line, event) => {
+  const spec = content.news[event];
+  if (!spec || !line) return false;
+  const pools = [spec.lines ?? [], ...Object.values(spec.by ?? {})];
+  return pools.some((pool) => pool.some((authored) => {
+    let at = 0;
+    for (const frag of authored.split(/\{\w+\}/).map((f) => f.trim()).filter((f) => f.length > 3)) {
+      const found = line.indexOf(frag, at);
+      if (found < 0) return false;
+      at = found + frag.length;
+    }
+    return true;
+  }));
+};
+const wireSays = (news, event) => news.map((n) => n.text ?? n).some((l) => saysEvent(l, event));
+
 // --- Content coherence: every part references a real species + slot.
 for (const part of Object.values(content.parts)) {
   assert.ok(content.species[part.species], `${part.id}: unknown species ${part.species}`);
@@ -8879,10 +8899,20 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // 8. It is a milestone, not an ending: the same breath says the coalition
   //    keeps coming, because R9 is what stops the map going quiet.
   {
+    // R62 moved the sentence to news.json, so the anchor moved with it — and
+    // the claim is CALLED now rather than grepped: the event actually
+    // resolves to a line, and that line says the fighting continues.
+    const { newsFor } = await import('../campaign/wire.js');
+    const said = newsFor({ ...newGameState(), seed: 4 }, content, 'dominion_continues');
+    assert.ok(said, 'taking the county says something about what comes next');
+    assert.ok(/continue|reschedul|quarterly review/i.test(said),
+      `and what it says is that the fighting continues (${said})`);
+    // Every phrasing in the pool, not just the one this seed drew.
+    for (const line of content.news.dominion_continues.lines) {
+      assert.ok(!/game over|the end|you win/i.test(line), `no phrasing calls it an ending (${line})`);
+    }
     const src = readFileSync(join(root, 'campaign/campaign.js'), 'utf8');
-    assert.ok(/Counter-offensives continue/.test(src),
-      'the announcement says the fighting continues');
-    assert.ok(!/game over|the end|you win/i.test(src), 'and never calls it an ending');
+    assert.ok(!/game over|the end|you win/i.test(src), 'and the engine never calls it an ending either');
   }
 
   // 9. The save carries it, and an old one migrates without losing anything.
@@ -8922,7 +8952,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(done.dominionAt, null, 'they arrive not yet told');
     tickCampaign(done, content, t0);
     assert.equal(done.dominionAt, t0, 'and the tick that runs on load tells them');
-    assert.ok(done.news.some((n) => /THE COUNTY IS YOURS/.test(n.text ?? n)),
+    assert.ok(wireSays(done.news, 'dominion'),
       `and it reaches the wire (${JSON.stringify(done.news.slice(-3))})`);
     // …once, not on every tick thereafter.
     const before = done.news.length;
@@ -9234,7 +9264,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(st.campaign.notoriety, notorietyBefore, 'with no notoriety — an exhibition is not a conquest');
     const news = st.news.map((n) => n.text ?? n).join(' | ');
     assert.ok(news.includes(finale.news), `the stage news reaches the wire`);
-    assert.ok(/THE GAUNTLET IS CLEARED/.test(news), 'and the fourth closes the set');
+    assert.ok(wireSays(st.news, 'gauntlet_cleared'), 'and the fourth closes the set');
     const before = st.news.length;
     const again = createBattle([team[0]], enc, content, 8, t0, { kind: 'gauntlet' });
     again.outcome = 'win'; again.over = true;
