@@ -1,5 +1,228 @@
 # PROGRESS
 
+## Session 82 — R60: the War Room's decisions, out where they can be tested ✅
+
+**Acceptance criterion:** the War Room's logic is DOM-free and testable the
+way `dexProgress` is, with no change to what the screen renders — **passes,
+measured**. No schema change; `SAVE_VERSION` stays **34**.
+
+### The premise was half right, and the wrong half was the interesting one
+
+The queue said `campaign/ui.js` is 1,139 lines of screen with its logic
+tangled in. Reading it first: the *systems* were already leaf modules —
+`campaign.js`, `operations.js`, `contest.js`, `rehab.js`, `rivals.js`,
+`sparring.js`, `gauntlet.js`, `monologue.js`. The War Room is not a monolith
+of untested logic. It is a monolith of **markup over well-factored logic**,
+with a thin layer between them that nobody had ever named:
+
+> which strip opens by default, which tab earns a badge, what a job row says
+> when it cannot be run, and **how much money a counter-offensive is costing
+> you**.
+
+Every one of those was written inside a template literal, where the only way
+to check one is to render the screen and read the HTML back.
+
+### One of them was already wrong
+
+Each counter-offensive alert computed its own strip bonus inline — *"is every
+node in my strip held? then the whole bonus is at risk from me"* — beside a
+function, `incomeSuspended`, that already knew the answer and is what the econ
+row three inches above it prints.
+
+With two contests open in one completed strip, both alerts claim the same
+$180. Measured on Kestrel Reach, held end to end:
+
+| contests | alerts claim | econ row says |
+|---|---|---|
+| 1 | $310 | $310 |
+| 2 | $310 + $260 = **$570** | **$390** |
+| 3 | $310 + $260 + $285 = **$855** | **$495** |
+
+Two numbers on the same screen, at the same moment, disagreeing by 73%.
+
+**It was unreachable only because `contestation.maxConcurrent` ships as 1** —
+a value in `data/regions.json`. CLAUDE.md promises content changes never
+require engine edits, so the single most obvious knob in that file makes the
+War Room start lying about money. Walked it to be sure: raising it to 2 opens
+a second contest and produces exactly the numbers above.
+
+The strip bonus is a property of the **strip**, not of any one contest, so it
+is now attributed once — to the first alert in that strip — and the others say
+so and name the alert carrying it. The alerts now sum to `incomeSuspended` by
+construction, which is the invariant the gate asserts.
+
+### The proof: 124 cells, 119 byte-identical
+
+"No change to what the screen renders" needs a measurement, not a promise. The
+harness walks 13 fixtures × 5 tabs × 6 briefing kinds (with and without a team
+picked) and hashes the markup: **124 cells**, rendered against a clean
+pre-R60 worktree and against the new tree, then diffed.
+
+**119 cells byte-identical.** The 5 that changed are all `twoContests` — the
+fixture that exercises the bug. Nothing else moved, which is what makes the
+diff attributable to the fix rather than to the refactor.
+
+Checked deterministic across runs and *sensitive* before trusting it: a
+one-character edit to a heading moved 12 cells.
+
+### Three bugs found while building the proof were in the proof
+
+This is the part worth writing down. The measurement kept passing for the
+wrong reasons, and each one is the same species as R55's `{id:'a1'}` animals
+and R57's locked rivals — **a broken fixture reads as a working feature**.
+
+1. **The rival briefing was never reached.** `data-rival` lives on the Labs
+   tab and the walk only ever looked at the map. R57's hole exactly, this time
+   in my own harness.
+2. **The live-job card was never rendered.** The fixture wrote
+   `campaign.ops`; `operations.js` reads `campaign.operations`. So the Jobs
+   board showed an idle board in every one of the 124 cells — and the live-job
+   card is markup this phase rewrote. Fixed, re-baselined, still 119/124.
+3. **`warTab` leaked between fixtures.** It is module state that survives
+   every draw, and the walk only switched tabs when the target was not `map` —
+   so after a fixture ended on Labs, the *next* fixture's "map" cell was a
+   Labs render under a map label. Both sides of the comparison had it, so the
+   identity result held, but the labels were lying.
+
+And the browser QA reported a clean screen with **no contest card at all**: it
+seeded `spliceworld:save` while the game reads `spliceworld_save`. The QA
+script now exits non-zero rather than reporting on an unseeded screen.
+
+Before spending another five minutes on the full suite, I rehearsed the new
+gates standalone — which caught **two of my own gates being wrong**: one
+asserted a crewed job with an empty stable says "no crew free" when the honest
+answer is that it falls to the solo lane and is runnable; the other held
+Kestrel without the strip that unlocks it, leaving the region closed with no
+buttons to walk into. Both were fixed before the suite ever saw them.
+
+### What moved, and what did not
+
+`campaign/warroom.js` — 317 lines, 16 exports, DOM-free:
+
+```
+warTargetEncounter  the router — called once for the briefing, again for the
+                    battle; if they disagree you fight a different fight
+contestAlerts       what a counter-offensive costs (the fix lives here)
+econRow  stripState  frontierRegionId  sparVerdict  tabBadge  WAR_TABS
+jobsModel  jobRow  heatBand
+foeRead  obedienceRead  canBringMore  fitTeam  aftermathText
+```
+
+`campaign/ui.js` is **1,139 → 1,019 lines** and is still the largest module in
+the repo. Recording that plainly rather than claiming the title: the remaining
+1,019 lines are markup, and the screen stays one file because it is **one
+state machine written in two halves** — `warTab`, `draftTarget`, `draftTeam`,
+`lastAftermath` and `identityRoll` are shared module state; the map builds the
+briefing's target and the briefing writes the map's aftermath. Splitting the
+markup would mean moving that state somewhere both halves can reach, which is
+a different phase with real render-identity risk, not a tidy-up.
+
+Two dead imports (`opTuning`, `threatRung`) fell out while rewriting the lines
+they sat on. Both predate this phase — exactly what **R61**'s unreferenced-
+export gate is for.
+
+### Browser QA, 380px, console clean
+
+Kestrel Reach held end to end with a counter-offensive live on it, so the
+number the phase changed is on screen:
+
+```
+COUNTER-OFFENSIVE — Crop-Duster Strip
+5h 0m to hold the line · $260/day suspended until you do
+(the node plus Kestrel Reach's $180 strip bonus)
+
+TERRITORY +$1025/day  incl. +$150 strip bonus  −$260 contested
+```
+
+$260 in the alert, $260 in the econ row — the two numbers that disagreed by
+73% at two contests, now agreeing at one. Map 1,697px, Labs 1,814px, Jobs
+1,467px, Bays 890px, Wire 877px. No horizontal overflow on any tab, no console
+messages, and the alerts sit above the tab bar on all five (R15's rule),
+checked on the rendered page rather than in the source.
+
+### Four gates were anchored to the screen's source, and all four broke
+
+Seven places in the suite read `campaign/ui.js` as *text*. Moving the
+decisions broke four of them — the tab list, the gauntlet router and two spar
+gates — and every one broke on its **setup**, never on its **claim**.
+
+That is the session's recurring pattern arriving from the other direction. A
+gate that greps a screen for `kind === 'gauntlet') return gauntletEncounter`
+is asserting that a *string appears in a file*; what it means to assert is
+that a stage resolves to the authored fight. Now that the router is
+importable, it does:
+
+```js
+const viaBriefing = warTargetEncounter(held, { kind: 'gauntlet', stageId }, content, t0);
+assert.deepEqual(viaBriefing.waves, rawStage(held, content, stageId).encounter.waves);
+```
+
+Four proxy assertions became four real ones, and only because the code moved
+somewhere it could be **called** instead of matched. That is the argument for
+this phase, better than any line count.
+
+### The break battery
+
+Twelve breaks. **All twelve caught**, each on the assertion it was aimed at.
+
+| # | break | caught by |
+|---|---|---|
+| 1 | the bonus is claimed in full by every alert (the original bug) | the alerts total what the econ row prints ($545 vs $365) |
+| 2 | the bonus is **split evenly** — total right, shape wrong | one alert carries the strip bonus |
+| 3 | the other alerts stop saying the strip is down | Radio Mast still says the strip is down |
+| 4 | the strip is down and nothing says who is carrying it | and names the alert carrying it |
+| 5 | an unfinished strip invents a bonus to lose | an incomplete strip puts no bonus at risk |
+| 6 | the screen keeps its own opinion about what is suspended | *(a crash — see below)* |
+| 7 | a DOM reference creeps into `warroom.js` | warroom.js never touches a DOM |
+| 8 | the briefing and the battle stop facing the same team | the briefing and the battle face the same team |
+| 9 | a tab wears a badge with nothing behind it | map never wears a badge |
+| 10 | the heat bands overlap by one | strict equality on the boundary |
+| 11 | the map opens on a strip already finished | a finished strip stops being the frontier |
+| 12 | the foe read stops resolving units named by id | a wave named by id and the same wave inlined read the same |
+
+**Break 2 is the one worth keeping.** Splitting the bonus evenly across the
+alerts leaves the *total* correct — gate 1 passes it — and it is still wrong,
+because the money is attributed to contests that are not costing it. Gate 2
+caught it on shape. Two gates that look redundant are not; one of them exists
+for exactly this break.
+
+**Break 6 was a category error.** It re-added `incomeSuspended(...)` to the
+screen after the extraction had removed the import, so Node threw
+`ReferenceError` before the gate could speak: that tests the module system,
+not the guard. Re-run as **6b** with the import wired in, so the screen really
+does keep a second opinion. The gate is what caught it:
+
+```
+CAUGHT  6b the same second opinion, wired so it actually runs
+        AssertionError: the screen does not recompute what is suspended
+```
+
+### Next session's first task
+
+**R61 — no orphan content.** Three findings and the gate that would have
+caught all of them: `utilityValue` in `battle/ai.js` is exported and appears
+exactly once in the repo (its own declaration); `species.json` names a
+crocodile move **"Death Roll"** against CLAUDE.md's *"Zero death language"*;
+and R57/R58 were both authored content with no reader. R50's `MODULE_NOTES`
+catches an unclassified module; nothing catches an unreferenced export or an
+unread data key. This phase adds two more instances to its pile —
+`opTuning` and `threatRung`, imported into the War Room and never used.
+
+Then **R62**, the news-wire overhaul: 19 hardcoded strings in engine modules
+against CLAUDE.md's "all content is data".
+
+### Standing leftovers
+
+- The campaign plateau is still unexplained (R56).
+- The agenda has no entry for **defending** a contested node (R56). R59 gave
+  that moment a sound and R60 made its cost honest — the walker still cannot
+  answer it.
+- The duel still doesn't show a rival face (R57).
+- Briefing chips still say "beats their Water" with no reason (R58).
+- `campaign/ui.js` is still the largest module in the repo at 1,019 lines.
+  Splitting the markup means moving five pieces of shared module state
+  somewhere both halves can reach — a phase, not a tidy-up.
+
 ## Session 81 — R59: audio outside the arena ✅
 
 **Acceptance criterion:** the moments that matter outside a fight are scored,
