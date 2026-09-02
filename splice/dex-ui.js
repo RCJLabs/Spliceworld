@@ -26,6 +26,7 @@ import { openPicker } from '../ui/picker.js';
 import { speciesLines, speciesParts, dexProgress, beatenUnits } from './dexentry.js';
 import { gauntletStages } from '../campaign/gauntlet.js';
 import { guideForScreen } from '../ranch/onboarding.js';
+import { classReason } from '../campaign/matchup.js';
 
 const CLASS_ORDER = ['ground', 'water', 'air'];
 
@@ -76,7 +77,16 @@ function rosterView(state, content) {
   return `
     <section class="card">
       <h3>Class Triangle</h3>
-      <p class="fine-print">${CLASS_ORDER.map((c) => `${content.classes[c].icon} ${content.classes[c].name} beats ${content.classes[content.classes[c].beats].name}`).join(' · ')}. A chimera's class comes from its anatomy — ${CLASS_ORDER.map((c) => content.classes[c].cue).join('; ')} — and a tie leaves it Unclassed (neutral both ways).</p>
+      <ul class="token-list triangle-why">${CLASS_ORDER.map((c) => {
+        const beaten = content.classes[content.classes[c].beats];
+        const why = classReason(c, content.classes[c].beats, content.classRules);
+        return `<li>${content.classes[c].icon} <strong>${content.classes[c].name}</strong> beats ${beaten.name}${
+          why ? ` <span class="fine-print">— ${why}</span>` : ''
+        }</li>`;
+      }).join('')}</ul>
+      <p class="fine-print">A chimera's class comes from its anatomy — ${CLASS_ORDER.map((c) => content.classes[c].cue).join('; ')} — and a tie leaves it Unclassed. ${
+        classReason(null, null, content.classRules) ?? ''
+      }</p>
     </section>
     <section class="card">
       ${classSections}

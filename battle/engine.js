@@ -14,6 +14,7 @@ import { perksOf, driftFromBattle } from '../splice/temperament.js';
 import { flatModifiers, scarEffects, againstTags } from '../splice/scars.js';
 import { infirmaryGrants } from '../splice/facility.js';
 import { MOVE_SLOTS, activeMoves, defaultPick, partMoveId, comboMoveId } from './moves.js';
+import { hitReason } from '../campaign/matchup.js';
 
 const STAGE_STEP = 0.15;
 const STAGE_CAP = 2; // setup matters, but stacking is not a strategy on its own
@@ -683,6 +684,17 @@ function attack(battle, atk, def, move, events, content) {
     if (mult > 1) line += ' (super effective!)';
     if (clsMult > 1) line += ` (${content.classes[atk.creatureClass].name} beats ${content.classes[def.creatureClass].name}!)`;
     else if (clsMult < 1) line += ` (${content.classes[def.creatureClass].name} shrugs off ${content.classes[atk.creatureClass].name})`;
+    // R58: the reason, once per matchup per battle. The multiplier prints on
+    // every hit and the sentence behind it would be noise repeated — but
+    // never saying it at all is how four authored lines sat unread since the
+    // triangle shipped. R37's rule: the lesson arrives at the wall it
+    // explains, and only the first time you walk into it.
+    const clsWhy = hitReason(atk.creatureClass, def.creatureClass, clsMult, content.classRules);
+    const clsPair = clsWhy && (clsMult > 1
+      ? `${atk.creatureClass}>${def.creatureClass}`
+      : `${def.creatureClass}>${atk.creatureClass}`);
+    const clsFirst = clsPair && !(battle.classSaid ??= []).includes(clsPair);
+    if (clsFirst) battle.classSaid.push(clsPair);
     if (bypassArmor && def.armor > 0) line += ' (armor ignored!)';
     events.push({
       text: line + '.',
@@ -695,6 +707,7 @@ function attack(battle, atk, def, move, events, content) {
       classMult: clsMult,
       tagMult: mult,
     });
+    if (clsFirst) events.push({ text: clsWhy, kind: 'info' });
     if (def.status.sleep) {
       def.status.sleep = false;
       events.push({ text: `${def.name} is rudely awakened.`, kind: 'status', target: at });

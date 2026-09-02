@@ -86,7 +86,9 @@ export function indexContent(raw) {
     chaosLines: raw.chaos ? raw.chaos.lines : null,
     resequencerLines: raw.resequencer ? raw.resequencer.lines : null,
     labNames: raw.philosophies ? raw.philosophies.labNames : null,
-    classRules: raw.classes ? { advantage: raw.classes.advantage, disadvantage: raw.classes.disadvantage } : { advantage: 1, disadvantage: 1 },
+    classRules: raw.classes
+      ? { advantage: raw.classes.advantage, disadvantage: raw.classes.disadvantage, flavor: raw.classes.flavor ?? {} }
+      : { advantage: 1, disadvantage: 1, flavor: {} },
     campaignMeta: raw.regions
       ? {
           // The Threat Generation ladder (R26). threatGen2At is kept beside

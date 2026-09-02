@@ -1,5 +1,106 @@
 # PROGRESS
 
+## Session 80 — R58: the triangle says why ✅
+
+**Acceptance criterion:** the reason appears where the multiplier does, and
+smoke asserts every matchup line has a reader — **passes, measured in the
+browser**. No schema change; `SAVE_VERSION` stays **34**.
+
+### It was worse than "nothing reads them"
+
+The queue entry said `classes.json` carries authored lines that nothing
+reads. Probing the runtime shape first — the R56 habit — turned up something
+sharper: **`indexContent` kept only the class list and the two multipliers,
+so the whole `flavor` block was dropped at index time and never reached
+runtime at all.** A reader written before this phase would have found nothing
+there to read. My first probe returned four `null`s, which is what exposed it.
+
+Same trap as R56's `content.director.counters`, caught the same way: ask the
+runtime what shape it actually has instead of trusting the file.
+
+And it is **four lines, not three** — my audit missed `unclassed`, which is
+the one no hit can ever fire, because a neutral matchup has no multiplier to
+explain.
+
+### One predicate, because the key order is the trap
+
+The flavor is keyed `winner_loser`. At the moment of a hit the winner is the
+**attacker** when the multiplier is up and the **defender** when it is down —
+so a second reader constructing that key itself is a second chance to get it
+backwards. `classReason` and `hitReason` live in `campaign/matchup.js`, which
+imports nothing and is therefore safe for both the battle engine and the Dex
+to read. R49's lesson applied *before* the second reader existed.
+
+### Once per matchup, not once per hit
+
+The reason fires as its own `info` event after the hit it explains — an
+existing event kind, so the arena already knows how to pace it. Said on every
+hit it is noise; said never is the bug this phase fixes. R37's rule: the
+lesson arrives at the wall it explains, the first time you walk into it.
+
+Probed in a real fight: **three hits printed the multiplier, the reason said
+it once.**
+
+### Browser QA, 380px, console clean
+
+```
+🦶 Ground beats Water — Solid footing beats a flopping swimmer on dry land.
+🌊 Water beats Air — A soaked flyer is a falling flyer.
+🪽 Air beats Ground — You cannot punch what refuses to stay on the ground.
+```
+
+The Dex is the lookup home, and the only place `unclassed` can live. The list
+costs **188px** against the one-line paragraph it replaced (~60px), putting
+the roster tab at **2,909px / 3.6 screens** — inside R45's 4.4-screen worst
+case. Recorded rather than waved past.
+
+### The break battery
+
+Nine breaks. **Seven caught, one bad break, one bad anchor re-run.**
+
+| break | verdict |
+|---|---|
+| `indexContent` drops the flavor again | CAUGHT |
+| the reason fires on every hit | CAUGHT |
+| the reason never fires | CAUGHT |
+| the key order is flipped, explaining the wrong edge | CAUGHT |
+| a neutral hit starts explaining itself | **MISSED — bad break** |
+| the Dex lists edges without reasons | BADANCH (my escaping) |
+| 6 (rerun, correct anchor) | **CAUGHT** — `the Dex names why ground beats water` |
+| the `unclassed` line loses its only home | CAUGHT |
+| an authored line is deleted from the data | CAUGHT — `classes.json authors reasons (3)` |
+
+Breaks 2 and 3 are the pair that matters: **too often and never**, both
+caught. A gate that only asked "does the reason appear" would have passed
+the noise failure.
+
+**Break 5 was a bad break, and worth being precise about rather than
+counting as a gap.** Removing the `mult === 1` guard changes nothing
+observable: two *different* classes can never produce a multiplier of 1 —
+they either interact or one is null, which the preceding guard catches — and
+same-class falls through to a `ground_ground` key that does not exist and
+returns null anyway. The guard is defensive against a state the triangle
+cannot produce, so there was no behaviour for the gate to catch.
+
+Break 6's bad anchor was the uniqueness assert (added at R55) doing its job:
+a 0-hit anchor now fails loudly instead of reporting as a silent miss.
+
+### Known gaps
+
+- The briefing chips still say `beats their Water` with no reason. The chips
+  are inline spans on per-chimera rows, so a sentence there would cost the
+  height R35 and R44 fought for. A `title=` tooltip is the R47 pattern but is
+  nearly useless on a phone, which is why it was not done rather than done
+  badly.
+- The reason is per-battle, so a player who reloads mid-fight hears it again.
+  `classSaid` lives on the battle, not the save, which is the right scope.
+
+### Next session's first task
+
+**R59 — audio outside the arena.** Fifteen `sfx.play()` call sites, nine of
+them in `battle/ui.js`; taking a node, beating a rival, a chimera levelling
+and a resequence decanting are all silent.
+
 ## Session 79 — R57: the rivals get their own faces ✅
 
 **Acceptance criterion:** a rival has a face, it is procedural and seeded
