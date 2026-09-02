@@ -1,5 +1,131 @@
 # PROGRESS
 
+## Session 78 — R56: the playthrough, walked ✅
+
+**Acceptance criterion:** the harness plays a whole campaign headless and
+reports the curve, and one deliberately broken economy number fails the
+build — **passes**, with an honest caveat about *which* gate does the
+failing (below). No schema change; `SAVE_VERSION` stays **34**.
+
+### The walker does not invent a policy
+
+Every measurement this project owns is a **slice**: `runSim` benches a
+build, `ladderBench` a ladder, `regionBench` a strip, `facilityPayback` a
+track. None answers what it is like to *play* this from an empty ranch, and
+R41's trajectory math is an assumption the whole late game rests on.
+
+`campaignWalk` drives one seeded save on a simulated clock and does whatever
+`agendaShape` — the game's own answer to "what can I do right now" — says is
+open. So the curve is the game's designed pace rather than mine, and a tick
+offering nothing productive **is** a stall, measured with the same code the
+Ranch screen renders from.
+
+### Getting an honest walker took three policies
+
+The first two measured the walker, not the game:
+
+1. **Assaulted every tick. Went 140–1191.** A player who lost 1,191 fights
+   would have quit; any curve underneath that is meaningless.
+2. **Trained the whole stable every cooldown and spent to $3**, then could
+   not buy an animal or feed the ones it had. Doing *nothing* nets **+22/day**
+   ($40 stipend against $18 upkeep), so that insolvency was entirely the
+   policy's doing.
+3. **Shipped:** care first; a fourteen-day upkeep reserve before any
+   discretionary spend; one assault a day; no second attempt on a node that
+   already beat this exact roster. **187–36**, never below the reserve.
+
+### Four bugs of mine, three of them signature errors
+
+`careStatus` takes `(animal, now)`, not `(state, animal, …)`. `catalogFor`
+returns **species objects**, so the `.affordable` the walker looked for was
+always `undefined` and it never bought anything. `validateSplice` returns an
+**array of error strings**, so `.ok` was undefined and always falsy — the
+first walk produced six parts and never wore any of them.
+
+The fourth was a **hollow metric caught by reading rather than by the
+battery**: `applyElapsed` clamps funds with `Math.max(0, …)`, so funds can
+never go negative and a `brokeHours` counting `funds < 0` could not fire.
+Insolvency here means *pinned at zero*.
+
+### What the walk found
+
+- **The agenda has no entry for defending a contested node.** It is the one
+  action in the game with a deadline that costs you territory, and a player
+  following the agenda is never told to do it. The walker had to defend
+  directly, outside the agenda, or it bled nodes silently. Same shape as
+  R48, and a candidate phase.
+- **`longestStallHours` is 0 across every seed over 240 simulated days.**
+  A4's promise — that something *productive* is always open, not merely
+  something to buy — holds across a whole campaign and not just one save.
+- **The campaign plateaus.** First parts at day 0.08, first chimera 0.17,
+  first node 0.25 — then 1–5 nodes held and **no dominion in 240 days**,
+  with 110+ defences at ~55% held. **Whether that is the game or the walker
+  is NOT established**, and it is deliberately not asserted or claimed.
+  Settling it needs its own measurement.
+
+### The break battery, and what it honestly showed
+
+Nine breaks. Eight caught, one bad break — but the count is the least
+interesting part.
+
+| break | verdict |
+|---|---|
+| the stipend goes to zero | CAUGHT — **sibling** (M1's `stipend minus upkeep`) |
+| chimera upkeep flattened | CAUGHT — **sibling** (R25's `upkeep climbs with grade`) |
+| 2b. upkeep scaled 60×, curve intact | CAUGHT — **sibling** (R25's R11-floor gate) |
+| the starting funds gutted | **MISSED — bad break** |
+| graduation removed from the agenda | CAUGHT — **sibling** (A4) |
+| 4b. agenda offers it, the action refuses | CAUGHT — **sibling** (M2's `assert.ok(resA.ok)`) |
+| the agenda offers no productive work | CAUGHT — **sibling** (A4) |
+| the coalition never comes back | CAUGHT — **sibling** (R9) |
+| the walk is not reproducible | **CAUGHT — this phase's own gate** |
+
+**Every break except determinism was caught by a pre-existing gate.** That
+is not an accident and it is worth stating plainly rather than counting
+eight catches and moving on: the walker sits on top of heavily gated
+systems, so anything that breaks a *system* trips that system's gate long
+before the walk runs. Two rounds of isolation (2b, 4b) failed to find a
+break the walk catches first.
+
+So: **the walk's gates are redundant, not hollow.** They can fail — they are
+simply second in line. The distinction matters, because a hollow gate is a
+lie and a redundant one is a seatbelt. They are kept for that reason, and
+because a future refactor that removes a sibling should not silently remove
+the coverage too.
+
+**The walk's real deliverable is the measurement, not its gates** — the
+curve, the stall metric, the agenda gap, and four of my own bugs it exposed.
+The one thing it uniquely guards today is that the same seed walks the same
+way twice.
+
+Break 3 was a **bad break**: dropping starting funds from $300 to $1 changes
+a number without changing an outcome, because the stipend nets +22/day — the
+player is poor, never insolvent, and still closes the opening loop on day
+one.
+
+**Two fixes to the battery harness itself.** After R54's break 3 silently
+patched an identical earlier line, `patch()` now asserts its anchor is
+**unique** — and it earned that immediately, catching a 0-hit anchor in this
+very battery. And a bad anchor now reports `BADANCH` and continues rather
+than aborting the run, so one loud mis-aim no longer costs the other six
+verdicts.
+
+### Known gaps
+
+- The plateau is unexplained, and the walker's strength is the confound.
+- The walker does not breed, use the Chaos Vat, treat scars, or buy facility
+  upgrades. Those are enhancements to the loop rather than the loop, but a
+  walker that used them might not plateau — which is part of why the plateau
+  is not claimed as a finding.
+- The walk's only uniquely load-bearing gate is determinism.
+
+### Next session's first task
+
+**R57 — three villains with no face**, or settle the plateau first. The
+plateau is the more interesting question and the walk now exists to answer
+it: give the walker the enhancements it skips and see whether dominion
+arrives.
+
 ## Session 77 — R55: a second run ✅
 
 **Acceptance criterion:** a player can start over without clearing site

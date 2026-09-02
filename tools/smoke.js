@@ -25,7 +25,7 @@ import {
   movesFromTokens, previewMove,
 } from '../battle/engine.js';
 import {
-  runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent,
+  runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent, campaignWalk,
   regionBench, ARCHETYPES, facilityPayback, labAt, scoutedBy, fightRival,
   ladderBench, ladderRate, STARTER_BUILD, partsOnFrame,
 } from './sim.js';
@@ -11306,6 +11306,53 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(JSON.parse(fresh.get('spliceworld_save')).settings.muted, false,
       'carrying nothing, because there was nothing to carry');
   }
+}
+
+// R56. Every measurement this project owns is a SLICE — runSim benches a
+// build, ladderBench a ladder, regionBench a strip, facilityPayback a track.
+// None of them answers what it is like to PLAY this from an empty ranch, and
+// R41's trajectory math is an assumption the whole late game rests on.
+//
+// campaignWalk drives one seeded save on a simulated clock and does whatever
+// `agendaShape` — the game's own answer to "what can I do right now" — says
+// is open. So the curve is the game's designed pace rather than my idea of
+// one, and a tick where nothing productive is offered IS a stall, measured
+// with the same code the Ranch screen renders from.
+{
+  const walk = campaignWalk(content, { seed: 2026, days: 45 });
+
+  // 1. The opening loop closes. A4's whole complaint was that nothing you
+  //    could do produced a next thing to do; walked, the first parts, the
+  //    first chimera and the first node all land on day one.
+  assert.ok(walk.at.firstParts <= 1, `parts on day one (${walk.at.firstParts})`);
+  assert.ok(walk.at.firstChimera <= 1, `a chimera on day one (${walk.at.firstChimera})`);
+  assert.ok(walk.at.firstNode <= 2, `and a node held by day two (${walk.at.firstNode})`);
+  assert.ok(walk.chimeras > 0 && walk.warRecord.wins > 0,
+    `the walk actually played (${walk.chimeras} chimeras, ${walk.warRecord.wins} wins)`);
+
+  // 2. THE CRITERION. The player is never insolvent. `applyElapsed` clamps
+  //    funds with Math.max(0, ...), so "broke" here means PINNED AT ZERO —
+  //    a `< 0` counter would have been an assertion that cannot fire.
+  //    Break the stipend and this is what notices.
+  assert.equal(walk.brokeHours, 0, `never broke across the walk (${walk.brokeHours}h at zero)`);
+  assert.ok(walk.minFunds > 0, `and never reached zero (low-water ${walk.minFunds})`);
+
+  // 3. A4's promise, held over a whole campaign rather than one save: there
+  //    is always something PRODUCTIVE open, not merely something to buy.
+  assert.ok(walk.longestStallHours <= 24,
+    `never a day with nothing productive to do (worst ${walk.longestStallHours}h, from day ${walk.worstStallDay})`);
+
+  // 4. The world pushes back, and the walk survives it. R9's counter-
+  //    offensives fire on a schedule, and a walk that never saw one would be
+  //    measuring a game with the late half switched off.
+  assert.ok(walk.defences > 0, `the coalition came back for a node (${walk.defences} defences)`);
+  assert.ok(walk.defencesHeld > 0, `and some were held (${walk.defencesHeld}/${walk.defences})`);
+
+  // 5. Determinism: same seed, same walk. A pacing number that moves on its
+  //    own is not a measurement.
+  const again = campaignWalk(content, { seed: 2026, days: 45 });
+  assert.deepEqual(again.at, walk.at, 'the walk is reproducible from its seed');
+  assert.equal(again.warRecord.wins, walk.warRecord.wins, 'down to the fights');
 }
 
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

@@ -862,3 +862,240 @@ function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+
+// --- R56: the playthrough, walked ----------------------------------------
+//
+// Every measurement this project owns is a SLICE. runSim benches a build,
+// ladderBench a ladder, regionBench a strip, facilityPayback a track. All of
+// them answer "is this thing balanced" and none of them answers "what is it
+// like to play this from an empty ranch". R41's trajectory math — L8 at
+// dominion, L10 on a realistic diet — is an assumption the entire late game
+// rests on, and it has never been walked end to end.
+//
+// The walker does not invent a policy. It reads `agendaShape`, which is the
+// game's OWN answer to what a player can do right now, and does everything
+// productive it offers. Two consequences worth stating: the curve it reports
+// is the game's designed pace rather than my idea of one, and a tick where
+// the agenda offers no productive action IS the stall this phase is looking
+// for — measured with the same code the Ranch screen renders from.
+//
+// It is a diligent player, not an optimal one: it takes what is in front of
+// it in a fixed order and never plans. A real player will be slower, so
+// every day count here is a FLOOR.
+import { agendaShape } from '../ranch/agenda.js';
+import { newGameState } from '../save/save.js';
+import { ensureRanchSeeded, applyElapsed } from '../ranch/ranch.js';
+import { tickCampaign, resolveBattle } from '../campaign/campaign.js';
+import { careAction, careStatus, buyMailOrder, buyPenUpgrade, catalogFor, ageStage, upkeepPerDay, penUpgradeCost } from '../ranch/ranch.js';
+import { extractAnimal } from '../splice/extract.js';
+import { spliceChimera, validateSplice, trainChimera, TRAINING } from '../splice/theater.js';
+import { startOperation, operationList, opReady, laneFree } from '../campaign/operations.js';
+import { startSpar, canSpar } from '../campaign/sparring.js';
+import { nodeStates } from '../campaign/campaign.js';
+import { contestEncounter, resolveContest } from '../campaign/contest.js';
+
+const WALK_HOUR = 3600000;
+const WALK_DAY = 24 * WALK_HOUR;
+
+// Fill a frame from whatever is in the vault, best grade first. Deliberately
+// unclever: the point is to measure the pace of the loop, not to find the
+// strongest build the vault allows.
+function bestSplice(state, content) {
+  const owned = state.inventory.parts;
+  if (!owned.length) return null;
+  for (const frameId of ['M', 'S', 'L', 'A']) {
+    if (!content.frames[frameId]) continue;
+    const used = new Set();
+    const slots = {};
+    for (const token of [...owned].sort((a, b) => GRADE_ORDER.indexOf(b.grade) - GRADE_ORDER.indexOf(a.grade))) {
+      const part = content.parts[token.partId];
+      if (!part || used.has(token.id) || slots[part.slot]) continue;
+      slots[part.slot] = token.id;
+      used.add(token.id);
+    }
+    if (!slots.head) continue;
+    if (validateSplice(state, frameId, slots, content).length === 0) return { frameId, slots };
+  }
+  return null;
+}
+const GRADE_ORDER = ['standard', 'prime', 'apex', 'prismatic'];
+
+// One tick of a diligent player. Three rules, stated because a walker's
+// policy is half of every number it reports:
+//
+//  1. CARE FIRST. It is nearly free and condition decays without it.
+//  2. KEEP A RESERVE. Doing nothing nets +22/day (a $40 stipend against $18
+//     of upkeep), so the passive economy is solvent — but the first policy
+//     spent to $3 training six chimeras and then could not buy an animal or
+//     feed the ones it had. Discretionary spending stops at fourteen days of
+//     upkeep in hand. Fourteen because that is comfortably longer than any
+//     timer the game asks a player to wait out.
+//  3. DO NOT THROW CREATURES AT A WALL. The first policy assaulted every
+//     tick and went 140-1191, which measures the walker rather than the
+//     game. One assault a day, and a node that has already beaten this exact
+//     roster is not tried again until the roster changes.
+const WALK_RESERVE_DAYS = 14;
+
+function walkAct(state, content, now, open) {
+  const has = (id) => open.some((i) => i.id === id);
+  const reserve = upkeepPerDay(state, content) * WALK_RESERVE_DAYS;
+  const canSpend = (cost) => state.funds - cost >= reserve;
+  let acted = 0;
+
+  if (has('care')) {
+    for (const animal of [...state.ranch.stock]) {
+      const status = careStatus(animal, now);
+      for (const kind of ['feed', 'groom', 'exercise', 'enrich']) {
+        if (status[kind]?.ready && careAction(state, animal.id, kind, content, now).ok) acted++;
+      }
+    }
+  }
+  // Graduate adults, never below a breeding pair — a walker that empties its
+  // own ranch measures a mistake rather than the game.
+  if (has('graduate') && state.ranch.stock.length > 2) {
+    const adult = state.ranch.stock.find((a) => ageStage(a, content, now) !== 'juvenile');
+    if (adult && extractAnimal(state, adult.id, content, now).ok) acted++;
+  }
+  if (has('splice')) {
+    const plan = bestSplice(state, content);
+    if (plan) {
+      const before = state.chimeras.length;
+      spliceChimera(state, plan.frameId, plan.slots, content, now);
+      if (state.chimeras.length > before) acted++;
+    }
+  }
+  if (has('job')) {
+    const op = operationList(content).find((o) => opReady(state, o.id, content, now) && laneFree(state, o, content));
+    if (op && startOperation(state, op.id, null, content, now).ok) acted++;
+  }
+  if (has('spar') && canSpar(state, content, now).ok) { startSpar(state, now, content); acted++; }
+
+  for (const contest of [...(state.campaign.contested ?? [])]) {
+    const enc = contestEncounter(state, content, contest);
+    const team = state.chimeras.filter((c) => !c.injury || c.injury.until <= now).slice(0, 3);
+    if (!enc || !team.length) continue;
+    const battle = createBattle(team, enc, content, hashString(`defend#${contest.nodeId}#${now}`), now,
+      { kind: 'contest', nodeId: contest.nodeId });
+    walkAutoplay(battle, content);
+    resolveContest(state, content, contest.nodeId, battle.outcome, now);
+    state.__walkDefences = (state.__walkDefences ?? 0) + 1;
+    if (battle.outcome === 'win') state.__walkHeld = (state.__walkHeld ?? 0) + 1;
+    acted++;
+  }
+
+  if (has('assault') && now - (state.__walkLastAssault ?? -WALK_DAY) >= WALK_DAY) {
+    const target = nodeStates(state, content).find((n) => n.status === 'available');
+    const enc = target && content.encounters[target.node.encounter];
+    const team = state.chimeras.filter((c) => !c.injury || c.injury.until <= now).slice(0, 3);
+    const refused = state.__walkRefused ?? (state.__walkRefused = {});
+    const roster = `${state.chimeras.length}:${state.chimeras.reduce((n, c) => n + (c.xp ?? 0), 0)}`;
+    if (enc && team.length && refused[target.node.id] !== roster) {
+      const battle = createBattle(team, enc, content, hashString(`walk#${target.node.id}#${now}`), now,
+        { kind: 'assault', nodeId: target.node.id });
+      walkAutoplay(battle, content);
+      state.battle = battle;
+      resolveBattle(state, battle, content, now);
+      state.battle = null;
+      state.__walkLastAssault = now;
+      if (battle.outcome !== 'win') refused[target.node.id] = roster;
+      acted++;
+    }
+  }
+
+  // --- discretionary, and only above the reserve.
+  if (has('train')) {
+    // The three that actually fight. Training the whole stable is how the
+    // first policy went broke.
+    for (const c of [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0)).slice(0, 3)) {
+      if (!canSpend(TRAINING.cost)) break;
+      if (trainChimera(state, c.id, now, content).ok) acted++;
+    }
+  }
+  if (has('pens') && state.ranch.stock.length >= state.ranch.penCapacity
+      && canSpend(penUpgradeCost(state))) {
+    if (buyPenUpgrade(state).ok) acted++;
+  }
+  if (has('buy') && state.ranch.stock.length < state.ranch.penCapacity) {
+    const cheapest = catalogFor(state, content)
+      .filter((sp) => canSpend(sp.mailOrderPrice))
+      .sort((a, b) => a.mailOrderPrice - b.mailOrderPrice)[0];
+    if (cheapest && buyMailOrder(state, cheapest.id, content, now).ok) acted++;
+  }
+  return acted;
+}
+
+function walkAutoplay(battle, content) {
+  let guard = 0;
+  while (!battle.over && guard++ < 400) {
+    const acts = playerActions(battle);
+    const best = acts.filter((a) => a.type === 'move')
+      .sort((x, y) => playerActive(battle).moves[y.index].power - playerActive(battle).moves[x.index].power)[0] ?? acts[0];
+    if (!best) break;
+    step(battle, best, content);
+  }
+  return battle;
+}
+
+// Walk one seeded save from an empty ranch as far as it gets, and report the
+// curve rather than a verdict — the numbers are the deliverable.
+export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2 } = {}) {
+  const t0 = Date.UTC(2026, 0, 1);
+  const state = { ...newGameState(), seed };
+  ensureRanchSeeded(state, content, t0);
+  state.lastTickAt = t0;
+  state.campaign.lastTickAt = t0;
+
+  const at = {};
+  const mark = (key, now) => { if (at[key] === undefined) at[key] = +((now - t0) / WALK_DAY).toFixed(2); };
+  let stall = 0;
+  let longestStall = 0;
+  let stallStartedAt = null;
+  let worstStallDay = null;
+  let minFunds = Infinity;
+  let broke = 0;
+
+  for (let h = 0; h <= days * 24; h += stepHours) {
+    const now = t0 + h * WALK_HOUR;
+    applyElapsed(state, content, now);
+    tickCampaign(state, content, now);
+
+    minFunds = Math.min(minFunds, Math.round(state.funds));
+    if (state.funds <= 0) broke += stepHours;
+    if (state.inventory.parts.length) mark('firstParts', now);
+    if (state.chimeras.length) mark('firstChimera', now);
+    if (state.campaign.heldNodes.length) mark('firstNode', now);
+    if (state.campaign.heldNodes.length >= 5) mark('firstRegion', now);
+    if (state.dominionAt) mark('dominion', now);
+
+    const shape = agendaShape(state, content, now);
+    if (shape.productive === 0) {
+      if (stall === 0) stallStartedAt = +((now - t0) / WALK_DAY).toFixed(2);
+      stall += stepHours;
+      if (stall > longestStall) { longestStall = stall; worstStallDay = stallStartedAt; }
+    } else {
+      stall = 0;
+    }
+    walkAct(state, content, now, shape.open);
+    if (state.dominionAt) break;
+  }
+
+  return {
+    seed,
+    at,
+    reachedDominion: state.dominionAt != null,
+    nodes: state.campaign.heldNodes.length,
+    chimeras: state.chimeras.length,
+    stock: state.ranch.stock.length,
+    parts: state.inventory.parts.length,
+    funds: Math.round(state.funds),
+    minFunds,
+    // Hours the agenda offered nothing but ways to spend money. A4's measure,
+    // read over a whole campaign instead of one save.
+    longestStallHours: longestStall,
+    worstStallDay,
+    brokeHours: broke,
+    warRecord: { ...state.warRecord },
+    defences: state.__walkDefences ?? 0,
+    defencesHeld: state.__walkHeld ?? 0,
+  };
+}
