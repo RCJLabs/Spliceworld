@@ -1,5 +1,128 @@
 # PROGRESS
 
+## Session 72 — R50: a new module has to declare itself ✅
+
+**Acceptance criterion:** a system cannot ship without somebody deciding
+who teaches it — **passes**, proven by a break battery in which a new
+module fails the build until it is classified. Harness-only change; no
+runtime file is touched and `SAVE_VERSION` stays **33**.
+
+### The note that queued this was wrong three ways
+
+R49 left this as *"fold `SHIPPED_SYSTEMS` into `DATA_NOTES` so the harness
+derives it."* Auditing it before writing anything:
+
+1. **The two lists cover disjoint sets.** Fifteen of the thirty systems on
+   the roll — `bond`, `breeding`, `catalog`, `containment`, `contest`,
+   `dex`, `flight`, `grades`, `incubator`, `infirmary`, `pairing`,
+   `rehab`, `rescue`, `stable`, `upkeep` — are behaviour in code with no
+   data file at all. `DATA_NOTES` is keyed on data files, so it
+   structurally cannot reach them. Folding would have **deleted their only
+   coverage** while looking like a tidy-up.
+2. **The roll is not silently droppable anyway.** `orphans` already asserts
+   every note names a system on the roll, so the direction the note worried
+   about is guarded.
+3. **The real hole is narrower than the note described.** Not "the roll can
+   drift" but: a system shipped with **no note, no roll entry *and* no data
+   file** — the Resequencer failure with its one catchable symptom removed.
+
+What transfers from `DATA_NOTES` is the **mechanism**, not the map.
+
+### MODULE_NOTES
+
+Same shape, over source modules instead of data files. All 51 modules are
+classified: **21 name the system-note that teaches them**, 30 are exempted
+by category, each category with its reason written down —
+
+| category | n | why exempt |
+|---|---|---|
+| shell and save | 7 | the ground everything stands on, not systems |
+| shared UI machinery | 4 | a fold, a picker, a tab bar, a band |
+| screens | 8 | a screen is where a system is *met*; the note belongs to the system |
+| battle engine + readouts | 9 | R28's point: these explain the fight, they don't add to it |
+| onboarding machinery | 2 | cannot be taught by one of its own notes without circularity |
+
+`orphans` forces a roll entry for every **note**; this forces a decision
+for every **module**. Between them the only way to ship a system nobody
+teaches is to write no module and no data file for it.
+
+Two guards against the map itself going hollow: a non-null value must name
+a note that exists, and the map must keep **≥20 claims across ≥15 distinct
+systems** (it carries 21 across 19), so blanking the system half cannot
+leave a gate that passes while guarding nothing.
+
+### A redundant assertion dropped *before* the battery
+
+The first draft asserted both `covered.has(note)` and
+`SHIPPED_SYSTEMS.includes(note)`. But `missing` and `orphans` below prove
+those two sets are **equal**, so the second is the first spelled
+differently — an assertion that cannot fail on its own.
+
+R34, R35, R45 and R48 all shipped a hollow gate and found it in the
+battery. This one was caught by reading the surrounding assertions first.
+Same lesson, applied earlier.
+
+### The break battery
+
+Nine breaks, each run against the full suite in an isolated worktree.
+
+| break | verdict |
+|---|---|
+| a new module ships unclassified | CAUGHT — by the **sw.js precache gate**, a sibling |
+| 1b. …and is precached, so only MODULE_NOTES can object | **CAUGHT** |
+| a mapped module leaves the tree | CAUGHT — by `ERR_MODULE_NOT_FOUND`, a sibling |
+| 2b. the map names a module that never existed | **CAUGHT** |
+| a module points at a note that does not exist | **CAUGHT** |
+| the map goes all-exemption | MISSED — **bad break** |
+| 4b. the map really does go all-exemption | **CAUGHT** |
+| the walk skips a whole directory | **CAUGHT** |
+| the completeness check stops checking | MISSED — **category error**, dropped |
+
+**Neither miss is a gate failure; both are my errors writing the break.**
+Naming them honestly, in the taxonomy this run of phases has been
+building:
+
+- **Bad break** (4). Named "all-exemption" but removed a *single* entry —
+  21 claims to 20, which clears the `>=20` floor by exactly one. The gate
+  could always have failed; the break just didn't do the thing it was
+  named after. 4b blanks every `'…': 'system',` in the block and the floor
+  fires immediately (`modules actually claim systems (0)`).
+- **Category error** (6). `const unlisted = []` damages **the guard
+  itself** rather than the thing guarded — of course a check you delete
+  stops checking. Tautological, so it is dropped rather than counted.
+
+**Sibling catches** (1 and 2) are the other thing worth naming. Both were
+caught, but by older gates — the precache list and the module loader — not
+by `MODULE_NOTES`. A sibling catch proves *something* catches it, not that
+the new gate does, so both were re-run in isolation: 1b adds the module to
+`sw.js` so the precache gate is satisfied, 2b names a file that never
+existed so nothing imports it. Both then fail on `MODULE_NOTES`'s own
+assertions, by their own messages.
+
+### Verified
+
+- Full suite green; the R50 block is four assertions over a 51-entry map.
+- No runtime file touched — the whole diff is `tools/smoke.js` — so the
+  fresh save, the migrated save, the 380px layout and every screen are
+  bit-identical to R49's verified build.
+- No schema change; `SAVE_VERSION` stays **33**.
+
+### Known gaps
+
+- Trophies still are not in the Dex (R42), and the Gauntlet rematch toggle
+  (R42) is still unbuilt.
+- The agenda's rows remain the Ranch's largest chrome cost, by design
+  (R47).
+- `MODULE_NOTES` is hand-kept in the same sense `SHIPPED_SYSTEMS` was —
+  the difference is that it now *cannot silently fall behind the tree*,
+  because the walk fails the build on any module it has never seen.
+
+### Next session's first task
+
+Trophies in the Dex (R42) — the oldest note still standing now that the
+`SHIPPED_SYSTEMS` one is closed. The `foes` tab shipped in R45 with rival
+records; trophies are the missing half of that page.
+
 ## Session 71 — R49: the map's spar button reads the predicate ✅
 
 **Acceptance criterion:** all three surfaces give one answer to "can I
