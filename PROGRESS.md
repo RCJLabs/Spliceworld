@@ -1,5 +1,134 @@
 # PROGRESS
 
+## Session 74 — R52: the Vault at a completionist's inventory ✅
+
+**Acceptance criterion:** the last two unmeasured long screens are measured,
+and the one that needed cutting fits a phone — **passes, measured in the
+browser**. No schema change; `SAVE_VERSION` stays **34**.
+
+### Half the phase died in the audit, and that is the result
+
+The Surgery Theater measured **1,630px at every one of five inventories** —
+from nothing extracted to a completionist's 41 graduations. It does not grow
+with the player at all: its sockets are capped by the chassis and its
+physiology panel is fixed. There was nothing to cut, so nothing was cut.
+
+What that half got instead is **gate 5**, which turns "does not grow" from a
+note into a build failure. Break 7 proves it: list owned tokens inline under
+the sockets and the Theater goes 5,773 chars to 9,810 and the build stops.
+
+### The Vault, measured at 380px
+
+| inventory | Vault | DNA Vials card | Part Tokens card |
+|---|---|---|---|
+| nothing extracted | 260px | 133px | 115px |
+| 3 graduations | 673px | 447px | 214px |
+| 10 | 1,723px | 1,210px | 501px |
+| 25 | 3,973px | 2,845px | 1,116px |
+| **41 (completionist)** | **5,999px (7.5 screens)** | **4,502px** | 1,485px |
+
+The vials card was **75% of the screen for forty items**, while the token
+list directly below it carried **244 in 1,485px**.
+
+### The screen already contained its own answer
+
+Volume was never the difference. **The tokens fold by species and the vials
+never did.** R31 added the Resequencer, gave every vial a plan line and a
+Resequence button, and left the list flat — so the card grew a live button
+per vial forever, sitting directly above a list that had solved exactly this
+problem.
+
+Same fold, same `.vault-species` class, same screen:
+
+| inventory | Vault before | after | DNA Vials before | after |
+|---|---|---|---|---|
+| 3 | 673px | **673px** | 447px | **447px** |
+| 10 | 1,723px | **1,052px** | 1,210px | **539px** |
+| 25 | 3,973px | **2,297px** | 2,845px | **1,169px** |
+| 41 | 5,999px | **3,044px** | 4,502px | **1,547px** |
+
+**7.5 screens to 3.8**, and the vials card down 66%.
+
+### My first cut made the small rack worse, and the measurement said so
+
+The first version rendered the folds **open** below the threshold, on the
+reasoning that a fold you must tap to see your only vial is friction. Re-
+measured: three vials went **447px to 575px**. An open `<details>` still
+pays for its summary row, so "open while small" bought three summaries and
+saved nothing.
+
+Below five vials the card now renders **flat** — byte-identical to what
+shipped before this phase. The threshold earns itself immediately: in the
+browser, four vials is 556px and five folded is **329px**, smaller while
+holding one more.
+
+### R15's rule reaches this screen
+
+The Resequencer's countdown is the one thing here that costs something if
+missed. It is a card of its own **above** the rack, verified in the browser
+(`run card at child 0, vials card at 1`) and gated on position rather than
+presence, so a later edit cannot quietly move it inside a fold. Break 6 does
+exactly that and is caught.
+
+### Browser QA, 380px, console clean
+
+| state | Vault | vials card | folds | buttons |
+|---|---|---|---|---|
+| 3 vials | 574px (0.7) | 447px | 0 | 3 |
+| 4 vials — boundary | 683px (0.9) | 556px | 0 | 4 |
+| 5 vials — folds on | 456px (0.6) | 329px | 5 | 5 |
+| 40 vials | 1,674px (2.1) | 1,547px | 34 | 40 |
+| 40 + run in flight | 1,788px (2.2) | 1,533px | 34 | 0 |
+
+All forty buttons survive folding; opening a fold gives a live
+`🧬 Resequence`. Zero buttons during a run is correct — a second run cannot
+start. No horizontal overflow in any state.
+
+### The break battery
+
+Seven breaks, each run against the full suite in an isolated worktree.
+**All caught, and this time none by a sibling** — every failure message
+belongs to a gate this phase wrote.
+
+| break | verdict |
+|---|---|
+| the vials stop folding at all | CAUGHT — `five vials fold` |
+| the fold swallows every vial but the best | CAUGHT — `40 vials, 40 ways to spend one` |
+| a folded vial keeps its row and loses its button | CAUGHT — `1 vials, 1 ways to spend one` |
+| the small rack goes back to open folds | CAUGHT — `four vials render flat, as they always did` |
+| the retired-species guard comes off | CAUGHT — `TypeError` |
+| the Resequencer countdown moves behind a fold | CAUGHT — `and never behind a fold` |
+| the Theater starts growing with the vault | CAUGHT — `5,773 chars at 6 tokens, 9,810 at 244` |
+
+Break 5 fails with a `TypeError` rather than an assertion, which is the
+honest signal: take the guard off and the grouping pass cannot run at all.
+
+### Two small things picked up on the way
+
+- A vial whose species left the roster is now **skipped rather than crashed
+  on**, matching what the token loop beside it has always done.
+- A `run ? '' : ''` ternary — both branches empty — is gone.
+
+### Known gaps
+
+- **Both Vault cards now list the same ~34 species names** (1,547px and
+  1,485px). A single per-species shelf holding that animal's vial *and* its
+  parts would halve the summaries and answer "what have I got of this
+  animal" in one place. Not built, because vials and parts are spent by
+  different systems — the Resequencer here, the Theater elsewhere — and
+  merging them would make "what can I splice with" harder to scan. Recorded
+  so a later session does not have to re-derive the trade.
+- The Gauntlet rematch toggle (R42) is still a preference, still unbuilt.
+- `dex.beaten` records the win but not when (R51).
+
+### Next session's first task
+
+Every long screen now has a measurement behind it: Pens (R44), Dex (R45),
+Ranch (R46/R47), Vault and Theater (R52). Nothing is queued, so the next
+session picks its own subject — the per-species Vault shelf above is the
+best-specified candidate, and the first job is to decide whether the merge
+is worth losing the vial/part split.
+
 ## Session 73 — R51: the field guide records outcomes ✅
 
 **Acceptance criterion:** the Dex says what you *beat*, not just what you
