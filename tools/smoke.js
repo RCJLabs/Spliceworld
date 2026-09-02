@@ -5344,8 +5344,11 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     );
   }
 
-  // Every tab the bar offers has somewhere to go.
-  const ids = [...src.matchAll(/\{ id: '(\w+)', icon:/g)].map((m) => m[1]);
+  // Every tab the bar offers has somewhere to go. R60 moved the tab list to
+  // warroom.js, so this reads the ACTUAL list rather than grepping a literal
+  // out of the screen — which is the better test, and only possible because
+  // the list is now importable.
+  const ids = (await import('../campaign/warroom.js')).WAR_TABS.map((t) => t.id);
   assert.ok(ids.length >= 4, `the bar has tabs (${ids.join(', ')})`);
   for (const id of ids) {
     assert.ok(new RegExp(`(^|\\W)${id}:`).test(viewMap), `tab "${id}" has a view`);
@@ -5860,6 +5863,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'splice/temperament.js': 'temperament',
     'splice/theater.js': 'combos',
     'splice/dexentry.js': 'dex',
+    'campaign/warroom.js': 'regions',
 
     // --- The shell and the save. Not systems; the ground everything
     // stands on.
@@ -9266,9 +9270,18 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const src = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
     assert.ok(/gauntletState\(state, content\)/.test(src), 'the card reads the shared state');
     assert.ok(/data-gauntlet/.test(src), 'and each open stage is a control');
-    assert.ok(/kind === 'gauntlet'\) return gauntletEncounter/.test(src.replace(/\s+/g, ' ')) ||
-              /target\.kind === 'gauntlet'/.test(src), 'the briefing resolves a gauntlet target');
-    assert.ok(!/directEncounter\(state, gauntletEncounter/.test(src), 'and the director does not rewrite it');
+    // R60 moved the encounter router to warroom.js, so the anchor moved with
+    // it — and the claim is now CALLED rather than grepped, which is the
+    // better test: a stage resolves, and it resolves to the authored fight
+    // rather than one the director has been at.
+    const { warTargetEncounter } = await import('../campaign/warroom.js');
+    const { gauntletEncounter: rawStage } = await import('../campaign/gauntlet.js');
+    const held = { ...newGameState(), dominionAt: t0 };
+    const stage = gauntletState(held, content)[0].stage;
+    const viaBriefing = warTargetEncounter(held, { kind: 'gauntlet', stageId: stage.id }, content, t0);
+    assert.ok(viaBriefing, 'the briefing resolves a gauntlet target');
+    assert.deepEqual(viaBriefing.waves, rawStage(held, content, stage.id).encounter.waves,
+      'and the director does not rewrite it');
   }
 }
 
@@ -9397,7 +9410,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //    not have its own opinion of the bucket.
   {
     const src = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
-    assert.ok(/canSpar\(state, content, t\)/.test(src), 'the map reads the shared predicate');
+    // R60 put a named verdict between the map and the predicate, so the
+    // chain is what matters — all three links, not the one line of source
+    // that used to hold them.
+    const wr = readFileSync(join(root, 'campaign/warroom.js'), 'utf8');
+    assert.ok(/sparVerdict\(state, content, t\)/.test(src), 'the map reads the shared verdict');
+    assert.ok(/canSpar\(state, content, now\)/.test(wr), 'which reads the shared predicate');
     assert.ok(/sparGate\.charges/.test(src), 'and the button shows the count');
     assert.ok(/sparGate\.msToNext/.test(src), 'with the short countdown when empty');
   }
@@ -10583,13 +10601,16 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //    the way this regresses is a screen quietly going back to reading the
   //    bucket on its own.
   {
-    for (const f of ['campaign/ui.js', 'splice/pens-ui.js', 'ranch/agenda.js']) {
+    // R60: the War Room reaches the predicate through warroom.js now, which
+    // is the module the map's verdict comes from.
+    for (const f of ['campaign/warroom.js', 'splice/pens-ui.js', 'ranch/agenda.js']) {
       const src = readFileSync(join(root, f), 'utf8');
       assert.ok(/\bcanSpar\b/.test(src), `${f} reads the predicate`);
     }
-    const war = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
-    assert.ok(!/sparCharges\(/.test(war),
-      'and the War Room no longer computes the bucket for itself');
+    for (const f of ['campaign/ui.js', 'campaign/warroom.js']) {
+      assert.ok(!/sparCharges\(/.test(readFileSync(join(root, f), 'utf8')),
+        `${f} no longer computes the bucket for itself`);
+    }
     assert.equal(newGameState().saveVersion, SAVE_VERSION, 'with no schema change');
   }
 }
@@ -11609,6 +11630,297 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       `exactly one function reaches the synth (${synths.map((c) => (c.match(/function (\w+)/) ?? [])[1]).join(', ')})`);
     assert.ok(/^(?:export )?function play\b/.test(synths[0].trim()),
       'and it is the one that checks the mute');
+  }
+}
+
+// --- R60: the War Room's decisions, out where they can be tested.
+//
+// campaign/ui.js was 1,139 lines and every decision the screen made lived
+// inside a template literal, where the only way to check one is to render
+// the screen and read the HTML back. One of them was already wrong: each
+// counter-offensive alert computed its own strip bonus and claimed the
+// WHOLE thing, so two contests in one completed strip claimed it twice and
+// the alerts stopped agreeing with the econ row above them.
+//
+// It was unreachable only because `contestation.maxConcurrent` ships as 1 —
+// a value in data/regions.json, which CLAUDE.md says must be safe to change
+// without touching the engine.
+{
+  const {
+    contestAlerts, econRow, tabBadge, frontierRegionId, heatBand, jobRow,
+    foeRead, warTargetEncounter, obedienceRead, canBringMore, fitTeam, stripState,
+    WAR_TABS,
+  } = await import('../campaign/warroom.js');
+  const { incomeSuspended, regionStates } = await import('../campaign/campaign.js');
+  const HOUR = 3600000;
+  const kestrel = content.regions.kestrel;
+  assert.ok(kestrel?.completionBonus, 'the fixture strip pays a completion bonus');
+
+  const holdKestrel = (contested) => {
+    const st = { ...newGameState(), seed: 60, funds: 4000 };
+    st.campaign.heldNodes = kestrel.nodes.map((n) => n.id);
+    st.campaign.notoriety = 300;
+    st.campaign.contested = contested.map((id) => ({
+      nodeId: id, startedAt: t0, deadline: t0 + 6 * HOUR, gen: 3,
+    }));
+    return st;
+  };
+
+  // 1. THE CRITERION. What the alerts add up to is what the econ row says,
+  //    at every number of simultaneous contests — not just the one the
+  //    shipped tuning happens to allow.
+  {
+    const ids = kestrel.nodes.map((n) => n.id);
+    for (let k = 1; k <= ids.length; k += 1) {
+      const st = holdKestrel(ids.slice(0, k));
+      const alerts = contestAlerts(st, content, t0);
+      const claimed = alerts.reduce((sum, a) => sum + a.nodeIncome + a.bonusAtRisk, 0);
+      assert.equal(alerts.length, k, `${k} contest(s) draw ${k} alert(s)`);
+      assert.equal(claimed, incomeSuspended(st, content),
+        `${k} contest(s): the alerts total what the econ row prints ($${claimed} vs $${incomeSuspended(st, content)})`);
+      assert.equal(econRow(st, content).suspended, claimed,
+        'and the econ row is reading the same number');
+    }
+  }
+
+  // 2. The strip bonus is a property of the STRIP, so exactly one alert
+  //    carries it and the rest name the one that does. This is the shape of
+  //    the bug, not just its total: three alerts each claiming $60 would
+  //    also sum correctly and would still be wrong.
+  {
+    const st = holdKestrel(['crop_strip', 'radio_mast', 'cloudbase']);
+    const alerts = contestAlerts(st, content, t0);
+    const carrying = alerts.filter((a) => a.bonusAtRisk > 0);
+    assert.equal(carrying.length, 1, 'one alert carries the strip bonus');
+    assert.equal(carrying[0].bonusAtRisk, kestrel.completionBonus, 'and it carries all of it');
+    for (const a of alerts.filter((x) => x.bonusAtRisk === 0)) {
+      assert.ok(a.stripAlsoDown, `${a.name} still says the strip is down`);
+      assert.equal(a.stripCountedOn, carrying[0].name, 'and names the alert carrying it');
+    }
+  }
+
+  // 3. A strip that is NOT held end to end has no bonus to lose, so no
+  //    alert may invent one.
+  {
+    const st = holdKestrel(['crop_strip']);
+    st.campaign.heldNodes = st.campaign.heldNodes.filter((id) => id !== 'aerodrome');
+    const alerts = contestAlerts(st, content, t0);
+    assert.equal(alerts.reduce((n, a) => n + a.bonusAtRisk, 0), 0,
+      'an incomplete strip puts no bonus at risk');
+    assert.ok(!alerts[0].stripAlsoDown, 'and does not claim one is down');
+  }
+
+  // 4. The screen must not keep a second opinion about any of this. The bug
+  //    existed because the alert did its own arithmetic next to a function
+  //    that already knew the answer.
+  {
+    const ui = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
+    assert.ok(!/incomeSuspended\(/.test(ui), 'the screen does not recompute what is suspended');
+    assert.ok(!/completionBonus\s*:\s*0|nodes\.every\(/.test(ui),
+      'nor re-derive whether a strip is complete');
+    assert.ok(/from '\.\/warroom\.js'/.test(ui), 'it reads the decisions from warroom.js');
+    // …and warroom.js must stay DOM-free, which is what makes all of this
+    // assertable without a browser.
+    const wr = readFileSync(join(root, 'campaign/warroom.js'), 'utf8');
+    assert.ok(!/\bdocument\b|innerHTML|addEventListener/.test(wr),
+      'and warroom.js never touches a DOM');
+  }
+
+  // 5. The encounter router is called once for the briefing and again to
+  //    build the battle. If those two calls disagree the player commits a
+  //    team against one fight and walks into another.
+  {
+    const st = holdKestrel(['crop_strip']);
+    st.chimeras = [];
+    const targets = [
+      { kind: 'assault', nodeId: 'aerodrome', encounterId: content.regions.kestrel.nodes.at(-1).encounter },
+      { kind: 'defend', nodeId: 'crop_strip' },
+      { kind: 'rival', rivalId: Object.keys(content.rivals)[0] },
+    ];
+    for (const target of targets) {
+      const a = warTargetEncounter(st, target, content, t0);
+      const b = warTargetEncounter(st, target, content, t0);
+      assert.ok(a, `${target.kind} resolves to an encounter`);
+      assert.deepEqual(a.waves, b.waves, `${target.kind}: the briefing and the battle face the same team`);
+    }
+    assert.equal(warTargetEncounter(st, null, content, t0), null, 'and no target is not a crash');
+  }
+
+  // 6. A badge is a promise that something is waiting. Only two things earn
+  //    one, and an unread report outranks a job still out.
+  {
+    const st = { ...newGameState(), seed: 1 };
+    for (const tab of ['map', 'labs', 'wire']) {
+      assert.equal(tabBadge(st, tab), null, `${tab} never wears a badge`);
+    }
+    assert.equal(tabBadge(st, 'jobs'), null, 'an idle board has nothing waiting');
+    st.campaign.containment = [{ id: 'b1' }, { id: 'b2' }];
+    assert.equal(tabBadge(st, 'bays').text, '2', 'the bays count what is in them');
+    st.campaign.opReport = { name: 'x', success: true, msg: '' };
+    assert.equal(tabBadge(st, 'jobs').kind, 'alert', 'an unread report is an alert');
+  }
+
+  // 7. The strip you are actually fighting in is the first open one you
+  //    have not finished — the fold the map opens by default.
+  {
+    const st = { ...newGameState(), seed: 1 };
+    const map = regionStates(st, content);
+    const firstOpen = map.find((r) => r.open);
+    assert.equal(frontierRegionId(st, content), firstOpen.region.id, 'a fresh save opens on the first strip');
+    const done = { ...st, campaign: { ...st.campaign, heldNodes: firstOpen.region.nodes.map((n) => n.id) } };
+    assert.notEqual(frontierRegionId(done, content), firstOpen.region.id,
+      'a finished strip stops being the frontier');
+  }
+
+  // 8. The heat wording is a band, and the bands do not overlap.
+  {
+    assert.equal(heatBand(0), 'quiet');
+    assert.equal(heatBand(20), 'quiet');
+    assert.equal(heatBand(21), 'noticed');
+    assert.equal(heatBand(55), 'noticed');
+    assert.equal(heatBand(56), 'awake');
+  }
+
+  // 9. A job row says WHICH lane is full rather than greying out in silence,
+  //    and only when one really is. Three lanes, so the wrong reason is as
+  //    much a bug as no reason: with an empty stable a crewed job falls to
+  //    the SOLO lane, which is free — the board must offer it, not refuse it
+  //    for want of a crew.
+  {
+    const op = Object.values(content.operations).find((o) => o.crew !== 'none');
+    assert.ok(op, 'a crewed job exists');
+
+    const empty = { ...newGameState(), seed: 1, funds: 5000 };
+    const idle = jobRow(empty, content, op, t0);
+    assert.equal(idle.noSlot, null, 'an empty stable can still go itself');
+    assert.ok(idle.ready && !idle.out && !idle.cooling, 'so the row is runnable');
+
+    // …and once you are personally out, the honest reason is that YOU are,
+    // not that there is no crew.
+    const away = { ...newGameState(), seed: 1, funds: 5000 };
+    away.campaign.operations = [{ opId: op.id, chimeraId: null, startedAt: t0, endsAt: t0 + 4 * HOUR, chance: 0.5 }];
+    const other = Object.values(content.operations).find((o) => o.crew !== 'none' && o.id !== op.id);
+    assert.ok(other, 'a second crewed job exists');
+    assert.equal(jobRow(away, content, other, t0).noSlot, 'you are out',
+      'the solo lane names itself when it is the one that is full');
+    assert.ok(jobRow(away, content, op, t0).out, 'and the job you are on says so');
+  }
+
+  // 10. One read of the opposition. The briefing used to normalise the wave
+  //     list twice — once with `.flat()` and once without — which is two
+  //     chances to disagree about the same fight.
+  {
+    const unitId = Object.keys(content.enemies)[0];
+    const unit = content.enemies[unitId];
+    const byId = foeRead({ waves: [unitId] }, content);
+    const byObject = foeRead({ waves: [unit] }, content);
+    assert.deepEqual([...byId.classes], [...byObject.classes],
+      'a wave named by id and the same wave inlined read the same');
+    assert.deepEqual([...byId.tags], [...byObject.tags], 'tags too');
+    assert.equal(foeRead({ waves: ['no_such_unit'] }, content).units.length, 0,
+      'and an unknown id is dropped rather than crashing');
+  }
+
+  // 11. R37's hint must never tell a player to bring more creatures when
+  //     the team is full or the bench is empty.
+  {
+    const st = { ...newGameState(), seed: 1 };
+    st.chimeras = [];
+    assert.equal(canBringMore(st, [], t0, 3), false, 'an empty bench cannot send more');
+    assert.deepEqual(fitTeam(st, ['nobody'], t0), [], 'and a team of ghosts is an empty team');
+    assert.deepEqual(obedienceRead([], t0), { disobedient: [], worst: 100 },
+      'nobody on the team can disobey');
+  }
+
+  // 12. Every view the screen offers actually draws. The extraction was
+  //     verified against a 124-cell render harness, which is a one-off
+  //     measurement; this is the part of it worth keeping — a tab or a
+  //     briefing kind that throws, or renders nothing, is a dead screen.
+  {
+    const { renderWarRoomScreen } = await import('../campaign/ui.js');
+    const st = holdKestrel(['crop_strip']);
+    // Kestrel unlocks behind Greenfield: holding it without the strip in
+    // front leaves the region CLOSED, with no node rows and so no Spar or
+    // Assault button to walk into. A fixture the progression would never
+    // produce tests nothing.
+    st.campaign.heldNodes = [...content.regions.greenfield.nodes.map((n) => n.id), ...st.campaign.heldNodes];
+    st.chimeras = [{
+      id: 'q1', name: 'Test Subject', frame: 'M', settleUntil: 0, bond: 100, scars: [],
+      temperament: null, lastTrainedAt: 0, moveset: [], lastMoveTrainAt: 0, xp: 0, injury: null,
+      tokens: Object.fromEntries(Object.entries({
+        head: 'rhino_head', forelimbs: 'gorilla_forelimbs', hindlimbs: 'rhino_hindlimbs',
+        tail: 'bear_tail', hide: 'pangolin_hide', organ: 'bear_organ',
+      }).map(([k, v]) => [k, { id: `q${k}`, partId: v, grade: 'prime', donor: { name: 'Bessie', stars: 4 } }])),
+    }];
+    st.chimeraCount = 1;
+    st.campaign.captives = [{ id: 'c1', chimera: { ...st.chimeras[0], name: 'Poor Gerald' }, deadline: t0 + 7 * HOUR }];
+    st.campaign.containment = [{ id: 'b1', unitId: Object.keys(content.enemies)[0], caughtAt: t0 - HOUR }];
+    st.dominionAt = t0 - 48 * HOUR;
+    // A root that hands back the buttons it just rendered, so the walk can
+    // press a tab or open a briefing the way a player would.
+    const stub = () => {
+      const handlers = [];
+      const self = {
+        innerHTML: '', classList: { remove() {}, add() {} },
+        querySelector: (sel) => {
+          const id = /^#([\w-]+)$/.exec(sel)?.[1];
+          return id && self.innerHTML.includes(`id="${id}"`)
+            ? { addEventListener: (_e, fn) => handlers.push({ attr: `#${id}`, id, fn }) } : null;
+        },
+        querySelectorAll: (sel) => {
+          const attr = /button\[data-([a-z-]+)\]/.exec(sel)?.[1];
+          if (!attr) return [];
+          const key = attr.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+          const ids = [...self.innerHTML.matchAll(new RegExp(`data-${attr}="([^"]+)"`, 'g'))].map((m) => m[1]);
+          return [...new Set(ids)].map((id) => ({ dataset: { [key]: id },
+            addEventListener: (_e, fn) => handlers.push({ attr, id, fn }) }));
+        },
+        handlers,
+      };
+      return self;
+    };
+    const ctx = { state: st, content, now: () => t0, save: () => {}, goto: () => {},
+      refreshTicker: () => {}, pushNews: () => {} };
+    const draw = () => { const r = stub(); renderWarRoomScreen(r, ctx); return r; };
+    for (const tab of WAR_TABS.map((x) => x.id)) {
+      const r = draw();
+      r.handlers.find((h) => h.attr === 'war-tab' && h.id === tab)?.fn();
+      assert.ok(r.innerHTML.length > 200, `the ${tab} view draws something (${r.innerHTML.length} chars)`);
+      assert.ok(r.innerHTML.includes('data-war-tab'), `and keeps the tab bar on ${tab}`);
+    }
+    // R15's rule, checked against the rendered page rather than the source:
+    // a live countdown never hides behind a tab.
+    for (const tab of WAR_TABS.map((x) => x.id)) {
+      const r = draw();
+      r.handlers.find((h) => h.attr === 'war-tab' && h.id === tab)?.fn();
+      assert.ok(r.innerHTML.includes('data-defend='), `the counter-offensive is reachable from ${tab}`);
+      assert.ok(r.innerHTML.includes('data-rescue='), `and so is the rescue window from ${tab}`);
+    }
+    // Every briefing the screen can open, entered from the tab that hosts
+    // its button — `data-rival` lives on Labs, so a map-only walk never
+    // reaches a duel at all.
+    for (const [attr, host] of Object.entries({ node: 'map', spar: 'map', defend: 'map',
+      rescue: 'map', gauntlet: 'map', rival: 'labs' })) {
+      const r = draw();
+      r.handlers.find((h) => h.attr === 'war-tab' && h.id === host)?.fn();
+      const hit = r.handlers.find((h) => h.attr === attr);
+      assert.ok(hit, `the ${host} view offers a ${attr} briefing`);
+      hit.fn();
+      assert.ok(/id="wr-launch"/.test(r.innerHTML), `the ${attr} briefing offers a launch button`);
+      assert.ok(/Strike Team/.test(r.innerHTML), `and a strike team picker (${attr})`);
+      r.handlers.find((h) => h.attr === '#wr-back')?.fn();
+    }
+  }
+
+  // 13. The strip line has three states and says the right one in each.
+  {
+    const st = holdKestrel([]);
+    assert.equal(stripState(st, content, kestrel, 0), 'paying', 'held end to end pays');
+    assert.equal(stripState(holdKestrel(['crop_strip']), content, kestrel, 1), 'suspended',
+      'a contest suspends it');
+    const partial = holdKestrel([]);
+    partial.campaign.heldNodes = partial.campaign.heldNodes.slice(0, 2);
+    assert.equal(stripState(partial, content, kestrel, 0), 'available', 'an unfinished strip offers it');
   }
 }
 

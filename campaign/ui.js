@@ -1,9 +1,19 @@
 // War Room screen (M5): region map, notoriety, captives with live
 // dissection countdowns, Containment salvage, news feed — and the launch
 // point for assaults and rescue raids (arena rendered via battle/ui).
+//
+// R60 moved this screen's DECISIONS to campaign/warroom.js — which strip
+// opens, which tab earns a badge, what a counter-offensive is costing, what
+// a job row says when it cannot be run — so they can be tested without
+// rendering the screen and reading the HTML back. What is left here is
+// markup and the module state the five views share: `warTab`, `draftTarget`,
+// `draftTeam`, `lastAftermath`, `identityRoll`. That shared state is why the
+// screen is still one file: the map builds the briefing's target and the
+// briefing writes the map's aftermath, so they are one state machine written
+// in two halves, not two screens that happen to live together.
 
 import { renderArena } from '../battle/ui.js';
-import { createBattle, isInjured, obediencePercent, obedienceIgnoreChance, combatantFromChimera } from '../battle/engine.js';
+import { createBattle, isInjured, obediencePercent, combatantFromChimera } from '../battle/engine.js';
 import { forecast, diagnose } from '../battle/forecast.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
@@ -15,55 +25,35 @@ import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js'
 // the player to build three. A second `3` typed in here is how those four
 // numbers drift apart.
 import { guideForScreen, STABLE as TEAM_CAP } from '../ranch/onboarding.js';
-import { sparEncounter, canSpar, startSpar } from './sparring.js';
-import { gauntletState, gauntletEncounter } from './gauntlet.js';
-import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
+import { startSpar } from './sparring.js';
+import { gauntletState } from './gauntlet.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import { renderCreatureSVG, renderRivalSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
-import { directEncounter, directorRead } from './director.js';
+import { directorRead } from './director.js';
 import {
   bayUnit, rehabPlan, rehabTuning, startRehab, rehabSession, cancelRehab,
   rehabRemainingMs, sessionReadyAt,
 } from './rehab.js';
 import { GRADES, GRADE_INDEX } from '../splice/extract.js';
-import { contestOn, contestEncounter, contestRemainingMs, defencesOf, isContested } from './contest.js';
+import { isContested } from './contest.js';
 import {
-  operationList, activeOp, activeOps, jobSlots, freeCrew, laneFree, soloOps, crewedOps, opOdds, opReady, opCooldownEndsAt, opRemainingMs,
-  startOperation, abortOperation, heatNow, opTuning,
+  operationList, freeCrew, startOperation, abortOperation,
 } from './operations.js';
 import {
   profileOf, philosophyList, rollIdentities, setIdentity, setPhilosophy, duelBarks,
 } from './monologue.js';
 import {
-  regionStates, threatGen, threatRung, nextThreatRung,
-  incomePerDay, incomeSuspended, regionBonusPerDay, regionComplete, salvageUnit, nodeById, regionOfNode,
-  dominionBanner,
+  WAR_TABS, tabBadge, warTargetEncounter, frontierRegionId, sparVerdict, econRow,
+  stripState, contestAlerts, heatBand, jobsModel, jobRow, foeRead, obedienceRead,
+  canBringMore, fitTeam, aftermathText,
+} from './warroom.js';
+import {
+  regionStates, salvageUnit, nodeById, dominionBanner,
 } from './campaign.js';
 
 let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, label }
 
-// Static encounters live in enemies.json; a rival duel is generated from
-// the world seed and their record, so it is identical every time it is
-// resolved — briefing preview and battle always face the same team.
-function encounterFor(state, target, content, now) {
-  if (target.kind === 'rival') return rivalEncounter(state, content.rivals[target.rivalId], content);
-  // R41: a spar is a derived rematch at reduced scale, and the director
-  // does NOT get a look at it — a drill that adapts to you is a second
-  // front, and the ring exists to not be one.
-  if (target.kind === 'sparring') return sparEncounter(state, content, target.nodeId, now).encounter ?? null;
-  // R42: a Gauntlet stage. The director does not rewrite it — this IS the
-  // coalition's answer.
-  if (target.kind === 'gauntlet') return gauntletEncounter(state, content, target.stageId).encounter ?? null;
-  // A defence is the node's own encounter, escalated — built fresh from
-  // the live contest so the briefing and the battle always agree.
-  const base =
-    target.kind === 'defend'
-      ? contestEncounter(state, content, contestOn(state, target.nodeId))
-      : content.encounters[target.encounterId];
-  // The AI director gets a look at every human encounter before you do.
-  return base ? directEncounter(state, base, content) : null;
-}
 let draftTeam = [];
 let lastAftermath = null;
 
@@ -83,31 +73,7 @@ let lastAftermath = null;
 // Deliberately module state rather than saved state: it survives the
 // re-render on every tick and every action, which is what matters, and it
 // costs no save migration to do it that way.
-const WAR_TABS = [
-  { id: 'map', icon: '🗺', label: 'Map' },
-  { id: 'jobs', icon: '💼', label: 'Jobs' },
-  { id: 'labs', icon: '🧫', label: 'Labs' },
-  { id: 'bays', icon: '⛓', label: 'Bays' },
-  { id: 'wire', icon: '📡', label: 'Wire' },
-];
 let warTab = 'map';
-
-// A badge is a promise that something is waiting, so only two things earn
-// one: a job report nobody has read, and a bay with something in it.
-// Everything else would be decoration, and a decoration on a tab teaches
-// players to ignore the badges that matter.
-function tabBadge(state, id) {
-  if (id === 'jobs') {
-    if (state.campaign.opReport) return { text: '!', kind: 'alert' };
-    if (activeOp(state)) return { text: '⏳', kind: 'busy' };
-    return null;
-  }
-  if (id === 'bays') {
-    const n = state.campaign.containment?.length ?? 0;
-    return n ? { text: String(n), kind: 'count' } : null;
-  }
-  return null;
-}
 
 // R45 extracted the bar itself to ui/tabs.js — the Dex needed the same
 // nav, and two copies of it is how two screens drift apart.
@@ -188,16 +154,8 @@ function rivalFile(dossier, content) {
 function renderMap(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
-  const gen = threatGen(state, content);
-  const income = incomePerDay(state, content);
-  const suspended = incomeSuspended(state, content);
-  const bonus = regionBonusPerDay(state, content);
   const map = regionStates(state, content);
-  const nextRung = nextThreatRung(state, content);
-  // Territory is gross. What the lab banks is territory plus the stipend
-  // minus what the stable eats, and since R25 the stable eats plenty.
-  const upkeep = upkeepPerDay(state, content);
-  const net = Math.round(TUNING.stipendPerDay + income - upkeep);
+  const { gen, income, suspended, bonus, nextRung, upkeep, net } = econRow(state, content);
 
   // Five strips instead of one (R26). A locked region still shows its name,
   // its identity and the one thing standing between you and it — a map that
@@ -225,13 +183,13 @@ function renderMap(root, ctx) {
   // The wording is not shared, only the verdict: this is a chip in a node
   // row and the Pens has a whole line, so they say the same thing at
   // different lengths.
-  const sparGate = canSpar(state, content, t);
-  const sparLabel = sparGate.ok
+  const sparGate = sparVerdict(state, content, t);
+  const sparLabel = sparGate.kind === 'charges'
     ? `Spar <span class="spar-charges">${sparGate.charges}</span>`
-    : sparGate.reason === 'nobody-fit'
+    : sparGate.kind === 'nobody-fit'
       ? 'no-one fit'
       : fmtDuration(sparGate.msToNext);
-  const frontier = map.find((r) => r.open && r.held < r.region.nodes.length)?.region.id ?? null;
+  const frontier = frontierRegionId(state, content, map);
   const regions = map.map(({ region, open, blockers, nodes: nodeRows, held }) => {
     const contestedHere = region.nodes.filter((n) => isContested(state, n.id)).length;
     const rows = open ? nodeRows.map(({ node, status }) => {
@@ -259,14 +217,14 @@ function renderMap(root, ctx) {
     // row — "one node left" is a different sentence when finishing it pays
     // a standing bonus, and a contest that suspends one is worth answering
     // for more than the node it took.
-    const paying = region.completionBonus && regionComplete(state, content, region);
-    const strip = region.completionBonus
-      ? paying
-        ? ` Strip bonus +$${region.completionBonus}/day.`
-        : contestedHere
-          ? ` Strip bonus of $${region.completionBonus}/day suspended.`
-          : ` Take the strip for +$${region.completionBonus}/day.`
-      : '';
+    const bonusState = stripState(state, content, region, contestedHere);
+    const strip = bonusState === 'paying'
+      ? ` Strip bonus +$${region.completionBonus}/day.`
+      : bonusState === 'suspended'
+        ? ` Strip bonus of $${region.completionBonus}/day suspended.`
+        : bonusState === 'available'
+          ? ` Take the strip for +$${region.completionBonus}/day.`
+          : '';
     const summary = open
       ? held === region.nodes.length
         ? `Held end to end.${strip}`
@@ -286,28 +244,18 @@ function renderMap(root, ctx) {
   // A counter-offensive is time-critical and costs money every hour it
   // stands, so it gets an alert of its own rather than a quieter row on
   // the map (which also marks it).
-  const contests = (state.campaign.contested ?? []).map((c) => {
-    const node = nodeById(content, c.nodeId);
-    if (!node) return '';
-    const held = defencesOf(state, c.nodeId);
-    // A9: a contest inside a completed strip suspends the strip bonus too,
-    // and that is usually the bigger number by far — the alert has to say so
-    // or the player reads "$40/day" and lets a $150 bonus lapse.
-    const strip = regionOfNode(content, c.nodeId);
-    const bonusAtRisk = strip?.completionBonus
-      && strip.nodes.every((n) => state.campaign.heldNodes.includes(n.id))
-      ? strip.completionBonus : 0;
-    return `
+  const contests = contestAlerts(state, content, t).map((a) => `
     <div class="encounter contested">
-      <div><strong>${node.name}</strong> <span class="lineage">counter-offensive</span><br>
-      <span class="fine-print"><strong class="countdown">${fmtDuration(contestRemainingMs(c, t))}</strong> to hold the line · <strong>$${node.incomePerDay + bonusAtRisk}/day</strong> suspended until you do${
-        bonusAtRisk ? ` (the node plus ${strip.name}'s $${bonusAtRisk} strip bonus)` : ''
+      <div><strong>${a.name}</strong> <span class="lineage">counter-offensive</span><br>
+      <span class="fine-print"><strong class="countdown">${fmtDuration(a.remainingMs)}</strong> to hold the line · <strong>$${a.nodeIncome + a.bonusAtRisk}/day</strong> suspended until you do${
+        a.bonusAtRisk ? ` (the node plus ${a.stripName}'s $${a.bonusAtRisk} strip bonus)` : ''
       }${
-        held ? ` · you have held it ${held}× already` : ''
+        a.stripAlsoDown ? ` (the node — ${a.stripName}'s strip bonus is already counted against ${a.stripCountedOn})` : ''
+      }${
+        a.defences ? ` · you have held it ${a.defences}× already` : ''
       }.</span></div>
-      <button type="button" data-defend="${c.nodeId}">🛡 Defend</button>
-    </div>`;
-  }).join('');
+      <button type="button" data-defend="${a.nodeId}">🛡 Defend</button>
+    </div>`).join('');
 
   const captives = state.campaign.captives.map((cap) => `
     <div class="encounter captive">
@@ -631,24 +579,16 @@ function jobsCard(state, ctx, t) {
   const { content } = ctx;
   const jobs = operationList(content);
   if (!jobs.length) return '';
-  const runs = activeOps(state);
-  // Count the lanes separately or the arithmetic lies: a solo job with no
-  // stable read as "1/0 crews out", and the board offered "-1 of 0 crews
-  // free". Crews are creatures; you are not one of them.
-  const slots = jobSlots(state, content, t);
-  const crewsOut = crewedOps(state, content).length;
-  const youOut = soloOps(state, content).length > 0;
+  const { runs, slots, crewsOut, youOut, heat, report } = jobsModel(state, content, t);
   const crewLine = [
     slots ? `${slots - crewsOut} of ${slots} ${slots === 1 ? 'crew' : 'crews'} free` : 'no crews fit to work',
     youOut ? 'you are out' : 'you are available',
   ].join(' · ');
-  const heat = Math.round(heatNow(state, content, t));
-  const report = state.campaign.opReport;
-
-  const heatLine = `<p class="fine-print">Heat <strong class="${heat > 55 ? 'heat-high' : ''}">${heat}/100</strong> — ${
-    heat > 55
+  const band = heatBand(heat);
+  const heatLine = `<p class="fine-print">Heat <strong class="${band === 'awake' ? 'heat-high' : ''}">${heat}/100</strong> — ${
+    band === 'awake'
       ? 'the county is extremely awake. Everything is harder until it is not.'
-      : heat > 20
+      : band === 'noticed'
         ? 'somebody has started noticing a pattern.'
         : 'nobody is looking for you. Yet.'
   }</p>`;
@@ -659,35 +599,24 @@ function jobsCard(state, ctx, t) {
   const liveCard = runs.length ? `
       <section class="card jobs-card">
         <h3>💼 ${runs.length === 1 ? 'Job In Progress' : `${runs.length} Jobs In Progress`}</h3>
-        ${runs.map((run) => {
-          const op = content.operations[run.opId];
-          const who = state.chimeras.find((c) => c.id === run.chimeraId);
-          return `
+        ${runs.map(({ run, op, who, remainingMs }) => `
         <div class="encounter job-live">
           <div><strong>${op.icon} ${op.name}</strong><br>
-          <span class="fine-print">Back in <strong class="countdown">${fmtDuration(opRemainingMs(state, t, run.opId))}</strong> · ${
+          <span class="fine-print">Back in <strong class="countdown">${fmtDuration(remainingMs)}</strong> · ${
             who ? who.name : 'you went yourself'
           } · odds were ${pct(run.chance)}</span></div>
           <button type="button" class="job-abort" data-abort="${run.opId}">Call it off</button>
-        </div>`;
-        }).join('')}
+        </div>`).join('')}
         ${heatLine}
       </section>` : '';
 
   const free = freeCrew(state, t);
+  const liveRuns = runs.map((r) => r.run);
   const rows = jobs.map((op) => {
-    const out = runs.some((r) => r.opId === op.id);
-    const ready = opReady(state, op.id, t) && !out;
-    const crew = op.crew === 'none' ? null : free[0] ?? null;
-    const odds = opOdds(state, op, crew, content, t);
-    // Three lanes (operations.js): carried by a creature, done by you, or
-    // paperwork. Saying WHICH lane is full is the honest reason; a greyed-out
-    // button with no explanation is the thing R29 was about.
-    // Short, because this sits in a flex row next to the job's title and a
-    // long string turns the whole row into one word per line at 380px.
-    const noSlot = laneFree(state, content, t, op, crew) || laneFree(state, content, t, op, null)
-      ? null
-      : crew ? 'no crew free' : 'you are out';
+    // The lane verdict and the odds are decisions (warroom.js); the wording
+    // is short on purpose, because this sits in a flex row next to the job's
+    // title and a long string turns the row into one word per line at 380px.
+    const { out, cooling, ready, odds, noSlot, cooldownEndsAt } = jobRow(state, content, op, t, liveRuns, free);
     const loot = [
       `$${op.funds[0]}–${op.funds[1]}`,
       op.livestock ? `${pct(op.livestock.chance)} livestock` : null,
@@ -703,8 +632,8 @@ function jobsCard(state, ctx, t) {
         }${op.notoriety ? ` · +${op.notoriety} heat` : ' · draws no attention at all'}</span></div>
         ${out
           ? '<span class="locked-tag">out right now</span>'
-          : !opReady(state, op.id, t)
-            ? `<span class="locked-tag">quiet for ${fmtDuration(opCooldownEndsAt(state, op.id) - t)}</span>`
+          : cooling
+            ? `<span class="locked-tag">quiet for ${fmtDuration(cooldownEndsAt - t)}</span>`
             : noSlot
               ? `<span class="locked-tag">${noSlot}</span>`
               : `<button type="button" data-job="${op.id}" ${odds.blocked ? 'disabled' : ''}>Run it</button>`}
@@ -879,7 +808,7 @@ function programmeHtml(state, entry, unit, content, t) {
 function renderBriefing(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
-  const encounter = encounterFor(state, draftTarget, content, t);
+  const encounter = warTargetEncounter(state, draftTarget, content, t);
   // The window can close while the briefing is open (a tick fires on
   // focus). There is nothing left to defend, so say so rather than
   // rendering a battle against undefined.
@@ -890,13 +819,10 @@ function renderBriefing(root, ctx) {
     return;
   }
 
-  // What are we walking into? The class triangle only matters if the player
-  // can see the matchup before they commit a team.
-  const foeClasses = new Set(
-    encounter.waves
-      .map((u) => (typeof u === 'string' ? content.enemies[u] : u)?.class)
-      .filter(Boolean)
-  );
+  // What are we walking into? One read of the opposition (warroom.js) —
+  // this used to normalise the wave list TWICE, once with `.flat()` and
+  // once without, which is two chances to disagree about the same fight.
+  const { classes: foeClasses, tags: foeTags, attackTags: foeAttackTags } = foeRead(encounter, content);
   const foeLine = foeClasses.size
     ? [...foeClasses].map((c) => `${content.classes[c].icon} ${content.classes[c].name}`).join(', ')
     : 'no declared class';
@@ -907,12 +833,6 @@ function renderBriefing(root, ctx) {
   // throw a Ground move. Isolated with the same build on both sides of the
   // chart, `Ground misses Airborne` is worth 3.7pp to a flier and `Sonic
   // ignores Armor` 7.4pp against armour. None of it was here.
-  const foeUnits = encounter.waves.flat()
-    .map((u) => (typeof u === 'string' ? content.enemies[u] : u))
-    .filter(Boolean);
-  const foeTags = new Set(foeUnits.flatMap((u) => u.tags ?? []));
-  const foeAttackTags = new Set(foeUnits
-    .flatMap((u) => (u.moves ?? []).filter((m) => (m.power ?? 0) > 0).flatMap((m) => m.tags ?? [])));
   const tagLines = foeTagLines(foeTags, content.tagChart, foeAttackTags);
 
   const roster = state.chimeras.map((ch) => {
@@ -974,9 +894,7 @@ function renderBriefing(root, ctx) {
   // seven-and-twenty times, with the real engine and the real AI, and says
   // what it found. It refuses nothing; it just stops the game presenting an
   // unwinnable fight as though it were a choice.
-  const picked = draftTeam
-    .map((id) => state.chimeras.find((c) => c.id === id))
-    .filter((c) => c && !isInjured(c, t));
+  const picked = fitTeam(state, draftTeam, t);
   const fc = picked.length ? forecast(picked, encounter, content, state.seed, t) : null;
 
   // A7: obedience as a DECISION, not a percentage. The audit filed this as
@@ -991,14 +909,11 @@ function renderBriefing(root, ctx) {
   //
   // Only computed when somebody on the team can actually disobey, so a
   // fully bonded, settled team pays nothing for the extra 32 replays.
-  const disobedient = picked.filter((c) => obedienceIgnoreChance(c, t) > 0);
+  const { disobedient, worst: worstObedience } = obedienceRead(picked, t);
   const fcObedient = fc && disobedient.length
     ? forecast(picked, encounter, content, state.seed, t, { obedient: true })
     : null;
   const obedienceCost = fcObedient ? Math.round((fcObedient.winRate - fc.winRate) * 100) : 0;
-  const worstObedience = disobedient.length
-    ? Math.min(...disobedient.map((c) => obediencePercent(c, t)))
-    : 100;
   const obedienceLine = disobedient.length
     ? `<span class="fine-print obedience-cost${obedienceCost >= 5 ? ' is-costly' : ''}">Obedience ${worstObedience}% — ${
         obedienceCost >= 3
@@ -1012,9 +927,10 @@ function renderBriefing(root, ctx) {
   // ("bring more creatures") was, for a player who already had three,
   // advice the screen itself refuses to accept. Only computed on a verdict
   // that needs it, the same way the obedience replay is.
-  const canBringMore = picked.length < TEAM_CAP &&
-    state.chimeras.some((c) => !draftTeam.includes(c.id) && !isInjured(c, t) && isSettled(c, t));
-  const why = fc ? diagnose(picked, encounter, content, state.seed, t, { canBringMore }) : null;
+  const why = fc
+    ? diagnose(picked, encounter, content, state.seed, t,
+      { canBringMore: canBringMore(state, draftTeam, t, TEAM_CAP) })
+    : null;
   const odds = fc
     ? `
       <p class="forecast forecast-${fc.band.id}">
@@ -1076,9 +992,7 @@ function renderBriefing(root, ctx) {
     renderMap(root, ctx);
   });
   root.querySelector('#wr-launch').addEventListener('click', () => {
-    const team = draftTeam
-      .map((id) => state.chimeras.find((c) => c.id === id))
-      .filter((c) => c && !isInjured(c, ctx.now()));
+    const team = fitTeam(state, draftTeam, ctx.now());
     if (!team.length) return;
     if (draftTarget.kind === 'sparring') startSpar(state, ctx.now(), content);
     const battleNo = state.warRecord.wins + state.warRecord.losses + 1;
@@ -1112,28 +1026,4 @@ function renderBriefing(root, ctx) {
     ctx.save();
     renderWarRoomScreen(root, ctx);
   });
-}
-
-function aftermathText(detail) {
-  const bits = [];
-  if (detail.rival && detail.outcome === 'win') bits.push(`${detail.rival} defeated.`);
-  else if (detail.rival && detail.outcome === 'loss') bits.push(`${detail.rival} wins this round.`);
-  if (detail.outcome === 'win') bits.push(`Victory!${detail.reward ? ` Confiscated budget: $${detail.reward}.` : ''}`);
-  else if (detail.outcome === 'fled') bits.push('Tactical scamper executed flawlessly.');
-  else bits.push('Defeat.');
-  if (detail.defended === true) bits.push(`${detail.node} holds.${detail.wreckage ? ` A ${detail.wreckage} was left behind and is now in Containment.` : ''}`);
-  else if (detail.defended === false) bits.push(`${detail.node} is theirs again. It can be retaken.`);
-  if (detail.freed) bits.push(`${detail.freed} is home safe (and slightly dramatic about it).`);
-  if (detail.capturedChimera) bits.push(`${detail.capturedChimera} was CAPTURED — a rescue window is open in the War Room.`);
-  if (detail.salvageUnits.length) bits.push(`Impounded: ${detail.salvageUnits.length} unit(s) for Containment.`);
-  // R41: what the fight paid in experience — the number that stays on the
-  // creature. Level-ups get their own sentence; a rank earned is news.
-  if (detail.xp?.length) {
-    bits.push(`+${detail.xp[0].gained} xp each.`);
-    const ranked = detail.xp.filter((r) => r.leveled);
-    if (ranked.length) bits.push(ranked.map((r) => `${r.name} reaches Level ${r.level}!`).join(' '));
-  }
-  const treatable = detail.injuries.filter((i) => i.chimera !== detail.capturedChimera);
-  if (treatable.length) bits.push(treatable.map((i) => `${i.chimera} → Infirmary (${i.injury.name}).`).join(' '));
-  return bits.join(' ');
 }
