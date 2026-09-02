@@ -12174,9 +12174,27 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     }
     assert.deepEqual(hits, [], `zero death language (${hits.join(' | ')})`);
 
+    // An exemption must be a PHRASE, and the comment above saying so was not
+    // worth anything until this asserted it: the battery widened the list to
+    // `['Death', 'shush']` and every "Death Roll" in the game went quiet,
+    // because a bare banned word as an exemption is the rule switched off.
+    for (const [phrase, why] of IDIOMS) {
+      assert.ok(/\s/.test(phrase), `"${phrase}" is a phrase, not a bare word (${why})`);
+      const rest = phrase.replace(BANNED, ' ').trim();
+      BANNED.lastIndex = 0;
+      assert.ok(rest.length > 0,
+        `"${phrase}" carries a word beyond the banned one, or it exempts the word itself`);
+    }
+
     // Every idiom on the list is still somewhere in the repo. An exemption
     // for a phrase nobody writes any more is a hole with nothing behind it.
-    const haystack = [...source.values()].join('\n')
+    //
+    // THE SUITE'S OWN SOURCE DOES NOT COUNT. Listing "Dead heat" here made
+    // the list evidence for itself, so renaming the only real use of it in
+    // battle/ui.js left the exemption standing — the same self-satisfaction
+    // the HAND_RUN list had, reproduced one gate later.
+    const haystack = [...source].filter(([f]) => f !== 'tools/smoke.js')
+      .map(([, t]) => t).join('\n')
       + readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json'))
         .map((f) => readFileSync(join(root, 'data', f), 'utf8')).join('\n');
     for (const [phrase, why] of IDIOMS) {
