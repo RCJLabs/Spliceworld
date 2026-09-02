@@ -547,6 +547,117 @@ export function loadSave(storage = globalThis.localStorage) {
   }
 }
 
+// R54 — a save that cannot leave the browser is one cleared-site-data away
+// from gone. `SAVE_VERSION` and the migration table protect a save from
+// THIS CODE changing under it; nothing protected it from the browser it
+// lives in, from a new phone, or from installing the TWA. A completionist
+// save is ~38 KB, so size was never the obstacle — nobody had built the
+// door.
+//
+// All three functions are DOM-free on purpose: the harness can round-trip a
+// save and exercise every refusal without a browser, which is the only way
+// the refusals get tested at all.
+
+const APP_ID = 'spliceworld';
+export const EXPORT_FORMAT = 1;
+
+export function exportSave(state) {
+  return JSON.stringify({
+    app: APP_ID,
+    format: EXPORT_FORMAT,
+    exportedAt: Date.now(),
+    // Restated outside the save so a human reading the file, or a future
+    // importer refusing it, does not have to parse the whole thing first.
+    saveVersion: state.saveVersion,
+    save: state,
+  }, null, 2);
+}
+
+// Named for a human looking at a downloads folder six months from now.
+export function exportFilename(state, now = Date.now()) {
+  const lab = String(state.profile?.lab ?? '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `spliceworld-${lab || 'lab'}-v${state.saveVersion}-${new Date(now).toISOString().slice(0, 10)}.json`;
+}
+
+// Every refusal names the rule it broke, because "invalid file" tells a
+// player nothing about whether their game is recoverable.
+export function importSave(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, reason: 'not-json', msg: 'That file is not JSON. The centrifuge declines to spin it.' };
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { ok: false, reason: 'not-json', msg: 'That file is JSON, but not an object. Nothing to restore from it.' };
+  }
+  // The wrapper this build writes, or a bare save — someone's raw
+  // localStorage dump is plainly readable and refusing it would be
+  // pedantry rather than safety.
+  const wrapped = typeof parsed.app === 'string' || parsed.save !== undefined;
+  if (wrapped && parsed.app !== APP_ID) {
+    return { ok: false, reason: 'not-spliceworld', msg: `That is a save from "${parsed.app}", not Spliceworld.` };
+  }
+  const save = wrapped ? parsed.save : parsed;
+  if (!save || typeof save !== 'object' || Array.isArray(save)) {
+    return { ok: false, reason: 'not-spliceworld', msg: 'The file carries no save.' };
+  }
+  if (typeof save.saveVersion !== 'number') {
+    return { ok: false, reason: 'no-version', msg: 'That save has no version — refusing to guess what it is.' };
+  }
+  // `seed` has been on every save since v1, so this rules out a JSON file
+  // that merely happens to carry a number called saveVersion without
+  // rejecting a genuinely ancient one.
+  if (typeof save.seed !== 'number') {
+    return { ok: false, reason: 'not-spliceworld', msg: 'That save has no world seed. Every Spliceworld save has had one since the first build.' };
+  }
+  if (save.saveVersion > SAVE_VERSION) {
+    return {
+      ok: false, reason: 'from-the-future',
+      msg: `That save is v${save.saveVersion} and this build reads v${SAVE_VERSION}. Update the game rather than downgrading the save.`,
+    };
+  }
+  try {
+    return { ok: true, save: migrate(structuredClone(save)), from: save.saveVersion };
+  } catch (err) {
+    return { ok: false, reason: 'migration-failed', msg: `That save could not be brought forward: ${err.message}` };
+  }
+}
+
+// Adopting an imported save is the only operation in the game that replaces
+// a running one, so the running one is set aside FIRST — the same forensics
+// rule loadSave applies to a corrupt save, applied to a deliberate act.
+//
+// And if the backup cannot be written, the import is REFUSED rather than
+// completed. An import that destroys the game it replaced is the one
+// outcome this feature exists to prevent, so a full disk loses the import,
+// never the save.
+export function adoptSave(save, storage = globalThis.localStorage) {
+  let current = null;
+  try {
+    current = storage.getItem(STORAGE_KEY);
+  } catch {
+    return { ok: false, reason: 'no-storage', msg: 'This browser will not let the game read its own storage.' };
+  }
+  if (current) {
+    try {
+      storage.setItem(`${STORAGE_KEY}_backup_${Date.now()}`, current);
+    } catch {
+      return {
+        ok: false, reason: 'backup-failed',
+        msg: 'There was no room to set the current game aside first, so the import was refused. Nothing was lost.',
+      };
+    }
+  }
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(save));
+  } catch (err) {
+    return { ok: false, reason: 'write-failed', msg: `The save could not be written: ${err.message}` };
+  }
+  return { ok: true, replaced: current !== null };
+}
+
 export function saveGame(state, storage = globalThis.localStorage) {
   state.saveVersion = SAVE_VERSION;
   try {
