@@ -1,5 +1,129 @@
 # PROGRESS
 
+## Session 81 — R59: audio outside the arena ✅
+
+**Acceptance criterion:** the moments that matter outside a fight are scored,
+and the mute toggle still silences all of it — **passes**. No schema change;
+`SAVE_VERSION` stays **34**.
+
+### The audit nearly filed a sixteenth finding that wasn't there
+
+The queue said fourteen stingers exist and combat uses most of them. Checking
+before writing, one — `waveIn` — looked unplayed. It isn't: the grep matching
+stinger names used `[a-z]+` and the capital `I` hid it. **All fifteen fire.**
+The problem was only ever *where*: fifteen `sfx.play()` call sites and **nine
+of them in `battle/ui.js`**. Three in the shell, two in the Pens, one each in
+Extraction and the Theater. The War Room and the Dex made no sound at all.
+
+A game scored for its fights and silent everywhere else.
+
+### One rule, four cues
+
+The temptation is to score everything — a chirp per tab, a tap per button.
+The rule that decides it: **a sound marks a change in your position** —
+something arrived, completed, or was taken from you. Navigation is not an
+event, and the shell already has one `click`.
+
+```
+alarm     a node you hold is contested   (the only cue with a deadline)
+conquest  a node taken
+report    a job came back
+decant    a resequenced donor arrived
+```
+
+Four new stingers to carry them: two sawtooth stabs, a rising triad, a
+two-note ding, a sine rise and pop.
+
+### The mapper is data, not four copies of a decision
+
+`watchSignals` takes a snapshot of five scalars off `gameState`; `cuesFor`
+diffs two snapshots and returns cue names. Both live in `audio/sfx.js`, not
+sprinkled across four screens — *"what deserves a sound"* is one decision, and
+four copies of it drift. Because it reads scalars it is DOM-free, so the suite
+asserts every cue with no browser and no `AudioContext`.
+
+`tick()` is the hook, and deliberately: it is the only place that can see a
+job come back or a node fall **while nobody was looking**. A screen can only
+score what happens while it is open.
+
+Two judgements, both gated in both directions:
+
+- A resequencing run that ended **with an animal arriving** decants. One that
+  ended without is an **abort the player did on purpose and already saw** — no
+  sound for something you just did to yourself.
+- **Losing a node is silent.** The wire says it; a fanfare would be the wrong
+  feeling and a klaxon would punish a player for reading the news.
+
+### The break battery — and the third instance of one pattern
+
+Eight breaks. **Seven caught, one MISSED, and the miss was a real gap.**
+
+| # | break | verdict |
+|---|---|---|
+| 1 | a cue names a stinger nobody wrote | CAUGHT |
+| 2 | the alarm stops firing | CAUGHT |
+| 3 | every tick makes a noise | CAUGHT |
+| 4 | an aborted run is announced as a decant | CAUGHT |
+| 5 | losing a node gets a fanfare | CAUGHT |
+| 6 | the shell stops snapshotting before the tick | CAUGHT |
+| 7 | the shell stops playing what changed | CAUGHT |
+| 8 | a second path around the mute appears | **MISSED** |
+
+Break 8 added `playUnmuted` — a second, unmuted route to the synth. The gate
+counted functions *named* `play`, and `function play` in `playUnmuted` is not
+followed by `(`, so the count stayed at 1 and the suite stayed green. **A
+player who muted the game would have kept hearing it.**
+
+The invariant is **one path to sound**, not one function with a particular
+name. Rewritten to find every function that reaches `voice()`, require exactly
+one, and require that it is the one checking the mute. Re-run against two
+breaks, not one — the original, plus an `8c` that removes the mute check with
+*no* second function at all, to check the fix generalises instead of being
+tuned to break 8's silhouette:
+
+```
+CAUGHT  8 (rerun) a second path around the mute appears
+        exactly one function reaches the synth (playUnmuted, play)
+CAUGHT  8c the mute check itself stops applying
+        play() refuses while muted
+```
+
+**Third time this session** a gate was true of the text and silent about the
+claim: R55's `confirmNewRun` regex matched the definition while the *call* was
+gone; R57 compared whole SVGs, which name and colour alone satisfied; this one
+counted a name instead of a path. Same shape every time — **assert the thing,
+not a stand-in for it.** Recording it as a pattern rather than three
+footnotes, because the tell is consistent: when a gate asserts something
+*near* the claim because the claim is awkward to reach, that convenience is
+the bug.
+
+### No browser QA, and why
+
+The harness cannot hear. The cue logic is DOM-free and fully gated headless;
+what a browser run would add is a screenshot of an unchanged screen. Noted
+rather than staged, the same call made for R52's Theater half. The mute toggle
+itself is unchanged and already covered.
+
+### Next session's first task
+
+**R60 — split the War Room.** `campaign/ui.js` is 1,136 lines, the largest
+module in the repo: five tab views in one file, and the only screen that
+needed a `document` guard (R49) before the harness could render it. The Dex
+already has this shape — logic in `dexentry.js`, bar in `ui/tabs.js` — and the
+War Room is where both patterns came from.
+
+Then R61 (no orphan content: `utilityValue`, "Death Roll", plus the gate) and
+R62 (the news wire overhaul — 19 hardcoded strings in engine modules).
+
+### Standing leftovers
+
+- The campaign plateau is still unexplained (R56).
+- The agenda has no entry for **defending** a contested node (R56) — and R59
+  just gave that moment a sound, which sharpens it: the game now shouts about
+  a thing the walker has no way to answer.
+- The duel still doesn't show a rival face (R57).
+- Briefing chips still say "beats their Water" with no reason (R58).
+
 ## Session 80 — R58: the triangle says why ✅
 
 **Acceptance criterion:** the reason appears where the multiplier does, and
