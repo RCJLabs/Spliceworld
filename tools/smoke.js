@@ -5819,6 +5819,123 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     }
   }
 
+  // R50. DATA_NOTES closes the hole for a system that arrives with a data
+  // file. Half the roll has no data file at all — bond, breeding, catalog,
+  // containment, contest, dex, flight, grades, incubator, infirmary,
+  // pairing, rehab, rescue, stable, upkeep are behaviour in code — so a
+  // code-only system shipping with NO note and NO roll entry is still
+  // invisible to both lists. That is the Resequencer failure with its one
+  // catchable symptom removed.
+  //
+  // (The note that queued this phase said to fold the roll INTO DATA_NOTES.
+  // That was wrong and would have deleted the only check covering those
+  // fifteen. What transfers is the mechanism, not the map.)
+  //
+  // Same shape as DATA_NOTES, over source modules: every module either
+  // names the note that teaches its system, or is exempted with the reason.
+  // A new module therefore fails this build until somebody decides which it
+  // is. `orphans` above already forces a roll entry for every NOTE; this
+  // forces a decision for every MODULE. Between them, the only way to ship
+  // a system nobody teaches is to write no module and no data file for it.
+  const MODULE_NOTES = {
+    // --- Systems: the module that implements the thing the note teaches.
+    'battle/veterancy.js': 'veterans',
+    'campaign/sparring.js': 'veterans',
+    'campaign/campaign.js': 'regions',
+    'campaign/map.js': 'regions',
+    'campaign/contest.js': 'contest',
+    'campaign/director.js': 'director',
+    'campaign/gauntlet.js': 'gauntlet',
+    'campaign/operations.js': 'jobs',
+    'campaign/rehab.js': 'rehab',
+    'campaign/rivals.js': 'rivals',
+    'ranch/breeding.js': 'breeding',
+    'ranch/ranch.js': 'stable',
+    'splice/chaos.js': 'chaos',
+    'splice/extract.js': 'grades',
+    'splice/facility.js': 'facility',
+    'splice/physiology.js': 'flight',
+    'splice/resequencer.js': 'resequencer',
+    'splice/scars.js': 'scars',
+    'splice/temperament.js': 'temperament',
+    'splice/theater.js': 'combos',
+    'splice/dexentry.js': 'dex',
+
+    // --- The shell and the save. Not systems; the ground everything
+    // stands on.
+    'main.js': null,
+    'sw.js': null,
+    'save/save.js': null,
+    'data/loader.js': null,
+    'util/rng.js': null,
+    'render/renderer.js': null,
+    'audio/sfx.js': null,
+
+    // --- Shared UI machinery. A fold, a picker, a tab bar and a band are
+    // how systems are shown, not systems themselves.
+    'ui/cards.js': null,
+    'ui/picker.js': null,
+    'ui/roster.js': null,
+    'ui/tabs.js': null,
+
+    // --- Screens. A screen is where systems are met; the note belongs to
+    // the system, which is why these are exempt rather than each claiming
+    // one.
+    'battle/ui.js': null,
+    'campaign/ui.js': null,
+    'ranch/ui.js': null,
+    'splice/dex-ui.js': null,
+    'splice/extract-ui.js': null,
+    'splice/pens-ui.js': null,
+    'splice/theater-ui.js': null,
+    'splice/vault-ui.js': null,
+
+    // --- The battle engine and the things that read it out. R28's whole
+    // point was that these EXPLAIN the fight rather than adding to it.
+    'battle/engine.js': null,
+    'battle/ai.js': null,
+    'battle/moves.js': null,
+    'battle/forecast.js': null,
+    'battle/readout.js': null,
+    'battle/tagtext.js': null,
+    'campaign/matchup.js': null,
+    'campaign/monologue.js': null,
+    'splice/dossier.js': null,
+
+    // --- The onboarding machinery itself. It cannot be taught by one of
+    // its own notes without circularity.
+    'ranch/onboarding.js': null,
+    'ranch/agenda.js': null,
+  };
+  {
+    const SKIP = new Set(['tools', 'docs', 'node_modules', '.git']);
+    const modules = [];
+    const walk = (dir) => {
+      for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+        const rel = dir ? `${dir}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) { if (!SKIP.has(rel)) walk(rel); }
+        else if (entry.name.endsWith('.js')) modules.push(rel);
+      }
+    };
+    walk('');
+    const unlisted = modules.filter((m) => !(m in MODULE_NOTES)).sort();
+    assert.deepEqual(unlisted, [],
+      `every module either names the note that teaches its system or is exempted (unlisted: ${unlisted.join(', ')})`);
+    for (const [file, note] of Object.entries(MODULE_NOTES)) {
+      assert.ok(modules.includes(file), `${file} is still on disk (drop it from the map if it went)`);
+      // Only the one test: `missing` and `orphans` below prove the roll and
+      // the note ids are the SAME SET, so "names a system on the roll" is
+      // not a second condition — it is this one spelled differently. An
+      // assertion that cannot fail on its own is not a gate.
+      if (note) assert.ok(covered.has(note), `${file} points at a note that exists (${note})`);
+    }
+    // The map must not be all exemptions: if a future edit blanks the
+    // system half, this gate would still pass while guarding nothing.
+    const taught = Object.values(MODULE_NOTES).filter(Boolean);
+    assert.ok(taught.length >= 20, `modules actually claim systems (${taught.length})`);
+    assert.ok(new Set(taught).size >= 15, `across many systems, not one repeated (${new Set(taught).size})`);
+  }
+
   const missing = SHIPPED_SYSTEMS.filter((id) => !covered.has(id));
   assert.deepEqual(missing, [], `every shipped system has a note (missing: ${missing.join(', ')})`);
   const orphans = [...covered].filter((id) => !SHIPPED_SYSTEMS.includes(id));
