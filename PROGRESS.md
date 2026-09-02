@@ -1,5 +1,132 @@
 # PROGRESS
 
+## Session 71 — R49: the map's spar button reads the predicate ✅
+
+**Acceptance criterion:** all three surfaces give one answer to "can I
+spar", in every state — **passes, measured in the browser**. No schema
+change; `SAVE_VERSION` stays **33**.
+
+### The note R48 left was wrong about its own severity
+
+R48 recorded the map button as *"a wording gap rather than a broken
+affordance, since the briefing disables it correctly."* Reading the
+briefing properly: the roster rows are `disabled: injured` and Launch is
+`disabled` without a team. So a player with three charges and every
+chimera in the Infirmary got an **ENABLED** `🥊 Spar 3` onto a screen
+where nothing at all can be pressed.
+
+Nothing breaks — the earlier note was right that far — but an enabled
+button onto a dead end is a wasted trip, not a wording problem. **"Wording
+gap" was the wrong call**, and it took re-reading the briefing rather than
+trusting the note to see it.
+
+### One predicate, three readers
+
+The button reads `canSpar()` now. It is disabled on the verdict, not on
+the bucket, and it names the reason:
+
+| state | map button | Pens | agenda |
+|---|---|---|---|
+| full bucket | `[enabled] 🥊 Spar 3` | ready | offered |
+| one charge spent | `[enabled] 🥊 Spar 2` | ready | offered |
+| bucket empty | `[disabled] 🥊 10m` | — | withheld |
+| everyone hurt | `[disabled] 🥊 no-one fit` | — | withheld |
+| hurt **and** empty | `[disabled] 🥊 no-one fit` | — | withheld |
+
+Every row: **all three agree**. Clicking the disabled button no longer
+reaches a briefing (`#wr-launch` absent), so the dead-end trip is closed.
+
+**The predicate is shared; the wording deliberately is not.** This is a
+chip inside a node row and the Pens has a whole line, so they say the same
+thing at different lengths — `no-one fit` against `nobody fit to send`.
+Sharing the verdict is the point; sharing the string would be wrong for
+the space.
+
+That last row also settles a precedence I had not specified: with both
+conditions failing, **fitness wins the label**. Telling a player to wait
+ten minutes when they would still have nobody to send is the less useful
+truth, so `canSpar`'s reason ladder checks garrison, then fitness, then
+charges.
+
+### The War Room was the one screen the harness could not render
+
+`campaign/ui.js` had exactly one `document` reference — `document.body
+.classList.remove('in-battle')` — which is why R15's gate had to grep the
+module's *source* rather than assert its markup, and why this phase's
+first gate died on `ReferenceError: document is not defined`.
+
+Guarded, so the War Room now renders to a plain `{ innerHTML }` like every
+other screen. `main.js` already clears that class on every navigation, so
+the guard is inert in a browser. It is a production change made for
+testability, and worth naming as such: what it buys is that a gate can
+assert the button's real markup instead of a regex over source text.
+
+### R43's gate 7 moved its anchor
+
+It asserted `sparCharges(state, t, content)` appears in `campaign/ui.js`.
+`canSpar` wraps `sparCharges` and adds the other two conditions, so the
+function named changed and the claim — *the map must not have its own
+opinion of the bucket* — did not. Same shape as the R44, R45 and R46
+anchor moves this run of phases keeps producing.
+
+### The break battery
+
+Twelve breaks, each run against the full suite in an isolated worktree.
+**All caught.**
+
+| break | verdict |
+|---|---|
+| the button reads the bucket alone | CAUGHT |
+| the button is enabled on charges | CAUGHT |
+| the button stops naming the reason | CAUGHT |
+| every refusal blames fitness | CAUGHT |
+| the countdown becomes a word | CAUGHT (R43's gate 7) |
+| a ready button stops counting | CAUGHT (R43's gate 7) |
+| the War Room forks the predicate | CAUGHT |
+| the Pens forks the predicate | CAUGHT |
+| the agenda forks the predicate | CAUGHT |
+| the predicate ignores fitness | CAUGHT |
+| the predicate ignores charges | CAUGHT |
+| the War Room needs a document again | CAUGHT |
+
+**Breaks 10 and 11 are the ones this phase's design invites.** Every other
+break damages one surface, and the agreement gate catches it because the
+three stop matching. Break the PREDICATE instead and all three agree on
+the wrong answer together — an agreement-only gate sails past that. They
+are caught by the per-reason assertions (`nothing to send, no spar`, `an
+empty bucket is not an open action`), which is why those exist alongside
+the agreement loop rather than being folded into it.
+
+Breaks 5 and 6 were caught by **R43's own gate 7** — the one whose anchor
+moved this phase. It still guards exactly what it always did: the button
+says how many, and shows a countdown when empty.
+
+Break 12 fails with `ReferenceError: document is not defined` rather than
+an assertion, which is the honest signal: undo the guard and the harness
+cannot render the screen at all.
+
+### Verified
+
+- Full suite green; four R49 gate blocks.
+- Browser QA at 380px across five states, table above; all three surfaces
+  agree in every one, the disabled button cannot reach a briefing, zero
+  console errors.
+- No schema change; `SAVE_VERSION` stays **33**.
+
+### Known gaps
+
+- The agenda's rows remain the Ranch's largest chrome cost, by design
+  (R47).
+- Trophies still are not in the Dex (R42), and `SHIPPED_SYSTEMS` in
+  `smoke.js` is still hand-kept rather than folded into `DATA_NOTES`
+  (R39) — the oldest surviving note on this list.
+
+### Next session's first task
+
+`SHIPPED_SYSTEMS` has outlived ten phases as a hand-kept list that a new
+system can silently fall out of. Fold it into `DATA_NOTES` so the harness
+derives it, the way R39 derived the screen list from `main.js`.
+
 ## Session 70 — R48: the Sparring Ring you can see ✅
 
 **Acceptance criterion:** the charge bucket is legible wherever you would

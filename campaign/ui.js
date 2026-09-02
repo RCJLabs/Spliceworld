@@ -15,7 +15,7 @@ import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js'
 // the player to build three. A second `3` typed in here is how those four
 // numbers drift apart.
 import { guideForScreen, STABLE as TEAM_CAP } from '../ranch/onboarding.js';
-import { sparEncounter, sparCharges, startSpar } from './sparring.js';
+import { sparEncounter, canSpar, startSpar } from './sparring.js';
 import { gauntletState, gauntletEncounter } from './gauntlet.js';
 import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
@@ -124,7 +124,14 @@ function warSubtabBar(state) {
 export function renderWarRoomScreen(root, ctx) {
   const { state } = ctx;
   // Battle mode locks the shell to one screen; every other view scrolls.
-  if (!state.battle) document.body.classList.remove('in-battle');
+  //
+  // R49: guarded so the War Room renders to a plain `{ innerHTML }` like
+  // every other screen does. This is the ONLY `document` reference in the
+  // module, and main.js already clears the class on every navigation, so
+  // the guard is inert in a browser — what it buys is that the harness can
+  // assert this screen's markup instead of grepping its source, which is
+  // what R15's gate had to do.
+  if (!state.battle) globalThis.document?.body?.classList.remove('in-battle');
   if (state.battle) {
     renderArena(root, ctx, (detail) => {
       lastAftermath = aftermathText(detail);
@@ -205,7 +212,25 @@ function renderMap(root, ctx) {
   // R41: one gate for every Spar button — the ring has one bucket.
   // R43: and it holds charges, so the button says how many rather than
   // just whether.
-  const sparGate = sparCharges(state, t, content);
+  //
+  // R49: …and whether is more than the bucket. This read `sparCharges`
+  // alone, so with three charges and every chimera in the Infirmary the
+  // button said "🥊 Spar 3", was pressable, and landed on a briefing where
+  // every roster row is disabled and Launch is disabled with it. Nothing
+  // broke — R48 recorded that as a wording gap on those grounds — but an
+  // ENABLED button onto a screen that can do nothing is a wasted trip, not
+  // a wording problem. `canSpar` is the same predicate the agenda and the
+  // Pens read, so the three cannot disagree about whether the ring is open.
+  //
+  // The wording is not shared, only the verdict: this is a chip in a node
+  // row and the Pens has a whole line, so they say the same thing at
+  // different lengths.
+  const sparGate = canSpar(state, content, t);
+  const sparLabel = sparGate.ok
+    ? `Spar <span class="spar-charges">${sparGate.charges}</span>`
+    : sparGate.reason === 'nobody-fit'
+      ? 'no-one fit'
+      : fmtDuration(sparGate.msToNext);
   const frontier = map.find((r) => r.open && r.held < r.region.nodes.length)?.region.id ?? null;
   const regions = map.map(({ region, open, blockers, nodes: nodeRows, held }) => {
     const contestedHere = region.nodes.filter((n) => isContested(state, n.id)).length;
@@ -216,9 +241,7 @@ function renderMap(root, ctx) {
           ? `<button type="button" data-node="${node.id}">Assault</button>`
           : status === 'held'
             ? `<span class="held-tag">HELD +$${node.incomePerDay}/d</span>
-               <button type="button" class="spar-btn" data-spar="${node.id}" ${sparGate.ready ? '' : 'disabled'}>🥊 ${
-                 sparGate.ready ? `Spar <span class="spar-charges">${sparGate.charges}</span>` : fmtDuration(sparGate.msToNext)
-               }</button>`
+               <button type="button" class="spar-btn" data-spar="${node.id}" ${sparGate.ok ? '' : 'disabled'}>🥊 ${sparLabel}</button>`
             : status === 'contested'
               ? `<span class="contested-tag">CONTESTED −$${node.incomePerDay}/d</span>`
               : `<span class="locked-tag">${(node.threatGen ?? 1) > gen ? `needs Threat Gen ${node.threatGen}` : 'locked'}</span>`;

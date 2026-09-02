@@ -9273,10 +9273,14 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(done.funds, 99, 'nothing else touched');
   }
 
-  // 7. The button says how many, and the map reads the shared bucket.
+  // 7. The button says how many, and the map reads the shared derivation
+  //    rather than counting for itself. R49 moved which function that is —
+  //    `canSpar` wraps `sparCharges` and adds the other two conditions —
+  //    so the anchor moved with it. The CLAIM is unchanged: the map must
+  //    not have its own opinion of the bucket.
   {
     const src = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
-    assert.ok(/sparCharges\(state, t, content\)/.test(src), 'the map reads the bucket');
+    assert.ok(/canSpar\(state, content, t\)/.test(src), 'the map reads the shared predicate');
     assert.ok(/sparGate\.charges/.test(src), 'and the button shows the count');
     assert.ok(/sparGate\.msToNext/.test(src), 'with the short countdown when empty');
   }
@@ -10331,6 +10335,145 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
         `and the Pens matches it too (${g.reason ?? 'ok'})`);
     }
     assert.equal(newGameState().saveVersion, SAVE_VERSION, 'and none of this touched the schema');
+  }
+}
+
+// --- R49: the map's spar button reads the predicate too.
+//
+// R48 gave the agenda and the Pens one answer to "can I spar" and left the
+// button that actually spends a charge reading `sparCharges` on its own. I
+// recorded that as a wording gap on the grounds that the briefing disables
+// its Launch correctly. Re-reading it: the ROSTER ROWS are `disabled:
+// injured` and Launch is disabled without a team, so a player with three
+// charges and every chimera in the Infirmary got an ENABLED "🥊 Spar 3"
+// onto a briefing where nothing at all can be pressed. Nothing breaks, but
+// that is a wasted trip, not a wording problem, and "wording gap" was the
+// wrong call.
+{
+  const { renderWarRoomScreen } = await import('../campaign/ui.js');
+  const { canSpar } = await import('../campaign/sparring.js');
+  const HOUR = 3600000;
+  const B = { head: 'rhino_head', forelimbs: 'gorilla_forelimbs', hindlimbs: 'rhino_hindlimbs',
+    tail: 'bear_tail', hide: 'pangolin_hide', organ: 'bear_organ' };
+  const mk = (i, extra = {}) => ({
+    id: `w${i}`, name: `Unit ${i + 1}`, frame: 'M',
+    tokens: Object.fromEntries(Object.entries(B).map(([k, v]) =>
+      [k, { id: `t${i}${k}`, partId: v, grade: 'prime', donor: { name: 'Bessie', stars: 4 } }])),
+    settleUntil: 0, bond: 100, scars: [], temperament: null,
+    lastTrainedAt: 0, moveset: [], lastMoveTrainAt: 0, xp: 0, injury: null, ...extra,
+  });
+  // The War Room binds real listeners, so the stub hands back empty lists
+  // and a null query rather than a DOM.
+  const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null,
+    classList: { remove: () => {}, add: () => {} } });
+  const held = () => {
+    const st = { ...newGameState(), seed: 49, funds: 500 };
+    const node = Object.values(content.regions)
+      .flatMap((r) => r.nodes).find((n) => content.encounters[n.encounter]);
+    assert.ok(node, 'a node with an encounter behind it');
+    st.campaign.heldNodes = [node.id];
+    st.chimeras = [mk(0)];
+    st.chimeraCount = 1;
+    return st;
+  };
+  const drawMap = (st, now = t0) => {
+    const root = stub();
+    renderWarRoomScreen(root, { state: st, content, now: () => now, save: () => {},
+      goto: () => {}, refreshTicker: () => {} });
+    return root.innerHTML;
+  };
+  // The button's own markup, sliced from its data-spar attribute to the
+  // close tag — so an assertion about the LABEL cannot accidentally read
+  // the rest of the map.
+  const sparBtn = (page) => {
+    const at = page.indexOf('data-spar=');
+    if (at < 0) return null;
+    const from = page.lastIndexOf('<button', at);
+    return page.slice(from, page.indexOf('</button>', at) + 9);
+  };
+
+  // 1. THE CRITERION. A full bucket with nobody fit to send no longer
+  //    offers a pressable button.
+  {
+    const st = held();
+    st.chimeras = [mk(0, { injury: { name: 'Bent Whiskers', until: t0 + 2 * HOUR } })];
+    const gate = canSpar(st, content, t0);
+    assert.equal(gate.reason, 'nobody-fit', 'the predicate says why');
+    assert.equal(gate.charges, gate.max, 'with the bucket still full');
+
+    const btn = sparBtn(drawMap(st));
+    assert.ok(btn, 'the held node still offers a Spar control');
+    assert.ok(btn.includes('disabled'), 'which is disabled rather than a trip to a dead end');
+    assert.ok(btn.includes('no-one fit'), `and says why (${btn})`);
+    assert.ok(!/Spar <span class="spar-charges">/.test(btn),
+      'it does not advertise charges it cannot spend');
+  }
+
+  // 2. The three surfaces agree, in every state the predicate has a name
+  //    for. This is the assertion the phase exists for: one verdict, three
+  //    readers, no drift.
+  {
+    const { renderPensScreen } = await import('../splice/pens-ui.js');
+    const penStub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null });
+    const drawPens = (st, now = t0) => {
+      const root = penStub();
+      renderPensScreen(root, { state: st, content, now: () => now, save: () => {}, goto: () => {} });
+      return root.innerHTML;
+    };
+    const t = trainingTuning(content);
+    const cases = [
+      ['open', held()],
+      ['nobody-fit', (() => { const x = held();
+        x.chimeras = [mk(0, { injury: { name: 'Bent Whiskers', until: t0 + 2 * HOUR } })]; return x; })()],
+      ['no-charge', (() => { const x = held();
+        x.sparRefillAt = t0 + t.sparCharges * t.sparRegenMinutes * 60000; return x; })()],
+    ];
+    const seen = new Set();
+    for (const [label, st] of cases) {
+      const gate = canSpar(st, content, t0);
+      seen.add(gate.reason ?? 'ok');
+      const onAgenda = !!agendaShape(st, content, t0).open.find((i) => i.id === 'spar');
+      const btn = sparBtn(drawMap(st));
+      const pens = drawPens(st);
+      assert.equal(onAgenda, gate.ok, `${label}: the agenda agrees`);
+      assert.equal(!btn.includes('disabled'), gate.ok, `${label}: the map button agrees`);
+      assert.equal(pens.includes('spar-line is-ready'), gate.ok, `${label}: the Pens agrees`);
+    }
+    // The fixtures actually exercised three different verdicts — without
+    // this the loop could pass by testing one state three times.
+    assert.deepEqual([...seen].sort(), ['no-charge', 'nobody-fit', 'ok'],
+      `three distinct verdicts were exercised (${[...seen]})`);
+  }
+
+  // 3. What the button said before is still what it says when the reason
+  //    is a clock — R43's countdown was right and this must not lose it.
+  {
+    const t = trainingTuning(content);
+    const st = held();
+    st.sparRefillAt = t0 + t.sparCharges * t.sparRegenMinutes * 60000;
+    const btn = sparBtn(drawMap(st));
+    assert.ok(btn.includes('disabled'), 'an empty bucket disables the button');
+    assert.ok(/\d/.test(btn), `and shows the countdown rather than a word (${btn})`);
+    assert.ok(!btn.includes('no-one fit'), 'the reason shown is the real one');
+
+    // …and a ready ring still counts its charges, which is R43's whole point.
+    const ok = sparBtn(drawMap(held()));
+    assert.ok(!ok.includes('disabled'), 'a ready ring is pressable');
+    assert.ok(/Spar <span class="spar-charges">\d/.test(ok), `and says how many (${ok})`);
+  }
+
+  // 4. One predicate, three readers — asserted against the source, because
+  //    the way this regresses is a screen quietly going back to reading the
+  //    bucket on its own.
+  {
+    for (const f of ['campaign/ui.js', 'splice/pens-ui.js', 'ranch/agenda.js']) {
+      const src = readFileSync(join(root, f), 'utf8');
+      assert.ok(/\bcanSpar\b/.test(src), `${f} reads the predicate`);
+    }
+    const war = readFileSync(join(root, 'campaign/ui.js'), 'utf8');
+    assert.ok(!/sparCharges\(/.test(war),
+      'and the War Room no longer computes the bucket for itself');
+    assert.equal(newGameState().saveVersion, SAVE_VERSION, 'with no schema change');
   }
 }
 
