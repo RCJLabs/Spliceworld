@@ -11443,4 +11443,86 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+// R58. classes.json has carried four authored lines since the triangle
+// shipped — ground_water, water_air, air_ground and unclassed — and nothing
+// read any of them. R20's shape: authored content with no caller.
+//
+// Except it was worse than unread. `indexContent` kept only the class list
+// and the two multipliers, so the `flavor` block was DROPPED at index time
+// and never reached runtime at all. A reader written before this phase would
+// have found nothing there to read.
+{
+  const { classReason, hitReason } = await import('../campaign/matchup.js');
+
+  // 1. The data arrives. This is the half that was actually broken.
+  {
+    const raw = JSON.parse(readFileSync(join(root, 'data/classes.json'), 'utf8'));
+    const authored = Object.keys(raw.flavor ?? {});
+    assert.ok(authored.length >= 4, `classes.json authors reasons (${authored.length})`);
+    assert.ok(content.classRules?.flavor, 'and indexContent carries them to runtime');
+    assert.deepEqual(Object.keys(content.classRules.flavor).sort(), authored.sort(),
+      'every authored line survives indexing');
+  }
+
+  // 2. Every edge of the triangle has a reason, keyed winner_loser, and the
+  //    key is built in ONE place — the order is the part a second reader
+  //    gets backwards, because at a 0.7 multiplier the winner is the
+  //    DEFENDER.
+  {
+    for (const cls of Object.values(content.classes)) {
+      const why = classReason(cls.id, cls.beats, content.classRules);
+      assert.ok(why && why.length > 15, `${cls.id} beating ${cls.beats} has a reason (${why})`);
+    }
+    const ground = content.classes.ground;
+    const up = hitReason(ground.id, ground.beats, content.classRules.advantage, content.classRules);
+    const down = hitReason(ground.beats, ground.id, content.classRules.disadvantage, content.classRules);
+    assert.equal(up, down, 'the same edge reads the same whichever side swung');
+    assert.equal(hitReason('ground', 'ground', 1, content.classRules), null,
+      'and a neutral hit has nothing to explain');
+    assert.ok(classReason(null, null, content.classRules), 'unclassed has a line of its own');
+  }
+
+  // 3. THE CRITERION. The reason appears where the multiplier does — once
+  //    per matchup per battle, not on every hit. Both halves matter: said
+  //    every time it is noise, said never it is the bug this phase fixes.
+  {
+    const enc = Object.values(content.encounters)
+      .find((e) => (e.waves ?? []).some((u) => content.enemies[u]?.class === 'water'));
+    assert.ok(enc, 'an encounter that fields Water to be beaten');
+    const team = [makeSimChimera('M',
+      ['rhino_head', 'gorilla_forelimbs', 'rhino_hindlimbs', 'bear_tail', 'pangolin_hide', 'bear_organ'],
+      'prime', content)];
+    const battle = createBattle(team, enc, content, 58, t0, { kind: 'assault' });
+    const said = [];
+    let guard = 0;
+    while (!battle.over && guard++ < 200) {
+      const acts = playerActions(battle);
+      const best = acts.filter((a) => a.type === 'move')
+        .sort((x, y) => playerActive(battle).moves[y.index].power - playerActive(battle).moves[x.index].power)[0] ?? acts[0];
+      if (!best) break;
+      for (const e of step(battle, best, content) ?? []) if (e.kind === 'info') said.push(e.text);
+    }
+    const multiplied = battle.log.filter((l) => /beats|shrugs off/.test(l)).length;
+    assert.ok(multiplied > 1, `the triangle bit more than once in this fight (${multiplied})`);
+    assert.equal(said.length, new Set(said).size, `and said its reason once each (${said.length})`);
+    assert.ok(said.length >= 1, 'the reason was said at all');
+    assert.ok(said.length < multiplied,
+      `once per matchup rather than once per hit (${said.length} reasons over ${multiplied} multiplied hits)`);
+    assert.ok(said.every((t) => Object.values(content.classRules.flavor).includes(t)),
+      'and it is the authored line, not a restatement of the multiplier');
+  }
+
+  // 4. The Dex is the lookup home, and the one place the fourth line —
+  //    `unclassed` — can live, since no hit ever fires it.
+  {
+    const page = dexPages({ ...newGameState(), seed: 58 }).roster;
+    for (const cls of Object.values(content.classes)) {
+      const why = classReason(cls.id, cls.beats, content.classRules);
+      assert.ok(page.includes(why), `the Dex names why ${cls.id} beats ${cls.beats}`);
+    }
+    assert.ok(page.includes(content.classRules.flavor.unclassed),
+      'and what being Unclassed actually means');
+  }
+}
+
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

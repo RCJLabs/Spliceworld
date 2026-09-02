@@ -113,6 +113,33 @@ function effectWordShort(rule) {
   return `hits ${rule.mult}× as hard`;
 }
 
+// --- R58: the triangle says WHY --------------------------------------
+//
+// classes.json has carried four authored lines since the triangle shipped —
+// `ground_water`, `water_air`, `air_ground` and `unclassed` — and NOTHING
+// read any of them. The engine prints "(Ground beats Water!)" every hit and
+// swallows the reason; the Dex lists the three edges and swallows it too.
+// R20's shape exactly: authored content with no caller.
+//
+// One function, because the non-obvious part is the KEY ORDER. The flavor is
+// keyed winner_loser, and at the moment of a hit the winner is the ATTACKER
+// when the multiplier is up and the DEFENDER when it is down — so a second
+// reader constructing that key itself is a second chance to get it backwards.
+export function classReason(winnerClass, loserClass, rules = {}) {
+  if (!winnerClass || !loserClass) return rules.flavor?.unclassed ?? null;
+  return rules.flavor?.[`${winnerClass}_${loserClass}`] ?? null;
+}
+
+// The reason for a hit, given who swung and what the multiplier did. Returns
+// null when the classes do not interact, so a caller never has to know the
+// triangle to ask.
+export function hitReason(atkClass, defClass, mult, rules = {}) {
+  if (!atkClass || !defClass || mult === 1) return null;
+  return mult > 1
+    ? classReason(atkClass, defClass, rules)
+    : classReason(defClass, atkClass, rules);
+}
+
 // --- R37: the class layer, both directions ------------------------------
 //
 // R35 put losses beside wins on the tag notes and did not touch the class
