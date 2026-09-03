@@ -12383,11 +12383,29 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const elsewhere = newsFor(st, content, 'node_seized', { node: 'Crop-Duster Strip', income: 80 });
     assert.ok(once && elsewhere, 'both nodes get a line');
     // A pool that always returns its first entry is a pool in name only.
-    const seen = new Set();
+    //
+    // Counted as PHRASINGS, not as sentences: the first version of this
+    // collected the filled lines, and eight different node names make eight
+    // different strings out of one template — so pinning the pool to its
+    // first entry sailed through a gate that looked like it was watching for
+    // exactly that. Which authored line was used is the question.
+    const whichLine = (line) => (content.news.node_seized.lines ?? []).findIndex((authored) => {
+      let at = 0;
+      for (const frag of authored.split(/\{\w+\}/).map((f) => f.trim()).filter((f) => f.length > 3)) {
+        const found = line.indexOf(frag, at);
+        if (found < 0) return false;
+        at = found + frag.length;
+      }
+      return true;
+    });
+    const used = new Set();
     for (const node of ['A Fence', 'B Yard', 'C Lot', 'D Pad', 'E Shed', 'F Barn', 'G Rig', 'H Mill']) {
-      seen.add(newsFor(st, content, 'node_seized', { node, income: 40 }));
+      const drawn = newsFor(st, content, 'node_seized', { node, income: 40 });
+      const idx = whichLine(drawn);
+      assert.ok(idx >= 0, `every drawn line traces to an authored one (${drawn})`);
+      used.add(idx);
     }
-    assert.ok(seen.size > 1, `and the pool actually varies (${seen.size} phrasings across eight nodes)`);
+    assert.ok(used.size > 1, `and the pool actually varies (${used.size} of ${content.news.node_seized.lines.length} phrasings used across eight nodes)`);
   }
 
   // 7. The philosophy weighting is real: R10's machinery, pointed at the
