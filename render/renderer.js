@@ -52,6 +52,11 @@ export function indexContent(raw) {
     enemies: raw.enemies ? byId(raw.enemies.units) : {},
     encounters: raw.enemies ? byId(raw.enemies.encounters) : {},
     tierScale: raw.enemies?.tierScale ?? [1, 1],
+    // R67: how well the opposition PLAYS at each rung, beside how hard it
+    // HITS. Lifted here for the same reason tierScale is — battle/ai.js reads
+    // it, and a ladder that lives only in the engine cannot grow a rung
+    // without an engine edit.
+    aiSkillByTier: raw.enemies?.aiSkillByTier ?? null,
     keywords: raw.keywords ? byId(raw.keywords.keywords) : {},
     tagChart: raw.keywords ? raw.keywords.tagChart : [],
     regions: raw.regions ? byId(raw.regions.regions) : {},

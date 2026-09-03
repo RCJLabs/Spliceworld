@@ -1,5 +1,42 @@
 # PROGRESS
 
+## Session 90 — R67: the KO turn skips end-of-turn ✅
+
+**Acceptance criterion:** the enemy's half of end-of-turn runs on the KO turn,
+the skill ladder is data, and a gate plays a KO turn and asserts the poison
+ticked — **passes**. No schema change; `SAVE_VERSION` stays **35**. `sw.js`
+cache → `v35-koturn`.
+
+### Measured first
+A foe carrying three venom and two bleed, on a bench of three:
+
+| turn | damage-over-turn on the foe | its stamina |
+|---|---|---|
+| ordinary | 74 | +0 (spent 5, recovered 5) |
+| a chimera goes down | **0** | −5 |
+
+Both sides skipped a full round of ticks, so a player cycling a deep bench
+was handed a free round of everything they had applied.
+
+### Shipped
+- `endOfTurn` runs whenever the battle is live, not only when no replacement
+  is pending. It already skips anything at zero, so the creature that just
+  went down takes nothing — and `handlePlayerKO` is guarded so the KO is
+  announced once, not twice. The replacement itself is still free: it costs
+  no turn and gives the enemy no bonus one.
+- **`aiSkillByTier` is data.** The engine held six rungs against nine of
+  `tierScale`, so tiers 6–8 were all piloted at tier 5's skill while hitting
+  up to 2.3× stats — and a tier 7 encounter would have needed an engine edit.
+  Nine rungs now live in `enemies.json` beside the curve they parallel;
+  `render/renderer.js` indexes it the way it indexes `tierScale`; the old
+  array stays as the fallback for a caller with no bundle.
+- Benched: the Spire is unmoved by the new rungs (boots 47, wings 69,
+  gills 47, fumes 53, kite 34, noise 63 at apex).
+
+### Next session's first task
+R68 — 244 parts on 65 distinct moves, eight unshipped signature abilities,
+and set bonuses that collide. Start from the part/move census.
+
 ## Session 89 — R66: the preview lies to the player and to the AI ✅
 
 **Acceptance criterion:** a gate compares the preview's expected value with

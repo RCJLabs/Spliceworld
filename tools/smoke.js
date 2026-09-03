@@ -13383,4 +13383,114 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+// --- R67: the KO turn skipped end-of-turn for both sides ------------------
+{
+  const { skillFor, SKILL_BY_TIER, RIVAL_SKILL } = await import('../battle/ai.js');
+  const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+  const build = (id) => ({ ...makeSimChimera('M', SLOTS.map((s) => `goat_${s}`), 'prime', content), id, name: id.toUpperCase(), injuryCount: 0 });
+  const enc = () => ({
+    id: 'r67', name: 'Bench', tier: null, scaleOverride: 1, reward: 0, blurb: '',
+    waves: [{ id: 'r67_foe', name: 'Foe', class: 'ground', tags: [], hp: 400, power: 30, armor: 0,
+      speed: 1, stamina: 100, regen: 5, koLine: 'The Foe retires loudly.',
+      moves: [{ name: 'Bonk', power: 40, acc: 100, cost: 5, tags: [], keywords: {} }] }],
+  });
+
+  // A bench of three, the foe venomed and bleeding. `ko` flattens the
+  // player's active on this very turn.
+  const round = ({ ko }) => {
+    const b = createBattle([build('a'), build('b'), build('c')], enc(), content, 11, t0, {});
+    const me = playerActive(b);
+    me.speed = 9999;
+    b.enemy.active.status.venom = 3;
+    b.enemy.active.status.bleed = 2;
+    b.enemy.active.stamina = 10;
+    if (ko) { me.hp = 1; b.enemy.active.speed = 99999; b.enemy.active.moves[0].power = 999; }
+    const before = { hp: b.enemy.active.hp, stamina: b.enemy.active.stamina };
+    const events = step(b, playerActions(b).find((a) => a.type === 'move'), content);
+    return {
+      b, events,
+      pending: b.pendingReplace,
+      dot: before.hp - b.enemy.active.hp,
+      stamina: b.enemy.active.stamina - before.stamina,
+      downs: events.filter((e) => e.kind === 'ko' && e.target === 'player').length,
+    };
+  };
+
+  // 1. THE CRITERION. The turn a chimera goes down is still a turn: the
+  //    enemy's venom, bleed and stamina all tick. Skipping it handed a
+  //    player cycling a deep bench a free round of every effect they had
+  //    spent turns applying.
+  {
+    const downed = round({ ko: true });
+    assert.ok(downed.pending, 'the fixture actually knocks the active out');
+    const tick = 3 * 4 + 2 * 3; // venom stacks x VENOM_TICK + bleed x BLEED_TICK
+    assert.ok(downed.dot > 0,
+      `the foe's damage-over-turn still ticks on the KO turn (${downed.dot} damage)`);
+    assert.equal(downed.stamina, 0,
+      `and its stamina recovers (spent 5 on its swing, +5 back: net ${downed.stamina})`);
+    void tick;
+  }
+  // 2. …and the creature that went down takes nothing more. endOfTurn skips
+  //    anything already at zero, which is what makes running it safe here.
+  {
+    const downed = round({ ko: true });
+    const me = playerActive(downed.b);
+    assert.equal(me.hp, 0, 'the downed one is at zero');
+    assert.equal(downed.downs, 1, `and its KO is announced once, not twice (${downed.downs})`);
+  }
+  // 3. A quiet turn is unchanged — the fix must not double-tick anybody.
+  {
+    const quiet = round({ ko: false });
+    assert.ok(!quiet.pending, 'nobody went down');
+    assert.ok(quiet.dot > 0, 'and the ticks still land on an ordinary turn');
+    const twice = round({ ko: false });
+    assert.equal(twice.dot, quiet.dot, 'deterministically');
+  }
+  // 4. The prompt still gates the round: a replacement is a free action, and
+  //    the enemy does not get a bonus turn out of it.
+  {
+    const downed = round({ ko: true });
+    const turnBefore = downed.b.turn;
+    const hpBefore = playerActive(downed.b).hp;
+    const bench = downed.b.player.team.findIndex((c) => c.hp > 0);
+    step(downed.b, { type: 'switch', index: bench }, content);
+    assert.equal(downed.b.pendingReplace, false, 'the replacement takes the field');
+    assert.equal(downed.b.turn, turnBefore, 'and it costs no turn');
+    assert.ok(playerActive(downed.b).hp > 0, 'with a creature that can fight');
+    void hpBefore;
+  }
+
+  // 5. The AI skill ladder is DATA, one rung per tierScale rung. Six rungs
+  //    against nine of scaling meant the hardest fight in the game was
+  //    piloted exactly as well as tier 5 while hitting 2.3x stats.
+  {
+    assert.ok(Array.isArray(content.aiSkillByTier), 'enemies.json carries the ladder');
+    assert.equal(content.aiSkillByTier.length, content.tierScale.length,
+      `one skill rung per scaling rung (${content.aiSkillByTier.length} vs ${content.tierScale.length})`);
+    for (const enc of Object.values(content.encounters)) {
+      if (enc.tier == null) continue;
+      assert.ok(content.aiSkillByTier[enc.tier] != null,
+        `${enc.id}'s tier ${enc.tier} has a skill rung`);
+    }
+    // It rises, and the top of the ladder is genuinely above the middle.
+    const ladder = content.aiSkillByTier;
+    for (let i = 2; i < ladder.length; i++) {
+      assert.ok(ladder[i] >= ladder[i - 1], `the ladder never goes backwards at rung ${i}`);
+    }
+    assert.ok(ladder[ladder.length - 1] > ladder[5],
+      `and the top rung is played better than tier 5 (${ladder[ladder.length - 1]} vs ${ladder[5]})`);
+    // A new rung is a JSON edit. This is the CLAUDE.md rule, exercised.
+    const grown = { ...content, aiSkillByTier: [...ladder, 0.99] };
+    assert.equal(skillFor({ tier: ladder.length }, grown), 0.99,
+      'a tier the data adds is piloted without an engine edit');
+    assert.notEqual(skillFor({ tier: 6 }, content), skillFor({ tier: 6 }, { ...content, aiSkillByTier: null }),
+      'and the data ladder is what the engine reads, not the fallback');
+    // The fallback is still honest for a caller with no bundle.
+    assert.equal(skillFor({ tier: 3 }), SKILL_BY_TIER[3], 'no content, no crash');
+    assert.equal(skillFor({ rivalId: 'x', tier: 8 }, content), RIVAL_SKILL, 'a rival still brings its A game');
+    const src = readFileSync(join(root, 'battle/engine.js'), 'utf8').replace(/\/\/.*$/gm, '');
+    assert.ok(/skillFor\(encounter, content\)/.test(src), 'and the engine hands it the bundle');
+  }
+}
+
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

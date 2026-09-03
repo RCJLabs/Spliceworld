@@ -545,7 +545,7 @@ export function createBattle(chimeras, encounter, content, seed, now, context = 
     enemyScale: tierScaleFor(encounter, content),
     // How well the opposition plays, fixed at the top of the fight so a
     // mid-battle reload resumes against the same opponent it started against.
-    aiSkill: skillFor(encounter),
+    aiSkill: skillFor(encounter, content),
     log: [],
   };
   // Call, then response. A duel that is only ever monologued AT is a wall
@@ -1139,10 +1139,19 @@ export function step(battle, action, content) {
     handlePlayerKO(battle, events);
   }
 
-  if (!battle.over && !battle.pendingReplace) {
+  if (!battle.over) {
+    // R67: end-of-turn runs even when a replacement is pending. It skips
+    // anything already at zero, so the creature that just went down takes
+    // nothing — but the ENEMY's venom, bleed, regen and stamina all still
+    // tick, and skipping them handed a player cycling a deep bench a free
+    // round of every effect they had spent turns applying. Measured: 74
+    // damage of venom and bleed on a quiet turn, 0 on the turn a chimera
+    // went down.
     endOfTurn(battle, events);
     handleEnemyKO(battle, events, content);
-    handlePlayerKO(battle, events);
+    // …but the KO itself has already been announced and the prompt already
+    // raised, so it is not announced twice.
+    if (!battle.pendingReplace) handlePlayerKO(battle, events);
   }
   battle.turn++;
   battle.log.push(...events.texts());
