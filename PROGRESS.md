@@ -1,5 +1,76 @@
 # PROGRESS
 
+## Session 87 — R64: being away is strictly profitable ✅
+
+**Acceptance criterion:** one `now` per tick and one elapsed clock per save;
+elapsed time resolves the contests it contained, capped with a mercy; a gate
+replays 30 days away against 30 days of daily play and asserts the absent
+save is not ahead — **passes**. `SAVE_VERSION` → **35** (the campaign's
+second clock is folded into the one clock). `sw.js` cache → `v35-clock`.
+
+### Measured first, with the R63 walker
+- Thirty days closed on the day the app shut banked a **full month of pay**
+  and met **one convoy** against the daily player's **21–26**; the only cost
+  was stock condition at the floor.
+- The two-clock forgiveness was exact: a $200 save with $72/day upkeep and
+  $340/day income came back **$760 richer** after one thirty-day tick than
+  after 720 hourly ones — the upkeep the zero-clamp forgave before income
+  landed.
+
+### Shipped
+- **`campaign/world.js`** — `tickWorld(state, content, now)`: income before
+  upkeep, one clamp, one clock (`state.lastTickAt`), every passive system in
+  one order. `main.js` reads `NOW()` once and no longer ticks systems itself;
+  the walker ticks through the same function, so a browser tick and a walk
+  tick are the same tick. `applyElapsed` and `tickCampaign` take `since`.
+- **Migration 35** — `campaign.lastTickAt` is deleted; a missing ranch clock
+  takes its value so the gap is neither charged nor paid twice.
+- **The schedule replays through an absence** (`contest.js`): each convoy
+  arrives when due, waits `windowHours`, leaves without taking anything; the
+  next rolls a cooldown after it left; only one still inside its window is
+  waiting on return, with its full window from then (R9's rule untouched).
+  `tickContests` returns `{ news, missed }`; `tickCampaign` prices the missed
+  convoys' windows and pays a waiting convoy's node until it arrived. One
+  wire line summarises the ones that came and went (`news.missed`).
+- **Measured after:** a month away banks **84–95%** of full pay (88 / 84 / 95
+  on three seeds), the world moved as much as it did for the daily player
+  (24 vs 21, 26 vs 26 convoys), no node is lost unseen, at most one convoy
+  waits.
+- **Gates:** tick() reads the clock once and calls nothing but `tickWorld`;
+  no module reads the second clock; hourly and monthly ticks agree on the
+  poor save; migration folds the clock; a week away replays about six
+  convoys deterministically, each waited exactly its window, none took a
+  node; the week is priced to the dollar as full pay minus the windows, and
+  a zero window (the broken number) makes it full pay again; the 30-day walk
+  on two seeds is under full pay, over half, same convoys, same nodes.
+
+### Corrected from session 86
+- R63's gate used "no veterancy → 3 nodes" as its broken number. Once the
+  walk ticked every passive system the browser does, the same fixture read
+  21 and 21 with dominion — and ticking scars alone flipped one seed while
+  temperaments alone flipped the other. An unlevelled roster sits on a
+  knife-edge at the Precinct; the oracle now doubles every garrison
+  (24 nodes against 81), which is monotone. ROADMAP's R63 line is corrected.
+  Flattening the class triangle, incidentally, makes the walk *easier*
+  (84/84, dominion on every seed by day 103): the class check is the wall.
+
+### Discarded on measurement
+- A first cut capped **catch-up convoys at three, parked until return**, with
+  income suspended from arrival. Three convoys arriving within two days of
+  the first and sitting for 28 turned a month away into a fine (funds fell
+  below what was left in the bank). Replaced by the replay, which is what a
+  watching player would have seen.
+
+### Known issues
+- The walker's day-30 leave snapshot is taken after that day's actions;
+  `snapshots[day]` remain "after tick, before act". Documented in `sim.js`.
+- Next in §9.4: **R65 — timers anchored to the return time** (job cooldowns
+  and failure injuries in `operations.js`).
+
+### Next session's first task
+R65. Start from `operations.js:332` and `:371`; the R64 walker's `away`
+option already reproduces the week-away case, so the gate can be walked.
+
 ## Session 86 — R63: the contest treadmill, measured honestly ✅
 
 **Acceptance criterion (as restated by the measurement):** the walk reaches

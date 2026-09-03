@@ -464,26 +464,42 @@ The queue is a proposal: prune it before starting R63.
   wider set. Then the contest dials were measured: a cap changed nothing,
   a decay made it worse (the record also spaces the schedule), a grace
   period was noise, and a first defence at **300%** still cost under a
-  quarter of the map. Switch veterancy off and the same walker holds
-  **3 nodes**. Shipped: the walker, `escalationMax: 2` as insurance
-  against the 330% tail, `defend` and `rescue` on the agenda, and a gate
-  that pins all of it — including that contests are pressure and levels
-  are the ladder. *Done when (as restated by the measurement): the walk
-  reaches dominion on a realistic diet, the two clocks that cost a node or
-  a creature are on the agenda, escalation has a ceiling, and the walk is
-  a gate that a broken veterancy number fails.*
-- **R64 — Being away is strictly profitable.** Thirty days closed: **+$190
-  a day banked, zero contests** (the tick resolves one contest regardless
-  of elapsed time), the captive dissected, animals at the condition floor
-  of 25. A daily player fights ~25 contests in that month; the absent one
-  fights none and keeps the income. Underneath it, `main.js` reads `NOW()`
-  **seven times in one tick**, and two elapsed clocks disagree:
-  `state.lastTickAt` charges upkeep clamped at zero while
-  `campaign.lastTickAt` pays income unclamped, so a long absence forgives
-  debt the daily player pays. *Done when: one `now` per tick and one elapsed
-  clock per save; elapsed time resolves the contests it contained, capped
-  with a mercy; and a gate replays 30 days away against 30 days of daily
-  play and asserts the absent save is not ahead.*
+  quarter of the map, while every garrison at twice its strength holds
+  the walk under a third of it (**24 nodes against 81**). (Veterancy off
+  read **3 nodes** at the time; R64 found that a knife-edge — once the walk
+  ticked every passive system the browser does, the same fixture cleared
+  the map, and either scars or temperaments alone could flip a seed — so
+  the doubled garrison is the oracle that shipped.) Shipped: the walker,
+  `escalationMax: 2` as insurance against the 330% tail, `defend` and
+  `rescue` on the agenda, and a gate that pins all of it — including that
+  contests are pressure and the fights' own numbers are the wall. *Done
+  when (as restated by the measurement): the walk reaches dominion on a
+  realistic diet, the two clocks that cost a node or a creature are on the
+  agenda, escalation has a ceiling, and the walk is a gate that a broken
+  garrison number fails.*
+- **R64 — Being away is strictly profitable** *(shipped, premise
+  narrowed).* Measured with the R63 walker: thirty days closed, from the same
+  save on the day the app shut, banked a **full month of pay**, met **one
+  convoy** on return against the **21–26** a daily player fought, and lost
+  nothing but stock condition. Underneath it two elapsed clocks disagreed:
+  `main.js` read `NOW()` seven times in one tick, the ranch charged a
+  month's upkeep from `state.lastTickAt` and clamped at zero, then the
+  campaign paid a month's income from `campaign.lastTickAt` — so a poor save
+  came back **$760 richer** than the same save played hourly, exactly the
+  upkeep the clamp forgave. Shipped: one `now`, one clock, one order
+  (`campaign/world.js`, which the shell and the walker both tick through;
+  the second clock is folded in by SAVE_VERSION 35), and the schedule
+  replays through the gap — each convoy arrives when it was due, waits its
+  window, leaves without taking anything, and the node it sat on paid
+  nothing meanwhile; only one still inside its window is waiting on return,
+  with its full window from then. Walked: a month away now banks **84–95%**
+  of full pay and the world moved as much as it did for the daily player
+  (**24 vs 21, 26 vs 26** convoys). *Done when: one `now` per tick and one
+  elapsed clock per save; elapsed time resolves the contests it contained,
+  capped with a mercy; and a gate replays 30 days away against 30 days of
+  daily play and asserts the absent save is not ahead* — **passes**, with
+  "not ahead" read as: less than full pay, more than half of it, every node
+  it left with, and the same number of convoys.
 - **R65 — Timers that start when you look.** `operations.js:332` anchors a
   job's cooldown to the tick, not to `run.until` — come back after a week
   and the job locks for a fresh six hours; `abortOperation` (`:305`) anchors
