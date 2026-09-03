@@ -11,17 +11,25 @@ import { previewMove } from './engine.js';
 // Skill is a dial, not a switch: at 0 this is the old coin flip, at 1 it
 // always takes the best line. Encounter tier drives it, so a beat cop plays
 // like a beat cop and a Gen-2 response team does not.
+// The fallback ladder, for a caller with no content bundle. The real one is
+// `aiSkillByTier` in enemies.json, beside the `tierScale` it parallels — this
+// array had SIX rungs against nine tiers of scaling, so the hardest fight in
+// the game was piloted at exactly the same skill as tier 5 while hitting 2.3x
+// stats, and a tier 7 encounter (which tierScale already prices) would have
+// needed an engine edit to be piloted properly. CLAUDE.md: if adding content
+// requires an engine edit, the engine is wrong.
 export const SKILL_BY_TIER = [0.15, 0.15, 0.35, 0.55, 0.7, 0.85];
 export const RIVAL_SKILL = 0.9;
 // What a utility move must be worth to beat resting when nothing can swing.
 const STARVED_UTILITY_BAR = 22;
 
-export function skillFor(encounter) {
+export function skillFor(encounter, content = null) {
   if (!encounter) return 0.5;
   if (encounter.rivalId) return RIVAL_SKILL;
   const t = encounter.tier;
   if (t == null) return 0.5;
-  return SKILL_BY_TIER[Math.max(0, Math.min(SKILL_BY_TIER.length - 1, t))];
+  const ladder = content?.aiSkillByTier?.length ? content.aiSkillByTier : SKILL_BY_TIER;
+  return ladder[Math.max(0, Math.min(ladder.length - 1, t))];
 }
 
 // How much a status is worth is mostly "is it already there" — the single

@@ -555,18 +555,25 @@ The queue is a proposal: prune it before starting R63.
   has no branch the suite cannot reach* — **passes**, all seven benched cases
   within **1% on damage and 1pp on accuracy**, and every call site is swept
   for the turn.
-- **R67 — The KO turn skips end-of-turn for both sides.** `engine.js:1106`
-  runs `endOfTurn` only when no replacement is pending, and the replacement
-  action returns early (`:999–1005`) without it — venom, bleed, regen and
-  stamina recovery all skip a round whenever the player's active goes
-  down, so cycling a deep bench denies the enemy every tick it applied.
-  Also here: `SKILL_BY_TIER` is a **6-entry array in the engine** while
-  `enemies.json` prices **9 tiers** and fields tier 6, so the hardest
-  fight in the game is piloted at tier-5 skill and a tier-7 encounter is an
-  engine edit — the CLAUDE.md rule, broken in the one module that most
-  needs it. *Done when: the enemy's half of end-of-turn runs on the KO turn,
-  the skill ladder is data, and a gate plays a KO turn and asserts the
-  poison ticked.*
+- **R67 — The KO turn skips end-of-turn for both sides** *(shipped).*
+  `endOfTurn` sat behind `!battle.pendingReplace`, so the round a chimera
+  went down ticked nothing: venom, bleed, regen and stamina recovery all
+  skipped, **for both sides**. Measured on a foe carrying three venom and two
+  bleed: **74 damage on an ordinary turn, 0 on the turn a chimera went
+  down** — a player cycling a deep bench got a free round of every effect
+  they had spent turns applying. It now runs whenever the battle is live;
+  `endOfTurn` already skips anything at zero, so the creature that just went
+  down still takes nothing, and the KO is announced once rather than twice.
+  Alongside it, `SKILL_BY_TIER` was a **six-rung array in the engine against
+  nine rungs of `tierScale` in the data**, so tiers 6–8 were all piloted
+  exactly as well as tier 5 while hitting up to 2.3× stats, and a tier 7
+  encounter — which `tierScale` already prices — would have needed an engine
+  edit to be piloted properly. `aiSkillByTier` now sits in `enemies.json`
+  beside the curve it parallels, nine rungs, with the old array kept as the
+  fallback for a caller with no bundle. Benched: the Spire is unmoved
+  (47/69/47/53/34/63 across archetypes at apex). *Done when: the enemy's half
+  of end-of-turn runs on the KO turn, the skill ladder is data, and a gate
+  plays a KO turn and asserts the poison ticked* — **passes**.
 - **R68 — 244 parts on 65 moves.** Tails: **40 parts, 6 moves, 35 of them
   the identical `{evasionUp: 1}`**; hides: **21 identical thorns**. Eight
   signature abilities the roadmap promises never shipped — the goat's *Iron
