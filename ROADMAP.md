@@ -914,16 +914,70 @@ The queue is a proposal: prune it before starting R63.
   grouping still read a class id straight off an ENEMY record. *Done when:
   the R72 fixture also retires one species, one frame, one enemy, one region
   node and one class, and every screen and the sim still run.*
-- **R73 — Tap targets and focus at 380 px.** Per screen, **8–14 controls
-  under 40 px**: mute 24 h, field-note dismiss 26 h, agenda chip 28 h, row
-  buttons 31–33 h; the nav is ~36 h with no `aria-current`; focus rings are
-  absent (`outline: none`, `style.css:2104`); zero `aria-live` regions, so
-  the wire never reaches a screen reader; `#overlay` has no dialog role and
-  no Escape; the save-import label is unfocusable; the Dex sheet's disabled
-  state sits at ~3.1:1. This ships as a TWA. *Done when: every control is
-  at least 40 px at 380 px, focus is visible, the wire is a live region,
-  the overlay is a dialog, and a Playwright pass measures bounding boxes
-  and fails below the floor.*
+- **R73 — Tap targets and focus at 380 px.** ✅ *Shipped.*
+  Re-measured rather than trusted: the entry's own list was stale (it costed
+  a mute button R71 had already replaced). A real headless pass at 380 px
+  found **21 of 46 distinct controls under the floor**, the worst a **15×21**
+  rename button that was also a raw `✏️` — emoji-as-art, which R70's block
+  test could not see because a Dingbat wearing U+FE0F is not in the emoji
+  block. It is a procedural pencil now, and that gate reads the variation
+  selector too.
+  - **The floor is stated once.** A `min-height`/`min-width` added to the
+    fifteen selectors that were wrong would have fixed fifteen and missed the
+    sixteenth somebody adds next phase — which is how the floor got to 15 px
+    in the first place. One rule over `button, summary, label[for],
+    [role="button"], select, input`, with the box-sizing and flex centring
+    that make a 40 px box actually contain its label. Verified against
+    controls the walk never reaches: the field-note dismiss and the battle
+    log button, authored 26×26 and 30×30, both compute to 40×40 without
+    being named anywhere.
+  - **`outline: none` had no replacement anywhere in the file.** One
+    `:focus-visible` ring now, two-tone so it survives all five themes, and
+    the gate presses a real Tab to check it — measuring after a programmatic
+    `.focus()` reports "no ring" on a page whose ring is fine, which the
+    first version of that check did.
+  - **The overlay is a dialog in ONE place.** Nine call sites across five
+    modules open it by hand (`overlay.hidden = false`), so the behaviour
+    watches the element instead of asking nine authors to remember: name
+    from the heading, focus in, Escape, Tab trapped, and focus **restored to
+    the opener** — the half that is always forgotten. The first draft of it
+    restored focus only down its own Escape path, and every Close button in
+    the game silently kept the old behaviour.
+  - **A dead custom property, in four rules.** `var(--bg)` — never defined,
+    in any theme — silently fell back to `inherit`, so two chips designed as
+    dark-ink-on-lime rendered muted-grey-on-lime and measured **1.91:1**. A
+    new gate reads every `var()` against every definition and found a second
+    one the first grep missed (`--text-dim`, three more rules). Disabled
+    controls went from 2.35:1 to 4.03:1, because a disabled button's label is
+    usually the sentence saying *why* it is disabled.
+  *Done when: every control is at least 40 px at 380 px, focus is visible,
+  the wire is a live region, the overlay is a dialog, and a Playwright pass
+  measures bounding boxes and fails below the floor.* ✅ — with one
+  substitution: **no Playwright.** CLAUDE.md's no-dependencies rule is
+  absolute, and Node 22 ships a global `WebSocket`, so `tools/a11y.js`
+  (`npm run a11y`) drives headless Chromium over CDP in ~40 lines, serves
+  the repo itself, launches its own browser, and needs no argument. It
+  measures every control across eight views and asserts the four semantic
+  halves as well, because a gate that measured boxes and ignored semantics
+  would pass a game no keyboard could play. Proven both ways: it exits 1
+  with 28 named problems against the pre-R73 stylesheet.
+- **R80 — The keyboard can see the game but not play it.** R73 made focus
+  visible and the two modals real dialogs; an adversarial four-dimension
+  audit found the barriers that survive. **Focus is destroyed on a timer:**
+  `main.js`'s `tick()` re-renders the active screen every 30 s and every
+  render function replaces `innerHTML` wholesale, so a keyboard user is
+  returned to the top of the document twice a minute; the same happens on
+  every subtab activation (`ui/tabs.js:37`), every retraining toggle
+  (`pens-ui.js:468`) and every strike-team pick (`campaign/ui.js:996`).
+  **Controls that are not controls:** the battle's opening exchange advances
+  by clicking a `<div>` (`battle/ui.js:221`), and the move-detail sheet opens
+  on `pointerdown` only. **Nothing announces:** the settings panel's own
+  result message, the retraining counter and the battle log are all plain
+  text that changes silently. **Spacing:** picker rows sit 5 px apart, the
+  Dex subtab strip 4 px, and Train sits directly beside Dismantle — under
+  the 8 px the same audit measured everywhere else. *Done when: no render
+  loses focus, every control is a real control, state changes announce, and
+  `tools/a11y.js` walks the app by keyboard alone.*
 - **R74 — The briefing runs 64–160 battles per checkbox.** `campaign/ui.js`
   calls `forecast` and then `diagnose`, whose first act is the same
   `forecast` again, and on a losing band two more 32-battle sweeps —

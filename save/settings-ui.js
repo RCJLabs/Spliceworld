@@ -142,7 +142,12 @@ export function openSettings(overlay, ctx) {
         <p class="fine-print">This game lives in this browser. Clear the site data, change phones, or
           reinstall, and it is gone — unless you have carried it out first.</p>
         <button type="button" class="care-train" id="set-export">⬇ Download my save</button>
-        <label for="set-import-file" class="care-train" id="set-import">⬆ Load a save file…</label>
+        <!-- R73: a <label for> is never in the tab order and never fires on
+             Enter, so the one control that carries a save back INTO the game
+             was reachable by touch and mouse only. A button that forwards the
+             click to the hidden input is focusable, Enter- and Space-
+             activated, and announces itself as a button. -->
+        <button type="button" class="care-train" id="set-import">⬆ Load a save file…</button>
         <input type="file" id="set-import-file" accept="application/json,.json" hidden>
 
         ${msg ? `<p class="ranch-msg settings-note">${msg}</p>` : ''}
@@ -238,6 +243,10 @@ export function openSettings(overlay, ctx) {
     overlay.querySelector('#set-export').addEventListener('click', () => {
       downloadSave();
       render(`Saved as ${exportFilename(state)}. Keep it somewhere that is not this phone.`);
+    });
+
+    overlay.querySelector('#set-import').addEventListener('click', () => {
+      overlay.querySelector('#set-import-file').click();
     });
 
     overlay.querySelector('#set-import-file').addEventListener('change', async (e) => {

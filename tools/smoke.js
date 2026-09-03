@@ -12985,8 +12985,20 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       ['battle/ui.js', "() => '💤'"],
       ['battle/ui.js', "() => '🛡'"],
     ];
+    // R73 extends the block test with the OTHER way a colour picture reaches
+    // a screen: any glyph followed by U+FE0F, the variation selector that
+    // FORCES emoji presentation. R70 deliberately let the Dingbats block
+    // through because this codebase uses ✓ ★ → as compact typography — but
+    // `✏️` is a Dingbat wearing U+FE0F, so it rendered as a colour pencil and
+    // walked straight past the block test. It was the rename button on two
+    // screens, and at 15x21 it was also the smallest control in the game.
+    // The selector is the tell: typography never asks for emoji presentation.
+    const FORCED_EMOJI = /(.)\uFE0F/gu;
     const hits = [];
     for (const [file, text] of uiFiles) {
+      for (const m of text.matchAll(FORCED_EMOJI)) {
+        hits.push(`${file}: "${m[1]}\uFE0F" is a glyph forced to emoji presentation by U+FE0F`);
+      }
       let masked = text;
       for (const [f, phrase] of ALLOWED) {
         if (f === file) masked = masked.split(phrase).join(' '.repeat(phrase.length));
@@ -14953,6 +14965,52 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.deepEqual(offenders, [],
       `no module re-hardcodes the class list (${offenders.join(', ')}) — read content.classes`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// R73 — a custom property that was never defined. `var(--bg)` appeared in
+// four rules in style.css and `--bg` has never existed in any theme block:
+// CSS does not warn, it just falls back to `inherit`, so two chips designed
+// as dark-ink-on-lime rendered as muted-grey-on-lime and measured 1.91:1 in
+// a real browser. Nothing in the suite could see it, because it is not a
+// syntax error and not a JS reference — it is a name that resolves to
+// nothing, quietly, in every theme at once.
+{
+  // Comments are stripped first: this file explains its own palette at
+  // length, and a rule's comment naming the variable it replaced would
+  // otherwise fail the gate that comment exists to describe.
+  const css = readFileSync(join(root, 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  // Every property this file DEFINES, anywhere — the five theme blocks each
+  // redefine the palette, so the union is the vocabulary.
+  const defined = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]));
+  // …and every one it READS. A var() may carry a fallback, which is a
+  // deliberate default rather than a typo, so those are exempt.
+  const used = [...css.matchAll(/var\(\s*(--[\w-]+)\s*([,)])/g)]
+    .filter((m) => m[2] === ')')
+    .map((m) => m[1]);
+  const undefinedVars = [...new Set(used.filter((v) => !defined.has(v)))].sort();
+  assert.deepEqual(undefinedVars, [],
+    `every var() names a property style.css defines (${undefinedVars.join(', ')})`);
+
+  // The R73 semantics, asserted on the shell rather than only in the browser
+  // pass, so a suite run with no Chromium available still catches a
+  // regression that removes them.
+  const html = readFileSync(join(root, 'index.html'), 'utf8');
+  assert.ok(/id="ticker"[^>]*aria-live="polite"/.test(html), 'the news wire is a live region');
+  assert.ok(/id="overlay"[^>]*role="dialog"/.test(html), 'the overlay is a dialog');
+  assert.ok(/id="overlay"[^>]*aria-modal="true"/.test(html), 'and a modal one');
+  const shell = readFileSync(join(root, 'main.js'), 'utf8');
+  assert.ok(/aria-current/.test(shell), 'the nav says which screen you are on');
+  assert.ok(/installDialogBehaviour/.test(shell), 'the dialog behaviour is installed centrally');
+  // The floor, and the ring, exist as rules at all.
+  assert.ok(/min-height:\s*40px/.test(css), 'the 40px floor is stated in the stylesheet');
+  assert.ok(/:focus-visible\s*\{[^}]*outline:/.test(css), 'focus draws a visible outline');
+  assert.ok(!/outline:\s*none/.test(css), 'and nothing takes it away again');
+  // A <label for> cannot be tabbed to or activated with Enter, so it must
+  // never be the only control for an action. This is the save-import button.
+  const panel = readFileSync(join(root, 'save/settings-ui.js'), 'utf8');
+  assert.ok(!/<label for="set-import-file"/.test(panel),
+    'the save-import control is a button, not an unfocusable label');
 }
 
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

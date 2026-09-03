@@ -16,7 +16,7 @@
     <p class="tagline">Ethically ambiguous genetics. Family-friendly results.™</p>
   </header>
 
-  <nav class="tabs" id="tabs">
+  <nav class="tabs" id="tabs" aria-label="Screens">
     <button type="button" data-screen="ranch">Ranch</button>
     <button type="button" data-screen="pens">Pens</button>
     <button type="button" data-screen="vault">Vault</button>
@@ -34,11 +34,11 @@
     <div id="screen-dex" class="screen" hidden></div>
   </main>
 
-  <div id="overlay" class="overlay" hidden></div>
+  <div id="overlay" class="overlay" role="dialog" aria-modal="true" hidden></div>
   <div id="picker" class="picker-host" hidden></div>
 
   <footer>
-    <p id="ticker" class="ticker"></p>
+    <p id="ticker" class="ticker" role="status" aria-live="polite"></p>
     <button type="button" id="settings" class="icon-btn" aria-label="Settings — sound, theme, save, labs"></button>
   </footer>
 

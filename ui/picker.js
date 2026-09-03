@@ -63,9 +63,24 @@ export function openPicker({ title, subtitle, groups, selectedId, onPick }) {
       <div class="pick-list">${body || '<p class="ranch-msg">Nothing to choose from yet.</p>'}</div>
     </div>`;
 
-  const onKey = (e) => { if (e.key === 'Escape') closePicker(); };
+  // R73 — the sheet already CLAIMED to be a modal dialog (role, aria-modal,
+  // a label) and behaved like a div: nothing moved focus into it, so a
+  // keyboard user opened a picker and stayed exactly where they were, tabbing
+  // through the page behind it. `aria-modal` is a promise; these three make
+  // it true — focus in, Tab kept inside, focus back to the opener on close.
+  const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const onKey = (e) => {
+    if (e.key === 'Escape') { closePicker(); return; }
+    if (e.key !== 'Tab') return;
+    const items = [...host.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
   document.addEventListener('keydown', onKey);
-  openSheet = { host, onKey };
+  openSheet = { host, onKey, opener: document.activeElement instanceof HTMLElement ? document.activeElement : null };
 
   host.querySelectorAll('[data-close]').forEach((el) =>
     el.addEventListener('click', () => closePicker())
@@ -77,7 +92,13 @@ export function openPicker({ title, subtitle, groups, selectedId, onPick }) {
       onPick(value);
     })
   );
-  host.querySelector('.pick-row.is-selected')?.scrollIntoView({ block: 'center' });
+  // The selected row is where the player's attention already is, so it is
+  // where focus goes; failing that, the first thing they can act on.
+  const landing = host.querySelector('.pick-row.is-selected:not([disabled])')
+    ?? host.querySelector('.pick-row:not([disabled])')
+    ?? host.querySelector('.pick-close');
+  landing?.scrollIntoView({ block: 'center' });
+  landing?.focus();
 }
 
 // R41: a one-field text sheet in the same chrome as the picker — the OS
@@ -124,9 +145,12 @@ export function openPrompt({ title, label, value = '', maxLength = 24, onSubmit 
 export function closePicker() {
   if (!openSheet) return;
   document.removeEventListener('keydown', openSheet.onKey);
+  const { opener } = openSheet;
   openSheet.host.hidden = true;
   openSheet.host.innerHTML = '';
   openSheet = null;
+  // Back where they came from, not the top of the document.
+  if (opener && document.contains(opener)) opener.focus();
 }
 
 // Wire every pickerField in a container. specs: { [id]: () => pickerConfig }

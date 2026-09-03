@@ -508,7 +508,7 @@ export function renderRanchScreen(root, ctx) {
       <section class="card animal-card">
         <div class="portrait">${portrait}</div>
         <div class="animal-info">
-          <h4>${animal.name} <button type="button" class="rename-btn" data-rename="${animal.id}" aria-label="Rename ${animal.name}">✏️</button> <span class="sex">${animal.sex === 'F' ? '♀' : '♂'}</span>${
+          <h4>${animal.name} <button type="button" class="rename-btn" data-rename="${animal.id}" aria-label="Rename ${animal.name}">${renderIcon('pencil', { size: 15 })}</button> <span class="sex">${animal.sex === 'F' ? '♀' : '♂'}</span>${
             isVariant(animal.species, content) ? ' <span class="variant-badge">✦ variant</span>' : ''
           }${(animal.traits ?? [])
             .map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`)
