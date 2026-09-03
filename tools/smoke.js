@@ -99,7 +99,28 @@ const content = indexContent({
   scars: readJSON('data/scars.json'),
   guides: readJSON('data/guides.json'),
   resequencer: readJSON('data/resequencer.json'),
+  news: readJSON('data/news.json'),
 });
+
+// R62: a line on the wire is one of the phrasings news.json authors for that
+// event. Asserted by matching the authored line's literal fragments in order,
+// so a gate about "did the world say this" survives a rewording and does not
+// quietly pin the copy to whatever phrase somebody grepped for once.
+const saysEvent = (line, event) => {
+  const spec = content.news[event];
+  if (!spec || !line) return false;
+  const pools = [spec.lines ?? [], ...Object.values(spec.by ?? {})];
+  return pools.some((pool) => pool.some((authored) => {
+    let at = 0;
+    for (const frag of authored.split(/\{\w+\}/).map((f) => f.trim()).filter((f) => f.length > 3)) {
+      const found = line.indexOf(frag, at);
+      if (found < 0) return false;
+      at = found + frag.length;
+    }
+    return true;
+  }));
+};
+const wireSays = (news, event) => news.map((n) => n.text ?? n).some((l) => saysEvent(l, event));
 
 // --- Content coherence: every part references a real species + slot.
 for (const part of Object.values(content.parts)) {
@@ -5810,6 +5831,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'enemies.json': null,
     'philosophies.json': null,
     'guides.json': null,
+    // R62: the wire's copy is not a system with a first-use moment — it is
+    // the voice every system above speaks in, met through all of them and
+    // never on its own. Its own gate is the two-way one: every event has
+    // copy, every line has an emitter.
+    'news.json': null,
   };
   {
     const files = readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json')).sort();
@@ -5864,6 +5890,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'splice/theater.js': 'combos',
     'splice/dexentry.js': 'dex',
     'campaign/warroom.js': 'regions',
+    'campaign/wire.js': 'regions',
 
     // --- The shell and the save. Not systems; the ground everything
     // stands on.
@@ -8872,10 +8899,20 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // 8. It is a milestone, not an ending: the same breath says the coalition
   //    keeps coming, because R9 is what stops the map going quiet.
   {
+    // R62 moved the sentence to news.json, so the anchor moved with it — and
+    // the claim is CALLED now rather than grepped: the event actually
+    // resolves to a line, and that line says the fighting continues.
+    const { newsFor } = await import('../campaign/wire.js');
+    const said = newsFor({ ...newGameState(), seed: 4 }, content, 'dominion_continues');
+    assert.ok(said, 'taking the county says something about what comes next');
+    assert.ok(/continue|reschedul|quarterly review/i.test(said),
+      `and what it says is that the fighting continues (${said})`);
+    // Every phrasing in the pool, not just the one this seed drew.
+    for (const line of content.news.dominion_continues.lines) {
+      assert.ok(!/game over|the end|you win/i.test(line), `no phrasing calls it an ending (${line})`);
+    }
     const src = readFileSync(join(root, 'campaign/campaign.js'), 'utf8');
-    assert.ok(/Counter-offensives continue/.test(src),
-      'the announcement says the fighting continues');
-    assert.ok(!/game over|the end|you win/i.test(src), 'and never calls it an ending');
+    assert.ok(!/game over|the end|you win/i.test(src), 'and the engine never calls it an ending either');
   }
 
   // 9. The save carries it, and an old one migrates without losing anything.
@@ -8915,7 +8952,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(done.dominionAt, null, 'they arrive not yet told');
     tickCampaign(done, content, t0);
     assert.equal(done.dominionAt, t0, 'and the tick that runs on load tells them');
-    assert.ok(done.news.some((n) => /THE COUNTY IS YOURS/.test(n.text ?? n)),
+    assert.ok(wireSays(done.news, 'dominion'),
       `and it reaches the wire (${JSON.stringify(done.news.slice(-3))})`);
     // …once, not on every tick thereafter.
     const before = done.news.length;
@@ -9227,7 +9264,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(st.campaign.notoriety, notorietyBefore, 'with no notoriety — an exhibition is not a conquest');
     const news = st.news.map((n) => n.text ?? n).join(' | ');
     assert.ok(news.includes(finale.news), `the stage news reaches the wire`);
-    assert.ok(/THE GAUNTLET IS CLEARED/.test(news), 'and the fourth closes the set');
+    assert.ok(wireSays(st.news, 'gauntlet_cleared'), 'and the fourth closes the set');
     const before = st.news.length;
     const again = createBattle([team[0]], enc, content, 8, t0, { kind: 'gauntlet' });
     again.outcome = 'win'; again.over = true;
@@ -12211,6 +12248,233 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     for (const [phrase, why] of IDIOMS) {
       assert.ok(haystack.includes(phrase), `the "${phrase}" exemption still applies to something (${why})`);
     }
+  }
+}
+
+// --- R62: the news wire, as a system.
+//
+// CLAUDE.md: "All content is data. Adding content must never require engine
+// edits. If it does, the engine is wrong — fix the engine." The wire broke
+// it outright — seventeen player-facing sentences lived inside campaign.js
+// and rehab.js, so a new world-reaction was an engine change.
+//
+// It was also LYING. regions.json authors an `announce` line per threat
+// rung, including a distinct one for Generation 3, and nothing read either:
+// the engine pushed a hardcoded Gen 2 sentence for every rung-up. A player
+// reaching Gen 3 was told they had reached Gen 2, and the authored Gen 3
+// line had never once played.
+{
+  const { newsFor, poolFor, placeholdersIn, emitNews } = await import('../campaign/wire.js');
+  const engineFiles = ['campaign/campaign.js', 'campaign/rehab.js', 'campaign/contest.js',
+    'campaign/operations.js', 'campaign/gauntlet.js', 'campaign/director.js', 'campaign/rivals.js',
+    'campaign/sparring.js', 'campaign/wire.js'];
+  const src = Object.fromEntries(engineFiles.map((f) => [f, readFileSync(join(root, f), 'utf8')]));
+  const allCode = Object.values(src).join('\n');
+  const copy = content.news;
+
+  // Every emit in the engine, with the params it hands over.
+  const emits = [];
+  for (const [file, text] of Object.entries(src)) {
+    for (const m of text.matchAll(/(?:emitNews|newsFor)\s*\(\s*state\s*,\s*content\s*,\s*'([\w:]+)'\s*(,\s*\{([^}]*)\})?/g)) {
+      const params = (m[3] ?? '').split(',')
+        .map((p) => p.trim().split(':')[0].trim()).filter((p) => /^\w+$/.test(p));
+      emits.push({ file, event: m[1], params });
+    }
+  }
+
+  // 1. THE CRITERION, first direction: every event the engine emits has copy.
+  {
+    assert.ok(emits.length >= 12, `the scan found the emitters (${emits.length})`);
+    const missing = [...new Set(emits.map((e) => e.event))].filter((id) => !copy[id]);
+    assert.deepEqual(missing, [], `every emitted event has copy in news.json (${missing.join(', ')})`);
+  }
+
+  // 2. …and the other direction: every line authored has an emitter. R20's
+  //    invariant — authored content with no caller is the bug this repo
+  //    keeps re-finding — pointed at the wire.
+  {
+    const emitted = new Set(emits.map((e) => e.event));
+    const orphans = Object.keys(copy).filter((id) => !emitted.has(id));
+    assert.deepEqual(orphans, [], `every event in news.json is emitted somewhere (${orphans.join(', ')})`);
+    assert.ok(Object.keys(copy).length >= 15, `and the file actually carries copy (${Object.keys(copy).length} events)`);
+  }
+
+  // 3. No engine module writes a sentence. `pushNews` and `emitNews` take an
+  //    event, or a line another system already produced — never a literal.
+  {
+    for (const [file, text] of Object.entries(src)) {
+      const literals = [...text.matchAll(/pushNews\s*\(\s*state\s*,\s*(['"`])/g)];
+      assert.deepEqual(literals.map((m) => m[0]), [],
+        `${file} pushes events, not sentences`);
+    }
+    // …and the copy is not quietly duplicated back into the engine. Compared
+    // as WHOLE LINES with the placeholders normalised, not as fuzzy stems: a
+    // first draft matched on the first few words and flagged the phrase
+    // "changes hands" — inside a comment about the Gauntlet. Prose in a
+    // comment is shop talk, and a gate that cannot tell it from copy will be
+    // switched off by whoever hits it next.
+    const shape = (t) => t.replace(/\$\{[^}]*\}|\{\w+\}/g, '{}').replace(/\s+/g, ' ').trim();
+    // A line that is nothing but a placeholder — `threat_rung` is "{announce}",
+    // because the rung's own copy lives in regions.json — normalises to "{}"
+    // and would collide with every lone interpolation in the engine. Only
+    // lines carrying real words can be duplicated in a way worth catching.
+    const hasWords = (t) => t.replace(/\{\}/g, ' ').trim().split(/\s+/).filter(Boolean).length >= 4;
+    const authored = new Set();
+    for (const spec of Object.values(copy)) {
+      for (const pool of [spec.lines ?? [], ...Object.values(spec.by ?? {})]) {
+        for (const line of pool) { const t = shape(line); if (hasWords(t)) authored.add(t); }
+      }
+    }
+    assert.ok(authored.size >= 20, `the duplication check has copy to compare against (${authored.size})`);
+    const STRINGS = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g;
+    for (const [file, text] of Object.entries(src)) {
+      for (const m of text.matchAll(STRINGS)) {
+        const lit = shape(m[1] ?? m[2] ?? m[3] ?? '');
+        assert.ok(!authored.has(lit), `${file} does not keep its own copy of "${lit.slice(0, 50)}…"`);
+      }
+    }
+  }
+
+  // 4. A line and its emitter are two readers of one contract. Copy that
+  //    says {node} and an emitter that passes `nodeName` is a sentence with
+  //    a hole in it — `fill` leaves the hole visible rather than crashing,
+  //    so nothing would have failed at runtime.
+  {
+    const paramsFor = new Map();
+    for (const e of emits) {
+      const set = paramsFor.get(e.event) ?? new Set();
+      for (const p of e.params) set.add(p);
+      paramsFor.set(e.event, set);
+    }
+    const holes = [];
+    for (const [id, spec] of Object.entries(copy)) {
+      const supplied = paramsFor.get(id) ?? new Set();
+      const pools = [spec.lines ?? [], ...Object.values(spec.by ?? {})];
+      for (const pool of pools) {
+        for (const line of pool) {
+          for (const key of placeholdersIn(line)) {
+            if (!supplied.has(key)) holes.push(`${id} asks for {${key}}`);
+          }
+        }
+      }
+    }
+    assert.deepEqual(holes, [], `every placeholder is supplied by its emitter (${holes.join(', ')})`);
+  }
+
+  // 5. Adding a reaction is a JSON edit. Proven by adding one to a COPY of
+  //    the content and watching it print, with no engine change at all.
+  {
+    const invented = {
+      ...content,
+      news: { ...copy, spar_done: { lines: ['The ring is re-chalked by a very small crane.'] } },
+    };
+    const st = { ...newGameState(), seed: 7 };
+    assert.equal(newsFor(st, invented, 'spar_done'), 'The ring is re-chalked by a very small crane.',
+      'a phrasing changed in data changes what the wire says');
+  }
+
+  // 6. The wire is seeded, like everything else in this game: the same save
+  //    tells its story the same way, and a reload cannot reroll it.
+  {
+    const st = { ...newGameState(), seed: 99 };
+    const once = newsFor(st, content, 'node_seized', { node: 'Radio Mast', income: 105 });
+    const twice = newsFor({ ...newGameState(), seed: 99 }, content, 'node_seized', { node: 'Radio Mast', income: 105 });
+    assert.equal(once, twice, 'the same seed and the same event read the same');
+    const elsewhere = newsFor(st, content, 'node_seized', { node: 'Crop-Duster Strip', income: 80 });
+    assert.ok(once && elsewhere, 'both nodes get a line');
+    // A pool that always returns its first entry is a pool in name only.
+    //
+    // Counted as PHRASINGS, not as sentences: the first version of this
+    // collected the filled lines, and eight different node names make eight
+    // different strings out of one template — so pinning the pool to its
+    // first entry sailed through a gate that looked like it was watching for
+    // exactly that. Which authored line was used is the question.
+    const whichLine = (line) => (content.news.node_seized.lines ?? []).findIndex((authored) => {
+      let at = 0;
+      for (const frag of authored.split(/\{\w+\}/).map((f) => f.trim()).filter((f) => f.length > 3)) {
+        const found = line.indexOf(frag, at);
+        if (found < 0) return false;
+        at = found + frag.length;
+      }
+      return true;
+    });
+    const used = new Set();
+    for (const node of ['A Fence', 'B Yard', 'C Lot', 'D Pad', 'E Shed', 'F Barn', 'G Rig', 'H Mill']) {
+      const drawn = newsFor(st, content, 'node_seized', { node, income: 40 });
+      const idx = whichLine(drawn);
+      assert.ok(idx >= 0, `every drawn line traces to an authored one (${drawn})`);
+      used.add(idx);
+    }
+    assert.ok(used.size > 1, `and the pool actually varies (${used.size} of ${content.news.node_seized.lines.length} phrasings used across eight nodes)`);
+  }
+
+  // 7. The philosophy weighting is real: R10's machinery, pointed at the
+  //    campaign. A philosophy with nothing to say about an event falls back.
+  {
+    const withBy = Object.entries(copy).find(([, spec]) => spec.by && Object.keys(spec.by).length);
+    assert.ok(withBy, 'at least one event reacts to who the player is');
+    const [id, spec] = withBy;
+    const who = Object.keys(spec.by)[0];
+    const mine = { ...newGameState(), seed: 3, profile: { philosophy: who } };
+    const plain = { ...newGameState(), seed: 3 };
+    assert.notDeepEqual(poolFor(mine, content, id), poolFor(plain, content, id),
+      `${who} draws from its own pool for ${id}`);
+    assert.deepEqual(poolFor({ ...newGameState(), seed: 3, profile: { philosophy: 'nobody' } }, content, id),
+      spec.lines, 'and an unknown philosophy falls back to the general pool');
+  }
+
+  // 8. THE BUG. Every threat rung the data authors can reach the wire, and
+  //    the line that plays is the one for the rung you actually reached.
+  {
+    const rungs = (content.campaignMeta?.threatGens ?? []).filter((r) => r.announce);
+    assert.ok(rungs.length >= 2, `more than one rung announces itself (${rungs.length})`);
+    const st = { ...newGameState(), seed: 5 };
+    for (const rung of rungs) {
+      const line = newsFor(st, content, 'threat_rung', { announce: rung.announce });
+      assert.equal(line, rung.announce, `Generation ${rung.gen} announces its own line`);
+    }
+    // And the engine no longer carries a rung number of its own.
+    assert.ok(!/Threat Generation \d/.test(src['campaign/campaign.js']),
+      'the engine does not name a threat generation in prose');
+
+    // …and it hands the wire the rung the player ACTUALLY reached. The two
+    // assertions above both pass while the engine looks up the wrong rung —
+    // the battery proved it by pinning the lookup to threatGens[1], which is
+    // the original bug wearing a different coat: the wire faithfully prints
+    // whatever announce it is given. Only walking a real rung-up catches
+    // that, so this one drives resolveBattle and reads the wire.
+    for (const rung of rungs) {
+      const below = rungs.filter((r) => r.gen < rung.gen).pop();
+      const st = { ...newGameState(), seed: 21, funds: 5000 };
+      const nodes = Object.values(content.regions).flatMap((r) => r.nodes);
+      // Everything up to the rung below, so the next node crosses THIS one.
+      st.campaign.notoriety = rung.at - 1;
+      st.campaign.heldNodes = [];
+      const target = nodes.find((n) => n.notoriety > 0 && content.encounters[n.encounter]);
+      assert.ok(target, 'a node that moves the needle');
+      st.campaign.notoriety = rung.at - target.notoriety;
+      if (below) assert.ok(st.campaign.notoriety >= below.at, `the fixture starts on Generation ${below.gen}`);
+      const enc = content.encounters[target.encounter];
+      const battle = createBattle([makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'prime', content)], enc, content, 3, t0,
+        { kind: 'assault', nodeId: target.id });
+      battle.outcome = 'win'; battle.over = true;
+      resolveBattle(st, battle, content, t0);
+      assert.equal(threatGen(st, content), rung.gen, `taking ${target.name} reaches Generation ${rung.gen}`);
+      const said = st.news.map((n) => n.text ?? n).filter((l) => /THREAT LEVEL UP/.test(l));
+      assert.deepEqual(said, [rung.announce],
+        `and the wire says Generation ${rung.gen}'s own line, not another rung's (${said.join(' | ')})`);
+    }
+  }
+
+  // 9. The whole path, end to end: an event emitted lands on the wire.
+  {
+    const st = { ...newGameState(), seed: 11 };
+    const line = emitNews(st, content, 'gauntlet_cleared');
+    assert.ok(line, 'the event resolves to a line');
+    assert.equal(st.news[st.news.length - 1], line, 'and the line is on the wire');
+    const before = st.news.length;
+    emitNews(st, content, 'no_such_event_at_all');
+    assert.equal(st.news.length, before, 'an event with no copy prints nothing rather than "undefined"');
   }
 }
 

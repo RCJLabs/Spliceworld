@@ -4,7 +4,7 @@
 import { indexContent } from '../render/renderer.js';
 
 export async function loadContent(base = '.') {
-  const files = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet'];
+  const files = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news'];
   // Keyed by name, not destructured by position. R41's training.json was
   // added to the list, fetched, and silently DROPPED — the positional
   // destructure had nineteen names for twenty files, and nothing errors

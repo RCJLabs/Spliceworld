@@ -1,0 +1,108 @@
+{
+  "_doc": "R62 — the news wire's copy. Every sentence the wire prints lives here, keyed by EVENT id; engine modules emit {event, params} and never a sentence. Before this file, 17 player-facing lines were written inside campaign.js and rehab.js, so a new world-reaction was an engine edit — against CLAUDE.md's 'all content is data'. `lines` is the pool for an event: one is picked with the seeded RNG, so a save always tells its story the same way and a reload mid-run cannot reroll the wire. `by` is an optional per-philosophy pool, checked first, which is how the world reacts differently to a Purist than to an Improver — the same machinery R10 built for the rivals, pointed at the campaign instead. Placeholders are {braces} filled by campaign/monologue.js `fill`, which leaves an unknown key ALONE rather than printing 'undefined', so a typo reads oddly instead of breaking. Adding a reaction is a key here plus one emit at the site of the event; it must never be an engine change again. The gate in tools/smoke.js runs the invariant both ways: every event emitted in code has copy here, and every event here has an emitter — R20's rule, pointed at the wire.",
+  "events": {
+    "dominion": {
+      "lines": [
+        "THE COUNTY IS YOURS. All {nodes} nodes held.{rivals} Somewhere, a regional manager is updating a spreadsheet with shaking hands.",
+        "THE COUNTY IS YOURS. Every one of {nodes} nodes answers to the lab.{rivals} The county line is now a suggestion you make."
+      ]
+    },
+    "dominion_continues": {
+      "lines": [
+        "The coalition does not concede. It reschedules. Counter-offensives continue.",
+        "The coalition has stopped calling it a war and started calling it a quarterly review. It continues."
+      ]
+    },
+    "spar_done": {
+      "lines": [
+        "Sparring session concluded. The garrison applauds politely and re-chalks the ring.",
+        "Sparring session concluded. Somebody fetches the good chalk.",
+        "Sparring session concluded. No territory changed hands and everyone had a nice time."
+      ]
+    },
+    "dissection_done": {
+      "lines": [
+        "{creature} has been transferred to an out-of-state research internship (involuntary). The enemy took notes."
+      ]
+    },
+    "capture_ours": {
+      "lines": [
+        "{creature} impounded in Containment. Finders keepers is the law here now.",
+        "{creature} is in a bay with the lights dimmed and the door locked. Finders keepers."
+      ]
+    },
+    "rescued": {
+      "lines": [
+        "{creature} rescued from the impound lot! Bond deepened. Paperwork ignored.",
+        "{creature} is home from the impound lot, furious and adored. Nobody signed anything."
+      ]
+    },
+    "gauntlet_cleared": {
+      "lines": [
+        "THE GAUNTLET IS CLEARED. The coalition has nothing left in storage. Somewhere, a procurement officer starts a very long memo."
+      ]
+    },
+    "node_seized": {
+      "lines": [
+        "{node} seized. Income +${income}/day. Locals adjusting surprisingly well.",
+        "{node} seized. Income +${income}/day. The locals have decided this is fine.",
+        "{node} changes hands. +${income}/day, and nobody has filed anything about it."
+      ],
+      "by": {
+        "purist": [
+          "{node} seized. Income +${income}/day. Taken with clean stock and cleaner records."
+        ],
+        "chimerist": [
+          "{node} seized. Income +${income}/day. Witnesses disagree about how many legs were involved."
+        ]
+      }
+    },
+    "threat_rung": {
+      "lines": ["{announce}"]
+    },
+    "salvaged": {
+      "lines": [
+        "Salvage crews work through the night at {node}. One {unit} is now, legally speaking, scrap you own.",
+        "Salvage crews strip {node} until dawn. One {unit} is yours, in the way a paperweight is yours."
+      ]
+    },
+    "chimera_captured": {
+      "lines": [
+        "{creature} CAPTURED! \"Unauthorized peer review\" scheduled in {hours}h. Mount a rescue.",
+        "{creature} CAPTURED! They have booked \"unauthorized peer review\" for {hours}h from now. There is still time."
+      ]
+    },
+    "last_stand": {
+      "lines": [
+        "{creature} is the last one on the roster, and the coalition could not quite hold on to it. It limped back through the fence at dawn, furious and filthy. Infirmary."
+      ]
+    },
+    "dismantled": {
+      "lines": [
+        "{unit} dismantled with great enthusiasm. Enemy tech acquired.",
+        "{unit} taken apart on the workshop floor. The parts are ours and the manual is missing."
+      ]
+    },
+    "rehab_enrolled": {
+      "lines": [
+        "{creature} has been enrolled in a private behavioural programme. Its former employer has not been notified.",
+        "{creature} starts a private behavioural programme today. Nobody has told its old employer."
+      ]
+    },
+    "rehab_graduated": {
+      "lines": [
+        "{creature} graduates the Reorientation Wing and reports for duty, cautiously."
+      ]
+    },
+    "rehab_graduated_honours": {
+      "lines": [
+        "{creature} graduates the Reorientation Wing with honours and follows you around the yard."
+      ]
+    },
+    "rehab_graduated_alone": {
+      "lines": [
+        "{creature} completes the programme unsupervised and joins the roster. It is watching you. Always watching."
+      ]
+    }
+  }
+}

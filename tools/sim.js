@@ -35,6 +35,7 @@ export function loadSimContent() {
     // physiology or movesFromTokens here, so a gene could not be measured
     // at all, and campaignMeta fell back to its empty default.
     traits: readJSON('data/traits.json'),
+    news: readJSON('data/news.json'),
     // R41: without this the harness benches every chimera at level 0 with a
     // zero curve — which is the right DEFAULT for the [OP] gates, but the
     // tuning probes need the real curve to measure it at all.

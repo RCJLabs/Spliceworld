@@ -72,6 +72,8 @@ export function indexContent(raw) {
     resequencerMeta: raw.resequencer ? raw.resequencer.tuning : null,
     trainingMeta: raw.training ? raw.training.tuning : null,
     gauntlet: raw.gauntlet ? raw.gauntlet.stages : [],
+    // R62: the wire's copy, keyed by event id.
+    news: raw.news ? raw.news.events : {},
     sparBlurbs: raw.training ? raw.training.sparBlurbs : null,
     scars: raw.scars ? byId(raw.scars.scars) : {},
     scarMeta: raw.scars ? raw.scars.tuning : null,
