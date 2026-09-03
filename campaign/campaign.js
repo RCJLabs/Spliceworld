@@ -8,7 +8,7 @@ import { pushNews, emitNews, newsFor } from './wire.js';
 import { recordGauntletWin, gauntletComplete } from './gauntlet.js';
 import { GRADES } from '../splice/extract.js';
 import { infirmaryGrants } from '../splice/facility.js';
-import { finishBattle } from '../battle/engine.js';
+import { finishBattle, applyInjury } from '../battle/engine.js';
 import { recordRivalResult, scoutStable } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';
@@ -279,7 +279,23 @@ export function tickCampaign(state, content, now, since = state.lastTickAt ?? no
   for (const contest of state.campaign.contested ?? []) {
     if (contest.startedAt !== now || contest.scheduledAt == null) continue;
     const paidUntil = Math.min(Math.max(contest.scheduledAt, since), now);
-    state.funds += rate(contest.nodeId) * ((paidUntil - since) / DAY);
+    const days = (paidUntil - since) / DAY;
+    state.funds += rate(contest.nodeId) * days;
+    // R65: and the strip bonus it suspended. A contest inside a completed
+    // region stops the region's completionBonus as well as the node's own
+    // income (see incomeSuspended), and the line above only put the node
+    // back — so a convoy arriving in the last two hours of a month away
+    // retroactively withheld thirty days of the strip bonus. Measured at
+    // $4,500 of Greenfield's $150/day on a thirty-day absence.
+    const strip = regionOfNode(content, contest.nodeId);
+    const wholeStripHeld = strip?.completionBonus
+      && strip.nodes.every((n) => state.campaign.heldNodes.includes(n.id));
+    // Only the contest that actually suspended it pays it back: with a
+    // second convoy in the same strip the bonus was already down.
+    const alsoDown = (state.campaign.contested ?? []).some((c) => c !== contest
+      && regionOfNode(content, c.nodeId)?.id === strip?.id
+      && (c.scheduledAt ?? c.startedAt) <= contest.scheduledAt);
+    if (wholeStripHeld && !alsoDown) state.funds += strip.completionBonus * days;
   }
   for (const m of contests.missed) {
     const from = Math.max(m.arrivedAt, since);
@@ -391,7 +407,7 @@ export function resolveBattle(state, battle, content, now) {
       state.campaign.captives = state.campaign.captives.filter((c) => c !== captive);
       const chimera = captive.chimera;
       const rng = rngStream(state.seed, 'rescue', state.warRecord.wins);
-      chimera.injury = { name: 'Dramatic Rescue Whiplash', until: now + Math.round((1 + rng()) * HOUR) };
+      applyInjury(chimera, { name: 'Dramatic Rescue Whiplash', until: now + Math.round((1 + rng()) * HOUR) });
       chimera.bond = Math.min(100, chimera.bond + 10); // "you came back for me!"
       state.chimeras.push(chimera);
       detail.freed = chimera.name;
@@ -538,10 +554,10 @@ export function resolveBattle(state, battle, content, now) {
       // went down, which is the right mechanic and the whole of the
       // punishment here — this branch only has to make sure the creature
       // was not ALSO taken, and to say why.
-      only.injury ??= {
+      applyInjury(only, {
         name: 'Dragged Itself Home',
         until: now + Math.round(3 * infirmaryGrants(state, content).healScale * HOUR),
-      };
+      });
       detail.lastStand = only.name;
       emitNews(state, content, 'last_stand', { creature: only.name });
     }

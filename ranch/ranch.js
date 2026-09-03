@@ -132,17 +132,31 @@ export function applyElapsed(state, content, now, since = null) {
   if (since == null) state.lastTickAt = now;
   if (dt === 0) return;
 
-  const dtHours = dt / HOUR;
   const dtDays = dt / DAY;
+  // R65: how long each head was ACTUALLY here inside this window. A creature
+  // that arrived during the gap — a job's prize, a decant, a vat child — was
+  // stamped with the moment it arrived rather than the moment the player
+  // looked, so the ledger can finally read that clock instead of charging a
+  // month of upkeep and a month of neglect to something that spent most of
+  // the month not existing. Measured: a thirty-day absence billed $5,850 of
+  // retroactive upkeep for one animal a job brought home on day one, and
+  // decayed it to the condition floor for a month it had not lived through.
+  const ownedMs = (arrivedAt) => Math.max(0, now - Math.max(last, arrivedAt ?? last));
 
   for (const animal of state.ranch.stock) {
     animal.condition = Math.max(
       TUNING.conditionFloor,
-      animal.condition - TUNING.decayPerHour * dtHours
+      animal.condition - TUNING.decayPerHour * (ownedMs(animal.birthAt) / HOUR)
     );
   }
-  const upkeep = upkeepPerDay(state, content);
-  state.funds = Math.max(0, state.funds + (TUNING.stipendPerDay - upkeep) * dtDays);
+  let upkeep = 0;
+  for (const animal of state.ranch.stock) {
+    upkeep += content.species[animal.species].upkeepPerDay * (ownedMs(animal.birthAt) / DAY);
+  }
+  for (const chimera of state.chimeras ?? []) {
+    upkeep += chimeraUpkeep(chimera, content) * (ownedMs(chimera.createdAt) / DAY);
+  }
+  state.funds = Math.max(0, state.funds + TUNING.stipendPerDay * dtDays - upkeep);
 }
 
 export function careStatus(animal, now) {

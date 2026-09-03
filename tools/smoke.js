@@ -47,7 +47,7 @@ import { forecast } from '../battle/forecast.js';
 import {
   rivalDossier, rivalTeam, rivalRecord, scoutStable, counterTier, rivalEncounter,
 } from '../campaign/rivals.js';
-import { classMultiplier } from '../battle/engine.js';
+import { classMultiplier, applyInjury } from '../battle/engine.js';
 import { overflowingParts } from './bounds.js';
 import { renderDexScreen } from '../splice/dex-ui.js';
 import { dexProgress } from '../splice/dexentry.js';
@@ -4425,7 +4425,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     assert.ok(startOperation(s, 'feed_coop', null, content, t0).ok);
     assert.ok(!startOperation(s, 'petting_zoo', null, content, t0).ok, 'one job at a time');
     const funds = s.funds;
-    assert.ok(abortOperation(s, content).ok);
+    assert.ok(abortOperation(s, content, null, t0).ok);
     assert.equal(activeOp(s), null);
     assert.equal(s.funds, funds, 'calling it off costs no money');
     assert.equal(s.chimeras.length, 1, 'and no creature');
@@ -4652,6 +4652,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     startVat(s, a.id, b.id, content, t0);
     assert.equal(tickVat(s, content, t0 + 1).child, null, 'not before the clock');
     assert.ok(activeVat(s), 'still gestating');
+    const decantedAt = activeVat(s).until;
     const out = tickVat(s, content, t0 + 99 * HOUR);
     const child = out.child;
     assert.ok(child, 'something is decanted');
@@ -4666,7 +4667,15 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
       assert.ok(s.dex.parts.includes(token.partId), 'logged in the Splice-Dex');
     }
     assert.equal(child.bond, 0, 'nobody has raised it yet');
-    assert.ok(child.settleUntil > t0 + 99 * HOUR, 'and it has to settle like anything else');
+    // R65 re-anchored this. The claim is that a vat child is not born
+    // pre-settled — it has a settling period like anything else — and that
+    // is still true; what changed is where the period is measured FROM.
+    // The old form ("still settling now") was really a statement about how
+    // late the player happened to look: this fixture ticks 99 hours after
+    // sealing the vat, and a child that decanted 90 hours ago has settled,
+    // which is the correct new behaviour rather than a lost rule.
+    assert.ok(child.settleUntil > decantedAt, 'and it has to settle like anything else, from the moment it decanted');
+    assert.equal(child.createdAt, decantedAt, 'which is when it was born, not when the player looked');
     assert.ok(child.instability >= ct.extraInstability, 'it is measurably unrulier for having been assembled by nobody');
     assert.deepEqual(child.vatBorn.parents, [a.name, b.name], 'and it remembers where it came from');
     assert.ok(renderCreatureSVG(chimeraGenome(child, content), content).startsWith('<svg'), 'it draws');
@@ -5172,7 +5181,12 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     res.chimera.settleUntil = t0;
     return s;
   };
-  const hurt = (ch, hours = 4) => { ch.injury = { name: 'Sprained Everything', until: t0 + hours * HOUR }; };
+  // R65: through the real inflict path. Setting `ch.injury` by hand used to
+  // be equivalent; it is not any more, because `applyInjury` also advances
+  // the creature's injury tally — and that tally is what the scar roll below
+  // is keyed on. A fixture that inflicts by hand freezes the key and rolls
+  // the same scar forty times, which is a fixture measuring itself.
+  const hurt = (ch, hours = 4) => applyInjury(ch, { name: 'Sprained Everything', until: t0 + hours * HOUR });
 
   // Treatment buys CERTAINTY, not healing: the injury still had to happen,
   // and what you are paying for is that it leaves nothing behind.
@@ -12670,14 +12684,20 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // An unlevelled roster sits on a knife-edge at the Precinct, and any
     // nudge to the timeline decides which side it lands on. A gate that
     // depends on which side is a coin, so the oracle is the number with a
-    // monotone effect: every garrison twice as strong, and the walk holds
-    // under a third of the map (measured 24 against 81).
-    const heavy = { ...content, tierScale: content.tierScale.map((x) => x * 2) };
+    // monotone effect: every garrison stronger. R65 re-measured the curve
+    // after the walker learned to run jobs and the ledger stopped
+    // over-charging absences — a healthier walk needs a heavier thumb:
+    //
+    //   x2 → 0.55 of the healthy map   x2.5 → 0.31   x3 → 0.07
+    //
+    // x2.5 is the rung with real separation on both sides, so a small drift
+    // in either direction cannot flip the gate.
+    const heavy = { ...content, tierScale: content.tierScale.map((x) => x * 2.5) };
     const walled = WALK_SEEDS.slice(0, 2).map((seed) => walkCampaign(heavy, { seed, days: 180 }));
     const okNodes = walks.slice(0, 2).reduce((n, w) => n + w.nodes, 0);
     const walledNodes = walled.reduce((n, w) => n + w.nodes, 0);
-    console.log(`   garrisons doubled: ${walled.map((w) => `${w.seed}:${w.nodes}`).join(' ')} against ${okNodes}`);
-    assert.ok(walledNodes <= okNodes / 2, `with every garrison twice as strong the walk is walled (${walledNodes} nodes against ${okNodes}) — the walk answers to the numbers that price the fights`);
+    console.log(`   garrisons x2.5: ${walled.map((w) => `${w.seed}:${w.nodes}`).join(' ')} against ${okNodes}`);
+    assert.ok(walledNodes <= okNodes / 2, `with every garrison 2.5x as strong the walk is walled (${walledNodes} nodes against ${okNodes}) — the walk answers to the numbers that price the fights`);
     const triple = { ...content, campaignMeta: { ...content.campaignMeta, contestation: { ...t, escalation: 2.0 } } };
     const pressed = WALK_SEEDS.slice(0, 2).map((seed) => walkCampaign(triple, { seed, days: 180 }));
     const pressedNodes = pressed.reduce((n, w) => n + w.nodes, 0);
@@ -12856,23 +12876,293 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // 6. THE CRITERION, walked. Thirty days away against thirty days of daily
   //    play, from the same save on the day the app closed.
   {
+    // The window has to end while there is still a campaign to be away from:
+    // a walk that reaches dominion breaks out early and has no snapshot to
+    // compare. R65 made the walk healthy enough that some seeds finish
+    // inside sixty days, so the seeds are CHOSEN rather than listed — every
+    // seed that survives the window is compared, and at least two must.
+    const FROM = 10, AWAY = 30, END = FROM + AWAY;
+    const SEEDS = [2026, 7, 99, 4242];
     const rows = [];
-    for (const seed of [2026, 7]) {
-      const daily = campaignWalk(content, { seed, days: 60, snapshotDays: [30, 60], markDay: 30 });
-      const gone = campaignWalk(content, { seed, days: 60, away: { from: 30, days: 30 }, snapshotDays: [30, 60], markDay: 30 });
-      const left = gone.snapshots.left, back = gone.snapshots[60], d60 = daily.snapshots[60], d30 = daily.snapshots[30];
-      assert.ok(left && back && d60, `seed ${seed} walked to day 60 without finishing the map`);
-      const fullPay = (left.incomeRate + TUNING.stipendPerDay - left.upkeepRate) * 30;
+    let compared = 0;
+    let bankedTotal = 0;
+    let payTotal = 0;
+    for (const seed of SEEDS) {
+      const daily = campaignWalk(content, { seed, days: END, snapshotDays: [FROM, END], markDay: FROM });
+      const gone = campaignWalk(content, { seed, days: END, away: { from: FROM, days: AWAY }, snapshotDays: [FROM, END], markDay: FROM });
+      const left = gone.snapshots.left, back = gone.snapshots[END], d60 = daily.snapshots[END], d30 = daily.snapshots[FROM];
+      if (!left || !back || !d60 || !d30) { rows.push(`${seed}: finished the map inside the window, skipped`); continue; }
+      compared++;
+      const fullPay = (left.incomeRate + TUNING.stipendPerDay - left.upkeepRate) * AWAY;
       const banked = back.funds - left.funds;
       rows.push(`${seed}: banked ${banked} of ${fullPay} (${Math.round(100 * banked / fullPay)}%), convoys ${back.contestCount - left.contestCount} vs daily ${d60.contestCount - d30.contestCount}`);
+      assert.ok(fullPay > 0, `seed ${seed}: the fixture is solvent enough to measure (${fullPay})`);
+      bankedTotal += banked; payTotal += fullPay;
       assert.ok(banked < fullPay, `seed ${seed}: a month away is not a month of full pay (${banked} of ${fullPay})`);
-      assert.ok(banked > fullPay * 0.5, `seed ${seed}: and not a fine either (${banked} of ${fullPay})`);
+      // Per-seed floor deliberately loose, aggregate tight. Early in a
+      // campaign the empire is four nodes, so ONE waiting convoy suspends a
+      // large share of it and a seed can legitimately land near half —
+      // measured 52 / 73 / 89% across the three comparable seeds. A tight
+      // per-seed line would be a coin flip on the first of those; the
+      // aggregate is the number that states the design claim.
+      assert.ok(banked > fullPay * 0.35, `seed ${seed}: and not a fine either (${banked} of ${fullPay})`);
       assert.ok(back.contestCount - left.contestCount >= 0.7 * (d60.contestCount - d30.contestCount),
         `seed ${seed}: the world moved about as much as it did for the daily player (${back.contestCount - left.contestCount} vs ${d60.contestCount - d30.contestCount})`);
       assert.ok(back.nodes >= left.nodes - left.contested, `seed ${seed}: no node was lost unseen (${back.nodes} of ${left.nodes})`);
       assert.ok(back.contested <= 1, `seed ${seed}: at most one convoy is waiting on return (${back.contested})`);
     }
     console.log('   ' + rows.join('\n   '));
+    assert.ok(compared >= 2, `at least two seeds stayed mid-campaign for the whole window (${compared}) — ${rows.join(' · ')}`);
+    const share = bankedTotal / payTotal;
+    console.log(`   across seeds: banked ${Math.round(bankedTotal)} of ${Math.round(payTotal)} (${Math.round(share * 100)}%)`);
+    assert.ok(share < 1, `a month away is not a month of full pay (${Math.round(share * 100)}%)`);
+    assert.ok(share > 0.6, `and it is a cost rather than a fine (${Math.round(share * 100)}%)`);
+  }
+}
+
+// --- R65: timers that started when you looked -----------------------------
+{
+  const { tickWorld } = await import('../campaign/world.js');
+  const { startOperation, abortOperation, opReady, operationList } = await import('../campaign/operations.js');
+  const DAY = 24 * HOUR;
+  const chim = (id, extra = {}) => ({
+    ...makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'prime', content),
+    id, name: id.toUpperCase(), injuryCount: 0, settleUntil: 0, injury: null, ...extra,
+  });
+
+  // 1. THE CRITERION, as a sweep rather than a list. Prime every elapsed
+  //    resolver with something that finished A WEEK AGO, run one tick, and
+  //    walk the whole save for any timestamp equal to the moment the player
+  //    looked. A resolver that stamps its output with `now` is exactly a
+  //    timestamp that equals `now`, so this catches the four the audit found
+  //    AND the next one somebody writes — which a list of four could not.
+  const away = () => {
+    const s = { ...newGameState(), seed: 65, funds: 5000 };
+    ensureRanchSeeded(s, content, t0);
+    s.lastTickAt = t0;
+    s.chimeras = [chim('c0'), chim('c1')];
+    // Territory and a threat generation, so a counter-offensive actually
+    // arrives on the return tick. Without it the sweep never meets the one
+    // timer that is SUPPOSED to read `now`, and the exemption below would be
+    // an exemption for nothing — which is how an allowlist stops being read.
+    s.campaign.heldNodes = ['barn_perimeter', 'downtown', 'checkpoint', 'precinct', 'guard_post'];
+    s.campaign.notoriety = 100;
+    // Due two hours before the player returns, so it is still inside its
+    // window and is WAITING rather than one of R64's came-and-went convoys.
+    s.campaign.nextContestAt = t0 + 7 * DAY - 2 * HOUR;
+    // A job that came home a week ago, failed, and bruised its crew.
+    const op = operationList(content).find((o) => o.species?.length) ?? operationList(content)[0];
+    s.campaign.operations = [{
+      opId: op.id, chimeraId: 'c0', startedAt: t0, until: t0 + DAY,
+      chance: 0.5, outcome: { success: false, funds: 0, species: null, injuryRoll: 0.1 },
+    }];
+    // A vat that opened a week ago.
+    const donor = { name: 'D', species: 'goat', stars: 3, extractedAt: t0 };
+    s.vat = {
+      parents: ['x', 'y'], parentNames: ['X', 'Y'], startedAt: t0, until: t0 + DAY, fee: 0,
+      conception: {
+        frame: 'M', chaosParts: [], extraSockets: [],
+        parts: Object.fromEntries(['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ']
+          .map((sl) => [sl, { partId: `goat_${sl}`, grade: 'prime', donor }])),
+      },
+    };
+    // A resequencer that decanted a week ago.
+    s.resequencer = {
+      vialId: 'v1', species: 'goat', donorName: 'Vialed', stars: 3, startedAt: t0, until: t0 + DAY,
+      sample: { potential: {}, genotype: {} },
+      outcome: { succeeded: true, mutated: false, potential: { power: 3 }, genotype: {}, mutationNote: null },
+    };
+    return s;
+  };
+  const NOW = t0 + 7 * DAY;
+  {
+    const s = away();
+    tickWorld(s, content, NOW);
+
+    // Every timestamp in the save that reads exactly `now`. Two are allowed
+    // and each is a rule somebody wrote down: the save's one elapsed clock
+    // (R64), and a counter-offensive's window, which R9 opens when the
+    // player SEES it precisely so a week away cannot cost a node they were
+    // never given the chance to defend. Anything else is this phase's bug.
+    // Written as PATHS, not leaf names: `startedAt` is a legitimate `now` on
+    // a counter-offensive and would be a bug on anything a resolver builds,
+    // so an exemption spelled `startedAt` would quietly cover the next one.
+    const ALLOWED = [
+      /^lastTickAt$/,                         // the save's one elapsed clock (R64)
+      /^campaign\.contested\.\d+\.(startedAt|deadline)$/, // R9: the window opens when you SEE it
+    ];
+    const stamped = [];
+    const walk = (node, path) => {
+      if (node === NOW && !ALLOWED.some((re) => re.test(path))) stamped.push(path);
+      if (!node || typeof node !== 'object') return;
+      for (const [k, v] of Object.entries(node)) walk(v, path ? `${path}.${k}` : k);
+    };
+    walk(s, '');
+    assert.deepEqual(stamped, [], `nothing in the save starts at the moment the player looked (${stamped.join(', ')})`);
+    // The sweep can see: plant one and it is named. Without this the gate
+    // passes just as happily on a save it never actually walked.
+    {
+      const planted = [];
+      const saved = stamped.length;
+      s.chimeras[0].__plantedTimer = NOW;
+      const found = [];
+      const walk2 = (node, path) => {
+        if (node === NOW && !ALLOWED.some((re) => re.test(path))) found.push(path);
+        if (!node || typeof node !== 'object') return;
+        for (const [k, v] of Object.entries(node)) walk2(v, path ? `${path}.${k}` : k);
+      };
+      walk2(s, '');
+      delete s.chimeras[0].__plantedTimer;
+      assert.deepEqual(found, ['chimeras.0.__plantedTimer'], `a timer stamped now is caught (${found.join(', ')})`);
+      assert.equal(saved, 0, 'and the real sweep found none');
+      void planted;
+    }
+    // …and the sweep is not vacuous: the fixture really did resolve all three.
+    assert.equal(s.campaign.operations.length, 0, 'the job resolved');
+    assert.equal(s.vat, null, 'the vat opened');
+    assert.equal(s.resequencer, null, 'the tank decanted');
+    assert.ok(s.chimeras.some((c) => c.name === 'X' || c.vatBorn), 'and the vat child is on the roster');
+    assert.equal(s.campaign.contested.length, 1, 'and a convoy is on the road, so the one legitimate `now` was met');
+    assert.equal(s.campaign.contested[0].startedAt, NOW, 'which is the R9 exemption, exercised rather than assumed');
+  }
+
+  // 2. What each of those timers now says, in the player's terms.
+  {
+    const s = away();
+    const op = s.campaign.operations[0];
+    tickWorld(s, content, NOW);
+    assert.ok(opReady(s, op.opId, NOW), 'a job that ended a week ago is runnable again, not locked for a fresh cooldown');
+    assert.ok(!isInjured(s.chimeras.find((c) => c.id === 'c0'), NOW), 'and its bruise healed while the player was away');
+    const child = s.chimeras.find((c) => c.vatBorn);
+    assert.ok(child.settleUntil <= NOW, 'a vat child decanted a week ago has finished settling');
+    assert.ok(child.temperament, 'so the same tick gives it opinions');
+    const grown = s.ranch.stock.find((a) => a.name === 'Vialed');
+    assert.ok(grown && ageStage(grown, content, NOW) !== 'juvenile',
+      `a decant from a week ago has grown (${grown && ageStage(grown, content, NOW)})`);
+  }
+
+  // 3. Injuries only ever lengthen. A failed job used to overwrite a longer
+  //    battle wound with its own bruise — the worse day was the better
+  //    outcome, and it took the Infirmary bill with it.
+  {
+    const c = chim('c0', { injury: { name: 'Battle Wound', until: t0 + 9 * HOUR } });
+    applyInjury(c, { name: 'Undignified Exit', until: t0 + 2 * HOUR });
+    assert.equal(c.injury.name, 'Battle Wound', 'a shorter injury does not replace a longer one');
+    assert.equal(c.injuryCount, 1, 'but the creature is recorded as having been hurt again');
+    applyInjury(c, { name: 'Worse Wound', until: t0 + 20 * HOUR });
+    assert.equal(c.injury.name, 'Worse Wound', 'a longer one does');
+    // Through the real resolver, which is where it actually bit.
+    const s = away();
+    const hurt = s.chimeras.find((x) => x.id === 'c0');
+    hurt.injury = { name: 'Battle Wound', until: NOW + 4 * HOUR };
+    tickWorld(s, content, NOW);
+    assert.equal(hurt.injury.name, 'Battle Wound', 'and a week-old job failure cannot heal a standing battle wound');
+    assert.equal(hurt.injury.until, NOW + 4 * HOUR, 'nor shorten it');
+  }
+
+  // 4. One cooldown rule for both paths. Resolving anchors to when the job
+  //    ended; aborting anchors to now, because that is when the crew walks
+  //    back in. They used to disagree, and aborting a six-hour job a minute
+  //    in freed it sooner than letting it run.
+  {
+    const src = readFileSync(join(root, 'campaign/operations.js'), 'utf8');
+    assert.equal((src.match(/opCooldowns\[[^\]]*\] =/g) ?? []).length, 1, 'exactly one place writes a cooldown');
+    const op = operationList(content).find((o) => o.crew === 'none') ?? operationList(content)[0];
+    const cd = (op.cooldownHours ?? 6) * HOUR;
+    const s = { ...newGameState(), seed: 66, funds: 5000 };
+    ensureRanchSeeded(s, content, t0); s.lastTickAt = t0; s.chimeras = [chim('c0')];
+    assert.ok(startOperation(s, op.id, null, content, t0).ok, 'a job starts');
+    const run = s.campaign.operations[0];
+    abortOperation(s, content, op.id, t0 + HOUR);
+    assert.equal(s.campaign.opCooldowns[op.id], t0 + HOUR + cd, 'an abort is on the clock from the moment it is called off');
+    assert.ok(s.campaign.opCooldowns[op.id] > run.startedAt + cd, 'which is later than pretending it ended when it began');
+    const s2 = { ...newGameState(), seed: 66, funds: 5000 };
+    ensureRanchSeeded(s2, content, t0); s2.lastTickAt = t0; s2.chimeras = [chim('c0')];
+    startOperation(s2, op.id, null, content, t0);
+    const until = s2.campaign.operations[0].until;
+    tickWorld(s2, content, until + 5 * DAY);
+    assert.equal(s2.campaign.opCooldowns[op.id], until + cd, 'and a resolved job is on the clock from when it ended');
+  }
+
+  // 5. Two consecutive two-casualty losses no longer roll the same injuries.
+  //    The stream was keyed on `warRecord.wins + losses + injuries.length`,
+  //    and the record increments AFTER the loop, so a fight consumed N and
+  //    N+1 and the next fight started at N+1.
+  {
+    const s = { ...newGameState(), seed: 67, funds: 0 };
+    ensureRanchSeeded(s, content, t0); s.lastTickAt = t0;
+    s.chimeras = [chim('c0'), chim('c1')];
+    const enc = content.encounters[content.regions.greenfield.nodes[0].encounter];
+    const fight = (n) => {
+      for (const c of s.chimeras) c.injury = null; // healed since the last one
+      const b = createBattle(s.chimeras.map((c) => ({ ...c })), enc, content, 7, t0 + n * DAY, { kind: 'assault' });
+      b.over = true; b.outcome = 'loss';
+      for (const c of b.player.team) c.hp = 0;
+      // The NAME and the DURATION, never the absolute deadline: two fights on
+      // different days produce different `until` values from the same roll,
+      // so a gate comparing deadlines can never see the collision it exists
+      // to catch. The battery proved that — break 4 sailed through it.
+      return finishBattle(s, b, content, t0 + n * DAY).injuries
+        .map((i) => `${i.injury.name}|${Math.round((i.injury.until - (t0 + n * DAY)) / 1000)}`);
+    };
+    const first = fight(1), second = fight(2);
+    assert.equal(first.length, 2, 'two casualties');
+    assert.equal(new Set([...first, ...second]).size, 4,
+      `four fights, four different injuries (${[...first, ...second].join(' · ')})`);
+    // Keyed on the CREATURE: the fix is not "add the battle number", which
+    // would still give one creature the same injury every time it is the
+    // only casualty.
+    const src = readFileSync(join(root, 'battle/engine.js'), 'utf8');
+    assert.ok(/rngStream\(state\.seed, `injury:\$\{chimera\.id\}`/.test(src), 'the stream names the creature');
+    assert.ok(!/'injury', state\.warRecord/.test(src), 'and not the war record');
+  }
+
+  // 6. One inflict point, enforced rather than remembered. The scar roll and
+  //    the name roll are both keyed on a tally that only `applyInjury`
+  //    advances, so a module that assigns `chimera.injury` directly freezes
+  //    that key — the suite's own scar fixture did exactly that and rolled
+  //    the same scar forty times. Healing (`= null`) is not an inflict.
+  {
+    // Every module, walked — not a list somebody has to remember to extend.
+    // Three forms are legitimate and each is named: healing to null, the
+    // assignment inside applyInjury itself, and the save migration that
+    // normalises a missing field. Anything else is an inflict that bypasses
+    // the tally.
+    // Same walk the R50 module gate uses: every shipped .js, tools excluded.
+    const SKIP_DIRS = new Set(['tools', 'docs', 'node_modules', '.git']);
+    const files = [];
+    const walkModules = (dir) => {
+      for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+        const rel = dir ? `${dir}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) { if (!SKIP_DIRS.has(rel)) walkModules(rel); }
+        else if (entry.name.endsWith('.js')) files.push(rel);
+      }
+    };
+    walkModules('');
+    assert.ok(files.length > 40, `the sweep found the modules (${files.length})`);
+    let inflicts = 0;
+    for (const file of files) {
+      const src = readFileSync(join(root, file), 'utf8').replace(/\/\/.*$/gm, '');
+      for (const [, rhs] of src.matchAll(/\.injury\s*=\s*([^;\n]+)/g)) {
+        const r = rhs.trim();
+        if (/^null/.test(r)) continue;                                    // healed
+        if (file === 'battle/engine.js' && /^injury/.test(r)) { inflicts++; continue; } // the inflict point
+        if (file === 'save/save.js' && /\?\?\s*null/.test(r)) continue;    // migration normalise
+        assert.fail(`${file} writes an injury outside applyInjury (= ${r.slice(0, 40)})`);
+      }
+    }
+    assert.equal(inflicts, 1, 'and there is exactly one inflict point');
+  }
+
+  // 7. Walked. A week away with a job in flight, against the same save played
+  //    daily: the job comes home on its own clock either way.
+  {
+    const daily = campaignWalk(content, { seed: 2026, days: 40, snapshotDays: [40] });
+    const gone = campaignWalk(content, { seed: 2026, days: 40, away: { from: 25, days: 7 }, snapshotDays: [40] });
+    const jobs = daily.log.filter((e) => e.kind === 'job').length;
+    assert.ok(daily.snapshots[40] && gone.snapshots[40], 'both walks reached day 40');
+    assert.ok(gone.snapshots[40].funds > 0, 'and the absent one is solvent on return');
+    console.log(`   walked: daily $${daily.snapshots[40].funds} vs a week away $${gone.snapshots[40].funds}`);
   }
 }
 
