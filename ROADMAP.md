@@ -762,16 +762,62 @@ The queue is a proposal: prune it before starting R63.
   to all three.* ✅ all five — R61 gained checks for units fielded, species
   flavor, the data glyph scan, icon-id resolution, and (found along the
   way) a JS-source glyph scan the first four checks could not have caught.
-- **R71 — A save from a newer build starts a new game.** `save.js:535–547`
-  throws on `saveVersion > SAVE_VERSION`, the `catch` backs the string up
-  under a timestamped key and returns `newGameState()`; `importSave`
-  refuses the same case with a named reason. A stale service-worker cache
-  is enough to serve old code against a new save, and the player opens the
-  app to an empty ranch. Related: a boot failure in `main.js` leaves a
-  half-live shell. *Done when: "from the future" is a refusal the shell
-  renders with a reload path and never a reset, boot failure is one screen
-  that says so, and a gate loads a v35 save into v34 code and asserts the
-  stored save is byte-identical afterwards.*
+- **R71 — A save from a newer build starts a new game.** ✅ *Shipped.*
+  `save.js:535–547` threw on `saveVersion > SAVE_VERSION`, the `catch`
+  backed the string up under a timestamped key and returned
+  `newGameState()`; `importSave` refused the same case with a named reason.
+  A stale service-worker cache was enough to serve old code against a new
+  save, and the player opened the app to an empty ranch. Related: a boot
+  failure in `main.js` left a half-live shell.
+  - **`loadSlot` now throws `FutureSaveError` and touches nothing** — no
+    backup key, no rewrite, the stored save byte-identical afterward.
+    `main.js`'s `boot()` catches it and renders one full-screen refusal
+    (title, an explanation, a Reload button, never a reset) through the
+    SAME `renderBootFailure` a content-load failure already used — the
+    "boot failure is one screen" half of the criterion closes a second bug
+    at the same time: content-load failure used to leave header/tabs/footer
+    standing over a `<main>` that would never render, the actual half-live
+    shell, not a screen that says so.
+  - **Also shipped this session, beyond R71's own scope, at Evan's direct
+    request**: the footer's save and mute buttons are one settings button
+    now (`save/settings-ui.js`, a new module — CLAUDE.md's "small modules
+    by system" extended to the shell's own chrome), opening a panel for
+    sound, the five colour schemes (`THEMES` existed since main.js's
+    `?theme=` dev override but had no player-facing control until now),
+    the save-file door, and **up to four independent save slots**
+    ("labs"). Slot 1 stays the literal `spliceworld_save` key forever —
+    every save that has ever existed already lives there, so an existing
+    player's save is discovered as slot 1 on first read with no migration
+    step; slots 2+ get `spliceworld_save_N`, with a small registry
+    (`spliceworld_slots`, synthesized on first read) naming which exist and
+    which is active. No `SAVE_VERSION` bump: the only new field on
+    `gameState` (`slotId`) is stamped fresh on every load rather than
+    trusted from storage, so nothing about the schema itself changed.
+  - **An adversarial four-dimension review of the diff, run before shipping
+    given what "never reset player saves" is worth: 16 raw findings, each
+    re-verified by a second pass instructed to try to refute it — 11 real.**
+    Fixed: deleting a lab was one unconfirmed tap with no backup, unlike
+    every other destructive path in the game; `downloadSave()`'s anchor was
+    never attached to the document, which silently fails to trigger a
+    save-as on Safari — the exact browser three separate dialogues tell a
+    player to trust for their one copy outside this device; an import's
+    async file-read could still land and reload after Close; the rename
+    prompt opened blank instead of pre-filled; a corrupted slot read
+    identically to "never started"; `?warp=` desynced an inactive slot's
+    day-count from the active one; the boot-failure screen said
+    "Splicework" — CLAUDE.md's own header carries the project's old
+    codename, and it reached a live screen. Deferred, not regressions:
+    `saveGame()`'s write-failure return is discarded by 25+ pre-existing
+    callers app-wide (needs a UI surface this session didn't build), and
+    unpruned backup keys are R54's own already-documented, deliberately
+    unresolved tradeoff.
+  *Done when: "from the future" is a refusal the shell renders with a
+  reload path and never a reset, boot failure is one screen that says so,
+  and a gate loads a v35 save into v34 code and asserts the stored save is
+  byte-identical afterwards.* ✅ all three — plus a full slot-management
+  test suite (create/switch/delete/rename, `MAX_SLOTS`, backward-compat
+  synthesis, active-slot and last-slot refusals) that R71 didn't originally
+  ask for but the added scope needed.
 - **R72 — Retired content ids crash the Theater.** `theater.js:81` reads
   `content.parts[token.partId].slot` unguarded (verified: a vault token
   whose part was removed from `parts.json` throws and takes the screen

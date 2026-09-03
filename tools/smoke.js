@@ -6052,6 +6052,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'main.js': null,
     'sw.js': null,
     'save/save.js': null,
+    'save/settings-ui.js': null,
     'data/loader.js': null,
     'util/rng.js': null,
     'render/renderer.js': null,
@@ -11315,7 +11316,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // one when something has already gone wrong, which is exactly when a vague
 // "invalid file" is most expensive and least testable by hand.
 {
-  const { exportSave, exportFilename, importSave, adoptSave, loadSave } = await import('../save/save.js');
+  const { exportSave, exportFilename, importSave, adoptSave, loadSave, FutureSaveError } = await import('../save/save.js');
 
   // A localStorage stand-in, so adoption can be driven into the states a
   // real browser only reaches when it is full or locked down.
@@ -11329,6 +11330,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
         if (full) throw new Error('QuotaExceededError');
         map.set(k, v);
       },
+      removeItem: (k) => map.delete(k),
     };
   };
 
@@ -11431,43 +11433,104 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       'with no backup of nothing');
   }
 
-  // 5b. loadSave's OWN refusal of a newer-than-code save — which this
-  //    phase's battery found ungated, by accident. Break 3 aimed at
-  //    importSave's version check and hit this one instead: the two lines
-  //    are character-for-character identical and loadSave's comes first in
-  //    the file, so a `replace(..., 1)` silently patched the wrong one. The
-  //    suite passed.
-  //
-  //    It is not R54's code — it has guarded the boot path since M0 — but it
-  //    is R54's rule, that a save from the future is never mangled by an
-  //    older build, and it turns out nothing has ever asserted it. So it is
-  //    R54's gate now.
+  // 5b. R71 — loadSave's OWN refusal of a newer-than-code save, which this
+  //    phase found built on the SAME defect the door-is-reachable gate below
+  //    exists for: `loadSave` caught its own "save is from the future"
+  //    exception in the same block as a genuinely corrupt file, so a stale
+  //    service-worker cache serving old code against a new save opened the
+  //    player onto a brand-new ranch — the exact "opens onto an empty ranch"
+  //    failure the earlier version of this same comment already named as
+  //    the risk, without a gate that would have caught it actually
+  //    happening. THE CRITERION now: it throws (`FutureSaveError`, so a
+  //    caller can tell this apart from a corrupt file) and touches NOTHING —
+  //    no backup key, no rewrite, the stored save byte-identical afterward,
+  //    because the whole fix is that reloading later, once the build
+  //    catches up, finds it exactly as it was.
   {
     const ahead = { ...newGameState(), saveVersion: SAVE_VERSION + 1, seed: 4242 };
-    const map = new Map([['spliceworld_save', JSON.stringify(ahead)]]);
+    const rawAhead = JSON.stringify(ahead);
+    const map = new Map([['spliceworld_save', rawAhead]]);
     const store = { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, v) };
+    let threw = null;
+    try { loadSave(store); } catch (err) { threw = err; }
+    assert.ok(threw instanceof FutureSaveError, `a save from a newer build throws FutureSaveError (got ${threw?.constructor?.name ?? 'nothing'})`);
+    assert.equal(threw.foundVersion, SAVE_VERSION + 1, 'and names the version it found');
+    assert.equal(map.size, 1, 'nothing new was written — no backup, no second key');
+    assert.equal(map.get('spliceworld_save'), rawAhead, 'the stored save is byte-identical afterward');
+
+    // A corrupt file is a DIFFERENT failure — there is no later build that
+    // will fix a broken JSON blob — and keeps the old backup-and-start-fresh
+    // behaviour, so this is a deliberate fork, not a regression of it.
+    const junkMap = new Map([['spliceworld_save', '{not json']]);
+    const junkStore = { getItem: (k) => (junkMap.has(k) ? junkMap.get(k) : null), setItem: (k, v) => junkMap.set(k, v) };
     const err = console.error;
-    console.error = () => {}; // loadSave narrates the refusal; the gate does not need it
-    let loaded;
-    try { loaded = loadSave(store); } finally { console.error = err; }
-    assert.equal(loaded.saveVersion, SAVE_VERSION, 'a save from a newer build does not load into an older one');
-    assert.notEqual(loaded.seed, 4242, 'the newer save is not adopted');
-    const kept = [...map.keys()].filter((k) => k.includes('_backup_'));
-    assert.equal(kept.length, 1, 'and it is kept rather than destroyed');
-    assert.equal(JSON.parse(map.get(kept[0])).saveVersion, SAVE_VERSION + 1, 'exactly as it arrived');
+    console.error = () => {};
+    let fresh;
+    try { fresh = loadSave(junkStore); } finally { console.error = err; }
+    assert.equal(fresh.saveVersion, SAVE_VERSION, 'a corrupt save still starts a fresh game');
+    assert.equal([...junkMap.keys()].filter((k) => k.includes('_backup_')).length, 1,
+      'with the broken file kept aside for forensics — the case this refusal is NOT');
   }
 
-  // 6. The door is reachable. The three verbs are useless if the shell has
-  //    no handle on them, and this is the only assertion that would notice.
+  // 6. The door is reachable. Sound, theme, save file and lab management all
+  //    live behind one settings button now (R71) — the four verbs are
+  //    useless if the shell has no handle on them, and this is the only
+  //    assertion that would notice. The panel itself lives in
+  //    save/settings-ui.js, not main.js, so the checks moved with it.
   {
     const html = readFileSync(join(root, 'index.html'), 'utf8');
-    assert.ok(/id="savefile"/.test(html), 'the shell has a save-file button');
-    const shell = readFileSync(join(root, 'main.js'), 'utf8');
+    assert.ok(/id="settings"/.test(html), 'the shell has a settings button');
+    assert.ok(!/id="savefile"|id="mute"/.test(html), 'and not the two buttons it replaced');
+    const panel = readFileSync(join(root, 'save/settings-ui.js'), 'utf8');
     for (const fn of ['exportSave', 'exportFilename', 'importSave', 'adoptSave']) {
-      assert.ok(new RegExp(`\\b${fn}\\b`).test(shell), `and main.js wires ${fn}`);
+      assert.ok(new RegExp(`\\b${fn}\\b`).test(panel), `and the settings panel wires ${fn}`);
     }
-    assert.ok(/adoptSave\(/.test(shell) && /location\.reload\(\)/.test(shell),
+    assert.ok(/adoptSave\(/.test(panel) && /location\.reload\(\)/.test(panel),
       'and reboots after adopting rather than swapping state under the running screens');
+    const shell = readFileSync(join(root, 'main.js'), 'utf8');
+    assert.ok(/openSettings\(/.test(shell), 'and the shell actually opens the panel it imported');
+  }
+
+  // 7. R71, THE CRITERION: a save from the future is a refusal the shell
+  //    renders with a reload path, never a reset — asserted on main.js's
+  //    own source, since a throw reaching an unguarded caller is a browser
+  //    behaviour this harness cannot otherwise observe.
+  {
+    const shell = readFileSync(join(root, 'main.js'), 'utf8');
+    assert.ok(/FutureSaveError/.test(shell), 'the shell knows the refusal by name, not just by catching Error');
+    const bootAt = shell.indexOf('async function boot()');
+    assert.notEqual(bootAt, -1, 'boot() exists');
+    const bootBody = shell.slice(bootAt, shell.indexOf('\nboot();'));
+    assert.ok(/try\s*\{\s*state = loadSave\(\)/.test(bootBody), 'loadSave() is called inside a try');
+    assert.ok(/err instanceof FutureSaveError/.test(bootBody), 'and the refusal is told apart from other failures');
+    // "Boot failure is one screen that says so": both the content-load
+    // failure and the future-save refusal go through the SAME renderer,
+    // not two ad hoc ones — R71's actual complaint about the old
+    // `.boot-error` path was that content failure left header/tabs/footer
+    // standing over a dead `<main>`, a second broken shell rather than one
+    // clear screen.
+    const calls = (bootBody.match(/renderBootFailure\(/g) ?? []).length;
+    assert.equal(calls, 3, `content-load failure, the future-save refusal, and the generic fallback all use it (${calls})`);
+    // And never a reset: the whole point is nothing is touched, so the
+    // future-save branch must not call adoptSave, startNewRun, or offer a
+    // second button beyond the renderer's own reload.
+    const futureAt = bootBody.indexOf('FutureSaveError');
+    const futureBranch = bootBody.slice(futureAt, bootBody.indexOf('} else {', futureAt));
+    assert.ok(!/adoptSave|startNewRun/.test(futureBranch), 'the future-save screen never resets anything');
+    // The renderer itself: one screen, one door out.
+    const rendererAt = shell.indexOf('function renderBootFailure');
+    const rendererBody = shell.slice(rendererAt, shell.indexOf('\n}', rendererAt));
+    assert.ok(/document\.body\.innerHTML/.test(rendererBody),
+      'it replaces the WHOLE body — a live header/tabs/footer over a dead main is the half-live shell this closes');
+    assert.ok(/location\.reload\(\)/.test(rendererBody) && !/adoptSave|startNewRun/.test(rendererBody),
+      'and offers reload, never a reset, from the renderer itself');
+    // The one player-facing string both failure paths share is not the
+    // one place it is easy to typo the game's own name — CLAUDE.md's own
+    // header carries the project's old internal codename ("Splicework"),
+    // and it slipped into this exact screen once already.
+    assert.ok(!/\bSplicework\b/.test(shell), 'the boot-failure title never regresses to the project codename');
+    assert.equal((shell.match(/Spliceworld won.t start/g) ?? []).length, 2,
+      'both non-future-save boot failures say the shipped name');
   }
 }
 
@@ -11583,24 +11646,64 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // standing, so a regex over the whole source still matched and the
     // suite passed on a one-tap reset. R51's `logged.includes('logged')`
     // wearing different clothes.
-    const shell = readFileSync(join(root, 'main.js'), 'utf8');
-    const at = shell.indexOf("querySelector('#sf-reset')");
+    //
+    // R71 moved this whole panel to save/settings-ui.js and gave the
+    // reset path a slot to target (`state.slotId`), so the ids and the
+    // call shape both changed; the checks moved with them rather than
+    // being dropped.
+    const panel = readFileSync(join(root, 'save/settings-ui.js'), 'utf8');
+    const at = panel.indexOf("querySelector('#set-reset')");
     assert.notEqual(at, -1, 'the panel binds the reset button');
-    const handler = shell.slice(at, shell.indexOf("querySelector('#sf-file')", at));
+    const handler = panel.slice(at, panel.indexOf("querySelector('#set-import-file')", at));
     assert.ok(/confirmNewRun\(\)/.test(handler), 'and that button leads to the confirmation');
     assert.ok(/runSummary\(state\)\.empty/.test(handler),
       'skipping it only when there is nothing to lose');
-    assert.ok(/id="sf-go"/.test(shell) && /id="sf-back"/.test(shell), 'with a way through and a way out');
+    assert.ok(/id="cnr-go"/.test(panel) && /id="cnr-back"/.test(panel), 'with a way through and a way out');
 
     // And every reset path goes through adoptSave, which is what sets the
     // outgoing run aside. Break 8 wrote localStorage directly from the
     // shell: the mechanism was gated, its USE was not — R49's lesson, that
     // a shared predicate needs every reader asserted, not just the
     // predicate.
-    assert.equal((shell.match(/adoptSave\(startNewRun\(state\)\)/g) ?? []).length, 2,
-      'both reset paths — confirmed and empty — go through adoptSave');
-    assert.ok(!/localStorage/.test(shell),
-      'and the shell never touches storage itself: every write goes through save.js');
+    assert.equal((panel.match(/adoptSave\(startNewRun\(state\), storage, state\.slotId\)/g) ?? []).length, 2,
+      'both reset paths — confirmed and empty — go through adoptSave, targeting the slot it was loaded from');
+    assert.ok(!/localStorage\.(setItem|getItem|removeItem)/.test(panel),
+      'and the panel never calls storage directly: every write goes through the `storage` save.js hands back');
+  }
+
+  // 4b. R71's own adversarial review found deleteSlot() reachable in one
+  //    unconfirmed tap — every OTHER destructive path here (a reset, an
+  //    import overwrite) gates behind a dialog or a backup; a lab's delete
+  //    button, sitting in a tight row next to Switch and Rename, had
+  //    neither. Asserted the same way as 4's one-tap-reset check: on the
+  //    HANDLER a delete button is actually bound to, not on whether a
+  //    confirmation function merely exists somewhere in the file.
+  {
+    const panel = readFileSync(join(root, 'save/settings-ui.js'), 'utf8');
+    const at = panel.indexOf("querySelectorAll('[data-delete-slot]')");
+    assert.notEqual(at, -1, 'the panel binds the delete buttons');
+    const handler = panel.slice(at, panel.indexOf('});', at) + 3);
+    assert.ok(/confirmDeleteSlot\(/.test(handler), 'and the click goes to a confirmation, not straight to deleteSlot');
+    assert.ok(!/\bdeleteSlot\(/.test(handler), 'with no direct call to deleteSlot sitting in the one-tap handler');
+    const confirmAt = panel.indexOf('const confirmDeleteSlot');
+    assert.notEqual(confirmAt, -1, 'the confirmation itself is defined');
+    const confirmBody = panel.slice(confirmAt, panel.indexOf('\n  };', confirmAt));
+    assert.ok(/id="cds-back"/.test(confirmBody) && /id="cds-go"/.test(confirmBody), 'with a way through and a way out');
+    assert.ok(/deleteSlot\(id, storage\)/.test(confirmBody), 'and only the confirmed path actually deletes anything');
+  }
+
+  // 4c. downloadSave() is the only recovery path several of the dialogues
+  //    above point players at ("take the file first"). An anchor clicked
+  //    without ever entering the document does not reliably download in
+  //    every browser — verified structurally, since jsdom-free Node has no
+  //    way to actually observe a download firing.
+  {
+    const panel = readFileSync(join(root, 'save/settings-ui.js'), 'utf8');
+    const at = panel.indexOf('const downloadSave');
+    const body = panel.slice(at, panel.indexOf('\n  };', at));
+    assert.ok(/document\.body\.appendChild\(a\)/.test(body), 'the download anchor is attached to the document before the click');
+    assert.ok(/a\.click\(\)/.test(body) && body.indexOf('a.click()') > body.indexOf('appendChild(a)'),
+      'attached before it is clicked, not after');
   }
 
   // 5. R54's import learns the same category. This is a change to shipped
@@ -11625,6 +11728,227 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(adoptSave(incoming, bare).ok, 'an import into an empty browser lands');
     assert.equal(JSON.parse(fresh.get('spliceworld_save')).settings.muted, false,
       'carrying nothing, because there was nothing to carry');
+  }
+}
+
+// R71, second half: save slots. Multiple independent labs on one device —
+// each its own gameState at its own key, one small registry naming which
+// exist and which is active. `STORAGE_KEY` ('spliceworld_save') stays slot
+// 1's literal key forever: every save that has ever existed already lives
+// there, so a player who has never opened the slot picker needs no
+// migration or copy step at all — the registry itself is SYNTHESIZED on
+// first read, discovering their save as "slot 1" with zero action from
+// anyone.
+{
+  const {
+    loadSlotRegistry, saveSlotRegistry, activeSlotId, slotSummary,
+    createSlot, switchSlot, deleteSlot, renameSlot, loadSlot, loadSave, saveGame,
+    adoptSave, startNewRun, MAX_SLOTS, CARRIED_ACROSS_RUNS,
+  } = await import('../save/save.js');
+
+  const fakeStore = (seed = {}) => {
+    const map = new Map(Object.entries(seed));
+    return {
+      map,
+      getItem: (k) => (map.has(k) ? map.get(k) : null),
+      setItem: (k, v) => map.set(k, v),
+      removeItem: (k) => map.delete(k),
+    };
+  };
+
+  // 1. Backward compatibility, THE CRITERION for this half: a player from
+  //    before this phase has no registry at all, and a save sitting at the
+  //    bare legacy key. Nothing here should ask them to do anything.
+  {
+    const legacy = { ...newGameState(), seed: 71, funds: 5000 };
+    const store = fakeStore({ spliceworld_save: JSON.stringify(legacy) });
+    const reg = loadSlotRegistry(store);
+    assert.deepEqual(reg.slots.map((s) => s.id), [1], 'the existing save is discovered as slot 1');
+    assert.equal(reg.activeId, 1, 'and it is the active one');
+    assert.equal(activeSlotId(store), 1, 'which activeSlotId agrees with');
+    // loadSlotRegistry alone never writes — a synthesized registry is
+    // recomputed fresh every call until something actually persists it.
+    assert.equal(store.map.size, 1, 'reading the registry alone writes nothing');
+    const loaded = loadSave(store);
+    assert.equal(loaded.funds, 5000, 'loadSave still finds it — same key, same data');
+    assert.equal(loaded.slotId, 1, 'stamped as slot 1');
+    // loadSave is more than a read, though: it stamps `lastPlayedAt` for
+    // the picker, which is the one write a legacy player's first post-R71
+    // boot makes — after which the registry is real and stable rather
+    // than resynthesized on every call.
+    assert.equal(store.map.size, 2, 'and that stamp is what actually materializes the registry key');
+    assert.equal(loadSlotRegistry(store).slots[0].lastPlayedAt > 0, true, 'with a real timestamp on slot 1');
+  }
+
+  // 2. A brand-new device: no registry, no legacy save either. Still one
+  //    slot, just an empty one — exactly loadSave()'s existing behaviour
+  //    for "nothing here yet".
+  {
+    const store = fakeStore();
+    const loaded = loadSave(store);
+    assert.equal(loaded.chimeras.length, 0, 'a fresh device gets a fresh game');
+    assert.equal(loaded.slotId, 1, 'still slot 1 — the only slot a device starts with');
+  }
+
+  // 3. saveGame routes by the save's OWN slotId, not by whatever the
+  //    registry currently calls active — the save in your hand is the save
+  //    you are looking at, even if something else changed the pointer.
+  {
+    const store = fakeStore();
+    const s = loadSlot(2, store); // slot 2 has never existed — still loads clean
+    assert.equal(s.slotId, 2, 'loadSlot stamps the slot it was asked for');
+    s.funds = 42;
+    saveGame(s, store);
+    assert.equal(JSON.parse(store.map.get('spliceworld_save_2')).funds, 42, 'written to slot 2s own key');
+    assert.ok(!store.map.has('spliceworld_save'), 'slot 1s key is untouched — a different slot entirely');
+  }
+
+  // 4. createSlot: carries device preferences forward (the SAME list R55
+  //    built for a reset — sound and read guides should not reset
+  //    themselves just because a second lab opened), starts otherwise
+  //    empty, and becomes the active slot.
+  {
+    const current = { ...newGameState(), seed: 1 };
+    current.settings.muted = true;
+    current.guidesSeen = ['resequencer'];
+    current.chimeras = [{ id: 'c1' }];
+    const store = fakeStore({ spliceworld_save: JSON.stringify(current) });
+    const made = createSlot(current, store);
+    assert.ok(made.ok, `a new lab is made (${made.msg ?? ''})`);
+    assert.equal(made.slotId, 2, 'the next free id, since slot 1 is taken');
+    const reg = loadSlotRegistry(store);
+    assert.equal(reg.activeId, 2, 'and it becomes active immediately');
+    assert.deepEqual(reg.slots.map((s) => s.id).sort(), [1, 2], 'both labs are listed');
+    const fresh = loadSlot(2, store);
+    assert.equal(fresh.chimeras.length, 0, 'a new lab starts empty — nothing carries over but the device list');
+    assert.equal(fresh.settings.muted, true, 'sound carries forward');
+    assert.deepEqual(fresh.guidesSeen, ['resequencer'], 'and the field notes already read');
+    assert.deepEqual(CARRIED_ACROSS_RUNS, ['settings', 'guidesSeen', 'ui'],
+      'the exact same three fields a reset carries — one list, both doors');
+    // The old lab is entirely undisturbed by the new one existing.
+    assert.equal(loadSlot(1, store).chimeras.length, 1, 'slot 1 still has its chimera');
+  }
+
+  // 5. MAX_SLOTS is a real ceiling, not a suggestion, and createSlot names
+  //    the reason rather than failing silently or overwriting a slot.
+  //    A brand-new device already has slot 1 (synthesized, per test 2), so
+  //    only MAX_SLOTS - 1 MORE creations should succeed before the cap.
+  {
+    const store = fakeStore();
+    for (let i = 0; i < MAX_SLOTS - 1; i++) {
+      const r = createSlot(newGameState(), store);
+      assert.ok(r.ok, `lab ${i + 2} of ${MAX_SLOTS} is allowed (${r.msg ?? ''})`);
+    }
+    assert.equal(loadSlotRegistry(store).slots.length, MAX_SLOTS, `exactly ${MAX_SLOTS} exist, slot 1 included`);
+    const over = createSlot(newGameState(), store);
+    assert.equal(over.ok, false, `a ${MAX_SLOTS + 1}th lab is refused`);
+    assert.equal(over.reason, 'max-slots', 'for that reason');
+    assert.equal(loadSlotRegistry(store).slots.length, MAX_SLOTS, 'and nothing was overwritten to make room');
+    assert.ok(MAX_SLOTS >= 2, 'the cap is not so tight it defeats its own point');
+  }
+
+  // 6. switchSlot: moves the active pointer and nothing else — no data is
+  //    touched, so this alone must never lose or alter either lab.
+  {
+    const store = fakeStore({ spliceworld_save: JSON.stringify({ ...newGameState(), funds: 111 }) });
+    createSlot(newGameState(), store); // slot 2, now active
+    const before1 = store.map.get('spliceworld_save');
+    const before2 = store.map.get('spliceworld_save_2');
+    assert.ok(switchSlot(1, store).ok, 'switching back to slot 1 succeeds');
+    assert.equal(activeSlotId(store), 1, 'and it is now active');
+    assert.equal(store.map.get('spliceworld_save'), before1, 'slot 1s data is untouched by switching');
+    assert.equal(store.map.get('spliceworld_save_2'), before2, 'and so is slot 2s');
+    const missing = switchSlot(999, store);
+    assert.equal(missing.ok, false, 'switching to a slot that does not exist is refused');
+    assert.equal(missing.reason, 'no-such-slot', 'for that reason');
+    assert.equal(activeSlotId(store), 1, 'and the active pointer did not move');
+  }
+
+  // 7. deleteSlot: three refusals before it ever removes anything — no
+  //    such slot, the last slot standing, and the active slot (there is no
+  //    "which game is this" answer if the one on screen goes). Only past
+  //    all three does it actually free the storage.
+  //
+  //    With exactly one slot, it is BOTH the last one and the active one —
+  //    'last-slot' wins that check on purpose: "switch to another one
+  //    first" is impossible advice when there is no other one, so the
+  //    message that is actually actionable has to be the one that fires.
+  {
+    const store = fakeStore();
+    const only = activeSlotId(store);
+    assert.equal(deleteSlot(only, store).reason, 'last-slot',
+      'the only slot cannot go — and the reason given is the one a player can act on');
+    const made = createSlot(newGameState(), store);
+    // Now that a second lab exists, the FIRST one — inactive, since
+    // createSlot switched active to the new one — is the active check's
+    // actual target.
+    assert.equal(deleteSlot(made.slotId, store).reason, 'active-slot',
+      'the new lab is active, so deleting IT specifically hits the active-slot refusal instead');
+    assert.ok(deleteSlot(only, store).ok, 'while the other, inactive lab can go');
+    assert.equal(loadSlotRegistry(store).slots.length, 1, 'one lab remains');
+    assert.ok(!store.map.has(only === 1 ? 'spliceworld_save' : `spliceworld_save_${only}`),
+      'and its storage key is actually freed, not just delisted');
+    assert.equal(deleteSlot(made.slotId, store).reason, 'last-slot', 'the last lab standing cannot go either');
+    assert.equal(deleteSlot(999, store).reason, 'no-such-slot', 'and a slot that never existed is its own refusal');
+  }
+
+  // 8. renameSlot: a label for the picker, independent of the in-fiction
+  //    lab name — trimmed, capped, and an empty string clears back to the
+  //    default rather than leaving a blank picker row.
+  {
+    const store = fakeStore();
+    assert.ok(renameSlot(1, '  Hardcore Run  ', store).ok, 'a name is accepted');
+    assert.equal(loadSlotRegistry(store).slots[0].name, 'Hardcore Run', 'trimmed');
+    const long = 'x'.repeat(80);
+    renameSlot(1, long, store);
+    assert.equal(loadSlotRegistry(store).slots[0].name.length, 40, 'and capped rather than stored unbounded');
+    renameSlot(1, '   ', store);
+    assert.equal(loadSlotRegistry(store).slots[0].name, null, 'blank clears back to the default label');
+    assert.equal(renameSlot(999, 'ghost', store).reason, 'no-such-slot', 'and a missing slot is refused, not silently created');
+  }
+
+  // 9. slotSummary: read straight off storage, never off a value cached at
+  //    creation time — the failure mode a cache invites is a picker that
+  //    shows a lab as it was five sessions ago.
+  {
+    const store = fakeStore();
+    assert.equal(slotSummary(1, store).empty, true, 'nothing written yet reads as empty');
+    const played = { ...newGameState(), chimeras: [{ id: 'c1' }, { id: 'c2' }], seed: 9 };
+    played.profile.lab = 'The Gurgling Annexe';
+    saveGame({ ...played, slotId: 1 }, store);
+    const sum = slotSummary(1, store);
+    assert.equal(sum.empty, false, 'and now reads as played');
+    assert.equal(sum.chimeras, 2, 'with the real count');
+    assert.equal(sum.lab, 'The Gurgling Annexe', 'and the in-fiction lab name, for a picker with no override');
+    store.map.set('spliceworld_save_9', '{not json');
+    assert.deepEqual(slotSummary(9, store), { empty: true, corrupt: true }, 'a corrupt slot reads empty rather than throwing');
+  }
+
+  // 10. activeSlotId is self-healing: a registry whose active pointer names
+  //     a slot that no longer exists (which switchSlot/deleteSlot's own
+  //     guards should prevent, but a hand-edited or half-written registry
+  //     should not be able to strand the game on a slot with no data path)
+  //     falls back to a real slot rather than loading nothing.
+  {
+    const store = fakeStore();
+    saveSlotRegistry({ slots: [{ id: 3, name: null, createdAt: 0 }], activeId: 7 }, store);
+    assert.equal(activeSlotId(store), 3, 'falls back to the one slot that actually exists');
+  }
+
+  // 11. Import and reset both target the slot they were asked to, not
+  //     silently the legacy key — the settings panel always passes
+  //     `state.slotId` explicitly (checked on its own source above), and
+  //     this is the mechanism that call relies on.
+  {
+    const store = fakeStore({ spliceworld_save_2: JSON.stringify({ ...newGameState(), funds: 1 }) });
+    const incoming = { ...newGameState(), seed: 77 };
+    const done = adoptSave(incoming, store, 2);
+    assert.ok(done.ok, 'an import targeted at slot 2 lands');
+    assert.equal(JSON.parse(store.map.get('spliceworld_save_2')).seed, 77, 'in slot 2s own key');
+    assert.ok(!store.map.has('spliceworld_save'), 'slot 1 was never touched by an import aimed at slot 2');
+    const reset = adoptSave(startNewRun(loadSlot(2, store)), store, 2);
+    assert.ok(reset.ok, 'and a reset aimed at slot 2 lands the same way');
+    assert.notEqual(JSON.parse(store.map.get('spliceworld_save_2')).seed, 77, 'a fresh run, still in slot 2');
   }
 }
 
