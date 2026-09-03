@@ -636,17 +636,63 @@ The queue is a proposal: prune it before starting R63.
   promised signature ability is shipped or struck from §3, `Camo` and
   `Burrower` are read by the engine or removed from the data, and a gate
   fails on identical-kit collisions.* ✅ all four.
-- **R69 — The late game has no content in it.** Fauna unlocked per region:
-  **Greenfield 16, Kestrel 7, Drowned 7, Foundry 2, Spire 0** — taking the
-  final region puts nothing in the catalog. `tierScale` prices tiers 7–8
-  and nothing fields them; Threat Generation stops at 3; all three rivals
-  are gated on **Greenfield** nodes (notoriety 40–85), so the ladder is
-  climbed before the map is; **16 of 21** node blurbs duplicate their
-  encounter's blurb; seven jobs never gate or grow. The roadmap's Tank,
-  Artillery and Containment Cannon mk2 were never built. *Done when: every
-  region unlocks fauna and hosts a rival, Gen 4 and the heavy vehicles
-  exist in data, and a gate asserts a floor of unlocks and one rival per
-  region.*
+- **R69 — The late game has no content in it.** ✅ *Shipped.* Fauna
+  unlocked per region: **Greenfield 16, Kestrel 7, Drowned 7, Foundry 2,
+  Spire 0** — taking the final region put nothing in the catalog.
+  `tierScale` priced tiers 7–8 and nothing fielded them; Threat Generation
+  stopped at 3; all three rivals gated on **Greenfield** nodes (notoriety
+  40–85), so the ladder was climbed before the map was. The roadmap's Tank
+  and Artillery were never built.
+  - **Fauna, redistributed rather than duplicated.** Four species moved out
+    of Greenfield's later nodes (one per class, so Spire's "all three
+    classes" demand has an unlock to match) into Foundry and Spire:
+    **Greenfield 16 → 12, Foundry 2 → 3, Spire 0 → 3.** This nearly shipped
+    wrong: the first draft handed each of the six A3 variants a node,
+    because they had no `mailOrderPrice` and no unlock — which is exactly
+    what R6 built them NOT to have. *"Bred, never bought: they surface as
+    the rarest mutation branch and then breed true"* (§3.2, R6); A6 calls
+    them "the rarest things the game produces." Every one of the 34
+    ordinary species was already reachable before this phase — the real
+    gap was which region a species belonged to, not whether it existed
+    anywhere. `SAVE_VERSION` **35 → 36**: a save keeps every species it
+    already unlocked via `faunaGranted`, the same permanent-grant mechanism
+    v24 built for exactly this reshuffle, and its own comment already said
+    "any future reshuffle of unlocksFauna is safe for the same reason."
+  - **One rival per region, met on arrival, not stacked on Greenfield.**
+    Aloft and Trench re-gated onto Kestrel and Drowned's first nodes; two
+    new rivals, **Magister Cinder Ferrule** (Foundry, Armored) and **Chair
+    Emerita Prudence Lacuna** (Spire, mixed), each waiting on the last and
+    costing more notoriety than it.
+  - **Threat Generation 4**, read off the same data-driven ladder R26 built
+    — a rung is a JSON edit, still. Two Spire nodes gate on it.
+  - **The Tank and the Artillery**, procedural SVG, both fielded at tiers
+    7–8: **Siege Tank** is the most armoured thing on the roster (Sonic is
+    its authored answer) with a 2-turn-charge Main Gun; **Battery 88** hits
+    harder and folds if you reach it (74hp/5armour against the Tank's
+    138/20) — "must be rushed" made mechanical, not just flavour text.
+  - **Two pre-existing cracks, found by fielding this honestly rather than
+    by looking for them:**
+    - **Heron's kit was already climbing toward the "no build dominates"
+      ceiling before this phase touched it** — measured at HEAD: a 6–13pp
+      gap over the peer median at Standard, 17–20 at Prime, 19–22 at Apex,
+      21–24 at Prismatic. R69's harder tiers nudged the peer median down
+      the last few points needed to cross 30pp, but the climb was already
+      there, invisible because R68's own suite only ever measured it
+      against the roster that existed then. `heron_head`'s power **58 →
+      54** flattens it; clean across all four grades and six seeds.
+    - **R68's away-gate logged a nonsensical row for every underwater
+      seed** — `banked -1429 of -90 (1588%)` printed BEFORE the
+      "underwater, skipped" line that superseded it, because the log and
+      `compared++` both ran ahead of the guard instead of behind it. No
+      assertion depended on the order; fixed as a drive-by.
+  *Done when: every region unlocks fauna and hosts a rival, Gen 4 and the
+  heavy vehicles exist in data, and a gate asserts a floor of unlocks and
+  one rival per region.* ✅ ten breaks, all red — identical-kit-style
+  coverage for fauna gating, rival regioning and chaining, the Gen 4 rung,
+  and both heavies' §3 identity (armour, fragility, the charge itself).
+  **Still open, out of this phase's Done-when:** the Containment Cannon
+  mk2 upgrade §3 also promised alongside the Tank and Artillery remains
+  unbuilt.
 - **R70 — Dead and unreachable content, second pass.** `jeep_50` is never
   fielded, so `v8_heart` cannot be obtained; `air_patrol` and
   `harbor_watch` are attached to no node; **34 of 41 species have no

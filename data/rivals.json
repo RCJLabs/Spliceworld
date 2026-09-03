@@ -1,5 +1,5 @@
 {
-  "_doc": "Rival geneticists (ROADMAP §3.8). requiresNodes gates each rival on the conquest that puts their COUNTER-class anatomy in your reach — you are never asked to beat Air before wings exist for you too; requiresRivals chains the ladder. Rivals field CHIMERAS, not human units: campaign/rivals.js builds each rival's team from real parts and runs it through the same physiology the player uses (splice/physiology.js), so a rival's stats, tags and elemental class are earned by anatomy exactly like yours. classBias picks the anatomy they commit to; the ladder is ordered so each rival counters the class you just farmed off the last one (Ground → Air → Water → back to Ground), which is what makes keeping a stable better than perfecting one build. Beating a rival puts their chimeras in Containment; salvaging one yields THEIR parts — the roadmap's 'enemy tech is otherwise unobtainable', except here it is other people's genetics. Rivals iterate on THEIR OWN OBSERVATIONS (R27): every duel writes into that rival's scouting file — the classes you brought, the move tags you leaned on, the parts you kept using — and nothing else feeds it. Every defeat raises their grade ladder and power AND advances their counter tier, so a rival you have beaten twice fields anatomy chosen to blunt the stable that beat them. counterBias only decides whether they react from the FIRST rematch or wait for the second. monologue follows the §3.8 schema and is now PROSE rather than placeholder barks. Slots: intro/midFight/defeat/victory fire inside the duel, interleaved with the player's own lines from philosophies.json so a rival fight is a conversation rather than a wall of one-liners; dissectionTaunt fires in the news wire when they take one of your chimeras and dissectionDone when the rescue window closes on it; defection fires when you REHABILITATE one of their specimens onto your roster; rematch fires when they iterate after a defeat. Templates take {creature} and {name}. Adding a slot means adding a key here and a caller — never an engine change. Balance pass: rivals were tuned against a lone chimera and folded against the team of three the game actually gives you — they were the EASIEST content on the ladder. powerScale/teamSize/grades now put them at the top of it, with the class triangle deciding: bring the counter and you win ~90%, mirror ~40-65%, bring what they counter and you lose.",
+  "_doc": "Rival geneticists (ROADMAP \u00a73.8). requiresNodes gates each rival on the conquest that puts their COUNTER-class anatomy in your reach \u2014 you are never asked to beat Air before wings exist for you too; requiresRivals chains the ladder. Rivals field CHIMERAS, not human units: campaign/rivals.js builds each rival's team from real parts and runs it through the same physiology the player uses (splice/physiology.js), so a rival's stats, tags and elemental class are earned by anatomy exactly like yours. classBias picks the anatomy they commit to; the ladder is ordered so each rival counters the class you just farmed off the last one (Ground \u2192 Air \u2192 Water \u2192 back to Ground), which is what makes keeping a stable better than perfecting one build. Beating a rival puts their chimeras in Containment; salvaging one yields THEIR parts \u2014 the roadmap's 'enemy tech is otherwise unobtainable', except here it is other people's genetics. Rivals iterate on THEIR OWN OBSERVATIONS (R27): every duel writes into that rival's scouting file \u2014 the classes you brought, the move tags you leaned on, the parts you kept using \u2014 and nothing else feeds it. Every defeat raises their grade ladder and power AND advances their counter tier, so a rival you have beaten twice fields anatomy chosen to blunt the stable that beat them. counterBias only decides whether they react from the FIRST rematch or wait for the second. monologue follows the \u00a73.8 schema and is now PROSE rather than placeholder barks. Slots: intro/midFight/defeat/victory fire inside the duel, interleaved with the player's own lines from philosophies.json so a rival fight is a conversation rather than a wall of one-liners; dissectionTaunt fires in the news wire when they take one of your chimeras and dissectionDone when the rescue window closes on it; defection fires when you REHABILITATE one of their specimens onto your roster; rematch fires when they iterate after a defeat. Templates take {creature} and {name}. Adding a slot means adding a key here and a caller \u2014 never an engine change. Balance pass: rivals were tuned against a lone chimera and folded against the team of three the game actually gives you \u2014 they were the EASIEST content on the ladder. powerScale/teamSize/grades now put them at the top of it, with the class triangle deciding: bring the counter and you win ~90%, mirror ~40-65%, bring what they counter and you lose.",
   "rematch": {
     "powerPerDefeat": 0.05,
     "powerCap": 2.8,
@@ -11,7 +11,7 @@
     ],
     "teamGrowthEvery": 2,
     "teamCap": 3,
-    "_doc": "Escalation and scouting (R27). A rival's ladder is driven by `defeats` — how many times YOU have beaten THEM — and by their own scouting file, which records what you actually fielded against them and nothing else. That is the difference from the AI director: the director watches your whole stable continuously from banked usage data, a rival only ever sees what walked into their lab. Tiers: 0 = the build they publish; 1 = they answer your class with one specimen (only rivals with counterBias react this early); 2 = the class counter moves to their LEAD and they pick anatomy that blunts your most-used move tag; 3 = they field one of your own signature parts back at you. `counters` is the anatomy table, keyed on the move tag you lean on: seek/avoid are part tags, and the reasons are the real chart in keywords.json — Ground misses Airborne outright, Electric doubles on Aquatic, Sonic ignores Armor so armour spent against it is wasted, Gas is x1.5 on Organic and every chimera is Organic, so the only answer to it is to be harder to kill.",
+    "_doc": "Escalation and scouting (R27). A rival's ladder is driven by `defeats` \u2014 how many times YOU have beaten THEM \u2014 and by their own scouting file, which records what you actually fielded against them and nothing else. That is the difference from the AI director: the director watches your whole stable continuously from banked usage data, a rival only ever sees what walked into their lab. Tiers: 0 = the build they publish; 1 = they answer your class with one specimen (only rivals with counterBias react this early); 2 = the class counter moves to their LEAD and they pick anatomy that blunts your most-used move tag; 3 = they field one of your own signature parts back at you. `counters` is the anatomy table, keyed on the move tag you lean on: seek/avoid are part tags, and the reasons are the real chart in keywords.json \u2014 Ground misses Airborne outright, Electric doubles on Aquatic, Sonic ignores Armor so armour spent against it is wasted, Gas is x1.5 on Organic and every chimera is Organic, so the only answer to it is to be harder to kill.",
     "classCounterTier": 1,
     "anatomyCounterTier": 2,
     "mirrorTier": 3,
@@ -30,7 +30,7 @@
           "Airborne"
         ],
         "avoid": [],
-        "intel": "Airborne stock — your Ground-tagged moves will swing through empty air."
+        "intel": "Airborne stock \u2014 your Ground-tagged moves will swing through empty air."
       },
       {
         "when": "Electric",
@@ -38,7 +38,7 @@
         "avoid": [
           "Aquatic"
         ],
-        "intel": "Nothing wet in the tank this time — they have stopped handing you double damage."
+        "intel": "Nothing wet in the tank this time \u2014 they have stopped handing you double damage."
       },
       {
         "when": "Sonic",
@@ -125,13 +125,13 @@
         ]
       },
       "monologue": {
-        "intro": "Ah — the goat person. I have read your paperwork. It is atrocious, it is unsourced, and page four is a drawing. My arthropods will explain the rest.",
+        "intro": "Ah \u2014 the goat person. I have read your paperwork. It is atrocious, it is unsourced, and page four is a drawing. My arthropods will explain the rest.",
         "midFight": "You are improvising. I ANNOTATED. There is a difference and it is about to become extremely obvious.",
         "defeat": "Fine! FINE. Take my specimens. They were a rough draft anyway, and the next instar will be less polite about it.",
         "victory": "Peer review complete. Findings: you need more legs. Considerably more legs. Resubmit in the spring.",
         "dissectionTaunt": "Your {creature} is in my lab. It has been given a name tag and a very small chair. It is not enjoying the seminar.",
         "dissectionDone": "The seminar on your {creature} concluded this morning. Attendance was excellent. Its parts have been filed alphabetically and I have learned SO much.",
-        "defection": "You have taken {creature} — MY {creature} — and taught it to sit. I raised that thing through four instars. I hope it bites you affectionately.",
+        "defection": "You have taken {creature} \u2014 MY {creature} \u2014 and taught it to sit. I raised that thing through four instars. I hope it bites you affectionately.",
         "rematch": "Dr. Mantissa has published a rebuttal. It is eleven pages long, it is mostly diagrams, and one of the diagrams is moving."
       }
     },
@@ -164,7 +164,7 @@
         "apex"
       ],
       "requiresNodes": [
-        "guard_post"
+        "crop_strip"
       ],
       "requiresRivals": [
         "mantissa"
@@ -194,11 +194,11 @@
       "monologue": {
         "intro": "How lovely. You brought things that touch the ground. I brought things that decline to. Shall we see whose posture holds up?",
         "midFight": "You keep swinging at where I was. It is charming. It is also, if I am honest, the entire problem with your whole philosophy.",
-        "defeat": "Grounded. Me. GROUNDED. Keep the wings, darling — I have blueprints, a hangar, and an unhealthy amount of free time.",
+        "defeat": "Grounded. Me. GROUNDED. Keep the wings, darling \u2014 I have blueprints, a hangar, and an unhealthy amount of free time.",
         "victory": "Do give my regards to the horizon. You will be looking at rather a lot of it for the foreseeable future.",
         "dissectionTaunt": "Your {creature} is up here with me now. The view is spectacular. The paperwork is not, and it is being made to help.",
         "dissectionDone": "Your {creature} has completed its residency at altitude. I have kept the interesting bits and a truly unflattering photograph.",
-        "defection": "{creature} has DEFECTED. To a barn. After everything I gave it, including — and I cannot stress this enough — the sky.",
+        "defection": "{creature} has DEFECTED. To a barn. After everything I gave it, including \u2014 and I cannot stress this enough \u2014 the sky.",
         "rematch": "Aloft Aeronautical announces a new range. The press release is four words long and one of them is 'unsurvivable', which the lawyers have queried."
       }
     },
@@ -234,7 +234,7 @@
         "prismatic"
       ],
       "requiresNodes": [
-        "guard_post"
+        "sunken_marina"
       ],
       "requiresRivals": [
         "aloft"
@@ -264,12 +264,149 @@
       "monologue": {
         "intro": "Eleven kilometres down, nothing hurries and nothing forgives. I have brought a little of it with me. Do try not to rush.",
         "midFight": "You are running out of air. Metaphorically. For now. I would pace yourself, but I suspect that ship has sailed and then sunk.",
-        "defeat": "Extraordinary. Wholly unreplicated, of course, and therefore not yet a result. Bring your notebook next time — I intend to iterate.",
+        "defeat": "Extraordinary. Wholly unreplicated, of course, and therefore not yet a result. Bring your notebook next time \u2014 I intend to iterate.",
         "victory": "The pressure differential did most of the work. I merely stood here being correct, which is my preferred form of exercise.",
         "dissectionTaunt": "Your {creature} is in a tank. It is being observed. It is, in fairness, being fed, and the water is a very pleasant temperature.",
         "dissectionDone": "Observation of your {creature} is complete and the findings are, frankly, delicious. The tank has been drained. The notebook has not.",
         "defection": "You have surfaced my {creature}. At that rate. Without a stop. I would call it barbaric if it had not so obviously worked.",
         "rematch": "Marianas Applied Wetworks has revised its depth rating upward. Nobody has explained what that means for the things living at the old one."
+      }
+    },
+    {
+      "id": "ferrule",
+      "name": "Magister Cinder Ferrule",
+      "title": "Ferrule Heavy Biotics, Master of the Pour",
+      "philosophy": "Bone is ore that gave up early. I simply finish the job.",
+      "portraitSeed": 8123,
+      "classBias": "ground",
+      "favoredTags": [
+        "Armored"
+      ],
+      "favoredSpecies": [
+        "rhino",
+        "pangolin",
+        "armadillo",
+        "iron_tortoise",
+        "rhino_beetle"
+      ],
+      "frames": [
+        "L",
+        "M",
+        "L"
+      ],
+      "teamSize": 3,
+      "powerScale": 1.3,
+      "grades": [
+        "apex",
+        "apex",
+        "prismatic"
+      ],
+      "requiresNodes": [
+        "slag_gate"
+      ],
+      "requiresRivals": [
+        "trench"
+      ],
+      "notorietyAt": 200,
+      "reward": 1100,
+      "notoriety": 45,
+      "counterBias": true,
+      "nameParts": {
+        "prefixes": [
+          "Billet",
+          "Cupola",
+          "Tuyere",
+          "Bloom",
+          "Ingot",
+          "Slag"
+        ],
+        "suffixes": [
+          "the Poured",
+          "Mk IX",
+          "of the Crucible",
+          "Annealed",
+          "Tempered",
+          "the Unquenched"
+        ]
+      },
+      "monologue": {
+        "intro": "You have come to a foundry with SOFT animals. Charming. Mine were poured, not born, and they have never once been described as cuddly.",
+        "midFight": "Do you hear that? That is my alloy holding. Yours is making a different noise entirely.",
+        "defeat": "Cracked on the cooling. CRACKED ON THE COOLING. Take the plate \u2014 I shall simply pour a thicker one and try not to think about you.",
+        "victory": "Back to the pattern shop with you. Bring something with a grain next time.",
+        "rematch": "Recast, retempered, and this time I let it rest properly. Your move.",
+        "dissectionTaunt": "You are welcome to open one up. You will find no seams, which I expect will annoy you enormously.",
+        "dissectionDone": "So you took it apart. Congratulations \u2014 you now own a very expensive paperweight and a diagram you cannot read.",
+        "defection": "It went WITH you? After everything I poured into it? Fine. It always did run cold."
+      }
+    },
+    {
+      "id": "lacuna",
+      "name": "Chair Emerita Prudence Lacuna",
+      "title": "Office of Biological Governance, the Compliance Spire",
+      "philosophy": "Every animal is a permit that nobody has filed yet. I file.",
+      "portraitSeed": 9440,
+      "classBias": "air",
+      "favoredTags": [
+        "Camo",
+        "Sonic"
+      ],
+      "favoredSpecies": [
+        "chameleon",
+        "pale_cobra",
+        "storm_eagle",
+        "owl",
+        "mantis"
+      ],
+      "frames": [
+        "M",
+        "S",
+        "L"
+      ],
+      "teamSize": 3,
+      "powerScale": 1.1,
+      "grades": [
+        "apex",
+        "prismatic",
+        "prismatic"
+      ],
+      "requiresNodes": [
+        "spire_reception"
+      ],
+      "requiresRivals": [
+        "ferrule"
+      ],
+      "notorietyAt": 450,
+      "reward": 1800,
+      "notoriety": 60,
+      "counterBias": true,
+      "nameParts": {
+        "prefixes": [
+          "Clause",
+          "Schedule",
+          "Rider",
+          "Appendix",
+          "Codicil",
+          "Erratum"
+        ],
+        "suffixes": [
+          "Compliant",
+          "Pending Review",
+          "as Amended",
+          "Mk XII",
+          "Notwithstanding",
+          "the Unfiled"
+        ]
+      },
+      "monologue": {
+        "intro": "I have your file. It is nine hundred pages and every one of them is a violation. My specimens are fully licensed. Yours are, at best, allegations.",
+        "midFight": "Note for the minutes: the goat person is improvising again. Strike it. Strike all of it.",
+        "defeat": "Motion carried, apparently. Against me. Take the specimens, take the lanyard, take the WHOLE floor \u2014 I shall be appealing this for the rest of my natural life.",
+        "victory": "Denied. Resubmit in triplicate, and do try to spell 'chimera' the way the form asks.",
+        "rematch": "I have had the paperwork reviewed by counsel, and counsel is furious on my behalf. Again.",
+        "dissectionTaunt": "Unauthorized peer review, is it? Do keep the receipts. I intend to read them aloud.",
+        "dissectionDone": "You have opened a licensed specimen without a permit. I have already filed about it. Twice.",
+        "defection": "It DEFECTED. To a barn. There will be an inquiry, and the inquiry will be about the barn."
       }
     }
   ]

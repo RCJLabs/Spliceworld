@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 35;
+export const SAVE_VERSION = 36;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -456,6 +456,29 @@ const migrations = {
     save.campaign ??= {};
     if (save.lastTickAt == null && save.campaign.lastTickAt != null) save.lastTickAt = save.campaign.lastTickAt;
     delete save.campaign.lastTickAt;
+    return save;
+  },
+  // v36 (R69): the map's fauna was lopsided — Greenfield held 16 unlocks,
+  // Foundry 2, Spire 0 — so taking the final region put nothing new in the
+  // catalog. Four species moved out of Greenfield's later nodes (one per
+  // class, so Spire's "all three classes" demand has an unlock to match)
+  // into Foundry and Spire. This is the exact redistribution v24 already
+  // built the mechanism for: `faunaGranted` is a permanent, additive grant,
+  // computed from the table as it stood in v35 against the nodes this save
+  // actually holds, so nobody who already had dragonfly, gorilla, cobra or
+  // otter loses it for being unlocked somewhere else now.
+  36: (save) => {
+    const V35_UNLOCKS = {
+      checkpoint: ['eagle', 'bat', 'dragonfly'],
+      precinct: ['bear', 'tiger', 'gorilla', 'cobra'],
+      guard_post: ['frog', 'crocodile', 'otter'],
+    };
+    save.campaign ??= {};
+    const granted = new Set(save.campaign.faunaGranted ?? []);
+    for (const nodeId of save.campaign.heldNodes ?? []) {
+      for (const id of V35_UNLOCKS[nodeId] ?? []) granted.add(id);
+    }
+    save.campaign.faunaGranted = [...granted];
     return save;
   },
 };
