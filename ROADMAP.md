@@ -961,6 +961,19 @@ The queue is a proposal: prune it before starting R63.
   halves as well, because a gate that measured boxes and ignored semantics
   would pass a game no keyboard could play. Proven both ways: it exits 1
   with 28 named problems against the pre-R73 stylesheet.
+  - **Follow-up, after the merge.** The audit finished late and found two
+    more of exactly the kind this phase was fixing, plus a gap in the gate.
+    `--cls-air` sat defined in all five theme blocks and used NOWHERE — both
+    rules that should have named it reached for `--accent-2`, while the two
+    rules directly above them named their own tokens correctly, so the class
+    the triangle makes hardest to read was drawn in another role's colour.
+    And `.forecast-hopeless` — the only rule in the file that hardcoded a hex
+    for text — put `#fff` on a solid `--danger-2` fill: 3.96 / 2.78 / 4.18 /
+    4.01 / 3.62 across the five schemes, below AA in all of them. Nothing
+    light clears these reds, so that band takes a new near-black
+    `--on-danger`, one value for all five. The gate had measured ONE theme of
+    five; it walks all five now, and a new rule fails a class colour that is
+    defined but unused.
 - **R80 — The keyboard can see the game but not play it.** R73 made focus
   visible and the two modals real dialogs; an adversarial four-dimension
   audit found the barriers that survive. **Focus is destroyed on a timer:**
@@ -975,9 +988,23 @@ The queue is a proposal: prune it before starting R63.
   result message, the retraining counter and the battle log are all plain
   text that changes silently. **Spacing:** picker rows sit 5 px apart, the
   Dex subtab strip 4 px, and Train sits directly beside Dismantle — under
-  the 8 px the same audit measured everywhere else. *Done when: no render
-  loses focus, every control is a real control, state changes announce, and
-  `tools/a11y.js` walks the app by keyboard alone.*
+  the 8 px the same audit measured everywhere else.
+  **And R73's own dialog controller only half-solves this.** When a panel
+  re-renders in place the focused element is detached, so
+  `document.activeElement` is `<body>`, the `!overlay.contains(...)` guard
+  passes, and focus lands on the FIRST control in the fresh markup rather
+  than the one the player just used: tapping "Download my save" moves focus
+  to the sound toggle and announces it, saying nothing about the export.
+  Strictly better than the `<body>` it replaced, and still not right — the
+  fix is for the re-rendering panels to name what should hold focus, which
+  is the same change the rest of this entry needs. Two more from the same
+  audit: `openPrompt` registers Enter on `document` with no target check, so
+  Enter on the sheet's own Close button COMMITS the rename instead of
+  cancelling it; and `pickerField`'s label sits in an unassociated sibling
+  span, so every picker button is announced as its current value with no
+  idea which field it belongs to. *Done when: no render loses focus, every
+  control is a real control, state changes announce, and `tools/a11y.js`
+  walks the app by keyboard alone.*
 - **R74 — The briefing runs 64–160 battles per checkbox.** `campaign/ui.js`
   calls `forecast` and then `diagnose`, whose first act is the same
   `forecast` again, and on a losing band two more 32-battle sweeps —

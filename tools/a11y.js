@@ -255,6 +255,21 @@ async function main() {
     await evaluate(`document.querySelector('#set-close')?.click()`);
     await sleep(300);
 
+    // ---- 1d. every theme, not just the shipped one. The floor is a layout
+    //      property and does not move between colour schemes, but the
+    //      stylesheet has five of them and a rule that only ever ran under
+    //      one is a rule measured once. This caught nothing on its first
+    //      run — which is the point: the gap it closes was found by an audit
+    //      reading the other four by hand, after this gate had already
+    //      passed.
+    for (const theme of ['lab', 'vivarium', 'blueprint', 'saturday']) {
+      await evaluate(`document.documentElement.dataset.theme = ${JSON.stringify(theme)}`);
+      await sleep(250);
+      await collect(`theme:${theme}`);
+    }
+    await evaluate(`delete document.documentElement.dataset.theme`);
+    await sleep(200);
+
     const controls = [...seen.values()].sort((a, b) => Math.min(a.h, a.w) - Math.min(b.h, b.w));
     const under = controls.filter((c) => c.h < FLOOR || c.w < FLOOR);
     if (REPORT) {
