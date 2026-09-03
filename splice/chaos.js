@@ -252,6 +252,11 @@ export function tickVat(state, content, now) {
   const t = chaosTuning(content);
   state.vat = null;
 
+  // R65: everything below is stamped with `vat.until`, when the vat actually
+  // opened, not with the tick that noticed. A child decanted on Tuesday has
+  // been settling since Tuesday; stamping it `now` restarted its settling
+  // clock on the player's return and made a week's absence cost a day.
+  const decantedAt = vat.until;
   const { frame, parts, chaosParts, extraSockets = [] } = vat.conception;
   const tokens = {};
   for (const [socketId, spec] of Object.entries(parts)) {
@@ -260,7 +265,7 @@ export function tickVat(state, content, now) {
       id: `t${state.inventory.tokenCount++}`,
       partId: spec.partId,
       grade: spec.grade,
-      donor: spec.donor ?? { name: 'the vat', species: content.parts[spec.partId].species, stars: 3, extractedAt: now },
+      donor: spec.donor ?? { name: 'the vat', species: content.parts[spec.partId].species, stars: 3, extractedAt: decantedAt },
     };
     if (!state.dex.parts.includes(spec.partId)) state.dex.parts.push(spec.partId);
   }
@@ -275,8 +280,8 @@ export function tickVat(state, content, now) {
     name: pick(rng, names),
     frame,
     tokens,
-    createdAt: now,
-    settleUntil: now + report.settlingMs,
+    createdAt: decantedAt,
+    settleUntil: decantedAt + report.settlingMs,
     // Whatever physiology already thinks of this mess, plus a little for
     // having been assembled by nobody.
     instability: Math.min(100, report.instability + t.extraInstability),
@@ -287,7 +292,7 @@ export function tickVat(state, content, now) {
     exhaustedUntil: 0,
     scars: [],
     injuryCount: 0,
-    vatBorn: { parents: vat.parentNames, at: now, chaosParts, extraSockets },
+    vatBorn: { parents: vat.parentNames, at: decantedAt, chaosParts, extraSockets },
   };
   state.chimeras.push(child);
 

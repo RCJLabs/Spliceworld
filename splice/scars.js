@@ -141,8 +141,11 @@ export function tickScars(state, content, now) {
     chimera.scars ??= [];
     if (!pool.length || chimera.scars.length >= t.maxScars) continue;
 
-    chimera.injuryCount = (chimera.injuryCount ?? 0) + 1;
-    const rng = rngStream(state.seed, `scar:${chimera.id}`, chimera.injuryCount);
+    // R65: the tally is advanced where the injury is INFLICTED
+    // (battle/engine.js applyInjury), so one number means one thing —
+    // how many injuries this creature has taken — and both the name roll
+    // and this scar roll key off it in their own namespaces.
+    const rng = rngStream(state.seed, `scar:${chimera.id}`, chimera.injuryCount ?? 0);
     // A Regenerative Suite does not stop an untreated injury setting badly,
     // it makes it rarer. Treatment is still the only guarantee — the
     // Infirmary sells certainty, and a track that sold certainty for free

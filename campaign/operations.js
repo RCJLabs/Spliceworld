@@ -43,6 +43,7 @@ import { analyze } from '../splice/physiology.js';
 import { isSettled } from '../splice/theater.js';
 import { createAnimal } from '../ranch/ranch.js';
 import { infirmaryGrants } from '../splice/facility.js';
+import { applyInjury } from '../battle/engine.js';
 
 const HOUR = 3600000;
 
@@ -294,15 +295,35 @@ export function startOperation(state, opId, chimeraId, content, now) {
   };
 }
 
+// R65 — one cooldown rule, in one place: it starts when the crew comes home.
+//
+// The two paths used to disagree about that moment. A resolved job started
+// its cooldown at the TICK, so a job that ended while you were away locked
+// for a fresh six hours the moment you looked — the schedule measured your
+// habits rather than the job's clock, which is the thing R9 spent a whole
+// phase forbidding for counter-offensives. An aborted job started its
+// cooldown at `startedAt`, so calling off a six-hour job one minute in
+// left it ready sooner than letting it run. Now: `endedAt` is `run.until`
+// for a job that finished and `now` for one you called off, because that is
+// when the crew is actually back through the door.
+function startCooldown(state, content, opId, endedAt) {
+  const op = content.operations?.[opId];
+  state.campaign.opCooldowns ??= {};
+  state.campaign.opCooldowns[opId] = endedAt + Math.round((op?.cooldownHours ?? 6) * HOUR);
+}
+
 // Pull out before the clock runs down. The job is off, the cooldown still
 // applies, and nothing is gained — but nothing is lost either.
-export function abortOperation(state, content, opId = null) {
+// `now` defaults to the save's own clock rather than the wall clock: this
+// module is DOM-free and drives the harness too, and a caller that forgets
+// the argument should fall back to the one timestamp the save keeps (R64),
+// not to whatever time it happens to be on the machine running the suite.
+export function abortOperation(state, content, opId = null, now = state.lastTickAt ?? Date.now()) {
   const run = opId ? activeOps(state).find((r) => r.opId === opId) : activeOp(state);
   if (!run) return { ok: false, msg: 'Nothing is running.' };
   const op = content.operations?.[run.opId];
   state.campaign.operations = activeOps(state).filter((r) => r !== run);
-  state.campaign.opCooldowns ??= {};
-  state.campaign.opCooldowns[run.opId] = run.startedAt + Math.round((op?.cooldownHours ?? 6) * HOUR);
+  startCooldown(state, content, run.opId, now);
   return { ok: true, msg: `${op?.name ?? 'The job'} called off. Everyone comes home. Nobody is paid.` };
 }
 
@@ -325,11 +346,16 @@ export function tickOperations(state, content, now) {
   return { news, results, result: results[results.length - 1] ?? null };
 }
 
+// R65 — everything this writes is stamped with `run.until`, the moment the
+// job actually ended, never with `now`. `now` is when the player happened to
+// look, and a resolver that stamps its output with that hands a week-old
+// result a brand-new clock: a fresh cooldown, a fresh bruise, and a newborn
+// animal that has been in the van since Tuesday.
 function resolveOperation(state, content, now, run) {
   const op = content.operations?.[run.opId];
+  const endedAt = run.until;
   state.campaign.operations = activeOps(state).filter((r) => r !== run);
-  state.campaign.opCooldowns ??= {};
-  state.campaign.opCooldowns[run.opId] = now + Math.round((op?.cooldownHours ?? 6) * HOUR);
+  startCooldown(state, content, run.opId, endedAt);
   if (!op) return { news: [], result: null }; // job retired from the data
 
   const t = opTuning(content);
@@ -357,7 +383,9 @@ function resolveOperation(state, content, now, run) {
       // assume is broken, and the cap has its own teeth anyway: upkeep is
       // per head, and the catalog still refuses to sell you an eleventh
       // goat for a four-goat barn.
-      const animal = createAnimal(state, species, content, now);
+      // Born when the van pulled in, so it has grown since — exactly as it
+      // would have if the player had been watching the clock.
+      const animal = createAnimal(state, species, content, endedAt);
       state.ranch.stock.push(animal);
       result.animal = animal;
       result.overCapacity = state.ranch.stock.length > state.ranch.penCapacity;
@@ -368,7 +396,13 @@ function resolveOperation(state, content, now, run) {
     const chimera = state.chimeras.find((c) => c.id === run.chimeraId);
     if (chimera && injuryRoll < 0.5) {
       const hours = t.injuryHours[0] + injuryRoll * 2 * (t.injuryHours[1] - t.injuryHours[0]);
-      chimera.injury = { name: 'Undignified Exit', until: now + Math.round(hours * infirmaryGrants(state, content).healScale * HOUR) };
+      // From when they limped home, and never shortening a longer one:
+      // through `applyInjury`, a bruise picked up on Tuesday cannot heal a
+      // battle wound the player is still paying the Infirmary for.
+      applyInjury(chimera, {
+        name: 'Undignified Exit',
+        until: endedAt + Math.round(hours * infirmaryGrants(state, content).healScale * HOUR),
+      });
       result.injured = chimera.name;
     }
   }

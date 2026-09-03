@@ -232,10 +232,15 @@ export function cancelRehab(state, ref, content) {
 // become real vault-shaped tokens carrying the donor's name, so a
 // rehabilitated creature can later be extracted, salvaged and remembered
 // exactly like one you built.
+// R65: `now` is when the player looked; `rehab.until` is when the programme
+// actually ended, and that is what everything here is stamped with. A
+// graduate that finished on Tuesday has been cleared for deployment since
+// Tuesday — stamping it `now` gave it a settling clock it had already served.
 function graduate(state, entry, content, now) {
   const unit = bayUnit(entry, content);
   const { sockets } = assignSockets(unit, content);
   const rehab = entry.rehab;
+  const graduatedAt = rehab.until ?? now;
 
   const tokens = {};
   for (const [socketId, { partId, grade }] of Object.entries(sockets)) {
@@ -243,7 +248,7 @@ function graduate(state, entry, content, now) {
       id: `t${state.inventory.tokenCount++}`,
       partId,
       grade,
-      donor: { name: unit.name, species: content.parts[partId].species, stars: 5, extractedAt: now },
+      donor: { name: unit.name, species: content.parts[partId].species, stars: 5, extractedAt: graduatedAt },
     };
     if (!state.dex.parts.includes(partId)) state.dex.parts.push(partId);
   }
@@ -254,10 +259,10 @@ function graduate(state, entry, content, now) {
     name: unit.name,
     frame: unit.genome.frame,
     tokens,
-    createdAt: now,
+    createdAt: graduatedAt,
     // The programme WAS the settling — it arrives cleared for deployment,
     // just not yet convinced about you.
-    settleUntil: now,
+    settleUntil: graduatedAt,
     instability: rehab.instability,
     bond: rehab.bond,
     temperament: null,
@@ -265,7 +270,7 @@ function graduate(state, entry, content, now) {
     lastTrainedAt: 0,
     // Whose lab it came out of, so the right villain can complain about
     // losing it (§3.8 `defection`).
-    rehabilitated: { from: entry.unitId ?? unit.id, rivalId: entry.rivalId ?? null, at: now, sessions: rehab.sessions },
+    rehabilitated: { from: entry.unitId ?? unit.id, rivalId: entry.rivalId ?? null, at: graduatedAt, sessions: rehab.sessions },
   };
   state.chimeras.push(chimera);
   return chimera;

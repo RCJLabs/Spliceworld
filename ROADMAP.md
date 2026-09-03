@@ -464,8 +464,9 @@ The queue is a proposal: prune it before starting R63.
   wider set. Then the contest dials were measured: a cap changed nothing,
   a decay made it worse (the record also spaces the schedule), a grace
   period was noise, and a first defence at **300%** still cost under a
-  quarter of the map, while every garrison at twice its strength holds
-  the walk under a third of it (**24 nodes against 81**). (Veterancy off
+  quarter of the map, while heavier garrisons hold the walk down in a clean
+  monotone curve (**x2 → 0.55 of the map, x2.5 → 0.31, x3 → 0.07**; the gate
+  uses x2.5, re-measured in R65 once the walker could run jobs). (Veterancy off
   read **3 nodes** at the time; R64 found that a knife-edge — once the walk
   ticked every passive system the browser does, the same fixture cleared
   the map, and either scars or temperaments alone could flip a seed — so
@@ -500,17 +501,33 @@ The queue is a proposal: prune it before starting R63.
   daily play and asserts the absent save is not ahead* — **passes**, with
   "not ahead" read as: less than full pay, more than half of it, every node
   it left with, and the same number of convoys.
-- **R65 — Timers that start when you look.** `operations.js:332` anchors a
-  job's cooldown to the tick, not to `run.until` — come back after a week
-  and the job locks for a fresh six hours; `abortOperation` (`:305`) anchors
-  the same rule to `startedAt`, so the two paths disagree. `:371` starts a
-  failure injury at the return time and assigns with `=`, replacing a
-  longer battle injury with a shorter one. `engine.js:1139` keys the injury
-  RNG on `wins + losses + injuries.length` before the record increments, so
-  two consecutive two-casualty losses roll byte-identical injuries. *Done
-  when: every timer written by an elapsed-time resolver is anchored to the
-  event's own clock, injuries only ever lengthen, and a gate replays a
-  week's absence and asserts nothing starts at the return time.*
+- **R65 — Timers that start when you look** *(shipped, scope widened).*
+  The audit named four instances; measuring every elapsed resolver against a
+  six-day absence found **six**, all the same shape — a resolver stamping
+  its output with the tick that noticed rather than the moment the thing
+  happened. A job that came home six days ago locked for a **fresh 4.5h**
+  cooldown and handed its crew a **fresh 1.9h** bruise; the animal it won
+  arrived a **newborn** after a week in the van; a vat child decanted six
+  days ago **restarted its settling clock**; a resequenced animal arrived a
+  newborn too. Two more were not about the clock: a failed job overwrote a
+  **4h battle wound with its own 1.9h bruise** — a free heal, so the worse
+  day was the better outcome — and the injury RNG was keyed on
+  `warRecord.wins + losses + injuries.length`, incremented *after* the loop,
+  so the second casualty of one fight was **byte-identical** to the first of
+  the next. Shipped: one rule (`endedAt`, never `now`) across all six
+  resolvers, one cooldown helper for both the resolve and abort paths, one
+  inflict point (`applyInjury`) that is longest-wins and owns the per-creature
+  injury tally both the name roll and the scar roll key off. The gate is a
+  **sweep, not a list**: prime every resolver with something a week old, tick
+  once, and walk the whole save for any timestamp equal to the return —
+  exactly one exemption survives, R9's defence window, and removing it fails.
+  Found on the way: the walker's `opReady(state, id, content, now)` put
+  `content` in `now`, so **every job read as on cooldown and the walk had
+  never run one** (fixed; the R63 walk improves to 83/84 nodes and three
+  dominions). *Done when: every timer written by an elapsed-time resolver is
+  anchored to the event's own clock, injuries only ever lengthen, and a gate
+  replays a week's absence and asserts nothing starts at the return time* —
+  **passes**, with "nothing" read literally, as a sweep of the whole save.
 - **R66 — The preview lies to the player and to the AI.** `previewMove`
   computes Multi-Hit as `(2 + max(1, N−1)) / 2` where the engine rolls
   uniform over `[2, N]` — **always half a hit low** (the bat forelimbs

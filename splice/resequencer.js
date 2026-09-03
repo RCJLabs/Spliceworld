@@ -168,7 +168,10 @@ export function tickResequencer(state, content, now) {
     return { news: [lines.penFull ?? 'It is ready and there is nowhere to put it.'], result: null, waiting: true };
   }
 
-  const animal = createAnimal(state, run.species, content, now);
+  // R65: born when the tank finished, not when the player looked. It ages
+  // in the tank exactly as it would have aged in the pen, which is also why
+  // the pen-full wait above needs no clock of its own.
+  const animal = createAnimal(state, run.species, content, run.until);
   animal.name = run.donorName;
   animal.potential = run.outcome.potential;
   animal.genotype = run.outcome.genotype;

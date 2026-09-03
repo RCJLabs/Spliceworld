@@ -1,5 +1,106 @@
 # PROGRESS
 
+## Session 88 — R65: timers that start when you look ✅
+
+**Acceptance criterion:** every timer written by an elapsed-time resolver is
+anchored to the event's own clock, injuries only ever lengthen, and a gate
+replays a week's absence and asserts nothing starts at the return time —
+**passes**. No schema change; `SAVE_VERSION` stays **35**. `sw.js` cache →
+`v35-anchors`.
+
+### Measured first: six instances, not four
+Every elapsed resolver primed with something that finished **six days** before
+the player looked:
+
+| resolver | before | after |
+|---|---|---|
+| job cooldown | fresh 4.5h lock on return | ready 139.5h ago |
+| job injury | fresh 1.9h bruise | expired 142.1h ago |
+| job animal | arrives a newborn | aged 144h |
+| vat child | settling restarts | settled 143.6h ago |
+| resequenced animal | arrives a newborn | aged 144h |
+| failed job vs battle wound | 4h wound → 1.9h bruise (free heal) | wound stands |
+
+Plus the injury RNG: two consecutive two-casualty losses rolled a
+byte-identical injury, because the stream was keyed on the war record and the
+record increments *after* the loop.
+
+### Shipped
+- **One rule.** Every resolver stamps `endedAt` (`run.until`, `vat.until`,
+  `rehab.until`), never `now`. An animal won or decanted while you were away
+  has aged exactly as it would have in the pen — which also means it can
+  arrive past its prime, and that is the honest number rather than a fresh
+  prime window handed out for being absent.
+- **One cooldown helper.** `startCooldown(state, content, opId, endedAt)` for
+  both paths: `run.until` when a job finished, `now` when it was called off,
+  because that is when the crew is actually back. Aborting a six-hour job a
+  minute in used to free it sooner than letting it run.
+- **One inflict point.** `applyInjury(chimera, injury)` in `battle/engine.js`:
+  longest-wins, and it owns `injuryCount`, the per-creature tally the name
+  roll (`injury:<id>`) and the scar roll (`scar:<id>`) both key off. The tally
+  moved from heal-time to inflict-time, so one number means one thing.
+- **A sweep, not a list.** The gate primes a job, a vat, a tank and a convoy,
+  ticks once after a week, and walks the whole save for any value equal to the
+  return time. One exemption survives — R9's defence window, which opens when
+  you SEE it — and the gate fails if it is removed. It also plants a timer and
+  asserts the sweep names it, so a walk that never walked cannot pass.
+
+### Two economic anchors the walker fix exposed
+Letting the walker run jobs changed what a month away costs, and the R64 gate
+caught it at **47% of full pay** against its 50% floor. Two real bugs, not a
+threshold to move:
+- **Upkeep and condition were charged for the whole gap** to creatures that
+  arrived *during* it. An animal a job brought home on day one of a
+  thirty-day absence was billed a month of upkeep and decayed to the
+  condition floor for a month it had not lived through. `applyElapsed` now
+  prorates both by how long each head was actually owned — which it can only
+  do because R65 made `birthAt` and `createdAt` honest.
+- **The strip completion bonus was suspended retroactively.** R64 restored a
+  contested node's own income for the period before its convoy arrived, but
+  a contest also suspends its region's `completionBonus`, and that was never
+  put back — so a convoy arriving in the last two hours of a month away
+  withheld **thirty days** of Greenfield's $150/day. Measured: $4,500.
+
+With both fixed, a month away banks **81% across seeds** (52 / 73 / 89% on
+the three that stay mid-campaign for the whole window) — the R64 gate now
+states that claim as an aggregate, because early in a campaign one waiting
+convoy can suspend a large share of a four-node empire and a tight per-seed
+line would be a coin flip.
+
+### Two things the suite itself was getting wrong
+- **The vat settling gate** asserted a child is *still* settling 99 hours
+  after the vat was sealed — which was really a statement about how late the
+  fixture ticked. Re-anchored to the claim it meant: settling runs from the
+  moment it decanted, and `createdAt` is that moment.
+- **The scar fixture inflicted injuries by hand** (`ch.injury = {...}`). That
+  used to be equivalent; it is not, because the tally the scar roll is keyed
+  on now advances at inflict. Frozen, the fixture rolled the same scar forty
+  times and 33 of 80 careers came out clean. Routed through `applyInjury`:
+  **80 of 80** scar, cap respected. The lesson is now a gate — every shipped
+  module is swept, and only three injury writes are legitimate (healing to
+  null, the one assignment inside `applyInjury`, and the save migration's
+  normalise), with exactly one inflict point.
+
+### Found on the way
+- **The walker had never run a job.** `opReady(state, o.id, content, now)`
+  put `content` in the `now` parameter, so the comparison was against an
+  object and every job read as on cooldown; `laneFree` was mis-argued too and
+  never reached. Fixed. The R63 walk improves to **83/84 nodes and three
+  dominions** (was 81 and two), so R63's thresholds hold with more margin.
+- **`injuryCount` semantics changed** without a schema change: a save whose
+  creature is mid-injury has a tally one lower than the old code would have
+  left, so its scar roll draws from a different position. No migration, no
+  crash — noted here because it is a behaviour change a reader should know.
+
+### Known issues
+- Next in §9.4: **R66 — the preview lies to the player and to the AI**
+  (Multi-Hit off by half a hit; no turn-one evasion term).
+
+### Next session's first task
+R66. Start at `battle/engine.js:442` (`previewMove`) against the engine's own
+roll at `:648`; the fix is a formula, and the gate is a Monte-Carlo comparison
+of preview against engine per keyword.
+
 ## Session 87 — R64: being away is strictly profitable ✅
 
 **Acceptance criterion:** one `now` per tick and one elapsed clock per save;

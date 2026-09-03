@@ -1051,7 +1051,11 @@ function walkAct(state, content, now, open, opts = {}) {
     }
   }
   if (has('job')) {
-    const op = operationList(content).find((o) => opReady(state, o.id, content, now) && laneFree(state, o, content));
+    // Both calls were mis-argued when the walker was written: `content`
+    // landed in opReady's `now`, so the comparison was against an object and
+    // every job read as on cooldown — the walker has never run one. laneFree
+    // was never reached to throw.
+    const op = operationList(content).find((o) => opReady(state, o.id, now) && laneFree(state, content, now, o, null));
     if (op && startOperation(state, op.id, null, content, now).ok) acted++;
   }
   // The ring. The hardest garrison you hold pays the most xp per charge.

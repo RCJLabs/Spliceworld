@@ -671,7 +671,7 @@ function bindJobs(root, ctx, redraw) {
   });
   root.querySelectorAll('button[data-abort]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      lastAftermath = abortOperation(state, content, btn.dataset.abort).msg;
+      lastAftermath = abortOperation(state, content, btn.dataset.abort, ctx.now()).msg;
       ctx.save();
       redraw();
     });

@@ -1138,16 +1138,22 @@ export function finishBattle(state, battle, content, now) {
     if (c.hp > 0) continue;
     const chimera = state.chimeras.find((ch) => ch.id === c.refId);
     if (!chimera) continue;
-    const rng = rngStream(state.seed, 'injury', state.warRecord.wins + state.warRecord.losses + injuries.length);
+    // Keyed on the CREATURE and its own tally of injuries. It used to be
+    // keyed on `warRecord.wins + losses + injuries.length`, and the record
+    // is incremented after this loop — so a two-casualty loss consumed
+    // counters N and N+1 and the next battle started at N+1. Lose twice in
+    // a row with two down each time and the second creature's injury was
+    // byte-identical to the previous fight's first.
+    const rng = rngStream(state.seed, `injury:${chimera.id}`, chimera.injuryCount ?? 0);
     // The Infirmary track shortens convalescence (R25). It buys TIME, not
     // outcomes: the scar roll is still a roll, and treating an injury is
     // still what guarantees it leaves no trace.
     const hours = (2 + rng() * 2) * infirmaryGrants(state, content).healScale;
-    chimera.injury = {
+    const standing = applyInjury(chimera, {
       name: pick(rng, INJURY_NAMES),
       until: now + Math.round(hours * 3600000),
-    };
-    injuries.push({ chimera: chimera.name, injury: chimera.injury });
+    });
+    injuries.push({ chimera: chimera.name, injury: standing });
   }
   // R41: everyone on the card learns something — win or lose, because a
   // walled player grinding losses into levels is the ladder out of the wall
@@ -1165,4 +1171,24 @@ export function finishBattle(state, battle, content, now) {
 
 export function isInjured(chimera, now) {
   return !!chimera.injury && now < chimera.injury.until;
+}
+
+// R65 — the one place an injury is written to a chimera.
+//
+// Two rules, both learned from bugs. An injury NEVER SHORTENS convalescence:
+// a job that failed while you were away used to overwrite a four-hour battle
+// wound with its own ninety minutes, so the worse day was the better outcome
+// and the Infirmary bill went with it. And every injury bumps the creature's
+// own tally, which is what the name roll and the scar roll are both keyed on
+// — before this they were keyed on the global war record, so two consecutive
+// two-casualty losses rolled byte-identical injuries.
+//
+// The tally counts injuries TAKEN, so it advances even when the standing one
+// is the longer of the two: the creature was hurt either way.
+export function applyInjury(chimera, injury) {
+  if (!chimera || !injury) return chimera?.injury ?? null;
+  chimera.injuryCount = (chimera.injuryCount ?? 0) + 1;
+  const standing = chimera.injury;
+  if (!standing || injury.until > standing.until) chimera.injury = injury;
+  return chimera.injury;
 }
