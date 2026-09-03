@@ -116,9 +116,33 @@ clicking a `<div>`, several message strips change silently, and picker rows
 sit 5 px apart against the 8 px the same audit measured elsewhere. These are
 a phase, not a patch, and R73's criterion does not name them.
 
+### The audit landed after the merge, and found two more
+
+Both of exactly the kind this phase was fixing, plus a gap in my own gate.
+
+`--cls-air` is defined in all five theme blocks and was used **nowhere** —
+both rules that should have named it reached for `--accent-2` instead, while
+`.class-ground` and `.class-water` immediately above named their own tokens
+correctly. That asymmetry is the tell, so the new rule is stated over the
+set: the three class colours are a family, and are used or unused together.
+
+`.forecast-hopeless` — the only place in the stylesheet that hardcoded a hex
+for text — put `#fff` on a solid `--danger-2` fill: **3.96 / 2.78 / 4.18 /
+4.01 / 3.62** across the five schemes, below AA in every one. Nothing light
+clears these reds (white tops out around 4.15), so the text goes near-black
+on a new `--on-danger`, one value that serves all five. I checked `--well`
+first and it failed vivarium at 4.48 — close enough to have shipped on a
+guess, which is why the ratios are computed rather than eyeballed.
+
+**The gate had measured one theme of five.** That is the honest gap: an
+audit reading the other four by hand found what a gate that had already
+passed could not. It walks all five now. It caught nothing on the first run,
+which is the point.
+
 ### Verified
 
-- `npm run a11y` — 46 controls across 8 views, all five criteria pass.
+- `npm run a11y` — 46 controls across 8 views and all five themes, all five
+  criteria pass.
   Proven both ways: 28 named problems and exit 1 against the pre-R73
   stylesheet, and it catches a deliberately broken picker focus.
 - `tools/smoke.js` — full suite green, including the new CSS-variable gate,

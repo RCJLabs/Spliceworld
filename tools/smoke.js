@@ -14992,6 +14992,20 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   assert.deepEqual(undefinedVars, [],
     `every var() names a property style.css defines (${undefinedVars.join(', ')})`);
 
+  // …and the mirror of it. A property DEFINED in all five themes and read
+  // nowhere is the other half of the same slip: `--cls-air` sat unused in
+  // every theme block while both rules that should have used it reached for
+  // `--accent-2` instead, so the class the triangle makes hardest to read
+  // was also the one painted in another role's colour. Its two neighbours
+  // named their own token correctly, which is what makes the asymmetry the
+  // tell — so the rule is stated over the SET: the three class colours are
+  // a family and are used, or not, together.
+  const usedSet = new Set(used);
+  const classVars = ['--cls-ground', '--cls-water', '--cls-air'];
+  const unusedClassVars = classVars.filter((v) => defined.has(v) && !usedSet.has(v));
+  assert.deepEqual(unusedClassVars, [],
+    `every class colour the palette defines is the one its rules use (${unusedClassVars.join(', ')})`);
+
   // The R73 semantics, asserted on the shell rather than only in the browser
   // pass, so a suite run with no Chromium available still catches a
   // regression that removes them.
