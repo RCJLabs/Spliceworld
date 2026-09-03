@@ -1,5 +1,183 @@
 # PROGRESS
 
+## Session 84 — R62: the news wire, as a system ✅
+
+**Acceptance criterion:** a new world reaction is a JSON edit, no engine module
+contains a player-facing sentence, and smoke asserts every emitted event id has
+copy AND every line has an emitter — **passes**, with the second clause scoped
+to the wire (below). No schema change; `SAVE_VERSION` stays **34**.
+
+### The rule was already written down, one module over
+
+`campaign/monologue.js` opens by stating exactly what this phase needed:
+
+> *"The design rule the whole module exists to enforce: a monologue slot is a
+> KEY IN A JSON FILE and a caller, never an engine change."*
+
+That was written for the rivals. The campaign's own voice never adopted it —
+seventeen player-facing sentences lived inside `campaign.js` and `rehab.js`,
+so a new world-reaction was an engine edit, against CLAUDE.md's *"all content
+is data"*. So the wire now uses that machinery rather than a second copy of
+it: `campaign/wire.js` looks the phrasing up and fills it with monologue's own
+`fill`.
+
+### And the wire was lying
+
+`regions.json` authors an `announce` line per threat rung, including a
+distinct one for Generation 3 — and **nothing read either**. `campaign.js`
+pushed a hardcoded Generation 2 sentence for every rung-up:
+
+```
+THREAT LEVEL UP: the military is now returning your calls. Threat Generation 2.
+```
+
+Measured: **Gen 3 is reachable at 14 nodes and notoriety 320+**, so a player
+who got there was told they had reached Gen 2, and the authored Gen 3 line —
+*"a Compliance Spire has been erected in your honour"* — **had never once
+played**. R57 and R58's shape, with the engine's own copy shouting over the
+data instead of merely ignoring it.
+
+Worth noting where the existing gates sat: R61's "every authored section
+reaches runtime" passes here, because `threatGens` *does* reach runtime as
+`campaignMeta.threatGens`. The dead thing was a **field inside** a section
+that arrived intact. R61's gate is section-level by design; catching this is
+what "every line has an emitter" is for.
+
+### The premise, corrected twice
+
+The queue said **19** hardcoded strings. At `pushNews` call sites there were
+**11** — but that was an undercount too: two more hid inside `?? fallback`
+expressions, and four more were built in `rehab.js` before reaching the wire.
+Seventeen.
+
+Then the wider scan found something the criterion had to be read against:
+**299 prose sentences live in engine modules**, and they are three different
+populations, not one.
+
+| population | count | is it the wire? |
+|---|---|---|
+| news lines | 17 | **yes — this phase** |
+| the combat log (`battle/engine.js`) | 61 | no: turn-by-turn arena readout |
+| action results (`{ok, msg}` to screens) | ~220 | no: an answer to a button press |
+
+Taking *"no engine module contains a player-facing sentence"* across all three
+is a 299-sentence overhaul in a phase whose entry describes `news.json`, event
+ids, variants and philosophy weighting. So the scope was cut **inside** the
+milestone, the way CLAUDE.md asks: the wire is done completely, and the other
+two populations are named here with their numbers rather than quietly folded
+in or quietly skipped.
+
+### What shipped
+
+`data/news.json` — **17 events, 29 phrasings, 2 philosophy-weighted variants.**
+`campaign/wire.js` — 6 exports, DOM-free, owns both the buffer and the lookup.
+
+The pool is picked with the seeded RNG keyed on **the event's own params**, so
+the same save always tells its story the same way, different nodes get
+different phrasings, and no save field had to be invented to hold a position —
+which is why `SAVE_VERSION` did not move.
+
+Two call sites in `rehab.js` were rewritten to spell out their event ids and
+params instead of computing them into variables. The repetition buys the
+invariant: an id assembled at runtime has copy nothing can prove is reachable,
+and a param passed in a variable hides half of the contract the gate exists to
+check.
+
+### The break battery: fourteen breaks, two real gaps, both mine
+
+| # | break | verdict |
+|---|---|---|
+| 1 / 1b | an engine goes back to writing a sentence | CAUGHT |
+| 2 / 2b | an event is emitted with no copy for it | CAUGHT |
+| 3 | copy is authored that nothing emits | CAUGHT |
+| 4 | copy asks for a placeholder nobody supplies | CAUGHT |
+| 5 | the emitter renames a param out from under its copy | CAUGHT |
+| 6 | the engine names a threat generation again | CAUGHT |
+| 7 | **the rung stops reading its own authored line** | **MISSED** → fixed → CAUGHT |
+| 8 | the wire stops being seeded | CAUGHT |
+| 9 | **the pool collapses to one phrasing** | **MISSED** → fixed → CAUGHT |
+| 10 | the philosophy weighting is dropped | CAUGHT |
+| 11 | an engine keeps a duplicate of authored copy | CAUGHT |
+| 12 | an unknown event prints "null" onto the wire | CAUGHT |
+
+Breaks 1 and 2 were caught by the wrong gate — removing an emit also orphaned
+its copy, and renaming `gauntlet_cleared` tripped R42's gate first. `1b` and
+`2b` re-ran each without the side effect, and the gates they were aimed at
+fired: *"campaign.js pushes events, not sentences"* and *"every emitted event
+has copy in news.json (dismantled_for_parts)"*.
+
+**Break 7 is the one worth the phase.** It pinned the rung lookup to
+`threatGens[1]` — the original bug wearing a different coat — and **every gate
+passed.** They tested the wrong half:
+
+- *"Generation N announces its own line"* calls `newsFor` with a rung already
+  in hand, so it proves the **wire prints what it is given**.
+- *"the engine does not name a threat generation in prose"* proves the
+  **sentence is gone**.
+
+Neither proves the engine looks up the rung the player actually reached, and
+the wire will faithfully print whichever one it gets. The fix walks a real
+rung-up: build a state one node short of each threshold, take that node
+through `resolveBattle`, and assert the wire carries that rung's own line and
+only that one. Against the break it reports what a player would have seen.
+
+> A gate that stops at the seam tests only the half it can reach. **The bug
+> lived in the handoff.**
+
+**Break 9** collapsed the pool to its first entry — the wire would repeat
+itself forever — and the gate watching for exactly that passed. It collected
+the *filled* lines from eight nodes and asserted they differed. They always
+do: eight node names make eight strings out of one template. It now traces
+each line back to the pool entry that produced it and says *"1 of 3 phrasings
+used across eight nodes"*.
+
+That is the session's pattern for the third time in my own gate: **filled text
+is a stand-in for the template that made it.**
+
+### Browser QA, 380px, console clean
+
+Driven through the real `loadContent` the browser uses — 17 events loaded —
+so the five loader spots are proven by the thing that reads them, not by a
+Node harness:
+
+```
+gen2: THREAT LEVEL UP: the military is now returning your calls. Threat Generation 2.
+gen3: THREAT LEVEL UP: a Compliance Spire has been erected in your honour. Threat Generation 3.
+seized A: Old Barn Perimeter changes hands. +$40/day, and nobody has filed anything about it.
+seized B: Radio Mast seized. Income +$105/day. Locals adjusting surprisingly well.
+chimerist: Radio Mast seized. Income +$105/day. Witnesses disagree about how many legs were involved.
+```
+
+**The Gen 3 line plays for the first time.** Two nodes draw two phrasings; a
+Chimerist hears a different sentence than everyone else. Wire tab renders at
+380px with no horizontal overflow and no console messages.
+
+### Next session's first task
+
+The audited queue (ROADMAP §9.3, R54–R62) is **finished**. Nothing is queued,
+so the next session starts with an audit rather than an item.
+
+Three things it should look at first, all recorded during this run:
+
+1. **The other two prose populations.** The combat log (61 sentences in
+   `battle/engine.js`) and action-result messages (~220 across `theater.js`,
+   `breeding.js`, `ranch.js`, `save.js`). Neither is the wire; both are engine
+   modules writing player-facing text, and R62's machinery now exists to move
+   either one if that is wanted.
+2. **The agenda has no entry for defending a contested node** (R56). R59 gave
+   the moment a sound, R60 made its cost honest, R62 gave it a voice — the
+   walker still cannot answer it. Three phases have now decorated a hole.
+3. **`campaign/ui.js` is still the largest module** at 1,019 lines (R60), and
+   splitting its markup means moving five pieces of shared module state.
+
+### Standing leftovers
+
+- The campaign plateau is still unexplained (R56).
+- The duel still doesn't show a rival face (R57).
+- Briefing chips still say "beats their Water" with no reason (R58).
+- 26 exports are used only inside their own module (R61) — a wide interface,
+  not dead content, and deliberately not gated.
+
 ## Session 83 — R61: no orphan content ✅
 
 **Acceptance criterion:** a dead export, an unread data field and a banned word
