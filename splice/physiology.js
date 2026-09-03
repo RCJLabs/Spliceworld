@@ -3,7 +3,7 @@
 // engineering, not a slot machine (Law 4). Battle stats derived here are
 // the same ones the M4 engine will consume.
 
-import { GRADES, GRADE_INDEX } from './extract.js';
+import { gradeOf } from './extract.js';
 import { renderIcon } from '../ui/icons.js';
 
 export const PHYS_TUNING = {
@@ -54,12 +54,18 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
   const speciesCount = {};
   const gradeSet = new Set();
   const tags = new Set();
-  const classVotes = { air: 0, ground: 0, water: 0 };
+  // R72 - this used to name the three shipped classes, so a fourth added to
+  // classes.json tallied `undefined + 1` = NaN and was silently dropped from
+  // its own election. Unseeded and counted on sight, it reads whatever the
+  // data defines. Anatomy pointing at a class this build no longer defines is
+  // ignored rather than counted, or a creature could be elected to a class
+  // that has no chart row, no icon and no name.
+  const classVotes = {};
 
   for (const token of tokens) {
     const part = content.parts[token.partId];
     if (!part) continue; // retired part id — ignore rather than crash
-    const mult = GRADES[GRADE_INDEX[token.grade]].mult;
+    const mult = gradeOf(token.grade).mult;
     for (const [stat, v] of Object.entries(part.stats)) {
       stats[stat] = (stats[stat] ?? 0) + v * mult;
     }
@@ -72,7 +78,9 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
     draw += part.phys.draw;
     lift += (part.phys.lift ?? 0) * mult;
     speciesCount[part.species] = (speciesCount[part.species] ?? 0) + 1;
-    if (part.classAffinity) classVotes[part.classAffinity] += 1;
+    if (part.classAffinity && content.classes?.[part.classAffinity]) {
+      classVotes[part.classAffinity] = (classVotes[part.classAffinity] ?? 0) + 1;
+    }
     gradeSet.add(token.grade);
     for (const t of part.tags) tags.add(t);
   }
@@ -152,7 +160,11 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
     label: 'Class',
     value: classDef ? `${renderIcon(classDef.icon)} ${classDef.name}` : 'Unclassed',
     note: classDef
-      ? `${voteText} — ${classDef.cue} carry the vote. Strong against ${content.classes[classDef.beats].name}, weak to whatever beats it.`
+      ? `${voteText} — ${classDef.cue} carry the vote.${
+          content.classes[classDef.beats]
+            ? ` Strong against ${content.classes[classDef.beats].name}, weak to whatever beats it.`
+            : ''
+        }`
       : votes.length
         ? `${voteText} — tied, so no class dominates. Neutral in every matchup: nothing to exploit, nothing to be exploited.`
         : 'No wings, fins or feet installed. Neutral in every matchup.',

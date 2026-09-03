@@ -5,7 +5,7 @@
 // where the player already goes to look at them.
 
 import { SLOTS } from '../render/renderer.js';
-import { GRADES, GRADE_INDEX } from './extract.js';
+import { GRADES, gradeOf, gradeIndexOf } from './extract.js';
 import { vialSVG } from './extract-ui.js';
 import {
   resequencePlan, startResequence, cancelResequence,
@@ -94,10 +94,10 @@ export function renderVaultScreen(root, ctx) {
 
   const tokenRows = (tokens) => SLOTS.map((slot) => tokens
     .filter((t) => content.parts[t.partId].slot === slot)
-    .sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade])
+    .sort((a, b) => gradeIndexOf(b.grade) - gradeIndexOf(a.grade))
     .map((t) => {
       const part = content.parts[t.partId];
-      const grade = GRADES[GRADE_INDEX[t.grade]];
+      const grade = gradeOf(t.grade);
       const traits = (t.traits ?? []).map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`).join('');
       return `<li><span class="grade-badge grade-${t.grade}">${grade.name}</span> ${SLOT_LABELS[slot]}: ${part.name}${traits} <span class="lineage">${t.donor.name} ★${t.donor.stars}</span></li>`;
     }).join('')).join('');
@@ -120,7 +120,9 @@ export function renderVaultScreen(root, ctx) {
       sp: content.species[id],
       ...held,
       stars: held.vials.reduce((m, v) => Math.max(m, v.stars), 0),
-      grade: held.tokens.reduce((m, t) => Math.max(m, GRADE_INDEX[t.grade]), -1),
+      // R72: a retired grade used to make this Math.max NaN, which quietly
+      // failed the `grade >= 0` test below and dropped the bay's grade badge.
+      grade: held.tokens.reduce((m, t) => Math.max(m, gradeIndexOf(t.grade)), -1),
     }))
     // A bay holding a vial sorts first: a vial is the only thing on this
     // screen with a button, and an actionable shelf outranks a full one.

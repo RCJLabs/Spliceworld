@@ -28,7 +28,7 @@ import { guideForScreen, STABLE as TEAM_CAP } from '../ranch/onboarding.js';
 import { startSpar } from './sparring.js';
 import { gauntletState } from './gauntlet.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
-import { renderCreatureSVG, renderRivalSVG } from '../render/renderer.js';
+import { renderCreatureSVG, renderRivalSVG, drawableGenome } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
 import { rescueEncounterFor } from './map.js';
 import { renderIcon } from '../ui/icons.js';
@@ -37,7 +37,7 @@ import {
   bayUnit, rehabPlan, rehabTuning, startRehab, rehabSession, cancelRehab,
   rehabRemainingMs, sessionReadyAt,
 } from './rehab.js';
-import { GRADES, GRADE_INDEX } from '../splice/extract.js';
+import { gradeOf, gradeIndexOf } from '../splice/extract.js';
 import { isContested } from './contest.js';
 import {
   operationList, freeCrew, startOperation, abortOperation, opOdds,
@@ -291,7 +291,9 @@ function renderMap(root, ctx) {
         <div class="rival-body">
           <strong>${rival.name}</strong>
           <p class="fine-print">${rival.title}</p>
-          <p class="class-banner class-${rival.classBias}">${renderIcon(cls.icon)} ${cls.name} school — beats ${content.classes[cls.beats].name}</p>
+          <p class="class-banner class-${rival.classBias}">${renderIcon(cls.icon)} ${cls.name} school${
+            content.classes[cls.beats] ? ` — beats ${content.classes[cls.beats].name}` : ''
+          }</p>
           <p class="rival-quote">&ldquo;${rival.philosophy}&rdquo;</p>
           ${record.defeats || record.losses ? `<p class="fine-print">Record: ${record.defeats}W–${record.losses}L against you${record.defeats ? ` · iterated ${record.defeats}× since` : ''}</p>` : ''}
           ${roster ? `<p class="fine-print">${roster}</p>` : ''}
@@ -730,8 +732,13 @@ function bayCard(state, entry, content, t) {
   const unit = bayUnit(entry, content);
   if (!unit) return '';
   const plan = rehabPlan(state, entry, content);
-  const portrait = unit.genome
-    ? renderCreatureSVG(unit.genome, content, { idPrefix: `bay-${entry.id ?? unit.id}` })
+  // R72 — this genome is frozen into the save at capture time, so a part
+  // retired afterwards used to throw here and take the whole War Room down.
+  // That was a soft-lock, not just a blank screen: dismantling the bay is a
+  // button on this same screen.
+  const bayGenome = drawableGenome(unit.genome, content);
+  const portrait = bayGenome
+    ? renderCreatureSVG(bayGenome, content, { idPrefix: `bay-${entry.id ?? unit.id}` })
     : '<div class="rival-redacted">⛓</div>';
   const cls = unit.class ? content.classes[unit.class] : null;
   const body = entry.rehab
@@ -763,8 +770,8 @@ function offerHtml(state, entry, plan, unit, content) {
     names.push(part.name);
   }
   const badges = [...byGrade.entries()]
-    .sort((a, b) => GRADE_INDEX[b[0]] - GRADE_INDEX[a[0]])
-    .map(([id, n]) => `<span class="grade-badge grade-${id}">${GRADES[GRADE_INDEX[id]].name}</span>${n > 1 ? ` ×${n}` : ''}`)
+    .sort((a, b) => gradeIndexOf(b[0]) - gradeIndexOf(a[0]))
+    .map(([id, n]) => `<span class="grade-badge grade-${id}">${gradeOf(id).name}</span>${n > 1 ? ` ×${n}` : ''}`)
     .join(' ');
   const salvageList = names.length ? `${badges} — ${names.join(', ')}` : '';
 

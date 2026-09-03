@@ -48,10 +48,13 @@ let lastMsg = 'The herd awaits your questionable attention.';
 let pickA = ''; // breeding pen draft (screen-local)
 let pickB = '';
 let catalogPick = '';
-const CLASS_MARK = {
-  air: `${renderIcon('wing', { size: 13 })} `,
-  ground: `${renderIcon('paw', { size: 13 })} `,
-  water: `${renderIcon('wave', { size: 13 })} `,
+// R72 - the mark is the class's OWN icon, named in classes.json. Three
+// entries typed out here meant a fourth class's animals wore no mark at
+// all, and a retired one left a stale mark behind: both are the data
+// disagreeing with the code about what a class is.
+const classMark = (content, cls) => {
+  const def = cls ? content.classes?.[cls] : null;
+  return def ? `${renderIcon(def.icon, { size: 13 })} ` : '';
 };
 
 // A variant hatching is the rarest thing the ranch produces (ROADMAP §3.2),
@@ -183,14 +186,17 @@ export function renderRanchScreen(root, ctx) {
 
   // 40 animals and climbing: group the catalog by elemental class so the
   // sheet reads like a menagerie, not a phone book.
-  const catalogGroups = ['ground', 'water', 'air', null].map((cls) => {
+  // R72 - derived from the data, not typed out: a fourth class's animals
+  // used to fall through every group and never appear in the catalog at all.
+  // `null` stays last, because Unclassed is a leftover, not a class.
+  const catalogGroups = [...Object.keys(content.classes ?? {}), null].map((cls) => {
     const rows = catalog.filter((sp) => (sp.class ?? null) === cls);
     return {
       label: cls ? `${renderIcon(content.classes[cls].icon)} ${content.classes[cls].name}` : 'Unclassed',
       options: rows.map((sp) => ({
         id: sp.id,
         label: sp.name,
-        mark: CLASS_MARK[sp.class] ?? '',
+        mark: classMark(content, sp.class),
         badge: `<span class="pick-price ${state.funds >= sp.mailOrderPrice ? '' : 'too-rich'}">$${sp.mailOrderPrice}</span>`,
         sub: `${sp.role} · ${sp.tags.join(', ') || 'no tags'} · upkeep $${sp.upkeepPerDay}/day`,
       })),
@@ -285,7 +291,7 @@ export function renderRanchScreen(root, ctx) {
           label: 'Mail-Order Menagerie',
           count: catalog.length || null,
           value: catalogSpecies
-            ? `${CLASS_MARK[catalogSpecies.class] ?? ''}${catalogSpecies.name}`
+            ? `${classMark(content, catalogSpecies.class)}${catalogSpecies.name}`
             : '— conquer territory to open the catalog —',
           hint: catalogSpecies
             ? `$${catalogSpecies.mailOrderPrice} · ${catalogSpecies.role} · ${catalogSpecies.tags.join(', ') || 'no tags'}`
@@ -335,7 +341,7 @@ export function renderRanchScreen(root, ctx) {
   const parentRow = (a) => ({
     id: a.id,
     label: `${a.name} ${a.sex === 'F' ? '♀' : '♂'}`,
-    mark: CLASS_MARK[content.species[a.species].class] ?? '',
+    mark: classMark(content, content.species[a.species]?.class),
     sub: `${content.species[a.species].name} · ${STAGE_LABELS[ageStage(a, content, t)]} · condition ${Math.round(a.condition)}`,
   });
   const parentGroups = (pool) => {
@@ -494,7 +500,7 @@ export function renderRanchScreen(root, ctx) {
           : next
             ? `<span class="pen-wait">⏳ ${STAGE_LABELS[next.stage]} in ${fmtDuration(next.msRemaining)}</span>`
             : '<span class="pen-ready">ready</span>';
-    const summary = `${CLASS_MARK[species.class] ?? ''}${species.name} · ${STAGE_LABELS[stage]} · condition ${Math.round(animal.condition)} · ${gradeFor(animal, content, t).name}${
+    const summary = `${classMark(content, species.class)}${species.name} · ${STAGE_LABELS[stage]} · condition ${Math.round(animal.condition)} · ${gradeFor(animal, content, t).name}${
       ready ? ` · ${ready} care ready` : ''
     }`;
 

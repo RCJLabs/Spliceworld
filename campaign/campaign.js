@@ -6,7 +6,7 @@
 import { rngStream, pick, randInt } from '../util/rng.js';
 import { pushNews, emitNews, newsFor } from './wire.js';
 import { recordGauntletWin, gauntletComplete } from './gauntlet.js';
-import { GRADES } from '../splice/extract.js';
+import { gradeOf } from '../splice/extract.js';
 import { infirmaryGrants } from '../splice/facility.js';
 import { finishBattle, applyInjury } from '../battle/engine.js';
 import { recordRivalResult, scoutStable } from './rivals.js';
@@ -605,6 +605,9 @@ export function salvageUnit(state, ref, content, now) {
   return {
     ok: true,
     tokens,
-    msg: `Salvaged: ${tokens.map((t) => `${content.parts[t.partId].name} (${GRADES.find((g) => g.id === t.grade).name})`).join(', ')}.`,
+    // R72: both halves of this line were unguarded — a retired part id, and a
+    // retired grade via GRADES.find, which returns undefined rather than
+    // throwing until `.name` is read off it.
+    msg: `Salvaged: ${tokens.map((t) => `${content.parts[t.partId]?.name ?? 'unlisted anatomy'} (${gradeOf(t.grade).name})`).join(', ')}.`,
   };
 }

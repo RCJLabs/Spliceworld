@@ -22,7 +22,7 @@
 
 import { rngStream, pick } from '../util/rng.js';
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
-import { GRADES, GRADE_INDEX } from './extract.js';
+import { GRADES, gradeIndexOf } from './extract.js';
 import { analyze } from './physiology.js';
 import { isSettled } from './theater.js';
 
@@ -66,7 +66,7 @@ export function gradeStepsOf(pair, content) {
   let steps = 0;
   for (const chimera of pair) {
     for (const token of Object.values(chimera?.tokens ?? {})) {
-      if (GRADE_INDEX[token.grade] > 0) steps += 1;
+      if (gradeIndexOf(token.grade) > 0) steps += 1;
     }
   }
   return steps;
@@ -143,7 +143,7 @@ function conceive(plan, state, content, rng, t) {
     }
     // Hybrid vigour, and its opposite. Mostly the parent's grade.
     const roll = rng();
-    let at = GRADE_INDEX[grade];
+    let at = gradeIndexOf(grade);
     if (roll < t.gradeUpChance) at = Math.min(GRADES.length - 1, at + 1);
     else if (roll < t.gradeUpChance + t.gradeDownChance) at = Math.max(0, at - 1);
     grade = GRADES[at].id;
@@ -216,7 +216,7 @@ export function startVat(state, sireId, damId, content, now) {
   // slides down the ladder generation by generation.
   for (const parent of [plan.a, plan.b]) {
     for (const token of Object.values(parent.tokens)) {
-      token.grade = GRADES[Math.max(0, GRADE_INDEX[token.grade] - 1)].id;
+      token.grade = GRADES[Math.max(0, gradeIndexOf(token.grade) - 1)].id;
     }
     parent.exhaustedUntil = now + Math.round(t.exhaustionHours * HOUR);
   }

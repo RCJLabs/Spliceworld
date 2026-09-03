@@ -14,7 +14,7 @@
 //    used to be a stacked panel is now either an overlay on the field or
 //    one tap away, because a battle you have to scroll is not a battle.
 
-import { renderCreatureSVG, renderUnitSVG } from '../render/renderer.js';
+import { renderCreatureSVG, renderUnitSVG, drawableGenome } from '../render/renderer.js';
 import { chimeraGenome } from '../splice/theater.js';
 import {
   step, playerActions, playerActive, turnForecast,
@@ -61,16 +61,18 @@ function bar(value, max, cls) {
   return `<div class="meter"><div class="meter-fill ${cls}" style="width:${pct}%"></div></div>`;
 }
 
-const CLASS_ICON = {
-  ground: renderIcon('paw', { size: 13 }),
-  water: renderIcon('wave', { size: 13 }),
-  air: renderIcon('wing', { size: 13 }),
-};
-
+// R72 - the chip reads the class out of classes.json rather than a hardcoded
+// trio, so a fourth class gets its own icon and a retired one degrades to the
+// Unclassed diamond instead of throwing on `c.name`. `beats` is looked up the
+// same way: the triangle is a cycle in the data, and a cycle with a hole in it
+// must not take the battle screen down mid-fight.
 function classChip(creatureClass, content) {
-  if (!creatureClass) return '<span class="cls-chip">◇</span>';
-  const c = content.classes[creatureClass];
-  return `<span class="cls-chip class-${creatureClass}" title="${c.name} — beats ${content.classes[c.beats].name}">${CLASS_ICON[creatureClass]}</span>`;
+  const c = creatureClass ? content.classes?.[creatureClass] : null;
+  if (!c) return '<span class="cls-chip">◇</span>';
+  const beaten = content.classes?.[c.beats];
+  return `<span class="cls-chip class-${creatureClass}" title="${c.name}${
+    beaten ? ` — beats ${beaten.name}` : ''
+  }">${renderIcon(c.icon, { size: 13 })}</span>`;
 }
 
 // Status as icons, not sentences: the HP box has no room for prose and the
@@ -119,7 +121,10 @@ function spriteFor(side, refId, ctx, battle) {
   const { state, content } = ctx;
   if (side === 'enemy') {
     const unit = battle.units?.[refId] ?? content.enemies[refId];
-    if (unit?.genome) return renderCreatureSVG(unit.genome, content, { idPrefix: `foe-${refId}` });
+    // R72 — `battle.units` is serialized with the save, so a fight resumed
+    // after one of its parts was retired reaches this with a stale genome.
+    const foeGenome = drawableGenome(unit?.genome, content);
+    if (foeGenome) return renderCreatureSVG(foeGenome, content, { idPrefix: `foe-${refId}` });
     return renderUnitSVG(unit ?? { name: '?', shapes: [] });
   }
   const chimera =

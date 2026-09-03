@@ -818,16 +818,102 @@ The queue is a proposal: prune it before starting R63.
   test suite (create/switch/delete/rename, `MAX_SLOTS`, backward-compat
   synthesis, active-slot and last-slot refusals) that R71 didn't originally
   ask for but the added scope needed.
-- **R72 — Retired content ids crash the Theater.** `theater.js:81` reads
-  `content.parts[token.partId].slot` unguarded (verified: a vault token
-  whose part was removed from `parts.json` throws and takes the screen
-  down), and `:99` calls `tokensFor` without `content`, so its own retired
-  guard is a no-op. `physiology.js:61` indexes `GRADES` unguarded one line
-  after guarding the part; `classVotes` hardcodes three classes in
-  `physiology.js` and twice in `director.js`, so a fourth class votes `NaN`
-  and is silently dropped. Every other module defends this case. *Done when:
-  a gate retires one part, one grade and adds one class in a fixture, and
-  every screen and the sim still run.*
+- **R72 — Retired content ids crash the Theater.** ✅ *Shipped.*
+  `theater.js:81` read `content.parts[token.partId].slot` unguarded and
+  `:99` called `tokensFor` without `content`, so its own retired guard was a
+  no-op. `physiology.js:61` indexed `GRADES` unguarded one line after
+  guarding the part; `classVotes` hardcoded three classes in
+  `physiology.js` and twice in `director.js`, so a fourth class voted `NaN`
+  and was silently dropped.
+  - **The named four were the smaller half.** A fixture that retires one
+    part, retires one grade and adds a fourth class — built first, then
+    pointed at the pristine tree — measured the actual blast radius:
+    **four of six screens threw, and the sim died inside `createBattle`.**
+    The retired GRADE was the worst of it, because `GRADES` is code rather
+    than data and nine sites indexed it with an id straight out of a save.
+    Two of those looked guarded and were not:
+    `GRADES[Math.max(0, GRADE_INDEX[id] - 1)]` throws, since `undefined - 1`
+    is `NaN` and `Math.max(0, NaN)` is `NaN`, not `0`. One `gradeOf()` /
+    `gradeIndexOf()` pair in `extract.js` now backs every reader, degrading
+    a retired grade to the baseline so the part keeps its face stats and the
+    player keeps the part.
+  - **`battle/engine.js:108` was the one that reached the sim.**
+    `1 + GRADE_INDEX[token.grade] * GRADE_MOVE_BONUS` on a retired grade is
+    `NaN`, and a `NaN` multiplier spreads silently through every damage
+    number the engine and the balance harness compute.
+  - **The renderer VALIDATES a genome and throws on an unknown part**, so
+    one retired part took the whole Pens screen down rather than one
+    overlay. `chimeraGenome` drops it now — the creature draws without that
+    piece, exactly as `analyze` already scored it.
+  - **The class list was hardcoded in six places, not three.** Beyond the
+    two tallies the entry named, `dex-ui.js`'s
+    `CLASS_ORDER = ['ground', 'water', 'air']` decided three separate things
+    at once (which sections the roster grows, which runs the foe guide
+    groups by, which enemies count as Unclassed) and a fourth class lost all
+    three silently; `ranch/ui.js` fell through every catalog group, so a new
+    class's animals never appeared in the Mail-Order Menagerie at all; and
+    three icon maps in `battle/ui.js`, `ranch/ui.js` and `theater-ui.js`
+    duplicated `classes.json`'s own `icon` field — the Theater's as emoji,
+    against the project's no-emoji-as-art rule. All six read the data now.
+  - **The genome in a containment bay is frozen into the save.**
+    `campaign.js` stores a captured unit's `battle.units` record verbatim and
+    a bay only empties on dismantle or rehab, so retiring one of its parts
+    threw at `campaign/ui.js:734` and took the War Room with it — a
+    soft-lock, since the dismantle button that clears the bay is on the
+    screen that will not render. `battle/ui.js:124` is the same shape for a
+    battle serialized mid-fight. `validateGenome` stays strict; the new
+    `drawableGenome` softens only those two save-fed readers. Found by the
+    adversarial sweep AFTER the gate was already green, because the fixture
+    had an empty `containment`.
+  - **The Dex's `dex.parts` is a SAVE-held list** read three times without a
+    guard, plus `combo.parts` in `comboHint` and the salvage line in
+    `campaign.js:608`, whose `GRADES.find(...).name` was unguarded on both
+    halves. The first fixture missed every one of these because its Dex was
+    empty and its cards were shut — a shut fold renders nothing, and
+    "nothing" is not the same as "renders safely."
+  *Done when: a gate retires one part, one grade and adds one class in a
+  fixture, and every screen and the sim still run.* ✅ — and the gate walks
+  all five Dex tabs with every fold forced open, asserts no screen leaks
+  `undefined`/`NaN`/`[object Object]` into its own output (a screen that
+  prints the hole instead of falling into it is still broken), and holds a
+  static rule that no module may name the three shipped classes as a
+  literal set again.
+- **R79 — The same hole, for retired species and frames.** R72 fixed the
+  ids its criterion named — parts, grades, classes — and its adversarial
+  sweep found the identical shape one level out, unfixed because it is a
+  different and much larger surface. A save holds a species id on every
+  ranch animal and a frame id on every chimera, and both are read bare:
+  `ranch.js:100`, `:110`, `:154`, `:179`, `:311`, `:351` all do
+  `content.species[animal.species].<field>`; `physiology.js:50` reads
+  `frame.phys.hp` with no check that the frame still exists, which puts it
+  on the battle and sim paths as well as the screen; `pens-ui.js:111`/`:228`
+  and `ranch/ui.js:345`/`:423`/`:503` throw on the card, as does
+  `vault-ui.js:61` on a Resequencer run whose species is gone. The same
+  sweep confirmed the sibling case for WORLD ids, which a save also holds:
+  `rivals.js:363` (`content.rivals[rivalId]`, unguarded on every branch),
+  `battle/engine.js:916`/`:1016`/`:1027`/`:1107` (enemy ids, one of them
+  reached through a KO'd foe's `transformInto`, which survives a reload),
+  and `sim.js:222`/`:287`/`:695` on a retired frame or encounter. A
+  completeness pass over all 58 modules added the ones a line-by-line read
+  keeps missing: **`physiology.js:124`** destructures
+  `content.species[sp].thermal` in the SAME function whose frame read is
+  already known — and fixing the frame only lets execution reach it;
+  `physiology.js:134`/`:172`/`:176` and `dossier.js:152` are the same
+  cross-reference from a part to its species; `theater-ui.js:91` and
+  `ranch/ui.js:354` throw inside a SORT COMPARATOR, which is a shape no
+  optional chain elsewhere covers; `ranch/ui.js:73` reads
+  `content.species[species.variantOf].name`; `breeding.js:209` takes a
+  species id off a save-held parent. And **`gauntlet.js:59`** builds waves
+  from `content.gauntlet` rather than `content.encounters`, so the
+  data-integrity gates at `smoke.js:479`/`:6640` — which only ever walk
+  `content.encounters` — do not cover it: retire an enemy named solely by a
+  gauntlet stage and Exhibition I reaches `combatantFromUnit(undefined)`.
+  Retiring a CLASS (as opposed to adding one) belongs here too: R72 guarded
+  every `content.classes[x.beats]` second hop, but `campaign/ui.js:834`,
+  `battle/readout.js:29`, `battle/engine.js:748` and `dex-ui.js`'s enemy
+  grouping still read a class id straight off an ENEMY record. *Done when:
+  the R72 fixture also retires one species, one frame, one enemy, one region
+  node and one class, and every screen and the sim still run.*
 - **R73 — Tap targets and focus at 380 px.** Per screen, **8–14 controls
   under 40 px**: mute 24 h, field-note dismiss 26 h, agenda chip 28 h, row
   buttons 31–33 h; the nav is ~36 h with no `aria-current`; focus rings are

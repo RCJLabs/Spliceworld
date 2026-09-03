@@ -1,5 +1,184 @@
 # PROGRESS
 
+## Session 95 — R72: retired content ids crash the Theater ✅
+
+**Acceptance criterion:** a gate retires one part, one grade and adds one
+class in a fixture, and every screen and the sim still run — **passes**.
+`SAVE_VERSION` unchanged (36): nothing about the schema moved, which is the
+point — this phase is about a save that is already valid naming content the
+build no longer has. `sw.js` cache → `v36-r72`, which the browser pass
+insisted on: the first run after adding a new export to `renderer.js` failed
+with *"does not provide an export named `drawableGenome`"* — the old shell
+still in CacheStorage. Exactly the stale-cache path R71 was about, caught
+here because a new export makes it loud instead of subtle.
+
+### Measured first
+
+The fixture was built before the fixes and pointed at the pristine tree, so
+the blast radius is measured rather than asserted:
+
+| against `HEAD` | with R72 |
+|---|---|
+| **4 of 6 screens threw** (Pens, Vault, Theater, War Room) | 6 of 6 render |
+| **the sim died inside `createBattle`** | 6324 battles, no degenerate builds |
+| the Dex threw once its `dex.parts` held a retired id | all five tabs render |
+| a fourth class scored `undefined + 1` = `NaN` in two tallies | counted, and it can win the election |
+| the class list was hardcoded in **6** modules | 0 — all read `classes.json` |
+| `GRADES` indexed by a save-held id at **9** sites | 1 shared accessor pair |
+
+### The four the roadmap named were the smaller half
+
+The entry named `theater.js:81`/`:99`, `physiology.js:61` and the two
+`classVotes` literals. All four were real. But the retired GRADE turned out
+to be the wide one, because `GRADES` is **code, not data** — a hardcoded
+array in `extract.js` — so a token stamped with a grade an older build wrote
+resolves to `GRADE_INDEX[id] === undefined` at nine call sites.
+
+Two of those looked defended and were not:
+
+```js
+GRADES[Math.max(0, GRADE_INDEX[token.grade] - 1)].id   // throws
+```
+
+`undefined - 1` is `NaN`, and `Math.max(0, NaN)` is `NaN`, not `0` — so the
+clamp that reads like a guard is the line that crashes. One `gradeOf()` /
+`gradeIndexOf()` pair now backs every reader, degrading a retired grade to
+the baseline: the part keeps its face stats and the player keeps the part.
+
+`battle/engine.js:108` was the one that reached the harness —
+`1 + GRADE_INDEX[token.grade] * GRADE_MOVE_BONUS` is `NaN` on a retired
+grade, and a `NaN` multiplier spreads silently through every damage number
+the engine and the sim compute.
+
+### The fixture found what the reading missed
+
+Three rounds of it, each time because the fixture was too polite:
+
+1. **Cards shut.** The Pens manifest and the portraits live behind a fold
+   that defaults closed, so the first run rendered neither. Forcing every
+   fold open surfaced the retired part immediately: the renderer VALIDATES a
+   genome and throws on an unknown id, so one retired part took the whole
+   screen down rather than one overlay. `chimeraGenome` drops it now — the
+   creature draws without that piece, exactly as `analyze` already scored it.
+2. **An empty Dex.** `dex.parts` is a **save-held** list read three times
+   with no guard. Populating it made the sixth screen throw too.
+3. **One tab.** The Dex renders one tab at a time (R45), so the screen loop
+   only ever saw its default view; the combo list and the foe guide — the two
+   that read `dex.parts` and group by class — are behind the other four.
+
+### The class list was hardcoded in six places, not three
+
+Beyond the two tallies the entry named, `dex-ui.js`'s
+`CLASS_ORDER = ['ground', 'water', 'air']` decided three separate things at
+once — which sections the roster grows, which runs the foe guide groups by,
+and which enemies count as Unclassed — and a fourth class lost all three in
+silence. `ranch/ui.js` fell through every catalog group, so a new class's
+animals never appeared in the Mail-Order Menagerie at all. And three icon
+maps duplicated `classes.json`'s own `icon` field, the Theater's as emoji,
+against the project's own no-emoji-as-art rule.
+
+The gate now holds the rule as well as the instances: a static pass fails if
+any module names all three shipped class ids close together as keys or string
+literals. Two drafts of that rule were too literal to work — matching `{…}`
+alone walked past the array, and widening it to both bracket kinds still
+missed the icon maps, whose entries contain nested `{ size: 13 }` calls. The
+version that ships strips comments first (prose names all three constantly
+and legitimately) and looks for the three as keys within 220 characters of
+each other. Checked both ways: it flags all six offenders on `HEAD` and none
+of the 60 modules after.
+
+### An adversarial six-dimension sweep, run against the whole tree
+
+Six agents swept in parallel — one per content kind — then findings were
+deduped and re-verified per file by agents told to default to *refuted*. It
+is what found `vault-ui.js` and `dex-ui.js`, both of which my own `grep` had
+missed: the first pass was truncated by a `head -20` and I read the short
+list as the whole list.
+
+It also found the one this phase would otherwise have shipped broken, and
+found it *past* a gate that was already green. **A captured unit sitting in a
+containment bay carries a genome frozen into the save** — `campaign.js` stores
+`battle.units[id]` verbatim, and a bay only empties when the player dismantles
+it or finishes rehab. Retire one of its parts and `campaign/ui.js:734` throws,
+taking the whole War Room down; and that is a **soft-lock**, not a blank
+screen, because the dismantle button that would clear the offending bay is on
+the screen that will not render. Reproduced independently before fixing:
+
+```
+THREW: Bad genome: Unknown part: bear_hide
+  at renderCreatureSVG (render/renderer.js:329:28)
+  at bayCard (campaign/ui.js:734:7)
+```
+
+The same shape sits behind `battle/ui.js:124`, where `battle.units` is
+serialized with the save, so a fight resumed after a part is retired throws
+out of the arena. `validateGenome` stays strict — a genome assembled wrong is
+a bug the suite should hear about — so the softening is a new
+`drawableGenome(genome, content)` in the renderer, used at exactly those two
+save-fed readers: it returns `null` when the frame itself is gone and
+otherwise drops only the sockets whose parts are, exactly as `chimeraGenome`
+already does for the player's own creatures.
+
+The gate passed over this because its fixture had an empty `containment` and
+no saved battle — the fourth time this phase that the fixture, not the
+reading, was the thing that needed fixing. The fixture now carries a bay.
+
+The sweep also caught the other half of the criterion escaping. **The sim's
+DEFAULT build pool crashed on a retired part**: `sampleBuilds` walks
+`combos.json` and reads `content.parts[p].slot` for every id a combo names,
+and a combo outlives its own halves. The gate had been running
+`scriptedBattle` — the battle — but not `sampleBuilds`, which is where
+`runSim` actually starts, so "the sim still runs" was only half-tested. Both
+are gated now, and the fix is a true no-op on live content: 6324 battles
+before and after, same pool.
+
+A completeness critic then swept all 58 modules for what the six dimensions
+missed, and its best catch is a rule worth keeping: **the second unguarded
+read in a function whose first one you just fixed.** `analyze()` has two —
+the frame at `:50` and `content.species[sp].thermal` at `:124` — and fixing
+the frame only lets execution *reach* the second. Both are R79's (species and
+frames), but the same pass found two class-cycle lookups still read bare
+after R72 had guarded four siblings, which is exactly the inconsistency that
+becomes the next bug; `physiology.js:163`, `campaign/ui.js:294` and
+`matchup.js:161` are guarded now, so every `content.classes[x.beats]` in the
+game reads the same way.
+
+Final tally from the sweep: **36 confirmed, 37 refuted** across 30 agents. A good share of the
+refutations are the review catching up with fixes landing underneath it, and
+several are the verifiers correctly rejecting claims whose line numbers or
+mechanisms were wrong — including one that refuted its own finding's headline
+and then found a real defect on a path the finding had only mentioned in
+passing. That one was the containment bay.
+
+### Known issues
+
+- **Retired species and frames are the same hole, one level out, and are
+  NOT fixed** — now written up as **R79**. A save holds a species id on
+  every ranch animal and a frame id on every chimera, and both are read
+  bare: `ranch.js:100`/`:110`/`:154`/`:179`/`:311`/`:351`,
+  `physiology.js:50` (which puts it on the battle and sim paths too),
+  `pens-ui.js:111`/`:228`, `ranch/ui.js:345`/`:423`/`:503`. Deliberately out
+  of scope: R72's criterion names parts, grades and classes, and the species
+  and frame surface is large enough to be its own phase rather than a
+  quietly widened one.
+- Retiring a *class* (as opposed to adding one) is not gated. The derived
+  class is now always one the data defines, and the dangling-`beats` lookups
+  are guarded, but no fixture removes a class.
+
+### Verified
+
+- `tools/smoke.js` — full suite green, including the new R72 section.
+- `tools/sim.js` — 6324 battles in 3575 ms, no degenerate builds flagged.
+- The gate run against a pristine `HEAD` worktree, confirming it fails there
+  (4 screens + the sim) and passes here.
+
+### Next session's first task
+
+**R73 — Tap targets and focus at 380 px.** 8–14 controls per screen under
+40 px, no `aria-current`, `outline: none` at `style.css:2104`, zero
+`aria-live` regions, `#overlay` has no dialog role and no Escape. This ships
+as a TWA, so it is the accessibility floor rather than a polish pass.
+
 ## Session 94 — R71: a save from a newer build starts a new game ✅
 
 **Acceptance criterion:** "from the future" is a refusal the shell renders

@@ -8,7 +8,7 @@ import { rngStream, pick } from '../util/rng.js';
 import { chooseMoveIndex, skillFor } from './ai.js';
 import { levelOf, levelMult, grantBattleXp } from './veterancy.js';
 import { analyze } from '../splice/physiology.js';
-import { GRADE_INDEX } from '../splice/extract.js';
+import { GRADE_INDEX, gradeIndexOf } from '../splice/extract.js';
 import { isSettled } from '../splice/theater.js';
 import { perksOf, driftFromBattle } from '../splice/temperament.js';
 import { flatModifiers, scarEffects, againstTags } from '../splice/scars.js';
@@ -105,7 +105,10 @@ export function movesFromTokens(tokens, report, content) {
   for (const token of tokens) {
     const part = content.parts[token.partId];
     if (!part?.move) continue; // passive or retired part — stats only
-    const gradeBonus = 1 + GRADE_INDEX[token.grade] * GRADE_MOVE_BONUS;
+    // R72: unguarded, a grade this build no longer defines made this NaN,
+    // and a NaN multiplier spreads silently through every damage number the
+    // engine and the balance sim compute.
+    const gradeBonus = 1 + gradeIndexOf(token.grade) * GRADE_MOVE_BONUS;
     // A trait can change what a part DOES, not only what it weighs (R24).
     // Stat bonuses alone made every gene feel like the same gene with a
     // different number on it; a venom gland that actually envenoms is a
