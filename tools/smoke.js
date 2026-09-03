@@ -12418,6 +12418,34 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // And the engine no longer carries a rung number of its own.
     assert.ok(!/Threat Generation \d/.test(src['campaign/campaign.js']),
       'the engine does not name a threat generation in prose');
+
+    // …and it hands the wire the rung the player ACTUALLY reached. The two
+    // assertions above both pass while the engine looks up the wrong rung —
+    // the battery proved it by pinning the lookup to threatGens[1], which is
+    // the original bug wearing a different coat: the wire faithfully prints
+    // whatever announce it is given. Only walking a real rung-up catches
+    // that, so this one drives resolveBattle and reads the wire.
+    for (const rung of rungs) {
+      const below = rungs.filter((r) => r.gen < rung.gen).pop();
+      const st = { ...newGameState(), seed: 21, funds: 5000 };
+      const nodes = Object.values(content.regions).flatMap((r) => r.nodes);
+      // Everything up to the rung below, so the next node crosses THIS one.
+      st.campaign.notoriety = rung.at - 1;
+      st.campaign.heldNodes = [];
+      const target = nodes.find((n) => n.notoriety > 0 && content.encounters[n.encounter]);
+      assert.ok(target, 'a node that moves the needle');
+      st.campaign.notoriety = rung.at - target.notoriety;
+      if (below) assert.ok(st.campaign.notoriety >= below.at, `the fixture starts on Generation ${below.gen}`);
+      const enc = content.encounters[target.encounter];
+      const battle = createBattle([makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'prime', content)], enc, content, 3, t0,
+        { kind: 'assault', nodeId: target.id });
+      battle.outcome = 'win'; battle.over = true;
+      resolveBattle(st, battle, content, t0);
+      assert.equal(threatGen(st, content), rung.gen, `taking ${target.name} reaches Generation ${rung.gen}`);
+      const said = st.news.map((n) => n.text ?? n).filter((l) => /THREAT LEVEL UP/.test(l));
+      assert.deepEqual(said, [rung.announce],
+        `and the wire says Generation ${rung.gen}'s own line, not another rung's (${said.join(' | ')})`);
+    }
   }
 
   // 9. The whole path, end to end: an event emitted lands on the wire.
