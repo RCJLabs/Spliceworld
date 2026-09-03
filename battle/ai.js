@@ -57,7 +57,7 @@ function incomingDamage(atk, def, content, turn) {
 // the problem by thirty phases because nothing was watching for an export
 // with no reader. That is what this phase's gate is for.
 
-function utilityScore(move, atk, def, allies, incoming, window) {
+function utilityScore(move, atk, def, allies, incoming, window, battle) {
   const kw = move.keywords ?? {};
   const missingHp = atk.maxHp - atk.hp;
   const staminaRoom = atk.staminaMax - atk.stamina;
@@ -97,7 +97,19 @@ function utilityScore(move, atk, def, allies, incoming, window) {
   if (kw.rally) v += room(atk.stages.power, true) * 7 * longFight * Math.max(1, allies);
   if (kw.powerDown) v += room(def.stages.power, false) * 7 * longFight;
   if (kw.accDown) v += room(def.stages.acc, false) * incoming * 0.1 * longFight;
-  if (kw.slow && def.speed > 1) v += def.speed * 1.4;
+  // Slow was priced at the target's WHOLE speed, ignoring both how much of
+  // it the move takes and how much is left to take. The data ships Slow
+  // from 0.3 to 1, so a 30% clip scored as the full stop; and unlike Venom,
+  // Sleep, Stun, Trap and Taunt, Slow has no "already applied" guard and
+  // COMPOUNDS on every press, so nothing ever told the pilot to stop. On an
+  // eagle carrying a 0.3 tail it pressed Downdraft 374 times in 60 fights —
+  // more than its best attack — and lost fights the greedy rule won.
+  // Priced now at the speed the press actually removes, and discounted once
+  // the pilot is already the faster of the two and the order is not in doubt.
+  if (kw.slow && def.speed > 1) {
+    const after = Math.max(1, Math.round(def.speed * (1 - kw.slow)));
+    v += (def.speed - after) * (def.speed > atk.speed ? 1.4 : 0.5);
+  }
 
   // Control: only ever worth applying to something it is not already on.
   if (kw.venom && !def.tags.includes('Vehicle')) v += Math.max(0, 4 - def.status.venom) * 7;
@@ -106,7 +118,28 @@ function utilityScore(move, atk, def, allies, incoming, window) {
   if (kw.stun && !def.status.stun) v += 14 * kw.stun;
   if (kw.trap && !def.status.trapped) v += 8;
   if (kw.taunt && !(def.status.taunted > 0)) v += 10;
-  if (kw.knockback) v += 9;
+  if (kw.knockback) {
+    // R68: this was a flat +9, and it made knockback a trap the pilot walked
+    // into on purpose. `knockback()` re-queues the fighter it punts and
+    // rebuilds it with `combatantFromUnit` when it comes back around — so
+    // the damage already spent on the active is not merely deferred, it is
+    // REFUNDED. Punting something you are three swings into is a rout of
+    // your own position, and the AI was paying a turn for the privilege.
+    // It is also a no-op in two states the score never checked: an empty
+    // bench, and the one-turn lockout after anybody was punted.
+    const side = def.kind === 'unit' ? 'enemy' : 'player';
+    const last = battle?.knockedAt?.[side];
+    const locked = last != null && battle.turn - last <= 1;
+    const bench = def.kind === 'unit'
+      ? (battle?.enemy?.queue?.length ?? 0)
+      : (battle?.player?.team ?? []).filter((c) => c !== def && c.hp > 0).length;
+    if (!locked && bench > 0) {
+      // Worth most against something fresh — a wall you cannot get through
+      // yet — and steeply negative against one you are about to finish.
+      const spent = 1 - def.hp / Math.max(1, def.maxHp);
+      v += 9 - spent * 26;
+    }
+  }
   return v;
 }
 
@@ -121,7 +154,7 @@ function scoreMove(battle, atk, def, move, content, allies, incoming, window) {
   // A kill is worth more than the damage on it — it ends the turn the foe
   // would have taken. Weighted by the odds of actually landing it.
   if (p.lethal) score += (def.hp + 24) * p.hitChance;
-  score += utilityScore(move, atk, def, allies, incoming, window) * p.hitChance;
+  score += utilityScore(move, atk, def, allies, incoming, window, battle) * p.hitChance;
   if (p.immune) score = 0;
   // Charge spends a turn before it does anything; only worth it well ahead.
   if (move.keywords.charge) score *= 0.55;
@@ -187,8 +220,16 @@ export function chooseMoveIndex(battle, atk, def, content, skill, rollFn) {
   // starving forever — so it refused every buff under the bar and breathed
   // instead, permanently. Starving means "there IS a swing and I cannot
   // afford it".
-  const affordableSwings = options.filter(({ m }) => m.power > 0).map(({ m }) => m.cost);
-  const cheapestSwing = affordableSwings.length ? Math.min(...affordableSwings) : null;
+  // R68: read from the creature's WHOLE moveset, not from `options`. Those
+  // are the moves it can already pay for, so every cost in that list was
+  // `<= atk.stamina` by construction and `atk.stamina < cheapestSwing` could
+  // never once be true — the guard below has been unreachable since R66
+  // sourced it from the filtered list, and the eagle it was written for went
+  // straight back to pressing a cheap tail 374 times in 60 fights. Filtering
+  // by `power > 0` still answers R66's case: a utility-only creature has no
+  // swing to be starved of, so `cheapestSwing` is null and it is not starving.
+  const swings = atk.moves.filter((m) => m.power > 0).map((m) => m.cost);
+  const cheapestSwing = swings.length ? Math.min(...swings) : null;
   const starving = cheapestSwing != null && atk.stamina < cheapestSwing;
   const chosen = atk.moves[best.i];
   if (!taunted && starving && !(chosen.power > 0) && best.score < STARVED_UTILITY_BAR) return -1;
