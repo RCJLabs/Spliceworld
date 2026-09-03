@@ -1,3 +1,4 @@
+import { renderIcon } from './icons.js';
 // Sub-navigation, shared. R15 built this for the War Room when nineteen
 // waves of features had stacked thirteen cards into one 3,884px column;
 // R45 needed the same thing for the Dex, which had grown to 12.5 screens.
@@ -19,7 +20,7 @@ export function subtabBar({ tabs, active, attr, badgeFor = () => null, id = '' }
         const badge = badgeFor(tab.id);
         return `
           <button type="button" data-${attr}="${tab.id}" class="${active === tab.id ? 'is-on' : ''}">
-            <span class="subtab-icon" aria-hidden="true">${tab.icon}</span>
+            <span class="subtab-icon" aria-hidden="true">${renderIcon(tab.icon)}</span>
             <span class="subtab-label">${tab.label}</span>
             ${badge ? `<span class="subtab-badge badge-${badge.kind}">${badge.text}</span>` : ''}
           </button>`;

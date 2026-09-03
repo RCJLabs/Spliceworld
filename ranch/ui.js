@@ -25,6 +25,7 @@ import { incomePerDay } from '../campaign/campaign.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { agendaShape } from './agenda.js';
 import { bandedHtml } from '../ui/roster.js';
+import { renderIcon } from '../ui/icons.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -47,7 +48,11 @@ let lastMsg = 'The herd awaits your questionable attention.';
 let pickA = ''; // breeding pen draft (screen-local)
 let pickB = '';
 let catalogPick = '';
-const CLASS_MARK = { air: '🪽 ', ground: '🦶 ', water: '🌊 ' };
+const CLASS_MARK = {
+  air: `${renderIcon('wing', { size: 13 })} `,
+  ground: `${renderIcon('paw', { size: 13 })} `,
+  water: `${renderIcon('wave', { size: 13 })} `,
+};
 
 // A variant hatching is the rarest thing the ranch produces (ROADMAP §3.2),
 // so it gets the ceremony treatment rather than a line in the message strip.
@@ -97,7 +102,7 @@ function facilityCard(state, content) {
     return `
       <div class="facility-row">
         <div class="facility-head">
-          <strong>${track.icon} ${current?.name ?? track.name}</strong>
+          <strong>${renderIcon(track.icon)} ${current?.name ?? track.name}</strong>
           <span class="lineage">level ${level}${up ? '' : ' · maxed'}</span>
         </div>
         <p class="fine-print">${current?.blurb ?? ''}</p>
@@ -117,7 +122,7 @@ function facilityCard(state, content) {
   }).join('');
   return collapsibleCard({
     id: 'facility',
-    title: '🏚 Facility',
+    title: `${renderIcon('derelict-house')} Facility`,
     badge: affordable.length ? `${affordable.length} ready` : `${upgrades.length || '—'}`,
     summary,
     body: rows,
@@ -181,7 +186,7 @@ export function renderRanchScreen(root, ctx) {
   const catalogGroups = ['ground', 'water', 'air', null].map((cls) => {
     const rows = catalog.filter((sp) => (sp.class ?? null) === cls);
     return {
-      label: cls ? `${content.classes[cls].icon} ${content.classes[cls].name}` : 'Unclassed',
+      label: cls ? `${renderIcon(content.classes[cls].icon)} ${content.classes[cls].name}` : 'Unclassed',
       options: rows.map((sp) => ({
         id: sp.id,
         label: sp.name,
@@ -199,7 +204,7 @@ export function renderRanchScreen(root, ctx) {
     const current = steps.find((s) => !s.done);
     onboarding = `
       <section class="card onboarding">
-        <h3>🗺 Path to World Domination</h3>
+        <h3>${renderIcon('map')} Path to World Domination</h3>
         <ol class="onboard-list">
           ${steps
             .map((s) => `<li class="${s.done ? 'done' : s === current ? 'current' : ''}">${s.done ? '✔' : s === current ? '→' : '·'} ${s.label}</li>`)
@@ -216,9 +221,9 @@ export function renderRanchScreen(root, ctx) {
   // everything they had was a way to spend money.
   const shape = agendaShape(state, content, t);
   const KINDS = [
-    ['work', '🧪 Make something'],
-    ['campaign', '🗺 Push on the world'],
-    ['spend', '💵 Spend money'],
+    ['work', `${renderIcon('test-tube')} Make something`],
+    ['campaign', `${renderIcon('map')} Push on the world`],
+    ['spend', `${renderIcon('money-wings')} Spend money`],
   ];
   // R47: decided above the body, for the same reason the Breeding Pen is —
   // a shut fold must not build what it is not showing, and this is the
@@ -366,7 +371,7 @@ export function renderRanchScreen(root, ctx) {
     const rows = pairingForecast(sireA, damB, content);
     forecast = `
       <div class="pairing-forecast">
-        <p class="econ-label">🔬 Predicted offspring</p>
+        <p class="econ-label">${renderIcon('microscope')} Predicted offspring</p>
         ${rows.length
           ? rows.map((r) => `
             <div class="pairing-row">
@@ -400,7 +405,7 @@ export function renderRanchScreen(root, ctx) {
         ${parentField('breed-b', 'Parent B', pickB, partnerPool, !pickA)}
       </div>
       ${forecast}
-      <button type="button" class="big-btn" data-act="breed" ${pickA && pickB ? '' : 'disabled'}>💕 Introduce Them (science)</button>`,
+      <button type="button" class="big-btn" data-act="breed" ${pickA && pickB ? '' : 'disabled'}>${renderIcon('heart')} Introduce Them (science)</button>`,
   });
 
   // Incubator: eggs on real-world timers, hatched by hand.
@@ -481,9 +486,9 @@ export function renderRanchScreen(root, ctx) {
     // prompt, not a deadline, so it ranks under it and still shows in the
     // summary line either way.
     const badge = stage === 'prime' && next
-      ? `<span class="pen-alert">🎓 Prime for ${fmtDuration(next.msRemaining)}</span>`
+      ? `<span class="pen-alert">${renderIcon('graduation-cap')} Prime for ${fmtDuration(next.msRemaining)}</span>`
       : stage === 'elder'
-        ? '<span class="pen-alert">🎓 past its Prime</span>'
+        ? `<span class="pen-alert">${renderIcon('graduation-cap')} past its Prime</span>`
         : ready
           ? `<span class="pen-ready">${ready} care ready</span>`
           : next
@@ -514,7 +519,7 @@ export function renderRanchScreen(root, ctx) {
           }</p>
           <p class="fine-print outlook">${outlookLine(outlook, animal.name)}</p>
           <div class="care-row">${buttons}</div>
-          <button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}">🎓 Extract (graduate ${animal.name})</button>
+          <button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}">${renderIcon('graduation-cap')} Extract (graduate ${animal.name})</button>
         </div>
       </section>`;
 

@@ -1,13 +1,13 @@
 {
-  "_doc": "First-use field guides (ROADMAP R29). Onboarding shipped in M7 as a five-step Path to World Domination and then eight more systems shipped behind it, unguided. Every guide here is DERIVED FROM SAVE STATE — there are no tutorial flags to migrate and nothing is scripted. A guide has two condition lists: `reachable` (the system exists for this player yet) and `done` (they have used it). It shows only when reachable AND not done, so a tip can never fire before its system is reachable and can never nag about something already understood. Conditions are either { path, min, default } — a dotted path into the save, compared by number, array length or key count — or { helper } for the handful that need real derivation (a breedable pair, an injured chimera, an open contest); the helper registry lives in ranch/onboarding.js and is the engine's own knowledge of its systems. Adding a guide for a system the engine can already detect is a pure data edit. `screen` is which tab it appears on; `order` breaks ties when more than one is ready. A player can dismiss one, which is the only piece of this that touches the save (`guidesSeen`).",
+  "_doc": "First-use field guides (ROADMAP R29). Onboarding shipped in M7 as a five-step Path to World Domination and then eight more systems shipped behind it, unguided. Every guide here is DERIVED FROM SAVE STATE \u2014 there are no tutorial flags to migrate and nothing is scripted. A guide has two condition lists: `reachable` (the system exists for this player yet) and `done` (they have used it). It shows only when reachable AND not done, so a tip can never fire before its system is reachable and can never nag about something already understood. Conditions are either { path, min, default } \u2014 a dotted path into the save, compared by number, array length or key count \u2014 or { helper } for the handful that need real derivation (a breedable pair, an injured chimera, an open contest); the helper registry lives in ranch/onboarding.js and is the engine's own knowledge of its systems. Adding a guide for a system the engine can already detect is a pure data edit. `screen` is which tab it appears on; `order` breaks ties when more than one is ready. A player can dismiss one, which is the only piece of this that touches the save (`guidesSeen`).",
   "guides": [
     {
       "id": "grades",
       "screen": "ranch",
       "order": 10,
-      "icon": "🎓",
+      "icon": "graduation-cap",
       "title": "A grade is three things, and you control two",
-      "body": "Every part a donor becomes is stamped <em>Standard</em>, <em>Prime</em>, <em>Apex</em> or <em>Prismatic</em>, and the grade is genetics × age × condition. Genetics you can only breed for. The other two are yours: an animal at its Prime, kept in good condition, grades two tiers above the same animal extracted young and neglected — and it is the same animal. Each card says what its own grade is waiting on, and what it would be worth if you fixed it. Graduating early is allowed and sometimes right; doing it by accident is not.",
+      "body": "Every part a donor becomes is stamped <em>Standard</em>, <em>Prime</em>, <em>Apex</em> or <em>Prismatic</em>, and the grade is genetics \u00d7 age \u00d7 condition. Genetics you can only breed for. The other two are yours: an animal at its Prime, kept in good condition, grades two tiers above the same animal extracted young and neglected \u2014 and it is the same animal. Each card says what its own grade is waiting on, and what it would be worth if you fixed it. Graduating early is allowed and sometimes right; doing it by accident is not.",
       "reachable": [
         {
           "path": "campaign.heldNodes",
@@ -25,9 +25,9 @@
       "id": "breeding",
       "screen": "ranch",
       "order": 11,
-      "icon": "💕",
+      "icon": "heart",
       "title": "Two adults make a third",
-      "body": "Two grown animals of the same stock — one of each sex — can be paired in the Breeding Pen. The egg inherits their stats, their genes, and occasionally something neither of them had.",
+      "body": "Two grown animals of the same stock \u2014 one of each sex \u2014 can be paired in the Breeding Pen. The egg inherits their stats, their genes, and occasionally something neither of them had.",
       "reachable": [
         {
           "helper": "breedablePair"
@@ -45,9 +45,9 @@
       "id": "incubator",
       "screen": "ranch",
       "order": 12,
-      "icon": "🥚",
+      "icon": "egg",
       "title": "Eggs hatch on their own clock",
-      "body": "The Incubator counts down in real time whether the app is open or not. Come back and hit Hatch — the hatchling needs a free pen, so keep one spare.",
+      "body": "The Incubator counts down in real time whether the app is open or not. Come back and hit Hatch \u2014 the hatchling needs a free pen, so keep one spare.",
       "reachable": [
         {
           "path": "ranch.eggs",
@@ -65,7 +65,7 @@
       "id": "genes",
       "screen": "ranch",
       "order": 13,
-      "icon": "🧬",
+      "icon": "dna",
       "title": "Half of what an animal has, it does not show",
       "body": "A dominant gene shows in the animal that carries it. A recessive needs two copies, so it can travel invisibly for generations. The Gene Scanner is how you stop guessing.",
       "reachable": [
@@ -90,7 +90,7 @@
       "id": "pairing",
       "screen": "ranch",
       "order": 14,
-      "icon": "🔬",
+      "icon": "microscope",
       "title": "The Suite does the Punnett square",
       "body": "Pick both parents in the Breeding Pen and the Predictive Pairing Suite prints the real odds: what the egg will CARRY, and what it will actually SHOW. Those are different numbers, and the gap is where breeding programmes live.",
       "reachable": [
@@ -112,7 +112,7 @@
       "id": "facility",
       "screen": "ranch",
       "order": 15,
-      "icon": "🏚",
+      "icon": "derelict-house",
       "title": "The lab is upgradeable",
       "body": "Six tracks, each bought in order, each gated by money and usually by territory. They buy things you cannot otherwise have: two more chassis at opposite ends of the scale, a second organ bay, a machine that reads alleles. Money has nowhere better to go.",
       "reachable": [
@@ -130,9 +130,9 @@
       "id": "upkeep",
       "screen": "ranch",
       "order": 16,
-      "icon": "💸",
+      "icon": "money-wings",
       "title": "Everything you own eats",
-      "body": "Stock costs its species upkeep; a chimera costs whatever its chassis, its part grades and its instability add up to — a prismatic monster runs seven times a plain one. Watch NET, not income. If it goes red, take a node or graduate something.",
+      "body": "Stock costs its species upkeep; a chimera costs whatever its chassis, its part grades and its instability add up to \u2014 a prismatic monster runs seven times a plain one. Watch NET, not income. If it goes red, take a node or graduate something.",
       "reachable": [
         {
           "path": "chimeras",
@@ -152,9 +152,9 @@
       "id": "catalog",
       "screen": "ranch",
       "order": 17,
-      "icon": "📦",
+      "icon": "package",
       "title": "The catalogue grows by conquest",
-      "body": "Mail-Order only stocks fauna your territory reaches. Every node you take adds species, and the exotic ones live in the later regions — which is the real reason to keep pushing the map.",
+      "body": "Mail-Order only stocks fauna your territory reaches. Every node you take adds species, and the exotic ones live in the later regions \u2014 which is the real reason to keep pushing the map.",
       "reachable": [
         {
           "path": "campaign.heldNodes",
@@ -174,9 +174,9 @@
       "id": "temperament",
       "screen": "pens",
       "order": 20,
-      "icon": "🎭",
+      "icon": "masks",
       "title": "They settle in with opinions",
-      "body": "A chimera that finishes settling acquires a temperament on two axes. It changes how it fights and what raises its bond — a Skittish one dodges, a Bullish one will not be told. You get what you get; you work with it.",
+      "body": "A chimera that finishes settling acquires a temperament on two axes. It changes how it fights and what raises its bond \u2014 a Skittish one dodges, a Bullish one will not be told. You get what you get; you work with it.",
       "reachable": [
         {
           "helper": "chimeraTempered"
@@ -194,7 +194,7 @@
       "id": "bond",
       "screen": "pens",
       "order": 21,
-      "icon": "🤝",
+      "icon": "handshake",
       "title": "Obedience is earned, not assumed",
       "body": "A chimera with a low bond ignores orders mid-fight and does something else instead. Train and feed it in the Pens between sorties. Bond is the difference between a weapon and an opinion.",
       "reachable": [
@@ -214,7 +214,7 @@
       "id": "infirmary",
       "screen": "pens",
       "order": 22,
-      "icon": "🩹",
+      "icon": "bandage",
       "title": "An injury is a clock, and a decision",
       "body": "A hurt chimera sits out until the timer runs down. TREAT it and the injury leaves no trace; leave it and it may set into a permanent scar. The Infirmary sells certainty, not healing.",
       "reachable": [
@@ -232,9 +232,9 @@
       "id": "scars",
       "screen": "pens",
       "order": 23,
-      "icon": "🩻",
+      "icon": "xray",
       "title": "A scar cuts both ways",
-      "body": "Every scar gives something and takes something — slower but tougher, worse against vehicles but better against everything else. Some are net good for a build, which makes \"leave it and see\" a real strategy rather than a mistake.",
+      "body": "Every scar gives something and takes something \u2014 slower but tougher, worse against vehicles but better against everything else. Some are net good for a build, which makes \"leave it and see\" a real strategy rather than a mistake.",
       "reachable": [
         {
           "helper": "chimeraScarred"
@@ -252,9 +252,9 @@
       "id": "resequencer",
       "screen": "vault",
       "order": 28,
-      "icon": "🧬",
+      "icon": "dna",
       "title": "A vial is the whole animal, banked",
-      "body": "Every graduation leaves a DNA vial, and for a long time that was a pile of inventory that did nothing. The Resequencer spends one to grow that donor <em>back</em> — same species, same star potential, same hidden genes. That matters because graduating used to be the one thing you could not undo: extract your best recessive carrier and those genes left the herd with it. A run takes 2 hours of real time, the vial is spent either way, and one in four collapses. A better vial does not buy safety — it buys the chance the animal comes back carrying something neither it nor its donor had.",
+      "body": "Every graduation leaves a DNA vial, and for a long time that was a pile of inventory that did nothing. The Resequencer spends one to grow that donor <em>back</em> \u2014 same species, same star potential, same hidden genes. That matters because graduating used to be the one thing you could not undo: extract your best recessive carrier and those genes left the herd with it. A run takes 2 hours of real time, the vial is spent either way, and one in four collapses. A better vial does not buy safety \u2014 it buys the chance the animal comes back carrying something neither it nor its donor had.",
       "reachable": [
         {
           "path": "inventory.vials",
@@ -274,9 +274,9 @@
       "id": "flight",
       "screen": "theater",
       "order": 29,
-      "icon": "🪶",
+      "icon": "feather",
       "title": "Wings are a promise. Lift is the receipt.",
-      "body": "Bird anatomy says AIRBORNE on the part. Your creature only gets it if the lift you installed can hoist the mass you built — the Flight row does that sum for you. It is worth doing: ground-level attacks swing straight underneath anything actually in the air, and the coalition throws a lot of them. The lighter the chassis, the cheaper the promise. The Kite gets off the ground on plain standard parts; the Rumbler never gets off the ground at all.",
+      "body": "Bird anatomy says AIRBORNE on the part. Your creature only gets it if the lift you installed can hoist the mass you built \u2014 the Flight row does that sum for you. It is worth doing: ground-level attacks swing straight underneath anything actually in the air, and the coalition throws a lot of them. The lighter the chassis, the cheaper the promise. The Kite gets off the ground on plain standard parts; the Rumbler never gets off the ground at all.",
       "reachable": [
         {
           "helper": "liftPartInVault"
@@ -292,9 +292,9 @@
       "id": "combos",
       "screen": "theater",
       "order": 30,
-      "icon": "✦",
+      "icon": "star",
       "title": "Some parts know each other",
-      "body": "Certain part pairings unlock a combo move nothing else can produce. They are not listed anywhere until you find one — the Splice-Dex keeps the ones you have, with silhouettes of the ones you have not.",
+      "body": "Certain part pairings unlock a combo move nothing else can produce. They are not listed anywhere until you find one \u2014 the Splice-Dex keeps the ones you have, with silhouettes of the ones you have not.",
       "reachable": [
         {
           "path": "inventory.parts",
@@ -314,9 +314,9 @@
       "id": "chaos",
       "screen": "pens",
       "order": 31,
-      "icon": "🧫",
+      "icon": "petri-dish",
       "title": "The vat crosses two chimeras",
-      "body": "Chaos-breeding takes two of your own chimeras and gestates a third out of both. It costs time and leaves the parents exhausted, and what comes out is genuinely unpredictable — which is the point.",
+      "body": "Chaos-breeding takes two of your own chimeras and gestates a third out of both. It costs time and leaves the parents exhausted, and what comes out is genuinely unpredictable \u2014 which is the point.",
       "reachable": [
         {
           "helper": "vatEligible"
@@ -334,9 +334,9 @@
       "id": "stable",
       "screen": "battle",
       "order": 39,
-      "icon": "👥",
+      "icon": "people",
       "title": "A patrol is three bodies, and so are you",
-      "body": "Combat is one creature per side at a time over a queue, so a three-unit patrol means grinding three health bars down with one of yours. Measured: the second node is unwinnable with one chimera and comfortable with three. If the briefing says <em>Not survivable</em>, it has run the fight and it means it — go and graduate another donor.",
+      "body": "Combat is one creature per side at a time over a queue, so a three-unit patrol means grinding three health bars down with one of yours. Measured: the second node is unwinnable with one chimera and comfortable with three. If the briefing says <em>Not survivable</em>, it has run the fight and it means it \u2014 go and graduate another donor.",
       "reachable": [
         {
           "path": "campaign.heldNodes",
@@ -356,9 +356,9 @@
       "id": "triangle",
       "screen": "battle",
       "order": 40,
-      "icon": "🔺",
-      "title": "Ground, Water, Air — and one of them is wrong",
-      "body": "Every creature's class comes from its <em>anatomy</em>, not its name: paws and hooves vote Ground, gills and fins vote Water, wings and talons vote Air. Ground beats Water, Water beats Air, Air beats Ground. It is the biggest single thing in a fight — measured at Precinct HQ, a flying team wins nine times in ten and the same team with the triangle switched off wins none. If the briefing calls a fight hopeless and your creatures are strong enough, you are on the wrong corner of it. Build something that votes differently.",
+      "icon": "warning-triangle",
+      "title": "Ground, Water, Air \u2014 and one of them is wrong",
+      "body": "Every creature's class comes from its <em>anatomy</em>, not its name: paws and hooves vote Ground, gills and fins vote Water, wings and talons vote Air. Ground beats Water, Water beats Air, Air beats Ground. It is the biggest single thing in a fight \u2014 measured at Precinct HQ, a flying team wins nine times in ten and the same team with the triangle switched off wins none. If the briefing calls a fight hopeless and your creatures are strong enough, you are on the wrong corner of it. Build something that votes differently.",
       "reachable": [
         {
           "path": "campaign.heldNodes",
@@ -376,9 +376,9 @@
       "id": "chart",
       "screen": "battle",
       "order": 41,
-      "icon": "🏷",
+      "icon": "tag",
       "title": "Tags are the other half, and some of them are zeroes",
-      "body": "Under the classes sits a second chart, and it deals in absolutes rather than percentages. A Ground-tagged move does <strong>nothing at all</strong> to anything Airborne — not less, nothing. Electric doubles into Aquatic, Sonic goes straight through Armored, and Gas is wasted on a Vehicle. The briefing lists every rule that applies before you commit: the opposition's tags sit under their name, and each of your creatures says what the chart does between it and them. Read the ✘ lines. They are the ones that cost you.",
+      "body": "Under the classes sits a second chart, and it deals in absolutes rather than percentages. A Ground-tagged move does <strong>nothing at all</strong> to anything Airborne \u2014 not less, nothing. Electric doubles into Aquatic, Sonic goes straight through Armored, and Gas is wasted on a Vehicle. The briefing lists every rule that applies before you commit: the opposition's tags sit under their name, and each of your creatures says what the chart does between it and them. Read the lines that say a move does nothing. They are the ones that cost you.",
       "reachable": [
         {
           "path": "campaign.heldNodes",
@@ -398,9 +398,9 @@
       "id": "veterans",
       "screen": "battle",
       "order": 42,
-      "icon": "🥊",
+      "icon": "boxing-glove",
       "title": "What they survive makes them stronger",
-      "body": "Every battle a chimera walks out of pays experience — win or lose, sized by what it actually stood against — and its <em>level</em> multiplies hp, power, armour and stamina. Never speed: how fast a creature acts is anatomy, and no amount of drilling changes what it is made of. Grades are what a creature is built from; levels are what it has been through, and they are the reason the one you spliced on day one can still be on the card at the end. Walled? Open the <strong>Sparring Ring</strong>: a scaled-down rematch against a garrison you already hold — half the experience, no purse, and nobody impounds a sparring partner.",
+      "body": "Every battle a chimera walks out of pays experience \u2014 win or lose, sized by what it actually stood against \u2014 and its <em>level</em> multiplies hp, power, armour and stamina. Never speed: how fast a creature acts is anatomy, and no amount of drilling changes what it is made of. Grades are what a creature is built from; levels are what it has been through, and they are the reason the one you spliced on day one can still be on the card at the end. Walled? Open the <strong>Sparring Ring</strong>: a scaled-down rematch against a garrison you already hold \u2014 half the experience, no purse, and nobody impounds a sparring partner.",
       "reachable": [
         {
           "path": "campaign.heldNodes",
@@ -423,9 +423,9 @@
       "id": "jobs",
       "screen": "battle",
       "order": 43,
-      "icon": "💼",
+      "icon": "briefcase",
       "title": "Not every job is a fight",
-      "body": "The Jobs board sends one chimera out on a timer for money, livestock or parts — no battle, no risk of capture. It is the floor under a bad run, and it raises Heat, which the world notices.",
+      "body": "The Jobs board sends one chimera out on a timer for money, livestock or parts \u2014 no battle, no risk of capture. It is the floor under a bad run, and it raises Heat, which the world notices.",
       "reachable": [
         {
           "path": "campaign.heldNodes",
@@ -445,7 +445,7 @@
       "id": "containment",
       "screen": "battle",
       "order": 44,
-      "icon": "⛓",
+      "icon": "chain",
       "title": "You can bring one home",
       "body": "Charging the Containment Cannon in a fight impounds an enemy. In the bay it becomes two futures and you pick one: dismantle it for enemy tech you cannot get any other way, or rehabilitate it onto your own roster.",
       "reachable": [
@@ -465,9 +465,9 @@
       "id": "rehab",
       "screen": "battle",
       "order": 45,
-      "icon": "🧸",
+      "icon": "teddy-bear",
       "title": "Their monster can become yours",
-      "body": "The Reorientation Wing turns an impounded specimen into a member of your stable — someone else’s anatomy, someone else’s grades, on your team. It runs on a clock and a curriculum; skip the sessions and it graduates wary.",
+      "body": "The Reorientation Wing turns an impounded specimen into a member of your stable \u2014 someone else\u2019s anatomy, someone else\u2019s grades, on your team. It runs on a clock and a curriculum; skip the sessions and it graduates wary.",
       "reachable": [
         {
           "path": "facility.containment",
@@ -485,9 +485,9 @@
       "id": "rivals",
       "screen": "battle",
       "order": 46,
-      "icon": "🧫",
+      "icon": "petri-dish",
       "title": "Other people do this too",
-      "body": "Rival labs field chimeras of their own and keep score. Beat one twice and it iterates — it reads your stable and builds something to answer it, which is the most direct feedback the game gives you on your own habits.",
+      "body": "Rival labs field chimeras of their own and keep score. Beat one twice and it iterates \u2014 it reads your stable and builds something to answer it, which is the most direct feedback the game gives you on your own habits.",
       "reachable": [
         {
           "helper": "rivalAvailable"
@@ -503,7 +503,7 @@
       "id": "rescue",
       "screen": "battle",
       "order": 47,
-      "icon": "⏳",
+      "icon": "hourglass",
       "title": "Nothing is ever really gone",
       "body": "Lose a fight and one downed chimera is taken, with a countdown to an \"unauthorized peer review\". Mount a rescue raid before it expires and you get it back with a deeper bond. There is always a window. Use it.",
       "reachable": [
@@ -525,9 +525,9 @@
       "id": "contest",
       "screen": "battle",
       "order": 48,
-      "icon": "🛡",
+      "icon": "shield",
       "title": "They come back for it",
-      "body": "Territory is not permanent. Once the coalition escalates, it counter-attacks a node you hold — the same garrison, stronger, and the node pays nothing while the convoy is on the road. Hold the line and the wreckage is yours.",
+      "body": "Territory is not permanent. Once the coalition escalates, it counter-attacks a node you hold \u2014 the same garrison, stronger, and the node pays nothing while the convoy is on the road. Hold the line and the wreckage is yours.",
       "reachable": [
         {
           "helper": "contestOpen"
@@ -543,9 +543,9 @@
       "id": "regions",
       "screen": "battle",
       "order": 49,
-      "icon": "🗺",
+      "icon": "map",
       "title": "Each region asks a different question",
-      "body": "The strips are not the same fight with bigger numbers. Kestrel Reach is Airborne, so your Ground-tagged moves miss entirely — and flying buys you nothing there, because almost nothing in the Reach fights from the ground. The Foundry is the opposite: armour, Sonic, and enough tippers and ram plates that a creature actually in the air is untouchable by a third of what they throw. Read the line under each region name.",
+      "body": "The strips are not the same fight with bigger numbers. Kestrel Reach is Airborne, so your Ground-tagged moves miss entirely \u2014 and flying buys you nothing there, because almost nothing in the Reach fights from the ground. The Foundry is the opposite: armour, Sonic, and enough tippers and ram plates that a creature actually in the air is untouchable by a third of what they throw. Read the line under each region name.",
       "reachable": [
         {
           "helper": "secondRegionOpen"
@@ -561,7 +561,7 @@
       "id": "director",
       "screen": "battle",
       "order": 50,
-      "icon": "🛰",
+      "icon": "satellite",
       "title": "The world is taking notes",
       "body": "Field the same anatomy often enough and the opposition starts bringing an answer to it. Their dossier on you is on the Labs tab. A stable of one class is legible; a mixed one is not.",
       "reachable": [
@@ -583,9 +583,9 @@
       "id": "gauntlet",
       "screen": "battle",
       "order": 51,
-      "icon": "🏟",
+      "icon": "stadium",
       "title": "They were saving these",
-      "body": "Hold the whole county and the coalition stops pretending its storage is empty: four exhibition matches, in order, against the machines they never dared field. No territory changes hands and no notoriety accrues — the purse is real, the Containment Cannon works, and a bagged exhibit salvages like nothing else in the game. These fights are sized for veterans. If the forecast says you are not ready, the Sparring Ring is still open.",
+      "body": "Hold the whole county and the coalition stops pretending its storage is empty: four exhibition matches, in order, against the machines they never dared field. No territory changes hands and no notoriety accrues \u2014 the purse is real, the Containment Cannon works, and a bagged exhibit salvages like nothing else in the game. These fights are sized for veterans. If the forecast says you are not ready, the Sparring Ring is still open.",
       "reachable": [
         {
           "path": "dominionAt",
@@ -605,9 +605,9 @@
       "id": "dex",
       "screen": "dex",
       "order": 55,
-      "icon": "📖",
+      "icon": "book",
       "title": "Everything you have ever found",
-      "body": "The Splice-Dex keeps every part, combo, enemy, gene and variant you have discovered — and shows silhouettes of the ones you have not, with where to look. It is the completion list and the hint system at once.",
+      "body": "The Splice-Dex keeps every part, combo, enemy, gene and variant you have discovered \u2014 and shows silhouettes of the ones you have not, with where to look. It is the completion list and the hint system at once.",
       "reachable": [
         {
           "path": "dex.parts",

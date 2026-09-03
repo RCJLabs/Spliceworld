@@ -102,10 +102,16 @@ export function indexContent(raw) {
           // it as the fallback a pre-ladder regions.json still reads by.
           threatGens: raw.regions.threatGens ?? null,
           threatGen2At: raw.regions.threatGen2At,
-          rescueEncounter: raw.regions.rescueEncounter,
+          // R70: a pool, not a single id — `rescue_impound` was the only
+          // response the coalition ever sent to a rescue, forever, and
+          // `air_patrol` and `harbor_watch` sat fully authored and unused
+          // beside it. `rescueEncounter` (singular) is read as a one-entry
+          // pool so an older regions.json still boots.
+          rescueEncounters: raw.regions.rescueEncounters
+            ?? (raw.regions.rescueEncounter ? [raw.regions.rescueEncounter] : []),
           contestation: raw.regions.contestation ?? null,
         }
-      : { threatGens: null, threatGen2At: Infinity, rescueEncounter: null, contestation: null },
+      : { threatGens: null, threatGen2At: Infinity, rescueEncounters: [], contestation: null },
   };
 }
 

@@ -46,6 +46,7 @@ import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '..
 import { bandedHtml } from '../ui/roster.js';
 import { canSpar } from '../campaign/sparring.js';
 import { guideForScreen } from '../ranch/onboarding.js';
+import { renderIcon } from '../ui/icons.js';
 
 let lastMsg = '';
 let vatPick = { a: null, b: null };
@@ -61,7 +62,7 @@ function vatCard(state, content, t) {
   if (running) {
     return `
       <section class="card vat-card">
-        <h3>🧪 The Chaos Vat</h3>
+        <h3>${renderIcon('test-tube')} The Chaos Vat</h3>
         <p class="ranch-msg">${running.parentNames.join(' × ')}</p>
         <p class="settle">Gestating… <strong class="countdown">${fmtDuration(vatRemainingMs(state, t))}</strong> remaining. The vat is making decisions and will not be taking questions.</p>
         <button type="button" id="vat-cancel" class="care-train">Drain the vat</button>
@@ -74,7 +75,7 @@ function vatCard(state, content, t) {
   if (state.chimeras.length < 2) {
     return `
       <section class="card vat-card">
-        <h3>🧪 The Chaos Vat</h3>
+        <h3>${renderIcon('test-tube')} The Chaos Vat</h3>
         <p class="fine-print">Two settled chimeras go in. Something neither of them was comes out. You have ${state.chimeras.length}.</p>
       </section>`;
   }
@@ -85,14 +86,14 @@ function vatCard(state, content, t) {
 
   return `
     <section class="card vat-card">
-      <h3>🧪 The Chaos Vat</h3>
+      <h3>${renderIcon('test-tube')} The Chaos Vat</h3>
       <p class="fine-print">Two settled chimeras in, one genome out that nobody designed. It may install a socket your Theater is not licensed to fill, and it may bring a part from neither parent.</p>
       ${pickerField({ id: 'vat-a', label: 'First donor', value: label(vatPick.a), hint: `${eligible.length} available` })}
       ${pickerField({ id: 'vat-b', label: 'Second donor', value: label(vatPick.b), hint: 'must be a different one' })}
       ${plan?.ok
         ? `<p class="vat-price">⚠ Both parents permanently drop <strong>one grade on every part</strong> — ${plan.gradeSteps} grade${plan.gradeSteps === 1 ? '' : 's'} in total, and you do not get them back. They then need ${tune.exhaustionHours}h off.</p>
            <p class="fine-print">Gestation ${plan.hours}h · fee <strong>$${plan.fee}</strong> · up to ${plan.sockets.length} sockets to inherit.</p>
-           <button type="button" id="vat-go" class="big-btn" ${plan.affordable ? '' : 'disabled'}>🧪 Seal the vat — $${plan.fee}</button>`
+           <button type="button" id="vat-go" class="big-btn" ${plan.affordable ? '' : 'disabled'}>${renderIcon('test-tube')} Seal the vat — $${plan.fee}</button>`
         : `<p class="fine-print">${plan ? plan.msg : 'Pick two.'}</p>`}
     </section>`;
 }
@@ -193,7 +194,7 @@ export function renderPensScreen(root, ctx) {
       // the shut row, in the badge, where they cost a creature if missed.
       const prog = xpProgress(ch.xp ?? 0, content);
       const cls = reportOf(ch, content).creatureClass;
-      const clsIcon = cls ? content.classes[cls].icon : '◇';
+      const clsIcon = cls ? renderIcon(content.classes[cls].icon) : '◇';
       const hurt = isInjured(ch, t);
       const badge = hurt
         ? `<span class="pen-alert">⚕ ${fmtDuration(ch.injury.until - t)}</span>`
@@ -275,7 +276,7 @@ export function renderPensScreen(root, ctx) {
                 ${known.length > MOVE_SLOTS ? `
                   <button type="button" class="care-train" data-moves="${ch.id}" ${mt.ready ? '' : 'disabled'}>
                     ${mt.ready
-                      ? `🧠 Retrain moves ($${mt.cost})`
+                      ? `${renderIcon('brain')} Retrain moves ($${mt.cost})`
                       : `Retrain moves (${fmtDuration(mt.msRemaining)})`}
                   </button>
                   <p class="fine-print">${known.length - active.length} more it knows and cannot currently press. Swapping one in means giving one up.</p>`
@@ -284,11 +285,11 @@ export function renderPensScreen(root, ctx) {
             })()}
             <div class="pen-actions">
               <button type="button" class="care-train" data-train="${ch.id}" ${trainReady ? '' : 'disabled'}>
-                ${trainReady ? `🎯 Train ($${TRAINING.cost}, +${TRAINING.bondGain} bond)` : `Train (${fmtDuration(trainReadyAt - t)})`}
+                ${trainReady ? `${renderIcon('target')} Train ($${TRAINING.cost}, +${TRAINING.bondGain} bond)` : `Train (${fmtDuration(trainReadyAt - t)})`}
               </button>
-              <button type="button" class="pen-dismantle" data-dismantle="${ch.id}">🔧 Dismantle</button>
+              <button type="button" class="pen-dismantle" data-dismantle="${ch.id}">${renderIcon('wrench')} Dismantle</button>
             </div>
-            ${isExhausted(ch, t) ? `<p class="settle">🧪 Recovering from the vat — ${fmtDuration(ch.exhaustedUntil - t)} left.</p>` : ''}
+            ${isExhausted(ch, t) ? `<p class="settle">${renderIcon('test-tube')} Recovering from the vat — ${fmtDuration(ch.exhaustedUntil - t)} left.</p>` : ''}
             ${ch.vatBorn ? `<p class="fine-print">Decanted from ${ch.vatBorn.parents.join(' × ')}.</p>` : ''}
             <p class="settle ${settled ? 'settled' : ''}">${
               settled
@@ -296,9 +297,9 @@ export function renderPensScreen(root, ctx) {
                 : `Settling… ${fmtDuration(settleRemainingMs(ch, t))} remaining. No sudden noises.`
             }</p>
             ${isInjured(ch, t)
-              ? `<p class="settle">🩹 Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} of dramatic convalescing left.</p>
+              ? `<p class="settle">${renderIcon('bandage')} Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} of dramatic convalescing left.</p>
                  <p class="fine-print scar-warn">Left to itself it may set badly and stay that way. Treating it costs money and guarantees it will not.</p>
-                 <button type="button" class="care-train" data-treat="${ch.id}">🩺 Treat ($${treatmentCost(ch, content, t, state)})</button>`
+                 <button type="button" class="care-train" data-treat="${ch.id}">${renderIcon('bandage')} Treat ($${treatmentCost(ch, content, t, state)})</button>`
               : ''}
             ${(() => {
               const scars = scarsOf(ch, content).map((sc) => describeScar(sc, ch.name));
@@ -337,7 +338,7 @@ export function renderPensScreen(root, ctx) {
   };
   const sparLine = spar.reason === 'no-garrison' ? '' : `
     <p class="spar-line${spar.ok ? ' is-ready' : ''}">
-      <span>🥊 Sparring Ring</span>
+      <span>${renderIcon('boxing-glove')} Sparring Ring</span>
       <strong>${spar.charges}/${spar.max}</strong>
       <span class="fine-print">${
         (sparWhy[spar.reason] ?? (() => (spar.full ? 'full — spend them' : `+1 in ${fmtDuration(spar.msToNext)}`)))()
@@ -401,7 +402,7 @@ export function renderPensScreen(root, ctx) {
         groups: [{
           label: null,
           options: [
-            { id: 'go', label: `🔧 Dismantle ${ch.name}`, sub: `${preview.tokens.length} of ${Object.keys(ch.tokens).length} parts return to the vault` },
+            { id: 'go', label: `${renderIcon('wrench')} Dismantle ${ch.name}`, sub: `${preview.tokens.length} of ${Object.keys(ch.tokens).length} parts return to the vault` },
             { id: 'no', label: 'Leave them alone', sub: 'They are having a nice time' },
           ],
         }],

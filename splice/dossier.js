@@ -24,6 +24,7 @@
 // report, the panel and the dossier can never disagree about a fact.
 
 import { tagRules } from '../battle/tagtext.js';
+import { renderIcon } from '../ui/icons.js';
 
 const P2W_WORD = [
   [0.35, 'explosive'],
@@ -56,7 +57,7 @@ export function dossierRows(report, content) {
   rows.push({
     key: 'class',
     label: 'Class',
-    value: cls ? `${cls.icon} ${cls.name}` : '◇ Unclassed',
+    value: cls ? `${renderIcon(cls.icon)} ${cls.name}` : '◇ Unclassed',
     note: cls
       ? `${votes} — strong against ${content.classes[cls.beats].name}${
         beatenBy ? `, weak to ${beatenBy.name}` : ''
@@ -167,7 +168,7 @@ export function dossierRows(report, content) {
 export function dossierSummary(report, content) {
   const cls = report.creatureClass ? content.classes?.[report.creatureClass] : null;
   return [
-    cls ? `${cls.icon} ${cls.name}` : '◇ Unclassed',
+    cls ? `${renderIcon(cls.icon)} ${cls.name}` : '◇ Unclassed',
     report.flight.capable ? '✈ Airborne' : report.flight.hasLiftSurface ? 'flightless' : 'ground unit',
     `speed ${report.stats.speed}`,
   ].join(' · ');

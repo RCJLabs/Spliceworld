@@ -693,29 +693,75 @@ The queue is a proposal: prune it before starting R63.
   **Still open, out of this phase's Done-when:** the Containment Cannon
   mk2 upgrade §3 also promised alongside the Tank and Artillery remains
   unbuilt.
-- **R70 — Dead and unreachable content, second pass.** `jeep_50` is never
-  fielded, so `v8_heart` cannot be obtained; `air_patrol` and
-  `harbor_watch` are attached to no node; **34 of 41 species have no
-  `flavor`** and `ranch/ui.js:64` renders the empty string; **47 emoji sit
-  in data files** (guides 30, operations 7, facility 6, classes 3 — one of
-  them Unicode 14, which older Android renders as a box) against *"no
-  emoji-as-art."* R61's orphan gate covers exports and data keys; it does
-  not cover enemy units, species fields or glyphs. **The quiet end of the
-  gene pool needs a probe that can resolve it.** R68 rebuilt R24's criterion
-  and found the old one was reading the seed, not the gene; the new one
-  measures every trait over 900 fights an arm against a null control and
-  holds in two seed families, but it can only make claims about the pool's
-  aggregate and about the loud genes. The weak ones are still unresolved at
-  that sample size — `venom_gland` alone read 1.1%, 6.9%, 8.2% and 8.2% in
-  four families, and `second_wind` 0.7%–4.1% — so whether they are quiet or
-  merely unmeasured is not yet known. Both are cheap suspects on paper:
-  `venom_gland` pays −2 power for one Venom stack worth 3 a turn in fights
-  lasting eight turns, `second_wind` pays −2 power for +3 stamina regen.
+- **R70 — Dead and unreachable content, second pass.** ✅ *Shipped.*
+  `jeep_50` was never fielded, so `v8_heart` could not be obtained;
+  `air_patrol` and `harbor_watch` hung off no node; **34 of 41 species had
+  no `flavor`** and `ranch/ui.js:64` rendered the empty string; **47 emoji
+  sat in data files** (guides 30, operations 7, facility 6, classes 3 — one
+  of them Unicode 14, which older Android renders as a box) against *"no
+  emoji-as-art."* R68 had already rebuilt R24's gene-pool probe once and
+  proved it could only make an aggregate claim — `venom_gland` alone read
+  1.1%–8.2% across four seed families at N=25, so whether it was quiet or
+  merely unmeasured was open.
+  - **`patrol_2`'s third wave swapped to `jeep_50`, fielding it.**
+    `air_patrol` and `harbor_watch` moved from a single hardcoded
+    `rescueEncounter` id to a `rescueEncounters` pool, picked
+    deterministically per captive (`rescueEncounterFor`) — a fourth rescue
+    site from here is a data edit, not an engine change. All 34 species
+    carry a one-line flavor sentence drawn from their own `diet`/`role`
+    fields; zero banned death-language.
+  - **A 53-icon inline-SVG set (`ui/icons.js`) replaced every emoji in the
+    game, not only the ones the phase went looking for.** The first sweep
+    converted the 47 data-authored `.icon` fields — 42 icons, wired into
+    every screen's headers, tabs and badges. A browser QA pass on the
+    result then found `hasRawEmoji: true` on **every single tab anyway**:
+    sixty-odd more pictographs were hardcoded directly into eight UI
+    modules' template strings with no `.icon` data field to have converted
+    in the first place — headings (`ranch/ui.js`'s "🗺 Path to World
+    Domination"), buttons, the footer save/mute chrome, even the favicon.
+    R61's original gate could not have caught this; it only ever opens
+    `data/*.json`. A third layer turned up after that: `style.css`'s
+    `.ticker::before { content: "📡 BREAKING: " }` painted a live emoji on
+    every screen's footer, on every visit, invisible to both a JS-source
+    scan and to the browser QA's own `innerText` check — this Chromium
+    build does not fold `::before` generated content into `innerText`, so
+    a rendered-DOM check missed exactly what a screenshot caught by eye.
+    Moved into the ticker's own JS-rendered markup as a real icon instead.
+    11 more icons and 62 more call sites later, zero pictographic emoji
+    remain outside one deliberately-kept exception (a battle-HUD status
+    strip that mixes two newer-block pictographs among three older Dingbat
+    glyphs doing the identical job in one packed row — converting only the
+    two would size-mismatch them against their row-mates). R61 gained an
+    eighth check watching JS source *and* `style.css` directly, scoped to
+    the actual "renders as a colour picture" Unicode block so it does not
+    also flag the arrows, stars and checkmarks this codebase uses
+    everywhere on purpose.
+  - **The gene probe now makes a per-gene claim for all twelve traits, at
+    N=200 (was 25).** Floor dropped 0.05 → 0.02, the aggregate bar rose
+    from 1.8× to 4× the floor, and every trait individually has to clear
+    1.5× the floor rather than riding the aggregate. `barbed_skin` failed
+    the new bar outright — 0.0% regardless of sample size — for a
+    pre-existing engine reason the old statistic was too coarse to see:
+    `movesFromTokens` let a part's own `moveKeywords` value beat a trait's
+    on any shared key unconditionally, independent of which was bigger. 22
+    of 42 hides already carry their own `thorns` (an R68 side effect), so
+    `barbed_skin`'s `thorns: 0.2` was silently discarded on all of them.
+    Fixed with `Math.max()` on the merge plus a magnitude bump to `0.7` —
+    **both** required, since 0.2 stayed under a typical hide's 0.45 either
+    way. Reverting the merge fix alone still passed the 200-fight,
+    two-family probe: only crocodile and shark, the two of ten test builds
+    whose hide carries no native `thorns` to collide with, carried the
+    pooled signal by themselves. A statistic that cannot tell "works
+    everywhere" from "works on a fifth of the roster" is not proof the
+    mechanism is fixed — added a direct mechanism assertion beside it that
+    checks the merged keyword value precisely, independent of battle noise.
   *Done when: every unit is fielded somewhere, every species has flavor,
   data carries icon ids that resolve to inline SVG, the gene probe resolves
   every trait against its control well enough to make a per-gene claim, any
   gene that then reads under the floor is fixed, and R61's gate is extended
-  to all three.*
+  to all three.* ✅ all five — R61 gained checks for units fielded, species
+  flavor, the data glyph scan, icon-id resolution, and (found along the
+  way) a JS-source glyph scan the first four checks could not have caught.
 - **R71 — A save from a newer build starts a new game.** `save.js:535–547`
   throws on `saveVersion > SAVE_VERSION`, the `catch` backs the string up
   under a timestamped key and returns `newGameState()`; `importSave`

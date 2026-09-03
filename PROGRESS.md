@@ -1,5 +1,156 @@
 # PROGRESS
 
+## Session 93 — R70: dead and unreachable content, second pass ✅
+
+**Acceptance criterion:** every unit is fielded somewhere, every species has
+flavor, data carries icon ids that resolve to inline SVG, the gene probe
+resolves every trait against its control well enough to make a per-gene
+claim, any gene that then reads under the floor is fixed, and R61's gate is
+extended to all three — **all five pass**. `SAVE_VERSION` unchanged (36; no
+schema change this phase). `sw.js` cache → `v36-icons2`.
+
+### Measured first
+
+| | before | after |
+|---|---|---|
+| enemy units with no encounter or Gauntlet stage | `jeep_50` | none |
+| rescue sites reachable | 1 hardcoded id | pool of 3, picked per captive |
+| species with no `flavor` | 34 of 41 | 0 |
+| emoji-as-art in the game | 47 in data + ~61 hardcoded in JS source | 0 (1 kept exception, see below) |
+| icon set | none | 53 icons, 91 call sites |
+| gene probe sample size / floor | N=25, floor <0.05 | N=200, floor <0.02 |
+| gene probe claims | aggregate + loud genes only | per-gene, all 12 traits |
+| R61 gate checks | 3 | 8 |
+
+### The gate that shipped a still-broken gate
+
+The plan going in was three new R61 checks (units fielded, species flavor,
+icon ids resolve) plus the reworked gene probe. All four landed clean, the
+first icon-conversion pass passed review, and the full suite went green.
+Browser QA — the last item on R70's own Definition-of-Done, "works at
+380px, no console errors" — is what actually found the real bug: every
+single tab reported `hasRawEmoji: true`. The 47-emoji, four-data-file sweep
+this phase set out to fix was real and done; it was never the whole
+problem. Sixty-odd more emoji were hardcoded directly into eight UI
+modules' template strings — headings, buttons, the footer save/mute
+chrome, even the favicon — every one of them with **no `.icon` field to
+have converted in the first place**, so the original three checks, which
+all walk `data/*.json`, could not have found a single one. `git blame`
+never entered into it: these were never touched by the icon-conversion
+pass because they were never data. A phase that ships its own acceptance
+criterion clean and still leaves the bug it names live in three-quarters
+of the screens is not done; the fix was a second, larger sweep plus an
+eighth gate check that watches JS source directly — see Shipped, below.
+
+### Shipped
+
+- **`patrol_2`'s third wave swapped to `jeep_50`**, fielding the last
+  orphaned enemy unit. `air_patrol` and `harbor_watch` moved off a single
+  hardcoded `rescueEncounter` id onto a `rescueEncounters` pool, picked
+  deterministically per captive via `rescueEncounterFor(state, content,
+  captiveId)` — a fourth rescue site from here is a data edit, not an
+  engine change.
+- **All 34 previously-blank species carry a one-line flavor sentence**,
+  each drawn from that species' own `diet`/`role` fields rather than
+  invented from nothing. Zero banned death-language, checked the same way
+  R61's existing gate already checks everything else.
+- **A 53-icon inline-SVG set (`ui/icons.js`)** — stroke-only paths on a
+  24×24 grid, `currentColor`, no fill, so one CSS `color` retints every
+  icon on the page like an icon font would, without shipping a font. 42
+  icons converted the 47 data-authored `.icon` fields (guides, operations,
+  facility, classes, the War Room and Dex tab bars); 11 more (crown, lock,
+  flag, trophy, dice, wrench, target, brain, save, sound-on, sound-off)
+  and 62 more call sites converted everything the browser QA pass found
+  still hardcoded — `ranch/ui.js`'s "Path to World Domination" heading,
+  the class/locomotion badges in both `ranch/ui.js` and `battle/ui.js`,
+  every button label across `campaign/ui.js`, `splice/pens-ui.js`,
+  `splice/theater-ui.js`, `splice/vault-ui.js` and `splice/extract-ui.js`,
+  the footer save and mute buttons (now painted from `main.js` instead of
+  living as static emoji in `index.html`), and the browser-tab favicon
+  (was a data-URI `<text>` emoji glyph; now the same inline DNA-helix path
+  data the in-game icon uses). A third layer of the same bug turned up
+  after the JS sweep looked done: `style.css`'s `.ticker::before { content:
+  "📡 BREAKING: " }` painted a live emoji into the footer ticker on every
+  screen, and it was invisible to both the JS-source scan (it's CSS, not
+  JS) and the browser QA's own `hasRawEmoji` check — this Chromium build
+  does not fold `::before` generated content into `.innerText`, so an
+  automated rendered-DOM check missed exactly what a screenshot caught by
+  eye. Moved the icon into the ticker's own JS-rendered markup
+  (`updateTicker()` in `main.js`) instead of CSS `content`. One deliberate
+  exception stands: a battle-HUD status strip mixes two pictographs among
+  three plain Dingbat glyphs doing the identical job in one tightly-packed
+  row, and converting only the two would size-mismatch them against their
+  row-mates — worse than the raw glyphs it would "fix". R61's glyph-scan
+  gate (#6, data files) gained a sibling (#8, JS source *and* `style.css`)
+  that watches for exactly this regression going forward, scoped to the
+  Unicode block that actually renders as a colour picture on every
+  platform rather than reusing #6's broader category test, which would
+  also flag the arrows, stars and checkmarks this codebase uses everywhere
+  on purpose.
+- **The gene probe makes a per-gene claim for all twelve traits now**, at
+  N=200 (was 25), floor <0.02 (was <0.05), aggregate bar at 4× the floor
+  (was 1.8×), and — new this phase — every trait individually has to clear
+  1.5× the floor rather than riding the aggregate. `venom_gland` and
+  `second_wind`, the two genes R69 flagged as unresolved, both clear the
+  new bar. `barbed_skin` did not, and not because it is quiet: see below.
+
+### A pre-existing engine bug the old statistic was too coarse to see
+
+`barbed_skin` read 0.0% regardless of sample size once the per-gene check
+existed to demand one. Root cause: `movesFromTokens`'s trait/part keyword
+merge let a part's own `moveKeywords` value beat a trait's on any shared
+key unconditionally, independent of which was bigger. 22 of the 42 hides
+in the game already carry their own `thorns` value (an R68 side effect of
+widening hide diversity), so `barbed_skin`'s `thorns: 0.2` was silently
+discarded on every one of them — the gene was never dead, it was being
+overwritten by the part it was spliced onto. Fixed with `Math.max()` on
+the merge plus a magnitude bump to `0.7`, and **both were required**: 0.2
+stays under a typical hide's 0.45 either way, so the merge fix alone would
+still have lost to the part on most builds.
+
+Reverting the merge fix alone still passed the full 200-fight, two-family
+probe. Only crocodile and shark — the two of ten test builds whose hide
+carries no native `thorns` to collide with — carried the pooled aggregate
+over the floor by themselves, while the other eight silently read the
+part's value again underneath. A statistic that cannot tell "works
+everywhere" from "works on a fifth of the roster" is not proof the
+mechanism is fixed. Added a direct, cheap mechanism assertion beside the
+statistical one: it splices the same trait onto the same part and checks
+the merged keyword value precisely, independent of battle noise, both
+that a bigger gene wins and that a smaller one still cannot downgrade the
+part below its own value (the direction R24 originally built this rule to
+protect).
+
+### Known issues
+- None outstanding for this phase — the browser-QA gap that produced the
+  emoji-in-source finding is now itself covered by check #8.
+
+### Verified
+- `tools/smoke.js` green end to end.
+- **Break battery**, including the false-negative near-miss below: the
+  merge-revert and magnitude-revert breaks both go correctly red against
+  the new mechanism assertion (they had passed the pooled-statistics probe
+  alone, which is exactly why the mechanism check was added).
+- Browser at 380px, on a freshly-provisioned browser profile (ruling out a
+  stale-Service-Worker-cache false alarm along the way): fresh save and a
+  migrated v34 → v36 save both boot with zero console errors, `svgIcons`
+  render on every tab, and `hasRawEmoji` is false on every tab and every
+  War Room / Dex sub-tab.
+- Screenshots of Ranch/Dex, War Room and Pens at 380px — icons legible at
+  their compact inline sizes (class badges, the crown on a boss node, the
+  footer save/mute buttons), no overflow, no leftover emoji anywhere in
+  frame, which is how the `.ticker::before` CSS emoji got caught in the
+  first place after the automated checks had already gone quiet on it.
+
+### Next session's first task
+**R71 — a save from a newer build starts a new game.** `save.js:535–547`
+throws on `saveVersion > SAVE_VERSION`, the `catch` backs the string up
+under a timestamped key and returns `newGameState()`, and `importSave`
+refuses the same case with a named reason — so a stale service-worker
+cache is currently enough to serve old code against a new save and open
+the player onto an empty ranch with no explanation. `main.js` has the same
+gap on a boot failure: a half-live shell, not a screen that says so.
+
 ## Session 92 — R69: the late game has no content in it ✅
 
 **Acceptance criterion:** every region unlocks fauna and hosts a rival, Gen 4
