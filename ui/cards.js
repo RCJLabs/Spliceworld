@@ -9,6 +9,7 @@
 // override.
 
 import { dismissGuide } from '../ranch/onboarding.js';
+import { renderIcon } from './icons.js';
 
 // One note, or nothing. Deliberately singular: a wall of tips is wallpaper.
 export function fieldNote(guide) {
@@ -16,7 +17,7 @@ export function fieldNote(guide) {
   return `
     <section class="card field-note" data-guide="${guide.id}">
       <div class="field-note-head">
-        <strong>${guide.icon} ${guide.title}</strong>
+        <strong>${renderIcon(guide.icon)} ${guide.title}</strong>
         <button type="button" class="field-note-dismiss" data-dismiss-guide="${guide.id}" aria-label="Dismiss">&#10005;</button>
       </div>
       <p>${guide.body}</p>

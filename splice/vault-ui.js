@@ -12,6 +12,7 @@ import {
   activeResequence, resequenceRemainingMs, resequencerTuning,
 } from './resequencer.js';
 import { fmtDuration } from '../ranch/ui.js';
+import { renderIcon } from '../ui/icons.js';
 // R39. The Vault was the one screen with no field-note slot at all — five
 // screens wired this and the sixth did not, so a note here could not have
 // been shown even if one had existed. The suite's hand-written screen list
@@ -49,14 +50,14 @@ export function renderVaultScreen(root, ctx) {
       plan.ok
         ? `<br><span class="fine-print">${Math.round(plan.successChance * 100)}% to take · ${
             Math.round(plan.mutationChance * 100)}% chance of a new gene · ${plan.hours}h</span>
-           <button type="button" class="care-train" data-reseq="${v.id}">🧬 Resequence</button>`
+           <button type="button" class="care-train" data-reseq="${v.id}">${renderIcon('dna')} Resequence</button>`
         : ''
     }</li>`;
   };
   // The run in flight, with its clock and the one thing that can stall it.
   const runCard = run
     ? `<section class="card">
-        <h3>🧬 Resequencer</h3>
+        <h3>${renderIcon('dna')} Resequencer</h3>
         <p class="ranch-msg">Rebuilding <strong>${run.donorName}</strong> — ${content.species[run.species].name}, ★${run.stars}.</p>
         <p class="settle">${
           resequenceRemainingMs(state, t) > 0

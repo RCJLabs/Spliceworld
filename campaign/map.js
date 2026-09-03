@@ -1,3 +1,5 @@
+import { rngStream, hashString, pick } from '../util/rng.js';
+
 // The world map, as data lookups and gates. R26 turned one county into
 // five, and every system that reached for `Object.values(content.regions)[0]`
 // was a system that silently stopped working at the county line —
@@ -153,4 +155,16 @@ export function reachableEncounterIds(state, content) {
   return Object.values(content.encounters ?? {})
     .filter((e) => open.has(e.id) || !onNodes.has(e.id))
     .map((e) => e.id);
+}
+
+// One rescue raid used to mean one encounter, forever — `air_patrol` and
+// `harbor_watch` sat fully authored (their own waves, blurb, reward) and
+// never once fielded, because `rescueEncounter` was a single id. Now a
+// pool, picked deterministically per captive so a reload during the same
+// rescue window faces the same opposition rather than reshuffling it.
+export function rescueEncounterFor(state, content, captiveId) {
+  const pool = content.campaignMeta?.rescueEncounters ?? [];
+  if (!pool.length) return null;
+  const rng = rngStream(state.seed, 'rescue-pick', hashString(String(captiveId)));
+  return pick(rng, pool);
 }

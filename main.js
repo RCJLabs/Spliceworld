@@ -17,6 +17,7 @@ import { tickWorld } from './campaign/world.js';
 import { renderDexScreen } from './splice/dex-ui.js';
 import * as sfx from './audio/sfx.js';
 import { watchSignals, cuesFor } from './audio/sfx.js';
+import { renderIcon } from './ui/icons.js';
 
 // Dev time-warp: ?warp=48 pretends 48 hours have passed. QA-only — the
 // warp lives in the URL, never in the save, so removing it can produce a
@@ -114,9 +115,12 @@ function tick() {
 
 // Latest news leads; otherwise a seeded deadpan default.
 function updateTicker() {
-  $('#ticker').textContent = state.news.length
+  const line = state.news.length
     ? state.news[state.news.length - 1]
     : TICKER_LINES[Math.abs(state.seed) % TICKER_LINES.length];
+  const ticker = $('#ticker');
+  ticker.innerHTML = `${renderIcon('satellite', { size: 13 })}<span class="ticker-lead">BREAKING: </span>`;
+  ticker.append(line);
 }
 
 async function boot() {
@@ -154,7 +158,7 @@ async function boot() {
   // Audio: context on first gesture (autoplay policy), mute persisted.
   sfx.setMuted(state.settings.muted);
   const muteBtn = $('#mute');
-  const paintMute = () => { muteBtn.textContent = state.settings.muted ? '🔇' : '🔊'; };
+  const paintMute = () => { muteBtn.innerHTML = renderIcon(state.settings.muted ? 'sound-off' : 'sound-on'); };
   paintMute();
   document.addEventListener('pointerdown', () => sfx.initAudio(), { once: true });
   muteBtn.addEventListener('click', () => {
@@ -168,6 +172,7 @@ async function boot() {
   // R54: the save file panel. The three verbs live in save.js and are
   // DOM-free; everything here is the door, not the lock.
   const saveFileBtn = $('#savefile');
+  saveFileBtn.innerHTML = renderIcon('save');
   // One downloader, two callers: the panel and the reset confirmation. The
   // confirmation is where it matters most, so it cannot be the copy that
   // drifts.
@@ -188,7 +193,7 @@ async function boot() {
     overlay.hidden = false;
     overlay.innerHTML = `
       <div class="ceremony card">
-        <h3>💾 Save File</h3>
+        <h3>${renderIcon('save')} Save File</h3>
         <p class="fine-print">This game lives in this browser. Clear the site data, change phones, or
           reinstall, and it is gone — unless you have carried it out first.</p>
         ${note ? `<p class="ranch-msg" id="sf-note">${note}</p>` : ''}

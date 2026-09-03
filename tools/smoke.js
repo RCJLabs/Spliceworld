@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import assert from 'node:assert/strict';
 import { indexContent, renderCreatureSVG, validateGenome, SLOTS, SOCKETS, slotOfSocket } from '../render/renderer.js';
+import { renderIcon, iconIds } from '../ui/icons.js';
 import { rngStream, hashString } from '../util/rng.js';
 import { newGameState, migrate, SAVE_VERSION } from '../save/save.js';
 import {
@@ -646,35 +647,78 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
   // THE CRITERION: the difference shows in a fight.
   //
   // R68 rebuilt this probe, because the old one was measuring the seed and
-  // not the gene. It fielded ONE build (a bear) against ONE encounter
-  // (air_patrol, whose second wave is a Vehicle — machinery does not bleed,
-  // so a Venom Gland was half dead on arrival) and demanded a 10pp swing in
-  // TEAM WIN RATE over 80 fights. Win rate is the worst metric available
-  // here: on an easy encounter it saturates at 100% either way, on a hard
-  // one at 0%, and in between 80 fights of noise is worth about 10pp on its
-  // own. It passed for four sessions on the seed string it happened to use.
-  // Re-authoring the bear's tail in R68 re-rolled that dice and it read 9pp.
+  // not the gene, and left two genes unresolved at its sample size —
+  // venom_gland and second_wind read anywhere from 0.7% to 8.2% depending
+  // on the seed family, sometimes above the null-control floor and
+  // sometimes under it. R70 raises the sample per cell until every trait
+  // resolves on the same side of its floor in both families, which turned
+  // up something the aggregate-only version could not: second_wind was
+  // never actually quiet (it reads 2.9–6.0% against the floor once N is
+  // big enough), but barbed_skin WAS — not weak, dead. `movesFromTokens`
+  // merged a trait's `moveKeywords` under the part's own, so any part whose
+  // move already carried the same keyword silently discarded the gene's
+  // value REGARDLESS of magnitude (`battle/engine.js`, R24's original
+  // comment: "a part that already envenoms is not quietly overwritten by a
+  // weaker gene" — true, but unconditional on the key, not the value). R68
+  // gave most hides their own `thorns`; by this phase 22 of 42 did, and
+  // `barbed_skin` (thorns 0.2) was zeroed on every one of them. Two fixes:
+  // the merge now keeps the LARGER of the two numbers on a shared key
+  // (still true to the original rule — a gene can never make a part worse
+  // at what it does), and `barbed_skin` itself moved from 0.2 to 0.7, since
+  // even the better merge cannot help a gene that was simply outclassed by
+  // what parts had grown to carry on their own.
   //
-  // What replaces it measures the gene where the gene can act:
+  // What the probe measures, per gene:
   //   · organic encounters only, so a Venom Gland has something to envenom;
   //   · the DEFAULT moveset, not the attack-led bench one — R30's lesson,
   //     re-learned: a gene on a hide is invisible if the hide never gets
-  //     fielded, which is why barbed_skin read a flat 0.0% until it did;
+  //     fielded;
   //   · pooled over every build × every encounter, not one of each;
   //   · turns-to-resolve and HP-left, which do not saturate;
   //   · TWO INDEPENDENT SEED FAMILIES, and every claim below has to hold in
-  //     both — this is the part the old gate had no answer for;
-  //   · and a null control per family — the same creature against itself on
-  //     another seed — which is the bar, not a number picked by hand.
-  //
-  // What it does NOT claim: that every individual gene is visible. Measured
-  // over four seed families at 900 fights an arm, the strong genes are rock
-  // steady (hyperthyroid 24.8–26.3%, clotting_factor 14.3–16.5%) but the
-  // weak ones are not resolved at this sample size — venom_gland alone read
-  // 1.1%, 6.9%, 8.2% and 8.2% in the four families. Asserting a floor per
-  // gene would just be the old knife-edge again with more arithmetic. The
-  // aggregate and the strong genes replicate; those are what is asserted.
-  // Resolving the quiet end needs a probe R70 has to build.
+  //     both;
+  //   · a null control per family — the same creature against itself on
+  //     another seed — which is the bar, not a number picked by hand;
+  //   · and enough fights per cell (200, not R68's 25) that the floor
+  //     itself stops swinging: 0.3–0.5% here, against 0.6–2.1% at 25. Every
+  //     one of the twelve genes now clears its family's floor by at least
+  //     1.8x, the weakest (venom_gland) included.
+  // THE MECHANISM, checked directly rather than only through the pooled
+  // battle statistics below. A merge regression is not guaranteed to show
+  // up there: reverting it back to "the part always wins" still passed the
+  // 200-fight probe, because barbed_skin at 0.7 is now so far past what a
+  // colliding hide carries that the two UNMASKED builds (crocodile, shark —
+  // the only two of ten whose hide has no `thorns` of its own to collide
+  // with) carried the pooled aggregate over the floor by themselves, while
+  // the other eight silently read the part's value again underneath. A
+  // statistic that cannot tell "works everywhere" from "works on a fifth of
+  // the roster" is not proof the mechanism is fixed — this is.
+  {
+    const kw = (sp, slot, traitId) => {
+      const hero = makeSimChimera('M', SLOTS.map((s) => `${sp}_${s}`), 'standard', content);
+      for (const tok of Object.values(hero.tokens)) if (content.parts[tok.partId].slot === slot) tok.traits = [traitId];
+      const tk = Object.values(hero.tokens);
+      const partId = `${sp}_${slot}`;
+      return movesFromTokens(tk, analyze(hero.frame, tk, content), content)
+        .find((m) => m.name === content.parts[partId].ability).keywords;
+    };
+    // bear_hide carries its own thorns:0.45; barbed_skin is thorns:0.7 —
+    // the gene is bigger, so it must win, not the part.
+    assert.equal(content.parts.bear_hide.move.keywords.thorns, 0.45, "bear_hide's own thorns is unchanged");
+    assert.equal(content.traits.barbed_skin.moveKeywords.thorns, 0.7, "barbed_skin's own thorns is unchanged");
+    assert.equal(kw('bear', 'hide', 'barbed_skin').thorns, 0.7,
+      `a gene bigger than the part's own value is not silently discarded (read ${kw('bear', 'hide', 'barbed_skin').thorns})`);
+    // And the direction R24 actually built this rule to protect: a WEAKER
+    // gene must never make a part worse at what it already does.
+    const weakerGene = { ...content, traits: { ...content.traits, barbed_skin: { ...content.traits.barbed_skin, moveKeywords: { thorns: 0.1 } } } };
+    const heroWeak = makeSimChimera('M', SLOTS.map((s) => `bear_${s}`), 'standard', weakerGene);
+    for (const tok of Object.values(heroWeak.tokens)) if (weakerGene.parts[tok.partId].slot === 'hide') tok.traits = ['barbed_skin'];
+    const tkWeak = Object.values(heroWeak.tokens);
+    const weakKw = movesFromTokens(tkWeak, analyze(heroWeak.frame, tkWeak, weakerGene), weakerGene)
+      .find((m) => m.name === weakerGene.parts.bear_hide.ability).keywords;
+    assert.equal(weakKw.thorns, 0.45, `a gene weaker than the part's own value cannot downgrade it (read ${weakKw.thorns})`);
+  }
+
   const GENE_BUILDS = ['bear', 'tiger', 'wolf', 'crocodile', 'gorilla', 'rhino', 'shark', 'mantis', 'cobra', 'tortoise']
     .filter((sp) => SLOTS.every((slot) => content.parts[`${sp}_${slot}`]));
   const GENE_ENCS = ['patrol_1', 'drowned_marina', 'drowned_rig', 'spire_lobby'];
@@ -682,6 +726,7 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
     assert.ok(content.encounters[enc].waves.every((w) => !(content.enemies[w].tags ?? []).includes('Vehicle')),
       `${enc} is organic, so a gene that only works on the living can show`);
   }
+  const GENE_N = 200;
   const geneRun = (sp, traitId, enc, salt) => {
     const hero = makeSimChimera('M', SLOTS.map((slot) => `${sp}_${slot}`), 'standard', content);
     if (traitId) {
@@ -692,7 +737,7 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
     const tk = Object.values(hero.tokens);
     hero.moveset = defaultMoveset(movesFromTokens(tk, analyze(hero.frame, tk, content), content));
     let turns = 0, left = 0;
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < GENE_N; i++) {
       const b = createBattle([hero, { ...hero, id: 'a', name: 'A' }, { ...hero, id: 'b', name: 'B' }],
         content.encounters[enc], content, hashString(`${salt}${sp}${enc}${i}`), 0);
       let g = 0;
@@ -707,9 +752,9 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
       turns += b.turn;
       left += b.player.team.reduce((a, c) => a + Math.max(0, c.hp), 0);
     }
-    return { turns: turns / 25, left: left / 25 };
+    return { turns: turns / GENE_N, left: left / GENE_N };
   };
-  // How far a gene moves the fight: 9 builds × 4 encounters × 25 an arm.
+  // How far a gene moves the fight: 9 builds × 4 encounters × 200 an arm.
   const geneEffect = (traitId, saltA, saltB = saltA) => {
     let pt = 0, gt = 0, ph = 0, gh = 0;
     for (const sp of GENE_BUILDS) {
@@ -722,27 +767,28 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
     return Math.max(Math.abs((gt - pt) / pt), Math.abs((gh - ph) / ph));
   };
 
-  // Genes that are unmistakable — each measured between 7.4% and 26.3% in
-  // every one of the four families, so each clears any family's control by
-  // a wide margin. If one of these goes quiet, a gene has stopped working.
-  const LOUD = ['hyperthyroid', 'clotting_factor', 'glass_jaw', 'dense_bones'];
   for (const family of ['t24', 'q7']) {
     // The control first: no gene either side, only the seed differs. This is
     // what the harness cannot tell apart, and so what a gene has to beat.
     const floor = Math.max(...['A', 'B'].map((salt) => geneEffect(null, family, family + salt)));
-    assert.ok(floor < 0.05,
-      `[${family}] the probe can see: 900 fights against themselves move only ${(floor * 100).toFixed(1)}%`);
+    assert.ok(floor < 0.02,
+      `[${family}] the probe can see: 3600 fights against themselves move only ${(floor * 100).toFixed(2)}%`);
 
     const effects = traits.map((t) => [t.id, geneEffect(t.id, family)]);
     const mean = effects.reduce((a, [, e]) => a + e, 0) / effects.length;
-    assert.ok(mean >= floor * 1.8,
+    assert.ok(mean >= floor * 4,
       `[${family}] the gene pool moves the fight far more than reshuffling the seed does `
-        + `(${(mean * 100).toFixed(1)}% mean against a ${(floor * 100).toFixed(1)}% floor)`);
+        + `(${(mean * 100).toFixed(2)}% mean against a ${(floor * 100).toFixed(2)}% floor)`);
 
-    for (const id of LOUD) {
-      const e = effects.find(([x]) => x === id)[1];
+    // THE PER-GENE CLAIM: every trait in the pool, not just the loud ones.
+    // 1.5x is not a number picked to fit — the weakest reading measured
+    // across both families (venom_gland, 1.81x) clears it with margin, and
+    // the strongest floor-adjacent case before barbed_skin's fix (0.12x)
+    // fails it by an order of magnitude, so the bar separates a real gene
+    // from a masked one rather than sitting on either one's edge.
+    for (const [id, e] of effects) {
       assert.ok(e >= floor * 1.5,
-        `[${family}] ${id} is plainly there (${(e * 100).toFixed(1)}% against a ${(floor * 100).toFixed(1)}% floor)`);
+        `[${family}] ${id} is plainly there (${(e * 100).toFixed(2)}% against a ${(floor * 100).toFixed(2)}% floor)`);
     }
   }
 
@@ -1596,7 +1642,10 @@ for (const node of region.nodes) {
   assert.ok(content.encounters[node.encounter], `${node.id}: unknown encounter`);
   assert.ok(node.incomePerDay > 0 && node.notoriety > 0, node.id);
 }
-assert.ok(content.encounters[content.campaignMeta.rescueEncounter], 'rescue template exists');
+assert.ok(content.campaignMeta.rescueEncounters?.length >= 1, 'a rescue pool exists');
+for (const id of content.campaignMeta.rescueEncounters) {
+  assert.ok(content.encounters[id], `rescue template ${id} exists`);
+}
 for (const unit of Object.values(content.enemies)) {
   for (const p of unit.salvage ?? []) assert.ok(content.parts[p], `${unit.id}: unknown salvage part ${p}`);
 }
@@ -1660,7 +1709,7 @@ assert.equal(m5lab.campaign.captives.length, 1, 'window still open — timer is 
 assert.ok(m5lab.news.some((n) => n.includes('CAPTURED')), 'the ticker knows');
 
 // Rescue raid: win it, get the creature back (injured, fonder of you).
-m5lab.battle = createBattle([strong1, strong2], content.encounters[content.campaignMeta.rescueEncounter], content, 42, tReady + HOUR, { kind: 'rescue', captiveId: captive.id });
+m5lab.battle = createBattle([strong1, strong2], content.encounters[content.campaignMeta.rescueEncounters[0]], content, 42, tReady + HOUR, { kind: 'rescue', captiveId: captive.id });
 autoplay(m5lab.battle);
 assert.equal(m5lab.battle.outcome, 'win', 'the prismatic rescue squad delivers');
 const rescueDetail = resolveBattle(m5lab, m5lab.battle, content, tReady + HOUR);
@@ -6011,6 +6060,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // --- Shared UI machinery. A fold, a picker, a tab bar and a band are
     // how systems are shown, not systems themselves.
     'ui/cards.js': null,
+    'ui/icons.js': null,
     'ui/picker.js': null,
     'ui/roster.js': null,
     'ui/tabs.js': null,
@@ -9856,7 +9906,14 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // the game at once — the 34-species roster AND the 40-unit field guide,
     // 80 inline SVGs. Each tab now draws exactly its own, which is the
     // assertion that fails if a view ever starts building a neighbour's.
-    const svgs = Object.fromEntries(DEX_IDS.map((id) => [id, (page[id].match(/<svg/g) ?? []).length]));
+    //
+    // PORTRAITS only: `renderCreatureSVG`/`renderUnitSVG`/`renderRivalSVG`
+    // all mark `role="img"`. R70 gave every class label its own inline-SVG
+    // icon (`ui/icons.js`, `aria-hidden="true"`, no `role`) — a `<svg` count
+    // alone would now also total every class icon a tab happens to print
+    // next to a creature's name, which is a different claim from "drew a
+    // portrait of it" and was never what this gate meant.
+    const svgs = Object.fromEntries(DEX_IDS.map((id) => [id, (page[id].match(/<svg[^>]*\brole="img"/g) ?? []).length]));
     const owed = {
       roster: Object.values(content.species).filter((sp) => !sp.synthetic && !sp.variantOf).length,
       variants: Object.values(content.species).filter((sp) => sp.variantOf).length,
@@ -10002,7 +10059,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // a rival dossier's "Favours Ground" line further up the same page, and
     // a gate that searches for the bare word measures that instead.
     const head = (cls) =>
-      `<h3>${content.classes[cls].icon} ${content.classes[cls].name} <span class="lineage">`;
+      `<h3>${renderIcon(content.classes[cls].icon)} ${content.classes[cls].name} <span class="lineage">`;
     const at = (needle) => page.indexOf(needle);
     const heads = CLASS_ORDER_FOR_DEX.map((c) => [c, at(head(c))]);
     for (const [c, i2] of heads) assert.ok(i2 > 0, `the guide has a ${c} heading`);
@@ -10032,7 +10089,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // stops being true this gate is comparing the guide to nothing.
     for (const c of CLASS_ORDER_FOR_DEX) {
       assert.ok(
-        FULL_PAGES.roster.includes(`<h3>${content.classes[c].icon} ${content.classes[c].name} — beats `),
+        FULL_PAGES.roster.includes(`<h3>${renderIcon(content.classes[c].icon)} ${content.classes[c].name} — beats `),
         `the roster still groups by ${c}`
       );
     }
@@ -10063,7 +10120,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // two copies of a nav is how two screens drift apart.
 {
   const bar = subtabBar({
-    tabs: [{ id: 'a', icon: '1', label: 'A' }, { id: 'b', icon: '2', label: 'B' }, { id: 'c', icon: '3', label: 'C' }],
+    tabs: [{ id: 'a', icon: 'egg', label: 'A' }, { id: 'b', icon: 'heart', label: 'B' }, { id: 'c', icon: 'star', label: 'C' }],
     active: 'b',
     attr: 'demo-tab',
   });
@@ -10075,7 +10132,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   assert.equal((bar.match(/is-on/g) ?? []).length, 1, 'and only it');
   assert.ok(!bar.includes('subtab-badge'), 'no badge unless the caller asks for one');
   const badged = subtabBar({
-    tabs: [{ id: 'a', icon: '1', label: 'A' }, { id: 'b', icon: '2', label: 'B' }],
+    tabs: [{ id: 'a', icon: 'egg', label: 'A' }, { id: 'b', icon: 'heart', label: 'B' }],
     active: 'a', attr: 'demo-tab', badgeFor: (id) => (id === 'b' ? { text: '!', kind: 'alert' } : null),
   });
   assert.equal((badged.match(/subtab-badge/g) ?? []).length, 1, 'and exactly the one it asks for');
@@ -10151,7 +10208,10 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(new Set(folds).size, 20, 'and each one only once');
     assert.equal((page.match(/data-fold="ranch-[^"]*" aria-expanded="true"/g) ?? []).length, 0,
       'a twenty-head Ranch opens nothing by default');
-    assert.equal((page.match(/<svg/g) ?? []).length, 0,
+    // Portraits only — R70 gave the class-group headers in the Mail-Order
+    // Catalog an inline-SVG icon too (`role` absent, `aria-hidden="true"`),
+    // which a bare `<svg` count would conflate with a drawn portrait.
+    assert.equal((page.match(/<svg[^>]*\brole="img"/g) ?? []).length, 0,
       'and draws no creature portraits at all while shut');
     // The care buttons and the extract route are the expensive interior;
     // a shut row must not be shipping them either.
@@ -10248,7 +10308,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     ]) {
       assert.ok(page.includes(needle), `${what} survives the fold (${needle})`);
     }
-    assert.equal((page.match(/<svg/g) ?? []).length, 1, 'and only the open one draws a portrait');
+    assert.equal((page.match(/<svg[^>]*\brole="img"/g) ?? []).length, 1, 'and only the open one draws a portrait');
     assert.equal(newGameState().saveVersion, SAVE_VERSION, 'with no version bump for a fold');
   }
 
@@ -12184,6 +12244,8 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   };
   walkJs('');
   const source = new Map(jsFiles.map((f) => [f, readFileSync(join(root, f), 'utf8')]));
+  // Shared by checks 3, 6 and 7 below — one list of data files, not three.
+  const dataFiles = readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json'));
 
   // --- 1. Every export has a reader.
   //
@@ -12400,7 +12462,6 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // The walk has to actually cover the content. A break that quietly
     // dropped species.json out of this loop found nothing and passed, which
     // is a gate reporting on a file it never opened.
-    const dataFiles = readdirSync(join(root, 'data')).filter((f) => f.endsWith('.json'));
     assert.ok(dataFiles.length >= 20, `every data file is in the walk (${dataFiles.length})`);
     for (const must of ['species.json', 'parts.json', 'enemies.json']) {
       assert.ok(dataFiles.includes(must), `${must} is one of them`);
@@ -12448,6 +12509,173 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
         .map((f) => readFileSync(join(root, 'data', f), 'utf8')).join('\n');
     for (const [phrase, why] of IDIOMS) {
       assert.ok(haystack.includes(phrase), `the "${phrase}" exemption still applies to something (${why})`);
+    }
+  }
+
+  // --- 4. Every enemy unit is fielded somewhere (R70). `jeep_50` existed in
+  //    data with nobody ever able to meet it — no node, no gauntlet stage —
+  //    which is exactly the shape #1 catches for a JS export and #2 catches
+  //    for a data section, extended to a THIRD kind of author-with-no-reader.
+  {
+    const fielded = new Set(Object.values(content.encounters).flatMap((e) => e.waves));
+    for (const g of content.gauntlet ?? []) { fielded.add(g.unitId); for (const e of g.escorts) fielded.add(e); }
+    const orphans = Object.values(content.enemies).filter((u) => !fielded.has(u.id)).map((u) => u.id).sort();
+    assert.deepEqual(orphans, [], `every enemy unit is fielded by an encounter or the Gauntlet (${orphans.join(', ')})`);
+  }
+
+  // --- 5. Every species has flavor. 34 of 41 did not, and `ranch/ui.js`'s
+  //    variant-hatch ceremony rendered `${species.flavor ?? ''}` — an empty
+  //    line, silently, for every purebred species that could ever hatch.
+  {
+    const noFlavor = Object.values(content.species)
+      .filter((sp) => !sp.synthetic && !sp.flavor).map((sp) => sp.id).sort();
+    assert.deepEqual(noFlavor, [], `every species has flavor text (${noFlavor.join(', ')})`);
+    for (const sp of Object.values(content.species)) {
+      if (sp.synthetic || !sp.flavor) continue;
+      assert.ok(sp.flavor.length >= 8 && sp.flavor.length <= 90,
+        `${sp.id}'s flavor is a line, not a placeholder or an essay (${sp.flavor.length} chars)`);
+    }
+  }
+
+  // --- 6. No emoji, dingbat or other pictographic glyph in a data file.
+  //    CLAUDE.md is absolute here — "no emoji-as-art... UI icons are inline
+  //    SVG" — and 47 of them sat in `.icon` fields across four files plus
+  //    one loose in guide prose. The FIRST sweep that found them missed a
+  //    48th (an hourglass) because it hand-picked Unicode block ranges and
+  //    U+23F3 falls in one nobody thought to list; this reads Unicode
+  //    CATEGORY instead (So/Sk/Cs — symbol and surrogate classes an emoji or
+  //    dingbat falls into, never plain punctuation or a currency sign), so
+  //    the next one does not need a human to have anticipated its block.
+  //    Parsed values, not raw file text: an escaped `\uXXXX` sequence is six
+  //    ASCII characters on disk and only becomes the glyph after JSON.parse,
+  //    which is exactly how the hourglass hid from a text-level regex too.
+  {
+    const isPictograph = (ch) => {
+      if (ch.codePointAt(0) < 0x2000) return false;
+      const cat = /\p{So}|\p{Sk}/u.test(ch) ? 'So/Sk' : (/[\uD800-\uDFFF]/.test(ch) ? 'Cs' : null);
+      return cat != null;
+    };
+    const hits = [];
+    let scanned = 0;
+    const walkGlyphs = (node, file, path) => {
+      if (typeof node === 'string') {
+        scanned += 1;
+        for (const ch of node) {
+          if (isPictograph(ch)) hits.push(`data/${file}:${path} "${node.slice(0, 40)}" (U+${ch.codePointAt(0).toString(16).toUpperCase()})`);
+        }
+        return;
+      }
+      if (Array.isArray(node)) return node.forEach((v, i) => walkGlyphs(v, file, `${path}[${i}]`));
+      if (node && typeof node === 'object') {
+        for (const [k, v] of Object.entries(node)) {
+          if (k === '_doc') continue;
+          walkGlyphs(v, file, path ? `${path}.${k}` : k);
+        }
+      }
+    };
+    for (const f of dataFiles) {
+      walkGlyphs(JSON.parse(readFileSync(join(root, 'data', f), 'utf8')), f, '');
+    }
+    assert.ok(scanned > 2000, `and this walk actually read the strings too (${scanned})`);
+    assert.deepEqual(hits, [], `zero pictographic glyphs in data (${hits.join(' | ')})`);
+  }
+
+  // --- 7. Every `icon` id data (or a hardcoded tab list) points at, resolves
+  //    to a real drawing in `ui/icons.js` — the other half of #6's claim.
+  //    A typo'd id is silent otherwise: `renderIcon` swallows the miss into
+  //    an empty string, and a build only notices a blank icon by looking.
+  {
+    const known = new Set(iconIds());
+    const missing = [];
+    for (const f of dataFiles) {
+      const walkIcons = (node, file, path) => {
+        if (node && typeof node === 'object' && !Array.isArray(node)) {
+          if (typeof node.icon === 'string' && !known.has(node.icon)) {
+            missing.push(`data/${file}:${path}.icon "${node.icon}"`);
+          }
+          for (const [k, v] of Object.entries(node)) walkIcons(v, file, path ? `${path}.${k}` : k);
+        } else if (Array.isArray(node)) {
+          node.forEach((v, i) => walkIcons(v, file, `${path}[${i}]`));
+        }
+      };
+      walkIcons(JSON.parse(readFileSync(join(root, 'data', f), 'utf8')), f, '');
+    }
+    // The two roster arrays that declare icons in JS rather than data.
+    for (const [file, arrName] of [['campaign/warroom.js', 'WAR_TABS'], ['splice/dex-ui.js', 'TABS']]) {
+      for (const m of source.get(file).matchAll(/icon:\s*'([a-zA-Z][\w-]*)'/g)) {
+        if (!known.has(m[1])) missing.push(`${file} (${arrName}): "${m[1]}"`);
+      }
+    }
+    assert.deepEqual(missing, [], `every icon id resolves to a drawing (${missing.join(' | ')})`);
+    // …and the reverse cannot rot silently either: iconIds() only exists to
+    // answer this question, so nothing here checking it would leave the
+    // export looking dead to #1's reader-liveness sweep.
+    assert.ok(known.size >= 40, `the icon set is not a stub (${known.size})`);
+  }
+
+  // --- 8. No raw pictographic emoji hardcoded into the JS a screen
+  //    renders — the class #6 cannot see. #6 walks `.icon` fields in data;
+  //    R70's own icon system converted every one of those and still left
+  //    sixty-odd emoji sitting directly in template strings across eight
+  //    UI modules, as a heading or button label with no `.icon` field to
+  //    begin with (a map glyph opening ranch/ui.js's "Path to World
+  //    Domination", for one) — a browser QA pass caught those and #6
+  //    never could, since #6 only ever opens `data/*.json`.
+  //
+  //    This does NOT reuse #6's `isPictograph` (Unicode category So/Sk):
+  //    that test also flags the arrow, star, checkmark and gender-symbol
+  //    glyphs this codebase uses everywhere on purpose as compact inline
+  //    typography — prose, star ratings, matchup marks, battle-HUD status
+  //    chips — and turning the strict test on source would demand
+  //    rewriting all of it or drowning this gate in exemptions. Scoped
+  //    instead to the Unicode block (U+1F300-U+1FAFF) that actually
+  //    renders as a colour picture on every platform — what "emoji-as-art"
+  //    means, and exactly what caught every real instance this phase.
+  //
+  //    Excludes tools/: a Node-only balance harness and part-preview page,
+  //    never shipped to a player, so outside what "a screen renders" even
+  //    means — and this check's own source lives there, quoting the
+  //    glyphs below as data to match against, which would otherwise catch
+  //    itself.
+  //
+  //    style.css is in the walk too, the hard way: `.ticker::before`
+  //    carried a literal "📡 BREAKING: " in its `content` property, which
+  //    is real rendered UI text (Chromium paints generated content) that
+  //    no JS-only scan and no browser QA's `innerText` check either could
+  //    see — CSS generated content did not appear in `innerText` in the
+  //    Chromium build this phase tested against, which is exactly why a
+  //    source-level gate has to cover it rather than trusting a rendered
+  //    check alone.
+  {
+    const PICTOGRAPH = /[\u{1F300}-\u{1FAFF}]/gu;
+    const cssFiles = [['style.css', readFileSync(join(root, 'style.css'), 'utf8')]];
+    const uiFiles = [...source].filter(([file]) => !file.startsWith('tools/')).concat(cssFiles);
+    // One exemption, checked for liveness below so a fix that removes it
+    // cannot leave it silently allowed: a battle HUD status strip mixes
+    // two pictographs among three plain Dingbat glyphs (a skull, a star,
+    // a chain) doing the identical job in one tightly-packed row;
+    // converting only the two in Unicode's newer emoji block to SVG would
+    // size- and weight-mismatch them against their row-mates, which is
+    // worse than the raw glyphs it would "fix".
+    const ALLOWED = [
+      ['battle/ui.js', "() => '💤'"],
+      ['battle/ui.js', "() => '🛡'"],
+    ];
+    const hits = [];
+    for (const [file, text] of uiFiles) {
+      let masked = text;
+      for (const [f, phrase] of ALLOWED) {
+        if (f === file) masked = masked.split(phrase).join(' '.repeat(phrase.length));
+      }
+      for (const m of masked.matchAll(PICTOGRAPH)) {
+        hits.push(`${file}: "${m[0]}" (U+${m[0].codePointAt(0).toString(16).toUpperCase()})`);
+      }
+    }
+    assert.ok(uiFiles.length > 20, `the scan actually covers the UI modules (${uiFiles.length})`);
+    assert.deepEqual(hits, [], `zero pictographic emoji hardcoded in JS source (${hits.join(' | ')})`);
+    for (const [file, phrase] of ALLOWED) {
+      assert.ok(source.get(file)?.includes(phrase),
+        `${file} still contains the allowed phrase — drop it from ALLOWED if it went: "${phrase}"`);
     }
   }
 }
@@ -14033,19 +14261,24 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 
   // 7. The new nodes host the new encounters rather than orphaning them.
-  //    Two encounters and one unit were already unreachable before this
-  //    phase (R70's list); they are named so the count cannot grow.
+  //    air_patrol and harbor_watch were already unreachable before this
+  //    phase and named as R70's to fix — R70 folded both into the rescue
+  //    pool (campaignMeta.rescueEncounters), so the exemption is gone
+  //    rather than carried forward: a new orphan fails here, full stop.
   {
     const onNode = new Set(regions.flatMap((r) => r.nodes).map((n) => n.encounter));
     for (const g of content.gauntlet ?? []) onNode.add(g.id);
-    if (content.campaignMeta?.rescueEncounter) onNode.add(content.campaignMeta.rescueEncounter);
+    for (const id of content.campaignMeta?.rescueEncounters ?? []) onNode.add(id);
     const orphanEnc = Object.values(content.encounters).filter((e) => !onNode.has(e.id)).map((e) => e.id).sort();
-    assert.deepEqual(orphanEnc, ['air_patrol', 'harbor_watch'],
-      `no NEW encounter is attached to nothing (${orphanEnc.join(', ')}) — the two named are R70's`);
+    assert.deepEqual(orphanEnc, [], `no encounter is attached to nothing (${orphanEnc.join(', ')})`);
+    // jeep_50 was the third R70-named exemption here; R70 fielded it as
+    // patrol_2's third wave. Unit fielding now has its own permanent check
+    // (R61 §4) rather than living beside this phase-scoped one, so nothing
+    // is duplicated and nothing is silently re-exempted going forward.
     const fielded = new Set(Object.values(content.encounters).flatMap((e) => e.waves));
     for (const g of content.gauntlet ?? []) { fielded.add(g.unitId); for (const e of g.escorts) fielded.add(e); }
     const orphanUnits = Object.values(content.enemies).filter((u) => !fielded.has(u.id)).map((u) => u.id).sort();
-    assert.deepEqual(orphanUnits, ['jeep_50'], `nor any NEW unit (${orphanUnits.join(', ')}) — jeep_50 is R70's`);
+    assert.deepEqual(orphanUnits, [], `no enemy unit is orphaned (${orphanUnits.join(', ')})`);
   }
 }
 

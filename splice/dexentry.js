@@ -14,6 +14,7 @@
 
 import { PHYS_TUNING } from './physiology.js';
 import { rivalList, rivalRecord } from '../campaign/rivals.js';
+import { renderIcon } from '../ui/icons.js';
 import { gauntletStages } from '../campaign/gauntlet.js';
 
 // A weight class in words, derived from the roster rather than hardcoded,
@@ -38,7 +39,7 @@ export function speciesLines(sp, content) {
   const all = Object.values(content.species);
   const cls = content.classes?.[sp.class];
   const lines = [];
-  lines.push(`${cls ? `${cls.icon} ${cls.name}` : '◇ Unclassed'} · ${sp.role} · ${weightWord(sp, all)}`);
+  lines.push(`${cls ? `${renderIcon(cls.icon)} ${cls.name}` : '◇ Unclassed'} · ${sp.role} · ${weightWord(sp, all)}`);
   if (sp.tags?.length) lines.push(`Tags: ${sp.tags.join(', ')}`);
   // The set bonus with what it DOES, not just its name. R34 made all 41
   // real; the Dex was still printing the name alone for variants and

@@ -3,6 +3,7 @@
 // M0 free-form dev slab — every part here is an owned token with lineage.
 
 import { renderCreatureSVG, slotOfSocket } from '../render/renderer.js';
+import { renderIcon } from '../ui/icons.js';
 import { GRADES, GRADE_INDEX } from './extract.js';
 import { analyze } from './physiology.js';
 import { spliceChimera, validateSplice, tokensFor } from './theater.js';
@@ -59,7 +60,7 @@ export function renderTheaterScreen(root, ctx) {
       const owned = grants.frames.includes(f.id);
       return `<button type="button" data-frame="${f.id}" class="${f.id === draft.frame ? 'active' : ''}${owned ? '' : ' locked'}" ${
         owned ? '' : 'disabled'
-      } title="${owned ? f.flavor : 'Needs a bigger Surgery Theater.'}">${f.sizeClass} · ${f.name}${owned ? '' : ' 🔒'}</button>`;
+      } title="${owned ? f.flavor : 'Needs a bigger Surgery Theater.'}">${f.sizeClass} · ${f.name}${owned ? '' : ` ${renderIcon('lock')}`}</button>`;
     })
     .join('');
 
@@ -142,7 +143,7 @@ export function renderTheaterScreen(root, ctx) {
       <h2>Surgery Theater</h2>
       <p class="class-banner class-${report.creatureClass ?? 'none'}">${
         report.creatureClass
-          ? `${content.classes[report.creatureClass].icon} ${content.classes[report.creatureClass].name} — beats ${content.classes[content.classes[report.creatureClass].beats].name}`
+          ? `${renderIcon(content.classes[report.creatureClass].icon)} ${content.classes[report.creatureClass].name} — beats ${content.classes[content.classes[report.creatureClass].beats].name}`
           : '◇ Unclassed — neutral in every matchup'
       }</p>
       <p class="recipe">${statLine}${report.tags.length ? ` · tags: ${report.tags.join(', ')}` : ''}</p>

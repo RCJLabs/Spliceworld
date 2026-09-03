@@ -65,11 +65,11 @@ export function warTargetEncounter(state, target, content, now) {
 // --- Sub-navigation -------------------------------------------------------
 
 export const WAR_TABS = [
-  { id: 'map', icon: '🗺', label: 'Map' },
-  { id: 'jobs', icon: '💼', label: 'Jobs' },
-  { id: 'labs', icon: '🧫', label: 'Labs' },
-  { id: 'bays', icon: '⛓', label: 'Bays' },
-  { id: 'wire', icon: '📡', label: 'Wire' },
+  { id: 'map', icon: 'map', label: 'Map' },
+  { id: 'jobs', icon: 'briefcase', label: 'Jobs' },
+  { id: 'labs', icon: 'petri-dish', label: 'Labs' },
+  { id: 'bays', icon: 'chain', label: 'Bays' },
+  { id: 'wire', icon: 'satellite', label: 'Wire' },
 ];
 
 // A badge is a promise that something is waiting, so only two things earn

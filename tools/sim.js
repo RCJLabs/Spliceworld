@@ -16,6 +16,7 @@ import { analyze } from '../splice/physiology.js';
 import { createBattle, step, playerActions, playerActive, movesFromTokens } from '../battle/engine.js';
 import { knownMoves } from '../battle/moves.js';
 import { rivalEncounter, rivalList } from '../campaign/rivals.js';
+import { rescueEncounterFor } from '../campaign/map.js';
 import { mulberry32, hashString, pick, rngStream } from '../util/rng.js';
 import { chooseMoveIndex } from '../battle/ai.js';
 
@@ -1083,7 +1084,7 @@ function walkAct(state, content, now, open, opts = {}) {
     const team = fitTeam();
     const lastChance = cap.deadline - now <= stepMs;
     if (!team.length || (team.length < fullTeam() && !lastChance)) continue;
-    const enc = content.encounters[content.campaignMeta?.rescueEncounter];
+    const enc = content.encounters[rescueEncounterFor(state, content, cap.id)];
     if (!enc) break;
     fight(team, enc, { kind: 'rescue', captiveId: cap.id }, `rescue#${cap.id}#${now}`);
     acted++;

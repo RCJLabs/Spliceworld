@@ -109,12 +109,38 @@ export function movesFromTokens(tokens, report, content) {
     // A trait can change what a part DOES, not only what it weighs (R24).
     // Stat bonuses alone made every gene feel like the same gene with a
     // different number on it; a venom gland that actually envenoms is a
-    // different creature. Merged under the part's own keywords so a part
-    // that already envenoms is not quietly overwritten by a weaker gene.
+    // different creature.
+    //
+    // R70: the original merge always kept the PART's own value on a shared
+    // key, so "a part that already envenoms is not quietly overwritten by a
+    // weaker gene" — but it did that unconditionally, by KEY, never looking
+    // at either value. R68 gave most hides their own `thorns`; by R70, 22 of
+    // 42 did, and `barbed_skin` (hide, thorns 0.2) was silently zeroed on
+    // every one of them — not overridden by something bigger, just deleted,
+    // regardless of what number was on either side. `venom_gland` (head,
+    // venom 1) took the same hit wherever a head already carried venom.
+    // Measured: pooled over 9 builds × 4 encounters at high sample,
+    // barbed_skin read 0.01–0.07% against a ~0.5–1.4% null-control floor —
+    // not quiet, dead — while venom_gland (only 1 of 10 test builds
+    // colliding) still cleared its floor by luck of the roster.
+    //
+    // The fix keeps the ORIGINAL intent — a gene must never make a part
+    // WORSE at what it already does — while actually comparing the two
+    // numbers instead of one hardcoded winner: on a shared key, the larger
+    // magnitude wins (a boolean stays true either way, so ties there are
+    // moot). A weak gene still cannot downgrade a strong part; a gene that
+    // matches or beats what the part already does is no longer invisible.
     let keywords = part.move.keywords;
     for (const traitId of token.traits ?? []) {
       const extra = content.traits?.[traitId]?.moveKeywords;
-      if (extra) keywords = { ...extra, ...keywords };
+      if (!extra) continue;
+      const merged = { ...extra, ...keywords };
+      for (const key of Object.keys(extra)) {
+        if (typeof extra[key] === 'number' && typeof keywords[key] === 'number') {
+          merged[key] = Math.max(extra[key], keywords[key]);
+        }
+      }
+      keywords = merged;
     }
     add({
       name: part.ability,

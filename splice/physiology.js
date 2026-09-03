@@ -4,6 +4,7 @@
 // the same ones the M4 engine will consume.
 
 import { GRADES, GRADE_INDEX } from './extract.js';
+import { renderIcon } from '../ui/icons.js';
 
 export const PHYS_TUNING = {
   massSpeedPenaltyPer: 50, // -1 speed per this much mass
@@ -149,7 +150,7 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
     : 'no classifying anatomy';
   rows.push({
     label: 'Class',
-    value: classDef ? `${classDef.icon} ${classDef.name}` : 'Unclassed',
+    value: classDef ? `${renderIcon(classDef.icon)} ${classDef.name}` : 'Unclassed',
     note: classDef
       ? `${voteText} — ${classDef.cue} carry the vote. Strong against ${content.classes[classDef.beats].name}, weak to whatever beats it.`
       : votes.length

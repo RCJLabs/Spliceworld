@@ -6,6 +6,7 @@ import { renderCreatureSVG } from '../render/renderer.js';
 import { stockGenome, conditionTier } from '../ranch/ranch.js';
 import { extractAnimal, gradeFor, gradeOutlook, outlookLine } from './extract.js';
 import * as sfx from '../audio/sfx.js';
+import { renderIcon } from '../ui/icons.js';
 
 const CEREMONY_MS = 2100;
 
@@ -37,7 +38,7 @@ export function runExtraction(overlay, ctx, animalId, onDone) {
           }: ${outlookLine(outlook, animal.name)}</p>`
         : `<p class="fine-print outlook">${outlookLine(outlook, animal.name)}</p>`}
       <div class="ceremony-btns">
-        <button type="button" id="grad-go" class="big-btn">🎓 Graduate</button>
+        <button type="button" id="grad-go" class="big-btn">${renderIcon('graduation-cap')} Graduate</button>
         <button type="button" id="grad-no">Not yet</button>
       </div>
     </div>`;
@@ -73,7 +74,7 @@ function showResults(overlay, ctx, result, onDone) {
     .join('');
   overlay.innerHTML = `
     <div class="ceremony card">
-      <h3>🎓 ${result.donorName} has ascended!</h3>
+      <h3>${renderIcon('graduation-cap')} ${result.donorName} has ascended!</h3>
       <p class="fine-print">${result.msg}</p>
       <ul class="token-list">
         <li>${vialSVG(content.species[result.vial.species].palette.accent)} DNA Vial — ${content.species[result.vial.species].name} <span class="lineage">★${result.vial.stars}</span></li>

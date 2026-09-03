@@ -23,6 +23,7 @@ import { moveReadout } from './readout.js';
 import { resolveBattle } from '../campaign/campaign.js';
 import { openPicker } from '../ui/picker.js';
 import { moveSummary, moveDetail } from './moves.js';
+import { renderIcon } from '../ui/icons.js';
 
 // Move names and keyword sentences are authored content, not player input,
 // but they land in innerHTML and an apostrophe in a name should not be able
@@ -60,7 +61,11 @@ function bar(value, max, cls) {
   return `<div class="meter"><div class="meter-fill ${cls}" style="width:${pct}%"></div></div>`;
 }
 
-const CLASS_ICON = { ground: '🦶', water: '🌊', air: '🪽' };
+const CLASS_ICON = {
+  ground: renderIcon('paw', { size: 13 }),
+  water: renderIcon('wave', { size: 13 }),
+  air: renderIcon('wing', { size: 13 }),
+};
 
 function classChip(creatureClass, content) {
   if (!creatureClass) return '<span class="cls-chip">◇</span>';

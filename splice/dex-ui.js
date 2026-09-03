@@ -16,6 +16,7 @@
 // expensive part.
 
 import { renderCreatureSVG, renderUnitSVG, renderRivalSVG } from '../render/renderer.js';
+import { renderIcon } from '../ui/icons.js';
 import { stockGenome } from '../ranch/ranch.js';
 import { comboHint } from './theater.js';
 import { rivalList, rivalRecord } from '../campaign/rivals.js';
@@ -31,11 +32,11 @@ import { classReason } from '../campaign/matchup.js';
 const CLASS_ORDER = ['ground', 'water', 'air'];
 
 const DEX_TABS = [
-  { id: 'roster', icon: '🧬', label: 'Roster' },
-  { id: 'variants', icon: '✦', label: 'Variants' },
-  { id: 'combos', icon: '⚡', label: 'Combos' },
-  { id: 'genes', icon: '🧪', label: 'Genes' },
-  { id: 'foes', icon: '👁', label: 'Foes' },
+  { id: 'roster', icon: 'dna', label: 'Roster' },
+  { id: 'variants', icon: 'star', label: 'Variants' },
+  { id: 'combos', icon: 'lightning', label: 'Combos' },
+  { id: 'genes', icon: 'test-tube', label: 'Genes' },
+  { id: 'foes', icon: 'eye', label: 'Foes' },
 ];
 let dexTab = 'roster';
 
@@ -68,7 +69,7 @@ function rosterView(state, content) {
         dex.parts.some((p) => content.parts[p].species === sp.id)
     ).length;
     const total = Object.values(content.species).filter((sp) => !sp.synthetic && sp.class === cls).length;
-    return `<h3>${def.icon} ${def.name} — beats ${content.classes[def.beats].name} <span class="lineage">${owned}/${total} met</span></h3>
+    return `<h3>${renderIcon(def.icon)} ${def.name} — beats ${content.classes[def.beats].name} <span class="lineage">${owned}/${total} met</span></h3>
       <div class="dex-grid">${speciesByClass(cls)}</div>`;
   }).join('');
   const salvageTotal = Object.values(content.parts).filter((p) => p.species === 'salvage').length;
@@ -80,7 +81,7 @@ function rosterView(state, content) {
       <ul class="token-list triangle-why">${CLASS_ORDER.map((c) => {
         const beaten = content.classes[content.classes[c].beats];
         const why = classReason(c, content.classes[c].beats, content.classRules);
-        return `<li>${content.classes[c].icon} <strong>${content.classes[c].name}</strong> beats ${beaten.name}${
+        return `<li>${renderIcon(content.classes[c].icon)} <strong>${content.classes[c].name}</strong> beats ${beaten.name}${
           why ? ` <span class="fine-print">— ${why}</span>` : ''
         }</li>`;
       }).join('')}</ul>
@@ -111,7 +112,7 @@ function variantsView(state, content) {
             <strong>${found ? sp.name : '???'}</strong>
             ${found ? `<span class="variant-badge">✦ bred</span>` : ''}
             <p class="fine-print">${found ? sp.flavor : `A rumoured mutation of the ${base.name} line.`}</p>
-            <p class="fine-print">${content.classes[sp.class].icon} ${content.classes[sp.class].name}${
+            <p class="fine-print">${renderIcon(content.classes[sp.class].icon)} ${content.classes[sp.class].name}${
               found ? ` · ${sp.tags.join(', ') || 'no tags'} · ${sp.setBonus.name}` : ` · from ${base.name} stock`
             }</p>
           </div>
@@ -260,7 +261,7 @@ function foesView(state, content) {
     const def = content.classes[cls];
     const met = inClass.filter((u) => state.dex.enemies.includes(u.id)).length;
     const won = inClass.filter((u) => beaten.has(u.id)).length;
-    return `<h3>${def.icon} ${def.name} <span class="lineage">${met}/${inClass.length} logged${won ? ` · ${won} beaten` : ''}</span></h3>
+    return `<h3>${renderIcon(def.icon)} ${def.name} <span class="lineage">${met}/${inClass.length} logged${won ? ` · ${won} beaten` : ''}</span></h3>
       <div class="dex-grid">${inClass.map(cell).join('')}</div>`;
   }).join('');
   // A unit whose class is not one of the three would vanish from a grouped
@@ -278,7 +279,7 @@ function foesView(state, content) {
   const stages = gauntletStages(content);
   const cleared = stages.filter((st) => (state.gauntletBeaten ?? []).includes(st.id));
   const gauntletShelf = state.dominionAt && stages.length
-    ? `<p class="fine-print gauntlet-shelf">🏟 The Gauntlet — ${cleared.length}/${stages.length} exhibitions answered${
+    ? `<p class="fine-print gauntlet-shelf">${renderIcon('stadium')} The Gauntlet — ${cleared.length}/${stages.length} exhibitions answered${
         cleared.length ? `: ${cleared.map((st) => content.enemies[st.unitId]?.name ?? st.name).join(', ')}` : ''
       }</p>`
     : '';

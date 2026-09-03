@@ -30,6 +30,8 @@ import { gauntletState } from './gauntlet.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
 import { renderCreatureSVG, renderRivalSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
+import { rescueEncounterFor } from './map.js';
+import { renderIcon } from '../ui/icons.js';
 import { directorRead } from './director.js';
 import {
   bayUnit, rehabPlan, rehabTuning, startRehab, rehabSession, cancelRehab,
@@ -120,7 +122,7 @@ export function renderWarRoomScreen(root, ctx) {
 function rivalFile(dossier, content) {
   if (!dossier || !dossier.fights) return '';
   if (!dossier.tier) {
-    return `<p class="fine-print rival-file">🗂 ${dossier.fights} duel${
+    return `<p class="fine-print rival-file">${renderIcon('document')} ${dossier.fights} duel${
       dossier.fights === 1 ? '' : 's'
     } on file. They have not changed anything yet.</p>`;
   }
@@ -129,14 +131,14 @@ function rivalFile(dossier, content) {
   const read = [];
   if (dossier.topClass) {
     const cls = content.classes[dossier.topClass];
-    read.push(`filed under ${cls.icon} ${cls.name}`);
+    read.push(`filed under ${renderIcon(cls.icon)} ${cls.name}`);
   }
   if (dossier.topTag) read.push(`swinging ${dossier.topTag}`);
 
   const done = [];
   if (dossier.counterClass) {
     const cls = content.classes[dossier.counterClass];
-    done.push(`${dossier.counterLeads ? 'Leading with' : 'Answering with'} ${cls.icon} ${cls.name}.`);
+    done.push(`${dossier.counterLeads ? 'Leading with' : 'Answering with'} ${renderIcon(cls.icon)} ${cls.name}.`);
   }
   // The intel lines are authored as whole sentences already.
   if (dossier.intel) done.push(dossier.intel);
@@ -173,7 +175,7 @@ function renderMap(root, ctx) {
   //
   // R49: …and whether is more than the bucket. This read `sparCharges`
   // alone, so with three charges and every chimera in the Infirmary the
-  // button said "🥊 Spar 3", was pressable, and landed on a briefing where
+  // button said "Spar 3", was pressable, and landed on a briefing where
   // every roster row is disabled and Launch is disabled with it. Nothing
   // broke — R48 recorded that as a wording gap on those grounds — but an
   // ENABLED button onto a screen that can do nothing is a wasted trip, not
@@ -199,20 +201,20 @@ function renderMap(root, ctx) {
           ? `<button type="button" data-node="${node.id}">Assault</button>`
           : status === 'held'
             ? `<span class="held-tag">HELD +$${node.incomePerDay}/d</span>
-               <button type="button" class="spar-btn" data-spar="${node.id}" ${sparGate.ok ? '' : 'disabled'}>🥊 ${sparLabel}</button>`
+               <button type="button" class="spar-btn" data-spar="${node.id}" ${sparGate.ok ? '' : 'disabled'}>${renderIcon('boxing-glove')} ${sparLabel}</button>`
             : status === 'contested'
               ? `<span class="contested-tag">CONTESTED −$${node.incomePerDay}/d</span>`
               : `<span class="locked-tag">${(node.threatGen ?? 1) > gen ? `needs Threat Gen ${node.threatGen}` : 'locked'}</span>`;
       return `
         <div class="encounter node-${status}">
-          <div><strong>${node.name}</strong>${node.boss ? ' 👑' : ''} <span class="lineage">${encounter.waves.length} waves · $${encounter.reward}</span><br>
+          <div><strong>${node.name}</strong>${node.boss ? ` ${renderIcon('crown')}` : ''} <span class="lineage">${encounter.waves.length} waves · $${encounter.reward}</span><br>
           <span class="fine-print">${node.blurb}</span></div>
           ${btn}
         </div>`;
     }).join('') : '';
     const body = open
-      ? `${region.demand ? `<p class="region-demand">🧬 ${region.demand}</p>` : ''}${rows}`
-      : `<p class="region-locked">🔒 ${blockers.map((b) => b.label).join(' · ')}</p>`;
+      ? `${region.demand ? `<p class="region-demand">${renderIcon('dna')} ${region.demand}</p>` : ''}${rows}`
+      : `<p class="region-locked">${renderIcon('lock')} ${blockers.map((b) => b.label).join(' · ')}</p>`;
     // A9: the strip bonus needs saying on the strip, not only in the econ
     // row — "one node left" is a different sentence when finishing it pays
     // a standing bonus, and a contest that suspends one is worth answering
@@ -229,11 +231,11 @@ function renderMap(root, ctx) {
       ? held === region.nodes.length
         ? `Held end to end.${strip}`
         : `${region.nodes.length - held} node${region.nodes.length - held === 1 ? '' : 's'} still theirs.${strip}`
-      : `🔒 ${blockers.map((b) => b.label).join(' · ')}`;
+      : `${renderIcon('lock')} ${blockers.map((b) => b.label).join(' · ')}`;
     return collapsibleCard({
       id: `region:${region.id}`,
       title: `${region.name}${region.subtitle ? ` <span class="fine-print region-sub">${region.subtitle}</span>` : ''}`,
-      badge: `${contestedHere ? '🛡 ' : ''}${held}/${region.nodes.length}`,
+      badge: `${contestedHere ? `${renderIcon('shield')} ` : ''}${held}/${region.nodes.length}`,
       summary,
       body,
       open: isOpen(state, `region:${region.id}`, open && region.id === frontier),
@@ -254,7 +256,7 @@ function renderMap(root, ctx) {
       }${
         a.defences ? ` · you have held it ${a.defences}× already` : ''
       }.</span></div>
-      <button type="button" data-defend="${a.nodeId}">🛡 Defend</button>
+      <button type="button" data-defend="${a.nodeId}">${renderIcon('shield')} Defend</button>
     </div>`).join('');
 
   const captives = state.campaign.captives.map((cap) => `
@@ -275,7 +277,7 @@ function renderMap(root, ctx) {
     const lead = preview?.waves[0];
     const roster = preview
       ? preview.waves
-          .map((u) => `${content.classes[u.class]?.icon ?? '◇'} ${u.name} <span class="lineage">HP ${u.hp} · PWR ${u.power}</span>`)
+          .map((u) => `${content.classes[u.class] ? renderIcon(content.classes[u.class].icon) : '◇'} ${u.name} <span class="lineage">HP ${u.hp} · PWR ${u.power}</span>`)
           .join('<br>')
       : '';
     return `
@@ -289,7 +291,7 @@ function renderMap(root, ctx) {
         <div class="rival-body">
           <strong>${rival.name}</strong>
           <p class="fine-print">${rival.title}</p>
-          <p class="class-banner class-${rival.classBias}">${cls.icon} ${cls.name} school — beats ${content.classes[cls.beats].name}</p>
+          <p class="class-banner class-${rival.classBias}">${renderIcon(cls.icon)} ${cls.name} school — beats ${content.classes[cls.beats].name}</p>
           <p class="rival-quote">&ldquo;${rival.philosophy}&rdquo;</p>
           ${record.defeats || record.losses ? `<p class="fine-print">Record: ${record.defeats}W–${record.losses}L against you${record.defeats ? ` · iterated ${record.defeats}× since` : ''}</p>` : ''}
           ${roster ? `<p class="fine-print">${roster}</p>` : ''}
@@ -308,12 +310,12 @@ function renderMap(root, ctx) {
   const read = directorRead(state, content);
   const dossier = read.profile.samples >= (content.directorMeta?.minSamples ?? 4)
     ? `<section class="card dossier">
-        <h3>🛰 Their Dossier On You</h3>
+        <h3>${renderIcon('satellite')} Their Dossier On You</h3>
         <p class="fine-print">${
           read.profile.topTags.length
             ? `Filed under: ${read.profile.topTags.map((t) => `<strong>${t.tag}</strong> ${Math.round(t.share * 100)}%`).join(' · ')}`
             : 'No pattern yet. Keep them guessing.'
-        }${read.profile.favoredClass ? ` · stable reads <strong>${content.classes[read.profile.favoredClass].icon} ${content.classes[read.profile.favoredClass].name}</strong>` : ' · no dominant class'}</p>
+        }${read.profile.favoredClass ? ` · stable reads <strong>${renderIcon(content.classes[read.profile.favoredClass].icon)} ${content.classes[read.profile.favoredClass].name}</strong>` : ' · no dominant class'}</p>
         <p class="fine-print">${
           read.rule
             ? `⚠ Countermeasures in the field: ${read.rule.intel}`
@@ -324,7 +326,7 @@ function renderMap(root, ctx) {
 
   // The wire has its own view now, so it shows everything it keeps
   // rather than the last five lines squeezed under the map.
-  const wire = [...state.news].reverse().map((n) => `<p>📡 ${n}</p>`).join('');
+  const wire = [...state.news].reverse().map((n) => `<p>${renderIcon('satellite')} ${n}</p>`).join('');
 
   const views = {
     map: regions,
@@ -332,13 +334,13 @@ function renderMap(root, ctx) {
     labs: `
       ${dossier}
       ${dossierCard(state, content)}
-      ${rivals ? `<section class="card"><h3>🧫 Rival Labs</h3>${rivals}</section>` : ''}`,
+      ${rivals ? `<section class="card"><h3>${renderIcon('petri-dish')} Rival Labs</h3>${rivals}</section>` : ''}`,
     bays: containment
       ? `<section class="card"><h3>⛓ Containment</h3>${containment}</section>`
       : `<section class="card"><h3>⛓ Containment</h3><p class="ranch-msg">The bays are empty. Charge the Containment Cannon in a fight and bring something home.</p></section>`,
     wire: `
       <section class="card">
-        <h3>📡 News Wire</h3>
+        <h3>${renderIcon('satellite')} News Wire</h3>
         <div class="news-feed">${wire || '<p class="fine-print">All quiet. Suspiciously quiet.</p>'}</div>
       </section>`,
   };
@@ -350,7 +352,7 @@ function renderMap(root, ctx) {
   const banner = dominionBanner(state, content);
   const dominionCard = banner
     ? `<section class="card dominion-card">
-        <h3>🏴 ${banner.title}</h3>
+        <h3>${renderIcon('flag')} ${banner.title}</h3>
         <p>${banner.body}</p>
         <p class="fine-print">${banner.note}</p>
       </section>`
@@ -362,12 +364,12 @@ function renderMap(root, ctx) {
     ? (() => {
         const rows = gauntletState(state, content).map(({ stage, status }) => `
           <div class="encounter gauntlet-${status}">
-            <div><strong>${stage.name}</strong>${status === 'beaten' ? ' 🏆' : ''} <span class="lineage">${stage.escorts.length + 1} waves · $${stage.reward}</span><br>
+            <div><strong>${stage.name}</strong>${status === 'beaten' ? ` ${renderIcon('trophy')}` : ''} <span class="lineage">${stage.escorts.length + 1} waves · $${stage.reward}</span><br>
             <span class="fine-print">${status === 'locked' ? 'The card goes in order.' : stage.blurb}</span></div>
             ${status === 'open' ? `<button type="button" data-gauntlet="${stage.id}">Answer</button>` : status === 'beaten' ? '<span class="held-tag">BEATEN</span>' : '<span class="locked-tag">locked</span>'}
           </div>`).join('');
         return `<section class="card gauntlet-card">
-          <h3>🏟 The Gauntlet</h3>
+          <h3>${renderIcon('stadium')} The Gauntlet</h3>
           <p class="fine-print">The county is yours, so the coalition has stopped pretending its storage is empty. Four exhibitions, in order. No territory changes hands — only reputations.</p>
           ${rows}
         </section>`;
@@ -395,7 +397,7 @@ function renderMap(root, ctx) {
         <div><span class="econ-label">Record</span><strong>${state.warRecord.wins}W–${state.warRecord.losses}L</strong></div>
       </div>
     </section>
-    ${contests ? `<section class="card contest-card"><h3>🛡 Counter-Offensive</h3>${contests}</section>` : ''}
+    ${contests ? `<section class="card contest-card"><h3>${renderIcon('shield')} Counter-Offensive</h3>${contests}</section>` : ''}
     ${captives ? `<section class="card captive-alert"><h3>⏳ Captured — Rescue Windows</h3>${captives}</section>` : ''}
     ${warSubtabBar(state)}
     ${fieldNote(guideForScreen(state, content, t, 'battle'))}
@@ -455,7 +457,7 @@ function renderMap(root, ctx) {
       draftTarget = {
         kind: 'rescue',
         captiveId: cap.id,
-        encounterId: content.campaignMeta.rescueEncounter,
+        encounterId: rescueEncounterFor(state, content, cap.id),
         label: `Rescue ${cap.chimera.name}`,
       };
       draftTeam = [];
@@ -494,7 +496,7 @@ function dossierCard(state, content) {
   const me = profileOf(state, content);
   return `
     <section class="card dossier-mine">
-      <h3>🧾 Your Dossier</h3>
+      <h3>${renderIcon('document')} Your Dossier</h3>
       <p class="dossier-name">${me.named ? `${me.title} ${me.name}` : 'Unregistered Operator'}</p>
       <p class="fine-print">${me.named ? `of ${me.lab}` : 'The paperwork has not been filed. The paperwork will never be filed.'}</p>
       <p class="rival-quote">&ldquo;${me.philosophy?.tagline ?? ''}&rdquo;</p>
@@ -529,7 +531,7 @@ function bindDossier(root, ctx, redraw) {
             sub: `of ${id.lab}`,
           })),
         },
-        { label: null, options: [{ id: '__reroll', label: '🎲 Roll a different set', sub: 'None of these. Try again.' }] },
+        { label: null, options: [{ id: '__reroll', label: `${renderIcon('dice')} Roll a different set`, sub: 'None of these. Try again.' }] },
       ],
       selectedId: '',
       onPick: (value) => {
@@ -598,10 +600,10 @@ function jobsCard(state, ctx, t) {
   // there was — which is half of why a visit felt like one click and a wait.
   const liveCard = runs.length ? `
       <section class="card jobs-card">
-        <h3>💼 ${runs.length === 1 ? 'Job In Progress' : `${runs.length} Jobs In Progress`}</h3>
+        <h3>${renderIcon('briefcase')} ${runs.length === 1 ? 'Job In Progress' : `${runs.length} Jobs In Progress`}</h3>
         ${runs.map(({ run, op, who, remainingMs }) => `
         <div class="encounter job-live">
-          <div><strong>${op.icon} ${op.name}</strong><br>
+          <div><strong>${renderIcon(op.icon)} ${op.name}</strong><br>
           <span class="fine-print">Back in <strong class="countdown">${fmtDuration(remainingMs)}</strong> · ${
             who ? who.name : 'you went yourself'
           } · odds were ${pct(run.chance)}</span></div>
@@ -626,7 +628,7 @@ function jobsCard(state, ctx, t) {
     // pushed the entire campaign off the screen.
     return `
       <div class="encounter job-row ${ready ? '' : 'is-cooling'}">
-        <div><strong>${op.icon} ${op.name}</strong> <span class="lineage">${op.hours}h · ${loot}</span>
+        <div><strong>${renderIcon(op.icon)} ${op.name}</strong> <span class="lineage">${op.hours}h · ${loot}</span>
         <span class="fine-print job-odds">${
           odds.blocked ? `⚠ ${odds.blocked}` : `Best odds: <strong>${pct(odds.chance)}</strong>`
         }${op.notoriety ? ` · +${op.notoriety} heat` : ' · draws no attention at all'}</span></div>
@@ -655,7 +657,7 @@ function jobsCard(state, ctx, t) {
   return `
     ${liveCard}
     <section class="card jobs-card">
-      <h3>💼 Jobs</h3>
+      <h3>${renderIcon('briefcase')} Jobs</h3>
       <p class="fine-print job-slots">${crewLine}</p>
       ${reportHtml}
       ${rows}
@@ -741,7 +743,7 @@ function bayCard(state, entry, content, t) {
       <div class="rival-portrait">${portrait}</div>
       <div class="rival-body">
         <strong>${unit.name}</strong>
-        <p class="fine-print">${cls ? `${cls.icon} ${cls.name}` : '◇ Unclassed'} · HP ${unit.hp} · PWR ${unit.power} · ARM ${unit.armor}</p>
+        <p class="fine-print">${cls ? `${renderIcon(cls.icon)} ${cls.name}` : '◇ Unclassed'} · HP ${unit.hp} · PWR ${unit.power} · ARM ${unit.armor}</p>
         ${body}
       </div>
     </div>`;
@@ -767,15 +769,15 @@ function offerHtml(state, entry, plan, unit, content) {
   const salvageList = names.length ? `${badges} — ${names.join(', ')}` : '';
 
   return `
-    <p class="fine-print">🔧 <strong>Salvage</strong> → ${salvageList || 'nothing recoverable'}</p>
+    <p class="fine-print">${renderIcon('wrench')} <strong>Salvage</strong> → ${salvageList || 'nothing recoverable'}</p>
     ${plan.possible
-      ? `<p class="fine-print">🫂 <strong>Rehabilitate</strong> → joins the roster whole, on a ${content.frames[unit.genome.frame]?.name ?? unit.genome.frame} chassis, at the grades its old lab raised. ${plan.hours}h · $${plan.fee} · arrives settled but wary (instability ${plan.instability}, bond 0).</p>`
+      ? `<p class="fine-print">${renderIcon('handshake')} <strong>Rehabilitate</strong> → joins the roster whole, on a ${content.frames[unit.genome.frame]?.name ?? unit.genome.frame} chassis, at the grades its old lab raised. ${plan.hours}h · $${plan.fee} · arrives settled but wary (instability ${plan.instability}, bond 0).</p>`
       : `<p class="fine-print locked-note">${plan.reason}</p>`}
     <div class="bay-btns">
-      <button type="button" data-salvage="${entry.id}">🔧 Salvage</button>
+      <button type="button" data-salvage="${entry.id}">${renderIcon('wrench')} Salvage</button>
       ${plan.possible
         ? plan.enabled
-          ? `<button type="button" class="bay-rehab" data-rehab="${entry.id}" ${state.funds >= plan.fee ? '' : 'disabled'}>🫂 Rehabilitate — $${plan.fee}</button>`
+          ? `<button type="button" class="bay-rehab" data-rehab="${entry.id}" ${state.funds >= plan.fee ? '' : 'disabled'}>${renderIcon('handshake')} Rehabilitate — $${plan.fee}</button>`
           : '<span class="locked-tag">needs the Reorientation Wing — Ranch › Facility</span>'
         : ''}
     </div>`;
@@ -796,7 +798,7 @@ function programmeHtml(state, entry, unit, content, t) {
         maxed
           ? 'Curriculum complete'
           : ready
-            ? `🎯 Enrichment session ($${tune.sessionCost})`
+            ? `${renderIcon('target')} Enrichment session ($${tune.sessionCost})`
             : `Next session in ${fmtDuration(readyAt - t)}`
       }</button>
       <button type="button" class="bay-cancel" data-cancel="${entry.id}">End programme</button>
@@ -824,7 +826,7 @@ function renderBriefing(root, ctx) {
   // once without, which is two chances to disagree about the same fight.
   const { classes: foeClasses, tags: foeTags, attackTags: foeAttackTags } = foeRead(encounter, content);
   const foeLine = foeClasses.size
-    ? [...foeClasses].map((c) => `${content.classes[c].icon} ${content.classes[c].name}`).join(', ')
+    ? [...foeClasses].map((c) => `${renderIcon(content.classes[c].icon)} ${content.classes[c].name}`).join(', ')
     : 'no declared class';
 
   // R35. The class triangle was the only matchup layer on this screen. The
@@ -879,7 +881,7 @@ function renderBriefing(root, ctx) {
       : '';
     return toggleRow({
       id: ch.id,
-      label: `${cls ? cls.icon + ' ' : '◇ '}${ch.name}${cb.level > 0 ? ` <span class="level-chip">Lv ${cb.level}</span>` : ''}`,
+      label: `${cls ? renderIcon(cls.icon) + ' ' : '◇ '}${ch.name}${cb.level > 0 ? ` <span class="level-chip">Lv ${cb.level}</span>` : ''}`,
       sub: `${note}${edge}${chart}`,
       checked: draftTeam.includes(ch.id),
       disabled: injured,
@@ -956,8 +958,8 @@ function renderBriefing(root, ctx) {
         foeClasses.size > 1 && encounter.counterClass ? ' — one of them was built to answer your stable' : ''
       }</p>
       ${tagLines.length ? `<ul class="foe-tags">${tagLines.map((l) => `<li>${l}</li>`).join('')}</ul>` : ''}
-      ${encounter.contestOf ? `<p class="fine-print contest-intel">🛡 ${encounter.intel}</p>` : ''}
-      ${encounter.directed ? `<p class="fine-print intel-line">🛰 Intel: ${encounter.directed.intel} <strong>${content.enemies[encounter.directed.unitId].name}</strong> ${
+      ${encounter.contestOf ? `<p class="fine-print contest-intel">${renderIcon('shield')} ${encounter.intel}</p>` : ''}
+      ${encounter.directed ? `<p class="fine-print intel-line">${renderIcon('satellite')} Intel: ${encounter.directed.intel} <strong>${content.enemies[encounter.directed.unitId].name}</strong> ${
         encounter.directed.added
           ? 'is riding along — they sent extra.'
           : `has replaced the ${content.enemies[encounter.directed.replaced].name}.`

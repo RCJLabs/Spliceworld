@@ -27,7 +27,6 @@
     }
   ],
   "threatGen2At": 60,
-  "rescueEncounter": "rescue_impound",
   "regions": [
     {
       "id": "greenfield",
@@ -418,5 +417,10 @@
       "expired": "{node} was abandoned without a shot. The coalition is describing this as a victory and, annoyingly, it is.",
       "missed": "While nobody was home, {count} convoys came, waited at the gate, and left stern letters. The nodes they sat on paid nothing for {days} days between them."
     }
-  }
+  },
+  "rescueEncounters": [
+    "rescue_impound",
+    "air_patrol",
+    "harbor_watch"
+  ]
 }

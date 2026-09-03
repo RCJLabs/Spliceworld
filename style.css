@@ -1343,7 +1343,8 @@ footer {
   color: var(--goo);
   text-align: center;
 }
-.ticker::before { content: "📡 BREAKING: "; color: var(--muted); }
+.ticker .ticker-lead { color: var(--muted); }
+.ticker .ui-icon { vertical-align: -2px; margin-right: 2px; }
 
 /* --- Wave 1: class banner, catalog, collapsible vault --- */
 .class-banner {
