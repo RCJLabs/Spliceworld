@@ -889,12 +889,14 @@ import { newGameState } from '../save/save.js';
 import { ensureRanchSeeded, applyElapsed } from '../ranch/ranch.js';
 import { tickCampaign, resolveBattle } from '../campaign/campaign.js';
 import { careAction, careStatus, buyMailOrder, buyPenUpgrade, catalogFor, ageStage, upkeepPerDay, penUpgradeCost } from '../ranch/ranch.js';
-import { extractAnimal } from '../splice/extract.js';
+import { extractAnimal, extractChimera } from '../splice/extract.js';
 import { spliceChimera, validateSplice, trainChimera, TRAINING } from '../splice/theater.js';
 import { startOperation, operationList, opReady, laneFree } from '../campaign/operations.js';
-import { startSpar, canSpar } from '../campaign/sparring.js';
-import { nodeStates } from '../campaign/campaign.js';
-import { contestEncounter, resolveContest } from '../campaign/contest.js';
+import { startSpar, canSpar, sparEncounter, sparPartners } from '../campaign/sparring.js';
+import { levelOf } from '../battle/veterancy.js';
+import { regionStates } from '../campaign/campaign.js';
+import { regionOfNode } from '../campaign/map.js';
+import { contestEncounter } from '../campaign/contest.js';
 
 const WALK_HOUR = 3600000;
 const WALK_DAY = 24 * WALK_HOUR;
@@ -902,14 +904,19 @@ const WALK_DAY = 24 * WALK_HOUR;
 // Fill a frame from whatever is in the vault, best grade first. Deliberately
 // unclever: the point is to measure the pace of the loop, not to find the
 // strongest build the vault allows.
-function bestSplice(state, content) {
+// `wanted` is the class the map says answers the strip in front of the
+// player (R37's `demand` line). A player who reads it dresses the frame in
+// that anatomy first and fills the rest by grade; the first walker ignored
+// it and took a mixed-class roster to the Aerodrome 33 times.
+function bestSplice(state, content, wanted = null) {
   const owned = state.inventory.parts;
   if (!owned.length) return null;
+  const rank = (t) => (wanted && content.parts[t.partId]?.classAffinity === wanted ? 10 : 0) + GRADE_ORDER.indexOf(t.grade);
   for (const frameId of ['M', 'S', 'L', 'A']) {
     if (!content.frames[frameId]) continue;
     const used = new Set();
     const slots = {};
-    for (const token of [...owned].sort((a, b) => GRADE_ORDER.indexOf(b.grade) - GRADE_ORDER.indexOf(a.grade))) {
+    for (const token of [...owned].sort((a, b) => rank(b) - rank(a))) {
       const part = content.parts[token.partId];
       if (!part || used.has(token.id) || slots[part.slot]) continue;
       slots[part.slot] = token.id;
@@ -938,8 +945,51 @@ const GRADE_ORDER = ['standard', 'prime', 'apex', 'prismatic'];
 //     roster is not tried again until the roster changes.
 const WALK_RESERVE_DAYS = 14;
 
-function walkAct(state, content, now, open) {
+// R63 rewrote the fighting half of this policy, because the first version
+// was measuring the walker rather than the game in four separate ways, and
+// the audit filed the result as a design finding:
+//
+//   - it called startSpar() and never fought the spar, so every charge was
+//     burned for zero xp and the ladder R43 built out of the wall was never
+//     climbed;
+//   - it never ran a rescue raid, so every capture-on-loss was a dissection,
+//     and with a loss a day the veterans drained out faster than they
+//     levelled — xp at day 180 read [168, 19, 0, 0, 0, 0];
+//   - it resolved defences through resolveContest() directly, skipping
+//     finishBattle: no xp, no injuries, no capture on a lost defence;
+//   - its "do not retry a node that beat this roster" rule keyed on total xp,
+//     which changes after every fight, so it retried guard_post 93 times.
+//
+// A player who reads the Pens sends the best three, spars when the ring is
+// charged, rescues a captured creature, waits for the Infirmary when the
+// window allows, and tries the next node when one keeps winning. None of
+// that is optimal play; all of it is the game's own instructions.
+function walkAct(state, content, now, open, opts = {}) {
   const has = (id) => open.some((i) => i.id === id);
+  const lvl = (c) => levelOf(c.xp ?? 0, content);
+  // What a player reads off the Pens: level first, then the grades on the
+  // card. The A-team is the best three whether or not they are fit.
+  const quality = (c) => lvl(c) * 10 + Object.values(c.tokens ?? {}).reduce((n, t) => n + GRADE_ORDER.indexOf(t.grade), 0);
+  const isFit = (c) => !c.injury || c.injury.until <= now;
+  const fitAll = () => state.chimeras.filter(isFit).sort((x, y) => quality(y) - quality(x));
+  const fitTeam = () => fitAll().slice(0, 3);
+  const fullTeam = () => Math.min(3, state.chimeras.length);
+  const aTeamFit = () => [...state.chimeras].sort((x, y) => quality(y) - quality(x)).slice(0, 3).every(isFit);
+  const stepMs = (opts.stepHours ?? 2) * WALK_HOUR;
+  const log = (entry) => (state.__walkLog ??= []).push({ day: +((now - (opts.t0 ?? 0)) / WALK_DAY).toFixed(2), ...entry });
+  // One fight, through the same door the War Room uses.
+  const fight = (team, enc, context, seedKey) => {
+    const battle = createBattle(team, enc, content, hashString(seedKey), now, context);
+    walkAutoplay(battle, content);
+    const before = state.chimeras.length;
+    state.battle = battle;
+    resolveBattle(state, battle, content, now);
+    state.battle = null;
+    log({ kind: context.kind, node: context.nodeId ?? null, outcome: battle.outcome, escalation: enc.escalation,
+      team: team.map((c) => c.xp ?? 0), grades: team.map((c) => Object.values(c.tokens).map((t) => t.grade[0]).join('')),
+      fit: team.length, held: state.campaign.heldNodes.length, lost: state.chimeras.length < before });
+    return battle;
+  };
   const reserve = upkeepPerDay(state, content) * WALK_RESERVE_DAYS;
   const canSpend = (cost) => state.funds - cost >= reserve;
   let acted = 0;
@@ -954,50 +1004,115 @@ function walkAct(state, content, now, open) {
   }
   // Graduate adults, never below a breeding pair — a walker that empties its
   // own ranch measures a mistake rather than the game.
+  // Graduate at Prime — the ranch card says so ("Graduation forecast", with
+  // the headroom still ahead of the animal) and Prime is 14–36h from birth.
+  // Adults go early only while the stable is still being bootstrapped.
   if (has('graduate') && state.ranch.stock.length > 2) {
-    const adult = state.ranch.stock.find((a) => ageStage(a, content, now) !== 'juvenile');
-    if (adult && extractAnimal(state, adult.id, content, now).ok) acted++;
+    const ripe = (a) => ['prime', 'elder'].includes(ageStage(a, content, now))
+      || (state.chimeras.length < 3 && ageStage(a, content, now) !== 'juvenile');
+    const donor = state.ranch.stock.find(ripe);
+    if (donor && extractAnimal(state, donor.id, content, now).ok) acted++;
   }
+  // A stable, not a warehouse: R25 prices upkeep per chimera, and the first
+  // rewrite spliced everything the vault could dress — nineteen creatures on
+  // five nodes of income, and $26 in the bank by day 180. Nine is what R44
+  // sized the Pens screen for.
+  const frontNode = () => regionStates(state, content).flatMap((r) => r.nodes).find((n) => n.status === 'available');
+  const demanded = () => { const f = frontNode(); return f ? (f.node.answer ?? regionOfNode(content, f.node.id)?.answer ?? null) : null; };
   if (has('splice')) {
-    const plan = bestSplice(state, content);
-    if (plan) {
-      const before = state.chimeras.length;
-      spliceChimera(state, plan.frameId, plan.slots, content, now);
-      if (state.chimeras.length > before) acted++;
+    const wanted = demanded();
+    const plan = bestSplice(state, content, wanted);
+    // Coherent, or not at all: with a class demanded, a build counts only
+    // if most of its class-bearing sockets (head, limbs, tail — hides and
+    // organs carry none) answer it. The first walker took two water parts
+    // and four leftovers to the Aerodrome, which the bench beats only with
+    // a water build. While the stable is below three, anything goes.
+    const classSockets = plan ? Object.values(plan.slots)
+      .map((id) => content.parts[state.inventory.parts.find((t) => t.id === id)?.partId]?.classAffinity)
+      .filter(Boolean) : [];
+    const answers = classSockets.filter((c) => c === wanted).length;
+    const coherent = !wanted || state.chimeras.length < 3 || answers >= 3;
+    if (plan && coherent) {
+      const cap = opts.stableCap ?? 9;
+      if (state.chimeras.length >= cap) {
+        // Make room: dismantle the weakest creature outside the A-team,
+        // which is the Pens' own button and what a player at capacity does.
+        const ranked = [...state.chimeras].sort((x, y) => quality(y) - quality(x));
+        const weakest = ranked.slice(3).filter((c) => isFit(c)).pop();
+        if (weakest) extractChimera(state, weakest.id, content, now);
+      }
+      if (state.chimeras.length < cap) {
+        const before = state.chimeras.length;
+        const again = bestSplice(state, content, wanted) ?? plan; // the vault just changed
+        spliceChimera(state, again.frameId, again.slots, content, now);
+        if (state.chimeras.length > before) acted++;
+      }
     }
   }
   if (has('job')) {
     const op = operationList(content).find((o) => opReady(state, o.id, content, now) && laneFree(state, o, content));
     if (op && startOperation(state, op.id, null, content, now).ok) acted++;
   }
-  if (has('spar') && canSpar(state, content, now).ok) { startSpar(state, now, content); acted++; }
+  // The ring. The hardest garrison you hold pays the most xp per charge.
+  // Rationed: the bucket refills three charges every half hour, so a walker
+  // ticking every two hours could spar 36 times a day, which is a diet
+  // nobody is on. `sparsPerDay` is the realistic one.
+  const sparBudget = opts.sparsPerDay ?? 3;
+  state.__walkSparDay ??= { day: -1, n: 0 };
+  const today = Math.floor((now - (opts.t0 ?? 0)) / WALK_DAY);
+  if (state.__walkSparDay.day !== today) state.__walkSparDay = { day: today, n: 0 };
+  while (has('spar') && canSpar(state, content, now).ok && fitTeam().length && state.__walkSparDay.n < sparBudget) {
+    state.__walkSparDay.n++;
+    const partner = sparPartners(state, content)
+      .sort((a, b) => (content.encounters[b.encounter]?.tier ?? 0) - (content.encounters[a.encounter]?.tier ?? 0))[0];
+    const offer = partner && sparEncounter(state, content, partner.id, now);
+    if (!offer?.ok) break;
+    startSpar(state, now, content);
+    fight(fitTeam(), offer.encounter, { kind: 'sparring', nodeId: partner.id }, `spar#${partner.id}#${now}`);
+    acted++;
+  }
 
-  for (const contest of [...(state.campaign.contested ?? [])]) {
+  // Rescue before anything else: the clock on a captive is the shortest
+  // one in the game, and a lost veteran is the one thing money cannot buy.
+  for (const cap of has('rescue') ? [...(state.campaign.captives ?? [])] : []) {
+    const team = fitTeam();
+    const lastChance = cap.deadline - now <= stepMs;
+    if (!team.length || (team.length < fullTeam() && !lastChance)) continue;
+    const enc = content.encounters[content.campaignMeta?.rescueEncounter];
+    if (!enc) break;
+    fight(team, enc, { kind: 'rescue', captiveId: cap.id }, `rescue#${cap.id}#${now}`);
+    acted++;
+  }
+
+  // Defend, with a full team if the window allows waiting for one. The
+  // window is R9's whole promise — you are never made to fight before you
+  // have seen it — and a player uses it to let the Infirmary finish.
+  for (const contest of has('defend') ? [...(state.campaign.contested ?? [])] : []) {
     const enc = contestEncounter(state, content, contest);
-    const team = state.chimeras.filter((c) => !c.injury || c.injury.until <= now).slice(0, 3);
-    if (!enc || !team.length) continue;
-    const battle = createBattle(team, enc, content, hashString(`defend#${contest.nodeId}#${now}`), now,
-      { kind: 'contest', nodeId: contest.nodeId });
-    walkAutoplay(battle, content);
-    resolveContest(state, content, contest.nodeId, battle.outcome, now);
+    const team = fitTeam();
+    const lastChance = contest.deadline - now <= stepMs;
+    if (!enc || !team.length || (!aTeamFit() && !lastChance)) continue;
+    const battle = fight(team, enc, { kind: 'defend', nodeId: contest.nodeId, waveIds: enc.waves },
+      `defend#${contest.nodeId}#${now}`);
     state.__walkDefences = (state.__walkDefences ?? 0) + 1;
     if (battle.outcome === 'win') state.__walkHeld = (state.__walkHeld ?? 0) + 1;
     acted++;
   }
 
   if (has('assault') && now - (state.__walkLastAssault ?? -WALK_DAY) >= WALK_DAY) {
-    const target = nodeStates(state, content).find((n) => n.status === 'available');
-    const enc = target && content.encounters[target.node.encounter];
-    const team = state.chimeras.filter((c) => !c.injury || c.injury.until <= now).slice(0, 3);
+    const team = fitTeam();
     const refused = state.__walkRefused ?? (state.__walkRefused = {});
-    const roster = `${state.chimeras.length}:${state.chimeras.reduce((n, c) => n + (c.xp ?? 0), 0)}`;
-    if (enc && team.length && refused[target.node.id] !== roster) {
-      const battle = createBattle(team, enc, content, hashString(`walk#${target.node.id}#${now}`), now,
-        { kind: 'assault', nodeId: target.node.id });
-      walkAutoplay(battle, content);
-      state.battle = battle;
-      resolveBattle(state, battle, content, now);
-      state.battle = null;
+    // The roster as a player would describe it: who, and how seasoned. Raw
+    // xp changes after every fight and made the refusal rule a no-op.
+    const roster = state.chimeras.map((c) => `${c.id}L${lvl(c)}`).sort().join(',');
+    // The WHOLE map. campaign.js's nodeStates() defaults its region argument
+    // to the first strip, so the R56 walker only ever saw Greenfield — and
+    // reported "3–5 of 21 nodes held" for 180 days as if that were pacing.
+    const target = regionStates(state, content).flatMap((r) => r.nodes)
+      .find((n) => n.status === 'available' && refused[n.node.id] !== roster);
+    const enc = target && content.encounters[target.node.encounter];
+    if (enc && team.length >= fullTeam() && aTeamFit()) {
+      const battle = fight(team, enc, { kind: 'assault', nodeId: target.node.id }, `walk#${target.node.id}#${now}`);
       state.__walkLastAssault = now;
       if (battle.outcome !== 'win') refused[target.node.id] = roster;
       acted++;
@@ -1018,29 +1133,38 @@ function walkAct(state, content, now, open) {
     if (buyPenUpgrade(state).ok) acted++;
   }
   if (has('buy') && state.ranch.stock.length < state.ranch.penCapacity) {
-    const cheapest = catalogFor(state, content)
+    // The map says which class answers the strip in front of you (`demand`,
+    // R37). A player who reads it buys that; the cheapest of those, or the
+    // cheapest of anything when the catalog has none yet.
+    const wanted = demanded();
+    const affordable = catalogFor(state, content)
       .filter((sp) => canSpend(sp.mailOrderPrice))
-      .sort((a, b) => a.mailOrderPrice - b.mailOrderPrice)[0];
-    if (cheapest && buyMailOrder(state, cheapest.id, content, now).ok) acted++;
+      .sort((a, b) => a.mailOrderPrice - b.mailOrderPrice);
+    // The best answer you can afford, not the cheapest: a frog and a shark
+    // are both Water, and the map's demand line is asking for the shark.
+    const answers = affordable.filter((sp) => wanted && (sp.class ?? sp.creatureClass) === wanted);
+    const pickSp = answers.length ? answers[answers.length - 1] : affordable[0];
+    if (pickSp && buyMailOrder(state, pickSp.id, content, now).ok) acted++;
   }
   return acted;
 }
 
+// The same pilot the bench flies: the game's own move scorer, so the walk
+// and the region bench disagree about a fight only when the ROSTER differs,
+// never because one of them presses the biggest number every turn.
 function walkAutoplay(battle, content) {
   let guard = 0;
   while (!battle.over && guard++ < 400) {
-    const acts = playerActions(battle);
-    const best = acts.filter((a) => a.type === 'move')
-      .sort((x, y) => playerActive(battle).moves[y.index].power - playerActive(battle).moves[x.index].power)[0] ?? acts[0];
-    if (!best) break;
-    step(battle, best, content);
+    const action = pilotAction(battle, content);
+    if (!action) break;
+    step(battle, action, content);
   }
   return battle;
 }
 
 // Walk one seeded save from an empty ranch as far as it gets, and report the
 // curve rather than a verdict — the numbers are the deliverable.
-export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2 } = {}) {
+export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = 9 } = {}) {
   const t0 = Date.UTC(2026, 0, 1);
   const state = { ...newGameState(), seed };
   ensureRanchSeeded(state, content, t0);
@@ -1077,8 +1201,11 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2 }
     } else {
       stall = 0;
     }
-    walkAct(state, content, now, shape.open);
-    if (state.dominionAt) break;
+    walkAct(state, content, now, shape.open, { t0, stepHours, sparsPerDay, stableCap });
+    // Claimed inside the act, so mark it here too — the R56 loop broke out
+    // before the next tick's mark() could see it, and `at.dominion` read
+    // undefined on a walk that had just won the map.
+    if (state.dominionAt) { mark('dominion', now); break; }
   }
 
   return {
@@ -1099,5 +1226,20 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2 }
     warRecord: { ...state.warRecord },
     defences: state.__walkDefences ?? 0,
     defencesHeld: state.__walkHeld ?? 0,
+    contests: state.campaign.contestCount ?? 0,
+    xp: state.chimeras.map((c) => c.xp ?? 0).sort((a, b) => b - a),
+    levels: state.chimeras.map((c) => levelOf(c.xp ?? 0, content)).sort((a, b) => b - a),
+    roster: state.chimeras.map((c) => ({
+      name: c.name, frame: c.frame, level: levelOf(c.xp ?? 0, content),
+      grades: Object.values(c.tokens).map((t) => t.grade[0]).join(''),
+      classes: Object.values(c.tokens).map((t) => (content.parts[t.partId]?.classAffinity ?? '?')[0]).join(''),
+    })),
+    captured: (state.__walkLog ?? []).filter((e) => e.lost).length,
+    rescues: (state.__walkLog ?? []).filter((e) => e.kind === 'rescue').length,
+    rescued: (state.__walkLog ?? []).filter((e) => e.kind === 'rescue' && e.outcome === 'win').length,
+    spars: (state.__walkLog ?? []).filter((e) => e.kind === 'sparring').length,
+    // Every fight the walker picked, in order — the treadmill is only
+    // visible in the sequence, never in the totals.
+    log: state.__walkLog ?? [],
   };
 }

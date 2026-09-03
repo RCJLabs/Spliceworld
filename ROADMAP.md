@@ -449,19 +449,29 @@ needs a gate before it is safe to touch.
 **Fifteen findings, fifteen phases,** ordered by what a player hits first.
 The queue is a proposal: prune it before starting R63.
 
-- **R63 — The contest treadmill is the wall.** The 180-day headless walk
-  (4 seeds) ends with **3–5 of 21 nodes held**, roughly **47 wins to 118
-  losses**, **~52 of 95 defences** held, and dominion reached on **zero**
-  seeds. Difficulty is not the cause: `regionBench` gives a solo Prime team
-  **80% / 75% / 75% / 50% / 50%** across the five regions. The cause is the
-  contest clock: one contest per **28.5 h** (≈0.84/day), **45%** of them
-  lost, is **~69 node losses per 180 days** against ~47 wins, and the
-  escalation of **+10% per defence** puts the fifth defence of the same node
-  at **150%**. The agenda has no `defend` entry, so the thing the player
-  loses to most is the one thing the panel never lists. *Done when: the
-  walk reaches dominion on a realistic diet for most seeds, escalation is
-  bounded or decays with tenure, defending is on the agenda, and the walk
-  is a gate with one deliberately broken contest number failing it.*
+- **R63 — The contest treadmill is the wall (shipped; premise corrected).**
+  The audit filed this on the 180-day walk: **3–5 of 21 nodes held**, and
+  it blamed the counter-offensive clock. The walk was the problem. It could
+  only see Greenfield (`nodeStates()` defaults its region to the first
+  strip), it called `startSpar()` and never fought the spar, it never ran a
+  rescue raid so every capture was a dissection, and it resolved defences
+  past `finishBattle`, so its roster read **xp [168, 19, 0, 0, 0, 0] at day
+  180** and it attacked the Guard Post **93 times at 2%**. Rewritten to
+  play the game as designed — whole map, three spars a day, rescues, the
+  A-team, Prime graduations, the class the map's demand line asks for, a
+  stable of nine — it holds **16 / 20 / 21 / 21** at day 180 on four seeds
+  and reaches dominion on two of them (day 45, day 135); three of six on a
+  wider set. Then the contest dials were measured: a cap changed nothing,
+  a decay made it worse (the record also spaces the schedule), a grace
+  period was noise, and a first defence at **300%** still cost under a
+  quarter of the map. Switch veterancy off and the same walker holds
+  **3 nodes**. Shipped: the walker, `escalationMax: 2` as insurance
+  against the 330% tail, `defend` and `rescue` on the agenda, and a gate
+  that pins all of it — including that contests are pressure and levels
+  are the ladder. *Done when (as restated by the measurement): the walk
+  reaches dominion on a realistic diet, the two clocks that cost a node or
+  a creature are on the agenda, escalation has a ceiling, and the walk is
+  a gate that a broken veterancy number fails.*
 - **R64 — Being away is strictly profitable.** Thirty days closed: **+$190
   a day banked, zero contests** (the tick resolves one contest regardless
   of elapsed time), the captive dissected, animals at the condition floor

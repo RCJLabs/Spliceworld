@@ -39,6 +39,18 @@ const DEFAULTS = {
   escalationPerDefence: 0.1,
   rewardScale: 1.6,
   notoriety: 8,
+  // R63. The ceiling on the grudge multiplier — they bring at most double.
+  // Mirrors regions.json (the suite holds the two equal, because the data
+  // wins and a default that disagrees is a lie); a data author who wants
+  // the old unbounded ramp back sets it to null. Unbounded, a node defended
+  // twenty-two times faced the same garrison at 330%, and a ramp with no
+  // top makes dominion a state you can only pass through. Two more dials
+  // were built and measured over six 180-day walks and are deliberately
+  // NOT here: a grace period after a conquest changed nothing the defence
+  // window did not already cover, and a memory that forgot old defences
+  // made things worse — the record also spaces the schedule, so forgetting
+  // brought the convoys back faster. A dial nobody should turn is clutter.
+  escalationMax: 2,
   blurb: 'They are back, and this time they brought a budget.',
   intel: 'Counter-offensive at {pct}% strength.',
   news: {},
@@ -105,9 +117,11 @@ function chooseNode(state, content) {
 }
 
 // How much stronger this convoy is than the garrison you originally beat.
+// Capped by `escalationMax` when the data sets one (R63).
 export function escalationOf(state, content, nodeId) {
   const t = contestTuning(content);
-  return 1 + t.escalation + defencesOf(state, nodeId) * t.escalationPerDefence;
+  const raw = 1 + t.escalation + defencesOf(state, nodeId) * t.escalationPerDefence;
+  return t.escalationMax ? Math.min(t.escalationMax, raw) : raw;
 }
 
 // The defence. It is the node's OWN garrison, at `escalation` above the

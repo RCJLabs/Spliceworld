@@ -6698,6 +6698,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     graduate: 'data-act="extract"', splice: 'id="thtr-splice"', breed: 'data-act="breed"',
     hatch: 'data-act="hatch"', care: 'data-act="care"', vat: 'id="vat-go"', spar: 'data-spar=',
     job: 'data-job=', assault: 'data-node=', treat: 'data-treat=', train: 'data-train=',
+    defend: 'data-defend=', rescue: 'data-rescue=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
@@ -10450,8 +10451,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // looked at the string this gate exists to make worth reading.
     if (after.charges === 1) assert.ok(/\b1 charge\b/.test(hint2), `singular (${hint2})`);
 
-    // Every other entry is untouched by the change.
-    const strings = AGENDA.filter((a) => a.id !== 'spar');
+    // Every other entry is untouched by the change. R63 added two more by
+    // R48's own rule — an entry whose whole value is a NUMBER (hours left on
+    // a convoy, hours left on a captive) — so those are named here too;
+    // anything else with a function hint has to argue its way onto this list.
+    const NUMBERED = ['spar', 'defend', 'rescue'];
+    const strings = AGENDA.filter((a) => !NUMBERED.includes(a.id));
     assert.ok(strings.length > 10, 'there are plenty of them');
     for (const a of strings) {
       assert.equal(typeof a.hint, 'string', `"${a.id}" still declares a plain string hint`);
@@ -12594,6 +12599,114 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(typeof u.transformLine === 'string' && u.transformLine.length > 20,
       `${u.id} announces its second stage in its own words`);
     assert.ok(content.enemies[u.transformInto], `${u.id} transforms into a unit that exists`);
+  }
+}
+
+// --- R63: the contest treadmill, measured honestly ------------------------
+//
+// The audit's R63 said the 180-day walk held 3–5 of 21 nodes and blamed the
+// counter-offensive clock. The walk was wrong in four ways (below), and once
+// it played the game as designed the map was won in six months on most seeds
+// with contests moving the outcome by less than the noise. This block is the
+// corrected measurement, pinned: what the walk does, what it reaches, what
+// moves it, and the one contest dial that shipped.
+{
+  const { campaignWalk: walkCampaign } = await import('./sim.js');
+  const { contestTuning: tuningOf, escalationOf: escOf, contestEncounter: convoyOf } = await import('../campaign/contest.js');
+  const { AGENDA: AGENDA63, agenda: agenda63 } = await import('../ranch/agenda.js');
+  const { makeSimChimera: simChimera63, STARTER_BUILD: STARTER63 } = await import('./sim.js');
+  const WALK_SEEDS = [2026, 7, 99, 4242];
+  const MIN_DOMINION_SEEDS = 1;   // measured 2 of 4 (day 45 and day 135); 3 of 6 on a wider set
+  const MIN_NODES_EACH = 12;      // measured 16/20/21/21 — the floor is the margin, not the number
+  const DAY63 = 24 * HOUR;
+  const t = tuningOf(content);
+  const total = Object.values(content.regions).flatMap((r) => r.nodes).length;
+
+  // 1. THE PREMISE, corrected. The audit's "3–5 of 21 nodes in 180 days" was
+  //    the walker, not the game: it saw only Greenfield (nodeStates() defaults
+  //    its region), burned every sparring charge without fighting, never ran
+  //    a rescue, and resolved defences past finishBattle. Each of those is
+  //    now a thing the walk visibly does.
+  const w45 = walkCampaign(content, { seed: 2026, days: 45 });
+  assert.ok(w45.nodes > 5, `the walk leaves Greenfield (${w45.nodes} nodes held by day 45; the first strip has 5)`);
+  assert.ok(w45.spars > 0 && w45.levels[0] >= 5, `sparring is fought, not just charged (${w45.spars} spars, best level ${w45.levels[0]})`);
+  assert.ok(w45.rescues > 0, `a captured creature is rescued rather than written off (${w45.rescues} raids)`);
+  assert.ok(w45.log.some((e) => e.kind === 'defend' && e.escalation), 'defences go through the same door the War Room uses');
+
+  // 2. THE CRITERION. Four seeds, 180 days, a realistic diet (three spars a
+  //    day, a nine-creature stable, Prime graduations): most reach dominion
+  //    and none is walled below a floor. Aggregates rather than one number,
+  //    because the walk is chaotic and a threshold with no margin is a gate
+  //    that fails on the next unrelated RNG change.
+  const walks = WALK_SEEDS.map((seed) => walkCampaign(content, { seed, days: 180 }));
+  const doms = walks.filter((w) => w.at.dominion != null).length;
+  const heldTotal = walks.reduce((n, w) => n + w.nodes, 0);
+  const summary = walks.map((w) => `${w.seed}:${w.nodes}${w.at.dominion != null ? `@d${w.at.dominion}` : ''}`).join(' ');
+  console.log(`   walk: ${summary} — ${doms} dominion, ${heldTotal}/${total * walks.length} nodes`);
+  assert.ok(doms >= MIN_DOMINION_SEEDS, `at least ${MIN_DOMINION_SEEDS} of ${WALK_SEEDS.length} seeds reach dominion inside 180 days (${summary})`);
+  assert.ok(heldTotal >= MIN_NODES_EACH * walks.length, `and across the seeds most of the map is held at day 180 (${heldTotal} of ${total * walks.length}; floor ${MIN_NODES_EACH * walks.length})`);
+
+  // 3. What the walk is sensitive to — and what it is not. The audit filed
+  //    contests as the wall; the honest walk says the wall is VETERANCY.
+  //    Switch levels off and the same walker holds three nodes, exactly the
+  //    "3–5 of 21" the broken walker reported. Meanwhile a first defence at
+  //    300% costs under a quarter of the map. That pair is the finding, and
+  //    the second half is what makes the first half a gate rather than a
+  //    story: a walk that no number could move would prove nothing.
+  {
+    const flat = { ...content, trainingMeta: { ...content.trainingMeta, levels: [] } };
+    const walled = WALK_SEEDS.slice(0, 2).map((seed) => walkCampaign(flat, { seed, days: 180 }));
+    const okNodes = walks.slice(0, 2).reduce((n, w) => n + w.nodes, 0);
+    const walledNodes = walled.reduce((n, w) => n + w.nodes, 0);
+    console.log(`   no veterancy: ${walled.map((w) => `${w.seed}:${w.nodes}`).join(' ')} against ${okNodes}`);
+    assert.ok(walledNodes <= okNodes / 2, `without levels the walk is walled (${walledNodes} nodes against ${okNodes}) — the ladder R41 built is the one the campaign climbs`);
+    const triple = { ...content, campaignMeta: { ...content.campaignMeta, contestation: { ...t, escalation: 2.0 } } };
+    const pressed = WALK_SEEDS.slice(0, 2).map((seed) => walkCampaign(triple, { seed, days: 180 }));
+    const pressedNodes = pressed.reduce((n, w) => n + w.nodes, 0);
+    console.log(`   first defence at 300%: ${pressed.map((w) => `${w.seed}:${w.nodes}`).join(' ')} against ${okNodes}`);
+    assert.ok(pressedNodes >= okNodes * 0.75, `contests are pressure, not the wall: a first defence at 300% costs under a quarter of the map (${pressedNodes} against ${okNodes})`);
+  }
+
+  // 4. Escalation is bounded. Measured, not wished: over six 180-day walks a
+  //    cap changed the outcome by nothing, and a decay made it worse, so the
+  //    cap is the one that ships and it sits ABOVE anything the walk reached
+  //    (230%) — insurance against the 330% tail, not a difficulty change.
+  {
+    assert.ok(t.escalationMax >= 1.5 && t.escalationMax <= 2.5, `regions.json caps the grudge (${t.escalationMax})`);
+    const st = { ...newGameState(), seed: 63 };
+    st.campaign.heldNodes = ['barn_perimeter'];
+    st.campaign.defences = { barn_perimeter: 30 };
+    assert.equal(escOf(st, content, 'barn_perimeter'), t.escalationMax, 'thirty defences price at the cap, not at 410%');
+    st.campaign.defences.barn_perimeter = 2;
+    assert.equal(escOf(st, content, 'barn_perimeter'), 1 + t.escalation + 2 * t.escalationPerDefence, 'below the cap the ramp is untouched');
+    const enc = convoyOf(st, content, { nodeId: 'barn_perimeter', startedAt: t0, deadline: t0 + 13 * HOUR, gen: 2 });
+    assert.ok(Math.abs(enc.escalation - (1 + t.escalation + 2 * t.escalationPerDefence)) < 1e-9, 'and the convoy carries it');
+    // The whole walk stays under the cap the way the cap was sized: it never
+    // binds on a healthy campaign, so a cap that binds is the walk telling
+    // you the ramp has changed.
+    const peak = Math.max(...walks.flatMap((w) => w.log.filter((e) => e.kind === 'defend').map((e) => e.escalation)));
+    assert.ok(peak <= t.escalationMax, `no defence in the walk priced above the cap (peak ${peak})`);
+  }
+
+  // 7. Defending and rescuing are on the agenda — the two clocks that cost a
+  //    node or a creature when they run out, and the two the panel never
+  //    listed. Both productive (`campaign`), both ahead of the job and the
+  //    assault, both with the time left in the hint.
+  {
+    const ids = AGENDA63.map((i) => i.id);
+    assert.ok(ids.indexOf('defend') < ids.indexOf('job') && ids.indexOf('rescue') < ids.indexOf('job'), 'ahead of the job board');
+    const st = { ...newGameState(), seed: 65 };
+    st.chimeras = [{ ...simChimera63(STARTER63.frame, STARTER63.partIds, 'prime', content), id: 'q0', name: 'Q' }];
+    assert.ok(!agenda63(st, content, t0).some((i) => i.id === 'defend'), 'nothing to defend on a quiet map');
+    st.campaign.contested = [{ nodeId: 'barn_perimeter', startedAt: t0, deadline: t0 + 5 * HOUR, gen: 2 }];
+    const defend = agenda63(st, content, t0).find((i) => i.id === 'defend');
+    assert.ok(defend && defend.kind === 'campaign' && defend.screen === 'battle', 'a convoy on the road is a thing to do');
+    assert.ok(/5h/.test(defend.hint), `and the hint says how long you have (${defend.hint})`);
+    st.campaign.captives = [{ id: 'cap1', chimera: { name: 'Gnash' }, deadline: t0 + 12 * HOUR }];
+    const rescue = agenda63(st, content, t0).find((i) => i.id === 'rescue');
+    assert.ok(rescue && /Gnash/.test(rescue.hint) && /12h/.test(rescue.hint), `the captive is named and timed (${rescue?.hint})`);
+    st.chimeras[0].injury = { name: 'x', until: t0 + 9 * HOUR };
+    assert.ok(!agenda63(st, content, t0).some((i) => ['defend', 'rescue'].includes(i.id)), 'neither is offered with nobody fit to go');
   }
 }
 

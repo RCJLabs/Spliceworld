@@ -360,7 +360,7 @@
     }
   ],
   "contestation": {
-    "_doc": "startsAtGen/minHeld gate the whole system so early play is untouched. cooldownHours is the gap between counter-offensives, lengthened by cooldownPerDefenceHours for every successful defence of that node — they learn. windowHours is how long you have once you see it. The defence reuses the node's OWN encounter at `escalation` above its authored strength, growing by escalationPerDefence every time you hold the place: a continuous dial rather than a tier step, because the authored tier ladder is deliberately lumpy (a tier is a band of CONTENT) and +1 tier on an already-top-tier boss is a wall while +1 on a mid encounter is a shrug. A new region therefore costs zero new encounter data, and the ramp is endless and self-paced. rewardScale multiplies the node encounter's reward; holding the line also impounds one of the attacking units, because a conquest reward has to expand what you can CREATE (Law 2) and enemy tech is how this one does. Measured against the balance harness's yardstick team of three at prismatic: a first defence runs 100/98/88/12/42% across the five Greenfield nodes against 100/100/93/30/55% for the original assault.",
+    "_doc": "startsAtGen/minHeld gate the whole system so early play is untouched. cooldownHours is the gap between counter-offensives, lengthened by cooldownPerDefenceHours for every successful defence of that node — they learn. windowHours is how long you have once you see it. The defence reuses the node's OWN encounter at `escalation` above its authored strength, growing by escalationPerDefence every time you hold the place and capped at escalationMax (R63: the honest 180-day walk saw a node defended twenty-two times at 330% of its garrison; they bring at most double, so a roster that can hold double holds for good): a continuous dial rather than a tier step, because the authored tier ladder is deliberately lumpy (a tier is a band of CONTENT) and +1 tier on an already-top-tier boss is a wall while +1 on a mid encounter is a shrug. A new region therefore costs zero new encounter data, and the ramp is endless and self-paced. rewardScale multiplies the node encounter's reward; holding the line also impounds one of the attacking units, because a conquest reward has to expand what you can CREATE (Law 2) and enemy tech is how this one does. Measured against the balance harness's yardstick team of three at prismatic: a first defence runs 100/98/88/12/42% across the five Greenfield nodes against 100/100/93/30/55% for the original assault.",
     "startsAtGen": 2,
     "minHeld": 2,
     "maxConcurrent": 1,
@@ -371,6 +371,7 @@
     "windowHours": 13.5,
     "escalation": 0.1,
     "escalationPerDefence": 0.1,
+    "escalationMax": 2,
     "rewardScale": 1.6,
     "notoriety": 8,
     "blurb": "They have been back to the drawing board and the drawing board had a bigger budget.",
