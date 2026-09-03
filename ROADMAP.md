@@ -1005,16 +1005,64 @@ The queue is a proposal: prune it before starting R63.
   idea which field it belongs to. *Done when: no render loses focus, every
   control is a real control, state changes announce, and `tools/a11y.js`
   walks the app by keyboard alone.*
-- **R74 — The briefing runs 64–160 battles per checkbox.** `campaign/ui.js`
-  calls `forecast` and then `diagnose`, whose first act is the same
-  `forecast` again, and on a losing band two more 32-battle sweeps —
-  **~150 ms synchronous in Node per toggle**, most of a second on a
-  mid-range phone. Boot is the same shape: **52 modules, 623 KB of JS and
-  745 KB of JSON** (`parts.json` alone 410 KB) all eager, **zero dynamic
-  imports**, against CLAUDE.md's *"lazy-init heavy systems."* *Done when:
-  `diagnose` reuses the computed forecast and runs only on losing bands,
-  the War Room, battle and Dex load on first use, and a gate caps the
-  eager import graph from `main.js`.*
+- **R74 — The briefing runs 64–160 battles per checkbox.** ✅ *Shipped.*
+  Re-measured before touching anything, and the graph had grown since the
+  entry was written: **55 modules and 701 KB** eager, not 52 and 623.
+  - **`diagnose` was paying to decline.** The comment above its call site
+    already claimed it was "only computed on a verdict that needs it" — true
+    of the RESULT and of nothing else. It ran a full 32-battle forecast of
+    its own purely to learn the band, then returned `null` on any winning
+    one. That forecast was `forecast(team, encounter, content, seed, now,
+    { runs: 32 })` and the briefing's own call is the same function with the
+    same arguments and the same seed, so the two were **identical by
+    construction** — verified across all 26 encounters before the change.
+    The band now travels in the forecast the caller already holds
+    (`wantsDiagnosis`, exported so one place knows which verdicts want a
+    reason), and `diagnose` takes that forecast instead of recomputing it.
+    Measured: a **winning** band, which is the common case, went 4.9 ms →
+    **2.1 ms**; a hopeless one 20.5 ms → **11.0 ms**; battles per toggle
+    155 → **123** with the obedience replay and 123 → **91** without.
+  - **Two screens load on first use.** The War Room (which is also the
+    battle screen — one module renders both) and the Dex. That takes 8
+    modules and 131 KB out of the eager graph: `campaign/ui.js`,
+    `battle/ui.js`, `battle/forecast.js`, `battle/readout.js`,
+    `campaign/warroom.js`, `splice/dex-ui.js`, `splice/dexentry.js` and
+    `ui/tabs.js`, reachable no other way. **55 modules / 701 KB → 47 / 570
+    KB**, and boot went from 81 network requests to 73. What this buys is
+    parse and execute, **not download**: `sw.js` precaches the whole shell
+    on purpose so the game works on a train, and the gate asserts the
+    deferred modules are still in that list. The boot simply stops compiling
+    a battle engine's worth of UI before it can paint a ranch.
+  *Done when: `diagnose` reuses the computed forecast and runs only on
+  losing bands, the War Room, battle and Dex load on first use, and a gate
+  caps the eager import graph from `main.js`.* ✅ — the cap is a budget (50
+  modules, 620 KB) rather than a fingerprint, because a gate that fails on
+  a small new module is one people learn to raise without reading; what it
+  has to catch is the graph regrowing by a SCREEN, and putting that import
+  back at the top of `main.js` costs eight modules at once. It also asserts
+  which screens are deferred, that their modules are genuinely absent from
+  the eager graph, that each still resolves to a real export (nothing
+  type-checks a string inside `import()`), and that each is still
+  precached.
+- **R81 — The other 766 KB, and the modules eager for one function.** R74
+  halved the eager JS the boot compiles; the audit that checked it measured
+  what is left, so the next pass starts from numbers rather than a guess.
+  **The JSON is now the larger half and none of it is deferred:**
+  `parts.json` is 410 KB of which **283 KB (69%) is `parts[].shapes`**
+  geometry read only by the renderer, and `enemies.json` is 172 KB of which
+  **126 KB (73%) is `units[].shapes`** — a split-file or lazy-shapes shape
+  is the obvious win, and the same audit found the guardrail on the obvious
+  *wrong* version of it: the Ranch genuinely reads `enemies.json` through
+  `ranch/agenda.js`, so "fetch it when the player opens the War Room" would
+  break the agenda panel. **Three modules are eager for almost nothing:**
+  `battle/engine.js` (63 KB, the single largest, pulled in for six small
+  helpers), `campaign/campaign.js` (30 KB, for one function that is a bare
+  re-export), and `save/settings-ui.js` (16 KB, a modal behind one click
+  handler, not a screen at all). And `sw.js` is **network-first for
+  everything**, so every precached module still costs a request that must
+  fail before the cache answers. *Done when: the shapes are not fetched
+  before the first paint, the three modules above are behind the thing that
+  needs them, and the import-graph gate's cap comes down to match.*
 - **R75 — The small wrongs the walk found.** Rename drops `res.msg`; the
   empty-vault SPLICE IT is disabled with its reason suppressed
   (`theater-ui.js:164`); Assault is enabled with everyone injured while only

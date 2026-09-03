@@ -49,6 +49,15 @@ export function bandFor(winRate) {
   return BANDS.find((b) => winRate >= b.floor) ?? BANDS[BANDS.length - 1];
 }
 
+// R74 — which verdicts want a reason. `diagnose` used to answer this itself,
+// which meant it had to RUN a forecast before it could decline to say
+// anything, so a walkover paid 32 battles to be told it was fine. Exported
+// so the caller can ask before spending anything, and so the answer lives in
+// one place rather than as a pair of string comparisons at each site.
+export function wantsDiagnosis(band) {
+  return band?.id === 'losing' || band?.id === 'hopeless';
+}
+
 function pilot(battle, content) {
   const actions = playerActions(battle);
   if (!actions.length) return null;
@@ -171,10 +180,17 @@ const CAUSE_FLOOR = 0.1;
 // after, so Precinct is now honestly a GRADE problem for Water too. The
 // live example is an Air team at the Drowned Marina, where the class layer
 // is worth 69pp and the chart layer nothing.
-export function diagnose(team, encounter, content, seed = 1, now = 0, { canBringMore = false } = {}) {
+// `base` is the forecast the caller already computed and is already showing.
+// Recomputing it here was 32 battles of pure duplicate on every render: the
+// call is `forecast(team, encounter, content, seed, now, { runs: 32 })`, and
+// the briefing's own call is the same function with the same arguments and
+// the same seed, so the two results were identical by construction —
+// verified across all 26 encounters before this was changed. Left optional
+// so a caller with no forecast in hand (the suite has two) still works.
+export function diagnose(team, encounter, content, seed = 1, now = 0, { canBringMore = false, base: given = null } = {}) {
   const runs = 32;
-  const base = forecast(team, encounter, content, seed, now, { runs });
-  if (base.band.id !== 'losing' && base.band.id !== 'hopeless') return null;
+  const base = given ?? forecast(team, encounter, content, seed, now, { runs });
+  if (!wantsDiagnosis(base.band)) return null;
 
   // The one prescription that is free to check and the only one A1's
   // original wall actually needed: they are short a body AND have one to

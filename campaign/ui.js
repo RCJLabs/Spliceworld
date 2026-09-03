@@ -14,7 +14,7 @@
 
 import { renderArena } from '../battle/ui.js';
 import { createBattle, isInjured, obediencePercent, combatantFromChimera } from '../battle/engine.js';
-import { forecast, diagnose } from '../battle/forecast.js';
+import { forecast, diagnose, wantsDiagnosis } from '../battle/forecast.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
@@ -936,9 +936,15 @@ function renderBriefing(root, ctx) {
   // ("bring more creatures") was, for a player who already had three,
   // advice the screen itself refuses to accept. Only computed on a verdict
   // that needs it, the same way the obedience replay is.
-  const why = fc
+  // R74 — the comment above says "only computed on a verdict that needs it",
+  // and until now that was only true of the RESULT: `diagnose` ran a full
+  // 32-battle forecast of its own before it could work out the band and
+  // return null, so a walkover paid for a diagnosis it then threw away. The
+  // band is already in `fc`, so ask it here — and hand `fc` over rather than
+  // let diagnose recompute the identical sweep a third time.
+  const why = fc && wantsDiagnosis(fc.band)
     ? diagnose(picked, encounter, content, state.seed, t,
-      { canBringMore: canBringMore(state, draftTeam, t, TEAM_CAP) })
+      { canBringMore: canBringMore(state, draftTeam, t, TEAM_CAP), base: fc })
     : null;
   const odds = fc
     ? `

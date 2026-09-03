@@ -12,10 +12,8 @@ import { renderVaultScreen } from './splice/vault-ui.js';
 import { renderTheaterScreen } from './splice/theater-ui.js';
 import { renderPensScreen } from './splice/pens-ui.js';
 import { runExtraction } from './splice/extract-ui.js';
-import { renderWarRoomScreen } from './campaign/ui.js';
 import { pushNews } from './campaign/campaign.js';
 import { tickWorld } from './campaign/world.js';
-import { renderDexScreen } from './splice/dex-ui.js';
 import * as sfx from './audio/sfx.js';
 import { watchSignals, cuesFor } from './audio/sfx.js';
 import { renderIcon } from './ui/icons.js';
@@ -60,13 +58,64 @@ const ctx = {
   applyTheme: () => applyTheme(),
 };
 
+// R74 — the two heaviest screens load on FIRST USE rather than at boot.
+// Measured: they pull in 8 modules and 133 KB reachable no other way (the
+// War Room and the Dex, and through the War Room the whole battle UI, the
+// forecast, the readout and the subtab bar), out of an eager graph of 55
+// modules and 701 KB with no dynamic imports in it at all — against
+// CLAUDE.md's own "lazy-init heavy systems".
+//
+// What this buys is PARSE AND EXECUTE time, not download: sw.js precaches
+// the whole shell on purpose, so the bytes are already on the device for
+// offline play. That is the honest version of the win — the boot stops
+// compiling a battle engine's worth of UI before it can paint a ranch.
+//
+// A screen is rendered by whatever it is: a function that paints now, or a
+// loader that paints as soon as the module arrives. Callers cannot tell,
+// which is why showScreen and tick stay synchronous.
+const warmScreens = new Map();
+const loadingScreens = new Map();
+function lazy(load, exportName) {
+  return (root) => {
+    const ready = warmScreens.get(exportName);
+    if (ready) { ready(root, ctx); return; }
+    let inFlight = loadingScreens.get(exportName);
+    if (!inFlight) {
+      inFlight = load();
+      loadingScreens.set(exportName, inFlight);
+    }
+    // Two-argument `then`, NOT `.then(...).catch(...)`: a catch chained after
+    // the render handler also catches anything the RENDER throws, which would
+    // blame the network for a bug in the War Room, tell the player to check
+    // their connection, and delete the in-flight entry while the warm one was
+    // already set. The rejection path here can only be the import failing.
+    inFlight.then(
+      (mod) => {
+        warmScreens.set(exportName, mod[exportName]);
+        // If the player moved on while this was loading there is nothing to
+        // paint that anyone can see — and the same predicate tick() uses to
+        // decide whether a screen is worth rendering at all. The next tap
+        // renders synchronously off the warm cache.
+        if (!root.hidden) mod[exportName](root, ctx);
+      },
+      () => {
+        // Offline with a cold cache is the only way here. Say so rather than
+        // leaving the panel blank, and let the next tap try again.
+        loadingScreens.delete(exportName);
+        root.innerHTML = '<section class="card"><p class="ranch-msg">This screen could not be loaded.'
+          + ' Check your connection and tap the tab again.</p></section>';
+      }
+    );
+  };
+}
+
 const SCREENS = {
   ranch: (root) => renderRanchScreen(root, ctx),
   pens: (root) => renderPensScreen(root, ctx),
   vault: (root) => renderVaultScreen(root, ctx),
   theater: (root) => renderTheaterScreen(root, ctx),
-  battle: (root) => renderWarRoomScreen(root, ctx),
-  dex: (root) => renderDexScreen(root, ctx),
+  battle: lazy(() => import('./campaign/ui.js'), 'renderWarRoomScreen'),
+  dex: lazy(() => import('./splice/dex-ui.js'), 'renderDexScreen'),
 };
 
 // Colour scheme. `settings.theme` picks one of the blocks in style.css
