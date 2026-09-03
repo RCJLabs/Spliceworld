@@ -1,5 +1,67 @@
 # PROGRESS
 
+## Session 86 — R63: the contest treadmill, measured honestly ✅
+
+**Acceptance criterion (as restated by the measurement):** the walk reaches
+dominion on a realistic diet, defending and rescuing are on the agenda,
+escalation has a ceiling, and the walk is a gate that a broken number fails —
+**passes.** No schema change; `SAVE_VERSION` stays **34**. `sw.js` cache →
+`v34-contest`.
+
+### The premise was the walker
+R63 was filed on "3–5 of 21 nodes in 180 days". Four defects in
+`campaignWalk` produced that number, none of them the game:
+- it saw only Greenfield — `nodeStates(state, content)` defaults its region
+  argument to the first strip, so it never saw Kestrel exist;
+- it called `startSpar()` and never fought the spar: every charge burned for
+  zero xp, and R43's ladder out of the wall was never climbed;
+- it never ran a rescue raid, so a loss a day drained veterans through the
+  impound faster than they levelled (xp at day 180: `[168, 19, 0, 0, 0, 0]`);
+- it resolved defences through `resolveContest()` directly, past
+  `finishBattle` — no xp, no injuries, no capture on a lost defence — and its
+  "do not retry a node that beat this roster" rule keyed on total xp, which
+  changes every fight, so it retried the Guard Post 93 times.
+
+### What the honest walk says
+Rewritten to play as designed (whole map, best three by level, three spars a
+day, rescues, wait for the A-team inside the window, Prime graduations,
+build the class the demand line asks for, a stable of nine):
+
+| 180 days, seed | 2026 | 7 | 99 | 4242 |
+|---|---|---|---|---|
+| nodes held of 21 | 16 | 20 | 21 (dominion d45) | 21 (dominion d135) |
+
+Six seeds: dominion on three. Then every contest dial was measured over the
+six: `escalationMax 1.5` neutral, `memoryHours 168` **worse** (the defence
+record also spaces the schedule, so forgetting brought convoys back 50%
+more often), a 48h grace noise. Broken numbers: a 30-minute window, a 300%
+first defence, four convoys an hour — 16–21 nodes, dominion still reached.
+**Veterancy off: 3 nodes.** Contests are pressure; levels are the ladder.
+
+### Shipped
+- `tools/sim.js`: the walker rewrite above, `roster`/`log`/`spars`/`rescues`
+  in the report, and a fix to `at.dominion` (the loop broke out before the
+  mark). `regionStates` for the map, `pilotAction` for the fights.
+- `data/regions.json` + `campaign/contest.js`: `escalationMax: 2` — above
+  anything the walk reached (230%), insurance against the 330% tail. Grace
+  and memory were built, measured, and removed.
+- `ranch/agenda.js`: `defend` and `rescue`, ahead of the job board, with the
+  time left in the hint. Both `campaign` kind; the walker reads them.
+- Gate (end of smoke.js): the walk leaves Greenfield, spars and rescues for
+  real, ≥1 of 4 seeds reaches dominion and ≥48 of 84 nodes are held, no
+  veterancy halves it, a 300% first defence costs under a quarter, the cap
+  prices thirty defences at 200%, the two agenda entries read right.
+
+### Known issues
+- The walk gate adds ~70s to the suite (nine 180-day walks). Worth it; the
+  R56 45-day gate stays as the fast one.
+- §9.4 R64's absence claim (zero contests in thirty days away) is untested by
+  this walker, which ticks every two hours. Still queued.
+
+### Next session's first task
+R64 — being away is strictly profitable. Start by making the walker skip
+thirty days and comparing it with itself.
+
 ## Session 85 — Fourth audit + hotfixes ✅
 
 **Scope:** a full audit of the shipped game, not a milestone. Four agents

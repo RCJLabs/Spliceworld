@@ -38,6 +38,7 @@ import { treatmentCost } from '../splice/scars.js';
 import { activeVat, vatPlan } from '../splice/chaos.js';
 import { operationList, opReady, activeOps, laneFree } from '../campaign/operations.js';
 import { reachableEncounterIds } from '../campaign/map.js';
+import { contestRemainingMs } from '../campaign/contest.js';
 import { isInjured } from '../battle/engine.js';
 import { sparCharges, canSpar } from '../campaign/sparring.js';
 
@@ -106,6 +107,32 @@ export const AGENDA = [
       return `${charges} charge${charges === 1 ? '' : 's'} in the ring — free xp against a garrison you already hold.`;
     },
     ready: (state, content, now) => canSpar(state, content, now).ok,
+  },
+  {
+    // R63. The two clocks that cost a node or a creature when they run out
+    // were the two things this list never mentioned. The 180-day walk lost
+    // more nodes to counter-offensives than it won by assault, and the
+    // panel whose job is to say what is open never said "defend". Both
+    // sit ahead of the job and the assault because both are the thing a
+    // player loses by doing the other two first.
+    id: 'defend', kind: 'campaign', screen: 'battle', label: 'Defend a node',
+    hint: (state, content, now) => {
+      const soonest = Math.min(...(state.campaign.contested ?? []).map((c) => contestRemainingMs(c, now)));
+      const hours = Math.max(0, soonest) / HOUR;
+      return `A convoy is rolling on ${state.campaign.contested.length === 1 ? 'a node you hold' : `${state.campaign.contested.length} nodes you hold`}. ${hours < 1 ? 'Under an hour' : `${Math.floor(hours)}h`} to answer it, and the income is suspended until you do.`;
+    },
+    ready: (state, content, now) =>
+      (state.campaign.contested ?? []).length > 0 && fit(state, now).length > 0,
+  },
+  {
+    id: 'rescue', kind: 'campaign', screen: 'battle', label: 'Rescue a captive',
+    hint: (state, content, now) => {
+      const soonest = Math.min(...(state.campaign.captives ?? []).map((c) => c.deadline - now));
+      const hours = Math.max(0, soonest) / HOUR;
+      return `${state.campaign.captives.length === 1 ? state.campaign.captives[0].chimera.name : `${state.campaign.captives.length} of yours`} in the impound. ${hours < 1 ? 'Under an hour' : `${Math.floor(hours)}h`} before the unauthorized peer review.`;
+    },
+    ready: (state, content, now) =>
+      (state.campaign.captives ?? []).some((c) => c.deadline > now) && fit(state, now).length > 0,
   },
   {
     id: 'job', kind: 'campaign', screen: 'battle', label: 'Run a job',
