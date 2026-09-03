@@ -6968,6 +6968,474 @@
           "strokeWidth": 4
         }
       ]
+    },
+    {
+      "id": "siege_tank",
+      "name": "Siege Tank",
+      "hp": 138,
+      "power": 18,
+      "armor": 20,
+      "speed": 5,
+      "stamina": 170,
+      "regen": 17,
+      "tags": [
+        "Vehicle",
+        "Armored"
+      ],
+      "class": "ground",
+      "salvage": [
+        "blast_shield",
+        "v8_heart"
+      ],
+      "salvageGrades": [
+        "prime",
+        "prime"
+      ],
+      "koLine": "The Siege Tank's turret rotates left, keeps rotating, and declines to stop. It retires very loudly and in a circle.",
+      "moves": [
+        {
+          "name": "Main Gun",
+          "power": 88,
+          "cost": 34,
+          "acc": 90,
+          "tags": [],
+          "keywords": {
+            "charge": true
+          }
+        },
+        {
+          "name": "Coax Chatter",
+          "power": 30,
+          "cost": 16,
+          "acc": 95,
+          "tags": [],
+          "keywords": {
+            "multiHit": 2
+          }
+        },
+        {
+          "name": "Button Up",
+          "power": 0,
+          "cost": 14,
+          "acc": 100,
+          "tags": [],
+          "keywords": {
+            "guard": true
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "rect",
+          "x": -82,
+          "y": 24,
+          "width": 160,
+          "height": 18,
+          "rx": 9,
+          "fill": "#3f4650"
+        },
+        {
+          "type": "path",
+          "d": "M -74 28 L 70 28 M -74 38 L 70 38",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 2,
+          "opacity": 0.35
+        },
+        {
+          "type": "circle",
+          "cx": -64,
+          "cy": 33,
+          "r": 8,
+          "fill": "#565f6c",
+          "stroke": "#2b2440",
+          "strokeWidth": 2
+        },
+        {
+          "type": "circle",
+          "cx": -38,
+          "cy": 33,
+          "r": 8,
+          "fill": "#565f6c",
+          "stroke": "#2b2440",
+          "strokeWidth": 2
+        },
+        {
+          "type": "circle",
+          "cx": -12,
+          "cy": 33,
+          "r": 8,
+          "fill": "#565f6c",
+          "stroke": "#2b2440",
+          "strokeWidth": 2
+        },
+        {
+          "type": "circle",
+          "cx": 14,
+          "cy": 33,
+          "r": 8,
+          "fill": "#565f6c",
+          "stroke": "#2b2440",
+          "strokeWidth": 2
+        },
+        {
+          "type": "circle",
+          "cx": 40,
+          "cy": 33,
+          "r": 8,
+          "fill": "#565f6c",
+          "stroke": "#2b2440",
+          "strokeWidth": 2
+        },
+        {
+          "type": "circle",
+          "cx": 64,
+          "cy": 33,
+          "r": 8,
+          "fill": "#565f6c",
+          "stroke": "#2b2440",
+          "strokeWidth": 2
+        },
+        {
+          "type": "path",
+          "d": "M -80 24 L -86 4 L -52 -8 L 56 -8 L 80 6 L 80 24 Z",
+          "fill": "#6b7482",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -52 -8 L 56 -8 L 48 -18 L -44 -18 Z",
+          "fill": "#565f6c",
+          "strokeWidth": 3
+        },
+        {
+          "type": "path",
+          "d": "M -70 10 L -60 2",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 3,
+          "opacity": 0.4
+        },
+        {
+          "type": "path",
+          "d": "M -32 -18 C -32 -40 -8 -46 12 -46 C 34 -46 44 -38 44 -18 Z",
+          "fill": "#6b7482",
+          "strokeWidth": 4
+        },
+        {
+          "type": "ellipse",
+          "cx": 0,
+          "cy": -46,
+          "rx": 13,
+          "ry": 4,
+          "fill": "#565f6c",
+          "strokeWidth": 2
+        },
+        {
+          "type": "rect",
+          "x": 40,
+          "y": -34,
+          "width": 58,
+          "height": 10,
+          "rx": 3,
+          "fill": "#565f6c",
+          "strokeWidth": 3
+        },
+        {
+          "type": "rect",
+          "x": 92,
+          "y": -38,
+          "width": 11,
+          "height": 18,
+          "rx": 3,
+          "fill": "#3f4650",
+          "strokeWidth": 3
+        },
+        {
+          "type": "path",
+          "d": "M -28 -30 L -14 -30",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 3,
+          "opacity": 0.45
+        },
+        {
+          "type": "circle",
+          "cx": -4,
+          "cy": -30,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -2,
+          "cy": -30,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -3.2,
+          "cy": -31.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 24,
+          "cy": -30,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 26,
+          "cy": -30,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": 24.8,
+          "cy": -31.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -14 -41 L 2 -36",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 36 -41 L 20 -36",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
+    },
+    {
+      "id": "battery_88",
+      "name": "Battery 88",
+      "hp": 74,
+      "power": 22,
+      "armor": 5,
+      "speed": 4,
+      "stamina": 180,
+      "regen": 18,
+      "tags": [
+        "Vehicle"
+      ],
+      "class": "ground",
+      "salvage": [
+        "arc_coil",
+        "blast_shield"
+      ],
+      "salvageGrades": [
+        "apex",
+        "standard"
+      ],
+      "koLine": "Battery 88 fires one final shell straight up, considers the arc, and folds itself into a commemorative lawn ornament.",
+      "moves": [
+        {
+          "name": "Fire Mission",
+          "power": 96,
+          "cost": 36,
+          "acc": 95,
+          "tags": [],
+          "keywords": {
+            "charge": true,
+            "ignoreEvasion": true
+          }
+        },
+        {
+          "name": "Depression Limit",
+          "power": 18,
+          "cost": 12,
+          "acc": 90,
+          "tags": [],
+          "keywords": {}
+        },
+        {
+          "name": "Call For Smoke",
+          "power": 0,
+          "cost": 14,
+          "acc": 100,
+          "tags": [
+            "Gas"
+          ],
+          "keywords": {
+            "accDown": 1
+          }
+        }
+      ],
+      "shapes": [
+        {
+          "type": "path",
+          "d": "M -18 10 L -88 40 L -74 52 L -8 24 Z",
+          "fill": "#3f4650",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -22 0 L -92 26 L -82 40 L -14 14 Z",
+          "fill": "#565f6c",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 2 -6 L 72 -68 L 92 -46 L 22 12 Z",
+          "fill": "#6b7482",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 26 -18 L 68 -54",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 3,
+          "opacity": 0.4
+        },
+        {
+          "type": "path",
+          "d": "M 70 -70 L 96 -44 L 87 -35 L 61 -60 Z",
+          "fill": "#3f4650",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -48 -22 C -48 -50 -14 -58 12 -54 L 20 4 C -14 12 -48 4 -48 -22 Z",
+          "fill": "#6b7482",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M -40 -38 L -36 -6 M -28 -44 L -24 -2",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 3,
+          "opacity": 0.32
+        },
+        {
+          "type": "rect",
+          "x": -40,
+          "y": 4,
+          "width": 66,
+          "height": 10,
+          "rx": 4,
+          "fill": "#3f4650",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -24,
+          "cy": 26,
+          "r": 22,
+          "fill": "#3f4650",
+          "strokeWidth": 4
+        },
+        {
+          "type": "circle",
+          "cx": -24,
+          "cy": 26,
+          "r": 9,
+          "fill": "#565f6c",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": 26,
+          "cy": 28,
+          "r": 19,
+          "fill": "#3f4650",
+          "strokeWidth": 4
+        },
+        {
+          "type": "circle",
+          "cx": 26,
+          "cy": 28,
+          "r": 8,
+          "fill": "#565f6c",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -30,
+          "cy": -28,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -28,
+          "cy": -28,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -29.2,
+          "cy": -29.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -6,
+          "cy": -32,
+          "r": 8,
+          "fill": "#ffffff",
+          "stroke": "#2b2440",
+          "strokeWidth": 3
+        },
+        {
+          "type": "circle",
+          "cx": -4,
+          "cy": -32,
+          "r": 3.68,
+          "fill": "#2b2440",
+          "stroke": "none"
+        },
+        {
+          "type": "circle",
+          "cx": -5.2,
+          "cy": -33.6,
+          "r": 1.28,
+          "fill": "#ffffff",
+          "stroke": "none"
+        },
+        {
+          "type": "path",
+          "d": "M -41 -40 L -25 -36",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        },
+        {
+          "type": "path",
+          "d": "M 5 -44 L -10 -40",
+          "fill": "none",
+          "stroke": "#2b2440",
+          "strokeWidth": 4
+        }
+      ]
     }
   ],
   "encounters": [
@@ -7245,6 +7713,28 @@
       ],
       "reward": 980,
       "blurb": "Director Prime would like to walk you through the slides. All of them."
+    },
+    {
+      "id": "spire_procurement",
+      "name": "Procurement",
+      "tier": 7,
+      "waves": [
+        "gunship_80",
+        "siege_tank"
+      ],
+      "reward": 1400,
+      "blurb": "Requisition finally cleared. It cleared for something with treads."
+    },
+    {
+      "id": "spire_range",
+      "name": "The Proving Range",
+      "tier": 8,
+      "waves": [
+        "gunship_80",
+        "battery_88"
+      ],
+      "reward": 1900,
+      "blurb": "They have a range. It has your barn's dimensions chalked on it."
     }
   ],
   "aiSkillByTier": [

@@ -1,5 +1,5 @@
 {
-  "_doc": "Campaign shell (M5, five regions since R26): an ordered list of region strips. Nodes unlock in order WITHIN their region; a region itself opens when its `requires` block is satisfied ({ nodes: [...] held, threatGen: N, notoriety: N } — all optional, all ANDed), so the ladder is data and adding a sixth region needs no engine edit. Each node is an encounter from enemies.json; winning holds it, granting income per real-world day (timestamp-computed) and notoriety. threatGens is the Threat Generation ladder — [{gen, at, name, announce}] — replacing the single threatGen2At threshold, which is still read as a fallback so a pre-R26 save sees the world it left. Crossing a rung announces it and unlocks nodes gated with 'threatGen': N. rescueEncounter = the themed battle used for every rescue raid. unlocksFauna: species ids added to the Mail-Order catalog when the node is held. `answer` names the class that beats the region's dominant enemy class ('mixed' where none does) and `demand` says it in the player's language on the map; smoke checks `answer` against the actual rosters AND checks that fauna of that class is already purchasable when the region opens, so the ladder can never ask for anatomy the catalog cannot sell. Region contestation (§3.9 'coalition counter-offensives can contest held regions'): once the threat generation named in `contestation.startsAtGen` is reached, the coalition periodically comes BACK for a node you already hold — anywhere on the map, not just the first region. The schedule is a timestamp (nextContestAt), never a per-tick dice roll, so how often you open the app cannot change how often you are attacked; and the defence window starts the moment you SEE the contest, so being away never costs you a node you were never given the chance to defend. R64: being away is not a month of full pay either. The schedule is replayed through the gap: each convoy arrives when it was due, waits its windowHours at the gate, and — nobody home — leaves without taking anything, the node having paid nothing while it sat there; the next rolls a cooldown after it left. Only a convoy still inside its window when you return is waiting, with its full window from then (news.missed is the one-line summary of the ones that came and went). Adding a region must never require engine edits, and neither does tuning this. `benchGrade` is the part grade a player plausibly holds when the region opens, and `benchTeam` (audit A8) is the number of chimeras the node is tuned for; the balance harness scores each node at ITS OWN grade and team so no cell is measured saturated at one end or floored at the other. Both are per-node overridable, because a strip is not reached all at once: guard_post sits behind Threat Gen 2 and is 4% at the strip's `standard` grade but 48% at `prime`, which is what a player actually brings to it. benchTeam is the answer to \"the team size a player has when they reach it\" — without it that phrase is undecidable, and A8's gate would just be asserting whatever the balance happened to be. Measured, not wished: it is the smallest team at which the best of the harness archetypes clears the node with room to spare. Income (A9): every node's incomePerDay was raised by half — the wait to afford the Surgery Theater's Tier II gantry ran about eight days of held territory, which is a long time to look at a locked chassis. `completionBonus` is paid per day for holding EVERY node of a region with none of them contested; it is worth roughly the strip's best single node, so finishing a region reads as earning a sixth location. It is suspended the moment a counter-offensive contests any node in the strip, which is what makes defending the cheapest node in a completed region worth as much as defending the richest.",
+  "_doc": "Campaign shell (M5, five regions since R26): an ordered list of region strips. Nodes unlock in order WITHIN their region; a region itself opens when its `requires` block is satisfied ({ nodes: [...] held, threatGen: N, notoriety: N } \u2014 all optional, all ANDed), so the ladder is data and adding a sixth region needs no engine edit. Each node is an encounter from enemies.json; winning holds it, granting income per real-world day (timestamp-computed) and notoriety. threatGens is the Threat Generation ladder \u2014 [{gen, at, name, announce}] \u2014 replacing the single threatGen2At threshold, which is still read as a fallback so a pre-R26 save sees the world it left. Crossing a rung announces it and unlocks nodes gated with 'threatGen': N. rescueEncounter = the themed battle used for every rescue raid. unlocksFauna: species ids added to the Mail-Order catalog when the node is held. `answer` names the class that beats the region's dominant enemy class ('mixed' where none does) and `demand` says it in the player's language on the map; smoke checks `answer` against the actual rosters AND checks that fauna of that class is already purchasable when the region opens, so the ladder can never ask for anatomy the catalog cannot sell. Region contestation (\u00a73.9 'coalition counter-offensives can contest held regions'): once the threat generation named in `contestation.startsAtGen` is reached, the coalition periodically comes BACK for a node you already hold \u2014 anywhere on the map, not just the first region. The schedule is a timestamp (nextContestAt), never a per-tick dice roll, so how often you open the app cannot change how often you are attacked; and the defence window starts the moment you SEE the contest, so being away never costs you a node you were never given the chance to defend. R64: being away is not a month of full pay either. The schedule is replayed through the gap: each convoy arrives when it was due, waits its windowHours at the gate, and \u2014 nobody home \u2014 leaves without taking anything, the node having paid nothing while it sat there; the next rolls a cooldown after it left. Only a convoy still inside its window when you return is waiting, with its full window from then (news.missed is the one-line summary of the ones that came and went). Adding a region must never require engine edits, and neither does tuning this. `benchGrade` is the part grade a player plausibly holds when the region opens, and `benchTeam` (audit A8) is the number of chimeras the node is tuned for; the balance harness scores each node at ITS OWN grade and team so no cell is measured saturated at one end or floored at the other. Both are per-node overridable, because a strip is not reached all at once: guard_post sits behind Threat Gen 2 and is 4% at the strip's `standard` grade but 48% at `prime`, which is what a player actually brings to it. benchTeam is the answer to \"the team size a player has when they reach it\" \u2014 without it that phrase is undecidable, and A8's gate would just be asserting whatever the balance happened to be. Measured, not wished: it is the smallest team at which the best of the harness archetypes clears the node with room to spare. Income (A9): every node's incomePerDay was raised by half \u2014 the wait to afford the Surgery Theater's Tier II gantry ran about eight days of held territory, which is a long time to look at a locked chassis. `completionBonus` is paid per day for holding EVERY node of a region with none of them contested; it is worth roughly the strip's best single node, so finishing a region reads as earning a sixth location. It is suspended the moment a counter-offensive contests any node in the strip, which is what makes defending the cheapest node in a completed region worth as much as defending the richest.",
   "threatGens": [
     {
       "gen": 1,
@@ -18,6 +18,12 @@
       "at": 320,
       "name": "Threat Generation 3",
       "announce": "THREAT LEVEL UP: a Compliance Spire has been erected in your honour. Threat Generation 3."
+    },
+    {
+      "gen": 4,
+      "at": 600,
+      "name": "Threat Generation 4",
+      "announce": "THREAT LEVEL UP: they have stopped sending police and started sending procurement. Threat Generation 4."
     }
   ],
   "threatGen2At": 60,
@@ -67,8 +73,7 @@
           "blurb": "The county's only exit. The county's only cruiser lives here.",
           "unlocksFauna": [
             "eagle",
-            "bat",
-            "dragonfly"
+            "bat"
           ],
           "benchTeam": 2
         },
@@ -78,13 +83,11 @@
           "encounter": "boss_clampdown",
           "incomePerDay": 150,
           "notoriety": 25,
-          "blurb": "Captain Clampdown’s office. There is a tarp in the motor pool. It is humming.",
+          "blurb": "Captain Clampdown\u2019s office. There is a tarp in the motor pool. It is humming.",
           "boss": true,
           "unlocksFauna": [
             "bear",
-            "tiger",
-            "gorilla",
-            "cobra"
+            "tiger"
           ],
           "benchTeam": 3
         },
@@ -98,8 +101,7 @@
           "threatGen": 2,
           "unlocksFauna": [
             "frog",
-            "crocodile",
-            "otter"
+            "crocodile"
           ],
           "benchTeam": 3,
           "benchGrade": "prime"
@@ -112,7 +114,7 @@
       "id": "kestrel",
       "name": "Kestrel Reach",
       "subtitle": "The sky over the county, and everyone in it.",
-      "demand": "Everything here is Airborne — your Ground-tagged moves swing through empty air. Their class is Air, so Water anatomy owns them.",
+      "demand": "Everything here is Airborne \u2014 your Ground-tagged moves swing through empty air. Their class is Air, so Water anatomy owns them.",
       "answer": "water",
       "requires": {
         "nodes": [
@@ -180,7 +182,7 @@
       "id": "drowned",
       "name": "The Drowned Quarter",
       "subtitle": "The harbour district, at high tide, permanently.",
-      "demand": "Aquatic and Water class throughout — Ground anatomy walks all over them, and Electric doubles on anything wet. Bring boots, not gills: their generators read Aquatic as a target.",
+      "demand": "Aquatic and Water class throughout \u2014 Ground anatomy walks all over them, and Electric doubles on anything wet. Bring boots, not gills: their generators read Aquatic as a target.",
       "answer": "ground",
       "requires": {
         "nodes": [
@@ -229,7 +231,7 @@
         },
         {
           "id": "harbor_rig",
-          "name": "Harbormaster’s Rig",
+          "name": "Harbormaster\u2019s Rig",
           "encounter": "drowned_rig",
           "incomePerDay": 220,
           "notoriety": 40,
@@ -247,8 +249,8 @@
     {
       "id": "foundry",
       "name": "The Foundry Belt",
-      "subtitle": "Where the coalition’s vehicles come from.",
-      "demand": "Vehicle and Armored, wall to wall. Gas does nothing to a machine and Venom is half-wasted — Sonic ignores their plating, and they are Ground class, so Air anatomy still flies over the top.",
+      "subtitle": "Where the coalition\u2019s vehicles come from.",
+      "demand": "Vehicle and Armored, wall to wall. Gas does nothing to a machine and Venom is half-wasted \u2014 Sonic ignores their plating, and they are Ground class, so Air anatomy still flies over the top.",
       "answer": "air",
       "requires": {
         "nodes": [
@@ -275,7 +277,10 @@
           "incomePerDay": 190,
           "notoriety": 30,
           "blurb": "Everything in here is either red hot or armour-plated. Frequently both.",
-          "benchTeam": 2
+          "benchTeam": 2,
+          "unlocksFauna": [
+            "cobra"
+          ]
         },
         {
           "id": "motor_pool",
@@ -298,7 +303,8 @@
           "blurb": "Smelter Prime pours a fresh chassis while you watch. It is meant for you.",
           "boss": true,
           "threatGen": 3,
-          "benchTeam": 2
+          "benchTeam": 2,
+          "unlocksFauna": []
         }
       ],
       "benchGrade": "apex",
@@ -308,7 +314,7 @@
       "id": "spire",
       "name": "The Compliance Spire",
       "subtitle": "Head office. They have a lanyard policy.",
-      "demand": "All three classes on one ladder — no single anatomy answers the whole building. Bring a stable, not a team.",
+      "demand": "All three classes on one ladder \u2014 no single anatomy answers the whole building. Bring a stable, not a team.",
       "answer": "mixed",
       "requires": {
         "nodes": [
@@ -324,7 +330,10 @@
           "incomePerDay": 225,
           "notoriety": 35,
           "blurb": "Please take a number. The number is a summons.",
-          "benchTeam": 2
+          "benchTeam": 2,
+          "unlocksFauna": [
+            "dragonfly"
+          ]
         },
         {
           "id": "records_annex",
@@ -342,7 +351,10 @@
           "incomePerDay": 280,
           "notoriety": 40,
           "blurb": "The helipad, the water tanks, and a really committed accountant.",
-          "benchTeam": 3
+          "benchTeam": 3,
+          "unlocksFauna": [
+            "gorilla"
+          ]
         },
         {
           "id": "boardroom",
@@ -352,6 +364,29 @@
           "notoriety": 60,
           "blurb": "Director Prime would like to walk you through the slides. All of them.",
           "boss": true,
+          "benchTeam": 3,
+          "unlocksFauna": [
+            "otter"
+          ]
+        },
+        {
+          "id": "procurement_yard",
+          "name": "The Procurement Yard",
+          "encounter": "spire_procurement",
+          "incomePerDay": 440,
+          "notoriety": 70,
+          "threatGen": 4,
+          "blurb": "Sixteen acres of things bought with your paperwork as the business case.",
+          "benchTeam": 3
+        },
+        {
+          "id": "proving_range",
+          "name": "The Proving Range",
+          "encounter": "spire_range",
+          "incomePerDay": 520,
+          "notoriety": 85,
+          "threatGen": 4,
+          "blurb": "Where the new hardware learns your habits. Attendance, as ever, mandatory.",
           "benchTeam": 3
         }
       ],
@@ -360,7 +395,7 @@
     }
   ],
   "contestation": {
-    "_doc": "startsAtGen/minHeld gate the whole system so early play is untouched. cooldownHours is the gap between counter-offensives, lengthened by cooldownPerDefenceHours for every successful defence of that node — they learn. windowHours is how long you have once you see it. The defence reuses the node's OWN encounter at `escalation` above its authored strength, growing by escalationPerDefence every time you hold the place and capped at escalationMax (R63: the honest 180-day walk saw a node defended twenty-two times at 330% of its garrison; they bring at most double, so a roster that can hold double holds for good): a continuous dial rather than a tier step, because the authored tier ladder is deliberately lumpy (a tier is a band of CONTENT) and +1 tier on an already-top-tier boss is a wall while +1 on a mid encounter is a shrug. A new region therefore costs zero new encounter data, and the ramp is endless and self-paced. rewardScale multiplies the node encounter's reward; holding the line also impounds one of the attacking units, because a conquest reward has to expand what you can CREATE (Law 2) and enemy tech is how this one does. Measured against the balance harness's yardstick team of three at prismatic: a first defence runs 100/98/88/12/42% across the five Greenfield nodes against 100/100/93/30/55% for the original assault.",
+    "_doc": "startsAtGen/minHeld gate the whole system so early play is untouched. cooldownHours is the gap between counter-offensives, lengthened by cooldownPerDefenceHours for every successful defence of that node \u2014 they learn. windowHours is how long you have once you see it. The defence reuses the node's OWN encounter at `escalation` above its authored strength, growing by escalationPerDefence every time you hold the place and capped at escalationMax (R63: the honest 180-day walk saw a node defended twenty-two times at 330% of its garrison; they bring at most double, so a roster that can hold double holds for good): a continuous dial rather than a tier step, because the authored tier ladder is deliberately lumpy (a tier is a band of CONTENT) and +1 tier on an already-top-tier boss is a wall while +1 on a mid encounter is a shrug. A new region therefore costs zero new encounter data, and the ramp is endless and self-paced. rewardScale multiplies the node encounter's reward; holding the line also impounds one of the attacking units, because a conquest reward has to expand what you can CREATE (Law 2) and enemy tech is how this one does. Measured against the balance harness's yardstick team of three at prismatic: a first defence runs 100/98/88/12/42% across the five Greenfield nodes against 100/100/93/30/55% for the original assault.",
     "startsAtGen": 2,
     "minHeld": 2,
     "maxConcurrent": 1,

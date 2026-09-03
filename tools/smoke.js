@@ -32,6 +32,7 @@ import {
 import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
 import {
   nodeStates, threatGen, threatLadder, regionStates, regionBlockers, regionOpen, nodeById,
+  regionList,
   incomePerDay, incomeSuspended, regionBonusPerDay, regionComplete,
   tickCampaign, resolveBattle, salvageUnit,
 } from '../campaign/campaign.js';
@@ -45,7 +46,7 @@ import {
 import { isOpen } from '../ui/cards.js';
 import { forecast } from '../battle/forecast.js';
 import {
-  rivalDossier, rivalTeam, rivalRecord, scoutStable, counterTier, rivalEncounter,
+  rivalDossier, rivalTeam, rivalRecord, scoutStable, counterTier, rivalEncounter, rivalList,
 } from '../campaign/rivals.js';
 import { classMultiplier, applyInjury } from '../battle/engine.js';
 import { overflowingParts } from './bounds.js';
@@ -2685,15 +2686,21 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // Gate rule: you are never asked to beat a class before the anatomy that
   // answers it is obtainable. A rival's counter-class parts must be unlocked
   // by the nodes their gate requires (or available from the start).
-  const region = Object.values(content.regions)[0]; // Greenfield, for the node-order fixtures
+  // R69: this used to index the rival's gate node into GREENFIELD's node
+  // list alone, because every rival gated on a Greenfield node — which was
+  // the defect R69 fixed. A Kestrel node then indexed to -1, the fixture
+  // held nothing, and a rule about anatomy read as a rule about nothing.
+  // The walk is now the whole map in the order it is actually taken:
+  // regions in order, nodes in order within each, up to and including the
+  // node that opens this rival.
+  const mapOrder = Object.values(content.regions).flatMap((r) => r.nodes.map((n) => n.id));
   for (const rival of Object.values(content.rivals)) {
     const counter = Object.values(content.classes).find((c) => c.beats === rival.classBias).id;
-    const gateIndex = Math.max(
-      ...rival.requiresNodes.map((id) => region.nodes.findIndex((n) => n.id === id))
-    );
+    const gateIndex = Math.max(...rival.requiresNodes.map((id) => mapOrder.indexOf(id)));
+    assert.ok(gateIndex >= 0, `${rival.name}'s gate node is somewhere on the map`);
     // Use the real catalog rule, not a re-implementation of it.
     const fauna = faunaUnlocked(
-      { campaign: { heldNodes: region.nodes.slice(0, gateIndex + 1).map((n) => n.id) } },
+      { campaign: { heldNodes: mapOrder.slice(0, gateIndex + 1) } },
       content
     );
     const counterParts = Object.values(content.parts).filter(
@@ -2706,7 +2713,15 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   }
 
   // Fully unlocked: teams are generated, classed by anatomy, and stable.
-  const open = mkState({ campaign: { heldNodes: [...ALL_NODE_IDS], notoriety: 999, rivals: { mantissa: { defeats: 1, losses: 0 }, aloft: { defeats: 1, losses: 0 } }, captives: [], containment: [] } });
+  // R69: the beaten-rival list was typed out (mantissa and aloft), which
+  // was every prerequisite while the chain was three long. At five it
+  // silently stopped being "the ladder is cleared" and started being "the
+  // first two rungs are cleared", so the two new rivals read as locked. It
+  // is derived from the roster now — R39's rule, applied to a fixture.
+  const clearedLadder = Object.fromEntries(
+    Object.keys(content.rivals).map((id) => [id, { defeats: 1, losses: 0 }])
+  );
+  const open = mkState({ campaign: { heldNodes: [...ALL_NODE_IDS], notoriety: 999, rivals: clearedLadder, captives: [], containment: [] } });
   for (const { rival, status } of rivalStatus(open, content)) {
     assert.notEqual(status, 'locked', `${rival.name} opens once the ladder is cleared`);
     const enc = rivalEncounter(open, rival, content);
@@ -13001,15 +13016,19 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       // the ONLY seed with the symptom: a second one fails this gate.
       const froze = back.contestCount - left.contestCount === 0;
       if (froze) { frozen.push(String(seed)); rows.push(`${seed}: the world froze while away — known R64 defect, see §9.4`); continue; }
-      compared++;
       const fullPay = (left.incomeRate + TUNING.stipendPerDay - left.upkeepRate) * AWAY;
       const banked = back.funds - left.funds;
-      rows.push(`${seed}: banked ${banked} of ${fullPay} (${Math.round(100 * banked / fullPay)}%), convoys ${back.contestCount - left.contestCount} vs daily ${d60.contestCount - d30.contestCount}`);
       // An empire already underwater at the moment of leaving cannot measure
       // what a month away costs — there is no pay to bank a share of. That
       // is a precondition on the measurement, not a claim about the design,
       // so such a seed is recorded and skipped rather than asserted on.
-      if (fullPay <= 0) { rows.push(`${seed}: underwater at leave (income ${left.incomeRate} vs upkeep ${left.upkeepRate}), skipped`); compared--; continue; }
+      // Checked BEFORE the row is logged — this used to log the noisy raw
+      // "banked X of Y (NNNN%)" line first and the real explanation second,
+      // for every underwater seed, because `compared++` and the log both
+      // ran ahead of this guard instead of behind it.
+      if (fullPay <= 0) { rows.push(`${seed}: underwater at leave (income ${left.incomeRate} vs upkeep ${left.upkeepRate}), skipped`); continue; }
+      compared++;
+      rows.push(`${seed}: banked ${banked} of ${fullPay} (${Math.round(100 * banked / fullPay)}%), convoys ${back.contestCount - left.contestCount} vs daily ${d60.contestCount - d30.contestCount}`);
       bankedTotal += banked; payTotal += fullPay;
       // Never MORE than full pay — an absent player out-earning a present
       // one would be a real bug. Equal is legitimate and happens: if no
@@ -13869,6 +13888,164 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const ledger = src.slice(src.indexOf('export function chimeraUpkeep'), src.indexOf('export function stockUpkeepPerDay'));
     assert.ok(ledger.length > 100, 'and the gate found the ledger to read');
     assert.ok(!/goat/i.test(ledger), 'and it does not know the goat by name');
+  }
+}
+
+// --- R69: the late game had no content in it ------------------------------
+{
+  const regions = regionList(content);
+  const nodeRegion = {};
+  for (const r of regions) for (const n of r.nodes) nodeRegion[n.id] = r.id;
+
+  // 1. THE CRITERION, first half. Every region unlocks fauna. Measured
+  //    before this phase: Greenfield 16, Kestrel 7, Drowned 7, Foundry 2,
+  //    Spire ZERO — taking the final region put nothing in the catalog.
+  const unlocksIn = (r) => {
+    const s = new Set();
+    for (const n of r.nodes) for (const f of n.unlocksFauna ?? []) s.add(f);
+    return s;
+  };
+  for (const r of regions) {
+    assert.ok(unlocksIn(r).size >= 3,
+      `${r.id} unlocks fauna worth crossing it for (${unlocksIn(r).size})`);
+  }
+
+  // 2. Every ORDINARY species is reachable — mail order or a node, at
+  //    least one. This nearly shipped wrong: the first draft of this gate
+  //    flagged all six A3 variants as unreachable and "fixed" it by handing
+  //    each one a node, which is precisely what R6 built them NOT to have —
+  //    "Bred, never bought: they surface as the rarest mutation branch and
+  //    then breed true" (§3.2, R6). The measurement before this phase had
+  //    already confirmed all 34 non-variant species were reachable; the
+  //    only real gap was WHICH region a species belonged to, not whether it
+  //    existed anywhere. So this checks reachability with variants
+  //    excluded, and checks the variants stay excluded in the other
+  //    direction right below it.
+  {
+    const unlocked = new Set();
+    for (const r of regions) for (const f of unlocksIn(r)) unlocked.add(f);
+    const orphans = Object.values(content.species)
+      .filter((s) => !s.synthetic && !s.variantOf && !s.mailOrderPrice && !unlocked.has(s.id))
+      .map((s) => s.id).sort();
+    assert.deepEqual(orphans, [], `every ordinary species can be obtained (${orphans.join(', ')})`);
+    // The sidegrade contract, the other way round: a variant must not
+    // ALSO be directly obtainable, or breeding one is no longer the rarest
+    // thing the game produces (A6) — it is a shortcut around it.
+    const boughtVariants = Object.values(content.species)
+      .filter((s) => s.variantOf && (s.mailOrderPrice || unlocked.has(s.id)))
+      .map((s) => s.id).sort();
+    assert.deepEqual(boughtVariants, [], `no variant is directly obtainable (${boughtVariants.join(', ')})`);
+  }
+
+  // 3. THE CRITERION, second half. One rival per region, each waiting in
+  //    the region it belongs to. All three used to gate on GREENFIELD
+  //    nodes at notoriety 40/70/85, so the whole rival ladder was climbable
+  //    before the map was.
+  {
+    const rivals = rivalList(content);
+    const byRegion = {};
+    for (const rv of rivals) {
+      const regs = [...new Set((rv.requiresNodes ?? []).map((n) => nodeRegion[n]).filter(Boolean))];
+      assert.equal(regs.length, 1,
+        `${rv.id} waits in exactly one region (${regs.join(', ') || 'nowhere'})`);
+      (byRegion[regs[0]] ??= []).push(rv.id);
+    }
+    for (const r of regions) {
+      assert.equal((byRegion[r.id] ?? []).length, 1,
+        `${r.id} hosts exactly one rival (${(byRegion[r.id] ?? []).join(', ') || 'none'})`);
+    }
+    // …and they are met in the order the map is walked, each one waiting on
+    // the last, so the ladder and the map advance together.
+    const order = regions.map((r) => byRegion[r.id][0]);
+    const byId = Object.fromEntries(rivals.map((rv) => [rv.id, rv]));
+    for (let i = 1; i < order.length; i++) {
+      assert.ok((byId[order[i]].requiresRivals ?? []).includes(order[i - 1]),
+        `${order[i]} waits on ${order[i - 1]}, the rival of the region before it`);
+      assert.ok(byId[order[i]].notorietyAt > byId[order[i - 1]].notorietyAt,
+        `${order[i]} costs more notoriety than ${order[i - 1]}`);
+    }
+  }
+
+  // 4. Threat Generation 4 exists and is reachable — and the ladder is
+  //    still DATA, which is the rule that matters: a fifth rung must not
+  //    need an engine edit either.
+  {
+    const ladder = threatLadder(content);
+    assert.deepEqual(ladder.map((r) => r.gen), [1, 2, 3, 4], 'the ladder runs to Gen 4');
+    const gen4 = ladder.find((r) => r.gen === 4);
+    assert.ok(gen4.announce, 'and Gen 4 announces itself');
+    assert.equal(threatGen({ campaign: { notoriety: gen4.at - 1 } }, content), 3, 'just short of it, Gen 3');
+    assert.equal(threatGen({ campaign: { notoriety: gen4.at } }, content), 4, 'on the rung, Gen 4');
+    // Something has to actually need it, or the rung is a badge.
+    const gated = regions.flatMap((r) => r.nodes).filter((n) => (n.threatGen ?? 1) >= 4);
+    assert.ok(gated.length >= 2, `and nodes are locked behind it (${gated.length})`);
+    // The fifth rung, added in data alone.
+    const grown = { ...content, campaignMeta: { ...content.campaignMeta, threatGens: [...ladder, { gen: 5, at: 9000 }] } };
+    assert.equal(threatGen({ campaign: { notoriety: 9000 } }, grown), 5,
+      'a rung the data adds is climbed without an engine edit');
+  }
+
+  // 5. Every tier the scale prices is a band of CONTENT. `tierScale` and
+  //    (since R67) `aiSkillByTier` both price nine rungs; tiers 7 and 8
+  //    were priced and piloted and nothing fielded them.
+  {
+    const priced = content.tierScale.length - 1;
+    const fielded = new Set(Object.values(content.encounters).map((e) => e.tier).filter((t) => t != null));
+    for (let t = 1; t <= priced; t++) {
+      assert.ok(fielded.has(t), `tier ${t} is priced at ${content.tierScale[t]}x and something fields it`);
+    }
+    for (const t of fielded) {
+      assert.ok(content.tierScale[t] != null, `tier ${t} is fielded and the scale prices it`);
+      assert.ok(content.aiSkillByTier?.[t] != null, `tier ${t} is fielded and the ladder pilots it`);
+    }
+  }
+
+  // 6. The heavy vehicles §3 promised and never built: "Tank (Armored,
+  //    slow, Cannon = 2-turn charge)" and "Artillery (off-screen strikes,
+  //    must be rushed)". Asserted against what §3 actually says, not
+  //    against their names.
+  {
+    const tank = content.enemies.siege_tank;
+    const arty = content.enemies.battery_88;
+    assert.ok(tank && arty, 'both heavies exist');
+    assert.ok(tank.tags.includes('Armored'), 'the Tank is Armored');
+    assert.equal(tank.armor, Math.max(...Object.values(content.enemies).map((u) => u.armor ?? 0)),
+      'and the most armoured thing on the roster, so Sonic is its authored answer');
+    const charged = (u) => u.moves.filter((m) => m.keywords?.charge);
+    assert.ok(charged(tank).length === 1, 'its Cannon is a charge, spending a turn before it lands');
+    assert.ok(charged(arty).length === 1, 'so is the Artillery\'s fire mission');
+    // "Must be rushed" is mechanical, not flavour: the biggest gun on the
+    // roster behind the thinnest armour of any heavy.
+    assert.ok(charged(arty)[0].power > charged(tank)[0].power, 'the Artillery hits harder than the Tank');
+    assert.ok(arty.hp < tank.hp * 0.6 && arty.armor < tank.armor * 0.4,
+      `and folds if you reach it (${arty.hp}hp/${arty.armor}armour against ${tank.hp}/${tank.armor})`);
+    assert.ok(tank.speed <= 6 && arty.speed <= 6, 'both are slow');
+    // Both fielded, and drawn — procedural SVG, no asset.
+    const waves = new Set(Object.values(content.encounters).flatMap((e) => e.waves));
+    for (const u of [tank, arty]) {
+      assert.ok(waves.has(u.id), `${u.id} is fielded by an encounter`);
+      assert.ok((u.shapes ?? []).length >= 10, `${u.id} is drawn from shapes (${(u.shapes ?? []).length})`);
+      assert.ok(u.koLine && !/\b(dead|die|dies|killed|death)\b/i.test(u.koLine), `${u.id} retires loudly, not fatally`);
+    }
+    // §3 is no longer promising something that does not exist.
+    const spec = readFileSync(`${root}/ROADMAP.md`, 'utf8');
+    assert.ok(/Tank \(Armored, slow, Cannon = 2-turn charge\)/.test(spec), '§3 still describes the Tank it now has');
+  }
+
+  // 7. The new nodes host the new encounters rather than orphaning them.
+  //    Two encounters and one unit were already unreachable before this
+  //    phase (R70's list); they are named so the count cannot grow.
+  {
+    const onNode = new Set(regions.flatMap((r) => r.nodes).map((n) => n.encounter));
+    for (const g of content.gauntlet ?? []) onNode.add(g.id);
+    if (content.campaignMeta?.rescueEncounter) onNode.add(content.campaignMeta.rescueEncounter);
+    const orphanEnc = Object.values(content.encounters).filter((e) => !onNode.has(e.id)).map((e) => e.id).sort();
+    assert.deepEqual(orphanEnc, ['air_patrol', 'harbor_watch'],
+      `no NEW encounter is attached to nothing (${orphanEnc.join(', ')}) — the two named are R70's`);
+    const fielded = new Set(Object.values(content.encounters).flatMap((e) => e.waves));
+    for (const g of content.gauntlet ?? []) { fielded.add(g.unitId); for (const e of g.escorts) fielded.add(e); }
+    const orphanUnits = Object.values(content.enemies).filter((u) => !fielded.has(u.id)).map((u) => u.id).sort();
+    assert.deepEqual(orphanUnits, ['jeep_50'], `nor any NEW unit (${orphanUnits.join(', ')}) — jeep_50 is R70's`);
   }
 }
 

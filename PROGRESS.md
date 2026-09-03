@@ -1,5 +1,98 @@
 # PROGRESS
 
+## Session 92 — R69: the late game has no content in it ✅
+
+**Acceptance criterion:** every region unlocks fauna and hosts a rival, Gen 4
+and the heavy vehicles exist in data, and a gate asserts a floor of unlocks
+and one rival per region — **all four pass**. `SAVE_VERSION` **35 → 36**
+(fauna redistribution, grandfathered per-save). `sw.js` cache →
+`v36-lategame`.
+
+### Measured first
+
+| | before | after |
+|---|---|---|
+| fauna unlocked: Greenfield/Kestrel/Drowned/Foundry/Spire | 16/7/7/**2**/**0** | 12/7/7/**3**/**3** |
+| rivals gated on Greenfield nodes | **3 of 3** | 1 (its own) |
+| notoriety span of the rival ladder | 40–85 | 40–450 |
+| Threat Generations | 3 | **4** |
+| tiers priced but never fielded | **7, 8** | none |
+| heavy vehicles §3 promised, never built | Tank, Artillery | 0 |
+
+### A near-miss worth writing down
+
+The first draft of this phase's fauna gate found six "unreachable" species
+and handed each one a node — and every one of those six was an A3 variant,
+which R6 built to be reachable **only** by breeding: *"Bred, never bought:
+they surface as the rarest mutation branch and then breed true."* The
+smoke suite's own sidegrade-contract assertion caught it (`no variant is
+directly obtainable`) before it shipped. The actual gap was never "six
+species nobody can get" — it was zero; every ordinary species was already
+mail-order or node-reachable before this phase touched anything. The real
+fix was redistribution, not invention: four species moved from Greenfield's
+oversized 16 into Foundry and Spire, one per class so Spire's "all three
+classes" identity has something to unlock. `SAVE_VERSION` bumped because
+moving a species between regions can, in principle, un-reach it for a save
+mid-campaign — `faunaGranted` (the exact mechanism v24 already built for
+this) makes sure it can't.
+
+### Shipped
+
+- **One rival per region**, met on arrival: Aloft and Trench re-gated onto
+  Kestrel's and Drowned's first nodes; **Ferrule** (Foundry, Armored) and
+  **Lacuna** (Spire, mixed) are new, each waiting on the last rival and
+  costing more notoriety than it did.
+- **Threat Generation 4**, one JSON entry on the same ladder R26 built —
+  still a rung, still data, still no engine edit.
+- **Siege Tank and Battery 88**, procedural SVG, fielded at tiers 7 and 8 —
+  the roster's most-armoured unit and its charge-cannon counter (Sonic),
+  and the fragile, harder-hitting Artillery that "must be rushed" for real
+  reasons (74hp/5armour against the Tank's 138/20), not just in the blurb.
+
+### Two pre-existing cracks, found by fielding this honestly
+
+- **Heron was already climbing toward the "no build dominates" ceiling.**
+  Measured at HEAD, before this phase changed a single number: 6–13pp over
+  the peer median at Standard, 17–20 at Prime, 19–22 at Apex, 21–24 at
+  Prismatic — climbing steadily with grade, invisible because R68's own
+  suite only ever measured it against the roster that existed then. R69's
+  harder tiers dropped the peer median the last few points needed to cross
+  30pp. `heron_head`'s power **58 → 54** flattens the curve; verified clean
+  across all four grades and six seeds, not just the one that failed.
+- **The R64 away-gate logged garbage for every underwater seed** —
+  `banked -1429 of -90 (1588%)` printed and was immediately followed by the
+  "underwater, skipped" line that superseded it, because the log and
+  `compared++` both ran ahead of the guard instead of behind it. No
+  assertion depended on the order; fixed as a drive-by while in the file.
+
+### Known issues
+- The Containment Cannon mk2 upgrade §3 named alongside the Tank and
+  Artillery remains unbuilt — outside this phase's Done-when, tracked here
+  so it stays visible rather than quietly dropping out of the roadmap.
+- Suite runtime holds around 5m30s–5m40s; the new tiers add real battles to
+  every sweep that iterates `content.encounters`.
+
+### Verified
+- `tools/smoke.js` green end to end; `tools/sim.js` 6324 battles in 3.1s,
+  no degenerate builds.
+- **Break battery: 10 breaks, all red** — zero-fauna Spire, a variant
+  handed a node unlock, a rival re-gated onto Greenfield, a broken rival
+  chain, Gen 4 struck from the ladder, tiers 7–8 struck entirely, the
+  Tank's armour no longer the roster max, the Artillery no longer fragile
+  relative to the Tank, the Tank's cannon no longer a charge, and the new
+  encounters orphaned from every node.
+- Browser at 380px: fresh save and a **v35 → v36** migration both boot with
+  no console errors; the War Room's Spire card renders Procurement Yard and
+  Proving Range with their real wave counts and rewards, and reports "5
+  rival labs still open for business."
+
+### Next session's first task
+**R70 — dead and unreachable content, second pass.** `jeep_50` is never
+fielded (so `v8_heart` cannot be obtained), `air_patrol` and `harbor_watch`
+are attached to no node, 34 of 41 species have no `flavor`, 47 emoji sit in
+data files, and the gene probe R68 rebuilt still cannot resolve the quiet
+end of the trait pool (`venom_gland`, `second_wind`).
+
 ## Session 91 — R68: 244 parts, six moves ✅
 
 **Acceptance criterion:** no two non-variant species share an identical slot

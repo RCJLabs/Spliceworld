@@ -12039,7 +12039,7 @@
       ],
       "classAffinity": "air",
       "move": {
-        "power": 58,
+        "power": 54,
         "cost": 26,
         "acc": 97,
         "tags": [],
