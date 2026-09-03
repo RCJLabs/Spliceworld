@@ -7,6 +7,7 @@ import { rngStream, pick, randInt } from '../util/rng.js';
 import { pushNews, emitNews, newsFor } from './wire.js';
 import { recordGauntletWin, gauntletComplete } from './gauntlet.js';
 import { GRADES } from '../splice/extract.js';
+import { infirmaryGrants } from '../splice/facility.js';
 import { finishBattle } from '../battle/engine.js';
 import { recordRivalResult, scoutStable } from './rivals.js';
 import { directorNews } from './director.js';
@@ -357,10 +358,11 @@ export function resolveBattle(state, battle, content, now) {
       capturedAt: now,
       rehab: null,
     });
+    // Every philosophy authors a `capture` line, so there is no fallback to
+    // reach: the one that used to sit behind this `??` was dead copy.
     pushNews(
       state,
       playerLine(state, content, 'capture', { creature: unit.name })
-        ?? newsFor(state, content, 'capture_ours', { creature: unit.name })
     );
   }
 

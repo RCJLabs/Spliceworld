@@ -48,7 +48,7 @@ const fit = (state, now) => state.chimeras.filter((c) => !isInjured(c, now));
 // the order the player should think about them in — work before spending.
 export const AGENDA = [
   {
-    id: 'graduate', kind: 'work', screen: 'vault', label: 'Graduate a donor',
+    id: 'graduate', kind: 'work', screen: 'ranch', label: 'Graduate a donor',
     hint: 'A grown animal becomes six parts. This is where chimeras come from.',
     ready: (state, content, now) =>
       state.ranch.stock.some((a) => ageStage(a, content, now) !== 'juvenile'),
@@ -77,7 +77,7 @@ export const AGENDA = [
       state.ranch.stock.some((a) => Object.values(careStatus(a, now)).some((s) => s.ready)),
   },
   {
-    id: 'vat', kind: 'work', screen: 'theater', label: 'Run the chaos vat',
+    id: 'vat', kind: 'work', screen: 'pens', label: 'Run the chaos vat',
     hint: 'Two finished chimeras in, one genome out that neither of them was.',
     ready: (state, content, now) => {
       if (activeVat(state)) return false;

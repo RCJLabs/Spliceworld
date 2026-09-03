@@ -331,7 +331,7 @@ complaint. It is A1, and A1 is the worst thing in the game.
   Spending a vial now grows that donor back — same species, same star potential, same genotype. **2 real hours** (shortened by the Incubator's existing `hourScale`), **75% to take**, and a **new-gene chance of 6% + 5%/star** multiplied by the Incubator's `mutationBonus`. Quality buys **upside, never safety**: a five-star vial mutates far more often and fails exactly as often, so banking a good one beats banking four ordinary ones and no amount of quality removes the risk. The Incubator governs both halves because a resequencing *is* an incubation — that track gained a second reason to exist without one new facility knob. The outcome is **sealed at launch** from a seeded stream, like the vat and the jobs board, so reloading cannot reroll a failure into a success. Vials written before R31 kept only a star average and rebuild stats to match it, so a vial banked long ago is worth exactly what it always said. *Done when: a vial does something, and what it does uses what a vial actually is* — measured over 400 runs, **72% took, 29% of successes threw a new gene, and the donor's recessive survived 286 of 286 successes.**
   **Four bugs, three mine.** Aborting wrote the *post-mutation* genome back into the vial, making abort-cycling a free ratchet; the fix then failed because I had taken a **reference** to the vial's `potential` and mutated it in place, so the sample was contaminated before it was copied — 60 abort cycles walked a 3/3/3/3/3 donor to 3/4/4/5/3 without completing a run. **Migration 29 did not return the save**, and `migrate` does `save = fn(save)`, so a missing return turns every existing player's save into `undefined` on load — all 28 other migrations return correctly. And **neither the harness nor the suite loaded the new data file**: `resequencerTuning` falls back to code defaults, so my probe had been measuring defaults rather than the shipped JSON and giving the right answer for the wrong reason. House rules held: a **full pen makes a finished run wait** rather than losing the animal, **aborting returns the vial** unharmed, and the odds are **quoted before the player commits**.
 
-### 9.3 Third audit (R54–R62)
+### 9.3 Third audit (R54–R62) — **all nine shipped**
 Run after R53, against a game whose roadmap was finished: M0–M7 shipped,
 waves R1–R19 shipped, §9.1 and §9.2 both closed, and ten consecutive phases
 (R44–R53) spent on screen density and the harness. Same rule as the first
@@ -430,3 +430,187 @@ every `sfx.play()` call is invisible to it. Checked before filing.
   reaction is a JSON edit, no engine module contains a player-facing
   sentence, and smoke asserts every emitted event id has copy AND every
   line has an emitter — R20's invariant, pointed at the wire.*
+
+### 9.4 Fourth audit (R63–R77) — proposed, not yet accepted
+
+Run after R62, against a game with three closed audits behind it. Same rule
+as the other three: every line names the evidence that put it there, and the
+evidence is a number, a grep, or a headless run wherever one was gettable.
+Four agents read the whole repo (engine correctness, content, UX at 380px,
+roadmap-versus-shipped) alongside the harness measurements below. Five
+outright bugs were fixed in the audit's own PR rather than queued (a
+`ReferenceError` on the Jobs board's "Run it" that shipped in R60, an unbound
+`infirmaryGrants` in the last-stand branch since A1, `news.json` philosophy
+pools keyed on ids that do not exist, four bosses transforming with a blank
+line, and the Graduate and vat agenda chips landing on screens that have no
+Extract button and no vat). Everything below is bigger than a one-liner, or
+needs a gate before it is safe to touch.
+
+**Fifteen findings, fifteen phases,** ordered by what a player hits first.
+The queue is a proposal: prune it before starting R63.
+
+- **R63 — The contest treadmill is the wall.** The 180-day headless walk
+  (4 seeds) ends with **3–5 of 21 nodes held**, roughly **47 wins to 118
+  losses**, **~52 of 95 defences** held, and dominion reached on **zero**
+  seeds. Difficulty is not the cause: `regionBench` gives a solo Prime team
+  **80% / 75% / 75% / 50% / 50%** across the five regions. The cause is the
+  contest clock: one contest per **28.5 h** (≈0.84/day), **45%** of them
+  lost, is **~69 node losses per 180 days** against ~47 wins, and the
+  escalation of **+10% per defence** puts the fifth defence of the same node
+  at **150%**. The agenda has no `defend` entry, so the thing the player
+  loses to most is the one thing the panel never lists. *Done when: the
+  walk reaches dominion on a realistic diet for most seeds, escalation is
+  bounded or decays with tenure, defending is on the agenda, and the walk
+  is a gate with one deliberately broken contest number failing it.*
+- **R64 — Being away is strictly profitable.** Thirty days closed: **+$190
+  a day banked, zero contests** (the tick resolves one contest regardless
+  of elapsed time), the captive dissected, animals at the condition floor
+  of 25. A daily player fights ~25 contests in that month; the absent one
+  fights none and keeps the income. Underneath it, `main.js` reads `NOW()`
+  **seven times in one tick**, and two elapsed clocks disagree:
+  `state.lastTickAt` charges upkeep clamped at zero while
+  `campaign.lastTickAt` pays income unclamped, so a long absence forgives
+  debt the daily player pays. *Done when: one `now` per tick and one elapsed
+  clock per save; elapsed time resolves the contests it contained, capped
+  with a mercy; and a gate replays 30 days away against 30 days of daily
+  play and asserts the absent save is not ahead.*
+- **R65 — Timers that start when you look.** `operations.js:332` anchors a
+  job's cooldown to the tick, not to `run.until` — come back after a week
+  and the job locks for a fresh six hours; `abortOperation` (`:305`) anchors
+  the same rule to `startedAt`, so the two paths disagree. `:371` starts a
+  failure injury at the return time and assigns with `=`, replacing a
+  longer battle injury with a shorter one. `engine.js:1139` keys the injury
+  RNG on `wins + losses + injuries.length` before the record increments, so
+  two consecutive two-casualty losses roll byte-identical injuries. *Done
+  when: every timer written by an elapsed-time resolver is anchored to the
+  event's own clock, injuries only ever lengthen, and a gate replays a
+  week's absence and asserts nothing starts at the return time.*
+- **R66 — The preview lies to the player and to the AI.** `previewMove`
+  computes Multi-Hit as `(2 + max(1, N−1)) / 2` where the engine rolls
+  uniform over `[2, N]` — **always half a hit low** (the bat forelimbs
+  preview 2 hits against an engine mean of 2.5, a 20% understatement), and
+  it has no turn-one evasion term, so against a Skittish defender the
+  opening hit chance reads up to **30% too high**. `ai.js` and `forecast.js`
+  both score off it, so the AI undervalues Multi-Hit and the briefing band
+  is biased. Same file: `Math.min(Infinity, …)` at `ai.js:62` and `:167`
+  makes a utility-only combatant read as starving forever, and the
+  `after < 0` branch is unreachable. *Done when: a gate compares the preview's
+  expected value with the engine's Monte-Carlo mean per keyword within
+  tolerance, and the AI has no branch the suite cannot reach.*
+- **R67 — The KO turn skips end-of-turn for both sides.** `engine.js:1106`
+  runs `endOfTurn` only when no replacement is pending, and the replacement
+  action returns early (`:999–1005`) without it — venom, bleed, regen and
+  stamina recovery all skip a round whenever the player's active goes
+  down, so cycling a deep bench denies the enemy every tick it applied.
+  Also here: `SKILL_BY_TIER` is a **6-entry array in the engine** while
+  `enemies.json` prices **9 tiers** and fields tier 6, so the hardest
+  fight in the game is piloted at tier-5 skill and a tier-7 encounter is an
+  engine edit — the CLAUDE.md rule, broken in the one module that most
+  needs it. *Done when: the enemy's half of end-of-turn runs on the KO turn,
+  the skill ladder is data, and a gate plays a KO turn and asserts the
+  poison ticked.*
+- **R68 — 244 parts on 65 moves.** Tails: **40 parts, 6 moves, 35 of them
+  the identical `{evasionUp: 1}`**; hides: **21 identical thorns**. Eight
+  signature abilities the roadmap promises never shipped — the goat's *Iron
+  Gut halves upkeep* is not implemented (`chimeraUpkeep` reads no
+  abilities), *Camo* is a tag with **8 data hits and 0 in any `.js`**,
+  *Burrower* does not exist. Set bonuses collide: **five species share
+  `{power: 1.15}`**, `pale_cobra` equals `cobra`, `alpine_ram` is strictly
+  better than `ram`. Grades give a flat **+12%** where the roadmap promised
+  upgraded abilities. *Done when: no two non-variant species share an
+  identical slot kit, every promised signature ability is shipped or struck
+  from §3, `Camo` and `Burrower` are read by the engine or removed from the
+  data, and a gate fails on identical-kit collisions.*
+- **R69 — The late game has no content in it.** Fauna unlocked per region:
+  **Greenfield 16, Kestrel 7, Drowned 7, Foundry 2, Spire 0** — taking the
+  final region puts nothing in the catalog. `tierScale` prices tiers 7–8
+  and nothing fields them; Threat Generation stops at 3; all three rivals
+  are gated on **Greenfield** nodes (notoriety 40–85), so the ladder is
+  climbed before the map is; **16 of 21** node blurbs duplicate their
+  encounter's blurb; seven jobs never gate or grow. The roadmap's Tank,
+  Artillery and Containment Cannon mk2 were never built. *Done when: every
+  region unlocks fauna and hosts a rival, Gen 4 and the heavy vehicles
+  exist in data, and a gate asserts a floor of unlocks and one rival per
+  region.*
+- **R70 — Dead and unreachable content, second pass.** `jeep_50` is never
+  fielded, so `v8_heart` cannot be obtained; `air_patrol` and
+  `harbor_watch` are attached to no node; **34 of 41 species have no
+  `flavor`** and `ranch/ui.js:64` renders the empty string; **47 emoji sit
+  in data files** (guides 30, operations 7, facility 6, classes 3 — one of
+  them Unicode 14, which older Android renders as a box) against *"no
+  emoji-as-art."* R61's orphan gate covers exports and data keys; it does
+  not cover enemy units, species fields or glyphs. *Done when: every unit
+  is fielded somewhere, every species has flavor, data carries icon ids
+  that resolve to inline SVG, and R61's gate is extended to all three.*
+- **R71 — A save from a newer build starts a new game.** `save.js:535–547`
+  throws on `saveVersion > SAVE_VERSION`, the `catch` backs the string up
+  under a timestamped key and returns `newGameState()`; `importSave`
+  refuses the same case with a named reason. A stale service-worker cache
+  is enough to serve old code against a new save, and the player opens the
+  app to an empty ranch. Related: a boot failure in `main.js` leaves a
+  half-live shell. *Done when: "from the future" is a refusal the shell
+  renders with a reload path and never a reset, boot failure is one screen
+  that says so, and a gate loads a v35 save into v34 code and asserts the
+  stored save is byte-identical afterwards.*
+- **R72 — Retired content ids crash the Theater.** `theater.js:81` reads
+  `content.parts[token.partId].slot` unguarded (verified: a vault token
+  whose part was removed from `parts.json` throws and takes the screen
+  down), and `:99` calls `tokensFor` without `content`, so its own retired
+  guard is a no-op. `physiology.js:61` indexes `GRADES` unguarded one line
+  after guarding the part; `classVotes` hardcodes three classes in
+  `physiology.js` and twice in `director.js`, so a fourth class votes `NaN`
+  and is silently dropped. Every other module defends this case. *Done when:
+  a gate retires one part, one grade and adds one class in a fixture, and
+  every screen and the sim still run.*
+- **R73 — Tap targets and focus at 380 px.** Per screen, **8–14 controls
+  under 40 px**: mute 24 h, field-note dismiss 26 h, agenda chip 28 h, row
+  buttons 31–33 h; the nav is ~36 h with no `aria-current`; focus rings are
+  absent (`outline: none`, `style.css:2104`); zero `aria-live` regions, so
+  the wire never reaches a screen reader; `#overlay` has no dialog role and
+  no Escape; the save-import label is unfocusable; the Dex sheet's disabled
+  state sits at ~3.1:1. This ships as a TWA. *Done when: every control is
+  at least 40 px at 380 px, focus is visible, the wire is a live region,
+  the overlay is a dialog, and a Playwright pass measures bounding boxes
+  and fails below the floor.*
+- **R74 — The briefing runs 64–160 battles per checkbox.** `campaign/ui.js`
+  calls `forecast` and then `diagnose`, whose first act is the same
+  `forecast` again, and on a losing band two more 32-battle sweeps —
+  **~150 ms synchronous in Node per toggle**, most of a second on a
+  mid-range phone. Boot is the same shape: **52 modules, 623 KB of JS and
+  745 KB of JSON** (`parts.json` alone 410 KB) all eager, **zero dynamic
+  imports**, against CLAUDE.md's *"lazy-init heavy systems."* *Done when:
+  `diagnose` reuses the computed forecast and runs only on losing bands,
+  the War Room, battle and Dex load on first use, and a gate caps the
+  eager import graph from `main.js`.*
+- **R75 — The small wrongs the walk found.** Rename drops `res.msg`; the
+  empty-vault SPLICE IT is disabled with its reason suppressed
+  (`theater-ui.js:164`); Assault is enabled with everyone injured while only
+  Spar reads `canSpar`; "Run a job" lands on the map, not the Jobs tab;
+  Hatch! is enabled with the pens full; an unread job report is overwritten
+  by the next (`campaign.js:233`); the resequencer's pen-full line is pushed
+  **every 30 s** while it waits, so six minutes erase the whole wire
+  (`WIRE_KEEP` is 12); hatchlings and vat children use bare `pick` over 12
+  and 18 names while `pickFresh` exists; `.grad-shake` is infinite and
+  `.poof` ignores `prefers-reduced-motion`; the move sheet binds
+  `{ once: true }`. *Done when: each is fixed and the handler-firing stub the
+  audit used becomes a suite gate, so every bound handler on every screen
+  fires once headlessly.*
+- **R76 — The gate that would have caught R60.** `opOdds` was removed from
+  an import in R60 while two call sites remained: a live `ReferenceError`
+  on the Jobs board, through a 124-cell render-identity harness and a
+  five-minute suite, because nothing fires the handler and nothing reads
+  the free identifiers. `infirmaryGrants` had been unbound since A1 behind
+  a `??=` that never evaluates. A static free-identifier pass over every
+  module (the audit's script finds both, with one default-parameter false
+  positive to fix) costs under a second. *Done when: a free identifier in
+  any module fails the build, every `data-*` handler has been fired once,
+  and the battery carries one break per new gate.*
+- **R77 — The roadmap describes a different game.** §9.3 listed R54–R62 as
+  open with all nine shipped (fixed above); R32–R53 appear nowhere; the
+  clocks are stale (settle 22.5 min–3 h, dissection 9–18 h); "three
+  frames" against four shipped; ZzFX is named where a hand-rolled synth
+  shipped; Gene Juice and Feral-at-instability-100 are designed with **zero
+  hits** in code; grades promise upgraded abilities and deliver +12%. *Done
+  when: ROADMAP either describes the shipped game or names each gap as a
+  queued phase, and a gate checks the numbers it states — settle hours,
+  frame count, region count, `SAVE_VERSION` — against the data.*

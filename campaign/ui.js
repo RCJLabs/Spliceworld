@@ -38,7 +38,7 @@ import {
 import { GRADES, GRADE_INDEX } from '../splice/extract.js';
 import { isContested } from './contest.js';
 import {
-  operationList, freeCrew, startOperation, abortOperation,
+  operationList, freeCrew, startOperation, abortOperation, opOdds,
 } from './operations.js';
 import {
   profileOf, philosophyList, rollIdentities, setIdentity, setPhilosophy, duelBarks,

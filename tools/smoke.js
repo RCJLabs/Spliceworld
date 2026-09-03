@@ -6684,6 +6684,40 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
       `${item.id} points at a screen the shell actually has (${item.screen} not in ${realScreens.join(', ')})`);
   }
 
+  // …and a screen the shell HAS is not yet the screen the control is ON.
+  // 'vault' and 'theater' are both real, and for two sessions the Graduate
+  // chip sent the player to the Vault — where there is nothing to graduate,
+  // the Extract button lives on the Ranch card — and the vat chip sent them
+  // to the Theater, where there is no vat. The list-membership check above
+  // is exactly the hollow gate this suite keeps re-learning about: true of
+  // the text, silent about the claim. The claim is that the chip lands the
+  // player where the button is, so every entry names the control it
+  // promises and the module main.js maps its screen to has to render it.
+  // A new agenda entry without a marker here fails, on purpose.
+  const AGENDA_CONTROL = {
+    graduate: 'data-act="extract"', splice: 'id="thtr-splice"', breed: 'data-act="breed"',
+    hatch: 'data-act="hatch"', care: 'data-act="care"', vat: 'id="vat-go"', spar: 'data-spar=',
+    job: 'data-job=', assault: 'data-node=', treat: 'data-treat=', train: 'data-train=',
+    buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
+  };
+  const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
+  const moduleSrc = {};
+  for (const item of AGENDA) {
+    const marker = AGENDA_CONTROL[item.id];
+    assert.ok(marker, `${item.id}: the agenda gate knows which control this chip promises`);
+    const file = screenModule[item.screen];
+    assert.ok(file, `${item.id}: ${item.screen} traces to a module`);
+    moduleSrc[file] ??= readFileSync(join(root, file), 'utf8');
+    assert.ok(moduleSrc[file].includes(marker),
+      `${item.id} lands on ${item.screen} (${file}), which is where ${marker} is rendered`);
+  }
+  // The negative that keeps the check from being decorative: the two screens
+  // the chips used to point at do NOT render those controls.
+  assert.ok(!readFileSync(join(root, screenModule.vault), 'utf8').includes(AGENDA_CONTROL.graduate),
+    'the Vault has no Extract button — which is why graduate:vault was a bug');
+  assert.ok(!readFileSync(join(root, screenModule.theater), 'utf8').includes(AGENDA_CONTROL.vat),
+    'the Theater has no vat — which is why vat:theater was a bug');
+
   // THE CRITERION: money, a stable, and a lost fight — everyone hurt, and
   // the one job they launched still out.
   const now = t0 + 2 * HOUR;
@@ -6723,6 +6757,36 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   const before = agenda(lost, content, now).map((i) => i.id);
   assert.ok(before.includes('graduate'), `a donor is grown on day one (${before.join(', ')})`);
   assert.ok(!before.includes('splice'), 'and the vault is empty until you use it');
+  // Rendered, not just read: with the Graduate chip open, the screen it
+  // points at actually shows the Extract button — and the Pens show the vat.
+  {
+    const { renderRanchScreen } = await import('../ranch/ui.js');
+    const { renderPensScreen } = await import('../splice/pens-ui.js');
+    const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null });
+    const gradChip = AGENDA.find((i) => i.id === 'graduate');
+    const grown = lost.ranch.stock.find((a) => ageStage(a, content, now) !== 'juvenile');
+    // The A4 fixture predates the incubator; the renderer reads eggs.
+    const shown = { ...lost, ranch: { eggs: [], eggCount: 0, ...lost.ranch } };
+    const drawRanch = (st) => {
+      const r = stub();
+      renderRanchScreen(r, { state: st, content, now: () => now, save: () => {}, refreshTicker: () => {} });
+      return r.innerHTML;
+    };
+    assert.equal(gradChip.screen, 'ranch', 'the Graduate chip goes to the Ranch');
+    // R46 ships the animal cards shut, so the button is one tap into the
+    // card: the shut Ranch shows the grown animal's fold, the open one the
+    // Extract button. Both halves, so the gate says what the player sees.
+    const shut = drawRanch(shown);
+    assert.ok(shut.includes(`data-fold="ranch-${grown.id}"`), 'the Ranch lists the grown animal');
+    assert.ok(!shut.includes(AGENDA_CONTROL.graduate), '(shut cards render no body — R46)');
+    const opened = drawRanch({ ...shown, ui: { collapsed: { [`ranch-${grown.id}`]: false } } });
+    assert.ok(opened.includes(AGENDA_CONTROL.graduate), 'and its card, opened, is where the Extract button is');
+    const vatChip = AGENDA.find((i) => i.id === 'vat');
+    const pensRoot = stub();
+    renderPensScreen(pensRoot, { state: shown, content, now: () => now, save: () => {} });
+    assert.equal(vatChip.screen, 'pens', 'the vat chip goes to the Pens');
+    assert.ok(pensRoot.innerHTML.includes('The Chaos Vat'), 'and the Pens are rendering the vat');
+  }
   const donor = lost.ranch.stock.find((a) => ageStage(a, content, now) !== 'juvenile');
   const grad = extractAnimal(lost, donor.id, content, now);
   assert.ok(grad.ok, `graduating works: ${grad.msg}`);
@@ -12408,9 +12472,50 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(used.size > 1, `and the pool actually varies (${used.size} of ${content.news.node_seized.lines.length} phrasings used across eight nodes)`);
   }
 
+  // 6b. A repeat rotates. Seeding on the params alone meant an event WITHOUT
+  //     params — a spar, the county holding — hashed to one position for the
+  //     life of the save: spar_done authored three phrasings and a player
+  //     heard one of them, every time, forever. The audit found it by asking
+  //     which lines had ever printed rather than whether a pool existed.
+  //     While the last telling of an event is still on the wire, the next
+  //     telling moves to the next phrasing; a fresh save still opens on the
+  //     same line, so the reload rule above is intact.
+  {
+    const pool = content.news.spar_done.lines;
+    assert.ok(pool.length >= 3, `spar_done has a pool worth rotating (${pool.length})`);
+    const st = { ...newGameState(), seed: 7 };
+    const heard = [emitNews(st, content, 'spar_done'), emitNews(st, content, 'spar_done'), emitNews(st, content, 'spar_done')];
+    assert.equal(new Set(heard).size, 3, `three spars in a row read three ways (${heard.join(' | ')})`);
+    for (const line of heard) assert.ok(pool.includes(line), `each is an authored phrasing (${line})`);
+    // Deterministic: the same save, replayed, hears the same three in the same order.
+    const again = { ...newGameState(), seed: 7 };
+    const replay = [emitNews(again, content, 'spar_done'), emitNews(again, content, 'spar_done'), emitNews(again, content, 'spar_done')];
+    assert.deepEqual(replay, heard, 'the rotation is a function of the save, not of the clock');
+    // The same node seized twice (lost, retaken) does not repeat itself either.
+    const twice = { ...newGameState(), seed: 99 };
+    const first = emitNews(twice, content, 'node_seized', { node: 'Radio Mast', income: 105 });
+    const second = emitNews(twice, content, 'node_seized', { node: 'Radio Mast', income: 105 });
+    assert.notEqual(first, second, `retaking a node is told differently while the first telling is on the wire (${first})`);
+    // And a different event on the wire does not shift this one: the count
+    // is of THIS event's phrasings, not of the wire's length.
+    const noisy = { ...newGameState(), seed: 7 };
+    for (let i = 0; i < 5; i++) emitNews(noisy, content, 'rescued', { creature: `Unit ${i}` });
+    assert.equal(emitNews(noisy, content, 'spar_done'), heard[0], 'other news does not move the first spar line');
+  }
+
   // 7. The philosophy weighting is real: R10's machinery, pointed at the
   //    campaign. A philosophy with nothing to say about an event falls back.
   {
+    // Every philosophy pool is keyed on a philosophy that EXISTS. The first
+    // draft keyed on 'purist' and 'chimerist' — ids from nowhere — so the
+    // weighting had never fired, and the gate below passed because it used
+    // the authored key as the profile instead of asking whether it was real.
+    const realIds = new Set(Object.keys(content.philosophies));
+    for (const [id, spec] of Object.entries(copy)) {
+      for (const who of Object.keys(spec.by ?? {})) {
+        assert.ok(realIds.has(who), `${id}.by.${who} names a philosophy that exists (${[...realIds].join(', ')})`);
+      }
+    }
     const withBy = Object.entries(copy).find(([, spec]) => spec.by && Object.keys(spec.by).length);
     assert.ok(withBy, 'at least one event reacts to who the player is');
     const [id, spec] = withBy;
@@ -12475,6 +12580,20 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const before = st.news.length;
     emitNews(st, content, 'no_such_event_at_all');
     assert.equal(st.news.length, before, 'an event with no copy prints nothing rather than "undefined"');
+  }
+}
+
+// --- Audit: a boss that transforms says so. Four of five second stages
+// shipped with no `transformLine`, and the engine pushed `text: null`, so the
+// message box went blank for a beat at the exact moment the boss revealed
+// itself. Authored content the engine assumed existed.
+{
+  const staged = Object.values(content.enemies).filter((u) => u.transformInto);
+  assert.ok(staged.length >= 5, `the bosses still transform (${staged.length})`);
+  for (const u of staged) {
+    assert.ok(typeof u.transformLine === 'string' && u.transformLine.length > 20,
+      `${u.id} announces its second stage in its own words`);
+    assert.ok(content.enemies[u.transformInto], `${u.id} transforms into a unit that exists`);
   }
 }
 

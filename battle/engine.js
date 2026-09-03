@@ -947,7 +947,9 @@ function handleEnemyKO(battle, events, content) {
   const e = battle.enemy.active;
   if (e.hp > 0) return;
   if (e.transformInto) {
-    events.push({ text: e.transformLine, kind: 'ko', target: 'enemy' });
+    // A boss with no authored line still announces its second stage rather
+    // than blanking the message box for a beat: four of five shipped that way.
+    events.push({ text: e.transformLine ?? `${battle.enemy.active.name} takes the field!`, kind: 'ko', target: 'enemy' });
     battle.enemy.active = combatantFromUnit(unitFor(content, e.transformInto), battle.enemyScale);
     events.push({ text: `${battle.enemy.active.name} looms over the field!`, kind: 'waveIn', target: 'enemy', transform: true });
     return;
