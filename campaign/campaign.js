@@ -212,7 +212,10 @@ export function incomeSuspended(state, content) {
 }
 
 // Elapsed campaign effects: held-node income and dissection deadlines.
-export function tickCampaign(state, content, now) {
+// `since` is the one elapsed clock (`state.lastTickAt`), passed in so this
+// runs BEFORE the ranch charges upkeep and the two land in one clamp — see
+// campaign/world.js. Nothing here advances a clock any more.
+export function tickCampaign(state, content, now, since = state.lastTickAt ?? now) {
   // Rehabilitation graduates on its own clock, checked every tick rather
   // than only when time has visibly passed — a programme can finish while
   // the tab is open (an enrichment session can take the last hour off it).
@@ -260,14 +263,30 @@ export function tickCampaign(state, content, now) {
   // (Income over a long gap is still charged at the CURRENT holdings —
   // the model has always been that simple, and a contest opening
   // mid-absence starts its window now, not then.)
-  for (const line of tickContests(state, content, now, threatGen(state, content))) pushNews(state, line);
+  const contests = tickContests(state, content, now, threatGen(state, content));
+  for (const line of contests.news) pushNews(state, line);
 
-  const last = state.campaign.lastTickAt ?? now;
-  const dt = Math.max(0, now - last);
-  state.campaign.lastTickAt = now;
+  const dt = Math.max(0, now - since);
   if (dt === 0) return;
 
+  // Income over the gap at CURRENT holdings — contested nodes pay nothing.
+  // Two R64 corrections on top, both about a convoy the player never saw
+  // arrive: a node whose convoy is still waiting paid until it ARRIVED, not
+  // for none of the gap; and every convoy that came and went unseen took its
+  // node's revenue for the window it sat there.
   state.funds += incomePerDay(state, content) * (dt / DAY);
+  const rate = (id) => nodeById(content, id)?.incomePerDay ?? 0;
+  for (const contest of state.campaign.contested ?? []) {
+    if (contest.startedAt !== now || contest.scheduledAt == null) continue;
+    const paidUntil = Math.min(Math.max(contest.scheduledAt, since), now);
+    state.funds += rate(contest.nodeId) * ((paidUntil - since) / DAY);
+  }
+  for (const m of contests.missed) {
+    const from = Math.max(m.arrivedAt, since);
+    const to = Math.min(m.leftAt, now);
+    if (to > from) state.funds -= rate(m.nodeId) * ((to - from) / DAY);
+  }
+  state.funds = Math.max(0, state.funds);
 
   for (const captive of [...state.campaign.captives]) {
     if (now < captive.deadline) continue;

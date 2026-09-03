@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 34;
+export const SAVE_VERSION = 35;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -446,6 +446,18 @@ const migrations = {
     save.dex.beaten ??= [];
     return save;
   },
+  // R64: one elapsed clock. `campaign.lastTickAt` was a second timestamp for
+  // income, kept beside `lastTickAt` for upkeep since v2, and the two
+  // disagreeing over a long absence is how a closed app came back richer
+  // than an open one. The ranch clock is the one that survives; if it was
+  // never set, the campaign's stands in, so nobody is charged or paid twice
+  // for the gap they were away.
+  35: (save) => {
+    save.campaign ??= {};
+    if (save.lastTickAt == null && save.campaign.lastTickAt != null) save.lastTickAt = save.campaign.lastTickAt;
+    delete save.campaign.lastTickAt;
+    return save;
+  },
 };
 
 export function newGameState() {
@@ -483,7 +495,6 @@ export function newGameState() {
       heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,
       operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
-      lastTickAt: null,
     },
     news: [],
     settings: { muted: false },

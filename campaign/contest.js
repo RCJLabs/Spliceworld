@@ -159,8 +159,9 @@ export function contestEncounter(state, content, contest) {
 }
 
 // Elapsed contestation, computed on load like every other timer. Returns
-// news lines instead of pushing them, so this module never has to know
-// campaign.js exists.
+// `{ news, missed }` instead of pushing anything, so this module never has
+// to know campaign.js exists: `news` are wire lines, `missed` the convoys
+// that came and went unseen (R64), which campaign.js prices.
 export function tickContests(state, content, now, gen) {
   const t = contestTuning(content);
   const cam = state.campaign;
@@ -169,27 +170,53 @@ export function tickContests(state, content, now, gen) {
   const nameOf = (id) => nodeName(content, id);
   const news = [];
 
-  // Open at most ONE per tick. A player returning from a week away should
-  // find the world has made a move, not fifty.
-  if (contestEligible(state, content, gen)) {
-    if (cam.nextContestAt == null) {
-      // Eligibility has just appeared: give them a beat before the first one.
-      cam.nextContestAt = now + Math.round(t.firstDelayHours * HOUR);
-    } else if (now >= cam.nextContestAt) {
-      const node = chooseNode(state, content);
-      if (node) {
-        cam.contestCount = (cam.contestCount ?? 0) + 1;
-        cam.contested.push({
-          nodeId: node.id,
-          startedAt: now,
-          // The window opens NOW, however long the schedule sat unread.
-          deadline: now + Math.round(t.windowHours * HOUR),
-          gen,
-        });
-        cam.nextContestAt = null; // rescheduled when this one resolves
-        news.push(line(t.news.opened, node.name));
-      }
+  // R64: the world keeps moving while the app is closed. Before this, a
+  // month away met exactly one convoy on return and thirty days of full pay;
+  // a player who opened the app daily met twenty-three. So the schedule is
+  // replayed through the gap: a convoy arrives when nextContestAt fell due,
+  // waits its window at the gate, and — nobody home — leaves with a stern
+  // letter, the node having paid nothing while it sat there. The next one
+  // rolls a cooldown after that. Only a convoy still inside its window when
+  // you return is actually waiting, and it gets its full window from NOW,
+  // which is R9's rule unchanged: being away never costs a node you were
+  // not given the chance to defend. It costs the income, which is the
+  // half a daily player was already paying.
+  if (contestEligible(state, content, gen) && cam.nextContestAt == null) {
+    // Eligibility has just appeared: give them a beat before the first one.
+    cam.nextContestAt = now + Math.round(t.firstDelayHours * HOUR);
+  }
+  const missed = [];
+  const armed = gen >= t.startsAtGen && state.campaign.heldNodes.length >= t.minHeld;
+  const windowMs = Math.round(t.windowHours * HOUR);
+  let guard = 0;
+  while (armed && (cam.contested.length ?? 0) < t.maxConcurrent
+    && cam.nextContestAt != null && now >= cam.nextContestAt && guard++ < 400) {
+    const arrivedAt = cam.nextContestAt;
+    const node = chooseNode(state, content);
+    if (!node) break;
+    cam.contestCount = (cam.contestCount ?? 0) + 1;
+    if (arrivedAt + windowMs <= now) {
+      // Came, waited, left. Unseen, so no window was ever offered and no
+      // node changes hands; the revenue is what went with it.
+      missed.push({ nodeId: node.id, arrivedAt, leftAt: arrivedAt + windowMs });
+      scheduleNext(state, content, arrivedAt + windowMs);
+      continue;
     }
+    cam.contested.push({
+      nodeId: node.id,
+      startedAt: now,
+      // When the convoy actually rolled: the node stopped paying here.
+      scheduledAt: arrivedAt,
+      // The window opens NOW, however long the schedule sat unread.
+      deadline: now + windowMs,
+      gen,
+    });
+    cam.nextContestAt = null; // rescheduled when this one resolves
+    news.push(line(t.news.opened, node.name));
+  }
+  if (missed.length && t.news.missed) {
+    const nodeDays = missed.reduce((n, m) => n + (m.leftAt - m.arrivedAt), 0) / (24 * HOUR);
+    news.push((t.news.missed ?? '').replace('{count}', String(missed.length)).replace('{days}', String(Math.round(nodeDays))));
   }
 
   // Close anything whose window ran out. A contest opened on this very
@@ -202,7 +229,7 @@ export function tickContests(state, content, now, gen) {
     news.push(line(t.news.expired, nameOf(contest.nodeId)));
   }
 
-  return news;
+  return { news, missed };
 }
 
 // Called by resolveBattle when a defence is fought to a conclusion.

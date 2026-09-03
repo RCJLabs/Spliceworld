@@ -122,10 +122,14 @@ export function conditionTier(condition) {
 
 // Advance all timestamp-driven effects since the last tick. Idempotent for
 // dt <= 0 (clock skew, time-warp removed) — never rewind anything.
-export function applyElapsed(state, content, now) {
-  const last = state.lastTickAt ?? now;
+// `since` defaults to the save's one clock and, when it is left to default,
+// this call still advances that clock — so a fixture that ages a ranch with
+// one call behaves as it always did. campaign/world.js passes `since`
+// explicitly and advances the clock itself, once, after every system.
+export function applyElapsed(state, content, now, since = null) {
+  const last = since ?? state.lastTickAt ?? now;
   const dt = Math.max(0, now - last);
-  state.lastTickAt = now;
+  if (since == null) state.lastTickAt = now;
   if (dt === 0) return;
 
   const dtHours = dt / HOUR;

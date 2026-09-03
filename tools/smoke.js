@@ -1547,7 +1547,7 @@ assert.equal(states[4].status, 'locked', 'guard post needs Threat Gen 2');
 // would just have to be edited again next time the economy is tuned.
 assert.equal(incomePerDay(camp, content), regionOf0.nodes[0].incomePerDay,
   'one node held pays exactly that node');
-camp.campaign.lastTickAt = t0;
+camp.lastTickAt = t0;
 tickCampaign(camp, content, t0 + 2 * 24 * HOUR);
 assert.ok(Math.abs(camp.funds - regionOf0.nodes[0].incomePerDay * 2) < 0.01,
   `two days of one held node pays two days of that node (${camp.funds})`);
@@ -1557,7 +1557,7 @@ assert.equal(nodeStates(camp, content)[4].status, 'locked', 'still strip-gated b
 
 // --- M5 ACCEPTANCE: losing a battle creates a rescue mission with a live timer.
 const m5lab = { ...newGameState(), seed: 505 };
-m5lab.campaign.lastTickAt = t0;
+m5lab.lastTickAt = t0;
 const doomed = makeChimera(m5lab, 'S', { goat_head: 'standard', goat_tail: 'standard' }, t0);
 const strong1 = makeChimera(m5lab, 'L', { bear_head: 'prismatic', bear_forelimbs: 'prismatic', bear_hide: 'prismatic', bear_organ: 'prismatic' }, t0);
 const strong2 = makeChimera(m5lab, 'M', { goat_head: 'prismatic', goat_hindlimbs: 'prismatic', goat_organ: 'prismatic' }, t0);
@@ -1601,7 +1601,7 @@ assert.ok(freed && isInjured(freed, tReady + HOUR) && freed.bond === 10, 'home, 
 
 // Expiry path: ignore a captive past its deadline → lost + the enemy learns.
 const m5lab2 = { ...newGameState(), seed: 506 };
-m5lab2.campaign.lastTickAt = t0;
+m5lab2.lastTickAt = t0;
 const doomed2 = makeChimera(m5lab2, 'S', { cobra_head: 'standard' }, t0);
 // A2: the last chimera on a roster is never taken, so a capture fixture
 // needs somebody left at home. Not deployed — just alive, which is the
@@ -1620,7 +1620,7 @@ assert.ok(m5lab2.news.some((n) => n.includes('internship')), 'zero death languag
 
 // --- M5: conquest holds nodes, pays, raises notoriety to Threat Gen 2.
 const conq = { ...newGameState(), seed: 900, funds: 0 };
-conq.campaign.lastTickAt = t0;
+conq.lastTickAt = t0;
 const army = [
   makeChimera(conq, 'L', { bear_head: 'prismatic', bear_forelimbs: 'prismatic', bear_hide: 'prismatic', bear_organ: 'prismatic' }, t0),
   makeChimera(conq, 'M', { goat_head: 'prismatic', goat_hindlimbs: 'prismatic', goat_organ: 'prismatic' }, t0),
@@ -1824,7 +1824,7 @@ assert.deepEqual(m5.campaign, {
   heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
   contested: [], nextContestAt: null, defences: {}, contestCount: 0,
   operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
-  lastTickAt: null,
+  // R64: the campaign's own clock is gone — one elapsed clock per save.
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -2725,7 +2725,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   const { rivalEncounter } = await import('../campaign/rivals.js');
   const region = Object.values(content.regions)[0]; // Greenfield, for the node-order fixtures
   const lab = { ...newGameState(), seed: 77 };
-  lab.campaign.lastTickAt = t0;
+  lab.lastTickAt = t0;
   lab.campaign.heldNodes = [...ALL_NODE_IDS];
   lab.campaign.notoriety = 999;
   lab.campaign.rivals = { mantissa: { defeats: 0, losses: 0 } };
@@ -2805,7 +2805,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // A lab holding one captured rival specimen, ready to decide about it.
   const bayLab = (rivalId = 'mantissa', waveIndex = 0) => {
     const lab = { ...newGameState(), seed: 4242, funds: 6000 };
-    lab.campaign.lastTickAt = t0;
+    lab.lastTickAt = t0;
     lab.campaign.heldNodes = [...ALL_NODE_IDS];
     lab.campaign.notoriety = 999;
     lab.campaign.rivals = { [rivalId]: { defeats: 0, losses: 0 } };
@@ -3698,7 +3698,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // An empire at Threat Gen 2 holding four nodes, cloned per test.
   const empire = () => {
     const s = structuredClone(conq);
-    s.campaign.lastTickAt = t0;
+    s.lastTickAt = t0;
     s.campaign.contested = [];
     s.campaign.nextContestAt = null;
     s.campaign.defences = {};
@@ -3715,7 +3715,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     young.campaign.heldNodes = ['barn_perimeter', 'downtown'];
     assert.equal(threatGen(young, content), 1);
     assert.equal(contestEligible(young, content, 1), false, 'gen 1 is not contestable');
-    assert.deepEqual(tickContests(young, content, t0 + 500 * HOUR, 1), [], 'and nothing ever fires');
+    assert.deepEqual(tickContests(young, content, t0 + 500 * HOUR, 1).news, [], 'and nothing ever fires');
     assert.equal(young.campaign.nextContestAt, null, 'not even a schedule');
     // Nor with the generation but without the territory.
     const lonely = { ...newGameState(), seed: 32 };
@@ -3729,30 +3729,37 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // their habits instead of the world.
   {
     const s = empire();
-    assert.deepEqual(tickContests(s, content, t0, 2), [], 'the first tick only schedules');
+    assert.deepEqual(tickContests(s, content, t0, 2).news, [], 'the first tick only schedules');
     assert.equal(s.campaign.nextContestAt, t0 + ct.firstDelayHours * HOUR, 'a beat before the first one');
     let opened = 0;
     for (let i = 0; i < 50; i++) {
-      opened += tickContests(s, content, t0 + i * 60000, 2).length;
+      opened += tickContests(s, content, t0 + i * 60000, 2).news.length;
     }
     assert.equal(opened, 0, 'fifty ticks inside the window open nothing');
     assert.equal(s.campaign.contested.length, 0);
     assert.equal(s.campaign.nextContestAt, t0 + ct.firstDelayHours * HOUR, 'and the schedule never moved');
   }
 
-  // The window starts when you SEE it. Come back from a week away and the
-  // convoy is arriving now, with the whole window ahead of you — losing a
+  // The window starts when you SEE it. Come back and find a convoy that
+  // arrived an hour ago, and the whole window is ahead of you — losing a
   // node you were never given a chance to defend is exactly the surprise
   // the rescue-window house rule forbids.
+  //
+  // R64 changed what a week away MEANS, not this rule: the schedule now
+  // replays through the gap, so several convoys came, waited their window,
+  // and left (see the R64 block), and only one that is still inside its
+  // window on return is waiting. This block pins the waiting one.
   let contestedNodeId = null;
   {
     const s = empire();
     tickContests(s, content, t0, 2);
     const away = t0 + 7 * 24 * HOUR;
-    const news = tickContests(s, content, away, 2);
-    assert.equal(s.campaign.contested.length, 1, 'a week away means exactly one counter-offensive, not fifty');
+    s.campaign.nextContestAt = away - HOUR; // the last convoy rolled an hour before you got back
+    const news = tickContests(s, content, away, 2).news;
+    assert.equal(s.campaign.contested.length, 1, 'one counter-offensive is waiting, not fifty');
     assert.equal(news.length, 1, 'and one wire line');
     const c = s.campaign.contested[0];
+    assert.equal(c.scheduledAt, away - HOUR, 'the wire remembers when it actually rolled');
     contestedNodeId = c.nodeId;
     assert.equal(c.deadline, away + ct.windowHours * HOUR, 'the window opens when the player does');
     assert.ok(c.deadline > away, 'so it cannot already have expired');
@@ -3774,7 +3781,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     // Force another to fall due while this one still stands: the cap, not
     // the schedule, has to be what stops it.
     s.campaign.nextContestAt = away;
-    assert.deepEqual(tickContests(s, content, away + HOUR, 2), [], 'only one convoy at a time');
+    assert.deepEqual(tickContests(s, content, away + HOUR, 2).news, [], 'only one convoy at a time');
     assert.equal(s.campaign.contested.length, 1);
   }
 
@@ -3785,9 +3792,9 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     tickContests(s, content, t0, 2);
     tickContests(s, content, t0 + 10 * HOUR, 2);
     const c = s.campaign.contested[0];
-    assert.deepEqual(tickContests(s, content, c.deadline - 1, 2), [], 'not a minute early');
+    assert.deepEqual(tickContests(s, content, c.deadline - 1, 2).news, [], 'not a minute early');
     assert.ok(s.campaign.heldNodes.includes(c.nodeId));
-    const news = tickContests(s, content, c.deadline, 2);
+    const news = tickContests(s, content, c.deadline, 2).news;
     assert.equal(news.length, 1);
     assert.ok(news[0].includes(region.nodes.find((n) => n.id === c.nodeId).name), 'the wire names what you lost');
     assert.ok(!s.campaign.heldNodes.includes(c.nodeId), 'the node is gone');
@@ -4102,7 +4109,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // quotation marks.
   {
     const lab = { ...newGameState(), seed: 3131 };
-    lab.campaign.lastTickAt = t0;
+    lab.lastTickAt = t0;
     lab.campaign.heldNodes = [...ALL_NODE_IDS];
     lab.campaign.notoriety = 999;
     lab.campaign.rivals = { mantissa: { defeats: 0, losses: 0 } };
@@ -4165,7 +4172,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // for, in the news wire, across the whole game rather than three fights.
   {
     const lab = { ...newGameState(), seed: 4141, funds: 6000 };
-    lab.campaign.lastTickAt = t0;
+    lab.lastTickAt = t0;
     setPhilosophy(lab, 'collector');
     const ph = content.philosophies.collector;
     const say = (slot) => fragment(ph.monologue[slot]);
@@ -4185,7 +4192,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     // Losing a chimera TO A RIVAL is personal: the taunt has an author,
     // and the wire says so when the window closes on it.
     const lost = { ...newGameState(), seed: 5151 };
-    lost.campaign.lastTickAt = t0;
+    lost.lastTickAt = t0;
     setPhilosophy(lost, 'collector');
     const doomed = makeChimera(lost, 'S', { goat_head: 'standard' }, t0);
     // A2: a lone chimera is never taken, so a capture fixture keeps a
@@ -4221,7 +4228,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     // Rehabilitating a rival's specimen: you say what you did, and the lab
     // you took it from says what they think of that.
     const won = { ...newGameState(), seed: 6161, funds: 6000 };
-    won.campaign.lastTickAt = t0;
+    won.lastTickAt = t0;
     won.facility.containment = 2;
     setPhilosophy(won, 'collector');
     won.campaign.rivals = { aloft: { defeats: 0, losses: 0 } };
@@ -4304,7 +4311,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   const lab = (seed = 800, { chimera = null, funds = 300 } = {}) => {
     const s = { ...newGameState(), seed, funds };
     ensureRanchSeeded(s, content, t0);
-    s.campaign.lastTickAt = t0;
+    s.lastTickAt = t0;
     s.lastTickAt = t0;
     if (chimera) {
       const slots = {};
@@ -5072,7 +5079,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 
     // A won battle, resolved the way the game resolves one.
     const temperBefore = ch.temperament.temper;
-    s.campaign.lastTickAt = t0;
+    s.lastTickAt = t0;
     s.battle = createBattle([ch], content.encounters.patrol_1, content, 3, t0, { kind: 'assault', nodeId: null });
     let guard = 0;
     while (!s.battle.over && guard++ < 200) {
@@ -5500,7 +5507,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
 
   // Two on the roster: the capture works exactly as it always has.
   const pair = { ...newGameState(), seed: 4141 };
-  pair.campaign.lastTickAt = t0;
+  pair.lastTickAt = t0;
   const a = mk(pair, 'goat_head');
   mk(pair, 'ram_head');
   const took = lose(pair, [a]);
@@ -5510,7 +5517,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
 
   // One on the roster: it comes home instead.
   const solo = { ...newGameState(), seed: 4141 };
-  solo.campaign.lastTickAt = t0;
+  solo.lastTickAt = t0;
   const only = mk(solo, 'goat_head');
   const held = lose(solo, [only]);
   assert.equal(held.capturedChimera, null, 'the last one is not taken');
@@ -5685,7 +5692,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     const lab = { ...newGameState(), seed: 909 };
     lab.campaign.heldNodes = [...ALL_NODE_IDS];
     lab.campaign.notoriety = 999;
-    lab.campaign.lastTickAt = t0;
+    lab.lastTickAt = t0;
     const hero = makeChimera(lab, 'L', {
       bear_head: 'prismatic', bear_forelimbs: 'prismatic', bear_hide: 'prismatic', bear_organ: 'prismatic',
     }, t0);
@@ -5891,6 +5898,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'splice/dexentry.js': 'dex',
     'campaign/warroom.js': 'regions',
     'campaign/wire.js': 'regions',
+    'campaign/world.js': 'regions',
 
     // --- The shell and the save. Not systems; the ground everything
     // stands on.
@@ -12654,12 +12662,22 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //    the second half is what makes the first half a gate rather than a
   //    story: a walk that no number could move would prove nothing.
   {
-    const flat = { ...content, trainingMeta: { ...content.trainingMeta, levels: [] } };
-    const walled = WALK_SEEDS.slice(0, 2).map((seed) => walkCampaign(flat, { seed, days: 180 }));
+    // The oracle was first written as "no veterancy" and measured 3 nodes on
+    // both seeds. R64 then made the walk tick every passive system the
+    // browser does, and the same oracle read 21 and 21 — with dominion. Not
+    // because temperaments or scars empower a level-zero roster: ticking
+    // scars alone flipped one seed and temperaments alone flipped the other.
+    // An unlevelled roster sits on a knife-edge at the Precinct, and any
+    // nudge to the timeline decides which side it lands on. A gate that
+    // depends on which side is a coin, so the oracle is the number with a
+    // monotone effect: every garrison twice as strong, and the walk holds
+    // under a third of the map (measured 24 against 81).
+    const heavy = { ...content, tierScale: content.tierScale.map((x) => x * 2) };
+    const walled = WALK_SEEDS.slice(0, 2).map((seed) => walkCampaign(heavy, { seed, days: 180 }));
     const okNodes = walks.slice(0, 2).reduce((n, w) => n + w.nodes, 0);
     const walledNodes = walled.reduce((n, w) => n + w.nodes, 0);
-    console.log(`   no veterancy: ${walled.map((w) => `${w.seed}:${w.nodes}`).join(' ')} against ${okNodes}`);
-    assert.ok(walledNodes <= okNodes / 2, `without levels the walk is walled (${walledNodes} nodes against ${okNodes}) — the ladder R41 built is the one the campaign climbs`);
+    console.log(`   garrisons doubled: ${walled.map((w) => `${w.seed}:${w.nodes}`).join(' ')} against ${okNodes}`);
+    assert.ok(walledNodes <= okNodes / 2, `with every garrison twice as strong the walk is walled (${walledNodes} nodes against ${okNodes}) — the walk answers to the numbers that price the fights`);
     const triple = { ...content, campaignMeta: { ...content.campaignMeta, contestation: { ...t, escalation: 2.0 } } };
     const pressed = WALK_SEEDS.slice(0, 2).map((seed) => walkCampaign(triple, { seed, days: 180 }));
     const pressedNodes = pressed.reduce((n, w) => n + w.nodes, 0);
@@ -12707,6 +12725,154 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(rescue && /Gnash/.test(rescue.hint) && /12h/.test(rescue.hint), `the captive is named and timed (${rescue?.hint})`);
     st.chimeras[0].injury = { name: 'x', until: t0 + 9 * HOUR };
     assert.ok(!agenda63(st, content, t0).some((i) => ['defend', 'rescue'].includes(i.id)), 'neither is offered with nobody fit to go');
+  }
+}
+
+// --- R64: being away was strictly profitable -------------------------------
+{
+  const { tickWorld, elapsedSince } = await import('../campaign/world.js');
+  const { tickContests, contestTuning } = await import('../campaign/contest.js');
+  const DAY = 24 * HOUR;
+  const ct = contestTuning(content);
+  // 1. One clock, one `now`, one place. The shell used to read NOW() seven
+  //    times in a tick and keep two elapsed timestamps.
+  {
+    const shell = readFileSync(join(root, 'main.js'), 'utf8');
+    const tickBody = shell.slice(shell.indexOf('function tick()'), shell.indexOf('function updateTicker'));
+    assert.equal((tickBody.match(/NOW\(\)/g) ?? []).length, 1, 'tick() reads the clock once');
+    assert.ok(tickBody.includes('tickWorld('), 'and advances the world through campaign/world.js');
+    for (const gone of ['applyElapsed(', 'tickCampaign(', 'tickVat(', 'tickScars(']) {
+      assert.ok(!shell.includes(gone), `the shell no longer calls ${gone} itself`);
+    }
+    const src = ['campaign/campaign.js', 'campaign/contest.js', 'ranch/ranch.js', 'campaign/world.js', 'main.js', 'tools/sim.js']
+      .map((f) => readFileSync(join(root, f), 'utf8').replace(/\/\/.*$/gm, '')).join('\n');
+    assert.ok(!src.includes('campaign.lastTickAt'), 'nothing reads the second clock any more');
+    assert.equal(newGameState().campaign.lastTickAt, undefined, 'and a new save does not carry it');
+  }
+
+  // 2. THE FORGIVENESS. A poor save, upkeep above what is in hand, income
+  //    covering it daily: thirty hourly ticks and one thirty-day tick land
+  //    on the same funds. They used to differ by exactly the upkeep the
+  //    clamp forgave ($760 on this fixture).
+  const poor = () => {
+    const st = { ...newGameState(), seed: 5, funds: 200 };
+    ensureRanchSeeded(st, content, t0);
+    st.lastTickAt = t0;
+    st.campaign.heldNodes = ['barn_perimeter', 'downtown', 'checkpoint', 'precinct'];
+    for (let i = 0; i < 6; i++) st.chimeras.push({ id: `c${i}`, name: `C${i}`, frame: 'L', tokens: {}, xp: 0 });
+    return st;
+  };
+  {
+    const a = poor(), b = poor();
+    assert.ok(upkeepPerDay(a, content) * 30 > a.funds, 'the fixture cannot pay a month of upkeep up front');
+    assert.ok(incomePerDay(a, content) > upkeepPerDay(a, content), 'but earns more than it spends');
+    for (let h = 1; h <= 30 * 24; h++) tickWorld(a, content, t0 + h * HOUR);
+    tickWorld(b, content, t0 + 30 * DAY);
+    assert.ok(Math.abs(a.funds - b.funds) < 1, `hourly and monthly ticks agree ($${Math.round(a.funds)} vs $${Math.round(b.funds)})`);
+    assert.equal(b.lastTickAt, t0 + 30 * DAY, 'the one clock advanced');
+    assert.deepEqual(elapsedSince(b, t0 + 31 * DAY), { since: t0 + 30 * DAY, dt: DAY }, 'and reads back');
+  }
+
+  // 3. Migration: a v34 save's campaign clock is folded into the one clock.
+  {
+    const old = { ...structuredClone(newGameState()), saveVersion: 34, lastTickAt: null };
+    old.campaign.lastTickAt = t0 + 5 * DAY;
+    const moved = migrate(structuredClone(old));
+    assert.equal(moved.saveVersion, SAVE_VERSION);
+    assert.equal(moved.lastTickAt, t0 + 5 * DAY, 'a missing ranch clock takes the campaign one, so the gap is neither charged nor paid twice');
+    assert.equal(moved.campaign.lastTickAt, undefined, 'and the second clock is gone');
+    const both = { ...structuredClone(newGameState()), saveVersion: 34, lastTickAt: t0 + 6 * DAY };
+    both.campaign.lastTickAt = t0 + 5 * DAY;
+    assert.equal(migrate(structuredClone(both)).lastTickAt, t0 + 6 * DAY, 'a set ranch clock is kept');
+  }
+
+  // 4. THE WORLD MOVES WHILE THE APP IS CLOSED. A week away used to meet one
+  //    convoy and seven days of full pay. Now the schedule replays: convoys
+  //    arrive when due, wait their window, leave; only one still inside its
+  //    window is waiting, with its full window from now.
+  const empire = () => {
+    const st = { ...newGameState(), seed: 64, funds: 0 };
+    ensureRanchSeeded(st, content, t0);
+    st.lastTickAt = t0;
+    st.campaign.heldNodes = ['barn_perimeter', 'downtown', 'checkpoint', 'precinct', 'guard_post'];
+    st.campaign.notoriety = 100; // gen 2
+    return st;
+  };
+  {
+    const s = empire();
+    tickContests(s, content, t0, 2); // schedules the first
+    const away = t0 + 7 * DAY;
+    const { news, missed } = tickContests(s, content, away, 2);
+    const cadence = (ct.windowHours + ct.cooldownHours) ; // hours from one arrival to the next, before jitter
+    const expect = Math.floor((7 * 24 - ct.firstDelayHours) / cadence);
+    assert.ok(missed.length >= expect - 2 && missed.length <= expect + 2, `a week contains about ${expect} convoys (${missed.length})`);
+    for (const m of missed) {
+      assert.equal(m.leftAt - m.arrivedAt, Math.round(ct.windowHours * HOUR), 'each waited exactly its window');
+      assert.ok(m.leftAt <= away, 'and had left before you got back');
+      assert.ok(s.campaign.heldNodes.includes(m.nodeId), 'without taking the node');
+    }
+    assert.equal(s.campaign.heldNodes.length, 5, 'nothing changes hands unseen');
+    assert.ok(s.campaign.contested.length <= 1, 'at most one is waiting');
+    for (const c of s.campaign.contested) {
+      assert.equal(c.deadline, away + Math.round(ct.windowHours * HOUR), 'with its full window from now');
+      assert.ok(c.scheduledAt > away - ct.windowHours * HOUR, 'because it arrived inside the last window');
+    }
+    assert.ok(news.some((l) => l.includes(`${missed.length} convoys`)), `the wire says how many came and went (${news.join(' | ')})`);
+    // Present, the player still sees one at a time: nothing replays while one waits.
+    if (s.campaign.contested.length) {
+      assert.deepEqual(tickContests(s, content, away + 2 * HOUR, 2).missed, [], 'a waiting convoy holds the schedule');
+    }
+    // Deterministic: the same save away for the same week meets the same convoys.
+    const twin = empire(); tickContests(twin, content, t0, 2);
+    assert.deepEqual(tickContests(twin, content, away, 2).missed, missed, 'replayed identically from the seed');
+  }
+
+  // 5. And it costs exactly the income those convoys sat on — no more, no
+  //    less — so a month away is not a month of full pay, and not a fine.
+  {
+    const s = empire();
+    tickContests(s, content, t0, 2);
+    const twin = structuredClone(s);
+    const away = t0 + 7 * DAY;
+    const { missed } = tickContests(twin, content, away, 2);
+    const rate = (id) => Object.values(content.regions).flatMap((r) => r.nodes).find((n) => n.id === id).incomePerDay;
+    const suspended = missed.reduce((n, m) => n + rate(m.nodeId) * (m.leftAt - m.arrivedAt) / DAY, 0);
+    const waiting = twin.campaign.contested[0];
+    const waitingCost = waiting ? rate(waiting.nodeId) * (away - waiting.scheduledAt) / DAY : 0;
+    const fullPay = incomePerDay(s, content) * 7;
+    tickCampaign(s, content, away, t0);
+    assert.ok(Math.abs(s.funds - (fullPay - suspended - waitingCost)) < 1,
+      `paid the week minus the windows the convoys sat on ($${Math.round(s.funds)} = ${Math.round(fullPay)} − ${Math.round(suspended)} − ${Math.round(waitingCost)})`);
+    assert.ok(s.funds < fullPay, 'less than full pay');
+    assert.ok(s.funds > fullPay * 0.5, 'and more than half of it — a cost, not a fine');
+    // The broken number: a window of zero is a convoy that costs nothing, and
+    // the week reads as full pay again. That is what this gate is watching for.
+    const free = { ...content, campaignMeta: { ...content.campaignMeta, contestation: { ...ct, windowHours: 0 } } };
+    const z = empire(); tickContests(z, free, t0, 2);
+    tickCampaign(z, free, away, t0);
+    assert.ok(Math.abs(z.funds - incomePerDay(z, free) * 7) < 1, 'with the window broken, absence is full pay again');
+  }
+
+  // 6. THE CRITERION, walked. Thirty days away against thirty days of daily
+  //    play, from the same save on the day the app closed.
+  {
+    const rows = [];
+    for (const seed of [2026, 7]) {
+      const daily = campaignWalk(content, { seed, days: 60, snapshotDays: [30, 60], markDay: 30 });
+      const gone = campaignWalk(content, { seed, days: 60, away: { from: 30, days: 30 }, snapshotDays: [30, 60], markDay: 30 });
+      const left = gone.snapshots.left, back = gone.snapshots[60], d60 = daily.snapshots[60], d30 = daily.snapshots[30];
+      assert.ok(left && back && d60, `seed ${seed} walked to day 60 without finishing the map`);
+      const fullPay = (left.incomeRate + TUNING.stipendPerDay - left.upkeepRate) * 30;
+      const banked = back.funds - left.funds;
+      rows.push(`${seed}: banked ${banked} of ${fullPay} (${Math.round(100 * banked / fullPay)}%), convoys ${back.contestCount - left.contestCount} vs daily ${d60.contestCount - d30.contestCount}`);
+      assert.ok(banked < fullPay, `seed ${seed}: a month away is not a month of full pay (${banked} of ${fullPay})`);
+      assert.ok(banked > fullPay * 0.5, `seed ${seed}: and not a fine either (${banked} of ${fullPay})`);
+      assert.ok(back.contestCount - left.contestCount >= 0.7 * (d60.contestCount - d30.contestCount),
+        `seed ${seed}: the world moved about as much as it did for the daily player (${back.contestCount - left.contestCount} vs ${d60.contestCount - d30.contestCount})`);
+      assert.ok(back.nodes >= left.nodes - left.contested, `seed ${seed}: no node was lost unseen (${back.nodes} of ${left.nodes})`);
+      assert.ok(back.contested <= 1, `seed ${seed}: at most one convoy is waiting on return (${back.contested})`);
+    }
+    console.log('   ' + rows.join('\n   '));
   }
 }
 

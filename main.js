@@ -5,18 +5,15 @@
 
 import { loadContent } from './data/loader.js';
 import { loadSave, saveGame, exportSave, exportFilename, importSave, adoptSave, startNewRun, runSummary } from './save/save.js';
-import { ensureRanchSeeded, ensureDexVariants, applyElapsed } from './ranch/ranch.js';
+import { ensureRanchSeeded, ensureDexVariants } from './ranch/ranch.js';
 import { renderRanchScreen } from './ranch/ui.js';
 import { renderVaultScreen } from './splice/vault-ui.js';
 import { renderTheaterScreen } from './splice/theater-ui.js';
 import { renderPensScreen } from './splice/pens-ui.js';
 import { runExtraction } from './splice/extract-ui.js';
 import { renderWarRoomScreen } from './campaign/ui.js';
-import { tickCampaign, pushNews } from './campaign/campaign.js';
-import { tickVat } from './splice/chaos.js';
-import { tickResequencer } from './splice/resequencer.js';
-import { ensureTemperaments } from './splice/temperament.js';
-import { tickScars } from './splice/scars.js';
+import { pushNews } from './campaign/campaign.js';
+import { tickWorld } from './campaign/world.js';
 import { renderDexScreen } from './splice/dex-ui.js';
 import * as sfx from './audio/sfx.js';
 import { watchSignals, cuesFor } from './audio/sfx.js';
@@ -103,16 +100,10 @@ function tick() {
   // it is the only place that can see a job come back or a node fall while
   // nobody was looking.
   const beforeCues = watchSignals(state);
-  applyElapsed(state, content, NOW());
-  for (const line of tickVat(state, content, NOW()).news) pushNews(state, line);
-  // A resequencing run finishes on its own clock, whether or not anyone is
-  // watching — and waits politely if the pens are full.
-  for (const line of tickResequencer(state, content, NOW()).news) pushNews(state, line);
-  // A chimera that has finished settling acquires opinions (§3.5).
-  ensureTemperaments(state, content, NOW());
-  // An injury left to run its course may set badly and stay (§3.5).
-  for (const line of tickScars(state, content, NOW()).news) pushNews(state, line);
-  tickCampaign(state, content, NOW());
+  // R64: one `now` for every system, one elapsed clock, one place that
+  // decides the order (campaign/world.js). This used to read the clock
+  // seven times and keep two elapsed timestamps.
+  tickWorld(state, content, NOW());
   saveGame(state);
   updateTicker();
   for (const cue of cuesFor(beforeCues, watchSignals(state))) sfx.play(cue);
@@ -142,7 +133,10 @@ async function boot() {
   applyTheme();
   ensureRanchSeeded(state, content, NOW());
   ensureDexVariants(state, content);
-  applyElapsed(state, content, NOW());
+  // The first tick (showScreen below runs one) settles the whole absence —
+  // condition, upkeep, income and contests — from the one clock. A separate
+  // applyElapsed here used to advance that clock first, which under one
+  // clock would have paid nothing for the gap.
 
   updateTicker();
   document.querySelectorAll('#tabs button').forEach((btn) => {

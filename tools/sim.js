@@ -886,8 +886,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) main();
 // every day count here is a FLOOR.
 import { agendaShape } from '../ranch/agenda.js';
 import { newGameState } from '../save/save.js';
-import { ensureRanchSeeded, applyElapsed } from '../ranch/ranch.js';
-import { tickCampaign, resolveBattle } from '../campaign/campaign.js';
+import { ensureRanchSeeded } from '../ranch/ranch.js';
+import { tickWorld } from '../campaign/world.js';
+import { resolveBattle, incomePerDay } from '../campaign/campaign.js';
 import { careAction, careStatus, buyMailOrder, buyPenUpgrade, catalogFor, ageStage, upkeepPerDay, penUpgradeCost } from '../ranch/ranch.js';
 import { extractAnimal, extractChimera } from '../splice/extract.js';
 import { spliceChimera, validateSplice, trainChimera, TRAINING } from '../splice/theater.js';
@@ -1164,12 +1165,19 @@ function walkAutoplay(battle, content) {
 
 // Walk one seeded save from an empty ranch as far as it gets, and report the
 // curve rather than a verdict — the numbers are the deliverable.
-export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = 9 } = {}) {
+// `away` closes the app for a stretch: { from: day, days: n } skips every
+// tick inside the window, so the return tick sees the whole gap at once —
+// which is exactly what a save does when the player comes back after a
+// holiday. `snapshotDays` records the state as the player would SEE it on
+// those days: after the tick, before they do anything.
+// `tick` is the world-advancing function; the game's own (campaign/world.js)
+// by default. A harness knob only: it exists so an experiment can ask which
+// passive system moves a result, by ticking without it.
+export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = 9, away = null, snapshotDays = [], markDay = null, tick = tickWorld } = {}) {
   const t0 = Date.UTC(2026, 0, 1);
   const state = { ...newGameState(), seed };
   ensureRanchSeeded(state, content, t0);
   state.lastTickAt = t0;
-  state.campaign.lastTickAt = t0;
 
   const at = {};
   const mark = (key, now) => { if (at[key] === undefined) at[key] = +((now - t0) / WALK_DAY).toFixed(2); };
@@ -1180,10 +1188,37 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   let minFunds = Infinity;
   let broke = 0;
 
+  const snapshots = {};
+  const snap = (day) => ({
+    day,
+    funds: Math.round(state.funds),
+    nodes: state.campaign.heldNodes.length,
+    contested: (state.campaign.contested ?? []).length,
+    contestCount: state.campaign.contestCount ?? 0,
+    income: Math.round(state.__walkIncome ?? 0),
+    // The daily rates at this moment: what a month of full pay would be.
+    incomeRate: Math.round(incomePerDay(state, content)),
+    upkeepRate: Math.round(upkeepPerDay(state, content)),
+    captives: (state.campaign.captives ?? []).length,
+    dissections: (state.directorStats?.dissections ?? []).length,
+    chimeras: state.chimeras.length,
+    stock: state.ranch.stock.length,
+    condition: state.ranch.stock.length ? +(state.ranch.stock.reduce((n, a) => n + a.condition, 0) / state.ranch.stock.length).toFixed(1) : null,
+    injured: state.chimeras.filter((c) => c.injury && c.injury.until > t0 + day * WALK_DAY).length,
+    notoriety: state.campaign.notoriety,
+    news: [...(state.news ?? [])],
+  });
+  const awayStart = away ? away.from * 24 : Infinity;
+  const awayEnd = away ? (away.from + away.days) * 24 : -Infinity;
+
   for (let h = 0; h <= days * 24; h += stepHours) {
+    if (h > awayStart && h < awayEnd) continue; // the app is closed
     const now = t0 + h * WALK_HOUR;
-    applyElapsed(state, content, now);
-    tickCampaign(state, content, now);
+    // Income the world is about to pay for this gap, at the holdings it
+    // pays on — the ledger the R64 gate compares a month away against.
+    state.__walkIncome = (state.__walkIncome ?? 0) + incomePerDay(state, content) * ((now - (state.lastTickAt ?? now)) / WALK_DAY);
+    tick(state, content, now);
+    if (snapshotDays.includes(h / 24)) snapshots[h / 24] = snap(h / 24);
 
     minFunds = Math.min(minFunds, Math.round(state.funds));
     if (state.funds <= 0) broke += stepHours;
@@ -1202,6 +1237,9 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       stall = 0;
     }
     walkAct(state, content, now, shape.open, { t0, stepHours, sparsPerDay, stableCap });
+    // The state as the player LEFT it: after the day's actions, so a month
+    // away is measured from what was actually in the bank when the app closed.
+    if (markDay != null && h === markDay * 24) snapshots.left = snap(markDay);
     // Claimed inside the act, so mark it here too — the R56 loop broke out
     // before the next tick's mark() could see it, and `at.dominion` read
     // undefined on a walk that had just won the map.
@@ -1227,6 +1265,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     defences: state.__walkDefences ?? 0,
     defencesHeld: state.__walkHeld ?? 0,
     contests: state.campaign.contestCount ?? 0,
+    snapshots,
     xp: state.chimeras.map((c) => c.xp ?? 0).sort((a, b) => b - a),
     levels: state.chimeras.map((c) => levelOf(c.xp ?? 0, content)).sort((a, b) => b - a),
     roster: state.chimeras.map((c) => ({
