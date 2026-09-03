@@ -329,12 +329,21 @@ export function stockGenome(speciesId, content) {
 export function chimeraUpkeep(chimera, content) {
   const t = upkeepTuning(content);
   let cost = t.frameBase[chimera.frame] ?? t.frameFallback;
+  // R68: a part may carry a PASSIVE — something true of the creature rather
+  // than a button it presses. The goat's Iron Gut was promised in §4.1 as
+  // "halves upkeep" and nothing anywhere read it, because upkeep looked only
+  // at frame, grade and draw. `upkeepMult` is the general form: any part can
+  // carry one, and the ledger multiplies them together, so a 42nd species
+  // with a thrifty organ is a data edit.
+  let upkeepMult = 1;
   for (const token of Object.values(chimera.tokens ?? {})) {
     cost += t.gradeCost[token.grade] ?? t.gradeCost.standard;
-    cost += (content.parts[token.partId]?.phys?.draw ?? 0) * t.drawCost;
+    const part = content.parts[token.partId];
+    cost += (part?.phys?.draw ?? 0) * t.drawCost;
+    if (typeof part?.passive?.upkeepMult === 'number') upkeepMult *= part.passive.upkeepMult;
   }
   cost += (chimera.instability ?? 0) * t.instabilityCost;
-  return Math.round(cost);
+  return Math.max(1, Math.round(cost * upkeepMult));
 }
 
 export function stockUpkeepPerDay(state, content) {

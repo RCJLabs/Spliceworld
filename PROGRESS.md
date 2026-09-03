@@ -1,5 +1,113 @@
 # PROGRESS
 
+## Session 91 — R68: 244 parts, six moves ✅
+
+**Acceptance criterion:** no two non-variant species share an identical slot
+kit, every promised signature ability ships or is struck from §3, `Camo` and
+`Burrower` are read by the engine or gone from the data, and a gate fails on
+identical-kit collisions — **all four pass**. No schema change;
+`SAVE_VERSION` stays **35**. `sw.js` cache → `v35-roster`.
+
+### Measured first
+
+| | before | after |
+|---|---|---|
+| distinct tail effects (40 parts) | **6** | **19** |
+| largest identical tail group | **35 of 40 (88%)** | 5 of 40 (12.5%) |
+| distinct hide effects | 6 (21 plain thorns) | **9** |
+| set-bonus collisions | 5 species on `{power:1.15}` | **0** |
+| tags carried with no chart row | 1 (`Camo`, 8 data hits, 0 in `.js`) | **0** |
+| animals carrying the same active twice | **14** | **0** |
+| §4.1 signature abilities that don't ship | 6 | **0** |
+| goat upkeep with Iron Gut | 40/day (unimplemented) | **20/day** |
+
+### Shipped
+
+- **Tails are a decision.** Nineteen effects across the slot, largest group
+  12.5%. Hides got the three §4.1 names apart at last: pangolin *Roll Up* is
+  the guard + reflect row 7 actually promises, tortoise *Shell Fortress* is
+  thorns + regen, porcupine *Quill Coat* is all quills and no guard.
+- **`Camo` is read from both sides.** A chart row (*Sonic ≫ Camo* — a shape
+  you cannot see still echoes) and the Surveillance Drone carries the tag,
+  because a rule whose defender side nothing fields is still half-dead.
+  *Burrower* struck from §3 rather than invent a ninth tag for a sentence.
+- **Iron Gut is real money.** `chimeraUpkeep` reads `passive.upkeepMult`
+  generically — 20 a day against 40 — so the ledger never learns a species
+  name and the next such passive is a JSON edit.
+
+### Three readers were wrong, and fielding the content honestly found them
+
+- **The starvation guard has been unreachable since R66.** It took its
+  cheapest swing from `options`, which is *already* filtered to
+  `cost <= stamina`, so `atk.stamina < cheapestSwing` could never once be
+  true. The guard R22's comment says cost a whole class had been dead the
+  entire time: an eagle pressed a cheap tail **374 times in 60 fights**
+  instead of resting toward its 30-stamina Dive Bomb. Reading the whole
+  moveset took that build from **56/60 to 60/60**.
+- **Knockback scored a flat `+9`** — but `knockback()` re-queues the fighter
+  it punts and rebuilds it with `combatantFromUnit`, so the damage already
+  spent is *refunded*. It also scored the same with an empty bench, where
+  the move does nothing at all. Now priced against how much of the target
+  you have already taken off.
+- **Slow was priced at the target's whole speed**, with no reference to
+  `kw.slow` — so a 0.1 clip and a full stop tied, and the pilot's pick came
+  down to array order. Slow is also the one control keyword with no
+  already-applied guard *and* it compounds, so nothing was ever going to
+  tell the pilot to stop.
+
+### Two gates were measuring the seed, not the thing
+
+- **R24's gene criterion.** One build, one encounter whose second wave is a
+  Vehicle (machinery does not bleed, so a Venom Gland was half dead on
+  arrival), 80 fights, and a demand for 10pp of *team win rate* — a metric
+  that saturates at both ends and is worth ~10pp of noise on its own. It had
+  passed for four sessions on the seed string it happened to use, and
+  re-authoring one tail re-rolled the dice. Rebuilt: organic encounters, the
+  default moveset (R30's lesson — barbed_skin read a flat 0.0% until the
+  hide was actually fielded), pooled over 9 builds × 4 encounters, turns and
+  HP-left, **two seed families**, and a null control that sets the bar.
+- **R64's away-gate.** A flat 0.35 per-seed floor on four seeds; its own
+  comment already knew that was thin. Widened to sixteen seeds with the
+  claim moved to the aggregate (**84% banked**), a margin-aware per-seed
+  line, and an underwater fixture skipped rather than asserted on.
+
+### Known issues
+- **R78 (new, queued):** widening R64's gate to sixteen seeds turned up a
+  real defect — on seed **5150** the away walk records **zero** world events
+  across a month and returns a node down (7 → 6) with nothing counted,
+  where all ten other comparable seeds record 25–26 and hold every node. A
+  node lost unseen is what R64's replay was built to prevent. The suite pins
+  the seed by name, so a second one fails the gate rather than widening the
+  exemption.
+- Roster-wide, fielding your hide/organ/tail actives is still a small net
+  negative (**−2.4pp**, 7 of 38 species helped; HEAD measured −1.9pp / 7 of
+  38, so this phase is within noise of where it started, having recovered
+  from −5.0pp mid-phase). R23 gave the sockets moves; making them *worth
+  pressing* is unfinished business.
+- The gene probe still cannot resolve the quiet end of the pool —
+  `venom_gland` read 1.1%, 6.9%, 8.2% and 8.2% across four seed families —
+  so the gate claims the aggregate and the loud genes only. Queued in R70.
+- Suite runtime is up to **5m02s**, mostly the campaign walks (R64's gate
+  now runs 32 of them).
+- 8–12 sub-40px controls per screen at 380px, unchanged and R73's work.
+
+### Verified
+- `tools/smoke.js` green; `tools/sim.js` 5508 battles in 2.8s, no degenerate
+  builds flagged.
+- **Break battery: 13 breaks, all red** — identical kit, shared set bonus,
+  homogeneous tails (with kits held distinct so the tail criterion is what
+  fires), same button twice, missing chart row, a renamed signature, both
+  halves of Iron Gut, knockback back to `+9`, slow back to whole-speed, the
+  starvation guard back on `options`, a dead gene and a merely weakened one.
+- Browser at 380px: fresh save and a **v34 → v35** migration both boot with
+  no console errors; all six screens report `scrollWidth` exactly 380.
+
+### Next session's first task
+**R69 — the late game has no content in it.** Fauna per region is Greenfield
+16 / Kestrel 7 / Drowned 7 / Foundry 2 / **Spire 0**, so taking the final
+region puts nothing in the catalog; `tierScale` prices tiers 7–8 and nothing
+fields them; all three rivals gate on Greenfield nodes.
+
 ## Session 90 — R67: the KO turn skips end-of-turn ✅
 
 **Acceptance criterion:** the enemy's half of end-of-turn runs on the KO turn,

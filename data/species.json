@@ -1,5 +1,5 @@
 {
-  "_doc": "Base fauna (34 species; 40 animals with variants, ROADMAP §4.1 and audit §9.2 A3). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity — see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP §3.2): a species with `variantOf` is the same stock, mutated — it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them — variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads — a variant whose identity only shows up on the defending side is a dead mechanic. R32: `bulk` is what the ANIMAL weighs, and it is the multiplier tools/gen-parts.js applies to every part's mass and lift. Before it, mass was a constant — all 41 species' anatomy totalled exactly 58, so a rhino's head massed what a moth's head massed. That was harmless while mass only bought turn order; A9 made mass gate flight (lift >= mass) and cost a point of speed per 50, which meant the game's widest build decision was priced in a currency carrying no information about the creature. Lift follows bulk^(2/3) — wing AREA, not wing mass, which is why a moth gets airborne on nothing and a swan needs a runway. Metabolic draw is deliberately NOT scaled: it was, briefly, and it cost the harness's `gills` archetype four stamina a turn and dropped kestrel/cloudbase from 54% to 21%. Draw is the stamina economy and the upkeep bill; mass and lift are the physics. A variant inherits its base's bulk unless the mutation IS a weight change: an Iron Tortoise is heavier than the tortoise, a Glider Skunk lighter than the skunk, because a patagium is only worth having on something light. `frame` was reassessed at the same time: the cobras have no limbs and rode a quadruped chassis, so they now ride the A-class Kite, and six species whose frame flattered their size (armadillo, chameleon, pangolin, porcupine, goose, heron) dropped to the Scamper. R34: `setBonus.effect` is what makes the purebred bonus real. Every species declared a name and a sentence, and NOTHING read either — physiology computed `purebredSpecies`, handed it to the combatant as `physiology.purebred`, and the battle engine never looked. Measured on matched builds first (same frame, same grade, the same six sockets, bond 100 on both), a purebred build TRAILED a mixed one by 0.1 to 1.8pp across six frame x grade cells: the set was a cost with no payment, because purebred's one wired benefit — 20 less instability — buys nothing once bond cancels the disobedience term, which it does in full at bond 100. So the bonus is not a buff that threatens mixing; it is the missing payment. Three dials, all of them things the engine already reads every turn, so a 42nd species is a data edit and never an engine one: `stats` multiplies the combatant's base numbers, `perks` adds to the temperament perk block, and `keywords` multiplies the NUMERIC value of that keyword wherever it appears on this creature's moves (a boolean keyword has no dial and is left alone). Every `desc` states exactly what its effect does, because the previous ones did not: 14 of the 41 promised a percentage on a keyword that is a boolean — '+20% trap duration' on a trap that has no duration — and those were rewritten rather than faked. Measured after: purebred goes from -0.9pp to +1.3pp, ahead in all six cells, which is a reason to chase a set and not a reason to stop mixing.",
+  "_doc": "Base fauna (34 species; 40 animals with variants, ROADMAP \u00a74.1 and audit \u00a79.2 A3). Palettes drive part rendering via @primary/@secondary/@accent tokens. tags feed the battle chart; class is the species' natural elemental class (a chimera's actual class is derived from its parts' classAffinity \u2014 see data/classes.json); archetype selects the shape family used by tools/gen-parts.js. Ranch fields: frame = torso for a purebred; diet/feedCost = one feed action; upkeepPerDay = housing drain; mailOrderPrice = catalog price (null = not sold, acquired by conquering region nodes that unlock its fauna); growthHours = age-stage thresholds; thermal = [minC,maxC] comfort band, intersected across a chimera's species; setBonus = purebred bonus at 4+ parts; incubationMinutes = egg timer. VARIANTS (post-v0.1, ROADMAP \u00a73.2): a species with `variantOf` is the same stock, mutated \u2014 it inherits its base's anatomy and frame, and carries its own palette, tags, thermal band, set bonus and `statMult`. Never strictly better: every variant trades something, or the base species becomes dead content the moment you breed one. `affinity` overrides a slot's classAffinity (a Glider Skunk's forelimbs vote Air), and `shapeTweak` nudges the generator's shape params so a variant is not merely a recolour. mailOrderPrice is null on all of them \u2014 variants are bred, never bought. `moveTag` appends a tag to a variant's damaging MOVES, which is where the tag chart actually reads \u2014 a variant whose identity only shows up on the defending side is a dead mechanic. R32: `bulk` is what the ANIMAL weighs, and it is the multiplier tools/gen-parts.js applies to every part's mass and lift. Before it, mass was a constant \u2014 all 41 species' anatomy totalled exactly 58, so a rhino's head massed what a moth's head massed. That was harmless while mass only bought turn order; A9 made mass gate flight (lift >= mass) and cost a point of speed per 50, which meant the game's widest build decision was priced in a currency carrying no information about the creature. Lift follows bulk^(2/3) \u2014 wing AREA, not wing mass, which is why a moth gets airborne on nothing and a swan needs a runway. Metabolic draw is deliberately NOT scaled: it was, briefly, and it cost the harness's `gills` archetype four stamina a turn and dropped kestrel/cloudbase from 54% to 21%. Draw is the stamina economy and the upkeep bill; mass and lift are the physics. A variant inherits its base's bulk unless the mutation IS a weight change: an Iron Tortoise is heavier than the tortoise, a Glider Skunk lighter than the skunk, because a patagium is only worth having on something light. `frame` was reassessed at the same time: the cobras have no limbs and rode a quadruped chassis, so they now ride the A-class Kite, and six species whose frame flattered their size (armadillo, chameleon, pangolin, porcupine, goose, heron) dropped to the Scamper. R34: `setBonus.effect` is what makes the purebred bonus real. Every species declared a name and a sentence, and NOTHING read either \u2014 physiology computed `purebredSpecies`, handed it to the combatant as `physiology.purebred`, and the battle engine never looked. Measured on matched builds first (same frame, same grade, the same six sockets, bond 100 on both), a purebred build TRAILED a mixed one by 0.1 to 1.8pp across six frame x grade cells: the set was a cost with no payment, because purebred's one wired benefit \u2014 20 less instability \u2014 buys nothing once bond cancels the disobedience term, which it does in full at bond 100. So the bonus is not a buff that threatens mixing; it is the missing payment. Three dials, all of them things the engine already reads every turn, so a 42nd species is a data edit and never an engine one: `stats` multiplies the combatant's base numbers, `perks` adds to the temperament perk block, and `keywords` multiplies the NUMERIC value of that keyword wherever it appears on this creature's moves (a boolean keyword has no dial and is left alone). Every `desc` states exactly what its effect does, because the previous ones did not: 14 of the 41 promised a percentage on a keyword that is a boolean \u2014 '+20% trap duration' on a trap that has no duration \u2014 and those were rewritten rather than faked. Measured after: purebred goes from -0.9pp to +1.3pp, ahead in all six cells, which is a reason to chase a set and not a reason to stop mixing.",
   "species": [
     {
       "id": "bear",
@@ -348,10 +348,11 @@
       "incubationMinutes": 26,
       "setBonus": {
         "name": "Leverage",
-        "desc": "+15% Power",
+        "desc": "+10% Power, +20% Armor",
         "effect": {
           "stats": {
-            "power": 1.15
+            "power": 1.1,
+            "armor": 1.2
           }
         }
       }
@@ -386,10 +387,11 @@
       "incubationMinutes": 26,
       "setBonus": {
         "name": "Battering Line",
-        "desc": "+15% Power",
+        "desc": "+12% Power, +15% Speed",
         "effect": {
           "stats": {
-            "power": 1.15
+            "power": 1.12,
+            "speed": 1.15
           }
         }
       }
@@ -629,10 +631,11 @@
       "incubationMinutes": 38,
       "setBonus": {
         "name": "Overcharge",
-        "desc": "+15% Power",
+        "desc": "+25% Power, \u221215% Stamina",
         "effect": {
           "stats": {
-            "power": 1.15
+            "power": 1.25,
+            "stamina": 0.85
           }
         }
       }
@@ -669,10 +672,13 @@
       "incubationMinutes": 34,
       "setBonus": {
         "name": "Deep Lure",
-        "desc": "Accuracy Down drops two stages, not one",
+        "desc": "Blinds 50% harder, and +15% HP to survive the bite it invites",
         "effect": {
+          "stats": {
+            "hp": 1.15
+          },
           "keywords": {
-            "accDown": 2
+            "accDown": 1.5
           }
         }
       }
@@ -709,10 +715,10 @@
       "incubationMinutes": 22,
       "setBonus": {
         "name": "Springloaded",
-        "desc": "Evasion Up rises two stages, not one",
+        "desc": "+25% Speed",
         "effect": {
-          "keywords": {
-            "evasionUp": 2
+          "stats": {
+            "speed": 1.25
           }
         }
       }
@@ -787,7 +793,7 @@
       "incubationMinutes": 34,
       "setBonus": {
         "name": "Full Cloak",
-        "desc": "Evasion Up rises two stages, not one",
+        "desc": "Evasion stacks twice as fast",
         "effect": {
           "keywords": {
             "evasionUp": 2
@@ -827,7 +833,7 @@
       "incubationMinutes": 26,
       "setBonus": {
         "name": "Lingering Cloud",
-        "desc": "Accuracy Down drops two stages, not one",
+        "desc": "Blinding gas lands twice as thick",
         "effect": {
           "keywords": {
             "accDown": 2
@@ -903,10 +909,11 @@
       "incubationMinutes": 22,
       "setBonus": {
         "name": "Duelist's Edge",
-        "desc": "+15% Power",
+        "desc": "+18% crit chance, and cornered sooner",
         "effect": {
-          "stats": {
-            "power": 1.15
+          "perks": {
+            "critChance": 0.18,
+            "lastStandAt": 0.1
           }
         }
       }
@@ -1028,10 +1035,10 @@
       "incubationMinutes": 26,
       "setBonus": {
         "name": "Unprovoked",
-        "desc": "+12% Power",
+        "desc": "+12% power on every swing, the way a fierce creature gets it",
         "effect": {
-          "stats": {
-            "power": 1.12
+          "perks": {
+            "power": 0.12
           }
         }
       }
@@ -1109,10 +1116,11 @@
       "incubationMinutes": 33,
       "setBonus": {
         "name": "Standing Still",
-        "desc": "+12% Power",
+        "desc": "+20% Power, \u221210% Speed",
         "effect": {
           "stats": {
-            "power": 1.12
+            "power": 1.2,
+            "speed": 0.9
           }
         }
       }
@@ -1487,10 +1495,11 @@
       "incubationMinutes": 51,
       "setBonus": {
         "name": "Crush Depth",
-        "desc": "+20% Power",
+        "desc": "+15% Power and Armor",
         "effect": {
           "stats": {
-            "power": 1.2
+            "power": 1.15,
+            "armor": 1.15
           }
         }
       },
@@ -1716,10 +1725,11 @@
       "incubationMinutes": 38,
       "setBonus": {
         "name": "Second Dose",
-        "desc": "Venom applies twice the stacks",
+        "desc": "Venom applies 50% more stacks, and its chill lands twice as hard",
         "effect": {
           "keywords": {
-            "venom": 2
+            "venom": 1.5,
+            "slow": 2
           }
         }
       },

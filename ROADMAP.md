@@ -84,7 +84,7 @@ BREED stock (genetics raise the ceiling)
 ### 3.6 Battle System
 - **Format:** turn-based, menu-driven, Pokémon structure. Player fields a **team of 3** (bench + switching); enemy commanders field unit waves. Speed determines turn order; switching costs the turn.
 - **Stats:** HP, Power, Armor, Speed, Stamina (pool + regen from physiology). **Moves cost stamina instead of PP** — heavy high-power builds run hot and must pace; this is the physiology sim paying off in combat.
-- **Tags instead of types:** parts grant tags — Armored, Airborne, Aquatic, Venomous, Electric, Sonic, Burrower, Gas, Camo. Effectiveness is a small readable chart (Electric ≫ Aquatic; Ground moves miss Airborne; Sonic ignores Armor; Gas ≫ organic, useless vs. vehicles; etc.). The "type chart" emerges from what you built.
+- **Tags instead of types:** parts grant tags — Armored, Airborne, Aquatic, Venomous, Electric, Sonic, Gas, Camo. (Burrower was listed here for a long time and never reached a single part; R68 struck it rather than invent a ninth tag to justify the sentence.) Effectiveness is a small readable chart (Electric ≫ Aquatic; Ground moves miss Airborne; Sonic ignores Armor; Gas ≫ organic, useless vs. vehicles; etc.). The "type chart" emerges from what you built.
 - **Human enemy roster** (Gen 1–2): Riot Squad (Shield Wall: guards allies), Net Trooper (Trap), Tranq Team (Sleep), Police Cruiser, Infantry Squad (Suppressing Fire: accuracy down), Jeep .50 (fast, fragile), Tank (Armored, slow, Cannon = 2-turn charge), Attack Chopper (Airborne), Artillery (off-screen strikes, must be rushed). KO'd soldiers parachute away; vehicles sputter and collapse.
 - **Multi-stage battles:** commanders send waves; bosses transform mid-fight (Tank → Rail Tank), call reinforcements, or change the arena.
 - **Capture — theirs:** defeat a rival chimera with your **Containment Cannon** charged (charges by dealing damage without KO'ing — a capture minigame of restraint) → chimera goes to your Containment → **salvage** its engineered parts (enemy-tech parts are otherwise unobtainable) or, post-v0.1, rehabilitate it into your roster.
@@ -136,14 +136,14 @@ Each species contributes ~6 parts (head, forelimbs, hindlimbs, tail, hide, organ
 | 10 | Ram | Breaker | Head → Knockback Butt (forces enemy switch) | — |
 | 11 | Eagle | Aerial striker | Hindlimbs+Wings → Dive Bomb (accuracy up) | Airborne |
 | 12 | Bat | Disruptor | Organ → Echo Shriek (enemy accuracy down) | Airborne, Sonic |
-| 13 | Dragonfly | Speedster | Wings → Flicker (evasion, first-strike) | Airborne |
+| 13 | Dragonfly | Speedster | Forelimbs → Flicker (priority + evasion) | Airborne |
 | 14 | Shark | Finisher | Head → Frenzy (power up vs. wounded) | Aquatic |
 | 15 | Octopus | Controller | Forelimbs → Eight-Grip (trap); Organ → Ink (acc down) | Aquatic, Gas |
 | 16 | Electric Eel | Mage | Organ → Discharge (Electric nuke) | Electric, Aquatic |
 | 17 | Anglerfish | Taunter | Head → Lure Light (taunt) | Aquatic |
 | 18 | Frog | Mobility | Hindlimbs → Springboard (dodge-hop); Head → Tongue Lash | Aquatic |
 | 19 | Goat | Economy | Organ → Iron Gut (halves chimera upkeep) | — |
-| 20 | Chameleon | Ghost | Hide → Camouflage (evasion stacks) | Camo |
+| 20 | Chameleon | Ghost | Hide → Chameleon Vanish (evasion stacks) | Camo |
 | 21 | Skunk | Debuffer | Organ → Stink Cloud (team acc/power down) | Gas |
 | 22 | Porcupine | Punisher | Hide → Quill Coat (thorns) | — |
 | 23 | Mantis | Duelist | Forelimbs → Scythe Strike (priority, crit) | — |
@@ -574,18 +574,68 @@ The queue is a proposal: prune it before starting R63.
   (47/69/47/53/34/63 across archetypes at apex). *Done when: the enemy's half
   of end-of-turn runs on the KO turn, the skill ladder is data, and a gate
   plays a KO turn and asserts the poison ticked* — **passes**.
-- **R68 — 244 parts on 65 moves.** Tails: **40 parts, 6 moves, 35 of them
-  the identical `{evasionUp: 1}`**; hides: **21 identical thorns**. Eight
-  signature abilities the roadmap promises never shipped — the goat's *Iron
-  Gut halves upkeep* is not implemented (`chimeraUpkeep` reads no
-  abilities), *Camo* is a tag with **8 data hits and 0 in any `.js`**,
-  *Burrower* does not exist. Set bonuses collide: **five species share
-  `{power: 1.15}`**, `pale_cobra` equals `cobra`, `alpine_ram` is strictly
-  better than `ram`. Grades give a flat **+12%** where the roadmap promised
-  upgraded abilities. *Done when: no two non-variant species share an
-  identical slot kit, every promised signature ability is shipped or struck
-  from §3, `Camo` and `Burrower` are read by the engine or removed from the
-  data, and a gate fails on identical-kit collisions.*
+- **R68 — 244 parts, six moves.** ✅ *Shipped.* The roster was mostly
+  costume. **Tails: 40 parts carrying 6 distinct effects, 35 of them the
+  identical `{evasionUp: 1}`** — five of a chimera's six sockets were a
+  decision and the tail was a formality. **Hides: 21 identical thorns.**
+  **Five species shared a literal `{power: 1.15}` set bonus**, so four of
+  them were paying for a name. `Camo` was a tag on six chameleon parts with
+  **no chart row and no enemy carrying it** — R20 struck the `camouflage`
+  keyword as a duplicate of evasionUp and left the tag behind, doing
+  nothing: R20 and R58's shape exactly, authored content with no reader.
+  *Burrower* was promised in §3 and never reached a single part.
+  - **Now:** tails carry **19 distinct effects, largest group 5 of 40
+    (12.5%)**; hides **9**, with the three §4.1 names finally distinct —
+    pangolin *Roll Up* is the guard + reflect row 7 promises, tortoise
+    *Shell Fortress* is thorns + regen, porcupine *Quill Coat* is all quills
+    and no guard. Set-bonus collisions **0**, each expressed in dials the
+    engine reads. `Camo` has a chart row (*Sonic ≫ Camo* — a shape you
+    cannot see still echoes) and the Surveillance Drone carries it, so the
+    rule is reachable from both sides. Burrower struck rather than invent a
+    ninth tag to justify a sentence.
+  - **The goat's Iron Gut is real money at last.** `chimeraUpkeep` reads
+    `part.passive.upkeepMult` generically — 20 a day against 40 — so the
+    ledger never learns a species name and the next such passive is a JSON
+    edit.
+  - **One animal must not carry the same button twice.** Fourteen did: a
+    bear whose tail and organ were both `{powerUp: 1}`, five whose tail and
+    hide were both `{evasionUp: 1}`. The criterion is *identical*, not
+    "shares a keyword" — the chameleon's `{evasionUp: 1}` tail at cost 10
+    under its `{evasionUp: 2}` hide at cost 12 is the Ghost's whole design,
+    which §4.1 row 20 spells out in the word *stacks*. The first draft of
+    the rule outlawed that and cost the chameleon 53pp of win rate before
+    the measurement caught it.
+  - **Three readers were wrong, and fielding the content honestly for the
+    first time is what surfaced them.** `ai.js` scored Knockback a flat
+    `+9` — but `knockback()` re-queues the fighter it punts and rebuilds it
+    fresh, so the damage already spent is *refunded*: punting something you
+    are three swings into is a rout of your own position, and the pilot paid
+    a turn for it. Slow was priced at the target's whole speed, ignoring
+    both how much the move takes (the data ships 0.3 to 1) and that Slow,
+    alone among the control keywords, has no already-applied guard and
+    **compounds**. And the starvation guard — the one R22's comment says
+    cost a whole class — **has been unreachable since R66**: it took its
+    cheapest swing from `options`, which is already filtered to
+    `cost <= stamina`, so `stamina < cheapestSwing` could never once be
+    true. An eagle pressed a cheap tail **374 times in 60 fights** instead
+    of resting toward its 30-stamina Dive Bomb. Reading the whole moveset
+    instead took that build from 56/60 to **60/60**.
+  - **R24's criterion was measuring the seed, not the gene.** It fielded one
+    build against one encounter whose second wave is a Vehicle — machinery
+    does not bleed, so a Venom Gland was half dead on arrival — and demanded
+    a 10pp swing in *team win rate* over 80 fights, a metric that saturates
+    at both ends and is worth ~10pp of noise on its own. It passed for four
+    sessions on the seed string it happened to use, and re-authoring one
+    tail re-rolled that dice. Rebuilt: organic encounters only, the default
+    moveset rather than the attack-led bench one (R30's lesson — a gene on a
+    hide is invisible if the hide is never fielded, which is why barbed_skin
+    read a flat 0.0%), pooled over 9 builds × 4 encounters, turns and
+    HP-left rather than win rate, **two independent seed families**, and a
+    null control that sets the bar instead of a number picked by hand.
+  *Done when: no two non-variant species share an identical slot kit, every
+  promised signature ability is shipped or struck from §3, `Camo` and
+  `Burrower` are read by the engine or removed from the data, and a gate
+  fails on identical-kit collisions.* ✅ all four.
 - **R69 — The late game has no content in it.** Fauna unlocked per region:
   **Greenfield 16, Kestrel 7, Drowned 7, Foundry 2, Spire 0** — taking the
   final region puts nothing in the catalog. `tierScale` prices tiers 7–8
@@ -604,9 +654,22 @@ The queue is a proposal: prune it before starting R63.
   in data files** (guides 30, operations 7, facility 6, classes 3 — one of
   them Unicode 14, which older Android renders as a box) against *"no
   emoji-as-art."* R61's orphan gate covers exports and data keys; it does
-  not cover enemy units, species fields or glyphs. *Done when: every unit
-  is fielded somewhere, every species has flavor, data carries icon ids
-  that resolve to inline SVG, and R61's gate is extended to all three.*
+  not cover enemy units, species fields or glyphs. **The quiet end of the
+  gene pool needs a probe that can resolve it.** R68 rebuilt R24's criterion
+  and found the old one was reading the seed, not the gene; the new one
+  measures every trait over 900 fights an arm against a null control and
+  holds in two seed families, but it can only make claims about the pool's
+  aggregate and about the loud genes. The weak ones are still unresolved at
+  that sample size — `venom_gland` alone read 1.1%, 6.9%, 8.2% and 8.2% in
+  four families, and `second_wind` 0.7%–4.1% — so whether they are quiet or
+  merely unmeasured is not yet known. Both are cheap suspects on paper:
+  `venom_gland` pays −2 power for one Venom stack worth 3 a turn in fights
+  lasting eight turns, `second_wind` pays −2 power for +3 stamina regen.
+  *Done when: every unit is fielded somewhere, every species has flavor,
+  data carries icon ids that resolve to inline SVG, the gene probe resolves
+  every trait against its control well enough to make a per-gene claim, any
+  gene that then reads under the floor is fixed, and R61's gate is extended
+  to all three.*
 - **R71 — A save from a newer build starts a new game.** `save.js:535–547`
   throws on `saveVersion > SAVE_VERSION`, the `catch` backs the string up
   under a timestamped key and returns `newGameState()`; `importSave`
@@ -670,6 +733,19 @@ The queue is a proposal: prune it before starting R63.
   positive to fix) costs under a second. *Done when: a free identifier in
   any module fails the build, every `data-*` handler has been fired once,
   and the battery carries one break per new gate.*
+- **R78 — A month lost unseen on one seed.** Found by R68 widening R64's
+  away-gate from four seeds to sixteen. On `campaignWalk` seed **5150**,
+  leaving on day 10 for thirty days records **zero contest events** for the
+  whole month and comes back a **node down (7 → 6)** with nothing counted
+  against it, where all ten other comparable seeds record 25 or 26 events
+  and hold every node. A node lost with no contest recorded is precisely
+  what R64's schedule replay was built to make impossible, so this is not a
+  tuning outlier — the replay has a hole, and it takes a specific empire
+  shape to fall into it. The suite pins the seed by name (`frozen` must
+  equal `['5150']`), so a second seed developing the symptom fails the gate
+  rather than widening the exemption. *Done when: seed 5150's away walk
+  records the same world movement as its daily walk and loses no node
+  unseen, the pinned list is empty, and the gate asserts it stays empty.*
 - **R77 — The roadmap describes a different game.** §9.3 listed R54–R62 as
   open with all nine shipped (fixed above); R32–R53 appear nowhere; the
   clocks are stale (settle 22.5 min–3 h, dissection 9–18 h); "three
