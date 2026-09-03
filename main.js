@@ -4,7 +4,8 @@
 // tokens now; legacy `genome` data stays in old saves, unshown.
 
 import { loadContent } from './data/loader.js';
-import { loadSave, saveGame, exportSave, exportFilename, importSave, adoptSave, startNewRun, runSummary } from './save/save.js';
+import { loadSave, saveGame, SAVE_VERSION, FutureSaveError } from './save/save.js';
+import { openSettings, THEMES, BASE_THEME } from './save/settings-ui.js';
 import { ensureRanchSeeded, ensureDexVariants } from './ranch/ranch.js';
 import { renderRanchScreen } from './ranch/ui.js';
 import { renderVaultScreen } from './splice/vault-ui.js';
@@ -56,6 +57,7 @@ const ctx = {
   // A4: the Right Now panel lists things that live on other screens, so it
   // needs to be able to send you to one. Screen switching is the shell's job.
   goto: (name) => showScreen(name),
+  applyTheme: () => applyTheme(),
 };
 
 const SCREENS = {
@@ -67,16 +69,17 @@ const SCREENS = {
   dex: (root) => renderDexScreen(root, ctx),
 };
 
-// Colour scheme. `settings.theme` picks one of the blocks in style.css;
-// ?theme= overrides it for previews without touching the save.
-// Biohazard is the shipped scheme and lives in :root, so it needs no stamp —
-// which also means a fresh load paints it before this ever runs.
-const BASE_THEME = 'biohazard';
-const THEMES = [BASE_THEME, 'lab', 'vivarium', 'blueprint', 'saturday'];
+// Colour scheme. `settings.theme` picks one of the blocks in style.css
+// (the list and the settings-panel UI both live in save/settings-ui.js —
+// one source for what a theme id is, since this is the only other place
+// that needs to know); ?theme= overrides it for previews without touching
+// the save. Biohazard is the shipped scheme and lives in :root, so it
+// needs no stamp — which also means a fresh load paints it before this
+// ever runs.
 function applyTheme() {
   const override = new URLSearchParams(location.search).get('theme');
   const name = override ?? state.settings?.theme ?? BASE_THEME;
-  if (name === BASE_THEME || !THEMES.includes(name)) delete document.documentElement.dataset.theme;
+  if (name === BASE_THEME || !THEMES.some((t) => t.id === name)) delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = name;
 }
 
@@ -123,17 +126,54 @@ function updateTicker() {
   ticker.append(line);
 }
 
+// R71 — a boot that cannot proceed gets ONE screen that says so, replacing
+// the whole body rather than leaving header/tabs/footer standing over a
+// `<main>` that will never render into — a tab a player can tap that does
+// nothing is the "half-live shell" this exists to close. Every failure
+// offers a reload and nothing else: a reset button here would be a second,
+// worse way to lose a save on top of whatever already went wrong.
+function renderBootFailure(title, message) {
+  document.body.innerHTML = `
+    <div class="boot-fail">
+      <div class="boot-fail-card card">
+        <h1>${title}</h1>
+        <p>${message}</p>
+        <button type="button" id="boot-reload" class="big-btn">Reload</button>
+      </div>
+    </div>`;
+  document.getElementById('boot-reload').addEventListener('click', () => location.reload());
+}
+
 async function boot() {
   try {
     content = await loadContent('.');
   } catch (err) {
-    document.querySelector('main').innerHTML =
-      `<p class="boot-error">Could not load content data (${err.message}). ` +
-      `If you opened index.html directly, serve it instead: <code>python3 -m http.server</code></p>`;
+    renderBootFailure(
+      'Spliceworld won’t start',
+      `Could not load content data (${err.message}). If you opened index.html directly, serve it ` +
+      `instead: <code>python3 -m http.server</code>`
+    );
     return;
   }
 
-  state = loadSave();
+  try {
+    state = loadSave();
+  } catch (err) {
+    if (err instanceof FutureSaveError) {
+      // R71 — never a reset: the save has not been touched, and staying
+      // that way is the entire point. Reloading is only useless until the
+      // build actually catches up, at which point it is the fix.
+      renderBootFailure(
+        'This save is from a newer build',
+        `This browser holds a save at v${err.foundVersion}; this build only understands up to ` +
+        `v${SAVE_VERSION}. It has not been touched. Update the game — or, if it was just updated and ` +
+        `this is stale, clear this site's cache — then reload, and it will pick up exactly where you left off.`
+      );
+    } else {
+      renderBootFailure('Spliceworld won’t start', `The save could not be read (${err.message}).`);
+    }
+    return;
+  }
   applyTheme();
   ensureRanchSeeded(state, content, NOW());
   ensureDexVariants(state, content);
@@ -157,123 +197,15 @@ async function boot() {
 
   // Audio: context on first gesture (autoplay policy), mute persisted.
   sfx.setMuted(state.settings.muted);
-  const muteBtn = $('#mute');
-  const paintMute = () => { muteBtn.innerHTML = renderIcon(state.settings.muted ? 'sound-off' : 'sound-on'); };
-  paintMute();
   document.addEventListener('pointerdown', () => sfx.initAudio(), { once: true });
-  muteBtn.addEventListener('click', () => {
-    state.settings.muted = !state.settings.muted;
-    sfx.setMuted(state.settings.muted);
-    saveGame(state);
-    paintMute();
-    if (!state.settings.muted) sfx.play('click');
-  });
 
-  // R54: the save file panel. The three verbs live in save.js and are
-  // DOM-free; everything here is the door, not the lock.
-  const saveFileBtn = $('#savefile');
-  saveFileBtn.innerHTML = renderIcon('save');
-  // One downloader, two callers: the panel and the reset confirmation. The
-  // confirmation is where it matters most, so it cannot be the copy that
-  // drifts.
-  const downloadSave = () => {
-    const blob = new Blob([exportSave(state)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = exportFilename(state);
-    a.click();
-    // Revoked on the next frame: revoking synchronously races the download
-    // in some browsers and silently produces an empty file.
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    sfx.play('click');
-  };
-  const openSaveFile = (note = '') => {
-    const overlay = $('#overlay');
-    overlay.hidden = false;
-    overlay.innerHTML = `
-      <div class="ceremony card">
-        <h3>${renderIcon('save')} Save File</h3>
-        <p class="fine-print">This game lives in this browser. Clear the site data, change phones, or
-          reinstall, and it is gone — unless you have carried it out first.</p>
-        ${note ? `<p class="ranch-msg" id="sf-note">${note}</p>` : ''}
-        <button type="button" id="sf-export" class="big-btn">⬇ Download my save</button>
-        <p class="fine-print">Importing replaces the game in progress. The one it replaces is kept
-          in this browser as a backup, and if it cannot be kept the import is refused instead.</p>
-        <label for="sf-file" class="care-train" id="sf-pick">⬆ Load a save file…</label>
-        <input type="file" id="sf-file" accept="application/json,.json" hidden>
-        <hr class="sf-rule">
-        <button type="button" id="sf-reset" class="pen-dismantle">Start a new run…</button>
-        <button type="button" id="sf-close" class="care-train">Close</button>
-      </div>`;
-    overlay.querySelector('#sf-close').addEventListener('click', () => {
-      overlay.hidden = true;
-      overlay.innerHTML = '';
-    });
-    overlay.querySelector('#sf-export').addEventListener('click', () => {
-      downloadSave();
-      const el = overlay.querySelector('.fine-print');
-      if (el) el.textContent = `Saved as ${exportFilename(state)}. Keep it somewhere that is not this phone.`;
-    });
-    overlay.querySelector('#sf-reset').addEventListener('click', () => {
-      // Nothing to lose means nothing to confirm: a dialogue that guards an
-      // empty ranch is how a player learns to tap through the one that
-      // guards a real run.
-      if (runSummary(state).empty) {
-        const written = adoptSave(startNewRun(state));
-        if (!written.ok) return openSaveFile(written.msg);
-        return location.reload();
-      }
-      confirmNewRun();
-    });
-    overlay.querySelector('#sf-file').addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const read = await file.text().catch(() => null);
-      if (read === null) return openSaveFile('That file could not be read.');
-      const parsed = importSave(read);
-      if (!parsed.ok) return openSaveFile(parsed.msg);
-      const written = adoptSave(parsed.save);
-      if (!written.ok) return openSaveFile(written.msg);
-      // Reload rather than swapping state in place: every screen, timer and
-      // module-level cache in the game was built against the old save, and
-      // a boot is the one path already proven to set all of them up.
-      location.reload();
-    });
-  };
-  // R55: the reset. Two taps, and the second one is only ever reached after
-  // the first has said out loud what it costs — with the download button
-  // repeated inside the confirmation, because "there is a backup in this
-  // browser" is not a plan a player can hold.
-  const confirmNewRun = () => {
-    const overlay = $('#overlay');
-    const sum = runSummary(state);
-    overlay.hidden = false;
-    overlay.innerHTML = `
-      <div class="ceremony card">
-        <h3>⚠ Start a new run?</h3>
-        <p class="ranch-msg">This ends the current one: <strong>${sum.chimeras}</strong> chimera${sum.chimeras === 1 ? '' : 's'},
-          <strong>${sum.animals}</strong> animal${sum.animals === 1 ? '' : 's'} on the ranch,
-          <strong>${sum.parts}</strong> part token${sum.parts === 1 ? '' : 's'},
-          <strong>${sum.nodes}</strong> node${sum.nodes === 1 ? '' : 's'} held, over ${sum.days} day${sum.days === 1 ? '' : 's'}.</p>
-        <p class="fine-print">The run is kept in this browser as a backup — but a backup you cannot
-          see is not a plan. Take the file first.</p>
-        <button type="button" id="sf-export2" class="big-btn">⬇ Download it first</button>
-        <p class="fine-print">Your sound setting and the field notes you have already read carry over.
-          Everything else starts again from an empty ranch.</p>
-        <button type="button" id="sf-go" class="pen-dismantle">Yes, start over</button>
-        <button type="button" id="sf-back" class="care-train">Cancel</button>
-      </div>`;
-    overlay.querySelector('#sf-back').addEventListener('click', () => openSaveFile());
-    overlay.querySelector('#sf-export2').addEventListener('click', () => downloadSave());
-    overlay.querySelector('#sf-go').addEventListener('click', () => {
-      const written = adoptSave(startNewRun(state));
-      if (!written.ok) return openSaveFile(written.msg);
-      location.reload();
-    });
-  };
-
-  saveFileBtn.addEventListener('click', () => openSaveFile());
+  // R71: one door for sound, theme, save file and lab (save slot)
+  // management — see save/settings-ui.js for all four. The footer used to
+  // carry a mute button and a save-file button side by side; a slot picker
+  // would have made a third.
+  const settingsBtn = $('#settings');
+  settingsBtn.innerHTML = renderIcon('settings');
+  settingsBtn.addEventListener('click', () => openSettings($('#overlay'), ctx));
 
   // PWA: offline shell. Registration failure is never a problem worth
   // showing anyone.

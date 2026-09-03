@@ -202,7 +202,23 @@ main {
 }
 .stage svg { display: block; width: 100%; height: auto; }
 
-.boot-error { padding: 24px 12px; color: var(--danger-soft); font-size: 0.9rem; }
+/* R71: the one screen a boot failure gets, replacing the whole body — see
+   main.js's renderBootFailure. Same overlay geometry as .overlay/.ceremony
+   so it reads as deliberate chrome rather than a page that broke. */
+.boot-fail {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--ink);
+}
+.boot-fail-card { width: 100%; max-width: 420px; text-align: center; }
+.boot-fail-card h1 { margin: 0 0 8px; font-size: 1.05rem; color: var(--danger-soft); text-transform: none; letter-spacing: 0; }
+.boot-fail-card p { margin: 0 0 4px; font-size: 0.82rem; color: var(--text); line-height: 1.4; }
+.boot-fail-card code { background: var(--well); padding: 1px 4px; border-radius: 4px; font-size: 0.88em; }
+.boot-fail-card .big-btn { margin-top: 14px; }
 
 .save-info { margin: 8px 0 0; font-size: 0.7rem; color: var(--muted); }
 
@@ -400,7 +416,10 @@ main {
   padding: 16px;
   z-index: 50;
 }
-.ceremony { width: 100%; max-width: 420px; text-align: center; }
+/* R71: nothing before the settings panel was ever tall enough for this to
+   matter — a short landscape phone could still overflow the fixed .overlay
+   it sits in, which is a scroll bug no card here had needed until now. */
+.ceremony { width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; text-align: center; }
 .ceremony h3 { margin: 0 0 8px; font-size: 1.05rem; color: var(--goo); text-transform: none; letter-spacing: 0; }
 .grad-portrait { max-width: 220px; margin: 0 auto; }
 .grad-portrait svg { width: 100%; height: auto; }
@@ -415,6 +434,47 @@ main {
   border-radius: 10px;
   cursor: pointer;
 }
+
+/* R71: the settings panel — sound, theme, save slots and the save-file
+   door, one overlay instead of the two footer buttons it replaced. */
+.settings-card { text-align: left; }
+.settings-card h3 { text-align: center; }
+.settings-heading {
+  margin: 12px 0 4px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.settings-heading:first-of-type { margin-top: 0; }
+.settings-card #set-theme, .settings-card #set-new-slot { margin: 0; }
+.slot-list { list-style: none; margin: 4px 0; padding: 0; }
+.slot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 7px 8px;
+  margin-bottom: 5px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.slot-row.is-active { border-color: var(--goo); }
+.slot-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 140px; }
+.slot-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--on-accent);
+  background: var(--goo);
+  border-radius: 4px;
+  padding: 1px 4px;
+  vertical-align: middle;
+}
+.slot-actions { display: flex; gap: 5px; flex: 0 0 auto; }
+.slot-actions .care-train, .slot-actions .pen-dismantle { margin: 0; padding: 5px 8px; font-size: 0.68rem; }
 
 .grad-shake { animation: grad-shake 0.14s linear infinite; }
 @keyframes grad-shake {
@@ -1289,7 +1349,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   font-size: 0.74rem;
   cursor: pointer;
 }
-.sf-rule {
+.settings-rule {
   border: 0;
   border-top: 1px solid var(--line);
   margin: 12px 0 8px;
@@ -1301,9 +1361,11 @@ label.care-train {
 }
 .care-train:disabled { opacity: 0.45; color: var(--muted); border-color: var(--line); cursor: default; }
 
-footer { position: relative; padding-right: 84px !important; }
-#savefile { right: 46px; }
-.mute-btn {
+/* R71: the footer carried a mute button and a save-file button side by
+   side; one settings door replaced both, so it is back to room for one.
+   Renamed from .mute-btn — the one button left behind is not just sound. */
+footer { position: relative; padding-right: 46px !important; }
+.icon-btn {
   position: absolute;
   right: 8px;
   top: 50%;

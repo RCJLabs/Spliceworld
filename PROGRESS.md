@@ -1,5 +1,168 @@
 # PROGRESS
 
+## Session 94 — R71: a save from a newer build starts a new game ✅
+
+**Acceptance criterion:** "from the future" is a refusal the shell renders
+with a reload path and never a reset, boot failure is one screen that says
+so, and a gate loads a save from a newer build into older code and asserts
+the stored save is byte-identical afterwards — **all three pass**.
+`SAVE_VERSION` unchanged (36; the one new field this phase adds, `slotId`,
+is stamped fresh on every load rather than trusted from storage, so the
+schema itself never changed). `sw.js` cache → `v36-slots`.
+
+Evan also asked, in the same session, for two things beyond R71's own
+scope: replace the footer's save and mute buttons with one settings button
+holding sound, save, reset and "etc.", and add multiple save slots. Both
+shipped alongside R71 rather than deferred, since the settings-button
+consolidation and the slot picker are the same piece of UI.
+
+### Measured first
+
+| | before | after |
+|---|---|---|
+| a save from a newer build | silently backed up, player gets a blank ranch | refused; the save is never touched; one screen, Reload, no reset |
+| boot failure paths | two ad hoc ones (`<main>` swapped, header/tabs/footer left standing) | one `renderBootFailure`, whole body replaced, used by both |
+| footer buttons | 2 (mute, save file) | 1 (settings) |
+| device-preference doors | mute toggle only; 5 colour schemes existed in CSS with no player-facing control | sound + theme picker + save file + labs, one panel |
+| save slots | 1, hardcoded | up to 4, independent, named, switchable |
+| `save/save.js` public functions | 10 | 21 (11 new: slot registry + `FutureSaveError`) |
+
+### The bug the roadmap already described, finally gated
+
+`loadSave`'s catch block treated "the save is from a newer build" exactly
+like "the file is corrupt": back it up under a timestamped key, hand back
+`newGameState()`. A stale service-worker cache serving pre-update code
+against a post-update save was enough to trigger it for real — which is
+exactly the ROADMAP entry's own opening sentence, written before this
+session touched anything. Fixed by giving the future-save case its own
+outcome: `loadSlot` now throws `FutureSaveError` and — the part that
+actually matters — writes **nothing**. No backup key, no rewrite. The save
+sits at its slot's key exactly as it arrived; the day the build catches up,
+an ordinary reload finds it untouched. A corrupt, unparseable save is a
+different failure (there is no later build that will fix broken JSON) and
+keeps the old backup-and-start-fresh behaviour on purpose — the fork is
+deliberate, not a narrowed fix.
+
+`main.js`'s `boot()` catches the throw and renders one full-screen refusal
+— title, plain explanation, a Reload button, never anything else — through
+a `renderBootFailure` function that the content-load-failure path now also
+uses. That unification closes a second, related bug the roadmap flagged
+only in passing: a content-load failure used to swap `<main>`'s innerHTML
+for an error paragraph while header, tabs and footer stayed exactly as
+rendered — a shell where six tabs looked clickable and did nothing, the
+literal "half-live shell" the criterion names. Verified in a real browser:
+planting a save at `saveVersion: 99999` renders the refusal screen with no
+`#tabs` element anywhere in the DOM, no reset offered, and the stored save
+byte-identical (same version, same funds) after the failed load — zero
+backup keys created.
+
+### Shipped
+
+- **`save/settings-ui.js`** (new module) — one settings panel replacing the
+  footer's two buttons: a sound toggle, a theme picker (`openPicker` over
+  the five colour schemes `main.js` already shipped behind a `?theme=`
+  dev-only override), the save-file export/import door, up to four
+  independent save slots ("labs"), and the existing "Start a new run"
+  reset flow, moved here from `main.js` unchanged in behaviour.
+- **Save slots.** Slot 1 stays the literal `spliceworld_save` key forever
+  — every save that has ever existed already lives there, so an existing
+  player's save is discovered as slot 1 on first read with no migration
+  step and no action from anyone. Slots 2+ get `spliceworld_save_N`; a
+  small registry at `spliceworld_slots` (synthesized on first read, same
+  backward-compatible pattern) names which slots exist and which is
+  active. Create, switch, rename and delete are all gated: deleting the
+  active slot or the last slot standing is refused with a reason a player
+  can act on (`switch to another one first` only appears when there IS
+  another one — with exactly one slot, "at least one lab has to exist"
+  fires instead, since the other message would be advice nobody could
+  follow). `MAX_SLOTS = 4`. A new slot carries forward the same three
+  device-preference fields R55's reset already protects (`settings`,
+  `guidesSeen`, `ui`) via the identical `carryForward` helper — muting
+  your phone and opening a second lab should not unmute it.
+- **A third, purely accidental bug this refactor found and fixed**: two
+  regex-based smoke checks (R55's "the reset cannot happen in one tap",
+  and the "door is reachable" check) had been asserting against
+  `main.js`'s source since R54/R55 shipped. Moving the panel to its own
+  module meant rewriting BOTH rather than letting them silently stop
+  checking anything real — the exact failure mode R51 and R55's own
+  comments already warn about (a regex over the whole file passing on a
+  handler that no longer does what it says).
+
+### An adversarial review, run against this session's own diff before shipping
+
+Given the stakes CLAUDE.md itself names ("never reset player saves"), the
+diff went through a four-dimension adversarial review (data integrity,
+backward compatibility, settings-panel UI logic, CLAUDE.md conventions) —
+16 raw findings, each independently re-verified against the actual source
+by a second pass told to try to refute it. 11 confirmed, 5 refuted (mostly
+citation errors or theoretical races that a closer read showed the
+existing code already prevents). Of the 11:
+
+- **Fixed this session** (8): deleting a lab was one unconfirmed tap next
+  to Switch and Rename with no backup behind it, unlike every other
+  destructive path in the game — it now gets the same two-tap dialog
+  `confirmNewRun` already set the precedent for, naming exactly what's at
+  stake. `downloadSave()`'s anchor was never attached to the document,
+  which silently fails to trigger a save-as on Safari — the one browser
+  where the "take the file first" advice in three different dialogues
+  would have quietly done nothing. An import's async file-read could still
+  land and reload the page after the player had already tapped Close — now
+  checked. The rename prompt opened blank instead of pre-filled for a slot
+  showing its fallback label. A corrupted (non-active) slot read
+  identically to "never started" — now says so. Inactive-slot summaries
+  used real `Date.now()` instead of `ctx.now()`, so a `?warp=` QA session
+  saw them disagree with the active slot. The boot-failure screen said
+  "Splicework" — CLAUDE.md's own header carries the project's old internal
+  codename, and it slipped into this exact screen. And `content`,
+  destructured from `ctx` in `openSettings`, was never used.
+- **Deferred, not regressions from this session** (2): `saveGame()`'s
+  write-failure return value is discarded by all 25+ callers across the
+  whole app (not just this phase's additions) — real, but fixing it needs
+  a genuine UI surface (a toast/banner system) this session did not build,
+  and it predates R71 entirely. Backup keys from a corrupt load or an
+  import are never pruned — also real, and already the exact tradeoff
+  R54's own PROGRESS.md entry documented and left open on purpose ("100+
+  imports before this matters, and pruning is how a rescue disappears").
+  Both are noted here rather than fixed blind, since a save-integrity fix
+  written under review pressure without its own scrutiny is how R71 itself
+  got created.
+
+### Known issues
+- The two deferred findings above. Everything else this phase touched is
+  clean. The settings panel has no automated screenshot regression test —
+  verified by hand and via CDP this session; a future phase touching it
+  should re-verify at 380px.
+
+### Verified
+- `tools/smoke.js` green end to end — 11 new slot-management sub-tests
+  (backward-compat synthesis, routing by a save's own `slotId`,
+  create/switch/delete/rename, `MAX_SLOTS`, the active-slot self-healing
+  fallback), a rewritten `FutureSaveError` gate asserting the stored save
+  is byte-identical and zero backup keys are written, and new checks
+  locking in the review's fixes: the delete button routes through a
+  confirmation rather than calling `deleteSlot` directly, the download
+  anchor is attached before it is clicked, and the boot-failure title
+  never regresses to the project's old codename.
+- `tools/sim.js`: 6324 battles, no degenerate builds.
+- Browser at 380px, fresh Chrome profile: fresh save, a migrated
+  v34 → current save, and a planted from-the-future save all verified —
+  the first two boot clean with zero console errors, the third renders the
+  refusal screen with the stored save untouched. Full settings-panel
+  walkthrough (sound toggle, theme picker + live apply, create/switch/
+  delete a lab) exercised end to end with zero console errors throughout;
+  screenshots confirm the panel scrolls cleanly and the multi-button slot
+  row (Switch/Rename/Delete) lays out correctly at 380px.
+
+### Next session's first task
+**R72 — retired content ids crash the Theater.** `theater.js:81` reads
+`content.parts[token.partId].slot` unguarded — a vault token whose part
+was removed from `parts.json` throws and takes the screen down — and `:99`
+calls `tokensFor` without `content`, so its own retired-content guard is a
+no-op. `physiology.js:61` indexes `GRADES` unguarded one line after
+guarding the part; `classVotes` hardcodes three classes in both
+`physiology.js` and `director.js`, so a fourth class votes `NaN` and is
+silently dropped.
+
 ## Session 93 — R70: dead and unreachable content, second pass ✅
 
 **Acceptance criterion:** every unit is fielded somewhere, every species has

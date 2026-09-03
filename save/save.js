@@ -556,29 +556,224 @@ export function migrate(save) {
   return save;
 }
 
-export function loadSave(storage = globalThis.localStorage) {
+// R71 — a save from a newer build must never be silently discarded. It used
+// to fall into the same catch as a genuinely corrupt file: backed up under a
+// timestamped key, and the player opened the app onto a brand-new ranch. A
+// stale service-worker cache serving old code against a new save was enough
+// to trigger it, and "your progress is gone" is not a refusal, it is the
+// exact failure R55 exists to prevent happening any OTHER way.
+//
+// A future save gets its own, distinguishable outcome: `loadSlot` THROWS
+// rather than returning a fresh game, and — the actual fix — touches
+// NOTHING. No backup key, no rewrite, nothing. The save sits at its slot's
+// key exactly as it arrived, so the day the build catches up, an ordinary
+// reload finds it untouched. Corrupt JSON and an unparseable save are a
+// different failure (there is no later build that will fix a broken file)
+// and keep the old backup-and-start-fresh behaviour.
+export class FutureSaveError extends Error {
+  constructor(foundVersion) {
+    super(`Save is v${foundVersion}, code is v${SAVE_VERSION}.`);
+    this.name = 'FutureSaveError';
+    this.foundVersion = foundVersion;
+  }
+}
+
+// R71 — multiple save slots. `STORAGE_KEY` stays the literal key for slot 1
+// forever: every save that has ever existed lives there, and finding it
+// needs no migration or copy step that could go wrong — a slot 2 and up
+// gets its own suffixed key instead. `SLOTS_KEY` holds the small registry
+// (which slots exist, which is active); it is synthesized on first read for
+// a player who has never opened the slot picker, so a save from before this
+// phase is discovered as "slot 1" with zero action needed from anyone.
+export const SLOTS_KEY = 'spliceworld_slots';
+export const MAX_SLOTS = 4;
+
+function slotKey(id) {
+  return id === 1 ? STORAGE_KEY : `${STORAGE_KEY}_${id}`;
+}
+
+export function loadSlotRegistry(storage = globalThis.localStorage) {
+  try {
+    const raw = storage.getItem(SLOTS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.slots) && parsed.slots.length && typeof parsed.activeId === 'number') {
+        return parsed;
+      }
+    }
+  } catch { /* fall through to a synthesized single-slot registry */ }
+  return { slots: [{ id: 1, name: null, createdAt: Date.now() }], activeId: 1 };
+}
+
+export function saveSlotRegistry(registry, storage = globalThis.localStorage) {
+  try {
+    storage.setItem(SLOTS_KEY, JSON.stringify(registry));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Self-healing against a registry whose active pointer somehow names a slot
+// that no longer exists: falls back to whatever slot IS there rather than
+// loading nothing.
+export function activeSlotId(storage = globalThis.localStorage) {
+  const reg = loadSlotRegistry(storage);
+  if (reg.slots.some((s) => s.id === reg.activeId)) return reg.activeId;
+  return reg.slots[0]?.id ?? 1;
+}
+
+// A lightweight, on-demand summary of a slot's own stored save. Read
+// straight from storage rather than cached in the registry, so it can never
+// go stale the way a cached copy would the moment the slot is played again
+// without the picker open to update it.
+export function slotSummary(slotId, storage = globalThis.localStorage, now = Date.now()) {
   let raw;
   try {
-    raw = storage.getItem(STORAGE_KEY);
+    raw = storage.getItem(slotKey(slotId));
   } catch {
-    return newGameState(); // storage unavailable (private mode etc.)
+    raw = null;
   }
-  if (!raw) return newGameState();
+  if (!raw) return { empty: true };
   try {
     const save = JSON.parse(raw);
-    if (save.saveVersion > SAVE_VERSION) {
-      // Save from a newer build than this code — don't touch it.
-      throw new Error(`Save is v${save.saveVersion}, code is v${SAVE_VERSION}.`);
-    }
-    return migrate(save);
+    // `empty` comes from runSummary, not a hardcoded `false`: a save that
+    // exists but has never actually been played (0 chimeras, 0 stock, no
+    // nodes) should read as empty to the picker the same way it already
+    // does everywhere else "empty" is asked about. `now` is threaded through
+    // rather than left to runSummary's own Date.now() default so a dev
+    // ?warp= session sees every slot's day-count agree, not just the active
+    // one.
+    return { saveVersion: save.saveVersion, lab: save.profile?.lab ?? null, ...runSummary(save, now) };
+  } catch {
+    return { empty: true, corrupt: true };
+  }
+}
+
+export function loadSlot(slotId, storage = globalThis.localStorage) {
+  const key = slotKey(slotId);
+  const fresh = () => {
+    const s = newGameState();
+    s.slotId = slotId;
+    return s;
+  };
+  let raw;
+  try {
+    raw = storage.getItem(key);
+  } catch {
+    return fresh(); // storage unavailable (private mode etc.)
+  }
+  if (!raw) return fresh();
+  let save;
+  try {
+    save = JSON.parse(raw);
+  } catch (err) {
+    console.error('Save load failed:', err);
+    try {
+      storage.setItem(`${key}_backup_${Date.now()}`, raw);
+    } catch { /* storage full — nothing more we can do */ }
+    return fresh();
+  }
+  if (typeof save.saveVersion === 'number' && save.saveVersion > SAVE_VERSION) {
+    throw new FutureSaveError(save.saveVersion); // see FutureSaveError above — nothing is touched
+  }
+  let migrated;
+  try {
+    migrated = migrate(save);
   } catch (err) {
     // A corrupt save is preserved for forensics, never silently destroyed.
     console.error('Save load failed:', err);
     try {
-      storage.setItem(STORAGE_KEY + '_backup_' + Date.now(), raw);
+      storage.setItem(`${key}_backup_${Date.now()}`, raw);
     } catch { /* storage full — nothing more we can do */ }
-    return newGameState();
+    return fresh();
   }
+  migrated.slotId = slotId;
+  // Best-effort "last opened" stamp for the slot picker — cosmetic only,
+  // so a failure here never affects the load it is riding along with.
+  try {
+    const reg = loadSlotRegistry(storage);
+    const entry = reg.slots.find((s) => s.id === slotId);
+    if (entry) {
+      entry.lastPlayedAt = Date.now();
+      saveSlotRegistry(reg, storage);
+    }
+  } catch { /* cosmetic only */ }
+  return migrated;
+}
+
+export function loadSave(storage = globalThis.localStorage) {
+  return loadSlot(activeSlotId(storage), storage);
+}
+
+// Up to MAX_SLOTS labs. `carryForward` is the same device-preference list
+// R55 built for a reset — sound and the field notes already read should not
+// reset themselves just because the player opened a second lab.
+export function createSlot(currentState, storage = globalThis.localStorage) {
+  const reg = loadSlotRegistry(storage);
+  if (reg.slots.length >= MAX_SLOTS) {
+    return { ok: false, reason: 'max-slots', msg: `You can run ${MAX_SLOTS} labs at once. Delete one to make room for another.` };
+  }
+  const used = new Set(reg.slots.map((s) => s.id));
+  let id = 1;
+  while (used.has(id)) id++;
+  const fresh = carryForward(newGameState(), currentState);
+  fresh.slotId = id;
+  try {
+    storage.setItem(slotKey(id), JSON.stringify(fresh));
+  } catch (err) {
+    return { ok: false, reason: 'write-failed', msg: `The new lab could not be written: ${err.message}` };
+  }
+  reg.slots.push({ id, name: null, createdAt: Date.now(), lastPlayedAt: Date.now() });
+  reg.activeId = id;
+  if (!saveSlotRegistry(reg, storage)) {
+    return { ok: false, reason: 'write-failed', msg: 'The new lab was written, but its listing could not be saved.' };
+  }
+  return { ok: true, slotId: id };
+}
+
+export function switchSlot(slotId, storage = globalThis.localStorage) {
+  const reg = loadSlotRegistry(storage);
+  if (!reg.slots.some((s) => s.id === slotId)) {
+    return { ok: false, reason: 'no-such-slot', msg: 'That lab no longer exists.' };
+  }
+  reg.activeId = slotId;
+  if (!saveSlotRegistry(reg, storage)) {
+    return { ok: false, reason: 'write-failed', msg: 'Could not switch labs — storage refused the write.' };
+  }
+  return { ok: true };
+}
+
+// Never the active slot (there is no "which game am I looking at" answer if
+// it goes), and never the last one standing.
+export function deleteSlot(slotId, storage = globalThis.localStorage) {
+  const reg = loadSlotRegistry(storage);
+  if (!reg.slots.some((s) => s.id === slotId)) {
+    return { ok: false, reason: 'no-such-slot', msg: 'That lab is already gone.' };
+  }
+  if (reg.slots.length <= 1) {
+    return { ok: false, reason: 'last-slot', msg: 'At least one lab has to exist.' };
+  }
+  if (reg.activeId === slotId) {
+    return { ok: false, reason: 'active-slot', msg: 'You cannot delete the lab you are currently in. Switch to another one first.' };
+  }
+  reg.slots = reg.slots.filter((s) => s.id !== slotId);
+  if (!saveSlotRegistry(reg, storage)) {
+    return { ok: false, reason: 'write-failed', msg: 'Could not update the lab listing.' };
+  }
+  try {
+    storage.removeItem(slotKey(slotId));
+  } catch { /* best effort — the listing no longer names it either way */ }
+  return { ok: true };
+}
+
+export function renameSlot(slotId, name, storage = globalThis.localStorage) {
+  const reg = loadSlotRegistry(storage);
+  const entry = reg.slots.find((s) => s.id === slotId);
+  if (!entry) return { ok: false, reason: 'no-such-slot', msg: 'That lab no longer exists.' };
+  entry.name = name.trim().slice(0, 40) || null;
+  if (!saveSlotRegistry(reg, storage)) return { ok: false, reason: 'write-failed', msg: 'Could not save the new name.' };
+  return { ok: true };
 }
 
 // R54 — a save that cannot leave the browser is one cleared-site-data away
@@ -713,16 +908,21 @@ export function runSummary(state, now = Date.now()) {
   };
 }
 
-export function adoptSave(save, storage = globalThis.localStorage) {
+// R71 — slot-aware, but the two-argument call every existing caller and
+// test already makes is untouched: `slotId` defaults to whatever the
+// registry says is active, which is slot 1 on a device that has never
+// opened the slot picker — exactly `STORAGE_KEY` as before this phase.
+export function adoptSave(save, storage = globalThis.localStorage, slotId = activeSlotId(storage)) {
+  const key = slotKey(slotId);
   let current = null;
   try {
-    current = storage.getItem(STORAGE_KEY);
+    current = storage.getItem(key);
   } catch {
     return { ok: false, reason: 'no-storage', msg: 'This browser will not let the game read its own storage.' };
   }
   if (current) {
     try {
-      storage.setItem(`${STORAGE_KEY}_backup_${Date.now()}`, current);
+      storage.setItem(`${key}_backup_${Date.now()}`, current);
     } catch {
       return {
         ok: false, reason: 'backup-failed',
@@ -739,8 +939,9 @@ export function adoptSave(save, storage = globalThis.localStorage) {
       landing = carryForward({ ...save }, JSON.parse(current));
     } catch { /* unreadable local save — the import stands on its own */ }
   }
+  landing.slotId = slotId;
   try {
-    storage.setItem(STORAGE_KEY, JSON.stringify(landing));
+    storage.setItem(key, JSON.stringify(landing));
   } catch (err) {
     return { ok: false, reason: 'write-failed', msg: `The save could not be written: ${err.message}` };
   }
@@ -750,7 +951,7 @@ export function adoptSave(save, storage = globalThis.localStorage) {
 export function saveGame(state, storage = globalThis.localStorage) {
   state.saveVersion = SAVE_VERSION;
   try {
-    storage.setItem(STORAGE_KEY, JSON.stringify(state));
+    storage.setItem(slotKey(state.slotId ?? activeSlotId(storage)), JSON.stringify(state));
     return true;
   } catch (err) {
     console.error('Save write failed:', err);
