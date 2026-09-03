@@ -79,31 +79,50 @@ function lazy(load, exportName) {
   return (root) => {
     const ready = warmScreens.get(exportName);
     if (ready) { ready(root, ctx); return; }
-    let inFlight = loadingScreens.get(exportName);
-    if (!inFlight) {
-      inFlight = load();
-      loadingScreens.set(exportName, inFlight);
-    }
+    // Already loading: the continuation below was attached when the import
+    // started and paints this same container, so there is nothing to add.
+    // Attaching another here would render N times for N calls — and three
+    // separate things call this during a cold load (a tab tap, the 30s
+    // interval, and visibilitychange), each one a full re-render of the
+    // heaviest screen in the game at the moment it is already slowest.
+    if (loadingScreens.has(exportName)) return;
+
+    // A tab that is lit, un-hidden and empty is precisely the "half-live
+    // shell" main.js's own boot-failure comment exists to rule out. Before
+    // this phase the render landed in the same task as the tab highlight, so
+    // the state could not occur; it can now, for as long as the fetch takes.
+    root.innerHTML = '<section class="card"><p class="ranch-msg">Warming up the lab…</p></section>';
+
+    const inFlight = load();
+    loadingScreens.set(exportName, inFlight);
     // Two-argument `then`, NOT `.then(...).catch(...)`: a catch chained after
     // the render handler also catches anything the RENDER throws, which would
-    // blame the network for a bug in the War Room, tell the player to check
-    // their connection, and delete the in-flight entry while the warm one was
-    // already set. The rejection path here can only be the import failing.
+    // blame the network for a bug in the War Room and tell the player to check
+    // their connection. The rejection path here can only be the import.
     inFlight.then(
       (mod) => {
         warmScreens.set(exportName, mod[exportName]);
         // If the player moved on while this was loading there is nothing to
-        // paint that anyone can see — and the same predicate tick() uses to
-        // decide whether a screen is worth rendering at all. The next tap
-        // renders synchronously off the warm cache.
+        // paint that anyone can see — the same predicate tick() uses to decide
+        // whether a screen is worth rendering at all. The next tap renders
+        // synchronously off the warm cache.
         if (!root.hidden) mod[exportName](root, ctx);
       },
       () => {
-        // Offline with a cold cache is the only way here. Say so rather than
-        // leaving the panel blank, and let the next tap try again.
+        // Offline with a cold cache is the only way here, and the recovery is
+        // a RELOAD, not another tap: a dynamic import that fails to fetch is
+        // recorded as failed in the document's module map, so importing the
+        // same specifier again rejects immediately without touching the
+        // network. Verified in this project's own Chromium — second attempt,
+        // server back up, zero further requests. The first version of this
+        // card told the player to tap the tab again, which could never have
+        // worked. Same shape as renderBootFailure, for the same reason.
         loadingScreens.delete(exportName);
-        root.innerHTML = '<section class="card"><p class="ranch-msg">This screen could not be loaded.'
-          + ' Check your connection and tap the tab again.</p></section>';
+        root.innerHTML = '<section class="card"><p class="ranch-msg">This screen could not be loaded.</p>'
+          + '<p class="fine-print">It needs one more piece than the rest of the game, and that piece did'
+          + ' not arrive. Reloading will fetch it again.</p>'
+          + '<button type="button" class="big-btn" id="lazy-reload">Reload</button></section>';
+        root.querySelector('#lazy-reload').addEventListener('click', () => location.reload());
       }
     );
   };

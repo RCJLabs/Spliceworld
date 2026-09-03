@@ -67,6 +67,28 @@ Worth recording because both were mine and neither was obvious:
   container is hidden, using the same `!root.hidden` predicate `tick()`
   already uses to decide whether a screen is worth rendering at all.
 
+And three more that landed after the merge, fixed in a follow-up. The one
+that mattered: **the failure card told the player to do something that
+provably cannot work.** A dynamic import that fails to fetch is recorded as
+failed in the document's module map, so importing the same specifier again
+rejects *without touching the network* — I reproduced it against a local
+server that returns 503 then 200, and the hit count stayed at **1**. So "tap
+the tab again" was a promise the browser will not keep, and a player who hit
+it on the Dex would also boot back into the dead screen, since `activeScreen`
+persists. The card carries a Reload button now, the same shape
+`renderBootFailure` already uses, because a reload is the one thing that
+does recover — verified end to end: blocked module → card, tap again →
+still the card, reload with the block lifted → the War Room renders.
+
+The other two: N calls during a cold load attached N continuations and
+rendered the heaviest screen in the game N times (three separate things call
+into it — a tab tap, the 30 s interval and `visibilitychange`), now
+coalesced to the one attached where the import starts; and the cold path
+painted nothing at all, so a lit, un-hidden, empty tab was exactly the
+"half-live shell" `main.js`'s own boot-failure comment exists to rule out.
+It shows a placeholder now — confirmed by clicking and reading the DOM in
+one synchronous expression, so no microtask can run in between.
+
 ### The gate is a budget, not a fingerprint
 
 50 modules and 620 KB, against a current 47 and 570. A gate that fails when
