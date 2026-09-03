@@ -3572,6 +3572,7 @@
       ],
       "class": "air",
       "transformInto": "stratofortress",
+      "transformLine": "Aeronaut Prime is gone. In its place, the sky fills with something that should have been declared to customs.",
       "koLine": "Aeronaut Prime hurls the goggles to the deck and reaches, theatrically, for a very large lever.",
       "moves": [
         {
@@ -4356,6 +4357,7 @@
       ],
       "class": "water",
       "transformInto": "leviathan_dredge",
+      "transformLine": "The Harbormaster's whistle is answered at last \u2014 by the harbour. Most of it stands up.",
       "koLine": "The Harbormaster blows a whistle nobody obeys and climbs, grimly, into something much larger.",
       "moves": [
         {
@@ -5232,6 +5234,7 @@
       ],
       "class": "ground",
       "transformInto": "crucible_9000",
+      "transformLine": "The DO NOT button did. Smelter Prime returns wearing the foundry.",
       "koLine": "Smelter Prime slams a very red button labelled DO NOT and steps back with obvious relish.",
       "moves": [
         {
@@ -6241,6 +6244,7 @@
       ],
       "class": "ground",
       "transformInto": "the_compliance_engine",
+      "transformLine": "The platform comes back up. Director Prime has been replaced by the agenda item nobody wanted to reach.",
       "koLine": "Director Prime declares the meeting adjourned and descends, on a platform, into the floor.",
       "moves": [
         {

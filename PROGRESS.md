@@ -1,5 +1,54 @@
 # PROGRESS
 
+## Session 85 — Fourth audit + hotfixes ✅
+
+**Scope:** a full audit of the shipped game, not a milestone. Four agents
+(engine correctness, content, UX at 380 px, roadmap-versus-shipped) plus the
+harness: a 180-day walk on four seeds, a 30-day-absence replay, a
+reachability sweep, a screen walk with every handler fired, and a static
+free-identifier pass. **Fifteen recommendations are written up as ROADMAP
+§9.4 (R63–R77), marked proposed.** No schema change; `SAVE_VERSION` stays
+**34**. `sw.js` cache → `v34-audit`.
+
+### Shipped in this PR (bugs, not phases)
+- **`opOdds` ReferenceError on the Jobs board's "Run it"** — R60 trimmed the
+  `operations.js` import past a symbol two call sites still used. Live
+  crash, missed by the render-identity harness because nothing fires the
+  handler. Import restored.
+- **`infirmaryGrants` unbound in `campaign.js`** since A1, behind an `??=`
+  that never evaluates (finishBattle always sets the injury first). Import
+  added; the dead branch is R75's.
+- **`news.json` philosophy pools keyed on `purist` / `chimerist`**, ids that
+  exist nowhere — the R62 weighting had never fired, and its gate took the
+  authored key as the profile. Rekeyed to `naturalist` / `engineer`; gate 7
+  now asserts every `by` key is a real philosophy. Unreachable
+  `capture_ours` pool and its dead fallback removed.
+- **Zero-param events printed one phrasing forever** — `spar_done` authored
+  three lines and a save heard one of them. `newsFor` now rotates while the
+  last telling is still on the wire; still seeded, no new save field. Gate 6b.
+- **Four of five bosses transformed with a blank line** (only
+  `captain_clampdown` had a `transformLine`). Authored the other four, null
+  guard in the engine, gate: every `transformInto` has a line and a target.
+- **Agenda chips on the wrong screen** — Graduate went to the Vault (no
+  Extract button there; it is on the Ranch card) and the vat went to the
+  Theater (no vat). The A4 gate checked only that the screen *existed*, and
+  both are real screens — the hollow-gate shape again. Fixed, plus the
+  `chaos` guide's screen; the gate now names the control each chip promises
+  and asserts the mapped module renders it, with the two old targets as
+  negatives, and renders Ranch and Pens to see the buttons.
+
+### Known issues
+- Everything in §9.4. The three with the highest player cost are R63 (the
+  contest treadmill — no seed reaches dominion in 180 days), R64 (thirty
+  days away is strictly profitable) and R71 (a save from a newer build opens
+  an empty ranch).
+- `tools/smoke.js` is 12.5k lines and ~4–5 min; R76 proposes the two cheap
+  static gates that would have caught this session's regressions.
+
+### Next session's first task
+Prune §9.4 with Evan, then start **R63** (or whichever survives the prune
+first). Read its evidence line before touching `contest.js`.
+
 ## Session 84 — R62: the news wire, as a system ✅
 
 **Acceptance criterion:** a new world reaction is a JSON edit, no engine module

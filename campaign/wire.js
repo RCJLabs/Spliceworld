@@ -37,8 +37,11 @@ export function newsEvents(content) {
 }
 
 // Which pool an event draws from: the player's philosophy first, so the
-// world reacts differently to a Purist than to a Chimerist, then the general
-// one. A philosophy with nothing to say about an event is the normal case.
+// world reacts differently to a Naturalist than to an Engineer, then the
+// general one. The ids here are philosophies.json's ids — the first draft
+// keyed on 'purist' and 'chimerist', which exist nowhere, so the weighting
+// had never fired and its gate did not notice because it took the authored
+// key as the profile instead of asking whether the key was real. A philosophy with nothing to say about an event is the normal case.
 export function poolFor(state, content, event) {
   const spec = newsEvents(content)[event];
   if (!spec) return null;
@@ -52,12 +55,22 @@ export function poolFor(state, content, event) {
 // a reload cannot reroll the wire, and no save field had to be invented to
 // hold a position. Different nodes still get different phrasings, which is
 // the whole point of a pool.
+//
+// The seed alone was not enough. An event with no params — a spar, the
+// county holding — hashes to the same position every time, so a pool of
+// three authored phrasings printed one of them for the life of the save and
+// the other two had never once played. So a repeat rotates: while the last
+// telling of this exact event is still on the wire, the next telling moves
+// to the next phrasing. Still a function of the save, still no new field,
+// and the wire stops saying the same sentence twice in a row.
 export function newsFor(state, content, event, params = {}) {
   const pool = poolFor(state, content, event);
   if (!pool?.length) return null;
   const rng = rngStream(state?.seed ?? 0, `news:${event}`, hashString(JSON.stringify(params)));
-  const line = pool[Math.floor(rng() * pool.length) % pool.length];
-  return fill(line, params);
+  const base = Math.floor(rng() * pool.length) % pool.length;
+  const wire = state?.news ?? [];
+  const repeats = pool.filter((line) => wire.includes(fill(line, params))).length;
+  return fill(pool[(base + repeats) % pool.length], params);
 }
 
 // What an engine calls: say what happened, not what to print.

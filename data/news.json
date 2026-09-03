@@ -1,5 +1,5 @@
 {
-  "_doc": "R62 — the news wire's copy. Every sentence the wire prints lives here, keyed by EVENT id; engine modules emit {event, params} and never a sentence. Before this file, 17 player-facing lines were written inside campaign.js and rehab.js, so a new world-reaction was an engine edit — against CLAUDE.md's 'all content is data'. `lines` is the pool for an event: one is picked with the seeded RNG, so a save always tells its story the same way and a reload mid-run cannot reroll the wire. `by` is an optional per-philosophy pool, checked first, which is how the world reacts differently to a Purist than to an Improver — the same machinery R10 built for the rivals, pointed at the campaign instead. Placeholders are {braces} filled by campaign/monologue.js `fill`, which leaves an unknown key ALONE rather than printing 'undefined', so a typo reads oddly instead of breaking. Adding a reaction is a key here plus one emit at the site of the event; it must never be an engine change again. The gate in tools/smoke.js runs the invariant both ways: every event emitted in code has copy here, and every event here has an emitter — R20's rule, pointed at the wire.",
+  "_doc": "R62 — the news wire's copy. Every sentence the wire prints lives here, keyed by EVENT id; engine modules emit {event, params} and never a sentence. Before this file, 17 player-facing lines were written inside campaign.js and rehab.js, so a new world-reaction was an engine edit — against CLAUDE.md's 'all content is data'. `lines` is the pool for an event: one is picked with the seeded RNG, so a save always tells its story the same way and a reload mid-run cannot reroll the wire. `by` is an optional per-philosophy pool, checked first, which is how the world reacts differently to a Naturalist than to an Engineer — the same machinery R10 built for the rivals, pointed at the campaign instead. Placeholders are {braces} filled by campaign/monologue.js `fill`, which leaves an unknown key ALONE rather than printing 'undefined', so a typo reads oddly instead of breaking. Adding a reaction is a key here plus one emit at the site of the event; it must never be an engine change again. The gate in tools/smoke.js runs the invariant both ways: every event emitted in code has copy here, and every event here has an emitter — R20's rule, pointed at the wire.",
   "events": {
     "dominion": {
       "lines": [
@@ -25,12 +25,6 @@
         "{creature} has been transferred to an out-of-state research internship (involuntary). The enemy took notes."
       ]
     },
-    "capture_ours": {
-      "lines": [
-        "{creature} impounded in Containment. Finders keepers is the law here now.",
-        "{creature} is in a bay with the lights dimmed and the door locked. Finders keepers."
-      ]
-    },
     "rescued": {
       "lines": [
         "{creature} rescued from the impound lot! Bond deepened. Paperwork ignored.",
@@ -49,10 +43,10 @@
         "{node} changes hands. +${income}/day, and nobody has filed anything about it."
       ],
       "by": {
-        "purist": [
+        "naturalist": [
           "{node} seized. Income +${income}/day. Taken with clean stock and cleaner records."
         ],
-        "chimerist": [
+        "engineer": [
           "{node} seized. Income +${income}/day. Witnesses disagree about how many legs were involved."
         ]
       }
