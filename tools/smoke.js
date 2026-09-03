@@ -2,9 +2,9 @@
 // requirement the M4.5 balance harness will lean on) and that all content
 // data is coherent. Run: node tools/smoke.js
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import { indexContent, renderCreatureSVG, validateGenome, drawableGenome, SLOTS, SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { renderIcon, iconIds } from '../ui/icons.js';
@@ -68,12 +68,30 @@ function shellScreenMap() {
   const shell = readFileSync(join(root, 'main.js'), 'utf8');
   const block = shell.slice(shell.indexOf('const SCREENS = {'));
   const body = block.slice(0, block.indexOf('};'));
-  return [...body.matchAll(/^\s{2}(\w+): \(root\) => (\w+)\(/gm)].map(([, screen, fn]) => {
-    // …and on to the module that exports it, so a gate can ask what that
-    // file does rather than what a list says about it.
-    const imp = shell.match(new RegExp(`import \\{[^}]*\\b${fn}\\b[^}]*\\} from '([^']+)'`));
-    return { screen, fn, file: imp ? imp[1].replace(/^\.\//, '') : null };
-  });
+  const out = [];
+  // R74 — a screen is now painted by one of two things, and this list is
+  // still derived rather than typed out (R39's rule, which is why every gate
+  // downstream keeps working when a seventh screen arrives): a statically
+  // imported render function, or a `lazy()` loader that names its module and
+  // its export inline. `lazy` travels with each entry so a gate can assert
+  // WHICH screens are deferred, not merely that the map parses.
+  for (const line of body.split('\n')) {
+    const eager = line.match(/^\s{2}(\w+): \(root\) => (\w+)\(/);
+    if (eager) {
+      const [, screen, fn] = eager;
+      // …and on to the module that exports it, so a gate can ask what that
+      // file does rather than what a list says about it.
+      const imp = shell.match(new RegExp(`import \\{[^}]*\\b${fn}\\b[^}]*\\} from '([^']+)'`));
+      out.push({ screen, fn, file: imp ? imp[1].replace(/^\.\//, '') : null, lazy: false });
+      continue;
+    }
+    const deferred = line.match(/^\s{2}(\w+): lazy\(\(\) => import\('([^']+)'\), '(\w+)'\)/);
+    if (deferred) {
+      const [, screen, spec, fn] = deferred;
+      out.push({ screen, fn, file: spec.replace(/^\.\//, ''), lazy: true });
+    }
+  }
+  return out;
 }
 
 const shellScreens = () => shellScreenMap().map((e) => e.screen);
@@ -15025,6 +15043,75 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   const panel = readFileSync(join(root, 'save/settings-ui.js'), 'utf8');
   assert.ok(!/<label for="set-import-file"/.test(panel),
     'the save-import control is a button, not an unfocusable label');
+}
+
+// ---------------------------------------------------------------------------
+// R74 — the eager import graph, capped. Boot used to pull 55 modules and
+// 701 KB of JS with ZERO dynamic imports anywhere in the tree, against
+// CLAUDE.md's own "lazy-init heavy systems". Two screens now load on first
+// use, which takes 8 modules and 131 KB out of the graph.
+//
+// A cap rather than an exact number: this is a budget, not a fingerprint, and
+// a gate that fails when someone adds a small module is a gate people learn
+// to raise without reading. What it must catch is the graph RE-growing by a
+// screen — putting `import { renderWarRoomScreen }` back at the top of
+// main.js costs 8 modules at once and blows straight through it.
+{
+  const graphFrom = (entry) => {
+    const seen = new Map();
+    const walk = (rel) => {
+      if (seen.has(rel)) return;
+      let src;
+      try { src = readFileSync(join(root, rel), 'utf8'); } catch { return; }
+      seen.set(rel, statSync(join(root, rel)).size);
+      // STATIC imports only — a dynamic import() is the whole point and must
+      // not be followed, or this measures nothing.
+      for (const m of src.matchAll(/^\s*import\s(?:[\s\S]*?)from\s*['"](\.[^'"]+)['"]/gm)) {
+        walk(relative(root, resolve(dirname(join(root, rel)), m[1])));
+      }
+      for (const m of src.matchAll(/^\s*import\s*['"](\.[^'"]+)['"]/gm)) {
+        walk(relative(root, resolve(dirname(join(root, rel)), m[1])));
+      }
+    };
+    walk(entry);
+    return seen;
+  };
+
+  const eager = graphFrom('main.js');
+  const kb = [...eager.values()].reduce((n, b) => n + b, 0) / 1024;
+  const MODULE_CAP = 50;
+  const KB_CAP = 620;
+  assert.ok(eager.size <= MODULE_CAP,
+    `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
+  assert.ok(kb <= KB_CAP,
+    `boot imports ${kb.toFixed(0)} KB of JS eagerly, over the cap of ${KB_CAP} KB`);
+
+  // The screens the shell defers, read from the shell rather than restated —
+  // and the modules behind them must genuinely be absent from the graph
+  // above, which is the assertion a lazy screen actually earns its keep by.
+  const deferred = shellScreenMap().filter((e) => e.lazy);
+  assert.ok(deferred.length >= 2,
+    `at least the two heaviest screens load on first use (${deferred.map((e) => e.screen).join(', ') || 'none do'})`);
+  for (const e of deferred) {
+    assert.ok(!eager.has(e.file),
+      `${e.screen} is deferred, so ${e.file} must not also be imported eagerly`);
+  }
+  // …and every deferred screen still resolves to a real module with a real
+  // export, since nothing type-checks a string in an import() any more.
+  for (const e of deferred) {
+    const mod = await import(`../${e.file}`);
+    assert.equal(typeof mod[e.fn], 'function',
+      `${e.screen}: ${e.file} exports ${e.fn}`);
+  }
+  // Offline play still needs the bytes, so the service worker precaches them
+  // deliberately: what this phase defers is parse and execute, not download.
+  // A deferred module missing from the SHELL list would be a screen that
+  // simply fails on a train.
+  const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+  for (const e of deferred) {
+    assert.ok(sw.includes(`'${e.file}'`),
+      `${e.file} is deferred but still precached, or it breaks offline`);
+  }
 }
 
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

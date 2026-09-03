@@ -1,5 +1,125 @@
 # PROGRESS
 
+## Session 97 — R74: the briefing runs 64–160 battles per checkbox ✅
+
+**Acceptance criterion:** `diagnose` reuses the computed forecast and runs
+only on losing bands, the War Room, battle and Dex load on first use, and a
+gate caps the eager import graph from `main.js` — **all four pass**.
+`SAVE_VERSION` unchanged (36). `sw.js` cache → `v36-r74`.
+
+### Measured first, and the entry was already stale
+
+| | before | after |
+|---|---|---|
+| battles per toggle (losing band, obedience replay) | **155** | **123** |
+| battles per toggle (winning band, no replay) | 123 | **91** |
+| wall clock, winning band — *the common case* | 4.9 ms | **2.1 ms** |
+| wall clock, hopeless band | 20.5 ms | **11.0 ms** |
+| eager modules from `main.js` | **55** (entry said 52) | **47** |
+| eager JS | **701 KB** (entry said 623) | **570 KB** |
+| dynamic imports anywhere in the tree | **0** | 2 |
+| network requests at boot | 81 | **73** |
+
+### `diagnose` was paying to decline
+
+The comment at its call site already said it was "only computed on a verdict
+that needs it." That was true of the *result* and of nothing else: it ran a
+full 32-battle forecast of its own purely to learn the band, then returned
+`null` on every winning one. A walkover paid 32 battles to be told it was
+fine.
+
+The reuse is safe by construction, not by hope. `diagnose`'s internal call is
+`forecast(team, encounter, content, seed, now, { runs: 32 })`, and the
+briefing's own call is the same function with the same arguments and the same
+seed — so I checked it across all 26 encounters and got 26/26 identical
+before changing anything. The band now travels in the forecast the caller
+already holds, via a `wantsDiagnosis` predicate exported so one place knows
+which verdicts want a reason rather than two string comparisons at each site.
+
+### Two screens now load on first use
+
+The War Room and the Dex — and the War Room *is* the battle screen, one
+module renders both, which is why two dynamic imports satisfy a criterion
+that names three things. Between them they pull in 8 modules and 131 KB
+reachable no other way.
+
+**What this buys is parse and execute, not download.** `sw.js` precaches the
+whole shell on purpose so the game works on a train, so the bytes were
+already on the device. That is the honest version of the win, and the gate
+asserts the deferred modules are *still* precached — a screen that fails
+offline would be a bad trade for a faster boot.
+
+Verified the way the claim is actually worded: with the service worker
+bypassed, `campaign/ui.js`, `battle/ui.js` and `battle/forecast.js` are **not
+fetched at boot**, arrive on the tap, and both screens render (12 KB and
+282 KB of HTML) with zero console errors.
+
+### The audit caught two defects in the loader I had just written
+
+Worth recording because both were mine and neither was obvious:
+
+- **`.then(render).catch(...)` catches the RENDER, not just the import.** A
+  bug inside the War Room would have shown "This screen could not be loaded.
+  Check your connection" — blaming the network for a code fault — while
+  leaving the warm cache set and the in-flight entry deleted. It is a
+  two-argument `then` now, so the rejection path can only be the import.
+- **The deferred paint had no staleness check.** It now skips when the
+  container is hidden, using the same `!root.hidden` predicate `tick()`
+  already uses to decide whether a screen is worth rendering at all.
+
+### The gate is a budget, not a fingerprint
+
+50 modules and 620 KB, against a current 47 and 570. A gate that fails when
+someone adds a small module is one people learn to raise without reading it;
+what this has to catch is the graph regrowing by a *screen*, and putting
+`import { renderWarRoomScreen }` back at the top of `main.js` costs eight
+modules at once and blows straight through it.
+
+It also asserts the things the cap alone cannot: which screens are deferred
+(read from the shell, not restated), that their modules are genuinely absent
+from the eager graph, that each still resolves to a real export — nothing
+type-checks a string inside `import()` — and that each is still in the
+service worker's precache list.
+
+`shellScreenMap()` learned the second form rather than being replaced, so
+R39's rule still holds: every gate that walks the screens keeps working, and
+a seventh screen is still held to all of them without anyone adding it to a
+list.
+
+### Known issues, now measured rather than guessed at — queued as R81
+
+The audit that checked this change also measured what is left, so the next
+pass starts from numbers:
+
+- **The JSON is now the larger half.** `parts.json` is 410 KB of which
+  **283 KB (69%) is `parts[].shapes`**, read only by the renderer;
+  `enemies.json` is 172 KB of which **126 KB (73%)** is the same thing. The
+  same audit found the guardrail on the obvious wrong fix: the Ranch really
+  does read `enemies.json`, through `ranch/agenda.js`, so "fetch it when the
+  player opens the War Room" would break the agenda panel.
+- **Three modules are eager for almost nothing:** `battle/engine.js` (63 KB,
+  the single largest, for six small helpers), `campaign/campaign.js` (30 KB,
+  for one function that is a bare re-export) and `save/settings-ui.js` (16 KB
+  — a modal behind one click handler, not a screen at all).
+- `sw.js` is **network-first for everything**, so every precached module
+  still costs a request that has to fail before the cache answers.
+
+### Verified
+
+- `tools/smoke.js` — full suite green, including the new import-graph gate.
+- `npm run a11y` — 46 controls, 8 views, all five criteria still pass (it
+  clicks every tab, so it exercises both lazy screens).
+- A network trace with the service worker bypassed, proving "first use"
+  literally.
+
+### Next session's first task
+
+**R75 — The small wrongs the walk found.** Rename drops `res.msg`; the
+empty-vault SPLICE IT is disabled with its reason suppressed; Assault is
+enabled with everyone injured; an unread job report is overwritten by the
+next; the resequencer's pen-full line is pushed every 30 s and erases the
+whole wire in six minutes.
+
 ## Session 96 — R73: tap targets and focus at 380 px ✅
 
 **Acceptance criterion:** every control at least 40 px at 380 px, focus
