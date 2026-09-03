@@ -162,6 +162,89 @@ h1 span { color: var(--zap); }
 }
 .tabs button.active { color: var(--goo); border-color: var(--goo); }
 
+/* --- R73: focus you can actually see -----------------------------------
+   There was exactly one `outline: none` in the file (on the Dex cell) and
+   nothing anywhere that put a ring back, so a keyboard user moved through
+   the game with no idea where they were — the browser default was the only
+   indicator and one rule had already killed it locally.
+
+   `:focus-visible` rather than `:focus`, so a mouse or thumb never sees it
+   and a keyboard always does. Two-tone — a dark outline under a bright one
+   — because the accent sits on both light panels and dark wells across five
+   themes, and a single-colour ring disappears on one of them. `outline`,
+   not `box-shadow`, so it survives Windows High Contrast. */
+:focus-visible {
+  outline: 2px solid var(--goo);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Elements that already draw their own rounded box keep its radius, so the
+   ring hugs the control instead of cutting its corners. */
+button:focus-visible,
+summary:focus-visible,
+label[for]:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  border-radius: inherit;
+  outline-offset: 2px;
+}
+/* The shell never scrolls a focused control under the sticky footer. */
+:focus-visible { scroll-margin-block: 56px; }
+
+/* --- R73: the 40px floor ------------------------------------------------
+   This ships as a TWA, so every control is a thumb target before it is
+   anything else. Measured at 380px before this rule: 21 of 46 distinct
+   controls came in under 40px, the worst a 15x21 rename button.
+
+   Stated ONCE, here, rather than as a min-height added to fifteen
+   individual selectors — that version fixes the fifteen that exist and
+   misses the sixteenth somebody adds next phase, which is the whole reason
+   the floor was 15px in the first place. `box-sizing` and the flex
+   centring come with it, because a min-height without them buys a 40px box
+   with the label still painted at the top of it.
+
+   `summary` keeps `display: list-item` (a flex summary drops the
+   disclosure triangle in Chromium) and reaches the floor on padding
+   instead. Anything genuinely inline inside running text opts out below. */
+button,
+summary,
+label[for],
+[role="button"],
+select,
+input[type="text"],
+input[type="number"],
+input[type="search"] {
+  min-height: 40px;
+  box-sizing: border-box;
+}
+/* Both dimensions: a 40px-tall sliver 20px wide is still a miss. Applied to
+   the things that shrink-wrap their label; full-width and flex-1 controls
+   are already far past it. */
+button,
+summary,
+label[for],
+[role="button"] {
+  min-width: 40px;
+}
+button,
+label[for],
+[role="button"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+/* A button that fills its row stays a block-level thing, not a shrink-wrap. */
+button.big-btn,
+button.care-train,
+button.pen-dismantle,
+button.extract-btn {
+  display: flex;
+  width: 100%;
+}
+summary { padding-block: 9px; }
+
 .screen { display: flex; flex-direction: column; gap: 12px; }
 
 main {
@@ -366,7 +449,7 @@ main {
   font-size: 0.72rem;
   cursor: pointer;
 }
-.care-row button:disabled { opacity: 0.45; cursor: default; }
+.care-row button:disabled { opacity: 0.6; cursor: default; }
 
 @media (max-width: 420px) {
   .animal-card { flex-direction: column; }
@@ -535,7 +618,12 @@ main {
   color: var(--goo);
 }
 
-.big-btn:disabled { opacity: 0.4; cursor: default; }
+/* R73 — every disabled opacity above was raised to 0.6. A disabled control
+   is exempt from WCAG contrast, but its LABEL is usually the sentence that
+   explains why it is disabled ("None in the vault", "the pens are full"),
+   which is precisely the moment a player needs to read it. Measured: the
+   primary button sat at 2.35:1 against its own surface. */
+.big-btn:disabled { opacity: 0.6; cursor: default; }
 
 /* --- Battle (M4) --- */
 
@@ -561,7 +649,7 @@ main {
   cursor: pointer;
   flex: 0 0 auto;
 }
-.encounter button:disabled { opacity: 0.4; cursor: default; }
+.encounter button:disabled { opacity: 0.6; cursor: default; }
 
 /* --- Arena: one screen, no scrolling ------------------------------------
    Laid out the way turn-based creature battles have been laid out since
@@ -1359,7 +1447,7 @@ label.care-train {
   box-sizing: border-box;
   text-align: center;
 }
-.care-train:disabled { opacity: 0.45; color: var(--muted); border-color: var(--line); cursor: default; }
+.care-train:disabled { opacity: 0.6; color: var(--muted); border-color: var(--line); cursor: default; }
 
 /* R71: the footer carried a mute button and a save-file button side by
    side; one settings door replaced both, so it is back to room for one.
@@ -1437,7 +1525,7 @@ footer {
   font-size: 0.78rem;
   cursor: pointer;
 }
-.catalog button:disabled { opacity: 0.45; cursor: default; }
+.catalog button:disabled { opacity: 0.6; cursor: default; }
 
 .slot span em { font-style: normal; color: var(--goo); }
 
@@ -1502,7 +1590,7 @@ footer {
   cursor: pointer;
 }
 .pick-button:active { border-color: var(--goo); }
-.pick-button:disabled { opacity: 0.45; cursor: default; }
+.pick-button:disabled { opacity: 0.6; cursor: default; }
 .pick-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pick-hint {
   grid-column: 1;
@@ -1594,7 +1682,7 @@ footer {
   font-size: 0.82rem;
   cursor: pointer;
 }
-.pick-row:disabled { opacity: 0.38; cursor: default; }
+.pick-row:disabled { opacity: 0.6; cursor: default; }
 .pick-row.is-selected { border-color: var(--goo); box-shadow: inset 3px 0 0 var(--goo); }
 .pick-row-main { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .pick-row-label { font-weight: 700; }
@@ -1620,7 +1708,7 @@ footer {
   cursor: pointer;
 }
 .toggle-row.is-on { border-color: var(--goo); }
-.toggle-row:disabled, .toggle-row.is-disabled { opacity: 0.5; cursor: default; }
+.toggle-row:disabled, .toggle-row.is-disabled { opacity: 0.6; cursor: default; }
 .toggle-box {
   flex: 0 0 auto;
   width: 20px;
@@ -1714,7 +1802,7 @@ footer {
   margin-top: 6px;
 }
 .bay-card .bay-btns button { margin-top: 0; }
-.bay-card .bay-btns button:disabled { opacity: 0.4; cursor: default; }
+.bay-card .bay-btns button:disabled { opacity: 0.6; cursor: default; }
 /* The pill is `flex: 0 0 auto` everywhere else, which is right for a two-word
    tag beside a node. This one is a sentence, so it has to be allowed to
    shrink and wrap or it walks the whole page sideways at 380px. */
@@ -2164,7 +2252,6 @@ button.dex-cell {
 button.dex-cell:hover,
 button.dex-cell:focus-visible {
   border-color: var(--accent);
-  outline: none;
 }
 
 /* --- R37: why you are losing -------------------------------------------
@@ -2190,11 +2277,14 @@ button.dex-cell:focus-visible {
   font-weight: 700;
   padding: 0.05rem 0.3rem;
   border-radius: 0.5rem;
-  color: var(--bg);
+  color: var(--on-accent);
   background: var(--accent);
   vertical-align: middle;
 }
-.outlook { margin-top: 0.15rem; color: var(--text-dim); }
+/* R73 — these three asked for a text tier the palette never defined, so
+   they silently inherited instead of dimming. There are exactly two text
+   tiers and the palette comment says so; these are the dim one. */
+.outlook { margin-top: 0.15rem; color: var(--muted); }
 .outlook.giving-up {
   padding-left: 0.5rem;
   border-left: 2px solid var(--accent-2);
@@ -2219,7 +2309,7 @@ button.dex-cell:focus-visible {
   font-weight: 700;
   padding: 0.05rem 0.35rem;
   border-radius: 0.5rem;
-  color: var(--bg);
+  color: var(--on-accent);
   background: var(--accent);
   vertical-align: middle;
 }
@@ -2235,15 +2325,25 @@ button.dex-cell:focus-visible {
 }
 .xp-fill { display: block; height: 100%; background: var(--accent); }
 .xp-cap { font-size: 0.72em; font-weight: 700; color: var(--accent); letter-spacing: 0.08em; }
+/* R73 — this sat at 15x21, the smallest control in the game, and it opens a
+   destructive-ish flow (renaming a creature you have grown attached to).
+   It lives INSIDE an <h4>, so it cannot take a 40px box in the flow without
+   pushing the name off its own line: the visible pencil stays small and the
+   TOUCH area is grown around it with a negative margin, which is the one
+   place that trick is the right answer rather than a dodge. */
 .rename-btn {
   background: none;
   border: none;
-  padding: 0 0.15rem;
-  font-size: 0.8em;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  margin: -10px -8px -10px 0;
+  vertical-align: middle;
+  color: inherit;
   cursor: pointer;
   opacity: 0.55;
 }
-.rename-btn:hover, .rename-btn:focus { opacity: 1; }
+.rename-btn:hover, .rename-btn:focus-visible { opacity: 1; }
 .spar-btn { margin-left: 0.35rem; }
 .prompt-label { display: block; padding: 0.4rem 0.2rem 0.8rem; }
 .prompt-input {
@@ -2254,7 +2354,7 @@ button.dex-cell:focus-visible {
   font: inherit;
   font-size: 1.05rem;
   color: var(--text);
-  background: var(--bg);
+  background: var(--well);
   border: 1px solid var(--accent);
   border-radius: 0.5rem;
   box-sizing: border-box;
@@ -2277,7 +2377,7 @@ button.dex-cell:focus-visible {
   margin-left: 0.15em;
   border-radius: 0.6em;
   font-weight: 700;
-  color: var(--bg);
+  color: var(--on-accent);
   background: var(--accent);
 }
 
@@ -2285,9 +2385,9 @@ button.dex-cell:focus-visible {
    A stable is a list you scan before it is a creature you open. The shut
    row carries the clocks that cost you something when they run out —
    R15's rule, on the screen that grew past the War Room. */
-.pen-fold .fold-summary { color: var(--text-dim); }
+.pen-fold .fold-summary { color: var(--muted); }
 .pen-alert { color: var(--accent-2); font-weight: 700; }
-.pen-ready { color: var(--text-dim); }
+.pen-ready { color: var(--text); }
 .pen-wait { color: var(--muted); }
 
 /* R48: the spar bucket, as one line rather than a card. It is a stable-wide

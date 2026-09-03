@@ -213,7 +213,7 @@ export function renderPensScreen(root, ctx) {
         <section class="card animal-card">
           <div class="portrait">${portrait}</div>
           <div class="animal-info">
-            <h4>${ch.name} <button type="button" class="rename-btn" data-rename="${ch.id}" aria-label="Rename ${ch.name}">✏️</button></h4>
+            <h4>${ch.name} <button type="button" class="rename-btn" data-rename="${ch.id}" aria-label="Rename ${ch.name}">${renderIcon('pencil', { size: 15 })}</button></h4>
             ${(() => {
               // R41: what it has been through, beside what it is built from.
               const prog = xpProgress(ch.xp ?? 0, content);

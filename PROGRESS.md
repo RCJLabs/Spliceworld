@@ -1,5 +1,137 @@
 # PROGRESS
 
+## Session 96 — R73: tap targets and focus at 380 px ✅
+
+**Acceptance criterion:** every control at least 40 px at 380 px, focus
+visible, the wire a live region, the overlay a dialog, and an automated pass
+that measures bounding boxes and fails below the floor — **all five pass**.
+`SAVE_VERSION` unchanged (36). `sw.js` cache → `v36-r73`.
+
+One substitution, made deliberately: the criterion says *Playwright*, and
+this repo has **zero dependencies** by rule. Node 22 ships a global
+`WebSocket`, and CDP is JSON over one socket, so `tools/a11y.js`
+(`npm run a11y`) drives headless Chromium in about forty lines — serving the
+repo itself and launching its own browser, so it takes no arguments and needs
+nothing running. The criterion's intent was an automated browser measurement
+that fails below the floor; that is what shipped.
+
+### Measured first
+
+The entry's own numbers were stale — it costed a mute button R71 had already
+replaced — so the first move was to measure, not to read:
+
+| at 380 px | before | after |
+|---|---|---|
+| distinct controls under 40 px | **21 of 46** | **0** |
+| smallest control | `.rename-btn` at **15×21** | 40×40 |
+| `outline: none` with no replacement | 1 | 0 |
+| `aria-live` regions | 0 | 1 |
+| `aria-current` on the nav | none | the active screen |
+| undefined CSS custom properties | **2, across 7 rules** | 0 |
+| worst text contrast | **1.91:1** | 4.03:1 |
+
+### The floor is stated once
+
+Fifteen selectors were under the floor. Adding a `min-height` to each would
+have fixed those fifteen and missed the sixteenth somebody adds next phase —
+which is exactly how the smallest control in the game got to 15 px. One rule
+covers `button, summary, label[for], [role="button"], select, input`, with
+the `box-sizing` and flex centring that make a 40 px box actually *contain*
+its label rather than paint it at the top.
+
+The proof that this was the right shape: the audit flagged the field-note
+dismiss (authored 26×26) and the battle log button (30×30), neither of which
+the browser walk ever reaches. Both already compute to **40×40**, without
+being named anywhere.
+
+### `.rename-btn` was two bugs wearing one hat
+
+At 15×21 it was the smallest control in the game, and it opened a flow that
+renames a creature the player has grown attached to. Its icon was a raw
+`✏️` — emoji-as-art, against the project's own procedural-SVG-only rule, and
+invisible to R70's gate because that gate scans the emoji **block** and a
+Dingbat wearing U+FE0F is not in it. It is a procedural pencil now, and the
+gate reads the variation selector too: typography never asks for emoji
+presentation, so `U+FE0F` is the tell.
+
+It also cannot take a 40 px box in the flow — it lives inside an `<h4>` and
+would push the name off its own line — so the visible pencil stays small and
+the touch area grows around it with a negative margin. That is the one place
+that trick is the right answer rather than a dodge.
+
+### The overlay is a dialog in one place, not nine
+
+Nine call sites across five modules open `#overlay` by hand. Teaching all
+nine about focus, Escape and labelling would have taught the tenth nothing,
+so the behaviour watches the element: name from the heading it already
+writes, focus moved in, Escape, Tab trapped, and focus **restored to the
+opener**.
+
+The first draft restored focus only inside its own `close()` — and every
+Close button in the game sets `hidden = true` directly, so all of them
+silently kept the old behaviour. The audit caught that in code I had written
+an hour earlier. The observer watches the attribute in **both** directions
+now, which is the whole reason it lives there instead of in a helper the
+callers would have to remember to call.
+
+### A dead CSS variable, in seven rules
+
+`var(--bg)` has never been defined, in any of the five themes. CSS does not
+warn — it falls back to `inherit` — so two chips designed as dark-ink-on-lime
+rendered muted-grey-on-lime and measured **1.91:1**. Nothing in the suite
+could see it: not a syntax error, not a JS reference, just a name that
+resolves to nothing, quietly, everywhere at once.
+
+The new gate reads every `var()` against every definition, and immediately
+found a second one I had missed by grepping for the first: `--text-dim`,
+three more rules, including a `.pen-ready` state cue that never painted.
+
+That gate also caught **me** twice in five minutes: my fix comment quoted the
+dead variable name, which failed my own assertion and would have failed the
+gate — so it strips comments now, because this stylesheet explains itself at
+length and a rule's comment naming what it replaced is not a defect.
+
+### Two tooling lessons worth keeping
+
+- **The service worker caches the whole shell**, so a QA run after editing
+  `index.html` or `main.js` measures the *previous* build. Clearing
+  CacheStorage is not enough, because the SW re-registers on the next load.
+  `Network.setBypassServiceWorker` is the deterministic fix — and it silently
+  does nothing unless `Network.enable` was called first, which cost a full
+  diagnostic round where the CSS changes appeared and the JS ones did not.
+- **`:focus-visible` deliberately ignores a programmatic `.focus()`** once
+  the page has seen a click, so a ring check written as `el.focus()` reports
+  "no ring" on a page whose ring is fine. The gate presses a real Tab, which
+  is also simply the thing being tested.
+
+### Not fixed, and written up as R80
+
+An adversarial four-dimension audit (tap targets the walk cannot reach,
+keyboard, ARIA semantics, contrast and motion) found the barriers that
+survive this phase. The largest: **focus is destroyed on a timer** —
+`tick()` re-renders the active screen every 30 s and every render function
+replaces `innerHTML` wholesale, so a keyboard user is returned to the top of
+the document twice a minute. Also the battle's opening exchange advances by
+clicking a `<div>`, several message strips change silently, and picker rows
+sit 5 px apart against the 8 px the same audit measured elsewhere. These are
+a phase, not a patch, and R73's criterion does not name them.
+
+### Verified
+
+- `npm run a11y` — 46 controls across 8 views, all five criteria pass.
+  Proven both ways: 28 named problems and exit 1 against the pre-R73
+  stylesheet, and it catches a deliberately broken picker focus.
+- `tools/smoke.js` — full suite green, including the new CSS-variable gate,
+  the R73 semantics assertions and the extended emoji rule.
+- `tools/sim.js` — clean.
+
+### Next session's first task
+
+**R74 — The briefing runs 64–160 battles per checkbox.** `campaign/ui.js`
+calls `forecast` then `diagnose`, whose first act is the same `forecast`
+again — ~150 ms synchronous per toggle in Node, most of a second on a
+mid-range phone — against 52 eager modules and 623 KB of JS.
+
 ## Session 95 — R72: retired content ids crash the Theater ✅
 
 **Acceptance criterion:** a gate retires one part, one grade and adds one

@@ -91,7 +91,11 @@ function showScreen(name) {
   saveGame(state);
   for (const s of Object.keys(SCREENS)) $(`#screen-${s}`).hidden = s !== name;
   document.querySelectorAll('#tabs button').forEach((b) => {
-    b.classList.toggle('active', b.dataset.screen === name);
+    const on = b.dataset.screen === name;
+    b.classList.toggle('active', on);
+    // R73 — which screen you are on was said in colour and nothing else.
+    if (on) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
   });
   tick();
 }
@@ -142,6 +146,81 @@ function renderBootFailure(title, message) {
       </div>
     </div>`;
   document.getElementById('boot-reload').addEventListener('click', () => location.reload());
+}
+
+// R73 — the overlay is a DIALOG, made one in a single place. Nine call sites
+// across four modules open it the same hand-rolled way (`overlay.hidden =
+// false; overlay.innerHTML = …`), and teaching all nine about focus, Escape
+// and labelling would have taught the tenth nothing. This watches the
+// element instead, so every overlay the game has — and every one it grows —
+// behaves like a dialog without its author thinking about it:
+//   · an accessible name, taken from the heading the panel already writes
+//   · focus moved inside on open and RESTORED to the opener on close, which
+//     is the difference between a keyboard user continuing and being dumped
+//     at the top of the document
+//   · Escape closes it, the same thing every one of these panels already
+//     offers as a Cancel button
+//   · Tab cycles within it while it is open (`aria-modal` is a promise to
+//     assistive tech; the trap is what makes it true for everyone else)
+function installDialogBehaviour(overlay) {
+  const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]),'
+    + ' textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  let opener = null;
+
+  // The picker sheet is its own modal with its own Escape and its own focus,
+  // and it opens ON TOP of a panel (the settings panel picks a theme that
+  // way). While it is up, this dialog stands down rather than fighting it
+  // for the Tab key.
+  const pickerUp = () => !document.getElementById('picker')?.hidden;
+
+  const onKey = (e) => {
+    if (overlay.hidden || pickerUp()) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      overlay.hidden = true;
+      overlay.innerHTML = '';
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const items = [...overlay.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
+  document.addEventListener('keydown', onKey);
+
+  // `hidden` is toggled directly by nine call sites across five modules, and
+  // every one of them closes by hand. So the ATTRIBUTE is the event, in both
+  // directions — which is the whole reason this lives here instead of in a
+  // close() helper the callers would have to remember to call. The first
+  // version of this only restored focus down its own Escape path, and every
+  // Close button in the game silently kept the old behaviour.
+  new MutationObserver((records) => {
+    const toggled = records.some((r) => r.type === 'attributes');
+    if (overlay.hidden) {
+      if (!toggled) return;
+      // Restoring focus is the half that is always forgotten: without it a
+      // keyboard user is dumped at the top of the document, several screens
+      // from the control they opened.
+      if (opener && document.contains(opener)) opener.focus();
+      opener = null;
+      return;
+    }
+    if (toggled) {
+      opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    }
+    const heading = overlay.querySelector('h1, h2, h3, h4');
+    overlay.setAttribute('aria-label', heading?.textContent?.trim() || 'Dialog');
+    // Only pull focus in when it is not already inside: these panels
+    // re-render in place (the settings panel walks four screens without ever
+    // closing), and stealing focus back to the top on every repaint would
+    // undo the player's own Tab.
+    if (!overlay.contains(document.activeElement)) {
+      overlay.querySelector(FOCUSABLE)?.focus();
+    }
+  }).observe(overlay, { attributes: true, attributeFilter: ['hidden'], childList: true });
 }
 
 async function boot() {
@@ -203,6 +282,8 @@ async function boot() {
   // management — see save/settings-ui.js for all four. The footer used to
   // carry a mute button and a save-file button side by side; a slot picker
   // would have made a third.
+  installDialogBehaviour($('#overlay'));
+
   const settingsBtn = $('#settings');
   settingsBtn.innerHTML = renderIcon('settings');
   settingsBtn.addEventListener('click', () => openSettings($('#overlay'), ctx));
