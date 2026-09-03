@@ -157,7 +157,10 @@ export function classNotes(myClass, foeClasses, classes) {
   if (!myClass || !classes?.[myClass]) return [];
   const me = classes[myClass];
   const notes = [];
-  if (foeClasses.has(me.beats)) {
+  // R72: `foeClasses` holds ids off ENEMY records, so `me.beats` being in it
+  // does not prove the class itself is still defined — the last of the
+  // cycle's second hops to be read bare.
+  if (foeClasses.has(me.beats) && classes[me.beats]) {
     notes.push({ kind: 'good', key: `cls:${myClass}:${me.beats}`, text: `beats their ${classes[me.beats].name}` });
   }
   // The other direction, which nothing said: whoever beats ME, standing

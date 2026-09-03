@@ -4,7 +4,7 @@
 
 import { renderCreatureSVG, slotOfSocket } from '../render/renderer.js';
 import { renderIcon } from '../ui/icons.js';
-import { GRADES, GRADE_INDEX } from './extract.js';
+import { gradeOf, gradeIndexOf } from './extract.js';
 import { analyze } from './physiology.js';
 import { spliceChimera, validateSplice, tokensFor } from './theater.js';
 import * as sfx from '../audio/sfx.js';
@@ -65,7 +65,17 @@ export function renderTheaterScreen(root, ctx) {
     .join('');
 
   const chosen = new Set(Object.values(draft.slots).filter(Boolean));
-  const CLASS_MARK = { air: '\u{1FABD}', ground: '\u{1F9B6}', water: '\u{1F30A}' };
+  // R72 - the class mark comes from classes.json's own `icon`, so a fourth
+  // class marks its parts without an engine edit. It is also an inline SVG
+  // now rather than three emoji, which is what the rest of the game uses.
+  const classMark = (cls) => {
+    const def = cls ? content.classes?.[cls] : null;
+    return def ? renderIcon(def.icon, { size: 13 }) : '';
+  };
+  const markedName = (p) => {
+    const mark = classMark(p.classAffinity);
+    return `${p.name}${mark ? ' ' + mark : ''}`;
+  };
 
   // 236 parts across 40 animals: grouped, and never through an OS dropdown.
   const slotOptions = (socketId) => {
@@ -82,14 +92,14 @@ export function renderTheaterScreen(root, ctx) {
       .map(([sp, tokens]) => ({
         label: content.species[sp].name,
         options: tokens
-          .sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade])
+          .sort((a, b) => gradeIndexOf(b.grade) - gradeIndexOf(a.grade))
           .map((t) => {
             const part = content.parts[t.partId];
-            const grade = GRADES[GRADE_INDEX[t.grade]];
+            const grade = gradeOf(t.grade);
             return {
               id: t.id,
               label: part.name,
-              mark: part.classAffinity ? CLASS_MARK[part.classAffinity] : '',
+              mark: classMark(part.classAffinity),
               badge: `<span class="grade-badge grade-${t.grade}">${grade.name}</span>`,
               // R32 made mass the currency the chassis decision is priced in — a
               // rhino head is 32 and a moth head is 1 — so the number has to be on
@@ -114,9 +124,9 @@ export function renderTheaterScreen(root, ctx) {
       label: `${SLOT_LABELS[socketId]}${socketId === 'head' ? ' *' : ''}`,
       count: owned.length || null,
       value: part
-        ? `${part.name}${part.classAffinity ? ' ' + CLASS_MARK[part.classAffinity] : ''}`
+        ? markedName(part)
         : owned.length ? 'Empty socket' : 'None in the vault',
-      hint: part ? `${GRADES[GRADE_INDEX[token.grade]].name} \u00b7 ${token.donor.name}` : '',
+      hint: part ? `${gradeOf(token.grade).name} \u00b7 ${token.donor.name}` : '',
       disabled: !owned.length,
     });
   }).join('');
@@ -143,7 +153,11 @@ export function renderTheaterScreen(root, ctx) {
       <h2>Surgery Theater</h2>
       <p class="class-banner class-${report.creatureClass ?? 'none'}">${
         report.creatureClass
-          ? `${renderIcon(content.classes[report.creatureClass].icon)} ${content.classes[report.creatureClass].name} — beats ${content.classes[content.classes[report.creatureClass].beats].name}`
+          ? `${renderIcon(content.classes[report.creatureClass].icon)} ${content.classes[report.creatureClass].name}${
+              content.classes[content.classes[report.creatureClass].beats]
+                ? ` — beats ${content.classes[content.classes[report.creatureClass].beats].name}`
+                : ''
+            }`
           : '◇ Unclassed — neutral in every matchup'
       }</p>
       <p class="recipe">${statLine}${report.tags.length ? ` · tags: ${report.tags.join(', ')}` : ''}</p>

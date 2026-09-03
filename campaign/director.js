@@ -46,10 +46,14 @@ const tuningOf = (content) => ({ ...DEFAULT_TUNING, ...(content.directorMeta ?? 
 // structural lie: ~32 parts vote Ground and only 4 vote Air, so every
 // stable would read as Ground and diversifying would buy you nothing.
 export function classOfParts(partIds, content) {
-  const votes = { air: 0, ground: 0, water: 0 };
+  // R72 - derived, not typed out: see splice/physiology.js, which runs the
+  // same election on the same rule. A hardcoded trio here made a fourth class
+  // invisible to the director specifically, so the world would never learn to
+  // counter it.
+  const votes = {};
   for (const id of partIds) {
     const affinity = content.parts[id]?.classAffinity;
-    if (affinity) votes[affinity] += 1;
+    if (affinity && content.classes?.[affinity]) votes[affinity] = (votes[affinity] ?? 0) + 1;
   }
   const ranked = Object.entries(votes).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
   if (!ranked.length) return null;
@@ -66,7 +70,7 @@ export function classOfParts(partIds, content) {
 export function directorProfile(state, content) {
   const t = tuningOf(content);
   const tags = {};
-  const classes = { air: 0, ground: 0, water: 0 };
+  const classes = {}; // R72: see classOfParts above - the data says how many.
   let samples = 0;
 
   const observeTags = (partId, weight) => {
@@ -77,7 +81,7 @@ export function directorProfile(state, content) {
   };
   const observeCreature = (partIds, weight) => {
     const cls = classOfParts(partIds, content);
-    if (cls) classes[cls] += weight;
+    if (cls) classes[cls] = (classes[cls] ?? 0) + weight;
   };
 
   for (const chimera of state.chimeras ?? []) {

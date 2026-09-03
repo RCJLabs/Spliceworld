@@ -92,6 +92,7 @@ export function makeSimChimera(frame, partIds, grade, content) {
   const used = new Set();
   for (const pid of partIds) {
     const part = content.parts[pid];
+    if (!part) continue; // R72: a retired id measures as the build without it
     let socketId = part.slot;
     let n = 2;
     while (used.has(socketId)) socketId = `${part.slot}${n++}`;
@@ -222,6 +223,13 @@ export function sampleBuilds(content, n, seed) {
     push(content.species[sp].frame, partIds);
   }
   for (const combo of Object.values(content.combos)) {
+    // R72 - a combo outlives its own halves: combos.json names part ids, and
+    // a part retired from parts.json leaves the combo pointing at nothing.
+    // The build it describes cannot be assembled, so the yardstick skips it
+    // rather than throwing on `content.parts[p].slot` on the way to measuring
+    // it. This is the sim's DEFAULT path (runSim falls back to sampleBuilds),
+    // so unguarded it took the whole harness down, not one row of the table.
+    if (combo.parts.some((p) => !content.parts[p])) continue;
     const partIds = new Set(combo.parts);
     if (![...partIds].some((p) => content.parts[p].slot === 'head')) partIds.add(pick(rng, bySlot.head));
     const filled = new Set([...partIds].map((p) => content.parts[p].slot));

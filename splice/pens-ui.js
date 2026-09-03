@@ -3,7 +3,7 @@
 // later milestones — for now the pens are a proud, slightly humming nursery.
 
 import { renderCreatureSVG } from '../render/renderer.js';
-import { GRADES, GRADE_INDEX, salvagePreview, extractChimera } from './extract.js';
+import { gradeOf, salvagePreview, extractChimera } from './extract.js';
 import {
   chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING,
   setMoveset, moveTrainingReady,
@@ -175,8 +175,11 @@ export function renderPensScreen(root, ctx) {
       const manifest = !open ? '' : Object.entries(ch.tokens)
         .map(([slot, token]) => {
           const part = content.parts[token.partId];
-          const grade = GRADES[GRADE_INDEX[token.grade]];
-          return `<li><span class="grade-badge grade-${token.grade}">${grade.name}</span> ${part.name} <span class="lineage">essence of ${token.donor.name} ★${token.donor.stars}</span></li>`;
+          const grade = gradeOf(token.grade);
+          // R72: the manifest lists what the creature is MADE of, so a retired
+          // part is named as missing rather than skipped - a socket silently
+          // absent from the list reads as a chimera with fewer parts.
+          return `<li><span class="grade-badge grade-${token.grade}">${grade.name}</span> ${part?.name ?? 'unlisted anatomy'} <span class="lineage">essence of ${token.donor.name} ★${token.donor.stars}</span></li>`;
         })
         .join('');
       const obedience = obediencePercent(ch, t);
@@ -388,7 +391,9 @@ export function renderPensScreen(root, ctx) {
       if (!ch) return;
       const preview = salvagePreview(state, ch, content);
       const kept = preview.tokens
-        .map((tk) => `${content.parts[tk.partId].name} (${GRADES[GRADE_INDEX[tk.grade]].name}, was ${GRADES[GRADE_INDEX[tk.wasGrade]].name})`)
+        // R72: a retired part still comes back to the vault, so it is named
+        // rather than dropped - the count in the button below counts it.
+        .map((tk) => `${content.parts[tk.partId]?.name ?? 'unlisted anatomy'} (${gradeOf(tk.grade).name}, was ${gradeOf(tk.wasGrade).name})`)
         .join(', ');
       const lost = preview.lose
         .map((socketId) => content.parts[ch.tokens[socketId].partId]?.name)

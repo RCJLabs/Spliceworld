@@ -6,7 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import assert from 'node:assert/strict';
-import { indexContent, renderCreatureSVG, validateGenome, SLOTS, SOCKETS, slotOfSocket } from '../render/renderer.js';
+import { indexContent, renderCreatureSVG, validateGenome, drawableGenome, SLOTS, SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { renderIcon, iconIds } from '../ui/icons.js';
 import { rngStream, hashString } from '../util/rng.js';
 import { newGameState, migrate, SAVE_VERSION } from '../save/save.js';
@@ -28,7 +28,7 @@ import {
 import {
   runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent, campaignWalk,
   regionBench, ARCHETYPES, facilityPayback, labAt, scoutedBy, fightRival,
-  ladderBench, ladderRate, STARTER_BUILD, partsOnFrame,
+  ladderBench, ladderRate, STARTER_BUILD, partsOnFrame, sampleBuilds,
 } from './sim.js';
 import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
 import {
@@ -14603,6 +14603,355 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     for (const g of content.gauntlet ?? []) { fielded.add(g.unitId); for (const e of g.escorts) fielded.add(e); }
     const orphanUnits = Object.values(content.enemies).filter((u) => !fielded.has(u.id)).map((u) => u.id).sort();
     assert.deepEqual(orphanUnits, [], `no enemy unit is orphaned (${orphanUnits.join(', ')})`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// R72 — RETIRED CONTENT IDS. A save outlives the build that wrote it: a vault
+// token holds a partId and a grade, a chimera holds both on every socket, and
+// the Dex holds species ids. Retire one of those from the json — or add a
+// class the code never anticipated — and the old save still names it.
+//
+// Most modules already defended this ("const part = …; if (!part) continue").
+// A handful did not, and they were not the harmless ones: `analyze` threw on
+// the grade one line after guarding the part, which took the Pens, the War
+// Room AND the balance sim down; the renderer VALIDATES a genome and throws
+// on an unknown part, so one retired part killed the whole Pens screen rather
+// than one overlay; and the class tally was three literal keys, so a fourth
+// class scored `undefined + 1` and was dropped from its own election.
+//
+// THE CRITERION: retire one part, retire one grade, add one class — in a
+// fixture, against a save that holds all three — and every screen the shell
+// renders still renders, and the sim still runs. Measured on HEAD before the
+// fix: four of six screens threw and the sim died in createBattle.
+{
+  // An independent clone: this gate mutates content, and every other gate in
+  // this file shares the module-level `content`.
+  const retired = indexContent({
+    frames: readJSON('data/frames.json'), parts: readJSON('data/parts.json'),
+    species: readJSON('data/species.json'), combos: readJSON('data/combos.json'),
+    enemies: readJSON('data/enemies.json'), keywords: readJSON('data/keywords.json'),
+    classes: readJSON('data/classes.json'), regions: readJSON('data/regions.json'),
+    traits: readJSON('data/traits.json'), rivals: readJSON('data/rivals.json'),
+    training: readJSON('data/training.json'), gauntlet: readJSON('data/gauntlet.json'),
+    director: readJSON('data/director.json'), facility: readJSON('data/facility.json'),
+    philosophies: readJSON('data/philosophies.json'), operations: readJSON('data/operations.json'),
+    chaos: readJSON('data/chaos.json'), temperament: readJSON('data/temperament.json'),
+    scars: readJSON('data/scars.json'), guides: readJSON('data/guides.json'),
+    resequencer: readJSON('data/resequencer.json'), news: readJSON('data/news.json'),
+  });
+
+  const RETIRED_PART = 'bear_hide';
+  const RETIRED_GRADE = 'mythic'; // a grade id GRADES does not define
+  const NEW_CLASS = 'storm';
+
+  // (a) RETIRE ONE PART — one the fixture save holds on a chimera AND in the
+  //     vault, so both readers meet the same hole.
+  assert.ok(retired.parts[RETIRED_PART], 'the part to retire exists to begin with');
+  delete retired.parts[RETIRED_PART];
+  // (b) ADD ONE CLASS — a fourth, with a real icon and a place in the cycle.
+  //     The goat becomes coherently Storm: its voting anatomy and its species
+  //     entry agree, which is what a real content addition would look like.
+  retired.classes[NEW_CLASS] = {
+    id: NEW_CLASS, name: 'Storm', icon: 'lightning',
+    cue: 'charged plating', beats: 'ground', color: '#e2703a',
+  };
+  retired.parts.goat_head.classAffinity = NEW_CLASS;
+  retired.parts.goat_hindlimbs.classAffinity = NEW_CLASS;
+  retired.species.goat.class = NEW_CLASS;
+
+  // A save with something on every screen, built against FULL content (the
+  // player made it before the retirement) and then read back against the
+  // retired content — which is exactly the sequence a content update creates.
+  const r72State = () => {
+    const s = { ...newGameState(), seed: 4242, funds: 20000 };
+    s.facility = { theater: 2 };
+    s.lastTickAt = t0;
+    const partGrades = {
+      cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'prime',
+      cobra_organ: 'standard', bear_hide: 'standard', goat_tail: 'standard',
+    };
+    for (const [pid, grade] of Object.entries(partGrades)) {
+      s.inventory.parts.push({ id: `r72-${pid}`, partId: pid, grade,
+        donor: { name: 'Donor', species: pid.split('_')[0], stars: 3, extractedAt: t0 } });
+    }
+    const used = new Set();
+    const slots = Object.fromEntries(Object.keys(partGrades).map((pid) => {
+      const slot = content.parts[pid].slot;
+      let socketId = slot;
+      let n = 2;
+      while (used.has(socketId)) socketId = `${slot}${n++}`;
+      used.add(socketId);
+      return [socketId, `r72-${pid}`];
+    }));
+    const made = spliceChimera(s, 'M', slots, content, t0);
+    assert.ok(made.ok, `R72 fixture splices on full content: ${made.msg}`);
+    for (const [pid, grade] of [['goat_head', 'standard'], ['bear_organ', 'prime'], ['bear_hide', 'apex']]) {
+      s.inventory.parts.push({ id: `r72-spare-${pid}`, partId: pid, grade,
+        donor: { name: 'Spare', species: pid.split('_')[0], stars: 2, extractedAt: t0 } });
+    }
+    // The Dex's lists live in the SAVE, which is exactly where a retired id
+    // outlives the build that wrote it: `dex.parts` is read three times in
+    // dex-ui.js, and every one of them dereferenced the result unguarded.
+    s.dex = {
+      parts: [RETIRED_PART, 'goat_head', 'goat_hindlimbs', 'cobra_head', 'bear_forelimbs', 'cobra_organ'],
+      enemies: Object.keys(content.enemies).slice(0, 4),
+      beaten: Object.keys(content.enemies).slice(0, 2),
+      traits: Object.keys(content.traits ?? {}).slice(0, 2),
+      variants: [],
+    };
+    s.discoveredCombos = Object.keys(content.combos).slice(0, 3);
+    // A captured unit in a containment bay carries a genome FROZEN INTO THE
+    // SAVE at capture time (campaign.js stores `battle.units[id]` verbatim), so
+    // it is the one genome in the game that can name a part the build no longer
+    // has. Rendering it threw and took the whole War Room with it — a soft-lock,
+    // because dismantling the bay is a button on that same screen. The first
+    // version of this fixture had an empty `containment`, which is exactly why
+    // the gate passed while the defect was still live.
+    s.campaign = s.campaign ?? {};
+    s.campaign.containment = [{
+      id: 'bay-r72', unitId: 'r72_specimen', rivalId: null, capturedAt: t0, rehab: null,
+      unit: {
+        id: 'r72_specimen', name: 'Specimen', class: 'ground', hp: 80, power: 20,
+        tier: 2, tags: [], moves: [],
+        genome: { frame: 'M', parts: { head: 'goat_head', hide: RETIRED_PART } },
+      },
+    }];
+    s.ranch = { ...s.ranch, stock: [], penCapacity: 8, animalCount: 0, seeded: true };
+    for (const sp of ['goat', 'bear', 'cobra']) s.ranch.stock.push(createAnimal(s, sp, content, t0));
+    // (c) RETIRE ONE GRADE. GRADES is code, not data, so it cannot be deleted
+    //     from a json — but a save written before a grade was dropped looks
+    //     exactly like this: a token stamped with an id the ladder no longer
+    //     has. Both a chimera's socket and a loose vault token carry it.
+    s.chimeras[0].tokens.head.grade = RETIRED_GRADE;
+    s.inventory.parts[0].grade = RETIRED_GRADE;
+    // Every collapsible open: a shut fold renders nothing, and "nothing" is
+    // not the same as "renders safely" — the pens manifest and the portraits
+    // both live behind one, and both are where the retired part surfaces.
+    s.ui = { ...s.ui, collapsed: new Proxy({}, { get: () => false }) };
+    return s;
+  };
+
+  // 1. THE CRITERION, first half: every screen the SHELL renders still
+  //    renders. Derived from main.js's own SCREENS map (R39's rule), so a
+  //    seventh screen is held to this without anyone adding it to a list.
+  {
+    const el = () => ({
+      innerHTML: '', textContent: '', hidden: false, dataset: {}, style: {},
+      classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+      addEventListener() {}, removeEventListener() {}, appendChild() {}, remove() {},
+      querySelector: () => el(), querySelectorAll: () => [], focus() {}, click() {},
+      getAttribute: () => null, setAttribute() {}, insertAdjacentHTML() {},
+      closest: () => null, scrollIntoView() {},
+    });
+    const ctx = {
+      state: r72State(), content: retired, now: () => t0 + 3 * HOUR,
+      save: () => {}, refreshTicker: () => {}, pushNews: () => {},
+      onExtract: () => {}, goto: () => {}, applyTheme: () => {},
+    };
+    const noted = [];
+    const realError = console.error;
+    console.error = (...a) => noted.push(a.join(' '));
+    try {
+      for (const { screen, fn, file } of shellScreenMap()) {
+        const mod = await import(`../${file}`);
+        const host = el();
+        mod[fn](host, ctx);
+        const html = String(host.innerHTML);
+        assert.ok(html.length > 0, `${screen} rendered something with retired content`);
+        // Rendering without throwing is half of it. A screen that prints the
+        // hole instead of falling into it is still broken, just quietly.
+        for (const leak of ['undefined', 'NaN', '[object Object]']) {
+          const at = html.indexOf(leak);
+          assert.equal(at, -1,
+            `${screen} leaks "${leak}": …${html.slice(Math.max(0, at - 80), at + 40).replace(/\s+/g, ' ')}…`);
+        }
+      }
+    } finally {
+      console.error = realError;
+    }
+    // renderIcon narrates a missing icon rather than throwing, which would
+    // otherwise let a class with no icon pass this gate in silence.
+    assert.deepEqual([...new Set(noted)], [], 'and no screen narrated an error to the console');
+  }
+
+  // 1b. …and the Dex renders ONE TAB at a time (R45), so the loop above only
+  //     ever saw its default view. The combo list and the foe guide — the two
+  //     that read `dex.parts` and group by class — are behind the other four.
+  {
+    const handlers = new Map();
+    const host = {
+      innerHTML: '', querySelector: () => null,
+      querySelectorAll: (sel) => (sel !== 'button[data-dex-tab]' ? [] : DEX_TAB_IDS.map((id) => ({
+        dataset: { dexTab: id },
+        addEventListener: (_e, fn) => handlers.set(id, fn),
+      }))),
+    };
+    const ctx = {
+      state: r72State(), content: retired, now: () => t0 + 3 * HOUR, save: () => {},
+    };
+    renderDexScreen(host, ctx);
+    for (const id of DEX_TAB_IDS) {
+      assert.ok(handlers.has(id), `the Dex binds tab "${id}" under retired content`);
+      handlers.get(id)();
+      const html = String(host.innerHTML);
+      assert.ok(html.length > 0, `dex/${id} rendered something`);
+      for (const leak of ['undefined', 'NaN', '[object Object]']) {
+        const at = html.indexOf(leak);
+        assert.equal(at, -1,
+          `dex/${id} leaks "${leak}": …${html.slice(Math.max(0, at - 80), at + 40).replace(/\s+/g, ' ')}…`);
+      }
+    }
+  }
+
+  // 1c. The two genomes that live in a SAVE rather than being generated at
+  //     render time: a captured unit in a containment bay, and a battle
+  //     serialized mid-fight. `validateGenome` stays strict on purpose, so the
+  //     softening is `drawableGenome`, and both readers must go through it.
+  {
+    const gone = { frame: 'M', parts: { head: 'goat_head', hide: RETIRED_PART } };
+    const drawn = drawableGenome(gone, retired);
+    assert.deepEqual(drawn, { frame: 'M', parts: { head: 'goat_head' } },
+      'drawableGenome drops the retired socket and keeps the rest');
+    assert.ok(renderCreatureSVG(drawn, retired).startsWith('<svg'), 'and what it returns actually draws');
+    assert.equal(drawableGenome({ frame: 'no_such_frame', parts: {} }, retired), null,
+      'a genome with no frame left is not drawable at all — there is no creature without one');
+    assert.equal(drawableGenome(null, retired), null, 'and a missing genome is not a crash');
+
+    // Asserted on the source as well as the behaviour: these two call sites are
+    // the whole point of the helper, and a future edit that reaches for
+    // renderCreatureSVG directly would put the soft-lock straight back.
+    for (const [file, why] of [
+      ['campaign/ui.js', 'the containment bay portrait'],
+      ['battle/ui.js', 'the arena sprite for a saved foe'],
+    ]) {
+      const s = readFileSync(join(root, file), 'utf8');
+      assert.ok(/drawableGenome\(/.test(s), `${why} (${file}) goes through drawableGenome`);
+    }
+  }
+
+  // 2. THE CRITERION, second half: the sim still runs. It is the same battle
+  //    code the browser uses, which is WHY this is worth asserting separately
+  //    — on HEAD it died inside createBattle, before a single turn resolved.
+  {
+    const enc = Object.values(retired.encounters)[0];
+    const c = makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'standard', retired);
+    const sockets = Object.keys(c.tokens);
+    c.tokens[sockets[0]].grade = RETIRED_GRADE;
+    c.tokens[sockets[1]].partId = RETIRED_PART;
+    const out = scriptedBattle(c, enc, retired, 12345, 2);
+    assert.ok(['win', 'loss', 'stall'].includes(out.outcome), `the sim reaches an outcome (${out.outcome})`);
+    assert.ok(Number.isFinite(out.turns) && out.turns > 0, `over a real number of turns (${out.turns})`);
+
+    // …and the sim's DEFAULT build pool, which is where it actually starts.
+    // `sampleBuilds` walks combos.json and reads `content.parts[p].slot` for
+    // every id a combo names — and a combo outlives its own halves, so one
+    // retired part took the whole harness down rather than one row of the
+    // table. Retire a part a combo actually references, not just any part.
+    {
+      const inCombos = new Set(Object.values(retired.combos).flatMap((c2) => c2.parts));
+      const stillHere = [...inCombos].filter((p) => retired.parts[p]);
+      assert.ok(stillHere.length, 'combos.json names parts that exist, to retire one of');
+      const pool = { ...retired, parts: { ...retired.parts } };
+      delete pool.parts[stillHere[0]];
+      const builds = sampleBuilds(pool, 40, 1);
+      assert.ok(builds.length > 0, `sampleBuilds still yields a pool with ${stillHere[0]} retired (${builds.length})`);
+      assert.ok(builds.every((b) => b.partIds.every((p) => pool.parts[p])),
+        'and every build it yields is one the game could actually assemble');
+      const solo = makeSimChimera('M', [stillHere[0], 'goat_head', 'goat_hindlimbs'], 'standard', pool);
+      assert.ok(Object.keys(solo.tokens).length === 2,
+        'makeSimChimera measures the build without the retired socket rather than throwing');
+    }
+  }
+
+  // 3. The Theater's own refusal. validateSplice runs on EVERY Theater render
+  //    (theater-ui.js binds the SPLICE IT button's reason to it), and it read
+  //    `.slot` off the hole where a retired part used to be. A refusal, not a
+  //    throw — and the vault is not raided on the way out.
+  {
+    const s = { ...newGameState(), seed: 1, funds: 100 };
+    s.facility = { theater: 2 };
+    const donor = { name: 'D', species: 'x', stars: 3, extractedAt: t0 };
+    s.inventory.parts = [
+      { id: 'v-head', partId: 'cobra_head', grade: 'standard', donor },
+      { id: 'v-hide', partId: RETIRED_PART, grade: 'standard', donor },
+    ];
+    const errs = validateSplice(s, 'M', { head: 'v-head', hide: 'v-hide' }, retired);
+    assert.ok(Array.isArray(errs), 'validateSplice returns errors rather than throwing');
+    assert.ok(errs.some((e) => /no longer in the catalogue/.test(e)),
+      `and says why (${errs.join(' | ')})`);
+    const res = spliceChimera(s, 'M', { head: 'v-head', hide: 'v-hide' }, retired, t0);
+    assert.equal(res.ok, false, 'and the splice is refused');
+    assert.equal(s.inventory.parts.length, 2, 'with the vault untouched');
+  }
+
+  // 4. A fourth class is counted, not dropped. Both tallies — the one the
+  //    player sees (physiology) and the one the WORLD sees (the director,
+  //    which decides what gets fielded against you) — hardcoded the same
+  //    three keys, so a new class was invisible to both.
+  {
+    const donor = { name: 'D', species: 'goat', stars: 3 };
+    const rep = analyze('M', [
+      { partId: 'goat_head', grade: RETIRED_GRADE, donor },
+      { partId: RETIRED_PART, grade: 'standard', donor },
+      { partId: 'goat_hindlimbs', grade: 'standard', donor },
+    ], retired, 6);
+    assert.ok(Number.isFinite(rep.stats.power), `a retired grade does not NaN the stats (${rep.stats.power})`);
+    assert.equal(rep.classVotes[NEW_CLASS], 2, `the fourth class is counted (${JSON.stringify(rep.classVotes)})`);
+    assert.ok(!Object.values(rep.classVotes).some((n) => Number.isNaN(n)), 'and nothing in the tally is NaN');
+    assert.equal(rep.creatureClass, NEW_CLASS, `so it can win the election (${rep.creatureClass})`);
+
+    const { classOfParts, directorProfile } = await import('../campaign/director.js');
+    assert.equal(classOfParts(['goat_head'], retired), NEW_CLASS, 'the director reads the same result');
+    const st = r72State();
+    st.chimeras[0].tokens.head = { partId: 'goat_head', grade: 'standard', donor };
+    const prof = directorProfile(st, retired);
+    assert.ok(!Object.values(prof.classes).some((n) => Number.isNaN(n)),
+      `and its own tally holds no NaN (${JSON.stringify(prof.classes)})`);
+    assert.equal(prof.favoredClass, NEW_CLASS, `so the world can learn to counter it (${prof.favoredClass})`);
+  }
+
+  // 5. And the rule, not just the instances: no module may name the shipped
+  //    classes as a literal set again. classes.json is the list; three keys
+  //    typed into an object literal is a second, stale copy of it.
+  {
+    const jsFiles = [];
+    const walk = (dir) => {
+      for (const e of readdirSync(join(root, dir), { withFileTypes: true })) {
+        if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+        const rel = `${dir}/${e.name}`.replace(/^\.\//, '');
+        if (e.isDirectory()) walk(rel);
+        else if (e.name.endsWith('.js') && !rel.startsWith('tools/gen-')) jsFiles.push(rel);
+      }
+    };
+    walk('.');
+    // All three shipped ids named close together as KEYS or STRING LITERALS —
+    // the shape of a hand-kept copy of the class list, whatever brackets it
+    // happens to sit in. Two earlier drafts of this rule were too literal to
+    // work: matching `{…}` alone walked past dex-ui.js's
+    // `CLASS_ORDER = ['ground', 'water', 'air']`, and widening it to both
+    // bracket kinds still missed the two icon maps, whose entries contain
+    // nested `{ size: 13 }` calls. Comments are stripped first, because prose
+    // in this codebase names all three constantly and legitimately.
+    const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
+    const asKey = (w) => new RegExp(`(['"\`]${w}['"\`]|\\b${w}\\s*:)`, 'g');
+    const namesAllThree = (raw) => {
+      const s = stripComments(raw);
+      const at = {};
+      for (const w of ['air', 'ground', 'water']) at[w] = [...s.matchAll(asKey(w))].map((m) => m.index);
+      if (!at.air.length || !at.ground.length || !at.water.length) return false;
+      for (const a of at.air) for (const g of at.ground) for (const w of at.water) {
+        if (Math.max(a, g, w) - Math.min(a, g, w) <= 220) return true;
+      }
+      return false;
+    };
+    const offenders = jsFiles.filter((f) => {
+      if (f === 'tools/smoke.js') return false; // this gate quotes them on purpose
+      return namesAllThree(readFileSync(join(root, f), 'utf8'));
+    });
+    assert.deepEqual(offenders, [],
+      `no module re-hardcodes the class list (${offenders.join(', ')}) — read content.classes`);
   }
 }
 

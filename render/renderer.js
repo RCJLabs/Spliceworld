@@ -320,6 +320,24 @@ const SPARKLE_SPOTS = [
   { x: -158, y: 36, s: 0.8 },
 ];
 
+// R72 — a genome that came out of a SAVE can name content this build no
+// longer has. `validateGenome` stays strict (a genome assembled wrong is a
+// bug, and the suite depends on hearing about it), so the softening happens
+// here instead, at the two readers whose genomes are persisted rather than
+// generated: a captured unit sitting in a containment bay, and a battle
+// saved mid-fight. Returns null when the FRAME is gone — there is no
+// creature to draw without one — and otherwise drops only the sockets whose
+// parts are gone, exactly as `chimeraGenome` does for the player's own.
+export function drawableGenome(genome, content) {
+  if (!genome || !content.frames[genome.frame]) return null;
+  return {
+    ...genome,
+    parts: Object.fromEntries(
+      Object.entries(genome.parts ?? {}).filter(([, id]) => id == null || content.parts[id])
+    ),
+  };
+}
+
 // Returns a complete inline-<svg> string for the given genome.
 // idPrefix keeps defs ids unique when several creatures share a document.
 // condition: null | 'gleaming' | 'scruffy' (see ranch.conditionTier).

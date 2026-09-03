@@ -29,7 +29,12 @@ import { gauntletStages } from '../campaign/gauntlet.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { classReason } from '../campaign/matchup.js';
 
-const CLASS_ORDER = ['ground', 'water', 'air'];
+// R72 - the Dex used to name the three shipped classes here, which decided
+// three separate things at once: which sections the roster grows, which runs
+// the foe guide groups by, and which enemies count as "unclassed". A fourth
+// class lost all three silently - no section, no group, and its foes filed
+// under Unclassed. The data is the list.
+const classOrder = (content) => Object.keys(content.classes ?? {});
 
 const DEX_TABS = [
   { id: 'roster', icon: 'dna', label: 'Roster' },
@@ -48,7 +53,7 @@ function rosterView(state, content) {
     .filter((sp) => !sp.synthetic && !sp.variantOf && sp.class === cls)
     .map((sp) => {
       const total = Object.values(content.parts).filter((p) => p.species === sp.id).length;
-      const found = dex.parts.filter((p) => content.parts[p].species === sp.id).length;
+      const found = dex.parts.filter((p) => content.parts[p]?.species === sp.id).length;
       // R36. The cell stays scannable — a 100px grid column cannot carry a
       // set bonus and its effect — and gains the tags, which is what the
       // variants and the enemy field guide already show and the base roster
@@ -62,30 +67,34 @@ function rosterView(state, content) {
         </button>`;
     })
     .join('');
-  const classSections = CLASS_ORDER.map((cls) => {
+  const classSections = classOrder(content).map((cls) => {
     const def = content.classes[cls];
     const owned = Object.values(content.species).filter(
       (sp) => !sp.synthetic && sp.class === cls &&
-        dex.parts.some((p) => content.parts[p].species === sp.id)
+        dex.parts.some((p) => content.parts[p]?.species === sp.id)
     ).length;
     const total = Object.values(content.species).filter((sp) => !sp.synthetic && sp.class === cls).length;
-    return `<h3>${renderIcon(def.icon)} ${def.name} — beats ${content.classes[def.beats].name} <span class="lineage">${owned}/${total} met</span></h3>
+    return `<h3>${renderIcon(def.icon)} ${def.name}${
+      content.classes[def.beats] ? ` — beats ${content.classes[def.beats].name}` : ''
+    } <span class="lineage">${owned}/${total} met</span></h3>
       <div class="dex-grid">${speciesByClass(cls)}</div>`;
   }).join('');
   const salvageTotal = Object.values(content.parts).filter((p) => p.species === 'salvage').length;
-  const salvageFound = dex.parts.filter((p) => content.parts[p].species === 'salvage').length;
+  const salvageFound = dex.parts.filter((p) => content.parts[p]?.species === 'salvage').length;
 
   return `
     <section class="card">
       <h3>Class Triangle</h3>
-      <ul class="token-list triangle-why">${CLASS_ORDER.map((c) => {
+      <ul class="token-list triangle-why">${classOrder(content).map((c) => {
         const beaten = content.classes[content.classes[c].beats];
         const why = classReason(c, content.classes[c].beats, content.classRules);
-        return `<li>${renderIcon(content.classes[c].icon)} <strong>${content.classes[c].name}</strong> beats ${beaten.name}${
-          why ? ` <span class="fine-print">— ${why}</span>` : ''
-        }</li>`;
+        // A cycle with a hole in it - a class whose `beats` names one that was
+        // retired - still describes itself rather than taking the tab down.
+        return `<li>${renderIcon(content.classes[c].icon)} <strong>${content.classes[c].name}</strong>${
+          beaten ? ` beats ${beaten.name}` : ''
+        }${why ? ` <span class="fine-print">— ${why}</span>` : ''}</li>`;
       }).join('')}</ul>
-      <p class="fine-print">A chimera's class comes from its anatomy — ${CLASS_ORDER.map((c) => content.classes[c].cue).join('; ')} — and a tie leaves it Unclassed. ${
+      <p class="fine-print">A chimera's class comes from its anatomy — ${classOrder(content).map((c) => content.classes[c].cue).join('; ')} — and a tie leaves it Unclassed. ${
         classReason(null, null, content.classRules) ?? ''
       }</p>
     </section>
@@ -148,7 +157,7 @@ function group(label, rows) {
 function combosView(state, content) {
   const row = (combo) => {
     if (state.discoveredCombos.includes(combo.id)) {
-      return `<li><span class="grade-badge grade-prismatic">${combo.name}</span> ${combo.desc} <span class="lineage">${combo.parts.map((p) => content.parts[p].name).join(' + ')}</span></li>`;
+      return `<li><span class="grade-badge grade-prismatic">${combo.name}</span> ${combo.desc} <span class="lineage">${combo.parts.map((p) => content.parts[p]?.name ?? 'unlisted anatomy').join(' + ')}</span></li>`;
     }
     // A6: a silhouette has to point at something. These all used to read
     // "an undiscovered pairing lurks in the parts bin…" — twenty-seven
@@ -255,7 +264,7 @@ function foesView(state, content) {
         </div>`;
   };
   const units = Object.values(content.enemies);
-  const enemyRows = CLASS_ORDER.map((cls) => {
+  const enemyRows = classOrder(content).map((cls) => {
     const inClass = units.filter((u) => u.class === cls);
     if (!inClass.length) return '';
     const def = content.classes[cls];
@@ -266,7 +275,7 @@ function foesView(state, content) {
   }).join('');
   // A unit whose class is not one of the three would vanish from a grouped
   // guide, so it gets its own run rather than being silently dropped.
-  const unclassed = units.filter((u) => !CLASS_ORDER.includes(u.class));
+  const unclassed = units.filter((u) => !classOrder(content).includes(u.class));
 
   // R42 left a note that its trophies lived on the War Room card and in the
   // wire but not here. They do now — as one line, because the four bosses

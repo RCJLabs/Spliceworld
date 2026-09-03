@@ -59,7 +59,7 @@ export function dossierRows(report, content) {
     label: 'Class',
     value: cls ? `${renderIcon(cls.icon)} ${cls.name}` : '◇ Unclassed',
     note: cls
-      ? `${votes} — strong against ${content.classes[cls.beats].name}${
+      ? `${votes}${content.classes?.[cls.beats] ? ` — strong against ${content.classes[cls.beats].name}` : ''}${
         beatenBy ? `, weak to ${beatenBy.name}` : ''
       }.`
       : votes

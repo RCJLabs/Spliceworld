@@ -78,7 +78,16 @@ export function validateSplice(state, frameId, slotTokens, content) {
     seen.add(tokenId);
     const token = state.inventory.parts.find((t) => t.id === tokenId);
     if (!token) errors.push(`Token ${tokenId} is not in the vault.`);
-    else if (content.parts[token.partId].slot !== slotOfSocket(socketId)) {
+    // R72 - a part retired from parts.json leaves its tokens behind in the
+    // vault, and this line read `.slot` off the hole where the part used to
+    // be. validateSplice runs on EVERY Theater render (theater-ui.js binds
+    // the SPLICE IT button's reason to it), so one retired part took the
+    // whole screen down rather than one row. A refusal, not a throw: the
+    // token keeps its place in the vault, and the player is told why it
+    // cannot be bolted to anything.
+    else if (!content.parts[token.partId]) {
+      errors.push(`That ${socketId} part is no longer in the catalogue — the lab cannot source it.`);
+    } else if (content.parts[token.partId].slot !== slotOfSocket(socketId)) {
       errors.push(`${content.parts[token.partId].name} does not fit the ${socketId} socket.`);
     }
   }
@@ -96,7 +105,12 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
   const errors = validateSplice(state, frameId, slotTokens, content);
   if (errors.length) return { ok: false, msg: errors.join(' ') };
 
-  const tokens = tokensFor(state, slotTokens);
+  // R72 - `content` was omitted here, which turned tokensFor's own retired-part
+  // filter into a no-op (it short-circuits on `!content`). validateSplice above
+  // now refuses a retired part outright, so this is the second lock on the same
+  // door rather than the only one - but a splice that reached `analyze` with a
+  // part the renderer cannot draw would build a chimera nobody can look at.
+  const tokens = tokensFor(state, slotTokens, content);
   const report = analyze(frameId, tokens, content, theaterGrants(state, content, frameId).sockets.length);
 
   // Tokens leave the vault and live inside the chimera (salvage can
@@ -166,7 +180,14 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
 
 export function chimeraGenome(chimera, content) {
   const parts = {};
-  for (const [slot, token] of Object.entries(chimera.tokens)) parts[slot] = token.partId;
+  for (const [slot, token] of Object.entries(chimera.tokens)) {
+    // R72 - the renderer VALIDATES a genome and throws on an unknown part id,
+    // so one retired part took the whole Pens screen down rather than one
+    // overlay off one creature. Dropped here instead: the chimera draws
+    // without that piece, which is exactly how `analyze` already scores it.
+    if (content && !content.parts[token.partId]) continue;
+    parts[slot] = token.partId;
+  }
   return { frame: chimera.frame, parts };
 }
 
@@ -303,7 +324,13 @@ export function comboHint(combo, state, content) {
   const seen = new Set(state.dex?.parts ?? []);
   const halves = combo.parts.map((id) => ({ part: content.parts[id], seen: seen.has(id) }));
   const known = halves.filter((h) => h.seen).length;
-  const label = (h) => (h.seen ? h.part.name : SLOT_WORDS[h.part.slot] ?? `a ${h.part.slot}`);
+  // R72: a combo can outlive one of its own halves. Unguarded, the hint for
+  // it threw and took the Dex's combo tab down — the one screen whose whole
+  // job is listing content the player has not met yet.
+  const label = (h) => {
+    if (!h.part) return 'a part no longer in the catalogue';
+    return h.seen ? h.part.name : SLOT_WORDS[h.part.slot] ?? `a ${h.part.slot}`;
+  };
   return {
     known,
     // The keyword is always shown: it is the reason to go looking, and it

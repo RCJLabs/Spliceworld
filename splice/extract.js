@@ -23,6 +23,23 @@ export const GRADES = [
 ];
 export const GRADE_INDEX = Object.fromEntries(GRADES.map((g, i) => [g.id, i]));
 
+// R72 - a save outlives the build that wrote it, and GRADES is code rather
+// than data, so a token stamped with a grade this build no longer defines
+// resolves to GRADE_INDEX[id] === undefined. Every reader of that does
+// something worse than nothing: GRADES[undefined].mult throws outright, and
+// so does GRADES[Math.max(0, GRADE_INDEX[id] - 1)], because undefined - 1 is
+// NaN and Math.max(0, NaN) is NaN rather than 0 - the guard that LOOKS like
+// it clamps is the one that crashes. A retired grade degrades to the
+// baseline instead: the part keeps its face stats and the player keeps the
+// part. Never a crash, and never a token quietly deleted.
+export function gradeOf(id) {
+  return GRADES[GRADE_INDEX[id]] ?? GRADES[0];
+}
+
+export function gradeIndexOf(id) {
+  return GRADE_INDEX[id] ?? 0;
+}
+
 // Peak is Prime — Elders still beat Adults' ceiling but are past their best.
 const AGE_FACTOR = { juvenile: 0.35, adult: 0.75, prime: 1, elder: 0.8 };
 
@@ -161,7 +178,7 @@ export function salvagePreview(state, chimera, content) {
     return {
       socketId,
       partId: token.partId,
-      grade: GRADES[Math.max(0, GRADE_INDEX[token.grade] - 1)].id,
+      grade: GRADES[Math.max(0, gradeIndexOf(token.grade) - 1)].id,
       wasGrade: token.grade,
       traits: token.traits ?? [],
       donor: token.donor,
