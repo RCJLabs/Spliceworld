@@ -14,8 +14,10 @@ import { classMultiplier } from './engine.js';
 // Split, not merged. The old chip multiplied class and tag together and
 // printed one number, so "×1.5" never said whether it was the triangle or
 // the chart — which is the half a new player is trying to learn.
-export function moveReadout(move, me, foe, content) {
-  const p = previewMove(me, foe, move, content);
+// `turn` reaches previewMove so the chip shows the opening dodge a Skittish
+// defender actually gets, rather than the number for every other turn.
+export function moveReadout(move, me, foe, content, turn = null) {
+  const p = previewMove(me, foe, move, content, turn);
   const cls = classMultiplier(me.creatureClass, foe.creatureClass, content);
   const tag = p.tagMult;
   const chips = [];

@@ -159,13 +159,18 @@ export function forecast(team, encounter, content, seed = 1, now = 0, { runs = 3
 const CAUSE_FLOOR = 0.1;
 
 // `runs` is deliberately NOT a parameter here. The first version of this
-// gate ran the diagnosis at 12 replays to keep the suite quick, and it
-// named the wrong cause: the class layer is worth a measured 16 points to a
-// Water team at Precinct, and at 12 samples that lands under the floor and
-// reads as "your creatures are too weak" — sending the player after the one
-// fix that does not work. It is the same lesson `runs = 32` above is
-// written down for, one layer up, and a knob that quietly degrades an
-// answer is worse than no knob.
+// gate ran the diagnosis at 12 replays to keep the suite quick, and it named
+// the wrong cause: a layer worth real points landed under the floor at 12
+// samples and read as "your creatures are too weak", sending the player
+// after the one fix that does not work. It is the same lesson `runs = 32`
+// above is written down for, one layer up, and a knob that quietly degrades
+// an answer is worse than no knob.
+//
+// The example this used to cite — 16 points to a Water team at Precinct —
+// was stale: measured at 512 replays it was 11.3pp before R66 and 6.4pp
+// after, so Precinct is now honestly a GRADE problem for Water too. The
+// live example is an Air team at the Drowned Marina, where the class layer
+// is worth 69pp and the chart layer nothing.
 export function diagnose(team, encounter, content, seed = 1, now = 0, { canBringMore = false } = {}) {
   const runs = 32;
   const base = forecast(team, encounter, content, seed, now, { runs });

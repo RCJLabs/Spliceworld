@@ -6368,6 +6368,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     assert.ok(slots.has('head'), `${key}: has a head (engine rule)`);
   }
 
+  const identityMargins = {};
   for (const benchSeed of BENCH_SEEDS) {
     const rows = regionBench(content, { grade: 'apex', seedsPer: SEEDS_PER, seed: benchSeed, stable: false });
     assert.equal(rows.length, 5, 'five regions on the bench');
@@ -6409,13 +6410,19 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     const rank = (row) => Object.values(bestPerAnatomy(row)).sort((a, b) => b - a);
 
     // Three of the four later strips ask a SPECIFIC question, and each asks
-    // a different one. Observed spreads: 13-19, 17-27, 20-33pp.
+    // a different one. The margin is POOLED across the bench seeds rather
+    // than asserted on each: measured at seedsPer 32 the true spreads are
+    // kestrel 16pp, drowned 15pp, foundry 26pp, but a single seed of the
+    // Drowned strip draws anywhere from 6pp to 20pp around its 15. R66
+    // sharpened the AI by a few points and that was enough for one seed's
+    // draw to fall under the floor — a gate reading its own sampling noise.
+    // The floor is unchanged; what changed is that it now reads the quantity
+    // it means.
     const shaped = later.filter((r) => r.region.answer !== 'mixed');
     assert.equal(shaped.length, 3, 'three shaped regions and one that is deliberately not');
     for (const row of shaped) {
       const [top, second] = rank(row);
-      assert.ok(top - second >= 0.1,
-        `${row.region.id}: one anatomy answers it decisively (+${Math.round((top - second) * 100)}pp over the next)`);
+      (identityMargins[row.region.id] ??= []).push(top - second);
     }
     const champions = new Set(shaped.map((r) => r.champion));
     assert.equal(champions.size, 3,
@@ -6428,6 +6435,14 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     assert.ok(fTop <= 0.75, `${finale.region.id}: no mono-build strolls through the finale (best ${pctOf(fTop)})`);
     assert.ok(fTop - fSecond <= 0.15,
       `${finale.region.id}: and no single anatomy owns it (+${Math.round((fTop - fSecond) * 100)}pp)`);
+  }
+
+  // …and the pooled identity margins, once every bench seed has spoken.
+  for (const [region, margins] of Object.entries(identityMargins)) {
+    const pooled = margins.reduce((a, b) => a + b, 0) / margins.length;
+    assert.ok(pooled >= 0.1,
+      `${region}: one anatomy answers it decisively (+${Math.round(pooled * 100)}pp over the next, pooled over ` +
+      `${margins.length} bench seeds: ${margins.map((m) => Math.round(m * 100)).join(', ')}pp)`);
   }
 
   // Reachability, measured at the grade a player plausibly holds when each
@@ -8493,9 +8508,20 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const ground = dx(squad('boots', 'standard', CAP), { canBringMore: false });
     assert.equal(ground.id, 'outgunned',
       `Ground at Precinct is a grade problem, not a class one (${ground.id}: ${ground.text})`);
-    const water = dx(squad('gills', 'standard', CAP), { canBringMore: false });
-    assert.equal(water.id, 'outclassed',
-      `Water at Precinct is the class one (${water.id}: ${water.text})`);
+    // The class half used to be Water at Precinct, and that fixture was
+    // marginal: the layer measured 11.3pp against the 10pp floor before R66
+    // and 6.4pp after a sharper AI, while the comment in forecast.js still
+    // claimed 16. A gate sitting one point above its own floor is measuring
+    // the weather. An Air team at the Drowned Marina is the same claim with
+    // room in it — the class layer is worth 69pp there, and the chart layer
+    // nothing — so the assertion is about telling the layers apart rather
+    // than about whether one fixture drifted.
+    const marina = content.encounters.drowned_marina;
+    const air = diagnose(squad('wings', 'standard', CAP), marina, content, 2026, 0, { canBringMore: false });
+    assert.equal(air.id, 'outclassed',
+      `Air at the Drowned Marina is the class one (${air.id}: ${air.text})`);
+    assert.ok(/class triangle/i.test(air.text) && /\d+ points/.test(air.text),
+      `and it says what the layer is worth (${air.text})`);
   }
 
   // 4. A winning verdict says nothing. The diagnosis is for a loss; firing
@@ -13163,6 +13189,197 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(daily.snapshots[40] && gone.snapshots[40], 'both walks reached day 40');
     assert.ok(gone.snapshots[40].funds > 0, 'and the absent one is solvent on return');
     console.log(`   walked: daily $${daily.snapshots[40].funds} vs a week away $${gone.snapshots[40].funds}`);
+  }
+}
+
+// --- R66: the preview lied to the player and to the AI --------------------
+{
+  const { multiHitMean } = await import('../battle/engine.js');
+  // A defender that cannot be knocked out and cannot reflect, so the only
+  // thing moving its hp is the swing under test.
+  const encounterFor = (over = {}) => ({
+    id: 'r66_enc', name: 'Bench', tier: null, scaleOverride: 1, reward: 0, blurb: '',
+    waves: [{
+      id: 'r66_dummy', name: 'Dummy', class: 'ground', tags: [], hp: 999999, power: 20,
+      armor: over.armor ?? 0, speed: 1, stamina: 100, regen: 0, koLine: 'Helped away.',
+      moves: [{ name: 'Poke', power: 1, acc: 100, cost: 1, tags: [], keywords: {} }],
+      ...(over.perks ? { perks: over.perks } : {}),
+    }],
+  });
+  const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+  const BAT = { frame: 'M', partIds: ['bat_head', 'bat_forelimbs', 'bat_hindlimbs', 'bat_tail', 'bat_hide', 'bat_organ'] };
+  const GOAT = { frame: 'M', partIds: SLOTS.map((s) => `goat_${s}`) };
+
+  // THE CRITERION: the preview's number against the engine's own mean, by
+  // Monte Carlo. Not a re-derivation of the formula — that would only assert
+  // that two copies of my arithmetic agree — but the damage attack() actually
+  // takes off a health bar, over thousands of seeded rolls.
+  const bench = (build, pick, { runs = 3000, armor = 0, perks = null, turn = 2, hpFrac = 1 } = {}) => {
+    const enc = encounterFor({ armor, perks });
+    let hits = 0, total = 0, preview = null, moveName = null;
+    for (let s = 0; s < runs; s++) {
+      const c = { ...makeSimChimera(build.frame, build.partIds, 'prime', content), id: 'a', name: 'A', temperament: null };
+      const b = createBattle([c], enc, content, 5000 + s, t0, {});
+      const me = playerActive(b);
+      me.speed = 9999;
+      me.hp = Math.max(1, Math.round(me.maxHp * hpFrac));
+      if (perks) me.perks = { ...me.perks, ...(perks.atk ?? {}) };
+      if (perks?.def) b.enemy.active.perks = { ...b.enemy.active.perks, ...perks.def };
+      b.turn = turn;
+      const idx = me.moves.findIndex(pick);
+      assert.ok(idx >= 0, `the bench build knows the move under test (${me.moves.map((m) => m.name).join(', ')})`);
+      moveName = me.moves[idx].name;
+      if (s === 0) preview = previewMove(me, b.enemy.active, me.moves[idx], content, b.turn);
+      const before = b.enemy.active.hp;
+      const act = playerActions(b).find((a) => a.type === 'move' && a.index === idx);
+      assert.ok(act, `${moveName} is affordable on the bench`);
+      step(b, act, content);
+      const dealt = before - b.enemy.active.hp;
+      if (dealt > 0) { hits++; total += dealt; }
+    }
+    return { moveName, preview, hitRate: hits / runs, meanOnHit: hits ? total / hits : 0 };
+  };
+  const agrees = (label, r, dmgTol = 0.03, accTol = 0.03) => {
+    const dmgErr = Math.abs(r.meanOnHit - r.preview.damage) / Math.max(1, r.preview.damage);
+    const accErr = Math.abs(r.hitRate - r.preview.hitChance);
+    assert.ok(dmgErr <= dmgTol,
+      `${label}: preview ${r.preview.damage} vs engine ${r.meanOnHit.toFixed(1)} (${(dmgErr * 100).toFixed(1)}% off, tol ${dmgTol * 100}%)`);
+    assert.ok(accErr <= accTol,
+      `${label}: preview ${(r.preview.hitChance * 100).toFixed(0)}% vs engine ${(r.hitRate * 100).toFixed(0)}% (${(accErr * 100).toFixed(0)}pp off)`);
+    return `${label} ${r.preview.damage}≈${r.meanOnHit.toFixed(1)} @${(r.hitRate * 100).toFixed(0)}%`;
+  };
+
+  const said = [];
+  // 1. Multi-Hit. The audit's finding: the old preview was 19.5% low here.
+  {
+    const r = bench(BAT, (m) => m.keywords?.multiHit);
+    said.push(agrees('multiHit', r));
+    // And the mean itself is the engine's own roll, not a second opinion:
+    // Monte-Carlo the expression attack() evaluates and compare.
+    for (const n of [2, 3, 4.5, 6]) {
+      const m = Math.max(1, n - 1);
+      let sum = 0;
+      const RUNS = 200000;
+      for (let i = 0; i < RUNS; i++) sum += 2 + Math.floor(((i + 0.5) / RUNS) * m);
+      const empirical = sum / RUNS;
+      assert.ok(Math.abs(multiHitMean(n) - empirical) < 0.01,
+        `multiHitMean(${n}) = ${multiHitMean(n).toFixed(4)} matches the roll's own mean ${empirical.toFixed(4)}`);
+    }
+    assert.equal(multiHitMean(2), 2, 'N=2 always strikes exactly twice, so the mean is 2 — the old formula said 1.5');
+  }
+  // 2. A plain swing, as the control. If this drifts the bench itself is wrong.
+  {
+    const plain = (m) => m.power > 0 && !Object.keys(m.keywords ?? {}).length;
+    said.push(agrees('plain', bench(GOAT, plain)));
+    for (const armor of [20, 60]) said.push(agrees(`armour ${armor}`, bench(GOAT, plain, { armor })));
+  }
+  // 3. Turn-one evasion. The engine hands a Skittish defender an extra dodge
+  //    on the opening exchange; the preview said the swing lands 92% of the
+  //    time when it lands 64%.
+  {
+    const plain = (m) => m.power > 0 && !Object.keys(m.keywords ?? {}).length;
+    const perks = { def: { evasion: 0.3 } };
+    const opening = bench(GOAT, plain, { turn: 1, perks });
+    const later = bench(GOAT, plain, { turn: 2, perks });
+    said.push(agrees('turn 1 vs Skittish', opening));
+    said.push(agrees('turn 2 vs Skittish', later));
+    assert.ok(opening.preview.hitChance < later.preview.hitChance - 0.15,
+      `and the preview KNOWS the opening is worse (${(opening.preview.hitChance * 100).toFixed(0)}% vs ${(later.preview.hitChance * 100).toFixed(0)}%)`);
+    // Without a turn there is no dodge to apply, and that has to stay true:
+    // it is the only honest answer for a caller with no battle.
+    const c = { ...makeSimChimera(GOAT.frame, GOAT.partIds, 'prime', content), id: 'a', name: 'A', temperament: null };
+    const b = createBattle([c], encounterFor({ perks: { evasion: 0.3 } }), content, 1, t0, {});
+    const me = playerActive(b);
+    b.enemy.active.perks = { ...b.enemy.active.perks, evasion: 0.3 };
+    const mv = me.moves.find(plain);
+    assert.equal(previewMove(me, b.enemy.active, mv, content, null).hitChance,
+      previewMove(me, b.enemy.active, mv, content, 2).hitChance, 'no turn reads as "not the opening"');
+  }
+  // 4. A cornered Brave attacker crits, and the preview used to say nothing.
+  {
+    const plain = (m) => m.power > 0 && !Object.keys(m.keywords ?? {}).length;
+    said.push(agrees('cornered Brave', bench(GOAT, plain, { hpFrac: 0.1, perks: { atk: { critChance: 0.35, critMult: 1.5, lastStandAt: 0.3 } } })));
+  }
+  console.log('   ' + said.join(' · '));
+
+  // 5. Every caller passes the turn. previewMove still accepts null, because
+  //    a caller with no battle has no honest answer — but nothing in the game
+  //    is such a caller, and a new one that forgets is the bug coming back.
+  {
+    const SKIP = new Set(['tools', 'docs', 'node_modules', '.git']);
+    const files = [];
+    const walk = (dir) => {
+      for (const e of readdirSync(join(root, dir), { withFileTypes: true })) {
+        const rel = dir ? `${dir}/${e.name}` : e.name;
+        if (e.isDirectory()) { if (!SKIP.has(rel)) walk(rel); }
+        else if (e.name.endsWith('.js')) files.push(rel);
+      }
+    };
+    walk('');
+    let calls = 0;
+    for (const file of files) {
+      const src = readFileSync(join(root, file), 'utf8').replace(/\/\/.*$/gm, '');
+      for (const [, args] of src.matchAll(/\b(?:previewMove|moveReadout)\(([^)]*)\)/g)) {
+        if (/^\s*(move,\s*me,\s*foe,\s*content,\s*turn|atk,\s*def,\s*move,\s*content,\s*turn)\s*$/.test(args)) continue; // the definitions
+        calls++;
+        assert.equal(args.split(',').length, 5,
+          `${file}: previewMove/moveReadout is called without a turn (${args.trim()})`);
+      }
+    }
+    assert.ok(calls >= 4, `and the sweep actually found the call sites (${calls})`);
+  }
+
+  // 6. The AI has no branch the suite cannot reach.
+  {
+    // Comments stripped first. The prose below this gate explains the bug by
+    // NAMING it, and a grep over the raw file matches that explanation —
+    // which is a gate reading its own documentation and calling it code.
+    const src = readFileSync(join(root, 'battle/ai.js'), 'utf8').replace(/\/\/.*$/gm, '');
+    assert.ok(!/Math\.min\(Infinity/.test(src), 'no Math.min(Infinity, ...spread) — an empty list must not read as a real minimum');
+    assert.ok(!/if \(after < 0\)/.test(src), 'and no guard on a value that cannot be negative');
+    const base = (over = {}) => ({
+      name: 'A', kind: 'chimera', creatureClass: 'ground', tags: [], scars: [],
+      hp: 100, maxHp: 100, power: 10, armor: 0, speed: 10, stamina: 100, staminaMax: 100,
+      perks: { critChance: 0, critMult: 1.5, lastStandAt: 0.3, evasion: 0, power: 0, guardLoss: 0, regen: 0 },
+      stages: { acc: 0, evasion: 0, power: 0 },
+      status: { venom: 0, bleed: 0, sleep: false, stun: false, guard: false, charging: null, thorns: 0, regen: null, taunted: 0 },
+      moves: [], ...over,
+    });
+    const mv = (name, over = {}) => ({ name, power: 0, acc: 100, cost: 10, tags: [], keywords: {}, ...over });
+    const battle = { turn: 2, player: { team: [{ hp: 100 }] } };
+    const best = () => 0;
+    // A moveset that is ALL utility has no swing to be starved of. The pilot
+    // used to read as starving forever and breathe for the whole fight.
+    const util = base({ moves: [mv('Bristle', { keywords: { evasionUp: 2 } }), mv('Brace', { keywords: { guard: true } })] });
+    const hitter = base({ name: 'D', moves: [mv('Bonk', { power: 30, cost: 15 })] });
+    assert.ok(chooseMoveIndex(battle, util, hitter, content, 1, best) >= 0,
+      'a utility-only pilot presses something rather than breathing forever');
+    // …while a creature that HAS a swing it cannot afford is still starving.
+    const broke = base({ stamina: 5, moves: [mv('Bristle', { keywords: { evasionUp: 2 } }), mv('Smash', { power: 40, cost: 40 })] });
+    assert.equal(chooseMoveIndex(battle, broke, hitter, content, 1, best), -1,
+      'and a genuinely starving one still rests');
+    // staminaDrain: "we can strand them" needs somebody to strand.
+    const drainer = base({ moves: [mv('Sap', { keywords: { staminaDrain: 12 } }), mv('Hit', { power: 25 })] });
+    const utilityFoe = base({ name: 'D', moves: [mv('Bristle', { keywords: { evasionUp: 2 } })] });
+    const strandable = base({ name: 'D', stamina: 95, moves: [mv('Bonk', { power: 30, cost: 90 })] });
+    assert.notEqual(chooseMoveIndex(battle, drainer, utilityFoe, content, 1, best), 0,
+      'draining a foe with no swing to lose is not worth 1.8x');
+    assert.equal(chooseMoveIndex(battle, drainer, strandable, content, 1, best), 0,
+      'draining one it can actually strand still is');
+  }
+
+  // 7. The player reads the same board the AI does (R28's rule), including
+  //    the opening dodge.
+  {
+    const c = { ...makeSimChimera(GOAT.frame, GOAT.partIds, 'prime', content), id: 'a', name: 'A', temperament: null };
+    const b = createBattle([c], encounterFor(), content, 1, t0, {});
+    const me = playerActive(b);
+    b.enemy.active.perks = { ...b.enemy.active.perks, evasion: 0.3 };
+    const mv = me.moves.find((m) => m.power > 0);
+    const r1 = moveReadout(mv, me, b.enemy.active, content, 1);
+    const r2 = moveReadout(mv, me, b.enemy.active, content, 2);
+    assert.ok(r1.hitChance < r2.hitChance, `the button shows the opening dodge too (${r1.hitChance} vs ${r2.hitChance})`);
+    assert.equal(r2.damage, previewMove(me, b.enemy.active, mv, content, 2).damage, 'and the same damage the AI scores on');
   }
 }
 
