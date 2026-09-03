@@ -247,7 +247,7 @@ function commandHtml(battle, actions, me, foe, content) {
   const cells = moves.map((a) => {
     const i = actions.indexOf(a);
     const move = me.moves[a.type === 'release' ? me.status.charging : a.index];
-    const r = moveReadout(move, me, foe, content);
+    const r = moveReadout(move, me, foe, content, battle.turn);
     // What it DOES, not the word "util". 41% of the roster's moves are
     // power-0, and every one of them used to render as three grey letters.
     const says = move.power > 0
@@ -299,7 +299,7 @@ function wireCommands(root, ctx, onDone, actions, me, foe) {
     const idx = Number(btn.dataset.detail);
     let timer = null;
     let held = false;
-    const open = () => { held = true; showMoveDetail(me.moves[idx], me, foe, content); };
+    const open = () => { held = true; showMoveDetail(me.moves[idx], me, foe, content, battle.turn); };
     const start = () => { held = false; timer = setTimeout(open, HOLD_MS); };
     const stop = () => { clearTimeout(timer); };
     btn.addEventListener('pointerdown', start);
@@ -316,9 +316,9 @@ function wireCommands(root, ctx, onDone, actions, me, foe) {
 // Everything here was already computed or already written down — the
 // arithmetic in moveReadout (R28), the keyword sentences in keywords.json,
 // the tag chart in the same file — and none of it was ever on screen.
-function showMoveDetail(move, me, foe, content) {
+function showMoveDetail(move, me, foe, content, turn) {
   const d = moveDetail(move, content);
-  const r = moveReadout(move, me, foe, content);
+  const r = moveReadout(move, me, foe, content, turn);
   const overlay = document.querySelector('#overlay');
   overlay.hidden = false;
   const stat = (label, value) => `<div><span class="econ-label">${label}</span><strong>${value}</strong></div>`;

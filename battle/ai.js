@@ -32,11 +32,11 @@ export function skillFor(encounter) {
 // worth a quarter of what it should be against a move that actually lands
 // thirty, so guard, thorns and evasion only ever got pressed by accident —
 // twenty of R23's new actives were never pressed once.
-function incomingDamage(atk, def, content) {
+function incomingDamage(atk, def, content, turn) {
   let worst = 0;
   for (const m of def.moves) {
     if (!(m.power > 0)) continue;
-    const p = previewMove(def, atk, m, content);
+    const p = previewMove(def, atk, m, content, turn);
     worst = Math.max(worst, p.damage * p.hitChance);
   }
   return worst || def.power;
@@ -59,8 +59,12 @@ function utilityScore(move, atk, def, allies, incoming, window) {
   if (kw.regen && !atk.status.regen) v += atk.maxHp * kw.regen * 2.2 * window;
   if (kw.staminaRestore) v += Math.min(kw.staminaRestore, staminaRoom) * 0.7;
   if (kw.staminaDrain) {
-    const cheapest = Math.min(Infinity, ...def.moves.filter((m) => m.power > 0).map((m) => m.cost));
-    const strands = def.stamina - kw.staminaDrain < cheapest;
+    // A foe with NO damaging move has no cheapest swing to strand it short
+    // of — `Math.min(Infinity)` made that read as "always stranded" and the
+    // 1.8x bonus fired on every drain against a utility-only opponent.
+    const swings = def.moves.filter((m) => m.power > 0).map((m) => m.cost);
+    const cheapest = swings.length ? Math.min(...swings) : null;
+    const strands = cheapest != null && def.stamina - kw.staminaDrain < cheapest;
     v += Math.min(kw.staminaDrain, def.stamina) * (strands ? 1.8 : 0.4);
   }
   // Each priced against what is actually coming in, and against how much of
@@ -99,8 +103,12 @@ function utilityScore(move, atk, def, allies, incoming, window) {
 }
 
 // Everything that is not the damage itself: finishing, tempo, and the cost.
+// `battle` is here for its TURN: the opening exchange gives a Skittish
+// defender an extra dodge, and a pilot that scores without it over-values
+// every swing on turn one. Before R66 the parameter was passed and never
+// read, which is why the AI could not see the dodge at all.
 function scoreMove(battle, atk, def, move, content, allies, incoming, window) {
-  const p = previewMove(atk, def, move, content);
+  const p = previewMove(atk, def, move, content, battle.turn);
   let score = p.damage * p.hitChance;
   // A kill is worth more than the damage on it — it ends the turn the foe
   // would have taken. Weighted by the odds of actually landing it.
@@ -114,9 +122,11 @@ function scoreMove(battle, atk, def, move, content, allies, incoming, window) {
   if (move.keywords.priority && def.speed >= atk.speed) score += 6;
   // Stamina is a real resource: a move that empties the tank costs the next
   // turn too. Cheap moves get a nudge when the tank is low.
+  // `options` is built from `affordable`, so `after` is never negative and
+  // the guard that used to sit here could not fire. Dropped rather than left
+  // as a comfort blanket over a branch the suite cannot reach.
   const after = atk.stamina - move.cost;
   if (after < atk.staminaMax * 0.2) score *= 0.75;
-  if (after < 0) score = -Infinity;
   return score;
 }
 
@@ -139,7 +149,7 @@ export function chooseMoveIndex(battle, atk, def, content, skill, rollFn) {
   }
 
   const allies = battle.player?.team?.filter((c) => c.hp > 0).length ?? 1;
-  const incoming = incomingDamage(atk, def, content);
+  const incoming = incomingDamage(atk, def, content, battle.turn);
   // An investment is only worth its payoff WINDOW. Thorns, evasion and regen
   // all pay out over the turns still to come, so a creature with three turns
   // left in it should not buy a five-turn return — measured as the difference
@@ -164,8 +174,14 @@ export function chooseMoveIndex(battle, atk, def, content, skill, rollFn) {
   // the next swing — so it has to be worth more than the turn that unlocks
   // hitting again. Without this bar the pilot chain-casts a 10-stamina buff
   // and never climbs back to its 20-stamina attack.
-  const cheapestSwing = Math.min(Infinity, ...options.filter(({ m }) => m.power > 0).map(({ m }) => m.cost));
-  const starving = atk.stamina < cheapestSwing;
+  // Same shape, same bug: a creature whose whole moveset is utility has no
+  // swing to be starved of, and `Math.min(Infinity)` told the pilot it was
+  // starving forever — so it refused every buff under the bar and breathed
+  // instead, permanently. Starving means "there IS a swing and I cannot
+  // afford it".
+  const affordableSwings = options.filter(({ m }) => m.power > 0).map(({ m }) => m.cost);
+  const cheapestSwing = affordableSwings.length ? Math.min(...affordableSwings) : null;
+  const starving = cheapestSwing != null && atk.stamina < cheapestSwing;
   const chosen = atk.moves[best.i];
   if (!taunted && starving && !(chosen.power > 0) && best.score < STARVED_UTILITY_BAR) return -1;
   return best.i;

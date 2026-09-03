@@ -528,18 +528,33 @@ The queue is a proposal: prune it before starting R63.
   anchored to the event's own clock, injuries only ever lengthen, and a gate
   replays a week's absence and asserts nothing starts at the return time* —
   **passes**, with "nothing" read literally, as a sweep of the whole save.
-- **R66 — The preview lies to the player and to the AI.** `previewMove`
-  computes Multi-Hit as `(2 + max(1, N−1)) / 2` where the engine rolls
-  uniform over `[2, N]` — **always half a hit low** (the bat forelimbs
-  preview 2 hits against an engine mean of 2.5, a 20% understatement), and
-  it has no turn-one evasion term, so against a Skittish defender the
-  opening hit chance reads up to **30% too high**. `ai.js` and `forecast.js`
-  both score off it, so the AI undervalues Multi-Hit and the briefing band
-  is biased. Same file: `Math.min(Infinity, …)` at `ai.js:62` and `:167`
-  makes a utility-only combatant read as starving forever, and the
-  `after < 0` branch is unreachable. *Done when: a gate compares the preview's
-  expected value with the engine's Monte-Carlo mean per keyword within
-  tolerance, and the AI has no branch the suite cannot reach.*
+- **R66 — The preview lies to the player and to the AI** *(shipped, one
+  more divergence than the audit found).* `previewMove` is the single source
+  of truth for "what does this button do" — the move chip reads it, the AI
+  scores on it, the briefing band forecasts from it — and Monte-Carloing the
+  engine against it found **three** places it disagreed, not two.
+  **Multi-Hit** previewed `(2 + max(1, N−1)) / 2` against an engine rolling
+  `2 + floor(r · max(1, N−1))`: half a hit low for every integer N (at N=2,
+  1.5 hits against a *guaranteed* 2) and **19.5% low** on the bat's Wing
+  Beat, whose N is 4.5 at Prime because keywords scale with grade — so the
+  mean had to be the exact expectation of the floor, not `(2 + N) / 2`.
+  **Turn-one evasion** was absent: the engine gives a Skittish defender an
+  extra dodge on the opening exchange, and the preview said a swing lands
+  **92%** of the time when it landed **64%**. And the one the audit missed:
+  a **cornered Brave attacker crits**, which the preview omitted "by
+  design" and which measures **18.4% low** — a whole extra swing the AI
+  never counted. (Armour rounding was suspected and cleared: 0.1–0.4%.)
+  Alongside it the AI's own reachability: two `Math.min(Infinity, ...spread)`
+  idioms made an empty list read as a real minimum, so a **utility-only
+  combatant read as starving forever and breathed for the whole fight**, and
+  `staminaDrain` always claimed its 1.8× "we can strand them" bonus against a
+  foe with nothing to strand; a guard on a value that cannot be negative went
+  too. `scoreMove`'s `battle` parameter, passed and never read, is now what
+  carries the turn. *Done when: a gate compares the preview's expected value
+  with the engine's Monte-Carlo mean per keyword within tolerance, and the AI
+  has no branch the suite cannot reach* — **passes**, all seven benched cases
+  within **1% on damage and 1pp on accuracy**, and every call site is swept
+  for the turn.
 - **R67 — The KO turn skips end-of-turn for both sides.** `engine.js:1106`
   runs `endOfTurn` only when no replacement is pending, and the replacement
   action returns early (`:999–1005`) without it — venom, bleed, regen and

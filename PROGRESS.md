@@ -1,5 +1,82 @@
 # PROGRESS
 
+## Session 89 — R66: the preview lies to the player and to the AI ✅
+
+**Acceptance criterion:** a gate compares the preview's expected value with
+the engine's Monte-Carlo mean per keyword within tolerance, and the AI has no
+branch the suite cannot reach — **passes**. No schema change; `SAVE_VERSION`
+stays **35**. `sw.js` cache → `v35-preview`.
+
+### Measured first: three divergences, not two
+`previewMove` is the single source of truth — the move chip reads it, the AI
+scores on it, the briefing forecasts from it. Benched against the engine's own
+damage over 3,000 seeded rolls per case:
+
+| case | preview before | engine | after |
+|---|---|---|---|
+| Multi-Hit (bat Wing Beat, N=4.5) | 82.5 | 98.6 | 99 (−0.4%) |
+| plain swing (control) | 55 | 55.3 | unchanged |
+| turn 1 vs a Skittish defender | 92% | 64% | 65% (−1pp) |
+| cornered Brave attacker | 55 | 65.1 | 65 (+0.2%) |
+| into armour 20 / 60 | 42 / 14 | 42.1 / 14.1 | unchanged |
+
+- **Multi-Hit** was half a hit low for every integer N — at N=2 it previewed
+  1.5 hits against a *guaranteed* 2 — and 19.5% low on the bat, whose N is
+  **4.5 at Prime** because keywords scale with grade. So the fix is the exact
+  expectation of `floor(r · M)` for real M, not `(2 + N) / 2`.
+- **Turn-one evasion** simply was not there.
+- **The crit** was omitted "by design", and design was wrong: 18.4% is a
+  whole extra swing the AI never counted.
+- **Armour rounding** was suspected (per-hit clamping against a mean) and
+  measured clean at 0.1–0.4%. No change.
+
+### Shipped
+- `multiHitMean(n)`, exported, sitting beside the engine's own roll with a
+  comment pointing each at the other; the gate Monte-Carlos the roll and
+  compares, so the pair cannot drift.
+- `previewMove(atk, def, move, content, turn)` — the turn carries the opening
+  dodge. `null` stays honest for a caller with no battle, and the gate sweeps
+  every module to prove no such caller exists in the game.
+- Crit enters as its expectation, in the same place `attack()` applies it.
+- The preview's damage is rounded once at the end: `hits` is an expectation
+  and a chip reading `98.57142857142857` is not a number anybody can use.
+- **The AI:** two `Math.min(Infinity, ...spread)` idioms replaced with a real
+  emptiness check — a utility-only pilot pressed nothing and breathed for the
+  whole fight, and `staminaDrain` always took its 1.8× bonus against a foe
+  with no swing to lose. The `after < 0` guard, unreachable because `options`
+  is built from `affordable`, is gone. `scoreMove`'s `battle` parameter —
+  passed and never read — is now what carries the turn.
+
+### Three balance gates were fitted to a mismeasured AI
+A preview that stopped lying moves every number the AI plays on, and three
+gates turned out to be sitting on their own floors:
+
+| gate | before R66 | floor | after | resolution |
+|---|---|---|---|---|
+| `records_annex` climbable solo | 25% | 25% | 4% | `benchTeam` 1 → 2 (100% there) |
+| Drowned identity margin | ~15pp true, 6–20pp per seed | 10pp | same | pooled across bench seeds |
+| Water at Precinct is a class problem | 11.3pp | 10pp | 6.4pp | fixture replaced (Air at the Drowned Marina, 69pp) |
+
+None of the three was fixed by moving a floor. The first was a data field
+that was already wrong by its own definition, the second a gate reading one
+noisy draw instead of the quantity it means, and the third a fixture one
+point above the line — whose own comment claimed a stale "16 points" it had
+not measured in some time. `forecast.js` carries the corrected numbers now.
+
+### Balance impact
+Champions unchanged on every strip; weak archetypes move a few points
+(prime Kestrel boots 13→6%, noise 72→69%; apex kite 63→66%). The AI is
+slightly sharper, which is what a preview that stopped lying to it should do.
+
+### Known issues
+- Next in §9.4: **R67 — the KO turn skips end-of-turn for both sides**, and
+  the AI skill ladder hardcoded at six tiers against nine in data.
+
+### Next session's first task
+R67. Start at `battle/engine.js:1106` (`endOfTurn` behind `!pendingReplace`)
+and the early return on the replacement action; the gate plays a KO turn and
+asserts the poison ticked.
+
 ## Session 88 — R65: timers that start when you look ✅
 
 **Acceptance criterion:** every timer written by an elapsed-time resolver is

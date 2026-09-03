@@ -427,28 +427,60 @@ function makeEvents(battle) {
 // truth for "what does this button do" — the AI reads it to choose, and the
 // battle UI will read it to explain (R28). Deterministic, so calling it never
 // disturbs the seeded stream.
-export function previewMove(atk, def, move, content) {
+// The exact mean of the engine's own Multi-Hit roll, `2 + floor(r * M)` with
+// `M = max(1, N - 1)`. For an integer M that is uniform over [2, N] and the
+// mean is (2 + N) / 2 — but N is scaled by grade and is routinely
+// FRACTIONAL (the bat's Wing Beat is 3 in the data and 4.5 at Prime), so the
+// expectation of the floor is what this computes. The old preview used
+// `(2 + M) / 2`, which is exactly half a hit low for every integer N and
+// 19.5% low on the bat, measured against the engine.
+export function multiHitMean(n) {
+  const m = Math.max(1, n - 1);
+  const whole = Math.floor(m);
+  const part = m - whole;
+  return 2 + (whole * (whole - 1) / 2 + whole * part) / m;
+}
+
+// `turn` matters because the engine gives a Skittish defender an extra dodge
+// on turn one (`jumpy`), and a preview that omits it told the player — and
+// the AI — that an opening swing lands 92% of the time when it lands 64%.
+// Null means "no turn context", which is only honest for a caller that has
+// no battle; every caller in the game passes one, and smoke checks that.
+export function previewMove(atk, def, move, content, turn = null) {
   const mine = againstTags(atk.scars, def.tags);
   const theirs = againstTags(def.scars, atk.tags);
   const locked = !!move.keywords.ignoreEvasion;
+  const jumpy = turn === 1 ? (def.perks?.evasion ?? 0) : 0;
   const hitChance = Math.max(0, Math.min(1, locked
     ? (move.acc + mine.acc) / 100 * stageMult(atk.stages.acc)
-    : ((move.acc + mine.acc) / 100) * stageMult(atk.stages.acc) / stageMult(def.stages.evasion) * (1 - theirs.evasion)));
+    : ((move.acc + mine.acc) / 100) * stageMult(atk.stages.acc) / stageMult(def.stages.evasion) * (1 - jumpy) * (1 - theirs.evasion)));
   const { mult, ignoreArmor } = tagMultiplier(move.tags, def.tags, content.tagChart);
   const clsMult = classMultiplier(atk.creatureClass, def.creatureClass, content);
   if (!(move.power > 0) || mult === 0) {
     return { damage: 0, hitChance, lethal: false, tagMult: mult, classMult: clsMult, immune: move.power > 0 && mult === 0 };
   }
-  const hits = move.keywords.multiHit ? (2 + Math.max(1, move.keywords.multiHit - 1)) / 2 : 1;
+  const hits = move.keywords.multiHit ? multiHitMean(move.keywords.multiHit) : 1;
   let one = move.power * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult * clsMult;
   one *= 1 + (atk.perks?.power ?? 0);
   one *= 1 + mine.power;
   one *= 1 - theirs.armor;
   if (move.keywords.frenzy) one *= 1 + FRENZY_SCALE * (1 - def.hp / Math.max(1, def.maxHp));
   if (move.keywords.rage) one *= 1 + RAGE_SCALE * (1 - atk.hp / Math.max(1, atk.maxHp));
+  // A cornered Brave creature crits, and the preview used to say so nowhere
+  // — measured 18.4% low on a Brave attacker at 10% health, which is a whole
+  // extra swing the AI never counted and the player was never shown. The
+  // crit is a roll, so it enters as its expectation, in the same place
+  // attack() applies it.
+  const cornered = atk.maxHp > 0 && atk.hp / atk.maxHp <= (atk.perks?.lastStandAt ?? 0);
+  if (cornered && (atk.perks?.critChance ?? 0) > 0) {
+    one *= 1 + atk.perks.critChance * ((atk.perks.critMult ?? 1) - 1);
+  }
   if (!(ignoreArmor || move.keywords.ignoreArmor)) one -= def.armor * ARMOR_FACTOR;
   if (def.status.guard && !move.keywords.ignoreGuard) one *= 1 - 0.5 * (1 - (def.perks?.guardLoss ?? 0));
-  const damage = Math.max(1, Math.round(one)) * hits;
+  // Rounded once at the end: `hits` is an expectation and can be fractional,
+  // and a damage chip reading 98.57142857142857 is not a number anybody can
+  // use. The per-hit round matches what attack() does to each strike.
+  const damage = Math.round(Math.max(1, Math.round(one)) * hits);
   return { damage, hitChance, lethal: damage >= def.hp, tagMult: mult, classMult: clsMult, immune: false };
 }
 
@@ -645,6 +677,8 @@ function attack(battle, atk, def, move, events, content) {
     // the keyword rather than an oversight: a flurry is worse than one big
     // swing into plating and better into a bare target, so the data tunes it
     // by listing a small per-hit power.
+    // multiHitMean() above is the exact expectation of this expression; the
+    // suite Monte-Carlos this and compares, so the pair cannot drift.
     const hits = move.keywords.multiHit
       ? 2 + Math.floor(roll(battle) * Math.max(1, move.keywords.multiHit - 1))
       : 1;
