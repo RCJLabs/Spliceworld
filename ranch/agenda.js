@@ -175,10 +175,17 @@ export const AGENDA = [
   {
     id: 'facility', kind: 'spend', screen: 'ranch', label: 'Buy a lab upgrade',
     hint: 'Bigger chassis, more bays, better odds — permanently.',
-    ready: (state, content) => tracks(content).some((t) => {
-      const up = nextUpgrade(state, content, t.id);
-      return up && !up.locked && state.funds >= up.cost;
-    }),
+    // R83 — this row has never once appeared. It read two fields
+    // `nextUpgrade` does not return: `up.cost` (the cost lives at
+    // `up.level.cost`, so `funds >= undefined` was false for every player at
+    // every balance) and `up.locked` (it returns `blockers`, so the lock
+    // check was a no-op in the other direction). Shipped in A4 and dead
+    // since: with a billion dollars and all 21 nodes held, the Ranch still
+    // never suggested buying a lab upgrade.
+    //
+    // `affordable` is exactly the question being asked — no missing node,
+    // and the money is there — so ask it rather than recomputing it.
+    ready: (state, content) => tracks(content).some((t) => nextUpgrade(state, content, t.id)?.affordable),
   },
   {
     id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',

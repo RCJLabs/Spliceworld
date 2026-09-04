@@ -13673,6 +13673,77 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   assert.ok(doms >= MIN_DOMINION_SEEDS, `at least ${MIN_DOMINION_SEEDS} of ${WALK_SEEDS.length} seeds reach dominion inside 180 days (${summary})`);
   assert.ok(heldTotal >= MIN_NODES_EACH * walks.length, `and across the seeds most of the map is held at day 180 (${heldTotal} of ${total * walks.length}; floor ${MIN_NODES_EACH * walks.length})`);
 
+  // 2b. R83 — WHAT A CAMPAIGN ACTUALLY CONTAINS.
+  //
+  //     "180 days" here means what it has always meant in this file: up to
+  //     180, or until the county falls, because `campaignWalk` halts at
+  //     dominion. These seeds take it on day 24-39, so this is the shape of
+  //     a campaign UP TO the win, which is the stretch every other gate in
+  //     this block is also measuring.
+  //
+  //     Before this milestone the walk fought 735 assaults, 590 defences,
+  //     2,235 spars and 368 rescues across sixteen seeds — and ZERO rival
+  //     duels. The rival ladder is the game's second axis of difficulty and
+  //     its only source of apex-graded anatomy, and the yardstick had never
+  //     once been down it. Everything downstream was unmeasured with it: the
+  //     loose board (R82 gates escapes on having beaten a lab), the
+  //     Containment Cannon (the walk's autoplay never fired it), the
+  //     Reorientation Wing, and the whole facility track — the walker had
+  //     never bought a single lab upgrade in 180 days, because the agenda
+  //     row offering one was itself dead (see ranch/agenda.js).
+  //
+  //     None of that failed a gate, because no gate asked. This one asks.
+  //     The floors are the measured minimum across sixteen seeds, halved,
+  //     because the point is to catch a system falling to ZERO rather than
+  //     to pin a chaotic simulation to a number.
+  {
+    const shapes = WALK_SEEDS.map((seed) => walkCampaign(content, { seed, days: 180 }));
+    const tally = (k) => shapes.map((w) => w.fights?.[k] ?? 0);
+    const line = shapes.map((w) => `${w.seed}:${w.duels}d/${w.breakouts}b/${w.rehabbed}r`).join(' ');
+    console.log(`   campaign shape: ${line} — duels/breakouts/rehabilitated`);
+
+    // Every kind of fight the game offers turns up in every seed's log.
+    // A missing KIND is the failure this is really guarding: it is how the
+    // ladder went unmeasured for eighty milestones.
+    for (const kind of ['assault', 'defend', 'sparring', 'rescue', 'rival', 'breakout']) {
+      const per = tally(kind);
+      assert.ok(per.every((n) => n > 0),
+        `every seed's campaign contains a "${kind}" fight (${per.join(', ')})`);
+    }
+    // Measured minima across sixteen seeds: 4 duels, 17 hunts, 1 graduate,
+    // 46 bays. Halved, so an unrelated RNG shift cannot flip this.
+    assert.ok(shapes.every((w) => w.duels >= 2),
+      `the ladder is climbed rather than glanced at (${shapes.map((w) => w.duels).join(', ')} duels)`);
+    assert.ok(shapes.every((w) => w.breakouts >= 8),
+      `and the loose board is hunted (${shapes.map((w) => w.breakouts).join(', ')})`);
+    // The capture chain, end to end: the cannon fires, bays fill, and the
+    // Wing turns at least one specimen into a member of the roster. This is
+    // the only route onto the roster that does not go through the Theater,
+    // and until R83 the harness had never taken it.
+    // Counted as UNITS BAGGED, not bays held. A held defence impounds the
+    // wreckage, so the bay count fills whether or not the cannon is ever
+    // fired — a battery break aimed at the cannon passed against a bay-count
+    // assertion, which is how this one got written properly.
+    assert.ok(shapes.every((w) => w.bagged >= 10),
+      `the Containment Cannon is fired (${shapes.map((w) => w.bagged).join(', ')} bagged)`);
+    // Counted at the moment the county falls. A walk continued PAST that
+    // point recycles them: measured on seed 4242 over a full 180 days, 125
+    // distinct specimens pass through the roster, it peaks at 8 held at
+    // once, and 0 remain at the end — the walker's stable cap dismantles
+    // them, because a rehabilitated specimen carries its old lab's grades
+    // and those are worse than what the Theater builds by then. That is the
+    // walker's policy rather than a defect, and it is why this is asserted
+    // where it is asserted.
+    assert.ok(shapes.every((w) => w.rehabbed >= 1),
+      `and somebody else's science ends up on the roster (${shapes.map((w) => w.rehabbed).join(', ')} rehabilitated)`);
+    // R25 priced $24,000 of facility depth and the walk had never bought a
+    // dollar of it. Every track maxes on every seed now, which is its own
+    // finding — the depth is real but a 180-day campaign exhausts it.
+    const levels = shapes.map((w) => Object.values(w.facility ?? {}).reduce((a, b) => a + b, 0));
+    assert.ok(levels.every((n) => n >= 12),
+      `the lab is actually built (summed track levels ${levels.join(', ')}; six tracks max at 17)`);
+  }
+
   // 3. What the walk is sensitive to — and what it is not. The audit filed
   //    contests as the wall; the honest walk says the wall is VETERANCY.
   //    Switch levels off and the same walker holds three nodes, exactly the
@@ -13697,12 +13768,27 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     //
     // x2.5 is the rung with real separation on both sides, so a small drift
     // in either direction cannot flip the gate.
-    const heavy = { ...content, tierScale: content.tierScale.map((x) => x * 2.5) };
+    //
+    // R83 re-measured it, because the walker changed: it now fights the
+    // rival ladder (xp and apex parts), hunts the loose board and buys the
+    // lab, and a stronger stable climbs a heavier wall. Over six seeds
+    // rather than R65's two:
+    //
+    //   x2.5 → 0.44   x3 → 0.28   x3.5 → 0.32
+    //
+    // x2.5 had drifted to 0.44 against a limit of 0.50 — the gate was
+    // passing at 20 nodes against 23 and one nudge from flipping, which is
+    // the separation R65 chose it for, gone. x3 restores it: 0.28 against
+    // 0.50 is the same headroom x2.5 used to have, and the two-seed slice
+    // the gate actually runs reads 0.28 against the six-seed 0.28, so the
+    // cheap sample still tracks the wide one. The RUNG moved; the claim and
+    // the limit did not.
+    const heavy = { ...content, tierScale: content.tierScale.map((x) => x * 3) };
     const walled = WALK_SEEDS.slice(0, 2).map((seed) => walkCampaign(heavy, { seed, days: 180 }));
     const okNodes = walks.slice(0, 2).reduce((n, w) => n + w.nodes, 0);
     const walledNodes = walled.reduce((n, w) => n + w.nodes, 0);
-    console.log(`   garrisons x2.5: ${walled.map((w) => `${w.seed}:${w.nodes}`).join(' ')} against ${okNodes}`);
-    assert.ok(walledNodes <= okNodes / 2, `with every garrison 2.5x as strong the walk is walled (${walledNodes} nodes against ${okNodes}) — the walk answers to the numbers that price the fights`);
+    console.log(`   garrisons x3: ${walled.map((w) => `${w.seed}:${w.nodes}`).join(' ')} against ${okNodes}`);
+    assert.ok(walledNodes <= okNodes / 2, `with every garrison 3x as strong the walk is walled (${walledNodes} nodes against ${okNodes}) — the walk answers to the numbers that price the fights`);
     const triple = { ...content, campaignMeta: { ...content.campaignMeta, contestation: { ...t, escalation: 2.0 } } };
     const pressed = WALK_SEEDS.slice(0, 2).map((seed) => walkCampaign(triple, { seed, days: 180 }));
     const pressedNodes = pressed.reduce((n, w) => n + w.nodes, 0);
@@ -13896,8 +13982,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const thin = [];
     const frozen = [];
     for (const seed of SEEDS) {
-      const daily = campaignWalk(content, { seed, days: END, snapshotDays: [FROM, END], markDay: FROM });
-      const gone = campaignWalk(content, { seed, days: END, away: { from: FROM, days: AWAY }, snapshotDays: [FROM, END], markDay: FROM });
+      // R83: `stopAtDominion: false` — this comparison is about a WINDOW,
+      // and a walk that halts the moment it takes the county has no day-40
+      // snapshot to compare. Six seeds were being skipped for winning.
+      const opts = { days: END, snapshotDays: [FROM, END], markDay: FROM, stopAtDominion: false };
+      const daily = campaignWalk(content, { seed, ...opts });
+      const gone = campaignWalk(content, { seed, ...opts, away: { from: FROM, days: AWAY } });
       const left = gone.snapshots.left, back = gone.snapshots[END], d60 = daily.snapshots[END], d30 = daily.snapshots[FROM];
       if (!left || !back || !d60 || !d30) { rows.push(`${seed}: finished the map inside the window, skipped`); continue; }
       // R68 widened this gate from four seeds to sixteen so its aggregate
@@ -13912,7 +14002,27 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       // seed to freeze is named rather than merely counted.
       const froze = back.contestCount - left.contestCount === 0;
       if (froze) { frozen.push(String(seed)); rows.push(`${seed}: the world froze while away — R78 regressed`); continue; }
-      const fullPay = (left.incomeRate + TUNING.stipendPerDay - left.upkeepRate) * AWAY;
+      // R83 — the upkeep the empire ACTUALLY carried across the window, not
+      // the rate at the instant it left.
+      //
+      // This denominator used `left.upkeepRate` alone, which is right only
+      // while the roster cannot change size while you are away. Measured on
+      // pre-R83 main, it never did: `chimeras at leave` equalled `chimeras
+      // at return` on all fifteen comparable seeds, so the flaw was latent
+      // rather than wrong. R83 put the Reorientation Wing on the walk, and a
+      // programme enrolled before leaving GRADUATES while you are gone — so
+      // five seeds now come home with a bigger stable than they left with,
+      // and seed 64 comes home with two extra chimeras and 27% more upkeep
+      // (476/day → 605/day). Against a denominator that assumed 476 it
+      // banked 33% and read as an empire fined for a month away; against
+      // what it actually cost to run it banks 44%, and the two creatures it
+      // bought with the difference are standing in its pens.
+      //
+      // The mean of the two rates is the unbiased estimate when the moment
+      // of graduation is unknown, which it is. The FLOOR is unchanged — the
+      // claim was never the thing that was wrong.
+      const upkeepAcross = ((left.upkeepRate ?? 0) + (back.upkeepRate ?? left.upkeepRate ?? 0)) / 2;
+      const fullPay = (left.incomeRate + TUNING.stipendPerDay - upkeepAcross) * AWAY;
       const banked = back.funds - left.funds;
       // An empire already underwater at the moment of leaving cannot measure
       // what a month away costs — there is no pay to bank a share of. That
@@ -13948,7 +14058,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       // barely solvent. So the claim is now made where it means something —
       // an empire with REAL MARGIN banks most of its pay — and a seed is
       // only allowed to go backwards if it was marginal to begin with.
-      const margin = (fullPay / AWAY) / Math.max(1, left.upkeepRate);
+      const margin = (fullPay / AWAY) / Math.max(1, upkeepAcross);
       if (margin >= 0.15) {
         assert.ok(banked > fullPay * 0.35,
           `seed ${seed}: an empire with room to spare is not fined for a month away `
