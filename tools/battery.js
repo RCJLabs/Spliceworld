@@ -805,6 +805,16 @@ const BREAKS = [
     to: "  if (!loose || outcome !== 'win') return { cleared: false, creature: null, lab: null };",
     expect: 'contract',
   },
+  {
+    // R81's own near-miss, as a break: nine exports moved out of the engine
+    // and the static pass caught every stale call site but the five dynamic
+    // ones. Only a ten-minute smoke run found it; now scopecheck does.
+    n: 65, gate: SCOPE, name: 'a dynamic import asks a module for a name it does not export',
+    file: 'tools/smoke.js',
+    anchor: "  const { obedienceIgnoreChance, obediencePercent } = await import('../battle/statblock.js');",
+    to: "  const { obedienceIgnoreChance, obediencePercent } = await import('../battle/engine.js');",
+  },
+
   // --- gate: boot (the game reaches the screen without its pictures) -------
   {
     n: 61, gate: BOOT, name: 'the geometry goes back into the round the first paint waits on',

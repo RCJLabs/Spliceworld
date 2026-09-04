@@ -2377,7 +2377,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 // off and shows the difference, which stays honest at whatever this
 // mechanic is eventually worth.
 {
-  const { obedienceIgnoreChance, obediencePercent } = await import('../battle/engine.js');
+  const { obedienceIgnoreChance, obediencePercent } = await import('../battle/statblock.js');
   const { forecast } = await import('../battle/forecast.js');
 
   const mk = (id, { bond = 100, settled = true, instability = 0 } = {}) => ({
@@ -3058,7 +3058,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // behind rather than crashing the intake. No rival builds this today —
   // which is exactly why the guard needs a test of its own.
   {
-    const { unitFromGenome } = await import('../battle/engine.js');
+    const { unitFromGenome } = await import('../battle/statblock.js');
     const organs = Object.values(content.parts).filter((p) => p.slot === 'organ').slice(0, 3);
     const head = Object.values(content.parts).find((p) => p.slot === 'head');
     assert.equal(organs.length, 3, 'the fixture needs three distinct organs');
@@ -7628,7 +7628,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     MOVE_SLOTS, activeMoves, defaultPick, defaultMoveset,
     moveSummary, moveDetail, keywordEffect,
   } = await import('../battle/moves.js');
-  const { movesFromTokens, combatantFromChimera } = await import('../battle/engine.js');
+  const { combatantFromChimera } = await import('../battle/engine.js');
+  const { movesFromTokens } = await import('../battle/statblock.js');
   const { setMoveset, moveTrainingReady, MOVE_TRAINING } = await import('../splice/theater.js');
 
   // R61: reads the shared definition rather than a fourth copy of it.
@@ -8311,7 +8312,8 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // buys nothing once bond cancels the disobedience term, which it does in
 // full at bond 100.
 {
-  const { applySetBonus, combatantFromChimera } = await import('../battle/engine.js');
+  const { combatantFromChimera } = await import('../battle/engine.js');
+  const { applySetBonus } = await import('../battle/statblock.js');
   const { makeSimChimera, partsOnFrame } = await import('../tools/sim.js');
   const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
   const partOf = (sp, slot) => Object.values(content.parts).find((p) => p.species === sp && p.slot === slot);
@@ -11066,7 +11068,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // three different ways for one save.
 {
   const { renderWarRoomScreen } = await import('../campaign/ui.js');
-  const { fitToFight } = await import('../battle/engine.js');
+  const { fitToFight } = await import('../battle/statblock.js');
   const HOUR = 3600000;
   const B = { head: 'rhino_head', forelimbs: 'gorilla_forelimbs', hindlimbs: 'rhino_hindlimbs',
     tail: 'bear_tail', hide: 'pangolin_hide', organ: 'bear_organ' };

@@ -11,8 +11,8 @@ gate's cap comes down to match — **passes**. `SAVE_VERSION` unchanged
 |---|---|
 | `npm run boot` | ✓ **new** — 1,462 KB to put the game on screen, down to **1,010 KB (-31%)** |
 | `npm run smoke` | ✓ — module cap 52 -> **51**, byte cap 620 -> **560**, and both halves of every part and unit must pair |
-| `npm run battery` | ✓ — **64 breaks, 64 caught** (4 new, two more gates) |
-| `npm run scopecheck` · `npm run handlers` | ✓ — 75 modules · 1455 handlers across 64 surfaces |
+| `npm run battery` | ✓ — **65 breaks, 65 caught** (5 new, two more gates) |
+| `npm run scopecheck` · `npm run handlers` | ✓ — 75 modules, **33 link cases** (6 new) · 1455 handlers |
 | `npm run a11y` · `npm run roadmap` · `npm run sim` | ✓ |
 
 ### What it cost to look at the game
@@ -85,6 +85,23 @@ version fails the old loader by 3 problems and passes the new one.
 It caught something else, too: kicking the second round off in the same
 synchronous block as `showScreen` still puts the request in front of the
 paint. One frame plus a macrotask is the idiom, and now the code says so.
+
+### The split shipped a defect past scopecheck, and closed the hole
+
+Nine exports moved out of `battle/engine.js`. The static pass caught every
+stale call site — and `scopecheck` had skipped
+`const { x } = await import('./m.js')` **by design** since R76 ("`import(…)`
+is not an import DECLARATION" — true, and beside the point). Five dynamic
+call sites in the suite kept asking the old module for names it no longer
+had, and only a ten-minute smoke run found them.
+
+R76's rule is that a name which is not there fails the build, and it has to
+hold whichever syntax asked. `dynamicImports()` now scans the same tree for
+the destructured form, with six new link cases covering it: the plain form,
+a name that moved, a rename-on-destructure, a module used whole (asks for
+nothing), a computed specifier (abstains rather than guesses — the handler
+gate loads a module per run with a cache-busting query), and a missing
+module. **27 link cases -> 33.**
 
 ### Known issues
 

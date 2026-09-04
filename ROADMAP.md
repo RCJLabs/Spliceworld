@@ -1324,6 +1324,11 @@ The queue is a proposal: prune it before starting R63.
     `firstContentfulPaint` and passed on the old behaviour** — the header and
     the tab bar are static HTML, so FCP fires long before any content is
     fetched at all. A gate that cannot tell the two apart proves nothing.
+  - **It shipped a defect past `scopecheck`, and closed the hole.** Moving
+    nine exports broke five `await import` call sites, which the static pass
+    skipped by design since R76 — so the rule "a name that is not there fails
+    the build" now holds for the destructured dynamic form too, with six new
+    link cases and a battery break.
   - **Known and not fixed here:** `tools/gen-parts.js` has drifted from the
     roster it generates — running it would rewrite **40 of 244 parts**, all
     the hand-tuned tails. The split was therefore done mechanically, with the
