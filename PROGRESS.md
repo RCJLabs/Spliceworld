@@ -1,5 +1,120 @@
 # PROGRESS
 
+## Session 103 — R83: The harness has never fought a rival ✅
+
+**Acceptance criterion:** the walk fights rivals and hunts escapees, every
+assertion it moves is re-derived rather than retuned, and the suite says
+what a 180-day campaign actually earns — **passes**. `SAVE_VERSION`
+unchanged (**38**); `sw.js` cache → `v38-r83`, because the one shipped file
+this milestone changes — `ranch/agenda.js` — is one the browser downloads,
+and a stale service worker would keep serving the dead row.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ — a new block prints and asserts the campaign's shape; two assertions re-derived |
+| `npm run battery` | ✓ — **48 breaks, 48 caught** (5 new, a seventh gate), baseline green on all seven |
+| `npm run scopecheck` · `npm run handlers` | ✓ — 68 modules · 1231 handlers (up 2: the lab-upgrade row can finally paint) |
+| `npm run a11y` · `npm run sim` · browser QA | ✓ |
+
+### The hole, measured before touching anything
+
+Across sixteen seeds and 2,880 simulated days, the walk fought:
+
+```
+   735 assaults   590 defences   2,235 spars   368 rescues
+     0 duels        0 hunts        0 captures      0 rehabilitated
+```
+
+The rival ladder is the game's second axis of difficulty and its only source
+of apex-graded anatomy, and the yardstick had never once been down it.
+Everything downstream went unmeasured with it: R82's loose board (escapes
+are gated on having beaten a lab), the Containment Cannon (the walk's
+autoplay never fired it), the Reorientation Wing, and R25's whole facility
+track.
+
+Now: **96 duels, 536 hunts, every lab track maxed, 52 specimens
+rehabilitated onto rosters.**
+
+### A dead agenda row, shipped in A4 and never once seen
+
+The walker bought no upgrades because the offer itself was impossible.
+`ranch/agenda.js` gated it on `up.cost` — a field `nextUpgrade` does not
+return; the cost lives at `up.level.cost` — so `funds >= undefined` was
+false for every player at every balance. It also tested `up.locked`, which
+does not exist either, so the lock check was a no-op in the other direction.
+
+> With a billion dollars and all 21 nodes held, the Ranch still never
+> suggested buying a lab upgrade.
+
+Dated to A4, 2026-08-31. That is this milestone's thesis in one line: a
+harness that actually walked the game would have caught it eight months ago.
+
+### Two assertions moved. Both re-derived; neither threshold touched.
+
+**The away-walk denominator.** It used the upkeep rate at the instant of
+leaving, which is correct only while the roster cannot change size while you
+are away. Measured on pre-R83 main, it never did — chimeras at leave equalled
+chimeras at return on all fifteen comparable seeds, so the flaw was latent
+rather than wrong. The Wing made it live: seed 64 comes home with **two extra
+chimeras and 27% more upkeep** (476/day → 605/day), banked 33% against a 35%
+floor, and read as an empire fined for a month away when it had in fact
+converted the money into two creatures standing in its pens. The denominator
+now uses the mean upkeep across the window. The floor stays 0.35.
+
+**R63's garrison wall.** R65 picked the x2.5 rung for having "real separation
+on both sides". A stronger walker climbs a heavier wall, and it had drifted
+to 0.44 of the healthy map against a 0.50 limit — passing at 20 nodes against
+23, one nudge from flipping. Re-measured over six seeds rather than R65's
+two:
+
+```
+   x2.5 → 0.44      x3 → 0.28      x3.5 → 0.32
+```
+
+Moved to x3 on R65's own principle. The limit stays `<= half`.
+
+### Coverage went up, not down
+
+The away comparison halts at dominion, and R83's walker takes the county on
+day 24-39 instead of 28-48 — so six of sixteen seeds were being skipped *for
+winning*, taking the sample from fifteen to nine. A gate that passes because
+it measured less is R17's lesson, not a result. The away walk now continues
+past dominion (R9's counter-offensives keep arriving; post-dominion play is
+real), and **all sixteen seeds are compared** — better than the baseline.
+
+### A battery break caught a false-confidence assertion of mine
+
+I proved the cannon fires by counting **bays**. But a held defence impounds
+the wreckage, so bays fill whether or not the cannon is ever fired — break 46
+disabled the cannon and sailed straight through. Both gates now count units
+actually bagged. The break existed before the assertion was right, which is
+the only reason it was caught.
+
+### One observation worth keeping
+
+Continued past dominion for a full 180 days, seed 4242 passes **125 distinct
+rehabilitated specimens** through its roster, peaks at 8 held at once, and
+ends with **0**. The walker's stable cap dismantles them: a specimen carries
+its old lab's grades, and those fall behind what the Theater builds by the
+late game. The Wing's output is raw material to a mature stable. That is the
+walker's policy rather than a defect — but it is the first time anyone has
+been able to see it.
+
+### Known issues
+
+- The walk buys the lab before it uses the Wing, so rehabilitation only
+  starts once the facility is maxed. Defensible ordering, but it means the
+  Wing is measured late rather than throughout.
+- The 45-day battery walk cannot reach a rehabilitation for the same reason;
+  the full chain is asserted in smoke's own walk instead.
+
+### Next session's first task
+
+**R80 — the keyboard can see the game but not play it.** Read ROADMAP.md §6
+for the criterion before touching anything.
+
+---
+
 ## Session 102 — R82: The Breakout ✅
 
 **Acceptance criterion:** rival specimens escape into the world and

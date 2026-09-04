@@ -15,7 +15,7 @@ import { seedTemperament } from '../splice/temperament.js';
 import { analyze } from '../splice/physiology.js';
 import { createBattle, step, playerActions, playerActive, movesFromTokens } from '../battle/engine.js';
 import { knownMoves } from '../battle/moves.js';
-import { rivalEncounter, rivalList } from '../campaign/rivals.js';
+import { rivalEncounter, rivalList, rivalStatus } from '../campaign/rivals.js';
 import { rescueEncounterFor } from '../campaign/map.js';
 import { mulberry32, hashString, pick, rngStream } from '../util/rng.js';
 import { chooseMoveIndex } from '../battle/ai.js';
@@ -401,6 +401,7 @@ import { pairingForecast, expressedTraits, incubatorSlots, BREEDING } from '../r
 const BREEDING_MUTATION = BREEDING.mutationChance;
 import {
   incubatorGrants, extractorGrants, scannerGrants, infirmaryGrants,
+  nextUpgrade, buyUpgrade,
 } from '../splice/facility.js';
 
 const HOUR_MS = 3600000;
@@ -907,6 +908,8 @@ import { levelOf } from '../battle/veterancy.js';
 import { regionStates } from '../campaign/campaign.js';
 import { regionOfNode } from '../campaign/map.js';
 import { contestEncounter } from '../campaign/contest.js';
+import { looseSpecimens, breakoutEncounter } from '../campaign/breakout.js';
+import { rehabPlan, startRehab, rehabSession, sessionReadyAt } from '../campaign/rehab.js';
 
 const WALK_HOUR = 3600000;
 const WALK_DAY = 24 * WALK_HOUR;
@@ -996,6 +999,12 @@ function walkAct(state, content, now, open, opts = {}) {
     resolveBattle(state, battle, content, now);
     state.battle = null;
     log({ kind: context.kind, node: context.nodeId ?? null, outcome: battle.outcome, escalation: enc.escalation,
+      // R83 — what the Containment Cannon actually bagged. Counting BAYS
+      // instead proves nothing: a held defence impounds the wreckage too, so
+      // a walker that never fires the cannon still fills them. Break 46 of
+      // the battery was written against the bay count, missed, and is why
+      // this number exists.
+      bagged: (battle.captured ?? []).length,
       team: team.map((c) => c.xp ?? 0), grades: team.map((c) => Object.values(c.tokens).map((t) => t.grade[0]).join('')),
       fit: team.length, held: state.campaign.heldNodes.length, lost: state.chimeras.length < before });
     return battle;
@@ -1113,6 +1122,42 @@ function walkAct(state, content, now, open, opts = {}) {
     acted++;
   }
 
+  // R83 — challenge a rival. The walk has never done this. `campaignWalk`
+  // claims to measure the honest 180-day campaign, and across 16 seeds and
+  // 2,880 simulated days it fought 735 assaults, 590 defences, 2,235 spars,
+  // 368 rescues and ZERO duels — so the rival ladder, the game's second axis
+  // of difficulty and its only source of apex-graded anatomy, was not on the
+  // yardstick at all, and neither was anything downstream of a duel.
+  //
+  // Paced like a player: one duel a week at most, only with a fit A-team,
+  // and only the rivals the ladder has actually opened. Lowest defeat count
+  // first, which is how a player climbs it.
+  if (has('assault') && now - (state.__walkLastDuel ?? -7 * WALK_DAY) >= 7 * WALK_DAY) {
+    const open2 = rivalStatus(state, content).filter((r) => r.status !== 'locked');
+    const nextUp = open2.sort((a, b) => a.record.defeats - b.record.defeats)[0];
+    const team = fitTeam();
+    if (nextUp && team.length >= fullTeam() && aTeamFit()) {
+      fight(team, rivalEncounter(state, nextUp.rival, content),
+        { kind: 'rival', rivalId: nextUp.rival.id, waveIds: [] }, `duel#${nextUp.rival.id}#${now}`);
+      state.__walkLastDuel = now;
+      acted++;
+    }
+  }
+
+  // R83 — hunt a loose specimen (R82's board). One per visit, and only with
+  // a healthy A-team, because that is how a player treats an opportunity
+  // with no clock on it: it waits, so you go when you are ready. Measuring
+  // it matters because an escapee is real income and the only route onto the
+  // roster that does not go through the Theater.
+  for (const esc of has('assault') ? [...looseSpecimens(state)].slice(0, 1) : []) {
+    const enc = breakoutEncounter(state, content, esc.id);
+    const team = fitTeam();
+    if (!enc || team.length < fullTeam() || !aTeamFit()) continue;
+    fight(team, enc, { kind: 'breakout', breakoutId: esc.id, rivalId: esc.rivalId,
+      looseUnitId: esc.unit.id, waveIds: [] }, `loose#${esc.id}#${now}`);
+    acted++;
+  }
+
   if (has('assault') && now - (state.__walkLastAssault ?? -WALK_DAY) >= WALK_DAY) {
     const team = fitTeam();
     const refused = state.__walkRefused ?? (state.__walkRefused = {});
@@ -1131,6 +1176,44 @@ function walkAct(state, content, now, open, opts = {}) {
       if (battle.outcome !== 'win') refused[target.node.id] = roster;
       acted++;
     }
+  }
+
+  // R83 — buy the lab. The walker has never bought a single upgrade in 180
+  // days, so R25's $24,000 of facility depth — six tracks, every one gated
+  // on money AND territory — was measured by `facilityPayback` in isolation
+  // and by the campaign not at all. It also meant the Reorientation Wing was
+  // never built, so no captive could ever reach the roster and `rehabbed`
+  // was structurally 0 on every seed.
+  //
+  // Cheapest affordable upgrade first, above the reserve, one per visit.
+  // That is what the Ranch screen's own card offers and roughly what a
+  // player does: take the next thing you can afford rather than saving for
+  // a specific tier.
+  if (has('facility')) {
+    const offers = Object.keys(content.facility ?? {})
+      .map((id) => ({ id, next: nextUpgrade(state, content, id) }))
+      .filter((o) => o.next?.affordable)
+      .sort((a, b) => a.next.level.cost - b.next.level.cost);
+    const pick2 = offers.find((o) => canSpend(o.next.level.cost));
+    if (pick2 && buyUpgrade(state, content, pick2.id).ok) acted++;
+  }
+
+  // R83 — and then use it. A bay holding something with a genome is a
+  // creature the Theater could not have built; leaving it there is the one
+  // half of R8 the harness could never see. Enrol when the Wing exists and
+  // the fee clears the reserve, then take every session the clock offers —
+  // skipping them is what graduates a wary specimen, and a walker that
+  // never attends is measuring the worst case as if it were the only one.
+  for (const entry of [...(state.campaign.containment ?? [])]) {
+    if (entry.rehab) {
+      if (now >= sessionReadyAt(entry, content)) {
+        if (rehabSession(state, entry.id, content, now).ok) acted++;
+      }
+      continue;
+    }
+    const plan = rehabPlan(state, entry, content);
+    if (!plan.possible || !plan.enabled || !canSpend(plan.fee)) continue;
+    if (startRehab(state, entry.id, content, now).ok) acted++;
   }
 
   // --- discretionary, and only above the reserve.
@@ -1166,10 +1249,27 @@ function walkAct(state, content, now, open, opts = {}) {
 // The same pilot the bench flies: the game's own move scorer, so the walk
 // and the region bench disagree about a fight only when the ROSTER differs,
 // never because one of them presses the biggest number every turn.
+// R83 — the walker fires the Containment Cannon; the BENCH pilot does not.
+//
+// This is deliberately not a change to `pilotAction`. That function is what
+// `scriptedBattle`, `runSim`, `regionBench` and the all-grade [OP] gate play
+// with, and a bench that bagged its opponent would re-baseline every balance
+// number in the suite to measure something those benches are not asking
+// about. The walk is asking a different question — what a campaign actually
+// produces — and capture is half the answer: it is the only route onto the
+// roster that does not go through the Surgery Theater, and until now the
+// walk had never taken it.
+//
+// The rule is the one the screen teaches: soften below the threshold, then
+// fire. `playerActions` only offers `capture` when the cannon is charged and
+// the target is both capturable and weak enough, so asking for it is the
+// whole policy.
 function walkAutoplay(battle, content) {
   let guard = 0;
   while (!battle.over && guard++ < 400) {
-    const action = pilotAction(battle, content);
+    const offered = playerActions(battle);
+    const bag = offered.find((a) => a.type === 'capture');
+    const action = bag ?? pilotAction(battle, content);
     if (!action) break;
     step(battle, action, content);
   }
@@ -1186,7 +1286,7 @@ function walkAutoplay(battle, content) {
 // `tick` is the world-advancing function; the game's own (campaign/world.js)
 // by default. A harness knob only: it exists so an experiment can ask which
 // passive system moves a result, by ticking without it.
-export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = 9, away = null, snapshotDays = [], markDay = null, tick = tickWorld } = {}) {
+export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = 9, away = null, snapshotDays = [], markDay = null, tick = tickWorld, stopAtDominion = true } = {}) {
   const t0 = Date.UTC(2026, 0, 1);
   const state = { ...newGameState(), seed };
   ensureRanchSeeded(state, content, t0);
@@ -1256,7 +1356,21 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // Claimed inside the act, so mark it here too — the R56 loop broke out
     // before the next tick's mark() could see it, and `at.dominion` read
     // undefined on a walk that had just won the map.
-    if (state.dominionAt) { mark('dominion', now); break; }
+    //
+    // R83 — stopping there is right for "how long does the campaign take"
+    // and wrong for anything measured across a WINDOW. The away comparison
+    // leaves on day 10 and returns on day 40, and R83's walker (which now
+    // fights the rival ladder for xp and apex parts) takes the county on
+    // day 24-39 instead of day 28-48 — so six of sixteen seeds finished
+    // inside the window and were skipped, taking the sample from fifteen
+    // comparable seeds to nine. A gate that passes because it measured less
+    // is R17's lesson, not a result. Post-dominion play is real (R9's
+    // counter-offensives keep arriving, R40 says so out loud), so the away
+    // walk simply keeps going.
+    if (state.dominionAt) {
+      mark('dominion', now);
+      if (stopAtDominion) break;
+    }
   }
 
   return {
@@ -1286,6 +1400,24 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       grades: Object.values(c.tokens).map((t) => t.grade[0]).join(''),
       classes: Object.values(c.tokens).map((t) => (content.parts[t.partId]?.classAffinity ?? '?')[0]).join(''),
     })),
+    // R83 — what a 180-day campaign actually earns, reported rather than
+    // inferred. Before this milestone the walk fought 735 assaults, 590
+    // defences, 2,235 spars and 368 rescues across sixteen seeds and ZERO
+    // duels, so half the campaign was invisible to the yardstick and there
+    // was no number that said so.
+    fights: (state.__walkLog ?? []).reduce((tally, e) => {
+      tally[e.kind] = (tally[e.kind] ?? 0) + 1;
+      return tally;
+    }, {}),
+    duels: (state.__walkLog ?? []).filter((e) => e.kind === 'rival').length,
+    breakouts: (state.__walkLog ?? []).filter((e) => e.kind === 'breakout').length,
+    // The two halves of R8 the harness could never see: how many specimens
+    // were bagged, and how many of those were talked round rather than
+    // taken apart.
+    bays: (state.campaign.containment ?? []).length,
+    bagged: (state.__walkLog ?? []).reduce((n, e) => n + (e.bagged ?? 0), 0),
+    rehabbed: state.chimeras.filter((c) => c.rehabilitated).length,
+    facility: { ...state.facility },
     captured: (state.__walkLog ?? []).filter((e) => e.lost).length,
     rescues: (state.__walkLog ?? []).filter((e) => e.kind === 'rescue').length,
     rescued: (state.__walkLog ?? []).filter((e) => e.kind === 'rescue' && e.outcome === 'win').length,

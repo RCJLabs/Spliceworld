@@ -390,6 +390,39 @@ const BREAKOUT = ['node', '-e', `
   console.log('breakout ✓  escaped, waited, hunted, bagged and on the roster as ' + mine.name);
 `];
 
+
+// R83 — the walk fights the whole game, at battery speed.
+//
+// smoke runs this over four seeds to dominion; a 45-day walk on one seed
+// costs about a second and still contains duels, hunts, a bought lab and a
+// filled bay. What is being defended is coverage: before R83 the walk had
+// never fought a rival in 180 days, and no gate noticed for eighty
+// milestones because none of them asked.
+const WALK = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { campaignWalk } = await import('./tools/sim.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
+    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
+    'resequencer','training','gauntlet','news','breakout'];
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const fail = (m) => { console.error('walk ✗  ' + m); process.exit(1); };
+  const w = campaignWalk(content, { seed: 4242, days: 45, stopAtDominion: false });
+  for (const kind of ['assault', 'defend', 'sparring', 'rival', 'breakout']) {
+    if (!(w.fights?.[kind] > 0)) fail('the walk never fought a "' + kind + '" (' + JSON.stringify(w.fights) + ')');
+  }
+  if (w.duels < 3) fail('the ladder is barely touched (' + w.duels + ' duels)');
+  if (w.breakouts < 15) fail('the loose board is barely hunted (' + w.breakouts + ')');
+  // Not the bay count: a held defence impounds wreckage, so bays fill
+  // whether or not the cannon ever fires. Count what the cannon bagged.
+  if (w.bagged < 10) fail('the Containment Cannon is not being fired (' + w.bagged + ' bagged)');
+  const levels = Object.values(w.facility ?? {}).reduce((a, b) => a + b, 0);
+  if (levels < 12) fail('the lab is never bought (summed track levels ' + levels + ')');
+  console.log('walk ✓  ' + w.duels + ' duels, ' + w.breakouts + ' hunts, ' + w.bagged
+    + ' bagged, lab at ' + levels + ' over 45 days');
+`];
+
 const BREAKS = [
   // --- gate: scopecheck (a free identifier fails the build) ----------------
   {
@@ -660,6 +693,41 @@ const BREAKS = [
     anchor: '    waves: [loose.unit],',
     to: "    waves: ['riot_squad'],",
   },
+  // --- gate: walk (the walk fights the whole game) -------------------------
+  {
+    // The hole R83 closed, put back: the walker stops challenging rivals.
+    // It cost eighty milestones to notice the first time.
+    n: 44, gate: WALK, name: 'the walk stops fighting the rival ladder',
+    file: 'tools/sim.js',
+    anchor: '  if (has(\'assault\') && now - (state.__walkLastDuel ?? -7 * WALK_DAY) >= 7 * WALK_DAY) {',
+    to: '  if (false) {',
+  },
+  {
+    n: 45, gate: WALK, name: 'the walk stops hunting the loose board',
+    file: 'tools/sim.js',
+    anchor: '  for (const esc of has(\'assault\') ? [...looseSpecimens(state)].slice(0, 1) : []) {',
+    to: '  for (const esc of []) {',
+  },
+  {
+    n: 46, gate: WALK, name: 'the walk stops firing the Containment Cannon',
+    file: 'tools/sim.js',
+    anchor: '    const bag = offered.find((a) => a.type === \'capture\');',
+    to: '    const bag = null;',
+  },
+  {
+    n: 47, gate: WALK, name: 'the walk stops buying the lab',
+    file: 'tools/sim.js',
+    anchor: '    if (pick2 && buyUpgrade(state, content, pick2.id).ok) acted++;',
+    to: '    if (false && pick2) acted++;',
+  },
+  {
+    // The product bug R83 found: the agenda row that offers a lab upgrade
+    // read `up.cost`, which `nextUpgrade` does not return. Dead since A4.
+    n: 48, gate: WALK, name: 'the "buy a lab upgrade" agenda row goes back to reading a field that does not exist',
+    file: 'ranch/agenda.js',
+    anchor: '    ready: (state, content) => tracks(content).some((t) => nextUpgrade(state, content, t.id)?.affordable),',
+    to: '    ready: (state, content) => tracks(content).some((t) => {\n      const up = nextUpgrade(state, content, t.id);\n      return up && !up.locked && state.funds >= up.cost;\n    }),',
+  },
   {
     n: 43, gate: BREAKOUT, name: 'a specimen bagged in a lost fight is left on the board as well as in the bay',
     file: 'campaign/breakout.js',
@@ -693,13 +761,14 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
       : gate === RETIRED ? 'a save read against a build that retired seven of its ids'
         : gate === BREAKOUT ? 'a specimen escapes, waits, is hunted and joins the roster'
-          : gate.join(' ');
+          : gate === WALK ? 'the walk fights rivals, hunts the board and builds the lab'
+            : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }
