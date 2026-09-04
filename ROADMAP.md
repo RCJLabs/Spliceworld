@@ -878,6 +878,55 @@ The queue is a proposal: prune it before starting R63.
   prints the hole instead of falling into it is still broken), and holds a
   static rule that no module may name the three shipped classes as a
   literal set again.
+- **R82 — The Breakout.** ✅ *Shipped.* R27 built rival labs that field
+  chimeras from real parts under the player's own physiology. R8 built a
+  Reorientation Wing that turns a captured specimen into a member of the
+  roster. Between them sat a gap nobody had named: the ONLY way to stand in
+  front of a rival's chimera was to challenge that rival — a gated ladder
+  duel, fought three-at-a-time and won once. The most interesting anatomy in
+  the game was also the rarest thing to meet. *Done when: rival specimens
+  escape into the world and accumulate on a board you can hunt in any order,
+  each one a real rival-built chimera; and capturing one and putting it
+  through the Reorientation Wing adds it to your roster at the grades its old
+  lab raised.* ✅
+  - **A lab that keeps losing to you starts losing other things.** Gated on
+    the player's own record (`startsAfterDefeats`), not a clock, so the first
+    escapee is a consequence of something they did — and until then no clock
+    runs behind the gate at all.
+  - **The generator is `rivalSpecimen`, pulled out of `rivalTeam`'s loop.**
+    A loose specimen is indistinguishable from one still on the ladder
+    because it was on the ladder: the same anatomy counter, the same class
+    votes, the same chassis-lift decision. Two generators would be two sets
+    of rules about what a lab builds, and they would drift.
+  - **TWO DELIBERATE DIFFERENCES FROM A COUNTER-OFFENSIVE.** A contest is a
+    threat and a threat needs a clock; an escapee is an OPPORTUNITY, and a
+    window that closes while the player is asleep produces FEWER fights with
+    rival anatomy — the one thing this system exists to produce. So the board
+    is standing: they accumulate, in any order, capped by `maxLoose` so a
+    fortnight away is a queue rather than a wall. And it is not about land:
+    no node, no income, no suspension.
+  - **The capture path is not new, and that is the point.** A bagged escapee
+    lands in containment like any other prize and reaches the roster through
+    the Wing, at its old lab's grades. This is a SOURCE of specimens, not a
+    second way to own one, and the gate fails if it becomes the second thing.
+  - **R78's lesson, paid forward.** Eligibility lives in the save, so the
+    tick that first arms the clock can also be the tick closing a month-long
+    gap. Arming at `now` and returning produced an empty board and a
+    plausible-looking save — invisible for exactly the reason seed 5150 was.
+    Arming dates from the start of the gap and falls through to the replay
+    loop; one jump and two-hourly steps land on the same board, asserted.
+  - **The harness still does not walk the rival ladder** — and therefore
+    cannot reach the breakout either. `campaignWalk` has never fought a
+    rival, which R82 found rather than made. Fixing it re-baselines every
+    economic assertion in the suite (measured: it moves seed 5150 into the
+    away-walk's dead zone), so it is R83's job, not a rider on this one.
+  - **43 breaks, 43 caught**, on a sixth battery gate that walks the whole
+    route at battery speed. One defect the gates could not have found: a
+    specimen bagged in a LOST fight would have stayed on the board as well as
+    in the bay. Unreachable today — one wave, and bagging the only wave wins
+    the fight — which is precisely why the rule now lives in the function
+    rather than in the wave count.
+
 - **R79 — The same hole, for retired species and frames.** ✅ *Shipped.*
   *Done when: the R72 fixture also retires one species, one frame, one
   enemy, one region node and one class, and every screen and the sim still
@@ -990,6 +1039,20 @@ The queue is a proposal: prune it before starting R63.
     `--on-danger`, one value for all five. The gate had measured ONE theme of
     five; it walks all five now, and a new rule fails a class colour that is
     defined but unused.
+- **R83 — The harness has never fought a rival.** `campaignWalk` claims to
+  measure the honest 180-day campaign, and in 180 days it does not challenge
+  a single rival lab — the game's second axis of difficulty, the only source
+  of apex-graded anatomy, and now (R82) the gate on the whole breakout
+  system. So nothing downstream of a duel is measured at all: not the
+  rival ladder's pacing, not the Reorientation Wing (`rehabbed` is 0 on
+  every seed), not the loose board. R82 wrote the walk hook, measured it —
+  one duel a week with a fit A-team yields 18-31 escapees hunted per 180
+  days, all won, and funds up $43-46k → $46-59k — and then REVERTED it,
+  because it moves seed 5150 into the away-walk's dead zone and that
+  assertion belongs to R68/R78. Re-baselining is the work, not a rider on
+  somebody else's milestone. *Done when: the walk fights rivals and hunts
+  escapees, every assertion it moves is re-derived rather than retuned, and
+  the suite says what a 180-day campaign actually earns.*
 - **R80 — The keyboard can see the game but not play it.** R73 made focus
   visible and the two modals real dialogs; an adversarial four-dimension
   audit found the barriers that survive. **Focus is destroyed on a timer:**

@@ -1,5 +1,5 @@
 {
-  "_doc": "R62 — the news wire's copy. Every sentence the wire prints lives here, keyed by EVENT id; engine modules emit {event, params} and never a sentence. Before this file, 17 player-facing lines were written inside campaign.js and rehab.js, so a new world-reaction was an engine edit — against CLAUDE.md's 'all content is data'. `lines` is the pool for an event: one is picked with the seeded RNG, so a save always tells its story the same way and a reload mid-run cannot reroll the wire. `by` is an optional per-philosophy pool, checked first, which is how the world reacts differently to a Naturalist than to an Engineer — the same machinery R10 built for the rivals, pointed at the campaign instead. Placeholders are {braces} filled by campaign/monologue.js `fill`, which leaves an unknown key ALONE rather than printing 'undefined', so a typo reads oddly instead of breaking. Adding a reaction is a key here plus one emit at the site of the event; it must never be an engine change again. The gate in tools/smoke.js runs the invariant both ways: every event emitted in code has copy here, and every event here has an emitter — R20's rule, pointed at the wire.",
+  "_doc": "R62 \u2014 the news wire's copy. Every sentence the wire prints lives here, keyed by EVENT id; engine modules emit {event, params} and never a sentence. Before this file, 17 player-facing lines were written inside campaign.js and rehab.js, so a new world-reaction was an engine edit \u2014 against CLAUDE.md's 'all content is data'. `lines` is the pool for an event: one is picked with the seeded RNG, so a save always tells its story the same way and a reload mid-run cannot reroll the wire. `by` is an optional per-philosophy pool, checked first, which is how the world reacts differently to a Naturalist than to an Engineer \u2014 the same machinery R10 built for the rivals, pointed at the campaign instead. Placeholders are {braces} filled by campaign/monologue.js `fill`, which leaves an unknown key ALONE rather than printing 'undefined', so a typo reads oddly instead of breaking. Adding a reaction is a key here plus one emit at the site of the event; it must never be an engine change again. The gate in tools/smoke.js runs the invariant both ways: every event emitted in code has copy here, and every event here has an emitter \u2014 R20's rule, pointed at the wire.",
   "events": {
     "dominion": {
       "lines": [
@@ -52,7 +52,9 @@
       }
     },
     "threat_rung": {
-      "lines": ["{announce}"]
+      "lines": [
+        "{announce}"
+      ]
     },
     "salvaged": {
       "lines": [
@@ -96,6 +98,25 @@
     "rehab_graduated_alone": {
       "lines": [
         "{creature} completes the programme unsupervised and joins the roster. It is watching you. Always watching."
+      ]
+    },
+    "specimen_loose": {
+      "lines": [
+        "BREAKOUT: {lab} confirms one specimen is unaccounted for. It was last seen {sighting}. The lab describes the situation as \u201cfluid.\u201d",
+        "{lab} has misplaced a chimera. It is {sighting} and it is not coming when called.",
+        "A specimen belonging to {lab} was reported {sighting} this morning. The county has been advised to carry on normally."
+      ]
+    },
+    "specimen_bagged": {
+      "lines": [
+        "THWOOMP. {creature} is off the streets and into a bay. {lab} has been sent an invoice for the inconvenience.",
+        "{creature} has been impounded. {lab} is welcome to file a claim and will be ignored politely."
+      ]
+    },
+    "specimen_recovered": {
+      "lines": [
+        "{creature} was talked down, and {lab} collected it in an unmarked van. Everyone waved.",
+        "{creature} has been retrieved by {lab}, who arrived with a net and no apology."
       ]
     }
   }

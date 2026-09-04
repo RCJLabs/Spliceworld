@@ -13,6 +13,7 @@ import { recordRivalResult, scoutStable } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';
 import { tickContests, resolveContest, isContested } from './contest.js';
+import { resolveBreakout } from './breakout.js';
 import { playerLine, rivalLine } from './monologue.js';
 import { tickOperations } from './operations.js';
 import {
@@ -438,6 +439,24 @@ export function resolveBattle(state, battle, content, now) {
     const line = recordRivalResult(state, context.rivalId, result.outcome, content);
     if (result.outcome !== 'fled') pushNews(state, line);
     detail.rival = content.rivals[context.rivalId]?.name ?? null;
+  }
+
+  // R82: a loose specimen. No node either — the entry on the board is the
+  // whole stake. The containment loop above has already run, so whether it
+  // went home in one of your bays is settled by the time this asks; a win
+  // closes the entry either way, and the wire says which of the two it was.
+  if (context.kind === 'breakout' && context.breakoutId) {
+    const bagged = (battle.captured ?? []).some((id) => id === context.looseUnitId);
+    const out = resolveBreakout(state, content, context.breakoutId, result.outcome, bagged);
+    if (out.cleared) {
+      // Two literals, not one variable: the wire's two-way gate reads the
+      // emitter out of the source, so an event id computed elsewhere is copy
+      // with no visible caller.
+      if (bagged) emitNews(state, content, 'specimen_bagged', { creature: out.creature, lab: out.lab });
+      else emitNews(state, content, 'specimen_recovered', { creature: out.creature, lab: out.lab });
+      detail.breakout = out.creature;
+      detail.bagged = bagged;
+    }
   }
 
   // R42: a Gauntlet stage. No node, no income, no notoriety — the win is

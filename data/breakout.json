@@ -1,0 +1,25 @@
+{
+  "_doc": "R82 — The Breakout. A rival lab that keeps losing to you starts losing other things: specimens. Each escapee is a REAL rival chimera, built by campaign/rivals.js's own generator from that lab's parts at that lab's grades, so a loose one is indistinguishable from one still on the ladder — because it was on the ladder. Unlike a counter-offensive (regions.json contestation) an escapee has NO deadline: it accumulates on a standing board and waits, because the point of the system is more fights with rival anatomy, and a window that closes while the player is asleep produces fewer of them, not more. It is gated on `startsAfterDefeats` so nothing gets loose until you have actually rattled somebody. Beating one closes the entry either way; the Containment Cannon decides whether it goes home in a bay or is collected by its old lab, and a bagged one reaches the roster the same way every captive does — the Reorientation Wing (campaign/rehab.js). maxLoose caps the board so a player who ignores it does not return to a wall of them.",
+  "startsAfterDefeats": 1,
+  "firstDelayHours": 5,
+  "cooldownHours": 22,
+  "jitter": 0.3,
+  "maxLoose": 4,
+  "rewardBase": 140,
+  "rewardPerPower": 5,
+  "notoriety": 5,
+  "blurb": "Somebody else's science, unsupervised, in a county that is nominally yours.",
+  "intel": "Loose specimen — {lab} built it, {lab} lost it, and it has been eating well since. Bag it and the Wing can talk it round.",
+  "sightings": [
+    "in the reservoir, doing lengths",
+    "on the roof of the feed store",
+    "in a drainage culvert, unbothered",
+    "asleep in the municipal bandstand",
+    "in the orchard, methodically",
+    "behind the bowling alley",
+    "in a parked school bus, which it now owns",
+    "at the county fairground, judging livestock",
+    "in the quarry, echoing",
+    "under the water tower, brooding"
+  ]
+}

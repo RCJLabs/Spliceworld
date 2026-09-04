@@ -40,6 +40,7 @@ import {
 import { gradeOf, gradeIndexOf } from '../splice/extract.js';
 import { isContested } from './contest.js';
 import { speciesOf, classOf, enemyOf, rivalOf } from '../data/catalog.js';
+import { looseSpecimens, looseById } from './breakout.js';
 import {
   operationList, freeCrew, startOperation, abortOperation, opOdds,
 } from './operations.js';
@@ -335,6 +336,32 @@ function renderMap(root, ctx) {
       </div>`;
   }).join('');
 
+  // R82 — the loose board. It sits under the rival cards on purpose: an
+  // escapee IS a rival specimen, and the card above it is the only place
+  // that explains whose lab builds like that. No clock and no order — the
+  // whole design of the system is that these wait for you, so the row shows
+  // what it is and what it is worth, and nothing about how long you have.
+  const loose = looseSpecimens(state);
+  const looseCard = loose.length
+    ? `<section class="card">
+        <h3>${renderIcon('chain')} Loose Specimens</h3>
+        <p class="fine-print">Somebody else's science, unsupervised. Bag one with the Containment Cannon and the Reorientation Wing can talk it round.</p>
+        ${loose.map((esc) => {
+          const lab = rivalOf(content, esc.rivalId);
+          const cls = classOf(content, esc.unit.class);
+          return `<div class="encounter">
+            <div><strong>${esc.unit.name}</strong> <span class="lineage">${
+              cls ? `${renderIcon(cls.icon)} ${cls.name} · ` : ''
+            }HP ${esc.unit.hp} · PWR ${esc.unit.power}</span><br>
+            <span class="fine-print">${lab ? `${lab.name}'s, and no longer ${lab.name}'s. ` : ''}Last seen ${esc.sighting}.</span></div>
+            <button type="button" data-breakout="${esc.id}"${canFight ? '' : ' disabled'}>${
+              canFight ? `Hunt — $${esc.reward}` : noneFit
+            }</button>
+          </div>`;
+        }).join('')}
+      </section>`
+    : '';
+
   // What the world has learned. Shown whether or not it is acting on it yet,
   // because "they are studying you" is the threat, not the swap.
   const read = directorRead(state, content);
@@ -364,7 +391,8 @@ function renderMap(root, ctx) {
     labs: `
       ${dossier}
       ${dossierCard(state, content)}
-      ${rivals ? `<section class="card"><h3>${renderIcon('petri-dish')} Rival Labs</h3>${rivals}</section>` : ''}`,
+      ${rivals ? `<section class="card"><h3>${renderIcon('petri-dish')} Rival Labs</h3>${rivals}</section>` : ''}
+      ${looseCard}`,
     bays: containment
       ? `<section class="card"><h3>⛓ Containment</h3>${containment}</section>`
       : `<section class="card"><h3>⛓ Containment</h3><p class="ranch-msg">The bays are empty. Charge the Containment Cannon in a fight and bring something home.</p></section>`,
@@ -461,6 +489,18 @@ function renderMap(root, ctx) {
     btn.addEventListener('click', () => {
       const node = nodeById(content, btn.dataset.node);
       draftTarget = { kind: 'assault', nodeId: node.id, encounterId: node.encounter, label: node.name };
+      draftTeam = [];
+      renderBriefing(root, ctx);
+    });
+  });
+  root.querySelectorAll('button[data-breakout]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const esc = looseById(state, btn.dataset.breakout);
+      if (!esc) return;
+      draftTarget = {
+        kind: 'breakout', breakoutId: esc.id, rivalId: esc.rivalId,
+        looseUnitId: esc.unit.id, encounterId: `breakout_${esc.id}`, label: `${esc.unit.name} — loose`,
+      };
       draftTeam = [];
       renderBriefing(root, ctx);
     });
@@ -1047,6 +1087,10 @@ function renderBriefing(root, ctx) {
       nodeId: draftTarget.nodeId ?? null,
       captiveId: draftTarget.captiveId ?? null,
       rivalId: draftTarget.rivalId ?? null,
+      // R82: which board entry this fight closes, and which unit id the
+      // cannon would have to have bagged for it to come home with you.
+      breakoutId: draftTarget.breakoutId ?? null,
+      looseUnitId: draftTarget.looseUnitId ?? null,
       // The wave list as actually launched. A derived encounter (a
       // defence) and a director-rewritten one are both absent from
       // enemies.json, so the aftermath cannot look them up afterwards —

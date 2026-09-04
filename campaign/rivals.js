@@ -283,55 +283,75 @@ export function rivalTeam(state, rival, content) {
   const team = [];
   const names = new Set();
   for (let i = 0; i < size; i++) {
-    // Tier 1: the lead still flies their flag and the SECOND specimen
-    // answers you. Tier 2 and up: the counter moves to the lead, because a
-    // lab that has lost to you twice has stopped treating you as a variable
-    // and started treating you as the problem.
-    const counterSlot = dossier.counterLeads ? 0 : 1;
-    const targetClass = counter && i === counterSlot ? counter : rival.classBias;
-    // Only the specimen built to answer you carries the anatomy counter;
-    // the rest of the lab is still the lab.
-    const parts = chooseParts(rival, targetClass, content, rng, i === counterSlot ? dossier : null);
-    const tokens = parts.map((part, n) => ({
-      id: `${rival.id}-${i}-${n}`,
-      partId: part.id,
-      grade: gradeFor(rival, meta, record.defeats, i, rng),
-      donor: { name: rival.name, species: part.species, stars: 5, extractedAt: 0 },
+    team.push(rivalSpecimen(rival, content, {
+      rng, meta, defeats: record.defeats, index: i, dossier, counter, powerScale, names,
     }));
-    // A9: a rival's authored `frames` list is their STYLE; answering you is
-    // a decision. Since Airborne became a claim about physics rather than
-    // ancestry, a lab that looked up "get above their Ground kit" and then
-    // bolted the wings to its usual Rumbler has bought wings and stayed on
-    // the ground — the exact mistake the rules now punish the player for.
-    // So the countering specimen takes the lightest chassis that actually
-    // gets this build off the ground, and every other specimen keeps the
-    // lab's own taste.
-    let frame = rival.frames[Math.min(i, rival.frames.length - 1)];
-    const wantsAir = i === counterSlot && (dossier.seek ?? []).includes('Airborne');
-    if (wantsAir && !analyze(frame, tokens, content).flight.capable) {
-      const lifted = Object.values(content.frames)
-        .slice()
-        .sort((a, b) => a.phys.mass - b.phys.mass)
-        .find((f) => analyze(f.id, tokens, content).flight.capable);
-      if (lifted) frame = lifted.id;
-    }
-    const name = creatureName(rival, rng, names);
-    names.add(name);
-    team.push(
-      unitFromGenome(
-        {
-          id: `${rival.id}_spec${i}_${record.defeats}`,
-          name,
-          frame,
-          tokens,
-          powerScale,
-          koLine: `${name} folds neatly and is collected by ${rival.name}'s very patient intern.`,
-        },
-        content
-      )
-    );
   }
   return { team, powerScale, counterClass: counter, dossier };
+}
+
+// ONE specimen, the way this lab builds them.
+//
+// R82 pulled this out of `rivalTeam`'s loop because a rival's chimera is no
+// longer something you only ever meet three-at-a-time on the ladder: one can
+// get loose and turn up on its own. Two generators would be two sets of
+// rules about what a lab builds, and they would drift — the anatomy counter,
+// the class-vote arithmetic and the chassis-lift decision are the rival
+// system's whole personality, and a loose specimen has to have been built by
+// the same lab as the ones still in it.
+//
+// Everything the caller varies is passed in, so the function itself has no
+// memory: same rng position, same specimen.
+export function rivalSpecimen(rival, content, {
+  rng, meta, defeats = 0, index = 0, dossier = null, counter = null,
+  powerScale = rival.powerScale, names = new Set(), idSuffix = null,
+} = {}) {
+  // Tier 1: the lead still flies their flag and the SECOND specimen
+  // answers you. Tier 2 and up: the counter moves to the lead, because a
+  // lab that has lost to you twice has stopped treating you as a variable
+  // and started treating you as the problem.
+  const counterSlot = dossier?.counterLeads ? 0 : 1;
+  const isCounter = index === counterSlot;
+  const targetClass = counter && isCounter ? counter : rival.classBias;
+  // Only the specimen built to answer you carries the anatomy counter;
+  // the rest of the lab is still the lab.
+  const parts = chooseParts(rival, targetClass, content, rng, isCounter ? dossier : null);
+  const tokens = parts.map((part, n) => ({
+    id: `${rival.id}-${index}-${n}`,
+    partId: part.id,
+    grade: gradeFor(rival, meta, defeats, index, rng),
+    donor: { name: rival.name, species: part.species, stars: 5, extractedAt: 0 },
+  }));
+  // A9: a rival's authored `frames` list is their STYLE; answering you is
+  // a decision. Since Airborne became a claim about physics rather than
+  // ancestry, a lab that looked up "get above their Ground kit" and then
+  // bolted the wings to its usual Rumbler has bought wings and stayed on
+  // the ground — the exact mistake the rules now punish the player for.
+  // So the countering specimen takes the lightest chassis that actually
+  // gets this build off the ground, and every other specimen keeps the
+  // lab's own taste.
+  let frame = rival.frames[Math.min(index, rival.frames.length - 1)];
+  const wantsAir = isCounter && (dossier?.seek ?? []).includes('Airborne');
+  if (wantsAir && !analyze(frame, tokens, content).flight.capable) {
+    const lifted = Object.values(content.frames)
+      .slice()
+      .sort((a, b) => a.phys.mass - b.phys.mass)
+      .find((f) => analyze(f.id, tokens, content).flight.capable);
+    if (lifted) frame = lifted.id;
+  }
+  const name = creatureName(rival, rng, names);
+  names.add(name);
+  return unitFromGenome(
+    {
+      id: `${rival.id}_spec${index}_${idSuffix ?? defeats}`,
+      name,
+      frame,
+      tokens,
+      powerScale,
+      koLine: `${name} folds neatly and is collected by ${rival.name}'s very patient intern.`,
+    },
+    content
+  );
 }
 
 // A full encounter in the enemies.json shape, with the units inline.

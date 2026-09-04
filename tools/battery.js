@@ -63,7 +63,7 @@ const CONTEST = ['node', '-e', `
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
   const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
     'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news'];
+    'resequencer','training','gauntlet','news','breakout'];
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const HOUR = 3600000, t0 = 1700000000000;
   const region = Object.values(content.regions)[0];
@@ -108,7 +108,7 @@ const RETIRED = ['node', '-e', `
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
   const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
     'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news'];
+    'resequencer','training','gauntlet','news','breakout'];
   const load = () => indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const content = load();
   const retired = load();
@@ -264,6 +264,130 @@ const RETIRED = ['node', '-e', `
   if (/data-reseq="v1"/.test(vroot.innerHTML)) fail('a vial with no species left still offers a Resequence button');
 
   console.log('retired ✓  ' + screens + ' screens, the sim, the gauntlet, the briefing and the vault');
+`];
+
+
+// R82 — the breakout, end to end at battery speed: a lab loses a specimen,
+// it lands on a standing board, a win closes the entry, and the capture
+// route is the one every other prize takes.
+const BREAKOUT = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { newGameState } = await import('./save/save.js');
+  const { tickWorld } = await import('./campaign/world.js');
+  const { warTargetEncounter } = await import('./campaign/warroom.js');
+  const { looseSpecimens, breakoutEligible, tickBreakouts } = await import('./campaign/breakout.js');
+  const { createBattle, step, playerActions } = await import('./battle/engine.js');
+  const { resolveBattle } = await import('./campaign/campaign.js');
+  const { rehabPlan, startRehab, tickRehab } = await import('./campaign/rehab.js');
+  const { makeSimChimera, STARTER_BUILD } = await import('./tools/sim.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
+    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
+    'resequencer','training','gauntlet','news','breakout'];
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const HOUR = 3600000, t0 = 1700000000000;
+  const fail = (m) => { console.error('breakout ✗  ' + m); process.exit(1); };
+
+  const armed = () => {
+    const s = { ...newGameState(), seed: 4242, funds: 60000 };
+    s.lastTickAt = t0;
+    s.facility = { theater: 2, containment: 3, infirmary: 1, incubator: 1, extractor: 1, scanner: 1 };
+    s.campaign.rivals = { mantissa: { defeats: 3, losses: 0, lastMetAt: null } };
+    for (let i = 0; i < 3; i++) {
+      const c = makeSimChimera('L', STARTER_BUILD.partIds, 'prismatic', content);
+      c.id = 'b' + i; c.name = 'Hero ' + i; c.settleUntil = 0; c.bond = 80; c.xp = 4000;
+      s.chimeras.push(c);
+    }
+    return s;
+  };
+
+  // Nothing gets out until a lab has been rattled, and no clock runs behind
+  // the gate.
+  const fresh = { ...newGameState(), seed: 1 };
+  if (breakoutEligible(fresh, content)) fail('something is loose before any rival has lost to you');
+  tickBreakouts(fresh, content, t0 + 900 * HOUR);
+  if (fresh.campaign.nextBreakAt !== null) fail('a clock is running behind the eligibility gate');
+
+  // A fortnight away is replayed, not skipped.
+  const jump = armed();
+  tickWorld(jump, content, t0 + 24 * 14 * HOUR);
+  const stepped = armed();
+  for (let h = 2; h <= 24 * 14; h += 2) tickWorld(stepped, content, t0 + h * HOUR);
+  if (!jump.campaign.loose.length) fail('a fortnight away put nothing on the board');
+  const a = jump.campaign.loose.map((e) => e.unit.name).join(',');
+  const b = stepped.campaign.loose.map((e) => e.unit.name).join(',');
+  if (a !== b) fail('one jump replays to a different board than stepping there (' + a + ' vs ' + b + ')');
+  if (!jump.news.some((n) => /BREAKOUT|misplaced|unaccounted/i.test(n))) {
+    fail('an escape nobody was there for said nothing on the wire');
+  }
+
+  // No clock on a loose specimen: a hundred days later it is still there.
+  const patient = armed();
+  tickWorld(patient, content, t0 + 24 * 7 * HOUR);
+  const before = patient.campaign.loose.map((e) => e.id + ':' + e.unit.hp).join(',');
+  tickWorld(patient, content, t0 + 24 * 107 * HOUR);
+  const still = patient.campaign.loose.map((e) => e.id + ':' + e.unit.hp).join(',');
+  if (!before.length || !still.startsWith(before)) {
+    fail('the board did not keep what was on it (' + before + ' -> ' + still + ')');
+  }
+
+  // The criterion: fight it, bag it, and the Wing puts it on the roster.
+  const s = armed();
+  tickWorld(s, content, t0 + 24 * 7 * HOUR);
+  const esc = looseSpecimens(s)[0];
+  if (!esc) fail('nothing to hunt');
+  if (!esc.unit.capturable || !esc.unit.genome) fail('the escapee is not a capturable chimera');
+  const now = t0 + 24 * 7 * HOUR;
+  const enc = warTargetEncounter(s, { kind: 'breakout', breakoutId: esc.id }, content, now);
+  if (!enc || enc.waves.length !== 1 || enc.waves[0].id !== esc.unit.id) {
+    fail('the briefing is not the specimen on the board');
+  }
+  const boardBefore = looseSpecimens(s).length;
+  const battle = createBattle(s.chimeras.slice(0, 3), enc, content, 99, now, {
+    kind: 'breakout', breakoutId: esc.id, rivalId: esc.rivalId, looseUnitId: esc.unit.id, waveIds: [],
+  });
+  battle.enemy.active.hp = Math.floor(battle.enemy.active.maxHp * 0.3);
+  battle.cannon.charge = 100;
+  const cap = playerActions(battle).find((x) => x.type === 'capture');
+  if (!cap) fail('the cannon does not offer itself at a weakened escapee');
+  step(battle, cap, content);
+  let guard = 0;
+  while (!battle.over && guard++ < 200) {
+    battle.enemy.active.hp = 0;
+    step(battle, playerActions(battle)[0] ?? { type: 'rest' }, content);
+  }
+  const detail = resolveBattle(s, battle, content, now);
+  if (detail.outcome !== 'win') fail('the fight did not resolve as a win');
+  if (looseSpecimens(s).length !== boardBefore - 1) fail('a win did not close the entry on the board');
+  if (s.campaign.containment.length !== 1) fail('the bagged specimen did not reach a bay');
+  if (!s.news.some((n) => /THWOOMP|impounded/.test(n))) fail('the wire did not say it was bagged');
+
+  // Bagged in a LOST fight still closes the entry — one wave makes that
+  // unreachable in play, so the contract is checked directly.
+  const { resolveBreakout } = await import('./campaign/breakout.js');
+  const spare = looseSpecimens(s)[0];
+  if (spare) {
+    if (resolveBreakout(s, content, spare.id, 'loss').cleared) fail('a plain loss closed the entry');
+    if (!resolveBreakout(s, content, spare.id, 'loss', true).cleared) {
+      fail('a specimen bagged in a lost fight was left on the board');
+    }
+    if (looseSpecimens(s).some((e) => e.id === spare.id)) fail('it is in a bay and still at large');
+  }
+
+  const bay = s.campaign.containment[0];
+  const plan = rehabPlan(s, bay, content);
+  if (!plan.possible) fail('an escapee is not a candidate for the Wing: ' + plan.reason);
+  if (!startRehab(s, bay.id, content, now).ok) fail('it does not enrol');
+  tickRehab(s, content, now + (plan.hours + 1) * HOUR);
+  const mine = s.chimeras.find((c) => c.rehabilitated);
+  if (!mine) fail('it never joined the roster');
+  if (mine.name !== esc.unit.name) fail('it joined as somebody else');
+  if (mine.frame !== esc.unit.genome.frame) fail('it joined on a different chassis');
+  if (!Object.values(mine.tokens).some((tk) => tk.grade !== 'standard')) {
+    fail('it joined at the shop floor grade rather than its old lab\\'s');
+  }
+  console.log('breakout ✓  escaped, waited, hunted, bagged and on the roster as ' + mine.name);
 `];
 
 const BREAKS = [
@@ -495,6 +619,60 @@ const BREAKS = [
     anchor: '      upkeepPerDay: 0,\n',
     to: '',
   },
+
+  // --- gate: breakout (a specimen escapes, waits, is hunted, joins) -------
+  {
+    // The R78 slip, in its new home: arming the clock at `now` and returning
+    // means a month away produced nothing, and the board that comes back
+    // looks perfectly plausible while being empty.
+    n: 36, gate: BREAKOUT, name: 'the escape clock arms at the wrong end of a month away',
+    file: 'campaign/breakout.js',
+    anchor: '    cam.nextBreakAt = since + Math.round((t.firstDelayHours ?? 5) * HOUR);',
+    to: '    cam.nextBreakAt = now + Math.round((t.firstDelayHours ?? 5) * HOUR);\n    return { escaped };',
+  },
+  {
+    n: 37, gate: BREAKOUT, name: 'the schedule advances from the wrong instant, so the replay drifts',
+    file: 'campaign/breakout.js',
+    anchor: '    scheduleNext(state, content, due);\n  }\n  return { escaped };',
+    to: '    scheduleNext(state, content, now);\n  }\n  return { escaped };',
+  },
+  {
+    n: 38, gate: BREAKOUT, name: 'nothing gates the escapes, so a save that beat nobody still loses specimens',
+    file: 'campaign/breakout.js',
+    anchor: '  return beaten >= (t.startsAfterDefeats ?? 1);',
+    to: '  return true;',
+  },
+  {
+    n: 39, gate: BREAKOUT, name: 'a win no longer closes the entry on the board',
+    file: 'campaign/breakout.js',
+    anchor: '  state.campaign.loose = looseSpecimens(state).filter((s) => s !== loose);',
+    to: '',
+  },
+  {
+    n: 40, gate: BREAKOUT, name: 'the escapee stops being a chimera, so the Wing will not take it',
+    file: 'campaign/rivals.js',
+    anchor: '      powerScale,\n      koLine: `${name} folds neatly',
+    to: '      powerScale,\n      capturable: false,\n      koLine: `${name} folds neatly',
+  },
+  {
+    n: 41, gate: BREAKOUT, name: 'the briefing stops being the specimen on the board',
+    file: 'campaign/breakout.js',
+    anchor: '    waves: [loose.unit],',
+    to: "    waves: ['riot_squad'],",
+  },
+  {
+    n: 43, gate: BREAKOUT, name: 'a specimen bagged in a lost fight is left on the board as well as in the bay',
+    file: 'campaign/breakout.js',
+    anchor: "  if (!loose || (outcome !== 'win' && !captured)) return { cleared: false, creature: null, lab: null };",
+    to: "  if (!loose || outcome !== 'win') return { cleared: false, creature: null, lab: null };",
+    expect: 'contract',
+  },
+  {
+    n: 42, gate: BREAKOUT, name: 'a loose specimen grows a deadline and wanders off while you are away',
+    file: 'campaign/breakout.js',
+    anchor: '    const rival = labFor(state, content, cam.breakoutCount);',
+    to: '    cam.loose = cam.loose.filter((e) => due - e.escapedAt < 48 * HOUR);\n    const rival = labFor(state, content, cam.breakoutCount);',
+  },
 ];
 
 const pristine = {};
@@ -515,12 +693,13 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
       : gate === RETIRED ? 'a save read against a build that retired seven of its ids'
-        : gate.join(' ');
+        : gate === BREAKOUT ? 'a specimen escapes, waits, is hunted and joins the roster'
+          : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }

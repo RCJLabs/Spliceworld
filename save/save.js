@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 37;
+export const SAVE_VERSION = 38;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -473,6 +473,22 @@ const migrations = {
   // (they get the line once more, then never again), and the migration is
   // here so the field is DECLARED rather than appearing by accident — the
   // schema is never allowed to drift without a version behind it.
+  // R82 — the Breakout. Three new campaign fields hold the standing board
+  // of loose specimens, the clock that puts the next one on it, and the
+  // counter that seeds both. Every one of them is additive and empty: a save
+  // that has never seen a breakout is a save with nothing loose, which is
+  // exactly what a player mid-campaign should find. `nextBreakAt` stays null
+  // rather than being dated here, because `tickBreakouts` sets the first
+  // delay itself the moment the save becomes eligible — dating it in a
+  // migration would start the clock for a player who has not yet beaten a
+  // rival, and the gate for this whole system is that you rattled somebody.
+  38: (save) => {
+    save.campaign ??= {};
+    save.campaign.loose ??= [];
+    save.campaign.nextBreakAt ??= null;
+    save.campaign.breakoutCount ??= 0;
+    return save;
+  },
   37: (save) => {
     if (save.resequencer) save.resequencer.penFullSaid ??= false;
     return save;
@@ -527,6 +543,7 @@ export function newGameState() {
     campaign: {
       heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,
+      loose: [], nextBreakAt: null, breakoutCount: 0,
       operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
     },
     news: [],

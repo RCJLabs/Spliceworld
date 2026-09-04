@@ -19,6 +19,7 @@ import { isSettled } from '../splice/theater.js';
 import { isInjured, obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
 import { canSpar, sparEncounter } from './sparring.js';
 import { gauntletEncounter } from './gauntlet.js';
+import { breakoutEncounter } from './breakout.js';
 import { rivalEncounter } from './rivals.js';
 import { directEncounter } from './director.js';
 import { contestOn, contestEncounter, contestRemainingMs, defencesOf } from './contest.js';
@@ -55,6 +56,12 @@ export function warTargetEncounter(state, target, content, now) {
   // front, and the ring exists to not be one.
   if (target.kind === 'sparring') {
     return withLiveWaves(sparEncounter(state, content, target.nodeId, now).encounter, content);
+  }
+  // R82: a loose specimen. One rival chimera, standing on its own, and the
+  // director does not rewrite it either — nobody is directing it, which is
+  // rather the point.
+  if (target.kind === 'breakout') {
+    return withLiveWaves(breakoutEncounter(state, content, target.breakoutId), content);
   }
   // R42: a Gauntlet stage. The director does not rewrite it — this IS the
   // coalition's answer.
@@ -112,6 +119,14 @@ export function tabBadge(state, id) {
   }
   if (id === 'bays') {
     const n = state.campaign.containment?.length ?? 0;
+    return n ? { text: String(n), kind: 'count' } : null;
+  }
+  // R82: a loose specimen is something waiting, which is the bar a badge has
+  // to clear. It is a count rather than an alert because nothing is lost by
+  // leaving it — that is the whole difference between an escapee and a
+  // counter-offensive, and the badge should not lie about which one this is.
+  if (id === 'labs') {
+    const n = state.campaign.loose?.length ?? 0;
     return n ? { text: String(n), kind: 'count' } : null;
   }
   return null;
