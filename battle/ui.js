@@ -355,7 +355,21 @@ function showMoveDetail(move, me, foe, content, turn) {
       }</ul>` : ''}
     </div>`;
   overlay.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { overlay.hidden = true; }));
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.hidden = true; }, { once: true });
+  // R75 — this was `{ once: true }`, which spends the listener on the FIRST
+  // click anywhere in the overlay. A tap inside the sheet bubbles up to it,
+  // does nothing (the target is not the overlay), and takes the backdrop
+  // dismissal with it: read one move detail and the only way out is the ✕.
+  // `once` was there to stop handlers stacking across opens, since this one
+  // binds to the overlay itself rather than to markup that gets replaced —
+  // so keep one handler by name and replace it, instead of spending it.
+  overlay.removeEventListener('click', backdropClose);
+  overlay.addEventListener('click', backdropClose);
+}
+
+// One named handler for the overlay backdrop, so binding it again replaces
+// rather than stacks. See the move sheet below.
+function backdropClose(e) {
+  if (e.target === e.currentTarget) e.currentTarget.hidden = true;
 }
 
 // The log lives one tap away instead of eating a third of the screen.

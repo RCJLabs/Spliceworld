@@ -10933,6 +10933,190 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+// R75. R49 gated the Spar button on the predicate and stopped there, so the
+// five OTHER ways to start a fight from this screen — Assault, Defend,
+// Rescue Raid, the rival Challenge and the Gauntlet's Answer — stayed
+// pressable with the whole stable in the Infirmary. Same wasted trip R49
+// named, five more doors into it, and the two that hurt most are the timed
+// ones: a player watching a counter-offensive countdown pressed Defend and
+// got bounced with no reason given.
+//
+// The predicate now lives in battle/engine.js beside the injury rule it
+// reads, so the map, the ring and the agenda cannot answer "can I fight?"
+// three different ways for one save.
+{
+  const { renderWarRoomScreen } = await import('../campaign/ui.js');
+  const { fitToFight } = await import('../battle/engine.js');
+  const HOUR = 3600000;
+  const B = { head: 'rhino_head', forelimbs: 'gorilla_forelimbs', hindlimbs: 'rhino_hindlimbs',
+    tail: 'bear_tail', hide: 'pangolin_hide', organ: 'bear_organ' };
+  const mk = (i, extra = {}) => ({
+    id: `r75w${i}`, name: `Unit ${i + 1}`, frame: 'M',
+    tokens: Object.fromEntries(Object.entries(B).map(([k, v]) =>
+      [k, { id: `r75t${i}${k}`, partId: v, grade: 'prime', donor: { name: 'Bessie', stars: 4 } }])),
+    settleUntil: 0, bond: 100, scars: [], temperament: null,
+    lastTrainedAt: 0, moveset: [], lastMoveTrainAt: 0, xp: 0, injury: null, ...extra,
+  });
+  const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null,
+    classList: { remove: () => {}, add: () => {} } });
+
+  // One save that renders ALL FIVE launchers at once: a takeable node, a
+  // contested node, a captive in the impound, every rival unlocked and the
+  // county held so the Gauntlet card is on screen.
+  const world = (injured) => {
+    const st = { ...newGameState(), seed: 75, funds: 5000 };
+    const regions = Object.values(content.regions);
+    const nodes = regions.flatMap((r) => r.nodes).filter((n) => content.encounters[n.encounter]);
+    assert.ok(nodes.length >= 2, 'two nodes with encounters behind them');
+    // Hold everything but the last node of the first region: nodes unlock in
+    // strip order, so that one — and only that one — comes back 'available',
+    // which is the state Assault renders in. Holding the rest is what
+    // unlocks the first rival and keeps the contested node contestable.
+    const last = regions[0].nodes[regions[0].nodes.length - 1].id;
+    st.campaign.heldNodes = nodes.map((n) => n.id).filter((id) => id !== last);
+    st.campaign.notoriety = 9999;
+    st.campaign.contested = [{ nodeId: st.campaign.heldNodes[0], startedAt: t0 - HOUR,
+      scheduledAt: t0 - HOUR, deadline: t0 + 3 * HOUR, gen: 1 }];
+    st.campaign.captives = [{ id: 'cap-r75', chimera: mk(9), capturedAt: t0 - HOUR,
+      deadline: t0 + 5 * HOUR, captor: null }];
+    st.dominionAt = t0 - HOUR;
+    st.gauntletBeaten = [];
+    st.chimeras = [mk(0, injured ? { injury: { name: 'Bent Whiskers', until: t0 + 2 * HOUR } } : {})];
+    st.chimeraCount = 1;
+    return st;
+  };
+  // The tab is driven through the very hook R75 added for the agenda, which
+  // is also the only way this gate can reach the rival labs.
+  const drawMap = (st, tab = 'map') => {
+    const root = stub();
+    let handed = tab;
+    renderWarRoomScreen(root, { state: st, content, now: () => t0, save: () => {},
+      goto: () => {}, refreshTicker: () => {},
+      takeSubtab: () => { const v = handed; handed = null; return v; } });
+    return root.innerHTML;
+  };
+  // A button's own markup, sliced from its data attribute to its close tag,
+  // so an assertion about ONE launcher cannot read the rest of the map.
+  const btnFor = (page, attr) => {
+    const at = page.indexOf(`${attr}=`);
+    if (at < 0) return null;
+    return page.slice(page.lastIndexOf('<button', at), page.indexOf('</button>', at) + 9);
+  };
+  // Every way this screen starts a fight, and the tab it is on. The
+  // Gauntlet card sits above the subtab bar, so it is on all of them.
+  const LAUNCHERS = [
+    ['data-node', 'Assault', 'map'],
+    ['data-defend', 'Defend', 'map'],
+    ['data-rescue', 'Rescue Raid', 'map'],
+    ['data-rival', 'Challenge', 'labs'],
+    ['data-gauntlet', 'Answer', 'map'],
+  ];
+
+  // 1. Everyone hurt: every launcher is present, disabled, and says why.
+  {
+    const hurt = world(true);
+    assert.equal(fitToFight(hurt, t0).length, 0, 'nobody is fit to fight');
+    for (const [attr, label, tab] of LAUNCHERS) {
+      const btn = btnFor(drawMap(hurt, tab), attr);
+      assert.ok(btn, `${label} is still on the screen (${attr})`);
+      assert.ok(btn.includes('disabled'), `${label} is disabled rather than a trip to a dead end`);
+      assert.ok(btn.includes('no-one fit'), `${label} says why, in the label (${btn})`);
+      // R73's rule: the reason has to be READABLE, which a title attribute
+      // is not on a device with no hover. This ships as a TWA.
+      assert.ok(!/title="/.test(btn), `${label} does not hide its reason in a tooltip`);
+    }
+  }
+
+  // 2. One creature out of the Infirmary and all five come back, each
+  //    saying its own thing again. Without this the gate would pass by
+  //    disabling the buttons forever.
+  {
+    const fit = world(false);
+    assert.equal(fitToFight(fit, t0).length, 1, 'one fit creature');
+    for (const [attr, label, tab] of LAUNCHERS) {
+      const btn = btnFor(drawMap(fit, tab), attr);
+      assert.ok(btn, `${label} is on the screen`);
+      assert.ok(!btn.includes('disabled'), `${label} is pressable again`);
+      assert.ok(btn.includes(label), `${label} says "${label}" (${btn})`);
+    }
+  }
+
+  // 3. One predicate, three readers. The agenda and the ring must not keep
+  //    private copies of the injury filter — that is how the map came to
+  //    disagree with the Right Now panel about the same save.
+  for (const f of ['ranch/agenda.js', 'campaign/sparring.js', 'campaign/ui.js']) {
+    const src = readFileSync(join(root, f), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+    assert.ok(src.includes('fitToFight'), `${f} reads the shared predicate`);
+    assert.ok(!/filter\(\s*\(c\)\s*=>\s*!isInjured\(/.test(src),
+      `${f} no longer keeps its own copy of it`);
+  }
+}
+
+// R75. "Run a job" is a promise about a TAB. The agenda could only name a
+// screen, so the chip landed on the War Room's map and left the player to
+// find the Jobs tab themselves — on the one entry whose whole point is that
+// the jobs board is somewhere else. The War Room is lazy since R74, so the
+// request travels as data through ctx rather than as a call into a module
+// that may not be loaded yet.
+{
+  const { AGENDA, agenda } = await import('../ranch/agenda.js');
+  const { renderWarRoomScreen } = await import('../campaign/ui.js');
+  const { WAR_TABS } = await import('../campaign/warroom.js');
+
+  const job = AGENDA.find((i) => i.id === 'job');
+  assert.ok(job, 'the agenda still has a job entry');
+  assert.equal(job.screen, 'battle', 'which lives on the War Room');
+  assert.equal(job.subtab, 'jobs', 'and names the tab it means');
+  assert.ok(WAR_TABS.some((tab) => tab.id === job.subtab),
+    'and that tab exists on the screen it names');
+  // …and it has to SURVIVE `agenda()`, which rebuilds each entry from a
+  // named field list. Browser QA caught the field being declared on the
+  // entry and dropped on the way out — a static read of AGENDA alone would
+  // have shipped it.
+  {
+    const st = { ...newGameState(), seed: 75, funds: 3000 };
+    st.lastTickAt = t0;
+    const row = agenda(st, content, t0).find((i) => i.id === 'job');
+    assert.ok(row, 'the job entry is open on a fresh save');
+    assert.equal(row.subtab, 'jobs', 'and the shape the Ranch renders still carries the tab');
+  }
+
+  // The Ranch has to put it in the markup, and hand it to goto on click.
+  const ranchSrc = readFileSync(join(root, 'ranch/ui.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+  assert.ok(ranchSrc.includes('data-subtab'), 'the agenda renders the subtab');
+  assert.ok(ranchSrc.includes('ctx.goto?.(btn.dataset.goto, btn.dataset.subtab)'),
+    'and the click carries it to the shell');
+  const shellSrc = readFileSync(join(root, 'main.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+  assert.ok(/goto:\s*\(name, subtab\)\s*=>\s*showScreen\(name, subtab\)/.test(shellSrc),
+    'the shell accepts a subtab');
+  assert.ok(shellSrc.includes('takeSubtab'), 'and parks it for whoever paints next');
+
+  // THE CRITERION: the screen honours it, and only for a tab that exists.
+  const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null,
+    classList: { remove: () => {}, add: () => {} } });
+  const drawWith = (subtab) => {
+    const st = { ...newGameState(), seed: 75, funds: 500 };
+    let handed = subtab;
+    const root = stub();
+    renderWarRoomScreen(root, { state: st, content, now: () => t0, save: () => {},
+      goto: () => {}, refreshTicker: () => {},
+      takeSubtab: () => { const s = handed; handed = null; return s; } });
+    return root.innerHTML;
+  };
+  // ui/tabs.js marks the live tab with `is-on`, so that is what the screen
+  // is asked, not what the shell would like it to have done.
+  const activeTab = (page) => page.match(/data-war-tab="(\w+)" class="is-on"/)?.[1] ?? null;
+  assert.equal(activeTab(drawWith('jobs')), 'jobs', 'asking for jobs lands on Jobs');
+  assert.equal(activeTab(drawWith('bays')), 'bays', 'and the plumbing is not hard-coded to one tab');
+  // A tab id the screen does not have must not blank the view: the shell
+  // and the screen are separately deployable in a service-worker update.
+  assert.equal(activeTab(drawWith('nonsense')), 'bays',
+    'an unknown tab is ignored rather than obeyed');
+  assert.equal(activeTab(drawWith(null)), 'bays', 'and no request changes nothing');
+}
+
 // R51. The field guide has logged sightings since R21 and has never once
 // recorded an OUTCOME. `dex.enemies` is stamped for every unit that took the
 // field — which a unit also does while flattening you — so a player who was
@@ -15111,6 +15295,172 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   for (const e of deferred) {
     assert.ok(sw.includes(`'${e.file}'`),
       `${e.file} is deferred but still precached, or it breaks offline`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// R75 — EVERY BOUND HANDLER FIRES ONCE. This is the gate the walk that found
+// R75's ten small wrongs was itself running by hand, and the one R60 needed:
+// `opOdds` was removed from an import while two call sites remained, and the
+// live `ReferenceError` on the Jobs board went out through a 124-cell render
+// harness and a five-minute suite, because a handler body is dead code to
+// every gate in this file. The renders are exercised constantly here; the
+// bodies of the functions those renders BIND had never been executed once.
+//
+// The trick is a DOM stub that RECORDS rather than one that returns nothing.
+// Every other stub in this file answers `querySelectorAll` with `[]`, so the
+// binding loops iterate an empty list and nothing is ever registered. This
+// one answers from the HTML the screen actually painted: it reads the
+// `data-*` attribute the selector asks about straight out of `innerHTML`, so
+// the handlers fire holding the REAL ids the screen rendered, not invented
+// ones. A handler that looks its own row up in state finds it.
+{
+  const camel = (s) => s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+
+  // A class, so `x instanceof HTMLElement` is true for these and a handler
+  // takes the branch it takes in a browser rather than the else.
+  class StubEl {}
+  const makeEl = (dataset = {}, tag = 'button') => Object.assign(new StubEl(), {
+    tagName: tag.toUpperCase(), dataset, value: '', textContent: '', innerHTML: '',
+    hidden: false, checked: false, disabled: false, files: [],
+    style: {}, classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    addEventListener() {}, removeEventListener() {}, appendChild() {}, removeChild() {},
+    remove() {}, focus() {}, blur() {}, click() {}, scrollIntoView() {},
+    insertAdjacentHTML() {}, setAttribute() {}, getAttribute: () => null,
+    hasAttribute: () => false, closest: () => null, select() {}, setSelectionRange() {},
+    querySelector: () => makeEl(), querySelectorAll: () => [],
+    parentElement: null, offsetParent: null,
+    getBoundingClientRect: () => ({ width: 40, height: 40, top: 0, left: 0, right: 40, bottom: 40 }),
+  });
+
+  const recordingRoot = () => {
+    const bound = [];
+    let html = '';
+    const attrOf = (sel) => {
+      const m = String(sel).match(/\[data-([\w-]+)(?:=["']?([^"'\]]+)["']?)?\]/);
+      return m ? { name: m[1], value: m[2] ?? null } : null;
+    };
+    const collect = (sel) => {
+      const a = attrOf(sel);
+      if (!a) return [];
+      const out = [];
+      for (const m of html.matchAll(new RegExp(`data-${a.name}="([^"]*)"`, 'g'))) {
+        if (a.value !== null && m[1] !== a.value) continue;
+        const el = makeEl({ [camel(a.name)]: m[1] });
+        el.addEventListener = (type, fn) => bound.push({ type, fn, el, sel });
+        out.push(el);
+      }
+      return out;
+    };
+    const host = {
+      get innerHTML() { return html; },
+      set innerHTML(v) { html = String(v); },
+      querySelectorAll: collect,
+      querySelector: (sel) => {
+        const hit = collect(sel)[0];
+        if (hit) return hit;
+        const el = makeEl();
+        el.addEventListener = (type, fn) => bound.push({ type, fn, el, sel });
+        return el;
+      },
+      classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+      addEventListener(type, fn) { bound.push({ type, fn, el: host, sel: 'root' }); },
+      style: {}, dataset: {}, hidden: false, appendChild() {}, remove() {},
+    };
+    return { host, bound };
+  };
+
+  // The handlers reach for a document and a location. Installed for the
+  // length of this gate and put back afterwards, so nothing downstream
+  // inherits a half-real DOM.
+  const saved = { doc: globalThis.document, loc: globalThis.location, el: globalThis.HTMLElement };
+  const overlay = recordingRoot();
+  globalThis.HTMLElement = StubEl;
+  globalThis.location = { reload() {}, search: '', href: '' };
+  globalThis.document = {
+    body: makeEl({}, 'body'),
+    documentElement: makeEl({}, 'html'),
+    activeElement: null,
+    createElement: (t) => makeEl({}, t),
+    querySelector: (sel) => (sel === '#overlay' || sel === '#picker' ? overlay.host : makeEl()),
+    querySelectorAll: () => [],
+    addEventListener() {}, removeEventListener() {}, contains: () => false,
+  };
+
+  try {
+    const now = t0 + 3 * HOUR;
+    const s = { ...newGameState(), seed: 4242, funds: 20000 };
+    s.facility = { theater: 2 };
+    s.lastTickAt = t0;
+    const grades = { cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'prime',
+      cobra_organ: 'standard', bear_hide: 'standard', goat_tail: 'standard' };
+    for (const [pid, g] of Object.entries(grades)) {
+      s.inventory.parts.push({ id: `h-${pid}`, partId: pid, grade: g,
+        donor: { name: 'Donor', species: pid.split('_')[0], stars: 3, extractedAt: t0 } });
+    }
+    const used = new Set();
+    const slots = Object.fromEntries(Object.keys(grades).map((pid) => {
+      const slot = content.parts[pid].slot;
+      let socket = slot; let n = 2;
+      while (used.has(socket)) socket = `${slot}${n++}`;
+      used.add(socket);
+      return [socket, `h-${pid}`];
+    }));
+    const made = spliceChimera(s, 'M', slots, content, t0);
+    assert.ok(made.ok, `handler-gate fixture splices: ${made.msg}`);
+    for (const [pid, g] of [['goat_head', 'standard'], ['bear_organ', 'prime']]) {
+      s.inventory.parts.push({ id: `h-sp-${pid}`, partId: pid, grade: g,
+        donor: { name: 'Spare', species: pid.split('_')[0], stars: 2, extractedAt: t0 } });
+    }
+    s.ranch = { ...s.ranch, stock: [], penCapacity: 8, animalCount: 0, seeded: true };
+    for (const sp of ['goat', 'bear', 'cobra']) s.ranch.stock.push(createAnimal(s, sp, content, t0));
+    s.dex = { parts: Object.keys(content.parts).slice(0, 8),
+      enemies: Object.keys(content.enemies).slice(0, 4),
+      beaten: Object.keys(content.enemies).slice(0, 2), traits: [], variants: [] };
+    s.discoveredCombos = Object.keys(content.combos).slice(0, 3);
+    s.chimeras[0].settleUntil = t0 - 1000;
+    // Every fold open, or the handlers behind them are never bound at all —
+    // the same reason R72's fixture forces them.
+    s.ui = { ...s.ui, collapsed: new Proxy({}, { get: () => false }) };
+
+    const ctx = { state: s, content, now: () => now, save: () => {}, refreshTicker: () => {},
+      pushNews: () => {}, onExtract: () => {}, goto: () => {}, applyTheme: () => {} };
+
+    let totalBound = 0;
+    const failures = [];
+    for (const { screen, fn, file } of shellScreenMap()) {
+      const mod = await import(`../${file}`);
+      const { host, bound } = recordingRoot();
+      try {
+        mod[fn](host, ctx);
+      } catch (err) {
+        failures.push(`${screen}: RENDER threw ${err.constructor.name}: ${err.message}`);
+        continue;
+      }
+      // Snapshot: several handlers re-render the screen, which binds a fresh
+      // set into the SAME array. Iterating it live never terminates.
+      const snapshot = bound.slice();
+      totalBound += snapshot.length;
+      for (const h of snapshot) {
+        const ev = { preventDefault() {}, stopPropagation() {}, key: 'Enter', shiftKey: false,
+          target: h.el, currentTarget: h.el };
+        try {
+          h.fn(ev);
+        } catch (err) {
+          failures.push(`${screen}: ${h.sel} [${h.type}] threw ${err.constructor.name}: ${err.message}`);
+        }
+      }
+    }
+    assert.deepEqual([...new Set(failures)], [], 'every bound handler on every screen fires without throwing');
+    // A floor, so a render that silently stops binding anything cannot pass
+    // this gate by having nothing to fire.
+    assert.ok(totalBound >= 60,
+      `the screens bind a real number of handlers (${totalBound}) — a collapse to nothing would pass vacuously`);
+    console.log(`   handlers: ${totalBound} bound across ${shellScreenMap().length} screens, every one fired`);
+  } finally {
+    globalThis.document = saved.doc;
+    globalThis.location = saved.loc;
+    globalThis.HTMLElement = saved.el;
   }
 }
 

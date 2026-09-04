@@ -1063,19 +1063,69 @@ The queue is a proposal: prune it before starting R63.
   fail before the cache answers. *Done when: the shapes are not fetched
   before the first paint, the three modules above are behind the thing that
   needs them, and the import-graph gate's cap comes down to match.*
-- **R75 — The small wrongs the walk found.** Rename drops `res.msg`; the
-  empty-vault SPLICE IT is disabled with its reason suppressed
-  (`theater-ui.js:164`); Assault is enabled with everyone injured while only
-  Spar reads `canSpar`; "Run a job" lands on the map, not the Jobs tab;
-  Hatch! is enabled with the pens full; an unread job report is overwritten
-  by the next (`campaign.js:233`); the resequencer's pen-full line is pushed
-  **every 30 s** while it waits, so six minutes erase the whole wire
-  (`WIRE_KEEP` is 12); hatchlings and vat children use bare `pick` over 12
-  and 18 names while `pickFresh` exists; `.grad-shake` is infinite and
-  `.poof` ignores `prefers-reduced-motion`; the move sheet binds
-  `{ once: true }`. *Done when: each is fixed and the handler-firing stub the
-  audit used becomes a suite gate, so every bound handler on every screen
-  fires once headlessly.*
+- **R75 — The small wrongs the walk found.** ✅ *Shipped.* All ten fixed,
+  and the handler-firing stub is now a suite gate: **70 handlers across six
+  screens, every one fired** — 70 function bodies that no gate in this repo
+  had ever executed. `SAVE_VERSION` → **37** for one field.
+  - **Rename dropped `res.msg`.** The refusal (an empty or
+    sanitised-to-nothing name) and the confirmation were both computed and
+    both thrown away. `lastMsg = res.msg` — the same banner the Pens and
+    Settings already use for the same call.
+  - **The empty-vault SPLICE IT hid its own reason.** `errors.length &&
+    tokens.length` suppressed the fine print in exactly the state a new
+    player meets first: an empty vault, a disabled button, no explanation.
+    The reason now renders on the same condition that disables the button,
+    so the two cannot disagree — "A head is required. Company policy."
+  - **Only Spar read the predicate — and it was worse than the entry says.**
+    Assault was one of **five** launchers on that screen with no fitness
+    check at all; Defend, Rescue Raid, the rival Challenge and the
+    Gauntlet's Answer were the other four, and the two timed ones are the
+    ones that hurt: a player watching a counter-offensive countdown pressed
+    Defend and got bounced to a briefing where every row was greyed out.
+    All five now read one exported `fitToFight(state, now)` in
+    `battle/engine.js`, beside the injury rule it asks about — **not**
+    `canSpar`'s verdict, which would gate an assault on the ring's
+    bookkeeping. The map, the agenda and the ring can no longer answer "can
+    I fight?" three ways for one save. Disabled with the reason in the
+    LABEL, per the rule `style.css` already records: this ships as a TWA and
+    a `title` tooltip is invisible to every player who hits it.
+  - **"Run a job" named a screen when it meant a tab.** The War Room is lazy
+    since R74, so the shell cannot reach into `warTab`: the request is
+    parked on `ctx` and collected by the screen on its first paint, whenever
+    that is. Browser QA caught what the static gate could not — `agenda()`
+    rebuilds each entry from a named field list, so the new `subtab` was
+    declared on the entry and dropped on the way out. The gate now asserts
+    the rendered shape, not the constant.
+  - **Hatch! was enabled with the pens full.** The button now reads
+    `Pens full` and refuses, rather than spending the egg into nowhere.
+  - **An unread job report was overwritten by the next.** Two jobs landing
+    in one tick, or thirty seconds apart, evicted the first card before
+    anyone read it. An unread report is kept and the newcomer goes to the
+    wire.
+  - **The pen-full line was pushed every 30 s.** `WIRE_KEEP` is 12, so six
+    minutes of a full pen flushed every other thing that had happened out of
+    the feed. Said once per run now (`penFullSaid`, the one field behind the
+    `SAVE_VERSION` bump — declared by a migration rather than appearing by
+    accident). Measured: 12 ticks, 1 line.
+  - **Hatchlings and vat children used bare `pick`** over 12 and 18 names on
+    a ranch that holds twenty. Collisions were not a risk, they were the
+    expected case. Both use `pickFresh` now, like the stock and the chimeras
+    already did.
+  - **`.grad-shake` was `infinite`** — bounded in fact only by a
+    `setTimeout` in another file — and the reduced-motion block covered
+    neither it, `.grad-flash` nor `.poof`. Nine iterations (1.26 s) inside
+    the 1155 ms the element exists, and all eleven animating selectors are
+    now covered; zero `infinite` declarations remain.
+  - **The move sheet bound `{ once: true }`**, so the backdrop closed the
+    sheet exactly once per render. A named module-level handler, removed and
+    re-added, so it survives every re-render.
+  - **The gate.** A recording DOM stub answers `querySelectorAll` from the
+    HTML the screen actually painted — every other stub in the suite returns
+    `[]`, which is why the binding loops had always iterated nothing. Each
+    screen renders, every bound handler fires once, and a floor (60) stops a
+    render that silently stops binding from passing vacuously. Proven on a
+    pristine worktree: the two new War Room gates fail 6/6 there and pass
+    6/6 here.
 - **R76 — The gate that would have caught R60.** `opOdds` was removed from
   an import in R60 while two call sites remained: a live `ReferenceError`
   on the Jobs board, through a 124-cell render-identity harness and a

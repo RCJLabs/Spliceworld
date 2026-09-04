@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 36;
+export const SAVE_VERSION = 37;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -467,6 +467,16 @@ const migrations = {
   // computed from the table as it stood in v35 against the nodes this save
   // actually holds, so nobody who already had dragonfly, gorilla, cobra or
   // otter loses it for being unlocked somewhere else now.
+  // R75 — `resequencer.penFullSaid` marks that a waiting run has already
+  // announced its full pen, so the line is said once instead of on every
+  // tick. Old saves carry a run with no flag; leaving it unset is correct
+  // (they get the line once more, then never again), and the migration is
+  // here so the field is DECLARED rather than appearing by accident — the
+  // schema is never allowed to drift without a version behind it.
+  37: (save) => {
+    if (save.resequencer) save.resequencer.penFullSaid ??= false;
+    return save;
+  },
   36: (save) => {
     const V35_UNLOCKS = {
       checkpoint: ['eagle', 'bat', 'dragonfly'],

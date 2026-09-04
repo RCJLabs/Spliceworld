@@ -1,5 +1,128 @@
 # PROGRESS
 
+## Session 98 — R75: the small wrongs the walk found ✅
+
+**Acceptance criterion:** each of the ten is fixed, and the handler-firing
+stub the audit was running by hand is now a suite gate — **both pass**.
+`SAVE_VERSION` **36 → 37** for one field (`resequencer.penFullSaid`), with a
+migration. `sw.js` cache → `v37-r75`.
+
+| gate | result |
+|---|---|
+| `tools/smoke.js` | ✓ — **70 handlers across 6 screens, every one fired** |
+| `npm run a11y` | ✓ — 46 controls at 380px across 8 views, all clear 40px |
+| `tools/sim.js` | ✓ — 6324 battles in 3311 ms, no degenerate builds |
+| browser QA | ✓ — fresh save, v36→v37 migrated save, 0 console errors |
+
+### The gate first, because it is the one that outlives the ten
+
+Every other stub in the suite answers `querySelectorAll` with `[]`. That is
+why every binding loop in the codebase had always iterated an empty list:
+the renders are exercised constantly here, and the bodies of the functions
+those renders *bind* had **never been executed once**. `opOdds` (R60) went
+out that way — removed from an import with two call sites live, a
+`ReferenceError` on the Jobs board, through a 124-cell render harness and a
+five-minute suite.
+
+The stub records instead. It answers a `data-*` selector by parsing that
+attribute out of the HTML the screen actually painted, so handlers fire with
+real ids on real elements; `StubEl` is a class assigned to
+`globalThis.HTMLElement`, so `instanceof` checks inside handlers are true.
+Then every screen renders, every bound handler fires once, and a floor of 60
+stops a render that silently stops binding from passing vacuously.
+
+Two things it taught me while being built, both mine:
+
+- **It hung.** Handlers re-render, and a re-render binds a fresh set into the
+  *same* array being iterated. `bound.slice()` before firing.
+- **Stub gaps read as product bugs.** `input.select is not a function` and a
+  bare `ReferenceError: HTMLElement is not defined` both looked like findings
+  for about a minute each. They were holes in my stub.
+
+### The five launchers, not the one
+
+The entry names Assault. Assault was one of **five** ways to start a fight
+from the War Room with no fitness check at all — Defend, Rescue Raid, the
+rival Challenge and the Gauntlet's Answer were the others. The two timed
+ones are the ones that cost something: a player watching a counter-offensive
+countdown pressed **Defend** and landed on a briefing where every roster row
+was greyed out and Launch was disabled, with the countdown still running and
+no reason given anywhere.
+
+All five read one predicate now — `fitToFight(state, now)`, exported from
+`battle/engine.js` beside the injury rule it asks about. Deliberately **not**
+`sparGate.fit`, which was where I had it first: that gates an assault on the
+sparring ring's bookkeeping, and the next change to `canSpar`'s shape would
+quietly decide who may take a node. The agenda and the ring dropped their
+private copies of the same filter, so the map, the Right Now panel and the
+Pens cannot answer "can I fight?" three ways for one save.
+
+The reason goes in the **label**, not a `title`. This ships as a TWA; there
+is no hover, so a tooltip is invisible to exactly the players who hit this.
+`style.css` already recorded that rule and R73 raised disabled opacity to
+0.6 so the label stays readable.
+
+### Browser QA caught what the static gate could not
+
+The subtab plumbing (`ctx.goto(name, subtab)` → parked in the shell →
+`ctx.takeSubtab()` on the screen's first paint, because R74 made the War
+Room lazy and the shell can no longer reach `warTab`) passed three static
+assertions and did nothing in a browser. `agenda()` rebuilds every entry
+from a **named field list** — `{ id, kind, screen, label, hint }` — so
+`subtab` was declared on the entry and dropped on the way out. The gate now
+asserts the shape the Ranch actually renders, not the constant it comes
+from.
+
+### Proven on a pristine worktree
+
+The two new War Room gates fail **6/6** on `HEAD` and pass **6/6** on the
+branch. Worth recording that one of the six fails there by being *absent*:
+without the subtab hook the gate cannot reach the rival labs tab at all,
+which is a fair description of the player's problem too.
+
+### The other seven, briefly
+
+- **Rename dropped `res.msg`** — both the refusal and the confirmation were
+  computed and discarded. One line: `lastMsg = res.msg`.
+- **Empty-vault SPLICE IT hid its reason** — `errors.length && tokens.length`
+  suppressed the fine print in exactly the state a new player meets first.
+  Now on the same condition that disables the button. Reads: *"A head is
+  required. Company policy."*
+- **Hatch! with the pens full** — the button says `Pens full` and refuses.
+- **An unread job report was overwritten** by one landing thirty seconds
+  later. Unread is kept; the newcomer goes to the wire.
+- **The pen-full line every 30 s** — `WIRE_KEEP` is 12, so six minutes of a
+  full pen erased everything else that had happened. Said once per run.
+  Measured: 12 ticks, 1 line. This is the field behind the version bump, and
+  the migration **declares** it rather than letting it appear by accident.
+- **Bare `pick` over 12 and 18 names** on a ranch that holds twenty —
+  collisions were the expected case, not a risk. `pickFresh`, like
+  everything else that names a creature.
+- **`.grad-shake` was `infinite`** (bounded only by a `setTimeout` in another
+  file) and reduced-motion covered neither it, `.grad-flash` nor `.poof`.
+  Nine iterations = 1.26 s inside the 1155 ms the element exists; all eleven
+  animating selectors are covered; zero `infinite` declarations left.
+- **The move sheet bound `{ once: true }`**, so the backdrop closed it
+  exactly once per render. Named module-level handler, removed then re-added.
+
+### Known issues
+
+- Subtabs mark the live tab with `is-on` and no `aria-current` — the main
+  nav got one in R73, the sub-nav did not. Not in this milestone's scope;
+  worth a line in a future a11y pass.
+- `campaign/ui.js` keeps `warTab` as module state, so the parked subtab is
+  cleared on any navigation that does not ask for one. Correct, but it means
+  a request aimed at a screen you leave before it finishes loading is
+  dropped rather than queued. That is the behaviour I want; noting it so the
+  next reader does not treat it as a bug.
+
+### Next session's first task
+
+R76 — the gate that would have caught R60: a static free-identifier pass
+over every module. Half of it is already paid for — the handler-firing gate
+lands the runtime half; R76 adds the static half that finds an unbound name
+without needing a fixture to reach it.
+
 ## Session 97 — R74: the briefing runs 64–160 battles per checkbox ✅
 
 **Acceptance criterion:** `diagnose` reuses the computed forecast and runs

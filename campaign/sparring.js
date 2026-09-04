@@ -21,7 +21,7 @@
 import { rngStream, pick } from '../util/rng.js';
 import { regionList } from './map.js';
 import { trainingTuning } from '../battle/veterancy.js';
-import { isInjured } from '../battle/engine.js';
+import { fitToFight } from '../battle/engine.js';
 
 const MINUTE = 60000;
 
@@ -85,7 +85,7 @@ export function sparReady(state, now, content) {
 export function canSpar(state, content, now) {
   const charges = sparCharges(state, now, content);
   const partners = sparPartners(state, content);
-  const fit = (state.chimeras ?? []).filter((c) => !isInjured(c, now));
+  const fit = fitToFight(state, now);
   const reason = !partners.length
     ? 'no-garrison'
     : !fit.length

@@ -39,11 +39,11 @@ import { activeVat, vatPlan } from '../splice/chaos.js';
 import { operationList, opReady, activeOps, laneFree } from '../campaign/operations.js';
 import { reachableEncounterIds } from '../campaign/map.js';
 import { contestRemainingMs } from '../campaign/contest.js';
-import { isInjured } from '../battle/engine.js';
+import { isInjured, fitToFight } from '../battle/engine.js';
 import { sparCharges, canSpar } from '../campaign/sparring.js';
 
 const HOUR = 3600000;
-const fit = (state, now) => state.chimeras.filter((c) => !isInjured(c, now));
+const fit = fitToFight;
 
 // Every entry answers one question: is there a click here right now? Order is
 // the order the player should think about them in — work before spending.
@@ -135,7 +135,7 @@ export const AGENDA = [
       (state.campaign.captives ?? []).some((c) => c.deadline > now) && fit(state, now).length > 0,
   },
   {
-    id: 'job', kind: 'campaign', screen: 'battle', label: 'Run a job',
+    id: 'job', kind: 'campaign', screen: 'battle', subtab: 'jobs', label: 'Run a job',
     hint: 'Money and livestock without winning a fight. Costs heat, not creatures.',
     // Three lanes (see operations.js): a creature can be carried somewhere,
     // you can go yourself, and paperwork needs nobody. Rule 1 — something is
@@ -191,8 +191,12 @@ export const AGENDA = [
 export function agenda(state, content, now) {
   return AGENDA.filter((item) => {
     try { return !!item.ready(state, content, now); } catch { return false; }
-  }).map(({ id, kind, screen, label, hint }) => ({
-    id, kind, screen, label,
+  }).map(({ id, kind, screen, subtab, label, hint }) => ({
+    // R75: `subtab` travels with the entry. An agenda row names a
+    // DESTINATION, and on the two screens that have sub-navigation the
+    // screen alone is only half of one — "Run a job" landed on the map and
+    // left the player to find the Jobs tab themselves.
+    id, kind, screen, subtab, label,
     // R48: a hint may be a function of the save, because the entry that
     // needed adding is one whose whole value is a NUMBER — "3 charges in
     // the ring" is a reason to go, "you can spar" is not. Strings pass

@@ -260,10 +260,10 @@ export function renderRanchScreen(root, ctx) {
       if (!items.length) return '';
       if (kind === 'spend') {
         return `<p class="agenda-head">${heading}</p><div class="agenda-chips">` + items.map((i) => `
-          <button type="button" class="agenda-chip" data-goto="${i.screen}" title="${i.hint}">${i.label}</button>`).join('') + '</div>';
+          <button type="button" class="agenda-chip" data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''} title="${i.hint}">${i.label}</button>`).join('') + '</div>';
       }
       return `<p class="agenda-head">${heading}</p>` + items.map((i) => `
-        <button type="button" class="agenda-row" data-goto="${i.screen}">
+        <button type="button" class="agenda-row" data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''}>
           <span class="agenda-label">${i.label}</span>
           <span class="fine-print">${i.hint}</span>
         </button>`).join('');
@@ -415,9 +415,14 @@ export function renderRanchScreen(root, ctx) {
   });
 
   // Incubator: eggs on real-world timers, hatched by hand.
+  // R75 — `hatchEgg` already refuses a hatch into full pens and says why, so
+  // nothing was ever lost; the button just did not know. An enabled control
+  // that answers a tap with a complaint is the shape R49 took off the map's
+  // spar button — the predicate the action reads belongs on the control too.
+  const pensFull = state.ranch.stock.length >= state.ranch.penCapacity;
   const eggCards = state.ranch.eggs.map((egg) => {
     const species = content.species[egg.species];
-    const ready = t >= egg.hatchAt;
+    const ready = t >= egg.hatchAt && !pensFull;
     // The egg shows its BASE stock: a variant is a surprise you earn at the
     // moment of hatching, not something the incubator spoils.
     const shown = content.species[species.variantOf ?? species.id];
@@ -430,7 +435,11 @@ export function renderRanchScreen(root, ctx) {
             egg.mutationNote || egg.variantNote ? ' · the egg vibrates suspiciously' : ''
           }</span>
         </div>
-        <button type="button" data-act="hatch" data-egg="${egg.id}" ${ready ? '' : 'disabled'}>${ready ? 'Hatch!' : fmtDuration(egg.hatchAt - t)}</button>
+        <button type="button" data-act="hatch" data-egg="${egg.id}" ${ready ? '' : 'disabled'} title="${
+          t < egg.hatchAt ? 'Still incubating.' : pensFull ? 'The pens are full — free one first.' : 'Hatch it'
+        }">${
+          t < egg.hatchAt ? fmtDuration(egg.hatchAt - t) : pensFull ? 'Pens full' : 'Hatch!'
+        }</button>
       </div>`;
   }).join('');
   const incubator = `
@@ -558,6 +567,11 @@ export function renderRanchScreen(root, ctx) {
         onSubmit: (value) => {
           const res = renameCreature(ctx.state.ranch.stock, btn.dataset.rename, value);
           if (res.ok) ctx.save();
+          // R75 — `renameCreature` refuses a blank or all-punctuation name and
+          // says why, and this threw the sentence away: the prompt closed, the
+          // name was unchanged, and nothing on the screen accounted for it.
+          // The Pens rename already did this; the Ranch one did not.
+          lastMsg = res.msg;
           again();
         },
       });
@@ -566,7 +580,7 @@ export function renderRanchScreen(root, ctx) {
   bindFieldNote(root, ctx, again);
   bindFolds(root, ctx, again);
   root.querySelectorAll('button[data-goto]').forEach((btn) => {
-    btn.addEventListener('click', () => ctx.goto?.(btn.dataset.goto));
+    btn.addEventListener('click', () => ctx.goto?.(btn.dataset.goto, btn.dataset.subtab));
   });
 
   bindPickers(root, {
