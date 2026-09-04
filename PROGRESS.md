@@ -1,5 +1,110 @@
 # PROGRESS
 
+## Session 100 — R78: a month lost unseen on one seed ✅
+
+**Acceptance criterion:** seed 5150's away walk records the same world
+movement as its daily walk and loses no node unseen, the pinned list is
+empty, and the gate asserts it stays empty — **all four pass**.
+`SAVE_VERSION` unchanged (**37**); `sw.js` cache → `v37-r78`, because
+`campaign/contest.js` is a file the browser downloads.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ — `frozen` is `[]`, and 5150 runs every assertion it used to skip |
+| `npm run battery` | ✓ — **21 breaks, 21 caught** (two new, aimed at this fix) |
+| `npm run scopecheck` · `npm run handlers` | ✓ |
+| `npm run a11y` · `npm run sim` · browser QA | ✓ |
+
+### One seed, and the reason it was only one
+
+```
+ 5150  left: nodes 7 contested 1 count 7  →  back: nodes 6 contested 0 count 7   (away 0, daily 25)
+```
+
+Every other seed in the sample leaves with **`contested: 0`**. 5150 is the
+only one that closes the app with a convoy already at the gate — and that is
+the whole defect, because an arrival needs a free slot and `maxConcurrent`
+is **1**.
+
+`tickContests` replayed the gap in two passes: every arrival, then every
+expiry. The one open contest held the only slot from the first instant of the
+month to the last, so the arrival loop's guard was false on every iteration
+and **nothing was replayed at all**. The expiry pass then ran, took the node,
+and called `scheduleNext(state, content, now)` — putting the next convoy
+fifteen hours after the player was already back.
+
+So "a month away" was: no convoys, no wire lines, no income lost to a
+suspended node, and one node gone. Thirty days in which the world did not
+move at all.
+
+### The fix is an ordering, not a number
+
+The replay is now a single loop over **whichever event is due first** —
+an expiry or an arrival — until nothing is due before `now`. Two details are
+load-bearing:
+
+- **A contest expires at its own deadline, not at `now`.** That is what puts
+  the convoy after it *inside* the gap instead of after the player's return.
+  Break 21 aims exactly here and goes red.
+- **`armed` is re-read every iteration**, because a node falling mid-replay
+  can take the empire below `minHeld`, and the coalition should stop coming
+  for someone who no longer holds enough to be worth the trip.
+
+After:
+
+```
+ 5150  left: nodes 7 contested 1 count 7  →  back: nodes 6 contested 1 count 32   (away 25, daily 25)
+```
+
+**Every other seed is bit-identical** to its pre-fix numbers, which is the
+result I wanted: the fix touches only the path where a contest is open across
+the gap.
+
+### The node it loses is still lost, and that is the design
+
+5150 comes back 7 → 6. That node was contested **before** the app closed —
+the window was offered and ignored — so losing it is R9 working, not R9
+failing. The gate has always said so precisely
+(`back.nodes >= left.nodes - left.contested`), and the seed now clears it at
+6 ≥ 6.
+
+Worth recording: **that assertion had never once run on this seed.** The
+frozen-seed exemption `continue`d before reaching any of the comparison
+assertions, so the one seed in the sample that actually loses a node was the
+one seed exempt from the check about losing nodes. An exemption that skips
+the assertions is not a narrower gate, it is a hole with a name on it.
+
+### Pinned twice, on purpose
+
+The walk found this; the walk is a bad place to keep it. The empire shape
+that reaches this path is rare, and a forty-day chaotic simulation could stop
+producing it for reasons that have nothing to do with contests — at which
+point the gate would go on passing and mean nothing. So there is also a unit
+test: open a contest, leave for thirty days, and assert the month is replayed
+(≥ 10 convoys, all reported as came-and-went, every one of them rolling after
+the first had left and finishing before the player returned).
+
+The battery got a fourth gate for it — a `node -e` that runs that scenario in
+about a second, so a break can be aimed at contest logic without waiting five
+minutes for balance sims.
+
+### One break missed first time, and why that mattered
+
+Break 20 was originally "make expiry unconditionally first". It **missed** —
+correctly, because that is not the bug. Expiry-first is fine; the bug was
+expiries running after *all* arrivals, so the slot could never be freed
+mid-replay. Re-aimed at the thing that actually breaks it (`expiring` forced
+to null inside the loop) it goes red at once. A break that misses is a break
+aimed at the wrong sentence, and rewriting it is how the sentence gets
+checked.
+
+### Next session's first task
+
+R79 — the same retired-id hole R72 fixed, one level out: a save holds a
+species id on every animal and a frame id on every chimera, both read bare,
+and `physiology.js:50` puts it on the battle and sim paths rather than just a
+screen.
+
 ## Session 99 — R76: the gate that would have caught R60 ✅
 
 **Acceptance criterion:** a free identifier in any module fails the build,

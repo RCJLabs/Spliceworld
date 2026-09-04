@@ -186,11 +186,55 @@ export function tickContests(state, content, now, gen) {
     cam.nextContestAt = now + Math.round(t.firstDelayHours * HOUR);
   }
   const missed = [];
-  const armed = gen >= t.startsAtGen && state.campaign.heldNodes.length >= t.minHeld;
   const windowMs = Math.round(t.windowHours * HOUR);
+
+  // R78 — ONE TIMELINE, IN ORDER. This used to be two passes: replay every
+  // arrival, then close every expired contest. Both halves were right and
+  // the ORDER was wrong, because an arrival needs a free slot
+  // (`maxConcurrent` is 1) and the expiry that frees it ran afterwards. So a
+  // player who closed the app with a convoy at the gate had the whole gap
+  // skipped: the one open contest held the only slot from the first
+  // instant to the last, no convoy was replayed, and the expiry pass then
+  // took the node and scheduled the next arrival from `now` — after they
+  // were already back.
+  //
+  // Measured on `campaignWalk` seed 5150, thirty days away from day 10:
+  // ZERO contest events across the month and a node gone (7 → 6), against
+  // 25 or 26 events for every other seed in the sample. It needed a
+  // specific empire shape to fall into — leaving with `contested.length`
+  // already at the cap — which is why fifteen other seeds never showed it.
+  //
+  // The replay is now a single loop over the earliest thing that has not
+  // happened yet, whichever kind it is. Two consequences worth stating,
+  // because both are load-bearing rather than incidental:
+  //   * a contest expires AT ITS OWN DEADLINE, not at `now`, so the convoy
+  //     that follows it is scheduled from inside the gap and arrives inside
+  //     the gap — the world keeps its own time while nobody is looking;
+  //   * `armed` is re-read every iteration, because a node falling during
+  //     the replay can take the empire below `minHeld` and the coalition
+  //     should stop coming for someone who no longer holds enough.
+  const armedNow = () => gen >= t.startsAtGen && cam.heldNodes.length >= t.minHeld;
   let guard = 0;
-  while (armed && (cam.contested.length ?? 0) < t.maxConcurrent
-    && cam.nextContestAt != null && now >= cam.nextContestAt && guard++ < 400) {
+  while (guard++ < 400) {
+    // The two things that can be due: the open contest's window running
+    // out, and the next convoy rolling up.
+    const expiring = cam.contested.find((c) => c.deadline <= now) ?? null;
+    const arrivalDue = armedNow()
+      && cam.nextContestAt != null
+      && now >= cam.nextContestAt
+      && (cam.contested.length ?? 0) < t.maxConcurrent;
+
+    if (!expiring && !arrivalDue) break;
+    // Earliest first. An expiry and an arrival at the same instant resolve
+    // expiry-first, which is the only order that can free the slot for it.
+    if (expiring && (!arrivalDue || expiring.deadline <= cam.nextContestAt)) {
+      cam.contested = cam.contested.filter((c) => c !== expiring);
+      cam.heldNodes = cam.heldNodes.filter((id) => id !== expiring.nodeId);
+      scheduleNext(state, content, expiring.deadline);
+      news.push(line(t.news.expired, nameOf(expiring.nodeId)));
+      continue;
+    }
+
     const arrivedAt = cam.nextContestAt;
     const node = chooseNode(state, content);
     if (!node) break;
@@ -217,16 +261,6 @@ export function tickContests(state, content, now, gen) {
   if (missed.length && t.news.missed) {
     const nodeDays = missed.reduce((n, m) => n + (m.leftAt - m.arrivedAt), 0) / (24 * HOUR);
     news.push((t.news.missed ?? '').replace('{count}', String(missed.length)).replace('{days}', String(Math.round(nodeDays))));
-  }
-
-  // Close anything whose window ran out. A contest opened on this very
-  // tick cannot expire on it, because its deadline was set from `now`.
-  for (const contest of [...cam.contested]) {
-    if (now < contest.deadline) continue;
-    cam.contested = cam.contested.filter((c) => c !== contest);
-    cam.heldNodes = cam.heldNodes.filter((id) => id !== contest.nodeId);
-    scheduleNext(state, content, now);
-    news.push(line(t.news.expired, nameOf(contest.nodeId)));
   }
 
   return { news, missed };

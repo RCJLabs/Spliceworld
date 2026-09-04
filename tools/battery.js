@@ -51,6 +51,41 @@ const TWICE = ['node', '-e', `
 
 const VERBOSE = process.argv.includes('--verbose');
 
+// The R78 replay, at the unit level. A month away with a convoy already at
+// the gate must still replay the month — a chaotic forty-day walk is where
+// this was FOUND, but it is a bad place to keep it honest, and far too slow
+// to aim a break at.
+const CONTEST = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { tickContests } = await import('./campaign/contest.js');
+  const { newGameState } = await import('./save/save.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
+    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
+    'resequencer','training','gauntlet','news'];
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const HOUR = 3600000, t0 = 1700000000000;
+  const region = Object.values(content.regions)[0];
+  const s = { ...newGameState(), seed: 5 };
+  s.campaign.heldNodes = region.nodes.map((n) => n.id);
+  s.campaign.notoriety = 9999;
+  tickContests(s, content, t0, 2);
+  tickContests(s, content, t0 + 10 * HOUR, 2);
+  const open = s.campaign.contested[0];
+  if (!open) { console.error('contest ✗  the fixture never opened a contest'); process.exit(1); }
+  const count = s.campaign.contestCount;
+  const back = t0 + (10 + 30 * 24) * HOUR;
+  const res = tickContests(s, content, back, 2);
+  const replayed = s.campaign.contestCount - count;
+  const ordered = res.missed.every((m) => m.arrivedAt >= open.deadline && m.leftAt <= back);
+  if (replayed < 10 || res.missed.length < 10 || !ordered) {
+    console.error('contest ✗  replayed ' + replayed + ', missed ' + res.missed.length + ', ordered ' + ordered);
+    process.exit(1);
+  }
+  console.log('contest ✓  ' + replayed + ' convoys replayed past the one at the gate');
+`];
+
 const BREAKS = [
   // --- gate: scopecheck (a free identifier fails the build) ----------------
   {
@@ -172,6 +207,18 @@ const BREAKS = [
     anchor: 'const mod = await import(`../${surface.file}?run=${runNonce++}`);',
     to: 'const mod = await import(`../${surface.file}`);',
   },
+  {
+    n: 20, gate: CONTEST, name: 'an expiry can no longer free the slot during the replay (the R78 bug itself)',
+    file: 'campaign/contest.js',
+    anchor: '    const expiring = cam.contested.find((c) => c.deadline <= now) ?? null;',
+    to: '    const expiring = null;',
+  },
+  {
+    n: 21, gate: CONTEST, name: 'a contest expires at `now` rather than at its own deadline',
+    file: 'campaign/contest.js',
+    anchor: '      scheduleNext(state, content, expiring.deadline);',
+    to: '      scheduleNext(state, content, now);',
+  },
 ];
 
 const pristine = {};
@@ -192,9 +239,11 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST]) {
   const r = run(gate);
-  const label = gate[1] === '-e' ? 'walkSurfaces twice in one process' : gate.join(' ');
+  const label = gate === TWICE ? 'walkSurfaces twice in one process'
+    : gate === CONTEST ? 'a month away with a convoy at the gate'
+      : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }

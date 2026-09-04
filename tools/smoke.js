@@ -3957,6 +3957,54 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
     assert.ok(status === 'available' || status === 'locked', `a lost node returns to the map (${status})`);
   }
 
+  // R78 — A CONVOY AT THE GATE MUST NOT FREEZE THE MONTH.
+  //
+  // The whole replay used to be two passes: every arrival, then every
+  // expiry. An arrival needs a free slot and `maxConcurrent` is 1, so a
+  // player who closed the app with a contest already open had the entire
+  // gap skipped — the open one held the only slot from the first instant to
+  // the last, nothing was replayed, and the expiry pass then took the node
+  // and scheduled the next convoy from `now`, after they were back.
+  //
+  // Found on `campaignWalk` seed 5150 (zero events across thirty days, a
+  // node gone, against 25 for every other seed) and pinned here at the unit
+  // level as well, because a chaotic forty-day walk is a bad place to keep
+  // a mechanism honest: the empire shape that reaches this path is rare,
+  // and the walk could stop producing it for reasons that have nothing to
+  // do with contests.
+  {
+    const s = empire();
+    tickContests(s, content, t0, 2);
+    tickContests(s, content, t0 + 10 * HOUR, 2);
+    const open = s.campaign.contested[0];
+    assert.ok(open, 'a contest is open when the app closes');
+    const heldAtLeave = s.campaign.heldNodes.length;
+    const countAtLeave = s.campaign.contestCount;
+
+    // Thirty days away, with that one still standing at the gate.
+    const back = t0 + (10 + 30 * 24) * HOUR;
+    const res = tickContests(s, content, back, 2);
+
+    assert.ok(!s.campaign.heldNodes.includes(open.nodeId),
+      'the convoy that was already at the gate takes its node — the window was offered and ignored');
+    assert.equal(s.campaign.heldNodes.length, heldAtLeave - 1,
+      'and exactly that one, not a second taken unseen');
+    // THE CRITERION, at the unit level: the month is replayed rather than
+    // skipped. Thirty days at a 15h cooldown plus a 13.5h window is dozens
+    // of convoys; the floor is deliberately far below that, because the
+    // assertion is "the world moved", not a tuning value.
+    assert.ok(s.campaign.contestCount - countAtLeave >= 10,
+      `the month is replayed, not skipped (${s.campaign.contestCount - countAtLeave} convoys after the first expired)`);
+    assert.ok(res.missed.length >= 10,
+      `and they are reported as came-and-went, not silently dropped (${res.missed.length})`);
+    for (const m of res.missed) {
+      assert.ok(m.arrivedAt >= open.deadline,
+        'every replayed convoy rolled AFTER the one at the gate left — the timeline is in order');
+      assert.ok(m.leftAt <= back, 'and each finished waiting before the player got back');
+    }
+    assert.ok(s.campaign.contested.length <= ct.maxConcurrent, 'the cap still holds on return');
+  }
+
   // The defence is the node's OWN encounter, escalated — which is why a
   // new region costs zero new encounter data.
   {
@@ -13783,16 +13831,17 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       const left = gone.snapshots.left, back = gone.snapshots[END], d60 = daily.snapshots[END], d30 = daily.snapshots[FROM];
       if (!left || !back || !d60 || !d30) { rows.push(`${seed}: finished the map inside the window, skipped`); continue; }
       // R68 widened this gate from four seeds to sixteen so its aggregate
-      // would mean something, and the wider sample turned up a real defect
-      // that is NOT this phase's: on seed 5150 the away walk records ZERO
-      // world movement across the whole month and comes back a node down —
-      // 7 → 6 with no contest counted — where every other seed records 25
-      // or 26 and holds its nodes. A node lost unseen is the exact thing
-      // R64 promised could not happen, so it is named here and queued in
-      // §9.4 rather than papered over. The assertion below is that it is
-      // the ONLY seed with the symptom: a second one fails this gate.
+      // would mean something, and the wider sample turned up a real defect:
+      // on seed 5150 the away walk recorded ZERO world movement across the
+      // whole month and came back a node down — 7 → 6 with no contest
+      // counted — where every other seed recorded 25 or 26. R78 found why
+      // and fixed it (`campaign/contest.js`: arrivals and expiries were two
+      // passes, and an open contest held the only slot for the entire gap
+      // because the expiry that frees it ran second). The list is EMPTY
+      // now, and it stays a list rather than becoming a boolean so the next
+      // seed to freeze is named rather than merely counted.
       const froze = back.contestCount - left.contestCount === 0;
-      if (froze) { frozen.push(String(seed)); rows.push(`${seed}: the world froze while away — known R64 defect, see §9.4`); continue; }
+      if (froze) { frozen.push(String(seed)); rows.push(`${seed}: the world froze while away — R78 regressed`); continue; }
       const fullPay = (left.incomeRate + TUNING.stipendPerDay - left.upkeepRate) * AWAY;
       const banked = back.funds - left.funds;
       // An empire already underwater at the moment of leaving cannot measure
@@ -13851,9 +13900,9 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       assert.ok(back.contested <= 1, `seed ${seed}: at most one convoy is waiting on return (${back.contested})`);
     }
     console.log('   ' + rows.join('\n   '));
-    assert.deepEqual(frozen, ['5150'],
-      `only the one known seed loses its month unseen (${frozen.join(', ') || 'none'}) — `
-        + 'a new one here is a fresh R64 defect, not a gate to widen');
+    assert.deepEqual(frozen, [],
+      `no seed loses its month unseen (${frozen.join(', ') || 'none'}) — `
+        + 'R78 emptied this list; a name back in it is a regression, not a gate to widen');
     assert.ok(compared >= 6,
       `enough seeds stayed mid-campaign for the window to carry an aggregate (${compared}) — ${rows.join(' · ')}`);
     // THE DESIGN CLAIM, stated where it is stable: measured 85% aggregate
