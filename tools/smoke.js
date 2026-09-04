@@ -14329,7 +14329,9 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // Keyed on the CREATURE: the fix is not "add the battle number", which
     // would still give one creature the same injury every time it is the
     // only casualty.
-    const src = readFileSync(join(root, 'battle/engine.js'), 'utf8');
+    // R81 moved `finishBattle` to battle/statblock.js with the injuries it
+    // writes; the rule it is checked against is unchanged.
+    const src = readFileSync(join(root, 'battle/statblock.js'), 'utf8');
     assert.ok(/rngStream\(state\.seed, `injury:\$\{chimera\.id\}`/.test(src), 'the stream names the creature');
     assert.ok(!/'injury', state\.warRecord/.test(src), 'and not the war record');
   }
