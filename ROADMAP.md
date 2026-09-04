@@ -878,42 +878,58 @@ The queue is a proposal: prune it before starting R63.
   prints the hole instead of falling into it is still broken), and holds a
   static rule that no module may name the three shipped classes as a
   literal set again.
-- **R79 — The same hole, for retired species and frames.** R72 fixed the
-  ids its criterion named — parts, grades, classes — and its adversarial
-  sweep found the identical shape one level out, unfixed because it is a
-  different and much larger surface. A save holds a species id on every
-  ranch animal and a frame id on every chimera, and both are read bare:
-  `ranch.js:100`, `:110`, `:154`, `:179`, `:311`, `:351` all do
-  `content.species[animal.species].<field>`; `physiology.js:50` reads
-  `frame.phys.hp` with no check that the frame still exists, which puts it
-  on the battle and sim paths as well as the screen; `pens-ui.js:111`/`:228`
-  and `ranch/ui.js:345`/`:423`/`:503` throw on the card, as does
-  `vault-ui.js:61` on a Resequencer run whose species is gone. The same
-  sweep confirmed the sibling case for WORLD ids, which a save also holds:
-  `rivals.js:363` (`content.rivals[rivalId]`, unguarded on every branch),
-  `battle/engine.js:916`/`:1016`/`:1027`/`:1107` (enemy ids, one of them
-  reached through a KO'd foe's `transformInto`, which survives a reload),
-  and `sim.js:222`/`:287`/`:695` on a retired frame or encounter. A
-  completeness pass over all 58 modules added the ones a line-by-line read
-  keeps missing: **`physiology.js:124`** destructures
-  `content.species[sp].thermal` in the SAME function whose frame read is
-  already known — and fixing the frame only lets execution reach it;
-  `physiology.js:134`/`:172`/`:176` and `dossier.js:152` are the same
-  cross-reference from a part to its species; `theater-ui.js:91` and
-  `ranch/ui.js:354` throw inside a SORT COMPARATOR, which is a shape no
-  optional chain elsewhere covers; `ranch/ui.js:73` reads
-  `content.species[species.variantOf].name`; `breeding.js:209` takes a
-  species id off a save-held parent. And **`gauntlet.js:59`** builds waves
-  from `content.gauntlet` rather than `content.encounters`, so the
-  data-integrity gates at `smoke.js:479`/`:6640` — which only ever walk
-  `content.encounters` — do not cover it: retire an enemy named solely by a
-  gauntlet stage and Exhibition I reaches `combatantFromUnit(undefined)`.
-  Retiring a CLASS (as opposed to adding one) belongs here too: R72 guarded
-  every `content.classes[x.beats]` second hop, but `campaign/ui.js:834`,
-  `battle/readout.js:29`, `battle/engine.js:748` and `dex-ui.js`'s enemy
-  grouping still read a class id straight off an ENEMY record. *Done when:
-  the R72 fixture also retires one species, one frame, one enemy, one region
-  node and one class, and every screen and the sim still run.*
+- **R79 — The same hole, for retired species and frames.** ✅ *Shipped.*
+  *Done when: the R72 fixture also retires one species, one frame, one
+  enemy, one region node and one class, and every screen and the sim still
+  run.* ✅ — measured on HEAD before writing the fix, with the fixture
+  itself rather than the entry's list: **six of six screens threw**, and six
+  of eleven sim entry points died on `combatantFromUnit(undefined)` or
+  `analyze`'s frame read. R72 fixed the ids its own criterion named; this is
+  the identical shape one level out, and worse, because a frame read sits on
+  the battle and sim paths as well as the screen.
+  - **One module, one rule.** `data/catalog.js`: VALIDATION reads `content`
+    directly (`if (!content.frames[id])` is asking a real question and must
+    get a real no); PRESENTATION and MATH read through the catalogue, because
+    they are describing something the player already owns and "you own
+    nothing" is the wrong answer. `speciesOf`/`frameOf` never return null — a
+    **Discontinued Line** and a **Retired Chassis** carry every field the
+    readers dereference. `classOf`/`enemyOf`/`rivalOf` do return null: those
+    are rows to skip, not things to describe. Region nodes are deliberately
+    absent — `nodeById` has answered that since R26, and a second way to ask
+    is the copy the module exists to avoid.
+  - **`thermal` and `setBonus` are null on purpose.** A comfort band nobody
+    can state must not narrow a mix (an unstatable range is not a zero-width
+    one), and a bonus nobody can name must not be claimed. The gate asserts
+    both, so a future "helpful" default fails.
+  - **Nine screens painted creatures unsoftened.** R72 softened the two
+    readers whose genomes come out of a save; the other nine called
+    `renderCreatureSVG` on a genome assembled from content, which is only as
+    good as the ids behind it — `stockGenome` takes its frame off the
+    animal's SPECIES. `creaturePortrait` is the one call now, a gone chassis
+    gets a procedural empty crate, and a static rule fails the build if any
+    module outside `render/` reaches past it.
+  - **A wave list outlives the roster it names**, in three places: enemies.json,
+    a gauntlet stage, and `battle.queue` inside a save. `warTargetEncounter`
+    filters once so the briefing and the battle still agree, an encounter with
+    nothing left is not offered, and a boss-less gauntlet stage is not a
+    stage. For the queue a save can resume into, an **Unmarked Van** turns up
+    — procedural, no salvage, so nothing pays out for a unit that is gone.
+    The data-integrity walk now covers gauntlet stages and region nodes, which
+    is the hole `smoke.js:479` could not see.
+  - **The vault stopped deleting what it could not name** (R52's rule,
+    deliberately reversed). A cobra token is still spliceable in the Theater;
+    it simply vanished from the screen whose job is listing what you own.
+  - **The fixture only ever saw the War Room's default sub-tab**, so a break
+    reverting the rival class guard survived — the Water school lives on Labs.
+    Five tabs are walked now, and Bays immediately surfaced an `ARM undefined`
+    the fixture had been hiding.
+  - **The battery grew a fifth gate and 14 breaks (35 total, 35 caught).**
+    Its baseline was silently failing on the first draft, which scored ten
+    breaks green for free; the stand-ins are now checked against the shape of
+    the shipped records in both directions, because the two defects that
+    check catches — a chassis claiming `slots: []` when three of four shipped
+    frames omit it, and sockets as an array where the renderer indexes by
+    name — were found by hand, not by any gate.
 - **R73 — Tap targets and focus at 380 px.** ✅ *Shipped.*
   Re-measured rather than trusted: the entry's own list was stale (it costed
   a mute button R71 had already replaced). A real headless pass at 380 px

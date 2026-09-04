@@ -6,7 +6,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { indexContent, renderCreatureSVG, validateGenome, drawableGenome, SLOTS, SOCKETS, slotOfSocket } from '../render/renderer.js';
+import { indexContent, renderCreatureSVG, creaturePortrait, validateGenome, drawableGenome, SLOTS, SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { renderIcon, iconIds } from '../ui/icons.js';
 import { walkSurfaces, shellScreenMap } from './handlers.js';
 import { checkTree, runSelfTests, runLinkTests, moduleFiles, SELF_TESTS, LINK_TESTS } from './scopecheck.js';
@@ -496,6 +496,28 @@ for (const unit of Object.values(content.enemies)) {
 }
 for (const enc of Object.values(content.encounters)) {
   for (const w of enc.waves) assert.ok(content.enemies[w], `${enc.id}: unknown unit ${w}`);
+}
+// R79 — and the wave lists that are NOT in `content.encounters`.
+//
+// A gauntlet stage names its boss and its escorts by id straight out of
+// gauntlet.json, so this walk — which has only ever iterated
+// `content.encounters` — could not see them. Retire a unit named solely by
+// a stage and every gate in this file stayed green while Exhibition I
+// reached `combatantFromUnit(undefined)`. The rule is the same rule; it
+// just has to be applied to every place a wave list actually lives.
+for (const stage of readJSON('data/gauntlet.json').stages) {
+  assert.ok(content.enemies[stage.unitId], `gauntlet ${stage.id}: unknown boss ${stage.unitId}`);
+  for (const e of stage.escorts ?? []) {
+    assert.ok(content.enemies[e], `gauntlet ${stage.id}: unknown escort ${e}`);
+  }
+}
+// Rival rosters are generated from parts rather than named, so the third
+// place a wave list can name a unit is a REGION NODE's encounter id.
+for (const region of Object.values(content.regions)) {
+  for (const node of region.nodes ?? []) {
+    assert.ok(content.encounters[node.encounter],
+      `${region.id}/${node.id}: unknown encounter ${node.encounter}`);
+  }
 }
 
 // --- M4: physiology → combatant mapping (moves from parts + combos).
@@ -6121,6 +6143,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'save/save.js': null,
     'save/settings-ui.js': null,
     'data/loader.js': null,
+    'data/catalog.js': null,
     'util/rng.js': null,
     'render/renderer.js': null,
     'audio/sfx.js': null,
@@ -11477,18 +11500,36 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     }
   }
 
-  // 3. A vial whose species left the roster is skipped rather than thrown
-  //    on — the token loop beside it has always done this, and the grouping
-  //    pass would otherwise crash on a null species.
+  // 3. A holding whose SPECIES left the roster. R52 skipped it outright and
+  //    this gate asserted that: seven vials, six bays, the seventh gone.
+  //
+  //    R79 reversed it, deliberately. "Skipped" kept the screen up by
+  //    deleting the player's holdings from the one screen whose job is
+  //    listing what they own — and a part token is not even inert: retire
+  //    the COBRA and `cobra_head` is still in parts.json, still spliceable
+  //    in the Theater, and it simply stopped appearing in the vault. The
+  //    vial beside it genuinely cannot be grown back, so it says so instead
+  //    of vanishing, and a player who remembers banking Kevin can find him.
+  //
+  //    What R52's gate was actually protecting survives unchanged and is
+  //    asserted below: no crash, no raw id drawn, and no Resequence button
+  //    on something the Resequencer would refuse.
+  //
+  //    A retired PART is still skipped — there is no part to name, which is
+  //    R72's rule and a different question.
   {
     const st = withVials(6);
     st.inventory.vials.push({ id: 'ghost', species: 'not_a_species', donorName: 'Nobody', stars: 3, traits: [] });
     st.inventory.parts = [{ id: 'pghost', partId: 'not_a_part', grade: 'prime', donor: { name: 'Nobody', stars: 3 }, traits: [] }];
     const html = vault(st);
-    assert.equal(count(html, /data-reseq="/g), 6, 'six real vials survive a retired seventh');
-    assert.ok(!html.includes('not_a_species'), 'and the retired one is not drawn');
+    assert.equal(count(html, /data-reseq="/g), 6,
+      'six real vials keep their button and the retired seventh does not get one');
+    assert.ok(!html.includes('not_a_species'), 'no raw species id is ever drawn');
     assert.ok(!html.includes('not_a_part'), 'nor a token whose part left the roster');
-    assert.equal(count(html, /<details/g), 6, 'and neither opens a bay of its own');
+    assert.equal(count(html, /<details/g), 7, 'the discontinued line keeps a bay of its own');
+    assert.ok(html.includes('Discontinued Line'), 'named as what it is');
+    assert.ok(/Nothing in the catalogue matches that essence/.test(html),
+      'and the vial says why it cannot be resequenced');
   }
 
   // 3b. The bay summary carries the holdings — which is the ENTIRE argument
@@ -14918,6 +14959,17 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   const RETIRED_PART = 'bear_hide';
   const RETIRED_GRADE = 'mythic'; // a grade id GRADES does not define
   const NEW_CLASS = 'storm';
+  // R79 — the same hole, one level out. R72 retired the ids ITS criterion
+  // named; a save also holds a SPECIES on every ranch animal, a FRAME on
+  // every chimera, an ENEMY id in a wave list and a containment bay, a
+  // region NODE id in `heldNodes`, and a CLASS id on a captured foe. Every
+  // one of those was read bare somewhere, and measured on HEAD with these
+  // five added: all six screens threw and the sim died in combatantFromUnit.
+  const RETIRED_SPECIES = 'cobra'; // its PARTS stay — a part outlives its donor
+  const RETIRED_FRAME = 'M';       // the chassis this fixture's chimera rides
+  const RETIRED_ENEMY = 'riot_squad';
+  const RETIRED_CLASS = 'water';   // still named on enemy records that remain
+  const RETIRED_NODE = 'downtown'; // held in the save, gone from regions.json
 
   // (a) RETIRE ONE PART — one the fixture save holds on a chimera AND in the
   //     vault, so both readers meet the same hole.
@@ -14933,6 +14985,23 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   retired.parts.goat_head.classAffinity = NEW_CLASS;
   retired.parts.goat_hindlimbs.classAffinity = NEW_CLASS;
   retired.species.goat.class = NEW_CLASS;
+  // (d) RETIRE ONE SPECIES, one FRAME, one ENEMY, one CLASS and one NODE.
+  //     Each is asserted present first, so a rename in the json fails this
+  //     gate loudly rather than quietly retiring nothing at all — which is
+  //     how a fixture stops testing what it says it tests.
+  for (const [what, has] of [
+    ['species', retired.species[RETIRED_SPECIES]], ['frame', retired.frames[RETIRED_FRAME]],
+    ['enemy', retired.enemies[RETIRED_ENEMY]], ['class', retired.classes[RETIRED_CLASS]],
+  ]) assert.ok(has, `the ${what} to retire exists to begin with`);
+  assert.ok(Object.values(retired.regions).some((r) => (r.nodes ?? []).some((n) => n.id === RETIRED_NODE)),
+    'the node to retire exists to begin with');
+  delete retired.species[RETIRED_SPECIES];
+  delete retired.frames[RETIRED_FRAME];
+  delete retired.enemies[RETIRED_ENEMY];
+  delete retired.classes[RETIRED_CLASS];
+  for (const region of Object.values(retired.regions)) {
+    region.nodes = (region.nodes ?? []).filter((n) => n.id !== RETIRED_NODE);
+  }
 
   // A save with something on every screen, built against FULL content (the
   // player made it before the retirement) and then read back against the
@@ -14969,8 +15038,10 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // dex-ui.js, and every one of them dereferenced the result unguarded.
     s.dex = {
       parts: [RETIRED_PART, 'goat_head', 'goat_hindlimbs', 'cobra_head', 'bear_forelimbs', 'cobra_organ'],
-      enemies: Object.keys(content.enemies).slice(0, 4),
-      beaten: Object.keys(content.enemies).slice(0, 2),
+      // The retired foe is one the player has already MET and beaten, which
+      // is the only way its id gets into a save at all.
+      enemies: [RETIRED_ENEMY, ...Object.keys(content.enemies).slice(0, 4)],
+      beaten: [RETIRED_ENEMY, ...Object.keys(content.enemies).slice(0, 2)],
       traits: Object.keys(content.traits ?? {}).slice(0, 2),
       variants: [],
     };
@@ -14986,13 +15057,39 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     s.campaign.containment = [{
       id: 'bay-r72', unitId: 'r72_specimen', rivalId: null, capturedAt: t0, rehab: null,
       unit: {
-        id: 'r72_specimen', name: 'Specimen', class: 'ground', hp: 80, power: 20,
-        tier: 2, tags: [], moves: [],
-        genome: { frame: 'M', parts: { head: 'goat_head', hide: RETIRED_PART } },
+        // R79 - the class is retired too. A bay holds the foe's whole record
+        // verbatim, so it is the one place a class id survives its own
+        // deletion from classes.json.
+        id: 'r72_specimen', name: 'Specimen', class: RETIRED_CLASS,
+        hp: 80, power: 20, armor: 6, speed: 5, stamina: 60, regen: 8,
+        tier: 2, tags: [], moves: [], koLine: 'It ascends, grumbling.',
+        genome: { frame: RETIRED_FRAME, parts: { head: 'goat_head', hide: RETIRED_PART } },
       },
     }];
+    // R79 - the campaign's own ids. A node the player HOLDS and one they are
+    // DEFENDING, both named by a regions.json that no longer has them.
+    s.campaign.heldNodes = [...(s.campaign.heldNodes ?? []), RETIRED_NODE];
+    s.campaign.contested = [{ nodeId: RETIRED_NODE, deadline: t0 + 8 * HOUR, arrivedAt: t0 }];
     s.ranch = { ...s.ranch, stock: [], penCapacity: 8, animalCount: 0, seeded: true };
-    for (const sp of ['goat', 'bear', 'cobra']) s.ranch.stock.push(createAnimal(s, sp, content, t0));
+    // R79 - one of the three is the species about to be retired, so the pens
+    // hold an animal whose whole record — name, growth clock, feed price,
+    // upkeep, portrait — the build can no longer describe.
+    for (const sp of ['goat', 'bear', RETIRED_SPECIES]) s.ranch.stock.push(createAnimal(s, sp, content, t0));
+    // …and an EGG of it in the incubator, which is a second reader entirely:
+    // the egg card prints the base stock rather than the hatchling's.
+    s.ranch.eggs = [{
+      id: 'e-r79', species: RETIRED_SPECIES, variant: null, variantNote: null,
+      sex: 'F', laidAt: t0, hatchAt: t0 + 2 * HOUR, potential: {}, genotype: {},
+      mutationNote: null,
+      parents: { sire: { name: 'Kevin', stars: 4, species: RETIRED_SPECIES },
+                 dam: { name: 'Denise', stars: 3, species: RETIRED_SPECIES } },
+    }];
+    // …and a VIAL of it in the vault with a resequencer run in flight. The
+    // run names the species in a card that renders on every Vault paint, and
+    // the vial is the one holding whose whole point is growing that animal
+    // back — which this build now cannot do, and has to say so.
+    s.inventory.vials = [{ id: 'v-r79', species: RETIRED_SPECIES, donorName: 'Kevin', stars: 4 }];
+    s.resequencer = { vialId: 'v-r79', species: RETIRED_SPECIES, donorName: 'Kevin', stars: 4, until: t0 + 5 * HOUR };
     // (c) RETIRE ONE GRADE. GRADES is code, not data, so it cannot be deleted
     //     from a json — but a save written before a grade was dropped looks
     //     exactly like this: a token stamped with an id the ladder no longer
@@ -15049,6 +15146,48 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.deepEqual([...new Set(noted)], [], 'and no screen narrated an error to the console');
   }
 
+  // R79 — 1a-bis. The War Room ALSO renders one sub-tab at a time, and the
+  //      loop above only ever saw its default. That is not a hypothetical
+  //      gap: the rival cards — the one place a CLASS id is read off a
+  //      rival record, and `trench` is a Water school — live on the Labs
+  //      tab, so a break that reverted that guard survived the whole
+  //      fixture. Five tabs, asked for the way the shell asks.
+  {
+    const { WAR_TABS } = await import('../campaign/warroom.js');
+    const el2 = () => ({
+      innerHTML: '', textContent: '', hidden: false, dataset: {}, style: {},
+      classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+      addEventListener() {}, removeEventListener() {}, appendChild() {}, remove() {},
+      querySelector: () => el2(), querySelectorAll: () => [], focus() {}, click() {},
+      getAttribute: () => null, setAttribute() {}, insertAdjacentHTML() {},
+      closest: () => null, scrollIntoView() {},
+    });
+    const mod = await import('../campaign/ui.js');
+    const noted2 = [];
+    const realError2 = console.error;
+    console.error = (...a) => noted2.push(a.join(' '));
+    try {
+      for (const tab of WAR_TABS) {
+        const host = el2();
+        mod.renderWarRoomScreen(host, {
+          state: r72State(), content: retired, now: () => t0 + 3 * HOUR,
+          save: () => {}, refreshTicker: () => {}, pushNews: () => {},
+          goto: () => {}, takeSubtab: () => tab.id,
+        });
+        const html = String(host.innerHTML);
+        assert.ok(html.length > 0, `war/${tab.id} rendered something with retired content`);
+        for (const leak of ['undefined', 'NaN', '[object Object]']) {
+          const at = html.indexOf(leak);
+          assert.equal(at, -1,
+            `war/${tab.id} leaks "${leak}": …${html.slice(Math.max(0, at - 80), at + 40).replace(/\s+/g, ' ')}…`);
+        }
+      }
+    } finally {
+      console.error = realError2;
+    }
+    assert.deepEqual([...new Set(noted2)], [], 'and no War Room tab narrated an error');
+  }
+
   // 1b. …and the Dex renders ONE TAB at a time (R45), so the loop above only
   //     ever saw its default view. The combo list and the foe guide — the two
   //     that read `dex.parts` and group by class — are behind the other four.
@@ -15083,24 +15222,52 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //     serialized mid-fight. `validateGenome` stays strict on purpose, so the
   //     softening is `drawableGenome`, and both readers must go through it.
   {
-    const gone = { frame: 'M', parts: { head: 'goat_head', hide: RETIRED_PART } };
+    const gone = { frame: 'L', parts: { head: 'goat_head', hide: RETIRED_PART } };
     const drawn = drawableGenome(gone, retired);
-    assert.deepEqual(drawn, { frame: 'M', parts: { head: 'goat_head' } },
+    assert.deepEqual(drawn, { frame: 'L', parts: { head: 'goat_head' } },
       'drawableGenome drops the retired socket and keeps the rest');
     assert.ok(renderCreatureSVG(drawn, retired).startsWith('<svg'), 'and what it returns actually draws');
-    assert.equal(drawableGenome({ frame: 'no_such_frame', parts: {} }, retired), null,
+    assert.equal(drawableGenome({ frame: RETIRED_FRAME, parts: {} }, retired), null,
       'a genome with no frame left is not drawable at all — there is no creature without one');
     assert.equal(drawableGenome(null, retired), null, 'and a missing genome is not a crash');
 
-    // Asserted on the source as well as the behaviour: these two call sites are
-    // the whole point of the helper, and a future edit that reaches for
-    // renderCreatureSVG directly would put the soft-lock straight back.
+    // R79 — and "not drawable" still has to put something on the screen.
+    //
+    // R72 softened the TWO readers whose genomes come out of a save. The
+    // other nine called renderCreatureSVG on a genome assembled from
+    // content — which is only as good as the ids behind it, and a save
+    // holds those too: `stockGenome` takes its frame off the animal's
+    // SPECIES and `chimeraGenome` off the chimera's own. Retire either and
+    // nine screens threw `Bad genome: Unknown frame`, losing a whole screen
+    // to one card. `creaturePortrait` is the one call every reader makes now.
+    const crate = creaturePortrait({ frame: RETIRED_FRAME, parts: {} }, retired, { idPrefix: 'x' });
+    assert.ok(crate.startsWith('<svg') && crate.includes('</svg>'),
+      'a genome whose chassis is gone still returns a drawable svg');
+    assert.ok(/aria-label="[^"]+"/.test(crate), 'and it is labelled rather than silently blank');
+    assert.equal(creaturePortrait(null, retired), creaturePortrait(undefined, retired),
+      'a missing genome is the same absence, not a crash');
+    assert.ok(creaturePortrait(drawn, retired, { idPrefix: 'y' }).length > crate.length,
+      'a genome that CAN draw still draws the creature, not the placeholder');
+
+    // Asserted on the source as well as the behaviour: every module that
+    // paints a creature must go through one of the two softenings, or the
+    // soft-lock goes straight back in. Derived from the source rather than
+    // listed, so a tenth painter is held to it without anyone adding it.
+    // `moduleFiles` returns absolute paths; relativise so the message names
+    // the module rather than the machine.
+    const painters = moduleFiles()
+      .map((f) => relative(root, f))
+      .filter((f) => !f.startsWith('render/') && !f.startsWith('tools/')
+        && /renderCreatureSVG\(/.test(readFileSync(join(root, f), 'utf8')));
+    assert.deepEqual(painters, [],
+      `no screen calls renderCreatureSVG directly (${painters.join(', ')}) — use creaturePortrait`);
     for (const [file, why] of [
       ['campaign/ui.js', 'the containment bay portrait'],
       ['battle/ui.js', 'the arena sprite for a saved foe'],
     ]) {
-      const s = readFileSync(join(root, file), 'utf8');
-      assert.ok(/drawableGenome\(/.test(s), `${why} (${file}) goes through drawableGenome`);
+      const src = readFileSync(join(root, file), 'utf8');
+      assert.ok(/creaturePortrait\(|drawableGenome\(/.test(src),
+        `${why} (${file}) goes through the softening`);
     }
   }
 
@@ -15183,6 +15350,142 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(!Object.values(prof.classes).some((n) => Number.isNaN(n)),
       `and its own tally holds no NaN (${JSON.stringify(prof.classes)})`);
     assert.equal(prof.favoredClass, NEW_CLASS, `so the world can learn to counter it (${prof.favoredClass})`);
+  }
+
+  // R79 — 4a. THE STAND-INS MUST BE THE SHAPE THEY STAND IN FOR.
+  //      A stand-in exists so readers can dereference it without asking, so
+  //      a field it is MISSING is the crash it was built to prevent, only
+  //      later and stranger. The other direction bites too: the first draft
+  //      of the retired frame declared `slots: []`, and `slots` means "only
+  //      these slot types are legal on this chassis" — three of the four
+  //      shipped frames omit it precisely because they accept everything, so
+  //      an empty list said the opposite of what was known. Both directions
+  //      are asserted against the shipped records rather than against a
+  //      hand-kept list, so a new field on species.json is held to this.
+  {
+    const { speciesOf, frameOf, isRetired } = await import('../data/catalog.js');
+    const shapeOf = (records) => {
+      const all = Object.values(records);
+      const every = Object.keys(all[0]).filter((k) => all.every((r) => k in r));
+      const any = new Set(all.flatMap((r) => Object.keys(r)));
+      return { every, any };
+    };
+    for (const [what, stand, records, exempt] of [
+      ['species', speciesOf(retired, RETIRED_SPECIES), content.species, []],
+      ['frame', frameOf(retired, RETIRED_FRAME), content.frames, ['torso', 'silhouette', 'shadow']],
+    ]) {
+      assert.ok(isRetired(stand), `the ${what} stand-in says it is one`);
+      const { every, any } = shapeOf(records);
+      const missing = every.filter((k) => !(k in stand) && !exempt.includes(k));
+      assert.deepEqual(missing, [],
+        `the ${what} stand-in carries every field a shipped record always has (missing: ${missing.join(', ')})`);
+      const invented = Object.keys(stand).filter((k) => k !== 'retired' && !any.has(k));
+      assert.deepEqual(invented, [],
+        `and invents none (${invented.join(', ')}) — a field no real record declares is a claim, not a default`);
+    }
+    // The two fields whose ABSENCE is the point, spelled out so a future
+    // "helpful" default cannot be added without failing here.
+    assert.equal(speciesOf(retired, RETIRED_SPECIES).thermal, null,
+      'a comfort band nobody can state must not narrow the mix');
+    assert.equal(speciesOf(retired, RETIRED_SPECIES).setBonus, null,
+      'and a set bonus nobody can name must not be claimed');
+    assert.equal(frameOf(retired, RETIRED_FRAME).slots, undefined,
+      'the retired chassis declares no slot whitelist — it is unknown, not empty');
+    assert.deepEqual(frameOf(retired, RETIRED_FRAME).sockets, {},
+      'and its sockets are an object, because that is what the renderer indexes by name');
+    // Every shipped id still resolves to the real record, not a stand-in.
+    for (const id of Object.keys(retired.species)) assert.equal(speciesOf(retired, id), retired.species[id]);
+    for (const id of Object.keys(retired.frames)) assert.equal(frameOf(retired, id), retired.frames[id]);
+  }
+
+  // R79 — 4b. THE WORLD IDS. A save holds four more that content owns: an
+  //      enemy in a wave list and a bay, a rival on a duel record, a region
+  //      node in `heldNodes`, and a class on a captured foe's frozen record.
+  //      These reach the ENGINE rather than a screen, which is why they took
+  //      the campaign walk and the balance harness down with them.
+  {
+    const { warTargetEncounter } = await import('../campaign/warroom.js');
+    const { gauntletStages, gauntletState } = await import('../campaign/gauntlet.js');
+    const { recordRivalResult } = await import('../campaign/rivals.js');
+    const { liveWaves, unitFor, ABSENT_UNIT } = await import('../battle/engine.js');
+
+    // A wave list naming a unit the build no longer has. This is the shape
+    // the whole battle path shares — five `combatantFromUnit(unitFor(…))`
+    // sites, one of them reached only through a KO'd foe's `transformInto`,
+    // which is a branch a save can resume straight into.
+    assert.equal(unitFor(retired, RETIRED_ENEMY), null, 'a retired unit resolves to nothing');
+    assert.deepEqual(liveWaves([RETIRED_ENEMY, 'net_trooper'], retired), ['net_trooper'],
+      'and a wave list drops it rather than carrying a hole');
+    const holed = { id: 'r79_holed', name: 'Holed', waves: [RETIRED_ENEMY, 'net_trooper'], reward: 10, tier: 1 };
+    const outHoled = scriptedBattle(
+      makeSimChimera('L', STARTER_BUILD.partIds, 'prime', retired), holed, retired, 4242, 1
+    );
+    assert.ok(['win', 'loss', 'stall'].includes(outHoled.outcome),
+      `a fight whose first wave was retired still reaches an outcome (${outHoled.outcome})`);
+    // The opposition does not simply evaporate: something shows up, and it
+    // carries no salvage, so nothing downstream pays out for a unit that no
+    // longer exists.
+    assert.deepEqual(ABSENT_UNIT.salvage, [], 'and the stand-in is worth nothing to strip');
+
+    // The Gauntlet is the wave list `content.encounters` never held, which
+    // is why the integrity walk above could not see it. A stage whose BOSS
+    // is gone is not a stage; escorts that are gone are off the card.
+    const bossGone = { ...retired, gauntlet: [
+      { id: 'g_dead', unitId: RETIRED_ENEMY, name: 'X', escorts: ['net_trooper'], reward: 1 },
+      { id: 'g_live', unitId: 'net_trooper', name: 'Y', escorts: [RETIRED_ENEMY, 'riot_van'], reward: 1 },
+    ] };
+    const stages = gauntletStages(bossGone);
+    assert.deepEqual(stages.map((st) => st.id), ['g_live'], 'a boss-less stage is not offered');
+    assert.ok(!stages[0].escorts.includes(RETIRED_ENEMY), 'and a retired escort is off the card');
+    assert.ok(gauntletState({ ...r72State(), dominionAt: t0 }, bossGone).every((r) => r.stage.unitId !== RETIRED_ENEMY),
+      'the board agrees with the encounter builder');
+
+    // The briefing and the battle are built by ONE function on purpose, so
+    // the filter belongs there: a fight the player is shown must be the
+    // fight they get, and an encounter left with nothing is not offered.
+    const holedContent = { ...retired, encounters: { ...retired.encounters, r79_holed: holed,
+      r79_empty: { id: 'r79_empty', name: 'Empty', waves: [RETIRED_ENEMY], reward: 1, tier: 1 } } };
+    const st = r72State();
+    const one = warTargetEncounter(st, { kind: 'node', encounterId: 'r79_holed' }, holedContent, t0);
+    assert.deepEqual(one.waves, ['net_trooper'], 'the briefing shows the fight that will actually happen');
+    assert.equal(warTargetEncounter(st, { kind: 'node', encounterId: 'r79_empty' }, holedContent, t0), null,
+      'and an encounter with no opposition left is not offered at all');
+
+    // A rival duel is recorded in `resolveBattle`, AFTER the player has
+    // already won it — so a throw here loses a fight that was won.
+    const rst = r72State();
+    const noRival = { ...retired, rivals: {} };
+    assert.doesNotThrow(() => recordRivalResult(rst, 'mantissa', 'win', noRival),
+      'a duel against a rival the build no longer has still files its result');
+    assert.equal(rst.campaign.rivals.mantissa.defeats, 1, 'and the player keeps the win');
+
+    // The month away, on the content this fixture retired. Same code the
+    // browser runs; on HEAD it died inside combatantFromUnit.
+    const walked = campaignWalk(retired, { seed: 4242, days: 30 });
+    assert.ok(Number.isFinite(walked.funds) && walked.nodes > 0,
+      `the campaign walk runs on retired content ($${walked.funds}, ${walked.nodes} nodes)`);
+    assert.ok(walked.warRecord.wins + walked.warRecord.losses > 0,
+      `and it actually fought (${JSON.stringify(walked.warRecord)}) rather than idling past every fight`);
+  }
+
+  // R79 — 4c. The vault must not delete what it cannot describe. Both of its
+  //      loops used to SKIP any holding whose species was gone, which kept
+  //      the screen up and quietly removed the player's tokens from the one
+  //      screen whose job is listing what they own — while the Theater would
+  //      still happily splice them.
+  {
+    const html = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+    const { renderVaultScreen } = await import('../splice/vault-ui.js');
+    const vst = r72State();
+    vst.inventory.parts.push({ id: 'v-r79-tok', partId: 'cobra_head', grade: 'apex',
+      donor: { name: 'Kevin', species: RETIRED_SPECIES, stars: 4, extractedAt: t0 } });
+    renderVaultScreen(html, { state: vst, content: retired, now: () => t0 + HOUR, save: () => {} });
+    assert.ok(/Cobra Head/.test(html.innerHTML),
+      'a token whose donor species was retired is still listed in the vault');
+    assert.ok(/Discontinued Line/.test(html.innerHTML),
+      'shelved under the discontinued line rather than dropped');
+    assert.ok(!/data-reseq="v-r79"/.test(html.innerHTML),
+      'and its vial offers no Resequence button — there is nothing to grow it back into');
   }
 
   // 5. And the rule, not just the instances: no module may name the shipped

@@ -338,6 +338,37 @@ export function drawableGenome(genome, content) {
   };
 }
 
+// R79 — the portrait EVERY screen should ask for.
+//
+// R72 softened the two readers whose genomes come out of a save. The other
+// nine call `renderCreatureSVG` directly on a genome assembled from content
+// — and that genome is only as good as the ids behind it, which a save also
+// holds: `stockGenome` reads its frame off the animal's SPECIES, and
+// `chimeraGenome` reads the frame the chimera was built on. Retire either
+// and nine screens threw `Bad genome: Unknown frame`, which is a whole
+// screen lost to one card.
+//
+// So: one call that always returns an <svg>. Drawable genomes draw. A
+// genome whose chassis is gone gets an EMPTY CRATE — procedural, sized to
+// the same viewBox, and captioned by the alt text rather than by a leaked
+// id, so the row keeps its shape and the player sees an absence instead of
+// a blank.
+export function creaturePortrait(genome, content, opts = {}) {
+  const drawable = drawableGenome(genome, content);
+  if (drawable) return renderCreatureSVG(drawable, content, opts);
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-230 -230 460 440" role="img" ` +
+    `aria-label="No chassis on file for this specimen">` +
+    `<g fill="none" stroke="${OUTLINE}" stroke-width="10" stroke-linejoin="round" opacity="0.45">` +
+    `<path d="M-120 -40 L0 -100 L120 -40 L120 90 L0 150 L-120 90 Z"/>` +
+    `<path d="M-120 -40 L0 20 L120 -40"/><path d="M0 20 L0 150"/>` +
+    `</g>` +
+    `<text x="0" y="205" text-anchor="middle" font-size="34" fill="${OUTLINE}" opacity="0.6">` +
+    `chassis unfiled</text>` +
+    `</svg>`
+  );
+}
+
 // Returns a complete inline-<svg> string for the given genome.
 // idPrefix keeps defs ids unique when several creatures share a document.
 // condition: null | 'gleaming' | 'scruffy' (see ranch.conditionTier).

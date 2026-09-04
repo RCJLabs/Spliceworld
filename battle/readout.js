@@ -10,6 +10,7 @@
 // the same board.
 import { previewMove } from './engine.js';
 import { classMultiplier } from './engine.js';
+import { classOf } from '../data/catalog.js';
 
 // Split, not merged. The old chip multiplied class and tag together and
 // printed one number, so "×1.5" never said whether it was the triangle or
@@ -26,8 +27,14 @@ export function moveReadout(move, me, foe, content, turn = null) {
     if (p.immune || tag === 0) {
       chips.push(['null', 'no effect']);
     } else {
-      if (cls > 1) chips.push(['up', `${content.classes[me.creatureClass].name} ▸`]);
-      else if (cls < 1) chips.push(['down', `◂ ${content.classes[foe.creatureClass].name}`]);
+      // R79 - the chip needs a NAME, and the multiplier can be decided by a
+      // class that still exists while the one on the other side has been
+      // retired out from under a saved foe. No name, no chip; the number
+      // the move actually does is unaffected.
+      const myCls = classOf(content, me.creatureClass);
+      const foeCls = classOf(content, foe.creatureClass);
+      if (cls > 1 && myCls) chips.push(['up', `${myCls.name} ▸`]);
+      else if (cls < 1 && foeCls) chips.push(['down', `◂ ${foeCls.name}`]);
       if (tag > 1) chips.push(['up', `×${tag % 1 ? tag.toFixed(1) : tag} tag`]);
       else if (tag < 1) chips.push(['down', `×${tag.toFixed(1)} tag`]);
     }

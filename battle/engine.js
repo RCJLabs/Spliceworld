@@ -15,6 +15,7 @@ import { flatModifiers, scarEffects, againstTags } from '../splice/scars.js';
 import { infirmaryGrants } from '../splice/facility.js';
 import { MOVE_SLOTS, activeMoves, defaultPick, partMoveId, comboMoveId } from './moves.js';
 import { hitReason } from '../campaign/matchup.js';
+import { classOf } from '../data/catalog.js';
 
 const STAGE_STEP = 0.15;
 const STAGE_CAP = 2; // setup matters, but stacking is not a strategy on its own
@@ -277,7 +278,56 @@ export function applySetBonus(combatant, purebredSpecies, content) {
 
 // Waves may name a unit id or carry a generated unit record inline.
 export function unitFor(content, ref) {
-  return typeof ref === 'string' ? content.enemies[ref] : ref;
+  return (typeof ref === 'string' ? content.enemies[ref] : ref) ?? null;
+}
+
+// R79 — a wave list outlives the roster it names.
+//
+// Wave lists live in three places a build cannot reach: enemies.json's own
+// encounters, a gauntlet stage, and — the one that matters — `battle.queue`
+// inside a SAVE, serialized mid-fight. Retire a unit and every one of the
+// five `combatantFromUnit(unitFor(...))` sites read `.capturable` off
+// undefined, which is not one lost row: it is the whole battle path, the
+// campaign walk and the balance harness, down together.
+//
+// The opposition does not simply vanish, because a wave that evaporates
+// hands the player a fight they did not win. Something shows up. It is
+// unmarked, it is not on any roster, and it carries no salvage, so nothing
+// downstream can be paid out for a unit that no longer exists.
+export const ABSENT_UNIT = Object.freeze({
+  id: 'unmarked_van',
+  name: 'Unmarked Van',
+  hp: 1, power: 1, armor: 0, speed: 5, stamina: 10, regen: 1,
+  tags: [],
+  moves: [{ name: 'Idle Menacingly', power: 1, cost: 0, acc: 100, tags: [], keywords: {} }],
+  koLine: 'The van reverses at speed. Nobody was ever inside it. There was never a van.',
+  // Procedural, like everything else that draws: a blank shape list renders
+  // an empty box in the arena, and an empty box is not an explanation.
+  shapes: [
+    { type: 'rect', x: -62, y: -34, width: 124, height: 56, rx: 10, fill: '#b9bcc2' },
+    { type: 'rect', x: -62, y: -34, width: 46, height: 30, rx: 7, fill: '#8f959e' },
+    { type: 'rect', x: -18, y: -8, width: 66, height: 4, rx: 2, fill: '#8f959e' },
+    { type: 'circle', cx: -38, cy: 24, r: 15, fill: '#2b2440' },
+    { type: 'circle', cx: 38, cy: 24, r: 15, fill: '#2b2440' },
+    { type: 'circle', cx: -38, cy: 24, r: 6, fill: '#b9bcc2' },
+    { type: 'circle', cx: 38, cy: 24, r: 6, fill: '#b9bcc2' },
+  ],
+  salvage: [],
+});
+
+// Every reader that must produce a combatant NOW goes through here. The
+// ones that can decline instead — the launchers, the briefing, the gauntlet
+// board — call `unitFor` and drop the wave, so a healthy build never meets
+// the van.
+export function combatantFor(content, ref, scale = 1) {
+  return combatantFromUnit(unitFor(content, ref) ?? ABSENT_UNIT, scale);
+}
+
+// The wave list, minus whatever the build no longer has. An encounter left
+// with nothing at all is not offered — that is the caller's call, and every
+// caller of this checks the length.
+export function liveWaves(waves, content) {
+  return (waves ?? []).filter((w) => unitFor(content, w));
 }
 
 export function combatantFromChimera(chimera, content, now) {
@@ -559,8 +609,9 @@ export function createBattle(chimeras, encounter, content, seed, now, context = 
       encounter.waves.filter((w) => typeof w !== 'string').map((u) => [u.id, u])
     ),
     player: { team: chimeras.map((c) => combatantFromChimera(c, content, now)), active: 0 },
-    enemy: { queue: encounter.waves.slice(1), active: combatantFromUnit(
-        unitFor(content, encounter.waves[0]),
+    enemy: { queue: encounter.waves.slice(1), active: combatantFor(
+        content,
+        encounter.waves[0],
         tierScaleFor(encounter, content)
       ) },
     barks: { ...(encounter.barks ?? {}) }, // rival monologue slots (§3.8)
@@ -587,7 +638,7 @@ export function createBattle(chimeras, encounter, content, seed, now, context = 
   battle.log.push(...battle.opening);
   // An em dash, not a colon: with barks now attributed as "Name: …", a
   // colon here made the wave announcement read as something the rival said.
-  battle.log.push(`${encounter.name} — ${unitFor(content, encounter.waves[0]).name} moves in!`);
+  battle.log.push(`${encounter.name} — ${battle.enemy.active.name} moves in!`);
   const first = battle.player.team[0];
   if (first.rejection) battle.log.push(`${first.name} is unsettled — Rejection saps its power and speed.`);
   return battle;
@@ -745,8 +796,18 @@ function attack(battle, atk, def, move, events, content) {
     if (hits > 1) line += ` across ${hits} hits`;
     if (crit) line += ' — CORNERED AND FURIOUS!';
     if (mult > 1) line += ' (super effective!)';
-    if (clsMult > 1) line += ` (${content.classes[atk.creatureClass].name} beats ${content.classes[def.creatureClass].name}!)`;
-    else if (clsMult < 1) line += ` (${content.classes[def.creatureClass].name} shrugs off ${content.classes[atk.creatureClass].name})`;
+    // R79 - the multiplier survives a retirement that the NAMES do not: a
+    // class still named on an enemy record after it left classes.json makes
+    // the chart read 1, but a class that BEATS it is still on the chart, so
+    // this line runs with one of the two names missing. Print the clause
+    // only when both classes can be named; the damage number is already
+    // correct either way.
+    const atkCls = classOf(content, atk.creatureClass);
+    const defCls = classOf(content, def.creatureClass);
+    if (atkCls && defCls) {
+      if (clsMult > 1) line += ` (${atkCls.name} beats ${defCls.name}!)`;
+      else if (clsMult < 1) line += ` (${defCls.name} shrugs off ${atkCls.name})`;
+    }
     // R58: the reason, once per matchup per battle. The multiplier prints on
     // every hit and the sentence behind it would be noise repeated — but
     // never saying it at all is how four authored lines sat unread since the
@@ -913,7 +974,7 @@ function knockback(battle, target, events, content) {
     // generated record for a rival chimera that has no enemies.json entry.
     battle.enemy.queue.push(battle.units?.[target.refId] ?? target.refId);
     const nextId = battle.enemy.queue.shift();
-    battle.enemy.active = combatantFromUnit(unitFor(content, nextId), battle.enemyScale);
+    battle.enemy.active = combatantFor(content, nextId, battle.enemyScale);
     markKnocked(battle, 'enemy');
     events.push({ text: `${target.name} is punted out of formation! ${battle.enemy.active.name} scrambles in.`, kind: 'waveIn', target: 'enemy' });
   } else {
@@ -1013,7 +1074,7 @@ function handleEnemyKO(battle, events, content) {
     // A boss with no authored line still announces its second stage rather
     // than blanking the message box for a beat: four of five shipped that way.
     events.push({ text: e.transformLine ?? `${battle.enemy.active.name} takes the field!`, kind: 'ko', target: 'enemy' });
-    battle.enemy.active = combatantFromUnit(unitFor(content, e.transformInto), battle.enemyScale);
+    battle.enemy.active = combatantFor(content, e.transformInto, battle.enemyScale);
     events.push({ text: `${battle.enemy.active.name} looms over the field!`, kind: 'waveIn', target: 'enemy', transform: true });
     return;
   }
@@ -1024,7 +1085,7 @@ function handleEnemyKO(battle, events, content) {
   }
   if (battle.enemy.queue.length) {
     const nextId = battle.enemy.queue.shift();
-    battle.enemy.active = combatantFromUnit(unitFor(content, nextId), battle.enemyScale);
+    battle.enemy.active = combatantFor(content, nextId, battle.enemyScale);
     events.push({ text: `Next wave: ${battle.enemy.active.name}!`, kind: 'waveIn', target: 'enemy' });
     playerActive(battle).status.trapped = false;
   } else {
@@ -1104,7 +1165,7 @@ export function step(battle, action, content) {
     me.status.trapped = false;
     if (battle.enemy.queue.length) {
       const nextId = battle.enemy.queue.shift();
-      battle.enemy.active = combatantFromUnit(unitFor(content, nextId), battle.enemyScale);
+      battle.enemy.active = combatantFor(content, nextId, battle.enemyScale);
       events.push({ text: `Next wave: ${battle.enemy.active.name}!`, kind: 'waveIn', target: 'enemy' });
     } else {
       battle.over = true;

@@ -2,11 +2,12 @@
 // The comedy is CSS keyframes and copy; the state change is one call to
 // extract.js. Timeouts here are presentation only — never game logic.
 
-import { renderCreatureSVG } from '../render/renderer.js';
+import { creaturePortrait } from '../render/renderer.js';
 import { stockGenome, conditionTier } from '../ranch/ranch.js';
 import { extractAnimal, gradeFor, gradeOutlook, outlookLine } from './extract.js';
 import * as sfx from '../audio/sfx.js';
 import { renderIcon } from '../ui/icons.js';
+import { speciesOf } from '../data/catalog.js';
 
 const CEREMONY_MS = 2100;
 
@@ -14,12 +15,12 @@ export function runExtraction(overlay, ctx, animalId, onDone) {
   const { state, content } = ctx;
   const animal = state.ranch.stock.find((a) => a.id === animalId);
   if (!animal) return;
-  const species = content.species[animal.species];
+  const species = speciesOf(content, animal.species);
   const grade = gradeFor(animal, content, ctx.now());
   // R38. This is the screen where §3.3's "central economic decision" is
   // actually made, and it offered one word and no second term.
   const outlook = gradeOutlook(animal, content, ctx.now(), state);
-  const portrait = renderCreatureSVG(stockGenome(animal.species, content), content, {
+  const portrait = creaturePortrait(stockGenome(animal.species, content), content, {
     idPrefix: 'grad',
     condition: (() => { const t = conditionTier(animal.condition); return t === 'fine' ? null : t; })(),
   });
@@ -77,7 +78,7 @@ function showResults(overlay, ctx, result, onDone) {
       <h3>${renderIcon('graduation-cap')} ${result.donorName} has ascended!</h3>
       <p class="fine-print">${result.msg}</p>
       <ul class="token-list">
-        <li>${vialSVG(content.species[result.vial.species].palette.accent)} DNA Vial — ${content.species[result.vial.species].name} <span class="lineage">★${result.vial.stars}</span></li>
+        <li>${vialSVG(speciesOf(content, result.vial.species).palette.accent)} DNA Vial — ${speciesOf(content, result.vial.species).name} <span class="lineage">★${result.vial.stars}</span></li>
         ${tokenRows}
       </ul>
       <button type="button" id="grad-done" class="big-btn">Collect (pending assembly)</button>

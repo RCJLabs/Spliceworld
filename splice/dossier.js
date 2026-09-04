@@ -148,7 +148,7 @@ export function dossierRows(report, content) {
   //    wired them, so the dossier says it: the NAME the player is chasing,
   //    what it actually does, and the instability discount that was the only
   //    real part of it before.
-  if (report.purebredSpecies) {
+  if (report.purebredSpecies && content.species[report.purebredSpecies]?.setBonus) {
     const sp = content.species[report.purebredSpecies];
     const bonus = sp.setBonus;
     rows.push({

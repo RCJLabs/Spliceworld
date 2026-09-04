@@ -2,7 +2,7 @@
 // physiology panel explain the consequences live, then splice. Replaces the
 // M0 free-form dev slab — every part here is an owned token with lineage.
 
-import { renderCreatureSVG, slotOfSocket } from '../render/renderer.js';
+import { creaturePortrait, slotOfSocket } from '../render/renderer.js';
 import { renderIcon } from '../ui/icons.js';
 import { gradeOf, gradeIndexOf } from './extract.js';
 import { analyze } from './physiology.js';
@@ -12,6 +12,7 @@ import { pickerField, bindPickers } from '../ui/picker.js';
 import { theaterGrants, facilityLevel, levelData, nextUpgrade } from './facility.js';
 import { fieldNote, bindFieldNote } from '../ui/cards.js';
 import { guideForScreen } from '../ranch/onboarding.js';
+import { speciesOf, classOf } from '../data/catalog.js';
 
 const SLOT_LABELS = {
   head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
@@ -88,9 +89,9 @@ export function renderTheaterScreen(root, ctx) {
       bySpecies.get(sp).push(t);
     }
     const groups = [...bySpecies.entries()]
-      .sort((a, b) => (content.species[a[0]].name > content.species[b[0]].name ? 1 : -1))
+      .sort((a, b) => (speciesOf(content, a[0]).name > speciesOf(content, b[0]).name ? 1 : -1))
       .map(([sp, tokens]) => ({
-        label: content.species[sp].name,
+        label: speciesOf(content, sp).name,
         options: tokens
           .sort((a, b) => gradeIndexOf(b.grade) - gradeIndexOf(a.grade))
           .map((t) => {
@@ -153,15 +154,15 @@ export function renderTheaterScreen(root, ctx) {
       <h2>Surgery Theater</h2>
       <p class="class-banner class-${report.creatureClass ?? 'none'}">${
         report.creatureClass
-          ? `${renderIcon(content.classes[report.creatureClass].icon)} ${content.classes[report.creatureClass].name}${
-              content.classes[content.classes[report.creatureClass].beats]
-                ? ` — beats ${content.classes[content.classes[report.creatureClass].beats].name}`
+          ? `${renderIcon(classOf(content, report.creatureClass).icon)} ${classOf(content, report.creatureClass).name}${
+              classOf(content, classOf(content, report.creatureClass).beats)
+                ? ` — beats ${classOf(content, classOf(content, report.creatureClass).beats).name}`
                 : ''
             }`
           : '◇ Unclassed — neutral in every matchup'
       }</p>
       <p class="recipe">${statLine}${report.tags.length ? ` · tags: ${report.tags.join(', ')}` : ''}</p>
-      <div class="stage">${renderCreatureSVG(draftGenome(state, content), content, { idPrefix: 'thtr' })}</div>
+      <div class="stage">${creaturePortrait(draftGenome(state, content), content, { idPrefix: 'thtr' })}</div>
       <p class="ranch-msg">${lastMsg}</p>
     </section>
     <section class="card">
@@ -240,7 +241,7 @@ function showSpliceResult(ctx, result, onClose) {
   overlay.innerHTML = `
     <div class="ceremony card">
       <h3>⚡ IT'S ALIVE(-ADJACENT)!</h3>
-      <div class="grad-portrait">${renderCreatureSVG(genome, content, { idPrefix: 'born' })}</div>
+      <div class="grad-portrait">${creaturePortrait(genome, content, { idPrefix: 'born' })}</div>
       <p><strong>${result.chimera.name}</strong> · instability ${result.report.instability}/100</p>
       <p class="fine-print">Settling for ~${Math.round(result.report.settlingMs / 60000)} minutes. Deploying early causes Rejection. Patience is a stat.</p>
       ${combos}

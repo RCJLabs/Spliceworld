@@ -18,7 +18,18 @@
 // a Gauntlet fight: these ARE the coalition's answer.
 
 export function gauntletStages(content) {
-  return content.gauntlet ?? [];
+  // R79 - a stage names its boss and its escorts by id, and those ids are
+  // NOT in `content.encounters`, which is the only place the suite's
+  // data-integrity walk ever looked. Retire the boss and the card still
+  // listed the exhibition, still unlocked it, and reached the engine with
+  // an undefined unit. A stage with no boss is not a stage; escorts that
+  // are gone are simply not on the card.
+  return (content.gauntlet ?? [])
+    .filter((stage) => content.enemies?.[stage.unitId])
+    .map((stage) => {
+      const escorts = (stage.escorts ?? []).filter((id) => content.enemies?.[id]);
+      return escorts.length === (stage.escorts ?? []).length ? stage : { ...stage, escorts };
+    });
 }
 
 // Every stage with its status: 'locked' (dominion unclaimed, or the stage

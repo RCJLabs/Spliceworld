@@ -14,7 +14,7 @@
 //    used to be a stacked panel is now either an overlay on the field or
 //    one tap away, because a battle you have to scroll is not a battle.
 
-import { renderCreatureSVG, renderUnitSVG, drawableGenome } from '../render/renderer.js';
+import { creaturePortrait, renderUnitSVG, drawableGenome } from '../render/renderer.js';
 import { chimeraGenome } from '../splice/theater.js';
 import {
   step, playerActions, playerActive, turnForecast,
@@ -124,13 +124,13 @@ function spriteFor(side, refId, ctx, battle) {
     // R72 — `battle.units` is serialized with the save, so a fight resumed
     // after one of its parts was retired reaches this with a stale genome.
     const foeGenome = drawableGenome(unit?.genome, content);
-    if (foeGenome) return renderCreatureSVG(foeGenome, content, { idPrefix: `foe-${refId}` });
+    if (foeGenome) return creaturePortrait(foeGenome, content, { idPrefix: `foe-${refId}` });
     return renderUnitSVG(unit ?? { name: '?', shapes: [] });
   }
   const chimera =
     state.chimeras.find((c) => c.id === refId) ??
     state.campaign.captives.find((c) => c.chimera.id === refId)?.chimera;
-  return chimera ? renderCreatureSVG(chimeraGenome(chimera, content), content, { idPrefix: `me-${refId}` }) : '';
+  return chimera ? creaturePortrait(chimeraGenome(chimera, content), content, { idPrefix: `me-${refId}` }) : '';
 }
 
 function hpBox(side, c, content, extra = '') {

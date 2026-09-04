@@ -15,7 +15,7 @@
 // actual saving: a hidden tab costs nothing, and the portraits are the
 // expensive part.
 
-import { renderCreatureSVG, renderUnitSVG, renderRivalSVG } from '../render/renderer.js';
+import { creaturePortrait, renderUnitSVG, renderRivalSVG } from '../render/renderer.js';
 import { renderIcon } from '../ui/icons.js';
 import { stockGenome } from '../ranch/ranch.js';
 import { comboHint } from './theater.js';
@@ -28,6 +28,7 @@ import { speciesLines, speciesParts, dexProgress, beatenUnits } from './dexentry
 import { gauntletStages } from '../campaign/gauntlet.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { classReason } from '../campaign/matchup.js';
+import { speciesOf, classOf } from '../data/catalog.js';
 
 // R72 - the Dex used to name the three shipped classes here, which decided
 // three separate things at once: which sections the roster grows, which runs
@@ -60,7 +61,7 @@ function rosterView(state, content) {
       // did not. The depth is one tap away rather than crammed in here.
       return `
         <button type="button" class="dex-cell dex-open" data-species="${sp.id}">
-          <div class="dex-portrait">${renderCreatureSVG(stockGenome(sp.id, content), content, { idPrefix: `dex-${sp.id}`, extraScale: 0.85 })}</div>
+          <div class="dex-portrait">${creaturePortrait(stockGenome(sp.id, content), content, { idPrefix: `dex-${sp.id}`, extraScale: 0.85 })}</div>
           <strong>${sp.name}</strong>
           <span class="fine-print">${sp.role}${sp.tags.length ? ` · ${sp.tags.join(', ')}` : ''}</span>
           <span class="fine-print">parts ${found}/${total}</span>
@@ -113,16 +114,16 @@ function variantsView(state, content) {
   const rows = variants
     .map((sp) => {
       const found = bred.includes(sp.id);
-      const base = content.species[sp.variantOf];
+      const base = speciesOf(content, sp.variantOf);
       return `
         <div class="variant-row ${found ? '' : 'variant-locked'}">
-          <div class="variant-portrait">${renderCreatureSVG(stockGenome(sp.id, content), content, { idPrefix: `var-${sp.id}`, extraScale: 0.8 })}</div>
+          <div class="variant-portrait">${creaturePortrait(stockGenome(sp.id, content), content, { idPrefix: `var-${sp.id}`, extraScale: 0.8 })}</div>
           <div style="flex:1;min-width:0">
             <strong>${found ? sp.name : '???'}</strong>
             ${found ? `<span class="variant-badge">✦ bred</span>` : ''}
             <p class="fine-print">${found ? sp.flavor : `A rumoured mutation of the ${base.name} line.`}</p>
-            <p class="fine-print">${renderIcon(content.classes[sp.class].icon)} ${content.classes[sp.class].name}${
-              found ? ` · ${sp.tags.join(', ') || 'no tags'} · ${sp.setBonus.name}` : ` · from ${base.name} stock`
+            <p class="fine-print">${classOf(content, sp.class) ? `${renderIcon(classOf(content, sp.class).icon)} ${classOf(content, sp.class).name}` : '◇ Unclassed'}${
+              found ? ` · ${sp.tags.join(', ') || 'no tags'}${sp.setBonus ? ` · ${sp.setBonus.name}` : ''}` : ` · from ${base.name} stock`
             }</p>
           </div>
         </div>`;
