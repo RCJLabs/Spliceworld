@@ -12,7 +12,7 @@ gate's cap comes down to match — **passes**. `SAVE_VERSION` unchanged
 | `npm run boot` | ✓ **new** — 1,462 KB to put the game on screen, down to **1,010 KB (-31%)** |
 | `npm run smoke` | ✓ — module cap 52 -> **51**, byte cap 620 -> **560**, and both halves of every part and unit must pair |
 | `npm run battery` | ✓ — **65 breaks, 65 caught** (5 new, two more gates) |
-| `npm run scopecheck` · `npm run handlers` | ✓ — 75 modules, **33 link cases** (6 new) · 1455 handlers |
+| `npm run scopecheck` · `npm run handlers` | ✓ — 75 modules, **33 link cases** (6 new) · 1455 handlers across 64 surfaces |
 | `npm run a11y` · `npm run roadmap` · `npm run sim` | ✓ |
 
 ### What it cost to look at the game
@@ -102,6 +102,35 @@ a name that moved, a rename-on-destructure, a module used whole (asks for
 nothing), a computed specifier (abstains rather than guesses — the handler
 gate loads a module per run with a cache-busting query), and a missing
 module. **27 link cases -> 33.**
+
+### Six gates named a module instead of finding one
+
+The split moved two data sections and nine exports, and then spent six suite
+cycles being refused by gates that identify things by NAME. Every refusal was
+a real omission or a real staleness, and they only surface deep inside a
+twelve-minute run:
+
+| what refused it | why |
+|---|---|
+| R50 module map | `ui/theme.js`, `battle/statblock.js` undeclared |
+| R50 content map | `parts-shapes.json`, `enemies-shapes.json` undeclared |
+| R50 note ids | the statblock was pointed at a note (`battle`) that does not exist |
+| `indexContent` round-trip | a section that reaches runtime DISTRIBUTED, not exposed |
+| the injury-stream scan | greps `battle/engine.js` for code that moved |
+| R65's one-inflict-point rule | exempts the inflict point **by name** |
+
+The last two got the durable fix rather than a new string. R65's rule is
+"exactly one place writes an injury", and its gate exempted that place by
+name — so moving `applyInjury` made it fire on the very function it protects.
+It now **derives** the inflict point (the one module defining `applyInjury`,
+asserted to be exactly one). The round-trip gate likewise learned a new true
+shape instead of an exemption, and checks that all 244 entries landed.
+
+The other lesson was cheaper: after the fourth cycle I stopped guessing and
+**replayed the registry-style gates in isolation** — all 67 source-scan
+assertions evaluated against the tree in one pass, the round-trip gate, the
+precache walk, the injury sweep. Seconds instead of twelve minutes, and it is
+how the last three were confirmed before committing.
 
 ### Known issues
 
