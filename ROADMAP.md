@@ -1196,19 +1196,36 @@ The queue is a proposal: prune it before starting R63.
     tag/id/class/attribute and `:not([disabled])`, and hands each handler
     the WHOLE tag's dataset rather than the one attribute it was selected
     by.
-- **R78 — A month lost unseen on one seed.** Found by R68 widening R64's
-  away-gate from four seeds to sixteen. On `campaignWalk` seed **5150**,
-  leaving on day 10 for thirty days records **zero contest events** for the
-  whole month and comes back a **node down (7 → 6)** with nothing counted
-  against it, where all ten other comparable seeds record 25 or 26 events
-  and hold every node. A node lost with no contest recorded is precisely
-  what R64's schedule replay was built to make impossible, so this is not a
-  tuning outlier — the replay has a hole, and it takes a specific empire
-  shape to fall into it. The suite pins the seed by name (`frozen` must
-  equal `['5150']`), so a second seed developing the symptom fails the gate
-  rather than widening the exemption. *Done when: seed 5150's away walk
-  records the same world movement as its daily walk and loses no node
-  unseen, the pinned list is empty, and the gate asserts it stays empty.*
+- **R78 — A month lost unseen on one seed.** ✅ *Shipped.* Seed 5150 now
+  records **25 away events against 25 daily** — the same world movement as
+  its daily walk — and the pinned list is **empty**, asserted to stay empty.
+  - **The cause was an ordering, not a tuning value.** `tickContests`
+    replayed the gap in two passes: every arrival, then every expiry. An
+    arrival needs a free slot and `maxConcurrent` is **1**, so a player who
+    closed the app with a convoy already at the gate had the *entire* gap
+    skipped — the open contest held the only slot from the first instant to
+    the last, nothing was replayed, and the expiry pass then took the node
+    and scheduled the next convoy from `now`, after they were already back.
+  - **Which is why only one seed in sixteen showed it.** 5150 is the only
+    seed in the sample that leaves with `contested: 1`; every other one
+    leaves with an empty gate and never reaches the path. That is what a
+    defect needing "a specific empire shape" turned out to mean, and it is
+    the argument for the sixteen-seed sample R68 widened to.
+  - **The replay is one loop over one timeline now**, taking whichever is
+    due first — an expiry or an arrival. Two consequences are load-bearing
+    rather than incidental: a contest expires **at its own deadline**, not
+    at `now`, so the convoy after it is scheduled from inside the gap and
+    arrives inside it; and `armed` is re-read every iteration, because a
+    node falling mid-replay can take the empire below `minHeld`.
+  - **The node 5150 loses is still lost, and that is correct**: it was
+    contested *before* the app closed, so the window was offered and
+    ignored. The gate's own rule (`back.nodes >= left.nodes - left.contested`)
+    says exactly that — and it had never once run on this seed, because the
+    frozen-seed exemption skipped it before reaching any assertion.
+  - Pinned at the unit level too (a month away with a convoy at the gate
+    must replay the month), because the empire shape that reaches this path
+    is rare and a chaotic forty-day walk is a bad place to keep a mechanism
+    honest. Break battery: **21 breaks, 21 caught**, two of them aimed here.
 - **R77 — The roadmap describes a different game.** §9.3 listed R54–R62 as
   open with all nine shipped (fixed above); R32–R53 appear nowhere; the
   clocks are stale (settle 22.5 min–3 h, dissection 9–18 h); "three
