@@ -622,6 +622,24 @@
           "default": 0
         }
       ]
+    },
+    {
+      "id": "breakout",
+      "screen": "battle",
+      "order": 52,
+      "icon": "chain",
+      "title": "Their science, unsupervised",
+      "body": "A lab that keeps losing to you starts losing specimens. Loose ones gather on the Labs tab and wait \u2014 there is no clock on them. Each is a real rival chimera at that lab's grades, so hunting one is the cheapest way to stand in front of anatomy you cannot build yet. Charge the Containment Cannon before you finish it: bagged, it goes to a bay, and the Reorientation Wing turns it into one of yours.",
+      "reachable": [
+        {
+          "helper": "specimenLoose"
+        }
+      ],
+      "done": [
+        {
+          "helper": "specimenCaught"
+        }
+      ]
     }
   ]
 }

@@ -122,7 +122,7 @@ async function fixtureSave() {
   const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
   const files = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits',
     'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament',
-    'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news'];
+    'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout'];
   const content = indexContent(Object.fromEntries(files.map((n) => [n, readJSON(`data/${n}.json`)])));
   const now = Date.now();
   const s = { ...newGameState(), seed: 4242, funds: 20000, saveVersion: SAVE_VERSION };
@@ -154,6 +154,15 @@ async function fixtureSave() {
     beaten: Object.keys(content.enemies).slice(0, 2), traits: Object.keys(content.traits ?? {}).slice(0, 2), variants: [] };
   s.discoveredCombos = Object.keys(content.combos).slice(0, 3);
   s.chimeras[0].settleUntil = now - 1000;
+  // R82 — one loose specimen, so the Labs tab paints its Hunt button and
+  // this gate measures it like every other control. Built the way the world
+  // builds one: a lab that has lost to you, and a clock dated far enough
+  // back that the first escape is already overdue.
+  s.campaign.heldNodes = ['barn_perimeter', 'downtown'];
+  s.campaign.notoriety = 9999;
+  s.campaign.rivals = { mantissa: { defeats: 2, losses: 0, lastMetAt: now } };
+  const { tickBreakouts } = await import('../campaign/breakout.js');
+  tickBreakouts(s, content, now, now - 24 * 3600000);
   return JSON.stringify(s);
 }
 

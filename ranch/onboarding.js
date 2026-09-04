@@ -199,6 +199,10 @@ export const GUIDE_HELPERS = {
   rivalAvailable: (state, content) => rivalStatus(state, content).some((r) => r.status !== 'locked'),
   rivalBeaten: (state) => Object.values(state.campaign.rivals ?? {}).some((r) => (r.defeats ?? 0) > 0),
   contestOpen: (state) => (state.campaign.contested ?? []).length > 0,
+  specimenLoose: (state) => (state.campaign.loose ?? []).length > 0,
+  // "Caught" means it reached the roster, not that it reached a bay — the
+  // guide teaches the whole route, so it is done when the route is walked.
+  specimenCaught: (state) => state.chimeras.some((c) => c.rehabilitated),
   nodeDefended: (state) => Object.values(state.campaign.defences ?? {}).some((n) => n > 0),
   secondRegionOpen: (state, content) =>
     regionList(content).slice(1).some((r) => regionOpen(state, content, r)),

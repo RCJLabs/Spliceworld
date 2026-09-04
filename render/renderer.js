@@ -64,6 +64,9 @@ export function indexContent(raw) {
     classes: raw.classes ? byId(raw.classes.classes) : {},
     rivals: raw.rivals ? byId(raw.rivals.rivals) : {},
     rivalMeta: raw.rivals ? raw.rivals.rematch : null,
+    // R82: the breakout's whole tuning is one flat object, so it is
+    // indexed as one rather than split into a list and a meta block.
+    breakoutMeta: raw.breakout ?? null,
     directorRules: raw.director ? byId(raw.director.counters) : {},
     directorMeta: raw.director ? raw.director.tuning : null,
     facility: raw.facility ? byId(raw.facility.tracks) : {},

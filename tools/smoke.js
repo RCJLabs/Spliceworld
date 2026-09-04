@@ -78,6 +78,7 @@ const content = indexContent({
   regions: readJSON('data/regions.json'),
   traits: readJSON('data/traits.json'),
   rivals: readJSON('data/rivals.json'),
+  breakout: readJSON('data/breakout.json'),
   training: readJSON('data/training.json'),
   gauntlet: readJSON('data/gauntlet.json'),
   director: readJSON('data/director.json'),
@@ -1985,6 +1986,11 @@ assert.deepEqual(m5.campaign, {
   contested: [], nextContestAt: null, defences: {}, contestCount: 0,
   operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
   // R64: the campaign's own clock is gone — one elapsed clock per save.
+  // R82: an empty board, an unarmed clock. A save from before the breakout
+  // arrives with nothing loose and nothing scheduled, which is the whole
+  // claim of the v38 migration — the first escape is still five hours after
+  // the save becomes eligible, not five hours after it was upgraded.
+  loose: [], nextBreakAt: null, breakoutCount: 0,
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -6033,6 +6039,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'temperament', 'bond', 'infirmary', 'scars',
     'combos', 'chaos', 'flight',
     'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director', 'gauntlet',
+    // R82. The breakout is the rival ladder's consequence rather than a
+    // second ladder: it is on the roll in its own right because it has a
+    // data file, a module, a board, a launcher and a first-use moment, and
+    // dropping its note has to fail the build like everything else here.
+    'breakout',
     'dex',
   ];
   const covered = new Set(guides.map((g) => g.id));
@@ -6060,6 +6071,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'training.json': 'veterans',
     'gauntlet.json': 'gauntlet',
     'rivals.json': 'rivals',
+    'breakout.json': 'breakout',
     'scars.json': 'scars',
     'temperament.json': 'temperament',
     'traits.json': 'genes',
@@ -6118,6 +6130,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'campaign/contest.js': 'contest',
     'campaign/director.js': 'director',
     'campaign/gauntlet.js': 'gauntlet',
+    'campaign/breakout.js': 'breakout',
     'campaign/operations.js': 'jobs',
     'campaign/rehab.js': 'rehab',
     'campaign/rivals.js': 'rivals',
@@ -6312,6 +6325,17 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['the Pairing Suite is installed', () => { lab.facility.scanner = 3; }, ['pairing']],
     // R42: the county falls, and the coalition's storage opens.
     ['the county is theirs', () => { lab.dominionAt = t0; }, ['gauntlet']],
+    // R82: and a lab that has been losing to you starts losing specimens.
+    // Last, because it is the only note in this walk that is downstream of
+    // BEATING a rival rather than of meeting one.
+    ['something of theirs gets loose', () => {
+      lab.campaign.rivals = { mantissa: { defeats: 2, losses: 0, lastMetAt: t0 } };
+      lab.campaign.loose = [{
+        id: 'loose-0', rivalId: 'mantissa', escapedAt: t0, reward: 320,
+        sighting: 'in the reservoir, doing lengths',
+        unit: { id: 'mantissa_spec0_loose0', name: 'Vitreous', hp: 140, power: 40 },
+      }];
+    }, ['breakout']],
   ];
 
   const firstSeen = {};
@@ -13334,7 +13358,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   const { newsFor, poolFor, placeholdersIn, emitNews } = await import('../campaign/wire.js');
   const engineFiles = ['campaign/campaign.js', 'campaign/rehab.js', 'campaign/contest.js',
     'campaign/operations.js', 'campaign/gauntlet.js', 'campaign/director.js', 'campaign/rivals.js',
-    'campaign/sparring.js', 'campaign/wire.js'];
+    'campaign/sparring.js', 'campaign/wire.js', 'campaign/breakout.js',
+    // R82: `world.js` owns the one tick that runs every system, and the
+    // breakout's own announcement is emitted there — the module that decides
+    // a specimen got loose is not the module that owns the clock it got
+    // loose on. It was outside this list, so its copy read as an orphan.
+    'campaign/world.js'];
   const src = Object.fromEntries(engineFiles.map((f) => [f, readFileSync(join(root, f), 'utf8')]));
   const allCode = Object.values(src).join('\n');
   const copy = content.news;
@@ -14949,6 +14978,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     classes: readJSON('data/classes.json'), regions: readJSON('data/regions.json'),
     traits: readJSON('data/traits.json'), rivals: readJSON('data/rivals.json'),
     training: readJSON('data/training.json'), gauntlet: readJSON('data/gauntlet.json'),
+    breakout: readJSON('data/breakout.json'),
     director: readJSON('data/director.json'), facility: readJSON('data/facility.json'),
     philosophies: readJSON('data/philosophies.json'), operations: readJSON('data/operations.json'),
     chaos: readJSON('data/chaos.json'), temperament: readJSON('data/temperament.json'),
@@ -15701,6 +15731,233 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     `and a real number of them are controls, not parameters (${walk.controls.length})`);
   assert.ok(walk.surfaces >= 25, `across a real number of surfaces (${walk.surfaces})`);
   console.log(`   handlers: ${walk.totalFired} fired across ${walk.surfaces} surfaces · ${walk.controls.length} controls pressed, ${walk.parameters.length} parameters carried`);
+}
+
+// ---------------------------------------------------------------------------
+// R82 — THE BREAKOUT. The criterion, walked end to end in one block: a rival
+// lab loses a specimen, it lands on a standing board, you fight it, the
+// cannon bags it, the Wing turns it round, and it is on your roster at the
+// grades its old lab raised.
+//
+// Every step of that already existed except the first. R27 built labs that
+// field chimeras from real parts; R8 built a Wing that adopts a captive.
+// The only way to MEET one of those chimeras was to challenge that rival —
+// a gated ladder duel, three at a time, won once. So this is a source of
+// specimens, not a second way to own one, and the gate is written to fail
+// if it ever becomes the second thing: the capture path asserted below is
+// the same containment → rehab path every other prize takes.
+{
+  const { tickBreakouts, breakoutEligible, looseSpecimens, looseById, breakoutEncounter, resolveBreakout } =
+    await import('../campaign/breakout.js');
+  const { tickWorld } = await import('../campaign/world.js');
+  const { warTargetEncounter } = await import('../campaign/warroom.js');
+  const { startRehab, rehabPlan, tickRehab } = await import('../campaign/rehab.js');
+
+  const HOUR82 = 3600000;
+  const armed = (extra = {}) => {
+    const s = { ...newGameState(), seed: 4242, funds: 60000, ...extra };
+    s.lastTickAt = t0;
+    s.facility = { theater: 2, containment: 3, infirmary: 1, incubator: 1, extractor: 1, scanner: 1 };
+    s.campaign.rivals = { mantissa: { defeats: 3, losses: 0, lastMetAt: null } };
+    for (let i = 0; i < 3; i++) {
+      const c = makeSimChimera('L', STARTER_BUILD.partIds, 'prismatic', content);
+      c.id = `r82-${i}`; c.name = `Hero ${i}`; c.settleUntil = 0; c.bond = 80; c.xp = 4000;
+      s.chimeras.push(c);
+    }
+    return s;
+  };
+
+  // 1. NOTHING GETS OUT UNTIL A LAB HAS BEEN RATTLED. The gate reads the
+  //    player's own record rather than a clock, so the first escapee is a
+  //    consequence of something they did.
+  {
+    const fresh = { ...newGameState(), seed: 1 };
+    assert.equal(breakoutEligible(fresh, content), false, 'nothing is loose before a rival has lost to you');
+    fresh.campaign.rivals = { mantissa: { defeats: 1 } };
+    assert.equal(breakoutEligible(fresh, content), true, 'and one defeat is enough to start losing specimens');
+    // …and an ineligible save is not merely quiet, it is UNARMED: a clock
+    // ticking behind the gate would fire the moment the gate opened.
+    const before = { ...newGameState(), seed: 1 };
+    tickBreakouts(before, content, t0 + 900 * HOUR82);
+    assert.equal(before.campaign.nextBreakAt, null, 'and no clock runs behind the gate');
+    assert.deepEqual(before.campaign.loose, [], 'so a long absence before eligibility loses nothing');
+  }
+
+  // 2. A MONTH AWAY IS REPLAYED, NOT SKIPPED. R78's lesson, paid forward:
+  //    eligibility lives in the SAVE, so the tick that first arms the clock
+  //    can also be the tick that closes a month-long gap. Arming at `now`
+  //    and returning would produce an empty board and a plausible-looking
+  //    save — invisible for exactly the reason seed 5150 was.
+  {
+    const jump = armed();
+    tickWorld(jump, content, t0 + 24 * 14 * HOUR82);
+    const stepped = armed();
+    for (let h = 2; h <= 24 * 14; h += 2) tickWorld(stepped, content, t0 + h * HOUR82);
+    assert.ok(jump.campaign.loose.length > 0,
+      `a fortnight away puts specimens on the board (${jump.campaign.loose.length})`);
+    assert.deepEqual(
+      jump.campaign.loose.map((e) => e.unit.name),
+      stepped.campaign.loose.map((e) => e.unit.name),
+      'and one jump replays to the same board as stepping there two hours at a time'
+    );
+    assert.ok(jump.news.some((n) => /BREAKOUT|misplaced|unaccounted/i.test(n)),
+      'every escape says so on the wire, including the ones nobody was there for');
+    // The board is a queue, not a wall.
+    const long = armed();
+    tickWorld(long, content, t0 + 24 * 200 * HOUR82);
+    assert.ok(long.campaign.loose.length <= content.breakoutMeta.maxLoose,
+      `two hundred days away is still a queue, not a wall (${long.campaign.loose.length})`);
+  }
+
+  // 3. THERE IS NO CLOCK ON A LOOSE SPECIMEN. This is the one design
+  //    decision that separates the system from a counter-offensive, and it
+  //    is asserted rather than described: sitting on the board for a
+  //    hundred days must not remove it, downgrade it, or change what it is.
+  {
+    const s = armed();
+    tickWorld(s, content, t0 + 24 * 7 * HOUR82);
+    const before = s.campaign.loose.map((e) => `${e.id}:${e.unit.name}:${e.unit.hp}:${e.reward}`);
+    assert.ok(before.length, 'the board has something on it to leave alone');
+    tickWorld(s, content, t0 + 24 * 107 * HOUR82);
+    const kept = s.campaign.loose.filter((e) => before.includes(`${e.id}:${e.unit.name}:${e.unit.hp}:${e.reward}`));
+    assert.equal(kept.length, before.length,
+      'a hundred days later every one of them is still there, unchanged — they wait for you');
+  }
+
+  // 4. THE BOARD IS A REAL RIVAL CHIMERA, not a stat block wearing a name.
+  //    The generator is `rivalSpecimen`, the same one the ladder uses, which
+  //    is why the capture is worth having: a genome to draw, an anatomy to
+  //    read, and its lab's own grades on every socket.
+  {
+    const s = armed();
+    tickWorld(s, content, t0 + 24 * 7 * HOUR82);
+    const esc = looseSpecimens(s)[0];
+    assert.ok(esc, 'something is loose');
+    assert.ok(esc.unit.genome?.frame, 'it has a chassis to draw');
+    assert.ok(esc.unit.salvage.length >= 4, `and real anatomy on it (${esc.unit.salvage.length} parts)`);
+    assert.equal(esc.unit.capturable, true, 'the Containment Cannon may target it');
+    assert.ok(content.rivals[esc.rivalId], 'and it belongs to a lab that exists');
+    assert.ok(esc.unit.salvageGrades.some((g) => g !== 'standard'),
+      `at that lab's grades rather than the shop floor's (${esc.unit.salvageGrades.join('/')})`);
+    assert.equal(looseById(s, esc.id), esc, 'and the board can be addressed by id');
+
+    // The briefing is built by the SAME funnel as every other fight, so the
+    // fight the player is shown is the fight they get (R79's rule).
+    const enc = warTargetEncounter(s, { kind: 'breakout', breakoutId: esc.id }, content, t0);
+    assert.equal(enc.waves.length, 1, 'one specimen, standing on its own');
+    assert.equal(enc.waves[0].id, esc.unit.id, 'and it is the one on the board');
+    assert.ok(enc.reward > 0, `worth something (${enc.reward})`);
+    assert.equal(warTargetEncounter(s, { kind: 'breakout', breakoutId: 'no-such' }, content, t0), null,
+      'and a board entry that is gone is not offered');
+  }
+
+  // 5. THE CRITERION. Fight it, bag it, put it through the Wing, and it is
+  //    on the roster — through containment and rehab, the same path every
+  //    other prize takes.
+  {
+    const s = armed();
+    tickWorld(s, content, t0 + 24 * 7 * HOUR82);
+    const esc = looseSpecimens(s)[0];
+    const boardBefore = looseSpecimens(s).length;
+    const now = t0 + 24 * 7 * HOUR82;
+    const enc = warTargetEncounter(s, { kind: 'breakout', breakoutId: esc.id }, content, now);
+    const battle = createBattle(s.chimeras.slice(0, 3), enc, content, 99, now, {
+      kind: 'breakout', breakoutId: esc.id, rivalId: esc.rivalId, looseUnitId: esc.unit.id, waveIds: [],
+    });
+    const foe = battle.enemy.active;
+    foe.hp = Math.floor(foe.maxHp * 0.3);
+    battle.cannon.charge = 100;
+    const capture = playerActions(battle).find((a) => a.type === 'capture');
+    assert.ok(capture, 'the cannon offers itself at a weakened escapee');
+    step(battle, capture, content);
+    assert.deepEqual(battle.captured, [esc.unit.id], 'the specimen is bagged');
+    let guard = 0;
+    while (!battle.over && guard++ < 200) {
+      battle.enemy.active.hp = 0;
+      step(battle, playerActions(battle)[0] ?? { type: 'rest' }, content);
+    }
+    const detail = resolveBattle(s, battle, content, now);
+    assert.equal(detail.outcome, 'win');
+    assert.equal(looseSpecimens(s).length, boardBefore - 1, 'a win closes the entry on the board');
+    assert.equal(s.campaign.containment.length, 1, 'and the specimen is in a bay');
+    assert.equal(s.campaign.containment[0].rivalId, esc.rivalId, 'which remembers whose lab built it');
+    assert.ok(s.news.some((n) => /THWOOMP|impounded/.test(n)), 'and the wire says it was bagged');
+
+    const bay = s.campaign.containment[0];
+    const plan = rehabPlan(s, bay, content);
+    assert.ok(plan.possible, `an escapee is a candidate for the Wing (${plan.reason ?? ''})`);
+    const started = startRehab(s, bay.id, content, now);
+    assert.ok(started.ok, `and enrols (${started.msg})`);
+    tickRehab(s, content, now + (plan.hours + 1) * HOUR82);
+    const mine = s.chimeras.find((c) => c.rehabilitated);
+    assert.ok(mine, 'THE CRITERION: it joins the roster');
+    assert.equal(mine.name, esc.unit.name, `as the creature it was (${mine?.name})`);
+    assert.equal(mine.frame, esc.unit.genome.frame, 'on the chassis its old lab gave it');
+    assert.deepEqual(
+      Object.values(mine.tokens).map((tk) => tk.partId).sort(),
+      [...esc.unit.salvage].sort(),
+      'with the anatomy its old lab gave it'
+    );
+    assert.ok(Object.values(mine.tokens).some((tk) => tk.grade !== 'standard'),
+      `and at the grades its old lab raised (${Object.values(mine.tokens).map((tk) => tk.grade).join('/')})`);
+  }
+
+  // 6. A WIN WITHOUT A CAPTURE still closes the entry — its old lab
+  //    collects it — and the wire says which of the two happened. A board
+  //    that kept a beaten specimen would be a board that never empties.
+  {
+    const s = armed();
+    tickWorld(s, content, t0 + 24 * 7 * HOUR82);
+    const esc = looseSpecimens(s)[0];
+    const out = resolveBreakout(s, content, esc.id, 'win', t0);
+    assert.equal(out.cleared, true, 'beaten and not bagged still closes the entry');
+    assert.equal(out.creature, esc.unit.name, 'and hands the wire the name it will print');
+    assert.ok(!looseSpecimens(s).some((e) => e.id === esc.id), 'it is off the board');
+    // A loss leaves it exactly where it was. Losing to an escapee costs an
+    // Infirmary timer like any other fight; it must not also delete the
+    // fight you lost, which is the only way to get the parts.
+    const next = looseSpecimens(s)[0];
+    const lost = resolveBreakout(s, content, next.id, 'loss');
+    assert.equal(lost.cleared, false, 'a loss does not close the entry');
+    assert.ok(looseSpecimens(s).some((e) => e.id === next.id), 'the fight is still there to try again');
+    // …but a loss you BAGGED IT IN does. Cannon prizes ride home whatever
+    // the outcome, so a specimen can end a lost fight inside your own
+    // containment wing, and a board that still offered it would be offering
+    // you a creature you already own. One wave makes that unreachable today
+    // — bagging the only wave ends the fight as a win — which is precisely
+    // why the rule belongs in the function rather than in the wave count.
+    const bagged = resolveBreakout(s, content, next.id, 'loss', true);
+    assert.equal(bagged.cleared, true, 'a specimen bagged in a lost fight is still off the board');
+    assert.ok(!looseSpecimens(s).some((e) => e.id === next.id), 'it is in a bay, not at large');
+  }
+
+  // 7. AND THE BOARD SURVIVES A RELOAD. Everything above happens in memory;
+  //    the loose specimens live in the save, and a unit record with a genome
+  //    is the largest thing this game has ever asked a save to hold.
+  {
+    const s = armed();
+    tickWorld(s, content, t0 + 24 * 7 * HOUR82);
+    const reloaded = migrate(JSON.parse(JSON.stringify(s)));
+    assert.equal(reloaded.saveVersion, SAVE_VERSION);
+    assert.deepEqual(
+      reloaded.campaign.loose.map((e) => e.unit.name),
+      s.campaign.loose.map((e) => e.unit.name),
+      'the board survives a round trip through the save'
+    );
+    const enc = breakoutEncounter(reloaded, content, reloaded.campaign.loose[0].id);
+    assert.ok(enc?.waves[0]?.moves?.length, 'and what comes back off it can still fight');
+
+    // A pre-R82 save has no board and is not given one — the Ascent rule.
+    const old = { ...JSON.parse(JSON.stringify(s)), saveVersion: 37 };
+    delete old.campaign.loose;
+    delete old.campaign.nextBreakAt;
+    delete old.campaign.breakoutCount;
+    const up = migrate(old);
+    assert.deepEqual(up.campaign.loose, [], 'a save from before the breakout arrives with an empty board');
+    assert.equal(up.campaign.nextBreakAt, null,
+      'and no clock already running — the first escape is still five hours after it becomes eligible');
+    assert.equal(up.campaign.notoriety, s.campaign.notoriety, 'and nothing else about it moved');
+  }
 }
 
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

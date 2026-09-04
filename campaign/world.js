@@ -20,7 +20,8 @@ import { tickResequencer } from '../splice/resequencer.js';
 import { ensureTemperaments } from '../splice/temperament.js';
 import { tickScars } from '../splice/scars.js';
 import { tickCampaign } from './campaign.js';
-import { pushNews } from './wire.js';
+import { tickBreakouts } from './breakout.js';
+import { pushNews, emitNews } from './wire.js';
 
 export function elapsedSince(state, now) {
   const since = state.lastTickAt ?? now;
@@ -36,5 +37,13 @@ export function tickWorld(state, content, now) {
   for (const line of tickResequencer(state, content, now).news) pushNews(state, line);
   ensureTemperaments(state, content, now);
   for (const line of tickScars(state, content, now).news) pushNews(state, line);
+  // R82 — the breakout, last, because an escape is a consequence of the
+  // campaign tick above (a rival's defeat count is what lets one out) and a
+  // fight the player can go and have rather than a timer they have to beat.
+  // Every escape says so on the wire, including the ones that happened while
+  // the app was closed: the board they come back to has to be explained.
+  for (const e of tickBreakouts(state, content, now, since).escaped) {
+    emitNews(state, content, 'specimen_loose', { lab: e.lab, sighting: e.sighting });
+  }
   state.lastTickAt = now;
 }

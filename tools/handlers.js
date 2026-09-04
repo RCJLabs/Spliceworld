@@ -51,7 +51,7 @@ const t0 = 1700000000000;
 
 const CONTENT_FILES = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions',
   'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos',
-  'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news'];
+  'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout'];
 
 export function loadContent() {
   const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -104,6 +104,7 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   const { WAR_TABS } = await import('../campaign/warroom.js');
   const { operationList } = await import('../campaign/operations.js');
   const { rivalTeam, rivalList } = await import('../campaign/rivals.js');
+  const { tickBreakouts } = await import('../campaign/breakout.js');
 
   // ONE SAVE WITH EVERY CONTROL ALIVE AT ONCE. A surface the fixture cannot
   // reach is a surface the gate cannot press, so this state deliberately holds
@@ -200,6 +201,18 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
           sessions: 1, lastSessionAt: t0 - 4 * HOUR } },
     ];
 
+    // R82 — one loose specimen on the board, so the Labs tab paints its
+    // Hunt button and this walk can press it. The fixture builds it the way
+    // the world does rather than hand-rolling a unit: `tickBreakouts` needs
+    // a lab that has lost to you, so the record says one has.
+    s.campaign.rivals = { ...(s.campaign.rivals ?? {}),
+      [rivalList(content)[0].id]: { defeats: 2, losses: 0, lastMetAt: t0 } };
+    // Dated a day BEFORE the fixture's clock so the first escape is already
+    // overdue by `now`: the tuning's opening delay is five hours and the
+    // fixture only runs three, so arming from `t0` would leave the board
+    // empty and the Hunt button unpainted.
+    tickBreakouts(s, content, now, t0 - 24 * HOUR);
+
     // A job in the field and an unread report from the last one.
     const op = operationList(content)[0];
     s.campaign.operations = [{ opId: op.id, chimeraId: null, startedAt: t0,
@@ -236,6 +249,11 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     subtab: 'map', path: [{ sel: '[data-node]' }] });
   SURFACES.push({ name: 'battle:spar-briefing', file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
     subtab: 'map', path: [{ sel: '[data-spar]' }] });
+  // R82: the briefing behind a loose specimen. It lives on the Labs tab, not
+  // the map, which is exactly the reachability the walk exists to prove — a
+  // Hunt button nothing can press is a fight nobody can have.
+  SURFACES.push({ name: 'battle:loose-briefing', file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
+    subtab: 'labs', path: [{ sel: '[data-breakout]' }] });
   // A picker sheet per field, on every screen that has one. `path` stays
   // EMPTY here: the fanout is what presses the field, and a surface that
   // consumed its own control in the path would probe zero of them.

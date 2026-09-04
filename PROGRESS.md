@@ -1,5 +1,110 @@
 # PROGRESS
 
+## Session 102 — R82: The Breakout ✅
+
+**Acceptance criterion:** rival specimens escape into the world and
+accumulate on a board you can hunt in any order, each one a real rival-built
+chimera; and capturing one and putting it through the Reorientation Wing
+adds it to your roster at the grades its old lab raised — **passes**.
+`SAVE_VERSION` **37 → 38** with a migration; `sw.js` cache → `v38-r82`.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ — a new block walks the whole route: escape → board → briefing → cannon → bay → Wing → roster |
+| `npm run battery` | ✓ — **43 breaks, 43 caught** (8 new, a sixth gate), baseline green on all six |
+| `npm run scopecheck` · `npm run handlers` | ✓ — 68 modules · 1229 handlers across **60** surfaces (the loose briefing is one) |
+| `npm run a11y` · `npm run sim` | ✓ — **48** controls at 380px (was 46; the Hunt button is measured) · 6324 battles |
+| browser QA | ✓ — fresh, migrated-v1, full and a retired build, six screens each, 0 console errors |
+
+### The gap this closes
+
+R27 built labs that field chimeras from real parts under the player's own
+physiology. R8 built a Wing that turns a captive into a roster member.
+Between them: the only way to stand in front of a rival's chimera was to
+challenge that rival — a gated ladder duel, three at a time, won once. The
+most interesting anatomy in the game was the rarest thing to meet.
+
+Almost none of this milestone is new machinery. `rivalSpecimen` is
+`rivalTeam`'s own loop, extracted so a loose specimen is built by the same
+rules as one still on the ladder. The capture path is containment → rehab,
+unchanged. What is new is a **source**.
+
+### Two decisions, and why
+
+**No clock.** A counter-offensive is a threat and a threat needs a deadline.
+An escapee is an opportunity — and a window that closes while the player is
+asleep produces *fewer* fights with rival anatomy, which is the one thing
+this system exists to produce. The board is standing; `maxLoose` caps it so
+a fortnight away is a queue, not a wall. Asserted directly: a hundred days
+later every entry is still there, unchanged.
+
+**Through the Wing.** A bagged escapee lands in a bay like any other prize.
+The alternative — joining the roster on capture — would make the Wing the
+*slower* option for exactly the creatures it was built for.
+
+### R78's lesson, paid forward
+
+Eligibility lives in the save, so the tick that first arms the escape clock
+can also be the tick closing a month-long gap. The first draft armed at
+`now` and returned: a month away produced nothing, and the board you came
+back to looked perfectly plausible while being empty — invisible for exactly
+the reason seed 5150 was. Arming now dates from the *start* of the gap and
+falls through to the replay loop. One 14-day jump and 168 two-hourly steps
+land on the same board, asserted by name.
+
+### What the gates caught, and what they could not
+
+The suite did its job three times before I got near a browser:
+- **`data-breakout` painted and nothing fired** — the Hunt button had no way
+  in. It lives on the Labs tab, not the map, so the walk needed a surface of
+  its own.
+- **Two news events with no visible emitter** — I passed the event id out of
+  `resolveBreakout` as a variable, and R20's two-way wire gate cannot verify
+  a caller it cannot see. The literals moved to the call site, which is
+  better design anyway.
+- **A guide order collision, an unlisted system, an unreachable note** — the
+  R29/R39/R50 registration gates, all working.
+
+One defect no gate could have found, from an adversarial pass on my own
+code: **a specimen bagged in a LOST fight would have stayed on the board as
+well as in the bay.** Cannon prizes ride home regardless of outcome. It is
+unreachable today — a breakout is one wave, and bagging the only wave ends
+the fight as a win — which is precisely why the rule now lives in
+`resolveBreakout` rather than in the wave count. Break 43 holds it.
+
+### What I reverted, and why
+
+I wrote the harness half too: `campaignWalk` hunting escapees. It was dead
+code, because **the walk has never challenged a rival in 180 days** — so
+nothing is ever eligible. Making it duel (one a week, fit A-team only)
+worked: 18–31 escapees hunted per seed, all won, funds $43–46k → $46–59k.
+
+It also moved seed 5150 into the away-walk's dead zone, and that assertion
+belongs to R68/R78. Retuning someone else's balance claim to fit my
+behaviour change is how a suite stops meaning anything, so I reverted the
+walk entirely — the numbers above are byte-identical to before this session
+— and queued it as **R83**, where re-baselining is the work rather than a
+rider.
+
+### Known issues
+
+- The harness does not measure the breakout at all (see R83). The smoke gate
+  walks the full route, which is stronger per-path but says nothing about
+  how the system paces over a campaign.
+- Escapees measured as easy: one specimen against a team of three, and the
+  walker only hunts with a fit A-team. That is consistent with "opportunity,
+  not threat" — the reward is the capture, not the challenge — but if the
+  board ever feels like a chore, difficulty is the dial.
+- A save with four loose specimens carries ~8 KB more than one without
+  (measured: 2,023 bytes per escapee, since each is a full unit record).
+
+### Next session's first task
+
+**R80 — the keyboard can see the game but not play it**, unless R83 first.
+Read ROADMAP.md §6 for the criterion before touching anything.
+
+---
+
 ## Session 101 — R79: the same hole, for retired species and frames ✅
 
 **Acceptance criterion:** the R72 fixture also retires one species, one
