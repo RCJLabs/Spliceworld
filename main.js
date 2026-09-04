@@ -17,6 +17,7 @@ import { tickWorld } from './campaign/world.js';
 import * as sfx from './audio/sfx.js';
 import { watchSignals, cuesFor } from './audio/sfx.js';
 import { renderIcon } from './ui/icons.js';
+import { installFocusKeeper } from './ui/focus.js';
 
 // Dev time-warp: ?warp=48 pretends 48 hours have passed. QA-only — the
 // warp lives in the URL, never in the save, so removing it can produce a
@@ -344,6 +345,19 @@ async function boot() {
   document.querySelectorAll('#tabs button').forEach((btn) => {
     btn.addEventListener('click', () => showScreen(btn.dataset.screen));
   });
+  // R80 — one observer per screen, so no repaint can drop a keyboard user
+  // at the top of the document. Installed before the first paint so the
+  // 30-second tick below is covered from the very first one.
+  //
+  // The overlay is in the list for the second half of R80's report: R73's
+  // dialog controller re-focuses the FIRST control in a re-rendered panel,
+  // because a detached activeElement reads as `<body>` and its guard sees
+  // nothing inside the dialog. So tapping "Download my save" moved focus to
+  // the sound toggle and announced it, saying nothing about the export. The
+  // keeper's observer is registered first and restores by key, so by the
+  // time the dialog controller looks, focus is already back where the
+  // player left it and its guard correctly does nothing.
+  installFocusKeeper([...Object.keys(SCREENS).map((s) => $(`#screen-${s}`)), $('#overlay')].filter(Boolean));
   showScreen(state.activeScreen);
 
   document.addEventListener('visibilitychange', () => {

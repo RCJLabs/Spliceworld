@@ -49,6 +49,14 @@ const TWICE = ['node', '-e', `
   console.log('twice ✓  ' + a.totalFired + ' both times');
 `];
 
+// R80 — the keyboard gate. Slow (it launches a browser) and worth it: it is
+// the only gate in the battery that presses keys, and the defects it exists
+// to catch are all of the form "works with a mouse, does nothing without
+// one", which no static read can see. If Chromium is missing it exits
+// nonzero, the baseline below prints FAIL, and the battery says so rather
+// than scoring seven breaks green for free.
+const A11Y = ['node', 'tools/a11y.js'];
+
 const VERBOSE = process.argv.includes('--verbose');
 
 // The R78 replay, at the unit level. A month away with a convoy already at
@@ -767,6 +775,49 @@ const BREAKS = [
     to: "  if (!loose || outcome !== 'win') return { cleared: false, creature: null, lab: null };",
     expect: 'contract',
   },
+  // --- gate: a11y (the game is playable without a mouse) -------------------
+  {
+    n: 54, gate: A11Y, name: 'the focus keeper is not installed, so every repaint drops the player at the top',
+    file: 'main.js',
+    anchor: "  installFocusKeeper([...Object.keys(SCREENS).map((s) => $(`#screen-${s}`)), $('#overlay')].filter(Boolean));",
+    to: '  void installFocusKeeper;',
+  },
+  {
+    n: 55, gate: A11Y, name: 'the opening exchange of a duel goes back to being a div you click',
+    file: 'battle/ui.js',
+    anchor: `\${opening ? '<button type="button" class="msg-next" id="msg-next" aria-label="Continue">&#9654;</button>' : ''}`,
+    to: `\${opening ? '<div class="msg-next" id="msg-next">&#9654;</div>' : ''}`,
+  },
+  {
+    n: 56, gate: A11Y, name: 'the move readout loses its key and is a long press again',
+    file: 'battle/ui.js',
+    anchor: "      if (e.key !== '?') return;",
+    to: "      if (e.key !== 'Unidentified') return;",
+  },
+  {
+    n: 57, gate: A11Y, name: 'the retraining counter changes in silence',
+    file: 'splice/pens-ui.js',
+    anchor: '            announce(`${chosen.size} of ${MOVE_SLOTS} move slots filled`);',
+    to: '            void announce;',
+  },
+  {
+    n: 58, gate: A11Y, name: "Enter goes back on the document, so the rename sheet's Close button commits",
+    file: 'ui/picker.js',
+    anchor: "  input.addEventListener('keydown', (e) => {\n    if (e.key !== 'Enter') return;\n    e.preventDefault();\n    submit();\n  });",
+    to: "  document.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });",
+  },
+  {
+    n: 59, gate: A11Y, name: 'a nav tab stops being a button, so the keyboard cannot reach that screen',
+    file: 'index.html',
+    anchor: '    <button type="button" data-screen="dex">Dex</button>',
+    to: '    <div data-screen="dex" role="button">Dex</div>',
+  },
+  {
+    n: 60, gate: A11Y, name: 'the subtab strip crowds its buttons back together',
+    file: 'style.css',
+    anchor: '  gap: 6px;  /* R80 — the tightest strip in the game was the one with the most buttons in it. */',
+    to: '  gap: 3px;',
+  },
   {
     n: 42, gate: BREAKOUT, name: 'a loose specimen grows a deadline and wanders off while you are away',
     file: 'campaign/breakout.js',
@@ -793,14 +844,15 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
       : gate === RETIRED ? 'a save read against a build that retired seven of its ids'
         : gate === BREAKOUT ? 'a specimen escapes, waits, is hunted and joins the roster'
           : gate === WALK ? 'the walk fights rivals, hunts the board and builds the lab'
-            : gate.join(' ');
+            : gate === A11Y ? 'the whole game opened, tabbed and fought with a keyboard'
+              : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }

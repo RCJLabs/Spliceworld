@@ -6164,7 +6164,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // --- Shared UI machinery. A fold, a picker, a tab bar and a band are
     // how systems are shown, not systems themselves.
     'ui/cards.js': null,
+    // R80. Neither is a system: one keeps focus where the player left it
+    // across a repaint, the other is the single live region every panel
+    // announces into. A player never meets either — which is the whole
+    // point of both — so there is nothing for a note to teach.
+    'ui/focus.js': null,
     'ui/icons.js': null,
+    'ui/live.js': null,
     'ui/picker.js': null,
     'ui/roster.js': null,
     'ui/tabs.js': null,
@@ -15730,6 +15736,36 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   const panel = readFileSync(join(root, 'save/settings-ui.js'), 'utf8');
   assert.ok(!/<label for="set-import-file"/.test(panel),
     'the save-import control is a button, not an unfocusable label');
+
+  // R80 — the same reasoning, for everything a Chromium-less run would
+  // otherwise take on trust. `tools/a11y.js` proves all of this properly, in
+  // a browser, by pressing the keys; these are the shape assertions that
+  // survive a machine with no browser on it.
+  assert.ok(/id="announcer"[^>]*aria-live="polite"/.test(html),
+    'the shell carries a live region for panels to announce into');
+  assert.ok(/id="announcer"[^>]*role="status"/.test(html), 'and it is a status region');
+  assert.ok(/\.sr-only\s*\{/.test(css) && !/\.sr-only\s*\{[^}]*display:\s*none/.test(css),
+    'the live region is hidden visually and NOT removed from the accessibility tree');
+  assert.ok(/installFocusKeeper\(\[/.test(shell) && /\$\('#overlay'\)/.test(shell),
+    'the focus keeper covers the overlay as well as the screens — R73 refocused the first control');
+
+  // Every control is a real control: the two the audit named by hand.
+  const arena = readFileSync(join(root, 'battle/ui.js'), 'utf8');
+  assert.ok(/<button[^>]*id="msg-next"/.test(arena),
+    'the opening exchange advances by a real button, not by clicking a div');
+  assert.ok(/aria-keyshortcuts/.test(arena),
+    'and the move readout has a keyboard shortcut, not only a long press');
+  assert.ok(/id="msg-text"[^>]*aria-live="polite"/.test(arena),
+    'the running commentary of a fight is a live region');
+
+  // The rename sheet: Enter belongs to the field, not to the document.
+  const picker = readFileSync(join(root, 'ui/picker.js'), 'utf8');
+  assert.ok(!/document\.addEventListener\('keydown', \(e\) => \{ if \(e\.key === 'Enter'/.test(picker),
+    'Enter is not registered on the document, where the Close button would commit a rename');
+  assert.ok(/aria-labelledby="pick-label-/.test(picker),
+    'a picker field is announced with the label it belongs to, not only its current value');
+  assert.equal((picker.match(/opener: openerNow\(\)/g) ?? []).length, 2,
+    'both sheets remember the control that opened them');
 }
 
 // ---------------------------------------------------------------------------
@@ -15766,7 +15802,15 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 
   const eager = graphFrom('main.js');
   const kb = [...eager.values()].reduce((n, b) => n + b, 0) / 1024;
-  const MODULE_CAP = 50;
+  // R80 raised the module cap by two and left the KB cap where it was.
+  // `ui/focus.js` and `ui/live.js` are 5 KB between them — under one percent
+  // of the graph — which is exactly the case the note above anticipates: "a
+  // gate that fails when someone adds a small module is a gate people learn
+  // to raise without reading". So the entry count moved and the BYTE budget,
+  // which is the one that measures cost rather than tidiness, did not: 615
+  // of 620, with no room left to spend without cutting something first.
+  // That is R81's whole job.
+  const MODULE_CAP = 52;
   const KB_CAP = 620;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);

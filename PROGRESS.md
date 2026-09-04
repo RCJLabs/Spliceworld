@@ -1,5 +1,144 @@
 # PROGRESS
 
+## Session 105 — R80: The keyboard can see the game but not play it ✅
+
+**Acceptance criterion:** no render loses focus, every control is a real
+control, state changes announce, and `tools/a11y.js` walks the app by
+keyboard alone — **passes**. `SAVE_VERSION` unchanged (**38**); `sw.js`
+bumped to `spliceworld-v38-r80` and carrying two new modules.
+
+| gate | result |
+|---|---|
+| `npm run a11y` | ✓ **rewritten** — 6/6 screens opened with Tab and Enter, 52 controls tabbed to, a duel fought; 59 controls measured across 19 views |
+| `npm run battery` | ✓ — **60 breaks, 60 caught** (7 new, a ninth gate), baseline green on all nine |
+| `npm run smoke` | ✓ — ten new shell assertions for the runs with no browser; module cap 50 → 52 |
+| `npm run scopecheck` · `npm run handlers` | ✓ — 71 modules · 1455 handlers across 64 surfaces |
+| `npm run roadmap` · `npm run sim` · browser QA | ✓ |
+
+### Nine of the entry's ten claims held. The tenth was the measurement.
+
+The entry said the crowded controls sat "under the 8 px the same audit
+measured everywhere else". Measured for the first time — every pair of
+controls sharing an axis, on every screen, subtab, sheet and theme, at 380 px
+— the game's gutter is **6 px**, in eighteen separate places. Nothing in the
+stylesheet uses 8. "Train sits directly beside Dismantle" was wrong the same
+way: 6 px, which is the standard.
+
+What was genuinely under it, and is now fixed:
+
+| where | was | now |
+|---|---|---|
+| picker rows | 5 px | 6 |
+| Dex subtab strip | 4 px | 6 |
+| care row, slot actions, toggle rows, slot rows | 5 px | 6 |
+| **Retreat → the settings gear, in battle** | **1.5 px** | 6 |
+
+That last one was in nobody's report. The handler gate has fired the arena's
+buttons headlessly since R75, but nothing had ever laid a ruler on the
+screen, and battle mode reshapes every band in the shell — its own
+message-log button was **30 px**, under R73's floor since R73. So the floor
+is the number the game actually uses, and the gate measures it pairwise
+across every view from now on.
+
+### The fixes
+
+- **`ui/focus.js`** — one `MutationObserver` per render root. There is no
+  funnel to wrap: `tick()` repaints the active screen every 30 s,
+  `bindSubtabs` repaints on activation, and the Pens and the briefing repaint
+  themselves from inside their own handlers. The DOM mutation *is* the event.
+  Identity is R76's — tag + id + `data-*` — so the restore is a lookup, not
+  an index; position is exactly what a repaint changes. Before: focus a
+  Dismiss button, wait for the tick, `activeElement` is `BODY`. After: it is
+  the Dismiss button.
+- **R73's dialog controller**, fixed by inclusion rather than by surgery. The
+  overlay joins the keeper's list and the keeper's observer is registered
+  first, so by the time the controller looks, focus is already home and its
+  "focus the first control" fallback correctly does nothing.
+- **Two controls that were not controls.** The opening exchange of a duel is
+  a real `<button>` (and takes focus as each line advances); the move readout
+  — all of R30's arithmetic, tags and keyword sentences — answers `?` as
+  well as a 350 ms hold.
+- **`ui/live.js`** — one region, in `index.html`, outside every render root,
+  because a live region written *inside* a panel is destroyed and rebuilt by
+  that panel's next render. That is the bug wearing its own fix as a costume.
+  The settings result line and the retraining slot counter speak through it;
+  the arena's commentary keeps its own, because that node is stable for the
+  length of a round.
+- **The rename sheet.** Enter was on `document` with no target check, so the
+  ✕ committed the rename — "no" and "yes" did the same thing. Enter belongs
+  to the field now. It also never recorded an opener and never trapped Tab
+  despite claiming `aria-modal="true"`; both now come from one helper shared
+  with the picker.
+- **`pickerField`** labels its button with `aria-labelledby`, so a picker
+  announces "Theme, Laboratory" instead of "Laboratory" and a guess.
+
+### The gate stopped clicking
+
+Everything `tools/a11y.js` measured before this navigated with `.click()`,
+which is the assumption R80 was filed against. Section 6 opens all six
+screens with Tab and Enter, Tabs to every control on each, fires the app's own
+tick and checks focus held, activates a Dex subtab and checks focus stayed on
+it, advances a duel's opening exchange, opens a move readout with `?`, and
+throws a punch — with no `.click()` and no `.focus()` anywhere in it. Its last
+two parts (a real announcement driven through the retraining sheet, and Enter
+on the rename sheet's ✕ cancelling rather than committing) do open their sheet
+with a click, because the question there is what the KEYS do once it is open.
+
+Two things it needed first. The fixture carries **a duel in progress** — a
+battle is plain serializable state, so a save is all it takes — which is how
+the arena finally got measured. And the 30-second repaint is switched off for
+the walk: it is a thing under test (§6b fires it deliberately, on the app's
+own code path), and left running it lands at an arbitrary moment inside a
+200-press tab walk and makes the result depend on how fast the machine is.
+
+One driver bug worth remembering: `blur()` does **not** reset the tab order.
+It clears `document.activeElement` and leaves Chrome's sequential focus
+navigation starting point where it was, so "from the top of the document"
+resumed from the middle of the page and the Dex tab looked unreachable.
+Focusing a body made programmatically focusable moves the starting point too.
+
+### Two gates caught me on the way past
+
+R50's module-declaration map refused `ui/focus.js` and `ui/live.js` until both
+were listed and exempted with a reason. And R74's eager-import cap went red at
+**51 modules against a cap of 50**. The cap moved to 52; the **byte budget did
+not** — 615 KB of 620, which is the number that measures cost rather than
+tidiness, and there is no room left in it to spend without cutting something
+first. That is R81's whole job, and it starts next session with five
+kilobytes less headroom than it had.
+
+### The arena, on the shortest phone the game supports
+
+The stylesheet carries a `max-height: 640px` band written specifically
+because the arena is height-locked and had to give something up — and no gate
+had ever rendered it. The walk now measures the arena at 380x640 as well as
+380x780. It also asks a question the floor and the gutter cannot:
+`body.in-battle` sets `overflow: hidden`, and a clipped control still reports
+a full-size rect, so the gate measures **overflow**
+(`scrollHeight - clientHeight` on `main`, the screen, `.arena` and `.cmd`).
+Proven by squeezing: 78 px more footer and it goes red on all three.
+
+### Known issues
+
+- The gutter floor is 6 px, not 8. If the game's spacing scale is ever
+  raised, `GUTTER` in `tools/a11y.js` is the one place to raise with it.
+- The keyboard walk adds ~10 s to `npm run a11y` (≈27 s total) and ~4 min
+  to the battery, which now launches a browser eight times.
+- The gate measures two viewport heights, 780 and 640, which are the two
+  bands the stylesheet has rules for. The middle band (641-759) is rendered
+  by neither.
+- `?` for the move readout is announced through `aria-keyshortcuts` and a
+  `title`, which is the right place for a screen reader and an invisible one
+  for a sighted keyboard user. A visible hint would cost arena height that
+  the 380 px layout does not have.
+
+### Next session's first task
+
+**R81 — the other 766 KB.** R74 capped the eager graph from `main.js`; R81 is
+the rest of it — the modules that load eagerly behind the screens R74 made
+lazy. Read the entry, measure the graph before believing it (R74's own
+numbers had drifted by the time it ran), and cut from there.
+
 ## Session 104 — R77: the roadmap describes a different game ✅
 
 **Acceptance criterion:** ROADMAP either describes the shipped game or names

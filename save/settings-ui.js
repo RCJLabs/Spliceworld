@@ -18,6 +18,7 @@ import {
 import { renderIcon } from '../ui/icons.js';
 import { openPicker, openPrompt, toggleRow } from '../ui/picker.js';
 import * as sfx from '../audio/sfx.js';
+import { announce } from '../ui/live.js';
 
 // The five colour schemes style.css ships. BASE_THEME is a sentinel, not a
 // `[data-theme]` selector — biohazard IS the bare `:root`, so "picked
@@ -88,6 +89,12 @@ export function openSettings(overlay, ctx) {
   // has to survive being appended to a DOM the very next line replaces.
   // `note`-then-`render` was tried first and lost every message it showed.
   const render = (msg) => {
+    // R80 — this panel's whole conversation with the player is one line of
+    // text that appears in a full re-render, so a screen reader was told
+    // nothing at all: not that the save downloaded, not that the import
+    // failed, not why. The line still renders where it always did; it is
+    // also spoken.
+    announce(msg);
     const reg = loadSlotRegistry(storage);
     const now = ctx.now();
     const slotRows = reg.slots

@@ -487,7 +487,7 @@ every `sfx.play()` call is invisible to it. Checked before filing.
   sentence, and smoke asserts every emitted event id has copy AND every
   line has an emitter — R20's invariant, pointed at the wire.*
 
-### 9.4 Fourth audit (R63–R83) — **shipped except R80, R81 and the three gaps R77 named (R84–R86)**
+### 9.4 Fourth audit (R63–R83) — **shipped except R81 and the three gaps R77 named (R84–R86)**
 
 Run after R62, against a game with three closed audits behind it. Same rule
 as the other three: every line names the evidence that put it there, and the
@@ -1171,37 +1171,72 @@ The queue is a proposal: prune it before starting R63.
   timer game with no earned skip is a timer game that just makes you wait —
   and it is the last unbuilt clause of the offline-timer spec. *Done when:
   an earned currency skips a timer, or §3.9 stops promising one.*
-- **R80 — The keyboard can see the game but not play it.** R73 made focus
-  visible and the two modals real dialogs; an adversarial four-dimension
-  audit found the barriers that survive. **Focus is destroyed on a timer:**
-  `main.js`'s `tick()` re-renders the active screen every 30 s and every
-  render function replaces `innerHTML` wholesale, so a keyboard user is
-  returned to the top of the document twice a minute; the same happens on
-  every subtab activation (`ui/tabs.js:37`), every retraining toggle
-  (`pens-ui.js:468`) and every strike-team pick (`campaign/ui.js:996`).
-  **Controls that are not controls:** the battle's opening exchange advances
-  by clicking a `<div>` (`battle/ui.js:221`), and the move-detail sheet opens
-  on `pointerdown` only. **Nothing announces:** the settings panel's own
-  result message, the retraining counter and the battle log are all plain
-  text that changes silently. **Spacing:** picker rows sit 5 px apart, the
-  Dex subtab strip 4 px, and Train sits directly beside Dismantle — under
-  the 8 px the same audit measured everywhere else.
-  **And R73's own dialog controller only half-solves this.** When a panel
-  re-renders in place the focused element is detached, so
-  `document.activeElement` is `<body>`, the `!overlay.contains(...)` guard
-  passes, and focus lands on the FIRST control in the fresh markup rather
-  than the one the player just used: tapping "Download my save" moves focus
-  to the sound toggle and announces it, saying nothing about the export.
-  Strictly better than the `<body>` it replaced, and still not right — the
-  fix is for the re-rendering panels to name what should hold focus, which
-  is the same change the rest of this entry needs. Two more from the same
-  audit: `openPrompt` registers Enter on `document` with no target check, so
-  Enter on the sheet's own Close button COMMITS the rename instead of
-  cancelling it; and `pickerField`'s label sits in an unassociated sibling
-  span, so every picker button is announced as its current value with no
-  idea which field it belongs to. *Done when: no render loses focus, every
-  control is a real control, state changes announce, and `tools/a11y.js`
-  walks the app by keyboard alone.*
+- **R80 — The keyboard can see the game but not play it.** ✅ *Shipped.*
+  Every claim in the entry was checked against the shipped game before
+  anything was touched, and nine of the ten held. The tenth did not, and it
+  is the one worth writing down: the entry said the crowded controls sat
+  "under the 8 px the same audit measured everywhere else". Measured in a
+  browser at 380 px — every pair of controls that shares an axis, on every
+  screen, subtab, sheet and theme — the game's gutter is **6 px**, not 8, in
+  eighteen separate places. "Train sits directly beside Dismantle" was wrong
+  too: they sit 6 px apart, which is the standard. What was genuinely under
+  it: the picker rows at 5, the Dex subtab strip at 4, and one nobody had
+  seen — **Retreat ends 1.5 px above the settings gear** in battle mode.
+  The handler gate has fired the arena's buttons headlessly since R75, but
+  nothing had ever laid a ruler on the screen, and battle mode reshapes
+  every band in the shell. Its own message-log button turned out to be 30 px
+  — under R73's floor since R73. So the gutter floor is the number the game
+  actually uses, and five rules came up to meet it.
+  - **Focus survives a repaint** (`ui/focus.js`). One `MutationObserver` per
+    render root rather than a wrapper around a dozen render calls, because
+    there is no funnel: `tick()` repaints the active screen, `bindSubtabs`
+    repaints on activation, and the Pens and the briefing repaint themselves
+    from inside their own handlers. The DOM mutation IS the event. Identity
+    is R76's: tag + id + `data-*`, so the restore is a lookup and not an
+    index — position is exactly what a repaint changes. Measured before:
+    focus a Dismiss button, wait for the tick, `document.activeElement` is
+    `BODY`. After: it is the Dismiss button.
+  - **R73's dialog controller, fixed by inclusion.** The overlay is in the
+    keeper's list, and the keeper's observer is registered first, so by the
+    time the dialog controller looks, focus is already back where the player
+    left it and its "focus the first control" fallback correctly does
+    nothing. "Download my save" no longer answers by announcing the sound
+    toggle.
+  - **Two controls that were not controls.** The opening exchange of a duel
+    is a real `<button>` that Tab reaches and Enter presses (and that takes
+    focus as each line advances); the move readout — the whole of R30's
+    arithmetic, tags and keyword sentences — answers `?` on the focused move
+    as well as a 350 ms hold, advertised in `aria-keyshortcuts` and a title.
+  - **Three things that changed in silence now speak** (`ui/live.js`). One
+    region, in `index.html`, outside every render root — because a live
+    region written INSIDE a panel is destroyed and rebuilt by that panel's
+    next render, which is the bug wearing its own fix as a costume. The
+    settings panel's result line and the retraining slot counter announce
+    through it; the arena's commentary keeps its own, because that node is
+    stable for the length of a round.
+  - **The rename sheet.** Enter belonged to `document` with no target check,
+    so the ✕ committed the rename — the control that means "no" did the same
+    thing as the control that means "yes". Enter now belongs to the field.
+    It also never recorded an opener (focus went to the top of the document
+    on close) and never trapped Tab despite claiming `aria-modal="true"`;
+    both now come from one helper shared with the picker.
+  - **`pickerField` labels its button.** `aria-labelledby` naming the label
+    and the value, so a picker announces "Theme, Laboratory" rather than
+    "Laboratory" and a guess.
+  - **The gate.** `tools/a11y.js` now enters an arena — the fixture carries a
+    duel in progress, which is only a save — and then puts the mouse down:
+    it opens all six screens with Tab and Enter, Tabs to all 52 controls on
+    them, fires the tick and checks focus held, advances a duel's opening
+    exchange, opens a move readout with `?`, throws a punch, activates a Dex
+    subtab and checks focus stayed on it, drives a real announcement through
+    the retraining sheet, and proves Enter on the rename sheet's ✕ cancels.
+    Plus the 6 px gutter, measured pairwise across every view, and the arena
+    at 380×640 as well as 380×780 — the stylesheet's short-phone band exists
+    because that screen is height-locked, and no gate had ever rendered it.
+    Since `overflow: hidden` means a clipped control still reports a
+    full-size rect, the arena is also checked for OVERFLOW, which is the
+    only way to see it. 59 controls across 19 views. Seven battery breaks
+    aim at the new gate and all seven go red; the suite is 60 for 60.
 - **R74 — The briefing runs 64–160 battles per checkbox.** ✅ *Shipped.*
   Re-measured before touching anything, and the graph had grown since the
   entry was written: **55 modules and 701 KB** eager, not 52 and 623.

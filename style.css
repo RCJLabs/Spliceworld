@@ -166,6 +166,21 @@ h1 span { color: var(--zap); }
 }
 .tabs button.active { color: var(--goo); border-color: var(--goo); }
 
+/* R80 — for a screen reader and nobody else. Not `display: none` and not
+   `visibility: hidden`: both take the element out of the accessibility tree
+   entirely, which is the one thing a live region must never be. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* --- R73: focus you can actually see -----------------------------------
    There was exactly one `outline: none` in the file (on the Dex cell) and
    nothing anywhere that put a ring back, so a keyboard user moved through
@@ -442,7 +457,7 @@ main {
 .tier-scruffy { background: var(--danger-2); }
 .cond-label { margin: 0 0 4px; font-size: 0.68rem; color: var(--muted); }
 
-.care-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px; }
+.care-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
 .care-row button {
   min-width: 0;
   background: var(--panel-2);
@@ -543,7 +558,7 @@ main {
   gap: 6px;
   flex-wrap: wrap;
   padding: 7px 8px;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -560,7 +575,7 @@ main {
   padding: 1px 4px;
   vertical-align: middle;
 }
-.slot-actions { display: flex; gap: 5px; flex: 0 0 auto; }
+.slot-actions { display: flex; gap: 6px; flex: 0 0 auto; }
 .slot-actions .care-train, .slot-actions .pen-dismantle { margin: 0; padding: 5px 8px; font-size: 0.68rem; }
 
 /* R75 — was `infinite`. The element is replaced by the poof at 0.55 ×
@@ -674,7 +689,10 @@ body.in-battle .tabs { margin-top: 4px; }
 body.in-battle .tabs button { padding: 6px 2px; font-size: 0.66rem; }
 body.in-battle main { padding: 8px 10px 6px; overflow: hidden; min-height: 0; }
 body.in-battle .screen { min-height: 0; height: 100%; }
-body.in-battle footer { padding: 2px 8px; }
+/* R80 — Retreat used to end 1.5px above the settings gear. Battle mode
+   squeezes every band in the shell, and the two it squeezed together belong
+   to different systems: one ends the fight, one opens the options. */
+body.in-battle footer { padding: 12px 8px 2px; }
 body.in-battle .ticker { font-size: 0.66rem; }
 
 .arena {
@@ -890,16 +908,24 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .ord-you { color: var(--goo); }
 .ord-them { color: var(--danger-soft); }
 .ord-tie, .ord-swap { color: var(--muted); }
-.msg-log {
+/* R80: 30x30 until the a11y walk finally reached the arena. Both of these
+   are real controls in a fight and both were under R73's 40px floor — the
+   gate could not see them because the arena was not one of the views it
+   walked. */
+.msg-log, .msg-next {
   flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
+  min-width: 40px;
+  min-height: 40px;
   background: var(--panel-2);
   color: var(--muted);
   border: 1px solid var(--line);
   border-radius: 8px;
   font-size: 0.8rem;
   cursor: pointer;
+}
+.msg-next {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* --- Command menu --- */
@@ -1699,7 +1725,10 @@ footer {
   gap: 2px;
   align-items: flex-start;
   text-align: left;
-  margin-bottom: 5px;
+  /* R80 — 6px, the gutter every other control row in the game uses. These
+     sat at 5, which is close enough to read as a typo and far enough for a
+     thumb to land between two options and pick the wrong one. */
+  margin-bottom: 6px;
   padding: 9px 10px;
   background: var(--panel-2);
   color: var(--text);
@@ -1724,7 +1753,7 @@ footer {
   align-items: center;
   gap: 9px;
   text-align: left;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   padding: 8px 10px;
   background: var(--panel-2);
   color: var(--text);
@@ -1931,7 +1960,7 @@ footer {
   z-index: 6;
   display: grid;
   grid-template-columns: repeat(var(--subtab-n, 5), 1fr);
-  gap: 4px;
+  gap: 6px;  /* R80 — the tightest strip in the game was the one with the most buttons in it. */
   margin: 0 0 10px;
   padding: 6px;
   background: var(--ink);

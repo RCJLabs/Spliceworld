@@ -209,7 +209,13 @@ export function renderArena(root, ctx, onDone) {
       </div>
 
       <div class="msg-box ${opening ? 'is-bark' : ''}" id="msg-box">
-        <p class="msg-text" id="msg-text">${prompt}</p>
+        <!-- R80: the running commentary of a fight — every hit, every miss,
+             every status — is written into this one node beat by beat while
+             a round plays, and until now it was written silently. It is a
+             stable element for the length of a round, which is exactly the
+             case a live region is for. -->
+        <p class="msg-text" id="msg-text" role="status" aria-live="polite">${prompt}</p>
+        ${opening ? '<button type="button" class="msg-next" id="msg-next" aria-label="Continue">&#9654;</button>' : ''}
         <button type="button" class="msg-log" id="msg-log" aria-label="Battle log">▤</button>
       </div>
 
@@ -218,11 +224,17 @@ export function renderArena(root, ctx, onDone) {
 
   wireCommands(root, ctx, onDone, actions, me, foe);
   if (opening) {
+    // R80 — the opening exchange used to advance by CLICKING THE DIV, so a
+    // keyboard could not get past the first line of a rival duel and the
+    // fight was unplayable from there. The whole box stays tappable, which
+    // is the right target on a phone; the advance is now also a real button
+    // that Tab reaches and Enter presses, and it is what takes focus.
+    const advance = () => { openingSeen += 1; renderArena(root, ctx, onDone); };
     root.querySelector('#msg-box').addEventListener('click', (e) => {
       if (e.target.closest('#msg-log')) return; // the log button keeps its own job
-      openingSeen += 1;
-      renderArena(root, ctx, onDone);
+      advance();
     });
+    root.querySelector('#msg-next')?.focus();
   }
   root.querySelector('#msg-log').addEventListener('click', () => showLog(battle));
   paintPips(root, battle.player.team.map((c) => c.hp > 0), battle.enemy.queue.length + 1);
@@ -319,6 +331,20 @@ function wireCommands(root, ctx, onDone, actions, me, foe) {
     // A hold must not also fire the move it was explaining.
     btn.addEventListener('click', (e) => { if (held) { e.stopPropagation(); e.preventDefault(); held = false; } }, true);
     btn.addEventListener('contextmenu', (e) => { e.preventDefault(); open(); });
+    // R80 — a hold is a pointer gesture and nothing else, so the whole of
+    // R30 — the arithmetic, the tags, the keyword sentences — was behind a
+    // door a keyboard could not open. `contextmenu` covers Shift+F10 and the
+    // Menu key on a desktop keyboard, but a TWA soft keyboard has neither,
+    // so the shortcut is also a plain "?" on the focused move, advertised
+    // where a screen reader will read it out.
+    btn.setAttribute('aria-keyshortcuts', 'Shift+Slash');
+    btn.title = 'Hold, right-click, or press ? for the full readout';
+    btn.addEventListener('keydown', (e) => {
+      if (e.key !== '?') return;
+      e.preventDefault();
+      open();
+      held = false; // a key press is not a hold, and must not eat the next click
+    });
   });
 }
 

@@ -48,6 +48,7 @@ import { bandedHtml } from '../ui/roster.js';
 import { canSpar } from '../campaign/sparring.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { renderIcon } from '../ui/icons.js';
+import { announce } from '../ui/live.js';
 
 let lastMsg = '';
 let vatPick = { a: null, b: null };
@@ -449,7 +450,7 @@ export function renderPensScreen(root, ctx) {
               <p class="fine-print">Pick ${MOVE_SLOTS}. It knows ${known.length}. Learning one costs $${moveTrainingReady(ch, ctx.now(), content).cost} and a rest; reordering is free.</p>
               <button type="button" class="pick-close" data-close="1" aria-label="Close">&#10005;</button>
             </div>
-            <p class="ranch-msg" id="mv-count">${chosen.size}/${MOVE_SLOTS} slots filled${full ? ' — uncheck one to swap' : ''}</p>
+            <p class="ranch-msg" id="mv-count" role="status" aria-live="polite">${chosen.size}/${MOVE_SLOTS} slots filled${full ? ' — uncheck one to swap' : ''}</p>
             <div class="pick-list">${known.map((m) => toggleRow({
               id: m.id,
               label: m.name,
@@ -467,6 +468,13 @@ export function renderPensScreen(root, ctx) {
             const id = btn.dataset.toggle;
             if (chosen.has(id)) chosen.delete(id); else chosen.add(id);
             draw();
+            // R80 — the counter is the only feedback this sheet gives, and
+            // `draw()` rebuilds it, so the aria-live on the element itself
+            // announces nothing: the node it was watching is gone. The
+            // shell's own region says it instead. The toggle's pressed
+            // state is already spoken by the button; what was silent is how
+            // many slots are left.
+            announce(`${chosen.size} of ${MOVE_SLOTS} move slots filled`);
           });
         });
         overlay.querySelector('#mv-save')?.addEventListener('click', () => {

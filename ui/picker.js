@@ -9,16 +9,55 @@
 let openSheet = null;
 
 // A field that looks like a form control but is a plain button.
+// R80 — the label is ASSOCIATED, not merely adjacent. A <span> beside a
+// button is a span beside a button: every picker in the game announced
+// itself as its own current value with no idea which field it belonged to,
+// so a screen reader heard "Laboratory, button" and "Goat, button" and had
+// to guess which was the theme and which was the animal. `aria-labelledby`
+// naming the label and the value in that order reads them as one control —
+// "Theme, Laboratory, button" — which is what the sighted layout already
+// says. The hint moves to `aria-describedby` rather than being dropped:
+// `aria-labelledby` REPLACES the accessible name, so naming the label and
+// the value without this would silently throw away "3 available" and
+// "Prime · Biscuit".
 export function pickerField({ id, label, value, hint, disabled = false, count = null }) {
   return `
     <div class="pick-field ${disabled ? 'is-disabled' : ''}">
-      <span class="pick-label">${label}${count != null ? ` <em>${count}</em>` : ''}</span>
-      <button type="button" class="pick-button" data-picker="${id}" ${disabled ? 'disabled' : ''}>
-        <span class="pick-value">${value}</span>
-        ${hint ? `<span class="pick-hint">${hint}</span>` : ''}
+      <span class="pick-label" id="pick-label-${id}">${label}${count != null ? ` <em>${count}</em>` : ''}</span>
+      <button type="button" class="pick-button" data-picker="${id}" ${disabled ? 'disabled' : ''}
+              aria-labelledby="pick-label-${id} pick-value-${id}"
+              ${hint ? `aria-describedby="pick-hint-${id}"` : ''}>
+        <span class="pick-value" id="pick-value-${id}">${value}</span>
+        ${hint ? `<span class="pick-hint" id="pick-hint-${id}">${hint}</span>` : ''}
         <span class="pick-caret" aria-hidden="true">▾</span>
       </button>
     </div>`;
+}
+
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+// Who to give focus back to. Both sheets need it and only one of them had it
+// (R80): openPrompt never recorded an opener, so renaming a chimera returned
+// a keyboard user to the top of the document rather than to the Rename
+// button they had just pressed.
+const openerNow = () => (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+
+// Escape closes, and Tab cycles inside. Both sheets are `aria-modal="true"`,
+// which is a PROMISE that nothing outside them is reachable; the trap is what
+// makes it true for a keyboard as well as for assistive tech. openPrompt
+// carried the promise and not the trap, so Tab walked straight out of a
+// rename sheet and into the screen behind it.
+function sheetKeys(host) {
+  return (e) => {
+    if (e.key === 'Escape') { closePicker(); return; }
+    if (e.key !== 'Tab') return;
+    const items = [...host.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
 }
 
 // groups: [{ label, options: [{ id, label, sub, mark, disabled, badge }] }]
@@ -68,19 +107,9 @@ export function openPicker({ title, subtitle, groups, selectedId, onPick }) {
   // keyboard user opened a picker and stayed exactly where they were, tabbing
   // through the page behind it. `aria-modal` is a promise; these three make
   // it true — focus in, Tab kept inside, focus back to the opener on close.
-  const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
-  const onKey = (e) => {
-    if (e.key === 'Escape') { closePicker(); return; }
-    if (e.key !== 'Tab') return;
-    const items = [...host.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
-    if (!items.length) return;
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  };
+  const onKey = sheetKeys(host);
   document.addEventListener('keydown', onKey);
-  openSheet = { host, onKey, opener: document.activeElement instanceof HTMLElement ? document.activeElement : null };
+  openSheet = { host, onKey, opener: openerNow() };
 
   host.querySelectorAll('[data-close]').forEach((el) =>
     el.addEventListener('click', () => closePicker())
@@ -130,12 +159,21 @@ export function openPrompt({ title, label, value = '', maxLength = 24, onSubmit 
     closePicker();
     onSubmit(v);
   };
-  const onKey = (e) => {
-    if (e.key === 'Escape') closePicker();
-    if (e.key === 'Enter') submit();
-  };
+  // R80 — Enter belongs to the FIELD, not to the document. It was registered
+  // on `document` with no target check, so pressing Enter on the sheet's own
+  // ✕ COMMITTED the rename instead of cancelling it: the two controls a
+  // keyboard user is most likely to be on did the same thing, and one of
+  // them was the one that means "no". Escape and the Tab trap stay on the
+  // document, because those are properties of the sheet rather than of any
+  // control in it.
+  const onKey = sheetKeys(host);
   document.addEventListener('keydown', onKey);
-  openSheet = { host, onKey };
+  input.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    submit();
+  });
+  openSheet = { host, onKey, opener: openerNow() };
   host.querySelectorAll('[data-close]').forEach((el) => el.addEventListener('click', () => closePicker()));
   host.querySelector('#prompt-go').addEventListener('click', submit);
   input.focus();
