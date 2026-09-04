@@ -61,7 +61,7 @@ BREED stock (genetics raise the ceiling)
 
 ### 3.3 Extraction & Part Grades
 - **The Extractor**: place a stock animal in, comedic sequence (flash, kazoo, poof), out comes a **DNA vial** + that species' **part tokens**. Framed as *graduation*: "Bessie has ascended to her final form (pending assembly)."
-- **Part grade = Genetics × Age stage × Condition at extraction.** Grades: **Standard → Prime → Apex → Prismatic.** Each grade = a flat stat multiplier **and** sharpens the part's own move by 12% per tier (`GRADE_MOVE_BONUS`), so a Prismatic ability is the same ability hitting harder. A *distinct* upgraded ability at Apex/Prismatic was designed and is **not shipped — queued as R84**.
+- **Part grade = Genetics × Age stage × Condition at extraction.** Grades: **Standard → Prime → Apex → Prismatic.** Each grade = a flat stat multiplier (×1 / ×1.2 / ×1.4 / ×1.65) **and** sharpens the part's own move by 12% per tier (`GRADE_MOVE_BONUS`), so a Prismatic ability is the same ability hitting harder: 80 power becomes 109, and the name, the stamina cost, the accuracy and the keywords are the ones the Standard part had. A grade **sharpens; it does not upgrade** — R84 decided that deliberately and smoke asserts it over all 244 parts at all four grades.
 - Timing tension: extract a Juvenile now (fast, Standard) vs. raise to Prime with good care (slow, upkeep cost, Apex+). This is the ranch's central economic decision.
 - Every part token permanently records its donor's name and stars for Splice-Dex lineage ("contains the essence of Bessie").
 - Chimeras (yours or captured) can also be extracted — returns a *subset* of parts, one grade degraded. Salvage, not free recycling.
@@ -134,6 +134,8 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - keywords: 29
 - combos: 27
 - grades: 4
+- grade multipliers: 1/1.2/1.4/1.65
+- grade move bonus percent: 12
 - enemy units: 42
 - encounters: 26
 - rivals: 5
@@ -487,7 +489,7 @@ every `sfx.play()` call is invisible to it. Checked before filing.
   sentence, and smoke asserts every emitted event id has copy AND every
   line has an emitter — R20's invariant, pointed at the wire.*
 
-### 9.4 Fourth audit (R63–R83) — **shipped; the three gaps R77 named (R84–R86) remain**
+### 9.4 Fourth audit (R63–R83) — **shipped; two of the three gaps R77 named remain (R85, R86)**
 
 Run after R62, against a game with three closed audits behind it. Same rule
 as the other three: every line names the evidence that put it there, and the
@@ -1147,16 +1149,30 @@ The queue is a proposal: prune it before starting R63.
     behind what the Theater builds. The Wing's output is raw material to a
     late-game stable.
 
-- **R84 — Grades promise an ability and deliver a percentage.** §3.3 has
-  said since M0 that Apex and Prismatic give "an upgraded version of the
-  part's ability". What ships is `GRADE_MOVE_BONUS`: +12% move power per
-  grade tier, the same ability hitting harder. That is a defensible design —
-  R17 measured it and it is what keeps combos from being overtaken by their
-  own halves — but it is not what the spec promised, and a player reading
-  "upgraded ability" is being told a different game. Either the ability
-  upgrade ships, or §3.3 stops promising it (R77 has already made §3.3 state
-  both). *Done when: an Apex part either grants a materially different move
-  or the roadmap no longer implies one, and smoke asserts whichever is true.*
+- **R84 — Grades promise an ability and deliver a percentage.** ✅ *Shipped —
+  as a decision, which is what the entry asked for.* §3.3 had promised since
+  M0 that Apex and Prismatic give "an upgraded version of the part's
+  ability"; what ships is +12% move power per tier. R84 chose between them,
+  and chose the shipped mechanic, on two measurements rather than on taste:
+  - **The game never made the promise to a player.** The `grades` field guide
+    says genetics × age × condition and nothing about abilities, and the Pens
+    prints the graded number — 80 → 90 → 99 → 109 on the same Haymaker — so
+    what a grade buys is already visible and already honest. Only the design
+    doc over-promised, and R77's rule is that the doc describes the build.
+  - **Grade scaling is load-bearing.** R17 measured it: a combo takes the best
+    grade among the parts that unlock it precisely so a Prismatic part cannot
+    overtake the combo it belongs to, and when the two scaled differently
+    **7 of 12 combos went dead** at Prime or Apex. A distinct Apex ability
+    reopens that, at four grades across six pools.
+  So §3.3 now says what a grade does and stops implying more, and the
+  decision is enforced rather than written down: smoke reads **all 244 parts
+  at all four grades — 976 readings — through `movesFromTokens`, the function
+  the Pens renders from**, and asserts the move keeps its name, its cost, its
+  accuracy, its tags and its keyword SET, with only power moving, by exactly
+  12% per tier off the authored number. Ship a distinct Apex ability later and
+  this fails, which is the point: whoever does it has to change §3.3 in the
+  same breath. Proved by shipping one — an Apex part gaining `ignoreArmor`
+  lights up 484 readings.
 - **R85 — Feral at instability 100.** §3.5 has designed it since M0: at
   instability 100 the chimera goes Feral and moves to Containment until
   rehabilitated. There are **zero hits for "feral" anywhere in the

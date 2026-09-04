@@ -63,6 +63,43 @@ const A11Y = ['node', 'tools/a11y.js'];
 // about a running browser and nothing else.
 const BOOT = ['node', 'tools/boot.js'];
 
+// R84 — a grade sharpens and changes nothing else, as its own gate: what it
+// guards is one rule over 244 parts and the smoke suite takes twelve minutes.
+// Read through `movesFromTokens`, which is the function the Pens renders
+// from, so what is checked is what the player is shown.
+const GRADE = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { movesFromTokens } = await import('./battle/statblock.js');
+  const { analyze } = await import('./splice/physiology.js');
+  const { GRADES } = await import('./splice/extract.js');
+  const J = (n) => JSON.parse(readFileSync('data/' + n + '.json', 'utf8'));
+  const files = ['frames','parts','species','combos','enemies','keywords','classes','traits','parts-shapes','enemies-shapes'];
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, J(n)])));
+  const bad = [];
+  for (const part of Object.values(content.parts).filter((p) => p.move)) {
+    const rows = GRADES.map((g, tier) => {
+      const tokens = [{ id: 'g', partId: part.id, grade: g.id,
+        donor: { name: 'D', species: part.species, stars: 3, extractedAt: 0 } }];
+      return { tier, g: g.id, m: movesFromTokens(tokens, analyze('M', tokens, content), content)
+        .find((x) => x.name === part.ability) };
+    });
+    if (rows.some((r) => !r.m)) { bad.push(part.id + ': the move vanishes at some grade'); continue; }
+    const base = rows[0].m;
+    const keys = (m) => JSON.stringify(Object.keys(m.keywords ?? {}).sort());
+    for (const { tier, g, m } of rows) {
+      if (m.name !== base.name || m.cost !== base.cost || m.acc !== base.acc || keys(m) !== keys(base)) {
+        bad.push(part.id + ' @' + g + ': a grade changed something other than power');
+      }
+      if (m.power !== Math.round(part.move.power * (1 + tier * 0.12))) {
+        bad.push(part.id + ' @' + g + ': power is ' + m.power + ', not 12% per tier');
+      }
+    }
+  }
+  if (bad.length) { console.error('grade ✗  ' + bad.length + ' — ' + bad.slice(0, 3).join('; ')); process.exit(1); }
+  console.log('grade ✓  a grade sharpens, and changes nothing else');
+`];
+
 // R81 — the pairing, as its own gate rather than through the whole smoke
 // suite: what it guards is one assertion and the suite takes ten minutes.
 // `parts.json` says what a part IS and `parts-shapes.json` says what it looks
@@ -818,6 +855,27 @@ const BREAKS = [
     to: "  const { obedienceIgnoreChance, obediencePercent } = await import('../battle/engine.js');",
   },
 
+  // --- gate: grade (a grade sharpens and does not upgrade) -----------------
+  {
+    // The thing R84 decided against, shipped: an Apex part gains a keyword.
+    n: 66, gate: GRADE, name: 'an Apex part gains an ability its Standard version did not have',
+    file: 'battle/statblock.js',
+    anchor: `      keywords,\n      // R30: identity is where the move came from`,
+    to: `      keywords: gradeIndexOf(token.grade) >= 2 ? { ...keywords, ignoreArmor: 1 } : keywords,\n      // R30: identity is where the move came from`,
+  },
+  {
+    n: 67, gate: GRADE, name: 'a grade quietly stops sharpening the move at all',
+    file: 'battle/statblock.js',
+    anchor: '    const gradeBonus = 1 + gradeIndexOf(token.grade) * GRADE_MOVE_BONUS;',
+    to: '    const gradeBonus = 1;',
+  },
+  {
+    n: 68, gate: GRADE, name: 'the sharpening is retuned without the roadmap being told',
+    file: 'battle/statblock.js',
+    anchor: 'export const GRADE_MOVE_BONUS = 0.12;',
+    to: 'export const GRADE_MOVE_BONUS = 0.2;',
+  },
+
   // --- gate: boot (the game reaches the screen without its pictures) -------
   {
     n: 61, gate: BOOT, name: 'the geometry goes back into the round the first paint waits on',
@@ -916,7 +974,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -926,7 +984,8 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
             : gate === A11Y ? 'the whole game opened, tabbed and fought with a keyboard'
               : gate === BOOT ? 'the game on screen without the 400 KB of pictures'
                 : gate === SMOKE_PAIR ? 'both halves of every part and every unit'
-                  : gate.join(' ');
+                  : gate === GRADE ? 'every part at every grade, sharpened and nothing more'
+                    : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }

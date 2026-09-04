@@ -33,6 +33,7 @@ import { dirname, join, relative } from 'node:path';
 import { indexContent } from '../render/renderer.js';
 import { SAVE_VERSION } from '../save/save.js';
 import { GRADES } from '../splice/extract.js';
+import { GRADE_MOVE_BONUS } from '../battle/statblock.js';
 import { PHYS_TUNING } from '../splice/physiology.js';
 import { moduleFiles } from './scopecheck.js';
 
@@ -63,6 +64,12 @@ export function shippedNumbers() {
     keywords: Object.keys(content.keywords).length,
     combos: Object.keys(content.combos).length,
     grades: GRADES.length,
+    // R84 — §3.3 now states what a grade is WORTH, not just how many there
+    // are, and R77's rule is that a stated number is a checked one. Both are
+    // read out of the code rather than restated here, so retuning either one
+    // fails this before it reaches a player who was told the old figure.
+    'grade multipliers': GRADES.map((g) => g.mult).join('/'),
+    'grade move bonus percent': Math.round(GRADE_MOVE_BONUS * 100),
     'enemy units': Object.keys(content.enemies).length,
     encounters: Object.keys(content.encounters).length,
     rivals: Object.keys(content.rivals).length,

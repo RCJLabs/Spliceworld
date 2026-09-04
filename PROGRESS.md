@@ -1,5 +1,86 @@
 # PROGRESS
 
+## Session 107 — R84: Grades promise an ability and deliver a percentage ✅
+
+**Acceptance criterion:** an Apex part either grants a materially different
+move or the roadmap no longer implies one, and smoke asserts whichever is
+true — **passes**, by the second route, deliberately. `SAVE_VERSION`
+unchanged (**38**); no `sw.js` bump — nothing the browser downloads changed.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ **new** — 244 parts x 4 grades, **976 readings**, through the function the Pens renders from |
+| `npm run roadmap` | ✓ — **17** stated numbers (2 new: the grade multipliers and the 12%) |
+| `npm run battery` | ✓ — **68 breaks, 68 caught** (3 new, a twelfth gate) |
+| `npm run scopecheck` · `npm run handlers` · `npm run a11y` · `npm run boot` · `npm run sim` | ✓ |
+
+### This one was a decision, and the measurement made it
+
+§3.3 had promised since M0 that Apex and Prismatic give "an upgraded version
+of the part's ability". What ships is +12% move power per tier. The entry
+asked for a choice, so the choice was measured rather than argued:
+
+**The game never made the promise to a player.** The `grades` field guide
+says genetics x age x condition and nothing about abilities, and the Pens
+prints the graded number. Measured on one part:
+
+| the same part | what the Pens shows |
+|---|---|
+| Standard | "Haymaker" **80** power · 35 stamina · 85% · recoil |
+| Prime | "Haymaker" **90** power · 35 · 85% · recoil |
+| Apex | "Haymaker" **99** power · 35 · 85% · recoil |
+| Prismatic | "Haymaker" **109** power · 35 · 85% · recoil |
+
+So what a grade buys is already visible and already honest. Only the design
+doc over-promised — and R77's rule is that the doc describes the build.
+
+**Grade scaling is load-bearing.** R17 measured it: a combo takes the best
+grade among the parts that unlock it precisely so a Prismatic part cannot
+overtake the combo it belongs to, and when the two scaled differently **7 of
+12 combos went dead** at Prime or Apex. A distinct Apex ability reopens that
+at four grades across six pools — a balance pass, not a session.
+
+Worth recording as the road not taken: the material for an upgrade is there.
+All 244 parts carry a move, 28 distinct keywords exist across the roster, and
+the drawbacks do NOT ease with grade — a Prismatic Haymaker recoils exactly as
+hard as a Standard one while hitting 36% harder. If R84 is ever reopened,
+"a better specimen handles its own anatomy" is the cheapest honest version of
+it, and it is bounded in a way that adding a keyword is not.
+
+### The decision is enforced, not written down
+
+Smoke reads **every part at every grade — 976 readings — through
+`movesFromTokens`**, the function the Pens renders from, and asserts the move
+keeps its name, its stamina cost, its accuracy, its tags and its keyword SET,
+with only power moving, by exactly 12% per tier off the authored number.
+
+Ship a distinct Apex ability later and this fails, which is the point:
+whoever does it has to change §3.3 in the same breath. Proved by shipping
+one — an Apex part gaining `ignoreArmor` lights up **484 readings**.
+
+And because §3.3 now states numbers rather than a promise, R77's gate checks
+them: the grade multipliers (1/1.2/1.4/1.65) and the 12% are both read out of
+the code, so retuning either one fails the build before it reaches a player
+who was told the old figure.
+
+### Known issues
+
+- The R84 gate builds a one-token chimera per part per grade — 976
+  `analyze()` calls. It is a second or so inside a twelve-minute suite, and
+  it is also the reason the battery got its own fast copy rather than
+  aiming a break at the whole suite.
+- Combos are covered by R17's own gate rather than this one: a combo's move
+  takes the best grade among its parts, which is a different rule, and
+  restating it here would have been a second copy of it.
+
+### Next session's first task
+
+**R85 — Feral at instability 100**, or **R86 — Gene Juice**. Both are the
+same shape as this one: designed in the spec since M0, zero hits in the
+codebase, and a decision before a build. R86 is the one the TWA pitch leans
+on — a timer game with no earned skip is a timer game that just makes you
+wait.
+
 ## Session 106 — R81: The other 766 KB, and the modules eager for one function ✅
 
 **Acceptance criterion:** the shapes are not fetched before the first paint,

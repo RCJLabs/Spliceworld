@@ -572,7 +572,7 @@ assert.equal(cb.moves.length, 4, 'and it fights with four of them');
 const apexFang = granted.find((m) => m.name === 'Venom Fang');
 // GRADE_MOVE_BONUS rides on top of the stat multiplier; the balance pass
 // trimmed it to +12%/tier so grades stop double-dipping so hard.
-assert.equal(apexFang.power, Math.round(40 * (1 + 2 * 0.12)), 'apex grade upgrades the move (+24%)');
+assert.equal(apexFang.power, Math.round(40 * (1 + 2 * 0.12)), 'apex grade SHARPENS the move (+24%) — see R84');
 const report = analyze(fighter.frame, Object.values(fighter.tokens), content);
 assert.equal(cb.maxHp, report.stats.hp, 'battle HP = physiology HP');
 assert.equal(cb.staminaMax, report.stats.stamina, 'stamina pool from physiology');
@@ -15809,6 +15809,70 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     'a picker field is announced with the label it belongs to, not only its current value');
   assert.equal((picker.match(/opener: openerNow\(\)/g) ?? []).length, 2,
     'both sheets remember the control that opened them');
+}
+
+// ---------------------------------------------------------------------------
+// R84 — A GRADE SCALES. IT DOES NOT UPGRADE.
+//
+// §3.3 promised since M0 that Apex and Prismatic give "an upgraded version of
+// the part's ability". What ships is `GRADE_MOVE_BONUS`: +12% move power per
+// tier, the same ability hitting harder. R84 decided BETWEEN those, and chose
+// the shipped mechanic over the promise, for reasons that were measured
+// rather than argued:
+//
+//   · the game never made the promise to a PLAYER. The `grades` field guide
+//     says genetics x age x condition and nothing about abilities, and the
+//     Pens prints the graded number, so what a grade buys is already visible
+//     and already honest. Only the design doc over-promised.
+//   · R17 measured that grade scaling is load-bearing. A combo takes the best
+//     grade among the parts that unlock it precisely so a Prismatic part
+//     cannot overtake the combo it belongs to; when the two scaled
+//     differently, 7 of 12 combos went dead at Prime or Apex.
+//
+// So this is the decision, made permanent. Every part, every grade: the move
+// keeps its NAME, its COST, its ACCURACY and its KEYWORD SET, and only its
+// power moves — by exactly 12% per tier off the authored number. Ship a
+// distinct Apex ability later and this fails, which is the point: whoever
+// does it has to come back and change §3.3 in the same breath.
+//
+// Asserted through `movesFromTokens`, which is the function the Pens renders
+// from, so what is checked is what the player is shown.
+{
+  const { GRADES } = await import('../splice/extract.js');
+  const graded = Object.values(content.parts).filter((p) => p.move);
+  assert.ok(graded.length > 200, `every part carries a move (${graded.length})`);
+  let checked = 0;
+  for (const part of graded) {
+    const rows = GRADES.map((g, tier) => {
+      const tokens = [{ id: 'r84', partId: part.id, grade: g.id,
+        donor: { name: 'D', species: part.species, stars: 3, extractedAt: t0 } }];
+      // The move's display name is the part's `ability` — the authored
+      // `move` object carries the numbers and no name of its own.
+      const m = movesFromTokens(tokens, analyze('M', tokens, content), content)
+        .find((x) => x.name === part.ability);
+      assert.ok(m, `${part.id} at ${g.id} still grants ${part.ability}`);
+      return { tier, g: g.id, m };
+    });
+    const [base] = rows;
+    for (const { tier, g, m } of rows) {
+      assert.equal(m.name, base.m.name, `${part.id}: ${g} keeps the move's name`);
+      assert.equal(m.cost, base.m.cost, `${part.id}: ${g} keeps the move's stamina cost`);
+      assert.equal(m.acc, base.m.acc, `${part.id}: ${g} keeps the move's accuracy`);
+      assert.deepEqual(
+        Object.keys(m.keywords ?? {}).sort(), Object.keys(base.m.keywords ?? {}).sort(),
+        `${part.id}: ${g} keeps the move's keywords — a grade adds no effect and removes none`);
+      assert.deepEqual(
+        [...(m.tags ?? [])].sort(), [...(base.m.tags ?? [])].sort(),
+        `${part.id}: ${g} keeps the move's tags`);
+      // The one thing a grade IS allowed to move, and by exactly how much.
+      assert.equal(m.power, Math.round(part.move.power * (1 + tier * 0.12)),
+        `${part.id}: ${g} sharpens the move by 12% per tier and does nothing else`);
+      checked += 1;
+    }
+  }
+  assert.equal(checked, graded.length * GRADES.length,
+    'every part was read at every grade');
+  console.log(`   R84: ${graded.length} parts x ${GRADES.length} grades — a grade sharpens, and changes nothing else`);
 }
 
 // ---------------------------------------------------------------------------
