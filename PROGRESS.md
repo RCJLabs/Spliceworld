@@ -1,5 +1,100 @@
 # PROGRESS
 
+## Session 104 — R77: the roadmap describes a different game ✅
+
+**Acceptance criterion:** ROADMAP either describes the shipped game or names
+each gap as a queued phase, and a gate checks the numbers it states — settle
+hours, frame count, region count, `SAVE_VERSION` — against the data —
+**passes**. `SAVE_VERSION` unchanged (**38**); no `sw.js` bump, because
+nothing the browser downloads changed.
+
+| gate | result |
+|---|---|
+| `npm run roadmap` | ✓ new — 15 stated numbers match the data, every named mechanic exists or is queued |
+| `npm run smoke` | ✓ — the same check, as a build failure |
+| `npm run battery` | ✓ — **53 breaks, 53 caught** (5 new, an eighth gate), baseline green on all eight |
+| `npm run scopecheck` · `npm run handlers` | ✓ — 69 modules · 1231 handlers |
+| `npm run a11y` · `npm run sim` · browser QA | ✓ |
+
+### Every one of the entry's claims checked out
+
+Unusual for this queue — the last several entries have been partly stale.
+This one was right about all seven:
+
+| §3-§4 said | shipped |
+|---|---|
+| settling "~1-4 hrs" | **22.5 min to 3 h** |
+| Dissection Countdown "12-24 hrs" | **9-18 h**, rolled per capture |
+| "3 frames" | **4** (A, S, M, L) |
+| "~12 combos" | **27** |
+| "25 species × ~6 parts ≈ 150 parts" | **41 species, 244 parts** |
+| "~30 keywords" | **29** |
+| ZzFX stingers | a hand-rolled WebAudio synth |
+| grades give "an upgraded version of the part's ability" | +12% move power per tier |
+| Feral at instability 100 | **zero hits in the codebase** |
+| Gene Juice skips any timer | **zero hits in the codebase** |
+
+And §9 jumped from R31 straight to R54 — **twenty-two shipped milestones
+missing**, so a reader taking the document at its word was looking at a game
+two months out of date.
+
+### Prose does not run, so the numbers moved somewhere that does
+
+`tools/roadmap.js` (`npm run roadmap`) parses a new **§4.0 Shipped, as
+measured** block and re-derives all fifteen values from `data/*.json` and the
+engine. Nothing is typed twice — the settle ceiling is read from
+`PHYS_TUNING`, the dissection window from the `randInt` literal in
+`campaign.js`, `SAVE_VERSION` from `save.js`.
+
+Two directions, the shape of the news wire's own two-way gate:
+
+1. Every number §4.0 states must match the data.
+2. Every mechanic the **live spec** (§1-§5) names must exist in the code — or
+   the line naming it must read `not shipped — queued as R##` **and** point
+   at a phase the roadmap actually carries.
+
+§6 onward is exempt by construction. A milestone entry narrating "one region,
+five nodes was the whole campaign" is history, not a claim, and a gate that
+could not tell the difference would have made the log unwritable. I checked:
+a naive number-scan over the whole file flags 33 of 38 mentions, almost all
+of them legitimate history.
+
+### The gaps are phases now rather than fiction
+
+- **R84** — grades promise an ability and deliver a percentage.
+- **R85** — Feral at instability 100 (R8's Reorientation Wing is the system
+  it would need, shipped and idle for it since).
+- **R86** — Gene Juice. Load-bearing for the TWA pitch: a timer game with no
+  earned skip is a timer game that just makes you wait.
+
+Each is named at the point the spec makes the promise, and the gate checks
+the pointer resolves to a real entry.
+
+### A break I got wrong first
+
+The fifth break deletes the measured-numbers block. My first version renamed
+the heading with a suffix — and it MISSED, because the split still matched
+the prefix and the block was genuinely still there. The break was wrong, not
+the gate. Rewritten to delete the block outright, it catches.
+
+### Known issues
+
+- The mechanic check carries two claims (Feral, Gene Juice) rather than
+  deriving the list. A third dead design added to §3 tomorrow would not be
+  noticed until someone adds it to `CLAIMS`. Deriving "every mechanic the
+  spec names" from prose is not something I can do honestly, so the list is
+  explicit and the comment says why.
+- `npm run roadmap` checks §1-§5 only. The milestone log can still drift;
+  R26 says "21 nodes" where 23 ship, which was true when R26 shipped and is
+  left as history.
+
+### Next session's first task
+
+**R80 — the keyboard can see the game but not play it.** Read ROADMAP.md §6
+for the criterion before touching anything.
+
+---
+
 ## Session 103 — R83: The harness has never fought a rival ✅
 
 **Acceptance criterion:** the walk fights rivals and hunts escapees, every
