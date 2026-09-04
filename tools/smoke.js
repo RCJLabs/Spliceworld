@@ -13092,7 +13092,18 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
         // scalar the destination has to carry the same name.
         const named = hits.some(([path]) => path.split('.').pop() === key);
         const scalar = value === null || typeof value !== 'object';
-        if (!named && (scalar || !hits.length)) dropped.push(`${file}.json:${key}`);
+        // R81 — a section can reach runtime by being DISTRIBUTED rather than
+        // exposed. `parts-shapes.json:shapes` is a table keyed by part id and
+        // `indexContent` merges each entry onto `content.parts[id].shapes`,
+        // so the block never appears anywhere as a block and all 244 of its
+        // entries are live. Checking every entry landed on the record it
+        // names is a STRONGER claim than the whole-value match above, not an
+        // exemption from it: drop one and this still fails.
+        const distributed = !scalar && value && !Array.isArray(value)
+          && Object.keys(value).length > 0
+          && ['parts', 'enemies', 'species', 'frames', 'combos'].some((into) =>
+            indexed[into] && Object.entries(value).every(([id, v]) => eq(indexed[into][id]?.[key], v)));
+        if (!named && !distributed && (scalar || !hits.length)) dropped.push(`${file}.json:${key}`);
       }
     }
     assert.ok(sections >= 40, `the scan actually walked the data (${sections} sections)`);
