@@ -19,23 +19,14 @@ import { renderIcon } from '../ui/icons.js';
 import { openPicker, openPrompt, toggleRow } from '../ui/picker.js';
 import * as sfx from '../audio/sfx.js';
 import { announce } from '../ui/live.js';
+// R81 — the theme list moved to ui/theme.js so the shell can read it on boot
+// without importing this whole panel: main.js needs to know which
+// [data-theme] to stamp before anything paints, and needed a 16 KB modal to
+// find out. Re-exported so nothing else has to learn that it moved.
+import { THEMES, BASE_THEME, themeName } from '../ui/theme.js';
 
-// The five colour schemes style.css ships. BASE_THEME is a sentinel, not a
-// `[data-theme]` selector — biohazard IS the bare `:root`, so "picked
-// biohazard" and "picked nothing" have to resolve to the same no-attribute
-// state, which is what applyTheme() (main.js) does with this list.
-export const BASE_THEME = 'biohazard';
-export const THEMES = [
-  { id: 'biohazard', name: 'Biohazard' },
-  { id: 'lab', name: 'Lab Standard' },
-  { id: 'vivarium', name: 'Vivarium' },
-  { id: 'blueprint', name: 'Blueprint' },
-  { id: 'saturday', name: 'Saturday Morning' },
-];
+export { THEMES, BASE_THEME };
 
-function themeName(id) {
-  return THEMES.find((t) => t.id === id)?.name ?? THEMES[0].name;
-}
 
 function fmtAgo(ts, now) {
   if (!ts) return null;

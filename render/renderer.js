@@ -44,7 +44,7 @@ const LAYERS = [
 
 export function indexContent(raw) {
   const byId = (arr) => Object.fromEntries(arr.map((x) => [x.id, x]));
-  return {
+  const indexed = {
     frames: byId(raw.frames.frames),
     parts: byId(raw.parts.parts),
     species: byId(raw.species.species),
@@ -116,6 +116,9 @@ export function indexContent(raw) {
         }
       : { threatGens: null, threatGen2At: Infinity, rescueEncounters: [], contestation: null },
   };
+  // R81: present for a Node tool that read every file off disk, absent in
+  // the browser until the first paint is over. Same merge either way.
+  return attachShapes(indexed, raw);
 }
 
 // Human units and vehicles: same shape interpreter, literal palettes.
@@ -148,6 +151,40 @@ function portraitRng(seed) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+// R81 — THE GEOMETRY ARRIVES SEPARATELY.
+//
+// `parts[].shapes` was 69% of data/parts.json and `units[].shapes` 73% of
+// data/enemies.json — 400 KB between them, half of everything the game
+// downloads, read by this module and by nothing else. So both now ship as
+// their own file and are fetched AFTER the first paint (data/loader.js).
+//
+// They are merged back onto the very objects they came off, which is the
+// whole point: `content.parts[id].shapes` is where every reader already
+// looks, so nothing downstream learned a new shape. The only thing that
+// changed is that for a few hundred milliseconds it is `undefined`, and the
+// two draw paths below say so rather than throwing.
+//
+// A Node tool that hands `indexContent` the shapes files alongside the rest
+// gets them merged here and never notices the split at all.
+export function attachShapes(content, raw) {
+  // Keyed by FILE NAME, like every other entry in `raw` — the browser hands
+  // over what it fetched and a Node tool hands over what it read, and there
+  // is one spelling between them.
+  for (const [key, into] of [['parts-shapes', content.parts], ['enemies-shapes', content.enemies]]) {
+    const table = raw?.[key]?.shapes;
+    if (!table) continue;
+    for (const [id, shapes] of Object.entries(table)) {
+      if (into[id]) into[id].shapes = shapes;
+    }
+  }
+  return content;
+}
+
+// Can this genome be drawn yet? Every part it names has to have arrived.
+export function hasGeometry(genome, content) {
+  return Object.values(genome.parts ?? {}).every((id) => !id || content.parts[id]?.shapes);
 }
 
 export function rivalPortraitShapes(rival, classes = {}) {
@@ -215,7 +252,7 @@ export function renderRivalSVG(rival, classes = {}) {
 export function renderUnitSVG(unit) {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-110 -110 220 220" role="img" aria-label="${esc(unit.name)}">` +
-    `<g>${unit.shapes.map((s) => shapeToSVG(s, NEUTRAL_PALETTE)).join('')}</g>` +
+    `<g>${(unit.shapes ?? []).map((s) => shapeToSVG(s, NEUTRAL_PALETTE)).join('')}</g>` +
     `</svg>`
   );
 }
@@ -358,6 +395,12 @@ export function drawableGenome(genome, content) {
 // a blank.
 export function creaturePortrait(genome, content, opts = {}) {
   const drawable = drawableGenome(genome, content);
+  // R81 — the anatomy is known and the geometry is still in flight. This is
+  // the same idea as the crate below and for the same reason: the row keeps
+  // its shape, and the player sees a thing happening rather than a blank.
+  // In practice it is on screen for the length of one fetch, and only if
+  // they open a fold before it lands.
+  if (drawable && !hasGeometry(drawable, content)) return developingPortrait();
   if (drawable) return renderCreatureSVG(drawable, content, opts);
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-230 -230 460 440" role="img" ` +
@@ -368,6 +411,24 @@ export function creaturePortrait(genome, content, opts = {}) {
     `</g>` +
     `<text x="0" y="205" text-anchor="middle" font-size="34" fill="${OUTLINE}" opacity="0.6">` +
     `chassis unfiled</text>` +
+    `</svg>`
+  );
+}
+
+// A specimen whose body has not been delivered yet. Deliberately not the
+// bare chassis — that is a real creature with no parts on it, and a player
+// should never be shown one thing while another is meant.
+function developingPortrait() {
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-230 -230 460 440" role="img" ` +
+    `aria-label="Specimen still developing">` +
+    `<g fill="none" stroke="${OUTLINE}" stroke-width="9" stroke-linecap="round" opacity="0.35">` +
+    `<ellipse cx="0" cy="20" rx="132" ry="96"/>` +
+    `<path d="M-132 20 a132 96 0 0 0 264 0"/>` +
+    `<path d="M-58 -34 q58 46 116 0"/>` +
+    `</g>` +
+    `<text x="0" y="205" text-anchor="middle" font-size="34" fill="${OUTLINE}" opacity="0.5">` +
+    `developing</text>` +
     `</svg>`
   );
 }
@@ -410,14 +471,14 @@ export function renderCreatureSVG(genome, content, { idPrefix = 'cw', condition 
 
     if (slot === 'hide') {
       // Hide overlays draw in torso space, clipped to the torso silhouette.
-      layers.push(`<g clip-path="url(#${clipId})">${shapesToSVG(part.shapes, palette)}</g>`);
+      layers.push(`<g clip-path="url(#${clipId})">${shapesToSVG(part.shapes ?? [], palette)}</g>`);
       continue;
     }
     const socket = frame.sockets[socketName];
     if (!socket) continue; // frame simply lacks this socket — legal
     const shade = socket.shade ? ' style="filter:brightness(0.8)"' : '';
     layers.push(
-      `<g transform="${socketTransform(socket)}"${shade}>${shapesToSVG(part.shapes, palette)}</g>`
+      `<g transform="${socketTransform(socket)}"${shade}>${shapesToSVG(part.shapes ?? [], palette)}</g>`
     );
   }
 

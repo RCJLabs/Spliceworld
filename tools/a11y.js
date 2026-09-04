@@ -23,96 +23,20 @@
 // arguments and no running server. CHROME=/path/to/chrome overrides the
 // browser search.
 
-import { createServer } from 'node:http';
-import { readFile, mkdtemp, rm } from 'node:fs/promises';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join, dirname, extname } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+// R81 — the driver moved to its own module so tools/boot.js could use it too.
+import { sleep, serve, findChrome, connect, CHROME_CANDIDATES } from './cdp.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FLOOR = 40;          // px, both dimensions
 const GUTTER = 6;          // px, between two adjacent controls
 const VIEWPORT = 380;      // px, the reference phone width
 const REPORT = process.argv.includes('--report');
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// --- a static server, so the gate needs nothing running ---------------------
-const MIME = {
-  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
-  '.json': 'application/json', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json',
-};
-function serve() {
-  const server = createServer(async (req, res) => {
-    const path = decodeURIComponent(req.url.split('?')[0]);
-    const file = join(root, path === '/' ? '/index.html' : path);
-    if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
-    try {
-      const body = await readFile(file);
-      res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
-      res.end(body);
-    } catch { res.writeHead(404).end('not found'); }
-  });
-  return new Promise((r) => server.listen(0, '127.0.0.1', () => r({ server, port: server.address().port })));
-}
-
-// --- the browser ------------------------------------------------------------
-const CHROME_CANDIDATES = [
-  process.env.CHROME,
-  '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-  '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-].filter(Boolean);
-
-function findChrome() {
-  const hit = CHROME_CANDIDATES.find((p) => existsSync(p));
-  if (hit) return hit;
-  // Any Playwright-managed build, whatever version suffix it carries.
-  try {
-    for (const name of readdirSync('/opt/pw-browsers')) {
-      const p = join('/opt/pw-browsers', name, 'chrome-linux', 'chrome');
-      if (existsSync(p)) return p;
-    }
-  } catch { /* no such directory — fall through to the caller's error */ }
-  return null;
-}
-
-// --- CDP over the built-in WebSocket ---------------------------------------
-async function connect(port) {
-  let info = null;
-  for (let i = 0; i < 60 && !info; i++) {
-    try { info = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json(); }
-    catch { await sleep(250); }
-  }
-  if (!info) throw new Error('the browser never opened a debugging port');
-  const page = info.find((t) => t.type === 'page' && t.webSocketDebuggerUrl) ?? info[0];
-  const ws = new WebSocket(page.webSocketDebuggerUrl);
-  let id = 0;
-  const pending = new Map();
-  const errors = [];
-  ws.addEventListener('message', (e) => {
-    const m = JSON.parse(e.data);
-    if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); }
-    if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') {
-      errors.push(m.params.args.map((a) => a.value ?? a.description).join(' '));
-    }
-    if (m.method === 'Runtime.exceptionThrown') {
-      errors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text);
-    }
-  });
-  await new Promise((r, j) => { ws.addEventListener('open', r, { once: true }); ws.addEventListener('error', j, { once: true }); });
-  const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
-  const evaluate = async (expression) => {
-    const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-    const bad = r.result?.exceptionDetails;
-    if (bad) throw new Error(bad.exception?.description ?? bad.text);
-    return r.result?.result?.value;
-  };
-  return { ws, send, evaluate, errors };
-}
 
 // --- a save with something on every screen ----------------------------------
 async function fixtureSave() {
@@ -123,7 +47,10 @@ async function fixtureSave() {
   const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
   const files = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits',
     'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament',
-    'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout'];
+    'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout',
+    // R81: a Node tool reads every file off disk, so it gets the geometry
+    // that the browser now fetches after its first paint.
+    'parts-shapes', 'enemies-shapes'];
   const content = indexContent(Object.fromEntries(files.map((n) => [n, readJSON(`data/${n}.json`)])));
   const now = Date.now();
   const s = { ...newGameState(), seed: 4242, funds: 20000, saveVersion: SAVE_VERSION };

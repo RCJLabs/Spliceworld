@@ -3,16 +3,20 @@
 // The M0 free-form dev slab retired in M3 — the Theater consumes real vault
 // tokens now; legacy `genome` data stays in old saves, unshown.
 
-import { loadContent } from './data/loader.js';
+import { loadContent, loadShapes } from './data/loader.js';
 import { loadSave, saveGame, SAVE_VERSION, FutureSaveError } from './save/save.js';
-import { openSettings, THEMES, BASE_THEME } from './save/settings-ui.js';
+import { THEMES, BASE_THEME } from './ui/theme.js';
 import { ensureRanchSeeded, ensureDexVariants } from './ranch/ranch.js';
 import { renderRanchScreen } from './ranch/ui.js';
 import { renderVaultScreen } from './splice/vault-ui.js';
 import { renderTheaterScreen } from './splice/theater-ui.js';
 import { renderPensScreen } from './splice/pens-ui.js';
 import { runExtraction } from './splice/extract-ui.js';
-import { pushNews } from './campaign/campaign.js';
+// R81 — from the module that actually defines it. `campaign/campaign.js:32`
+// is `export { pushNews }` — a bare re-export of this — so the shell used to
+// pull in the whole campaign module, and the director, the rehab wing and
+// the gauntlet behind it, for a five-line function that appends to an array.
+import { pushNews } from './campaign/wire.js';
 import { tickWorld } from './campaign/world.js';
 import * as sfx from './audio/sfx.js';
 import { watchSignals, cuesFor } from './audio/sfx.js';
@@ -360,6 +364,22 @@ async function boot() {
   installFocusKeeper([...Object.keys(SCREENS).map((s) => $(`#screen-${s}`)), $('#overlay')].filter(Boolean));
   showScreen(state.activeScreen);
 
+  // R81 — the geometry, now that there is something on screen. 400 KB of
+  // `shapes` used to sit in front of the first paint; it is fetched here
+  // instead, after it, and one repaint puts the creatures in. Deliberately
+  // not awaited: everything above this line is what the game IS, and a slow
+  // or failed geometry fetch must not hold up a shell that works without it.
+  //
+  // After the PAINT, not merely after the render call: a fetch issued in the
+  // same synchronous block as `showScreen` is still a fetch the browser has
+  // to start before it can put anything on the glass. One frame, then a
+  // macrotask, is the idiom for "the player is looking at the game now".
+  requestAnimationFrame(() => setTimeout(() => {
+    loadShapes(content).then((ok) => {
+      if (ok) tick();
+    });
+  }, 0));
+
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) tick();
   });
@@ -379,7 +399,17 @@ async function boot() {
 
   const settingsBtn = $('#settings');
   settingsBtn.innerHTML = renderIcon('settings');
-  settingsBtn.addEventListener('click', () => openSettings($('#overlay'), ctx));
+  // R81 — imported when the gear is pressed, not when the game starts. This
+  // is a modal behind one click handler, and it was 16 KB of the boot: sound,
+  // theme, five save slots, import, export and a new-run confirmation, none
+  // of which a player has asked for yet. `await` inside the handler is safe
+  // because the module is a static file the service worker has already
+  // precached — and on the very first press, before that, a frame's wait to
+  // open a settings panel is not a wait anybody notices.
+  settingsBtn.addEventListener('click', async () => {
+    const { openSettings } = await import('./save/settings-ui.js');
+    openSettings($('#overlay'), ctx);
+  });
 
   // PWA: offline shell. Registration failure is never a problem worth
   // showing anyone.

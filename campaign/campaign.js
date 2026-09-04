@@ -8,7 +8,7 @@ import { pushNews, emitNews, newsFor } from './wire.js';
 import { recordGauntletWin, gauntletComplete } from './gauntlet.js';
 import { gradeOf } from '../splice/extract.js';
 import { infirmaryGrants } from '../splice/facility.js';
-import { finishBattle, applyInjury } from '../battle/engine.js';
+import { applyInjury, finishBattle } from '../battle/statblock.js';
 import { recordRivalResult, scoutStable } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';

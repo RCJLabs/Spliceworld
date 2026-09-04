@@ -57,6 +57,36 @@ const TWICE = ['node', '-e', `
 // than scoring seven breaks green for free.
 const A11Y = ['node', 'tools/a11y.js'];
 
+// R81 — the boot gate. The other browser gate asks what the game LOOKS like;
+// this one asks what it costs to get there, which no static read can answer:
+// the split between "before the game is on screen" and "after" is a fact
+// about a running browser and nothing else.
+const BOOT = ['node', 'tools/boot.js'];
+
+// R81 — the pairing, as its own gate rather than through the whole smoke
+// suite: what it guards is one assertion and the suite takes ten minutes.
+// `parts.json` says what a part IS and `parts-shapes.json` says what it looks
+// like; enemies.json is HAND-AUTHORED, so adding a unit now means adding it
+// in two places and this is what says so.
+const SMOKE_PAIR = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const J = (p) => JSON.parse(readFileSync(p, 'utf8'));
+  let bad = [];
+  for (const [what, core, shapeFile, key] of [
+    ['parts', 'data/parts.json', 'data/parts-shapes.json', 'parts'],
+    ['units', 'data/enemies.json', 'data/enemies-shapes.json', 'units'],
+  ]) {
+    const list = J(core)[key];
+    const { shapes } = J(shapeFile);
+    const ids = new Set(list.map((x) => x.id));
+    for (const x of list) if (!shapes[x.id]?.length) bad.push(what + ': ' + x.id + ' has no geometry');
+    for (const id of Object.keys(shapes)) if (!ids.has(id)) bad.push(what + ': geometry for ' + id + ', which does not exist');
+    for (const x of list) if ('shapes' in x) bad.push(what + ': ' + x.id + ' still carries geometry in ' + core);
+  }
+  if (bad.length) { console.error('pair ✗  ' + bad.slice(0, 4).join('; ')); process.exit(1); }
+  console.log('pair ✓  every part and every unit has exactly one body');
+`];
+
 const VERBOSE = process.argv.includes('--verbose');
 
 // The R78 replay, at the unit level. A month away with a convoy already at
@@ -71,7 +101,7 @@ const CONTEST = ['node', '-e', `
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
   const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
     'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout'];
+    'resequencer','training','gauntlet','news','breakout','parts-shapes','enemies-shapes'];
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const HOUR = 3600000, t0 = 1700000000000;
   const region = Object.values(content.regions)[0];
@@ -116,7 +146,7 @@ const RETIRED = ['node', '-e', `
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
   const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
     'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout'];
+    'resequencer','training','gauntlet','news','breakout','parts-shapes','enemies-shapes'];
   const load = () => indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const content = load();
   const retired = load();
@@ -292,7 +322,7 @@ const BREAKOUT = ['node', '-e', `
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
   const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
     'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout'];
+    'resequencer','training','gauntlet','news','breakout','parts-shapes','enemies-shapes'];
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const HOUR = 3600000, t0 = 1700000000000;
   const fail = (m) => { console.error('breakout ✗  ' + m); process.exit(1); };
@@ -413,7 +443,7 @@ const WALK = ['node', '-e', `
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
   const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
     'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout'];
+    'resequencer','training','gauntlet','news','breakout','parts-shapes','enemies-shapes'];
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const fail = (m) => { console.error('walk ✗  ' + m); process.exit(1); };
   const w = campaignWalk(content, { seed: 4242, days: 45, stopAtDominion: false });
@@ -775,6 +805,35 @@ const BREAKS = [
     to: "  if (!loose || outcome !== 'win') return { cleared: false, creature: null, lab: null };",
     expect: 'contract',
   },
+  // --- gate: boot (the game reaches the screen without its pictures) -------
+  {
+    n: 61, gate: BOOT, name: 'the geometry goes back into the round the first paint waits on',
+    file: 'data/loader.js',
+    anchor: "  const loaded = await Promise.all(CORE.map((name) => grab(base, name)));\n  return indexContent(Object.fromEntries(CORE.map((name, i) => [name, loaded[i]])));",
+    to: "  const all = [...CORE, ...GEOMETRY];\n  const loaded = await Promise.all(all.map((name) => grab(base, name)));\n  return indexContent(Object.fromEntries(all.map((name, i) => [name, loaded[i]])));",
+  },
+  {
+    n: 62, gate: BOOT, name: 'the second round is fired inside the same block as the first paint',
+    file: 'main.js',
+    anchor: '  requestAnimationFrame(() => setTimeout(() => {',
+    to: '  (() => (() => {',
+  },
+  {
+    n: 63, gate: BOOT, name: 'the geometry is never fetched at all, so the creatures never arrive',
+    file: 'main.js',
+    anchor: '    loadShapes(content).then((ok) => {',
+    to: '    Promise.resolve(false).then((ok) => {',
+  },
+  {
+    // The product bug this would be: a part with stats and no body. The
+    // renderer draws "developing" forever and nobody notices until a player
+    // opens a fold.
+    n: 64, gate: SMOKE_PAIR, name: 'a part loses its geometry, so the game can name it and not draw it',
+    file: 'data/parts-shapes.json',
+    anchor: '  "shapes": {\n    "bear_head": [',
+    to: '  "shapes": {\n    "bear_head_TYPO": [',
+  },
+
   // --- gate: a11y (the game is playable without a mouse) -------------------
   {
     n: 54, gate: A11Y, name: 'the focus keeper is not installed, so every repaint drops the player at the top',
@@ -844,7 +903,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -852,7 +911,9 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
         : gate === BREAKOUT ? 'a specimen escapes, waits, is hunted and joins the roster'
           : gate === WALK ? 'the walk fights rivals, hunts the board and builds the lab'
             : gate === A11Y ? 'the whole game opened, tabbed and fought with a keyboard'
-              : gate.join(' ');
+              : gate === BOOT ? 'the game on screen without the 400 KB of pictures'
+                : gate === SMOKE_PAIR ? 'both halves of every part and every unit'
+                  : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }

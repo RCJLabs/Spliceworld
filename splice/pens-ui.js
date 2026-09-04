@@ -10,7 +10,7 @@ import {
 } from './theater.js';
 import { MOVE_SLOTS, activeMoves, knownMoves, moveSummary, moveDetail } from '../battle/moves.js';
 import { toggleRow } from '../ui/picker.js';
-import { movesFromTokens } from '../battle/engine.js';
+import { movesFromTokens } from '../battle/statblock.js';
 import { analyze } from './physiology.js';
 import { dossierRows, dossierSummary } from './dossier.js';
 import { xpProgress, maxLevel } from '../battle/veterancy.js';
@@ -35,7 +35,7 @@ function knownMovesOf(chimera, content) {
   return knownMoves(chimera, content, () =>
     movesFromTokens(tokens, analyze(chimera.frame, tokens, content), content));
 }
-import { isInjured, obediencePercent } from '../battle/engine.js';
+import { isInjured, obediencePercent } from '../battle/statblock.js';
 import { describe as describeTemperament } from './temperament.js';
 import { scarsOf, describeScar, treatInjury, treatmentCost } from './scars.js';
 import { fmtDuration } from '../ranch/ui.js';

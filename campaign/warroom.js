@@ -16,7 +16,7 @@
 // One of them was already wrong. See `contestAlerts`.
 
 import { isSettled } from '../splice/theater.js';
-import { isInjured, obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
+import { isInjured, obediencePercent, obedienceIgnoreChance } from '../battle/statblock.js';
 import { canSpar, sparEncounter } from './sparring.js';
 import { gauntletEncounter } from './gauntlet.js';
 import { breakoutEncounter } from './breakout.js';

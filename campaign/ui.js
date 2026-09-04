@@ -13,7 +13,8 @@
 // in two halves, not two screens that happen to live together.
 
 import { renderArena } from '../battle/ui.js';
-import { createBattle, isInjured, fitToFight, obediencePercent, combatantFromChimera } from '../battle/engine.js';
+import { createBattle, combatantFromChimera } from '../battle/engine.js';
+import { isInjured, fitToFight, obediencePercent } from '../battle/statblock.js';
 import { forecast, diagnose, wantsDiagnosis } from '../battle/forecast.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';

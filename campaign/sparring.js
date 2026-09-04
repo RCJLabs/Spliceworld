@@ -21,7 +21,7 @@
 import { rngStream, pick } from '../util/rng.js';
 import { regionList } from './map.js';
 import { trainingTuning } from '../battle/veterancy.js';
-import { fitToFight } from '../battle/engine.js';
+import { fitToFight } from '../battle/statblock.js';
 
 const MINUTE = 60000;
 

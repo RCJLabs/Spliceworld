@@ -22,11 +22,8 @@ import {
 } from '../splice/extract.js';
 import { analyze } from '../splice/physiology.js';
 import { spliceChimera, validateSplice, isSettled, chimeraGenome } from '../splice/theater.js';
-import {
-  combatantFromChimera, combatantFromUnit, createBattle, step, finishBattle,
-  playerActions, playerActive, tagMultiplier, isInjured, turnForecast, tierScaleFor,
-  movesFromTokens, previewMove,
-} from '../battle/engine.js';
+import { combatantFromChimera, combatantFromUnit, createBattle, step, playerActions, playerActive, tagMultiplier, turnForecast, tierScaleFor, previewMove } from '../battle/engine.js';
+import { isInjured, movesFromTokens, finishBattle } from '../battle/statblock.js';
 import {
   runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent, campaignWalk,
   regionBench, ARCHETYPES, facilityPayback, labAt, scoutedBy, fightRival,
@@ -41,7 +38,7 @@ import {
 } from '../campaign/campaign.js';
 import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING, pairingForecast, incubatorSlots } from '../ranch/breeding.js';
 import { trainChimera, TRAINING } from '../splice/theater.js';
-import { obediencePercent, obedienceIgnoreChance } from '../battle/engine.js';
+import { obediencePercent, obedienceIgnoreChance } from '../battle/statblock.js';
 import {
   onboardingSteps, onboardingActive, guideStates, guideForScreen, dismissGuide, GUIDE_HELPERS,
   STABLE, pathOwnsScreen,
@@ -51,7 +48,8 @@ import { forecast } from '../battle/forecast.js';
 import {
   rivalDossier, rivalTeam, rivalRecord, scoutStable, counterTier, rivalEncounter, rivalList,
 } from '../campaign/rivals.js';
-import { classMultiplier, applyInjury } from '../battle/engine.js';
+import { classMultiplier } from '../battle/engine.js';
+import { applyInjury } from '../battle/statblock.js';
 import { overflowingParts } from './bounds.js';
 import { renderDexScreen } from '../splice/dex-ui.js';
 import { dexProgress } from '../splice/dexentry.js';
@@ -70,6 +68,10 @@ const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 const content = indexContent({
   frames: readJSON('data/frames.json'),
   parts: readJSON('data/parts.json'),
+  // R81: the geometry ships as its own file now, and only the browser
+  // defers it — a Node tool reads both halves and gets them merged.
+  'parts-shapes': readJSON('data/parts-shapes.json'),
+  'enemies-shapes': readJSON('data/enemies-shapes.json'),
   species: readJSON('data/species.json'),
   combos: readJSON('data/combos.json'),
   enemies: readJSON('data/enemies.json'),
@@ -6171,6 +6173,9 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'ui/focus.js': null,
     'ui/icons.js': null,
     'ui/live.js': null,
+    // R81: the five colour schemes, moved out of the settings panel so the
+    // shell can read them on boot without importing a 16 KB modal.
+    'ui/theme.js': null,
     'ui/picker.js': null,
     'ui/roster.js': null,
     'ui/tabs.js': null,
@@ -6190,6 +6195,9 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // --- The battle engine and the things that read it out. R28's whole
     // point was that these EXPLAIN the fight rather than adding to it.
     'battle/engine.js': null,
+    // R81: what a creature IS, split from what happens when two of them
+    // fight. Same system, same note — the fight is where a player meets it.
+    'battle/statblock.js': 'battle',
     'battle/ai.js': null,
     'battle/moves.js': null,
     'battle/forecast.js': null,
@@ -15100,6 +15108,8 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     chaos: readJSON('data/chaos.json'), temperament: readJSON('data/temperament.json'),
     scars: readJSON('data/scars.json'), guides: readJSON('data/guides.json'),
     resequencer: readJSON('data/resequencer.json'), news: readJSON('data/news.json'),
+    'parts-shapes': readJSON('data/parts-shapes.json'),
+    'enemies-shapes': readJSON('data/enemies-shapes.json'),
   });
 
   const RETIRED_PART = 'bear_hide';
@@ -15769,6 +15779,47 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 }
 
 // ---------------------------------------------------------------------------
+// R81 — the geometry ships as its own file, so the two halves have to stay a
+// pair. `parts.json` decides what a part IS and `parts-shapes.json` decides
+// what it looks like; either one alone is a part the game can name and not
+// draw, or geometry for something that does not exist. parts.json is
+// generated and enemies.json is HAND-AUTHORED, so this matters most for the
+// second: adding a unit now means adding it in two places, and the build
+// says so rather than the player finding out.
+{
+  const pairs = [
+    ['parts', 'data/parts.json', 'data/parts-shapes.json', (j) => j.parts],
+    ['units', 'data/enemies.json', 'data/enemies-shapes.json', (j) => j.units],
+  ];
+  for (const [what, coreFile, shapeFile, listOf] of pairs) {
+    const core = listOf(readJSON(coreFile));
+    const { shapes } = readJSON(shapeFile);
+    const ids = new Set(core.map((x) => x.id));
+    const bodyless = core.filter((x) => !shapes[x.id]?.length).map((x) => x.id);
+    const orphans = Object.keys(shapes).filter((id) => !ids.has(id));
+    assert.deepEqual(bodyless, [], `every one of the ${what} in ${coreFile} has geometry in ${shapeFile} (${bodyless.join(', ')})`);
+    assert.deepEqual(orphans, [], `and every entry in ${shapeFile} belongs to something in ${coreFile} (${orphans.join(', ')})`);
+    // And the geometry did not stay behind in the file it was split out of,
+    // which would mean shipping it twice and deferring nothing.
+    const stillThere = core.filter((x) => 'shapes' in x).map((x) => x.id);
+    assert.deepEqual(stillThere, [], `${coreFile} no longer carries geometry (${stillThere.join(', ')})`);
+  }
+  // The shell must precache both halves: offline needs the pictures too, it
+  // just does not need them before the shell is on screen.
+  const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+  for (const f of ['data/parts-shapes.json', 'data/enemies-shapes.json']) {
+    assert.ok(sw.includes(`'${f}'`), `sw.js precaches ${f}`);
+  }
+  // And the loader keeps them out of the first round, which tools/boot.js
+  // proves properly in a browser — this is the shape of it for a run with
+  // no Chromium.
+  const loader = readFileSync(join(root, 'data/loader.js'), 'utf8');
+  const core = loader.match(/const CORE = \[([^\]]*)\]/)?.[1] ?? '';
+  assert.ok(!/shapes/.test(core), 'the loader does not fetch geometry in the round the first paint waits on');
+  assert.ok(/export async function loadShapes/.test(loader), 'and there is a second round that does');
+}
+
+// ---------------------------------------------------------------------------
 // R74 — the eager import graph, capped. Boot used to pull 55 modules and
 // 701 KB of JS with ZERO dynamic imports anywhere in the tree, against
 // CLAUDE.md's own "lazy-init heavy systems". Two screens now load on first
@@ -15802,16 +15853,17 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 
   const eager = graphFrom('main.js');
   const kb = [...eager.values()].reduce((n, b) => n + b, 0) / 1024;
-  // R80 raised the module cap by two and left the KB cap where it was.
-  // `ui/focus.js` and `ui/live.js` are 5 KB between them — under one percent
-  // of the graph — which is exactly the case the note above anticipates: "a
-  // gate that fails when someone adds a small module is a gate people learn
-  // to raise without reading". So the entry count moved and the BYTE budget,
-  // which is the one that measures cost rather than tidiness, did not: 615
-  // of 620, with no room left to spend without cutting something first.
-  // That is R81's whole job.
-  const MODULE_CAP = 52;
-  const KB_CAP = 620;
+  // R81 brought both down, which is the third clause of its criterion.
+  // Measured after the split: 49 modules and 537 KB, from 51 and 616. What
+  // moved: `save/settings-ui.js` is imported when the gear is pressed rather
+  // than when the game starts, `main.js` takes `pushNews` from the module
+  // that defines it instead of through a bare re-export, and
+  // `battle/engine.js` — 65 KB, the largest module in the game, and the AI
+  // and the matchup chart behind it — is now reached only by the two screens
+  // that hold a fight. Both caps keep a little headroom and no more: a
+  // budget you can spend without noticing is not a budget.
+  const MODULE_CAP = 51;
+  const KB_CAP = 560;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

@@ -51,7 +51,8 @@ const t0 = 1700000000000;
 
 const CONTENT_FILES = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions',
   'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos',
-  'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout'];
+  'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout',
+  'parts-shapes', 'enemies-shapes'];   // R81: on disk there is no second round
 
 export function loadContent() {
   const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));

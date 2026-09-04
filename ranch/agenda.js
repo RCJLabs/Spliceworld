@@ -39,7 +39,7 @@ import { activeVat, vatPlan } from '../splice/chaos.js';
 import { operationList, opReady, activeOps, laneFree } from '../campaign/operations.js';
 import { reachableEncounterIds } from '../campaign/map.js';
 import { contestRemainingMs } from '../campaign/contest.js';
-import { isInjured, fitToFight } from '../battle/engine.js';
+import { isInjured, fitToFight } from '../battle/statblock.js';
 import { sparCharges, canSpar } from '../campaign/sparring.js';
 
 const HOUR = 3600000;

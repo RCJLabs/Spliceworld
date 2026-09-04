@@ -1,7 +1,7 @@
 // Service worker (M7): network-first with cache fallback. Fresh deploys win
 // whenever the network is up; offline play falls back to the last good
 // build. Bump CACHE with SAVE_VERSION-sized releases so stale caches drain.
-const CACHE = 'spliceworld-v38-r80';
+const CACHE = 'spliceworld-v38-r81';
 
 const SHELL = [
   '.',
@@ -21,6 +21,7 @@ const SHELL = [
   'ui/icons.js',
   'ui/focus.js',
   'ui/live.js',
+  'ui/theme.js',
   'data/loader.js',
   'data/catalog.js',
   'campaign/breakout.js',
@@ -54,6 +55,7 @@ const SHELL = [
   'battle/forecast.js',
   'battle/veterancy.js',
   'battle/engine.js',
+  'battle/statblock.js',
   'battle/ui.js',
   'campaign/campaign.js',
   'campaign/map.js',
@@ -75,6 +77,11 @@ const SHELL = [
   'data/gauntlet.json',
   'data/news.json',
   'data/parts.json',
+  // R81: the geometry, split out of parts.json and enemies.json and fetched
+  // after the first paint. Still precached — offline needs the pictures too,
+  // it just does not need them before the shell is on screen.
+  'data/parts-shapes.json',
+  'data/enemies-shapes.json',
   'data/species.json',
   'data/combos.json',
   'data/enemies.json',

@@ -487,7 +487,7 @@ every `sfx.play()` call is invisible to it. Checked before filing.
   sentence, and smoke asserts every emitted event id has copy AND every
   line has an emitter — R20's invariant, pointed at the wire.*
 
-### 9.4 Fourth audit (R63–R83) — **shipped except R81 and the three gaps R77 named (R84–R86)**
+### 9.4 Fourth audit (R63–R83) — **shipped; the three gaps R77 named (R84–R86) remain**
 
 Run after R62, against a game with three closed audits behind it. Same rule
 as the other three: every line names the evidence that put it there, and the
@@ -1276,25 +1276,59 @@ The queue is a proposal: prune it before starting R63.
   the eager graph, that each still resolves to a real export (nothing
   type-checks a string inside `import()`), and that each is still
   precached.
-- **R81 — The other 766 KB, and the modules eager for one function.** R74
-  halved the eager JS the boot compiles; the audit that checked it measured
-  what is left, so the next pass starts from numbers rather than a guess.
-  **The JSON is now the larger half and none of it is deferred:**
-  `parts.json` is 410 KB of which **283 KB (69%) is `parts[].shapes`**
-  geometry read only by the renderer, and `enemies.json` is 172 KB of which
-  **126 KB (73%) is `units[].shapes`** — a split-file or lazy-shapes shape
-  is the obvious win, and the same audit found the guardrail on the obvious
-  *wrong* version of it: the Ranch genuinely reads `enemies.json` through
-  `ranch/agenda.js`, so "fetch it when the player opens the War Room" would
-  break the agenda panel. **Three modules are eager for almost nothing:**
-  `battle/engine.js` (63 KB, the single largest, pulled in for six small
-  helpers), `campaign/campaign.js` (30 KB, for one function that is a bare
-  re-export), and `save/settings-ui.js` (16 KB, a modal behind one click
-  handler, not a screen at all). And `sw.js` is **network-first for
-  everything**, so every precached module still costs a request that must
-  fail before the cache answers. *Done when: the shapes are not fetched
-  before the first paint, the three modules above are behind the thing that
-  needs them, and the import-graph gate's cap comes down to match.*
+- **R81 — The other 766 KB, and the modules eager for one function.**
+  ✅ *Shipped.* Every number re-measured first, and the entry held on the
+  data and was wrong about the code. **Measured, before:** 1,462 KB and 79
+  requests to put the game on screen; 51 modules and 616 KB of eager JS.
+  **After: 1,010 KB (−31%), 49 modules, 537 KB.**
+  - **The geometry was half of everything the game downloads.**
+    `parts[].shapes` is 276.8 KB of `parts.json` (69.1%) and
+    `units[].shapes` 122.8 KB of `enemies.json` (72.8%) — the entry's
+    percentages were exact and its absolutes a little stale. Both now ship
+    as their own file, fetched a frame *after* the game is on screen and
+    merged onto the objects they came off, so every reader in the game is
+    unchanged and simply starts working. The renderer draws "developing" for
+    the few hundred milliseconds in between, which is the same idea as the
+    empty crate it already drew for a chassis it could not find.
+  - **The trap the entry named was real and the split walks past it.** The
+    Ranch does read `enemies.json` through `ranch/agenda.js`, so deferring
+    the file wholesale until the War Room opens would have broken the agenda
+    panel — but it reads `content.encounters`, never a unit, and the units'
+    bodies are the 122.8 KB. Splitting by what the renderer reads splits
+    exactly where the Ranch does not look.
+  - **`battle/engine.js` was not "eager for six small helpers".** It had
+    **11 import sites across 9 modules**, and the eager graph took seven
+    distinct names from it. Four are trivial and engine-free; three
+    (`movesFromTokens`, `unitFromGenome`, `finishBattle`) are real. So it
+    could not be lifted out — it had to be **split**, along the seam those
+    seven names describe: `battle/statblock.js` is what a creature IS (its
+    moves from its anatomy, its purebred set, its obedience, whether it is
+    hurt, and what a finished fight does to it) and `battle/engine.js` is the
+    rules for resolving a fight. The engine imports from the statblock;
+    nothing in the statblock knows the engine exists. 65 KB, plus the AI and
+    the matchup chart behind it, now load only for the two screens that hold
+    a fight.
+  - **`campaign/campaign.js` cannot leave the graph, and the entry's saving
+    for it was overcounted.** `campaign/world.js` needs `tickCampaign` on
+    every tick. What was real is the rest of the claim: `main.js` took
+    `pushNews` through a **bare re-export** and now takes it from
+    `campaign/wire.js`, which defines it.
+  - **`save/settings-ui.js`** is imported when the gear is pressed. The
+    five-line theme list it also held moved to `ui/theme.js`, because the
+    shell needs to know which `[data-theme]` to stamp before anything paints
+    and was importing a 16 KB modal to find out.
+  - **The gate is a browser, not the import graph.** `tools/boot.js` (new,
+    on R73's dependency-free CDP driver, now shared as `tools/cdp.js`) loads
+    the game for real and splits the waterfall at the moment a screen first
+    has a game in it. **The first version of it split on
+    `firstContentfulPaint` and passed on the old behaviour** — the header and
+    the tab bar are static HTML, so FCP fires long before any content is
+    fetched at all. A gate that cannot tell the two apart proves nothing.
+  - **Known and not fixed here:** `tools/gen-parts.js` has drifted from the
+    roster it generates — running it would rewrite **40 of 244 parts**, all
+    the hand-tuned tails. The split was therefore done mechanically, with the
+    serializer proved byte-identical against each file before anything was
+    removed. Also unchanged: `sw.js` is still network-first for everything.
 - **R75 — The small wrongs the walk found.** ✅ *Shipped.* All ten fixed,
   and the handler-firing stub is now a suite gate: **70 handlers across six
   screens, every one fired** — 70 function bodies that no gate in this repo

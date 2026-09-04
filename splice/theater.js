@@ -9,7 +9,7 @@ import { theaterGrants } from './facility.js';
 import { driftFromTraining } from './temperament.js';
 import { MOVE_SLOTS, activeMoves } from '../battle/moves.js';
 import { defaultMoveset } from '../battle/moves.js';
-import { movesFromTokens } from '../battle/engine.js';
+import { movesFromTokens } from '../battle/statblock.js';
 
 const CHIMERA_NAMES = [
   // R41: fifteen names for a stable the game encourages past nine was a

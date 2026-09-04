@@ -10,7 +10,7 @@
 // the identical opposition.
 
 import { rngStream, pick } from '../util/rng.js';
-import { unitFromGenome } from '../battle/engine.js';
+import { unitFromGenome } from '../battle/statblock.js';
 import { analyze } from '../splice/physiology.js';
 import { rivalLine } from './monologue.js';
 import { rivalOf } from '../data/catalog.js';

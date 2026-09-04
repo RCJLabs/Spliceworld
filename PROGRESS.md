@@ -1,5 +1,116 @@
 # PROGRESS
 
+## Session 106 — R81: The other 766 KB, and the modules eager for one function ✅
+
+**Acceptance criterion:** the shapes are not fetched before the first paint,
+the three modules are behind the thing that needs them, and the import-graph
+gate's cap comes down to match — **passes**. `SAVE_VERSION` unchanged
+(**38**); `sw.js` bumped to `spliceworld-v38-r81`.
+
+| gate | result |
+|---|---|
+| `npm run boot` | ✓ **new** — 1,462 KB to put the game on screen, down to **1,010 KB (-31%)** |
+| `npm run smoke` | ✓ — module cap 52 -> **51**, byte cap 620 -> **560**, and both halves of every part and unit must pair |
+| `npm run battery` | ✓ — **64 breaks, 64 caught** (4 new, two more gates) |
+| `npm run scopecheck` · `npm run handlers` | ✓ — 75 modules · 1455 handlers across 64 surfaces |
+| `npm run a11y` · `npm run roadmap` · `npm run sim` | ✓ |
+
+### What it cost to look at the game
+
+| | before | after |
+|---|---|---|
+| to put the game on screen | 1,462 KB / 79 requests | **1,010 KB / 75** |
+| eager modules | 51 | **49** |
+| eager JS | 615.6 KB | **536.9 KB** |
+| `data/parts.json` | 400.6 KB | **123.8 KB** |
+| `data/enemies.json` | 168.6 KB | **45.8 KB** |
+
+### The entry was right about the data and wrong about the code
+
+Its percentages were exact — `parts[].shapes` really is **69.1%** of
+parts.json (276.8 KB) and `units[].shapes` **72.8%** of enemies.json
+(122.8 KB), read by `render/renderer.js` and by nothing else, from three call
+sites. Its absolutes were a little stale, the files having shrunk since.
+
+It was also right about the trap it named: the Ranch really does read
+`enemies.json`, through `ranch/agenda.js`, so deferring that file until the
+War Room opens would break the agenda panel. But it reads
+**`content.encounters`**, never a unit — and the units' bodies are the
+122.8 KB. Splitting by what the renderer reads splits exactly where the Ranch
+does not look.
+
+Where it was wrong: **`battle/engine.js` is not "eager for six small helpers"
+from one place.** It has **11 import sites across 9 modules**, and the eager
+graph takes seven distinct names. Four are trivial and engine-free
+(`isInjured`, `fitToFight`, `applyInjury`, `obediencePercent` — twelve lines
+between them); three are real engine functions with real dependencies. So it
+could not be lifted out. It had to be split.
+
+And **`campaign/campaign.js` cannot leave the graph at all** —
+`campaign/world.js` needs `tickCampaign` on every tick — so the entry's
+saving for it was overcounted. What was exactly right was the rest of that
+claim: `main.js` took `pushNews` through a bare re-export, and now takes it
+from `campaign/wire.js`, which defines it.
+
+### The seam
+
+`battle/statblock.js` is **what a creature is**: its moves from its anatomy,
+its purebred set bonus, its obedience, whether it is hurt, and what a
+finished fight does to it. `battle/engine.js` is **the rules for resolving a
+fight**. The engine imports from the statblock; nothing in the statblock
+knows the engine exists.
+
+That sentence is the whole justification, and it was found by measuring
+rather than by taste: nine modules import from the engine and only two of
+them are ever in a battle. The Ranch's agenda asks whether a chimera is hurt,
+the Pens print its moves, the Theater builds a move list to show what you
+just spliced, sparring asks who is fit, the rival ladder turns a genome into
+a unit — none of that is a fight, and all of it used to drag the turn loop,
+the AI, the damage formula and the aftermath behind it.
+
+### The first version of the gate passed on the old behaviour
+
+`tools/boot.js` splits the network waterfall at the moment the game reaches
+the screen. It first split on **`firstContentfulPaint`**, and measured
+cleanly, and was worthless: the header and the tab bar are static HTML, so
+FCP fires long before any content is fetched at all — 400 KB of geometry
+landing in the same round as everything else still counted as "after the
+paint". Proved by running it against the pre-R81 loader, where it passed.
+
+The honest line is the moment a screen first has a game in it, recorded by an
+observer injected before the document runs, on the same `performance.now()`
+clock the resource timings use so there is no conversion to get wrong. That
+version fails the old loader by 3 problems and passes the new one.
+
+It caught something else, too: kicking the second round off in the same
+synchronous block as `showScreen` still puts the request in front of the
+paint. One frame plus a macrotask is the idiom, and now the code says so.
+
+### Known issues
+
+- **`tools/gen-parts.js` has drifted from the roster it generates.** Running
+  it would rewrite **40 of 244 parts** — all the hand-tuned tails, e.g.
+  `bear_tail`'s "Raking Swat" back to "Nub Wiggle". The generator's own
+  comment warns about exactly this ("a generator that reverts four phases of
+  tuning the next time somebody runs it is a trap") and it has become one.
+  The split was therefore done mechanically instead, with the serializer
+  proved byte-identical against each file before anything was removed. Worth
+  a phase of its own; not this one's job.
+- `sw.js` is still **network-first for everything**, so every precached file
+  costs a request that has to fail before the cache answers. Named in the
+  entry, out of the criterion, untouched.
+- `data/enemies.json` is hand-authored, so adding a unit now means adding its
+  stats in one file and its body in another. Smoke pairs the two halves, so a
+  half-added unit fails the build rather than reaching a player.
+
+### Next session's first task
+
+**R84, R85 or R86** — the three gaps R77 named, and each is a decision before
+it is a build: an Apex part either grants a materially different move or §3.3
+stops implying one; instability 100 either does something or §3.5 stops
+designing it; a timer is either skippable with an earned currency or §3.9
+stops promising it. R86 is the one the TWA pitch leans on.
+
 ## Session 105 — R80: The keyboard can see the game but not play it ✅
 
 **Acceptance criterion:** no render loses focus, every control is a real

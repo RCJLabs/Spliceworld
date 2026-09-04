@@ -7,7 +7,12 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const parts = JSON.parse(readFileSync(join(root, 'data/parts.json'), 'utf8')).parts;
+// R81 — the geometry lives in its own file now (it was 69% of parts.json and
+// only the renderer reads it), so this reads both halves and puts them back
+// together. It is the one tool that cares about nothing BUT the shapes.
+const partShapes = JSON.parse(readFileSync(join(root, 'data/parts-shapes.json'), 'utf8')).shapes;
+const parts = JSON.parse(readFileSync(join(root, 'data/parts.json'), 'utf8')).parts
+  .map((p) => ({ ...p, shapes: partShapes[p.id] ?? [] }));
 const frames = JSON.parse(readFileSync(join(root, 'data/frames.json'), 'utf8')).frames;
 const VB = 230; // viewBox half-extent
 function ext(shapes) {

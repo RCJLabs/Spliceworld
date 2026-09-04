@@ -41,7 +41,8 @@ const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 
 const FILES = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits',
   'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament',
-  'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout'];
+  'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout',
+  'parts-shapes', 'enemies-shapes'];
 
 // Each is a mechanic §1-§5 has named since M0. `prose` is how the spec says
 // it; `probe` is what the code would have to contain for it to be real.

@@ -13,7 +13,8 @@ import { dirname, join } from 'node:path';
 import { indexContent } from '../render/renderer.js';
 import { seedTemperament } from '../splice/temperament.js';
 import { analyze } from '../splice/physiology.js';
-import { createBattle, step, playerActions, playerActive, movesFromTokens } from '../battle/engine.js';
+import { createBattle, step, playerActions, playerActive } from '../battle/engine.js';
+import { movesFromTokens } from '../battle/statblock.js';
 import { knownMoves } from '../battle/moves.js';
 import { rivalEncounter, rivalList, rivalStatus } from '../campaign/rivals.js';
 import { rescueEncounterFor } from '../campaign/map.js';
@@ -27,6 +28,10 @@ export function loadSimContent() {
   return indexContent({
     frames: readJSON('data/frames.json'),
     parts: readJSON('data/parts.json'),
+    // R81: the geometry ships as its own file now, and only the browser
+    // defers it — a Node tool reads both halves and gets them merged.
+    'parts-shapes': readJSON('data/parts-shapes.json'),
+    'enemies-shapes': readJSON('data/enemies-shapes.json'),
     species: readJSON('data/species.json'),
     combos: readJSON('data/combos.json'),
     enemies: readJSON('data/enemies.json'),
