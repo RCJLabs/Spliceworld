@@ -176,7 +176,12 @@ export function renderTheaterScreen(root, ctx) {
       <h3>Sockets (from the Vault)</h3>
       <div class="slot-grid">${slotFields}</div>
       <button id="thtr-splice" type="button" class="big-btn" ${errors.length ? 'disabled' : ''}>⚡ SPLICE IT</button>
-      ${errors.length && tokens.length ? `<p class="fine-print">${errors.join(' ')}</p>` : ''}
+      ${/* R75 — the `&& tokens.length` suppressed the reason in exactly the
+            case a new player meets first: an empty vault disables SPLICE IT
+            and said nothing about why, so the one button on the screen was
+            dead with no account of itself. A player with a part selected got
+            the explanation; a player with none got silence. */ ''}
+      ${errors.length ? `<p class="fine-print">${errors.join(' ')}</p>` : ''}
     </section>
     <section class="card">
       <h3>Physiology Panel</h3>

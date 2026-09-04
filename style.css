@@ -563,7 +563,12 @@ main {
 .slot-actions { display: flex; gap: 5px; flex: 0 0 auto; }
 .slot-actions .care-train, .slot-actions .pen-dismantle { margin: 0; padding: 5px 8px; font-size: 0.68rem; }
 
-.grad-shake { animation: grad-shake 0.14s linear infinite; }
+/* R75 — was `infinite`. The element is replaced by the poof at 0.55 ×
+   CEREMONY_MS (1155 ms), so nine iterations of 0.14 s cover the whole window
+   with room to spare and the animation can no longer outlive the thing it
+   decorates — an infinite animation that happens to be cut short by a
+   setTimeout is a bounded animation with the bound written somewhere else. */
+.grad-shake { animation: grad-shake 0.14s linear 9; }
 @keyframes grad-shake {
   0% { transform: translate(0, 0) rotate(-2deg); }
   50% { transform: translate(2px, -1px) rotate(2deg); }
@@ -1051,8 +1056,14 @@ body.in-battle .ticker { font-size: 0.66rem; }
 
 @media (prefers-reduced-motion: reduce) {
   .meter-fill { transition: none; }
+  /* R75 — the graduation ceremony's three were missing: a player who has
+     asked their OS to stop moving things still got a shaking portrait, a
+     flashing card and an expanding puff. Safe to disable outright because
+     the ceremony advances on setTimeout, not on animationend, so the results
+     still arrive on time with nothing moving. */
   .float, .anim-lunge-fwd, .anim-hit, .anim-ko,
-  .anim-wavein, .anim-buff, .anim-debuff { animation: none; }
+  .anim-wavein, .anim-buff, .anim-debuff,
+  .grad-shake, .grad-flash, .poof { animation: none; }
 }
 
 /* Taller phones get a roomier field; short ones keep the menu reachable. */

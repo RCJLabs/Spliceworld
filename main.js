@@ -54,7 +54,13 @@ const ctx = {
     runExtraction($('#overlay'), ctx, animalId, () => showScreen(state.activeScreen)),
   // A4: the Right Now panel lists things that live on other screens, so it
   // needs to be able to send you to one. Screen switching is the shell's job.
-  goto: (name) => showScreen(name),
+  //
+  // R75: "Run a job" names a SUBTAB, not a screen, and the screens that own
+  // subtabs are lazy (R74) — the shell cannot reach into a module that may
+  // not be loaded yet. So the request is parked here and the screen collects
+  // it on its first paint, whenever that turns out to be.
+  goto: (name, subtab) => showScreen(name, subtab),
+  takeSubtab: () => { const s = pendingSubtab; pendingSubtab = null; return s; },
   applyTheme: () => applyTheme(),
 };
 
@@ -151,8 +157,13 @@ function applyTheme() {
   else document.documentElement.dataset.theme = name;
 }
 
-function showScreen(name) {
+let pendingSubtab = null;
+
+function showScreen(name, subtab) {
   if (!SCREENS[name]) name = 'ranch';
+  // Cleared on every navigation that does not ask for one, so a request
+  // aimed at a screen you left cannot arrive on a later visit.
+  pendingSubtab = subtab ?? null;
   // The single-screen battle layout locks the shell; leaving it unlocks.
   if (name !== 'battle') document.body.classList.remove('in-battle');
   state.activeScreen = name;

@@ -234,13 +234,21 @@ export function tickCampaign(state, content, now, since = state.lastTickAt ?? no
   const job = tickOperations(state, content, now);
   for (const line of job.news) pushNews(state, line);
   if (job.results.length) {
-    state.campaign.opReport = job.results[0];
+    // R75 — an UNREAD report is not a slot to overwrite. `opReport` is the
+    // rich one: the War Room badges it with a '!' and the player clears it by
+    // reading it. Two jobs landing before they look meant the first vanished
+    // with its payout and its captured animal unmentioned. The file already
+    // knew the answer for the second result in a single tick — send it to the
+    // wire instead — so an unread report now takes the same path, and every
+    // result is accounted for somewhere.
+    const unread = Boolean(state.campaign.opReport);
+    if (!unread) state.campaign.opReport = job.results[0];
     for (const res of job.results) {
       if (!res.success) continue;
       const boast = playerLine(state, content, 'capture', { creature: res.animal?.name ?? 'the prize' });
       if (res.animal && boast) pushNews(state, boast);
     }
-    for (const extra of job.results.slice(1)) {
+    for (const extra of job.results.slice(unread ? 0 : 1)) {
       pushNews(state, extra.success
         ? `${extra.name} also paid out: $${extra.funds}${extra.animal ? `, and ${extra.animal.name} came back in the van` : ''}.`
         : `${extra.name} came to nothing, which happens.`);

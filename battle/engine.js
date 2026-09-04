@@ -1245,6 +1245,15 @@ export function isInjured(chimera, now) {
   return !!chimera.injury && now < chimera.injury.until;
 }
 
+// R75 — "who can fight right now" was written out three times: the agenda,
+// the sparring ring, and (once R75 gated the map's Assault) the War Room.
+// Three copies of one rule is how a map comes to offer a fight the agenda
+// has already ruled out. It lives beside the injury rule because it IS the
+// injury rule, asked about the stable rather than one creature.
+export function fitToFight(state, now) {
+  return (state.chimeras ?? []).filter((c) => !isInjured(c, now));
+}
+
 // R65 — the one place an injury is written to a chimera.
 //
 // Two rules, both learned from bugs. An injury NEVER SHORTENS convalescence:

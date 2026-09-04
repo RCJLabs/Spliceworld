@@ -165,7 +165,20 @@ export function tickResequencer(state, content, now) {
   // to a housekeeping problem the player cannot see coming is exactly the
   // kind of surprise this project's house rules forbid.
   if (state.ranch.stock.length >= state.ranch.penCapacity) {
-    return { news: [lines.penFull ?? 'It is ready and there is nowhere to put it.'], result: null, waiting: true };
+    // R75 — said ONCE per run, not on every tick. This returns its line to
+    // the caller, and the caller pushes it to the wire, which keeps the last
+    // twelve entries: a run left waiting emitted the same sentence every 30
+    // seconds, so six minutes of a full pen flushed every other thing that
+    // had happened out of the feed. The wait itself is still right — a full
+    // pen must not destroy a successful decant — it just does not need
+    // announcing twelve times.
+    const said = run.penFullSaid === true;
+    run.penFullSaid = true;
+    return {
+      news: said ? [] : [lines.penFull ?? 'It is ready and there is nowhere to put it.'],
+      result: null,
+      waiting: true,
+    };
   }
 
   // R65: born when the tank finished, not when the player looked. It ages

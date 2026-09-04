@@ -5,7 +5,7 @@
 // alleles pass Mendel-style; rare mutations spike stats or introduce
 // mutation-only trait genes.
 
-import { rngStream, pick } from '../util/rng.js';
+import { rngStream, pick, pickFresh } from '../util/rng.js';
 import { STATS, AGE_STAGES, TUNING, ageStage } from './ranch.js';
 import { avgStars } from '../splice/extract.js';
 import { incubatorGrants } from '../splice/facility.js';
@@ -240,7 +240,11 @@ export function hatchEgg(state, eggId, content, now) {
   const hatchling = {
     id: `a${n}`,
     species: egg.species,
-    name: pick(rng, HATCHLING_NAMES),
+    // R75 — twelve names and a bare `pick`, on a ranch that holds up to
+    // twenty: collisions were not a risk, they were the expected case. The
+    // same helper the stock and the chimeras already use prefers a name
+    // nobody on the ranch is wearing before it repeats one.
+    name: pickFresh(rng, HATCHLING_NAMES, state.ranch.stock.map((a) => a.name)),
     sex: egg.sex,
     birthAt: now,
     condition: TUNING.startCondition,

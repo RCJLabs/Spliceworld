@@ -20,7 +20,7 @@
 // parent — drawn from the Splice-Dex, so it is always something you have
 // seen and never a gift from the end of the game.
 
-import { rngStream, pick } from '../util/rng.js';
+import { rngStream, pick, pickFresh } from '../util/rng.js';
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { GRADES, gradeIndexOf } from './extract.js';
 import { analyze } from './physiology.js';
@@ -277,7 +277,9 @@ export function tickVat(state, content, now) {
   const n = state.chimeraCount++;
   const child = {
     id: `c${n}`,
-    name: pick(rng, names),
+    // R75 — see ranch/breeding.js: eighteen names against a roster that
+    // can hold nine, picked blind.
+    name: pickFresh(rng, names, state.chimeras.map((c) => c.name)),
     frame,
     tokens,
     createdAt: decantedAt,

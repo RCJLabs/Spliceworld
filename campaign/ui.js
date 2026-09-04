@@ -13,7 +13,7 @@
 // in two halves, not two screens that happen to live together.
 
 import { renderArena } from '../battle/ui.js';
-import { createBattle, isInjured, obediencePercent, combatantFromChimera } from '../battle/engine.js';
+import { createBattle, isInjured, fitToFight, obediencePercent, combatantFromChimera } from '../battle/engine.js';
 import { forecast, diagnose, wantsDiagnosis } from '../battle/forecast.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
@@ -110,6 +110,16 @@ export function renderWarRoomScreen(root, ctx) {
     });
     return;
   }
+  // R75 — the Ranch's "Run a job" promised the Jobs tab and delivered the
+  // map, because a screen name was the only thing an agenda row could ask
+  // for. The shell parks the subtab; this is where it is collected. Taking
+  // it clears any half-built briefing: the player asked for a tab, so the
+  // tab is what they get.
+  const asked = ctx.takeSubtab?.();
+  if (asked && WAR_TABS.some((tab) => tab.id === asked)) {
+    warTab = asked;
+    draftTarget = null;
+  }
   if (draftTarget) renderBriefing(root, ctx);
   else renderMap(root, ctx);
 }
@@ -186,10 +196,27 @@ function renderMap(root, ctx) {
   // row and the Pens has a whole line, so they say the same thing at
   // different lengths.
   const sparGate = sparVerdict(state, content, t);
+  // R75 — Assault sat beside a Spar button that reads its own verdict and
+  // read nothing at all: with the whole stable in the Infirmary it opened a
+  // briefing whose team could only be empty. Nor was it alone — Defend,
+  // Rescue Raid, the rival Challenge and the Gauntlet's Answer were all
+  // pressable trips to the same dead end, which is what "only Spar reads
+  // the predicate" actually cost. They read the shared one now.
+  //
+  // Not `sparGate.fit`: that would gate an assault on the sparring ring's
+  // bookkeeping, and the next change to canSpar's shape would quietly
+  // decide who may take a node. The map, the ring and the agenda ask
+  // battle/engine.js, which owns the injury rule.
+  //
+  // Disabled with the reason IN THE LABEL, per the house rule style.css
+  // records for exactly this case: this ships as a TWA, there is no hover,
+  // so a title attribute is invisible to every player who hits it.
+  const canFight = fitToFight(state, t).length > 0;
+  const noneFit = 'no-one fit';
   const sparLabel = sparGate.kind === 'charges'
     ? `Spar <span class="spar-charges">${sparGate.charges}</span>`
     : sparGate.kind === 'nobody-fit'
-      ? 'no-one fit'
+      ? noneFit
       : fmtDuration(sparGate.msToNext);
   const frontier = frontierRegionId(state, content, map);
   const regions = map.map(({ region, open, blockers, nodes: nodeRows, held }) => {
@@ -198,7 +225,7 @@ function renderMap(root, ctx) {
       const encounter = content.encounters[node.encounter];
       const btn =
         status === 'available'
-          ? `<button type="button" data-node="${node.id}">Assault</button>`
+          ? `<button type="button" data-node="${node.id}"${canFight ? '' : ' disabled'}>${canFight ? 'Assault' : noneFit}</button>`
           : status === 'held'
             ? `<span class="held-tag">HELD +$${node.incomePerDay}/d</span>
                <button type="button" class="spar-btn" data-spar="${node.id}" ${sparGate.ok ? '' : 'disabled'}>${renderIcon('boxing-glove')} ${sparLabel}</button>`
@@ -256,14 +283,14 @@ function renderMap(root, ctx) {
       }${
         a.defences ? ` · you have held it ${a.defences}× already` : ''
       }.</span></div>
-      <button type="button" data-defend="${a.nodeId}">${renderIcon('shield')} Defend</button>
+      <button type="button" data-defend="${a.nodeId}"${canFight ? '' : ' disabled'}>${renderIcon('shield')} ${canFight ? 'Defend' : noneFit}</button>
     </div>`).join('');
 
   const captives = state.campaign.captives.map((cap) => `
     <div class="encounter captive">
       <div><strong>${cap.chimera.name}</strong> <span class="lineage">captured</span><br>
       <span class="fine-print">Unauthorized peer review in <strong class="countdown">${fmtDuration(cap.deadline - t)}</strong>. There is still time.</span></div>
-      <button type="button" data-rescue="${cap.id}">Rescue Raid</button>
+      <button type="button" data-rescue="${cap.id}"${canFight ? '' : ' disabled'}>${canFight ? 'Rescue Raid' : noneFit}</button>
     </div>`).join('');
 
   const containment = state.campaign.containment.map((entry) => bayCard(state, entry, content, t)).join('');
@@ -301,7 +328,9 @@ function renderMap(root, ctx) {
           ${
             locked
               ? `<span class="locked-tag">${need.join(' · ')}</span>`
-              : `<button type="button" data-rival="${rival.id}">${status === 'rematch' ? `Rematch — $${preview.reward}` : `Challenge — $${preview.reward}`}</button>`
+              : `<button type="button" data-rival="${rival.id}"${canFight ? '' : ' disabled'}>${
+                  !canFight ? noneFit : status === 'rematch' ? `Rematch — $${preview.reward}` : `Challenge — $${preview.reward}`
+                }</button>`
           }
         </div>
       </div>`;
@@ -368,7 +397,7 @@ function renderMap(root, ctx) {
           <div class="encounter gauntlet-${status}">
             <div><strong>${stage.name}</strong>${status === 'beaten' ? ` ${renderIcon('trophy')}` : ''} <span class="lineage">${stage.escorts.length + 1} waves · $${stage.reward}</span><br>
             <span class="fine-print">${status === 'locked' ? 'The card goes in order.' : stage.blurb}</span></div>
-            ${status === 'open' ? `<button type="button" data-gauntlet="${stage.id}">Answer</button>` : status === 'beaten' ? '<span class="held-tag">BEATEN</span>' : '<span class="locked-tag">locked</span>'}
+            ${status === 'open' ? `<button type="button" data-gauntlet="${stage.id}"${canFight ? '' : ' disabled'}>${canFight ? 'Answer' : noneFit}</button>` : status === 'beaten' ? '<span class="held-tag">BEATEN</span>' : '<span class="locked-tag">locked</span>'}
           </div>`).join('');
         return `<section class="card gauntlet-card">
           <h3>${renderIcon('stadium')} The Gauntlet</h3>
