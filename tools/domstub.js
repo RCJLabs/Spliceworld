@@ -107,7 +107,7 @@ function simpleMatcher(part) {
   let rest = part;
   // Every `:not()`, not just the first, and each may hold a selector LIST.
   for (const not of [...rest.matchAll(/:not\(([^)]*)\)/g)]) {
-    const inners = not[1].split(',').map((x) => simpleMatcher(x.trim()));
+    const inners = splitGroups(not[1]).map((x) => simpleMatcher(x.trim()));
     tests.push((n) => !inners.some((t) => t(n)));
   }
   rest = rest.replace(/:not\([^)]*\)/g, '');
@@ -138,9 +138,25 @@ function simpleMatcher(part) {
   return (n) => tests.every((t) => t(n));
 }
 
+// Selector groups, splitting only on commas OUTSIDE parentheses — the naive
+// split cut `:not(a, b)` in half, which made the selector-list form the
+// comment above claims to support match nothing at all.
+function splitGroups(sel) {
+  const out = [];
+  let depth = 0;
+  let at = 0;
+  for (let i = 0; i < sel.length; i++) {
+    if (sel[i] === '(') depth++;
+    else if (sel[i] === ')') depth--;
+    else if (sel[i] === ',' && depth === 0) { out.push(sel.slice(at, i)); at = i + 1; }
+  }
+  out.push(sel.slice(at));
+  return out;
+}
+
 export function queryAll(nodes, selector) {
   const out = new Set();
-  for (const group of String(selector).split(',')) {
+  for (const group of splitGroups(String(selector))) {
     // `a > b` is a direct child; `a b` any descendant. This tree uses no
     // child combinator today, but parsing `>` as a TAG NAME (which is what
     // splitting on whitespace does) silently matches nothing, and a stub
@@ -282,14 +298,19 @@ export function recordingRoot() {
   return { host, bound, painted };
 }
 
-// The `data-*` names a fired handler's element actually carried. Coverage is
-// counted on the ELEMENT, not the selector, because that is the question worth
-// asking: did a handler run holding this attribute?
+// The `data-*` names a fired handler's element actually carried. Counted on
+// the ELEMENT and ONLY the element, because that is the question worth
+// asking: did a handler run HOLDING this attribute?
+//
+// The selector used to be credited too, which quietly made the opposite claim
+// true. `querySelector` deliberately hands back a bindable stub when nothing
+// matches — so a binder can still be recorded — and crediting its selector
+// meant a control the screen had STOPPED PAINTING still counted as covered.
+// Delete the sound toggle from the settings panel, keep its bind, and the
+// gate's output was byte-for-byte identical to a healthy run.
 export function attrsOfFire(h) {
   const out = new Set();
   for (const k of Object.keys(h.el?.dataset ?? {})) out.add(kebab(k));
-  const sel = String(h.sel).match(/\[data-([\w-]+)/);
-  if (sel) out.add(sel[1]);
   return out;
 }
 

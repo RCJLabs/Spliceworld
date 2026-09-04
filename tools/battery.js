@@ -35,6 +35,19 @@ cpSync(SRC, DIR, {
 
 const SCOPE = ['node', 'tools/scopecheck.js'];
 const HANDLERS = ['node', 'tools/handlers.js'];
+// Two walks in one process must fire the same handlers. The gate's own result
+// used to depend on what ran before it, which no single-run check can see.
+const TWICE = ['node', '-e', `
+  const { walkSurfaces, loadContent } = await import('./tools/handlers.js');
+  const c = loadContent();
+  const a = await walkSurfaces(c);
+  const b = await walkSurfaces(c);
+  if (a.totalFired !== b.totalFired || b.failures.length) {
+    console.error('twice ✗  ' + a.totalFired + ' then ' + b.totalFired + ', ' + b.failures.length + ' failures');
+    process.exit(1);
+  }
+  console.log('twice ✓  ' + a.totalFired + ' both times');
+`];
 
 const VERBOSE = process.argv.includes('--verbose');
 
@@ -135,6 +148,30 @@ const BREAKS = [
     to: "    if (false && nx.type === 'name' && ['const', 'let', 'var'].includes(nx.value)) {",
     expect: 'corpus',
   },
+  {
+    n: 16, gate: SCOPE, name: 'a keyword after a dot stops being treated as a property',
+    file: 'tools/scopecheck.js',
+    anchor: "    if (before?.type === 'punct' && ['.', '?.'].includes(before.value)) continue;",
+    to: '',
+  },
+  {
+    n: 17, gate: HANDLERS, name: 'a control stops being painted but its binder stays',
+    file: 'save/settings-ui.js',
+    anchor: '${active ? \'\' : `<button type="button" class="care-train" data-switch-slot="${slot.id}">Switch</button>`}',
+    to: "''",
+  },
+  {
+    n: 18, gate: HANDLERS, name: 'the War Room sub-tab bar disappears, taking its attribute with it',
+    file: 'campaign/ui.js',
+    anchor: 'function warSubtabBar(state) {',
+    to: 'function warSubtabBar(state) {\n  if (state) return \'\';',
+  },
+  {
+    n: 19, gate: TWICE, name: 'the walk stops being reproducible across two runs',
+    file: 'tools/handlers.js',
+    anchor: 'const mod = await import(`../${surface.file}?run=${runNonce++}`);',
+    to: 'const mod = await import(`../${surface.file}`);',
+  },
 ];
 
 const pristine = {};
@@ -155,9 +192,10 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS]) {
+for (const gate of [SCOPE, HANDLERS, TWICE]) {
   const r = run(gate);
-  console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${gate.join(' ')}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
+  const label = gate[1] === '-e' ? 'walkSurfaces twice in one process' : gate.join(' ');
+  console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }
 

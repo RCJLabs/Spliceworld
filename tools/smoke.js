@@ -15321,6 +15321,18 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // that decides whether the build passes.
 {
   const walk = await walkSurfaces(content);
+  // THE ONE ASSERTION THAT WOULD HAVE CAUGHT ALL OF IT. The walk's result was
+  // a function of what ran before it — module state (`warTab`, `dexTab`) is
+  // not reset by a fresh save — so the same tree gave one number from the
+  // tool and another from this suite, and a second walk in one process
+  // reported 54
+  // handlers "vanished" that were fine. Two walks, one process, same number:
+  // if that ever stops holding, the coverage number below means nothing.
+  const again = await walkSurfaces(content);
+  assert.equal(again.totalFired, walk.totalFired,
+    `the walk is reproducible: two runs in one process fire the same handlers (${walk.totalFired} then ${again.totalFired})`);
+  assert.deepEqual(again.failures, [], 'and the second run is as clean as the first');
+
   assert.deepEqual(walk.failures, [],
     `every handler on every surface fires without throwing:\n  ${walk.failures.join('\n  ')}`);
   assert.deepEqual(walk.missed, [],
@@ -15331,7 +15343,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // having nothing left to check. `handlers.js` also fails any INDIVIDUAL
   // surface that binds nothing, which is the check these cannot make: the
   // audit found all three of these satisfied by the arena alone.
-  assert.ok(walk.totalFired >= 900,
+  assert.ok(walk.totalFired >= 1000,
     `the surfaces bind a real number of handlers (${walk.totalFired})`);
   assert.ok(walk.controls.length >= 30,
     `and a real number of them are controls, not parameters (${walk.controls.length})`);
