@@ -16070,4 +16070,23 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 }
 
+// ---------------------------------------------------------------------------
+// R77 — THE ROADMAP DESCRIBES A DIFFERENT GAME.
+//
+// The check itself lives in `tools/roadmap.js`, which explains what it found
+// and why it exists. It is a tool rather than a block here so the break
+// battery can aim at it without paying for the whole suite; this is the
+// assertion that makes it a BUILD failure rather than a report.
+{
+  const { checkRoadmap, shippedNumbers } = await import('./roadmap.js');
+  const drift = checkRoadmap();
+  assert.deepEqual(drift, [],
+    `the roadmap describes the shipped game:\n  ${drift.join('\n  ')}`);
+  // A gate whose subject can vanish is not a gate: if the block is ever
+  // emptied, `checkRoadmap` reports it, and this proves it had something to
+  // check in the first place.
+  assert.ok(Object.keys(shippedNumbers()).length >= 15,
+    'and there is a real number of numbers to check');
+}
+
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

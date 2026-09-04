@@ -61,7 +61,7 @@ BREED stock (genetics raise the ceiling)
 
 ### 3.3 Extraction & Part Grades
 - **The Extractor**: place a stock animal in, comedic sequence (flash, kazoo, poof), out comes a **DNA vial** + that species' **part tokens**. Framed as *graduation*: "Bessie has ascended to her final form (pending assembly)."
-- **Part grade = Genetics × Age stage × Condition at extraction.** Grades: **Standard → Prime → Apex → Prismatic.** Each grade = flat stat multiplier + at Apex/Prismatic, an upgraded version of the part's ability.
+- **Part grade = Genetics × Age stage × Condition at extraction.** Grades: **Standard → Prime → Apex → Prismatic.** Each grade = a flat stat multiplier **and** sharpens the part's own move by 12% per tier (`GRADE_MOVE_BONUS`), so a Prismatic ability is the same ability hitting harder. A *distinct* upgraded ability at Apex/Prismatic was designed and is **not shipped — queued as R84**.
 - Timing tension: extract a Juvenile now (fast, Standard) vs. raise to Prime with good care (slow, upkeep cost, Apex+). This is the ranch's central economic decision.
 - Every part token permanently records its donor's name and stars for Splice-Dex lineage ("contains the essence of Bessie").
 - Chimeras (yours or captured) can also be extracted — returns a *subset* of parts, one grade degraded. Salvage, not free recycling.
@@ -70,10 +70,10 @@ BREED stock (genetics raise the ceiling)
 - **Frame first:** choose a **torso**, which sets size class (S/M/L for v0.1) and slot layout. Slots: Head, Forelimbs, Hindlimbs, Tail, Hide, Organ ×1 (×2 at Theater Tier 2).
 - Every part carries: stat block, **one signature ability**, and **physiology properties** (mass, metabolic draw, thermal tolerance).
 - **Physiology panel** computes and *explains*: power-to-weight, stamina pool & regen, speed, thermal comfort band. Eagle wings on a hippo frame = legal, flightless, and the panel says why. Building is engineering (Law 4).
-- **Instability** (0–100): rises with species count in the mix and grade mismatches. High instability = longer settling, more care demand, obedience risk, and at 100 the chimera goes **Feral** (moves to Containment until rehabilitated).
+- **Instability** (0–100): rises with species count in the mix and grade mismatches. High instability = longer settling, more care demand and obedience risk. Going **Feral** at 100 (the chimera moves to Containment until rehabilitated) was designed and is **not shipped — queued as R85**; instability currently tops out as a settling and obedience cost.
 - **Purebred bonus:** 4+ parts from one species = that species' set bonus.
-- **Combo abilities:** specific part pairings unlock discovered abilities logged in the Splice-Dex (Venom Organ + Cobra Head = *Injection*; Electric Organ + Aquatic Hide = *Live Wire*). ~12 combos at v0.1; combos are the "gotta discover 'em all" hook.
-- **Splice settling:** new chimeras settle on a real-world timer (~1–4 hrs by instability). Deploying an unsettled chimera = Rejection debuffs in battle. Patience is a stat.
+- **Combo abilities:** specific part pairings unlock discovered abilities logged in the Splice-Dex (Venom Organ + Cobra Head = *Injection*; Electric Organ + Aquatic Hide = *Live Wire*). **27 combos** ship; combos are the "gotta discover 'em all" hook.
+- **Splice settling:** new chimeras settle on a real-world timer — **22.5 min at instability 0, rising to about 3 hrs at 100** (`PHYS_TUNING.settleBaseMs` + `settleMaxExtraMs`). Deploying an unsettled chimera = Rejection debuffs in battle. Patience is a stat.
 
 ### 3.5 Chimera Raising
 - Chimeras have **bond** (raised by training, feeding favorites, post-battle care) and **temperament** on two axes (Brave–Skittish, Fierce–Gentle), seeded by dominant donor species + drifted by how you raise them.
@@ -88,7 +88,7 @@ BREED stock (genetics raise the ceiling)
 - **Human enemy roster** (Gen 1–2): Riot Squad (Shield Wall: guards allies), Net Trooper (Trap), Tranq Team (Sleep), Police Cruiser, Infantry Squad (Suppressing Fire: accuracy down), Jeep .50 (fast, fragile), Tank (Armored, slow, Cannon = 2-turn charge), Attack Chopper (Airborne), Artillery (off-screen strikes, must be rushed). KO'd soldiers parachute away; vehicles sputter and collapse.
 - **Multi-stage battles:** commanders send waves; bosses transform mid-fight (Tank → Rail Tank), call reinforcements, or change the arena.
 - **Capture — theirs:** defeat a rival chimera with your **Containment Cannon** charged (charges by dealing damage without KO'ing — a capture minigame of restraint) → chimera goes to your Containment → **salvage** its engineered parts (enemy-tech parts are otherwise unobtainable) or, post-v0.1, rehabilitate it into your roster.
-- **Capture — yours:** *lose a battle* and one of your downed chimeras is captured → **Dissection Countdown** (real-world, 12–24 hrs) → launch a **Rescue Raid** (a themed battle behind enemy lines) before it expires. Fail or ignore it: the creature is lost *and* the enemy's next generation gains a counter-bias against its parts. Stakes without permadeath-by-surprise.
+- **Capture — yours:** *lose a battle* and one of your downed chimeras is captured → **Dissection Countdown** (real-world, **9–18 hrs**, rolled per capture) → launch a **Rescue Raid** (a themed battle behind enemy lines) before it expires. Fail or ignore it: the creature is lost *and* the enemy's next generation gains a counter-bias against its parts. Stakes without permadeath-by-surprise.
 
 ### 3.6b Elemental Classes (Wave 1)
 - Three classes in a rock-paper-scissors cycle: **Ground ≫ Water ≫ Air ≫ Ground** (×1.5 advantage, ×0.7 disadvantage), defined in `classes.json`.
@@ -110,7 +110,7 @@ BREED stock (genetics raise the ceiling)
 - Ambient storytelling from day one: a **news ticker** on the War Room screen reacts to your actions ("Local zoo reports goat shortage. Authorities baffled."). Cheap, cartoony, does the tone's heavy lifting.
 
 ### 3.9 Real-World Timers (offline-computed)
-Incubation, growth stages, splice settling, injury recovery, dissection countdowns, region income. All computed from timestamps on app open — no background process, PWA-safe. Every timer skippable with **Gene Juice** (earned currency only, no IAP assumptions in v0.1).
+Incubation, growth stages, splice settling, injury recovery, dissection countdowns, region income. All computed from timestamps on app open — no background process, PWA-safe. **Gene Juice** — an earned currency that skips any timer, no IAP assumptions — was designed and is **not shipped — queued as R86**. No timer is currently skippable at any price.
 
 ### 3.10 Facility (menu-based)
 Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery Theater** · **Incubator** · **Infirmary** · **Containment** · **War Room** (map, notoriety, ticker) · **Splice-Dex**. Upgrades are menu purchases: pen capacity, Theater tiers (frames/slots), Gene Scanner, Extractor efficiency, Infirmary speed, Containment Cannon mk2.
@@ -119,7 +119,30 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 
 ## 4. Content Spec (v0.1 → 1.0)
 
-### 4.1 Roster — 25 Species *(complete as of Wave 1)*
+### 4.0 Shipped, as measured
+
+<!-- R77: tools/smoke.js parses this block and fails the build when a line
+     drifts from the data. Every value is derived from data/*.json or the
+     engine at test time, never typed twice. If you change content, this
+     block is what tells you the prose above it has gone stale. -->
+
+- species: 41
+- parts: 244
+- frames: 4
+- regions: 5
+- nodes: 23
+- keywords: 29
+- combos: 27
+- grades: 4
+- enemy units: 42
+- encounters: 26
+- rivals: 5
+- save version: 38
+- settle minutes at instability 0: 22.5
+- settle hours at instability 100: 3
+- dissection hours: 9-18
+
+### 4.1 Roster — 41 Species *(25 at Wave 1; A3 took it to 40 and R6's variants to 41)*
 Each species contributes ~6 parts (head, forelimbs, hindlimbs, tail, hide, organ) with one ability each. Picks are swappable; coverage of tags/roles is what matters.
 
 | # | Species | Role | Signature part → ability | Key tags |
@@ -150,9 +173,9 @@ Each species contributes ~6 parts (head, forelimbs, hindlimbs, tail, hide, organ
 | 24 | Cobra | Poisoner | Head → Venom Fang (Venom stack) | Venomous |
 | 25 | Scorpion | Hybrid | Tail → Sting (Venom); Hide → Chitin | Venomous, Armored |
 
-**Math:** 25 species × ~6 parts ≈ **150 parts/abilities**, ~30 ability keywords, 12 combo abilities, 4 grades. Combination space: 3 frames × 150 parts across 6 slots = effectively unbounded; physiology + tags keep it meaningful instead of noisy.
+**Math, as shipped:** 41 species × ~6 parts = **244 parts/abilities**, 29 ability keywords, 27 combo abilities, 4 grades. Combination space: 4 frames × 244 parts across 6 slots = effectively unbounded; physiology + tags keep it meaningful instead of noisy.
 
-### 4.2 Ability Keyword System (~30 keywords)
+### 4.2 Ability Keyword System (29 keywords)
 Bleed, Venom (stacking), Stun, Sleep, Trap, Slow, Knockback(switch), Taunt, Guard, Reflect, Thorns, Priority, Charge(2-turn), Multi-Hit, Recoil, Frenzy(execute), Rally(team buff), AccUp/AccDown, PowerUp/PowerDown, EvasionUp, Camouflage, Regen, Rage(power-when-hit), StaminaDrain, StaminaRestore, IgnoreArmor, IgnoreEvasion(Lock-On), AoE(vs. squads), Suppression. Every move = 1–2 keywords + numbers. No bespoke scripts; the Monte Carlo harness can enumerate the whole space.
 
 ---
@@ -175,7 +198,7 @@ Bleed, Venom (stacking), Stun, Sleep, Trap, Slow, Knockback(switch), Taunt, Guar
 - **M4.5 — Balance Harness.** Headless battle simulator in `/tools`: Monte Carlo across part combos vs. enemy roster; outputs win-rate tables and flags degenerate builds. *Done when: it catches one broken combo I planted on purpose.*
 - **M5 — Campaign Shell.** Region strip, notoriety Gen 1→2, income ticks, capture-on-loss → dissection countdown → rescue raid, Containment + salvage, news ticker. *Done when: losing a battle creates a rescue mission with a live timer.*
 - **M6 — Breeding.** Pairing, incubation timers, genetics inheritance, family tree UI, one mutation trait. *Done when: two starred parents produce a measurably better egg.*
-- **M7 — Polish & Ship v0.1.** Splice-Dex, onboarding (guided first splice), obedience UX, ZzFX stingers, PWA manifest + service worker, TWA checklist. *Done when: a stranger can go from empty ranch to first conquest without asking questions.*
+- **M7 — Polish & Ship v0.1.** Splice-Dex, onboarding (guided first splice), obedience UX, audio stingers (planned as ZzFX; shipped as a hand-rolled WebAudio synth in `audio/sfx.js` — same few-bytes-of-joy goal, zero third-party code, so the no-dependency rule held), PWA manifest + service worker, TWA checklist. *Done when: a stranger can go from empty ranch to first conquest without asking questions.*
 
 ### Post-v0.1 waves (shipped)
 - **Wave 1 — Content & Classes.** 25 species / 150 parts, the Ground ≫ Water ≫ Air ≫ Ground triangle derived from anatomy, menus reorganised for the roster. *Done when: a build's class changes the outcome of a fight it would otherwise win.*
@@ -331,6 +354,39 @@ complaint. It is A1, and A1 is the worst thing in the game.
   Spending a vial now grows that donor back — same species, same star potential, same genotype. **2 real hours** (shortened by the Incubator's existing `hourScale`), **75% to take**, and a **new-gene chance of 6% + 5%/star** multiplied by the Incubator's `mutationBonus`. Quality buys **upside, never safety**: a five-star vial mutates far more often and fails exactly as often, so banking a good one beats banking four ordinary ones and no amount of quality removes the risk. The Incubator governs both halves because a resequencing *is* an incubation — that track gained a second reason to exist without one new facility knob. The outcome is **sealed at launch** from a seeded stream, like the vat and the jobs board, so reloading cannot reroll a failure into a success. Vials written before R31 kept only a star average and rebuild stats to match it, so a vial banked long ago is worth exactly what it always said. *Done when: a vial does something, and what it does uses what a vial actually is* — measured over 400 runs, **72% took, 29% of successes threw a new gene, and the donor's recessive survived 286 of 286 successes.**
   **Four bugs, three mine.** Aborting wrote the *post-mutation* genome back into the vial, making abort-cycling a free ratchet; the fix then failed because I had taken a **reference** to the vial's `potential` and mutated it in place, so the sample was contaminated before it was copied — 60 abort cycles walked a 3/3/3/3/3 donor to 3/4/4/5/3 without completing a run. **Migration 29 did not return the save**, and `migrate` does `save = fn(save)`, so a missing return turns every existing player's save into `undefined` on load — all 28 other migrations return correctly. And **neither the harness nor the suite loaded the new data file**: `resequencerTuning` falls back to code defaults, so my probe had been measuring defaults rather than the shipped JSON and giving the right answer for the wrong reason. House rules held: a **full pen makes a finished run wait** rather than losing the animal, **aborting returns the vial** unharmed, and the odds are **quoted before the player commits**.
 
+### 9.2b Third wave (R32–R53) — **all twenty-two shipped**
+
+R77 found these missing entirely: the roadmap jumped from R31 to R54 while
+twenty-two milestones had shipped in between, so a reader taking this
+document at its word would have been looking at a game two months out of
+date. They are listed rather than written up — each one's measurement, its
+corrected premises and its known issues are in `PROGRESS.md` under the
+session that shipped it, which is where that detail has always lived and
+where it does not have to be maintained twice.
+
+- **R32 — a part finally says what animal it came from.** ✅
+- **R33 — the chimera dossier — physiology on a finished creature.** ✅
+- **R34 — the purebred set bonus, which nothing read.** ✅
+- **R35 — the other matchup layer, on the screen where you choose.** ✅
+- **R36 — the Dex says what the roster is for.** ✅
+- **R37 — the lesson is behind the wall it explains.** ✅
+- **R38 — "Standard" is three different animals.** ✅
+- **R39 — the gate that checked five of six screens.** ✅
+- **R40 — the campaign had an end and never said so.** ✅
+- **R41 — a chimera you keep.** ✅
+- **R42 — The Gauntlet.** ✅
+- **R43 — the Sparring Ring holds charges.** ✅
+- **R44 — the Pens at nine chimeras.** ✅
+- **R45 — the Dex at twelve screens.** ✅
+- **R46 — the Ranch at twenty animals.** ✅
+- **R47 — the Ranch chrome earns its height.** ✅
+- **R48 — the Sparring Ring you can see.** ✅
+- **R49 — the map's spar button reads the predicate.** ✅
+- **R50 — a new module has to declare itself.** ✅
+- **R51 — the field guide records outcomes.** ✅
+- **R52 — the Vault at a completionist's inventory.** ✅
+- **R53 — one Vault shelf per animal.** ✅
+
 ### 9.3 Third audit (R54–R62) — **all nine shipped**
 Run after R53, against a game whose roadmap was finished: M0–M7 shipped,
 waves R1–R19 shipped, §9.1 and §9.2 both closed, and ten consecutive phases
@@ -431,7 +487,7 @@ every `sfx.play()` call is invisible to it. Checked before filing.
   sentence, and smoke asserts every emitted event id has copy AND every
   line has an emitter — R20's invariant, pointed at the wire.*
 
-### 9.4 Fourth audit (R63–R77) — proposed, not yet accepted
+### 9.4 Fourth audit (R63–R83) — **shipped except R80, R81 and the three gaps R77 named (R84–R86)**
 
 Run after R62, against a game with three closed audits behind it. Same rule
 as the other three: every line names the evidence that put it there, and the
@@ -1057,7 +1113,7 @@ The queue is a proposal: prune it before starting R63.
     `up.level.cost`), so `funds >= undefined` was false for every player at
     every balance. It also checked `up.locked`, which does not exist either,
     so the lock test was a no-op in the other direction. Measured: with a
-    billion dollars and all 21 nodes held, the Ranch still never suggested
+    billion dollars and all 23 nodes held, the Ranch still never suggested
     buying an upgrade. This is the milestone's thesis in one line — a
     harness that actually walked the game would have caught it in 2026-08.
   - **Two assertions moved, both re-derived.** The away-walk denominator used
@@ -1091,6 +1147,30 @@ The queue is a proposal: prune it before starting R63.
     behind what the Theater builds. The Wing's output is raw material to a
     late-game stable.
 
+- **R84 — Grades promise an ability and deliver a percentage.** §3.3 has
+  said since M0 that Apex and Prismatic give "an upgraded version of the
+  part's ability". What ships is `GRADE_MOVE_BONUS`: +12% move power per
+  grade tier, the same ability hitting harder. That is a defensible design —
+  R17 measured it and it is what keeps combos from being overtaken by their
+  own halves — but it is not what the spec promised, and a player reading
+  "upgraded ability" is being told a different game. Either the ability
+  upgrade ships, or §3.3 stops promising it (R77 has already made §3.3 state
+  both). *Done when: an Apex part either grants a materially different move
+  or the roadmap no longer implies one, and smoke asserts whichever is true.*
+- **R85 — Feral at instability 100.** §3.5 has designed it since M0: at
+  instability 100 the chimera goes Feral and moves to Containment until
+  rehabilitated. There are **zero hits for "feral" anywhere in the
+  codebase**. Instability currently costs settling time and obedience and
+  nothing else, so the top of the scale has no teeth — and R8's
+  Reorientation Wing, the exact system a Feral chimera would need, has been
+  shipped and idle for it since. *Done when: instability 100 does something
+  the player can see and recover from, or §3.5 stops designing it.*
+- **R86 — Gene Juice.** §3.9 says "every timer skippable with Gene Juice
+  (earned currency only)". **Zero hits in the codebase**; no timer is
+  skippable at any price. This one is load-bearing for the TWA pitch — a
+  timer game with no earned skip is a timer game that just makes you wait —
+  and it is the last unbuilt clause of the offline-timer spec. *Done when:
+  an earned currency skips a timer, or §3.9 stops promising one.*
 - **R80 — The keyboard can see the game but not play it.** R73 made focus
   visible and the two modals real dialogs; an adversarial four-dimension
   audit found the barriers that survive. **Focus is destroyed on a timer:**
@@ -1343,12 +1423,38 @@ The queue is a proposal: prune it before starting R63.
     must replay the month), because the empire shape that reaches this path
     is rare and a chaotic forty-day walk is a bad place to keep a mechanism
     honest. Break battery: **21 breaks, 21 caught**, two of them aimed here.
-- **R77 — The roadmap describes a different game.** §9.3 listed R54–R62 as
-  open with all nine shipped (fixed above); R32–R53 appear nowhere; the
-  clocks are stale (settle 22.5 min–3 h, dissection 9–18 h); "three
-  frames" against four shipped; ZzFX is named where a hand-rolled synth
-  shipped; Gene Juice and Feral-at-instability-100 are designed with **zero
-  hits** in code; grades promise upgraded abilities and deliver +12%. *Done
-  when: ROADMAP either describes the shipped game or names each gap as a
-  queued phase, and a gate checks the numbers it states — settle hours,
-  frame count, region count, `SAVE_VERSION` — against the data.*
+- **R77 — The roadmap describes a different game.** ✅ *Shipped.* Every one
+  of the entry's claims checked out, which is unusual for this queue — the
+  document really had drifted on all of them. §3 promised chimeras settle in
+  "~1-4 hrs" (**22.5 min to 3 h**), a Dissection Countdown of "12-24 hrs"
+  (**9-18**, rolled per capture), "3 frames" (**4**), "~12 combos" (**27**),
+  "25 species × ~6 parts ≈ 150" (**41 and 244**), and ZzFX as the audio that
+  shipped — `audio/sfx.js` is a hand-rolled WebAudio synth written precisely
+  so the no-dependency rule would hold. Two whole mechanics were designed in
+  §3 with **zero hits anywhere in the codebase**: going Feral at instability
+  100, and Gene Juice skipping timers. And §9 jumped from R31 to R54 with
+  twenty-two shipped milestones missing in between. *Done when: ROADMAP
+  either describes the shipped game or names each gap as a queued phase, and
+  a gate checks the numbers it states — settle hours, frame count, region
+  count, `SAVE_VERSION` — against the data.* ✅
+  - **`tools/roadmap.js`, and `npm run roadmap`.** A design document is prose
+    and prose does not run, so the numbers moved into §4.0, a block the gate
+    parses and re-derives from `data/*.json` and the engine. Nothing is typed
+    twice: fifteen values, every one computed at test time.
+  - **Two directions, the shape of the news wire's own gate.** Every number
+    §4.0 states must match the data — and every mechanic the LIVE SPEC
+    (§1-§5) names must exist in the code, or the line naming it must say
+    `not shipped — queued as R##` and point at a phase the roadmap actually
+    carries. §6 onward is exempt by construction: a milestone entry
+    narrating "one region, five nodes" is history, not a claim, and a gate
+    that could not tell the difference would have made the log unwritable.
+  - **The three gaps are phases now rather than fiction**: R84 (grades
+    promise an ability and deliver a percentage), R85 (Feral at instability
+    100), R86 (Gene Juice). Each is named at the point the spec makes the
+    promise, and the gate checks the pointer resolves.
+  - **Five breaks on an eighth battery gate**: a number drifting,
+    `SAVE_VERSION` going stale, a queued gap re-described as shipped, a
+    pointer to a phase that does not exist, and the block deleted outright.
+    The last was rewritten after the first attempt MISSED — renaming the
+    heading with a suffix still matched the prefix, which was the block still
+    being there rather than a hole in the gate.

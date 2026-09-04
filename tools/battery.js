@@ -423,6 +423,8 @@ const WALK = ['node', '-e', `
     + ' bagged, lab at ' + levels + ' over 45 days');
 `];
 
+const ROADMAP = ['node', 'tools/roadmap.js'];
+
 const BREAKS = [
   // --- gate: scopecheck (a free identifier fails the build) ----------------
   {
@@ -693,6 +695,36 @@ const BREAKS = [
     anchor: '    waves: [loose.unit],',
     to: "    waves: ['riot_squad'],",
   },
+  // --- gate: roadmap (the design doc describes the shipped game) -----------
+  {
+    // The shape R77 found: a number in the spec drifts from the data and
+    // nothing can fail, because prose does not run.
+    n: 49, gate: ROADMAP, name: 'a number the roadmap states drifts from the data',
+    file: 'ROADMAP.md', anchor: '- frames: 4', to: '- frames: 3',
+  },
+  {
+    n: 50, gate: ROADMAP, name: 'SAVE_VERSION goes stale in the spec',
+    file: 'ROADMAP.md', anchor: '- save version: 38', to: '- save version: 37',
+  },
+  {
+    // Feral at instability 100 has zero hits in the codebase. Describing it
+    // as shipped is the exact defect R77 was filed for.
+    n: 51, gate: ROADMAP, name: 'a designed-but-absent mechanic is described as if it works',
+    file: 'ROADMAP.md',
+    anchor: 'not shipped — queued as R85**; instability',
+    to: 'shipped**; instability',
+  },
+  {
+    n: 52, gate: ROADMAP, name: 'a named gap points at a phase the roadmap does not carry',
+    file: 'ROADMAP.md', anchor: 'queued as R86', to: 'queued as R99',
+  },
+  {
+    n: 53, gate: ROADMAP, name: 'the measured-numbers block is deleted outright',
+    file: 'ROADMAP.md',
+    anchor: '### 4.0 Shipped, as measured',
+    to: '### 4.0b Retired',
+  },
+
   // --- gate: walk (the walk fights the whole game) -------------------------
   {
     // The hole R83 closed, put back: the walker stops challenging rivals.
@@ -761,7 +793,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
