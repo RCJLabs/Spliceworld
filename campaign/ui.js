@@ -28,7 +28,7 @@ import { guideForScreen, STABLE as TEAM_CAP } from '../ranch/onboarding.js';
 import { startSpar } from './sparring.js';
 import { gauntletState } from './gauntlet.js';
 import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
-import { renderCreatureSVG, renderRivalSVG, drawableGenome } from '../render/renderer.js';
+import { creaturePortrait, renderRivalSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
 import { rescueEncounterFor } from './map.js';
 import { renderIcon } from '../ui/icons.js';
@@ -39,6 +39,7 @@ import {
 } from './rehab.js';
 import { gradeOf, gradeIndexOf } from '../splice/extract.js';
 import { isContested } from './contest.js';
+import { speciesOf, classOf, enemyOf, rivalOf } from '../data/catalog.js';
 import {
   operationList, freeCrew, startOperation, abortOperation, opOdds,
 } from './operations.js';
@@ -139,16 +140,14 @@ function rivalFile(dossier, content) {
   // Written as sentences rather than a stat block: what they know, then
   // what they have done about it.
   const read = [];
-  if (dossier.topClass) {
-    const cls = content.classes[dossier.topClass];
-    read.push(`filed under ${renderIcon(cls.icon)} ${cls.name}`);
-  }
+  const topCls = classOf(content, dossier.topClass);
+  if (topCls) read.push(`filed under ${renderIcon(topCls.icon)} ${topCls.name}`);
   if (dossier.topTag) read.push(`swinging ${dossier.topTag}`);
 
   const done = [];
-  if (dossier.counterClass) {
-    const cls = content.classes[dossier.counterClass];
-    done.push(`${dossier.counterLeads ? 'Leading with' : 'Answering with'} ${renderIcon(cls.icon)} ${cls.name}.`);
+  const counterCls = classOf(content, dossier.counterClass);
+  if (counterCls) {
+    done.push(`${dossier.counterLeads ? 'Leading with' : 'Answering with'} ${renderIcon(counterCls.icon)} ${counterCls.name}.`);
   }
   // The intel lines are authored as whole sentences already.
   if (dossier.intel) done.push(dossier.intel);
@@ -298,13 +297,13 @@ function renderMap(root, ctx) {
   // Rival Labs. Their chimeras are real genomes, so the card can just draw
   // the lead specimen — no portrait art, same renderer as everything else.
   const rivals = rivalStatus(state, content).map(({ rival, record, status, need }) => {
-    const cls = content.classes[rival.classBias];
+    const cls = classOf(content, rival.classBias);
     const locked = status === 'locked';
     const preview = locked ? null : rivalEncounter(state, rival, content);
     const lead = preview?.waves[0];
     const roster = preview
       ? preview.waves
-          .map((u) => `${content.classes[u.class] ? renderIcon(content.classes[u.class].icon) : '◇'} ${u.name} <span class="lineage">HP ${u.hp} · PWR ${u.power}</span>`)
+          .map((u) => `${classOf(content, u.class) ? renderIcon(classOf(content, u.class).icon) : '◇'} ${u.name} <span class="lineage">HP ${u.hp} · PWR ${u.power}</span>`)
           .join('<br>')
       : '';
     return `
@@ -312,15 +311,15 @@ function renderMap(root, ctx) {
         <div class="rival-portrait">
           ${locked ? '<div class="rival-redacted">?</div>' : renderRivalSVG(rival, content.classes)}
           ${lead && !locked
-            ? `<div class="rival-lead" title="What they lead with">${renderCreatureSVG(lead.genome, content, { idPrefix: `rv-${rival.id}` })}</div>`
+            ? `<div class="rival-lead" title="What they lead with">${creaturePortrait(lead.genome, content, { idPrefix: `rv-${rival.id}` })}</div>`
             : ''}
         </div>
         <div class="rival-body">
           <strong>${rival.name}</strong>
           <p class="fine-print">${rival.title}</p>
-          <p class="class-banner class-${rival.classBias}">${renderIcon(cls.icon)} ${cls.name} school${
-            content.classes[cls.beats] ? ` — beats ${content.classes[cls.beats].name}` : ''
-          }</p>
+          ${cls ? `<p class="class-banner class-${rival.classBias}">${renderIcon(cls.icon)} ${cls.name} school${
+            classOf(content, cls.beats) ? ` — beats ${classOf(content, cls.beats).name}` : ''
+          }</p>` : ''}
           <p class="rival-quote">&ldquo;${rival.philosophy}&rdquo;</p>
           ${record.defeats || record.losses ? `<p class="fine-print">Record: ${record.defeats}W–${record.losses}L against you${record.defeats ? ` · iterated ${record.defeats}× since` : ''}</p>` : ''}
           ${roster ? `<p class="fine-print">${roster}</p>` : ''}
@@ -346,7 +345,7 @@ function renderMap(root, ctx) {
           read.profile.topTags.length
             ? `Filed under: ${read.profile.topTags.map((t) => `<strong>${t.tag}</strong> ${Math.round(t.share * 100)}%`).join(' · ')}`
             : 'No pattern yet. Keep them guessing.'
-        }${read.profile.favoredClass ? ` · stable reads <strong>${renderIcon(content.classes[read.profile.favoredClass].icon)} ${content.classes[read.profile.favoredClass].name}</strong>` : ' · no dominant class'}</p>
+        }${classOf(content, read.profile.favoredClass) ? ` · stable reads <strong>${renderIcon(classOf(content, read.profile.favoredClass).icon)} ${classOf(content, read.profile.favoredClass).name}</strong>` : ' · no dominant class'}</p>
         <p class="fine-print">${
           read.rule
             ? `⚠ Countermeasures in the field: ${read.rule.intel}`
@@ -468,7 +467,8 @@ function renderMap(root, ctx) {
   });
   root.querySelectorAll('button[data-rival]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const rival = content.rivals[btn.dataset.rival];
+      const rival = rivalOf(content, btn.dataset.rival);
+      if (!rival) return;
       draftTarget = { kind: 'rival', rivalId: rival.id, encounterId: `rival_${rival.id}`, label: rival.name };
       draftTeam = [];
       renderBriefing(root, ctx);
@@ -677,7 +677,7 @@ function jobsCard(state, ctx, t) {
     ? `<div class="encounter job-report ${report.success ? 'is-win' : 'is-bust'}">
         <div><strong>${report.success ? '✔' : '✘'} ${report.name}</strong><br>
         <span class="fine-print">${report.msg}${report.funds ? ` <strong>+$${report.funds}</strong>.` : ''}${
-          report.animal ? ` <strong>${report.animal.name}</strong> the ${content.species[report.animal.species].name} is in the pens.` : ''
+          report.animal ? ` <strong>${report.animal.name}</strong> the ${speciesOf(content, report.animal.species).name} is in the pens.` : ''
         }${report.overCapacity ? ' The pens are over capacity and everyone is cross about it.' : ''}${
           report.injured ? ` ${report.injured} is in the Infirmary, sulking.` : ''
         }</span></div>
@@ -765,11 +765,11 @@ function bayCard(state, entry, content, t) {
   // retired afterwards used to throw here and take the whole War Room down.
   // That was a soft-lock, not just a blank screen: dismantling the bay is a
   // button on this same screen.
-  const bayGenome = drawableGenome(unit.genome, content);
-  const portrait = bayGenome
-    ? renderCreatureSVG(bayGenome, content, { idPrefix: `bay-${entry.id ?? unit.id}` })
-    : '<div class="rival-redacted">⛓</div>';
-  const cls = unit.class ? content.classes[unit.class] : null;
+  // R79 - and `creaturePortrait` is now that softening for every reader, so
+  // the bay asks for a portrait like everything else and gets the empty
+  // crate when the chassis is gone.
+  const portrait = creaturePortrait(unit.genome, content, { idPrefix: `bay-${entry.id ?? unit.id}` });
+  const cls = classOf(content, unit.class);
   const body = entry.rehab
     ? programmeHtml(state, entry, unit, content, t)
     : offerHtml(state, entry, plan, unit, content);
@@ -862,7 +862,7 @@ function renderBriefing(root, ctx) {
   // once without, which is two chances to disagree about the same fight.
   const { classes: foeClasses, tags: foeTags, attackTags: foeAttackTags } = foeRead(encounter, content);
   const foeLine = foeClasses.size
-    ? [...foeClasses].map((c) => `${renderIcon(content.classes[c].icon)} ${content.classes[c].name}`).join(', ')
+    ? [...foeClasses].map((c) => classOf(content, c)).filter(Boolean).map((c) => `${renderIcon(c.icon)} ${c.name}`).join(', ')
     : 'no declared class';
 
   // R35. The class triangle was the only matchup layer on this screen. The
@@ -884,7 +884,7 @@ function renderBriefing(root, ctx) {
     // combatant already carries the class the icon needs, and building it
     // twice per chimera per render is work nobody sees.
     const cb = combatantFromChimera(ch, content, t);
-    const cls = cb.creatureClass ? content.classes[cb.creatureClass] : null;
+    const cls = classOf(content, cb.creatureClass);
     // Name the class it beats, not just that it beats something. Measured
     // across the 24 encounters against a one-of-each stable, "type advantage
     // here" is true of EVERY row in 21% of them — Slag Gate among them —
@@ -1001,10 +1001,10 @@ function renderBriefing(root, ctx) {
       }</p>
       ${tagLines.length ? `<ul class="foe-tags">${tagLines.map((l) => `<li>${l}</li>`).join('')}</ul>` : ''}
       ${encounter.contestOf ? `<p class="fine-print contest-intel">${renderIcon('shield')} ${encounter.intel}</p>` : ''}
-      ${encounter.directed ? `<p class="fine-print intel-line">${renderIcon('satellite')} Intel: ${encounter.directed.intel} <strong>${content.enemies[encounter.directed.unitId].name}</strong> ${
-        encounter.directed.added
+      ${encounter.directed && enemyOf(content, encounter.directed.unitId) ? `<p class="fine-print intel-line">${renderIcon('satellite')} Intel: ${encounter.directed.intel} <strong>${enemyOf(content, encounter.directed.unitId).name}</strong> ${
+        encounter.directed.added || !enemyOf(content, encounter.directed.replaced)
           ? 'is riding along — they sent extra.'
-          : `has replaced the ${content.enemies[encounter.directed.replaced].name}.`
+          : `has replaced the ${enemyOf(content, encounter.directed.replaced).name}.`
       }</p>` : ''}
       <h3>Strike Team (up to 3)</h3>
       ${roster || '<p class="ranch-msg">No chimeras available. The Surgery Theater accepts walk-ins.</p>'}
@@ -1056,9 +1056,9 @@ function renderBriefing(root, ctx) {
       // handed to the engine as data. Everything else fights in silence.
       ...(draftTarget.kind === 'rival'
         ? {
-            playerBarks: duelBarks(state, content, content.rivals[draftTarget.rivalId]),
+            playerBarks: duelBarks(state, content, rivalOf(content, draftTarget.rivalId)),
             speakers: {
-              enemy: content.rivals[draftTarget.rivalId]?.name ?? 'The opposition',
+              enemy: rivalOf(content, draftTarget.rivalId)?.name ?? 'The opposition',
               // Mirror the rivals: they speak as "Dr. Mantissa", not as
               // "Chief Entomologist, Hexapod Futures". The full title
               // belongs on the dossier card, not in every line of dialogue.

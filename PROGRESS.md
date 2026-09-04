@@ -1,5 +1,131 @@
 # PROGRESS
 
+## Session 101 — R79: the same hole, for retired species and frames ✅
+
+**Acceptance criterion:** the R72 fixture also retires one species, one
+frame, one enemy, one region node and one class, and every screen and the
+sim still run — **passes**. `SAVE_VERSION` unchanged (**37**); `sw.js`
+cache → `v37-r79`, and `data/catalog.js` joins the precache list.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ — the fixture now retires **seven** ids and walks six screens, five Dex tabs, five War Room tabs, the sim and the campaign walk |
+| `npm run battery` | ✓ — **35 breaks, 35 caught** (14 new, one gate), baseline green |
+| `npm run scopecheck` · `npm run handlers` | ✓ — 67 modules · 1222 handlers across 59 surfaces |
+| `npm run a11y` · `npm run sim` | ✓ — 46 controls at 380px · 6324 battles, no degenerate builds |
+| browser QA | ✓ — fresh, migrated-v1, full and **a build whose data files really are missing the ids**, all six screens, 0 console errors |
+
+### Measured on HEAD before writing a line of the fix
+
+Not the roadmap's list — the fixture itself, run against `746f263`:
+
+```
+  ranch    THREW  reading 'upkeepPerDay'   ranch.js:351
+  pens     THREW  Bad genome: Unknown frame: M
+  vault    THREW  reading 'growthHours'    ranch.js:100
+  theater  THREW  reading 'phys'           physiology.js:50
+  battle   THREW  reading 'upkeepPerDay'   ranch.js:351
+  dex      THREW  reading 'growthHours'    ranch.js:100
+```
+
+**Six of six screens**, and six of eleven sim entry points — `scriptedBattle`,
+`runSim`, `regionBench`, `ladderBench`, `rivalEncounters` and `campaignWalk`
+— died on `combatantFromUnit(undefined)` or `analyze`'s frame read. R72 fixed
+the ids its own criterion named; this is the identical shape one level out,
+and it was worse, because a frame read sits on the battle and sim paths as
+well as the screen.
+
+### The rule the fix draws
+
+`data/catalog.js` is one module and one sentence:
+
+> **VALIDATION reads `content` directly** — `if (!content.frames[id])` is
+> asking a real question and must get a real no.
+> **PRESENTATION and MATH read through the catalogue** — they are describing
+> something the player already owns, and "you own nothing" is the wrong
+> answer.
+
+So `speciesOf` and `frameOf` never return null: a **Discontinued Line** and a
+**Retired Chassis** carry every field the readers dereference. `classOf`,
+`enemyOf` and `rivalOf` *do* return null, because those are rows to skip
+rather than things to describe. Region nodes are deliberately absent —
+`nodeById` has answered that since R26, and a second way to ask is the copy
+this module exists to avoid.
+
+Two fields are null **on purpose**: a thermal band nobody can state must not
+narrow a mix (an unstatable range is not a zero-width one), and a set bonus
+nobody can name must not be claimed. Both are now gated.
+
+### Nine screens were painting creatures unsoftened
+
+R72 softened the two readers whose genomes come out of a save. The other
+nine called `renderCreatureSVG` on a genome assembled from content — which
+is only as good as the ids behind it, and a save holds those too:
+`stockGenome` takes its frame off the animal's **species**, `chimeraGenome`
+off the chimera's own. `creaturePortrait` is now the one call every reader
+makes; a chassis that is gone gets a procedural empty crate, and a static
+rule fails the build if any module outside `render/` reaches past it.
+
+### The opposition does not evaporate
+
+A wave list outlives the roster it names, and it lives in three places —
+enemies.json, a gauntlet stage, and `battle.queue` inside a save. Five
+`combatantFromUnit(unitFor(…))` sites read `.capturable` off undefined.
+Now: `warTargetEncounter` filters the wave list once, so the **briefing and
+the battle still agree** (that is the whole job of that function) and an
+encounter with nothing left is not offered; a gauntlet stage with no boss is
+not a stage; and for the queue a save can resume straight into, an
+**Unmarked Van** turns up, procedurally drawn, carrying no salvage, so
+nothing downstream pays out for a unit that no longer exists.
+
+### Three things the gates could not have found, and one they nearly hid
+
+- **The battery's baseline was failing** and I nearly shipped it: the first
+  draft of the new gate spent all six vault tokens on the splice and then
+  stamped `parts[0]`, so the gate threw on everything and scored ten breaks
+  green for free. That is exactly the failure the baseline check exists to
+  catch, and I found it only because I stopped tailing the output.
+- **The retired chassis declared `slots: []`.** `slots` means "only these
+  slot types are legal here" — three of the four shipped frames omit it
+  because they accept everything, so an empty list said the opposite of what
+  was known. Its `sockets` were an array where the renderer indexes by name.
+- **`recordRivalResult` had a line of mine that read `state.campaign.lastMetAt`**,
+  a field that does not exist. It looked like intent and did nothing.
+- The fixture only ever saw the War Room's **default sub-tab**, so a break
+  reverting the rival class guard survived — the Water school (`trench`)
+  lives on Labs. Five tabs are walked now, and the Bays tab immediately
+  turned up an `ARM undefined` the fixture had been hiding.
+
+The first three are gated now: the stand-ins are checked against the *shape
+of the shipped records* in both directions — a field they lack and a field
+they invent both fail.
+
+### One deliberate reversal
+
+R52's vault gate asserted that a holding whose species left the roster is
+**skipped**. That kept the screen up by deleting the player's holdings from
+the one screen whose job is listing what they own — and a part token is not
+even inert: retire the cobra and `cobra_head` is still spliceable in the
+Theater, it just stopped appearing in the vault. It shelves under the
+discontinued line now and says why the vial cannot be grown back. What R52
+was actually protecting (no crash, no raw id drawn, no button on something
+the Resequencer would refuse) is asserted unchanged.
+
+### Known issues
+
+- `tools/sim.js:350` takes a rival id as an argument and reads it bare. It is
+  a harness entry point, not a save reader; a bad id there is a caller bug.
+- The Unmarked Van keeps the fight's shape but not its difficulty. That is
+  the honest trade for a queue frozen into a save, and it only happens on a
+  build that retired a unit out from under one.
+
+### Next session's first task
+
+**R80 — the keyboard can see the game but not play it.** Read ROADMAP.md §6
+for the criterion before touching anything.
+
+---
+
 ## Session 100 — R78: a month lost unseen on one seed ✅
 
 **Acceptance criterion:** seed 5150's away walk records the same world

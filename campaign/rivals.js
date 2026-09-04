@@ -13,6 +13,7 @@ import { rngStream, pick } from '../util/rng.js';
 import { unitFromGenome } from '../battle/engine.js';
 import { analyze } from '../splice/physiology.js';
 import { rivalLine } from './monologue.js';
+import { rivalOf } from '../data/catalog.js';
 
 // Slots a rival will try to fill, in the order they commit to them. Head
 // first (mandatory), then the limbs that carry classAffinity votes.
@@ -357,7 +358,17 @@ export function rivalEncounter(state, rival, content) {
 export function recordRivalResult(state, rivalId, outcome, content) {
   state.campaign.rivals ??= {};
   const record = (state.campaign.rivals[rivalId] ??= { defeats: 0, losses: 0, lastMetAt: null });
-  const rival = content.rivals[rivalId];
+  // R79 - the record is the player's and is kept either way, but a rival
+  // the build no longer has cannot be named, cannot pay notoriety it no
+  // longer declares, and has no voice lines to quote. The result is filed
+  // in silence rather than thrown on: this runs inside `resolveBattle`,
+  // so it used to take the aftermath of a fight the player already won.
+  const rival = rivalOf(content, rivalId);
+  if (!rival) {
+    if (outcome === 'win') record.defeats += 1;
+    else record.losses += 1;
+    return null;
+  }
   if (outcome === 'win') {
     record.defeats += 1;
     state.campaign.notoriety += rival.notoriety;

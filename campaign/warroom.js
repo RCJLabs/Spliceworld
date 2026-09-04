@@ -31,6 +31,8 @@ import {
   regionBonusPerDay, regionComplete, nodeById, regionOfNode,
 } from './campaign.js';
 import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
+import { liveWaves } from '../battle/engine.js';
+import { rivalOf } from '../data/catalog.js';
 
 // --- What are we about to fight? -----------------------------------------
 //
@@ -44,14 +46,21 @@ import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
 // walks into another.
 export function warTargetEncounter(state, target, content, now) {
   if (!target) return null;
-  if (target.kind === 'rival') return rivalEncounter(state, content.rivals[target.rivalId], content);
+  if (target.kind === 'rival') {
+    const rival = rivalOf(content, target.rivalId);
+    return rival ? withLiveWaves(rivalEncounter(state, rival, content), content) : null;
+  }
   // R41: a spar is a derived rematch at reduced scale, and the director
   // does NOT get a look at it — a drill that adapts to you is a second
   // front, and the ring exists to not be one.
-  if (target.kind === 'sparring') return sparEncounter(state, content, target.nodeId, now).encounter ?? null;
+  if (target.kind === 'sparring') {
+    return withLiveWaves(sparEncounter(state, content, target.nodeId, now).encounter, content);
+  }
   // R42: a Gauntlet stage. The director does not rewrite it — this IS the
   // coalition's answer.
-  if (target.kind === 'gauntlet') return gauntletEncounter(state, content, target.stageId).encounter ?? null;
+  if (target.kind === 'gauntlet') {
+    return withLiveWaves(gauntletEncounter(state, content, target.stageId).encounter, content);
+  }
   // A defence is the node's own encounter, escalated — built fresh from
   // the live contest so the briefing and the battle always agree.
   const base =
@@ -59,7 +68,26 @@ export function warTargetEncounter(state, target, content, now) {
       ? contestEncounter(state, content, contestOn(state, target.nodeId))
       : content.encounters[target.encounterId];
   // The AI director gets a look at every human encounter before you do.
-  return base ? directEncounter(state, base, content) : null;
+  return base ? withLiveWaves(directEncounter(state, base, content), content) : null;
+}
+
+// R79 — one funnel, one filter.
+//
+// Every human-launched fight comes through `warTargetEncounter`, which is
+// exactly why it is the place to drop a wave the build no longer has: a
+// retired unit is then absent from the BRIEFING as well as the battle, so
+// the two still agree, which is this function's whole job. The engine keeps
+// its own stand-in for the queue inside a save — but a live encounter
+// assembled today should never need it.
+//
+// An encounter left with no opposition at all is not a fight. Returning
+// null here is what every launcher already handles: the target simply is
+// not offered.
+function withLiveWaves(encounter, content) {
+  if (!encounter) return null;
+  const waves = liveWaves(encounter.waves, content);
+  if (!waves.length) return null;
+  return waves.length === (encounter.waves?.length ?? 0) ? encounter : { ...encounter, waves };
 }
 
 // --- Sub-navigation -------------------------------------------------------

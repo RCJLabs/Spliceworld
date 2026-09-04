@@ -2,7 +2,7 @@
 // part manifests with lineage. Training, bond, and deployment arrive with
 // later milestones — for now the pens are a proud, slightly humming nursery.
 
-import { renderCreatureSVG } from '../render/renderer.js';
+import { creaturePortrait } from '../render/renderer.js';
 import { gradeOf, salvagePreview, extractChimera } from './extract.js';
 import {
   chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING,
@@ -15,6 +15,7 @@ import { analyze } from './physiology.js';
 import { dossierRows, dossierSummary } from './dossier.js';
 import { xpProgress, maxLevel } from '../battle/veterancy.js';
 import { renameCreature } from './theater.js';
+import { frameOf, classOf } from '../data/catalog.js';
 
 // Everything this genome grants, which is what the four slots are chosen
 // FROM. One definition, shared with the battle screen and the harness.
@@ -108,7 +109,7 @@ function bindVat(root, ctx, redraw) {
         const why = !isSettled(c, t) ? 'still settling'
           : isExhausted(c, t) ? `recovering — ${fmtDuration(c.exhaustedUntil - t)}`
             : isInjured(c, t) ? 'in the Infirmary'
-              : `${content.frames[c.frame].name} · ${Object.keys(c.tokens).length} parts · instability ${c.instability}`;
+              : `${frameOf(content, c.frame).name} · ${Object.keys(c.tokens).length} parts · instability ${c.instability}`;
         return {
           id: c.id,
           label: c.name,
@@ -170,7 +171,7 @@ export function renderPensScreen(root, ctx) {
       // phone the same as showing it.
       const open = isOpen(state, `pen-${ch.id}`, false);
       const portrait = open
-        ? renderCreatureSVG(chimeraGenome(ch, content), content, { idPrefix: `pen-${ch.id}` })
+        ? creaturePortrait(chimeraGenome(ch, content), content, { idPrefix: `pen-${ch.id}` })
         : '';
       const manifest = !open ? '' : Object.entries(ch.tokens)
         .map(([slot, token]) => {
@@ -197,7 +198,7 @@ export function renderPensScreen(root, ctx) {
       // the shut row, in the badge, where they cost a creature if missed.
       const prog = xpProgress(ch.xp ?? 0, content);
       const cls = reportOf(ch, content).creatureClass;
-      const clsIcon = cls ? renderIcon(content.classes[cls].icon) : '◇';
+      const clsIcon = classOf(content, cls) ? renderIcon(classOf(content, cls).icon) : '◇';
       const hurt = isInjured(ch, t);
       const badge = hurt
         ? `<span class="pen-alert">⚕ ${fmtDuration(ch.injury.until - t)}</span>`
@@ -225,7 +226,7 @@ export function renderPensScreen(root, ctx) {
                 prog.atCap ? ` <span class="fine-print">of ${maxLevel(content)} — a finished veteran</span>` : ''
               } ${bar}</p>`;
             })()}
-            <p class="meta">${content.frames[ch.frame].name} chassis · instability ${ch.instability}/100 · bond ${ch.bond}/100</p>
+            <p class="meta">${frameOf(content, ch.frame).name} · instability ${ch.instability}/100 · bond ${ch.bond}/100</p>
             ${(() => {
               // R33. Everything physiology knows, on the creature rather than
               // on the bench. Measured before building it: of the eight rows

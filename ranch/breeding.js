@@ -9,6 +9,7 @@ import { rngStream, pick, pickFresh } from '../util/rng.js';
 import { STATS, AGE_STAGES, TUNING, ageStage } from './ranch.js';
 import { avgStars } from '../splice/extract.js';
 import { incubatorGrants } from '../splice/facility.js';
+import { speciesOf } from '../data/catalog.js';
 
 export const BREEDING = {
   incubatorSlots: 3,
@@ -163,7 +164,7 @@ export function breedPair(state, sireId, damId, content, now) {
     if (rng() < BREEDING.variantFromOne) species = carrier.species;
   }
   if (species !== baseSpecies(sire.species, content)) {
-    variantNote = `The line holds: this one is ${content.species[species].name} stock.`;
+    variantNote = `The line holds: this one is ${speciesOf(content, species).name} stock.`;
   }
 
   // Mutations (rare): a stat spike, a novel mutation-only trait gene, or —
@@ -186,8 +187,8 @@ export function breedPair(state, sireId, damId, content, now) {
       species = variant.id;
       variantNote = null; // the mutation note says it louder
       mutationNote =
-        `MUTATION — VARIANT SPECIES: the egg is ${content.species[variant.id].name}. ` +
-        `${content.species[variant.id].flavor} Nobody at this facility is qualified to explain it.`;
+        `MUTATION — VARIANT SPECIES: the egg is ${speciesOf(content, variant.id).name}. ` +
+        `${speciesOf(content, variant.id).flavor} Nobody at this facility is qualified to explain it.`;
     } else if (rng() < 0.5 && mutable.length) {
       const trait = pick(rng, mutable);
       genotype[trait.id] = Math.min(2, (genotype[trait.id] ?? 0) + 1);
@@ -206,7 +207,7 @@ export function breedPair(state, sireId, damId, content, now) {
     variantNote,
     sex: rng() < 0.5 ? 'F' : 'M',
     laidAt: now,
-    hatchAt: now + Math.round(content.species[species].incubationMinutes * 60000 * incubatorGrants(state, content).hourScale),
+    hatchAt: now + Math.round(speciesOf(content, species).incubationMinutes * 60000 * incubatorGrants(state, content).hourScale),
     potential,
     genotype,
     mutationNote,

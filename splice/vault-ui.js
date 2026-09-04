@@ -19,6 +19,7 @@ import { renderIcon } from '../ui/icons.js';
 // happened to omit `vault` too, so nothing ever asked.
 import { fieldNote, bindFieldNote } from '../ui/cards.js';
 import { guideForScreen } from '../ranch/onboarding.js';
+import { speciesOf, isRetired } from '../data/catalog.js';
 
 let lastMsg = '';
 
@@ -44,21 +45,23 @@ export function renderVaultScreen(root, ctx) {
   //
   // Same fold, same class, same screen — the inconsistency was the bug.
   const vialRow = (v) => {
-    const sp = content.species[v.species];
+    const sp = speciesOf(content, v.species);
     const plan = resequencePlan(state, v.id, content, t);
     return `<li>${vialSVG(sp.palette.accent)} ${sp.name} essence <span class="lineage">from ${v.donorName} ★${v.stars}</span>${
       plan.ok
         ? `<br><span class="fine-print">${Math.round(plan.successChance * 100)}% to take · ${
             Math.round(plan.mutationChance * 100)}% chance of a new gene · ${plan.hours}h</span>
            <button type="button" class="care-train" data-reseq="${v.id}">${renderIcon('dna')} Resequence</button>`
-        : ''
+        : isRetired(sp)
+          ? `<br><span class="fine-print">${plan.msg} The essence keeps. The paperwork does not.</span>`
+          : ''
     }</li>`;
   };
   // The run in flight, with its clock and the one thing that can stall it.
   const runCard = run
     ? `<section class="card">
         <h3>${renderIcon('dna')} Resequencer</h3>
-        <p class="ranch-msg">Rebuilding <strong>${run.donorName}</strong> — ${content.species[run.species].name}, ★${run.stars}.</p>
+        <p class="ranch-msg">Rebuilding <strong>${run.donorName}</strong> — ${speciesOf(content, run.species).name}, ★${run.stars}.</p>
         <p class="settle">${
           resequenceRemainingMs(state, t) > 0
             ? `<strong class="countdown">${fmtDuration(resequenceRemainingMs(state, t))}</strong> to go.`
@@ -82,14 +85,17 @@ export function renderVaultScreen(root, ctx) {
     if (!shelf.has(id)) shelf.set(id, { vials: [], tokens: [] });
     return shelf.get(id);
   };
-  for (const v of inv.vials) {
-    // Retired species are skipped rather than thrown on, as R52 established
-    // for vials and the token loop has always done.
-    if (content.species[v.species]) bay(v.species).vials.push(v);
-  }
+  // R79 - these two loops used to SKIP anything whose species the build no
+  // longer has, which kept the screen up and quietly deleted the player's
+  // holdings from it: a cobra token is still a real part, still spliceable
+  // in the Theater, and it simply stopped appearing in the vault that is
+  // supposed to list what you own. Now it shelves under the discontinued
+  // line's stand-in and says so. A retired PART is still skipped — there is
+  // no part to name — which is R72's rule, unchanged.
+  for (const v of inv.vials) bay(v.species).vials.push(v);
   for (const token of inv.parts) {
     const known = content.parts[token.partId];
-    if (known && content.species[known.species]) bay(known.species).tokens.push(token);
+    if (known) bay(known.species).tokens.push(token);
   }
 
   const tokenRows = (tokens) => SLOTS.map((slot) => tokens
@@ -117,7 +123,7 @@ export function renderVaultScreen(root, ctx) {
   // taught it on this screen since R31.
   const bays = [...shelf.entries()]
     .map(([id, held]) => ({
-      sp: content.species[id],
+      sp: speciesOf(content, id),
       ...held,
       stars: held.vials.reduce((m, v) => Math.max(m, v.stars), 0),
       // R72: a retired grade used to make this Math.max NaN, which quietly

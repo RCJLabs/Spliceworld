@@ -8,6 +8,7 @@ import { ageStage } from '../ranch/ranch.js';
 import { STATS } from '../ranch/ranch.js';
 import { rngStream } from '../util/rng.js';
 import { extractorGrants } from './facility.js';
+import { speciesOf } from '../data/catalog.js';
 
 // Stat multipliers feed the battle engine in M4; Apex/Prismatic ability
 // upgrades land with the keyword resolver, also M4.
@@ -83,7 +84,7 @@ export function extractAnimal(state, animalId, content, now) {
   const idx = state.ranch.stock.findIndex((a) => a.id === animalId);
   if (idx === -1) return { ok: false, msg: 'No such animal.' };
   const animal = state.ranch.stock[idx];
-  const species = content.species[animal.species];
+  const species = speciesOf(content, animal.species);
   const grade = gradeFor(animal, content, now, state);
   const stars = Math.round(avgStars(animal) * 10) / 10;
 
@@ -286,7 +287,7 @@ export function gradeOutlook(animal, content, now, state = null) {
   const condHelps = up(kept);
   const anyHelp = up(best);
 
-  const g = content.species[animal.species].growthHours;
+  const g = speciesOf(content, animal.species).growthHours;
   const msToPrime = stage === 'prime' || stage === 'elder'
     ? 0
     : Math.max(0, animal.birthAt + g.prime * HOUR_MS - now);

@@ -5,6 +5,7 @@
 
 import { rngStream, pick, randInt, pickFresh } from '../util/rng.js';
 import { upkeepTuning } from '../splice/facility.js';
+import { speciesOf } from '../data/catalog.js';
 
 export const STATS = ['hp', 'power', 'armor', 'speed', 'stamina'];
 export const AGE_STAGES = ['juvenile', 'adult', 'prime', 'elder'];
@@ -97,7 +98,7 @@ export function createAnimal(state, speciesId, content, now) {
 }
 
 export function ageStage(animal, content, now) {
-  const g = content.species[animal.species].growthHours;
+  const g = speciesOf(content, animal.species).growthHours;
   const hours = Math.max(0, now - animal.birthAt) / HOUR;
   if (hours >= g.elder) return 'elder';
   if (hours >= g.prime) return 'prime';
@@ -107,7 +108,7 @@ export function ageStage(animal, content, now) {
 
 // Time until the next stage, or null at elder. UI countdowns only.
 export function nextStage(animal, content, now) {
-  const g = content.species[animal.species].growthHours;
+  const g = speciesOf(content, animal.species).growthHours;
   const stage = ageStage(animal, content, now);
   if (stage === 'elder') return null;
   const nextName = AGE_STAGES[AGE_STAGES.indexOf(stage) + 1];
@@ -151,7 +152,7 @@ export function applyElapsed(state, content, now, since = null) {
   }
   let upkeep = 0;
   for (const animal of state.ranch.stock) {
-    upkeep += content.species[animal.species].upkeepPerDay * (ownedMs(animal.birthAt) / DAY);
+    upkeep += speciesOf(content, animal.species).upkeepPerDay * (ownedMs(animal.birthAt) / DAY);
   }
   for (const chimera of state.chimeras ?? []) {
     upkeep += chimeraUpkeep(chimera, content) * (ownedMs(chimera.createdAt) / DAY);
@@ -176,7 +177,7 @@ export function careAction(state, animalId, action, content, now) {
     return { ok: false, msg: `${animal.name} has had enough ${action} for now.` };
   }
   if (action === 'feed') {
-    const cost = content.species[animal.species].feedCost;
+    const cost = speciesOf(content, animal.species).feedCost;
     if (state.funds < cost) return { ok: false, msg: 'Slush fund is empty. Feeding requires funding.' };
     state.funds -= cost;
   }
@@ -287,7 +288,7 @@ export function ensureRanchSeeded(state, content, now) {
   // The two goats stay newborn, so the husbandry timers are still a thing
   // the player learns — there is simply one door open on day one.
   const grown = state.ranch.stock[2];
-  grown.birthAt = now - Math.round(content.species[grown.species].growthHours.adult * HOUR);
+  grown.birthAt = now - Math.round(speciesOf(content, grown.species).growthHours.adult * HOUR);
 }
 
 // Purebred display genome for a stock animal — all of its species' parts on
@@ -308,7 +309,7 @@ export function stockGenome(speciesId, content) {
   for (const part of Object.values(content.parts)) {
     if (part.species === speciesId) parts[part.slot] = part.id;
   }
-  return { frame: content.species[speciesId].frame, parts };
+  return { frame: speciesOf(content, speciesId).frame, parts };
 }
 
 // What one chimera costs to keep, per real-world day. Every term is read
@@ -348,7 +349,7 @@ export function chimeraUpkeep(chimera, content) {
 
 export function stockUpkeepPerDay(state, content) {
   return state.ranch.stock.reduce(
-    (sum, a) => sum + content.species[a.species].upkeepPerDay, 0
+    (sum, a) => sum + speciesOf(content, a.species).upkeepPerDay, 0
   );
 }
 

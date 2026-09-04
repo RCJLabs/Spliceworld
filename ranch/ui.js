@@ -2,7 +2,7 @@
 // renders state and forwards clicks. Re-renders the whole screen per action
 // — herd sizes are tiny, simplicity wins.
 
-import { renderCreatureSVG } from '../render/renderer.js';
+import { creaturePortrait } from '../render/renderer.js';
 import {
   CARE_ACTIONS, ageStage, nextStage, conditionTier, careStatus, careAction,
   penUpgradeCost, buyPenUpgrade, buyMailOrder, stockGenome, upkeepPerDay,
@@ -21,6 +21,7 @@ import { pickerField, bindPickers } from '../ui/picker.js';
 import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade } from '../splice/facility.js';
 import { nodeName } from '../campaign/map.js';
 import { scannerGrants } from '../splice/facility.js';
+import { speciesOf } from '../data/catalog.js';
 import { incomePerDay } from '../campaign/campaign.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { agendaShape } from './agenda.js';
@@ -61,16 +62,16 @@ const classMark = (content, cls) => {
 // so it gets the ceremony treatment rather than a line in the message strip.
 function showVariantCeremony(ctx, result, onClose) {
   const { content } = ctx;
-  const species = content.species[result.variant];
+  const species = speciesOf(content, result.variant);
   const overlay = document.querySelector('#overlay');
   overlay.hidden = false;
   overlay.innerHTML = `
     <div class="ceremony card">
       <h3>${result.firstOfItsKind ? '✦ NEW VARIANT SPECIES' : '✦ THE LINE HOLDS'}</h3>
-      <div class="grad-portrait">${renderCreatureSVG(stockGenome(species.id, content), content, { idPrefix: 'variant' })}</div>
+      <div class="grad-portrait">${creaturePortrait(stockGenome(species.id, content), content, { idPrefix: 'variant' })}</div>
       <p><strong>${result.hatchling.name}</strong> — ${species.name}</p>
       <p class="fine-print">${species.flavor ?? ''}</p>
-      <p class="fine-print">Same stock as the ${content.species[species.variantOf].name}, and it breeds true: pair two and the line continues. Its parts carry ${species.tags.join(' and ') || 'no tags'} — and its own numbers.</p>
+      <p class="fine-print">Same stock as the ${speciesOf(content, species.variantOf).name}, and it breeds true: pair two and the line continues. Its parts carry ${species.tags.join(' and ') || 'no tags'} — and its own numbers.</p>
       ${result.firstOfItsKind ? '<p class="combo-toast">✦ Logged in the Splice-Dex.</p>' : ''}
       <button type="button" id="variant-done" class="big-btn">Astonishing</button>
     </div>`;
@@ -342,7 +343,7 @@ export function renderRanchScreen(root, ctx) {
     id: a.id,
     label: `${a.name} ${a.sex === 'F' ? '♀' : '♂'}`,
     mark: classMark(content, content.species[a.species]?.class),
-    sub: `${content.species[a.species].name} · ${STAGE_LABELS[ageStage(a, content, t)]} · condition ${Math.round(a.condition)}`,
+    sub: `${speciesOf(content, a.species).name} · ${STAGE_LABELS[ageStage(a, content, t)]} · condition ${Math.round(a.condition)}`,
   });
   const parentGroups = (pool) => {
     const bySpecies = new Map();
@@ -351,8 +352,8 @@ export function renderRanchScreen(root, ctx) {
       bySpecies.get(a.species).push(a);
     }
     return [...bySpecies.entries()]
-      .sort((x, y) => (content.species[x[0]].name > content.species[y[0]].name ? 1 : -1))
-      .map(([sp, pool2]) => ({ label: content.species[sp].name, options: pool2.map(parentRow) }));
+      .sort((x, y) => (speciesOf(content, x[0]).name > speciesOf(content, y[0]).name ? 1 : -1))
+      .map(([sp, pool2]) => ({ label: speciesOf(content, sp).name, options: pool2.map(parentRow) }));
   };
   const parentField = (id, label, pick, pool, disabled) => {
     const a = pool.find((x) => x.id === pick) ?? null;
@@ -361,7 +362,7 @@ export function renderRanchScreen(root, ctx) {
       label,
       count: pool.length || null,
       value: a ? `${a.name} ${a.sex === 'F' ? '♀' : '♂'}` : disabled ? 'Pick Parent A first' : pool.length ? '— choose —' : 'No eligible adults',
-      hint: a ? content.species[a.species].name : '',
+      hint: a ? speciesOf(content, a.species).name : '',
       disabled: disabled || !pool.length,
     });
   };
@@ -421,11 +422,11 @@ export function renderRanchScreen(root, ctx) {
   // spar button — the predicate the action reads belongs on the control too.
   const pensFull = state.ranch.stock.length >= state.ranch.penCapacity;
   const eggCards = state.ranch.eggs.map((egg) => {
-    const species = content.species[egg.species];
+    const species = speciesOf(content, egg.species);
     const ready = t >= egg.hatchAt && !pensFull;
     // The egg shows its BASE stock: a variant is a surprise you earn at the
     // moment of hatching, not something the incubator spoils.
-    const shown = content.species[species.variantOf ?? species.id];
+    const shown = speciesOf(content, species.variantOf ?? species.id);
     return `
       <div class="encounter">
         <div class="egg-wrap">${eggSVG(species.palette)}</div>
@@ -472,13 +473,13 @@ export function renderRanchScreen(root, ctx) {
   };
 
   const cards = bandedHtml(state.ranch.stock, RANCH_BANDS, bandOf, (animal) => {
-    const species = content.species[animal.species];
+    const species = speciesOf(content, animal.species);
     const stage = ageStage(animal, content, t);
     const next = nextStage(animal, content, t);
     const tier = conditionTier(animal.condition);
     const care = careStatus(animal, t);
     const open = isOpen(state, `ranch-${animal.id}`, false);
-    const portrait = !open ? '' : renderCreatureSVG(stockGenome(animal.species, content), content, {
+    const portrait = !open ? '' : creaturePortrait(stockGenome(animal.species, content), content, {
       idPrefix: `pt-${animal.id}`,
       condition: tier === 'fine' ? null : tier,
       extraScale: STAGE_SCALE[stage],

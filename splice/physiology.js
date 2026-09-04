@@ -5,6 +5,7 @@
 
 import { gradeOf } from './extract.js';
 import { renderIcon } from '../ui/icons.js';
+import { frameOf, speciesOf, isRetired } from '../data/catalog.js';
 
 export const PHYS_TUNING = {
   massSpeedPenaltyPer: 50, // -1 speed per this much mass
@@ -44,7 +45,12 @@ function airborneTags(tags, canFly) {
 }
 
 export function analyze(frameId, tokens, content, socketCount = 6) {
-  const frame = content.frames[frameId];
+  // R79 - a save holds the frame id, so a retired chassis arrives here on
+  // the battle and sim paths as well as the screen. The stand-in carries a
+  // zeroed phys block: the creature the player owns keeps every stat its
+  // PARTS give it and loses only what the chassis contributed, which is the
+  // one honest answer available when the chassis is no longer described.
+  const frame = frameOf(content, frameId);
   const rows = [];
 
   const stats = { hp: frame.phys.hp, power: 0, armor: 0, speed: frame.phys.speed, stamina: frame.phys.stamina, regen: frame.phys.regen };
@@ -87,13 +93,20 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
   for (const stat of Object.keys(stats)) stats[stat] = Math.round(stats[stat]);
   lift = Math.round(lift);
 
-  // Power-to-weight
-  const p2w = stats.power / mass;
-  const p2wRating = P2W_RATINGS.find(([min]) => p2w >= min)[1];
+  // Power-to-weight. Mass is frame + parts, and BOTH can be nothing: a
+  // retired chassis contributes zero and an empty draft has no parts, so
+  // this is a real division by zero rather than a hypothetical one. A ratio
+  // with no denominator is not a very large ratio, it is no ratio — and
+  // `find` on a NaN comparison returns undefined, which is how it used to
+  // throw one line later.
+  const p2w = mass > 0 ? stats.power / mass : null;
+  const p2wRating = p2w === null ? null : (P2W_RATINGS.find(([min]) => p2w >= min)?.[1] ?? 'Straining');
   rows.push({
     label: 'Power-to-weight',
-    value: `${p2w.toFixed(2)} (${p2wRating})`,
-    note: `power ${stats.power} moving ${mass} mass — ${frame.name} chassis is ${frame.phys.mass} of that.`,
+    value: p2w === null ? '—' : `${p2w.toFixed(2)} (${p2wRating})`,
+    note: p2w === null
+      ? `power ${stats.power} moving nothing at all — there is no chassis mass to move.`
+      : `power ${stats.power} moving ${mass} mass — ${frame.name} chassis is ${frame.phys.mass} of that.`,
   });
 
   // Speed after mass penalty
@@ -121,9 +134,13 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
   let tMin = -Infinity;
   let tMax = Infinity;
   for (const sp of Object.keys(speciesCount)) {
-    const [lo, hi] = content.species[sp].thermal;
-    tMin = Math.max(tMin, lo);
-    tMax = Math.min(tMax, hi);
+    // A retired species has no band anyone can state. It must not NARROW
+    // the mix — an unstatable range is not a zero-width one — so it sits
+    // the vote out, exactly as a retired part does above.
+    const band = content.species[sp]?.thermal;
+    if (!band) continue;
+    tMin = Math.max(tMin, band[0]);
+    tMax = Math.min(tMax, band[1]);
   }
   const thermalOk = tokens.length === 0 || tMin <= tMax;
   rows.push({
@@ -131,7 +148,7 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
     value: thermalOk ? (tokens.length ? `${tMin}° to ${tMax}°` : '—') : 'NONE',
     note: thermalOk
       ? 'Every donor species can tolerate this range.'
-      : `${Object.keys(speciesCount).map((s) => content.species[s].name).join(' and ')} disagree about weather on a cellular level. Expect instability.`,
+      : `${Object.keys(speciesCount).map((s) => speciesOf(content, s).name).join(' and ')} disagree about weather on a cellular level. Expect instability.`,
   });
 
   // Flight — the acceptance row. Legal to build, physics gets a vote.
@@ -172,12 +189,15 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
 
   // Purebred set bonus
   const purebredSpecies = Object.entries(speciesCount).find(([, n]) => n >= PHYS_TUNING.purebredAt)?.[0] ?? null;
-  if (purebredSpecies) {
-    const bonus = content.species[purebredSpecies].setBonus;
+  // A bonus nobody can name is not claimed. `setBonus` is null on the
+  // retired stand-in for exactly this reason, and the engine reads the same
+  // field, so the row and the effect disappear together.
+  const bonus = purebredSpecies ? speciesOf(content, purebredSpecies).setBonus : null;
+  if (purebredSpecies && bonus) {
     rows.push({
       label: 'Purebred bonus',
       value: bonus.name,
-      note: `${speciesCount[purebredSpecies]} ${content.species[purebredSpecies].name} parts: ${bonus.desc}.`,
+      note: `${speciesCount[purebredSpecies]} ${speciesOf(content, purebredSpecies).name} parts: ${bonus.desc}.`,
     });
   }
 
@@ -199,6 +219,17 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
       (purebredSpecies ? ', steadied by the purebred set' : '') +
       `. Settling estimate: ~${Math.round(settlingMs / 60000)} min.`,
   });
+
+  // R79 - and the chassis itself may be gone. A screen that silently drops
+  // the frame's stats and says nothing is the quiet half of the same bug:
+  // the player's numbers moved and nothing explained why.
+  if (isRetired(frame)) {
+    rows.push({
+      label: 'Chassis',
+      value: 'Discontinued',
+      note: `The ${frameId} chassis is no longer in the catalogue, so it contributes nothing. The creature is intact; its frame is unsupported. Legal counsel advises against comment.`,
+    });
+  }
 
   // Chassis completeness — the audit found a head-only chimera is legal and
   // measures a 0% win rate. Say so before they walk into a patrol with it.
