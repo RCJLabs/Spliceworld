@@ -6086,6 +6086,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'parts.json': null,
     'species.json': null,
     'enemies.json': null,
+    // R81 — the drawing halves. A player never meets these as content at
+    // all: they are the geometry the renderer reads, split out of the two
+    // files above because between them they were 400 KB and 69% and 73% of
+    // their own files. Nothing to teach, and their own gate is the pairing
+    // one — every part and every unit has exactly one body.
+    'parts-shapes.json': null,
+    'enemies-shapes.json': null,
     'philosophies.json': null,
     'guides.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
