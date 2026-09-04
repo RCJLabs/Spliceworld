@@ -484,8 +484,11 @@ const BREAKS = [
     to: '<p class="ranch-msg">${lastMsgg}</p>',
   },
   {
+    // R81 moved this one: `isInjured` went to battle/statblock.js with the
+    // rest of what a creature IS. The break follows it, because the module
+    // it guards is still the one the headless sim runs.
     n: 4, gate: SCOPE, name: 'a DOM global in a logic module the headless sim runs',
-    file: 'battle/engine.js',
+    file: 'battle/statblock.js',
     anchor: 'export function isInjured(chimera, now) {',
     to: 'export function isInjured(chimera, now) {\n  if (document.hidden) return false;',
   },
