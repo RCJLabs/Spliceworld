@@ -4281,7 +4281,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // by a player. Every slot must be REACHED by code.
   {
     const sources = ['campaign/campaign.js', 'campaign/rivals.js', 'campaign/rehab.js',
-      'campaign/ui.js', 'campaign/monologue.js', 'battle/engine.js']
+      'campaign/ui.js', 'campaign/monologue.js', 'battle/engine.js', 'battle/statblock.js']
       .map((f) => readFileSync(join(root, f), 'utf8'))
       .join('\n');
     for (const slot of new Set([...playerSlots, ...rivalSlots])) {
@@ -14359,13 +14359,22 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     };
     walkModules('');
     assert.ok(files.length > 40, `the sweep found the modules (${files.length})`);
+    const defines = files.filter((f) =>
+      /export function applyInjury\(/.test(readFileSync(join(root, f), 'utf8')));
+    assert.equal(defines.length, 1, `exactly one module defines applyInjury (${defines.join(', ') || 'none'})`);
+    const INFLICT_POINT = defines[0];
     let inflicts = 0;
     for (const file of files) {
       const src = readFileSync(join(root, file), 'utf8').replace(/\/\/.*$/gm, '');
       for (const [, rhs] of src.matchAll(/\.injury\s*=\s*([^;\n]+)/g)) {
         const r = rhs.trim();
         if (/^null/.test(r)) continue;                                    // healed
-        if (file === 'battle/engine.js' && /^injury/.test(r)) { inflicts++; continue; } // the inflict point
+        // R81 — the inflict point is DERIVED, not named. `applyInjury` moved
+        // from battle/engine.js to battle/statblock.js and this gate went
+        // red on the very function it exists to protect. A rule that says
+        // "one place writes an injury" should find that place rather than be
+        // told where it is, or the next move breaks it again.
+        if (file === INFLICT_POINT && /^injury/.test(r)) { inflicts++; continue; }
         if (file === 'save/save.js' && /\?\?\s*null/.test(r)) continue;    // migration normalise
         assert.fail(`${file} writes an injury outside applyInjury (= ${r.slice(0, 40)})`);
       }
