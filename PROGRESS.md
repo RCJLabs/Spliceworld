@@ -10,9 +10,9 @@ This milestone is entirely instrument.
 
 | gate | result |
 |---|---|
-| `npm run scopecheck` | ✓ — 66 modules, 61 syntax + 27 link cases, ~1 s |
-| `npm run handlers` | ✓ — 1150 fired across 58 surfaces, 34 controls + 7 parameters, 13 s |
-| `npm run battery` | ✓ — **15 breaks, 15 caught** (shipped, so the number is reproducible) |
+| `npm run scopecheck` | ✓ — 66 modules, 72 syntax + 27 link cases, ~1 s |
+| `npm run handlers` | ✓ — 1222 fired across 59 surfaces, 34 controls + 7 parameters, 14 s |
+| `npm run battery` | ✓ — **19 breaks, 19 caught** (shipped, so the number is reproducible) |
 | `npm run smoke` | ✓ — including both new gates |
 | `npm run a11y` | ✓ — 46 controls at 380px across 8 views |
 | `npm run sim` | ✓ — 6324 battles, no degenerate builds |
@@ -80,14 +80,14 @@ tree forever. Breaks 6 and 7 aim at the tokenizer itself — disable the
 interpolation scan, disable regex detection — and both go red on the corpus,
 not on the codebase.
 
-### R75's gate fired 70 handlers; this one fires 1150
+### R75's gate fired 70 handlers; this one fires 1222
 
 R75's gate rendered each of the six screens once and fired what that render
 bound — 70 handlers, its own printed number. Everything behind a click was
 out of reach: sub-tabs, the briefing, the arena, overlays, picker sheets, the
 settings panel.
 
-The walk now fires **1150 handlers across 58 surfaces**, covering **34
+The walk now fires **1222 handlers across 59 surfaces**, covering **34
 controls pressed and 7 parameters carried**. That split is deliberate and it
 is the audit's doing: "every `data-*` handler has been fired" read stronger
 than the code proved, because seven of the 41 attributes are never a selector
@@ -97,9 +97,11 @@ Three things made that possible, and two of them were harness bugs that had
 been silently costing coverage:
 
 - **The stub answered only `[data-x]` selectors.** `#thtr-frames button`,
-  `.pick-row` and `[data-action]` bound *nothing* — the frame chooser, the
-  picker sheet and the entire arena move bar were invisible, in the way that
-  looks exactly like success: no error, no handler, no failure. It has a real
+  and `.pick-row` bound *nothing* — the frame chooser and the picker sheet
+  were invisible, in the way that looks exactly like success: no error, no
+  handler, no failure. (`[data-action]`, the arena's move bar, the old parser
+  handled fine; that one was invisible for a different reason — no surface
+  ever rendered the arena.) It has a real
   (tiny) query engine now: comma groups, descendant chains,
   tag/id/class/attribute, `:not([disabled])`.
 - **The stub handed each handler only the attribute it was selected by.** A
@@ -194,7 +196,7 @@ Two changes, and the header comment's own premise is finally true one level
 up: each run imports a **fresh module instance** (`import('../x.js?run=N')`),
 and handlers are found by a **stable key** rather than by position, so a
 handler the probe saw and the run cannot find is a failure rather than a
-shrug. The fired count went from 1056 to **1150**.
+shrug. The fired count went from 1056 to **1222**.
 
 Three smaller ones alongside it: a `fanout` that matched zero controls
 deleted its whole surface family silently (it now fails, and immediately
@@ -228,6 +230,50 @@ And the battery itself is now `tools/battery.js` rather than a scratch file,
 because the audit's fairest complaint was that a headline number nothing in
 the repo can reproduce is not evidence.
 
+### The audit's verify pass found seven more, after the first round of fixes
+
+The verifiers re-ran everything against the *fixed* tree and came back with
+seven that survived — including one live false pass in what had just been
+committed:
+
+- **`{ import: 1 }` as an object KEY** walked into the import handler, which
+  scanned to the next string (or to end of file) and bound everything it
+  passed. One such key silenced every free identifier in the rest of the
+  module. Guarded, and the specifier scan is bounded now so a misfire costs a
+  line rather than a file.
+- **The walk was not reproducible.** The cache-buster's counter was declared
+  *inside* `walkSurfaces`, so a second walk re-imported run 1's exact URLs —
+  `campaign/ui.js?run=0` and the rest — and inherited each instance's
+  leftover `warTab`. A second walk in one process reported **54 handlers
+  "vanished" that were fine**. The counter is module-level now, the `battle`
+  surface pins its own tab instead of inheriting one, and the suite asserts
+  the number twice in one process. That single assertion covers the whole
+  class.
+- **`attrsOfFire` credited the SELECTOR**, not the element. Since
+  `querySelector` deliberately returns a bindable stub when nothing matches,
+  a control the screen had stopped painting still counted as covered: delete
+  the sound toggle, keep its bind, and the gate's output was byte-identical
+  to a healthy run. Credit comes from the element's own dataset now.
+- **The denominator could shrink to fit.** Two ways: `data-${attr}` sub-tab
+  buttons were invisible to the source scan, so deleting a sub-tab bar
+  removed the attribute *and* the surface that pressed it in one move; and an
+  attribute that appears only as a SELECTOR (`[data-switch-slot]` has no
+  `=`) was never in the source set at all, so deleting the Switch button left
+  a dead binder and a green gate. Both are read from source now.
+- Three latent false failures in the tokenizer — object generator and
+  computed-key methods, a class field with no initializer, and a label as the
+  body of an `if` — plus a real one: a **regex literal after a `)`**
+  (`if (s) /needle/.test(s)`) was read as division and failed the build on
+  valid JS. Fixed precisely by remembering whether each `(` opened a control
+  head.
+- And the **MARKERS justification was false**: the comment said a stylesheet
+  or a sibling handler finds those rows by `data-guide` / `data-slot`. Nothing
+  does — the dismiss button and each slot button carry their own ids, and
+  neither name is in `style.css`. They are simply unused, which is a fine
+  reason to exempt them and the only honest one to write down.
+
+Four more breaks were added for these, and the battery is 19 now.
+
 ### The break battery
 
 | # | break | caught by |
@@ -247,6 +293,10 @@ the repo can reproduce is not evidence.
 | 13 | a surface goes unreachable | `battle:briefing: cannot reach [data-node][0]` |
 | 14 | a marker grows a handler and stays exempt | `data-guide is listed as a marker … but ui/cards.js reads it` |
 | 15 | the link pass stops seeing `export const` | the link corpus |
+| 16 | a keyword after a dot stops being a property | `ghost is not bound` |
+| 17 | a control stops being painted but its binder stays | `data-switch-slot … nothing ever fired` |
+| 18 | the War Room sub-tab bar disappears | `data-war-tab … nothing ever fired` |
+| 19 | the walk stops being reproducible across two runs | 1222 then 1150 |
 
 Breaks 14 and 15 were added after the audit prompt asked whether the
 exemption list was "a hole with a comment on it". It was, so the gate now
@@ -273,14 +323,16 @@ catch is a catch, but the prediction was wrong and the note stays.
 
 ### Known issues
 
-- The walk's handler count differs by 3 between the standalone tool (1041)
-  and the suite (1038), because gates that run earlier in the suite leave
-  module state (`dexTab`, `warTab`) somewhere else. Coverage is asserted, not
-  the count, and the fanout presses every tab regardless — but the number is
-  not reproducible across the two entry points and I would rather write that
-  down than round it off.
 - `scopecheck` cannot see a name bound in a sibling scope. That is the
-  deliberate trade above; `handlers.js` covers it by execution.
+  deliberate trade above, and `handlers.js` only PARTLY covers it: it runs
+  the handler bodies it reaches, which the audit measured at 59% of the
+  tree's blocks. A sibling-scope read on a line neither gate runs survives
+  both. The two halves overlap; they do not tile.
+- The seven parameter attributes are covered by the handler that reads them
+  off `dataset`, not by a handler of their own. The gate says which are
+  which; the criterion's words ("every `data-*` handler") are looser than
+  what is actually proved, and I would rather write that down than round it
+  off.
 
 ### Next session's first task
 

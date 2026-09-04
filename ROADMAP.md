@@ -1127,7 +1127,7 @@ The queue is a proposal: prune it before starting R63.
     pristine worktree: the two new War Room gates fail 6/6 there and pass
     6/6 here.
 - **R76 — The gate that would have caught R60.** ✅ *Shipped.* Two new gates
-  and a widened one, all three proven by a **15-break battery, 15 caught** —
+  and a widened one, all three proven by a **19-break battery, 19 caught** —
   and the battery ships as `tools/battery.js`, so that number is reproducible
   rather than asserted. No game code changed: this milestone is entirely
   instrument.
@@ -1151,7 +1151,7 @@ The queue is a proposal: prune it before starting R63.
     `export * from` and `export { x } from` chains. It immediately found a
     module the walk had never scanned at all: `data/loader.js`, excluded by
     a directory skip meant for JSON.
-  - **The tokenizer is tested against its own corpus**, not the tree: **61
+  - **The tokenizer is tested against its own corpus**, not the tree: **72
     syntax cases + 27 link cases**, so nested templates, regex-versus-
     division, shorthand-versus-keys and defaults that read earlier
     parameters are pinned by cases that fail loudly, rather than by whatever
@@ -1162,16 +1162,16 @@ The queue is a proposal: prune it before starting R63.
     never** — module state (`warTab`) drifted between probe and run, the
     list collapsed 72 → 17, and a missing index returned silently. Runs now
     take a fresh module instance and find handlers by key, not position;
-    1056 fires became **1150**. In the analyzer, three live false passes: a name spelled like a keyword after a dot
+    1056 fires became **1222**. In the analyzer, three live false passes: a name spelled like a keyword after a dot
     (`unit.class`, `promise.catch(…)`, `cfg.in / 2`) started the keyword's
     binding branch and swallowed the free identifier after it — in the files
     R60's bug lived in. Each fix carries the corpus case that was missing.
   - **`tools/handlers.js` — every `data-*` handler has been fired once.**
-    R75's version fired **70 handlers and reached 12 of 41** `data-*`
-    controls, because most of the surface is behind a click. This walks
-    SURFACES — screens, sub-tabs, the briefing, the arena, the settings
-    panel, every picker sheet — and fires **1041 handlers across 58
-    surfaces, 34 controls pressed and 7 parameters carried** — including
+    R75's version fired **70 handlers** against one render per screen;
+    everything behind a click was out of its reach. This walks SURFACES —
+    screens, sub-tabs, the briefing, the arena, the settings panel, every
+    picker sheet — and fires **1222 handlers across 59 surfaces, 34 controls
+    pressed and 7 parameters carried** — including
     the picker sheet's Escape-and-Tab focus trap, which is bound on
     `document` and had never been fired by anything. The control/parameter
     split is the audit's doing: seven attributes are never a selector, so
@@ -1189,9 +1189,9 @@ The queue is a proposal: prune it before starting R63.
     clicking all six tabs in a real browser. That is an admission, not a
     dismissal.
   - **The stub grew a real query engine.** It answered only `[data-x]`
-    selectors, so `#thtr-frames button`, `.pick-row` and `[data-action]`
-    bound *nothing* — the frame chooser, the picker sheet and the whole
-    arena move bar were invisible, in the way that looks like success. It
+    selectors, so `#thtr-frames button` and `.pick-row` bound *nothing* —
+    the frame chooser and the picker sheet were invisible, in the way that
+    looks like success. It
     now parses painted HTML and supports comma groups, descendant chains,
     tag/id/class/attribute and `:not([disabled])`, and hands each handler
     the WHOLE tag's dataset rather than the one attribute it was selected

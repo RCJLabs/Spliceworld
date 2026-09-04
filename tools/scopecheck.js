@@ -194,6 +194,14 @@ export function tokenize(src) {
   let i = 0;
   let line = 1;
   let prev = null;                 // last emitted token, for the regex decision
+  // What opened each `(`. A `)` that closes an `if`/`while`/`for`/`switch`
+  // head is a place a REGEX may legally follow (`if (s) /needle/.test(s)`),
+  // where any other `)` is followed by division. Without this the regex body
+  // became identifier tokens and the gate failed valid code — a false build
+  // failure, which is the one thing this design is meant not to do.
+  const parenHeads = [];
+  const HEAD_WORDS = new Set(['if', 'while', 'for', 'switch', 'catch', 'with']);
+  let lastCloseWasHead = false;
   let braceDepth = 0;
   const tmpl = [];                 // braceDepth at each open `${`
   let mode = 'code';
@@ -267,6 +275,7 @@ export function tokenize(src) {
         && !(prev2?.type === 'punct' && ['.', '?.'].includes(prev2.value));
       const regexOk = prev === null
         || (prev.type === 'punct' && ![')', ']', '}', '++', '--', '`end'].includes(prev.value))
+        || (prev.type === 'punct' && prev.value === ')' && lastCloseWasHead)
         || keywordish;
       if (regexOk) {
         const start = i;
@@ -324,6 +333,8 @@ export function tokenize(src) {
     }
     if (!hit) { i++; continue; }                        // unknown byte: skip
     i += hit.length;
+    if (hit === '(') parenHeads.push(prev?.type === 'name' && HEAD_WORDS.has(prev.value));
+    else if (hit === ')') lastCloseWasHead = parenHeads.pop() === true;
     if (hit === '{') braceDepth++;
     else if (hit === '}') {
       if (tmpl.length && braceDepth === tmpl[tmpl.length - 1]) {
@@ -427,7 +438,8 @@ function isRead(toks, i) {
   // token BEFORE decides: after `?` it is a value, after `{`/`,`/`;`/`}` a key.
   if (nx && nx.type === 'punct' && nx.value === ':') {
     if (!p) return false;
-    if (p.type === 'punct' && ['{', ',', ';', '}', '`end'].includes(p.value)) return false;
+    if (p.type === 'punct' && ['{', ',', ';', '}', ')', '`end'].includes(p.value)) return false;
+    if (p.type === 'name' && ['else', 'do'].includes(p.value)) return false;
     if (p.type === 'name' && ['case'].includes(p.value)) return true;   // `case foo:` IS a read
     if (p.type === 'punct' && p.value === '?') return true;             // ternary branch
     return true;
@@ -441,7 +453,7 @@ function isRead(toks, i) {
     const after = close === -1 ? null : toks[close + 1];
     if (after && after.type === 'punct' && after.value === '{') {
       const prevName = p && p.type === 'name' ? p.value : null;
-      if (p && p.type === 'punct' && ['{', ',', '}$', '`end'].includes(p.value)) return false;
+      if (p && p.type === 'punct' && ['{', ',', '}$', '`end', '*'].includes(p.value)) return false;
       if (prevName && ['get', 'set', 'async', 'static'].includes(prevName)) return false;
     }
   }
@@ -485,11 +497,31 @@ export function analyze(src, file = '<anonymous>') {
     // own lazy loader. Three live false passes from one missing guard.
     const before = toks[i - 1];
     if (before?.type === 'punct' && ['.', '?.'].includes(before.value)) continue;
+    // …and a keyword used as an object or class KEY is not that keyword
+    // either. `{ import: true }` is legal JS, and it walked into the import
+    // handler below, which scans to the next string — or to end of file —
+    // and binds everything it passes. One `import:` key silenced every free
+    // identifier in the rest of the module.
+    if (toks[i + 1]?.type === 'punct' && toks[i + 1].value === ':') continue;
 
     // import … from '…'  /  import '…'
     if (t.value === 'import' && !(toks[i + 1]?.type === 'punct' && ['(', '.'].includes(toks[i + 1].value))) {
       let j = i + 1;
-      while (j < toks.length && !(toks[j].type === 'str')) j++;
+      // Bounded: a declaration's specifier is on the same statement, so a
+      // misfire costs a line rather than the whole tail of the file. The
+      // clause's own braces do not count — `import { a as b } from '…'` has
+      // a `}` in the middle of it.
+      let clause = 0;
+      while (j < toks.length && toks[j].type !== 'str') {
+        const u = toks[j];
+        if (u.type === 'punct') {
+          if (u.value === '{') clause++;
+          else if (u.value === '}') { if (clause === 0) break; clause--; }
+          else if (u.value === ';' && clause === 0) break;
+        }
+        j++;
+      }
+      if (toks[j]?.type !== 'str') continue;
       // An import clause is the one binding form with no ambiguity, so it is
       // read exactly rather than over-bound: `import { a as b }` binds `b`
       // and NOT `a`. Binding both was the conservative default everywhere
@@ -631,14 +663,30 @@ export function analyze(src, file = '<anonymous>') {
             } else k = shut + 1;
             continue;
           }
-          if (nx?.type === 'punct' && (nx.value === '=' || nx.value === ';')) {
+          // A field with NO initializer: `x;` or, without a semicolon, `x`
+          // followed by the next member. Treating it like `x = …` and
+          // scanning for a terminating `;` ran the walk straight through the
+          // member after it, so that member's name and parameters were never
+          // bound and all were reported free — a build failure on valid JS.
+          if (nx?.type === 'punct' && nx.value === ';') { claimed[k] = true; k += 2; continue; }
+          if (nx && (nx.type === 'name' || nx.type === 'str' || nx.type === 'num'
+            || (nx.type === 'punct' && ['#', '[', '*', '}'].includes(nx.value)))) {
+            claimed[k] = true;                               // a bare field
+            k += 1;
+            continue;
+          }
+          if (nx?.type === 'punct' && nx.value === '=') {
             claimed[k] = true;                               // the field name
             // Step over the initializer without claiming it — it is ordinary
             // code and its reads are real — landing on the `;` that ends it.
+            const startLine = toks[k + 1].line;
             let j = k + 2;
             let d = 0;
             while (j < end) {
               const v = toks[j];
+              // A member on a later line ends a semicolon-less initializer.
+              if (d === 0 && v.line > startLine && (v.type === 'name' || v.type === 'str'
+                || (v.type === 'punct' && ['#', '[', '*'].includes(v.value)))) { j--; break; }
               if (v.type === 'punct') {
                 if (['(', '[', '{'].includes(v.value)) d++;
                 else if ([')', ']', '}'].includes(v.value)) d--;
@@ -689,7 +737,7 @@ export function analyze(src, file = '<anonymous>') {
     const after = toks[close + 1];
     if (!(after && after.type === 'punct' && after.value === '{')) continue;
     const p = toks[i - 1];
-    const isDef = (p && p.type === 'punct' && ['{', ',', '}$', '`end', ';'].includes(p.value))
+    const isDef = (p && p.type === 'punct' && ['{', ',', '}$', '`end', ';', '*'].includes(p.value))
       || (p && p.type === 'name' && ['get', 'set', 'async', 'static'].includes(p.value));
     if (isDef) { scanPattern(toks, i + 2, close - 1, bind, read); claim(i + 2, close - 1); }
   }
@@ -1038,6 +1086,19 @@ export const SELF_TESTS = [
   { name: 'a member access on a decimal literal', src: 'export const f = () => 1.5.toFixed(1);', expect: [] },
   { name: '`arguments` is a binding, not a free name', src: 'export function f() { return arguments.length; }', expect: [] },
   { name: 'a class with a call expression for a heritage', src: 'const mixin = (B) => B;\nclass A {}\nclass B extends mixin(A) { m(n) { return n; } }\nexport const f = () => new B();', expect: [] },
+
+  // --- the second audit pass, after the first round of fixes ---------------
+  { name: 'a keyword used as an object KEY', src: 'const io = { import: 1 };\nexport const f = () => ghost();', expect: ['ghost'] },
+  { name: '…and it does not swallow the rest of the file', src: 'const io = { import: 1 };\nexport const f = () => ghostA();\nexport const g = () => ghostB;', expect: ['ghostA', 'ghostB'] },
+  { name: 'other keywords as keys', src: 'const o = { class: 1, catch: 2, function: 3, export: 4 };\nexport const f = () => o.class + ghost;', expect: ['ghost'] },
+  { name: 'an object generator method', src: 'export const o = { *gen(a) { yield a; } };', expect: [] },
+  { name: 'an object async generator method', src: 'export const o = { async *s(a) { yield a; } };', expect: [] },
+  { name: 'a class field with no initializer', src: 'class A { x; y = 1; }\nexport const f = () => new A();', expect: [] },
+  { name: 'a class field with no initializer and no semicolon', src: 'class A {\n  n = 0\n  bump(d) { return this.n + d; }\n}\nexport const f = () => new A();', expect: [] },
+  { name: 'a label as the body of an if', src: 'export function f(xs) { if (xs) outer: for (const x of xs) { break outer; } return 0; }', expect: [] },
+  { name: 'a regex after an if head', src: 'export const f = (s) => { if (s) /needle/.test(s); return 1; };', expect: [] },
+  { name: 'a regex after a for head', src: 'export const f = (xs) => { for (const x of xs) /abc/.test(x); return 1; };', expect: [] },
+  { name: '…while a call result still divides', src: 'export const f = (a, b) => wide(a) / b;', expect: ['wide'] },
 ];
 
 // Cross-module cases, run on synthetic files so they pin the RULE rather than

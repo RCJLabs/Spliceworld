@@ -91,6 +91,13 @@ export function shellScreenMap() {
   return out;
 }
 
+// The cache-buster's counter lives OUTSIDE walkSurfaces on purpose. Reset per
+// call, run 2 re-imports run 1's exact URLs — `campaign/ui.js?run=0` and the
+// rest — and inherits each instance's leftover `warTab`, so a second walk in
+// one process reported 54 handlers "vanished" that were fine. A module
+// instance this walk has used must never be handed to another walk.
+let runNonce = 0;
+
 export async function walkSurfaces(content = loadContent(), { report = false } = {}) {
   const { renderArena } = await import('../battle/ui.js');
   const { openSettings } = await import('../save/settings-ui.js');
@@ -209,10 +216,13 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // GET there — the gate's own answer to "what prior click would be needed".
   const SURFACES = [];
   for (const { screen, fn, file } of shellScreenMap()) {
-    SURFACES.push({ name: screen, file, fn, path: [] });
+    // The War Room's tab is PINNED rather than inherited. Leaving it to
+    // module state made the whole walk a function of what ran before it: a
+    // second walk in one process rendered Labs here and reported 54 handlers
+    // "vanished" that were fine.
+    SURFACES.push({ name: screen, file, fn, path: [], subtab: screen === 'battle' ? 'map' : null });
   }
   for (const tab of WAR_TABS) {
-    if (tab.id === 'map') continue;
     SURFACES.push({ name: `battle:${tab.id}`, file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
       subtab: tab.id, path: [] });
   }
@@ -281,7 +291,6 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // That is not a bug in the game — it is a bug in the harness, and it showed
   // up as `#wr-launch` reading `draftTarget.kind` after `#wr-back` had cleared
   // it, a sequence no player can produce.
-  let runNonce = 0;
   const runSurface = async (surface, plannedKey) => {
     const state = fixture(now);
     // A FRESH MODULE INSTANCE, not just a fresh state. `campaign/ui.js` keeps
@@ -346,7 +355,10 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       const pickedBefore = picker.bound.length;
       const overlayBefore = overlay.bound.length;
       const docBefore = docBound.length;
-      for (const a of attrsOfFire(pre)) fired.add(a);
+      const preCarried = attrsOfFire(pre);
+      for (const a of preCarried) fired.add(a);
+      const preSel = selectorAttr(pre.sel);
+      if (preSel && preCarried.has(preSel)) firedBySelector.add(preSel);
       try { pre.fn(fakeEvent(pre.el)); } catch (err) {
         failures.push(`${surface.name}: path ${step.sel} threw ${err.constructor.name}: ${err.message}`);
         return { live, root, ctx };
@@ -372,8 +384,14 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       return { live, root, ctx, keys };
     }
     const h = live[at];
-    for (const a of attrsOfFire(h)) fired.add(a);
-    if (selectorAttr(h.sel)) firedBySelector.add(selectorAttr(h.sel));
+    const carried = attrsOfFire(h);
+    for (const a of carried) fired.add(a);
+    // A control counts as PRESSED only when the element the handler ran on
+    // actually carried the attribute it was selected by. Crediting the
+    // selector alone let a bind against a control the screen had stopped
+    // painting read as coverage.
+    const bySel = selectorAttr(h.sel);
+    if (bySel && carried.has(bySel)) firedBySelector.add(bySel);
     totalFired++;
     try { h.fn(fakeEvent(h.el)); } catch (err) {
       failures.push(`${surface.name}: ${h.sel} [${h.type}] threw ${err.constructor.name}: ${err.message}`);
@@ -442,11 +460,27 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // source, so a control that no surface renders still counts against us
   // rather than quietly leaving the set.
   const inSource = new Set();
+  const literalSelector = new Set();
   for (const f of [...moduleFiles(root), join(root, 'index.html')]) {
     const rel = relative(root, f).replaceAll('\\', '/');
     if (rel.startsWith('tools/')) continue;
     const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
     for (const a of dataAttrsIn(src)) inSource.add(a);
+    // `ui/tabs.js` writes EVERY sub-tab button as `data-${attr}=`, which the
+    // regex above is structurally unable to see. Those attributes were in the
+    // denominator only because the walk itself painted them — so deleting a
+    // sub-tab bar removed the attribute AND the surface that pressed it in
+    // one move, and the criterion was satisfied by a smaller world. The names
+    // are right there in the call, so they are read from the call.
+    for (const m of src.matchAll(/attr:\s*'([\w-]+)'/g)) inSource.add(m[1]);
+    // A SELECTOR is a source of truth too. `[data-switch-slot]` has no `=`,
+    // so the paint-shaped regex above cannot see it — which meant deleting
+    // the Switch button removed the attribute from the denominator along
+    // with its own coverage, and the gate went green on a dead binder.
+    for (const m of src.matchAll(/\[data-([a-z][\w-]*)[\]~^$*|=]/g)) {
+      inSource.add(m[1]);
+      literalSelector.add(m[1]);
+    }
   }
 
   // Two kinds of exemption, kept apart because they are not the same claim.
@@ -455,9 +489,14 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // or a sibling handler can find the row, with nothing listening for it. The
   // gate PROVES that below rather than taking the comment's word — a marker
   // that quietly grows a handler is a hole with a comment on it.
+  // The stated reason used to be that a stylesheet or a sibling handler finds
+  // the row by these. Neither is true: the dismiss button carries its own
+  // `data-dismiss-guide`, each slot button carries its own `data-*-slot`, and
+  // neither name appears in style.css. They are simply unused — which is a
+  // fine reason to exempt them, and the only honest one to write down.
   const MARKERS = {
-    guide: 'ui/cards.js stamps the field-note <section> so the dismiss button beside it knows which guide it is',
-    slot: 'save/settings-ui.js stamps the <li> row; the Switch, Rename and Delete buttons inside it carry the verbs',
+    guide: 'painted on the field-note <section> and read by nothing; the dismiss button carries its own id',
+    slot: 'painted on the slot <li> and read by nothing; Switch, Rename and Delete each carry their own id',
   };
   // ELSEWHERE is a real control that no screen render binds, so this walk
   // cannot reach it — and something else must. `data-screen` is the shell's
@@ -475,11 +514,13 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   for (const [attr, why] of Object.entries(MARKERS)) {
     const camelAttr = attr.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
     const readers = [];
-    for (const f of moduleFiles(root)) {
+    // The same files the denominator reads, plus the stylesheet — the claim
+    // being policed is "nothing reads this", and a CSS rule is a reader.
+    for (const f of [...moduleFiles(root), join(root, 'index.html'), join(root, 'style.css')]) {
       const rel = relative(root, f).replaceAll('\\', '/');
       if (rel.startsWith('tools/')) continue;
       const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
-      if (new RegExp(`dataset\\.${camelAttr}\\b|\\[data-${attr}[\\]=]`).test(src)) readers.push(rel);
+      if (new RegExp(`dataset\\.${camelAttr}\\b|\\[data-${attr}[\\]~^$*|=]`).test(src)) readers.push(rel);
     }
     if (readers.length) {
       failures.push(`data-${attr} is listed as a marker (${why}) but ${readers.join(', ')} reads it — it is a control`);
@@ -500,13 +541,6 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // Seven of the 41 are parameters (`animal`, `care`, `egg`, `track`,
   // `subtab`, `frame`, `value`). Saying which is which is the honest version
   // of "41 of 41".
-  const literalSelector = new Set();
-  for (const f of moduleFiles(root)) {
-    const rel = relative(root, f).replaceAll('\\', '/');
-    if (rel.startsWith('tools/')) continue;
-    const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
-    for (const m of src.matchAll(/\[data-([a-z][\w-]*)[\]=]/g)) literalSelector.add(m[1]);
-  }
   const missed = [...denominator].filter((a) => {
     if (firedBySelector.has(a)) return false;      // a control, and it was pressed
     if (literalSelector.has(a)) return true;       // a control, and it was NOT
