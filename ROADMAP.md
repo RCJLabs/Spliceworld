@@ -1126,16 +1126,76 @@ The queue is a proposal: prune it before starting R63.
     render that silently stops binding from passing vacuously. Proven on a
     pristine worktree: the two new War Room gates fail 6/6 there and pass
     6/6 here.
-- **R76 — The gate that would have caught R60.** `opOdds` was removed from
-  an import in R60 while two call sites remained: a live `ReferenceError`
-  on the Jobs board, through a 124-cell render-identity harness and a
-  five-minute suite, because nothing fires the handler and nothing reads
-  the free identifiers. `infirmaryGrants` had been unbound since A1 behind
-  a `??=` that never evaluates. A static free-identifier pass over every
-  module (the audit's script finds both, with one default-parameter false
-  positive to fix) costs under a second. *Done when: a free identifier in
-  any module fails the build, every `data-*` handler has been fired once,
-  and the battery carries one break per new gate.*
+- **R76 — The gate that would have caught R60.** ✅ *Shipped.* Two new gates
+  and a widened one, all three proven by a **15-break battery, 15 caught** —
+  and the battery ships as `tools/battery.js`, so that number is reproducible
+  rather than asserted. No game code changed: this milestone is entirely
+  instrument.
+  - **`tools/scopecheck.js` — a free identifier fails the build.** A
+    hand-written tokenizer (no dependencies, none coming) over all **66
+    modules in ~1 s**, with **61 syntax and 27 link cases** behind it. It reports a name that is READ in a file and BOUND
+    nowhere in it. That is a FILE-level question on purpose: scope-level
+    analysis needs correct lexical scoping for every binding form, and one
+    mistake there is a false build failure on correct code — worse than a
+    miss, because the fix for a false alarm is to stop trusting the gate.
+    File-level only needs the BINDING SET to be complete, so every ambiguous
+    construct is resolved by binding MORE names, which can only cost a miss.
+    Both historical bugs are file-level and both replay green: **`opOdds` at
+    `campaign/ui.js:720`, `infirmaryGrants` at `campaign/campaign.js:566`.**
+    The audit's default-parameter false positive is fixed and pinned
+    (`(a, b = a * 2)` binds both and reads `a`).
+  - **…and every import is answered.** Added because break 5 was MISSED:
+    rename an exported function, leave one call site, and no name is free —
+    the import statement still binds it. That is a link error, so the module
+    never evaluates and the game does not boot. The pass follows
+    `export * from` and `export { x } from` chains. It immediately found a
+    module the walk had never scanned at all: `data/loader.js`, excluded by
+    a directory skip meant for JSON.
+  - **The tokenizer is tested against its own corpus**, not the tree: **61
+    syntax cases + 27 link cases**, so nested templates, regex-versus-
+    division, shorthand-versus-keys and defaults that read earlier
+    parameters are pinned by cases that fail loudly, rather than by whatever
+    happens to be in the codebase today. Breaks 6, 7 and 15 aim at the
+    instrument and all go red.
+  - **An adversarial audit found defects in every one of the new gates.**
+    The worst: the surface walk fired **57 of the War Room's 72 handlers
+    never** — module state (`warTab`) drifted between probe and run, the
+    list collapsed 72 → 17, and a missing index returned silently. Runs now
+    take a fresh module instance and find handlers by key, not position;
+    1056 fires became **1150**. In the analyzer, three live false passes: a name spelled like a keyword after a dot
+    (`unit.class`, `promise.catch(…)`, `cfg.in / 2`) started the keyword's
+    binding branch and swallowed the free identifier after it — in the files
+    R60's bug lived in. Each fix carries the corpus case that was missing.
+  - **`tools/handlers.js` — every `data-*` handler has been fired once.**
+    R75's version fired **70 handlers and reached 12 of 41** `data-*`
+    controls, because most of the surface is behind a click. This walks
+    SURFACES — screens, sub-tabs, the briefing, the arena, the settings
+    panel, every picker sheet — and fires **1041 handlers across 58
+    surfaces, 34 controls pressed and 7 parameters carried** — including
+    the picker sheet's Escape-and-Tab focus trap, which is bound on
+    `document` and had never been fired by anything. The control/parameter
+    split is the audit's doing: seven attributes are never a selector, so
+    "every `data-*` handler has been fired" was reading stronger than the
+    code proved. Each handler is fired against a screen
+    rendered FRESH for it, because firing a snapshot in sequence tests
+    stale elements (it produced `#wr-launch` reading `draftTarget.kind`
+    after `#wr-back` cleared it, a sequence no player can make).
+  - **The exemption list proves itself.** Two `data-*` attributes are
+    markers with nothing listening (`data-guide`, `data-slot`); the gate
+    greps the tree for a reader and fails if one appears, because a marker
+    that grows a handler is a hole with a comment on it. `data-screen` is
+    listed separately as a real control this walk cannot reach — the shell's
+    nav, bound in `main.js` at boot — and named as covered by `tools/a11y.js`
+    clicking all six tabs in a real browser. That is an admission, not a
+    dismissal.
+  - **The stub grew a real query engine.** It answered only `[data-x]`
+    selectors, so `#thtr-frames button`, `.pick-row` and `[data-action]`
+    bound *nothing* — the frame chooser, the picker sheet and the whole
+    arena move bar were invisible, in the way that looks like success. It
+    now parses painted HTML and supports comma groups, descendant chains,
+    tag/id/class/attribute and `:not([disabled])`, and hands each handler
+    the WHOLE tag's dataset rather than the one attribute it was selected
+    by.
 - **R78 — A month lost unseen on one seed.** Found by R68 widening R64's
   away-gate from four seeds to sixteen. On `campaignWalk` seed **5150**,
   leaving on day 10 for thirty days records **zero contest events** for the

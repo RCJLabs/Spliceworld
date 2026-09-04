@@ -5,6 +5,9 @@
   "description": "Cartoony mad-geneticist ranch/splice/battle game. Vanilla ES modules, no build step, no dependencies.",
   "scripts": {
     "smoke": "node tools/smoke.js",
+    "scopecheck": "node tools/scopecheck.js",
+    "handlers": "node tools/handlers.js",
+    "battery": "node tools/battery.js",
     "sim": "node tools/sim.js",
     "serve": "python3 -m http.server 8000",
     "a11y": "node tools/a11y.js"

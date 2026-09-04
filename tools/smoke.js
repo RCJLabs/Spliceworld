@@ -8,6 +8,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import { indexContent, renderCreatureSVG, validateGenome, drawableGenome, SLOTS, SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { renderIcon, iconIds } from '../ui/icons.js';
+import { walkSurfaces, shellScreenMap } from './handlers.js';
+import { checkTree, runSelfTests, runLinkTests, moduleFiles, SELF_TESTS, LINK_TESTS } from './scopecheck.js';
 import { rngStream, hashString } from '../util/rng.js';
 import { newGameState, migrate, SAVE_VERSION } from '../save/save.js';
 import {
@@ -61,38 +63,6 @@ import { defaultMoveset, knownMoves } from '../battle/moves.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-// The screens the shell actually renders, read from `main.js` rather than
-// restated. R39: two gates needed this list, one derived it and one typed
-// it out, and the typed one was missing the Vault.
-function shellScreenMap() {
-  const shell = readFileSync(join(root, 'main.js'), 'utf8');
-  const block = shell.slice(shell.indexOf('const SCREENS = {'));
-  const body = block.slice(0, block.indexOf('};'));
-  const out = [];
-  // R74 — a screen is now painted by one of two things, and this list is
-  // still derived rather than typed out (R39's rule, which is why every gate
-  // downstream keeps working when a seventh screen arrives): a statically
-  // imported render function, or a `lazy()` loader that names its module and
-  // its export inline. `lazy` travels with each entry so a gate can assert
-  // WHICH screens are deferred, not merely that the map parses.
-  for (const line of body.split('\n')) {
-    const eager = line.match(/^\s{2}(\w+): \(root\) => (\w+)\(/);
-    if (eager) {
-      const [, screen, fn] = eager;
-      // …and on to the module that exports it, so a gate can ask what that
-      // file does rather than what a list says about it.
-      const imp = shell.match(new RegExp(`import \\{[^}]*\\b${fn}\\b[^}]*\\} from '([^']+)'`));
-      out.push({ screen, fn, file: imp ? imp[1].replace(/^\.\//, '') : null, lazy: false });
-      continue;
-    }
-    const deferred = line.match(/^\s{2}(\w+): lazy\(\(\) => import\('([^']+)'\), '(\w+)'\)/);
-    if (deferred) {
-      const [, screen, spec, fn] = deferred;
-      out.push({ screen, fn, file: spec.replace(/^\.\//, ''), lazy: true });
-    }
-  }
-  return out;
-}
 
 const shellScreens = () => shellScreenMap().map((e) => e.screen);
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -141,6 +111,37 @@ const saysEvent = (line, event) => {
   }));
 };
 const wireSays = (news, event) => news.map((n) => n.text ?? n).some((l) => saysEvent(l, event));
+
+// ---------------------------------------------------------------------------
+// R76 — A FREE IDENTIFIER FAILS THE BUILD. First, because it costs half a
+// second and it is the cheapest gate in the file: an unbound name is a
+// ReferenceError the moment its line runs, and R60 shipped one to players
+// through a 124-cell render harness and this very suite. `tools/scopecheck.js`
+// carries the tokenizer and the reasoning; here it is only asked the question.
+//
+// Two questions, one pass. Is every name a module READS bound somewhere in
+// that module? And does every name a module IMPORTS actually exist at the
+// other end? The second was added because the break battery caught the first
+// pass missing a renamed export: the import statement still binds the name,
+// so nothing is free — the failure is a link error that stops the module
+// evaluating at all, and the game does not boot.
+//
+// The corpus runs first. A tokenizer that has quietly stopped seeing template
+// interpolations would report a clean tree forever, so the gate proves the
+// instrument before it trusts the reading.
+{
+  const selfFailures = [...runSelfTests(), ...runLinkTests()];
+  assert.deepEqual(selfFailures, [], `the scope tokenizer passes its own corpus:\n  ${selfFailures.join('\n  ')}`);
+  const free = [];
+  let modules = 0;
+  for (const r of checkTree()) {
+    modules++;
+    for (const f of r.findings) free.push(`${r.file}:${f.line}  ${f.name} ${f.why ?? `(read ${f.count}×)`}`);
+  }
+  assert.deepEqual(free, [], `no module reads a name nothing binds, and no import asks for an export that is not there:\n  ${free.join('\n  ')}`);
+  assert.ok(modules >= 60, `and the walk actually found the tree (${modules} modules)`);
+  console.log(`   scopecheck: ${modules} modules · ${SELF_TESTS.length} syntax + ${LINK_TESTS.length} link cases · every name bound, every import answered`);
+}
 
 // --- Content coherence: every part references a real species + slot.
 for (const part of Object.values(content.parts)) {
@@ -8946,10 +8947,20 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const src = readFileSync(join(root, 'tools/smoke.js'), 'utf8');
     assert.ok(!/const SCREENS = \['ranch'/.test(src),
       'the guide gate no longer types the screen list out by hand');
-    // One derivation, not two: the agenda gate and the guide gate read the
-    // same helper, because two copies is how they disagreed in the first place.
-    assert.equal(src.match(/const SCREENS = \{/g)?.length ?? 0, 1,
-      'and only one place in the suite knows how to find the shell map');
+    // One derivation, not two: every gate that needs the screen list calls
+    // the same helper, because two copies is how they disagreed in the first
+    // place. R76 moved that helper out to `tools/handlers.js`, next to the
+    // surface walk that leans on it hardest, so the check follows it rather
+    // than pinning it to whichever file happened to hold it first.
+    // The needle is assembled rather than written, because a check that
+    // greps for a string is a check that matches ITSELF — this assertion
+    // reported smoke.js as a second parser on its first run.
+    const NEEDLE = `indexOf('const SCREENS` + ` = {')`;
+    const parsers = moduleFiles(root)
+      .map((f) => relative(root, f).replaceAll('\\', '/'))
+      .filter((f) => readFileSync(join(root, f), 'utf8').includes(NEEDLE));
+    assert.deepEqual(parsers, ['tools/handlers.js'],
+      `exactly one place knows how to find the shell map (${parsers.join(', ') || 'nowhere'})`);
   }
 
   // 2. Every screen the shell renders has something to say. This is the
@@ -15299,169 +15310,33 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 }
 
 // ---------------------------------------------------------------------------
-// R75 — EVERY BOUND HANDLER FIRES ONCE. This is the gate the walk that found
-// R75's ten small wrongs was itself running by hand, and the one R60 needed:
-// `opOdds` was removed from an import while two call sites remained, and the
-// live `ReferenceError` on the Jobs board went out through a 124-cell render
-// harness and a five-minute suite, because a handler body is dead code to
-// every gate in this file. The renders are exercised constantly here; the
-// bodies of the functions those renders BIND had never been executed once.
-//
-// The trick is a DOM stub that RECORDS rather than one that returns nothing.
-// Every other stub in this file answers `querySelectorAll` with `[]`, so the
-// binding loops iterate an empty list and nothing is ever registered. This
-// one answers from the HTML the screen actually painted: it reads the
-// `data-*` attribute the selector asks about straight out of `innerHTML`, so
-// the handlers fire holding the REAL ids the screen rendered, not invented
-// ones. A handler that looks its own row up in state finds it.
+// R76 — EVERY data-* HANDLER HAS BEEN FIRED ONCE. R75 built the first version
+// of this inline here: render each screen once, fire what that render bound,
+// assert nothing throws. It fired 70 handlers and reached 12 of the game's 42
+// `data-*` controls, because most of the surface is behind a click — a
+// sub-tab, a briefing, an overlay, a picker sheet, the arena, the settings
+// panel. R76 moved the walk to `tools/handlers.js` (where a break battery can
+// aim at it in seconds instead of after five minutes of balance sims) and
+// widened it to surfaces. The assertions stay here, because this is the file
+// that decides whether the build passes.
 {
-  const camel = (s) => s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-
-  // A class, so `x instanceof HTMLElement` is true for these and a handler
-  // takes the branch it takes in a browser rather than the else.
-  class StubEl {}
-  const makeEl = (dataset = {}, tag = 'button') => Object.assign(new StubEl(), {
-    tagName: tag.toUpperCase(), dataset, value: '', textContent: '', innerHTML: '',
-    hidden: false, checked: false, disabled: false, files: [],
-    style: {}, classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
-    addEventListener() {}, removeEventListener() {}, appendChild() {}, removeChild() {},
-    remove() {}, focus() {}, blur() {}, click() {}, scrollIntoView() {},
-    insertAdjacentHTML() {}, setAttribute() {}, getAttribute: () => null,
-    hasAttribute: () => false, closest: () => null, select() {}, setSelectionRange() {},
-    querySelector: () => makeEl(), querySelectorAll: () => [],
-    parentElement: null, offsetParent: null,
-    getBoundingClientRect: () => ({ width: 40, height: 40, top: 0, left: 0, right: 40, bottom: 40 }),
-  });
-
-  const recordingRoot = () => {
-    const bound = [];
-    let html = '';
-    const attrOf = (sel) => {
-      const m = String(sel).match(/\[data-([\w-]+)(?:=["']?([^"'\]]+)["']?)?\]/);
-      return m ? { name: m[1], value: m[2] ?? null } : null;
-    };
-    const collect = (sel) => {
-      const a = attrOf(sel);
-      if (!a) return [];
-      const out = [];
-      for (const m of html.matchAll(new RegExp(`data-${a.name}="([^"]*)"`, 'g'))) {
-        if (a.value !== null && m[1] !== a.value) continue;
-        const el = makeEl({ [camel(a.name)]: m[1] });
-        el.addEventListener = (type, fn) => bound.push({ type, fn, el, sel });
-        out.push(el);
-      }
-      return out;
-    };
-    const host = {
-      get innerHTML() { return html; },
-      set innerHTML(v) { html = String(v); },
-      querySelectorAll: collect,
-      querySelector: (sel) => {
-        const hit = collect(sel)[0];
-        if (hit) return hit;
-        const el = makeEl();
-        el.addEventListener = (type, fn) => bound.push({ type, fn, el, sel });
-        return el;
-      },
-      classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
-      addEventListener(type, fn) { bound.push({ type, fn, el: host, sel: 'root' }); },
-      style: {}, dataset: {}, hidden: false, appendChild() {}, remove() {},
-    };
-    return { host, bound };
-  };
-
-  // The handlers reach for a document and a location. Installed for the
-  // length of this gate and put back afterwards, so nothing downstream
-  // inherits a half-real DOM.
-  const saved = { doc: globalThis.document, loc: globalThis.location, el: globalThis.HTMLElement };
-  const overlay = recordingRoot();
-  globalThis.HTMLElement = StubEl;
-  globalThis.location = { reload() {}, search: '', href: '' };
-  globalThis.document = {
-    body: makeEl({}, 'body'),
-    documentElement: makeEl({}, 'html'),
-    activeElement: null,
-    createElement: (t) => makeEl({}, t),
-    querySelector: (sel) => (sel === '#overlay' || sel === '#picker' ? overlay.host : makeEl()),
-    querySelectorAll: () => [],
-    addEventListener() {}, removeEventListener() {}, contains: () => false,
-  };
-
-  try {
-    const now = t0 + 3 * HOUR;
-    const s = { ...newGameState(), seed: 4242, funds: 20000 };
-    s.facility = { theater: 2 };
-    s.lastTickAt = t0;
-    const grades = { cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'prime',
-      cobra_organ: 'standard', bear_hide: 'standard', goat_tail: 'standard' };
-    for (const [pid, g] of Object.entries(grades)) {
-      s.inventory.parts.push({ id: `h-${pid}`, partId: pid, grade: g,
-        donor: { name: 'Donor', species: pid.split('_')[0], stars: 3, extractedAt: t0 } });
-    }
-    const used = new Set();
-    const slots = Object.fromEntries(Object.keys(grades).map((pid) => {
-      const slot = content.parts[pid].slot;
-      let socket = slot; let n = 2;
-      while (used.has(socket)) socket = `${slot}${n++}`;
-      used.add(socket);
-      return [socket, `h-${pid}`];
-    }));
-    const made = spliceChimera(s, 'M', slots, content, t0);
-    assert.ok(made.ok, `handler-gate fixture splices: ${made.msg}`);
-    for (const [pid, g] of [['goat_head', 'standard'], ['bear_organ', 'prime']]) {
-      s.inventory.parts.push({ id: `h-sp-${pid}`, partId: pid, grade: g,
-        donor: { name: 'Spare', species: pid.split('_')[0], stars: 2, extractedAt: t0 } });
-    }
-    s.ranch = { ...s.ranch, stock: [], penCapacity: 8, animalCount: 0, seeded: true };
-    for (const sp of ['goat', 'bear', 'cobra']) s.ranch.stock.push(createAnimal(s, sp, content, t0));
-    s.dex = { parts: Object.keys(content.parts).slice(0, 8),
-      enemies: Object.keys(content.enemies).slice(0, 4),
-      beaten: Object.keys(content.enemies).slice(0, 2), traits: [], variants: [] };
-    s.discoveredCombos = Object.keys(content.combos).slice(0, 3);
-    s.chimeras[0].settleUntil = t0 - 1000;
-    // Every fold open, or the handlers behind them are never bound at all —
-    // the same reason R72's fixture forces them.
-    s.ui = { ...s.ui, collapsed: new Proxy({}, { get: () => false }) };
-
-    const ctx = { state: s, content, now: () => now, save: () => {}, refreshTicker: () => {},
-      pushNews: () => {}, onExtract: () => {}, goto: () => {}, applyTheme: () => {} };
-
-    let totalBound = 0;
-    const failures = [];
-    for (const { screen, fn, file } of shellScreenMap()) {
-      const mod = await import(`../${file}`);
-      const { host, bound } = recordingRoot();
-      try {
-        mod[fn](host, ctx);
-      } catch (err) {
-        failures.push(`${screen}: RENDER threw ${err.constructor.name}: ${err.message}`);
-        continue;
-      }
-      // Snapshot: several handlers re-render the screen, which binds a fresh
-      // set into the SAME array. Iterating it live never terminates.
-      const snapshot = bound.slice();
-      totalBound += snapshot.length;
-      for (const h of snapshot) {
-        const ev = { preventDefault() {}, stopPropagation() {}, key: 'Enter', shiftKey: false,
-          target: h.el, currentTarget: h.el };
-        try {
-          h.fn(ev);
-        } catch (err) {
-          failures.push(`${screen}: ${h.sel} [${h.type}] threw ${err.constructor.name}: ${err.message}`);
-        }
-      }
-    }
-    assert.deepEqual([...new Set(failures)], [], 'every bound handler on every screen fires without throwing');
-    // A floor, so a render that silently stops binding anything cannot pass
-    // this gate by having nothing to fire.
-    assert.ok(totalBound >= 60,
-      `the screens bind a real number of handlers (${totalBound}) — a collapse to nothing would pass vacuously`);
-    console.log(`   handlers: ${totalBound} bound across ${shellScreenMap().length} screens, every one fired`);
-  } finally {
-    globalThis.document = saved.doc;
-    globalThis.location = saved.loc;
-    globalThis.HTMLElement = saved.el;
-  }
+  const walk = await walkSurfaces(content);
+  assert.deepEqual(walk.failures, [],
+    `every handler on every surface fires without throwing:\n  ${walk.failures.join('\n  ')}`);
+  assert.deepEqual(walk.missed, [],
+    `every data-* the game paints has had a handler fired holding it (missed: ${walk.missed.join(', ')})`);
+  // Floors, so a walk that silently stops reaching anything cannot pass by
+  // having nothing left to check.
+  // Floors, so a walk that silently stops reaching anything cannot pass by
+  // having nothing left to check. `handlers.js` also fails any INDIVIDUAL
+  // surface that binds nothing, which is the check these cannot make: the
+  // audit found all three of these satisfied by the arena alone.
+  assert.ok(walk.totalFired >= 900,
+    `the surfaces bind a real number of handlers (${walk.totalFired})`);
+  assert.ok(walk.controls.length >= 30,
+    `and a real number of them are controls, not parameters (${walk.controls.length})`);
+  assert.ok(walk.surfaces >= 25, `across a real number of surfaces (${walk.surfaces})`);
+  console.log(`   handlers: ${walk.totalFired} fired across ${walk.surfaces} surfaces · ${walk.controls.length} controls pressed, ${walk.parameters.length} parameters carried`);
 }
 
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

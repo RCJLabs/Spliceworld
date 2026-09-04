@@ -1,5 +1,294 @@
 # PROGRESS
 
+## Session 99 — R76: the gate that would have caught R60 ✅
+
+**Acceptance criterion:** a free identifier in any module fails the build,
+every `data-*` handler has been fired once, and the battery carries one break
+per new gate — **all three pass**. `SAVE_VERSION` unchanged (**37**). `sw.js`
+cache **not** bumped, deliberately: no file the browser downloads changed.
+This milestone is entirely instrument.
+
+| gate | result |
+|---|---|
+| `npm run scopecheck` | ✓ — 66 modules, 61 syntax + 27 link cases, ~1 s |
+| `npm run handlers` | ✓ — 1150 fired across 58 surfaces, 34 controls + 7 parameters, 13 s |
+| `npm run battery` | ✓ — **15 breaks, 15 caught** (shipped, so the number is reproducible) |
+| `npm run smoke` | ✓ — including both new gates |
+| `npm run a11y` | ✓ — 46 controls at 380px across 8 views |
+| `npm run sim` | ✓ — 6324 battles, no degenerate builds |
+| browser QA (scratch, CDP) | ✓ — fresh save and a v36 → v37 migrated save, 0 console errors |
+
+### Measured before reading, and the entry was right for once
+
+Eight parallel agents each wrote their own analyzer and read every candidate
+by hand across the tree; so did I. **All nine passes agree: zero free
+identifiers today.** That is the answer the milestone wanted — the gate is
+for the next one, not for a backlog.
+
+The two historical bugs replay green on a copy of the tree:
+
+```
+campaign/ui.js:720        opOdds is not bound in this file (read 2×)
+campaign/campaign.js:566  infirmaryGrants is not bound in this file (read 1×)
+```
+
+### File-level on purpose, and the bias runs one way
+
+There is no parser in the box and none is coming (CLAUDE.md: no
+dependencies), so this is a hand-written tokenizer. That fact decides the
+design. It reports a name READ in a file and BOUND nowhere in it — a
+**file-level** question, not a scope-level one:
+
+- Scope-level ("read in A, bound only in sibling B") needs correct lexical
+  scoping for every binding form, and one mistake is a **false build failure
+  on correct code**. In a gate that fails the build that is worse than a
+  miss, because the fix for a false alarm is to stop trusting the gate.
+- File-level only needs the BINDING SET to be complete, so every ambiguous
+  construct is resolved by binding **more** names — which can only ever cost
+  a miss.
+
+Both target bugs are file-level, and so is every import trimmed past a live
+call site, which is the shape that actually recurs. R75's handler-firing gate
+is the other half of the net: it EXECUTES the bodies where a sibling-scope
+read would throw. The audit's own default-parameter false positive is fixed
+and pinned: `(a, b = a * 2)` binds both and reads `a`.
+
+### The battery found the hole, then the hole found a module
+
+Break 5 — rename an exported function, leave one call site — was **MISSED**,
+and correctly so: the import statement still binds the name, so nothing is
+free. The failure is a *link* error; the module never evaluates and the game
+does not boot. So the gate grew a second question: **does every imported name
+exist at the other end?** It follows `export * from` and `export { x } from`
+chains.
+
+It then immediately reported `main.js` importing `./data/loader.js` from
+nothing — because `data/` was in the walker's skip list, meant for JSON. One
+module had never been scanned at all. 64 modules became 65.
+
+Break 5 now reads:
+
+```
+campaign/ui.js:49  sparVerdict is imported from './warroom.js', which does not export it
+```
+
+### The instrument is tested, not the tree
+
+48 syntax cases and 14 link cases, run before the tree is read. A tokenizer
+that had quietly stopped seeing template interpolations would report a clean
+tree forever. Breaks 6 and 7 aim at the tokenizer itself — disable the
+interpolation scan, disable regex detection — and both go red on the corpus,
+not on the codebase.
+
+### R75's gate fired 70 handlers; this one fires 1150
+
+R75's gate rendered each of the six screens once and fired what that render
+bound — 70 handlers, its own printed number. Everything behind a click was
+out of reach: sub-tabs, the briefing, the arena, overlays, picker sheets, the
+settings panel.
+
+The walk now fires **1150 handlers across 58 surfaces**, covering **34
+controls pressed and 7 parameters carried**. That split is deliberate and it
+is the audit's doing: "every `data-*` handler has been fired" read stronger
+than the code proved, because seven of the 41 attributes are never a selector
+anywhere — they ride on a control and are read off `dataset`. The gate now
+makes the two claims separately and both are true.
+Three things made that possible, and two of them were harness bugs that had
+been silently costing coverage:
+
+- **The stub answered only `[data-x]` selectors.** `#thtr-frames button`,
+  `.pick-row` and `[data-action]` bound *nothing* — the frame chooser, the
+  picker sheet and the entire arena move bar were invisible, in the way that
+  looks exactly like success: no error, no handler, no failure. It has a real
+  (tiny) query engine now: comma groups, descendant chains,
+  tag/id/class/attribute, `:not([disabled])`.
+- **The stub handed each handler only the attribute it was selected by.** A
+  handler selected by `[data-act]` that reads `btn.dataset.care` got
+  `undefined` and took the else. It gets the whole tag's dataset now, plus
+  `disabled`, `value` and `id`.
+- **Each handler is fired against a screen rendered fresh for it.** Firing a
+  snapshot in sequence tests stale elements: it produced `#wr-launch` reading
+  `draftTarget.kind` after `#wr-back` had cleared it, a sequence no player
+  can make.
+
+Three fixture facts worth keeping, each found by the gate refusing to pass:
+
+- **0 of the 42 authored enemy units can be rehabilitated** — every one is a
+  squad or a machine, and "is not, in the end, an animal". A containment bay
+  stocked from the catalogue renders Salvage and nothing else, so the bay
+  fixture holds a generated rival chimera.
+- **The default save has one slot, which is the active one**, so Switch and
+  Delete are never drawn. The gate installs a two-slot registry.
+- **Folds are opened the way a player opens them** — render, read the fold
+  ids actually painted, open those, render again. R72's Proxy on
+  `ui.collapsed` was un-`structuredClone`-able, and New Slot crashed on it:
+  a harness artefact wearing a bug's clothes.
+
+### The audit found twelve real defects in the gates I had just written
+
+This is the fourth milestone running where an adversarial pass caught
+something in my own fresh code, and this time it was not close: **twelve
+confirmed defects across the two new tools**, three of them live FALSE PASSES
+in the very construct the gate exists to catch. Every one was reproduced
+before it was fixed, and every one now has a corpus case.
+
+**In the free-identifier pass — three keyword branches fired on property
+accesses.** A name token was tested for `class` / `catch` / `import` without
+first asking whether it followed a dot:
+
+```
+export const f = (op) => { if (op.demands.class) { return ghost(); } return 1; };   → []
+export const f = (p) => p.catch(() => ghost());                                     → []
+export const f = (cfg) => cfg.in / 2 + ghost / 3;                                   → []
+```
+
+Three real free identifiers, silently swallowed. `.class` appears throughout
+`campaign/`, `.catch(` is in the shell's own lazy loader, and the third makes
+the tokenizer read a division as a regex and eat the rest of the line. One
+missing guard — *a property spelled like a keyword is not that keyword* — and
+all three report correctly.
+
+**And one over-bind I had defended in a comment.** `import { a as b }` bound
+`a` as well as `b`, which I had written up as "the conservative reading, costs
+at most a miss". It costs exactly the R60 shape: a trim that leaves a rename
+behind, with the old name still read below. An import clause is the one
+binding form with no ambiguity, so it is now read exactly.
+
+**In the link pass — `export const f = …;` swallowed the rest of the file.**
+The declarator walk consumed the initializer and then kept scanning, so every
+name after the first `export const` joined the export set:
+
+```
+exports of that file: [ 'f', 'notExported', 'alsoNot', 'privateThing' ]
+```
+
+Which is to say the link pass was, tree-wide, passing almost anything. Fixed,
+plus renaming re-exports asking for the wrong name, `export { default } from`
+re-exporting nothing, `import { default as d }` asking for `d`, one `seen` set
+shared across sibling forwards, an unchecked side-effect import, and a
+`resolve` that clamped `..` past the tree root into a plausible-looking path.
+
+**In the DOM stub — nested queries were dead.** An element handed back by a
+query was not itself queryable, so a handler that reaches inside its own row
+bound nothing. Fixing that immediately failed the gate on the arena's "tap to
+skip" button, which paints a button into an element and then binds it — an
+element whose `innerHTML` is replaced has to become queryable again. Also
+fixed: selector-group order instead of document order, attribute operators
+(`~=`, `^=`, `$=`, `*=`, `|=`) parsed and then thrown away, only the first
+`:not()` honoured, child combinators parsed as tag names, single-quoted
+attributes dropped (their values becoming phantom attribute NAMES), and a
+`document`-level listener going nowhere — which is how the picker sheet's
+Escape-and-Tab focus trap had never been fired. That last fix is worth 15
+handlers on its own.
+
+**In the surface walk — 57 of the War Room's 72 handlers were never fired.**
+The worst one, and the one that would have shipped. The walk gives each
+handler a fresh *state*, but modules keep their own: `campaign/ui.js` holds
+`warTab`, `draftTarget` and `draftTeam` at module scope. Fire the Jobs tab on
+pass 7 and every later pass renders Jobs, so the handler list collapses from
+72 to 17, the loop indexes off the end, and `if (!h) return` swallows it —
+no failure, no counter, no line of output. Every Spar button, Assault, Defend
+and Rescue went unpressed while the gate printed a tick.
+
+Two changes, and the header comment's own premise is finally true one level
+up: each run imports a **fresh module instance** (`import('../x.js?run=N')`),
+and handlers are found by a **stable key** rather than by position, so a
+handler the probe saw and the run cannot find is a failure rather than a
+shrug. The fired count went from 1056 to **1150**.
+
+Three smaller ones alongside it: a `fanout` that matched zero controls
+deleted its whole surface family silently (it now fails, and immediately
+caught that the Vault has no picker field at all — a surface I had added on
+assumption); one `localStorage` was shared across the whole walk, so New Slot
+fired four times and Export, Import and Reset never did; and the three global
+floors were all satisfied by the arena alone, so every other surface could
+have stopped binding and still passed. Each surface must now bind something.
+
+### Four claims corrected, not defended
+
+The audit also read the prose against the code, which is the part I would
+have skipped:
+
+- *"can only ever cost a miss — never a false alarm"* was **false**. The
+  binding-set bias is one-directional, but the GLOBALS list is a denylist by
+  omission, so a real global missing from it is exactly a false alarm — which
+  is how `caches` was missing while `sw.js` passed anyway.
+- *"handlers.js EXECUTES the bodies where a sibling-scope read would throw"*
+  claimed the two gates tile. They do not. Measured with V8 coverage, the
+  walk executes **59% of blocks and 75% of named functions**, and never loads
+  `main.js`. The audit injected a sibling-scope `ReferenceError` and both
+  gates passed it. The comment now says so.
+- *"the long press arms a 500 ms setTimeout"* — it is **350 ms**
+  (`HOLD_MS`, `battle/ui.js:307`).
+- *"R75 reached 12 of 41 controls"* — a number I could not reproduce on
+  demand. Replaced with the one that is printed by R75's own gate: **70
+  handlers**.
+
+And the battery itself is now `tools/battery.js` rather than a scratch file,
+because the audit's fairest complaint was that a headline number nothing in
+the repo can reproduce is not evidence.
+
+### The break battery
+
+| # | break | caught by |
+|---|---|---|
+| 1 | R60 replayed: `opOdds` trimmed, two call sites live | `campaign/ui.js:720 opOdds is not bound` |
+| 2 | A1 replayed: `infirmaryGrants` behind an `??=` | `campaign/campaign.js:566` |
+| 3 | a typo inside a template interpolation | `lastMsgg is not bound` |
+| 4 | a DOM global in a logic module the sim runs | `battle/engine.js:1245 document is not bound` |
+| 5 | an export renamed, one call site left | *(missed → became the link pass)* |
+| 6 | the tokenizer stops seeing `${…}` | the corpus |
+| 7 | the tokenizer stops seeing regex literals | `regex literal is not division` |
+| 8 | a new control painted, nothing binds it | `data-nudge … no handler ever fired` |
+| 9 | a binder deleted, leaving a dead button | `data-treat … no handler ever fired` |
+| 10 | a handler body reads a name that does not exist | `ReferenceError: salvageUnitTypo` |
+| 11 | a control stops being rendered at all | `data-salvag … no handler ever fired` |
+| 12 | the stub loses descendant selectors | `theater:picker#6: cannot reach [data-picker][6]` |
+| 13 | a surface goes unreachable | `battle:briefing: cannot reach [data-node][0]` |
+| 14 | a marker grows a handler and stays exempt | `data-guide is listed as a marker … but ui/cards.js reads it` |
+| 15 | the link pass stops seeing `export const` | the link corpus |
+
+Breaks 14 and 15 were added after the audit prompt asked whether the
+exemption list was "a hole with a comment on it". It was, so the gate now
+proves it: `data-guide` and `data-slot` are exempt only while nothing in the
+tree reads them, and `data-screen` moved to a separate list — a real control
+this walk cannot reach (the shell's nav, bound in `main.js` at boot), named
+as covered by `tools/a11y.js` clicking all six tabs in a real browser
+instead. An admission, not a dismissal.
+
+Break 12 is worth a footnote: it was caught, but not for the reason I
+predicted. I expected the frame chooser to go uncovered; what actually
+happened is the picker fanout counted fewer fields and the walk said so. A
+catch is a catch, but the prediction was wrong and the note stays.
+
+### Two harness bugs of my own, both found by running it
+
+- **The walk hung** on its first fixpoint design — handlers re-render and
+  bind into the same array being iterated. Fresh-render-per-handler replaced
+  it, which is a better test anyway.
+- **A timer outlived the gate.** The arena's long press arms a 350 ms
+  `setTimeout`; it fired after the walk had restored the real (absent)
+  `document` and crashed the process *after* the suite printed its tick.
+  `installDom` now tracks and cancels every timer started under it.
+
+### Known issues
+
+- The walk's handler count differs by 3 between the standalone tool (1041)
+  and the suite (1038), because gates that run earlier in the suite leave
+  module state (`dexTab`, `warTab`) somewhere else. Coverage is asserted, not
+  the count, and the fanout presses every tab regardless — but the number is
+  not reproducible across the two entry points and I would rather write that
+  down than round it off.
+- `scopecheck` cannot see a name bound in a sibling scope. That is the
+  deliberate trade above; `handlers.js` covers it by execution.
+
+### Next session's first task
+
+R78 — the month lost unseen on `campaignWalk` seed 5150, where the world
+freezes while away. The away-gate already names it; the suite prints it as a
+known defect on every run, which is exactly the kind of line that stops being
+read.
+
 ## Session 98 — R75: the small wrongs the walk found ✅
 
 **Acceptance criterion:** each of the ten is fixed, and the handler-firing
