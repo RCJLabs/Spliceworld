@@ -6203,8 +6203,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // point was that these EXPLAIN the fight rather than adding to it.
     'battle/engine.js': null,
     // R81: what a creature IS, split from what happens when two of them
-    // fight. Same system, same note — the fight is where a player meets it.
-    'battle/statblock.js': 'battle',
+    // fight. Exempt for the same reason as the engine beside it — a player
+    // meets a statblock through the Pens, the Theater and the arena, never
+    // as a system of its own.
+    'battle/statblock.js': null,
     'battle/ai.js': null,
     'battle/moves.js': null,
     'battle/forecast.js': null,
