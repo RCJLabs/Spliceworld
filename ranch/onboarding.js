@@ -26,6 +26,7 @@ import { analyze } from '../splice/physiology.js';
 import { GRADE_INDEX } from '../splice/extract.js';
 import { feralTuning } from '../splice/feral.js';
 import { rushable } from '../splice/rush.js';
+import { taskforceEligible } from '../campaign/taskforce.js';
 
 export function onboardingSteps(state, content, now) {
   const caredOnce = state.ranch.stock.some((a) =>
@@ -221,6 +222,10 @@ export const GUIDE_HELPERS = {
   // settle, day one — and done once they have paid for one. `rushCount` is
   // the only thing the mechanic persists.
   rushableNow: (state, content, now) => rushable(state, content, now).length > 0,
+  // R87. Reachable the moment the State is in range — which is the moment
+  // before the first raid rather than during it, so the note explains the
+  // rules while there is still time to read them.
+  taskforceInRange: (state, content) => taskforceEligible(state, content),
   // "Caught" means it reached the roster, not that it reached a bay — the
   // guide teaches the whole route, so it is done when the route is walked.
   specimenCaught: (state) => state.chimeras.some((c) => c.rehabilitated),

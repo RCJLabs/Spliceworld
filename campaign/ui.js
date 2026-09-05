@@ -296,12 +296,17 @@ function renderMap(root, ctx) {
   const raidCard = !raid ? '' : (() => {
     const levy = levyOf(state, content);
     const enc = raidEncounter(state, content, raid);
+    // The card's own heading already says who it is, so the row does not
+    // repeat it: at 380px the first cut said "Compliance Task Force" three
+    // times inside a 356px column and wrapped the body into a ravine.
     return `
     <div class="encounter contested">
-      <div><strong>Compliance Task Force</strong> <span class="lineage">at the gate</span><br>
-      <span class="fine-print"><strong class="countdown">${fmtDuration(raidRemainingMs(raid, t))}</strong> before they serve papers · they leave with <strong>$${levy.fine}</strong>${
+      <div><strong>Unmarked vans at the gate</strong>${
+        enc?.escalation ? ` <span class="lineage">${Math.round(enc.escalation * 100)}% strength</span>` : ''
+      }<br>
+      <span class="fine-print"><strong class="countdown">${fmtDuration(raidRemainingMs(raid, t))}</strong> before they serve papers and leave with <strong>$${levy.fine}</strong>${
         levy.stock ? ` and ${levy.stock} of the herd` : ''
-      }${enc?.intel ? ` · ${enc.intel}` : ''}. Nothing of yours in the Pens is on the table.</span></div>
+      }. Nothing in the Pens is on the table.</span></div>
       <button type="button" data-raid="${raid.id}"${canFight ? '' : ' disabled'}>${renderIcon('shield')} ${canFight ? 'Defend the ranch' : noneFit}</button>
     </div>`;
   })();

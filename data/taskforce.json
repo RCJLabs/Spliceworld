@@ -23,7 +23,7 @@
       "spire_range"
     ],
     "blurb": "They are not here for the county. They are here for the barn.",
-    "intel": "Compliance Task Force at {pct}% strength."
+    "intel": "Compliance Task Force at {pct}% strength"
   },
   "lines": {
     "incoming": "A convoy of unmarked vans has parked at the end of your drive. Nobody has got out yet.",

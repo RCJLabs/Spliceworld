@@ -6032,6 +6032,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // R86. Paying a clock to hurry: a data file, a module, a button on three
     // screens and a first-use moment that arrives with the first settle.
     'rush',
+    // R87. The Compliance Task Force: a data file, a module, an alert above
+    // the subtab bar, two agenda rows and a first-use moment that arrives
+    // the day the State notices you.
+    'taskforce',
     'dex',
   ];
   const covered = new Set(guides.map((g) => g.id));
@@ -6062,6 +6066,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'breakout.json': 'breakout',
     'feral.json': 'feral',
     'rush.json': 'rush',
+    'taskforce.json': 'taskforce',
     'scars.json': 'scars',
     'temperament.json': 'temperament',
     'traits.json': 'genes',
@@ -6123,6 +6128,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'battle/veterancy.js': 'veterans',
     'splice/feral.js': 'feral',
     'splice/rush.js': 'rush',
+    'campaign/taskforce.js': 'taskforce',
     'campaign/sparring.js': 'veterans',
     'campaign/campaign.js': 'regions',
     'campaign/map.js': 'regions',
@@ -6350,6 +6356,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // born settled, so nothing before this step has been buyable — which is
     // the whole of what the walk is asked to prove about it.
     ['a clock worth paying for', () => { lab.ranch.eggs[0].hatchAt = t0 + HOUR; }, ['rush']],
+    // R87: and the State finally notices. Nothing earlier in this walk holds
+    // enough of the county at enough heat to be in range, which is what the
+    // steps above have been proving about it.
+    ['the State notices', () => {
+      lab.campaign.notoriety = 9999;
+      lab.campaign.heldNodes = Object.values(content.regions).flatMap((r) => r.nodes).map((n) => n.id);
+    }, ['taskforce']],
     // R82: and a lab that has been losing to you starts losing specimens.
     // Last, because it is the only note in this walk that is downstream of
     // BEATING a rival rather than of meeting one.
@@ -12373,6 +12386,30 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   assert.ok(walk.rushSpent > 0 && walk.minFunds > 0,
     `and paid real money for it without going broke (spent $${walk.rushSpent}, low-water $${walk.minFunds})`);
 
+  // 5c. R87 — THE ENDGAME HAS A STAKE AND A SINK.
+  //
+  //     Measured over six 180-day walks before the phase: the county fell on
+  //     median day 35, every facility track was maxed by day 28, and the next
+  //     145 days were 5.1 fights a day won 97% of the time while funds ran to
+  //     a median $864k with nothing to buy. Notoriety reached ~3,975 against
+  //     a ladder topping out at 600.
+  //
+  //     This walk is 45 days on one seed, so it cannot assert the 180-day
+  //     medians — what it CAN assert is that the second act exists and that
+  //     the ceiling holds, which is the half a per-commit gate can afford.
+  //     The medians live in the phase's own record.
+  assert.ok(walk.notoriety <= 600,
+    `notoriety cannot exceed the ladder's top rung (${walk.notoriety})`);
+  assert.ok(walk.raids > 0, `the State comes for the ranch (${walk.raids} raids)`);
+  //     `raidsHeld < raids` is deliberately NOT asserted here: a 45-day walk
+  //     sees four to seven raids, and a seed that happens to hold all of them
+  //     is a lucky seed rather than a broken build. That the raid is a fight
+  //     which can go either way is proved where it can be proved exactly —
+  //     the engine block above resolves one as a loss — and measured across
+  //     six 180-day seeds in the phase's own record (43 raids, 64% held).
+  assert.ok(walk.raidsHeld > 0, `and some are held (${walk.raidsHeld} of ${walk.raids})`);
+  assert.ok(walk.levied >= 0 && Number.isFinite(walk.levied), 'the levy ledger is real');
+
   // 6. Determinism: same seed, same walk. A pacing number that moves on its
   //    own is not a measurement.
   const again = campaignWalk(content, { seed: 2026, days: 45 });
@@ -16295,6 +16332,170 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     }
   }
   console.log(`   R86: four sealed clocks, one price — rushed and waited agree on the child, the animal, the hatchling and the temperament ($${spent} for all four)`);
+
+}
+
+// ---------------------------------------------------------------------------
+// R87 — THE COMPLIANCE TASK FORCE: A STAKE, A SINK, AND A CEILING.
+//
+// Measured over six 180-day walks before anything was built: the county falls
+// on median day 35, every facility track is maxed by median day 28 — BEFORE
+// dominion, so from day 29 there is nothing left to buy — and the next 145
+// days are 5.1 fights a day won 97% of the time while funds run to a median
+// $864k at +$5,128/day. Notoriety reached ~3,975 against a ladder whose top
+// rung is 600, so for 150 days it was a number that only went up.
+//
+// What ships is the ladder's own last line made real: Gen 4 announces that
+// they have stopped sending police and started sending procurement, so
+// procurement arrives, at the RANCH. This block holds the three rules that
+// make it fair rather than punishing — R9's schedule, R9's window, and a
+// levy that never touches a creature — plus the ceiling itself.
+{
+  const tf = await import('../campaign/taskforce.js');
+  const { tickWorld: tickWorld87 } = await import('../campaign/world.js');
+  const T = tf.taskforceTuning(content);
+
+  // 0. THE DEFAULTS AND THE DATA AGREE. R9's rule from contest.js, which
+  //    carries the same pairing for the same reason: the data wins, so a
+  //    module default that disagrees is a lie told to any Node tool holding
+  //    a partial bundle. These drifted the first time the escalation was
+  //    retuned, which is exactly how contest.js's copy earned its comment.
+  {
+    const authored = readJSON('data/taskforce.json').tuning;
+    for (const [k, v] of Object.entries(authored)) {
+      assert.deepEqual(T[k], v, `taskforce default "${k}" matches the shipped data`);
+    }
+  }
+  const mk = () => {
+    const s = { ...newGameState(), seed: 8701, funds: 100000 };
+    s.lastTickAt = t0;
+    s.dominionAt = t0 - 24 * HOUR;
+    s.campaign.notoriety = 4000;
+    s.ranch.stock = [{ id: 'a1', name: 'Bessie' }, { id: 'a2', name: 'Gordon' }, { id: 'a3', name: 'Pickles' }];
+    s.chimeras = [{ id: 'c0', name: 'Chompers', tokens: {}, frame: 'M', settleUntil: 0, bond: 50, xp: 0 }];
+    return s;
+  };
+
+  // 1. THE CEILING. Notoriety cannot exceed the ladder's top rung.
+  {
+    const s = mk();
+    tickWorld87(s, content, t0 + 60000);
+    assert.equal(s.campaign.notoriety, T.notorietyCap, `notoriety is capped at ${T.notorietyCap} (got ${s.campaign.notoriety})`);
+    assert.ok(s.news.some((l) => /as wanted as it is possible to be/.test(l)), 'and says so once');
+    const before = s.news.length;
+    tickWorld87(s, content, t0 + 120000);
+    assert.equal(s.news.length, before, 'and only once');
+  }
+
+  // 2. SCHEDULED, NOT ROLLED. Many small ticks and one big tick agree.
+  {
+    const coarse = mk();
+    tickWorld87(coarse, content, t0 + 60000);
+    const at = coarse.campaign.nextRaidAt;
+    assert.ok(at > t0, 'a raid is scheduled');
+    const fine = mk();
+    // Armed at the SAME moment as the coarse copy — the schedule is set
+    // relative to the tick that first finds the player in range, so two
+    // copies armed a minute apart are two different schedules, and comparing
+    // them would be measuring my fixture rather than the rule.
+    tickWorld87(fine, content, t0 + 60000);
+    const step = (at - (t0 + 60000)) / 400;
+    let raids = 0;
+    for (let x = t0 + 60000; x < at; x += step) { tickWorld87(fine, content, x); if (fine.campaign.raid) raids++; }
+    assert.equal(raids, 0, 'nobody is raided early by checking in often');
+    assert.equal(fine.campaign.nextRaidAt, at, 'and the schedule is the same one');
+  }
+
+  // 3. THE WINDOW OPENS ON SIGHT. A fortnight away costs nothing.
+  {
+    const s = mk();
+    tickWorld87(s, content, t0 + 60000);
+    const fortnight = t0 + 14 * 24 * HOUR;
+    tickWorld87(s, content, fortnight);
+    const raid = tf.activeRaid(s);
+    assert.ok(raid, 'they are at the gate on return');
+    assert.equal(raid.startedAt, fortnight, 'the window opens when the player looks (R9)');
+    assert.equal(tf.raidRemainingMs(raid, fortnight), T.windowHours * HOUR, 'and it is the FULL window');
+    // Funds MOVE while you are away — the world pays income — so the claim
+    // is not "the number is unchanged", it is that nothing was levied.
+    assert.equal(s.campaign.leviedTotal ?? 0, 0, 'and a fortnight away cost no levy at all');
+    assert.equal(s.campaign.raidCount ?? 0, 0, 'no raid came and went unseen');
+  }
+
+  // 4. A MISSED WINDOW LEVIES MONEY AND LIVESTOCK — NEVER A CREATURE.
+  {
+    const s = mk();
+    tickWorld87(s, content, t0 + 60000);
+    tickWorld87(s, content, t0 + 20 * HOUR);
+    const raid = tf.activeRaid(s);
+    assert.ok(raid, 'a raid is on the board');
+    const quote = tf.levyOf(s, content);
+    const fundsBefore = s.funds, stockBefore = s.ranch.stock.length, chimBefore = s.chimeras.length;
+    tickWorld87(s, content, raid.deadline + 60000);
+    assert.equal(tf.activeRaid(s), null, 'the raid is over');
+    // The fine is a fraction of the fund AT THE MOMENT IT IS LEVIED, and the
+    // same tick pays income first — so it is near the quote rather than equal
+    // to it, and the exact-quote claim belongs in the no-tick case below.
+    assert.ok(s.campaign.leviedTotal > 0, 'a levy was taken');
+    assert.ok(Math.abs(s.campaign.leviedTotal - quote.fine) < quote.fine * 0.05,
+      `and it is within 5% of what the card quoted ($${Math.round(s.campaign.leviedTotal)} vs $${quote.fine})`);
+    assert.ok(s.funds < fundsBefore, 'the fund is lighter');
+    assert.equal(s.ranch.stock.length, stockBefore - quote.stock, `${quote.stock} of the herd went for inspection`);
+    assert.equal(s.chimeras.length, chimBefore, 'and NOT ONE creature was taken');
+    assert.ok(s.news.some((l) => /Compliance Task Force served papers/.test(l)), 'and the wire says so');
+    assert.ok(s.campaign.nextRaidAt > raid.deadline, 'and the next one is scheduled');
+  }
+
+  // 5. WINNING BUYS QUIET.
+  {
+    const s = mk();
+    tickWorld87(s, content, t0 + 60000);
+    tickWorld87(s, content, t0 + 20 * HOUR);
+    const raid = tf.activeRaid(s);
+    const notorBefore = s.campaign.notoriety, fundsBefore = s.funds;
+    const res = tf.resolveRaid(s, content, raid.id, 'win', raid.startedAt + HOUR);
+    assert.equal(res.outcome, 'held', 'the raid is held');
+    assert.equal(tf.activeRaid(s), null, 'the board clears');
+    assert.equal(s.funds, fundsBefore, 'nothing was levied');
+    assert.equal(s.campaign.notoriety, notorBefore - T.notorietyRelief, `notoriety drops by ${T.notorietyRelief} — the spend it never had`);
+    assert.equal(s.campaign.raidsHeld, 1, 'and the record counts it');
+  }
+
+  // 6. LOSING COSTS THE SAME AS NOT TURNING UP.
+  {
+    const s = mk();
+    tickWorld87(s, content, t0 + 60000);
+    tickWorld87(s, content, t0 + 20 * HOUR);
+    const raid = tf.activeRaid(s);
+    const quote = tf.levyOf(s, content), fundsBefore = s.funds, chimBefore = s.chimeras.length;
+    const res = tf.resolveRaid(s, content, raid.id, 'loss', raid.startedAt + HOUR);
+    assert.equal(res.outcome, 'lost');
+    assert.equal(s.funds, fundsBefore - quote.fine, 'losing on purpose is not cheaper than turning up');
+    assert.equal(s.chimeras.length, chimBefore, 'and still no creature is taken');
+  }
+
+  // 7. THE ENCOUNTER IS REAL, AND ESCALATES.
+  {
+    const s = mk();
+    tickWorld87(s, content, t0 + 60000);
+    tickWorld87(s, content, t0 + 20 * HOUR);
+    const enc = tf.raidEncounter(s, content, tf.activeRaid(s));
+    assert.ok(enc && enc.waves?.length, 'the raid has a real encounter with waves');
+    assert.equal(enc.name, 'Defend the ranch');
+    assert.ok(enc.scaleOverride > 1, `and it is scaled above the authored fight (${enc.scaleOverride})`);
+    s.campaign.raidCount = 10;
+    assert.ok(tf.escalationOf(s, content) <= T.escalationMax, 'escalation has a ceiling');
+  }
+
+  // 8. OUT OF RANGE, NOTHING RUNS.
+  {
+    const s = mk();
+    s.dominionAt = null; s.campaign.notoriety = 10; s.campaign.heldNodes = [];
+    tickWorld87(s, content, t0 + 60000);
+    assert.equal(s.campaign.nextRaidAt, null, 'a player who has provoked nobody is not raided');
+    assert.equal(tf.activeRaid(s), null);
+  }
+  console.log(`   R87 raid engine: ceiling ${T.notorietyCap} · window ${T.windowHours}h opens on sight · levy ${T.fineFraction * 100}% + ${T.stockTaken} stock, never a creature`);
 
 }
 

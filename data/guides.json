@@ -267,6 +267,26 @@
       ]
     },
     {
+      "id": "taskforce",
+      "screen": "battle",
+      "order": 54,
+      "icon": "warning-triangle",
+      "title": "They have stopped sending police",
+      "body": "Take enough of the county and the State stops sending police. What it sends instead parks at the end of your drive and asks to see paperwork. A Task Force raid is a fight for the RANCH, not for a node \u2014 ignore it or lose it and they leave with a quarter of the slush fund and a couple of the herd. They never take a chimera; that is not what procurement is for. Beat one and your notoriety drops, which buys you quiet before the next lot arrive. The window opens when you first see it, so a fortnight away can never cost you one.",
+      "reachable": [
+        {
+          "helper": "taskforceInRange"
+        }
+      ],
+      "done": [
+        {
+          "path": "campaign.raidsHeld",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
       "id": "rush",
       "screen": "pens",
       "order": 25,

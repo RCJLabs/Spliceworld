@@ -57,6 +57,11 @@ import { rngStream } from '../util/rng.js';
 
 const HOUR = 3600000;
 
+// Mirrors data/taskforce.json, and the suite holds the two equal — R9 wrote
+// that rule for contest.js and it is the same rule here: the data wins, so a
+// default that disagrees with it is a lie told to whichever Node tool holds
+// a partial content bundle. These drifted once already, when the escalation
+// was tuned down twice in the data and not here.
 const DEFAULTS = {
   notorietyCap: 600,
   minHeld: 12,
@@ -66,16 +71,16 @@ const DEFAULTS = {
   cooldownMaxHours: 96,
   jitter: 0.2,
   windowHours: 21,
-  escalation: 0.15,
-  escalationPerRaid: 0.1,
-  escalationMax: 2.5,
+  escalation: 0.1,
+  escalationPerRaid: 0.05,
+  escalationMax: 2.0,
   fineFraction: 0.25,
   stockTaken: 2,
   notorietyRelief: 140,
   rewardScale: 2.4,
   pool: [],
   blurb: 'They are not here for the county. They are here for the barn.',
-  intel: 'Compliance Task Force at {pct}% strength.',
+  intel: 'Compliance Task Force at {pct}% strength',
 };
 
 export function taskforceTuning(content) {

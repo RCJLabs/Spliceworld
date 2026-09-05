@@ -252,6 +252,73 @@ const RUSH = ['node', '-e', `
   console.log('rush ✓  four sealed clocks, one price — rushed and waited agree');
 `];
 
+// R87 — the Compliance Task Force: a stake, a sink and a ceiling. Its own
+// gate for the usual reason — the smoke suite takes twelve minutes and this
+// is one save and six assertions, all of them on the rules that make a raid
+// fair rather than punishing.
+const RAID = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { tickWorld } = await import('./campaign/world.js');
+  const tf = await import('./campaign/taskforce.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const T = tf.taskforceTuning(content);
+  const t0 = 1700000000000, HR = 3600000;
+  const mk = () => {
+    const s = { ...newGameState(), seed: 8701, funds: 100000 };
+    s.lastTickAt = t0; s.dominionAt = t0 - 24 * HR;
+    s.campaign.notoriety = 4000;
+    s.ranch.stock = [{ id: 'a1', name: 'Bessie' }, { id: 'a2', name: 'Gordon' }, { id: 'a3', name: 'Pickles' }];
+    s.chimeras = [{ id: 'c0', name: 'Chompers', tokens: {}, frame: 'M', settleUntil: 0, bond: 50, xp: 0 }];
+    return s;
+  };
+  const bad = [];
+  { const s = mk(); tickWorld(s, content, t0 + 60000);
+    if (s.campaign.notoriety !== T.notorietyCap) bad.push('notoriety is not capped (' + s.campaign.notoriety + ')'); }
+  // R9: a schedule, not a roll.
+  { const a = mk(); tickWorld(a, content, t0 + 60000); const at = a.campaign.nextRaidAt;
+    const b = mk(); tickWorld(b, content, t0 + 60000);
+    let early = 0; const step = (at - t0 - 60000) / 300;
+    for (let x = t0 + 60000; x < at; x += step) { tickWorld(b, content, x); if (b.campaign.raid) early++; }
+    if (early) bad.push('checking in often summoned a raid early');
+    if (b.campaign.nextRaidAt !== at) bad.push('the schedule moved under many small ticks'); }
+  // R9's exemption: the window opens on sight.
+  { const s = mk(); tickWorld(s, content, t0 + 60000);
+    const away = t0 + 14 * 24 * HR; tickWorld(s, content, away);
+    const raid = tf.activeRaid(s);
+    if (!raid) bad.push('a fortnight away met no raid at all');
+    else if (raid.startedAt !== away) bad.push('the window did not open on sight');
+    else if (tf.raidRemainingMs(raid, away) !== T.windowHours * HR) bad.push('and it was not the full window');
+    if ((s.campaign.leviedTotal ?? 0) > 0) bad.push('a fortnight away was levied'); }
+  // The levy takes money and livestock and NEVER a creature.
+  { const s = mk(); tickWorld(s, content, t0 + 60000); tickWorld(s, content, t0 + 20 * HR);
+    const raid = tf.activeRaid(s); const q = tf.levyOf(s, content);
+    const chim = s.chimeras.length, stock = s.ranch.stock.length;
+    tickWorld(s, content, raid.deadline + 60000);
+    if (!(s.campaign.leviedTotal > 0)) bad.push('a missed window cost nothing');
+    if (s.chimeras.length !== chim) bad.push('the State took a CREATURE');
+    if (s.ranch.stock.length !== stock - q.stock) bad.push('the herd is wrong'); }
+  // Winning buys quiet; losing costs the same as not turning up.
+  { const s = mk(); tickWorld(s, content, t0 + 60000); tickWorld(s, content, t0 + 20 * HR);
+    const raid = tf.activeRaid(s); const n0 = s.campaign.notoriety, f0 = s.funds;
+    tf.resolveRaid(s, content, raid.id, 'win', raid.startedAt + HR);
+    if (s.funds !== f0) bad.push('a held raid was levied anyway');
+    if (s.campaign.notoriety !== n0 - T.notorietyRelief) bad.push('winning bought no quiet');
+    const l = mk(); tickWorld(l, content, t0 + 60000); tickWorld(l, content, t0 + 20 * HR);
+    const r2 = tf.activeRaid(l); const lf = l.funds;
+    tf.resolveRaid(l, content, r2.id, 'loss', r2.startedAt + HR);
+    if (!(l.funds < lf)) bad.push('losing on purpose was cheaper than turning up'); }
+  // Out of range, nothing runs.
+  { const s = mk(); s.dominionAt = null; s.campaign.notoriety = 10; s.campaign.heldNodes = [];
+    tickWorld(s, content, t0 + 60000);
+    if (s.campaign.nextRaidAt != null || tf.activeRaid(s)) bad.push('a player who has provoked nobody was raided'); }
+  if (bad.length) { console.error('raid ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('raid ✓  scheduled, opened on sight, levied in money and never in creatures');
+`];
+
 const VERBOSE = process.argv.includes('--verbose');
 
 // The R78 replay, at the unit level. A month away with a convoy already at
@@ -1102,6 +1169,46 @@ const BREAKS = [
     to: '  for (const q of []) {',
   },
 
+  // --- gate: raid (the State comes for the ranch, fairly) ------------------
+  {
+    // R9's first rule, broken the way it is always broken: a roll per tick,
+    // so the player who checks in often is raided more often.
+    n: 80, gate: RAID, name: 'the raid schedule becomes a per-tick roll',
+    file: 'campaign/taskforce.js',
+    anchor: '  if (now < cam.nextRaidAt) return { news, levied };',
+    to: '  if (now < cam.nextRaidAt && ((now / 60000 | 0) % 7) !== 0) return { news, levied };',
+  },
+  {
+    // R9's exemption removed: the window is back-dated to when they were
+    // scheduled, so a fortnight away arrives to find the levy already taken.
+    n: 81, gate: RAID, name: 'the window stops opening on sight, so being away is billed',
+    file: 'campaign/taskforce.js',
+    anchor: '    startedAt: now,\n    deadline: now + Math.round(t.windowHours * HOUR),',
+    to: '    startedAt: cam.nextRaidAt,\n    deadline: cam.nextRaidAt + Math.round(t.windowHours * HOUR),',
+  },
+  {
+    // The one thing the design refuses. Zero death language and Law 3 in one
+    // line: procurement takes money and livestock, never a creature.
+    n: 82, gate: RAID, name: 'the levy starts taking creatures as well',
+    file: 'campaign/taskforce.js',
+    anchor: '  state.campaign.raid = null;\n  state.campaign.raidCount',
+    to: '  state.chimeras = (state.chimeras ?? []).slice(1);\n  state.campaign.raid = null;\n  state.campaign.raidCount',
+  },
+  {
+    n: 83, gate: RAID, name: 'the notoriety ceiling stops holding',
+    file: 'campaign/taskforce.js',
+    anchor: '  if (before <= t.notorietyCap) return false;',
+    to: '  if (before <= t.notorietyCap * 100) return false;',
+  },
+  {
+    // Winning has to buy something, or the raid is a tax with a fight
+    // attached rather than a rhythm the player manages.
+    n: 84, gate: RAID, name: 'holding the ranch stops buying any quiet',
+    file: 'campaign/taskforce.js',
+    anchor: '  cam.notoriety = Math.max(0, (cam.notoriety ?? 0) - t.notorietyRelief);',
+    to: '  cam.notoriety = Math.max(0, cam.notoriety ?? 0);',
+  },
+
   // --- gate: boot (the game reaches the screen without its pictures) -------
   {
     n: 61, gate: BOOT, name: 'the geometry goes back into the round the first paint waits on',
@@ -1200,7 +1307,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -1213,7 +1320,8 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                   : gate === GRADE ? 'every part at every grade, sharpened and nothing more'
                     : gate === FERAL ? 'a neglected creature warned, answered, and given back'
                       : gate === RUSH ? 'a rush buys time and nothing else'
-                        : gate.join(' ');
+                        : gate === RAID ? 'the State comes for the ranch, fairly'
+                          : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }

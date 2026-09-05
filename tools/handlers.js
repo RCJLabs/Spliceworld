@@ -195,6 +195,14 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       scheduledAt: t0, deadline: now + 3 * HOUR, gen: 1 }];
     s.campaign.captives = [{ id: 'h-cap', chimera: structuredClone(s.chimeras[0]),
       capturedAt: t0, deadline: now + 5 * HOUR, captor: null }];
+    // R87 — the Compliance Task Force at the gate, so the War Room paints its
+    // alert and this walk presses `data-raid`. Written the way the tick
+    // writes one rather than invented: the same fields, so a renamed field
+    // breaks the fixture instead of quietly exempting it.
+    s.campaign.notoriety = 9999;
+    s.campaign.nextRaidAt = t0;
+    s.campaign.raid = { id: 'raid-0', encounterId: 'military_response', scheduledAt: t0,
+      startedAt: t0, deadline: now + 4 * HOUR, escalation: 1.15 };
     s.dominionAt = t0;
     s.gauntletBeaten = [];
 

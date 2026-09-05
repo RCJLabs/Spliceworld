@@ -33,6 +33,7 @@ import { dirname, join, relative } from 'node:path';
 import { indexContent } from '../render/renderer.js';
 import { feralTuning } from '../splice/feral.js';
 import { rushTuning } from '../splice/rush.js';
+import { taskforceTuning } from '../campaign/taskforce.js';
 // R85: derived, not named — see data/loader.js.
 import { CONTENT_FILES as FILES } from '../data/loader.js';
 import { SAVE_VERSION } from '../save/save.js';
@@ -91,6 +92,13 @@ export function shippedNumbers() {
     // data fails here rather than leaving the spec quoting the old figure.
     'rush base dollars': rushTuning(content).base,
     'rush dollars per hour': rushTuning(content).perHour,
+    // R87 — §3.9 states what the endgame costs, so R77's rule applies to all
+    // three of its numbers. Read through the same function the tick and the
+    // War Room card read, so retuning the raid in data fails here rather
+    // than leaving the spec quoting the old figure.
+    'notoriety ceiling': taskforceTuning(content).notorietyCap,
+    'task force levy percent': Math.round(taskforceTuning(content).fineFraction * 100),
+    'task force window hours': taskforceTuning(content).windowHours,
     // Rolled per capture in campaign.js. Read the literal rather than
     // restating it, so widening the window fails here.
     'dissection hours': (readFileSync(join(root, 'campaign/campaign.js'), 'utf8')

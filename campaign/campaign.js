@@ -13,7 +13,7 @@ import { attend } from '../splice/feral.js';
 import { recordRivalResult, scoutStable } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';
-import { resolveRaid } from './taskforce.js';
+import { resolveRaid, capNotoriety } from './taskforce.js';
 import { tickContests, resolveContest, isContested } from './contest.js';
 import { resolveBreakout } from './breakout.js';
 import { playerLine, rivalLine } from './monologue.js';
@@ -603,6 +603,13 @@ export function resolveBattle(state, battle, content, now) {
       emitNews(state, content, 'last_stand', { creature: only.name });
     }
   }
+
+  // R87 — the ceiling, here as well as in the tick. A conquest writes
+  // notoriety and the War Room re-renders straight afterwards WITHOUT a
+  // tick, so the tick alone left a window in which the player could read a
+  // number above the cap. Measured: a 45-day walk reported 690 against a
+  // ceiling of 600. Same function, both call sites.
+  capNotoriety(state, content);
 
   return detail;
 }

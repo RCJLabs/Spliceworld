@@ -113,6 +113,8 @@ BREED stock (genetics raise the ceiling)
 ### 3.9 Real-World Timers (offline-computed)
 Incubation, growth stages, splice settling, injury recovery, dissection countdowns, region income. All computed from timestamps on app open — no background process, PWA-safe.
 
+**The second act (R87).** Conquest used to be the end: measured over six 180-day walks, the county fell on median **day 35**, every facility track was maxed by median **day 28** — *before* dominion, so from day 29 there was nothing left to buy — and the next 145 days were **5.1 fights a day won 97% of the time** while funds ran to a median **$864k**. So the ladder's own last line is made real. Threat Generation 4 announces that they have stopped sending police and started sending procurement, and **notoriety is capped at that top rung** — you cannot be more wanted than maximally wanted. Past it, or once the county is yours, the **Compliance Task Force** comes for the **ranch** rather than for a node: a scheduled raid on R9's two rules (a timestamp, never a per-tick roll; a window that opens *when you see it*, so a fortnight away can never cost you one). Ignore it or lose it and they levy **25%** of the slush fund and take a couple of the herd — money and livestock, **never a creature**, both recoverable. Beat it and your notoriety falls, which is the spend notoriety never had. Money finally has somewhere to go: a **tier IV** on every facility track that still had a knob to turn ($480k together) and **Gauntlet purses at $26k–$90k** instead of the $400–$900 they were set at before anyone measured the economy that reaches them. Measured after: day-180 funds **$864k → $176k**, notoriety **3,975 → 106**, and a median **43 raids at 64% held**.
+
 **Paying a clock to hurry (R86).** Every *sealed* clock can be bought out by the hour at the Infirmary's rate — a **$25** call-out plus **$18** for every hour left. Sealed means the answer is already in the save when the clock starts, so a rush buys time and never a different creature: a settling chimera, the Chaos Vat, the Resequencer and an incubating egg, and smoke proves it by decanting a rushed vat and a waited one and comparing the children. Nothing else is for sale, as a rule rather than an omission: training and care cooldowns are where bond and grade come from (Law 3), growth is the animal, a rehab programme is its curriculum, a job is its duration, and the world's own clocks — convoys, dissections, the agitation window, a breakout — are threats, not waits. There is no second currency. The game's one economy pays for it, and the waits are short enough (22.5 min–3 h settle, 2 h tank, under an hour of incubation) that the choice is a real one rather than a toll.
 
 ### 3.10 Facility (menu-based)
@@ -142,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 40
+- save version: 41
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -150,6 +152,9 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - feral window hours: 24
 - rush base dollars: 25
 - rush dollars per hour: 18
+- notoriety ceiling: 600
+- task force levy percent: 25
+- task force window hours: 21
 - dissection hours: 9-18
 
 ### 4.1 Roster — 41 Species *(25 at Wave 1; A3 took it to 40 and R6's variants to 41)*
@@ -268,7 +273,7 @@ Bleed, Venom (stacking), Stun, Sleep, Trap, Slow, Knockback(switch), Taunt, Guar
 2. **Balance space is astronomical.** Mitigation: keyword system + M4.5 harness from the start; grades multiply, never add new mechanics.
 3. **Timer fatigue / chore feeling.** Mitigation: soft decay floors, generous early timers, paid rushes on every sealed clock (R86 — measured first: a 180-day walk never once had nothing productive to do, so what shipped is agency over the short waits rather than a second economy), and nothing *breaks* from absence — you return to grown creatures, not dead ones.
 4. **Consumption guilt breaking the cartoon tone.** Mitigation: graduation framing, lineage tracking, zero death language anywhere in UI copy.
-5. **Endless mode going stale.** Mitigation: AI director + variants + region contestation are the designed content engines; ship the tracking stub in v0.1 so data exists when the director lands.
+5. **Endless mode going stale.** Mitigation: AI director + variants + region contestation were the designed content engines — and R87 measured what they actually produce past dominion (5.1 fights a day won 97% of the time, 96% of them at a flat 100%): a schedule, not a second act. What answers the risk is R87's Compliance Task Force, the notoriety ceiling that triggers it, and money sinks that give the endgame economy somewhere to go.
 
 ## 9. Post-v0.1 Backlog (ordered)
 Rival geneticists (regional, gym cadence) → AI director activation → L frames & Theater T2 → full combo set → variants via mutation → rehabilitation of captured chimeras (shipped) → region contestation (shipped) → monologue/story pass on the profile schema (shipped) → non-combat operations (shipped) → chaos-breeding chimeras (shipped) → chimera extraction & temperament (shipped) → injury scarring (shipped) → async ghost defenses (multiplayer "later").
@@ -1647,7 +1652,7 @@ The queue is a proposal: prune it before starting R63.
     heading with a suffix still matched the prefix, which was the block still
     being there rather than a hole in the gate.
 
-### 9.5 Fifth audit (R84–R86) — queue R87–R101
+### 9.5 Fifth audit (R84–R86) — queue R87–R101 · **R87 shipped**
 
 Run after R86, against a game with four closed audits and R77's three gaps
 closed behind it. Same rule as the other four — every line names the
@@ -1663,34 +1668,78 @@ not play a third of it.** Fifteen phases follow, medium to large, four of
 them overhauls. Each carries its evidence and a *Done when* the suite can
 check.
 
-**Overhauls.**
+**Overhauls.** *(R87 shipped; R88–R90 remain.)*
 
-- **R87 — The endgame: the county falls on day 40 and the game keeps going
-  for 140 more.** Measured on seed 4242: dominion on **day 40.1** (25–40
-  across seeds); every facility track maxed by **day 30**; funds **$13k on
-  day 30, $175k on day 60, $861k on day 180** — about $5.7k a day with
-  nothing left to buy; notoriety **3,833**, uncapped, unread past Threat Gen
-  3. After dominion the walker fights **5.0 times a day**, and 96% of those
-  fights (157 breakouts, 417 spars, 18 rescues) are won at **100%**; only 20
-  rival duels (45%) and 93 defences (92%) carry any doubt. The agenda offers
-  the same ten rows ~100% of the time from day 60 on — "always something to
-  do" held, and it is the same ten things. §8 risk 5 named the director,
-  variants and contestation as the content engines for endless mode; measured,
-  they produce a schedule, not a second act. Proposed, large: a second act
-  that changes the *rules* rather than the numbers. (a) **The State
-  notices** — after dominion, notoriety finally does something: it summons a
-  task force whose convoys target the *ranch* (a home-defence encounter that
-  risks stock and vials, not nodes), the first fight after day 40 with
-  something to lose. (b) **Money sinks with teeth** — Theater tier 3 (an
-  eighth socket, so the seven-species build the instability scale was tuned
-  for is buildable on purpose), a Menagerie that sells the species the Dex
-  has never seen, and lab prestige bought for cash. (c) **A run boundary** —
-  "Relocate the lab": new game plus with one legacy pick (a bloodline, a
-  philosophy perk, a named veteran), so the 140 days have an ending the
-  player chooses. *Done when: after dominion, a 180-day walk fights at least
-  once a day with a win rate under 90%, funds on day 180 are under 10× funds
-  on day 60, and the agenda shows two rows after dominion that did not exist
-  before it.*
+- **R87 — The endgame.** ✅ *Shipped.* Re-measured over six 180-day walks
+  before anything was built, and it corrected three claims in the audit
+  entry's own text. The county falls on **median day 35**; every facility
+  track is maxed by **median day 28** — *before* dominion, so from day 29
+  there is nothing left to buy, ever; funds run to a median **$864k** at
+  **+$5,128/day**; and the next ~145 days are **5.1 fights a day won 97% of
+  the time**, 96% of them at a flat 100%. Two corrections: the threat ladder
+  has a **Gen 4 at 600** (the entry said it topped out at Gen 3), and **the
+  Gauntlet already was a second act** — four exhibitions, opened at dominion,
+  genuinely hard (0/100/56/0% autoplayed by a day-60 A-team), which the
+  walker had entered **zero** times in every walk this harness has ever run
+  and which paid **$400–$900** into that economy.
+  - **The answer was already written, in the ladder's own last line.** Gen 4
+    announces *"they have stopped sending police and started sending
+    procurement."* So procurement arrives. Notoriety is **capped at 600** —
+    you cannot be more wanted than maximally wanted — and past it, or once
+    the county is yours, the **Compliance Task Force** comes for the **ranch**
+    rather than for a node. Every other threat in the game costs a node, a
+    purse or an opportunity, and by dominion the player holds every node and
+    cannot spend their money, so none of them is a stake. The barn had never
+    once been in danger.
+  - **R9's two rules, unchanged, because they are why contestation is fair.**
+    The next raid is a scheduled timestamp, never a per-tick roll. The window
+    opens **when you see it** — R9's own exemption in the R65 sweep, the one
+    R85 took for a creature — so a fortnight away can never cost a levy you
+    were given no chance to answer.
+  - **What it costs is money and livestock, never a creature.** A Compliance
+    Levy of **25%** of the slush fund — a fraction rather than a figure,
+    precisely so it scales with the runaway economy it exists to drain — and
+    a bounded number of animals off for inspection. Both recoverable; zero
+    death language; everyone is very polite about it. Beating one drops
+    notoriety, which is the **spend** notoriety never had, and makes raids a
+    rhythm the player manages rather than a tax they pay.
+  - **Money finally has somewhere to go.** A **tier IV** on the four facility
+    tracks that still had a knob to turn — **$480k** together, most of a
+    campaign's bank, and a pure data edit because the facility system was
+    already fully data-driven. Theater and Scanner deliberately get none:
+    Theater's next step is an eighth socket and Scanner's two grants are both
+    already true, so both need an engine change, and a level that grants
+    nothing is a price with no purchase behind it. **Gauntlet purses
+    $400–$900 → $26k–$90k**, and the walker now fights the four exhibitions.
+  - **Two agenda rows**: *defend the ranch* (above even R85's feral row — the
+    only clock in the game that bills you a quarter of the bank for ignoring
+    it) and *answer an exhibition* (unreachable from any screen but the Labs
+    tab since R42).
+  - **Tuned by measurement, twice, and the first two cuts were both wrong.**
+    Drawing from the Spire's top two shelves at up to 2.5× an A-team held
+    **17 of 41** — 41% is not a fight you can lose, it is a fight you usually
+    lose, and a stake the player cannot meet is just a tax. Backing off
+    overshot to **89%**, a formality with a countdown. Settled at **64%**.
+    The walker also had to stop head-butting a wall: its first cut retried
+    whichever exhibition was open on every tick it could field a team, and
+    one seed entered the same fight **182 times**, losing 98%.
+  - **Measured after, six seeds:** funds day 180 **$864k → $176k**; notoriety
+    **3,975 → 106**; raids **0 → 43 median, 64% held, $403k levied**;
+    exhibitions fought **0 → 4**; and the endgame agenda shows **raid** and
+    **gauntlet** where no mid-game save has either.
+  - **Gates:** an R87 block in smoke and a fifteenth battery gate with breaks
+    80–84 (the schedule becoming a roll, the window back-dating, the levy
+    taking a creature, the ceiling failing, and winning buying no quiet). All
+    five caught. `SAVE_VERSION` 41.
+  *Done when — re-derived, because the entry's own criterion was
+  part-vacuous against the shipped game (its funds test passed 6/6 already,
+  and its fight test passed on 1/6 by seed noise): across six seeds the
+  median campaign faces 40+ Task Force raids and holds between half and
+  85% of them; median day-180 funds fall under a quarter of the $864k the
+  shipped game banked; and two agenda rows appear in the endgame that no
+  mid-game save has shown.* ✅ **43 raids at 64% · $176k (20%) · raid and
+  gauntlet.**
+
 - **R88 — The battle screen charges full price for free fights.** A battle
   is **8.7 turns, 9 player decisions and ~25 beats** (measured, 20 pairings at
   tier 1), and the arena replays every beat with a per-kind timer and a

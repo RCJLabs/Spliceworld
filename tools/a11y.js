@@ -134,6 +134,18 @@ async function fixtureSave() {
   // back that the first escape is already overdue.
   s.campaign.heldNodes = ['barn_perimeter', 'downtown'];
   s.campaign.notoriety = 9999;
+  // R87 — a raid at the gate, so the Task Force alert is measured at 380px
+  // like every other control. It sits above the subtab bar with the
+  // counter-offensives, which is the one place R15 says a billing countdown
+  // has to be.
+  // …and the county, because the Task Force only comes for a player it is in
+  // range of. Two held nodes is not in range, so the first tick stood the
+  // raid down and the gate measured ONE FEWER control than before rather
+  // than one more — which is how this was caught.
+  s.dominionAt = now - 24 * 3600000;
+  s.campaign.nextRaidAt = now;
+  s.campaign.raid = { id: 'raid-0', encounterId: 'military_response', scheduledAt: now,
+    startedAt: now, deadline: now + 4 * 3600000, escalation: 1.15 };
   s.campaign.rivals = { mantissa: { defeats: 2, losses: 0, lastMetAt: now } };
   const { tickBreakouts } = await import('../campaign/breakout.js');
   tickBreakouts(s, content, now, now - 24 * 3600000);
