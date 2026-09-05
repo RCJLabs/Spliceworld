@@ -1386,6 +1386,14 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   // constantly, so it is exactly the player this must not touch.
   const feralSeen = new Set();
   const feralBays = new Set();
+  // R87 — every specimen the Wing has EVER graduated, by id, not the ones
+  // still standing at the end. A rehabilitated creature carries its old
+  // lab's grades, so the walker's stable cap dismantles it as soon as the
+  // Theater builds better — which means a survivor count measures how long
+  // the walk ran, not whether the capture chain works. R83 asserted on the
+  // survivors and R87 moved dominion later, so the same working chain
+  // started reporting zero.
+  const rehabEver = new Set();
 
   for (let h = 0; h <= days * 24; h += stepHours) {
     if (h > awayStart && h < awayEnd) continue; // the app is closed
@@ -1395,6 +1403,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     state.__walkIncome = (state.__walkIncome ?? 0) + incomePerDay(state, content) * ((now - (state.lastTickAt ?? now)) / WALK_DAY);
     tick(state, content, now);
     for (const c of state.chimeras) if (c.agitatedAt) feralSeen.add(c.id);
+    for (const c of state.chimeras) if (c.rehabilitated) rehabEver.add(c.id);
     for (const b of state.campaign.containment ?? []) if (b.feral) feralBays.add(b.id);
     if (snapshotDays.includes(h / 24)) snapshots[h / 24] = snap(h / 24);
 
@@ -1482,6 +1491,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     bays: (state.campaign.containment ?? []).length,
     bagged: (state.__walkLog ?? []).reduce((n, e) => n + (e.bagged ?? 0), 0),
     rehabbed: state.chimeras.filter((c) => c.rehabilitated).length,
+    rehabbedEver: rehabEver.size,
     // R85: how many of the walker's creatures ever paced their pen, and how
     // many it actually lost to it. Both should be zero for a walker that
     // plays every day; the away-runs are where the mechanic is supposed to

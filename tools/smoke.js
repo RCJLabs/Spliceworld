@@ -13841,22 +13841,28 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // assertion, which is how this one got written properly.
     assert.ok(shapes.every((w) => w.bagged >= 10),
       `the Containment Cannon is fired (${shapes.map((w) => w.bagged).join(', ')} bagged)`);
-    // Counted at the moment the county falls. A walk continued PAST that
-    // point recycles them: measured on seed 4242 over a full 180 days, 125
-    // distinct specimens pass through the roster, it peaks at 8 held at
-    // once, and 0 remain at the end — the walker's stable cap dismantles
-    // them, because a rehabilitated specimen carries its old lab's grades
-    // and those are worse than what the Theater builds by then. That is the
-    // walker's policy rather than a defect, and it is why this is asserted
-    // where it is asserted.
-    assert.ok(shapes.every((w) => w.rehabbed >= 1),
-      `and somebody else's science ends up on the roster (${shapes.map((w) => w.rehabbed).join(', ')} rehabilitated)`);
+    // Counted as specimens the Wing has EVER graduated, not as survivors on
+    // the roster. A rehabilitated specimen carries its old lab's grades, so
+    // the walker's stable cap dismantles it as soon as the Theater builds
+    // better — measured on seed 4242, 125 distinct specimens pass through
+    // and 0 remain at day 180. R83 asserted on the survivors and read 1, 1,
+    // 1, 1; R87 pushed dominion from day 35 to day 39-54, gave that recycling
+    // longer to run, and the same working chain reported 1, 0, 0, 0. A
+    // survivor count measures how long the walk ran. This counts the chain.
+    assert.ok(shapes.every((w) => w.rehabbedEver >= 1),
+      `and somebody else's science ends up on the roster (${shapes.map((w) => w.rehabbedEver).join(', ')} rehabilitated)`);
     // R25 priced $24,000 of facility depth and the walk had never bought a
-    // dollar of it. Every track maxes on every seed now, which is its own
-    // finding — the depth is real but a 180-day campaign exhausts it.
+    // dollar of it. R83 then measured every track maxing on every seed by
+    // day 28 — real depth, exhausted before the county even fell, which is
+    // half of why R87 exists. R87 added a tier IV to the four tracks that
+    // still had a knob to turn ($480k together), so the ceiling is 21 rather
+    // than 17 and the walk is NO LONGER expected to reach it by dominion:
+    // that is the sink working, so the floor is what this asserts.
     const levels = shapes.map((w) => Object.values(w.facility ?? {}).reduce((a, b) => a + b, 0));
     assert.ok(levels.every((n) => n >= 12),
-      `the lab is actually built (summed track levels ${levels.join(', ')}; six tracks max at 17)`);
+      `the lab is actually built (summed track levels ${levels.join(', ')}; six tracks now max at 21)`);
+    assert.ok(levels.some((n) => n < 21),
+      `and the endgame still has something left to buy (${levels.join(', ')} of 21)`);
   }
 
   // 3. What the walk is sensitive to — and what it is not. The audit filed
