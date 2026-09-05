@@ -1403,6 +1403,9 @@ body.in-battle .ticker { font-size: 0.66rem; }
 
 /* --- Breeding & Incubator (M6) --- */
 .egg-wrap { flex: 0 0 44px; }
+/* R86: the Hurry button sits beneath its egg's row, pulled up to read as part of it. */
+.egg-rush { margin: -4px 0 10px; }
+.egg-rush .care-train { margin: 0; }
 .egg { width: 44px; height: auto; display: block; }
 
 /* --- Splice-Dex, onboarding, mute (M7) --- */

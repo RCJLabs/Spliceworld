@@ -102,6 +102,13 @@ coverage.
 - A rushed egg still needs the Hatch button — rushing makes it hatchable,
   it does not hatch it. Deliberate: hatching needs pen room, and the hatch
   button already says why when there is none.
+- **A gap in the a11y gate, found by a screenshot.** The first cut dropped
+  the egg's Hurry button into the `.encounter` flex row, where it overlapped
+  the lineage text and ran past the card at 380px — and `npm run a11y`
+  passed it, because that gate checks a control's size and its gutter to the
+  next control, not whether it overlaps text or escapes its container. Fixed
+  (the button sits under the row now), but the gate still cannot see that
+  class of defect. A candidate for the fifth audit.
 
 ### Next session's first task
 

@@ -442,8 +442,15 @@ export function renderRanchScreen(root, ctx) {
         }">${
           t < egg.hatchAt ? fmtDuration(egg.hatchAt - t) : pensFull ? 'Pens full' : 'Hatch!'
         }</button>
-        ${t < egg.hatchAt ? rushButton(rushQuote(state, 'egg', egg.id, content, t)) : ''}
-      </div>`;
+      </div>
+      ${
+        // R86: under the row, not in it. `.encounter` is a flex line already
+        // holding a portrait, two lines of lineage and the countdown, and a
+        // full-width button dropped into it overlapped the text and ran past
+        // the card at 380px — measured, after the a11y gate had passed it,
+        // because that gate checks size and gutter and not overlap.
+        t < egg.hatchAt ? `<div class="egg-rush">${rushButton(rushQuote(state, 'egg', egg.id, content, t))}</div>` : ''
+      }`;
   }).join('');
   const incubator = `
     <section class="card">
