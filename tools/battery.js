@@ -260,7 +260,7 @@ const STANCE = ['node', '-e', `
   const { readFileSync } = await import('node:fs');
   const { indexContent } = await import('./render/renderer.js');
   const { CONTENT_FILES: files } = await import('./data/loader.js');
-  const { createBattle, step, playerActions, playerActive, intentOf, stanceTuning } = await import('./battle/engine.js');
+  const { createBattle, step, playerActions, playerActive, intentOf, stanceTuning, bracePreview, braceTitle } = await import('./battle/engine.js');
   const { choosePlayerAction } = await import('./battle/ai.js');
   const { makeSimChimera, sampleBuilds } = await import('./tools/sim.js');
   const { analyze } = await import('./splice/physiology.js');
@@ -271,9 +271,18 @@ const STANCE = ['node', '-e', `
   const T = stanceTuning(content);
   const bad = [];
 
-  // 0. the data wins
-  for (const [k, v] of Object.entries(R('stance').tuning)) {
-    if (T[k] !== v) bad.push('stance default ' + k + ' is ' + T[k] + ', data says ' + v);
+  // 0. THE DATA WINS — and this is checked against the ENGINE'S FALLBACKS,
+  //    not against the merged tuning. The first draft compared
+  //    stanceTuning(content) to stance.json, but that call spreads
+  //    content.stanceMeta over the defaults and stanceMeta IS the shipped
+  //    tuning: it was comparing the file with itself and could not disagree.
+  //    Break 94 walked through it. stanceTuning(null) is the fallback set.
+  {
+    const D = stanceTuning(null);
+    for (const [k, v] of Object.entries(R('stance').tuning)) {
+      if (D[k] !== v) bad.push('the engine\'s fallback ' + k + ' is ' + D[k] + ', the data ships ' + v);
+      if (T[k] !== v) bad.push('the merged ' + k + ' is ' + T[k] + ', the data ships ' + v);
+    }
   }
 
   const builds = sampleBuilds(content, 40, 2026).map((b) => makeSimChimera(b.frame, b.partIds, 'prime', content));
@@ -325,33 +334,49 @@ const STANCE = ['node', '-e', `
     if (!(guarded > 0)) bad.push('a brace is immunity, not mitigation');
   }
 
-  // 4. the counter-switch reads the class triangle and nothing else
+  // 4. THE COUNTER-SWITCH READS THE CLASS TRIANGLE AND NOTHING ELSE.
+  //
+  //    Read off the free hit's OWN line. The first draft scanned the log for
+  //    /comes in|free/ — a sentence stance.json shipped and the engine never
+  //    spoke — so it matched nothing on the pristine tree and nothing on the
+  //    broken one either, and break 93 (fire for anybody) was missed. A free
+  //    hit that arrives as an ordinary attack line is also indistinguishable
+  //    to the PLAYER from the switch just not costing a turn, so the line is
+  //    not merely for the gate.
   {
+    const mark = (log) => log.filter((l) => /comes in on the turn/.test(l)).length;
     const beats = Object.fromEntries(Object.values(content.classes).map((c) => [c.beats, c.id]));
     const b0 = fight([builds[0], { ...builds[0], id: 'z' }], 'patrol_2');
     const li = intentOf(b0, content);
-    const wrong = builds.find((c) => classOf(c) && classOf(c) !== beats[li.creatureClass] && content.classes[li.creatureClass]?.beats !== classOf(c));
-    if (wrong) {
-      const b = fight([builds[0], wrong], 'patrol_2');
-      intentOf(b, content);
-      const foeHp = b.enemy.active.hp;
-      step(b, playerActions(b).find((a) => a.type === 'switch'), content);
-      // A switch into a creature that does NOT counter must not land a free
-      // hit before the enemy acts — the only damage may be the enemy's own.
-      if (b.log.some((l) => /comes in|free/.test(l))) bad.push('a non-countering switch took tempo it did not earn');
-    }
-    const right = beats[li.creatureClass] ? builds.find((c) => classOf(c) === beats[li.creatureClass]) : null;
-    if (right) {
+    const counterClass = beats[li.creatureClass];
+
+    // The one that DOES answer it: the free hit fires and says so.
+    const right = counterClass ? builds.find((c) => classOf(c) === counterClass) : null;
+    if (!right) bad.push('the pool holds no ' + counterClass + ' build to answer a ' + li.creatureClass + ' attacker');
+    else {
       const b = fight([builds[0], right], 'patrol_2');
       const i2 = intentOf(b, content);
-      if (beats[i2.creatureClass] === classOf(right)) {
-        const foeHp = b.enemy.active.hp;
+      if (beats[i2.creatureClass] !== classOf(right)) bad.push('the fixture no longer reaches a counter-class switch');
+      else {
+        // Held by REFERENCE, not by reading b.enemy.active again: the free
+        // hit can graduate the thing it hits, and then the field holds the
+        // next wave at full health and 'took no damage' reads backwards.
+        const foe0 = b.enemy.active;
+        const foeHp = foe0.hp;
         step(b, playerActions(b).find((a) => a.type === 'switch'), content);
-        if (b.enemy.active.hp >= foeHp && b.enemy.active.name === b.enemy.active.name) {
-          // the incoming should have hit it on the way in
-          if (!b.log.some((l) => l.includes(right.name))) bad.push('the counter-class switch landed nothing');
-        }
+        if (!mark(b.log)) bad.push('the counter-class switch came in and nothing happened');
+        if (foe0.hp >= foeHp) bad.push('the free hit landed no damage (' + foeHp + ' -> ' + foe0.hp + ')');
       }
+    }
+
+    // The one that does NOT: no free hit, and nothing said.
+    const wrong = builds.find((c) => classOf(c) && classOf(c) !== counterClass);
+    if (!wrong) bad.push('the pool holds no non-countering build');
+    else {
+      const b = fight([builds[0], wrong], 'patrol_2');
+      intentOf(b, content);
+      step(b, playerActions(b).find((a) => a.type === 'switch'), content);
+      if (mark(b.log)) bad.push('a switch that answers nothing took tempo it did not earn');
     }
   }
 
@@ -388,10 +413,104 @@ const STANCE = ['node', '-e', `
     if (braces + switches === 0) {
       bad.push('the pilot never braces or switches over ' + turns + ' turns — it cannot see the telegraph');
     }
+
+    // …AND ITS ANSWER CHANGES WITH THE QUESTION. Counting braces was not
+    // enough: a pilot blind to the intent still switches for every other
+    // reason it switches and still rests when it is starving, so the count
+    // stayed positive and break 95 was missed. Ask the same turn twice —
+    // once against what is really coming, once against a foe that is
+    // catching its breath — with the same rolls. A pilot that cannot see
+    // the telegraph gives the identical answer every single time.
+    let asked = 0, differed = 0;
+    for (const encId of ['patrol_2', 'checkpoint', 'boss_clampdown']) {
+      const team = ['ground', 'water', 'air'].map((cls, i) => {
+        const c = builds.find((x) => classOf(x) === cls) ?? builds[i];
+        return { ...c, id: c.id + '@' + i };
+      });
+      const b = fight(team, encId, 11);
+      let g = 0;
+      while (!b.over && g++ < 200) {
+        const acts = playerActions(b);
+        if (!acts.length) break;
+        const rel = acts.find((a) => a.type === 'release');
+        let action;
+        if (rel || b.pendingReplace) action = rel ?? acts[0];
+        else {
+          const real = intentOf(b, content);
+          const same = (x, y) => x.type === y.type && x.index === y.index;
+          const withIt = choosePlayerAction(b, acts, content, 1, () => 0.5);
+          b.intent = { index: -1, name: 'Catch Breath', power: 0, tags: [], creatureClass: null, priority: false, ignoreGuard: false };
+          const without = choosePlayerAction(b, acts, content, 1, () => 0.5);
+          b.intent = real;
+          asked++;
+          if (!same(withIt, without)) differed++;
+          action = withIt;
+        }
+        step(b, action, content);
+      }
+    }
+    if (asked < 20) bad.push('the differential probe played too little (' + asked + ' turns)');
+    else if (!differed) {
+      bad.push('the pilot answers ' + asked + ' turns identically whether or not a blow is telegraphed — it cannot see it');
+    }
+  }
+
+  // 6. THE BUTTON'S PROMISE IS THE RESOLUTION. The tooltip is built from
+  //    the same preview 'step' resolves, so the percentage and the price it
+  //    quotes are the ones that land. The first draft promised stamina BACK
+  //    from a brace that spends a quarter of it, and nothing in the suite
+  //    disagreed — a lie on the one button this milestone exists to make
+  //    worth pressing.
+  {
+    const b = fight([builds[2], { ...builds[2], id: 'p1' }], 'patrol_2');
+    const intent = intentOf(b, content);
+    const me = playerActive(b);
+    const p = bracePreview(me, intent, content);
+    const title = braceTitle(me, intent, content);
+    if (!p.braced) bad.push('the fixture no longer reaches a live brace');
+    else {
+      if (!title.includes(Math.round(p.absorb * 100) + '%')) bad.push('the button does not quote the absorb it gets: ' + title);
+      if (!title.includes(String(p.cost))) bad.push('the button does not quote the stamina it spends: ' + title);
+      const before = me.stamina;
+      step(b, playerActions(b).find((a) => a.type === 'rest'), content);
+      if (before - me.stamina !== p.cost) bad.push('the brace cost ' + (before - me.stamina) + ', the button said ' + p.cost);
+    }
+    const quiet = fight([builds[2], { ...builds[2], id: 'p2' }], 'patrol_2');
+    intentOf(quiet, content);
+    quiet.intent = { index: -1, name: 'Catch Breath', power: 0, tags: [], creatureClass: null, priority: false, ignoreGuard: false };
+    const qt = braceTitle(playerActive(quiet), quiet.intent, content);
+    if (/%/.test(qt)) bad.push('the button promises mitigation with nothing telegraphed: ' + qt);
+  }
+
+  // 7. THE LINES ARE THE SHIPPED LINES. 'stance.json' carried a 'lines'
+  //    block nobody read while the engine spoke literals — content that says
+  //    one thing and an engine that says another is R9's rule, and this is
+  //    the third time it has been paid for.
+  {
+    const retuned = { ...content, stanceLines: { ...content.stanceLines, brace: '{name} DIGS IN for {cost}.' } };
+    const b = fight([builds[2], { ...builds[2], id: 'l1' }], 'patrol_2');
+    intentOf(b, retuned);
+    step(b, playerActions(b).find((a) => a.type === 'rest'), retuned);
+    if (!b.log.some((l) => /DIGS IN/.test(l))) bad.push('the engine does not speak the line the data ships');
+    for (const k of ['brace', 'breath', 'absorbed', 'braceLive', 'braceIdle']) {
+      if (!content.stanceLines?.[k]) bad.push('stance.json ships no "' + k + '" line');
+    }
+  }
+
+  // 8. ONE READER. The tuning and the lines are read in battle/engine.js and
+  //    indexed in render/renderer.js; everywhere else asks. The pilot kept
+  //    its own copy of the table AND its own copy of the brace predicate,
+  //    and the predicate was already a condition short of the engine's —
+  //    it scored a brace for a creature with nothing left to swing, where
+  //    the engine simply catches its breath (R61).
+  for (const mod of ['battle/ai.js', 'battle/ui.js', 'tools/sim.js']) {
+    if (/stanceMeta|stanceLines/.test(readFileSync('./' + mod, 'utf8'))) {
+      bad.push(mod + ' reads the stance data behind the engine');
+    }
   }
 
   if (bad.length) { console.error('stance ✗  ' + bad.join('; ')); process.exit(1); }
-  console.log('stance ✓  the enemy commits first, a brace answers it, the counter-class comes in free');
+  console.log('stance ✓  the enemy commits first, a brace answers it and says what it costs, the counter-class comes in free');
 `];
 
 // R106 — the opening tells the truth about the wall it walks you into. Its
@@ -1565,14 +1684,14 @@ const BREAKS = [
   {
     n: 91, gate: STANCE, name: 'a brace is granted with nothing telegraphed, so standing still is free again',
     file: 'battle/engine.js',
-    anchor: '      const braced = !!intent && intent.index >= 0 && couldHaveAttacked && canAfford && !me.status.justBraced;',
-    to: '      const braced = true;',
+    anchor: '  const braced = telegraphed && couldHaveAttacked && me.stamina >= cost && !me.status.justBraced;',
+    to: '  const braced = true;',
   },
   {
     n: 92, gate: STANCE, name: 'the brace stops costing stamina, so every incidental rest is mitigation',
     file: 'battle/engine.js',
-    anchor: "      const cost = Math.round(me.staminaMax * stance.braceCost);",
-    to: "      const cost = 0;",
+    anchor: "  const cost = Math.round(me.staminaMax * stance.braceCost);",
+    to: "  const cost = 0;",
   },
   {
     n: 93, gate: STANCE, name: 'the counter-switch stops reading the class triangle and fires for anybody',
@@ -1591,6 +1710,24 @@ const BREAKS = [
     file: 'battle/ai.js',
     anchor: '  const intent = intentOf(battle, content);',
     to: '  const intent = battle.intent ?? null;',
+  },
+  {
+    n: 96, gate: STANCE, name: 'the Brace button promises mitigation it will not get',
+    file: 'battle/engine.js',
+    anchor: "  if (!p.braced) return stanceLine(content, p.why, { gain: p.gain });",
+    to: "  if (!p.braced) return stanceLine(content, 'braceLive', { pct: Math.round(p.absorb * 100), move: intent?.name, cost: p.cost });",
+  },
+  {
+    n: 97, gate: STANCE, name: "the stance's sentences go back to being literals the data cannot reach",
+    file: 'battle/engine.js',
+    anchor: "  const raw = content?.stanceLines?.[key] ?? STANCE_LINES[key] ?? '';",
+    to: "  const raw = STANCE_LINES[key] ?? '';",
+  },
+  {
+    n: 98, gate: STANCE, name: 'the pilot keeps a second copy of the stance table',
+    file: 'battle/ai.js',
+    anchor: '  const stance = stanceTuning(content);',
+    to: '  const stance = { absorb: 0.45, counterPower: 1, braceCost: 0.25, ...(content?.stanceMeta ?? {}) };',
   },
 ];
 

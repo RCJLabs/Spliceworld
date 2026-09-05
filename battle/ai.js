@@ -6,7 +6,7 @@
 //
 // DOM-free and deterministic apart from the battle's own seeded stream, so
 // tools/sim.js replays the exact code the browser runs.
-import { previewMove, classMultiplier as classMult, intentOf } from './engine.js';
+import { previewMove, classMultiplier as classMult, intentOf, stanceTuning, bracePreview } from './engine.js';
 
 // Skill is a dial, not a switch: at 0 this is the old coin flip, at 1 it
 // always takes the best line. Encounter tier drives it, so a beat cop plays
@@ -298,17 +298,31 @@ export function choosePlayerAction(battle, actions, content, skill, rollFn) {
   // against the same commitment, and the RNG is drawn once.
   const intent = intentOf(battle, content);
   const rules = content?.classRules ?? {};
-  const stance = { absorb: 0.45, counterPower: 1, braceCost: 0.25, ...(content?.stanceMeta ?? {}) };
+  const stance = stanceTuning(content);
   let best = bestMove ? { action: bestMove, score: bestDamage } : null;
 
   // BRACE. Worth the share of the telegraphed hit it takes off, and only
   // when there is a telegraphed hit — against a foe that is resting or has
   // no move coming, standing there is exactly the old trap.
+  // ASKED, not re-derived. The pilot used to carry its own copy of the
+  // three conditions and its own stance table, and it was already missing
+  // one of them — it scored a brace for a creature with nothing affordable
+  // left, where the engine simply catches its breath. A pilot that models a
+  // rule the engine does not have is measuring a game nobody plays (R61).
+  //
+  // IT COST SOMETHING, and the cost is recorded rather than tuned away:
+  // asking the engine dropped the standard grade's spread from 19.1pp to
+  // 16.2 (the bar is 15; prime and apex held at 22.9 and 30.0). The obvious
+  // culprit — a starving creature scoring every option at zero, so any
+  // counter-switch above nothing takes the turn — was tried and measured,
+  // and pricing that rest at the stamina it buys returned +0.3/-0.1/-0.5.
+  // A wash, so it is not here. The phantom brace flattered the number; this
+  // is what the arena is actually worth.
   const braceAction = actions.find((a) => a.type === 'rest');
-  const braceCost = Math.round(me.staminaMax * stance.braceCost);
-  if (braceAction && intent && intent.index >= 0 && !intent.ignoreGuard
-      && me.stamina >= braceCost && !me.status.justBraced) {
-    const absorb = stance.absorb * (1 - (me.perks?.guardLoss ?? 0));
+  const brace = bracePreview(me, intent, content);
+  const braceCost = brace.cost;
+  if (braceAction && brace.braced && !brace.unguardable) {
+    const absorb = brace.absorb;
     // Damage avoided…
     let braceScore = incoming * absorb;
     // …and the whole creature, when the blow coming would otherwise finish

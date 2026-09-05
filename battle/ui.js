@@ -17,7 +17,7 @@
 import { creaturePortrait, renderUnitSVG, drawableGenome } from '../render/renderer.js';
 import { chimeraGenome } from '../splice/theater.js';
 import {
-  step, playerActions, playerActive, turnForecast, intentOf, stanceTuning,
+  step, playerActions, playerActive, turnForecast, intentOf, bracePreview, braceTitle,
 } from './engine.js';
 import { moveReadout } from './readout.js';
 import { resolveBattle } from '../campaign/campaign.js';
@@ -264,14 +264,6 @@ export function renderArena(root, ctx, onDone) {
 
 // The command menu. Four move cells like every creature battler ever made,
 // with the overflow behind one more tap rather than a taller screen.
-// The share of a telegraphed blow this creature's brace would take off —
-// read from the engine's own tuning so the button's promise and the damage
-// that lands cannot drift (R61: the absorb was written out three times once
-// already).
-function guardShare(me, content) {
-  return stanceTuning(content).absorb * (1 - (me.perks?.guardLoss ?? 0));
-}
-
 function commandHtml(battle, actions, me, foe, content) {
   const intent = battle.pendingReplace || battle.over ? null : intentOf(battle, content);
   if (battle.pendingReplace) {
@@ -324,11 +316,14 @@ function commandHtml(battle, actions, me, foe, content) {
       // that decides fights and marked when it is answering something. The
       // old label ("Breath") described the half that never did.
       const label = { rest: 'Brace', switch: 'Switch', flee: 'Retreat', capture: 'Cannon' }[a.type];
-      const live = a.type === 'rest' && intent && intent.index >= 0 && !intent.ignoreGuard;
-      const title = a.type === 'rest'
-        ? (live ? `Take ${Math.round(guardShare(me, content) * 100)}% off ${intent.name}, and get stamina back`
-          : 'Nothing to brace against — stamina only')
-        : '';
+      // Lit only when a brace would actually HAPPEN, and captioned by the
+      // engine's own preview — the first draft lit the button whenever
+      // something was telegraphed and promised stamina back from a brace
+      // that spends it (R28: the number on the screen is the number that
+      // lands).
+      const brace = a.type === 'rest' ? bracePreview(me, intent, content) : null;
+      const live = !!brace?.braced && !brace.unguardable;
+      const title = a.type === 'rest' ? braceTitle(me, intent, content) : '';
       return `<button type="button" class="ut ut-${a.type}${live ? ' ut-live' : ''}" data-action="${i}"${
         title ? ` title="${esc(title)}"` : ''}><b>${icon}</b> ${label}</button>`;
     })

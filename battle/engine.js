@@ -53,6 +53,93 @@ function guardAbsorb(def, content) {
   return stanceTuning(content).absorb * (1 - (def.perks?.guardLoss ?? 0));
 }
 
+// The stance's sentences, in data with its numbers. They were written out
+// here as literals in the first draft and `stance.json` carried a `lines`
+// block nobody read — content that says one thing and an engine that says
+// another, which is the exact shape of the bug R9's rule exists to stop.
+// The defaults mirror the file; smoke holds them equal.
+const STANCE_LINES = {
+  brace: '{name} sets its feet and braces — {cost} stamina spent standing still.',
+  breath: '{name} catches its breath: +{gain} stamina.',
+  absorbed: "{name}'s guard absorbs {pct}% of the blow.",
+  counter: '{name} comes in on the turn and lands one for free.',
+  braceLive: 'Take {pct}% off {move} — costs {cost} stamina',
+  braceIdle: 'Nothing to brace against — catch your breath for +{gain}',
+  braceThrough: '{move} goes straight through a guard — this is stamina only, +{gain}',
+  braceHeld: 'Braced last turn — this one is stamina only, +{gain}',
+  braceSpent: 'Not enough stamina to hold a brace — catch your breath for +{gain}',
+  braceNothingLeft: 'Nothing left to swing — catch your breath for +{gain}',
+};
+
+export function stanceLine(content, key, vars = {}) {
+  const raw = content?.stanceLines?.[key] ?? STANCE_LINES[key] ?? '';
+  return raw.replace(/\{(\w+)\}/g, (whole, k) => (vars[k] === undefined ? whole : String(vars[k])));
+}
+
+// R103 — WHAT THE BRACE BUTTON IS ABOUT TO DO, worked out once. `step`
+// resolves this and the arena quotes it, so the promise on the button and
+// the thing that happens cannot drift. They did: the first tooltip said
+// "and get stamina back" about a brace that SPENDS a quarter of it, because
+// two places were describing one rule (R61 — hand-copy a predicate and the
+// canonical one becomes the orphan).
+//
+// It is HANDED the intent rather than reading it, because `step` consumes
+// and clears the field before the rest branch runs; asking again in here
+// would plan a second commitment and resolve the turn against the wrong one.
+//
+// The three conditions, and why each is a condition:
+//   - A TELEGRAPH. No telegraph, no brace: the stamina is still there, but
+//     standing ready for nothing is the old trap wearing the new name.
+//   - SOMETHING ELSE IT COULD HAVE DONE. A creature with nothing affordable
+//     left is not making a read, it is catching its breath because that is
+//     all there is — and granting the guard there hands free mitigation to
+//     exactly the fight A1 built the game's first wall out of. Measured: it
+//     lifted one chimera against three bodies from ~0% to 8%, out of "not
+//     survivable" and into "losing", which is the Path's own reason for
+//     telling a new player to bring three. Bracing is a decision;
+//     exhaustion is not.
+//   - NOT TWICE RUNNING. A brace is a read of one telegraphed blow; held
+//     every turn it stops being a read and becomes 45% permanent mitigation,
+//     which compounds hardest in exactly the longest fights. Measured:
+//     without this the best mono-build strolls the finale at 77% against a
+//     ceiling of 75 that exists to stop any single anatomy owning it.
+export function bracePreview(me, intent, content) {
+  if (!me) return null;
+  const stance = stanceTuning(content);
+  const cost = Math.round(me.staminaMax * stance.braceCost);
+  const gain = Math.round(me.staminaMax * stance.stamina);
+  const telegraphed = !!intent && intent.index >= 0;
+  const couldHaveAttacked = me.moves.some((mv) => mv.cost <= me.stamina);
+  const braced = telegraphed && couldHaveAttacked && me.stamina >= cost && !me.status.justBraced;
+  // Why it will not, in the order the engine checks — this is the sentence
+  // the button shows when it is not lit. `unguardable` is deliberately NOT
+  // one of them: the creature still braces against a move that ignores
+  // guards (and still pays), so the button says so rather than pretending
+  // the turn is free.
+  const why = braced ? null
+    : !telegraphed ? 'braceIdle'
+      : !couldHaveAttacked ? 'braceNothingLeft'
+        : me.stamina < cost ? 'braceSpent'
+          : 'braceHeld';
+  return {
+    braced, cost, gain, why,
+    absorb: guardAbsorb(me, content),
+    unguardable: !!intent?.ignoreGuard,
+  };
+}
+
+// The one sentence the Brace button carries, built from the same preview
+// `step` resolves. A tooltip is a promise; this is where it is kept.
+export function braceTitle(me, intent, content) {
+  const p = bracePreview(me, intent, content);
+  if (!p) return '';
+  if (!p.braced) return stanceLine(content, p.why, { gain: p.gain });
+  if (p.unguardable) return stanceLine(content, 'braceThrough', { move: intent.name, gain: p.gain });
+  return stanceLine(content, 'braceLive', {
+    pct: Math.round(p.absorb * 100), move: intent.name, cost: p.cost,
+  });
+}
+
 // A combatant with no temperament — every enemy unit, and any chimera
 // still settling — behaves exactly as it did before §3.5 landed.
 const NEUTRAL_PERKS = { critChance: 0, critMult: 1.5, lastStandAt: 0.3, evasion: 0, power: 0, guardLoss: 0, regen: 0 };
@@ -574,7 +661,9 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
     }
     if (def.status.guard && !move.keywords.ignoreGuard) {
       // A Fierce creature guards badly — it would rather be hitting.
-      events.push(`${def.name}'s guard absorbs ${Math.round(guardAbsorb(def, content) * 100)}% of the blow.`);
+      events.push(stanceLine(content, 'absorbed', {
+        name: def.name, pct: Math.round(guardAbsorb(def, content) * 100),
+      }));
     }
     def.hp = Math.max(0, def.hp - dmg);
     if (atk.kind === 'chimera' && def.hp > 0) {
@@ -1078,45 +1167,32 @@ export function step(battle, action, content) {
     if (counters && !actUnavailable(incoming, events)) {
       const idx = chooseMoveIndex(battle, incoming, battle.enemy.active, content, 1, () => roll(battle));
       if (idx >= 0) {
+        // SAID OUT LOUD, and not only for the player. A free hit that arrives
+        // as an ordinary attack line is indistinguishable from the switch
+        // simply not costing a turn — and it left the battery nothing to
+        // read: the break that made this fire for ANYBODY was missed,
+        // because the gate was scanning for a sentence the engine never
+        // spoke while stance.json shipped one nobody used.
+        events.push({ text: stanceLine(content, 'counter', { name: incoming.name }), kind: 'buff', target: 'player' });
         performMove(battle, 'player', idx, events, content, stanceTuning(content).counterPower);
         handleEnemyKO(battle, events, content);
       }
     }
   } else if (playerAction.type === 'rest') {
     if (!actUnavailable(me, events)) {
-      const stance = stanceTuning(content);
-      const cost = Math.round(me.staminaMax * stance.braceCost);
-      // R103 — and it braces, against the blow it was actually told about.
-      // No telegraph, no brace: the stamina is still there, but standing
-      // ready for nothing is the old trap wearing the new name.
-      //
-      // AND ONLY WHEN IT COULD HAVE DONE SOMETHING ELSE. A creature with
-      // nothing affordable left is not making a read, it is catching its
-      // breath because that is all there is — and granting the guard there
-      // hands free mitigation to exactly the fight A1 built the game's first
-      // wall out of. Measured: it lifted one chimera against three bodies
-      // from ~0% to 8%, out of "not survivable" and into "losing", which is
-      // the Path's own reason for telling a new player to bring three.
-      // Bracing is a decision; exhaustion is not.
-      const couldHaveAttacked = me.moves.some((mv) => mv.cost <= me.stamina);
-      const canAfford = me.stamina >= cost;
-      // …AND NOT TWICE IN A ROW. A brace is a read of one telegraphed blow;
-      // held every turn it stops being a read and becomes 45% permanent
-      // mitigation, which compounds hardest in exactly the longest fights.
-      // Measured: without this the best mono-build strolls the finale at
-      // 77% against a ceiling of 75 that exists to stop any single anatomy
-      // owning it. They adjust to a creature that only ever turtles.
-      const braced = !!intent && intent.index >= 0 && couldHaveAttacked && canAfford && !me.status.justBraced;
-      me.status.justBraced = braced;
-      const gain = braced ? 0 : Math.round(me.staminaMax * stance.stamina);
-      me.stamina = braced
-        ? Math.max(0, me.stamina - cost)
-        : Math.min(me.staminaMax, me.stamina + gain);
-      if (braced) me.status.guard = true;
+      // R103 — it braces, against the blow it was actually told about. The
+      // three conditions and the two numbers are `bracePreview`'s, which is
+      // also what the button quotes: one rule, one place (R61).
+      const p = bracePreview(me, intent, content);
+      me.status.justBraced = p.braced;
+      me.stamina = p.braced
+        ? Math.max(0, me.stamina - p.cost)
+        : Math.min(me.staminaMax, me.stamina + p.gain);
+      if (p.braced) me.status.guard = true;
       events.push({
-        text: braced
-          ? `${me.name} sets its feet and braces — ${cost} stamina spent standing still.`
-          : `${me.name} catches its breath: +${gain} stamina.`,
+        text: p.braced
+          ? stanceLine(content, 'brace', { name: me.name, cost: p.cost })
+          : stanceLine(content, 'breath', { name: me.name, gain: p.gain }),
         kind: 'rest', target: 'player',
       });
     }
@@ -1205,7 +1281,7 @@ function restCombatant(c, events, content) {
   if (actUnavailable(c, events)) return;
   const gain = Math.round(c.staminaMax * stanceTuning(content).stamina);
   c.stamina = Math.min(c.staminaMax, c.stamina + gain);
-  events.push({ text: `${c.name} catches its breath: +${gain} stamina.`, kind: 'rest', target: sideOf(c) });
+  events.push({ text: stanceLine(content, 'breath', { name: c.name, gain }), kind: 'rest', target: sideOf(c) });
 }
 
 

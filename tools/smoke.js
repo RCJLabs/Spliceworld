@@ -16830,10 +16830,23 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // 0. THE DATA WINS. The engine's fallbacks mirror stance.json exactly, or
   //    retuning the file leaves a default quietly disagreeing with it —
   //    contest.js's lesson, paid for again in R87.
+  //
+  //    AGAINST stanceTuning(null), which is the fallback set. The first
+  //    draft asserted against stanceTuning(content), and that call spreads
+  //    content.stanceMeta OVER the defaults — stanceMeta being the shipped
+  //    tuning itself. It was comparing the file with itself, could not
+  //    disagree, and the break that drifts the defaults walked through both
+  //    this and the battery gate that copied it.
   {
     const authored = readJSON('data/stance.json').tuning;
+    const fallbacks = stanceTuning(null);
     for (const [k, v] of Object.entries(authored)) {
-      assert.equal(T[k], v, `stance default "${k}" matches the shipped data`);
+      assert.equal(fallbacks[k], v, `the engine's FALLBACK "${k}" matches the shipped data`);
+      assert.equal(T[k], v, `and so does the merged "${k}"`);
+    }
+    // …and every sentence the stance speaks is shipped too, not a literal.
+    for (const k of ['brace', 'breath', 'absorbed', 'counter', 'braceLive', 'braceIdle']) {
+      assert.ok(content.stanceLines?.[k], `stance.json ships the "${k}" line`);
     }
   }
 
