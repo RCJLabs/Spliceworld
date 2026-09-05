@@ -155,6 +155,18 @@ numbered-hint list.
   what the first paint *should* carry rather than a number that drifts up one
   milestone at a time.
 
+### Deliberately not built
+
+One third of R87's own entry — the **run boundary** ("Relocate the lab": new
+game plus with a single legacy pick) — was cut by decision, not by accident,
+because it is a save-schema feature with its own migration, UI and gates, and
+building it alongside the other two would have landed two half-proved things
+instead of one proved one. It is now **queued as R102** with its evidence,
+rather than left implied by an entry that reads as if it shipped whole. The
+machinery is already there: `startNewRun`, `runSummary` and
+`CARRIED_ACROSS_RUNS` in `save.js` carry `settings`, `guidesSeen` and `ui`
+today — what is missing is the *pick*.
+
 ### Next session's first task
 
 **R88 — the battle screen charges full price for free fights**, which R87's

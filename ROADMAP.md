@@ -1652,7 +1652,7 @@ The queue is a proposal: prune it before starting R63.
     heading with a suffix still matched the prefix, which was the block still
     being there rather than a hole in the gate.
 
-### 9.5 Fifth audit (R84–R86) — queue R87–R101 · **R87 shipped**
+### 9.5 Fifth audit (R84–R86) — queue R87–R102 · **R87 shipped**
 
 Run after R86, against a game with four closed audits and R77's three gaps
 closed behind it. Same rule as the other four — every line names the
@@ -1668,7 +1668,8 @@ not play a third of it.** Fifteen phases follow, medium to large, four of
 them overhauls. Each carries its evidence and a *Done when* the suite can
 check.
 
-**Overhauls.** *(R87 shipped; R88–R90 remain.)*
+**Overhauls.** *(R87 shipped — its run-boundary third deferred and queued as
+R102; R88–R90 remain.)*
 
 - **R87 — The endgame.** ✅ *Shipped.* Re-measured over six 180-day walks
   before anything was built, and it corrected three claims in the audit
@@ -1731,6 +1732,15 @@ check.
     80–84 (the schedule becoming a roll, the window back-dating, the levy
     taking a creature, the ceiling failing, and winning buying no quiet). All
     five caught. `SAVE_VERSION` 41.
+  - **One third of the entry was deliberately not built, and is queued as
+    R102.** The original proposal had three parts: the task force, the money
+    sinks, and a *run boundary* — "Relocate the lab", a new game plus
+    carrying one legacy pick. The first two ship here; the third is a
+    save-schema feature with its own migration, its own UI and its own
+    gates, and building it alongside these would have landed two half-proved
+    things instead of one proved one. `startNewRun`, `runSummary` and
+    `CARRIED_ACROSS_RUNS` already exist in `save.js`, so the machinery is
+    waiting.
   *Done when — re-derived, because the entry's own criterion was
   part-vacuous against the shipped game (its funds test passed 6/6 already,
   and its fight test passed on 1/6 by seed noise): across six seeds the
@@ -1913,6 +1923,23 @@ check.
   `CACHE` against `SAVE_VERSION` rather than remembering to. *Done when: the
   app opens offline in under a second from cache, the checklist is empty,
   and a 2 MB save round-trips through IndexedDB.*
+- **R102 — The run boundary: "Relocate the lab".** The third part of R87,
+  deliberately deferred rather than half-built. R87 gave the endgame a stake
+  and a sink; what it still has no shape for is an **ending the player
+  chooses**. Measured there: the county falls on median day 35–54 and the
+  remaining ~130 days have no terminus, so a campaign stops when the player
+  gets bored rather than when they decide it is finished. Proposed, large:
+  new game plus, carrying exactly **one legacy pick** — a bloodline, a
+  philosophy perk, or a named veteran — so a second run starts different
+  rather than merely faster. `startNewRun`, `runSummary` and
+  `CARRIED_ACROSS_RUNS` already exist in `save/save.js` (the settings panel's
+  "new run" button uses them today, carrying only `settings`, `guidesSeen`
+  and `ui`), so the machinery exists and what is missing is the *pick*: a
+  save-schema field, its migration, the ceremony that offers it, and a gate
+  that a legacy creature arrives with its history and none of its old
+  roster. *Done when: a completed run can be retired into a new one carrying
+  exactly one chosen thing, and smoke asserts the new save keeps that one
+  thing and nothing else.*
 - **R101 — `save/save.js` is 1,020 lines of migrations, with fixtures for
   19 of 39.** It is the largest eager module (**44 KB**), so every player
   downloads every migration they will never run, and twenty steps of the
