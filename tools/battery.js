@@ -436,9 +436,15 @@ const STANCE = ['node', '-e', `
         let action;
         if (rel || b.pendingReplace) action = rel ?? acts[0];
         else {
-          const real = intentOf(b, content);
+          // NOT PLANTED FIRST. The draft called intentOf here before asking
+          // the pilot anything, which WROTE the intent onto the battle —
+          // handing a pilot that reads the field directly the very thing
+          // the break takes away, and break 95 was missed a second time.
+          // The pristine pilot plants its own by asking; a blind one leaves
+          // the field as 'step' left it, which is empty.
           const same = (x, y) => x.type === y.type && x.index === y.index;
           const withIt = choosePlayerAction(b, acts, content, 1, () => 0.5);
+          const real = b.intent;
           b.intent = { index: -1, name: 'Catch Breath', power: 0, tags: [], creatureClass: null, priority: false, ignoreGuard: false };
           const without = choosePlayerAction(b, acts, content, 1, () => 0.5);
           b.intent = real;
