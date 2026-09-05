@@ -16967,7 +16967,11 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   {
     let braces = 0, switches = 0, moves = 0, turns = 0;
     for (const encId of ['patrol_2', 'checkpoint', 'boss_clampdown']) {
-      const team = ['ground', 'water', 'air'].map((cls, i) => {
+      // R72: the classes this fixture fields come out of classes.json, not
+      // out of here. This gate is exempt from the hardcoded-class-list scan
+      // (it quotes the ids on purpose elsewhere), which is exactly why the
+      // copy in tools/battery.js sat unnoticed until smoke read it.
+      const team = Object.keys(content.classes).slice(0, 3).map((cls, i) => {
         const c = pick(cls) ?? builds[i];
         return { ...c, id: `${c.id}#${i}` };
       });

@@ -185,7 +185,7 @@ export function renderArena(root, ctx, onDone) {
     ? `<p class="intent" id="intent">${renderIcon('target', { size: 13 })} <strong>${foe.name}</strong> is winding up
         <strong>${intent.name}</strong>${intent.priority ? ' <span class="intent-pri">first</span>' : ''}${
         intent.ignoreGuard ? ' <span class="intent-pri">unguardable</span>' : ''}${
-        counterClass ? ` <span class="intent-answer">${counterClass.name} answers it</span>` : ''}</p>`
+        counterClass ? ` <span class="intent-answer">· ${counterClass.name} answers it</span>` : ''}</p>`
     : intent
       ? `<p class="intent" id="intent">${renderIcon('target', { size: 13 })} <strong>${foe.name}</strong> is catching its breath.</p>`
       : '';

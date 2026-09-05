@@ -280,7 +280,7 @@ const STANCE = ['node', '-e', `
   {
     const D = stanceTuning(null);
     for (const [k, v] of Object.entries(R('stance').tuning)) {
-      if (D[k] !== v) bad.push('the engine\'s fallback ' + k + ' is ' + D[k] + ', the data ships ' + v);
+      if (D[k] !== v) bad.push('the engine fallback ' + k + ' is ' + D[k] + ', the data ships ' + v);
       if (T[k] !== v) bad.push('the merged ' + k + ' is ' + T[k] + ', the data ships ' + v);
     }
   }
@@ -387,7 +387,7 @@ const STANCE = ['node', '-e', `
   {
     let braces = 0, switches = 0, moves = 0, turns = 0;
     for (const encId of ['patrol_2', 'checkpoint', 'boss_clampdown']) {
-      const team = ['ground', 'water', 'air'].map((cls, i) => {
+      const team = Object.keys(content.classes).slice(0, 3).map((cls, i) => {
         const c = builds.find((x) => classOf(x) === cls) ?? builds[i];
         return { ...c, id: c.id + '#' + i };
       });
@@ -423,7 +423,7 @@ const STANCE = ['node', '-e', `
     // the telegraph gives the identical answer every single time.
     let asked = 0, differed = 0;
     for (const encId of ['patrol_2', 'checkpoint', 'boss_clampdown']) {
-      const team = ['ground', 'water', 'air'].map((cls, i) => {
+      const team = Object.keys(content.classes).slice(0, 3).map((cls, i) => {
         const c = builds.find((x) => classOf(x) === cls) ?? builds[i];
         return { ...c, id: c.id + '@' + i };
       });
