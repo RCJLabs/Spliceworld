@@ -2002,14 +2002,47 @@ suite can check.
     switch-in** lands a free hit, reading the same triangle every other hit
     reads.
   - **Measured like-for-like against the pre-R103 engine** (mixed-class
-    teams, 8 seeds): a decision is worth **19.1 / 23.6 / 29.1pp** over the
+    teams, 8 seeds): a decision is worth **16.2 / 22.9 / 30.0pp** over the
     first button at standard / prime / apex (against a bar of 15) and
-    **46.4 / 50.2 / 54.8pp** over mashing (bar 25); the forecast's own pilot
+    **45.5 / 50.4 / 55.6pp** over mashing (bar 25); the forecast's own pilot
     — the floor this milestone was not allowed to lower — **rose** at every
-    grade, 48→52%, 43→54%, 43→60%. Difficulty elsewhere is unmoved: the
+    grade, 48→50%, 43→52%, 43→60%. Difficulty elsewhere is unmoved: the
     Spire finale's best mono-build reads 71/75/63% against a baseline of
     71/71/63, and A1's wall (one chimera against the second node) stays at
     **0%**.
+  - **Those numbers were 19.1 / 23.6 / 29.1 until the pilot stopped keeping
+    its own copy of the rules.** `ai.js` carried a second `STANCE_DEFAULTS`
+    — the drift break 94 exists to catch, one file over from the gate — and
+    a brace predicate that was a condition short: it scored mitigation for a
+    creature with nothing left to swing, where the engine simply catches its
+    breath. The phantom flattered the standard grade by 2.9pp. The obvious
+    remedy (pricing a non-bracing rest at the stamina it buys) was tried and
+    measured at **+0.3 / −0.1 / −0.5** — a wash — so it is not in the
+    build, and the measurement sits beside the rule instead.
+  - **Four things it had got wrong about itself, found reading the shipped
+    code for the browser QA.** The Brace button promised "and get stamina back" from a brace that
+    *spends* a quarter of it, and quoted a flat 45% where a Fierce
+    creature's guard absorbs less; `stance.json` shipped a `lines` block
+    that `renderer.js` indexed and nobody read, so the engine spoke literals
+    that disagreed with it; its `_doc` claimed the opposition braces when it
+    breathes too, which the code deliberately does not do and carries the
+    measurement for; and the pilot kept the second stance table above. One
+    fix for all of them: `bracePreview`, `braceTitle` and `stanceLine`
+    exported from the engine, with `step`, the arena and the pilot all
+    asking instead of re-deriving (R61). On a Fierce chimera the button now
+    reads *"Take 36% off Baton Bonk — costs 15 stamina"* and the log reads
+    *"guard absorbs 36% of the blow."*
+  - **And three of R103's own gate rules could not fail.** Rule 0 compared
+    `stanceTuning(content)` against `stance.json` — but that call spreads
+    `content.stanceMeta` *over* the defaults, and `stanceMeta` **is** the
+    shipped tuning, so it compared the file with itself; the same vacuous
+    assertion had been copied into `smoke.js`. Rule 4 scanned the log for a
+    sentence the engine never spoke (the unread `counter` line), matching
+    nothing on either tree. Rule 5 counted braces and switches, but a pilot
+    blind to the intent still switches and still rests when starving. All
+    three now read the thing they claim to: the fallbacks, the counter
+    hit's own line, and whether the pilot's answer *changes* when the same
+    turn is asked twice with the telegraph swapped out.
   - **Four things were wrong along the way, all found by measuring.** The
     pilot read `battle.intent` AFTER `step` had cleared it, so it was null on
     all **4,757** decision turns and both new reads were dead while the code
@@ -2032,7 +2065,7 @@ suite can check.
   rather than a target. Measured across the LIVE bands, where a decision can
   change the outcome at all: the full-skill pilot beats "first button" by at
   least 15 points and mashing by at least 25 at every grade, and the
-  forecast's own pilot does not fall.* ✅ **19.1/23.6/29.1pp, 46.4/50.2/54.8pp,
+  forecast's own pilot does not fall.* ✅ **16.2/22.9/30.0pp, 45.5/50.4/55.6pp,
   and the forecast pilot up at all three.**
 
   *(The original entry, for the record.)* The same 68 builds against all 26

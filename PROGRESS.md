@@ -11,9 +11,9 @@ mashing by ≥25 at every grade, and the forecast's own pilot does not fall —
 
 | grade | vs first button | vs mashing | forecast pilot |
 |---|---|---|---|
-| standard | 12.5 → **19.1pp** | 38.3 → **46.4pp** | 48 → **52%** |
-| prime | 10.0 → **23.6pp** | 35.0 → **50.2pp** | 43 → **54%** |
-| apex | 12.8 → **29.1pp** | 37.6 → **54.8pp** | 43 → **60%** |
+| standard | 12.5 → **16.2pp** | 38.3 → **45.5pp** | 48 → **50%** |
+| prime | 10.0 → **22.9pp** | 35.0 → **50.4pp** | 43 → **52%** |
+| apex | 12.8 → **30.0pp** | 37.6 → **55.6pp** | 43 → **60%** |
 
 All against the pre-R103 engine on the same fixture (mixed-class teams, 8
 seeds). Difficulty elsewhere is unmoved: the Spire finale's best mono-build
@@ -79,6 +79,64 @@ all of the above.
 - **M5 rescue**: pinned to seed 42, so it read as a balance regression the day
   the RNG order changed. Now five seeds, majority must win.
 - **Onboarding walk**: the new guide lights at the first fought battle.
+
+### Four things it got wrong about itself, and three gate rules that could not fail
+
+Reading the shipped code for the browser QA turned up four things this
+milestone had got wrong about itself, and the battery turned up three more
+in the gate meant to be holding it.
+
+- **The Brace button lied twice.** It promised *"and get stamina back"* from
+  a brace that *spends* 25% of maximum, and quoted a flat 45% where a Fierce
+  creature's guard absorbs less. The tooltip and the resolution were two
+  descriptions of one rule.
+- **`stance.json` shipped a `lines` block nobody read.** `renderer.js`
+  indexed it; the engine spoke literals that disagreed with it. The
+  counter-switch's line had sat there unused since the day it was written —
+  which is *why* break 93 was missed: the gate scanned the log for a
+  sentence the engine never spoke.
+- **The `_doc` claimed a symmetry the code deliberately refuses.** It said
+  the opposition braces when it breathes too; `restCombatant` carries the
+  measurement for why it must not (both sides braced → the forecast pilot
+  fell six points and the spread compressed from 15.8pp to 11.5).
+- **The pilot kept its own stance table and its own brace predicate** — the
+  drift break 94 exists to catch, one file over from the gate, and a
+  predicate one condition short of the engine's.
+
+One fix for all four: `bracePreview`, `braceTitle` and `stanceLine` exported
+from the engine, with `step`, the arena and the pilot asking rather than
+re-deriving (R61). On a Fierce chimera the button now reads *"Take 36% off
+Baton Bonk — costs 15 stamina"* and the log reads *"guard absorbs 36% of the
+blow."* It **cost 2.9pp at standard** — the phantom brace had been
+flattering the number — and the obvious remedy (pricing a non-bracing rest
+at the stamina it buys) measured **+0.3 / −0.1 / −0.5**, a wash, so it is
+not in the build.
+
+Then the gate itself:
+
+- **Rule 0 compared the file with itself.** `stanceTuning(content)` spreads
+  `content.stanceMeta` *over* the defaults, and `stanceMeta` **is** the
+  shipped tuning. It could not disagree. The same vacuous assertion had been
+  copied into `smoke.js`.
+- **Rule 4 scanned for a sentence nothing spoke**, matching nothing on the
+  pristine tree and nothing on the broken one.
+- **Rule 5 counted braces and switches** — but a pilot blind to the intent
+  still switches, and still rests when starving, so the count never reached
+  zero. It now asks the same turn twice, once against the real telegraph and
+  once against a foe catching its breath, with identical rolls.
+
+And then the battery came back **98 of 98 caught with the STANCE gate
+FAILING on the baseline** — six breaks caught for free. A backslash-quote
+inside the gate's template literal collapsed to a bare quote, so the script
+handed to `node -e` would not parse; and I had "verified" that gate by
+extracting the literal and hand-unescaping backticks and dollars but not
+that one. **A verifier that does not reproduce the transport is not a
+verifier.**
+
+R72's rule caught the last one: the STANCE fixture hand-kept the class list,
+and smoke's scan failed the build. Both fixtures read `content.classes` now
+— and so does the copy in `smoke.js`, which is exempt from that scan, and is
+exactly why the battery's copy sat unnoticed.
 
 ### Known issues
 
