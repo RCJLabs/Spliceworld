@@ -12,7 +12,7 @@ and its schedule); `sw.js` bumped to `spliceworld-v41-r87`.
 | gate | result |
 |---|---|
 | `npm run smoke` | ✓ **new** — the ceiling, the schedule, the window, the levy |
-| `npm run battery` | ✓ — a **fifteenth gate**, breaks 80–84, all caught |
+| `npm run battery` | ✓ — **84 breaks, 84 caught**, a fifteenth gate, 5 new |
 | `npm run roadmap` | ✓ — **25** stated numbers (3 new: the ceiling, the levy %, the window) |
 | `npm run handlers` | ✓ — 37 controls pressed (was 36): `data-raid` fired |
 | `npm run a11y` | ✓ — 65 controls at 380px, 74 tabbed |
@@ -108,6 +108,23 @@ income first.
 - **The a11y fixture caught its own bug.** Two held nodes is not in range,
   so the first tick stood the planted raid down and the gate measured one
   control *fewer* than before rather than one more.
+
+### Five smoke runs, and every failure was a gate working
+
+Worth writing down, because none of them was noise:
+
+1. **The v1→current migration gate** asserts the campaign's exact shape — a
+   new save field has to be declared there, the way R82 declared its board.
+2. **The onboarding walk** caught an ordering fact: the Task Force note
+   lights when the county falls, not two steps later. Dominion is itself one
+   of the two triggers, so my separate step was two steps too late.
+3. **R83's rehabilitation assertion** — counted survivors, not the chain.
+4. **R74's eager cap** — 52 modules over 51.
+
+Two more were pre-empted rather than discovered a cycle at a time, because
+R86 had hit both in this exact spot: the agenda-chip→control map and R48's
+numbered-hint list.
+
 
 ### Known issues
 
