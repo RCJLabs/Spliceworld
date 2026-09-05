@@ -11,7 +11,7 @@
 import { indexContent, attachShapes } from '../render/renderer.js';
 
 // Everything the game needs to know before it can show you anything.
-const CORE = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout'];
+const CORE = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout', 'feral'];
 
 // …and everything it needs before it can draw one.
 const GEOMETRY = ['parts-shapes', 'enemies-shapes'];

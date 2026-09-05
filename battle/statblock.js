@@ -27,6 +27,7 @@ import { rngStream, pick } from '../util/rng.js';
 import { grantBattleXp } from './veterancy.js';
 import { driftFromBattle } from '../splice/temperament.js';
 import { infirmaryGrants } from '../splice/facility.js';
+import { attend } from '../splice/feral.js';
 
 // "Upgraded abilities" (ROADMAP §3.3) — grades already scale stats, so this
 // rides gently on top. R17 keyed combo scaling to it as well, which is why
@@ -275,6 +276,10 @@ export function finishBattle(state, battle, content, now) {
     const chimera = state.chimeras.find((ch) => ch.id === c.refId);
     if (!chimera) continue;
     driftFromBattle(chimera, content, { won: battle.outcome === 'win', knockedOut: c.hp <= 0 });
+    // R85 — standing in a fight together is the loudest form of attention
+    // there is. A creature you campaign with never drifts, which is the
+    // point: the mechanic is about the ones left in the pen.
+    attend(chimera, now);
   }
   for (const c of battle.player.team) {
     if (c.hp > 0) continue;

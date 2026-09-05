@@ -9,6 +9,7 @@ import { recordGauntletWin, gauntletComplete } from './gauntlet.js';
 import { gradeOf } from '../splice/extract.js';
 import { infirmaryGrants } from '../splice/facility.js';
 import { applyInjury, finishBattle } from '../battle/statblock.js';
+import { attend } from '../splice/feral.js';
 import { recordRivalResult, scoutStable } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';
@@ -418,6 +419,7 @@ export function resolveBattle(state, battle, content, now) {
       const rng = rngStream(state.seed, 'rescue', state.warRecord.wins);
       applyInjury(chimera, { name: 'Dramatic Rescue Whiplash', until: now + Math.round((1 + rng()) * HOUR) });
       chimera.bond = Math.min(100, chimera.bond + 10); // "you came back for me!"
+      attend(chimera, now); // R85: you went and got it
       state.chimeras.push(chimera);
       detail.freed = chimera.name;
       emitNews(state, content, 'rescued', { creature: chimera.name });

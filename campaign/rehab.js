@@ -25,6 +25,10 @@ import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { grantsOf } from '../splice/facility.js';
 import { playerLine } from './monologue.js';
 import { newsFor } from './wire.js';
+// R85 — the same function the rival ladder turns a genome into a fightable
+// record with, so a feral creature's bay card is built the way every other
+// bay card is.
+import { unitFromGenome } from '../battle/statblock.js';
 
 const HOUR = 3600000;
 
@@ -66,6 +70,43 @@ export function rehabGrants(state, content) {
 
 // A bay holds either a generated record (a rival's chimera, whose stats
 // came from physiology) or a roster id from enemies.json.
+// R85 — one of YOURS goes into a bay.
+//
+// The Wing was built for a captured rival: a bay holds a unit record and
+// `graduate` rebuilds a chimera from its genome, minting fresh tokens,
+// because there was never an original to keep. A creature that has gone
+// feral is a different case in exactly one way that matters — it IS the
+// original — so the entry carries the whole record and hands it back
+// untouched. Rebuilding it from its genome would return a stranger with the
+// same name and none of its xp, its trained moveset, or its scars, which is
+// a loss wearing the word "recovered".
+//
+// `unit` is still built, because the plan, the portrait and the bay card all
+// read one, and `unitFromGenome` is the same function the rival ladder uses.
+export function impound(state, chimera, content, now) {
+  state.campaign.containment ??= [];
+  state.chimeras = (state.chimeras ?? []).filter((c) => c !== chimera);
+  const entry = {
+    id: `bay-feral-${chimera.id}-${now}`,
+    // The tell that this one is going home rather than being rebuilt.
+    feral: true,
+    chimera,
+    unit: unitFromGenome({
+      id: `feral-${chimera.id}`,
+      name: chimera.name,
+      frame: chimera.frame,
+      tokens: Object.values(chimera.tokens ?? {}),
+      capturable: false,
+    }, content),
+    unitId: null,
+    rivalId: null,
+    capturedAt: now,
+    rehab: null,
+  };
+  state.campaign.containment.push(entry);
+  return entry;
+}
+
 export function bayUnit(entry, content) {
   if (!entry) return null;
   return entry.unit ?? content.enemies[entry.unitId] ?? null;
@@ -237,6 +278,23 @@ export function cancelRehab(state, ref, content) {
 // graduate that finished on Tuesday has been cleared for deployment since
 // Tuesday — stamping it `now` gave it a settling clock it had already served.
 function graduate(state, entry, content, now) {
+  // R85 — a creature of your own comes back AS ITSELF. The programme decides
+  // what it thinks of you (bond) and how settled it is (instability); its
+  // id, its tokens, its level, the four moves you trained it on and every
+  // scar it earned are the ones it went in with. It is also attended to by
+  // definition — somebody spent a fortnight with it — so the clock that sent
+  // it here starts again from zero rather than from wherever it left off.
+  if (entry.feral && entry.chimera) {
+    const rehab = entry.rehab;
+    const back = entry.chimera;
+    back.bond = rehab?.bond ?? back.bond;
+    back.instability = rehab?.instability ?? back.instability;
+    back.settleUntil = rehab?.until ?? now;
+    back.agitatedAt = null;
+    back.lastAttendedAt = rehab?.until ?? now;
+    state.chimeras.push(back);
+    return back;
+  }
   const unit = bayUnit(entry, content);
   const { sockets } = assignSockets(unit, content);
   const rehab = entry.rehab;

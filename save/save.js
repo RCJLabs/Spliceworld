@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 38;
+export const SAVE_VERSION = 39;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -482,6 +482,26 @@ const migrations = {
   // delay itself the moment the save becomes eligible — dating it in a
   // migration would start the clock for a player who has not yet beaten a
   // rival, and the gate for this whole system is that you rattled somebody.
+  // R85 — the top of the instability scale finally does something, and the
+  // one thing it must never do is do it to somebody retroactively. A
+  // creature that has been on the roster for six months has `lastAttendedAt`
+  // undefined, which reads as the epoch, which reads as neglected since
+  // 1970 — so every unstable chimera in every existing save would be
+  // agitated the instant the player updated, through no act of theirs.
+  //
+  // So the field is seeded to NOW rather than to `createdAt`: whatever the
+  // player was doing before this build, they were not ignoring a mechanic
+  // that did not exist. Everybody starts the new clock clean, and the first
+  // creature that goes agitated does so because it was genuinely left alone
+  // for three days AFTER the update, which is a thing the player can see
+  // coming and answer.
+  39: (save, now = Date.now()) => {
+    for (const chimera of save.chimeras ?? []) {
+      chimera.lastAttendedAt ??= now;
+      chimera.agitatedAt ??= null;
+    }
+    return save;
+  },
   38: (save) => {
     save.campaign ??= {};
     save.campaign.loose ??= [];
@@ -569,7 +589,11 @@ export function newGameState() {
 // (The v2 migration above keeps hardcoded values on purpose: migrations
 // reproduce the historical schema even if TUNING drifts later.)
 
-export function migrate(save) {
+// R85 — `now` is threaded through because the v39 step is the first
+// migration that needs a clock: it seeds a "last attended" stamp, and a
+// migration that quietly reads Date.now() inside itself is one a test can
+// only check approximately. Defaulted, so every existing caller is unchanged.
+export function migrate(save, now = Date.now()) {
   if (typeof save.saveVersion !== 'number') {
     throw new Error('Save has no version — refusing to guess.');
   }
@@ -577,7 +601,7 @@ export function migrate(save) {
     const next = save.saveVersion + 1;
     const fn = migrations[next];
     if (!fn) throw new Error(`No migration to save version ${next}.`);
-    save = fn(save);
+    save = fn(save, now);
     save.saveVersion = next;
   }
   return save;

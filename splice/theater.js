@@ -10,6 +10,7 @@ import { driftFromTraining } from './temperament.js';
 import { MOVE_SLOTS, activeMoves } from '../battle/moves.js';
 import { defaultMoveset } from '../battle/moves.js';
 import { movesFromTokens } from '../battle/statblock.js';
+import { attend } from './feral.js';
 
 const CHIMERA_NAMES = [
   // R41: fifteen names for a stable the game encourages past nine was a
@@ -140,6 +141,10 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
     temperament: null, // seeded on settling — later milestone
     injury: null, // Infirmary timer set by battle aftermath (Law 1)
     lastTrainedAt: 0,
+    // R85: born attended — the neglect clock starts the moment it exists,
+    // not at the epoch, or every new chimera would be three days overdue.
+    lastAttendedAt: now,
+    agitatedAt: null,
     // R41: what it has been through. Grades build a creature; this seasons it.
     xp: 0,
     // R30: what it can press, out of everything its anatomy knows. Stamped
@@ -224,6 +229,7 @@ export function trainChimera(state, chimeraId, now, content) {
   if (state.funds < TRAINING.cost) return { ok: false, msg: 'Training treats cost money. The good ones, anyway.' };
   state.funds -= TRAINING.cost;
   chimera.lastTrainedAt = now;
+  attend(chimera, now);   // R85: working with a creature is what stops it drifting
   chimera.bond = Math.min(100, chimera.bond + TRAINING.bondGain);
   // Trust makes a creature braver, and gentler with it (§3.5).
   driftFromTraining(chimera, content);
@@ -285,6 +291,7 @@ export function setMoveset(state, chimeraId, next, known, now, content) {
   }
   state.funds -= t.cost;
   chimera.lastMoveTrainAt = now;
+  attend(chimera, now);   // R85
   chimera.moveset = ids;
   const dropped = [...current].filter((id) => !ids.includes(id));
   const name = (id) => known.find((m) => m.id === id)?.name ?? 'something';

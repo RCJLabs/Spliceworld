@@ -67,6 +67,11 @@ export function indexContent(raw) {
     // R82: the breakout's whole tuning is one flat object, so it is
     // indexed as one rather than split into a list and a meta block.
     breakoutMeta: raw.breakout ?? null,
+    // R85: the top of the instability scale. Tuning and copy split the way
+    // every other system splits them, so a threshold can move without an
+    // engine edit and a line can be rewritten without either.
+    feralMeta: raw.feral?.tuning ?? null,
+    feralLines: raw.feral?.lines ?? null,
     directorRules: raw.director ? byId(raw.director.counters) : {},
     directorMeta: raw.director ? raw.director.tuning : null,
     facility: raw.facility ? byId(raw.facility.tracks) : {},

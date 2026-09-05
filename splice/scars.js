@@ -15,6 +15,7 @@
 
 import { rngStream, pick } from '../util/rng.js';
 import { infirmaryGrants } from './facility.js';
+import { attend } from './feral.js';
 
 const HOUR = 3600000;
 
@@ -119,6 +120,7 @@ export function treatInjury(state, chimeraId, content, now) {
   state.funds -= cost;
   const name = chimera.injury.name;
   chimera.injury = null;
+  attend(chimera, now); // R85: paying the Infirmary bill is paying attention
   chimera.injuriesTreated = (chimera.injuriesTreated ?? 0) + 1;
   return { ok: true, cost, msg: `${chimera.name} is patched up properly. ${name} will leave no trace, which is the expensive option.` };
 }
