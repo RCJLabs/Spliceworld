@@ -11,7 +11,7 @@ route. `SAVE_VERSION` **38 → 39** (migration seeds `lastAttendedAt` and
 | gate | result |
 |---|---|
 | `npm run smoke` | ✓ **new** — the whole mechanic, plus a walk assertion that a player who shows up never loses a creature |
-| `npm run battery` | ✓ — **74 breaks**, a thirteenth gate, 6 new |
+| `npm run battery` | ✓ — **74 breaks, 74 caught**, a thirteenth gate, 6 new |
 | `npm run roadmap` | ✓ — **20** stated numbers (3 new: the bond floor, the neglect window, the answer window) |
 | `npm run a11y` | ✓ — 60 controls at 380px, now including a pacing creature's card |
 | `npm run boot` | ✓ — 1031 KB to put the game on screen |
@@ -132,6 +132,12 @@ no breakouts in it.
 - A feral bay has no expiry, unlike a rival's captive board. Deliberate — it
   is your creature and the Wing will hold it — but it means a player can
   accumulate bays they never empty.
+- Two existing ROADMAP breaks went **BADANCH** on the first battery run
+  rather than silently green, which is the anchor rule working: both were
+  aimed at prose this milestone rewrote (`save version: 38`, and the §3.4
+  Feral line that used to say "not shipped"). Break 51 now points at Gene
+  Juice, the one gap R77 named that is still a gap — so when R86 lands, it
+  moves again or goes.
 
 ### Next session's first task
 
