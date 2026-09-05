@@ -7000,6 +7000,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     hatch: 'data-act="hatch"', care: 'data-act="care"', vat: 'id="vat-go"', spar: 'data-spar=',
     job: 'data-job=', assault: 'data-node=', treat: 'data-treat=', train: 'data-train=',
     defend: 'data-defend=', rescue: 'data-rescue=',
+    // R85 — the same control as `train`, and deliberately so. Attention is
+    // what settles an agitated creature; training is the one form of it the
+    // player can press on the screen this chip lands them on, and the row's
+    // own hint says so. (A fight or a treatment answers it too, but neither
+    // is a button on the Pens, and this gate is about where the chip LANDS.)
+    settle: 'data-train=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
