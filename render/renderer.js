@@ -77,6 +77,9 @@ export function indexContent(raw) {
     taskforceMeta: raw.taskforce?.tuning ?? null,
     taskforceLines: raw.taskforce?.lines ?? null,
     rushMeta: raw.rush?.tuning ?? null,
+    // R103 — how a brace and a counter-switch are priced.
+    stanceMeta: raw.stance?.tuning ?? null,
+    stanceLines: raw.stance?.lines ?? null,
     rushKinds: raw.rush?.kinds ?? null,
     directorRules: raw.director ? byId(raw.director.counters) : {},
     directorMeta: raw.director ? raw.director.tuning : null,

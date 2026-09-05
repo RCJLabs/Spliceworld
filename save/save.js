@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 41;
+export const SAVE_VERSION = 42;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -498,6 +498,16 @@ const migrations = {
   // R87 — the Task Force's board and its schedule. Nothing is seeded from
   // the past: an existing save is not retroactively raided, and the first
   // raid is scheduled by the first tick that finds the player in range.
+  // R103 — the opposition commits before you answer, and what it committed
+  // to lives on the battle (`battle.intent`). A fight saved mid-turn under
+  // v41 has none; `intentOf` plans one on the first read, so the fight is
+  // resumed rather than dropped and the field is cleared here rather than
+  // guessed at. Nothing else about a telegraph, a brace or a counter-switch
+  // touches the schema.
+  42: (save) => {
+    if (save.battle) save.battle.intent = null;
+    return save;
+  },
   41: (save) => {
     save.campaign ??= {};
     save.campaign.raid ??= null;

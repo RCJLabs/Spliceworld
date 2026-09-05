@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 41
+- save version: 42
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -2330,3 +2330,22 @@ suite can check.
   at 1,280 px the agenda and the wire are visible without scrolling on every
   screen, the 380 px floor and gutter still hold, and the day-180 Pens
   needs no horizontal scroll at either width.*
+- **R118 — The gene probe cannot see a damage-over-time gene.** Found while
+  shipping R103, and it is not R103's doing: the trait probe in `smoke.js`
+  scores a gene by how far it moves TURNS TAKEN and HP LEFT, and
+  `venom_gland` is a slow trickle that changes neither aggregate much while
+  changing *when* a creature falls. Measured on the **unchanged** engine by
+  re-salting the probe, it reads **1.81× the noise floor on one salt and
+  0.50× on another** — so the 1.5× bar it was supposed to clear was never
+  robust for this gene, and the derivation written beside that bar ("the
+  weakest reading measured … venom_gland, 1.81x") was taken on the two salts
+  that happened to land well. After R103 reordered the battle's RNG stream it
+  reads 0.56×, 0.89×, 0.90× and 1.18× across four salts. Every *other* gene
+  reads 5.2–75× on every salt, before and after, so this is one gene and one
+  blind spot rather than a bar that is too high. It is exempted by name in
+  the suite, with a second assertion that the exemption stays at exactly one
+  gene. Proposed, medium: give the probe a third measure that a DoT actually
+  moves — total damage dealt to the player's team, or the turn the first
+  creature falls — and retire the exemption. *Done when: `venom_gland` clears
+  the same 1.5× bar as every other gene on at least four independent salts,
+  and `UNRESOLVED_BY_THIS_PROBE` is empty.*

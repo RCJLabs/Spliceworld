@@ -24,7 +24,8 @@ import { knownMoves } from '../battle/moves.js';
 import { rivalEncounter, rivalList, rivalStatus } from '../campaign/rivals.js';
 import { rescueEncounterFor } from '../campaign/map.js';
 import { mulberry32, hashString, pick, rngStream } from '../util/rng.js';
-import { chooseMoveIndex } from '../battle/ai.js';
+import { chooseMoveIndex, choosePlayerAction } from '../battle/ai.js';
+import { forecast, bandFor } from '../battle/forecast.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -806,6 +807,159 @@ export function plantBrokenCombo(content) {
   return mutated;
 }
 
+
+// --- R103: does playing the fight well change the fight? -------------------
+//
+// The yardstick had a hole in the shape of the player. Every table above
+// measures a BUILD, flown by one fixed pilot at skill 0.8, so a change that
+// made the arena deeper or shallower moved nothing here and nothing anywhere
+// else — the sixth audit had to write a throwaway probe to find out that
+// pressing the first button was worth 2.5 points less than playing well.
+//
+// The same builds, the same encounters, under pilots that differ ONLY in how
+// they choose. The gap between them is what a decision is worth.
+//
+// BUCKETED BY THE BRIEFING'S OWN VERDICT, which is the half that makes the
+// number mean anything. Measured over the uniform grid, 72-81% of pairings
+// are called walkover or not-survivable before a move is pressed — a day-one
+// build against the Compliance Spire cannot be saved by any pilot, and a
+// walkover cannot be lost by one. Averaging those in reports a skill spread
+// of about three points and hides a real one of fifteen. The LIVE bands
+// (favoured, even, losing) are the fights a player can actually influence,
+// and they are where this number lives.
+export const PILOTS = {
+  // The ceiling: the same policy the opposition plays, flown perfectly.
+  'skill 1.0': (content) => (battle, actions) => skilledAction(battle, actions, content, 1),
+  // What the briefing PROMISES. If this one falls, the forecast starts lying
+  // to the player in the optimistic direction, which is the one direction it
+  // must never lie in — so it is a floor, not a target.
+  'skill 0.8': (content) => (battle, actions) => skilledAction(battle, actions, content, 0.8),
+  'skill 0.5': (content) => (battle, actions) => skilledAction(battle, actions, content, 0.5),
+  // The three ways a person actually plays when they are not thinking.
+  strongest: (content) => (battle, actions) => {
+    const me = playerActive(battle);
+    const moves = actions.filter((a) => a.type === 'move')
+      .sort((x, y) => me.moves[y.index].power - me.moves[x.index].power);
+    return moves[0] ?? actions.find((a) => a.type === 'rest') ?? actions[0];
+  },
+  first: () => (battle, actions) =>
+    actions.find((a) => a.type === 'move') ?? actions.find((a) => a.type === 'rest') ?? actions[0],
+  random: () => (battle, actions) => {
+    const pool = actions.filter((a) => a.type === 'move' || a.type === 'rest');
+    return pool[Math.floor(rngStream(battle.seed, 'agency', battle.rollCount++)() * pool.length)] ?? actions[0];
+  },
+};
+
+// R103 — the skilled pilots read the WHOLE action space (brace and the
+// counter-switch included), because that is what a player who is paying
+// attention has in front of them. The unskilled ones below still only press
+// buttons, which is the entire point of the comparison: the gap between them
+// is what paying attention is worth.
+function skilledAction(battle, actions, content, skill) {
+  return choosePlayerAction(battle, actions, content, skill,
+    () => rngStream(battle.seed, 'agency', battle.rollCount++)()) ?? actions[0];
+}
+
+function flyBattle(team, encounter, content, seed, pilot) {
+  const battle = createBattle(team, encounter, content, seed, 1);
+  let guard = 0;
+  while (!battle.over && guard++ < 300) {
+    const actions = playerActions(battle);
+    if (!actions.length) break;
+    const release = actions.find((a) => a.type === 'release');
+    const action = release ?? (battle.pendingReplace ? actions[0] : pilot(battle, actions));
+    if (!action) break;
+    step(battle, action, content);
+  }
+  return battle.outcome === 'win';
+}
+
+export const LIVE_BANDS = ['favoured', 'even', 'losing'];
+
+// `runs` is the forecast's sample for BANDING a pairing — it decides which
+// bucket the row lands in, not the win rate reported, so it is cheap on
+// purpose. The win rates come from the pilots actually flying the fight.
+// MIXED TEAMS, not three copies of one animal.
+//
+// The first version of this fielded `[c, {...c}, {...c}]` — the yardstick's
+// own habit, and correct for pricing a BUILD. It is wrong for pricing a
+// DECISION: three clones share one class, so the counter-switch this phase
+// shipped could never once fire in the fixture that was supposed to measure
+// it. A gate can be perfectly general and still stand where the new code
+// cannot be reached (R85, R86, R87, and now here).
+//
+// So a team is three DIFFERENT builds, spread across classes where the pool
+// allows, which is also the team the game actually hands a player (R41's
+// stable of three, A1's three bodies).
+function mixedTeams(chimeras, count, content) {
+  const byClass = new Map();
+  for (const c of chimeras) {
+    // The class is ANATOMY, computed by `analyze` on the way into a
+    // combatant — it is not a field on the chimera record, and reading it as
+    // one put all 68 builds in a single bucket and quietly rebuilt the
+    // clone teams this function exists to replace.
+    const key = analyze(c.frame, Object.values(c.tokens), content).creatureClass ?? 'none';
+    if (!byClass.has(key)) byClass.set(key, []);
+    byClass.get(key).push(c);
+  }
+  const classes = [...byClass.keys()];
+  const teams = [];
+  for (let i = 0; i < count; i++) {
+    const team = [];
+    for (let slot = 0; slot < 3; slot++) {
+      const pool = byClass.get(classes[(i + slot) % classes.length]) ?? chimeras;
+      const pick = pool[(i + slot * 7) % pool.length];
+      team.push({ ...pick, id: `${pick.id}#${slot}` });
+    }
+    teams.push(team);
+  }
+  return teams;
+}
+
+export function agencyTable(content, { grade = 'standard', builds = 40, seeds = 3, bandRuns = 16 } = {}) {
+  const pilots = Object.fromEntries(Object.entries(PILOTS).map(([k, make]) => [k, make(content)]));
+  const chimeras = sampleBuilds(content, builds, 2026)
+    .map((b) => makeSimChimera(b.frame, b.partIds, grade, content));
+  const teams = mixedTeams(chimeras, builds, content);
+  const encounterIds = Object.keys(content.encounters);
+  const bands = {};
+  const seedList = Array.from({ length: seeds }, (_, i) => i + 1);
+  for (const encId of encounterIds) {
+    const encounter = content.encounters[encId];
+    for (const team of teams) {
+      const band = bandFor(forecast(team, encounter, content, 1, 0, { runs: bandRuns }).winRate).id;
+      const bucket = (bands[band] ??= { pairings: 0, fights: 0, wins: {} });
+      bucket.pairings++;
+      for (const seed of seedList) {
+        bucket.fights++;
+        for (const [name, pilot] of Object.entries(pilots)) {
+          bucket.wins[name] = (bucket.wins[name] ?? 0) + (flyBattle(team, encounter, content, seed, pilot) ? 1 : 0);
+        }
+      }
+    }
+  }
+  const live = { pairings: 0, fights: 0, wins: {} };
+  for (const band of LIVE_BANDS) {
+    const b = bands[band];
+    if (!b) continue;
+    live.pairings += b.pairings;
+    live.fights += b.fights;
+    for (const [k, v] of Object.entries(b.wins)) live.wins[k] = (live.wins[k] ?? 0) + v;
+  }
+  const rate = (bucket, name) => (bucket.fights ? bucket.wins[name] / bucket.fights : 0);
+  return {
+    grade,
+    bands,
+    live,
+    pairings: Object.values(bands).reduce((n, b) => n + b.pairings, 0),
+    rate,
+    // The headline: what a decision is worth where a decision can matter.
+    spread: rate(live, 'skill 1.0') - rate(live, 'first'),
+    spreadVsRandom: rate(live, 'skill 1.0') - rate(live, 'random'),
+    forecastRate: rate(live, 'skill 0.8'),
+  };
+}
+
 const pct = (x) => `${Math.round(x * 100)}%`;
 
 function main() {
@@ -829,6 +983,30 @@ function main() {
     teamSize: Number(args.team ?? 3),
   };
   const t0 = Date.now();
+  // R103 — the agency table, on request. It flies six pilots over the whole
+  // grid, which is six times the work of the balance table, so it is a flag
+  // rather than part of every run.
+  if (args.agency) {
+    const grades = String(args.agency === true ? 'standard,prime,apex' : args.agency).split(',');
+    console.log('agency: what a decision is worth, by the briefing\'s own verdict\n');
+    for (const grade of grades) {
+      const a = agencyTable(content, { grade, builds: opts.builds, seeds: opts.seedsPer });
+      console.log(`grade ${grade} — ${a.pairings} pairings`);
+      console.log('  band        pairings  share   ' + Object.keys(PILOTS).map((k) => k.padStart(9)).join(' '));
+      for (const band of ['walkover', 'favoured', 'even', 'losing', 'hopeless']) {
+        const b = a.bands[band];
+        if (!b) continue;
+        const cells = Object.keys(PILOTS).map((k) => pct(a.rate(b, k)).padStart(9)).join(' ');
+        console.log(`  ${band.padEnd(11)} ${String(b.pairings).padStart(8)}  ${pct(b.pairings / a.pairings).padStart(5)}   ${cells}`);
+      }
+      const cells = Object.keys(PILOTS).map((k) => `${(100 * a.rate(a.live, k)).toFixed(1)}%`.padStart(9)).join(' ');
+      console.log(`  ${'LIVE'.padEnd(11)} ${String(a.live.pairings).padStart(8)}  ${pct(a.live.pairings / a.pairings).padStart(5)}   ${cells}`);
+      console.log(`  → a decision is worth ${(a.spread * 100).toFixed(1)}pp over the first button, ${(a.spreadVsRandom * 100).toFixed(1)}pp over mashing`
+        + `; the forecast's own pilot wins ${pct(a.forecastRate)} of live fights\n`);
+    }
+    console.log(`agency in ${Date.now() - t0}ms`);
+    return;
+  }
   const { rows, flags, encounterIds } = runSim(content, opts);
 
   const short = (e) => (e.startsWith('rival_') ? '@' + e.slice(6) : e).slice(0, 9);

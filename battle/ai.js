@@ -6,7 +6,7 @@
 //
 // DOM-free and deterministic apart from the battle's own seeded stream, so
 // tools/sim.js replays the exact code the browser runs.
-import { previewMove } from './engine.js';
+import { previewMove, classMultiplier as classMult, intentOf } from './engine.js';
 
 // Skill is a dial, not a switch: at 0 this is the old coin flip, at 1 it
 // always takes the best line. Encounter tier drives it, so a beat cop plays
@@ -234,4 +234,121 @@ export function chooseMoveIndex(battle, atk, def, content, skill, rollFn) {
   const chosen = atk.moves[best.i];
   if (!taunted && starving && !(chosen.power > 0) && best.score < STARVED_UTILITY_BAR) return -1;
   return best.i;
+}
+
+// R103 — THE WHOLE ACTION SPACE, not just the moves.
+//
+// `chooseMoveIndex` above answers one question — which move — because until
+// this milestone that was the only question with an answer. Bracing gave
+// stamina and nothing else, and switching was a coin toss because the
+// opposition re-aimed at whoever arrived, so a pilot that considered either
+// was a pilot playing worse.
+//
+// Both are decisions now: the enemy commits first (`battle.intent`), so a
+// brace is worth exactly the share of a KNOWN hit it absorbs, and tagging in
+// the class that counters the telegraphed attacker lands a free hit on the
+// way in. This is what a player who is paying attention does, so it is what
+// the yardstick's pilot has to do — a mechanic no pilot uses is a mechanic
+// the harness cannot see (R83), and the whole point of this phase is a
+// number that says whether paying attention pays.
+//
+// It scores against the SAME `scoreMove` the enemy uses, in the same units,
+// so the three options are comparable rather than three tunings that happen
+// to sit near each other.
+export function choosePlayerAction(battle, actions, content, skill, rollFn) {
+  if (!actions?.length) return null;
+  const me = battle.player.team[battle.player.active];
+  const foe = battle.enemy.active;
+  const release = actions.find((a) => a.type === 'release');
+  if (release) return release;
+
+  // `chooseMoveIndex` keeps its own skill dial, including its coin flip — so
+  // it is asked first and unchanged. The first draft of this function
+  // replaced that flip with one of its own over the WHOLE action space, and
+  // a distracted pilot started tagging out at random: the forecast's own
+  // pilot fell fifteen points, which is the one thing this milestone is not
+  // allowed to do. Skill decides how often you are paying ATTENTION, and the
+  // extra options below are what attention buys.
+  const moveIdx = chooseMoveIndex(battle, me, foe, content, skill, rollFn);
+  const bestMove = moveIdx >= 0 ? actions.find((a) => a.type === 'move' && a.index === moveIdx) : null;
+  const allies = battle.player.team.filter((c) => c.hp > 0).length;
+  const incoming = incomingDamage(foe, me, content, battle.turn);
+  const window = Math.min(1, (me.hp / Math.max(1, incoming)) / 4);
+  // The currency for the three options is EXPECTED DAMAGE, not `scoreMove`'s
+  // composite. Scored against the composite, bracing won a third of all
+  // turns — it was being compared against a number that carries a kill bonus
+  // and a utility term, so mitigation looked like tempo — and the pilot
+  // spent a third of the fight standing still and lost ground for it.
+  //
+  // Preventing damage is worth strictly less than dealing it: a blow you
+  // absorb extends the fight, a blow you land ends it. So the bar for
+  // standing there is the damage you would otherwise have done.
+  const bestPreview = bestMove ? previewMove(me, foe, me.moves[moveIdx], content, battle.turn) : null;
+  const bestDamage = bestPreview ? bestPreview.damage * bestPreview.hitChance : 0;
+
+  // Not paying attention this turn: press the button and move on.
+  if (rollFn() > skill) return bestMove ?? actions.find((a) => a.type === 'rest') ?? actions[0];
+
+  // ASKED FOR, not read off the battle. `step` consumes the intent and
+  // clears it, so `battle.intent` is null every time a pilot is called — the
+  // first draft read the field directly and got null on all 4,757 decision
+  // turns, which silently switched off both of this milestone's reads while
+  // the code around them looked exactly right. `intentOf` plans one if there
+  // is none and stores it, so the pilot and `step` resolve the same turn
+  // against the same commitment, and the RNG is drawn once.
+  const intent = intentOf(battle, content);
+  const rules = content?.classRules ?? {};
+  const stance = { absorb: 0.45, counterPower: 1, braceCost: 0.25, ...(content?.stanceMeta ?? {}) };
+  let best = bestMove ? { action: bestMove, score: bestDamage } : null;
+
+  // BRACE. Worth the share of the telegraphed hit it takes off, and only
+  // when there is a telegraphed hit — against a foe that is resting or has
+  // no move coming, standing there is exactly the old trap.
+  const braceAction = actions.find((a) => a.type === 'rest');
+  const braceCost = Math.round(me.staminaMax * stance.braceCost);
+  if (braceAction && intent && intent.index >= 0 && !intent.ignoreGuard
+      && me.stamina >= braceCost && !me.status.justBraced) {
+    const absorb = stance.absorb * (1 - (me.perks?.guardLoss ?? 0));
+    // Damage avoided…
+    let braceScore = incoming * absorb;
+    // …and the whole creature, when the blow coming would otherwise finish
+    // it. That is the read this option exists for: a telegraph you cannot
+    // survive is the one turn standing still is obviously right.
+    if (incoming >= me.hp) braceScore += me.hp;
+    // …less what the stamina would have bought. A brace is PAID for, and a
+    // pilot that does not price what it spends will buy a brace it did not
+    // need: measured, scoring it free made the priced brace worth 9.1pp
+    // against the 14.1pp of not having one at all — the option was actively
+    // losing fights because nobody was subtracting its cost.
+    const perStamina = bestMove ? bestDamage / Math.max(1, me.moves[moveIdx].cost) : 0;
+    braceScore -= braceCost * perStamina;
+    if (braceScore > bestDamage) best = { action: braceAction, score: braceScore };
+  }
+
+  // COUNTER-SWITCH. Tag in the animal the telegraphed attacker is the wrong
+  // shape for: it arrives, lands one for free, and the hit that was aimed at
+  // somebody else is now aimed at the creature that resists it.
+  if (intent && intent.creatureClass) {
+    for (const a of actions) {
+      if (a.type !== 'switch') continue;
+      const incomingMate = battle.player.team[a.index];
+      if (!incomingMate || incomingMate.hp <= 0) continue;
+      const beats = incomingMate.creatureClass
+        && classMult(incomingMate.creatureClass, intent.creatureClass, content) === rules.advantage;
+      if (!beats) continue;
+      const freeIdx = chooseMoveIndex(battle, incomingMate, foe, content, 1, rollFn);
+      if (freeIdx < 0) continue;
+      const free = previewMove(incomingMate, foe, incomingMate.moves[freeIdx], content, battle.turn);
+      // The free hit, plus what the switch spares this creature. Discounted:
+      // it still costs the turn, and the incoming animal takes the blow.
+      // The free hit, in the same currency, plus the share of the telegraphed
+      // blow the incoming animal's class takes off it.
+      const score = free.damage * free.hitChance * stance.counterPower
+        + incoming * (1 - (rules.disadvantage ?? 1));
+      if (score > (best?.score ?? 0)) best = { action: a, score };
+    }
+  }
+
+  if (best) return best.action;
+  return braceAction ?? actions.find((a) => a.type === 'move') ?? actions[0];
 }

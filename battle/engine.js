@@ -33,8 +33,25 @@ const REGEN_TURNS = 3;
 const TAUNT_TURNS = 2;
 const VENOM_TICK = 3;
 const VENOM_CAP = 5;
-const REST_FRACTION = 0.35;
 const REJECTION_MULT = 0.75;
+
+// R103 — bracing and the counter-switch, priced in data/stance.json. The
+// defaults mirror that file exactly and smoke holds them equal: the data
+// wins, so a default that disagrees is a lie waiting for somebody to retune
+// one of them (R9's rule, learned in contest.js and paid for again in R87).
+const STANCE_DEFAULTS = { absorb: 0.45, stamina: 0.35, counterPower: 1, braceCost: 0.25 };
+
+export function stanceTuning(content) {
+  return { ...STANCE_DEFAULTS, ...(content?.stanceMeta ?? {}) };
+}
+
+// One rule in one place. The absorb was written out three times — in the
+// preview, in the per-hit loop and in the line that announces it — so the
+// number the player was shown and the number that landed agreed only by
+// everybody remembering to edit all three (R61).
+function guardAbsorb(def, content) {
+  return stanceTuning(content).absorb * (1 - (def.perks?.guardLoss ?? 0));
+}
 
 // A combatant with no temperament — every enemy unit, and any chimera
 // still settling — behaves exactly as it did before §3.5 landed.
@@ -148,7 +165,7 @@ export function combatantFromChimera(chimera, content, now) {
     perks: perksOf(chimera, content),
     scars: scarEffects(chimera, content),
     stages: { acc: 0, evasion: 0, power: 0 },
-    status: { venom: 0, bleed: 0, sleep: false, stun: false, guard: false, charging: null, thorns: 0, regen: null, taunted: 0 },
+    status: { venom: 0, bleed: 0, sleep: false, stun: false, guard: false, justBraced: false, charging: null, thorns: 0, regen: null, taunted: 0 },
   };
   return applySetBonus(combatant, report.purebredSpecies, content);
 }
@@ -203,7 +220,7 @@ export function combatantFromUnit(unit, scale = 1) {
     perks: unit.perks ? { ...NEUTRAL_PERKS, ...unit.perks } : NEUTRAL_PERKS,
     scars: [],
     stages: { acc: 0, evasion: 0, power: 0 },
-    status: { venom: 0, bleed: 0, sleep: false, stun: false, guard: false, charging: null, thorns: 0, regen: null, taunted: 0 },
+    status: { venom: 0, bleed: 0, sleep: false, stun: false, guard: false, justBraced: false, charging: null, thorns: 0, regen: null, taunted: 0 },
   };
 }
 
@@ -329,7 +346,7 @@ export function previewMove(atk, def, move, content, turn = null) {
     one *= 1 + atk.perks.critChance * ((atk.perks.critMult ?? 1) - 1);
   }
   if (!(ignoreArmor || move.keywords.ignoreArmor)) one -= def.armor * ARMOR_FACTOR;
-  if (def.status.guard && !move.keywords.ignoreGuard) one *= 1 - 0.5 * (1 - (def.perks?.guardLoss ?? 0));
+  if (def.status.guard && !move.keywords.ignoreGuard) one *= 1 - guardAbsorb(def, content);
   // Rounded once at the end: `hits` is an expectation and can be fractional,
   // and a damage chip reading 98.57142857142857 is not a number anybody can
   // use. The per-hit round matches what attack() does to each strike.
@@ -455,7 +472,9 @@ export function playerActions(battle) {
     const swings = actions.filter((a) => a.type === 'move' && me.moves[a.index].power > 0);
     if (swings.length) return swings;
   }
-  actions.push({ type: 'rest', label: 'Catch Breath' });
+  // R103 — it braces as well as breathes now, so it is named for the half
+  // that decides fights. The old label described the half that never did.
+  actions.push({ type: 'rest', label: 'Brace' });
   const trapped = me.status.trapped;
   if (!trapped) {
     for (const { c, i } of livingBench(battle)) actions.push({ type: 'switch', index: i, label: `Switch to ${c.name}` });
@@ -488,7 +507,7 @@ function tagMultiplier(moveTags, defenderTags, chart) {
 }
 export { tagMultiplier }; // exposed for tests and the M4.5 harness
 
-function attack(battle, atk, def, move, events, content) {
+function attack(battle, atk, def, move, events, content, powerScale = 1) {
   atk.stamina = Math.max(0, atk.stamina - move.cost);
 
   const from = sideOf(atk);
@@ -538,7 +557,7 @@ function attack(battle, atk, def, move, events, content) {
       : 1;
     let dmg = 0;
     for (let hit = 0; hit < hits; hit++) {
-      let one = move.power * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult * clsMult;
+      let one = move.power * powerScale * (0.55 + atk.power / 60) * stageMult(atk.stages.power) * mult * clsMult;
       one *= 0.9 + 0.2 * roll(battle);
       one *= 1 + (atk.perks?.power ?? 0); // Fierce
       one *= 1 + mine.power; // a scar that changed how it fights THESE
@@ -550,16 +569,12 @@ function attack(battle, atk, def, move, events, content) {
       if (move.keywords.rage) one *= 1 + RAGE_SCALE * (1 - atk.hp / Math.max(1, atk.maxHp));
       if (crit) one *= atk.perks.critMult;
       if (!bypassArmor) one -= def.armor * ARMOR_FACTOR;
-      if (def.status.guard && !move.keywords.ignoreGuard) {
-        const absorbed = 0.5 * (1 - (def.perks?.guardLoss ?? 0));
-        one *= 1 - absorbed;
-      }
+      if (def.status.guard && !move.keywords.ignoreGuard) one *= 1 - guardAbsorb(def, content);
       dmg += Math.max(1, Math.round(one));
     }
     if (def.status.guard && !move.keywords.ignoreGuard) {
       // A Fierce creature guards badly — it would rather be hitting.
-      const absorbed = 0.5 * (1 - (def.perks?.guardLoss ?? 0));
-      events.push(`${def.name}'s guard absorbs ${Math.round(absorbed * 100)}% of the blow.`);
+      events.push(`${def.name}'s guard absorbs ${Math.round(guardAbsorb(def, content) * 100)}% of the blow.`);
     }
     def.hp = Math.max(0, def.hp - dmg);
     if (atk.kind === 'chimera' && def.hp > 0) {
@@ -777,12 +792,19 @@ function actUnavailable(c, events) {
   return false;
 }
 
-function performMove(battle, side, moveIndex, events, content) {
+// `powerScale` is R103's counter-switch hit: the same move, resolved by the
+// same path, at a fraction of its power. A fraction rather than a second
+// damage formula — the free hit has to obey armour, the class triangle, the
+// tag chart and a guard exactly like every other blow in the game, or it is
+// a special case that will disagree with the briefing the day somebody
+// retunes one of them.
+function performMove(battle, side, moveIndex, events, content, powerScale = 1) {
   const atk = side === 'player' ? playerActive(battle) : battle.enemy.active;
   const def = side === 'player' ? battle.enemy.active : playerActive(battle);
   if (atk.hp <= 0) return;
   if (actUnavailable(atk, events)) return;
   atk.status.guard = false; // guard lasts until your next action
+  atk.status.justBraced = false; // …and a creature that acted is not turtling
 
   const move = atk.moves[moveIndex];
   if (move.keywords.charge && atk.status.charging == null) {
@@ -792,7 +814,7 @@ function performMove(battle, side, moveIndex, events, content) {
     return;
   }
   if (atk.status.charging != null) atk.status.charging = null;
-  attack(battle, atk, def, move, events, content);
+  attack(battle, atk, def, move, events, content, powerScale);
 }
 
 // The opposition thinks now (R22). How hard it thinks is the encounter's
@@ -803,6 +825,63 @@ function enemyChooseMove(battle, content) {
     battle, battle.enemy.active, playerActive(battle), content,
     battle.aiSkill ?? 0.5, () => roll(battle)
   );
+}
+
+// R103 — THE OPPOSITION COMMITS BEFORE YOU ANSWER.
+//
+// Measured first, and it moved the whole milestone: in a LIVE fight the
+// arena already rewards play by 10-16 points over pressing the first button
+// and by ~44 over mashing. What it did not offer was anything to play
+// AGAINST. The enemy chose inside `step`, after the player had already
+// committed, so every defensive option was a guess — you could not brace for
+// a hit you had no way to see coming, and switching was a coin toss because
+// the opposition simply re-aimed at whoever arrived.
+//
+// So the choice moves to the top of the turn and is written down. Three
+// things follow, and they are the milestone: a telegraphed hit can be
+// GUARDED, a telegraphed class can be ANSWERED by tagging in the creature
+// that counters it, and neither is a guess any more.
+//
+// IT IS THE SAME AI. `chooseMoveIndex` is untouched — the opposition is no
+// weaker for having said what it is doing, it simply says it first. The one
+// real concession is that it no longer re-aims mid-turn: it plans against
+// the creature standing in front of it, and a switch makes that plan stale.
+// That IS the tempo the switch is buying, and it is why switching is worth
+// a turn now when it was not before.
+//
+// Seeded like everything else, and stored on the battle so a reload resumes
+// against the same intent it was showing when the app closed. Null is a
+// legitimate state — an old save mid-fight, or a battle that is over — and
+// every reader treats it as "not known yet" rather than "no move".
+export function planIntent(battle, content) {
+  if (!battle || battle.over) return null;
+  const foe = battle.enemy?.active;
+  const me = playerActive(battle);
+  if (!foe || foe.hp <= 0 || !me) return null;
+  const index = enemyChooseMove(battle, content);
+  const move = index >= 0 ? foe.moves[index] : null;
+  battle.intent = {
+    index,
+    name: move ? move.name : 'Catch Breath',
+    power: move ? move.power : 0,
+    tags: move ? [...(move.tags ?? [])] : [],
+    // What a defender needs to decide: is it worth bracing for, and which
+    // of my creatures is the wrong shape to receive it.
+    creatureClass: foe.creatureClass ?? null,
+    priority: !!move?.keywords?.priority,
+    ignoreGuard: !!move?.keywords?.ignoreGuard,
+  };
+  return battle.intent;
+}
+
+// The intent for THIS turn, computed on demand. A save written before R103
+// carries a battle with no intent at all, and a fight in flight must not be
+// abandoned or restarted — so the first read plans one, exactly as the turn
+// before it would have.
+export function intentOf(battle, content) {
+  if (!battle || battle.over) return null;
+  if (battle.intent === undefined || battle.intent === null) return planIntent(battle, content);
+  return battle.intent;
 }
 
 function endOfTurn(battle, events) {
@@ -902,8 +981,32 @@ export function step(battle, action, content) {
     events.push({ text: `${playerActive(battle).name} takes the field!`, kind: 'waveIn', target: 'player' });
     if (playerActive(battle).rejection) events.push({ text: `${playerActive(battle).name} is unsettled — Rejection applies.`, kind: 'debuff', target: 'player' });
     battle.log.push(...events.texts());
+    // The plan was made against the creature that just went down. A
+    // replacement is a free action, so the next real turn plans afresh.
+    battle.intent = null;
     return events.list;
   }
+
+  // R103 — THE INTENT IS LOCKED HERE, at the top of the turn, before any of
+  // the player's action is applied.
+  //
+  // This line is the whole mechanic. `enemyChooseMove` used to be called
+  // below, AFTER the switch had already resolved, so the opposition re-aimed
+  // at whoever had just arrived and tagging in a counter bought nothing but
+  // a lost turn. Reading it here — and reading whatever the arena has
+  // already shown the player, rather than choosing again — is what makes the
+  // telegraph honest in both directions: the fight the harness flies is the
+  // fight the screen described, whether or not anything ever rendered.
+  const intent = intentOf(battle, content);
+  battle.intent = null;   // consumed; the next turn plans its own
+  // …and BOUND to the creature that made it. A counter-switch below can put
+  // the telegraphed attacker down before it ever acts, and the next wave
+  // walks in with a move list of its own — an index chosen for somebody else
+  // is not a move, it is a crash. (It was, once: the first run of the agency
+  // table died here.) Same rule the ordered branch already applies to a
+  // knockback rotation: orders do not transfer to whoever arrives.
+
+  const plannedFoe = battle.enemy.active;
 
   // Obedience (§3.5): unsettled/unbonded chimeras sometimes freelance.
   let playerAction = action;
@@ -956,17 +1059,71 @@ export function step(battle, action, content) {
   // Switching and resting resolve before moves (Pokémon convention).
   if (playerAction.type === 'switch') {
     battle.player.active = playerAction.index;
-    events.push({ text: `${me.name} tags out. ${playerActive(battle).name} takes the field!`, kind: 'waveIn', target: 'player' });
+    const incoming = playerActive(battle);
+    events.push({ text: `${me.name} tags out. ${incoming.name} takes the field!`, kind: 'waveIn', target: 'player' });
+    // R103 — THE COUNTER-SWITCH.
+    //
+    // A switch has always cost the whole turn, and until the intent was
+    // written down it bought nothing for it: the opposition simply re-aimed
+    // at whoever arrived. Now it has committed, and tagging in the animal
+    // its telegraphed attacker is the wrong shape for is an ANSWER — so the
+    // incoming creature comes in on the turn and lands one for free.
+    //
+    // It reads `classMultiplier`, the same triangle every hit in this game
+    // reads, rather than a second table of its own: two tables that have to
+    // agree are one table and a bug (R61, and R72's whole fixture).
+    const rules = content.classRules ?? {};
+    const counters = intent && incoming.creatureClass && intent.creatureClass
+      && classMultiplier(incoming.creatureClass, intent.creatureClass, content) === rules.advantage;
+    if (counters && !actUnavailable(incoming, events)) {
+      const idx = chooseMoveIndex(battle, incoming, battle.enemy.active, content, 1, () => roll(battle));
+      if (idx >= 0) {
+        performMove(battle, 'player', idx, events, content, stanceTuning(content).counterPower);
+        handleEnemyKO(battle, events, content);
+      }
+    }
   } else if (playerAction.type === 'rest') {
     if (!actUnavailable(me, events)) {
-      me.status.guard = false;
-      const gain = Math.round(me.staminaMax * REST_FRACTION);
-      me.stamina = Math.min(me.staminaMax, me.stamina + gain);
-      events.push({ text: `${me.name} catches its breath: +${gain} stamina.`, kind: 'rest', target: 'player' });
+      const stance = stanceTuning(content);
+      const cost = Math.round(me.staminaMax * stance.braceCost);
+      // R103 — and it braces, against the blow it was actually told about.
+      // No telegraph, no brace: the stamina is still there, but standing
+      // ready for nothing is the old trap wearing the new name.
+      //
+      // AND ONLY WHEN IT COULD HAVE DONE SOMETHING ELSE. A creature with
+      // nothing affordable left is not making a read, it is catching its
+      // breath because that is all there is — and granting the guard there
+      // hands free mitigation to exactly the fight A1 built the game's first
+      // wall out of. Measured: it lifted one chimera against three bodies
+      // from ~0% to 8%, out of "not survivable" and into "losing", which is
+      // the Path's own reason for telling a new player to bring three.
+      // Bracing is a decision; exhaustion is not.
+      const couldHaveAttacked = me.moves.some((mv) => mv.cost <= me.stamina);
+      const canAfford = me.stamina >= cost;
+      // …AND NOT TWICE IN A ROW. A brace is a read of one telegraphed blow;
+      // held every turn it stops being a read and becomes 45% permanent
+      // mitigation, which compounds hardest in exactly the longest fights.
+      // Measured: without this the best mono-build strolls the finale at
+      // 77% against a ceiling of 75 that exists to stop any single anatomy
+      // owning it. They adjust to a creature that only ever turtles.
+      const braced = !!intent && intent.index >= 0 && couldHaveAttacked && canAfford && !me.status.justBraced;
+      me.status.justBraced = braced;
+      const gain = braced ? 0 : Math.round(me.staminaMax * stance.stamina);
+      me.stamina = braced
+        ? Math.max(0, me.stamina - cost)
+        : Math.min(me.staminaMax, me.stamina + gain);
+      if (braced) me.status.guard = true;
+      events.push({
+        text: braced
+          ? `${me.name} sets its feet and braces — ${cost} stamina spent standing still.`
+          : `${me.name} catches its breath: +${gain} stamina.`,
+        kind: 'rest', target: 'player',
+      });
     }
   }
 
-  const enemyMove = enemyChooseMove(battle, content);
+  // The move it already told you it was making, decided above.
+  const enemyMove = intent?.index ?? -1;
   const playerMoves = playerAction.type === 'move' || playerAction.type === 'release';
   const playerMoveIndex = playerAction.type === 'release' ? playerActive(battle).status.charging : playerAction.index;
 
@@ -990,15 +1147,16 @@ export function step(battle, action, content) {
       const current = side === 'player' ? playerActive(battle) : battle.enemy.active;
       const planned = side === 'player' ? plannedPlayer : plannedEnemy;
       if (current !== planned) continue; // swapped in mid-round: needs a moment
-      if (idx < 0) restCombatant(current, events);
+      if (idx < 0) restCombatant(current, events, content);
       else performMove(battle, side, idx, events, content);
       handleEnemyKO(battle, events, content);
       handlePlayerKO(battle, events);
       if (battle.pendingReplace) break; // replacement happens before anything else
     }
-  } else {
-    // Player spent the turn on switch/rest — the enemy acts freely.
-    if (enemyMove < 0) restCombatant(battle.enemy.active, events);
+  } else if (battle.enemy.active === plannedFoe) {
+    // Player spent the turn on switch/rest — the enemy acts freely, unless
+    // the creature that planned the move is no longer the one standing there.
+    if (enemyMove < 0) restCombatant(battle.enemy.active, events, content);
     else performMove(battle, 'enemy', enemyMove, events, content);
     handlePlayerKO(battle, events);
   }
@@ -1023,9 +1181,29 @@ export function step(battle, action, content) {
   return events.list;
 }
 
-function restCombatant(c, events) {
+// R103 — breathing is BRACING now, on both sides of the field.
+//
+// "Catch Breath" gave stamina back and nothing else, which made it the worst
+// button on the bar: measured, a pilot that takes it a quarter of the time
+// gives up 4.2 points against one that never does, and the only pilot that
+// fell off a cliff in the audit was the one that pressed it at random. A
+// defensive option that is strictly a loss is not a decision, it is a trap
+// with a label.
+//
+// A BRACE IS AN ANSWER TO A TELEGRAPH, so only the side that gets one can
+// make it. The player is told what is coming (`battle.intent`); the
+// opposition is told nothing, and bracing against a blow you have no reason
+// to expect is not a decision, it is free armour.
+//
+// Measured, and this is why the rule is written this way round rather than
+// "symmetric because symmetry is tidy": granting the brace to both sides put
+// half a mitigation on every enemy rest, and every pilot in the harness got
+// worse — the forecast's own pilot fell six points and the skill spread
+// COMPRESSED from 15.8pp to 11.5. A defensive buff both sides receive is not
+// a decision either side makes.
+function restCombatant(c, events, content) {
   if (actUnavailable(c, events)) return;
-  const gain = Math.round(c.staminaMax * REST_FRACTION);
+  const gain = Math.round(c.staminaMax * stanceTuning(content).stamina);
   c.stamina = Math.min(c.staminaMax, c.stamina + gain);
   events.push({ text: `${c.name} catches its breath: +${gain} stamina.`, kind: 'rest', target: sideOf(c) });
 }

@@ -17,7 +17,7 @@
 import { creaturePortrait, renderUnitSVG, drawableGenome } from '../render/renderer.js';
 import { chimeraGenome } from '../splice/theater.js';
 import {
-  step, playerActions, playerActive, turnForecast,
+  step, playerActions, playerActive, turnForecast, intentOf, stanceTuning,
 } from './engine.js';
 import { moveReadout } from './readout.js';
 import { resolveBattle } from '../campaign/campaign.js';
@@ -170,6 +170,26 @@ export function renderArena(root, ctx, onDone) {
   if (openingKey !== key) { openingKey = key; openingSeen = 0; }
   const opening = battle.turn === 1 && !battle.over ? (battle.opening ?? [])[openingSeen] ?? null : null;
 
+  // R103 — WHAT IS COMING. The opposition commits at the top of the turn and
+  // this is where it says so; without it the brace and the counter-switch
+  // are two buttons whose whole value is answering something the player
+  // cannot see. Read through `intentOf`, which is the same call `step` makes
+  // — the arena shows the fight the engine is about to resolve, not a second
+  // guess at it (R28's rule: the number on the screen is the number that
+  // lands).
+  const intent = battle.pendingReplace || battle.over ? null : intentOf(battle, content);
+  const counterClass = intent?.creatureClass
+    ? Object.values(content.classes ?? {}).find((c) => c.beats === intent.creatureClass)
+    : null;
+  const telegraph = intent && intent.index >= 0
+    ? `<p class="intent" id="intent">${renderIcon('target', { size: 13 })} <strong>${foe.name}</strong> is winding up
+        <strong>${intent.name}</strong>${intent.priority ? ' <span class="intent-pri">first</span>' : ''}${
+        intent.ignoreGuard ? ' <span class="intent-pri">unguardable</span>' : ''}${
+        counterClass ? ` <span class="intent-answer">${counterClass.name} answers it</span>` : ''}</p>`
+    : intent
+      ? `<p class="intent" id="intent">${renderIcon('target', { size: 13 })} <strong>${foe.name}</strong> is catching its breath.</p>`
+      : '';
+
   const prompt = opening
     ? `<span class="bark-msg">${opening}</span><span class="bark-next">tap ▸</span>`
     : battle.pendingReplace
@@ -219,6 +239,7 @@ export function renderArena(root, ctx, onDone) {
         <button type="button" class="msg-log" id="msg-log" aria-label="Battle log">▤</button>
       </div>
 
+      ${telegraph}
       <div class="cmd" id="cmd">${commandHtml(battle, actions, me, foe, content)}</div>
     </section>`;
 
@@ -243,7 +264,16 @@ export function renderArena(root, ctx, onDone) {
 
 // The command menu. Four move cells like every creature battler ever made,
 // with the overflow behind one more tap rather than a taller screen.
+// The share of a telegraphed blow this creature's brace would take off —
+// read from the engine's own tuning so the button's promise and the damage
+// that lands cannot drift (R61: the absorb was written out three times once
+// already).
+function guardShare(me, content) {
+  return stanceTuning(content).absorb * (1 - (me.perks?.guardLoss ?? 0));
+}
+
 function commandHtml(battle, actions, me, foe, content) {
+  const intent = battle.pendingReplace || battle.over ? null : intentOf(battle, content);
   if (battle.pendingReplace) {
     return `<div class="move-grid">${actions
       .map((a, i) => `<button type="button" class="mv mv-swap" data-action="${i}">
@@ -290,8 +320,17 @@ function commandHtml(battle, actions, me, foe, content) {
     .map((a) => {
       const i = actions.indexOf(a);
       const icon = { rest: '❑', switch: '⇄', flee: '↩', capture: '◎' }[a.type];
-      const label = { rest: 'Breath', switch: 'Switch', flee: 'Retreat', capture: 'Cannon' }[a.type];
-      return `<button type="button" class="ut ut-${a.type}" data-action="${i}"><b>${icon}</b> ${label}</button>`;
+      // R103 — the rest button is a STANCE now, so it is named for the half
+      // that decides fights and marked when it is answering something. The
+      // old label ("Breath") described the half that never did.
+      const label = { rest: 'Brace', switch: 'Switch', flee: 'Retreat', capture: 'Cannon' }[a.type];
+      const live = a.type === 'rest' && intent && intent.index >= 0 && !intent.ignoreGuard;
+      const title = a.type === 'rest'
+        ? (live ? `Take ${Math.round(guardShare(me, content) * 100)}% off ${intent.name}, and get stamina back`
+          : 'Nothing to brace against — stamina only')
+        : '';
+      return `<button type="button" class="ut ut-${a.type}${live ? ' ut-live' : ''}" data-action="${i}"${
+        title ? ` title="${esc(title)}"` : ''}><b>${icon}</b> ${label}</button>`;
     })
     .join('');
 

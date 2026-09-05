@@ -198,6 +198,12 @@ export const GUIDE_HELPERS = {
   // Panel starts answering the question for them.
   liftPartInVault: (state, content) =>
     (state.inventory?.parts ?? []).some((t) => content.parts[t.partId]?.phys?.lift),
+  // R103. The telegraph lesson arrives once the player has FOUGHT, not once
+  // they have won — a `warRecord.wins` path was the obvious way to write it
+  // and it is backwards: the player who keeps losing is exactly the one the
+  // brace and the counter-switch were built for, and they would have been
+  // the last to be told.
+  hasFought: (state) => ((state.warRecord?.wins ?? 0) + (state.warRecord?.losses ?? 0)) >= 1,
   flierBuilt: (state, content) =>
     (state.chimeras ?? []).some((c) =>
       Object.values(c.tokens ?? {}).some((t) => content.parts[t.partId]?.phys?.lift)
