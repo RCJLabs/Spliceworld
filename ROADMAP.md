@@ -2442,3 +2442,54 @@ suite can check.
   creature falls — and retire the exemption. *Done when: `venom_gland` clears
   the same 1.5× bar as every other gene on at least four independent salts,
   and `UNRESOLVED_BY_THIS_PROBE` is empty.*
+
+### 9.7 The opening, and the sitting (R119–R120) — asked for directly
+
+Both phases were **measured before either was written**, and the measurement
+moved one of them: the first premise held exactly, the second did not.
+
+- **R119 — The first splice has no decision in it.** *Queued.* Measured on a
+  fresh save: the starter herd is `['goat', 'goat', 'bear']`, the two goats
+  are newborn, and the bear is backdated to adult so that one door is open on
+  day one (A4's fix). Graduate it and the vault holds **six parts from one
+  species** — head, forelimbs, hindlimbs, tail, hide, organ, all `bear`, all
+  Standard. So the distinct species available to splice from is **one**, and
+  the **Surgery Theater — the system this whole game is named for — opens
+  with exactly one creature you can build**. Every player's first chimera is
+  the same pure bear, which is not a chimera at all: M0's own done-when is "a
+  bear-headed, eagle-winged goat renders and persists," and nothing on day
+  one can produce one. The Path's third step says "Splice a chimera" and the
+  Theater teaches it with a passive field-guide card. Proposed, medium: a
+  **Founding Stock** choice on first open — five starter labs, each a themed
+  trio (one grown donor plus a breedable juvenile pair) and a small crate of
+  sample parts from a *second* species, so the first splice is a real mix and
+  a real decision. Same number of animals, same grades, same ages as today,
+  so A1's wall and R106's arithmetic are untouched by construction: the
+  choice changes *which* creature, never *how much*. Data-driven in
+  `data/starters.json`; adding a sixth lab must never need an engine edit.
+  *Done when: a fresh save cannot reach the Theater without choosing one of
+  at least five founding labs; the first splice offers parts from two or more
+  species under every one of them; two different choices produce measurably
+  different first chimeras; and A1's wall — one chimera against the second
+  node — still reads 0% under every lab.*
+
+- **R120 — The sitting, not the session.** *Queued, and its premise is
+  narrower than it was asked as.* The request was "more to do every time you
+  open the game," and sampled on **every tick of three real 90-day campaign
+  walks** (497 / 534 / 422 opens) the mid-game is not thin: the agenda offers
+  **11 rows, 8 of them productive**, on an average open after the first week,
+  and peaks at 16. The thinness is real but **local to the first day** — a
+  brand-new save offers **5 rows of which only 3 are productive** (graduate ·
+  care · run a job; the other two are ways to spend money), and d0–1 averages
+  **7.9 rows / 5.2 productive** against **11.5 / 7.6** by week two. Three
+  rows also never fired once in 1,453 sampled opens across all three seeds:
+  `settle` (by design — R85's feral window must never reach an engaged
+  player), `hatch` (the walker hatches inside the same tick it breeds, so the
+  row exists but is never *seen*), and **`gauntlet`, which is shipped content
+  a 90-day campaign never surfaces at all**. So the honest phase is not "add
+  more things" — it is: raise the floor of the first day, make the walker's
+  invisible rows visible, and give the Gauntlet a reason to appear. *Done
+  when: a fresh save's first open offers at least 6 productive rows without
+  spending money; `hatch` and `gauntlet` both appear in a 90-day walk; and
+  the d0–1 average clears 9 rows / 6 productive without moving the d30–90
+  figure by more than one row.*
