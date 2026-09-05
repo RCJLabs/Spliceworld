@@ -23,7 +23,7 @@ import { nextUpgrade, tracks } from '../splice/facility.js';
 import { rivalStatus } from '../campaign/rivals.js';
 import { expressedTraits } from './breeding.js';
 import { analyze } from '../splice/physiology.js';
-import { GRADE_INDEX } from '../splice/extract.js';
+import { GRADE_INDEX, gradeFor } from '../splice/extract.js';
 import { feralTuning } from '../splice/feral.js';
 import { rushable } from '../splice/rush.js';
 import { taskforceEligible } from '../campaign/taskforce.js';
@@ -36,6 +36,21 @@ export function onboardingSteps(state, content, now) {
   const spliced = state.chimeraCount > 0;
   const settledOne = state.chimeras.some((c) => now >= c.settleUntil);
   const conquered = state.campaign.heldNodes.length > 0;
+  // R106 — the starters still standing, and what they would grade at right
+  // now. Read through `gradeFor`, which is what the Ranch card prints two
+  // lines above this, so the Path and the card can never quote different
+  // grades for the same animal.
+  const spare = state.ranch.stock.slice(0, 2);
+  const spareGrades = spare.map((a) => gradeFor(a, content, now, state).name);
+  // One parenthesis when they agree, which is the ordinary case for a
+  // starter pair; per-animal when they do not, because a hint that averages
+  // two different grades into one word is a hint that is wrong about one of
+  // the animals it just named.
+  const sameGrade = new Set(spareGrades).size === 1;
+  const spareNames = spare
+    .map((a, i) => (sameGrade ? a.name : `${a.name} (${spareGrades[i]})`))
+    .join(' and ');
+  const spareSuffix = sameGrade && spare.length ? ` (${spareGrades[0]} today)` : '';
 
   return [
     {
@@ -70,9 +85,23 @@ export function onboardingSteps(state, content, now) {
     // of stat-tuning moves that because it is a question of BODIES. The
     // starter herd is exactly three animals, so the answer is already in
     // the pens; nothing ever said so.
+    // R106. The step was right and incomplete, and the Ranch card on the very
+    // animals it names gives the OPPOSITE instruction: "Apex once Biscuit is
+    // fully grown (14h) and at condition 86+." Both are true, and a new
+    // player has no way to know which one this hour wants.
+    //
+    // Measured, the wait buys nothing that matters here: a juvenile goat and
+    // an adult goat both grade Standard at the starting condition of 60, and
+    // three STANDARD chimeras take the second node at 100%. So the step says
+    // what they grade at today, and that today is enough — the ceiling on the
+    // Ranch card is for the batch after this one.
     {
       label: 'Build a stable of three',
-      hint: 'One chimera cannot out-last a three-unit patrol — it is one health bar against three. Graduate your other two starter animals and splice them. (Restock the pens after: a goat is $60.)',
+      hint: `One chimera cannot out-last a three-unit patrol — it is one health bar against three. ${
+        spare.length
+          ? `Graduate ${spareNames}${spareSuffix} and splice them`
+          : 'Graduate your other starter animals and splice them'
+      }: three bodies is what the next node asks for, not better ones — raise those in the batch after. (Restock the pens after: a goat is $60.)`,
       done: state.chimeras.length >= STABLE,
     },
   ];

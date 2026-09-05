@@ -1,5 +1,118 @@
 # PROGRESS
 
+## Session 112 — R106: The first hour points at a fight nobody can win ✅
+
+**Acceptance criterion (re-derived — see below):** on a fresh save with one
+settled chimera the agenda's assault row states the true wave count and the
+true fieldable team instead of its reward line; over ten days of walking it is
+never silent while outnumbered and never cries wall when it is not; and the
+Path's sixth step quotes the same grade the Ranch card would print for the
+same animal — **passes on all four**. No save-schema change, so `SAVE_VERSION`
+stays **41** and there is no migration.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ **new** — the wall, the row, the numbers, the Path |
+| `npm run battery` | ✓ — **89 breaks, 89 caught**, a sixteenth gate, 5 new |
+| `npm run scopecheck` · `roadmap` · `handlers` · `a11y` · `boot` · `sim` | ✓ |
+| browser QA, 380px | ✓ — both sentences paint, row box 326×81, 0 overflow, 0 console errors |
+
+### My own entry was wrong three times, and its criterion was already true
+
+Measured before a line was written.
+
+| the entry said | measured |
+|---|---|
+| the opening waits **5h** on the goats growing up | ✗ a juvenile and an adult goat both grade **Standard** at condition 60; growth pays nothing until Prime at 14h. The lever at 5h is **care** (86 → the Apex ceiling) |
+| — | `extractAnimal` has **no age guard**: the starters can be graduated at minute 0 |
+| *Done when:* three chimeras **within 90 minutes** | ✗ already true — graduate all three at minute 0, splice, **settled at minute 23** |
+| the Path completes at **5.75–25h** | ✗ that is the **walker's** opening: `walkAct` refuses juveniles and refuses to drop below two animals. The yardstick plays a different opening from the one the Path teaches — R92's, left there |
+| the agenda offers an assault A1 measured at **0%** | ✓ `downtown` fields **three**: **0%** with one settled chimera, **100%** with three |
+
+That is the **third** of my own acceptance criteria to pass on the shipped
+game before its milestone began (R84's grade promise, R87's funds ratio, now
+this). The pattern is consistent enough to be a rule: an audit criterion
+written from a reading is a hypothesis, and the first job of the milestone is
+to try to kill it.
+
+### What was actually wrong: one row, for nine days
+
+The agenda is the one place that claims to know what you can do right now, and
+it offered *"Take a node"* under **the same reward line it uses at every other
+moment in the game** while the player was outnumbered three to one. Measured
+across three seeds at half-hour resolution: offered outnumbered on **days 0–9
+and never afterwards** — 1.4–2.3% of all offers, worst ratio 3.0:1. Not a
+balance problem, not a mid-game problem: the opening walking a new player into
+the one wall A1 designed the Path around, in the voice of a hint about how
+well it pays.
+
+**The row is not removed.** `battle/forecast.js` settles that out loud — a
+forecast is not a gate, and *"a player who wants to throw one goat at a police
+cruiser is entitled to"*. So the row stays and the hint tells the truth:
+
+> Downtown Greenfield fields 3; you can field 1. One active per side, so that
+> is 3 health bars against 1 — 2 more bodies first.
+
+**Bodies, not a forecast.** Measured: the check costs **0.016 ms**, the whole
+agenda **0.060 ms**, a `forecast()` **4.3 ms** — 267× the check and 72× the
+entire screen, on something rebuilt on every render and every step of the
+walk. The wave count reads through `enemyOf` (R79's catalogue) rather than
+`liveWaves`, which is the same predicate for static waves but lives in
+`battle/engine.js` — and R81 put the engine behind the thing that needs it.
+
+### The Path's sixth step resolves its own contradiction
+
+It sends the player to graduate two animals whose Ranch card simultaneously
+reads *"Apex once Biscuit is fully grown (14h) and at condition 86+."* Both
+sentences are true; a new player has no way to know which one this hour wants.
+The step now reads:
+
+> …Graduate Biscuit and Juniper (Standard today) and splice them: three bodies
+> is what the next node asks for, not better ones — raise those in the batch
+> after. (Restock the pens after: a goat is $60.)
+
+The grade comes from the same `gradeFor` the card prints, so the two can never
+quote different grades for the same animal; and when the two animals differ it
+names each rather than averaging them into one word.
+
+### Two gate bugs, both mine, both the same shape
+
+- **The gate hand-copied a predicate.** My walk assertion counted the team as
+  "uninjured **and settled**" and reported two false failures out of 72,
+  because a settling chimera *can* be fielded — it fights with Rejection.
+  R61's rule; the gate was the wrong half, and now reads `fitToFight`.
+- **A numeric assertion that any number could satisfy.** Break 88 (drop the
+  `enemyOf` filter) went **MISSED** twice. First because the shipped waves are
+  all live, so the fixture could not reach R79's case at all — the recurring
+  lesson, a gate can be general while its fixture cannot reach the new code.
+  Then, after removing a unit, because the broken build reads *"3 health bars
+  against 1 — **2** more bodies first"* and the shortfall supplied the 2 I was
+  checking for. It now compares the **leading** count against the same
+  sentence on the full roster.
+
+### Deliberately not built
+
+Two thirds of the proposal, both because the measurement removed the premise
+— not for time. The starter goats were **not** back-dated (growth is not the
+wall), and no Path step carries a **countdown** (the wait it was meant to
+explain is not a real one, and the Ranch card already carries each animal's
+clock and its outlook). The **walker progress stall** belongs to **R92**,
+whose Done-when already covers the walker's policy gaps.
+
+### Known issues
+
+None new. `assaultWall` reads the front node only, which is the node the
+assault row sends you to; a player who opens the War Room and picks a
+different available node gets the briefing's own forecast, as before.
+
+### Next session's first task
+
+**R103 — Decisions that matter** (the user has already named it). It is the
+game's core loop and the audit's most important number: the outcome is
+identical under all six pilots in 72–82% of fights. Measure first — the agency
+probe is described in §9.6 and rebuilds from `sampleBuilds` + the shipped
+engine.
+
 ## Session 111 — Sixth audit: fifteen phases (R103–R117) ✅
 
 **Acceptance criterion:** a full audit of the shipped game with fifteen

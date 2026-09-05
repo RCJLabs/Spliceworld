@@ -1951,7 +1951,7 @@ R102; R88–R90 remain.)*
   carries under 15 KB of save.js, and `npm test` migrates a v1 save to
   current through every step with a fixture at each.*
 
-### 9.6 Sixth audit (R87) — queue R103–R117
+### 9.6 Sixth audit (R87) — queue R103–R117 · **R106 shipped**
 
 Run after R87, against a game with five closed audits behind it and R88–R102
 still queued. Same rule as the other five — every line names the measurement
@@ -2055,29 +2055,66 @@ suite can check.
 
 **Gameplay.**
 
-- **R106 — The first session ends at minute 45.** Five seeds at
-  fifteen-minute resolution: the first chimera decants at **minute 30**, the
-  first node falls at **minute 45**, on every seed. Then the Path's sixth
-  step — *build a stable of three* — waits on the two starter goats growing
-  up, which takes **five hours** (`growthHours.adult` 5; the bear arrives
-  grown because A4 back-dated it, the goats do not), during which the agenda
-  offers **spar, a job, and an assault** on a second node that A1 measured at
-  **0% with one chimera**, plus three ways to spend $305. The Path completes
-  between **5.75 and 25 hours** into a save and its hint says nothing about
-  the wait. The walker's stall metric reads **zero** for this stretch,
-  because it counts open rows rather than progress — the yardstick cannot
-  see the wall. Proposed, medium, two steps: **(1)** the starter goats arrive
-  an hour from adulthood (A4's rule applied to the pair — they still grow
-  into their prime, the husbandry timers are still learnt, there are simply
-  three doors on day one instead of one), and the agenda's assault row
-  refuses to point at a not-survivable node (the forecast is already there:
-  *"Not yet — one against three"*); **(2)** every Path step and every field
-  guide carries its **clock** (*"Bessie grows up in 4h 12m"*), and the walker
-  gains a **progress stall** — hours in which no open row advances the Path
-  or the map — reported beside the row-count stall. *Done when: on every
-  seed a fresh save can field three chimeras within 90 minutes of play, the
-  Path names every wait it contains with a countdown, and the walker's
-  progress stall over a save's first 24 hours is under one hour.*
+- **R106 — The first hour points at a fight nobody can win.** ✅ *Shipped.*
+  Re-measured before anything was built, and it corrected **three** claims in
+  this entry's own text plus its acceptance criterion.
+  - **The five-hour wall does not exist.** A juvenile goat and an adult goat
+    both grade **Standard** at the starting condition of 60 — growth changes
+    nothing until Prime at 14h, and the lever that pays at five hours is
+    **care** (condition 86 buys the Apex ceiling). `extractAnimal` has no age
+    guard, so the starters can be graduated at minute 0.
+  - **The criterion was already true.** Graduate all three starters at minute
+    0, splice three, and they are settled at **minute 23** — against a
+    criterion of 90. That is the third audit criterion of mine to pass on the
+    shipped game before the milestone began (after R84's and R87's).
+  - **The 5.75-to-25-hour opening was the WALKER's, not the game's.**
+    `walkAct` refuses to graduate a juvenile and refuses to drop below two
+    animals, so the yardstick plays a different opening from the one the Path
+    teaches and no measurement of the opening taken from it is evidence about
+    a player. That divergence is **R92's**, and is left there.
+  - **What was actually wrong is one row.** A1 measured the second node at 0%
+    with one chimera and said why: combat is one active per side, so three
+    enemy bodies is three health bars against your one. Re-measured through
+    the shipped forecast: `downtown` fields **three**, and it is **0% with
+    one settled chimera and 100% with three**. The **agenda** — the one place
+    that claims to know what you can do right now — offered *"Take a node"*
+    through all of it under the same reward line it uses at every other
+    moment in the game. Measured across three seeds at half-hour resolution,
+    the row is offered outnumbered on **days 0–9 and never afterwards**
+    (1.4–2.3% of offers, worst 3.0:1).
+  - **The row is not removed, it is made honest.** `battle/forecast.js`
+    settles that out loud — a forecast is not a gate, and "a player who wants
+    to throw one goat at a police cruiser is entitled to" — so the row stays
+    and the hint reads *"Downtown Greenfield fields 3; you can field 1. One
+    active per side, so that is 3 health bars against 1 — 2 more bodies
+    first."* Bodies rather than a forecast: measured, the check costs
+    **0.016 ms** against **4.3 ms** for `forecast()`, which is 267× the check
+    and 72× the whole agenda, on something rebuilt every render and every
+    step of the walk. The wave count is read through `enemyOf` (R79's
+    catalogue) rather than `liveWaves`, because the latter lives in
+    `battle/engine.js` and R81 put the engine behind the thing that needs it.
+  - **The Path's sixth step resolves its own contradiction.** It sends the
+    player to graduate two animals whose Ranch card simultaneously reads
+    *"Apex once Biscuit is fully grown (14h) and at condition 86+."* Both are
+    true and a new player cannot know which one this hour wants, so the step
+    now names them, states what they grade at **today** through the same
+    `gradeFor` the card prints, and says that three bodies is what the next
+    node asks for — the ceiling is for the batch after.
+  - **Two thirds of the proposal were deliberately not built**, both because
+    the measurement removed their premise: the starter goats were **not**
+    back-dated (growth is not the wall), and no Path step carries a
+    **countdown** (the wait it was meant to explain is not a real one; the
+    Ranch card already carries the animal's clock and its outlook). The
+    **walker progress stall** is R92's, named above. Nothing here was cut for
+    time.
+  *Done when — re-derived, because the entry's own criterion passed on the
+  shipped game before a line was written: on a fresh save with one settled
+  chimera the agenda's assault row states the true wave count and the true
+  fieldable team instead of its reward line, over ten days of walking it is
+  never silent while outnumbered and never cries wall when it is not, and the
+  Path's sixth step quotes the same grade the Ranch card would print for the
+  same animal.* ✅ **All four, plus the R79 case: five new battery breaks,
+  89 caught of 89.**
 - **R107 — Welcome back.** A week away from day 25: **+$18,035** earned,
   **6 counter-offensives** came, **4 specimens** got loose, a job came home
   — and the wire, which keeps twelve lines, has **eight** new ones to show

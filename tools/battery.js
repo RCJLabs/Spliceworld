@@ -252,6 +252,101 @@ const RUSH = ['node', '-e', `
   console.log('rush ✓  four sealed clocks, one price — rushed and waited agree');
 `];
 
+// R106 — the opening tells the truth about the wall it walks you into. Its
+// own gate for the usual reason: the smoke suite takes nine minutes and this
+// is one fresh save and four assertions, all of them on the one row that has
+// ever pointed a new player at a fight nobody can win.
+const OPENING = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { ensureRanchSeeded } = await import('./ranch/ranch.js');
+  const { extractAnimal, GRADES, gradeFor } = await import('./splice/extract.js');
+  const { spliceChimera } = await import('./splice/theater.js');
+  const { agenda } = await import('./ranch/agenda.js');
+  const { onboardingSteps } = await import('./ranch/onboarding.js');
+  const { regionStates } = await import('./campaign/map.js');
+  const { fitToFight } = await import('./battle/statblock.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000;
+  const PLAIN = 'Holding it pays every day and puts its fauna in the catalog.';
+  const openTo = (n) => {
+    const s = { ...newGameState(), seed: 4242 };
+    ensureRanchSeeded(s, content, t0);
+    s.lastTickAt = t0;
+    for (const a of [...s.ranch.stock].slice(0, n)) extractAnimal(s, a.id, content, t0);
+    for (let made = 0; made < n; made++) {
+      const head = s.inventory.parts.find((p) => content.parts[p.partId].slot === 'head');
+      if (!head) break;
+      const sp = content.parts[head.partId].species;
+      const slots = { head: head.id }; const used = new Set([head.id]);
+      for (const slot of ['forelimbs', 'hindlimbs', 'tail', 'hide', 'organ']) {
+        const p = s.inventory.parts.find((x) => !used.has(x.id) && content.parts[x.partId].slot === slot && content.parts[x.partId].species === sp);
+        if (p) { slots[slot] = p.id; used.add(p.id); }
+      }
+      spliceChimera(s, 'M', slots, content, t0);
+    }
+    for (const c of s.chimeras) c.settleUntil = t0;
+    s.campaign.heldNodes = ['barn_perimeter'];
+    return s;
+  };
+  const rowOf = (s) => agenda(s, content, t0).find((r) => r.id === 'assault');
+  const bodiesOf = (s) => {
+    const front = regionStates(s, content).flatMap((r) => r.nodes).find((n) => n.status === 'available');
+    const enc = front ? content.encounters[front.node.encounter] : null;
+    return (enc?.waves ?? []).filter((w) => content.enemies[w]).length;
+  };
+  const bad = [];
+  const one = openTo(1), three = openTo(3);
+  if (three.chimeras.length !== 3) bad.push('three starters did not make three chimeras');
+  if (bodiesOf(one) !== 3) bad.push('the second node no longer fields three (' + bodiesOf(one) + ')');
+  if (!rowOf(one)) bad.push('the row is not offered to an outnumbered player — a forecast is not a gate');
+  {
+    const hint = rowOf(one).hint;
+    const said = (hint.match(/\\d+/g) ?? []).map(Number);
+    const team = fitToFight(one, t0).length;
+    if (hint === PLAIN) bad.push('outnumbered, the row still reads as a reward');
+    if (!said.includes(bodiesOf(one)) || !said.includes(team)) bad.push('the row does not state the true bodies and team: "' + hint + '"');
+    if (!/health bar/.test(hint)) bad.push('the row does not say it in A1 terms');
+  }
+  if (rowOf(three).hint !== PLAIN) bad.push('the row cries wall at a team that can take the node');
+  // R79 — a wave list outlives the roster it names. Drop a unit the front
+  // node still lists and the count has to follow, or the row tells a new
+  // player to bring a body for an opponent that no longer exists. The
+  // shipped waves are all present, so this case is unreachable without
+  // taking one away on purpose: break 88 went MISSED until this existed.
+  {
+    const s0 = openTo(1);
+    const front = regionStates(s0, content).flatMap((r) => r.nodes).find((n) => n.status === 'available');
+    const waves = content.encounters[front.node.encounter].waves;
+    const thinned = { ...content, enemies: { ...content.enemies } };
+    delete thinned.enemies[waves[0]];
+    const lead = (h) => (h.match(/\\d+/g) ?? []).map(Number)[0];
+    const full = agenda(s0, content, t0).find((r) => r.id === 'assault').hint;
+    const thin = agenda(s0, thinned, t0).find((r) => r.id === 'assault').hint;
+    // The LEADING number, against the same sentence on the full roster.
+    // Asking only "does 2 appear anywhere" passed on the broken build: with
+    // the filter gone the row reads "3 health bars against 1 — 2 more bodies
+    // first", and the shortfall supplied the 2. A number that any number in
+    // the sentence can satisfy is not an assertion.
+    if (!(lead(thin) < lead(full))) {
+      bad.push('a retired unit still counts as a body: "' + thin + '" against "' + full + '"');
+    }
+  }
+  {
+    const step = onboardingSteps(openTo(0), content, t0).find((x) => x.label === 'Build a stable of three');
+    const spare = openTo(0).ranch.stock[0];
+    if (!step) bad.push('the Path lost its sixth step');
+    else if (!step.hint.includes(gradeFor(spare, content, t0, openTo(0)).name)) {
+      bad.push('the Path does not say what the starters grade at today: "' + step.hint + '"');
+    }
+  }
+  if (bad.length) { console.error('opening ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('opening ✓  the second node fields three, and the row says so');
+`];
+
 // R87 — the Compliance Task Force: a stake, a sink and a ceiling. Its own
 // gate for the usual reason — the smoke suite takes twelve minutes and this
 // is one save and six assertions, all of them on the rules that make a raid
@@ -1287,6 +1382,37 @@ const BREAKS = [
     anchor: '    const rival = labFor(state, content, cam.breakoutCount);',
     to: '    cam.loose = cam.loose.filter((e) => due - e.escapedAt < 48 * HOUR);\n    const rival = labFor(state, content, cam.breakoutCount);',
   },
+
+  {
+    n: 85, gate: OPENING, name: 'the assault row goes back to its reward line, so the opening hides the wall',
+    file: 'ranch/agenda.js',
+    anchor: "      const wall = assaultWall(state, content, now);\n      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';",
+    to: "      const wall = null;\n      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';",
+  },
+  {
+    n: 86, gate: OPENING, name: 'the wall counts every chimera instead of the ones that can fight',
+    file: 'ranch/agenda.js',
+    anchor: '  const team = fit(state, now).length;\n  const front = regionStates(state, content)',
+    to: '  const team = (state.chimeras ?? []).length + 1;\n  const front = regionStates(state, content)',
+  },
+  {
+    n: 87, gate: OPENING, name: 'the wall cries out at a team that can already take the node',
+    file: 'ranch/agenda.js',
+    anchor: '  if (!bodies || bodies <= team) return null;',
+    to: '  if (!bodies) return null;',
+  },
+  {
+    n: 88, gate: OPENING, name: 'a retired unit still counts as a body, so the row overstates the wall',
+    file: 'ranch/agenda.js',
+    anchor: "  const bodies = (encounter?.waves ?? []).filter((w) => enemyOf(content, w)).length;",
+    to: "  const bodies = (encounter?.waves ?? []).length;",
+  },
+  {
+    n: 89, gate: OPENING, name: "the Path stops saying what the starters grade at, so it contradicts the Ranch card",
+    file: 'ranch/onboarding.js',
+    anchor: "          ? `Graduate ${spareNames}${spareSuffix} and splice them`",
+    to: "          ? `Graduate ${spareNames} and splice them`",
+  },
 ];
 
 const pristine = {};
@@ -1307,7 +1433,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -1321,7 +1447,8 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                     : gate === FERAL ? 'a neglected creature warned, answered, and given back'
                       : gate === RUSH ? 'a rush buys time and nothing else'
                         : gate === RAID ? 'the State comes for the ranch, fairly'
-                          : gate.join(' ');
+                          : gate === OPENING ? 'the opening tells the truth about the wall'
+                            : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }

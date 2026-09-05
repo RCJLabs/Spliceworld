@@ -10834,7 +10834,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // R87 adds two more, on the same terms: a raid's row is worth reading
     // because it names the hours left and the dollars at stake, and an
     // exhibition's because it names which one and what it pays.
-    const NUMBERED = ['spar', 'defend', 'rescue', 'settle', 'raid', 'gauntlet'];
+    const NUMBERED = ['spar', 'defend', 'rescue', 'settle', 'raid', 'gauntlet', 'assault'];
     const strings = AGENDA.filter((a) => !NUMBERED.includes(a.id));
     assert.ok(strings.length > 10, 'there are plenty of them');
     for (const a of strings) {
@@ -16515,6 +16515,210 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
   console.log(`   R87 raid engine: ceiling ${T.notorietyCap} · window ${T.windowHours}h opens on sight · levy ${T.fineFraction * 100}% + ${T.stockTaken} stock, never a creature`);
 
+}
+
+// ---------------------------------------------------------------------------
+// R106 — THE FIRST HOUR: A ROW THAT POINTS AT A FIGHT NOBODY CAN WIN.
+//
+// MEASURED BEFORE THIS WAS WRITTEN, and it corrected three claims in the
+// audit entry that proposed it. The entry said the opening waits five hours
+// on the starter goats growing up: it does not. A juvenile goat and an adult
+// goat both grade STANDARD at the starting condition of 60 — growth changes
+// nothing until Prime at 14h, and the lever that pays at five hours is CARE
+// (condition 86 buys the Apex ceiling). The entry's own acceptance criterion
+// — "three chimeras within 90 minutes" — was already true: graduate all
+// three starters at minute 0, splice three, and they are settled at minute
+// 23. And the 5.75-to-25-hour opening the entry quoted is the WALKER's, not
+// the game's: `walkAct` refuses to graduate a juvenile and refuses to drop
+// below two animals, so the yardstick plays a different opening from the one
+// the Path teaches, and no measurement of the opening taken from it is
+// evidence about a player. (That divergence is R92's, not this milestone's.)
+//
+// WHAT IS ACTUALLY WRONG is one row. A1 measured the second node at 0% with
+// one chimera and 84% with three and said why: combat is one active per
+// side, so three enemy bodies is three health bars against your one, and no
+// amount of stat-tuning moves it. Re-measured here: `downtown` fields three,
+// and it is 0% with one settled chimera and 100% with three. The Path says
+// so in its own sixth step. The AGENDA — the one place that claims to know
+// what you can do right now — offers "Take a node" through all of it, with
+// the same reward line it uses at every other moment in the game.
+//
+// Measured across three seeds at half-hour resolution: the row is offered
+// while outnumbered on days 0-9 and never afterwards (1.4-2.3% of all
+// offers, worst 3.0:1). So this is not a balance problem and it is not a
+// mid-game problem. It is the opening telling a new player to walk into the
+// one wall the game was designed around, in the voice of a hint that says it
+// pays every day.
+//
+// THE ROW IS NOT REMOVED. `battle/forecast.js` says it out loud: a forecast
+// is not a gate, and "a player who wants to throw one goat at a police
+// cruiser is entitled to". So the row stays and the HINT tells the truth, in
+// the numbers A1 measured — which is R48's rule (a hint may be a function of
+// the save when its value is a number) applied to the row that needed it
+// most.
+//
+// The wave count is read through `enemyOf` (R79's catalogue) rather than
+// through `liveWaves`, which is the same predicate for a node's static
+// waves but lives in `battle/engine.js` — and R81 put the engine behind the
+// thing that needs it. A hint on the Ranch must not drag the battle engine
+// into the boot.
+{
+  const { ensureRanchSeeded } = await import('../ranch/ranch.js');
+  const { extractAnimal, gradeFor, GRADES } = await import('../splice/extract.js');
+  const { agenda, AGENDA } = await import('../ranch/agenda.js');
+  const { onboardingSteps } = await import('../ranch/onboarding.js');
+  const { regionStates } = await import('../campaign/map.js');
+  const { campaignWalk } = await import('./sim.js');
+  const { tickWorld } = await import('../campaign/world.js');
+  const { bandFor } = await import('../battle/forecast.js');
+  const { fitToFight } = await import('../battle/statblock.js');
+
+  const PLAIN = 'Holding it pays every day and puts its fauna in the catalog.';
+
+  // The player's own opening, played by hand rather than by the walker:
+  // graduate N starters, splice what comes out, hold the first node. This is
+  // the only fixture in this suite that is a NEW PLAYER instead of a save
+  // built to order, which is the whole point — the wall is in the opening.
+  const openTo = (n, at = t0) => {
+    const s = { ...newGameState(), seed: 4242 };
+    ensureRanchSeeded(s, content, at);
+    s.lastTickAt = at;
+    for (const a of [...s.ranch.stock].slice(0, n)) extractAnimal(s, a.id, content, at);
+    for (let made = 0; made < n; made++) {
+      const head = s.inventory.parts.find((p) => content.parts[p.partId].slot === 'head');
+      if (!head) break;
+      const sp = content.parts[head.partId].species;
+      const slots = { head: head.id };
+      const used = new Set([head.id]);
+      for (const slot of ['forelimbs', 'hindlimbs', 'tail', 'hide', 'organ']) {
+        const p = s.inventory.parts.find((x) => !used.has(x.id)
+          && content.parts[x.partId].slot === slot && content.parts[x.partId].species === sp);
+        if (p) { slots[slot] = p.id; used.add(p.id); }
+      }
+      spliceChimera(s, 'M', slots, content, at);
+    }
+    for (const c of s.chimeras) c.settleUntil = at;
+    s.campaign.heldNodes = ['barn_perimeter'];
+    return s;
+  };
+  const rowOf = (s, at = t0) => agenda(s, content, at).find((r) => r.id === 'assault');
+  const frontOf = (s) => regionStates(s, content).flatMap((r) => r.nodes).find((n) => n.status === 'available');
+  const bodiesOf = (s) => {
+    const front = frontOf(s);
+    const enc = front ? content.encounters[front.node.encounter] : null;
+    return (enc?.waves ?? []).filter((w) => content.enemies[w]).length;
+  };
+
+  // 1. THE WALL IS REAL, AND IT IS BODIES. A1's finding, re-measured through
+  //    the shipped forecast rather than quoted from the roadmap.
+  {
+    const one = openTo(1);
+    const three = openTo(3);
+    assert.equal(three.chimeras.length, 3, 'three starters make three chimeras');
+    assert.equal(bodiesOf(one), 3, `the second node fields three (got ${bodiesOf(one)})`);
+    const enc = content.encounters[frontOf(one).node.encounter];
+    const solo = forecast(one.chimeras, enc, content, 1, t0, { runs: 40 });
+    const full = forecast(three.chimeras, enc, content, 1, t0, { runs: 40 });
+    assert.equal(bandFor(solo.winRate).id, 'hopeless',
+      `one chimera against three bodies is not survivable (${Math.round(solo.winRate * 100)}%)`);
+    assert.ok(full.winRate >= 0.9,
+      `and the same build three times over walks it (${Math.round(full.winRate * 100)}%)`);
+  }
+
+  // 2. THE ROW IS STILL OFFERED. battle/forecast.js: a forecast is not a
+  //    gate, and a player who wants to throw one goat at a police cruiser is
+  //    entitled to. This milestone changes what the row SAYS, never whether
+  //    it is there.
+  {
+    assert.ok(rowOf(openTo(1)), 'the row is offered with one chimera');
+    assert.ok(rowOf(openTo(3)), 'and with three');
+  }
+
+  // 3. …AND IT NAMES THE WALL, IN NUMBERS. The failing assertion this
+  //    milestone was written for.
+  {
+    const hint = rowOf(openTo(1)).hint;
+    assert.notEqual(hint, PLAIN, 'outnumbered, the row does not use the reward line');
+    assert.ok(hint.includes('3'), `it says how many they field: "${hint}"`);
+    assert.ok(/\bone\b|\b1\b/.test(hint), `and how many you can (got "${hint}")`);
+    assert.ok(/health bar/.test(hint), 'in A1’s own terms, which the Path already uses');
+  }
+
+  // 4. NO FALSE ALARM. With the bodies to take it, the reward line is back —
+  //    a warning that never stands down is a warning nobody reads.
+  {
+    assert.equal(rowOf(openTo(3)).hint, PLAIN, 'three bodies against three: the plain line');
+  }
+
+  // 5. THE GENERAL PROPERTY, over the opening the wall actually lives in.
+  //    Measured over ten days rather than asserted at one instant, because
+  //    the row is offered thousands of times and the wall is only there for
+  //    the first week.
+  //
+  //    The numbers the hint states are checked against independently
+  //    computed ones — the wave count read straight out of regions.json and
+  //    enemies.json here, not from `assaultWall`. A hint that merely differs
+  //    from the reward line would pass a version of this that says nothing;
+  //    what has to be true is that it reports the RIGHT two numbers.
+  //
+  //    `fitToFight` rather than a predicate of my own: the first draft of
+  //    this block hand-copied it as "uninjured AND settled" and reported two
+  //    false failures out of 72, because a settling chimera CAN be fielded —
+  //    it just fights with Rejection. R61's rule, and the gate was the half
+  //    that was wrong.
+  {
+    let offered = 0, outnumbered = 0, wrong = 0, plainWhenClear = 0;
+    campaignWalk(content, {
+      seed: 4242, days: 10, stepHours: 0.5, stopAtDominion: false,
+      tick: (s, c, now) => {
+        tickWorld(s, c, now);
+        const row = agenda(s, c, now).find((r) => r.id === 'assault');
+        if (!row) return;
+        offered++;
+        const front = regionStates(s, c).flatMap((r) => r.nodes).find((n) => n.status === 'available');
+        const enc = front ? c.encounters[front.node.encounter] : null;
+        const bodies = (enc?.waves ?? []).filter((w) => c.enemies[w]).length;
+        const team = fitToFight(s, now).length;
+        if (bodies > team) {
+          outnumbered++;
+          const said = (row.hint.match(/\d+/g) ?? []).map(Number);
+          if (row.hint === PLAIN || !said.includes(bodies) || !said.includes(team)) wrong++;
+        } else if (row.hint !== PLAIN) plainWhenClear++;
+      },
+    });
+    assert.ok(offered > 100, `the row is offered plenty over ten days (${offered})`);
+    assert.ok(outnumbered > 0, `and some of those are outnumbered (${outnumbered})`);
+    assert.equal(wrong, 0,
+      `every outnumbered offer states the true bodies and team (${wrong} of ${outnumbered} did not)`);
+    assert.equal(plainWhenClear, 0,
+      `and the row never cries wall when there is none (${plainWhenClear})`);
+  }
+
+  // 6. THE PATH RESOLVES ITS OWN CONTRADICTION. The Ranch card on those same
+  //    two goats says "Apex once Biscuit is fully grown (14h) and at
+  //    condition 86+" — correct, and the opposite instruction. Measured, the
+  //    wait buys nothing that matters here: three STANDARD chimeras take the
+  //    node at 100%. So the step that sends the player to graduate them says
+  //    what they grade at today and that it is enough.
+  {
+    const s = openTo(0);
+    const step = onboardingSteps(s, content, t0).find((x) => x.label === 'Build a stable of three');
+    assert.ok(step, 'the Path still has its sixth step');
+    const names = GRADES.map((g) => g.name);
+    assert.ok(names.some((n) => step.hint.includes(n)),
+      `it names what the starters grade at today (got "${step.hint}")`);
+    const spare = s.ranch.stock[0];
+    assert.ok(step.hint.includes(gradeFor(spare, content, t0, s).name),
+      'and it is the grade the Ranch card would print for the same animal');
+  }
+
+  // 7. R48's list. The hint is a function of the save now, so it belongs to
+  //    the numbered ones — and the string-hint gate above must know it.
+  {
+    const row = AGENDA.find((a) => a.id === 'assault');
+    assert.equal(typeof row.hint, 'function', 'the assault hint reads the save');
+  }
+  console.log('   R106 opening: the second node fields 3 · 0% with one, 100% with three · the row says so, days 0–9');
 }
 
 // ---------------------------------------------------------------------------

@@ -37,7 +37,8 @@ import { TRAINING } from '../splice/theater.js';
 import { treatmentCost } from '../splice/scars.js';
 import { activeVat, vatPlan } from '../splice/chaos.js';
 import { operationList, opReady, activeOps, laneFree } from '../campaign/operations.js';
-import { reachableEncounterIds } from '../campaign/map.js';
+import { reachableEncounterIds, regionStates } from '../campaign/map.js';
+import { enemyOf } from '../data/catalog.js';
 import { contestRemainingMs } from '../campaign/contest.js';
 import { isInjured, fitToFight } from '../battle/statblock.js';
 import { sparCharges, canSpar } from '../campaign/sparring.js';
@@ -47,6 +48,41 @@ import { gauntletState } from '../campaign/gauntlet.js';
 
 const HOUR = 3600000;
 const fit = fitToFight;
+
+// R106 — the wall A1 measured, read cheaply enough to live inside a hint.
+//
+// Combat is one active per side, so an encounter's WAVE COUNT is how many
+// health bars the player has to grind down with however many creatures they
+// can field. Re-measured through the shipped forecast: `downtown` fields
+// three, and it is 0% with one settled chimera and 100% with the same build
+// three times over. That is a question of BODIES, and no stat-tuning moves
+// it — which is why A1 put it in the Path and why this row has to say it.
+//
+// BODIES RATHER THAN A FORECAST, deliberately. Measured: this check costs
+// 0.016 ms and the whole agenda 0.060 ms, against 4.3 ms for `forecast()` at
+// its 32 runs — 267 times the price of the check and 72 times the price of
+// the entire screen, to answer a question the wave count already answers.
+// The agenda is rebuilt on every render and on every step of the balance
+// walk, so that is not a rounding error; it is the difference between a hint
+// and a stall.
+//
+// And `enemyOf` (R79's catalogue) rather than `liveWaves`, which is the same
+// predicate for a node's static waves but lives in `battle/engine.js` — R81
+// put the engine behind the thing that needs it, and a hint on the Ranch
+// must not drag a battle engine into the boot.
+//
+// Null when the player is not outnumbered, so the row falls back to its
+// reward line: a warning that never stands down is a warning nobody reads.
+export function assaultWall(state, content, now) {
+  const team = fit(state, now).length;
+  const front = regionStates(state, content)
+    .flatMap((r) => r.nodes)
+    .find((n) => n.status === 'available');
+  const encounter = front ? content.encounters?.[front.node.encounter] : null;
+  const bodies = (encounter?.waves ?? []).filter((w) => enemyOf(content, w)).length;
+  if (!bodies || bodies <= team) return null;
+  return { name: front.node.name, bodies, team, short: bodies - team };
+}
 
 // Every entry answers one question: is there a click here right now? Order is
 // the order the player should think about them in — work before spending.
@@ -211,7 +247,22 @@ export const AGENDA = [
   },
   {
     id: 'assault', kind: 'campaign', screen: 'battle', label: 'Take a node',
-    hint: 'Holding it pays every day and puts its fauna in the catalog.',
+    // R106 — the row stays when the odds are hopeless, and says so. It is
+    // not removed, because `battle/forecast.js` settles that out loud: a
+    // forecast is not a gate, and "a player who wants to throw one goat at a
+    // police cruiser is entitled to". What was wrong was never the offer, it
+    // was that the offer read the same at three-against-one as it does at
+    // every other moment in the game — measured over three seeds, the row is
+    // offered outnumbered on days 0-9 and never afterwards, so this is the
+    // opening walking a new player into the one wall A1 designed around, in
+    // the voice of a hint about how well it pays.
+    hint: (state, content, now) => {
+      const wall = assaultWall(state, content, now);
+      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';
+      return `${wall.name} fields ${wall.bodies}; you can field ${wall.team}. One active per side,`
+        + ` so that is ${wall.bodies} health bars against ${wall.team} — ${
+          wall.short === 1 ? 'one more body' : `${wall.short} more bodies`} first.`;
+    },
     ready: (state, content, now) =>
       reachableEncounterIds(state, content).length > 0 && fit(state, now).length > 0,
   },
