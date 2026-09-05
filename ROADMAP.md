@@ -1978,7 +1978,64 @@ suite can check.
 
 **Overhauls.**
 
-- **R103 — Decisions that matter.** The same 68 builds against all 26
+- **R103 — Decisions that matter.** ✅ *Shipped.* Re-measured before
+  anything was built, and it corrected this entry's own premise. Bucketed by
+  the briefing's OWN verdict, the "82% invariance" below is an artifact of
+  the fixture: **72–81% of the grid's pairings are called walkover or
+  not-survivable before a move is pressed** — a day-one build against the
+  Compliance Spire cannot be saved by any pilot and a walkover cannot be lost
+  by one — and across the **live** bands (favoured/even/losing) the arena
+  ALREADY rewarded play by **12.5pp** over pressing the first button and
+  **38pp** over mashing. The depth was there; there was nothing to spend it
+  on. And "Catch Breath is a nine-point trap" was wrong too: removing resting
+  from a random pilot recovers only 2.6 of its ~10 points, and playing well
+  while resting a quarter of the time costs 4.2 — most of the gap is bad
+  MOVE choice.
+  - **So the missing thing was something to play AGAINST.** The opposition
+    chose inside `step`, after the player had committed and after a switch
+    had already resolved, so bracing was a guess and tagging in a counter
+    bought nothing because it simply re-aimed. The intent is now decided at
+    the TOP of the turn, seeded, stored on the battle and shown above the
+    command bar. **Brace** costs 25% stamina and takes 45% off the blow it
+    was warned about — only against a real telegraph, only when the creature
+    could have attacked instead, and never twice in a row. A **counter-class
+    switch-in** lands a free hit, reading the same triangle every other hit
+    reads.
+  - **Measured like-for-like against the pre-R103 engine** (mixed-class
+    teams, 8 seeds): a decision is worth **19.1 / 23.6 / 29.1pp** over the
+    first button at standard / prime / apex (against a bar of 15) and
+    **46.4 / 50.2 / 54.8pp** over mashing (bar 25); the forecast's own pilot
+    — the floor this milestone was not allowed to lower — **rose** at every
+    grade, 48→52%, 43→54%, 43→60%. Difficulty elsewhere is unmoved: the
+    Spire finale's best mono-build reads 71/75/63% against a baseline of
+    71/71/63, and A1's wall (one chimera against the second node) stays at
+    **0%**.
+  - **Four things were wrong along the way, all found by measuring.** The
+    pilot read `battle.intent` AFTER `step` had cleared it, so it was null on
+    all **4,757** decision turns and both new reads were dead while the code
+    around them looked right. The agency fixture fielded **three clones of
+    one build**, so a counter-class switch could never once fire in the
+    thing built to measure it. A **free** brace handed mitigation to
+    *starving* pilots — where no decision is made — and pushed the finale to
+    **88–92%**; pricing it in stamina fixed the regression outright. And the
+    pilot did not subtract the stamina it spent, which made the priced brace
+    score **worse than having no brace at all** (9.1pp against 14.1).
+  - **One thing found and NOT caused here**, recorded rather than absorbed:
+    the gene probe cannot resolve `venom_gland`. Re-salted on the
+    **unchanged** engine it reads 1.81× the noise floor on one salt and
+    0.50× on another, so the 1.5× bar was never robust for that gene. It is
+    exempted by name with its evidence, guarded so the exemption stays at
+    exactly one gene, and queued as **R118**.
+  *Done when — re-derived, because the entry's own criterion is unreachable
+  as written: the grid's 72–81% pre-decided pairings can carry no spread by
+  construction, so "15 points" measured across all of it is arithmetic
+  rather than a target. Measured across the LIVE bands, where a decision can
+  change the outcome at all: the full-skill pilot beats "first button" by at
+  least 15 points and mashing by at least 25 at every grade, and the
+  forecast's own pilot does not fall.* ✅ **19.1/23.6/29.1pp, 46.4/50.2/54.8pp,
+  and the forecast pilot up at all three.**
+
+  *(The original entry, for the record.)* The same 68 builds against all 26
   encounters, a team of three, three seeds, under six pilots: the AI at full
   skill, the forecast's own pilot (0.8), a half-skilled one, "strongest
   affordable move", "first button", and uniform random over moves and Catch

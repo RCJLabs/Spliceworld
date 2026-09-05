@@ -1097,8 +1097,40 @@ body.in-battle .ticker { font-size: 0.66rem; }
 @media (max-height: 640px) {
   .msg-box { min-height: 44px; }
   .mv { min-height: 40px; padding: 5px 8px; }
-  .stage { min-height: 170px; }
+  /* R103 — the telegraph is a line the arena did not used to carry, and the
+     arena is height-locked (`body.in-battle` is 100dvh with overflow hidden),
+     so on the shortest phone the space has to come from somewhere. It comes
+     from the stage, which is the one part of the fight that scales: the
+     creatures get smaller, nothing gets cut off. Measured at 380x640, the
+     line costs 38px and this gives back 40. */
+  .stage { min-height: 130px; }
 }
+
+/* R103 — what the opposition has committed to. One line, directly above the
+   buttons that answer it, because a telegraph the player has to look for is
+   a telegraph nobody reads. Never below the 12px floor: it is the newest
+   text in the game and it is not going to be the smallest. */
+.intent {
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: 6px;
+  background: var(--panel);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  flex: 0 0 auto;
+}
+.intent strong { color: var(--ink); }
+.intent-pri {
+  color: var(--warn);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.intent-answer { color: var(--good, var(--accent)); font-weight: 700; }
+/* The brace button, when there is actually something to brace against. */
+.ut-live { border-color: var(--warn); }
 
 /* --- War Room (M5) --- */
 

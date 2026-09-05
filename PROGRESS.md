@@ -1,5 +1,98 @@
 # PROGRESS
 
+## Session 113 — R103: Decisions that matter ✅
+
+**Acceptance criterion (re-derived — see below):** measured across the LIVE
+briefing bands, the full-skill pilot beats "first button" by ≥15 points and
+mashing by ≥25 at every grade, and the forecast's own pilot does not fall —
+**passes at all three grades, and the forecast pilot rose at every one.**
+`SAVE_VERSION` **41 → 42** (`battle.intent`); `sw.js` bumped to
+`spliceworld-v42-r103`.
+
+| grade | vs first button | vs mashing | forecast pilot |
+|---|---|---|---|
+| standard | 12.5 → **19.1pp** | 38.3 → **46.4pp** | 48 → **52%** |
+| prime | 10.0 → **23.6pp** | 35.0 → **50.2pp** | 43 → **54%** |
+| apex | 12.8 → **29.1pp** | 37.6 → **54.8pp** | 43 → **60%** |
+
+All against the pre-R103 engine on the same fixture (mixed-class teams, 8
+seeds). Difficulty elsewhere is unmoved: the Spire finale's best mono-build
+reads **71/75/63%** against a baseline of 71/71/63, and A1's wall — one
+chimera against the second node — stays at **0%**.
+
+### The entry's premise was wrong, and bucketing showed it
+
+The audit said the outcome is identical under all six pilots in 82% of fights
+and concluded the arena was shallow. Bucketed by the briefing's **own**
+verdict, that number is an artifact of the fixture: **72–81% of the grid's
+pairings are called walkover or not-survivable before a move is pressed**, and
+across the live bands the arena **already** rewarded play by 12.5pp over the
+first button and 38pp over mashing. "Catch Breath is a nine-point trap" was
+wrong too — removing rest from a random pilot recovers only 2.6 of its ~10
+points; most of the gap is bad *move* choice.
+
+So the missing thing was never depth. It was **something to play against**.
+
+### What shipped
+
+The opposition commits at the **top** of the turn — seeded, stored on the
+battle, and shown above the command bar. **Brace** costs 25% stamina and takes
+45% off the blow it was warned about: only against a real telegraph, only when
+the creature could have attacked instead, and never twice in a row. A
+**counter-class switch-in** lands a free hit, reading the same class triangle
+every other hit reads. Tuning in `data/stance.json`, a field guide keyed on
+having *fought* (not won), and an `--agency` table in `sim` so the number is
+watched from now on.
+
+### Four things I got wrong, all found by measuring
+
+- **The pilot never saw the telegraph.** It read `battle.intent` after `step`
+  had consumed and cleared it — null on all **4,757** decision turns — so both
+  new reads were dead while the code around them looked right. This is why the
+  first three edits produced byte-identical tables.
+- **The fixture couldn't reach the new code.** The agency table fielded three
+  **clones** of one build, so a counter-class switch could never once fire in
+  the thing built to measure it. (Fourth milestone running.)
+- **A free brace paid the wrong people.** A pilot rests mostly when it is
+  *starving* — precisely when no decision is made — so free mitigation landed
+  there, and the Spire finale went to **88–92%**. Lowering the absorb did not
+  fix it (79–83% at 0.2). **Pricing** it in stamina did, completely.
+- **The pilot didn't price what it spent.** Scoring the brace as free made the
+  priced brace worth **9.1pp — worse than having no brace at all** (14.1).
+
+### Found here, but not caused here
+
+The gene probe cannot resolve `venom_gland`. Re-salted on the **unchanged**
+engine it reads **1.81× the noise floor on one salt and 0.50× on another**, so
+the 1.5× bar was never robust for that gene and the derivation written beside
+it was taken on the two salts that happened to land well. Every other gene
+reads 5.2–75× on every salt, before and after. Exempted by name with its
+evidence, guarded so the exemption stays at exactly one gene, and queued as
+**R118**. `GENE_FAMILIES` now lets anyone re-salt the probe — it is what proved
+all of the above.
+
+### Assertions re-derived (each with its reason)
+
+- **R23** (hides and organs change a fight): 25pp → 15pp. Bracing is a
+  tactical floor every creature has, so a build stripped of its actives went
+  70% → 83%. R23's claim survives — anatomy is still worth 17 points on top.
+- **M5 rescue**: pinned to seed 42, so it read as a balance regression the day
+  the RNG order changed. Now five seeds, majority must win.
+- **Onboarding walk**: the new guide lights at the first fought battle.
+
+### Known issues
+
+The telegraph costs the height-locked arena 38px, taken back from the stage's
+`min-height` at 640px — the creatures are smaller on the shortest phone.
+Nothing is cut off (the a11y gate proves it) but it is the tightest the arena
+has been.
+
+### Next session's first task
+
+**R88 — the battle screen charges full price for free fights.** It is the
+other half of this milestone's finding: R103 made the live fights worth
+flying, and R88 removes the ones that never needed a pilot.
+
 ## Session 112 — R106: The first hour points at a fight nobody can win ✅
 
 **Acceptance criterion (re-derived — see below):** on a fresh save with one

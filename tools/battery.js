@@ -1413,6 +1413,43 @@ const BREAKS = [
     anchor: "          ? `Graduate ${spareNames}${spareSuffix} and splice them`",
     to: "          ? `Graduate ${spareNames} and splice them`",
   },
+
+  {
+    n: 90, gate: SMOKE_PAIR, name: 'the opposition goes back to choosing after the player has committed',
+    file: 'battle/engine.js',
+    anchor: '  const intent = intentOf(battle, content);\n  battle.intent = null;   // consumed; the next turn plans its own',
+    to: '  const intent = null;\n  battle.intent = null;',
+  },
+  {
+    n: 91, gate: SMOKE_PAIR, name: 'a brace is granted with nothing telegraphed, so standing still is free again',
+    file: 'battle/engine.js',
+    anchor: '      const braced = !!intent && intent.index >= 0 && couldHaveAttacked && canAfford && !me.status.justBraced;',
+    to: '      const braced = true;',
+  },
+  {
+    n: 92, gate: SMOKE_PAIR, name: 'the brace stops costing stamina, so every incidental rest is mitigation',
+    file: 'battle/engine.js',
+    anchor: "      const cost = Math.round(me.staminaMax * stance.braceCost);",
+    to: "      const cost = 0;",
+  },
+  {
+    n: 93, gate: SMOKE_PAIR, name: 'the counter-switch stops reading the class triangle and fires for anybody',
+    file: 'battle/engine.js',
+    anchor: '    const counters = intent && incoming.creatureClass && intent.creatureClass\n      && classMultiplier(incoming.creatureClass, intent.creatureClass, content) === rules.advantage;',
+    to: '    const counters = !!intent;',
+  },
+  {
+    n: 94, gate: SMOKE_PAIR, name: "the engine's stance defaults drift from the shipped data",
+    file: 'battle/engine.js',
+    anchor: 'const STANCE_DEFAULTS = { absorb: 0.45, stamina: 0.35, counterPower: 1, braceCost: 0.25 };',
+    to: 'const STANCE_DEFAULTS = { absorb: 0.6, stamina: 0.35, counterPower: 1, braceCost: 0.25 };',
+  },
+  {
+    n: 95, gate: SMOKE_PAIR, name: 'the pilot reads the intent off the battle again, where step has already cleared it',
+    file: 'battle/ai.js',
+    anchor: '  const intent = intentOf(battle, content);',
+    to: '  const intent = battle.intent ?? null;',
+  },
 ];
 
 const pristine = {};
