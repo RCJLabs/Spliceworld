@@ -252,6 +252,148 @@ const RUSH = ['node', '-e', `
   console.log('rush ✓  four sealed clocks, one price — rushed and waited agree');
 `];
 
+// R103 — the opposition commits before you answer. Its own gate for the
+// usual reason: the smoke suite takes nine minutes and this is three
+// battles and six rules, all of them the ones that turn two dead buttons
+// into decisions. Six breaks aim here.
+const STANCE = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { createBattle, step, playerActions, playerActive, intentOf, stanceTuning } = await import('./battle/engine.js');
+  const { choosePlayerAction } = await import('./battle/ai.js');
+  const { makeSimChimera, sampleBuilds } = await import('./tools/sim.js');
+  const { analyze } = await import('./splice/physiology.js');
+  const { rngStream } = await import('./util/rng.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000;
+  const T = stanceTuning(content);
+  const bad = [];
+
+  // 0. the data wins
+  for (const [k, v] of Object.entries(R('stance').tuning)) {
+    if (T[k] !== v) bad.push('stance default ' + k + ' is ' + T[k] + ', data says ' + v);
+  }
+
+  const builds = sampleBuilds(content, 40, 2026).map((b) => makeSimChimera(b.frame, b.partIds, 'prime', content));
+  const classOf = (c) => analyze(c.frame, Object.values(c.tokens), content).creatureClass ?? null;
+  const fight = (team, enc, seed = 5) => createBattle(team, content.encounters[enc], content, seed, t0);
+
+  // 1. the intent is decided before the player acts, and it is what lands
+  {
+    const b = fight([builds[0], { ...builds[0], id: 'b1' }], 'patrol_2');
+    const intent = intentOf(b, content);
+    if (!intent || intent.index < 0) bad.push('nothing was telegraphed');
+    else {
+      const named = b.enemy.active.moves[intent.index].name;
+      if (intent.name !== named) bad.push('the telegraph names a different move than it holds');
+      step(b, playerActions(b).find((a) => a.type === 'rest'), content);
+      if (!b.log.some((l) => l.includes(named))) bad.push('the move it announced is not the move it used');
+    }
+  }
+
+  // 2. a brace answers a telegraph, costs stamina, and never twice running
+  {
+    const b = fight([builds[2], { ...builds[2], id: 'c1' }], 'patrol_2');
+    intentOf(b, content);
+    const me = playerActive(b);
+    const before = me.stamina;
+    step(b, playerActions(b).find((a) => a.type === 'rest'), content);
+    if (!b.log.some((l) => /braces/.test(l))) bad.push('bracing against a telegraph did not brace');
+    if (me.stamina >= before) bad.push('the brace did not cost stamina (' + before + ' -> ' + me.stamina + ')');
+
+    const quiet = fight([builds[2], { ...builds[2], id: 'c2' }], 'patrol_2');
+    intentOf(quiet, content);
+    quiet.intent = { index: -1, name: 'Catch Breath', power: 0, tags: [], creatureClass: null, priority: false, ignoreGuard: false };
+    const q = playerActive(quiet);
+    step(quiet, playerActions(quiet).find((a) => a.type === 'rest'), content);
+    if (q.status.guard) bad.push('a brace was granted with nothing telegraphed');
+  }
+
+  // 3. the brace is worth what it claims
+  {
+    const hit = (braced) => {
+      const b = fight([builds[3], { ...builds[3], id: 'd1' }], 'patrol_2');
+      intentOf(b, content);
+      const hp = playerActive(b).hp;
+      step(b, braced ? playerActions(b).find((a) => a.type === 'rest') : playerActions(b).find((a) => a.type === 'move'), content);
+      return hp - playerActive(b).hp;
+    };
+    const open = hit(false), guarded = hit(true);
+    if (!(guarded < open)) bad.push('a braced creature does not take less (' + guarded + ' vs ' + open + ')');
+    if (!(guarded > 0)) bad.push('a brace is immunity, not mitigation');
+  }
+
+  // 4. the counter-switch reads the class triangle and nothing else
+  {
+    const beats = Object.fromEntries(Object.values(content.classes).map((c) => [c.beats, c.id]));
+    const b0 = fight([builds[0], { ...builds[0], id: 'z' }], 'patrol_2');
+    const li = intentOf(b0, content);
+    const wrong = builds.find((c) => classOf(c) && classOf(c) !== beats[li.creatureClass] && content.classes[li.creatureClass]?.beats !== classOf(c));
+    if (wrong) {
+      const b = fight([builds[0], wrong], 'patrol_2');
+      intentOf(b, content);
+      const foeHp = b.enemy.active.hp;
+      step(b, playerActions(b).find((a) => a.type === 'switch'), content);
+      // A switch into a creature that does NOT counter must not land a free
+      // hit before the enemy acts — the only damage may be the enemy's own.
+      if (b.log.some((l) => /comes in|free/.test(l))) bad.push('a non-countering switch took tempo it did not earn');
+    }
+    const right = beats[li.creatureClass] ? builds.find((c) => classOf(c) === beats[li.creatureClass]) : null;
+    if (right) {
+      const b = fight([builds[0], right], 'patrol_2');
+      const i2 = intentOf(b, content);
+      if (beats[i2.creatureClass] === classOf(right)) {
+        const foeHp = b.enemy.active.hp;
+        step(b, playerActions(b).find((a) => a.type === 'switch'), content);
+        if (b.enemy.active.hp >= foeHp && b.enemy.active.name === b.enemy.active.name) {
+          // the incoming should have hit it on the way in
+          if (!b.log.some((l) => l.includes(right.name))) bad.push('the counter-class switch landed nothing');
+        }
+      }
+    }
+  }
+
+  // 5. the pilot can SEE the telegraph. This is the assertion that catches
+  //    the bug that made the whole milestone invisible: step consumes and
+  //    clears the intent, so a pilot reading the field directly gets null
+  //    every turn and never braces or counter-switches at all.
+  {
+    let braces = 0, switches = 0, moves = 0, turns = 0;
+    for (const encId of ['patrol_2', 'checkpoint', 'boss_clampdown']) {
+      const team = ['ground', 'water', 'air'].map((cls, i) => {
+        const c = builds.find((x) => classOf(x) === cls) ?? builds[i];
+        return { ...c, id: c.id + '#' + i };
+      });
+      const b = fight(team, encId, 11);
+      let g = 0;
+      while (!b.over && g++ < 200) {
+        const acts = playerActions(b);
+        if (!acts.length) break;
+        const rel = acts.find((a) => a.type === 'release');
+        const action = rel ?? (b.pendingReplace ? acts[0]
+          : choosePlayerAction(b, acts, content, 1, () => rngStream(b.seed, 'gate', b.rollCount++)()));
+        if (!rel && !b.pendingReplace) {
+          turns++;
+          if (action.type === 'rest') braces++;
+          else if (action.type === 'switch') switches++;
+          else if (action.type === 'move') moves++;
+        }
+        step(b, action, content);
+      }
+    }
+    if (turns < 20) bad.push('the pilot did not play a real fight (' + turns + ' turns)');
+    if (!moves) bad.push('the pilot never attacks');
+    if (braces + switches === 0) {
+      bad.push('the pilot never braces or switches over ' + turns + ' turns — it cannot see the telegraph');
+    }
+  }
+
+  if (bad.length) { console.error('stance ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('stance ✓  the enemy commits first, a brace answers it, the counter-class comes in free');
+`];
+
 // R106 — the opening tells the truth about the wall it walks you into. Its
 // own gate for the usual reason: the smoke suite takes nine minutes and this
 // is one fresh save and four assertions, all of them on the one row that has
@@ -1415,37 +1557,37 @@ const BREAKS = [
   },
 
   {
-    n: 90, gate: SMOKE_PAIR, name: 'the opposition goes back to choosing after the player has committed',
+    n: 90, gate: STANCE, name: 'the opposition goes back to choosing after the player has committed',
     file: 'battle/engine.js',
     anchor: '  const intent = intentOf(battle, content);\n  battle.intent = null;   // consumed; the next turn plans its own',
     to: '  const intent = null;\n  battle.intent = null;',
   },
   {
-    n: 91, gate: SMOKE_PAIR, name: 'a brace is granted with nothing telegraphed, so standing still is free again',
+    n: 91, gate: STANCE, name: 'a brace is granted with nothing telegraphed, so standing still is free again',
     file: 'battle/engine.js',
     anchor: '      const braced = !!intent && intent.index >= 0 && couldHaveAttacked && canAfford && !me.status.justBraced;',
     to: '      const braced = true;',
   },
   {
-    n: 92, gate: SMOKE_PAIR, name: 'the brace stops costing stamina, so every incidental rest is mitigation',
+    n: 92, gate: STANCE, name: 'the brace stops costing stamina, so every incidental rest is mitigation',
     file: 'battle/engine.js',
     anchor: "      const cost = Math.round(me.staminaMax * stance.braceCost);",
     to: "      const cost = 0;",
   },
   {
-    n: 93, gate: SMOKE_PAIR, name: 'the counter-switch stops reading the class triangle and fires for anybody',
+    n: 93, gate: STANCE, name: 'the counter-switch stops reading the class triangle and fires for anybody',
     file: 'battle/engine.js',
     anchor: '    const counters = intent && incoming.creatureClass && intent.creatureClass\n      && classMultiplier(incoming.creatureClass, intent.creatureClass, content) === rules.advantage;',
     to: '    const counters = !!intent;',
   },
   {
-    n: 94, gate: SMOKE_PAIR, name: "the engine's stance defaults drift from the shipped data",
+    n: 94, gate: STANCE, name: "the engine's stance defaults drift from the shipped data",
     file: 'battle/engine.js',
     anchor: 'const STANCE_DEFAULTS = { absorb: 0.45, stamina: 0.35, counterPower: 1, braceCost: 0.25 };',
     to: 'const STANCE_DEFAULTS = { absorb: 0.6, stamina: 0.35, counterPower: 1, braceCost: 0.25 };',
   },
   {
-    n: 95, gate: SMOKE_PAIR, name: 'the pilot reads the intent off the battle again, where step has already cleared it',
+    n: 95, gate: STANCE, name: 'the pilot reads the intent off the battle again, where step has already cleared it',
     file: 'battle/ai.js',
     anchor: '  const intent = intentOf(battle, content);',
     to: '  const intent = battle.intent ?? null;',
@@ -1470,7 +1612,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -1485,7 +1627,8 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                       : gate === RUSH ? 'a rush buys time and nothing else'
                         : gate === RAID ? 'the State comes for the ranch, fairly'
                           : gate === OPENING ? 'the opening tells the truth about the wall'
-                            : gate.join(' ');
+                            : gate === STANCE ? 'the opposition commits before you answer'
+                              : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }
