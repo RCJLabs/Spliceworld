@@ -80,6 +80,10 @@ export function indexContent(raw) {
     // R103 — how a brace and a counter-switch are priced.
     stanceMeta: raw.stance?.tuning ?? null,
     stanceLines: raw.stance?.lines ?? null,
+    // R119 — the founding labs, keyed by id so the seeder can look one up
+    // and the picker can list them in authored order.
+    starterLabs: raw.starters?.labs ?? [],
+    starterMeta: raw.starters ?? null,
     rushKinds: raw.rush?.kinds ?? null,
     directorRules: raw.director ? byId(raw.director.counters) : {},
     directorMeta: raw.director ? raw.director.tuning : null,

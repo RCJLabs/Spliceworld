@@ -6162,6 +6162,14 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'enemies-shapes.json': null,
     'philosophies.json': null,
     'guides.json': null,
+    // R119: the founding labs are the FIRST screen, and a note that teaches
+    // a screen you have already been through is a note nobody reads. The
+    // choice explains itself where it is made — each card prints the donor,
+    // the pair and the crate it will hand you — so there is no field guide
+    // to point at here. Exempted for the same reason the wire is, from the
+    // other end: this one is met before anything else rather than through
+    // everything else.
+    'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
     // never on its own. Its own gate is the two-way one: every event has

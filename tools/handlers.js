@@ -357,7 +357,18 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       takeSubtab: () => { const v = pending; pending = null; return v; },
     };
     let live;
-    if (surface.settings) {
+    if (surface.founding) {
+      // A save that has not been founded: no herd, no lab, no crate. Every
+      // other surface in this gate starts from a stocked ranch, so this is
+      // the only one that has to unmake the fixture to exist at all.
+      state.ranch.stock = [];
+      state.ranch.seeded = false;
+      state.starterLab = null;
+      state.inventory.parts = [];
+      const before = overlay.bound.length;
+      mod[surface.fn](overlay.host, ctx, () => {});
+      live = overlay.bound.slice(before);
+    } else if (surface.settings) {
       const before = overlay.bound.length;
       openSettings(overlay.host, ctx);
       live = overlay.bound.slice(before);
@@ -441,6 +452,13 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
 
   try {
     SURFACES.push({ name: 'settings', settings: true, file: 'save/settings-ui.js', fn: 'openSettings', path: [] });
+    // R119 — the founding choice. It renders into the shared overlay like
+    // the settings panel, but it is the one surface that cannot be reached
+    // from a normal fixture: the fixture has a herd, and a save with a herd
+    // has already been founded. So it gets a state with the herd taken back
+    // out — which is what a brand-new save actually is.
+    SURFACES.push({ name: 'founding', founding: true, file: 'ranch/founding-ui.js',
+      fn: 'renderFounding', path: [] });
     // The move sheet is behind a LONG PRESS, which is a `contextmenu` handler
     // sharing its selector with the tap handler — so the fanout walks both
     // and one of them opens the sheet into the overlay.

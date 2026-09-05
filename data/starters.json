@@ -1,0 +1,66 @@
+{
+  "_doc": "The founding choice (ROADMAP §9.7, R119). WHY THIS EXISTS: measured on a fresh save, the starter herd was ['goat', 'goat', 'bear'] — two newborn goats and a bear backdated to adult so one door is open on day one (A4). The only animal that can be graduated is therefore the bear, and a graduation yields SIX PARTS FROM ONE SPECIES. So the distinct species available to splice from was exactly one, and the Surgery Theater — the system this game is named for — opened with exactly one creature anybody could build. Every player's first chimera was the same pure bear, which is not a chimera at all; M0's own done-when is 'a bear-headed, eagle-winged goat renders and persists', and nothing on day one could produce one. A lab is therefore three things: a GROWN DONOR (extractable immediately, six parts, the day-one door A4 opened), a BREEDABLE JUVENILE PAIR (F and M of one species, so the husbandry timers are still the first thing a player learns), and a CRATE of sample parts from a THIRD species. The crate is what makes the first splice a decision rather than a formality — every lab spans the class triangle, so whatever you pick, your first creature is a mix of two animals and you chose which. THE CHOICE CHANGES WHICH, NEVER HOW MUCH: three animals, one grown and two juvenile, all Standard, under every lab — the same counts A1's wall and R106's arithmetic were measured against, so neither moves. The crate is two parts because two is enough to make a socket a question and few enough that it cannot arm a day-one player past the wall the Path is built to explain. Adding a sixth lab is this file and nothing else.",
+  "crateGrade": "standard",
+  "labs": [
+    {
+      "id": "bramble_barn",
+      "name": "The Bramble Barn",
+      "blurb": "Inherited from an aunt who asked no questions. Smells of hay and ozone.",
+      "donor": "bear",
+      "pair": "goat",
+      "crate": [
+        "eagle_head",
+        "eagle_forelimbs"
+      ],
+      "pitch": "A bear on the slab and a crate of eagle. The first thing you build can leave the ground."
+    },
+    {
+      "id": "wetwing_annexe",
+      "name": "The Wetwing Annexe",
+      "blurb": "Half greenhouse, half aquarium, entirely uninsured.",
+      "donor": "heron",
+      "pair": "goose",
+      "crate": [
+        "crocodile_head",
+        "crocodile_forelimbs"
+      ],
+      "pitch": "A heron to graduate, geese coming up, and a crocodile head for the end of its neck."
+    },
+    {
+      "id": "nightshift_loft",
+      "name": "The Nightshift Loft",
+      "blurb": "You work when the neighbours do not. This is not a coincidence.",
+      "donor": "bat",
+      "pair": "ram",
+      "crate": [
+        "tiger_head",
+        "tiger_forelimbs"
+      ],
+      "pitch": "A bat on the slab and a tiger in a crate. Nobody is going to sleep through this."
+    },
+    {
+      "id": "the_slab",
+      "name": "The Slab",
+      "blurb": "One long table, one drain, excellent lighting.",
+      "donor": "tortoise",
+      "pair": "porcupine",
+      "crate": [
+        "mantis_head",
+        "mantis_forelimbs"
+      ],
+      "pitch": "Armour first. Add the blades yourself — they are right there in the crate."
+    },
+    {
+      "id": "the_kennel",
+      "name": "The Kennel",
+      "blurb": "The howling is structural. The council has been told it is pipes.",
+      "donor": "wolf",
+      "pair": "frog",
+      "crate": [
+        "rhino_head",
+        "rhino_forelimbs"
+      ],
+      "pitch": "A wolf to graduate and a rhino in a crate. We call it a kennel for the paperwork."
+    }
+  ]
+}

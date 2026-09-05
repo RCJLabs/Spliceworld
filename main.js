@@ -6,7 +6,7 @@
 import { loadContent, loadShapes } from './data/loader.js';
 import { loadSave, saveGame, SAVE_VERSION, FutureSaveError } from './save/save.js';
 import { THEMES, BASE_THEME } from './ui/theme.js';
-import { ensureRanchSeeded, ensureDexVariants } from './ranch/ranch.js';
+import { ensureRanchSeeded, ensureDexVariants, needsFounding } from './ranch/ranch.js';
 import { renderRanchScreen } from './ranch/ui.js';
 import { renderVaultScreen } from './splice/vault-ui.js';
 import { renderTheaterScreen } from './splice/theater-ui.js';
@@ -266,6 +266,12 @@ function installDialogBehaviour(overlay) {
     if (overlay.hidden || pickerUp()) return;
     if (e.key === 'Escape') {
       e.preventDefault();
+      // R119 — a dialog can refuse to be dismissed, and exactly one does:
+      // the founding choice. There is no game behind it to return to — the
+      // ranch has no animals until a lab is picked — so an Escape that
+      // closed it would leave a player looking at an empty shell with no
+      // way back. Everything else in the game closes on Escape as before.
+      if (overlay.dataset.locked === 'true') return;
       overlay.hidden = true;
       overlay.innerHTML = '';
       return;
@@ -343,7 +349,32 @@ async function boot() {
     return;
   }
   applyTheme();
-  ensureRanchSeeded(state, content, NOW());
+  // R119 — THE FOUNDING CHOICE COMES FIRST. A save with no herd and no lab
+  // is not seeded here at all: it goes to the picker, and the picker seeds
+  // it. Before this the herd was a literal in the seeder, so every player
+  // opened the game already owning the same three animals and the Surgery
+  // Theater had exactly one creature in it.
+  //
+  // Only a BRAND-NEW save can be waiting — a save that already has animals
+  // was founded before the choice existed, keeps every one of them, and is
+  // stamped by the v43 migration rather than re-rolled.
+  if (needsFounding(state, content)) {
+    const { renderFounding } = await import('./ranch/founding-ui.js');
+    renderFounding($('#overlay'), ctx, () => {
+      // The picker's own click seeds the herd through `foundLab`, so by the
+      // time this runs the ranch is stocked and the screen has something to
+      // paint. Saving here rather than on the next tick means a player who
+      // closes the tab straight after choosing still owns their laboratory.
+      ensureDexVariants(state, content);
+      saveGame(state);
+      showScreen('ranch');
+    });
+  } else {
+    // …and NOT while the picker is up: seeding here would hand the waiting
+    // player the fallback lab's animals behind the dialog asking them to
+    // choose one, which is the bug this whole phase exists to remove.
+    ensureRanchSeeded(state, content, NOW());
+  }
   ensureDexVariants(state, content);
   // The first tick (showScreen below runs one) settles the whole absence —
   // condition, upkeep, income and contests — from the one clock. A separate

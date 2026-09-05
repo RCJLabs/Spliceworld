@@ -263,16 +263,84 @@ export function buyMailOrder(state, speciesId, content, now) {
   return { ok: true, msg: `${animal.name} the ${species.name} has arrived in a suspiciously ventilated crate.` };
 }
 
+// R119 — WHICH LAB THIS SAVE WAS FOUNDED IN. The seeder used to hold the
+// starter herd as a literal, and the herd it held was the reason the
+// Surgery Theater opened with exactly one buildable creature: the only
+// graduatable starter was a bear, and a graduation yields six parts of ONE
+// species, so every player's first "chimera" was a purebred.
+//
+// A lab is content now. This resolves the one a save was founded in, and
+// falls back to the first authored lab so a caller that never asked (every
+// tool fixture written before this, and any save from before v43) seeds
+// exactly as it always did rather than not at all.
+export function starterLabOf(state, content) {
+  const labs = content?.starterLabs ?? [];
+  if (!labs.length) return null;
+  return labs.find((l) => l.id === state?.starterLab) ?? labs[0];
+}
+
+// R119 — IS THIS SAVE WAITING TO BE FOUNDED? True only for a save with no
+// herd yet, no lab chosen, on a build that actually ships labs. The APP
+// asks this and shows the picker instead of seeding; `ensureRanchSeeded`
+// keeps its own fallback so the forty-odd tool fixtures that seed a herd
+// without caring which one still get exactly the herd they always got.
+//
+// A save that already has animals is never waiting: it was founded before
+// the choice existed, the v43 migration stamps it, and nothing about it is
+// re-rolled. That is the Ascent rule — a new feature never resets a save.
+export function needsFounding(state, content) {
+  if (state?.ranch?.seeded) return false;
+  if (state?.starterLab) return false;
+  return (content?.starterLabs?.length ?? 0) > 0;
+}
+
+// Found the lab the player picked, then seed it. One door in, so the id can
+// never be set without the herd that goes with it, or the other way round.
+export function foundLab(state, content, labId, now) {
+  const lab = (content?.starterLabs ?? []).find((l) => l.id === labId);
+  if (!lab) return { ok: false, msg: 'No such laboratory. Try one that exists.' };
+  if (state.ranch.seeded) return { ok: false, msg: 'This laboratory is already founded.' };
+  state.starterLab = lab.id;
+  ensureRanchSeeded(state, content, now);
+  return { ok: true, lab, msg: `${lab.name} is yours. The paperwork is somebody else's problem.` };
+}
+
 // One-time starter herd for fresh AND migrated saves (migrations can't
 // reach content data, so seeding happens here on boot instead).
 export function ensureRanchSeeded(state, content, now) {
   if (state.ranch.seeded) return;
+  const lab = starterLabOf(state, content);
   state.ranch.seeded = true;
-  for (const speciesId of ['goat', 'goat', 'bear']) {
+  state.starterLab = lab?.id ?? state.starterLab ?? null;
+  // Pair first, donor last: R106's Path hint reads `stock.slice(0, 2)` as
+  // "your other starters" and names them, so the ORDER here is load-bearing
+  // prose elsewhere. Two of the pair, one donor, exactly as before.
+  // No labs indexed at all means a caller built its content bundle
+  // without starters.json; seed what this game seeded before R119 rather
+  // than throwing, so an old fixture is old rather than broken.
+  const herd = lab ? [lab.pair, lab.pair, lab.donor] : ['goat', 'goat', 'bear'];
+  for (const speciesId of herd) {
     state.ranch.stock.push(createAnimal(state, speciesId, content, now));
   }
-  // The starter goats are always a breedable pair — the first egg is a
-  // tutorial moment, not a dice roll.
+  // The crate: a handful of parts from a THIRD species, and the whole reason
+  // the first splice is a decision. Six parts from the donor plus these is a
+  // socket with two answers in it — which is what a chimera is. It is two
+  // parts rather than a set: enough to make a socket a question, few enough
+  // that it cannot arm a day-one player past the wall the Path exists to
+  // explain (A1, R106).
+  const grade = content?.starterMeta?.crateGrade ?? 'standard';
+  for (const partId of lab?.crate ?? []) {
+    const part = content.parts?.[partId];
+    if (!part) continue;
+    state.inventory.parts.push({
+      id: `starter-${partId}`,
+      partId,
+      grade,
+      donor: { name: 'Founding crate', species: part.species, stars: 3, extractedAt: now },
+    });
+  }
+  // The starter pair is always breedable — the first egg is a tutorial
+  // moment, not a dice roll.
   state.ranch.stock[0].sex = 'F';
   state.ranch.stock[1].sex = 'M';
   // A4: the bear arrives GROWN. Every starter used to be born the moment the

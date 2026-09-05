@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 42;
+export const SAVE_VERSION = 43;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -504,6 +504,18 @@ const migrations = {
   // resumed rather than dropped and the field is cleared here rather than
   // guessed at. Nothing else about a telegraph, a brace or a counter-switch
   // touches the schema.
+  // R119 — the founding lab. A save that already has a herd KEEPS IT: it
+  // was founded in the Bramble Barn whether or not anybody was offered the
+  // choice, so it is stamped with that id and `ensureRanchSeeded` returns
+  // early on `seeded` exactly as it always has. Nothing is re-rolled, no
+  // animal is replaced, and no crate is granted retroactively — the crate
+  // is part of a founding, and this save was founded long ago. Only a save
+  // with no herd yet reaches the picker (the Ascent rule: never reset a
+  // player's save to give them a new feature).
+  43: (save) => {
+    save.starterLab = save.ranch?.seeded ? (save.starterLab ?? 'bramble_barn') : (save.starterLab ?? null);
+    return save;
+  },
   42: (save) => {
     if (save.battle) save.battle.intent = null;
     return save;
@@ -562,6 +574,10 @@ export function newGameState() {
   return {
     saveVersion: SAVE_VERSION,
     seed: newWorldSeed(),
+    // R119 — null until the player picks a founding lab. The seeder will
+    // not run without one, so a brand-new save cannot reach the Theater
+    // holding somebody else's animals.
+    starterLab: null,
     createdAt: Date.now(),
     spliceCount: 0,
     // The current creature on the Surgery Theater slab.
