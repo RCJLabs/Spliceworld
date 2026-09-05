@@ -1,5 +1,5 @@
 {
-  "_doc": "The founding choice (ROADMAP §9.7, R119). WHY THIS EXISTS: measured on a fresh save, the starter herd was ['goat', 'goat', 'bear'] — two newborn goats and a bear backdated to adult so one door is open on day one (A4). The only animal that can be graduated is therefore the bear, and a graduation yields SIX PARTS FROM ONE SPECIES. So the distinct species available to splice from was exactly one, and the Surgery Theater — the system this game is named for — opened with exactly one creature anybody could build. Every player's first chimera was the same pure bear, which is not a chimera at all; M0's own done-when is 'a bear-headed, eagle-winged goat renders and persists', and nothing on day one could produce one. A lab is therefore three things: a GROWN DONOR (extractable immediately, six parts, the day-one door A4 opened), a BREEDABLE JUVENILE PAIR (F and M of one species, so the husbandry timers are still the first thing a player learns), and a CRATE of sample parts from a THIRD species. The crate is what makes the first splice a decision rather than a formality — every lab spans the class triangle, so whatever you pick, your first creature is a mix of two animals and you chose which. THE CHOICE CHANGES WHICH, NEVER HOW MUCH: three animals, one grown and two juvenile, all Standard, under every lab — the same counts A1's wall and R106's arithmetic were measured against, so neither moves. The crate is two parts because two is enough to make a socket a question and few enough that it cannot arm a day-one player past the wall the Path is built to explain. Adding a sixth lab is this file and nothing else.",
+  "_doc": "The founding choice (ROADMAP §9.7, R119). WHY THIS EXISTS: measured on a fresh save, the starter herd was ['goat', 'goat', 'bear'] — two newborn goats and a bear backdated to adult so one door is open on day one (A4). The only animal that can be graduated is therefore the bear, and a graduation yields SIX PARTS FROM ONE SPECIES. So the distinct species available to splice from was exactly one, and the Surgery Theater — the system this game is named for — opened with exactly one creature anybody could build. Every player's first chimera was the same pure bear, which is not a chimera at all; M0's own done-when is 'a bear-headed, eagle-winged goat renders and persists', and nothing on day one could produce one. A lab is therefore three things: a GROWN DONOR (extractable immediately, six parts, the day-one door A4 opened), a BREEDABLE JUVENILE PAIR (F and M of one species, so the husbandry timers are still the first thing a player learns), and a CRATE of sample parts from a THIRD species. The crate is what makes the first splice a decision rather than a formality: whatever you pick, your first creature is a mix of two animals and you chose which. THE CRATE HOLDS NO HEAD, deliberately. A head is mandatory to splice, so a crate containing one lets a brand-new player build a two-part creature out of the crate alone on their very first open — burning the whole reason the crate exists before they have met the extractor. Without one, the sequence A4 measured and fixed still holds: graduate the donor, THEN splice what comes out, and the crate is waiting when it is worth something. It is the forelimbs and the hindlimbs because those are the parts that most visibly change an animal, and — measured — the ones that decide whether the creature can fight at all. THE CHOICE CHANGES WHICH, NEVER HOW MUCH: three animals, one grown and two juvenile, all Standard, under every lab — the same counts A1's wall and R106's arithmetic were measured against, so neither moves. The crate is two parts because two is enough to make a socket a question and few enough that it cannot arm a day-one player past the wall the Path is built to explain. Adding a sixth lab is this file and nothing else.",
   "crateGrade": "standard",
   "labs": [
     {
@@ -9,10 +9,10 @@
       "donor": "bear",
       "pair": "goat",
       "crate": [
-        "eagle_head",
-        "eagle_forelimbs"
+        "eagle_forelimbs",
+        "eagle_hindlimbs"
       ],
-      "pitch": "A bear on the slab and a crate of eagle. The first thing you build can leave the ground."
+      "pitch": "A bear on the slab and a crate of eagle. Graduate the bear for a head, then give it wings."
     },
     {
       "id": "wetwing_annexe",
@@ -21,10 +21,10 @@
       "donor": "heron",
       "pair": "goose",
       "crate": [
-        "crocodile_head",
-        "crocodile_forelimbs"
+        "mantis_forelimbs",
+        "mantis_hindlimbs"
       ],
-      "pitch": "A heron to graduate, geese coming up, and a crocodile head for the end of its neck."
+      "pitch": "A heron to graduate, geese coming up, and a crate of mantis limbs that came with the greenhouse."
     },
     {
       "id": "nightshift_loft",
@@ -33,10 +33,10 @@
       "donor": "bat",
       "pair": "ram",
       "crate": [
-        "tiger_head",
-        "tiger_forelimbs"
+        "tiger_forelimbs",
+        "tiger_hindlimbs"
       ],
-      "pitch": "A bat on the slab and a tiger in a crate. Nobody is going to sleep through this."
+      "pitch": "A bat on the slab and a tiger's legs in a crate. Nobody is going to sleep through this."
     },
     {
       "id": "the_slab",
@@ -45,10 +45,10 @@
       "donor": "tortoise",
       "pair": "porcupine",
       "crate": [
-        "mantis_head",
-        "mantis_forelimbs"
+        "crocodile_forelimbs",
+        "crocodile_hindlimbs"
       ],
-      "pitch": "Armour first. Add the blades yourself — they are right there in the crate."
+      "pitch": "Armour first, from the tortoise. The crocodile in the crate supplies everything that grips."
     },
     {
       "id": "the_kennel",
@@ -57,10 +57,10 @@
       "donor": "wolf",
       "pair": "frog",
       "crate": [
-        "rhino_head",
-        "rhino_forelimbs"
+        "rhino_forelimbs",
+        "rhino_hindlimbs"
       ],
-      "pitch": "A wolf to graduate and a rhino in a crate. We call it a kennel for the paperwork."
+      "pitch": "A wolf to graduate and a rhino's legs in a crate. We call it a kennel for the paperwork."
     }
   ]
 }

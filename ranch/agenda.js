@@ -154,7 +154,13 @@ export const AGENDA = [
   {
     id: 'splice', kind: 'work', screen: 'theater', label: 'Splice a chimera',
     hint: 'There are parts in the vault. Something could be wearing them.',
-    ready: (state) => (state.inventory.parts ?? []).length > 0,
+    // A HEAD, not just parts: the Theater refuses a genome without one, so
+    // "there are parts in the vault" could point at a splice the game will
+    // not allow. R119's founding crate is exactly that case — limbs, no
+    // head — so the row waits for the graduation that makes it true, which
+    // is the sequence A4 measured and fixed.
+    ready: (state, content) => (state.inventory.parts ?? [])
+      .some((p) => content?.parts?.[p.partId]?.slot === 'head'),
   },
   {
     id: 'breed', kind: 'work', screen: 'ranch', label: 'Breed a pair',

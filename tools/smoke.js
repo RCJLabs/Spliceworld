@@ -6298,6 +6298,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // its own notes without circularity.
     'ranch/onboarding.js': null,
     'ranch/agenda.js': null,
+    // R119: the founding choice teaches itself, at the only moment it can.
+    // Each card prints the donor it hands you, the pair it hands you and the
+    // crate it hands you, and then the screen is gone for the life of the
+    // save — a field guide about a choice you already made, reachable only
+    // after you can no longer make it, is a note nobody would ever open.
+    'ranch/founding-ui.js': null,
   };
   {
     const SKIP = new Set(['tools', 'docs', 'node_modules', '.git']);
@@ -13148,7 +13154,15 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
         }
       }
       // `const { a, b } = await import('./x.js')` — how the suite loads things.
-      for (const m of text.matchAll(/\{([^}]*)\}\s*=\s*await\s+import\(\s*['"]([^'"]+)['"]/g)) {
+      // `[^{}]*`, not `[^}]*`: the loose class lets the match START at an
+      // enclosing brace and swallow everything up to the real one, so a
+      // dynamic import inside an `if (...) {` block captured
+      // "const { renderFounding" and registered no name at all. That is a
+      // FALSE NEGATIVE in a dead-export gate — the worst direction — and it
+      // was invisible for as long as every such export also had a static
+      // importer somewhere else. R119's founding screen was the first that
+      // did not.
+      for (const m of text.matchAll(/\{([^{}]*)\}\s*=\s*await\s+import\(\s*['"]([^'"]+)['"]/g)) {
         const target = resolve(file, m[2]);
         if (!target) continue;
         for (const part of m[1].split(',')) {
@@ -16801,6 +16815,168 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 }
 
 // ---------------------------------------------------------------------------
+// R119 — THE FIRST SPLICE HAS A DECISION IN IT.
+//
+// MEASURED FIRST, on a fresh save: the starter herd was a literal,
+// ['goat', 'goat', 'bear'], and only the bear was grown. A graduation yields
+// six parts from ONE species, so the vault held one species, so the Surgery
+// Theater — the system this game is named for — opened with exactly one
+// creature anybody could build. Every player's first "chimera" was the same
+// purebred bear, and M0's own done-when ("a bear-headed, eagle-winged goat
+// renders and persists") was unreachable on day one.
+//
+// Five labs fix it, and the rules below are what stop the fix from becoming
+// a different problem: a founding choice that also decides whether you can
+// win is not a choice, it is a trap with five doors.
+{
+  const { ensureRanchSeeded: seed, foundLab, needsFounding, ageStage: stage } =
+    await import('../ranch/ranch.js');
+  const { extractAnimal: graduate } = await import('../splice/extract.js');
+  const { spliceChimera: splice } = await import('../splice/theater.js');
+  const { scriptedStableBattle } = await import('./sim.js');
+  const { agenda: agendaRows } = await import('../ranch/agenda.js');
+
+  const labs = content.starterLabs ?? [];
+  assert.ok(labs.length >= 5, `at least five founding labs (${labs.length})`);
+
+  // 1. A FRESH SAVE CANNOT REACH THE THEATER WITHOUT CHOOSING. The seeder
+  //    keeps a fallback for the forty-odd fixtures that seed a herd without
+  //    caring which; the APP asks this instead, and this is the assertion
+  //    that stops somebody deleting the question and leaving the fallback.
+  {
+    const fresh = { ...newGameState(), seed: 4242 };
+    assert.ok(needsFounding(fresh, content), 'a brand-new save is waiting to be founded');
+    assert.equal(fresh.ranch.stock.length, 0, 'and owns nothing until it is');
+    const founded = { ...newGameState(), seed: 4242 };
+    foundLab(founded, content, labs[1].id, t0);
+    assert.ok(!needsFounding(founded, content), 'founding answers the question');
+    assert.equal(founded.starterLab, labs[1].id, 'and records which lab');
+  }
+
+  // 2. A SAVE THAT ALREADY HAS A HERD IS NEVER ASKED. The Ascent rule: a new
+  //    feature does not reset, re-roll or top up somebody's save.
+  {
+    const old = { ...newGameState(), seed: 4242, starterLab: null };
+    seed(old, content, t0);
+    const before = old.ranch.stock.map((a) => a.id).join(',');
+    assert.ok(!needsFounding(old, content), 'a save with animals is not waiting for anything');
+    seed(old, content, t0 + 5 * HOUR);
+    assert.equal(old.ranch.stock.map((a) => a.id).join(','), before, 'and seeding again changes nothing');
+  }
+
+  // 3. EVERY LAB IS A REAL CHOICE AND A REAL MIX.
+  const built = labs.map((lab) => {
+    const s2 = { ...newGameState(), seed: 4242 };
+    foundLab(s2, content, lab.id, t0);
+    // Counted at FOUNDING. Graduating the donor takes it out of the pens, so
+    // a count read after the loop below measures two animals under every
+    // lab and says nothing about what the founding handed over.
+    const seededCount = s2.ranch.stock.length;
+    const grownAtFounding = s2.ranch.stock.filter((a) => stage(a, content, t0) !== 'juvenile').length;
+    for (const a of [...s2.ranch.stock]) {
+      if (stage(a, content, t0) !== 'juvenile') graduate(s2, a.id, content, t0);
+    }
+    const bySlot = {};
+    for (const p of s2.inventory.parts) {
+      const slot = content.parts[p.partId]?.slot;
+      if (slot && !bySlot[slot]) bySlot[slot] = p.id;
+    }
+    // BEFORE the splice, which consumes what it wears — reading the vault
+    // afterwards measures the leftovers and reports one species for a
+    // founding that offered two.
+    const vault = new Set(s2.inventory.parts.map((p) => content.parts[p.partId]?.species));
+    const made = splice(s2, 'M', bySlot, content, t0);
+    assert.ok(made.ok, `${lab.id} can splice on day one (${made.msg})`);
+    const chimera = s2.chimeras[s2.chimeras.length - 1];
+    chimera.settleUntil = t0 - 1;
+    const worn = new Set(Object.values(chimera.tokens ?? {}).map((tk) => content.parts[tk.partId]?.species));
+    return { lab, state: s2, chimera, vault, worn, seededCount, grownAtFounding };
+  });
+
+  for (const b of built) {
+    assert.ok(b.vault.size >= 2,
+      `${b.lab.id}: the vault offers two or more species on day one (${[...b.vault].join(', ')})`);
+    assert.ok(b.worn.size >= 2,
+      `${b.lab.id}: and the first chimera is actually a MIX, not a purebred (${[...b.worn].join(', ')})`);
+    assert.equal(b.seededCount, 3, `${b.lab.id} seeds three animals, exactly as before R119`);
+    assert.equal(b.grownAtFounding, 1,
+      `${b.lab.id} seeds exactly one GROWN donor — the day-one door A4 opened, no wider`);
+    assert.equal(b.state.ranch.stock.length, 2,
+      `${b.lab.id}: graduating it leaves the breeding pair, which is the husbandry loop`);
+  }
+  assert.equal(new Set(built.map((b) => [...b.worn].sort().join('+'))).size, built.length,
+    'and no two labs produce the same first creature');
+
+  // 4. THE CHOICE CHANGES WHICH CREATURE, NEVER HOW MUCH. This is the rule
+  //    that took four passes to satisfy: the first authored set read 4% with
+  //    three bodies under one lab, which would have walked a new player
+  //    following the Path into a fight nobody can win — the exact failure
+  //    R106 exists to remove — and a later pass overshot the other way, a
+  //    tiger crate taking one body to 46% and breaking A1's wall from above.
+  {
+    const enc = content.encounters.patrol_2;
+    const rate = (chimera, n) => {
+      let w = 0;
+      const team = Array.from({ length: n }, (_, i) => ({ ...chimera, id: `w${i}` }));
+      for (let k = 0; k < 16; k++) {
+        if (scriptedStableBattle(team, enc, content, 1000 + k).outcome === 'win') w++;
+      }
+      return Math.round((w / 16) * 100);
+    };
+    for (const b of built) {
+      const one = rate(b.chimera, 1);
+      const three = rate(b.chimera, 3);
+      assert.ok(one <= 10,
+        `${b.lab.id}: A1's wall holds — one chimera does not take the second node (${one}%)`);
+      assert.ok(three >= 80,
+        `${b.lab.id}: and R106's promise is true — three bodies do (${three}%)`);
+    }
+  }
+
+  // 5. THE CRATE CANNOT BE SPLICED ON ITS OWN. A head is mandatory, and the
+  //    crate deliberately holds none: with one, a brand-new player can build
+  //    a two-part creature out of the crate alone on their very first open
+  //    and burn the whole reason it exists before meeting the extractor.
+  //    Measured — it was ALLOWED until this rule, and the day-one agenda
+  //    offered "Splice a chimera" to say so.
+  for (const lab of labs) {
+    for (const partId of lab.crate) {
+      assert.notEqual(content.parts[partId].slot, 'head',
+        `${lab.id}'s crate holds no head, or it can be spliced alone on day one`);
+    }
+  }
+  {
+    const s3 = { ...newGameState(), seed: 4242 };
+    foundLab(s3, content, labs[0].id, t0);
+    const crateOnly = {};
+    for (const p of s3.inventory.parts) crateOnly[content.parts[p.partId].slot] = p.id;
+    assert.ok(!splice(s3, 'M', crateOnly, content, t0).ok,
+      'the founding crate alone does not make a chimera');
+    const day0 = agendaRows(s3, content, t0).map((i) => i.id);
+    assert.ok(!day0.includes('splice'),
+      `and the agenda does not offer a splice there is no head for (${day0.join(', ')})`);
+  }
+
+  // 6. ADDING A LAB IS DATA. Every id a lab names has to resolve, or the
+  //    sixth lab somebody writes seeds a herd of undefined (R50, R79).
+  for (const lab of labs) {
+    for (const key of ['donor', 'pair']) {
+      assert.ok(content.species[lab[key]], `${lab.id}.${key} names a real species (${lab[key]})`);
+    }
+    assert.ok((lab.crate ?? []).length > 0, `${lab.id} ships a crate`);
+    for (const partId of lab.crate) {
+      assert.ok(content.parts[partId], `${lab.id}'s crate names a real part (${partId})`);
+      assert.notEqual(content.parts[partId].species, lab.donor,
+        `${lab.id}'s crate is a DIFFERENT species from its donor, or the first splice is a purebred again`);
+    }
+    for (const field of ['name', 'blurb', 'pitch']) {
+      assert.ok(lab[field]?.length > 0, `${lab.id} has ${field} — a card with no words is not a choice`);
+    }
+  }
+  console.log(`   R119 founding: ${labs.length} labs · every first splice a mix of two species · the wall holds and three bodies still take the node`);
+}
+
+// ---------------------------------------------------------------------------
 // R103 — THE OPPOSITION COMMITS BEFORE YOU ANSWER.
 //
 // MEASURED FIRST, and it corrected the premise of the phase that proposed
@@ -17113,8 +17289,22 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // from, which is a trend rather than three coincidences — a candidate for
   // its own phase (what SHOULD the first paint carry?) rather than a number
   // that drifts up one milestone at a time.
+  //
+  // R119 raises the KB cap a fourth consecutive time, to 595, and this note
+  // is the argument rather than a shrug. What it added is FIRST-PAINT code
+  // by definition: the founding choice is the first screen a new save shows,
+  // so `needsFounding` has to be answerable before anything is drawn and
+  // `ensureRanchSeeded` has to know which lab it is seeding. The picker
+  // ITSELF is lazy and stays lazy — the module count is unmoved at 52, which
+  // is the number that would have caught a screen sneaking into boot.
+  // Measured at 594.1 KB; the cap sits just above it so creep still fails.
+  //
+  // The trend the R87 note called out is now four phases long, so the phase
+  // it asked for is queued rather than deferred again: R121, what the first
+  // paint should carry. `save/save.js` is 46 KB of it and most of that is
+  // migrations for versions no live save is on.
   const MODULE_CAP = 52;
-  const KB_CAP = 590;
+  const KB_CAP = 595;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

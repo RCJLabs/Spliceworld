@@ -349,30 +349,23 @@ async function boot() {
     return;
   }
   applyTheme();
-  // R119 — THE FOUNDING CHOICE COMES FIRST. A save with no herd and no lab
+  // R119 — the founding choice comes first. A save with no herd and no lab
   // is not seeded here at all: it goes to the picker, and the picker seeds
-  // it. Before this the herd was a literal in the seeder, so every player
-  // opened the game already owning the same three animals and the Surgery
-  // Theater had exactly one creature in it.
-  //
-  // Only a BRAND-NEW save can be waiting — a save that already has animals
-  // was founded before the choice existed, keeps every one of them, and is
-  // stamped by the v43 migration rather than re-rolled.
+  // it. Only a brand-new save can be waiting; one that already has animals
+  // keeps every one of them.
   if (needsFounding(state, content)) {
     const { renderFounding } = await import('./ranch/founding-ui.js');
     renderFounding($('#overlay'), ctx, () => {
-      // The picker's own click seeds the herd through `foundLab`, so by the
-      // time this runs the ranch is stocked and the screen has something to
-      // paint. Saving here rather than on the next tick means a player who
-      // closes the tab straight after choosing still owns their laboratory.
+      // `foundLab` has already seeded the herd, so the screen has something
+      // to paint. Saved here so a player who closes the tab straight after
+      // choosing still owns their laboratory.
       ensureDexVariants(state, content);
       saveGame(state);
       showScreen('ranch');
     });
   } else {
-    // …and NOT while the picker is up: seeding here would hand the waiting
-    // player the fallback lab's animals behind the dialog asking them to
-    // choose one, which is the bug this whole phase exists to remove.
+    // …and NOT while the picker is up, or the waiting player is handed the
+    // fallback lab's animals behind the dialog asking them to choose one.
     ensureRanchSeeded(state, content, NOW());
   }
   ensureDexVariants(state, content);

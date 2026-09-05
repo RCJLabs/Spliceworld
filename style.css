@@ -2546,8 +2546,8 @@ button.dex-cell:focus-visible {
    lab is picked. Sized for the 380px phone first — five cards is a scroll,
    and the scroll is inside the panel rather than the page. */
 .founding { max-width: 34rem; }
-.founding-lede { margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45; color: var(--dim); }
-.founding-foot { margin: 10px 0 0; font-size: 0.74rem; color: var(--dim); }
+.founding-lede { margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45; color: var(--muted); }
+.founding-foot { margin: 10px 0 0; font-size: 0.74rem; color: var(--muted); }
 .lab-list {
   list-style: none;
   margin: 0;
@@ -2573,9 +2573,9 @@ button.dex-cell:focus-visible {
   font: inherit;
   cursor: pointer;
 }
-.lab-pick:hover, .lab-pick:focus-visible { border-color: var(--accent); background: var(--panel-hi, var(--panel)); }
+.lab-pick:hover, .lab-pick:focus-visible { border-color: var(--accent); background: var(--well); }
 .lab-name { font-weight: 700; font-size: 0.95rem; color: var(--ink); }
-.lab-blurb { font-size: 0.76rem; color: var(--dim); font-style: italic; }
+.lab-blurb { font-size: 0.76rem; color: var(--muted); font-style: italic; }
 .lab-kit { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
 .lab-row { font-size: 0.76rem; line-height: 1.35; display: flex; gap: 5px; align-items: baseline; }
 .lab-row b { color: var(--ink); }

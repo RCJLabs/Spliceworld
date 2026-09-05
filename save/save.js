@@ -504,14 +504,11 @@ const migrations = {
   // resumed rather than dropped and the field is cleared here rather than
   // guessed at. Nothing else about a telegraph, a brace or a counter-switch
   // touches the schema.
-  // R119 — the founding lab. A save that already has a herd KEEPS IT: it
-  // was founded in the Bramble Barn whether or not anybody was offered the
-  // choice, so it is stamped with that id and `ensureRanchSeeded` returns
-  // early on `seeded` exactly as it always has. Nothing is re-rolled, no
-  // animal is replaced, and no crate is granted retroactively — the crate
-  // is part of a founding, and this save was founded long ago. Only a save
-  // with no herd yet reaches the picker (the Ascent rule: never reset a
-  // player's save to give them a new feature).
+  // R119 — the founding lab. A save that already has a herd KEEPS IT,
+  // stamped with the lab it was in fact founded in; nothing is re-rolled and
+  // no crate is granted retroactively, because a crate is part of a founding
+  // and this save was founded long ago. Only a save with no herd reaches the
+  // picker (the Ascent rule).
   43: (save) => {
     save.starterLab = save.ranch?.seeded ? (save.starterLab ?? 'bramble_barn') : (save.starterLab ?? null);
     return save;

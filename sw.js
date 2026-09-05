@@ -28,6 +28,7 @@ const SHELL = [
   'ranch/ranch.js',
   'ranch/breeding.js',
   'ranch/agenda.js',
+  'ranch/founding-ui.js',
   'ranch/onboarding.js',
   'ranch/ui.js',
   'splice/extract.js',
@@ -104,6 +105,7 @@ const SHELL = [
   'data/feral.json',
   'data/rush.json',
   'data/stance.json',
+  'data/starters.json',
   'data/guides.json',
 ];
 
