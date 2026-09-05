@@ -2042,7 +2042,10 @@ suite can check.
     blind to the intent still switches and still rests when starving. All
     three now read the thing they claim to: the fallbacks, the counter
     hit's own line, and whether the pilot's answer *changes* when the same
-    turn is asked twice with the telegraph swapped out.
+    turn is asked twice with the telegraph swapped out. The battery closes
+    at **98 breaks, 98 caught**, with all seventeen gates passing on the
+    pristine tree — which it did not do on the first two attempts, and that
+    baseline is the only reason anybody knew.
   - **Four things were wrong along the way, all found by measuring.** The
     pilot read `battle.intent` AFTER `step` had cleared it, so it was null on
     all **4,757** decision turns and both new reads were dead while the code

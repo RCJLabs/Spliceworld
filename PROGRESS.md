@@ -133,10 +133,25 @@ extracting the literal and hand-unescaping backticks and dollars but not
 that one. **A verifier that does not reproduce the transport is not a
 verifier.**
 
-R72's rule caught the last one: the STANCE fixture hand-kept the class list,
+R72's rule caught the next one: the STANCE fixture hand-kept the class list,
 and smoke's scan failed the build. Both fixtures read `content.classes` now
 — and so does the copy in `smoke.js`, which is exempt from that scan, and is
 exactly why the battery's copy sat unnoticed.
+
+And with a baseline that finally passed, break 95 was still missed — by the
+probe again. It called `intentOf` *before* asking the pilot anything, and
+`intentOf` **writes** the intent onto the battle when there is none. The
+probe was planting the very state it was testing for, so the blind pilot
+found it freshly placed and answered like a sighted one. It asks first now
+and reads the field afterwards.
+
+**Three times this milestone the gate was the thing that was wrong**: the
+predicate hand-copied from `fit` in R106, the three rules that could not
+fail, and a probe that supplies the state it checks for. The rule held every
+time — build the gate first, then prove it fails.
+
+**Final:** 98 breaks, 98 caught, 0 missed, with all seventeen gates passing
+on the pristine tree.
 
 ### Known issues
 
