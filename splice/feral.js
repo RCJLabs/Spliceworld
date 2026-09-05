@@ -20,9 +20,12 @@
 // so how often you open the app cannot change what happens to your creatures.
 // An agitated chimera is a countdown on the Pens with an obvious answer —
 // train it, fight with it, treat it — and only a missed window is a loss.
-// Two chances before anything is taken, and even then it is recoverable
-// through R8's Reorientation Wing, which has been shipped and idle for
-// exactly this since.
+// The window opens when the player looks, which is R9's own exemption to
+// R65's stamp-it-when-it-happened rule and is here for R9's own reason: a
+// fortnight away must not cost you an animal you were never given the
+// chance to answer for. Two chances before anything is taken, and even then
+// it is recoverable through R8's Reorientation Wing, which has been shipped
+// and idle for exactly this since.
 //
 // Law 3 holds: care fixes it. Zero death language: the creature has not gone
 // anywhere, it is simply no longer taking your calls.
@@ -118,10 +121,23 @@ export function tickFeral(state, content, now) {
     }
     if (!status.atRisk) continue;
 
-    // First notice. The clock starts WHEN THE CONDITION IS MET rather than
-    // when the player next opens the app — R65's rule — but the window is
-    // long enough that a whole cycle of being away cannot cost a creature
-    // that was fine when you left.
+    // First notice, and the window OPENS WHEN THE PLAYER LOOKS. That is
+    // R9's rule, not R65's: R65 says a resolver stamps its output with the
+    // moment the thing happened rather than the tick that noticed, and the
+    // save-wide sweep it left behind carries exactly one exemption — a
+    // counter-offensive's defence window, which R9 opens on sight
+    // "precisely so a week away cannot cost a node they were never given
+    // the chance to defend". This is the same shape with a creature instead
+    // of a node, so it is the same rule and the same exemption: no absence,
+    // of any length, can cost you an animal. Only being here and still
+    // ignoring that one creature for a full day can.
+    //
+    // (An earlier draft of this comment cited R65 while the code did this,
+    // which is how a comment and its code end up describing different
+    // games. The sweep's fixture could not reach here — its chimeras are
+    // lab-perfect at bond 100 — so nothing said so; the fixture now carries
+    // a creature that agitates on the return tick, and the exemption is
+    // named and exercised rather than assumed.)
     if (!status.agitated) {
       chimera.agitatedAt = now;
       if (say('agitated', chimera.name)) news.push(say('agitated', chimera.name));

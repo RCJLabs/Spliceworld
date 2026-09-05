@@ -161,7 +161,14 @@ const FERAL = ['node', '-e', `
     if (feralStatus(ch, content, endsAt * 2).atRisk) bad.push('a bonded creature can still go feral'); }
   // The deadline is scheduled, not rolled: many small ticks agree with one big one.
   { const one = mk(3); tickFeral(one.s, content, startsAt);
-    if (one.ch.agitatedAt !== startsAt) bad.push('the clock does not start when the condition is met');
+    if (one.ch.agitatedAt !== startsAt) bad.push('the tick does not open the window');
+    // R9's exemption: a fortnight away must not cost an animal the player
+    // was never given the chance to answer for. Ticked late on purpose —
+    // at the moment the condition is met, opening on sight and back-dating
+    // are the same number.
+    const late = mk(3); const fortnight = t0 + 14 * 24 * HR;
+    if (tickFeral(late.s, content, fortnight).gone.length) bad.push('two weeks away cost a creature');
+    if (late.ch.agitatedAt !== fortnight) bad.push('the window does not open when the player looks');
     const many = mk(3); const step = (endsAt - t0) / 400; let lost = 0;
     for (let at = t0; at < endsAt; at += step) lost += tickFeral(many.s, content, at).gone.length;
     if (lost) bad.push('checking in often cost a creature — the window is a roll, not a deadline');
@@ -975,6 +982,17 @@ const BREAKS = [
     file: 'ranch/agenda.js',
     anchor: "      (state.chimeras ?? []).some((c) => feralStatus(c, content, now).agitated),",
     to: '      false,',
+  },
+  {
+    // R9's exemption removed: the window is back-dated to the moment the
+    // condition was met, so a fortnight away ends with the creature in a
+    // bay it was never given the chance to stay out of. This is the reading
+    // an earlier draft of feral.js's own comment described, which is why it
+    // is worth a break rather than a note.
+    n: 74, gate: FERAL, name: 'the window stops opening on sight, so being away costs a creature',
+    file: 'splice/feral.js',
+    anchor: '      chimera.agitatedAt = now;',
+    to: '      chimera.agitatedAt = lastAttended(chimera) + t.neglectHours * HOUR;',
   },
 
   // --- gate: boot (the game reaches the screen without its pictures) -------

@@ -31,6 +31,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 
 import { indexContent } from '../render/renderer.js';
+import { feralTuning } from '../splice/feral.js';
 // R85: derived, not named — see data/loader.js.
 import { CONTENT_FILES as FILES } from '../data/loader.js';
 import { SAVE_VERSION } from '../save/save.js';
@@ -76,6 +77,14 @@ export function shippedNumbers() {
     // The top of the scale, rounded the way prose rounds it.
     'settle hours at instability 100':
       Math.round(((PHYS_TUNING.settleBaseMs + PHYS_TUNING.settleMaxExtraMs) / 3600000) * 10) / 10,
+    // R85 — §3.4 now states the price of the top of the scale, so R77's rule
+    // applies to all four of its numbers. Read out of data/feral.json through
+    // the same function the Pens and the tick read, so retuning the mechanic
+    // fails here rather than leaving the spec quietly describing a game that
+    // no longer exists.
+    'feral bond floor': feralTuning(content).bondFloor,
+    'feral neglect hours': feralTuning(content).neglectHours,
+    'feral window hours': feralTuning(content).windowHours,
     // Rolled per capture in campaign.js. Read the literal rather than
     // restating it, so widening the window fails here.
     'dissection hours': (readFileSync(join(root, 'campaign/campaign.js'), 'utf8')

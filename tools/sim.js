@@ -1301,6 +1301,15 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   const awayStart = away ? away.from * 24 : Infinity;
   const awayEnd = away ? (away.from + away.days) * 24 : -Infinity;
 
+  // R85 — the harness's view of the top of the instability scale. Counted
+  // here rather than inferred from the log, because what matters is a
+  // property of the WHOLE run: an engaged player must never lose a creature
+  // to neglect, and a mechanic that fires on somebody who is playing is a
+  // punishment rather than a stake. The walker trains, spars and fights
+  // constantly, so it is exactly the player this must not touch.
+  const feralSeen = new Set();
+  const feralBays = new Set();
+
   for (let h = 0; h <= days * 24; h += stepHours) {
     if (h > awayStart && h < awayEnd) continue; // the app is closed
     const now = t0 + h * WALK_HOUR;
@@ -1308,6 +1317,8 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // pays on — the ledger the R64 gate compares a month away against.
     state.__walkIncome = (state.__walkIncome ?? 0) + incomePerDay(state, content) * ((now - (state.lastTickAt ?? now)) / WALK_DAY);
     tick(state, content, now);
+    for (const c of state.chimeras) if (c.agitatedAt) feralSeen.add(c.id);
+    for (const b of state.campaign.containment ?? []) if (b.feral) feralBays.add(b.id);
     if (snapshotDays.includes(h / 24)) snapshots[h / 24] = snap(h / 24);
 
     minFunds = Math.min(minFunds, Math.round(state.funds));
@@ -1394,6 +1405,11 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     bays: (state.campaign.containment ?? []).length,
     bagged: (state.__walkLog ?? []).reduce((n, e) => n + (e.bagged ?? 0), 0),
     rehabbed: state.chimeras.filter((c) => c.rehabilitated).length,
+    // R85: how many of the walker's creatures ever paced their pen, and how
+    // many it actually lost to it. Both should be zero for a walker that
+    // plays every day; the away-runs are where the mechanic is supposed to
+    // bite.
+    feral: { agitated: feralSeen.size, lost: feralBays.size },
     facility: { ...state.facility },
     captured: (state.__walkLog ?? []).filter((e) => e.lost).length,
     rescues: (state.__walkLog ?? []).filter((e) => e.kind === 'rescue').length,

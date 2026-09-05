@@ -12323,7 +12323,17 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   assert.ok(walk.defences > 0, `the coalition came back for a node (${walk.defences} defences)`);
   assert.ok(walk.defencesHeld > 0, `and some were held (${walk.defencesHeld}/${walk.defences})`);
 
-  // 5. Determinism: same seed, same walk. A pacing number that moves on its
+  // 5. R85 — A PLAYER WHO SHOWS UP NEVER LOSES A CREATURE TO NEGLECT. The
+  //    walker trains, spars and fights every day it can, which is exactly
+  //    the player the top of the instability scale must not touch: a stake
+  //    that fires on somebody who is playing is a punishment, not a stake.
+  //    Measured over the whole run rather than at the end, because a
+  //    creature taken on day 12 and rehabilitated by day 30 would leave no
+  //    trace in a final tally.
+  assert.equal(walk.feral.lost, 0,
+    `a walk that plays every day never loses a creature to neglect (${walk.feral.lost})`);
+
+  // 6. Determinism: same seed, same walk. A pacing number that moves on its
   //    own is not a measurement.
   const again = campaignWalk(content, { seed: 2026, days: 45 });
   assert.deepEqual(again.at, walk.at, 'the walk is reproducible from its seed');
@@ -14137,7 +14147,14 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const s = { ...newGameState(), seed: 65, funds: 5000 };
     ensureRanchSeeded(s, content, t0);
     s.lastTickAt = t0;
-    s.chimeras = [chim('c0'), chim('c1')];
+    // R85 — and one the sweep could not previously reach. `makeSimChimera`
+    // builds lab-perfect creatures at bond 100, so no fixture chimera could
+    // ever go agitated and the newest elapsed resolver was invisible to a
+    // sweep that walks the whole save. This is the R81 failure in its other
+    // form: the gate was general, its FIXTURE was not.
+    s.chimeras = [chim('c0'), chim('c1'), chim('c2', {
+      instability: 100, bond: 0, lastAttendedAt: t0, lastTrainedAt: t0,
+    })];
     // Territory and a threat generation, so a counter-offensive actually
     // arrives on the return tick. Without it the sweep never meets the one
     // timer that is SUPPOSED to read `now`, and the exemption below would be
@@ -14187,6 +14204,11 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const ALLOWED = [
       /^lastTickAt$/,                         // the save's one elapsed clock (R64)
       /^campaign\.contested\.\d+\.(startedAt|deadline)$/, // R9: the window opens when you SEE it
+      // R85: the same rule and the same reason, with a creature instead of a
+      // node. A fortnight away must not cost you an animal you were never
+      // given the chance to answer for, so the agitation window opens on
+      // sight too. Exercised below, not assumed.
+      /^chimeras\.\d+\.agitatedAt$/,
     ];
     const stamped = [];
     const walk = (node, path) => {
@@ -14221,6 +14243,14 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(s.chimeras.some((c) => c.name === 'X' || c.vatBorn), 'and the vat child is on the roster');
     assert.equal(s.campaign.contested.length, 1, 'and a convoy is on the road, so the one legitimate `now` was met');
     assert.equal(s.campaign.contested[0].startedAt, NOW, 'which is the R9 exemption, exercised rather than assumed');
+    // …and the second exemption, likewise met rather than declared. A week
+    // of neglect ends with the creature PACING, not with it gone: the
+    // window it gets is the full one, dated from the moment the player
+    // looked, so no absence of any length can cost an animal.
+    const pacing = s.chimeras.find((c) => c.id === 'c2');
+    assert.ok(pacing, 'the neglected creature is still on the roster after a week away');
+    assert.equal(pacing.agitatedAt, NOW,
+      'and its window opens on sight — R9 exemption, exercised rather than assumed');
   }
 
   // 2. What each of those timers now says, in the player's terms.
@@ -15925,8 +15955,24 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   {
     const coarse = mkFeral(8503);
     tickFeral(coarse.s, content, startsAt);
-    assert.equal(coarse.ch.agitatedAt, startsAt,
-      'the clock starts WHEN THE CONDITION IS MET, not when the player next looked (R65)');
+    assert.equal(coarse.ch.agitatedAt, startsAt, 'the tick opens the window');
+
+    // AND THE WINDOW OPENS WHEN THE PLAYER LOOKS. This is R9's rule rather
+    // than R65's, and the exemption is named in the R65 sweep above: a
+    // fortnight away must not cost an animal the player was never given the
+    // chance to answer for. Ticked LATE on purpose — the first draft of
+    // this assertion ticked at exactly the moment the condition was met,
+    // where `= now` and a back-dated stamp are the same number, so it was
+    // true of both implementations and guarded neither.
+    {
+      const late = mkFeral(8503);
+      const fortnight = t0 + 14 * 24 * HR;
+      const { gone } = tickFeral(late.s, content, fortnight);
+      assert.deepEqual(gone, [], 'two weeks away costs nothing');
+      assert.equal(late.ch.agitatedAt, fortnight, 'the window opens on sight');
+      assert.equal(feralStatus(late.ch, content, fortnight).remainingMs, tune.windowHours * HR,
+        'and it is the FULL window, however long you were gone');
+    }
 
     const fine = mkFeral(8503);
     const step = (endsAt - t0) / 400;

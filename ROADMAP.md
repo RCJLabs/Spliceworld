@@ -70,7 +70,8 @@ BREED stock (genetics raise the ceiling)
 - **Frame first:** choose a **torso**, which sets size class (S/M/L for v0.1) and slot layout. Slots: Head, Forelimbs, Hindlimbs, Tail, Hide, Organ ×1 (×2 at Theater Tier 2).
 - Every part carries: stat block, **one signature ability**, and **physiology properties** (mass, metabolic draw, thermal tolerance).
 - **Physiology panel** computes and *explains*: power-to-weight, stamina pool & regen, speed, thermal comfort band. Eagle wings on a hippo frame = legal, flightless, and the panel says why. Building is engineering (Law 4).
-- **Instability** (0–100): rises with species count in the mix and grade mismatches. High instability = longer settling, more care demand and obedience risk. Going **Feral** at 100 (the chimera moves to Containment until rehabilitated) was designed and is **not shipped — queued as R85**; instability currently tops out as a settling and obedience cost.
+- **Instability** (0–100): rises with species count in the mix and grade mismatches. High instability = longer settling, more care demand and obedience risk.
+- **Going Feral (R85):** the top of the scale costs something, and what it costs is *neglect*, not anatomy. A chimera at instability **100** whose bond is under **40** and that nobody has worked with for **72 hours** starts pacing its pen; you then have a **24-hour window** to go and do anything with it at all — train it, fight with it, treat it — and the warning clears. Miss the window and it stops taking your calls: it moves to Containment, and R8's Reorientation Wing hands it back *whole* (same id, level, trained moveset and scars) for the usual fee. Building a six-species monstrosity is never itself the trigger — every chimera is spliced at bond 0, so a snapshot rule would send the game's own premise to Containment the day it was made. Raising bond past the floor makes it impossible.
 - **Purebred bonus:** 4+ parts from one species = that species' set bonus.
 - **Combo abilities:** specific part pairings unlock discovered abilities logged in the Splice-Dex (Venom Organ + Cobra Head = *Injection*; Electric Organ + Aquatic Hide = *Live Wire*). **27 combos** ship; combos are the "gotta discover 'em all" hook.
 - **Splice settling:** new chimeras settle on a real-world timer — **22.5 min at instability 0, rising to about 3 hrs at 100** (`PHYS_TUNING.settleBaseMs` + `settleMaxExtraMs`). Deploying an unsettled chimera = Rejection debuffs in battle. Patience is a stat.
@@ -139,9 +140,12 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 38
+- save version: 39
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
+- feral bond floor: 40
+- feral neglect hours: 72
+- feral window hours: 24
 - dissection hours: 9-18
 
 ### 4.1 Roster — 41 Species *(25 at Wave 1; A3 took it to 40 and R6's variants to 41)*
@@ -489,7 +493,7 @@ every `sfx.play()` call is invisible to it. Checked before filing.
   sentence, and smoke asserts every emitted event id has copy AND every
   line has an emitter — R20's invariant, pointed at the wire.*
 
-### 9.4 Fourth audit (R63–R83) — **shipped; two of the three gaps R77 named remain (R85, R86)**
+### 9.4 Fourth audit (R63–R83) — **shipped; one of the three gaps R77 named remains (R86)**
 
 Run after R62, against a game with three closed audits behind it. Same rule
 as the other three: every line names the evidence that put it there, and the
@@ -1173,14 +1177,59 @@ The queue is a proposal: prune it before starting R63.
   this fails, which is the point: whoever does it has to change §3.3 in the
   same breath. Proved by shipping one — an Apex part gaining `ignoreArmor`
   lights up 484 readings.
-- **R85 — Feral at instability 100.** §3.5 has designed it since M0: at
-  instability 100 the chimera goes Feral and moves to Containment until
-  rehabilitated. There are **zero hits for "feral" anywhere in the
-  codebase**. Instability currently costs settling time and obedience and
-  nothing else, so the top of the scale has no teeth — and R8's
-  Reorientation Wing, the exact system a Feral chimera would need, has been
-  shipped and idle for it since. *Done when: instability 100 does something
-  the player can see and recover from, or §3.5 stops designing it.*
+- **R85 — Feral at instability 100.** ✅ *Shipped.* The promise lives in
+  **§3.4**, not §3.5 — the entry pointed at the wrong section, which is its
+  own small lesson about a document nothing runs. Measured before building,
+  and the entry understated it: at instability 100 the price was a one-time
+  three-hour settle and $8/day, and the obedience penalty is
+  `instability/100 × 0.2` MINUS `bond/100 × 0.2`, so a trained creature at
+  the top of the scale had a **0% ignore chance**. The top of the scale was
+  cheaper than the middle.
+  - **The trigger is neglect, not anatomy.** The bear-headed, eagle-winged
+    goat this game exists to let you build scores 90 instability, and *every*
+    chimera is spliced at bond 0 — so a snapshot rule on "unstable and
+    unbonded" would send the game's own premise to Containment the day it was
+    made. That is not a mechanic, it is a punishment for playing. What tips a
+    creature over is being LEFT ALONE: instability **100**, bond under **40**,
+    and nobody has worked with it in **72 hours**.
+  - **A scheduled window, never a per-tick roll (R9).** An agitated chimera is
+    a **24-hour** countdown with an obvious answer, and how often you open the
+    app cannot change what happens to your creatures. The clock starts when
+    the condition is met rather than when you next looked (R65), so a whole
+    cycle away cannot cost a creature that was fine when you left.
+  - **Everything you do WITH a creature answers it** — a training session, a
+    fight, a treatment, a rescue all stamp the same field, and the warning
+    leaves the card the instant you act. Raising bond past 40 makes it
+    impossible at all, which is what the field guide tells you *before* any
+    clock is running.
+  - **Losing it is a loan.** R8's Reorientation Wing had been shipped and idle
+    for exactly this since. A bay now holds the creature **itself** rather than
+    a description of it: the Wing was written for a captured rival and rebuilds
+    one from its genome, which for a creature of your own would hand back a
+    stranger with the same name and none of its level, its trained moveset or
+    its scars. Zero death language throughout — it has not gone anywhere, it
+    is simply no longer taking your calls.
+  - **On the screen, not in the engine.** The Pens gives agitation a band above
+    all three existing ones and a countdown badge on the *shut* row that
+    outranks even the Infirmary clock; the agenda opens with a `settle` row
+    above the two clocks R63 put at the front. R15's rule with the stakes
+    turned up: this is the only clock in the game whose expiry removes a row
+    from the roster.
+  - **Gates:** an R85 block in smoke and a thirteenth battery gate, with breaks
+    69–73 — the trigger firing on anatomy alone, the window becoming a roll,
+    attending stopping counting, the bay keeping a copy, and the agenda going
+    quiet. All five caught. The first draft of the 400-tick assertion counted
+    the roster rather than what the tick reported and was true for every
+    possible implementation; the battery is what found that.
+  - **Six copies of one list, found on the way through.** Shipping
+    `data/feral.json` meant editing the content-file list in six places
+    (smoke had two; sim, roadmap, handlers and the battery one each), and the
+    failure mode for missing one is not an error — it is `content.feral`
+    coming back undefined and the tuning silently falling back to its
+    defaults. R41's `training.json` bug with the blast radius spread across
+    the toolchain. `data/loader.js` now exports the list the *game* loads and
+    every tool derives from it; `sim.js` had already drifted, scoring a world
+    with no breakouts in it.
 - **R86 — Gene Juice.** §3.9 says "every timer skippable with Gene Juice
   (earned currency only)". **Zero hits in the codebase**; no timer is
   skippable at any price. This one is load-bearing for the TWA pitch — a
