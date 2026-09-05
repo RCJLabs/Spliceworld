@@ -32,6 +32,7 @@ import { dirname, join, relative } from 'node:path';
 
 import { indexContent } from '../render/renderer.js';
 import { feralTuning } from '../splice/feral.js';
+import { rushTuning } from '../splice/rush.js';
 // R85: derived, not named — see data/loader.js.
 import { CONTENT_FILES as FILES } from '../data/loader.js';
 import { SAVE_VERSION } from '../save/save.js';
@@ -85,6 +86,11 @@ export function shippedNumbers() {
     'feral bond floor': feralTuning(content).bondFloor,
     'feral neglect hours': feralTuning(content).neglectHours,
     'feral window hours': feralTuning(content).windowHours,
+    // R86 — §3.9 states the price of a rush, which is also the Infirmary's
+    // price. Read through the same function both call, so retuning it in
+    // data fails here rather than leaving the spec quoting the old figure.
+    'rush base dollars': rushTuning(content).base,
+    'rush dollars per hour': rushTuning(content).perHour,
     // Rolled per capture in campaign.js. Read the literal rather than
     // restating it, so widening the window fails here.
     'dissection hours': (readFileSync(join(root, 'campaign/campaign.js'), 'utf8')
@@ -132,10 +138,17 @@ export function checkRoadmap() {
   // drag a section out of scope.
   const liveSpec = roadmap.split('## 6. Milestones')[0];
   if (liveSpec.length < 2000) note('the live spec (§1-§5) could not be found');
+  // R86 — comments stripped before probing. Break 51 of the battery went
+  // MISSED the day splice/rush.js landed with a header explaining why an
+  // earned skip currency was NOT built: the probe found the mechanic's name
+  // in that sentence and scored the promise as kept. A probe a comment can
+  // satisfy is R10's dead-prose problem inverted — prose with no code behind
+  // it, passing for code.
+  const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
   const engineSource = moduleFiles()
     .map((f) => relative(root, f))
     .filter((f) => !f.startsWith('tools/'))
-    .map((f) => readFileSync(join(root, f), 'utf8'))
+    .map((f) => stripComments(readFileSync(join(root, f), 'utf8')))
     .join('\n');
 
   for (const claim of CLAIMS) {

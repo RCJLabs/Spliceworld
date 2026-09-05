@@ -25,6 +25,7 @@ import { expressedTraits } from './breeding.js';
 import { analyze } from '../splice/physiology.js';
 import { GRADE_INDEX } from '../splice/extract.js';
 import { feralTuning } from '../splice/feral.js';
+import { rushable } from '../splice/rush.js';
 
 export function onboardingSteps(state, content, now) {
   const caredOnce = state.ranch.stock.some((a) =>
@@ -215,6 +216,11 @@ export const GUIDE_HELPERS = {
       (c) => (c.instability ?? 0) < t.instabilityAt || (c.bond ?? 0) >= t.bondFloor
     );
   },
+  // R86. Reachable the first time something of the player's is on a clock
+  // they could pay to hurry — which for a new player is their first splice's
+  // settle, day one — and done once they have paid for one. `rushCount` is
+  // the only thing the mechanic persists.
+  rushableNow: (state, content, now) => rushable(state, content, now).length > 0,
   // "Caught" means it reached the roster, not that it reached a bay — the
   // guide teaches the whole route, so it is done when the route is walked.
   specimenCaught: (state) => state.chimeras.some((c) => c.rehabilitated),

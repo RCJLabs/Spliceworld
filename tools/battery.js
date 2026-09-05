@@ -25,6 +25,10 @@ import { tmpdir } from 'node:os';
 
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
+// R86: break 50 used to hardcode the save version and went BADANCH on three
+// milestones running. It is read off the source now, so bumping SAVE_VERSION
+// moves the break with it.
+import { SAVE_VERSION } from '../save/save.js';
 
 const SRC = dirname(dirname(fileURLToPath(import.meta.url)));
 const DIR = mkdtempSync(join(tmpdir(), 'sw-battery-'));
@@ -193,6 +197,59 @@ const FERAL = ['node', '-e', `
         bad.push('the bay does not hold the creature itself'); } } }
   if (bad.length) { console.error('feral ✗  ' + bad.join('; ')); process.exit(1); }
   console.log('feral ✓  warned, answerable, scheduled, and given back');
+`];
+
+// R86 — a rush buys time and nothing else. Its own gate, for the usual
+// reason: the smoke suite takes twelve minutes and this is one save, two
+// copies and a handful of comparisons. Same functions the buttons call.
+const RUSH = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { spliceChimera } = await import('./splice/theater.js');
+  const { startVat } = await import('./splice/chaos.js');
+  const { tickWorld } = await import('./campaign/world.js');
+  const { treatmentCost } = await import('./splice/scars.js');
+  const { rush, rushable, rushPrice, RUSH_KINDS, rushLines } = await import('./splice/rush.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000, HR = 3600000;
+  const s = { ...newGameState(), seed: 8601, funds: 50000 };
+  s.facility = { theater: 2, containment: 1, incubator: 1, extractor: 1, scanner: 1, infirmary: 1 };
+  s.lastTickAt = t0;
+  const tok = (id, partId) => ({ id, partId, grade: 'prime', donor: { name: 'D', species: partId.split('_')[0], stars: 3, extractedAt: t0 } });
+  s.inventory.parts.push(tok('a1','bear_head'), tok('a2','bear_organ'), tok('b1','goat_head'), tok('b2','goat_organ'), tok('c1','cobra_head'), tok('c2','wolf_tail'));
+  for (const [h, o] of [['a1','a2'],['b1','b2']]) { const m = spliceChimera(s, 'M', { head: h, organ: o }, content, t0 - 10 * HR); if (!m.ok) throw new Error(m.msg); }
+  for (const c of s.chimeras) { c.settleUntil = t0 - HR; c.bond = 50; }
+  const mC = spliceChimera(s, 'M', { head: 'c1', tail: 'c2' }, content, t0); if (!mC.ok) throw new Error(mC.msg);
+  const C = s.chimeras[2];
+  const v = startVat(s, s.chimeras[0].id, s.chimeras[1].id, content, t0); if (!v.ok) throw new Error(v.msg);
+  const base = structuredClone(s);
+  const bad = [];
+  if (JSON.stringify([...RUSH_KINDS].sort()) !== JSON.stringify(['egg','resequencer','settle','vat'])) bad.push('the registry is not exactly the four sealed clocks (' + RUSH_KINDS.join(',') + ')');
+  { const t = structuredClone(base);
+    for (const k of ['train','care','growth','rehab','job']) { const r = rush(t, k, C.id, content, t0); if (r.ok || r.msg !== rushLines(content).refusal) bad.push(k + ' is for sale'); }
+    if (t.funds !== base.funds) bad.push('a refusal charged money'); }
+  const t1 = t0 + 60000;
+  const wait = structuredClone(base); tickWorld(wait, content, Math.max(base.vat.until, C.settleUntil) + 60000);
+  const rushed = structuredClone(base); let spent = 0;
+  for (const q of rushable(rushed, content, t1)) { const r = rush(rushed, q.kind, q.id, content, t1); if (!r.ok) bad.push(q.kind + ': ' + r.msg); else spent += r.cost; }
+  if (base.funds - rushed.funds !== spent || spent <= 0) bad.push('the money did not move exactly once (' + (base.funds - rushed.funds) + ' vs ' + spent + ')');
+  tickWorld(rushed, content, t1);
+  const shape = (c) => c && JSON.stringify({ f: c.frame, t: Object.entries(c.tokens).map(([k, x]) => k + ':' + x.partId + '@' + x.grade), n: c.name, i: c.instability });
+  const cw = wait.chimeras.find((c) => c.vatBorn), cr = rushed.chimeras.find((c) => c.vatBorn);
+  if (!cw || !cr) bad.push('a vat did not decant');
+  else if (shape(cw) !== shape(cr)) bad.push('the rushed vat decanted a DIFFERENT child');
+  const tw = wait.chimeras.find((c) => c.id === C.id).temperament, tr = rushed.chimeras.find((c) => c.id === C.id).temperament;
+  if (!tw || !tr || JSON.stringify(tw) !== JSON.stringify(tr)) bad.push('the rushed settle produced a different temperament');
+  { const h = structuredClone(base); const ch = h.chimeras[0];
+    for (const hrs of [0.5, 2, 6]) { ch.injury = { name: 'x', until: t0 + hrs * HR };
+      if (treatmentCost(ch, content, t0) !== rushPrice(hrs * HR, content)) bad.push('treatment at ' + hrs + 'h is not the rush price'); } }
+  { const p = structuredClone(base); p.funds = 10; const before = p.vat.until;
+    const r = rush(p, 'vat', 'vat', content, t1); if (r.ok || p.funds !== 10 || p.vat.until !== before) bad.push('a rush went through with no money'); }
+  if (bad.length) { console.error('rush ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('rush ✓  four sealed clocks, one price — rushed and waited agree');
 `];
 
 const VERBOSE = process.argv.includes('--verbose');
@@ -551,6 +608,7 @@ const WALK = ['node', '-e', `
     if (!(w.fights?.[kind] > 0)) fail('the walk never fought a "' + kind + '" (' + JSON.stringify(w.fights) + ')');
   }
   if (w.duels < 3) fail('the ladder is barely touched (' + w.duels + ' duels)');
+  if (!(w.rushes > 0)) fail('the walk never paid to hurry a clock (R86)');
   if (w.breakouts < 15) fail('the loose board is barely hunted (' + w.breakouts + ')');
   // Not the bay count: a held defence impounds wreckage, so bays fill
   // whether or not the cannon ever fires. Count what the cannon bagged.
@@ -845,23 +903,27 @@ const BREAKS = [
   },
   {
     n: 50, gate: ROADMAP, name: 'SAVE_VERSION goes stale in the spec',
-    file: 'ROADMAP.md', anchor: '- save version: 39', to: '- save version: 38',
+    file: 'ROADMAP.md', anchor: `- save version: ${SAVE_VERSION}`, to: `- save version: ${SAVE_VERSION - 1}`,
   },
   {
-    // R85 shipped Feral, which is what this break used to point at, so it
-    // now points at the one gap R77 named that is still a gap: Gene Juice
-    // has zero hits in the codebase and no timer is skippable at any price.
-    // Describing it as shipped is the exact defect R77 was filed for, and
-    // this break follows the gap rather than the wording — when R86 lands
-    // it moves again, or goes, and the roadmap gate is what says so.
+    // R86 closed the last of R77's three gaps, so there is no absent mechanic
+    // left to describe as shipped. The break keeps its meaning by CREATING
+    // one: the live spec is made to claim Gene Juice — a mechanic the
+    // roadmap gate probes the code for and will not find — with no "queued
+    // as" pointer beside it. That is the exact defect R77 was filed for.
     n: 51, gate: ROADMAP, name: 'a designed-but-absent mechanic is described as if it works',
     file: 'ROADMAP.md',
-    anchor: 'not shipped — queued as R86**. No timer',
-    to: 'shipped**. No timer',
+    anchor: '**Paying a clock to hurry (R86).** Every *sealed* clock',
+    to: '**Gene Juice skips any timer, and paying a clock to hurry (R86).** Every *sealed* clock',
   },
   {
+    // R86 closed the last queued gap, so the break creates one: the live spec
+    // is made to name an absent mechanic AND point it at a phase the roadmap
+    // does not carry. The pointer is the half this break is about.
     n: 52, gate: ROADMAP, name: 'a named gap points at a phase the roadmap does not carry',
-    file: 'ROADMAP.md', anchor: 'queued as R86', to: 'queued as R99',
+    file: 'ROADMAP.md',
+    anchor: '**Paying a clock to hurry (R86).** Every *sealed* clock',
+    to: '**Gene Juice is not shipped — queued as R99.** **Paying a clock to hurry (R86).** Every *sealed* clock',
   },
   {
     n: 53, gate: ROADMAP, name: 'the measured-numbers block is deleted outright',
@@ -999,6 +1061,45 @@ const BREAKS = [
     to: '      chimera.agitatedAt = lastAttended(chimera) + t.neglectHours * HOUR;',
   },
 
+  // --- gate: rush (a rush buys time and nothing else) ----------------------
+  {
+    n: 75, gate: RUSH, name: 'a rush moves the clock and forgets to charge for it',
+    file: 'splice/rush.js',
+    anchor: '  state.funds -= price;\n  def.set(target, now);',
+    to: '  def.set(target, now);',
+  },
+  {
+    // The thing the whole design refuses: a cooldown you can buy is bond you
+    // can buy.
+    n: 76, gate: RUSH, name: 'a training cooldown quietly joins the registry',
+    file: 'splice/rush.js',
+    anchor: 'const RUSHABLE = {\n  settle: {',
+    to: "const RUSHABLE = {\n  train: { list: (s) => (s.chimeras ?? []).map((c) => c.id), find: (s, id) => (s.chimeras ?? []).find((c) => c.id === id) ?? null, name: (t) => t.name, until: (t) => (t.lastTrainedAt ?? 0) + 15 * HOUR, set: (t, now) => { t.lastTrainedAt = now - 15 * HOUR; } },\n  settle: {",
+  },
+  {
+    n: 77, gate: RUSH, name: 'the Infirmary grows its own price and drifts from the rush',
+    file: 'splice/scars.js',
+    anchor: '  return rushPrice(chimera.injury.until - now, content, scale);',
+    to: '  return Math.round((30 + Math.max(0, (chimera.injury.until - now) / HOUR) * 18) * scale);',
+  },
+  {
+    // Zero death language has a cousin here: a rush that changes what comes
+    // out is a slot machine with a receipt. The vat is sealed at conception;
+    // this break makes the rush re-open it.
+    n: 78, gate: RUSH, name: 'rushing the vat quietly changes what it decants',
+    file: 'splice/rush.js',
+    anchor: "    name: (target) => target.parentNames?.join(' × ') ?? 'the vat',\n    until: (target) => target.until ?? 0,\n    set: (target, now) => { target.until = now; },",
+    to: "    name: (target) => target.parentNames?.join(' × ') ?? 'the vat',\n    until: (target) => target.until ?? 0,\n    set: (target, now) => { target.until = now; target.conception = { ...target.conception, parts: Object.fromEntries(Object.entries(target.conception.parts).slice(0, 1)) }; },",
+  },
+  {
+    // R83's rule, pointed at the new purchase: a system the walker never
+    // uses is one the yardstick cannot see.
+    n: 79, gate: WALK, name: 'the walker stops paying to hurry, and the yardstick goes blind to it',
+    file: 'tools/sim.js',
+    anchor: '  for (const q of rushable(state, content, now)) {',
+    to: '  for (const q of []) {',
+  },
+
   // --- gate: boot (the game reaches the screen without its pictures) -------
   {
     n: 61, gate: BOOT, name: 'the geometry goes back into the round the first paint waits on',
@@ -1097,7 +1198,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -1109,7 +1210,8 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === SMOKE_PAIR ? 'both halves of every part and every unit'
                   : gate === GRADE ? 'every part at every grade, sharpened and nothing more'
                     : gate === FERAL ? 'a neglected creature warned, answered, and given back'
-                      : gate.join(' ');
+                      : gate === RUSH ? 'a rush buys time and nothing else'
+                        : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }

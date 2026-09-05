@@ -1,5 +1,114 @@
 # PROGRESS
 
+## Session 109 — R86: Gene Juice ✅ (shipped as the Infirmary's model)
+
+**Acceptance criterion:** an earned currency skips a timer, or §3.9 stops
+promising one — **passes**, by a third route the measurement pointed at:
+§3.9 now promises what ships, which is every *sealed* clock buyable by the
+hour at the price the Infirmary already charged. `SAVE_VERSION` **39 → 40**
+(`rushCount`); `sw.js` bumped to `spliceworld-v40-r86`.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ **new** — one save, four clocks; rushed and waited decant the same child, animal, hatchling and temperament |
+| `npm run battery` | ✓ — **79 breaks**, a fourteenth gate, 5 new; break 50 derives `SAVE_VERSION`, breaks 51/52 re-aimed |
+| `npm run roadmap` | ✓ — **22** stated numbers (2 new: the call-out and the hourly rate); probe now ignores comments |
+| `npm run a11y` | ✓ — 65 controls at 380px, incl. a Hurry button on each of the three screens |
+| `npm run handlers` | ✓ — 36 controls pressed (was 35): `data-rush` fired |
+| `npm run boot` · `npm run scopecheck` · `npm run sim` | ✓ |
+
+### Both premises were wrong, and the harness said so
+
+**"No timer is skippable at any price."** The Infirmary was: `treatInjury`
+ends its clock for **$25 + $18/hour remaining**, and `cancelVat` drains a
+vat. **"Load-bearing for the TWA pitch."** `docs/TWA.md` has zero mentions of
+a skip, a currency or a purchase.
+
+**The pacing problem does not show up.** Longest stall in a 45-day walk:
+**0 hours**. Week one the stable is 64% free / 28% on a training cooldown /
+8% injured / 0% settling; after that 82% free. The biggest "wait" is the
+fifteen-hour cooldown — a daily rhythm by design and *where bond comes from*
+(Law 3), so a skip for it is bond for sale. Money: ~$500–1000 on day 1, ~$4k
+by day 7, $10–55k by day 30 — a money-priced skip is unaffordable early and
+free late, which was the one honest argument for a second currency.
+
+The user chose the middle route: no new currency, the Infirmary's model
+extended to every pure wait.
+
+### Rushable ⇔ sealed
+
+The rule came from the engine's own comments. `startVat`: *"sealed at
+conception: a reload must not be able to reroll it."* `startResequence`:
+*"every die is thrown here, and tick only reads the answer."* An egg's
+genotype, potential and sex are fixed at lay. A temperament is seeded from
+the world seed once settled. During each of those four clocks **nothing is
+being decided** — so a rush can only ever buy time.
+
+| clock | typical wait | to hurry it |
+|---|---|---|
+| settling | 22.5 min – 3 h | $32 – $79 |
+| Chaos Vat | 4 – 11 h | $97 – $223 |
+| Resequencer | 2 h | $61 |
+| incubation | 1 – 56 min | $25 – $42 |
+
+Everything else refuses with one line, as a rule rather than an omission.
+Injury is the one clock that is neither sealed nor a threat — its scar rolls
+at heal time and treatment changes that — so `treatInjury` keeps its meaning
+and only lends its price: the formula lives in `splice/rush.js` now and
+`scars.json` lost `treatBase`/`treatPerHour`.
+
+### Proved literally
+
+One save with all four clocks running. One copy waits until the last clock
+ends; the other pays at t+1 minute and ticks. The vat child (frame, parts,
+grades, name, instability), the tank's animal, the hatchling and the settled
+creature's temperament are **identical**. The rushed child is stamped with
+when it actually opened (R65). $265 for all four.
+
+### On the screen, and in the walk
+
+One `data-rush="kind:id"` button and one binder, on three screens. The shell
+lends its `tick` to the screens so a rushed vat decants on the click rather
+than at the next thirty-second refresh — measured in a real browser at
+380px: settle button charged $39 and settled; vat button decanted (3 → 4
+chimeras); no overflow, no console errors.
+
+The walker now rushes (reserve-gated, soonest first): **1–18 rushes in 45
+days across four seeds, $29–$577**. And it treats its A-team — 29–43 times —
+which surfaced the R83 gap of this session: **the harness had never once
+called `treatInjury`.** The game's only paid skip had shipped with zero
+coverage.
+
+### Two gate weaknesses found by the battery
+
+- **Break 51 went MISSED, not BADANCH.** The roadmap gate's probe
+  `/gene ?juice/i` matched the words in `rush.js`'s header — a comment
+  explaining why the earned currency was *not* built — and scored the
+  promise as kept. A probe a comment can satisfy is R10's dead-prose problem
+  inverted. The probe strips comments first now, and the new files say "an
+  earned second currency" rather than the name.
+- **Break 50 hardcoded the save version** and had gone BADANCH on three
+  milestones running. It imports `SAVE_VERSION` now, so bumping it moves the
+  break with it.
+
+### Known issues
+
+- No agenda row for rushes. The agenda's `screen` is static and the rushes
+  live on three screens; and a rush never creates a new thing to do — it
+  makes a row that already exists arrive sooner. The `treat` row stays,
+  because treatment changes an outcome.
+- Seed 99 rushes only once in 45 days: its reserve rarely clears. The smoke
+  assertion runs on seed 2026 (8) and the battery's WALK gate on 4242 (18).
+- A rushed egg still needs the Hatch button — rushing makes it hatchable,
+  it does not hatch it. Deliberate: hatching needs pen room, and the hatch
+  button already says why when there is none.
+
+### Next session's first task
+
+R77's three gaps are closed. The queue is empty of named phases; the next
+session opens with a fifth audit — the same rule as the other four, every
+line naming the measurement that put it there.
+
 ## Session 108 — R85: Feral at instability 100 ✅
 
 **Acceptance criterion:** instability 100 does something the player can see

@@ -72,6 +72,8 @@ export function indexContent(raw) {
     // engine edit and a line can be rewritten without either.
     feralMeta: raw.feral?.tuning ?? null,
     feralLines: raw.feral?.lines ?? null,
+    rushMeta: raw.rush?.tuning ?? null,
+    rushKinds: raw.rush?.kinds ?? null,
     directorRules: raw.director ? byId(raw.director.counters) : {},
     directorMeta: raw.director ? raw.director.tuning : null,
     facility: raw.facility ? byId(raw.facility.tracks) : {},

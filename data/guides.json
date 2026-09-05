@@ -267,6 +267,26 @@
       ]
     },
     {
+      "id": "rush",
+      "screen": "pens",
+      "order": 25,
+      "icon": "lightning",
+      "title": "You can pay a clock to hurry",
+      "body": "Four of the lab\u2019s clocks are sealed the moment they start \u2014 a settling chimera, the Chaos Vat, the Resequencer and an egg \u2014 so the answer is already in the tank and all you would be buying is not having to wait. Every one of them takes money at the Infirmary\u2019s rate: a call-out plus the hours left. Cooldowns, growth and the Reorientation Wing are not for sale and never will be. That is where bond and grade come from, and a bond you can buy is not a bond.",
+      "reachable": [
+        {
+          "helper": "rushableNow"
+        }
+      ],
+      "done": [
+        {
+          "path": "rushCount",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
       "id": "resequencer",
       "screen": "vault",
       "order": 28,

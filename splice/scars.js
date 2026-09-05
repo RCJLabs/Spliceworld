@@ -16,10 +16,11 @@
 import { rngStream, pick } from '../util/rng.js';
 import { infirmaryGrants } from './facility.js';
 import { attend } from './feral.js';
+import { rushPrice } from './rush.js';
 
 const HOUR = 3600000;
 
-const DEFAULTS = { scarChance: 0.34, maxScars: 3, treatBase: 25, treatPerHour: 18 };
+const DEFAULTS = { scarChance: 0.34, maxScars: 3 };
 
 export function scarTuning(content) {
   return { ...DEFAULTS, ...(content.scarMeta ?? {}) };
@@ -100,11 +101,12 @@ export function describeScar(scar, chimeraName) {
 // `state` is optional so a preview built without a save still prices an
 // injury the way the game always did.
 export function treatmentCost(chimera, content, now, state = null) {
-  const t = scarTuning(content);
   if (!chimera?.injury) return 0;
-  const hoursLeft = Math.max(0, (chimera.injury.until - now) / HOUR);
   const scale = state ? infirmaryGrants(state, content).treatScale : 1;
-  return Math.round((t.treatBase + hoursLeft * t.treatPerHour) * scale);
+  // R86: the Infirmary's price IS the rush price — a call-out plus the hours
+  // left — and it lives in splice/rush.js now, where the four other clocks
+  // you can pay to hurry read the same two numbers. One rule, one place.
+  return rushPrice(chimera.injury.until - now, content, scale);
 }
 
 export function treatInjury(state, chimeraId, content, now) {

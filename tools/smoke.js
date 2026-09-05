@@ -6029,6 +6029,9 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // first-use moment that arrives BEFORE the clock does. On the roll so
     // that dropping its note fails the build like everything else here.
     'feral',
+    // R86. Paying a clock to hurry: a data file, a module, a button on three
+    // screens and a first-use moment that arrives with the first settle.
+    'rush',
     'dex',
   ];
   const covered = new Set(guides.map((g) => g.id));
@@ -6058,6 +6061,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'rivals.json': 'rivals',
     'breakout.json': 'breakout',
     'feral.json': 'feral',
+    'rush.json': 'rush',
     'scars.json': 'scars',
     'temperament.json': 'temperament',
     'traits.json': 'genes',
@@ -6118,6 +6122,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // --- Systems: the module that implements the thing the note teaches.
     'battle/veterancy.js': 'veterans',
     'splice/feral.js': 'feral',
+    'splice/rush.js': 'rush',
     'campaign/sparring.js': 'veterans',
     'campaign/campaign.js': 'regions',
     'campaign/map.js': 'regions',
@@ -6340,6 +6345,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // Nothing earlier in this walk touches `instability`, so every step
     // above it has been proving the note stays quiet.
     ['a monstrosity comes off the bench', () => { lab.chimeras[0].instability = 100; }, ['feral']],
+    // R86: the first clock the player could pay to hurry. The egg from the
+    // step above never had a hatch time, and every chimera in this walk was
+    // born settled, so nothing before this step has been buyable — which is
+    // the whole of what the walk is asked to prove about it.
+    ['a clock worth paying for', () => { lab.ranch.eggs[0].hatchAt = t0 + HOUR; }, ['rush']],
     // R82: and a lab that has been losing to you starts losing specimens.
     // Last, because it is the only note in this walk that is downstream of
     // BEATING a rival rather than of meeting one.
@@ -12355,6 +12365,14 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   assert.equal(walk.feral.lost, 0,
     `a walk that plays every day never loses a creature to neglect (${walk.feral.lost})`);
 
+  // 5b. R86 — the walker pays to hurry, and buys out of the Infirmary, so
+  //     the one purchase that buys time rather than things is inside the
+  //     yardstick. Before this the game's only paid skip had never once been
+  //     exercised by the harness.
+  assert.ok(walk.rushes > 0, `the walk paid to hurry a clock at least once (${walk.rushes} rushes, $${walk.rushSpent})`);
+  assert.ok(walk.rushSpent > 0 && walk.minFunds > 0,
+    `and paid real money for it without going broke (spent $${walk.rushSpent}, low-water $${walk.minFunds})`);
+
   // 6. Determinism: same seed, same walk. A pacing number that moves on its
   //    own is not a measurement.
   const again = campaignWalk(content, { seed: 2026, days: 45 });
@@ -16127,6 +16145,157 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 
   console.log(`   R85: instability ${tune.instabilityAt} + bond under ${tune.bondFloor} + ${tune.neglectHours}h alone = a ${tune.windowHours}h window, then the Wing`);
+}
+
+// ---------------------------------------------------------------------------
+// R86 — A RUSH BUYS TIME AND NOTHING ELSE.
+//
+// §3.9 promised since M0 that every timer is skippable with an earned
+// second currency. Measured first: the Infirmary already skipped for money,
+// priced by the hour; the TWA pitch never mentioned a skip; and the walker's
+// longest stretch with nothing productive to do was zero hours. So what
+// shipped is the Infirmary's price applied to every SEALED clock — the four
+// whose answer is already in the save when they start — and this block is
+// the proof that a rush can only ever buy time. One save, every clock
+// running; one copy waits it out, the other pays at t+1min and ticks; the
+// vat child, the tank's animal, the hatchling and the settled creature's
+// temperament have to be the same.
+{
+  const { rush, rushable, rushPrice, rushQuote, RUSH_KINDS, rushLines } = await import('../splice/rush.js');
+  const { isSettled: isSettled86 } = await import('../splice/theater.js');
+  const { startVat: startVat86 } = await import('../splice/chaos.js');
+  const { startResequence: startResequence86 } = await import('../splice/resequencer.js');
+  const { breedPair: breedPair86, hatchEgg: hatchEgg86 } = await import('../ranch/breeding.js');
+  const { createAnimal: createAnimal86 } = await import('../ranch/ranch.js');
+  const { tickWorld: tickWorld86 } = await import('../campaign/world.js');
+  const { treatmentCost: treatmentCost86 } = await import('../splice/scars.js');
+  const { speciesOf: speciesOf86 } = await import('../data/catalog.js');
+  // --- the fixture: every sealed clock running at once ------------------------
+  const s = { ...newGameState(), seed: 8601, funds: 50000 };
+  s.facility = { theater: 2, containment: 1, incubator: 1, extractor: 1, scanner: 1, infirmary: 1 };
+  s.lastTickAt = t0;
+  const tok = (id, partId, grade = 'prime') => ({ id, partId, grade, donor: { name: 'D', species: partId.split('_')[0], stars: 3, extractedAt: t0 } });
+  s.inventory.parts.push(tok('a1', 'bear_head'), tok('a2', 'bear_organ'), tok('b1', 'goat_head'), tok('b2', 'goat_organ'), tok('c1', 'cobra_head'), tok('c2', 'wolf_tail'));
+  for (const [h, o] of [['a1', 'a2'], ['b1', 'b2']]) {
+    const made = spliceChimera(s, 'M', { head: h, organ: o }, content, t0 - 10 * HOUR);
+    assert.ok(made.ok, made.msg);
+  }
+  for (const c of s.chimeras) { c.settleUntil = t0 - HOUR; c.bond = 50; }
+  const [A, B] = s.chimeras;
+  const madeC = spliceChimera(s, 'M', { head: 'c1', tail: 'c2' }, content, t0);
+  assert.ok(madeC.ok, madeC.msg);
+  const C = s.chimeras[2];
+  assert.ok(C.settleUntil > t0 + 20 * 60000, `C is settling (${(C.settleUntil - t0) / 60000} min)`);
+  s.inventory.vials = [{ id: 'v1', species: 'goat', donorName: 'Bessie', stars: 3,
+    potential: { hp: 3, power: 3, armor: 3, speed: 3, stamina: 3 }, genotype: {} }];
+  s.ranch = { ...s.ranch, stock: [], penCapacity: 8, animalCount: 0, seeded: true, eggs: [], eggCount: 0 };
+  const g = speciesOf86(content, 'goat').growthHours;
+  for (const sex of ['F', 'M']) {
+    const a = createAnimal86(s, 'goat', content, t0 - (g.adult + 1) * HOUR);
+    a.sex = sex; s.ranch.stock.push(a);
+  }
+  const [dam, sire] = s.ranch.stock;
+  const vat = startVat86(s, A.id, B.id, content, t0); assert.ok(vat.ok, vat.msg);
+  const rs = startResequence86(s, 'v1', content, t0); assert.ok(rs.ok, rs.msg);
+  const eg = breedPair86(s, sire.id, dam.id, content, t0); assert.ok(eg.ok, eg.msg);
+  const egg = s.ranch.eggs[0];
+  assert.ok(s.vat && s.resequencer && egg, 'all four clocks are running');
+  const base = structuredClone(s);
+
+  // 1. THE REGISTRY IS EXACTLY THE FOUR SEALED CLOCKS.
+  assert.deepEqual([...RUSH_KINDS].sort(), ['egg', 'resequencer', 'settle', 'vat'], 'exactly the four');
+
+  // 2. rushable() lists them, soonest first, priced by the hour.
+  {
+    const list = rushable(base, content, t0);
+    assert.deepEqual(list.map((q) => q.kind).sort(), ['egg', 'resequencer', 'settle', 'vat'], `one quote per clock (${list.map((q) => q.kind)})`);
+    for (let i = 1; i < list.length; i++) assert.ok(list[i - 1].msLeft <= list[i].msLeft, 'soonest first');
+    for (const q of list) assert.equal(q.price, rushPrice(q.msLeft, content), `${q.kind} priced by the rule`);
+    assert.equal(rushPrice(0, content), 25, 'a call-out is $25');
+    assert.equal(rushPrice(HOUR, content), 43, 'an hour is $18 more');
+    assert.equal(rushPrice(3 * HOUR, content), 79, 'a three-hour settle is $79');
+  }
+
+  // 3. EVERYTHING ELSE REFUSES, and moves no money.
+  {
+    const t = structuredClone(base);
+    for (const kind of ['train', 'care', 'growth', 'rehab', 'job', 'contest', 'exhaustion', 'spar', 'injury', 'feral']) {
+      const r = rush(t, kind, A.id, content, t0);
+      assert.equal(r.ok, false, `${kind} is not for sale`);
+      assert.equal(r.msg, rushLines(content).refusal, `${kind}: and says why`);
+    }
+    assert.equal(t.funds, base.funds, 'and nothing was charged');
+    assert.equal(t.rushCount ?? 0, 0, 'and nothing was counted');
+  }
+
+  // 4. A RUSH BUYS TIME AND NOTHING ELSE. Wait one copy out; rush the other.
+  const t1 = t0 + 60000;
+  const wait = structuredClone(base);
+  const tEnd = Math.max(base.vat.until, base.resequencer.until, egg.hatchAt, C.settleUntil) + 60000;
+  tickWorld86(wait, content, tEnd);
+  const hatchedW = hatchEgg86(wait, egg.id, content, tEnd); assert.ok(hatchedW.ok, hatchedW.msg);
+
+  const rushed = structuredClone(base);
+  let spent = 0;
+  for (const q of rushable(rushed, content, t1)) {
+    const r = rush(rushed, q.kind, q.id, content, t1);
+    assert.ok(r.ok, `${q.kind}: ${r.msg}`);
+    assert.equal(r.cost, q.price, `${q.kind}: charged what it quoted`);
+    spent += r.cost;
+  }
+  assert.equal(base.funds - rushed.funds, spent, 'the money moved exactly once, before any tick');
+  assert.equal(rushed.rushCount, 4, 'four rushes counted');
+  assert.ok(isSettled86(rushed.chimeras.find((c) => c.id === C.id), t1), 'a rushed settle is settled NOW, no tick needed');
+  assert.equal(rushed.chimeras.find((c) => c.id === C.id).lastAttendedAt, t1, 'and paying for its peace counts as attention (R85)');
+  tickWorld86(rushed, content, t1);
+  const hatchedR = hatchEgg86(rushed, egg.id, content, t1); assert.ok(hatchedR.ok, hatchedR.msg);
+
+  const shape = (c) => c && ({ frame: c.frame, tokens: Object.fromEntries(Object.entries(c.tokens).map(([k, v]) => [k, `${v.partId}@${v.grade}`])), name: c.name, instability: c.instability, xp: c.xp ?? 0 });
+  const childW = wait.chimeras.find((c) => c.vatBorn), childR = rushed.chimeras.find((c) => c.vatBorn);
+  assert.ok(childW && childR, 'both vats decanted');
+  assert.deepEqual(shape(childR), shape(childW), 'the rushed vat decants THE SAME CHILD as the waited one');
+  assert.equal(childR.createdAt, t1, 'stamped with when it actually opened (R65)');
+  assert.ok(childR.createdAt < childW.createdAt, 'which was earlier');
+
+  const animalShape = (a) => a && ({ species: a.species, sex: a.sex, potential: a.potential, genotype: a.genotype, traits: a.traits, name: a.name });
+  const fromTank = (st) => st.ranch.stock.filter((a) => !st.ranch.stock.slice(0, 2).includes(a) && a.species === 'goat' && a.parents == null);
+  assert.equal(fromTank(wait).length, 1, `the waited tank decanted one animal (${fromTank(wait).length})`);
+  assert.deepEqual(animalShape(fromTank(rushed)[0]), animalShape(fromTank(wait)[0]), 'the rushed tank decants THE SAME ANIMAL');
+
+  const hatchW = wait.ranch.stock.find((a) => a.parents), hatchR = rushed.ranch.stock.find((a) => a.parents);
+  assert.deepEqual(animalShape(hatchR), animalShape(hatchW), 'the rushed egg hatches THE SAME HATCHLING');
+
+  const cW = wait.chimeras.find((c) => c.id === C.id), cR = rushed.chimeras.find((c) => c.id === C.id);
+  assert.ok(cW.temperament && cR.temperament, 'both settled creatures acquired a temperament');
+  assert.deepEqual(cR.temperament, cW.temperament, 'and it is THE SAME temperament — seeded from the world, not from the wait');
+
+  // 5. Finished clocks refuse; short funds refuse and move nothing.
+  {
+    const r = rush(wait, 'settle', C.id, content, tEnd);
+    assert.equal(r.ok, false, 'a finished settle is not for sale');
+    const poor = structuredClone(base); poor.funds = 10;
+    const before = poor.vat.until;
+    const r2 = rush(poor, 'vat', 'vat', content, t1);
+    assert.equal(r2.ok, false, 'no money, no rush');
+    assert.ok(/Short by \$/.test(r2.msg), `and it says by how much (${r2.msg})`);
+    assert.equal(poor.funds, 10, 'nothing charged');
+    assert.equal(poor.vat.until, before, 'clock unmoved');
+    assert.equal(rushQuote(poor, 'vat', 'vat', content, t1).affordable, false, 'and the quote said so first');
+  }
+
+  // 6. THE INFIRMARY READS THE SAME PRICE. treatmentCost is rushPrice at the
+  //    Infirmary's discount — one rule, one place.
+  {
+    const hurt = structuredClone(base);
+    const ch = hurt.chimeras[0];
+    for (const h of [0.5, 2, 6, 11]) {
+      ch.injury = { name: 'Bent Whiskers', until: t0 + h * HOUR };
+      assert.equal(treatmentCost86(ch, content, t0), rushPrice(h * HOUR, content), `${h}h: treatment is the rush price`);
+      assert.equal(treatmentCost86(ch, content, t0), Math.round(25 + 18 * h), `${h}h: which is $25 + $18/h`);
+    }
+  }
+  console.log(`   R86: four sealed clocks, one price — rushed and waited agree on the child, the animal, the hatchling and the temperament ($${spent} for all four)`);
+
 }
 
 // ---------------------------------------------------------------------------

@@ -105,6 +105,29 @@ async function fixtureSave() {
     twin.agitatedAt = now - 3 * 3600000;
     s.chimeras.push(twin);
   }
+  // R86 — three clocks still running, so the Hurry buttons are measured at
+  // 380px on each of the three screens that draw one: a settling chimera on
+  // the Pens, an incubating egg on the Ranch, and a tank mid-run in the Vault.
+  {
+    const fresh = JSON.parse(JSON.stringify(s.chimeras[0]));
+    fresh.id = 'a11y-settling';
+    fresh.name = 'Newcomer';
+    fresh.settleUntil = now + 2 * 3600000;
+    fresh.temperament = null;
+    fresh.agitatedAt = null;
+    s.chimeras.push(fresh);
+    const lineage = (name) => ({ name, stars: 3, sire: { name: 'Gran', stars: 2 }, dam: { name: 'Nan', stars: 2 } });
+    s.ranch.eggs = [{ id: 'a11y-egg', species: 'goat', variant: null, variantNote: null, sex: 'F',
+      laidAt: now - 3600000, hatchAt: now + 3600000, mutationNote: null, genotype: {},
+      potential: { hp: 3, power: 3, armor: 3, speed: 3, stamina: 3 },
+      parents: { sire: lineage('Bullseye'), dam: lineage('Bessie') } }];
+    s.ranch.eggCount = 1;
+    const potential = { hp: 3, power: 3, armor: 3, speed: 3, stamina: 3 };
+    s.resequencer = { vialId: 'a11y-vial', species: 'goat', donorName: 'Vialed', stars: 3,
+      startedAt: now - 3600000, until: now + 3600000, penFullSaid: false,
+      sample: { potential, genotype: {} },
+      outcome: { succeeded: true, mutated: false, potential, genotype: {}, mutationNote: null } };
+  }
   // R82 — one loose specimen, so the Labs tab paints its Hunt button and
   // this gate measures it like every other control. Built the way the world
   // builds one: a lab that has lost to you, and a clock dated far enough

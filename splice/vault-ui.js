@@ -13,6 +13,7 @@ import {
 } from './resequencer.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { renderIcon } from '../ui/icons.js';
+import { rushQuote, rushButton, bindRush } from './rush.js';
 // R39. The Vault was the one screen with no field-note slot at all — five
 // screens wired this and the sixth did not, so a note here could not have
 // been shown even if one had existed. The suite's hand-written screen list
@@ -67,7 +68,10 @@ export function renderVaultScreen(root, ctx) {
             ? `<strong class="countdown">${fmtDuration(resequenceRemainingMs(state, t))}</strong> to go.`
             : penRoom ? 'Decanting…' : 'Ready — and the pens are full. Free one and it comes out. Nothing is lost while it waits.'
         }</p>
-        <button type="button" class="pen-dismantle" id="reseq-cancel">Abort (the vial goes back in the rack)</button>
+        <div class="pen-actions">
+          ${rushButton(rushQuote(state, 'resequencer', 'resequencer', content, t))}
+          <button type="button" class="pen-dismantle" id="reseq-cancel">Abort (the vial goes back in the rack)</button>
+        </div>
       </section>`
     : '';
 
@@ -181,4 +185,5 @@ export function renderVaultScreen(root, ctx) {
     renderVaultScreen(root, ctx);
   });
   bindFieldNote(root, ctx, () => renderVaultScreen(root, ctx));
+  bindRush(root, ctx, (m) => { lastMsg = m; }, () => renderVaultScreen(root, ctx));
 }

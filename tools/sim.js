@@ -13,6 +13,8 @@ import { dirname, join } from 'node:path';
 import { indexContent } from '../render/renderer.js';
 import { CONTENT_FILES } from '../data/loader.js';
 import { seedTemperament } from '../splice/temperament.js';
+import { rushable, rush } from '../splice/rush.js';
+import { treatInjury, treatmentCost } from '../splice/scars.js';
 import { analyze } from '../splice/physiology.js';
 import { createBattle, step, playerActions, playerActive } from '../battle/engine.js';
 import { movesFromTokens } from '../battle/statblock.js';
@@ -998,6 +1000,36 @@ function walkAct(state, content, now, open, opts = {}) {
       }
     }
   }
+  // R86 — pay to hurry what is sealed, the way a player with money in the
+  // bank does. Reserve-gated like every other purchase here, soonest clock
+  // first. Never the cooldowns: `rush` refuses those, and a walker that could
+  // buy bond would be measuring a different game from the one that ships.
+  for (const q of rushable(state, content, now)) {
+    if (!canSpend(q.price)) break;
+    const res = rush(state, q.kind, q.id, content, now);
+    if (!res.ok) continue;
+    acted++;
+    state.__walkRushes = (state.__walkRushes ?? 0) + 1;
+    state.__walkRushSpent = (state.__walkRushSpent ?? 0) + res.cost;
+  }
+  // …and buy out of the Infirmary on the same terms. R83's rule: a system
+  // the walker never uses is one the yardstick cannot see, and until R86
+  // measured it nobody had asked whether the walker treats. It did not — the
+  // one paid skip the game had shipped had never once been exercised here.
+  if (has('treat')) {
+    // The A-team only: a player pays to patch the creatures that fight and
+    // lets the bench heal on its own, and a walker that treated everything
+    // spent a third of a campaign's rushes on animals it never fielded.
+    const aTeam = new Set([...state.chimeras].sort((x, y) => quality(y) - quality(x)).slice(0, 3).map((c) => c.id));
+    for (const c of state.chimeras) {
+      if (!aTeam.has(c.id) || !c.injury || c.injury.until <= now) continue;
+      if (!canSpend(treatmentCost(c, content, now, state))) continue;
+      if (treatInjury(state, c.id, content, now).ok) {
+        acted++;
+        state.__walkTreated = (state.__walkTreated ?? 0) + 1;
+      }
+    }
+  }
   // Graduate adults, never below a breeding pair — a walker that empties its
   // own ranch measures a mistake rather than the game.
   // Graduate at Prime — the ranch card says so ("Graduation forecast", with
@@ -1410,6 +1442,12 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // plays every day; the away-runs are where the mechanic is supposed to
     // bite.
     feral: { agitated: feralSeen.size, lost: feralBays.size },
+    // R86: how often the walker paid to hurry a clock, what it spent, and how
+    // often it bought out of the Infirmary — the yardstick's view of the one
+    // purchase that buys time rather than things.
+    rushes: state.__walkRushes ?? 0,
+    rushSpent: Math.round(state.__walkRushSpent ?? 0),
+    treated: state.__walkTreated ?? 0,
     facility: { ...state.facility },
     captured: (state.__walkLog ?? []).filter((e) => e.lost).length,
     rescues: (state.__walkLog ?? []).filter((e) => e.kind === 'rescue').length,

@@ -53,6 +53,11 @@ const ctx = {
   get content() { return content; },
   now: NOW,
   save: () => saveGame(state),
+  // R86: a rush moves a clock to now, and it is the tick that decants the
+  // vat or empties the tank it just finished. Without this a rushed vat
+  // would read "0s to go" for up to thirty seconds, which is a button that
+  // looks broken for exactly as long as it takes to lose faith in it.
+  tick: () => tick(),
   refreshTicker: () => updateTicker(),
   pushNews: (line) => { pushNews(state, line); updateTicker(); },
   onExtract: (animalId) =>

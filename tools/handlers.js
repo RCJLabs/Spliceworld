@@ -154,6 +154,17 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     hurt.name = 'Patient';
     hurt.injury = { name: 'Bent Whiskers', until: now + 2 * HOUR };
     s.chimeras.push(hurt);
+    // R86 — a third, still settling, so the Pens draws a Hurry button and
+    // this walk presses it. (No running vat here on purpose: a vat in flight
+    // replaces the Pens' two donor pickers, and the picker fanout below
+    // would then walk an empty family. The vat's own button is measured by
+    // the a11y gate, which has no such rule.)
+    const settling = structuredClone(s.chimeras[0]);
+    settling.id = 'h-settling';
+    settling.name = 'Newcomer';
+    settling.settleUntil = now + 2 * HOUR;
+    settling.temperament = null;
+    s.chimeras.push(settling);
     s.chimeraCount = s.chimeras.length;
 
     // A vial, so the Resequencer has something to run.
@@ -169,6 +180,9 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       laidAt: t0, hatchAt: now - 1000, mutationNote: null,
       genotype: {}, potential: { hp: 3, power: 3, armor: 3, speed: 3, stamina: 3 },
       parents: { sire: lineage('Bullseye'), dam: lineage('Bessie') } }];
+    // R86 — and a second egg still incubating, so the Ranch draws its Hurry
+    // button beside the one that is ready to hatch.
+    s.ranch.eggs.push({ ...structuredClone(s.ranch.eggs[0]), id: 'h-egg-2', sex: 'M', hatchAt: now + HOUR });
 
     // The map, wide open: hold everything but the last node of the first
     // region (so exactly one is takeable), contest one, and take a prisoner.

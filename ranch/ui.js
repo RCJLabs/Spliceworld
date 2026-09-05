@@ -27,6 +27,7 @@ import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '..
 import { agendaShape } from './agenda.js';
 import { bandedHtml } from '../ui/roster.js';
 import { renderIcon } from '../ui/icons.js';
+import { rushQuote, rushButton, bindRush } from '../splice/rush.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -441,6 +442,7 @@ export function renderRanchScreen(root, ctx) {
         }">${
           t < egg.hatchAt ? fmtDuration(egg.hatchAt - t) : pensFull ? 'Pens full' : 'Hatch!'
         }</button>
+        ${t < egg.hatchAt ? rushButton(rushQuote(state, 'egg', egg.id, content, t)) : ''}
       </div>`;
   }).join('');
   const incubator = `
@@ -580,6 +582,7 @@ export function renderRanchScreen(root, ctx) {
   });
   bindFieldNote(root, ctx, again);
   bindFolds(root, ctx, again);
+  bindRush(root, ctx, (m) => { lastMsg = m; }, again);
   root.querySelectorAll('button[data-goto]').forEach((btn) => {
     btn.addEventListener('click', () => ctx.goto?.(btn.dataset.goto, btn.dataset.subtab));
   });

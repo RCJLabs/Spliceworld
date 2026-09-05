@@ -111,7 +111,9 @@ BREED stock (genetics raise the ceiling)
 - Ambient storytelling from day one: a **news ticker** on the War Room screen reacts to your actions ("Local zoo reports goat shortage. Authorities baffled."). Cheap, cartoony, does the tone's heavy lifting.
 
 ### 3.9 Real-World Timers (offline-computed)
-Incubation, growth stages, splice settling, injury recovery, dissection countdowns, region income. All computed from timestamps on app open — no background process, PWA-safe. **Gene Juice** — an earned currency that skips any timer, no IAP assumptions — was designed and is **not shipped — queued as R86**. No timer is currently skippable at any price.
+Incubation, growth stages, splice settling, injury recovery, dissection countdowns, region income. All computed from timestamps on app open — no background process, PWA-safe.
+
+**Paying a clock to hurry (R86).** Every *sealed* clock can be bought out by the hour at the Infirmary's rate — a **$25** call-out plus **$18** for every hour left. Sealed means the answer is already in the save when the clock starts, so a rush buys time and never a different creature: a settling chimera, the Chaos Vat, the Resequencer and an incubating egg, and smoke proves it by decanting a rushed vat and a waited one and comparing the children. Nothing else is for sale, as a rule rather than an omission: training and care cooldowns are where bond and grade come from (Law 3), growth is the animal, a rehab programme is its curriculum, a job is its duration, and the world's own clocks — convoys, dissections, the agitation window, a breakout — are threats, not waits. There is no second currency. The game's one economy pays for it, and the waits are short enough (22.5 min–3 h settle, 2 h tank, under an hour of incubation) that the choice is a real one rather than a toll.
 
 ### 3.10 Facility (menu-based)
 Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery Theater** · **Incubator** · **Infirmary** · **Containment** · **War Room** (map, notoriety, ticker) · **Splice-Dex**. Upgrades are menu purchases: pen capacity, Theater tiers (frames/slots), Gene Scanner, Extractor efficiency, Infirmary speed, Containment Cannon mk2.
@@ -140,12 +142,14 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 39
+- save version: 40
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
 - feral neglect hours: 72
 - feral window hours: 24
+- rush base dollars: 25
+- rush dollars per hour: 18
 - dissection hours: 9-18
 
 ### 4.1 Roster — 41 Species *(25 at Wave 1; A3 took it to 40 and R6's variants to 41)*
@@ -262,7 +266,7 @@ Bleed, Venom (stacking), Stun, Sleep, Trap, Slow, Knockback(switch), Taunt, Guar
 ## 8. Risks & Mitigations
 1. **Renderer quality is the whole first impression.** Mitigation: M0 is the renderer, judged on charm before anything else proceeds. Style target: bold flat vector, thick outlines, googly-eye energy.
 2. **Balance space is astronomical.** Mitigation: keyword system + M4.5 harness from the start; grades multiply, never add new mechanics.
-3. **Timer fatigue / chore feeling.** Mitigation: soft decay floors, generous early timers, Gene Juice skips, and nothing *breaks* from absence — you return to grown creatures, not dead ones.
+3. **Timer fatigue / chore feeling.** Mitigation: soft decay floors, generous early timers, paid rushes on every sealed clock (R86 — measured first: a 180-day walk never once had nothing productive to do, so what shipped is agency over the short waits rather than a second economy), and nothing *breaks* from absence — you return to grown creatures, not dead ones.
 4. **Consumption guilt breaking the cartoon tone.** Mitigation: graduation framing, lineage tracking, zero death language anywhere in UI copy.
 5. **Endless mode going stale.** Mitigation: AI director + variants + region contestation are the designed content engines; ship the tracking stub in v0.1 so data exists when the director lands.
 
@@ -493,7 +497,7 @@ every `sfx.play()` call is invisible to it. Checked before filing.
   sentence, and smoke asserts every emitted event id has copy AND every
   line has an emitter — R20's invariant, pointed at the wire.*
 
-### 9.4 Fourth audit (R63–R83) — **shipped; one of the three gaps R77 named remains (R86)**
+### 9.4 Fourth audit (R63–R83) — **shipped; all three gaps R77 named are closed (R84, R85, R86)**
 
 Run after R62, against a game with three closed audits behind it. Same rule
 as the other three: every line names the evidence that put it there, and the
@@ -1230,12 +1234,57 @@ The queue is a proposal: prune it before starting R63.
     the toolchain. `data/loader.js` now exports the list the *game* loads and
     every tool derives from it; `sim.js` had already drifted, scoring a world
     with no breakouts in it.
-- **R86 — Gene Juice.** §3.9 says "every timer skippable with Gene Juice
-  (earned currency only)". **Zero hits in the codebase**; no timer is
-  skippable at any price. This one is load-bearing for the TWA pitch — a
-  timer game with no earned skip is a timer game that just makes you wait —
-  and it is the last unbuilt clause of the offline-timer spec. *Done when:
-  an earned currency skips a timer, or §3.9 stops promising one.*
+- **R86 — Gene Juice.** ✅ *Shipped — as the Infirmary's model, not a
+  second economy, which is what the measurement said to do.* §3.9 had said
+  since M0 that every timer is skippable with Gene Juice, an earned currency.
+  Both of the entry's premises were checked first and both were wrong: "no
+  timer is skippable at any price" — the **Infirmary already was**, for $25 +
+  $18 an hour, and the vat could be drained; "load-bearing for the TWA pitch"
+  — `docs/TWA.md` mentions no skip, no currency and no purchase. And the
+  pacing problem it was designed for does not exist in the harness: the
+  180-day walker's longest stretch with nothing productive to do is **zero
+  hours**, its stable is **64% free in week one and 82% after**, and its
+  biggest "wait" is the fifteen-hour training cooldown — which is not a wait,
+  it is where bond comes from.
+  - **The rule is the engine's own.** Four clocks in this game are *sealed*
+    when they start — `startVat` says "a reload must not be able to reroll
+    it", `startResequence` says "every die is thrown here, and tick only
+    reads the answer", an egg is fixed at lay, a temperament is seeded from
+    the world. During each of them nothing is being decided. **Rushable ⇔
+    sealed.** Those four take money at the Infirmary's rate; everything else
+    refuses, as a rule rather than an omission — cooldowns are husbandry
+    (Law 3), growth is the animal, rehab is its curriculum, a job is its
+    duration, the world's clocks are threats. Injury is neither: its scar is
+    rolled when it heals and treatment changes that, so `treatInjury` keeps
+    its meaning and only lends its price — the formula moved to
+    `splice/rush.js` and `scars.json` lost two fields.
+  - **A rush buys time and nothing else, proved literally.** One save with
+    all four clocks running; one copy waits it out, the other pays at t+1min
+    and ticks. The vat child, the tank's animal, the hatchling and the
+    settled creature's temperament are **identical**. $265 for all four; a
+    three-hour settle is $79, a two-hour tank $61, a half-hour egg $35.
+  - **One binder, three screens.** `data-rush="kind:id"` beside the four
+    countdowns — settle and vat on the Pens, the egg on the Ranch, the tank
+    in the Vault — through one shared button and one shared handler. The
+    shell lends its tick to the screens (`ctx.tick`) so a rushed vat decants
+    on the click rather than at the next thirty-second refresh. No agenda
+    row, deliberately: a rush never creates a new thing to do, it makes a row
+    that already exists arrive sooner, and the agenda's `screen` is static
+    where the rushes live on three.
+  - **The walker pays, and finally treats.** Reserve-gated like every other
+    purchase: 1–18 rushes in 45 days across four seeds ($29–$577), and 29–43
+    Infirmary buyouts for its A-team — and until R86 asked, **the harness had
+    never once called `treatInjury`**. The game's one paid skip had shipped
+    with zero coverage (R83's rule, found late).
+  - **Gates.** An R86 block in smoke and a fourteenth battery gate, breaks
+    75–79: a rush that forgets to charge, a cooldown joining the registry,
+    the Infirmary growing its own price, a rush that re-opens the vat, and
+    the walker going quiet. Found on the way: break 51 went **MISSED** rather
+    than BADANCH because the roadmap gate's probe matched the words "Gene
+    Juice" in a *comment* explaining why it was not built — the probe now
+    strips comments first. Break 50 hardcoded the save version and had gone
+    BADANCH three milestones running; it reads `SAVE_VERSION` now.
+  `SAVE_VERSION` 40 (`rushCount`, the one thing the mechanic persists).
 - **R80 — The keyboard can see the game but not play it.** ✅ *Shipped.*
   Every claim in the entry was checked against the shipped game before
   anything was touched, and nine of the ten held. The tenth did not, and it

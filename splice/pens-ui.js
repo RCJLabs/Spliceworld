@@ -47,6 +47,7 @@ import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '..
 import { bandedHtml } from '../ui/roster.js';
 import { canSpar } from '../campaign/sparring.js';
 import { feralStatus, feralTuning } from './feral.js';
+import { rushQuote, rushButton, bindRush } from './rush.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { renderIcon } from '../ui/icons.js';
 import { announce } from '../ui/live.js';
@@ -69,6 +70,7 @@ function vatCard(state, content, t) {
         <p class="ranch-msg">${running.parentNames.join(' × ')}</p>
         <p class="settle">Gestating… <strong class="countdown">${fmtDuration(vatRemainingMs(state, t))}</strong> remaining. The vat is making decisions and will not be taking questions.</p>
         <button type="button" id="vat-cancel" class="care-train">Drain the vat</button>
+        ${rushButton(rushQuote(state, 'vat', 'vat', content, t))}
       </section>`;
   }
 
@@ -338,6 +340,7 @@ export function renderPensScreen(root, ctx) {
                 ? 'Settled ✓ — cleared for deployment'
                 : `Settling… ${fmtDuration(settleRemainingMs(ch, t))} remaining. No sudden noises.`
             }</p>
+            ${settled ? '' : rushButton(rushQuote(state, 'settle', ch.id, content, t))}
             ${isInjured(ch, t)
               ? `<p class="settle">${renderIcon('bandage')} Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} of dramatic convalescing left.</p>
                  <p class="fine-print scar-warn">Left to itself it may set badly and stay that way. Treating it costs money and guarantees it will not.</p>
@@ -421,6 +424,8 @@ export function renderPensScreen(root, ctx) {
   bindFolds(root, ctx, () => renderPensScreen(root, ctx));
   bindFieldNote(root, ctx, () => renderPensScreen(root, ctx));
   bindVat(root, ctx, () => renderPensScreen(root, ctx));
+  // R86: one binder for every Hurry button on this screen, settle and vat alike.
+  bindRush(root, ctx, (m) => { lastMsg = m; }, () => renderPensScreen(root, ctx));
   // Dismantling is irreversible and returns less than it consumed, so the
   // sheet shows the EXACT parts that will come back — seeded on the
   // chimera, so the preview and the outcome can never disagree.

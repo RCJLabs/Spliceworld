@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 39;
+export const SAVE_VERSION = 40;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -495,6 +495,12 @@ const migrations = {
   // creature that goes agitated does so because it was genuinely left alone
   // for three days AFTER the update, which is a thing the player can see
   // coming and answer.
+  // R86 — one counter. Nothing else about a rush touches the schema: the
+  // clocks it moves are fields every save already has.
+  40: (save) => {
+    save.rushCount ??= 0;
+    return save;
+  },
   39: (save, now = Date.now()) => {
     for (const chimera of save.chimeras ?? []) {
       chimera.lastAttendedAt ??= now;
@@ -584,6 +590,9 @@ export function newGameState() {
     // Chaos-breeding: one gestation at a time.
     vat: null,
     vatCount: 0,
+    // R86: how many clocks this player has paid to hurry. The field guide
+    // retires on it, and it is the only thing the mechanic persists.
+    rushCount: 0,
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations
