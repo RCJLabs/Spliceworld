@@ -58,6 +58,7 @@ import { trainingTuning } from '../battle/veterancy.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { moveReadout } from '../battle/readout.js';
 import { defaultMoveset, knownMoves } from '../battle/moves.js';
+import { CONTENT_FILES } from '../data/loader.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -65,35 +66,12 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const shellScreens = () => shellScreenMap().map((e) => e.screen);
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 
-const content = indexContent({
-  frames: readJSON('data/frames.json'),
-  parts: readJSON('data/parts.json'),
-  // R81: the geometry ships as its own file now, and only the browser
-  // defers it — a Node tool reads both halves and gets them merged.
-  'parts-shapes': readJSON('data/parts-shapes.json'),
-  'enemies-shapes': readJSON('data/enemies-shapes.json'),
-  species: readJSON('data/species.json'),
-  combos: readJSON('data/combos.json'),
-  enemies: readJSON('data/enemies.json'),
-  keywords: readJSON('data/keywords.json'),
-  classes: readJSON('data/classes.json'),
-  regions: readJSON('data/regions.json'),
-  traits: readJSON('data/traits.json'),
-  rivals: readJSON('data/rivals.json'),
-  breakout: readJSON('data/breakout.json'),
-  training: readJSON('data/training.json'),
-  gauntlet: readJSON('data/gauntlet.json'),
-  director: readJSON('data/director.json'),
-  facility: readJSON('data/facility.json'),
-  philosophies: readJSON('data/philosophies.json'),
-  operations: readJSON('data/operations.json'),
-  chaos: readJSON('data/chaos.json'),
-  temperament: readJSON('data/temperament.json'),
-  scars: readJSON('data/scars.json'),
-  guides: readJSON('data/guides.json'),
-  resequencer: readJSON('data/resequencer.json'),
-  news: readJSON('data/news.json'),
-});
+// R85: built from the list the GAME loads (data/loader.js), not from a
+// hand-written copy of it. There were six such copies across the tools, and
+// a file missing from one did not error — it came back `undefined` and the
+// system quietly ran on its fallback tuning. Node reads both halves at once;
+// only the browser defers the geometry.
+const content = indexContent(Object.fromEntries(CONTENT_FILES.map((n) => [n, readJSON(`data/${n}.json`)])));
 
 // R62: a line on the wire is one of the phrasings news.json authors for that
 // event. Asserted by matching the authored line's literal fragments in order,
@@ -6074,6 +6052,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'gauntlet.json': 'gauntlet',
     'rivals.json': 'rivals',
     'breakout.json': 'breakout',
+    'feral.json': 'feral',
     'scars.json': 'scars',
     'temperament.json': 'temperament',
     'traits.json': 'genes',
@@ -6133,6 +6112,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   const MODULE_NOTES = {
     // --- Systems: the module that implements the thing the note teaches.
     'battle/veterancy.js': 'veterans',
+    'splice/feral.js': 'feral',
     'campaign/sparring.js': 'veterans',
     'campaign/campaign.js': 'regions',
     'campaign/map.js': 'regions',
@@ -15128,22 +15108,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 {
   // An independent clone: this gate mutates content, and every other gate in
   // this file shares the module-level `content`.
-  const retired = indexContent({
-    frames: readJSON('data/frames.json'), parts: readJSON('data/parts.json'),
-    species: readJSON('data/species.json'), combos: readJSON('data/combos.json'),
-    enemies: readJSON('data/enemies.json'), keywords: readJSON('data/keywords.json'),
-    classes: readJSON('data/classes.json'), regions: readJSON('data/regions.json'),
-    traits: readJSON('data/traits.json'), rivals: readJSON('data/rivals.json'),
-    training: readJSON('data/training.json'), gauntlet: readJSON('data/gauntlet.json'),
-    breakout: readJSON('data/breakout.json'),
-    director: readJSON('data/director.json'), facility: readJSON('data/facility.json'),
-    philosophies: readJSON('data/philosophies.json'), operations: readJSON('data/operations.json'),
-    chaos: readJSON('data/chaos.json'), temperament: readJSON('data/temperament.json'),
-    scars: readJSON('data/scars.json'), guides: readJSON('data/guides.json'),
-    resequencer: readJSON('data/resequencer.json'), news: readJSON('data/news.json'),
-    'parts-shapes': readJSON('data/parts-shapes.json'),
-    'enemies-shapes': readJSON('data/enemies-shapes.json'),
-  });
+  const retired = indexContent(Object.fromEntries(CONTENT_FILES.map((n) => [n, readJSON(`data/${n}.json`)])));
 
   const RETIRED_PART = 'bear_hide';
   const RETIRED_GRADE = 'mythic'; // a grade id GRADES does not define
@@ -15873,6 +15838,227 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   assert.equal(checked, graded.length * GRADES.length,
     'every part was read at every grade');
   console.log(`   R84: ${graded.length} parts x ${GRADES.length} grades — a grade sharpens, and changes nothing else`);
+}
+
+// ---------------------------------------------------------------------------
+// R85 — THE TOP OF THE INSTABILITY SCALE COSTS SOMETHING, AND GIVES IT BACK.
+//
+// §3.4 has promised since M0 that a chimera at instability 100 "may go feral".
+// Measured first: instability bought a longer settle, an obedience penalty and
+// upkeep, and at 100 it bought exactly those. Worse, the obedience penalty is
+// `instability/100 x 0.2` MINUS `bond/100 x 0.2`, so a trained creature at 100
+// had a 0% ignore chance. The whole price of the top of the scale was a
+// one-time three-hour settle and $8/day.
+//
+// What ships instead is neglect, not anatomy, and every assertion below is one
+// half of that sentence. The trigger cannot be a snapshot of what a creature
+// IS, because the bear-headed eagle-winged goat this game exists to let you
+// build scores 90 and every chimera is spliced at bond 0 — a snapshot rule
+// would send the premise to Containment the moment it was made. So three
+// conditions have to hold AT ONCE, and the third is a calendar.
+{
+  const { feralStatus, feralTuning, attend, tickFeral } = await import('../splice/feral.js');
+  const { impound } = await import('../campaign/rehab.js');
+  const { agenda } = await import('../ranch/agenda.js');
+  const { guideStates } = await import('../ranch/onboarding.js');
+  const tune = feralTuning(content);
+  const HR = 3600000;
+
+  // The fixture is a real splice, not a hand-written object, so a renamed
+  // field on a chimera breaks this gate rather than quietly exempting it.
+  const mkLab = (seed) => {
+    const s = { ...newGameState(), seed, funds: 99999 };
+    s.inventory.parts = [
+      { id: 'tk-f1', partId: 'bear_head', grade: 'prime',
+        donor: { name: 'Ursa', species: 'bear', stars: 4, extractedAt: t0 } },
+      { id: 'tk-f2', partId: 'eagle_forelimbs', grade: 'prime',
+        donor: { name: 'Talon', species: 'eagle', stars: 4, extractedAt: t0 } },
+    ];
+    return s;
+  };
+  const mkFeral = (seed, patch = {}) => {
+    const s = mkLab(seed);
+    const res = spliceChimera(s, 'M', { head: 'tk-f1', forelimbs: 'tk-f2' }, content, t0);
+    assert.ok(res.ok, `the fixture splices (${res.msg ?? ''})`);
+    const ch = s.chimeras[0];
+    // Pushed to the top of the scale by hand: what the roll produces varies
+    // with the parts on the bench, and this gate is about what happens AT
+    // 100, not about which anatomy gets you there.
+    ch.instability = tune.instabilityAt;
+    ch.bond = 0;
+    Object.assign(ch, patch);
+    return { s, ch };
+  };
+
+  // 1. BEING BUILT UNSTABLE IS NOT A CRIME. The moment of the splice is the
+  //    single most dangerous moment for a snapshot rule, so it is the first
+  //    thing asserted: freshly made, maxed out, bond 0 — and safe.
+  {
+    const { s, ch } = mkFeral(8501);
+    const st = feralStatus(ch, content, t0);
+    assert.equal(st.unstable, true, 'the fixture is at the top of the scale');
+    assert.equal(st.unbonded, true, 'and nobody has trained it yet');
+    assert.equal(st.neglected, false, 'but it was made five seconds ago');
+    assert.equal(st.atRisk, false, 'so a brand new chimera is never at risk, however monstrous');
+    const { news, gone } = tickFeral(s, content, t0);
+    assert.deepEqual(gone, [], 'and the tick takes nothing');
+    assert.deepEqual(news, [], 'and says nothing');
+  }
+
+  // 2. BOND IS THE DURABLE ANSWER. Past the floor, the calendar stops
+  //    mattering at all — which is what makes the field guide's advice true.
+  {
+    const { s, ch } = mkFeral(8502, { bond: tune.bondFloor });
+    const far = t0 + tune.neglectHours * HR * 10;
+    assert.equal(feralStatus(ch, content, far).atRisk, false,
+      `bond ${tune.bondFloor} makes it impossible however long you leave it`);
+    assert.deepEqual(tickFeral(s, content, far).gone, [], 'a bonded creature is never taken');
+  }
+
+  // 3. THE DEADLINE IS SCHEDULED, NOT ROLLED (R9). How often the player opens
+  //    the app must not change what happens to their creatures. So: one tick
+  //    that jumps the whole window, and 400 tiny ticks across the same span,
+  //    have to agree — on the moment it starts pacing, and on the moment it
+  //    stops taking calls.
+  const startsAt = t0 + tune.neglectHours * HR;
+  const endsAt = startsAt + tune.windowHours * HR;
+  {
+    const coarse = mkFeral(8503);
+    tickFeral(coarse.s, content, startsAt);
+    assert.equal(coarse.ch.agitatedAt, startsAt,
+      'the clock starts WHEN THE CONDITION IS MET, not when the player next looked (R65)');
+
+    const fine = mkFeral(8503);
+    const step = (endsAt - t0) / 400;
+    let firstNoticedAt = null;
+    let lost = 0;
+    for (let at = t0; at < endsAt; at += step) {
+      // `tickFeral` REPORTS the losses rather than performing them — the
+      // roster is emptied by `impound` — so what is counted here is what the
+      // tick returned, not what is left in `state.chimeras`. Counting the
+      // roster instead would have made this assertion true for every
+      // possible implementation, which is the shape of a gate that guards
+      // nothing.
+      lost += tickFeral(fine.s, content, at).gone.length;
+      if (fine.ch.agitatedAt && firstNoticedAt === null) firstNoticedAt = at;
+    }
+    assert.ok(firstNoticedAt !== null, '400 small ticks notice it too');
+    assert.ok(firstNoticedAt - startsAt < step,
+      'and notice it at the same hour the single big tick did');
+    // The whole point: 400 chances to roll badly, and nothing was rolled.
+    assert.equal(lost, 0, 'nobody lost a creature by checking in often');
+    assert.deepEqual(tickFeral(fine.s, content, endsAt - 1).gone, [],
+      'and the window is not over until it is over');
+  }
+
+  // 4. ATTENDING CLEARS IT, IMMEDIATELY AND VISIBLY. `attend` stamps and
+  //    nothing else — the tick owns the flag — so the check is that the
+  //    WARNING leaves the card the instant the player acts, and the tick then
+  //    tidies up and says so. (If `attend` cleared the flag itself, the
+  //    "talked round" line would have no caller: R10's rule, and the reason
+  //    the ownership is where it is.)
+  {
+    const { s, ch } = mkFeral(8504);
+    tickFeral(s, content, startsAt);
+    assert.ok(feralStatus(ch, content, startsAt).agitated, 'it is pacing');
+    const answeredAt = startsAt + HR;
+    attend(ch, answeredAt);
+    assert.equal(feralStatus(ch, content, answeredAt).atRisk, false,
+      'the warning leaves the card the instant you work with it');
+    const { news, gone } = tickFeral(s, content, answeredAt);
+    assert.deepEqual(gone, [], 'and it is not taken');
+    assert.equal(ch.agitatedAt, null, 'the tick clears the flag');
+    assert.equal(news.length, 1, 'and says out loud that it settled');
+    // Past the deadline it would have been gone, so the rescue was real.
+    assert.deepEqual(tickFeral(s, content, endsAt + HR).gone, [],
+      'and answering it once buys the full window back');
+  }
+
+  // 5. EVERY WAY THE PLAYER WORKS WITH A CREATURE COUNTS. Three of the four
+  //    stamps live in modules that have nothing else to do with this one, so
+  //    the check is that they all call the same function — a fifth care
+  //    action added later without a stamp is a creature you can nurse all
+  //    week and still lose.
+  {
+    const callers = ['splice/theater.js', 'battle/statblock.js', 'splice/scars.js', 'campaign/campaign.js']
+      .filter((f) => /\battend\(/.test(readFileSync(join(root, f), 'utf8')));
+    assert.deepEqual(callers.sort(),
+      ['battle/statblock.js', 'campaign/campaign.js', 'splice/scars.js', 'splice/theater.js'],
+      'training, fighting, treating and rescuing all stamp the same field');
+  }
+
+  // 6. A MISSED WINDOW COSTS THE CREATURE — AND ONLY BORROWS IT. Zero death
+  //    language and Law 3 both land in the same assertion: it goes to a
+  //    Containment bay WHOLE. The Wing rebuilds a captured rival from its
+  //    genome, which for one of your own would hand back a stranger with the
+  //    same name and none of its level, its trained moveset or its scars.
+  {
+    const { s, ch } = mkFeral(8505);
+    ch.xp = 4200;
+    ch.moveset = ['a', 'b', 'c', 'd'];
+    ch.scars = [{ id: 'wary' }];
+    const wasId = ch.id;
+    tickFeral(s, content, startsAt);
+    const { news, gone } = tickFeral(s, content, endsAt);
+    assert.equal(gone.length, 1, 'a missed window costs the creature');
+    assert.equal(news.length, 1, 'and the wire is told');
+    for (const c of gone) impound(s, c, content, endsAt);
+    assert.equal(s.chimeras.length, 0, 'it is off the roster');
+    assert.equal(s.campaign.containment.length, 1, 'and in a bay');
+    const bay = s.campaign.containment[0];
+    assert.equal(bay.feral, true, 'flagged as one of yours rather than a captured rival');
+    assert.equal(bay.chimera, ch, 'the bay holds the creature itself, not a description of it');
+    assert.equal(bay.chimera.id, wasId, 'same id');
+    assert.equal(bay.chimera.xp, 4200, 'same level');
+    assert.deepEqual(bay.chimera.moveset, ['a', 'b', 'c', 'd'], 'same four moves you trained');
+    assert.deepEqual(bay.chimera.scars, [{ id: 'wary' }], 'same scars');
+    assert.ok(bay.unit, 'and it has a unit record, because the bay card renders one');
+    // The Wing's own gate covers the programme; this covers the handback.
+    const src = readFileSync(join(root, 'campaign/rehab.js'), 'utf8');
+    assert.ok(/if \(entry\.feral && entry\.chimera\)/.test(src),
+      'graduate() returns your own creature rather than rebuilding it from its genome');
+  }
+
+  // 7. THE PLAYER IS TOLD. A countdown nobody surfaces is a countdown that
+  //    runs out — R15's rule, with the stakes turned up: this is the only
+  //    clock in the game whose expiry removes a row from the roster.
+  {
+    const { s, ch } = mkFeral(8506);
+    assert.ok(!agenda(s, content, t0).some((i) => i.id === 'settle'),
+      'the agenda says nothing while nothing is wrong');
+    tickFeral(s, content, startsAt);
+    const row = agenda(s, content, startsAt).find((i) => i.id === 'settle');
+    assert.ok(row, 'and names it the moment it starts pacing');
+    assert.equal(row.screen, 'pens', 'pointing at the screen you fix it on');
+    assert.ok(row.hint.includes(ch.name), 'and says WHICH creature');
+    assert.equal(agenda(s, content, startsAt)[0].id, 'settle',
+      'first in the list, above the two clocks R63 put at the front — those cost a node, this costs the animal');
+
+    // The Pens: an agitated creature sorts into its own band and carries the
+    // countdown on the SHUT row, where a folded card cannot hide it.
+    const pens = readFileSync(join(root, 'splice/pens-ui.js'), 'utf8');
+    assert.ok(/id: 'agitated'/.test(pens), 'the Pens gives it a band of its own');
+    assert.ok(/feralStatus\(ch, content, t\)\.agitated\) return 'agitated'/.test(pens),
+      'and sorts by the same predicate the engine ticks on');
+    assert.ok(/feral\.agitated\s*\?\s*`<span class="pen-feral-badge">/.test(pens),
+      'the badge outranks every other badge on the shut row');
+
+    // And the field guide arrives while there is still bond to build, rather
+    // than while a countdown is running.
+    const safe = mkFeral(8507, { instability: tune.instabilityAt - 1 });
+    const before = guideStates(safe.s, content, t0).find((g) => g.guide.id === 'feral');
+    assert.ok(before, 'the guide exists');
+    assert.equal(before.status, 'done',
+      'and stays quiet while nothing you own can go feral');
+    const at = guideStates(s, content, t0).find((g) => g.guide.id === 'feral');
+    assert.equal(at.status, 'ready',
+      'and fires when you first own a creature that can — before the clock, not during it');
+    s.chimeras[0].bond = tune.bondFloor;
+    assert.equal(guideStates(s, content, t0).find((g) => g.guide.id === 'feral').status, 'done',
+      'and retires once you have taken its advice');
+  }
+
+  console.log(`   R85: instability ${tune.instabilityAt} + bond under ${tune.bondFloor} + ${tune.neglectHours}h alone = a ${tune.windowHours}h window, then the Wing`);
 }
 
 // ---------------------------------------------------------------------------

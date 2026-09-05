@@ -31,6 +31,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 
 import { indexContent } from '../render/renderer.js';
+// R85: derived, not named — see data/loader.js.
+import { CONTENT_FILES as FILES } from '../data/loader.js';
 import { SAVE_VERSION } from '../save/save.js';
 import { GRADES } from '../splice/extract.js';
 import { GRADE_MOVE_BONUS } from '../battle/statblock.js';
@@ -40,10 +42,6 @@ import { moduleFiles } from './scopecheck.js';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 
-const FILES = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits',
-  'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament',
-  'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout',
-  'parts-shapes', 'enemies-shapes'];
 
 // Each is a mechanic §1-§5 has named since M0. `prose` is how the spec says
 // it; `probe` is what the code would have to contain for it to be real.

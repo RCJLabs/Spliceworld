@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { indexContent } from '../render/renderer.js';
+import { CONTENT_FILES } from '../data/loader.js';
 import { seedTemperament } from '../splice/temperament.js';
 import { analyze } from '../splice/physiology.js';
 import { createBattle, step, playerActions, playerActive } from '../battle/engine.js';
@@ -24,41 +25,12 @@ import { chooseMoveIndex } from '../battle/ai.js';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 
+// R85: built from the list the GAME loads. This used to be its own
+// hand-written map and had drifted — `breakout` was never in it, so the
+// harness scored a world where escapees do not exist. Six copies of one
+// list, and the failure mode of missing a file is silence.
 export function loadSimContent() {
-  return indexContent({
-    frames: readJSON('data/frames.json'),
-    parts: readJSON('data/parts.json'),
-    // R81: the geometry ships as its own file now, and only the browser
-    // defers it — a Node tool reads both halves and gets them merged.
-    'parts-shapes': readJSON('data/parts-shapes.json'),
-    'enemies-shapes': readJSON('data/enemies-shapes.json'),
-    species: readJSON('data/species.json'),
-    combos: readJSON('data/combos.json'),
-    enemies: readJSON('data/enemies.json'),
-    keywords: readJSON('data/keywords.json'),
-    classes: readJSON('data/classes.json'),
-    // The harness was blind to both of these: traits never reached
-    // physiology or movesFromTokens here, so a gene could not be measured
-    // at all, and campaignMeta fell back to its empty default.
-    traits: readJSON('data/traits.json'),
-    news: readJSON('data/news.json'),
-    // R41: without this the harness benches every chimera at level 0 with a
-    // zero curve — which is the right DEFAULT for the [OP] gates, but the
-    // tuning probes need the real curve to measure it at all.
-    training: readJSON('data/training.json'),
-    gauntlet: readJSON('data/gauntlet.json'),
-    regions: readJSON('data/regions.json'),
-    rivals: readJSON('data/rivals.json'),
-    director: readJSON('data/director.json'),
-    facility: readJSON('data/facility.json'),
-  philosophies: readJSON('data/philosophies.json'),
-  operations: readJSON('data/operations.json'),
-  chaos: readJSON('data/chaos.json'),
-  temperament: readJSON('data/temperament.json'),
-  scars: readJSON('data/scars.json'),
-  guides: readJSON('data/guides.json'),
-  resequencer: readJSON('data/resequencer.json'),
-  });
+  return indexContent(Object.fromEntries(CONTENT_FILES.map((n) => [n, readJSON(`data/${n}.json`)])));
 }
 
 // A lab-perfect chimera: settled, fully bonded, uniform grade — so the sim

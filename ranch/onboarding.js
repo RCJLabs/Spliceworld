@@ -24,6 +24,7 @@ import { rivalStatus } from '../campaign/rivals.js';
 import { expressedTraits } from './breeding.js';
 import { analyze } from '../splice/physiology.js';
 import { GRADE_INDEX } from '../splice/extract.js';
+import { feralTuning } from '../splice/feral.js';
 
 export function onboardingSteps(state, content, now) {
   const caredOnce = state.ranch.stock.some((a) =>
@@ -200,6 +201,20 @@ export const GUIDE_HELPERS = {
   rivalBeaten: (state) => Object.values(state.campaign.rivals ?? {}).some((r) => (r.defeats ?? 0) > 0),
   contestOpen: (state) => (state.campaign.contested ?? []).length > 0,
   specimenLoose: (state) => (state.campaign.loose ?? []).length > 0,
+  // R85. Reachable the moment the player owns a creature that CAN go
+  // feral, which is the only useful moment to be told — the note has to
+  // arrive while there is still bond to build, not while a countdown is
+  // running. Done when every such creature is bonded past the floor,
+  // because that is the lesson: instability is not the problem, an
+  // unstable animal nobody has befriended is.
+  chimeraUnstable: (state, content) =>
+    state.chimeras.some((c) => (c.instability ?? 0) >= feralTuning(content).instabilityAt),
+  chimeraSecured: (state, content) => {
+    const t = feralTuning(content);
+    return state.chimeras.every(
+      (c) => (c.instability ?? 0) < t.instabilityAt || (c.bond ?? 0) >= t.bondFloor
+    );
+  },
   // "Caught" means it reached the roster, not that it reached a bay — the
   // guide teaches the whole route, so it is done when the route is walked.
   specimenCaught: (state) => state.chimeras.some((c) => c.rehabilitated),

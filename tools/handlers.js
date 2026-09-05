@@ -38,6 +38,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 import { indexContent } from '../render/renderer.js';
+// R85: the list the game itself loads. On disk there is no second round,
+// so both halves arrive together.
+import { CONTENT_FILES } from '../data/loader.js';
 import { newGameState } from '../save/save.js';
 import { createAnimal } from '../ranch/ranch.js';
 import { spliceChimera } from '../splice/theater.js';
@@ -49,10 +52,6 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const HOUR = 3600000;
 const t0 = 1700000000000;
 
-const CONTENT_FILES = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions',
-  'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos',
-  'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout',
-  'parts-shapes', 'enemies-shapes'];   // R81: on disk there is no second round
 
 export function loadContent() {
   const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));

@@ -124,6 +124,70 @@ const SMOKE_PAIR = ['node', '-e', `
   console.log('pair ✓  every part and every unit has exactly one body');
 `];
 
+// R85 — a neglected creature is warned before it is taken, and the taking is
+// a loan. Its own gate rather than the smoke suite's, for the usual reason:
+// the suite takes twelve minutes and this is four assertions. Runs the same
+// engine the Pens renders from, on the one clock.
+const FERAL = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { spliceChimera } = await import('./splice/theater.js');
+  const { feralTuning, feralStatus, attend, tickFeral } = await import('./splice/feral.js');
+  const { impound } = await import('./campaign/rehab.js');
+  const { agenda } = await import('./ranch/agenda.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const T = feralTuning(content), HR = 3600000, t0 = 1700000000000;
+  const startsAt = t0 + T.neglectHours * HR, endsAt = startsAt + T.windowHours * HR;
+  const mk = (seed) => {
+    const s = { ...newGameState(), seed, funds: 99999 };
+    s.inventory.parts = [{ id: 'k1', partId: 'bear_head', grade: 'prime',
+      donor: { name: 'U', species: 'bear', stars: 4, extractedAt: t0 } }];
+    const r = spliceChimera(s, 'M', { head: 'k1' }, content, t0);
+    if (!r.ok) throw new Error('fixture: ' + r.msg);
+    const ch = s.chimeras[0];
+    ch.instability = T.instabilityAt; ch.bond = 0;
+    return { s, ch };
+  };
+  const bad = [];
+  // Built unstable is not a crime.
+  { const { s, ch } = mk(1);
+    if (feralStatus(ch, content, t0).atRisk) bad.push('a chimera is at risk the moment it is spliced');
+    if (tickFeral(s, content, t0).gone.length) bad.push('and the tick takes it'); }
+  // Bond past the floor is the durable answer.
+  { const { s, ch } = mk(2); ch.bond = T.bondFloor;
+    if (feralStatus(ch, content, endsAt * 2).atRisk) bad.push('a bonded creature can still go feral'); }
+  // The deadline is scheduled, not rolled: many small ticks agree with one big one.
+  { const one = mk(3); tickFeral(one.s, content, startsAt);
+    if (one.ch.agitatedAt !== startsAt) bad.push('the clock does not start when the condition is met');
+    const many = mk(3); const step = (endsAt - t0) / 400; let lost = 0;
+    for (let at = t0; at < endsAt; at += step) lost += tickFeral(many.s, content, at).gone.length;
+    if (lost) bad.push('checking in often cost a creature — the window is a roll, not a deadline');
+    if (Math.abs((many.ch.agitatedAt ?? 0) - startsAt) > step) bad.push('small ticks and one big tick disagree'); }
+  // Attending clears it, and the player was told first.
+  { const { s, ch } = mk(4); tickFeral(s, content, startsAt);
+    if (!feralStatus(ch, content, startsAt).agitated) bad.push('a neglected creature is never warned');
+    if (!agenda(s, content, startsAt).some((i) => i.id === 'settle')) bad.push('the agenda never says so');
+    attend(ch, startsAt + HR);
+    if (feralStatus(ch, content, startsAt + HR).atRisk) bad.push('working with it does not clear the warning');
+    const r = tickFeral(s, content, startsAt + HR);
+    if (ch.agitatedAt !== null || r.news.length !== 1) bad.push('and the tick neither clears it nor says so');
+    if (tickFeral(s, content, endsAt + HR).gone.length) bad.push('it was taken anyway'); }
+  // A missed window is a loan, not a loss.
+  { const { s, ch } = mk(5); ch.xp = 4200; ch.moveset = ['a','b','c','d'];
+    tickFeral(s, content, startsAt);
+    const gone = tickFeral(s, content, endsAt).gone;
+    if (gone.length !== 1) { bad.push('a missed window costs nothing'); }
+    else { impound(s, gone[0], content, endsAt);
+      const bay = s.campaign.containment[0];
+      if (!bay || bay.chimera !== ch || bay.chimera.xp !== 4200 || bay.chimera.moveset.length !== 4) {
+        bad.push('the bay does not hold the creature itself'); } } }
+  if (bad.length) { console.error('feral ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('feral ✓  warned, answerable, scheduled, and given back');
+`];
+
 const VERBOSE = process.argv.includes('--verbose');
 
 // The R78 replay, at the unit level. A month away with a convoy already at
@@ -136,9 +200,7 @@ const CONTEST = ['node', '-e', `
   const { tickContests } = await import('./campaign/contest.js');
   const { newGameState } = await import('./save/save.js');
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
-  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
-    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout','parts-shapes','enemies-shapes'];
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const HOUR = 3600000, t0 = 1700000000000;
   const region = Object.values(content.regions)[0];
@@ -181,9 +243,7 @@ const RETIRED = ['node', '-e', `
   const { warTargetEncounter } = await import('./campaign/warroom.js');
   const { renderVaultScreen } = await import('./splice/vault-ui.js');
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
-  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
-    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout','parts-shapes','enemies-shapes'];
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
   const load = () => indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const content = load();
   const retired = load();
@@ -357,9 +417,7 @@ const BREAKOUT = ['node', '-e', `
   const { rehabPlan, startRehab, tickRehab } = await import('./campaign/rehab.js');
   const { makeSimChimera, STARTER_BUILD } = await import('./tools/sim.js');
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
-  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
-    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout','parts-shapes','enemies-shapes'];
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const HOUR = 3600000, t0 = 1700000000000;
   const fail = (m) => { console.error('breakout ✗  ' + m); process.exit(1); };
@@ -478,9 +536,7 @@ const WALK = ['node', '-e', `
   const { indexContent } = await import('./render/renderer.js');
   const { campaignWalk } = await import('./tools/sim.js');
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
-  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
-    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout','parts-shapes','enemies-shapes'];
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const fail = (m) => { console.error('walk ✗  ' + m); process.exit(1); };
   const w = campaignWalk(content, { seed: 4242, days: 45, stopAtDominion: false });
@@ -876,6 +932,51 @@ const BREAKS = [
     to: 'export const GRADE_MOVE_BONUS = 0.2;',
   },
 
+  // --- gate: feral (the top of the scale costs something, and lends it) ----
+  {
+    // The snapshot rule this was NOT built as: unstable and unbonded is
+    // enough, so the six-species chimera the game exists to let you build
+    // goes to Containment the day it is made.
+    n: 69, gate: FERAL, name: 'the trigger forgets the calendar and fires on anatomy alone',
+    file: 'splice/feral.js',
+    anchor: '  const atRisk = unstable && unbonded && neglected;',
+    to: '  const atRisk = unstable && unbonded;',
+  },
+  {
+    // R9's rule, broken the way it is usually broken: a roll per tick, so
+    // the player who checks in often loses creatures the one who does not
+    // keeps.
+    n: 70, gate: FERAL, name: 'the window becomes a per-tick roll instead of a deadline',
+    file: 'splice/feral.js',
+    anchor: '    if (now >= chimera.agitatedAt + t.windowHours * HOUR) {',
+    to: '    if ((now / HOUR | 0) % 3 === 0) {',
+  },
+  {
+    // The whole answer, gone: you can train it, fight with it and treat it
+    // all week, and the clock never notices.
+    n: 71, gate: FERAL, name: 'attending a creature stops counting as attending to it',
+    file: 'splice/feral.js',
+    anchor: '  chimera.lastAttendedAt = now;',
+    to: '',
+  },
+  {
+    // Zero death language and Law 3, in one line: the bay stops holding the
+    // creature and starts holding a description of it, so what the Wing
+    // hands back is a stranger with the same name.
+    n: 72, gate: FERAL, name: 'the Containment bay keeps a copy of the creature instead of the creature',
+    file: 'campaign/rehab.js',
+    anchor: '    chimera,\n    unit: unitFromGenome({',
+    to: '    chimera: { ...chimera, xp: 0, moveset: [] },\n    unit: unitFromGenome({',
+  },
+  {
+    // R15, with the stakes turned up: the countdown runs, and the screen
+    // whose job is to say what is open says nothing.
+    n: 73, gate: FERAL, name: 'the agenda stops surfacing the one clock that costs a creature',
+    file: 'ranch/agenda.js',
+    anchor: "      (state.chimeras ?? []).some((c) => feralStatus(c, content, now).agitated),",
+    to: '      false,',
+  },
+
   // --- gate: boot (the game reaches the screen without its pictures) -------
   {
     n: 61, gate: BOOT, name: 'the geometry goes back into the round the first paint waits on',
@@ -974,7 +1075,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -985,7 +1086,8 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
               : gate === BOOT ? 'the game on screen without the 400 KB of pictures'
                 : gate === SMOKE_PAIR ? 'both halves of every part and every unit'
                   : gate === GRADE ? 'every part at every grade, sharpened and nothing more'
-                    : gate.join(' ');
+                    : gate === FERAL ? 'a neglected creature warned, answered, and given back'
+                      : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }

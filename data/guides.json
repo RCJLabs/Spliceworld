@@ -249,6 +249,24 @@
       ]
     },
     {
+      "id": "feral",
+      "screen": "pens",
+      "order": 24,
+      "icon": "paw",
+      "title": "A creature you never visit stops being yours",
+      "body": "Instability 100 is not a crime on its own \u2014 the six-species monstrosity is the point of this laboratory. But an animal that unstable, with a bond under 40, that nobody has worked with in three days starts pacing its pen, and you get one day to go and sit with it. <em>Anything</em> counts: a training session, a fight, a treatment. Miss the window and it stops taking your calls, Containment collects it, and the Reorientation Wing will sell it back to you. Build its bond past 40 and none of this can happen to it again.",
+      "reachable": [
+        {
+          "helper": "chimeraUnstable"
+        }
+      ],
+      "done": [
+        {
+          "helper": "chimeraSecured"
+        }
+      ]
+    },
+    {
       "id": "resequencer",
       "screen": "vault",
       "order": 28,

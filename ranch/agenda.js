@@ -41,6 +41,7 @@ import { reachableEncounterIds } from '../campaign/map.js';
 import { contestRemainingMs } from '../campaign/contest.js';
 import { isInjured, fitToFight } from '../battle/statblock.js';
 import { sparCharges, canSpar } from '../campaign/sparring.js';
+import { feralStatus } from '../splice/feral.js';
 
 const HOUR = 3600000;
 const fit = fitToFight;
@@ -48,6 +49,30 @@ const fit = fitToFight;
 // Every entry answers one question: is there a click here right now? Order is
 // the order the player should think about them in — work before spending.
 export const AGENDA = [
+  {
+    // R85, and it goes above everything — including the two clocks R63 put
+    // at the front — because it is the only row on this list whose deadline
+    // ends with a creature off the roster. Everything else here costs you a
+    // node, a purse or an opportunity; this one costs you the animal.
+    //
+    // `work`, not `spend`: training is one answer and it costs $5, but a
+    // fight, a spar and a treatment all clear it too, and a row that reads
+    // as a purchase is a row a broke player skips.
+    id: 'settle', kind: 'work', screen: 'pens', label: 'Settle an agitated chimera',
+    hint: (state, content, now) => {
+      const pacing = (state.chimeras ?? [])
+        .map((c) => ({ c, f: feralStatus(c, content, now) }))
+        .filter((x) => x.f.agitated)
+        .sort((a, b) => a.f.remainingMs - b.f.remainingMs);
+      if (!pacing.length) return 'Somebody has been left alone too long.';
+      const { c, f } = pacing[0];
+      const hours = Math.max(0, f.remainingMs) / HOUR;
+      const who = pacing.length === 1 ? c.name : `${c.name} and ${pacing.length - 1} other${pacing.length === 2 ? '' : 's'}`;
+      return `${who} pacing the pen. ${hours < 1 ? 'Under an hour' : `${Math.floor(hours)}h`} before it stops taking your calls. Working with it at all is the fix.`;
+    },
+    ready: (state, content, now) =>
+      (state.chimeras ?? []).some((c) => feralStatus(c, content, now).agitated),
+  },
   {
     id: 'graduate', kind: 'work', screen: 'ranch', label: 'Graduate a donor',
     hint: 'A grown animal becomes six parts. This is where chimeras come from.',

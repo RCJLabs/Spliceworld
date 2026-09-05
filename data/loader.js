@@ -11,10 +11,27 @@
 import { indexContent, attachShapes } from '../render/renderer.js';
 
 // Everything the game needs to know before it can show you anything.
-const CORE = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout', 'feral'];
+export const CORE = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout', 'feral'];
 
 // …and everything it needs before it can draw one.
-const GEOMETRY = ['parts-shapes', 'enemies-shapes'];
+export const GEOMETRY = ['parts-shapes', 'enemies-shapes'];
+
+// R85 — and both halves together, for the Node tools.
+//
+// Every tool that scores this game builds its own `content`, and until now
+// each one did it from its own hand-written list of file names: smoke had
+// two, sim, roadmap, handlers and the break battery one each. Six lists for
+// one set of files, so shipping `feral.json` meant editing six places and
+// the failure mode for missing one was not an error — it was `content.feral`
+// coming back undefined and the tuning silently falling back to its
+// defaults. That is R41's training.json bug (nineteen names for twenty
+// files, and the browser ran on fallback tuning for a milestone) with the
+// blast radius spread across the toolchain.
+//
+// This is the list the GAME loads, so a tool built from it is by definition
+// scoring the same content the player has. R81's lesson, again: derive it,
+// do not name it.
+export const CONTENT_FILES = [...CORE, ...GEOMETRY];
 
 async function grab(base, name) {
   const res = await fetch(`${base}/data/${name}.json`);
