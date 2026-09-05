@@ -2491,5 +2491,16 @@ button.dex-cell:focus-visible {
 .feral-panel p { margin: 0 0 5px; }
 .feral-panel p:last-child { margin-bottom: 0; }
 .feral-head { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+/* Measured at 380px: `.fine-print`'s muted grey on the warn ground came out
+   at 3.42:1, under AA for text this size, on the one panel in the game that
+   explains how not to lose a creature. `--text` is the readable foreground
+   in every theme and the ground is `--warn-dim` in every theme, so pairing
+   them holds across all five; the hierarchy is carried by size and weight
+   rather than by dimming the thing that has to be read. */
+.feral-panel .fine-print { color: var(--text); }
+/* …except the consequence, which keeps the warn hue for emphasis and clears
+   AA on its own (5.6:1). Written after the rule above, which is specific
+   enough to have swallowed `.scar-warn` and flattened the last line. */
+.feral-panel .fine-print.scar-warn { color: var(--warn); }
 .feral-head .countdown { color: var(--warn); font-variant-numeric: tabular-nums; }
 .pen-fold .animal-card { border: none; padding: 0; margin: 0; background: none; }

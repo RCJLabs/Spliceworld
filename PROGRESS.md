@@ -1,5 +1,147 @@
 # PROGRESS
 
+## Session 108 — R85: Feral at instability 100 ✅
+
+**Acceptance criterion:** instability 100 does something the player can see
+and recover from, or §3.4 stops designing it — **passes**, by the first
+route. `SAVE_VERSION` **38 → 39** (migration seeds `lastAttendedAt` and
+`agitatedAt`, so nobody's roster is retroactively neglected by an update);
+`sw.js` bumped to `spliceworld-v39-r85`.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ **new** — the whole mechanic, plus a walk assertion that a player who shows up never loses a creature |
+| `npm run battery` | ✓ — **74 breaks**, a thirteenth gate, 6 new |
+| `npm run roadmap` | ✓ — **20** stated numbers (3 new: the bond floor, the neglect window, the answer window) |
+| `npm run a11y` | ✓ — 60 controls at 380px, now including a pacing creature's card |
+| `npm run boot` | ✓ — 1031 KB to put the game on screen |
+| `npm run scopecheck` · `npm run handlers` · `npm run sim` | ✓ |
+
+### What the top of the scale actually cost, before this
+
+Measured first, and the entry understated it. At instability 100 you paid a
+one-time three-hour settle and $8/day — and the obedience penalty is
+`instability/100 x 0.2` **minus** `bond/100 x 0.2`, so a trained creature at
+the very top of the scale had a **0% ignore chance**. The top of the scale
+was cheaper than the middle.
+
+### The trigger is neglect, not anatomy
+
+This is the whole design, and it is a constraint the content forced. The
+bear-headed, eagle-winged goat this game exists to let you build scores **90**
+instability, a seven-species build reaches **100**, and *every* chimera is
+spliced at bond 0. A snapshot rule on "unstable and unbonded" would therefore
+send the game's own premise to Containment the day it was made — not a
+mechanic, a punishment for playing.
+
+So three conditions have to hold at once, and the third is a calendar:
+
+| | |
+|---|---|
+| instability | **100** |
+| bond | under **40** |
+| nobody has worked with it in | **72 hours** |
+| then you have | **24 hours** |
+
+Anything you do *with* a creature answers it — a training session, a fight, a
+treatment, a rescue all stamp the same field — and the warning leaves the
+card the instant you act. Raising bond past 40 makes it impossible at all,
+which is what the field guide tells you *before* any clock is running.
+
+### The window opens when you look, and that is R9's rule not R65's
+
+The first draft's comment said the clock starts when the condition is met
+(R65) while the code started it when the player looked. Those are opposite
+behaviours, and the code was right: R9's own exemption in the R65 sweep says
+why — a counter-offensive's window opens on sight "precisely so a week away
+cannot cost a node they were never given the chance to defend". Same rule,
+same reason, a creature instead of a node.
+
+**No absence of any length can cost you an animal.** Only being here and
+still ignoring that one creature for a full day can.
+
+### Losing it is a loan
+
+R8's Reorientation Wing had been shipped and idle for exactly this since. A
+bay now holds the creature **itself** rather than a description of it: the
+Wing was written for a captured rival and rebuilds one from its genome, which
+for a creature of your own would hand back a stranger with the same name and
+none of its level, its trained moveset or its scars.
+
+### On the screen
+
+The Pens gives agitation a band above all three existing ones — those sort by
+what you would *like* to do, this one sorts by what it costs to do nothing —
+a countdown badge on the **shut** row that outranks even the Infirmary clock,
+and an open-card panel naming all three conditions and what ends each. The
+agenda opens with a `settle` row above the two clocks R63 put at the front.
+R15's rule with the stakes turned up: this is the only clock in the game
+whose expiry removes a row from the roster.
+
+Rendered at 380px, all five themes: panel 326px inside 380px, no horizontal
+overflow, no console errors. The explanation text measured **3.42:1** on the
+warn ground — under AA for text that size, on the one panel that explains how
+not to lose a creature — and is now 5.7–8.0:1 across every theme.
+
+### Three fixtures that could not reach the thing they were guarding
+
+The recurring shape of this session, and R81's lesson in a new place: **the
+gate was general, the fixture was not.**
+
+1. The **R65 sweep** walks the whole save for any timestamp equal to the
+   return. It would have flagged `agitatedAt` — except its chimeras are
+   lab-perfect at bond 100, so none could ever agitate. It now carries a
+   neglected creature, `agitatedAt` is the second named exemption with its
+   reason written down, and dropping the exemption fails with
+   `chimeras.2.agitatedAt`.
+2. The **a11y fixture** got a pacing creature, and passed on a card with no
+   alert on it — `lastAttended` takes the MAX of `lastAttendedAt`,
+   `createdAt` and `lastTrainedAt`, and the twin was cloned from a chimera
+   spliced that second. Two of the three stamps were set; the third
+   un-neglected it.
+3. Both **R85 clock assertions** ticked at exactly the moment the condition
+   was met, where opening-on-sight and back-dating are the same number. True
+   of both implementations, guarding neither. Both now tick a fortnight late.
+
+The 400-tick assertion had the same disease: it counted the roster, but
+`tickFeral` *reports* losses and `impound` performs them, so it was true for
+every possible implementation. The battery is what found that one.
+
+### Six copies of one list
+
+Shipping `data/feral.json` meant editing the content-file list in six places
+— smoke had two; sim, roadmap, handlers, a11y and the battery one each — and
+the failure mode for missing one is not an error. It is `content.feral`
+coming back `undefined` and the tuning silently falling back to its defaults:
+R41's `training.json` bug with the blast radius spread across the toolchain.
+`data/loader.js` now exports the list the **game** loads and every tool
+derives from it. `sim.js` had already drifted — it was scoring a world with
+no breakouts in it.
+
+### Known issues
+
+- The 180-day walk never trips the mechanic, and that is the point rather
+  than a gap: the walker's builds top out at instability **92**, and it
+  trains and fights every day. `walk.feral.lost === 0` is asserted as the
+  safety property it is. The mechanic's own coverage is the smoke block and
+  the battery gate, which drive it end to end.
+- One rounding seam: the agenda hint floors hours (`20h`) where the Pens
+  badge rounds (`21h 0m`). The `defend` and `rescue` rows have floored the
+  same way since R63, so this matches its siblings rather than deviating
+  alone.
+- A feral bay has no expiry, unlike a rival's captive board. Deliberate — it
+  is your creature and the Wing will hold it — but it means a player can
+  accumulate bays they never empty.
+
+### Next session's first task
+
+**R86 — Gene Juice.** §3.9 says "every timer skippable with Gene Juice
+(earned currency only)"; zero hits in the codebase and no timer skippable at
+any price. It is the last unbuilt clause of the offline-timer spec and the
+one the TWA pitch leans on — a timer game with no earned skip is a timer game
+that just makes you wait. Same shape as R84 and R85: a decision before a
+build, and the decision gets measured.
+
 ## Session 107 — R84: Grades promise an ability and deliver a percentage ✅
 
 **Acceptance criterion:** an Apex part either grants a materially different

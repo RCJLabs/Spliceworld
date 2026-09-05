@@ -244,7 +244,7 @@ export function renderPensScreen(root, ctx) {
               return `
                 <div class="feral-panel" role="group" aria-label="${ch.name} is agitated">
                   <p class="feral-head">${renderIcon('warning-triangle')} Pacing the pen — <strong class="countdown">${fmtDuration(feral.remainingMs)}</strong> to talk it round.</p>
-                  <p class="fine-print">Instability ${ch.instability}/100, bond ${ch.bond}/100, and nobody has worked with it in ${tun.neglectHours} hours. All three at once is what did it; any one of them going away is what fixes it.</p>
+                  <p class="fine-print">Instability ${ch.instability}/100, bond ${ch.bond}/100, and it is over ${tun.neglectHours} hours since anyone worked with it. All three at once is what did it; any one of them going away is what fixes it.</p>
                   <p class="fine-print">Do <em>anything</em> with it — a training session, a fight, a treatment — and it settles. ${
                     feral.bondNeeded > 0
                       ? `${feral.bondNeeded} more bond and it stops being able to happen at all.`

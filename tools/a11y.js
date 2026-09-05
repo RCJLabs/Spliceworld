@@ -45,12 +45,10 @@ async function fixtureSave() {
   const { spliceChimera } = await import('../splice/theater.js');
   const { createAnimal } = await import('../ranch/ranch.js');
   const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
-  const files = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits',
-    'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament',
-    'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout',
-    // R81: a Node tool reads every file off disk, so it gets the geometry
-    // that the browser now fetches after its first paint.
-    'parts-shapes', 'enemies-shapes'];
+  // R85: the list the game itself loads, rather than a sixth copy of it. A
+  // Node tool reads every file off disk, so it gets the geometry the browser
+  // fetches after its first paint (R81) in the same round.
+  const { CONTENT_FILES: files } = await import('../data/loader.js');
   const content = indexContent(Object.fromEntries(files.map((n) => [n, readJSON(`data/${n}.json`)])));
   const now = Date.now();
   const s = { ...newGameState(), seed: 4242, funds: 20000, saveVersion: SAVE_VERSION };
@@ -82,6 +80,31 @@ async function fixtureSave() {
     beaten: Object.keys(content.enemies).slice(0, 2), traits: Object.keys(content.traits ?? {}).slice(0, 2), variants: [] };
   s.discoveredCombos = Object.keys(content.combos).slice(0, 3);
   s.chimeras[0].settleUntil = now - 1000;
+  // R85 — a second creature, pacing its pen, so this gate measures the one
+  // alert on the Pens whose countdown ends with the roster one shorter. The
+  // band, the badge on the shut row and the open card's explanation are all
+  // new controls and new text at 380px, and a fixture that cannot reach them
+  // would leave the newest thing on the screen the only unmeasured thing on
+  // it. Built by hand rather than by waiting: `agitatedAt` is what the tick
+  // stamps, and this gate is about the pixels, not the clock.
+  {
+    const twin = JSON.parse(JSON.stringify(s.chimeras[0]));
+    twin.id = 'a11y-feral';
+    twin.name = 'Chompers';
+    twin.instability = 100;
+    twin.bond = 0;
+    // Every one of these, because `lastAttended` takes the MAX of the three
+    // — a creature is attended by being made, so a twin cloned from a
+    // chimera spliced this second is not neglected however far back its
+    // other stamps go. The first draft set only two of them and the gate
+    // passed on a card with no alert on it at all.
+    twin.createdAt = now - 80 * 3600000;
+    twin.settleUntil = now - 79 * 3600000;
+    twin.lastAttendedAt = now - 80 * 3600000;
+    twin.lastTrainedAt = now - 80 * 3600000;
+    twin.agitatedAt = now - 3 * 3600000;
+    s.chimeras.push(twin);
+  }
   // R82 — one loose specimen, so the Labs tab paints its Hunt button and
   // this gate measures it like every other control. Built the way the world
   // builds one: a lab that has lost to you, and a clock dated far enough

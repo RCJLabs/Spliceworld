@@ -6024,6 +6024,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // data file, a module, a board, a launcher and a first-use moment, and
     // dropping its note has to fail the build like everything else here.
     'breakout',
+    // R85. The top of the instability scale is a system on its own terms —
+    // a data file, a module, its own band on the Pens, an agenda row and a
+    // first-use moment that arrives BEFORE the clock does. On the roll so
+    // that dropping its note fails the build like everything else here.
+    'feral',
     'dex',
   ];
   const covered = new Set(guides.map((g) => g.id));
@@ -6328,6 +6333,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['the Pairing Suite is installed', () => { lab.facility.scanner = 3; }, ['pairing']],
     // R42: the county falls, and the coalition's storage opens.
     ['the county is theirs', () => { lab.dominionAt = t0; }, ['gauntlet']],
+    // R85: and the player finally builds something at the top of the scale.
+    // The note is reachable the moment they OWN a creature that could go
+    // feral — while there is still bond to build — rather than once one is
+    // already pacing, which would be a tutorial arriving during the exam.
+    // Nothing earlier in this walk touches `instability`, so every step
+    // above it has been proving the note stays quiet.
+    ['a monstrosity comes off the bench', () => { lab.chimeras[0].instability = 100; }, ['feral']],
     // R82: and a lab that has been losing to you starts losing specimens.
     // Last, because it is the only note in this walk that is downstream of
     // BEATING a rival rather than of meeting one.
