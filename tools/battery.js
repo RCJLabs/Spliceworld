@@ -845,15 +845,19 @@ const BREAKS = [
   },
   {
     n: 50, gate: ROADMAP, name: 'SAVE_VERSION goes stale in the spec',
-    file: 'ROADMAP.md', anchor: '- save version: 38', to: '- save version: 37',
+    file: 'ROADMAP.md', anchor: '- save version: 39', to: '- save version: 38',
   },
   {
-    // Feral at instability 100 has zero hits in the codebase. Describing it
-    // as shipped is the exact defect R77 was filed for.
+    // R85 shipped Feral, which is what this break used to point at, so it
+    // now points at the one gap R77 named that is still a gap: Gene Juice
+    // has zero hits in the codebase and no timer is skippable at any price.
+    // Describing it as shipped is the exact defect R77 was filed for, and
+    // this break follows the gap rather than the wording — when R86 lands
+    // it moves again, or goes, and the roadmap gate is what says so.
     n: 51, gate: ROADMAP, name: 'a designed-but-absent mechanic is described as if it works',
     file: 'ROADMAP.md',
-    anchor: 'not shipped — queued as R85**; instability',
-    to: 'shipped**; instability',
+    anchor: 'not shipped — queued as R86**. No timer',
+    to: 'shipped**. No timer',
   },
   {
     n: 52, gate: ROADMAP, name: 'a named gap points at a phase the roadmap does not carry',
