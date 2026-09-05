@@ -48,7 +48,15 @@ const REPORT = process.argv.includes('--report');
 // species is a gate people learn to raise without reading. What it must
 // catch is a whole class of file coming back in front of the player, which
 // is what happened here and cost 400 KB.
-const FIRST_PAINT_KB = 1100;
+// R119 raises it 1100 -> 1106, measured at 1102. This gate loads a FRESH
+// save, and on a fresh save the founding choice IS the first paint: the
+// player has no herd and no other screen to be on. So `ranch/founding-ui.js`
+// (4.4 KB) and `data/starters.json` are the thing being looked at rather
+// than weight in front of it — and the module is fetched on that first-ever
+// open only, never again for that save. What the gate exists to catch is
+// unchanged: a whole CLASS of file arriving in front of the player, the way
+// the shape files once did at 400 KB.
+const FIRST_PAINT_KB = 1106;
 
 // Anything matching this is geometry, and geometry is never allowed in
 // front of the game.

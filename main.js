@@ -353,6 +353,16 @@ async function boot() {
   // is not seeded here at all: it goes to the picker, and the picker seeds
   // it. Only a brand-new save can be waiting; one that already has animals
   // keeps every one of them.
+  // R119 — the dialog controller BEFORE the founding choice, not after it.
+  // It was installed further down, which meant the very first screen of the
+  // game — the only dialog a player cannot escape out of — was the one
+  // dialog with no focus trap, no accessible name and no focus restore.
+  // Measured in a real browser: `aria-label` came back null on it.
+  //
+  // R71: one door for sound, theme, save file and lab (save slot)
+  // management — see save/settings-ui.js for all four.
+  installDialogBehaviour($('#overlay'));
+
   if (needsFounding(state, content)) {
     const { renderFounding } = await import('./ranch/founding-ui.js');
     renderFounding($('#overlay'), ctx, () => {
@@ -419,12 +429,6 @@ async function boot() {
   // Audio: context on first gesture (autoplay policy), mute persisted.
   sfx.setMuted(state.settings.muted);
   document.addEventListener('pointerdown', () => sfx.initAudio(), { once: true });
-
-  // R71: one door for sound, theme, save file and lab (save slot)
-  // management — see save/settings-ui.js for all four. The footer used to
-  // carry a mute button and a save-file button side by side; a slot picker
-  // would have made a third.
-  installDialogBehaviour($('#overlay'));
 
   const settingsBtn = $('#settings');
   settingsBtn.innerHTML = renderIcon('settings');

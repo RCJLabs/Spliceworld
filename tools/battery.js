@@ -519,6 +519,85 @@ const STANCE = ['node', '-e', `
   console.log('stance ✓  the enemy commits first, a brace answers it and says what it costs, the counter-class comes in free');
 `];
 
+// R119 — the first splice has a decision in it. Its own gate: five foundings
+// and six rules, none of which the nine-minute suite needs to be run for.
+const FOUNDING = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { foundLab, needsFounding, ensureRanchSeeded, ageStage } = await import('./ranch/ranch.js');
+  const { extractAnimal } = await import('./splice/extract.js');
+  const { spliceChimera } = await import('./splice/theater.js');
+  const { agenda } = await import('./ranch/agenda.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000;
+  const bad = [];
+  const labs = content.starterLabs ?? [];
+
+  if (labs.length < 5) bad.push('only ' + labs.length + ' founding labs');
+
+  // 1. a fresh save is WAITING; a save with a herd never is
+  {
+    const fresh = { ...newGameState(), seed: 4242 };
+    if (!needsFounding(fresh, content)) bad.push('a brand-new save is not asked to choose a lab');
+    if (fresh.ranch.stock.length) bad.push('and it already owns animals');
+    const old = { ...newGameState(), seed: 4242 };
+    ensureRanchSeeded(old, content, t0);
+    if (needsFounding(old, content)) bad.push('a save that already has a herd is asked to choose again');
+  }
+
+  // 2. every lab: three animals, exactly one grown, two species in the vault,
+  //    and a first chimera that is actually a MIX
+  const worn = [];
+  for (const lab of labs) {
+    const s = { ...newGameState(), seed: 4242 };
+    foundLab(s, content, lab.id, t0);
+    if (s.ranch.stock.length !== 3) bad.push(lab.id + ' seeds ' + s.ranch.stock.length + ' animals, not 3');
+    const grown = s.ranch.stock.filter((a) => ageStage(a, content, t0) !== 'juvenile').length;
+    if (grown !== 1) bad.push(lab.id + ' seeds ' + grown + ' grown donors, not 1');
+    for (const a of [...s.ranch.stock]) {
+      if (ageStage(a, content, t0) !== 'juvenile') extractAnimal(s, a.id, content, t0);
+    }
+    const vault = new Set(s.inventory.parts.map((p) => content.parts[p.partId]?.species));
+    if (vault.size < 2) bad.push(lab.id + ' offers ' + vault.size + ' species to splice from');
+    const bySlot = {};
+    for (const p of s.inventory.parts) {
+      const sl = content.parts[p.partId]?.slot;
+      if (sl && !bySlot[sl]) bySlot[sl] = p.id;
+    }
+    const made = spliceChimera(s, 'M', bySlot, content, t0);
+    if (!made.ok) { bad.push(lab.id + ' cannot splice on day one: ' + made.msg); continue; }
+    const c = s.chimeras[s.chimeras.length - 1];
+    const mix = new Set(Object.values(c.tokens ?? {}).map((tk) => content.parts[tk.partId]?.species));
+    if (mix.size < 2) bad.push(lab.id + ' builds a PUREBRED first creature');
+    worn.push([...mix].sort().join('+'));
+  }
+  if (new Set(worn).size !== worn.length) bad.push('two labs produce the same first creature');
+
+  // 3. the crate holds no head, and cannot be spliced alone
+  for (const lab of labs) {
+    for (const pid of lab.crate ?? []) {
+      if (content.parts[pid]?.slot === 'head') bad.push(lab.id + " crate holds a head");
+      if (content.parts[pid]?.species === lab.donor) bad.push(lab.id + ' crate is the donor species');
+    }
+  }
+  {
+    const s = { ...newGameState(), seed: 4242 };
+    foundLab(s, content, labs[0].id, t0);
+    const only = {};
+    for (const p of s.inventory.parts) only[content.parts[p.partId].slot] = p.id;
+    if (spliceChimera(s, 'M', only, content, t0).ok) bad.push('the crate alone makes a chimera');
+    if (agenda(s, content, t0).some((i) => i.id === 'splice')) {
+      bad.push('the agenda offers a splice there is no head for');
+    }
+  }
+
+  if (bad.length) { console.error('founding \u2717  ' + bad.join('; ')); process.exit(1); }
+  console.log('founding \u2713  ' + labs.length + ' labs, every one a real choice, a real mix and no head in the crate');
+`];
+
 // R106 — the opening tells the truth about the wall it walks you into. Its
 // own gate for the usual reason: the smoke suite takes nine minutes and this
 // is one fresh save and four assertions, all of them on the one row that has
@@ -1718,6 +1797,36 @@ const BREAKS = [
     to: '  const intent = battle.intent ?? null;',
   },
   {
+    n: 99, gate: FOUNDING, name: 'the starter herd goes back to being a literal, so every player builds the same creature',
+    file: 'ranch/ranch.js',
+    anchor: '  const herd = lab ? [lab.pair, lab.pair, lab.donor] : [\'goat\', \'goat\', \'bear\'];',
+    to: "  const herd = ['goat', 'goat', 'bear'];",
+  },
+  {
+    n: 100, gate: FOUNDING, name: 'the founding crate is never delivered, so the first splice is a purebred again',
+    file: 'ranch/ranch.js',
+    anchor: '  for (const partId of lab?.crate ?? []) {',
+    to: '  for (const partId of []) {',
+  },
+  {
+    n: 101, gate: FOUNDING, name: 'a brand-new save stops being asked which laboratory it is',
+    file: 'ranch/ranch.js',
+    anchor: '  return (content?.starterLabs?.length ?? 0) > 0;',
+    to: '  return false;',
+  },
+  {
+    n: 102, gate: FOUNDING, name: 'a crate grows a head, so it can be spliced alone on day one',
+    file: 'data/starters.json',
+    anchor: '"eagle_forelimbs",',
+    to: '"eagle_head",',
+  },
+  {
+    n: 103, gate: FOUNDING, name: 'the agenda points at a splice the Theater will refuse',
+    file: 'ranch/agenda.js',
+    anchor: "    ready: (state, content) => (state.inventory.parts ?? [])\n      .some((p) => content?.parts?.[p.partId]?.slot === 'head'),",
+    to: '    ready: (state) => (state.inventory.parts ?? []).length > 0,',
+  },
+  {
     n: 96, gate: STANCE, name: 'the Brace button promises mitigation it will not get',
     file: 'battle/engine.js',
     anchor: "  if (!p.braced) return stanceLine(content, p.why, { gain: p.gain });",
@@ -1755,7 +1864,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -1771,6 +1880,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                         : gate === RAID ? 'the State comes for the ranch, fairly'
                           : gate === OPENING ? 'the opening tells the truth about the wall'
                             : gate === STANCE ? 'the opposition commits before you answer'
+              : gate === FOUNDING ? 'five laboratories, and a first splice worth making'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;

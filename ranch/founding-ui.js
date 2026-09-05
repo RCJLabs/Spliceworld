@@ -1,21 +1,7 @@
-// The founding choice (R119). The first thing a new player sees, and until
-// R119 the first thing they saw was somebody else's animals.
-//
-// MEASURED, and this is the whole reason the screen exists: the starter herd
-// was `['goat', 'goat', 'bear']` with the goats newborn, so the only animal
-// that could be graduated on day one was the bear — and a graduation yields
-// six parts from ONE species. The distinct species available to splice from
-// was exactly one, which means the Surgery Theater, the system this game is
-// named for, opened with exactly one creature anybody could build. Every
-// player's first "chimera" was the same purebred bear. M0's own done-when is
-// "a bear-headed, eagle-winged goat renders and persists"; nothing on day one
-// could produce one.
-//
-// So: five labs, and the lab you pick decides your donor, your breeding pair
-// and a crate of parts from a third species — which is what turns the first
-// splice from a formality into a decision. The choice changes WHICH creature,
-// never HOW MUCH: three animals, one grown and two juvenile, all Standard,
-// under every lab, so A1's wall and R106's arithmetic are untouched.
+// The founding choice (R119) — the first thing a new player sees, and until
+// R119 the first thing they saw was somebody else's animals. The finding,
+// the crate rule and the measured balance are all in data/starters.json's
+// _doc; this file is the screen.
 //
 // It renders into the shared overlay (R73's dialog: focus trap, restore,
 // aria-label) with one difference — `data-locked`, because there is no game
