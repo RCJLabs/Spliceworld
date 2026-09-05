@@ -10795,7 +10795,11 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // R48's own rule — an entry whose whole value is a NUMBER (hours left on
     // a convoy, hours left on a captive) — so those are named here too;
     // anything else with a function hint has to argue its way onto this list.
-    const NUMBERED = ['spar', 'defend', 'rescue'];
+    // R85 adds the fourth, by the same rule and with the same argument: the
+    // value of the row is WHICH creature and HOW LONG. "Somebody has been
+    // left alone too long" is not a reason to open the Pens; "Chompers
+    // pacing the pen, 20h before it stops taking your calls" is.
+    const NUMBERED = ['spar', 'defend', 'rescue', 'settle'];
     const strings = AGENDA.filter((a) => !NUMBERED.includes(a.id));
     assert.ok(strings.length > 10, 'there are plenty of them');
     for (const a of strings) {
