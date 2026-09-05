@@ -6349,7 +6349,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     }, ['contest']],
     ['the Pairing Suite is installed', () => { lab.facility.scanner = 3; }, ['pairing']],
     // R42: the county falls, and the coalition's storage opens.
-    ['the county is theirs', () => { lab.dominionAt = t0; }, ['gauntlet']],
+    // R87: dominion opens the Gauntlet AND puts the player in range of the
+    // Compliance Task Force — taking the whole county is provocation enough
+    // on its own, so both notes light on the same step. The first cut gave
+    // the Task Force a step of its own further down and this walk caught it:
+    // by then the note had already been live for two steps.
+    ['the county is theirs', () => { lab.dominionAt = t0; }, ['gauntlet', 'taskforce']],
     // R85: and the player finally builds something at the top of the scale.
     // The note is reachable the moment they OWN a creature that could go
     // feral — while there is still bond to build — rather than once one is
@@ -6362,13 +6367,6 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // born settled, so nothing before this step has been buyable — which is
     // the whole of what the walk is asked to prove about it.
     ['a clock worth paying for', () => { lab.ranch.eggs[0].hatchAt = t0 + HOUR; }, ['rush']],
-    // R87: and the State finally notices. Nothing earlier in this walk holds
-    // enough of the county at enough heat to be in range, which is what the
-    // steps above have been proving about it.
-    ['the State notices', () => {
-      lab.campaign.notoriety = 9999;
-      lab.campaign.heldNodes = Object.values(content.regions).flatMap((r) => r.nodes).map((n) => n.id);
-    }, ['taskforce']],
     // R82: and a lab that has been losing to you starts losing specimens.
     // Last, because it is the only note in this walk that is downstream of
     // BEATING a rival rather than of meeting one.
