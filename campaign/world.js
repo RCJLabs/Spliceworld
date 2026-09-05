@@ -23,6 +23,7 @@ import { tickCampaign } from './campaign.js';
 import { tickBreakouts } from './breakout.js';
 import { tickFeral } from '../splice/feral.js';
 import { impound } from './rehab.js';
+import { tickTaskforce } from './taskforce.js';
 import { pushNews, emitNews } from './wire.js';
 
 export function elapsedSince(state, now) {
@@ -53,5 +54,10 @@ export function tickWorld(state, content, now) {
   const feral = tickFeral(state, content, now);
   for (const line of feral.news) pushNews(state, line);
   for (const chimera of feral.gone) impound(state, chimera, content, now);
+  // R87 — the Task Force last, and after the campaign tick above, because
+  // whether they are in range depends on the notoriety that tick just paid
+  // out and on whether the county fell during it. It also caps notoriety,
+  // so this is the one place that clamp lives.
+  for (const line of tickTaskforce(state, content, now).news) pushNews(state, line);
   state.lastTickAt = now;
 }

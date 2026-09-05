@@ -13,6 +13,7 @@ import { attend } from '../splice/feral.js';
 import { recordRivalResult, scoutStable } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';
+import { resolveRaid } from './taskforce.js';
 import { tickContests, resolveContest, isContested } from './contest.js';
 import { resolveBreakout } from './breakout.js';
 import { playerLine, rivalLine } from './monologue.js';
@@ -500,6 +501,17 @@ export function resolveBattle(state, battle, content, now) {
   // A counter-offensive fought to a conclusion. Holding the line has to
   // expand what you can CREATE rather than just what you own (Law 2), so
   // the wreckage goes to Containment: enemy tech, salvage, new parts.
+  // R87 — the Compliance Task Force. Before the node defence below, because
+  // a raid has no node and would otherwise fall through every branch here
+  // and resolve as nothing at all.
+  if (context.kind === 'raid' && context.raidId) {
+    const res = resolveRaid(state, content, context.raidId, result.outcome, now);
+    if (res) {
+      for (const line of res.news ?? []) pushNews(state, line);
+      detail.raid = res;
+    }
+  }
+
   if (context.kind === 'defend' && context.nodeId) {
     const node = nodeById(content, context.nodeId);
     const { news, held } = resolveContest(state, content, context.nodeId, result.outcome, now);

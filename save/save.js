@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 40;
+export const SAVE_VERSION = 41;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -495,6 +495,19 @@ const migrations = {
   // creature that goes agitated does so because it was genuinely left alone
   // for three days AFTER the update, which is a thing the player can see
   // coming and answer.
+  // R87 — the Task Force's board and its schedule. Nothing is seeded from
+  // the past: an existing save is not retroactively raided, and the first
+  // raid is scheduled by the first tick that finds the player in range.
+  41: (save) => {
+    save.campaign ??= {};
+    save.campaign.raid ??= null;
+    save.campaign.nextRaidAt ??= null;
+    save.campaign.raidCount ??= 0;
+    save.campaign.raidsHeld ??= 0;
+    save.campaign.leviedTotal ??= 0;
+    save.campaign.notorietyCapped ??= false;
+    return save;
+  },
   // R86 — one counter. Nothing else about a rush touches the schema: the
   // clocks it moves are fields every save already has.
   40: (save) => {
@@ -571,6 +584,10 @@ export function newGameState() {
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,
       loose: [], nextBreakAt: null, breakoutCount: 0,
       operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
+      // R87: the Compliance Task Force. `raid` is the one at the gate,
+      // `nextRaidAt` the schedule R9's rule requires, and the counters are
+      // what the escalation and the wire read.
+      raid: null, nextRaidAt: null, raidCount: 0, raidsHeld: 0, leviedTotal: 0, notorietyCapped: false,
     },
     news: [],
     settings: { muted: false },

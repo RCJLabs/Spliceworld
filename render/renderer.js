@@ -72,6 +72,10 @@ export function indexContent(raw) {
     // engine edit and a line can be rewritten without either.
     feralMeta: raw.feral?.tuning ?? null,
     feralLines: raw.feral?.lines ?? null,
+    // R87: the Compliance Task Force. Tuning and copy split the way every
+    // other system splits them, so a rung can move without an engine edit.
+    taskforceMeta: raw.taskforce?.tuning ?? null,
+    taskforceLines: raw.taskforce?.lines ?? null,
     rushMeta: raw.rush?.tuning ?? null,
     rushKinds: raw.rush?.kinds ?? null,
     directorRules: raw.director ? byId(raw.director.counters) : {},

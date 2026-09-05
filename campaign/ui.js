@@ -19,6 +19,7 @@ import { forecast, diagnose, wantsDiagnosis } from '../battle/forecast.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
+import { activeRaid, raidRemainingMs, levyOf, raidEncounter } from './taskforce.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js';
 // STABLE is the cap, not a coincidence: A1 measured the campaign at three
@@ -287,6 +288,24 @@ function renderMap(root, ctx) {
       <button type="button" data-defend="${a.nodeId}"${canFight ? '' : ' disabled'}>${renderIcon('shield')} ${canFight ? 'Defend' : noneFit}</button>
     </div>`).join('');
 
+  // R87 — the Compliance Task Force. An alert, ABOVE the subtab bar with the
+  // counter-offensives and the rescue windows, because R15's rule is that a
+  // live countdown which costs something cannot go behind a tab — and this
+  // is the only one that bills you.
+  const raid = activeRaid(state);
+  const raidCard = !raid ? '' : (() => {
+    const levy = levyOf(state, content);
+    const enc = raidEncounter(state, content, raid);
+    return `
+    <div class="encounter contested">
+      <div><strong>Compliance Task Force</strong> <span class="lineage">at the gate</span><br>
+      <span class="fine-print"><strong class="countdown">${fmtDuration(raidRemainingMs(raid, t))}</strong> before they serve papers · they leave with <strong>$${levy.fine}</strong>${
+        levy.stock ? ` and ${levy.stock} of the herd` : ''
+      }${enc?.intel ? ` · ${enc.intel}` : ''}. Nothing of yours in the Pens is on the table.</span></div>
+      <button type="button" data-raid="${raid.id}"${canFight ? '' : ' disabled'}>${renderIcon('shield')} ${canFight ? 'Defend the ranch' : noneFit}</button>
+    </div>`;
+  })();
+
   const captives = state.campaign.captives.map((cap) => `
     <div class="encounter captive">
       <div><strong>${cap.chimera.name}</strong> <span class="lineage">captured</span><br>
@@ -456,6 +475,7 @@ function renderMap(root, ctx) {
         <div><span class="econ-label">Record</span><strong>${state.warRecord.wins}W–${state.warRecord.losses}L</strong></div>
       </div>
     </section>
+    ${raidCard ? `<section class="card contest-card raid-card"><h3>${renderIcon('warning-triangle')} Compliance Task Force</h3>${raidCard}</section>` : ''}
     ${contests ? `<section class="card contest-card"><h3>${renderIcon('shield')} Counter-Offensive</h3>${contests}</section>` : ''}
     ${captives ? `<section class="card captive-alert"><h3>⏳ Captured — Rescue Windows</h3>${captives}</section>` : ''}
     ${warSubtabBar(state)}
@@ -511,6 +531,15 @@ function renderMap(root, ctx) {
       const rival = rivalOf(content, btn.dataset.rival);
       if (!rival) return;
       draftTarget = { kind: 'rival', rivalId: rival.id, encounterId: `rival_${rival.id}`, label: rival.name };
+      draftTeam = [];
+      renderBriefing(root, ctx);
+    });
+  });
+  root.querySelectorAll('button[data-raid]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const live = activeRaid(state);
+      if (!live || live.id !== btn.dataset.raid) return;
+      draftTarget = { kind: 'raid', raidId: live.id, encounterId: live.encounterId, label: 'Defend the ranch' };
       draftTeam = [];
       renderBriefing(root, ctx);
     });
@@ -1092,6 +1121,8 @@ function renderBriefing(root, ctx) {
       // cannon would have to have bagged for it to come home with you.
       breakoutId: draftTarget.breakoutId ?? null,
       looseUnitId: draftTarget.looseUnitId ?? null,
+      // R87: which raid this fight answers, so resolveBattle can find it.
+      raidId: draftTarget.raidId ?? null,
       // The wave list as actually launched. A derived encounter (a
       // defence) and a director-rewritten one are both absent from
       // enemies.json, so the aftermath cannot look them up afterwards —

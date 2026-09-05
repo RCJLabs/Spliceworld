@@ -19,6 +19,7 @@ import { isSettled } from '../splice/theater.js';
 import { isInjured, obediencePercent, obedienceIgnoreChance } from '../battle/statblock.js';
 import { canSpar, sparEncounter } from './sparring.js';
 import { gauntletEncounter } from './gauntlet.js';
+import { raidEncounter, activeRaid } from './taskforce.js';
 import { breakoutEncounter } from './breakout.js';
 import { rivalEncounter } from './rivals.js';
 import { directEncounter } from './director.js';
@@ -67,6 +68,13 @@ export function warTargetEncounter(state, target, content, now) {
   // coalition's answer.
   if (target.kind === 'gauntlet') {
     return withLiveWaves(gauntletEncounter(state, content, target.stageId).encounter, content);
+  }
+  // R87: the Compliance Task Force at the gate. Built fresh from the live
+  // raid, like a defence, so the briefing and the battle always agree — and
+  // the director does NOT rewrite it: this is procurement, and procurement
+  // does not improvise.
+  if (target.kind === 'raid') {
+    return withLiveWaves(raidEncounter(state, content, activeRaid(state)), content);
   }
   // A defence is the node's own encounter, escalated — built fresh from
   // the live contest so the briefing and the battle always agree.
