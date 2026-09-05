@@ -16607,8 +16607,23 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // together they crossed R81's 560. Same rule as R81, same direction of
   // travel: the cap sits just above the measurement so creep fails, and the
   // module cap is now AT the count — the next eager module has to argue.
-  const MODULE_CAP = 51;
-  const KB_CAP = 580;
+  // R87 re-measured: 52 modules / 583 KB. Two arrived and both are argued
+  // rather than waved through. `campaign/taskforce.js` is eager because
+  // `campaign/world.js` owns the tick that runs it — unavoidable, and the
+  // same reason `contest.js` and `breakout.js` are here. `campaign/
+  // gauntlet.js` (3.8 KB) is eager because the Ranch's agenda lists an
+  // exhibition row, and R61's lesson is that the alternative — hand-copying
+  // "is a stage open" into agenda.js — is how a rule ends up with four
+  // copies and the canonical one becomes the orphan.
+  //
+  // WORTH NAMING: this is the second consecutive phase to raise the KB cap
+  // and the first to raise the module cap since R81 set it. Three phases in
+  // a row have each added one small module the first screen genuinely draws
+  // from, which is a trend rather than three coincidences — a candidate for
+  // its own phase (what SHOULD the first paint carry?) rather than a number
+  // that drifts up one milestone at a time.
+  const MODULE_CAP = 52;
+  const KB_CAP = 590;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

@@ -127,6 +127,16 @@ income first.
   *Send them*), not something R87 could fix without cutting fights.
 - Seed 31337 remains the hard seed: 36% raid win rate and 29 exhibition
   attempts where the others need four.
+- **The eager-graph cap went up again, and that is now a trend.** R87 is the
+  second consecutive phase to raise the KB cap and the first to raise the
+  module cap since R81 set it at 51. `campaign/taskforce.js` is eager because
+  the world tick owns it (unavoidable); `campaign/gauntlet.js` because the
+  Ranch's agenda lists an exhibition row, and hand-copying "is a stage open"
+  into agenda.js is how R61's rule ended up with four copies. Both are
+  argued — but three phases in a row have each added one small module the
+  first screen genuinely draws from, which deserves its own phase asking
+  what the first paint *should* carry rather than a number that drifts up one
+  milestone at a time.
 
 ### Next session's first task
 
