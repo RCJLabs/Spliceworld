@@ -1,5 +1,141 @@
 # PROGRESS
 
+## Session 110 — R87: The endgame ✅
+
+**Acceptance criterion (re-derived — see below):** across six seeds the
+median campaign faces 40+ Task Force raids and holds between half and 85% of
+them; median day-180 funds fall under a quarter of the $864k the shipped game
+banked; and two agenda rows appear in the endgame that no mid-game save has
+shown — **passes on all three**. `SAVE_VERSION` **40 → 41** (`campaign.raid`
+and its schedule); `sw.js` bumped to `spliceworld-v41-r87`.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ **new** — the ceiling, the schedule, the window, the levy |
+| `npm run battery` | ✓ — a **fifteenth gate**, breaks 80–84, all caught |
+| `npm run roadmap` | ✓ — **25** stated numbers (3 new: the ceiling, the levy %, the window) |
+| `npm run handlers` | ✓ — 37 controls pressed (was 36): `data-raid` fired |
+| `npm run a11y` | ✓ — 65 controls at 380px, 74 tabbed |
+| `npm run boot` · `npm run scopecheck` · `npm run sim` | ✓ |
+
+### My own criterion was part-vacuous, and three of my own claims were wrong
+
+The audit entry was written last session and measured this one, over six
+180-day walks, before anything was built.
+
+| the entry said | measured |
+|---|---|
+| dominion ~day 40 | **day 35** median (25.7–40.2) |
+| facility maxed by day 30 | **day 28.6** — *before* dominion, so nothing to buy from day 29 |
+| $861k by day 180 | **$864k**, +$5,128/day |
+| notoriety "unread past Threat Gen 3" | ❌ there is a **Gen 4 at 600**; notoriety hits **3,975 = 6.6× the top rung** |
+| 5 fights/day, 96% at 100% | **5.1/day, 97% won** |
+| — | ❗ **the Gauntlet already was a second act** — four exhibitions, hard (0/100/56/0% autoplayed), fought **0** times by the walker, paying **$400–900** into that economy |
+
+And the criterion I wrote could not see the problem it was written for:
+**c2 (funds < 10× day-60) already passed 6/6** — post-dominion income is
+linear, so the ratio is 4.2–5.0 no matter how absurd the absolute — and
+**c1 passed on 1/6 seeds by noise**. Only c3 was sound.
+
+### The answer was already written, in the ladder's own last line
+
+Threat Gen 4 announces *"they have stopped sending police and started
+sending procurement."* So procurement arrives. Notoriety is **capped at
+600** — you cannot be more wanted than maximally wanted — and past it, or
+once the county is yours, the **Compliance Task Force** comes for the
+**ranch**. Every other threat costs a node, a purse or an opportunity, and
+by dominion the player holds every node and cannot spend their money, so
+none of them is a stake. The barn had never once been in danger.
+
+R9's two rules unchanged: a scheduled timestamp, never a per-tick roll; and
+the window opens **when you see it**, so a fortnight away can never cost a
+levy you were given no chance to answer. What it costs is **25% of the slush
+fund** and a couple of the herd — money and livestock, **never a creature**,
+both recoverable. Beating one drops notoriety, which is the **spend**
+notoriety never had.
+
+### Shipped vs measured, six seeds
+
+| | shipped | now |
+|---|---|---|
+| funds, day 180 | $863,955 | **$175,519** (20%) |
+| notoriety | 3,975 | **106** |
+| Task Force raids | 0 | **43 median, 64% held, $403k levied** |
+| exhibitions fought | 0 | **4** |
+| endgame agenda rows | — | **raid, gauntlet** |
+
+### Tuned by measurement, and the first two cuts were both wrong
+
+Drawing raids from the Spire's top two shelves at up to 2.5×, an A-team held
+**17 of 41**. 41% is not a fight you can lose, it is a fight you usually
+lose, and a stake the player cannot meet is just a tax. Backing off overshot
+to **89%** — a formality with a countdown. Settled at **64%**.
+
+The walker also had to stop head-butting a wall: its first cut retried
+whichever exhibition was open on every tick it could field a team, and seed
+31337 entered the same fight **182 times**, losing 98%. Paced to one attempt
+every five days, the shape the rival ladder uses.
+
+### Four sampler bugs, all mine
+
+The criterion was re-derived three times because the sampler was wrong three
+times, and each failure looked like the game failing:
+
+1. Compared **day 30 to day 180** — on fast seeds the county was already
+   taken by day 30, so the "new" rows were not new.
+2. Compared a **single instant at dominion** — a raid is only at the gate
+   for its 21h window, so the row was absent about half the time.
+3. Read the Gauntlet row **at day 180** — the walker beats all four inside a
+   fortnight, so the row is gone again by then, which is the row doing its
+   job.
+4. Asserted **"funds unchanged"** across a fortnight away — income accrues;
+   the claim was that no *levy* was taken.
+
+Plus two in the engine probe: two copies armed their schedules a minute
+apart, and the fine is a fraction of funds *at levy time* while the tick pays
+income first.
+
+### Found on the way
+
+- **The cap needed a second call site.** A conquest writes notoriety and the
+  War Room re-renders without a tick, so the tick alone left a window where
+  the player could read a number above the ceiling — a 45-day walk reported
+  **690** against a cap of 600.
+- **The module defaults had already drifted from the data** after the
+  escalation was tuned twice in JSON and not in JS. R9 wrote the rule for
+  `contest.js`: the data wins, so a default that disagrees is a lie. Held
+  equal by a gate now.
+- **The a11y fixture caught its own bug.** Two held nodes is not in range,
+  so the first tick stood the planted raid down and the gate measured one
+  control *fewer* than before rather than one more.
+
+### Known issues
+
+- **Theater and Scanner get no tier IV.** Theater's next step is an eighth
+  socket (`organ3` — SOCKETS, LAYERS and four frame positions) and Scanner's
+  two grants are both already true. Both need an engine change rather than a
+  data one, and a level that grants nothing is a price with no purchase
+  behind it. The eighth socket is the natural follow-up and would make the
+  seven-species build the instability scale was tuned for buildable on
+  purpose.
+- **Dominion is later now** — median day 35 → 39–54. Raids before the county
+  falls genuinely slow the conquest, which is the second act doing its job,
+  but it is a real pacing change and worth watching.
+- **The treadmill is still the majority of fights.** Post-dominion win rate
+  moved 97% → 97%: sparring, breakouts and rescues still dominate the count
+  and are still free. That is **R88's** problem (a forecast ≥95% offering
+  *Send them*), not something R87 could fix without cutting fights.
+- Seed 31337 remains the hard seed: 36% raid win rate and 29 exhibition
+  attempts where the others need four.
+
+### Next session's first task
+
+**R88 — the battle screen charges full price for free fights**, which R87's
+own measurement now underlines: four fights a day whose outcome was never in
+doubt, each costing the same attention as a duel. Or **R90** (the test
+runner), which is what makes every later session cheaper — this one spent
+four full smoke cycles on single-assertion fixes again.
+
 ## Session 109 — R86: Gene Juice ✅ (shipped as the Infirmary's model)
 
 **Acceptance criterion:** an earned currency skips a timer, or §3.9 stops
