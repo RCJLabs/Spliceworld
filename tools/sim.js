@@ -14,6 +14,8 @@ import { indexContent } from '../render/renderer.js';
 import { CONTENT_FILES } from '../data/loader.js';
 import { seedTemperament } from '../splice/temperament.js';
 import { rushable, rush } from '../splice/rush.js';
+import { activeRaid, raidEncounter } from '../campaign/taskforce.js';
+import { gauntletState, gauntletEncounter } from '../campaign/gauntlet.js';
 import { treatInjury, treatmentCost } from '../splice/scars.js';
 import { analyze } from '../splice/physiology.js';
 import { createBattle, step, playerActions, playerActive } from '../battle/engine.js';
@@ -1131,6 +1133,49 @@ function walkAct(state, content, now, open, opts = {}) {
     acted++;
   }
 
+  // R87 — the Compliance Task Force. FIRST, above everything: it is the only
+  // clock in the game that bills you a quarter of the bank for ignoring it,
+  // and a player who has one at the gate does nothing else until it is
+  // answered. Same window logic the defence uses — wait for a full team
+  // unless this is the last chance.
+  {
+    const raid = has('raid') ? activeRaid(state) : null;
+    const enc = raid ? raidEncounter(state, content, raid) : null;
+    const team = fitTeam();
+    const lastChance = raid && raid.deadline - now <= stepMs;
+    if (enc && team.length && (aTeamFit() || lastChance)) {
+      const battle = fight(team, enc, { kind: 'raid', raidId: raid.id, waveIds: enc.waves }, `raid#${raid.id}`);
+      state.__walkRaids = (state.__walkRaids ?? 0) + 1;
+      if (battle.outcome === 'win') state.__walkRaidsHeld = (state.__walkRaidsHeld ?? 0) + 1;
+      acted++;
+    }
+  }
+
+  // R87 — the Gauntlet. Shipped in R42, opened at dominion, and fought ZERO
+  // times in 180 days by every walk this harness has ever run: the four
+  // exhibitions are the hardest content in the game and the yardstick had
+  // never seen one. Paced like the rival ladder — an A-team, one at a time,
+  // and only after the county is yours, which is when they open.
+  // Paced. The first cut retried whichever exhibition was open on every tick
+  // it could field a team, and seed 31337 entered the same fight ONE HUNDRED
+  // AND EIGHTY-TWO times and lost 98% of them — which is not a player, it is
+  // a loop. A stage stays open until it is beaten, so the pacing has to come
+  // from the walker: one attempt every five days, the same shape as the
+  // rival ladder's one-a-week.
+  if (has('gauntlet') && aTeamFit() && now - (state.__walkLastGauntlet ?? -5 * WALK_DAY) >= 5 * WALK_DAY) {
+    const open = gauntletState(state, content).find((r) => r.status === 'open');
+    const res = open ? gauntletEncounter(state, content, open.stage.id) : null;
+    const team = fitTeam();
+    if (res?.ok && team.length >= fullTeam()) {
+      const battle = fight(team, res.encounter, { kind: 'gauntlet', stageId: open.stage.id, waveIds: res.encounter.waves },
+        `gauntlet#${open.stage.id}`);
+      state.__walkLastGauntlet = now;
+      state.__walkGauntlets = (state.__walkGauntlets ?? 0) + 1;
+      if (battle.outcome === 'win') state.__walkGauntletsWon = (state.__walkGauntletsWon ?? 0) + 1;
+      acted++;
+    }
+  }
+
   // R83 — challenge a rival. The walk has never done this. `campaignWalk`
   // claims to measure the honest 180-day campaign, and across 16 seeds and
   // 2,880 simulated days it fought 735 assaults, 590 defences, 2,235 spars,
@@ -1445,6 +1490,16 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // R86: how often the walker paid to hurry a clock, what it spent, and how
     // often it bought out of the Infirmary — the yardstick's view of the one
     // purchase that buys time rather than things.
+    // R87 — the second act, on the yardstick for the first time: raids
+    // answered and held, exhibitions entered and won, and what the State
+    // took from the ones that were not answered.
+    raids: state.__walkRaids ?? 0,
+    raidsHeld: state.__walkRaidsHeld ?? 0,
+    raidsMissed: (state.campaign.raidCount ?? 0) - (state.__walkRaidsHeld ?? 0),
+    levied: Math.round(state.campaign.leviedTotal ?? 0),
+    gauntlets: state.__walkGauntlets ?? 0,
+    gauntletsWon: state.__walkGauntletsWon ?? 0,
+    notoriety: Math.round(state.campaign.notoriety ?? 0),
     rushes: state.__walkRushes ?? 0,
     rushSpent: Math.round(state.__walkRushSpent ?? 0),
     treated: state.__walkTreated ?? 0,

@@ -1,5 +1,5 @@
 {
-  "_doc": "R42: The Gauntlet — the post-dominion tier. Four boss-scale units (stratofortress, leviathan_dredge, crucible_9000, the_compliance_engine) were drafted at R25 with full stat blocks, moves, shapes, salvage and KO lines, and A5 measured that they fit no strip without a rescale — so they sat parked behind a pinned gate for seventeen phases. A veteran stable is the thing they fit: R41's trajectory math says a creature that fights the whole campaign arrives at dominion at L8, and a realistic diet caps it at L10 near the finale. Stages unlock in order, the first when the county is yours (dominionAt, R40); each is one derived encounter — authored escorts, then the boss — with no node, no income and no notoriety: prestige fights, with the purse and whatever the Containment Cannon can bag (capturing THE COMPLIANCE ENGINE is the intended jackpot — its salvage carries the game's only apex mandate_horn). scaleOverride is tuned with the harness against prime-grade L8-L10 stables, benched per stage; the director does not rewrite a Gauntlet fight, because these ARE the coalition's answer. Adding a fifth stage must never require engine edits.",
+  "_doc": "R42: The Gauntlet — the post-dominion tier. Four boss-scale units (stratofortress, leviathan_dredge, crucible_9000, the_compliance_engine) were drafted at R25 with full stat blocks, moves, shapes, salvage and KO lines, and A5 measured that they fit no strip without a rescale — so they sat parked behind a pinned gate for seventeen phases. A veteran stable is the thing they fit: R41's trajectory math says a creature that fights the whole campaign arrives at dominion at L8, and a realistic diet caps it at L10 near the finale. Stages unlock in order, the first when the county is yours (dominionAt, R40); each is one derived encounter — authored escorts, then the boss — with no node, no income and no notoriety: prestige fights, with the purse and whatever the Containment Cannon can bag (capturing THE COMPLIANCE ENGINE is the intended jackpot — its salvage carries the game's only apex mandate_horn). scaleOverride is tuned with the harness against prime-grade L8-L10 stables, benched per stage; the director does not rewrite a Gauntlet fight, because these ARE the coalition's answer. Adding a fifth stage must never require engine edits.R87 — the purses were $400-$900, set when the Gauntlet shipped and never re-read against the economy that can actually reach it: measured, a player at dominion banks +$5,128 a day, so the finale paid one sixth of a day's income for the hardest fight in the game. They now run $26k-$90k, which is a third of the facility's remaining tier-4 sink — the Gauntlet is how you afford the second act rather than a rosette.",
   "stages": [
     {
       "id": "gauntlet_strato",
@@ -10,7 +10,7 @@
         "falconry_unit",
         "attack_chopper"
       ],
-      "reward": 400,
+      "reward": 26000,
       "scaleOverride": 2.4,
       "news": "EXHIBITION MATCH: local geneticist versus the airborne mortgage of an entire county. Tickets free, attendance mandatory."
     },
@@ -23,7 +23,7 @@
         "harbor_diver",
         "dredger_barge"
       ],
-      "reward": 500,
+      "reward": 38000,
       "scaleOverride": 3.2,
       "news": "EXHIBITION MATCH: the harbour's largest resident takes a personal day. Swimmers advised to be elsewhere, permanently."
     },
@@ -36,7 +36,7 @@
         "water_cannon_truck",
         "riot_squad"
       ],
-      "reward": 650,
+      "reward": 55000,
       "scaleOverride": 2.5,
       "news": "EXHIBITION MATCH: CRUCIBLE-9000 leaves the Foundry for the first time since its warranty expired. Roads pre-melted for its convenience."
     },
@@ -49,7 +49,7 @@
         "compliance_marshal",
         "mandate_swarm"
       ],
-      "reward": 900,
+      "reward": 90000,
       "scaleOverride": 2.8,
       "news": "FINAL EXHIBITION: THE COMPLIANCE ENGINE has been signed out of storage. The signature took four days."
     }

@@ -1,5 +1,5 @@
 {
-  "_doc": "The Compliance Task Force (ROADMAP §3.9, R87). WHY THIS EXISTS: measured over six 180-day walks, the county falls on median day 35, every facility track is maxed by day 28 — BEFORE dominion, so there is nothing left to buy from day 29 — and the next 145 days are 5.1 fights a day won 97% of the time, with funds climbing to a median $864k at +$5,128/day. §8 risk 5 named the director, variants and contestation as the content engines for endless mode; measured, they produce a schedule rather than a second act. Notoriety was the other half of the waste: it reaches ~3,975 against a threat ladder whose top rung is 600, so for 150 days it was a number that only went up and nothing read. THE ANSWER IS THE LADDER'S OWN LAST LINE. Threat Generation 4 announces 'they have stopped sending police and started sending procurement' — so procurement is what arrives. Notoriety is CAPPED at the top rung, and past it (or once the county is yours, which is provocation enough on its own) the State sends a task force at the RANCH rather than at a node: the first fight after dominion with something to lose. THE TWO R9 RULES ARE LOAD-BEARING AND UNCHANGED: the next raid is a scheduled timestamp, never a per-tick roll, so how often you open the app cannot change how often you are raided; and the window opens when you SEE it, so a fortnight away can never cost you a levy you were given no chance to answer. WHAT IT COSTS is money and livestock, never a creature — a Compliance Levy on the slush fund and a number of animals taken for inspection. Both are recoverable and both scale with the runaway economy this exists to drain, which is why the levy is a FRACTION rather than a figure. Beating one buys quiet: notoriety drops below the cap and the schedule resets, so raids are a rhythm you manage rather than a tax you pay. `pool` names encounters from enemies.json; adding a rung is a data edit here, not an engine edit.",
+  "_doc": "The Compliance Task Force (ROADMAP §3.9, R87). WHY THIS EXISTS: measured over six 180-day walks, the county falls on median day 35, every facility track is maxed by day 28 — BEFORE dominion, so there is nothing left to buy from day 29 — and the next 145 days are 5.1 fights a day won 97% of the time, with funds climbing to a median $864k at +$5,128/day. §8 risk 5 named the director, variants and contestation as the content engines for endless mode; measured, they produce a schedule rather than a second act. Notoriety was the other half of the waste: it reaches ~3,975 against a threat ladder whose top rung is 600, so for 150 days it was a number that only went up and nothing read. THE ANSWER IS THE LADDER'S OWN LAST LINE. Threat Generation 4 announces 'they have stopped sending police and started sending procurement' — so procurement is what arrives. Notoriety is CAPPED at the top rung, and past it (or once the county is yours, which is provocation enough on its own) the State sends a task force at the RANCH rather than at a node: the first fight after dominion with something to lose. THE TWO R9 RULES ARE LOAD-BEARING AND UNCHANGED: the next raid is a scheduled timestamp, never a per-tick roll, so how often you open the app cannot change how often you are raided; and the window opens when you SEE it, so a fortnight away can never cost you a levy you were given no chance to answer. WHAT IT COSTS is money and livestock, never a creature — a Compliance Levy on the slush fund and a number of animals taken for inspection. Both are recoverable and both scale with the runaway economy this exists to drain, which is why the levy is a FRACTION rather than a figure. Beating one buys quiet: notoriety drops below the cap and the schedule resets, so raids are a rhythm you manage rather than a tax you pay. `pool` names encounters from enemies.json; adding a rung is a data edit here, not an engine edit. TUNED BY MEASUREMENT, NOT BY TASTE: the first cut drew from the Spire's top two shelves at up to 2.5x and the walker's A-team held 17 of 41 — a 41% win rate is not a fight you can lose, it is a fight you usually lose, and a stake the player cannot meet is just a tax. The pool and the escalation came down — and then the second cut overshot the other way to 89%, which is a formality with a countdown. Settled where an A-team holds most raids and genuinely drops some.",
   "tuning": {
     "notorietyCap": 600,
     "minHeld": 12,
@@ -9,18 +9,18 @@
     "cooldownMaxHours": 96,
     "jitter": 0.2,
     "windowHours": 21,
-    "escalation": 0.15,
-    "escalationPerRaid": 0.1,
-    "escalationMax": 2.5,
+    "escalation": 0.1,
+    "escalationPerRaid": 0.05,
+    "escalationMax": 2.0,
     "fineFraction": 0.25,
     "stockTaken": 2,
     "notorietyRelief": 140,
     "rewardScale": 2.4,
     "pool": [
-      "spire_procurement",
-      "spire_range",
       "military_response",
-      "boss_clampdown"
+      "boss_clampdown",
+      "spire_procurement",
+      "spire_range"
     ],
     "blurb": "They are not here for the county. They are here for the barn.",
     "intel": "Compliance Task Force at {pct}% strength."

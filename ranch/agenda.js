@@ -42,6 +42,8 @@ import { contestRemainingMs } from '../campaign/contest.js';
 import { isInjured, fitToFight } from '../battle/statblock.js';
 import { sparCharges, canSpar } from '../campaign/sparring.js';
 import { feralStatus } from '../splice/feral.js';
+import { activeRaid, raidRemainingMs, levyOf } from '../campaign/taskforce.js';
+import { gauntletState } from '../campaign/gauntlet.js';
 
 const HOUR = 3600000;
 const fit = fitToFight;
@@ -49,6 +51,40 @@ const fit = fitToFight;
 // Every entry answers one question: is there a click here right now? Order is
 // the order the player should think about them in — work before spending.
 export const AGENDA = [
+  {
+    // R87 — above even R85's, and it is the only row that has ever outranked
+    // it. A creature going feral is recoverable through the Wing; a levy is
+    // a quarter of everything you have, and unlike every other clock in this
+    // game it bills you for doing nothing. Measured: post-dominion the
+    // player has more money than they can spend and no fight they can lose,
+    // and this row is both halves of the answer.
+    id: 'raid', kind: 'campaign', screen: 'battle', label: 'Defend the ranch',
+    hint: (state, content, now) => {
+      const raid = activeRaid(state);
+      if (!raid) return 'The Compliance Task Force is at the gate.';
+      const hours = Math.max(0, raidRemainingMs(raid, now)) / HOUR;
+      const levy = levyOf(state, content);
+      return `The Compliance Task Force is at the gate. ${
+        hours < 1 ? 'Under an hour' : `${Math.floor(hours)}h`
+      } before they serve papers and leave with $${levy.fine}${levy.stock ? ` and ${levy.stock} of the herd` : ''}.`;
+    },
+    ready: (state, content, now) => !!activeRaid(state) && fit(state, now).length > 0,
+  },
+  {
+    // R87 — the four exhibitions have been shipped and unreachable since
+    // R42: they open at dominion, and nothing on any screen but the Labs tab
+    // has ever mentioned that they had. Measured, the walker fought 0 of 4
+    // in 180 days.
+    id: 'gauntlet', kind: 'campaign', screen: 'battle', subtab: 'labs', label: 'Answer an exhibition',
+    hint: (state, content) => {
+      const open = gauntletState(state, content).find((r) => r.status === 'open');
+      return open
+        ? `${open.stage.name} is waiting. $${open.stage.reward} and the hardest fight the coalition has.`
+        : 'The Gauntlet is open.';
+    },
+    ready: (state, content, now) =>
+      gauntletState(state, content).some((r) => r.status === 'open') && fit(state, now).length > 0,
+  },
   {
     // R85, and it goes above everything — including the two clocks R63 put
     // at the front — because it is the only row on this list whose deadline
