@@ -1646,3 +1646,231 @@ The queue is a proposal: prune it before starting R63.
     The last was rewritten after the first attempt MISSED — renaming the
     heading with a suffix still matched the prefix, which was the block still
     being there rather than a hole in the gate.
+
+### 9.5 Fifth audit (R84–R86) — queue R87–R101
+
+Run after R86, against a game with four closed audits and R77's three gaps
+closed behind it. Same rule as the other four — every line names the
+measurement that put it there — with one difference: this one was run by
+the harness rather than by readers. One instrumented 180-day campaign (seed
+4242, the walker's realistic diet) sampled at nine checkpoints; every screen
+rendered at 380 px on that campaign's day-180 save, folded and expanded; the
+balance table re-read across 68 builds × 31 encounters; the shipped source
+measured; and the walker's own blind spots enumerated by grep. The headline
+is one sentence: **the county falls on day 40, and the next 140 days are a
+treadmill nothing in the game can currently see — because the yardstick does
+not play a third of it.** Fifteen phases follow, medium to large, four of
+them overhauls. Each carries its evidence and a *Done when* the suite can
+check.
+
+**Overhauls.**
+
+- **R87 — The endgame: the county falls on day 40 and the game keeps going
+  for 140 more.** Measured on seed 4242: dominion on **day 40.1** (25–40
+  across seeds); every facility track maxed by **day 30**; funds **$13k on
+  day 30, $175k on day 60, $861k on day 180** — about $5.7k a day with
+  nothing left to buy; notoriety **3,833**, uncapped, unread past Threat Gen
+  3. After dominion the walker fights **5.0 times a day**, and 96% of those
+  fights (157 breakouts, 417 spars, 18 rescues) are won at **100%**; only 20
+  rival duels (45%) and 93 defences (92%) carry any doubt. The agenda offers
+  the same ten rows ~100% of the time from day 60 on — "always something to
+  do" held, and it is the same ten things. §8 risk 5 named the director,
+  variants and contestation as the content engines for endless mode; measured,
+  they produce a schedule, not a second act. Proposed, large: a second act
+  that changes the *rules* rather than the numbers. (a) **The State
+  notices** — after dominion, notoriety finally does something: it summons a
+  task force whose convoys target the *ranch* (a home-defence encounter that
+  risks stock and vials, not nodes), the first fight after day 40 with
+  something to lose. (b) **Money sinks with teeth** — Theater tier 3 (an
+  eighth socket, so the seven-species build the instability scale was tuned
+  for is buildable on purpose), a Menagerie that sells the species the Dex
+  has never seen, and lab prestige bought for cash. (c) **A run boundary** —
+  "Relocate the lab": new game plus with one legacy pick (a bloodline, a
+  philosophy perk, a named veteran), so the 140 days have an ending the
+  player chooses. *Done when: after dominion, a 180-day walk fights at least
+  once a day with a win rate under 90%, funds on day 180 are under 10× funds
+  on day 60, and the agenda shows two rows after dominion that did not exist
+  before it.*
+- **R88 — The battle screen charges full price for free fights.** A battle
+  is **8.7 turns, 9 player decisions and ~25 beats** (measured, 20 pairings at
+  tier 1), and the arena replays every beat with a per-kind timer and a
+  tap-to-skip. The walker's 180 days hold **543 spars, 157 breakout hunts and
+  18 rescues at 100%** — four fights a day whose outcome was never in doubt,
+  each costing the same attention as a duel; the harness itself autoplays
+  them. Proposed, medium-large: a **forecast → send-them** path — when the
+  briefing's own forecast reads ≥ 95% and the fight is a spar, a hunt or a
+  known rescue, offer *Send them* (the same seeded engine, resolved at once,
+  reported on the wire with a one-line why) beside *Watch*; a battle **speed
+  setting** (1× / 2× / instant) that reduced-motion selects; and a post-fight
+  **report card** naming what decided it (the class edge, the tag-chart hit,
+  the obedience miss) so a skipped fight still teaches. Duels, defences and
+  assaults default to Watch. *Done when: the beats the walker's day replays
+  drop by 60% at identical outcomes, and a rival duel still plays beat by
+  beat by default.*
+- **R89 — The Pens and the Ranch at scale.** On the day-180 save at 380 px,
+  folded: Ranch **2,892 px (3.7 screens)**, Dex Foes **4,306 px (5.5)**, Dex
+  front **3,172 (4.1)**, Vault **2,380 with one button per vial**; expanded:
+  Ranch **8,356 px (10.7 screens, 98 buttons)** and the Pens **12,554 px —
+  sixteen phone screens, 2,157 words, 52 buttons — for ten chimeras.** R44
+  measured 10,470 px for nine; the card has grown 20% since (moves, dossier,
+  the feral panel, rush). Proposed, large: one **list component**
+  (`ui/list.js`) with band headers, a filter chip row (*can train · hurt ·
+  settling · idle*) and one card open at a time; the creature card split into
+  **tabs inside the card** (Overview · Moves · Anatomy · History) so an open
+  card is under 1.5 screens; the Vault grouping vials by species with a
+  count and a picker; and a **height budget in the a11y gate** — no screen
+  over four screens folded, no card over two open — so the next system that
+  adds a paragraph fails the build instead of the phone. *Done when: the
+  day-180 save's expanded Pens is under 4,000 px and the Foes tab under
+  2,500, gated.*
+- **R90 — The test suite gets a test runner.** `tools/smoke.js` is **16,708
+  lines in one file** and takes **twelve minutes**; the battery about an hour.
+  R86 burned four full smoke cycles on single-assertion fixes (a missing roll
+  entry, a chip's control marker, a hint's list membership, the eager cap).
+  The same splice fixture is written out in **four tools, nine times**; the
+  content-file list was in six places until R85; and three fixtures this
+  session could not reach the code they guarded. Proposed, large, no new
+  dependencies — `node:test` and `node:worker_threads` ship with Node 22:
+  split smoke into `tools/suites/*.test.js` by system and run them in
+  parallel workers; one `tools/fixtures.js` (the lab, the every-clock-running
+  save, the walker's day-N saves) shared by smoke, handlers, a11y, the
+  battery and any probe; a `--only <suite>` flag; and the battery aims breaks
+  at suites rather than the whole file. *Done when: `npm test` runs every
+  current assertion in under three minutes wall-clock on four cores, and no
+  fixture recipe appears in more than one file.*
+
+**Gameplay.**
+
+- **R91 — The vault is a hoard with no bottom, and the save is paying for
+  it.** The day-180 save is **1,711 KB**, of which `inventory` is **1,641 KB:
+  8,760 part tokens and 1,965 vials.** Nothing caps either (grep: no cap on
+  parts, vials, bays or notoriety anywhere); a token costs ~190 bytes, so
+  localStorage's 5 MB quota fails around 27,000 tokens — roughly day 500 at
+  this rate, silently. The same run created **1,797 chimeras with a median
+  life of two hours**: splices are free of consequence because parts are
+  abundant and dismantling hands them back. Proposed, medium: **vault
+  capacity** sold like pen capacity and raised by the Extractor track;
+  **stacking** (partId + grade + donor → count) so the save stores counts;
+  vials that **retire into the Dex** after a season (the donor's genes stay
+  remembered when the vial is gone); a dismantle **cooldown**, so a chimera
+  is a decision; a **bay count** for Containment (280 bays on day 180, 719
+  bagged, 0 rehabilitated); and a smoke rule that every array in the save
+  has a stated bound. *Done when: the 180-day save is under 200 KB, every
+  unbounded array is bounded and gated, and the walker's median chimera life
+  exceeds five days.*
+- **R92 — The yardstick plays half the game.** By grep, the walker never
+  calls `breedPair`, `hatchEgg`, `startVat`, `startResequence`, `setMoveset`
+  or the Gauntlet. Measured over 180 days: **0 of 27 combos discovered, 0 of
+  12 traits expressed, 0 eggs, 0 vats, 0 tank runs, 0 of 4 Gauntlet stages,
+  0 of 719 bagged specimens rehabilitated** — eight systems with zero
+  harness coverage, the exact gap R83 closed for rivals, escapees and the
+  Wing. Every balance claim about breeding, genetics, the vat, combos and
+  retraining is currently unmeasured. Proposed, medium: a reserve-gated
+  walker policy per loop, a number per loop in the walk report, a floor per
+  loop in smoke — and then read the numbers, which will be the first honest
+  answer to whether breeding pays, whether the vat is worth a grade, and
+  whether combos are discoverable by playing. *Done when: every row the
+  agenda can offer has a walker action behind it and a number in
+  `campaignWalk`'s report.*
+- **R93 — Breakouts and contests are the whole late game, and neither has
+  stakes.** After dominion: **157 breakout hunts at 1.1 a day, 100% won**,
+  against 8 assaults; **93 defences at 92%**, where the only cost of a loss
+  is suspended income. Proposed, medium: **escapee packs** — a lab that has
+  lost N specimens sends them back together, with the rival's counter-bias
+  (R27's machinery, already built); **consequences at home** — an escapee
+  left loose raids the ranch (a vial gone, the herd spooked to a condition
+  floor); and **contest stakes that grow with tenure** — a node held thirty
+  days pays a bonus and its loss costs a facility level. *Done when:
+  post-dominion breakout and defence win rates are under 90% on the walker's
+  diet, and the walk still reaches day 180 solvent.*
+- **R94 — Notoriety is a number that goes up.** **3,833 on day 180**; the
+  Threat Gen ladder is its only reader and tops out at Gen 3; every job adds
+  heat and nothing spends or cools it. Proposed, medium: notoriety as a
+  **meter with a top** that summons R87's task force, a **decay** through
+  lying low (an "off the grid" job that pays nothing and cools you), and at
+  least one **spend** — a bribe that suspends a convoy, a rival's dossier
+  bought from the press — all in `regions.json`. *Done when: notoriety has a
+  cap, a decay and a spend, and the walker's notoriety on day 180 is under
+  the cap.*
+- **R95 — 71 parts nobody reaches, and one encounter nobody beats.** Dex
+  parts plateau at **173 of 244** from day 150 to 180 — 71 parts, twelve
+  species' worth, never enter a 180-day campaign. In the standard-grade
+  table the `military` column is **0% across all 68 builds** (kestrel air
+  3%, the clam boss 10%) while the median build wins 23% of encounters.
+  Proposed, medium, content and balance: a **Travelling Menagerie** — a
+  rotating three-species catalog that visits monthly, weighted toward
+  species the Dex lacks (the director already tracks what you have used);
+  and a pass on the wall encounters so each has at least one standard-grade
+  answer, or says in its briefing that it is Apex content. *Done when: a
+  180-day walk sees at least 95% of parts, and every encounter has a
+  standard-grade build that beats it at least half the time.*
+- **R96 — Creatures that move.** The renderer holds **0 `<animate>`
+  elements**; the stylesheet 11 keyframes; a chimera's temperament (two
+  axes), condition, injuries and ten scar types are all *text beside a
+  static portrait*. §8 risk 1 says the renderer is the whole first
+  impression. Proposed, medium-large, zero art assets: a procedural **idle
+  layer** (breathing, blink, tail sway — on the existing shape groups, off
+  under reduced motion); **temperament in the posture** (Skittish crouches,
+  Bullish squares up); **injury and scar marks** drawn as part-space
+  overlays; and a **victory and KO beat** in the arena. All driven by state
+  the save already carries. *Done when: a Skittish and a Bullish chimera
+  with the same genome render visibly differently, a scarred one shows it,
+  and the boot and a11y (reduced-motion) gates still pass.*
+
+**UI.**
+
+- **R97 — The Dex is polluted.** `dex.enemies` holds **255 entries for 42
+  authored units** and `beaten` 250: `campaign.js` records every generated
+  rival chimera and escapee by its unique id, so the Foes tab is the tallest
+  folded screen in the game (4,306 px) and grows with every duel. Proposed,
+  medium: key generated units by **archetype** (lab + class + frame) with a
+  sightings count; a Foes tab that groups authored units by region and
+  generated ones by lab; and a migration that dedupes existing saves. *Done
+  when: Foes is under two screens folded on the day-180 save, and
+  `dex.enemies` never exceeds authored units plus labs.*
+- **R98 — The game says 2,157 words on one screen.** Expanded Pens **2,157
+  words**, expanded Ranch 973, folded Ranch 448; 33 field guides averaging
+  55 words; every card carries a deadpan paragraph while the tone rules ask
+  the ticker for one sentence. Proposed, medium, copy and UI: a **card copy
+  budget** (headline ≤ 8 words, body ≤ 25, everything else behind a fold);
+  a **terse setting** that hides flavour lines; a `fine-print` audit for
+  lines that explain nothing the number beside them does not; and a smoke
+  gate on words per card. *Done when: expanded Pens is under 900 words with
+  no rule left unexplained — every mechanic still has a title or a guide.*
+- **R99 — The a11y gate learns to see overlap, contrast and motion.** This
+  session shipped two defects the gate passed: **3.42:1** body text on the
+  feral panel, and the egg's Hurry button overlapping its lineage text and
+  escaping the card at 380 px. The gate measures a control's size and its
+  gutter to the next control, and nothing else; two `prefers-reduced-motion`
+  blocks cover eleven keyframes. Proposed, medium: a **contrast pass** (every
+  text node against its effective background, AA, all five themes), an
+  **overlap and containment pass** (no control's box intersects another's or
+  leaves its card), and a **reduced-motion pass** (media query emulated,
+  nothing animates). *Done when: both defects, replayed as battery breaks,
+  are caught.*
+
+**Platform and durability.**
+
+- **R100 — Ship the TWA: four unchecked boxes, an offline-second worker,
+  and a save that lives in localStorage.** `docs/TWA.md` has **four items
+  open** (device test, 512 px icon, screenshots, cache-bump discipline);
+  `sw.js` is **network-first for all 95 shell entries** — a known issue since
+  R81, so every cold open waits on the network before it will use the cache;
+  the save lives only in localStorage (5 MB, evictable on iOS) though export
+  and import are already built. Proposed, medium: cache-first for the
+  versioned shell with background revalidation; IndexedDB as the primary
+  store with localStorage as a mirror; an export reminder in settings after
+  N days; the icon and screenshots; and a `tools/release.js` that checks
+  `CACHE` against `SAVE_VERSION` rather than remembering to. *Done when: the
+  app opens offline in under a second from cache, the checklist is empty,
+  and a 2 MB save round-trips through IndexedDB.*
+- **R101 — `save/save.js` is 1,020 lines of migrations, with fixtures for
+  19 of 39.** It is the largest eager module (**44 KB**), so every player
+  downloads every migration they will never run, and twenty steps of the
+  chain have never been replayed against a real save of their version.
+  Proposed, medium: migrations 1–35 behind a lazy import taken only when
+  `saveVersion < 36`; a **fixture per version** generated from the walker
+  (`tools/saves/v{N}.json`) so smoke replays v1 → current step by step; and
+  a rule that a migration ships with its fixture. *Done when: the eager graph
+  carries under 15 KB of save.js, and `npm test` migrates a v1 save to
+  current through every step with a fixture at each.*

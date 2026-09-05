@@ -110,11 +110,38 @@ coverage.
   (the button sits under the row now), but the gate still cannot see that
   class of defect. A candidate for the fifth audit.
 
+- Smoke tripped R74's eager-graph cap on the first full run: **566 KB over
+  560**. R85 (feral, 6.9 KB) and R86 (rush, 8.4 KB) each added one module
+  the first screen genuinely draws from. Re-measured and set to 580, R81's
+  rule; the module cap is now exactly at the count, so the next eager module
+  has to argue its way in.
+
+### The fifth audit, run the same session
+
+By the harness rather than by readers: one instrumented 180-day campaign
+sampled at nine checkpoints, every screen at 380 px on its day-180 save
+(folded and expanded), the balance table, the shipped source, and the
+walker's blind spots by grep. Headlines:
+
+- **Dominion on day 40; then 140 days of treadmill.** Every facility maxed
+  by day 30; $175k by day 60, $861k by day 180 with nothing to buy; five
+  fights a day after dominion, 96% of them won at 100%.
+- **The save is 1.7 MB** — 8,760 part tokens and 1,965 vials; nothing caps
+  either; localStorage's quota fails around day 500.
+- **The yardstick plays half the game:** 0/27 combos, 0/12 traits, no eggs,
+  no vat, no tank, no Gauntlet, 0 of 719 bagged specimens rehabilitated.
+- **255 foes in the Dex for 42 units; expanded Pens is sixteen phone
+  screens and 2,157 words.**
+
+Fifteen phases, **R87–R101**, are in ROADMAP §9.5 with their evidence and a
+*Done when* each — four overhauls (R87 endgame, R88 battle pacing, R89 lists
+at scale, R90 a test runner), six gameplay, three UI, two platform.
+
 ### Next session's first task
 
-R77's three gaps are closed. The queue is empty of named phases; the next
-session opens with a fifth audit — the same rule as the other four, every
-line naming the measurement that put it there.
+Pick one from §9.5. The four overhauls are the ones that change what every
+later phase costs; R90 (the test runner) is the one that changes what every
+later *session* costs, and it was the cause of four lost cycles this time.
 
 ## Session 108 — R85: Feral at instability 100 ✅
 

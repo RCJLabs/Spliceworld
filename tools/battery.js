@@ -923,7 +923,9 @@ const BREAKS = [
     n: 52, gate: ROADMAP, name: 'a named gap points at a phase the roadmap does not carry',
     file: 'ROADMAP.md',
     anchor: '**Paying a clock to hurry (R86).** Every *sealed* clock',
-    to: '**Gene Juice is not shipped — queued as R99.** **Paying a clock to hurry (R86).** Every *sealed* clock',
+    // R999, not R99: the fifth audit queued R87–R101, so a two-digit fake
+    // would have pointed at a phase the roadmap now carries and MISSED.
+    to: '**Gene Juice is not shipped — queued as R999.** **Paying a clock to hurry (R86).** Every *sealed* clock',
   },
   {
     n: 53, gate: ROADMAP, name: 'the measured-numbers block is deleted outright',
