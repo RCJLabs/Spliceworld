@@ -1950,3 +1950,346 @@ R102; R88–R90 remain.)*
   a rule that a migration ships with its fixture. *Done when: the eager graph
   carries under 15 KB of save.js, and `npm test` migrates a v1 save to
   current through every step with a fixture at each.*
+
+### 9.6 Sixth audit (R87) — queue R103–R117
+
+Run after R87, against a game with five closed audits behind it and R88–R102
+still queued. Same rule as the other five — every line names the measurement
+that put it there — and a different set of instruments, chosen to see what
+the harness cannot see by *playing*: what a **different player** would have
+done in the same fight (six pilots over **5,304 fights at each of three
+grades**); the **first two days at fifteen-minute resolution** across five
+seeds; the browser's own account of what it draws (**58,313 DOM nodes** on
+one screen); **72,171 text nodes** measured against their effective
+background under all five themes; the code **no gate has ever run** (V8
+coverage merged across the Node suite and a Chromium walk of every screen);
+a week away; the wire's **4,034 lines**; and an import with a
+`<b onmouseover>` in it. Three things came back clean and are worth saying
+so: two 180-day walks on the same seed are **bit-for-bit identical**, the
+day-180 save holds **no NaN, undefined or Infinity**, and the tone sweep
+found **nothing to fix** (nine hits, all idiom — "Blood Sense", "Dead
+Reckoning"). The headline is two sentences. **The build decides the fight
+and the briefing announces it: the arena, where the player spends most of
+their time, moves the outcome in about one fight in thirty.** And **a new
+player's first session ends at minute 45, in front of a five-hour wall the
+Path never mentions.** Fifteen phases follow, medium to large, three of them
+overhauls, several in steps. Each carries its evidence and a *Done when* the
+suite can check.
+
+**Overhauls.**
+
+- **R103 — Decisions that matter.** The same 68 builds against all 26
+  encounters, a team of three, three seeds, under six pilots: the AI at full
+  skill, the forecast's own pilot (0.8), a half-skilled one, "strongest
+  affordable move", "first button", and uniform random over moves and Catch
+  Breath. At standard grade they win **31.0 / 29.6 / 27.8 / 27.4 / 27.1 /
+  18.4%**; at apex **54.9 / 53.6 / 51.1 / 50.8 / 50.6 / 34.6%**. Flying a
+  fight well instead of pressing the first button is worth **2.5 points at
+  standard and 4.3 at apex**. The outcome is **identical under all six
+  pilots in 82% of fights** (77% prime, 72% apex), and the briefing already
+  calls **83% of pairings** walkover or not-survivable before a move is
+  pressed (78%, 74%). Each fight asks for **6.2 decisions** and about six of
+  them do not matter. The one pilot that falls off a cliff is the one that
+  rests a quarter of the time — **Catch Breath is a nine-point trap**, and
+  it is offered on every turn as an equal. R88 removes the fights that never
+  needed a pilot; this makes the remaining ones need one. Proposed, large,
+  engine and arena, all in data: **enemy intent** — the AI's choice for next
+  turn is shown (it is already seeded and previewable through `previewMove`),
+  so a switch into the counter class, a priority move or a guard becomes an
+  *answer* rather than a guess; **Guard** replacing Catch Breath as a stance
+  that halves a telegraphed hit and refunds stamina, so the defensive button
+  is a decision instead of a penalty; **switch-ins with tempo** — tagging
+  into the class that counters the telegraphed move lands a free hit; and
+  the agency probe becomes a `sim` table so the number is watched. *Done
+  when: at every grade the full-skill pilot beats "first button" by at least
+  15 points and random by at least 25, without the forecast pilot's win rate
+  falling against any encounter — so the game gets harder to play badly, not
+  harder.*
+- **R104 — The shell repaints blind.** `main.js` rebuilds the active screen
+  from a string on a **30-second interval and after every tap**, whether or
+  not anything changed, and hidden screens keep their DOM. Measured in
+  Chromium: on a fresh save the Dex tick costs **16 ms of script and 10 ms
+  of layout for 3,106 nodes** every half minute while the player reads it;
+  on the day-180 save the Vault tick is **300 ms** for **58,043 nodes**
+  (the string alone is **2,841 KB, 66,047 words, 1,955 buttons and 3,909
+  SVGs**, built in 217 ms; with its folds open the screen is **557,274 px
+  tall — 714 phone screens**), and after the player *leaves* the Vault,
+  **57,489 of those nodes stay in the document** behind `hidden` for the
+  rest of the session, so every later theme change and style recalculation
+  pays for a screen nobody is looking at. Every tick **destroys a text
+  selection** (87 → 0 characters on the Ranch) and every card's DOM
+  identity. R89 and R91 shrink the worst screen; this is about the loop that
+  paints them. Proposed, medium-large: `tickWorld` returns a **change
+  report** (what moved: funds, clocks, arrivals — R107 needs the same
+  report), and the shell repaints only when the report is non-empty or the
+  screen has declared a live countdown; **keyed cards** — `ui/cards.js`
+  grows a `patchList(root, items, keyOf, render)` that replaces only the
+  cards whose HTML changed, so a tap on one chimera re-renders one card;
+  **screens empty on leave**, so a visited Vault costs nothing afterwards;
+  and Dex portraits paint **lazily** below the fold (with the stub rendering
+  all, so the gates keep measuring everything). *Done when: a tick on an
+  unchanged day-180 save touches zero DOM nodes (a MutationObserver count in
+  the a11y gate), a tap on one Pens card leaves every other card's node
+  identity intact, leaving any screen leaves under 50 nodes behind, and the
+  fresh Dex's first paint is under 100 KB.*
+- **R105 — The county calendar.** The game runs entirely on real
+  timestamps — CLAUDE.md's own rule — and nothing in it knows what time it
+  is: **zero** hits for time of day, season or weather anywhere in the code
+  or the data; the Ranch at 3 a.m. is the Ranch at 3 p.m.; five themes,
+  every one static. R95's Travelling Menagerie needs a rotation to travel
+  on and has nothing to hang it from. Proposed, medium-large, zero assets,
+  nothing running in the background: `data/calendar.json` — a **procedural
+  sky** in the header drawn from the local hour and the world seed (sun,
+  moon, cloud cover as SVG, dusk tinting the header only, so the five themes
+  stay themselves); **four 28-day seasons** from the save's `createdAt` whose
+  effects are *husbandry, never power* — condition decay, incubation length,
+  a breeding window in which variants are likelier, and which species the
+  catalogue stocks (the hook R95 wants); **weather rolled per day** from the
+  seed, one line on the wire, one small effect (rain slows the ring's
+  refill, heat shortens patience in the Pens); and the calendar on the Ranch
+  as one line — *"Late Splicetember. Goat season."* *Done when: the same
+  save opened at two hours renders two skies and at the same hour the same
+  sky; a season changes at least one husbandry number smoke reads; the
+  catalogue's stock differs between two months of one save; and the walker's
+  180 days cross all four seasons with no new stall.*
+
+**Gameplay.**
+
+- **R106 — The first session ends at minute 45.** Five seeds at
+  fifteen-minute resolution: the first chimera decants at **minute 30**, the
+  first node falls at **minute 45**, on every seed. Then the Path's sixth
+  step — *build a stable of three* — waits on the two starter goats growing
+  up, which takes **five hours** (`growthHours.adult` 5; the bear arrives
+  grown because A4 back-dated it, the goats do not), during which the agenda
+  offers **spar, a job, and an assault** on a second node that A1 measured at
+  **0% with one chimera**, plus three ways to spend $305. The Path completes
+  between **5.75 and 25 hours** into a save and its hint says nothing about
+  the wait. The walker's stall metric reads **zero** for this stretch,
+  because it counts open rows rather than progress — the yardstick cannot
+  see the wall. Proposed, medium, two steps: **(1)** the starter goats arrive
+  an hour from adulthood (A4's rule applied to the pair — they still grow
+  into their prime, the husbandry timers are still learnt, there are simply
+  three doors on day one instead of one), and the agenda's assault row
+  refuses to point at a not-survivable node (the forecast is already there:
+  *"Not yet — one against three"*); **(2)** every Path step and every field
+  guide carries its **clock** (*"Bessie grows up in 4h 12m"*), and the walker
+  gains a **progress stall** — hours in which no open row advances the Path
+  or the map — reported beside the row-count stall. *Done when: on every
+  seed a fresh save can field three chimeras within 90 minutes of play, the
+  Path names every wait it contains with a countdown, and the walker's
+  progress stall over a save's first 24 hours is under one hour.*
+- **R107 — Welcome back.** A week away from day 25: **+$18,035** earned,
+  **6 counter-offensives** came, **4 specimens** got loose, a job came home
+  — and the wire, which keeps twelve lines, has **eight** new ones to show
+  for it, one of which is the game's only digest (*"While nobody was home, 5
+  convoys came, waited at the gate, and left stern letters"*) and the rest
+  of which are petting-zoo results. Two weeks away from day 60: **+$71,331,
+  12 contests, 4 loose, seven lines.** R64 proved a month away pays fairly;
+  nothing tells the player what it paid. Proposed, medium: a **Welcome back**
+  card at the top of whichever screen opens when the gap is over six hours,
+  built from the tick's change report (R104) rather than from the wire —
+  income earned and upkeep paid, contests held and lost, raids missed and
+  what they took, breakouts, jobs returned (and the animal in the van), eggs
+  hatched, injuries healed, creatures now pacing (with their countdown),
+  chimeras settled — one line per category that moved, none for those that
+  did not; dismissable; DOM-free so smoke can assert it against the diff.
+  *Done when: for the R64 away fixture the digest names every category that
+  changed and nothing that did not, and it never appears for a gap under an
+  hour.*
+- **R108 — Specimen cards, and the fights they carry.** §8 risk 1 says the
+  renderer is the whole first impression, and there is **no way to take a
+  creature out of the app**: the only download in the game is the save file,
+  `navigator.share` is used nowhere, and the renderer already produces
+  standalone SVG strings. Proposed, medium-large, zero backend: a
+  **specimen card** — portrait, name, lineage, grades, moves, the lab's
+  name — as one self-contained SVG with the genome and moveset embedded in
+  `<metadata>` and a short **genome code** printed under the portrait;
+  exported through the Web Share API (files) with the save exporter's Blob
+  fallback; and **import a card** — paste the code or upload the SVG — which
+  builds the creature through the same physiology the rivals use (rivals.js
+  already assembles chimeras from parts) and offers it as a Gauntlet
+  exhibition, *Visiting Specimen*, so two players can fight each other's
+  creatures with no server anywhere. Imported genomes pass R114's
+  validation; unknown part ids are refused with a sentence. The cards double
+  as the store screenshots R100 still needs. *Done when: a card round-trips
+  (export, import, identical genome and stat block), an imported specimen
+  can be fought as an exhibition, and a card naming a part that does not
+  exist is refused.*
+
+**Content and voice.**
+
+- **R109 — The voice repeats.** The wire pushed **4,034 lines in 180 days**
+  — 22 a day — from **181 distinct phrasings**, each heard **22 times** on
+  average. The top one, *"…came to nothing, which happens,"* ran **670
+  times**; the five sparring blurbs covered **539 of 543 spars**. The
+  authored reactive voice of the whole game is about **150 lines**: rivals
+  have **one line per slot** (40 in all — every duel with the same rival
+  opens with the same sentence), philosophies 45 (the `rehab` slot's five
+  are never spoken), news 34 lines across 19 events, the Task Force five,
+  Feral three, and the eleven deadpan ticker lines live **in `main.js`**, the
+  one place CLAUDE.md says content may not. `pickFresh` already exists in
+  `util/rng.js` and the wire does not use it. Proposed, medium, three steps:
+  **(1)** every reactive line becomes a **pool** of at least three variants
+  with optional conditions (`first`, `streak`, `rare`, `season` once R105
+  lands) and the wire keeps a **no-repeat window** of the last twenty
+  phrasings; **(2)** the ticker lines and spar blurbs move to data, the rival
+  `midFight` slot grows to three, and the player's `rehab` slot is wired or
+  cut; **(3)** a smoke gate over the walker's diet. *Done when: over 180
+  days no phrasing exceeds 5% of the wire and the distinct-phrasing count is
+  at least 400.*
+- **R110 — Copy is data.** Counted with comments stripped: **5,310 words of
+  player-facing prose live in JS string literals** against 20,393 in
+  `data/*.json` — **21% of everything the game says is invisible to the data
+  rule**, to the tone sweep (which can only read JSON with confidence), and
+  to R98's terse mode, which has nowhere to switch it off. The heaviest
+  files are `splice/theater.js` (436 words), `battle/ui.js` (363),
+  `campaign/ui.js` (361), `render/renderer.js` (299) and `ranch/agenda.js`
+  (274 words of hints). Proposed, medium: `data/copy.json` holding every
+  string by id with the wire's `{name}` placeholders (its `fill` already
+  exists), a `copy(id, vars)` reader, a **scopecheck rule** that a JS string
+  literal of three or more words outside `data/` fails unless it is on a
+  short developer allowlist, and the tone sweep promoted to a gate over one
+  tree. *Done when: game modules carry under 300 prose words, the scopecheck
+  rule holds, and the tone gate reads every player-facing word.*
+- **R111 — Feel: creature voices, ambience and haptics.** `audio/sfx.js`
+  holds **19 stingers** and **none of them depends on the creature** — a
+  goat-headed tank and a moth-winged kite land the same `hit`; the Ranch,
+  Pens, Vault, Theater and Dex are silent between taps; the only audio
+  setting is mute; the whole game has **one gesture** (the arena's hold) and
+  **zero** haptics. Proposed, medium-large, zero assets, the synth is
+  already hand-rolled: `audio/voice.js` derives a **voice from the genome**
+  — mass to pitch, head species to waveform family, organ to modulation,
+  temperament to contour (Skittish rises, Bullish falls) — heard on a pen
+  tap, a landed hit, a KO and a decant, seeded so the same creature always
+  sounds the same; **ambient beds** per screen (filtered noise: barn wind
+  and birds, lab hum, war-room static, vault refrigeration) under a separate
+  toggle; a **volume slider** replacing mute-only; and **haptics** via
+  `navigator.vibrate` on KO, capture and conquest, off by setting. R96 gives
+  the creatures motion; this gives them a sound. *Done when: smoke asserts
+  two genomes yield two voice specs and one genome always the same, and the
+  settings panel carries volume, ambience and haptics controls.*
+
+**UI.**
+
+- **R112 — The dossier: a name on the door, and a yearbook.** The player's
+  own dossier — name, lab, philosophy — lives on the War Room's Labs tab; no
+  guide and no agenda row points at it (the one guide that says "dossier"
+  means the rival's), and the walker's profile reads **`named: false` on day
+  180**. Without a philosophy the player's half of every duel conversation
+  is **silent** (`duelBarks` returns nothing) and the card reads
+  *Unregistered Operator*. Meanwhile the save keeps **about twenty
+  counters nobody can see**: `warRecord` 922–42, 1,853 chimeras made, 1,992
+  animals raised, 21,745 tokens, 543 spars, 144 contests, 190 breakouts,
+  1,189 jobs, 42 raids and **$445k levied**, `directorStats.partUse` with
+  128 parts — no screen renders any of them, `runSummary` shows five fields,
+  and `spliceCount` has **never been written** since M0. Proposed, medium,
+  two steps: **(1)** the **naming ceremony** moves to the first decant —
+  `showSpliceResult` offers *Name on the door* (rolled, as now) the moment
+  the player becomes a villain, the philosophy picker follows the first
+  conquest, both stay editable in the dossier; **(2)** **the Yearbook**, a
+  Dex tab: fights by kind, chimeras made and graduated and dismantled,
+  longest-serving chimera, most-used part, raids held and missed and what
+  they cost, notoriety's peak, days played — every counter the save keeps,
+  with `spliceCount` retired and `runSummary` reading the Yearbook so R102's
+  relocation has something to show. *Done when: every non-clock counter in
+  `newGameState` is either on the Yearbook or gone, and smoke walks a fresh
+  save to a name without visiting the Labs tab.*
+- **R113 — Vivarium and the fine print: the theme and type pass.** Of
+  **1,143 text nodes** on the fresh screens, **665 (58%) are under 12 px**
+  and 354 under 11 px: `.fine-print` at 11.5 px ×191, `.lineage` at 10.9 px
+  ×67, buttons at 10.9. Contrast, measured against the effective background
+  under every theme: Biohazard fails **136 of 72,171** nodes, Lab and
+  Blueprint 87, Saturday 95 — and **Vivarium fails 7,353 (10.5%)**, almost
+  all of it `.grade-badge` at 4.23:1 on every vial. Common to all five:
+  `.fine-print` at **2.3–2.6:1**, `.lineage` at 2.3–2.6, the **SPLICE IT**
+  button at 3.3–4.0, `.button` at 3.5–4.0, and 84 decorative `?` cards at
+  2.6–2.8. At 150% text the Ranch and Pens spill **70 px** past the edge, at
+  200% 216 px. `style.css` has **no safe-area insets, no `forced-colors`,
+  no light scheme** — five themes, all dark, `color-scheme: dark` — and
+  money prints as `$153249`. R99 is the gate; this is the pass it will
+  guard. Proposed, medium: a **12 px type floor** (R98's copy budget absorbs
+  the height); per-theme tokens for muted ink, badges and the big button so
+  every theme clears AA; the `?` cards marked decorative; `viewport-fit=cover`
+  with `env(safe-area-inset-*)` on header, footer and arena; the one
+  overflowing span; one **`fmtMoney`** through `Intl.NumberFormat`; and a
+  **light theme** (or one existing theme honouring
+  `prefers-color-scheme: light`). *Done when: the contrast pass reports zero
+  failures on all five themes on fresh and day-180 saves, no text node is
+  under 12 px, 150% text overflows nothing, and the header clears a
+  simulated 47 px cutout.*
+
+**Durability and tooling.**
+
+- **R114 — A save is untrusted input.** Verified this session: a save with a
+  chimera named `<b onmouseover=alert(1)>Chompers</b>` and a goat named
+  `Bessie <img src=x onerror=alert(2)>` **imports without complaint and both
+  tags render raw** on the Pens and the Ranch. `importSave` checks JSON,
+  object, app id, version and seed, then migrates; `renameCreature` strips
+  the dangerous characters at the keyboard, and nothing strips them at the
+  file. The renderer owns the game's one `esc()` (26 uses, plus seven in the
+  arena); the other screens interpolate **263 `.name` fields unescaped**.
+  Nothing checks a save's shape either: a `chimeras: "hello"` loads.
+  Proposed, medium, three steps: **(1)** `ui/html.js` — an `html` tagged
+  template that escapes every interpolation with an explicit `raw()`, the
+  263 sites migrated mechanically, and a scopecheck rule against
+  `innerHTML` templates outside it; **(2)** `save/schema.js` — types, bounds
+  (R91's list), enums and id-exists-in-content through R79's catalogue,
+  applied by `importSave` as refusal-with-a-reason and by `loadSlot` as
+  **repair** (drop the unknown, clamp the absurd, never reset — the Ascent
+  rule); **(3)** a **fuzz gate**: 200 mutated day-180 saves (type flips,
+  huge numbers, injected strings) must each import or refuse and render
+  every screen without a console error. *Done when: the injection save
+  renders as text on every screen and the fuzz gate passes.*
+- **R115 — Every shipped function has run under a gate.** V8 coverage
+  merged across smoke, handlers, sim, roadmap, scopecheck and a Chromium
+  walk of every screen on three saves: **538 of 9,733 code lines (5.5%)
+  never ran, and 50 named functions were never called.** Among them the
+  **graduation ceremony** — `runExtraction`, `playCeremony`, `showResults`,
+  `close`: 66 of `extract-ui.js`'s 76 lines, the first ceremony a new player
+  sees — `showVariantCeremony`, `showSpliceResult`, 47 lines of `main.js`
+  (`renderBootFailure`, the future-save branch, the dialog's Tab trap),
+  `ui/live.js`'s `say`, the audio context, and `sw.js`, which **no gate has
+  ever loaded**. The handlers gate fires 1,485 handlers but hands every
+  screen an `onExtract` stub, so the ceremony behind the Graduate button is
+  the one thing it cannot reach. Alongside: **19 exports imported by
+  nothing**, 67 used only by tools, `spliceCount` never written,
+  `species.archetype` on 40 species read by no code, and the philosophy
+  `rehab` slot authored five times and never spoken. Proposed, medium:
+  `tools/coverage.js` (the merge is a hundred lines, zero dependencies)
+  that runs the suite under `NODE_V8_COVERAGE`, takes precise coverage
+  from the a11y walk itself, and **fails on a never-called function outside
+  an allowlist that carries a reason**, on an export nothing imports, and
+  on a JSON key nothing reads; first use pays the list down — the three
+  ceremonies walked in the browser, a boot-failure fixture, a Node test of
+  the worker's fetch handler against a stub cache, and the dead things
+  removed. *Done when: `npm run coverage` passes with an allowlist under
+  ten entries, each with a reason.*
+- **R116 — The jobs board is a slot machine.** Over 180 days the walker
+  launched **1,188 jobs — 6.6 a day, more than every fight it fought
+  combined (964)** — every one of them **solo**: the four jobs that ask for
+  a chimera's tags and class, the interesting half of the design, ran
+  **zero** times. They succeeded 43% of the time and paid **$58,800, which
+  is 6.7% of the $882k the county paid in income**; the petting zoo ran 720
+  times at $23 a run. Those launches are **670 of the wire's lines**. Heat is
+  the only brake and it brakes ambition, not taps. Proposed, medium: the
+  solo jobs become **standing contracts** — one passive, auto-renewing
+  arrangement at a time, settled at the tick like income, no launch — and
+  the board keeps the **crewed** jobs, which become where a chimera earns
+  while the ring cools; the walker learns to crew them (a policy per
+  demand, closing another R92 blind spot); and job outcomes reach the wire
+  as **one ledger line a day** (shared with R109). *Done when: on the
+  walker's diet launches fall under one a day with job income within 20% of
+  today's, crewed launches run at least one a day, and "came to nothing"
+  leaves the ten most frequent phrasings.*
+- **R117 — Wide screens.** The game is a **560 px column at every width**:
+  `main { max-width: 560px }` and not one layout rule above 430 px, so on a
+  1,920 px laptop it sits at x = 673 with 1,360 px of dark on either side —
+  and GitHub Pages serves laptops. The one-line ticker is the only place the
+  wire is read. Proposed, medium: at **900 px and up**, a second column
+  docking the Right Now agenda and a readable wire beside the active
+  screen; on the Pens and Ranch the open card beside the list; the arena's
+  stage growing into the room; the tabs as a left rail at 1,200 px; and a
+  1,280 px pass in the a11y gate so nothing regresses at 380. *Done when:
+  at 1,280 px the agenda and the wire are visible without scrolling on every
+  screen, the 380 px floor and gutter still hold, and the day-180 Pens
+  needs no horizontal scroll at either width.*

@@ -1,5 +1,94 @@
 # PROGRESS
 
+## Session 111 — Sixth audit: fifteen phases (R103–R117) ✅
+
+**Acceptance criterion:** a full audit of the shipped game with fifteen
+evidence-backed phases, medium to large, none overlapping R88–R102 — **ROADMAP
+§9.6**. No game code changed; nothing to migrate. Every gate was green at the
+start of the session (see Session 110's table, re-run at the top of this one)
+and `npm run roadmap` is green with the new section in.
+
+| gate | result |
+|---|---|
+| `npm run roadmap` | ✓ — 25 stated numbers, every named mechanic exists or is queued (re-run after §9.6 landed) |
+| `npm run smoke` · `battery` · `scopecheck` · `a11y` · `boot` · `sim` · `handlers` | ✓ — unchanged; no code touched this session |
+
+### Instruments, and what they were pointed at
+
+Six audits in, the yardstick measures the *walker*. This one measured the
+things the walker cannot: what a **different player** would have done in the
+same fight, the **first two days at fifteen-minute resolution**, the
+**browser's own account** of what it draws, every **text node against its
+background** under all five themes, the **code no gate has ever run**, a
+**week away**, the **wire's 4,034 lines**, and a save with a `<b onmouseover>`
+in it. All of it ran from scratch probes over the shipped tools (the CDP
+driver, the walker, the recording DOM stub); R115 proposes committing the one
+worth keeping — the coverage merge.
+
+| instrument | headline |
+|---|---|
+| six pilots × 68 builds × 26 encounters × 3 seeds, three grades | playing well vs "first button": **+2.5 pts** (standard), **+4.3** (apex); outcome identical under all six pilots in **82% / 77% / 72%** of fights; **83% / 78% / 74%** of pairings decided in the briefing; Catch Breath is a **nine-point trap** |
+| five seeds, 15-minute steps, two days | first chimera **minute 30**, first node **minute 45**, then a **five-hour** wall (the starter goats' `growthHours.adult`) the Path never mentions; Path complete at **5.75–25 h**; the stall metric reads **zero** through it |
+| Chromium: DOM, tick cost, selection, hidden screens | day-180 Vault **58,043 nodes / 3 MB / 300 ms per tick**; **57,489 nodes stay in the document** after leaving it; fresh Dex **16 + 10 ms every 30 s**; every tick destroys a text selection |
+| contrast, 72,171 text nodes, five themes | Vivarium fails **10.5%** (the others 0.1–0.2%); `.fine-print` **2.3–2.6:1** everywhere; **58%** of text on fresh screens is **under 12 px**; no safe-area, no light scheme; `$153249` |
+| V8 coverage, Node suite + browser walk | **538 of 9,733 lines (5.5%)** and **50 named functions** never run — the **graduation ceremony** among them; `sw.js` never loaded; 19 dead exports; `spliceCount` never written |
+| the wire over 180 days | **4,034 lines from 181 phrasings**, 22× each; *"came to nothing"* ×670; the whole reactive voice is ~150 authored lines; the ticker's 11 lines live in `main.js` |
+| the jobs board | **1,188 launches, 6.6/day, all solo**, 43% success, **6.7%** of income; the four crewed jobs ran zero times |
+| a week away | +$18,035, 6 contests, 4 loose — and **eight** wire lines to show for it |
+| an imported save with `<b onmouseover>` in a name | **accepted, rendered raw** on the Pens and the Ranch; one `esc()` in the codebase, **263** unescaped `.name` interpolations |
+| the game at 1,920 px | a **560 px column** at x = 673 |
+
+### What came back clean
+
+Two 180-day walks on one seed are **bit-for-bit identical** (no hidden clock
+or `Math.random` anywhere in the loop). The day-180 save holds **no NaN,
+undefined, Infinity or exotic object**. The tone sweep over every JSON value
+and JS literal found **nine hits, all idiom** — nothing to fix. **Zero console
+errors** on fresh, day-180 and mid-duel loads. The CSS is tokenised (31
+custom properties, 511 `var()` uses, two stray hex literals) and rem-based
+throughout.
+
+### The fifteen
+
+**Overhauls** — R103 decisions that matter (enemy intent, Guard, switch
+tempo; agency becomes a sim table) · R104 the shell repaints blind (change
+report from `tickWorld`, keyed cards, screens empty on leave) · R105 the
+county calendar (procedural sky, four husbandry seasons, weather; the
+rotation R95 needs).
+
+**Gameplay** — R106 the first session ends at minute 45 · R107 Welcome back
+(a digest from the tick's diff) · R108 specimen cards and the fights they
+carry (share a creature, import a friend's as an exhibition).
+
+**Content and voice** — R109 the voice repeats (pools, conditions, a
+no-repeat window; ticker lines to data) · R110 copy is data (5,310 words out
+of code, a scopecheck rule) · R111 feel: creature voices from the genome,
+ambience, a volume slider, haptics.
+
+**UI** — R112 the dossier: a name on the door at the first decant, and a
+Yearbook for the twenty counters nobody sees · R113 Vivarium and the fine
+print: a 12 px floor, per-theme tokens, safe areas, `fmtMoney`, a light theme.
+
+**Durability and tooling** — R114 a save is untrusted input (an escaping
+`html` tag, a schema that repairs, a fuzz gate) · R115 every shipped function
+has run under a gate (`tools/coverage.js`) · R116 the jobs board (standing
+contracts; the crewed board) · R117 wide screens.
+
+### Known issues
+
+None new in code. The queue is a proposal: prune it before starting R103.
+The scratch probes were not committed; R115 is the one that should become a
+tool, and R103's agency table the one that should become a sim report.
+
+### Next session's first task
+
+**R106** if the session is short — it is the smallest phase with the largest
+audience (every new player, minute 45), and step (1) is a two-line change to
+`ensureRanchSeeded` plus a forecast-aware agenda row. **R103** if it is long:
+it is the game's core loop, and the measurement that it barely matters is the
+most important number this audit produced. Either way, measure first — the
+probes are described in §9.6 and reproduce from the shipped tools.
+
 ## Session 110 — R87: The endgame ✅
 
 **Acceptance criterion (re-derived — see below):** across six seeds the
