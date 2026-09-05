@@ -1971,6 +1971,12 @@ assert.deepEqual(m5.campaign, {
   // claim of the v38 migration — the first escape is still five hours after
   // the save becomes eligible, not five hours after it was upgraded.
   loose: [], nextBreakAt: null, breakoutCount: 0,
+  // R87: the same claim for the Task Force. A save from before it arrives
+  // with an empty board and an unarmed schedule — nobody is retroactively
+  // raided, and the first raid is scheduled by the first tick that finds
+  // the player in range rather than by the upgrade.
+  raid: null, nextRaidAt: null, raidCount: 0, raidsHeld: 0, leviedTotal: 0,
+  notorietyCapped: false,
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -7029,6 +7035,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // own hint says so. (A fight or a treatment answers it too, but neither
     // is a button on the Pens, and this gate is about where the chip LANDS.)
     settle: 'data-train=',
+    // R87 — both land on the War Room, where their buttons are: the raid
+    // alert sits above the subtab bar (R15) and the exhibition on the Labs
+    // tab, which is why the gauntlet row carries a subtab and the raid
+    // row does not.
+    raid: 'data-raid=', gauntlet: 'data-gauntlet=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
@@ -10822,7 +10833,10 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // value of the row is WHICH creature and HOW LONG. "Somebody has been
     // left alone too long" is not a reason to open the Pens; "Chompers
     // pacing the pen, 20h before it stops taking your calls" is.
-    const NUMBERED = ['spar', 'defend', 'rescue', 'settle'];
+    // R87 adds two more, on the same terms: a raid's row is worth reading
+    // because it names the hours left and the dollars at stake, and an
+    // exhibition's because it names which one and what it pays.
+    const NUMBERED = ['spar', 'defend', 'rescue', 'settle', 'raid', 'gauntlet'];
     const strings = AGENDA.filter((a) => !NUMBERED.includes(a.id));
     assert.ok(strings.length > 10, 'there are plenty of them');
     for (const a of strings) {
