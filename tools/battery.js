@@ -1798,6 +1798,45 @@ const BREAKS = [
     to: '  gap: 3px;',
   },
   {
+    n: 107, gate: A11Y, name: 'the founding card wears a colour token as a class name again, so it has no background and the Ranch reads through it',
+    file: 'ranch/founding-ui.js',
+    anchor: '    <div class="card founding">',
+    to: '    <div class="panel founding">',
+  },
+  {
+    n: 108, gate: A11Y, name: 'a species name on the founding screen goes back to page-colour on a panel',
+    file: 'style.css',
+    anchor: '.lab-name { font-weight: 700; font-size: 0.95rem; color: var(--text); }',
+    to: '.lab-name { font-weight: 700; font-size: 0.95rem; color: var(--ink); }',
+  },
+  {
+    n: 109, gate: A11Y, name: "the enemy's committed move is painted the colour of the page again",
+    file: 'style.css',
+    anchor: '.intent strong { color: var(--text); }',
+    to: '.intent strong { color: var(--ink); }',
+  },
+  {
+    n: 110, gate: A11Y, name: 'the field-note title drops back under the floor in one theme and no other',
+    file: 'style.css',
+    anchor: '  --accent-2: #ff61ac; --on-accent-2: #2b0417; --accent-2-dim: #5c1440;',
+    to: '  --accent-2: #ff4fa3; --on-accent-2: #2b0417; --accent-2-dim: #5c1440;',
+  },
+  {
+    n: 111, gate: A11Y, name: 'the move readout goes back to having no ground, so the arena shows through its own text',
+    file: 'style.css',
+    anchor: `.sheet {
+  width: 100%;
+  max-width: 440px;
+  max-height: 86vh;
+  overflow-y: auto;
+  background: var(--panel);`,
+    to: `.sheet {
+  width: 100%;
+  max-width: 440px;
+  max-height: 86vh;
+  overflow-y: auto;`,
+  },
+  {
     n: 42, gate: BREAKOUT, name: 'a loose specimen grows a deadline and wanders off while you are away',
     file: 'campaign/breakout.js',
     anchor: '    const rival = labFor(state, content, cam.breakoutCount);',

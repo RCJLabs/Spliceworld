@@ -37,9 +37,9 @@ export function renderFounding(overlay, ctx, onDone) {
         <span class="lab-name">${esc(lab.name)}</span>
         <span class="lab-blurb">${esc(lab.blurb)}</span>
         <span class="lab-kit">
-          <span class="lab-row">${renderIcon('graduation-cap', { size: 13 })} <b>${esc(s.donor)}</b>, fully grown — graduate it today for six parts</span>
-          <span class="lab-row">${renderIcon('heart', { size: 13 })} a breeding pair of <b>${esc(s.pair)}</b>, newborn</span>
-          <span class="lab-row">${renderIcon('package', { size: 13 })} a crate: ${s.crateParts.map((n) => `<b>${esc(n)}</b>`).join(' and ')}</span>
+          <span class="lab-row">${renderIcon('graduation-cap', { size: 13 })}<span><b>${esc(s.donor)}</b>, fully grown — graduate it today for six parts</span></span>
+          <span class="lab-row">${renderIcon('heart', { size: 13 })}<span>a breeding pair of <b>${esc(s.pair)}</b>, newborn</span></span>
+          <span class="lab-row">${renderIcon('package', { size: 13 })}<span>a crate: ${s.crateParts.map((n) => `<b>${esc(n)}</b>`).join(' and ')}</span></span>
         </span>
         <span class="lab-pitch">${esc(lab.pitch)}</span>
       </button>
@@ -48,7 +48,7 @@ export function renderFounding(overlay, ctx, onDone) {
 
   overlay.dataset.locked = 'true';
   overlay.innerHTML = `
-    <div class="panel founding">
+    <div class="card founding">
       <h2>Choose your laboratory</h2>
       <p class="founding-lede">Every one of these was abandoned in a hurry. Pick the one whose
         leftovers you like: a grown donor for the slab, a pair to raise, and a crate of

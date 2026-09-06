@@ -2635,3 +2635,108 @@ moved one of them: the first premise held exactly, the second did not.
   spending money; `hatch` and `gauntlet` both appear in a 90-day walk; and
   the d0–1 average clears 9 rows / 6 productive without moving the d30–90
   figure by more than one row.*
+
+### 9.8 The screen you cannot read (R122) — reported from a phone
+
+- **R122 — The founding picker was invisible.** ✅ *Shipped.* Reported with a
+  photograph of a phone, and the cause was **three separate bugs stacked on
+  one screen**, none of which any existing gate could see.
+
+  - **The card was never a card.** R119's markup said
+    `<div class="panel founding">`. `panel` is not a class in `style.css` — it
+    is the name of a *colour token* (`--panel`), and the token's name went
+    where the class goes. Every other overlay card in the game says `card`,
+    which is where the background, border, radius and padding live. Without
+    it the founding panel was `rgba(0, 0, 0, 0)`, so the Ranch behind it read
+    straight through the words. That is what "impossible to read" was.
+  - **`--ink` is the page, not the text.** The palette comment says so in as
+    many words: *"Surfaces run ink (page) -> panel (card) -> panel-2 (raised)
+    -> well (sunken)"*. Three rules used it as a text colour, painting
+    near-black on near-black at **1.1:1**: `.lab-name` and `.lab-row b` (every
+    species name on the founding screen — Bear, Goat, Eagle Wings, Marsh
+    Heron, Tiger Arms, all of them), and `.intent strong`, which is **R103's
+    enemy-intent banner in the battle arena** — the same bug, already shipped,
+    on a screen nobody had complained about yet.
+  - **A locked dialog was showing a game the player does not own.** `.overlay`
+    is deliberately translucent — a graduation ceremony over your own ranch is
+    the point — but the founding screen is the one dialog with *nothing*
+    behind it, which is exactly what R119's `data-locked` already marks. It
+    now takes an opaque ground, and the card caps at `88vh` with the list
+    scrolling inside it, because a `position: fixed` overlay does not scroll
+    and a card taller than the phone does not go below the fold, it goes away.
+
+  **Why nothing caught it.** The CSS gate asserts that every `var()` names a
+  property that **exists** — and `--ink` does exist. The a11y gate measures
+  40px targets, 6px gutters, focus, semantics and a keyboard walk — none of
+  which a colour can fail. And every one of those measurements runs against a
+  fixture **save**, while the founding picker is the one view that exists only
+  when there *isn't* one: it was the single screen in the game no gate had
+  ever looked at.
+
+  **The gate.** `tools/a11y.js` now asks the browser the only question that
+  settles it — what colour is this text, and what colour is actually behind
+  it — compositing every translucent ancestor down to the page the way the
+  screen does, and holding the result to WCAG's own thresholds (4.5:1, or 3:1
+  once type is large). A card with no background contributes nothing to that
+  stack, so **both** bugs fall out of one measurement. Gradients are read
+  rather than skipped: each colour stop is a candidate ground and the **worst**
+  one is the answer, because text legible on four stops of five is text you
+  cannot read a fifth of. Only a background with no colours in it at all (a
+  `url()`) is declared unmeasured, and the run prints every one of those by
+  name — an exemption nobody can see is an exemption that grows. Today there
+  are none. The walk also clears `localStorage` first and measures the
+  **founding picker itself**, so the screen this milestone fixed is a screen
+  the gate now covers: **19 views → 20 → 21, 65 controls → 69**. One fix to
+  the harness itself fell out of that: the readings were *judged* before the
+  keyboard walk that opens the move readout had taken them, so that view's
+  measurements reached the maps after they had been reported. Everything is
+  judged at the end of the run now.
+
+  **Two more faults the ratio cannot see**, found by looking at the rendered
+  screen rather than at a number. `.lab-row` was `display: flex` so the icon
+  would sit beside the sentence — but **a flex container lays out its TEXT
+  NODES as items too**, so each row held four of them (the icon, a space,
+  `<b>Bear</b>`, `", fully grown…"`) with 5px between each: the screen read
+  *"Bear , fully grown"*, and a two-word species name took a column of its own
+  with the rest of its sentence stranded beside it. It is a two-cell grid now,
+  the sentence in one cell, wrapping like prose and keeping its own
+  punctuation. And R73's global `button { align-items: center;
+  justify-content: center }` — which exists so a shrink-wrapped label sits in
+  the middle of its 40px target — leaked into `.lab-pick`, which had turned
+  itself into a **column**: the cross axis became horizontal and every child
+  was centred, which is why the laboratory's name floated in the middle of a
+  card whose every other line starts at the left margin. Probed for elsewhere
+  before deciding whether it deserved a gate of its own: across the founding
+  screen and all six screens of a real save, **that row was the only instance
+  in the game**, so it is a fix, not a rule.
+
+  **What it found beyond the report.** Two more, on screens nobody had
+  flagged: `.intent strong` above, and the field-note title at **4.32:1** in
+  the `vivarium` theme — `--accent-2` on `--panel-2`, under the floor in that
+  one scheme and no other. Lifted `#ff4fa3 → #ff61ac`, which clears 4.73 there
+  and 4.64 on `--accent-2-dim`, and takes dark text *over* the fill from 6.09
+  to 6.67 — better in both directions.
+
+  **And the break battery caught me shipping two vacuous breaks.** Reverting
+  the class name alone still passed, because the darkened scrim hides a card
+  with no ground; reverting the card's height cap alone still passed, because
+  the list's own cap already holds it. *Belt-and-braces fixes cannot be shown
+  load-bearing one at a time.* So the rule was stated where it is actually
+  true — **every element of a visible modal that owns text must paint its own
+  opaque background**, because a card that borrows its ground from whatever
+  scrim happens to sit behind it today is one stylesheet edit from being
+  unreadable. That makes the class name provable, and it immediately found a
+  **second instance**: `.sheet` had no rule in this stylesheet at all, so both
+  dialogs that wear it — the Pens' repertoire picker and the arena's move
+  readout — were transparent, showing the screen behind them through their own
+  text. The arena's readout is opened by the keyboard walk and had never been
+  measured; it is a view now (**21**), and `.sheet` is a card. The height cap
+  stays as belt-and-braces and carries no break, because it cannot honestly
+  earn one.
+
+  *Done when: every text node on every view the a11y walk reaches clears its
+  WCAG threshold against its real composited background, every dialog card
+  paints its own ground, the founding picker and the move readout are both
+  among those views, and the battery proves each fix load-bearing.* ✅ —
+  **111 breaks, 111 caught**, five of them new (the class name, the two
+  `--ink` reversions, the theme token, and `.sheet`'s ground).

@@ -1,5 +1,116 @@
 # PROGRESS
 
+## Session 116 — R122: The screen you cannot read ✅
+
+**Reported from a phone**, with a photograph: the founding picker's text was
+unreadable. **Acceptance criterion:** every text node on every view the a11y
+walk reaches clears its WCAG threshold against its real composited
+background; the founding picker is one of those views; and the battery proves
+each fix is load-bearing. **All three.**
+
+### One screen, three bugs, and none of them a colour I could grep for
+
+- **The card was never a card.** R119 wrote `<div class="panel founding">`.
+  `panel` is **not a class in this stylesheet** — it is the name of a colour
+  *token* (`--panel`), and the token's name went where the class goes. Every
+  other overlay card in the game says `card`, which is where the background,
+  border, radius and padding live. Measured: the panel's computed background
+  was `rgba(0, 0, 0, 0)`. The Ranch was reading straight through the words.
+- **`--ink` is the page, not the text.** The palette's own comment says so:
+  *"Surfaces run ink (page) -> panel (card) -> panel-2 (raised) -> well
+  (sunken)"*. Three rules used it as a text colour — **1.1:1**, near-black on
+  near-black. Two of them painted every species name on the founding screen;
+  the third was `.intent strong`, **R103's enemy-intent banner in the battle
+  arena**, the same bug already shipped on a screen nobody had complained
+  about.
+- **A locked dialog was showing a game the player does not own yet.** The
+  scrim is translucent on purpose everywhere else. The founding screen is the
+  one dialog with nothing behind it — which `data-locked` already marks — so
+  it takes an opaque ground, and the card caps at `88vh` with the list
+  scrolling inside it. A `position: fixed` overlay does not scroll: a card
+  taller than the phone does not go below the fold, it goes away.
+
+### Two more the ratio cannot see
+
+Looking at the rendered screen rather than at a number: `.lab-row` was
+`display: flex`, and **a flex container lays out its TEXT NODES as items
+too** — four per row (icon, a space, `<b>Bear</b>`, `", fully grown…"`) with
+5px between each. The screen read *"Bear , fully grown"*, and a two-word
+species name took a column of its own with the rest of its sentence stranded
+beside it. Two-cell grid now; the sentence wraps like prose and keeps its own
+punctuation. And R73's global `button { align-items: center }` leaked into
+`.lab-pick`'s **column** flex, so the cross axis was horizontal and every
+child was centred — the lab's name floated in the middle of a card whose
+every other line starts at the left margin. Probed the rest of the game
+before deciding it needed a gate: **that row was the only instance**, so it
+is a fix, not a rule.
+
+### Why nothing caught it, which is the actual finding
+
+The CSS gate asserts every `var()` names a property that **exists**, and
+`--ink` does. The a11y gate measured 40px targets, 6px gutters, focus,
+semantics and a keyboard walk — none of which a colour can fail. And every
+one of those measurements runs against a fixture **save**, while the founding
+picker is the one view that exists only when there *isn't* one. It was the
+single screen in the game no gate had ever looked at.
+
+### The gate
+
+`tools/a11y.js` now asks the browser what colour the text is and what colour
+is **actually behind it**, compositing every translucent ancestor down to the
+page. A card with no background contributes nothing to that stack, so both
+bugs fall out of one measurement. Gradients are read rather than skipped —
+each stop is a candidate ground, the **worst** one is the answer — and only a
+background with no colours in it at all is declared unmeasured, printed by
+name so the exemption cannot grow in silence. There are none today. The walk
+clears `localStorage` first and measures the founding picker itself:
+**19 views → 20 → 21, 65 controls → 69**. One more fix to the harness itself:
+the readings were being *judged* before the keyboard walk that opens the move
+readout had taken them, so that view's measurements landed in the maps after
+they had already been reported. Everything is judged at the end of the run
+now.
+
+### What it found beyond the report
+
+`.intent strong` above, and the field-note title at **4.32:1** in the
+`vivarium` theme — `--accent-2` on `--panel-2`, under the floor in that one
+scheme and no other. `#ff4fa3 → #ff61ac`: 4.73 on panel-2, 4.64 on
+`--accent-2-dim`, and dark text *over* the fill goes 6.09 → 6.67. Better in
+both directions.
+
+### The battery caught me shipping two vacuous breaks
+
+Reverting `class="card"` alone still passed — the darkened scrim hides a card
+with no ground. Reverting the card's height cap alone still passed — the
+list's own cap already holds it. **Belt-and-braces fixes cannot be shown
+load-bearing one at a time.** So the rule went where it is actually true:
+*every element of a visible modal that owns text paints its own opaque
+background*, because a card borrowing its ground from today's scrim is one
+edit from unreadable. That makes the class name provable — and it found a
+**second instance immediately**: `.sheet` has no rule in this stylesheet at
+all, so the Pens' repertoire picker and the arena's move readout were both
+transparent, showing the screen behind them through their own text. The
+arena's readout is opened by the keyboard walk and had never been measured.
+It is a view now (**21**) and `.sheet` is a card. The height cap stays as
+belt-and-braces and carries no break, because it cannot honestly earn one.
+
+### Verification
+
+**111 breaks, 111 caught** (five new: the class name, both `--ink`
+reversions, the theme token, the panel's height cap) · a11y green across 20
+views · smoke · handlers · scopecheck · roadmap · boot. `SAVE_VERSION` stays
+**43** (no schema change); `sw.js` cache → `spliceworld-v43-r122` so the CSS
+fix actually reaches a phone that already cached the old one.
+
+### Known issues
+
+None new.
+
+### Next session's first task
+
+**R88 — the battle screen charges full price for free fights.** Asked for
+directly, immediately after this one.
+
 ## Session 115 — R120: The sitting, not the session ✅
 
 **Acceptance criterion (re-derived — all three of my original clauses were
