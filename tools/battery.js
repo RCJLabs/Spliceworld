@@ -185,6 +185,22 @@ const OUTLOOK = ['node', '-e', `
   console.log('outlook ✓  ' + lines.length + ' sentences across every stage, condition and gene level, every slot filled');
 `];
 
+// R127 — IS THE DATA WHAT THE GENERATOR PRODUCES? For four phases it was
+// not. `data/parts.json` has said since R20 that hand-authored content lives
+// in the generator "because a generator that reverts four phases of tuning
+// the next time somebody runs it is a trap" — and forty parts had been tuned
+// straight into the JSON since, so running it reverted thirty-five named
+// tail abilities, three active hides, a heron's power and the goat's Iron
+// Gut passive, which the emitted object had no key for at all.
+//
+// Nothing could say so, because the only way to find out was to run the
+// generator and thereby destroy the evidence. `--check` computes the same
+// output and COMPARES it, so the question can be asked without paying for
+// the answer. R126 is why it matters beyond tidiness: a hand edit to claw
+// geometry and the shape library silently disagreed about thirteen parts,
+// and no gate in the suite could tell that apart from a deliberate change.
+const GENPARTS = ['node', 'tools/gen-parts.js', '--check'];
+
 // R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
 // "claws are on backwards". They were. Every part is drawn in a local space
 // where the head faces +x (frames.json _doc), and the `paw` archetype built
@@ -2265,6 +2281,18 @@ const BREAKS = [
     to: '      ${false && fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
   },
   {
+    n: 132, gate: GENPARTS, name: 'a part is tuned in the data and not in the generator, so the next regeneration reverts it',
+    file: 'data/parts.json',
+    anchor: '"ability": "Log Roll"',
+    to: '"ability": "Barrel Roll"',
+  },
+  {
+    n: 133, gate: GENPARTS, name: 'the hand-tuned table loses an entry, so the generator goes back to the family-generic name',
+    file: 'tools/gen-parts.js',
+    anchor: "  crocodile_tail: { ability: 'Log Roll'",
+    to: "  crocodile_tail_disabled: { ability: 'Log Roll'",
+  },
+  {
     n: 131, gate: CLAWS, name: 'a paw is regenerated with the old backward claw, and every big cat is on its feet the wrong way',
     file: 'data/parts-shapes.json',
     anchor: '"points": "13.55,55 14.55,65 28.55,61"',
@@ -2488,7 +2516,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2511,6 +2539,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === OUTLOOK ? 'every outlook sentence has something in every slot'
                 : gate === TIER ? 'a higher letter is a creature that wins more'
                 : gate === CLAWS ? 'every clawed foot points where the creature is going'
+                : gate === GENPARTS ? 'the shipped parts are exactly what the generator produces'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
