@@ -1766,7 +1766,51 @@ R102; R88–R90 remain.)*
   assaults default to Watch. *Done when: the beats the walker's day replays
   drop by 60% at identical outcomes, and a rival duel still plays beat by
   beat by default.*
-- **R89 — The Pens and the Ranch at scale.** On the day-180 save at 380 px,
+- **R89 — The Pens and the Ranch at scale.** ✅ *Shipped.*
+
+  **This entry's own numbers understated it.** Measured on the day-180 walked
+  save at 380px — which nothing in the tree could produce until this
+  milestone, because `campaignWalk` built the state, reported summaries of it
+  and dropped it — the expanded Pens is **16,657px and 3,446 words for NINE
+  chimeras**, against the 12,554px and 2,157 words this entry recorded for
+  ten. The card had kept growing since the audit wrote that down: R103's
+  stance row, R125's tier chip, its "why" and its lever all landed after.
+  That is the argument for a gate rather than a note.
+
+  **Two of the things proposed here already existed** and were not rebuilt:
+  `ui/roster.js` has supplied band headers since R44 (the Pens already reads
+  *"Can train now 9"*), and `ui/cards.js` has supplied `collapsibleCard`. The
+  real work was narrower — the open card, and a Foes tab with no fold on it
+  at all.
+
+  **Two rules, and they only work together.** Tabs (Overview · Moves ·
+  Anatomy · History) cut the card, and `bindFolds`' new `exclusive` list
+  keeps at most one creature open: a screen whose height is *roster × card*
+  cannot be fixed by dieting the card. Break 139 measures exactly that — with
+  the tabs still in place but exclusivity removed, the Pens is 7,063px.
+
+  **What is deliberately not in a tab** is the load-bearing half. R15's rule
+  is that a countdown costing you something never hides behind a tab, so the
+  feral panel, the settling clock, the vat recovery and the Infirmary window
+  sit above the bar and show on all four tabs — verified per tab in a real
+  browser.
+
+  *Done when: the day-180 save's expanded Pens is under 4,000 px and the Foes
+  tab under 2,500, gated.* ✅ — **Pens 16,657 → 1,919px** at its tallest,
+  **Foes 4,113 → 664px** shut. `tools/height.js` holds both on the day-180
+  save, plus a ratchet on the seven screens R89 does not touch so they cannot
+  grow into the space it frees. Breaks 139 and 140 hold both directions.
+
+  **Three gates caught this milestone hiding things from them**, which is the
+  system working: `handlers` found `data-moves` and `data-dossier` painted on
+  a surface no walk could reach (a `pens:card` surface with a fanout over the
+  tabs now walks them), and `a11y` found the retraining sheet unreachable for
+  the same reason. The height gate itself had to be fixed first: its first
+  version opened every fold and stopped, so on the new card it only ever saw
+  Overview at 1,742px while Moves is 1,919 — reporting the shortest of four
+  faces as the tallest.
+
+  *(Superseded proposal, kept for the record.)* On the day-180 save at 380 px,
   folded: Ranch **2,892 px (3.7 screens)**, Dex Foes **4,306 px (5.5)**, Dex
   front **3,172 (4.1)**, Vault **2,380 with one button per vial**; expanded:
   Ranch **8,356 px (10.7 screens, 98 buttons)** and the Pens **12,554 px —

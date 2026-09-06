@@ -312,7 +312,7 @@ function foesView(state, content) {
   const metCount = rivalList(content).filter(isMet).length;
   const rivalCard = collapsibleCard({
     id: 'dex-rivals',
-    title: `${renderIcon('flask')} Rival Geneticists`,
+    title: `${renderIcon('masks')} Rival Geneticists`,
     badge: `${metCount}/${rivalList(content).length} met`,
     summary: metCount
       ? `${metCount} of ${rivalList(content).length} have introduced themselves. Their records, their philosophies and what they will field next time.`
@@ -329,7 +329,7 @@ function foesView(state, content) {
       })</h3>
       ${gauntletShelf}
       ${enemyRows}
-      ${unclassed.length ? classFold('dex-foes-unclassed', `${renderIcon('flask')} Unclassed`, `${unclassed.length}`,
+      ${unclassed.length ? classFold('dex-foes-unclassed', `${renderIcon('tag')} Unclassed`, `${unclassed.length}`,
         `${unclassed.length} unit${unclassed.length === 1 ? '' : 's'} outside the triangle.`,
         `<div class="dex-grid">${unclassed.map(cell).join('')}</div>`, state) : ''}
       <p class="fine-print">Every entry remembers you too. That's the AI director's notebook.</p>

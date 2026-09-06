@@ -224,6 +224,12 @@ const GENSAVES = ['node', 'tools/gen-saves.js', '--check'];
 // Only the console tells you. That is why this gate reads the console.
 const STALE = ['node', 'tools/stale.js'];
 
+// R89 — HOW TALL IS THE SCREEN AFTER A HUNDRED AND EIGHTY DAYS? Every height
+// this project quoted at scale was measured by hand once and then went stale
+// while the screen kept growing: the roadmap recorded 12,554px of Pens for
+// ten chimeras and it was 16,657 for nine. A budget nobody runs is a note.
+const HEIGHT = ['node', 'tools/height.js'];
+
 // R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
 // "claws are on backwards". They were. Every part is drawn in a local space
 // where the head faces +x (frames.json _doc), and the `paw` archetype built
@@ -2304,6 +2310,18 @@ const BREAKS = [
     to: '      ${false && fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
   },
   {
+    n: 139, gate: HEIGHT, name: 'the creature cards stop being exclusive, so nine open at once and the Pens is twenty-one screens again',
+    file: 'splice/pens-ui.js',
+    anchor: "{ exclusive: state.chimeras.map((ch) => `pen-${ch.id}`) });",
+    to: '{ exclusive: [] });',
+  },
+  {
+    n: 140, gate: HEIGHT, name: 'a band of the enemy field guide opens itself, and the Foes tab is five screens of unasked-for reference again',
+    file: 'splice/dex-ui.js',
+    anchor: 'return collapsibleCard({ id, title, badge, summary, body, open: isOpen(state, id, false), extraClass: \'dex-band\' });',
+    to: 'return collapsibleCard({ id, title, badge, summary, body, open: isOpen(state, id, true), extraClass: \'dex-band\' });',
+  },
+  {
     n: 138, gate: STALE, name: 'the lazy migration module is fetched from a path that is not there, and a returning player is quietly handed a new ranch',
     file: 'save/save.js',
     anchor: "await import('./migrations.js')",
@@ -2569,7 +2587,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2596,6 +2614,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === SAVES ? 'a real save of every version still migrates to the current one'
                 : gate === GENSAVES ? 'every save fixture is what that version of the game actually wrote'
                 : gate === STALE ? 'a real old save still opens the game in a browser, quietly'
+                : gate === HEIGHT ? 'no screen outgrows its budget on a day-180 save'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;

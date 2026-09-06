@@ -57,16 +57,10 @@ export function isOpen(state, id, defaultOpen = true) {
   return !stored;
 }
 
-// R89 — `group` makes a set of cards EXCLUSIVE: opening one shuts the rest.
-// It exists because a stable of nine cards that can all be open at once is
-// 16,657px of screen, and no per-card diet fixes that — the height is the
-// product of the card and the roster, so the only ceiling that holds as the
-// roster grows is "one at a time". A screen without a group keeps the old
-// behaviour exactly.
-export function collapsibleCard({ id, title, badge = '', summary = '', body, open, extraClass = '', group = '' }) {
+export function collapsibleCard({ id, title, badge = '', summary = '', body, open, extraClass = '' }) {
   return `
     <section class="card foldable ${open ? 'is-open' : 'is-shut'} ${extraClass}">
-      <button type="button" class="fold-head" data-fold="${id}"${group ? ` data-fold-group="${group}"` : ''} aria-expanded="${open}">
+      <button type="button" class="fold-head" data-fold="${id}" aria-expanded="${open}">
         <span class="fold-caret" aria-hidden="true">${open ? '▾' : '▸'}</span>
         <span class="fold-title">${title}</span>
         ${badge ? `<span class="fold-badge">${badge}</span>` : ''}
@@ -76,7 +70,19 @@ export function collapsibleCard({ id, title, badge = '', summary = '', body, ope
     </section>`;
 }
 
-export function bindFolds(root, ctx, rerender) {
+// R89 — `exclusive` is a list of fold ids of which AT MOST ONE may be open.
+// It exists because a stable of nine cards that can all be open at once is
+// 16,657px of screen, and no per-card diet fixes that: the height is the
+// product of the card and the roster, so the only ceiling that holds as the
+// roster grows is "one at a time".
+//
+// Passed as ids rather than painted as a `data-fold-group` attribute on the
+// button, which is what this did first. The handler gate reads a `[data-x]`
+// selector in source as "a handler is bound by x", and that attribute was
+// selected on only to find SIBLINGS — so it registered as a control nobody
+// ever pressed. The gate is right about the general case and the attribute
+// was the wrong shape; the screen already knows which ids it made.
+export function bindFolds(root, ctx, rerender, { exclusive = [] } = {}) {
   if (!root?.querySelectorAll) return;
   root.querySelectorAll('button[data-fold]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -90,11 +96,8 @@ export function bindFolds(root, ctx, rerender) {
       state.ui.collapsed[id] = wasOpen;
       // Opening one member of a group shuts the others. Closing one shuts
       // nothing else — a group is "at most one open", not "exactly one".
-      const group = btn.dataset.foldGroup;
-      if (group && wasOpen === false) {
-        for (const other of root.querySelectorAll(`button[data-fold-group="${group}"]`)) {
-          if (other !== btn) state.ui.collapsed[other.dataset.fold] = true;
-        }
+      if (!wasOpen && exclusive.includes(id)) {
+        for (const other of exclusive) if (other !== id) state.ui.collapsed[other] = true;
       }
       ctx.save();
       rerender();

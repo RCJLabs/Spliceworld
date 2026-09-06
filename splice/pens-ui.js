@@ -216,10 +216,23 @@ function penTabbed(html) {
     history: '<p class="fine-print">Not a scratch on it. Yet.</p>',
     overview: '',
   };
-  const bodyFor = tab[active].trim() ? tab[active] : empty[active];
+  // All four panels are in the DOM; three are `hidden`, which `[hidden] {
+  // display: none }` keeps out of layout AND out of the accessibility tree.
+  //
+  // Rendering only the active one was the first version and it was worse in
+  // three ways at once: switching tabs cost a full re-render and a scroll
+  // jump, find-in-page could not see a creature's moves, and — the one that
+  // caught it — smoke's "the pens card renders a dossier" went red, because
+  // the physiology really had left the card. Only one creature is open at a
+  // time, so the whole cost of this is four panels rather than one, against
+  // the nine open cards it replaced.
+  const panels = PEN_TABS.map((t) => {
+    const inner = tab[t.id].trim() ? tab[t.id] : empty[t.id];
+    return `<div class="pen-tabbody"${t.id === active ? '' : ' hidden'}>${inner}</div>`;
+  }).join('');
   return `${head}${alerts}
     ${subtabBar({ tabs: PEN_TABS, active, attr: 'pen-tab', id: 'pen-tabs' })}
-    <div class="pen-tabbody">${bodyFor}</div>${tail}`;
+    ${panels}${tail}`;
 }
 
 export function renderPensScreen(root, ctx) {
@@ -466,10 +479,6 @@ export function renderPensScreen(root, ctx) {
         // Shut by default: the summary row carries what a glance needs, and
         // a stable is a list you scan before it is a creature you open.
         open,
-        // R89 — at most one creature open. Nine cards that can all be open
-        // at once is a screen whose height is the roster times the card, and
-        // no diet applied to the card fixes that.
-        group: 'pen',
         extraClass: `pen-fold${feral.agitated ? ' pen-feral' : ''}${hurt ? ' pen-hurt' : ''}${settled ? '' : ' pen-settling'}`,
       });
   });
@@ -526,7 +535,10 @@ export function renderPensScreen(root, ctx) {
     });
   });
 
-  bindFolds(root, ctx, () => renderPensScreen(root, ctx));
+  // R89 — at most one creature open at a time. The ids are the ones this
+  // screen just painted, so nothing has to be marked up for it.
+  bindFolds(root, ctx, () => renderPensScreen(root, ctx),
+    { exclusive: state.chimeras.map((ch) => `pen-${ch.id}`) });
   // R89 — the tab bar inside the open creature card. There is only ever one
   // in the document, because `group: 'pen'` keeps at most one card open, so
   // the bar needs no per-card identity to bind against.

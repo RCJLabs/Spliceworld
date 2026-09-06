@@ -276,6 +276,16 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // Hunt button nothing can press is a fight nobody can have.
   SURFACES.push({ name: 'battle:loose-briefing', file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
     subtab: 'labs', path: [{ sel: '[data-breakout]' }] });
+  // R89 — the creature card's four tabs. The card is shut until pressed and
+  // its Moves and Anatomy tabs are shut behind the bar inside it, so
+  // `data-moves` and `data-dossier` are painted on a surface no earlier
+  // entry here could reach: the gate said so the moment the tabs landed,
+  // which is the whole reason it exists. `path` opens a creature, `fanout`
+  // presses each tab the way a player does, so a fifth tab is walked the day
+  // it lands.
+  SURFACES.push({ name: 'pens:card', file: 'splice/pens-ui.js', fn: 'renderPensScreen',
+    path: [{ sel: '[data-fold]' }], fanout: '[data-pen-tab]' });
+
   // A picker sheet per field, on every screen that has one. `path` stays
   // EMPTY here: the fanout is what presses the field, and a surface that
   // consumed its own control in the path would probe zero of them.

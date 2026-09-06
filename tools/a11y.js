@@ -1132,6 +1132,15 @@ async function main() {
     }
     await evaluate(`document.querySelector('#tabs button[data-screen="pens"]').click()`);
     await sleep(700);
+    // R89 — the Retrain button moved twice: once behind the creature card's
+    // fold, and once behind that card's Moves tab. Both are deliberate, and
+    // both put it out of this walk's reach — which the gate said out loud
+    // rather than quietly finding nothing to press. Open a creature, then
+    // its Moves tab, the way a player does.
+    await evaluate(`document.querySelector('#screen-pens button[data-fold]')?.click()`);
+    await sleep(600);
+    await evaluate(`document.querySelector('#screen-pens [data-pen-tab="moves"]')?.click()`);
+    await sleep(600);
     const openedRetrain = await evaluate(`(() => {
       const b = [...document.querySelectorAll('#screen-pens .care-train')]
         .find((x) => !x.disabled && /Retrain/.test(x.textContent));
