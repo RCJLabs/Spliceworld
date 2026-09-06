@@ -21,7 +21,7 @@ import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { activeRaid, raidRemainingMs, levyOf, raidEncounter } from './taskforce.js';
-import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
+import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen, esc } from '../ui/cards.js';
 import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js';
 // STABLE is the cap, not a coincidence: A1 measured the campaign at three
 // bodies, the harness has fought at three since M4.5, and the Path tells
@@ -53,7 +53,7 @@ import {
 import {
   WAR_TABS, tabBadge, warTargetEncounter, frontierRegionId, sparVerdict, econRow,
   stripState, contestAlerts, heatBand, jobsModel, jobRow, foeRead, obedienceRead,
-  canBringMore, fitTeam, aftermathText,
+  canBringMore, fitTeam, aftermathText, suggestTeam,
 } from './warroom.js';
 import {
   regionStates, salvageUnit, nodeById, dominionBanner, resolveBattle,
@@ -63,6 +63,11 @@ let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, l
 
 let draftTeam = [];
 let lastAftermath = null;
+// R123 — why the last suggestion picked who it picked. Held here rather
+// than recomputed on render: the answer costs twelve forecasts, and a
+// briefing that re-ran them on every checkbox press would be the R74
+// mistake again.
+let lastSuggestion = null;
 
 // --- Sub-navigation -------------------------------------------------------
 //
@@ -110,6 +115,7 @@ export function renderWarRoomScreen(root, ctx) {
       lastAftermath = aftermathText(detail);
       draftTarget = null;
       draftTeam = [];
+      lastSuggestion = null;
       ctx.refreshTicker?.();
       renderWarRoomScreen(root, ctx);
     });
@@ -1083,6 +1089,10 @@ function renderBriefing(root, ctx) {
           : `has replaced the ${enemyOf(content, encounter.directed.replaced).name}.`
       }</p>` : ''}
       <h3>Strike Team (up to 3)</h3>
+      ${fitToFight(state, ctx.now()).length > TEAM_CAP ? `
+      <button type="button" id="wr-suggest" class="suggest-btn">${
+        renderIcon('target', { size: 14 })} Who should I send?</button>` : ''}
+      ${lastSuggestion ? `<p class="fine-print suggest-why">${esc(lastSuggestion)}</p>` : ''}
       ${roster || '<p class="ranch-msg">No chimeras available. The Surgery Theater accepts walk-ins.</p>'}
       ${odds}
       <div class="ceremony-btns">
@@ -1113,8 +1123,21 @@ function renderBriefing(root, ctx) {
       renderBriefing(root, ctx);
     });
   });
+  // R123 — the briefing answers the question it has always been able to
+  // answer and never did. It picks by the CLASS TRIANGLE and then forecasts
+  // its own shortlist, so the answer is the game's own arithmetic rather
+  // than a heuristic's opinion — and it says which creature counters what,
+  // because a pick whose reason you cannot see teaches nothing.
+  root.querySelector('#wr-suggest')?.addEventListener('click', () => {
+    const out = suggestTeam(state, encounter, content, ctx.now());
+    if (!out.team.length) return;
+    draftTeam = out.team.map((c) => c.id);
+    lastSuggestion = out.why;
+    renderBriefing(root, ctx);
+  });
   root.querySelector('#wr-back').addEventListener('click', () => {
     draftTarget = null;
+    lastSuggestion = null;
     renderMap(root, ctx);
   });
   // R88 — ONE PLACE A FIGHT BEGINS. Launch and Send them build the same

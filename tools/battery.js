@@ -519,6 +519,120 @@ const STANCE = ['node', '-e', `
   console.log('stance ✓  the enemy commits first, a brace answers it and says what it costs, the counter-class comes in free');
 `];
 
+// R123 — WHO SHOULD I SEND. Asked for directly, and measured before a line
+// was written, because the obvious answer is wrong twice over.
+//
+// Ranking creatures by their SOLO forecast ranks nobody: one creature
+// against a multi-wave encounter is 0% for the structural reason
+// forecast.js documents ("Bodies, not numbers"), so every score ties and a
+// stable sort hands back the roster in its existing order.
+//
+// And raw strength is the wrong signal. On a class-mixed roster of nine,
+// across the 13 of 14 encounters where the pick changes the outcome (mean
+// spread 76pp), picking by strength lands 17.3pp off the best team — the
+// same as doing nothing — while picking by the CLASS TRIANGLE lands 8.7pp
+// off. The triangle is the game's own thesis and it is what carries this.
+//
+// A shortlist closes the rest: forecast the best few teams by that score and
+// take the winner. Measured, top-8 lands 2.9pp off brute force at eight
+// forecasts, where the briefing already pays for one.
+//
+// This gate holds the suggestion to a BAR, not to that number: within 5pp of
+// the best, at least 8pp better than the roster's own order, inside its
+// stated budget, never fielding a creature that cannot fight, and seeded.
+const SQUAD = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { forecast } = await import('./battle/forecast.js');
+  const { suggestTeam, TEAM_SIZE } = await import('./campaign/warroom.js');
+  const { combatantFromChimera } = await import('./battle/engine.js');
+  const { makeSimChimera, sampleBuilds } = await import('./tools/sim.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000;
+  const bad = [];
+
+  // THE TRUTH IS MEASURED AT 24 RUNS, not the 6 the first draft used. A noisy
+  // truth is full of accidental ties, and a suggestion scores 0.0pp against
+  // one whatever it picks. At 24 the same suggestion measured 3.0pp off.
+  const TRUTH_RUNS = 24;
+  const combos3 = (a) => { const o = []; for (let i=0;i<a.length;i++) for (let j=i+1;j<a.length;j++) for (let k=j+1;k<a.length;k++) o.push([a[i],a[j],a[k]]); return o; };
+  const pool = sampleBuilds(content, 7, 11);
+  const clsOf = (b, i) => combatantFromChimera({ ...makeSimChimera(b.frame, b.partIds, 'standard', content), id: 'p'+i, name: 'P' }, content, t0).creatureClass;
+  const byClass = {};
+  pool.forEach((b, i) => { const k = clsOf(b, i); if (k) (byClass[k] = byClass[k] || []).push(b); });
+  const keys = Object.keys(byClass);
+  // THREE ROSTERS, because one is how a 9.5pp algorithm passed. The first
+  // draft of this gate used a single fixture, cleared its own 5pp bar on it,
+  // and was 9.5pp off on the very next roster I tried by hand.
+  const rosterAt = (off) => {
+    const mixed = [];
+    for (let r = off; mixed.length < 9; r++) for (const k of keys) { if (mixed.length < 9 && byClass[k][r]) mixed.push(byClass[k][r]); }
+    return mixed.map((b, i) => ({ ...makeSimChimera(b.frame, b.partIds, i % 3 === 0 ? 'prime' : 'standard', content), id: 'r'+i, name: 'R'+i }));
+  };
+
+  let sumSug = 0, sumRoster = 0, rosters = 0, worstRoster = 0, worstBudget = 0;
+  for (const off of [0, 1, 2]) {
+    const roster = rosterAt(off);
+    const state = { ...newGameState(), seed: 4242, chimeras: roster };
+    let gapS = 0, gapR = 0, n = 0;
+    // TWELVE encounters, not five. At five this gate reported 5.2pp mean and
+    // 7.3pp worst while a wider sample of the same code measured 2.0 and 2.8:
+    // encounters 0-4 happen to be the ones this heuristic finds hardest, so a
+    // five-encounter slice was measuring the slice rather than the algorithm.
+    for (const enc of Object.values(content.encounters).slice(0, 12)) {
+      const truth = combos3(roster).map((t) => ({ t, wr: forecast(t, enc, content, 4242, t0, { runs: TRUTH_RUNS }).winRate }));
+      truth.sort((a, b) => b.wr - a.wr);
+      const best = truth[0].wr;
+      if (best === truth[truth.length - 1].wr) continue;
+      n++;
+      const wrOf = (team) => (truth.find((s) => team.every((c) => s.t.some((x) => x.id === c.id))) || { wr: 0 }).wr;
+
+      const out = suggestTeam(state, enc, content, t0);
+      if (!out || !Array.isArray(out.team)) { bad.push('suggestTeam returned no team'); break; }
+      if (out.team.length !== TEAM_SIZE) bad.push('a suggestion of ' + out.team.length + ' where the cap is ' + TEAM_SIZE);
+      if (new Set(out.team.map((c) => c.id)).size !== out.team.length) bad.push('the same creature suggested twice');
+      if (!out.why) bad.push('the suggestion does not say why, so it picks without teaching');
+      worstBudget = Math.max(worstBudget, out.forecasts || 0);
+
+      const again = suggestTeam(state, enc, content, t0);
+      if (again.team.map((c) => c.id).join() !== out.team.map((c) => c.id).join()) {
+        bad.push('two suggestions for the same briefing disagree');
+      }
+      gapS += best - wrOf(out.team);
+      gapR += best - wrOf(roster.slice(0, 3));
+    }
+    if (!n) continue;
+    sumSug += gapS / n; sumRoster += gapR / n; rosters++;
+    worstRoster = Math.max(worstRoster, 100 * gapS / n);
+  }
+
+  if (rosters < 3) { bad.push('only ' + rosters + ' rosters had a pick worth making, so the spread is untested'); }
+  else {
+    const sug = 100 * sumSug / rosters;
+    const doNothing = 100 * sumRoster / rosters;
+    if (sug > 5) bad.push('the suggestion lands ' + sug.toFixed(1) + 'pp off the best team; the bar is 5');
+    if (worstRoster > 6) bad.push('on its worst roster it lands ' + worstRoster.toFixed(1) + 'pp off; the bar is 6');
+    if (doNothing - sug < 8) bad.push('it beats the roster order by only ' + (doNothing - sug).toFixed(1) + 'pp; the bar is 8');
+    if (worstBudget > 12) bad.push('it spent ' + worstBudget + ' forecasts; the budget is 12');
+    if (worstBudget === 0) bad.push('it reports no forecasts at all, so the budget clause proves nothing');
+  }
+
+  // IT NEVER FIELDS SOMEBODY WHO CANNOT FIGHT.
+  {
+    const roster = rosterAt(0);
+    const hurt = { ...newGameState(), seed: 4242, chimeras: roster.map((c, i) => (i < 6 ? { ...c, injury: { name: 'Sprained Everything', until: t0 + 3600000 } } : { ...c })) };
+    const out = suggestTeam(hurt, Object.values(content.encounters)[0], content, t0);
+    const fit = new Set(['r6', 'r7', 'r8']);
+    for (const c of out.team || []) if (!fit.has(c.id)) bad.push('the suggestion fields ' + c.id + ', which is in the Infirmary');
+  }
+
+  if (bad.length) { console.error('squad ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('squad ✓  across three rosters the suggestion beats the roster order, lands near the best team, and never fields the injured');
+`];
+
 // R88 — a fight whose outcome was never in doubt should not cost the same
 // attention as a duel. Measured on three 180-day walks before a line was
 // written: 1,013 fights and ~177 MINUTES of beat replay per campaign, of
@@ -1993,6 +2107,30 @@ const BREAKS = [
     to: '      ${false && canSend(fc, draftTarget) && draftTeam.length ? `',
   },
   {
+    n: 118, gate: SQUAD, name: 'the suggestion stops reading the class triangle, so it picks the three biggest instead',
+    file: 'campaign/warroom.js',
+    anchor: '    if (content.classes?.[u.creatureClass]?.beats === fc) edge += 1;',
+    to: '    if (false) edge += 1;',
+  },
+  {
+    n: 119, gate: SQUAD, name: 'the suggestion stops forecasting its own shortlist and trusts the heuristic',
+    file: 'campaign/warroom.js',
+    anchor: 'export function suggestTeam(state, encounter, content, now, { budget = 12 } = {}) {',
+    to: 'export function suggestTeam(state, encounter, content, now, { budget = 1 } = {}) {',
+  },
+  {
+    n: 120, gate: SQUAD, name: 'the suggestion fields creatures who are in the Infirmary',
+    file: 'campaign/warroom.js',
+    anchor: '  const fit = (state.chimeras ?? []).filter((c) => !isInjured(c, now) && isSettled(c, now));',
+    to: '  const fit = (state.chimeras ?? []).filter((c) => isSettled(c, now));',
+  },
+  {
+    n: 121, gate: A11Y, name: 'the briefing stops offering to pick a team, so the answer is unreachable',
+    file: 'campaign/ui.js',
+    anchor: '      ${fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
+    to: '      ${false && fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
+  },
+  {
     n: 42, gate: BREAKOUT, name: 'a loose specimen grows a deadline and wanders off while you are away',
     file: 'campaign/breakout.js',
     anchor: '    const rival = labFor(state, content, cam.breakoutCount);',
@@ -2152,7 +2290,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2171,6 +2309,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
               : gate === FOUNDING ? 'five laboratories, and a first splice worth making'
                 : gate === SITTING ? 'the agenda says how much is waiting'
                 : gate === SENT ? 'a certain fight can be sent instead of watched'
+                : gate === SQUAD ? 'the briefing knows who to send'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;

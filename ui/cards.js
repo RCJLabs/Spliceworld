@@ -11,6 +11,16 @@
 import { dismissGuide } from '../ranch/onboarding.js';
 import { renderIcon } from './icons.js';
 
+// R123 — HTML-escaping, in the shared UI module rather than a fourth private
+// copy. `battle/ui.js` and `ranch/founding-ui.js` each keep one of their own
+// and should fold into this; that is a separate change and is written down
+// here rather than smuggled into a milestone about picking a strike team.
+//
+// It matters wherever a PLAYER-TYPED string reaches markup, which creature
+// names do — the Pens hand out a rename sheet.
+export const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 // One note, or nothing. Deliberately singular: a wall of tips is wallpaper.
 export function fieldNote(guide) {
   if (!guide) return '';
