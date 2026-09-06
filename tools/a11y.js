@@ -28,7 +28,7 @@ import { readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 // R81 — the driver moved to its own module so tools/boot.js could use it too.
 import { sleep, serve, findChrome, connect, CHROME_CANDIDATES } from './cdp.js';
 
@@ -39,7 +39,7 @@ const VIEWPORT = 380;      // px, the reference phone width
 const REPORT = process.argv.includes('--report');
 
 // --- a save with something on every screen ----------------------------------
-async function fixtureSave() {
+export async function fixtureSave() {
   const { indexContent } = await import('../render/renderer.js');
   const { newGameState, SAVE_VERSION } = await import('../save/save.js');
   const { spliceChimera } = await import('../splice/theater.js');
@@ -479,6 +479,47 @@ async function main() {
       await sleep(2200);
     };
 
+    // R88 — THE BRIEFING WITH AN OFFER ON IT. "Send them without me" only
+    // appears when the forecast calls the fight a walkover AND a team is
+    // picked, and the fixture ships a duel already in progress so the arena
+    // walk can reach it — which means the screen-by-screen walk lands in the
+    // arena and never sees a briefing at all. R122's lesson exactly: the
+    // newest control in the game was the one nothing measured. So the
+    // fixture is written once more with no battle, the War Room is walked to
+    // an offer, and the real fixture is put back.
+    const briefingPass = async () => {
+      const noFight = JSON.parse(fixture);
+      noFight.battle = null;
+      await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(noFight))})`);
+      await send('Page.navigate', { url });
+      await sleep(2200);
+      await evaluate(`document.querySelector('#tabs button[data-screen="battle"]').click()`);
+      await sleep(700);
+      const opened = await evaluate(`(() => {
+        const b = [...document.querySelectorAll('#screen-battle button')]
+          .find((x) => /^\\s*(Spar|Assault)\\b/.test(x.textContent) && !x.disabled);
+        if (!b) return false; b.click(); return true;
+      })()`);
+      if (!opened) {
+        note('the War Room offered no target, so the briefing screen was never measured');
+      } else {
+        await sleep(600);
+        // A briefing forecasts nothing until somebody is picked, and the
+        // offer needs the forecast.
+        for (let i = 0; i < 3; i++) {
+          await evaluate(`(() => { const r = [...document.querySelectorAll('button[data-toggle]')].filter((b) => !b.disabled)[${i}]; if (r) r.click(); })()`);
+          await sleep(450);
+        }
+        await collect('briefing');
+        if (!await evaluate(`!!document.querySelector('#wr-send')`)) {
+          note("a briefing the forecast calls a walkover does not offer 'Send them', so R88's control is unmeasured");
+        }
+      }
+      await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
+      await send('Page.navigate', { url });
+      await sleep(2200);
+    };
+
     // R80 — the arena is the one screen that does not scroll
     // (`body.in-battle` sets `height: 100dvh; overflow: hidden`), so content
     // past the bottom of `<main>` is not "below the fold", it is gone.
@@ -509,6 +550,7 @@ async function main() {
     };
 
     await foundingPass();
+    await briefingPass();
     await collect('shell');
     const screens = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
     for (const s of screens) {
@@ -1083,4 +1125,8 @@ async function main() {
   console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · every word clears the contrast floor · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · the game is playable from the keyboard`);
 }
 
-await main();
+// R88 — only when RUN, not when imported. This module owns the one fixture
+// recipe in the repo (a lab, three chimeras, every clock running), and any
+// probe that wants it had to either duplicate it or accidentally run the
+// whole gate to get it. I did the latter once by mistake this session.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) await main();

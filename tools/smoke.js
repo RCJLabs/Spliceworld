@@ -2186,7 +2186,13 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 // --- M7: v8 migration backfills the dex from owned tokens.
 {
   const v7ish = migrate(structuredClone(v1Save)); // gives v8 empty everything
-  assert.deepEqual(v7ish.settings, { muted: false });
+  // R88 — battleSpeed joins the settings a migration hands back. Kept as a
+  // deepEqual on the WHOLE object rather than loosened to a field check:
+  // this assertion is what forces a deliberate decision every time settings
+  // grow, and it did its job here — the v44 migration adds a field and this
+  // is where it was noticed. A settings bag nobody is watching is where a
+  // device preference quietly becomes part of a run.
+  assert.deepEqual(v7ish.settings, { muted: false, battleSpeed: 1 });
   assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [], variants: [], beaten: [] });
   const richV7 = { ...structuredClone(v1Save) };
   const chain = migrate(richV7); // walk to v8 baseline shape…
@@ -6093,6 +6099,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // data file, a module, a board, a launcher and a first-use moment, and
     // dropping its note has to fail the build like everything else here.
     'breakout',
+    // R88. Sending a certain fight instead of watching it: a module, a
+    // predicate the briefing reads, a control that appears and disappears by
+    // a rule, and a trade the player is making knowingly — the arena's
+    // lesson for a report card. On the roll so that dropping its note fails
+    // the build like everything else here.
+    'sent',
     // R85. The top of the instability scale is a system on its own terms —
     // a data file, a module, its own band on the Pens, an agenda row and a
     // first-use moment that arrives BEFORE the clock does. On the roll so
@@ -6208,6 +6220,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   const MODULE_NOTES = {
     // --- Systems: the module that implements the thing the note teaches.
     'battle/veterancy.js': 'veterans',
+    'battle/autoplay.js': 'sent',
     'splice/feral.js': 'feral',
     'splice/rush.js': 'rush',
     'campaign/taskforce.js': 'taskforce',
@@ -6421,7 +6434,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // R103's telegraph lesson lights here too: it is keyed on having FOUGHT,
     // and this is the first step in the walk that puts anything on the war
     // record.
-    ['a few wins on the board', () => { lab.warRecord = { wins: 4, losses: 1 }; }, ['director', 'stance']],
+    // R88's send note lights on the same step and for the same reason: the
+    // offer cannot exist before there is a fight to forecast, and the first
+    // thing on the war record is the first moment it can.
+    ['a few wins on the board', () => { lab.warRecord = { wins: 4, losses: 1 }; }, ['director', 'stance', 'sent']],
     ['the Dex fills up', () => { lab.dex.parts = Object.keys(content.parts).slice(0, 8); }, ['dex']],
     // Dr. Mantissa is gated on the Highway Checkpoint, so the rival note
     // opens on the same push that opens Kestrel Reach.

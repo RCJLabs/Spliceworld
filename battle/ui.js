@@ -20,6 +20,7 @@ import {
   step, playerActions, playerActive, turnForecast, intentOf, bracePreview, braceTitle,
 } from './engine.js';
 import { moveReadout } from './readout.js';
+import { beatCost } from './autoplay.js';
 import { resolveBattle } from '../campaign/campaign.js';
 import { openPicker } from '../ui/picker.js';
 import { moveSummary, moveDetail } from './moves.js';
@@ -32,20 +33,20 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 import * as sfx from '../audio/sfx.js';
 
-// Beat lengths. Kept here so the whole fight's pacing is one edit away.
-const BEAT = {
-  damage: 620,
-  ko: 900,
-  waveIn: 720,
-  bark: 1100,
-  victory: 700,
-  defeat: 700,
-  info: 460,
-};
-const beatFor = (kind) => BEAT[kind] ?? BEAT.info;
+// Beat lengths moved to battle/autoplay.js in R88, and are imported rather
+// than repeated: the harness counts what a campaign costs in wall-clock
+// using the same table the arena plays it with, and two copies of a pacing
+// table is two answers to "how long is a fight" (R61).
 
 const reducedMotion = () =>
   globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+// R88 — how fast the arena replays. 1x is what the game has always done;
+// 2x halves every beat; 0 means do not replay at all, which is what
+// reduced motion has silently meant since M7. The OS preference still wins
+// outright: a player who has asked for no animation has already answered
+// this question, and a settings row must not override an accessibility one.
+const speedOf = (state) => (reducedMotion() ? 0 : state?.settings?.battleSpeed ?? 1);
 
 let playing = false; // guards clicks while a round resolves
 // How much of the opening exchange the player has read. Keyed to the
@@ -464,7 +465,8 @@ function playRound(root, ctx, onDone, events) {
   const battle = state.battle;
   const cmd = root.querySelector('#cmd');
   const msg = root.querySelector('#msg-text');
-  const instant = reducedMotion();
+  const speed = speedOf(state);
+  const instant = speed === 0;
 
   playing = true;
   let skipped = false;
@@ -503,7 +505,7 @@ function playRound(root, ctx, onDone, events) {
     }
     const e = events[i++];
     applyBeat(root, ctx, battle, e, msg);
-    timer = setTimeout(next, beatFor(e.kind));
+    timer = setTimeout(next, beatCost(e) / speed);
   }
   next();
 }

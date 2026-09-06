@@ -25,6 +25,16 @@ import { announce } from '../ui/live.js';
 // find out. Re-exported so nothing else has to learn that it moved.
 import { THEMES, BASE_THEME, themeName } from '../ui/theme.js';
 
+// R88 — the replay speeds. Data here rather than in data/*.json because
+// these are three fixed multipliers the ARENA implements, not content: a
+// sixth speed would need engine work, so a JSON file promising one would be
+// a lie of the kind CLAUDE.md's "all content is data" rule exists to stop.
+const SPEEDS = [
+  { id: 1, label: 'Normal', sub: 'Every beat, at the pace it was written' },
+  { id: 2, label: 'Quick', sub: 'Twice as fast, same fight' },
+  { id: 0, label: 'Instant', sub: 'Skip the replay; the result is the same' },
+];
+
 export { THEMES, BASE_THEME };
 
 
@@ -132,6 +142,11 @@ export function openSettings(overlay, ctx) {
         <p class="settings-heading">Theme</p>
         <button type="button" class="care-train" id="set-theme">Theme: ${themeName(state.settings.theme ?? BASE_THEME)}</button>
 
+        <p class="settings-heading">Battle speed</p>
+        <button type="button" class="care-train" id="set-speed">Replay: ${SPEEDS.find((s) => s.id === (state.settings.battleSpeed ?? 1))?.label ?? 'Normal'}</button>
+        <p class="fine-print">How fast the arena replays a fight. A duel is worth watching; the
+          fourth spar of the day is not. If your device asks for reduced motion, that wins.</p>
+
         <hr class="settings-rule">
         <p class="settings-heading">Labs (${reg.slots.length}/${MAX_SLOTS})</p>
         <ul class="slot-list">${slotRows}</ul>
@@ -175,6 +190,19 @@ export function openSettings(overlay, ctx) {
       ctx.save();
       if (!state.settings.muted) sfx.play('click');
       render();
+    });
+
+    overlay.querySelector('#set-speed').addEventListener('click', () => {
+      openPicker({
+        title: 'Battle speed',
+        groups: [{ label: null, options: SPEEDS.map((s) => ({ id: s.id, label: s.label, sub: s.sub })) }],
+        selectedId: state.settings.battleSpeed ?? 1,
+        onPick: (id) => {
+          state.settings.battleSpeed = id;
+          ctx.save();
+          render();
+        },
+      });
     });
 
     overlay.querySelector('#set-theme').addEventListener('click', () => {

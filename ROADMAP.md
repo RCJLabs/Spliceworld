@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 43
+- save version: 44
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -2635,6 +2635,55 @@ moved one of them: the first premise held exactly, the second did not.
   spending money; `hatch` and `gauntlet` both appear in a 90-day walk; and
   the d0–1 average clears 9 rows / 6 productive without moving the d30–90
   figure by more than one row.*
+
+### 9.9 The battle screen charges full price for free fights (R88)
+
+- **R88 — Send them, instead of watching them.** ✅ *Shipped.* Measured on
+  three 180-day walks before a line was written: **1,013 fights and ~177
+  minutes of beat replay per campaign**, sparring alone being 543 fights at a
+  **100% win rate**. The entry's own "8.7 turns, 9 decisions, ~25 beats" was
+  measured on tier-1 pairings; the real diet averages **17.4 beats**, from
+  9.5 for a breakout hunt to 37.4 for a Gauntlet stage.
+
+  **Both halves of the proposed trigger were wrong.** "forecast ≥ 95%" is a
+  number invented at a desk — the game already ships the vocabulary
+  (`walkover`, floor 0.90, the verdict the briefing has printed since A1),
+  and R61's rule is that the canonical predicate wins. Sampled on the walk's
+  real fights, **451 walkover forecasts produced 449 wins**. And "the fight
+  is a spar, a hunt or a known rescue" forfeits saving for no safety: a
+  walkover **defence** won 38/39 and a walkover **assault** 12/12, exactly as
+  certain as a spar. Gating on kind would have discarded ~4,600 beats a
+  campaign to protect against nothing. So the band decides; the one kind that
+  always plays is the rival duel, which is the criterion's second clause
+  rather than a safety rule (only 7% of duels forecast as walkovers anyway).
+
+  **Two pilots became one, and that is the load-bearing part.** The
+  player-side flier existed twice, byte for byte: `tools/sim.js` flew the
+  balance yardstick, `battle/forecast.js` flew the thing whose win rate the
+  briefing prints. Same skill, same chooser, different rng stream label —
+  R61's orphan. It matters here more than duplication usually does: the
+  briefing's claim *"this is a walkover"* is only sound if the pilot the
+  forecast modelled is the pilot that flies the fight when the player presses
+  Send. `battle/autoplay.js` is the only copy now, and the stream label stays
+  a parameter because unifying it would move every balance number in the
+  suite. **Proved behaviour-identical**: three 180-day walks, all eight fight
+  tallies unchanged to the unit. The beat table moved there for the same
+  reason — the arena plays beats and the harness prices them.
+
+  **What the player gets.** *Send them without me* under Launch, deliberately
+  quieter than it; the same seeded fight flown by the same autopilot through
+  the same `beginFight`; and a report card that reads its lesson off the
+  beats the fight actually produced — improvised orders, the class triangle,
+  tag-chart hits, resisted anatomy — so a skipped fight still teaches. Plus a
+  **battle-speed setting** (Normal · Quick · Instant, `SAVE_VERSION` 43 → 44
+  with a migration that defaults to the speed every existing save was already
+  playing at). Reduced motion still wins outright: an accessibility
+  preference is not something a settings row may override.
+
+  *Done when: the beats the walker's day replays drop by 60% at identical
+  outcomes, and a rival duel still plays beat by beat by default.* ✅ —
+  measured through the shipped path at **74.4%** (120 days × 2 seeds, 1,407
+  fights, 26,816 beats, 267.6 minutes), and `canSend` refuses a duel.
 
 ### 9.8 The screen you cannot read (R122) — reported from a phone
 

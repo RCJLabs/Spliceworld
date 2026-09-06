@@ -519,6 +519,122 @@ const STANCE = ['node', '-e', `
   console.log('stance ✓  the enemy commits first, a brace answers it and says what it costs, the counter-class comes in free');
 `];
 
+// R88 — a fight whose outcome was never in doubt should not cost the same
+// attention as a duel. Measured on three 180-day walks before a line was
+// written: 1,013 fights and ~177 MINUTES of beat replay per campaign, of
+// which sparring alone is 543 fights at a 100% win rate.
+//
+// The roadmap proposed gating on "forecast >= 95% AND the fight is a spar,
+// a hunt or a known rescue". Both halves were wrong. 95% is a number I made
+// up when the game already ships the vocabulary — `walkover`, floor 0.90 —
+// and R61 says the canonical predicate wins. And gating on KIND forfeits
+// honest saving for no safety: sampled on the walk's real fights, a
+// walkover DEFENCE won 38/39 and a walkover ASSAULT 12/12, exactly as
+// certain as a spar. Across every kind, 451 sampled walkovers won 449.
+//
+// So the band decides, and the one kind that always plays is the rival
+// duel — which is the criterion's own second clause, not a safety rule.
+const SENT = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { createBattle, step } = await import('./battle/engine.js');
+  const { pilotAction } = await import('./battle/autoplay.js');
+  const { autoResolve, canSend, beatCost } = await import('./battle/autoplay.js');
+  const { bandFor } = await import('./battle/forecast.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const { makeSimChimera, STARTER_BUILD } = await import('./tools/sim.js');
+  const bad = [];
+  const t0 = 1700000000000;
+
+  const team = () => [0, 1, 2].map((i) => {
+    const c = makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'prime', content);
+    return { ...c, id: 'sent' + i, name: 'Sent ' + i };
+  });
+  const enc = Object.values(content.encounters)[0];
+
+  // 1. SENDING IS NOT A SHORTCUT. The same battle, resolved by the autopilot
+  //    and by a hand-rolled copy of the same loop, has to land on the same
+  //    outcome, the same turn and the same log — otherwise \\'send them\\' is
+  //    a second combat model wearing the first one's name.
+  {
+    const a = createBattle(team(), enc, content, 4242, t0);
+    const b = createBattle(team(), enc, content, 4242, t0);
+    autoResolve(a, content);
+    let guard = 0;
+    while (!b.over && guard++ < 400) {
+      const act = pilotAction(b, content);
+      if (!act) break;
+      step(b, act, content);
+    }
+    if (a.outcome !== b.outcome) bad.push('sent says ' + a.outcome + ', flown says ' + b.outcome);
+    if (a.turn !== b.turn) bad.push('sent ends on turn ' + a.turn + ', flown on ' + b.turn);
+    if (a.log.join('|') !== b.log.join('|')) bad.push('the sent fight and the flown fight tell different stories');
+  }
+
+  // 2. AND IT IS SEEDED. Two sends of the same seed agree; a different seed
+  //    is allowed to differ, or the gate would pass on a constant.
+  {
+    const a = createBattle(team(), enc, content, 99, t0);
+    const b = createBattle(team(), enc, content, 99, t0);
+    autoResolve(a, content); autoResolve(b, content);
+    if (a.log.join('|') !== b.log.join('|')) bad.push('two sends of seed 99 disagree');
+  }
+
+  // 3. THE BAND DECIDES, NOT THE KIND. \\'canSend\\' reads the forecast the
+  //    briefing has already paid for (R74: nobody runs 32 battles twice).
+  {
+    const wo = { band: bandFor(0.97), winRate: 0.97 };
+    const even = { band: bandFor(0.5), winRate: 0.5 };
+    for (const kind of ['sparring', 'breakout', 'rescue', 'defend', 'assault', 'raid']) {
+      if (!canSend(wo, { kind })) bad.push('a walkover ' + kind + ' cannot be sent, though it is as certain as a spar');
+      if (canSend(even, { kind })) bad.push('an even ' + kind + ' can be sent, and its outcome is in doubt');
+    }
+    // 4. A RIVAL DUEL ALWAYS PLAYS.
+    if (canSend(wo, { kind: 'rival' })) bad.push('a rival duel can be skipped, and the duels are the set-pieces');
+    if (canSend(null, { kind: 'sparring' })) bad.push('a fight with no forecast at all can be sent');
+  }
+
+  // 5. THE SAVING IS REAL, on the walk's own diet rather than on a bench.
+  {
+    const { loadSimContent, campaignWalk } = await import('./tools/sim.js');
+    const c2 = loadSimContent();
+    let total = 0;
+    let sendable = 0;
+    for (const seed of [2026, 808]) {
+      const w = campaignWalk(c2, { seed, days: 120, stopAtDominion: false, priceBeats: true });
+      for (const e of w.log) {
+        if (e.beats === undefined) continue;
+        total += e.beats;
+        if (e.sendable) sendable += e.beats;
+      }
+    }
+    if (!total) { bad.push('the walk recorded no beats at all, so nothing measured the saving'); }
+    else {
+      const pct = Math.round(100 * sendable / total);
+      if (pct < 60) bad.push('only ' + pct + '% of the beats a walk replays can be sent; the floor is 60%');
+      if (pct >= 100) bad.push('every beat is sendable, which means the rule is not discriminating');
+    }
+  }
+
+  // 6. ONE BEAT TABLE. The saving above is arithmetic in milliseconds, and
+  //    it is arithmetic about a fiction the moment the arena plays beats at
+  //    lengths the harness is not counting. So the rule is not "the two
+  //    tables agree" — comparing a copy with its original is the vacuous
+  //    assertion R103 shipped three of — it is that there is only ONE.
+  {
+    const ui = readFileSync('./battle/ui.js', 'utf8');
+    if (/const BEAT\\s*=\\s*\\{/.test(ui)) bad.push('battle/ui.js keeps a second beat table, so the arena and the harness can drift');
+    if (!/beatCost/.test(ui)) bad.push('the arena does not use beatCost, so the saving is measured against a table nothing plays');
+    if (beatCost({ kind: 'damage' }) === beatCost({ kind: 'bark' })) bad.push('every beat costs the same, so there is no cost model to speak of');
+    if (beatCost({ kind: 'nonsense' }) !== beatCost({ kind: 'info' })) bad.push('an unknown beat kind does not fall back to the info length');
+  }
+
+  if (bad.length) { console.error('sent \\u2717  ' + bad.join('; ')); process.exit(1); }
+  console.log('sent \\u2713  a send is the same fight flown by the autopilot, the band decides it, and a duel always plays');
+`];
+
 // R120 — the agenda says how much is waiting. Its own gate: no campaign walk
 // here, because the rules that can silently stop being true are about what
 // the ROWS say, and those are one fresh save and a read.
@@ -1533,9 +1649,13 @@ const BREAKS = [
     to: '  for (const esc of []) {',
   },
   {
+    // R88 — repointed. The line lived in tools/sim.js's own autoplay loop
+    // until that loop moved into battle/autoplay.js so the GAME could press
+    // it too. Same behaviour, same break, new address; the battery reported
+    // BADANCH rather than passing, which is the whole reason it checks.
     n: 46, gate: WALK, name: 'the walk stops firing the Containment Cannon',
-    file: 'tools/sim.js',
-    anchor: '    const bag = offered.find((a) => a.type === \'capture\');',
+    file: 'battle/autoplay.js',
+    anchor: "    const bag = capture ? offered.find((a) => a.type === 'capture') : null;",
     to: '    const bag = null;',
   },
   {
@@ -1843,6 +1963,36 @@ const BREAKS = [
     to: '    fetch(event.request)',
   },
   {
+    n: 113, gate: SENT, name: 'the send stops reading the band, so a coin-flip fight is offered as a certainty',
+    file: 'battle/autoplay.js',
+    anchor: "  return fc.band.id === 'walkover';",
+    to: '  return true;',
+  },
+  {
+    n: 114, gate: SENT, name: 'a rival duel becomes skippable, and the duels are the set-pieces',
+    file: 'battle/autoplay.js',
+    anchor: "  if (context.kind === 'rival') return false;",
+    to: '  if (context.kind === null) return false;',
+  },
+  {
+    n: 115, gate: SENT, name: 'the autopilot stops flying and just presses the first thing on the list',
+    file: 'battle/autoplay.js',
+    anchor: '    const action = bag ?? pilotAction(battle, content);',
+    to: '    const action = bag ?? offered[0];',
+  },
+  {
+    n: 116, gate: SENT, name: 'the arena grows a second beat table, so it can pace a fight the harness is not pricing',
+    file: 'battle/ui.js',
+    anchor: "import { beatCost } from './autoplay.js';",
+    to: "import { beatCost } from './autoplay.js';\nconst BEAT = { damage: 620 };",
+  },
+  {
+    n: 117, gate: A11Y, name: 'the briefing stops offering to send them, so the saving is theoretical',
+    file: 'campaign/ui.js',
+    anchor: '      ${canSend(fc, draftTarget) && draftTeam.length ? `',
+    to: '      ${false && canSend(fc, draftTarget) && draftTeam.length ? `',
+  },
+  {
     n: 42, gate: BREAKOUT, name: 'a loose specimen grows a deadline and wanders off while you are away',
     file: 'campaign/breakout.js',
     anchor: '    const rival = labFor(state, content, cam.breakoutCount);',
@@ -2002,7 +2152,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2020,6 +2170,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                             : gate === STANCE ? 'the opposition commits before you answer'
               : gate === FOUNDING ? 'five laboratories, and a first splice worth making'
                 : gate === SITTING ? 'the agenda says how much is waiting'
+                : gate === SENT ? 'a certain fight can be sent instead of watched'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
