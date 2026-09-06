@@ -13218,6 +13218,22 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
           if (name) importsOf.set(`${target}\u0000${name}`, true);
         }
       }
+      // …and the same load written as a continuation rather than awaited:
+      // `import('./x.js').then(({ a }) => …)`. R121 wrote one of these and
+      // this gate called a live export dead — which is the SAFE direction
+      // for a build failure, but only because I happened to be looking. The
+      // reverse is what the comment above warns about, and a form the
+      // scanner cannot see is a false negative waiting for the day its
+      // export has no static importer left. Names come after the path here,
+      // so it is a second pattern rather than a wider first one.
+      for (const m of text.matchAll(/import\(\s*['"]([^'"]+)['"]\s*\)\s*\.\s*then\(\s*(?:async\s*)?\(?\s*\{([^{}]*)\}/g)) {
+        const target = resolve(file, m[1]);
+        if (!target) continue;
+        for (const part of m[2].split(',')) {
+          const name = part.trim().split(/\s*:\s*/)[0].trim();
+          if (name) importsOf.set(`${target}\u0000${name}`, true);
+        }
+      }
       for (const m of text.matchAll(/import\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*['"]([^'"]+)['"]/g)) {
         const target = resolve(file, m[2]);
         if (target) namespaces.push({ file, target, alias: m[1] });

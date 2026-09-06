@@ -59,9 +59,10 @@ const ctx = {
   // R121 — the extraction sequence arrives with the press, not with the
   // page. It is a ceremony the player starts, so the first frame it could
   // possibly be needed on is the one after this callback fires.
-  onExtract: (animalId) =>
-    import('./splice/extract-ui.js').then(({ runExtraction }) =>
-      runExtraction($('#overlay'), ctx, animalId, () => showScreen(state.activeScreen))),
+  onExtract: async (animalId) => {
+    const { runExtraction } = await import('./splice/extract-ui.js');
+    runExtraction($('#overlay'), ctx, animalId, () => showScreen(state.activeScreen));
+  },
   // A4: the Right Now panel lists things that live on other screens, so it
   // needs to be able to send you to one. Screen switching is the shell's job.
   //
