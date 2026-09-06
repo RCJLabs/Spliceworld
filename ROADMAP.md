@@ -2638,6 +2638,44 @@ moved one of them: the first premise held exactly, the second did not.
 
 ### 9.8 The screen you cannot read (R122) — reported from a phone
 
+- **R122b — The fix shipped and the phone did not get it.** ✅ *Shipped.*
+  R122 merged, GitHub Pages deployed it successfully at 04:41Z, and the
+  reporter's phone still showed the broken screen. The cause was not the
+  fix: **`sw.js` calls itself "network-first with cache fallback", but a
+  plain `fetch(request)` READS THROUGH THE BROWSER'S HTTP CACHE**, and Pages
+  serves the shell with `Cache-Control: max-age=600`. So it returned the
+  previous build believing it had gone to the network — and then wrote that
+  stale copy into the freshly-named cache, where it outlived the ten
+  minutes. A phone could sit on an old build indefinitely. Bumping `CACHE`,
+  which every milestone here has dutifully done, does not help: the install
+  that fills the new cache fetches through the same stale HTTP cache.
+
+  `fetch(event.request, { cache: 'no-cache' })` forces a conditional request
+  instead — a changed file returns 200 with new bytes, an unchanged one 304
+  with almost none — and the offline fallback is untouched.
+
+  **Why no gate could see it.** Every browser gate in the suite calls
+  `Network.setBypassServiceWorker` on purpose, because a run that measured
+  the *previous* build's CSS would be worse than no run at all. The
+  consequence is that the one code path deciding whether a build reaches a
+  player had never been executed by anything. `tools/boot.js` now runs it:
+  a server sending exactly what Pages sends, a fresh profile so the worker
+  installs from scratch, the app opened twice so it takes control, the
+  stylesheet then changed *in the response* (the working tree is never
+  touched), and the app reopened. The marker is a custom property on
+  `:root`, so the check does not depend on which screen is up.
+
+  **Two mistakes this cost, both caught by measuring.** `Page.navigate` to
+  an identical URL is not a reload and re-requests nothing, so the first
+  version of the probe reported the fixed worker as broken too — leaving the
+  page and coming back is the honest simulation of reopening the app. And
+  the first marker declared its property on `#__deploy__`, an element that
+  does not exist, so the gate failed against a worker that was working.
+  *Done when: a build whose bytes changed reaches a browser that already has
+  the app cached, gated, and the battery proves the gate load-bearing.* ✅ —
+  **break 112 caught**, `boot` red on the reverted fetch.
+
+
 - **R122 — The founding picker was invisible.** ✅ *Shipped.* Reported with a
   photograph of a phone, and the cause was **three separate bugs stacked on
   one screen**, none of which any existing gate could see.

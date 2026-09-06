@@ -34,11 +34,18 @@
 // NO DEPENDENCIES, per CLAUDE.md — the CDP driver is tools/cdp.js, which R73
 // wrote rather than taking Playwright.
 
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { sleep, serve, findChrome, connect, CHROME_CANDIDATES } from './cdp.js';
+import { join, dirname, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { sleep, serve, findChrome, connect, CHROME_CANDIDATES, MIME } from './cdp.js';
+
+// R122b's freshness check serves the repo itself, with the headers GitHub
+// Pages sends. `serve()` cannot be reused for it: it deliberately sends no
+// cache headers, which is the one condition this has to reproduce.
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const REPORT = process.argv.includes('--report');
 
@@ -81,6 +88,82 @@ const WATCH_FIRST_RENDER = `(() => {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })()`;
+
+// R122b — DOES A DEPLOY REACH A PHONE THAT ALREADY HAS THE APP?
+//
+// R122 shipped, GitHub Pages deployed it, and the reporter's phone kept
+// showing the broken screen. The service worker calls itself network-first,
+// but a plain `fetch(request)` READS THROUGH THE BROWSER'S HTTP CACHE, and
+// Pages serves the shell with `Cache-Control: max-age=600` — so it returned
+// the old file believing it had gone to the network, and then wrote that
+// stale copy into the freshly-named cache, where it outlived the ten
+// minutes. Nothing in the suite could see it: every other browser gate
+// bypasses the service worker on purpose, so the one code path that decides
+// whether a build reaches a player had never been run.
+//
+// This runs it. A server that sends exactly what Pages sends, a fresh
+// profile so the worker installs from scratch, the app opened twice so it
+// takes control, then the stylesheet CHANGED — served from memory, so the
+// working tree is never touched — and the app reopened the way a player
+// reopens it. The marker is a custom property on `body` so the check does
+// not depend on which screen happens to be up.
+//
+// One trap this cost an hour of: `Page.navigate` to an identical URL is not
+// a reload and re-requests nothing, so the first version of this reported
+// BOTH workers as broken. Leaving the page and coming back is the honest
+// simulation of reopening the app.
+const MARKER = '\n:root{--deploy-marker:7}\n';
+
+async function deployReaches(note) {
+  const chrome = findChrome();
+  let override = null;
+  const srv = createServer(async (req, res) => {
+    const path = decodeURIComponent(req.url.split('?')[0]);
+    const file = join(root, path === '/' ? '/index.html' : path);
+    if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
+    try {
+      let body = await readFile(file);
+      if (override && path.endsWith('style.css')) body = Buffer.concat([body, Buffer.from(override)]);
+      res.writeHead(200, {
+        'content-type': MIME[extname(file)] ?? 'application/octet-stream',
+        'cache-control': 'max-age=600',      // what GitHub Pages sends
+      });
+      res.end(body);
+    } catch { res.writeHead(404).end('not found'); }
+  });
+  const port = await new Promise((r) => srv.listen(0, '127.0.0.1', () => r(srv.address().port)));
+  const profile = await mkdtemp(join(tmpdir(), 'spliceworld-deploy-'));
+  const cdpPort = 9600 + Math.floor(process.pid % 90);
+  const proc = spawn(chrome, ['--headless=new', `--remote-debugging-port=${cdpPort}`,
+    `--user-data-dir=${profile}`, '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', 'about:blank'],
+    { stdio: 'ignore' });
+  let cdp;
+  try {
+    cdp = await connect(cdpPort);
+    const { send, evaluate } = cdp;
+    await send('Runtime.enable');
+    await send('Page.enable');
+    const url = `http://127.0.0.1:${port}/index.html`;
+    await send('Page.navigate', { url }); await sleep(2600);
+    await send('Page.navigate', { url }); await sleep(2600);
+    if (!await evaluate('!!navigator.serviceWorker.controller')) {
+      note('the service worker never took control, so nothing measured whether a deploy reaches a player');
+      return;
+    }
+    override = MARKER;                        // the deploy
+    await send('Page.navigate', { url: 'about:blank' }); await sleep(500);
+    await send('Page.navigate', { url }); await sleep(3200);
+    const got = await evaluate(`getComputedStyle(document.body).getPropertyValue('--deploy-marker').trim()`);
+    if (got !== '7') {
+      note('a new build does NOT reach a browser that already has the app cached — the service worker is serving the previous deploy');
+    }
+  } finally {
+    try { cdp?.ws.close(); } catch { /* already gone */ }
+    proc.kill();
+    srv.close();
+    await rm(profile, { recursive: true, force: true }).catch(() => {});
+  }
+}
 
 async function main() {
   const chrome = findChrome();
@@ -178,7 +261,13 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`boot ✓  no geometry in front of the game, and under ${FIRST_PAINT_KB} KB to put it on screen`);
+  await deployReaches((m) => problems.push(m));
+  if (problems.length) {
+    console.error(`\nboot ✗  ${problems.length} problem${problems.length === 1 ? '' : 's'}`);
+    for (const p of problems) console.error(`  · ${p}`);
+    process.exit(1);
+  }
+  console.log(`boot ✓  no geometry in front of the game, under ${FIRST_PAINT_KB} KB to put it on screen, and a new build reaches a phone that already has the old one`);
 }
 
 await main();

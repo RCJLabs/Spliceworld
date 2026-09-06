@@ -1,5 +1,39 @@
 # PROGRESS
 
+## Session 116b — R122b: the fix shipped, the phone did not get it ✅
+
+R122 merged, Pages deployed it at 04:41Z, and the reporter's phone still
+showed the broken screen. **The fix was fine; the delivery was not.**
+
+`sw.js` calls itself "network-first with cache fallback", but a plain
+`fetch(request)` **reads through the browser's HTTP cache**, and GitHub Pages
+serves the shell with `Cache-Control: max-age=600`. It returned the previous
+build believing it had gone to the network — then wrote that stale copy into
+the freshly-named cache, where it outlived the ten minutes. Bumping `CACHE`,
+which every milestone here has dutifully done, cannot help: the install that
+fills the new cache fetches through the same stale HTTP cache.
+
+`fetch(event.request, { cache: 'no-cache' })` forces a conditional request —
+200 with new bytes when the file changed, 304 with almost none when it did
+not. The offline fallback is untouched.
+
+**Why nothing caught it.** Every browser gate calls
+`Network.setBypassServiceWorker` on purpose, so the one code path that
+decides whether a build reaches a player had never been run by anything.
+`tools/boot.js` runs it now: a server sending exactly what Pages sends, a
+fresh profile, the app opened twice so the worker takes control, the
+stylesheet changed *in the response*, and the app reopened.
+
+**Two mistakes, both caught by measuring rather than reasoning.**
+`Page.navigate` to an identical URL is not a reload and re-requests nothing
+— the first probe called the *fixed* worker broken too. And the first marker
+declared its custom property on `#__deploy__`, an element that does not
+exist, so the gate failed a worker that was working.
+
+Verified: **break 112 caught** (boot red on the reverted fetch), boot green,
+a11y, smoke, handlers, scopecheck, roadmap. `SAVE_VERSION` stays 43;
+`sw.js` cache → `spliceworld-v43-r122b`.
+
 ## Session 116 — R122: The screen you cannot read ✅
 
 **Reported from a phone**, with a photograph: the founding picker's text was
