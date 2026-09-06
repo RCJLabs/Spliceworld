@@ -517,6 +517,7 @@ const migrations = {
   44: (save) => {
     save.settings ??= {};
     save.settings.battleSpeed ??= 1;
+    save.sentCount ??= 0;
     return save;
   },
   43: (save) => {
@@ -643,6 +644,7 @@ export function newGameState() {
     // R86: how many clocks this player has paid to hurry. The field guide
     // retires on it, and it is the only thing the mechanic persists.
     rushCount: 0,
+    sentCount: 0,
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations

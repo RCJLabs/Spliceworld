@@ -1172,6 +1172,7 @@ function renderBriefing(root, ctx) {
     const battle = beginFight();
     if (!battle) return;
     const events = autoResolve(battle, content);
+    state.sentCount = (state.sentCount ?? 0) + 1;
     const detail = resolveBattle(state, battle, content, ctx.now());
     state.battle = null;
     lastAftermath = `${aftermathText(detail)} — sent, not watched: ${whatDecidedIt(events)}`;

@@ -6214,6 +6214,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   const MODULE_NOTES = {
     // --- Systems: the module that implements the thing the note teaches.
     'battle/veterancy.js': 'veterans',
+    'battle/autoplay.js': 'sent',
     'splice/feral.js': 'feral',
     'splice/rush.js': 'rush',
     'campaign/taskforce.js': 'taskforce',

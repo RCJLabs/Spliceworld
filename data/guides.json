@@ -718,6 +718,28 @@
           "helper": "specimenCaught"
         }
       ]
+    },
+    {
+      "id": "sent",
+      "screen": "battle",
+      "order": 43,
+      "icon": "lightning",
+      "title": "Some fights do not need watching",
+      "body": "When the briefing calls a fight a <strong>Walkover</strong>, the War Room offers to <em>send them without you</em>: the same seeded fight, the same team, flown by your own people and reported when it is over. It is the identical engine — nothing is rolled on your behalf and nothing is rounded in your favour. A rival duel is never offered, because a duel is the part worth watching. What you give up is the lesson the arena teaches, so a sent fight hands it back in a sentence: which orders were improvised, where the class triangle did the work, what came back resisted.",
+      "reachable": [
+        {
+          "path": "warRecord.wins",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "sentCount",
+          "min": 1,
+          "default": 0
+        }
+      ]
     }
   ]
 }
