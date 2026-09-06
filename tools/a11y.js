@@ -35,6 +35,8 @@ import { sleep, serve, findChrome, connect, CHROME_CANDIDATES } from './cdp.js';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FLOOR = 40;          // px, both dimensions
 const GUTTER = 6;          // px, between two adjacent controls
+const RAG = 1;             // px, how far into its own line a full-width row may start
+const BAND_TOP = 420;      // px, the wide end of the stylesheet's phone media query
 const VIEWPORT = 380;      // px, the reference phone width
 const REPORT = process.argv.includes('--report');
 
@@ -387,6 +389,81 @@ const MODAL_CARDS = `(() => {
   return out;
 })()`;
 
+// R124 — A BOX THAT FILLS ITS LINE USES ALL OF IT.
+//
+// Reported from a phone: the briefing's roster rows had a ragged left edge,
+// one row's tick 70px further in than the row above it. The cause is R73's
+// global `button { justify-content: center }`, which exists so a
+// shrink-wrapped label sits in the middle of its 40px target — and which
+// centres a FULL-WIDTH row too, so its content slides by half of whatever
+// slack that row's own text happens to leave. Change the text, move the
+// tick. This rule has now leaked three times: R122 fixed it on `.lab-pick`,
+// R124 on `.toggle-row`, and nothing in this file could see either.
+//
+// It is stated as the DEFECT and not as the cause. Checking for
+// `justify-content: center` reads intent and gets it wrong both ways: the
+// fold heads on every screen are centred full-width rows whose middle child
+// takes `flex: 1`, so there is no slack to distribute and they start at +0,
+// while a stray margin or an auto-margined first child would drift exactly
+// the same way with `justify-content` perfectly innocent. So the question
+// asked is the one a player can see — how far in does the first thing on
+// this row begin — and the answer for a row that fills its line is zero.
+//
+// Only boxes that FILL their parent's content box: a shrink-wrapped control
+// centres its label on purpose, and that is the rule working. Only boxes with
+// more than one child, because a single centred child is a button.
+//
+// The column half below is the same sentence turned ninety degrees, and it
+// is the half that had to be written differently — see the comment on it.
+const RAGGED = `(() => {
+  const out = [];
+  const sig = (el) => el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
+  for (const el of document.querySelectorAll('body *')) {
+    const cs = getComputedStyle(el);
+    if (cs.display !== 'flex' && cs.display !== 'inline-flex') continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    const p = el.parentElement;
+    if (!p) continue;
+    const pcs = getComputedStyle(p);
+    // clientWidth, not the bounding rect: the rect includes the parent's
+    // border, and a 1px border each side is enough to make a row that fills
+    // its line look 2px short of filling it.
+    const inner = p.clientWidth - parseFloat(pcs.paddingLeft) - parseFloat(pcs.paddingRight);
+    if (inner < 2 || r.width < inner - 1) continue;
+    const kids = [...el.children].filter((c) => { const b = c.getBoundingClientRect(); return b.width > 0 || b.height > 0; });
+    if (kids.length < 2) continue;
+    const txt = (el.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 30);
+    if (cs.flexDirection.startsWith('column')) {
+      // The COLUMN half, and the one rule here read off the stylesheet
+      // rather than off the pixels. In a column the cross axis is
+      // horizontal, so any align-items but stretch shrink-wraps every child
+      // to its own content and the card ends wherever its longest sentence
+      // does. Whether that SHOWS depends entirely on whether today's text
+      // happens to be longer than the line — which is luck, and on a real
+      // save the luck ran out: two ranch cards of identical width ended
+      // about 70px apart because one animal's name is shorter than the
+      // other's.
+      // A measurement would have called that green on this fixture.
+      //
+      // A child that sets its own 'align-self' has opted out and is not
+      // evidence either way; a column where EVERY child has is a column
+      // whose align-items decides nothing.
+      const optedOut = kids.every((c) => { const a = getComputedStyle(c).alignSelf; return a && a !== 'auto' && a !== cs.alignItems; });
+      if (!/stretch|normal/.test(cs.alignItems) && !optedOut) {
+        out.push({ kind: 'column', sel: sig(el), n: 0, w: Math.round(r.width), how: cs.alignItems, txt });
+      }
+      continue;
+    }
+    const edge = r.left + parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft);
+    const start = Math.round(kids[0].getBoundingClientRect().left - edge);
+    if (start > RAG_PX) {
+      out.push({ kind: 'row', sel: sig(el), n: start, w: Math.round(r.width), how: cs.justifyContent, txt });
+    }
+  }
+  return out;
+})()`.replace('RAG_PX', String(RAG));
+
 const OPEN_EVERYTHING = `[...document.querySelectorAll('details')].forEach((d) => { d.open = true; });
   [...document.querySelectorAll('.fold-toggle,[data-fold]')].forEach((b) => b.click());`;
 
@@ -441,9 +518,15 @@ async function main() {
     const unpainted = new Map();
     const seeThrough = new Map();
     const cards = new Map();
+    const lists = new Map();
     const views = new Set();
     const collect = async (where) => {
       views.add(where);
+      for (const g of await evaluate(RAGGED)) {
+        // Keyed by the rule that would fix it and not by the view, so one
+        // leaked selector reports once however many screens render it.
+        if (!lists.has(g.sel) || lists.get(g.sel).n < g.n) lists.set(g.sel, { ...g, where });
+      }
       for (const c of await evaluate(MODAL_CARDS)) {
         cards.set(`${c.host}|${c.sel}`, { ...c, where });
         if (!c.opaque) seeThrough.set(`${c.host}|${c.sel}`, { ...c, where });
@@ -601,6 +684,35 @@ async function main() {
     await sleep(700);
     await collect('battle@640');
     await arenaFits('battle@640');
+    await send('Emulation.setDeviceMetricsOverride', { width: VIEWPORT, height: 780, deviceScaleFactor: 1, mobile: true });
+    await sleep(300);
+
+    // ---- 1b2. R124 — the OTHER end of the phone band. The stylesheet's
+    //      mobile rules live behind `@media (max-width: 420px)`, and every
+    //      measurement in this file had only ever been taken at 380: the
+    //      narrow end. That is one reading of a forty-pixel band, and the
+    //      bug that prompted this ran the whole width of it — a ranch card
+    //      that shrink-wraps to its own text is invisible at 380, where the
+    //      text is already wider than the line, and plain at 411 on the
+    //      phone it was photographed on.
+    //
+    //      Only the box rules are re-read up here. The 40px floor and the
+    //      6px gutter are worst-case-at-the-narrowest properties and get
+    //      no truer with more room; contrast does not move with width at
+    //      all. Widening the whole walk would also make "76 controls at
+    //      380px" a claim about two different pages.
+    await send('Emulation.setDeviceMetricsOverride', { width: BAND_TOP, height: 780, deviceScaleFactor: 1, mobile: true });
+    await sleep(350);
+    for (const s of screens) {
+      await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
+      await sleep(500);
+      await evaluate(OPEN_EVERYTHING);
+      await sleep(350);
+      views.add(`${s}@${BAND_TOP}`);
+      for (const g of await evaluate(RAGGED)) {
+        if (!lists.has(g.sel) || lists.get(g.sel).n < g.n) lists.set(g.sel, { ...g, where: `${s}@${BAND_TOP}` });
+      }
+    }
     await send('Emulation.setDeviceMetricsOverride', { width: VIEWPORT, height: 780, deviceScaleFactor: 1, mobile: true });
     await sleep(300);
 
@@ -1127,10 +1239,24 @@ async function main() {
       console.log(`a11y ~  ${t.where}: ${t.sel} "${t.txt}" sits on a painted background, so its contrast is not a number this can read`);
     }
 
+    // ---- 1g. and a box that fills its line uses all of it ----------------
+    const ragged = [...lists.values()].sort((a, b) => b.n - a.n);
+    if (REPORT) {
+      for (const g of ragged.slice(0, 30)) {
+        console.log(`  ${g.kind.padEnd(7)} +${String(g.n).padStart(4)}px  ${g.where.padEnd(14)} ${g.sel}  ${g.how}  "${g.txt}"`);
+      }
+      console.log('');
+    }
+    for (const g of ragged) {
+      note(g.kind === 'row'
+        ? `${g.where}: ${g.sel} fills its ${g.w}px line but starts its content ${g.n}px in ("${g.txt}") — a ragged left edge`
+        : `${g.where}: ${g.sel} fills its ${g.w}px line as a column but leaves align-items "${g.how}", so every child shrink-wraps to its own text ("${g.txt}")`);
+    }
+
     // ---- 7. nothing narrated an error along the way ------------------------
     for (const e of [...new Set(errors)]) note(`console error during the walk: ${e}`);
 
-    console.log(`a11y: ${controls.length} distinct controls measured at ${VIEWPORT}px across ${views.size} views`);
+    console.log(`a11y: ${controls.length} distinct controls measured at ${VIEWPORT}px across ${views.size} views (boxes re-read at ${BAND_TOP}px, the top of the phone band)`);
     console.log(`a11y: ${kbScreens}/${screens.length} screens opened, ${kbControls} controls tabbed to and a duel fought with Tab and Enter alone`);
   } finally {
     try { cdp?.ws.close(); } catch { /* already gone */ }
@@ -1144,7 +1270,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · every word clears the contrast floor · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · the game is playable from the keyboard`);
+  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · the game is playable from the keyboard`);
 }
 
 // R88 — only when RUN, not when imported. This module owns the one fixture

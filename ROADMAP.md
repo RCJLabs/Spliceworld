@@ -2747,6 +2747,53 @@ moved one of them: the first premise held exactly, the second did not.
 
 ### 9.8 The screen you cannot read (R122) — reported from a phone
 
+- **R124 — Three things a phone could see and no gate could.** ✅ *Shipped.*
+  Reported with three screenshots. All three turned out to be measurement
+  failures rather than coding ones: the game was rendering exactly what the
+  stylesheet and the sentence said, and every gate agreed, because each gate
+  was looking at one width and one fixture.
+
+  - **The briefing's roster had a ragged left edge.** R73's global
+    `button { justify-content: center }` exists so a shrink-wrapped label
+    sits in the middle of its 40px target; `.toggle-row` fills its line, so
+    centring slid its content by half of whatever slack that row's own text
+    left. Measured: three rows started their tick **82px** in and a fourth,
+    whose label wrapped, at **12px**. Third leak of this one rule — R122
+    fixed the same centring on `.lab-pick`.
+  - **Ranch cards ended in different places.** Under `max-width: 420px` the
+    card becomes a flex COLUMN, where `align-items: flex-start` stops
+    meaning "top-align the portrait" and starts meaning "shrink-wrap every
+    child". The widest child is the Extract button, whose label carries the
+    animal's name, so identical cards ended about **70px** apart, read off
+    a 411px-wide phone. Invisible at
+    380px, where the text already exceeds the line and `fit-content` clamps
+    to full width — which is why nothing had ever seen it. **A band
+    measured only at its narrow end is a band measured once.**
+  - **"Prime once Meatball is ."** `needsAge` and `needsCondition` each
+    mean *strictly necessary*, so when either lever alone reaches the
+    ceiling neither one is, and the clause listing what is needed had
+    nothing to put in it. Five smoke assertions covered this sentence and
+    all five missed it, because each picks a fixture and reads what it
+    says while the hole is a **combination** of stage, condition and genes.
+
+  On its first honest run the new gate found **two more instances** nobody
+  had reported: `.toggle-row` again in Settings, and `.pick-row` — the
+  picker sheet, the game's only chooser — whose four option rows held main
+  blocks **83, 94, 123 and 81px** wide inside identical boxes. Both fixed
+  by the same two lines.
+
+  Three new gates, each proven red before the fix: the a11y walk now asks
+  where a full-width row's content actually starts (**+71px** unfixed,
+  0 fixed) and re-reads every box at **420px**, the top of the phone band,
+  as well as 380 — 29 views, up from 23. The new `OUTLOOK` gate sweeps
+  **10,605** sentences across every stage, condition and gene level;
+  **150** of them read as a word followed by a lone stop before the fix,
+  none after.
+
+  *Done when: each of the three is red in the battery before its fix and
+  green after, with no false positive across every view at both ends of the
+  phone band.* ✅ — breaks 122, 123 and 124.
+
 - **R122b — The fix shipped and the phone did not get it.** ✅ *Shipped.*
   R122 merged, GitHub Pages deployed it successfully at 04:41Z, and the
   reporter's phone still showed the broken screen. The cause was not the

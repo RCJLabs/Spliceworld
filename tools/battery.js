@@ -128,6 +128,63 @@ const SMOKE_PAIR = ['node', '-e', `
   console.log('pair ✓  every part and every unit has exactly one body');
 `];
 
+// R124 — EVERY OUTLOOK SENTENCE IS A SENTENCE. Reported from a phone: a
+// Cobra at adult and condition 89 read "Prime once Meatball is ."
+//
+// `needsAge` and `needsCondition` each mean "strictly necessary", so when
+// EITHER lever alone reaches the ceiling neither one is, and the clause
+// listing what is needed had nothing to put in it. The arithmetic was right
+// and the wording had no shape for its answer.
+//
+// The smoke suite already had five assertions about this sentence and all
+// five missed it, because each picks a fixture and reads what it says — and
+// the hole is a COMBINATION of stage, condition and genes, not an animal.
+// So this walks the space: three starter animals, five gene levels, seven
+// points of growth, the whole condition range. 10,605 sentences, of which
+// 150 took the missing branch.
+//
+// It asks about SHAPE, not wording. Nothing else in the game writes " ." or
+// a dangling "and .", so an empty slot cannot hide behind a rephrasing —
+// and the sentence stays free to be rewritten.
+const OUTLOOK = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { ensureRanchSeeded, STATS } = await import('./ranch/ranch.js');
+  const { gradeOutlook, outlookLine } = await import('./splice/extract.js');
+  const raw = {};
+  for (const f of CONTENT_FILES) raw[f] = JSON.parse(readFileSync('data/' + f + '.json', 'utf8'));
+  const content = indexContent(raw);
+  const HOURS = 3600000;
+  const t0 = Date.UTC(2025, 0, 1);
+  const st = { ...newGameState(), seed: 7 };
+  ensureRanchSeeded(st, content, t0);
+  const lines = [];
+  for (const a of st.ranch.stock) {
+    const grow = content.species[a.species].growthHours;
+    for (const g of [1, 2, 3, 4, 5]) {
+      const potential = Object.fromEntries(STATS.map((k) => [k, g]));
+      for (const age of [0, 1, grow.adult - 1, grow.adult, grow.prime - 1, grow.prime, grow.prime + 200]) {
+        for (let cond = 0; cond <= 100; cond++) {
+          const o = gradeOutlook({ ...a, potential, birthAt: t0 - age * HOURS, condition: cond }, content, t0, st);
+          lines.push(outlookLine(o, a.name));
+        }
+      }
+    }
+  }
+  const bad = [];
+  if (lines.length < 10000) bad.push('the sweep collapsed to ' + lines.length + ' sentences');
+  const hollow = lines.filter((l) => / \\.|\\band\\s*\\.|,\\s*\\.|\\(\\)|  /.test(l));
+  if (hollow.length) bad.push(hollow.length + ' of ' + lines.length + ' sentences have an empty slot, e.g. "' + hollow[0] + '"');
+  const unstopped = lines.filter((l) => !l.endsWith('.'));
+  if (unstopped.length) bad.push(unstopped.length + ' sentences do not end, e.g. "' + unstopped[0] + '"');
+  const either = lines.filter((l) => /either way/.test(l));
+  if (either.length < 100) bad.push('the "either way" wording is unreachable (' + either.length + ' of ' + lines.length + ')');
+  if (bad.length) { console.error('outlook ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('outlook ✓  ' + lines.length + ' sentences across every stage, condition and gene level, every slot filled');
+`];
+
 // R85 — a neglected creature is warned before it is taken, and the taking is
 // a loan. Its own gate rather than the smoke suite's, for the usual reason:
 // the suite takes twelve minutes and this is four assertions. Runs the same
@@ -2133,6 +2190,24 @@ const BREAKS = [
     to: '      ${false && fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
   },
   {
+    n: 122, gate: A11Y, name: "R73's centring leaks onto a full-width row again, so its content drifts with its own text",
+    file: 'style.css',
+    anchor: '  justify-content: flex-start;\n  gap: 9px;',
+    to: '  gap: 9px;',
+  },
+  {
+    n: 123, gate: A11Y, name: 'a ranch card goes back to shrink-wrapping, so every card ends where its animal name does',
+    file: 'style.css',
+    anchor: '  .animal-card { flex-direction: column; align-items: stretch; }',
+    to: '  .animal-card { flex-direction: column; }',
+  },
+  {
+    n: 124, gate: OUTLOOK, name: 'the outlook loses the sentence for "either lever alone", and reads "Prime once Meatball is ."',
+    file: 'splice/extract.js',
+    anchor: `  if (!need) {\n    return \`\${best.name} either way — condition \${conditionNeeded}+ now, or \${hours}h more growing.\`;\n  }`,
+    to: '  void need;',
+  },
+  {
     n: 42, gate: BREAKOUT, name: 'a loose specimen grows a deadline and wanders off while you are away',
     file: 'campaign/breakout.js',
     anchor: '    const rival = labFor(state, content, cam.breakoutCount);',
@@ -2292,7 +2367,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2312,6 +2387,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === SITTING ? 'the agenda says how much is waiting'
                 : gate === SENT ? 'a certain fight can be sent instead of watched'
                 : gate === SQUAD ? 'the briefing knows who to send'
+                : gate === OUTLOOK ? 'every outlook sentence has something in every slot'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;

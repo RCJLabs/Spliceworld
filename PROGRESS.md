@@ -1,5 +1,85 @@
 # PROGRESS
 
+## Session 119 — R124: three things a phone could see and no gate could ✅
+
+Three screenshots, three defects, and all three were **measurement**
+failures rather than coding ones. The game rendered exactly what the
+stylesheet and the sentence said; every gate agreed; each gate was looking
+at one width and one fixture.
+
+### What was wrong
+
+- **The briefing's roster had a ragged left edge.** R73's global
+  `button { justify-content: center }` centres a full-width row too, so its
+  content slides by half of whatever slack the row's own text leaves. Three
+  rows started their tick **82px** in and a fourth, whose label wrapped, at
+  **12px**. Third leak of this one rule — R122 fixed `.lab-pick` the same way.
+- **Ranch cards ended in different places.** Under `max-width: 420px` the
+  card is a flex COLUMN, where `align-items: flex-start` means shrink-wrap,
+  not top-align. The widest child is the Extract button, whose label carries
+  the animal's name, so identical cards ended about **70px** apart, read
+  off a 411px-wide phone.
+- **"Prime once Meatball is ."** Both need-flags mean *strictly necessary*,
+  so when either lever alone reaches the ceiling neither one is, and the
+  clause listing what is needed had nothing to put in it.
+
+### Three gates, each proven red first
+
+- The a11y walk now asks **where a full-width row's content actually
+  starts** — `+71px` unfixed, 0 fixed. Stated as the defect, not the cause:
+  checking `justify-content: center` gets it wrong both ways, since the fold
+  heads are centred full-width rows whose middle child takes `flex: 1` and
+  start at +0 regardless.
+- It re-reads every box at **420px**, the top of the phone band, as well as
+  380 — **29 views**, up from 23. The card bug is invisible at 380, where
+  the text already exceeds the line and `fit-content` clamps to full width.
+  *A band measured only at its narrow end is a band measured once.*
+- New **`OUTLOOK`** gate: **10,605** sentences across every stage, condition
+  and gene level. **150** read as a word followed by a lone stop before the
+  fix, none after. Five existing smoke assertions covered this sentence and
+  all five missed it — each picks a fixture, and the hole is a *combination*.
+
+### What the gate found that nobody reported
+
+On its first honest run it flagged **two more instances** of the same two
+rules: `.toggle-row` again in Settings (fixed by the same line), and
+`.pick-row` — the picker sheet, the game's only chooser — shrink-wrapping
+its option rows. Measured at 380px, four rows of identical width held main
+blocks **83, 94, 123 and 81px** wide. That one shows nothing today, because
+those blocks carry no background and their text is left-aligned anyway; it
+is fixed because it is the same rule, and because a `margin-left: auto` on
+the price would quietly do nothing while it stood. Row height and text
+position are unchanged — verified before and after.
+
+Battery **124 breaks, 22 gates**. `sw.js` → `spliceworld-v44-r124`.
+`SAVE_VERSION` unchanged at 44 — no schema moved.
+
+### My own errors this session, worth naming
+
+Three, all the same shape: **asserting a mechanism instead of measuring it.**
+I wrote a sibling-comparison probe before checking that `.animal-card` has
+`sibs: 1` (each card is alone in its own fold, so no sibling check could
+ever see it). I then measured the card fix at 380px, found it moved nothing,
+and concluded it was not load-bearing — the screenshot said otherwise, at a
+width I had not looked at. And I wrote a smoke sweep whose numbers I quoted
+from memory (29,520 / 15.5%); the real sweep is 10,605 / 1.4%, and the first
+version of it was **vacuous** — the branch never fired because I was not
+varying genes.
+
+A fourth: I left an early `continue` for columns above the column branch,
+which made that whole branch **dead code**. The gate passed, the baseline
+passed, and break 123 would have come back MISSED — a gate that cannot fail
+is worse than no gate. Caught by re-reading the diff rather than by any
+check, which is its own lesson.
+
+The backtick trap bit twice more: `\s` inside a `node -e` template literal
+is `s`, and a backtick in a *comment* inside one still closes the literal.
+
+### Next session's first task
+
+R121 — what should the first paint carry? Queued and asked for directly;
+R120 discharged part of it already.
+
 ## Session 118 — R123: who should I send? ✅
 
 Asked for directly. The War Room has forecast whatever team you tick since
