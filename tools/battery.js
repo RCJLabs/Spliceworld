@@ -199,11 +199,16 @@ const OUTLOOK = ['node', '-e', `
 // that way it survives the claws being moved, resized or restyled, and it
 // cannot be satisfied by a blunt wedge that happens to lean the right way.
 //
-// One backward claw per foot is allowed and is not a fudge: a raptor's
-// hallux and a wader's back toe are real anatomy, and the talon and stilt
-// archetypes both carry exactly one. What fails is a foot that is
-// back-heavy — more claws behind than in front, which is a foot on the
-// wrong way round.
+// The tolerance follows the anatomy rather than being a blanket allowance,
+// and the battery is why: the first version let any foot keep one backward
+// claw, so flipping a single claw on a three-clawed tiger paw slipped
+// straight through and break 131 came back MISSED.
+//
+// A PAW has no hallux. Its claws are @white and every one of them must
+// point forward. A TALON or a STILT does have one — a raptor's hallux and a
+// wader's back toe are real anatomy — and those toes are @accent, so at
+// most one of them may face backwards. Two different rules because they are
+// two different feet.
 const CLAWS = ['node', '-e', `
   const { readFileSync } = await import('node:fs');
   const J = (p) => JSON.parse(readFileSync(p, 'utf8'));
@@ -212,6 +217,7 @@ const CLAWS = ['node', '-e', `
   const limbs = parts.filter((p) => p.slot === 'forelimbs' || p.slot === 'hindlimbs');
   const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
   const bad = [];
+  const paw = [];
   let feet = 0, claws = 0;
   for (const part of limbs) {
     const list = shapes[part.id] || [];
@@ -224,7 +230,9 @@ const CLAWS = ['node', '-e', `
       const short = e.indexOf(Math.min.apply(null, e));
       const apex = v[(short + 2) % 3];
       const b0 = v[short], b1 = v[(short + 1) % 3];
-      if (apex[0] > (b0[0] + b1[0]) / 2) fwd++; else back++;
+      const forward = apex[0] > (b0[0] + b1[0]) / 2;
+      if (forward) fwd++; else back++;
+      if (!forward && sh.fill === '@white') paw.push(part.id);
     }
     if (fwd + back === 0) continue;
     feet++; claws += fwd + back;
@@ -233,6 +241,11 @@ const CLAWS = ['node', '-e', `
   if (!feet) { console.error('claws x  no clawed limb was examined at all'); process.exit(1); }
   if (bad.length) {
     console.error('claws x  ' + bad.length + ' limb(s) face backwards: ' + bad.slice(0, 4).join('; '));
+    process.exit(1);
+  }
+  if (paw.length) {
+    const uniq = paw.filter((v, i, a) => a.indexOf(v) === i);
+    console.error('claws x  a paw has no hallux, but ' + uniq.length + ' carries a backward claw: ' + uniq.slice(0, 4).join(', '));
     process.exit(1);
   }
   console.log('claws ok  ' + claws + ' claws across ' + feet + ' clawed limbs, every foot forward-heavy');
