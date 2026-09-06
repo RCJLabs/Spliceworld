@@ -37,8 +37,19 @@ at. Reduced motion still wins outright.
 
 ### Verification
 
-SENT gate (six clauses, written and proven red first) · five new battery
-breaks · a11y **22 views, 74 controls** — the walk now reaches the briefing
+**117 breaks, 117 caught** — five of them new, and one repointed: break 46
+(the walk stops firing the Containment Cannon) came back **BADANCH** because
+the line it aims at moved out of `tools/sim.js` when that loop became the
+game's. That is the battery reporting a stale address rather than passing on
+one, which is the whole reason it checks. Same lesson as R120's break 47.
+
+Smoke also caught me: the v44 migration adds `settings.battleSpeed`, and a
+`deepEqual` pins the migrated settings shape. Kept as a whole-object
+comparison rather than loosened — that assertion exists to force a deliberate
+decision every time settings grow, and it just did.
+
+SENT gate (six clauses, written and proven red first) · a11y **22 views, 74
+controls** — the walk now reaches the briefing
 with an offer on it, which nothing did before · handlers 1494 · scopecheck ·
 roadmap · browser QA at 412px. `sw.js` → `spliceworld-v44-r88`.
 

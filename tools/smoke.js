@@ -2186,7 +2186,13 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 // --- M7: v8 migration backfills the dex from owned tokens.
 {
   const v7ish = migrate(structuredClone(v1Save)); // gives v8 empty everything
-  assert.deepEqual(v7ish.settings, { muted: false });
+  // R88 — battleSpeed joins the settings a migration hands back. Kept as a
+  // deepEqual on the WHOLE object rather than loosened to a field check:
+  // this assertion is what forces a deliberate decision every time settings
+  // grow, and it did its job here — the v44 migration adds a field and this
+  // is where it was noticed. A settings bag nobody is watching is where a
+  // device preference quietly becomes part of a run.
+  assert.deepEqual(v7ish.settings, { muted: false, battleSpeed: 1 });
   assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [], variants: [], beaten: [] });
   const richV7 = { ...structuredClone(v1Save) };
   const chain = migrate(richV7); // walk to v8 baseline shape…

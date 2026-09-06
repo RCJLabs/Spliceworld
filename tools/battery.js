@@ -1649,9 +1649,13 @@ const BREAKS = [
     to: '  for (const esc of []) {',
   },
   {
+    // R88 — repointed. The line lived in tools/sim.js's own autoplay loop
+    // until that loop moved into battle/autoplay.js so the GAME could press
+    // it too. Same behaviour, same break, new address; the battery reported
+    // BADANCH rather than passing, which is the whole reason it checks.
     n: 46, gate: WALK, name: 'the walk stops firing the Containment Cannon',
-    file: 'tools/sim.js',
-    anchor: '    const bag = offered.find((a) => a.type === \'capture\');',
+    file: 'battle/autoplay.js',
+    anchor: "    const bag = capture ? offered.find((a) => a.type === 'capture') : null;",
     to: '    const bag = null;',
   },
   {
