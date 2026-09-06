@@ -347,6 +347,15 @@ export function outlookLine(outlook, name = 'this one') {
     needsAge ? `fully grown (${hours}h)` : null,
     needsCondition ? `at condition ${conditionNeeded}+` : null,
   ].filter(Boolean).join(' and ');
+  // BOTH FLAGS MEAN "STRICTLY NECESSARY", so when EITHER lever alone reaches
+  // the ceiling neither one is, and this sentence had nothing to put in its
+  // slot: a Cobra at adult and condition 89 read "Prime once Meatball is ."
+  // on a real save. It is not a missing case in the arithmetic — the
+  // arithmetic is right and the ANSWER is "either way", which the sentence
+  // had no shape for. Reported from a phone.
+  if (!need) {
+    return `${best.name} either way — condition ${conditionNeeded}+ now, or ${hours}h more growing.`;
+  }
   // The intermediate is worth saying only when it beats where they are now
   // AND falls short of the ceiling — otherwise it is the same sentence twice.
   const partway = needsCondition && GRADE_INDEX[grown.id] > GRADE_INDEX[current.id]

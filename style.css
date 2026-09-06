@@ -475,7 +475,21 @@ main {
 .care-row button:disabled { opacity: 0.6; cursor: default; }
 
 @media (max-width: 420px) {
-  .animal-card { flex-direction: column; }
+  /* `align-items: flex-start` top-aligns the portrait beside the text in the
+     ROW layout. Turning the card into a COLUMN changes what that property
+     means — the cross axis is now horizontal, so it stops the info block
+     stretching and every child shrink-wraps to its own content. The widest
+     child is the Extract button, whose label carries the animal's NAME, so
+     each card in the list ends at a different place: read off a 411px-wide
+     phone, two cards of identical width ended about 70px apart. Stretch is
+     what a column wants; the portrait keeps centring itself with its own
+     `align-self`.
+
+     Invisible at 380px, which is why no gate had ever seen it: down there
+     the text's max-content already exceeds the line, so `fit-content`
+     clamps to full width and the bug has nowhere to show. A band measured
+     only at its narrow end is a band measured once. */
+  .animal-card { flex-direction: column; align-items: stretch; }
   .portrait { flex-basis: auto; width: 100%; max-width: 220px; align-self: center; }
 }
 
@@ -1779,7 +1793,14 @@ footer {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  align-items: flex-start;
+  /* R124 — stretch, not flex-start. In a column, flex-start shrink-wraps
+     every child to its own text: measured at 380px, four option rows of
+     identical width held main blocks 83, 94, 123 and 81px wide. Nothing
+     shows today because those blocks carry no background and their text is
+     left-aligned anyway — but it is why `margin-left: auto` on the price
+     would quietly do nothing, and it is the same rule the ranch cards
+     broke visibly. Row height and text position are unchanged by this. */
+  align-items: stretch;
   text-align: left;
   /* R80 — 6px, the gutter every other control row in the game uses. These
      sat at 5, which is close enough to read as a typo and far enough for a
@@ -1807,6 +1828,14 @@ footer {
   width: 100%;
   display: flex;
   align-items: center;
+  /* R73's global `button { justify-content: center }` exists so a
+     shrink-wrapped label sits in the middle of its 40px target. This row
+     fills its line, so centring slides its content by half of whatever
+     slack the row's own text leaves: measured on the briefing, three
+     roster rows started their tick 82px in and a fourth, whose label
+     wrapped, started at 12px. That is the ragged left edge reported from a
+     phone. Third leak of this rule — R122 fixed `.lab-pick` the same way. */
+  justify-content: flex-start;
   gap: 9px;
   text-align: left;
   margin-bottom: 6px;
