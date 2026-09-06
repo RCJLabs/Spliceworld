@@ -2619,6 +2619,27 @@ button.dex-cell:focus-visible {
 .lab-row b { color: var(--text); }
 .lab-pitch { font-size: 0.76rem; color: var(--accent); margin-top: 3px; }
 
+/* R123 — "Who should I send?", above the roster it is about to tick. Quiet
+   on purpose: it answers a question, it does not make the decision, and the
+   player must still see who it picked and why before they launch. */
+.suggest-btn {
+  display: flex;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 9px 12px;
+  justify-content: center;
+  gap: 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+.suggest-btn:hover, .suggest-btn:focus-visible { border-color: var(--accent); }
+.suggest-why { margin: 0 0 8px; line-height: 1.4; color: var(--accent); }
+
 /* R88 — "Send them without me". Deliberately NOT a second big-btn: Launch
    is the decision, this is the shortcut past a decision already made, and a
    briefing with two equally loud buttons on it is a briefing that has stopped

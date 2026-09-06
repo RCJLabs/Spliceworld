@@ -2636,6 +2636,66 @@ moved one of them: the first premise held exactly, the second did not.
   the d0–1 average clears 9 rows / 6 productive without moving the d30–90
   figure by more than one row.*
 
+### 9.10 Who should I send? (R123) — asked for directly
+
+- **R123 — The briefing knows the answer and never said it.** ✅ *Shipped.*
+  The War Room has run a 32-battle forecast on whatever team you tick since
+  A1, but it has never told you which team to tick. Measured on a
+  class-mixed roster of nine — 84 legal teams, against a truth forecast at
+  24 runs — the pick **changes the outcome in 13 of 14 encounters**, mean
+  spread **76 points**, and taking the roster in the order it happens to be
+  in lands **17–23pp off the best team**.
+
+  **Three wrong answers, each measured rather than reasoned away.**
+  - *Rank by each creature's solo forecast.* Ranks nobody: one creature
+    against a multi-wave encounter is 0% for the structural reason
+    `forecast.js` documents ("Bodies, not numbers"), so every score ties and
+    a stable sort hands back the roster unchanged.
+  - *Rank by raw strength.* With no forecasting at all, **17.3pp** off —
+    indistinguishable from not choosing; picking by the **class triangle**
+    lands **8.7pp** off. Those are the zero-forecast figures, and quoting
+    only them overstates the triangle in the SHIPPED configuration: with the
+    twelve forecasts this actually spends, triangle-on is **2.2pp** (worst
+    roster 3.3) against triangle-off's **5.2pp** (worst 6.4). Still
+    load-bearing — better than twice as close — but the forecasting stage
+    does more of the work than the headline comparison suggests, and the
+    battery is what forced the distinction: break 118 disabled only half the
+    triangle term and was MISSED, because half-off lands between the two and
+    inside the bars.
+  - *Reward class COVERAGE over total edge* — the hypothesis that answering
+    more of the enemy's classes beats stacking one counter. Measured over 4
+    rosters × 14 encounters it is **worse**: 3.1pp against 2.0pp. Recorded
+    because a negative result nobody wrote down gets re-proposed.
+
+  So: score every legal team by the triangle, forecast the best twelve, take
+  the winner. **Twelve is measured too** — eight held at 3.0 and 1.8pp on the
+  two rosters it was tuned against and was **9.5pp** off on a third; twelve
+  takes the worst roster to 4.2pp, and sixteen and twenty-four buy nothing
+  more, because past that the limit is the shortlist's ordering rather than
+  its length.
+
+  **The gate caught its own first draft.** Written against one roster and
+  five encounters, it cleared a 5pp bar on an algorithm that was 9.5pp off on
+  the next roster tried by hand — and its 6-run truth was so noisy that ties
+  were everywhere and a suggestion scored 0.0pp whatever it picked. It runs
+  three rosters against a 24-run truth over twelve encounters now, with a
+  worst-roster bar as well as a mean.
+
+  The suggestion says **why** — which creature brings which class against
+  what — because a pick whose reason you cannot see teaches nothing, and it
+  names only the classes the team actually beats rather than every class the
+  opposition fields, which would be the briefing overselling a pick (A1).
+
+  The bars sit where the algorithm measures, with headroom, rather than at
+  round numbers chosen before measuring: 4pp mean and 5pp worst, against a
+  shipped 2.2 and 3.3, which separates triangle-on from triangle-off clearly
+  instead of by two tenths of a point.
+
+  *Done when: the suggestion lands within 4pp of the brute-force best across
+  three rosters, no worse than 5pp on any one of them, beats the roster's own
+  order by at least 8pp, spends no more than 12 forecasts, and never fields a
+  creature that cannot fight.* ✅
+
 ### 9.9 The battle screen charges full price for free fights (R88)
 
 - **R88 — Send them, instead of watching them.** ✅ *Shipped.* Measured on

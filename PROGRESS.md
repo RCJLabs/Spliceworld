@@ -1,5 +1,64 @@
 # PROGRESS
 
+## Session 118 — R123: who should I send? ✅
+
+Asked for directly. The War Room has forecast whatever team you tick since
+A1 and never told you which team to tick. Measured first: on a class-mixed
+roster of nine (84 legal teams, truth at 24 runs) the pick **changes the
+outcome in 13 of 14 encounters**, mean spread **76pp**, and the roster's own
+order is **17–23pp off the best team**.
+
+### Three wrong answers, each measured
+
+- **Rank by solo forecast.** Ranks nobody — one creature against a
+  multi-wave encounter is 0% for the reason `forecast.js` documents at
+  length. Every score ties; a stable sort returns the roster unchanged.
+- **Rank by raw strength.** With no forecasting, 17.3pp off — the same as
+  not choosing; the **class triangle** lands 8.7pp off. But those are the
+  zero-forecast numbers and they overstate the triangle in the shipped
+  configuration: at the twelve forecasts this spends, triangle-on is
+  **2.2pp** against triangle-off's **5.2pp**. Still load-bearing, still
+  better than twice as close, but the forecasting stage does more of the
+  work than the headline suggests.
+- **Reward coverage over total edge.** My own hypothesis, and wrong: 3.1pp
+  against 2.0pp over 4 rosters × 14 encounters. Written down because a
+  negative result nobody records gets re-proposed.
+
+### And three of my own process errors, worth naming
+
+The first measurement mis-called `sampleBuilds` and brute-forced a
+68-creature roster. The second read the enemy's class off `creatureClass`
+when enemies use `class` — the two sides genuinely differ, and `foeRead`
+already reconciles them. The third ran on a roster that was six ground and
+one water, so a class term could not reorder anything. Each produced a
+confident table of identical numbers.
+
+### The gate caught its own first draft
+
+Written against one roster and five encounters, it cleared its own 5pp bar
+on an algorithm that was **9.5pp** off on the next roster tried by hand. Its
+6-run truth was noisy enough that ties were everywhere and a suggestion
+scored 0.0pp whatever it picked. Three rosters, a 24-run truth, twelve
+encounters, and a worst-roster bar now.
+
+Budget 12 is measured the same way: eight held on the rosters it was tuned
+against and broke on a third.
+
+**And the battery caught an overclaim.** Break 118 — "the suggestion stops
+reading the class triangle" — was MISSED, because it disabled only the
+positive half of the term; half-off lands between on and off and stayed
+inside the bars. Removing the whole term reads 5.2pp against the shipped
+2.2, which is what the bars are set to separate: 4pp mean and 5pp worst,
+where the first draft's 5 and 6 would have been tripped by two tenths.
+
+### Verification
+
+SQUAD gate (written and proven red first) · four new breaks · a11y **23
+views, 76 controls** — the fixture gained a fourth chimera, because with
+exactly three fit there is no choice to make and the control correctly does
+not appear · handlers 1497 · scopecheck · roadmap · browser QA at 412px.
+`sw.js` → `spliceworld-v44-r123`. `SAVE_VERSION` unchanged at 44.
+
 ## Session 117 — R88: the battle screen charges full price for free fights ✅
 
 **Criterion:** the beats the walker's day replays drop by 60% at identical

@@ -104,6 +104,16 @@ export async function fixtureSave() {
     twin.lastTrainedAt = now - 80 * 3600000;
     twin.agitatedAt = now - 3 * 3600000;
     s.chimeras.push(twin);
+    // R123 — a FOURTH, so the briefing has a choice to make. The suggestion
+    // only appears when more creatures are fit than the team holds: with
+    // exactly three there is nothing to choose, and a button that always
+    // returns the same three is noise. Three chimeras is what this fixture
+    // had, so the newest control in the game was unmeasurable on it.
+    const spare = JSON.parse(JSON.stringify(s.chimeras[0]));
+    spare.id = 'a11y-spare';
+    spare.name = 'Understudy';
+    spare.settleUntil = now - 1000;
+    s.chimeras.push(spare);
   }
   // R86 — three clocks still running, so the Hurry buttons are measured at
   // 380px on each of the three screens that draw one: a settling chimera on
@@ -509,6 +519,18 @@ async function main() {
         for (let i = 0; i < 3; i++) {
           await evaluate(`(() => { const r = [...document.querySelectorAll('button[data-toggle]')].filter((b) => !b.disabled)[${i}]; if (r) r.click(); })()`);
           await sleep(450);
+        }
+        // R123 — press the suggestion, so the answer and its reason are
+        // measured too. It rewrites the roster's ticks, which is a render:
+        // the control that made it has to survive its own effect.
+        if (await evaluate(`(() => { const b = document.querySelector('#wr-suggest'); if (!b) return false; b.click(); return true; })()`)) {
+          await sleep(700);
+          await collect('briefing/suggested');
+          if (!await evaluate(`!!document.querySelector('.suggest-why')`)) {
+            note('pressing the suggestion leaves no reason on the screen, so it picks without teaching');
+          }
+        } else {
+          note('the briefing offers no suggestion, so R123 is unmeasured');
         }
         await collect('briefing');
         if (!await evaluate(`!!document.querySelector('#wr-send')`)) {
