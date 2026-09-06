@@ -1940,16 +1940,58 @@ R102; R88–R90 remain.)*
   roster. *Done when: a completed run can be retired into a new one carrying
   exactly one chosen thing, and smoke asserts the new save keeps that one
   thing and nothing else.*
-- **R101 — `save/save.js` is 1,020 lines of migrations, with fixtures for
-  19 of 39.** It is the largest eager module (**44 KB**), so every player
-  downloads every migration they will never run, and twenty steps of the
-  chain have never been replayed against a real save of their version.
-  Proposed, medium: migrations 1–35 behind a lazy import taken only when
-  `saveVersion < 36`; a **fixture per version** generated from the walker
-  (`tools/saves/v{N}.json`) so smoke replays v1 → current step by step; and
-  a rule that a migration ships with its fixture. *Done when: the eager graph
-  carries under 15 KB of save.js, and `npm test` migrates a v1 save to
-  current through every step with a fixture at each.*
+- **R101 — every player downloaded forty-four migrations to run none of
+  them.** ✅ *Shipped.*
+
+  **Two of this entry's own numbers were wrong, and one of its claims was
+  wrong in an interesting way.** `save/save.js` was **1,094 lines and 47.3
+  KB**, not 1,020 and 44 — it had grown since the audit wrote this down.
+  And the claim that "twenty steps of the chain have never been replayed
+  against a real save of their version" understated it in one direction and
+  overstated it in another. Instrumenting the table and running the whole
+  suite: **every one of the 44 migrations does run**, 679 times over. What
+  none of them had ever seen was a real save. The inputs were either the
+  six-key object hand-written in smoke.js —
+
+      const v1Save = { saveVersion: 1, seed, createdAt, spliceCount,
+                       genome, directorStats };
+
+  — chained upward, or a save built from **today's** `newGameState()` with
+  its version number written *backwards* to 24. The second is the worse
+  instrument: it hands migration 25 a save that already contains fields
+  invented at v40, so a migration that fails to CREATE a field passes anyway
+  because the field was already there. Not "never replayed" — replayed
+  against something that could not fail.
+
+  **Git had every version, so the fixtures are not written, they are
+  taken.** `tools/gen-saves.js` finds the commit where SAVE_VERSION was N —
+  all 45 exist — checks that tree out, imports *its* `save/save.js`, and
+  asks it for a new game. `v29.json` is a save the game itself wrote when 29
+  was current. Each is then stocked through its own era's
+  `ensureRanchSeeded`, so 44 of the 45 carry real animals of their period
+  and a migration that walks a herd has a herd to walk. v1 predates the
+  `ranch/` directory and is correctly bare.
+
+  **The split.** The migration table moved to `save/migrations.js` whole —
+  it turned out to reference nothing at module scope, which is what it
+  should be: a migration reproduces the schema of its own era and must not
+  read today's tuning. `migrate` is async and takes that import **only when
+  the save is actually behind**, so the common load never fetches it. The
+  slot picker, export file and new-run ceremony moved to `save/slots.js`;
+  they were reached only from the already-lazy settings panel and were
+  riding into the first paint because they shared a file with `loadSave`.
+
+  *Done when: the eager graph carries under 15 KB of save.js, and `npm test`
+  migrates a v1 save to current through every step with a fixture at each.*
+  ✅ — the save system's share of the first paint went **47.3 KB → 10.5 KB**,
+  and the whole first paint **1053 KB → 1016 KB** (the ceiling came down
+  1055 → 1020 behind it). `npm test` now exists and runs `tools/saves.js`,
+  which walks a real save of every version v1–v45 to current and requires
+  each to land on exactly the shape a new game has — a new game IS the
+  specification, with empty containers specifying nothing. Breaks 134–137
+  hold all four directions: a migration that stops creating its field, a
+  fixture that stops being a save of its own version, a fixture hand-edited
+  rather than generated, and the table put back on a static import.
 
 ### 9.6 Sixth audit (R87) — queue R103–R117 · **R106 shipped**
 

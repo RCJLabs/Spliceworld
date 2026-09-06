@@ -201,6 +201,20 @@ const OUTLOOK = ['node', '-e', `
 // and no gate in the suite could tell that apart from a deliberate change.
 const GENPARTS = ['node', 'tools/gen-parts.js', '--check'];
 
+// R101 — A REAL SAVE OF EVERY VERSION, NOT A SIX-KEY STUB. The chain was
+// only ever walked from a hand-written object with six keys, or from a
+// CURRENT-shaped save with its version number written backwards — which is
+// worse, because a migration that fails to create a field passes anyway
+// when the field was already there. `tools/saves.js` walks a real save of
+// each of v1-v45, taken from the commit where that version was current, and
+// requires each to land on the shape a new game has.
+const SAVES = ['node', 'tools/saves.js'];
+
+// R101 — and the fixtures themselves are generated, not authored, so the
+// same question R127 asked of the parts data gets asked of them: is what is
+// on disk what that version's own code produces?
+const GENSAVES = ['node', 'tools/gen-saves.js', '--check'];
+
 // R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
 // "claws are on backwards". They were. Every part is drawn in a local space
 // where the head faces +x (frames.json _doc), and the `paw` archetype built
@@ -2281,6 +2295,30 @@ const BREAKS = [
     to: '      ${false && fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
   },
   {
+    n: 134, gate: SAVES, name: 'a migration stops creating the field it exists to add, and every older save arrives missing it',
+    file: 'save/migrations.js',
+    anchor: '    save.dex.beaten ??= [];',
+    to: '    save.dex.beaten2 ??= [];',
+  },
+  {
+    n: 135, gate: SAVES, name: 'a fixture stops being a save of the version it stands for, so it tests the wrong step',
+    file: 'tools/saves/v30.json',
+    anchor: '  "saveVersion": 30,',
+    to: '  "saveVersion": 31,',
+  },
+  {
+    n: 136, gate: GENSAVES, name: 'a fixture is hand-edited instead of taken from the version that wrote it',
+    file: 'tools/saves/v30.json',
+    anchor: '  "funds": 300,',
+    to: '  "funds": 301,',
+  },
+  {
+    n: 137, gate: BOOT, name: 'the migration table goes back to a static import, so every player downloads forty-four steps to run none',
+    file: 'save/save.js',
+    anchor: "import { newWorldSeed } from '../util/rng.js';",
+    to: "import { newWorldSeed } from '../util/rng.js';\nimport { migrations as eagerAgain } from './migrations.js';\nvoid eagerAgain;",
+  },
+  {
     n: 132, gate: GENPARTS, name: 'a part is tuned in the data and not in the generator, so the next regeneration reverts it',
     file: 'data/parts.json',
     anchor: '"ability": "Log Roll"',
@@ -2516,7 +2554,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2540,6 +2578,8 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === TIER ? 'a higher letter is a creature that wins more'
                 : gate === CLAWS ? 'every clawed foot points where the creature is going'
                 : gate === GENPARTS ? 'the shipped parts are exactly what the generator produces'
+                : gate === SAVES ? 'a real save of every version still migrates to the current one'
+                : gate === GENSAVES ? 'every save fixture is what that version of the game actually wrote'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;

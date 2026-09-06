@@ -12,6 +12,9 @@
     "sim": "node tools/sim.js",
     "serve": "python3 -m http.server 8000",
     "a11y": "node tools/a11y.js",
-    "boot": "node tools/boot.js"
+    "boot": "node tools/boot.js",
+    "saves": "node tools/saves.js",
+    "gen-saves": "node tools/gen-saves.js",
+    "test": "node tools/scopecheck.js && node tools/saves.js && node tools/smoke.js && node tools/handlers.js && node tools/roadmap.js"
   }
 }

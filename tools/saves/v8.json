@@ -1,0 +1,125 @@
+{
+  "saveVersion": 8,
+  "seed": 424242,
+  "createdAt": 1700000000000,
+  "spliceCount": 0,
+  "genome": null,
+  "directorStats": {
+    "partUse": {},
+    "tagUse": {},
+    "dissections": []
+  },
+  "funds": 300,
+  "ranch": {
+    "stock": [
+      {
+        "id": "a0",
+        "species": "goat",
+        "name": "Herbert",
+        "sex": "F",
+        "birthAt": 1700000000000,
+        "condition": 60,
+        "potential": {
+          "hp": 3,
+          "power": 2,
+          "armor": 3,
+          "speed": 1,
+          "stamina": 4
+        },
+        "traits": [],
+        "genotype": {},
+        "parents": null,
+        "lastCare": {
+          "feed": 0,
+          "groom": 0,
+          "exercise": 0,
+          "enrich": 0
+        }
+      },
+      {
+        "id": "a1",
+        "species": "goat",
+        "name": "Rufus",
+        "sex": "M",
+        "birthAt": 1700000000000,
+        "condition": 60,
+        "potential": {
+          "hp": 3,
+          "power": 4,
+          "armor": 2,
+          "speed": 4,
+          "stamina": 5
+        },
+        "traits": [],
+        "genotype": {},
+        "parents": null,
+        "lastCare": {
+          "feed": 0,
+          "groom": 0,
+          "exercise": 0,
+          "enrich": 0
+        }
+      },
+      {
+        "id": "a2",
+        "species": "bear",
+        "name": "Pickles",
+        "sex": "F",
+        "birthAt": 1700000000000,
+        "condition": 60,
+        "potential": {
+          "hp": 5,
+          "power": 3,
+          "armor": 1,
+          "speed": 3,
+          "stamina": 3
+        },
+        "traits": [],
+        "genotype": {},
+        "parents": null,
+        "lastCare": {
+          "feed": 0,
+          "groom": 0,
+          "exercise": 0,
+          "enrich": 0
+        }
+      }
+    ],
+    "penCapacity": 4,
+    "animalCount": 3,
+    "seeded": true,
+    "eggs": [],
+    "eggCount": 0
+  },
+  "lastTickAt": null,
+  "activeScreen": "ranch",
+  "inventory": {
+    "vials": [],
+    "parts": [],
+    "tokenCount": 0
+  },
+  "chimeras": [],
+  "chimeraCount": 0,
+  "discoveredCombos": [],
+  "battle": null,
+  "warRecord": {
+    "wins": 0,
+    "losses": 0
+  },
+  "campaign": {
+    "heldNodes": [],
+    "notoriety": 0,
+    "captives": [],
+    "containment": [],
+    "lastTickAt": null
+  },
+  "news": [],
+  "settings": {
+    "muted": false
+  },
+  "dex": {
+    "parts": [],
+    "enemies": [],
+    "traits": []
+  }
+}
