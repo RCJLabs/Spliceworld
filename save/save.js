@@ -744,7 +744,19 @@ export function slotSummary(slotId, storage = globalThis.localStorage, now = Dat
     // rather than left to runSummary's own Date.now() default so a dev
     // ?warp= session sees every slot's day-count agree, not just the active
     // one.
-    return { saveVersion: save.saveVersion, lab: save.profile?.lab ?? null, ...runSummary(save, now) };
+    // R119's founding lab travels with the summary too. `lab` is the
+    // PROFILE's rolled laboratory name, which is what the picker titles a
+    // slot with; `foundedIn` is which of the five starter labs it was
+    // founded in, and they are different questions — two slots can both be
+    // "The Institute for Applied Regret" and have started from a bear and a
+    // tortoise. Comparing those openings is the whole reason to keep two
+    // slots at once, and the picker could not tell you which was which.
+    return {
+      saveVersion: save.saveVersion,
+      lab: save.profile?.lab ?? null,
+      foundedIn: save.starterLab ?? null,
+      ...runSummary(save, now),
+    };
   } catch {
     return { empty: true, corrupt: true };
   }

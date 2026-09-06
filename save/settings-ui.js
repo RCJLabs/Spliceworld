@@ -72,7 +72,7 @@ export function openSettings(overlay, ctx) {
   // prompt, which needs the same fallback label render() shows rather than
   // opening blank.
   const summaryFor = (slot, reg, now) => (slot.id === reg.activeId
-    ? { ...runSummary(state, now), lab: state.profile?.lab ?? null }
+    ? { ...runSummary(state, now), lab: state.profile?.lab ?? null, foundedIn: state.starterLab ?? null }
     : slotSummary(slot.id, storage, now));
   const slotLabel = (slot, summary) => slot.name ?? summary.lab ?? `Lab ${slot.id}`;
 
@@ -100,12 +100,17 @@ export function openSettings(overlay, ctx) {
           : summary.empty
           ? 'Empty — not started yet.'
           : `${summary.chimeras} chimera${summary.chimeras === 1 ? '' : 's'} · ${summary.animals} animal${summary.animals === 1 ? '' : 's'} · ${summary.days} day${summary.days === 1 ? '' : 's'}`;
+        // Which of R119's five it was founded in, named from the content
+        // rather than from the id, so a sixth lab needs no edit here.
+        const founded = summary.foundedIn
+          ? (ctx.content?.starterLabs ?? []).find((l) => l.id === summary.foundedIn)?.name ?? null
+          : null;
         const played = active ? 'playing now' : fmtAgo(slot.lastPlayedAt, now);
         return `
           <li class="slot-row ${active ? 'is-active' : ''}" data-slot="${slot.id}">
             <div class="slot-info">
               <strong>${label}</strong>${active ? ' <span class="slot-badge">ACTIVE</span>' : ''}
-              <span class="fine-print">${detail}${played ? ` · ${played}` : ''}</span>
+              <span class="fine-print">${founded ? `${founded} · ` : ''}${detail}${played ? ` · ${played}` : ''}</span>
             </div>
             <div class="slot-actions">
               ${active ? '' : `<button type="button" class="care-train" data-switch-slot="${slot.id}">Switch</button>`}
