@@ -25,6 +25,10 @@ import { tmpdir } from 'node:os';
 
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
+// R86: break 50 used to hardcode the save version and went BADANCH on three
+// milestones running. It is read off the source now, so bumping SAVE_VERSION
+// moves the break with it.
+import { SAVE_VERSION } from '../save/save.js';
 
 const SRC = dirname(dirname(fileURLToPath(import.meta.url)));
 const DIR = mkdtempSync(join(tmpdir(), 'sw-battery-'));
@@ -49,6 +53,788 @@ const TWICE = ['node', '-e', `
   console.log('twice ✓  ' + a.totalFired + ' both times');
 `];
 
+// R80 — the keyboard gate. Slow (it launches a browser) and worth it: it is
+// the only gate in the battery that presses keys, and the defects it exists
+// to catch are all of the form "works with a mouse, does nothing without
+// one", which no static read can see. If Chromium is missing it exits
+// nonzero, the baseline below prints FAIL, and the battery says so rather
+// than scoring seven breaks green for free.
+const A11Y = ['node', 'tools/a11y.js'];
+
+// R81 — the boot gate. The other browser gate asks what the game LOOKS like;
+// this one asks what it costs to get there, which no static read can answer:
+// the split between "before the game is on screen" and "after" is a fact
+// about a running browser and nothing else.
+const BOOT = ['node', 'tools/boot.js'];
+
+// R84 — a grade sharpens and changes nothing else, as its own gate: what it
+// guards is one rule over 244 parts and the smoke suite takes twelve minutes.
+// Read through `movesFromTokens`, which is the function the Pens renders
+// from, so what is checked is what the player is shown.
+const GRADE = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { movesFromTokens } = await import('./battle/statblock.js');
+  const { analyze } = await import('./splice/physiology.js');
+  const { GRADES } = await import('./splice/extract.js');
+  const J = (n) => JSON.parse(readFileSync('data/' + n + '.json', 'utf8'));
+  const files = ['frames','parts','species','combos','enemies','keywords','classes','traits','parts-shapes','enemies-shapes'];
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, J(n)])));
+  const bad = [];
+  for (const part of Object.values(content.parts).filter((p) => p.move)) {
+    const rows = GRADES.map((g, tier) => {
+      const tokens = [{ id: 'g', partId: part.id, grade: g.id,
+        donor: { name: 'D', species: part.species, stars: 3, extractedAt: 0 } }];
+      return { tier, g: g.id, m: movesFromTokens(tokens, analyze('M', tokens, content), content)
+        .find((x) => x.name === part.ability) };
+    });
+    if (rows.some((r) => !r.m)) { bad.push(part.id + ': the move vanishes at some grade'); continue; }
+    const base = rows[0].m;
+    const keys = (m) => JSON.stringify(Object.keys(m.keywords ?? {}).sort());
+    for (const { tier, g, m } of rows) {
+      if (m.name !== base.name || m.cost !== base.cost || m.acc !== base.acc || keys(m) !== keys(base)) {
+        bad.push(part.id + ' @' + g + ': a grade changed something other than power');
+      }
+      if (m.power !== Math.round(part.move.power * (1 + tier * 0.12))) {
+        bad.push(part.id + ' @' + g + ': power is ' + m.power + ', not 12% per tier');
+      }
+    }
+  }
+  if (bad.length) { console.error('grade ✗  ' + bad.length + ' — ' + bad.slice(0, 3).join('; ')); process.exit(1); }
+  console.log('grade ✓  a grade sharpens, and changes nothing else');
+`];
+
+// R81 — the pairing, as its own gate rather than through the whole smoke
+// suite: what it guards is one assertion and the suite takes ten minutes.
+// `parts.json` says what a part IS and `parts-shapes.json` says what it looks
+// like; enemies.json is HAND-AUTHORED, so adding a unit now means adding it
+// in two places and this is what says so.
+const SMOKE_PAIR = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const J = (p) => JSON.parse(readFileSync(p, 'utf8'));
+  let bad = [];
+  for (const [what, core, shapeFile, key] of [
+    ['parts', 'data/parts.json', 'data/parts-shapes.json', 'parts'],
+    ['units', 'data/enemies.json', 'data/enemies-shapes.json', 'units'],
+  ]) {
+    const list = J(core)[key];
+    const { shapes } = J(shapeFile);
+    const ids = new Set(list.map((x) => x.id));
+    for (const x of list) if (!shapes[x.id]?.length) bad.push(what + ': ' + x.id + ' has no geometry');
+    for (const id of Object.keys(shapes)) if (!ids.has(id)) bad.push(what + ': geometry for ' + id + ', which does not exist');
+    for (const x of list) if ('shapes' in x) bad.push(what + ': ' + x.id + ' still carries geometry in ' + core);
+  }
+  if (bad.length) { console.error('pair ✗  ' + bad.slice(0, 4).join('; ')); process.exit(1); }
+  console.log('pair ✓  every part and every unit has exactly one body');
+`];
+
+// R85 — a neglected creature is warned before it is taken, and the taking is
+// a loan. Its own gate rather than the smoke suite's, for the usual reason:
+// the suite takes twelve minutes and this is four assertions. Runs the same
+// engine the Pens renders from, on the one clock.
+const FERAL = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { spliceChimera } = await import('./splice/theater.js');
+  const { feralTuning, feralStatus, attend, tickFeral } = await import('./splice/feral.js');
+  const { impound } = await import('./campaign/rehab.js');
+  const { agenda } = await import('./ranch/agenda.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const T = feralTuning(content), HR = 3600000, t0 = 1700000000000;
+  const startsAt = t0 + T.neglectHours * HR, endsAt = startsAt + T.windowHours * HR;
+  const mk = (seed) => {
+    const s = { ...newGameState(), seed, funds: 99999 };
+    s.inventory.parts = [{ id: 'k1', partId: 'bear_head', grade: 'prime',
+      donor: { name: 'U', species: 'bear', stars: 4, extractedAt: t0 } }];
+    const r = spliceChimera(s, 'M', { head: 'k1' }, content, t0);
+    if (!r.ok) throw new Error('fixture: ' + r.msg);
+    const ch = s.chimeras[0];
+    ch.instability = T.instabilityAt; ch.bond = 0;
+    return { s, ch };
+  };
+  const bad = [];
+  // Built unstable is not a crime.
+  { const { s, ch } = mk(1);
+    if (feralStatus(ch, content, t0).atRisk) bad.push('a chimera is at risk the moment it is spliced');
+    if (tickFeral(s, content, t0).gone.length) bad.push('and the tick takes it'); }
+  // Bond past the floor is the durable answer.
+  { const { s, ch } = mk(2); ch.bond = T.bondFloor;
+    if (feralStatus(ch, content, endsAt * 2).atRisk) bad.push('a bonded creature can still go feral'); }
+  // The deadline is scheduled, not rolled: many small ticks agree with one big one.
+  { const one = mk(3); tickFeral(one.s, content, startsAt);
+    if (one.ch.agitatedAt !== startsAt) bad.push('the tick does not open the window');
+    // R9's exemption: a fortnight away must not cost an animal the player
+    // was never given the chance to answer for. Ticked late on purpose —
+    // at the moment the condition is met, opening on sight and back-dating
+    // are the same number.
+    const late = mk(3); const fortnight = t0 + 14 * 24 * HR;
+    if (tickFeral(late.s, content, fortnight).gone.length) bad.push('two weeks away cost a creature');
+    if (late.ch.agitatedAt !== fortnight) bad.push('the window does not open when the player looks');
+    const many = mk(3); const step = (endsAt - t0) / 400; let lost = 0;
+    for (let at = t0; at < endsAt; at += step) lost += tickFeral(many.s, content, at).gone.length;
+    if (lost) bad.push('checking in often cost a creature — the window is a roll, not a deadline');
+    if (Math.abs((many.ch.agitatedAt ?? 0) - startsAt) > step) bad.push('small ticks and one big tick disagree'); }
+  // Attending clears it, and the player was told first.
+  { const { s, ch } = mk(4); tickFeral(s, content, startsAt);
+    if (!feralStatus(ch, content, startsAt).agitated) bad.push('a neglected creature is never warned');
+    if (!agenda(s, content, startsAt).some((i) => i.id === 'settle')) bad.push('the agenda never says so');
+    attend(ch, startsAt + HR);
+    if (feralStatus(ch, content, startsAt + HR).atRisk) bad.push('working with it does not clear the warning');
+    const r = tickFeral(s, content, startsAt + HR);
+    if (ch.agitatedAt !== null || r.news.length !== 1) bad.push('and the tick neither clears it nor says so');
+    if (tickFeral(s, content, endsAt + HR).gone.length) bad.push('it was taken anyway'); }
+  // A missed window is a loan, not a loss.
+  { const { s, ch } = mk(5); ch.xp = 4200; ch.moveset = ['a','b','c','d'];
+    tickFeral(s, content, startsAt);
+    const gone = tickFeral(s, content, endsAt).gone;
+    if (gone.length !== 1) { bad.push('a missed window costs nothing'); }
+    else { impound(s, gone[0], content, endsAt);
+      const bay = s.campaign.containment[0];
+      if (!bay || bay.chimera !== ch || bay.chimera.xp !== 4200 || bay.chimera.moveset.length !== 4) {
+        bad.push('the bay does not hold the creature itself'); } } }
+  if (bad.length) { console.error('feral ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('feral ✓  warned, answerable, scheduled, and given back');
+`];
+
+// R86 — a rush buys time and nothing else. Its own gate, for the usual
+// reason: the smoke suite takes twelve minutes and this is one save, two
+// copies and a handful of comparisons. Same functions the buttons call.
+const RUSH = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { spliceChimera } = await import('./splice/theater.js');
+  const { startVat } = await import('./splice/chaos.js');
+  const { tickWorld } = await import('./campaign/world.js');
+  const { treatmentCost } = await import('./splice/scars.js');
+  const { rush, rushable, rushPrice, RUSH_KINDS, rushLines } = await import('./splice/rush.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000, HR = 3600000;
+  const s = { ...newGameState(), seed: 8601, funds: 50000 };
+  s.facility = { theater: 2, containment: 1, incubator: 1, extractor: 1, scanner: 1, infirmary: 1 };
+  s.lastTickAt = t0;
+  const tok = (id, partId) => ({ id, partId, grade: 'prime', donor: { name: 'D', species: partId.split('_')[0], stars: 3, extractedAt: t0 } });
+  s.inventory.parts.push(tok('a1','bear_head'), tok('a2','bear_organ'), tok('b1','goat_head'), tok('b2','goat_organ'), tok('c1','cobra_head'), tok('c2','wolf_tail'));
+  for (const [h, o] of [['a1','a2'],['b1','b2']]) { const m = spliceChimera(s, 'M', { head: h, organ: o }, content, t0 - 10 * HR); if (!m.ok) throw new Error(m.msg); }
+  for (const c of s.chimeras) { c.settleUntil = t0 - HR; c.bond = 50; }
+  const mC = spliceChimera(s, 'M', { head: 'c1', tail: 'c2' }, content, t0); if (!mC.ok) throw new Error(mC.msg);
+  const C = s.chimeras[2];
+  const v = startVat(s, s.chimeras[0].id, s.chimeras[1].id, content, t0); if (!v.ok) throw new Error(v.msg);
+  const base = structuredClone(s);
+  const bad = [];
+  if (JSON.stringify([...RUSH_KINDS].sort()) !== JSON.stringify(['egg','resequencer','settle','vat'])) bad.push('the registry is not exactly the four sealed clocks (' + RUSH_KINDS.join(',') + ')');
+  { const t = structuredClone(base);
+    for (const k of ['train','care','growth','rehab','job']) { const r = rush(t, k, C.id, content, t0); if (r.ok || r.msg !== rushLines(content).refusal) bad.push(k + ' is for sale'); }
+    if (t.funds !== base.funds) bad.push('a refusal charged money'); }
+  const t1 = t0 + 60000;
+  const wait = structuredClone(base); tickWorld(wait, content, Math.max(base.vat.until, C.settleUntil) + 60000);
+  const rushed = structuredClone(base); let spent = 0;
+  for (const q of rushable(rushed, content, t1)) { const r = rush(rushed, q.kind, q.id, content, t1); if (!r.ok) bad.push(q.kind + ': ' + r.msg); else spent += r.cost; }
+  if (base.funds - rushed.funds !== spent || spent <= 0) bad.push('the money did not move exactly once (' + (base.funds - rushed.funds) + ' vs ' + spent + ')');
+  tickWorld(rushed, content, t1);
+  const shape = (c) => c && JSON.stringify({ f: c.frame, t: Object.entries(c.tokens).map(([k, x]) => k + ':' + x.partId + '@' + x.grade), n: c.name, i: c.instability });
+  const cw = wait.chimeras.find((c) => c.vatBorn), cr = rushed.chimeras.find((c) => c.vatBorn);
+  if (!cw || !cr) bad.push('a vat did not decant');
+  else if (shape(cw) !== shape(cr)) bad.push('the rushed vat decanted a DIFFERENT child');
+  const tw = wait.chimeras.find((c) => c.id === C.id).temperament, tr = rushed.chimeras.find((c) => c.id === C.id).temperament;
+  if (!tw || !tr || JSON.stringify(tw) !== JSON.stringify(tr)) bad.push('the rushed settle produced a different temperament');
+  { const h = structuredClone(base); const ch = h.chimeras[0];
+    for (const hrs of [0.5, 2, 6]) { ch.injury = { name: 'x', until: t0 + hrs * HR };
+      if (treatmentCost(ch, content, t0) !== rushPrice(hrs * HR, content)) bad.push('treatment at ' + hrs + 'h is not the rush price'); } }
+  { const p = structuredClone(base); p.funds = 10; const before = p.vat.until;
+    const r = rush(p, 'vat', 'vat', content, t1); if (r.ok || p.funds !== 10 || p.vat.until !== before) bad.push('a rush went through with no money'); }
+  if (bad.length) { console.error('rush ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('rush ✓  four sealed clocks, one price — rushed and waited agree');
+`];
+
+// R103 — the opposition commits before you answer. Its own gate for the
+// usual reason: the smoke suite takes nine minutes and this is three
+// battles and six rules, all of them the ones that turn two dead buttons
+// into decisions. Six breaks aim here.
+const STANCE = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { createBattle, step, playerActions, playerActive, intentOf, stanceTuning, bracePreview, braceTitle } = await import('./battle/engine.js');
+  const { choosePlayerAction } = await import('./battle/ai.js');
+  const { makeSimChimera, sampleBuilds } = await import('./tools/sim.js');
+  const { analyze } = await import('./splice/physiology.js');
+  const { rngStream } = await import('./util/rng.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000;
+  const T = stanceTuning(content);
+  const bad = [];
+
+  // 0. THE DATA WINS — and this is checked against the ENGINE'S FALLBACKS,
+  //    not against the merged tuning. The first draft compared
+  //    stanceTuning(content) to stance.json, but that call spreads
+  //    content.stanceMeta over the defaults and stanceMeta IS the shipped
+  //    tuning: it was comparing the file with itself and could not disagree.
+  //    Break 94 walked through it. stanceTuning(null) is the fallback set.
+  {
+    const D = stanceTuning(null);
+    for (const [k, v] of Object.entries(R('stance').tuning)) {
+      if (D[k] !== v) bad.push('the engine fallback ' + k + ' is ' + D[k] + ', the data ships ' + v);
+      if (T[k] !== v) bad.push('the merged ' + k + ' is ' + T[k] + ', the data ships ' + v);
+    }
+  }
+
+  const builds = sampleBuilds(content, 40, 2026).map((b) => makeSimChimera(b.frame, b.partIds, 'prime', content));
+  const classOf = (c) => analyze(c.frame, Object.values(c.tokens), content).creatureClass ?? null;
+  const fight = (team, enc, seed = 5) => createBattle(team, content.encounters[enc], content, seed, t0);
+
+  // 1. the intent is decided before the player acts, and it is what lands
+  {
+    const b = fight([builds[0], { ...builds[0], id: 'b1' }], 'patrol_2');
+    const intent = intentOf(b, content);
+    if (!intent || intent.index < 0) bad.push('nothing was telegraphed');
+    else {
+      const named = b.enemy.active.moves[intent.index].name;
+      if (intent.name !== named) bad.push('the telegraph names a different move than it holds');
+      step(b, playerActions(b).find((a) => a.type === 'rest'), content);
+      if (!b.log.some((l) => l.includes(named))) bad.push('the move it announced is not the move it used');
+    }
+  }
+
+  // 2. a brace answers a telegraph, costs stamina, and never twice running
+  {
+    const b = fight([builds[2], { ...builds[2], id: 'c1' }], 'patrol_2');
+    intentOf(b, content);
+    const me = playerActive(b);
+    const before = me.stamina;
+    step(b, playerActions(b).find((a) => a.type === 'rest'), content);
+    if (!b.log.some((l) => /braces/.test(l))) bad.push('bracing against a telegraph did not brace');
+    if (me.stamina >= before) bad.push('the brace did not cost stamina (' + before + ' -> ' + me.stamina + ')');
+
+    const quiet = fight([builds[2], { ...builds[2], id: 'c2' }], 'patrol_2');
+    intentOf(quiet, content);
+    quiet.intent = { index: -1, name: 'Catch Breath', power: 0, tags: [], creatureClass: null, priority: false, ignoreGuard: false };
+    const q = playerActive(quiet);
+    step(quiet, playerActions(quiet).find((a) => a.type === 'rest'), content);
+    if (q.status.guard) bad.push('a brace was granted with nothing telegraphed');
+  }
+
+  // 3. the brace is worth what it claims
+  {
+    const hit = (braced) => {
+      const b = fight([builds[3], { ...builds[3], id: 'd1' }], 'patrol_2');
+      intentOf(b, content);
+      const hp = playerActive(b).hp;
+      step(b, braced ? playerActions(b).find((a) => a.type === 'rest') : playerActions(b).find((a) => a.type === 'move'), content);
+      return hp - playerActive(b).hp;
+    };
+    const open = hit(false), guarded = hit(true);
+    if (!(guarded < open)) bad.push('a braced creature does not take less (' + guarded + ' vs ' + open + ')');
+    if (!(guarded > 0)) bad.push('a brace is immunity, not mitigation');
+  }
+
+  // 4. THE COUNTER-SWITCH READS THE CLASS TRIANGLE AND NOTHING ELSE.
+  //
+  //    Read off the free hit's OWN line. The first draft scanned the log for
+  //    /comes in|free/ — a sentence stance.json shipped and the engine never
+  //    spoke — so it matched nothing on the pristine tree and nothing on the
+  //    broken one either, and break 93 (fire for anybody) was missed. A free
+  //    hit that arrives as an ordinary attack line is also indistinguishable
+  //    to the PLAYER from the switch just not costing a turn, so the line is
+  //    not merely for the gate.
+  {
+    const mark = (log) => log.filter((l) => /comes in on the turn/.test(l)).length;
+    const beats = Object.fromEntries(Object.values(content.classes).map((c) => [c.beats, c.id]));
+    const b0 = fight([builds[0], { ...builds[0], id: 'z' }], 'patrol_2');
+    const li = intentOf(b0, content);
+    const counterClass = beats[li.creatureClass];
+
+    // The one that DOES answer it: the free hit fires and says so.
+    const right = counterClass ? builds.find((c) => classOf(c) === counterClass) : null;
+    if (!right) bad.push('the pool holds no ' + counterClass + ' build to answer a ' + li.creatureClass + ' attacker');
+    else {
+      const b = fight([builds[0], right], 'patrol_2');
+      const i2 = intentOf(b, content);
+      if (beats[i2.creatureClass] !== classOf(right)) bad.push('the fixture no longer reaches a counter-class switch');
+      else {
+        // Held by REFERENCE, not by reading b.enemy.active again: the free
+        // hit can graduate the thing it hits, and then the field holds the
+        // next wave at full health and 'took no damage' reads backwards.
+        const foe0 = b.enemy.active;
+        const foeHp = foe0.hp;
+        step(b, playerActions(b).find((a) => a.type === 'switch'), content);
+        if (!mark(b.log)) bad.push('the counter-class switch came in and nothing happened');
+        if (foe0.hp >= foeHp) bad.push('the free hit landed no damage (' + foeHp + ' -> ' + foe0.hp + ')');
+      }
+    }
+
+    // The one that does NOT: no free hit, and nothing said.
+    const wrong = builds.find((c) => classOf(c) && classOf(c) !== counterClass);
+    if (!wrong) bad.push('the pool holds no non-countering build');
+    else {
+      const b = fight([builds[0], wrong], 'patrol_2');
+      intentOf(b, content);
+      step(b, playerActions(b).find((a) => a.type === 'switch'), content);
+      if (mark(b.log)) bad.push('a switch that answers nothing took tempo it did not earn');
+    }
+  }
+
+  // 5. the pilot can SEE the telegraph. This is the assertion that catches
+  //    the bug that made the whole milestone invisible: step consumes and
+  //    clears the intent, so a pilot reading the field directly gets null
+  //    every turn and never braces or counter-switches at all.
+  {
+    let braces = 0, switches = 0, moves = 0, turns = 0;
+    for (const encId of ['patrol_2', 'checkpoint', 'boss_clampdown']) {
+      const team = Object.keys(content.classes).slice(0, 3).map((cls, i) => {
+        const c = builds.find((x) => classOf(x) === cls) ?? builds[i];
+        return { ...c, id: c.id + '#' + i };
+      });
+      const b = fight(team, encId, 11);
+      let g = 0;
+      while (!b.over && g++ < 200) {
+        const acts = playerActions(b);
+        if (!acts.length) break;
+        const rel = acts.find((a) => a.type === 'release');
+        const action = rel ?? (b.pendingReplace ? acts[0]
+          : choosePlayerAction(b, acts, content, 1, () => rngStream(b.seed, 'gate', b.rollCount++)()));
+        if (!rel && !b.pendingReplace) {
+          turns++;
+          if (action.type === 'rest') braces++;
+          else if (action.type === 'switch') switches++;
+          else if (action.type === 'move') moves++;
+        }
+        step(b, action, content);
+      }
+    }
+    if (turns < 20) bad.push('the pilot did not play a real fight (' + turns + ' turns)');
+    if (!moves) bad.push('the pilot never attacks');
+    if (braces + switches === 0) {
+      bad.push('the pilot never braces or switches over ' + turns + ' turns — it cannot see the telegraph');
+    }
+
+    // …AND ITS ANSWER CHANGES WITH THE QUESTION. Counting braces was not
+    // enough: a pilot blind to the intent still switches for every other
+    // reason it switches and still rests when it is starving, so the count
+    // stayed positive and break 95 was missed. Ask the same turn twice —
+    // once against what is really coming, once against a foe that is
+    // catching its breath — with the same rolls. A pilot that cannot see
+    // the telegraph gives the identical answer every single time.
+    let asked = 0, differed = 0;
+    for (const encId of ['patrol_2', 'checkpoint', 'boss_clampdown']) {
+      const team = Object.keys(content.classes).slice(0, 3).map((cls, i) => {
+        const c = builds.find((x) => classOf(x) === cls) ?? builds[i];
+        return { ...c, id: c.id + '@' + i };
+      });
+      const b = fight(team, encId, 11);
+      let g = 0;
+      while (!b.over && g++ < 200) {
+        const acts = playerActions(b);
+        if (!acts.length) break;
+        const rel = acts.find((a) => a.type === 'release');
+        let action;
+        if (rel || b.pendingReplace) action = rel ?? acts[0];
+        else {
+          // NOT PLANTED FIRST. The draft called intentOf here before asking
+          // the pilot anything, which WROTE the intent onto the battle —
+          // handing a pilot that reads the field directly the very thing
+          // the break takes away, and break 95 was missed a second time.
+          // The pristine pilot plants its own by asking; a blind one leaves
+          // the field as 'step' left it, which is empty.
+          const same = (x, y) => x.type === y.type && x.index === y.index;
+          const withIt = choosePlayerAction(b, acts, content, 1, () => 0.5);
+          const real = b.intent;
+          b.intent = { index: -1, name: 'Catch Breath', power: 0, tags: [], creatureClass: null, priority: false, ignoreGuard: false };
+          const without = choosePlayerAction(b, acts, content, 1, () => 0.5);
+          b.intent = real;
+          asked++;
+          if (!same(withIt, without)) differed++;
+          action = withIt;
+        }
+        step(b, action, content);
+      }
+    }
+    if (asked < 20) bad.push('the differential probe played too little (' + asked + ' turns)');
+    else if (!differed) {
+      bad.push('the pilot answers ' + asked + ' turns identically whether or not a blow is telegraphed — it cannot see it');
+    }
+  }
+
+  // 6. THE BUTTON'S PROMISE IS THE RESOLUTION. The tooltip is built from
+  //    the same preview 'step' resolves, so the percentage and the price it
+  //    quotes are the ones that land. The first draft promised stamina BACK
+  //    from a brace that spends a quarter of it, and nothing in the suite
+  //    disagreed — a lie on the one button this milestone exists to make
+  //    worth pressing.
+  {
+    const b = fight([builds[2], { ...builds[2], id: 'p1' }], 'patrol_2');
+    const intent = intentOf(b, content);
+    const me = playerActive(b);
+    const p = bracePreview(me, intent, content);
+    const title = braceTitle(me, intent, content);
+    if (!p.braced) bad.push('the fixture no longer reaches a live brace');
+    else {
+      if (!title.includes(Math.round(p.absorb * 100) + '%')) bad.push('the button does not quote the absorb it gets: ' + title);
+      if (!title.includes(String(p.cost))) bad.push('the button does not quote the stamina it spends: ' + title);
+      const before = me.stamina;
+      step(b, playerActions(b).find((a) => a.type === 'rest'), content);
+      if (before - me.stamina !== p.cost) bad.push('the brace cost ' + (before - me.stamina) + ', the button said ' + p.cost);
+    }
+    const quiet = fight([builds[2], { ...builds[2], id: 'p2' }], 'patrol_2');
+    intentOf(quiet, content);
+    quiet.intent = { index: -1, name: 'Catch Breath', power: 0, tags: [], creatureClass: null, priority: false, ignoreGuard: false };
+    const qt = braceTitle(playerActive(quiet), quiet.intent, content);
+    if (/%/.test(qt)) bad.push('the button promises mitigation with nothing telegraphed: ' + qt);
+  }
+
+  // 7. THE LINES ARE THE SHIPPED LINES. 'stance.json' carried a 'lines'
+  //    block nobody read while the engine spoke literals — content that says
+  //    one thing and an engine that says another is R9's rule, and this is
+  //    the third time it has been paid for.
+  {
+    const retuned = { ...content, stanceLines: { ...content.stanceLines, brace: '{name} DIGS IN for {cost}.' } };
+    const b = fight([builds[2], { ...builds[2], id: 'l1' }], 'patrol_2');
+    intentOf(b, retuned);
+    step(b, playerActions(b).find((a) => a.type === 'rest'), retuned);
+    if (!b.log.some((l) => /DIGS IN/.test(l))) bad.push('the engine does not speak the line the data ships');
+    for (const k of ['brace', 'breath', 'absorbed', 'braceLive', 'braceIdle']) {
+      if (!content.stanceLines?.[k]) bad.push('stance.json ships no "' + k + '" line');
+    }
+  }
+
+  // 8. ONE READER. The tuning and the lines are read in battle/engine.js and
+  //    indexed in render/renderer.js; everywhere else asks. The pilot kept
+  //    its own copy of the table AND its own copy of the brace predicate,
+  //    and the predicate was already a condition short of the engine's —
+  //    it scored a brace for a creature with nothing left to swing, where
+  //    the engine simply catches its breath (R61).
+  for (const mod of ['battle/ai.js', 'battle/ui.js', 'tools/sim.js']) {
+    if (/stanceMeta|stanceLines/.test(readFileSync('./' + mod, 'utf8'))) {
+      bad.push(mod + ' reads the stance data behind the engine');
+    }
+  }
+
+  if (bad.length) { console.error('stance ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('stance ✓  the enemy commits first, a brace answers it and says what it costs, the counter-class comes in free');
+`];
+
+// R120 — the agenda says how much is waiting. Its own gate: no campaign walk
+// here, because the rules that can silently stop being true are about what
+// the ROWS say, and those are one fresh save and a read.
+const SITTING = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { foundLab } = await import('./ranch/ranch.js');
+  const { AGENDA, agenda } = await import('./ranch/agenda.js');
+  const { runnableOps, startOperation, operationList } = await import('./campaign/operations.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000;
+  const bad = [];
+
+  // 1. EVERY ROW READS THE SAVE. R48's rule applied to all of them rather
+  //    than the seven that happened to need it.
+  const fixed = AGENDA.filter((row) => typeof row.hint !== 'function').map((r) => r.id);
+  if (fixed.length) bad.push(fixed.length + ' rows are fixed sentences: ' + fixed.join(' '));
+
+  // 2. AND SAYS A NUMBER. A function hint that returns the same words
+  //    whatever the save holds is a fixed sentence wearing a callback.
+  {
+    const lean = { ...newGameState(), seed: 4242 };
+    foundLab(lean, content, 'bramble_barn', t0);
+    const fat = JSON.parse(JSON.stringify(lean));
+    fat.funds = 999999;
+    fat.ranch.penCapacity = 40;
+    for (let i = 0; i < 6; i++) {
+      fat.ranch.stock.push(JSON.parse(JSON.stringify(lean.ranch.stock[0])));
+      fat.ranch.stock[fat.ranch.stock.length - 1].id = 'extra' + i;
+    }
+    const say = (state, id) => (agenda(state, content, t0).find((r) => r.id === id) ?? {}).hint;
+    for (const id of ['care', 'buy', 'pens']) {
+      const a = say(lean, id);
+      const b = say(fat, id);
+      if (!a || !b) { bad.push('the ' + id + ' row did not appear on both fixtures'); continue; }
+      if (a === b) bad.push('the ' + id + ' row reads identically at 3 animals and at 9');
+      if (!/[0-9]/.test(a)) bad.push('the ' + id + ' row says no number: ' + a);
+    }
+  }
+
+  // 3. THE JOB COUNT IS THE NUMBER THAT LAUNCHES. laneFree alone said
+  //    seven where three start; requiring a rider said one. The row and its
+  //    hint both read runnableOps, and this is what holds it to the truth.
+  {
+    const s2 = { ...newGameState(), seed: 4242 };
+    foundLab(s2, content, 'bramble_barn', t0);
+    let launches = 0;
+    for (const op of operationList(content)) {
+      const probe = JSON.parse(JSON.stringify(s2));
+      if (startOperation(probe, op.id, null, content, t0).ok) launches++;
+    }
+    const claimed = runnableOps(s2, content, t0).length;
+    if (claimed !== launches) {
+      bad.push('the job row claims ' + claimed + ' runnable, ' + launches + ' actually launch');
+    }
+    const hint = (agenda(s2, content, t0).find((r) => r.id === 'job') ?? {}).hint ?? '';
+    if (!hint.includes(String(launches))) bad.push('and the hint does not say ' + launches + ': ' + hint);
+  }
+
+  if (bad.length) { console.error('sitting \u2717  ' + bad.join('; ')); process.exit(1); }
+  console.log('sitting \u2713  every row reads the save, says a number, and the job count is the number that launches');
+`];
+
+// R119 — the first splice has a decision in it. Its own gate: five foundings
+// and six rules, none of which the nine-minute suite needs to be run for.
+const FOUNDING = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { foundLab, needsFounding, ensureRanchSeeded, ageStage } = await import('./ranch/ranch.js');
+  const { extractAnimal } = await import('./splice/extract.js');
+  const { spliceChimera } = await import('./splice/theater.js');
+  const { agenda } = await import('./ranch/agenda.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000;
+  const bad = [];
+  const labs = content.starterLabs ?? [];
+
+  if (labs.length < 5) bad.push('only ' + labs.length + ' founding labs');
+
+  // 1. a fresh save is WAITING; a save with a herd never is
+  {
+    const fresh = { ...newGameState(), seed: 4242 };
+    if (!needsFounding(fresh, content)) bad.push('a brand-new save is not asked to choose a lab');
+    if (fresh.ranch.stock.length) bad.push('and it already owns animals');
+    const old = { ...newGameState(), seed: 4242 };
+    ensureRanchSeeded(old, content, t0);
+    if (needsFounding(old, content)) bad.push('a save that already has a herd is asked to choose again');
+  }
+
+  // 2. every lab: three animals, exactly one grown, two species in the vault,
+  //    and a first chimera that is actually a MIX
+  const worn = [];
+  const herds = [];
+  for (const lab of labs) {
+    const s = { ...newGameState(), seed: 4242 };
+    foundLab(s, content, lab.id, t0);
+    herds.push(s.ranch.stock.map((a) => a.species).sort().join(','));
+    if (s.ranch.stock.length !== 3) bad.push(lab.id + ' seeds ' + s.ranch.stock.length + ' animals, not 3');
+    const grown = s.ranch.stock.filter((a) => ageStage(a, content, t0) !== 'juvenile').length;
+    if (grown !== 1) bad.push(lab.id + ' seeds ' + grown + ' grown donors, not 1');
+    for (const a of [...s.ranch.stock]) {
+      if (ageStage(a, content, t0) !== 'juvenile') extractAnimal(s, a.id, content, t0);
+    }
+    const vault = new Set(s.inventory.parts.map((p) => content.parts[p.partId]?.species));
+    if (vault.size < 2) bad.push(lab.id + ' offers ' + vault.size + ' species to splice from');
+    const bySlot = {};
+    for (const p of s.inventory.parts) {
+      const sl = content.parts[p.partId]?.slot;
+      if (sl && !bySlot[sl]) bySlot[sl] = p.id;
+    }
+    const made = spliceChimera(s, 'M', bySlot, content, t0);
+    if (!made.ok) { bad.push(lab.id + ' cannot splice on day one: ' + made.msg); continue; }
+    const c = s.chimeras[s.chimeras.length - 1];
+    const mix = new Set(Object.values(c.tokens ?? {}).map((tk) => content.parts[tk.partId]?.species));
+    if (mix.size < 2) bad.push(lab.id + ' builds a PUREBRED first creature');
+    worn.push([...mix].sort().join('+'));
+  }
+  if (new Set(worn).size !== worn.length) bad.push('two labs produce the same first creature');
+  // …AND THE ANIMALS DIFFER, not just the chimera. The crate alone can carry
+  // "is a mix" and "is distinct", so a herd that went back to a literal
+  // passed every other rule here — five labs handing out the same three
+  // animals is a cosmetic choice with five labels on it.
+  if (new Set(herds).size !== herds.length) {
+    bad.push(labs.length + ' labs seed only ' + new Set(herds).size + ' distinct herds');
+  }
+
+  // 3. the crate holds no head, and cannot be spliced alone
+  for (const lab of labs) {
+    for (const pid of lab.crate ?? []) {
+      if (content.parts[pid]?.slot === 'head') bad.push(lab.id + " crate holds a head");
+      if (content.parts[pid]?.species === lab.donor) bad.push(lab.id + ' crate is the donor species');
+    }
+  }
+  {
+    const s = { ...newGameState(), seed: 4242 };
+    foundLab(s, content, labs[0].id, t0);
+    const only = {};
+    for (const p of s.inventory.parts) only[content.parts[p.partId].slot] = p.id;
+    if (spliceChimera(s, 'M', only, content, t0).ok) bad.push('the crate alone makes a chimera');
+    if (agenda(s, content, t0).some((i) => i.id === 'splice')) {
+      bad.push('the agenda offers a splice there is no head for');
+    }
+  }
+
+  if (bad.length) { console.error('founding \u2717  ' + bad.join('; ')); process.exit(1); }
+  console.log('founding \u2713  ' + labs.length + ' labs, every one a real choice, a real mix and no head in the crate');
+`];
+
+// R106 — the opening tells the truth about the wall it walks you into. Its
+// own gate for the usual reason: the smoke suite takes nine minutes and this
+// is one fresh save and four assertions, all of them on the one row that has
+// ever pointed a new player at a fight nobody can win.
+const OPENING = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { ensureRanchSeeded } = await import('./ranch/ranch.js');
+  const { extractAnimal, GRADES, gradeFor } = await import('./splice/extract.js');
+  const { spliceChimera } = await import('./splice/theater.js');
+  const { agenda } = await import('./ranch/agenda.js');
+  const { onboardingSteps } = await import('./ranch/onboarding.js');
+  const { regionStates } = await import('./campaign/map.js');
+  const { fitToFight } = await import('./battle/statblock.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000;
+  const PLAIN = 'Holding it pays every day and puts its fauna in the catalog.';
+  const openTo = (n) => {
+    const s = { ...newGameState(), seed: 4242 };
+    ensureRanchSeeded(s, content, t0);
+    s.lastTickAt = t0;
+    for (const a of [...s.ranch.stock].slice(0, n)) extractAnimal(s, a.id, content, t0);
+    for (let made = 0; made < n; made++) {
+      const head = s.inventory.parts.find((p) => content.parts[p.partId].slot === 'head');
+      if (!head) break;
+      const sp = content.parts[head.partId].species;
+      const slots = { head: head.id }; const used = new Set([head.id]);
+      for (const slot of ['forelimbs', 'hindlimbs', 'tail', 'hide', 'organ']) {
+        const p = s.inventory.parts.find((x) => !used.has(x.id) && content.parts[x.partId].slot === slot && content.parts[x.partId].species === sp);
+        if (p) { slots[slot] = p.id; used.add(p.id); }
+      }
+      spliceChimera(s, 'M', slots, content, t0);
+    }
+    for (const c of s.chimeras) c.settleUntil = t0;
+    s.campaign.heldNodes = ['barn_perimeter'];
+    return s;
+  };
+  const rowOf = (s) => agenda(s, content, t0).find((r) => r.id === 'assault');
+  const bodiesOf = (s) => {
+    const front = regionStates(s, content).flatMap((r) => r.nodes).find((n) => n.status === 'available');
+    const enc = front ? content.encounters[front.node.encounter] : null;
+    return (enc?.waves ?? []).filter((w) => content.enemies[w]).length;
+  };
+  const bad = [];
+  const one = openTo(1), three = openTo(3);
+  if (three.chimeras.length !== 3) bad.push('three starters did not make three chimeras');
+  if (bodiesOf(one) !== 3) bad.push('the second node no longer fields three (' + bodiesOf(one) + ')');
+  if (!rowOf(one)) bad.push('the row is not offered to an outnumbered player — a forecast is not a gate');
+  {
+    const hint = rowOf(one).hint;
+    const said = (hint.match(/\\d+/g) ?? []).map(Number);
+    const team = fitToFight(one, t0).length;
+    if (hint === PLAIN) bad.push('outnumbered, the row still reads as a reward');
+    if (!said.includes(bodiesOf(one)) || !said.includes(team)) bad.push('the row does not state the true bodies and team: "' + hint + '"');
+    if (!/health bar/.test(hint)) bad.push('the row does not say it in A1 terms');
+  }
+  if (rowOf(three).hint !== PLAIN) bad.push('the row cries wall at a team that can take the node');
+  // R79 — a wave list outlives the roster it names. Drop a unit the front
+  // node still lists and the count has to follow, or the row tells a new
+  // player to bring a body for an opponent that no longer exists. The
+  // shipped waves are all present, so this case is unreachable without
+  // taking one away on purpose: break 88 went MISSED until this existed.
+  {
+    const s0 = openTo(1);
+    const front = regionStates(s0, content).flatMap((r) => r.nodes).find((n) => n.status === 'available');
+    const waves = content.encounters[front.node.encounter].waves;
+    const thinned = { ...content, enemies: { ...content.enemies } };
+    delete thinned.enemies[waves[0]];
+    const lead = (h) => (h.match(/\\d+/g) ?? []).map(Number)[0];
+    const full = agenda(s0, content, t0).find((r) => r.id === 'assault').hint;
+    const thin = agenda(s0, thinned, t0).find((r) => r.id === 'assault').hint;
+    // The LEADING number, against the same sentence on the full roster.
+    // Asking only "does 2 appear anywhere" passed on the broken build: with
+    // the filter gone the row reads "3 health bars against 1 — 2 more bodies
+    // first", and the shortfall supplied the 2. A number that any number in
+    // the sentence can satisfy is not an assertion.
+    if (!(lead(thin) < lead(full))) {
+      bad.push('a retired unit still counts as a body: "' + thin + '" against "' + full + '"');
+    }
+  }
+  {
+    const step = onboardingSteps(openTo(0), content, t0).find((x) => x.label === 'Build a stable of three');
+    const spare = openTo(0).ranch.stock[0];
+    if (!step) bad.push('the Path lost its sixth step');
+    else if (!step.hint.includes(gradeFor(spare, content, t0, openTo(0)).name)) {
+      bad.push('the Path does not say what the starters grade at today: "' + step.hint + '"');
+    }
+  }
+  if (bad.length) { console.error('opening ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('opening ✓  the second node fields three, and the row says so');
+`];
+
+// R87 — the Compliance Task Force: a stake, a sink and a ceiling. Its own
+// gate for the usual reason — the smoke suite takes twelve minutes and this
+// is one save and six assertions, all of them on the rules that make a raid
+// fair rather than punishing.
+const RAID = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { tickWorld } = await import('./campaign/world.js');
+  const tf = await import('./campaign/taskforce.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const T = tf.taskforceTuning(content);
+  const t0 = 1700000000000, HR = 3600000;
+  const mk = () => {
+    const s = { ...newGameState(), seed: 8701, funds: 100000 };
+    s.lastTickAt = t0; s.dominionAt = t0 - 24 * HR;
+    s.campaign.notoriety = 4000;
+    s.ranch.stock = [{ id: 'a1', name: 'Bessie' }, { id: 'a2', name: 'Gordon' }, { id: 'a3', name: 'Pickles' }];
+    s.chimeras = [{ id: 'c0', name: 'Chompers', tokens: {}, frame: 'M', settleUntil: 0, bond: 50, xp: 0 }];
+    return s;
+  };
+  const bad = [];
+  { const s = mk(); tickWorld(s, content, t0 + 60000);
+    if (s.campaign.notoriety !== T.notorietyCap) bad.push('notoriety is not capped (' + s.campaign.notoriety + ')'); }
+  // R9: a schedule, not a roll.
+  { const a = mk(); tickWorld(a, content, t0 + 60000); const at = a.campaign.nextRaidAt;
+    const b = mk(); tickWorld(b, content, t0 + 60000);
+    let early = 0; const step = (at - t0 - 60000) / 300;
+    for (let x = t0 + 60000; x < at; x += step) { tickWorld(b, content, x); if (b.campaign.raid) early++; }
+    if (early) bad.push('checking in often summoned a raid early');
+    if (b.campaign.nextRaidAt !== at) bad.push('the schedule moved under many small ticks'); }
+  // R9's exemption: the window opens on sight.
+  { const s = mk(); tickWorld(s, content, t0 + 60000);
+    const away = t0 + 14 * 24 * HR; tickWorld(s, content, away);
+    const raid = tf.activeRaid(s);
+    if (!raid) bad.push('a fortnight away met no raid at all');
+    else if (raid.startedAt !== away) bad.push('the window did not open on sight');
+    else if (tf.raidRemainingMs(raid, away) !== T.windowHours * HR) bad.push('and it was not the full window');
+    if ((s.campaign.leviedTotal ?? 0) > 0) bad.push('a fortnight away was levied'); }
+  // The levy takes money and livestock and NEVER a creature.
+  { const s = mk(); tickWorld(s, content, t0 + 60000); tickWorld(s, content, t0 + 20 * HR);
+    const raid = tf.activeRaid(s); const q = tf.levyOf(s, content);
+    const chim = s.chimeras.length, stock = s.ranch.stock.length;
+    tickWorld(s, content, raid.deadline + 60000);
+    if (!(s.campaign.leviedTotal > 0)) bad.push('a missed window cost nothing');
+    if (s.chimeras.length !== chim) bad.push('the State took a CREATURE');
+    if (s.ranch.stock.length !== stock - q.stock) bad.push('the herd is wrong'); }
+  // Winning buys quiet; losing costs the same as not turning up.
+  { const s = mk(); tickWorld(s, content, t0 + 60000); tickWorld(s, content, t0 + 20 * HR);
+    const raid = tf.activeRaid(s); const n0 = s.campaign.notoriety, f0 = s.funds;
+    tf.resolveRaid(s, content, raid.id, 'win', raid.startedAt + HR);
+    if (s.funds !== f0) bad.push('a held raid was levied anyway');
+    if (s.campaign.notoriety !== n0 - T.notorietyRelief) bad.push('winning bought no quiet');
+    const l = mk(); tickWorld(l, content, t0 + 60000); tickWorld(l, content, t0 + 20 * HR);
+    const r2 = tf.activeRaid(l); const lf = l.funds;
+    tf.resolveRaid(l, content, r2.id, 'loss', r2.startedAt + HR);
+    if (!(l.funds < lf)) bad.push('losing on purpose was cheaper than turning up'); }
+  // Out of range, nothing runs.
+  { const s = mk(); s.dominionAt = null; s.campaign.notoriety = 10; s.campaign.heldNodes = [];
+    tickWorld(s, content, t0 + 60000);
+    if (s.campaign.nextRaidAt != null || tf.activeRaid(s)) bad.push('a player who has provoked nobody was raided'); }
+  if (bad.length) { console.error('raid ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('raid ✓  scheduled, opened on sight, levied in money and never in creatures');
+`];
+
 const VERBOSE = process.argv.includes('--verbose');
 
 // The R78 replay, at the unit level. A month away with a convoy already at
@@ -61,9 +847,7 @@ const CONTEST = ['node', '-e', `
   const { tickContests } = await import('./campaign/contest.js');
   const { newGameState } = await import('./save/save.js');
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
-  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
-    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout'];
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const HOUR = 3600000, t0 = 1700000000000;
   const region = Object.values(content.regions)[0];
@@ -106,9 +890,7 @@ const RETIRED = ['node', '-e', `
   const { warTargetEncounter } = await import('./campaign/warroom.js');
   const { renderVaultScreen } = await import('./splice/vault-ui.js');
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
-  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
-    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout'];
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
   const load = () => indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const content = load();
   const retired = load();
@@ -282,9 +1064,7 @@ const BREAKOUT = ['node', '-e', `
   const { rehabPlan, startRehab, tickRehab } = await import('./campaign/rehab.js');
   const { makeSimChimera, STARTER_BUILD } = await import('./tools/sim.js');
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
-  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
-    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout'];
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const HOUR = 3600000, t0 = 1700000000000;
   const fail = (m) => { console.error('breakout ✗  ' + m); process.exit(1); };
@@ -403,9 +1183,7 @@ const WALK = ['node', '-e', `
   const { indexContent } = await import('./render/renderer.js');
   const { campaignWalk } = await import('./tools/sim.js');
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
-  const files = ['frames','parts','species','combos','enemies','keywords','regions','traits','classes',
-    'rivals','director','facility','philosophies','operations','chaos','temperament','scars','guides',
-    'resequencer','training','gauntlet','news','breakout'];
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const fail = (m) => { console.error('walk ✗  ' + m); process.exit(1); };
   const w = campaignWalk(content, { seed: 4242, days: 45, stopAtDominion: false });
@@ -413,6 +1191,7 @@ const WALK = ['node', '-e', `
     if (!(w.fights?.[kind] > 0)) fail('the walk never fought a "' + kind + '" (' + JSON.stringify(w.fights) + ')');
   }
   if (w.duels < 3) fail('the ladder is barely touched (' + w.duels + ' duels)');
+  if (!(w.rushes > 0)) fail('the walk never paid to hurry a clock (R86)');
   if (w.breakouts < 15) fail('the loose board is barely hunted (' + w.breakouts + ')');
   // Not the bay count: a held defence impounds wreckage, so bays fill
   // whether or not the cannon ever fires. Count what the cannon bagged.
@@ -446,8 +1225,11 @@ const BREAKS = [
     to: '<p class="ranch-msg">${lastMsgg}</p>',
   },
   {
+    // R81 moved this one: `isInjured` went to battle/statblock.js with the
+    // rest of what a creature IS. The break follows it, because the module
+    // it guards is still the one the headless sim runs.
     n: 4, gate: SCOPE, name: 'a DOM global in a logic module the headless sim runs',
-    file: 'battle/engine.js',
+    file: 'battle/statblock.js',
     anchor: 'export function isInjured(chimera, now) {',
     to: 'export function isInjured(chimera, now) {\n  if (document.hidden) return false;',
   },
@@ -704,19 +1486,29 @@ const BREAKS = [
   },
   {
     n: 50, gate: ROADMAP, name: 'SAVE_VERSION goes stale in the spec',
-    file: 'ROADMAP.md', anchor: '- save version: 38', to: '- save version: 37',
+    file: 'ROADMAP.md', anchor: `- save version: ${SAVE_VERSION}`, to: `- save version: ${SAVE_VERSION - 1}`,
   },
   {
-    // Feral at instability 100 has zero hits in the codebase. Describing it
-    // as shipped is the exact defect R77 was filed for.
+    // R86 closed the last of R77's three gaps, so there is no absent mechanic
+    // left to describe as shipped. The break keeps its meaning by CREATING
+    // one: the live spec is made to claim Gene Juice — a mechanic the
+    // roadmap gate probes the code for and will not find — with no "queued
+    // as" pointer beside it. That is the exact defect R77 was filed for.
     n: 51, gate: ROADMAP, name: 'a designed-but-absent mechanic is described as if it works',
     file: 'ROADMAP.md',
-    anchor: 'not shipped — queued as R85**; instability',
-    to: 'shipped**; instability',
+    anchor: '**Paying a clock to hurry (R86).** Every *sealed* clock',
+    to: '**Gene Juice skips any timer, and paying a clock to hurry (R86).** Every *sealed* clock',
   },
   {
+    // R86 closed the last queued gap, so the break creates one: the live spec
+    // is made to name an absent mechanic AND point it at a phase the roadmap
+    // does not carry. The pointer is the half this break is about.
     n: 52, gate: ROADMAP, name: 'a named gap points at a phase the roadmap does not carry',
-    file: 'ROADMAP.md', anchor: 'queued as R86', to: 'queued as R99',
+    file: 'ROADMAP.md',
+    anchor: '**Paying a clock to hurry (R86).** Every *sealed* clock',
+    // R999, not R99: the fifth audit queued R87–R101, so a two-digit fake
+    // would have pointed at a phase the roadmap now carries and MISSED.
+    to: '**Gene Juice is not shipped — queued as R999.** **Paying a clock to hurry (R86).** Every *sealed* clock',
   },
   {
     n: 53, gate: ROADMAP, name: 'the measured-numbers block is deleted outright',
@@ -749,8 +1541,8 @@ const BREAKS = [
   {
     n: 47, gate: WALK, name: 'the walk stops buying the lab',
     file: 'tools/sim.js',
-    anchor: '    if (pick2 && buyUpgrade(state, content, pick2.id).ok) acted++;',
-    to: '    if (false && pick2) acted++;',
+    anchor: "    if (pick2 && buyUpgrade(state, content, pick2.id).ok) did('facility', { track: pick2.id });",
+    to: '    if (false && pick2) { /* the lab stops being bought */ }',
   },
   {
     // The product bug R83 found: the agenda row that offers a lab upgrade
@@ -768,10 +1560,382 @@ const BREAKS = [
     expect: 'contract',
   },
   {
+    // R81's own near-miss, as a break: nine exports moved out of the engine
+    // and the static pass caught every stale call site but the five dynamic
+    // ones. Only a ten-minute smoke run found it; now scopecheck does.
+    n: 65, gate: SCOPE, name: 'a dynamic import asks a module for a name it does not export',
+    file: 'tools/smoke.js',
+    anchor: "  const { obedienceIgnoreChance, obediencePercent } = await import('../battle/statblock.js');",
+    to: "  const { obedienceIgnoreChance, obediencePercent } = await import('../battle/engine.js');",
+  },
+
+  // --- gate: grade (a grade sharpens and does not upgrade) -----------------
+  {
+    // The thing R84 decided against, shipped: an Apex part gains a keyword.
+    n: 66, gate: GRADE, name: 'an Apex part gains an ability its Standard version did not have',
+    file: 'battle/statblock.js',
+    anchor: `      keywords,\n      // R30: identity is where the move came from`,
+    to: `      keywords: gradeIndexOf(token.grade) >= 2 ? { ...keywords, ignoreArmor: 1 } : keywords,\n      // R30: identity is where the move came from`,
+  },
+  {
+    n: 67, gate: GRADE, name: 'a grade quietly stops sharpening the move at all',
+    file: 'battle/statblock.js',
+    anchor: '    const gradeBonus = 1 + gradeIndexOf(token.grade) * GRADE_MOVE_BONUS;',
+    to: '    const gradeBonus = 1;',
+  },
+  {
+    n: 68, gate: GRADE, name: 'the sharpening is retuned without the roadmap being told',
+    file: 'battle/statblock.js',
+    anchor: 'export const GRADE_MOVE_BONUS = 0.12;',
+    to: 'export const GRADE_MOVE_BONUS = 0.2;',
+  },
+
+  // --- gate: feral (the top of the scale costs something, and lends it) ----
+  {
+    // The snapshot rule this was NOT built as: unstable and unbonded is
+    // enough, so the six-species chimera the game exists to let you build
+    // goes to Containment the day it is made.
+    n: 69, gate: FERAL, name: 'the trigger forgets the calendar and fires on anatomy alone',
+    file: 'splice/feral.js',
+    anchor: '  const atRisk = unstable && unbonded && neglected;',
+    to: '  const atRisk = unstable && unbonded;',
+  },
+  {
+    // R9's rule, broken the way it is usually broken: a roll per tick, so
+    // the player who checks in often loses creatures the one who does not
+    // keeps.
+    n: 70, gate: FERAL, name: 'the window becomes a per-tick roll instead of a deadline',
+    file: 'splice/feral.js',
+    anchor: '    if (now >= chimera.agitatedAt + t.windowHours * HOUR) {',
+    to: '    if ((now / HOUR | 0) % 3 === 0) {',
+  },
+  {
+    // The whole answer, gone: you can train it, fight with it and treat it
+    // all week, and the clock never notices.
+    n: 71, gate: FERAL, name: 'attending a creature stops counting as attending to it',
+    file: 'splice/feral.js',
+    anchor: '  chimera.lastAttendedAt = now;',
+    to: '',
+  },
+  {
+    // Zero death language and Law 3, in one line: the bay stops holding the
+    // creature and starts holding a description of it, so what the Wing
+    // hands back is a stranger with the same name.
+    n: 72, gate: FERAL, name: 'the Containment bay keeps a copy of the creature instead of the creature',
+    file: 'campaign/rehab.js',
+    anchor: '    chimera,\n    unit: unitFromGenome({',
+    to: '    chimera: { ...chimera, xp: 0, moveset: [] },\n    unit: unitFromGenome({',
+  },
+  {
+    // R15, with the stakes turned up: the countdown runs, and the screen
+    // whose job is to say what is open says nothing.
+    n: 73, gate: FERAL, name: 'the agenda stops surfacing the one clock that costs a creature',
+    file: 'ranch/agenda.js',
+    anchor: "      (state.chimeras ?? []).some((c) => feralStatus(c, content, now).agitated),",
+    to: '      false,',
+  },
+  {
+    // R9's exemption removed: the window is back-dated to the moment the
+    // condition was met, so a fortnight away ends with the creature in a
+    // bay it was never given the chance to stay out of. This is the reading
+    // an earlier draft of feral.js's own comment described, which is why it
+    // is worth a break rather than a note.
+    n: 74, gate: FERAL, name: 'the window stops opening on sight, so being away costs a creature',
+    file: 'splice/feral.js',
+    anchor: '      chimera.agitatedAt = now;',
+    to: '      chimera.agitatedAt = lastAttended(chimera) + t.neglectHours * HOUR;',
+  },
+
+  // --- gate: rush (a rush buys time and nothing else) ----------------------
+  {
+    n: 75, gate: RUSH, name: 'a rush moves the clock and forgets to charge for it',
+    file: 'splice/rush.js',
+    anchor: '  state.funds -= price;\n  def.set(target, now);',
+    to: '  def.set(target, now);',
+  },
+  {
+    // The thing the whole design refuses: a cooldown you can buy is bond you
+    // can buy.
+    n: 76, gate: RUSH, name: 'a training cooldown quietly joins the registry',
+    file: 'splice/rush.js',
+    anchor: 'const RUSHABLE = {\n  settle: {',
+    to: "const RUSHABLE = {\n  train: { list: (s) => (s.chimeras ?? []).map((c) => c.id), find: (s, id) => (s.chimeras ?? []).find((c) => c.id === id) ?? null, name: (t) => t.name, until: (t) => (t.lastTrainedAt ?? 0) + 15 * HOUR, set: (t, now) => { t.lastTrainedAt = now - 15 * HOUR; } },\n  settle: {",
+  },
+  {
+    n: 77, gate: RUSH, name: 'the Infirmary grows its own price and drifts from the rush',
+    file: 'splice/scars.js',
+    anchor: '  return rushPrice(chimera.injury.until - now, content, scale);',
+    to: '  return Math.round((30 + Math.max(0, (chimera.injury.until - now) / HOUR) * 18) * scale);',
+  },
+  {
+    // Zero death language has a cousin here: a rush that changes what comes
+    // out is a slot machine with a receipt. The vat is sealed at conception;
+    // this break makes the rush re-open it.
+    n: 78, gate: RUSH, name: 'rushing the vat quietly changes what it decants',
+    file: 'splice/rush.js',
+    anchor: "    name: (target) => target.parentNames?.join(' × ') ?? 'the vat',\n    until: (target) => target.until ?? 0,\n    set: (target, now) => { target.until = now; },",
+    to: "    name: (target) => target.parentNames?.join(' × ') ?? 'the vat',\n    until: (target) => target.until ?? 0,\n    set: (target, now) => { target.until = now; target.conception = { ...target.conception, parts: Object.fromEntries(Object.entries(target.conception.parts).slice(0, 1)) }; },",
+  },
+  {
+    // R83's rule, pointed at the new purchase: a system the walker never
+    // uses is one the yardstick cannot see.
+    n: 79, gate: WALK, name: 'the walker stops paying to hurry, and the yardstick goes blind to it',
+    file: 'tools/sim.js',
+    anchor: '  for (const q of rushable(state, content, now)) {',
+    to: '  for (const q of []) {',
+  },
+
+  // --- gate: raid (the State comes for the ranch, fairly) ------------------
+  {
+    // R9's first rule, broken the way it is always broken: a roll per tick,
+    // so the player who checks in often is raided more often.
+    n: 80, gate: RAID, name: 'the raid schedule becomes a per-tick roll',
+    file: 'campaign/taskforce.js',
+    anchor: '  if (now < cam.nextRaidAt) return { news, levied };',
+    to: '  if (now < cam.nextRaidAt && ((now / 60000 | 0) % 7) !== 0) return { news, levied };',
+  },
+  {
+    // R9's exemption removed: the window is back-dated to when they were
+    // scheduled, so a fortnight away arrives to find the levy already taken.
+    n: 81, gate: RAID, name: 'the window stops opening on sight, so being away is billed',
+    file: 'campaign/taskforce.js',
+    anchor: '    startedAt: now,\n    deadline: now + Math.round(t.windowHours * HOUR),',
+    to: '    startedAt: cam.nextRaidAt,\n    deadline: cam.nextRaidAt + Math.round(t.windowHours * HOUR),',
+  },
+  {
+    // The one thing the design refuses. Zero death language and Law 3 in one
+    // line: procurement takes money and livestock, never a creature.
+    n: 82, gate: RAID, name: 'the levy starts taking creatures as well',
+    file: 'campaign/taskforce.js',
+    anchor: '  state.campaign.raid = null;\n  state.campaign.raidCount',
+    to: '  state.chimeras = (state.chimeras ?? []).slice(1);\n  state.campaign.raid = null;\n  state.campaign.raidCount',
+  },
+  {
+    n: 83, gate: RAID, name: 'the notoriety ceiling stops holding',
+    file: 'campaign/taskforce.js',
+    anchor: '  if (before <= t.notorietyCap) return false;',
+    to: '  if (before <= t.notorietyCap * 100) return false;',
+  },
+  {
+    // Winning has to buy something, or the raid is a tax with a fight
+    // attached rather than a rhythm the player manages.
+    n: 84, gate: RAID, name: 'holding the ranch stops buying any quiet',
+    file: 'campaign/taskforce.js',
+    anchor: '  cam.notoriety = Math.max(0, (cam.notoriety ?? 0) - t.notorietyRelief);',
+    to: '  cam.notoriety = Math.max(0, cam.notoriety ?? 0);',
+  },
+
+  // --- gate: boot (the game reaches the screen without its pictures) -------
+  {
+    n: 61, gate: BOOT, name: 'the geometry goes back into the round the first paint waits on',
+    file: 'data/loader.js',
+    anchor: "  const loaded = await Promise.all(CORE.map((name) => grab(base, name)));\n  return indexContent(Object.fromEntries(CORE.map((name, i) => [name, loaded[i]])));",
+    to: "  const all = [...CORE, ...GEOMETRY];\n  const loaded = await Promise.all(all.map((name) => grab(base, name)));\n  return indexContent(Object.fromEntries(all.map((name, i) => [name, loaded[i]])));",
+  },
+  {
+    n: 62, gate: BOOT, name: 'the second round is fired inside the same block as the first paint',
+    file: 'main.js',
+    anchor: '  requestAnimationFrame(() => setTimeout(() => {',
+    to: '  (() => (() => {',
+  },
+  {
+    n: 63, gate: BOOT, name: 'the geometry is never fetched at all, so the creatures never arrive',
+    file: 'main.js',
+    anchor: '    loadShapes(content).then((ok) => {',
+    to: '    Promise.resolve(false).then((ok) => {',
+  },
+  {
+    // The product bug this would be: a part with stats and no body. The
+    // renderer draws "developing" forever and nobody notices until a player
+    // opens a fold.
+    n: 64, gate: SMOKE_PAIR, name: 'a part loses its geometry, so the game can name it and not draw it',
+    file: 'data/parts-shapes.json',
+    anchor: '  "shapes": {\n    "bear_head": [',
+    to: '  "shapes": {\n    "bear_head_TYPO": [',
+  },
+
+  // --- gate: a11y (the game is playable without a mouse) -------------------
+  {
+    n: 54, gate: A11Y, name: 'the focus keeper is not installed, so every repaint drops the player at the top',
+    file: 'main.js',
+    anchor: "  installFocusKeeper([...Object.keys(SCREENS).map((s) => $(`#screen-${s}`)), $('#overlay')].filter(Boolean));",
+    to: '  void installFocusKeeper;',
+  },
+  {
+    n: 55, gate: A11Y, name: 'the opening exchange of a duel goes back to being a div you click',
+    file: 'battle/ui.js',
+    anchor: `\${opening ? '<button type="button" class="msg-next" id="msg-next" aria-label="Continue">&#9654;</button>' : ''}`,
+    to: `\${opening ? '<div class="msg-next" id="msg-next">&#9654;</div>' : ''}`,
+  },
+  {
+    n: 56, gate: A11Y, name: 'the move readout loses its key and is a long press again',
+    file: 'battle/ui.js',
+    anchor: "      if (e.key !== '?') return;",
+    to: "      if (e.key !== 'Unidentified') return;",
+  },
+  {
+    n: 57, gate: A11Y, name: 'the retraining counter changes in silence',
+    file: 'splice/pens-ui.js',
+    anchor: '            announce(`${chosen.size} of ${MOVE_SLOTS} move slots filled`);',
+    to: '            void announce;',
+  },
+  {
+    n: 58, gate: A11Y, name: "Enter goes back on the document, so the rename sheet's Close button commits",
+    file: 'ui/picker.js',
+    anchor: "  input.addEventListener('keydown', (e) => {\n    if (e.key !== 'Enter') return;\n    e.preventDefault();\n    submit();\n  });",
+    to: "  document.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });",
+  },
+  {
+    n: 59, gate: A11Y, name: 'a nav tab stops being a button, so the keyboard cannot reach that screen',
+    file: 'index.html',
+    anchor: '    <button type="button" data-screen="dex">Dex</button>',
+    to: '    <div data-screen="dex" role="button">Dex</div>',
+  },
+  {
+    n: 60, gate: A11Y, name: 'the subtab strip crowds its buttons back together',
+    file: 'style.css',
+    anchor: '  gap: 6px;  /* R80 — the tightest strip in the game was the one with the most buttons in it. */',
+    to: '  gap: 3px;',
+  },
+  {
     n: 42, gate: BREAKOUT, name: 'a loose specimen grows a deadline and wanders off while you are away',
     file: 'campaign/breakout.js',
     anchor: '    const rival = labFor(state, content, cam.breakoutCount);',
     to: '    cam.loose = cam.loose.filter((e) => due - e.escapedAt < 48 * HOUR);\n    const rival = labFor(state, content, cam.breakoutCount);',
+  },
+
+  {
+    n: 85, gate: OPENING, name: 'the assault row goes back to its reward line, so the opening hides the wall',
+    file: 'ranch/agenda.js',
+    anchor: "      const wall = assaultWall(state, content, now);\n      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';",
+    to: "      const wall = null;\n      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';",
+  },
+  {
+    n: 86, gate: OPENING, name: 'the wall counts every chimera instead of the ones that can fight',
+    file: 'ranch/agenda.js',
+    anchor: '  const team = fit(state, now).length;\n  const front = regionStates(state, content)',
+    to: '  const team = (state.chimeras ?? []).length + 1;\n  const front = regionStates(state, content)',
+  },
+  {
+    n: 87, gate: OPENING, name: 'the wall cries out at a team that can already take the node',
+    file: 'ranch/agenda.js',
+    anchor: '  if (!bodies || bodies <= team) return null;',
+    to: '  if (!bodies) return null;',
+  },
+  {
+    n: 88, gate: OPENING, name: 'a retired unit still counts as a body, so the row overstates the wall',
+    file: 'ranch/agenda.js',
+    anchor: "  const bodies = (encounter?.waves ?? []).filter((w) => enemyOf(content, w)).length;",
+    to: "  const bodies = (encounter?.waves ?? []).length;",
+  },
+  {
+    n: 89, gate: OPENING, name: "the Path stops saying what the starters grade at, so it contradicts the Ranch card",
+    file: 'ranch/onboarding.js',
+    anchor: "          ? `Graduate ${spareNames}${spareSuffix} and splice them`",
+    to: "          ? `Graduate ${spareNames} and splice them`",
+  },
+
+  {
+    n: 90, gate: STANCE, name: 'the opposition goes back to choosing after the player has committed',
+    file: 'battle/engine.js',
+    anchor: '  const intent = intentOf(battle, content);\n  battle.intent = null;   // consumed; the next turn plans its own',
+    to: '  const intent = null;\n  battle.intent = null;',
+  },
+  {
+    n: 91, gate: STANCE, name: 'a brace is granted with nothing telegraphed, so standing still is free again',
+    file: 'battle/engine.js',
+    anchor: '  const braced = telegraphed && couldHaveAttacked && me.stamina >= cost && !me.status.justBraced;',
+    to: '  const braced = true;',
+  },
+  {
+    n: 92, gate: STANCE, name: 'the brace stops costing stamina, so every incidental rest is mitigation',
+    file: 'battle/engine.js',
+    anchor: "  const cost = Math.round(me.staminaMax * stance.braceCost);",
+    to: "  const cost = 0;",
+  },
+  {
+    n: 93, gate: STANCE, name: 'the counter-switch stops reading the class triangle and fires for anybody',
+    file: 'battle/engine.js',
+    anchor: '    const counters = intent && incoming.creatureClass && intent.creatureClass\n      && classMultiplier(incoming.creatureClass, intent.creatureClass, content) === rules.advantage;',
+    to: '    const counters = !!intent;',
+  },
+  {
+    n: 94, gate: STANCE, name: "the engine's stance defaults drift from the shipped data",
+    file: 'battle/engine.js',
+    anchor: 'const STANCE_DEFAULTS = { absorb: 0.45, stamina: 0.35, counterPower: 1, braceCost: 0.25 };',
+    to: 'const STANCE_DEFAULTS = { absorb: 0.6, stamina: 0.35, counterPower: 1, braceCost: 0.25 };',
+  },
+  {
+    n: 95, gate: STANCE, name: 'the pilot reads the intent off the battle again, where step has already cleared it',
+    file: 'battle/ai.js',
+    anchor: '  const intent = intentOf(battle, content);',
+    to: '  const intent = battle.intent ?? null;',
+  },
+  {
+    n: 104, gate: SITTING, name: 'a row goes back to a fixed sentence that cannot say how much is waiting',
+    file: 'ranch/agenda.js',
+    anchor: `    hint: (state) => \`$\${penUpgradeCost(state)} for the next pen — \${`,
+    to: "    hint: 'Room for more stock, which is room for more parts.', unusedHint: (state) => `x${",
+  },
+  {
+    n: 105, gate: SITTING, name: 'the care row stops counting and reads the same at three animals and nine',
+    file: 'ranch/agenda.js',
+    anchor: "      return `${ready} thing${ready === 1 ? '' : 's'} to do for ${animals} animal${",
+    to: "      return `${0} thing${'s'} to do for ${0} animal${",
+  },
+  {
+    n: 106, gate: SITTING, name: 'the job row counts lanes again, so it promises jobs that will not start',
+    file: 'campaign/operations.js',
+    anchor: '    const riders = [null, crew ?? freeCrew(state, now)[0] ?? null];',
+    to: '    return laneFree(state, content, now, op, null);\n    const riders = [null, crew ?? freeCrew(state, now)[0] ?? null];',
+  },
+  {
+    n: 99, gate: FOUNDING, name: 'the starter herd goes back to being a literal, so every player builds the same creature',
+    file: 'ranch/ranch.js',
+    anchor: '  const herd = lab ? [lab.pair, lab.pair, lab.donor] : [\'goat\', \'goat\', \'bear\'];',
+    to: "  const herd = ['goat', 'goat', 'bear'];",
+  },
+  {
+    n: 100, gate: FOUNDING, name: 'the founding crate is never delivered, so the first splice is a purebred again',
+    file: 'ranch/ranch.js',
+    anchor: '  for (const partId of lab?.crate ?? []) {',
+    to: '  for (const partId of []) {',
+  },
+  {
+    n: 101, gate: FOUNDING, name: 'a brand-new save stops being asked which laboratory it is',
+    file: 'ranch/ranch.js',
+    anchor: '  return (content?.starterLabs?.length ?? 0) > 0;',
+    to: '  return false;',
+  },
+  {
+    n: 102, gate: FOUNDING, name: 'a crate grows a head, so it can be spliced alone on day one',
+    file: 'data/starters.json',
+    anchor: '"eagle_forelimbs",',
+    to: '"eagle_head",',
+  },
+  {
+    n: 103, gate: FOUNDING, name: 'the agenda points at a splice the Theater will refuse',
+    file: 'ranch/agenda.js',
+    anchor: "    ready: (state, content) => (state.inventory.parts ?? [])\n      .some((p) => content?.parts?.[p.partId]?.slot === 'head'),",
+    to: '    ready: (state) => (state.inventory.parts ?? []).length > 0,',
+  },
+  {
+    n: 96, gate: STANCE, name: 'the Brace button promises mitigation it will not get',
+    file: 'battle/engine.js',
+    anchor: "  if (!p.braced) return stanceLine(content, p.why, { gain: p.gain });",
+    to: "  if (!p.braced) return stanceLine(content, 'braceLive', { pct: Math.round(p.absorb * 100), move: intent?.name, cost: p.cost });",
+  },
+  {
+    n: 97, gate: STANCE, name: "the stance's sentences go back to being literals the data cannot reach",
+    file: 'battle/engine.js',
+    anchor: "  const raw = content?.stanceLines?.[key] ?? STANCE_LINES[key] ?? '';",
+    to: "  const raw = STANCE_LINES[key] ?? '';",
+  },
+  {
+    n: 98, gate: STANCE, name: 'the pilot keeps a second copy of the stance table',
+    file: 'battle/ai.js',
+    anchor: '  const stance = stanceTuning(content);',
+    to: '  const stance = { absorb: 0.45, counterPower: 1, braceCost: 0.25, ...(content?.stanceMeta ?? {}) };',
   },
 ];
 
@@ -793,14 +1957,25 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
       : gate === RETIRED ? 'a save read against a build that retired seven of its ids'
         : gate === BREAKOUT ? 'a specimen escapes, waits, is hunted and joins the roster'
           : gate === WALK ? 'the walk fights rivals, hunts the board and builds the lab'
-            : gate.join(' ');
+            : gate === A11Y ? 'the whole game opened, tabbed and fought with a keyboard'
+              : gate === BOOT ? 'the game on screen without the 400 KB of pictures'
+                : gate === SMOKE_PAIR ? 'both halves of every part and every unit'
+                  : gate === GRADE ? 'every part at every grade, sharpened and nothing more'
+                    : gate === FERAL ? 'a neglected creature warned, answered, and given back'
+                      : gate === RUSH ? 'a rush buys time and nothing else'
+                        : gate === RAID ? 'the State comes for the ranch, fairly'
+                          : gate === OPENING ? 'the opening tells the truth about the wall'
+                            : gate === STANCE ? 'the opposition commits before you answer'
+              : gate === FOUNDING ? 'five laboratories, and a first splice worth making'
+                : gate === SITTING ? 'the agenda says how much is waiting'
+                              : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
 }

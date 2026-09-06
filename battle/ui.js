@@ -17,7 +17,7 @@
 import { creaturePortrait, renderUnitSVG, drawableGenome } from '../render/renderer.js';
 import { chimeraGenome } from '../splice/theater.js';
 import {
-  step, playerActions, playerActive, turnForecast,
+  step, playerActions, playerActive, turnForecast, intentOf, bracePreview, braceTitle,
 } from './engine.js';
 import { moveReadout } from './readout.js';
 import { resolveBattle } from '../campaign/campaign.js';
@@ -170,6 +170,26 @@ export function renderArena(root, ctx, onDone) {
   if (openingKey !== key) { openingKey = key; openingSeen = 0; }
   const opening = battle.turn === 1 && !battle.over ? (battle.opening ?? [])[openingSeen] ?? null : null;
 
+  // R103 — WHAT IS COMING. The opposition commits at the top of the turn and
+  // this is where it says so; without it the brace and the counter-switch
+  // are two buttons whose whole value is answering something the player
+  // cannot see. Read through `intentOf`, which is the same call `step` makes
+  // — the arena shows the fight the engine is about to resolve, not a second
+  // guess at it (R28's rule: the number on the screen is the number that
+  // lands).
+  const intent = battle.pendingReplace || battle.over ? null : intentOf(battle, content);
+  const counterClass = intent?.creatureClass
+    ? Object.values(content.classes ?? {}).find((c) => c.beats === intent.creatureClass)
+    : null;
+  const telegraph = intent && intent.index >= 0
+    ? `<p class="intent" id="intent">${renderIcon('target', { size: 13 })} <strong>${foe.name}</strong> is winding up
+        <strong>${intent.name}</strong>${intent.priority ? ' <span class="intent-pri">first</span>' : ''}${
+        intent.ignoreGuard ? ' <span class="intent-pri">unguardable</span>' : ''}${
+        counterClass ? ` <span class="intent-answer">· ${counterClass.name} answers it</span>` : ''}</p>`
+    : intent
+      ? `<p class="intent" id="intent">${renderIcon('target', { size: 13 })} <strong>${foe.name}</strong> is catching its breath.</p>`
+      : '';
+
   const prompt = opening
     ? `<span class="bark-msg">${opening}</span><span class="bark-next">tap ▸</span>`
     : battle.pendingReplace
@@ -209,20 +229,33 @@ export function renderArena(root, ctx, onDone) {
       </div>
 
       <div class="msg-box ${opening ? 'is-bark' : ''}" id="msg-box">
-        <p class="msg-text" id="msg-text">${prompt}</p>
+        <!-- R80: the running commentary of a fight — every hit, every miss,
+             every status — is written into this one node beat by beat while
+             a round plays, and until now it was written silently. It is a
+             stable element for the length of a round, which is exactly the
+             case a live region is for. -->
+        <p class="msg-text" id="msg-text" role="status" aria-live="polite">${prompt}</p>
+        ${opening ? '<button type="button" class="msg-next" id="msg-next" aria-label="Continue">&#9654;</button>' : ''}
         <button type="button" class="msg-log" id="msg-log" aria-label="Battle log">▤</button>
       </div>
 
+      ${telegraph}
       <div class="cmd" id="cmd">${commandHtml(battle, actions, me, foe, content)}</div>
     </section>`;
 
   wireCommands(root, ctx, onDone, actions, me, foe);
   if (opening) {
+    // R80 — the opening exchange used to advance by CLICKING THE DIV, so a
+    // keyboard could not get past the first line of a rival duel and the
+    // fight was unplayable from there. The whole box stays tappable, which
+    // is the right target on a phone; the advance is now also a real button
+    // that Tab reaches and Enter presses, and it is what takes focus.
+    const advance = () => { openingSeen += 1; renderArena(root, ctx, onDone); };
     root.querySelector('#msg-box').addEventListener('click', (e) => {
       if (e.target.closest('#msg-log')) return; // the log button keeps its own job
-      openingSeen += 1;
-      renderArena(root, ctx, onDone);
+      advance();
     });
+    root.querySelector('#msg-next')?.focus();
   }
   root.querySelector('#msg-log').addEventListener('click', () => showLog(battle));
   paintPips(root, battle.player.team.map((c) => c.hp > 0), battle.enemy.queue.length + 1);
@@ -232,6 +265,7 @@ export function renderArena(root, ctx, onDone) {
 // The command menu. Four move cells like every creature battler ever made,
 // with the overflow behind one more tap rather than a taller screen.
 function commandHtml(battle, actions, me, foe, content) {
+  const intent = battle.pendingReplace || battle.over ? null : intentOf(battle, content);
   if (battle.pendingReplace) {
     return `<div class="move-grid">${actions
       .map((a, i) => `<button type="button" class="mv mv-swap" data-action="${i}">
@@ -278,8 +312,20 @@ function commandHtml(battle, actions, me, foe, content) {
     .map((a) => {
       const i = actions.indexOf(a);
       const icon = { rest: '❑', switch: '⇄', flee: '↩', capture: '◎' }[a.type];
-      const label = { rest: 'Breath', switch: 'Switch', flee: 'Retreat', capture: 'Cannon' }[a.type];
-      return `<button type="button" class="ut ut-${a.type}" data-action="${i}"><b>${icon}</b> ${label}</button>`;
+      // R103 — the rest button is a STANCE now, so it is named for the half
+      // that decides fights and marked when it is answering something. The
+      // old label ("Breath") described the half that never did.
+      const label = { rest: 'Brace', switch: 'Switch', flee: 'Retreat', capture: 'Cannon' }[a.type];
+      // Lit only when a brace would actually HAPPEN, and captioned by the
+      // engine's own preview — the first draft lit the button whenever
+      // something was telegraphed and promised stamina back from a brace
+      // that spends it (R28: the number on the screen is the number that
+      // lands).
+      const brace = a.type === 'rest' ? bracePreview(me, intent, content) : null;
+      const live = !!brace?.braced && !brace.unguardable;
+      const title = a.type === 'rest' ? braceTitle(me, intent, content) : '';
+      return `<button type="button" class="ut ut-${a.type}${live ? ' ut-live' : ''}" data-action="${i}"${
+        title ? ` title="${esc(title)}"` : ''}><b>${icon}</b> ${label}</button>`;
     })
     .join('');
 
@@ -319,6 +365,20 @@ function wireCommands(root, ctx, onDone, actions, me, foe) {
     // A hold must not also fire the move it was explaining.
     btn.addEventListener('click', (e) => { if (held) { e.stopPropagation(); e.preventDefault(); held = false; } }, true);
     btn.addEventListener('contextmenu', (e) => { e.preventDefault(); open(); });
+    // R80 — a hold is a pointer gesture and nothing else, so the whole of
+    // R30 — the arithmetic, the tags, the keyword sentences — was behind a
+    // door a keyboard could not open. `contextmenu` covers Shift+F10 and the
+    // Menu key on a desktop keyboard, but a TWA soft keyboard has neither,
+    // so the shortcut is also a plain "?" on the focused move, advertised
+    // where a screen reader will read it out.
+    btn.setAttribute('aria-keyshortcuts', 'Shift+Slash');
+    btn.title = 'Hold, right-click, or press ? for the full readout';
+    btn.addEventListener('keydown', (e) => {
+      if (e.key !== '?') return;
+      e.preventDefault();
+      open();
+      held = false; // a key press is not a hold, and must not eat the next click
+    });
   });
 }
 

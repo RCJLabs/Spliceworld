@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 38;
+export const SAVE_VERSION = 43;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -482,6 +482,64 @@ const migrations = {
   // delay itself the moment the save becomes eligible — dating it in a
   // migration would start the clock for a player who has not yet beaten a
   // rival, and the gate for this whole system is that you rattled somebody.
+  // R85 — the top of the instability scale finally does something, and the
+  // one thing it must never do is do it to somebody retroactively. A
+  // creature that has been on the roster for six months has `lastAttendedAt`
+  // undefined, which reads as the epoch, which reads as neglected since
+  // 1970 — so every unstable chimera in every existing save would be
+  // agitated the instant the player updated, through no act of theirs.
+  //
+  // So the field is seeded to NOW rather than to `createdAt`: whatever the
+  // player was doing before this build, they were not ignoring a mechanic
+  // that did not exist. Everybody starts the new clock clean, and the first
+  // creature that goes agitated does so because it was genuinely left alone
+  // for three days AFTER the update, which is a thing the player can see
+  // coming and answer.
+  // R87 — the Task Force's board and its schedule. Nothing is seeded from
+  // the past: an existing save is not retroactively raided, and the first
+  // raid is scheduled by the first tick that finds the player in range.
+  // R103 — the opposition commits before you answer, and what it committed
+  // to lives on the battle (`battle.intent`). A fight saved mid-turn under
+  // v41 has none; `intentOf` plans one on the first read, so the fight is
+  // resumed rather than dropped and the field is cleared here rather than
+  // guessed at. Nothing else about a telegraph, a brace or a counter-switch
+  // touches the schema.
+  // R119 — the founding lab. A save that already has a herd KEEPS IT,
+  // stamped with the lab it was in fact founded in; nothing is re-rolled and
+  // no crate is granted retroactively, because a crate is part of a founding
+  // and this save was founded long ago. Only a save with no herd reaches the
+  // picker (the Ascent rule).
+  43: (save) => {
+    save.starterLab = save.ranch?.seeded ? (save.starterLab ?? 'bramble_barn') : (save.starterLab ?? null);
+    return save;
+  },
+  42: (save) => {
+    if (save.battle) save.battle.intent = null;
+    return save;
+  },
+  41: (save) => {
+    save.campaign ??= {};
+    save.campaign.raid ??= null;
+    save.campaign.nextRaidAt ??= null;
+    save.campaign.raidCount ??= 0;
+    save.campaign.raidsHeld ??= 0;
+    save.campaign.leviedTotal ??= 0;
+    save.campaign.notorietyCapped ??= false;
+    return save;
+  },
+  // R86 — one counter. Nothing else about a rush touches the schema: the
+  // clocks it moves are fields every save already has.
+  40: (save) => {
+    save.rushCount ??= 0;
+    return save;
+  },
+  39: (save, now = Date.now()) => {
+    for (const chimera of save.chimeras ?? []) {
+      chimera.lastAttendedAt ??= now;
+      chimera.agitatedAt ??= null;
+    }
+    return save;
+  },
   38: (save) => {
     save.campaign ??= {};
     save.campaign.loose ??= [];
@@ -513,6 +571,10 @@ export function newGameState() {
   return {
     saveVersion: SAVE_VERSION,
     seed: newWorldSeed(),
+    // R119 — null until the player picks a founding lab. The seeder will
+    // not run without one, so a brand-new save cannot reach the Theater
+    // holding somebody else's animals.
+    starterLab: null,
     createdAt: Date.now(),
     spliceCount: 0,
     // The current creature on the Surgery Theater slab.
@@ -545,6 +607,10 @@ export function newGameState() {
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,
       loose: [], nextBreakAt: null, breakoutCount: 0,
       operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
+      // R87: the Compliance Task Force. `raid` is the one at the gate,
+      // `nextRaidAt` the schedule R9's rule requires, and the counters are
+      // what the escalation and the wire read.
+      raid: null, nextRaidAt: null, raidCount: 0, raidsHeld: 0, leviedTotal: 0, notorietyCapped: false,
     },
     news: [],
     settings: { muted: false },
@@ -564,12 +630,19 @@ export function newGameState() {
     // Chaos-breeding: one gestation at a time.
     vat: null,
     vatCount: 0,
+    // R86: how many clocks this player has paid to hurry. The field guide
+    // retires on it, and it is the only thing the mechanic persists.
+    rushCount: 0,
   };
 }
 // (The v2 migration above keeps hardcoded values on purpose: migrations
 // reproduce the historical schema even if TUNING drifts later.)
 
-export function migrate(save) {
+// R85 — `now` is threaded through because the v39 step is the first
+// migration that needs a clock: it seeds a "last attended" stamp, and a
+// migration that quietly reads Date.now() inside itself is one a test can
+// only check approximately. Defaulted, so every existing caller is unchanged.
+export function migrate(save, now = Date.now()) {
   if (typeof save.saveVersion !== 'number') {
     throw new Error('Save has no version — refusing to guess.');
   }
@@ -577,7 +650,7 @@ export function migrate(save) {
     const next = save.saveVersion + 1;
     const fn = migrations[next];
     if (!fn) throw new Error(`No migration to save version ${next}.`);
-    save = fn(save);
+    save = fn(save, now);
     save.saveVersion = next;
   }
   return save;
@@ -671,7 +744,19 @@ export function slotSummary(slotId, storage = globalThis.localStorage, now = Dat
     // rather than left to runSummary's own Date.now() default so a dev
     // ?warp= session sees every slot's day-count agree, not just the active
     // one.
-    return { saveVersion: save.saveVersion, lab: save.profile?.lab ?? null, ...runSummary(save, now) };
+    // R119's founding lab travels with the summary too. `lab` is the
+    // PROFILE's rolled laboratory name, which is what the picker titles a
+    // slot with; `foundedIn` is which of the five starter labs it was
+    // founded in, and they are different questions — two slots can both be
+    // "The Institute for Applied Regret" and have started from a bear and a
+    // tortoise. Comparing those openings is the whole reason to keep two
+    // slots at once, and the picker could not tell you which was which.
+    return {
+      saveVersion: save.saveVersion,
+      lab: save.profile?.lab ?? null,
+      foundedIn: save.starterLab ?? null,
+      ...runSummary(save, now),
+    };
   } catch {
     return { empty: true, corrupt: true };
   }

@@ -11,49 +11,31 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { indexContent } from '../render/renderer.js';
+import { CONTENT_FILES } from '../data/loader.js';
 import { seedTemperament } from '../splice/temperament.js';
+import { rushable, rush } from '../splice/rush.js';
+import { activeRaid, raidEncounter } from '../campaign/taskforce.js';
+import { gauntletState, gauntletEncounter } from '../campaign/gauntlet.js';
+import { treatInjury, treatmentCost } from '../splice/scars.js';
 import { analyze } from '../splice/physiology.js';
-import { createBattle, step, playerActions, playerActive, movesFromTokens } from '../battle/engine.js';
+import { createBattle, step, playerActions, playerActive } from '../battle/engine.js';
+import { movesFromTokens } from '../battle/statblock.js';
 import { knownMoves } from '../battle/moves.js';
 import { rivalEncounter, rivalList, rivalStatus } from '../campaign/rivals.js';
 import { rescueEncounterFor } from '../campaign/map.js';
 import { mulberry32, hashString, pick, rngStream } from '../util/rng.js';
-import { chooseMoveIndex } from '../battle/ai.js';
+import { chooseMoveIndex, choosePlayerAction } from '../battle/ai.js';
+import { forecast, bandFor } from '../battle/forecast.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 
+// R85: built from the list the GAME loads. This used to be its own
+// hand-written map and had drifted — `breakout` was never in it, so the
+// harness scored a world where escapees do not exist. Six copies of one
+// list, and the failure mode of missing a file is silence.
 export function loadSimContent() {
-  return indexContent({
-    frames: readJSON('data/frames.json'),
-    parts: readJSON('data/parts.json'),
-    species: readJSON('data/species.json'),
-    combos: readJSON('data/combos.json'),
-    enemies: readJSON('data/enemies.json'),
-    keywords: readJSON('data/keywords.json'),
-    classes: readJSON('data/classes.json'),
-    // The harness was blind to both of these: traits never reached
-    // physiology or movesFromTokens here, so a gene could not be measured
-    // at all, and campaignMeta fell back to its empty default.
-    traits: readJSON('data/traits.json'),
-    news: readJSON('data/news.json'),
-    // R41: without this the harness benches every chimera at level 0 with a
-    // zero curve — which is the right DEFAULT for the [OP] gates, but the
-    // tuning probes need the real curve to measure it at all.
-    training: readJSON('data/training.json'),
-    gauntlet: readJSON('data/gauntlet.json'),
-    regions: readJSON('data/regions.json'),
-    rivals: readJSON('data/rivals.json'),
-    director: readJSON('data/director.json'),
-    facility: readJSON('data/facility.json'),
-  philosophies: readJSON('data/philosophies.json'),
-  operations: readJSON('data/operations.json'),
-  chaos: readJSON('data/chaos.json'),
-  temperament: readJSON('data/temperament.json'),
-  scars: readJSON('data/scars.json'),
-  guides: readJSON('data/guides.json'),
-  resequencer: readJSON('data/resequencer.json'),
-  });
+  return indexContent(Object.fromEntries(CONTENT_FILES.map((n) => [n, readJSON(`data/${n}.json`)])));
 }
 
 // A lab-perfect chimera: settled, fully bonded, uniform grade — so the sim
@@ -396,7 +378,7 @@ export function rivalCounterBench(content, { grade = 'apex', seedsPer = 12, othe
 // the browser loads.
 
 import { gradeFor, GRADE_INDEX } from '../splice/extract.js';
-import { pairingForecast, expressedTraits, incubatorSlots, BREEDING } from '../ranch/breeding.js';
+import { pairingForecast, expressedTraits, incubatorSlots, BREEDING, canBreed, breedPair, hatchEgg } from '../ranch/breeding.js';
 
 const BREEDING_MUTATION = BREEDING.mutationChance;
 import {
@@ -825,6 +807,159 @@ export function plantBrokenCombo(content) {
   return mutated;
 }
 
+
+// --- R103: does playing the fight well change the fight? -------------------
+//
+// The yardstick had a hole in the shape of the player. Every table above
+// measures a BUILD, flown by one fixed pilot at skill 0.8, so a change that
+// made the arena deeper or shallower moved nothing here and nothing anywhere
+// else — the sixth audit had to write a throwaway probe to find out that
+// pressing the first button was worth 2.5 points less than playing well.
+//
+// The same builds, the same encounters, under pilots that differ ONLY in how
+// they choose. The gap between them is what a decision is worth.
+//
+// BUCKETED BY THE BRIEFING'S OWN VERDICT, which is the half that makes the
+// number mean anything. Measured over the uniform grid, 72-81% of pairings
+// are called walkover or not-survivable before a move is pressed — a day-one
+// build against the Compliance Spire cannot be saved by any pilot, and a
+// walkover cannot be lost by one. Averaging those in reports a skill spread
+// of about three points and hides a real one of fifteen. The LIVE bands
+// (favoured, even, losing) are the fights a player can actually influence,
+// and they are where this number lives.
+export const PILOTS = {
+  // The ceiling: the same policy the opposition plays, flown perfectly.
+  'skill 1.0': (content) => (battle, actions) => skilledAction(battle, actions, content, 1),
+  // What the briefing PROMISES. If this one falls, the forecast starts lying
+  // to the player in the optimistic direction, which is the one direction it
+  // must never lie in — so it is a floor, not a target.
+  'skill 0.8': (content) => (battle, actions) => skilledAction(battle, actions, content, 0.8),
+  'skill 0.5': (content) => (battle, actions) => skilledAction(battle, actions, content, 0.5),
+  // The three ways a person actually plays when they are not thinking.
+  strongest: (content) => (battle, actions) => {
+    const me = playerActive(battle);
+    const moves = actions.filter((a) => a.type === 'move')
+      .sort((x, y) => me.moves[y.index].power - me.moves[x.index].power);
+    return moves[0] ?? actions.find((a) => a.type === 'rest') ?? actions[0];
+  },
+  first: () => (battle, actions) =>
+    actions.find((a) => a.type === 'move') ?? actions.find((a) => a.type === 'rest') ?? actions[0],
+  random: () => (battle, actions) => {
+    const pool = actions.filter((a) => a.type === 'move' || a.type === 'rest');
+    return pool[Math.floor(rngStream(battle.seed, 'agency', battle.rollCount++)() * pool.length)] ?? actions[0];
+  },
+};
+
+// R103 — the skilled pilots read the WHOLE action space (brace and the
+// counter-switch included), because that is what a player who is paying
+// attention has in front of them. The unskilled ones below still only press
+// buttons, which is the entire point of the comparison: the gap between them
+// is what paying attention is worth.
+function skilledAction(battle, actions, content, skill) {
+  return choosePlayerAction(battle, actions, content, skill,
+    () => rngStream(battle.seed, 'agency', battle.rollCount++)()) ?? actions[0];
+}
+
+function flyBattle(team, encounter, content, seed, pilot) {
+  const battle = createBattle(team, encounter, content, seed, 1);
+  let guard = 0;
+  while (!battle.over && guard++ < 300) {
+    const actions = playerActions(battle);
+    if (!actions.length) break;
+    const release = actions.find((a) => a.type === 'release');
+    const action = release ?? (battle.pendingReplace ? actions[0] : pilot(battle, actions));
+    if (!action) break;
+    step(battle, action, content);
+  }
+  return battle.outcome === 'win';
+}
+
+export const LIVE_BANDS = ['favoured', 'even', 'losing'];
+
+// `runs` is the forecast's sample for BANDING a pairing — it decides which
+// bucket the row lands in, not the win rate reported, so it is cheap on
+// purpose. The win rates come from the pilots actually flying the fight.
+// MIXED TEAMS, not three copies of one animal.
+//
+// The first version of this fielded `[c, {...c}, {...c}]` — the yardstick's
+// own habit, and correct for pricing a BUILD. It is wrong for pricing a
+// DECISION: three clones share one class, so the counter-switch this phase
+// shipped could never once fire in the fixture that was supposed to measure
+// it. A gate can be perfectly general and still stand where the new code
+// cannot be reached (R85, R86, R87, and now here).
+//
+// So a team is three DIFFERENT builds, spread across classes where the pool
+// allows, which is also the team the game actually hands a player (R41's
+// stable of three, A1's three bodies).
+function mixedTeams(chimeras, count, content) {
+  const byClass = new Map();
+  for (const c of chimeras) {
+    // The class is ANATOMY, computed by `analyze` on the way into a
+    // combatant — it is not a field on the chimera record, and reading it as
+    // one put all 68 builds in a single bucket and quietly rebuilt the
+    // clone teams this function exists to replace.
+    const key = analyze(c.frame, Object.values(c.tokens), content).creatureClass ?? 'none';
+    if (!byClass.has(key)) byClass.set(key, []);
+    byClass.get(key).push(c);
+  }
+  const classes = [...byClass.keys()];
+  const teams = [];
+  for (let i = 0; i < count; i++) {
+    const team = [];
+    for (let slot = 0; slot < 3; slot++) {
+      const pool = byClass.get(classes[(i + slot) % classes.length]) ?? chimeras;
+      const pick = pool[(i + slot * 7) % pool.length];
+      team.push({ ...pick, id: `${pick.id}#${slot}` });
+    }
+    teams.push(team);
+  }
+  return teams;
+}
+
+export function agencyTable(content, { grade = 'standard', builds = 40, seeds = 3, bandRuns = 16 } = {}) {
+  const pilots = Object.fromEntries(Object.entries(PILOTS).map(([k, make]) => [k, make(content)]));
+  const chimeras = sampleBuilds(content, builds, 2026)
+    .map((b) => makeSimChimera(b.frame, b.partIds, grade, content));
+  const teams = mixedTeams(chimeras, builds, content);
+  const encounterIds = Object.keys(content.encounters);
+  const bands = {};
+  const seedList = Array.from({ length: seeds }, (_, i) => i + 1);
+  for (const encId of encounterIds) {
+    const encounter = content.encounters[encId];
+    for (const team of teams) {
+      const band = bandFor(forecast(team, encounter, content, 1, 0, { runs: bandRuns }).winRate).id;
+      const bucket = (bands[band] ??= { pairings: 0, fights: 0, wins: {} });
+      bucket.pairings++;
+      for (const seed of seedList) {
+        bucket.fights++;
+        for (const [name, pilot] of Object.entries(pilots)) {
+          bucket.wins[name] = (bucket.wins[name] ?? 0) + (flyBattle(team, encounter, content, seed, pilot) ? 1 : 0);
+        }
+      }
+    }
+  }
+  const live = { pairings: 0, fights: 0, wins: {} };
+  for (const band of LIVE_BANDS) {
+    const b = bands[band];
+    if (!b) continue;
+    live.pairings += b.pairings;
+    live.fights += b.fights;
+    for (const [k, v] of Object.entries(b.wins)) live.wins[k] = (live.wins[k] ?? 0) + v;
+  }
+  const rate = (bucket, name) => (bucket.fights ? bucket.wins[name] / bucket.fights : 0);
+  return {
+    grade,
+    bands,
+    live,
+    pairings: Object.values(bands).reduce((n, b) => n + b.pairings, 0),
+    rate,
+    // The headline: what a decision is worth where a decision can matter.
+    spread: rate(live, 'skill 1.0') - rate(live, 'first'),
+    spreadVsRandom: rate(live, 'skill 1.0') - rate(live, 'random'),
+    forecastRate: rate(live, 'skill 0.8'),
+  };
+}
+
 const pct = (x) => `${Math.round(x * 100)}%`;
 
 function main() {
@@ -848,6 +983,30 @@ function main() {
     teamSize: Number(args.team ?? 3),
   };
   const t0 = Date.now();
+  // R103 — the agency table, on request. It flies six pilots over the whole
+  // grid, which is six times the work of the balance table, so it is a flag
+  // rather than part of every run.
+  if (args.agency) {
+    const grades = String(args.agency === true ? 'standard,prime,apex' : args.agency).split(',');
+    console.log('agency: what a decision is worth, by the briefing\'s own verdict\n');
+    for (const grade of grades) {
+      const a = agencyTable(content, { grade, builds: opts.builds, seeds: opts.seedsPer });
+      console.log(`grade ${grade} — ${a.pairings} pairings`);
+      console.log('  band        pairings  share   ' + Object.keys(PILOTS).map((k) => k.padStart(9)).join(' '));
+      for (const band of ['walkover', 'favoured', 'even', 'losing', 'hopeless']) {
+        const b = a.bands[band];
+        if (!b) continue;
+        const cells = Object.keys(PILOTS).map((k) => pct(a.rate(b, k)).padStart(9)).join(' ');
+        console.log(`  ${band.padEnd(11)} ${String(b.pairings).padStart(8)}  ${pct(b.pairings / a.pairings).padStart(5)}   ${cells}`);
+      }
+      const cells = Object.keys(PILOTS).map((k) => `${(100 * a.rate(a.live, k)).toFixed(1)}%`.padStart(9)).join(' ');
+      console.log(`  ${'LIVE'.padEnd(11)} ${String(a.live.pairings).padStart(8)}  ${pct(a.live.pairings / a.pairings).padStart(5)}   ${cells}`);
+      console.log(`  → a decision is worth ${(a.spread * 100).toFixed(1)}pp over the first button, ${(a.spreadVsRandom * 100).toFixed(1)}pp over mashing`
+        + `; the forecast's own pilot wins ${pct(a.forecastRate)} of live fights\n`);
+    }
+    console.log(`agency in ${Date.now() - t0}ms`);
+    return;
+  }
   const { rows, flags, encounterIds } = runSim(content, opts);
 
   const short = (e) => (e.startsWith('rival_') ? '@' + e.slice(6) : e).slice(0, 9);
@@ -990,6 +1149,14 @@ function walkAct(state, content, now, open, opts = {}) {
   const aTeamFit = () => [...state.chimeras].sort((x, y) => quality(y) - quality(x)).slice(0, 3).every(isFit);
   const stepMs = (opts.stepHours ?? 2) * WALK_HOUR;
   const log = (entry) => (state.__walkLog ??= []).push({ day: +((now - (opts.t0 ?? 0)) / WALK_DAY).toFixed(2), ...entry });
+  // R120 — EVERY VERB, not only the ones with an opponent. `log` was called
+  // from exactly one place, the `fight` helper below, so across 90 days the
+  // walk's own record held 502 entries and every one was a battle. Care,
+  // graduation, splicing, training, buying, rushing and treating — most of
+  // what a player actually does when they open the app — left no trace at
+  // all, which meant the harness could answer "how many fights" and could
+  // not answer "how much is there to do". Every branch reports through this.
+  const did = (kind, detail = {}) => { acted++; log({ kind, ...detail }); return true; };
   // One fight, through the same door the War Room uses.
   const fight = (team, enc, context, seedKey) => {
     const battle = createBattle(team, enc, content, hashString(seedKey), now, context);
@@ -1017,7 +1184,37 @@ function walkAct(state, content, now, open, opts = {}) {
     for (const animal of [...state.ranch.stock]) {
       const status = careStatus(animal, now);
       for (const kind of ['feed', 'groom', 'exercise', 'enrich']) {
-        if (status[kind]?.ready && careAction(state, animal.id, kind, content, now).ok) acted++;
+        if (status[kind]?.ready && careAction(state, animal.id, kind, content, now).ok) did('care', { who: animal.id, act: kind });
+      }
+    }
+  }
+  // R86 — pay to hurry what is sealed, the way a player with money in the
+  // bank does. Reserve-gated like every other purchase here, soonest clock
+  // first. Never the cooldowns: `rush` refuses those, and a walker that could
+  // buy bond would be measuring a different game from the one that ships.
+  for (const q of rushable(state, content, now)) {
+    if (!canSpend(q.price)) break;
+    const res = rush(state, q.kind, q.id, content, now);
+    if (!res.ok) continue;
+    did('rush', { clock: q.kind, cost: res.cost });
+    state.__walkRushes = (state.__walkRushes ?? 0) + 1;
+    state.__walkRushSpent = (state.__walkRushSpent ?? 0) + res.cost;
+  }
+  // …and buy out of the Infirmary on the same terms. R83's rule: a system
+  // the walker never uses is one the yardstick cannot see, and until R86
+  // measured it nobody had asked whether the walker treats. It did not — the
+  // one paid skip the game had shipped had never once been exercised here.
+  if (has('treat')) {
+    // The A-team only: a player pays to patch the creatures that fight and
+    // lets the bench heal on its own, and a walker that treated everything
+    // spent a third of a campaign's rushes on animals it never fielded.
+    const aTeam = new Set([...state.chimeras].sort((x, y) => quality(y) - quality(x)).slice(0, 3).map((c) => c.id));
+    for (const c of state.chimeras) {
+      if (!aTeam.has(c.id) || !c.injury || c.injury.until <= now) continue;
+      if (!canSpend(treatmentCost(c, content, now, state))) continue;
+      if (treatInjury(state, c.id, content, now).ok) {
+        did('treat', { who: c.id });
+        state.__walkTreated = (state.__walkTreated ?? 0) + 1;
       }
     }
   }
@@ -1030,7 +1227,49 @@ function walkAct(state, content, now, open, opts = {}) {
     const ripe = (a) => ['prime', 'elder'].includes(ageStage(a, content, now))
       || (state.chimeras.length < 3 && ageStage(a, content, now) !== 'juvenile');
     const donor = state.ranch.stock.find(ripe);
-    if (donor && extractAnimal(state, donor.id, content, now).ok) acted++;
+    if (donor && extractAnimal(state, donor.id, content, now).ok) did('graduate', { species: donor.species });
+  }
+  // R120 — THE RANCH LOOP, which this walker had never once run. `breed`
+  // has been on the agenda since M6 and the walk had no branch for it, so
+  // the pairing, the incubator, the inheritance and the whole variant ladder
+  // were unmeasured — and `hatch` could not appear on the agenda because no
+  // egg ever existed to ripen. R83's rule, found again in the harness rather
+  // than the game.
+  //
+  // Hatch FIRST: an egg that has finished is a free animal, and leaving it in
+  // the incubator blocks the slot that makes the next one.
+  for (const egg of [...(state.ranch.eggs ?? [])]) {
+    if (now < egg.hatchAt) continue;
+    if (state.ranch.stock.length >= state.ranch.penCapacity) break;
+    if (hatchEgg(state, egg.id, content, now).ok) did('hatch', { species: egg.species });
+  }
+  // …then pair, if a slot is free and the pens have room for what comes out.
+  // Deliberately NOT while the pens are full: a player does not start a clock
+  // whose payout has nowhere to go, and an egg that cannot hatch is the one
+  // way this loop could quietly stall the ranch it is meant to feed.
+  // …and A HERD, NOT A HOARD. Eggs cost nothing but time, so a walker that
+  // breeds whenever a pen is free breeds unboundedly: measured, the ranch
+  // went from 13 animals to 41, the care it owed went with it, and the
+  // upkeep on all of them ate the cash that used to pay for rushes — R86's
+  // assertion that the walk hurries a clock at least once went from 10
+  // rushes to 0. That is the "stable, not a warehouse" rule R25 and R44
+  // already apply to chimeras, arriving late on the ranch side. The cap is
+  // one above the equilibrium the walker settled at before it could breed,
+  // so breeding SUPPLEMENTS the catalog rather than replacing it and every
+  // number the earlier phases measured stays comparable.
+  const HERD_CAP = 14;
+  if (has('breed') && (state.ranch.eggs ?? []).length < incubatorSlots(state, content)
+      && state.ranch.stock.length + (state.ranch.eggs ?? []).length < Math.min(state.ranch.penCapacity, HERD_CAP)) {
+    const stock = state.ranch.stock;
+    let paired = false;
+    for (let i = 0; i < stock.length && !paired; i++) {
+      for (let j = i + 1; j < stock.length && !paired; j++) {
+        if (!canBreed(stock[i], stock[j], state, content, now).ok) continue;
+        if (breedPair(state, stock[i].id, stock[j].id, content, now).ok) {
+          paired = did('breed', { species: stock[i].species });
+        }
+      }
+    }
   }
   // A stable, not a warehouse: R25 prices upkeep per chimera, and the first
   // rewrite spliced everything the vault could dress — nineteen creatures on
@@ -1064,7 +1303,7 @@ function walkAct(state, content, now, open, opts = {}) {
         const before = state.chimeras.length;
         const again = bestSplice(state, content, wanted) ?? plan; // the vault just changed
         spliceChimera(state, again.frameId, again.slots, content, now);
-        if (state.chimeras.length > before) acted++;
+        if (state.chimeras.length > before) did('splice', { frame: again.frameId });
       }
     }
   }
@@ -1074,7 +1313,7 @@ function walkAct(state, content, now, open, opts = {}) {
     // every job read as on cooldown — the walker has never run one. laneFree
     // was never reached to throw.
     const op = operationList(content).find((o) => opReady(state, o.id, now) && laneFree(state, content, now, o, null));
-    if (op && startOperation(state, op.id, null, content, now).ok) acted++;
+    if (op && startOperation(state, op.id, null, content, now).ok) did('job', { op: op.id });
   }
   // The ring. The hardest garrison you hold pays the most xp per charge.
   // Rationed: the bucket refills three charges every half hour, so a walker
@@ -1120,6 +1359,49 @@ function walkAct(state, content, now, open, opts = {}) {
     state.__walkDefences = (state.__walkDefences ?? 0) + 1;
     if (battle.outcome === 'win') state.__walkHeld = (state.__walkHeld ?? 0) + 1;
     acted++;
+  }
+
+  // R87 — the Compliance Task Force. FIRST, above everything: it is the only
+  // clock in the game that bills you a quarter of the bank for ignoring it,
+  // and a player who has one at the gate does nothing else until it is
+  // answered. Same window logic the defence uses — wait for a full team
+  // unless this is the last chance.
+  {
+    const raid = has('raid') ? activeRaid(state) : null;
+    const enc = raid ? raidEncounter(state, content, raid) : null;
+    const team = fitTeam();
+    const lastChance = raid && raid.deadline - now <= stepMs;
+    if (enc && team.length && (aTeamFit() || lastChance)) {
+      const battle = fight(team, enc, { kind: 'raid', raidId: raid.id, waveIds: enc.waves }, `raid#${raid.id}`);
+      state.__walkRaids = (state.__walkRaids ?? 0) + 1;
+      if (battle.outcome === 'win') state.__walkRaidsHeld = (state.__walkRaidsHeld ?? 0) + 1;
+      acted++;
+    }
+  }
+
+  // R87 — the Gauntlet. Shipped in R42, opened at dominion, and fought ZERO
+  // times in 180 days by every walk this harness has ever run: the four
+  // exhibitions are the hardest content in the game and the yardstick had
+  // never seen one. Paced like the rival ladder — an A-team, one at a time,
+  // and only after the county is yours, which is when they open.
+  // Paced. The first cut retried whichever exhibition was open on every tick
+  // it could field a team, and seed 31337 entered the same fight ONE HUNDRED
+  // AND EIGHTY-TWO times and lost 98% of them — which is not a player, it is
+  // a loop. A stage stays open until it is beaten, so the pacing has to come
+  // from the walker: one attempt every five days, the same shape as the
+  // rival ladder's one-a-week.
+  if (has('gauntlet') && aTeamFit() && now - (state.__walkLastGauntlet ?? -5 * WALK_DAY) >= 5 * WALK_DAY) {
+    const open = gauntletState(state, content).find((r) => r.status === 'open');
+    const res = open ? gauntletEncounter(state, content, open.stage.id) : null;
+    const team = fitTeam();
+    if (res?.ok && team.length >= fullTeam()) {
+      const battle = fight(team, res.encounter, { kind: 'gauntlet', stageId: open.stage.id, waveIds: res.encounter.waves },
+        `gauntlet#${open.stage.id}`);
+      state.__walkLastGauntlet = now;
+      state.__walkGauntlets = (state.__walkGauntlets ?? 0) + 1;
+      if (battle.outcome === 'win') state.__walkGauntletsWon = (state.__walkGauntletsWon ?? 0) + 1;
+      acted++;
+    }
   }
 
   // R83 — challenge a rival. The walk has never done this. `campaignWalk`
@@ -1195,7 +1477,7 @@ function walkAct(state, content, now, open, opts = {}) {
       .filter((o) => o.next?.affordable)
       .sort((a, b) => a.next.level.cost - b.next.level.cost);
     const pick2 = offers.find((o) => canSpend(o.next.level.cost));
-    if (pick2 && buyUpgrade(state, content, pick2.id).ok) acted++;
+    if (pick2 && buyUpgrade(state, content, pick2.id).ok) did('facility', { track: pick2.id });
   }
 
   // R83 — and then use it. A bay holding something with a genome is a
@@ -1207,13 +1489,13 @@ function walkAct(state, content, now, open, opts = {}) {
   for (const entry of [...(state.campaign.containment ?? [])]) {
     if (entry.rehab) {
       if (now >= sessionReadyAt(entry, content)) {
-        if (rehabSession(state, entry.id, content, now).ok) acted++;
+        if (rehabSession(state, entry.id, content, now).ok) did('rehab-session', { who: entry.id });
       }
       continue;
     }
     const plan = rehabPlan(state, entry, content);
     if (!plan.possible || !plan.enabled || !canSpend(plan.fee)) continue;
-    if (startRehab(state, entry.id, content, now).ok) acted++;
+    if (startRehab(state, entry.id, content, now).ok) did('rehab-start', { who: entry.id });
   }
 
   // --- discretionary, and only above the reserve.
@@ -1222,12 +1504,12 @@ function walkAct(state, content, now, open, opts = {}) {
     // first policy went broke.
     for (const c of [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0)).slice(0, 3)) {
       if (!canSpend(TRAINING.cost)) break;
-      if (trainChimera(state, c.id, now, content).ok) acted++;
+      if (trainChimera(state, c.id, now, content).ok) did('train', { who: c.id });
     }
   }
   if (has('pens') && state.ranch.stock.length >= state.ranch.penCapacity
       && canSpend(penUpgradeCost(state))) {
-    if (buyPenUpgrade(state).ok) acted++;
+    if (buyPenUpgrade(state).ok) did('pens');
   }
   if (has('buy') && state.ranch.stock.length < state.ranch.penCapacity) {
     // The map says which class answers the strip in front of you (`demand`,
@@ -1241,7 +1523,7 @@ function walkAct(state, content, now, open, opts = {}) {
     // are both Water, and the map's demand line is asking for the shark.
     const answers = affordable.filter((sp) => wanted && (sp.class ?? sp.creatureClass) === wanted);
     const pickSp = answers.length ? answers[answers.length - 1] : affordable[0];
-    if (pickSp && buyMailOrder(state, pickSp.id, content, now).ok) acted++;
+    if (pickSp && buyMailOrder(state, pickSp.id, content, now).ok) did('buy', { species: pickSp.id });
   }
   return acted;
 }
@@ -1324,6 +1606,23 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   const awayStart = away ? away.from * 24 : Infinity;
   const awayEnd = away ? (away.from + away.days) * 24 : -Infinity;
 
+  // R85 — the harness's view of the top of the instability scale. Counted
+  // here rather than inferred from the log, because what matters is a
+  // property of the WHOLE run: an engaged player must never lose a creature
+  // to neglect, and a mechanic that fires on somebody who is playing is a
+  // punishment rather than a stake. The walker trains, spars and fights
+  // constantly, so it is exactly the player this must not touch.
+  const feralSeen = new Set();
+  const feralBays = new Set();
+  // R87 — every specimen the Wing has EVER graduated, by id, not the ones
+  // still standing at the end. A rehabilitated creature carries its old
+  // lab's grades, so the walker's stable cap dismantles it as soon as the
+  // Theater builds better — which means a survivor count measures how long
+  // the walk ran, not whether the capture chain works. R83 asserted on the
+  // survivors and R87 moved dominion later, so the same working chain
+  // started reporting zero.
+  const rehabEver = new Set();
+
   for (let h = 0; h <= days * 24; h += stepHours) {
     if (h > awayStart && h < awayEnd) continue; // the app is closed
     const now = t0 + h * WALK_HOUR;
@@ -1331,6 +1630,9 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // pays on — the ledger the R64 gate compares a month away against.
     state.__walkIncome = (state.__walkIncome ?? 0) + incomePerDay(state, content) * ((now - (state.lastTickAt ?? now)) / WALK_DAY);
     tick(state, content, now);
+    for (const c of state.chimeras) if (c.agitatedAt) feralSeen.add(c.id);
+    for (const c of state.chimeras) if (c.rehabilitated) rehabEver.add(c.id);
+    for (const b of state.campaign.containment ?? []) if (b.feral) feralBays.add(b.id);
     if (snapshotDays.includes(h / 24)) snapshots[h / 24] = snap(h / 24);
 
     minFunds = Math.min(minFunds, Math.round(state.funds));
@@ -1373,9 +1675,18 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     }
   }
 
+  // R120 — what the walk actually DID, by verb. The log was fights-only, so
+  // this tally could not exist; it is how smoke asserts that a sitting is
+  // countable and that the ranch loop ran, without walking the campaign a
+  // second time to find out.
+  const verbs = {};
+  for (const e of state.__walkLog ?? []) verbs[e.kind] = (verbs[e.kind] ?? 0) + 1;
+
   return {
     seed,
     at,
+    verbs,
+    actions: (state.__walkLog ?? []).length,
     reachedDominion: state.dominionAt != null,
     nodes: state.campaign.heldNodes.length,
     chimeras: state.chimeras.length,
@@ -1417,6 +1728,28 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     bays: (state.campaign.containment ?? []).length,
     bagged: (state.__walkLog ?? []).reduce((n, e) => n + (e.bagged ?? 0), 0),
     rehabbed: state.chimeras.filter((c) => c.rehabilitated).length,
+    rehabbedEver: rehabEver.size,
+    // R85: how many of the walker's creatures ever paced their pen, and how
+    // many it actually lost to it. Both should be zero for a walker that
+    // plays every day; the away-runs are where the mechanic is supposed to
+    // bite.
+    feral: { agitated: feralSeen.size, lost: feralBays.size },
+    // R86: how often the walker paid to hurry a clock, what it spent, and how
+    // often it bought out of the Infirmary — the yardstick's view of the one
+    // purchase that buys time rather than things.
+    // R87 — the second act, on the yardstick for the first time: raids
+    // answered and held, exhibitions entered and won, and what the State
+    // took from the ones that were not answered.
+    raids: state.__walkRaids ?? 0,
+    raidsHeld: state.__walkRaidsHeld ?? 0,
+    raidsMissed: (state.campaign.raidCount ?? 0) - (state.__walkRaidsHeld ?? 0),
+    levied: Math.round(state.campaign.leviedTotal ?? 0),
+    gauntlets: state.__walkGauntlets ?? 0,
+    gauntletsWon: state.__walkGauntletsWon ?? 0,
+    notoriety: Math.round(state.campaign.notoriety ?? 0),
+    rushes: state.__walkRushes ?? 0,
+    rushSpent: Math.round(state.__walkRushSpent ?? 0),
+    treated: state.__walkTreated ?? 0,
     facility: { ...state.facility },
     captured: (state.__walkLog ?? []).filter((e) => e.lost).length,
     rescues: (state.__walkLog ?? []).filter((e) => e.kind === 'rescue').length,

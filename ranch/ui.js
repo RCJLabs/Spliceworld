@@ -27,6 +27,7 @@ import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '..
 import { agendaShape } from './agenda.js';
 import { bandedHtml } from '../ui/roster.js';
 import { renderIcon } from '../ui/icons.js';
+import { rushQuote, rushButton, bindRush } from '../splice/rush.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -261,7 +262,8 @@ export function renderRanchScreen(root, ctx) {
       if (!items.length) return '';
       if (kind === 'spend') {
         return `<p class="agenda-head">${heading}</p><div class="agenda-chips">` + items.map((i) => `
-          <button type="button" class="agenda-chip" data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''} title="${i.hint}">${i.label}</button>`).join('') + '</div>';
+          <button type="button" class="agenda-chip" data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''} title="${i.hint}">${i.label}${
+            i.chip ? `<span class="chip-num">${i.chip}</span>` : ''}</button>`).join('') + '</div>';
       }
       return `<p class="agenda-head">${heading}</p>` + items.map((i) => `
         <button type="button" class="agenda-row" data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''}>
@@ -441,7 +443,15 @@ export function renderRanchScreen(root, ctx) {
         }">${
           t < egg.hatchAt ? fmtDuration(egg.hatchAt - t) : pensFull ? 'Pens full' : 'Hatch!'
         }</button>
-      </div>`;
+      </div>
+      ${
+        // R86: under the row, not in it. `.encounter` is a flex line already
+        // holding a portrait, two lines of lineage and the countdown, and a
+        // full-width button dropped into it overlapped the text and ran past
+        // the card at 380px — measured, after the a11y gate had passed it,
+        // because that gate checks size and gutter and not overlap.
+        t < egg.hatchAt ? `<div class="egg-rush">${rushButton(rushQuote(state, 'egg', egg.id, content, t))}</div>` : ''
+      }`;
   }).join('');
   const incubator = `
     <section class="card">
@@ -580,6 +590,7 @@ export function renderRanchScreen(root, ctx) {
   });
   bindFieldNote(root, ctx, again);
   bindFolds(root, ctx, again);
+  bindRush(root, ctx, (m) => { lastMsg = m; }, again);
   root.querySelectorAll('button[data-goto]').forEach((btn) => {
     btn.addEventListener('click', () => ctx.goto?.(btn.dataset.goto, btn.dataset.subtab));
   });

@@ -36,50 +36,204 @@ import { nextUpgrade, tracks } from '../splice/facility.js';
 import { TRAINING } from '../splice/theater.js';
 import { treatmentCost } from '../splice/scars.js';
 import { activeVat, vatPlan } from '../splice/chaos.js';
-import { operationList, opReady, activeOps, laneFree } from '../campaign/operations.js';
-import { reachableEncounterIds } from '../campaign/map.js';
+import { operationList, opReady, activeOps, laneFree, runnableOps } from '../campaign/operations.js';
+import { reachableEncounterIds, regionStates } from '../campaign/map.js';
+import { enemyOf, speciesOf } from '../data/catalog.js';
 import { contestRemainingMs } from '../campaign/contest.js';
-import { isInjured, fitToFight } from '../battle/engine.js';
+import { isInjured, fitToFight } from '../battle/statblock.js';
 import { sparCharges, canSpar } from '../campaign/sparring.js';
+import { feralStatus } from '../splice/feral.js';
+import { activeRaid, raidRemainingMs, levyOf } from '../campaign/taskforce.js';
+import { gauntletState } from '../campaign/gauntlet.js';
 
 const HOUR = 3600000;
 const fit = fitToFight;
 
+// R106 — the wall A1 measured, read cheaply enough to live inside a hint.
+//
+// Combat is one active per side, so an encounter's WAVE COUNT is how many
+// health bars the player has to grind down with however many creatures they
+// can field. Re-measured through the shipped forecast: `downtown` fields
+// three, and it is 0% with one settled chimera and 100% with the same build
+// three times over. That is a question of BODIES, and no stat-tuning moves
+// it — which is why A1 put it in the Path and why this row has to say it.
+//
+// BODIES RATHER THAN A FORECAST, deliberately. Measured: this check costs
+// 0.016 ms and the whole agenda 0.060 ms, against 4.3 ms for `forecast()` at
+// its 32 runs — 267 times the price of the check and 72 times the price of
+// the entire screen, to answer a question the wave count already answers.
+// The agenda is rebuilt on every render and on every step of the balance
+// walk, so that is not a rounding error; it is the difference between a hint
+// and a stall.
+//
+// And `enemyOf` (R79's catalogue) rather than `liveWaves`, which is the same
+// predicate for a node's static waves but lives in `battle/engine.js` — R81
+// put the engine behind the thing that needs it, and a hint on the Ranch
+// must not drag a battle engine into the boot.
+//
+// Null when the player is not outnumbered, so the row falls back to its
+// reward line: a warning that never stands down is a warning nobody reads.
+export function assaultWall(state, content, now) {
+  const team = fit(state, now).length;
+  const front = regionStates(state, content)
+    .flatMap((r) => r.nodes)
+    .find((n) => n.status === 'available');
+  const encounter = front ? content.encounters?.[front.node.encounter] : null;
+  const bodies = (encounter?.waves ?? []).filter((w) => enemyOf(content, w)).length;
+  if (!bodies || bodies <= team) return null;
+  return { name: front.node.name, bodies, team, short: bodies - team };
+}
+
 // Every entry answers one question: is there a click here right now? Order is
 // the order the player should think about them in — work before spending.
+// R120 — EVERY ROW READS THE SAVE (ROADMAP §9.7). R48's rule, applied to all
+// nineteen instead of the seven that happened to need it: a hint's value is
+// the NUMBER. Day one looks like five headings and is eighteen things you
+// can press; the screen was the part that would not say so. A hint may fall
+// back to a sentence when there is nothing to count — what it must not be is
+// the same sentence whether one thing or twenty are waiting.
 export const AGENDA = [
   {
+    // R87 — above even R85's, and it is the only row that has ever outranked
+    // it. A creature going feral is recoverable through the Wing; a levy is
+    // a quarter of everything you have, and unlike every other clock in this
+    // game it bills you for doing nothing. Measured: post-dominion the
+    // player has more money than they can spend and no fight they can lose,
+    // and this row is both halves of the answer.
+    id: 'raid', kind: 'campaign', screen: 'battle', label: 'Defend the ranch',
+    hint: (state, content, now) => {
+      const raid = activeRaid(state);
+      if (!raid) return 'The Compliance Task Force is at the gate.';
+      const hours = Math.max(0, raidRemainingMs(raid, now)) / HOUR;
+      const levy = levyOf(state, content);
+      return `The Compliance Task Force is at the gate. ${
+        hours < 1 ? 'Under an hour' : `${Math.floor(hours)}h`
+      } before they serve papers and leave with $${levy.fine}${levy.stock ? ` and ${levy.stock} of the herd` : ''}.`;
+    },
+    ready: (state, content, now) => !!activeRaid(state) && fit(state, now).length > 0,
+  },
+  {
+    // R87 — the four exhibitions have been shipped and unreachable since
+    // R42: they open at dominion, and nothing on any screen but the Labs tab
+    // has ever mentioned that they had. Measured, the walker fought 0 of 4
+    // in 180 days.
+    id: 'gauntlet', kind: 'campaign', screen: 'battle', subtab: 'labs', label: 'Answer an exhibition',
+    hint: (state, content) => {
+      const open = gauntletState(state, content).find((r) => r.status === 'open');
+      return open
+        ? `${open.stage.name} is waiting. $${open.stage.reward} and the hardest fight the coalition has.`
+        : 'The Gauntlet is open.';
+    },
+    ready: (state, content, now) =>
+      gauntletState(state, content).some((r) => r.status === 'open') && fit(state, now).length > 0,
+  },
+  {
+    // R85, and it goes above everything — including the two clocks R63 put
+    // at the front — because it is the only row on this list whose deadline
+    // ends with a creature off the roster. Everything else here costs you a
+    // node, a purse or an opportunity; this one costs you the animal.
+    //
+    // `work`, not `spend`: training is one answer and it costs $5, but a
+    // fight, a spar and a treatment all clear it too, and a row that reads
+    // as a purchase is a row a broke player skips.
+    id: 'settle', kind: 'work', screen: 'pens', label: 'Settle an agitated chimera',
+    hint: (state, content, now) => {
+      const pacing = (state.chimeras ?? [])
+        .map((c) => ({ c, f: feralStatus(c, content, now) }))
+        .filter((x) => x.f.agitated)
+        .sort((a, b) => a.f.remainingMs - b.f.remainingMs);
+      if (!pacing.length) return 'Somebody has been left alone too long.';
+      const { c, f } = pacing[0];
+      const hours = Math.max(0, f.remainingMs) / HOUR;
+      const who = pacing.length === 1 ? c.name : `${c.name} and ${pacing.length - 1} other${pacing.length === 2 ? '' : 's'}`;
+      return `${who} pacing the pen. ${hours < 1 ? 'Under an hour' : `${Math.floor(hours)}h`} before it stops taking your calls. Working with it at all is the fix.`;
+    },
+    ready: (state, content, now) =>
+      (state.chimeras ?? []).some((c) => feralStatus(c, content, now).agitated),
+  },
+  {
     id: 'graduate', kind: 'work', screen: 'ranch', label: 'Graduate a donor',
-    hint: 'A grown animal becomes six parts. This is where chimeras come from.',
+    hint: (state, content, now) => {
+      const ripe = state.ranch.stock.filter((a) => ageStage(a, content, now) !== 'juvenile');
+      if (!ripe.length) return 'A grown animal becomes six parts. This is where chimeras come from.';
+      const who = ripe.length === 1
+        ? `${ripe[0].name} the ${speciesOf(content, ripe[0].species)?.name ?? ripe[0].species} is grown`
+        : `${ripe.length} are grown`;
+      return `${who} — ${ripe.length === 1 ? 'six parts' : `six parts each, ${ripe.length * 6} in all`}. This is where chimeras come from.`;
+    },
     ready: (state, content, now) =>
       state.ranch.stock.some((a) => ageStage(a, content, now) !== 'juvenile'),
   },
   {
     id: 'splice', kind: 'work', screen: 'theater', label: 'Splice a chimera',
-    hint: 'There are parts in the vault. Something could be wearing them.',
-    ready: (state) => (state.inventory.parts ?? []).length > 0,
+    hint: (state, content) => {
+      const parts = state.inventory.parts ?? [];
+      const species = new Set(parts.map((p) => content?.parts?.[p.partId]?.species).filter(Boolean));
+      return `${parts.length} part${parts.length === 1 ? '' : 's'} in the vault from ${
+        species.size} donor${species.size === 1 ? '' : 's'}. Something could be wearing them.`;
+    },
+    // A HEAD, not just parts: the Theater refuses a genome without one, so
+    // "there are parts in the vault" could point at a splice the game will
+    // not allow. R119's founding crate is exactly that case — limbs, no
+    // head — so the row waits for the graduation that makes it true, which
+    // is the sequence A4 measured and fixed.
+    ready: (state, content) => (state.inventory.parts ?? [])
+      .some((p) => content?.parts?.[p.partId]?.slot === 'head'),
   },
   {
     id: 'breed', kind: 'work', screen: 'ranch', label: 'Breed a pair',
-    hint: 'Two adults of a species make a better third.',
+    hint: (state, content, now) => {
+      let pairs = 0;
+      for (let i = 0; i < state.ranch.stock.length; i++) {
+        for (let j = i + 1; j < state.ranch.stock.length; j++) {
+          if (canBreed(state.ranch.stock[i], state.ranch.stock[j], state, content, now).ok) pairs++;
+        }
+      }
+      return `${pairs} pairing${pairs === 1 ? '' : 's'} the pens can make right now. Two adults of a species make a better third.`;
+    },
     ready: (state, content, now) => state.ranch.stock.some((x, i) =>
       state.ranch.stock.slice(i + 1).some((y) => canBreed(x, y, state, content, now).ok)),
   },
   {
     id: 'hatch', kind: 'work', screen: 'ranch', label: 'Hatch an egg',
-    hint: 'The incubator has finished. Somebody is knocking.',
+    hint: (state, content, now) => {
+      const ready = (state.ranch.eggs ?? []).filter((e) => now >= e.hatchAt);
+      return ready.length === 1
+        ? 'An egg has finished. Somebody is knocking.'
+        : `${ready.length} eggs have finished. Somebody is knocking.`;
+    },
     ready: (state, content, now) => (state.ranch.eggs ?? []).some((e) => now >= e.hatchAt)
       && state.ranch.stock.length < state.ranch.penCapacity,
   },
   {
     id: 'care', kind: 'work', screen: 'ranch', label: 'Care for the herd',
-    hint: 'Condition decides the grade a donor graduates at. It is not decoration.',
+    hint: (state, content, now) => {
+      let ready = 0;
+      let animals = 0;
+      for (const a of state.ranch.stock) {
+        const n = Object.values(careStatus(a, now)).filter((c) => c.ready).length;
+        if (n) { ready += n; animals++; }
+      }
+      return `${ready} thing${ready === 1 ? '' : 's'} to do for ${animals} animal${
+        animals === 1 ? '' : 's'}. Condition decides the grade they graduate at.`;
+    },
     ready: (state, content, now) =>
       state.ranch.stock.some((a) => Object.values(careStatus(a, now)).some((s) => s.ready)),
   },
   {
     id: 'vat', kind: 'work', screen: 'pens', label: 'Run the chaos vat',
-    hint: 'Two finished chimeras in, one genome out that neither of them was.',
+    hint: (state, content, now) => {
+      const seen = new Set();
+      for (const a of state.chimeras) {
+        for (const b of state.chimeras) {
+          if (a === b) continue;
+          const key = [a.id, b.id].sort().join('+');
+          if (seen.has(key)) continue;
+          try { if (vatPlan(state, a.id, b.id, content, now)?.ok) seen.add(key); } catch { /* not a pair */ }
+        }
+      }
+      return `${seen.size} pairing${seen.size === 1 ? '' : 's'} the vat will take. Two go in, one genome out that neither of them was.`;
+    },
     ready: (state, content, now) => {
       if (activeVat(state)) return false;
       for (const a of state.chimeras) {
@@ -136,45 +290,106 @@ export const AGENDA = [
   },
   {
     id: 'job', kind: 'campaign', screen: 'battle', subtab: 'jobs', label: 'Run a job',
-    hint: 'Money and livestock without winning a fight. Costs heat, not creatures.',
+    // Both read `runnableOps` — the list `startOperation` would accept. The
+    // first draft counted every job whose LANE was free and told a day-one
+    // player seven; three start (R28).
+    hint: (state, content, now) => {
+      const runnable = runnableOps(state, content, now);
+      const purse = runnable.reduce((n, op) => Math.max(n, op.funds?.[1] ?? 0), 0);
+      return `${runnable.length} you can run right now${
+        purse ? `, the best worth up to $${purse}` : ''}. Costs heat, not creatures.`;
+    },
     // Three lanes (see operations.js): a creature can be carried somewhere,
     // you can go yourself, and paperwork needs nobody. Rule 1 — something is
     // ALWAYS runnable — lives in the last two.
-    ready: (state, content, now) => operationList(content).some((op) => {
+    ready: (state, content, now) => runnableOps(state, content, now).length > 0
+      || operationList(content).some((op) => {
       if (!opReady(state, op.id, now)) return false;
       if (activeOps(state).some((run) => run.opId === op.id)) return false;
-      if (laneFree(state, content, now, op, null)) return true;
       const free = fit(state, now).find((c) => !activeOps(state).some((r) => r.chimeraId === c.id));
       return !!free && laneFree(state, content, now, op, free);
     }),
   },
   {
     id: 'assault', kind: 'campaign', screen: 'battle', label: 'Take a node',
-    hint: 'Holding it pays every day and puts its fauna in the catalog.',
+    // R106 — the row stays when the odds are hopeless, and says so. It is
+    // not removed, because `battle/forecast.js` settles that out loud: a
+    // forecast is not a gate, and "a player who wants to throw one goat at a
+    // police cruiser is entitled to". What was wrong was never the offer, it
+    // was that the offer read the same at three-against-one as it does at
+    // every other moment in the game — measured over three seeds, the row is
+    // offered outnumbered on days 0-9 and never afterwards, so this is the
+    // opening walking a new player into the one wall A1 designed around, in
+    // the voice of a hint about how well it pays.
+    hint: (state, content, now) => {
+      const wall = assaultWall(state, content, now);
+      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';
+      return `${wall.name} fields ${wall.bodies}; you can field ${wall.team}. One active per side,`
+        + ` so that is ${wall.bodies} health bars against ${wall.team} — ${
+          wall.short === 1 ? 'one more body' : `${wall.short} more bodies`} first.`;
+    },
     ready: (state, content, now) =>
       reachableEncounterIds(state, content).length > 0 && fit(state, now).length > 0,
   },
   {
     id: 'treat', kind: 'spend', screen: 'pens', label: 'Buy someone out of the Infirmary',
-    hint: 'Cheaper the closer they are to walking out on their own.',
+    chip: (state, content, now) => {
+      const hurt = state.chimeras.filter((c) => isInjured(c, now));
+      return hurt.length ? `${hurt.length} hurt` : null;
+    },
+    hint: (state, content, now) => {
+      const hurt = state.chimeras.filter((c) => isInjured(c, now));
+      const affordable = hurt.filter((c) => state.funds >= treatmentCost(c, content, now, state));
+      const cheapest = affordable.length
+        ? Math.min(...affordable.map((c) => treatmentCost(c, content, now, state))) : 0;
+      return `${hurt.length} in the Infirmary, ${affordable.length} you can afford out${
+        cheapest ? ` from $${cheapest}` : ''}. Cheaper the closer they are to walking out on their own.`;
+    },
     ready: (state, content, now) => state.chimeras.some((c) =>
       isInjured(c, now) && state.funds >= treatmentCost(c, content, now, state)),
   },
   {
     id: 'train', kind: 'spend', screen: 'pens', label: 'Train a chimera',
-    hint: 'Bond is obedience, and obedience is whether your orders happen.',
+    chip: (state, content, now) =>
+      `${state.chimeras.filter((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR).length} ready`,
+    hint: (state, content, now) => {
+      const due = state.chimeras.filter((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR);
+      return `${due.length} ready for a session at $${TRAINING.cost} each. Bond is obedience, and obedience is whether your orders happen.`;
+    },
     ready: (state, content, now) => state.funds >= TRAINING.cost
       && state.chimeras.some((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR),
   },
   {
     id: 'buy', kind: 'spend', screen: 'ranch', label: 'Order from the catalog',
-    hint: 'New anatomy is how a losing matchup stops being one.',
+    chip: (state, content) => {
+      const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
+      return afford.length ? `${afford.length} from $${Math.min(...afford.map((sp) => sp.mailOrderPrice))}` : null;
+    },
+    hint: (state, content) => {
+      const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
+      const room = state.ranch.penCapacity - state.ranch.stock.length;
+      const cheapest = afford.length ? Math.min(...afford.map((sp) => sp.mailOrderPrice)) : 0;
+      return `${afford.length} species you can afford${cheapest ? ` from $${cheapest}` : ''}, ${
+        room} pen${room === 1 ? '' : 's'} free. New anatomy is how a losing matchup stops being one.`;
+    },
     ready: (state, content) => state.ranch.stock.length < state.ranch.penCapacity
       && catalogFor(state, content).some((sp) => state.funds >= sp.mailOrderPrice),
   },
   {
     id: 'facility', kind: 'spend', screen: 'ranch', label: 'Buy a lab upgrade',
-    hint: 'Bigger chassis, more bays, better odds — permanently.',
+    chip: (state, content) => {
+      const open = tracks(content).map((t) => nextUpgrade(state, content, t.id)).filter((up) => up?.affordable);
+      return open.length ? `from $${Math.min(...open.map((up) => up.level.cost))}` : null;
+    },
+    hint: (state, content) => {
+      const open = tracks(content)
+        .map((t) => nextUpgrade(state, content, t.id))
+        .filter((up) => up?.affordable);
+      if (!open.length) return 'Bigger chassis, more bays, better odds — permanently.';
+      const cheapest = open.reduce((a, b) => (a.level.cost <= b.level.cost ? a : b));
+      return `${open.length} upgrade${open.length === 1 ? '' : 's'} you can afford, from $${
+        cheapest.level.cost} (${cheapest.level.name ?? cheapest.track?.name ?? 'the lab'}). Permanent.`;
+    },
     // R83 — this row has never once appeared. It read two fields
     // `nextUpgrade` does not return: `up.cost` (the cost lives at
     // `up.level.cost`, so `funds >= undefined` was false for every player at
@@ -189,7 +404,9 @@ export const AGENDA = [
   },
   {
     id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',
-    hint: 'Room for more stock, which is room for more parts.',
+    chip: (state) => `$${penUpgradeCost(state)}`,
+    hint: (state) => `$${penUpgradeCost(state)} for the next pen — ${
+      state.ranch.stock.length}/${state.ranch.penCapacity} full. Room for stock is room for parts.`,
     ready: (state) => state.funds >= penUpgradeCost(state),
   },
 ];
@@ -198,7 +415,7 @@ export const AGENDA = [
 export function agenda(state, content, now) {
   return AGENDA.filter((item) => {
     try { return !!item.ready(state, content, now); } catch { return false; }
-  }).map(({ id, kind, screen, subtab, label, hint }) => ({
+  }).map(({ id, kind, screen, subtab, label, hint, chip }) => ({
     // R75: `subtab` travels with the entry. An agenda row names a
     // DESTINATION, and on the two screens that have sub-navigation the
     // screen alone is only half of one — "Run a job" landed on the map and
@@ -210,6 +427,13 @@ export function agenda(state, content, now) {
     // through untouched, so every entry written before this still reads
     // exactly as it did.
     hint: typeof hint === 'function' ? hint(state, content, now) : hint,
+    // R120 — `spend` rows render as CHIPS (A4: "three ways to spend the same
+    // money is one idea wearing three hats"), and a chip has room for a label
+    // and nothing else, so its hint went into a `title`. This game ships as a
+    // TWA: a tooltip is invisible on the device most people play it on. The
+    // chip carries the short form on its face; the sentence stays in the
+    // title for anyone with a pointer.
+    chip: typeof chip === 'function' ? chip(state, content, now) : (chip ?? null),
   }));
 }
 

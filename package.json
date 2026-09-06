@@ -11,6 +11,7 @@
     "roadmap": "node tools/roadmap.js",
     "sim": "node tools/sim.js",
     "serve": "python3 -m http.server 8000",
-    "a11y": "node tools/a11y.js"
+    "a11y": "node tools/a11y.js",
+    "boot": "node tools/boot.js"
   }
 }

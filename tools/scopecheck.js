@@ -948,6 +948,68 @@ export function moduleImports(src) {
 // Does every imported name exist at the other end? `modules` is a plain
 // { relativePath: source } map, so this is testable with synthetic files and
 // does not have to touch the disk.
+// R81 — the OTHER kind of import, which this gate could not see.
+//
+// `const { x } = await import('./m.js')` asks a module for a name exactly as
+// a static import does, and until now line 913 above skipped it by design
+// ("`import(…)` is not an import DECLARATION" — true, and beside the point).
+// Splitting battle/engine.js in two moved nine exports, and the static pass
+// caught every stale call site but the five dynamic ones, which only a
+// ten-minute smoke run found. The rule R76 wrote — a name that is not there
+// fails the build — has to hold whichever syntax asked for it.
+//
+// A template specifier (tools/handlers.js loads a module per run with a cache
+// -busting query) is skipped: the target is not knowable from the source, and
+// a gate that guesses is worse than one that abstains.
+export function dynamicImports(src) {
+  const toks = tokenize(src);
+  const out = [];
+  for (let i = 0; i < toks.length; i++) {
+    if (toks[i].type !== 'name' || toks[i].value !== 'import') continue;
+    if (toks[i + 1]?.type !== 'punct' || toks[i + 1].value !== '(') continue;
+    if (toks[i + 2]?.type !== 'str' || !/^['"]/.test(toks[i + 2].value)) continue;
+    if (toks[i + 3]?.type !== 'punct' || toks[i + 3].value !== ')') continue;
+    const from = toks[i + 2].value.slice(1, -1);
+
+    // Walk back over `await` and `=` to a `}`; if that is not the shape, the
+    // result is used some other way (`.then(m => …)`, a bare side-effect
+    // load) and asks for no names in particular.
+    let k = i - 1;
+    if (toks[k]?.type === 'name' && toks[k].value === 'await') k--;
+    if (!(toks[k]?.type === 'punct' && toks[k].value === '=')) { out.push({ from, wanted: [], line: toks[i].line }); continue; }
+    k--;
+    if (!(toks[k]?.type === 'punct' && toks[k].value === '}')) { out.push({ from, wanted: [], line: toks[i].line }); continue; }
+    let depth = 0;
+    const inner = [];
+    for (; k >= 0; k--) {
+      const t = toks[k];
+      if (t.type === 'punct' && t.value === '}') { depth++; continue; }
+      if (t.type === 'punct' && t.value === '{') { depth--; if (!depth) break; continue; }
+      inner.unshift(t);
+    }
+    if (k < 0) continue;
+
+    // `{ a, b: local, c = 1 }` — the name ASKED FOR is the key, which is the
+    // token at the start of each comma-separated group.
+    const wanted = [];
+    let fresh = true;
+    let nest = 0;
+    for (const t of inner) {
+      if (t.type === 'punct' && '{[('.includes(t.value)) { nest++; continue; }
+      if (t.type === 'punct' && '}])'.includes(t.value)) { nest--; continue; }
+      if (nest) continue;
+      if (t.type === 'punct' && t.value === ',') { fresh = true; continue; }
+      if (!fresh) continue;
+      if (t.type === 'punct' && t.value === '...') { fresh = false; continue; }
+      if (t.type !== 'name' || KEYWORDS.has(t.value)) { fresh = false; continue; }
+      wanted.push({ imported: t.value, line: t.line });
+      fresh = false;
+    }
+    out.push({ from, wanted, line: toks[i].line });
+  }
+  return out;
+}
+
 export function checkImports(modules) {
   const iface = new Map();
   for (const [file, src] of Object.entries(modules)) iface.set(file, moduleInterface(src));
@@ -995,7 +1057,7 @@ export function checkImports(modules) {
 
   const findings = [];
   for (const [file, src] of Object.entries(modules)) {
-    for (const imp of moduleImports(src)) {
+    for (const imp of [...moduleImports(src), ...dynamicImports(src)]) {
       const target = resolve(file, imp.from);
       if (!target) continue;
       if (!iface.has(target)) {
@@ -1104,6 +1166,40 @@ export const SELF_TESTS = [
 // Cross-module cases, run on synthetic files so they pin the RULE rather than
 // whatever this tree happens to import today.
 export const LINK_TESTS = [
+  // R81 — the dynamic form. Every one of these occurs in this tree, and the
+  // second is the defect that shipped past the static pass: nine exports
+  // moved out of battle/engine.js and five `await import` call sites kept
+  // asking the old module for them.
+  {
+    name: 'a dynamic import that exists',
+    files: { 'a.js': "export async function f() { const { go } = await import('./b.js'); return go(); }", 'b.js': 'export function go() { return 1; }' },
+    expect: [],
+  },
+  {
+    name: 'a dynamic import of a name that moved',
+    files: { 'a.js': "export async function f() { const { go } = await import('./b.js'); return go(); }", 'b.js': 'export function elsewhere() { return 1; }' },
+    expect: ['go'],
+  },
+  {
+    name: 'a dynamic import renaming as it destructures',
+    files: { 'a.js': "export async function f() { const { go: g } = await import('./b.js'); return g(); }", 'b.js': 'export function gone() { return 1; }' },
+    expect: ['go'],
+  },
+  {
+    name: 'a dynamic import used whole asks for nothing in particular',
+    files: { 'a.js': "export async function f() { const m = await import('./b.js'); return m.anything; }", 'b.js': 'export function go() { return 1; }' },
+    expect: [],
+  },
+  {
+    name: 'a dynamic import with a computed specifier is not guessed at',
+    files: { 'a.js': "export async function f(n) { const { go } = await import(`./${n}.js`); return go(); }", 'b.js': 'export function go() { return 1; }' },
+    expect: [],
+  },
+  {
+    name: 'a dynamic import of a module that is not there',
+    files: { 'a.js': "export async function f() { const { go } = await import('./nope.js'); return go(); }", 'b.js': 'export function go() { return 1; }' },
+    expect: ['./nope.js'],
+  },
   {
     name: 'a named import that exists',
     files: { 'a.js': "import { go } from './b.js';\nexport const f = () => go();", 'b.js': 'export function go() { return 1; }' },

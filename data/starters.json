@@ -1,0 +1,66 @@
+{
+  "_doc": "The founding choice (ROADMAP §9.7, R119). Measured on a fresh save, the starter herd was a literal ['goat','goat','bear'] with the goats newborn, so the only animal graduatable on day one was the bear — and a graduation yields six parts from ONE species. The Theater therefore opened with exactly one creature anybody could build. A lab is three things: a GROWN DONOR (extractable immediately, the day-one door A4 opened), a BREEDABLE JUVENILE PAIR, and a CRATE of two parts from a third species. THE CRATE HOLDS NO HEAD, deliberately: a head is mandatory to splice, so a crate with one lets a new player build a two-part creature out of the crate alone before meeting the extractor. Without one, the sequence A4 fixed holds — graduate, THEN splice. It is the forelimbs and hindlimbs because those most change an animal and, measured, decide whether it can fight. THE CHOICE CHANGES WHICH CREATURE, NEVER HOW MUCH: three animals, one grown, all Standard, under every lab. Against the second node the five read 0% with one chimera and 96/96/92/100/100% with three, so A1's wall holds and R106's promise is true whichever you pick. That balance was searched, not guessed. Adding a sixth lab is this file and nothing else.",
+  "crateGrade": "standard",
+  "labs": [
+    {
+      "id": "bramble_barn",
+      "name": "The Bramble Barn",
+      "blurb": "Inherited from an aunt who asked no questions. Smells of hay and ozone.",
+      "donor": "bear",
+      "pair": "goat",
+      "crate": [
+        "eagle_forelimbs",
+        "eagle_hindlimbs"
+      ],
+      "pitch": "A bear on the slab and a crate of eagle. Graduate the bear for a head, then give it wings."
+    },
+    {
+      "id": "wetwing_annexe",
+      "name": "The Wetwing Annexe",
+      "blurb": "Half greenhouse, half aquarium, entirely uninsured.",
+      "donor": "heron",
+      "pair": "goose",
+      "crate": [
+        "mantis_forelimbs",
+        "mantis_hindlimbs"
+      ],
+      "pitch": "A heron to graduate, geese coming up, and a crate of mantis limbs that came with the greenhouse."
+    },
+    {
+      "id": "nightshift_loft",
+      "name": "The Nightshift Loft",
+      "blurb": "You work when the neighbours do not. This is not a coincidence.",
+      "donor": "bat",
+      "pair": "ram",
+      "crate": [
+        "tiger_forelimbs",
+        "tiger_hindlimbs"
+      ],
+      "pitch": "A bat on the slab and a tiger's legs in a crate. Nobody is going to sleep through this."
+    },
+    {
+      "id": "the_slab",
+      "name": "The Slab",
+      "blurb": "One long table, one drain, excellent lighting.",
+      "donor": "tortoise",
+      "pair": "porcupine",
+      "crate": [
+        "crocodile_forelimbs",
+        "crocodile_hindlimbs"
+      ],
+      "pitch": "Armour first, from the tortoise. The crocodile in the crate supplies everything that grips."
+    },
+    {
+      "id": "the_kennel",
+      "name": "The Kennel",
+      "blurb": "The howling is structural. The council has been told it is pipes.",
+      "donor": "wolf",
+      "pair": "frog",
+      "crate": [
+        "rhino_forelimbs",
+        "rhino_hindlimbs"
+      ],
+      "pitch": "A wolf to graduate and a rhino's legs in a crate. We call it a kennel for the paperwork."
+    }
+  ]
+}

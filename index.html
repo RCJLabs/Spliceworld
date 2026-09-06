@@ -37,6 +37,12 @@
   <div id="overlay" class="overlay" role="dialog" aria-modal="true" hidden></div>
   <div id="picker" class="picker-host" hidden></div>
 
+  <!-- R80: the one live region every panel speaks into (see ui/live.js). It
+       lives out here because a live region written INSIDE a panel is
+       destroyed and rebuilt by that panel's next render, and a region that
+       did not exist a moment ago announces nothing. -->
+  <p id="announcer" class="sr-only" role="status" aria-live="polite"></p>
+
   <footer>
     <p id="ticker" class="ticker" role="status" aria-live="polite"></p>
     <button type="button" id="settings" class="icon-btn" aria-label="Settings — sound, theme, save, labs"></button>

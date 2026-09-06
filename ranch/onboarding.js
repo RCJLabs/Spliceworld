@@ -23,7 +23,10 @@ import { nextUpgrade, tracks } from '../splice/facility.js';
 import { rivalStatus } from '../campaign/rivals.js';
 import { expressedTraits } from './breeding.js';
 import { analyze } from '../splice/physiology.js';
-import { GRADE_INDEX } from '../splice/extract.js';
+import { GRADE_INDEX, gradeFor } from '../splice/extract.js';
+import { feralTuning } from '../splice/feral.js';
+import { rushable } from '../splice/rush.js';
+import { taskforceEligible } from '../campaign/taskforce.js';
 
 export function onboardingSteps(state, content, now) {
   const caredOnce = state.ranch.stock.some((a) =>
@@ -33,6 +36,21 @@ export function onboardingSteps(state, content, now) {
   const spliced = state.chimeraCount > 0;
   const settledOne = state.chimeras.some((c) => now >= c.settleUntil);
   const conquered = state.campaign.heldNodes.length > 0;
+  // R106 — the starters still standing, and what they would grade at right
+  // now. Read through `gradeFor`, which is what the Ranch card prints two
+  // lines above this, so the Path and the card can never quote different
+  // grades for the same animal.
+  const spare = state.ranch.stock.slice(0, 2);
+  const spareGrades = spare.map((a) => gradeFor(a, content, now, state).name);
+  // One parenthesis when they agree, which is the ordinary case for a
+  // starter pair; per-animal when they do not, because a hint that averages
+  // two different grades into one word is a hint that is wrong about one of
+  // the animals it just named.
+  const sameGrade = new Set(spareGrades).size === 1;
+  const spareNames = spare
+    .map((a, i) => (sameGrade ? a.name : `${a.name} (${spareGrades[i]})`))
+    .join(' and ');
+  const spareSuffix = sameGrade && spare.length ? ` (${spareGrades[0]} today)` : '';
 
   return [
     {
@@ -67,9 +85,23 @@ export function onboardingSteps(state, content, now) {
     // of stat-tuning moves that because it is a question of BODIES. The
     // starter herd is exactly three animals, so the answer is already in
     // the pens; nothing ever said so.
+    // R106. The step was right and incomplete, and the Ranch card on the very
+    // animals it names gives the OPPOSITE instruction: "Apex once Biscuit is
+    // fully grown (14h) and at condition 86+." Both are true, and a new
+    // player has no way to know which one this hour wants.
+    //
+    // Measured, the wait buys nothing that matters here: a juvenile goat and
+    // an adult goat both grade Standard at the starting condition of 60, and
+    // three STANDARD chimeras take the second node at 100%. So the step says
+    // what they grade at today, and that today is enough — the ceiling on the
+    // Ranch card is for the batch after this one.
     {
       label: 'Build a stable of three',
-      hint: 'One chimera cannot out-last a three-unit patrol — it is one health bar against three. Graduate your other two starter animals and splice them. (Restock the pens after: a goat is $60.)',
+      hint: `One chimera cannot out-last a three-unit patrol — it is one health bar against three. ${
+        spare.length
+          ? `Graduate ${spareNames}${spareSuffix} and splice them`
+          : 'Graduate your other starter animals and splice them'
+      }: three bodies is what the next node asks for, not better ones — raise those in the batch after. (Restock the pens after: a goat is $60.)`,
       done: state.chimeras.length >= STABLE,
     },
   ];
@@ -166,6 +198,12 @@ export const GUIDE_HELPERS = {
   // Panel starts answering the question for them.
   liftPartInVault: (state, content) =>
     (state.inventory?.parts ?? []).some((t) => content.parts[t.partId]?.phys?.lift),
+  // R103. The telegraph lesson arrives once the player has FOUGHT, not once
+  // they have won — a `warRecord.wins` path was the obvious way to write it
+  // and it is backwards: the player who keeps losing is exactly the one the
+  // brace and the counter-switch were built for, and they would have been
+  // the last to be told.
+  hasFought: (state) => ((state.warRecord?.wins ?? 0) + (state.warRecord?.losses ?? 0)) >= 1,
   flierBuilt: (state, content) =>
     (state.chimeras ?? []).some((c) =>
       Object.values(c.tokens ?? {}).some((t) => content.parts[t.partId]?.phys?.lift)
@@ -200,6 +238,29 @@ export const GUIDE_HELPERS = {
   rivalBeaten: (state) => Object.values(state.campaign.rivals ?? {}).some((r) => (r.defeats ?? 0) > 0),
   contestOpen: (state) => (state.campaign.contested ?? []).length > 0,
   specimenLoose: (state) => (state.campaign.loose ?? []).length > 0,
+  // R85. Reachable the moment the player owns a creature that CAN go
+  // feral, which is the only useful moment to be told — the note has to
+  // arrive while there is still bond to build, not while a countdown is
+  // running. Done when every such creature is bonded past the floor,
+  // because that is the lesson: instability is not the problem, an
+  // unstable animal nobody has befriended is.
+  chimeraUnstable: (state, content) =>
+    state.chimeras.some((c) => (c.instability ?? 0) >= feralTuning(content).instabilityAt),
+  chimeraSecured: (state, content) => {
+    const t = feralTuning(content);
+    return state.chimeras.every(
+      (c) => (c.instability ?? 0) < t.instabilityAt || (c.bond ?? 0) >= t.bondFloor
+    );
+  },
+  // R86. Reachable the first time something of the player's is on a clock
+  // they could pay to hurry — which for a new player is their first splice's
+  // settle, day one — and done once they have paid for one. `rushCount` is
+  // the only thing the mechanic persists.
+  rushableNow: (state, content, now) => rushable(state, content, now).length > 0,
+  // R87. Reachable the moment the State is in range — which is the moment
+  // before the first raid rather than during it, so the note explains the
+  // rules while there is still time to read them.
+  taskforceInRange: (state, content) => taskforceEligible(state, content),
   // "Caught" means it reached the roster, not that it reached a bay — the
   // guide teaches the whole route, so it is done when the route is walked.
   specimenCaught: (state) => state.chimeras.some((c) => c.rehabilitated),

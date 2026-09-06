@@ -10,7 +10,7 @@ import {
 } from './theater.js';
 import { MOVE_SLOTS, activeMoves, knownMoves, moveSummary, moveDetail } from '../battle/moves.js';
 import { toggleRow } from '../ui/picker.js';
-import { movesFromTokens } from '../battle/engine.js';
+import { movesFromTokens } from '../battle/statblock.js';
 import { analyze } from './physiology.js';
 import { dossierRows, dossierSummary } from './dossier.js';
 import { xpProgress, maxLevel } from '../battle/veterancy.js';
@@ -35,7 +35,7 @@ function knownMovesOf(chimera, content) {
   return knownMoves(chimera, content, () =>
     movesFromTokens(tokens, analyze(chimera.frame, tokens, content), content));
 }
-import { isInjured, obediencePercent } from '../battle/engine.js';
+import { isInjured, obediencePercent } from '../battle/statblock.js';
 import { describe as describeTemperament } from './temperament.js';
 import { scarsOf, describeScar, treatInjury, treatmentCost } from './scars.js';
 import { fmtDuration } from '../ranch/ui.js';
@@ -46,8 +46,11 @@ import {
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { bandedHtml } from '../ui/roster.js';
 import { canSpar } from '../campaign/sparring.js';
+import { feralStatus, feralTuning } from './feral.js';
+import { rushQuote, rushButton, bindRush } from './rush.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { renderIcon } from '../ui/icons.js';
+import { announce } from '../ui/live.js';
 
 let lastMsg = '';
 let vatPick = { a: null, b: null };
@@ -67,6 +70,7 @@ function vatCard(state, content, t) {
         <p class="ranch-msg">${running.parentNames.join(' × ')}</p>
         <p class="settle">Gestating… <strong class="countdown">${fmtDuration(vatRemainingMs(state, t))}</strong> remaining. The vat is making decisions and will not be taking questions.</p>
         <button type="button" id="vat-cancel" class="care-train">Drain the vat</button>
+        ${rushButton(rushQuote(state, 'vat', 'vat', content, t))}
       </section>`;
   }
 
@@ -153,12 +157,19 @@ export function renderPensScreen(root, ctx) {
   // row. Training is the thing you came here for, so it goes first; the
   // two clocks go last, and go there carrying their countdowns on the shut
   // row, so ordering them last is not the same as hiding them.
+  //
+  // R85 adds a band ABOVE all three. Every other band here sorts by what
+  // you would like to do; this one sorts by what it costs to do nothing,
+  // and an agitated creature is the only row on this screen with a
+  // deadline that ends in the roster being one shorter.
   const PEN_BANDS = [
+    { id: 'agitated', label: 'Pacing — needs you today' },
     { id: 'train', label: 'Can train now' },
     { id: 'ready', label: 'Ready' },
     { id: 'clock', label: 'On a clock' },
   ];
   const penBand = (ch) => {
+    if (feralStatus(ch, content, t).agitated) return 'agitated';
     if (isInjured(ch, t) || !isSettled(ch, t)) return 'clock';
     return t >= (ch.lastTrainedAt ?? 0) + TRAINING.cooldownHours * 3600000 ? 'train' : 'ready';
   };
@@ -200,13 +211,20 @@ export function renderPensScreen(root, ctx) {
       const cls = reportOf(ch, content).creatureClass;
       const clsIcon = classOf(content, cls) ? renderIcon(classOf(content, cls).icon) : '◇';
       const hurt = isInjured(ch, t);
-      const badge = hurt
-        ? `<span class="pen-alert">⚕ ${fmtDuration(ch.injury.until - t)}</span>`
-        : !settled
-          ? `<span class="pen-alert">⏳ ${fmtDuration(ch.settleUntil - t)}</span>`
-          : trainReady
-            ? '<span class="pen-ready">ready · can train</span>'
-            : '<span class="pen-ready">ready</span>';
+      // R85. Agitation outranks the Infirmary clock on the shut row, and it
+      // is the only badge on this screen that outranks anything: a missed
+      // treatment costs a scar, a missed window costs the creature. R15's
+      // rule with the stakes turned up — this one cannot go behind a fold.
+      const feral = feralStatus(ch, content, t);
+      const badge = feral.agitated
+        ? `<span class="pen-feral-badge">⚠ ${fmtDuration(feral.remainingMs)}</span>`
+        : hurt
+          ? `<span class="pen-alert">⚕ ${fmtDuration(ch.injury.until - t)}</span>`
+          : !settled
+            ? `<span class="pen-alert">⏳ ${fmtDuration(ch.settleUntil - t)}</span>`
+            : trainReady
+              ? '<span class="pen-ready">ready · can train</span>'
+              : '<span class="pen-ready">ready</span>';
       const summary = `${clsIcon} Lv ${prog.level} · bond ${ch.bond}/100 · obedience ${obedience}%${
         scarsOf(ch, content).length ? ` · ${scarsOf(ch, content).length} scar${scarsOf(ch, content).length === 1 ? '' : 's'}` : ''
       }`;
@@ -215,6 +233,28 @@ export function renderPensScreen(root, ctx) {
           <div class="portrait">${portrait}</div>
           <div class="animal-info">
             <h4>${ch.name} <button type="button" class="rename-btn" data-rename="${ch.id}" aria-label="Rename ${ch.name}">${renderIcon('pencil', { size: 15 })}</button></h4>
+            ${(() => {
+              // R85. The badge says there is a clock; this says WHY there is
+              // a clock and WHAT ENDS IT, because a countdown with no stated
+              // answer is a countdown the player watches rather than beats.
+              // Three conditions have to hold at once, so all three are
+              // named — instability alone is not a crime, and a creature
+              // built at 90 instability on day one should be able to read
+              // that its problem is the calendar and not its anatomy.
+              if (!feral.agitated) return '';
+              const tun = feralTuning(content);
+              return `
+                <div class="feral-panel" role="group" aria-label="${ch.name} is agitated">
+                  <p class="feral-head">${renderIcon('warning-triangle')} Pacing the pen — <strong class="countdown">${fmtDuration(feral.remainingMs)}</strong> to talk it round.</p>
+                  <p class="fine-print">Instability ${ch.instability}/100, bond ${ch.bond}/100, and it is over ${tun.neglectHours} hours since anyone worked with it. All three at once is what did it; any one of them going away is what fixes it.</p>
+                  <p class="fine-print">Do <em>anything</em> with it — a training session, a fight, a treatment — and it settles. ${
+                    feral.bondNeeded > 0
+                      ? `${feral.bondNeeded} more bond and it stops being able to happen at all.`
+                      : 'Its bond is already past the line; this was the calendar.'
+                  }</p>
+                  <p class="fine-print scar-warn">Let the clock run out and it stops taking your calls. Containment picks it up and the Reorientation Wing will hand it back — whole, scars and service record intact — but you will be paying them to do it.</p>
+                </div>`;
+            })()}
             ${(() => {
               // R41: what it has been through, beside what it is built from.
               const prog = xpProgress(ch.xp ?? 0, content);
@@ -300,6 +340,7 @@ export function renderPensScreen(root, ctx) {
                 ? 'Settled ✓ — cleared for deployment'
                 : `Settling… ${fmtDuration(settleRemainingMs(ch, t))} remaining. No sudden noises.`
             }</p>
+            ${settled ? '' : rushButton(rushQuote(state, 'settle', ch.id, content, t))}
             ${isInjured(ch, t)
               ? `<p class="settle">${renderIcon('bandage')} Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} of dramatic convalescing left.</p>
                  <p class="fine-print scar-warn">Left to itself it may set badly and stay that way. Treating it costs money and guarantees it will not.</p>
@@ -324,7 +365,7 @@ export function renderPensScreen(root, ctx) {
         // Shut by default: the summary row carries what a glance needs, and
         // a stable is a list you scan before it is a creature you open.
         open,
-        extraClass: `pen-fold${hurt ? ' pen-hurt' : ''}${settled ? '' : ' pen-settling'}`,
+        extraClass: `pen-fold${feral.agitated ? ' pen-feral' : ''}${hurt ? ' pen-hurt' : ''}${settled ? '' : ' pen-settling'}`,
       });
   });
 
@@ -383,6 +424,8 @@ export function renderPensScreen(root, ctx) {
   bindFolds(root, ctx, () => renderPensScreen(root, ctx));
   bindFieldNote(root, ctx, () => renderPensScreen(root, ctx));
   bindVat(root, ctx, () => renderPensScreen(root, ctx));
+  // R86: one binder for every Hurry button on this screen, settle and vat alike.
+  bindRush(root, ctx, (m) => { lastMsg = m; }, () => renderPensScreen(root, ctx));
   // Dismantling is irreversible and returns less than it consumed, so the
   // sheet shows the EXACT parts that will come back — seeded on the
   // chimera, so the preview and the outcome can never disagree.
@@ -449,7 +492,7 @@ export function renderPensScreen(root, ctx) {
               <p class="fine-print">Pick ${MOVE_SLOTS}. It knows ${known.length}. Learning one costs $${moveTrainingReady(ch, ctx.now(), content).cost} and a rest; reordering is free.</p>
               <button type="button" class="pick-close" data-close="1" aria-label="Close">&#10005;</button>
             </div>
-            <p class="ranch-msg" id="mv-count">${chosen.size}/${MOVE_SLOTS} slots filled${full ? ' — uncheck one to swap' : ''}</p>
+            <p class="ranch-msg" id="mv-count" role="status" aria-live="polite">${chosen.size}/${MOVE_SLOTS} slots filled${full ? ' — uncheck one to swap' : ''}</p>
             <div class="pick-list">${known.map((m) => toggleRow({
               id: m.id,
               label: m.name,
@@ -467,6 +510,13 @@ export function renderPensScreen(root, ctx) {
             const id = btn.dataset.toggle;
             if (chosen.has(id)) chosen.delete(id); else chosen.add(id);
             draw();
+            // R80 — the counter is the only feedback this sheet gives, and
+            // `draw()` rebuilds it, so the aria-live on the element itself
+            // announces nothing: the node it was watching is gone. The
+            // shell's own region says it instead. The toggle's pressed
+            // state is already spoken by the button; what was silent is how
+            // many slots are left.
+            announce(`${chosen.size} of ${MOVE_SLOTS} move slots filled`);
           });
         });
         overlay.querySelector('#mv-save')?.addEventListener('click', () => {

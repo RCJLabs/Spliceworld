@@ -166,6 +166,21 @@ h1 span { color: var(--zap); }
 }
 .tabs button.active { color: var(--goo); border-color: var(--goo); }
 
+/* R80 — for a screen reader and nobody else. Not `display: none` and not
+   `visibility: hidden`: both take the element out of the accessibility tree
+   entirely, which is the one thing a live region must never be. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* --- R73: focus you can actually see -----------------------------------
    There was exactly one `outline: none` in the file (on the Dex cell) and
    nothing anywhere that put a ring back, so a keyboard user moved through
@@ -442,7 +457,7 @@ main {
 .tier-scruffy { background: var(--danger-2); }
 .cond-label { margin: 0 0 4px; font-size: 0.68rem; color: var(--muted); }
 
-.care-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px; }
+.care-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
 .care-row button {
   min-width: 0;
   background: var(--panel-2);
@@ -543,7 +558,7 @@ main {
   gap: 6px;
   flex-wrap: wrap;
   padding: 7px 8px;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -560,7 +575,7 @@ main {
   padding: 1px 4px;
   vertical-align: middle;
 }
-.slot-actions { display: flex; gap: 5px; flex: 0 0 auto; }
+.slot-actions { display: flex; gap: 6px; flex: 0 0 auto; }
 .slot-actions .care-train, .slot-actions .pen-dismantle { margin: 0; padding: 5px 8px; font-size: 0.68rem; }
 
 /* R75 — was `infinite`. The element is replaced by the poof at 0.55 ×
@@ -674,7 +689,10 @@ body.in-battle .tabs { margin-top: 4px; }
 body.in-battle .tabs button { padding: 6px 2px; font-size: 0.66rem; }
 body.in-battle main { padding: 8px 10px 6px; overflow: hidden; min-height: 0; }
 body.in-battle .screen { min-height: 0; height: 100%; }
-body.in-battle footer { padding: 2px 8px; }
+/* R80 — Retreat used to end 1.5px above the settings gear. Battle mode
+   squeezes every band in the shell, and the two it squeezed together belong
+   to different systems: one ends the fight, one opens the options. */
+body.in-battle footer { padding: 12px 8px 2px; }
 body.in-battle .ticker { font-size: 0.66rem; }
 
 .arena {
@@ -890,16 +908,24 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .ord-you { color: var(--goo); }
 .ord-them { color: var(--danger-soft); }
 .ord-tie, .ord-swap { color: var(--muted); }
-.msg-log {
+/* R80: 30x30 until the a11y walk finally reached the arena. Both of these
+   are real controls in a fight and both were under R73's 40px floor — the
+   gate could not see them because the arena was not one of the views it
+   walked. */
+.msg-log, .msg-next {
   flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
+  min-width: 40px;
+  min-height: 40px;
   background: var(--panel-2);
   color: var(--muted);
   border: 1px solid var(--line);
   border-radius: 8px;
   font-size: 0.8rem;
   cursor: pointer;
+}
+.msg-next {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* --- Command menu --- */
@@ -1071,8 +1097,40 @@ body.in-battle .ticker { font-size: 0.66rem; }
 @media (max-height: 640px) {
   .msg-box { min-height: 44px; }
   .mv { min-height: 40px; padding: 5px 8px; }
-  .stage { min-height: 170px; }
+  /* R103 — the telegraph is a line the arena did not used to carry, and the
+     arena is height-locked (`body.in-battle` is 100dvh with overflow hidden),
+     so on the shortest phone the space has to come from somewhere. It comes
+     from the stage, which is the one part of the fight that scales: the
+     creatures get smaller, nothing gets cut off. Measured at 380x640, the
+     line costs 38px and this gives back 40. */
+  .stage { min-height: 130px; }
 }
+
+/* R103 — what the opposition has committed to. One line, directly above the
+   buttons that answer it, because a telegraph the player has to look for is
+   a telegraph nobody reads. Never below the 12px floor: it is the newest
+   text in the game and it is not going to be the smallest. */
+.intent {
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: 6px;
+  background: var(--panel);
+  font-size: 0.78rem;
+  line-height: 1.25;
+  flex: 0 0 auto;
+}
+.intent strong { color: var(--ink); }
+.intent-pri {
+  color: var(--warn);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.intent-answer { color: var(--good, var(--accent)); font-weight: 700; }
+/* The brace button, when there is actually something to brace against. */
+.ut-live { border-color: var(--warn); }
 
 /* --- War Room (M5) --- */
 
@@ -1377,6 +1435,9 @@ body.in-battle .ticker { font-size: 0.66rem; }
 
 /* --- Breeding & Incubator (M6) --- */
 .egg-wrap { flex: 0 0 44px; }
+/* R86: the Hurry button sits beneath its egg's row, pulled up to read as part of it. */
+.egg-rush { margin: -4px 0 10px; }
+.egg-rush .care-train { margin: 0; }
 .egg { width: 44px; height: auto; display: block; }
 
 /* --- Splice-Dex, onboarding, mute (M7) --- */
@@ -1699,7 +1760,10 @@ footer {
   gap: 2px;
   align-items: flex-start;
   text-align: left;
-  margin-bottom: 5px;
+  /* R80 — 6px, the gutter every other control row in the game uses. These
+     sat at 5, which is close enough to read as a typo and far enough for a
+     thumb to land between two options and pick the wrong one. */
+  margin-bottom: 6px;
   padding: 9px 10px;
   background: var(--panel-2);
   color: var(--text);
@@ -1724,7 +1788,7 @@ footer {
   align-items: center;
   gap: 9px;
   text-align: left;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   padding: 8px 10px;
   background: var(--panel-2);
   color: var(--text);
@@ -1931,7 +1995,7 @@ footer {
   z-index: 6;
   display: grid;
   grid-template-columns: repeat(var(--subtab-n, 5), 1fr);
-  gap: 4px;
+  gap: 6px;  /* R80 — the tightest strip in the game was the one with the most buttons in it. */
   margin: 0 0 10px;
   padding: 6px;
   background: var(--ink);
@@ -2447,4 +2511,76 @@ button.dex-cell:focus-visible {
 }
 .spar-goto:hover, .spar-goto:focus-visible { border-color: var(--accent); }
 .pen-fold.pen-hurt { border-color: var(--accent-2); }
+
+/* R85: the one clock on this screen that ends with the roster one shorter.
+   Loud on the shut row, explained on the open one. */
+.pen-feral-badge { color: var(--warn); font-weight: 700; }
+.pen-fold.pen-feral { border-color: var(--warn); }
+.feral-panel {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  background: var(--warn-dim);
+}
+.feral-panel p { margin: 0 0 5px; }
+.feral-panel p:last-child { margin-bottom: 0; }
+.feral-head { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+/* Measured at 380px: `.fine-print`'s muted grey on the warn ground came out
+   at 3.42:1, under AA for text this size, on the one panel in the game that
+   explains how not to lose a creature. `--text` is the readable foreground
+   in every theme and the ground is `--warn-dim` in every theme, so pairing
+   them holds across all five; the hierarchy is carried by size and weight
+   rather than by dimming the thing that has to be read. */
+.feral-panel .fine-print { color: var(--text); }
+/* …except the consequence, which keeps the warn hue for emphasis and clears
+   AA on its own (5.6:1). Written after the rule above, which is specific
+   enough to have swallowed `.scar-warn` and flattened the last line. */
+.feral-panel .fine-print.scar-warn { color: var(--warn); }
+.feral-head .countdown { color: var(--warn); font-variant-numeric: tabular-nums; }
 .pen-fold .animal-card { border: none; padding: 0; margin: 0; background: none; }
+
+/* --- The founding choice (R119) --- */
+/* The first screen a new player sees. It is a locked dialog: there is no
+   game behind it to go back to, because the ranch has no animals until a
+   lab is picked. Sized for the 380px phone first — five cards is a scroll,
+   and the scroll is inside the panel rather than the page. */
+.founding { max-width: 34rem; }
+.founding-lede { margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45; color: var(--muted); }
+.founding-foot { margin: 10px 0 0; font-size: 0.74rem; color: var(--muted); }
+.lab-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.lab-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.lab-pick:hover, .lab-pick:focus-visible { border-color: var(--accent); background: var(--well); }
+.lab-name { font-weight: 700; font-size: 0.95rem; color: var(--ink); }
+.lab-blurb { font-size: 0.76rem; color: var(--muted); font-style: italic; }
+.lab-kit { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.lab-row { font-size: 0.76rem; line-height: 1.35; display: flex; gap: 5px; align-items: baseline; }
+.lab-row b { color: var(--ink); }
+.lab-pitch { font-size: 0.76rem; color: var(--accent); margin-top: 3px; }
+
+/* R120 — the number on a spend chip's face. Its sentence is in the title,
+   which is invisible on a touch device, and this ships as a TWA. */
+.chip-num { margin-left: 5px; opacity: 0.75; font-variant-numeric: tabular-nums; }

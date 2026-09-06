@@ -38,6 +38,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 import { indexContent } from '../render/renderer.js';
+// R85: the list the game itself loads. On disk there is no second round,
+// so both halves arrive together.
+import { CONTENT_FILES } from '../data/loader.js';
 import { newGameState } from '../save/save.js';
 import { createAnimal } from '../ranch/ranch.js';
 import { spliceChimera } from '../splice/theater.js';
@@ -49,9 +52,6 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const HOUR = 3600000;
 const t0 = 1700000000000;
 
-const CONTENT_FILES = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions',
-  'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos',
-  'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout'];
 
 export function loadContent() {
   const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -154,6 +154,17 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     hurt.name = 'Patient';
     hurt.injury = { name: 'Bent Whiskers', until: now + 2 * HOUR };
     s.chimeras.push(hurt);
+    // R86 — a third, still settling, so the Pens draws a Hurry button and
+    // this walk presses it. (No running vat here on purpose: a vat in flight
+    // replaces the Pens' two donor pickers, and the picker fanout below
+    // would then walk an empty family. The vat's own button is measured by
+    // the a11y gate, which has no such rule.)
+    const settling = structuredClone(s.chimeras[0]);
+    settling.id = 'h-settling';
+    settling.name = 'Newcomer';
+    settling.settleUntil = now + 2 * HOUR;
+    settling.temperament = null;
+    s.chimeras.push(settling);
     s.chimeraCount = s.chimeras.length;
 
     // A vial, so the Resequencer has something to run.
@@ -169,6 +180,9 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       laidAt: t0, hatchAt: now - 1000, mutationNote: null,
       genotype: {}, potential: { hp: 3, power: 3, armor: 3, speed: 3, stamina: 3 },
       parents: { sire: lineage('Bullseye'), dam: lineage('Bessie') } }];
+    // R86 — and a second egg still incubating, so the Ranch draws its Hurry
+    // button beside the one that is ready to hatch.
+    s.ranch.eggs.push({ ...structuredClone(s.ranch.eggs[0]), id: 'h-egg-2', sex: 'M', hatchAt: now + HOUR });
 
     // The map, wide open: hold everything but the last node of the first
     // region (so exactly one is takeable), contest one, and take a prisoner.
@@ -181,6 +195,14 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       scheduledAt: t0, deadline: now + 3 * HOUR, gen: 1 }];
     s.campaign.captives = [{ id: 'h-cap', chimera: structuredClone(s.chimeras[0]),
       capturedAt: t0, deadline: now + 5 * HOUR, captor: null }];
+    // R87 — the Compliance Task Force at the gate, so the War Room paints its
+    // alert and this walk presses `data-raid`. Written the way the tick
+    // writes one rather than invented: the same fields, so a renamed field
+    // breaks the fixture instead of quietly exempting it.
+    s.campaign.notoriety = 9999;
+    s.campaign.nextRaidAt = t0;
+    s.campaign.raid = { id: 'raid-0', encounterId: 'military_response', scheduledAt: t0,
+      startedAt: t0, deadline: now + 4 * HOUR, escalation: 1.15 };
     s.dominionAt = t0;
     s.gauntletBeaten = [];
 
@@ -335,7 +357,18 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       takeSubtab: () => { const v = pending; pending = null; return v; },
     };
     let live;
-    if (surface.settings) {
+    if (surface.founding) {
+      // A save that has not been founded: no herd, no lab, no crate. Every
+      // other surface in this gate starts from a stocked ranch, so this is
+      // the only one that has to unmake the fixture to exist at all.
+      state.ranch.stock = [];
+      state.ranch.seeded = false;
+      state.starterLab = null;
+      state.inventory.parts = [];
+      const before = overlay.bound.length;
+      mod[surface.fn](overlay.host, ctx, () => {});
+      live = overlay.bound.slice(before);
+    } else if (surface.settings) {
       const before = overlay.bound.length;
       openSettings(overlay.host, ctx);
       live = overlay.bound.slice(before);
@@ -419,6 +452,13 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
 
   try {
     SURFACES.push({ name: 'settings', settings: true, file: 'save/settings-ui.js', fn: 'openSettings', path: [] });
+    // R119 — the founding choice. It renders into the shared overlay like
+    // the settings panel, but it is the one surface that cannot be reached
+    // from a normal fixture: the fixture has a herd, and a save with a herd
+    // has already been founded. So it gets a state with the herd taken back
+    // out — which is what a brand-new save actually is.
+    SURFACES.push({ name: 'founding', founding: true, file: 'ranch/founding-ui.js',
+      fn: 'renderFounding', path: [] });
     // The move sheet is behind a LONG PRESS, which is a `contextmenu` handler
     // sharing its selector with the tap handler — so the fanout walks both
     // and one of them opens the sheet into the overlay.

@@ -2,9 +2,7 @@
   "_doc": "Injury scarring (ROADMAP §3.5: 'untreated injuries can scar into permanent trait tradeoffs'). A battle injury opens an Infirmary timer; pay to treat it and it clears clean, ignore it and there is a chance it sets badly and stays. EVERY SCAR IS TWO-SIDED, which is the whole design: a scar is character, not a punishment, so missing a treatment window is interesting rather than ruinous — and some scars are net GOOD for a given build, which makes 'leave it and see' a real choice rather than a mistake. `vs` narrows an effect to opponents carrying one of those tags, which is what makes the roadmap's own example ('Chompers now fears jeeps: +Evasion vs. vehicles, −Accuracy vs. vehicles') expressible as data. Effects: acc is percentage points on the move roll; evasion is a fraction off the attacker's chance to connect; power and armor are fractions of damage dealt and taken; speed and regen are flat additions to the stat. Adding a scar is one object here and nothing else.",
   "tuning": {
     "scarChance": 0.34,
-    "maxScars": 3,
-    "treatBase": 25,
-    "treatPerHour": 18
+    "maxScars": 3
   },
   "scars": [
     {

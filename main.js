@@ -3,20 +3,24 @@
 // The M0 free-form dev slab retired in M3 — the Theater consumes real vault
 // tokens now; legacy `genome` data stays in old saves, unshown.
 
-import { loadContent } from './data/loader.js';
+import { loadContent, loadShapes } from './data/loader.js';
 import { loadSave, saveGame, SAVE_VERSION, FutureSaveError } from './save/save.js';
-import { openSettings, THEMES, BASE_THEME } from './save/settings-ui.js';
-import { ensureRanchSeeded, ensureDexVariants } from './ranch/ranch.js';
+import { THEMES, BASE_THEME } from './ui/theme.js';
+import { ensureRanchSeeded, ensureDexVariants, needsFounding } from './ranch/ranch.js';
 import { renderRanchScreen } from './ranch/ui.js';
 import { renderVaultScreen } from './splice/vault-ui.js';
 import { renderTheaterScreen } from './splice/theater-ui.js';
-import { renderPensScreen } from './splice/pens-ui.js';
 import { runExtraction } from './splice/extract-ui.js';
-import { pushNews } from './campaign/campaign.js';
+// R81 — from the module that actually defines it. `campaign/campaign.js:32`
+// is `export { pushNews }` — a bare re-export of this — so the shell used to
+// pull in the whole campaign module, and the director, the rehab wing and
+// the gauntlet behind it, for a five-line function that appends to an array.
+import { pushNews } from './campaign/wire.js';
 import { tickWorld } from './campaign/world.js';
 import * as sfx from './audio/sfx.js';
 import { watchSignals, cuesFor } from './audio/sfx.js';
 import { renderIcon } from './ui/icons.js';
+import { installFocusKeeper } from './ui/focus.js';
 
 // Dev time-warp: ?warp=48 pretends 48 hours have passed. QA-only — the
 // warp lives in the URL, never in the save, so removing it can produce a
@@ -48,6 +52,11 @@ const ctx = {
   get content() { return content; },
   now: NOW,
   save: () => saveGame(state),
+  // R86: a rush moves a clock to now, and it is the tick that decants the
+  // vat or empties the tank it just finished. Without this a rushed vat
+  // would read "0s to go" for up to thirty seconds, which is a button that
+  // looks broken for exactly as long as it takes to lose faith in it.
+  tick: () => tick(),
   refreshTicker: () => updateTicker(),
   pushNews: (line) => { pushNews(state, line); updateTicker(); },
   onExtract: (animalId) =>
@@ -136,7 +145,15 @@ function lazy(load, exportName) {
 
 const SCREENS = {
   ranch: (root) => renderRanchScreen(root, ctx),
-  pens: (root) => renderPensScreen(root, ctx),
+  // R120 — deferred on R74's own terms, and for its reason rather than for
+  // mine. The Pens are a TAB YOU PRESS: the first paint is the Ranch, and
+  // 30 KB of pen chrome sat in front of it for every player on every open.
+  // R74 moved the War Room, the arena and the Dex out for exactly this and
+  // stopped one screen short. What forced the question was R120's own bytes
+  // — twelve agenda hints that read the save are ~5 KB of real code, and the
+  // eager cap has been raised four milestones running. Raising it a fifth
+  // time to pay for a feature is how a cap stops meaning anything.
+  pens: lazy(() => import('./splice/pens-ui.js'), 'renderPensScreen'),
   vault: (root) => renderVaultScreen(root, ctx),
   theater: (root) => renderTheaterScreen(root, ctx),
   battle: lazy(() => import('./campaign/ui.js'), 'renderWarRoomScreen'),
@@ -256,6 +273,12 @@ function installDialogBehaviour(overlay) {
     if (overlay.hidden || pickerUp()) return;
     if (e.key === 'Escape') {
       e.preventDefault();
+      // R119 — a dialog can refuse to be dismissed, and exactly one does:
+      // the founding choice. There is no game behind it to return to — the
+      // ranch has no animals until a lab is picked — so an Escape that
+      // closed it would leave a player looking at an empty shell with no
+      // way back. Everything else in the game closes on Escape as before.
+      if (overlay.dataset.locked === 'true') return;
       overlay.hidden = true;
       overlay.innerHTML = '';
       return;
@@ -333,7 +356,35 @@ async function boot() {
     return;
   }
   applyTheme();
-  ensureRanchSeeded(state, content, NOW());
+  // R119 — the founding choice comes first. A save with no herd and no lab
+  // is not seeded here at all: it goes to the picker, and the picker seeds
+  // it. Only a brand-new save can be waiting; one that already has animals
+  // keeps every one of them.
+  // R119 — the dialog controller BEFORE the founding choice, not after it.
+  // It was installed further down, which meant the very first screen of the
+  // game — the only dialog a player cannot escape out of — was the one
+  // dialog with no focus trap, no accessible name and no focus restore.
+  // Measured in a real browser: `aria-label` came back null on it.
+  //
+  // R71: one door for sound, theme, save file and lab (save slot)
+  // management — see save/settings-ui.js for all four.
+  installDialogBehaviour($('#overlay'));
+
+  if (needsFounding(state, content)) {
+    const { renderFounding } = await import('./ranch/founding-ui.js');
+    renderFounding($('#overlay'), ctx, () => {
+      // `foundLab` has already seeded the herd, so the screen has something
+      // to paint. Saved here so a player who closes the tab straight after
+      // choosing still owns their laboratory.
+      ensureDexVariants(state, content);
+      saveGame(state);
+      showScreen('ranch');
+    });
+  } else {
+    // …and NOT while the picker is up, or the waiting player is handed the
+    // fallback lab's animals behind the dialog asking them to choose one.
+    ensureRanchSeeded(state, content, NOW());
+  }
   ensureDexVariants(state, content);
   // The first tick (showScreen below runs one) settles the whole absence —
   // condition, upkeep, income and contests — from the one clock. A separate
@@ -344,7 +395,36 @@ async function boot() {
   document.querySelectorAll('#tabs button').forEach((btn) => {
     btn.addEventListener('click', () => showScreen(btn.dataset.screen));
   });
+  // R80 — one observer per screen, so no repaint can drop a keyboard user
+  // at the top of the document. Installed before the first paint so the
+  // 30-second tick below is covered from the very first one.
+  //
+  // The overlay is in the list for the second half of R80's report: R73's
+  // dialog controller re-focuses the FIRST control in a re-rendered panel,
+  // because a detached activeElement reads as `<body>` and its guard sees
+  // nothing inside the dialog. So tapping "Download my save" moved focus to
+  // the sound toggle and announced it, saying nothing about the export. The
+  // keeper's observer is registered first and restores by key, so by the
+  // time the dialog controller looks, focus is already back where the
+  // player left it and its guard correctly does nothing.
+  installFocusKeeper([...Object.keys(SCREENS).map((s) => $(`#screen-${s}`)), $('#overlay')].filter(Boolean));
   showScreen(state.activeScreen);
+
+  // R81 — the geometry, now that there is something on screen. 400 KB of
+  // `shapes` used to sit in front of the first paint; it is fetched here
+  // instead, after it, and one repaint puts the creatures in. Deliberately
+  // not awaited: everything above this line is what the game IS, and a slow
+  // or failed geometry fetch must not hold up a shell that works without it.
+  //
+  // After the PAINT, not merely after the render call: a fetch issued in the
+  // same synchronous block as `showScreen` is still a fetch the browser has
+  // to start before it can put anything on the glass. One frame, then a
+  // macrotask, is the idiom for "the player is looking at the game now".
+  requestAnimationFrame(() => setTimeout(() => {
+    loadShapes(content).then((ok) => {
+      if (ok) tick();
+    });
+  }, 0));
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) tick();
@@ -357,15 +437,19 @@ async function boot() {
   sfx.setMuted(state.settings.muted);
   document.addEventListener('pointerdown', () => sfx.initAudio(), { once: true });
 
-  // R71: one door for sound, theme, save file and lab (save slot)
-  // management — see save/settings-ui.js for all four. The footer used to
-  // carry a mute button and a save-file button side by side; a slot picker
-  // would have made a third.
-  installDialogBehaviour($('#overlay'));
-
   const settingsBtn = $('#settings');
   settingsBtn.innerHTML = renderIcon('settings');
-  settingsBtn.addEventListener('click', () => openSettings($('#overlay'), ctx));
+  // R81 — imported when the gear is pressed, not when the game starts. This
+  // is a modal behind one click handler, and it was 16 KB of the boot: sound,
+  // theme, five save slots, import, export and a new-run confirmation, none
+  // of which a player has asked for yet. `await` inside the handler is safe
+  // because the module is a static file the service worker has already
+  // precached — and on the very first press, before that, a frame's wait to
+  // open a settings panel is not a wait anybody notices.
+  settingsBtn.addEventListener('click', async () => {
+    const { openSettings } = await import('./save/settings-ui.js');
+    openSettings($('#overlay'), ctx);
+  });
 
   // PWA: offline shell. Registration failure is never a problem worth
   // showing anyone.

@@ -18,23 +18,15 @@ import {
 import { renderIcon } from '../ui/icons.js';
 import { openPicker, openPrompt, toggleRow } from '../ui/picker.js';
 import * as sfx from '../audio/sfx.js';
+import { announce } from '../ui/live.js';
+// R81 — the theme list moved to ui/theme.js so the shell can read it on boot
+// without importing this whole panel: main.js needs to know which
+// [data-theme] to stamp before anything paints, and needed a 16 KB modal to
+// find out. Re-exported so nothing else has to learn that it moved.
+import { THEMES, BASE_THEME, themeName } from '../ui/theme.js';
 
-// The five colour schemes style.css ships. BASE_THEME is a sentinel, not a
-// `[data-theme]` selector — biohazard IS the bare `:root`, so "picked
-// biohazard" and "picked nothing" have to resolve to the same no-attribute
-// state, which is what applyTheme() (main.js) does with this list.
-export const BASE_THEME = 'biohazard';
-export const THEMES = [
-  { id: 'biohazard', name: 'Biohazard' },
-  { id: 'lab', name: 'Lab Standard' },
-  { id: 'vivarium', name: 'Vivarium' },
-  { id: 'blueprint', name: 'Blueprint' },
-  { id: 'saturday', name: 'Saturday Morning' },
-];
+export { THEMES, BASE_THEME };
 
-function themeName(id) {
-  return THEMES.find((t) => t.id === id)?.name ?? THEMES[0].name;
-}
 
 function fmtAgo(ts, now) {
   if (!ts) return null;
@@ -80,7 +72,7 @@ export function openSettings(overlay, ctx) {
   // prompt, which needs the same fallback label render() shows rather than
   // opening blank.
   const summaryFor = (slot, reg, now) => (slot.id === reg.activeId
-    ? { ...runSummary(state, now), lab: state.profile?.lab ?? null }
+    ? { ...runSummary(state, now), lab: state.profile?.lab ?? null, foundedIn: state.starterLab ?? null }
     : slotSummary(slot.id, storage, now));
   const slotLabel = (slot, summary) => slot.name ?? summary.lab ?? `Lab ${slot.id}`;
 
@@ -88,6 +80,12 @@ export function openSettings(overlay, ctx) {
   // has to survive being appended to a DOM the very next line replaces.
   // `note`-then-`render` was tried first and lost every message it showed.
   const render = (msg) => {
+    // R80 — this panel's whole conversation with the player is one line of
+    // text that appears in a full re-render, so a screen reader was told
+    // nothing at all: not that the save downloaded, not that the import
+    // failed, not why. The line still renders where it always did; it is
+    // also spoken.
+    announce(msg);
     const reg = loadSlotRegistry(storage);
     const now = ctx.now();
     const slotRows = reg.slots
@@ -102,12 +100,17 @@ export function openSettings(overlay, ctx) {
           : summary.empty
           ? 'Empty — not started yet.'
           : `${summary.chimeras} chimera${summary.chimeras === 1 ? '' : 's'} · ${summary.animals} animal${summary.animals === 1 ? '' : 's'} · ${summary.days} day${summary.days === 1 ? '' : 's'}`;
+        // Which of R119's five it was founded in, named from the content
+        // rather than from the id, so a sixth lab needs no edit here.
+        const founded = summary.foundedIn
+          ? (ctx.content?.starterLabs ?? []).find((l) => l.id === summary.foundedIn)?.name ?? null
+          : null;
         const played = active ? 'playing now' : fmtAgo(slot.lastPlayedAt, now);
         return `
           <li class="slot-row ${active ? 'is-active' : ''}" data-slot="${slot.id}">
             <div class="slot-info">
               <strong>${label}</strong>${active ? ' <span class="slot-badge">ACTIVE</span>' : ''}
-              <span class="fine-print">${detail}${played ? ` · ${played}` : ''}</span>
+              <span class="fine-print">${founded ? `${founded} · ` : ''}${detail}${played ? ` · ${played}` : ''}</span>
             </div>
             <div class="slot-actions">
               ${active ? '' : `<button type="button" class="care-train" data-switch-slot="${slot.id}">Switch</button>`}

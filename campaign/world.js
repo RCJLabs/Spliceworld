@@ -21,6 +21,9 @@ import { ensureTemperaments } from '../splice/temperament.js';
 import { tickScars } from '../splice/scars.js';
 import { tickCampaign } from './campaign.js';
 import { tickBreakouts } from './breakout.js';
+import { tickFeral } from '../splice/feral.js';
+import { impound } from './rehab.js';
+import { tickTaskforce } from './taskforce.js';
 import { pushNews, emitNews } from './wire.js';
 
 export function elapsedSince(state, now) {
@@ -45,5 +48,16 @@ export function tickWorld(state, content, now) {
   for (const e of tickBreakouts(state, content, now, since).escaped) {
     emitNews(state, content, 'specimen_loose', { lab: e.lab, sighting: e.sighting });
   }
+  // R85 — the top of the instability scale, after the scars and before the
+  // clock is stamped, because whether a creature is agitated depends on
+  // everything above it having already happened this tick.
+  const feral = tickFeral(state, content, now);
+  for (const line of feral.news) pushNews(state, line);
+  for (const chimera of feral.gone) impound(state, chimera, content, now);
+  // R87 — the Task Force last, and after the campaign tick above, because
+  // whether they are in range depends on the notoriety that tick just paid
+  // out and on whether the county fell during it. It also caps notoriety,
+  // so this is the one place that clamp lives.
+  for (const line of tickTaskforce(state, content, now).news) pushNews(state, line);
   state.lastTickAt = now;
 }

@@ -1,0 +1,14 @@
+{
+  "_doc": "R85: what happens at the top of the instability scale (ROADMAP §3.4). Designed since M0 and unshipped until now: instability cost settling time, obedience and upkeep, and nothing at 100. It does now, in two stages, because one stage would have punished the game's own premise. A six-species chimera — the bear-headed, eagle-winged goat this whole game exists to let you build — scores 90 instability and starts at bond 0, so any snapshot trigger would send every interesting creature straight to Containment the moment it was spliced. So the trigger is NEGLECT, not anatomy: an unstable creature nobody has worked with for `neglectHours` becomes AGITATED, which is visible and carries a deadline; attend to it and it settles; miss `windowHours` and it goes Feral to a Containment bay, where R8's Reorientation Wing — shipped and idle for exactly this since — brings it back. It comes back AS ITSELF: same id, same tokens, same xp, same moveset, same scars. Zero death language: it has not gone anywhere, it is just no longer taking your calls.",
+  "tuning": {
+    "instabilityAt": 100,
+    "bondFloor": 40,
+    "neglectHours": 72,
+    "windowHours": 24
+  },
+  "lines": {
+    "agitated": "{creature} has stopped sleeping and started pacing. The night staff would like this noted.",
+    "settled": "{creature} has been talked round. The night staff withdraw their note.",
+    "feral": "{creature} has gone feral and shown itself to the containment wing. It is unharmed, uninterested in you, and extremely large."
+  }
+}

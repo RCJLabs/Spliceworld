@@ -8,10 +8,12 @@ import { pushNews, emitNews, newsFor } from './wire.js';
 import { recordGauntletWin, gauntletComplete } from './gauntlet.js';
 import { gradeOf } from '../splice/extract.js';
 import { infirmaryGrants } from '../splice/facility.js';
-import { finishBattle, applyInjury } from '../battle/engine.js';
+import { applyInjury, finishBattle } from '../battle/statblock.js';
+import { attend } from '../splice/feral.js';
 import { recordRivalResult, scoutStable } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay } from './rehab.js';
+import { resolveRaid, capNotoriety } from './taskforce.js';
 import { tickContests, resolveContest, isContested } from './contest.js';
 import { resolveBreakout } from './breakout.js';
 import { playerLine, rivalLine } from './monologue.js';
@@ -418,6 +420,7 @@ export function resolveBattle(state, battle, content, now) {
       const rng = rngStream(state.seed, 'rescue', state.warRecord.wins);
       applyInjury(chimera, { name: 'Dramatic Rescue Whiplash', until: now + Math.round((1 + rng()) * HOUR) });
       chimera.bond = Math.min(100, chimera.bond + 10); // "you came back for me!"
+      attend(chimera, now); // R85: you went and got it
       state.chimeras.push(chimera);
       detail.freed = chimera.name;
       emitNews(state, content, 'rescued', { creature: chimera.name });
@@ -498,6 +501,17 @@ export function resolveBattle(state, battle, content, now) {
   // A counter-offensive fought to a conclusion. Holding the line has to
   // expand what you can CREATE rather than just what you own (Law 2), so
   // the wreckage goes to Containment: enemy tech, salvage, new parts.
+  // R87 — the Compliance Task Force. Before the node defence below, because
+  // a raid has no node and would otherwise fall through every branch here
+  // and resolve as nothing at all.
+  if (context.kind === 'raid' && context.raidId) {
+    const res = resolveRaid(state, content, context.raidId, result.outcome, now);
+    if (res) {
+      for (const line of res.news ?? []) pushNews(state, line);
+      detail.raid = res;
+    }
+  }
+
   if (context.kind === 'defend' && context.nodeId) {
     const node = nodeById(content, context.nodeId);
     const { news, held } = resolveContest(state, content, context.nodeId, result.outcome, now);
@@ -589,6 +603,13 @@ export function resolveBattle(state, battle, content, now) {
       emitNews(state, content, 'last_stand', { creature: only.name });
     }
   }
+
+  // R87 — the ceiling, here as well as in the tick. A conquest writes
+  // notoriety and the War Room re-renders straight afterwards WITHOUT a
+  // tick, so the tick alone left a window in which the player could read a
+  // number above the cap. Measured: a 45-day walk reported 690 against a
+  // ceiling of 600. Same function, both call sites.
+  capNotoriety(state, content);
 
   return detail;
 }

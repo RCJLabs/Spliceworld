@@ -1,5 +1,1378 @@
 # PROGRESS
 
+## Session 115 — R120: The sitting, not the session ✅
+
+**Acceptance criterion (re-derived — all three of my original clauses were
+wrong):** the walk records every action rather than only its fights; the
+ranch loop runs end to end so `breed` and `hatch` both appear; and every
+agenda row reads the save. **All three.**
+
+### Three findings, and I got all three wrong in my own favour
+
+- **"The Gauntlet is shipped content a 90-day campaign never surfaces."**
+  False. `campaignWalk` breaks at the END of the iteration that sets
+  `dominionAt` and my sampler ran at the START of one, so the state after
+  dominion was never read. Re-run without the early break: **dominion lands
+  day 33.3, the Gauntlet is offered the same day**, and the walker fights all
+  four exhibitions. A criterion clause built on it would have passed the day
+  it was written — R106's lesson, paid again.
+- **"`hatch` never fires."** True, but not because a row was hidden: **the
+  walker never laid an egg**, 0 across 1,081 opens, because `walkAct` had no
+  breed branch at all. The whole of M6 — pairing, incubation, inheritance,
+  the variant ladder R6 built on it — was unexercised.
+- **"Day one offers 3 productive rows."** That counts HEADINGS. Counted in
+  things a player can press it offers **18**: twelve care actions, one grown
+  donor, three jobs that launch with no crew, two affordable catalog entries.
+  Day one is not short of things to do; the screen was short of saying so.
+
+### What shipped
+
+`state.__walkLog` was written in one place — the `fight` helper — so 90 days
+of it held **502 entries, every one a battle**. Every branch reports through
+one `did()` helper now: **22 verbs, 49,214 actions**. The walker breeds and
+hatches (**breed 672, hatch 671**). And R48's rule — *"a hint's whole value
+is a NUMBER"* — finally applies to all nineteen rows instead of the seven
+that happened to need it:
+
+| before | after |
+|---|---|
+| A grown animal becomes six parts. | Pearl the Bear is grown — six parts. |
+| Condition decides the grade… | 12 things to do for 3 animals. |
+| Money and livestock without winning a fight. | 3 you can run right now, the best worth up to $460. |
+
+The `spend` rows render as chips with their hint in a `title`, which is
+invisible on a touch device and this ships as a TWA — so each carries a short
+number on its face: *Order from the catalog · 2 from $60*.
+
+### Two regressions of my own, both caught by gates
+
+- **The ranch became a warehouse.** Eggs cost nothing but time, so an
+  uncapped walker bred 13 animals into **41**; the upkeep ate the cash that
+  paid for rushes and R86's assertion went **10 rushes → 0**. Capped one
+  above the walker's own pre-R120 equilibrium.
+- **The job row lied.** Counting lanes, it told a day-one player they could
+  run **seven** where **three** launch. `runnableOps` answers it once now for
+  both the row and its hint, deferring to the same `opOdds` the launch
+  consults. Verified against `startOperation` on a cloned save.
+
+### The eager cap came down instead of up
+
+Twelve hints that read the save are ~5 KB, which would have been the **fifth
+consecutive raise**. A cap that moves whenever a feature wants it is not a
+cap. So the Pens screen was deferred on R74's own terms — it is a tab you
+press, the first paint is the Ranch, and R74 stopped one screen short:
+
+**52 modules / 594 KB → 48 / 560**, both caps lowered to match. The first
+paint is smaller than before this milestone started, which discharges most of
+R121 as a side effect.
+
+### Next session's first task
+
+**R88 — the battle screen charges full price for free fights**, the task
+R103 left, or **R121** if the first-paint rule is worth writing down properly
+now that the graph is 34 KB lighter.
+
+## Session 114 — R119: The first splice has a decision in it ✅
+
+**Acceptance criterion:** a fresh save cannot reach the Theater without
+choosing one of at least five founding labs; the first splice offers two or
+more species under every one; two choices produce measurably different first
+chimeras; and A1's wall still reads 0% under every lab — **all four, and the
+wall reads 0% under all five.** `SAVE_VERSION` **42 → 43** (`starterLab`);
+`sw.js` bumped to `spliceworld-v43-r119`.
+
+### The finding
+
+Measured on a fresh save before anything was written: the starter herd was a
+literal `['goat', 'goat', 'bear']` with the goats newborn, so the only animal
+that could be graduated on day one was the bear — and a graduation yields
+**six parts from one species**. The distinct species available to splice from
+was **one**, which means the Surgery Theater, the system this game is named
+for, opened with exactly one creature anybody could build. Every player's
+first "chimera" was the same purebred bear. M0's own done-when is *"a
+bear-headed, eagle-winged goat renders and persists"*, and nothing on day one
+could produce one.
+
+### The five, measured against the second node (24 seeds each)
+
+| lab | herd | 1 body | 3 bodies |
+|---|---|---|---|
+| The Bramble Barn | bear + goats + eagle limbs | 0% | 96% |
+| The Wetwing Annexe | heron + geese + mantis limbs | 0% | 96% |
+| The Nightshift Loft | bat + rams + tiger limbs | 0% | 92% |
+| The Slab | tortoise + porcupines + crocodile limbs | 0% | 100% |
+| The Kennel | wolf + frogs + rhino limbs | 0% | 100% |
+
+Three animals, one grown, all Standard, under every lab — the counts A1's
+wall and R106's arithmetic were measured against. The choice changes *which*
+creature, never *how much*.
+
+### Four passes, and guessing was wrong three times
+
+- The first authored set read **96/29/4/100/63** with three bodies. Under the
+  Nightshift Loft a new player following the Path would have walked into a
+  fight they win **4%** of the time — the exact failure R106 exists to
+  remove.
+- "The donor is too weak" was **wrong**: with the crate held constant every
+  donor lands within **23–28 power**. It is the crate's parts that decide,
+  spanning **19–37**.
+- Rebalancing by hand overshot the other way — a tiger crate took one body to
+  **46%**, breaking the wall from above.
+- The last pass **searched** the space: every crate species against every
+  lab, scored on both numbers. That is also how the owl was found
+  unsalvageable as a donor — no crate in the roster brings it to the bar —
+  and replaced by the bat.
+
+### Three bugs the gate found, all mine
+
+- **The crate could be spliced alone.** A head is mandatory, and the first
+  crate held one, so a brand-new player could build a two-part creature out
+  of the crate on their very first open and burn the whole reason it exists.
+  Measured: ALLOWED, and the day-one agenda offered "Splice a chimera" to
+  invite it. The crate is limbs now — which preserves A4's sequence
+  (graduate, THEN splice) and improved both numbers: the wall went 0–4% → 0%
+  everywhere, the worst three-body reading 88% → 92%.
+- **The agenda pointed at a splice the Theater refuses.** `ready` was "there
+  are parts in the vault"; it reads for a **head** now.
+- **The first screen of the game had no accessible name.** The dialog
+  controller was installed *after* the founding render, so the one dialog a
+  player cannot escape out of had no focus trap, no focus restore and no
+  accessible name — `aria-label` measured null in a real browser.
+
+Plus a gate bug: smoke's dead-export scan matched `\{([^}]*)\}` on dynamic
+imports, so `const { x } = await import(...)` inside an `if (...) {` block
+captured `"const { renderFounding"` and registered no name. A **false
+negative** in a dead-export gate, invisible for as long as every such export
+also had a static importer elsewhere.
+
+### Known issues
+
+Two budgets moved, both argued in the gates rather than nudged: the eager KB
+cap 590 → 595 (measured 594.1) and the first-paint budget 1100 → 1106 KB
+(measured 1102, on a fresh save where the founding screen *is* the first
+paint). Both were trimmed against first. It is the fourth consecutive raise,
+so **R121 — what should the first paint carry?** is queued rather than
+deferred again; `save/save.js` is 46 KB of the 594 and most of it is
+migrations for versions no live save is on.
+
+### Next session's first task
+
+**R120 — the sitting, not the session.** Measured this session: the mid-game
+is not thin (11 rows, 8 productive on an average open after week one), but
+day one offers 5 rows of which 3 are productive, and `gauntlet` never fired
+once in 1,453 sampled opens across three 90-day walks.
+
+## Session 113 — R103: Decisions that matter ✅
+
+**Acceptance criterion (re-derived — see below):** measured across the LIVE
+briefing bands, the full-skill pilot beats "first button" by ≥15 points and
+mashing by ≥25 at every grade, and the forecast's own pilot does not fall —
+**passes at all three grades, and the forecast pilot rose at every one.**
+`SAVE_VERSION` **41 → 42** (`battle.intent`); `sw.js` bumped to
+`spliceworld-v42-r103`.
+
+| grade | vs first button | vs mashing | forecast pilot |
+|---|---|---|---|
+| standard | 12.5 → **16.2pp** | 38.3 → **45.5pp** | 48 → **50%** |
+| prime | 10.0 → **22.9pp** | 35.0 → **50.4pp** | 43 → **52%** |
+| apex | 12.8 → **30.0pp** | 37.6 → **55.6pp** | 43 → **60%** |
+
+All against the pre-R103 engine on the same fixture (mixed-class teams, 8
+seeds). Difficulty elsewhere is unmoved: the Spire finale's best mono-build
+reads **71/75/63%** against a baseline of 71/71/63, and A1's wall — one
+chimera against the second node — stays at **0%**.
+
+### The entry's premise was wrong, and bucketing showed it
+
+The audit said the outcome is identical under all six pilots in 82% of fights
+and concluded the arena was shallow. Bucketed by the briefing's **own**
+verdict, that number is an artifact of the fixture: **72–81% of the grid's
+pairings are called walkover or not-survivable before a move is pressed**, and
+across the live bands the arena **already** rewarded play by 12.5pp over the
+first button and 38pp over mashing. "Catch Breath is a nine-point trap" was
+wrong too — removing rest from a random pilot recovers only 2.6 of its ~10
+points; most of the gap is bad *move* choice.
+
+So the missing thing was never depth. It was **something to play against**.
+
+### What shipped
+
+The opposition commits at the **top** of the turn — seeded, stored on the
+battle, and shown above the command bar. **Brace** costs 25% stamina and takes
+45% off the blow it was warned about: only against a real telegraph, only when
+the creature could have attacked instead, and never twice in a row. A
+**counter-class switch-in** lands a free hit, reading the same class triangle
+every other hit reads. Tuning in `data/stance.json`, a field guide keyed on
+having *fought* (not won), and an `--agency` table in `sim` so the number is
+watched from now on.
+
+### Four things I got wrong, all found by measuring
+
+- **The pilot never saw the telegraph.** It read `battle.intent` after `step`
+  had consumed and cleared it — null on all **4,757** decision turns — so both
+  new reads were dead while the code around them looked right. This is why the
+  first three edits produced byte-identical tables.
+- **The fixture couldn't reach the new code.** The agency table fielded three
+  **clones** of one build, so a counter-class switch could never once fire in
+  the thing built to measure it. (Fourth milestone running.)
+- **A free brace paid the wrong people.** A pilot rests mostly when it is
+  *starving* — precisely when no decision is made — so free mitigation landed
+  there, and the Spire finale went to **88–92%**. Lowering the absorb did not
+  fix it (79–83% at 0.2). **Pricing** it in stamina did, completely.
+- **The pilot didn't price what it spent.** Scoring the brace as free made the
+  priced brace worth **9.1pp — worse than having no brace at all** (14.1).
+
+### Found here, but not caused here
+
+The gene probe cannot resolve `venom_gland`. Re-salted on the **unchanged**
+engine it reads **1.81× the noise floor on one salt and 0.50× on another**, so
+the 1.5× bar was never robust for that gene and the derivation written beside
+it was taken on the two salts that happened to land well. Every other gene
+reads 5.2–75× on every salt, before and after. Exempted by name with its
+evidence, guarded so the exemption stays at exactly one gene, and queued as
+**R118**. `GENE_FAMILIES` now lets anyone re-salt the probe — it is what proved
+all of the above.
+
+### Assertions re-derived (each with its reason)
+
+- **R23** (hides and organs change a fight): 25pp → 15pp. Bracing is a
+  tactical floor every creature has, so a build stripped of its actives went
+  70% → 83%. R23's claim survives — anatomy is still worth 17 points on top.
+- **M5 rescue**: pinned to seed 42, so it read as a balance regression the day
+  the RNG order changed. Now five seeds, majority must win.
+- **Onboarding walk**: the new guide lights at the first fought battle.
+
+### Four things it got wrong about itself, and three gate rules that could not fail
+
+Reading the shipped code for the browser QA turned up four things this
+milestone had got wrong about itself, and the battery turned up three more
+in the gate meant to be holding it.
+
+- **The Brace button lied twice.** It promised *"and get stamina back"* from
+  a brace that *spends* 25% of maximum, and quoted a flat 45% where a Fierce
+  creature's guard absorbs less. The tooltip and the resolution were two
+  descriptions of one rule.
+- **`stance.json` shipped a `lines` block nobody read.** `renderer.js`
+  indexed it; the engine spoke literals that disagreed with it. The
+  counter-switch's line had sat there unused since the day it was written —
+  which is *why* break 93 was missed: the gate scanned the log for a
+  sentence the engine never spoke.
+- **The `_doc` claimed a symmetry the code deliberately refuses.** It said
+  the opposition braces when it breathes too; `restCombatant` carries the
+  measurement for why it must not (both sides braced → the forecast pilot
+  fell six points and the spread compressed from 15.8pp to 11.5).
+- **The pilot kept its own stance table and its own brace predicate** — the
+  drift break 94 exists to catch, one file over from the gate, and a
+  predicate one condition short of the engine's.
+
+One fix for all four: `bracePreview`, `braceTitle` and `stanceLine` exported
+from the engine, with `step`, the arena and the pilot asking rather than
+re-deriving (R61). On a Fierce chimera the button now reads *"Take 36% off
+Baton Bonk — costs 15 stamina"* and the log reads *"guard absorbs 36% of the
+blow."* It **cost 2.9pp at standard** — the phantom brace had been
+flattering the number — and the obvious remedy (pricing a non-bracing rest
+at the stamina it buys) measured **+0.3 / −0.1 / −0.5**, a wash, so it is
+not in the build.
+
+Then the gate itself:
+
+- **Rule 0 compared the file with itself.** `stanceTuning(content)` spreads
+  `content.stanceMeta` *over* the defaults, and `stanceMeta` **is** the
+  shipped tuning. It could not disagree. The same vacuous assertion had been
+  copied into `smoke.js`.
+- **Rule 4 scanned for a sentence nothing spoke**, matching nothing on the
+  pristine tree and nothing on the broken one.
+- **Rule 5 counted braces and switches** — but a pilot blind to the intent
+  still switches, and still rests when starving, so the count never reached
+  zero. It now asks the same turn twice, once against the real telegraph and
+  once against a foe catching its breath, with identical rolls.
+
+And then the battery came back **98 of 98 caught with the STANCE gate
+FAILING on the baseline** — six breaks caught for free. A backslash-quote
+inside the gate's template literal collapsed to a bare quote, so the script
+handed to `node -e` would not parse; and I had "verified" that gate by
+extracting the literal and hand-unescaping backticks and dollars but not
+that one. **A verifier that does not reproduce the transport is not a
+verifier.**
+
+R72's rule caught the next one: the STANCE fixture hand-kept the class list,
+and smoke's scan failed the build. Both fixtures read `content.classes` now
+— and so does the copy in `smoke.js`, which is exempt from that scan, and is
+exactly why the battery's copy sat unnoticed.
+
+And with a baseline that finally passed, break 95 was still missed — by the
+probe again. It called `intentOf` *before* asking the pilot anything, and
+`intentOf` **writes** the intent onto the battle when there is none. The
+probe was planting the very state it was testing for, so the blind pilot
+found it freshly placed and answered like a sighted one. It asks first now
+and reads the field afterwards.
+
+**Three times this milestone the gate was the thing that was wrong**: the
+predicate hand-copied from `fit` in R106, the three rules that could not
+fail, and a probe that supplies the state it checks for. The rule held every
+time — build the gate first, then prove it fails.
+
+**Final:** 98 breaks, 98 caught, 0 missed, with all seventeen gates passing
+on the pristine tree.
+
+### Known issues
+
+The telegraph costs the height-locked arena 38px, taken back from the stage's
+`min-height` at 640px — the creatures are smaller on the shortest phone.
+Nothing is cut off (the a11y gate proves it) but it is the tightest the arena
+has been.
+
+### Next session's first task
+
+**R88 — the battle screen charges full price for free fights.** It is the
+other half of this milestone's finding: R103 made the live fights worth
+flying, and R88 removes the ones that never needed a pilot.
+
+## Session 112 — R106: The first hour points at a fight nobody can win ✅
+
+**Acceptance criterion (re-derived — see below):** on a fresh save with one
+settled chimera the agenda's assault row states the true wave count and the
+true fieldable team instead of its reward line; over ten days of walking it is
+never silent while outnumbered and never cries wall when it is not; and the
+Path's sixth step quotes the same grade the Ranch card would print for the
+same animal — **passes on all four**. No save-schema change, so `SAVE_VERSION`
+stays **41** and there is no migration.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ **new** — the wall, the row, the numbers, the Path |
+| `npm run battery` | ✓ — **89 breaks, 89 caught**, a sixteenth gate, 5 new |
+| `npm run scopecheck` · `roadmap` · `handlers` · `a11y` · `boot` · `sim` | ✓ |
+| browser QA, 380px | ✓ — both sentences paint, row box 326×81, 0 overflow, 0 console errors |
+
+### My own entry was wrong three times, and its criterion was already true
+
+Measured before a line was written.
+
+| the entry said | measured |
+|---|---|
+| the opening waits **5h** on the goats growing up | ✗ a juvenile and an adult goat both grade **Standard** at condition 60; growth pays nothing until Prime at 14h. The lever at 5h is **care** (86 → the Apex ceiling) |
+| — | `extractAnimal` has **no age guard**: the starters can be graduated at minute 0 |
+| *Done when:* three chimeras **within 90 minutes** | ✗ already true — graduate all three at minute 0, splice, **settled at minute 23** |
+| the Path completes at **5.75–25h** | ✗ that is the **walker's** opening: `walkAct` refuses juveniles and refuses to drop below two animals. The yardstick plays a different opening from the one the Path teaches — R92's, left there |
+| the agenda offers an assault A1 measured at **0%** | ✓ `downtown` fields **three**: **0%** with one settled chimera, **100%** with three |
+
+That is the **third** of my own acceptance criteria to pass on the shipped
+game before its milestone began (R84's grade promise, R87's funds ratio, now
+this). The pattern is consistent enough to be a rule: an audit criterion
+written from a reading is a hypothesis, and the first job of the milestone is
+to try to kill it.
+
+### What was actually wrong: one row, for nine days
+
+The agenda is the one place that claims to know what you can do right now, and
+it offered *"Take a node"* under **the same reward line it uses at every other
+moment in the game** while the player was outnumbered three to one. Measured
+across three seeds at half-hour resolution: offered outnumbered on **days 0–9
+and never afterwards** — 1.4–2.3% of all offers, worst ratio 3.0:1. Not a
+balance problem, not a mid-game problem: the opening walking a new player into
+the one wall A1 designed the Path around, in the voice of a hint about how
+well it pays.
+
+**The row is not removed.** `battle/forecast.js` settles that out loud — a
+forecast is not a gate, and *"a player who wants to throw one goat at a police
+cruiser is entitled to"*. So the row stays and the hint tells the truth:
+
+> Downtown Greenfield fields 3; you can field 1. One active per side, so that
+> is 3 health bars against 1 — 2 more bodies first.
+
+**Bodies, not a forecast.** Measured: the check costs **0.016 ms**, the whole
+agenda **0.060 ms**, a `forecast()` **4.3 ms** — 267× the check and 72× the
+entire screen, on something rebuilt on every render and every step of the
+walk. The wave count reads through `enemyOf` (R79's catalogue) rather than
+`liveWaves`, which is the same predicate for static waves but lives in
+`battle/engine.js` — and R81 put the engine behind the thing that needs it.
+
+### The Path's sixth step resolves its own contradiction
+
+It sends the player to graduate two animals whose Ranch card simultaneously
+reads *"Apex once Biscuit is fully grown (14h) and at condition 86+."* Both
+sentences are true; a new player has no way to know which one this hour wants.
+The step now reads:
+
+> …Graduate Biscuit and Juniper (Standard today) and splice them: three bodies
+> is what the next node asks for, not better ones — raise those in the batch
+> after. (Restock the pens after: a goat is $60.)
+
+The grade comes from the same `gradeFor` the card prints, so the two can never
+quote different grades for the same animal; and when the two animals differ it
+names each rather than averaging them into one word.
+
+### Two gate bugs, both mine, both the same shape
+
+- **The gate hand-copied a predicate.** My walk assertion counted the team as
+  "uninjured **and settled**" and reported two false failures out of 72,
+  because a settling chimera *can* be fielded — it fights with Rejection.
+  R61's rule; the gate was the wrong half, and now reads `fitToFight`.
+- **A numeric assertion that any number could satisfy.** Break 88 (drop the
+  `enemyOf` filter) went **MISSED** twice. First because the shipped waves are
+  all live, so the fixture could not reach R79's case at all — the recurring
+  lesson, a gate can be general while its fixture cannot reach the new code.
+  Then, after removing a unit, because the broken build reads *"3 health bars
+  against 1 — **2** more bodies first"* and the shortfall supplied the 2 I was
+  checking for. It now compares the **leading** count against the same
+  sentence on the full roster.
+
+### Deliberately not built
+
+Two thirds of the proposal, both because the measurement removed the premise
+— not for time. The starter goats were **not** back-dated (growth is not the
+wall), and no Path step carries a **countdown** (the wait it was meant to
+explain is not a real one, and the Ranch card already carries each animal's
+clock and its outlook). The **walker progress stall** belongs to **R92**,
+whose Done-when already covers the walker's policy gaps.
+
+### Known issues
+
+None new. `assaultWall` reads the front node only, which is the node the
+assault row sends you to; a player who opens the War Room and picks a
+different available node gets the briefing's own forecast, as before.
+
+### Next session's first task
+
+**R103 — Decisions that matter** (the user has already named it). It is the
+game's core loop and the audit's most important number: the outcome is
+identical under all six pilots in 72–82% of fights. Measure first — the agency
+probe is described in §9.6 and rebuilds from `sampleBuilds` + the shipped
+engine.
+
+## Session 111 — Sixth audit: fifteen phases (R103–R117) ✅
+
+**Acceptance criterion:** a full audit of the shipped game with fifteen
+evidence-backed phases, medium to large, none overlapping R88–R102 — **ROADMAP
+§9.6**. No game code changed; nothing to migrate. Every gate was green at the
+start of the session (see Session 110's table, re-run at the top of this one)
+and `npm run roadmap` is green with the new section in.
+
+| gate | result |
+|---|---|
+| `npm run roadmap` | ✓ — 25 stated numbers, every named mechanic exists or is queued (re-run after §9.6 landed) |
+| `npm run smoke` · `battery` · `scopecheck` · `a11y` · `boot` · `sim` · `handlers` | ✓ — unchanged; no code touched this session |
+
+### Instruments, and what they were pointed at
+
+Six audits in, the yardstick measures the *walker*. This one measured the
+things the walker cannot: what a **different player** would have done in the
+same fight, the **first two days at fifteen-minute resolution**, the
+**browser's own account** of what it draws, every **text node against its
+background** under all five themes, the **code no gate has ever run**, a
+**week away**, the **wire's 4,034 lines**, and a save with a `<b onmouseover>`
+in it. All of it ran from scratch probes over the shipped tools (the CDP
+driver, the walker, the recording DOM stub); R115 proposes committing the one
+worth keeping — the coverage merge.
+
+| instrument | headline |
+|---|---|
+| six pilots × 68 builds × 26 encounters × 3 seeds, three grades | playing well vs "first button": **+2.5 pts** (standard), **+4.3** (apex); outcome identical under all six pilots in **82% / 77% / 72%** of fights; **83% / 78% / 74%** of pairings decided in the briefing; Catch Breath is a **nine-point trap** |
+| five seeds, 15-minute steps, two days | first chimera **minute 30**, first node **minute 45**, then a **five-hour** wall (the starter goats' `growthHours.adult`) the Path never mentions; Path complete at **5.75–25 h**; the stall metric reads **zero** through it |
+| Chromium: DOM, tick cost, selection, hidden screens | day-180 Vault **58,043 nodes / 3 MB / 300 ms per tick**; **57,489 nodes stay in the document** after leaving it; fresh Dex **16 + 10 ms every 30 s**; every tick destroys a text selection |
+| contrast, 72,171 text nodes, five themes | Vivarium fails **10.5%** (the others 0.1–0.2%); `.fine-print` **2.3–2.6:1** everywhere; **58%** of text on fresh screens is **under 12 px**; no safe-area, no light scheme; `$153249` |
+| V8 coverage, Node suite + browser walk | **538 of 9,733 lines (5.5%)** and **50 named functions** never run — the **graduation ceremony** among them; `sw.js` never loaded; 19 dead exports; `spliceCount` never written |
+| the wire over 180 days | **4,034 lines from 181 phrasings**, 22× each; *"came to nothing"* ×670; the whole reactive voice is ~150 authored lines; the ticker's 11 lines live in `main.js` |
+| the jobs board | **1,188 launches, 6.6/day, all solo**, 43% success, **6.7%** of income; the four crewed jobs ran zero times |
+| a week away | +$18,035, 6 contests, 4 loose — and **eight** wire lines to show for it |
+| an imported save with `<b onmouseover>` in a name | **accepted, rendered raw** on the Pens and the Ranch; one `esc()` in the codebase, **263** unescaped `.name` interpolations |
+| the game at 1,920 px | a **560 px column** at x = 673 |
+
+### What came back clean
+
+Two 180-day walks on one seed are **bit-for-bit identical** (no hidden clock
+or `Math.random` anywhere in the loop). The day-180 save holds **no NaN,
+undefined, Infinity or exotic object**. The tone sweep over every JSON value
+and JS literal found **nine hits, all idiom** — nothing to fix. **Zero console
+errors** on fresh, day-180 and mid-duel loads. The CSS is tokenised (31
+custom properties, 511 `var()` uses, two stray hex literals) and rem-based
+throughout.
+
+### The fifteen
+
+**Overhauls** — R103 decisions that matter (enemy intent, Guard, switch
+tempo; agency becomes a sim table) · R104 the shell repaints blind (change
+report from `tickWorld`, keyed cards, screens empty on leave) · R105 the
+county calendar (procedural sky, four husbandry seasons, weather; the
+rotation R95 needs).
+
+**Gameplay** — R106 the first session ends at minute 45 · R107 Welcome back
+(a digest from the tick's diff) · R108 specimen cards and the fights they
+carry (share a creature, import a friend's as an exhibition).
+
+**Content and voice** — R109 the voice repeats (pools, conditions, a
+no-repeat window; ticker lines to data) · R110 copy is data (5,310 words out
+of code, a scopecheck rule) · R111 feel: creature voices from the genome,
+ambience, a volume slider, haptics.
+
+**UI** — R112 the dossier: a name on the door at the first decant, and a
+Yearbook for the twenty counters nobody sees · R113 Vivarium and the fine
+print: a 12 px floor, per-theme tokens, safe areas, `fmtMoney`, a light theme.
+
+**Durability and tooling** — R114 a save is untrusted input (an escaping
+`html` tag, a schema that repairs, a fuzz gate) · R115 every shipped function
+has run under a gate (`tools/coverage.js`) · R116 the jobs board (standing
+contracts; the crewed board) · R117 wide screens.
+
+### Known issues
+
+None new in code. The queue is a proposal: prune it before starting R103.
+The scratch probes were not committed; R115 is the one that should become a
+tool, and R103's agency table the one that should become a sim report.
+
+### Next session's first task
+
+**R106** if the session is short — it is the smallest phase with the largest
+audience (every new player, minute 45), and step (1) is a two-line change to
+`ensureRanchSeeded` plus a forecast-aware agenda row. **R103** if it is long:
+it is the game's core loop, and the measurement that it barely matters is the
+most important number this audit produced. Either way, measure first — the
+probes are described in §9.6 and reproduce from the shipped tools.
+
+## Session 110 — R87: The endgame ✅
+
+**Acceptance criterion (re-derived — see below):** across six seeds the
+median campaign faces 40+ Task Force raids and holds between half and 85% of
+them; median day-180 funds fall under a quarter of the $864k the shipped game
+banked; and two agenda rows appear in the endgame that no mid-game save has
+shown — **passes on all three**. `SAVE_VERSION` **40 → 41** (`campaign.raid`
+and its schedule); `sw.js` bumped to `spliceworld-v41-r87`.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ **new** — the ceiling, the schedule, the window, the levy |
+| `npm run battery` | ✓ — **84 breaks, 84 caught**, a fifteenth gate, 5 new |
+| `npm run roadmap` | ✓ — **25** stated numbers (3 new: the ceiling, the levy %, the window) |
+| `npm run handlers` | ✓ — 37 controls pressed (was 36): `data-raid` fired |
+| `npm run a11y` | ✓ — 65 controls at 380px, 74 tabbed |
+| `npm run boot` · `npm run scopecheck` · `npm run sim` | ✓ |
+
+### My own criterion was part-vacuous, and three of my own claims were wrong
+
+The audit entry was written last session and measured this one, over six
+180-day walks, before anything was built.
+
+| the entry said | measured |
+|---|---|
+| dominion ~day 40 | **day 35** median (25.7–40.2) |
+| facility maxed by day 30 | **day 28.6** — *before* dominion, so nothing to buy from day 29 |
+| $861k by day 180 | **$864k**, +$5,128/day |
+| notoriety "unread past Threat Gen 3" | ❌ there is a **Gen 4 at 600**; notoriety hits **3,975 = 6.6× the top rung** |
+| 5 fights/day, 96% at 100% | **5.1/day, 97% won** |
+| — | ❗ **the Gauntlet already was a second act** — four exhibitions, hard (0/100/56/0% autoplayed), fought **0** times by the walker, paying **$400–900** into that economy |
+
+And the criterion I wrote could not see the problem it was written for:
+**c2 (funds < 10× day-60) already passed 6/6** — post-dominion income is
+linear, so the ratio is 4.2–5.0 no matter how absurd the absolute — and
+**c1 passed on 1/6 seeds by noise**. Only c3 was sound.
+
+### The answer was already written, in the ladder's own last line
+
+Threat Gen 4 announces *"they have stopped sending police and started
+sending procurement."* So procurement arrives. Notoriety is **capped at
+600** — you cannot be more wanted than maximally wanted — and past it, or
+once the county is yours, the **Compliance Task Force** comes for the
+**ranch**. Every other threat costs a node, a purse or an opportunity, and
+by dominion the player holds every node and cannot spend their money, so
+none of them is a stake. The barn had never once been in danger.
+
+R9's two rules unchanged: a scheduled timestamp, never a per-tick roll; and
+the window opens **when you see it**, so a fortnight away can never cost a
+levy you were given no chance to answer. What it costs is **25% of the slush
+fund** and a couple of the herd — money and livestock, **never a creature**,
+both recoverable. Beating one drops notoriety, which is the **spend**
+notoriety never had.
+
+### Shipped vs measured, six seeds
+
+| | shipped | now |
+|---|---|---|
+| funds, day 180 | $863,955 | **$175,519** (20%) |
+| notoriety | 3,975 | **106** |
+| Task Force raids | 0 | **43 median, 64% held, $403k levied** |
+| exhibitions fought | 0 | **4** |
+| endgame agenda rows | — | **raid, gauntlet** |
+
+### Tuned by measurement, and the first two cuts were both wrong
+
+Drawing raids from the Spire's top two shelves at up to 2.5×, an A-team held
+**17 of 41**. 41% is not a fight you can lose, it is a fight you usually
+lose, and a stake the player cannot meet is just a tax. Backing off overshot
+to **89%** — a formality with a countdown. Settled at **64%**.
+
+The walker also had to stop head-butting a wall: its first cut retried
+whichever exhibition was open on every tick it could field a team, and seed
+31337 entered the same fight **182 times**, losing 98%. Paced to one attempt
+every five days, the shape the rival ladder uses.
+
+### Four sampler bugs, all mine
+
+The criterion was re-derived three times because the sampler was wrong three
+times, and each failure looked like the game failing:
+
+1. Compared **day 30 to day 180** — on fast seeds the county was already
+   taken by day 30, so the "new" rows were not new.
+2. Compared a **single instant at dominion** — a raid is only at the gate
+   for its 21h window, so the row was absent about half the time.
+3. Read the Gauntlet row **at day 180** — the walker beats all four inside a
+   fortnight, so the row is gone again by then, which is the row doing its
+   job.
+4. Asserted **"funds unchanged"** across a fortnight away — income accrues;
+   the claim was that no *levy* was taken.
+
+Plus two in the engine probe: two copies armed their schedules a minute
+apart, and the fine is a fraction of funds *at levy time* while the tick pays
+income first.
+
+### Found on the way
+
+- **The cap needed a second call site.** A conquest writes notoriety and the
+  War Room re-renders without a tick, so the tick alone left a window where
+  the player could read a number above the ceiling — a 45-day walk reported
+  **690** against a cap of 600.
+- **The module defaults had already drifted from the data** after the
+  escalation was tuned twice in JSON and not in JS. R9 wrote the rule for
+  `contest.js`: the data wins, so a default that disagrees is a lie. Held
+  equal by a gate now.
+- **The a11y fixture caught its own bug.** Two held nodes is not in range,
+  so the first tick stood the planted raid down and the gate measured one
+  control *fewer* than before rather than one more.
+
+### Five smoke runs, and every failure was a gate working
+
+Worth writing down, because none of them was noise:
+
+1. **The v1→current migration gate** asserts the campaign's exact shape — a
+   new save field has to be declared there, the way R82 declared its board.
+2. **The onboarding walk** caught an ordering fact: the Task Force note
+   lights when the county falls, not two steps later. Dominion is itself one
+   of the two triggers, so my separate step was two steps too late.
+3. **R83's rehabilitation assertion** — counted survivors, not the chain.
+4. **R74's eager cap** — 52 modules over 51.
+
+Two more were pre-empted rather than discovered a cycle at a time, because
+R86 had hit both in this exact spot: the agenda-chip→control map and R48's
+numbered-hint list.
+
+
+### Known issues
+
+- **Theater and Scanner get no tier IV.** Theater's next step is an eighth
+  socket (`organ3` — SOCKETS, LAYERS and four frame positions) and Scanner's
+  two grants are both already true. Both need an engine change rather than a
+  data one, and a level that grants nothing is a price with no purchase
+  behind it. The eighth socket is the natural follow-up and would make the
+  seven-species build the instability scale was tuned for buildable on
+  purpose.
+- **Dominion is later now** — median day 35 → 39–54. Raids before the county
+  falls genuinely slow the conquest, which is the second act doing its job,
+  but it is a real pacing change and worth watching.
+- **The treadmill is still the majority of fights.** Post-dominion win rate
+  moved 97% → 97%: sparring, breakouts and rescues still dominate the count
+  and are still free. That is **R88's** problem (a forecast ≥95% offering
+  *Send them*), not something R87 could fix without cutting fights.
+- Seed 31337 remains the hard seed: 36% raid win rate and 29 exhibition
+  attempts where the others need four.
+- **The eager-graph cap went up again, and that is now a trend.** R87 is the
+  second consecutive phase to raise the KB cap and the first to raise the
+  module cap since R81 set it at 51. `campaign/taskforce.js` is eager because
+  the world tick owns it (unavoidable); `campaign/gauntlet.js` because the
+  Ranch's agenda lists an exhibition row, and hand-copying "is a stage open"
+  into agenda.js is how R61's rule ended up with four copies. Both are
+  argued — but three phases in a row have each added one small module the
+  first screen genuinely draws from, which deserves its own phase asking
+  what the first paint *should* carry rather than a number that drifts up one
+  milestone at a time.
+
+### Deliberately not built
+
+One third of R87's own entry — the **run boundary** ("Relocate the lab": new
+game plus with a single legacy pick) — was cut by decision, not by accident,
+because it is a save-schema feature with its own migration, UI and gates, and
+building it alongside the other two would have landed two half-proved things
+instead of one proved one. It is now **queued as R102** with its evidence,
+rather than left implied by an entry that reads as if it shipped whole. The
+machinery is already there: `startNewRun`, `runSummary` and
+`CARRIED_ACROSS_RUNS` in `save.js` carry `settings`, `guidesSeen` and `ui`
+today — what is missing is the *pick*.
+
+### Next session's first task
+
+**R88 — the battle screen charges full price for free fights**, which R87's
+own measurement now underlines: four fights a day whose outcome was never in
+doubt, each costing the same attention as a duel. Or **R90** (the test
+runner), which is what makes every later session cheaper — this one spent
+four full smoke cycles on single-assertion fixes again.
+
+## Session 109 — R86: Gene Juice ✅ (shipped as the Infirmary's model)
+
+**Acceptance criterion:** an earned currency skips a timer, or §3.9 stops
+promising one — **passes**, by a third route the measurement pointed at:
+§3.9 now promises what ships, which is every *sealed* clock buyable by the
+hour at the price the Infirmary already charged. `SAVE_VERSION` **39 → 40**
+(`rushCount`); `sw.js` bumped to `spliceworld-v40-r86`.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ **new** — one save, four clocks; rushed and waited decant the same child, animal, hatchling and temperament |
+| `npm run battery` | ✓ — **79 breaks**, a fourteenth gate, 5 new; break 50 derives `SAVE_VERSION`, breaks 51/52 re-aimed |
+| `npm run roadmap` | ✓ — **22** stated numbers (2 new: the call-out and the hourly rate); probe now ignores comments |
+| `npm run a11y` | ✓ — 65 controls at 380px, incl. a Hurry button on each of the three screens |
+| `npm run handlers` | ✓ — 36 controls pressed (was 35): `data-rush` fired |
+| `npm run boot` · `npm run scopecheck` · `npm run sim` | ✓ |
+
+### Both premises were wrong, and the harness said so
+
+**"No timer is skippable at any price."** The Infirmary was: `treatInjury`
+ends its clock for **$25 + $18/hour remaining**, and `cancelVat` drains a
+vat. **"Load-bearing for the TWA pitch."** `docs/TWA.md` has zero mentions of
+a skip, a currency or a purchase.
+
+**The pacing problem does not show up.** Longest stall in a 45-day walk:
+**0 hours**. Week one the stable is 64% free / 28% on a training cooldown /
+8% injured / 0% settling; after that 82% free. The biggest "wait" is the
+fifteen-hour cooldown — a daily rhythm by design and *where bond comes from*
+(Law 3), so a skip for it is bond for sale. Money: ~$500–1000 on day 1, ~$4k
+by day 7, $10–55k by day 30 — a money-priced skip is unaffordable early and
+free late, which was the one honest argument for a second currency.
+
+The user chose the middle route: no new currency, the Infirmary's model
+extended to every pure wait.
+
+### Rushable ⇔ sealed
+
+The rule came from the engine's own comments. `startVat`: *"sealed at
+conception: a reload must not be able to reroll it."* `startResequence`:
+*"every die is thrown here, and tick only reads the answer."* An egg's
+genotype, potential and sex are fixed at lay. A temperament is seeded from
+the world seed once settled. During each of those four clocks **nothing is
+being decided** — so a rush can only ever buy time.
+
+| clock | typical wait | to hurry it |
+|---|---|---|
+| settling | 22.5 min – 3 h | $32 – $79 |
+| Chaos Vat | 4 – 11 h | $97 – $223 |
+| Resequencer | 2 h | $61 |
+| incubation | 1 – 56 min | $25 – $42 |
+
+Everything else refuses with one line, as a rule rather than an omission.
+Injury is the one clock that is neither sealed nor a threat — its scar rolls
+at heal time and treatment changes that — so `treatInjury` keeps its meaning
+and only lends its price: the formula lives in `splice/rush.js` now and
+`scars.json` lost `treatBase`/`treatPerHour`.
+
+### Proved literally
+
+One save with all four clocks running. One copy waits until the last clock
+ends; the other pays at t+1 minute and ticks. The vat child (frame, parts,
+grades, name, instability), the tank's animal, the hatchling and the settled
+creature's temperament are **identical**. The rushed child is stamped with
+when it actually opened (R65). $265 for all four.
+
+### On the screen, and in the walk
+
+One `data-rush="kind:id"` button and one binder, on three screens. The shell
+lends its `tick` to the screens so a rushed vat decants on the click rather
+than at the next thirty-second refresh — measured in a real browser at
+380px: settle button charged $39 and settled; vat button decanted (3 → 4
+chimeras); no overflow, no console errors.
+
+The walker now rushes (reserve-gated, soonest first): **1–18 rushes in 45
+days across four seeds, $29–$577**. And it treats its A-team — 29–43 times —
+which surfaced the R83 gap of this session: **the harness had never once
+called `treatInjury`.** The game's only paid skip had shipped with zero
+coverage.
+
+### Two gate weaknesses found by the battery
+
+- **Break 51 went MISSED, not BADANCH.** The roadmap gate's probe
+  `/gene ?juice/i` matched the words in `rush.js`'s header — a comment
+  explaining why the earned currency was *not* built — and scored the
+  promise as kept. A probe a comment can satisfy is R10's dead-prose problem
+  inverted. The probe strips comments first now, and the new files say "an
+  earned second currency" rather than the name.
+- **Break 50 hardcoded the save version** and had gone BADANCH on three
+  milestones running. It imports `SAVE_VERSION` now, so bumping it moves the
+  break with it.
+
+### Known issues
+
+- No agenda row for rushes. The agenda's `screen` is static and the rushes
+  live on three screens; and a rush never creates a new thing to do — it
+  makes a row that already exists arrive sooner. The `treat` row stays,
+  because treatment changes an outcome.
+- Seed 99 rushes only once in 45 days: its reserve rarely clears. The smoke
+  assertion runs on seed 2026 (8) and the battery's WALK gate on 4242 (18).
+- A rushed egg still needs the Hatch button — rushing makes it hatchable,
+  it does not hatch it. Deliberate: hatching needs pen room, and the hatch
+  button already says why when there is none.
+- **A gap in the a11y gate, found by a screenshot.** The first cut dropped
+  the egg's Hurry button into the `.encounter` flex row, where it overlapped
+  the lineage text and ran past the card at 380px — and `npm run a11y`
+  passed it, because that gate checks a control's size and its gutter to the
+  next control, not whether it overlaps text or escapes its container. Fixed
+  (the button sits under the row now), but the gate still cannot see that
+  class of defect. A candidate for the fifth audit.
+
+- Smoke tripped R74's eager-graph cap on the first full run: **566 KB over
+  560**. R85 (feral, 6.9 KB) and R86 (rush, 8.4 KB) each added one module
+  the first screen genuinely draws from. Re-measured and set to 580, R81's
+  rule; the module cap is now exactly at the count, so the next eager module
+  has to argue its way in.
+
+### The fifth audit, run the same session
+
+By the harness rather than by readers: one instrumented 180-day campaign
+sampled at nine checkpoints, every screen at 380 px on its day-180 save
+(folded and expanded), the balance table, the shipped source, and the
+walker's blind spots by grep. Headlines:
+
+- **Dominion on day 40; then 140 days of treadmill.** Every facility maxed
+  by day 30; $175k by day 60, $861k by day 180 with nothing to buy; five
+  fights a day after dominion, 96% of them won at 100%.
+- **The save is 1.7 MB** — 8,760 part tokens and 1,965 vials; nothing caps
+  either; localStorage's quota fails around day 500.
+- **The yardstick plays half the game:** 0/27 combos, 0/12 traits, no eggs,
+  no vat, no tank, no Gauntlet, 0 of 719 bagged specimens rehabilitated.
+- **255 foes in the Dex for 42 units; expanded Pens is sixteen phone
+  screens and 2,157 words.**
+
+Fifteen phases, **R87–R101**, are in ROADMAP §9.5 with their evidence and a
+*Done when* each — four overhauls (R87 endgame, R88 battle pacing, R89 lists
+at scale, R90 a test runner), six gameplay, three UI, two platform.
+
+### Next session's first task
+
+Pick one from §9.5. The four overhauls are the ones that change what every
+later phase costs; R90 (the test runner) is the one that changes what every
+later *session* costs, and it was the cause of four lost cycles this time.
+
+## Session 108 — R85: Feral at instability 100 ✅
+
+**Acceptance criterion:** instability 100 does something the player can see
+and recover from, or §3.4 stops designing it — **passes**, by the first
+route. `SAVE_VERSION` **38 → 39** (migration seeds `lastAttendedAt` and
+`agitatedAt`, so nobody's roster is retroactively neglected by an update);
+`sw.js` bumped to `spliceworld-v39-r85`.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ **new** — the whole mechanic, plus a walk assertion that a player who shows up never loses a creature |
+| `npm run battery` | ✓ — **74 breaks, 74 caught**, a thirteenth gate, 6 new |
+| `npm run roadmap` | ✓ — **20** stated numbers (3 new: the bond floor, the neglect window, the answer window) |
+| `npm run a11y` | ✓ — 60 controls at 380px, now including a pacing creature's card |
+| `npm run boot` | ✓ — 1031 KB to put the game on screen |
+| `npm run scopecheck` · `npm run handlers` · `npm run sim` | ✓ |
+
+### What the top of the scale actually cost, before this
+
+Measured first, and the entry understated it. At instability 100 you paid a
+one-time three-hour settle and $8/day — and the obedience penalty is
+`instability/100 x 0.2` **minus** `bond/100 x 0.2`, so a trained creature at
+the very top of the scale had a **0% ignore chance**. The top of the scale
+was cheaper than the middle.
+
+### The trigger is neglect, not anatomy
+
+This is the whole design, and it is a constraint the content forced. The
+bear-headed, eagle-winged goat this game exists to let you build scores **90**
+instability, a seven-species build reaches **100**, and *every* chimera is
+spliced at bond 0. A snapshot rule on "unstable and unbonded" would therefore
+send the game's own premise to Containment the day it was made — not a
+mechanic, a punishment for playing.
+
+So three conditions have to hold at once, and the third is a calendar:
+
+| | |
+|---|---|
+| instability | **100** |
+| bond | under **40** |
+| nobody has worked with it in | **72 hours** |
+| then you have | **24 hours** |
+
+Anything you do *with* a creature answers it — a training session, a fight, a
+treatment, a rescue all stamp the same field — and the warning leaves the
+card the instant you act. Raising bond past 40 makes it impossible at all,
+which is what the field guide tells you *before* any clock is running.
+
+### The window opens when you look, and that is R9's rule not R65's
+
+The first draft's comment said the clock starts when the condition is met
+(R65) while the code started it when the player looked. Those are opposite
+behaviours, and the code was right: R9's own exemption in the R65 sweep says
+why — a counter-offensive's window opens on sight "precisely so a week away
+cannot cost a node they were never given the chance to defend". Same rule,
+same reason, a creature instead of a node.
+
+**No absence of any length can cost you an animal.** Only being here and
+still ignoring that one creature for a full day can.
+
+### Losing it is a loan
+
+R8's Reorientation Wing had been shipped and idle for exactly this since. A
+bay now holds the creature **itself** rather than a description of it: the
+Wing was written for a captured rival and rebuilds one from its genome, which
+for a creature of your own would hand back a stranger with the same name and
+none of its level, its trained moveset or its scars.
+
+### On the screen
+
+The Pens gives agitation a band above all three existing ones — those sort by
+what you would *like* to do, this one sorts by what it costs to do nothing —
+a countdown badge on the **shut** row that outranks even the Infirmary clock,
+and an open-card panel naming all three conditions and what ends each. The
+agenda opens with a `settle` row above the two clocks R63 put at the front.
+R15's rule with the stakes turned up: this is the only clock in the game
+whose expiry removes a row from the roster.
+
+Rendered at 380px, all five themes: panel 326px inside 380px, no horizontal
+overflow, no console errors. The explanation text measured **3.42:1** on the
+warn ground — under AA for text that size, on the one panel that explains how
+not to lose a creature — and is now 5.7–8.0:1 across every theme.
+
+### Three fixtures that could not reach the thing they were guarding
+
+The recurring shape of this session, and R81's lesson in a new place: **the
+gate was general, the fixture was not.**
+
+1. The **R65 sweep** walks the whole save for any timestamp equal to the
+   return. It would have flagged `agitatedAt` — except its chimeras are
+   lab-perfect at bond 100, so none could ever agitate. It now carries a
+   neglected creature, `agitatedAt` is the second named exemption with its
+   reason written down, and dropping the exemption fails with
+   `chimeras.2.agitatedAt`.
+2. The **a11y fixture** got a pacing creature, and passed on a card with no
+   alert on it — `lastAttended` takes the MAX of `lastAttendedAt`,
+   `createdAt` and `lastTrainedAt`, and the twin was cloned from a chimera
+   spliced that second. Two of the three stamps were set; the third
+   un-neglected it.
+3. Both **R85 clock assertions** ticked at exactly the moment the condition
+   was met, where opening-on-sight and back-dating are the same number. True
+   of both implementations, guarding neither. Both now tick a fortnight late.
+
+The 400-tick assertion had the same disease: it counted the roster, but
+`tickFeral` *reports* losses and `impound` performs them, so it was true for
+every possible implementation. The battery is what found that one.
+
+### Six copies of one list
+
+Shipping `data/feral.json` meant editing the content-file list in six places
+— smoke had two; sim, roadmap, handlers, a11y and the battery one each — and
+the failure mode for missing one is not an error. It is `content.feral`
+coming back `undefined` and the tuning silently falling back to its defaults:
+R41's `training.json` bug with the blast radius spread across the toolchain.
+`data/loader.js` now exports the list the **game** loads and every tool
+derives from it. `sim.js` had already drifted — it was scoring a world with
+no breakouts in it.
+
+### Known issues
+
+- The 180-day walk never trips the mechanic, and that is the point rather
+  than a gap: the walker's builds top out at instability **92**, and it
+  trains and fights every day. `walk.feral.lost === 0` is asserted as the
+  safety property it is. The mechanic's own coverage is the smoke block and
+  the battery gate, which drive it end to end.
+- One rounding seam: the agenda hint floors hours (`20h`) where the Pens
+  badge rounds (`21h 0m`). The `defend` and `rescue` rows have floored the
+  same way since R63, so this matches its siblings rather than deviating
+  alone.
+- A feral bay has no expiry, unlike a rival's captive board. Deliberate — it
+  is your creature and the Wing will hold it — but it means a player can
+  accumulate bays they never empty.
+- Two existing ROADMAP breaks went **BADANCH** on the first battery run
+  rather than silently green, which is the anchor rule working: both were
+  aimed at prose this milestone rewrote (`save version: 38`, and the §3.4
+  Feral line that used to say "not shipped"). Break 51 now points at Gene
+  Juice, the one gap R77 named that is still a gap — so when R86 lands, it
+  moves again or goes.
+
+### Next session's first task
+
+**R86 — Gene Juice.** §3.9 says "every timer skippable with Gene Juice
+(earned currency only)"; zero hits in the codebase and no timer skippable at
+any price. It is the last unbuilt clause of the offline-timer spec and the
+one the TWA pitch leans on — a timer game with no earned skip is a timer game
+that just makes you wait. Same shape as R84 and R85: a decision before a
+build, and the decision gets measured.
+
+## Session 107 — R84: Grades promise an ability and deliver a percentage ✅
+
+**Acceptance criterion:** an Apex part either grants a materially different
+move or the roadmap no longer implies one, and smoke asserts whichever is
+true — **passes**, by the second route, deliberately. `SAVE_VERSION`
+unchanged (**38**); no `sw.js` bump — nothing the browser downloads changed.
+
+| gate | result |
+|---|---|
+| `npm run smoke` | ✓ **new** — 244 parts x 4 grades, **976 readings**, through the function the Pens renders from |
+| `npm run roadmap` | ✓ — **17** stated numbers (2 new: the grade multipliers and the 12%) |
+| `npm run battery` | ✓ — **68 breaks, 68 caught** (3 new, a twelfth gate) |
+| `npm run scopecheck` · `npm run handlers` · `npm run a11y` · `npm run boot` · `npm run sim` | ✓ |
+
+### This one was a decision, and the measurement made it
+
+§3.3 had promised since M0 that Apex and Prismatic give "an upgraded version
+of the part's ability". What ships is +12% move power per tier. The entry
+asked for a choice, so the choice was measured rather than argued:
+
+**The game never made the promise to a player.** The `grades` field guide
+says genetics x age x condition and nothing about abilities, and the Pens
+prints the graded number. Measured on one part:
+
+| the same part | what the Pens shows |
+|---|---|
+| Standard | "Haymaker" **80** power · 35 stamina · 85% · recoil |
+| Prime | "Haymaker" **90** power · 35 · 85% · recoil |
+| Apex | "Haymaker" **99** power · 35 · 85% · recoil |
+| Prismatic | "Haymaker" **109** power · 35 · 85% · recoil |
+
+So what a grade buys is already visible and already honest. Only the design
+doc over-promised — and R77's rule is that the doc describes the build.
+
+**Grade scaling is load-bearing.** R17 measured it: a combo takes the best
+grade among the parts that unlock it precisely so a Prismatic part cannot
+overtake the combo it belongs to, and when the two scaled differently **7 of
+12 combos went dead** at Prime or Apex. A distinct Apex ability reopens that
+at four grades across six pools — a balance pass, not a session.
+
+Worth recording as the road not taken: the material for an upgrade is there.
+All 244 parts carry a move, 28 distinct keywords exist across the roster, and
+the drawbacks do NOT ease with grade — a Prismatic Haymaker recoils exactly as
+hard as a Standard one while hitting 36% harder. If R84 is ever reopened,
+"a better specimen handles its own anatomy" is the cheapest honest version of
+it, and it is bounded in a way that adding a keyword is not.
+
+### The decision is enforced, not written down
+
+Smoke reads **every part at every grade — 976 readings — through
+`movesFromTokens`**, the function the Pens renders from, and asserts the move
+keeps its name, its stamina cost, its accuracy, its tags and its keyword SET,
+with only power moving, by exactly 12% per tier off the authored number.
+
+Ship a distinct Apex ability later and this fails, which is the point:
+whoever does it has to change §3.3 in the same breath. Proved by shipping
+one — an Apex part gaining `ignoreArmor` lights up **484 readings**.
+
+And because §3.3 now states numbers rather than a promise, R77's gate checks
+them: the grade multipliers (1/1.2/1.4/1.65) and the 12% are both read out of
+the code, so retuning either one fails the build before it reaches a player
+who was told the old figure.
+
+### Known issues
+
+- The R84 gate builds a one-token chimera per part per grade — 976
+  `analyze()` calls. It is a second or so inside a twelve-minute suite, and
+  it is also the reason the battery got its own fast copy rather than
+  aiming a break at the whole suite.
+- Combos are covered by R17's own gate rather than this one: a combo's move
+  takes the best grade among its parts, which is a different rule, and
+  restating it here would have been a second copy of it.
+
+### Next session's first task
+
+**R85 — Feral at instability 100**, or **R86 — Gene Juice**. Both are the
+same shape as this one: designed in the spec since M0, zero hits in the
+codebase, and a decision before a build. R86 is the one the TWA pitch leans
+on — a timer game with no earned skip is a timer game that just makes you
+wait.
+
+## Session 106 — R81: The other 766 KB, and the modules eager for one function ✅
+
+**Acceptance criterion:** the shapes are not fetched before the first paint,
+the three modules are behind the thing that needs them, and the import-graph
+gate's cap comes down to match — **passes**. `SAVE_VERSION` unchanged
+(**38**); `sw.js` bumped to `spliceworld-v38-r81`.
+
+| gate | result |
+|---|---|
+| `npm run boot` | ✓ **new** — 1,462 KB to put the game on screen, down to **1,010 KB (-31%)** |
+| `npm run smoke` | ✓ — module cap 52 -> **51**, byte cap 620 -> **560**, and both halves of every part and unit must pair |
+| `npm run battery` | ✓ — **65 breaks, 65 caught** (5 new, two more gates) |
+| `npm run scopecheck` · `npm run handlers` | ✓ — 75 modules, **33 link cases** (6 new) · 1455 handlers across 64 surfaces |
+| `npm run a11y` · `npm run roadmap` · `npm run sim` | ✓ |
+
+### What it cost to look at the game
+
+| | before | after |
+|---|---|---|
+| to put the game on screen | 1,462 KB / 79 requests | **1,010 KB / 75** |
+| eager modules | 51 | **49** |
+| eager JS | 615.6 KB | **536.9 KB** |
+| `data/parts.json` | 400.6 KB | **123.8 KB** |
+| `data/enemies.json` | 168.6 KB | **45.8 KB** |
+
+### The entry was right about the data and wrong about the code
+
+Its percentages were exact — `parts[].shapes` really is **69.1%** of
+parts.json (276.8 KB) and `units[].shapes` **72.8%** of enemies.json
+(122.8 KB), read by `render/renderer.js` and by nothing else, from three call
+sites. Its absolutes were a little stale, the files having shrunk since.
+
+It was also right about the trap it named: the Ranch really does read
+`enemies.json`, through `ranch/agenda.js`, so deferring that file until the
+War Room opens would break the agenda panel. But it reads
+**`content.encounters`**, never a unit — and the units' bodies are the
+122.8 KB. Splitting by what the renderer reads splits exactly where the Ranch
+does not look.
+
+Where it was wrong: **`battle/engine.js` is not "eager for six small helpers"
+from one place.** It has **11 import sites across 9 modules**, and the eager
+graph takes seven distinct names. Four are trivial and engine-free
+(`isInjured`, `fitToFight`, `applyInjury`, `obediencePercent` — twelve lines
+between them); three are real engine functions with real dependencies. So it
+could not be lifted out. It had to be split.
+
+And **`campaign/campaign.js` cannot leave the graph at all** —
+`campaign/world.js` needs `tickCampaign` on every tick — so the entry's
+saving for it was overcounted. What was exactly right was the rest of that
+claim: `main.js` took `pushNews` through a bare re-export, and now takes it
+from `campaign/wire.js`, which defines it.
+
+### The seam
+
+`battle/statblock.js` is **what a creature is**: its moves from its anatomy,
+its purebred set bonus, its obedience, whether it is hurt, and what a
+finished fight does to it. `battle/engine.js` is **the rules for resolving a
+fight**. The engine imports from the statblock; nothing in the statblock
+knows the engine exists.
+
+That sentence is the whole justification, and it was found by measuring
+rather than by taste: nine modules import from the engine and only two of
+them are ever in a battle. The Ranch's agenda asks whether a chimera is hurt,
+the Pens print its moves, the Theater builds a move list to show what you
+just spliced, sparring asks who is fit, the rival ladder turns a genome into
+a unit — none of that is a fight, and all of it used to drag the turn loop,
+the AI, the damage formula and the aftermath behind it.
+
+### The first version of the gate passed on the old behaviour
+
+`tools/boot.js` splits the network waterfall at the moment the game reaches
+the screen. It first split on **`firstContentfulPaint`**, and measured
+cleanly, and was worthless: the header and the tab bar are static HTML, so
+FCP fires long before any content is fetched at all — 400 KB of geometry
+landing in the same round as everything else still counted as "after the
+paint". Proved by running it against the pre-R81 loader, where it passed.
+
+The honest line is the moment a screen first has a game in it, recorded by an
+observer injected before the document runs, on the same `performance.now()`
+clock the resource timings use so there is no conversion to get wrong. That
+version fails the old loader by 3 problems and passes the new one.
+
+It caught something else, too: kicking the second round off in the same
+synchronous block as `showScreen` still puts the request in front of the
+paint. One frame plus a macrotask is the idiom, and now the code says so.
+
+### The split shipped a defect past scopecheck, and closed the hole
+
+Nine exports moved out of `battle/engine.js`. The static pass caught every
+stale call site — and `scopecheck` had skipped
+`const { x } = await import('./m.js')` **by design** since R76 ("`import(…)`
+is not an import DECLARATION" — true, and beside the point). Five dynamic
+call sites in the suite kept asking the old module for names it no longer
+had, and only a ten-minute smoke run found them.
+
+R76's rule is that a name which is not there fails the build, and it has to
+hold whichever syntax asked. `dynamicImports()` now scans the same tree for
+the destructured form, with six new link cases covering it: the plain form,
+a name that moved, a rename-on-destructure, a module used whole (asks for
+nothing), a computed specifier (abstains rather than guesses — the handler
+gate loads a module per run with a cache-busting query), and a missing
+module. **27 link cases -> 33.**
+
+### Six gates named a module instead of finding one
+
+The split moved two data sections and nine exports, and then spent six suite
+cycles being refused by gates that identify things by NAME. Every refusal was
+a real omission or a real staleness, and they only surface deep inside a
+twelve-minute run:
+
+| what refused it | why |
+|---|---|
+| R50 module map | `ui/theme.js`, `battle/statblock.js` undeclared |
+| R50 content map | `parts-shapes.json`, `enemies-shapes.json` undeclared |
+| R50 note ids | the statblock was pointed at a note (`battle`) that does not exist |
+| `indexContent` round-trip | a section that reaches runtime DISTRIBUTED, not exposed |
+| the injury-stream scan | greps `battle/engine.js` for code that moved |
+| R65's one-inflict-point rule | exempts the inflict point **by name** |
+
+The last two got the durable fix rather than a new string. R65's rule is
+"exactly one place writes an injury", and its gate exempted that place by
+name — so moving `applyInjury` made it fire on the very function it protects.
+It now **derives** the inflict point (the one module defining `applyInjury`,
+asserted to be exactly one). The round-trip gate likewise learned a new true
+shape instead of an exemption, and checks that all 244 entries landed.
+
+The other lesson was cheaper: after the fourth cycle I stopped guessing and
+**replayed the registry-style gates in isolation** — all 67 source-scan
+assertions evaluated against the tree in one pass, the round-trip gate, the
+precache walk, the injury sweep. Seconds instead of twelve minutes, and it is
+how the last three were confirmed before committing.
+
+### Known issues
+
+- **`tools/gen-parts.js` has drifted from the roster it generates.** Running
+  it would rewrite **40 of 244 parts** — all the hand-tuned tails, e.g.
+  `bear_tail`'s "Raking Swat" back to "Nub Wiggle". The generator's own
+  comment warns about exactly this ("a generator that reverts four phases of
+  tuning the next time somebody runs it is a trap") and it has become one.
+  The split was therefore done mechanically instead, with the serializer
+  proved byte-identical against each file before anything was removed. Worth
+  a phase of its own; not this one's job.
+- `sw.js` is still **network-first for everything**, so every precached file
+  costs a request that has to fail before the cache answers. Named in the
+  entry, out of the criterion, untouched.
+- `data/enemies.json` is hand-authored, so adding a unit now means adding its
+  stats in one file and its body in another. Smoke pairs the two halves, so a
+  half-added unit fails the build rather than reaching a player.
+
+### Next session's first task
+
+**R84, R85 or R86** — the three gaps R77 named, and each is a decision before
+it is a build: an Apex part either grants a materially different move or §3.3
+stops implying one; instability 100 either does something or §3.5 stops
+designing it; a timer is either skippable with an earned currency or §3.9
+stops promising it. R86 is the one the TWA pitch leans on.
+
+## Session 105 — R80: The keyboard can see the game but not play it ✅
+
+**Acceptance criterion:** no render loses focus, every control is a real
+control, state changes announce, and `tools/a11y.js` walks the app by
+keyboard alone — **passes**. `SAVE_VERSION` unchanged (**38**); `sw.js`
+bumped to `spliceworld-v38-r80` and carrying two new modules.
+
+| gate | result |
+|---|---|
+| `npm run a11y` | ✓ **rewritten** — 6/6 screens opened with Tab and Enter, 52 controls tabbed to, a duel fought; 59 controls measured across 19 views |
+| `npm run battery` | ✓ — **60 breaks, 60 caught** (7 new, a ninth gate), baseline green on all nine |
+| `npm run smoke` | ✓ — ten new shell assertions for the runs with no browser; module cap 50 → 52 |
+| `npm run scopecheck` · `npm run handlers` | ✓ — 71 modules · 1455 handlers across 64 surfaces |
+| `npm run roadmap` · `npm run sim` · browser QA | ✓ |
+
+### Nine of the entry's ten claims held. The tenth was the measurement.
+
+The entry said the crowded controls sat "under the 8 px the same audit
+measured everywhere else". Measured for the first time — every pair of
+controls sharing an axis, on every screen, subtab, sheet and theme, at 380 px
+— the game's gutter is **6 px**, in eighteen separate places. Nothing in the
+stylesheet uses 8. "Train sits directly beside Dismantle" was wrong the same
+way: 6 px, which is the standard.
+
+What was genuinely under it, and is now fixed:
+
+| where | was | now |
+|---|---|---|
+| picker rows | 5 px | 6 |
+| Dex subtab strip | 4 px | 6 |
+| care row, slot actions, toggle rows, slot rows | 5 px | 6 |
+| **Retreat → the settings gear, in battle** | **1.5 px** | 6 |
+
+That last one was in nobody's report. The handler gate has fired the arena's
+buttons headlessly since R75, but nothing had ever laid a ruler on the
+screen, and battle mode reshapes every band in the shell — its own
+message-log button was **30 px**, under R73's floor since R73. So the floor
+is the number the game actually uses, and the gate measures it pairwise
+across every view from now on.
+
+### The fixes
+
+- **`ui/focus.js`** — one `MutationObserver` per render root. There is no
+  funnel to wrap: `tick()` repaints the active screen every 30 s,
+  `bindSubtabs` repaints on activation, and the Pens and the briefing repaint
+  themselves from inside their own handlers. The DOM mutation *is* the event.
+  Identity is R76's — tag + id + `data-*` — so the restore is a lookup, not
+  an index; position is exactly what a repaint changes. Before: focus a
+  Dismiss button, wait for the tick, `activeElement` is `BODY`. After: it is
+  the Dismiss button.
+- **R73's dialog controller**, fixed by inclusion rather than by surgery. The
+  overlay joins the keeper's list and the keeper's observer is registered
+  first, so by the time the controller looks, focus is already home and its
+  "focus the first control" fallback correctly does nothing.
+- **Two controls that were not controls.** The opening exchange of a duel is
+  a real `<button>` (and takes focus as each line advances); the move readout
+  — all of R30's arithmetic, tags and keyword sentences — answers `?` as
+  well as a 350 ms hold.
+- **`ui/live.js`** — one region, in `index.html`, outside every render root,
+  because a live region written *inside* a panel is destroyed and rebuilt by
+  that panel's next render. That is the bug wearing its own fix as a costume.
+  The settings result line and the retraining slot counter speak through it;
+  the arena's commentary keeps its own, because that node is stable for the
+  length of a round.
+- **The rename sheet.** Enter was on `document` with no target check, so the
+  ✕ committed the rename — "no" and "yes" did the same thing. Enter belongs
+  to the field now. It also never recorded an opener and never trapped Tab
+  despite claiming `aria-modal="true"`; both now come from one helper shared
+  with the picker.
+- **`pickerField`** labels its button with `aria-labelledby`, so a picker
+  announces "Theme, Laboratory" instead of "Laboratory" and a guess.
+
+### The gate stopped clicking
+
+Everything `tools/a11y.js` measured before this navigated with `.click()`,
+which is the assumption R80 was filed against. Section 6 opens all six
+screens with Tab and Enter, Tabs to every control on each, fires the app's own
+tick and checks focus held, activates a Dex subtab and checks focus stayed on
+it, advances a duel's opening exchange, opens a move readout with `?`, and
+throws a punch — with no `.click()` and no `.focus()` anywhere in it. Its last
+two parts (a real announcement driven through the retraining sheet, and Enter
+on the rename sheet's ✕ cancelling rather than committing) do open their sheet
+with a click, because the question there is what the KEYS do once it is open.
+
+Two things it needed first. The fixture carries **a duel in progress** — a
+battle is plain serializable state, so a save is all it takes — which is how
+the arena finally got measured. And the 30-second repaint is switched off for
+the walk: it is a thing under test (§6b fires it deliberately, on the app's
+own code path), and left running it lands at an arbitrary moment inside a
+200-press tab walk and makes the result depend on how fast the machine is.
+
+One driver bug worth remembering: `blur()` does **not** reset the tab order.
+It clears `document.activeElement` and leaves Chrome's sequential focus
+navigation starting point where it was, so "from the top of the document"
+resumed from the middle of the page and the Dex tab looked unreachable.
+Focusing a body made programmatically focusable moves the starting point too.
+
+### Two gates caught me on the way past
+
+R50's module-declaration map refused `ui/focus.js` and `ui/live.js` until both
+were listed and exempted with a reason. And R74's eager-import cap went red at
+**51 modules against a cap of 50**. The cap moved to 52; the **byte budget did
+not** — 615 KB of 620, which is the number that measures cost rather than
+tidiness, and there is no room left in it to spend without cutting something
+first. That is R81's whole job, and it starts next session with five
+kilobytes less headroom than it had.
+
+### The arena, on the shortest phone the game supports
+
+The stylesheet carries a `max-height: 640px` band written specifically
+because the arena is height-locked and had to give something up — and no gate
+had ever rendered it. The walk now measures the arena at 380x640 as well as
+380x780. It also asks a question the floor and the gutter cannot:
+`body.in-battle` sets `overflow: hidden`, and a clipped control still reports
+a full-size rect, so the gate measures **overflow**
+(`scrollHeight - clientHeight` on `main`, the screen, `.arena` and `.cmd`).
+Proven by squeezing: 78 px more footer and it goes red on all three.
+
+### Known issues
+
+- The gutter floor is 6 px, not 8. If the game's spacing scale is ever
+  raised, `GUTTER` in `tools/a11y.js` is the one place to raise with it.
+- The keyboard walk adds ~10 s to `npm run a11y` (≈27 s total) and ~4 min
+  to the battery, which now launches a browser eight times.
+- The gate measures two viewport heights, 780 and 640, which are the two
+  bands the stylesheet has rules for. The middle band (641-759) is rendered
+  by neither.
+- `?` for the move readout is announced through `aria-keyshortcuts` and a
+  `title`, which is the right place for a screen reader and an invisible one
+  for a sighted keyboard user. A visible hint would cost arena height that
+  the 380 px layout does not have.
+
+### Next session's first task
+
+**R81 — the other 766 KB.** R74 capped the eager graph from `main.js`; R81 is
+the rest of it — the modules that load eagerly behind the screens R74 made
+lazy. Read the entry, measure the graph before believing it (R74's own
+numbers had drifted by the time it ran), and cut from there.
+
 ## Session 104 — R77: the roadmap describes a different game ✅
 
 **Acceptance criterion:** ROADMAP either describes the shipped game or names

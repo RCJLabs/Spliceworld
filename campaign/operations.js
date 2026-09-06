@@ -43,7 +43,7 @@ import { analyze } from '../splice/physiology.js';
 import { isSettled } from '../splice/theater.js';
 import { createAnimal } from '../ranch/ranch.js';
 import { infirmaryGrants } from '../splice/facility.js';
-import { applyInjury } from '../battle/engine.js';
+import { applyInjury } from '../battle/statblock.js';
 
 const HOUR = 3600000;
 
@@ -242,6 +242,27 @@ const clamp = (n, t) => Math.max(t.minChance, Math.min(t.maxChance, n));
 // Launching decides the outcome NOW, seeded, and stores it. Deciding at
 // resolution instead would let a reload reroll a bad job, which is the
 // one thing a timer-based game must never allow.
+// R120 — WHICH JOBS ACTUALLY LAUNCH, asked once. The agenda's row and its
+// hint each decided this for themselves and both were wrong the same way:
+// `laneFree` alone says yes to a solo job with nobody free to send, so the
+// hint counted SEVEN where three start. `opOdds().blocked` is the check
+// neither made, and the one `startOperation` consults.
+export function runnableOps(state, content, now, crew = null) {
+  const running = activeOps(state);
+  return operationList(content).filter((op) => {
+    if (running.some((r) => r.opId === op.id)) return false;
+    if (!opReady(state, op.id, now)) return false;
+    // Two lanes: go yourself (rider null) or send a creature. Runnable if
+    // either opens — requiring a rider counted 1 where 3 launch.
+    const riders = [null, crew ?? freeCrew(state, now)[0] ?? null];
+    return riders.some((rider) => {
+      if (rider && running.some((r) => r.chimeraId === rider.id)) return false;
+      if (!laneFree(state, content, now, op, rider)) return false;
+      return !opOdds(state, op, rider, content, now).blocked;
+    });
+  });
+}
+
 export function startOperation(state, opId, chimeraId, content, now) {
   const t = opTuning(content);
   const op = content.operations?.[opId];

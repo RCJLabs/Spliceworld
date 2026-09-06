@@ -1,0 +1,26 @@
+{
+  "_doc": "Paying a clock to hurry (ROADMAP §3.9, R86). WHY THIS SHAPE: §3.9 promised since M0 that every timer is skippable with an earned second currency. Measured before building, the premise was wrong twice — the Infirmary already ends its clock for money, priced by the hour, and the TWA pitch never mentions a skip — and the pacing problem it was designed for does not show up in a 180-day walk (longest stretch with nothing productive to do: zero hours). So R86 shipped the model the game already had rather than a second economy: the Infirmary's price, applied to every PURE WAIT. A pure wait is a clock whose outcome is SEALED when it starts — the vat, the resequencer, an egg and a settling chimera — so a rush can only ever buy time, never a different creature, and smoke proves it by decanting a rushed vat and a waited one and comparing the children. `tuning.base` is the flat call-out and `tuning.perHour` the rate on the hours left; splice/scars.js reads the same two numbers for treatment, so the Infirmary and a rush cannot drift apart. `kinds` carries the one line each rush says; `{name}` and `{price}` are filled in. Cooldowns, growth, rehab, jobs and the world's own clocks are NOT here on purpose — see splice/rush.js for the rule — and the registry that decides what is for sale is code, not this file, because 'a cooldown becomes buyable' is an engine decision with a §3.9 edit attached, not a content edit.",
+  "tuning": {
+    "base": 25,
+    "perHour": 18
+  },
+  "kinds": {
+    "settle": {
+      "label": "Settling",
+      "line": "{name} was talked into settling early. ${price}, and a firm tone of voice."
+    },
+    "vat": {
+      "label": "Gestation",
+      "line": "The vat was told to hurry. ${price}, and it complied with a noise nobody wants to hear twice."
+    },
+    "resequencer": {
+      "label": "Resequencing",
+      "line": "The tank skipped to the end of {name}. ${price}; the sample did not notice."
+    },
+    "egg": {
+      "label": "Incubation",
+      "line": "{name} was kept a little too warm. ${price}. It hatches when you say so."
+    },
+    "refusal": "That clock is not for sale. The waiting is the part that makes the thing worth having."
+  }
+}

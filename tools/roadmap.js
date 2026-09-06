@@ -31,17 +31,20 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 
 import { indexContent } from '../render/renderer.js';
+import { feralTuning } from '../splice/feral.js';
+import { rushTuning } from '../splice/rush.js';
+import { taskforceTuning } from '../campaign/taskforce.js';
+// R85: derived, not named — see data/loader.js.
+import { CONTENT_FILES as FILES } from '../data/loader.js';
 import { SAVE_VERSION } from '../save/save.js';
 import { GRADES } from '../splice/extract.js';
+import { GRADE_MOVE_BONUS } from '../battle/statblock.js';
 import { PHYS_TUNING } from '../splice/physiology.js';
 import { moduleFiles } from './scopecheck.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 
-const FILES = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits',
-  'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament',
-  'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout'];
 
 // Each is a mechanic §1-§5 has named since M0. `prose` is how the spec says
 // it; `probe` is what the code would have to contain for it to be real.
@@ -62,6 +65,12 @@ export function shippedNumbers() {
     keywords: Object.keys(content.keywords).length,
     combos: Object.keys(content.combos).length,
     grades: GRADES.length,
+    // R84 — §3.3 now states what a grade is WORTH, not just how many there
+    // are, and R77's rule is that a stated number is a checked one. Both are
+    // read out of the code rather than restated here, so retuning either one
+    // fails this before it reaches a player who was told the old figure.
+    'grade multipliers': GRADES.map((g) => g.mult).join('/'),
+    'grade move bonus percent': Math.round(GRADE_MOVE_BONUS * 100),
     'enemy units': Object.keys(content.enemies).length,
     encounters: Object.keys(content.encounters).length,
     rivals: Object.keys(content.rivals).length,
@@ -70,6 +79,26 @@ export function shippedNumbers() {
     // The top of the scale, rounded the way prose rounds it.
     'settle hours at instability 100':
       Math.round(((PHYS_TUNING.settleBaseMs + PHYS_TUNING.settleMaxExtraMs) / 3600000) * 10) / 10,
+    // R85 — §3.4 now states the price of the top of the scale, so R77's rule
+    // applies to all four of its numbers. Read out of data/feral.json through
+    // the same function the Pens and the tick read, so retuning the mechanic
+    // fails here rather than leaving the spec quietly describing a game that
+    // no longer exists.
+    'feral bond floor': feralTuning(content).bondFloor,
+    'feral neglect hours': feralTuning(content).neglectHours,
+    'feral window hours': feralTuning(content).windowHours,
+    // R86 — §3.9 states the price of a rush, which is also the Infirmary's
+    // price. Read through the same function both call, so retuning it in
+    // data fails here rather than leaving the spec quoting the old figure.
+    'rush base dollars': rushTuning(content).base,
+    'rush dollars per hour': rushTuning(content).perHour,
+    // R87 — §3.9 states what the endgame costs, so R77's rule applies to all
+    // three of its numbers. Read through the same function the tick and the
+    // War Room card read, so retuning the raid in data fails here rather
+    // than leaving the spec quoting the old figure.
+    'notoriety ceiling': taskforceTuning(content).notorietyCap,
+    'task force levy percent': Math.round(taskforceTuning(content).fineFraction * 100),
+    'task force window hours': taskforceTuning(content).windowHours,
     // Rolled per capture in campaign.js. Read the literal rather than
     // restating it, so widening the window fails here.
     'dissection hours': (readFileSync(join(root, 'campaign/campaign.js'), 'utf8')
@@ -117,10 +146,17 @@ export function checkRoadmap() {
   // drag a section out of scope.
   const liveSpec = roadmap.split('## 6. Milestones')[0];
   if (liveSpec.length < 2000) note('the live spec (§1-§5) could not be found');
+  // R86 — comments stripped before probing. Break 51 of the battery went
+  // MISSED the day splice/rush.js landed with a header explaining why an
+  // earned skip currency was NOT built: the probe found the mechanic's name
+  // in that sentence and scored the promise as kept. A probe a comment can
+  // satisfy is R10's dead-prose problem inverted — prose with no code behind
+  // it, passing for code.
+  const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
   const engineSource = moduleFiles()
     .map((f) => relative(root, f))
     .filter((f) => !f.startsWith('tools/'))
-    .map((f) => readFileSync(join(root, f), 'utf8'))
+    .map((f) => stripComments(readFileSync(join(root, f), 'utf8')))
     .join('\n');
 
   for (const claim of CLAIMS) {
