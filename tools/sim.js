@@ -1688,6 +1688,13 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   return {
     seed,
     at,
+    // R89 — the save the walk ends on, which is the only honest fixture for
+    // "the day-180 screen". Every height this project has quoted at scale
+    // was measured on one, and nothing in the tree could produce one: the
+    // walk built the state, reported summaries of it, and dropped it. The
+    // `__walk*` scratch fields are stripped because a real save has none,
+    // and a fixture carrying them measures a screen no player will see.
+    save: Object.fromEntries(Object.entries(state).filter(([k]) => !k.startsWith('__'))),
     verbs,
     actions: (state.__walkLog ?? []).length,
     reachedDominion: state.dominionAt != null,

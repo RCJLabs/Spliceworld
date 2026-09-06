@@ -10391,8 +10391,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // Anchored on the guide's own heading markup. "Ground" also appears in
     // a rival dossier's "Favours Ground" line further up the same page, and
     // a gate that searches for the bare word measures that instead.
+    //
+    // R89 folded each band, so the heading is a fold title rather than an
+    // <h3>. The claim is unchanged and so is the reason for anchoring on
+    // markup: the guide groups by the class triangle, in the roster's order.
     const head = (cls) =>
-      `<h3>${renderIcon(content.classes[cls].icon)} ${content.classes[cls].name} <span class="lineage">`;
+      `<span class="fold-title">${renderIcon(content.classes[cls].icon)} ${content.classes[cls].name}</span>`;
     const at = (needle) => page.indexOf(needle);
     const heads = CLASS_ORDER_FOR_DEX.map((c) => [c, at(head(c))]);
     for (const [c, i2] of heads) assert.ok(i2 > 0, `the guide has a ${c} heading`);

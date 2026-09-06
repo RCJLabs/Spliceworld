@@ -1,5 +1,80 @@
 # PROGRESS
 
+## Session 125 — R89: the Pens at scale ✅
+
+### The entry understated its own problem
+
+Measured on the day-180 walked save at 380px: the expanded Pens is **16,657px
+and 3,446 words for NINE chimeras**, against the 12,554px / 2,157 words the
+audit recorded for ten. The card kept growing after that number was written —
+R103's stance row, R125's tier chip, why and lever all landed since.
+
+Nothing in the tree could produce a day-180 save until this milestone.
+`campaignWalk` built the state, reported summaries of it and dropped it, so
+every height ever quoted at scale had been measured by hand, once.
+
+### Two things proposed here already existed
+
+`ui/roster.js` has had band headers since R44 (the Pens already reads *"Can
+train now 9"*) and `ui/cards.js` already had `collapsibleCard`. The real work
+was the open card and a Foes tab with no fold on it at all.
+
+### Two rules, and they only work together
+
+Tabs (Overview · Moves · Anatomy · History) cut the card; `bindFolds`' new
+`exclusive` list keeps at most one creature open. A screen whose height is
+*roster × card* cannot be fixed by dieting the card, and break 139 proves it:
+tabs in place, exclusivity removed, the Pens is 7,063px.
+
+The tabs are **partitioned from the existing template along marked seams**,
+not written out a second time — so a row added later lands in whichever tab
+its seam says, with no fifth place to remember.
+
+**What is not in a tab** is the load-bearing half: R15's rule that a
+countdown costing you something never hides behind a tab. The feral panel,
+settling clock, vat recovery and Infirmary window sit above the bar. Verified
+per tab in a real browser: one alert element visible on all four.
+
+### The gates caught me hiding things from them
+
+* `handlers` — `data-moves` and `data-dossier` painted on a surface no walk
+  could reach. A `pens:card` surface with a fanout over the tabs walks them.
+* `a11y` — the retraining sheet unreachable for the same reason.
+* `data-fold-group`, my first design, was a DOM attribute *selected on* to
+  find siblings but never *binding* a handler. The gate reads `[data-x]` in
+  source as "a handler is bound by x" and called it a control nobody pressed.
+  The gate is right about the general case; the attribute was the wrong
+  shape. The screen already knows which ids it made, so it passes a list.
+* And the height gate itself was wrong first: it opened every fold and
+  stopped, so on the new card it only ever saw Overview at 1,742px while
+  Moves is 1,919 — reporting the shortest of four faces as the tallest.
+
+### Numbers
+
+| | before | after | budget |
+| --- | --- | --- | --- |
+| Pens, tallest reachable | 16,657 px | **1,919 px** | 4,000 |
+| Dex · Foes, shut | 4,113 px | **664 px** | 2,500 |
+| a11y controls / views | 76 / 29 | 79 / 29 | — |
+| handlers fired / surfaces | 1,500 / 65 | 1,570 / 69 | — |
+
+### One judgement call, stated rather than buried
+
+Foes' *fully-open* height went 4,113 → 5,702 (fold chrome). Its `tallest`
+budget is a ratchet at 6,000 rather than 2,500, because the field guide is a
+gallery you compare bands in and one-at-a-time would make it worse to use.
+The criterion's 2,500 is about how the tab presents, and it does: 664px. The
+reasoning is written into the gate, not just here.
+
+### Known issues / next session's first task
+
+* The **Ranch** is 3,192px shut and 11,968px opened. R89's criterion does not
+  name it and it is ratcheted, not fixed.
+* The **Vault** is 61,539 nodes and 2,059 buttons even shut — R91 and R104
+  own that.
+* R125's Theater tier preview is still proven at engine and code level only.
+
+
 ## Session 124 — R101: the migrations split ✅
 
 ### The entry's numbers were stale, and its central claim was wrong

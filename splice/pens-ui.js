@@ -46,6 +46,7 @@ import {
 } from './chaos.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { bandedHtml } from '../ui/roster.js';
+import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { canSpar } from '../campaign/sparring.js';
 import { feralStatus, feralTuning } from './feral.js';
 import { rushQuote, rushButton, bindRush } from './rush.js';
@@ -160,6 +161,80 @@ function bindVat(root, ctx, redraw) {
   });
 }
 
+// R89 — THE CARD IS FOUR CARDS. Measured on the day-180 save at 380px, an
+// open creature card is about 925px and nine of them could be open at once:
+// 16,657px, twenty-one phone screens, 3,446 words. Two rules fix it and they
+// only work together — tabs cut the card, `group: 'pen'` (see ui/cards.js)
+// stops the roster multiplying it.
+//
+// WHAT IS NOT IN A TAB is the load-bearing half of this. R15's rule is that
+// a countdown which costs you something never goes behind a tab, so the
+// feral panel, the settling clock, the vat recovery and the Infirmary window
+// all stay above the bar and show whichever tab is on. A tab may hide
+// reference; it may never hide a deadline.
+//
+// The active tab is module state, not save state — `dexTab` in dex-ui.js is
+// the same pattern. It is a preference about a screen you are looking at
+// right now, and putting it in the save would be a schema change bought for
+// nothing.
+const PEN_TABS = [
+  { id: 'overview', icon: 'eye', label: 'Overview' },
+  { id: 'moves', icon: 'brain', label: 'Moves' },
+  { id: 'anatomy', icon: 'dna', label: 'Anatomy' },
+  { id: 'history', icon: 'bandage', label: 'History' },
+];
+let penTab = 'overview';
+
+// Cut the card up along the seams marked in its own template. The card is
+// built exactly as before and then PARTITIONED, rather than being written
+// four times — so a row added to the creature card lands in whichever tab
+// its seam says, and nobody has to remember to add it to a fifth place.
+//
+// `head` (portrait, name, the feral panel) and `ALERTS` (settling, vat
+// recovery, the Infirmary window) are outside the tabs by design: R15's
+// rule that a countdown costing you a creature is never behind a tab.
+function penTabbed(html) {
+  const parts = html.split(/<!--R89:([A-Z-]+)-->/);
+  const tab = { overview: '', moves: '', anatomy: '', history: '' };
+  let head = parts[0];
+  let alerts = '';
+  let tail = '';
+  for (let i = 1; i < parts.length; i += 2) {
+    const key = parts[i];
+    const chunk = parts[i + 1] ?? '';
+    if (key === 'ALERTS-END') head += chunk;
+    else if (key === 'ALERTS') alerts += chunk;
+    else if (key === 'END') tail += chunk;
+    else tab[key.toLowerCase()] += chunk;
+  }
+  const active = tab[penTab] !== undefined ? penTab : 'overview';
+  // A tab with nothing in it says so rather than opening on blank space —
+  // a creature with no scars has a history, it is just a short one.
+  const empty = {
+    moves: '<p class="fine-print">No moves to show yet.</p>',
+    anatomy: '<p class="fine-print">Nothing logged about its build yet.</p>',
+    history: '<p class="fine-print">Not a scratch on it. Yet.</p>',
+    overview: '',
+  };
+  // All four panels are in the DOM; three are `hidden`, which `[hidden] {
+  // display: none }` keeps out of layout AND out of the accessibility tree.
+  //
+  // Rendering only the active one was the first version and it was worse in
+  // three ways at once: switching tabs cost a full re-render and a scroll
+  // jump, find-in-page could not see a creature's moves, and — the one that
+  // caught it — smoke's "the pens card renders a dossier" went red, because
+  // the physiology really had left the card. Only one creature is open at a
+  // time, so the whole cost of this is four panels rather than one, against
+  // the nine open cards it replaced.
+  const panels = PEN_TABS.map((t) => {
+    const inner = tab[t.id].trim() ? tab[t.id] : empty[t.id];
+    return `<div class="pen-tabbody"${t.id === active ? '' : ' hidden'}>${inner}</div>`;
+  }).join('');
+  return `${head}${alerts}
+    ${subtabBar({ tabs: PEN_TABS, active, attr: 'pen-tab', id: 'pen-tabs' })}
+    ${panels}${tail}`;
+}
+
 export function renderPensScreen(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
@@ -247,7 +322,7 @@ export function renderPensScreen(root, ctx) {
       const summary = `${tierChip}${clsIcon} Lv ${prog.level} · bond ${ch.bond}/100 · obedience ${obedience}%${
         scarsOf(ch, content).length ? ` · ${scarsOf(ch, content).length} scar${scarsOf(ch, content).length === 1 ? '' : 's'}` : ''
       }`;
-      const body = !open ? '' : `
+      const body = !open ? '' : penTabbed(`
         <section class="card animal-card">
           <div class="portrait">${portrait}</div>
           <div class="animal-info">
@@ -274,6 +349,8 @@ export function renderPensScreen(root, ctx) {
                   <p class="fine-print scar-warn">Let the clock run out and it stops taking your calls. Containment picks it up and the Reorientation Wing will hand it back — whole, scars and service record intact — but you will be paying them to do it.</p>
                 </div>`;
             })()}
+            ${'<!--R89:ALERTS-END-->'}
+            ${'<!--R89:OVERVIEW-->'}
             ${(() => {
               // R41: what it has been through, beside what it is built from.
               const prog = xpProgress(ch.xp ?? 0, content);
@@ -286,6 +363,7 @@ export function renderPensScreen(root, ctx) {
               } ${bar}</p>`;
             })()}
             <p class="meta">${frameOf(content, ch.frame).name} · instability ${ch.instability}/100 · bond ${ch.bond}/100</p>
+            ${'<!--R89:ANATOMY-->'}
             ${(() => {
               // R33. Everything physiology knows, on the creature rather than
               // on the bench. Measured before building it: of the eight rows
@@ -317,6 +395,7 @@ export function renderPensScreen(root, ctx) {
                   <ul class="dossier-rows">${rows}</ul>
                 </details>`;
             })()}
+            ${'<!--R89:OVERVIEW-->'}
             ${(() => {
               const temp = describeTemperament(ch, content);
               if (!temp) {
@@ -331,6 +410,7 @@ export function renderPensScreen(root, ctx) {
                 ? ` — ${settled ? '' : 'unsettled; '}train to build bond${ch.instability > 0 ? ' (instability resists)' : ''}`
                 : ' — follows orders to the letter. Suspiciously eager, even.'
             }</p>
+            ${'<!--R89:MOVES-->'}
             ${(() => {
               // R30. A chimera knows every move its anatomy grants and can
               // press four. This is where you choose which four, and it is
@@ -356,12 +436,14 @@ export function renderPensScreen(root, ctx) {
                   : '<p class="fine-print">It knows every move it can carry. Splice it something new to give it a choice.</p>'}
               </div>`;
             })()}
+            ${'<!--R89:OVERVIEW-->'}
             <div class="pen-actions">
               <button type="button" class="care-train" data-train="${ch.id}" ${trainReady ? '' : 'disabled'}>
                 ${trainReady ? `${renderIcon('target')} Train ($${TRAINING.cost}, +${TRAINING.bondGain} bond)` : `Train (${fmtDuration(trainReadyAt - t)})`}
               </button>
               <button type="button" class="pen-dismantle" data-dismantle="${ch.id}">${renderIcon('wrench')} Dismantle</button>
             </div>
+            ${'<!--R89:ALERTS-->'}
             ${isExhausted(ch, t) ? `<p class="settle">${renderIcon('test-tube')} Recovering from the vat — ${fmtDuration(ch.exhaustedUntil - t)} left.</p>` : ''}
             ${ch.vatBorn ? `<p class="fine-print">Decanted from ${ch.vatBorn.parents.join(' × ')}.</p>` : ''}
             <p class="settle ${settled ? 'settled' : ''}">${
@@ -375,6 +457,7 @@ export function renderPensScreen(root, ctx) {
                  <p class="fine-print scar-warn">Left to itself it may set badly and stay that way. Treating it costs money and guarantees it will not.</p>
                  <button type="button" class="care-train" data-treat="${ch.id}">${renderIcon('bandage')} Treat ($${treatmentCost(ch, content, t, state)})</button>`
               : ''}
+            ${'<!--R89:HISTORY-->'}
             ${(() => {
               const scars = scarsOf(ch, content).map((sc) => describeScar(sc, ch.name));
               if (!scars.length) return '';
@@ -382,9 +465,11 @@ export function renderPensScreen(root, ctx) {
                 .map((sc) => `<li><strong>${sc.name}</strong> <span class="lineage">${sc.summary}</span><br><span class="fine-print">${sc.line}</span></li>`)
                 .join('')}</ul>`;
             })()}
+            ${'<!--R89:ANATOMY-->'}
             <ul class="token-list">${manifest}</ul>
+            ${'<!--R89:END-->'}
           </div>
-        </section>`;
+        </section>`);
       return collapsibleCard({
         id: `pen-${ch.id}`,
         title: `${ch.name}`,
@@ -450,7 +535,18 @@ export function renderPensScreen(root, ctx) {
     });
   });
 
-  bindFolds(root, ctx, () => renderPensScreen(root, ctx));
+  // R89 — at most one creature open at a time. The ids are the ones this
+  // screen just painted, so nothing has to be marked up for it.
+  bindFolds(root, ctx, () => renderPensScreen(root, ctx),
+    { exclusive: state.chimeras.map((ch) => `pen-${ch.id}`) });
+  // R89 — the tab bar inside the open creature card. There is only ever one
+  // in the document, because `group: 'pen'` keeps at most one card open, so
+  // the bar needs no per-card identity to bind against.
+  bindSubtabs(root, 'pen-tab', (id) => {
+    penTab = id;
+    renderPensScreen(root, ctx);
+    root.querySelector('#pen-tabs')?.scrollIntoView({ block: 'center' });
+  });
   bindFieldNote(root, ctx, () => renderPensScreen(root, ctx));
   bindVat(root, ctx, () => renderPensScreen(root, ctx));
   // R86: one binder for every Hurry button on this screen, settle and vat alike.
