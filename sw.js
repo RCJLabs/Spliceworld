@@ -1,7 +1,7 @@
 // Service worker (M7): network-first with cache fallback. Fresh deploys win
 // whenever the network is up; offline play falls back to the last good
 // build. Bump CACHE with SAVE_VERSION-sized releases so stale caches drain.
-const CACHE = 'spliceworld-v44-r121';
+const CACHE = 'spliceworld-v45-r125';
 
 const SHELL = [
   '.',
@@ -49,6 +49,7 @@ const SHELL = [
   'splice/feral.js',
   'splice/rush.js',
   'splice/theater-ui.js',
+  'splice/tier.js',
   'splice/pens-ui.js',
   'splice/dex-ui.js',
   'splice/dexentry.js',
@@ -107,6 +108,7 @@ const SHELL = [
   'data/rush.json',
   'data/stance.json',
   'data/starters.json',
+  'data/tiers.json',
   'data/guides.json',
 ];
 

@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 44;
+export const SAVE_VERSION = 45;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -514,6 +514,16 @@ const migrations = {
   // with them: a player who likes it quick likes it quick in their next lab
   // too. Absent means 1, which is exactly what every existing save was
   // doing, so a migrated save plays at the speed it always played at.
+  // R125 — the tier note remembers whether its lesson has been read. A
+  // boolean on `ui`, which every save has had since the fold state landed,
+  // so this only has to make sure the object is there to hold it. Nothing
+  // is reset and nothing is recomputed: a save arriving here has simply
+  // never opened a dossier, which is true.
+  45: (save) => {
+    save.ui ??= { collapsed: {} };
+    save.ui.tierRead ??= false;
+    return save;
+  },
   44: (save) => {
     save.settings ??= {};
     save.settings.battleSpeed ??= 1;
@@ -634,7 +644,7 @@ export function newGameState() {
     // themselves are derived; this is the only thing they persist.
     guidesSeen: [],
     // Remembered UI: which cards are folded shut.
-    ui: { collapsed: {} },
+    ui: { collapsed: {}, tierRead: false },
     // The §3.8 profile: the player's half of the story schema. Unnamed
     // until they choose — nothing in this game waits behind a form.
     profile: { named: false, title: null, name: null, lab: null, philosophy: null },

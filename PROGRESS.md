@@ -1,5 +1,82 @@
 # PROGRESS
 
+## Session 121 — R125: every chimera carries a letter ✅
+
+Asked for directly: grade chimeras F to S from part grades, moves chosen,
+traits and part combinations, to decide what to keep, dismantle or feed to
+the vat. Two calls were the user's: the scale is **absolute** (a creature's
+letter never moves unless the creature does), and the **Theater previews it
+before you commit the splice**.
+
+### The letter had to mean something
+
+The game already holds three opinions about a creature — the class triangle,
+the briefing's forecast, R123's team suggestion. A fourth that disagreed
+with them would only teach the player which to distrust. So the tier is a
+**prediction of one measured number**: the creature's solo win rate over
+every encounter the game ships. "B" means "clears about a quarter of the
+board alone". Fixed reference, so nothing you build later re-grades a
+creature you never touched.
+
+### Three of the four named inputs did not behave as assumed
+
+| lever | measured swing (solo, whole table) |
+|---|---|
+| **Traits** | `thick_hide` +12.2pp · `hyperthyroid` **−21.8pp (0% win rate)** · all twelve +40.2pp |
+| **Part grades** | +23pp (standard 4% → prismatic 27%) |
+| **Combos** | +5.9pp |
+| **Moves chosen** | 1.0–2.6pp — **nearly inert** |
+
+Traits are the biggest lever in the game and were listed third. The moveset
+is nearly inert for an arithmetic reason: the move pool averages **6.0** and
+you pick 4, so there is hardly room to choose badly. It is therefore not a
+term in the score — folding a 2pp effect into a letter spanning 35pp would
+dress noise up as a judgement — and is reported as a priced lever instead.
+
+`hyperthyroid` on every part is a creature that wins **nothing**: stamina
+−10 six times leaves it unable to act. Worth a balance look on its own.
+
+### Two measurement errors of mine, caught before shipping
+
+- The first calibration said combos **hurt** (−0.266). False: `sampleBuilds`
+  builds purebred creatures combo-less by construction, so purebred and
+  combos were perfectly confounded — the separating cell was n=8. Re-measured
+  on random legal builds holding species-mixing constant, the sign reversed
+  to **+5.9pp**.
+- The same run said the moveset had **0.000** correlation. An artifact:
+  `makeSimChimera` gives every creature the same bench moveset, so there was
+  no within-build variance. It also sets **no traits**, so the whole first
+  pass was blind to the largest lever.
+
+### And one about the bands
+
+I cut the bands for zero middle-50% overlap on the fitting sample. On a
+**held-out** draw (different seed) three of five seams overlap again — that
+is overfitting a threshold. Monotonicity is what generalised, so that is
+what the gate asks for. Held out at 300 creatures: **F 5.1 · D 10.2 · C 15.1
+· B 23.4 · A 35.1 · S 45.4%**, smallest step 4.9pp.
+
+Model: 420 creatures, **87,360 fights**, R² **0.786**. Scale, cuts and
+weights all live in `data/tiers.json`.
+
+### Verified how
+
+Pens surface driven end-to-end in a real browser: chips render, the dossier
+shows the reason and the lever, `ui.tierRead` persists. The **Theater
+preview is proven at engine and code level** (`tierbench` over 300 builds,
+plus smoke asserting the gate expression and the placed line) rather than by
+driving the picker — my browser driver could not operate the pick sheet, and
+I stopped rather than sink the session into a test harness. Worth re-checking
+by hand on a save with a stocked vault.
+
+`SAVE_VERSION` 44 → 45 (`ui.tierRead`). Battery **130 breaks**.
+`sw.js` → `spliceworld-v45-r125`.
+
+### Next session's first task
+
+R101 — the migrations split, still queued and still the biggest single item
+in the eager graph.
+
 ## Session 120 — R121: what should the first paint carry? ✅
 
 The premise was that five milestones running had each raised the eager

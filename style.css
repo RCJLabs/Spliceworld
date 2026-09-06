@@ -2695,3 +2695,54 @@ button.dex-cell:focus-visible {
 /* R120 — the number on a spend chip's face. Its sentence is in the title,
    which is invisible on a touch device, and this ships as a TWA. */
 .chip-num { margin-left: 5px; opacity: 0.75; font-variant-numeric: tabular-nums; }
+
+/* --- R125: the tier letter ---------------------------------------------
+   Six bands, so six colours would be six chances to fail the contrast
+   floor and six things to tell apart at a glance on a phone. Instead the
+   chip is one shape with a role colour: the bottom two read as a problem,
+   the middle two are neutral, and the top two use the two accents the
+   scheme already spends its boldness on. Every pairing here is a token
+   pair the stylesheet already ships and the a11y gate already measures.
+
+   `min-width` rather than fixed: a single letter in a circle looks like a
+   typo when the row beside it is 40px tall, and the tier chip sits in a
+   fold summary that a thumb has to hit. */
+.tier {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.tier-F { background: var(--danger-2); color: var(--on-danger); border-color: var(--danger-2); }
+.tier-D { background: var(--danger-soft); color: var(--on-danger); border-color: var(--danger-soft); }
+.tier-C { background: var(--panel-2); color: var(--text); }
+.tier-B { background: var(--well); color: var(--text); border-color: var(--accent-dim); }
+.tier-A { background: var(--accent-2); color: var(--on-accent-2); border-color: var(--accent-2); }
+.tier-S { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+/* The explanation, which is the half that actually helps you choose. */
+.tier-why {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 6px 0 2px;
+  font-size: 0.74rem;
+  color: var(--text);
+}
+.tier-lever { margin: 2px 0 0; }
+.tier-preview {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+}

@@ -64,6 +64,12 @@ export function indexContent(raw) {
     classes: raw.classes ? byId(raw.classes.classes) : {},
     rivals: raw.rivals ? byId(raw.rivals.rivals) : {},
     rivalMeta: raw.rivals ? raw.rivals.rematch : null,
+    // R125: the tier scale — letters, band cuts and the fitted weights that
+    // predict a build's solo clear rate. One flat object for the same reason
+    // breakoutMeta is: it is tuning, not a keyed collection, and `splice/
+    // tier.js` reads the whole of it so a band can move without an engine
+    // edit.
+    tiers: raw.tiers ?? null,
     // R82: the breakout's whole tuning is one flat object, so it is
     // indexed as one rather than split into a list and a meta block.
     breakoutMeta: raw.breakout ?? null,
