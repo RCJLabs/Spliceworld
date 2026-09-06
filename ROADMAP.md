@@ -2651,9 +2651,17 @@ moved one of them: the first premise held exactly, the second did not.
     against a multi-wave encounter is 0% for the structural reason
     `forecast.js` documents ("Bodies, not numbers"), so every score ties and
     a stable sort hands back the roster unchanged.
-  - *Rank by raw strength.* **17.3pp** off — indistinguishable from not
-    choosing. Picking by the **class triangle** lands **8.7pp** off. The
-    triangle is what the game is about and it is what carries this.
+  - *Rank by raw strength.* With no forecasting at all, **17.3pp** off —
+    indistinguishable from not choosing; picking by the **class triangle**
+    lands **8.7pp** off. Those are the zero-forecast figures, and quoting
+    only them overstates the triangle in the SHIPPED configuration: with the
+    twelve forecasts this actually spends, triangle-on is **2.2pp** (worst
+    roster 3.3) against triangle-off's **5.2pp** (worst 6.4). Still
+    load-bearing — better than twice as close — but the forecasting stage
+    does more of the work than the headline comparison suggests, and the
+    battery is what forced the distinction: break 118 disabled only half the
+    triangle term and was MISSED, because half-off lands between the two and
+    inside the bars.
   - *Reward class COVERAGE over total edge* — the hypothesis that answering
     more of the enemy's classes beats stacking one counter. Measured over 4
     rosters × 14 encounters it is **worse**: 3.1pp against 2.0pp. Recorded
@@ -2678,8 +2686,13 @@ moved one of them: the first premise held exactly, the second did not.
   names only the classes the team actually beats rather than every class the
   opposition fields, which would be the briefing overselling a pick (A1).
 
-  *Done when: the suggestion lands within 5pp of the brute-force best across
-  three rosters, no worse than 6pp on any one of them, beats the roster's own
+  The bars sit where the algorithm measures, with headroom, rather than at
+  round numbers chosen before measuring: 4pp mean and 5pp worst, against a
+  shipped 2.2 and 3.3, which separates triangle-on from triangle-off clearly
+  instead of by two tenths of a point.
+
+  *Done when: the suggestion lands within 4pp of the brute-force best across
+  three rosters, no worse than 5pp on any one of them, beats the roster's own
   order by at least 8pp, spends no more than 12 forecasts, and never fields a
   creature that cannot fight.* ✅
 

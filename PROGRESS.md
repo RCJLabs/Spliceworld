@@ -13,8 +13,13 @@ order is **17–23pp off the best team**.
 - **Rank by solo forecast.** Ranks nobody — one creature against a
   multi-wave encounter is 0% for the reason `forecast.js` documents at
   length. Every score ties; a stable sort returns the roster unchanged.
-- **Rank by raw strength.** 17.3pp off, indistinguishable from not choosing.
-  The **class triangle** lands 8.7pp off.
+- **Rank by raw strength.** With no forecasting, 17.3pp off — the same as
+  not choosing; the **class triangle** lands 8.7pp off. But those are the
+  zero-forecast numbers and they overstate the triangle in the shipped
+  configuration: at the twelve forecasts this spends, triangle-on is
+  **2.2pp** against triangle-off's **5.2pp**. Still load-bearing, still
+  better than twice as close, but the forecasting stage does more of the
+  work than the headline suggests.
 - **Reward coverage over total edge.** My own hypothesis, and wrong: 3.1pp
   against 2.0pp over 4 rosters × 14 encounters. Written down because a
   negative result nobody records gets re-proposed.
@@ -38,6 +43,13 @@ encounters, and a worst-roster bar now.
 
 Budget 12 is measured the same way: eight held on the rosters it was tuned
 against and broke on a third.
+
+**And the battery caught an overclaim.** Break 118 — "the suggestion stops
+reading the class triangle" — was MISSED, because it disabled only the
+positive half of the term; half-off lands between on and off and stayed
+inside the bars. Removing the whole term reads 5.2pp against the shipped
+2.2, which is what the bars are set to separate: 4pp mean and 5pp worst,
+where the first draft's 5 and 6 would have been tripped by two tenths.
 
 ### Verification
 

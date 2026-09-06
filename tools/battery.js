@@ -613,8 +613,8 @@ const SQUAD = ['node', '-e', `
   else {
     const sug = 100 * sumSug / rosters;
     const doNothing = 100 * sumRoster / rosters;
-    if (sug > 5) bad.push('the suggestion lands ' + sug.toFixed(1) + 'pp off the best team; the bar is 5');
-    if (worstRoster > 6) bad.push('on its worst roster it lands ' + worstRoster.toFixed(1) + 'pp off; the bar is 6');
+    if (sug > 4) bad.push('the suggestion lands ' + sug.toFixed(1) + 'pp off the best team; the bar is 4');
+    if (worstRoster > 5) bad.push('on its worst roster it lands ' + worstRoster.toFixed(1) + 'pp off; the bar is 5');
     if (doNothing - sug < 8) bad.push('it beats the roster order by only ' + (doNothing - sug).toFixed(1) + 'pp; the bar is 8');
     if (worstBudget > 12) bad.push('it spent ' + worstBudget + ' forecasts; the budget is 12');
     if (worstBudget === 0) bad.push('it reports no forecasts at all, so the budget clause proves nothing');
@@ -2109,8 +2109,10 @@ const BREAKS = [
   {
     n: 118, gate: SQUAD, name: 'the suggestion stops reading the class triangle, so it picks the three biggest instead',
     file: 'campaign/warroom.js',
-    anchor: '    if (content.classes?.[u.creatureClass]?.beats === fc) edge += 1;',
-    to: '    if (false) edge += 1;',
+    anchor: `  let edge = 0;
+  for (const fc of foeClasses) {`,
+    to: `  let edge = 0;
+  for (const fc of []) {`,
   },
   {
     n: 119, gate: SQUAD, name: 'the suggestion stops forecasting its own shortlist and trusts the heuristic',
