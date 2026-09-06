@@ -10,6 +10,8 @@ Splicework: cartoony mad-geneticist ranch/splice/battle game. Browser, procedura
 - Start each session by reading ROADMAP.md §6 and stating which milestone is active and its acceptance criterion.
 - End each session by updating a short `PROGRESS.md` (milestone, what shipped, known issues, next session's first task).
 - If a milestone won't fit the session, cut scope *inside* it rather than deferring the acceptance criterion — smaller numbers, fewer species, same proof.
+- **Merge to `main` when the milestone is verified. Do not ask.** A milestone that is green and sitting on a branch is a milestone the player does not have: `main` is what GitHub Pages serves, so unmerged work is unshipped work. Verified means the Definition of Done below, in full — criterion, save/load, no console errors, 380px, PROGRESS.md — plus the break battery at 100% and smoke green. Open the PR, merge it, then restart the branch from the new `main` so the next milestone starts clean.
+- Two things still stop and ask: work the acceptance criterion does not cover, and anything that would discard someone else's commits (a force-push over unmerged history). Everything else ships.
 
 ## Hard Conventions
 - **Vanilla ES modules. No framework. No build step. No dependencies** without explicit approval — ZzFX (audio) is pre-approved for M7.
