@@ -185,6 +185,72 @@ const OUTLOOK = ['node', '-e', `
   console.log('outlook ✓  ' + lines.length + ' sentences across every stage, condition and gene level, every slot filled');
 `];
 
+// R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
+// "claws are on backwards". They were. Every part is drawn in a local space
+// where the head faces +x (frames.json _doc), and the `paw` archetype built
+// its claws as near-equilateral triangles whose only visible point hung
+// down and BACKWARD, marching back across the toe pad (x = 15, 6, -3) so the
+// last one dangled off the heel. Twenty limbs, and not one forward claw
+// among them.
+//
+// The invariant is about the shape rather than about a coordinate anybody
+// typed: a claw is a triangle, its APEX is the vertex opposite its shortest
+// edge, and that apex must sit forward of the base it grows from. Stated
+// that way it survives the claws being moved, resized or restyled, and it
+// cannot be satisfied by a blunt wedge that happens to lean the right way.
+//
+// The tolerance follows the anatomy rather than being a blanket allowance,
+// and the battery is why: the first version let any foot keep one backward
+// claw, so flipping a single claw on a three-clawed tiger paw slipped
+// straight through and break 131 came back MISSED.
+//
+// A PAW has no hallux. Its claws are @white and every one of them must
+// point forward. A TALON or a STILT does have one — a raptor's hallux and a
+// wader's back toe are real anatomy — and those toes are @accent, so at
+// most one of them may face backwards. Two different rules because they are
+// two different feet.
+const CLAWS = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const J = (p) => JSON.parse(readFileSync(p, 'utf8'));
+  const shapes = J('data/parts-shapes.json').shapes;
+  const parts = J('data/parts.json').parts;
+  const limbs = parts.filter((p) => p.slot === 'forelimbs' || p.slot === 'hindlimbs');
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const bad = [];
+  const paw = [];
+  let feet = 0, claws = 0;
+  for (const part of limbs) {
+    const list = shapes[part.id] || [];
+    let fwd = 0, back = 0;
+    for (const sh of list) {
+      if (sh.type !== 'polygon' || typeof sh.points !== 'string') continue;
+      const v = sh.points.trim().split(/\\s+/).map((q) => q.split(',').map(Number));
+      if (v.length !== 3) continue;
+      const e = [dist(v[0], v[1]), dist(v[1], v[2]), dist(v[2], v[0])];
+      const short = e.indexOf(Math.min.apply(null, e));
+      const apex = v[(short + 2) % 3];
+      const b0 = v[short], b1 = v[(short + 1) % 3];
+      const forward = apex[0] > (b0[0] + b1[0]) / 2;
+      if (forward) fwd++; else back++;
+      if (!forward && sh.fill === '@white') paw.push(part.id);
+    }
+    if (fwd + back === 0) continue;
+    feet++; claws += fwd + back;
+    if (back > 1 || (back > 0 && back >= fwd)) bad.push(part.id + ' (' + fwd + ' forward, ' + back + ' back)');
+  }
+  if (!feet) { console.error('claws x  no clawed limb was examined at all'); process.exit(1); }
+  if (bad.length) {
+    console.error('claws x  ' + bad.length + ' limb(s) face backwards: ' + bad.slice(0, 4).join('; '));
+    process.exit(1);
+  }
+  if (paw.length) {
+    const uniq = paw.filter((v, i, a) => a.indexOf(v) === i);
+    console.error('claws x  a paw has no hallux, but ' + uniq.length + ' carries a backward claw: ' + uniq.slice(0, 4).join(', '));
+    process.exit(1);
+  }
+  console.log('claws ok  ' + claws + ' claws across ' + feet + ' clawed limbs, every foot forward-heavy');
+`];
+
 // R125 — does the letter predict the fight? The tier claims an A wins more
 // than a B, which is a claim about the battle engine rather than about the
 // scoring code, so the only instrument that can settle it is the engine. Its
@@ -2199,6 +2265,12 @@ const BREAKS = [
     to: '      ${false && fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
   },
   {
+    n: 131, gate: CLAWS, name: 'a paw is regenerated with the old backward claw, and every big cat is on its feet the wrong way',
+    file: 'data/parts-shapes.json',
+    anchor: '"points": "13.55,55 14.55,65 28.55,61"',
+    to: '"points": "15,55 27,58 18,68"',
+  },
+  {
     n: 128, gate: TIER, name: 'the tier stops reading part grades, so a whole lever goes invisible to it',
     file: 'data/tiers.json',
     anchor: '"gradeMult": 0.161198,',
@@ -2416,7 +2488,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2438,6 +2510,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === SQUAD ? 'the briefing knows who to send'
                 : gate === OUTLOOK ? 'every outlook sentence has something in every slot'
                 : gate === TIER ? 'a higher letter is a creature that wins more'
+                : gate === CLAWS ? 'every clawed foot points where the creature is going'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;

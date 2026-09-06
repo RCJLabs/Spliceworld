@@ -2651,6 +2651,46 @@ moved one of them: the first premise held exactly, the second did not.
     new measurement. The first paint is smaller than before this milestone
     started, which discharges most of R121 as a side effect.
 
+### 9.12 The claws were on backwards (R126) — reported from a phone
+
+- **R126 — Claws point where the creature is going.** ✅ *Shipped.* Reported
+  with a screenshot of the Splice Theater: "claws are on backwards". They
+  were, on **twenty limbs**, and not one of them had a single forward claw.
+
+  Every part is drawn in a local space where the head faces **+x** (see
+  `frames.json` `_doc`). The `paw` archetype built its claws as
+  near-equilateral triangles — no vertex sharp enough to read as a tip
+  except the one hanging **down and backward** — and marched them
+  *backwards* across the toe pad (x = 15, 6, −3), so the last claw dangled
+  off the heel. Rebuilt as narrow spikes based at the front of the pad with
+  the apex furthest forward.
+
+  Two more archetypes were **back-heavy** rather than reversed, which reads
+  the same way: `talon` had one toe forward and two trailing, and `stilt`
+  one and one. A raptor is three toes forward and one hallux; a wader the
+  same. Both now carry two forward toes (each with its own claw tip) and a
+  single hallux behind.
+
+  **The generator is eight parts behind the game, and running it is
+  destructive.** `tools/gen-parts.js` emits 236 parts across 40 species; the
+  game ships **244 across 41**. Regenerating drops every R6 variant
+  (`abyssal_shark`, `alpine_ram`, `glider_skunk`, `iron_tortoise`,
+  `pale_cobra`, `storm_eagle`) and all eight salvage parts — 42 parts of
+  shipped content. `data/parts.json` warns about exactly this trap in its
+  own `_doc`. So `tools/shapes.js` was fixed for the future and the shipped
+  geometry was rewritten surgically in place, matching each old claw by its
+  exact vertex signature: **26 parts touched, 6 shapes added, no other field
+  changed.** Closing that drift is its own phase and is not this one.
+
+  *Done when: no clawed foot in the shipped geometry is back-heavy, and the
+  rule is checked rather than eyeballed.* ✅ — the `CLAWS` gate states it as
+  a property of the SHAPE rather than of a coordinate anybody typed: a claw
+  is a triangle, its apex is the vertex opposite its shortest edge, and that
+  apex must sit forward of the base it grows from. One backward claw per
+  foot is allowed, because the hallux is real anatomy. Measured on the
+  shipped data: **20 limbs failed before the fix and 0 after**; the gate now
+  reads 69 claws across 31 clawed limbs.
+
 ### 9.11 What is this one worth? (R125) — asked for directly
 
 - **R125 — Every chimera carries a letter.** ✅ *Shipped.* Asked for as

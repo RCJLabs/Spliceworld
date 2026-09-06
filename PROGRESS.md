@@ -1,5 +1,53 @@
 # PROGRESS
 
+## Session 122 — R126: the claws were on backwards ✅
+
+Reported with a screenshot of the Splice Theater. They were, on **twenty
+limbs**, and not one of those had a single forward-facing claw.
+
+Every part is drawn head-toward-**+x** (`frames.json` `_doc`). The `paw`
+archetype built claws as near-equilateral triangles — no vertex sharp
+enough to read as a tip except the one hanging **down and backward** — and
+marched them *backwards* across the toe pad (x = 15, 6, −3), so the last
+claw dangled off the heel. Now narrow spikes based at the front of the pad,
+apex furthest forward.
+
+`talon` and `stilt` were **back-heavy** rather than reversed, which looks
+the same: one toe forward and two trailing. A raptor is three forward and
+one hallux. Both now carry two forward toes with their own claw tips and a
+single hallux.
+
+`bugleg` and `scythe` were measured and left alone — already forward.
+
+### The thing worth knowing for next time
+
+**`tools/gen-parts.js` is eight parts behind the game and running it is
+destructive.** It emits 236 parts / 40 species; the game ships **244 / 41**.
+Regenerating drops every R6 variant and all eight salvage parts — 42 parts
+of shipped content. I ran it, saw `parts.json` move by 179 lines, and
+restored both files before anything else happened. `data/parts.json` warns
+about this trap in its own `_doc` and the warning is now true of the
+generator itself.
+
+So: `tools/shapes.js` fixed for the future, and the shipped geometry
+rewritten in place by matching each old claw's exact vertex signature —
+**26 parts touched, 6 shapes added, no non-geometry field changed.**
+
+### The gate
+
+Stated as a property of the SHAPE, not of a coordinate: a claw is a
+triangle, its apex is the vertex opposite its shortest edge, and that apex
+must sit forward of the base it grows from. One backward claw per foot is
+allowed — the hallux is real anatomy. **20 limbs failed before the fix, 0
+after**; the gate reads 69 claws across 31 clawed limbs.
+
+Battery **131 breaks**. `sw.js` → `spliceworld-v45-r126`.
+
+### Next session's first task
+
+Two candidates, both now written down: **R101** (the migrations split) and
+closing the **gen-parts drift** so the generator can be run again safely.
+
 ## Session 121 — R125: every chimera carries a letter ✅
 
 Asked for directly: grade chimeras F to S from part grades, moves chosen,

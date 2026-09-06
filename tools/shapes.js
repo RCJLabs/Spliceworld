@@ -179,9 +179,21 @@ const LIMBS = {
     const s = [el(0, 2, mass, mass + 1, P), rc(-mass * 0.8, -2, mass * 1.6, len, mass * 0.75, P),
                li(`M ${-mass * 0.6} 8 q ${mass * 0.25} 24 ${mass * 0.05} 40`, W, 5, { opacity: 0.13 }),
                el(2, len, mass * 0.9, 13, digit)];
+    // Claws sit on the FRONT of the toe pad and sweep FORWARD, because the
+    // head faces +x (see frames.json _doc) and a claw that trails behind the
+    // toe reads as a foot put on backwards — which is exactly how it was
+    // reported. The old triangle was near-equilateral, so its only visible
+    // point was the bottom vertex, and the run marched BACKWARD across the
+    // pad (x = 15, 6, -3) hanging the last claw off the heel.
+    //
+    // Now: a narrow spike whose tip is the furthest-forward vertex, based at
+    // the front of the pad, fanning down and slightly back for the toes
+    // behind it. Two vertices make the base and one makes the point, so
+    // there is no ambiguity about which end is the claw.
     for (let i = 0; i < claws; i++) {
-      const x = 15 - i * 9, y = len - 8 + i * 9;
-      s.push(po(`${x},${y} ${x + 12},${y + 3} ${x + 3},${y + 13}`, W, { strokeWidth: 3 }));
+      const bx = 2 + mass * 0.55 - i * 5;
+      const by = len - 5 + i * 8;
+      s.push(po(`${bx},${by} ${bx + 1},${by + 10} ${bx + 15},${by + 6}`, W, { strokeWidth: 3 }));
     }
     return s;
   },
@@ -234,10 +246,15 @@ const LIMBS = {
   talon({ len = 54 }) {
     return [el(0, 10, 18, 20, P), sheen(-6, 3, 9, 10, 0.13),
             rc(-5.5, 24, 11, 30, 5, A, { strokeWidth: 4 }),
+            // A raptor's foot is forward-heavy: three toes ahead, one hallux
+            // behind. This had ONE toe forward and two trailing, so the whole
+            // foot read as facing the wrong way. Two forward toes now, each
+            // with its own dark claw tip at the front, and a single hallux.
             po(`0,${len - 4} 21,${len + 3} 19,${len + 11} 2,${len + 9}`, A, { strokeWidth: 4 }),
-            po(`-2,${len - 2} 5,${len + 13} -8,${len + 13}`, A, { strokeWidth: 4 }),
-            po(`-2,${len - 2} -16,${len + 9} -8,${len + 14}`, A, { strokeWidth: 4 }),
-            po(`21,${len + 3} 30,${len + 8} 19,${len + 11}`, O, { stroke: 'none' })];
+            po(`0,${len + 4} 15,${len + 11} 13,${len + 17} 1,${len + 13}`, A, { strokeWidth: 4 }),
+            po(`-2,${len - 2} -15,${len + 8} -8,${len + 13}`, A, { strokeWidth: 4 }),
+            po(`21,${len + 3} 30,${len + 8} 19,${len + 11}`, O, { stroke: 'none' }),
+            po(`15,${len + 11} 23,${len + 16} 13,${len + 17}`, O, { stroke: 'none' })];
   },
   // Webbed foot / flipper. Water's answer to the paw, and the reason a
   // goose reads as half-flier, half-swimmer.
@@ -272,9 +289,13 @@ const LIMBS = {
             el(0, len * 0.5, 8.5, 8.5, P),
             rc(-4.5, len * 0.5, 9, len * 0.5, 4, A),
             li(`M -2 6 q -2 ${len * 0.18} 0 ${len * 0.28}`, W, 3.5, { opacity: 0.14 }),
+            // Same correction as the talon, for the same reason: a wader
+            // stands on toes that point where it is walking. Long forward
+            // toe, a shorter one beside it, and one short hallux behind.
             po(`0,${len} 24,${len + 4} 22,${len + 11} 0,${len + 8}`, A, { strokeWidth: 3.5 }),
-            po(`0,${len} -20,${len + 6} -18,${len + 13} 0,${len + 8}`, A, { strokeWidth: 3.5 }),
-            li(`M 0 ${len + 3} L -3 ${len + 16}`, A, 3)];
+            po(`0,${len + 3} 15,${len + 12} 13,${len + 18} 0,${len + 11}`, A, { strokeWidth: 3.5 }),
+            po(`0,${len} -14,${len + 5} -13,${len + 11} 0,${len + 8}`, A, { strokeWidth: 3.5 }),
+            li(`M 0 ${len + 3} L -3 ${len + 14}`, A, 3)];
   },
   hop({ len = 50 }) {
     return [el(0, 8, 22, 24, P), sheen(-7, 0, 11, 12, 0.14),
