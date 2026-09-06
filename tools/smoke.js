@@ -10919,12 +10919,18 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // R87 adds two more, on the same terms: a raid's row is worth reading
     // because it names the hours left and the dollars at stake, and an
     // exhibition's because it names which one and what it pays.
-    const NUMBERED = ['spar', 'defend', 'rescue', 'settle', 'raid', 'gauntlet', 'assault'];
-    const strings = AGENDA.filter((a) => !NUMBERED.includes(a.id));
-    assert.ok(strings.length > 10, 'there are plenty of them');
-    for (const a of strings) {
-      assert.equal(typeof a.hint, 'string', `"${a.id}" still declares a plain string hint`);
-    }
+    // R120 INVERTED THIS. The list above was an ALLOWLIST: seven rows were
+    // permitted to read the save and every other row was required to be a
+    // plain string, which froze R48's rule at the seven that happened to
+    // need it and left twelve describing what a system IS rather than how
+    // much of it is waiting. Measured on a fresh save, that is the
+    // difference between "five headings" and the eighteen things a player
+    // can actually press on their first open. So the rule is now universal
+    // and the allowlist is gone: EVERY row reads the save.
+    assert.ok(AGENDA.length > 10, 'there are plenty of them');
+    const fixed = AGENDA.filter((a) => typeof a.hint !== 'function').map((a) => a.id);
+    assert.deepEqual(fixed, [],
+      `every agenda row reads the save — a fixed sentence cannot say how much is waiting (${fixed.join(', ')})`);
     for (const item of agendaShape({ ...newGameState(), funds: 99999 }, content, t0).open) {
       assert.equal(typeof item.hint, 'string', `"${item.id}" resolves to a string`);
       assert.ok(item.hint.length > 0, `"${item.id}" says something`);
@@ -17310,8 +17316,15 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // it asked for is queued rather than deferred again: R121, what the first
   // paint should carry. `save/save.js` is 46 KB of it and most of that is
   // migrations for versions no live save is on.
-  const MODULE_CAP = 52;
-  const KB_CAP = 595;
+  // R120 BROUGHT IT DOWN INSTEAD. This is where a fifth consecutive raise
+  // would have gone — twelve agenda hints that read the save are ~5 KB of
+  // real code — and a cap that moves every time a feature wants it is not a
+  // cap. So the Pens screen was deferred on R74's own terms (it is a TAB YOU
+  // PRESS; the first paint is the Ranch) and R74 had simply stopped one
+  // screen short of it. 52 modules / 594 KB became 48 / 560, which pays for
+  // R120 forty times over. Measured at 560.0; both caps sit just above.
+  const MODULE_CAP = 48;
+  const KB_CAP = 565;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

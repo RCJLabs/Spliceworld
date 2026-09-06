@@ -10,7 +10,6 @@ import { ensureRanchSeeded, ensureDexVariants, needsFounding } from './ranch/ran
 import { renderRanchScreen } from './ranch/ui.js';
 import { renderVaultScreen } from './splice/vault-ui.js';
 import { renderTheaterScreen } from './splice/theater-ui.js';
-import { renderPensScreen } from './splice/pens-ui.js';
 import { runExtraction } from './splice/extract-ui.js';
 // R81 — from the module that actually defines it. `campaign/campaign.js:32`
 // is `export { pushNews }` — a bare re-export of this — so the shell used to
@@ -146,7 +145,15 @@ function lazy(load, exportName) {
 
 const SCREENS = {
   ranch: (root) => renderRanchScreen(root, ctx),
-  pens: (root) => renderPensScreen(root, ctx),
+  // R120 — deferred on R74's own terms, and for its reason rather than for
+  // mine. The Pens are a TAB YOU PRESS: the first paint is the Ranch, and
+  // 30 KB of pen chrome sat in front of it for every player on every open.
+  // R74 moved the War Room, the arena and the Dex out for exactly this and
+  // stopped one screen short. What forced the question was R120's own bytes
+  // — twelve agenda hints that read the save are ~5 KB of real code, and the
+  // eager cap has been raised four milestones running. Raising it a fifth
+  // time to pay for a feature is how a cap stops meaning anything.
+  pens: lazy(() => import('./splice/pens-ui.js'), 'renderPensScreen'),
   vault: (root) => renderVaultScreen(root, ctx),
   theater: (root) => renderTheaterScreen(root, ctx),
   battle: lazy(() => import('./campaign/ui.js'), 'renderWarRoomScreen'),

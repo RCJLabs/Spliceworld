@@ -1247,8 +1247,19 @@ function walkAct(state, content, now, open, opts = {}) {
   // Deliberately NOT while the pens are full: a player does not start a clock
   // whose payout has nowhere to go, and an egg that cannot hatch is the one
   // way this loop could quietly stall the ranch it is meant to feed.
+  // …and A HERD, NOT A HOARD. Eggs cost nothing but time, so a walker that
+  // breeds whenever a pen is free breeds unboundedly: measured, the ranch
+  // went from 13 animals to 41, the care it owed went with it, and the
+  // upkeep on all of them ate the cash that used to pay for rushes — R86's
+  // assertion that the walk hurries a clock at least once went from 10
+  // rushes to 0. That is the "stable, not a warehouse" rule R25 and R44
+  // already apply to chimeras, arriving late on the ranch side. The cap is
+  // one above the equilibrium the walker settled at before it could breed,
+  // so breeding SUPPLEMENTS the catalog rather than replacing it and every
+  // number the earlier phases measured stays comparable.
+  const HERD_CAP = 14;
   if (has('breed') && (state.ranch.eggs ?? []).length < incubatorSlots(state, content)
-      && state.ranch.stock.length + (state.ranch.eggs ?? []).length < state.ranch.penCapacity) {
+      && state.ranch.stock.length + (state.ranch.eggs ?? []).length < Math.min(state.ranch.penCapacity, HERD_CAP)) {
     const stock = state.ranch.stock;
     let paired = false;
     for (let i = 0; i < stock.length && !paired; i++) {

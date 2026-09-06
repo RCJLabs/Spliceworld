@@ -86,22 +86,12 @@ export function assaultWall(state, content, now) {
 
 // Every entry answers one question: is there a click here right now? Order is
 // the order the player should think about them in — work before spending.
-// R120 — EVERY ROW READS THE SAVE. R48 wrote this rule shipping the Sparring
-// Ring's row — "a hint's whole value is a NUMBER: *3 charges in the ring* is
-// a reason to go, *you can spar* is not" — and then seven rows followed it
-// and twelve did not, describing what a system IS instead of how much of it
-// is waiting.
-//
-// It matters most where the game looks emptiest. Measured on a fresh save,
-// day one offers 5 rows of which 3 are productive, and that reads as a thin
-// game — but counted in things a player can actually press it offers
-// EIGHTEEN: twelve care actions across three animals, one grown donor, three
-// jobs that launch with no crew, and two catalog entries $300 can afford.
-// The volume was always there; the screen was the part that would not say so.
-//
-// A hint may still fall back to a sentence when the count is not the point
-// (nothing grown yet, nothing injured) — what it must not do is be the same
-// sentence whether one thing or twenty are waiting.
+// R120 — EVERY ROW READS THE SAVE (ROADMAP §9.7). R48's rule, applied to all
+// nineteen instead of the seven that happened to need it: a hint's value is
+// the NUMBER. Day one looks like five headings and is eighteen things you
+// can press; the screen was the part that would not say so. A hint may fall
+// back to a sentence when there is nothing to count — what it must not be is
+// the same sentence whether one thing or twenty are waiting.
 export const AGENDA = [
   {
     // R87 — above even R85's, and it is the only row that has ever outranked
@@ -300,10 +290,9 @@ export const AGENDA = [
   },
   {
     id: 'job', kind: 'campaign', screen: 'battle', subtab: 'jobs', label: 'Run a job',
-    // Both of these read `runnableOps`, which is the list `startOperation`
-    // would actually accept. The first draft counted every job whose LANE was
-    // free and told a day-one player they could run seven; three of them
-    // start (R28: the number on the screen is the number that lands).
+    // Both read `runnableOps` — the list `startOperation` would accept. The
+    // first draft counted every job whose LANE was free and told a day-one
+    // player seven; three start (R28).
     hint: (state, content, now) => {
       const runnable = runnableOps(state, content, now);
       const purse = runnable.reduce((n, op) => Math.max(n, op.funds?.[1] ?? 0), 0);
