@@ -2651,6 +2651,49 @@ moved one of them: the first premise held exactly, the second did not.
     new measurement. The first paint is smaller than before this milestone
     started, which discharges most of R121 as a side effect.
 
+### 9.13 The generator was a trap (R127) — found while doing something else
+
+- **R127 — The data is what the generator produces, and now it has to stay
+  that way.** ✅ *Shipped.*
+
+  **A correction first.** R126 reported that running `tools/gen-parts.js`
+  "drops every R6 variant and all eight salvage parts — 42 parts of shipped
+  content". **That was wrong.** Measured properly: regeneration produces all
+  **244 parts**, drops none and invents none. The generator's own log line —
+  "236 parts across 40 species (+8 salvage)" — counts variants separately
+  and I read it as a shortfall without checking. The real damage was
+  different and quieter.
+
+  **What regenerating actually reverted: forty parts.** Thirty-five tails
+  whose abilities had been named per species rather than per family (a
+  crocodile does a **Log Roll**, not a "Tail Drive"), three hides that
+  answer to their animal instead of their kind (**Roll Up**, **Quill
+  Coat**, **Shell Fortress**), one heron balance tune (54 power against the
+  generic 58), and the goat's **Iron Gut** passive — which was not reverted
+  so much as *deleted*, because the emitted part object had no `passive`
+  key at all. All of it now lives in a `HAND_TUNED` table, extracted from
+  the shipped data rather than retyped, applied last because that is what
+  hand-tuned means: a human looked at the generated answer and disagreed.
+
+  **And sixty-five parts carried float noise.** Coordinates like
+  `5.800000000000001` — what `2 + 16 * 0.55` is in binary. Nothing renders
+  differently for it, but it is why R126's hand-edited claw geometry and the
+  shape library silently disagreed about **thirteen parts**: one wrote two
+  decimal places, the other fifteen, and no gate could tell that apart from
+  a real change. Geometry is now rounded to 2dp at serialization — a
+  hundredth of a pixel on a creature drawn 200 wide.
+
+  *Done when: the generator can be run without changing the game, and
+  something checks that it stays true.* ✅ — `node tools/gen-parts.js
+  --check` computes the same output and COMPARES it instead of writing,
+  so the question can finally be asked without destroying the evidence.
+  Verified three ways: the regenerated data is **semantically identical** to
+  what shipped (0 parts differ; geometry moves on 2 parts by 0.005px, a
+  rounding tie), running the generator twice is a **fixed point**, and
+  `--check` goes red both on a one-word hand edit and on the pre-milestone
+  data. Breaks 132 and 133 hold both directions of it: tuning the data
+  without the generator, and dropping the generator's entry.
+
 ### 9.12 The claws were on backwards (R126) — reported from a phone
 
 - **R126 — Claws point where the creature is going.** ✅ *Shipped.* Reported

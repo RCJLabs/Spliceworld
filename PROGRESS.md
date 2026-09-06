@@ -1,5 +1,57 @@
 # PROGRESS
 
+## Session 123 — R127: the generator was a trap ✅
+
+### A correction to what I said last session
+
+R126 reported that running `tools/gen-parts.js` **"drops 42 parts of shipped
+content"**. That was wrong. Measured properly, regeneration produces all
+**244 parts** — drops none, invents none. I read the generator's own log
+line ("236 parts across 40 species (+8 salvage)") as a shortfall without
+checking; it counts variants separately. The trap was real but smaller and
+quieter than I reported, and I should have measured before writing it into
+a merged roadmap entry.
+
+### What regenerating actually reverted
+
+**Forty parts.** Thirty-five tails whose abilities were named per species
+rather than per family (a crocodile does a *Log Roll*, not a "Tail Drive"),
+three hides that answer to their animal instead of their kind, one heron
+balance tune (54 against the generic 58), and the goat's **Iron Gut**
+passive — which was not reverted so much as *deleted*, because the emitted
+part object had no `passive` key at all.
+
+All of it is now a `HAND_TUNED` table, extracted from the shipped data
+rather than retyped, applied last.
+
+### The float noise, and why it was not cosmetic
+
+**Sixty-five parts** carried coordinates like `5.800000000000001`. Nothing
+renders differently for it — but it is exactly why R126's hand-edited claw
+geometry and the shape library silently disagreed about **thirteen parts**:
+one wrote two decimals, the other fifteen, and no gate could tell that apart
+from a deliberate change. Geometry now rounds to 2dp at serialization.
+
+### The gate
+
+`node tools/gen-parts.js --check` computes the same output and **compares**
+it instead of writing, so the question "is the data what I would generate?"
+can be asked without destroying the evidence — which is why nobody had asked
+it in four phases.
+
+Verified three ways: the regenerated data is **semantically identical** to
+what shipped (0 parts differ; geometry moves on 2 parts by 0.005px, a
+rounding tie), running the generator twice is a **fixed point**, and
+`--check` goes red both on a one-word hand edit and on the pre-milestone
+data. Breaks 132 and 133 hold both directions.
+
+Battery **133 breaks**. `sw.js` → `spliceworld-v45-r127`.
+
+### Next session's first task
+
+**R101** — the migrations split. 25.3 KB behind an async `migrate()`, the
+biggest single item left in the eager graph.
+
 ## Session 122 — R126: the claws were on backwards ✅
 
 Reported with a screenshot of the Splice Theater. They were, on **twenty

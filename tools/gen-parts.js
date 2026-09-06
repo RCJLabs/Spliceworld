@@ -236,6 +236,70 @@ const KEYWORD_MOVES = {
   porcupine_forelimbs: M(44, 24, 92, [], { thorns: 0.25 }),
 };
 
+// R127 — THE FORTY PARTS THAT WERE TUNED IN THE DATA AND NEVER FOLDED BACK.
+//
+// `data/parts.json`'s own `_doc` says hand-authored content lives in this
+// generator "because a generator that reverts four phases of tuning the next
+// time somebody runs it is a trap". R20's keyword moves and R23's actives
+// did come home. These forty did not: thirty-five tails whose abilities were
+// named per species rather than per family (a crocodile does a Log Roll, not
+// a "Tail Drive"), three hides that answer to their animal instead of to
+// their kind, the goat's Iron Gut passive, and one heron balance tune. Every
+// one of them was written straight into the JSON, and running this file
+// silently put the generic version back.
+//
+// Applied LAST, over everything the archetypes decide, because that is what
+// "hand-tuned" means: a human looked at the generated answer and disagreed.
+// Extracted from the shipped data rather than retyped, so this table cannot
+// have introduced a change of its own — R127's gate proves that by running
+// the generator and demanding the tree come back clean.
+const HAND_TUNED = {
+  // --- tail ---
+  abyssal_shark_tail: { ability: 'Pressure Wake', move: M(0, 10, 100, [], { powerDown: 1 }) },
+  alpine_ram_tail: { ability: 'Rock Set', move: M(0, 10, 100, [], { powerDown: 1 }) },
+  anglerfish_tail: { ability: 'Second Lure', move: M(0, 10, 100, [], { taunt: true }) },
+  bat_tail: { ability: 'Wing Static', move: M(0, 10, 100, [], { accDown: 1 }) },
+  bear_tail: { ability: 'Raking Swat', move: M(0, 12, 100, [], { bleed: 1 }) },
+  chameleon_tail: { ability: 'Tail Fade' },
+  cobra_tail: { ability: 'Tail Feint', move: M(0, 10, 100, [], { venom: 1 }) },
+  crocodile_tail: { ability: 'Log Roll', move: M(0, 10, 100, [], { trap: true }) },
+  dragonfly_tail: { ability: 'Wing Buzz', move: M(0, 10, 100, [], { slow: 0.3 }) },
+  eagle_tail: { ability: 'Downdraft', move: M(0, 12, 100, [], { slow: 0.3 }) },
+  falcon_tail: { ability: 'Slipstream', move: M(0, 10, 100, [], { powerDown: 1 }) },
+  frog_tail: { ability: 'Tongue Tether', move: M(0, 12, 100, [], { trap: true }) },
+  glider_skunk_tail: { ability: 'Glide Trim' },
+  goat_tail: { ability: 'Stubborn Streak', move: M(0, 10, 100, [], { powerUp: 1 }) },
+  goose_tail: { ability: 'Honk and Chase', move: M(0, 10, 100, [], { taunt: true }) },
+  gorilla_tail: { ability: 'Anchor Grip', move: M(0, 10, 100, [], { trap: true }) },
+  heron_tail: { ability: 'Bill Rap', move: M(0, 14, 100, [], { stun: 0.3 }) },
+  iron_tortoise_tail: { ability: 'Plate Tuck', move: M(0, 10, 100, [], { guard: true }) },
+  mantis_tail: { ability: 'Guard Stance', move: M(0, 10, 100, [], { accUp: 1 }) },
+  moth_tail: { ability: 'Scale Dust', move: M(0, 10, 100, [], { accDown: 1 }) },
+  octopus_tail: { ability: 'Eighth Arm', move: M(0, 10, 100, [], { trap: true }) },
+  otter_tail: { ability: 'Otter Wrangle', move: M(0, 8, 100, [], { staminaDrain: 14 }) },
+  owl_tail: { ability: 'Silent Roost', move: M(0, 16, 100, [], { sleep: 0.35 }) },
+  pale_cobra_tail: { ability: 'Cold Coil', move: M(0, 10, 100, [], { slow: 1 }) },
+  pangolin_tail: { ability: 'Scale Rake', move: M(0, 12, 100, [], { bleed: 1 }) },
+  porcupine_tail: { ability: 'Quill Rattle', move: M(0, 10, 100, [], { powerDown: 1 }) },
+  pufferfish_tail: { ability: 'Spine Flare', move: M(0, 10, 100, [], { powerDown: 1 }) },
+  ram_tail: { ability: 'Herd Signal', move: M(0, 16, 100, [], { rally: 1 }) },
+  rhino_beetle_tail: { ability: 'Counterweight', move: M(0, 10, 100, [], { powerUp: 1 }) },
+  rhino_tail: { ability: 'Brace and Lean', move: M(0, 10, 100, [], { powerUp: 1 }) },
+  shark_tail: { ability: 'Lock On', move: M(0, 10, 100, [], { accUp: 1 }) },
+  storm_eagle_tail: { ability: 'Charge Trim', move: M(0, 10, 100, [], { accUp: 1 }) },
+  tiger_tail: { ability: 'Sight Line', move: M(0, 10, 100, [], { accUp: 1 }) },
+  tortoise_tail: { ability: 'Slow Breath', move: M(0, 8, 100, [], { staminaRestore: 12 }) },
+  wolf_tail: { ability: 'Hackles Up', move: M(0, 12, 100, [], { taunt: true }) },
+  // --- hide ---
+  pangolin_hide: { ability: 'Roll Up', move: M(0, 14, 100, [], { guard: true, thorns: 0.5 }) },
+  porcupine_hide: { ability: 'Quill Coat', move: M(0, 14, 100, [], { thorns: 0.9 }) },
+  tortoise_hide: { ability: 'Shell Fortress', move: M(0, 14, 100, [], { thorns: 0.45, regen: 0.06 }) },
+  // --- organ ---
+  goat_organ: { passive: {"name": "Iron Gut", "desc": "A digestive system that runs on spite and fence posts. Halves this chimera’s upkeep.", "upkeepMult": 0.5} },
+  // --- head ---
+  heron_head: { move: M(54, 26, 97, [], { ignoreEvasion: true }) },
+};
+
 // R23: every hide and every organ does something on a turn. A stat stick
 // the player can never press is a number wearing a part's name. The KIND is
 // chosen per species; the numbers live here once, so tuning "Bristles"
@@ -487,11 +551,22 @@ for (const sp of species) {
     };
     const liftFamily = slot === 'forelimbs' ? b.fore?.[0] : slot === 'hindlimbs' ? b.hind?.[0] : null;
     if (aff === 'air' && LIFT_FAMILY[liftFamily]) phys.lift = round1(LIFT_FAMILY[liftFamily] * Math.pow(bulk, LIFT_EXPONENT));
+    // R127 — last word to the hand. `passive` only exists because one part
+    // has one (the goat's Iron Gut), and it was being dropped on the floor:
+    // the emitted object had no such key at all, so the generator did not
+    // revert that tuning so much as delete it.
+    const tuned = HAND_TUNED[`${sp.id}_${slot}`];
+    if (tuned?.ability) ability = tuned.ability;
+    if (tuned?.move) move = tuned.move;
     const part = {
       id: `${sp.id}_${slot}`, species: sp.id, slot, name, ability,
       stats: statsFor(slot, sp), phys, tags: [...sp.tags],
       ...(aff ? { classAffinity: aff } : {}),
-      move, shapes,
+      move,
+      // After `move`, matching where it has always sat in the file: a
+      // regeneration that reorders keys is a diff nobody can read.
+      ...(tuned?.passive ? { passive: tuned.passive } : {}),
+      shapes,
     };
     parts.push(part);
   }
@@ -519,7 +594,9 @@ const out = {
     ' archetype shape library (tools/shapes.js) — a dev tool, not a build step; the game' +
     ' loads this JSON as-is. classAffinity is the anatomy that votes for a chimera\'s' +
     ' elemental class (see data/classes.json). Hand-authored content lives in the' +
-    ' generator too — R20\'s keyword moves and R23\'s hide and organ actives — because a' +
+    ' generator too — R20\'s keyword moves, R23\'s hide and organ actives, and R127\'s' +
+    ' HAND_TUNED (forty parts whose abilities, moves and one passive were written' +
+    ' straight into this file, and which running the generator used to revert) — because a' +
     ' generator that reverts four phases of tuning the next time somebody runs it is a' +
     ' trap. R32: phys.mass, phys.draw and phys.lift are no longer slot constants —' +
     ' every one of the 41 species used to total exactly 58 mass — but the species\' `bulk`' +
@@ -546,7 +623,60 @@ const geometry = {
     + ' asserts every part has geometry and every geometry entry has a part.',
   shapes: Object.fromEntries([...parts, ...salvage].map((p) => [p.id, p.shapes])),
 };
-writeFileSync(join(root, 'data/parts.json'), JSON.stringify(out, null, 2) + '\n');
-writeFileSync(join(root, 'data/parts-shapes.json'), JSON.stringify(geometry, null, 2) + '\n');
+// R127 — ROUND THE GEOMETRY ON THE WAY OUT. Sixty-five shipped parts carried
+// coordinates like `5.800000000000001`, which is what `2 + 16 * 0.55` is in
+// binary floating point. Nobody typed it and nothing renders differently for
+// it — SVG does not care about the fifteenth decimal — but it makes the data
+// file unreadable in a diff, and that is not cosmetic: R126 hand-edited some
+// claw geometry to two decimal places, the generator kept emitting the full
+// float, and the two silently disagreed about thirteen parts. The gate below
+// could not have told that apart from a real change.
+//
+// Two decimal places is a hundredth of a pixel on a creature drawn about 200
+// wide, so this rounds noise and nothing else. Applied at the point of
+// SERIALIZATION rather than inside the shape helpers, because that is what
+// it is about: what the file says, not what the drawing is.
+const tidy = (n) => Math.round(n * 100) / 100;
+const tidyShapes = (v) => {
+  if (typeof v === 'number') return tidy(v);
+  if (typeof v === 'string') return v.replace(/-?\d+\.\d+/g, (m) => String(tidy(Number(m))));
+  if (Array.isArray(v)) return v.map(tidyShapes);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, tidyShapes(x)]));
+  return v;
+};
+
+// R127 — `--check` answers the one question this file could never be asked
+// before: IS THE DATA WHAT I WOULD GENERATE? For four phases it was not, and
+// nothing said so, because the only way to find out was to run the generator
+// and thereby destroy the evidence. So the same output is computed and
+// COMPARED instead of written.
+//
+// It is the whole milestone in one flag. A hand edit to data/parts.json now
+// fails the build unless the reason for it comes home to this file, which is
+// what `_doc` has claimed since R20 and what stopped being true immediately
+// afterwards.
+const CHECK = process.argv.includes('--check');
+const emit = (rel, text) => {
+  const path = join(root, rel);
+  if (!CHECK) { writeFileSync(path, text); return null; }
+  const disk = readFileSync(path, 'utf8');
+  return disk === text ? null : rel;
+};
+
+const stale = [
+  emit('data/parts.json', JSON.stringify(out, null, 2) + '\n'),
+  emit('data/parts-shapes.json', JSON.stringify(tidyShapes(geometry), null, 2) + '\n'),
+].filter(Boolean);
+if (CHECK) {
+  if (stale.length) {
+    console.error(`gen-parts x  ${stale.join(' and ')} ${stale.length === 1 ? 'is' : 'are'} not what the generator produces`);
+    console.error('             — either the edit belongs in tools/gen-parts.js or tools/shapes.js, or somebody hand-edited the data');
+    process.exit(1);
+  }
+  console.log(`gen-parts ok  the shipped data is exactly what this generator produces (${parts.length + salvage.length} parts)`);
+  process.exit(0);
+}
+void 0;
+
 const shapeCount = Object.values(geometry.shapes).reduce((n, list) => n + list.length, 0);
 console.log(`generated ${parts.length} parts across ${species.filter(s => !s.synthetic).length} species (+${salvage.length} salvage) — ${shapeCount} shapes`);
