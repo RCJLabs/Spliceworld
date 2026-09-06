@@ -13218,6 +13218,22 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
           if (name) importsOf.set(`${target}\u0000${name}`, true);
         }
       }
+      // …and the same load written as a continuation rather than awaited:
+      // `import('./x.js').then(({ a }) => …)`. R121 wrote one of these and
+      // this gate called a live export dead — which is the SAFE direction
+      // for a build failure, but only because I happened to be looking. The
+      // reverse is what the comment above warns about, and a form the
+      // scanner cannot see is a false negative waiting for the day its
+      // export has no static importer left. Names come after the path here,
+      // so it is a second pattern rather than a wider first one.
+      for (const m of text.matchAll(/import\(\s*['"]([^'"]+)['"]\s*\)\s*\.\s*then\(\s*(?:async\s*)?\(?\s*\{([^{}]*)\}/g)) {
+        const target = resolve(file, m[1]);
+        if (!target) continue;
+        for (const part of m[2].split(',')) {
+          const name = part.trim().split(/\s*:\s*/)[0].trim();
+          if (name) importsOf.set(`${target}\u0000${name}`, true);
+        }
+      }
       for (const m of text.matchAll(/import\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*['"]([^'"]+)['"]/g)) {
         const target = resolve(file, m[2]);
         if (target) namespaces.push({ file, target, alias: m[1] });
@@ -17365,8 +17381,22 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // PRESS; the first paint is the Ranch) and R74 had simply stopped one
   // screen short of it. 52 modules / 594 KB became 48 / 560, which pays for
   // R120 forty times over. Measured at 560.0; both caps sit just above.
-  const MODULE_CAP = 48;
-  const KB_CAP = 565;
+  // R121 BRINGS BOTH DOWN AGAIN, and this time to a rule rather than to a
+  // number. Five milestones running raised this cap by a few KB with a good
+  // local argument, and every one of those arguments was true — measured
+  // now, every module those phases added DOES run at boot. The waste was
+  // not in what they added; it was in what nobody had re-read since it was
+  // written. V8 coverage of both first paints found the Vault, the Theater
+  // and the extraction sequence executing not one function while the player
+  // looked at the Ranch — 26 KB of screen chrome compiled in front of every
+  // open, and the third time a gate has found a screen sitting eager.
+  //
+  // The rule that catches it now lives in `tools/boot.js`, where it can be
+  // ENFORCED rather than argued: a module is allowed in the eager graph
+  // only if booting runs it. These two numbers are what that rule currently
+  // costs, not a budget anybody may spend. Measured at 45 / 538.2.
+  const MODULE_CAP = 45;
+  const KB_CAP = 540;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,
