@@ -6405,7 +6405,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['an egg is laid', () => { lab.ranch.eggCount = 1; lab.ranch.eggs = [{ id: 'e0' }]; }, ['incubator', 'genes']],
     ['a chimera exists', () => {
       lab.chimeras = [{ id: 'c1', frame: 'M', tokens: {}, settleUntil: 0, bond: 5, temperament: { a: 1 }, scars: [] }];
-    }, ['upkeep', 'temperament', 'bond', 'veterans']],
+      // R125 — the tier note becomes true at exactly this step and not
+      // before: the letter is on the fold of every chimera, so it can only
+      // teach a player who has one. It cannot ride on `parts in the vault`
+      // below, because a vault full of parts and no creature has nothing to
+      // grade.
+    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers']],
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
