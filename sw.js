@@ -12,6 +12,8 @@ const SHELL = [
   'icon.svg',
   'util/rng.js',
   'save/save.js',
+  'save/migrations.js',
+  'save/slots.js',
   'save/settings-ui.js',
   'render/renderer.js',
   'ui/picker.js',

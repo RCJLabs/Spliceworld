@@ -215,6 +215,15 @@ const SAVES = ['node', 'tools/saves.js'];
 // on disk what that version's own code produces?
 const GENSAVES = ['node', 'tools/gen-saves.js', '--check'];
 
+// R101 — AND THE MIGRATED SAVE, IN A REAL BROWSER. Every other browser gate
+// seeds a save at the current version, so none of them takes the migration
+// path — which after R101 fetches a module over the network. The failure it
+// exists to catch is invisible to the obvious checks: when the import 404s,
+// `loadSlot`'s catch starts a FRESH game and saves it, so the ranch paints
+// and storage reads v45 while the player's actual save has been set aside.
+// Only the console tells you. That is why this gate reads the console.
+const STALE = ['node', 'tools/stale.js'];
+
 // R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
 // "claws are on backwards". They were. Every part is drawn in a local space
 // where the head faces +x (frames.json _doc), and the `paw` archetype built
@@ -2295,6 +2304,12 @@ const BREAKS = [
     to: '      ${false && fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
   },
   {
+    n: 138, gate: STALE, name: 'the lazy migration module is fetched from a path that is not there, and a returning player is quietly handed a new ranch',
+    file: 'save/save.js',
+    anchor: "await import('./migrations.js')",
+    to: "await import('./migrationz.js')",
+  },
+  {
     n: 134, gate: SAVES, name: 'a migration stops creating the field it exists to add, and every older save arrives missing it',
     file: 'save/migrations.js',
     anchor: '    save.dex.beaten ??= [];',
@@ -2554,7 +2569,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2580,6 +2595,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === GENPARTS ? 'the shipped parts are exactly what the generator produces'
                 : gate === SAVES ? 'a real save of every version still migrates to the current one'
                 : gate === GENSAVES ? 'every save fixture is what that version of the game actually wrote'
+                : gate === STALE ? 'a real old save still opens the game in a browser, quietly'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;

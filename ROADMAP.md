@@ -1988,10 +1988,21 @@ R102; R88–R90 remain.)*
   1055 → 1020 behind it). `npm test` now exists and runs `tools/saves.js`,
   which walks a real save of every version v1–v45 to current and requires
   each to land on exactly the shape a new game has — a new game IS the
-  specification, with empty containers specifying nothing. Breaks 134–137
-  hold all four directions: a migration that stops creating its field, a
-  fixture that stops being a save of its own version, a fixture hand-edited
-  rather than generated, and the table put back on a static import.
+  specification, with empty containers specifying nothing. Breaks 134–138
+  hold five directions: a migration that stops creating its field, a fixture
+  that stops being a save of its own version, a fixture hand-edited rather
+  than generated, the table put back on a static import, and the lazy module
+  fetched from a path that is not there.
+
+  **And a gate that did not exist before this.** Every browser gate in the
+  repo seeds a save at the CURRENT version, so none had ever taken the
+  migration path — which now fetches a module over the network.
+  `tools/stale.js` opens the game on a real v1, v20, v30 and v44 save in
+  headless Chromium and reads the console. That last part is the point: when
+  the import 404s, `loadSlot`'s catch starts a fresh game and saves it, so
+  the ranch paints and storage reads v45 while the returning player's save
+  has been quietly set aside. Only the console says otherwise. Proven both
+  ways — green on the tree, four errors when the specifier is broken.
 
 ### 9.6 Sixth audit (R87) — queue R103–R117 · **R106 shipped**
 

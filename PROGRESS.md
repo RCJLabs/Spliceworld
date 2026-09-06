@@ -47,6 +47,23 @@ catch it.
   because it shared a file with `loadSave`.
 * `migrate` is async and imports the table **only when the save is behind**.
 
+### The gate nobody had: a migrated save in a browser
+
+Every browser gate seeds a save at the current version, so none had ever
+taken the migration path — and after this split that path fetches a module
+over the network. `tools/stale.js` opens a real v1, v20, v30 and v44 save in
+headless Chromium.
+
+It reads the **console**, and that is the whole design: when the import 404s,
+`loadSlot`'s catch starts a fresh game and saves it, so "the ranch painted"
+and "storage says v45" both pass while the player's save has been set aside
+under a backup key. The obvious checks are blind to the one failure that
+matters. Proven both ways.
+
+Also fixed in that gate: its `finally` block deleted the Chromium profile and
+could throw ENOTEMPTY, replacing a real verdict with a housekeeping error —
+which it did, on the first run that actually found the bug.
+
 ### Numbers
 
 | | before | after |
