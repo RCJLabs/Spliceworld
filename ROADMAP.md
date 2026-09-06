@@ -2448,7 +2448,7 @@ suite can check.
 Both phases were **measured before either was written**, and the measurement
 moved one of them: the first premise held exactly, the second did not.
 
-- **R119 — The first splice has no decision in it.** *Queued.* Measured on a
+- **R119 — The first splice has no decision in it.** ✅ *Shipped.* Measured on a
   fresh save: the starter herd is `['goat', 'goat', 'bear']`, the two goats
   are newborn, and the bear is backdated to adult so that one door is open on
   day one (A4's fix). Graduate it and the vault holds **six parts from one
@@ -2471,7 +2471,60 @@ moved one of them: the first premise held exactly, the second did not.
   at least five founding labs; the first splice offers parts from two or more
   species under every one of them; two different choices produce measurably
   different first chimeras; and A1's wall — one chimera against the second
-  node — still reads 0% under every lab.*
+  node — still reads 0% under every lab.* ✅ **All four, and the wall reads
+  0% under all five.**
+  - **The five, and what they measure against the second node** (24 seeds
+    each): the Bramble Barn (bear + goats + eagle limbs) **0% / 96%**, the
+    Wetwing Annexe (heron + geese + mantis limbs) **0% / 96%**, the
+    Nightshift Loft (bat + rams + tiger limbs) **0% / 92%**, the Slab
+    (tortoise + porcupines + crocodile limbs) **0% / 100%**, the Kennel
+    (wolf + frogs + rhino limbs) **0% / 100%**. A1's wall holds under every
+    one and R106's promise — three bodies take it, which the Path prints —
+    is true under every one.
+  - **It took four passes, and guessing was wrong three times.** The first
+    authored set read 96/29/4/100/63 with three bodies: under the Nightshift
+    Loft a new player following the Path would have walked into a fight they
+    win **4%** of the time, the exact failure R106 exists to remove.
+    Diagnosing that as "the donor is too weak" was wrong — with the crate
+    held constant every donor lands within **23–28 power**; it is the
+    crate's parts that decide, spanning **19–37**. Rebalancing by hand then
+    overshot the other way, a tiger crate taking one body to **46%** and
+    breaking the wall from above. The last pass **searched** the space
+    instead — every crate species against every lab, scored on both numbers
+    — which is also how the owl was found unsalvageable as a donor (no crate
+    in the roster brings it to the bar) and replaced by the bat.
+  - **The crate holds no head, and that was a bug found by writing the
+    gate.** A head is mandatory to splice, so the first crate let a
+    brand-new player build a two-part creature out of the crate alone on
+    their first open and burn the whole reason it exists. Measured: it was
+    ALLOWED, and the day-one agenda offered "Splice a chimera" to invite it.
+    The crate is the forelimbs and hindlimbs now, which preserves the
+    sequence A4 measured and fixed (graduate, THEN splice) and improved both
+    numbers: the wall went 0–4% → 0% everywhere and the worst three-body
+    reading 88% → 92%. The agenda's splice row reads the vault for a **head**
+    rather than for parts, because a row that names a screen where the button
+    is greyed out is a row that lies.
+  - **The first screen of the game had no accessible name.** The dialog
+    controller was installed after the founding render, so the one dialog a
+    player cannot escape out of was the one with no focus trap, no focus
+    restore and no accessible name — `aria-label` measured null in a real
+    browser at 380×640. Hoisted.
+  - **Two budgets moved, both argued in the gates themselves**: the eager
+    KB cap 590 → 595 (measured 594.1; the MODULE cap is unmoved at 52, which
+    is what would catch a screen sneaking into boot) and the first-paint
+    budget 1100 → 1106 KB (measured 1102 — this gate loads a *fresh* save,
+    where the founding choice IS the first paint). Both were trimmed against
+    first. The fourth consecutive raise makes **R121** overdue rather than
+    optional.
+
+- **R121 — What should the first paint carry?** *Queued, and asked for by
+  the R87 note four phases ago.* Four consecutive milestones have each
+  raised the eager-import cap by a few KB with a good local argument, which
+  is a trend rather than four coincidences. The measurement to start from:
+  `save/save.js` is **46 KB of the 594**, and most of it is migrations for
+  versions no live save is on. *Done when: the eager graph is measurably
+  smaller than R119 left it, and the rule for what belongs in boot is
+  written down rather than argued case by case.*
 
 - **R120 — The sitting, not the session.** *Queued, and its premise is
   narrower than it was asked as.* The request was "more to do every time you

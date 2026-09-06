@@ -16872,6 +16872,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // a count read after the loop below measures two animals under every
     // lab and says nothing about what the founding handed over.
     const seededCount = s2.ranch.stock.length;
+    const herd = s2.ranch.stock.map((a) => a.species).sort().join(',');
     const grownAtFounding = s2.ranch.stock.filter((a) => stage(a, content, t0) !== 'juvenile').length;
     for (const a of [...s2.ranch.stock]) {
       if (stage(a, content, t0) !== 'juvenile') graduate(s2, a.id, content, t0);
@@ -16890,7 +16891,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const chimera = s2.chimeras[s2.chimeras.length - 1];
     chimera.settleUntil = t0 - 1;
     const worn = new Set(Object.values(chimera.tokens ?? {}).map((tk) => content.parts[tk.partId]?.species));
-    return { lab, state: s2, chimera, vault, worn, seededCount, grownAtFounding };
+    return { lab, state: s2, chimera, vault, worn, seededCount, grownAtFounding, herd };
   });
 
   for (const b of built) {
@@ -16906,6 +16907,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
   assert.equal(new Set(built.map((b) => [...b.worn].sort().join('+'))).size, built.length,
     'and no two labs produce the same first creature');
+  // …AND THE ANIMALS DIFFER, not just the creature. The crate alone can
+  // carry both "is a mix" and "is distinct", so a herd that went back to a
+  // literal passed every other rule: five labs handing out the same three
+  // animals is a cosmetic choice with five labels on it.
+  assert.equal(new Set(built.map((b) => b.herd)).size, built.length,
+    'and no two labs seed the same herd');
 
   // 4. THE CHOICE CHANGES WHICH CREATURE, NEVER HOW MUCH. This is the rule
   //    that took four passes to satisfy: the first authored set read 4% with

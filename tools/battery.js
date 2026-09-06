@@ -551,9 +551,11 @@ const FOUNDING = ['node', '-e', `
   // 2. every lab: three animals, exactly one grown, two species in the vault,
   //    and a first chimera that is actually a MIX
   const worn = [];
+  const herds = [];
   for (const lab of labs) {
     const s = { ...newGameState(), seed: 4242 };
     foundLab(s, content, lab.id, t0);
+    herds.push(s.ranch.stock.map((a) => a.species).sort().join(','));
     if (s.ranch.stock.length !== 3) bad.push(lab.id + ' seeds ' + s.ranch.stock.length + ' animals, not 3');
     const grown = s.ranch.stock.filter((a) => ageStage(a, content, t0) !== 'juvenile').length;
     if (grown !== 1) bad.push(lab.id + ' seeds ' + grown + ' grown donors, not 1');
@@ -575,6 +577,13 @@ const FOUNDING = ['node', '-e', `
     worn.push([...mix].sort().join('+'));
   }
   if (new Set(worn).size !== worn.length) bad.push('two labs produce the same first creature');
+  // …AND THE ANIMALS DIFFER, not just the chimera. The crate alone can carry
+  // "is a mix" and "is distinct", so a herd that went back to a literal
+  // passed every other rule here — five labs handing out the same three
+  // animals is a cosmetic choice with five labels on it.
+  if (new Set(herds).size !== herds.length) {
+    bad.push(labs.length + ' labs seed only ' + new Set(herds).size + ' distinct herds');
+  }
 
   // 3. the crate holds no head, and cannot be spliced alone
   for (const lab of labs) {

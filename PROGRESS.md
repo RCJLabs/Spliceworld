@@ -1,5 +1,95 @@
 # PROGRESS
 
+## Session 114 — R119: The first splice has a decision in it ✅
+
+**Acceptance criterion:** a fresh save cannot reach the Theater without
+choosing one of at least five founding labs; the first splice offers two or
+more species under every one; two choices produce measurably different first
+chimeras; and A1's wall still reads 0% under every lab — **all four, and the
+wall reads 0% under all five.** `SAVE_VERSION` **42 → 43** (`starterLab`);
+`sw.js` bumped to `spliceworld-v43-r119`.
+
+### The finding
+
+Measured on a fresh save before anything was written: the starter herd was a
+literal `['goat', 'goat', 'bear']` with the goats newborn, so the only animal
+that could be graduated on day one was the bear — and a graduation yields
+**six parts from one species**. The distinct species available to splice from
+was **one**, which means the Surgery Theater, the system this game is named
+for, opened with exactly one creature anybody could build. Every player's
+first "chimera" was the same purebred bear. M0's own done-when is *"a
+bear-headed, eagle-winged goat renders and persists"*, and nothing on day one
+could produce one.
+
+### The five, measured against the second node (24 seeds each)
+
+| lab | herd | 1 body | 3 bodies |
+|---|---|---|---|
+| The Bramble Barn | bear + goats + eagle limbs | 0% | 96% |
+| The Wetwing Annexe | heron + geese + mantis limbs | 0% | 96% |
+| The Nightshift Loft | bat + rams + tiger limbs | 0% | 92% |
+| The Slab | tortoise + porcupines + crocodile limbs | 0% | 100% |
+| The Kennel | wolf + frogs + rhino limbs | 0% | 100% |
+
+Three animals, one grown, all Standard, under every lab — the counts A1's
+wall and R106's arithmetic were measured against. The choice changes *which*
+creature, never *how much*.
+
+### Four passes, and guessing was wrong three times
+
+- The first authored set read **96/29/4/100/63** with three bodies. Under the
+  Nightshift Loft a new player following the Path would have walked into a
+  fight they win **4%** of the time — the exact failure R106 exists to
+  remove.
+- "The donor is too weak" was **wrong**: with the crate held constant every
+  donor lands within **23–28 power**. It is the crate's parts that decide,
+  spanning **19–37**.
+- Rebalancing by hand overshot the other way — a tiger crate took one body to
+  **46%**, breaking the wall from above.
+- The last pass **searched** the space: every crate species against every
+  lab, scored on both numbers. That is also how the owl was found
+  unsalvageable as a donor — no crate in the roster brings it to the bar —
+  and replaced by the bat.
+
+### Three bugs the gate found, all mine
+
+- **The crate could be spliced alone.** A head is mandatory, and the first
+  crate held one, so a brand-new player could build a two-part creature out
+  of the crate on their very first open and burn the whole reason it exists.
+  Measured: ALLOWED, and the day-one agenda offered "Splice a chimera" to
+  invite it. The crate is limbs now — which preserves A4's sequence
+  (graduate, THEN splice) and improved both numbers: the wall went 0–4% → 0%
+  everywhere, the worst three-body reading 88% → 92%.
+- **The agenda pointed at a splice the Theater refuses.** `ready` was "there
+  are parts in the vault"; it reads for a **head** now.
+- **The first screen of the game had no accessible name.** The dialog
+  controller was installed *after* the founding render, so the one dialog a
+  player cannot escape out of had no focus trap, no focus restore and no
+  accessible name — `aria-label` measured null in a real browser.
+
+Plus a gate bug: smoke's dead-export scan matched `\{([^}]*)\}` on dynamic
+imports, so `const { x } = await import(...)` inside an `if (...) {` block
+captured `"const { renderFounding"` and registered no name. A **false
+negative** in a dead-export gate, invisible for as long as every such export
+also had a static importer elsewhere.
+
+### Known issues
+
+Two budgets moved, both argued in the gates rather than nudged: the eager KB
+cap 590 → 595 (measured 594.1) and the first-paint budget 1100 → 1106 KB
+(measured 1102, on a fresh save where the founding screen *is* the first
+paint). Both were trimmed against first. It is the fourth consecutive raise,
+so **R121 — what should the first paint carry?** is queued rather than
+deferred again; `save/save.js` is 46 KB of the 594 and most of it is
+migrations for versions no live save is on.
+
+### Next session's first task
+
+**R120 — the sitting, not the session.** Measured this session: the mid-game
+is not thin (11 rows, 8 productive on an average open after week one), but
+day one offers 5 rows of which 3 are productive, and `gauntlet` never fired
+once in 1,453 sampled opens across three 90-day walks.
+
 ## Session 113 — R103: Decisions that matter ✅
 
 **Acceptance criterion (re-derived — see below):** measured across the LIVE
