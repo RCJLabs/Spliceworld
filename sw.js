@@ -1,7 +1,7 @@
 // Service worker (M7): network-first with cache fallback. Fresh deploys win
 // whenever the network is up; offline play falls back to the last good
 // build. Bump CACHE with SAVE_VERSION-sized releases so stale caches drain.
-const CACHE = 'spliceworld-v43-r122';
+const CACHE = 'spliceworld-v43-r122b';
 
 const SHELL = [
   '.',
@@ -123,15 +123,28 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// R122b — REVALIDATE, or "network-first" is a lie for ten minutes after
+// every deploy. A plain `fetch(request)` reads through the BROWSER's HTTP
+// cache, and GitHub Pages serves the shell with `Cache-Control: max-age=600`
+// — so for ten minutes after a push this returned the old file while
+// believing it had gone to the network, and then wrote that stale copy into
+// the freshly-named cache, where it outlived the ten minutes. A phone could
+// sit on the previous build indefinitely; that is how R122's fix appeared
+// not to ship. `cache: 'no-cache'` forces a conditional request instead:
+// a changed file comes back 200 with new bytes, an unchanged one 304 with
+// almost none. The offline fallback below is untouched.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE).then((cache) => cache.put(event.request, copy));
         return response;
       })
-      .catch(() => caches.match(event.request, { ignoreSearch: true }))
+      // Both arms matter: a dead network, and a browser that refuses the
+      // `cache` option. Either way the last good build is still here.
+      .catch(() => fetch(event.request).catch(() => null))
+      .then((r) => r ?? caches.match(event.request, { ignoreSearch: true }))
   );
 });

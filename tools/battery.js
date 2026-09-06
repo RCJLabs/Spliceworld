@@ -1837,6 +1837,12 @@ const BREAKS = [
   overflow-y: auto;`,
   },
   {
+    n: 112, gate: BOOT, name: 'the service worker reads through the HTTP cache again, so a deploy never reaches a phone that already has the app',
+    file: 'sw.js',
+    anchor: "    fetch(event.request, { cache: 'no-cache' })",
+    to: '    fetch(event.request)',
+  },
+  {
     n: 42, gate: BREAKOUT, name: 'a loose specimen grows a deadline and wanders off while you are away',
     file: 'campaign/breakout.js',
     anchor: '    const rival = labFor(state, content, cam.breakoutCount);',
