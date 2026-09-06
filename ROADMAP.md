@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 44
+- save version: 45
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -2650,6 +2650,65 @@ moved one of them: the first premise held exactly, the second did not.
     / 594 KB → 48 / 560**, and both caps were lowered to sit just above the
     new measurement. The first paint is smaller than before this milestone
     started, which discharges most of R121 as a side effect.
+
+### 9.11 What is this one worth? (R125) — asked for directly
+
+- **R125 — Every chimera carries a letter.** ✅ *Shipped.* Asked for as
+  "grade my chimeras F to S, from part grades, moves chosen, traits and part
+  combinations, so I know what to keep, dismantle or feed to the vat."
+
+  **The letter had to mean something.** This game already holds three
+  opinions about a creature — the class triangle, the briefing's forecast,
+  and R123's team suggestion — and a fourth that disagreed with them would
+  only teach the player which to distrust. So the tier is not a weighted
+  guess: it is a **prediction of one measured number**, the creature's solo
+  win rate across every encounter the game ships. The reference is fixed, so
+  the scale is absolute and nothing you build later re-grades a creature you
+  never touched. A letter is a band of that rate — "B" means "clears about a
+  quarter of the board alone".
+
+  **Three of the four named inputs did not behave as the request assumed,
+  and measuring said so** (solo, whole 26-encounter table):
+  - **Traits are the biggest lever in the game**, and the request listed
+    them third. At apex, applied to every part: `thick_hide` **+12.2pp**,
+    `dense_bones` +8.2, `deep_lungs` +7.3 — and `hyperthyroid` **−21.8pp**,
+    a creature that wins *nothing*, because stamina −10 six times over
+    leaves it unable to act. All twelve at once is **+40.2pp**.
+  - **Part grades** are second: standard → prismatic moves the rate 4% →
+    27%, a **23pp** swing, and `gradeMult` is the strongest single term.
+  - **A combo is worth +5.9pp** — mixed-with-combo 23.1% against
+    mixed-without 17.2%, holding species-mixing constant.
+  - **The moveset is very nearly inert: 1.0pp at standard, 2.6pp at apex**
+    between the best and worst picks. The reason is arithmetic rather than
+    design — the move pool averages **6.0** and you choose 4. It is
+    therefore *not* a term in the score; folding a 2pp effect into a letter
+    spanning 35pp would dress noise up as a judgement. It is reported as a
+    priced lever instead.
+
+  **Two measurement errors of my own, both caught before they shipped.**
+  The first calibration said combos *hurt* (−0.266): false — `sampleBuilds`
+  builds purebred creatures combo-less by construction, so the two were
+  perfectly confounded, and re-measuring on random legal builds reversed the
+  sign. The same run said the moveset had exactly 0.000 correlation: an
+  artifact, because `makeSimChimera` gives every creature the same bench
+  moveset, so there was no within-build variance to correlate. It also sets
+  no traits at all, so the entire first pass ran blind to the biggest lever.
+
+  **The model** is fitted over **420 creatures × 87,360 fights** and
+  explains **R² = 0.786**. The bands were then cut for zero middle-50%
+  overlap — and *that did not generalise*: on a **held-out** draw of 300
+  (a different seed from the fit) three of the five seams overlap again,
+  which is what overfitting a threshold looks like. What survived is
+  monotonicity, so that is what the gate asks for.
+
+  *Done when: on a population the model was not fitted to, mean measured win
+  rate rises strictly with the letter across all six bands, every band is
+  populated, and each step is worth at least 3pp; and the Theater shows the
+  grade before the splice is committed.* ✅ — held out at 300 creatures:
+  **F 5.1% · D 10.2% · C 15.1% · B 23.4% · A 35.1% · S 45.4%**, smallest
+  step **4.9pp**. `tools/tierbench.js` is the gate; the scale, the cuts and
+  the weights are all `data/tiers.json`, so a band moves without an engine
+  edit. `SAVE_VERSION` 44 → 45.
 
 ### 9.10 Who should I send? (R123) — asked for directly
 

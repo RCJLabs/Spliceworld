@@ -6099,6 +6099,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // data file, a module, a board, a launcher and a first-use moment, and
     // dropping its note has to fail the build like everything else here.
     'breakout',
+    // R125. The tier letter: a data file, a module, a chip on every
+    // chimera and a live preview in the Theater. On the roll for the same
+    // reason as the rest — pulling its note has to fail the build.
+    'tiers',
     // R88. Sending a certain fight instead of watching it: a module, a
     // predicate the briefing reads, a control that appears and disappears by
     // a rule, and a trade the player is making knowingly — the arena's
@@ -6154,6 +6158,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'taskforce.json': 'taskforce',
     'stance.json': 'stance',
     'scars.json': 'scars',
+    'tiers.json': 'tiers',
     'temperament.json': 'temperament',
     'traits.json': 'genes',
     'keywords.json': 'chart',
@@ -6221,6 +6226,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // --- Systems: the module that implements the thing the note teaches.
     'battle/veterancy.js': 'veterans',
     'battle/autoplay.js': 'sent',
+    'splice/tier.js': 'tiers',
     'splice/feral.js': 'feral',
     'splice/rush.js': 'rush',
     'campaign/taskforce.js': 'taskforce',
@@ -6399,7 +6405,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['an egg is laid', () => { lab.ranch.eggCount = 1; lab.ranch.eggs = [{ id: 'e0' }]; }, ['incubator', 'genes']],
     ['a chimera exists', () => {
       lab.chimeras = [{ id: 'c1', frame: 'M', tokens: {}, settleUntil: 0, bond: 5, temperament: { a: 1 }, scars: [] }];
-    }, ['upkeep', 'temperament', 'bond', 'veterans']],
+      // R125 — the tier note becomes true at exactly this step and not
+      // before: the letter is on the fold of every chimera, so it can only
+      // teach a player who has one. It cannot ride on `parts in the vault`
+      // below, because a vault full of parts and no creature has nothing to
+      // grade.
+    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers']],
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
@@ -9125,6 +9136,40 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const early = gradeOutlook(st.ranch.stock[0], content, t0, st);
     assert.ok(!/bred, not raised/.test(outlookLine(early, 'it')),
       'but not while there is still husbandry left to do');
+  }
+
+  // R125 — THE TIER, and the two surfaces that must not grow separate
+  //     opinions about it. The Pens grade a finished creature and the
+  //     Theater previews an unbuilt one; both go through `tierOfBuild`, and
+  //     the preview is gated on the SAME `errors` the SPLICE button is,
+  //     because "is this a creature" is a question the game already answers.
+  //     Two earlier guards here were wrong in the same way — `stats.hp > 0`
+  //     is true of a bare frame, and a hand-picked floor of four sockets is
+  //     a number the game does not agree with.
+  {
+    const { tierOfBuild, tierForRate } = await import('../splice/tier.js');
+    const theater = readFileSync(join(root, 'splice/theater-ui.js'), 'utf8');
+    const pens = readFileSync(join(root, 'splice/pens-ui.js'), 'utf8');
+    assert.ok(/tierOfBuild\(/.test(theater), 'the Theater previews the tier');
+    assert.ok(/errors\.length \? null : tierOfBuild/.test(theater),
+      'and the preview appears exactly when SPLICE IT does, on the same predicate');
+    assert.ok(/\$\{tierLine\}/.test(theater), 'and the preview is actually placed in the panel');
+    assert.ok(/tierOf\(/.test(pens), 'the Pens grade a finished chimera through the shared reader');
+    assert.ok(!/model|intercept|weights/.test(pens) && !/model|intercept|weights/.test(theater),
+      'and neither screen rebuilds the scoring locally');
+
+    // The scale is data: every band the file declares must be reachable,
+    // and the letters must come out in the order the file lists them.
+    const tiers = content.tiers?.tiers ?? [];
+    assert.ok(tiers.length >= 2, `the tier scale is loaded (${tiers.length} bands)`);
+    const seen = tiers.map((t) => tierForRate(t.min === null || t.min === undefined ? 0 : t.min, content).id);
+    assert.deepEqual(seen, tiers.map((t) => t.id),
+      `every declared band is reachable at its own floor (${seen.join('')})`);
+    // …and a rate above the top floor still lands in the top band rather
+    // than falling off the end.
+    assert.equal(tierForRate(1, content).id, tiers[tiers.length - 1].id, 'a perfect build grades top');
+    assert.equal(tierForRate(0, content).id, tiers[0].id, 'and a hopeless one grades bottom');
+    void tierOfBuild;
   }
 
   // 6. Both screens read ONE implementation. Two copies of an explanation

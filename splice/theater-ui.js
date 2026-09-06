@@ -3,6 +3,7 @@
 // M0 free-form dev slab — every part here is an owned token with lineage.
 
 import { creaturePortrait, slotOfSocket } from '../render/renderer.js';
+import { tierOfBuild } from './tier.js';
 import { renderIcon } from '../ui/icons.js';
 import { gradeOf, gradeIndexOf } from './extract.js';
 import { analyze } from './physiology.js';
@@ -146,6 +147,25 @@ export function renderTheaterScreen(root, ctx) {
     : '';
 
   const errors = validateSplice(state, draft.frame, draft.slots, content);
+
+  // R125 — THE LETTER BEFORE YOU COMMIT. This panel already re-renders on
+  // every slot change, so the preview costs one call: fill a socket and the
+  // grade moves with it. That is why the tier takes a BUILD rather than a
+  // chimera — the Theater is asking about a creature that does not exist
+  // yet, through the same function the Pens grade a finished one with. Two
+  // answers to "how good is this" is how they start disagreeing.
+  //
+  // It appears exactly when SPLICE IT does, because `errors` is the game's
+  // own answer to "is this a creature". The first version of this guard was
+  // `stats.hp > 0`, which is true of a BARE FRAME — so an empty Theater
+  // confidently graded the empty frame F at 0% of the board. The second was
+  // a hand-picked floor of four sockets, which is a number I chose rather
+  // than one the game agrees with. R61: the canonical predicate wins.
+  const previewTier = errors.length ? null : tierOfBuild(report, tokens, content);
+  const tierLine = previewTier
+    ? `<p class="tier-preview"><span class="tier tier-${previewTier.id}">${previewTier.id}</span>`
+      + `<span>${previewTier.blurb} — about ${Math.round(previewTier.rate * 100)}% of the board on its own</span></p>`
+    : '';
   const statLine = `HP ${report.stats.hp} · PWR ${report.stats.power} · ARM ${report.stats.armor} · SPD ${report.stats.speed} · STA ${report.stats.stamina}`;
 
   root.innerHTML = `
@@ -162,6 +182,7 @@ export function renderTheaterScreen(root, ctx) {
           : '◇ Unclassed — neutral in every matchup'
       }</p>
       <p class="recipe">${statLine}${report.tags.length ? ` · tags: ${report.tags.join(', ')}` : ''}</p>
+      ${tierLine}
       <div class="stage">${creaturePortrait(draftGenome(state, content), content, { idPrefix: 'thtr' })}</div>
       <p class="ranch-msg">${lastMsg}</p>
     </section>

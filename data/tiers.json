@@ -1,0 +1,32 @@
+{
+  "_comment": "R125 - the chimera tier scale (F..S). Every number here was measured, not chosen: see ROADMAP 9.11 and tools/tierfit.js. The model predicts a build's SOLO WIN RATE over the whole shipped encounter table, and a letter is a band of that rate. Adding a tier, moving a cut or reweighting a term is a data edit; the engine reads this file and knows nothing about F or S.",
+  "reference": {
+    "what": "solo win rate across every encounter in enemies.json",
+    "why": "a fixed reference the letter can be absolute against - a creature's grade must not move because you built something better elsewhere",
+    "fitR2": 0.786,
+    "fitSample": 420,
+    "fitSeedsPerEncounter": 8
+  },
+  "model": {
+    "intercept": -0.494165,
+    "weights": {
+      "gradeMult": 0.161198,
+      "hp": 0.001411,
+      "armor": 0.004358,
+      "power": 0.002707,
+      "stamina": 0.002662,
+      "speed": 0.002277,
+      "combos": 0.032085,
+      "purebred": 0.021062
+    }
+  },
+  "tiers": [
+    { "id": "F", "name": "F", "min": null,  "blurb": "barely fields", "measured": 0.053 },
+    { "id": "D", "name": "D", "min": 0.07,  "blurb": "makes up the numbers", "measured": 0.105 },
+    { "id": "C", "name": "C", "min": 0.15,  "blurb": "pulls its weight", "measured": 0.172 },
+    { "id": "B", "name": "B", "min": 0.20,  "blurb": "a keeper", "measured": 0.245 },
+    { "id": "A", "name": "A", "min": 0.29,  "blurb": "front line", "measured": 0.340 },
+    { "id": "S", "name": "S", "min": 0.40,  "blurb": "the good stuff", "measured": 0.405 }
+  ],
+  "movesetWorth": 0.026
+}

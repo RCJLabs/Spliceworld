@@ -185,6 +185,15 @@ const OUTLOOK = ['node', '-e', `
   console.log('outlook ✓  ' + lines.length + ' sentences across every stage, condition and gene level, every slot filled');
 `];
 
+// R125 — does the letter predict the fight? The tier claims an A wins more
+// than a B, which is a claim about the battle engine rather than about the
+// scoring code, so the only instrument that can settle it is the engine. Its
+// own file because it fights 62,400 battles to answer, and because it is held
+// out on purpose: the model was fitted on one seeded population and this
+// grades a different one. The note at the top of tools/tierbench.js says why
+// the bar is monotonicity rather than separation.
+const TIER = ['node', 'tools/tierbench.js'];
+
 // R85 — a neglected creature is warned before it is taken, and the taking is
 // a loan. Its own gate rather than the smoke suite's, for the usual reason:
 // the suite takes twelve minutes and this is four assertions. Runs the same
@@ -2190,6 +2199,24 @@ const BREAKS = [
     to: '      ${false && fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
   },
   {
+    n: 128, gate: TIER, name: 'the tier stops reading part grades, so a whole lever goes invisible to it',
+    file: 'data/tiers.json',
+    anchor: '"gradeMult": 0.161198,',
+    to: '"gradeMult": 0.0,',
+  },
+  {
+    n: 129, gate: TIER, name: 'the top band is cut so low that most of the roster grades S',
+    file: 'data/tiers.json',
+    anchor: '{ "id": "S", "name": "S", "min": 0.40,  "blurb": "the good stuff", "measured": 0.405 }',
+    to: '{ "id": "S", "name": "S", "min": 0.08,  "blurb": "the good stuff", "measured": 0.405 }',
+  },
+  {
+    n: 130, gate: TIER, name: 'the tier stops reading the bulk a creature carries, so traits reach it through one fewer stat',
+    file: 'splice/tier.js',
+    anchor: '    hp: stats.hp ?? 0,',
+    to: '    hp: 0,',
+  },
+  {
     // Re-adds the STATIC import rather than stubbing the screen: stubbing it
     // takes theater-ui.js out of the graph altogether and the gate goes
     // green for the wrong reason, which is what the first draft of this
@@ -2389,7 +2416,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2410,6 +2437,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === SENT ? 'a certain fight can be sent instead of watched'
                 : gate === SQUAD ? 'the briefing knows who to send'
                 : gate === OUTLOOK ? 'every outlook sentence has something in every slot'
+                : gate === TIER ? 'a higher letter is a creature that wins more'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;

@@ -238,6 +238,13 @@ export const GUIDE_HELPERS = {
   rivalBeaten: (state) => Object.values(state.campaign.rivals ?? {}).some((r) => (r.defeats ?? 0) > 0),
   contestOpen: (state) => (state.campaign.contested ?? []).length > 0,
   specimenLoose: (state) => (state.campaign.loose ?? []).length > 0,
+  // R125. Reachable the moment there is a creature to grade at all, which
+  // is the first splice: the letter is on the fold of every chimera from
+  // then on, so the note explains a thing already on screen rather than
+  // promising one. Done once the player has opened a dossier and seen what
+  // the letter is made of — reading the grade is the lesson, not owning it.
+  chimeraOwned: (state) => (state.chimeras ?? []).length > 0,
+  tierRead: (state) => Boolean(state.ui?.tierRead),
   // R85. Reachable the moment the player owns a creature that CAN go
   // feral, which is the only useful moment to be told — the note has to
   // arrive while there is still bond to build, not while a countdown is

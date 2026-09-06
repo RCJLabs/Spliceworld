@@ -13,6 +13,7 @@ import { toggleRow } from '../ui/picker.js';
 import { movesFromTokens } from '../battle/statblock.js';
 import { analyze } from './physiology.js';
 import { dossierRows, dossierSummary } from './dossier.js';
+import { tierOf } from './tier.js';
 import { xpProgress, maxLevel } from '../battle/veterancy.js';
 import { renameCreature } from './theater.js';
 import { frameOf, classOf } from '../data/catalog.js';
@@ -133,6 +134,18 @@ function bindVat(root, ctx, redraw) {
       onPick: (v) => { vatPick.b = v; redraw(); },
     }),
   });
+  // R125 — opening a dossier is what finishes the tier note. The letter is
+  // on the fold whether you read it or not; the lesson is what it is MADE
+  // of, and that lives one tap in. Recorded on `state.ui` because it is a
+  // fact about the player rather than about any one creature, and `ui` is
+  // already carried across runs.
+  for (const d of root.querySelectorAll('details[data-dossier]')) {
+    d.addEventListener('toggle', () => {
+      if (!d.open || state.ui?.tierRead) return;
+      state.ui = { ...(state.ui ?? {}), tierRead: true };
+      ctx.save();
+    });
+  }
   root.querySelector('#vat-go')?.addEventListener('click', () => {
     const res = startVat(state, vatPick.a, vatPick.b, content, ctx.now());
     lastMsg = res.msg;
@@ -225,7 +238,13 @@ export function renderPensScreen(root, ctx) {
             : trainReady
               ? '<span class="pen-ready">ready · can train</span>'
               : '<span class="pen-ready">ready</span>';
-      const summary = `${clsIcon} Lv ${prog.level} · bond ${ch.bond}/100 · obedience ${obedience}%${
+      // R125 — the letter goes in the FOLD SUMMARY rather than inside the
+      // card, because the whole point of it is deciding which creatures to
+      // open. A grade you have to expand a card to read cannot help you
+      // choose between nine of them.
+      const tier = tierOf(ch, reportOf(ch, content), content);
+      const tierChip = tier ? `<span class="tier tier-${tier.id}">${tier.id}</span> ` : '';
+      const summary = `${tierChip}${clsIcon} Lv ${prog.level} · bond ${ch.bond}/100 · obedience ${obedience}%${
         scarsOf(ch, content).length ? ` · ${scarsOf(ch, content).length} scar${scarsOf(ch, content).length === 1 ? '' : 's'}` : ''
       }`;
       const body = !open ? '' : `
@@ -282,9 +301,19 @@ export function renderPensScreen(root, ctx) {
                   `<strong class="dossier-value">${r.value}</strong>` +
                   `<span class="dossier-note">${r.note}</span></li>`)
                 .join('');
+              // R125 — the letter is on the fold above; this is what it is
+              // FOR. A grade with no reason is a number to argue with, and
+              // the lever is the only part the player can act on today.
+              const t = tierOf(ch, rep, content);
+              const why = !t ? '' : `
+                <p class="tier-why"><span class="tier tier-${t.id}">${t.id}</span>
+                  <span>${t.blurb} — wins about ${Math.round(t.rate * 100)}% of the board on its own${
+                    t.reasons.length ? `, on ${t.reasons.join(' and ')}` : ''}.</span></p>
+                ${t.lever.map((l) => `<p class="fine-print tier-lever">${l.text}</p>`).join('')}`;
               return `
-                <details class="dossier">
+                <details class="dossier" data-dossier="${ch.id}">
                   <summary><span class="dossier-sum">${dossierSummary(rep, content)}</span></summary>
+                  ${why}
                   <ul class="dossier-rows">${rows}</ul>
                 </details>`;
             })()}
