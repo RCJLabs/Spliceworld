@@ -41,6 +41,13 @@ import * as sfx from '../audio/sfx.js';
 const reducedMotion = () =>
   globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
+// R88 — how fast the arena replays. 1x is what the game has always done;
+// 2x halves every beat; 0 means do not replay at all, which is what
+// reduced motion has silently meant since M7. The OS preference still wins
+// outright: a player who has asked for no animation has already answered
+// this question, and a settings row must not override an accessibility one.
+const speedOf = (state) => (reducedMotion() ? 0 : state?.settings?.battleSpeed ?? 1);
+
 let playing = false; // guards clicks while a round resolves
 // How much of the opening exchange the player has read. Keyed to the
 // battle so a reload mid-duel replays it rather than skipping it, and a
@@ -458,7 +465,8 @@ function playRound(root, ctx, onDone, events) {
   const battle = state.battle;
   const cmd = root.querySelector('#cmd');
   const msg = root.querySelector('#msg-text');
-  const instant = reducedMotion();
+  const speed = speedOf(state);
+  const instant = speed === 0;
 
   playing = true;
   let skipped = false;
@@ -497,7 +505,7 @@ function playRound(root, ctx, onDone, events) {
     }
     const e = events[i++];
     applyBeat(root, ctx, battle, e, msg);
-    timer = setTimeout(next, beatCost(e));
+    timer = setTimeout(next, beatCost(e) / speed);
   }
   next();
 }

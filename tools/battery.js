@@ -1959,6 +1959,36 @@ const BREAKS = [
     to: '    fetch(event.request)',
   },
   {
+    n: 113, gate: SENT, name: 'the send stops reading the band, so a coin-flip fight is offered as a certainty',
+    file: 'battle/autoplay.js',
+    anchor: "  return fc.band.id === 'walkover';",
+    to: '  return true;',
+  },
+  {
+    n: 114, gate: SENT, name: 'a rival duel becomes skippable, and the duels are the set-pieces',
+    file: 'battle/autoplay.js',
+    anchor: "  if (context.kind === 'rival') return false;",
+    to: '  if (context.kind === null) return false;',
+  },
+  {
+    n: 115, gate: SENT, name: 'the autopilot stops flying and just presses the first thing on the list',
+    file: 'battle/autoplay.js',
+    anchor: '    const action = bag ?? pilotAction(battle, content);',
+    to: '    const action = bag ?? offered[0];',
+  },
+  {
+    n: 116, gate: SENT, name: 'the arena grows a second beat table, so it can pace a fight the harness is not pricing',
+    file: 'battle/ui.js',
+    anchor: "import { beatCost } from './autoplay.js';",
+    to: "import { beatCost } from './autoplay.js';\nconst BEAT = { damage: 620 };",
+  },
+  {
+    n: 117, gate: A11Y, name: 'the briefing stops offering to send them, so the saving is theoretical',
+    file: 'campaign/ui.js',
+    anchor: '      ${canSend(fc, draftTarget) && draftTeam.length ? `',
+    to: '      ${false && canSend(fc, draftTarget) && draftTeam.length ? `',
+  },
+  {
     n: 42, gate: BREAKOUT, name: 'a loose specimen grows a deadline and wanders off while you are away',
     file: 'campaign/breakout.js',
     anchor: '    const rival = labFor(state, content, cam.breakoutCount);',

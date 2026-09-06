@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 43;
+export const SAVE_VERSION = 44;
 const STORAGE_KEY = 'spliceworld_save';
 
 // migrations[n] upgrades a save from version n-1 to version n.
@@ -509,6 +509,16 @@ const migrations = {
   // no crate is granted retroactively, because a crate is part of a founding
   // and this save was founded long ago. Only a save with no herd reaches the
   // picker (the Ascent rule).
+  // R88 — how fast the arena replays a fight. A device preference, so it
+  // rides in `settings` alongside sound and theme and is CARRIED_ACROSS_RUNS
+  // with them: a player who likes it quick likes it quick in their next lab
+  // too. Absent means 1, which is exactly what every existing save was
+  // doing, so a migrated save plays at the speed it always played at.
+  44: (save) => {
+    save.settings ??= {};
+    save.settings.battleSpeed ??= 1;
+    return save;
+  },
   43: (save) => {
     save.starterLab = save.ranch?.seeded ? (save.starterLab ?? 'bramble_barn') : (save.starterLab ?? null);
     return save;
@@ -613,7 +623,7 @@ export function newGameState() {
       raid: null, nextRaidAt: null, raidCount: 0, raidsHeld: 0, leviedTotal: 0, notorietyCapped: false,
     },
     news: [],
-    settings: { muted: false },
+    settings: { muted: false, battleSpeed: 1 },
     // R51: `beaten` is the field guide's second dimension — `enemies` is a
     // sighting log and always was, so a unit that flattened you read
     // exactly like one you flattened.

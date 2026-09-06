@@ -1,5 +1,52 @@
 # PROGRESS
 
+## Session 117 — R88: the battle screen charges full price for free fights ✅
+
+**Criterion:** the beats the walker's day replays drop by 60% at identical
+outcomes, and a rival duel still plays beat by beat. **Measured at 74.4%.**
+
+### The roadmap's own trigger was wrong in both halves
+
+- *"forecast ≥ 95%"* was invented at a desk. The game ships the vocabulary —
+  `walkover`, floor 0.90 — and R61 says the canonical predicate wins.
+  Sampled on real fights: **451 walkovers, 449 wins.**
+- *"and the fight is a spar, a hunt or a known rescue"* forfeits saving for
+  no safety. A walkover **defence** won 38/39, a walkover **assault** 12/12.
+  Kind-gating would have discarded ~4,600 beats a campaign for nothing.
+
+The band decides. The rival duel always plays — the criterion's own second
+clause, not a safety rule.
+
+### Two pilots became one, which is the load-bearing part
+
+The player-side flier existed **twice, byte for byte**: `tools/sim.js` flew
+the balance yardstick, `battle/forecast.js` flew the thing whose win rate the
+briefing prints. Here that duplication is not cosmetic: the briefing's claim
+*"this is a walkover"* is only sound if the pilot the forecast modelled is
+the pilot that flies the fight when you press Send. `battle/autoplay.js` is
+the only copy now. **Proved behaviour-identical** — three 180-day walks, all
+eight fight tallies unchanged to the unit.
+
+### What shipped
+
+`autoResolve` · `canSend` · `whatDecidedIt` (the lesson read off the beats) ·
+one `beginFight` both briefing buttons share · the offer on screen · a
+battle-speed setting (Normal · Quick · Instant), `SAVE_VERSION` 43 → **44**
+with a migration defaulting to the speed every existing save already played
+at. Reduced motion still wins outright.
+
+### Verification
+
+SENT gate (six clauses, written and proven red first) · five new battery
+breaks · a11y **22 views, 74 controls** — the walk now reaches the briefing
+with an offer on it, which nothing did before · handlers 1494 · scopecheck ·
+roadmap · browser QA at 412px. `sw.js` → `spliceworld-v44-r88`.
+
+### Next session's first task
+
+**R123 — who should I send?** Asked for directly: suggest the best team for a
+given fight, so you always know your best fighters.
+
 ## Session 116b — R122b: the fix shipped, the phone did not get it ✅
 
 R122 merged, Pages deployed it at 04:41Z, and the reporter's phone still
