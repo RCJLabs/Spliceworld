@@ -1,5 +1,77 @@
 # PROGRESS
 
+## Session 115 — R120: The sitting, not the session ✅
+
+**Acceptance criterion (re-derived — all three of my original clauses were
+wrong):** the walk records every action rather than only its fights; the
+ranch loop runs end to end so `breed` and `hatch` both appear; and every
+agenda row reads the save. **All three.**
+
+### Three findings, and I got all three wrong in my own favour
+
+- **"The Gauntlet is shipped content a 90-day campaign never surfaces."**
+  False. `campaignWalk` breaks at the END of the iteration that sets
+  `dominionAt` and my sampler ran at the START of one, so the state after
+  dominion was never read. Re-run without the early break: **dominion lands
+  day 33.3, the Gauntlet is offered the same day**, and the walker fights all
+  four exhibitions. A criterion clause built on it would have passed the day
+  it was written — R106's lesson, paid again.
+- **"`hatch` never fires."** True, but not because a row was hidden: **the
+  walker never laid an egg**, 0 across 1,081 opens, because `walkAct` had no
+  breed branch at all. The whole of M6 — pairing, incubation, inheritance,
+  the variant ladder R6 built on it — was unexercised.
+- **"Day one offers 3 productive rows."** That counts HEADINGS. Counted in
+  things a player can press it offers **18**: twelve care actions, one grown
+  donor, three jobs that launch with no crew, two affordable catalog entries.
+  Day one is not short of things to do; the screen was short of saying so.
+
+### What shipped
+
+`state.__walkLog` was written in one place — the `fight` helper — so 90 days
+of it held **502 entries, every one a battle**. Every branch reports through
+one `did()` helper now: **22 verbs, 49,214 actions**. The walker breeds and
+hatches (**breed 672, hatch 671**). And R48's rule — *"a hint's whole value
+is a NUMBER"* — finally applies to all nineteen rows instead of the seven
+that happened to need it:
+
+| before | after |
+|---|---|
+| A grown animal becomes six parts. | Pearl the Bear is grown — six parts. |
+| Condition decides the grade… | 12 things to do for 3 animals. |
+| Money and livestock without winning a fight. | 3 you can run right now, the best worth up to $460. |
+
+The `spend` rows render as chips with their hint in a `title`, which is
+invisible on a touch device and this ships as a TWA — so each carries a short
+number on its face: *Order from the catalog · 2 from $60*.
+
+### Two regressions of my own, both caught by gates
+
+- **The ranch became a warehouse.** Eggs cost nothing but time, so an
+  uncapped walker bred 13 animals into **41**; the upkeep ate the cash that
+  paid for rushes and R86's assertion went **10 rushes → 0**. Capped one
+  above the walker's own pre-R120 equilibrium.
+- **The job row lied.** Counting lanes, it told a day-one player they could
+  run **seven** where **three** launch. `runnableOps` answers it once now for
+  both the row and its hint, deferring to the same `opOdds` the launch
+  consults. Verified against `startOperation` on a cloned save.
+
+### The eager cap came down instead of up
+
+Twelve hints that read the save are ~5 KB, which would have been the **fifth
+consecutive raise**. A cap that moves whenever a feature wants it is not a
+cap. So the Pens screen was deferred on R74's own terms — it is a tab you
+press, the first paint is the Ranch, and R74 stopped one screen short:
+
+**52 modules / 594 KB → 48 / 560**, both caps lowered to match. The first
+paint is smaller than before this milestone started, which discharges most of
+R121 as a side effect.
+
+### Next session's first task
+
+**R88 — the battle screen charges full price for free fights**, the task
+R103 left, or **R121** if the first-paint rule is worth writing down properly
+now that the graph is 34 KB lighter.
+
 ## Session 114 — R119: The first splice has a decision in it ✅
 
 **Acceptance criterion:** a fresh save cannot reach the Theater without

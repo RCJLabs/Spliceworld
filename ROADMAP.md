@@ -2526,8 +2526,9 @@ moved one of them: the first premise held exactly, the second did not.
   smaller than R119 left it, and the rule for what belongs in boot is
   written down rather than argued case by case.*
 
-- **R120 — The sitting, not the session.** *Queued. Its premise was measured
-  twice and was wrong the first time, in my own favour.*
+- **R120 — The sitting, not the session.** ✅ *Shipped. All three of its
+  original findings were wrong, every one in my own favour, and the
+  measuring that caught them is the phase.*
   - **What holds.** Sampled on every tick of three real 90-day walks, the
     mid-game is not thin: **11 rows, 8 productive** on an average open after
     the first week, peaking at 15. The thinness is **local to day one** — a
@@ -2576,7 +2577,34 @@ moved one of them: the first premise held exactly, the second did not.
   exercised end to end, so `breed` and `hatch` both appear in a 90-day walk
   and M6 stops being unmeasured; and every agenda row reads the save — no row
   is a fixed sentence — so opening the game shows the volume that is actually
-  there rather than a list of headings.*
+  there rather than a list of headings.* ✅ **All three.**
+  - **What shipped.** `state.__walkLog` records every verb through one
+    `did()` helper — 22 of them, 49,214 actions over 90 days, against 502
+    fights before. The walker breeds and hatches, so M6 runs end to end
+    (breed 672, hatch 671) after never once laying an egg. And all nineteen
+    agenda rows read the save: day one went from five headings to *"Pearl the
+    Bear is grown — six parts"*, *"12 things to do for 3 animals"*, *"3 you
+    can run right now, the best worth up to $460"*, with the spend chips
+    carrying their number on their face because a `title` is invisible on the
+    device this ships to.
+  - **Two regressions of my own, both caught by gates.** Eggs cost nothing
+    but time, so an uncapped walker bred the ranch from 13 animals to **41**,
+    and the upkeep ate the cash that paid for rushes — R86's assertion went
+    from 10 rushes to **0**. That is the "stable, not a warehouse" rule R25
+    and R44 apply to chimeras, arriving late on the ranch side; capped one
+    above the walker's own pre-R120 equilibrium. And the job row **lied**:
+    counting lanes it told a day-one player they could run **seven** where
+    **three** launch, because `laneFree` says yes to a solo job with nobody
+    to send. `runnableOps` answers it once now, for both the row and its
+    hint, deferring to the same `opOdds` the launch consults.
+  - **And the eager cap came DOWN instead of up.** Twelve hints that read the
+    save are ~5 KB, which would have been the *fifth* consecutive raise. A
+    cap that moves whenever a feature wants it is not a cap — so the Pens
+    screen was deferred on R74's own terms (it is a tab you press; the first
+    paint is the Ranch, and R74 stopped one screen short of it). **52 modules
+    / 594 KB → 48 / 560**, and both caps were lowered to sit just above the
+    new measurement. The first paint is smaller than before this milestone
+    started, which discharges most of R121 as a side effect.
 
 - **R121 — What should the first paint carry?** *Queued, and asked for by
   the R87 note four phases ago.* Four consecutive milestones have each
