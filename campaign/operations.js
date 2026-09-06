@@ -242,6 +242,35 @@ const clamp = (n, t) => Math.max(t.minChance, Math.min(t.maxChance, n));
 // Launching decides the outcome NOW, seeded, and stores it. Deciding at
 // resolution instead would let a reload reroll a bad job, which is the
 // one thing a timer-based game must never allow.
+// R120 — WHICH JOBS ACTUALLY LAUNCH, asked once. The agenda's row and its
+// hint were each deciding this for themselves, and both were wrong in the
+// same direction: `laneFree` alone says yes to a solo job with nobody free
+// to send, so the row offered "Run a job" and the hint counted SEVEN when
+// three would start. `startOperation` refuses the rest through
+// `opOdds().blocked`, which is the check neither of them was making.
+//
+// Ordered as `startOperation` orders it, and returning the same shape the
+// callers want: already-running, cooling off, no lane, then blocked odds.
+export function runnableOps(state, content, now, crew = null) {
+  const running = activeOps(state);
+  return operationList(content).filter((op) => {
+    if (running.some((r) => r.opId === op.id)) return false;
+    if (!opReady(state, op.id, now)) return false;
+    // Two ways in, and the first draft only tried the second: you can GO
+    // YOURSELF (rider null — paperwork and the jobs a person can walk into),
+    // or you can send a creature. An op is runnable if either path opens, so
+    // both are tried. Requiring a rider counted 1 where 3 launch; accepting
+    // `laneFree` alone counted 7. `opOdds().blocked` is the arbiter, because
+    // it is the one `startOperation` actually consults.
+    const riders = [null, crew ?? freeCrew(state, now)[0] ?? null];
+    return riders.some((rider) => {
+      if (rider && running.some((r) => r.chimeraId === rider.id)) return false;
+      if (!laneFree(state, content, now, op, rider)) return false;
+      return !opOdds(state, op, rider, content, now).blocked;
+    });
+  });
+}
+
 export function startOperation(state, opId, chimeraId, content, now) {
   const t = opTuning(content);
   const op = content.operations?.[opId];

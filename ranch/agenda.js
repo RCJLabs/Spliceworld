@@ -36,9 +36,9 @@ import { nextUpgrade, tracks } from '../splice/facility.js';
 import { TRAINING } from '../splice/theater.js';
 import { treatmentCost } from '../splice/scars.js';
 import { activeVat, vatPlan } from '../splice/chaos.js';
-import { operationList, opReady, activeOps, laneFree } from '../campaign/operations.js';
+import { operationList, opReady, activeOps, laneFree, runnableOps } from '../campaign/operations.js';
 import { reachableEncounterIds, regionStates } from '../campaign/map.js';
-import { enemyOf } from '../data/catalog.js';
+import { enemyOf, speciesOf } from '../data/catalog.js';
 import { contestRemainingMs } from '../campaign/contest.js';
 import { isInjured, fitToFight } from '../battle/statblock.js';
 import { sparCharges, canSpar } from '../campaign/sparring.js';
@@ -86,6 +86,22 @@ export function assaultWall(state, content, now) {
 
 // Every entry answers one question: is there a click here right now? Order is
 // the order the player should think about them in — work before spending.
+// R120 — EVERY ROW READS THE SAVE. R48 wrote this rule shipping the Sparring
+// Ring's row — "a hint's whole value is a NUMBER: *3 charges in the ring* is
+// a reason to go, *you can spar* is not" — and then seven rows followed it
+// and twelve did not, describing what a system IS instead of how much of it
+// is waiting.
+//
+// It matters most where the game looks emptiest. Measured on a fresh save,
+// day one offers 5 rows of which 3 are productive, and that reads as a thin
+// game — but counted in things a player can actually press it offers
+// EIGHTEEN: twelve care actions across three animals, one grown donor, three
+// jobs that launch with no crew, and two catalog entries $300 can afford.
+// The volume was always there; the screen was the part that would not say so.
+//
+// A hint may still fall back to a sentence when the count is not the point
+// (nothing grown yet, nothing injured) — what it must not do is be the same
+// sentence whether one thing or twenty are waiting.
 export const AGENDA = [
   {
     // R87 — above even R85's, and it is the only row that has ever outranked
@@ -147,13 +163,25 @@ export const AGENDA = [
   },
   {
     id: 'graduate', kind: 'work', screen: 'ranch', label: 'Graduate a donor',
-    hint: 'A grown animal becomes six parts. This is where chimeras come from.',
+    hint: (state, content, now) => {
+      const ripe = state.ranch.stock.filter((a) => ageStage(a, content, now) !== 'juvenile');
+      if (!ripe.length) return 'A grown animal becomes six parts. This is where chimeras come from.';
+      const who = ripe.length === 1
+        ? `${ripe[0].name} the ${speciesOf(content, ripe[0].species)?.name ?? ripe[0].species} is grown`
+        : `${ripe.length} are grown`;
+      return `${who} — ${ripe.length === 1 ? 'six parts' : `six parts each, ${ripe.length * 6} in all`}. This is where chimeras come from.`;
+    },
     ready: (state, content, now) =>
       state.ranch.stock.some((a) => ageStage(a, content, now) !== 'juvenile'),
   },
   {
     id: 'splice', kind: 'work', screen: 'theater', label: 'Splice a chimera',
-    hint: 'There are parts in the vault. Something could be wearing them.',
+    hint: (state, content) => {
+      const parts = state.inventory.parts ?? [];
+      const species = new Set(parts.map((p) => content?.parts?.[p.partId]?.species).filter(Boolean));
+      return `${parts.length} part${parts.length === 1 ? '' : 's'} in the vault from ${
+        species.size} donor${species.size === 1 ? '' : 's'}. Something could be wearing them.`;
+    },
     // A HEAD, not just parts: the Theater refuses a genome without one, so
     // "there are parts in the vault" could point at a splice the game will
     // not allow. R119's founding crate is exactly that case — limbs, no
@@ -164,25 +192,58 @@ export const AGENDA = [
   },
   {
     id: 'breed', kind: 'work', screen: 'ranch', label: 'Breed a pair',
-    hint: 'Two adults of a species make a better third.',
+    hint: (state, content, now) => {
+      let pairs = 0;
+      for (let i = 0; i < state.ranch.stock.length; i++) {
+        for (let j = i + 1; j < state.ranch.stock.length; j++) {
+          if (canBreed(state.ranch.stock[i], state.ranch.stock[j], state, content, now).ok) pairs++;
+        }
+      }
+      return `${pairs} pairing${pairs === 1 ? '' : 's'} the pens can make right now. Two adults of a species make a better third.`;
+    },
     ready: (state, content, now) => state.ranch.stock.some((x, i) =>
       state.ranch.stock.slice(i + 1).some((y) => canBreed(x, y, state, content, now).ok)),
   },
   {
     id: 'hatch', kind: 'work', screen: 'ranch', label: 'Hatch an egg',
-    hint: 'The incubator has finished. Somebody is knocking.',
+    hint: (state, content, now) => {
+      const ready = (state.ranch.eggs ?? []).filter((e) => now >= e.hatchAt);
+      return ready.length === 1
+        ? 'An egg has finished. Somebody is knocking.'
+        : `${ready.length} eggs have finished. Somebody is knocking.`;
+    },
     ready: (state, content, now) => (state.ranch.eggs ?? []).some((e) => now >= e.hatchAt)
       && state.ranch.stock.length < state.ranch.penCapacity,
   },
   {
     id: 'care', kind: 'work', screen: 'ranch', label: 'Care for the herd',
-    hint: 'Condition decides the grade a donor graduates at. It is not decoration.',
+    hint: (state, content, now) => {
+      let ready = 0;
+      let animals = 0;
+      for (const a of state.ranch.stock) {
+        const n = Object.values(careStatus(a, now)).filter((c) => c.ready).length;
+        if (n) { ready += n; animals++; }
+      }
+      return `${ready} thing${ready === 1 ? '' : 's'} to do for ${animals} animal${
+        animals === 1 ? '' : 's'}. Condition decides the grade they graduate at.`;
+    },
     ready: (state, content, now) =>
       state.ranch.stock.some((a) => Object.values(careStatus(a, now)).some((s) => s.ready)),
   },
   {
     id: 'vat', kind: 'work', screen: 'pens', label: 'Run the chaos vat',
-    hint: 'Two finished chimeras in, one genome out that neither of them was.',
+    hint: (state, content, now) => {
+      const seen = new Set();
+      for (const a of state.chimeras) {
+        for (const b of state.chimeras) {
+          if (a === b) continue;
+          const key = [a.id, b.id].sort().join('+');
+          if (seen.has(key)) continue;
+          try { if (vatPlan(state, a.id, b.id, content, now)?.ok) seen.add(key); } catch { /* not a pair */ }
+        }
+      }
+      return `${seen.size} pairing${seen.size === 1 ? '' : 's'} the vat will take. Two go in, one genome out that neither of them was.`;
+    },
     ready: (state, content, now) => {
       if (activeVat(state)) return false;
       for (const a of state.chimeras) {
@@ -239,14 +300,23 @@ export const AGENDA = [
   },
   {
     id: 'job', kind: 'campaign', screen: 'battle', subtab: 'jobs', label: 'Run a job',
-    hint: 'Money and livestock without winning a fight. Costs heat, not creatures.',
+    // Both of these read `runnableOps`, which is the list `startOperation`
+    // would actually accept. The first draft counted every job whose LANE was
+    // free and told a day-one player they could run seven; three of them
+    // start (R28: the number on the screen is the number that lands).
+    hint: (state, content, now) => {
+      const runnable = runnableOps(state, content, now);
+      const purse = runnable.reduce((n, op) => Math.max(n, op.funds?.[1] ?? 0), 0);
+      return `${runnable.length} you can run right now${
+        purse ? `, the best worth up to $${purse}` : ''}. Costs heat, not creatures.`;
+    },
     // Three lanes (see operations.js): a creature can be carried somewhere,
     // you can go yourself, and paperwork needs nobody. Rule 1 — something is
     // ALWAYS runnable — lives in the last two.
-    ready: (state, content, now) => operationList(content).some((op) => {
+    ready: (state, content, now) => runnableOps(state, content, now).length > 0
+      || operationList(content).some((op) => {
       if (!opReady(state, op.id, now)) return false;
       if (activeOps(state).some((run) => run.opId === op.id)) return false;
-      if (laneFree(state, content, now, op, null)) return true;
       const free = fit(state, now).find((c) => !activeOps(state).some((r) => r.chimeraId === c.id));
       return !!free && laneFree(state, content, now, op, free);
     }),
@@ -274,25 +344,49 @@ export const AGENDA = [
   },
   {
     id: 'treat', kind: 'spend', screen: 'pens', label: 'Buy someone out of the Infirmary',
-    hint: 'Cheaper the closer they are to walking out on their own.',
+    hint: (state, content, now) => {
+      const hurt = state.chimeras.filter((c) => isInjured(c, now));
+      const affordable = hurt.filter((c) => state.funds >= treatmentCost(c, content, now, state));
+      const cheapest = affordable.length
+        ? Math.min(...affordable.map((c) => treatmentCost(c, content, now, state))) : 0;
+      return `${hurt.length} in the Infirmary, ${affordable.length} you can afford out${
+        cheapest ? ` from $${cheapest}` : ''}. Cheaper the closer they are to walking out on their own.`;
+    },
     ready: (state, content, now) => state.chimeras.some((c) =>
       isInjured(c, now) && state.funds >= treatmentCost(c, content, now, state)),
   },
   {
     id: 'train', kind: 'spend', screen: 'pens', label: 'Train a chimera',
-    hint: 'Bond is obedience, and obedience is whether your orders happen.',
+    hint: (state, content, now) => {
+      const due = state.chimeras.filter((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR);
+      return `${due.length} ready for a session at $${TRAINING.cost} each. Bond is obedience, and obedience is whether your orders happen.`;
+    },
     ready: (state, content, now) => state.funds >= TRAINING.cost
       && state.chimeras.some((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR),
   },
   {
     id: 'buy', kind: 'spend', screen: 'ranch', label: 'Order from the catalog',
-    hint: 'New anatomy is how a losing matchup stops being one.',
+    hint: (state, content) => {
+      const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
+      const room = state.ranch.penCapacity - state.ranch.stock.length;
+      const cheapest = afford.length ? Math.min(...afford.map((sp) => sp.mailOrderPrice)) : 0;
+      return `${afford.length} species you can afford${cheapest ? ` from $${cheapest}` : ''}, ${
+        room} pen${room === 1 ? '' : 's'} free. New anatomy is how a losing matchup stops being one.`;
+    },
     ready: (state, content) => state.ranch.stock.length < state.ranch.penCapacity
       && catalogFor(state, content).some((sp) => state.funds >= sp.mailOrderPrice),
   },
   {
     id: 'facility', kind: 'spend', screen: 'ranch', label: 'Buy a lab upgrade',
-    hint: 'Bigger chassis, more bays, better odds — permanently.',
+    hint: (state, content) => {
+      const open = tracks(content)
+        .map((t) => nextUpgrade(state, content, t.id))
+        .filter((up) => up?.affordable);
+      if (!open.length) return 'Bigger chassis, more bays, better odds — permanently.';
+      const cheapest = open.reduce((a, b) => (a.level.cost <= b.level.cost ? a : b));
+      return `${open.length} upgrade${open.length === 1 ? '' : 's'} you can afford, from $${
+        cheapest.level.cost} (${cheapest.level.name ?? cheapest.track?.name ?? 'the lab'}). Permanent.`;
+    },
     // R83 — this row has never once appeared. It read two fields
     // `nextUpgrade` does not return: `up.cost` (the cost lives at
     // `up.level.cost`, so `funds >= undefined` was false for every player at
@@ -307,7 +401,8 @@ export const AGENDA = [
   },
   {
     id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',
-    hint: 'Room for more stock, which is room for more parts.',
+    hint: (state) => `$${penUpgradeCost(state)} for the next pen — ${
+      state.ranch.stock.length}/${state.ranch.penCapacity} full. Room for stock is room for parts.`,
     ready: (state) => state.funds >= penUpgradeCost(state),
   },
 ];
