@@ -2559,13 +2559,24 @@ moved one of them: the first premise held exactly, the second did not.
     Every non-combat thing the walker does — care, graduate, splice, train,
     buy, rush — is invisible. "How much is there to do when you open the
     game" cannot be answered from it, only "how many fights".
-  *Done when — re-derived, because two of the original three clauses were
-  measuring my own mistake: the walk records every action it takes rather
+  - **And the third clause was wrong too, in the same direction.** "Day one
+    offers 3 productive rows" counts HEADINGS. Counted in things a player can
+    actually press, a fresh save's first open offers **18**: twelve care
+    actions across three animals, one grown donor to graduate, three jobs
+    that launch with no crew, and two catalog entries $300 can afford. Day
+    one is not short of things to do — **the screen is short of saying so**.
+    Which is the real finding: **12 of the 19 agenda rows are fixed
+    sentences** that describe what a system IS rather than how much of it is
+    waiting. R48 wrote the rule when it added the Sparring Ring's row — "a
+    hint's whole value is a NUMBER; *3 charges in the ring* is a reason to
+    go, *you can spar* is not" — and then only seven rows ever followed it.
+  *Done when — re-derived, because all three of the original clauses were
+  measuring my own mistakes: the walk records every action it takes rather
   than only its fights, so a sitting can be counted at all; the ranch loop is
   exercised end to end, so `breed` and `hatch` both appear in a 90-day walk
-  and M6 stops being unmeasured; and a fresh save's first open offers more
-  productive rows than the three it offers today, without adding a way to
-  spend money.*
+  and M6 stops being unmeasured; and every agenda row reads the save — no row
+  is a fixed sentence — so opening the game shows the volume that is actually
+  there rather than a list of headings.*
 
 - **R121 — What should the first paint carry?** *Queued, and asked for by
   the R87 note four phases ago.* Four consecutive milestones have each

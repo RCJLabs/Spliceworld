@@ -378,7 +378,7 @@ export function rivalCounterBench(content, { grade = 'apex', seedsPer = 12, othe
 // the browser loads.
 
 import { gradeFor, GRADE_INDEX } from '../splice/extract.js';
-import { pairingForecast, expressedTraits, incubatorSlots, BREEDING } from '../ranch/breeding.js';
+import { pairingForecast, expressedTraits, incubatorSlots, BREEDING, canBreed, breedPair, hatchEgg } from '../ranch/breeding.js';
 
 const BREEDING_MUTATION = BREEDING.mutationChance;
 import {
@@ -1149,6 +1149,14 @@ function walkAct(state, content, now, open, opts = {}) {
   const aTeamFit = () => [...state.chimeras].sort((x, y) => quality(y) - quality(x)).slice(0, 3).every(isFit);
   const stepMs = (opts.stepHours ?? 2) * WALK_HOUR;
   const log = (entry) => (state.__walkLog ??= []).push({ day: +((now - (opts.t0 ?? 0)) / WALK_DAY).toFixed(2), ...entry });
+  // R120 — EVERY VERB, not only the ones with an opponent. `log` was called
+  // from exactly one place, the `fight` helper below, so across 90 days the
+  // walk's own record held 502 entries and every one was a battle. Care,
+  // graduation, splicing, training, buying, rushing and treating — most of
+  // what a player actually does when they open the app — left no trace at
+  // all, which meant the harness could answer "how many fights" and could
+  // not answer "how much is there to do". Every branch reports through this.
+  const did = (kind, detail = {}) => { acted++; log({ kind, ...detail }); return true; };
   // One fight, through the same door the War Room uses.
   const fight = (team, enc, context, seedKey) => {
     const battle = createBattle(team, enc, content, hashString(seedKey), now, context);
@@ -1176,7 +1184,7 @@ function walkAct(state, content, now, open, opts = {}) {
     for (const animal of [...state.ranch.stock]) {
       const status = careStatus(animal, now);
       for (const kind of ['feed', 'groom', 'exercise', 'enrich']) {
-        if (status[kind]?.ready && careAction(state, animal.id, kind, content, now).ok) acted++;
+        if (status[kind]?.ready && careAction(state, animal.id, kind, content, now).ok) did('care', { who: animal.id, act: kind });
       }
     }
   }
@@ -1188,7 +1196,7 @@ function walkAct(state, content, now, open, opts = {}) {
     if (!canSpend(q.price)) break;
     const res = rush(state, q.kind, q.id, content, now);
     if (!res.ok) continue;
-    acted++;
+    did('rush', { clock: q.kind, cost: res.cost });
     state.__walkRushes = (state.__walkRushes ?? 0) + 1;
     state.__walkRushSpent = (state.__walkRushSpent ?? 0) + res.cost;
   }
@@ -1205,7 +1213,7 @@ function walkAct(state, content, now, open, opts = {}) {
       if (!aTeam.has(c.id) || !c.injury || c.injury.until <= now) continue;
       if (!canSpend(treatmentCost(c, content, now, state))) continue;
       if (treatInjury(state, c.id, content, now).ok) {
-        acted++;
+        did('treat', { who: c.id });
         state.__walkTreated = (state.__walkTreated ?? 0) + 1;
       }
     }
@@ -1219,7 +1227,38 @@ function walkAct(state, content, now, open, opts = {}) {
     const ripe = (a) => ['prime', 'elder'].includes(ageStage(a, content, now))
       || (state.chimeras.length < 3 && ageStage(a, content, now) !== 'juvenile');
     const donor = state.ranch.stock.find(ripe);
-    if (donor && extractAnimal(state, donor.id, content, now).ok) acted++;
+    if (donor && extractAnimal(state, donor.id, content, now).ok) did('graduate', { species: donor.species });
+  }
+  // R120 — THE RANCH LOOP, which this walker had never once run. `breed`
+  // has been on the agenda since M6 and the walk had no branch for it, so
+  // the pairing, the incubator, the inheritance and the whole variant ladder
+  // were unmeasured — and `hatch` could not appear on the agenda because no
+  // egg ever existed to ripen. R83's rule, found again in the harness rather
+  // than the game.
+  //
+  // Hatch FIRST: an egg that has finished is a free animal, and leaving it in
+  // the incubator blocks the slot that makes the next one.
+  for (const egg of [...(state.ranch.eggs ?? [])]) {
+    if (now < egg.hatchAt) continue;
+    if (state.ranch.stock.length >= state.ranch.penCapacity) break;
+    if (hatchEgg(state, egg.id, content, now).ok) did('hatch', { species: egg.species });
+  }
+  // …then pair, if a slot is free and the pens have room for what comes out.
+  // Deliberately NOT while the pens are full: a player does not start a clock
+  // whose payout has nowhere to go, and an egg that cannot hatch is the one
+  // way this loop could quietly stall the ranch it is meant to feed.
+  if (has('breed') && (state.ranch.eggs ?? []).length < incubatorSlots(state, content)
+      && state.ranch.stock.length + (state.ranch.eggs ?? []).length < state.ranch.penCapacity) {
+    const stock = state.ranch.stock;
+    let paired = false;
+    for (let i = 0; i < stock.length && !paired; i++) {
+      for (let j = i + 1; j < stock.length && !paired; j++) {
+        if (!canBreed(stock[i], stock[j], state, content, now).ok) continue;
+        if (breedPair(state, stock[i].id, stock[j].id, content, now).ok) {
+          paired = did('breed', { species: stock[i].species });
+        }
+      }
+    }
   }
   // A stable, not a warehouse: R25 prices upkeep per chimera, and the first
   // rewrite spliced everything the vault could dress — nineteen creatures on
@@ -1253,7 +1292,7 @@ function walkAct(state, content, now, open, opts = {}) {
         const before = state.chimeras.length;
         const again = bestSplice(state, content, wanted) ?? plan; // the vault just changed
         spliceChimera(state, again.frameId, again.slots, content, now);
-        if (state.chimeras.length > before) acted++;
+        if (state.chimeras.length > before) did('splice', { frame: again.frameId });
       }
     }
   }
@@ -1263,7 +1302,7 @@ function walkAct(state, content, now, open, opts = {}) {
     // every job read as on cooldown — the walker has never run one. laneFree
     // was never reached to throw.
     const op = operationList(content).find((o) => opReady(state, o.id, now) && laneFree(state, content, now, o, null));
-    if (op && startOperation(state, op.id, null, content, now).ok) acted++;
+    if (op && startOperation(state, op.id, null, content, now).ok) did('job', { op: op.id });
   }
   // The ring. The hardest garrison you hold pays the most xp per charge.
   // Rationed: the bucket refills three charges every half hour, so a walker
@@ -1427,7 +1466,7 @@ function walkAct(state, content, now, open, opts = {}) {
       .filter((o) => o.next?.affordable)
       .sort((a, b) => a.next.level.cost - b.next.level.cost);
     const pick2 = offers.find((o) => canSpend(o.next.level.cost));
-    if (pick2 && buyUpgrade(state, content, pick2.id).ok) acted++;
+    if (pick2 && buyUpgrade(state, content, pick2.id).ok) did('facility', { track: pick2.id });
   }
 
   // R83 — and then use it. A bay holding something with a genome is a
@@ -1439,13 +1478,13 @@ function walkAct(state, content, now, open, opts = {}) {
   for (const entry of [...(state.campaign.containment ?? [])]) {
     if (entry.rehab) {
       if (now >= sessionReadyAt(entry, content)) {
-        if (rehabSession(state, entry.id, content, now).ok) acted++;
+        if (rehabSession(state, entry.id, content, now).ok) did('rehab-session', { who: entry.id });
       }
       continue;
     }
     const plan = rehabPlan(state, entry, content);
     if (!plan.possible || !plan.enabled || !canSpend(plan.fee)) continue;
-    if (startRehab(state, entry.id, content, now).ok) acted++;
+    if (startRehab(state, entry.id, content, now).ok) did('rehab-start', { who: entry.id });
   }
 
   // --- discretionary, and only above the reserve.
@@ -1454,12 +1493,12 @@ function walkAct(state, content, now, open, opts = {}) {
     // first policy went broke.
     for (const c of [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0)).slice(0, 3)) {
       if (!canSpend(TRAINING.cost)) break;
-      if (trainChimera(state, c.id, now, content).ok) acted++;
+      if (trainChimera(state, c.id, now, content).ok) did('train', { who: c.id });
     }
   }
   if (has('pens') && state.ranch.stock.length >= state.ranch.penCapacity
       && canSpend(penUpgradeCost(state))) {
-    if (buyPenUpgrade(state).ok) acted++;
+    if (buyPenUpgrade(state).ok) did('pens');
   }
   if (has('buy') && state.ranch.stock.length < state.ranch.penCapacity) {
     // The map says which class answers the strip in front of you (`demand`,
@@ -1473,7 +1512,7 @@ function walkAct(state, content, now, open, opts = {}) {
     // are both Water, and the map's demand line is asking for the shark.
     const answers = affordable.filter((sp) => wanted && (sp.class ?? sp.creatureClass) === wanted);
     const pickSp = answers.length ? answers[answers.length - 1] : affordable[0];
-    if (pickSp && buyMailOrder(state, pickSp.id, content, now).ok) acted++;
+    if (pickSp && buyMailOrder(state, pickSp.id, content, now).ok) did('buy', { species: pickSp.id });
   }
   return acted;
 }
