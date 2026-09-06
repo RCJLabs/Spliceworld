@@ -6158,6 +6158,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'taskforce.json': 'taskforce',
     'stance.json': 'stance',
     'scars.json': 'scars',
+    'tiers.json': 'tiers',
     'temperament.json': 'temperament',
     'traits.json': 'genes',
     'keywords.json': 'chart',
