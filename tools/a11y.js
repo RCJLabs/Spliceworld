@@ -28,7 +28,7 @@ import { readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 // R81 — the driver moved to its own module so tools/boot.js could use it too.
 import { sleep, serve, findChrome, connect, CHROME_CANDIDATES } from './cdp.js';
 
@@ -39,7 +39,7 @@ const VIEWPORT = 380;      // px, the reference phone width
 const REPORT = process.argv.includes('--report');
 
 // --- a save with something on every screen ----------------------------------
-async function fixtureSave() {
+export async function fixtureSave() {
   const { indexContent } = await import('../render/renderer.js');
   const { newGameState, SAVE_VERSION } = await import('../save/save.js');
   const { spliceChimera } = await import('../splice/theater.js');
@@ -1083,4 +1083,8 @@ async function main() {
   console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · every word clears the contrast floor · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · the game is playable from the keyboard`);
 }
 
-await main();
+// R88 — only when RUN, not when imported. This module owns the one fixture
+// recipe in the repo (a lab, three chimeras, every clock running), and any
+// probe that wants it had to either duplicate it or accidentally run the
+// whole gate to get it. I did the latter once by mistake this session.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) await main();

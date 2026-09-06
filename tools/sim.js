@@ -25,6 +25,7 @@ import { rivalEncounter, rivalList, rivalStatus } from '../campaign/rivals.js';
 import { rescueEncounterFor } from '../campaign/map.js';
 import { mulberry32, hashString, pick, rngStream } from '../util/rng.js';
 import { chooseMoveIndex, choosePlayerAction } from '../battle/ai.js';
+import { pilotAction, autoResolve, canSend, replayCost } from '../battle/autoplay.js';
 import { forecast, bandFor } from '../battle/forecast.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -117,21 +118,11 @@ export function makeSimChimera(frame, partIds, grade, content) {
 // pressed, so it was never priced, so no build that depended on one could be
 // evaluated. A yardstick that cannot hold half the toolbox is measuring the
 // toolbox, not the builds.
-const PILOT_SKILL = 0.8;
-
-function pilotAction(battle, content) {
-  const actions = playerActions(battle);
-  if (!actions.length) return null;
-  const release = actions.find((a) => a.type === 'release');
-  if (release) return release;
-  const me = playerActive(battle);
-  const idx = chooseMoveIndex(battle, me, battle.enemy.active, content, PILOT_SKILL, () => rngStream(battle.seed, 'pilot', battle.rollCount++)());
-  if (idx >= 0) {
-    const move = actions.find((a) => a.type === 'move' && a.index === idx);
-    if (move) return move;
-  }
-  return actions.find((a) => a.type === 'rest') ?? actions[0];
-}
+//
+// R88 moved it into battle/autoplay.js and this imports it. It is the SAME
+// policy the game now flies when a player sends a fight instead of watching
+// it, which is the point: the yardstick and the game must not be two
+// different pilots, or the harness is measuring a game nobody plays.
 
 // `encounter` is an id from enemies.json or a generated encounter object
 // (rival duels are built at runtime, so they never live in a table).
@@ -1160,12 +1151,26 @@ function walkAct(state, content, now, open, opts = {}) {
   // One fight, through the same door the War Room uses.
   const fight = (team, enc, context, seedKey) => {
     const battle = createBattle(team, enc, content, hashString(seedKey), now, context);
+    // R88 — ask the briefing's own question BEFORE the fight is flown, so
+    // the walk can price what a campaign costs the eye and how much of that
+    // the player never needed to sit through. Sampling is a knob because
+    // this is 12 extra battles per fight: `sendable` walks want it, every
+    // other walk in the suite does not and should not pay for it.
+    let fc = null;
+    if (opts.priceBeats) {
+      try { fc = forecast(team, enc, content, hashString(seedKey), now, { runs: 12 }); } catch { fc = null; }
+    }
     walkAutoplay(battle, content);
     const before = state.chimeras.length;
     state.battle = battle;
     resolveBattle(state, battle, content, now);
     state.battle = null;
     log({ kind: context.kind, node: context.nodeId ?? null, outcome: battle.outcome, escalation: enc.escalation,
+      // What the arena would have spent replaying this, and whether the
+      // player would have been offered the chance not to.
+      beats: (battle.__beats ?? []).length,
+      ms: replayCost(battle.__beats),
+      sendable: fc ? canSend(fc, context) : undefined,
       // R83 — what the Containment Cannon actually bagged. Counting BAYS
       // instead proves nothing: a held defence impounds the wreckage too, so
       // a walker that never fires the cannon still fills them. Break 46 of
@@ -1546,15 +1551,13 @@ function walkAct(state, content, now, open, opts = {}) {
 // fire. `playerActions` only offers `capture` when the cannon is charged and
 // the target is both capturable and weak enough, so asking for it is the
 // whole policy.
+// R88 — the walker flies `autoResolve`, which IS this loop, moved into
+// battle/autoplay.js so the game could press it too. The walker is the
+// balance model; a sent fight has to be flown by the same thing the model
+// flies or the model is measuring a different game. It returns the beats
+// so the walk can price what a campaign costs the eye.
 function walkAutoplay(battle, content) {
-  let guard = 0;
-  while (!battle.over && guard++ < 400) {
-    const offered = playerActions(battle);
-    const bag = offered.find((a) => a.type === 'capture');
-    const action = bag ?? pilotAction(battle, content);
-    if (!action) break;
-    step(battle, action, content);
-  }
+  battle.__beats = autoResolve(battle, content);
   return battle;
 }
 
@@ -1568,7 +1571,7 @@ function walkAutoplay(battle, content) {
 // `tick` is the world-advancing function; the game's own (campaign/world.js)
 // by default. A harness knob only: it exists so an experiment can ask which
 // passive system moves a result, by ticking without it.
-export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = 9, away = null, snapshotDays = [], markDay = null, tick = tickWorld, stopAtDominion = true } = {}) {
+export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = 9, away = null, snapshotDays = [], markDay = null, tick = tickWorld, stopAtDominion = true, priceBeats = false } = {}) {
   const t0 = Date.UTC(2026, 0, 1);
   const state = { ...newGameState(), seed };
   ensureRanchSeeded(state, content, t0);
@@ -1651,7 +1654,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     } else {
       stall = 0;
     }
-    walkAct(state, content, now, shape.open, { t0, stepHours, sparsPerDay, stableCap });
+    walkAct(state, content, now, shape.open, { t0, stepHours, sparsPerDay, stableCap, priceBeats });
     // The state as the player LEFT it: after the day's actions, so a month
     // away is measured from what was actually in the bank when the app closed.
     if (markDay != null && h === markDay * 24) snapshots.left = snap(markDay);

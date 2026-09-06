@@ -16,6 +16,7 @@ import { renderArena } from '../battle/ui.js';
 import { createBattle, combatantFromChimera } from '../battle/engine.js';
 import { isInjured, fitToFight, obediencePercent } from '../battle/statblock.js';
 import { forecast, diagnose, wantsDiagnosis } from '../battle/forecast.js';
+import { autoResolve, canSend, whatDecidedIt } from '../battle/autoplay.js';
 import { isSettled } from '../splice/theater.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
@@ -55,7 +56,7 @@ import {
   canBringMore, fitTeam, aftermathText,
 } from './warroom.js';
 import {
-  regionStates, salvageUnit, nodeById, dominionBanner,
+  regionStates, salvageUnit, nodeById, dominionBanner, resolveBattle,
 } from './campaign.js';
 
 let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, label }
@@ -1092,6 +1093,12 @@ function renderBriefing(root, ctx) {
         }</button>
         <button type="button" id="wr-back">Back</button>
       </div>
+      ${canSend(fc, draftTarget) && draftTeam.length ? `
+      <button type="button" id="wr-send" class="send-btn">${
+        renderIcon('lightning', { size: 14 })} Send them without me</button>
+      <p class="fine-print send-why">Same fight, same seed, same team — flown by your own people and
+        reported when it is over. Offered because the briefing calls this a walkover; a duel is never
+        offered, because a duel is worth watching.</p>` : ''}
     </section>`;
 
   root.querySelectorAll('button[data-toggle]').forEach((btn) => {
@@ -1110,7 +1117,12 @@ function renderBriefing(root, ctx) {
     draftTarget = null;
     renderMap(root, ctx);
   });
-  root.querySelector('#wr-launch').addEventListener('click', () => {
+  // R88 — ONE PLACE A FIGHT BEGINS. Launch and Send them build the same
+  // battle from the same seed with the same context; they differ only in
+  // who watches it. Extracted rather than copied, because two launch
+  // paths would be two answers to what a fight IS, and the seeded-battle
+  // promise is the thing that makes sending honest in the first place.
+  const beginFight = () => {
     const team = fitTeam(state, draftTeam, ctx.now());
     if (!team.length) return;
     if (draftTarget.kind === 'sparring') startSpar(state, ctx.now(), content);
@@ -1148,6 +1160,30 @@ function renderBriefing(root, ctx) {
           }
         : {}),
     });
+    return state.battle;
+  };
+
+  // R88 — SEND THEM. Deliberately the same code path as Launch: the same
+  // `beginFight` builds the same battle from the same seed, and the only
+  // difference is whether the arena replays it a beat at a time or the
+  // autopilot flies it here and reports. Two launch paths would be two
+  // answers to what a fight is.
+  root.querySelector('#wr-send')?.addEventListener('click', () => {
+    const battle = beginFight();
+    if (!battle) return;
+    const events = autoResolve(battle, content);
+    const detail = resolveBattle(state, battle, content, ctx.now());
+    state.battle = null;
+    lastAftermath = `${aftermathText(detail)} — sent, not watched: ${whatDecidedIt(events)}`;
+    draftTarget = null;
+    draftTeam = [];
+    ctx.save();
+    ctx.refreshTicker?.();
+    renderWarRoomScreen(root, ctx);
+  });
+
+  root.querySelector('#wr-launch').addEventListener('click', () => {
+    if (!beginFight()) return;
     ctx.save();
     renderWarRoomScreen(root, ctx);
   });

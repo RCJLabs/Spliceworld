@@ -19,7 +19,7 @@
 // sure it cannot cost them the game.
 
 import { createBattle, step, playerActions, playerActive } from './engine.js';
-import { chooseMoveIndex } from './ai.js';
+import { pilotAction } from './autoplay.js';
 import { rngStream } from '../util/rng.js';
 
 // The same skill the balance harness pilots at. A forecast flown better
@@ -58,22 +58,13 @@ export function wantsDiagnosis(band) {
   return band?.id === 'losing' || band?.id === 'hopeless';
 }
 
-function pilot(battle, content) {
-  const actions = playerActions(battle);
-  if (!actions.length) return null;
-  const release = actions.find((a) => a.type === 'release');
-  if (release) return release;
-  const me = playerActive(battle);
-  const idx = chooseMoveIndex(
-    battle, me, battle.enemy.active, content, FORECAST_SKILL,
-    () => rngStream(battle.seed, 'forecast', battle.rollCount++)()
-  );
-  if (idx >= 0) {
-    const move = actions.find((a) => a.type === 'move' && a.index === idx);
-    if (move) return move;
-  }
-  return actions.find((a) => a.type === 'rest') ?? actions[0];
-}
+// R88 — the flier moved to battle/autoplay.js, which is now the only copy.
+// It was identical to the harness's, and the briefing's verdict is only
+// worth anything if the pilot it models is the pilot that flies the fight
+// the player presses Send them on. The stream stays 'forecast': it is what
+// every balance number in the suite was measured against.
+const pilot = (battle, content) =>
+  pilotAction(battle, content, { skill: FORECAST_SKILL, stream: 'forecast' });
 
 // Replay the fight `runs` times and report what happened. `team` is the
 // chimera records the player has actually selected, so the forecast is of
