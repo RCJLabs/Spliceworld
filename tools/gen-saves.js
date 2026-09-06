@@ -29,6 +29,7 @@ import { readFileSync, readdirSync, writeFileSync, existsSync, mkdirSync, rmSync
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { SAVE_VERSION } from '../save/save.js';
 
@@ -36,12 +37,36 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'tools', 'saves');
 const CHECK = process.argv.includes('--check');
 
+// R101 — TWO CHECKS, BECAUSE THE BATTERY HAS NO GIT.
+//
+// Regenerating a fixture needs history: `git archive` of the commit where
+// that version was current. The break battery copies the tree WITHOUT `.git`
+// and runs each gate there, so the git-backed check cannot run — and on its
+// first outing it failed in the copy whether the tree was broken or not,
+// which made its own break register as "caught" for entirely the wrong
+// reason. A gate that fails identically on a clean tree proves nothing.
+//
+// So the fixtures ship with a manifest of their hashes. With history, this
+// regenerates everything and compares — the strong question, "is this what
+// that version's code writes?". Without it, it compares each fixture to its
+// recorded hash — the weaker but still real question, "has anyone edited one
+// of these by hand?" — which is exactly what break 136 does.
+const INDEX = 'index.json';
+const sha = (text) => createHash('sha256').update(text).digest('hex');
+const hasGit = () => {
+  try { git('rev-parse', '--git-dir'); return true; } catch { return false; }
+};
+
 // Fixed stamps, so two runs agree. Any epoch-ms number in a generated save
 // is one of these clocks; the world seed is drawn from a real RNG.
 const STAMP = 1700000000000;
 const SEED = 424242;
 
-const git = (...a) => execFileSync('git', ['-C', root, ...a], { encoding: 'utf8', maxBuffer: 1 << 28 });
+// stderr piped, not inherited: `hasGit()` below EXPECTS to fail in a tree
+// copied without .git, and a stray `fatal: not a git repository` printed
+// above a passing line reads like a broken gate.
+const git = (...a) => execFileSync('git', ['-C', root, ...a],
+  { encoding: 'utf8', maxBuffer: 1 << 28, stdio: ['pipe', 'pipe', 'pipe'] });
 
 // The last commit at each version — the mature end of that era, right
 // before the bump. Rebuilt every run from history.
@@ -96,9 +121,35 @@ async function fixtureFor(version, commit, work) {
   return { save, stocked };
 }
 
+if (CHECK && !hasGit()) {
+  // The copied-tree path: hashes only, and it says so rather than passing
+  // quietly and letting a reader think the strong check ran.
+  const idxPath = join(out, INDEX);
+  if (!existsSync(idxPath)) {
+    console.error('gen-saves ✗  no fixture manifest, and no git history to rebuild one from');
+    process.exit(1);
+  }
+  const idx = JSON.parse(readFileSync(idxPath, 'utf8'));
+  const bad = [];
+  for (const [name, want] of Object.entries(idx.sha256 ?? {})) {
+    const f = join(out, name);
+    if (!existsSync(f)) { bad.push(`${name} is missing`); continue; }
+    if (sha(readFileSync(f, 'utf8')) !== want) bad.push(`${name} has been edited by hand since it was generated`);
+  }
+  if (bad.length) {
+    console.error(`gen-saves ✗  ${bad.length} fixture${bad.length === 1 ? '' : 's'} out of step`);
+    for (const b of bad) console.error(`  · ${b}`);
+    process.exit(1);
+  }
+  console.log(`gen-saves ok  ${Object.keys(idx.sha256 ?? {}).length} fixtures match their recorded hashes (no git here, so the regeneration check was not the one that ran)`);
+  process.exit(0);
+}
+
 const commits = versionCommits();
 const work = join(tmpdir(), `sw-saves-${process.pid}`);
 mkdirSync(work, { recursive: true });
+const manifest = {};
+const fromCommit = {};
 const missing = [];
 const written = [];
 const stale = [];
@@ -113,6 +164,8 @@ try {
     if (stocked) stockedCount++;
     const text = `${JSON.stringify(save, null, 2)}\n`;
     const file = join(out, `v${v}.json`);
+    manifest[`v${v}.json`] = sha(text);
+    fromCommit[v] = commit;
     if (CHECK) {
       if (!existsSync(file)) stale.push(`v${v}.json is not on disk`);
       else if (readFileSync(file, 'utf8') !== text) stale.push(`v${v}.json is not what v${v}'s own code produces`);
@@ -129,7 +182,20 @@ if (missing.length) {
   console.error(`gen-saves ✗  no commit in history has SAVE_VERSION at ${missing.join(', ')} — a fixture cannot be taken from a version that left no trace`);
   process.exit(1);
 }
+const indexText = `${JSON.stringify({
+  _doc: 'R101 — one real save per version, taken from the commit where that version was current. '
+    + 'Regenerate with `npm run gen-saves`; `--check` regenerates and compares where git history is '
+    + 'available, and falls back to these hashes where it is not (the break battery copies the tree '
+    + 'without .git). Do not hand-edit a fixture: it stops being a save the game actually wrote.',
+  fixtures: Object.keys(manifest).length,
+  fromCommit,
+  sha256: manifest,
+}, null, 2)}\n`;
+
 if (CHECK) {
+  const idxPath = join(out, INDEX);
+  if (!existsSync(idxPath)) stale.push(`${INDEX} is not on disk`);
+  else if (readFileSync(idxPath, 'utf8') !== indexText) stale.push(`${INDEX} does not describe the fixtures beside it`);
   if (stale.length) {
     console.error(`gen-saves ✗  ${stale.length} fixture${stale.length === 1 ? '' : 's'} out of step`);
     for (const s of stale) console.error(`  · ${s}`);
@@ -137,5 +203,6 @@ if (CHECK) {
   }
   console.log(`gen-saves ok  every fixture v1–v${SAVE_VERSION} is exactly what that version's own code writes (${stockedCount} with a stocked ranch)`);
 } else {
+  writeFileSync(join(out, INDEX), indexText);
   console.log(`gen-saves ✓  ${written.length} fixtures written, v1–v${SAVE_VERSION}, ${stockedCount} of them with a stocked ranch`);
 }

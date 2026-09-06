@@ -64,6 +64,25 @@ Also fixed in that gate: its `finally` block deleted the Chromium profile and
 could throw ENOTEMPTY, replacing a real verdict with a housekeeping error —
 which it did, on the first run that actually found the bug.
 
+### A false green in my own new gate
+
+The battery reported **138 breaks, 138 caught, 0 missed** — and exited 1. The
+count was only the break phase; its *baseline* pass on a pristine tree had
+failed. `gen-saves --check` regenerates from git history, and the battery
+copies the tree **without `.git`**, so the gate failed in that copy whether
+the tree was broken or not — which is precisely why its own break registered
+as "caught". A gate that fails identically on a clean tree proves nothing.
+
+Fixed with two modes: with history, regenerate and compare (the strong
+question, "is this what that version's code writes?"); without it, compare
+each fixture to a recorded hash in `tools/saves/index.json` (the weaker but
+real question, "has anyone edited one by hand?" — which is exactly break
+136). Verified in a no-git copy both ways: silent pass on pristine, named
+failure on a hand-edited fixture.
+
+Worth naming the near-miss: had I stopped at "138 caught · 0 missed", a gate
+that could never pass would have shipped looking green.
+
 ### Numbers
 
 | | before | after |

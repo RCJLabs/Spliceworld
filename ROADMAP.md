@@ -2004,6 +2004,15 @@ R102; R88–R90 remain.)*
   has been quietly set aside. Only the console says otherwise. Proven both
   ways — green on the tree, four errors when the specifier is broken.
 
+  **And one of the new gates was a false green.** The battery reported 138
+  breaks, 138 caught, 0 missed — and exited 1: the count covered only the
+  break phase, while the baseline pass on a pristine tree had failed.
+  `gen-saves --check` rebuilds from git history and the battery copies the
+  tree WITHOUT `.git`, so it failed in that copy whether the tree was broken
+  or not, which is exactly why its own break read as caught. It now has two
+  modes: regenerate-and-compare where history exists, and hashes recorded in
+  `tools/saves/index.json` where it does not.
+
 ### 9.6 Sixth audit (R87) — queue R103–R117 · **R106 shipped**
 
 Run after R87, against a game with five closed audits behind it and R88–R102
