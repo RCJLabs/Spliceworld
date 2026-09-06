@@ -236,6 +236,147 @@ const GAPS = `(() => {
   return out;
 })()`;
 
+// R122 — CAN YOU READ IT. The founding screen shipped with its species
+// names at 1.1:1 — near-black on near-black, because `--ink` is the PAGE
+// colour and I used it as a text colour, and because the card wore a class
+// (`panel`) that this stylesheet does not define, so it had no background
+// of its own and the Ranch showed through the words.
+//
+// Neither of those is visible to a static check. The CSS gate asserts that
+// every `var()` names a property that EXISTS, and both of these did; the
+// class was a real token name in the wrong slot. What is left is to ask the
+// browser the only question that matters — what colour is this text, and
+// what colour is actually behind it — which means compositing every
+// translucent ancestor down to the page the way the screen does. A card
+// with no background is transparent, so it contributes nothing, and its
+// text is measured against whatever it is really lying on.
+//
+// WCAG's own thresholds: 4.5:1 for body text, 3:1 once type is large
+// (24px, or 18.66px bold). There is exactly one exemption — a background
+// this cannot decompose into colours at all — and the run prints every
+// element that takes it, because an exemption nobody can see is one that
+// grows. Today none do.
+const CONTRAST = `(() => {
+  const parse = (c) => {
+    const m = String(c).match(/[\\d.]+/g) || [];
+    return { r: +m[0] || 0, g: +m[1] || 0, b: +m[2] || 0, a: m[3] === undefined ? 1 : +m[3] };
+  };
+  const over = (fg, bg) => ({
+    r: fg.a * fg.r + (1 - fg.a) * bg.r,
+    g: fg.a * fg.g + (1 - fg.a) * bg.g,
+    b: fg.a * fg.b + (1 - fg.a) * bg.b, a: 1,
+  });
+  const lum = (c) => {
+    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+  };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  // Every colour one element can put behind its text: its background-colour,
+  // plus each stop of any gradient painted over that. Returns null when the
+  // image is something with no colours to read.
+  const layersOf = (cs) => {
+    const img = cs.backgroundImage;
+    const out = [];
+    const bg = parse(cs.backgroundColor);
+    if (bg.a > 0) out.push(bg);
+    if (img !== 'none') {
+      if (/url\\(/.test(img)) return null;
+      const stops = img.match(/rgba?\\([^)]*\\)/g) || [];
+      if (!stops.length && !out.length) return null;
+      for (const c of stops) { const p = parse(c); if (p.a > 0) out.push(p); }
+    }
+    return out;
+  };
+  // The grounds this text could be sitting on. Walked up until something
+  // fully covers what is under it — an opaque background-colour with no
+  // image over it — because past that point nothing below can show through.
+  const behind = (el) => {
+    const levels = [];
+    for (let n = el; n; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      const layers = layersOf(cs);
+      if (layers === null) return null;
+      if (layers.length) levels.push(layers);
+      if (cs.backgroundImage === 'none' && parse(cs.backgroundColor).a === 1) break;
+    }
+    // Composite from the page upward. A level with several candidate stops
+    // multiplies the outcomes, so the walk keeps every possibility and the
+    // caller judges the worst — capped, because a stack of five-stop
+    // gradients is a combinatorial answer nobody needs.
+    let accs = [{ r: 255, g: 255, b: 255, a: 1 }];
+    for (let i = levels.length - 1; i >= 0; i--) {
+      const next = [];
+      for (const acc of accs) for (const layer of levels[i]) next.push(over(layer, acc));
+      accs = next.slice(0, 24);
+    }
+    return accs;
+  };
+  const out = [];
+  for (const el of document.querySelectorAll('body *')) {
+    // Only the element that OWNS the text, so a sentence is judged once
+    // rather than once per wrapper it happens to sit inside.
+    const txt = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join(' ').trim();
+    if (!txt) continue;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) continue;
+    const fg = parse(cs.color);
+    const grounds = behind(el);
+    const px = parseFloat(cs.fontSize);
+    const name = el.tagName.toLowerCase()
+      + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
+    if (!grounds) { out.push({ sel: name, txt: txt.replace(/\\s+/g, ' ').slice(0, 34), unmeasured: true }); continue; }
+    // The worst ground it passes over: text that is legible on four stops of
+    // five is text you cannot read a fifth of.
+    let bg = grounds[0];
+    let worst = Infinity;
+    for (const g of grounds) { const n = ratio(over(fg, g), g); if (n < worst) { worst = n; bg = g; } }
+    const large = px >= 24 || (px >= 18.66 && +cs.fontWeight >= 700);
+    out.push({
+      sel: name,
+      txt: txt.replace(/\\s+/g, ' ').slice(0, 34),
+      ratio: Math.round(worst * 100) / 100,
+      need: large ? 3 : 4.5,
+      color: cs.color,
+      bg: 'rgb(' + [bg.r, bg.g, bg.b].map(Math.round).join(', ') + ')',
+    });
+  }
+  return out;
+})()`;
+
+// R122 — A DIALOG CARD PAINTS ITS OWN BACKGROUND. The founding card said
+// `class="panel founding"`, and `panel` is a colour TOKEN, not a class in
+// this stylesheet — so the card was `rgba(0, 0, 0, 0)` and the Ranch behind
+// it read through the words. What made that hard to see afterwards is that
+// the scrim was darkened in the same milestone, and either fix alone hides
+// the other: a break that reverts one still passes.
+//
+// So the rule is stated where it is actually true — a card is a card, and a
+// card that borrows its ground from whatever scrim happens to be behind it
+// today is one stylesheet edit from being unreadable. Every element child of
+// a visible modal that OWNS TEXT must have an opaque background colour of
+// its own. A backdrop owns no text and is exempt without being named.
+const MODAL_CARDS = `(() => {
+  const out = [];
+  for (const id of ['overlay', 'picker']) {
+    const host = document.getElementById(id);
+    if (!host || host.hidden) continue;
+    for (const card of host.children) {
+      const holdsText = [...card.querySelectorAll('*'), card].some((el) =>
+        [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()));
+      if (!holdsText) continue;
+      const cs = getComputedStyle(card);
+      const m = cs.backgroundColor.match(/[0-9.]+/g) || [];
+      const alpha = m[3] === undefined ? 1 : +m[3];
+      out.push({ host: id, opaque: alpha === 1,
+                 sel: (typeof card.className === 'string' ? card.className.trim() : '') || card.tagName.toLowerCase(),
+                 bg: cs.backgroundColor });
+    }
+  }
+  return out;
+})()`;
+
 const OPEN_EVERYTHING = `[...document.querySelectorAll('details')].forEach((d) => { d.open = true; });
   [...document.querySelectorAll('.fold-toggle,[data-fold]')].forEach((b) => b.click());`;
 
@@ -277,7 +418,8 @@ async function main() {
     const url = `http://127.0.0.1:${port}/index.html`;
     await send('Page.navigate', { url });
     await sleep(900);
-    await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(await fixtureSave())})`);
+    const fixture = await fixtureSave();
+    await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
     errors.length = 0;
     await send('Page.navigate', { url });
     await sleep(2200);
@@ -285,9 +427,25 @@ async function main() {
     // ---- 1. every control clears the floor, on every view ------------------
     const seen = new Map();
     const pairs = new Map();
+    const dim = new Map();
+    const unpainted = new Map();
+    const seeThrough = new Map();
+    const cards = new Map();
     const views = new Set();
     const collect = async (where) => {
       views.add(where);
+      for (const c of await evaluate(MODAL_CARDS)) {
+        cards.set(`${c.host}|${c.sel}`, { ...c, where });
+        if (!c.opaque) seeThrough.set(`${c.host}|${c.sel}`, { ...c, where });
+      }
+      for (const t of await evaluate(CONTRAST)) {
+        if (t.unmeasured) { unpainted.set(t.sel, { ...t, where }); continue; }
+        // Keyed by what is WRONG (this selector, this pair of colours) and
+        // not by the sentence, so one bad rule reports once however many
+        // species names it paints.
+        const key = `${t.sel}|${t.color}|${t.bg}`;
+        if (!dim.has(key) || dim.get(key).ratio > t.ratio) dim.set(key, { ...t, where });
+      }
       for (const c of await evaluate(MEASURE)) {
         const key = `${c.tag}.${c.cls}#${c.id}|${c.w}x${c.h}`;
         if (!seen.has(key)) seen.set(key, { ...c, where });
@@ -297,6 +455,30 @@ async function main() {
         if (!pairs.has(key) || pairs.get(key).gap > p.gap) pairs.set(key, { ...p, where });
       }
     };
+    // R122 — the founding picker, which needs an EMPTY browser to exist:
+    // it is the screen a player sees before they have a save, so the
+    // fixture that makes every other view reachable is exactly what hides
+    // it. Cleared, measured, then the fixture is put back.
+    const foundingPass = async () => {
+      await evaluate(`localStorage.clear()`);
+      await send('Page.navigate', { url });
+      await sleep(2200);
+      if (!await evaluate(`!document.querySelector('#overlay').hidden && !!document.querySelector('.founding')`)) {
+        note('a fresh browser did not reach the founding picker, so nothing measured the first screen of the game');
+      } else {
+        await collect('founding');
+        // It has to fit the phone as well as read on it: .overlay is
+        // `position: fixed` and does not scroll, so a card taller than the
+        // viewport does not go below the fold, it goes away.
+        const spill = await evaluate(`(() => { const p = document.querySelector('.founding'); const b = p.getBoundingClientRect();
+          return Math.round(Math.max(0, b.bottom - innerHeight) + Math.max(0, -b.top)); })()`);
+        if (spill > 1) note(`founding: the picker overflows the viewport by ${spill}px, and a fixed overlay does not scroll`);
+      }
+      await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
+      await send('Page.navigate', { url });
+      await sleep(2200);
+    };
+
     // R80 — the arena is the one screen that does not scroll
     // (`body.in-battle` sets `height: 100dvh; overflow: hidden`), so content
     // past the bottom of `<main>` is not "below the fold", it is gone.
@@ -326,6 +508,7 @@ async function main() {
       else for (const x of over) note(`${where}: the arena does not scroll, and ${x}`);
     };
 
+    await foundingPass();
     await collect('shell');
     const screens = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
     for (const s of screens) {
@@ -392,29 +575,10 @@ async function main() {
     await evaluate(`delete document.documentElement.dataset.theme`);
     await sleep(200);
 
-    const controls = [...seen.values()].sort((a, b) => Math.min(a.h, a.w) - Math.min(b.h, b.w));
-    const under = controls.filter((c) => c.h < FLOOR || c.w < FLOOR);
-    if (REPORT) {
-      for (const c of controls) {
-        console.log(`  ${String(c.h).padStart(6)}h ${String(c.w).padStart(7)}w  ${c.where.padEnd(14)} ${c.tag}${c.id ? '#' + c.id : ''}${c.cls ? '.' + c.cls : ''}  "${c.label}"`);
-      }
-      console.log('');
-    }
-    for (const c of under) {
-      note(`${c.where}: ${c.tag}${c.id ? '#' + c.id : ''}${c.cls ? '.' + c.cls : ''} "${c.label}" is ${c.w}x${c.h}, under the ${FLOOR}px floor`);
-    }
-
-    // ---- 1e. and no two of them are crowded together ----------------------
-    const crowded = [...pairs.values()].sort((a, b) => a.gap - b.gap);
-    if (REPORT) {
-      for (const p of crowded.slice(0, 30)) {
-        console.log(`  ${String(p.gap).padStart(6)}px  ${p.where.padEnd(14)} ${p.a}  |  ${p.b}`);
-      }
-      console.log('');
-    }
-    for (const p of crowded.filter((x) => x.gap < GUTTER)) {
-      note(`${p.where}: ${p.a} sits ${p.gap}px from ${p.b}, under the ${GUTTER}px gutter`);
-    }
+    // R122 — the readings are taken here but JUDGED at the end of the run,
+    // because `collect` is called again further down: the keyboard walk opens
+    // the move readout, which is a whole dialog no measurement had ever
+    // reached. Reporting here read the maps before that view was in them.
 
     // ---- 2. focus is visible -----------------------------------------------
     // Pressed, not called. `:focus-visible` deliberately does NOT match a
@@ -747,6 +911,10 @@ async function main() {
           })()`);
           if (!sheet.open || !sheet.isMove) note('pressing ? on a move does not open its readout — the sheet is pointer-only');
           else if (!sheet.focusInside) note('the move readout opens with focus outside it');
+          // R122 — the walk has opened this sheet since R80 and never
+          // measured it. It is a dialog like any other: its card has to
+          // paint its own ground and its words have to clear the floor.
+          if (sheet.open && sheet.isMove) await collect('move-sheet');
           await tap('Escape', 'Escape', 27);
           await sleep(350);
         }
@@ -846,6 +1014,55 @@ async function main() {
     }
 
 
+    // ---- everything measured across every view, now that the walk is done -
+    const controls = [...seen.values()].sort((a, b) => Math.min(a.h, a.w) - Math.min(b.h, b.w));
+    const under = controls.filter((c) => c.h < FLOOR || c.w < FLOOR);
+    if (REPORT) {
+      for (const c of controls) {
+        console.log(`  ${String(c.h).padStart(6)}h ${String(c.w).padStart(7)}w  ${c.where.padEnd(14)} ${c.tag}${c.id ? '#' + c.id : ''}${c.cls ? '.' + c.cls : ''}  "${c.label}"`);
+      }
+      console.log('');
+    }
+    for (const c of under) {
+      note(`${c.where}: ${c.tag}${c.id ? '#' + c.id : ''}${c.cls ? '.' + c.cls : ''} "${c.label}" is ${c.w}x${c.h}, under the ${FLOOR}px floor`);
+    }
+
+    // ---- 1e. and no two of them are crowded together ----------------------
+    const crowded = [...pairs.values()].sort((a, b) => a.gap - b.gap);
+    if (REPORT) {
+      for (const p of crowded.slice(0, 30)) {
+        console.log(`  ${String(p.gap).padStart(6)}px  ${p.where.padEnd(14)} ${p.a}  |  ${p.b}`);
+      }
+      console.log('');
+    }
+    for (const p of crowded.filter((x) => x.gap < GUTTER)) {
+      note(`${p.where}: ${p.a} sits ${p.gap}px from ${p.b}, under the ${GUTTER}px gutter`);
+    }
+
+    // ---- 1f. and every word of it can be read off the screen -------------
+    const contrast = [...dim.values()].sort((a, b) => a.ratio - b.ratio);
+    if (REPORT) {
+      for (const t of contrast.slice(0, 30)) {
+        console.log(`  ${String(t.ratio).padStart(7)}:1  ${t.where.padEnd(14)} ${t.sel}  "${t.txt}"  ${t.color} on ${t.bg}`);
+      }
+      console.log('');
+    }
+    for (const t of contrast.filter((x) => x.ratio < x.need)) {
+      note(`${t.where}: ${t.sel} "${t.txt}" reads ${t.ratio}:1 against what is behind it, under the ${t.need}:1 floor (${t.color} on ${t.bg})`);
+    }
+    if (REPORT) {
+      for (const c of cards.values()) {
+        console.log(`  ${c.opaque ? 'opaque' : '  SEE-THROUGH'}  ${c.where.padEnd(14)} #${c.host} .${c.sel}  ${c.bg}`);
+      }
+      console.log('');
+    }
+    for (const c of seeThrough.values()) {
+      note(`${c.where}: the #${c.host} card .${c.sel.split(/\s+/).join('.')} has no background of its own (${c.bg}), so it shows whatever is behind the dialog`);
+    }
+    for (const t of unpainted.values()) {
+      console.log(`a11y ~  ${t.where}: ${t.sel} "${t.txt}" sits on a painted background, so its contrast is not a number this can read`);
+    }
+
     // ---- 7. nothing narrated an error along the way ------------------------
     for (const e of [...new Set(errors)]) note(`console error during the walk: ${e}`);
 
@@ -863,7 +1080,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · the game is playable from the keyboard`);
+  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · every word clears the contrast floor · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · the game is playable from the keyboard`);
 }
 
 await main();

@@ -78,7 +78,11 @@
   --ink: #101a2e; --panel: #17253d; --panel-2: #1f3050; --well: #0a1220;
   --line: #2f4a72; --text: #eaf4ff; --muted: #8fa8c9;
   --accent: #2ee6c8; --on-accent: #04241f; --accent-dim: #0d4a41;
-  --accent-2: #ff4fa3; --on-accent-2: #2b0417; --accent-2-dim: #5c1440;
+  /* Lifted from #ff4fa3 by R122's contrast floor: the field-note title is
+     accent-2 on panel-2, which was 4.32:1 — under 4.5 and the only theme
+     where it was. This clears 4.73 there and 4.64 on accent-2-dim, and dark
+     text over the fill goes 6.09 -> 6.67, so it is better in both directions. */
+  --accent-2: #ff61ac; --on-accent-2: #2b0417; --accent-2-dim: #5c1440;
   --danger: #ff6b8f; --danger-2: #e8305f; --danger-soft: #ff9ab2;
   --warn: #ffd93d; --warn-dim: #5c4c10;
   --hp: #2ee6c8; --sta: #f5c542; --sta-2: #ffe38a;
@@ -517,6 +521,23 @@ main {
   justify-content: center;
   padding: 16px;
   z-index: 50;
+}
+.overlay[data-locked] { background: var(--ink); }
+/* R122 — `.sheet` had no rule at all. Two dialogs wear it (the Pens'
+   repertoire picker and the arena's move readout) and both were therefore
+   transparent, showing the screen behind them through their own text — the
+   same defect as the founding card, on a screen nobody had reported. A card
+   is a card: its own ground, its own edge, and its own scroll, because the
+   fixed overlay it sits in does not scroll. `.move-sheet` still sets its own
+   padding; this is only what every card in the game already has. */
+.sheet {
+  width: 100%;
+  max-width: 440px;
+  max-height: 86vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
 }
 /* R71: nothing before the settings panel was ever tall enough for this to
    matter — a short landscape phone could still overflow the fixed .overlay
@@ -1121,7 +1142,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   line-height: 1.25;
   flex: 0 0 auto;
 }
-.intent strong { color: var(--ink); }
+.intent strong { color: var(--text); }
 .intent-pri {
   color: var(--warn);
   font-weight: 700;
@@ -2545,7 +2566,7 @@ button.dex-cell:focus-visible {
    game behind it to go back to, because the ranch has no animals until a
    lab is picked. Sized for the 380px phone first — five cards is a scroll,
    and the scroll is inside the panel rather than the page. */
-.founding { max-width: 34rem; }
+.founding { width: 100%; max-width: 34rem; max-height: 88vh; overflow-y: auto; }
 .founding-lede { margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45; color: var(--muted); }
 .founding-foot { margin: 10px 0 0; font-size: 0.74rem; color: var(--muted); }
 .lab-list {
@@ -2555,12 +2576,14 @@ button.dex-cell:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 60vh;
+  max-height: 52vh;
   overflow-y: auto;
 }
 .lab-pick {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   gap: 5px;
   width: 100%;
   text-align: left;
@@ -2574,11 +2597,26 @@ button.dex-cell:focus-visible {
   cursor: pointer;
 }
 .lab-pick:hover, .lab-pick:focus-visible { border-color: var(--accent); background: var(--well); }
-.lab-name { font-weight: 700; font-size: 0.95rem; color: var(--ink); }
+.lab-name { font-weight: 700; font-size: 0.95rem; color: var(--text); }
 .lab-blurb { font-size: 0.76rem; color: var(--muted); font-style: italic; }
 .lab-kit { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
-.lab-row { font-size: 0.76rem; line-height: 1.35; display: flex; gap: 5px; align-items: baseline; }
-.lab-row b { color: var(--ink); }
+/* Two cells: the icon, then the whole sentence. Grid rather than flex,
+   because a flex row lays out TEXT NODES as items too — it held four of
+   them (the icon, a space, <b>Bear</b>, ", fully grown...") with 5px
+   between each, so the screen read "Bear , fully grown" and a two-word
+   species name took a column of its own with the rest of its sentence
+   stranded beside it. One cell means the sentence wraps like prose and
+   keeps its own punctuation. */
+.lab-row {
+  font-size: 0.76rem;
+  line-height: 1.35;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px;
+  align-items: start;
+}
+.lab-row > svg { margin-top: 2px; }
+.lab-row b { color: var(--text); }
 .lab-pitch { font-size: 0.76rem; color: var(--accent); margin-top: 3px; }
 
 /* R120 — the number on a spend chip's face. Its sentence is in the title,
