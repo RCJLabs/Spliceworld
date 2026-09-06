@@ -519,6 +519,72 @@ const STANCE = ['node', '-e', `
   console.log('stance ✓  the enemy commits first, a brace answers it and says what it costs, the counter-class comes in free');
 `];
 
+// R120 — the agenda says how much is waiting. Its own gate: no campaign walk
+// here, because the rules that can silently stop being true are about what
+// the ROWS say, and those are one fresh save and a read.
+const SITTING = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { CONTENT_FILES: files } = await import('./data/loader.js');
+  const { newGameState } = await import('./save/save.js');
+  const { foundLab } = await import('./ranch/ranch.js');
+  const { AGENDA, agenda } = await import('./ranch/agenda.js');
+  const { runnableOps, startOperation, operationList } = await import('./campaign/operations.js');
+  const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
+  const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
+  const t0 = 1700000000000;
+  const bad = [];
+
+  // 1. EVERY ROW READS THE SAVE. R48's rule applied to all of them rather
+  //    than the seven that happened to need it.
+  const fixed = AGENDA.filter((row) => typeof row.hint !== 'function').map((r) => r.id);
+  if (fixed.length) bad.push(fixed.length + ' rows are fixed sentences: ' + fixed.join(' '));
+
+  // 2. AND SAYS A NUMBER. A function hint that returns the same words
+  //    whatever the save holds is a fixed sentence wearing a callback.
+  {
+    const lean = { ...newGameState(), seed: 4242 };
+    foundLab(lean, content, 'bramble_barn', t0);
+    const fat = JSON.parse(JSON.stringify(lean));
+    fat.funds = 999999;
+    fat.ranch.penCapacity = 40;
+    for (let i = 0; i < 6; i++) {
+      fat.ranch.stock.push(JSON.parse(JSON.stringify(lean.ranch.stock[0])));
+      fat.ranch.stock[fat.ranch.stock.length - 1].id = 'extra' + i;
+    }
+    const say = (state, id) => (agenda(state, content, t0).find((r) => r.id === id) ?? {}).hint;
+    for (const id of ['care', 'buy', 'pens']) {
+      const a = say(lean, id);
+      const b = say(fat, id);
+      if (!a || !b) { bad.push('the ' + id + ' row did not appear on both fixtures'); continue; }
+      if (a === b) bad.push('the ' + id + ' row reads identically at 3 animals and at 9');
+      if (!/[0-9]/.test(a)) bad.push('the ' + id + ' row says no number: ' + a);
+    }
+  }
+
+  // 3. THE JOB COUNT IS THE NUMBER THAT LAUNCHES. laneFree alone said
+  //    seven where three start; requiring a rider said one. The row and its
+  //    hint both read runnableOps, and this is what holds it to the truth.
+  {
+    const s2 = { ...newGameState(), seed: 4242 };
+    foundLab(s2, content, 'bramble_barn', t0);
+    let launches = 0;
+    for (const op of operationList(content)) {
+      const probe = JSON.parse(JSON.stringify(s2));
+      if (startOperation(probe, op.id, null, content, t0).ok) launches++;
+    }
+    const claimed = runnableOps(s2, content, t0).length;
+    if (claimed !== launches) {
+      bad.push('the job row claims ' + claimed + ' runnable, ' + launches + ' actually launch');
+    }
+    const hint = (agenda(s2, content, t0).find((r) => r.id === 'job') ?? {}).hint ?? '';
+    if (!hint.includes(String(launches))) bad.push('and the hint does not say ' + launches + ': ' + hint);
+  }
+
+  if (bad.length) { console.error('sitting \u2717  ' + bad.join('; ')); process.exit(1); }
+  console.log('sitting \u2713  every row reads the save, says a number, and the job count is the number that launches');
+`];
+
 // R119 — the first splice has a decision in it. Its own gate: five foundings
 // and six rules, none of which the nine-minute suite needs to be run for.
 const FOUNDING = ['node', '-e', `
@@ -1475,8 +1541,8 @@ const BREAKS = [
   {
     n: 47, gate: WALK, name: 'the walk stops buying the lab',
     file: 'tools/sim.js',
-    anchor: '    if (pick2 && buyUpgrade(state, content, pick2.id).ok) acted++;',
-    to: '    if (false && pick2) acted++;',
+    anchor: "    if (pick2 && buyUpgrade(state, content, pick2.id).ok) did('facility', { track: pick2.id });",
+    to: '    if (false && pick2) { /* the lab stops being bought */ }',
   },
   {
     // The product bug R83 found: the agenda row that offers a lab upgrade
@@ -1806,6 +1872,24 @@ const BREAKS = [
     to: '  const intent = battle.intent ?? null;',
   },
   {
+    n: 104, gate: SITTING, name: 'a row goes back to a fixed sentence that cannot say how much is waiting',
+    file: 'ranch/agenda.js',
+    anchor: `    hint: (state) => \`$\${penUpgradeCost(state)} for the next pen — \${`,
+    to: "    hint: 'Room for more stock, which is room for more parts.', unusedHint: (state) => `x${",
+  },
+  {
+    n: 105, gate: SITTING, name: 'the care row stops counting and reads the same at three animals and nine',
+    file: 'ranch/agenda.js',
+    anchor: "      return `${ready} thing${ready === 1 ? '' : 's'} to do for ${animals} animal${",
+    to: "      return `${0} thing${'s'} to do for ${0} animal${",
+  },
+  {
+    n: 106, gate: SITTING, name: 'the job row counts lanes again, so it promises jobs that will not start',
+    file: 'campaign/operations.js',
+    anchor: '    const riders = [null, crew ?? freeCrew(state, now)[0] ?? null];',
+    to: '    return laneFree(state, content, now, op, null);\n    const riders = [null, crew ?? freeCrew(state, now)[0] ?? null];',
+  },
+  {
     n: 99, gate: FOUNDING, name: 'the starter herd goes back to being a literal, so every player builds the same creature',
     file: 'ranch/ranch.js',
     anchor: '  const herd = lab ? [lab.pair, lab.pair, lab.donor] : [\'goat\', \'goat\', \'bear\'];',
@@ -1873,7 +1957,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -1890,6 +1974,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                           : gate === OPENING ? 'the opening tells the truth about the wall'
                             : gate === STANCE ? 'the opposition commits before you answer'
               : gate === FOUNDING ? 'five laboratories, and a first splice worth making'
+                : gate === SITTING ? 'the agenda says how much is waiting'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;

@@ -12481,6 +12481,32 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   assert.equal(walk.feral.lost, 0,
     `a walk that plays every day never loses a creature to neglect (${walk.feral.lost})`);
 
+  // 5a2. R120 — THE WALK CAN BE READ AS A SITTING, AND THE RANCH LOOP RUNS.
+  //      `__walkLog` was written in one place — the `fight` helper — so 90
+  //      days of it held 502 entries and every one was a battle. Every
+  //      non-combat verb was invisible, which meant the harness could answer
+  //      "how many fights" and could not answer "how much is there to do".
+  //      And `breed` had been on the agenda since M6 with no branch in the
+  //      walker at all: zero eggs across 1,081 sampled opens, so pairing,
+  //      the incubator, inheritance and the variant ladder R6 built on top
+  //      of it were never once exercised.
+  {
+    const COMBAT = new Set(['assault', 'defend', 'rescue', 'raid', 'rival', 'sparring', 'breakout', 'gauntlet']);
+    const verbs = Object.keys(walk.verbs ?? {});
+    const quiet = verbs.filter((v) => !COMBAT.has(v));
+    assert.ok(quiet.length > 0,
+      `the walk records what it does away from a battle too (${verbs.join(', ')})`);
+    for (const verb of ['care', 'graduate', 'splice', 'breed', 'hatch']) {
+      assert.ok((walk.verbs?.[verb] ?? 0) > 0, `the walk performs and records "${verb}"`);
+    }
+    // A HERD, NOT A HOARD. Breeding is free but for time, so an uncapped
+    // walker fills every pen it can buy — measured, 41 animals, and the
+    // upkeep took R86's rushes to zero. The cap is what keeps the ranch a
+    // working stable and every earlier phase's numbers comparable.
+    assert.ok(walk.stock <= 20,
+      `and keeps a working herd rather than a warehouse (${walk.stock} animals)`);
+  }
+
   // 5b. R86 — the walker pays to hurry, and buys out of the Infirmary, so
   //     the one purchase that buys time rather than things is inside the
   //     yardstick. Before this the game's only paid skip had never once been

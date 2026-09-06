@@ -333,6 +333,10 @@ export const AGENDA = [
   },
   {
     id: 'treat', kind: 'spend', screen: 'pens', label: 'Buy someone out of the Infirmary',
+    chip: (state, content, now) => {
+      const hurt = state.chimeras.filter((c) => isInjured(c, now));
+      return hurt.length ? `${hurt.length} hurt` : null;
+    },
     hint: (state, content, now) => {
       const hurt = state.chimeras.filter((c) => isInjured(c, now));
       const affordable = hurt.filter((c) => state.funds >= treatmentCost(c, content, now, state));
@@ -346,6 +350,8 @@ export const AGENDA = [
   },
   {
     id: 'train', kind: 'spend', screen: 'pens', label: 'Train a chimera',
+    chip: (state, content, now) =>
+      `${state.chimeras.filter((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR).length} ready`,
     hint: (state, content, now) => {
       const due = state.chimeras.filter((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR);
       return `${due.length} ready for a session at $${TRAINING.cost} each. Bond is obedience, and obedience is whether your orders happen.`;
@@ -355,6 +361,10 @@ export const AGENDA = [
   },
   {
     id: 'buy', kind: 'spend', screen: 'ranch', label: 'Order from the catalog',
+    chip: (state, content) => {
+      const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
+      return afford.length ? `${afford.length} from $${Math.min(...afford.map((sp) => sp.mailOrderPrice))}` : null;
+    },
     hint: (state, content) => {
       const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
       const room = state.ranch.penCapacity - state.ranch.stock.length;
@@ -367,6 +377,10 @@ export const AGENDA = [
   },
   {
     id: 'facility', kind: 'spend', screen: 'ranch', label: 'Buy a lab upgrade',
+    chip: (state, content) => {
+      const open = tracks(content).map((t) => nextUpgrade(state, content, t.id)).filter((up) => up?.affordable);
+      return open.length ? `from $${Math.min(...open.map((up) => up.level.cost))}` : null;
+    },
     hint: (state, content) => {
       const open = tracks(content)
         .map((t) => nextUpgrade(state, content, t.id))
@@ -390,6 +404,7 @@ export const AGENDA = [
   },
   {
     id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',
+    chip: (state) => `$${penUpgradeCost(state)}`,
     hint: (state) => `$${penUpgradeCost(state)} for the next pen — ${
       state.ranch.stock.length}/${state.ranch.penCapacity} full. Room for stock is room for parts.`,
     ready: (state) => state.funds >= penUpgradeCost(state),
@@ -400,7 +415,7 @@ export const AGENDA = [
 export function agenda(state, content, now) {
   return AGENDA.filter((item) => {
     try { return !!item.ready(state, content, now); } catch { return false; }
-  }).map(({ id, kind, screen, subtab, label, hint }) => ({
+  }).map(({ id, kind, screen, subtab, label, hint, chip }) => ({
     // R75: `subtab` travels with the entry. An agenda row names a
     // DESTINATION, and on the two screens that have sub-navigation the
     // screen alone is only half of one — "Run a job" landed on the map and
@@ -412,6 +427,13 @@ export function agenda(state, content, now) {
     // through untouched, so every entry written before this still reads
     // exactly as it did.
     hint: typeof hint === 'function' ? hint(state, content, now) : hint,
+    // R120 — `spend` rows render as CHIPS (A4: "three ways to spend the same
+    // money is one idea wearing three hats"), and a chip has room for a label
+    // and nothing else, so its hint went into a `title`. This game ships as a
+    // TWA: a tooltip is invisible on the device most people play it on. The
+    // chip carries the short form on its face; the sentence stays in the
+    // title for anyone with a pointer.
+    chip: typeof chip === 'function' ? chip(state, content, now) : (chip ?? null),
   }));
 }
 

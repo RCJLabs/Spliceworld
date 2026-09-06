@@ -1675,9 +1675,18 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     }
   }
 
+  // R120 — what the walk actually DID, by verb. The log was fights-only, so
+  // this tally could not exist; it is how smoke asserts that a sitting is
+  // countable and that the ranch loop ran, without walking the campaign a
+  // second time to find out.
+  const verbs = {};
+  for (const e of state.__walkLog ?? []) verbs[e.kind] = (verbs[e.kind] ?? 0) + 1;
+
   return {
     seed,
     at,
+    verbs,
+    actions: (state.__walkLog ?? []).length,
     reachedDominion: state.dominionAt != null,
     nodes: state.campaign.heldNodes.length,
     chimeras: state.chimeras.length,

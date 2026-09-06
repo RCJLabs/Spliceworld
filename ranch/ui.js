@@ -262,7 +262,8 @@ export function renderRanchScreen(root, ctx) {
       if (!items.length) return '';
       if (kind === 'spend') {
         return `<p class="agenda-head">${heading}</p><div class="agenda-chips">` + items.map((i) => `
-          <button type="button" class="agenda-chip" data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''} title="${i.hint}">${i.label}</button>`).join('') + '</div>';
+          <button type="button" class="agenda-chip" data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''} title="${i.hint}">${i.label}${
+            i.chip ? `<span class="chip-num">${i.chip}</span>` : ''}</button>`).join('') + '</div>';
       }
       return `<p class="agenda-head">${heading}</p>` + items.map((i) => `
         <button type="button" class="agenda-row" data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''}>

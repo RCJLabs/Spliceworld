@@ -2580,3 +2580,7 @@ button.dex-cell:focus-visible {
 .lab-row { font-size: 0.76rem; line-height: 1.35; display: flex; gap: 5px; align-items: baseline; }
 .lab-row b { color: var(--ink); }
 .lab-pitch { font-size: 0.76rem; color: var(--accent); margin-top: 3px; }
+
+/* R120 — the number on a spend chip's face. Its sentence is in the title,
+   which is invisible on a touch device, and this ships as a TWA. */
+.chip-num { margin-left: 5px; opacity: 0.75; font-variant-numeric: tabular-nums; }
