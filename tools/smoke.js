@@ -6099,6 +6099,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // data file, a module, a board, a launcher and a first-use moment, and
     // dropping its note has to fail the build like everything else here.
     'breakout',
+    // R88. Sending a certain fight instead of watching it: a module, a
+    // predicate the briefing reads, a control that appears and disappears by
+    // a rule, and a trade the player is making knowingly — the arena's
+    // lesson for a report card. On the roll so that dropping its note fails
+    // the build like everything else here.
+    'sent',
     // R85. The top of the instability scale is a system on its own terms —
     // a data file, a module, its own band on the Pens, an agenda row and a
     // first-use moment that arrives BEFORE the clock does. On the roll so
@@ -6428,7 +6434,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // R103's telegraph lesson lights here too: it is keyed on having FOUGHT,
     // and this is the first step in the walk that puts anything on the war
     // record.
-    ['a few wins on the board', () => { lab.warRecord = { wins: 4, losses: 1 }; }, ['director', 'stance']],
+    // R88's send note lights on the same step and for the same reason: the
+    // offer cannot exist before there is a fight to forecast, and the first
+    // thing on the war record is the first moment it can.
+    ['a few wins on the board', () => { lab.warRecord = { wins: 4, losses: 1 }; }, ['director', 'stance', 'sent']],
     ['the Dex fills up', () => { lab.dex.parts = Object.keys(content.parts).slice(0, 8); }, ['dex']],
     // Dr. Mantissa is gated on the Highway Checkpoint, so the rival note
     // opens on the same push that opens Kestrel Reach.
