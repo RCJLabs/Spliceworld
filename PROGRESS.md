@@ -1,5 +1,70 @@
 # PROGRESS
 
+## Session 120 — R121: what should the first paint carry? ✅
+
+The premise was that five milestones running had each raised the eager
+cap by a few KB with a good local argument, so the arguments were the
+problem. Measured: **every one of those arguments was true.** `feral`,
+`rush`, `taskforce`, `gauntlet` and the founding choice all genuinely run
+on the first frame. The cap rose because the first paint really does more.
+
+The waste was somewhere nobody had looked — in modules added long ago and
+never re-read.
+
+### The rule, as a gate
+
+> **A module is allowed in the eager graph only if booting runs it.**
+
+Asked of a real browser under V8 precise coverage, across **both** first
+paints: an empty browser, where the founding choice is the whole screen,
+and a save with a herd in it. A module earns its place by running in
+either. That second boot matters — measuring only the fresh one condemns
+the wrong modules, because `splice/extract.js` runs 10 of its 14 functions
+drawing a herd and none at all for a player who has no animals yet. My
+first version of the gate made exactly that mistake and named six modules,
+two of them wrongly.
+
+### What it found
+
+Seven of 48 eager modules ran **nothing**. Three were screen renderers —
+Vault, Theater, and the extraction sequence they share — sitting in
+`main.js`'s SCREENS table beside three already lazy. R74 deferred three
+screens on the principle that a tab you press is not the first paint, R120
+deferred the Pens for the same reason, and both stopped short of these.
+
+**48 modules / 563.6 KB → 45 / 538.2.** First paint 1076 → **1050 KB**;
+budget 1106 → 1055; module cap 48 → 45, KB cap 565 → 540.
+
+Four modules stay and run nothing, in two written categories: `ui/theme.js`
+exports constants the first frame reads, and `battle/moves.js`,
+`campaign/director.js`, `campaign/monologue.js` are leaves of
+`resolveBattle` and the statblock, which are synchronous by contract so the
+harness flies the same code. Deferring those three buys 23 KB and costs
+that contract — the wrong trade, and the gate now says so in writing rather
+than making someone rediscover it.
+
+### What I measured and deliberately did not do
+
+`save/save.js` is 46.9 KB of which the migrations object is **25.3 KB**
+(54%, 43 steps v2→v44) — bigger than all three screens together, and the
+thing the roadmap entry actually pointed at. I did not take it. The gate's
+granularity is the module and `save.js` does run at boot, so a big object
+of rarely-called functions inside it is invisible to this rule; and making
+it lazy makes `migrate()` async, rippling through `loadSlot`, `loadSave`,
+`importSave` and `adoptSave` — all synchronous, all inside the system
+CLAUDE.md guards hardest. That is a phase, not a footnote to this one.
+
+### A docs bug found on the way
+
+ROADMAP §9.7 carried a **stale duplicate** of both R120 and R121 — two
+R120 entries, one marked ✅ Shipped and one still Queued, quoting figures
+its own shipped entry says were wrong. Removed; one of each remains.
+
+### Next session's first task
+
+The migrations split, if it is wanted: 25.3 KB behind an async `migrate()`,
+with the save system's guarantees intact and `SAVE_VERSION` untouched.
+
 ## Session 119 — R124: three things a phone could see and no gate could ✅
 
 Three screenshots, three defects, and all three were **measurement**

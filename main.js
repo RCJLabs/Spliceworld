@@ -8,9 +8,6 @@ import { loadSave, saveGame, SAVE_VERSION, FutureSaveError } from './save/save.j
 import { THEMES, BASE_THEME } from './ui/theme.js';
 import { ensureRanchSeeded, ensureDexVariants, needsFounding } from './ranch/ranch.js';
 import { renderRanchScreen } from './ranch/ui.js';
-import { renderVaultScreen } from './splice/vault-ui.js';
-import { renderTheaterScreen } from './splice/theater-ui.js';
-import { runExtraction } from './splice/extract-ui.js';
 // R81 — from the module that actually defines it. `campaign/campaign.js:32`
 // is `export { pushNews }` — a bare re-export of this — so the shell used to
 // pull in the whole campaign module, and the director, the rehab wing and
@@ -59,8 +56,12 @@ const ctx = {
   tick: () => tick(),
   refreshTicker: () => updateTicker(),
   pushNews: (line) => { pushNews(state, line); updateTicker(); },
+  // R121 — the extraction sequence arrives with the press, not with the
+  // page. It is a ceremony the player starts, so the first frame it could
+  // possibly be needed on is the one after this callback fires.
   onExtract: (animalId) =>
-    runExtraction($('#overlay'), ctx, animalId, () => showScreen(state.activeScreen)),
+    import('./splice/extract-ui.js').then(({ runExtraction }) =>
+      runExtraction($('#overlay'), ctx, animalId, () => showScreen(state.activeScreen))),
   // A4: the Right Now panel lists things that live on other screens, so it
   // needs to be able to send you to one. Screen switching is the shell's job.
   //
@@ -154,8 +155,14 @@ const SCREENS = {
   // eager cap has been raised four milestones running. Raising it a fifth
   // time to pay for a feature is how a cap stops meaning anything.
   pens: lazy(() => import('./splice/pens-ui.js'), 'renderPensScreen'),
-  vault: (root) => renderVaultScreen(root, ctx),
-  theater: (root) => renderTheaterScreen(root, ctx),
+  // R121 — deferred for the reason R74 wrote down and R120 repeated: a tab
+  // you press is not the first paint. Measured rather than argued this
+  // time — V8 coverage of both first paints (an empty browser and a save
+  // with a herd in it) showed these two, and the extraction sequence they
+  // share, running NOT ONE of their functions while the player looked at
+  // the Ranch. 26 KB of screen chrome compiled in front of every open.
+  vault: lazy(() => import('./splice/vault-ui.js'), 'renderVaultScreen'),
+  theater: lazy(() => import('./splice/theater-ui.js'), 'renderTheaterScreen'),
   battle: lazy(() => import('./campaign/ui.js'), 'renderWarRoomScreen'),
   dex: lazy(() => import('./splice/dex-ui.js'), 'renderDexScreen'),
 };

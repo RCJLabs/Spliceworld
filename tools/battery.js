@@ -2190,6 +2190,28 @@ const BREAKS = [
     to: '      ${false && fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
   },
   {
+    // Re-adds the STATIC import rather than stubbing the screen: stubbing it
+    // takes theater-ui.js out of the graph altogether and the gate goes
+    // green for the wrong reason, which is what the first draft of this
+    // break did.
+    n: 125, gate: BOOT, name: 'a screen goes back to being imported eagerly, so its chrome compiles in front of the Ranch',
+    file: 'main.js',
+    anchor: "import { renderRanchScreen } from './ranch/ui.js';",
+    to: "import { renderRanchScreen } from './ranch/ui.js';\nimport { renderTheaterScreen } from './splice/theater-ui.js';\nvoid renderTheaterScreen;",
+  },
+  {
+    n: 126, gate: BOOT, name: 'an exemption is kept for a module that does run, so the list stops meaning anything',
+    file: 'tools/boot.js',
+    anchor: "  'ui/theme.js': 'applyTheme reads BASE_THEME and THEMES on the first frame; it calls nothing',",
+    to: "  'ui/theme.js': 'applyTheme reads BASE_THEME and THEMES on the first frame; it calls nothing',\n  'ranch/agenda.js': 'stale excuse for a module that is on the first screen',",
+  },
+  {
+    n: 127, gate: BOOT, name: 'coverage is armed after the navigate, so the modules that only run at boot read as idle',
+    file: 'tools/boot.js',
+    anchor: "    await send('Profiler.startPreciseCoverage', { callCount: true, detailed: true });",
+    to: '    void 0;',
+  },
+  {
     n: 122, gate: A11Y, name: "R73's centring leaks onto a full-width row again, so its content drifts with its own text",
     file: 'style.css',
     anchor: '  justify-content: flex-start;\n  gap: 9px;',

@@ -35,12 +35,14 @@
 // wrote rather than taking Playwright.
 
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { readFileSync, statSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join, dirname, extname } from 'node:path';
+import { join, dirname, extname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sleep, serve, findChrome, connect, CHROME_CANDIDATES, MIME } from './cdp.js';
+import { fixtureSave } from './a11y.js';
 
 // R122b's freshness check serves the repo itself, with the headers GitHub
 // Pages sends. `serve()` cannot be reused for it: it deliberately sends no
@@ -63,7 +65,90 @@ const REPORT = process.argv.includes('--report');
 // open only, never again for that save. What the gate exists to catch is
 // unchanged: a whole CLASS of file arriving in front of the player, the way
 // the shape files once did at 400 KB.
-const FIRST_PAINT_KB = 1106;
+// R121 BRINGS IT DOWN: 1106 -> 1055, measured at 1050. Deferring the Vault,
+// the Theater and the extraction sequence took 26 KB of screen chrome and
+// three requests out from in front of the player. Same rule as ever — the
+// ceiling sits just above the measurement, so creep fails.
+const FIRST_PAINT_KB = 1055;
+
+// R121 — THE RULE FOR WHAT THE FIRST PAINT CARRIES, and the reason it is
+// here rather than in a comment.
+//
+// Five milestones running (R85, R86, R87, R119, and R120 before it turned
+// around) each raised the eager-import cap by a few KB with a good local
+// argument. Every one of those arguments was true. That is exactly the
+// problem: a budget defended case by case is not a budget, it is a queue,
+// and R87's own note called this out three phases before anybody acted on
+// it. A number cannot fix that, because the next feature always has a
+// reason. A RULE can.
+//
+// The rule is:
+//
+//     A module is allowed in the eager graph only if booting RUNS it.
+//
+// Not "if the first screen might need it", not "if it would be awkward to
+// defer" — if a real boot, in a real browser, calls at least one function
+// in it. That is a fact about the running game rather than an opinion about
+// the architecture, so it cannot be argued up a milestone at a time. V8's
+// precise coverage answers it directly.
+//
+// Measured on the tree that first ran this: SEVEN of 48 eager modules
+// executed nothing at all. Three were SCREEN renderers sitting in main.js's
+// own SCREENS table beside three that were already lazy — R74 deferred the
+// War Room, the arena and the Dex on the principle that a tab you press is
+// not the first paint, R120 deferred the Pens for the same reason, and both
+// stopped short of the Vault and the Theater.
+//
+// ONE EXEMPTION, and it is a real one rather than an escape hatch: a module
+// whose exports are CONSTANTS read at boot runs no function and is still
+// needed. `applyTheme` reads `BASE_THEME` and `THEMES` on the first frame,
+// so `ui/theme.js` never gets called and could never be deferred. Every
+// entry here has to name what boot reads instead, which is the same shape
+// as R50's MODULE_NOTES: an exemption you have to write a sentence for is
+// one you notice yourself taking.
+// The eager graph, walked the same way the KB cap in smoke walks it:
+// STATIC imports only, because a dynamic import() is the whole point.
+function eagerGraph(entry = 'main.js') {
+  const seen = new Map();
+  const walk = (rel) => {
+    if (seen.has(rel)) return;
+    let src;
+    try { src = readFileSync(join(root, rel), 'utf8'); } catch { return; }
+    seen.set(rel, statSync(join(root, rel)).size);
+    for (const m of src.matchAll(/^\s*import\s(?:[\s\S]*?)from\s*['"](\.[^'"]+)['"]/gm)) {
+      walk(relative(root, resolve(dirname(join(root, rel)), m[1])));
+    }
+    for (const m of src.matchAll(/^\s*import\s*['"](\.[^'"]+)['"]/gm)) {
+      walk(relative(root, resolve(dirname(join(root, rel)), m[1])));
+    }
+  };
+  walk(entry);
+  return seen;
+}
+
+// Two categories, and both had to be earned by looking at every module the
+// first run of this gate named rather than by waving at the list:
+//
+//   CONSTANTS AT BOOT — the module exports values, not behaviour, and the
+//   first frame reads them. It can never be deferred and will never run a
+//   function.
+//
+//   SYNCHRONOUS BY CONTRACT — the module is a leaf of `battle/` or the
+//   campaign resolver, reached from code boot DOES run, and every call into
+//   it is synchronous. Deferring it means making `resolveBattle` and the
+//   creature statblock async, and CLAUDE.md's rule is that the balance
+//   harness flies the same battle code the browser does, DOM-free and
+//   without a build step. Trading that for 23 KB is the wrong trade, and
+//   saying so here is cheaper than rediscovering it.
+//
+// Note what is NOT in this list: a screen. R74, R120 and R121 have each
+// found one sitting eager, and no screen has ever had a reason to be.
+const RUNS_NOTHING_BUT_BELONGS = {
+  'ui/theme.js': 'applyTheme reads BASE_THEME and THEMES on the first frame; it calls nothing',
+  'battle/moves.js': 'battle/statblock.js reads MOVE_SLOTS and activeMoves synchronously to describe a creature',
+  'campaign/director.js': 'campaign.js calls directorNews inside resolveBattle, which the headless harness runs synchronously',
+  'campaign/monologue.js': 'rivalLine and playerLine are read on the same synchronous battle-resolution path',
+};
 
 // Anything matching this is geometry, and geometry is never allowed in
 // front of the game.
@@ -194,6 +279,10 @@ async function main() {
     await send('Network.setBypassServiceWorker', { bypass: true });
     await send('Emulation.setDeviceMetricsOverride', { width: 380, height: 780, deviceScaleFactor: 1, mobile: true });
     await send('Page.addScriptToEvaluateOnNewDocument', { source: WATCH_FIRST_RENDER });
+    // R121 — armed BEFORE the navigate, or the modules that run once at
+    // boot are exactly the ones that go unrecorded.
+    await send('Profiler.enable');
+    await send('Profiler.startPreciseCoverage', { callCount: true, detailed: true });
 
     const url = `http://127.0.0.1:${port}/index.html`;
     await send('Page.navigate', { url });
@@ -249,6 +338,87 @@ async function main() {
     // And the shell that paints has to be a working one, not an error card.
     const alive = await evaluate(`!!document.querySelector('#screen-ranch')?.innerHTML.trim()`);
     if (!alive) note('the Ranch painted nothing, so the boot this measured is not a working one');
+
+    // ---- R121. every module boot compiles is a module boot RUNS ----------
+    //
+    // Read off the browser that just booted, so it is a fact rather than a
+    // reading of the source. A module's top-level body always runs on
+    // import — that is what importing IS — so the question asked is whether
+    // any FUNCTION in it was called. Nothing called means nothing needed
+    // it: the bytes were parsed and compiled in front of the player to sit
+    // there.
+    const ranAFunction = new Map();
+    const harvest = async () => {
+      const cov = (await send('Profiler.takePreciseCoverage'))?.result?.result ?? [];
+      for (const script of cov) {
+        if (!script.url.includes(`127.0.0.1:${port}/`)) continue;
+        const file = script.url.split(`:${port}/`)[1]?.split('?')[0];
+        if (!file || !file.endsWith('.js')) continue;
+        // functionName '' is the module wrapper, which runs on import by
+        // definition and therefore proves nothing.
+        const ran = script.functions.some((f) => f.functionName !== '' && f.ranges.some((r) => r.count > 0));
+        ranAFunction.set(file, (ranAFunction.get(file) ?? false) || ran);
+      }
+    };
+    await harvest();
+
+    // THE SECOND FIRST PAINT. Everything above this line booted an empty
+    // browser, where the founding choice is the whole first screen — and a
+    // returning player's first paint is a different one. Measuring only the
+    // fresh boot condemns the wrong modules: `splice/extract.js` runs ten
+    // of its fourteen functions drawing a herd that has animals in it, and
+    // none at all for a player who has none yet. Both are the first paint,
+    // so a module earns its place by running in EITHER.
+    //
+    // The fixture is the one `tools/a11y.js` owns rather than a second
+    // recipe — R88 exported it for exactly this, after I once ran a whole
+    // gate by accident just to get a save out of it.
+    await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(await fixtureSave())})`);
+    await send('Page.navigate', { url: 'about:blank' });
+    await sleep(300);
+    await send('Page.navigate', { url });
+    await sleep(3500);
+    await harvest();
+    if (!await evaluate(`!!document.querySelector('#screen-ranch')?.innerHTML.trim()`)) {
+      note('the second boot, on a save with a herd in it, painted nothing — so half of this measurement is missing');
+    }
+
+    const eager = eagerGraph();
+    const idle = [];
+    for (const file of eager.keys()) {
+      if (file === 'main.js') continue;
+      if (ranAFunction.get(file)) continue;
+      // Never observed at all is not the same as observed doing nothing,
+      // and reporting the two the same way is how a broken probe reads as
+      // a clean tree.
+      if (!ranAFunction.has(file)) {
+        note(`${file} is imported eagerly but the browser never loaded it — this check measured nothing for it`);
+        continue;
+      }
+      idle.push(file);
+    }
+    for (const file of idle) {
+      if (file in RUNS_NOTHING_BUT_BELONGS) continue;
+      const kb = (eager.get(file) / 1024).toFixed(1);
+      note(`${file} (${kb} KB) is imported before the first paint and runs nothing during it`
+        + ' — defer it, or name it in RUNS_NOTHING_BUT_BELONGS with what boot reads from it');
+    }
+    // An exemption for a module that DOES run is an exemption nobody needs,
+    // and a stale one is how a list like this stops being read.
+    for (const file of Object.keys(RUNS_NOTHING_BUT_BELONGS)) {
+      if (!eager.has(file)) note(`RUNS_NOTHING_BUT_BELONGS names ${file}, which is not in the eager graph`);
+      else if (ranAFunction.get(file)) note(`RUNS_NOTHING_BUT_BELONGS excuses ${file}, which runs during boot — drop the entry`);
+    }
+    if (REPORT) {
+      const rows = [...eager.keys()].filter((f) => f !== 'main.js')
+        .map((f) => ({ f, kb: eager.get(f) / 1024, ran: ranAFunction.get(f) }))
+        .sort((a, b) => Number(a.ran) - Number(b.ran) || b.kb - a.kb);
+      for (const r of rows) console.log(`  ${r.ran ? 'runs' : 'IDLE'}  ${r.kb.toFixed(1).padStart(7)} KB  ${r.f}`);
+      console.log('');
+    }
+    const eagerKb = [...eager.values()].reduce((n, b) => n + b, 0) / 1024;
+    console.log(`boot: ${eager.size} modules compiled eagerly (${eagerKb.toFixed(1)} KB), `
+      + `${idle.length} of them running nothing on either first paint`);
   } finally {
     try { cdp?.ws.close(); } catch { /* already gone */ }
     proc.kill();
@@ -267,7 +437,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`boot ✓  no geometry in front of the game, under ${FIRST_PAINT_KB} KB to put it on screen, and a new build reaches a phone that already has the old one`);
+  console.log(`boot ✓  no geometry in front of the game, under ${FIRST_PAINT_KB} KB to put it on screen, every eager module runs during boot, and a new build reaches a phone that already has the old one`);
 }
 
 await main();

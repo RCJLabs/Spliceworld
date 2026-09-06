@@ -2517,14 +2517,59 @@ moved one of them: the first premise held exactly, the second did not.
     first. The fourth consecutive raise makes **R121** overdue rather than
     optional.
 
-- **R121 — What should the first paint carry?** *Queued, and asked for by
-  the R87 note four phases ago.* Four consecutive milestones have each
-  raised the eager-import cap by a few KB with a good local argument, which
-  is a trend rather than four coincidences. The measurement to start from:
-  `save/save.js` is **46 KB of the 594**, and most of it is migrations for
-  versions no live save is on. *Done when: the eager graph is measurably
-  smaller than R119 left it, and the rule for what belongs in boot is
-  written down rather than argued case by case.*
+- **R121 — What should the first paint carry?** ✅ *Shipped, and its own
+  premise was the least interesting thing in it.*
+
+  The entry blamed a trend: five milestones running had each raised the
+  eager cap by a few KB with a good local argument. Measured, **every one of
+  those arguments was true** — `feral`, `rush`, `taskforce`, `gauntlet` and
+  the founding choice all genuinely run on the first frame. The cap was
+  rising because the first paint really does more. The waste was somewhere
+  nobody had looked: in modules added long ago and never re-read since.
+
+  **The rule, and why it is a gate rather than a paragraph.** A number
+  cannot settle this, because the next feature always has a reason. So:
+  *a module is allowed in the eager graph only if booting runs it* — asked
+  of a real browser under V8 precise coverage, across **both** first paints
+  (an empty browser, where the founding choice is the whole screen, and a
+  save with a herd in it). A module earns its place by running in either.
+  Measuring only the fresh boot condemns the wrong things: `splice/
+  extract.js` runs ten of its fourteen functions drawing a herd, and none at
+  all for a player who has no animals yet.
+
+  **What it found.** Seven of 48 eager modules executed *nothing*. Three
+  were SCREEN renderers — the Vault, the Theater, and the extraction
+  sequence they share — sitting in `main.js`'s own SCREENS table beside
+  three that were already lazy. R74 deferred the War Room, the arena and the
+  Dex on the principle that a tab you press is not the first paint; R120
+  deferred the Pens for the same reason; both stopped short of these. Third
+  time a gate has found a screen sitting eager, and no screen has ever had a
+  reason to be.
+
+  **Two exemption categories, both earned by looking at every module the
+  gate named.** `ui/theme.js` exports constants `applyTheme` reads on the
+  first frame, so it can never run a function. `battle/moves.js`,
+  `campaign/director.js` and `campaign/monologue.js` are leaves reached from
+  `resolveBattle` and the creature statblock, which are synchronous by
+  contract so the headless harness flies the same code — deferring them
+  buys 23 KB and costs that contract. Each entry names its reader, and the
+  gate fails on an exemption that goes stale in either direction.
+
+  **What this could not see, said plainly because it is the next step.**
+  `save/save.js` is 46.9 KB of which the migrations object is **25.3 KB**
+  (54%, 43 steps from v2 to v44) — bigger than all three screens together.
+  The entry named it and this phase did not take it: the gate's granularity
+  is the MODULE, and `save.js` does run at boot, so a large object of
+  rarely-called functions inside it is invisible here. Making it lazy also
+  makes `migrate()` async, which ripples through `loadSlot`, `loadSave`,
+  `importSave` and `adoptSave` — all synchronous today, and all inside the
+  one system CLAUDE.md guards hardest. A separate phase, not a footnote.
+
+  *Done when: the eager graph is measurably smaller than R119 left it, and
+  the rule for what belongs in boot is written down rather than argued case
+  by case.* ✅ — R119 left it at **52 modules / 594.1 KB**; it now stands at
+  **45 / 538.2**, with the first paint down from 1076 KB to **1050** and its
+  budget from 1106 to 1055. The rule is `tools/boot.js`, not a comment.
 
 - **R120 — The sitting, not the session.** ✅ *Shipped. All three of its
   original findings were wrong, every one in my own favour, and the
@@ -2605,36 +2650,6 @@ moved one of them: the first premise held exactly, the second did not.
     / 594 KB → 48 / 560**, and both caps were lowered to sit just above the
     new measurement. The first paint is smaller than before this milestone
     started, which discharges most of R121 as a side effect.
-
-- **R121 — What should the first paint carry?** *Queued, and asked for by
-  the R87 note four phases ago.* Four consecutive milestones have each
-  raised the eager-import cap by a few KB with a good local argument, which
-  is a trend rather than four coincidences. The measurement to start from:
-  `save/save.js` is **46 KB of the 594**, and most of it is migrations for
-  versions no live save is on. *Done when: the eager graph is measurably
-  smaller than R119 left it, and the rule for what belongs in boot is
-  written down rather than argued case by case.*
-
-- **R120 — The sitting, not the session.** *Queued, and its premise is
-  narrower than it was asked as.* The request was "more to do every time you
-  open the game," and sampled on **every tick of three real 90-day campaign
-  walks** (497 / 534 / 422 opens) the mid-game is not thin: the agenda offers
-  **11 rows, 8 of them productive**, on an average open after the first week,
-  and peaks at 16. The thinness is real but **local to the first day** — a
-  brand-new save offers **5 rows of which only 3 are productive** (graduate ·
-  care · run a job; the other two are ways to spend money), and d0–1 averages
-  **7.9 rows / 5.2 productive** against **11.5 / 7.6** by week two. Three
-  rows also never fired once in 1,453 sampled opens across all three seeds:
-  `settle` (by design — R85's feral window must never reach an engaged
-  player), `hatch` (the walker hatches inside the same tick it breeds, so the
-  row exists but is never *seen*), and **`gauntlet`, which is shipped content
-  a 90-day campaign never surfaces at all**. So the honest phase is not "add
-  more things" — it is: raise the floor of the first day, make the walker's
-  invisible rows visible, and give the Gauntlet a reason to appear. *Done
-  when: a fresh save's first open offers at least 6 productive rows without
-  spending money; `hatch` and `gauntlet` both appear in a 90-day walk; and
-  the d0–1 average clears 9 rows / 6 productive without moving the d30–90
-  figure by more than one row.*
 
 ### 9.10 Who should I send? (R123) — asked for directly
 
