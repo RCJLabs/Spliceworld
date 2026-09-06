@@ -57,10 +57,16 @@ export function isOpen(state, id, defaultOpen = true) {
   return !stored;
 }
 
-export function collapsibleCard({ id, title, badge = '', summary = '', body, open, extraClass = '' }) {
+// R89 — `group` makes a set of cards EXCLUSIVE: opening one shuts the rest.
+// It exists because a stable of nine cards that can all be open at once is
+// 16,657px of screen, and no per-card diet fixes that — the height is the
+// product of the card and the roster, so the only ceiling that holds as the
+// roster grows is "one at a time". A screen without a group keeps the old
+// behaviour exactly.
+export function collapsibleCard({ id, title, badge = '', summary = '', body, open, extraClass = '', group = '' }) {
   return `
     <section class="card foldable ${open ? 'is-open' : 'is-shut'} ${extraClass}">
-      <button type="button" class="fold-head" data-fold="${id}" aria-expanded="${open}">
+      <button type="button" class="fold-head" data-fold="${id}"${group ? ` data-fold-group="${group}"` : ''} aria-expanded="${open}">
         <span class="fold-caret" aria-hidden="true">${open ? '▾' : '▸'}</span>
         <span class="fold-title">${title}</span>
         ${badge ? `<span class="fold-badge">${badge}</span>` : ''}
@@ -80,7 +86,16 @@ export function bindFolds(root, ctx, rerender) {
       state.ui.collapsed ??= {};
       // Stored as "is it collapsed", so an absent key means "use the
       // card's own default" rather than "open".
-      state.ui.collapsed[id] = btn.getAttribute('aria-expanded') === 'true';
+      const wasOpen = btn.getAttribute('aria-expanded') === 'true';
+      state.ui.collapsed[id] = wasOpen;
+      // Opening one member of a group shuts the others. Closing one shuts
+      // nothing else — a group is "at most one open", not "exactly one".
+      const group = btn.dataset.foldGroup;
+      if (group && wasOpen === false) {
+        for (const other of root.querySelectorAll(`button[data-fold-group="${group}"]`)) {
+          if (other !== btn) state.ui.collapsed[other.dataset.fold] = true;
+        }
+      }
       ctx.save();
       rerender();
     });

@@ -20,7 +20,7 @@ import { renderIcon } from '../ui/icons.js';
 import { stockGenome } from '../ranch/ranch.js';
 import { comboHint } from './theater.js';
 import { rivalList, rivalRecord } from '../campaign/rivals.js';
-import { fieldNote, bindFieldNote } from '../ui/cards.js';
+import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { bandHead } from '../ui/roster.js';
 import { openPicker } from '../ui/picker.js';
@@ -194,6 +194,13 @@ function genesView(state, content) {
     </section>`;
 }
 
+// R89 — one shape for every band of the field guide, so a fourth class is a
+// data edit rather than a fourth copy of this markup. Shut by default: the
+// guide is looked things up in, not read.
+function classFold(id, title, badge, summary, body, state) {
+  return collapsibleCard({ id, title, badge, summary, body, open: isOpen(state, id, false), extraClass: 'dex-band' });
+}
+
 // --- Foes: the rival dossiers and the enemy field guide. One tab, because
 // both answer the same question — who is on the other side of the board.
 function foesView(state, content) {
@@ -271,8 +278,10 @@ function foesView(state, content) {
     const def = content.classes[cls];
     const met = inClass.filter((u) => state.dex.enemies.includes(u.id)).length;
     const won = inClass.filter((u) => beaten.has(u.id)).length;
-    return `<h3>${renderIcon(def.icon)} ${def.name} <span class="lineage">${met}/${inClass.length} logged${won ? ` · ${won} beaten` : ''}</span></h3>
-      <div class="dex-grid">${inClass.map(cell).join('')}</div>`;
+    return classFold(`dex-foes-${cls}`, `${renderIcon(def.icon)} ${def.name}`,
+      `${met}/${inClass.length} logged${won ? ` · ${won} beaten` : ''}`,
+      `${met} of ${inClass.length} logged${won ? `, ${won} of them beaten` : ''}.`,
+      `<div class="dex-grid">${inClass.map(cell).join('')}</div>`, state);
   }).join('');
   // A unit whose class is not one of the three would vanish from a grouped
   // guide, so it gets its own run rather than being silently dropped.
@@ -294,18 +303,35 @@ function foesView(state, content) {
       }</p>`
     : '';
 
+  // R89 — THE TAB WAS 4,113px SHUT: five and a half phone screens of
+  // reference material before the player had asked for any of it, and no
+  // fold anywhere on it. Both halves are galleries you consult, not things
+  // you read top to bottom, so both now arrive shut with a line saying what
+  // is inside. Shut by default is the whole point — a fold that opens itself
+  // costs the same height as no fold at all.
+  const metCount = rivalList(content).filter(isMet).length;
+  const rivalCard = collapsibleCard({
+    id: 'dex-rivals',
+    title: `${renderIcon('flask')} Rival Geneticists`,
+    badge: `${metCount}/${rivalList(content).length} met`,
+    summary: metCount
+      ? `${metCount} of ${rivalList(content).length} have introduced themselves. Their records, their philosophies and what they will field next time.`
+      : 'Nobody has introduced themselves yet. Somebody out there is buying the same parts you are.',
+    body: rivalRows,
+    open: isOpen(state, 'dex-rivals', false),
+  });
+
   return `
-    <section class="card">
-      <h3>Rival Geneticists (${rivalList(content).filter(isMet).length}/${rivalList(content).length} met)</h3>
-      ${rivalRows}
-    </section>
+    ${rivalCard}
     <section class="card">
       <h3>Field Guide — Opposition (${state.dex.enemies.length}/${units.length} logged${
         beaten.size ? ` · ${beaten.size} beaten` : ''
       })</h3>
       ${gauntletShelf}
       ${enemyRows}
-      ${unclassed.length ? `<h3>Unclassed <span class="lineage">${unclassed.length}</span></h3><div class="dex-grid">${unclassed.map(cell).join('')}</div>` : ''}
+      ${unclassed.length ? classFold('dex-foes-unclassed', `${renderIcon('flask')} Unclassed`, `${unclassed.length}`,
+        `${unclassed.length} unit${unclassed.length === 1 ? '' : 's'} outside the triangle.`,
+        `<div class="dex-grid">${unclassed.map(cell).join('')}</div>`, state) : ''}
       <p class="fine-print">Every entry remembers you too. That's the AI director's notebook.</p>
     </section>`;
 }
@@ -353,6 +379,7 @@ export function renderDexScreen(root, ctx) {
     ${view(state, content)}`;
 
   bindFieldNote(root, ctx, () => renderDexScreen(root, ctx));
+  bindFolds(root, ctx, () => renderDexScreen(root, ctx));
   bindSubtabs(root, 'dex-tab', (id) => {
     dexTab = id;
     renderDexScreen(root, ctx);
