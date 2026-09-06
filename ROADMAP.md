@@ -2526,6 +2526,56 @@ moved one of them: the first premise held exactly, the second did not.
   smaller than R119 left it, and the rule for what belongs in boot is
   written down rather than argued case by case.*
 
+- **R120 — The sitting, not the session.** *Queued. Its premise was measured
+  twice and was wrong the first time, in my own favour.*
+  - **What holds.** Sampled on every tick of three real 90-day walks, the
+    mid-game is not thin: **11 rows, 8 productive** on an average open after
+    the first week, peaking at 15. The thinness is **local to day one** — a
+    brand-new save offers **5 rows of which 3 are productive** (graduate ·
+    care · run a job; the other two are ways to spend money), and d0–1
+    averages **7.9 rows / 5.2 productive** against **11 / 8.1** by day 30.
+    R119 did not move any of that: it changed *what* the vault holds, not
+    how much there is to do.
+  - **What was wrong: the Gauntlet.** The entry claimed it was "shipped
+    content a 90-day campaign never surfaces at all". It is not. The walk
+    breaks at the END of the iteration that sets `dominionAt`, and the
+    sampler runs at the START of one — so the state after dominion was never
+    read. Re-run without the early break, on the same seed: **dominion lands
+    day 33.3, the Gauntlet row is offered the same day**, and the walker
+    goes on to **fight all four exhibitions**. The finding was an artifact of
+    `stopAtDominion`, not a fact about the game, and the clause built on it
+    would have been vacuous — R106's lesson, paid again.
+  - **What was wrong differently: `hatch`.** It really never fires, but not
+    because a row is hidden. **The walker never lays a single egg** —
+    `eggCount` reaches 0 across 1,081 sampled opens on two seeds — while the
+    `breed` row is offered from hour six onward. So the entire M6 loop
+    (pairing, incubation, inheritance, mutation, the variant ladder R6 built
+    on top of it) is **never exercised by the yardstick**. R83's rule: a
+    system the walker never uses is one the harness cannot see.
+  - **And the harness cannot see a sitting at all.** `state.__walkLog` is
+    written in exactly one place — the `fight` helper — so across 90 days it
+    holds **502 entries and every one is a battle** (sparring 273, breakout
+    89, defend 54, assault 31, raid 22, rescue 18, rival 11, gauntlet 4).
+    Every non-combat thing the walker does — care, graduate, splice, train,
+    buy, rush — is invisible. "How much is there to do when you open the
+    game" cannot be answered from it, only "how many fights".
+  *Done when — re-derived, because two of the original three clauses were
+  measuring my own mistake: the walk records every action it takes rather
+  than only its fights, so a sitting can be counted at all; the ranch loop is
+  exercised end to end, so `breed` and `hatch` both appear in a 90-day walk
+  and M6 stops being unmeasured; and a fresh save's first open offers more
+  productive rows than the three it offers today, without adding a way to
+  spend money.*
+
+- **R121 — What should the first paint carry?** *Queued, and asked for by
+  the R87 note four phases ago.* Four consecutive milestones have each
+  raised the eager-import cap by a few KB with a good local argument, which
+  is a trend rather than four coincidences. The measurement to start from:
+  `save/save.js` is **46 KB of the 594**, and most of it is migrations for
+  versions no live save is on. *Done when: the eager graph is measurably
+  smaller than R119 left it, and the rule for what belongs in boot is
+  written down rather than argued case by case.*
+
 - **R120 — The sitting, not the session.** *Queued, and its premise is
   narrower than it was asked as.* The request was "more to do every time you
   open the game," and sampled on **every tick of three real 90-day campaign
