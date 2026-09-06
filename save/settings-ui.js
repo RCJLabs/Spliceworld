@@ -11,10 +11,15 @@
 // either re-renders in place or reloads (never leaves a stale handler
 // behind — closing and reopening is how every button here escapes).
 
+import { loadSlotRegistry, MAX_SLOTS } from './save.js';
+// R101 — the slot picker, the export file and the new-run ceremony live in
+// their own module now. This panel is already behind a dynamic import, so
+// naming them here keeps them out of the first paint rather than putting
+// them back into it.
 import {
   exportSave, exportFilename, importSave, adoptSave, startNewRun, runSummary,
-  loadSlotRegistry, slotSummary, createSlot, switchSlot, deleteSlot, renameSlot, MAX_SLOTS,
-} from './save.js';
+  slotSummary, createSlot, switchSlot, deleteSlot, renameSlot,
+} from './slots.js';
 import { renderIcon } from '../ui/icons.js';
 import { openPicker, openPrompt, toggleRow } from '../ui/picker.js';
 import * as sfx from '../audio/sfx.js';
@@ -291,7 +296,7 @@ export function openSettings(overlay, ctx) {
       // still happened and cost nothing, so simply stopping here is enough.
       if (closed) return;
       if (read === null) return render('That file could not be read.');
-      const parsed = importSave(read);
+      const parsed = await importSave(read);
       if (!parsed.ok) return render(parsed.msg);
       const written = adoptSave(parsed.save, storage, state.slotId);
       if (!written.ok) return render(written.msg);

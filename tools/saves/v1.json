@@ -1,0 +1,11 @@
+{
+  "saveVersion": 1,
+  "seed": 424242,
+  "createdAt": 1700000000000,
+  "spliceCount": 0,
+  "genome": null,
+  "directorStats": {
+    "partUse": {},
+    "tagUse": {}
+  }
+}

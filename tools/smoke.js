@@ -200,8 +200,8 @@ assert.notEqual(rngStream(1234, 'splice', 8)(), rngStream(1234, 'splice', 7)());
 // --- real v1 save (M0 era) migrates up to v2 with ranch fields intact.
 const fresh = newGameState();
 assert.equal(fresh.saveVersion, SAVE_VERSION);
-assert.equal(migrate(structuredClone(fresh)).saveVersion, SAVE_VERSION);
-assert.throws(() => migrate({ noVersion: true }), /no version/);
+assert.equal((await migrate(structuredClone(fresh))).saveVersion, SAVE_VERSION);
+await assert.rejects(() => migrate({ noVersion: true }), /no version/);
 
 const v1Save = {
   saveVersion: 1,
@@ -211,7 +211,7 @@ const v1Save = {
   genome: acceptance,
   directorStats: { partUse: { bear_head: 3 }, tagUse: {} },
 };
-const migrated = migrate(structuredClone(v1Save));
+const migrated = await migrate(structuredClone(v1Save));
 assert.equal(migrated.saveVersion, SAVE_VERSION, 'v1 chains all the way up');
 assert.equal(migrated.funds, 300);
 assert.deepEqual(migrated.ranch, { stock: [], penCapacity: 4, animalCount: 0, seeded: false, eggs: [], eggCount: 0 });
@@ -219,7 +219,7 @@ assert.deepEqual(migrated.inventory, { vials: [], parts: [], tokenCount: 0 });
 assert.equal(migrated.spliceCount, 3, 'migration preserves existing progress');
 assert.deepEqual(migrated.genome, acceptance, 'migration preserves the slab creature');
 const v2Save = { ...structuredClone(v1Save), saveVersion: 2, funds: 512, ranch: { stock: [], penCapacity: 6, animalCount: 2, seeded: true }, lastTickAt: 1, activeScreen: 'slab' };
-const m2 = migrate(structuredClone(v2Save));
+const m2 = await migrate(structuredClone(v2Save));
 assert.equal(m2.saveVersion, SAVE_VERSION);
 assert.equal(m2.funds, 512, 'v2→v3 leaves ranch/economy untouched');
 
@@ -463,11 +463,11 @@ const born2 = spliceChimera(lab2, 'M', { head: 'tk-goat_head-standard' }, conten
 assert.equal(born2.chimera.name, born.chimera.name, 'chimera naming is seed-deterministic');
 
 // --- v1 → v4 chain still carries everything forward.
-const m4 = migrate(structuredClone(v1Save));
+const m4 = await migrate(structuredClone(v1Save));
 assert.equal(m4.saveVersion, SAVE_VERSION);
 assert.deepEqual(m4.chimeras, []);
 assert.deepEqual(m4.discoveredCombos, []);
-const slabUser = migrate({ ...structuredClone(v2Save), activeScreen: 'slab' });
+const slabUser = await migrate({ ...structuredClone(v2Save), activeScreen: 'slab' });
 assert.equal(slabUser.activeScreen, 'theater', 'slab dwellers wake up in the Theater');
 
 // --- M4: enemies data coherence.
@@ -2020,7 +2020,7 @@ assert.ok(totalMut >= 8 && totalMut <= 50, `mutations occur at a sane rate (${to
 }
 
 // --- v1 → v9 chain.
-const m5 = migrate(structuredClone(v1Save));
+const m5 = await migrate(structuredClone(v1Save));
 assert.equal(m5.saveVersion, SAVE_VERSION);
 assert.equal(m5.battle, null);
 assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
@@ -2056,7 +2056,7 @@ assert.deepEqual(m5.campaign, {
       chance: 0.62, outcome: { success: true, funds: 180, species: 'frog', injuryRoll: 0.9 },
     },
   };
-  const moved = migrate(v26);
+  const moved = await migrate(v26);
   assert.equal(moved.campaign.operation, undefined, 'the single slot is gone');
   assert.equal(moved.campaign.operations.length, 1, 'and the job that was out is still out');
   const run = moved.campaign.operations[0];
@@ -2069,7 +2069,7 @@ assert.deepEqual(m5.campaign, {
   const idle = structuredClone(v1Save);
   idle.saveVersion = 26;
   idle.campaign = { ...(idle.campaign ?? {}), operation: null };
-  assert.deepEqual(migrate(idle).campaign.operations, [], 'and an idle board stays idle');
+  assert.deepEqual((await migrate(idle)).campaign.operations, [], 'and an idle board stays idle');
 }
 
 // Stronger than the literal above and self-maintaining: a migration that
@@ -2091,7 +2091,7 @@ const v5WithBattle = {
   inventory: { vials: [], parts: [], tokenCount: 0 },
   battle: { enemy: { active: {} }, log: [] },
 };
-const patched = migrate(v5WithBattle);
+const patched = await migrate(v5WithBattle);
 assert.deepEqual(patched.battle.cannon, { charge: 0 }, 'in-flight v5 battles gain cannon fields');
 
 // --- M7: Splice-Dex recording rides the existing flows.
@@ -2185,7 +2185,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 
 // --- M7: v8 migration backfills the dex from owned tokens.
 {
-  const v7ish = migrate(structuredClone(v1Save)); // gives v8 empty everything
+  const v7ish = await migrate(structuredClone(v1Save)); // gives v8 empty everything
   // R88 — battleSpeed joins the settings a migration hands back. Kept as a
   // deepEqual on the WHOLE object rather than loosened to a field check:
   // this assertion is what forces a deliberate decision every time settings
@@ -2195,7 +2195,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   assert.deepEqual(v7ish.settings, { muted: false, battleSpeed: 1 });
   assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [], variants: [], beaten: [] });
   const richV7 = { ...structuredClone(v1Save) };
-  const chain = migrate(richV7); // walk to v8 baseline shape…
+  const chain = await migrate(richV7); // walk to v8 baseline shape…
   // …then simulate a v7 save that owned things:
   const owned = {
     ...structuredClone(chain),
@@ -2205,7 +2205,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   };
   delete owned.settings;
   delete owned.dex;
-  const back = migrate(owned);
+  const back = await migrate(owned);
   assert.ok(back.dex.parts.includes('goat_head') && back.dex.parts.includes('cobra_organ'), 'dex backfilled from vault + chimeras');
   assert.equal(back.chimeras[0].lastTrainedAt, 0, 'training field patched in');
 }
@@ -4556,7 +4556,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // v15 migration.
   {
     const old = structuredClone(v1Save);
-    const up = migrate(old);
+    const up = await migrate(old);
     assert.deepEqual(up.profile, { named: false, title: null, name: null, lab: null, philosophy: null });
   }
 }
@@ -6015,7 +6015,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   {
     const veteran = { ...newGameState(), saveVersion: 25 };
     veteran.campaign.rivals = { trench: { defeats: 5, losses: 2, lastMetAt: t0 } };
-    const migrated = migrate(structuredClone(veteran));
+    const migrated = await migrate(structuredClone(veteran));
     const file = migrated.campaign.rivals.trench.scouted;
     assert.deepEqual(file, { fights: 0, classes: {}, moveTags: {}, parts: {} },
       'a rival beaten five times before R27 has still never watched you fight');
@@ -6260,6 +6260,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'main.js': null,
     'sw.js': null,
     'save/save.js': null,
+    // R101 — the two halves save/save.js was carved into. Neither is a new
+    // system: one is the migration table it always held, the other the slot
+    // and export code the settings panel always reached. A split that
+    // invented a system would need a note; a split that only moves where
+    // bytes live does not, and saying so here is cheaper than pretending.
+    'save/migrations.js': null,
+    'save/slots.js': null,
     'save/settings-ui.js': null,
     'data/loader.js': null,
     'data/catalog.js': null,
@@ -6568,13 +6575,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   assert.equal(isOpen(lab, 'region:kestrel', true), false, 'in both directions');
 
   // It survives the round trip, which is the only reason it is in the save.
-  const reloaded = migrate(structuredClone(lab));
+  const reloaded = await migrate(structuredClone(lab));
   assert.equal(isOpen(reloaded, 'facility', false), true, 'and it survives a reload');
   assert.equal(isOpen(reloaded, 'region:kestrel', true), false);
 
   // A save from before any of this reads as "use the defaults" rather than
   // throwing on a missing object.
-  const old = migrate(structuredClone({ ...newGameState(), saveVersion: 24, ui: undefined, guidesSeen: undefined }));
+  const old = await migrate(structuredClone({ ...newGameState(), saveVersion: 24, ui: undefined, guidesSeen: undefined }));
   assert.deepEqual(old.ui.collapsed, {}, 'a migrated save gets an empty fold record');
   assert.deepEqual(old.guidesSeen, [], 'and no dismissed notes');
   assert.equal(isOpen(old, 'facility', false), false, 'so every card falls back to its own default');
@@ -6978,7 +6985,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     campaign: { ...newGameState().campaign, heldNodes: ['barn_perimeter', 'downtown', 'checkpoint', 'precinct', 'guard_post'], notoriety: 85 },
   };
   delete v23.campaign.faunaGranted;
-  const migrated = migrate(structuredClone(v23));
+  const migrated = await migrate(structuredClone(v23));
   assert.equal(migrated.saveVersion, SAVE_VERSION);
 
   // Everything the v23 table opened at those five nodes.
@@ -7012,7 +7019,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
   const partial = { ...newGameState(), saveVersion: 23,
     campaign: { ...newGameState().campaign, heldNodes: ['barn_perimeter', 'downtown'], notoriety: 25 } };
   delete partial.campaign.faunaGranted;
-  const early = migrate(structuredClone(partial));
+  const early = await migrate(structuredClone(partial));
   const owedEarly = ['porcupine', 'skunk', 'wolf', 'chameleon', 'mantis'];
   assert.deepEqual([...early.campaign.faunaGranted].sort(), [...owedEarly].sort(),
     'a half-conquered save is granted exactly what it had earned');
@@ -9497,7 +9504,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.equal(newGameState().dominionAt, null, 'a fresh save has not won yet');
     const old = { ...newGameState(), saveVersion: 29, funds: 1234 };
     delete old.dominionAt;
-    const migrated = migrate(old);
+    const migrated = await migrate(old);
     assert.equal(migrated.saveVersion, SAVE_VERSION, 'an old save comes forward');
     assert.equal(migrated.dominionAt, null, 'with the new field');
     assert.equal(migrated.funds, 1234, 'and nothing of theirs touched');
@@ -9520,7 +9527,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const winner = { ...newGameState(), saveVersion: 29 };
     delete winner.dominionAt;
     winner.campaign = { ...winner.campaign, heldNodes: [...everyNode] };
-    const done = migrate(winner);
+    const done = await migrate(winner);
     assert.equal(done.saveVersion, SAVE_VERSION, 'the winner comes forward too');
     assert.equal(done.dominionAt, null, 'they arrive not yet told');
     tickCampaign(done, content, t0);
@@ -9723,7 +9730,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     delete old.sparCount; delete old.lastSparAt;
     old.chimeras = [{ id: 'c1', name: 'Vet', tokens: {} }];
     old.campaign = { ...old.campaign, captives: [{ id: 'cap1', chimera: { id: 'c2', name: 'Hostage', tokens: {} } }] };
-    const done = migrate(old);
+    const done = await migrate(old);
     assert.equal(done.saveVersion, SAVE_VERSION, 'comes forward');
     assert.equal(done.chimeras[0].xp, 0, 'roster chimeras get xp');
     assert.equal(done.campaign.captives[0].chimera.xp, 0, 'so do captives — a rescue must not return a crash');
@@ -9868,7 +9875,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   {
     const old = { ...newGameState(), saveVersion: 31, funds: 555, dominionAt: t0 };
     delete old.gauntletBeaten;
-    const done = migrate(old);
+    const done = await migrate(old);
     assert.equal(done.saveVersion, SAVE_VERSION, 'comes forward');
     assert.deepEqual(done.gauntletBeaten, [], 'with an empty shelf');
     assert.equal(done.funds, 555, 'and nothing else touched');
@@ -10006,7 +10013,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const old = { ...newGameState(), saveVersion: 32, funds: 99 };
     delete old.sparRefillAt;
     old.lastSparAt = t0; // mid-wait under the old rules
-    const done = migrate(old);
+    const done = await migrate(old);
     assert.equal(done.saveVersion, SAVE_VERSION, 'comes forward');
     assert.equal(done.lastSparAt, undefined, 'the old cooldown stamp is gone');
     assert.equal(sparCharges(done, t0, content).charges, tune.sparCharges,
@@ -11563,7 +11570,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     old.gauntletBeaten = [stages[0].id];
     old.warRecord = { wins: 40, losses: 2 };
     old.dex.enemies = Object.keys(content.enemies);
-    const up = migrate(old);
+    const up = await migrate(old);
     assert.equal(up.saveVersion, SAVE_VERSION, 'v33 comes forward');
     assert.deepEqual(up.dex.beaten, [], 'with an empty shelf — 40 wins prove nothing about WHICH units');
     const shelf = beatenUnits(up, content);
@@ -11856,7 +11863,8 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // one when something has already gone wrong, which is exactly when a vague
 // "invalid file" is most expensive and least testable by hand.
 {
-  const { exportSave, exportFilename, importSave, adoptSave, loadSave, FutureSaveError } = await import('../save/save.js');
+  const { loadSave, FutureSaveError } = await import('../save/save.js');
+  const { exportSave, exportFilename, importSave, adoptSave } = await import('../save/slots.js');
 
   // A localStorage stand-in, so adoption can be driven into the states a
   // real browser only reaches when it is full or locked down.
@@ -11878,11 +11886,11 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   {
     const st = { ...newGameState(), seed: 54, funds: 1234, spliceCount: 7 };
     st.dex.beaten = ['riot_squad'];
-    const back = importSave(exportSave(st));
+    const back = await importSave(exportSave(st));
     assert.ok(back.ok, `a freshly exported save imports (${back.msg ?? ''})`);
     assert.deepEqual(back.save, st, 'and is byte-for-byte the save that left');
     // A bare save — someone's raw localStorage dump — is readable too.
-    const bare = importSave(JSON.stringify(st));
+    const bare = await importSave(JSON.stringify(st));
     assert.ok(bare.ok, 'and so is an unwrapped save');
     assert.deepEqual(bare.save, st, 'with the same result');
   }
@@ -11915,7 +11923,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     ];
     const seen = new Set();
     for (const [reason, text] of cases) {
-      const r = importSave(text);
+      const r = await importSave(text);
       assert.equal(r.ok, false, `refused: ${text.slice(0, 40)}`);
       assert.equal(r.reason, reason, `for the right reason (${text.slice(0, 40)})`);
       assert.ok(r.msg && r.msg.length > 20, `and says so in words (${r.reason}: ${r.msg})`);
@@ -11929,7 +11937,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   {
     const old = { ...structuredClone(newGameState()), saveVersion: 33 };
     delete old.dex.beaten;
-    const r = importSave(JSON.stringify(old));
+    const r = await importSave(JSON.stringify(old));
     assert.ok(r.ok, `a v33 export still loads (${r.msg ?? ''})`);
     assert.equal(r.save.saveVersion, SAVE_VERSION, 'brought forward to this build');
     assert.equal(r.from, 33, 'and remembers where it came from');
@@ -11992,7 +12000,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const map = new Map([['spliceworld_save', rawAhead]]);
     const store = { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, v) };
     let threw = null;
-    try { loadSave(store); } catch (err) { threw = err; }
+    try { await loadSave(store); } catch (err) { threw = err; }
     assert.ok(threw instanceof FutureSaveError, `a save from a newer build throws FutureSaveError (got ${threw?.constructor?.name ?? 'nothing'})`);
     assert.equal(threw.foundVersion, SAVE_VERSION + 1, 'and names the version it found');
     assert.equal(map.size, 1, 'nothing new was written — no backup, no second key');
@@ -12006,7 +12014,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const err = console.error;
     console.error = () => {};
     let fresh;
-    try { fresh = loadSave(junkStore); } finally { console.error = err; }
+    try { fresh = await loadSave(junkStore); } finally { console.error = err; }
     assert.equal(fresh.saveVersion, SAVE_VERSION, 'a corrupt save still starts a fresh game');
     assert.equal([...junkMap.keys()].filter((k) => k.includes('_backup_')).length, 1,
       'with the broken file kept aside for forensics — the case this refusal is NOT');
@@ -12041,7 +12049,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const bootAt = shell.indexOf('async function boot()');
     assert.notEqual(bootAt, -1, 'boot() exists');
     const bootBody = shell.slice(bootAt, shell.indexOf('\nboot();'));
-    assert.ok(/try\s*\{\s*state = loadSave\(\)/.test(bootBody), 'loadSave() is called inside a try');
+    assert.ok(/try\s*\{\s*state = await loadSave\(\)/.test(bootBody), 'loadSave() is awaited inside a try');
     assert.ok(/err instanceof FutureSaveError/.test(bootBody), 'and the refusal is told apart from other failures');
     // "Boot failure is one screen that says so": both the content-load
     // failure and the future-save refusal go through the SAME renderer,
@@ -12086,7 +12094,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // friend's save muted your phone. One list now answers "what is a run" for
 // both paths, because two answers is how they drift.
 {
-  const { startNewRun, runSummary, adoptSave, CARRIED_ACROSS_RUNS } = await import('../save/save.js');
+  const { startNewRun, runSummary, adoptSave, CARRIED_ACROSS_RUNS } = await import('../save/slots.js');
 
   const played = (now = t0) => {
     const st = { ...newGameState(), seed: 55, funds: 9000, createdAt: now - 37 * 24 * 3600000 };
@@ -12281,10 +12289,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // anyone.
 {
   const {
-    loadSlotRegistry, saveSlotRegistry, activeSlotId, slotSummary,
-    createSlot, switchSlot, deleteSlot, renameSlot, loadSlot, loadSave, saveGame,
-    adoptSave, startNewRun, MAX_SLOTS, CARRIED_ACROSS_RUNS,
+    loadSlotRegistry, saveSlotRegistry, activeSlotId, loadSlot, loadSave, saveGame, MAX_SLOTS,
   } = await import('../save/save.js');
+  const {
+    slotSummary, createSlot, switchSlot, deleteSlot, renameSlot,
+    adoptSave, startNewRun, CARRIED_ACROSS_RUNS,
+  } = await import('../save/slots.js');
 
   const fakeStore = (seed = {}) => {
     const map = new Map(Object.entries(seed));
@@ -12309,7 +12319,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // loadSlotRegistry alone never writes — a synthesized registry is
     // recomputed fresh every call until something actually persists it.
     assert.equal(store.map.size, 1, 'reading the registry alone writes nothing');
-    const loaded = loadSave(store);
+    const loaded = await loadSave(store);
     assert.equal(loaded.funds, 5000, 'loadSave still finds it — same key, same data');
     assert.equal(loaded.slotId, 1, 'stamped as slot 1');
     // loadSave is more than a read, though: it stamps `lastPlayedAt` for
@@ -12325,7 +12335,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //    for "nothing here yet".
   {
     const store = fakeStore();
-    const loaded = loadSave(store);
+    const loaded = await loadSave(store);
     assert.equal(loaded.chimeras.length, 0, 'a fresh device gets a fresh game');
     assert.equal(loaded.slotId, 1, 'still slot 1 — the only slot a device starts with');
   }
@@ -12335,7 +12345,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //    you are looking at, even if something else changed the pointer.
   {
     const store = fakeStore();
-    const s = loadSlot(2, store); // slot 2 has never existed — still loads clean
+    const s = await loadSlot(2, store); // slot 2 has never existed — still loads clean
     assert.equal(s.slotId, 2, 'loadSlot stamps the slot it was asked for');
     s.funds = 42;
     saveGame(s, store);
@@ -12359,14 +12369,14 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const reg = loadSlotRegistry(store);
     assert.equal(reg.activeId, 2, 'and it becomes active immediately');
     assert.deepEqual(reg.slots.map((s) => s.id).sort(), [1, 2], 'both labs are listed');
-    const fresh = loadSlot(2, store);
+    const fresh = await loadSlot(2, store);
     assert.equal(fresh.chimeras.length, 0, 'a new lab starts empty — nothing carries over but the device list');
     assert.equal(fresh.settings.muted, true, 'sound carries forward');
     assert.deepEqual(fresh.guidesSeen, ['resequencer'], 'and the field notes already read');
     assert.deepEqual(CARRIED_ACROSS_RUNS, ['settings', 'guidesSeen', 'ui'],
       'the exact same three fields a reset carries — one list, both doors');
     // The old lab is entirely undisturbed by the new one existing.
-    assert.equal(loadSlot(1, store).chimeras.length, 1, 'slot 1 still has its chimera');
+    assert.equal((await loadSlot(1, store)).chimeras.length, 1, 'slot 1 still has its chimera');
   }
 
   // 5. MAX_SLOTS is a real ceiling, not a suggestion, and createSlot names
@@ -12486,7 +12496,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     assert.ok(done.ok, 'an import targeted at slot 2 lands');
     assert.equal(JSON.parse(store.map.get('spliceworld_save_2')).seed, 77, 'in slot 2s own key');
     assert.ok(!store.map.has('spliceworld_save'), 'slot 1 was never touched by an import aimed at slot 2');
-    const reset = adoptSave(startNewRun(loadSlot(2, store)), store, 2);
+    const reset = adoptSave(startNewRun(await loadSlot(2, store)), store, 2);
     assert.ok(reset.ok, 'and a reset aimed at slot 2 lands the same way');
     assert.notEqual(JSON.parse(store.map.get('spliceworld_save_2')).seed, 77, 'a fresh run, still in slot 2');
   }
@@ -14211,13 +14221,13 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   {
     const old = { ...structuredClone(newGameState()), saveVersion: 34, lastTickAt: null };
     old.campaign.lastTickAt = t0 + 5 * DAY;
-    const moved = migrate(structuredClone(old));
+    const moved = await migrate(structuredClone(old));
     assert.equal(moved.saveVersion, SAVE_VERSION);
     assert.equal(moved.lastTickAt, t0 + 5 * DAY, 'a missing ranch clock takes the campaign one, so the gap is neither charged nor paid twice');
     assert.equal(moved.campaign.lastTickAt, undefined, 'and the second clock is gone');
     const both = { ...structuredClone(newGameState()), saveVersion: 34, lastTickAt: t0 + 6 * DAY };
     both.campaign.lastTickAt = t0 + 5 * DAY;
-    assert.equal(migrate(structuredClone(both)).lastTickAt, t0 + 6 * DAY, 'a set ranch clock is kept');
+    assert.equal((await migrate(structuredClone(both))).lastTickAt, t0 + 6 * DAY, 'a set ranch clock is kept');
   }
 
   // 4. THE WORLD MOVES WHILE THE APP IS CLOSED. A week away used to meet one
@@ -14670,6 +14680,16 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       /export function applyInjury\(/.test(readFileSync(join(root, f), 'utf8')));
     assert.equal(defines.length, 1, `exactly one module defines applyInjury (${defines.join(', ') || 'none'})`);
     const INFLICT_POINT = defines[0];
+    // R101 — and the migrations module is derived for exactly the same
+    // reason, one line below the lesson. The exemption below said
+    // 'save/save.js' by name; R101 moved the table to save/migrations.js,
+    // and a named exemption would have gone on protecting the file the
+    // migrations had left.
+    const migrationHomes = files.filter((f) =>
+      /export const migrations = \{/.test(readFileSync(join(root, f), 'utf8')));
+    assert.equal(migrationHomes.length, 1,
+      `exactly one module holds the migrations table (${migrationHomes.join(', ') || 'none'})`);
+    const MIGRATIONS_MODULE = migrationHomes[0];
     let inflicts = 0;
     for (const file of files) {
       const src = readFileSync(join(root, file), 'utf8').replace(/\/\/.*$/gm, '');
@@ -14682,7 +14702,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
         // "one place writes an injury" should find that place rather than be
         // told where it is, or the next move breaks it again.
         if (file === INFLICT_POINT && /^injury/.test(r)) { inflicts++; continue; }
-        if (file === 'save/save.js' && /\?\?\s*null/.test(r)) continue;    // migration normalise
+        if (file === MIGRATIONS_MODULE && /\?\?\s*null/.test(r)) continue;  // migration normalise
         assert.fail(`${file} writes an injury outside applyInjury (= ${r.slice(0, 40)})`);
       }
     }
@@ -17721,7 +17741,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   {
     const s = armed();
     tickWorld(s, content, t0 + 24 * 7 * HOUR82);
-    const reloaded = migrate(JSON.parse(JSON.stringify(s)));
+    const reloaded = await migrate(JSON.parse(JSON.stringify(s)));
     assert.equal(reloaded.saveVersion, SAVE_VERSION);
     assert.deepEqual(
       reloaded.campaign.loose.map((e) => e.unit.name),
@@ -17736,7 +17756,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     delete old.campaign.loose;
     delete old.campaign.nextBreakAt;
     delete old.campaign.breakoutCount;
-    const up = migrate(old);
+    const up = await migrate(old);
     assert.deepEqual(up.campaign.loose, [], 'a save from before the breakout arrives with an empty board');
     assert.equal(up.campaign.nextBreakAt, null,
       'and no clock already running — the first escape is still five hours after it becomes eligible');

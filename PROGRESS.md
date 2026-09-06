@@ -1,5 +1,104 @@
 # PROGRESS
 
+## Session 124 — R101: the migrations split ✅
+
+### The entry's numbers were stale, and its central claim was wrong
+
+`save/save.js` was **1,094 lines / 47.3 KB**, not the 1,020 / 44 KB the
+audit recorded. And "twenty steps have never been replayed against a real
+save of their version" was not what was happening. Instrumented and run
+against the whole suite: **all 44 migrations execute, 679 times.** The
+problem was the *input*, and it was worse than not running:
+
+* smoke's `v1Save` is a **six-key object**, chained upward — so migration 30
+  saw a save assembled by 29 earlier migrations, never a v29 save;
+* several tests migrate **today's `newGameState()` with the version number
+  written backwards** to 24. That save already contains fields invented at
+  v40, so a migration that *fails to create a field* passes anyway, because
+  the field was already there.
+
+A test that cannot fail is worse than one that does not run, because it
+reports success.
+
+### The fixtures are taken, not written
+
+Git holds the commit where SAVE_VERSION was N — all 45 of them. So
+`tools/gen-saves.js` checks that tree out, imports **its** `save/save.js`,
+and asks it for a new game: `v29.json` is a save the game itself wrote when
+29 was current. Each is stocked through its own era's `ensureRanchSeeded`
+(era-agnostic — every JSON in that tree's `data/`, indexed by that tree's
+own `indexContent`, because the loader API drifted twice across 45
+versions), so 44 of 45 carry real animals. v1 predates `ranch/` and is
+correctly bare.
+
+**My generator was nondeterministic on its first outing and `--check` said
+so**: it stamped the world seed *after* stocking the ranch, so every fixture
+drew a random herd — 44 of 45 moved between two runs. Seed first, then
+stock. R127's lesson, one milestone old, and it still needed the check to
+catch it.
+
+### The split
+
+* `save/migrations.js` — the table, moved whole. It references nothing at
+  module scope, which is correct: a migration reproduces its own era's
+  schema and must not read today's tuning.
+* `save/slots.js` — slot picker, export/import, new-run ceremony. Reached
+  only from the already-lazy settings panel; it was in the first paint
+  because it shared a file with `loadSave`.
+* `migrate` is async and imports the table **only when the save is behind**.
+
+### The gate nobody had: a migrated save in a browser
+
+Every browser gate seeds a save at the current version, so none had ever
+taken the migration path — and after this split that path fetches a module
+over the network. `tools/stale.js` opens a real v1, v20, v30 and v44 save in
+headless Chromium.
+
+It reads the **console**, and that is the whole design: when the import 404s,
+`loadSlot`'s catch starts a fresh game and saves it, so "the ranch painted"
+and "storage says v45" both pass while the player's save has been set aside
+under a backup key. The obvious checks are blind to the one failure that
+matters. Proven both ways.
+
+Also fixed in that gate: its `finally` block deleted the Chromium profile and
+could throw ENOTEMPTY, replacing a real verdict with a housekeeping error —
+which it did, on the first run that actually found the bug.
+
+### A false green in my own new gate
+
+The battery reported **138 breaks, 138 caught, 0 missed** — and exited 1. The
+count was only the break phase; its *baseline* pass on a pristine tree had
+failed. `gen-saves --check` regenerates from git history, and the battery
+copies the tree **without `.git`**, so the gate failed in that copy whether
+the tree was broken or not — which is precisely why its own break registered
+as "caught". A gate that fails identically on a clean tree proves nothing.
+
+Fixed with two modes: with history, regenerate and compare (the strong
+question, "is this what that version's code writes?"); without it, compare
+each fixture to a recorded hash in `tools/saves/index.json` (the weaker but
+real question, "has anyone edited one by hand?" — which is exactly break
+136). Verified in a no-git copy both ways: silent pass on pristine, named
+failure on a hand-edited fixture.
+
+Worth naming the near-miss: had I stopped at "138 caught · 0 missed", a gate
+that could never pass would have shipped looking green.
+
+### Numbers
+
+| | before | after |
+| --- | --- | --- |
+| save system, eager | 47.3 KB | **10.5 KB** |
+| first paint | 1053 KB | **1016 KB** |
+| first-paint ceiling | 1055 | **1020** |
+| migration fixtures | 0 | **45** |
+
+### Known issues / next session's first task
+
+* The R125 Theater tier preview is still proven at engine and code level
+  only — worth a hand-check on a save with a stocked vault.
+* Next: pick the next item from ROADMAP §9.5/§9.6.
+
+
 ## Session 123 — R127: the generator was a trap ✅
 
 ### A correction to what I said last session

@@ -346,7 +346,7 @@ async function boot() {
   }
 
   try {
-    state = loadSave();
+    state = await loadSave();
   } catch (err) {
     if (err instanceof FutureSaveError) {
       // R71 — never a reset: the save has not been touched, and staying

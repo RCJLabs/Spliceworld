@@ -69,7 +69,30 @@ const REPORT = process.argv.includes('--report');
 // the Theater and the extraction sequence took 26 KB of screen chrome and
 // three requests out from in front of the player. Same rule as ever — the
 // ceiling sits just above the measurement, so creep fails.
-const FIRST_PAINT_KB = 1055;
+// R101 BRINGS IT DOWN AGAIN: 1055 -> 1020, measured at 1016. Splitting
+// save.js took 37 KB of migration table and slot machinery out from in
+// front of the player. Same rule as ever — the ceiling sits just above
+// the measurement, so creep fails.
+const FIRST_PAINT_KB = 1020;
+
+// R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
+//
+// `save/save.js` was 47.3 KB, and all of it eager, because `main.js` needs
+// `loadSave` on the first frame. But over half that file is the migration
+// table: forty-four steps, every one of which exists to move a save FROM a
+// version the player is not on. A player whose save is current downloads
+// all forty-four and runs none.
+//
+// The rest split the same way. Everything the slot picker, the export file
+// and the new-run ceremony need is reached only from `save/settings-ui.js`,
+// which R81 already made lazy — it was riding along in the eager graph
+// purely because it shared a file with `loadSave`.
+//
+// So the budget is on the SAVE SYSTEM'S SHARE of the first paint, not on
+// one filename: split it into three modules and the number is unchanged if
+// main.js still eagerly imports all three. Measured at 11.0 KB after R101.
+const SAVE_EAGER_KB = 15;
+
 
 // R121 — THE RULE FOR WHAT THE FIRST PAINT CARRIES, and the reason it is
 // here rather than in a comment.
@@ -384,6 +407,22 @@ async function main() {
     }
 
     const eager = eagerGraph();
+
+    // R101 — the save system's share of that graph. Derived from the same
+    // walk the cap above uses, so a fourth save module cannot arrive
+    // eagerly without this seeing it.
+    {
+      const saveFiles = [...eager].filter(([f]) => f.startsWith('save/'));
+      const bytes = saveFiles.reduce((a, [, n]) => a + n, 0);
+      const kb = bytes / 1024;
+      if (kb > SAVE_EAGER_KB) {
+        note(`the first paint carries ${kb.toFixed(1)} KB of the save system, over the budget of ${SAVE_EAGER_KB} KB`
+          + ` (${saveFiles.map(([f, n]) => `${f} ${(n / 1024).toFixed(1)}KB`).join(', ')})`);
+      } else {
+        console.log(`boot: ${kb.toFixed(1)} KB of the save system is eager, under the ${SAVE_EAGER_KB} KB budget`);
+      }
+    }
+
     const idle = [];
     for (const file of eager.keys()) {
       if (file === 'main.js') continue;
