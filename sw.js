@@ -45,6 +45,8 @@ const SHELL = [
   'campaign/sparring.js',
   'campaign/gauntlet.js',
   'splice/theater.js',
+  'splice/grades.js',
+  'splice/vault.js',
   'splice/chaos.js',
   'splice/temperament.js',
   'splice/scars.js',

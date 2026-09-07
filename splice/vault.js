@@ -93,6 +93,9 @@ export function renderDown(state, content, ids) {
   state.inventory.parts = state.inventory.parts.filter((t) => !wanted.has(t.id));
   const paid = going.reduce((n, t) => n + renderValue(t), 0);
   state.funds += paid;
+  // R91 — the guide's done-condition, and the only counter this milestone
+  // adds to a save. One integer against the 1.7 MB it takes off.
+  state.renderCount = (state.renderCount ?? 0) + 1;
   return {
     ok: true, count: going.length, paid,
     msg: `${going.length} part${going.length === 1 ? '' : 's'} rendered down for $${paid}. The shelves can breathe.`,

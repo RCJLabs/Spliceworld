@@ -41,6 +41,10 @@ export function newGameState() {
     // median life two hours. A timestamp like every other clock in this
     // game, and rushable like every other clock since R86.
     theater: { busyUntil: 0 },
+    // How many times the player has cleared shelf space on purpose. The
+    // vault guide's done-condition reads it, the same way `rushCount` backs
+    // R86's.
+    renderCount: 0,
     discoveredCombos: [],
     battle: null,
     warRecord: { wins: 0, losses: 0 },

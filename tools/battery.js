@@ -242,6 +242,14 @@ const SUITE = ['node', 'tools/suite.js'];
 // battery can aim at it in seconds rather than three minutes.
 const UNION = ['node', 'tools/smoke.js'];
 
+// R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
+// this game was bounded except the ones that mattered: the day-180 save was
+// 1.8 MB, 95.5% of it inventory, and four save slots share one 5 MB quota, so
+// four campaigns crossed it around day 124 while `saveGame` swallowed the
+// failure. The gate asks three things of one seeded walk — weight, a stated
+// bound for every array, and whether a chimera lives longer than an evening.
+const VAULT = ['node', 'tools/vault.js'];
+
 // R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
 // "claws are on backwards". They were. Every part is drawn in a local space
 // where the head faces +x (frames.json _doc), and the `paw` archetype built
@@ -1624,6 +1632,54 @@ const WALK = ['node', '-e', `
 const ROADMAP = ['node', 'tools/roadmap.js'];
 
 const BREAKS = [
+  {
+    n: 143, gate: VAULT, name: 'the vault stops having a capacity, so a campaign hoards nine thousand parts again',
+    file: 'splice/vault.js',
+    anchor: '  return { parts: g.vaultParts, vials: g.vaultVials };',
+    to: '  return { parts: Infinity, vials: Infinity };',
+  },
+  {
+    n: 144, gate: VAULT, name: 'the containment board goes back to being an append-only ledger of every capture ever',
+    file: 'campaign/rehab.js',
+    anchor: '  const cap = rehabGrants(state, content).bays;',
+    to: '  const cap = Infinity;',
+  },
+  {
+    n: 145, gate: VAULT, name: 'the Theater table is never occupied, so a creature can be built and scrapped in the same minute',
+    file: 'splice/facility.js',
+    anchor: '  state.theater.busyUntil = now + theaterBusyFor(state, content);',
+    to: '  state.theater.busyUntil = now;',
+  },
+  {
+    n: 146, gate: VAULT, name: 'the stable stops having a size, so nothing bounds how many creatures a save carries',
+    file: 'splice/facility.js',
+    anchor: '  const cap = theaterGrants(state, content).stable;',
+    to: '  const cap = Infinity;',
+  },
+  {
+    n: 147, gate: VAULT, name: 'a vial never retires, so the rack grows for as long as the player extracts',
+    file: 'splice/vault.js',
+    anchor: '  while (inv.vials.length > cap) {',
+    to: '  while (false) {',
+  },
+  {
+    n: 148, gate: VAULT, name: 'the walker goes back to swapping creatures on any improvement, ignoring the grades a dismantle burns',
+    file: 'tools/sim.js',
+    anchor: '        if (plan.score > quality(weakest) + burned) {',
+    to: '        if (plan.score > quality(weakest)) {',
+  },
+  {
+    n: 149, gate: VAULT, name: 'a new array joins the save with no stated bound, and the declare-yourself rule lets it through',
+    file: 'tools/vault.js',
+    anchor: "      + ' — add it to BOUNDS in tools/vault.js with the thing that caps it');\n    continue;",
+    to: "      + ' — add it to BOUNDS in tools/vault.js with the thing that caps it');\n    fails.pop();\n    continue;",
+  },
+  {
+    n: 150, gate: SAVES, name: 'a save that predates the cap is pruned instead of paid, so nine thousand parts are deleted in silence',
+    file: 'splice/vault.js',
+    anchor: '  const going = surplusParts(state, content, over);',
+    to: '  const going = state.inventory.parts.slice(0, over);',
+  },
   // --- gate: scopecheck (a free identifier fails the build) ----------------
   {
     n: 1, gate: SCOPE, name: 'R60, replayed: opOdds trimmed from the import, two call sites live',

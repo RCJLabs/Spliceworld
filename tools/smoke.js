@@ -503,6 +503,17 @@ assert.ok(!chaos.thermal.ok, 'bear + cobra cannot agree on a temperature');
 assert.ok(chaos.settlingMs > purebred.settlingMs, 'instability stretches settling');
 assert.ok(chaos.settlingMs <= 4 * HOUR + 1);
 
+// R91 — A LAB THAT IS NOT ABOUT THE THEATER'S SCHEDULE.
+//
+// The Surgery Theater does one operation at a time now, and most of this
+// file's fixtures build several creatures on one state in a single instant
+// to have something to fight, breed or draw with. The rule has its own
+// assertions where it IS the subject — the splice block below proves the
+// refusal, and break 145 proves the gate notices if the table stops being
+// occupied — so everywhere else a fixture says out loud, in one named call,
+// that it is stepping around a clock rather than quietly depending on one.
+const clearTable = (s) => { s.theater = { busyUntil: 0 }; return s; };
+
 // --- Splicing: tokens leave the vault, chimera settles on a timer.
 const lab = { ...newGameState(), seed: 321 };
 lab.inventory.parts = [tk('cobra_head'), tk('cobra_organ'), tk('goat_hindlimbs'), tk('goat_head')];
@@ -522,10 +533,18 @@ assert.deepEqual(lab.discoveredCombos, ['injection'], 'cobra head + venom sac di
 assert.equal(born.newCombos[0].name, 'Injection');
 const svgChim = renderCreatureSVG(chimeraGenome(c, content), content, { idPrefix: 'chz' });
 assert.ok(svgChim.length > 200, 'chimera renders from its tokens');
-// Splicing the same combo again is not a re-discovery.
+// R91 — the Theater is a room with one table, and the splice above is still
+// on it. A second operation in the same instant is refused, which is the
+// whole of what turns a chimera from a draft into a decision.
 lab.inventory.parts.push(tk('cobra_head', 'prime'), tk('cobra_organ', 'prime'));
-const again = spliceChimera(lab, 'S', { head: 'tk-cobra_head-prime', organ: 'tk-cobra_organ-prime' }, content, t0);
-assert.ok(again.ok && again.newCombos.length === 0 && lab.discoveredCombos.length === 1);
+const busy = spliceChimera(lab, 'S', { head: 'tk-cobra_head-prime', organ: 'tk-cobra_organ-prime' }, content, t0);
+assert.ok(!busy.ok && /table is still occupied/.test(busy.msg), `a busy table refuses: ${busy.msg}`);
+assert.equal(lab.chimeras.length, 1, 'and refuses without building anything');
+// Splicing the same combo again is not a re-discovery — a day later, when
+// the table is clear.
+const nextDay = t0 + 24 * 3600000;
+const again = spliceChimera(lab, 'S', { head: 'tk-cobra_head-prime', organ: 'tk-cobra_organ-prime' }, content, nextDay);
+assert.ok(again.ok && again.newCombos.length === 0 && lab.discoveredCombos.length === 1, again.msg);
 // Determinism: same seed & order → same chimera names.
 const lab2 = { ...newGameState(), seed: 321 };
 lab2.inventory.parts = [tk('goat_head')];
@@ -591,6 +610,7 @@ function makeChimera(state2, frame, partGrades, now) {
       return [socketId, `bt-${pid}`];
     })
   );
+  clearTable(state2);
   const res = spliceChimera(state2, frame, slots, content, now);
   assert.ok(res.ok, res.msg);
   return res.chimera;
@@ -3658,6 +3678,7 @@ if (inShard('team')) {
   assert.ok(validateSplice(stocked, 'L', { head: 't0', organ2: 't0' }, content).some((e) => e.includes('does not fit')));
 
   // The build that comes out is a real seven-socket creature.
+  clearTable(stocked);
   const two = spliceChimera(stocked, 'L', { head: 't0', organ: 't1', organ2: 't2' }, content, t0);
   assert.ok(two.ok, two.msg);
   assert.equal(Object.keys(two.chimera.tokens).length, 3);
@@ -4729,6 +4750,7 @@ if (inShard('curve')) {
         s.inventory.parts.push({ id, partId, grade: 'standard', donor: { name: 'Bessie', species: content.parts[partId].species, stars: 2, extractedAt: 0 } });
         slots[content.parts[partId].slot] = id;
       }
+      clearTable(s);
       const res = spliceChimera(s, 'M', slots, content, t0);
       assert.ok(res.ok, res.msg);
       res.chimera.settleUntil = t0;
@@ -4938,6 +4960,7 @@ if (inShard('curve')) {
         s.inventory.parts.push({ id, partId, grade, donor: { name: 'Bessie', species: content.parts[partId].species, stars: 5, extractedAt: 0 } });
         slots[content.parts[partId].slot] = id;
       }
+      clearTable(s);
       const res = spliceChimera(s, frame, slots, content, t0);
       assert.ok(res.ok, res.msg);
       res.chimera.settleUntil = t0;
@@ -5199,6 +5222,7 @@ if (inShard('curve')) {
           s.inventory.parts.push({ id, partId, grade: 'prime', donor: { name: 'X', species: content.parts[partId].species, stars: 5, extractedAt: 0 } });
           slots[content.parts[partId].slot] = id;
         }
+        clearTable(s);
         const res = spliceChimera(s, 'M', slots, content, t0);
         res.chimera.settleUntil = t0;
         return res.chimera;
@@ -5262,6 +5286,7 @@ if (inShard('curve')) {
       s.inventory.parts.push({ id, partId, grade, donor: { name: 'Bessie', species: 'goat', stars: 4, extractedAt: 0 } });
       slots[content.parts[partId].slot] = id;
     }
+    clearTable(s);
     const res = spliceChimera(s, 'M', slots, content, t0);
     assert.ok(res.ok, res.msg);
     res.chimera.settleUntil = t0;
@@ -5284,6 +5309,7 @@ if (inShard('curve')) {
     assert.deepEqual(salvagePreview(s, ch, content), preview, 'the preview is stable');
 
     const before = s.inventory.parts.length;
+    clearTable(s);
     const out = extractChimera(s, ch.id, content, t0);
     assert.ok(out.ok, out.msg);
     assert.equal(s.chimeras.length, 0, 'the chimera leaves the roster for good');
@@ -5313,12 +5339,16 @@ if (inShard('curve')) {
   {
     const s = dismLab(702);
     s.battle = { fake: true };
+    clearTable(s);
     assert.ok(!extractChimera(s, s.chimeras[0].id, content, t0).ok, 'not during a battle');
     s.battle = null;
     s.vat = { parents: [s.chimeras[0].id], parentNames: ['x'], until: t0 + 99 * HOUR, conception: {} };
+    clearTable(s);
     assert.ok(!extractChimera(s, s.chimeras[0].id, content, t0).ok, 'nor while they are in the vat');
     s.vat = null;
+    clearTable(s);
     assert.ok(extractChimera(s, s.chimeras[0].id, content, t0).ok, 'otherwise, fine');
+    clearTable(s);
     assert.ok(!extractChimera(s, 'nope', content, t0).ok, 'and an unknown id is refused');
   }
 
@@ -5331,6 +5361,7 @@ if (inShard('curve')) {
       const ch = s.chimeras[0];
       consumed += Object.values(ch.tokens).reduce((sum, tk) => sum + GRADE_INDEX[tk.grade] + 1, 0);
       const before = s.inventory.parts.length;
+      clearTable(s);
       extractChimera(s, ch.id, content, t0);
       recovered += s.inventory.parts.slice(before).reduce((sum, tk) => sum + GRADE_INDEX[tk.grade] + 1, 0);
     }
@@ -5373,6 +5404,7 @@ if (inShard('curve')) {
       s.inventory.parts.push({ id, partId, grade, donor: { name: 'X', species: content.parts[partId].species, stars: 4, extractedAt: 0 } });
       slots[content.parts[partId].slot] = id;
     }
+    clearTable(s);
     const res = spliceChimera(s, 'M', slots, content, t0);
     assert.ok(res.ok, res.msg);
     return s;
@@ -5585,6 +5617,7 @@ if (inShard('curve')) {
       s.inventory.parts.push({ id, partId, grade: 'apex', donor: { name: 'X', species: 'bear', stars: 4, extractedAt: 0 } });
       slots[content.parts[partId].slot] = id;
     }
+    clearTable(s);
     const res = spliceChimera(s, 'M', slots, content, t0);
     assert.ok(res.ok, res.msg);
     res.chimera.settleUntil = t0;
@@ -6217,6 +6250,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // that arrived two phases after R29's "one note per system" rule with
     // none. Neither list noticed, because the omission was in both.
     'resequencer',
+    // R91. The vault has a bottom now: a capacity sold by a facility track,
+    // a rendering price, a retirement rule for vials and a screen that says
+    // how full it is. That is a system by every test on this roll, and a
+    // player who is refused a graduation needs to have been told why before
+    // it happens rather than after.
+    'vault',
     'temperament', 'bond', 'infirmary', 'scars',
     'combos', 'chaos', 'flight',
     'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director', 'gauntlet',
@@ -6370,6 +6409,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'ranch/ranch.js': 'stable',
     'splice/chaos.js': 'chaos',
     'splice/extract.js': 'grades',
+    'splice/grades.js': 'grades',
+    'splice/vault.js': 'vault',
     'splice/facility.js': 'facility',
     'splice/physiology.js': 'flight',
     'splice/resequencer.js': 'resequencer',
@@ -6623,7 +6664,24 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
         unit: { id: 'mantissa_spec0_loose0', name: 'Vitreous', hp: 140, power: 40 },
       }];
     }, ['breakout']],
+    // R91 — the shelves start mattering. The note is deliberately NOT ready
+    // on day one, when a founding crate holds six parts against a capacity
+    // of sixty: a warning about a wall you are nowhere near is noise. It
+    // lights at 85% full, which is the same threshold the screen's own alert
+    // and the walker's render-down policy read.
+    ['the vault filling up', () => {
+      const cap = vaultCap(lab, content).parts;
+      const pid = Object.keys(content.parts)[0];
+      while (lab.inventory.parts.length < Math.ceil(cap * 0.85)) {
+        lab.inventory.parts.push({
+          id: `fill-${lab.inventory.parts.length}`, partId: pid, grade: 'standard', traits: [],
+          donor: { name: 'Surplus', species: content.parts[pid].species, stars: 2, extractedAt: t0 },
+        });
+      }
+    }, ['vault']],
   ];
+
+  const { vaultCapacity: vaultCap } = await import('../splice/vault.js');
 
   const firstSeen = {};
   let before = readyNow();
@@ -7980,6 +8038,7 @@ if (inShard('frames')) {
       hindlimbs: byPart.rhino_hindlimbs, tail: byPart.bear_tail,
       hide: byPart.pangolin_hide, organ: byPart.cobra_organ, organ2: byPart.bear_organ,
     };
+    clearTable(st);
     const res = spliceChimera(st, 'M', slots, content, t0);
     assert.ok(res.ok, res.msg);
     const ch = res.chimera;
@@ -8079,6 +8138,7 @@ if (inShard('frames')) {
       .map((partId, i) => ({ id: `k${i}`, partId, grade: 'standard',
         donor: { name: 'Doris', species: 'bear', stars: 3, extractedAt: t0 } }));
     const slots = Object.fromEntries(st.inventory.parts.map((tk) => [content.parts[tk.partId].slot, tk.id]));
+    clearTable(st);
     const ch = spliceChimera(st, 'M', slots, content, t0).chimera;
     const known = knownOf(ch);
     for (const bad of [undefined, [], ['p:nonsense'], ['p:bear_head'], known.map((m) => m.id)]) {
@@ -8563,6 +8623,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       id: `d${i}`, partId: p.id, grade: 'prime', traits: [],
       donor: { name: 'Test', species: 'eagle', stars: 3, extractedAt: 0 },
     }));
+    clearTable(s2);
     const made = spliceChimera(s2, 'S', Object.fromEntries(parts.map((p, i) => [p.slot, `d${i}`])), content, t0);
     assert.ok(made.ok, `the fixture splices cleanly (${made.msg ?? ''})`);
     assert.ok(made.chimera.settleUntil > t0, 'and carries the settling clock the real shape has');
@@ -11856,7 +11917,11 @@ if (inShard('spar')) {
       const html = vault(withVials(n));
       assert.equal(count(html, /data-reseq="/g), n, `${n} vials, ${n} ways to spend one`);
       assert.equal(count(html, / essence/g), n, `and ${n} vial rows`);
-      assert.ok(html.includes(`${n} vial${n === 1 ? '' : 's'} ·`), 'with the count line agreeing');
+      // R91 — the count line carries the CAPACITY now, which is the point of
+      // it: "12/20 vials" answers "how much room is left" in the same glance
+      // that used to answer only "how many do I have".
+      assert.ok(new RegExp(`${n}/\\d+ vial${n === 1 ? '' : 's'}`).test(html),
+        `with the count line agreeing (${n})`);
     }
     // And the half the merge could quietly lose: a part token has to come
     // through the shelf too, since it changed cards to get here.
@@ -11868,7 +11933,8 @@ if (inShard('spar')) {
       const html = vault(st);
       assert.equal(count(html, /<li>/g), 3 + parts.length,
         `three vials and ${parts.length} parts, all shelved`);
-      assert.ok(html.includes(`${parts.length} part token`), 'and the count line says so');
+      assert.ok(new RegExp(`${parts.length}/\\d+ part token`).test(html),
+        'and the count line says so, against the capacity');
       for (const pt of parts.slice(0, 6)) {
         assert.ok(html.includes(pt.name), `${pt.name} survived the merge`);
       }
@@ -15658,6 +15724,7 @@ if (inShard('preview')) {
       used.add(socketId);
       return [socketId, `r72-${pid}`];
     }));
+    clearTable(s);
     const made = spliceChimera(s, 'M', slots, content, t0);
     assert.ok(made.ok, `R72 fixture splices on full content: ${made.msg}`);
     for (const [pid, grade] of [['goat_head', 'standard'], ['bear_organ', 'prime'], ['bear_hide', 'apex']]) {
@@ -15952,6 +16019,7 @@ if (inShard('preview')) {
     assert.ok(Array.isArray(errs), 'validateSplice returns errors rather than throwing');
     assert.ok(errs.some((e) => /no longer in the catalogue/.test(e)),
       `and says why (${errs.join(' | ')})`);
+    clearTable(s);
     const res = spliceChimera(s, 'M', { head: 'v-head', hide: 'v-hide' }, retired, t0);
     assert.equal(res.ok, false, 'and the splice is refused');
     assert.equal(s.inventory.parts.length, 2, 'with the vault untouched');
@@ -16355,6 +16423,7 @@ if (inShard('preview')) {
   };
   const mkFeral = (seed, patch = {}) => {
     const s = mkLab(seed);
+    clearTable(s);
     const res = spliceChimera(s, 'M', { head: 'tk-f1', forelimbs: 'tk-f2' }, content, t0);
     assert.ok(res.ok, `the fixture splices (${res.msg ?? ''})`);
     const ch = s.chimeras[0];
@@ -16584,11 +16653,13 @@ if (inShard('preview')) {
   const tok = (id, partId, grade = 'prime') => ({ id, partId, grade, donor: { name: 'D', species: partId.split('_')[0], stars: 3, extractedAt: t0 } });
   s.inventory.parts.push(tok('a1', 'bear_head'), tok('a2', 'bear_organ'), tok('b1', 'goat_head'), tok('b2', 'goat_organ'), tok('c1', 'cobra_head'), tok('c2', 'wolf_tail'));
   for (const [h, o] of [['a1', 'a2'], ['b1', 'b2']]) {
+    clearTable(s);
     const made = spliceChimera(s, 'M', { head: h, organ: o }, content, t0 - 10 * HOUR);
     assert.ok(made.ok, made.msg);
   }
   for (const c of s.chimeras) { c.settleUntil = t0 - HOUR; c.bond = 50; }
   const [A, B] = s.chimeras;
+  clearTable(s);
   const madeC = spliceChimera(s, 'M', { head: 'c1', tail: 'c2' }, content, t0);
   assert.ok(madeC.ok, madeC.msg);
   const C = s.chimeras[2];
@@ -16947,6 +17018,7 @@ if (inShard('preview')) {
           && content.parts[x.partId].slot === slot && content.parts[x.partId].species === sp);
         if (p) { slots[slot] = p.id; used.add(p.id); }
       }
+      clearTable(s);
       spliceChimera(s, 'M', slots, content, at);
     }
     for (const c of s.chimeras) c.settleUntil = at;

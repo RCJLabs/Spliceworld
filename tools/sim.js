@@ -1205,18 +1205,6 @@ function walkAct(state, content, now, open, opts = {}) {
       }
     }
   }
-  // R86 — pay to hurry what is sealed, the way a player with money in the
-  // bank does. Reserve-gated like every other purchase here, soonest clock
-  // first. Never the cooldowns: `rush` refuses those, and a walker that could
-  // buy bond would be measuring a different game from the one that ships.
-  for (const q of rushable(state, content, now)) {
-    if (!canSpend(q.price)) break;
-    const res = rush(state, q.kind, q.id, content, now);
-    if (!res.ok) continue;
-    did('rush', { clock: q.kind, cost: res.cost });
-    state.__walkRushes = (state.__walkRushes ?? 0) + 1;
-    state.__walkRushSpent = (state.__walkRushSpent ?? 0) + res.cost;
-  }
   // …and buy out of the Infirmary on the same terms. R83's rule: a system
   // the walker never uses is one the yardstick cannot see, and until R86
   // measured it nobody had asked whether the walker treats. It did not — the
@@ -1612,6 +1600,27 @@ function walkAct(state, content, now, open, opts = {}) {
     const answers = affordable.filter((sp) => wanted && (sp.class ?? sp.creatureClass) === wanted);
     const pickSp = answers.length ? answers[answers.length - 1] : affordable[0];
     if (pickSp && buyMailOrder(state, pickSp.id, content, now).ok) did('buy', { species: pickSp.id });
+  }
+  // R91 — MOVED TO THE END, and it had to be. This sweep used to run first,
+  // before anything in this function had started a clock, so the only thing
+  // it could ever find was a clock left over from a previous step. That was
+  // invisible while the walker spliced a creature every two hours and always
+  // had one settling; with the stable capped it splices twelve times in six
+  // months, incubation is 22-56 MINUTES against a two-hour step, and the
+  // sweep went from 1,665 rushes to zero — not because rushing broke but
+  // because the walker was looking before it had made anything to look at.
+  // R86's gate caught it, which is what R86's gate is for.
+  // R86 — pay to hurry what is sealed, the way a player with money in the
+  // bank does. Reserve-gated like every other purchase here, soonest clock
+  // first. Never the cooldowns: `rush` refuses those, and a walker that could
+  // buy bond would be measuring a different game from the one that ships.
+  for (const q of rushable(state, content, now)) {
+    if (!canSpend(q.price)) break;
+    const res = rush(state, q.kind, q.id, content, now);
+    if (!res.ok) continue;
+    did('rush', { clock: q.kind, cost: res.cost });
+    state.__walkRushes = (state.__walkRushes ?? 0) + 1;
+    state.__walkRushSpent = (state.__walkRushSpent ?? 0) + res.cost;
   }
   return acted;
 }

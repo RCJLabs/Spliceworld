@@ -552,6 +552,7 @@ export const migrations = {
   // got that way, not only to one that came through this door.
   46: (save) => {
     save.theater ??= { busyUntil: 0 };
+    save.renderCount ??= 0;
     save.inventory ??= { vials: [], parts: [], tokenCount: 0 };
     save.inventory.parts ??= [];
     save.inventory.vials ??= [];

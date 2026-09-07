@@ -1,5 +1,91 @@
 # PROGRESS
 
+## Session 127 — R91: the vault has a bottom ✅
+
+**1,843.5 KB → 144.6 KB** at day 180, and the median chimera went from
+**two hours to 104 days**.
+
+### Every number in the entry was low, and the emergency was elsewhere
+
+| the entry said | measured |
+| --- | --- |
+| save 1,711 KB | **1,843.5 KB** |
+| inventory 1,641 KB | **1,760.9 KB — 95.5%** |
+| 8,760 tokens at ~190 B | **9,451 at 151 B** |
+| 1,965 vials | **2,059** |
+| 280 bays | **378 entries, 44 KB** |
+| 1,797 chimeras, median life 2h | **1,834 / 2.0h** — the one it got right |
+| quota fails "roughly day 500" | **day ~124**, because `MAX_SLOTS` is 4 |
+
+Two things it never mentioned were the actual problem. Four save slots
+share one 5 MB quota, and growth is dead linear at 10.4 KB/day. And
+`saveGame` catches the quota failure, returns `false`, and none of
+`main.js`'s four call sites reads it — the game stops saving and says
+nothing.
+
+### The entry's own fix could not have met the entry's own criterion
+
+`partId + grade + donor` collapses 9,451 tokens to **6,641**: a 30% saving
+against a bar that needs 97%. The donor block is display-only lineage with
+884 distinct name/stars pairs. In the end stacking was not needed at all —
+a **capacity** does the whole job, and pens have been sold that way since M1.
+
+### Four rules, and the two that were learned the hard way
+
+* **Two doors.** A yield you ASKED for is refused when it will not fit. A
+  yield you were GIVEN cannot be, because you never pressed a button: it is
+  rendered at the door and paid for.
+* **A dismantle is never refused for shelf space.** With that door closed, a
+  full stable and a full vault could neither dismantle nor splice and sat
+  there for 120 days — and the gate read a median life of **104 days that
+  was pure paralysis**. A passing number is not a passing game.
+* **The table is not rushable.** For one measurement it was, and the walker
+  bought past it **1,665 times** in 180 days. A limit you can pay to ignore
+  is not a limit; it is a capacity, like a pen.
+* **Never a feral bay.** Releasing one to make room would delete the
+  player's own chimera to house a wrecked jeep.
+
+### Three things the harness had wrong, none visible by reading
+
+* `stableCap ?? 9` — a hand-typed copy of a rule that existed nowhere else.
+  The moment the Theater sold stalls the two disagreed (R61).
+* A stall RESERVED by a running programme is not a reason to take an
+  existing creature apart. That turned 142 enrolments into 269 dismantles.
+* The replacement test ignored a price R13 has charged since it shipped: a
+  dismantle returns a subset, each part a grade worse. The margin is
+  `salvagePreview`, not a constant.
+
+And R86's gate caught a fourth: the walker's rush sweep ran **before**
+anything in the step had started a clock. Invisible while it spliced every
+two hours and always had one settling; with the stable capped it went to
+zero rushes. Moved to the end of the step: 54 rushes, $1,764.
+
+### Numbers
+
+| | before | after |
+| --- | --- | --- |
+| day-180 save | 1,843.5 KB | **144.6 KB** |
+| four slots vs 5 MB | 7,374 KB (144%) | **578 KB (11%)** |
+| part tokens | 9,451 | **≤ 400** |
+| vials | 2,059 | **≤ 120** |
+| containment | 378 | **≤ 40** |
+| chimeras made / kept | 1,834 / 9 | **45 / 13** |
+| median chimera life | 2.0 hours | **104.2 days** |
+| arrays with a stated bound | 0 of 33 | **34 of 34** |
+
+### Known issues / next session's first task
+
+* **`dex.enemies` holds 244 entries against 42 real enemies** (`dex.beaten`
+  237). Ratcheted at 260 and handed to **R97**, which owns Dex pollution.
+* **The Vault screen is 28,631px** with every bay open — finite for the first
+  time, because the data behind it is, but not folded. R89's exclusive-fold
+  rule applied here is the fix; the screen uses `<details>` and `bindFolds`
+  wants buttons.
+* The Ranch is still one card per animal, 12,623px for seventeen.
+* Boot 1020 → 1045 KB. `splice/vault.js` is eager because `splice/extract.js`
+  is, and has been since M2.
+
+
 ## Session 126 — R90: the suite runs in under three minutes ✅
 
 **621s → 172.2s**, and only ~50 of those 449 seconds came from parallelism.
