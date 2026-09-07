@@ -62,6 +62,21 @@ the criterion as written would delete the ladder, so the entry's own
 alternative shipped: `diagnose` gains `outgraded`, which replays the fight
 with the team's parts lifted and names the first grade that makes it a fight.
 
+### A break MISSED, and the fix it implied measured worse
+
+Break 160 emptied the never-held list and the gate stayed green: never-held
+is a **subset** of owes-the-Dex-a-part, so removing it changed which
+collectible the walker bought, not whether it collected. The obvious fix is
+to collapse the four lists into one comparison sorted by parts owed — and it
+measures **231** of 244 with the cheapest breaking ties and **229** with the
+dearest, against **233** for the branches. Reverted, numbers left in the
+source.
+
+The four lists are an **order, not a filter**, and that is the thing R95
+added: a six-part stranger beats a one-part straggler, and among strangers
+the expensive animal is the one behind the late node. The break takes the
+whole order now.
+
 ### A break retired, with its numbers
 
 R93b's break 157 was worth **16.5pp** when a campaign could assemble nine of
