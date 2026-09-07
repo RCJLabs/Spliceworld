@@ -11,7 +11,7 @@ import { admitParts } from '../splice/vault.js';
 import { infirmaryGrants } from '../splice/facility.js';
 import { applyInjury, finishBattle } from '../battle/statblock.js';
 import { attend } from '../splice/feral.js';
-import { recordRivalResult, scoutStable } from './rivals.js';
+import { recordRivalResult, scoutStable, dexKeyFor, labOfDexKey } from './rivals.js';
 import { directorNews } from './director.js';
 import { tickRehab, findBay, admitBay } from './rehab.js';
 import { resolveRaid, capNotoriety } from './taskforce.js';
@@ -348,10 +348,26 @@ export function resolveBattle(state, battle, content, now) {
     battle.enemy.active?.refId,
     ...(battle.captured ?? []),
   ];
+  // R97 — A GENERATED SPECIMEN GOES ON ITS LAB'S PAGE, NOT ITS OWN.
+  //
+  // The comment here used to read "generated rival chimeras aren't roster
+  // units — they have no Dex page", and the line under it filed them anyway:
+  // they are strings, so the guard never fired. A 180-day campaign ended
+  // with 253 entries for 42 authored units, growing with every duel, none of
+  // them rendered anywhere.
+  //
+  // `dexKeyFor` sends an authored unit to its own page and a generated one
+  // to `lab:{rival}`, and the sightings tally is what makes that page worth
+  // opening: one row per lab saying how many of their creatures you have
+  // seen. A key it does not recognise is left out rather than guessed at.
+  state.dex.sightings ??= {};
   for (const unitId of seen) {
-    // Generated rival chimeras aren't roster units — they have no Dex page.
-    if (typeof unitId !== 'string') continue;
-    if (unitId && !state.dex.enemies.includes(unitId)) state.dex.enemies.push(unitId);
+    const key = dexKeyFor(unitId, content);
+    if (!key) continue;
+    if (!state.dex.enemies.includes(key)) state.dex.enemies.push(key);
+    // Every appearance counts, not every archetype: the number is how often
+    // you have faced that lab's work, which is the thing a duel adds to.
+    if (labOfDexKey(key)) state.dex.sightings[key] = (state.dex.sightings[key] ?? 0) + 1;
   }
   const result = finishBattle(state, battle, content, now);
 
@@ -366,8 +382,8 @@ export function resolveBattle(state, battle, content, now) {
   if (result.outcome === 'win' && context.kind !== 'sparring') {
     state.dex.beaten ??= [];
     for (const unitId of seen) {
-      if (typeof unitId !== 'string') continue;
-      if (!state.dex.beaten.includes(unitId)) state.dex.beaten.push(unitId);
+      const key = dexKeyFor(unitId, content);
+      if (key && !state.dex.beaten.includes(key)) state.dex.beaten.push(key);
     }
   }
   const detail = { ...result, capturedChimera: null, freed: null, salvageUnits: battle.captured ?? [] };

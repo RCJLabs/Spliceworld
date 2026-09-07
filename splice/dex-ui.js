@@ -19,7 +19,7 @@ import { creaturePortrait, renderUnitSVG, renderRivalSVG } from '../render/rende
 import { renderIcon } from '../ui/icons.js';
 import { stockGenome } from '../ranch/ranch.js';
 import { comboHint } from './theater.js';
-import { rivalList, rivalRecord } from '../campaign/rivals.js';
+import { rivalList, rivalRecord, labOfDexKey } from '../campaign/rivals.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { bandHead } from '../ui/roster.js';
@@ -321,14 +321,48 @@ function foesView(state, content) {
     open: isOpen(state, 'dex-rivals', false),
   });
 
+  // R97 — THE LABS' OWN PAGE, AND THE COUNT THAT MAKES IT WORTH OPENING.
+  //
+  // A rival mints a fresh specimen for every duel, so before this each one
+  // took a Dex entry of its own: 253 entries against 42 authored units on a
+  // day-180 save, none of them rendered, and this header printed
+  // "253/42 logged". They share their lab's page now, and what that page has
+  // to say is a number — how much of each lab's work you have faced, and how
+  // much of it you have put down.
+  const labRows = rivalList(content).map((rival) => {
+    const key = `lab:${rival.id}`;
+    const seen = state.dex.sightings?.[key] ?? 0;
+    if (!seen && !state.dex.enemies.includes(key)) return '';
+    const put = beaten.has(key);
+    return `
+        <div class="dex-cell${put ? ' dex-beaten' : ''}">
+          <div class="dex-portrait"><div class="dex-mystery">${renderIcon('masks')}</div></div>
+          <strong>${rival.name}'s stock</strong>
+          <span class="fine-print">${seen} specimen${seen === 1 ? '' : 's'} met${put ? ' · beaten' : ''}</span>
+        </div>`;
+  }).filter(Boolean).join('');
+  const labFold = labRows
+    ? classFold('dex-foes-labs', `${renderIcon('masks')} Laboratory stock`,
+        `${Object.values(state.dex.sightings ?? {}).reduce((n, v) => n + v, 0)} met`,
+        'Chimeras built to order, one per duel, and never the same one twice.',
+        `<div class="dex-grid">${labRows}</div>`, state)
+    : '';
+
+  // The roll is the authored roster plus one page per lab, and `logged` is
+  // filtered to keys that still resolve — a build that retired a rival must
+  // not go on counting their page (R72's rule, on the Dex's own counter).
+  const foesTotal = units.length + rivalList(content).length;
+  const logged = state.dex.enemies.filter((id) => content.enemies[id] || labOfDexKey(id)).length;
+
   return `
     ${rivalCard}
     <section class="card">
-      <h3>Field Guide — Opposition (${state.dex.enemies.length}/${units.length} logged${
+      <h3>Field Guide — Opposition (${logged}/${foesTotal} logged${
         beaten.size ? ` · ${beaten.size} beaten` : ''
       })</h3>
       ${gauntletShelf}
       ${enemyRows}
+      ${labFold}
       ${unclassed.length ? classFold('dex-foes-unclassed', `${renderIcon('tag')} Unclassed`, `${unclassed.length}`,
         `${unclassed.length} unit${unclassed.length === 1 ? '' : 's'} outside the triangle.`,
         `<div class="dex-grid">${unclassed.map(cell).join('')}</div>`, state) : ''}
