@@ -1056,6 +1056,7 @@ import { vaultPressure, surplusParts, renderDown } from '../splice/vault.js';
 import { stableRoom } from '../splice/facility.js';
 import { spliceChimera, validateSplice, trainChimera, TRAINING, setMoveset, moveTrainingReady } from '../splice/theater.js';
 import { MOVE_SLOTS } from '../battle/moves.js';
+import { feralStatus } from '../splice/feral.js';
 import { activeVat, vatPlan, startVat } from '../splice/chaos.js';
 import { activeResequence, resequencePlan, startResequence } from '../splice/resequencer.js';
 import { startOperation, operationList, opReady, laneFree } from '../campaign/operations.js';
@@ -1625,6 +1626,23 @@ function walkAct(state, content, now, open, opts = {}) {
     for (const c of [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0)).slice(0, 3)) {
       if (!canSpend(TRAINING.cost)) break;
       if (trainChimera(state, c.id, now, content).ok) did('train', { who: c.id });
+    }
+    // R92 — AND WHOEVER IS DRIFTING. R85's rule is that a creature only goes
+    // feral on somebody who is NOT playing, and the walker was the proof: it
+    // trained, sparred and fought constantly, so nothing it owned ever
+    // drifted. That held while the stable was three fighters and a few
+    // spares. With the Theater given room again a campaign carries twelve,
+    // nine of which the A-team policy never touches — and one went feral,
+    // which is R85's mechanic firing on a player who IS playing.
+    //
+    // The Pens paints a warning on exactly this creature. A player who reads
+    // it works with that one, and working with a creature is what stops it
+    // drifting; the walker does the same rather than letting the alert sit
+    // there for 180 days.
+    for (const c of state.chimeras) {
+      if (!canSpend(TRAINING.cost)) break;
+      if (!feralStatus(c, content, now).atRisk) continue;
+      if (trainChimera(state, c.id, now, content).ok) did('train', { who: c.id, why: 'drifting' });
     }
   }
   if (has('pens') && state.ranch.stock.length >= state.ranch.penCapacity

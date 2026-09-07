@@ -30,6 +30,7 @@ import { newGameState } from '../save/save.js';
 import { consolidateVault } from '../splice/vault.js';
 import { loadSimContent, campaignWalk } from './sim.js';
 import { MAX_SLOTS } from '../save/save.js';
+import { TUNING } from '../ranch/ranch.js';
 
 const REPORT = process.argv.includes('--report');
 const KB = 1024;
@@ -49,8 +50,16 @@ const BOUNDS = {
   'inventory.vials':      { max: 120, by: 'vault capacity; older vials retire into the Dex' },
   'campaign.containment': { max: 40,  by: 'bay count, from the Containment track' },
   'chimeras':             { max: 12,  by: 'stable capacity, from the Theater track' },
-  'ranch.stock':          { max: 40,  by: 'penCapacity' },
-  'ranch.eggs':           { max: 40,  by: 'penCapacity — an egg holds a pen slot' },
+  // R92 — DERIVED, and with the one designed exception stated. R91 wrote
+  // "40, by penCapacity" when penCapacity had no ceiling of its own, so the
+  // bound was a sentence: a walk that ran the Resequencer bought 97 pen
+  // upgrades and finished on 199 animals. `penMaxCapacity` is a real cap
+  // now, read from the tuning rather than re-typed — and a job's livestock
+  // arrives whether or not there is room (operations.js says so out loud,
+  // because a reward that evaporates is worse than no reward), so the bound
+  // is the paddock plus the jobs that can be in the field at once.
+  'ranch.stock':          { max: () => TUNING.penMaxCapacity + 8, by: 'penMaxCapacity, plus livestock a job delivers over it' },
+  'ranch.eggs':           { max: () => TUNING.penMaxCapacity, by: 'penMaxCapacity — an egg holds a pen slot' },
   'news':                 { max: 40,  by: 'WIRE_KEEP in campaign/wire.js' },
   'campaign.captives':    { max: 12,  by: 'one per chimera, and the stable is capped' },
   'campaign.loose':       { max: 12,  by: 'one per chimera, and the stable is capped' },
