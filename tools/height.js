@@ -21,7 +21,9 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { sleep, serve, findChrome, connect } from './cdp.js';
 import { walkedSave } from './fixtures.js';
 
@@ -32,6 +34,19 @@ const REPORT = process.argv.includes('--report');
 // screen R89 does not touch cannot quietly grow into the space R89 frees.
 // Ratchets sit just above today's measurement — the R81/R121 rule: a ceiling
 // resting on the number means creep fails rather than accumulating.
+// R92 — how many rows the Vault can ever hold, read from the Extractor
+// track's top grant rather than typed. The screen lists one line per part
+// and one per vial, so this is the shape of the tallest Vault a save can
+// reach (R61: derive the number, never re-type it).
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const VAULT_CAP = JSON.parse(readFileSync(join(root, 'data', 'facility.json'), 'utf8'))
+  .tracks.find((t) => t.id === 'extractor').levels
+  .reduce((m, l) => ({
+    parts: Math.max(m.parts, l.grants.vaultParts ?? 0),
+    vials: Math.max(m.vials, l.grants.vaultVials ?? 0),
+  }), { parts: 0, vials: 0 });
+const VAULT_ROWS = VAULT_CAP.parts + VAULT_CAP.vials;
+
 const BUDGET = {
   // R91 RE-RATCHETS: 12500 -> 12700, measured at 12623. Not a regression in
   // the card — the walk simply keeps SEVENTEEN animals now where it kept
@@ -42,19 +57,24 @@ const BUDGET = {
   ranch:          { folded: 3400,  tallest: 12700 },
   pens:           { folded: 2000,  tallest: 4000 },   // R89's criterion
   theater:        { folded: 1900,  tallest: 1900 },
-  // R91 — THE VAULT HAS A NUMBER FOR THE FIRST TIME. R89 left this `null`
-  // because there was nothing honest to ratchet against: the screen listed
-  // 9,451 part tokens and would list a hundred thousand if the campaign ran
-  // long enough. It lists 299 now and cannot list more than 400, so a
-  // ceiling finally means something.
+  // R92 — THE VAULT'S HEIGHT IS DERIVED, NOT RATCHETED.
   //
-  // 30,156px is still thirty-nine phone screens with every species bay
-  // open, and this milestone did not fix that — it made it FINITE. The fix
-  // is R89's, applied here: one bay open at a time. That is a real piece of
-  // work (this screen folds with `<details>`, and `bindFolds`' exclusive
-  // list wants buttons) and it is not in R91's criterion, so it is written
-  // down rather than smuggled in.
-  vault:          { folded: 1900,  tallest: 31000 },
+  // R89 left this `null` because there was nothing honest to ratchet
+  // against: the screen listed 9,451 tokens and would list a hundred
+  // thousand if the campaign ran long enough. R91 capped the vault and gave
+  // it 29,000; R92's fuller walk pushed it to 31,992 and I was about to type
+  // 32,500. A ratchet that moves every milestone is not a ratchet, it is a
+  // number being dragged along behind the thing it was supposed to hold.
+  //
+  // The screen is one row per holding and the holdings are capped now, so
+  // the budget is a STATEMENT ABOUT THE SHAPE: rows times the height of a
+  // row. It only moves when somebody deliberately sells more shelf space,
+  // which is a design decision rather than drift — and if a row gets taller,
+  // this fails, which is the thing worth catching.
+  //
+  // 68px per row measured on the day-180 save (31,992px across 473 rows),
+  // with a tenth for the chrome the species bays put around them.
+  vault:          { folded: 1900,  tallest: Math.round(VAULT_ROWS * 68 * 1.1) },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
   'dex:combos':   { folded: 1900,  tallest: 1900 },
