@@ -2282,6 +2282,25 @@ R102; R88–R90 remain.)*
   lines that explain nothing the number beside them does not; and a smoke
   gate on words per card. *Done when: expanded Pens is under 900 words with
   no rule left unexplained — every mechanic still has a title or a guide.*
+- **R128 — Nobody can find the Surgery Theater upgrade.** Reported from
+  play, and the data has been saying so since it was written: every track in
+  `facility.json` carries a **`screen`** field naming where it belongs —
+  `theater`, `battle`, `ranch`, `extract`, `ranch`, `pens` — and **nothing
+  reads it**. All six are listed together in one card called *Facility*, on
+  the **Ranch**, shut by default, behind a derelict-house icon that names no
+  system. The Surgery Theater has exactly **2 levels**, so there is one
+  upgrade in the game that widens what you can splice, and it is the single
+  biggest card on the wordiest screen (**256 words**, one of 23 folds).
+  `theater-ui.js` already imports `nextUpgrade` and uses `levelData` only to
+  print its own level's NAME — it knows what tier it is and never offers the
+  next one. Proposed, small-medium, UI: **route each track to the screen its
+  data already names**, so the Theater's upgrade is bought on the Theater and
+  the Infirmary's on the Pens; leave a roll-up on the Ranch that links out
+  rather than duplicating; and make the buy row say what the level UNLOCKS
+  (a second organ bay, a wider chassis) rather than only its price. *Done
+  when: every facility track is reachable from the screen its `screen` field
+  names, and a player who has never opened the Ranch can still buy the
+  Surgery Theater's upgrade.*
 - **R99 — The a11y gate learns to see overlap, contrast and motion.** This
   session shipped two defects the gate passed: **3.42:1** body text on the
   feral panel, and the egg's Hurry button overlapping its lineage text and
