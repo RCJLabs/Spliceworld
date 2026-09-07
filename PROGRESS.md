@@ -54,6 +54,20 @@ creature every duel. Five cells measured 858px, five lines 200px.
   collapsed*, by regex — a migration has never seen the content index, and
   no authored id contains `_spec` across all 42.
 
+### A break went MISSED because this milestone healed the link it watched
+
+Break 134 pointed at v34's `save.dex.beaten ??= []` — a migration failing to
+create the field it exists to add. R97's v47 migration rewrites `dex.beaten`
+on the way past, so a save arriving without it leaves with it anyway: the
+chain heals the broken link behind it. Benign for the player, fatal for the
+break. **A canary two migrations create is not a canary**, so 134 moved to
+`theater`, which is written once.
+
+And break 167 went MISSED on its first run for the mirror-image reason: the
+overflow fixture was 42 authored ids plus two, calibrated against a roll of
+42 that this milestone raised to 47. **A fixture pinned to the number a
+milestone is about to change measures nothing afterwards.**
+
 ### Known issues / next session's first task
 
 * **R98 — the game says 2,157 words on one screen.** Expanded Pens 2,157,

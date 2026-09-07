@@ -2658,10 +2658,17 @@ const BREAKS = [
     to: "await import('./migrationz.js')",
   },
   {
+    // RE-AIMED BY R97, AND THE REASON IS THE FINDING. This pointed at v34's
+    // `save.dex.beaten ??= []` and went MISSED: R97's v47 migration rewrites
+    // `dex.beaten` on the way past, so a save that arrives without the field
+    // leaves with it anyway and the chain heals the broken link behind it.
+    // That is benign for the player and fatal for the break — a canary two
+    // migrations create is not a canary. `theater` is written once, in 46,
+    // and read by the Surgery Theater's one-operation rule.
     n: 134, gate: SAVES, name: 'a migration stops creating the field it exists to add, and every older save arrives missing it',
     file: 'save/migrations.js',
-    anchor: '    save.dex.beaten ??= [];',
-    to: '    save.dex.beaten2 ??= [];',
+    anchor: '    save.theater ??= { busyUntil: 0 };',
+    to: '    save.theatre ??= { busyUntil: 0 };',
   },
   {
     n: 135, gate: SAVES, name: 'a fixture stops being a save of the version it stands for, so it tests the wrong step',
