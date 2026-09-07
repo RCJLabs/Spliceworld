@@ -1,5 +1,68 @@
 # PROGRESS
 
+## Session 131 — R97: 253 Dex pages for 42 units, none of them rendered ✅
+
+### The entry was half stale and half worse
+
+| the entry said | measured, seven seeds |
+| --- | --- |
+| `dex.enemies` 255 for 42 authored, `beaten` 250 | **248–270**, of which 42 authored + **206–228 generated** |
+| Foes is the tallest folded screen, 4,306px | **681px shut** — R89 folded it two milestones ago |
+
+So the criterion's first clause already passed. And the entry's own proposal
+could not satisfy the second: it suggests keying generated units by **lab +
+class + frame**, which is up to 60 keys on 5 labs × 3 classes × 4 frames — a
+ceiling of 102 against a Done-when of **authored + labs = 47**.
+
+### The comment said it and the code did the opposite
+
+`resolveBattle` carried the line *"generated rival chimeras aren't roster
+units — they have no Dex page"* directly above the code that filed them. The
+guard tested `typeof unitId !== 'string'`, and they are strings.
+
+Nothing ever rendered them either: the Foes tab iterates the **authored**
+roster and tests membership, so all 211 entries were save weight no screen
+had ever shown. The visible damage was a counter — the header printed
+`state.dex.enemies.length` over the authored total, so it read **"253/42
+logged"**, and `dexProgress` hid the same overflow behind a `Math.min` on
+the way into its aggregate. That clamp is what somebody writes when they
+meet an overflow and work around it.
+
+### The archetype is the lab, and the count is the point
+
+`dexKeyFor` sends an authored unit to its own page and a generated one to
+`lab:{rival}`. It sits next to the line that mints the id and tests the
+prefix rather than splitting on an underscore — a format is only safe to
+read back where you can watch it being written.
+
+"You have met sixty-three of Mantissa's creatures" is worth saying;
+"you have met mantissa_spec2_17" is not. So `dex.sightings` counts what
+lands on each lab's page, and the Foes tab gained a **Laboratory stock**
+fold that reads it back. Without that the milestone would have deleted 211
+entries and shown the player nothing.
+
+**As a list, not a gallery.** Every other cell on the tab carries a portrait
+because the unit behind it is a fixed thing; a lab's specimen is a different
+creature every duel. Five cells measured 858px, five lines 200px.
+
+### Numbers
+
+* `dex.enemies` **253 → 47**, exactly the authored roster plus five labs.
+* Day-180 save **143.9 KB → 134.6 KB**.
+* Foes **764px shut** against the criterion's 1,560, and 6,042px open.
+* SAVE_VERSION **46 → 47**, migration collapses old ids *and counts what it
+  collapsed*, by regex — a migration has never seen the content index, and
+  no authored id contains `_spec` across all 42.
+
+### Known issues / next session's first task
+
+* **R98 — the game says 2,157 words on one screen.** Expanded Pens 2,157,
+  expanded Ranch 973; every card carries a paragraph while the tone rules
+  ask the ticker for one sentence.
+* Carried: folding the Dex's Combos tab and the Vault's; paginating the
+  Ranch, 3,485px shut and owed since R46.
+
+
 ## Session 130 — R95: the catalogue was open the whole time ✅
 
 R95 proposed a **Travelling Menagerie** for "71 parts nobody reaches" — a

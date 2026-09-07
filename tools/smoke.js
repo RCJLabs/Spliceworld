@@ -10556,6 +10556,44 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       assert.ok(row.found <= row.total,
         `${row.label} says ${row.found} found of ${row.total} — the Dex cannot have catalogued more than exists`);
     }
+
+    // R97 — WHICH PAGE A FIELDED UNIT GOES ON, and the three answers.
+    const { dexKeyFor, labOfDexKey } = await import('../campaign/rivals.js');
+    const anEnemy = Object.keys(content.enemies)[0];
+    const aRival = Object.keys(content.rivals)[0];
+    assert.equal(dexKeyFor(anEnemy, content), anEnemy, 'an authored unit is its own page');
+    assert.equal(dexKeyFor(`${aRival}_spec2_7`, content), `lab:${aRival}`,
+      "a rival's specimen goes on the lab's page");
+    assert.equal(dexKeyFor(`${aRival}_spec1_loose4`, content), `lab:${aRival}`,
+      'and so does one that got out');
+    // A build that retired the rival must not go on filing their work under
+    // a page it can no longer describe — R72's rule, reaching the Dex.
+    assert.equal(dexKeyFor('someone_else_spec1_0', content), null,
+      'a lab this build does not have is left out rather than guessed at');
+    assert.equal(dexKeyFor(null, content), null, 'and a non-id is not a page');
+    assert.equal(labOfDexKey(`lab:${aRival}`), aRival, 'the lab prefix is read in one place');
+    assert.equal(labOfDexKey(anEnemy), null, 'an authored id has no lab behind it');
+
+    // R97 — THE MIGRATION COLLAPSES AND COUNTS. A player's sightings have to
+    // arrive with them: dropping 211 entries and leaving a zero would be
+    // deleting something they earned.
+    const { migrations } = await import('../save/migrations.js');
+    const old46 = {
+      dex: {
+        enemies: [anEnemy, `${aRival}_spec1_0`, `${aRival}_spec2_3`, `${aRival}_spec1_loose7`],
+        beaten: [anEnemy, `${aRival}_spec1_0`],
+      },
+    };
+    const moved = migrations['47'](JSON.parse(JSON.stringify(old46)));
+    assert.deepEqual(moved.dex.enemies, [anEnemy, `lab:${aRival}`],
+      'three specimens of one lab become one page');
+    assert.deepEqual(moved.dex.beaten, [anEnemy, `lab:${aRival}`], 'and so does what you beat');
+    assert.equal(moved.dex.sightings[`lab:${aRival}`], 3,
+      'and the count of what was collapsed is what the page now says');
+    // Idempotent: a save that has already been through keeps its numbers.
+    const twice = migrations['47'](JSON.parse(JSON.stringify(moved)));
+    assert.deepEqual(twice.dex.enemies, moved.dex.enemies, 'running it again changes nothing');
+    assert.equal(twice.dex.sightings[`lab:${aRival}`], 3, 'and does not double the tally');
   }
 
   // 4. The only badge a tab earns is "nothing left here". A count of what

@@ -2236,15 +2236,43 @@ R102; R88–R90 remain.)*
 
 **UI.**
 
-- **R97 — The Dex is polluted.** `dex.enemies` holds **255 entries for 42
-  authored units** and `beaten` 250: `campaign.js` records every generated
-  rival chimera and escapee by its unique id, so the Foes tab is the tallest
-  folded screen in the game (4,306 px) and grows with every duel. Proposed,
-  medium: key generated units by **archetype** (lab + class + frame) with a
-  sightings count; a Foes tab that groups authored units by region and
-  generated ones by lab; and a migration that dedupes existing saves. *Done
-  when: Foes is under two screens folded on the day-180 save, and
-  `dex.enemies` never exceeds authored units plus labs.*
+- **R97 — The Dex is polluted.** ✅ *Shipped.*
+
+  **THE ENTRY WAS HALF STALE AND ITS OWN PROPOSAL COULD NOT MEET ITS OWN
+  CRITERION.** Re-measured across seven seeds: `dex.enemies` holds **248 to
+  270** entries — 42 authored plus **206 to 228 generated** — so the count
+  holds. The height does not: the Foes tab is **681px shut**, because R89
+  folded it two milestones ago, not the 4,306px tallest-screen-in-the-game
+  this entry describes. And the proposed key, *lab + class + frame*, is up
+  to **60** archetypes on 5 labs × 3 classes × 4 frames, for a ceiling of
+  102 against a Done-when of **authored + labs = 47**. The archetype has to
+  be the lab; class and frame belong inside that page, not in its key.
+
+  **THE COMMENT SAID IT AND THE CODE DID THE OPPOSITE.** `resolveBattle`
+  carried the line *"generated rival chimeras aren't roster units — they
+  have no Dex page"* directly above the code that filed them; the guard
+  tested for a string and they are strings. Nothing rendered them either —
+  the Foes tab iterates the authored roster and tests membership — so all
+  211 were weight no screen had ever shown. What the player *could* see was
+  a counter: the header printed the raw list length over the authored total,
+  reading **"253/42 logged"**, and `dexProgress` hid the same overflow
+  behind a `Math.min` on the way into its aggregate.
+
+  `dexKeyFor` sends an authored unit to its own page and a generated one to
+  `lab:{rival}`, living beside the line that mints the id and testing the
+  prefix rather than splitting on an underscore. `dex.sightings` counts what
+  lands there and a **Laboratory stock** fold reads it back — as a list, not
+  a gallery, because a lab's specimen is a different creature every duel and
+  a portrait cell would be a placeholder pretending otherwise (five cells
+  858px, five lines 200px).
+
+  **`dex.enemies` 253 → 47**, exactly the authored roster plus five labs;
+  the day-180 save **143.9 KB → 134.6 KB**; Foes **764px shut** against the
+  criterion's 1,560. `SAVE_VERSION` **46 → 47**, with a migration that
+  collapses the old ids *and counts what it collapsed*, so a player's
+  sightings arrive with them. *Done when: Foes is under two screens folded
+  on the day-180 save, and `dex.enemies` never exceeds authored units plus
+  labs* — both met, the first before this milestone started.
 - **R98 — The game says 2,157 words on one screen.** Expanded Pens **2,157
   words**, expanded Ranch 973, folded Ranch 448; 33 field guides averaging
   55 words; every card carries a deadpan paragraph while the tone rules ask
