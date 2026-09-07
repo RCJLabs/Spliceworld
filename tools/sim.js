@@ -1470,7 +1470,25 @@ function walkAct(state, content, now, open, opts = {}) {
       // units `quality` is already measured in. A build has to beat what it
       // replaces by more than the grades that replacing burns.
       const ranked = [...state.chimeras].sort((x, y) => quality(y) - quality(x));
-      const weakest = ranked.slice(3).filter((c) => isFit(c)).pop();
+      // R95 — AND NOT ONE THAT ARRIVED THIS MORNING.
+      //
+      // R91 wrote the argument for the Reorientation Wing: "nobody pays a
+      // fee, waits out a programme and attends its sessions in order to
+      // render the result down the same evening." The chaos vat is the same
+      // sentence with a different door, and it never got the rule. Measured
+      // once this milestone opened the catalogue: 119 gestations in 180
+      // days, every decant scrapped within hours, 200 creatures built to
+      // keep ten and a median chimera life of THIRTY-SIX HOURS — against 23
+      // built and a median of 91 days with the vat switched off. The vat was
+      // not a system being exercised, it was a conveyor belt, and it is
+      // self-limiting the moment its output is allowed to occupy a stall.
+      //
+      // Two days is the floor: a decant settles, fights once, and gets to be
+      // judged on that rather than on the scoreboard the minute it is out of
+      // the tank.
+      const KEEP_DAYS = 2;
+      const weakest = ranked.slice(3)
+        .filter((c) => isFit(c) && now - (c.createdAt ?? 0) >= KEEP_DAYS * WALK_DAY).pop();
       if (full && weakest) {
         const sockets = Object.values(weakest.tokens ?? {}).length;
         const back = salvagePreview(state, weakest, content).tokens.length;
@@ -1863,7 +1881,19 @@ function walkAct(state, content, now, open, opts = {}) {
       }
     }
   }
-  if (has('buy') && state.ranch.stock.length < Math.min(WORKING_HERD, state.ranch.penCapacity)) {
+  // R95 — AND THE HERD BENDS FOR ANATOMY IT HAS NEVER HELD.
+  //
+  // `WORKING_HERD` is the equilibrium a fighting ranch settles at, and it
+  // was also the shopping limit, so the pens only emptied when something was
+  // extracted: cut the chimera churn and the catalogue stops being read at
+  // all. Measured, the two-day tenure below took part reach from 234 back to
+  // 231 without a single rule about buying changing. A pen for a species you
+  // have never held is not the same purchase as a twenty-first goat, and the
+  // paddock has room for it — `penMaxCapacity` is 40.
+  const shoppingNew = catalogFor(state, content)
+    .some((sp) => isNewToDex(state, content, sp.id) && canSpend(sp.mailOrderPrice));
+  const herdLimit = Math.min(state.ranch.penCapacity, WORKING_HERD + (shoppingNew ? 6 : 0));
+  if (has('buy') && state.ranch.stock.length < herdLimit) {
     // The map says which class answers the strip in front of you (`demand`,
     // R37). A player who reads it buys that; the cheapest of those, or the
     // cheapest of anything when the catalog has none yet.
