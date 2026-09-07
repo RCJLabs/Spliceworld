@@ -346,6 +346,7 @@ const FERAL = ['node', '-e', `
     const s = { ...newGameState(), seed, funds: 99999 };
     s.inventory.parts = [{ id: 'k1', partId: 'bear_head', grade: 'prime',
       donor: { name: 'U', species: 'bear', stars: 4, extractedAt: t0 } }];
+    s.theater = { busyUntil: 0 };
     const r = spliceChimera(s, 'M', { head: 'k1' }, content, t0);
     if (!r.ok) throw new Error('fixture: ' + r.msg);
     const ch = s.chimeras[0];
@@ -417,8 +418,13 @@ const RUSH = ['node', '-e', `
   s.lastTickAt = t0;
   const tok = (id, partId) => ({ id, partId, grade: 'prime', donor: { name: 'D', species: partId.split('_')[0], stars: 3, extractedAt: t0 } });
   s.inventory.parts.push(tok('a1','bear_head'), tok('a2','bear_organ'), tok('b1','goat_head'), tok('b2','goat_organ'), tok('c1','cobra_head'), tok('c2','wolf_tail'));
-  for (const [h, o] of [['a1','a2'],['b1','b2']]) { const m = spliceChimera(s, 'M', { head: h, organ: o }, content, t0 - 10 * HR); if (!m.ok) throw new Error(m.msg); }
+  // R91 — the Surgery Theater does one operation at a time. This gate is
+  // about what a RUSH buys, not about how often the table turns over, so it
+  // clears the table between fixtures the way tools/smoke.js's clearTable
+  // does. Break 145 is what proves the table is still being occupied.
+  for (const [h, o] of [['a1','a2'],['b1','b2']]) { s.theater = { busyUntil: 0 }; const m = spliceChimera(s, 'M', { head: h, organ: o }, content, t0 - 10 * HR); if (!m.ok) throw new Error(m.msg); }
   for (const c of s.chimeras) { c.settleUntil = t0 - HR; c.bond = 50; }
+  s.theater = { busyUntil: 0 };
   const mC = spliceChimera(s, 'M', { head: 'c1', tail: 'c2' }, content, t0); if (!mC.ok) throw new Error(mC.msg);
   const C = s.chimeras[2];
   const v = startVat(s, s.chimeras[0].id, s.chimeras[1].id, content, t0); if (!v.ok) throw new Error(v.msg);
@@ -1062,6 +1068,7 @@ const FOUNDING = ['node', '-e', `
       const sl = content.parts[p.partId]?.slot;
       if (sl && !bySlot[sl]) bySlot[sl] = p.id;
     }
+    s.theater = { busyUntil: 0 };  // R91 — see the note on the rush gate above.
     const made = spliceChimera(s, 'M', bySlot, content, t0);
     if (!made.ok) { bad.push(lab.id + ' cannot splice on day one: ' + made.msg); continue; }
     const c = s.chimeras[s.chimeras.length - 1];
@@ -1090,6 +1097,7 @@ const FOUNDING = ['node', '-e', `
     foundLab(s, content, labs[0].id, t0);
     const only = {};
     for (const p of s.inventory.parts) only[content.parts[p.partId].slot] = p.id;
+    s.theater = { busyUntil: 0 };
     if (spliceChimera(s, 'M', only, content, t0).ok) bad.push('the crate alone makes a chimera');
     if (agenda(s, content, t0).some((i) => i.id === 'splice')) {
       bad.push('the agenda offers a splice there is no head for');
@@ -1134,6 +1142,7 @@ const OPENING = ['node', '-e', `
         const p = s.inventory.parts.find((x) => !used.has(x.id) && content.parts[x.partId].slot === slot && content.parts[x.partId].species === sp);
         if (p) { slots[slot] = p.id; used.add(p.id); }
       }
+      s.theater = { busyUntil: 0 };
       spliceChimera(s, 'M', slots, content, t0);
     }
     for (const c of s.chimeras) c.settleUntil = t0;
@@ -1263,6 +1272,12 @@ const RAID = ['node', '-e', `
 `];
 
 const VERBOSE = process.argv.includes('--verbose');
+// R91 — run the baseline pass and stop. The baseline is the fast half (every
+// gate once, on a pristine copy) and the breaks are the hour; when a change
+// moves a gate rather than a break, the whole hour is spent re-learning
+// something the first three minutes already said. Needed it twice in one
+// milestone, which is the bar for a flag.
+const BASELINE_ONLY = process.argv.includes('--baseline');
 
 // The R78 replay, at the unit level. A month away with a convoy already at
 // the gate must still replay the month — a chaotic forty-day walk is where
@@ -1354,6 +1369,7 @@ const RETIRED = ['node', '-e', `
       used.add(sock);
       slots[sock] = 'r-' + pid;
     }
+    s.theater = { busyUntil: 0 };
     const made = spliceChimera(s, FRAME, slots, content, t0);
     if (!made.ok) fail('the fixture no longer splices: ' + made.msg);
     // The splice SPENDS the six tokens, so the vault needs spares of its own
@@ -2699,6 +2715,12 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
+}
+
+if (BASELINE_ONLY) {
+  rmSync(DIR, { recursive: true, force: true });
+  console.log(process.exitCode ? '\nbaseline ✗  a gate fails on a pristine tree' : '\nbaseline ✓  every gate passes on a pristine tree');
+  process.exit(process.exitCode ?? 0);
 }
 
 console.log('\nbreaks:');
