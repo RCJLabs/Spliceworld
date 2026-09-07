@@ -1054,7 +1054,10 @@ import { extractAnimal, extractChimera } from '../splice/extract.js';
 import { salvagePreview } from '../splice/extract.js';
 import { vaultPressure, surplusParts, renderDown } from '../splice/vault.js';
 import { stableRoom } from '../splice/facility.js';
-import { spliceChimera, validateSplice, trainChimera, TRAINING } from '../splice/theater.js';
+import { spliceChimera, validateSplice, trainChimera, TRAINING, setMoveset, moveTrainingReady } from '../splice/theater.js';
+import { MOVE_SLOTS } from '../battle/moves.js';
+import { activeVat, vatPlan, startVat } from '../splice/chaos.js';
+import { activeResequence, resequencePlan, startResequence } from '../splice/resequencer.js';
 import { startOperation, operationList, opReady, laneFree } from '../campaign/operations.js';
 import { startSpar, canSpar, sparEncounter, sparPartners } from '../campaign/sparring.js';
 import { levelOf } from '../battle/veterancy.js';
@@ -1077,7 +1080,29 @@ const WALK_DAY = 24 * WALK_HOUR;
 function bestSplice(state, content, wanted = null) {
   const owned = state.inventory.parts;
   if (!owned.length) return null;
-  const rank = (t) => (wanted && content.parts[t.partId]?.classAffinity === wanted ? 10 : 0) + GRADE_ORDER.indexOf(t.grade);
+  // R92 — A PLAYER WHO OWNS BOTH HALVES OF A COMBO BUILDS WITH THEM.
+  //
+  // This ranked by grade and by the class the map asks for, and nothing
+  // else, so across 180 days and every splice it ever made the walk
+  // discovered ZERO of the 27 combos. R16 and R17 were whole milestones
+  // spent pricing combos against the moves of the parts that unlock them,
+  // and the yardstick had never once seen one — every claim either of them
+  // makes rests on a bench run, not on a campaign.
+  //
+  // The bias is what the Splice-Dex tells the player to do: if you already
+  // own the two parts a combo needs, put them in the same creature. Weighed
+  // above class and grade because a combo IS the reward for collecting the
+  // pair, and a build that ignores one it could have is not what a player
+  // who read the screen would make.
+  const ownedIds = new Set(owned.map((t) => t.partId));
+  const completable = new Set();
+  for (const combo of Object.values(content.combos ?? {})) {
+    const need = combo.parts ?? [];
+    if (need.length && need.every((pid) => ownedIds.has(pid))) for (const pid of need) completable.add(pid);
+  }
+  const rank = (t) => (completable.has(t.partId) ? 30 : 0)
+    + (wanted && content.parts[t.partId]?.classAffinity === wanted ? 10 : 0)
+    + GRADE_ORDER.indexOf(t.grade);
   for (const frameId of ['M', 'S', 'L', 'A']) {
     if (!content.frames[frameId]) continue;
     const used = new Set();
@@ -1103,6 +1128,11 @@ function bestSplice(state, content, wanted = null) {
   return null;
 }
 const GRADE_ORDER = ['standard', 'prime', 'apex', 'prismatic'];
+
+// R92 — how many stalls the opportunistic creators leave alone. A quarter of
+// a twelve-stable, which is what it takes for the Surgery Theater to get a
+// turn at all on a 180-day campaign.
+const THEATER_STALLS = 3;
 
 // One tick of a diligent player. Three rules, stated because a walker's
 // policy is half of every number it reports:
@@ -1294,7 +1324,24 @@ function walkAct(state, content, now, open, opts = {}) {
       .map((id) => content.parts[state.inventory.parts.find((t) => t.id === id)?.partId]?.classAffinity)
       .filter(Boolean) : [];
     const answers = classSockets.filter((c) => c === wanted).length;
-    const coherent = !wanted || state.chimeras.length < 3 || answers >= 3;
+    // R92 — A PLAN THAT FINDS A COMBO IS COHERENT WHATEVER ITS CLASS.
+    //
+    // R83's rule is that a build must answer the class the map asks for, or
+    // most of its class-bearing sockets must, and it is right for a creature
+    // you intend to fight with. It also vetoed nearly every plan: seven
+    // splices in 180 days, and not one of the 27 combos ever discovered.
+    //
+    // A player chasing a combo is not building a counter, they are building
+    // the thing the Splice-Dex is pointing at — and discovering it is the
+    // whole reward for having collected the pair (A6). So a plan that
+    // completes a combo this campaign has not seen yet passes on its own
+    // merit; everything else still has to answer the map.
+    const planPids = plan ? Object.values(plan.slots)
+      .map((id) => state.inventory.parts.find((t) => t.id === id)?.partId).filter(Boolean) : [];
+    const findsCombo = Object.values(content.combos ?? {}).some((k) =>
+      (k.parts ?? []).length && k.parts.every((pid) => planPids.includes(pid))
+      && !(state.discoveredCombos ?? []).includes(k.id));
+    const coherent = findsCombo || !wanted || state.chimeras.length < 3 || answers >= 3;
     if (plan && coherent) {
       // R91 — THE CAP IS THE GAME'S NOW, NOT THE WALKER'S. `stableCap ?? 9`
       // was a hand-typed copy of a rule that did not exist anywhere else,
@@ -1552,7 +1599,21 @@ function walkAct(state, content, now, open, opts = {}) {
     // would do.
     const roster = [...state.chimeras].sort((x, y) => quality(y) - quality(x));
     const displaced = roster.slice(3).filter(isFit).pop();
-    const keeps = !displaced || stableRoom(state, content).free > 0;
+    // R92 — THE THEATER KEEPS A QUARTER OF THE STABLE. Measured: the Wing and the vat
+    // took every free stall the moment one opened (22 graduates and 27
+    // decants against SEVEN splices in 180 days), so the Surgery Theater —
+    // the system this whole game is named for — was the one thing a
+    // campaign never got round to. Both of these are opportunistic; a
+    // splice is the primary way a player makes a creature.
+    //
+    // "Leave one free" was not enough and the instrument said why: across a
+    // 180-day walk the stable was FULL on 2,013 of the 2,063 steps where a
+    // splice was otherwise ready, so the Theater got a stall fifty times and
+    // used it seven. Once R91's replacement margin is in force a full stable
+    // stays full — nothing in it is bad enough to be worth the grades a
+    // dismantle burns — so the reservation has to be a standing one rather
+    // than a single space that closes the moment anything fills it.
+    const keeps = !displaced || stableRoom(state, content).free > THEATER_STALLS;
     if (!keeps) continue;
     if (startRehab(state, entry.id, content, now).ok) did('rehab-start', { who: entry.id });
   }
@@ -1570,6 +1631,77 @@ function walkAct(state, content, now, open, opts = {}) {
       && canSpend(penUpgradeCost(state))) {
     if (buyPenUpgrade(state).ok) did('pens');
   }
+  // R92 — THE RESEQUENCER. R31 built it so an extraction is not forever, and
+  // in 180 days the walk had never run one: every balance claim about what a
+  // vial is worth rested on nothing. A player runs it when they have a good
+  // vial, a pen to put the animal in, and the tank standing idle — the same
+  // three conditions the Vault screen's own button checks.
+  if (has('graduate') && !activeResequence(state) && state.ranch.stock.length < state.ranch.penCapacity) {
+    // The best sample on the rack, because a vial is spent whether or not it
+    // takes and nobody burns their worst one first.
+    const best = [...state.inventory.vials].sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0))[0];
+    const plan = best ? resequencePlan(state, best.id, content, now) : null;
+    if (plan?.ok && canSpend(plan.fee ?? 0) && startResequence(state, best.id, content, now).ok) {
+      did('resequence', { species: best.species, stars: best.stars });
+    }
+  }
+
+  // R92 — THE CHAOS VAT, and the one agenda row with nothing behind it.
+  //
+  // R12 priced it in GRADES rather than money: both parents drop one on
+  // every part, so a line bred against itself slides down the ladder. That
+  // is the whole design and the walk had never paid it once, which means the
+  // decay R12 describes has never been observed on a campaign.
+  //
+  // Never the A-team. A player does not put their two best fighters through
+  // a process that costs them both a grade on everything, and the walker
+  // ranking every creature by `quality` already knows which three those are.
+  if (has('vat') && !activeVat(state) && stableRoom(state, content).free > THEATER_STALLS) {
+    const ranked = [...state.chimeras].sort((x, y) => quality(y) - quality(x)).slice(3);
+    let ran = false;
+    for (const a of ranked) {
+      for (const b of ranked) {
+        if (ran || a === b) continue;
+        const plan = vatPlan(state, a.id, b.id, content, now);
+        if (!plan?.ok || !canSpend(plan.fee ?? 0)) continue;
+        if (startVat(state, a.id, b.id, content, now).ok) { did('vat', { sire: a.id, dam: b.id }); ran = true; }
+      }
+    }
+  }
+
+  // R92 — FOUR SLOTS, AND YOU RETRAIN TO CHANGE THEM. R30's whole point is
+  // that a combo you just discovered has to be worth more than what it
+  // displaces, and the walk pressed whatever the default pick handed it for
+  // 180 days. Now the three that actually fight carry their four best moves,
+  // which is what a player does the moment a splice teaches one something.
+  if (has('train')) {
+    for (const c of [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0)).slice(0, 3)) {
+      const ready = moveTrainingReady(c, now, content);
+      if (!ready.ready || !canSpend(ready.cost)) continue;
+      // `knownMoves` takes the genome reader as an argument rather than
+      // importing one, so the caller decides where a creature's anatomy
+      // comes from — the same shape the bench builder above uses.
+      const tokens = Object.values(c.tokens ?? {});
+      const report = analyze(c.frame, tokens, content);
+      const known = knownMoves(c, content, () => movesFromTokens(tokens, report, content));
+      if (known.length <= MOVE_SLOTS) continue;
+      // Strongest four it knows: power per stamina, which is the yardstick
+      // R16 priced every combo against.
+      const pick = [...known]
+        .sort((x, y) => (y.power ?? 0) / Math.max(1, y.cost ?? 1) - (x.power ?? 0) / Math.max(1, x.cost ?? 1))
+        .slice(0, MOVE_SLOTS).map((m) => m.id);
+      // Only when it actually CHANGES something. `setMoveset` charges for
+      // learning and not for reordering, so a pick identical to what the
+      // creature already carries is free — and the walker fired it every
+      // step for nothing, 6,123 times in 180 days, because a free action
+      // never trips its own cooldown. A player retrains when a splice has
+      // taught their creature something better.
+      const current = (c.moveset ?? []).join('|');
+      if (pick.join('|') === current) continue;
+      if (setMoveset(state, c.id, pick, known, now, content).ok) did('moveset', { who: c.id });
+    }
+  }
+
   // R91 — A PLAYER WITH A FULL VAULT RENDERS SOMETHING DOWN. Without this
   // the walker sat at 258 of 260 parts, could not graduate an animal because
   // the yield would not fit, and stopped playing half the game; the gate
@@ -1879,6 +2011,32 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     gauntletsWon: state.__walkGauntletsWon ?? 0,
     notoriety: Math.round(state.campaign.notoriety ?? 0),
     rushes: state.__walkRushes ?? 0,
+    // R92 — THE NUMBERS THAT SAY A SYSTEM RAN AT ALL.
+    //
+    // Every balance claim this project states comes out of this walk, so a
+    // system it never touches is a system whose balance has never been
+    // measured — and until `tools/coverage.js` there was nothing that said
+    // which those were. Four of the eight R92 named had quietly been closed
+    // by other milestones and nobody noticed; the other four had not, and
+    // nobody noticed that either. A number is what makes either noticeable.
+    //
+    // `eggs` and `traitsSeen` are the ones the walk was already doing and
+    // simply never reported: R120 taught it to breed in the milestone before
+    // last, and R92's entry still reads "0 eggs".
+    combosFound: (state.discoveredCombos ?? []).length,
+    vats: verbs.vat ?? 0,
+    resequences: verbs.resequence ?? 0,
+    movesetTrains: verbs.moveset ?? 0,
+    eggs: verbs.hatch ?? 0,
+    traitsSeen: (() => {
+      const seen = new Set();
+      for (const a of state.ranch.stock) for (const t of a.traits ?? []) seen.add(t);
+      for (const c of state.chimeras) {
+        for (const tk of Object.values(c.tokens ?? {})) for (const t of tk.traits ?? []) seen.add(t);
+      }
+      for (const tk of state.inventory.parts) for (const t of tk.traits ?? []) seen.add(t);
+      return seen.size;
+    })(),
     rushSpent: Math.round(state.__walkRushSpent ?? 0),
     treated: state.__walkTreated ?? 0,
     facility: { ...state.facility },
