@@ -91,6 +91,10 @@ const SHARD_OF = {
   // shard: 228s of the suite's work was those two blocks, four times over.
   // Measured with SW_SHARD=z, which runs the common path and nothing else.
   fired: 'c', mercy: 'd', planted: 'a', combos: 'b',
+  // R90 — the last of the common path worth guarding. Measured with
+  // SW_SHARD=z: these four were 17.7s that every shard paid, 53s of the
+  // suite's work for four copies of the same answer.
+  curve: 'a', regions: 'c', preview: 'b', spar: 'd',
   // Shard c is the balance sweep alone: it is the biggest single block and it
   // runs SERIALLY here, because four shards on four cores plus a worker pool
   // inside one of them is oversubscription, not parallelism.
@@ -3847,7 +3851,7 @@ if (inShard('mercy')) {
 // --- stop the shape from silently drifting back. The measured targets come
 // --- from tools/sim.js at a team of THREE — the yardstick that matters,
 // --- because that is what the game hands the player.
-{
+if (inShard('curve')) {
   // 1. The grade ladder is a staircase, not a leap. Prismatic used to be
   //    x2.0 against x1.5 apex, which turned every wall into a formality in
   //    one husbandry tier.
@@ -6855,7 +6859,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
 // The bar is set below what seven independent base seeds actually produce
 // (numbers in the comments), because a gate with no headroom is a gate
 // that fails on a Tuesday for no reason.
-{
+if (inShard('regions')) {
   // Two independent base seeds at sixteen games a cell. Seven seeds were
   // walked by hand while the bars below were set (the observed ranges are
   // quoted at each one); two is what the suite can afford to run every time.
@@ -11231,7 +11235,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // onto a briefing where nothing at all can be pressed. Nothing breaks, but
 // that is a wasted trip, not a wording problem, and "wording gap" was the
 // wrong call.
-{
+if (inShard('spar')) {
   const { renderWarRoomScreen } = await import('../campaign/ui.js');
   const { canSpar } = await import('../campaign/sparring.js');
   const HOUR = 3600000;
@@ -14833,7 +14837,7 @@ if (inShard('timers')) {
 }
 
 // --- R66: the preview lied to the player and to the AI --------------------
-{
+if (inShard('preview')) {
   const { multiHitMean } = await import('../battle/engine.js');
   // A defender that cannot be knocked out and cannot reflect, so the only
   // thing moving its hp is the swing under test.
