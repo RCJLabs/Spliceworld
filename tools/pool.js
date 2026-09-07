@@ -33,6 +33,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 // shards at once on four cores; a pool inside one of them is oversubscription
 // rather than parallelism, and the contention costs every shard, not just the
 // one that spawned the workers.
+// R90 — one worker per shard. Sharded, each process already holds a core and
+// runs a quarter of the sweep, so a pool inside it would be oversubscription;
+// unsharded, the pool is the only parallelism there is.
 export const poolSize = () => (process.env.SW_SHARD
   ? 1
   : Math.max(1, Math.min(8, availableParallelism() - 1)));

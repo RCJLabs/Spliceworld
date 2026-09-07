@@ -15,6 +15,7 @@
 // Everything runs concurrently, including the four non-smoke tools, and the
 // exit code is the worst of them. `--only <name>` runs one.
 import { spawn } from 'node:child_process';
+import { availableParallelism } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,15 +39,27 @@ if (!picked.length) {
   process.exit(1);
 }
 
+// R90 — AT MOST ONE JOB PER CORE. The first run put eight processes on four
+// cores and every one of them ran at roughly half speed: 878s of work in
+// 266s of wall-clock, against a 180s budget. Oversubscription does not add
+// throughput, it just makes every job's timing a lie about its own cost.
+const LANES = Math.max(1, availableParallelism());
 const started = Date.now();
-const results = await Promise.all(picked.map((job) => new Promise((resolve) => {
+const queue = [...picked];
+const results = [];
+const runOne = (job) => new Promise((resolve) => {
   const t0 = Date.now();
   const p = spawn('node', [job.file], { cwd: root, env: { ...process.env, ...job.env } });
   let out = '';
   p.stdout.on('data', (d) => { out += d; });
   p.stderr.on('data', (d) => { out += d; });
   p.on('close', (code) => resolve({ ...job, code, ms: Date.now() - t0, out }));
-})));
+});
+await Promise.all(Array.from({ length: Math.min(LANES, queue.length) }, async () => {
+  // Longest first, so a big job never starts last and leaves cores idle
+  // behind it. The shards are ordered ahead of the small tools by cost.
+  while (queue.length) results.push(await runOne(queue.shift()));
+}));
 
 const wall = Date.now() - started;
 const failed = results.filter((r) => r.code !== 0);
@@ -65,9 +78,9 @@ if (failed.length) {
 // sits just above the measurement so creep fails — the same rule the eager
 // import cap and the height budget are written to.
 const BUDGET_S = 180;
-console.log(`\nsuite ✓  ${results.length} jobs in ${(wall / 1000).toFixed(1)}s wall-clock`
-  + ` (sum ${(results.reduce((a, r) => a + r.ms, 0) / 1000).toFixed(0)}s of work)`);
+const work = (results.reduce((a, r) => a + r.ms, 0) / 1000).toFixed(0);
 if (!only && wall / 1000 > BUDGET_S) {
-  console.error(`suite ✗  ${(wall / 1000).toFixed(1)}s is over the ${BUDGET_S}s budget`);
+  console.error(`\nsuite ✗  every job passed, but ${(wall / 1000).toFixed(1)}s is over the ${BUDGET_S}s budget (sum ${work}s of work)`);
   process.exit(1);
 }
+console.log(`\nsuite ✓  ${results.length} jobs in ${(wall / 1000).toFixed(1)}s wall-clock (sum ${work}s of work)`);

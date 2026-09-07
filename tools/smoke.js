@@ -81,13 +81,16 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // block runs in exactly one, and an unset SW_SHARD runs all of them.
 const SHARD = process.env.SW_SHARD ?? '';
 const SHARD_OF = {
-  genes: 'a', orphans: 'a',
-  contest: 'b', team: 'b',
+  // Balanced by measured cost, not by subject: the two 70s blocks get a shard
+  // each, the 40s block shares with the 20s one, and the small ones fill the
+  // remainder. This table is data — rebalancing it costs nothing.
+  genes: 'a',
+  contest: 'b',
+  frames: 'c', timers: 'c', orphans: 'c', team: 'c',
   // Shard c is the balance sweep alone: it is the biggest single block and it
   // runs SERIALLY here, because four shards on four cores plus a worker pool
   // inside one of them is oversubscription, not parallelism.
-  balance: 'c',
-  wire: 'd', away: 'd', timers: 'd', frames: 'd',
+  wire: 'd', away: 'd',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -1601,7 +1604,7 @@ function playScriptedPartial(seed, pauseAt, roundTrip = false) {
   return b;
 }
 
-if (inShard('balance')) {
+{  // R90 — this block runs in every shard; the SWEEP below is what splits.
 // --- M4.5: the balance harness runs, and it catches the planted combo.
 // The yardstick is a team of THREE — the balance pass established that tuning
 // against a lone chimera measures the wrong game, and the detector is
@@ -1660,10 +1663,20 @@ const BALANCE_GRADES = ['standard', 'prime', 'apex', 'prismatic'];
 // results byte-identical to the loop it replaces. `runPool` places results
 // by index rather than in completion order, which is what keeps the failure
 // message below naming the same pool and grade every run.
+// R90 — SPLIT ACROSS THE SHARDS, one quarter each. Left whole it was a 125s
+// indivisible block, and a shard holding it was the critical path at 266s
+// against a 180s budget: parallelism cannot help a monolith, it can only
+// help around one. Each shard asserts its own six pools carry no OP flag and
+// the union is all twenty-four, which is the same claim the single loop made.
+const SHARD_ORDER = ['a', 'b', 'c', 'd'];
 const balanceTasks = [];
+let balanceIdx = 0;
 for (const grade of BALANCE_GRADES) {
   for (const poolSeed of BALANCE_POOLS) {
-    balanceTasks.push({ builds: 40, seedsPer: 8, teamSize: 3, grade, seed: poolSeed });
+    const mine = SHARD_ORDER[balanceIdx++ % SHARD_ORDER.length];
+    if (!SHARD || SHARD === mine) {
+      balanceTasks.push({ builds: 40, seedsPer: 8, teamSize: 3, grade, seed: poolSeed });
+    }
   }
 }
 const degenerate = [];
