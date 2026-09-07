@@ -1626,6 +1626,13 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   // started reporting zero.
   const rehabEver = new Set();
 
+  // R91 — id -> createdAt for everything standing, and a day count for
+  // everything that has left. A creature still alive at the end contributes
+  // its age, not nothing: dropping the survivors would measure only the
+  // churn and report a median far below what a player experiences.
+  const alive = new Map();
+  const lives = [];
+
   for (let h = 0; h <= days * 24; h += stepHours) {
     if (h > awayStart && h < awayEnd) continue; // the app is closed
     const now = t0 + h * WALK_HOUR;
@@ -1655,6 +1662,21 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       stall = 0;
     }
     walkAct(state, content, now, shape.open, { t0, stepHours, sparsPerDay, stableCap, priceBeats });
+    // R91 — HOW LONG DOES A CHIMERA LIVE? The criterion asks for a median
+    // and nothing in the tree could produce one: `chimeras` reports how many
+    // are standing at the end, which on a walk with a stable cap is just the
+    // cap. A creature leaves by exactly two doors — dismantled in
+    // `extractChimera`, taken in `finishBattle` — and both are engine calls
+    // the walk makes rather than events it raises, so the honest instrument
+    // is to diff the roster after each step. Resolution is one step; the
+    // baseline it has to distinguish is hours against days.
+    for (const [id, born] of alive) {
+      if (!state.chimeras.some((c) => c.id === id)) {
+        lives.push((now - born) / WALK_DAY);
+        alive.delete(id);
+      }
+    }
+    for (const c of state.chimeras) if (!alive.has(c.id)) alive.set(c.id, c.createdAt ?? now);
     // The state as the player LEFT it: after the day's actions, so a month
     // away is measured from what was actually in the bank when the app closed.
     if (markDay != null && h === markDay * 24) snapshots.left = snap(markDay);
@@ -1700,6 +1722,13 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     reachedDominion: state.dominionAt != null,
     nodes: state.campaign.heldNodes.length,
     chimeras: state.chimeras.length,
+    // R91 — the survivors are folded in at their current age, so this is the
+    // life of every chimera the campaign ever made, not only the discarded
+    // ones. `chimerasMade` is the churn the save pays for: 1,834 creatures
+    // built to keep nine.
+    chimerasMade: state.chimeraCount ?? 0,
+    chimeraLives: [...lives, ...state.chimeras.map((c) => (state.lastTickAt - (c.createdAt ?? state.lastTickAt)) / WALK_DAY)]
+      .sort((a, b) => a - b),
     stock: state.ranch.stock.length,
     parts: state.inventory.parts.length,
     funds: Math.round(state.funds),
