@@ -21,6 +21,17 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
+// Static, and therefore SYNCHRONOUS. These were dynamic imports at first,
+// which made every fixture async — and `tools/handlers.js` builds its
+// laboratory inside a plain `(now) => {}`, so an async recipe would have
+// rippled through a walk that has no other reason to await anything. A tool
+// pays no page weight for an import; the browser never loads this file.
+import { indexContent } from '../render/renderer.js';
+import { CONTENT_FILES } from '../data/loader.js';
+import { newGameState, SAVE_VERSION } from '../save/save.js';
+import { spliceChimera } from '../splice/theater.js';
+import { createAnimal } from '../ranch/ranch.js';
+import { loadSimContent, campaignWalk } from './sim.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -29,10 +40,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // wants a fixture wants content first, and re-reading 30 JSON files per
 // caller is pure waste in a suite that is trying to get under three minutes.
 let contentCache = null;
-export async function fixtureContent() {
+export function fixtureContent() {
   if (contentCache) return contentCache;
-  const { indexContent } = await import('../render/renderer.js');
-  const { CONTENT_FILES } = await import('../data/loader.js');
   contentCache = indexContent(Object.fromEntries(
     CONTENT_FILES.map((n) => [n, JSON.parse(readFileSync(join(root, 'data', `${n}.json`), 'utf8'))])
   ));
@@ -47,15 +56,19 @@ export async function fixtureContent() {
 // have always used different ones and an id is not a fixture decision —
 // making them share one would change what every gate reports for no reason
 // beyond tidiness.
-export async function labCore({ now, prefix = 'fx', funds = 20000 } = {}) {
-  const content = await fixtureContent();
-  const { newGameState, SAVE_VERSION } = await import('../save/save.js');
-  const { spliceChimera } = await import('../splice/theater.js');
-  const { createAnimal } = await import('../ranch/ranch.js');
+export function labCore({
+  now, prefix = 'fx', funds = 20000,
+  // The Theater is all any caller has ever needed to SPLICE; a gate that
+  // walks the Containment bay or the incubator says so by naming the tracks
+  // it needs, rather than every caller carrying every track forever.
+  facility = { theater: 2 },
+  spares = [['goat_head', 'standard'], ['bear_organ', 'prime'], ['cobra_tail', 'apex']],
+} = {}) {
+  const content = fixtureContent();
 
   const s = { ...newGameState(), seed: 4242, funds, saveVersion: SAVE_VERSION };
   s.lastTickAt = now;
-  s.facility = { theater: 2 };
+  s.facility = { ...facility };
 
   // The grade map is the fixture's one real opinion: an apex head so a grade
   // multiplier is exercised, a prime hindlimb so two tiers are in play, and
@@ -87,7 +100,7 @@ export async function labCore({ now, prefix = 'fx', funds = 20000 } = {}) {
   if (!made.ok) throw new Error(`fixture splice failed: ${made.msg}`);
 
   // Spares, so the Theater has something to build a second creature from.
-  for (const [pid, grade] of [['goat_head', 'standard'], ['bear_organ', 'prime'], ['cobra_tail', 'apex']]) {
+  for (const [pid, grade] of spares) {
     s.inventory.parts.push({
       id: `${prefix}-spare-${pid}`, partId: pid, grade,
       donor: { name: 'Spare', species: pid.split('_')[0], stars: 2, extractedAt: now },
@@ -111,13 +124,12 @@ export async function labCore({ now, prefix = 'fx', funds = 20000 } = {}) {
 // budget and any at-scale question needs. CACHED ON DISK because the walk
 // costs about fifteen seconds and is perfectly deterministic from its seed:
 // every gate that wants one was paying that separately.
-export async function walkedSave({ days = 180, seed = 2026, fresh = false } = {}) {
+export function walkedSave({ days = 180, seed = 2026, fresh = false } = {}) {
   const cache = join(tmpdir(), 'sw-walk-cache');
   const file = join(cache, `walk-${seed}-${days}.json`);
   if (!fresh && existsSync(file)) {
     try { return JSON.parse(readFileSync(file, 'utf8')); } catch { /* rebuild it */ }
   }
-  const { loadSimContent, campaignWalk } = await import('./sim.js');
   const save = campaignWalk(loadSimContent(), { seed, days, stopAtDominion: false }).save;
   // A player this far in has met every system, so every first-use field
   // guide has been read. Without this the guide dialog covers the screen and

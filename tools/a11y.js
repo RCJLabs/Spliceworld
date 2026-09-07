@@ -42,46 +42,15 @@ const REPORT = process.argv.includes('--report');
 
 // --- a save with something on every screen ----------------------------------
 export async function fixtureSave() {
-  const { indexContent } = await import('../render/renderer.js');
-  const { newGameState, SAVE_VERSION } = await import('../save/save.js');
-  const { spliceChimera } = await import('../splice/theater.js');
-  const { createAnimal } = await import('../ranch/ranch.js');
-  const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
-  // R85: the list the game itself loads, rather than a sixth copy of it. A
-  // Node tool reads every file off disk, so it gets the geometry the browser
-  // fetches after its first paint (R81) in the same round.
-  const { CONTENT_FILES: files } = await import('../data/loader.js');
-  const content = indexContent(Object.fromEntries(files.map((n) => [n, readJSON(`data/${n}.json`)])));
+  // R90 — the laboratory itself comes from tools/fixtures.js, which
+  // tools/handlers.js also builds from. The two gates had the same recipe
+  // twice: same grade map, same socket-numbering loop, same herd, differing
+  // by an id prefix. What stays here is what only THIS gate needs — the
+  // feral twin for the Pens' alert, the understudy that gives the briefing a
+  // choice, the three running clocks, the loose specimen, the raid.
+  const { labCore } = await import('./fixtures.js');
   const now = Date.now();
-  const s = { ...newGameState(), seed: 4242, funds: 20000, saveVersion: SAVE_VERSION };
-  s.facility = { theater: 2 };
-  s.lastTickAt = now;
-  const grades = { cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'prime',
-    cobra_organ: 'standard', bear_hide: 'standard', goat_tail: 'standard' };
-  for (const [pid, grade] of Object.entries(grades)) {
-    s.inventory.parts.push({ id: `a11y-${pid}`, partId: pid, grade,
-      donor: { name: 'Donor', species: pid.split('_')[0], stars: 3, extractedAt: now } });
-  }
-  const used = new Set();
-  const slots = Object.fromEntries(Object.keys(grades).map((pid) => {
-    const slot = content.parts[pid].slot;
-    let socket = slot; let n = 2;
-    while (used.has(socket)) socket = `${slot}${n++}`;
-    used.add(socket);
-    return [socket, `a11y-${pid}`];
-  }));
-  const made = spliceChimera(s, 'M', slots, content, now);
-  if (!made.ok) throw new Error(`fixture splice failed: ${made.msg}`);
-  for (const [pid, grade] of [['goat_head', 'standard'], ['bear_organ', 'prime'], ['cobra_tail', 'apex']]) {
-    s.inventory.parts.push({ id: `a11y-spare-${pid}`, partId: pid, grade,
-      donor: { name: 'Spare', species: pid.split('_')[0], stars: 2, extractedAt: now } });
-  }
-  s.ranch = { ...s.ranch, stock: [], penCapacity: 8, animalCount: 0, seeded: true };
-  for (const sp of ['goat', 'bear', 'cobra']) s.ranch.stock.push(createAnimal(s, sp, content, now));
-  s.dex = { parts: Object.keys(content.parts).slice(0, 8), enemies: Object.keys(content.enemies).slice(0, 4),
-    beaten: Object.keys(content.enemies).slice(0, 2), traits: Object.keys(content.traits ?? {}).slice(0, 2), variants: [] };
-  s.discoveredCombos = Object.keys(content.combos).slice(0, 3);
-  s.chimeras[0].settleUntil = now - 1000;
+  const { s, content } = await labCore({ now, prefix: 'a11y' });
   // R85 — a second creature, pacing its pen, so this gate measures the one
   // alert on the Pens whose countdown ends with the roster one shorter. The
   // band, the badge on the shut row and the open card's explanation are all
