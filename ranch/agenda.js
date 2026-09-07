@@ -30,7 +30,7 @@
 //   spend    — money leaves, something arrives. Always available if solvent.
 //   work     — you make something: a part, an egg, a creature, a better one.
 //   campaign — you push on the world: a job, an assault, a rival.
-import { careStatus, catalogFor, penUpgradeCost, ageStage } from './ranch.js';
+import { careStatus, catalogFor, isNewToDex, penUpgradeCost, ageStage } from './ranch.js';
 import { canBreed } from './breeding.js';
 import { nextUpgrade, tracks } from '../splice/facility.js';
 import { TRAINING } from '../splice/theater.js';
@@ -360,15 +360,34 @@ export const AGENDA = [
       && state.chimeras.some((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR),
   },
   {
+    // R95 — the row that knows what you have never held. "33 species you can
+    // afford" is true and is the wrong number; a collector wants to know how
+    // many of them are new anatomy. Measurement in tools/reach.js.
     id: 'buy', kind: 'spend', screen: 'ranch', label: 'Order from the catalog',
     chip: (state, content) => {
       const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
-      return afford.length ? `${afford.length} from $${Math.min(...afford.map((sp) => sp.mailOrderPrice))}` : null;
+      if (!afford.length) return null;
+      const fresh = afford.filter((sp) => isNewToDex(state, content, sp.id));
+      return fresh.length
+        ? `${fresh.length} new from $${Math.min(...fresh.map((sp) => sp.mailOrderPrice))}`
+        : `${afford.length} from $${Math.min(...afford.map((sp) => sp.mailOrderPrice))}`;
     },
     hint: (state, content) => {
       const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
       const room = state.ranch.penCapacity - state.ranch.stock.length;
       const cheapest = afford.length ? Math.min(...afford.map((sp) => sp.mailOrderPrice)) : 0;
+      const fresh = afford.filter((sp) => isNewToDex(state, content, sp.id));
+      if (fresh.length) {
+        const pick = fresh.reduce((a, b) => (a.mailOrderPrice <= b.mailOrderPrice ? a : b));
+        // The pen count stays in BOTH sentences. R120's rule is that a row
+        // reads the save, and the battery's sitting gate proves it by
+        // comparing the row at three animals and at nine: a hint about the
+        // catalogue alone reads the same on both, which is a fixed sentence
+        // wearing a callback.
+        return `${fresh.length} species you have never held, from $${pick.mailOrderPrice} `
+          + `(${pick.name}), and ${room} pen${room === 1 ? '' : 's'} free. `
+          + 'The Splice-Dex is a shopping list; each of those is six parts you cannot build with yet.';
+      }
       return `${afford.length} species you can afford${cheapest ? ` from $${cheapest}` : ''}, ${
         room} pen${room === 1 ? '' : 's'} free. New anatomy is how a losing matchup stops being one.`;
     },

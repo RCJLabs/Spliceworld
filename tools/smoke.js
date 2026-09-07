@@ -15,7 +15,7 @@ import { newGameState, migrate, SAVE_VERSION } from '../save/save.js';
 import {
   createAnimal, ageStage, conditionTier, applyElapsed, careAction,
   careStatus, buyMailOrder, buyPenUpgrade, ensureRanchSeeded, stockGenome,
-  CARE_ACTIONS, TUNING, STATS, faunaUnlocked, catalogFor, upkeepPerDay, chimeraUpkeep,
+  CARE_ACTIONS, TUNING, STATS, faunaUnlocked, catalogFor, isNewToDex, newToDex, upkeepPerDay, chimeraUpkeep,
 } from '../ranch/ranch.js';
 import {
   GRADES, GRADE_INDEX, gradeFor, avgStars, extractAnimal,
@@ -378,6 +378,42 @@ econ.campaign.heldNodes.pop();
 econ.ranch.penCapacity = 4;
 assert.ok(!buyMailOrder(econ, 'goat', content, t0).ok, 'full pens block orders');
 assert.ok(buyPenUpgrade(econ).ok && econ.ranch.penCapacity === 6);
+
+// R95 — WHAT HAVE YOU NEVER HELD? The catalog is 33 species deep by the
+// second act over four classes, so the row that matters to a collector is
+// the one whose anatomy is not in the Splice-Dex yet. `isNewToDex` reads
+// `dex.parts` — every part the save has EVER shelved — rather than the
+// current herd, which forgets everything already extracted.
+{
+  const shop = freshRanchState();
+  ensureRanchSeeded(shop, content, t0);
+  shop.dex.parts = [];
+  assert.ok(isNewToDex(shop, content, 'goat'), 'an empty Dex makes every species new');
+  const goatPart = Object.values(content.parts).find((p) => p.species === 'goat');
+  shop.dex.parts = [goatPart.id];
+  assert.ok(!isNewToDex(shop, content, 'goat'),
+    'one goat part on the shelf is enough — the species is no longer new anatomy');
+  assert.ok(isNewToDex(shop, content, 'ram'), 'and the ram still is');
+  // Owning the ANIMAL is not the same as having held its parts: an animal in
+  // the pens that has never been through the Extractor has taught the player
+  // nothing, and this is the distinction the old catalog could not draw.
+  const penned = freshRanchState();
+  ensureRanchSeeded(penned, content, t0);
+  penned.dex.parts = [];
+  assert.ok(penned.ranch.stock.some((a) => a.species === 'goat'), 'the starter herd has goats');
+  assert.ok(isNewToDex(penned, content, 'goat'),
+    'a goat standing in the pens is not a goat you have handled');
+  // The narrowed catalog is a subset of the catalog, in the same price order.
+  const fresh = newToDex(penned, content);
+  const all = catalogFor(penned, content);
+  assert.ok(fresh.every((sp) => all.some((c) => c.id === sp.id)),
+    'never-held is a filter on the catalog, not a second list');
+  assert.deepEqual(fresh.map((sp) => sp.id), all.filter((sp) => isNewToDex(penned, content, sp.id)).map((sp) => sp.id),
+    'and it keeps the catalog\'s cheapest-first order');
+  // A species with no parts at all is a data gap, never a prize.
+  assert.ok(!isNewToDex(penned, content, 'no_such_species'),
+    'a species the build does not have is not new anatomy to chase');
+}
 
 // Determinism: same seed → identical starter herd.
 const herdA = freshRanchState();
@@ -9116,8 +9152,16 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //    tell those two apart.
   {
     const ground = dx(squad('boots', 'standard', CAP), { canBringMore: false });
-    assert.equal(ground.id, 'outgunned',
+    // R95 — and now it SAYS grade. This assertion read `outgunned` for two
+    // milestones while its own message called Precinct "a grade problem":
+    // the diagnosis knew which layer was at fault and would not quote the
+    // price. `outgraded` is the same verdict with the number in it.
+    assert.equal(ground.id, 'outgraded',
       `Ground at Precinct is a grade problem, not a class one (${ground.id}: ${ground.text})`);
+    assert.ok(GRADES.some((g) => ground.text.includes(g.name)),
+      `and it names the grade that clears it (${ground.text})`);
+    assert.ok(ground.lifted > 0.4,
+      `and only names a grade that makes it a fight (${Math.round(ground.lifted * 100)}%)`);
     // The class half used to be Water at Precinct, and that fixture was
     // marginal: the layer measured 11.3pp against the 10pp floor before R66
     // and 6.4pp after a sharper AI, while the comment in forecast.js still

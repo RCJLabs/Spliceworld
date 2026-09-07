@@ -269,6 +269,12 @@ const VAULT = ['node', 'tools/vault.js'];
 // because there was nothing watching either way.
 const COVERAGE = ['node', 'tools/coverage.js'];
 
+// R95 — CAN A PLAYER ACTUALLY GET TO THE CONTENT? Three rules of one gate:
+// every species is reachable by a mechanism that resolves, a 180-day walk
+// sees 95% of the part list across seven seeds, and every encounter names
+// the grade it takes when the player's own is not enough.
+const REACH = ['node', 'tools/reach.js'];
+
 const TABLE = ['node', '-e', `
   const { readFileSync } = await import('node:fs');
   const { indexContent } = await import('./render/renderer.js');
@@ -1342,6 +1348,18 @@ const VERBOSE = process.argv.includes('--verbose');
 // something the first three minutes already said. Needed it twice in one
 // milestone, which is the bar for a flag.
 const BASELINE_ONLY = process.argv.includes('--baseline');
+// R95 — run these breaks and nothing else: `--only 158,159,163`. Same
+// argument as `--baseline` above, one level finer. A milestone that adds
+// seven breaks needs to know each one goes red BEFORE it spends the hour
+// proving the other hundred and fifty-seven still do, and aiming a break is
+// iterative: the first anchor is often in the wrong place, and the loop that
+// tells you so must not be an hour long. Needed it three times in one
+// milestone, which is this file's own bar for a flag.
+const ONLY = (() => {
+  const i = process.argv.indexOf('--only');
+  if (i < 0) return null;
+  return new Set(String(process.argv[i + 1] ?? '').split(',').map((n) => Number(n.trim())));
+})();
 
 // The R78 replay, at the unit level. A month away with a convoy already at
 // the gate must still replay the month — a chaotic forty-day walk is where
@@ -1712,16 +1730,68 @@ const WALK = ['node', '-e', `
 const ROADMAP = ['node', 'tools/roadmap.js'];
 
 const BREAKS = [
+  // R93b's break 157 lived here and R95 retired it. The planner boosting
+  // combos it has already discovered was worth 16.5pp when a campaign could
+  // assemble nine of the 27 (71.4% against 54.9%); with twenty-five
+  // assemblable it is worth 5.1pp (32.6% against 27.5%) and the per-seed
+  // results cross over. The fix is still in `tools/sim.js` and still right —
+  // what is gone is the gate's ability to see it, and a break that only goes
+  // red by luck teaches this battery to lie about its own coverage. The
+  // numbers are in tools/coverage.js.
   {
-    // R93b — the bug this phase found in R92's own planner. Boosting a pair
-    // the campaign has ALREADY discovered leaves the top-ranked parts
-    // unchanged, so the walker rebuilds the same creature and the combos it
-    // owns but has not seen go on not being seen: 71% of what a campaign can
-    // assemble drops back to 55%.
-    n: 157, gate: COVERAGE, name: 'the planner weighs combos it has already discovered, so it rebuilds the same creature',
+    // RULE 1 — the route table. A species nobody can obtain is content that
+    // does not exist, and the only reason none ships today is that nothing
+    // was checking.
+    n: 158, gate: REACH, name: 'a species is taken out of the catalogue with no other way in, so six parts stop existing',
+    file: 'data/species.json',
+    anchor: '"mailOrderPrice": 420',
+    to: '"mailOrderPrice": null',
+  },
+  {
+    n: 159, gate: REACH, name: 'a variant loses the base species it is supposed to mutate off',
+    file: 'data/species.json',
+    anchor: '"variantOf": "ram"',
+    to: '"variantOf": "aurochs"',
+  },
+  {
+    // RULE 2 — reach. Each of these three is a door R95 opened, and closing
+    // any one of them puts the median campaign back under the floor.
+    // RE-AIMED. This first read `const fresh = []`, which came back MISSED:
+    // never-held is a SUBSET of owes-the-Dex-a-part, so emptying it changed
+    // which collectible the walker bought and not whether it collected. What
+    // R95 actually added is the ORDER, so the break takes the whole of it and
+    // puts back the rule that shipped before — best answer in the demanded
+    // class, else the cheapest thing on the list.
+    n: 160, gate: REACH, name: 'the walker goes back to the best answer in the demanded class, and stops collecting',
     file: 'tools/sim.js',
-    anchor: '    if (!need.length || found.has(combo.id)) continue;',
-    to: '    if (!need.length) continue;',
+    anchor: `    const pickSp = freshAnswers.length ? best(freshAnswers)
+      : fresh.length ? best(fresh)
+      : mates.length ? mates[0]
+      : incomplete.length ? incomplete[0]
+      : answers.length ? best(answers)
+      : affordable[0];`,
+    to: '    const pickSp = answers.length ? best(answers) : affordable[0];',
+  },
+  {
+    n: 161, gate: REACH, name: 'every captive goes to the Wing, so the eight enemy-tech parts have no door at all',
+    file: 'tools/sim.js',
+    anchor: '    if (carriesNew) {',
+    to: '    if (false && carriesNew) {',
+  },
+  {
+    n: 162, gate: REACH, name: 'the buyer locks the breeder out again, and the six variant lines are never rolled for',
+    file: 'tools/sim.js',
+    anchor: '  const herdRoom = Math.min(state.ranch.penCapacity, chasing ? WORKING_HERD : HERD_CAP)',
+    to: '  const herdRoom = Math.min(state.ranch.penCapacity, chasing ? HERD_CAP : HERD_CAP)',
+  },
+  {
+    // RULE 3 — the wall quotes its price. Ten of thirty-one encounters cannot
+    // be won at Standard by any shipped build; the briefing has to say which
+    // grade clears it rather than "not strong enough yet".
+    n: 163, gate: REACH, name: 'the briefing goes back to naming no grade, so a wall never says what it costs',
+    file: 'battle/forecast.js',
+    anchor: '    if (lifted.band.floor < EVEN_FLOOR) continue;',
+    to: '    if (true) continue;',
   },
   {
     n: 151, gate: COVERAGE, name: 'the planner stops weighing combos, so a campaign never discovers one again',
@@ -1806,6 +1876,15 @@ const BREAKS = [
     file: 'save/save.js',
     anchor: '    discoveredCombos: [],',
     to: '    discoveredCombos: [],\n    auditTrail: [],',
+  },
+  {
+    // R95 — the conveyor belt. Without a minimum tenure the chaos vat runs
+    // 119 times in 180 days and every decant is scrapped within hours: 200
+    // creatures built to keep ten, median life thirty-six hours.
+    n: 164, gate: VAULT, name: 'a decant can be scrapped the hour it leaves the tank, and the vat becomes a conveyor belt',
+    file: 'tools/sim.js',
+    anchor: '        .filter((c) => isFit(c) && now - (c.createdAt ?? 0) >= KEEP_DAYS * WALK_DAY).pop();',
+    to: '        .filter((c) => isFit(c)).pop();',
   },
   {
     n: 150, gate: VAULT, name: 'a save that predates the cap is pruned instead of paid, so nine thousand parts are deleted in silence',
@@ -2843,7 +2922,13 @@ if (BASELINE_ONLY) {
 
 console.log('\nbreaks:');
 const results = [];
-for (const b of BREAKS) {
+const picked = ONLY ? BREAKS.filter((b) => ONLY.has(b.n)) : BREAKS;
+if (ONLY && picked.length !== ONLY.size) {
+  const missing = [...ONLY].filter((n) => !BREAKS.some((b) => b.n === n));
+  console.error(`battery ✗  no break numbered ${missing.join(', ')}`);
+  process.exit(1);
+}
+for (const b of picked) {
   restore(b.file);
   const path = join(DIR, b.file);
   const src = readFileSync(path, 'utf8');

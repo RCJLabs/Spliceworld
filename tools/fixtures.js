@@ -173,18 +173,44 @@ export function labCore({
 // budget and any at-scale question needs. CACHED ON DISK because the walk
 // costs about fifteen seconds and is perfectly deterministic from its seed:
 // every gate that wants one was paying that separately.
+// R95 — WHERE THE CACHE LIVES, so a caller that already has the walk can put
+// it there. `tools/coverage.js` runs a FULL walk of seed 2026 (it needs the
+// verb tally, which a save does not carry) and `tools/reach.js` then asked
+// `walkedSave` for the same seed and walked it again — the same campaign,
+// twice, in one suite job. One line of sharing is worth ten seconds of the
+// suite's wall clock, and the two gates now genuinely walk seven campaigns
+// between them rather than eight.
+function cacheFile(seed, days) {
+  return join(join(tmpdir(), 'sw-walk-cache'), `walk-${seed}-${days}-${sourceStamp()}.json`);
+}
+
+// Hand a walk you have already done to whoever asks for it next. Silent on
+// failure for the same reason `walkedSave` is: a cache that cannot be
+// written is a slower answer, never a wrong one.
+export function primeWalkCache(save, { seed = 2026, days = 180 } = {}) {
+  try {
+    mkdirSync(join(tmpdir(), 'sw-walk-cache'), { recursive: true });
+    writeFileSync(cacheFile(seed, days), JSON.stringify(withGuidesRead(save)));
+  } catch { /* not fatal, ever */ }
+}
+
+// A player this far in has met every system, so every first-use field guide
+// has been read. Without this the guide dialog covers the screen and a
+// browser gate measures the DIALOG — which is exactly what R89's first
+// measurement did.
+function withGuidesRead(save) {
+  save.guidesSeen = JSON.parse(readFileSync(join(root, 'data', 'guides.json'), 'utf8')).guides.map((g) => g.id);
+  return save;
+}
+
 export function walkedSave({ days = 180, seed = 2026, fresh = false } = {}) {
   const cache = join(tmpdir(), 'sw-walk-cache');
-  const file = join(cache, `walk-${seed}-${days}-${sourceStamp()}.json`);
+  const file = cacheFile(seed, days);
   if (!fresh && existsSync(file)) {
     try { return JSON.parse(readFileSync(file, 'utf8')); } catch { /* rebuild it */ }
   }
   const save = campaignWalk(loadSimContent(), { seed, days, stopAtDominion: false }).save;
-  // A player this far in has met every system, so every first-use field
-  // guide has been read. Without this the guide dialog covers the screen and
-  // a browser gate measures the DIALOG — which is exactly what R89's first
-  // measurement did.
-  save.guidesSeen = JSON.parse(readFileSync(join(root, 'data', 'guides.json'), 'utf8')).guides.map((g) => g.id);
+  withGuidesRead(save);
   try {
     mkdirSync(cache, { recursive: true });
     writeFileSync(file, JSON.stringify(save));

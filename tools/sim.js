@@ -369,7 +369,7 @@ export function rivalCounterBench(content, { grade = 'apex', seedsPer = 12, othe
 // the browser loads.
 
 import { gradeFor, GRADE_INDEX } from '../splice/extract.js';
-import { pairingForecast, expressedTraits, incubatorSlots, BREEDING, canBreed, breedPair, hatchEgg } from '../ranch/breeding.js';
+import { pairingForecast, expressedTraits, incubatorSlots, BREEDING, canBreed, breedPair, hatchEgg, variantsOf } from '../ranch/breeding.js';
 
 const BREEDING_MUTATION = BREEDING.mutationChance;
 import {
@@ -1048,8 +1048,8 @@ import { agendaShape } from '../ranch/agenda.js';
 import { newGameState } from '../save/save.js';
 import { ensureRanchSeeded } from '../ranch/ranch.js';
 import { tickWorld } from '../campaign/world.js';
-import { resolveBattle, incomePerDay } from '../campaign/campaign.js';
-import { careAction, careStatus, buyMailOrder, buyPenUpgrade, catalogFor, ageStage, upkeepPerDay, penUpgradeCost } from '../ranch/ranch.js';
+import { resolveBattle, incomePerDay, salvageUnit } from '../campaign/campaign.js';
+import { careAction, careStatus, buyMailOrder, buyPenUpgrade, catalogFor, isNewToDex, ageStage, upkeepPerDay, penUpgradeCost } from '../ranch/ranch.js';
 import { extractAnimal, extractChimera, avgStars } from '../splice/extract.js';
 import { salvagePreview } from '../splice/extract.js';
 import { vaultPressure, surplusParts, renderDown } from '../splice/vault.js';
@@ -1338,18 +1338,66 @@ function walkAct(state, content, now, open, opts = {}) {
   // one above the equilibrium the walker settled at before it could breed,
   // so breeding SUPPLEMENTS the catalog rather than replacing it and every
   // number the earlier phases measured stays comparable.
+  //
+  // R95 — AND IT WAS FOUR BELOW THE HERD THE BUYER FILLS. `WORKING_HERD` is
+  // 20 and this was 14, so the moment the catalog rule topped the pens up
+  // the breeding rule was locked out for the rest of the campaign: measured,
+  // the walk laid between SIX and thirty-two eggs in 180 days with twelve
+  // incubator bays standing empty, and the six variant lines — 34 of the 244
+  // parts, and the only door those parts come through — were rolled for
+  // almost never. Two rules of the same walker disagreeing about how many
+  // animals a ranch holds is not a difficulty setting, it is a bug, and it
+  // was invisible until something wanted the eggs.
   const HERD_CAP = 14;
+  // R95 — and the room a LINE gets, which is the exception the flat cap
+  // could not express. Uncapping breeding outright turned the ranch into an
+  // egg factory: 118 to 447 hatches in 180 days, upkeep doubled, funds
+  // halved and one seed lost five nodes to it. Breeding for its own sake
+  // stays at fourteen. Breeding a line that still owes the Splice-Dex a
+  // variant gets the whole working herd, because that is the one thing in
+  // the game those 34 parts can come from and it needs eggs to find it.
+  const wantsVariant = (a) => {
+    const held = new Set(state.dex.parts ?? []);
+    return variantsOf(a.species, content).some((v) => Object.values(content.parts)
+      .some((p) => p.species === v.id && !held.has(p.id)));
+  };
+  const chasing = state.ranch.stock.some(wantsVariant);
+  // R95 — AND THE SHOPPING LIST OUTRANKS THE INCUBATOR. `breed` runs before
+  // `buy` in this function, so a breeding herd that fills the pens starves
+  // the catalog for the rest of the campaign: one seed finished holding two
+  // variant lines and never bought a jellyfish or a pufferfish, twelve parts
+  // it could have had for $250. An animal you have never held is six parts
+  // for certain; an egg is a one-in-eight chance at six. Keep two pens for
+  // the certain one while the catalog still has something new in it.
+  const shopping = catalogFor(state, content)
+    .some((sp) => isNewToDex(state, content, sp.id) && canSpend(sp.mailOrderPrice));
+  const herdRoom = Math.min(state.ranch.penCapacity, chasing ? WORKING_HERD : HERD_CAP)
+    - (shopping ? 2 : 0);
   if (has('breed') && (state.ranch.eggs ?? []).length < incubatorSlots(state, content)
-      && state.ranch.stock.length + (state.ranch.eggs ?? []).length < Math.min(state.ranch.penCapacity, HERD_CAP)) {
+      && state.ranch.stock.length + (state.ranch.eggs ?? []).length < herdRoom) {
     const stock = state.ranch.stock;
+    // R95 — BREED THE LINE THAT HAS SOMEWHERE TO GO.
+    //
+    // Six species carry a variant and 34 of the 244 parts are on one, and
+    // they arrive by exactly one door: a mutation in the Incubator, at
+    // `mutationChance` × `variantShare` — about one egg in forty-two, and
+    // only when the parents' stock has a variant to become. The walk laid 75
+    // eggs off whichever two animals happened to sit at the front of the
+    // pens, so five of the six lines were never even rolled for.
+    //
+    // A player working the Splice-Dex pairs the ram with the ram. Ordering
+    // the candidates instead of taking the first legal one costs nothing and
+    // is what the screen's own Breeding Pen is for.
+    const pairs = [];
+    for (let i = 0; i < stock.length; i++) {
+      for (let j = i + 1; j < stock.length; j++) pairs.push([stock[i], stock[j]]);
+    }
+    pairs.sort((x, y) => (wantsVariant(y[0]) ? 1 : 0) - (wantsVariant(x[0]) ? 1 : 0));
     let paired = false;
-    for (let i = 0; i < stock.length && !paired; i++) {
-      for (let j = i + 1; j < stock.length && !paired; j++) {
-        if (!canBreed(stock[i], stock[j], state, content, now).ok) continue;
-        if (breedPair(state, stock[i].id, stock[j].id, content, now).ok) {
-          paired = did('breed', { species: stock[i].species });
-        }
-      }
+    for (const [a, b] of pairs) {
+      if (paired) break;
+      if (!canBreed(a, b, state, content, now).ok) continue;
+      if (breedPair(state, a.id, b.id, content, now).ok) paired = did('breed', { species: a.species });
     }
   }
   // A stable, not a warehouse: R25 prices upkeep per chimera, and the first
@@ -1422,7 +1470,25 @@ function walkAct(state, content, now, open, opts = {}) {
       // units `quality` is already measured in. A build has to beat what it
       // replaces by more than the grades that replacing burns.
       const ranked = [...state.chimeras].sort((x, y) => quality(y) - quality(x));
-      const weakest = ranked.slice(3).filter((c) => isFit(c)).pop();
+      // R95 — AND NOT ONE THAT ARRIVED THIS MORNING.
+      //
+      // R91 wrote the argument for the Reorientation Wing: "nobody pays a
+      // fee, waits out a programme and attends its sessions in order to
+      // render the result down the same evening." The chaos vat is the same
+      // sentence with a different door, and it never got the rule. Measured
+      // once this milestone opened the catalogue: 119 gestations in 180
+      // days, every decant scrapped within hours, 200 creatures built to
+      // keep ten and a median chimera life of THIRTY-SIX HOURS — against 23
+      // built and a median of 91 days with the vat switched off. The vat was
+      // not a system being exercised, it was a conveyor belt, and it is
+      // self-limiting the moment its output is allowed to occupy a stall.
+      //
+      // Two days is the floor: a decant settles, fights once, and gets to be
+      // judged on that rather than on the scoreboard the minute it is out of
+      // the tank.
+      const KEEP_DAYS = 2;
+      const weakest = ranked.slice(3)
+        .filter((c) => isFit(c) && now - (c.createdAt ?? 0) >= KEEP_DAYS * WALK_DAY).pop();
       if (full && weakest) {
         const sockets = Object.values(weakest.tokens ?? {}).length;
         const back = salvagePreview(state, weakest, content).tokens.length;
@@ -1628,6 +1694,22 @@ function walkAct(state, content, now, open, opts = {}) {
       }
       continue;
     }
+    // R95 — SALVAGE IS THE ONLY DOOR ENEMY TECH COMES THROUGH.
+    //
+    // The eight `salvage` parts are carried by 23 of the 42 enemies and by
+    // nothing else: no catalog, no egg, no vat. Rehab and salvage are the
+    // two futures §3.6 offers and picking one is the point, so a walker that
+    // always enrols is a walker for which those eight parts do not exist —
+    // which is exactly what seven campaigns measured, eight parts unreached
+    // on every seed. A player dismantles the ones carrying something they
+    // have never seen and reorients the rest.
+    const bayUnit = entry.unit ?? content.enemies[entry.unitId];
+    const carriesNew = (bayUnit?.salvage ?? []).some((pid) => content.parts[pid]
+      && !(state.dex.parts ?? []).includes(pid));
+    if (carriesNew) {
+      if (salvageUnit(state, entry.id, content, now).ok) did('salvage', { unit: entry.unitId });
+      continue;
+    }
     const plan = rehabPlan(state, entry, content);
     if (!plan.possible || !plan.enabled || !canSpend(plan.fee)) continue;
     // R91 — ENROL SOMETHING YOU MEAN TO KEEP. This loop used to enrol every
@@ -1690,8 +1772,12 @@ function walkAct(state, content, now, open, opts = {}) {
       if (trainChimera(state, c.id, now, content).ok) did('train', { who: c.id, why: 'drifting' });
     }
   }
-  if (has('pens') && state.ranch.stock.length >= state.ranch.penCapacity
-      && state.ranch.penCapacity < WORKING_HERD && canSpend(penUpgradeCost(state))) {
+  // R95 — the paddock has to hold the herd AND the eggs it is sitting on.
+  // Capped at `WORKING_HERD` this bought exactly enough room for the animals
+  // and none for the drawers, so a full herd meant no incubation at all.
+  if (has('pens') && state.ranch.stock.length + (state.ranch.eggs ?? []).length >= state.ranch.penCapacity
+      && state.ranch.penCapacity < WORKING_HERD + incubatorSlots(state, content)
+      && canSpend(penUpgradeCost(state))) {
     if (buyPenUpgrade(state).ok) did('pens');
   }
   // R92 — THE RESEQUENCER. R31 built it so an extraction is not forever, and
@@ -1795,7 +1881,19 @@ function walkAct(state, content, now, open, opts = {}) {
       }
     }
   }
-  if (has('buy') && state.ranch.stock.length < Math.min(WORKING_HERD, state.ranch.penCapacity)) {
+  // R95 — AND THE HERD BENDS FOR ANATOMY IT HAS NEVER HELD.
+  //
+  // `WORKING_HERD` is the equilibrium a fighting ranch settles at, and it
+  // was also the shopping limit, so the pens only emptied when something was
+  // extracted: cut the chimera churn and the catalogue stops being read at
+  // all. Measured, the two-day tenure below took part reach from 234 back to
+  // 231 without a single rule about buying changing. A pen for a species you
+  // have never held is not the same purchase as a twenty-first goat, and the
+  // paddock has room for it — `penMaxCapacity` is 40.
+  const shoppingNew = catalogFor(state, content)
+    .some((sp) => isNewToDex(state, content, sp.id) && canSpend(sp.mailOrderPrice));
+  const herdLimit = Math.min(state.ranch.penCapacity, WORKING_HERD + (shoppingNew ? 6 : 0));
+  if (has('buy') && state.ranch.stock.length < herdLimit) {
     // The map says which class answers the strip in front of you (`demand`,
     // R37). A player who reads it buys that; the cheapest of those, or the
     // cheapest of anything when the catalog has none yet.
@@ -1806,7 +1904,62 @@ function walkAct(state, content, now, open, opts = {}) {
     // The best answer you can afford, not the cheapest: a frog and a shark
     // are both Water, and the map's demand line is asking for the shark.
     const answers = affordable.filter((sp) => wanted && (sp.class ?? sp.creatureClass) === wanted);
-    const pickSp = answers.length ? answers[answers.length - 1] : affordable[0];
+    // R95 — AND A SPECIES YOU HAVE NEVER HELD BEATS A SECOND OF ONE YOU HAVE.
+    //
+    // The rule above is a good player's rule and it has a floor: 41 species
+    // share four classes, so once the best affordable Ground animal is in
+    // the pens, every other Ground animal is dominated and the walker stops
+    // buying. Measured over seven 180-day campaigns it bought TWELVE species
+    // while holding 22 of 23 nodes with a median $249,000 in the bank, and
+    // reached a median 118 of 244 parts.
+    //
+    // This is not the walker being tuned to please a gate. It is the walker
+    // doing what the Splice-Dex has asked for since R21 and the catalog now
+    // says out loud on every row: new anatomy is the thing a collector is
+    // buying, and the demand line is still honoured first among equals.
+    // THESE FOUR LISTS ARE AN ORDER, NOT A FILTER, and break 160 is why the
+    // distinction is written down. `fresh` (never held anything of it) is a
+    // SUBSET of `incomplete` (owes the Dex at least one part), so deleting
+    // the never-held branch does not stop the walker collecting — it changes
+    // which collectible it reaches for, and the break aimed at it came back
+    // MISSED. Measured over seven campaigns, the order is worth three parts
+    // of reach: never-held-dearest first lands at 233 of 244, one flat rule
+    // sorted by parts-owed at 231 cheapest-first and 229 dearest-first. A
+    // six-part stranger beats a one-part straggler, and among strangers the
+    // expensive animal is the one behind the late node.
+    const fresh = affordable.filter((sp) => isNewToDex(state, content, sp.id));
+    const freshAnswers = fresh.filter((sp) => wanted && (sp.class ?? sp.creatureClass) === wanted);
+    // R95 — AND A COLLECTOR STILL NEEDS TWO OF SOMETHING.
+    //
+    // Buying one of everything is exactly the wrong herd for the Incubator:
+    // `canBreed` wants two ADULTS OF ONE SPECIES, so a pen with one of each
+    // has no legal pairing at all and the six variant lines are never rolled
+    // for. Measured with the collector rule alone, five of seven seeds bred
+    // on a variant line zero to four times in 180 days.
+    //
+    // So when a line still owes the Dex a variant and the pens hold only one
+    // of it, buy the mate. It is the cheapest thing on this list to want and
+    // the only way those 34 parts exist.
+    const heldOf = (id) => state.ranch.stock.filter((a) => a.species === id).length;
+    const mates = affordable.filter((sp) => heldOf(sp.id) === 1
+      && variantsOf(sp.id, content).some((v) => Object.values(content.parts)
+        .some((p) => p.species === v.id && !(state.dex.parts ?? []).includes(p.id))));
+    // R95 — one extraction is not six parts. An Extractor run yields a
+    // SUBSET of the donor's anatomy, so a species bought once and rendered
+    // once leaves a socket or two on the shelf forever: measured, five of
+    // seven campaigns finished one part short on mantis, scorpion,
+    // rhino_beetle or armadillo — species they owned. Buying a second one is
+    // what a player does about it, and it is the cheapest part in the game.
+    const dexHas = new Set(state.dex.parts ?? []);
+    const incomplete = affordable.filter((sp) => Object.values(content.parts)
+      .some((p) => p.species === sp.id && !dexHas.has(p.id)));
+    const best = (list) => list[list.length - 1];
+    const pickSp = freshAnswers.length ? best(freshAnswers)
+      : fresh.length ? best(fresh)
+      : mates.length ? mates[0]
+      : incomplete.length ? incomplete[0]
+      : answers.length ? best(answers)
+      : affordable[0];
     if (pickSp && buyMailOrder(state, pickSp.id, content, now).ok) did('buy', { species: pickSp.id });
   }
   // R91 — MOVED TO THE END, and it had to be. This sweep used to run first,

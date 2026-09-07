@@ -6,7 +6,7 @@ import { creaturePortrait } from '../render/renderer.js';
 import {
   CARE_ACTIONS, ageStage, nextStage, conditionTier, careStatus, careAction,
   penUpgradeCost, buyPenUpgrade, buyMailOrder, stockGenome, upkeepPerDay,
-  catalogFor, TUNING,
+  catalogFor, isNewToDex, newToDex, TUNING,
 } from './ranch.js';
 import { gradeFor, gradeOutlook, outlookLine } from '../splice/extract.js';
 import { renameCreature } from '../splice/theater.js';
@@ -195,12 +195,14 @@ export function renderRanchScreen(root, ctx) {
     const rows = catalog.filter((sp) => (sp.class ?? null) === cls);
     return {
       label: cls ? `${renderIcon(content.classes[cls].icon)} ${content.classes[cls].name}` : 'Unclassed',
+      // R95 — which of these is anatomy you have never held. Without it a
+      // collector cross-references the Splice-Dex by hand, and nobody does.
       options: rows.map((sp) => ({
         id: sp.id,
         label: sp.name,
         mark: classMark(content, sp.class),
         badge: `<span class="pick-price ${state.funds >= sp.mailOrderPrice ? '' : 'too-rich'}">$${sp.mailOrderPrice}</span>`,
-        sub: `${sp.role} · ${sp.tags.join(', ') || 'no tags'} · upkeep $${sp.upkeepPerDay}/day`,
+        sub: `${isNewToDex(state, content, sp.id) ? 'NEW ANATOMY · ' : ''}${sp.role} · ${sp.tags.join(', ') || 'no tags'} · upkeep $${sp.upkeepPerDay}/day`,
       })),
     };
   });
@@ -298,6 +300,7 @@ export function renderRanchScreen(root, ctx) {
             : '— conquer territory to open the catalog —',
           hint: catalogSpecies
             ? `$${catalogSpecies.mailOrderPrice} · ${catalogSpecies.role} · ${catalogSpecies.tags.join(', ') || 'no tags'}`
+              + (isNewToDex(state, content, catalogSpecies.id) ? ' · never held' : '')
             : '',
           disabled: !catalog.length,
         })}
@@ -598,7 +601,13 @@ export function renderRanchScreen(root, ctx) {
   bindPickers(root, {
     'catalog-pick': () => ({
       title: 'Mail-Order Menagerie',
-      subtitle: `Slush fund $${Math.floor(state.funds)}. Livestock arrives in an unmarked van, as tradition demands.`,
+      // R95 — the count that decides whether the sheet is worth opening.
+      subtitle: (() => {
+        const fresh = newToDex(state, content).length;
+        return `Slush fund $${Math.floor(state.funds)}. `
+          + (fresh ? `${fresh} of these are anatomy you have never held. ` : '')
+          + 'Livestock arrives in an unmarked van, as tradition demands.';
+      })(),
       selectedId: catalogPick,
       groups: catalogGroups,
       onPick: (value) => { catalogPick = value; renderRanchScreen(root, ctx); },

@@ -256,6 +256,22 @@ export function catalogFor(state, content) {
     .sort((a, b) => a.mailOrderPrice - b.mailOrderPrice);
 }
 
+// R95 — have you ever held one of these? `dex.parts` is every part the save
+// has ever had on a shelf, so it is the honest record of what a player has
+// handled. The reasoning and the numbers are in tools/reach.js.
+export function isNewToDex(state, content, speciesId) {
+  const held = new Set(state?.dex?.parts ?? []);
+  const parts = Object.values(content.parts).filter((p) => p.species === speciesId);
+  // No parts at all is a data gap, not a prize.
+  return parts.length > 0 && !parts.some((p) => held.has(p.id));
+}
+
+// The catalog, narrowed to anatomy that has never been on the shelf —
+// cheapest first, like `catalogFor`.
+export function newToDex(state, content) {
+  return catalogFor(state, content).filter((sp) => isNewToDex(state, content, sp.id));
+}
+
 export function buyMailOrder(state, speciesId, content, now) {
   const species = content.species[speciesId];
   if (!species?.mailOrderPrice) return { ok: false, msg: 'Not in the catalog. Conquest required.' };

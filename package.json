@@ -18,6 +18,7 @@
     "stale": "node tools/stale.js",
     "test": "node tools/suite.js",
     "vault": "node tools/vault.js",
-    "coverage": "node tools/coverage.js"
+    "coverage": "node tools/coverage.js",
+    "reach": "node tools/reach.js"
   }
 }

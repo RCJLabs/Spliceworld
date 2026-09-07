@@ -31,6 +31,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadSimContent, campaignWalk } from './sim.js';
+import { walkedSave, primeWalkCache } from './fixtures.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REPORT = process.argv.includes('--report');
@@ -51,7 +52,11 @@ const VERB_FOR_ROW = { settle: 'rush', spar: 'sparring' };
 // days is an anecdote, not coverage; nobody can say anything about combo
 // balance from it, which is the whole thing this milestone exists to fix.
 const SYSTEMS = {
-  combos:      { key: 'combosFound', min: 2, what: 'a combo discovered by splicing the parts that unlock it' },
+  // R95 raises the floor from 2 to 4. R93b set it at 2 because a campaign
+  // could only ASSEMBLE a median nine of the 27; opening the roster took
+  // that to twenty-five, and seed 2026 now finds eight. Half the headroom,
+  // which is this project's ratchet.
+  combos:      { key: 'combosFound', min: 4, what: 'a combo discovered by splicing the parts that unlock it' },
   vat:         { key: 'vats',          what: 'a chaos-vat gestation run to a decant' },
   resequencer: { key: 'resequences',   what: 'a vial grown back into an animal' },
   moveset:     { key: 'movesetTrains', what: 'a chimera retrained onto different move slots' },
@@ -63,6 +68,9 @@ const SYSTEMS = {
 
 const content = loadSimContent();
 const walk = campaignWalk(content, { seed: 2026, days: 180, stopAtDominion: false });
+// R95 — hand it on. `tools/reach.js` runs next on the same suite lane and
+// wants this exact campaign; without this it walked it a second time.
+primeWalkCache(walk.save);
 const fails = [];
 
 // ---- 1. every agenda row ---------------------------------------------
@@ -103,54 +111,68 @@ for (const [name, { key, what, min }] of Object.entries(SYSTEMS)) {
 // ---- 3. the combos a campaign could actually have ---------------------
 //
 // R93b — R92 found a median 2 of 27 combos discovered and queued "at least
-// half the roster" as the target. That target is wrong, and the numbers say
-// why: a 180-day campaign touches a median of 23 OF 41 SPECIES and 109-136
-// of 244 parts, and 25 of the 27 combos need parts from two DIFFERENT
-// species. You cannot discover a combo whose second animal you never
-// acquired, so only a median NINE of 27 are even possible. Half the roster
-// was never reachable, and making it reachable is a species-reach problem —
-// R95's, not this one's.
+// half the roster" as the target. That target was wrong at the time and the
+// numbers said why: a campaign touched a median 23 of 41 species, and 25 of
+// the 27 combos need parts from two DIFFERENT species, so only a median NINE
+// were even assemblable. Half the roster was unreachable, and making it
+// reachable was named as R95's problem.
 //
-// What IS this one's: of the combos a campaign could assemble, it finds 55%
-// (28 of 51 across seven seeds, ranging 22% to 89%). That gap is the
-// Theater's, and it is worth closing — a pair you own and never think to put
-// on the same creature is the reward for collecting it going unclaimed.
-// ACROSS SEEDS, because one campaign's luck is not a content-reach number —
-// and SEVEN of them, because three was not enough either.
+// R95 DID IT, AND THIS RULE HAD TO BE RE-DERIVED BECAUSE OF IT. A campaign
+// now reaches a median 233 of 244 parts and 40 of 41 species, so a median
+// TWENTY-FIVE of the 27 combos are assemblable where nine were. The
+// numerator went up — 28 found across seven seeds becomes 56 — and the
+// denominator went up harder, 51 to 172. The ratio therefore FELL, from 55%
+// to 33%, on a tree that discovers twice as many combos. A ratio whose
+// denominator triples underneath it is not a regression signal.
 //
-// The single-seed version ranged 43% to 100% on the same tree, so this
-// started at three. On three, removing the fix this phase shipped scored
-// HIGHER (63% against 56%) and break 157 came back MISSED: the sample was
-// small enough to invert the result. On fourteen the answer is unambiguous —
-// 69.0% with the fix, 48.1% without — and seven reproduces it at 71.4%
-// against 54.9% for 25 seconds of walk, which the suite can afford.
+// What bounds the numerator now is the Surgery Theater, not the vault: a
+// campaign makes a median FIFTEEN splices, and you cannot discover
+// twenty-five combos in fifteen creatures. That ceiling is structural and
+// belongs to whichever phase widens the Theater, so this floor is set where
+// it can still catch the planner going blind rather than where it would
+// demand something the stable cannot do.
 //
-// The lesson is the one this phase had already half-learned when it went
-// from one seed to three: a content-reach number needs a sample, and
-// "more than one" is not a sample.
+// AND ONE BREAK IS RETIRED HERE, WITH ITS NUMBERS. R93b's break 157 — the
+// planner boosting combos it has ALREADY discovered — was worth 16.5pp on
+// the pre-R95 tree (71.4% against 54.9%) and is worth 5.1pp now (32.6%
+// against 27.5%), with per-seed results that cross over: seed 101 scores 2
+// with the fix and 9 without. The fix is still correct and still shipped;
+// what changed is that when seventeen undiscovered combos are completable,
+// leaving eight discovered ones in the ranking barely moves it. A break the
+// gate can only catch by luck is a break that teaches the battery to lie, so
+// it is removed rather than left to go MISSED. Break 151 — the planner not
+// weighing combos at all — separates 32.6% from 1.2% and stays.
 const COMBO_SEEDS = [2026, 7, 101, 4242, 55, 900, 31];
-// Ratchet between the two measured states, so removing the planner's
-// exclusion of already-discovered combos fails the build.
-const COMBO_REACH = 0.65;
+// Measured 32.6%; break 151 puts it at 1.2%. The floor sits between them and
+// near enough to today's number that drift fails.
+const COMBO_REACH = 0.22;
 {
   let possible = 0;
   let found = 0;
   const per = [];
   for (const seed of COMBO_SEEDS) {
-    const run = seed === 2026 ? walk : campaignWalk(content, { seed, days: 180, stopAtDominion: false });
-    const seen = new Set(run.save.dex.parts ?? []);
+    // R95 — through the FIXTURE CACHE, not a fresh walk. Both numbers this
+    // rule needs live in the save (`dex.parts` and `discoveredCombos`), and
+    // `tools/reach.js` asks about the same seven seeds; sharing the cache
+    // means the pair walks seven campaigns between them instead of fourteen.
+    // Seed 2026 stays the full walk above, because rules 1 and 2 need the
+    // verb tally, which a save does not carry.
+    const save = seed === 2026 ? walk.save : walkedSave({ seed, days: 180 });
+    const seen = new Set(save.dex.parts ?? []);
     const could = Object.values(content.combos ?? {})
       .filter((k) => (k.parts ?? []).length && k.parts.every((pid) => seen.has(pid))).length;
+    const got = (save.discoveredCombos ?? []).length;
     possible += could;
-    found += run.combosFound;
-    per.push(`${seed}: ${run.combosFound}/${could}`);
+    found += got;
+    per.push(`${seed}: ${got}/${could}`);
   }
   const ratio = possible ? found / possible : 1;
   if (REPORT) {
     console.log(`\ncombos: ${found} of ${possible} assemblable across ${COMBO_SEEDS.length} seeds`
       + ` (${Math.round(ratio * 100)}%) — ${per.join(', ')}`);
     console.log(`  the roster is ${Object.keys(content.combos).length}; a campaign reaches`
-      + ' a median 23 of 41 species, so most of it was never assemblable at all (R95)');
+      + ' a median 40 of 41 species since R95, so nearly all of it is assemblable'
+      + ' and the Theater\'s fifteen splices are what bound the count');
   }
   if (ratio < COMBO_REACH) {
     fails.push(`combo reach: ${found} of the ${possible} combos these campaigns could assemble`

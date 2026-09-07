@@ -17,6 +17,15 @@ export const BREEDING = {
   // Of the mutations that fire, this share is a VARIANT SPECIES rather than
   // a stat spike or a trait gene — the rarest branch, and only when the
   // stock has a variant to become (ROADMAP §3.2).
+  //
+  // R95 — THE FLOOR, NOT THE FIGURE. The Incubator track grants a
+  // `variantShare` per level now and this is what a save with no facility
+  // data falls back to. At Tier I it is unchanged; the reason it climbs is
+  // that 34 of the game's 244 parts sit on six variant species and this was
+  // the ONLY door they came through, at 0.08 × 0.3 = one egg in forty-two.
+  // Six lines at one in forty-two is a Splice-Dex section no player finishes,
+  // and the Incubator's own Tier III blurb has been selling itself as where
+  // variants come from since R25 while granting nothing of the kind.
   variantShare: 0.3,
   // Heredity is what turns one lucky egg into a line. A variant parent
   // passes the variant on; two of them almost always do.
@@ -182,7 +191,7 @@ export function breedPair(state, sireId, damId, content, now) {
     const mutable = Object.values(content.traits).filter((t) => t.mutationOnly);
     const candidates = variantsOf(sire.species, content).filter((v) => v.id !== species);
     const roll = rng();
-    if (roll < BREEDING.variantShare && candidates.length) {
+    if (roll < (incubatorGrants(state, content).variantShare ?? BREEDING.variantShare) && candidates.length) {
       const variant = pick(rng, candidates);
       species = variant.id;
       variantNote = null; // the mutation note says it louder
