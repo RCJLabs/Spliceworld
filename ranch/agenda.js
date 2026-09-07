@@ -379,8 +379,14 @@ export const AGENDA = [
       const fresh = afford.filter((sp) => isNewToDex(state, content, sp.id));
       if (fresh.length) {
         const pick = fresh.reduce((a, b) => (a.mailOrderPrice <= b.mailOrderPrice ? a : b));
+        // The pen count stays in BOTH sentences. R120's rule is that a row
+        // reads the save, and the battery's sitting gate proves it by
+        // comparing the row at three animals and at nine: a hint about the
+        // catalogue alone reads the same on both, which is a fixed sentence
+        // wearing a callback.
         return `${fresh.length} species you have never held, from $${pick.mailOrderPrice} `
-          + `(${pick.name}). The Splice-Dex is a shopping list; every one of them is six parts you cannot build with yet.`;
+          + `(${pick.name}), and ${room} pen${room === 1 ? '' : 's'} free. `
+          + 'The Splice-Dex is a shopping list; each of those is six parts you cannot build with yet.';
       }
       return `${afford.length} species you can afford${cheapest ? ` from $${cheapest}` : ''}, ${
         room} pen${room === 1 ? '' : 's'} free. New anatomy is how a losing matchup stops being one.`;
