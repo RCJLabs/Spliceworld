@@ -26,6 +26,8 @@
 //    HOURS: the walk builds 1,834 creatures to keep nine, because parts are
 //    free and dismantling hands them straight back.
 import { walkedSave } from './fixtures.js';
+import { newGameState } from '../save/save.js';
+import { consolidateVault } from '../splice/vault.js';
 import { loadSimContent, campaignWalk } from './sim.js';
 import { MAX_SLOTS } from '../save/save.js';
 
@@ -169,6 +171,42 @@ if (REPORT) {
 if (median <= MEDIAN_LIFE_DAYS) {
   fails.push(`the median chimera lives ${median.toFixed(2)} days (${(median * 24).toFixed(1)}h), not more than ${MEDIAN_LIFE_DAYS}`
     + ` — ${walk.chimerasMade} built to keep ${walk.chimeras}`);
+}
+
+// ---- 4. a legacy save is paid, not pruned -----------------------------
+//
+// `consolidateVault` runs on the world tick rather than in the migration,
+// because capacity comes from the facility data and a migration is handed a
+// save and nothing else. That put it out of reach of `tools/saves.js`, which
+// only migrates — so break 150 went MISSED: a consolidation that DELETED
+// nine thousand tokens instead of selling them passed every gate in the
+// tree. It is asserted here, where the rest of R91's rules live.
+{
+  const legacy = { ...newGameState(), seed: 5, funds: 0 };
+  legacy.facility = { extractor: 4 };
+  const cap = 400;
+  const pids = Object.keys(content.parts).slice(0, 30);
+  // One rare token of an anatomy nobody else has, plus a great many
+  // duplicates: the rule has to keep the rare one and sell the rest.
+  legacy.inventory.parts.push({ id: 'rare', partId: pids[0], grade: 'prismatic', traits: [],
+    donor: { name: 'Only', species: 'x', stars: 5, extractedAt: 0 } });
+  for (let i = 0; i < cap + 600; i++) {
+    legacy.inventory.parts.push({ id: `d${i}`, partId: pids[1 + (i % 29)], grade: 'standard', traits: [],
+      donor: { name: 'Dupe', species: 'x', stars: 2, extractedAt: i } });
+  }
+  const had = legacy.inventory.parts.length;
+  const paid = consolidateVault(legacy, content);
+  const kept = legacy.inventory.parts;
+  if (kept.length > cap) fails.push(`consolidation left ${kept.length} parts, over the capacity of ${cap}`);
+  if (!kept.some((t) => t.id === 'rare')) {
+    fails.push('consolidation sold the only token of an anatomy — it is meant to keep one of everything');
+  }
+  if (!paid || paid.count !== had - kept.length) {
+    fails.push(`consolidation did not account for what it removed (${had - kept.length} gone, ${paid?.count ?? 0} reported)`);
+  }
+  if (!(legacy.funds > 0) || !(paid?.paid > 0)) {
+    fails.push('a save that predates the cap was PRUNED rather than paid — nothing reached the bank');
+  }
 }
 
 // ---- verdict ---------------------------------------------------------
