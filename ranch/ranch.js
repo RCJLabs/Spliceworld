@@ -24,6 +24,14 @@ export const TUNING = {
   startingFunds: 300,
   penStartCapacity: 4,
   penUpgradeSize: 2,
+  // R92 — THE PENS HAVE A LAST ROW. R91 bounded `ranch.stock` "by
+  // penCapacity" and penCapacity was itself unbounded, so the bound was a
+  // sentence rather than a ceiling: the moment R92 taught the walker to run
+  // the Resequencer, a 180-day campaign bought NINETY-SEVEN pen upgrades and
+  // finished holding 199 animals against a stated bound of 40. A cap that
+  // rests on another uncapped number is not a cap, which is exactly what
+  // R91's own gate exists to catch and could not see until the walk grew.
+  penMaxCapacity: 40,
   penUpgradeBase: 250,
   penUpgradeStep: 150,
 };
@@ -201,6 +209,9 @@ export function penUpgradeCost(state) {
 }
 
 export function buyPenUpgrade(state) {
+  if (state.ranch.penCapacity >= TUNING.penMaxCapacity) {
+    return { ok: false, msg: `${TUNING.penMaxCapacity} pens is the whole paddock. The neighbours have started a petition.` };
+  }
   const cost = penUpgradeCost(state);
   if (state.funds < cost) return { ok: false, msg: 'Insufficient slush fund for pen expansion.' };
   state.funds -= cost;

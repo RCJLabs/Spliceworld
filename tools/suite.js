@@ -35,6 +35,9 @@ const JOBS = [
   // about fifteen seconds; it goes on the shortest lane and does not move the
   // wall-clock, because the four smoke shards are what the budget is made of.
   { name: 'vault', file: 'tools/vault.js', env: {} },
+  // R92 — the walk plays every system, and says so. Same shape as `vault`:
+  // one seeded 180-day campaign, about fifteen seconds, on a short lane.
+  { name: 'coverage', file: 'tools/coverage.js', env: {} },
 ];
 
 const picked = only ? JOBS.filter((j) => j.name === only || j.name.startsWith(`${only}:`)) : JOBS;

@@ -48,15 +48,32 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // in rendering, which the cached save does not decide.
 //
 // So the key carries the game too. Cheap and honest: hash every module and
-// data file the walk can reach — everything outside `tools/`, which cannot
-// change what a campaign does.
+// data file the walk can reach.
+//
+// R92 — AND THE WALKER ITSELF. R91 wrote this as "everything outside
+// `tools/`, which cannot change what a campaign does", and `tools/sim.js`
+// IS the campaign: it decides every action the walk takes. Teaching it to
+// run the Resequencer changed the day-180 save completely and the cache
+// handed the height gate the old one, so a screen was measured against a
+// save no version of the game would now produce. The excluded directory was
+// right about the GATES in it and wrong about the two files that build the
+// thing being cached.
+const WALK_FILES = ['sim.js', 'fixtures.js'];
 let stampCache = null;
 function sourceStamp() {
   if (stampCache) return stampCache;
   const h = createHash('sha256');
+  const walkTools = (dir) => {
+    for (const name of WALK_FILES) {
+      try { h.update(name).update(readFileSync(join(dir, name))); } catch { /* not there yet */ }
+    }
+  };
   const walk = (dir) => {
     for (const e of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      if (e.name.startsWith('.') || e.name === 'node_modules' || e.name === 'tools') continue;
+      if (e.name.startsWith('.') || e.name === 'node_modules') continue;
+      // `tools/` holds the gates, which cannot change a campaign — except
+      // for the two files that ARE the campaign and the fixture.
+      if (dir === root && e.name === 'tools') { walkTools(join(dir, e.name)); continue; }
       const p = join(dir, e.name);
       if (e.isDirectory()) walk(p);
       else if (e.name.endsWith('.js') || e.name.endsWith('.json')) h.update(e.name).update(readFileSync(p));
