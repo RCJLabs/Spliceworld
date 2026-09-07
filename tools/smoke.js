@@ -10540,6 +10540,22 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     met.campaign.rivals = { [Object.keys(content.rivals)[0]]: { defeats: 0, losses: 1, lastMetAt: null } };
     const one = dexProgress(met, content).rows.find((r) => r.id === 'rivals');
     assert.equal(one.found, 1, 'a rival you lost to still counts as met');
+
+    // R97 — NO ROW EVER CLAIMS MORE THAN THERE IS TO FIND. The Dex recorded
+    // every generated rival chimera and escapee by its unique id, so a
+    // day-180 save held 253 entries against 42 authored units and the Foes
+    // header read "253/42 logged". The aggregate hid it — `dexProgress`
+    // clamps each row with Math.min on the way into the total, which is a
+    // sign somebody met the overflow and worked around it rather than
+    // fixing it. A counter that can read past its own maximum is not a
+    // counter.
+    const stuffed = { ...newGameState(), seed: 97 };
+    stuffed.dex.enemies = [...Object.keys(content.enemies), 'mantissa_spec1_7', 'aloft_spec2_loose3'];
+    stuffed.dex.beaten = [...stuffed.dex.enemies];
+    for (const row of dexProgress(stuffed, content).rows) {
+      assert.ok(row.found <= row.total,
+        `${row.label} says ${row.found} found of ${row.total} — the Dex cannot have catalogued more than exists`);
+    }
   }
 
   // 4. The only badge a tab earns is "nothing left here". A count of what
