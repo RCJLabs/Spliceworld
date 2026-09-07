@@ -1050,7 +1050,7 @@ import { ensureRanchSeeded } from '../ranch/ranch.js';
 import { tickWorld } from '../campaign/world.js';
 import { resolveBattle, incomePerDay } from '../campaign/campaign.js';
 import { careAction, careStatus, buyMailOrder, buyPenUpgrade, catalogFor, ageStage, upkeepPerDay, penUpgradeCost } from '../ranch/ranch.js';
-import { extractAnimal, extractChimera } from '../splice/extract.js';
+import { extractAnimal, extractChimera, avgStars } from '../splice/extract.js';
 import { salvagePreview } from '../splice/extract.js';
 import { vaultPressure, surplusParts, renderDown } from '../splice/vault.js';
 import { stableRoom } from '../splice/facility.js';
@@ -1134,6 +1134,20 @@ const GRADE_ORDER = ['standard', 'prime', 'apex', 'prismatic'];
 // a twelve-stable, which is what it takes for the Surgery Theater to get a
 // turn at all on a 180-day campaign.
 const THEATER_STALLS = 3;
+
+// R92 — THE HERD THE WALKER WORKS, which is not the paddock it could fill.
+//
+// R120 measured this and wrote the rule into smoke: an uncapped walker fills
+// every pen it can buy, 41 animals, and the upkeep took R86's rushes to
+// zero. Its fix was a buying policy. Teaching the walker to run the
+// Resequencer re-opened the same hole from the other side — a decant needs
+// only pen ROOM, so the herd refilled to 39 against a bound of 20 and the
+// walker bought pens to keep up.
+//
+// So the number belongs in one place rather than in each thing that can add
+// an animal. Twenty is a working stable: enough to breed and graduate from,
+// few enough that every earlier phase's numbers stay comparable.
+const WORKING_HERD = 20;
 
 // One tick of a diligent player. Three rules, stated because a walker's
 // policy is half of every number it reports:
@@ -1260,7 +1274,17 @@ function walkAct(state, content, now, open, opts = {}) {
   // the headroom still ahead of the animal) and Prime is 14–36h from birth.
   // Adults go early only while the stable is still being bootstrapped.
   if (has('graduate') && state.ranch.stock.length > 2) {
+    // R92 — OVER THE WORKING HERD, ANYTHING GROWN GOES. A job's livestock
+    // arrives whether or not there is room (operations.js, deliberately: a
+    // reward that evaporates is worse than no reward), so loot accumulates
+    // in a pen the walker will not expand — measured, the herd reached 68
+    // against a working size of 20 while every animal in it waited to ripen.
+    // A player with too many animals graduates the surplus rather than
+    // feeding it; below the working size they wait for Prime, which is what
+    // the Ranch card's forecast is for.
+    const over = state.ranch.stock.length > WORKING_HERD;
     const ripe = (a) => ['prime', 'elder'].includes(ageStage(a, content, now))
+      || (over && ageStage(a, content, now) !== 'juvenile')
       || (state.chimeras.length < 3 && ageStage(a, content, now) !== 'juvenile');
     const donor = state.ranch.stock.find(ripe);
     if (donor && extractAnimal(state, donor.id, content, now).ok) did('graduate', { species: donor.species });
@@ -1646,7 +1670,7 @@ function walkAct(state, content, now, open, opts = {}) {
     }
   }
   if (has('pens') && state.ranch.stock.length >= state.ranch.penCapacity
-      && canSpend(penUpgradeCost(state))) {
+      && state.ranch.penCapacity < WORKING_HERD && canSpend(penUpgradeCost(state))) {
     if (buyPenUpgrade(state).ok) did('pens');
   }
   // R92 — THE RESEQUENCER. R31 built it so an extraction is not forever, and
@@ -1654,10 +1678,23 @@ function walkAct(state, content, now, open, opts = {}) {
   // vial is worth rested on nothing. A player runs it when they have a good
   // vial, a pen to put the animal in, and the tank standing idle — the same
   // three conditions the Vault screen's own button checks.
-  if (has('graduate') && !activeResequence(state) && state.ranch.stock.length < state.ranch.penCapacity) {
+  if (has('graduate') && !activeResequence(state) && state.ranch.stock.length < WORKING_HERD) {
     // The best sample on the rack, because a vial is spent whether or not it
     // takes and nobody burns their worst one first.
-    const best = [...state.inventory.vials].sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0))[0];
+    // R92 — ONLY A VIAL WORTH GROWING BACK. Run on "the tank is idle and a
+    // pen is free" it fired 296 times in 180 days, which is not a player
+    // choosing to rebuild a donor, it is a conveyor: the herd filled, every
+    // animal in it queued to ripen, and graduation stalled because R91's
+    // vault was full of what the last batch yielded. Three shipped systems
+    // deadlocking each other, and only visible once the walk ran all three.
+    //
+    // A player rebuilds a donor BETTER than what they are already raising.
+    // The herd's own best is the yardstick, so this throttles itself as the
+    // ranch improves and needs no number of its own.
+    const herdBest = state.ranch.stock.reduce((m, a) => Math.max(m, avgStars(a)), 0);
+    const best = [...state.inventory.vials]
+      .filter((v) => (v.stars ?? 0) > herdBest)
+      .sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0))[0];
     const plan = best ? resequencePlan(state, best.id, content, now) : null;
     if (plan?.ok && canSpend(plan.fee ?? 0) && startResequence(state, best.id, content, now).ok) {
       did('resequence', { species: best.species, stars: best.stars });
@@ -1737,7 +1774,7 @@ function walkAct(state, content, now, open, opts = {}) {
       }
     }
   }
-  if (has('buy') && state.ranch.stock.length < state.ranch.penCapacity) {
+  if (has('buy') && state.ranch.stock.length < Math.min(WORKING_HERD, state.ranch.penCapacity)) {
     // The map says which class answers the strip in front of you (`demand`,
     // R37). A player who reads it buys that; the cheapest of those, or the
     // cheapest of anything when the catalog has none yet.
