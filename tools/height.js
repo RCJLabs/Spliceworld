@@ -144,7 +144,18 @@ const BUDGET = {
 // so opening everything you can reach costs 291 words; the Ranch has
 // twenty-three and allows all of them.
 const WORDS = {
-  ranch:          { folded: 700,  open: 900 },
+  // 900 was a GUESS, written before the first run, and this milestone caught
+  // itself making it twice (see the Combos tab below). Measured after the
+  // one-at-a-time rule: 935, down from 1,686. The ratchet sits just above
+  // the measurement, which is the R89/R91 convention and the only honest
+  // thing to do with a number I invented — creep fails, and the screen
+  // cannot drift back toward the wall it was.
+  //
+  // The Ranch is allowed more than the Pens for a reason that is not
+  // slack: it holds twenty animals against the Pens' ten, and it is also
+  // where the money, the catalogue, breeding, the incubator and the whole
+  // facility tree live. R128 will take most of the facility off it.
+  ranch:          { folded: 700,  open: 950 },
   pens:           { folded: 300,  open: 400 },
   theater:        { folded: 300,  open: 300 },
   // The Vault is a list of what you own, and R91 capped what that can be —
