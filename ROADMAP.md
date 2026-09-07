@@ -2138,18 +2138,82 @@ R102; R88–R90 remain.)*
   bought from the press — all in `regions.json`. *Done when: notoriety has a
   cap, a decay and a spend, and the walker's notoriety on day 180 is under
   the cap.*
-- **R95 — 71 parts nobody reaches, and one encounter nobody beats.** Dex
-  parts plateau at **173 of 244** from day 150 to 180 — 71 parts, twelve
-  species' worth, never enter a 180-day campaign. In the standard-grade
-  table the `military` column is **0% across all 68 builds** (kestrel air
-  3%, the clam boss 10%) while the median build wins 23% of encounters.
-  Proposed, medium, content and balance: a **Travelling Menagerie** — a
-  rotating three-species catalog that visits monthly, weighted toward
-  species the Dex lacks (the director already tracks what you have used);
-  and a pass on the wall encounters so each has at least one standard-grade
-  answer, or says in its briefing that it is Apex content. *Done when: a
-  180-day walk sees at least 95% of parts, and every encounter has a
-  standard-grade build that beats it at least half the time.*
+- **R95 — 71 parts nobody reaches, and one encounter nobody beats.** ✅
+  *Shipped — the first half met, the second answered.*
+
+  **BOTH HALVES OF THE ENTRY WERE WRONG, AND THE PROPOSED FIX WAS AIMED AT A
+  CONSTRAINT THAT DOES NOT BIND.**
+
+  *Not 173 of 244.* Re-measured across the coverage gate's seven seeds, a
+  180-day campaign saw a median **118 of 244 parts** — 95 to 153. R91 capped
+  the vault and R92 capped the herd and nothing was watching this number
+  while they did.
+
+  *Not availability.* By day 180 the walk holds **22 or 23 of the map's 23
+  nodes** and finishes on a median **$249,000**, which opens **33 of the 41
+  species and 196 of the 244 parts**. It bought **twelve**. A Travelling
+  Menagerie would rotate a catalogue that is already open and already
+  affordable.
+
+  **WHAT WAS MISSING WAS A REASON.** 41 species share **four classes**, so
+  once the best Ground animal you can afford is in the pens every other
+  Ground animal is dominated, and nothing on the screen said which of them
+  was new. `isNewToDex` reads `dex.parts` — every part the save has ever
+  shelved — and the Mail-Order rows now say NEW ANATOMY, the picker counts
+  them, and the agenda's buy row leads with what you have never held rather
+  than what you can afford.
+
+  **AND THREE DOORS NOBODY WALKED THROUGH.** Buying (the walker took the best
+  answer in the demanded class and stopped: 118 → 200 parts on its own, with
+  no cost to dominion, record or bank). Salvage (eight enemy-tech parts are
+  carried by 23 of the 42 enemies and by nothing else, and rehab and salvage
+  are exclusive, so a walker that always enrolled meant those parts did not
+  exist). Breeding (34 parts sit on six variant species behind a mutation in
+  the Incubator, and two rules of the same walker disagreed about herd size —
+  `HERD_CAP` 14 against `WORKING_HERD` 20 — so the buyer locked the breeder
+  out for the rest of the campaign: six to thirty-two eggs in 180 days with
+  twelve bays empty).
+
+  **ONE GAME CHANGE.** The Incubator's Tier III blurb has sold itself as
+  where variants come from since R25 while granting nothing of the kind: the
+  variant share was a constant 0.3, so a variant was one egg in forty-two at
+  every tier. It is a facility grant now — **0.3 / 0.4 / 0.5 / 0.65** in
+  `data/facility.json`, with the constant left as the no-facility floor.
+
+  **AND ONE REGRESSION THE REACH WORK EXPOSED.** R91's save-weight gate went
+  red at a median chimera life of **thirty-six hours**, 200 creatures built to
+  keep ten. Switching the chaos vat off in a copy answered it in one run: 23
+  built, median 91 days. **119 gestations in 180 days and every decant
+  scrapped within hours.** R91's rule for the Reorientation Wing — nobody
+  waits out a programme to render the result down the same evening — had
+  never been applied to the vat. A creature now gets two days to be worth
+  keeping, which is long enough to settle and fight once, and the vat is
+  self-limiting the moment its output can occupy a stall: 119 gestations
+  become 25 and the median chimera lives **50.8 days**.
+
+  **Result: a median campaign sees 233 of 244 parts (95.5%), every seed 224
+  to 238, 40 of 41 species, dominion still 7 of 7.**
+
+  **THE WALL IS A GRADE WALL, ON PURPOSE.** The entry names one column;
+  measured, **13 of 31 encounters have no standard-grade build that beats
+  them half the time and 10 cannot be won at standard by any of the 68
+  sampled builds** — while at Apex it is **zero and zero**. (`military_response`
+  is not 0% but 33% at its best, one build in 68; the clam boss is 7.4% mean,
+  not 10%; kestrel air 3.4% and the median build 23.7% both hold.) A
+  standard-grade answer to every encounter would delete the ladder the whole
+  husbandry loop climbs, so the Done-when's second clause is answered the way
+  the entry's own text offers: `diagnose` gains **`outgraded`**, which replays
+  the same fight with the team's parts lifted, cheapest grade first, and names
+  the first one that makes it a fight rather than a formality. The string it
+  replaces said "these creatures are not strong enough yet" while the comment
+  directly above it already knew the number.
+
+  `tools/reach.js` holds all three rules: every species reachable by a
+  mechanism that resolves, 95% of the part list across seven seeds, and every
+  wall naming its price. *Done when: a 180-day walk sees at least 95% of
+  parts, and every encounter has a standard-grade build that beats it at
+  least half the time* — first clause met at 95.5%; second answered with
+  numbers, because meeting it as written would flatten the grade ladder.
 - **R96 — Creatures that move.** The renderer holds **0 `<animate>`
   elements**; the stylesheet 11 keyframes; a chimera's temperament (two
   axes), condition, injuries and ten scar types are all *text beside a

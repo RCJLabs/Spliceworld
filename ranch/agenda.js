@@ -360,16 +360,9 @@ export const AGENDA = [
       && state.chimeras.some((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR),
   },
   {
-    // R95 — THE ROW THAT KNOWS WHAT YOU HAVE NEVER HELD.
-    //
-    // Measured over seven 180-day campaigns: by day 180 the walk holds 22 or
-    // 23 of the map's 23 nodes and finishes on a median $249,000, which opens
-    // 33 of the 41 species — and it has bought TWELVE, because 41 species
-    // share four classes and the best Ground animal you can afford dominates
-    // every other Ground animal. Availability was never the constraint. This
-    // row was reporting "33 species you can afford", which is true and is
-    // exactly the wrong number: the one a collector wants is how many of them
-    // are new anatomy.
+    // R95 — the row that knows what you have never held. "33 species you can
+    // afford" is true and is the wrong number; a collector wants to know how
+    // many of them are new anatomy. Measurement in tools/reach.js.
     id: 'buy', kind: 'spend', screen: 'ranch', label: 'Order from the catalog',
     chip: (state, content) => {
       const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);

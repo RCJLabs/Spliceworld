@@ -38,6 +38,11 @@ const JOBS = [
   // R92 — the walk plays every system, and says so. Same shape as `vault`:
   // one seeded 180-day campaign, about fifteen seconds, on a short lane.
   { name: 'coverage', file: 'tools/coverage.js', env: {} },
+  // R95 — can a player get to the content? Seven walks against the fixture
+  // cache plus one sweep of the encounter table at three grades. The walks
+  // are shared with `vault` through `walkedSave`, so the second gate to ask
+  // for a seed pays nothing for it.
+  { name: 'reach', file: 'tools/reach.js', env: {} },
 ];
 
 const picked = only ? JOBS.filter((j) => j.name === only || j.name.startsWith(`${only}:`)) : JOBS;

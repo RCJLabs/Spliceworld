@@ -1,5 +1,84 @@
 # PROGRESS
 
+## Session 130 — R95: the catalogue was open the whole time ✅
+
+R95 proposed a **Travelling Menagerie** for "71 parts nobody reaches" — a
+rotating catalogue weighted toward species the Dex lacks. There is nothing to
+rotate.
+
+### Both numbers in the entry were wrong
+
+| the entry said | measured, seven seeds |
+| --- | --- |
+| Dex parts plateau at 173 of 244 | **median 118**, range 95–153 |
+| `military` is 0% across all 68 builds | **33% at best**, one build in 68 |
+| the clam boss 10% | 7.4% mean |
+| kestrel air 3%, median build 23% | 3.4% and 23.7% — both hold |
+
+### Availability was never the constraint
+
+By day 180 the walk holds **22 or 23 of 23 nodes** and sits on a median
+**$249,000**, which opens **33 of 41 species and 196 of 244 parts**. It bought
+**twelve**. 41 species share **four classes**, so once the best affordable
+Ground animal is in the pens the catalog is a wall of dominated duplicates
+with nothing marking which is new.
+
+### The pull, and three doors
+
+* **`isNewToDex`** — the Mail-Order rows say NEW ANATOMY, the picker counts
+  them, and the buy row leads with what you have never held.
+* **Buying** — the walker preferred the best answer in the demanded class and
+  stopped. Preferring unheld anatomy: 118 → 200, at no cost to dominion,
+  record or bank.
+* **Salvage** — 8 enemy-tech parts come off 23 of the 42 enemies and from
+  nowhere else, and rehab and salvage are exclusive. A walker that always
+  enrolled meant those parts did not exist.
+* **Breeding** — 34 parts on six variant species, and two rules of the same
+  walker disagreed about herd size (`HERD_CAP` 14 vs `WORKING_HERD` 20), so
+  the buyer locked the breeder out: 6–32 eggs in 180 days, twelve bays empty.
+
+### One game change and one regression
+
+The Incubator's Tier III blurb has claimed to be where variants come from
+since R25 while granting nothing of the kind — the share was a flat 0.3, one
+egg in forty-two at every tier. It is a facility grant now (0.3 / 0.4 / 0.5 /
+0.65), the constant left as the no-facility floor.
+
+And the reach work knocked R91's save-weight gate red: **median chimera life
+36 hours, 200 built to keep 10**. Switching the chaos vat off in a copy
+answered it in one run — 23 built, median 91 days. **119 gestations, every
+decant scrapped within hours.** R91 wrote the rule for the Wing and never
+applied it to the vat. Two days' tenure before a creature can be replaced:
+119 gestations become 25, median life **50.8 days**.
+
+**Median part reach 118 → 233 of 244 (48.4% → 95.5%), every seed 224–238,
+40 of 41 species, dominion 7/7.**
+
+### The wall is a grade wall, and now it says so
+
+13 of 31 encounters have no standard-grade build that beats them half the
+time; **10 cannot be won at standard at all**. At Apex it is 0 and 0. Meeting
+the criterion as written would delete the ladder, so the entry's own
+alternative shipped: `diagnose` gains `outgraded`, which replays the fight
+with the team's parts lifted and names the first grade that makes it a fight.
+
+### A break retired, with its numbers
+
+R93b's break 157 was worth **16.5pp** when a campaign could assemble nine of
+the 27 combos. With twenty-five assemblable it is worth **5.1pp** and the
+per-seed results cross over. The fix is still right and still shipped; what
+is gone is the gate's ability to see it. **A break that only goes red by luck
+teaches the battery to lie**, so it is removed rather than left to go MISSED.
+Break 151 separates 32.6% from 1.2% and stays.
+
+### Known issues / next session's first task
+
+* **R97 — the Dex is polluted.** `dex.enemies` holds 244 entries against 42
+  authored units; the Foes tab is the tallest folded screen in the game.
+* Carried: the Vault screen's fold work; the Theater's fifteen splices are
+  now what bound combo discovery, not the vault.
+
+
 ## Session 129 — R93b: half the combo roster was never reachable ✅
 
 R92 queued this with an escape hatch — *half the roster, **or** say with

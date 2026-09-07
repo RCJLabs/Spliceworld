@@ -195,10 +195,8 @@ export function renderRanchScreen(root, ctx) {
     const rows = catalog.filter((sp) => (sp.class ?? null) === cls);
     return {
       label: cls ? `${renderIcon(content.classes[cls].icon)} ${content.classes[cls].name}` : 'Unclassed',
-      // R95 — say which of these is anatomy you have never held. The
-      // catalog is 33 species deep by the second act and four classes wide,
-      // so without this a collector has to cross-reference the Splice-Dex
-      // by hand, one animal at a time, and nobody does.
+      // R95 — which of these is anatomy you have never held. Without it a
+      // collector cross-references the Splice-Dex by hand, and nobody does.
       options: rows.map((sp) => ({
         id: sp.id,
         label: sp.name,
@@ -603,9 +601,7 @@ export function renderRanchScreen(root, ctx) {
   bindPickers(root, {
     'catalog-pick': () => ({
       title: 'Mail-Order Menagerie',
-      // R95 — the count that decides whether the sheet is worth opening. A
-      // second-act catalog is 33 animals deep and the player has handled
-      // most of them; the number they want is how many they have not.
+      // R95 — the count that decides whether the sheet is worth opening.
       subtitle: (() => {
         const fresh = newToDex(state, content).length;
         return `Slush fund $${Math.floor(state.funds)}. `
