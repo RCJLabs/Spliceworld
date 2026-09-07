@@ -43,8 +43,15 @@ const VERB_FOR_ROW = { settle: 'rush', spar: 'sparring' };
 
 // The systems R92 names, and the number in `campaignWalk`'s report that
 // proves each one ran. A system with no number cannot be argued about.
+//
+// `min` defaults to 1 — "did this run at all" is the question for most of
+// them. Combos are the exception and break 152 is why: taking the Theater's
+// reserved stalls away drops a campaign from 17 splices to 10 and from THREE
+// combos to ONE, and a floor of one let that through. One discovery in 180
+// days is an anecdote, not coverage; nobody can say anything about combo
+// balance from it, which is the whole thing this milestone exists to fix.
 const SYSTEMS = {
-  combos:      { key: 'combosFound',   what: 'a combo discovered by splicing the parts that unlock it' },
+  combos:      { key: 'combosFound', min: 2, what: 'a combo discovered by splicing the parts that unlock it' },
   vat:         { key: 'vats',          what: 'a chaos-vat gestation run to a decant' },
   resequencer: { key: 'resequences',   what: 'a vial grown back into an animal' },
   moveset:     { key: 'movesetTrains', what: 'a chimera retrained onto different move slots' },
@@ -78,14 +85,19 @@ for (const row of rows) {
 
 // ---- 2. every named system -------------------------------------------
 if (REPORT) console.log(`\n${Object.keys(SYSTEMS).length} systems:`);
-for (const [name, { key, what }] of Object.entries(SYSTEMS)) {
+for (const [name, { key, what, min }] of Object.entries(SYSTEMS)) {
   const n = walk[key];
   if (n === undefined) {
     fails.push(`\`campaignWalk\` reports no \`${key}\`, so nothing can say whether ${name} ever ran`);
     continue;
   }
-  if (REPORT) console.log(`  ${String(n).padStart(6)}  ${name.padEnd(12)} ${what}`);
-  if (!n) fails.push(`${name}: 180 days and not once — ${what}`);
+  const floor = min ?? 1;
+  if (REPORT) console.log(`  ${String(n).padStart(6)} / ${String(floor).padEnd(3)} ${name.padEnd(12)} ${what}`);
+  if (n < floor) {
+    fails.push(floor === 1
+      ? `${name}: 180 days and not once — ${what}`
+      : `${name}: ${n} in 180 days, under the floor of ${floor} — ${what}`);
+  }
 }
 
 // ---- verdict ---------------------------------------------------------
