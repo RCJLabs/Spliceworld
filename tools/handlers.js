@@ -124,7 +124,15 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     const { s } = labCore({
       now, prefix: 'h',
       facility: { theater: 2, containment: 2, incubator: 2, extractor: 2, scanner: 2, infirmary: 2 },
-      spares: [['goat_head', 'standard'], ['bear_organ', 'prime']],
+      spares: [
+        ['goat_head', 'standard'], ['bear_organ', 'prime'],
+        // R91 — a DUPLICATE, so the Vault paints its render-down button. The
+        // surplus rule is "more than one of an anatomy, worst grade first,
+        // never the last of anything", so a fixture with one of each has
+        // nothing to render and the control cannot be pressed. Two goat
+        // heads is the smallest state in which the button exists at all.
+        ['goat_head', 'standard'],
+      ],
     });
     // A second chimera, hurt, so the Infirmary's Treat button renders.
     const hurt = structuredClone(s.chimeras[0]);

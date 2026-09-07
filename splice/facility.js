@@ -120,6 +120,16 @@ export function theaterFree(state, now) {
   return (state.theater?.busyUntil ?? 0) <= now;
 }
 
+// One sentence for a busy table, beside the clock it describes, so the
+// Theater and the Extractor cannot drift into wording the same refusal two
+// different ways — and so `splice/extract.js` does not have to import the
+// whole Surgery Theater to say it. That import cost 20 KB of the boot
+// budget for one string.
+export function theaterBusyMsg(state, now) {
+  const hours = Math.max(1, Math.ceil(((state.theater?.busyUntil ?? 0) - now) / 3600000));
+  return `The table is still occupied — ${hours}h to go. Surgery is not a thing you do twice at once.`;
+}
+
 export function occupyTheater(state, content, now) {
   state.theater ??= { busyUntil: 0 };
   state.theater.busyUntil = now + theaterBusyFor(state, content);

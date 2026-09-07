@@ -5,7 +5,7 @@
 import { rngStream, pick, pickFresh } from '../util/rng.js';
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { analyze } from './physiology.js';
-import { theaterGrants, stableRoom, theaterFree, occupyTheater } from './facility.js';
+import { theaterGrants, stableRoom, theaterFree, occupyTheater, theaterBusyMsg } from './facility.js';
 import { driftFromTraining } from './temperament.js';
 import { MOVE_SLOTS, activeMoves } from '../battle/moves.js';
 import { defaultMoveset } from '../battle/moves.js';
@@ -104,13 +104,6 @@ export function tokensFor(state, slotTokens, content) {
     .filter(Boolean)
     .map((id) => state.inventory.parts.find((t) => t.id === id))
     .filter((t) => t && (!content || content.parts[t.partId]));
-}
-
-// R91 — one sentence for a busy table, so the Theater and the Pens cannot
-// drift into describing the same clock two different ways.
-export function theaterBusyMsg(state, now) {
-  const hours = Math.max(1, Math.ceil(((state.theater?.busyUntil ?? 0) - now) / 3600000));
-  return `The table is still occupied — ${hours}h to go. Surgery is not a thing you do twice at once.`;
 }
 
 export function spliceChimera(state, frameId, slotTokens, content, now) {

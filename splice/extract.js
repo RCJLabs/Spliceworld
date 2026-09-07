@@ -7,10 +7,8 @@
 import { ageStage } from '../ranch/ranch.js';
 import { STATS } from '../ranch/ranch.js';
 import { rngStream } from '../util/rng.js';
-import { extractorGrants } from './facility.js';
+import { extractorGrants, theaterFree, occupyTheater, theaterBusyMsg } from './facility.js';
 import { admitParts, admitVial, vaultFit } from './vault.js';
-import { theaterFree, occupyTheater } from './facility.js';
-import { theaterBusyMsg } from './theater.js';
 import { speciesOf } from '../data/catalog.js';
 import { GRADES, GRADE_INDEX } from './grades.js';
 
