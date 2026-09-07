@@ -100,6 +100,62 @@ for (const [name, { key, what, min }] of Object.entries(SYSTEMS)) {
   }
 }
 
+// ---- 3. the combos a campaign could actually have ---------------------
+//
+// R93b — R92 found a median 2 of 27 combos discovered and queued "at least
+// half the roster" as the target. That target is wrong, and the numbers say
+// why: a 180-day campaign touches a median of 23 OF 41 SPECIES and 109-136
+// of 244 parts, and 25 of the 27 combos need parts from two DIFFERENT
+// species. You cannot discover a combo whose second animal you never
+// acquired, so only a median NINE of 27 are even possible. Half the roster
+// was never reachable, and making it reachable is a species-reach problem —
+// R95's, not this one's.
+//
+// What IS this one's: of the combos a campaign could assemble, it finds 55%
+// (28 of 51 across seven seeds, ranging 22% to 89%). That gap is the
+// Theater's, and it is worth closing — a pair you own and never think to put
+// on the same creature is the reward for collecting it going unclaimed.
+// ACROSS SEEDS, because one campaign's luck is not a content-reach number:
+// the same tree ranges from 43% to 100% seed by seed, so a single walk would
+// make this gate a coin toss. Three is what the suite's time budget affords.
+const COMBO_SEEDS = [2026, 101, 900];
+// A RATCHET, and it is 0.53 rather than the 0.8 this phase opened with.
+// Measured on these three seeds: 14 of 25, 56%. The 0.8 came from the
+// seven-seed aggregate of 71%, which is a different number about a different
+// sample — quoting it here would have been the same mistake R90 made with a
+// profiler, an honest figure answering a question nobody asked.
+//
+// So the floor sits just under what these three actually do, and moving it
+// UP is the work R93b still owes: the misses are pairs a campaign owns and
+// never thinks to put on one creature.
+const COMBO_REACH = 0.53;
+{
+  let possible = 0;
+  let found = 0;
+  const per = [];
+  for (const seed of COMBO_SEEDS) {
+    const run = seed === 2026 ? walk : campaignWalk(content, { seed, days: 180, stopAtDominion: false });
+    const seen = new Set(run.save.dex.parts ?? []);
+    const could = Object.values(content.combos ?? {})
+      .filter((k) => (k.parts ?? []).length && k.parts.every((pid) => seen.has(pid))).length;
+    possible += could;
+    found += run.combosFound;
+    per.push(`${seed}: ${run.combosFound}/${could}`);
+  }
+  const ratio = possible ? found / possible : 1;
+  if (REPORT) {
+    console.log(`\ncombos: ${found} of ${possible} assemblable across ${COMBO_SEEDS.length} seeds`
+      + ` (${Math.round(ratio * 100)}%) — ${per.join(', ')}`);
+    console.log(`  the roster is ${Object.keys(content.combos).length}; a campaign reaches`
+      + ' a median 23 of 41 species, so most of it was never assemblable at all (R95)');
+  }
+  if (ratio < COMBO_REACH) {
+    fails.push(`combo reach: ${found} of the ${possible} combos these campaigns could assemble`
+      + ` (${Math.round(ratio * 100)}%, under ${Math.round(COMBO_REACH * 100)}%) — ${per.join(', ')}`
+      + ' — a pair you own and never put on one creature is a reward going unclaimed');
+  }
+}
+
 // ---- verdict ---------------------------------------------------------
 if (fails.length) {
   console.error(`\ncoverage ✗  ${fails.length} gap${fails.length === 1 ? '' : 's'}:`);

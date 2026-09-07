@@ -1095,11 +1095,32 @@ function bestSplice(state, content, wanted = null) {
   // above class and grade because a combo IS the reward for collecting the
   // pair, and a build that ignores one it could have is not what a player
   // who read the screen would make.
+  // R93b — ONE COMBO AT A TIME, AND AN UNDISCOVERED ONE.
+  //
+  // R92 boosted every part of every completable combo equally, and the
+  // greedy fill below then took whichever ranked highest — the SAME pair
+  // every time. Measured across seven seeds: 28 of the 51 combos a campaign
+  // could actually assemble, 55%, with the misses being pairs it owned all
+  // along and kept passing over for the one it had already found.
+  //
+  // The fix is narrower than "pick a target": it is to stop boosting the
+  // ones already FOUND. R92 weighed every completable pair including the
+  // combos this campaign had discovered years ago, so the highest-ranked
+  // parts stayed the same and the walker rebuilt the same creature. Aiming
+  // at a single target instead was worse (62%, and one seed fell from 89% to
+  // 22%) because a six-socket frame can carry SEVERAL pairs at once, and
+  // naming one throws the others away.
+  //
+  // So: every pair it could complete and has not yet seen, all boosted, and
+  // the greedy fill below is free to land two or three of them on one
+  // creature — which is what a player reading the Splice-Dex does.
   const ownedIds = new Set(owned.map((t) => t.partId));
+  const found = new Set(state.discoveredCombos ?? []);
   const completable = new Set();
   for (const combo of Object.values(content.combos ?? {})) {
     const need = combo.parts ?? [];
-    if (need.length && need.every((pid) => ownedIds.has(pid))) for (const pid of need) completable.add(pid);
+    if (!need.length || found.has(combo.id)) continue;
+    if (need.every((pid) => ownedIds.has(pid))) for (const pid of need) completable.add(pid);
   }
   const rank = (t) => (completable.has(t.partId) ? 30 : 0)
     + (wanted && content.parts[t.partId]?.classAffinity === wanted ? 10 : 0)
