@@ -17,6 +17,7 @@
     "gen-saves": "node tools/gen-saves.js",
     "stale": "node tools/stale.js",
     "test": "node tools/suite.js",
-    "vault": "node tools/vault.js"
+    "vault": "node tools/vault.js",
+    "coverage": "node tools/coverage.js"
   }
 }
