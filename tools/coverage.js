@@ -115,20 +115,23 @@ for (const [name, { key, what, min }] of Object.entries(SYSTEMS)) {
 // (28 of 51 across seven seeds, ranging 22% to 89%). That gap is the
 // Theater's, and it is worth closing — a pair you own and never think to put
 // on the same creature is the reward for collecting it going unclaimed.
-// ACROSS SEEDS, because one campaign's luck is not a content-reach number:
-// the same tree ranges from 43% to 100% seed by seed, so a single walk would
-// make this gate a coin toss. Three is what the suite's time budget affords.
-const COMBO_SEEDS = [2026, 101, 900];
-// A RATCHET, and it is 0.53 rather than the 0.8 this phase opened with.
-// Measured on these three seeds: 14 of 25, 56%. The 0.8 came from the
-// seven-seed aggregate of 71%, which is a different number about a different
-// sample — quoting it here would have been the same mistake R90 made with a
-// profiler, an honest figure answering a question nobody asked.
+// ACROSS SEEDS, because one campaign's luck is not a content-reach number —
+// and SEVEN of them, because three was not enough either.
 //
-// So the floor sits just under what these three actually do, and moving it
-// UP is the work R93b still owes: the misses are pairs a campaign owns and
-// never thinks to put on one creature.
-const COMBO_REACH = 0.53;
+// The single-seed version ranged 43% to 100% on the same tree, so this
+// started at three. On three, removing the fix this phase shipped scored
+// HIGHER (63% against 56%) and break 157 came back MISSED: the sample was
+// small enough to invert the result. On fourteen the answer is unambiguous —
+// 69.0% with the fix, 48.1% without — and seven reproduces it at 71.4%
+// against 54.9% for 25 seconds of walk, which the suite can afford.
+//
+// The lesson is the one this phase had already half-learned when it went
+// from one seed to three: a content-reach number needs a sample, and
+// "more than one" is not a sample.
+const COMBO_SEEDS = [2026, 7, 101, 4242, 55, 900, 31];
+// Ratchet between the two measured states, so removing the planner's
+// exclusion of already-discovered combos fails the build.
+const COMBO_REACH = 0.65;
 {
   let possible = 0;
   let found = 0;

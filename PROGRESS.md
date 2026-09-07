@@ -1,5 +1,60 @@
 # PROGRESS
 
+## Session 129 — R93b: half the combo roster was never reachable ✅
+
+R92 queued this with an escape hatch — *half the roster, **or** say with
+numbers why that is the wrong target.* It is the wrong target.
+
+### Neither candidate the entry named was the reason
+
+* **Not "never pointed at."** `comboHint` has said *"you have handled both.
+  Put them on the same creature"* since R21.
+* **Not the sockets.** Two named parts on six is not a squeeze — a frame can
+  carry three pairs, which is why one of the fixes below failed.
+
+### It is species reach, and that belongs to R95
+
+25 of the 27 combos need parts from two **different** species. A 180-day
+campaign touches a median of **23 of 41 species**, 109–136 of 244 parts —
+so a median **9 of 27 combos are even possible**. Six more need a variant
+species, bred and never bought. You cannot discover a combo whose second
+animal you never acquired.
+
+### What was in this phase's gift: R92's own bug
+
+The planner boosted every completable pair **including ones already
+discovered**, so the top-ranked parts never changed and the walker rebuilt
+the same creature. Excluding found ones: **48.1% → 69.0%** of assemblable
+combos, over fourteen seeds.
+
+### Two fixes measured and reverted
+
+| tried | result |
+| --- | --- |
+| target one undiscovered combo | **62%** — one seed 89% → 22%; a frame carries several pairs and naming one throws the rest away |
+| protect combo halves from the vat | **63%** — keeps the vault full, which refuses graduations, which starves the economy that makes the parts |
+
+Both recorded rather than deleted: a change that sounds right and measures
+worse is worth more written down.
+
+### And three seeds was not a sample
+
+The gate went one seed → three when the tree measured 43%–100% campaign by
+campaign. On those three, *removing* the fix scored **higher** (63% vs 56%)
+and break 157 came back MISSED. Fourteen seeds settle it. Seven reproduce it
+for 25s of walking, which is what ships.
+
+**A content-reach number needs a sample, and "more than one" is not a
+sample.** I learned that one step short of far enough, twice in one phase.
+
+### Known issues / next session's first task
+
+* **R95 — species reach.** 23 of 41 species, 109–136 of 244 parts. It caps
+  combos at 9 of 27 and is the same root as "71 parts nobody reaches".
+* Carried: `dex.enemies` 244 entries against 42 real ones (R97); the Vault
+  screen's fold work.
+
+
 ## Session 128 — R92: the yardstick plays the whole game ✅
 
 **19 agenda rows and 8 systems, every one exercised and counted.** And then
