@@ -19,15 +19,12 @@
 // either way — how tall can a player make this screen — and it is stable
 // across both designs.
 import { mkdtemp, rm } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { sleep, serve, findChrome, connect } from './cdp.js';
-import { loadSimContent, campaignWalk } from './sim.js';
+import { walkedSave } from './fixtures.js';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const VIEWPORT = 380;
 const REPORT = process.argv.includes('--report');
 
@@ -59,13 +56,13 @@ const BUDGET = {
   'dex:foes':     { folded: 2500,  tallest: 6000 },
 };
 
-const content = loadSimContent();
-const save = campaignWalk(content, { seed: 2026, days: 180, stopAtDominion: false }).save;
+// R90 — one walked-save recipe, in tools/fixtures.js, and cached on disk.
+// The walk costs about fifteen seconds and is deterministic from its seed;
+// the battery runs this gate once per break aimed at it, and was paying for
+// the same fifteen seconds every time. The guides-dismissed rule lives there
+// too, because a fixture that forgets it measures the guide DIALOG.
+const save = await walkedSave();
 save.lastTickAt = Date.now();
-// A day-180 player has met every system, so every first-use field guide has
-// been read. Without this the guide dialog covers the screen and the gate
-// measures the dialog — which is what this measurement did on its first run.
-save.guidesSeen = JSON.parse(readFileSync(join(root, 'data', 'guides.json'), 'utf8')).guides.map((g) => g.id);
 
 const { server, port } = await serve();
 const chrome = findChrome();

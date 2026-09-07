@@ -59,9 +59,79 @@ import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { moveReadout } from '../battle/readout.js';
 import { defaultMoveset, knownMoves } from '../battle/moves.js';
 import { CONTENT_FILES } from '../data/loader.js';
+import { runPool } from './pool.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+
+// R90 — SHARDING, and the reason it is shards rather than a file split.
+//
+// Profiled after the balance sweep was pooled and the gene probe memoised,
+// smoke is 331s and the top sixteen sections are 98% of it. The tail — every
+// other section in the file — is 5.7 SECONDS. That is the number that
+// decides the design: with a tail that small, four processes each running
+// the whole file but only its own share of the heavy blocks cost 4 x 5.7s of
+// duplicated cheap work and parallelise everything that matters.
+//
+// The alternative was moving 17,790 lines into tools/suites/*.test.js, which
+// buys the same concurrency and risks silently dropping assertions in a way
+// no reviewer can eyeball. Every heavy block here is already a braced `{ }`,
+// so guarding one cannot leak a local into the file around it, and UNION
+// COVERAGE IS BY CONSTRUCTION: the tail runs in every shard, each heavy
+// block runs in exactly one, and an unset SW_SHARD runs all of them.
+const SHARD = process.env.SW_SHARD ?? '';
+const SHARD_OF = {
+  // Balanced by measured cost, not by subject: the two 70s blocks get a shard
+  // each, the 40s block shares with the 20s one, and the small ones fill the
+  // remainder. This table is data — rebalancing it costs nothing.
+  contest: 'b',
+  frames: 'c', timers: 'c', orphans: 'c', team: 'c',
+  // R90 — the two that were quietly costing the most. Unguarded, R76's
+  // handler walk (40s) and the director's mercy sweep (17s) ran in EVERY
+  // shard: 228s of the suite's work was those two blocks, four times over.
+  // Measured with SW_SHARD=z, which runs the common path and nothing else.
+  fired: 'c', mercy: 'd', planted: 'a', combos: 'b',
+  // R90 — the last of the common path worth guarding. Measured with
+  // SW_SHARD=z: these four were 17.7s that every shard paid, 53s of the
+  // suite's work for four copies of the same answer.
+  curve: 'a', regions: 'c', preview: 'b', spar: 'd',
+  // Shard c is the balance sweep alone: it is the biggest single block and it
+  // runs SERIALLY here, because four shards on four cores plus a worker pool
+  // inside one of them is oversubscription, not parallelism.
+  wire: 'd', away: 'd',
+};
+// Blocks not named above run in EVERY shard. That is deliberate for anything
+// small: the duplicated cost is four times a few seconds, and a guard is a
+// place to get the union wrong. Only blocks worth more than the duplication
+// are sharded.
+const inShard = (name) => {
+  if (!(name in SHARD_OF)) throw new Error(`unknown shard block "${name}"`);
+  return !SHARD || SHARD_OF[name] === SHARD;
+};
+
+// R90 — THE UNION IS A GATE, NOT A CLAIM. Sharding is only safe if every
+// guarded block runs in exactly one shard and no block is guarded under a
+// name no shard owns. Both failures are silent in the worst way: the suite
+// gets FASTER and greener while testing less, which is the exact shape of
+// bug this milestone could otherwise ship.
+//
+// Read off the source rather than the table, so a block guarded with a name
+// nobody assigned fails here instead of being quietly skipped by all four.
+{
+  const src = readFileSync(join(root, 'tools/smoke.js'), 'utf8');
+  const used = new Set([...src.matchAll(/\binShard\('([a-z0-9]+)'\)/g)].map((m) => m[1]));
+  const owned = new Set(Object.keys(SHARD_OF));
+  const unowned = [...used].filter((n) => !owned.has(n)).sort();
+  assert.deepEqual(unowned, [],
+    `every guarded block is owned by a shard (unowned, so skipped everywhere: ${unowned.join(', ')})`);
+  const unused = [...owned].filter((n) => !used.has(n)).sort();
+  assert.deepEqual(unused, [],
+    `every shard entry guards something (dead entries: ${unused.join(', ')})`);
+  // And the shards are the ones the runner actually spawns.
+  const lanes = new Set(Object.values(SHARD_OF));
+  assert.deepEqual([...lanes].sort(), ['a', 'b', 'c', 'd'],
+    `blocks are spread across the four shards tools/suite.js runs (found: ${[...lanes].sort().join(', ')})`);
+}
 
 const shellScreens = () => shellScreenMap().map((e) => e.screen);
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -627,7 +697,7 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
 // traits entered the pool ONLY through conception mutations, so a dozen of
 // them would each surface about once in two hundred eggs; and the balance
 // harness never loaded traits.json at all, so a gene could not be measured.
-{
+{  // R90 — runs in two shards; the FAMILIES below are what split.
   const traits = Object.values(content.traits);
   assert.ok(traits.length >= 10, `a gene pool needs genes, got ${traits.length}`);
 
@@ -749,7 +819,23 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
       `${enc} is organic, so a gene that only works on the living can show`);
   }
   const GENE_N = 200;
+  // R90 — MEMOISED, and it is not a micro-optimisation. `geneEffect` runs a
+  // plain arm and a gene arm for every build and encounter, and the PLAIN
+  // arm depends on (sp, enc, salt) alone — so it was recomputed identically
+  // for the floor and for all twelve genes: fourteen times per family, each
+  // 200 battles. `geneRun` is a pure function of its four arguments (the
+  // seed is hashed from them, content is constant), so the second call for
+  // the same cell can only produce the number the first one did.
+  const geneMemo = new Map();
   const geneRun = (sp, traitId, enc, salt) => {
+    const key = `${sp}|${traitId}|${enc}|${salt}`;
+    const hit = geneMemo.get(key);
+    if (hit) return hit;
+    const val = geneRunUncached(sp, traitId, enc, salt);
+    geneMemo.set(key, val);
+    return val;
+  };
+  const geneRunUncached = (sp, traitId, enc, salt) => {
     const hero = makeSimChimera('M', SLOTS.map((slot) => `${sp}_${slot}`), 'standard', content);
     if (traitId) {
       for (const tok of Object.values(hero.tokens)) {
@@ -789,7 +875,18 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
     return Math.max(Math.abs((gt - pt) / pt), Math.abs((gh - ph) / ph));
   };
 
-  for (const family of (process.env.GENE_FAMILIES ? process.env.GENE_FAMILIES.split(',') : ['t24', 'q7'])) {
+  // R90 — SPLIT BY FAMILY, for the same reason the balance sweep splits by
+  // pool: left whole this was 73s in one shard and that shard was the
+  // critical path at 195s against a 180s budget, while another finished at
+  // 124s and sat idle. The two families are independent salts — the floor
+  // and the twelve genes are measured separately under each — so a shard
+  // taking one is the same claim, made about half the evidence, and the
+  // union across shards is the pair the single loop checked.
+  const GENE_FAMILY_SHARD = { t24: 'a', q7: 'd' };
+  const families = process.env.GENE_FAMILIES
+    ? process.env.GENE_FAMILIES.split(',')
+    : ['t24', 'q7'].filter((f) => !SHARD || GENE_FAMILY_SHARD[f] === SHARD);
+  for (const family of families) {
     // The control first: no gene either side, only the seed differs. This is
     // what the harness cannot tell apart, and so what a gene has to beat.
     const floor = Math.max(...['A', 'B'].map((salt) => geneEffect(null, family, family + salt)));
@@ -1550,6 +1647,8 @@ function playScriptedPartial(seed, pauseAt, roundTrip = false) {
   return b;
 }
 
+{  // R90 — this block runs in every shard; the SWEEP below is what splits.
+if (inShard('planted')) {
 // --- M4.5: the balance harness runs, and it catches the planted combo.
 // The yardstick is a team of THREE — the balance pass established that tuning
 // against a lone chimera measures the wrong game, and the detector is
@@ -1567,6 +1666,7 @@ assert.ok(
   'the harness catches a deliberately broken combo'
 );
 
+}
 // --- Balance gate: the harness's OWN verdict is now a build failure.
 //
 // The sim reported `L · wolf:organ + tiger:head + …` as an [OP] outlier on
@@ -1602,12 +1702,35 @@ assert.ok(
 // are exactly where a matchup problem shows up first.
 const BALANCE_POOLS = [2026, 77, 1312, 4242, 99, 5];
 const BALANCE_GRADES = ['standard', 'prime', 'apex', 'prismatic'];
-const degenerate = [];
+// R90 — the twenty-four sweeps run in worker threads. Each is seeded and
+// depends on nothing the others produce, so this is the same arithmetic on
+// more cores: measured 125.0s serial against 58.4s pooled, and 24 of 24
+// results byte-identical to the loop it replaces. `runPool` places results
+// by index rather than in completion order, which is what keeps the failure
+// message below naming the same pool and grade every run.
+// R90 — SPLIT ACROSS THE SHARDS, one quarter each. Left whole it was a 125s
+// indivisible block, and a shard holding it was the critical path at 266s
+// against a 180s budget: parallelism cannot help a monolith, it can only
+// help around one. Each shard asserts its own six pools carry no OP flag and
+// the union is all twenty-four, which is the same claim the single loop made.
+const SHARD_ORDER = ['a', 'b', 'c', 'd'];
+const balanceTasks = [];
+let balanceIdx = 0;
 for (const grade of BALANCE_GRADES) {
   for (const poolSeed of BALANCE_POOLS) {
-    const { flags } = runSim(content, { builds: 40, seedsPer: 8, teamSize: 3, grade, seed: poolSeed });
-    for (const f of flags) if (f.kind === 'OP') degenerate.push(`${grade} pool ${poolSeed}: ${f.label} — ${f.why}`);
+    const mine = SHARD_ORDER[balanceIdx++ % SHARD_ORDER.length];
+    if (!SHARD || SHARD === mine) {
+      balanceTasks.push({ builds: 40, seedsPer: 8, teamSize: 3, grade, seed: poolSeed });
+    }
   }
+}
+const degenerate = [];
+{
+  const results = await runPool('sim-worker.js', balanceTasks);
+  results.forEach(({ flags }, i) => {
+    const { grade, seed: poolSeed } = balanceTasks[i];
+    for (const f of flags) if (f.kind === 'OP') degenerate.push(`${grade} pool ${poolSeed}: ${f.label} — ${f.why}`);
+  });
 }
 assert.equal(
   degenerate.length,
@@ -1615,6 +1738,7 @@ assert.equal(
   `no build may dominate the roster:\n  ${degenerate.join('\n  ')}`
 );
 
+if (inShard('combos')) {
 // R18: the enemy roster's class mix IS the class balance. Each player class
 // preys on exactly one enemy class (Ground >> Water >> Air >> Ground), so a
 // roster that is 90% one class — which this one was — turns the triangle
@@ -1698,6 +1822,8 @@ assert.ok(
   `each grade opens the boss further (${ladder.map((x) => Math.round(x * 100) + '%').join(' → ')})`
 );
 
+}
+}
 // --- M5: campaign data coherence.
 const region = Object.values(content.regions)[0];
 // "Conquer everything" means the whole map now, not the first county —
@@ -2338,7 +2464,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 // balance happened to be. `benchTeam` (per node, defaulting per strip)
 // makes it a declaration, the way `benchGrade` already declares the parts
 // a player arrives with.
-{
+if (inShard('team')) {
   const { nodeConditions, nodeClimbability } = await import('../tools/sim.js');
   const regionsList = Object.values(content.regions);
 
@@ -3562,7 +3688,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 
 // --- AI Director (§3.7): the world studies you and answers. The tracking
 // --- data has existed since M0; this is the session it started acting.
-{
+if (inShard('mercy')) {
   const {
     directorProfile, directorRead, directEncounter, directorNews, directorReach, classOfParts,
   } = await import('../campaign/director.js');
@@ -3749,7 +3875,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 // --- stop the shape from silently drifting back. The measured targets come
 // --- from tools/sim.js at a team of THREE — the yardstick that matters,
 // --- because that is what the game hands the player.
-{
+if (inShard('curve')) {
   // 1. The grade ladder is a staircase, not a leap. Prismatic used to be
   //    x2.0 against x1.5 apex, which turned every wall into a formality in
   //    one husbandry tier.
@@ -6757,7 +6883,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
 // The bar is set below what seven independent base seeds actually produce
 // (numbers in the comments), because a gate with no headroom is a gate
 // that fails on a Tuesday for no reason.
-{
+if (inShard('regions')) {
   // Two independent base seeds at sixteen games a cell. Seven seeds were
   // walked by hand while the bars below were set (the observed ranges are
   // quoted at each one); two is what the suite can afford to run every time.
@@ -7296,7 +7422,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
 // Ground-immunity at any mass on any chassis. Worse, no enemy in the game
 // threw a Ground-tagged move at all: `Ground -> Airborne x0` was a one-way
 // rule that only ever punished the player's own 20 Ground moves.
-{
+if (inShard('frames')) {
   const { ARCHETYPES, partsOnFrame, scriptedBattle, nodeConditions } = await import('../tools/sim.js');
   const { theaterGrants } = await import('../splice/facility.js');
   const frames = Object.values(content.frames);
@@ -11133,7 +11259,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // onto a briefing where nothing at all can be pressed. Nothing breaks, but
 // that is a wasted trip, not a wording problem, and "wording gap" was the
 // wrong call.
-{
+if (inShard('spar')) {
   const { renderWarRoomScreen } = await import('../campaign/ui.js');
   const { canSpar } = await import('../campaign/sparring.js');
   const HOUR = 3600000;
@@ -13178,7 +13304,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // it. R50's MODULE_NOTES catches an unclassified module; nothing caught an
 // unreferenced export, a section that never reaches runtime, or a word the
 // tone rules ban outright.
-{
+if (inShard('orphans')) {
   const SKIP_DIRS = new Set(['node_modules', '.git', 'docs']);
   const jsFiles = [];
   const walkJs = (dir) => {
@@ -13968,7 +14094,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // with contests moving the outcome by less than the noise. This block is the
 // corrected measurement, pinned: what the walk does, what it reaches, what
 // moves it, and the one contest dial that shipped.
-{
+if (inShard('contest')) {
   const { campaignWalk: walkCampaign } = await import('./sim.js');
   const { contestTuning: tuningOf, escalationOf: escOf, contestEncounter: convoyOf } = await import('../campaign/contest.js');
   const { AGENDA: AGENDA63, agenda: agenda63 } = await import('../ranch/agenda.js');
@@ -14177,7 +14303,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 }
 
 // --- R64: being away was strictly profitable -------------------------------
-{
+if (inShard('away')) {
   const { tickWorld, elapsedSince } = await import('../campaign/world.js');
   const { tickContests, contestTuning } = await import('../campaign/contest.js');
   const DAY = 24 * HOUR;
@@ -14439,7 +14565,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 }
 
 // --- R65: timers that started when you looked -----------------------------
-{
+if (inShard('timers')) {
   const { tickWorld } = await import('../campaign/world.js');
   const { startOperation, abortOperation, opReady, operationList } = await import('../campaign/operations.js');
   const DAY = 24 * HOUR;
@@ -14735,7 +14861,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 }
 
 // --- R66: the preview lied to the player and to the AI --------------------
-{
+if (inShard('preview')) {
   const { multiHitMean } = await import('../battle/engine.js');
   // A defender that cannot be knocked out and cannot reflect, so the only
   // thing moving its hp is the swing under test.
@@ -17376,7 +17502,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // to raise without reading. What it must catch is the graph RE-growing by a
 // screen — putting `import { renderWarRoomScreen }` back at the top of
 // main.js costs 8 modules at once and blows straight through it.
-{
+if (inShard('wire')) {
   const graphFrom = (entry) => {
     const seen = new Map();
     const walk = (rel) => {
@@ -17509,7 +17635,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // aim at it in seconds instead of after five minutes of balance sims) and
 // widened it to surfaces. The assertions stay here, because this is the file
 // that decides whether the build passes.
-{
+if (inShard('fired')) {
   const walk = await walkSurfaces(content);
   // THE ONE ASSERTION THAT WOULD HAVE CAUGHT ALL OF IT. The walk's result was
   // a function of what ran before it — module state (`warTab`, `dexTab`) is

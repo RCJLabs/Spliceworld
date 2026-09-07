@@ -42,6 +42,7 @@ import { indexContent } from '../render/renderer.js';
 // so both halves arrive together.
 import { CONTENT_FILES } from '../data/loader.js';
 import { newGameState } from '../save/save.js';
+import { labCore } from './fixtures.js';
 import { createAnimal } from '../ranch/ranch.js';
 import { spliceChimera } from '../splice/theater.js';
 import { createBattle } from '../battle/engine.js';
@@ -114,40 +115,17 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // field, an unread job report, dominion for the Gauntlet, and the notoriety
   // that unlocks the first rival.
   const fixture = (now) => {
-    const s = { ...newGameState(), seed: 4242, funds: 20000 };
-    // Every track built out. The Reorientation Wing in particular: without it
-    // the Containment bay renders "needs the Reorientation Wing" instead of
-    // the Rehabilitate button, and the gate cannot press what is not drawn.
-    s.facility = { theater: 2, containment: 2, incubator: 2, extractor: 2, scanner: 2, infirmary: 2 };
-    s.lastTickAt = t0;
-    const grades = { cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'prime',
-      cobra_organ: 'standard', bear_hide: 'standard', goat_tail: 'standard' };
-    for (const [pid, g] of Object.entries(grades)) {
-      s.inventory.parts.push({ id: `h-${pid}`, partId: pid, grade: g,
-        donor: { name: 'Donor', species: pid.split('_')[0], stars: 3, extractedAt: t0 } });
-    }
-    const used = new Set();
-    const slots = Object.fromEntries(Object.keys(grades).map((pid) => {
-      const slot = content.parts[pid].slot;
-      let socket = slot; let n = 2;
-      while (used.has(socket)) socket = `${slot}${n++}`;
-      used.add(socket);
-      return [socket, `h-${pid}`];
-    }));
-    const made = spliceChimera(s, 'M', slots, content, t0);
-    if (!made.ok) throw new Error(`handler-gate fixture splices: ${made.msg}`);
-    for (const [pid, g] of [['goat_head', 'standard'], ['bear_organ', 'prime']]) {
-      s.inventory.parts.push({ id: `h-sp-${pid}`, partId: pid, grade: g,
-        donor: { name: 'Spare', species: pid.split('_')[0], stars: 2, extractedAt: t0 } });
-    }
-    s.ranch = { ...s.ranch, stock: [], penCapacity: 8, animalCount: 0, seeded: true };
-    for (const sp of ['goat', 'bear', 'cobra']) s.ranch.stock.push(createAnimal(s, sp, content, t0));
-    s.dex = { parts: Object.keys(content.parts).slice(0, 8),
-      enemies: Object.keys(content.enemies).slice(0, 4),
-      beaten: Object.keys(content.enemies).slice(0, 2), traits: [], variants: [] };
-    s.discoveredCombos = Object.keys(content.combos).slice(0, 3);
-    s.chimeras[0].settleUntil = t0 - 1000;
-
+    // R90 — the laboratory comes from tools/fixtures.js, which tools/a11y.js
+    // also builds from; the two had the same recipe twice. What stays here is
+    // what only THIS walk needs: every facility track built out (without the
+    // Reorientation Wing the Containment bay renders "needs the Reorientation
+    // Wing" instead of the Rehabilitate button, and the gate cannot press
+    // what is not drawn), and the pile of live state below.
+    const { s } = labCore({
+      now, prefix: 'h',
+      facility: { theater: 2, containment: 2, incubator: 2, extractor: 2, scanner: 2, infirmary: 2 },
+      spares: [['goat_head', 'standard'], ['bear_organ', 'prime']],
+    });
     // A second chimera, hurt, so the Infirmary's Treat button renders.
     const hurt = structuredClone(s.chimeras[0]);
     hurt.id = 'h-hurt';

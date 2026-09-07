@@ -193,9 +193,28 @@ const indexText = `${JSON.stringify({
 }, null, 2)}\n`;
 
 if (CHECK) {
+  // R90 — COMPARE THE CONTENT, NOT THE PROVENANCE. This compared the whole
+  // index byte for byte, and `fromCommit` records which commit each fixture
+  // was taken from — so squash-merging the branch that generated them
+  // rewrote every hash and the gate went red on fixtures that had not
+  // changed at all. A commit id is a fact about history, not about the save;
+  // it stays in the file for a reader and out of the comparison.
   const idxPath = join(out, INDEX);
   if (!existsSync(idxPath)) stale.push(`${INDEX} is not on disk`);
-  else if (readFileSync(idxPath, 'utf8') !== indexText) stale.push(`${INDEX} does not describe the fixtures beside it`);
+  else {
+    let have = null;
+    try { have = JSON.parse(readFileSync(idxPath, 'utf8')); }
+    catch (err) { stale.push(`${INDEX} will not parse: ${err.message}`); }
+    if (have) {
+      const want = JSON.parse(indexText);
+      if (JSON.stringify(have.sha256) !== JSON.stringify(want.sha256)) {
+        stale.push(`${INDEX} records hashes the fixtures beside it do not have`);
+      }
+      if (have.fixtures !== want.fixtures) {
+        stale.push(`${INDEX} counts ${have.fixtures} fixtures and there are ${want.fixtures}`);
+      }
+    }
+  }
   if (stale.length) {
     console.error(`gen-saves ✗  ${stale.length} fixture${stale.length === 1 ? '' : 's'} out of step`);
     for (const s of stale) console.error(`  · ${s}`);
