@@ -35,14 +35,13 @@ const JOBS = [
   // about fifteen seconds; it goes on the shortest lane and does not move the
   // wall-clock, because the four smoke shards are what the budget is made of.
   { name: 'vault', file: 'tools/vault.js', env: {} },
-  // R92 — the walk plays every system, and says so. Same shape as `vault`:
-  // one seeded 180-day campaign, about fifteen seconds, on a short lane.
-  { name: 'coverage', file: 'tools/coverage.js', env: {} },
-  // R95 — can a player get to the content? Seven walks against the fixture
-  // cache plus one sweep of the encounter table at three grades. The walks
-  // are shared with `vault` through `walkedSave`, so the second gate to ask
-  // for a seed pays nothing for it.
-  { name: 'reach', file: 'tools/reach.js', env: {} },
+  // R92 — the walk plays every system, and says so. R95 — and can a player
+  // reach the content? The two gates ask about the SAME seven 180-day
+  // campaigns, so they share one lane and one set of walks: coverage runs
+  // first and fills the walk cache, reach reads it. Split across two lanes
+  // they walked fourteen campaigns for seven and put the suite 16s over
+  // budget.
+  { name: 'walks', files: ['tools/coverage.js', 'tools/reach.js'], env: {} },
 ];
 
 const picked = only ? JOBS.filter((j) => j.name === only || j.name.startsWith(`${only}:`)) : JOBS;
@@ -59,14 +58,33 @@ const LANES = Math.max(1, availableParallelism());
 const started = Date.now();
 const queue = [...picked];
 const results = [];
-const runOne = (job) => new Promise((resolve) => {
-  const t0 = Date.now();
-  const p = spawn('node', [job.file], { cwd: root, env: { ...process.env, ...job.env } });
+// R95 — a job may be SEVERAL tools, run one after another on one lane. Two
+// gates that walk the same campaigns should walk them once: `coverage` and
+// `reach` both ask about the same seven 180-day seeds, and in parallel they
+// each paid for their own set — 14 walks for 7 campaigns, and the suite went
+// 196s against a 180s budget. Sequenced on one lane, the second reads the
+// walk cache the first just wrote and costs almost nothing.
+const spawnOne = (file, env) => new Promise((resolve) => {
+  const p = spawn('node', [file], { cwd: root, env: { ...process.env, ...env } });
   let out = '';
   p.stdout.on('data', (d) => { out += d; });
   p.stderr.on('data', (d) => { out += d; });
-  p.on('close', (code) => resolve({ ...job, code, ms: Date.now() - t0, out }));
+  p.on('close', (code) => resolve({ code, out }));
 });
+const runOne = async (job) => {
+  const t0 = Date.now();
+  let out = '';
+  let code = 0;
+  for (const file of job.files ?? [job.file]) {
+    const r = await spawnOne(file, job.env);
+    out += r.out;
+    // Every tool in the job runs even when an earlier one fails: a job that
+    // stopped at the first red would hide the second gate's verdict, and the
+    // whole point of the suite is that one run says everything.
+    if (r.code !== 0) code = r.code;
+  }
+  return { ...job, code, ms: Date.now() - t0, out };
+};
 await Promise.all(Array.from({ length: Math.min(LANES, queue.length) }, async () => {
   // Longest first, so a big job never starts last and leaves cores idle
   // behind it. The shards are ordered ahead of the small tools by cost.

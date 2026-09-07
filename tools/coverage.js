@@ -31,6 +31,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadSimContent, campaignWalk } from './sim.js';
+import { walkedSave } from './fixtures.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REPORT = process.argv.includes('--report');
@@ -147,13 +148,20 @@ const COMBO_REACH = 0.22;
   let found = 0;
   const per = [];
   for (const seed of COMBO_SEEDS) {
-    const run = seed === 2026 ? walk : campaignWalk(content, { seed, days: 180, stopAtDominion: false });
-    const seen = new Set(run.save.dex.parts ?? []);
+    // R95 — through the FIXTURE CACHE, not a fresh walk. Both numbers this
+    // rule needs live in the save (`dex.parts` and `discoveredCombos`), and
+    // `tools/reach.js` asks about the same seven seeds; sharing the cache
+    // means the pair walks seven campaigns between them instead of fourteen.
+    // Seed 2026 stays the full walk above, because rules 1 and 2 need the
+    // verb tally, which a save does not carry.
+    const save = seed === 2026 ? walk.save : walkedSave({ seed, days: 180 });
+    const seen = new Set(save.dex.parts ?? []);
     const could = Object.values(content.combos ?? {})
       .filter((k) => (k.parts ?? []).length && k.parts.every((pid) => seen.has(pid))).length;
+    const got = (save.discoveredCombos ?? []).length;
     possible += could;
-    found += run.combosFound;
-    per.push(`${seed}: ${run.combosFound}/${could}`);
+    found += got;
+    per.push(`${seed}: ${got}/${could}`);
   }
   const ratio = possible ? found / possible : 1;
   if (REPORT) {
