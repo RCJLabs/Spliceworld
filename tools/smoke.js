@@ -10555,8 +10555,17 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // sign somebody met the overflow and worked around it rather than
     // fixing it. A counter that can read past its own maximum is not a
     // counter.
+    // Enough generated ids to pass the roll, which is the shape of the real
+    // bug: a day-180 save held 253 against a roll of 47. Two would not have
+    // done it — the roll is the authored roster PLUS the labs, so a fixture
+    // that overflowed the old 42 sits comfortably inside the new 47 and the
+    // assertion would pass while the counter was still broken.
     const stuffed = { ...newGameState(), seed: 97 };
-    stuffed.dex.enemies = [...Object.keys(content.enemies), 'mantissa_spec1_7', 'aloft_spec2_loose3'];
+    const aLab = Object.keys(content.rivals)[0];
+    stuffed.dex.enemies = [
+      ...Object.keys(content.enemies),
+      ...Array.from({ length: 12 }, (_, i) => `${aLab}_spec${i}_${i}`),
+    ];
     stuffed.dex.beaten = [...stuffed.dex.enemies];
     for (const row of dexProgress(stuffed, content).rows) {
       assert.ok(row.found <= row.total,

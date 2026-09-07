@@ -1911,8 +1911,7 @@ const BREAKS = [
     // build does not have rather than inventing a page for it.
     n: 168, gate: UNION, name: 'a retired lab is filed anyway, under a key no screen can resolve',
     file: 'campaign/rivals.js',
-    anchor: `  // Not authored and not a lab's — a build that has retired the rival, or an
-  // id from somewhere nobody has thought of. Better absent than miscounted.
+    anchor: `  // A retired rival, or an id nobody has thought of. Absent beats miscounted.
   return null;`,
     to: '  return unitId;',
   },
