@@ -2208,6 +2208,13 @@ R102; R88–R90 remain.)*
   replaces said "these creatures are not strong enough yet" while the comment
   directly above it already knew the number.
 
+  **AND ONE COST, STATED.** A richer save is a taller screen: the Ranch is
+  3,572px shut (4.6 phone screens before anything is opened) because the
+  folded card is one row per animal and the walk now keeps twenty, and the
+  Dex's Combos tab has no fold at all. Both budgets are re-ratcheted rather
+  than fixed — **folding the Combos tab is owed alongside the Vault's**, and
+  paginating the Ranch has been owed since R46.
+
   `tools/reach.js` holds all three rules: every species reachable by a
   mechanism that resolves, 95% of the part list across seven seeds, and every
   wall naming its price. *Done when: a 180-day walk sees at least 95% of

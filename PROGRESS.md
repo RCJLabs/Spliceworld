@@ -75,8 +75,13 @@ Break 151 separates 32.6% from 1.2% and stays.
 
 * **R97 — the Dex is polluted.** `dex.enemies` holds 244 entries against 42
   authored units; the Foes tab is the tallest folded screen in the game.
-* Carried: the Vault screen's fold work; the Theater's fifteen splices are
-  now what bound combo discovery, not the vault.
+* **The Ranch is 3,572px shut** — 4.6 phone screens before anything is
+  opened, one folded row per animal, and it grew because the walk now keeps
+  twenty. Ratcheted, not fixed; paginating it has been owed since R46.
+* Carried: the Vault screen's fold work, and now the Dex's Combos tab, which
+  has no fold at all and grew from 2 discoveries to 8.
+* The Theater's fifteen splices are what bound combo discovery now, not the
+  vault: 25 of 27 are assemblable and a campaign builds fifteen creatures.
 
 
 ## Session 129 — R93b: half the combo roster was never reachable ✅

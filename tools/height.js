@@ -54,7 +54,22 @@ const BUDGET = {
   // the vault changed what a campaign does with its pens, so the number
   // moved by exactly one animal. The Ranch is still one card per animal and
   // still 16 phone screens; that is R46's shape and nobody has fixed it.
-  ranch:          { folded: 3400,  tallest: 12700 },
+  //
+  // R95 RE-RATCHETS AGAIN, AND THIS TIME BOTH HALVES: 3400 -> 3650 shut,
+  // measured at 3572, and 12700 -> 14800 open, measured at 14537. Same cause
+  // as R91's and larger: a campaign that is still collecting keeps TWENTY
+  // animals where it kept seventeen, because a pen for a species you have
+  // never held is worth buying and the Dex is not finished until day 180.
+  // Three more animals is three more cards open and three more folded rows
+  // shut, which is exactly the arithmetic above and nothing else.
+  //
+  // The shut number is the one that should worry somebody: 3,572px is 4.6
+  // phone screens before the player opens anything, and it grows with the
+  // herd because the folded card is per-animal. That is R46's shape, it has
+  // been the tallest screen in the game since R89 measured it, and paginating
+  // the Ranch is the fix nobody has written. Ratcheting is not fixing it —
+  // it is refusing to let it creep any further while it waits.
+  ranch:          { folded: 3650,  tallest: 14800 },
   pens:           { folded: 2000,  tallest: 4000 },   // R89's criterion
   theater:        { folded: 1900,  tallest: 1900 },
   // R92 — THE VAULT'S HEIGHT IS DERIVED, NOT RATCHETED.
@@ -74,10 +89,18 @@ const BUDGET = {
   //
   // 68px per row measured on the day-180 save (31,992px across 473 rows),
   // with a tenth for the chrome the species bays put around them.
-  vault:          { folded: 1900,  tallest: Math.round(VAULT_ROWS * 68 * 1.1) },
+  // R95: 1900 -> 2400 shut, measured at 2346. The shut Vault summarises what
+  // is on the shelf, and a campaign that reaches 233 of 244 parts has more
+  // kinds of thing to summarise than one that reached 118. The open height
+  // is derived and did not move.
+  vault:          { folded: 2400,  tallest: Math.round(VAULT_ROWS * 68 * 1.1) },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
-  'dex:combos':   { folded: 1900,  tallest: 1900 },
+  // R95: 1900 -> 2350, measured at 2293. The tab lists what you have found,
+  // and a campaign now finds a median EIGHT combos where it found two — the
+  // milestone's own success arriving on a screen with no fold. Folding the
+  // Combos tab is owed alongside the Vault's.
+  'dex:combos':   { folded: 2350,  tallest: 2350 },
   'dex:genes':    { folded: 1100,  tallest: 1100 },
   // R89's criterion names 2,500 for the Foes tab, and that is a budget on
   // how it PRESENTS: 4,113px shut was five and a half screens of reference
