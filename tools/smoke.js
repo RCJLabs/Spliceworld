@@ -109,6 +109,30 @@ const inShard = (name) => {
   return !SHARD || SHARD_OF[name] === SHARD;
 };
 
+// R90 — THE UNION IS A GATE, NOT A CLAIM. Sharding is only safe if every
+// guarded block runs in exactly one shard and no block is guarded under a
+// name no shard owns. Both failures are silent in the worst way: the suite
+// gets FASTER and greener while testing less, which is the exact shape of
+// bug this milestone could otherwise ship.
+//
+// Read off the source rather than the table, so a block guarded with a name
+// nobody assigned fails here instead of being quietly skipped by all four.
+{
+  const src = readFileSync(join(root, 'tools/smoke.js'), 'utf8');
+  const used = new Set([...src.matchAll(/\binShard\('([a-z0-9]+)'\)/g)].map((m) => m[1]));
+  const owned = new Set(Object.keys(SHARD_OF));
+  const unowned = [...used].filter((n) => !owned.has(n)).sort();
+  assert.deepEqual(unowned, [],
+    `every guarded block is owned by a shard (unowned, so skipped everywhere: ${unowned.join(', ')})`);
+  const unused = [...owned].filter((n) => !used.has(n)).sort();
+  assert.deepEqual(unused, [],
+    `every shard entry guards something (dead entries: ${unused.join(', ')})`);
+  // And the shards are the ones the runner actually spawns.
+  const lanes = new Set(Object.values(SHARD_OF));
+  assert.deepEqual([...lanes].sort(), ['a', 'b', 'c', 'd'],
+    `blocks are spread across the four shards tools/suite.js runs (found: ${[...lanes].sort().join(', ')})`);
+}
+
 const shellScreens = () => shellScreenMap().map((e) => e.screen);
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 

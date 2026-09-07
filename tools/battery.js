@@ -230,6 +230,18 @@ const STALE = ['node', 'tools/stale.js'];
 // ten chimeras and it was 16,657 for nine. A budget nobody runs is a note.
 const HEIGHT = ['node', 'tools/height.js'];
 
+// R90 — THE SUITE ITSELF, UNDER ITS OWN BUDGET. npm test was 621s; it is
+// 172s. Most of that came from deleting duplicated work rather than from
+// parallelism, and both are easy to undo by accident: an unguarded block
+// runs in all four shards, and a guard naming a shard nobody owns runs in
+// none. The second failure is the dangerous one — the suite gets faster and
+// greener while testing less.
+const SUITE = ['node', 'tools/suite.js'];
+
+// The union gate lives inside smoke and needs no heavy block to run, so the
+// battery can aim at it in seconds rather than three minutes.
+const UNION = ['node', 'tools/smoke.js'];
+
 // R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
 // "claws are on backwards". They were. Every part is drawn in a local space
 // where the head faces +x (frames.json _doc), and the `paw` archetype built
@@ -2310,6 +2322,18 @@ const BREAKS = [
     to: '      ${false && fitToFight(state, ctx.now()).length > TEAM_CAP ? `',
   },
   {
+    n: 141, gate: UNION, name: 'a block is guarded under a shard name nobody owns, so it runs in none of them and the suite gets faster by testing less',
+    file: 'tools/smoke.js',
+    anchor: "if (inShard('fired')) {",
+    to: "if (inShard('fired2')) {",
+  },
+  {
+    n: 142, gate: UNION, name: 'a shard entry loses its block, so the table promises coverage the file no longer has',
+    file: 'tools/smoke.js',
+    anchor: "  curve: 'a', regions: 'c', preview: 'b', spar: 'd',",
+    to: "  curve: 'a', regions: 'c', preview: 'b', spar: 'd', ghost: 'a',",
+  },
+  {
     n: 139, gate: HEIGHT, name: 'the creature cards stop being exclusive, so nine open at once and the Pens is twenty-one screens again',
     file: 'splice/pens-ui.js',
     anchor: "{ exclusive: state.chimeras.map((ch) => `pen-${ch.id}`) });",
@@ -2587,7 +2611,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2615,6 +2639,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === GENSAVES ? 'every save fixture is what that version of the game actually wrote'
                 : gate === STALE ? 'a real old save still opens the game in a browser, quietly'
                 : gate === HEIGHT ? 'no screen outgrows its budget on a day-180 save'
+                : gate === UNION ? 'every sharded block is owned by exactly one shard'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;

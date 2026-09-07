@@ -1,5 +1,70 @@
 # PROGRESS
 
+## Session 126 — R90: the suite runs in under three minutes ✅
+
+**621s → 172.2s**, and only ~50 of those 449 seconds came from parallelism.
+
+### The entry's own mechanism could not have worked
+
+"Split smoke into suites and run them in parallel workers" bounds wall-clock
+by the largest suite, and the largest block was **242s against a 180s bar**.
+No partitioning of a file fixes a block already over budget. What worked was
+making the blocks smaller.
+
+### Two kinds of waste, both invisible to a profiler
+
+* The gene probe recomputed its **control fourteen times per family** — the
+  plain arm depends on (species, encounter, salt) alone, and `geneRun` is
+  pure in its four arguments, so the repeats could only return what the first
+  call returned.
+* Once sharding existed, eight blocks were computed **four times over for one
+  answer**: R76's handler walk (40.3s), the mercy sweep (17.0s), the balance
+  combo-by-grade check (13.9s), the difficulty curve (11.6s), four smaller.
+
+Roughly **330s of duplicated CPU** removed without losing an assertion.
+
+### The lesson worth keeping
+
+**A profiler answers the wrong question when work is duplicated across
+processes.** Section timings say where ONE run spends its time. They say
+nothing about what a SECOND process must repeat. I spent two suite runs
+optimising the first quantity while the second bounded the result.
+
+`SW_SHARD=z` runs the common path and nothing else. It said **92.7s** where
+my profiler's tail had implied six. It should have been the first instrument
+built, not the fifth.
+
+### Five suite runs, five different problems
+
+| run | wall | work | what was actually wrong |
+| --- | --- | --- | --- |
+| 1 | 266.6s | 878s | a 125s indivisible monolith; 8 jobs on 4 cores |
+| 2 | 259.6s | 944s | 92.7s duplicated per shard |
+| 3 | 195.1s | 722s | one shard 71s heavier than another |
+| 4 | 190.7s | 735s | at the arithmetic floor — 735s/4 cores = 184s |
+| 5 | **172.2s** | 669s | ✓ |
+
+Every one of those was a different diagnosis, and none was visible from
+reading the code.
+
+### Numbers
+
+| | before | after |
+| --- | --- | --- |
+| `npm test` | 621s | **172.2s** |
+| smoke, sequential | 597.4s | 335.4s |
+| common path per shard | 92.7s | **10.9s** |
+| fixture recipes | 2 files | **1** |
+
+### Known issues / next session's first task
+
+* `tools/suite.js` enforces its own 180s budget; the margin is 8s. The next
+  heavy block added will need a shard, and the union gate will not catch
+  slowness — only lost coverage.
+* Ranch and Vault heights are ratcheted, not fixed (R91, R104 own them).
+* R125's Theater tier preview is still proven at engine level only.
+
+
 ## Session 125 — R89: the Pens at scale ✅
 
 ### The entry understated its own problem

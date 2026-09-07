@@ -1826,7 +1826,58 @@ R102; R88–R90 remain.)*
   adds a paragraph fails the build instead of the phone. *Done when: the
   day-180 save's expanded Pens is under 4,000 px and the Foes tab under
   2,500, gated.*
-- **R90 — The test suite gets a test runner.** `tools/smoke.js` is **16,708
+- **R90 — The test suite gets a test runner.** ✅ *Shipped.*
+
+  **`npm test` went from 621s to 172s** — and only about 50 of those 449
+  seconds came from parallelism. The rest was work that never needed to
+  happen, which is not what this entry expected to find.
+
+  **Its proposed mechanism could not have met its own criterion.** "Split
+  smoke into `tools/suites/*.test.js` and run them in parallel workers"
+  bounds wall-clock below by the largest suite, and the largest single block
+  was **242s against a 180s bar**. No partitioning of a file fixes a block
+  that is already over budget. What worked was making the blocks smaller.
+
+  **Two kinds of waste, both invisible to a profiler.** The gene probe ran a
+  plain arm and a gene arm per build and encounter, and the plain arm depends
+  on `(species, encounter, salt)` alone — so it was recomputed identically
+  **fourteen times per family**, 200 battles each. `geneRun` is pure in its
+  four arguments, so the repeats could only return what the first call
+  returned. And once sharding existed, eight blocks were being computed
+  **four times over for one answer**: R76's handler walk (40.3s), the
+  director's mercy sweep (17.0s), the balance combo-by-grade check (13.9s),
+  the difficulty curve (11.6s) and four smaller ones. Roughly **330s of
+  duplicated CPU**, removed without losing an assertion.
+
+  **A profiler answers the wrong question when work is duplicated across
+  processes.** Section timings say where ONE run spends its time; they say
+  nothing about what a SECOND process must repeat. Two suite runs were spent
+  optimising the first quantity while the second bounded the result. The
+  honest instrument is `SW_SHARD=z`, which runs the common path and nothing
+  else — it reported **92.7s** where the profiler's tail had implied six, and
+  it should have been the first thing built rather than the fifth.
+
+  **Shards, not a file split.** Each of the four is the whole of `smoke.js`
+  with only its share of the heavy blocks enabled, so union coverage is by
+  construction — the common path runs in every shard, each guarded block in
+  exactly one, an unset `SW_SHARD` runs all. Moving 17,790 lines into
+  separate files buys the same concurrency and risks dropping assertions
+  where no reviewer would see it. The balance sweep splits by pool and the
+  gene probe by family, because a shard holding an indivisible 125s block was
+  the critical path at 266s: parallelism cannot help a monolith, only work
+  around one.
+
+  *Done when: `npm test` runs every current assertion in under three minutes
+  wall-clock on four cores, and no fixture recipe appears in more than one
+  file.* ✅ — **172.2s on four cores** (669s of work across 8 concurrent
+  jobs), enforced by `tools/suite.js` itself rather than reported; and
+  `tools/fixtures.js` holds the laboratory both walking gates build from,
+  verified behaviour-preserving (a11y 79 controls across 29 views, handlers
+  1,588 across 69 surfaces — both unchanged). Union coverage is a gate too:
+  breaks 141 and 142 hold a block guarded under a name no shard owns, and a
+  shard entry whose block has gone. Both failures make the suite faster and
+  greener while testing less, which is the one bug this milestone could
+  otherwise have shipped. `tools/smoke.js` is **16,708
   lines in one file** and takes **twelve minutes**; the battery about an hour.
   R86 burned four full smoke cycles on single-assertion fixes (a missing roll
   entry, a chip's control marker, a hint's list membership, the eager cap).
