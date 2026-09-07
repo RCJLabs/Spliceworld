@@ -78,6 +78,17 @@ const BOUNDS = {
   // Per-record lists. These sit inside an already-bounded array, so the cap
   // that matters is the shape of one record, not how many records there are.
   'chimeras[].moveset':   { max: 4,  by: "R30's four move slots" },
+  // A bay holding a rival's chimera carries the GENERATED unit record — the
+  // one `unitFromGenome` built, because that creature has no entry in
+  // enemies.json to look up. Its lists are the shape of one body, so they
+  // are bounded by the anatomy rather than by anything a campaign
+  // accumulates. The gate found these the first time a walk ended with a
+  // generated unit in bay zero, which is the declare-yourself rule working
+  // on a shape nobody had looked at.
+  'campaign.containment[].unit.moves':         { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },
+  'campaign.containment[].unit.salvage':       { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
+  'campaign.containment[].unit.salvageGrades': { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
+  'campaign.containment[].unit.tags':          { max: 8,  by: 'a body is a handful of tags' },
   'chimeras[].scars':     { max: 12, by: 'one per socket, twice over' },
   'inventory.parts[].traits':  { max: 4, by: 'a part carries at most a handful' },
   'ranch.stock[].traits':      { max: 4, by: 'an animal carries at most a handful' },
@@ -85,6 +96,12 @@ const BOUNDS = {
 // A token on a chimera is `tokens.<socket>.traits`; the socket names come
 // from the frame, so they are enumerated rather than listed.
 const TOKEN_TRAITS = /^chimeras\[\]\.tokens\.[a-z0-9]+\.traits$/;
+
+// The widest frame in the data decides how many sockets one body can have,
+// derived rather than typed so a frame gaining a bay does not silently make
+// this bound wrong (R61).
+const SOCKET_MAX = (c) => Math.max(...Object.values(c.frames ?? {})
+  .map((f) => (f.slots ?? []).length || 8), 8);
 
 const bytes = (v) => Buffer.byteLength(JSON.stringify(v), 'utf8');
 const fmt = (b) => (b / KB).toFixed(1) + ' KB';

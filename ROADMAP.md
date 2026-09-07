@@ -1956,18 +1956,18 @@ R102; R88–R90 remain.)*
 
   *Done when: the 180-day save is under 200 KB, every unbounded array is
   bounded and gated, and the walker's median chimera life exceeds five days.*
-  ✅ — **144.6 KB** at day 180 (578 KB across four slots, against 5 MB); **34
+  ✅ — **147.6 KB** at day 180 (591 KB across four slots, against 5 MB); **38
   array paths, every one named in `tools/vault.js` with the thing that caps
   it**, and an array the table does not know about fails the build, which is
   how `dex.species` was caught on the milestone that added it; median chimera
-  life **104.2 days**, from 45 creatures built to keep thirteen. `SAVE_VERSION`
+  life **43.8 days**. `SAVE_VERSION`
   46, and a save that predates the cap is PAID rather than pruned —
   `consolidateVault` renders the overflow at the Vault screen's own price on
   the first world tick, worst duplicates first, one of every anatomy kept.
 
   **What this milestone did not fix.** `dex.enemies` holds 244 entries against
   42 real enemies and `dex.beaten` 237 — R97's Dex pollution, ratcheted here
-  rather than widened into. The Vault SCREEN is 28,631 px with every bay open:
+  rather than widened into. The Vault SCREEN is 30,156 px with every bay open:
   finite for the first time, because the data behind it is, but the fold work
   is R89's applied here and is not in this criterion. The Ranch is still one
   card per animal.

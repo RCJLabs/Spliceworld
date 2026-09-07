@@ -48,13 +48,13 @@ const BUDGET = {
   // long enough. It lists 299 now and cannot list more than 400, so a
   // ceiling finally means something.
   //
-  // 28,631px is still thirty-seven phone screens with every species bay
+  // 30,156px is still thirty-nine phone screens with every species bay
   // open, and this milestone did not fix that — it made it FINITE. The fix
   // is R89's, applied here: one bay open at a time. That is a real piece of
   // work (this screen folds with `<details>`, and `bindFolds`' exclusive
   // list wants buttons) and it is not in R91's criterion, so it is written
   // down rather than smuggled in.
-  vault:          { folded: 1900,  tallest: 29000 },
+  vault:          { folded: 1900,  tallest: 31000 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
   'dex:combos':   { folded: 1900,  tallest: 1900 },

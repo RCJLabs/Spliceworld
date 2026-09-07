@@ -135,6 +135,7 @@
   "theater": {
     "busyUntil": 0
   },
+  "renderCount": 0,
   "discoveredCombos": [],
   "battle": null,
   "warRecord": {

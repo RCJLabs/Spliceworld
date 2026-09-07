@@ -2,8 +2,8 @@
 
 ## Session 127 — R91: the vault has a bottom ✅
 
-**1,843.5 KB → 144.6 KB** at day 180, and the median chimera went from
-**two hours to 104 days**.
+**1,843.5 KB → 147.6 KB** at day 180, and the median chimera went from
+**two hours to 43.8 days**.
 
 ### Every number in the entry was low, and the emergency was elsewhere
 
@@ -64,25 +64,25 @@ zero rushes. Moved to the end of the step: 54 rushes, $1,764.
 
 | | before | after |
 | --- | --- | --- |
-| day-180 save | 1,843.5 KB | **144.6 KB** |
-| four slots vs 5 MB | 7,374 KB (144%) | **578 KB (11%)** |
+| day-180 save | 1,843.5 KB | **147.6 KB** |
+| four slots vs 5 MB | 7,374 KB (144%) | **591 KB (12%)** |
 | part tokens | 9,451 | **≤ 400** |
 | vials | 2,059 | **≤ 120** |
 | containment | 378 | **≤ 40** |
-| chimeras made / kept | 1,834 / 9 | **45 / 13** |
-| median chimera life | 2.0 hours | **104.2 days** |
-| arrays with a stated bound | 0 of 33 | **34 of 34** |
+| chimeras made / kept | 1,834 / 9 | **95 / 12** |
+| median chimera life | 2.0 hours | **43.8 days** |
+| arrays with a stated bound | 0 of 33 | **38 of 38** |
 
 ### Known issues / next session's first task
 
 * **`dex.enemies` holds 244 entries against 42 real enemies** (`dex.beaten`
   237). Ratcheted at 260 and handed to **R97**, which owns Dex pollution.
-* **The Vault screen is 28,631px** with every bay open — finite for the first
+* **The Vault screen is 30,156px** with every bay open — finite for the first
   time, because the data behind it is, but not folded. R89's exclusive-fold
   rule applied here is the fix; the screen uses `<details>` and `bindFolds`
   wants buttons.
-* The Ranch is still one card per animal, 12,623px for seventeen.
-* Boot 1020 → 1045 KB. `splice/vault.js` is eager because `splice/extract.js`
+* The Ranch is still one card per animal, 11,580px.
+* Boot 1020 → 1050 KB. `splice/vault.js` is eager because `splice/extract.js`
   is, and has been since M2.
 
 

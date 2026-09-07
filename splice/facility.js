@@ -152,7 +152,16 @@ export function occupyTheater(state, content, now) {
 // into thirteen.
 export function stableRoom(state, content) {
   const cap = theaterGrants(state, content).stable;
-  const pending = (state.campaign?.containment ?? []).filter((b) => b.rehab && !b.feral).length
+  // A CAPTURED OR FERAL CREATURE STILL HAS A STALL. Its rescue window is a
+  // clock the player is running, exactly like a Wing programme, and it comes
+  // home to the roster when it closes — so leaving it out would let a player
+  // splice into the space of a creature they are on their way to getting
+  // back, and then exceed the cap the moment it walked in. Measured: the
+  // walk ended on THIRTEEN chimeras against a stable of twelve, and the gate
+  // said so. `chimeras.length <= stable` is only an invariant if everything
+  // that can rejoin the roster is counted while it is away.
+  const pending = (state.campaign?.containment ?? []).filter((b) => b.rehab || b.feral).length
+    + (state.campaign?.captives ?? []).length
     + (state.vat ? 1 : 0);
   const used = (state.chimeras?.length ?? 0) + pending;
   return { cap, used, pending, free: Math.max(0, cap - used) };
