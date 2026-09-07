@@ -329,23 +329,28 @@ function foesView(state, content) {
   // "253/42 logged". They share their lab's page now, and what that page has
   // to say is a number — how much of each lab's work you have faced, and how
   // much of it you have put down.
+  // A LIST, NOT A GALLERY. Every other cell on this tab carries a portrait
+  // because the unit behind it is a fixed thing you can be shown; a lab's
+  // stock is a different creature every duel, so there is no portrait to
+  // draw and a 172px cell would be a placeholder pretending otherwise. Five
+  // lines cost 200px where five cells cost 858 — measured, and the reason
+  // the open tab stayed inside its budget.
   const labRows = rivalList(content).map((rival) => {
     const key = `lab:${rival.id}`;
     const seen = state.dex.sightings?.[key] ?? 0;
     if (!seen && !state.dex.enemies.includes(key)) return '';
     const put = beaten.has(key);
-    return `
-        <div class="dex-cell${put ? ' dex-beaten' : ''}">
-          <div class="dex-portrait"><div class="dex-mystery">${renderIcon('masks')}</div></div>
-          <strong>${rival.name}'s stock</strong>
-          <span class="fine-print">${seen} specimen${seen === 1 ? '' : 's'} met${put ? ' · beaten' : ''}</span>
-        </div>`;
+    return `<li class="${put ? 'dex-beaten' : ''}"><strong>${rival.name}</strong> — ${
+      seen} specimen${seen === 1 ? '' : 's'} met${put ? ', and beaten' : ''}</li>`;
   }).filter(Boolean).join('');
+  const labSeen = Object.entries(state.dex.sightings ?? {})
+    .filter(([k]) => labOfDexKey(k) && content.rivals?.[labOfDexKey(k)])
+    .reduce((n, [, v]) => n + v, 0);
   const labFold = labRows
     ? classFold('dex-foes-labs', `${renderIcon('masks')} Laboratory stock`,
-        `${Object.values(state.dex.sightings ?? {}).reduce((n, v) => n + v, 0)} met`,
+        `${labSeen} met`,
         'Chimeras built to order, one per duel, and never the same one twice.',
-        `<div class="dex-grid">${labRows}</div>`, state)
+        `<ul class="dex-lab-list">${labRows}</ul>`, state)
     : '';
 
   // The roll is the authored roster plus one page per lab, and `logged` is

@@ -114,7 +114,16 @@ const BUDGET = {
   // pushed the everything-open height from 4,113 to 5,702; that is the price
   // of the fold, it is paid only by a player who deliberately opened all
   // four, and the ceiling below stops it growing further.
-  'dex:foes':     { folded: 2500,  tallest: 6000 },
+  // R97: 6000 -> 6100 open, measured at 6042. The tab gained a section that
+  // did not exist when R89 set this — one fold listing what each rival lab
+  // has fielded against you. Written as a LIST rather than the gallery the
+  // rest of the tab uses, because a lab's specimen is a different creature
+  // every duel and there is no portrait to draw: five cells measured 858px,
+  // five lines 200px, and the 42px that remain are the fold's own header.
+  //
+  // The number this milestone is judged on is the OTHER one. R97's criterion
+  // is "Foes under two screens folded"; it is 764px shut, against 1,560.
+  'dex:foes':     { folded: 2500,  tallest: 6100 },
 };
 
 // R90 — one walked-save recipe, in tools/fixtures.js, and cached on disk.
