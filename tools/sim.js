@@ -1917,6 +1917,16 @@ function walkAct(state, content, now, open, opts = {}) {
     // doing what the Splice-Dex has asked for since R21 and the catalog now
     // says out loud on every row: new anatomy is the thing a collector is
     // buying, and the demand line is still honoured first among equals.
+    // THESE FOUR LISTS ARE AN ORDER, NOT A FILTER, and break 160 is why the
+    // distinction is written down. `fresh` (never held anything of it) is a
+    // SUBSET of `incomplete` (owes the Dex at least one part), so deleting
+    // the never-held branch does not stop the walker collecting — it changes
+    // which collectible it reaches for, and the break aimed at it came back
+    // MISSED. Measured over seven campaigns, the order is worth three parts
+    // of reach: never-held-dearest first lands at 233 of 244, one flat rule
+    // sorted by parts-owed at 231 cheapest-first and 229 dearest-first. A
+    // six-part stranger beats a one-part straggler, and among strangers the
+    // expensive animal is the one behind the late node.
     const fresh = affordable.filter((sp) => isNewToDex(state, content, sp.id));
     const freshAnswers = fresh.filter((sp) => wanted && (sp.class ?? sp.creatureClass) === wanted);
     // R95 — AND A COLLECTOR STILL NEEDS TWO OF SOMETHING.

@@ -1756,10 +1756,21 @@ const BREAKS = [
   {
     // RULE 2 — reach. Each of these three is a door R95 opened, and closing
     // any one of them puts the median campaign back under the floor.
-    n: 160, gate: REACH, name: 'the walker stops preferring anatomy it has never held, and buys its fourth-best goat again',
+    // RE-AIMED. This first read `const fresh = []`, which came back MISSED:
+    // never-held is a SUBSET of owes-the-Dex-a-part, so emptying it changed
+    // which collectible the walker bought and not whether it collected. What
+    // R95 actually added is the ORDER, so the break takes the whole of it and
+    // puts back the rule that shipped before — best answer in the demanded
+    // class, else the cheapest thing on the list.
+    n: 160, gate: REACH, name: 'the walker goes back to the best answer in the demanded class, and stops collecting',
     file: 'tools/sim.js',
-    anchor: 'const fresh = affordable.filter((sp) => isNewToDex(state, content, sp.id));',
-    to: 'const fresh = [];',
+    anchor: `    const pickSp = freshAnswers.length ? best(freshAnswers)
+      : fresh.length ? best(fresh)
+      : mates.length ? mates[0]
+      : incomplete.length ? incomplete[0]
+      : answers.length ? best(answers)
+      : affordable[0];`,
+    to: '    const pickSp = answers.length ? best(answers) : affordable[0];',
   },
   {
     n: 161, gate: REACH, name: 'every captive goes to the Wing, so the eight enemy-tech parts have no door at all',
