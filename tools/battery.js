@@ -2818,6 +2818,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === STALE ? 'a real old save still opens the game in a browser, quietly'
                 : gate === HEIGHT ? 'no screen outgrows its budget on a day-180 save'
                 : gate === UNION ? 'every sharded block is owned by exactly one shard'
+                : gate === TABLE ? 'the Surgery Theater does one operation at a time'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
