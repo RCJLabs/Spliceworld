@@ -2375,7 +2375,10 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // is where it was noticed. A settings bag nobody is watching is where a
   // device preference quietly becomes part of a run.
   assert.deepEqual(v7ish.settings, { muted: false, battleSpeed: 1 });
-  assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [], variants: [], beaten: [] });
+  // R97 — `sightings` joins the Dex, and this deepEqual is the same forcing
+  // function the settings one above is: a bag nobody is watching is where a
+  // field quietly appears in half the saves and not the other half.
+  assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [], variants: [], beaten: [], sightings: {} });
   const richV7 = { ...structuredClone(v1Save) };
   const chain = await migrate(richV7); // walk to v8 baseline shape…
   // …then simulate a v7 save that owned things:
@@ -10427,8 +10430,11 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     st.dex = {
       parts: Object.keys(content.parts),
       traits: Object.keys(content.traits),
-      enemies: Object.keys(content.enemies),
+      // R97 — a finished Foes tab is the authored roster AND one page per
+      // rival lab, because a lab's generated specimens share a page now.
+      enemies: [...Object.keys(content.enemies), ...Object.keys(content.rivals).map((id) => `lab:${id}`)],
       variants: Object.values(content.species).filter((sp) => sp.variantOf).map((sp) => sp.id),
+      sightings: Object.fromEntries(Object.keys(content.rivals).map((id) => [`lab:${id}`, 3])),
     };
     st.discoveredCombos = Object.keys(content.combos);
     st.campaign.rivals = Object.fromEntries(

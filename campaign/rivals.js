@@ -343,9 +343,7 @@ export function rivalSpecimen(rival, content, {
   names.add(name);
   return unitFromGenome(
     {
-      // R97 — the shape `dexKeyFor` below reads. Minted and parsed within
-      // twenty lines of each other on purpose: a format is only safe to
-      // read back where you can see it being written.
+      // R97 — the shape `dexKeyFor` below reads, minted in its sight.
       id: `${rival.id}_spec${index}_${idSuffix ?? defeats}`,
       name,
       frame,
@@ -357,31 +355,18 @@ export function rivalSpecimen(rival, content, {
   );
 }
 
-// R97 — WHICH DEX PAGE DID THIS UNIT COME FROM?
-//
-// A rival's specimen is minted fresh for every duel, and an escapee is one
-// of those that got out, so their ids are unique by construction: a
-// 180-day campaign fielded 211 of them and `resolveBattle` filed every one
-// as though it were a roster unit. The save held 253 entries against 42
-// authored units, the Foes header read "253/42 logged", and not one of
-// those entries was ever rendered — the tab iterates the authored roster
-// and tests membership, so they were pure weight.
-//
-// They are not nothing, though. "You have met sixty-three of Mantissa's
-// creatures" is worth saying; "you have met mantissa_spec2_17" is not. So a
-// generated unit belongs to its LAB's page, and the count lives beside it.
-//
-// The lab prefix is tested rather than split, because the format above is
-// what makes it true and a `split('_')[0]` would go on looking right after
-// somebody changed it.
+// R97 — which Dex page a fielded unit belongs to. A rival's specimen is
+// minted fresh every duel, so filing them raw put 253 entries in a save with
+// 42 authored units; they share their lab's page and `dex.sightings` counts
+// them. The prefix is TESTED, not split: the format is minted above, and a
+// `split('_')[0]` would go on looking right after somebody changed it.
 export function dexKeyFor(unitId, content) {
   if (typeof unitId !== 'string' || !unitId) return null;
   if (content.enemies?.[unitId]) return unitId;
   for (const id of Object.keys(content.rivals ?? {})) {
     if (unitId.startsWith(`${id}_spec`)) return `lab:${id}`;
   }
-  // Not authored and not a lab's — a build that has retired the rival, or an
-  // id from somewhere nobody has thought of. Better absent than miscounted.
+  // A retired rival, or an id nobody has thought of. Absent beats miscounted.
   return null;
 }
 
