@@ -126,6 +126,45 @@ const BUDGET = {
   'dex:foes':     { folded: 2500,  tallest: 6100 },
 };
 
+// R98 — AND WHAT IT SAYS, not only how tall it is.
+//
+// The two are the same question asked twice. A screen is expensive because
+// it puts more in front of the player than they asked for, and height is
+// only the part you can see from across the room — the Ranch is 14,450px
+// open AND 1,686 words, for the one reason: twenty full dossiers stacked
+// vertically with nothing closing the one you were not reading.
+//
+// Measured on the same day-180 save, at the same moment, in the same browser
+// this gate has already started. A second tool would mean a second Chromium
+// and forty seconds on a suite that has six to spare.
+//
+// `open` is what a player can have on screen at once — which is NOT the sum
+// of every card, on a screen that keeps one card open at a time. That
+// distinction is the whole finding: the Pens has ten folds and allows one,
+// so opening everything you can reach costs 291 words; the Ranch has
+// twenty-three and allows all of them.
+const WORDS = {
+  ranch:          { folded: 700,  open: 900 },
+  pens:           { folded: 300,  open: 400 },
+  theater:        { folded: 300,  open: 300 },
+  // The Vault is a list of what you own, and R91 capped what that can be —
+  // 400 parts and 120 vials, each a line. Its words are inventory rather
+  // than prose, and the fold work it is owed is a height problem; a ratchet
+  // keeps it from growing further meanwhile.
+  vault:          { folded: 350,  open: 5000 },
+  'dex:roster':   { folded: 400,  open: 400 },
+  'dex:variants': { folded: 200,  open: 200 },
+  // Measured at 527, and 350 was a guess I wrote before running it — a
+  // budget invented rather than measured is how a gate fails on its first
+  // run for a reason that has nothing to do with the milestone. The Combos
+  // tab lists what you have found and R95 took that from two discoveries to
+  // eight, so it grew for a good reason and has no fold to hide behind. A
+  // ratchet stops the creep; folding it is owed alongside the Vault's.
+  'dex:combos':   { folded: 550,  open: 550 },
+  'dex:genes':    { folded: 200,  open: 200 },
+  'dex:foes':     { folded: 150,  open: 900 },
+};
+
 // R90 — one walked-save recipe, in tools/fixtures.js, and cached on disk.
 // The walk costs about fifteen seconds and is deterministic from its seed;
 // the battery runs this gate once per break aimed at it, and was paying for
@@ -163,6 +202,11 @@ try {
   await sleep(5000);
 
   const heightOf = async (sel) => Number(await evaluate(`Math.round(document.querySelector('${sel}')?.scrollHeight ?? 0)`));
+  // R98 — `innerText`, so it is what the player READS: hidden folds and
+  // display:none contribute nothing, which is exactly the difference a fold
+  // is there to make.
+  const wordsOf = async (sel) => Number(await evaluate(
+    `(document.querySelector('${sel}')?.innerText ?? '').split(/\\s+/).filter(Boolean).length`));
 
   // Open one closed thing, anywhere in the screen; report whether it found
   // one. A fold click rerenders, so this is a loop and not a forEach.
@@ -219,16 +263,19 @@ try {
     await show(screen);
     const sel = `#screen-${screen}`;
     const folded = await heightOf(sel);
+    const wordsShut = await wordsOf(sel);
     const tallest = BUDGET[screen]?.tallest === null ? null : await tallestOf(sel);
-    rows.push({ id: screen, folded, tallest });
+    // After `tallestOf`, which has opened everything the screen will allow.
+    rows.push({ id: screen, folded, tallest, wordsShut, wordsOpen: await wordsOf(sel) });
   }
   await show('dex');
   for (const tab of ['roster', 'variants', 'combos', 'genes', 'foes']) {
     await evaluate(`document.querySelector('#screen-dex [data-dex-tab="${tab}"]')?.click()`);
     await sleep(1700);
     const folded = await heightOf('#screen-dex');
+    const wordsShut = await wordsOf('#screen-dex');
     const tallest = await tallestOf('#screen-dex');
-    rows.push({ id: `dex:${tab}`, folded, tallest });
+    rows.push({ id: `dex:${tab}`, folded, tallest, wordsShut, wordsOpen: await wordsOf('#screen-dex') });
   }
 } finally {
   proc.kill();
@@ -246,12 +293,25 @@ for (const r of rows) {
   if (b.tallest !== null && r.tallest > b.tallest) {
     problems.push(`${r.id} reaches ${r.tallest}px when opened, over its ${b.tallest}px budget (${(r.tallest / 780).toFixed(1)} phone screens)`);
   }
+  const w = WORDS[r.id];
+  if (!w) { problems.push(`${r.id} has no word budget — a new screen has to declare one`); continue; }
+  if (r.wordsShut > w.folded) {
+    problems.push(`${r.id} says ${r.wordsShut} words shut, over its ${w.folded}-word budget`
+      + ' — that is what the player is handed before they ask for anything');
+  }
+  if (r.wordsOpen > w.open) {
+    problems.push(`${r.id} says ${r.wordsOpen} words with everything it will let you open open,`
+      + ` over its ${w.open}-word budget`);
+  }
 }
 if (REPORT) {
-  console.log(`  screen          shut     tallest   budget`);
+  console.log(`  screen          shut     tallest   budget          words shut/open   budget`);
   for (const r of rows) {
     const b = BUDGET[r.id] ?? {};
-    console.log(`  ${r.id.padEnd(14)} ${String(r.folded).padStart(5)}   ${String(r.tallest ?? '—').padStart(9)}   ${b.folded ?? '?'} / ${b.tallest ?? '—'}`);
+    const w = WORDS[r.id] ?? {};
+    console.log(`  ${r.id.padEnd(14)} ${String(r.folded).padStart(5)}   ${String(r.tallest ?? '—').padStart(9)}   ${
+      `${b.folded ?? '?'} / ${b.tallest ?? '—'}`.padEnd(14)}  ${
+      `${r.wordsShut} / ${r.wordsOpen}`.padStart(11)}   ${w.folded ?? '?'} / ${w.open ?? '?'}`);
   }
   console.log('');
 }
