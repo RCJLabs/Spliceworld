@@ -1988,7 +1988,65 @@ R102; R88–R90 remain.)*
   has a stated bound.~~ *(The original entry, struck through: every figure in
   it was measured low, its stacking key saves 30% where the criterion needs
   97%, and the quota arithmetic is right for one save slot out of four.)*
-- **R92 — The yardstick plays half the game.** By grep, the walker never
+- **R92 — The yardstick plays half the game.** ✅ *Shipped.*
+
+  **Half the entry was already stale, and nothing had noticed** — because
+  there was no gate to notice with. Of the eight systems it lists as having
+  zero harness coverage: **eggs are 75 laid and 75 hatched** (R120 taught the
+  walker to breed two milestones later), the **Gauntlet is 4 of 4** cleared,
+  **76 captives** have been rehabilitated (R83 and R91), and traits had crept
+  from 0 to 1 of 12. A note nobody re-runs goes stale whether the news is
+  good or bad, which is the argument for `tools/coverage.js` rather than a
+  seventh audit.
+
+  **The criterion was one row from passing while the problem stood
+  untouched.** "Every row the agenda can offer has a walker action behind
+  it" — 18 of the 19 rows already fired, and only the chaos vat did not. But
+  combo discovery, the Resequencer and retraining a moveset have **no agenda
+  row at all**, so the criterion as written could go green with three of the
+  four remaining gaps open. R106's lesson, so the gate's second rule checks
+  the SYSTEMS rather than the rows.
+
+  **The Surgery Theater was locked out of its own game.** Biasing the planner
+  toward combos changed nothing, and three guesses cost more than counting
+  would have: across 180 days the stable was **FULL on 2,013 of the 2,063
+  steps** where a splice was otherwise ready. The Wing and the vat took every
+  stall the moment one opened — 22 graduates and 27 decants against **seven
+  splices** — and once R91's replacement margin is in force a full stable
+  stays full, because nothing in it is bad enough to be worth the grades a
+  dismantle burns. An interaction between two shipped milestones that no gate
+  could see until this one existed. Both opportunistic creators now leave a
+  quarter of the stable alone: splices 7 → 26.
+
+  **AND THEN THE NUMBERS, which is what this entry was for.**
+
+  *Does breeding pay?* Yes, modestly, and not the way M6 claims. Over 600
+  pairs across 35 species a child beats the parent **mean** by +0.111
+  potential per stat and sits **−0.178 below the best parent**, beating it
+  **25.3%** of the time. Breeding regresses toward the mean with upside: it
+  turns two mediocre animals into a better-than-average one, and one cross in
+  four beats your best.
+
+  *Is the vat worth a grade?* Not for power — for **variety**, exactly as R12
+  said and nobody had checked. Over 200 gestations the child is **−0.89 grade
+  steps** below its best parent and beats it only **16.5%** of the time, but
+  **69.5%** carry a part from neither parent and **18.5%** gain a socket
+  neither had. "A creature the Surgery Theater could not have assembled" is
+  now a measurement.
+
+  *Are combos discoverable by playing?* **No.** A median of **2 of 27** across
+  five seeds — 7.4% of the combo content — even with the planner actively
+  chasing pairs it can complete. A6 was titled "Combos for the other 87%";
+  a full 180-day campaign reaches 7% of them. **Queued as R93b.**
+
+  *Done when: every row the agenda can offer has a walker action behind it
+  and a number in `campaignWalk`'s report.* ✅ — **19 agenda rows and 8
+  systems, every one exercised and counted**, gated by `tools/coverage.js`,
+  which reads the row list out of `ranch/agenda.js` rather than re-typing it
+  so a row added later is checked the day it lands. Dominion still falls, 21
+  nodes, no stall.
+
+  ~~By grep, the walker never
   calls `breedPair`, `hatchEgg`, `startVat`, `startResequence`, `setMoveset`
   or the Gauntlet. Measured over 180 days: **0 of 27 combos discovered, 0 of
   12 traits expressed, 0 eggs, 0 vats, 0 tank runs, 0 of 4 Gauntlet stages,
@@ -1999,9 +2057,22 @@ R102; R88–R90 remain.)*
   walker policy per loop, a number per loop in the walk report, a floor per
   loop in smoke — and then read the numbers, which will be the first honest
   answer to whether breeding pays, whether the vat is worth a grade, and
-  whether combos are discoverable by playing. *Done when: every row the
-  agenda can offer has a walker action behind it and a number in
-  `campaignWalk`'s report.*
+  whether combos are discoverable by playing.~~ *(The original entry, struck
+  through: four of its eight claims had already been closed by other
+  milestones, and its criterion could not see three of the four that had
+  not.)*
+- **R93b — Seven per cent of the combos.** Found by R92 the moment the walk
+  could see them: a 180-day campaign discovers a **median 2 of 27** combos,
+  and that is with the planner deliberately weighing a pair it could
+  complete. A6 shipped 27 of them under the title "Combos for the other
+  87%", R16 priced one down and R17 gave them all a grade, and between them
+  those three milestones tuned content a player will meet twice. The
+  question this phase has to answer first is which half is wrong — whether
+  combos are too hard to assemble (six sockets, two named parts, a vault
+  that now caps at 400) or simply never pointed at, since the Splice-Dex
+  lists them but nothing on the Theater screen says "you own both halves of
+  this one". *Done when: a 180-day walk discovers at least half the combo
+  roster, or the entry says with numbers why that is the wrong target.*
 - **R93 — Breakouts and contests are the whole late game, and neither has
   stakes.** After dominion: **157 breakout hunts at 1.1 a day, 100% won**,
   against 8 assaults; **93 defences at 92%**, where the only cost of a loss

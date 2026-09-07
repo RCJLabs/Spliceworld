@@ -262,6 +262,13 @@ const VAULT = ['node', 'tools/vault.js'];
 // no measurement of a finished save can see it. So it gets an assertion of
 // its own, the way the pairing did in R81: what it guards is a handful of
 // refusals and the suite takes three minutes.
+// R92 — DOES THE YARDSTICK PLAY THE WHOLE GAME? Every balance number this
+// project states comes out of one walk, so a system that walk never touches
+// is a system whose balance has never been measured. Four of the eight R92
+// named had quietly been closed by other milestones and nobody noticed,
+// because there was nothing watching either way.
+const COVERAGE = ['node', 'tools/coverage.js'];
+
 const TABLE = ['node', '-e', `
   const { readFileSync } = await import('node:fs');
   const { indexContent } = await import('./render/renderer.js');
@@ -1706,6 +1713,42 @@ const ROADMAP = ['node', 'tools/roadmap.js'];
 
 const BREAKS = [
   {
+    n: 151, gate: COVERAGE, name: 'the planner stops weighing combos, so a campaign never discovers one again',
+    file: 'tools/sim.js',
+    anchor: '  const rank = (t) => (completable.has(t.partId) ? 30 : 0)',
+    to: '  const rank = (t) => (false ? 30 : 0)',
+  },
+  {
+    n: 152, gate: COVERAGE, name: 'the Wing and the vat take every stall again, and the Surgery Theater never gets one',
+    file: 'tools/sim.js',
+    anchor: 'const THEATER_STALLS = 3;',
+    to: 'const THEATER_STALLS = 0;',
+  },
+  {
+    n: 153, gate: COVERAGE, name: 'the walker stops running the Resequencer, so what a vial is worth goes back to being unmeasured',
+    file: 'tools/sim.js',
+    anchor: "      did('resequence', { species: best.species, stars: best.stars });",
+    to: '      void 0;',
+  },
+  {
+    n: 154, gate: COVERAGE, name: 'the chaos vat goes back to being the one agenda row with nothing behind it',
+    file: 'tools/sim.js',
+    anchor: "        if (startVat(state, a.id, b.id, content, now).ok) { did('vat', { sire: a.id, dam: b.id }); ran = true; }",
+    to: '        ran = true;',
+  },
+  {
+    n: 155, gate: COVERAGE, name: 'a moveset retrain stops being logged, so four slots are exercised and nothing says so',
+    file: 'tools/sim.js',
+    anchor: "      if (setMoveset(state, c.id, pick, known, now, content).ok) did('moveset', { who: c.id });",
+    to: '      setMoveset(state, c.id, pick, known, now, content);',
+  },
+  {
+    n: 156, gate: COVERAGE, name: 'an agenda row is added that no walker verb answers, and the coverage rule lets it through',
+    file: 'ranch/agenda.js',
+    anchor: "    id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',",
+    to: "    id: 'audit', kind: 'spend', screen: 'ranch', label: 'Audit the paperwork',\n    hint: () => 'x', ready: () => true,\n  },\n  {\n    id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',",
+  },
+  {
     n: 143, gate: VAULT, name: 'the vault stops having a capacity, so a campaign hoards nine thousand parts again',
     file: 'splice/vault.js',
     anchor: '  return { parts: g.vaultParts, vials: g.vaultVials };',
@@ -2746,7 +2789,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, VAULT, TABLE]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, VAULT, TABLE, COVERAGE]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'

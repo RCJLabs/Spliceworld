@@ -1,5 +1,81 @@
 # PROGRESS
 
+## Session 128 — R92: the yardstick plays the whole game ✅
+
+**19 agenda rows and 8 systems, every one exercised and counted.** And then
+the three numbers this entry was actually written to get.
+
+### Half the entry was stale, and nothing had noticed
+
+| the entry said | measured |
+| --- | --- |
+| 0 eggs | **75 laid, 75 hatched** (R120) |
+| 0 of 4 Gauntlet stages | **4 of 4** |
+| 0 of 719 rehabilitated | **76** (R83, R91) |
+| 0 of 12 traits | 1 of 12 |
+| 0 of 27 combos | **holds** |
+| 0 vats · 0 tank runs · never retrains | **all hold** |
+
+Four of eight closed by other milestones with nobody watching. **A note
+nobody re-runs goes stale whether the news is good or bad** — which is the
+argument for a gate over a seventh audit.
+
+### The criterion could have passed with the problem untouched
+
+18 of 19 agenda rows already fired; only the vat did not. But combo
+discovery, the Resequencer and moveset retraining have **no agenda row at
+all**, so "every agenda row has a walker action" cannot see three of the
+four real gaps. R106's lesson: the gate's second rule checks systems.
+
+### The Surgery Theater was locked out of its own game
+
+Biasing the planner toward combos changed nothing. Three guesses, then I
+counted: the stable was **FULL on 2,013 of the 2,063 steps** where a splice
+was ready. The Wing and the vat took every stall the moment one opened — 22
+graduates and 27 decants against **seven splices** — and once R91's
+replacement margin is in force a full stable *stays* full, because nothing
+in it is bad enough to be worth the grades a dismantle burns.
+
+An interaction between two shipped milestones that no gate could see. Both
+opportunistic creators now leave a quarter of the stable alone.
+
+### The three answers
+
+**Does breeding pay?** Modestly, and not as M6 claims. 600 pairs, 35
+species: **+0.111** potential per stat against the parent *mean*, **−0.178**
+against the *best* parent, beats its best **25.3%** of the time. It
+regresses toward the mean with upside.
+
+**Is the vat worth a grade?** Not for power — for **variety**, exactly as
+R12 said and nobody had checked. 200 gestations: **−0.89 grade steps** vs
+the best parent, beats it **16.5%**, but **69.5%** carry a part from neither
+parent and **18.5%** gain a socket neither had.
+
+**Are combos discoverable by playing?** **No.** Median **2 of 27** across
+five seeds — 7.4% — with the planner actively chasing them. A6 was titled
+"Combos for the other 87%". Queued as **R93b**.
+
+### Numbers
+
+| | before | after |
+| --- | --- | --- |
+| agenda rows with a walker action | 18 of 19 | **19 of 19** |
+| systems with a number | 2 of 8 | **8 of 8** |
+| splices per 180 days | 7 | **26** |
+| combos discovered | 0 of 27 | **3 of 27** |
+| vat runs · resequences · retrains | 0 · 0 · 0 | **13 · 379 · 5** |
+
+### Known issues / next session's first task
+
+* **R93b — 7% combo reach.** The sharpest thing this milestone found.
+* The moveset block fired **6,123 times** before being told to check whether
+  the pick changes anything: `setMoveset` charges for learning, not
+  reordering, so a free action never trips its own cooldown. Worth watching
+  for the same shape elsewhere.
+* Carried from R91: `dex.enemies` 244 entries against 42 real enemies (R97),
+  and the Vault screen at 30,156px opened.
+
+
 ## Session 127 — R91: the vault has a bottom ✅
 
 **1,843.5 KB → 147.6 KB** at day 180, and the median chimera went from
