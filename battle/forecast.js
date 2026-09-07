@@ -21,6 +21,10 @@
 import { createBattle, step, playerActions, playerActive } from './engine.js';
 import { pilotAction } from './autoplay.js';
 import { rngStream } from '../util/rng.js';
+// R95 — the grade staircase, for the counterfactual below. `splice/grades.js`
+// is the leaf R91 split out precisely so a module can price a grade without
+// dragging the Extractor in behind it.
+import { GRADES, GRADE_INDEX } from '../splice/grades.js';
 
 // The same skill the balance harness pilots at. A forecast flown better
 // than the player can fly is a lie in the optimistic direction, which is
@@ -158,6 +162,30 @@ export function forecast(team, encounter, content, seed = 1, now = 0, { runs = 3
 // the wrong fix — the failure this whole function exists to stop.
 const CAUSE_FLOOR = 0.1;
 
+// R95 — how good a lifted fight has to get before the grade is worth naming.
+// This is `even`'s floor, read off BANDS rather than re-typed (R61): the
+// briefing may only tell a player to go and raise Apex parts if doing so
+// turns the fight into one they could actually win. A grade that moves
+// "not survivable" to "losing fight" has changed the number and not the
+// answer, and sending somebody up the husbandry ladder for that is worse
+// advice than the generic line it replaces.
+const EVEN_FLOOR = BANDS.find((b) => b.id === 'even').floor;
+
+// The same team with every part at or below `gradeId` raised to it. A copy,
+// never a mutation: `diagnose` is called on the records the briefing screen
+// is rendering from, and a counterfactual that edited them would upgrade the
+// player's creatures by asking a question about them.
+function liftedTo(team, gradeId) {
+  const target = GRADE_INDEX[gradeId] ?? 0;
+  return team.map((c) => ({
+    ...c,
+    tokens: Object.fromEntries(Object.entries(c.tokens ?? {}).map(([socket, t]) => [
+      socket,
+      (GRADE_INDEX[t.grade] ?? 0) >= target ? t : { ...t, grade: gradeId },
+    ])),
+  }));
+}
+
 // `runs` is deliberately NOT a parameter here. The first version of this
 // gate ran the diagnosis at 12 replays to keep the suite quick, and it named
 // the wrong cause: a layer worth real points landed under the floor at 12
@@ -209,14 +237,47 @@ export function diagnose(team, encounter, content, seed = 1, now = 0, { canBring
       text: `Their tags are blanking your attacks — worth about ${Math.round(chartGain * 100)} points. Check the opposition list and bring moves they cannot ignore.`,
     };
   }
-  // Neither layer is what is wrong, so it is the creatures. This is the
-  // honest answer at Precinct HQ for a Ground stable, and it is the one the
-  // old string never gave: 0% at Standard, 28% at Prime, on the same team.
-  // Worded to agree with the roster rows above it. Those list every chart
-  // rule that applies, so a flat "not a matchup problem" reads as a
-  // contradiction of three ✘ lines the player is looking at. It is not one:
-  // the rules apply AND lifting them does not save the fight, which is a
-  // different and more useful thing to say.
+  // R95 — AND THEN SAY HOW MUCH BETTER.
+  //
+  // The comment that used to sit here read "0% at Standard, 28% at Prime, on
+  // the same team", and the string under it said "these creatures are not
+  // strong enough yet" and stopped. The number was known when the sentence
+  // was written and was never printed, which is the whole of R95's second
+  // half: measured across the shipped encounter table, ten of thirty-one
+  // encounters cannot be won at Standard by ANY of the 68 sampled builds and
+  // eight of them want Apex, so a player at Standard is looking at a wall
+  // whose price the game has decided not to quote.
+  //
+  // Measured the same way every other cause here is: replay the same fight
+  // with one thing changed. Cheapest grade first, stop at the first one that
+  // makes it a fight rather than a formality, so the usual answer costs one
+  // extra forecast and never more than three. A part already above the
+  // candidate is left alone — lifting a team must never quietly lower it.
+  const floorGrade = Math.min(...team.flatMap((c) => Object.values(c.tokens ?? {})
+    .map((t) => GRADE_INDEX[t.grade] ?? 0)));
+  for (const g of GRADES.slice(floorGrade + 1)) {
+    const lifted = forecast(liftedTo(team, g.id), encounter, content, seed, now, { runs });
+    if (lifted.winRate - base.winRate < CAUSE_FLOOR) continue;
+    if (lifted.band.floor < EVEN_FLOOR) continue;
+    return {
+      id: 'outgraded',
+      grade: g.id,
+      lifted: lifted.winRate,
+      // The band's own label, not a re-worded one: the player has just read
+      // it at the top of this screen, and a briefing that grades the same
+      // fight in two vocabularies is two briefings.
+      text: `It is the grade. Raise this same team to ${g.name} and the briefing calls it `
+        + `${lifted.band.label} — about ${Math.round(lifted.winRate * 100)}%. `
+        + 'The Ranch says what is holding each grade down; the Extractor gives you the part you raised.',
+    };
+  }
+
+  // Neither layer is what is wrong, and no grade below the ceiling saves it
+  // either, so it is the creatures. Worded to agree with the roster rows
+  // above it. Those list every chart rule that applies, so a flat "not a
+  // matchup problem" reads as a contradiction of three ✘ lines the player is
+  // looking at. It is not one: the rules apply AND lifting them does not save
+  // the fight, which is a different and more useful thing to say.
   return {
     id: 'outgunned',
     // R38. This said "raise donors longer", naming ONE of the three inputs

@@ -9116,8 +9116,16 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //    tell those two apart.
   {
     const ground = dx(squad('boots', 'standard', CAP), { canBringMore: false });
-    assert.equal(ground.id, 'outgunned',
+    // R95 — and now it SAYS grade. This assertion read `outgunned` for two
+    // milestones while its own message called Precinct "a grade problem":
+    // the diagnosis knew which layer was at fault and would not quote the
+    // price. `outgraded` is the same verdict with the number in it.
+    assert.equal(ground.id, 'outgraded',
       `Ground at Precinct is a grade problem, not a class one (${ground.id}: ${ground.text})`);
+    assert.ok(GRADES.some((g) => ground.text.includes(g.name)),
+      `and it names the grade that clears it (${ground.text})`);
+    assert.ok(ground.lifted > 0.4,
+      `and only names a grade that makes it a fight (${Math.round(ground.lifted * 100)}%)`);
     // The class half used to be Water at Precinct, and that fixture was
     // marginal: the layer measured 11.3pp against the 10pp floor before R66
     // and 6.4pp after a sharper AI, while the comment in forecast.js still

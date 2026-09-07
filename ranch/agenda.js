@@ -30,7 +30,7 @@
 //   spend    — money leaves, something arrives. Always available if solvent.
 //   work     — you make something: a part, an egg, a creature, a better one.
 //   campaign — you push on the world: a job, an assault, a rival.
-import { careStatus, catalogFor, penUpgradeCost, ageStage } from './ranch.js';
+import { careStatus, catalogFor, isNewToDex, penUpgradeCost, ageStage } from './ranch.js';
 import { canBreed } from './breeding.js';
 import { nextUpgrade, tracks } from '../splice/facility.js';
 import { TRAINING } from '../splice/theater.js';
@@ -360,15 +360,35 @@ export const AGENDA = [
       && state.chimeras.some((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR),
   },
   {
+    // R95 — THE ROW THAT KNOWS WHAT YOU HAVE NEVER HELD.
+    //
+    // Measured over seven 180-day campaigns: by day 180 the walk holds 22 or
+    // 23 of the map's 23 nodes and finishes on a median $249,000, which opens
+    // 33 of the 41 species — and it has bought TWELVE, because 41 species
+    // share four classes and the best Ground animal you can afford dominates
+    // every other Ground animal. Availability was never the constraint. This
+    // row was reporting "33 species you can afford", which is true and is
+    // exactly the wrong number: the one a collector wants is how many of them
+    // are new anatomy.
     id: 'buy', kind: 'spend', screen: 'ranch', label: 'Order from the catalog',
     chip: (state, content) => {
       const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
-      return afford.length ? `${afford.length} from $${Math.min(...afford.map((sp) => sp.mailOrderPrice))}` : null;
+      if (!afford.length) return null;
+      const fresh = afford.filter((sp) => isNewToDex(state, content, sp.id));
+      return fresh.length
+        ? `${fresh.length} new from $${Math.min(...fresh.map((sp) => sp.mailOrderPrice))}`
+        : `${afford.length} from $${Math.min(...afford.map((sp) => sp.mailOrderPrice))}`;
     },
     hint: (state, content) => {
       const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
       const room = state.ranch.penCapacity - state.ranch.stock.length;
       const cheapest = afford.length ? Math.min(...afford.map((sp) => sp.mailOrderPrice)) : 0;
+      const fresh = afford.filter((sp) => isNewToDex(state, content, sp.id));
+      if (fresh.length) {
+        const pick = fresh.reduce((a, b) => (a.mailOrderPrice <= b.mailOrderPrice ? a : b));
+        return `${fresh.length} species you have never held, from $${pick.mailOrderPrice} `
+          + `(${pick.name}). The Splice-Dex is a shopping list; every one of them is six parts you cannot build with yet.`;
+      }
       return `${afford.length} species you can afford${cheapest ? ` from $${cheapest}` : ''}, ${
         room} pen${room === 1 ? '' : 's'} free. New anatomy is how a losing matchup stops being one.`;
     },

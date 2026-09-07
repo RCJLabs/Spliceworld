@@ -256,6 +256,33 @@ export function catalogFor(state, content) {
     .sort((a, b) => a.mailOrderPrice - b.mailOrderPrice);
 }
 
+// R95 — HAVE YOU EVER HELD ONE OF THESE?
+//
+// `state.dex.parts` is every part the save has ever had on a shelf (the
+// vault's door writes it, and so do salvage and the vat), so it is the
+// honest record of what a player has actually handled — better than the
+// current herd, which forgets everything you have already extracted.
+//
+// This is the question the catalog could not answer and the reason a
+// campaign reached a median 118 of 244 parts while sitting on $249,000 with
+// 33 species unlocked: 41 species share four classes, so once you own the
+// best Ground animal you can afford, the catalog is a wall of dominated
+// duplicates with nothing to tell you which of them is new.
+export function isNewToDex(state, content, speciesId) {
+  const held = new Set(state?.dex?.parts ?? []);
+  const parts = Object.values(content.parts).filter((p) => p.species === speciesId);
+  // A species with no parts at all cannot be "new anatomy" — it is a data
+  // gap, and claiming it as a prize would send the player after nothing.
+  return parts.length > 0 && !parts.some((p) => held.has(p.id));
+}
+
+// The catalog, narrowed to what would put anatomy on the shelf that has
+// never been there. Sorted by price like `catalogFor`, so the cheapest way
+// to learn something new is first.
+export function newToDex(state, content) {
+  return catalogFor(state, content).filter((sp) => isNewToDex(state, content, sp.id));
+}
+
 export function buyMailOrder(state, speciesId, content, now) {
   const species = content.species[speciesId];
   if (!species?.mailOrderPrice) return { ok: false, msg: 'Not in the catalog. Conquest required.' };

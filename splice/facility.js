@@ -39,7 +39,7 @@ export function grantsOf(state, content, trackId) {
 // partial content bundle, behaves exactly as it always did.
 export function incubatorGrants(state, content) {
   const g = grantsOf(state, content, 'incubator');
-  return { slots: g.slots ?? 3, hourScale: g.hourScale ?? 1, mutationBonus: g.mutationBonus ?? 0 };
+  return { slots: g.slots ?? 3, hourScale: g.hourScale ?? 1, mutationBonus: g.mutationBonus ?? 0, variantShare: g.variantShare ?? 0.3 };
 }
 
 export function extractorGrants(state, content) {
