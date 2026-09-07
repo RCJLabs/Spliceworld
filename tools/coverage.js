@@ -31,7 +31,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadSimContent, campaignWalk } from './sim.js';
-import { walkedSave } from './fixtures.js';
+import { walkedSave, primeWalkCache } from './fixtures.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REPORT = process.argv.includes('--report');
@@ -68,6 +68,9 @@ const SYSTEMS = {
 
 const content = loadSimContent();
 const walk = campaignWalk(content, { seed: 2026, days: 180, stopAtDominion: false });
+// R95 — hand it on. `tools/reach.js` runs next on the same suite lane and
+// wants this exact campaign; without this it walked it a second time.
+primeWalkCache(walk.save);
 const fails = [];
 
 // ---- 1. every agenda row ---------------------------------------------
