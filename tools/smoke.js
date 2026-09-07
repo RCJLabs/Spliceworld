@@ -750,7 +750,23 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
       `${enc} is organic, so a gene that only works on the living can show`);
   }
   const GENE_N = 200;
+  // R90 — MEMOISED, and it is not a micro-optimisation. `geneEffect` runs a
+  // plain arm and a gene arm for every build and encounter, and the PLAIN
+  // arm depends on (sp, enc, salt) alone — so it was recomputed identically
+  // for the floor and for all twelve genes: fourteen times per family, each
+  // 200 battles. `geneRun` is a pure function of its four arguments (the
+  // seed is hashed from them, content is constant), so the second call for
+  // the same cell can only produce the number the first one did.
+  const geneMemo = new Map();
   const geneRun = (sp, traitId, enc, salt) => {
+    const key = `${sp}|${traitId}|${enc}|${salt}`;
+    const hit = geneMemo.get(key);
+    if (hit) return hit;
+    const val = geneRunUncached(sp, traitId, enc, salt);
+    geneMemo.set(key, val);
+    return val;
+  };
+  const geneRunUncached = (sp, traitId, enc, salt) => {
     const hero = makeSimChimera('M', SLOTS.map((slot) => `${sp}_${slot}`), 'standard', content);
     if (traitId) {
       for (const tok of Object.values(hero.tokens)) {
