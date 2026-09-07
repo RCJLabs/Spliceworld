@@ -87,6 +87,11 @@ const SHARD_OF = {
   genes: 'a',
   contest: 'b',
   frames: 'c', timers: 'c', orphans: 'c', team: 'c',
+  // R90 — the two that were quietly costing the most. Unguarded, R76's
+  // handler walk (40s) and the director's mercy sweep (17s) ran in EVERY
+  // shard: 228s of the suite's work was those two blocks, four times over.
+  // Measured with SW_SHARD=z, which runs the common path and nothing else.
+  fired: 'c', mercy: 'd', planted: 'a', combos: 'b',
   // Shard c is the balance sweep alone: it is the biggest single block and it
   // runs SERIALLY here, because four shards on four cores plus a worker pool
   // inside one of them is oversubscription, not parallelism.
@@ -1605,6 +1610,7 @@ function playScriptedPartial(seed, pauseAt, roundTrip = false) {
 }
 
 {  // R90 — this block runs in every shard; the SWEEP below is what splits.
+if (inShard('planted')) {
 // --- M4.5: the balance harness runs, and it catches the planted combo.
 // The yardstick is a team of THREE — the balance pass established that tuning
 // against a lone chimera measures the wrong game, and the detector is
@@ -1622,6 +1628,7 @@ assert.ok(
   'the harness catches a deliberately broken combo'
 );
 
+}
 // --- Balance gate: the harness's OWN verdict is now a build failure.
 //
 // The sim reported `L · wolf:organ + tiger:head + …` as an [OP] outlier on
@@ -1693,6 +1700,7 @@ assert.equal(
   `no build may dominate the roster:\n  ${degenerate.join('\n  ')}`
 );
 
+if (inShard('combos')) {
 // R18: the enemy roster's class mix IS the class balance. Each player class
 // preys on exactly one enemy class (Ground >> Water >> Air >> Ground), so a
 // roster that is 90% one class — which this one was — turns the triangle
@@ -1776,6 +1784,7 @@ assert.ok(
   `each grade opens the boss further (${ladder.map((x) => Math.round(x * 100) + '%').join(' → ')})`
 );
 
+}
 }
 // --- M5: campaign data coherence.
 const region = Object.values(content.regions)[0];
@@ -3641,7 +3650,7 @@ if (inShard('team')) {
 
 // --- AI Director (§3.7): the world studies you and answers. The tracking
 // --- data has existed since M0; this is the session it started acting.
-{
+if (inShard('mercy')) {
   const {
     directorProfile, directorRead, directEncounter, directorNews, directorReach, classOfParts,
   } = await import('../campaign/director.js');
@@ -17588,7 +17597,7 @@ if (inShard('wire')) {
 // aim at it in seconds instead of after five minutes of balance sims) and
 // widened it to surfaces. The assertions stay here, because this is the file
 // that decides whether the build passes.
-{
+if (inShard('fired')) {
   const walk = await walkSurfaces(content);
   // THE ONE ASSERTION THAT WOULD HAVE CAUGHT ALL OF IT. The walk's result was
   // a function of what ran before it — module state (`warTab`, `dexTab`) is
