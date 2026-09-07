@@ -44,7 +44,20 @@ const JOBS = [
   { name: 'walks', files: ['tools/coverage.js', 'tools/reach.js'], env: {} },
 ];
 
-const picked = only ? JOBS.filter((j) => j.name === only || j.name.startsWith(`${only}:`)) : JOBS;
+// R95 — LONGEST FIRST, FROM A NUMBER RATHER THAN FROM THE ARRAY ORDER.
+// The comment below has claimed "longest first" since R90 and the mechanism
+// was the hand-written order of `JOBS`, which goes stale the first time
+// somebody appends. `walks` (77s) was appended last, so it started only once
+// the small tools had been picked up — at t=130 on a four-lane run — and
+// finished at 207s against a 180s budget, on a suite whose total work had
+// just gone DOWN. `cost` is a rough measured seconds, and wrong by a few
+// seconds costs nothing: it decides order, never anything else.
+const COST = {
+  'smoke:a': 111, 'smoke:b': 104, 'smoke:c': 132, 'smoke:d': 134,
+  walks: 77, vault: 24, handlers: 24, scopecheck: 2, roadmap: 1, saves: 1,
+};
+const picked = (only ? JOBS.filter((j) => j.name === only || j.name.startsWith(`${only}:`)) : JOBS)
+  .slice().sort((a, b) => (COST[b.name] ?? 0) - (COST[a.name] ?? 0));
 if (!picked.length) {
   console.error(`suite ✗  no job called "${only}" (have: ${JOBS.map((j) => j.name).join(', ')})`);
   process.exit(1);
