@@ -59,6 +59,7 @@ import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { moveReadout } from '../battle/readout.js';
 import { defaultMoveset, knownMoves } from '../battle/moves.js';
 import { CONTENT_FILES } from '../data/loader.js';
+import { runPool } from './pool.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -1602,12 +1603,25 @@ assert.ok(
 // are exactly where a matchup problem shows up first.
 const BALANCE_POOLS = [2026, 77, 1312, 4242, 99, 5];
 const BALANCE_GRADES = ['standard', 'prime', 'apex', 'prismatic'];
-const degenerate = [];
+// R90 — the twenty-four sweeps run in worker threads. Each is seeded and
+// depends on nothing the others produce, so this is the same arithmetic on
+// more cores: measured 125.0s serial against 58.4s pooled, and 24 of 24
+// results byte-identical to the loop it replaces. `runPool` places results
+// by index rather than in completion order, which is what keeps the failure
+// message below naming the same pool and grade every run.
+const balanceTasks = [];
 for (const grade of BALANCE_GRADES) {
   for (const poolSeed of BALANCE_POOLS) {
-    const { flags } = runSim(content, { builds: 40, seedsPer: 8, teamSize: 3, grade, seed: poolSeed });
-    for (const f of flags) if (f.kind === 'OP') degenerate.push(`${grade} pool ${poolSeed}: ${f.label} — ${f.why}`);
+    balanceTasks.push({ builds: 40, seedsPer: 8, teamSize: 3, grade, seed: poolSeed });
   }
+}
+const degenerate = [];
+{
+  const results = await runPool('sim-worker.js', balanceTasks);
+  results.forEach(({ flags }, i) => {
+    const { grade, seed: poolSeed } = balanceTasks[i];
+    for (const f of flags) if (f.kind === 'OP') degenerate.push(`${grade} pool ${poolSeed}: ${f.label} — ${f.why}`);
+  });
 }
 assert.equal(
   degenerate.length,
