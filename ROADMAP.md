@@ -2061,18 +2061,63 @@ R102; R88–R90 remain.)*
   through: four of its eight claims had already been closed by other
   milestones, and its criterion could not see three of the four that had
   not.)*
-- **R93b — Seven per cent of the combos.** Found by R92 the moment the walk
-  could see them: a 180-day campaign discovers a **median 2 of 27** combos,
-  and that is with the planner deliberately weighing a pair it could
-  complete. A6 shipped 27 of them under the title "Combos for the other
-  87%", R16 priced one down and R17 gave them all a grade, and between them
-  those three milestones tuned content a player will meet twice. The
-  question this phase has to answer first is which half is wrong — whether
-  combos are too hard to assemble (six sockets, two named parts, a vault
-  that now caps at 400) or simply never pointed at, since the Splice-Dex
-  lists them but nothing on the Theater screen says "you own both halves of
-  this one". *Done when: a 180-day walk discovers at least half the combo
-  roster, or the entry says with numbers why that is the wrong target.*
+- **R93b — Seven per cent of the combos.** ✅ *Shipped — as an answer, which
+  is what its criterion asked for.*
+
+  R92 queued this with a deliberate escape hatch: *at least half the roster,
+  **or** the entry says with numbers why that is the wrong target.* It is the
+  wrong target, and **neither candidate the entry named is the reason.**
+
+  **Not "never pointed at."** `comboHint` in `splice/theater.js` has rendered
+  *"you have handled both. Put them on the same creature"* since R21, the
+  moment a player owns a pair. The Splice-Dex says it out loud.
+
+  **Not the sockets.** Two named parts on a six-socket frame is not a
+  squeeze; a frame can carry three pairs at once, which is exactly why one
+  of the fixes below failed.
+
+  **IT IS SPECIES REACH.** 25 of the 27 combos need parts from two
+  DIFFERENT species, and a 180-day campaign touches a median of **23 of 41
+  species** — 109 to 136 of the 244 parts. You cannot discover a combo whose
+  second animal you never acquired, so a median **nine of 27 are even
+  possible**. Half the roster is unreachable by any play at all, and six more
+  need a **variant** species, which is bred and never bought. Making it
+  reachable is R95's problem ("71 parts nobody reaches"), not this one's, and
+  saying so with numbers is what this phase was for.
+
+  **What WAS this phase's, and it was R92's own bug.** Of the combos a
+  campaign could assemble it found **48.1%**, because R92's planner boosted
+  every completable pair *including the ones already discovered* — so the
+  highest-ranked parts never changed and the walker rebuilt the same
+  creature. Excluding the found ones takes it to **69.0%**, measured across
+  fourteen seeds.
+
+  **Two fixes measured and reverted**, recorded because a change that sounds
+  right and measures worse is worth more written down than deleted. Aiming at
+  a single undiscovered target: **62%**, one seed from 89% to 22% — a
+  six-socket frame carries several pairs and naming one throws the rest away.
+  Protecting undiscovered combo halves from the rendering vat: **63%** — it
+  keeps the vault full, which refuses graduations, which starves the economy
+  that makes the parts. The same second-order shape as R92's three-way
+  deadlock, one milestone later.
+
+  **And three seeds was not a sample either.** The gate started at one seed,
+  moved to three when the same tree measured 43% to 100% campaign by
+  campaign — and on those three, *removing* the fix scored HIGHER (63%
+  against 56%) and the break written to catch it came back MISSED. Fourteen
+  seeds settle it: **69.0% with, 48.1% without.** Seven reproduce that at
+  71.4% against 54.9% for 25 seconds of walking, which is what the gate runs.
+  The lesson is the one this phase had already half-learned one step
+  earlier: a content-reach number needs a sample, and "more than one" is not
+  a sample.
+
+  *Done when: a 180-day walk discovers at least half the combo roster, or the
+  entry says with numbers why that is the wrong target.* ✅ — **the second
+  clause**, on the numbers above. `tools/coverage.js` gates what is actually
+  in this phase's gift: the fraction of ASSEMBLABLE combos a campaign finds,
+  across seven seeds, ratchet 0.65 — between the two measured states, so
+  removing the planner's exclusion fails the build.
+
 - **R93 — Breakouts and contests are the whole late game, and neither has
   stakes.** After dominion: **157 breakout hunts at 1.1 a day, 100% won**,
   against 8 assaults; **93 defences at 92%**, where the only cost of a loss

@@ -1713,6 +1713,17 @@ const ROADMAP = ['node', 'tools/roadmap.js'];
 
 const BREAKS = [
   {
+    // R93b — the bug this phase found in R92's own planner. Boosting a pair
+    // the campaign has ALREADY discovered leaves the top-ranked parts
+    // unchanged, so the walker rebuilds the same creature and the combos it
+    // owns but has not seen go on not being seen: 71% of what a campaign can
+    // assemble drops back to 55%.
+    n: 157, gate: COVERAGE, name: 'the planner weighs combos it has already discovered, so it rebuilds the same creature',
+    file: 'tools/sim.js',
+    anchor: '    if (!need.length || found.has(combo.id)) continue;',
+    to: '    if (!need.length) continue;',
+  },
+  {
     n: 151, gate: COVERAGE, name: 'the planner stops weighing combos, so a campaign never discovers one again',
     file: 'tools/sim.js',
     anchor: '  const rank = (t) => (completable.has(t.partId) ? 30 : 0)',
