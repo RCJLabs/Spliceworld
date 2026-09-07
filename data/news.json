@@ -118,6 +118,13 @@
         "{creature} was talked down, and {lab} collected it in an unmarked van. Everyone waved.",
         "{creature} has been retrieved by {lab}, who arrived with a net and no apology."
       ]
+    },
+    "rendered": {
+      "lines": [
+        "Vault at capacity. {count} surplus parts rendered down for ${paid}. The accountants are, for once, delighted.",
+        "{count} parts went straight from the loading dock into the vat. ${paid} recovered, dignity optional.",
+        "Shelf space beat sentiment today: {count} parts rendered for ${paid}."
+      ]
     }
   }
 }

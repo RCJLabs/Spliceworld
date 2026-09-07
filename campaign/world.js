@@ -25,6 +25,7 @@ import { tickFeral } from '../splice/feral.js';
 import { impound } from './rehab.js';
 import { tickTaskforce } from './taskforce.js';
 import { pushNews, emitNews } from './wire.js';
+import { consolidateVault } from '../splice/vault.js';
 
 export function elapsedSince(state, now) {
   const since = state.lastTickAt ?? now;
@@ -33,6 +34,12 @@ export function elapsedSince(state, now) {
 
 export function tickWorld(state, content, now) {
   const { since } = elapsedSince(state, now);
+  // R91 — before anything else, because every system below this reads the
+  // vault and none of them should have to wonder whether it is over its
+  // capacity. A no-op for every save written since v46; the one that made
+  // it necessary is the one that arrives holding 9,451 tokens.
+  const consolidated = consolidateVault(state, content);
+  if (consolidated) emitNews(state, content, 'rendered', consolidated);
   // Income first, so the one clamp in applyElapsed sees the whole ledger.
   tickCampaign(state, content, now, since);
   applyElapsed(state, content, now, since);

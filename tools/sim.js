@@ -1051,6 +1051,9 @@ import { tickWorld } from '../campaign/world.js';
 import { resolveBattle, incomePerDay } from '../campaign/campaign.js';
 import { careAction, careStatus, buyMailOrder, buyPenUpgrade, catalogFor, ageStage, upkeepPerDay, penUpgradeCost } from '../ranch/ranch.js';
 import { extractAnimal, extractChimera } from '../splice/extract.js';
+import { salvagePreview } from '../splice/extract.js';
+import { vaultPressure, surplusParts, renderDown } from '../splice/vault.js';
+import { stableRoom } from '../splice/facility.js';
 import { spliceChimera, validateSplice, trainChimera, TRAINING } from '../splice/theater.js';
 import { startOperation, operationList, opReady, laneFree } from '../campaign/operations.js';
 import { startSpar, canSpar, sparEncounter, sparPartners } from '../campaign/sparring.js';
@@ -1086,7 +1089,16 @@ function bestSplice(state, content, wanted = null) {
       used.add(token.id);
     }
     if (!slots.head) continue;
-    if (validateSplice(state, frameId, slots, content).length === 0) return { frameId, slots };
+    if (validateSplice(state, frameId, slots, content).length === 0) {
+      // R91 — the plan carries its own score, on the SAME yardstick the
+      // roster is ranked by (`quality`), so "is this worth dismantling
+      // something for" is a comparison rather than a guess. A fresh splice
+      // is level 1, hence the bare grade sum.
+      const byId = new Map(owned.map((t) => [t.id, t]));
+      const score = 10 + Object.values(slots)
+        .reduce((n, id) => n + GRADE_ORDER.indexOf(byId.get(id)?.grade ?? 'standard'), 0);
+      return { frameId, slots, score };
+    }
   }
   return null;
 }
@@ -1296,13 +1308,50 @@ function walkAct(state, content, now, open, opts = {}) {
     const answers = classSockets.filter((c) => c === wanted).length;
     const coherent = !wanted || state.chimeras.length < 3 || answers >= 3;
     if (plan && coherent) {
-      const cap = opts.stableCap ?? 9;
-      if (state.chimeras.length >= cap) {
-        // Make room: dismantle the weakest creature outside the A-team,
-        // which is the Pens' own button and what a player at capacity does.
-        const ranked = [...state.chimeras].sort((x, y) => quality(y) - quality(x));
-        const weakest = ranked.slice(3).filter((c) => isFit(c)).pop();
-        if (weakest) extractChimera(state, weakest.id, content, now);
+      // R91 — THE CAP IS THE GAME'S NOW, NOT THE WALKER'S. `stableCap ?? 9`
+      // was a hand-typed copy of a rule that did not exist anywhere else,
+      // and the moment the Theater started selling stalls the two disagreed:
+      // the walker dismantled toward nine while the game allowed twelve, so
+      // it churned against its own constant. R61's rule — derive the
+      // predicate, never re-type it — and the option survives only so a
+      // caller can ask for a SMALLER stable than the facility grants.
+      const room = stableRoom(state, content);
+      const cap = Math.min(room.cap, opts.stableCap ?? room.cap);
+      // NOT `!room.free`. A stall RESERVED by a running Wing programme
+      // stops a new creature being made; it is not a reason to take an
+      // existing one apart. Reading it as one produced the whole remaining
+      // churn: every enrolment reserved a stall, the roster read as full,
+      // the walker dismantled its weakest to make room that was never
+      // needed, and 142 enrolments turned into 269 dismantles.
+      const full = state.chimeras.length >= cap;
+      // R91 — REPLACING PAYS A PRICE THE WALKER NEVER COUNTED.
+      //
+      // The old policy swapped on ANY improvement, which is why a campaign
+      // built 1,834 creatures to keep nine: with a bottomless vault and a
+      // free table, "slightly better" cost nothing. Capping the vault and
+      // occupying the table slowed it to one swap per table cycle and no
+      // further, because the comparison was still wrong — it read "is this
+      // build better than that creature" when the real question is "is it
+      // better by MORE THAN WHAT TAKING THAT CREATURE APART DESTROYS".
+      //
+      // R13 priced that in the game and the harness ignored it: a dismantle
+      // returns a SUBSET of the parts, each one grade worse. So the margin
+      // is not a tuning constant — it is `salvagePreview`, the same function
+      // the Pens' own confirmation dialog shows the player, counted in the
+      // units `quality` is already measured in. A build has to beat what it
+      // replaces by more than the grades that replacing burns.
+      const ranked = [...state.chimeras].sort((x, y) => quality(y) - quality(x));
+      const weakest = ranked.slice(3).filter((c) => isFit(c)).pop();
+      if (full && weakest) {
+        const sockets = Object.values(weakest.tokens ?? {}).length;
+        const back = salvagePreview(state, weakest, content).tokens.length;
+        // One grade off everything recovered, plus everything not recovered
+        // at all — both measured in GRADE_ORDER steps, which is what
+        // `quality` sums.
+        const burned = back + (sockets - back) * (GRADE_ORDER.length - 1);
+        if (plan.score > quality(weakest) + burned) {
+          extractChimera(state, weakest.id, content, now);
+        }
       }
       if (state.chimeras.length < cap) {
         const before = state.chimeras.length;
@@ -1500,6 +1549,23 @@ function walkAct(state, content, now, open, opts = {}) {
     }
     const plan = rehabPlan(state, entry, content);
     if (!plan.possible || !plan.enabled || !canSpend(plan.fee)) continue;
+    // R91 — ENROL SOMETHING YOU MEAN TO KEEP. This loop used to enrol every
+    // bay it could afford, and R83's own note already said what happened
+    // next: a graduate carries its old lab's grades, so the walker
+    // dismantled it as soon as the Theater built better. Measured after the
+    // vault and the table were capped, that single loop was the whole of the
+    // remaining churn — 141 of 278 creatures in 180 days were Wing graduates
+    // scrapped one table-cycle after they walked out, median life ten hours.
+    //
+    // Nobody pays a fee, waits out a programme and attends its sessions in
+    // order to render the result down the same evening. Requiring a stall
+    // that will still be worth giving it is not the walker being tuned to
+    // please a gate; it is the walker stopping doing something no player
+    // would do.
+    const roster = [...state.chimeras].sort((x, y) => quality(y) - quality(x));
+    const displaced = roster.slice(3).filter(isFit).pop();
+    const keeps = !displaced || stableRoom(state, content).free > 0;
+    if (!keeps) continue;
     if (startRehab(state, entry.id, content, now).ok) did('rehab-start', { who: entry.id });
   }
 
@@ -1515,6 +1581,23 @@ function walkAct(state, content, now, open, opts = {}) {
   if (has('pens') && state.ranch.stock.length >= state.ranch.penCapacity
       && canSpend(penUpgradeCost(state))) {
     if (buyPenUpgrade(state).ok) did('pens');
+  }
+  // R91 — A PLAYER WITH A FULL VAULT RENDERS SOMETHING DOWN. Without this
+  // the walker sat at 258 of 260 parts, could not graduate an animal because
+  // the yield would not fit, and stopped playing half the game; the gate
+  // read a five-figure median chimera life and called it success. Only the
+  // surplus goes: duplicate anatomy at the bottom grade, carrying no traits,
+  // never the last token of anything. Which is what the Vault screen's own
+  // button does, on the same rule.
+  {
+    const pressure = vaultPressure(state, content);
+    if (pressure.tight) {
+      const going = surplusParts(state, content, Math.max(8, Math.ceil(pressure.capacity.parts * 0.15)));
+      if (going.length) {
+        const r = renderDown(state, content, going.map((t) => t.id));
+        if (r.ok) did('render', { n: r.count, paid: r.paid });
+      }
+    }
   }
   if (has('buy') && state.ranch.stock.length < state.ranch.penCapacity) {
     // The map says which class answers the strip in front of you (`demand`,

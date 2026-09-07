@@ -96,6 +96,19 @@ const RUSHABLE = {
     until: (target) => target.until ?? 0,
     set: (target, now) => { target.until = now; },
   },
+  // R91 — THE SURGERY THEATER'S TABLE IS DELIBERATELY NOT HERE, and it is
+  // the only clock in the game that is not. It was, for one measurement: the
+  // walker bought its way past the cooldown 1,665 times in 180 days and the
+  // median chimera life went straight back to 0.1 days, because a limit you
+  // can pay to ignore is not a limit once the player is rich.
+  //
+  // The difference is what the clock IS. Every kind above is a WAIT the
+  // player is sitting through — an egg, a gestation, a resequence, a
+  // creature settling — and R86's rule is that a wait can always be bought.
+  // The table is a CAPACITY, like `penCapacity`: it says how much surgery
+  // this laboratory can do, not how long you have to stand about. You do not
+  // rush a pen, you buy another one, and the way to a faster table is the
+  // Surgery Theater track that halves it.
   egg: {
     list: (state) => (state.ranch?.eggs ?? []).map((e) => e.id),
     find: (state, id) => (state.ranch?.eggs ?? []).find((e) => e.id === id) ?? null,

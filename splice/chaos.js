@@ -25,6 +25,7 @@ import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { GRADES, gradeIndexOf } from './extract.js';
 import { analyze } from './physiology.js';
 import { isSettled } from './theater.js';
+import { stableRoom } from './facility.js';
 
 const HOUR = 3600000;
 
@@ -193,6 +194,15 @@ export function startVat(state, sireId, damId, content, now) {
   if (!plan.ok) return { ok: false, msg: plan.msg };
   if (!plan.affordable) {
     return { ok: false, msg: `Short by $${Math.ceil(plan.fee - state.funds)}. The vat runs on electricity and denial.` };
+  }
+  // R91 — the parents survive the process, so a decant is a net gain of one
+  // and needs a stall waiting for it. Checked at the START, for the same
+  // reason the Wing is: a gestation is a clock, and a clock that has been
+  // started gets to finish.
+  const stable = stableRoom(state, content);
+  if (!stable.free) {
+    return { ok: false, msg: `The stable holds ${stable.cap} and there is nowhere to put whatever comes out. `
+      + 'Dismantle something, or expand the Surgery Theater.' };
   }
 
   state.vatCount = (state.vatCount ?? 0) + 1;

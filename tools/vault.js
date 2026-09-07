@@ -65,6 +65,9 @@ const BOUNDS = {
   'dex.enemies':          { max: 260, by: 'the enemy list — R97 owns bringing this back to the 42 real ones' },
   'dex.beaten':           { max: 260, by: 'the enemy list — R97 owns bringing this back to the 42 real ones' },
   'dex.traits':           { max: (c) => Object.keys(c.traits ?? {}).length, by: 'the trait list' },
+  // R91 — where a retired vial's donor goes. The gate caught this one on the
+  // milestone that added it, which is the whole point of the rule.
+  'dex.species':          { max: (c) => Object.keys(c.species ?? {}).length, by: 'the species list' },
   'dex.variants':         { max: (c) => Object.values(c.species ?? {}).filter((s) => s.variantOf).length, by: 'the variant list' },
   'campaign.heldNodes':   { max: (c) => (c.nodes ?? c.regions ?? []).length || 40, by: 'the map has as many nodes as it has' },
   'campaign.contested':   { max: (c) => (c.nodes ?? c.regions ?? []).length || 40, by: 'one per held node' },
