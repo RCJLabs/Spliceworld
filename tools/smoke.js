@@ -2375,7 +2375,10 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // is where it was noticed. A settings bag nobody is watching is where a
   // device preference quietly becomes part of a run.
   assert.deepEqual(v7ish.settings, { muted: false, battleSpeed: 1 });
-  assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [], variants: [], beaten: [] });
+  // R97 — `sightings` joins the Dex, and this deepEqual is the same forcing
+  // function the settings one above is: a bag nobody is watching is where a
+  // field quietly appears in half the saves and not the other half.
+  assert.deepEqual(v7ish.dex, { parts: [], enemies: [], traits: [], variants: [], beaten: [], sightings: {} });
   const richV7 = { ...structuredClone(v1Save) };
   const chain = await migrate(richV7); // walk to v8 baseline shape…
   // …then simulate a v7 save that owned things:
@@ -10427,8 +10430,11 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     st.dex = {
       parts: Object.keys(content.parts),
       traits: Object.keys(content.traits),
-      enemies: Object.keys(content.enemies),
+      // R97 — a finished Foes tab is the authored roster AND one page per
+      // rival lab, because a lab's generated specimens share a page now.
+      enemies: [...Object.keys(content.enemies), ...Object.keys(content.rivals).map((id) => `lab:${id}`)],
       variants: Object.values(content.species).filter((sp) => sp.variantOf).map((sp) => sp.id),
+      sightings: Object.fromEntries(Object.keys(content.rivals).map((id) => [`lab:${id}`, 3])),
     };
     st.discoveredCombos = Object.keys(content.combos);
     st.campaign.rivals = Object.fromEntries(
@@ -10540,6 +10546,69 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     met.campaign.rivals = { [Object.keys(content.rivals)[0]]: { defeats: 0, losses: 1, lastMetAt: null } };
     const one = dexProgress(met, content).rows.find((r) => r.id === 'rivals');
     assert.equal(one.found, 1, 'a rival you lost to still counts as met');
+
+    // R97 — NO ROW EVER CLAIMS MORE THAN THERE IS TO FIND. The Dex recorded
+    // every generated rival chimera and escapee by its unique id, so a
+    // day-180 save held 253 entries against 42 authored units and the Foes
+    // header read "253/42 logged". The aggregate hid it — `dexProgress`
+    // clamps each row with Math.min on the way into the total, which is a
+    // sign somebody met the overflow and worked around it rather than
+    // fixing it. A counter that can read past its own maximum is not a
+    // counter.
+    // Enough generated ids to pass the roll, which is the shape of the real
+    // bug: a day-180 save held 253 against a roll of 47. Two would not have
+    // done it — the roll is the authored roster PLUS the labs, so a fixture
+    // that overflowed the old 42 sits comfortably inside the new 47 and the
+    // assertion would pass while the counter was still broken.
+    const stuffed = { ...newGameState(), seed: 97 };
+    const aLab = Object.keys(content.rivals)[0];
+    stuffed.dex.enemies = [
+      ...Object.keys(content.enemies),
+      ...Array.from({ length: 12 }, (_, i) => `${aLab}_spec${i}_${i}`),
+    ];
+    stuffed.dex.beaten = [...stuffed.dex.enemies];
+    for (const row of dexProgress(stuffed, content).rows) {
+      assert.ok(row.found <= row.total,
+        `${row.label} says ${row.found} found of ${row.total} — the Dex cannot have catalogued more than exists`);
+    }
+
+    // R97 — WHICH PAGE A FIELDED UNIT GOES ON, and the three answers.
+    const { dexKeyFor, labOfDexKey } = await import('../campaign/rivals.js');
+    const anEnemy = Object.keys(content.enemies)[0];
+    const aRival = Object.keys(content.rivals)[0];
+    assert.equal(dexKeyFor(anEnemy, content), anEnemy, 'an authored unit is its own page');
+    assert.equal(dexKeyFor(`${aRival}_spec2_7`, content), `lab:${aRival}`,
+      "a rival's specimen goes on the lab's page");
+    assert.equal(dexKeyFor(`${aRival}_spec1_loose4`, content), `lab:${aRival}`,
+      'and so does one that got out');
+    // A build that retired the rival must not go on filing their work under
+    // a page it can no longer describe — R72's rule, reaching the Dex.
+    assert.equal(dexKeyFor('someone_else_spec1_0', content), null,
+      'a lab this build does not have is left out rather than guessed at');
+    assert.equal(dexKeyFor(null, content), null, 'and a non-id is not a page');
+    assert.equal(labOfDexKey(`lab:${aRival}`), aRival, 'the lab prefix is read in one place');
+    assert.equal(labOfDexKey(anEnemy), null, 'an authored id has no lab behind it');
+
+    // R97 — THE MIGRATION COLLAPSES AND COUNTS. A player's sightings have to
+    // arrive with them: dropping 211 entries and leaving a zero would be
+    // deleting something they earned.
+    const { migrations } = await import('../save/migrations.js');
+    const old46 = {
+      dex: {
+        enemies: [anEnemy, `${aRival}_spec1_0`, `${aRival}_spec2_3`, `${aRival}_spec1_loose7`],
+        beaten: [anEnemy, `${aRival}_spec1_0`],
+      },
+    };
+    const moved = migrations['47'](JSON.parse(JSON.stringify(old46)));
+    assert.deepEqual(moved.dex.enemies, [anEnemy, `lab:${aRival}`],
+      'three specimens of one lab become one page');
+    assert.deepEqual(moved.dex.beaten, [anEnemy, `lab:${aRival}`], 'and so does what you beat');
+    assert.equal(moved.dex.sightings[`lab:${aRival}`], 3,
+      'and the count of what was collapsed is what the page now says');
+    // Idempotent: a save that has already been through keeps its numbers.
+    const twice = migrations['47'](JSON.parse(JSON.stringify(moved)));
+    assert.deepEqual(twice.dex.enemies, moved.dex.enemies, 'running it again changes nothing');
+    assert.equal(twice.dex.sightings[`lab:${aRival}`], 3, 'and does not double the tally');
   }
 
   // 4. The only badge a tab earns is "nothing left here". A count of what

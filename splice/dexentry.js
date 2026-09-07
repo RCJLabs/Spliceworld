@@ -13,7 +13,7 @@
 // bulk R32 made decide flight. This is that entry.
 
 import { PHYS_TUNING } from './physiology.js';
-import { rivalList, rivalRecord } from '../campaign/rivals.js';
+import { rivalList, rivalRecord, labOfDexKey } from '../campaign/rivals.js';
 import { renderIcon } from '../ui/icons.js';
 import { gauntletStages } from '../campaign/gauntlet.js';
 
@@ -138,7 +138,14 @@ export function dexProgress(state, content) {
     { id: 'combos', tab: 'combos', label: 'Combos', found: (state.discoveredCombos ?? []).length, total: Object.keys(content.combos).length },
     { id: 'traits', tab: 'genes', label: 'Genes', found: (dex.traits ?? []).length, total: Object.keys(content.traits).length },
     { id: 'rivals', tab: 'foes', label: 'Rivals', found: rivals.filter(metRival).length, total: rivals.length },
-    { id: 'enemies', tab: 'foes', label: 'Foes', found: (dex.enemies ?? []).length, total: Object.keys(content.enemies).length },
+    // R97 — the Foes roll is the authored roster PLUS one page per rival
+    // lab, because a lab's generated specimens now share a page instead of
+    // minting one each. Both halves are derived, and `found` is filtered
+    // rather than counted raw: this row read 253 of 42 on a day-180 save,
+    // and the aggregate below hid it behind a Math.min.
+    { id: 'enemies', tab: 'foes', label: 'Foes',
+      found: (dex.enemies ?? []).filter((id) => content.enemies[id] || labOfDexKey(id)).length,
+      total: Object.keys(content.enemies).length + Object.keys(content.rivals ?? {}).length },
   ];
 
   const found = rows.reduce((n, r) => n + Math.min(r.found, r.total), 0);

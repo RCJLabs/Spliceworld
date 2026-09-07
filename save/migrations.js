@@ -550,6 +550,45 @@ export const migrations = {
   // is where the rest of this game's elapsed effects are computed anyway —
   // and which means the rule applies to any over-capacity save however it
   // got that way, not only to one that came through this door.
+  // R97 — THE DEX STOPS RECORDING ONE PAGE PER DUEL.
+  //
+  // `campaign.js` filed every generated rival specimen and escapee by its
+  // unique id, so a day-180 save carried 253 entries against 42 authored
+  // units — and nothing rendered them, because the Foes tab iterates the
+  // authored roster and tests membership. They collapse onto their lab's
+  // archetype key, and the count of what was collapsed becomes the sightings
+  // tally that makes the lab's row worth reading.
+  //
+  // BY REGEX, AND DELIBERATELY. A migration has never seen the content
+  // index (see the note under 46), and this one does not need it: the id
+  // shape `{lab}_spec{n}_...` is minted in `campaign/rivals.js` and no
+  // authored enemy id contains `_spec` — checked across all 42. A save whose
+  // rival was retired keeps its sightings under a key the Dex will simply
+  // not find a lab for, which is the same "ignore what the build no longer
+  // has" rule R72 and R79 settled on, rather than dropping a number the
+  // player earned.
+  47: (save) => {
+    save.dex ??= {};
+    save.dex.sightings ??= {};
+    const collapse = (list) => {
+      const out = [];
+      for (const id of list ?? []) {
+        const m = /^([a-z0-9_]+?)_spec\d/.exec(id);
+        const key = m ? `lab:${m[1]}` : id;
+        if (!out.includes(key)) out.push(key);
+      }
+      return out;
+    };
+    // Sightings are counted off `enemies` before it is deduped: that list is
+    // one entry per specimen ever fielded, which is exactly the number.
+    for (const id of save.dex.enemies ?? []) {
+      const m = /^([a-z0-9_]+?)_spec\d/.exec(id);
+      if (m) save.dex.sightings[`lab:${m[1]}`] = (save.dex.sightings[`lab:${m[1]}`] ?? 0) + 1;
+    }
+    save.dex.enemies = collapse(save.dex.enemies);
+    save.dex.beaten = collapse(save.dex.beaten);
+    return save;
+  },
   46: (save) => {
     save.theater ??= { busyUntil: 0 };
     save.renderCount ??= 0;

@@ -87,11 +87,19 @@ const REPORT = process.argv.includes('--report');
 // staircase, split out of extract.js so the vault can price a rendering
 // without importing the Extractor that imports it.
 //
+// R97 RAISES IT: 1050 -> 1055, measured at 1052. `campaign/rivals.js` gains
+// `dexKeyFor` and `labOfDexKey` and `campaign/campaign.js` the recorder that
+// uses them, both eager because `resolveBattle` is — the Dex is written the
+// moment a fight ends, not when the Dex is opened. Two kilobytes of engine,
+// and it is the trade this gate should want: the save every player carries
+// on every load went from 143.9 KB to 134.6 KB, because it stopped keeping a
+// page per duel.
+//
 // Same rule as ever: the ceiling sits just above the measurement, so creep
 // fails. What this gate exists to catch is unchanged — a whole CLASS of file
 // arriving in front of the player, the way the shape files once did at
 // 400 KB.
-const FIRST_PAINT_KB = 1050;
+const FIRST_PAINT_KB = 1055;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //

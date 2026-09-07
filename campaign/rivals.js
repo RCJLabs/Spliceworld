@@ -343,6 +343,7 @@ export function rivalSpecimen(rival, content, {
   names.add(name);
   return unitFromGenome(
     {
+      // R97 — the shape `dexKeyFor` below reads, minted in its sight.
       id: `${rival.id}_spec${index}_${idSuffix ?? defeats}`,
       name,
       frame,
@@ -352,6 +353,27 @@ export function rivalSpecimen(rival, content, {
     },
     content
   );
+}
+
+// R97 — which Dex page a fielded unit belongs to. A rival's specimen is
+// minted fresh every duel, so filing them raw put 253 entries in a save with
+// 42 authored units; they share their lab's page and `dex.sightings` counts
+// them. The prefix is TESTED, not split: the format is minted above, and a
+// `split('_')[0]` would go on looking right after somebody changed it.
+export function dexKeyFor(unitId, content) {
+  if (typeof unitId !== 'string' || !unitId) return null;
+  if (content.enemies?.[unitId]) return unitId;
+  for (const id of Object.keys(content.rivals ?? {})) {
+    if (unitId.startsWith(`${id}_spec`)) return `lab:${id}`;
+  }
+  // A retired rival, or an id nobody has thought of. Absent beats miscounted.
+  return null;
+}
+
+// The lab behind an archetype key, or null for an authored unit. The one
+// place that knows `lab:` is a prefix rather than part of an id.
+export function labOfDexKey(key) {
+  return typeof key === 'string' && key.startsWith('lab:') ? key.slice(4) : null;
 }
 
 // A full encounter in the enemies.json shape, with the units inline.

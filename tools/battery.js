@@ -1878,6 +1878,44 @@ const BREAKS = [
     to: '    discoveredCombos: [],\n    auditTrail: [],',
   },
   {
+    // R97 — the Dex stops keying generated specimens by lab. A rival mints a
+    // fresh one every duel, so filing them raw put 253 entries in a save
+    // that has 42 authored units, and none of them was ever rendered.
+    n: 165, gate: VAULT, name: 'every generated specimen files under its own id again, one Dex page per duel',
+    file: 'campaign/rivals.js',
+    anchor: '  if (content.enemies?.[unitId]) return unitId;',
+    to: '  if (unitId) return unitId;',
+  },
+  {
+    // R97 — the migration collapses the old ids and forgets to count them, so
+    // a player who had met ninety-four of Mantissa's creatures arrives on the
+    // new save having met none. Deleting a number somebody earned is worse
+    // than leaving the mess alone.
+    n: 166, gate: UNION, name: 'the migration collapses the old ids and drops the count of what it collapsed',
+    file: 'save/migrations.js',
+    anchor: '      if (m) save.dex.sightings[`lab:${m[1]}`] = (save.dex.sightings[`lab:${m[1]}`] ?? 0) + 1;',
+    to: '      if (false && m) save.dex.sightings.never = 1;',
+  },
+  {
+    // R97 — the Foes row goes back to counting the raw list against the
+    // authored total, which is how it came to read "253/42 logged" with the
+    // aggregate hiding it behind a Math.min.
+    n: 167, gate: UNION, name: 'the Foes counter counts the raw list again, and can read past its own maximum',
+    file: 'splice/dexentry.js',
+    anchor: '      found: (dex.enemies ?? []).filter((id) => content.enemies[id] || labOfDexKey(id)).length,',
+    to: '      found: (dex.enemies ?? []).length,',
+  },
+  {
+    // R97 — a lab the build no longer ships starts being filed anyway, under
+    // a key nothing can describe. R72's rule reaching the Dex: ignore what the
+    // build does not have rather than inventing a page for it.
+    n: 168, gate: UNION, name: 'a retired lab is filed anyway, under a key no screen can resolve',
+    file: 'campaign/rivals.js',
+    anchor: `  // A retired rival, or an id nobody has thought of. Absent beats miscounted.
+  return null;`,
+    to: '  return unitId;',
+  },
+  {
     // R95 — the conveyor belt. Without a minimum tenure the chaos vat runs
     // 119 times in 180 days and every decant is scrapped within hours: 200
     // creatures built to keep ten, median life thirty-six hours.
@@ -2620,10 +2658,17 @@ const BREAKS = [
     to: "await import('./migrationz.js')",
   },
   {
+    // RE-AIMED BY R97, AND THE REASON IS THE FINDING. This pointed at v34's
+    // `save.dex.beaten ??= []` and went MISSED: R97's v47 migration rewrites
+    // `dex.beaten` on the way past, so a save that arrives without the field
+    // leaves with it anyway and the chain heals the broken link behind it.
+    // That is benign for the player and fatal for the break — a canary two
+    // migrations create is not a canary. `theater` is written once, in 46,
+    // and read by the Surgery Theater's one-operation rule.
     n: 134, gate: SAVES, name: 'a migration stops creating the field it exists to add, and every older save arrives missing it',
     file: 'save/migrations.js',
-    anchor: '    save.dex.beaten ??= [];',
-    to: '    save.dex.beaten2 ??= [];',
+    anchor: '    save.theater ??= { busyUntil: 0 };',
+    to: '    save.theatre ??= { busyUntil: 0 };',
   },
   {
     n: 135, gate: SAVES, name: 'a fixture stops being a save of the version it stands for, so it tests the wrong step',

@@ -67,14 +67,15 @@ const BOUNDS = {
   'discoveredCombos':     { max: (c) => Object.keys(c.combos).length, by: 'the combo list' },
   'guidesSeen':           { max: (c) => (c.guides ?? []).length || 64, by: 'the guide list' },
   'dex.parts':            { max: (c) => Object.keys(c.parts).length, by: 'the part list' },
-  // RATCHETS, NOT BOUNDS. These two hold 244 and 237 against 42 real
-  // enemies, because the Dex records the director's GENERATED encounter ids
-  // as though they were content. That is R97's finding and R97's fix; this
-  // milestone will not quietly widen its scope into the Dex. A ratchet just
-  // above today's number is R89's convention: creep fails rather than
-  // accumulating, and the entry that owns the problem is named.
-  'dex.enemies':          { max: 260, by: 'the enemy list — R97 owns bringing this back to the 42 real ones' },
-  'dex.beaten':           { max: 260, by: 'the enemy list — R97 owns bringing this back to the 42 real ones' },
+  // R97 TURNS THESE TWO FROM RATCHETS INTO BOUNDS. R91 left them at 260
+  // against 42 real enemies and named the entry that owed the fix, which is
+  // this one. A generated rival chimera or escapee is not a Dex page — it is
+  // a sighting of a LAB — so the honest ceiling is the authored roster plus
+  // one archetype per rival, derived from the content rather than typed.
+  'dex.enemies':          { max: (c) => Object.keys(c.enemies).length + Object.keys(c.rivals ?? {}).length,
+                            by: 'the enemy list, plus one archetype per rival lab' },
+  'dex.beaten':           { max: (c) => Object.keys(c.enemies).length + Object.keys(c.rivals ?? {}).length,
+                            by: 'the enemy list, plus one archetype per rival lab' },
   'dex.traits':           { max: (c) => Object.keys(c.traits ?? {}).length, by: 'the trait list' },
   // R91 — where a retired vial's donor goes. The gate caught this one on the
   // milestone that added it, which is the whole point of the rule.
