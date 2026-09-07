@@ -29,7 +29,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 // real work between batches — it holds the content index and runs every
 // assertion — so handing every core to workers makes the run slower, not
 // faster, on the four-core machine this is budgeted for.
-export const poolSize = () => Math.max(1, Math.min(8, availableParallelism() - 1));
+// R90 — ONE WORKER WHEN SHARDED. `tools/suite.js` already runs four smoke
+// shards at once on four cores; a pool inside one of them is oversubscription
+// rather than parallelism, and the contention costs every shard, not just the
+// one that spawned the workers.
+export const poolSize = () => (process.env.SW_SHARD
+  ? 1
+  : Math.max(1, Math.min(8, availableParallelism() - 1)));
 
 // Run `tasks` through `workerFile`, returning results IN INPUT ORDER.
 //

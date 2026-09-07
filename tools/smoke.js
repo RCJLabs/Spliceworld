@@ -64,6 +64,40 @@ import { runPool } from './pool.js';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 
+// R90 — SHARDING, and the reason it is shards rather than a file split.
+//
+// Profiled after the balance sweep was pooled and the gene probe memoised,
+// smoke is 331s and the top sixteen sections are 98% of it. The tail — every
+// other section in the file — is 5.7 SECONDS. That is the number that
+// decides the design: with a tail that small, four processes each running
+// the whole file but only its own share of the heavy blocks cost 4 x 5.7s of
+// duplicated cheap work and parallelise everything that matters.
+//
+// The alternative was moving 17,790 lines into tools/suites/*.test.js, which
+// buys the same concurrency and risks silently dropping assertions in a way
+// no reviewer can eyeball. Every heavy block here is already a braced `{ }`,
+// so guarding one cannot leak a local into the file around it, and UNION
+// COVERAGE IS BY CONSTRUCTION: the tail runs in every shard, each heavy
+// block runs in exactly one, and an unset SW_SHARD runs all of them.
+const SHARD = process.env.SW_SHARD ?? '';
+const SHARD_OF = {
+  genes: 'a', orphans: 'a',
+  contest: 'b', team: 'b',
+  // Shard c is the balance sweep alone: it is the biggest single block and it
+  // runs SERIALLY here, because four shards on four cores plus a worker pool
+  // inside one of them is oversubscription, not parallelism.
+  balance: 'c',
+  wire: 'd', away: 'd', timers: 'd', frames: 'd',
+};
+// Blocks not named above run in EVERY shard. That is deliberate for anything
+// small: the duplicated cost is four times a few seconds, and a guard is a
+// place to get the union wrong. Only blocks worth more than the duplication
+// are sharded.
+const inShard = (name) => {
+  if (!(name in SHARD_OF)) throw new Error(`unknown shard block "${name}"`);
+  return !SHARD || SHARD_OF[name] === SHARD;
+};
+
 const shellScreens = () => shellScreenMap().map((e) => e.screen);
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 
@@ -628,7 +662,7 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
 // traits entered the pool ONLY through conception mutations, so a dozen of
 // them would each surface about once in two hundred eggs; and the balance
 // harness never loaded traits.json at all, so a gene could not be measured.
-{
+if (inShard('genes')) {
   const traits = Object.values(content.traits);
   assert.ok(traits.length >= 10, `a gene pool needs genes, got ${traits.length}`);
 
@@ -1567,6 +1601,7 @@ function playScriptedPartial(seed, pauseAt, roundTrip = false) {
   return b;
 }
 
+if (inShard('balance')) {
 // --- M4.5: the balance harness runs, and it catches the planted combo.
 // The yardstick is a team of THREE — the balance pass established that tuning
 // against a lone chimera measures the wrong game, and the detector is
@@ -1728,6 +1763,7 @@ assert.ok(
   `each grade opens the boss further (${ladder.map((x) => Math.round(x * 100) + '%').join(' → ')})`
 );
 
+}
 // --- M5: campaign data coherence.
 const region = Object.values(content.regions)[0];
 // "Conquer everything" means the whole map now, not the first county —
@@ -2368,7 +2404,7 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
 // balance happened to be. `benchTeam` (per node, defaulting per strip)
 // makes it a declaration, the way `benchGrade` already declares the parts
 // a player arrives with.
-{
+if (inShard('team')) {
   const { nodeConditions, nodeClimbability } = await import('../tools/sim.js');
   const regionsList = Object.values(content.regions);
 
@@ -7326,7 +7362,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
 // Ground-immunity at any mass on any chassis. Worse, no enemy in the game
 // threw a Ground-tagged move at all: `Ground -> Airborne x0` was a one-way
 // rule that only ever punished the player's own 20 Ground moves.
-{
+if (inShard('frames')) {
   const { ARCHETYPES, partsOnFrame, scriptedBattle, nodeConditions } = await import('../tools/sim.js');
   const { theaterGrants } = await import('../splice/facility.js');
   const frames = Object.values(content.frames);
@@ -13208,7 +13244,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // it. R50's MODULE_NOTES catches an unclassified module; nothing caught an
 // unreferenced export, a section that never reaches runtime, or a word the
 // tone rules ban outright.
-{
+if (inShard('orphans')) {
   const SKIP_DIRS = new Set(['node_modules', '.git', 'docs']);
   const jsFiles = [];
   const walkJs = (dir) => {
@@ -13998,7 +14034,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // with contests moving the outcome by less than the noise. This block is the
 // corrected measurement, pinned: what the walk does, what it reaches, what
 // moves it, and the one contest dial that shipped.
-{
+if (inShard('contest')) {
   const { campaignWalk: walkCampaign } = await import('./sim.js');
   const { contestTuning: tuningOf, escalationOf: escOf, contestEncounter: convoyOf } = await import('../campaign/contest.js');
   const { AGENDA: AGENDA63, agenda: agenda63 } = await import('../ranch/agenda.js');
@@ -14207,7 +14243,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 }
 
 // --- R64: being away was strictly profitable -------------------------------
-{
+if (inShard('away')) {
   const { tickWorld, elapsedSince } = await import('../campaign/world.js');
   const { tickContests, contestTuning } = await import('../campaign/contest.js');
   const DAY = 24 * HOUR;
@@ -14469,7 +14505,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 }
 
 // --- R65: timers that started when you looked -----------------------------
-{
+if (inShard('timers')) {
   const { tickWorld } = await import('../campaign/world.js');
   const { startOperation, abortOperation, opReady, operationList } = await import('../campaign/operations.js');
   const DAY = 24 * HOUR;
@@ -17406,7 +17442,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 // to raise without reading. What it must catch is the graph RE-growing by a
 // screen — putting `import { renderWarRoomScreen }` back at the top of
 // main.js costs 8 modules at once and blows straight through it.
-{
+if (inShard('wire')) {
   const graphFrom = (entry) => {
     const seen = new Map();
     const walk = (rel) => {
