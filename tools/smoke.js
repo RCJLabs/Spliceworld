@@ -84,7 +84,6 @@ const SHARD_OF = {
   // Balanced by measured cost, not by subject: the two 70s blocks get a shard
   // each, the 40s block shares with the 20s one, and the small ones fill the
   // remainder. This table is data — rebalancing it costs nothing.
-  genes: 'a',
   contest: 'b',
   frames: 'c', timers: 'c', orphans: 'c', team: 'c',
   // R90 — the two that were quietly costing the most. Unguarded, R76's
@@ -670,7 +669,7 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
 // traits entered the pool ONLY through conception mutations, so a dozen of
 // them would each surface about once in two hundred eggs; and the balance
 // harness never loaded traits.json at all, so a gene could not be measured.
-if (inShard('genes')) {
+{  // R90 — runs in two shards; the FAMILIES below are what split.
   const traits = Object.values(content.traits);
   assert.ok(traits.length >= 10, `a gene pool needs genes, got ${traits.length}`);
 
@@ -848,7 +847,18 @@ if (inShard('genes')) {
     return Math.max(Math.abs((gt - pt) / pt), Math.abs((gh - ph) / ph));
   };
 
-  for (const family of (process.env.GENE_FAMILIES ? process.env.GENE_FAMILIES.split(',') : ['t24', 'q7'])) {
+  // R90 — SPLIT BY FAMILY, for the same reason the balance sweep splits by
+  // pool: left whole this was 73s in one shard and that shard was the
+  // critical path at 195s against a 180s budget, while another finished at
+  // 124s and sat idle. The two families are independent salts — the floor
+  // and the twelve genes are measured separately under each — so a shard
+  // taking one is the same claim, made about half the evidence, and the
+  // union across shards is the pair the single loop checked.
+  const GENE_FAMILY_SHARD = { t24: 'a', q7: 'd' };
+  const families = process.env.GENE_FAMILIES
+    ? process.env.GENE_FAMILIES.split(',')
+    : ['t24', 'q7'].filter((f) => !SHARD || GENE_FAMILY_SHARD[f] === SHARD);
+  for (const family of families) {
     // The control first: no gene either side, only the seed differs. This is
     // what the harness cannot tell apart, and so what a gene has to beat.
     const floor = Math.max(...['A', 'B'].map((salt) => geneEffect(null, family, family + salt)));
