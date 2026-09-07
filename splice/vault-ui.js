@@ -21,6 +21,7 @@ import { rushQuote, rushButton, bindRush } from './rush.js';
 import { fieldNote, bindFieldNote } from '../ui/cards.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { speciesOf, isRetired } from '../data/catalog.js';
+import { vaultPressure, surplusParts, renderDown, renderValue } from './vault.js';
 
 let lastMsg = '';
 
@@ -35,6 +36,12 @@ export function renderVaultScreen(root, ctx) {
 
   const t = ctx.now();
   const run = activeResequence(state);
+  // R91 — the shelf space, and the one button that frees some. Both read the
+  // same functions the engine and the walker use, so the number on screen
+  // and the number in the save cannot drift.
+  const pressure = vaultPressure(state, content);
+  const surplus = surplusParts(state, content, Math.max(8, Math.ceil(pressure.capacity.parts * 0.15)));
+  const surplusValue = surplus.reduce((n, tok) => n + renderValue(tok), 0);
   const penRoom = state.ranch.stock.length < state.ranch.penCapacity;
 
   // R52. Measured at 380px: this card was 4,502px of a 5,999px Vault at a
@@ -162,8 +169,23 @@ export function renderVaultScreen(root, ctx) {
     ${runCard}
     <section class="card">
       <h3>Gene Vault</h3>
-      <p class="fine-print">${inv.vials.length} vial${inv.vials.length === 1 ? '' : 's'} · ${
-        inv.parts.length} part token${inv.parts.length === 1 ? '' : 's'}, shelved by the animal they came off.</p>
+      <p class="fine-print">${pressure.parts}/${pressure.capacity.parts} part token${
+        pressure.parts === 1 ? '' : 's'} · ${inv.vials.length}/${pressure.capacity.vials} vial${
+        inv.vials.length === 1 ? '' : 's'}, shelved by the animal they came off.</p>
+      <div class="meter" role="img" aria-label="Vault ${
+        Math.round(pressure.parts / pressure.capacity.parts * 100)} percent full"><div class="meter-fill ${
+        pressure.tight ? 'fill-cannon' : 'fill-sta'}" style="width:${
+        Math.min(100, Math.round(pressure.parts / pressure.capacity.parts * 100))}%"></div></div>
+      ${pressure.tight ? `<p class="pen-alert">${renderIcon('wrench')} ${
+        pressure.full
+          ? 'The shelves are full. A graduation needs somewhere to go.'
+          : `Room for ${pressure.free} more. The shelves are getting opinionated.`
+      }</p>` : ''}
+      ${surplus.length ? `<div class="pen-actions">
+        <button type="button" class="pen-dismantle" data-render-surplus="${surplus.length}">${
+          renderIcon('wrench')} Render down ${surplus.length} duplicate${surplus.length === 1 ? '' : 's'} for $${surplusValue}</button>
+      </div>
+      <p class="fine-print">Duplicates only, worst grade first — never the last of an anatomy and never one carrying a gene. The vat pays cash and asks nothing.</p>` : ''}
       ${bays || '<p class="ranch-msg">The vault echoes. Graduate someone.</p>'}
       <p class="fine-print">A vial is the whole donor — its stars and its genes. Resequencing grows that animal back${
         run ? '' : '; the vial is spent whether or not it takes'
@@ -178,6 +200,11 @@ export function renderVaultScreen(root, ctx) {
       ctx.save();
       renderVaultScreen(root, ctx);
     });
+  });
+  root.querySelector('button[data-render-surplus]')?.addEventListener('click', () => {
+    lastMsg = renderDown(state, content, surplus.map((tok) => tok.id)).msg;
+    ctx.save();
+    renderVaultScreen(root, ctx);
   });
   root.querySelector('#reseq-cancel')?.addEventListener('click', () => {
     lastMsg = cancelResequence(state, content).msg;

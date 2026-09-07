@@ -17,7 +17,8 @@
 // are not duplication: the feral twin exists for the Pens' alert, the loose
 // specimen for the Labs tab's Hunt button, the second egg for the Ranch's
 // Hurry button. Each appears in exactly one file, which is the rule.
-import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -34,6 +35,37 @@ import { createAnimal } from '../ranch/ranch.js';
 import { loadSimContent, campaignWalk } from './sim.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+// R91 — THE CACHE HAS TO KNOW WHICH GAME IT WALKED.
+//
+// `walkedSave` is keyed by seed and day count and stored in the system temp
+// directory, which is shared by every copy of the tree — including the ones
+// `tools/battery.js` makes when it breaks a file on purpose. A break in
+// engine code would therefore be answered from a cache built by the
+// UNBROKEN tree, and the gate would come back green on a game it never ran:
+// a MISSED break that looks like coverage. R89's height gate has sat on this
+// since it started using the cache; it only escaped because its breaks are
+// in rendering, which the cached save does not decide.
+//
+// So the key carries the game too. Cheap and honest: hash every module and
+// data file the walk can reach — everything outside `tools/`, which cannot
+// change what a campaign does.
+let stampCache = null;
+function sourceStamp() {
+  if (stampCache) return stampCache;
+  const h = createHash('sha256');
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (e.name.startsWith('.') || e.name === 'node_modules' || e.name === 'tools') continue;
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith('.js') || e.name.endsWith('.json')) h.update(e.name).update(readFileSync(p));
+    }
+  };
+  walk(root);
+  stampCache = h.digest('hex').slice(0, 12);
+  return stampCache;
+}
 
 // The content index, built from the list the GAME loads rather than a
 // seventh hand-written copy of it (R85's rule). Cached: every tool that
@@ -126,7 +158,7 @@ export function labCore({
 // every gate that wants one was paying that separately.
 export function walkedSave({ days = 180, seed = 2026, fresh = false } = {}) {
   const cache = join(tmpdir(), 'sw-walk-cache');
-  const file = join(cache, `walk-${seed}-${days}.json`);
+  const file = join(cache, `walk-${seed}-${days}-${sourceStamp()}.json`);
   if (!fresh && existsSync(file)) {
     try { return JSON.parse(readFileSync(file, 'utf8')); } catch { /* rebuild it */ }
   }

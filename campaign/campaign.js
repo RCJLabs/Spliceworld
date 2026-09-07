@@ -7,12 +7,13 @@ import { rngStream, pick, randInt } from '../util/rng.js';
 import { pushNews, emitNews, newsFor } from './wire.js';
 import { recordGauntletWin, gauntletComplete } from './gauntlet.js';
 import { gradeOf } from '../splice/extract.js';
+import { admitParts } from '../splice/vault.js';
 import { infirmaryGrants } from '../splice/facility.js';
 import { applyInjury, finishBattle } from '../battle/statblock.js';
 import { attend } from '../splice/feral.js';
 import { recordRivalResult, scoutStable } from './rivals.js';
 import { directorNews } from './director.js';
-import { tickRehab, findBay } from './rehab.js';
+import { tickRehab, findBay, admitBay } from './rehab.js';
 import { resolveRaid, capNotoriety } from './taskforce.js';
 import { tickContests, resolveContest, isContested } from './contest.js';
 import { resolveBreakout } from './breakout.js';
@@ -396,7 +397,7 @@ export function resolveBattle(state, battle, content, now) {
     const generated = battle.units?.[unitId] ?? null;
     const unit = generated ?? content.enemies[unitId];
     if (!unit) continue;
-    state.campaign.containment.push({
+    admitBay(state, content, {
       id: `bay-${state.campaign.containment.length}-${now}`,
       unitId,
       unit: generated,
@@ -534,7 +535,7 @@ export function resolveBattle(state, battle, content, now) {
       if (wreckable.length) {
         const rng = rngStream(state.seed, 'wreckage', state.campaign.contestCount ?? 0);
         const unitId = pick(rng, wreckable);
-        state.campaign.containment.push({
+        admitBay(state, content, {
           id: `bay-${state.campaign.containment.length}-${now}`,
           unitId,
           unit: null,
@@ -645,11 +646,15 @@ export function salvageUnit(state, ref, content, now) {
       grade,
       donor: { name: unit.name, species: part.species, stars: 3, extractedAt: now },
     };
-    state.inventory.parts.push(token);
     tokens.push(token);
-    if (!state.dex.parts.includes(partId)) state.dex.parts.push(partId);
   }
+  // R91 — battle salvage is a yield the player was GIVEN, not one they asked
+  // for, so a full vault cannot refuse it: what fits goes on the shelf and
+  // the rest is rendered down at the door and paid for. The wire says so,
+  // because a reward that quietly evaporates is worse than no reward.
+  const door = admitParts(state, content, tokens);
   emitNews(state, content, 'dismantled', { unit: unit.name });
+  if (door.rendered) emitNews(state, content, 'rendered', { count: door.rendered, paid: door.paid });
   return {
     ok: true,
     tokens,

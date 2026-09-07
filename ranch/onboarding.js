@@ -26,6 +26,7 @@ import { analyze } from '../splice/physiology.js';
 import { GRADE_INDEX, gradeFor } from '../splice/extract.js';
 import { feralTuning } from '../splice/feral.js';
 import { rushable } from '../splice/rush.js';
+import { vaultPressure } from '../splice/vault.js';
 import { taskforceEligible } from '../campaign/taskforce.js';
 
 export function onboardingSteps(state, content, now) {
@@ -264,6 +265,9 @@ export const GUIDE_HELPERS = {
   // settle, day one — and done once they have paid for one. `rushCount` is
   // the only thing the mechanic persists.
   rushableNow: (state, content, now) => rushable(state, content, now).length > 0,
+  // R91 — the shelf note shows up when the shelf starts mattering, not on
+  // day one when the vault holds six parts out of sixty.
+  vaultTight: (state, content) => vaultPressure(state, content).tight,
   // R87. Reachable the moment the State is in range — which is the moment
   // before the first raid rather than during it, so the note explains the
   // rules while there is still time to read them.

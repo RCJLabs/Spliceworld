@@ -33,10 +33,28 @@ const REPORT = process.argv.includes('--report');
 // Ratchets sit just above today's measurement — the R81/R121 rule: a ceiling
 // resting on the number means creep fails rather than accumulating.
 const BUDGET = {
-  ranch:          { folded: 3400,  tallest: 12500 },
+  // R91 RE-RATCHETS: 12500 -> 12700, measured at 12623. Not a regression in
+  // the card — the walk simply keeps SEVENTEEN animals now where it kept
+  // sixteen, and this screen is one card per animal at ~742px each. Capping
+  // the vault changed what a campaign does with its pens, so the number
+  // moved by exactly one animal. The Ranch is still one card per animal and
+  // still 16 phone screens; that is R46's shape and nobody has fixed it.
+  ranch:          { folded: 3400,  tallest: 12700 },
   pens:           { folded: 2000,  tallest: 4000 },   // R89's criterion
   theater:        { folded: 1900,  tallest: 1900 },
-  vault:          { folded: 1900,  tallest: null },   // R91 owns the Vault's depth
+  // R91 — THE VAULT HAS A NUMBER FOR THE FIRST TIME. R89 left this `null`
+  // because there was nothing honest to ratchet against: the screen listed
+  // 9,451 part tokens and would list a hundred thousand if the campaign ran
+  // long enough. It lists 299 now and cannot list more than 400, so a
+  // ceiling finally means something.
+  //
+  // 30,156px is still thirty-nine phone screens with every species bay
+  // open, and this milestone did not fix that — it made it FINITE. The fix
+  // is R89's, applied here: one bay open at a time. That is a real piece of
+  // work (this screen folds with `<details>`, and `bindFolds`' exclusive
+  // list wants buttons) and it is not in R91's criterion, so it is written
+  // down rather than smuggled in.
+  vault:          { folded: 1900,  tallest: 31000 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
   'dex:combos':   { folded: 1900,  tallest: 1900 },

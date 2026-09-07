@@ -31,6 +31,10 @@ const JOBS = [
   { name: 'saves', file: 'tools/saves.js', env: {} },
   { name: 'handlers', file: 'tools/handlers.js', env: {} },
   { name: 'roadmap', file: 'tools/roadmap.js', env: {} },
+  // R91 — the save's own weight. It walks a 180-day campaign, which costs
+  // about fifteen seconds; it goes on the shortest lane and does not move the
+  // wall-clock, because the four smoke shards are what the budget is made of.
+  { name: 'vault', file: 'tools/vault.js', env: {} },
 ];
 
 const picked = only ? JOBS.filter((j) => j.name === only || j.name.startsWith(`${only}:`)) : JOBS;

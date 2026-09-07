@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 45
+- save version: 46
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -1896,7 +1896,83 @@ R102; R88–R90 remain.)*
 **Gameplay.**
 
 - **R91 — The vault is a hoard with no bottom, and the save is paying for
-  it.** The day-180 save is **1,711 KB**, of which `inventory` is **1,641 KB:
+  it.** ✅ *Shipped.*
+
+  **Every number in this entry was low, and two things it never mentioned
+  were the actual emergency.** Re-measured on the post-R90 tree at seed 2026:
+  the day-180 save is **1,843.5 KB**, of which `inventory` is **1,760.9 KB —
+  95.5%** — holding **9,451 part tokens at 151 bytes each** and **2,059
+  vials**, with **378 containment entries** (not "280 bays") at 44 KB. A
+  campaign built **1,834 chimeras to keep nine**, median life **two hours**,
+  which is the one figure the entry called exactly right.
+
+  **`MAX_SLOTS` is 4.** The entry's "5 MB fails around 27,000 tokens —
+  roughly day 500" is correct arithmetic for one campaign, and the game has
+  held four save slots since R71, sharing one quota. Growth is dead linear at
+  **10.4 KB a day**, so four campaigns cross 5 MB around **day 124** — inside
+  what the walker already simulates. And `saveGame` catches that write
+  failure, returns `false`, and none of `main.js`'s four call sites reads the
+  result: the game stops saving and says nothing.
+
+  **The entry's own stacking key could not have met its own criterion.**
+  `partId + grade + donor` collapses 9,451 tokens to **6,641** — a 30%
+  saving — because the donor block is display-only lineage with 884 distinct
+  name/stars pairs. `partId + grade + traits` collapses to **250**. Stacking
+  was not needed at all in the end: a capacity does the whole job, and it is
+  a rule the game already understood, because pens have been sold that way
+  since M1.
+
+  **Two doors, two rules.** A yield you ASKED for is refused when it will not
+  fit; a yield you were GIVEN — battle salvage, a Wing graduate — cannot be,
+  because you never pressed a button, so it is rendered down at the door and
+  paid for, and the wire says so. Nothing is destroyed silently, which is the
+  promise `SAVE_VERSION` makes about saves applied to everything else.
+
+  **A dismantle is never refused for want of shelf space**, and that was
+  learned the hard way: with that door closed, a full stable and a full vault
+  could neither dismantle nor splice and sat there for 120 days, while the
+  gate reported a median chimera life of 104 days that was pure paralysis. A
+  graduation ADDS to your holdings and can be told to wait. A dismantle
+  reduces them, and refusing it is how a game deadlocks.
+
+  **The Theater is a room with one table.** Splicing and dismantling both
+  occupy it, which is what turns "build one, scrap it, build another" from a
+  free action into a day's work. It is deliberately **the only clock in the
+  game that is not rushable**: for one measurement it was, and the walker
+  bought past it 1,665 times in 180 days. A limit you can pay to ignore is
+  not a limit. It is a capacity, like a pen — you do not rush a pen, you buy
+  a bigger one, and the Surgery Theater track halves the table.
+
+  **Three things the harness was getting wrong, each found by measuring.**
+  `stableCap ?? 9` was a hand-typed copy of a rule that existed nowhere else,
+  so the walker churned against its own constant the moment the Theater began
+  selling stalls (R61). A stall RESERVED by a running programme is not a
+  reason to take an existing creature apart — reading it as one turned 142
+  enrolments into 269 dismantles. And the replacement test asked "is this
+  build better than that creature" when R13 has charged a price since it
+  shipped: a dismantle returns a subset of the parts, each one grade worse.
+  The margin is `salvagePreview` — the same function the Pens' confirmation
+  shows the player — not a tuning constant.
+
+  *Done when: the 180-day save is under 200 KB, every unbounded array is
+  bounded and gated, and the walker's median chimera life exceeds five days.*
+  ✅ — **147.6 KB** at day 180 (591 KB across four slots, against 5 MB); **38
+  array paths, every one named in `tools/vault.js` with the thing that caps
+  it**, and an array the table does not know about fails the build, which is
+  how `dex.species` was caught on the milestone that added it; median chimera
+  life **43.8 days**. `SAVE_VERSION`
+  46, and a save that predates the cap is PAID rather than pruned —
+  `consolidateVault` renders the overflow at the Vault screen's own price on
+  the first world tick, worst duplicates first, one of every anatomy kept.
+
+  **What this milestone did not fix.** `dex.enemies` holds 244 entries against
+  42 real enemies and `dex.beaten` 237 — R97's Dex pollution, ratcheted here
+  rather than widened into. The Vault SCREEN is 30,156 px with every bay open:
+  finite for the first time, because the data behind it is, but the fold work
+  is R89's applied here and is not in this criterion. The Ranch is still one
+  card per animal.
+
+  ~~The day-180 save is **1,711 KB**, of which `inventory` is **1,641 KB:
   8,760 part tokens and 1,965 vials.** Nothing caps either (grep: no cap on
   parts, vials, bays or notoriety anywhere); a token costs ~190 bytes, so
   localStorage's 5 MB quota fails around 27,000 tokens — roughly day 500 at
@@ -1909,9 +1985,9 @@ R102; R88–R90 remain.)*
   remembered when the vial is gone); a dismantle **cooldown**, so a chimera
   is a decision; a **bay count** for Containment (280 bays on day 180, 719
   bagged, 0 rehabilitated); and a smoke rule that every array in the save
-  has a stated bound. *Done when: the 180-day save is under 200 KB, every
-  unbounded array is bounded and gated, and the walker's median chimera life
-  exceeds five days.*
+  has a stated bound.~~ *(The original entry, struck through: every figure in
+  it was measured low, its stacking key saves 30% where the criterion needs
+  97%, and the quota arithmetic is right for one save slot out of four.)*
 - **R92 — The yardstick plays half the game.** By grep, the walker never
   calls `breedPair`, `hatchEgg`, `startVat`, `startResequence`, `setMoveset`
   or the Gauntlet. Measured over 180 days: **0 of 27 combos discovered, 0 of

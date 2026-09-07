@@ -7,22 +7,17 @@
 import { ageStage } from '../ranch/ranch.js';
 import { STATS } from '../ranch/ranch.js';
 import { rngStream } from '../util/rng.js';
-import { extractorGrants } from './facility.js';
+import { extractorGrants, theaterFree, occupyTheater, theaterBusyMsg } from './facility.js';
+import { admitParts, admitVial, vaultFit } from './vault.js';
 import { speciesOf } from '../data/catalog.js';
+import { GRADES, GRADE_INDEX } from './grades.js';
 
-// Stat multipliers feed the battle engine in M4; Apex/Prismatic ability
-// upgrades land with the keyword resolver, also M4.
-// Balance pass: the ladder used to be 1 / 1.25 / 1.5 / 2.0, which made
-// Prismatic a leap rather than a step — every encounter went from a wall to
-// a formality in one husbandry tier. Even steps now, and the difficulty
-// curve (enemies.json tierScale) answers each one.
-export const GRADES = [
-  { id: 'standard', name: 'Standard', mult: 1 },
-  { id: 'prime', name: 'Prime', mult: 1.2 },
-  { id: 'apex', name: 'Apex', mult: 1.4 },
-  { id: 'prismatic', name: 'Prismatic', mult: 1.65 },
-];
-export const GRADE_INDEX = Object.fromEntries(GRADES.map((g, i) => [g.id, i]));
+// R91 — the staircase moved to its own module so `splice/vault.js` can
+// price a rendering without importing the Extractor that imports IT. The
+// names are re-exported here because every reader in the tree has always
+// asked `extract.js` for them, and a milestone about save weight has no
+// business rewriting a dozen unrelated import lines.
+export { GRADES, GRADE_INDEX } from './grades.js';
 
 // R72 - a save outlives the build that wrote it, and GRADES is code rather
 // than data, so a token stamped with a grade this build no longer defines
@@ -88,6 +83,18 @@ export function extractAnimal(state, animalId, content, now) {
   const grade = gradeFor(animal, content, now, state);
   const stars = Math.round(avgStars(animal) * 10) / 10;
 
+  // R91 — a graduation is a yield the player ASKED for, so a full vault
+  // refuses it rather than rendering the surplus at the door. The animal is
+  // still in the pen afterwards, which is the whole point: nothing is lost,
+  // and the shelf space is a decision. Counted BEFORE the animal leaves the
+  // herd, so a refusal costs nothing.
+  const yieldCount = Object.values(content.parts).filter((p) => p.species === animal.species).length;
+  const fit = vaultFit(state, content, yieldCount);
+  if (!fit.fits) {
+    return { ok: false, msg: `The vault holds ${fit.room} more part${fit.room === 1 ? '' : 's'} and `
+      + `${animal.name} yields ${yieldCount}. Render something down, or buy shelf space from the Extractor.` };
+  }
+
   state.ranch.stock.splice(idx, 1);
   const inv = state.inventory;
 
@@ -105,7 +112,7 @@ export function extractAnimal(state, animalId, content, now) {
     potential: { ...animal.potential },
     genotype: { ...(animal.genotype ?? {}) },
   };
-  inv.vials.push(vial);
+  const vialRetired = admitVial(state, content, vial);
 
   const tokens = [];
   for (const part of Object.values(content.parts)) {
@@ -123,16 +130,18 @@ export function extractAnimal(state, animalId, content, now) {
       donor: { name: animal.name, species: animal.species, stars, extractedAt: now },
     });
   }
-  inv.parts.push(...tokens);
-  for (const token of tokens) {
-    if (!state.dex.parts.includes(token.partId)) state.dex.parts.push(token.partId);
-  }
+  // R91 — a graduation is a yield the player ASKED for, so it is refused
+  // above (see the capacity check at the top of this function) rather than
+  // rendered at the door. Reaching here means it fits.
+  const yielded = admitParts(state, content, tokens);
 
   return {
     ok: true,
     grade,
     stars,
     vial,
+    vialRetired: vialRetired.retired,
+    rendered: yielded.rendered,
     tokens,
     donorName: animal.name,
     msg: `${animal.name} has ascended to ${grade.name}-grade essence (pending assembly).`,
@@ -198,6 +207,20 @@ export function extractChimera(state, chimeraId, content, now) {
   const chimera = state.chimeras[idx];
   const preview = salvagePreview(state, chimera, content);
   if (!preview.tokens.length) return { ok: false, msg: 'There is nothing in there to recover.' };
+  // R91 — the table again. A dismantle occupies it exactly as a splice
+  // does, which is what turns "build one, scrap it, build another" from a
+  // free action into a day's work. This is a WAIT, not a wall: the clock
+  // always ends, and R86's rush will sell you the rest of it.
+  if (!theaterFree(state, now)) return { ok: false, msg: theaterBusyMsg(state, now) };
+
+  // R91 — A DISMANTLE IS NEVER REFUSED FOR WANT OF SHELF SPACE. Measured the hard way: with the
+  // vault capped and this door closed, a walk with a full stable and a full
+  // vault could not dismantle to make room and could not splice for want of
+  // room, and sat there for 120 days. The median chimera life read 104 days
+  // and every one of them was paralysis wearing the shape of a passing
+  // number. A graduation ADDS to your holdings and can be told to wait; a
+  // dismantle REDUCES them, and refusing it is how a game deadlocks. The
+  // surplus is rendered at the door instead.
 
   state.chimeras.splice(idx, 1);
   const inv = state.inventory;
@@ -210,10 +233,8 @@ export function extractChimera(state, chimeraId, content, now) {
     // still remembers the goat Chompers was built out of.
     donor: spec.donor ?? { name: chimera.name, species: content.parts[spec.partId].species, stars: 3, extractedAt: now },
   }));
-  inv.parts.push(...tokens);
-  for (const token of tokens) {
-    if (!state.dex.parts.includes(token.partId)) state.dex.parts.push(token.partId);
-  }
+  const door = admitParts(state, content, tokens);
+  occupyTheater(state, content, now);
 
   const lostNames = preview.lose
     .map((socketId) => content.parts[chimera.tokens[socketId].partId]?.name)
@@ -225,7 +246,8 @@ export function extractChimera(state, chimeraId, content, now) {
     name: chimera.name,
     msg:
       `${chimera.name} has been honourably disassembled. ` +
-      `${tokens.length} part${tokens.length === 1 ? '' : 's'} back in the vault, one grade the worse for it` +
+      `${door.admitted} part${door.admitted === 1 ? '' : 's'} back in the vault, one grade the worse for it` +
+      `${door.rendered ? `; ${door.rendered} rendered down for $${door.paid}, the shelves being what they are` : ''}` +
       `${lostNames.length ? `; ${lostNames.join(', ')} did not survive the paperwork.` : '.'}`,
   };
 }

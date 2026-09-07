@@ -19,6 +19,7 @@
 
 import { rngStream, randInt, pick } from '../util/rng.js';
 import { incubatorGrants } from './facility.js';
+import { admitVial } from './vault.js';
 import { STATS, TUNING, createAnimal } from '../ranch/ranch.js';
 import { expressedTraits } from '../ranch/breeding.js';
 
@@ -131,7 +132,7 @@ export function startResequence(state, vialId, content, now) {
 export function cancelResequence(state, content) {
   const run = state.resequencer;
   if (!run) return { ok: false, msg: 'The resequencer is empty.' };
-  state.inventory.vials.push({
+  admitVial(state, content, {
     id: run.vialId,
     species: run.species,
     donorName: run.donorName,

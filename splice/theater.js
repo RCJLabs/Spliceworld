@@ -5,7 +5,7 @@
 import { rngStream, pick, pickFresh } from '../util/rng.js';
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { analyze } from './physiology.js';
-import { theaterGrants } from './facility.js';
+import { theaterGrants, stableRoom, theaterFree, occupyTheater, theaterBusyMsg } from './facility.js';
 import { driftFromTraining } from './temperament.js';
 import { MOVE_SLOTS, activeMoves } from '../battle/moves.js';
 import { defaultMoveset } from '../battle/moves.js';
@@ -60,6 +60,10 @@ export function validateSplice(state, frameId, slotTokens, content) {
     errors.push(`The ${content.frames[frameId].name} needs a bigger Theater than you own.`);
   }
   if (!slotTokens.head) errors.push('A head is required. Company policy.');
+  // R91 — the stable has a size. Nothing capped `state.chimeras` before
+  // this: a 180-day walk built 1,834 creatures to keep nine, because a
+  // splice cost nothing you could not immediately get back. The Theater
+  // track sells the space, the same way the ranch sells pens.
   const seen = new Set();
   for (const [socketId, tokenId] of Object.entries(slotTokens)) {
     if (!tokenId) continue;
@@ -105,6 +109,22 @@ export function tokensFor(state, slotTokens, content) {
 export function spliceChimera(state, frameId, slotTokens, content, now) {
   const errors = validateSplice(state, frameId, slotTokens, content);
   if (errors.length) return { ok: false, msg: errors.join(' ') };
+  // R91 — both of the laboratory's own refusals live here rather than in
+  // `validateSplice`, which answers a question about the GENOME: is this a
+  // creature the Theater is licensed to assemble. Whether there is a stall
+  // free and whether the table is clear are questions about the moment, and
+  // putting them in the genome check broke the harness's planner outright —
+  // `bestSplice` asks "what could I build" and got told "not right now",
+  // so a walker at capacity could not even see the replacement it was
+  // deciding against.
+  const stable = stableRoom(state, content);
+  if (!stable.free) {
+    return { ok: false, msg: `The stable holds ${stable.cap}${stable.pending ? ` and ${stable.pending} of them are spoken for` : ''}.`
+      + ' Dismantle one, or expand the Surgery Theater.' };
+  }
+  if (!theaterFree(state, now)) {
+    return { ok: false, msg: theaterBusyMsg(state, now) };
+  }
 
   // R72 - `content` was omitted here, which turned tokensFor's own retired-part
   // filter into a no-op (it short-circuits on `!content`). validateSplice above
@@ -162,6 +182,7 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
   // exists at battle time is one they cannot retrain before the fight.
   chimera.moveset = defaultMoveset(movesFromTokens(tokens, report, content));
   state.chimeras.push(chimera);
+  occupyTheater(state, content, now);
 
   // Combo discoveries are permanent Splice-Dex entries.
   const newCombos = [];

@@ -22,7 +22,7 @@
 // already offers (splice/theater.js).
 
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
-import { grantsOf } from '../splice/facility.js';
+import { grantsOf, stableRoom } from '../splice/facility.js';
 import { playerLine } from './monologue.js';
 import { newsFor } from './wire.js';
 // R85 — the same function the rival ladder turns a genome into a fightable
@@ -59,12 +59,56 @@ export function rehabTuning(content) {
 // out of what they already had), a missing Containment track means rehab
 // is simply not installed — salvage, the thing that already worked, is
 // unaffected.
+// R91 — THE BOARD IS BAYS, NOT A LEDGER.
+//
+// `containment` was append-only: a day-180 save carried 378 entries, every
+// one of them a capture the player never salvaged and never enrolled, at
+// 44 KB. Salvage has always removed a bay; nothing ever removed the ones
+// nobody touched, so the board recorded the whole history of the campaign
+// under a heading that reads like a room with doors in it.
+//
+// It is a room now. Past capacity the OLDEST bay with no programme running
+// is released — never one mid-programme, because that is a clock the player
+// started and is waiting on, and never the newest, because the thing you
+// just caught is the thing you are most likely to want. If every bay holds
+// a running programme the new capture walks free instead, which is a real
+// cost and the reason the Containment track sells more doors.
+export function admitBay(state, content, entry) {
+  const bays = state.campaign.containment;
+  const cap = rehabGrants(state, content).bays;
+  // A FERAL BAY IS NOT A SPECIMEN, IT IS THE PLAYER'S OWN CREATURE waiting
+  // out R85's window with its whole record inside it. Releasing one would
+  // delete a chimera to make room for a wrecked jeep — the exact silent loss
+  // `SAVE_VERSION` exists to forbid. So it is never a candidate, alongside
+  // anything with a programme running.
+  const idle = () => bays.filter((b) => b !== entry && !b.rehab && !b.feral);
+  bays.push(entry);
+  const released = [];
+  while (bays.length > cap) {
+    const free = idle();
+    if (!free.length) break;
+    const oldest = free.reduce((a, b) => ((a.capturedAt ?? 0) <= (b.capturedAt ?? 0) ? a : b));
+    bays.splice(bays.indexOf(oldest), 1);
+    released.push(oldest);
+  }
+  // Every bay is spoken for and busy: the new arrival is the one that goes.
+  if (bays.length > cap) {
+    bays.splice(bays.indexOf(entry), 1);
+    return { admitted: false, released: released.map((b) => b.unitId), turnedAway: true };
+  }
+  return { admitted: true, released: released.map((b) => b.unitId), turnedAway: false };
+}
+
 export function rehabGrants(state, content) {
   const g = grantsOf(state, content, 'containment');
   return {
     enabled: g.rehab === true,
     hourScale: g.hourScale ?? 1,
     feeScale: g.feeScale ?? 1,
+    // R91 — the track is literally bays, so it says how many. Before this
+    // the board was an append-only log: 378 entries on a day-180 save, all
+    // of them long resolved, 44 KB of a 1.8 MB problem.
+    bays: g.bays ?? 40,
   };
 }
 
@@ -103,6 +147,9 @@ export function impound(state, chimera, content, now) {
     capturedAt: now,
     rehab: null,
   };
+  // Straight onto the board rather than through `admitBay`: this is the
+  // player's own chimera, and "no room" must never be an answer that costs
+  // them one. The cap is a bound on what the WORLD hands you.
   state.campaign.containment.push(entry);
   return entry;
 }
@@ -199,6 +246,14 @@ export function startRehab(state, ref, content, now) {
   const plan = rehabPlan(state, entry, content);
   if (!plan.enabled) return { ok: false, msg: 'You do not have a Reorientation Wing. Right now the only programme on offer is a bandsaw.' };
   if (!plan.possible) return { ok: false, msg: plan.reason };
+  // R91 — enrolling reserves a stall, because a programme is a clock and a
+  // clock the player started must always be allowed to finish. Refusing at
+  // graduation would take a creature they had already paid and waited for.
+  const stable = stableRoom(state, content);
+  if (!stable.free) {
+    return { ok: false, msg: `The stable holds ${stable.cap} and every stall is spoken for. `
+      + 'A graduate needs somewhere to graduate INTO.' };
+  }
   if (state.funds < plan.fee) {
     return { ok: false, msg: `Short by $${Math.ceil(plan.fee - state.funds)}. Enrichment toys are, inexplicably, not cheap.` };
   }

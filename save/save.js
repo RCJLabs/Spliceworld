@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 45;
+export const SAVE_VERSION = 46;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -35,6 +35,16 @@ export function newGameState() {
     resequenceCount: 0,
     chimeras: [],
     chimeraCount: 0,
+    // R91 — the Surgery Theater is a room with one table in it. Splicing and
+    // dismantling both occupy it, so a chimera is a decision rather than a
+    // draft: a 180-day walk used to build 1,834 creatures to keep nine,
+    // median life two hours. A timestamp like every other clock in this
+    // game, and rushable like every other clock since R86.
+    theater: { busyUntil: 0 },
+    // How many times the player has cleared shelf space on purpose. The
+    // vault guide's done-condition reads it, the same way `rushCount` backs
+    // R86's.
+    renderCount: 0,
     discoveredCombos: [],
     battle: null,
     warRecord: { wins: 0, losses: 0 },

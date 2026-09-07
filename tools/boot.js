@@ -73,7 +73,25 @@ const REPORT = process.argv.includes('--report');
 // save.js took 37 KB of migration table and slot machinery out from in
 // front of the player. Same rule as ever — the ceiling sits just above
 // the measurement, so creep fails.
-const FIRST_PAINT_KB = 1020;
+// R91 RAISES IT: 1020 -> 1050, measured at 1045. The vault gained a bottom,
+// which is a system rather than chrome: `splice/vault.js` (8.6 KB) is the
+// one door everything that puts a part on a shelf goes through, and
+// `splice/extract.js` — eager since M2, because the Ranch's graduation
+// forecast reads `gradeFor` on the first frame — imports it directly. There
+// is no honest deferral: a dynamic import there would make `extractAnimal`
+// async and ripple through every caller of a function that has been
+// synchronous since the second milestone, to move 9 KB.
+//
+// The rest is the capacity rules themselves, spread across facility.js,
+// theater.js, campaign.js and rehab.js, plus `splice/grades.js` — the grade
+// staircase, split out of extract.js so the vault can price a rendering
+// without importing the Extractor that imports it.
+//
+// Same rule as ever: the ceiling sits just above the measurement, so creep
+// fails. What this gate exists to catch is unchanged — a whole CLASS of file
+// arriving in front of the player, the way the shape files once did at
+// 400 KB.
+const FIRST_PAINT_KB = 1050;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //
@@ -171,6 +189,12 @@ const RUNS_NOTHING_BUT_BELONGS = {
   'battle/moves.js': 'battle/statblock.js reads MOVE_SLOTS and activeMoves synchronously to describe a creature',
   'campaign/director.js': 'campaign.js calls directorNews inside resolveBattle, which the headless harness runs synchronously',
   'campaign/monologue.js': 'rivalLine and playerLine are read on the same synchronous battle-resolution path',
+  // R91 — GRADES and GRADE_INDEX and nothing else. Two constants that half
+  // the game reads synchronously to name a grade; the module has no code to
+  // run. It exists apart from `splice/extract.js` so that `splice/vault.js`
+  // can price a rendering without importing the Extractor that imports the
+  // vault — a leaf both of them read, rather than a cycle.
+  'splice/grades.js': 'extract.js and vault.js read GRADES and GRADE_INDEX synchronously to name and rank a grade',
 };
 
 // Anything matching this is geometry, and geometry is never allowed in

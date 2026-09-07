@@ -44,7 +44,11 @@ export function incubatorGrants(state, content) {
 
 export function extractorGrants(state, content) {
   const g = grantsOf(state, content, 'extractor');
-  return { gradeBonus: g.gradeBonus ?? 0 };
+  // R91 — the Extractor track buys shelf space as well as sharper grades.
+  // The fallbacks are the day-180 ceiling rather than the level-1 floor,
+  // because a Node tool holding a partial content bundle must not lock a
+  // player out of their own vault; the rule elsewhere in this file.
+  return { gradeBonus: g.gradeBonus ?? 0, vaultParts: g.vaultParts ?? 400, vaultVials: g.vaultVials ?? 120 };
 }
 
 export function scannerGrants(state, content) {
@@ -91,7 +95,76 @@ export function theaterGrants(state, content, frameId = null) {
     // because a file failed to load.
     frames: g.frames ?? Object.keys(content.frames ?? {}),
     sockets: frameSlots ? sockets.filter((s) => frameSlots.includes(slotOfSocket(s))) : sockets,
+    // R91 — the Theater builds the creatures, so the Theater houses them,
+    // and its one table decides how often it can change its mind.
+    stable: g.stable ?? 12,
+    tableHours: g.tableHours ?? 10,
   };
+}
+
+// R91 — THE THEATER IS A ROOM WITH ONE TABLE IN IT.
+//
+// Splicing and dismantling both occupy it. Before this, a splice cost
+// nothing you could not immediately undo, so a 180-day walk built 1,834
+// creatures to keep nine and the median chimera lived TWO HOURS: the vault
+// was deep enough that a build was a draft rather than a decision. The
+// table is the decision. A better Theater turns it round faster, which is
+// what a facility track is for, and the clock is rushable like every other
+// sealed clock since R86 — so a player in a hurry pays money instead of
+// waiting, and nobody is ever simply stopped.
+export function theaterBusyFor(state, content) {
+  return theaterGrants(state, content).tableHours * 3600000;
+}
+
+export function theaterFree(state, now) {
+  return (state.theater?.busyUntil ?? 0) <= now;
+}
+
+// One sentence for a busy table, beside the clock it describes, so the
+// Theater and the Extractor cannot drift into wording the same refusal two
+// different ways — and so `splice/extract.js` does not have to import the
+// whole Surgery Theater to say it. That import cost 20 KB of the boot
+// budget for one string.
+export function theaterBusyMsg(state, now) {
+  const hours = Math.max(1, Math.ceil(((state.theater?.busyUntil ?? 0) - now) / 3600000));
+  return `The table is still occupied — ${hours}h to go. Surgery is not a thing you do twice at once.`;
+}
+
+export function occupyTheater(state, content, now) {
+  state.theater ??= { busyUntil: 0 };
+  state.theater.busyUntil = now + theaterBusyFor(state, content);
+}
+
+// R91 — HOW MANY STALLS ARE SPOKEN FOR.
+//
+// A chimera arrives by five doors: a splice, a Wing graduation, a vat
+// decant, a rescue and a feral coming home. The last two are the player's
+// own creature COMING BACK and can never be refused — a cap that loses you
+// a chimera you already had is a bug wearing a rule's clothes. The first
+// three are creations, and all three are capped here.
+//
+// A running programme counts. The Wing and the vat are clocks the player
+// STARTED, and a clock that has been started must always be allowed to
+// finish (the same promise R9 makes about a defence window and R86 about a
+// rush), so the refusal belongs at the enrolment rather than at the
+// graduation — which means the stall has to be reserved while the clock
+// runs, or a player could enrol at eleven, splice to twelve, and graduate
+// into thirteen.
+export function stableRoom(state, content) {
+  const cap = theaterGrants(state, content).stable;
+  // A CAPTURED OR FERAL CREATURE STILL HAS A STALL. Its rescue window is a
+  // clock the player is running, exactly like a Wing programme, and it comes
+  // home to the roster when it closes — so leaving it out would let a player
+  // splice into the space of a creature they are on their way to getting
+  // back, and then exceed the cap the moment it walked in. Measured: the
+  // walk ended on THIRTEEN chimeras against a stable of twelve, and the gate
+  // said so. `chimeras.length <= stable` is only an invariant if everything
+  // that can rejoin the roster is counted while it is away.
+  const pending = (state.campaign?.containment ?? []).filter((b) => b.rehab || b.feral).length
+    + (state.campaign?.captives ?? []).length
+    + (state.vat ? 1 : 0);
+  const used = (state.chimeras?.length ?? 0) + pending;
+  return { cap, used, pending, free: Math.max(0, cap - used) };
 }
 
 // The next purchasable level of a track, with why it is or is not available.

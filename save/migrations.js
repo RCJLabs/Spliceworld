@@ -528,6 +528,36 @@ export const migrations = {
   // so this only has to make sure the object is there to hold it. Nothing
   // is reset and nothing is recomputed: a save arriving here has simply
   // never opened a dossier, which is true.
+  // R91 — the vault gets a bottom, and a save that predates it is not
+  // punished for having played before the rule existed. Two things happen
+  // here and neither destroys anything the player earned:
+  //
+  //   * The Theater's table starts free. A migrated save has never used one.
+  //   * A vault over its new capacity is RENDERED DOWN, worst duplicates
+  //     first, and the money is paid into the bank at the same price the
+  //     Vault screen's own button pays. Never the last token of an anatomy,
+  //     never one carrying a trait: a player who lands here keeps one of
+  //     everything they ever collected plus the best of the rest, and is
+  //     paid for the duplicates. A day-180 save arriving from v45 carries
+  //     9,451 tokens; deleting 9,000 of them silently is exactly the thing
+  //     `SAVE_VERSION` exists to prevent, so it is a sale, with a receipt on
+  //     the wire.
+  //
+  // The rendering itself is NOT here, because a migration is handed a save
+  // and nothing else: capacity comes from `data/facility.json`, and this
+  // function has never seen the content index. `consolidateVault` in
+  // campaign/campaign.js does it on the first world tick after load, which
+  // is where the rest of this game's elapsed effects are computed anyway —
+  // and which means the rule applies to any over-capacity save however it
+  // got that way, not only to one that came through this door.
+  46: (save) => {
+    save.theater ??= { busyUntil: 0 };
+    save.renderCount ??= 0;
+    save.inventory ??= { vials: [], parts: [], tokenCount: 0 };
+    save.inventory.parts ??= [];
+    save.inventory.vials ??= [];
+    return save;
+  },
   45: (save) => {
     save.ui ??= { collapsed: {} };
     save.ui.tierRead ??= false;

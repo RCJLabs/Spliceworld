@@ -242,6 +242,71 @@ const SUITE = ['node', 'tools/suite.js'];
 // battery can aim at it in seconds rather than three minutes.
 const UNION = ['node', 'tools/smoke.js'];
 
+// R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
+// this game was bounded except the ones that mattered: the day-180 save was
+// 1.8 MB, 95.5% of it inventory, and four save slots share one 5 MB quota, so
+// four campaigns crossed it around day 124 while `saveGame` swallowed the
+// failure. The gate asks three things of one seeded walk — weight, a stated
+// bound for every array, and whether a chimera lives longer than an evening.
+const VAULT = ['node', 'tools/vault.js'];
+
+// R91 — THE SURGERY THEATER DOES ONE OPERATION AT A TIME.
+//
+// This gate exists because break 145 went MISSED against `tools/vault.js`,
+// and the miss was informative rather than a mis-aimed break: with the table
+// never occupied, the walk's median chimera life BARELY MOVED. The table is
+// not what stops the churn — the replacement margin is, because the walker
+// will not take a creature apart unless the new build beats the grades a
+// dismantle burns. The table is a real rule and it is what a PLAYER feels
+// (you cannot build one, look at it, and scrap it in the same minute), but
+// no measurement of a finished save can see it. So it gets an assertion of
+// its own, the way the pairing did in R81: what it guards is a handful of
+// refusals and the suite takes three minutes.
+const TABLE = ['node', '-e', `
+  const { readFileSync } = await import('node:fs');
+  const { indexContent } = await import('./render/renderer.js');
+  const { newGameState } = await import('./save/save.js');
+  const { spliceChimera } = await import('./splice/theater.js');
+  const { extractChimera } = await import('./splice/extract.js');
+  const { theaterBusyFor } = await import('./splice/facility.js');
+  const { CONTENT_FILES } = await import('./data/loader.js');
+  const content = indexContent(Object.fromEntries(CONTENT_FILES.map((n) =>
+    [n, JSON.parse(readFileSync('data/' + n + '.json', 'utf8'))])));
+  const HR = 3600000, t0 = 1750000000000;
+  const bad = [];
+  const lab = (tier) => {
+    const s = { ...newGameState(), seed: 7, funds: 99999 };
+    s.facility = { theater: tier };
+    for (const [i, pid] of ['goat_head', 'bear_head', 'cobra_head'].entries()) {
+      s.inventory.parts.push({ id: 'h' + i, partId: pid, grade: 'standard', traits: [],
+        donor: { name: 'D', species: pid.split('_')[0], stars: 3, extractedAt: 0 } });
+    }
+    return s;
+  };
+
+  // One operation, then the door is shut.
+  const s = lab(2);
+  if (!spliceChimera(s, 'M', { head: 'h0' }, content, t0).ok) bad.push('the first splice was refused');
+  const second = spliceChimera(s, 'M', { head: 'h1' }, content, t0);
+  if (second.ok) bad.push('a second splice went through in the same instant');
+  else if (!/table is still occupied/.test(second.msg)) bad.push('refused for the wrong reason: ' + second.msg);
+  // A dismantle is the same table.
+  const un = extractChimera(s, s.chimeras[0].id, content, t0);
+  if (un.ok) bad.push('a dismantle went through while the table was occupied');
+
+  // It is a WAIT, never a wall: past the clock, both work again.
+  const later = t0 + theaterBusyFor(s, content) + HR;
+  if (!spliceChimera(s, 'M', { head: 'h1' }, content, later).ok) bad.push('the table never came free');
+
+  // And a better Theater turns it round faster, which is what the track sells.
+  const slow = theaterBusyFor(lab(1), content), fast = theaterBusyFor(lab(2), content);
+  if (!(fast < slow)) bad.push('tier 2 does not clear the table faster than tier 1 (' + fast + ' vs ' + slow + ')');
+  if (!(slow > 0)) bad.push('the table is not occupied at all');
+
+  if (bad.length) { console.error('table ✗  ' + bad.join('; ')); process.exit(1); }
+  console.log('table ✓  one operation at a time, ' + (slow / HR) + 'h at tier 1 and ' + (fast / HR) + 'h at tier 2, and always a wait rather than a wall');
+`];
+
 // R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
 // "claws are on backwards". They were. Every part is drawn in a local space
 // where the head faces +x (frames.json _doc), and the `paw` archetype built
@@ -338,6 +403,7 @@ const FERAL = ['node', '-e', `
     const s = { ...newGameState(), seed, funds: 99999 };
     s.inventory.parts = [{ id: 'k1', partId: 'bear_head', grade: 'prime',
       donor: { name: 'U', species: 'bear', stars: 4, extractedAt: t0 } }];
+    s.theater = { busyUntil: 0 };
     const r = spliceChimera(s, 'M', { head: 'k1' }, content, t0);
     if (!r.ok) throw new Error('fixture: ' + r.msg);
     const ch = s.chimeras[0];
@@ -409,8 +475,13 @@ const RUSH = ['node', '-e', `
   s.lastTickAt = t0;
   const tok = (id, partId) => ({ id, partId, grade: 'prime', donor: { name: 'D', species: partId.split('_')[0], stars: 3, extractedAt: t0 } });
   s.inventory.parts.push(tok('a1','bear_head'), tok('a2','bear_organ'), tok('b1','goat_head'), tok('b2','goat_organ'), tok('c1','cobra_head'), tok('c2','wolf_tail'));
-  for (const [h, o] of [['a1','a2'],['b1','b2']]) { const m = spliceChimera(s, 'M', { head: h, organ: o }, content, t0 - 10 * HR); if (!m.ok) throw new Error(m.msg); }
+  // R91 — the Surgery Theater does one operation at a time. This gate is
+  // about what a RUSH buys, not about how often the table turns over, so it
+  // clears the table between fixtures the way tools/smoke.js's clearTable
+  // does. Break 145 is what proves the table is still being occupied.
+  for (const [h, o] of [['a1','a2'],['b1','b2']]) { s.theater = { busyUntil: 0 }; const m = spliceChimera(s, 'M', { head: h, organ: o }, content, t0 - 10 * HR); if (!m.ok) throw new Error(m.msg); }
   for (const c of s.chimeras) { c.settleUntil = t0 - HR; c.bond = 50; }
+  s.theater = { busyUntil: 0 };
   const mC = spliceChimera(s, 'M', { head: 'c1', tail: 'c2' }, content, t0); if (!mC.ok) throw new Error(mC.msg);
   const C = s.chimeras[2];
   const v = startVat(s, s.chimeras[0].id, s.chimeras[1].id, content, t0); if (!v.ok) throw new Error(v.msg);
@@ -1054,6 +1125,7 @@ const FOUNDING = ['node', '-e', `
       const sl = content.parts[p.partId]?.slot;
       if (sl && !bySlot[sl]) bySlot[sl] = p.id;
     }
+    s.theater = { busyUntil: 0 };  // R91 — see the note on the rush gate above.
     const made = spliceChimera(s, 'M', bySlot, content, t0);
     if (!made.ok) { bad.push(lab.id + ' cannot splice on day one: ' + made.msg); continue; }
     const c = s.chimeras[s.chimeras.length - 1];
@@ -1082,6 +1154,7 @@ const FOUNDING = ['node', '-e', `
     foundLab(s, content, labs[0].id, t0);
     const only = {};
     for (const p of s.inventory.parts) only[content.parts[p.partId].slot] = p.id;
+    s.theater = { busyUntil: 0 };
     if (spliceChimera(s, 'M', only, content, t0).ok) bad.push('the crate alone makes a chimera');
     if (agenda(s, content, t0).some((i) => i.id === 'splice')) {
       bad.push('the agenda offers a splice there is no head for');
@@ -1126,6 +1199,7 @@ const OPENING = ['node', '-e', `
         const p = s.inventory.parts.find((x) => !used.has(x.id) && content.parts[x.partId].slot === slot && content.parts[x.partId].species === sp);
         if (p) { slots[slot] = p.id; used.add(p.id); }
       }
+      s.theater = { busyUntil: 0 };
       spliceChimera(s, 'M', slots, content, t0);
     }
     for (const c of s.chimeras) c.settleUntil = t0;
@@ -1255,6 +1329,12 @@ const RAID = ['node', '-e', `
 `];
 
 const VERBOSE = process.argv.includes('--verbose');
+// R91 — run the baseline pass and stop. The baseline is the fast half (every
+// gate once, on a pristine copy) and the breaks are the hour; when a change
+// moves a gate rather than a break, the whole hour is spent re-learning
+// something the first three minutes already said. Needed it twice in one
+// milestone, which is the bar for a flag.
+const BASELINE_ONLY = process.argv.includes('--baseline');
 
 // The R78 replay, at the unit level. A month away with a convoy already at
 // the gate must still replay the month — a chaotic forty-day walk is where
@@ -1346,6 +1426,7 @@ const RETIRED = ['node', '-e', `
       used.add(sock);
       slots[sock] = 'r-' + pid;
     }
+    s.theater = { busyUntil: 0 };
     const made = spliceChimera(s, FRAME, slots, content, t0);
     if (!made.ok) fail('the fixture no longer splices: ' + made.msg);
     // The splice SPENDS the six tokens, so the vault needs spares of its own
@@ -1624,6 +1705,60 @@ const WALK = ['node', '-e', `
 const ROADMAP = ['node', 'tools/roadmap.js'];
 
 const BREAKS = [
+  {
+    n: 143, gate: VAULT, name: 'the vault stops having a capacity, so a campaign hoards nine thousand parts again',
+    file: 'splice/vault.js',
+    anchor: '  return { parts: g.vaultParts, vials: g.vaultVials };',
+    to: '  return { parts: Infinity, vials: Infinity };',
+  },
+  {
+    n: 144, gate: VAULT, name: 'the containment board goes back to being an append-only ledger of every capture ever',
+    file: 'campaign/rehab.js',
+    anchor: '  const cap = rehabGrants(state, content).bays;',
+    to: '  const cap = Infinity;',
+  },
+  {
+    n: 145, gate: TABLE, name: 'the Theater table is never occupied, so a creature can be built and scrapped in the same minute',
+    file: 'splice/facility.js',
+    anchor: '  state.theater.busyUntil = now + theaterBusyFor(state, content);',
+    to: '  state.theater.busyUntil = now;',
+  },
+  {
+    n: 146, gate: VAULT, name: 'the stable stops having a size, so nothing bounds how many creatures a save carries',
+    file: 'splice/facility.js',
+    anchor: '  const cap = theaterGrants(state, content).stable;',
+    to: '  const cap = Infinity;',
+  },
+  {
+    n: 147, gate: VAULT, name: 'a vial never retires, so the rack grows for as long as the player extracts',
+    file: 'splice/vault.js',
+    anchor: '  while (inv.vials.length > cap) {',
+    to: '  while (false) {',
+  },
+  {
+    n: 148, gate: VAULT, name: 'the walker goes back to swapping creatures on any improvement, ignoring the grades a dismantle burns',
+    file: 'tools/sim.js',
+    anchor: '        if (plan.score > quality(weakest) + burned) {',
+    to: '        if (plan.score > quality(weakest)) {',
+  },
+  {
+    // The first version of this break disabled the REPORTER in tools/vault.js
+    // and went MISSED, correctly: with every array declared there was nothing
+    // to report, so silencing the report changed nothing. What the rule
+    // actually guards is a new unbounded list arriving in the save, so that
+    // is what the break does — the failure mode R50 was written for, in the
+    // file where a save's shape is decided.
+    n: 149, gate: VAULT, name: 'a new unbounded list joins the save shape, and the declare-yourself rule lets it through',
+    file: 'save/save.js',
+    anchor: '    discoveredCombos: [],',
+    to: '    discoveredCombos: [],\n    auditTrail: [],',
+  },
+  {
+    n: 150, gate: VAULT, name: 'a save that predates the cap is pruned instead of paid, so nine thousand parts are deleted in silence',
+    file: 'splice/vault.js',
+    anchor: '  const going = surplusParts(state, content, over);',
+    to: '  const going = state.inventory.parts.slice(0, over);',
+  },
   // --- gate: scopecheck (a free identifier fails the build) ----------------
   {
     n: 1, gate: SCOPE, name: 'R60, replayed: opOdds trimmed from the import, two call sites live',
@@ -2611,7 +2746,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, VAULT, TABLE]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2643,6 +2778,12 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
+}
+
+if (BASELINE_ONLY) {
+  rmSync(DIR, { recursive: true, force: true });
+  console.log(process.exitCode ? '\nbaseline ✗  a gate fails on a pristine tree' : '\nbaseline ✓  every gate passes on a pristine tree');
+  process.exit(process.exitCode ?? 0);
 }
 
 console.log('\nbreaks:');
