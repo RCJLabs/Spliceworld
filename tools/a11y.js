@@ -326,6 +326,207 @@ const CONTRAST = `(() => {
   return out;
 })()`;
 
+// R99 — WHAT THE WALK MUST HAVE ACTUALLY DRAWN.
+//
+// This whole milestone exists because coverage collapsed in silence: the
+// fold walk stopped opening folds, `.feral-panel` stopped being rendered,
+// and the contrast rule kept passing because it had nothing to look at. The
+// run said "29 views" and that number went up over four milestones while the
+// thing it was supposed to measure went dark.
+//
+// A count cannot catch that. A LIST can: these are states whose only proof
+// of life is that something drew them, and a run that never reaches one has
+// lost the reach rather than fixed the bug. Each is the deepest thing on its
+// screen — the panel behind a fold, the tab behind a card, the board behind
+// a battle — so between them they hold every kind of reach this gate has.
+const LANDMARKS = {
+  '.feral-panel': "the Pens' feral alert, behind a creature's fold",
+  '.subtabs [data-pen-tab]': "the Pens' per-creature subtabs, which only exist inside an open card",
+  '.subtabs [data-war-tab]': 'the War Room\'s tab bar, which the arena hides whenever a duel exists',
+  '.dominion-card': 'the dominion banner, which needs a conquered county',
+  '.encounter': 'an encounter row — an egg, a contest or a loose specimen',
+};
+const SAW = `(() => {
+  const out = [];
+  for (const sel of ${JSON.stringify(Object.keys(LANDMARKS))}) {
+    for (const el of document.querySelectorAll(sel)) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+      out.push(sel); break;
+    }
+  }
+  return out;
+})()`;
+
+// R99 — AND DOES IT HOLD STILL WHEN ASKED TO? `prefers-reduced-motion` has
+// been EMULATED in this file since R80 — purely to make a battle round
+// resolve in one frame so the keyboard walk is quick — and nothing has ever
+// asserted the result. The setting was a speed trick, not a measurement.
+//
+// Two halves, because neither alone is enough. This one reads the source:
+// every selector that starts an animation or a transition must have an
+// off-switch in a `prefers-reduced-motion` block. It catches the ten arena
+// effects that only exist for four tenths of a second mid-fight, which no
+// browser pass will ever have on screen when it looks.
+const motionSwitches = () => {
+  const css = readFileSync(join(root, 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const uncovered = [];
+  // Everything a reduced-motion block turns off, by property.
+  const off = { animation: new Set(), transition: new Set() };
+  for (const m of css.matchAll(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{/g)) {
+    // Walk braces from the block's opening one so a nested rule ends where it
+    // really ends rather than at the first `}` in the file.
+    let depth = 0, i = m.index + m[0].length - 1, start = i + 1;
+    for (; i < css.length; i++) {
+      if (css[i] === '{') depth++;
+      else if (css[i] === '}' && --depth === 0) break;
+    }
+    for (const rule of css.slice(start, i).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      for (const prop of ['animation', 'transition']) {
+        if (!new RegExp(`\\b${prop}\\s*:\\s*none`).test(rule[2])) continue;
+        for (const sel of rule[1].split(',')) off[prop].add(sel.trim());
+      }
+    }
+  }
+  // Everything that MOVES, outside those blocks.
+  const outside = css.replace(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\n\}/g, '')
+    .replace(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[^{}]*\{[^{}]*\}[^{}]*\}/g, '');
+  for (const rule of outside.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sels = rule[1].split(',').map((x) => x.trim()).filter(Boolean);
+    if (!sels.length || sels.some((x) => x.startsWith('@') || x.includes('%'))) continue;
+    for (const [prop, re] of [['animation', /\banimation\s*:\s*([^;]+)/], ['transition', /\btransition\s*:\s*([^;]+)/]]) {
+      const d = rule[2].match(re);
+      if (!d || /^\s*none\b/.test(d[1])) continue;
+      // A zero-duration transition does not move anything.
+      if (prop === 'transition' && !/[0-9.]+m?s/.test(d[1])) continue;
+      if (/\b0s\b/.test(d[1]) && !/[1-9][0-9.]*m?s/.test(d[1])) continue;
+      for (const sel of sels) {
+        if (off[prop].has(sel)) continue;
+        uncovered.push({ sel, prop, value: d[1].trim().slice(0, 44) });
+      }
+    }
+  }
+  return uncovered;
+};
+
+// The other half, in the browser: with the media query on, nothing that is
+// ACTUALLY ON SCREEN may still be moving. A source rule cannot see a duration
+// that arrives from a variable, an inline style, or a selector nobody thought
+// to grep for.
+const STILL = `(() => {
+  const out = [];
+  for (const el of document.querySelectorAll('body *')) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    const dur = (v) => Math.max(0, ...String(v).split(',').map((x) => parseFloat(x) || 0));
+    const anim = cs.animationName !== 'none' && dur(cs.animationDuration) > 0;
+    const trans = dur(cs.transitionDuration) > 0;
+    if (!anim && !trans) continue;
+    out.push({
+      sel: el.tagName.toLowerCase()
+        + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).join('.') : ''),
+      what: anim ? 'animation ' + cs.animationName + ' ' + cs.animationDuration
+        : 'transition ' + cs.transitionProperty + ' ' + cs.transitionDuration,
+    });
+  }
+  return out;
+})()`;
+
+// R99 — DOES IT STAY IN ITS CARD, AND ON THE PHONE?
+//
+// R86 shipped the egg's Hurry button inside `.encounter`, a flex line
+// already holding a portrait, two lines of lineage and a countdown. The
+// button ran 110px past the card and 98px past the viewport at 380px, and
+// this gate passed it: a control that escapes its card still reports a
+// full-size rect, so the 40px floor and the 6px gutter are both satisfied
+// by a button half of which is off the screen. It was found by screenshot.
+//
+// Measured against the CARD rather than the viewport alone, because those
+// are two different failures and only one of them is visible on a wide
+// phone: a button that leaves its card but lands inside the window looks
+// merely wrong, and the same button on a narrower device is gone.
+//
+// An ancestor that scrolls sideways is exempt by construction — a wide table
+// inside `overflow-x: auto` is the fix for this problem, not an instance of
+// it — and so is `overflow: hidden`, where the layout box overhangs but the
+// paint does not.
+const CONTAINED = `(() => {
+  const SEL = 'button, a[href], input:not([type="hidden"]), select, textarea, summary,'
+    + ' label[for], [tabindex]:not([tabindex="-1"]), [role="button"]';
+  const out = [];
+  const named = (el) => el.tagName.toLowerCase()
+    + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
+  const owns = (el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+  const pool = new Set(document.querySelectorAll(SEL));
+  for (const el of document.querySelectorAll('.card *')) if (owns(el)) pool.add(el);
+  for (const el of pool) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || cs.position === 'fixed') continue;
+    const card = el.closest('.card');
+    if (!card || card === el) continue;
+    // Anything between here and the card that scrolls or clips sideways
+    // makes an overhanging layout box legitimate.
+    let scrolls = false;
+    for (let n = el.parentElement; n && n !== card.parentElement; n = n.parentElement) {
+      const ox = getComputedStyle(n).overflowX;
+      if (ox === 'auto' || ox === 'scroll' || ox === 'hidden') { scrolls = true; break; }
+    }
+    if (scrolls) continue;
+    const c = card.getBoundingClientRect();
+    const right = Math.round(r.right - c.right);
+    const left = Math.round(c.left - r.left);
+    const past = Math.round(r.right - document.documentElement.clientWidth);
+    if (right > 1 || left > 1 || past > 1) {
+      out.push({ sel: named(el), card: named(card),
+        label: (el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 30),
+        right: Math.max(0, right), left: Math.max(0, left), past: Math.max(0, past) });
+    }
+  }
+  return out;
+})()`;
+
+// R99 — AND DOES IT SIT ON TOP OF ANOTHER CONTROL? R80 measured the GAP
+// between two controls, which is a number that only means anything once they
+// are apart: a negative gap is an overlap, and the pair rule reported the
+// distance as though it were still a separation.
+//
+// Nesting is not overlap (a button inside its label is one target), and a
+// modal covers the page on purpose, so while one is up only its own controls
+// are compared — the same rule GAPS uses, for the same reason.
+const OVERLAPS = `(() => {
+  const SEL = 'button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]),'
+    + ' select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+  const modal = [...document.querySelectorAll('#overlay, #picker')].find((m) => m && !m.hidden);
+  const root = modal || document;
+  const named = (el) => el.tagName.toLowerCase()
+    + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
+  const els = [...root.querySelectorAll(SEL)].filter((el) => {
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    return r.width && r.height && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity !== 0;
+  });
+  const out = [];
+  for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
+    const a = els[i], b = els[j];
+    if (a.contains(b) || b.contains(a)) continue;
+    const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    const ox = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+    const oy = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+    if (ox > 1 && oy > 1) {
+      out.push({ a: named(a), b: named(b), ox: Math.round(ox), oy: Math.round(oy),
+        la: (a.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 22),
+        lb: (b.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 22) });
+    }
+  }
+  return out;
+})()`;
+
 // R122 — A DIALOG CARD PAINTS ITS OWN BACKGROUND. The founding card said
 // `class="panel founding"`, and `panel` is a colour TOKEN, not a class in
 // this stylesheet — so the card was `rgba(0, 0, 0, 0)` and the Ranch behind
@@ -433,8 +634,45 @@ const RAGGED = `(() => {
   return out;
 })()`.replace('RAG_PX', String(RAG));
 
-const OPEN_EVERYTHING = `[...document.querySelectorAll('details')].forEach((d) => { d.open = true; });
-  [...document.querySelectorAll('.fold-toggle,[data-fold]')].forEach((b) => b.click());`;
+// R99 — THIS LINE MEASURED ALMOST NOTHING, AND SAID SO IN THE PASSING TENSE.
+//
+// `[...querySelectorAll('[data-fold]')].forEach((b) => b.click())` looks like
+// "open everything". It is not, for two reasons that compound:
+//
+//   1. A fold's click handler calls `rerender()`, which reassigns the
+//      screen's `innerHTML`. Every button in the captured list except the
+//      first is detached by the time its turn comes, so those clicks land on
+//      orphans and do nothing.
+//   2. R89 gave the Pens (and R98 the Ranch) an EXCLUSIVE group: opening one
+//      creature shuts the others. "Open everything" is a contradiction on
+//      those screens even when the clicks land — at most one can be open.
+//
+// Measured on the Pens: five folds, and this left TWO open, neither of them
+// the feral one. So `.feral-panel` — the panel R85 built and R122 fixed the
+// contrast on — was never drawn while the gate was looking, and its 3.42:1
+// body text passed every run. The contrast rule was right the whole time and
+// had nothing to look at.
+//
+// A fold is therefore opened one at a time, re-queried after each rerender,
+// and MEASURED IN ITS OWN PASS. `<details>` still opens in bulk because it
+// has no handler and no group.
+const OPEN_DETAILS = `[...document.querySelectorAll('details')].forEach((d) => { d.open = true; });`;
+
+// The ids of the folds on the screen that is currently showing.
+const FOLD_IDS = (screen) => `[...document.querySelectorAll('#screen-${screen} button[data-fold]')]`
+  + `.map((b) => b.dataset.fold)`;
+
+// Every subtab bar on the visible screen, by its attribute. The Dex's five
+// were walked by name; the Pens' four and the War Room's five were not, and
+// `ui/tabs.js` builds all three from one helper — so ask the DOM which
+// `data-*-tab` attributes are actually present rather than naming them (R61).
+const SUBTAB_ATTRS = (screen) => `(() => {
+  const out = new Set();
+  for (const el of document.querySelectorAll('#screen-${screen} button')) {
+    for (const k of Object.keys(el.dataset)) if (/Tab$/.test(k)) out.add(k);
+  }
+  return [...out];
+})()`;
 
 async function main() {
   const chrome = findChrome();
@@ -488,6 +726,9 @@ async function main() {
     const seeThrough = new Map();
     const cards = new Map();
     const lists = new Map();
+    const spills = new Map();
+    const stacked = new Map();
+    const saw = new Map();
     const views = new Set();
     const collect = async (where) => {
       views.add(where);
@@ -495,6 +736,19 @@ async function main() {
         // Keyed by the rule that would fix it and not by the view, so one
         // leaked selector reports once however many screens render it.
         if (!lists.has(g.sel) || lists.get(g.sel).n < g.n) lists.set(g.sel, { ...g, where });
+      }
+      for (const sel of await evaluate(SAW)) if (!saw.has(sel)) saw.set(sel, where);
+      for (const o of await evaluate(CONTAINED)) {
+        // Keyed by the element, and the WORST spill wins: one rule leaks the
+        // same button on every screen that draws it.
+        const key = `${o.card}|${o.sel}|${o.label}`;
+        const worst = Math.max(o.right, o.left, o.past);
+        if (!spills.has(key) || spills.get(key).worst < worst) spills.set(key, { ...o, worst, where });
+      }
+      for (const o of await evaluate(OVERLAPS)) {
+        const key = `${o.a}|${o.b}`;
+        const area = o.ox * o.oy;
+        if (!stacked.has(key) || stacked.get(key).area < area) stacked.set(key, { ...o, area, where });
       }
       for (const c of await evaluate(MODAL_CARDS)) {
         cards.set(`${c.host}|${c.sel}`, { ...c, where });
@@ -517,6 +771,52 @@ async function main() {
         if (!pairs.has(key) || pairs.get(key).gap > p.gap) pairs.set(key, { ...p, where });
       }
     };
+    // R99 — WALK THE SUBTABS THE SCREEN ACTUALLY HAS. This asked for
+    // `data-dex-tab` by name, so the Dex's five tabs were measured and the
+    // Pens' four and the War Room's five never were. All three come out of
+    // `ui/tabs.js`'s one helper, so the DOM is asked which bars exist.
+    const subtabPass = async (s, where) => {
+      for (const attr of await evaluate(SUBTAB_ATTRS(s))) {
+        const dash = attr.replace(/([A-Z])/g, '-$1').toLowerCase();
+        const ids = await evaluate(`[...document.querySelectorAll('#screen-${s} button[data-${dash}]')]`
+          + `.map((b) => b.dataset.${attr})`);
+        for (const id of ids ?? []) {
+          await evaluate(`document.querySelector('#screen-${s} button[data-${dash}="${id}"]')?.click()`);
+          await sleep(320);
+          await collect(`${where}/${id}`);
+        }
+      }
+    };
+
+    // R99 — ONE FOLD AT A TIME, RE-QUERIED. See OPEN_DETAILS above for why
+    // the bulk version measured almost nothing. Each creature card carries
+    // DIFFERENT alerts — the feral panel, the settling clock, the Infirmary
+    // window — so every fold earns its own pass; the subtabs inside a card
+    // are walked on the first card that has them, because R89 partitions one
+    // template into all four and a second creature's Anatomy tab is the same
+    // markup with different nouns.
+    const foldPass = async (s, where = s) => {
+      const ids = await evaluate(FOLD_IDS(s));
+      let walkedSubtabs = false;
+      for (const id of ids ?? []) {
+        const opened = await evaluate(`(() => {
+          const b = document.querySelector('#screen-${s} button[data-fold="${id}"]');
+          if (!b) return false;
+          if (b.getAttribute('aria-expanded') !== 'true') b.click();
+          return true;
+        })()`);
+        if (!opened) continue;      // a rerender can retire a fold mid-walk
+        await sleep(380);
+        await evaluate(OPEN_DETAILS);
+        await collect(`${where}#${id}`);
+        if (!walkedSubtabs && (await evaluate(SUBTAB_ATTRS(s))).length) {
+          await subtabPass(s, `${where}#${id}`);
+          walkedSubtabs = true;
+        }
+      }
+      return (ids ?? []).length;
+    };
+
     // R122 — the founding picker, which needs an EMPTY browser to exist:
     // it is the screen a player sees before they have a save, so the
     // fixture that makes every other view reachable is exactly what hides
@@ -557,6 +857,18 @@ async function main() {
       await sleep(2200);
       await evaluate(`document.querySelector('#tabs button[data-screen="battle"]').click()`);
       await sleep(700);
+      // R99 — AND THE WAR ROOM ITSELF, which no run had ever drawn. The
+      // fixture ships a duel in progress so the arena can be measured, and
+      // `#screen-battle` renders the arena whenever one exists — so the map,
+      // the jobs board, the Labs board, the bays and the wire, five tabs and
+      // the biggest screen in the game, were never rendered while any gate
+      // was looking. This is the one moment in the run when that screen is
+      // the War Room, so it is walked here.
+      await collect('warroom');
+      await subtabPass('battle', 'warroom');
+      await foldPass('battle', 'warroom');
+      await evaluate(`document.querySelector('#screen-battle button[data-war-tab="map"]')?.click()`);
+      await sleep(500);
       const opened = await evaluate(`(() => {
         const b = [...document.querySelectorAll('#screen-battle button')]
           .find((x) => /^\\s*(Spar|Assault)\\b/.test(x.textContent) && !x.disabled);
@@ -623,6 +935,16 @@ async function main() {
       else for (const x of over) note(`${where}: the arena does not scroll, and ${x}`);
     };
 
+    // R99 — the source half of the reduced-motion rule. No browser needed:
+    // it asks whether every moving thing HAS an off-switch, which is the only
+    // form of the question that can reach the ten arena effects that exist
+    // for four tenths of a second in the middle of a fight.
+    for (const m of motionSwitches()) {
+      note(`style.css: \`${m.sel}\` sets ${m.prop}: ${m.value} and no `
+        + '`prefers-reduced-motion: reduce` block turns it off — a player who asked their OS to stop'
+        + ' moving things still gets this one');
+    }
+
     await foundingPass();
     await briefingPass();
     await collect('shell');
@@ -630,16 +952,12 @@ async function main() {
     for (const s of screens) {
       await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
       await sleep(600);
-      await evaluate(OPEN_EVERYTHING);
+      await evaluate(OPEN_DETAILS);
       await sleep(400);
       await collect(s);
       if (s === 'battle') await arenaFits('battle');
-      const subs = await evaluate(`[...document.querySelectorAll('button[data-dex-tab]')].map((b) => b.dataset.dexTab)`);
-      for (const sub of subs ?? []) {
-        await evaluate(`document.querySelector('button[data-dex-tab="${sub}"]').click()`);
-        await sleep(350);
-        await collect(`${s}/${sub}`);
-      }
+      await subtabPass(s, s);
+      await foldPass(s);
     }
     // ---- 1b. …and the arena on a short phone. 780px lands in the
     //      `min-height: 760px` band (a roomier stage, taller move cells);
@@ -675,7 +993,8 @@ async function main() {
     for (const s of screens) {
       await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
       await sleep(500);
-      await evaluate(OPEN_EVERYTHING);
+      await evaluate(OPEN_DETAILS);
+      await evaluate(`document.querySelector('#screen-${s} button[data-fold]')?.click()`);
       await sleep(350);
       views.add(`${s}@${BAND_TOP}`);
       for (const g of await evaluate(RAGGED)) {
@@ -900,6 +1219,19 @@ async function main() {
       }
       kbScreens += 1;
 
+      // R99 — WITH A CARD OPEN. This stamped whatever fold state the earlier
+      // passes happened to leave behind, which made the count a function of
+      // what ran before it rather than of the screen. Most of this game's
+      // controls live inside a fold — care buttons, move slots, the rename
+      // sheet — so a keyboard walk over shut rows is a walk over the chrome.
+      // Opened with a click on purpose: the question is whether TAB reaches
+      // everything once the screen is in that state, not how it got there.
+      await evaluate(`(() => {
+        const b = document.querySelector('#screen-${s} button[data-fold]');
+        if (b && b.getAttribute('aria-expanded') !== 'true') b.click();
+      })()`);
+      await sleep(420);
+
       const stamped = await evaluate(`(() => {
         const SEL = 'button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]),'
           + ' select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
@@ -1004,6 +1336,20 @@ async function main() {
     // reduced motion is the setting an accessibility gate should be
     // measuring anyway.
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    // R99 — and with it on, nothing ON SCREEN may still be moving. The media
+    // query has been emulated here since R80 and nothing ever read the
+    // result; this is that emulation finally being asked a question.
+    {
+      const still = new Map();
+      for (const s2 of ['ranch', 'pens', 'battle', 'vault', 'theater', 'dex']) {
+        await evaluate(`document.querySelector('#tabs button[data-screen="${s2}"]').click()`);
+        await sleep(450);
+        for (const m of await evaluate(STILL)) still.set(`${m.sel}|${m.what}`, { ...m, where: s2 });
+      }
+      for (const m of still.values()) {
+        note(`${m.where}: ${m.sel} still has ${m.what} with reduced motion asked for`);
+      }
+    }
     if (!(await openScreen('battle'))) note('the War Room tab cannot be reached by Tab');
     else {
       if (!(await evaluate(`!!document.getElementById('msg-next')`))) {
@@ -1139,8 +1485,16 @@ async function main() {
     //     the ✕ — both committed, and one of them means "no".
     await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
     await sleep(700);
-    await evaluate(OPEN_EVERYTHING);
-    await sleep(400);
+    // The rename sheet lives inside an animal's card, so open folds until one
+    // appears rather than firing a single stale volley at all of them.
+    await evaluate(OPEN_DETAILS);
+    for (const id of await evaluate(FOLD_IDS('ranch')) ?? []) {
+      await evaluate(`(() => { const b = document.querySelector('#screen-ranch button[data-fold="${id}"]');
+        if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); })()`);
+      await sleep(300);
+      if (await evaluate(`!!document.querySelector('#screen-ranch .rename-btn:not([disabled])')`)) break;
+    }
+    await sleep(200);
     const openedPrompt = await evaluate(`(() => {
       const b = document.querySelector('#screen-ranch .rename-btn:not([disabled])');
       if (!b) return false;
@@ -1231,9 +1585,36 @@ async function main() {
         : `${g.where}: ${g.sel} fills its ${g.w}px line as a column but leaves align-items "${g.how}", so every child shrink-wraps to its own text ("${g.txt}")`);
     }
 
+    // ---- R99. Nothing leaves its card, and nothing sits on anything else.
+    for (const o of [...spills.values()].sort((a, b) => b.worst - a.worst)) {
+      const where = [o.right && `${o.right}px past its card`, o.left && `${o.left}px off its left edge`,
+        o.past && `${o.past}px past the phone`].filter(Boolean).join(' and ');
+      note(`${o.where}: ${o.sel} "${o.label}" escapes ${where} — a control that leaves its card`
+        + ' still reports a full-size box, so the 40px floor and the 6px gutter both pass it');
+    }
+    for (const o of [...stacked.values()].sort((a, b) => b.area - a.area)) {
+      note(`${o.where}: ${o.a} "${o.la}" sits on top of ${o.b} "${o.lb}" by ${o.ox}x${o.oy}px`
+        + ' — two targets a thumb cannot tell apart, and the gutter rule reads the overlap as a separation');
+    }
+
+    // ---- R99. The walk has to have DRAWN the things it claims to measure.
+    for (const [sel, what] of Object.entries(LANDMARKS)) {
+      if (saw.has(sel)) continue;
+      note(`nothing in the whole walk ever drew \`${sel}\` — ${what}. A rule with nothing`
+        + ' to look at passes; that is how a 3.42:1 panel survived four milestones of green runs');
+    }
+
     // ---- 7. nothing narrated an error along the way ------------------------
     for (const e of [...new Set(errors)]) note(`console error during the walk: ${e}`);
 
+    if (REPORT) {
+      // R99 — WHICH views, not how many. "29 views" read like coverage while
+      // the feral panel went undrawn for four milestones; a list is the only
+      // form of that number anybody can check.
+      console.log(`  views walked (${views.size}):`);
+      for (const v of [...views].sort()) console.log(`    ${v}`);
+      console.log('');
+    }
     console.log(`a11y: ${controls.length} distinct controls measured at ${VIEWPORT}px across ${views.size} views (boxes re-read at ${BAND_TOP}px, the top of the phone band)`);
     console.log(`a11y: ${kbScreens}/${screens.length} screens opened, ${kbControls} controls tabbed to and a duel fought with Tab and Enter alone`);
   } finally {
@@ -1248,7 +1629,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · the game is playable from the keyboard`);
+  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
 }
 
 // R88 — only when RUN, not when imported. This module owns the one fixture

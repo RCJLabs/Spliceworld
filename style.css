@@ -1125,6 +1125,9 @@ body.in-battle .ticker { font-size: 0.66rem; }
   .float, .anim-lunge-fwd, .anim-hit, .anim-ko,
   .anim-wavein, .anim-buff, .anim-debuff,
   .grad-shake, .grad-flash, .poof { animation: none; }
+  /* R99 — the two transitions nobody had listed, while all eleven keyframes
+     were. Safe: nothing listens for `transitionend`. */
+  .stage, .slot { transition: none; }
 }
 
 /* Taller phones get a roomier field; short ones keep the menu reachable. */
@@ -2196,12 +2199,9 @@ footer {
 }
 .facility-next button:disabled { background: var(--panel); color: var(--muted); cursor: default; }
 
-/* R128b — the roll-up's links out. These shipped as `class="linkish"`, a name
-   with NO RULE ANYWHERE, so four screen names rendered as default grey
-   buttons wedged mid-sentence — the sentence read as broken chrome rather
-   than as a sentence. They are links inside a line of prose, so they are
-   styled as links and given a real hit target on the way (R73's 40px floor
-   is for controls in a row; an inline link inherits the line it sits in). */
+/* R128b — the roll-up's links out, which shipped as `linkish`: a class name
+   with no rule anywhere, so four screen names rendered as grey buttons
+   wedged mid-sentence. Links in prose, styled as links. */
 .facility-delta { color: var(--goo); }
 .facility-elsewhere { display: block; margin: 10px 2px 0; line-height: 1.9; }
 .facility-goto {
@@ -2477,6 +2477,10 @@ button.dex-cell:focus-visible {
   background: linear-gradient(180deg, var(--accent-dim), transparent 70%);
 }
 .dominion-card h3 { color: var(--accent); }
+/* R99 — `--muted` on this card's `--accent-dim` gradient measured 4.43:1,
+   under AA, on the line that admits the map has changed under you. Same pair
+   R122 used on the feral panel; both tokens hold in all five themes. */
+.dominion-card .fine-print { color: var(--text); }
 
 /* --- R41: veterancy, the Sparring Ring, and names ----------------------
    Levels are what a creature has been through; the chip and bar sit beside

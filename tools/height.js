@@ -311,6 +311,20 @@ try {
   // pixels miss a short screen whose card is still dead last (the Pens
   // measured 1.9 screens down at 12 of 12), and position misses a screen
   // with two enormous cards above one small one.
+  //
+  // R99 CORRECTS THE POSITION HALF. It was `at * 2 > of` — "in the bottom
+  // half" — and that is a KNIFE EDGE on the one screen whose card count moves
+  // on its own: the War Room shows a raid card, a contest card and a captive
+  // card only when the world has one, and `height.js` stamps the fixture with
+  // `Date.now()`, so how many are up depends on how long since the walk. It
+  // measured 5 of 10 when it was written and 6 of 11 on the next run, which
+  // flipped a passing gate red for a reason that had nothing to do with
+  // layout. A gate that depends on world state is a gate that fails at random.
+  //
+  // NEVER LAST is the rule that was actually meant, and it is not a knife
+  // edge: it catches every appended card (12 of 12, 2 of 2, 4 of 4, 10 of 10)
+  // and cannot be flipped by an alert card arriving above it. The pixel
+  // budget covers the other case — not last, but still miles down.
   const facilityPlace = async (screen) => await evaluate(`(() => {
     const scr = document.querySelector('#screen-${screen}');
     const head = scr?.querySelector('[data-fold="facility-${screen}"]');
@@ -331,9 +345,9 @@ try {
     // state a player actually arrives in.
     const place = JSON.parse(await facilityPlace(screen));
     if (place) {
-      if (place.at * 2 > place.of) {
-        problems.push(`${screen} buries its facility card at ${place.at} of ${place.of} cards`
-          + ' — an upgrade below half a screen\'s cards is one nobody scrolls to');
+      if (place.of > 1 && place.at === place.of) {
+        problems.push(`${screen} buries its facility card last of ${place.of} cards`
+          + ' — an upgrade under everything else on the screen is one nobody scrolls to');
       }
       if (place.top > FACILITY_TOP) {
         problems.push(`${screen}'s facility card is ${place.top}px down (${(place.top / 780).toFixed(1)} phone`
@@ -351,8 +365,8 @@ try {
     await show('battle');
     const place = JSON.parse(await facilityPlace('battle'));
     if (!place) problems.push('the War Room draws no facility card at all');
-    else if (place.at * 2 > place.of) {
-      problems.push(`battle buries its facility card at ${place.at} of ${place.of} cards`);
+    else if (place.of > 1 && place.at === place.of) {
+      problems.push(`battle buries its facility card last of ${place.of} cards`);
     }
     if (place && place.top > FACILITY_TOP) {
       problems.push(`battle's facility card is ${place.top}px down, over the ${FACILITY_TOP}px it is allowed`);

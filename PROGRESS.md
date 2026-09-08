@@ -1,5 +1,138 @@
 # PROGRESS
 
+## Session 134 — R99: a rule with nothing to look at passes ✅
+
+Both named defects were replayed against the gate before anything was
+written, and **both passed green** — so the criterion was real. But only one
+of the entry's three asks was missing for the reason it gave.
+
+### The contrast rule was never missing. Its reach was.
+
+R122 built a full WCAG composite walk across all five themes and it has been
+correct the whole time. `OPEN_EVERYTHING` was the problem:
+
+```js
+[...querySelectorAll('[data-fold]')].forEach((b) => b.click())
+```
+
+A fold's handler calls `rerender()`, which reassigns the screen's `innerHTML`
+— so every button after the first is **detached** by the time its turn comes.
+And R89's exclusive groups mean "open everything" is a contradiction on the
+Pens and the Ranch: at most one creature can be open.
+
+Measured: **five folds on the Pens, two left open, neither the feral one.**
+`.feral-panel` was never drawn while the gate was looking, so its **3.42:1**
+passed every run for four milestones.
+
+### Three reach fixes
+
+| | before | after |
+| --- | --- | --- |
+| views | 29 | **67** |
+| distinct controls | 80 | **87** |
+| keyboard controls | 83 | 82 *(now deterministic)* |
+| wall clock | 53.7s | **70.1s** |
+
+Folds are opened **one at a time and re-queried**. Subtabs are found by asking
+the DOM which `data-*-tab` bars exist rather than naming `data-dex-tab`, so
+the Pens' four join the Dex's five. And the **War Room is walked at all** —
+the fixture ships a duel in progress and `#screen-battle` renders the arena
+whenever one exists, so the map, the jobs board, the Labs board, the bays and
+the wire had never been rendered by any gate in this project's history.
+
+### Three live defects, none of them visible before
+
+* **`.dominion-card` at 4.43:1.** Found by the new reach on its first run. An
+  `--accent-dim` gradient with a `--muted` note on it — the line that admits
+  the map has changed under you was the hardest one on the card to read.
+* **`.stage`, `background-color 0.12s`** — the arena's ground washed colour on
+  a crit under reduced motion.
+* **`.slot`, `opacity 0.4s`** — both sprite slots faded in under reduced motion.
+
+### The reduced-motion entry pointed at keyframes, and the keyframes were fine
+
+All **eleven** were already covered by the two existing blocks. The gap was
+**transitions**: three declared, only `.meter-fill` listed. Safe to disable
+outright — nothing anywhere listens for `transitionend`, and `animate()`
+already returns early under the query so its `animationend` listener never
+registers either.
+
+The rule has two halves and they found the same two defects from opposite
+directions, which is why both are worth having. The **source** half asks
+whether every animating selector *has* an off-switch — the only form of the
+question that reaches the ten arena effects that exist for four tenths of a
+second mid-fight. The **browser** half asks whether anything actually rendered
+is still moving — which catches a duration arriving from a variable or an
+inline style.
+
+### Containment and overlap
+
+Both quiet on a healthy tree, both proven to fire. Containment catches defect
+B exactly: **110px past its card, 98px past the phone**, matching an
+independent probe. It measures against the **card** as well as the viewport
+because those are different failures — a control that leaves its card but
+lands inside the window merely looks wrong, and the same control on a narrower
+phone is gone.
+
+**Overlap does not catch defect B.** On today's layout that flex line
+overflows rather than overlapping, so R86's *"overlapped the text and ran past
+the card"* is half true now. It is proven separately, by shifting alternate
+subtab buttons: *"Map sits on top of Jobs by 20x49px"*. My first attempt at
+that proof shifted **every** button equally and of course preserved their
+separation — the test case was bad, not the rule.
+
+### The lesson, and the gate that now enforces it
+
+**A rule with nothing to look at passes.** A count cannot catch that: "29
+views" went *up* over four milestones while the panel it was supposed to
+measure went dark. A **list** can. Five landmarks now have to be drawn at
+least once — the panel behind a fold, the tab behind a card, the board behind
+a battle. Reverting the fold walk turns the run red on the landmarks alone,
+with no rule broken, and exposes a second silently-degraded check on the way
+out ("no retraining sheet could be opened").
+
+### And my own gate from the session before, caught by the battery
+
+R128b's position rule was `at * 2 > of` — "in the bottom half" — and that is a
+**knife edge on the one screen whose card count moves on its own**. The War
+Room shows a raid card, a contest card and a captive card only when the world
+has one, and `height.js` stamps the fixture with `Date.now()`, so how many are
+up depends on how long since the walk ended. It measured **5 of 10** when I
+wrote it and **6 of 11** on the next run — a passing gate turning red for a
+reason with nothing to do with layout.
+
+**NEVER LAST** is the rule that was actually meant. It catches every appended
+card (12 of 12, 2 of 2, 4 of 4, 10 of 10) and cannot be flipped by an alert
+arriving above it; the pixel budget still covers "not last, but miles down".
+Verified against break 176, which it still catches.
+
+*A gate that depends on world state is a gate that fails at random.*
+
+### The boot budget held, for the first time in four milestones
+
+The battery caught R99 one kilobyte over: **1061 KB against 1060**. The whole
+breach was my own CSS comments — `+1,399 bytes` for **three declarations**,
+seventeen comment lines for three rules. Unlike JS comments these ship inside
+the render-blocking stylesheet, so a ten-line note explaining
+`color: var(--text)` is a tenth of a kilobyte in front of every player on
+every open.
+
+Trimmed to proportion — the full account already lives here and in the
+roadmap — and style.css lands at **+206 bytes**. R128's note said the next
+budget change should bring the number DOWN; it did not have to move at all.
+
+### Known issues / next session's first task
+
+* **R129 — the last lab falls open.** Asked for directly. Most of it is
+  already shipped as a trickle: R82's Breakout mints real rival chimeras and
+  routes captures through the Wing. What is missing is the *event*
+  (`maxLoose: 4`, a 22h cooldown), cross-lab bodies, and traits worth
+  capturing for.
+* Carried: folding the Dex's Combos tab and the Vault's.
+* Carried: paginating the Ranch — 3,485px shut, owed since R46.
+* The next boot-budget change should bring the number **down**.
+
+
 ## Session 133b — R128b: four green gates and the player still could not find it ✅
 
 Reported from play against the merged build: *"I don't see the upgrades
