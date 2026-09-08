@@ -2482,6 +2482,17 @@ button.dex-cell:focus-visible {
    R122 used on the feral panel; both tokens hold in all five themes. */
 .dominion-card .fine-print { color: var(--text); }
 
+/* R129 — the release banner, borrowing the dominion card's shape because it
+   is the same kind of sentence: a standing state the wire announced once.
+   `--warn` rather than `--accent` so the two never read as one event when a
+   player holds the county and opens the doors in the same session. */
+.release-card {
+  border-color: var(--warn);
+  background: linear-gradient(180deg, var(--warn-dim), transparent 70%);
+}
+.release-card h3 { color: var(--warn); }
+.release-card .fine-print { color: var(--text); }
+
 /* --- R41: veterancy, the Sparring Ring, and names ----------------------
    Levels are what a creature has been through; the chip and bar sit beside
    the chassis line so building and seasoning read as the two halves of the

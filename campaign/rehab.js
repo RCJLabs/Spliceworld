@@ -357,13 +357,26 @@ function graduate(state, entry, content, now) {
 
   const tokens = {};
   for (const [socketId, { partId, grade }] of Object.entries(sockets)) {
+    // R129 — A GRADUATE BRINGS WHAT IT WAS CARRYING. The Wing used to drop
+    // it at the door: the programme mints tokens off the genome, and a
+    // released specimen's trait is not in the genome, it is on the unit.
+    // That trait is the only thing a captured body has that a built one
+    // cannot — a graduate otherwise arrives at its old lab's grades, which
+    // is why a 180-day walk bagged 1,035 and kept ONE. Stamped where the
+    // trait's own `slots` fit the part, as `splice/extract.js` does.
+    const traits = (unit.traits ?? []).filter((tr) =>
+      (content.traits?.[tr]?.slots ?? []).includes(content.parts[partId]?.slot));
     tokens[socketId] = {
       id: `t${state.inventory.tokenCount++}`,
       partId,
       grade,
+      traits,
       donor: { name: unit.name, species: content.parts[partId].species, stars: 5, extractedAt: graduatedAt },
     };
     if (!state.dex.parts.includes(partId)) state.dex.parts.push(partId);
+    // The Dex learns the gene the moment one walks out of the Wing.
+    state.dex.traits ??= [];
+    for (const tr of traits) if (!state.dex.traits.includes(tr)) state.dex.traits.push(tr);
   }
 
   const chimera = {

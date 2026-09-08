@@ -180,18 +180,41 @@ function combosView(state, content) {
     </section>`;
 }
 
+// R129 — THE TAB THAT FINALLY FILLS UP. Twelve genes could only be learned
+// by breeding for them, so this tab spent the whole game mostly unsequenced
+// and its shape was never tested full. The release changes that — a bagged
+// specimen walks a gene out of the Wing — and the tab went 75px over R89's
+// budget the moment a walk actually collected them.
+//
+// The overrun was in the half that says nothing: N identical "??? a gene the
+// bloodlines haven't coughed up yet" rows, which is A6's combo defect
+// exactly ("twenty-seven identical rows naming nothing at all") surviving in
+// the one tab A6 did not touch. So the unsequenced remainder is one line,
+// and it points at the slots those genes ride in on rather than repeating
+// itself — derived from the traits themselves, so a thirteenth gene needs no
+// edit here.
 function genesView(state, content) {
   const all = Object.values(content.traits);
   const known = all.filter((t) => state.dex.traits.includes(t.id));
   const unknown = all.filter((t) => !state.dex.traits.includes(t.id));
-  return `
-    <section class="card">
-      <h3>Trait Genes (${known.length}/${all.length})</h3>
-      ${group('Sequenced', known.map((trait) =>
-        `<li><span class="grade-badge grade-apex">${trait.name}</span> ${trait.desc}</li>`))}
-      ${group('Not yet expressed', unknown.map(() =>
-        `<li><span class="grade-badge grade-standard">???</span> <span class="lineage">a gene the bloodlines haven't coughed up yet…</span></li>`))}
-    </section>`;
+  const slots = [...new Set(unknown.flatMap((t) => t.slots ?? []))];
+  const body = `
+    ${group('Sequenced', known.map((trait) =>
+      `<li><span class="grade-badge grade-apex">${trait.name}</span> ${trait.desc}</li>`))}
+    ${unknown.length ? `${bandHead('Not yet expressed', unknown.length)}
+      <p class="fine-print">Riding in on ${
+        slots.length ? slots.join(', ') : 'anatomy'
+      }. Breed for one, or bag something a lab let out and put it through the Wing.</p>` : ''}`;
+  // Shut by default, like every other band of the field guide: twelve genes
+  // with their descriptions is 219 words, and the guide is looked things up
+  // in rather than read. The summary is the answer to the only question a
+  // player asks from outside — which ones do I still not have.
+  return classFold('dex-genes', `Trait Genes (${known.length}/${all.length})`,
+    unknown.length ? `${unknown.length} to go` : 'complete',
+    unknown.length
+      ? `${unknown.length} gene${unknown.length === 1 ? '' : 's'} still unsequenced.`
+      : 'Every gene in the county is on file. The bloodlines have nothing left to surprise you with.',
+    body, state);
 }
 
 // R89 — one shape for every band of the field guide, so a fourth class is a

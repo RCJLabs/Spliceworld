@@ -23,13 +23,12 @@
     "under the water tower, brooding"
   ],
   "release": {
-    "_doc": "R129 — THE LAST LAB FALLS OPEN. Beating the fifth rival is the one thing on the ladder with no consequence: `rivalsAllBeaten` has been computed in campaign.js since R40 and read by two banner sentences. Measured before this was written — five 180-day walks spawn ~190 escapees and fight ~190 of them, and the board is EMPTY on every seed, so `maxLoose` above never binds and the drip was never the problem. Two ceilings were: the five lab palettes union to 21 of the 41 species, so half the bestiary can never be loose; and a bagged specimen is not worth a stall, because a Wing graduate carries its old lab's grades (1,035 bagged in a walk, 40 bays full, ONE rehabilitated). So the release is a PHASE, not a faster drip: it fires once, it opens the county to anatomy no lab owns, and what gets out carries a mutation trait the player cannot roll — which is Law 2, the only thing that makes a captured body better than a built one.",
+    "_doc": "R129 — THE LAST LAB FALLS OPEN. Beating the fifth rival was the one rung on the ladder with no consequence. Measured first: five 180-day walks already spawn ~190 escapees and the board is EMPTY on every seed, so `maxLoose` above never binds and the drip was never the problem. Two ceilings were — the five lab palettes union to 21 of the 41 species, so half the bestiary can never be loose; and a bagged specimen is not worth a stall, because a Wing graduate carries its old lab's grades (1,035 bagged in a walk, ONE kept). So the release is a PHASE: it fires once, it opens the county to anatomy no lab owns, and what gets out carries a mutation trait the player cannot roll. Wire copy lives in news.json under `labs_open`, as all of it does; `line`, `blurb` and `intel` are the Labs board's own three sentences.",
     "burst": 6,
     "cooldownHours": 9,
     "maxLoose": 9,
     "wildSocketChance": 0.45,
     "traitChance": 0.6,
-    "news": "Every containment door in the county opened at once. Five laboratories report nothing missing, in writing, at length.",
     "line": "THE LABS ARE OPEN. Five rival collections are loose in your county at the same time, and some of them are carrying things nobody bred on purpose.",
     "blurb": "Loose, and not from any collection you can name.",
     "intel": "Released stock — it was somebody's, briefly. Whatever it is carrying did not come off a shelf, and the Wing can still talk it round."

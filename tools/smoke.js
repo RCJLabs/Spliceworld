@@ -2222,6 +2222,12 @@ assert.deepEqual(m5.campaign, {
   // the player in range rather than by the upgrade.
   raid: null, nextRaidAt: null, raidCount: 0, raidsHeld: 0, leviedTotal: 0,
   notorietyCapped: false,
+  // R129: and the same claim for the release. A save from before the fifth
+  // lab could fall arrives with the phase UNFIRED, not retroactively opened
+  // — a player who beat the ladder in v47 gets the headline, the burst and
+  // the wild anatomy on their next tick, which is the moment they are
+  // sitting in front of the game to read it.
+  released: null,
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -18013,8 +18019,17 @@ if (inShard('wire')) {
   // Both RUN during boot, which is the rule this cap enforces; they are not
   // chrome sitting in front of the player. See the matching note on
   // FIRST_PAINT_KB in tools/boot.js.
+  //
+  // R129: 545 -> 548, measured at 545.0. The release, the pacing switch and
+  // the wild-anatomy widening are all in the world tick, which `main.js`
+  // runs on the first frame — see the FIRST_PAINT_KB note in tools/boot.js
+  // for the full accounting and for the 54.1 KB of `data/*.json` `_doc`
+  // prose that the next phase should spend instead of this ceiling. The cap
+  // sits just above the measurement rather than ON it: 545 against 545.0 is
+  // a knife edge, and a gate that fails on a rounding wobble teaches people
+  // to ignore it.
   const MODULE_CAP = 48;
-  const KB_CAP = 545;
+  const KB_CAP = 548;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,
@@ -18392,6 +18407,37 @@ if (inShard('fired')) {
   assert.ok(traited.length > 0,
     `a released specimen carries a mutation trait (0 of ${loose.length} do; ${
       Object.keys(content.traits).length} traits exist)`);
+
+  // 4. AND THE GENE HAS TO REACH THE VAULT, or the trait is decoration on a
+  //    creature the player scraps. This is the clause the measurement
+  //    demanded: capture is only worth a bay and a stall if what comes OUT
+  //    of the Wing is something the Theater cannot build. A trait on the
+  //    loose unit that the graduate's tokens do not carry is exactly the
+  //    bug this asserts against — the programme mints tokens off the genome,
+  //    and the trait is not in the genome.
+  const { admitBay, startRehab, tickRehab, findBay } = await import('../campaign/rehab.js');
+  const carrier = traited[0];
+  const gene = (carrier.unit.traits ?? [])[0];
+  assert.ok(content.traits[gene], `the carried trait is a real one (${gene})`);
+
+  const g = conquered();
+  g.campaign.containment = [];
+  admitBay(g, content, {
+    id: 'bay-r129', unitId: carrier.unit.id, unit: carrier.unit,
+    rivalId: carrier.rivalId, capturedAt: t0, rehab: null,
+  });
+  const enrolled = startRehab(g, 'bay-r129', content, t0);
+  assert.ok(enrolled.ok, `a released specimen can enter the Wing (${enrolled.msg})`);
+  const done = tickRehab(g, content, t0 + findBay(g, 'bay-r129').rehab.hours * HOUR129 + 1);
+  assert.equal(done.graduates.length, 1, 'and it graduates');
+
+  const grad = done.graduates[0];
+  const stamped = Object.values(grad.tokens ?? {}).filter((tk) => (tk.traits ?? []).includes(gene));
+  assert.ok(stamped.length > 0,
+    `the graduate's tokens carry ${gene} out of the Wing (0 of ${
+      Object.keys(grad.tokens ?? {}).length} tokens stamped)`);
+  assert.ok((g.dex.traits ?? []).includes(gene),
+    'and the Dex learns the gene the moment one walks out');
 }
 
 // ---------------------------------------------------------------------------

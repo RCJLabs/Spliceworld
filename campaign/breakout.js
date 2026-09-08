@@ -58,15 +58,14 @@ export function breakoutEligible(state, content) {
   return beaten >= (t.startsAfterDefeats ?? 1);
 }
 
-// R129 — THE LAST LAB FALLS OPEN.
-//
-// Beating the fifth rival was the one rung on the ladder with no consequence.
-// Measured before any of this was written: the board is NOT a drip. Five
-// 180-day walks spawn ~190 escapees and fight ~190 of them, and the board is
-// empty on every seed, so `maxLoose` never binds. The ceilings were
-// elsewhere — the five lab palettes own 21 of 41 species between them, and a
-// bagged specimen is not worth a stall because a Wing graduate carries its
-// old lab's grades. So this is a PHASE, not a faster cooldown.
+// R129 — THE LAST LAB FALLS OPEN. Beating the fifth rival was the one rung
+// on the ladder with no consequence. Measured before any of this was
+// written: the board is not a drip — five 180-day walks already spawn ~190
+// escapees and the board is empty on every seed, so `maxLoose` never binds
+// and "more often" would have been invisible. The ceilings were elsewhere:
+// the lab palettes own 21 of 41 species, and a bagged specimen is not worth
+// a stall because a Wing graduate carries its old lab's grades. So this is a
+// PHASE — a moment, and something in it worth crossing the county for.
 export function releaseTuning(content) {
   return breakoutTuning(content).release ?? {};
 }
@@ -190,17 +189,10 @@ export function tickBreakouts(state, content, now, since = now) {
     cam.nextBreakAt = since + Math.round((t.firstDelayHours ?? 5) * HOUR);
   }
 
-  // R129 — THE LAST LAB FALLS OPEN, ONCE. Fired here rather than at the
-  // duel's end because this is the tick that already replays a gap: beat
-  // the fifth lab, close the app for a week, and the release still happens
-  // at the moment it was due rather than five hours after you next look.
-  // That is R78's lesson, which the loop below was already written around.
-  //
-  // A burst, not a faster clock. The measurement that produced this
-  // milestone found ~190 escapees already in a 180-day walk and an empty
-  // board on every seed, so "more often" would have been invisible; what
-  // was missing was a MOMENT, and something in it worth crossing the county
-  // for.
+  // The release fires here rather than at the duel's end because this is the
+  // tick that already replays a gap: beat the fifth lab, close the app for a
+  // week, and it still happens at the moment it was due. R78's lesson, which
+  // the loop below was already written around.
   const rel = releaseTuning(content);
   if (!cam.released && ladderFinished(state, content)) {
     cam.released = since;

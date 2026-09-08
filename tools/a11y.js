@@ -127,7 +127,16 @@ export async function fixtureSave() {
   s.campaign.nextRaidAt = now;
   s.campaign.raid = { id: 'raid-0', encounterId: 'military_response', scheduledAt: now,
     startedAt: now, deadline: now + 4 * 3600000, escalation: 1.15 };
-  s.campaign.rivals = { mantissa: { defeats: 2, losses: 0, lastMetAt: now } };
+  // R129 — EVERY lab beaten, not one, because the release is the newest
+  // thing on this screen and a fixture that stops at one defeat would leave
+  // it unmeasured. That is R99's lesson in one line: a rule with nothing to
+  // look at passes. Finishing the ladder is also the honest board — the
+  // release card, the wild specimens and their trait chips are what a player
+  // who got this far actually opens the Labs tab onto.
+  const { rivalList } = await import('../campaign/rivals.js');
+  s.campaign.rivals = Object.fromEntries(
+    rivalList(content).map((r) => [r.id, { defeats: 2, losses: 0, lastMetAt: now }])
+  );
   const { tickBreakouts } = await import('../campaign/breakout.js');
   tickBreakouts(s, content, now, now - 24 * 3600000);
   // R80 — a fight in progress, so the walk reaches the arena.

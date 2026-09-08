@@ -340,19 +340,17 @@ export function rivalSpecimen(rival, content, {
   // Only the specimen built to answer you carries the anatomy counter;
   // the rest of the lab is still the lab.
   let parts = chooseParts(rival, targetClass, content, rng, isCounter ? dossier : null);
-  // R129 — THE DOORS ARE OPEN. Before the last lab falls, a specimen is its
-  // lab's taste and nothing else: the five palettes own 21 of the 41 species
-  // between them, so half the bestiary can never be met in the wild however
-  // many escape. After the release, a socket can draw from anywhere. It is
-  // applied here, inside the one generator, so the wilder body still gets
-  // the lab's frame, grades, naming and physiology — a released specimen is
+  // R129 — THE DOORS ARE OPEN. Before the release a specimen is its lab's
+  // taste and nothing else — the five palettes own 21 of the 41 species, so
+  // half the bestiary can never be met in the wild however many escape.
+  // Widened HERE, inside the one generator, so the wilder body still gets
+  // the lab's frame, grades, naming and physiology: a released specimen is
   // still somebody's, it has just been eating things it was not issued.
   if (wild) parts = openTheDoors(parts, content, rng, wild.socketChance ?? 0.45);
-  // R129 — and a trait the player cannot roll, which is what makes bagging
-  // one worth a bay and a stall (Law 2). Chosen from the traits whose own
-  // `slots` this body actually has, so the stamp is never a promise the
-  // anatomy cannot keep, and stamped on every token it fits — the same rule
-  // `splice/extract.js` uses when a bred animal graduates.
+  // And a trait the player cannot roll, which is what makes bagging one
+  // worth a bay and a stall. Drawn from the traits whose own `slots` this
+  // body has, and stamped on every token they fit — `splice/extract.js`'s
+  // rule, so the stamp is never a promise the anatomy cannot keep.
   const trait = wild && rng() < (wild.traitChance ?? 0.6)
     ? pickTrait(parts, content, rng) : null;
   const tokens = parts.map((part, n) => ({

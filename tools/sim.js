@@ -1741,7 +1741,21 @@ function walkAct(state, content, now, open, opts = {}) {
     // stays full — nothing in it is bad enough to be worth the grades a
     // dismantle burns — so the reservation has to be a standing one rather
     // than a single space that closes the moment anything fills it.
-    const keeps = !displaced || stableRoom(state, content).free > THEATER_STALLS;
+    // R129 — EXCEPT WHEN IT IS CARRYING SOMETHING YOU CANNOT BUILD. The rule
+    // above is right about every specimen it was written for: a Wing graduate
+    // arrives at its old lab's grades, so the Theater outbuilds it and
+    // enrolling one costs a stall for a creature you will scrap. Measured
+    // across a 180-day walk under exactly that rule: 1,035 bagged, 40 bays
+    // full, 13 programmes ever started, ONE kept.
+    //
+    // A released specimen carrying a mutation trait is the one body that
+    // breaks the comparison — the trait is not on the Theater's shelf at any
+    // grade, and it rides out through the graduate's tokens into the Vault.
+    // That is Law 2 in one creature, and no player would leave it in the bay.
+    const bayTraits = (bayUnit?.traits ?? []).filter((tr) => content.traits?.[tr]);
+    const carriesGene = bayTraits.some((tr) => !(state.dex.traits ?? []).includes(tr));
+    const keeps = carriesGene
+      || !displaced || stableRoom(state, content).free > THEATER_STALLS;
     if (!keeps) continue;
     if (startRehab(state, entry.id, content, now).ok) did('rehab-start', { who: entry.id });
   }
