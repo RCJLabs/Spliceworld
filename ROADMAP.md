@@ -2444,54 +2444,55 @@ R102; R88–R90 remain.)*
   free-roaming chimeras of numerous combinations, some with unique traits.
   More battles with other chimeras and more chances to capture some."*
 
-  **MOST OF THIS ALREADY EXISTS, AS A TRICKLE.** R82 built the Breakout: an
-  escapee is a REAL rival chimera, minted by `rivalSpecimen` — the same
-  generator the ladder duels use — put on a **standing board with no
-  deadline**, fought like any encounter, and bagged through the Containment
-  Cannon into a bay and out through the Reorientation Wing at the grades its
-  old lab raised. The source, the board, the fight and the capture path are
-  all shipped. What is missing is the **event**, and the reasons to go and
-  get one.
+  **MEASURED FIRST, AND THE FIRST DRAFT OF THIS ENTRY WAS WRONG.** It called
+  the Breakout a drip that needed opening up. Over five 180-day walks:
 
-  Today it is deliberately a drip, tuned when there were still labs to beat:
-  `startsAfterDefeats: 1`, `cooldownHours: 22`, and **`maxLoose: 4`** — a cap
-  written so a fortnight away is a queue rather than a wall. Every escapee is
-  **one lab's parts at one lab's grades**, so five labs make five flavours of
-  the same thing, and none of them carries anything a player cannot already
-  build. `rivalsAllBeaten` is already computed in `campaign/campaign.js:111`
-  and is read by exactly two banner sentences.
+  | the draft said | measured |
+  | --- | --- |
+  | a drip; `maxLoose: 4` binds | **~190 escapees per walk**, ~190 breakout fights, and **0 left on the board** on every seed — the cap NEVER binds |
+  | five labs, five silhouettes | **181 distinct bodies of 200** — `chooseParts` already mixes freely inside a lab |
+  | — | the real ceiling is **species: 21 of 41**. Half the bestiary can never be loose |
+  | no traits | **confirmed — 0 of 200**, against 12 in `data/traits.json` |
 
-  **AND IT LANDS WHERE THE GAME IS EMPTIEST.** R87 measured the endgame: every
-  facility track maxed by median **day 28**, the county falls **day 35**, and
-  the remaining 145 days are **5.1 fights a day won 97% of the time**. R87
-  gave that money somewhere to go (tier IV, Gauntlet purses) and the Task
-  Force something to threaten. It did not give the player anything new to
-  *meet*. This is the entry that does.
+  **So the BATTLES half of the request is already shipped, in volume.** An
+  escapee fight is ~190 of a campaign's fights, more than one a day, and the
+  bodies are varied. What is missing is not quantity.
 
-  Proposed, medium, and mostly data + wiring on shipped systems:
+  **THE CAPTURE HALF IS THE HOLE, AND IT IS A DEEP ONE.** The same walks:
+  **1,035 specimens bagged**, all **40 bays full**, **13 programmes ever
+  started**, **1 rehabilitated**, and **0 programmes running** on day 180.
+  The bays are a parking lot.
 
-  - **A phase change, not a faster drip.** Beating the fifth lab fails every
-    containment in the county at once — a one-off release with its own wire
-    line and its own board state, so the moment reads as an event rather than
-    as the cooldown getting shorter.
-  - **Cross-lab bodies.** The generator takes parts from ONE lab; after the
-    release it splices ACROSS them, which is the "numerous combinations" the
-    request asks for and is the only way five labs produce more than five
-    silhouettes. Their grades come from whichever lab contributed the socket.
-  - **Unique traits, which is what makes bagging one worth the trip.**
-    `data/traits.json` holds **12** mutation traits, and Law 2 says every
-    conquest reward must expand what you can CREATE. A loose apex carrying a
-    trait the player cannot roll is a body worth capturing, extracting and
-    splicing — it feeds the Vault, the Theater and the Dex at once.
-  - **A cap that fits a county-wide release** rather than the 4 written for a
-    ladder still in progress, with the board's no-deadline rule intact so a
-    week away is still a queue.
+  The cause is not plumbing — it is that **a captured specimen is not worth a
+  stall**. A Wing graduate carries its old lab's grades, so it is worse than
+  what the Surgery Theater can build, and the walker's own R91/R92 policy
+  refuses to enrol what it would only scrap. R91 measured that directly:
+  **141 of 278 creatures were Wing graduates scrapped one table-cycle after
+  walking out, median life ten hours.** Capture is a dead end by design, and
+  no amount of extra escapees changes that.
 
-  *Done when: beating the fifth lab visibly releases the county's rival
-  stock; a loose chimera can carry anatomy from more than one lab and a trait
+  So the milestone is **the release, and a reason to want what it releases**:
+
+  - **A phase change on the fifth lab.** `rivalsAllBeaten` is already computed
+    in `campaign/campaign.js:111` and read by two banner sentences. Beating
+    the last lab fails every containment in the county at once — its own wire
+    line, its own board state, so it reads as an event rather than as the
+    cooldown getting shorter.
+  - **Anatomy the county has never seen.** After the release an escapee draws
+    outside the five lab palettes, which is the only way past the **21 of 41**
+    species ceiling — and the only way "numerous combinations" means anything
+    when 181 of 200 bodies are already distinct.
+  - **A trait you cannot roll, which is the whole point.** Law 2: every
+    conquest reward must expand what you can CREATE. A loose apex carrying one
+    of the 12 mutation traits is a body worth a stall, worth a bay, worth
+    extracting — it feeds the Vault, the Theater and the Dex at once, and it
+    is the first thing in the game that makes a bagged specimen better than a
+    built one.
+
+  *Done when: beating the fifth lab visibly releases the county's rival stock;
+  a loose chimera can carry anatomy from outside every lab palette and a trait
   the player cannot otherwise roll; and a 180-day walk that finishes the
-  ladder meets and captures measurably more rival anatomy after it than
-  before.*
+  ladder captures and KEEPS measurably more than the 1 it keeps today.*
 
 - **R99 — The a11y gate learns to see overlap, contrast and motion.** This
   session shipped two defects the gate passed: **3.42:1** body text on the
