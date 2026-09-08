@@ -18426,12 +18426,37 @@ if (inShard('released')) {
   //    Stated here rather than left to `tools/reach.js`, which only caught it
   //    in combination with break 162: a rule that needs two failures at once
   //    to become visible is not a rule anybody can act on.
-  const variantSeen = [...speciesOfLoose].filter((sp) => content.species[sp]?.variantOf);
+  //
+  //    OVER A SAMPLE, not over one board. The first version of this asked the
+  //    nine specimens on seed 129's board, and a socket lands on one of the
+  //    three off-palette variant lines about seven times in a hundred — so
+  //    the break that removes the guard went MISSED on the seed that happened
+  //    to be in front of it. A gate whose subject has to get unlucky to be
+  //    seen is the knife edge this session already learned about once.
+  const mintedSpecies = new Map(); // species -> how many seeds put it on a board
+  for (let seed = 200; seed < 224; seed++) {
+    const w = { ...newGameState(), seed, funds: 90000 };
+    w.lastTickAt = t0;
+    w.campaign.rivals = Object.fromEntries(
+      rivalList(content).map((r) => [r.id, { defeats: 2, losses: 0, lastMetAt: null }])
+    );
+    tickBreakouts(w, content, t0 + 900 * HOUR129, t0);
+    for (const one of looseSpecimens(w)) {
+      for (const pid of Object.values(one.unit.genome?.parts ?? {})) {
+        const sp = content.parts[pid]?.species;
+        if (sp) mintedSpecies.set(sp, (mintedSpecies.get(sp) ?? 0) + 1);
+      }
+    }
+  }
+  assert.ok(mintedSpecies.size > labSpecies.size,
+    `the sample is wide enough to see past the palettes (${mintedSpecies.size} species minted)`);
+
   const labVariants = new Set([...labSpecies].filter((sp) => content.species[sp]?.variantOf));
-  const smuggled = variantSeen.filter((sp) => !labVariants.has(sp));
+  const smuggled = [...mintedSpecies.keys()]
+    .filter((sp) => content.species[sp]?.variantOf && !labVariants.has(sp)).sort();
   assert.deepEqual(smuggled, [],
     `the release does not open a second door to the variant lines (${smuggled.join(', ')}`
-    + ` are not on any lab's palette, so the Incubator is the only way to them)`);
+    + ` are on no lab's palette, so the Incubator must stay the only way to them)`);
 
   // 4. AND THE GENE HAS TO REACH THE VAULT, or the trait is decoration on a
   //    creature the player scraps. This is the clause the measurement
@@ -18507,9 +18532,10 @@ if (inShard('released')) {
   // Printed, like every other block's line, because a summary is the only
   // thing that proves this block RAN. `SW_SHARD=fired` cost this session an
   // hour of reading a green suite that had executed none of it.
-  const wildSpecies = [...speciesOfLoose].filter(Boolean);
-  console.log(`   R129 release: ${loose.length} loose · ${wildSpecies.length} species, ${
-    offPalette.length} off every lab palette · ${traited.length} carrying a gene · ${
+  const sampledOff = [...mintedSpecies.keys()].filter((sp) => !labSpecies.has(sp));
+  console.log(`   R129 release: ${loose.length} loose · ${mintedSpecies.size} species over 24 seeds, ${
+    sampledOff.length} off every lab palette, 0 variant lines smuggled · ${
+    traited.length} of ${loose.length} carrying a gene · ${
     gene} walks out of the Wing into the Vault`);
 }
 
