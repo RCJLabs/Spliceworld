@@ -99,6 +99,11 @@ const SHARD_OF = {
   // runs SERIALLY here, because four shards on four cores plus a worker pool
   // inside one of them is oversubscription, not parallelism.
   wire: 'd', away: 'd',
+  // R129 — the release block. Its own name rather than riding on `fired`
+  // (R76's handler walk), because a battery gate that wants to aim at ONE
+  // block aims at the lane its name maps to, and two unrelated blocks under
+  // one name make that aim a guess. Shard a is the lightest of the four.
+  released: 'a',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -18354,9 +18359,10 @@ if (inShard('fired')) {
 // So this block asks for the release AND for a reason to want what it
 // releases — Law 2, which says a conquest reward must expand what you can
 // CREATE. A trait the player cannot roll is that reason.
-if (inShard('fired')) {
-  const { tickBreakouts, looseSpecimens } = await import('../campaign/breakout.js');
+if (inShard('released')) {
+  const { tickBreakouts, looseSpecimens, releaseTuning } = await import('../campaign/breakout.js');
   const { rivalList } = await import('../campaign/rivals.js');
+  const rel = releaseTuning(content);
 
   const HOUR129 = 3600000;
   // Every lab beaten once, which is the condition the request names and
@@ -18438,6 +18444,54 @@ if (inShard('fired')) {
       Object.keys(grad.tokens ?? {}).length} tokens stamped)`);
   assert.ok((g.dex.traits ?? []).includes(gene),
     'and the Dex learns the gene the moment one walks out');
+
+  // 5. AND THE BOARD HAS TO SAY WHICH ERA IT IS IN. The wire says it once;
+  //    a player who was away when it scrolled past meets the second board
+  //    and reads it as the first. R40's dominion banner exists for exactly
+  //    this reason, and R128b's lesson applies: a released specimen that
+  //    EXISTS is not the same as one a player can tell apart from a stray.
+  //    Rendered for real rather than grepped, because the question is what
+  //    the Labs tab paints.
+  {
+    const { renderWarRoomScreen } = await import('../campaign/ui.js');
+    const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null,
+      classList: { remove: () => {}, add: () => {} } });
+    const draw = (st) => {
+      const root = stub();
+      renderWarRoomScreen(root, { state: st, content, now: () => t0, save: () => {},
+        goto: () => {}, refreshTicker: () => {}, takeSubtab: () => 'labs' });
+      return root.innerHTML;
+    };
+    const open = draw(s);
+    assert.ok(open.includes('release-card'),
+      'the Labs board carries the release as a standing card, not one line on the wire');
+    assert.ok(open.includes(rel.line), 'and it is the copy from data/breakout.json');
+
+    // The same board BEFORE the release must not say it — a card that is
+    // always there says nothing, which is the failure R40's banner avoids by
+    // being conditional.
+    const quiet = { ...newGameState(), seed: 129, funds: 9000 };
+    quiet.lastTickAt = t0;
+    quiet.campaign.rivals = { [rivalList(content)[0].id]: { defeats: 1, losses: 0, lastMetAt: t0 } };
+    tickBreakouts(quiet, content, t0 + 400 * HOUR129, t0);
+    assert.ok(!quiet.campaign.released, 'one lab beaten is not the ladder');
+    assert.ok(!draw(quiet).includes('release-card'),
+      'and a county with four labs still standing is told nothing');
+
+    // The trait rides on the row, because it is the reason to cross the
+    // county for THAT one rather than the cheapest one.
+    const chip = content.traits[gene].name;
+    assert.ok(open.includes(chip),
+      `the row wears the gene it is carrying (${chip} missing from the Labs board)`);
+  }
+
+  // Printed, like every other block's line, because a summary is the only
+  // thing that proves this block RAN. `SW_SHARD=fired` cost this session an
+  // hour of reading a green suite that had executed none of it.
+  const wildSpecies = [...speciesOfLoose].filter(Boolean);
+  console.log(`   R129 release: ${loose.length} loose · ${wildSpecies.length} species, ${
+    offPalette.length} off every lab palette · ${traited.length} carrying a gene · ${
+    gene} walks out of the Wing into the Vault`);
 }
 
 // ---------------------------------------------------------------------------

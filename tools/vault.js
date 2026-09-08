@@ -62,7 +62,14 @@ const BOUNDS = {
   'ranch.eggs':           { max: () => TUNING.penMaxCapacity, by: 'penMaxCapacity — an egg holds a pen slot' },
   'news':                 { max: 40,  by: 'WIRE_KEEP in campaign/wire.js' },
   'campaign.captives':    { max: 12,  by: 'one per chimera, and the stable is capped' },
-  'campaign.loose':       { max: 12,  by: 'one per chimera, and the stable is capped' },
+  // R129 — DERIVED, because the release moved it. R82 capped the board at 4
+  // and this said 12 "one per chimera"; the release raises the cap to 9, and
+  // a bound that was already a sentence rather than a number would have
+  // absorbed that silently. It is `maxLoose`, whichever era the save is in,
+  // read from the tuning so a data edit moves it here too.
+  'campaign.loose':       { max: (c) => Math.max(c.breakoutMeta?.maxLoose ?? 4,
+                                                 c.breakoutMeta?.release?.maxLoose ?? 9),
+                            by: 'maxLoose in data/breakout.json, before and after the release' },
   'gauntletBeaten':       { max: (c) => (c.gauntlet ?? []).length || 8, by: 'the Gauntlet has as many stages as it has' },
   'discoveredCombos':     { max: (c) => Object.keys(c.combos).length, by: 'the combo list' },
   'guidesSeen':           { max: (c) => (c.guides ?? []).length || 64, by: 'the guide list' },
@@ -101,6 +108,19 @@ const BOUNDS = {
   'campaign.containment[].unit.salvage':       { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
   'campaign.containment[].unit.salvageGrades': { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
   'campaign.containment[].unit.tags':          { max: 8,  by: 'a body is a handful of tags' },
+  // R129 — and the same four on the LOOSE board, which carries the identical
+  // generated record. They were invisible until now for a reason worth
+  // stating: a walk used to finish with an empty board (every escapee hunted
+  // down before day 180), so these lists existed in the engine and never
+  // once in a snapshot. The release puts nine on the board at a time, and
+  // the declare-yourself rule found them the first walk after.
+  'campaign.loose[].unit.moves':               { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },
+  'campaign.loose[].unit.salvage':             { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
+  'campaign.loose[].unit.salvageGrades':       { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
+  'campaign.loose[].unit.tags':                { max: 8,  by: 'a body is a handful of tags' },
+  // The release stamps at most one mutation trait per specimen; the list is
+  // a list so the shape matches every other trait-bearing thing in the save.
+  'campaign.loose[].traits':                   { max: 4,  by: 'a released specimen carries at most a handful' },
   'chimeras[].scars':     { max: 12, by: 'one per socket, twice over' },
   'inventory.parts[].traits':  { max: 4, by: 'a part carries at most a handful' },
   'ranch.stock[].traits':      { max: 4, by: 'an animal carries at most a handful' },

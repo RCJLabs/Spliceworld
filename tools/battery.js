@@ -251,8 +251,21 @@ const UNION = ['node', 'tools/smoke.js'];
 // only its own, the Theater renders for real, and every screen that draws
 // the card binds the fold and the button. Sharded, because the whole smoke
 // is two minutes and this block is twelve seconds of it.
+//
+// SW_SHARD takes the LANE, not the block name. This said `team` for a
+// milestone, and `inShard('team')` compares SHARD_OF['team'] — which is 'c'
+// — against the string 'team', so the block it was aiming at was the one
+// thing this gate never ran. It was still red on R128's breaks, because the
+// unsharded assertions caught them, which is exactly why the mistake
+// survived: a gate that runs the wrong subject and still fails teaches you
+// nothing. The same slip cost this session an hour on `SW_SHARD=fired`.
 const FACILITY = ['node', '-e',
-  "process.env.SW_SHARD = 'team'; await import('./tools/smoke.js');"];
+  "process.env.SW_SHARD = 'c'; await import('./tools/smoke.js');"];
+
+// R129 — the release block: the phase fires, the anatomy widens, the trait
+// rides out through the Wing into the Vault. Shard a, per SHARD_OF.
+const RELEASE = ['node', '-e',
+  "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
 
 // R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
 // this game was bounded except the ones that mattered: the day-180 save was
@@ -3111,6 +3124,76 @@ const BREAKS = [
     file: 'battle/ai.js',
     anchor: '  const stance = stanceTuning(content);',
     to: '  const stance = { absorb: 0.45, counterPower: 1, braceCost: 0.25, ...(content?.stanceMeta ?? {}) };',
+  },
+
+  // --- gate: release (R129 — the last lab falls open) --------------------
+  //
+  // The ladder's fifth rung was the one with no consequence. Five breaks,
+  // one per clause of the criterion: the phase fires, the anatomy widens,
+  // the trait exists, the trait REACHES the vault, and the board says which
+  // era it is in. The fourth is the one that matters most — a trait that
+  // dies at the Wing's door is decoration on a creature the player scraps,
+  // which is the state the game shipped in for six milestones.
+  {
+    n: 186, gate: RELEASE, name: 'beating the fifth lab does nothing, the way it did for six milestones',
+    file: 'campaign/breakout.js',
+    anchor: '  if (!cam.released && ladderFinished(state, content)) {',
+    to: '  if (false && !cam.released && ladderFinished(state, content)) {',
+  },
+  {
+    // Every escapee is its lab's taste again, so 20 of 41 species can never
+    // be met in the wild however many get out — the ceiling the measurement
+    // found, and the one "more escapees" would never have moved.
+    n: 187, gate: RELEASE, name: 'the doors stay shut: a released specimen is still only its own lab palette',
+    file: 'campaign/rivals.js',
+    anchor: '  if (wild) parts = openTheDoors(parts, content, rng, wild.socketChance ?? 0.45);',
+    to: '  if (false && wild) parts = openTheDoors(parts, content, rng, 0);',
+  },
+  {
+    // Law 2 goes out. The release still happens and the anatomy still
+    // widens, so the board LOOKS right — and there is no longer any reason
+    // to bag one, which is the whole point of the milestone.
+    n: 188, gate: RELEASE, name: 'nothing that gets out carries a gene, so capture is a dead end again',
+    file: 'campaign/rivals.js',
+    anchor: '  const trait = wild && rng() < (wild.traitChance ?? 0.6)',
+    to: '  const trait = false && rng() < 1',
+  },
+  {
+    // The subtle one, and the one the game actually shipped: the programme
+    // mints tokens off the GENOME, and the trait is on the unit. Everything
+    // upstream stays green — the specimen carries the gene right up to the
+    // moment it walks out without it.
+    n: 189, gate: RELEASE, name: 'the Wing drops the gene at the door, and a graduate is worse than what you can build',
+    file: 'campaign/rehab.js',
+    anchor: '    const traits = (unit.traits ?? []).filter((tr) =>',
+    to: '    const traits = [].filter((tr) =>',
+  },
+  {
+    // R40's lesson, re-learned: the wire says it once. A player who was away
+    // meets a board of nine and reads it as R82's drip.
+    n: 190, gate: RELEASE, name: 'the Labs board stops saying the county is open, so only the wire ever said it',
+    file: 'campaign/ui.js',
+    anchor: '  const releaseCard = openDoors',
+    to: '  const releaseCard = false',
+  },
+  {
+    // R91's rule, pointed at the board the release fills. The loose lists
+    // were invisible for six milestones because a walk always ended with an
+    // empty board; stating no bound for them is how the save grows in a
+    // place nobody is looking.
+    n: 191, gate: VAULT, name: 'the loose board\'s lists go back to having no stated bound',
+    file: 'tools/vault.js',
+    anchor: "  'campaign.loose[].unit.moves':               { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },",
+    to: '',
+  },
+  {
+    // The migration forgets the phase, so a save from v47 arrives with
+    // `released` undefined — and `!cam.released` is true for a county that
+    // has already been opened, which fires the burst a second time.
+    n: 192, gate: UNION, name: 'the v48 migration forgets the release, and an old save can open its doors twice',
+    file: 'save/migrations.js',
+    anchor: '    save.campaign.released ??= null;',
+    to: '',
   },
 ];
 

@@ -2494,6 +2494,34 @@ R102; R88–R90 remain.)*
   the player cannot otherwise roll; and a 180-day walk that finishes the
   ladder captures and KEEPS measurably more than the 1 it keeps today.*
 
+  **SHIPPED.** Every clause measured on the built game:
+
+  | clause | before | after |
+  | --- | --- | --- |
+  | the release is an event | nothing happens on the fifth defeat | fires once, six out at once, its own wire line and a standing Labs card |
+  | anatomy past the palettes | 7 species loose, **0** off-palette | **24 species, 6 off every lab palette** (bear, moth, tiger, ram, porcupine, skunk) |
+  | a trait you cannot roll | 0 of 200 | **63.8% of 400** minted specimens, against a declared 60% |
+  | the walk KEEPS more | 1 rehabilitated in 180 days | **3** — and 5/4/4/3 on the other four seeds, every one improved |
+
+  A county with four labs still standing is untouched: 4 escapees, 7 species,
+  0 off-palette, 0 traits, R82's 22h cooldown and cap of 4 exactly as before.
+
+  Two things the milestone found rather than built. The **Genes tab** had
+  never been measured full — twelve genes could only be learned by breeding,
+  so a walk that now collects them all put it 75 px and 19 words over R89's
+  budget; it is folded, and its N identical "???" rows became one line that
+  names the slots those genes ride in on, which is A6's combo defect
+  surviving in the one tab A6 did not touch. And the **loose board's four
+  nested arrays** had no stated bound — invisible for six milestones because
+  a walk always ended with an empty board, and R91's rule found them the
+  first walk that did not.
+
+  *The lesson, written down: a battery gate that aims at a shard aims with
+  the LANE letter, not the block name.* `SW_SHARD='team'` had been aiming the
+  facility gate at nothing for a milestone, and it stayed red on R128's
+  breaks anyway — because the unsharded assertions caught them. A gate that
+  runs the wrong subject and still fails teaches you nothing.
+
 - **R99 — The a11y gate learns to see overlap, contrast and motion.** This
   session shipped two defects the gate passed: **3.42:1** body text on the
   feral panel, and the egg's Hurry button overlapping its lineage text and
@@ -3808,3 +3836,32 @@ moved one of them: the first premise held exactly, the second did not.
   among those views, and the battery proves each fix load-bearing.* ✅ —
   **111 breaks, 111 caught**, five of them new (the class name, the two
   `--ink` reversions, the theme token, and `.sheet`'s ground).
+
+- **R130 — 54 KB of shop talk in front of every player.** `data/*.json`
+  carries **54.1 KB of `_doc` prose** — developer notes the game never reads,
+  keyed into the same objects the engine loads, downloaded on every cold boot
+  by every player. Measured this session while looking for the kilobytes R129
+  spent: it is **five times what R129 added**, **eight times what R128 did**,
+  and it is the last big one left in the first paint (1,068 KB of 1,070).
+
+  This is R81's finding pointed at a new target. That milestone took 400 KB
+  of geometry out of the first paint by splitting the file into the half that
+  says what things ARE and the half that says what they LOOK LIKE; this is
+  the half that says WHY, and it belongs to nobody who has ever opened the
+  game. The top ten alone are 31 KB: `regions` 5.0, `stance` 4.6, `species`
+  4.3, `rivals` 3.4, `facility` 3.0, `frames` 2.5, `taskforce` 2.4,
+  `training` 2.2, `operations` 2.2, `breakout` 2.0.
+
+  **It is a phase and not a `sed`, for three reasons already checked.**
+  `tools/gen-parts.js` regenerates `data/parts.json` from its own `_doc`, and
+  R127's gate says that generator must reproduce the shipped file exactly.
+  Eight source comments cross-reference notes by filename ("see
+  `data/frames.json` `_doc`"). And three of smoke's own rules skip the key by
+  name, so the notes have to keep a home a tool can find rather than simply
+  going away — the point is that the BROWSER stops fetching them, not that
+  the writing stops.
+
+  *Done when: the first paint is measurably smaller than 1,000 KB with every
+  note still in the repository and still findable from the file it documents;
+  `tools/gen-parts.js` still reproduces `data/parts.json` byte for byte; and
+  a gate fails if a note creeps back into a file `data/loader.js` fetches.*
