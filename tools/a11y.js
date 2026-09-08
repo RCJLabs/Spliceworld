@@ -326,6 +326,97 @@ const CONTRAST = `(() => {
   return out;
 })()`;
 
+// R99 — DOES IT STAY IN ITS CARD, AND ON THE PHONE?
+//
+// R86 shipped the egg's Hurry button inside `.encounter`, a flex line
+// already holding a portrait, two lines of lineage and a countdown. The
+// button ran 110px past the card and 98px past the viewport at 380px, and
+// this gate passed it: a control that escapes its card still reports a
+// full-size rect, so the 40px floor and the 6px gutter are both satisfied
+// by a button half of which is off the screen. It was found by screenshot.
+//
+// Measured against the CARD rather than the viewport alone, because those
+// are two different failures and only one of them is visible on a wide
+// phone: a button that leaves its card but lands inside the window looks
+// merely wrong, and the same button on a narrower device is gone.
+//
+// An ancestor that scrolls sideways is exempt by construction — a wide table
+// inside `overflow-x: auto` is the fix for this problem, not an instance of
+// it — and so is `overflow: hidden`, where the layout box overhangs but the
+// paint does not.
+const CONTAINED = `(() => {
+  const SEL = 'button, a[href], input:not([type="hidden"]), select, textarea, summary,'
+    + ' label[for], [tabindex]:not([tabindex="-1"]), [role="button"]';
+  const out = [];
+  const named = (el) => el.tagName.toLowerCase()
+    + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
+  const owns = (el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+  const pool = new Set(document.querySelectorAll(SEL));
+  for (const el of document.querySelectorAll('.card *')) if (owns(el)) pool.add(el);
+  for (const el of pool) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || cs.position === 'fixed') continue;
+    const card = el.closest('.card');
+    if (!card || card === el) continue;
+    // Anything between here and the card that scrolls or clips sideways
+    // makes an overhanging layout box legitimate.
+    let scrolls = false;
+    for (let n = el.parentElement; n && n !== card.parentElement; n = n.parentElement) {
+      const ox = getComputedStyle(n).overflowX;
+      if (ox === 'auto' || ox === 'scroll' || ox === 'hidden') { scrolls = true; break; }
+    }
+    if (scrolls) continue;
+    const c = card.getBoundingClientRect();
+    const right = Math.round(r.right - c.right);
+    const left = Math.round(c.left - r.left);
+    const past = Math.round(r.right - document.documentElement.clientWidth);
+    if (right > 1 || left > 1 || past > 1) {
+      out.push({ sel: named(el), card: named(card),
+        label: (el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 30),
+        right: Math.max(0, right), left: Math.max(0, left), past: Math.max(0, past) });
+    }
+  }
+  return out;
+})()`;
+
+// R99 — AND DOES IT SIT ON TOP OF ANOTHER CONTROL? R80 measured the GAP
+// between two controls, which is a number that only means anything once they
+// are apart: a negative gap is an overlap, and the pair rule reported the
+// distance as though it were still a separation.
+//
+// Nesting is not overlap (a button inside its label is one target), and a
+// modal covers the page on purpose, so while one is up only its own controls
+// are compared — the same rule GAPS uses, for the same reason.
+const OVERLAPS = `(() => {
+  const SEL = 'button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]),'
+    + ' select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+  const modal = [...document.querySelectorAll('#overlay, #picker')].find((m) => m && !m.hidden);
+  const root = modal || document;
+  const named = (el) => el.tagName.toLowerCase()
+    + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
+  const els = [...root.querySelectorAll(SEL)].filter((el) => {
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    return r.width && r.height && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity !== 0;
+  });
+  const out = [];
+  for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
+    const a = els[i], b = els[j];
+    if (a.contains(b) || b.contains(a)) continue;
+    const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    const ox = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+    const oy = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+    if (ox > 1 && oy > 1) {
+      out.push({ a: named(a), b: named(b), ox: Math.round(ox), oy: Math.round(oy),
+        la: (a.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 22),
+        lb: (b.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 22) });
+    }
+  }
+  return out;
+})()`;
+
 // R122 — A DIALOG CARD PAINTS ITS OWN BACKGROUND. The founding card said
 // `class="panel founding"`, and `panel` is a colour TOKEN, not a class in
 // this stylesheet — so the card was `rgba(0, 0, 0, 0)` and the Ranch behind
@@ -525,6 +616,8 @@ async function main() {
     const seeThrough = new Map();
     const cards = new Map();
     const lists = new Map();
+    const spills = new Map();
+    const stacked = new Map();
     const views = new Set();
     const collect = async (where) => {
       views.add(where);
@@ -532,6 +625,18 @@ async function main() {
         // Keyed by the rule that would fix it and not by the view, so one
         // leaked selector reports once however many screens render it.
         if (!lists.has(g.sel) || lists.get(g.sel).n < g.n) lists.set(g.sel, { ...g, where });
+      }
+      for (const o of await evaluate(CONTAINED)) {
+        // Keyed by the element, and the WORST spill wins: one rule leaks the
+        // same button on every screen that draws it.
+        const key = `${o.card}|${o.sel}|${o.label}`;
+        const worst = Math.max(o.right, o.left, o.past);
+        if (!spills.has(key) || spills.get(key).worst < worst) spills.set(key, { ...o, worst, where });
+      }
+      for (const o of await evaluate(OVERLAPS)) {
+        const key = `${o.a}|${o.b}`;
+        const area = o.ox * o.oy;
+        if (!stacked.has(key) || stacked.get(key).area < area) stacked.set(key, { ...o, area, where });
       }
       for (const c of await evaluate(MODAL_CARDS)) {
         cards.set(`${c.host}|${c.sel}`, { ...c, where });
@@ -1344,6 +1449,18 @@ async function main() {
         : `${g.where}: ${g.sel} fills its ${g.w}px line as a column but leaves align-items "${g.how}", so every child shrink-wraps to its own text ("${g.txt}")`);
     }
 
+    // ---- R99. Nothing leaves its card, and nothing sits on anything else.
+    for (const o of [...spills.values()].sort((a, b) => b.worst - a.worst)) {
+      const where = [o.right && `${o.right}px past its card`, o.left && `${o.left}px off its left edge`,
+        o.past && `${o.past}px past the phone`].filter(Boolean).join(' and ');
+      note(`${o.where}: ${o.sel} "${o.label}" escapes ${where} — a control that leaves its card`
+        + ' still reports a full-size box, so the 40px floor and the 6px gutter both pass it');
+    }
+    for (const o of [...stacked.values()].sort((a, b) => b.area - a.area)) {
+      note(`${o.where}: ${o.a} "${o.la}" sits on top of ${o.b} "${o.lb}" by ${o.ox}x${o.oy}px`
+        + ' — two targets a thumb cannot tell apart, and the gutter rule reads the overlap as a separation');
+    }
+
     // ---- 7. nothing narrated an error along the way ------------------------
     for (const e of [...new Set(errors)]) note(`console error during the walk: ${e}`);
 
@@ -1369,7 +1486,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · the game is playable from the keyboard`);
+  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · the game is playable from the keyboard`);
 }
 
 // R88 — only when RUN, not when imported. This module owns the one fixture
