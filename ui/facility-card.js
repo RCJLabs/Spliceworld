@@ -1,21 +1,9 @@
-// R128 — WHERE A FACILITY TRACK IS BOUGHT.
-//
-// Reported from play: "I don't see how to upgrade the surgery theater or
-// where it is." It existed — one upgrade, two levels — in a card called
-// Facility on the RANCH, shut by default, behind a derelict-house icon that
-// names no system, alongside five other tracks. The screen that is named
-// after the machine never mentioned it.
-//
-// The data had said where each one belongs since it was written: every track
-// in facility.json carries a `screen`. Nothing read it, so nothing validated
-// it either, and one of the six pointed at `extract` — which is not a
-// screen. Extraction is an overlay you start from the Ranch, not a place.
-//
-// So the card moved out of `ranch/ui.js` and takes the screen it is being
-// drawn on. Each screen shows the tracks whose data names it; the Ranch
-// keeps a roll-up that LINKS to the others rather than repeating them,
-// because two places to buy the same thing is the duplication R50 refuses.
-import { tracks, facilityLevel, levelData, nextUpgrade } from '../splice/facility.js';
+// R128 — where a facility track is bought: the screen its own `screen` field
+// names. That field had been in facility.json since it was written and
+// nothing read it, so all six sat in one shut card on the Ranch and the
+// Surgery Theater's upgrade was unfindable. The argument and the numbers are
+// in tools/smoke.js's R128 block.
+import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade } from '../splice/facility.js';
 import { nodeName } from '../campaign/map.js';
 import { collapsibleCard, isOpen } from './cards.js';
 import { renderIcon } from './icons.js';
@@ -25,30 +13,21 @@ export function tracksFor(content, screen) {
   return tracks(content).filter((t) => t.screen === screen);
 }
 
-// R128 — WHAT THE MONEY BUYS, from the grants rather than from prose.
-//
-// The buy row said `$3200` and nothing else, so the only description of what
-// changed was a blurb written for flavour. The grants are the mechanical
-// truth and they are already data: show every number that moves. Derived, so
-// a track that gains a grant next milestone says so without anyone
-// remembering to write a sentence about it (R61).
+// R128 — what the money buys, from the grants rather than from prose. The
+// buy row said `$3200` and nothing else. Derived, so a track that gains a
+// grant next milestone says so without anyone writing a sentence (R61).
 function grantDelta(current, next) {
   const from = current?.grants ?? {};
   const to = next?.grants ?? {};
   const rows = Object.keys(to)
     .filter((k) => (from[k] ?? 0) !== to[k])
-    .map((k) => {
-      // `vaultParts` reads as "vault parts". The key is the label because
-      // the key is what the engine calls it, and a second name for the same
-      // thing is a second thing to keep in step.
-      const label = k.replace(/([A-Z])/g, ' $1').toLowerCase();
-      return `${label} ${from[k] ?? 0} → ${to[k]}`;
-    });
+    // The key IS the label: a second name for the same thing is a second
+    // thing to keep in step.
+    .map((k) => `${k.replace(/([A-Z])/g, ' $1').toLowerCase()} ${from[k] ?? 0} → ${to[k]}`);
   return rows;
 }
 
-// One track's row. `screen` decides membership; everything else is the card
-// exactly as the Ranch drew it since R25.
+// One track's row — the card exactly as the Ranch drew it since R25.
 function trackRow(state, content, track) {
   const level = facilityLevel(state, track.id);
   const current = levelData(content, track.id, level);
@@ -98,17 +77,20 @@ export function facilityCard(state, content, screen) {
     badge: affordable.length ? `${affordable.length} ready` : `${upgrades.length || '—'}`,
     summary,
     body: mine.map((t) => trackRow(state, content, t)).join(''),
-    // R128 — a screen with ONE track opens by default: it is that screen's
-    // own machine and the whole complaint was that it was hidden. The
-    // Ranch's two stay shut, because the Ranch has plenty else to show.
-    open: isOpen(state, `facility-${screen}`, mine.length === 1),
+    // SHUT by default, on every screen. A single-track screen opening its
+    // own card was the first draft, and R98's gate refused it: the Pens
+    // asserts that nothing on that screen opens by default, because the
+    // whole point of that milestone was a stable costing a row per creature
+    // rather than a screen each, and a panel that opens itself spends the
+    // budget R98 just won back. Shut is not hidden — `collapsibleCard` draws
+    // the summary while shut, so the header still reads "1 ready to buy · 1
+    // upgrade left, from $900" without costing the height.
+    open: isOpen(state, `facility-${screen}`, false),
   });
 }
 
-// R128 — the Ranch's roll-up. It does not repeat the rows; it says how many
-// upgrades are waiting elsewhere and which screens they are on, because a
-// player who has learned to buy upgrades on the Ranch must not simply find
-// them gone.
+// R128 — the Ranch's roll-up: how many upgrades wait elsewhere and where,
+// so a player who learned to buy them here does not find them simply gone.
 export function facilityElsewhere(state, content, screen) {
   const away = tracks(content).filter((t) => t.screen !== screen);
   const open = away.map((t) => ({ t, up: nextUpgrade(state, content, t.id) })).filter((x) => x.up);
@@ -118,4 +100,21 @@ export function facilityElsewhere(state, content, screen) {
     open.length} more upgrade${open.length === 1 ? '' : 's'} on ${
     where.map((s) => `<button type="button" class="linkish" data-goto="${s}">${s}</button>`).join(', ')
   } — each machine is bought on its own screen.</p>`;
+}
+
+// R128 — one door for the button too. Five screens draw an upgrade now, and
+// five copies of a purchase is five places for it to drift (R50).
+export function bindFacility(root, ctx, again, onResult) {
+  for (const btn of root.querySelectorAll('button[data-act="upgrade"]')) {
+    btn.addEventListener('click', () => {
+      const result = buyUpgrade(ctx.state, ctx.content, btn.dataset.track);
+      if (result.ok && result.news) ctx.pushNews?.(result.news);
+      if (result.ok) ctx.save?.();
+      onResult?.(result);
+      again?.();
+    });
+  }
+  // `data-goto` is NOT bound here. The roll-up only renders on the Ranch,
+  // and the Ranch already binds every `button[data-goto]` on the screen —
+  // a second listener on the same button is two navigations per click.
 }

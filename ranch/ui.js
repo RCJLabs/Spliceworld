@@ -18,12 +18,11 @@ import {
 import { onboardingSteps, onboardingActive, guideForScreen, pathOwnsScreen } from './onboarding.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
-import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade } from '../splice/facility.js';
-import { nodeName } from '../campaign/map.js';
 import { scannerGrants } from '../splice/facility.js';
 import { speciesOf } from '../data/catalog.js';
 import { incomePerDay } from '../campaign/campaign.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
+import { facilityCard, facilityElsewhere, bindFacility } from '../ui/facility-card.js';
 import { agendaShape } from './agenda.js';
 import { bandedHtml } from '../ui/roster.js';
 import { renderIcon } from '../ui/icons.js';
@@ -80,58 +79,6 @@ function showVariantCeremony(ctx, result, onClose) {
     overlay.hidden = true;
     overlay.innerHTML = '';
     onClose();
-  });
-}
-
-// Facility upgrades (ROADMAP §3.10). Every level here has to expand what
-// you can CREATE — a bigger chassis, another bay — never just a bigger
-// number (Law 2).
-function facilityCard(state, content) {
-  const open = isOpen(state, 'facility', false);
-  const upgrades = tracks(content)
-    .map((track) => nextUpgrade(state, content, track.id))
-    .filter(Boolean);
-  const affordable = upgrades.filter((u) => u.affordable);
-  const cheapest = upgrades.length ? Math.min(...upgrades.map((u) => u.level.cost)) : 0;
-  const summary = upgrades.length
-    ? `${affordable.length ? `<strong>${affordable.length} ready to buy</strong> · ` : ''}${upgrades.length} upgrade${
-        upgrades.length === 1 ? '' : 's'
-      } left, from $${cheapest}.`
-    : 'Every track maxed. There is nothing left to buy and that is its own kind of sad.';
-  const rows = tracks(content).map((track) => {
-    const level = facilityLevel(state, track.id);
-    const current = levelData(content, track.id, level);
-    const up = nextUpgrade(state, content, track.id);
-    const blockedNode = up?.blockers.find((b) => b.kind === 'node');
-    const short = up?.blockers.find((b) => b.kind === 'funds');
-    return `
-      <div class="facility-row">
-        <div class="facility-head">
-          <strong>${renderIcon(track.icon)} ${current?.name ?? track.name}</strong>
-          <span class="lineage">level ${level}${up ? '' : ' · maxed'}</span>
-        </div>
-        ${up ? '' : `<p class="fine-print">${current?.blurb ?? ''}</p>`}
-        ${up ? `
-          <div class="facility-next">
-            <div>
-              <strong>${up.level.name}</strong>
-              <p class="fine-print">${up.level.blurb}</p>
-              ${blockedNode ? `<p class="fine-print locked-note">Needs ${nodeName(content, blockedNode.nodeId)} held.</p>` : ''}
-              ${short ? `<p class="fine-print locked-note">Short by $${short.short}.</p>` : ''}
-            </div>
-            <button type="button" data-act="upgrade" data-track="${track.id}" ${up.affordable ? '' : 'disabled'}>
-              $${up.level.cost}
-            </button>
-          </div>` : ''}
-      </div>`;
-  }).join('');
-  return collapsibleCard({
-    id: 'facility',
-    title: `${renderIcon('derelict-house')} Facility`,
-    badge: affordable.length ? `${affordable.length} ready` : `${upgrades.length || '—'}`,
-    summary,
-    body: rows,
-    open,
   });
 }
 
@@ -308,7 +255,8 @@ export function renderRanchScreen(root, ctx) {
       </div>
       <p class="ranch-msg">${lastMsg}</p>
     </section>
-    ${facilityCard(state, content)}`;
+    ${facilityCard(state, content, 'ranch')}
+    ${facilityElsewhere(state, content, 'ranch')}`;
 
   // Breeding Pen: adults of one species, opposite sexes. The egg does the rest.
   const eligible = state.ranch.stock.filter((a) => ageStage(a, content, t) !== 'juvenile');
@@ -607,6 +555,14 @@ export function renderRanchScreen(root, ctx) {
   // animal against what the agenda is asking for wants both.
   bindFolds(root, ctx, again,
     { exclusive: state.ranch.stock.map((animal) => `ranch-${animal.id}`) });
+  // R128 — the buy button is bound by the module that draws it now. The
+  // Ranch's own `data-act` loop used to carry an `upgrade` branch; taking
+  // that branch out without adding this left a live-looking button that did
+  // nothing, on the one screen where the upgrade had always worked.
+  bindFacility(root, ctx, again, (r) => {
+    if (r.ok) sfx.play('splice');
+    lastMsg = r.msg;
+  });
   bindRush(root, ctx, (m) => { lastMsg = m; }, again);
   root.querySelectorAll('button[data-goto]').forEach((btn) => {
     btn.addEventListener('click', () => ctx.goto?.(btn.dataset.goto, btn.dataset.subtab));
@@ -650,12 +606,6 @@ export function renderRanchScreen(root, ctx) {
         result = careAction(ctx.state, btn.dataset.animal, btn.dataset.care, content, t2);
       } else if (btn.dataset.act === 'pen') {
         result = buyPenUpgrade(ctx.state);
-      } else if (btn.dataset.act === 'upgrade') {
-        result = buyUpgrade(ctx.state, content, btn.dataset.track);
-        if (result.ok) {
-          sfx.play('splice');
-          if (result.news) ctx.pushNews?.(result.news);
-        }
       } else if (btn.dataset.act === 'order') {
         result = buyMailOrder(ctx.state, catalogPick, content, t2);
       } else if (btn.dataset.act === 'breed') {

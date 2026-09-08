@@ -1,5 +1,136 @@
 # PROGRESS
 
+## Session 133 — R128: the data said where it belonged and nothing read it ✅
+
+### The first entry in four whose premise held exactly
+
+R95, R97 and R98 each described a screen that had stopped existing. This one
+was true to the letter: the Surgery Theater has exactly one upgrade, it was
+listed with five others in a shut card called *Facility* on the **Ranch**,
+behind a derelict-house icon that names no system, and a player looking at
+the Theater had no way to reach it.
+
+Every track in `facility.json` has carried a **`screen`** field since it was
+written. Nothing read it. And a field nobody reads is a field nobody
+validates:
+
+| track | `screen` said | is that a screen? |
+| --- | --- | --- |
+| theater | `theater` | yes |
+| containment | `battle` | yes |
+| incubator | `ranch` | yes |
+| scanner | `ranch` | yes |
+| infirmary | `pens` | yes |
+| extractor | **`extract`** | **no** |
+
+Extraction is an overlay `main.js` starts from the Ranch, not a place you can
+navigate to. **The entry's own proposal, shipped as written, would have
+routed a track to a screen that does not exist.** It is `vault` now — two of
+that track's three grants are vault capacity, and the Vault is where a player
+watches them run out.
+
+### One door, five screens
+
+`ui/facility-card.js` exports `facilityCard(state, content, screen)` and
+draws the tracks whose data names that screen. The Ranch keeps a roll-up
+that says how many upgrades wait elsewhere and links out, so a player who
+learned to buy them there does not find them simply gone. The buy row now
+derives what the money buys from the `grants` themselves — `sockets 6 → 7`,
+`frames 2 → 4` — rather than printing only a price, so a track that gains a
+grant next milestone says so without anyone writing a sentence.
+
+### The gate found three dead controls and play found none of them
+
+Assertion 4 asks whether every screen that draws the card binds its fold and
+its button. It failed three times on the way in:
+
+* **The Theater had never called `bindFolds`.** No fold had ever existed on
+  that screen, so nothing had needed it.
+* **Neither had the Vault.** Same reason.
+* **The Ranch lost its buy button** when the `upgrade` branch moved out of
+  its `data-act` loop and nothing replaced it — on the one screen where the
+  upgrade had always worked.
+
+All three would have shipped a control that looks live and does nothing,
+which is worse than the hidden card this milestone set out to fix.
+
+### Two gates broke without any behaviour changing
+
+Both were the same shape of mistake, and both were mine from earlier
+milestones.
+
+`twenty < one * 3` is a claim about **roster growth** measured against a
+one-animal page. Moving four tracks off the Ranch pulled **~5.6 KB of fixed
+chrome** out of the denominator, so a leaner screen failed a gate whose real
+number had not moved at all:
+
+|  | before R128 | after |
+| --- | --- | --- |
+| Ranch, one animal | ~15,000 chars | **9,388** |
+| Ranch, twenty | ~38,800 | **33,196** |
+| **per head** | **1,253** | **1,253** |
+
+**A ratio to a screen's own furniture rewards furniture.** It compares a row
+to a **card** now — 1,253 against 9,607 — which is the comparison the
+sentence was always making, and it is the shape the Pens has used since R89.
+The Pens block survived R128 untouched.
+
+The second counted every `data-goto` on the Ranch and equated it to the
+agenda's open items. The roll-up adds four real destinations that are simply
+not agenda rows; the count is scoped to `agenda-chip`/`agenda-row` now.
+
+### The height cost is real, and was paid out of a ceiling nobody collected
+
+Advertising six tracks on five screens instead of one costs each destination
+a card header. That is the honest price of being findable:
+
+| screen | cost |
+| --- | --- |
+| vault, shut | **+56px** |
+| theater, open | **+98px, +20 words** |
+| ranch | ~nothing — its card was already shut |
+
+It is paid several times over by a change R98 earned and never claimed. The
+one-at-a-time rule took the Ranch's open height from **14,537px to 4,264px**
+and left the budget at **14,800**, so 10,536px of ceiling stood there
+permitting a screen the code can no longer build.
+
+|  | was | now | measured |
+| --- | --- | --- | --- |
+| ranch tallest | 14,800 | **4,450** | 4,264 |
+| ranch words open | 950 | **810** | 768 |
+| theater tallest | 1,900 | **2,080** | 1,998 |
+| theater words open | 300 | **340** | 320 |
+| vault shut | 2,400 | **2,560** | 2,456 |
+
+**A ceiling nothing can reach is not a ratchet — it is a number waiting to
+excuse the next regression.**
+
+### The card is shut on every screen
+
+A single-track screen opening its own card was the first draft, and R98's
+Pens criterion refused it: nothing on that screen may open by default. Shut
+is not hidden — the summary rides on the header, *1 ready to buy · 1 upgrade
+left, from $900*.
+
+### Boot went up again, and the note says so
+
+1055 → **1060 KB**, measured at 1,057. `ui/facility-card.js` is 6.1 KB where
+the Ranch's private copy was 2.0, and it is eager because the Ranch is the
+one screen the shell paints without a dynamic import. **That is the third
+raise in three milestones** — 1050 → 1055 → 1060 — and the comment now says
+out loud that the next milestone wanting one should be made to bring the
+number down instead. R101 and R121 both did, by 35 and 51 KB, and the same
+deferral work is still available.
+
+### Known issues / next session's first task
+
+* Carried: folding the Dex's Combos tab and the Vault's.
+* Carried: paginating the Ranch — 3,485px shut is 4.5 phone screens before
+  anything is opened, it grows with the herd, and it has been owed since R46.
+* The next boot-budget change should bring the number **down**.
+
+
 ## Session 132 — R98: the wordy screen was the other one ✅
 
 ### The entry describes a screen that stopped existing two milestones ago

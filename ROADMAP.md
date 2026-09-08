@@ -2333,6 +2333,71 @@ R102; R88–R90 remain.)*
   when: every facility track is reachable from the screen its `screen` field
   names, and a player who has never opened the Ranch can still buy the
   Surgery Theater's upgrade.*
+
+  **SHIPPED.** The first entry in four whose premise held exactly: R95, R97
+  and R98 each turned out to describe a screen that had stopped existing,
+  and this one was true to the letter. The `screen` field had gone unread
+  since it was written — and a field nobody reads is a field nobody
+  validates, so one of the six was pointed at nowhere. `extract` is not a
+  screen; extraction is an overlay `main.js` starts from the Ranch. It is
+  now `vault`, where two of that track's three grants are felt. **The
+  entry's own proposal, shipped as written, would have routed a track to a
+  screen that does not exist** — which is the argument for writing the gate
+  before the feature, again.
+
+  `ui/facility-card.js` is the one door: `facilityCard(state, content,
+  screen)` draws the tracks whose data names that screen, five screens call
+  it, and the Ranch keeps a roll-up that says how many upgrades wait
+  elsewhere and links out. The buy row now derives what the money buys from
+  the `grants` themselves — `sockets 6 → 7`, `frames 2 → 4` — so a track
+  that gains a grant next milestone says so without anyone writing a
+  sentence.
+
+  **THE GATE FOUND THREE LIVE-LOOKING DEAD CONTROLS, AND PLAY FOUND NONE OF
+  THEM.** The card is a fold, and its fourth assertion asks whether each
+  screen binds one: the **Theater and the Vault had never called
+  `bindFolds`** — neither had a fold before this card, so nothing had ever
+  needed it — and the **Ranch lost its buy button** when the `upgrade`
+  branch moved out of its `data-act` loop and nothing replaced it. Three
+  screens would have shipped a control that looks live and does nothing,
+  which is worse than the hidden card this milestone set out to fix.
+
+  Two gates written before this one broke **without any behaviour
+  changing**, and both were the same shape of mistake. `twenty < one * 3`
+  on the Ranch is a claim about roster growth measured against a
+  one-animal page — moving four tracks off the screen pulled **~5.6 KB of
+  fixed chrome out of the denominator**, so a leaner Ranch failed a gate
+  whose real number, 1,253 chars per head, had not moved at all. A ratio to
+  a screen's own furniture rewards furniture; it now measures a row against
+  a **card** (1,253 against 9,607), which is the comparison the sentence was
+  always making. The second counted every `data-goto` on the Ranch and
+  equated it to the agenda's open items; the roll-up adds four real
+  destinations that are simply not agenda rows.
+
+  **THE HEIGHT COST IS REAL AND WAS PAID FOR OUT OF A CEILING NOBODY
+  COLLECTED.** Advertising the same six tracks on five screens instead of
+  one costs each destination a card header — the Vault **+56px shut**, the
+  Theater **+98px and +20 words** open — and the Ranch gives back almost
+  nothing, because its card was already shut. That is the honest price of
+  being findable. It is paid several times over by R98's unclaimed change:
+  the one-at-a-time rule took the Ranch's open height from **14,537px to
+  4,264px** and left the budget standing at **14,800**, so 10,536px of
+  ceiling sat there permitting a screen the code can no longer build.
+  14800 → **4450**, 950 → **810 words**. Boot 1055 → **1060 KB** (measured
+  1,057), the third raise in three milestones, and the note now says out
+  loud that the next one should bring the number down.
+
+  The card is **shut on every screen**. A single-track screen opening its
+  own card was the first draft and R98's Pens criterion refused it; shut is
+  not hidden, because the summary rides on the header — *1 ready to buy · 1
+  upgrade left, from $900*. One number in the entry above was already stale
+  when it was written: the Facility card was **197 words, not 256**, R98's
+  `fine-print` audit having cut it the session before.
+
+  *Done when: every facility track is reachable from the screen its `screen`
+  field names, and a player who has never opened the Ranch can still buy the
+  Surgery Theater's upgrade* — both hold, and the second is asserted as a
+  real `renderTheaterScreen` call rather than a string check on the card.
 - **R99 — The a11y gate learns to see overlap, contrast and motion.** This
   session shipped two defects the gate passed: **3.42:1** body text on the
   feral panel, and the egg's Hurry button overlapping its lineage text and

@@ -45,6 +45,7 @@ import {
   activeVat, vatPlan, vatRemainingMs, startVat, cancelVat, isExhausted, chaosTuning,
 } from './chaos.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
+import { facilityCard, bindFacility } from '../ui/facility-card.js';
 import { bandedHtml } from '../ui/roster.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { canSpar } from '../campaign/sparring.js';
@@ -510,7 +511,10 @@ export function renderPensScreen(root, ctx) {
     (lastMsg ? `<section class="card"><p class="ranch-msg">${lastMsg}</p></section>` : '') +
     vatCard(state, content, t) +
     (cards ||
-      `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`);
+      `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`) +
+    // R128 — the Infirmary is bought where injuries are read.
+    facilityCard(state, content, 'pens');
+  bindFacility(root, ctx, () => renderPensScreen(root, ctx), (r) => { lastMsg = r.msg; });
 
   root.querySelectorAll('button[data-goto]').forEach((btn) => {
     btn.addEventListener('click', () => ctx.goto?.(btn.dataset.goto));

@@ -242,6 +242,18 @@ const SUITE = ['node', 'tools/suite.js'];
 // battery can aim at it in seconds rather than three minutes.
 const UNION = ['node', 'tools/smoke.js'];
 
+// R128 — EVERY FACILITY TRACK IS BOUGHT WHERE ITS SYSTEM LIVES. Reported from
+// play: the Surgery Theater's only upgrade was unfindable. Each track in
+// facility.json has carried a `screen` since it was written and nothing read
+// it — so nothing validated it either, and one of the six pointed at
+// `extract`, which is not a screen. The block asks four things: every track
+// names a screen the shell renders, every screen named draws its own and
+// only its own, the Theater renders for real, and every screen that draws
+// the card binds the fold and the button. Sharded, because the whole smoke
+// is two minutes and this block is twelve seconds of it.
+const FACILITY = ['node', '-e',
+  "process.env.SW_SHARD = 'team'; await import('./tools/smoke.js');"];
+
 // R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
 // this game was bounded except the ones that mattered: the day-180 save was
 // 1.8 MB, 95.5% of it inventory, and four save slots share one 5 MB quota, so
@@ -1908,6 +1920,49 @@ const BREAKS = [
     anchor: "  'dex:genes':    { folded: 200,  open: 200 },",
     to: '',
   },
+  // --- gate: facility (every track is bought where its system lives) ------
+  {
+    // R128 — the exact bug the entry's own proposal would have shipped. The
+    // Extractor's `screen` said `extract` from the day it was written, and
+    // routing tracks by that field without checking it first would have put
+    // one on a screen the shell has never rendered.
+    n: 172, gate: FACILITY, name: 'a facility track points at a screen that does not exist, and is bought nowhere',
+    file: 'data/facility.json',
+    anchor: '      "screen": "vault",',
+    to: '      "screen": "extract",',
+  },
+  {
+    // R128 — the card is a fold, and the Theater had never bound one, so it
+    // shipped a header nothing listened to until assertion 4 said so. This
+    // is the miss replayed: visible, unopenable, and worse than hidden
+    // because it looks like it works.
+    n: 173, gate: FACILITY, name: 'the Theater draws its upgrade card and binds no fold, so the header is dead',
+    file: 'splice/theater-ui.js',
+    anchor: '  bindFolds(root, ctx, () => renderTheaterScreen(root, ctx));',
+    to: '',
+  },
+  {
+    // R128 — the other half of the same miss. Moving the `upgrade` branch out
+    // of the Ranch's `data-act` loop without adding the shared binder left a
+    // live-looking buy button on the ONE screen where it had always worked.
+    n: 174, gate: FACILITY, name: 'the Ranch keeps the buy button and loses the handler behind it',
+    file: 'ranch/ui.js',
+    anchor: `  bindFacility(root, ctx, again, (r) => {
+    if (r.ok) sfx.play('splice');
+    lastMsg = r.msg;
+  });`,
+    to: '',
+  },
+  {
+    // R128 — the card stops reading the field this milestone exists to read.
+    // Every screen draws all six again, which is the pre-R128 Ranch card
+    // five times over: the Surgery Theater's upgrade is on the Pens, the
+    // Infirmary's is in the Vault, and none of them is where its system is.
+    n: 175, gate: FACILITY, name: 'every screen draws every track again, so no upgrade is where its machine is',
+    file: 'ui/facility-card.js',
+    anchor: '  return tracks(content).filter((t) => t.screen === screen);',
+    to: '  return tracks(content);',
+  },
   {
     // R97 — the Dex stops keying generated specimens by lab. A rival mints a
     // fresh one every duel, so filing them raw put 253 entries in a save
@@ -2955,7 +3010,7 @@ const run = (gate) => {
 // The battery is worthless if the pristine tree does not pass, so prove that
 // first — a gate that fails on everything "catches" every break for free.
 console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, VAULT, TABLE, COVERAGE]) {
+for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, COVERAGE]) {
   const r = run(gate);
   const label = gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
@@ -2984,6 +3039,7 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === STALE ? 'a real old save still opens the game in a browser, quietly'
                 : gate === HEIGHT ? 'no screen outgrows its budget on a day-180 save'
                 : gate === UNION ? 'every sharded block is owned by exactly one shard'
+                : gate === FACILITY ? 'every facility track is bought where its system lives'
                 : gate === TABLE ? 'the Surgery Theater does one operation at a time'
                               : gate.join(' ');
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
