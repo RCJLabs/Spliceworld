@@ -69,9 +69,24 @@ const BUDGET = {
   // been the tallest screen in the game since R89 measured it, and paginating
   // the Ranch is the fix nobody has written. Ratcheting is not fixing it —
   // it is refusing to let it creep any further while it waits.
-  ranch:          { folded: 3650,  tallest: 14800 },
+  //
+  // R128 COLLECTS WHAT R98 EARNED: 14800 -> 4450 open, measured at 4264.
+  // R98 gave this screen the Pens' one-at-a-time rule and never brought the
+  // ceiling down behind it — twenty animals that could all be open at once
+  // became twenty that cannot, and 10,536px of budget went on standing
+  // there permitting a screen the code no longer builds. A ceiling nothing
+  // can reach is not a ratchet; it is a number waiting to excuse the next
+  // regression. The shut half is untouched at 3,650 (measured 3,485) and is
+  // still the one that should worry somebody: pagination is still unwritten.
+  ranch:          { folded: 3650,  tallest: 4450 },
   pens:           { folded: 2000,  tallest: 4000 },   // R89's criterion
-  theater:        { folded: 1900,  tallest: 1900 },
+  // R128: 1900 -> 2080 open, measured at 1998. The shut half does not move
+  // (1,827 against 1,900) — what moved is that this screen HAS an open half
+  // now. Its two numbers were equal because the Theater had no fold at all,
+  // and a `tallest` that equals `folded` does not budget a fold, it forbids
+  // one. The Surgery Theater's own upgrade card is the fold, which is the
+  // entire milestone: the machine is bought on the screen it runs.
+  theater:        { folded: 1900,  tallest: 2080 },
   // R92 — THE VAULT'S HEIGHT IS DERIVED, NOT RATCHETED.
   //
   // R89 left this `null` because there was nothing honest to ratchet
@@ -93,7 +108,12 @@ const BUDGET = {
   // is on the shelf, and a campaign that reaches 233 of 244 parts has more
   // kinds of thing to summarise than one that reached 118. The open height
   // is derived and did not move.
-  vault:          { folded: 2400,  tallest: Math.round(VAULT_ROWS * 68 * 1.1) },
+  // R128: 2400 -> 2560 shut, measured at 2456. The Extractor's card. Two of
+  // that track's three grants are vault capacity, and this is the screen
+  // where a player watches them run out — 56px of card header is what it
+  // costs to be bought where it is felt. The derived open height is
+  // untouched, because a fold adds nothing to a screen already 29,798px tall.
+  vault:          { folded: 2560,  tallest: Math.round(VAULT_ROWS * 68 * 1.1) },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
   // R95: 1900 -> 2350, measured at 2293. The tab lists what you have found,
@@ -155,9 +175,16 @@ const WORDS = {
   // slack: it holds twenty animals against the Pens' ten, and it is also
   // where the money, the catalogue, breeding, the incubator and the whole
   // facility tree live. R128 will take most of the facility off it.
-  ranch:          { folded: 700,  open: 950 },
+  // R128 collects here too: 950 -> 810 open, measured at 768. Same cause as
+  // the pixel ceiling above — R98's one-at-a-time rule made the 950 word
+  // budget unreachable, and an unreachable budget measures nothing.
+  ranch:          { folded: 700,  open: 810 },
   pens:           { folded: 300,  open: 400 },
-  theater:        { folded: 300,  open: 300 },
+  // R128: 300 -> 340 open, measured at 320. The upgrade card's twenty words
+  // are the Tier II blurb and the grants line under it — what the gantry
+  // costs and what it buys. The shut budget is unchanged at 300 (measured
+  // 260), so the screen still has to summarise it in one line.
+  theater:        { folded: 300,  open: 340 },
   // The Vault is a list of what you own, and R91 capped what that can be —
   // 400 parts and 120 vials, each a line. Its words are inventory rather
   // than prose, and the fold work it is owed is a height problem; a ratchet

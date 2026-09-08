@@ -11,7 +11,8 @@ import { spliceChimera, validateSplice, tokensFor } from './theater.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
 import { theaterGrants, facilityLevel, levelData, nextUpgrade } from './facility.js';
-import { fieldNote, bindFieldNote } from '../ui/cards.js';
+import { facilityCard, bindFacility } from '../ui/facility-card.js';
+import { fieldNote, bindFieldNote, bindFolds } from '../ui/cards.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { speciesOf, classOf } from '../data/catalog.js';
 
@@ -209,8 +210,18 @@ export function renderTheaterScreen(root, ctx) {
       <h3>Physiology Panel</h3>
       ${panelRows}
       ${comboRows}
-    </section>`;
+    </section>
+    ${/* R128 — the Surgery Theater's own upgrade, on the Surgery Theater.
+          It was on the Ranch, in a shut card named after no system, and a
+          player looking at this screen had no way to find it. */ ''}
+    ${facilityCard(state, content, 'theater')}`;
   bindFieldNote(root, ctx, () => renderTheaterScreen(root, ctx));
+  // R128 — this screen had no fold until it had a facility card, so it
+  // had never called this. A card whose header nothing listens to is a
+  // card that cannot be opened, which is the bug this milestone exists
+  // to kill rather than relocate.
+  bindFolds(root, ctx, () => renderTheaterScreen(root, ctx));
+  bindFacility(root, ctx, () => renderTheaterScreen(root, ctx), (r) => { lastMsg = r.msg; });
 
   root.querySelectorAll('#thtr-frames button').forEach((btn) => {
     btn.addEventListener('click', () => {

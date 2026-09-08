@@ -99,7 +99,27 @@ const REPORT = process.argv.includes('--report');
 // fails. What this gate exists to catch is unchanged — a whole CLASS of file
 // arriving in front of the player, the way the shape files once did at
 // 400 KB.
-const FIRST_PAINT_KB = 1055;
+//
+// R128 RAISES IT: 1055 -> 1060, measured at 1057. `ui/facility-card.js` is
+// 6.1 KB where the Ranch's private copy was 2.0, and the 4 KB is the three
+// things the entry asked for: a card that takes the screen it is drawn on
+// (five screens share one implementation now, where one screen had a copy
+// nobody else could use), a buy row that says what the money BUYS from the
+// grants rather than only its price, and the roll-up that stops a player who
+// learned to buy upgrades on the Ranch finding them simply gone.
+//
+// It is eager for one reason and it is the right one: the Ranch is the only
+// screen the shell paints without a dynamic import, and the Ranch is one of
+// the five that draws a track. The other four pick the module up lazily,
+// after it is already in memory.
+//
+// THIS IS THE THIRD RAISE IN THREE MILESTONES AND THAT IS WORTH SAYING OUT
+// LOUD: 1050 -> 1055 -> 1060, each for a system rather than chrome, each
+// measured. The next milestone that wants one should be made to bring the
+// number DOWN instead — R101 and R121 both did, by 35 and 51 KB, and the
+// same deferral work is still available (the Vault and the Theater screens
+// are lazy; `campaign/map.js` and `campaign/campaign.js` are not).
+const FIRST_PAINT_KB = 1060;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //

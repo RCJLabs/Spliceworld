@@ -3207,6 +3207,105 @@ if (inShard('team')) {
 }
 
 // --- Rehabilitation (§3.6): the OTHER future a captured chimera has.
+// --- R128: EVERY FACILITY TRACK IS BOUGHT WHERE ITS SYSTEM LIVES ---------
+//
+// Reported from play: "I don't see how to upgrade the surgery theater or
+// where it is." It exists — one upgrade, two levels — and it was in a card
+// called Facility on the RANCH, shut by default, behind a derelict-house
+// icon that names no system. All six tracks were listed there together.
+//
+// The data has said where each belongs since it was written. Every track in
+// facility.json carries a `screen`, and NOTHING READ IT — grep across
+// splice/facility.js and ranch/ui.js returned nothing — so nothing had ever
+// checked it either, and one of the six was wrong: `extract` names no
+// screen at all. The extraction sequence is an overlay you start from the
+// Ranch (main.js `onExtract`), not a place you can navigate to.
+//
+// That is the whole argument for this block. A field nobody reads is a
+// field nobody validates, and the entry's own proposal — "route each track
+// to the screen its data names" — would have shipped a track pointed at
+// nowhere.
+{
+  const { tracks } = await import('../splice/facility.js');
+  const { shellScreenMap } = await import('./handlers.js');
+  const real = new Set(shellScreenMap().map((s) => s.screen));
+  assert.ok(real.size >= 6, `the shell renders ${real.size} screens`);
+
+  // 1. EVERY TRACK NAMES A SCREEN THE SHELL ACTUALLY RENDERS. Derived from
+  //    main.js through the same reader R39 wrote, so a seventh screen or a
+  //    renamed one cannot drift away from this list.
+  for (const track of tracks(content)) {
+    assert.ok(track.screen, `${track.id} says which screen it belongs to`);
+    assert.ok(real.has(track.screen),
+      `${track.id} points at "${track.screen}", which is not a screen the shell renders (${[...real].join(', ')})`);
+  }
+
+  // 2. AND EVERY SCREEN NAMED RENDERS IT. The union has to be all six: a
+  //    track routed to a screen that does not draw it is worse than one on
+  //    the wrong screen, because nothing anywhere would show it.
+  const { facilityCard } = await import('../ui/facility-card.js');
+  const rich = { ...newGameState(), seed: 128, funds: 999999 };
+  rich.campaign.heldNodes = [...ALL_NODE_IDS];
+  const drawn = new Set();
+  for (const screen of real) {
+    const html = facilityCard(rich, content, screen) ?? '';
+    for (const track of tracks(content)) {
+      if (!html.includes(`data-track="${track.id}"`)) continue;
+      assert.equal(track.screen, screen,
+        `${track.id} is drawn on ${screen} but its data says ${track.screen}`);
+      drawn.add(track.id);
+    }
+  }
+  assert.deepEqual([...drawn].sort(), tracks(content).map((t) => t.id).sort(),
+    'every track is drawn on exactly one screen, and none is dropped on the floor');
+
+  // 3. THE CRITERION, AS A PLAYER WOULD MEET IT. Somebody who has never
+  //    opened the Ranch can still buy the Surgery Theater's upgrade.
+  {
+    const { renderTheaterScreen } = await import('../splice/theater-ui.js');
+    // The Theater binds `#thtr-splice` unconditionally, so a stub whose
+    // `querySelector` returns null cannot render it — every other stub in
+    // this file returns null because no block had ever drawn this screen.
+    // A no-op element is the smallest thing that lets the render finish, and
+    // it keeps this assertion a REAL render rather than a string check on
+    // the card in isolation.
+    const el = { addEventListener() {}, click() {}, classList: { add() {}, remove() {} } };
+    const root = { innerHTML: '', querySelectorAll: () => [], querySelector: () => el };
+    renderTheaterScreen(root, { state: rich, content, now: () => t0, save: () => {}, refreshTicker: () => {} });
+    assert.ok(root.innerHTML.includes('data-track="theater"'),
+      'the Surgery Theater upgrade is on the Surgery Theater screen');
+    assert.ok(!root.innerHTML.includes('data-track="infirmary"'),
+      "and the Infirmary's is not — each screen shows its own");
+  }
+
+  // 4. AND THE CARD CAN BE OPENED. It is a fold, and a fold whose header
+  //    nothing listens to is exactly the bug this milestone exists to kill
+  //    rather than relocate: the upgrade would be visible and unreachable,
+  //    which is worse than hidden because it looks like it works.
+  //
+  //    This is not hypothetical. Wiring the five screens found the Theater
+  //    and the Vault had NEVER called `bindFolds` — neither had a fold
+  //    before this card, so nothing had ever needed it, and both shipped a
+  //    dead header until this assertion said so.
+  {
+    const bySrc = new Map();
+    const srcOf = (file) => {
+      if (!bySrc.has(file)) bySrc.set(file, readFileSync(join(root, file), 'utf8'));
+      return bySrc.get(file);
+    };
+    const screens = new Set(tracks(content).map((t) => t.screen));
+    assert.ok(screens.size >= 4, `the tracks spread over ${screens.size} screens`);
+    for (const screen of screens) {
+      const entry = shellScreenMap().find((e) => e.screen === screen);
+      assert.ok(entry?.file, `${screen} traces to a module`);
+      const src = srcOf(entry.file);
+      assert.match(src, /facilityCard\(/, `${entry.file} draws the card for ${screen}`);
+      assert.match(src, /bindFacility\(/, `${entry.file} binds its buy button`);
+      assert.match(src, /bindFolds\(/, `${entry.file} binds the fold header, or the card cannot be opened`);
+    }
+  }
+}
+
 // --- Salvage is instant and certain and hands you enemy tech. Rehab costs
 // --- real-world time, money and those same parts, and pays out a whole
 // --- creature you could not have built. Both must stay worth choosing.
@@ -6451,6 +6550,9 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'splice/grades.js': 'grades',
     'splice/vault.js': 'vault',
     'splice/facility.js': 'facility',
+    // R128 — the card that draws a track, on whichever screen that track's
+    // data names. Same system as the module above it, same note.
+    'ui/facility-card.js': 'facility',
     'splice/physiology.js': 'flight',
     'splice/resequencer.js': 'resequencer',
     'splice/scars.js': 'scars',
@@ -7390,7 +7492,23 @@ if (inShard('regions')) {
     const file = screenModule[item.screen];
     assert.ok(file, `${item.id}: ${item.screen} traces to a module`);
     moduleSrc[file] ??= readFileSync(join(root, file), 'utf8');
-    assert.ok(moduleSrc[file].includes(marker),
+    // R128 — AND ONE LEVEL INTO WHAT THAT SCREEN IMPORTS. This read the
+    // screen module's own text, which was right while every control was
+    // written where it was rendered. `data-act="upgrade"` now lives in
+    // `ui/facility-card.js`, drawn by five screens instead of one, and the
+    // Ranch still renders it — the assertion could not see through the
+    // import and failed on a screen that does exactly what the chip says.
+    // A marker found in a module the screen imports is a marker the screen
+    // renders.
+    const reach = [moduleSrc[file]];
+    for (const m of moduleSrc[file].matchAll(/^import .*from '(\.[^']+)';$/gm)) {
+      const dep = join(dirname(join(root, file)), m[1]);
+      if (!dep.startsWith(root)) continue;
+      const rel = dep.slice(root.length + 1);
+      try { moduleSrc[rel] ??= readFileSync(dep, 'utf8'); } catch { continue; }
+      reach.push(moduleSrc[rel]);
+    }
+    assert.ok(reach.some((src) => src.includes(marker)),
       `${item.id} lands on ${item.screen} (${file}), which is where ${marker} is rendered`);
   }
   // The negative that keeps the check from being decorative: the two screens
@@ -10903,8 +11021,21 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const twenty = page.length;
     const perHead = (twenty - one) / 19;
     assert.ok(perHead < (two - one) * 1.5, 'each extra head costs a constant row');
-    assert.ok(twenty < one * 3,
-      `twenty animals is not twenty cards (${one} -> ${twenty} chars, ${Math.round(perHead)}/head)`);
+    // Measured against the CARD, not against a one-animal page. `twenty <
+    // one * 3` was the first shape of this line and R128 broke it without
+    // moving a single row: taking four facility tracks off the Ranch pulled
+    // ~5.6KB of FIXED chrome out of the denominator, so a leaner screen
+    // failed a gate about roster growth while its per-head cost sat
+    // unchanged at 1,253 chars. A ratio to the page's own furniture rewards
+    // furniture. The card is the thing a row is being compared to, so
+    // compare to the card — which is also what the Pens block does, and the
+    // Pens survived R128 untouched.
+    const opened = herd([{}]);
+    opened.ui = { collapsed: { [`ranch-${opened.ranch.stock[0].id}`]: false } };
+    const openCard = drawRanch(opened).length - one;
+    assert.ok(openCard > 5000, `an open animal is the heavy thing (${openCard} chars)`);
+    assert.ok(perHead < openCard * 0.2,
+      `twenty animals is not twenty cards (${Math.round(perHead)}/head against a ${openCard}-char card)`);
   }
 
   // 2. ALERTS NEVER HIDE. The only deadline on this screen is R38's: an
@@ -11186,7 +11317,12 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       assert.ok(page.includes(`>${item.label}<`) || page.includes(`${item.label}</span>`),
         `"${item.label}" is still on the agenda`);
     }
-    const gotos = [...page.matchAll(/data-goto="(\w+)"/g)].map((m) => m[1]);
+    // Scoped to the agenda's OWN buttons. A bare `data-goto` count was the
+    // first shape of this line, and R128 broke it by putting four more on
+    // the Ranch — the facility roll-up, which says where the upgrades that
+    // left this screen went. Those are destinations too; they are simply
+    // not agenda items, and this block is about the agenda's shape.
+    const gotos = [...page.matchAll(/class="agenda-(?:chip|row)" data-goto="(\w+)"/g)].map((m) => m[1]);
     assert.equal(gotos.length, shape.open.length, 'one destination per open item, chips included');
     for (const item of shape.open) {
       assert.ok(gotos.includes(item.screen), `"${item.label}" still routes to ${item.screen}`);

@@ -22,6 +22,7 @@ import { fmtDuration } from '../ranch/ui.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { activeRaid, raidRemainingMs, levyOf, raidEncounter } from './taskforce.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen, esc } from '../ui/cards.js';
+import { facilityCard, bindFacility } from '../ui/facility-card.js';
 import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js';
 // STABLE is the cap, not a coincidence: A1 measured the campaign at three
 // bodies, the harness has fought at three since M4.5, and the Path tells
@@ -492,10 +493,14 @@ function renderMap(root, ctx) {
     ${captives ? `<section class="card captive-alert"><h3>⏳ Captured — Rescue Windows</h3>${captives}</section>` : ''}
     ${warSubtabBar(state)}
     ${fieldNote(guideForScreen(state, content, t, 'battle'))}
-    ${views[warTab] ?? views.map}`;
+    ${views[warTab] ?? views.map}
+    ${/* R128 — Containment is bought where captives arrive. Its data has
+          said `battle` since R8 and nothing read the field. */ ''}
+    ${facilityCard(state, content, 'battle')}`;
 
   bindFieldNote(root, ctx, () => renderMap(root, ctx));
   bindFolds(root, ctx, () => renderMap(root, ctx));
+  bindFacility(root, ctx, () => renderMap(root, ctx), (r) => { lastAftermath = r.msg; });
   bindSubtabs(root, 'war-tab', (id) => {
     warTab = id;
     renderMap(root, ctx);

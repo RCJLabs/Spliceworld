@@ -220,7 +220,7 @@
       "id": "extractor",
       "name": "Extractor",
       "icon": "test-tube",
-      "screen": "extract",
+      "screen": "vault",
       "levels": [
         {
           "level": 1,
@@ -281,7 +281,8 @@
             "vaultVials": 120
           }
         }
-      ]
+      ],
+      "_screenNote": "R128 — was `extract`, which is not a screen: extraction is an overlay started from the Ranch. Two of this track's three grants are vault capacity, and the Vault is where a player feels them."
     },
     {
       "id": "scanner",

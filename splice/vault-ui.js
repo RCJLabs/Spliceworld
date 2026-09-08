@@ -18,7 +18,8 @@ import { rushQuote, rushButton, bindRush } from './rush.js';
 // screens wired this and the sixth did not, so a note here could not have
 // been shown even if one had existed. The suite's hand-written screen list
 // happened to omit `vault` too, so nothing ever asked.
-import { fieldNote, bindFieldNote } from '../ui/cards.js';
+import { fieldNote, bindFieldNote, bindFolds } from '../ui/cards.js';
+import { facilityCard, bindFacility } from '../ui/facility-card.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { speciesOf, isRetired } from '../data/catalog.js';
 import { vaultPressure, surplusParts, renderDown, renderValue } from './vault.js';
@@ -191,7 +192,13 @@ export function renderVaultScreen(root, ctx) {
         run ? '' : '; the vial is spent whether or not it takes'
       }. It is the only way an extraction is not forever.</p>
       <p class="fine-print">Every token remembers its donor forever. It&#39;s sentimental. And legally binding.</p>
-    </section>`;
+    </section>
+    ${/* R128 — the Extractor is bought here. Its data said `extract`, which
+          is not a screen: extraction is an overlay you start from the Ranch.
+          Two of its three grants are vault capacity, and this is the screen
+          where a player feels them run out. */ ''}
+    ${facilityCard(state, content, 'vault')}`;
+  bindFacility(root, ctx, () => renderVaultScreen(root, ctx), (r) => { lastMsg = r.msg; });
 
   root.querySelectorAll('button[data-reseq]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -212,5 +219,8 @@ export function renderVaultScreen(root, ctx) {
     renderVaultScreen(root, ctx);
   });
   bindFieldNote(root, ctx, () => renderVaultScreen(root, ctx));
+  // R128 — same as the Theater: the Vault's first fold arrived with the
+  // Extractor's card, and nothing here had ever bound one.
+  bindFolds(root, ctx, () => renderVaultScreen(root, ctx));
   bindRush(root, ctx, (m) => { lastMsg = m; }, () => renderVaultScreen(root, ctx));
 }
