@@ -1899,10 +1899,14 @@ const BREAKS = [
     // R98 — a screen ships with no word budget at all. The height half of
     // this gate has refused an undeclared screen since R89; the word half
     // has to refuse one too, or a new screen arrives measured on one axis.
+    // RE-AIMED. This first removed the GUARD — `WORDS[r.id] ?? Infinity` —
+    // and went MISSED, because every screen currently declares a budget so
+    // the fallback never fired. A break has to make the thing the rule
+    // forbids actually happen: a screen with no entry at all.
     n: 171, gate: HEIGHT, name: 'a screen can ship without declaring what it is allowed to say',
     file: 'tools/height.js',
-    anchor: '  const w = WORDS[r.id];',
-    to: '  const w = WORDS[r.id] ?? { folded: 1e6, open: 1e6 };',
+    anchor: "  'dex:genes':    { folded: 200,  open: 200 },",
+    to: '',
   },
   {
     // R97 — the Dex stops keying generated specimens by lab. A rival mints a
