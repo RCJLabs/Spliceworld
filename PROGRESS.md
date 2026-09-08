@@ -1,5 +1,86 @@
 # PROGRESS
 
+## Session 132 — R98: the wordy screen was the other one ✅
+
+### The entry describes a screen that stopped existing two milestones ago
+
+| the entry said | measured, day-180 save |
+| --- | --- |
+| expanded Pens **2,157 words** | **291** |
+| expanded Ranch 973 | **1,686** |
+| folded Ranch 448 | 658 |
+
+R44 sized the Pens and R89 gave it `bindFolds`'s `exclusive` list — ten
+folds, **at most one open**. So "expanded Pens" is 242 shut plus a single
+dossier, and the criterion's 900 passed before this milestone touched
+anything.
+
+### One argument was the whole difference
+
+The Ranch had the same cards, the same helper, in the same file, and had
+never been passed the list. Twenty-three folds, all open at once.
+
+|  | before | after |
+| --- | --- | --- |
+| Ranch words, open | 1,686 | **935** |
+| Ranch height, open | 14,450px | **4,852px** |
+
+The bands stay out of the group — R47 already sorted this screen into *Ready
+to graduate*, *Needs care* and *Growing*, and those are how you **find** an
+animal rather than something you read. Nor are Right Now, the Facility, the
+Breeding Pen or the Incubator: a player comparing an animal against what the
+agenda asks for wants both.
+
+**No redesign was needed and none was done.** Every card already withheld its
+portrait, care buttons and dossier until opened, so a shut row was already a
+roster line: `🜃 Goat · Adult · condition 78 · Prime · 2 care ready`.
+
+### The word budget went into the height gate, not beside it
+
+Height and word count are one question asked twice — the Ranch was 14,450px
+**and** 1,686 words for the single reason that nothing closed the card you
+were not reading. `tools/height.js` already launches Chromium, walks every
+screen and opens every fold; counting `innerText` in that pass is free, where
+a second gate would put ~40s on a suite with six to spare.
+
+`open` means what a player can have on screen **at once**, not the sum of
+every card — and that distinction is the finding.
+
+### I invented two budgets and had to correct both
+
+`dex:combos` I wrote at 350; it measures **527** (R95 took combo discovery
+from two to eight, and that tab has no fold). The Ranch I wrote at 900; it
+measures **935**. Both replaced with ratchets just above the measurement.
+**A budget invented rather than measured is how a gate fails its first run
+for a reason that has nothing to do with the milestone.**
+
+### One fix this gate cannot see
+
+The Facility card printed **two** blurbs per track — the level you own and
+the level you are deciding about. Dropping the first (kept where a track is
+maxed and it is the only description there is) takes it from **306 words to
+197 on a mid-game save**, and **zero** on the day-180 fixture, where every
+track is already maxed. One fixture cannot see a change that helps every
+player who has not finished the tech tree.
+
+### And one break that broke the wrong thing
+
+Break 171 replaced `WORDS[r.id]` with a fallback to an infinite budget and
+went MISSED: every screen declares one, so the fallback never fired. **A
+break has to make the forbidden thing happen, not remove the sentence
+forbidding it.** It deletes a screen's entry now.
+
+### Known issues / next session's first task
+
+* **R128 — nobody can find the Surgery Theater upgrade.** Reported from play.
+  Every track in `facility.json` carries a `screen` field naming where it
+  belongs and nothing reads it; all six sit in one shut card called
+  *Facility* on the **Ranch**. The Theater has exactly one upgrade in the
+  game and `theater-ui.js` already imports `nextUpgrade` — it knows its tier
+  and never offers the next one.
+* Carried: folding the Dex's Combos tab and the Vault's.
+
+
 ## Session 131 — R97: 253 Dex pages for 42 units, none of them rendered ✅
 
 ### The entry was half stale and half worse

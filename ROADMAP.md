@@ -2273,15 +2273,47 @@ R102; R88–R90 remain.)*
   sightings arrive with them. *Done when: Foes is under two screens folded
   on the day-180 save, and `dex.enemies` never exceeds authored units plus
   labs* — both met, the first before this milestone started.
-- **R98 — The game says 2,157 words on one screen.** Expanded Pens **2,157
-  words**, expanded Ranch 973, folded Ranch 448; 33 field guides averaging
-  55 words; every card carries a deadpan paragraph while the tone rules ask
-  the ticker for one sentence. Proposed, medium, copy and UI: a **card copy
-  budget** (headline ≤ 8 words, body ≤ 25, everything else behind a fold);
-  a **terse setting** that hides flavour lines; a `fine-print` audit for
-  lines that explain nothing the number beside them does not; and a smoke
-  gate on words per card. *Done when: expanded Pens is under 900 words with
-  no rule left unexplained — every mechanic still has a title or a guide.*
+- **R98 — The game says 2,157 words on one screen.** ✅ *Shipped — the
+  criterion had already passed, and the words were on the other screen.*
+
+  **THE ENTRY DESCRIBES A SCREEN THAT STOPPED EXISTING TWO MILESTONES AGO.**
+  Measured on the day-180 save, expanded Pens is **291 words**, not 2,157:
+  R44 sized it and R89 gave it `bindFolds`'s `exclusive` list, so it has ten
+  folds and allows **at most one open**. Expanded Ranch is **1,686**, against
+  the 973 recorded here, and folded 658 against 448.
+
+  **ONE ARGUMENT WAS THE WHOLE DIFFERENCE.** The Ranch had the same cards,
+  the same helper, in the same file, and had never been passed the list —
+  twenty-three folds, all open at once. Giving it the Pens' rule took it from
+  **1,686 words to 935** and **14,450px to 4,852px**. No redesign was needed
+  or done: R47 had already banded the screen into *Ready to graduate*,
+  *Needs care* and *Growing*, and every card already withheld its portrait,
+  care buttons and dossier until opened, so a shut row was already a roster
+  line. The bands stay out of the exclusive group, because they are how you
+  **find** an animal rather than something you read.
+
+  **THE BUDGET LIVES IN THE HEIGHT GATE**, because height and word count are
+  one question asked twice — the Ranch was tall and wordy for the single
+  reason that nothing closed the card you were not reading. `tools/height.js`
+  already opens every screen and every fold, so counting `innerText` in that
+  pass is free; a second tool would have put ~40s on a suite with six to
+  spare. `open` means what a player can have on screen AT ONCE, not the sum
+  of every card, and that distinction is the finding.
+
+  Two budgets in the new table were **invented rather than measured** and
+  both had to be corrected on the first run — the Dex's Combos tab (350
+  written, **527** measured, because R95 took combo discovery from two to
+  eight on a tab with no fold) and the Ranch itself (900 written, **935**
+  measured). Both are ratchets on the measurement now. The `fine-print`
+  audit the entry asks for landed on the Facility card, which printed two
+  blurbs per track — the level you own and the level you are choosing;
+  the first survives only where a track is maxed and it is the sole
+  description, taking that card from **306 words to 197 mid-game**.
+
+  *Done when: expanded Pens is under 900 words with no rule left unexplained*
+  — it is 291, and was before this started; the milestone's real work was the
+  Ranch, and the terse setting the entry proposes was not needed to get
+  there. R128 takes the facility tree off that screen next.
 - **R128 — Nobody can find the Surgery Theater upgrade.** Reported from
   play, and the data has been saying so since it was written: every track in
   `facility.json` carries a **`screen`** field naming where it belongs —
