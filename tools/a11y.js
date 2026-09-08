@@ -433,8 +433,45 @@ const RAGGED = `(() => {
   return out;
 })()`.replace('RAG_PX', String(RAG));
 
-const OPEN_EVERYTHING = `[...document.querySelectorAll('details')].forEach((d) => { d.open = true; });
-  [...document.querySelectorAll('.fold-toggle,[data-fold]')].forEach((b) => b.click());`;
+// R99 — THIS LINE MEASURED ALMOST NOTHING, AND SAID SO IN THE PASSING TENSE.
+//
+// `[...querySelectorAll('[data-fold]')].forEach((b) => b.click())` looks like
+// "open everything". It is not, for two reasons that compound:
+//
+//   1. A fold's click handler calls `rerender()`, which reassigns the
+//      screen's `innerHTML`. Every button in the captured list except the
+//      first is detached by the time its turn comes, so those clicks land on
+//      orphans and do nothing.
+//   2. R89 gave the Pens (and R98 the Ranch) an EXCLUSIVE group: opening one
+//      creature shuts the others. "Open everything" is a contradiction on
+//      those screens even when the clicks land — at most one can be open.
+//
+// Measured on the Pens: five folds, and this left TWO open, neither of them
+// the feral one. So `.feral-panel` — the panel R85 built and R122 fixed the
+// contrast on — was never drawn while the gate was looking, and its 3.42:1
+// body text passed every run. The contrast rule was right the whole time and
+// had nothing to look at.
+//
+// A fold is therefore opened one at a time, re-queried after each rerender,
+// and MEASURED IN ITS OWN PASS. `<details>` still opens in bulk because it
+// has no handler and no group.
+const OPEN_DETAILS = `[...document.querySelectorAll('details')].forEach((d) => { d.open = true; });`;
+
+// The ids of the folds on the screen that is currently showing.
+const FOLD_IDS = (screen) => `[...document.querySelectorAll('#screen-${screen} button[data-fold]')]`
+  + `.map((b) => b.dataset.fold)`;
+
+// Every subtab bar on the visible screen, by its attribute. The Dex's five
+// were walked by name; the Pens' four and the War Room's five were not, and
+// `ui/tabs.js` builds all three from one helper — so ask the DOM which
+// `data-*-tab` attributes are actually present rather than naming them (R61).
+const SUBTAB_ATTRS = (screen) => `(() => {
+  const out = new Set();
+  for (const el of document.querySelectorAll('#screen-${screen} button')) {
+    for (const k of Object.keys(el.dataset)) if (/Tab$/.test(k)) out.add(k);
+  }
+  return [...out];
+})()`;
 
 async function main() {
   const chrome = findChrome();
@@ -517,6 +554,52 @@ async function main() {
         if (!pairs.has(key) || pairs.get(key).gap > p.gap) pairs.set(key, { ...p, where });
       }
     };
+    // R99 — WALK THE SUBTABS THE SCREEN ACTUALLY HAS. This asked for
+    // `data-dex-tab` by name, so the Dex's five tabs were measured and the
+    // Pens' four and the War Room's five never were. All three come out of
+    // `ui/tabs.js`'s one helper, so the DOM is asked which bars exist.
+    const subtabPass = async (s, where) => {
+      for (const attr of await evaluate(SUBTAB_ATTRS(s))) {
+        const dash = attr.replace(/([A-Z])/g, '-$1').toLowerCase();
+        const ids = await evaluate(`[...document.querySelectorAll('#screen-${s} button[data-${dash}]')]`
+          + `.map((b) => b.dataset.${attr})`);
+        for (const id of ids ?? []) {
+          await evaluate(`document.querySelector('#screen-${s} button[data-${dash}="${id}"]')?.click()`);
+          await sleep(320);
+          await collect(`${where}/${id}`);
+        }
+      }
+    };
+
+    // R99 — ONE FOLD AT A TIME, RE-QUERIED. See OPEN_DETAILS above for why
+    // the bulk version measured almost nothing. Each creature card carries
+    // DIFFERENT alerts — the feral panel, the settling clock, the Infirmary
+    // window — so every fold earns its own pass; the subtabs inside a card
+    // are walked on the first card that has them, because R89 partitions one
+    // template into all four and a second creature's Anatomy tab is the same
+    // markup with different nouns.
+    const foldPass = async (s, where = s) => {
+      const ids = await evaluate(FOLD_IDS(s));
+      let walkedSubtabs = false;
+      for (const id of ids ?? []) {
+        const opened = await evaluate(`(() => {
+          const b = document.querySelector('#screen-${s} button[data-fold="${id}"]');
+          if (!b) return false;
+          if (b.getAttribute('aria-expanded') !== 'true') b.click();
+          return true;
+        })()`);
+        if (!opened) continue;      // a rerender can retire a fold mid-walk
+        await sleep(380);
+        await evaluate(OPEN_DETAILS);
+        await collect(`${where}#${id}`);
+        if (!walkedSubtabs && (await evaluate(SUBTAB_ATTRS(s))).length) {
+          await subtabPass(s, `${where}#${id}`);
+          walkedSubtabs = true;
+        }
+      }
+      return (ids ?? []).length;
+    };
+
     // R122 — the founding picker, which needs an EMPTY browser to exist:
     // it is the screen a player sees before they have a save, so the
     // fixture that makes every other view reachable is exactly what hides
@@ -557,6 +640,18 @@ async function main() {
       await sleep(2200);
       await evaluate(`document.querySelector('#tabs button[data-screen="battle"]').click()`);
       await sleep(700);
+      // R99 — AND THE WAR ROOM ITSELF, which no run had ever drawn. The
+      // fixture ships a duel in progress so the arena can be measured, and
+      // `#screen-battle` renders the arena whenever one exists — so the map,
+      // the jobs board, the Labs board, the bays and the wire, five tabs and
+      // the biggest screen in the game, were never rendered while any gate
+      // was looking. This is the one moment in the run when that screen is
+      // the War Room, so it is walked here.
+      await collect('warroom');
+      await subtabPass('battle', 'warroom');
+      await foldPass('battle', 'warroom');
+      await evaluate(`document.querySelector('#screen-battle button[data-war-tab="map"]')?.click()`);
+      await sleep(500);
       const opened = await evaluate(`(() => {
         const b = [...document.querySelectorAll('#screen-battle button')]
           .find((x) => /^\\s*(Spar|Assault)\\b/.test(x.textContent) && !x.disabled);
@@ -630,16 +725,12 @@ async function main() {
     for (const s of screens) {
       await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
       await sleep(600);
-      await evaluate(OPEN_EVERYTHING);
+      await evaluate(OPEN_DETAILS);
       await sleep(400);
       await collect(s);
       if (s === 'battle') await arenaFits('battle');
-      const subs = await evaluate(`[...document.querySelectorAll('button[data-dex-tab]')].map((b) => b.dataset.dexTab)`);
-      for (const sub of subs ?? []) {
-        await evaluate(`document.querySelector('button[data-dex-tab="${sub}"]').click()`);
-        await sleep(350);
-        await collect(`${s}/${sub}`);
-      }
+      await subtabPass(s, s);
+      await foldPass(s);
     }
     // ---- 1b. …and the arena on a short phone. 780px lands in the
     //      `min-height: 760px` band (a roomier stage, taller move cells);
@@ -675,7 +766,8 @@ async function main() {
     for (const s of screens) {
       await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
       await sleep(500);
-      await evaluate(OPEN_EVERYTHING);
+      await evaluate(OPEN_DETAILS);
+      await evaluate(`document.querySelector('#screen-${s} button[data-fold]')?.click()`);
       await sleep(350);
       views.add(`${s}@${BAND_TOP}`);
       for (const g of await evaluate(RAGGED)) {
@@ -899,6 +991,19 @@ async function main() {
         continue;
       }
       kbScreens += 1;
+
+      // R99 — WITH A CARD OPEN. This stamped whatever fold state the earlier
+      // passes happened to leave behind, which made the count a function of
+      // what ran before it rather than of the screen. Most of this game's
+      // controls live inside a fold — care buttons, move slots, the rename
+      // sheet — so a keyboard walk over shut rows is a walk over the chrome.
+      // Opened with a click on purpose: the question is whether TAB reaches
+      // everything once the screen is in that state, not how it got there.
+      await evaluate(`(() => {
+        const b = document.querySelector('#screen-${s} button[data-fold]');
+        if (b && b.getAttribute('aria-expanded') !== 'true') b.click();
+      })()`);
+      await sleep(420);
 
       const stamped = await evaluate(`(() => {
         const SEL = 'button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]),'
@@ -1139,8 +1244,16 @@ async function main() {
     //     the ✕ — both committed, and one of them means "no".
     await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
     await sleep(700);
-    await evaluate(OPEN_EVERYTHING);
-    await sleep(400);
+    // The rename sheet lives inside an animal's card, so open folds until one
+    // appears rather than firing a single stale volley at all of them.
+    await evaluate(OPEN_DETAILS);
+    for (const id of await evaluate(FOLD_IDS('ranch')) ?? []) {
+      await evaluate(`(() => { const b = document.querySelector('#screen-ranch button[data-fold="${id}"]');
+        if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); })()`);
+      await sleep(300);
+      if (await evaluate(`!!document.querySelector('#screen-ranch .rename-btn:not([disabled])')`)) break;
+    }
+    await sleep(200);
     const openedPrompt = await evaluate(`(() => {
       const b = document.querySelector('#screen-ranch .rename-btn:not([disabled])');
       if (!b) return false;
@@ -1234,6 +1347,14 @@ async function main() {
     // ---- 7. nothing narrated an error along the way ------------------------
     for (const e of [...new Set(errors)]) note(`console error during the walk: ${e}`);
 
+    if (REPORT) {
+      // R99 — WHICH views, not how many. "29 views" read like coverage while
+      // the feral panel went undrawn for four milestones; a list is the only
+      // form of that number anybody can check.
+      console.log(`  views walked (${views.size}):`);
+      for (const v of [...views].sort()) console.log(`    ${v}`);
+      console.log('');
+    }
     console.log(`a11y: ${controls.length} distinct controls measured at ${VIEWPORT}px across ${views.size} views (boxes re-read at ${BAND_TOP}px, the top of the phone band)`);
     console.log(`a11y: ${kbScreens}/${screens.length} screens opened, ${kbControls} controls tabbed to and a duel fought with Tab and Enter alone`);
   } finally {

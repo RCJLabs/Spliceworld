@@ -2477,6 +2477,18 @@ button.dex-cell:focus-visible {
   background: linear-gradient(180deg, var(--accent-dim), transparent 70%);
 }
 .dominion-card h3 { color: var(--accent); }
+/* R99 — the note under the banner is `--muted`, and this card paints an
+   `--accent-dim` gradient behind it: measured at 4.43:1, under AA for text
+   this size. It is the line that admits the map has changed under you —
+   "3 back in coalition hands. Take them again." — so it is the last line on
+   the card that should be hard to read. Same fix R122 made on the feral
+   panel: `--text` is the readable foreground in every theme and the ground
+   is `--accent-dim` in every theme, so the pair holds across all five; the
+   hierarchy is carried by size, not by dimming the sentence.
+   Found by R99's own reach: the War Room had never been drawn by any gate,
+   because the fixture ships a duel in progress and that screen renders the
+   arena whenever one exists. */
+.dominion-card .fine-print { color: var(--text); }
 
 /* --- R41: veterancy, the Sparring Ring, and names ----------------------
    Levels are what a creature has been through; the chip and bar sit beside
