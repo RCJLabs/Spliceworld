@@ -3187,6 +3187,18 @@ const BREAKS = [
     to: '',
   },
   {
+    // R129's OWN BUG, replayed. The wild draw goes back to every part in the
+    // bestiary, which quietly makes the release a second door to the six
+    // variant lines — 34 of the 244 parts that R95 built a milestone on
+    // having exactly one. What found it live was break 162 going from caught
+    // to MISSED; the rule is stated in the release block now, so it fails on
+    // its own rather than only in combination with another break.
+    n: 193, gate: RELEASE, name: 'the release smuggles the variant lines out, and the Incubator stops being their only door',
+    file: 'campaign/rivals.js',
+    anchor: '    if (content.species[part.species]?.variantOf) continue;',
+    to: '',
+  },
+  {
     // The migration forgets the phase, so a save from v47 arrives with
     // `released` undefined — and `!cam.released` is true for a county that
     // has already been opened, which fires the burst a second time.

@@ -2499,12 +2499,32 @@ R102; R88–R90 remain.)*
   | clause | before | after |
   | --- | --- | --- |
   | the release is an event | nothing happens on the fifth defeat | fires once, six out at once, its own wire line and a standing Labs card |
-  | anatomy past the palettes | 7 species loose, **0** off-palette | **24 species, 6 off every lab palette** (bear, moth, tiger, ram, porcupine, skunk) |
-  | a trait you cannot roll | 0 of 200 | **63.8% of 400** minted specimens, against a declared 60% |
+  | anatomy past the palettes | the 5 palettes, **21 of 41 species**, and nothing else | **37 species across 540 minted specimens, 16 of them off every lab palette** — bear, falcon, goat, goose, gorilla, heron, jellyfish, moth, otter, porcupine, pufferfish, ram, skunk, tiger, tortoise, wolf |
+  | a trait you cannot roll | 0 of 200 | **62.2% of 540**, against a declared 60% |
   | the walk KEEPS more | 1 rehabilitated in 180 days | **3** — and 5/4/4/3 on the other four seeds, every one improved |
 
   A county with four labs still standing is untouched: 4 escapees, 7 species,
   0 off-palette, 0 traits, R82's 22h cooldown and cap of 4 exactly as before.
+
+  **The release does NOT draw variant anatomy, and that is R129's own bug
+  caught by R129's own verification.** The first draft widened a socket to
+  every part in the bestiary — including the six variant lines, which are 34
+  of the 244 parts and which R95 built a whole milestone around having
+  exactly ONE door: a mutation in your own Incubator. Measured with breeding
+  disabled outright, the five seeds that finish the ladder reached **20 to 34
+  variant parts anyway** while the two that do not reached 2 — so the release
+  was handing over the county's rarest bloodlines to a player who never bred
+  for one, and handing over the PARTS without the animal (`dex.variants`
+  stayed 0 on every seed). It draws from the 35 non-variant species now, up
+  from the 18 non-variant species the labs own. The three variants the labs
+  themselves favour (iron tortoise, pale cobra, storm eagle) are reachable
+  exactly as they were before, by R82's rules.
+
+  The battery is what found it: break 162 — *"the buyer locks the breeder out
+  again"* — went from caught to **MISSED**, because the release had become a
+  second door to the parts that break exists to strand. With the fix it is
+  decisive again: the median campaign drops from 237 parts to **220 (90.2%)**
+  and 14 variant parts are reached by no seed at all.
 
   Two things the milestone found rather than built. The **Genes tab** had
   never been measured full — twelve genes could only be learned by breeding,

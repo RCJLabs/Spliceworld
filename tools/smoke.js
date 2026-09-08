@@ -18414,6 +18414,25 @@ if (inShard('released')) {
     `a released specimen carries a mutation trait (0 of ${loose.length} do; ${
       Object.keys(content.traits).length} traits exist)`);
 
+  //    …BUT NOT THE SIX VARIANT LINES. They are 34 of the 244 parts and R95
+  //    built a milestone on their having exactly ONE door — a mutation in
+  //    your own Incubator — which is why the walker breeds a line that still
+  //    owes the Dex a variant. R129's first draft widened a socket to every
+  //    part in the bestiary and quietly became a second door: measured with
+  //    breeding disabled outright, the five seeds that finish the ladder
+  //    reached 20 to 34 variant parts anyway, and `dex.variants` stayed 0 on
+  //    every one of them — the parts without the animal.
+  //
+  //    Stated here rather than left to `tools/reach.js`, which only caught it
+  //    in combination with break 162: a rule that needs two failures at once
+  //    to become visible is not a rule anybody can act on.
+  const variantSeen = [...speciesOfLoose].filter((sp) => content.species[sp]?.variantOf);
+  const labVariants = new Set([...labSpecies].filter((sp) => content.species[sp]?.variantOf));
+  const smuggled = variantSeen.filter((sp) => !labVariants.has(sp));
+  assert.deepEqual(smuggled, [],
+    `the release does not open a second door to the variant lines (${smuggled.join(', ')}`
+    + ` are not on any lab's palette, so the Incubator is the only way to them)`);
+
   // 4. AND THE GENE HAS TO REACH THE VAULT, or the trait is decoration on a
   //    creature the player scraps. This is the clause the measurement
   //    demanded: capture is only worth a bay and a stall if what comes OUT

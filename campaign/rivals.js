@@ -185,6 +185,23 @@ function openTheDoors(parts, content, rng, chance) {
   const bySlot = new Map();
   for (const part of Object.values(content.parts)) {
     if (part.species === 'salvage') continue;
+    // R129 — AND NOT A VARIANT. Found by R129's own verification: the first
+    // draft drew from every part in the bestiary, and the six variant lines
+    // are 34 of the 244. R95 built a whole milestone on those parts having
+    // exactly ONE door — a mutation in your own Incubator, which is why the
+    // walker breeds a line that still owes the Dex a variant — and a
+    // released specimen wearing one is a second door that skips it.
+    //
+    // Measured with breeding disabled outright: the five seeds that finish
+    // the ladder reached 20 to 34 variant parts anyway; the two that did not
+    // reached 2. So the release was handing over the rarest bloodlines in
+    // the county to a player who never bred for them, and giving them the
+    // PARTS without the animal — `dex.variants` stayed 0 on every seed while
+    // `dex.parts` filled up with anatomy off a creature they had never met.
+    //
+    // The release still widens what a specimen can be built from 21 species
+    // to 35, which is the whole ceiling this milestone exists to break.
+    if (content.species[part.species]?.variantOf) continue;
     if (!bySlot.has(part.slot)) bySlot.set(part.slot, []);
     bySlot.get(part.slot).push(part);
   }

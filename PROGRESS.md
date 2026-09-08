@@ -30,8 +30,8 @@ stall on one. Capture was a dead end by design.
 | clause | before | after |
 | --- | --- | --- |
 | the release is an event | nothing on the fifth defeat | fires once, six out at once, its own wire line, a standing Labs card |
-| anatomy past the palettes | 7 species, **0** off-palette | **24 species, 6 off every lab palette** — bear, moth, tiger, ram, porcupine, skunk |
-| a trait you cannot roll | 0 of 200 | **63.8% of 400**, against a declared 60% |
+| anatomy past the palettes | the 5 palettes, **21 of 41 species**, and nothing else | **37 species across 540 specimens, 16 off every lab palette** |
+| a trait you cannot roll | 0 of 200 | **62.2% of 540**, against a declared 60% |
 | the walk KEEPS more | **1** rehabilitated in 180 days | **3** — and 5/4/4/3 on the other four seeds, every one improved |
 
 A county with four labs still standing is untouched: 4 escapees, 7 species,
@@ -44,6 +44,28 @@ then stopped. It is stamped on every token whose slot it fits now, the Dex
 learns it the moment one walks out, and the walker keeps a gene-bearing
 capture even under stall pressure, which is the thing R91's policy was never
 told about.
+
+### The bug this milestone shipped, and its own battery caught
+
+The first draft of the wild draw widened a socket to **every part in the
+bestiary** — including the six variant lines, which are 34 of the 244 parts
+and which R95 built a whole milestone around having exactly ONE door: a
+mutation in your own Incubator. Measured with breeding disabled outright,
+the five seeds that finish the ladder reached **20 to 34 variant parts
+anyway**; the two that do not reached 2. The release was handing the county's
+rarest bloodlines to a player who never bred for one — and handing over the
+PARTS without the animal, since `dex.variants` stayed 0 on every seed.
+
+What found it was break **162** going from caught to **MISSED**: *"the buyer
+locks the breeder out again, and the six variant lines are never rolled for"*
+stopped failing, because there was now another way in. Fixed, it is decisive
+again — the median campaign drops from 237 parts to **220 (90.2%)** with 14
+variant parts reached by no seed at all.
+
+*The lesson, and it is the same one R83 wrote down: a milestone that changes
+the walk has to re-derive every assertion the walk moves.* I read four green
+gates and one missed break as "a stale break" for twenty minutes before
+measuring it.
 
 ### Two things the milestone found rather than built
 
