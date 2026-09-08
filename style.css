@@ -1125,13 +1125,8 @@ body.in-battle .ticker { font-size: 0.66rem; }
   .float, .anim-lunge-fwd, .anim-hit, .anim-ko,
   .anim-wavein, .anim-buff, .anim-debuff,
   .grad-shake, .grad-flash, .poof { animation: none; }
-  /* R99 — the two TRANSITIONS nobody had listed. All eleven keyframes were
-     covered and both of these were not, which is what happens when a rule is
-     kept by hand: the arena's ground still washed colour on a crit and both
-     sprite slots still faded in, for a player who had asked their OS to stop
-     moving things. Safe to disable outright — nothing anywhere listens for
-     `transitionend`, and `animate()` already returns early under this query
-     so its `animationend` listener is never registered either. */
+  /* R99 — the two transitions nobody had listed, while all eleven keyframes
+     were. Safe: nothing listens for `transitionend`. */
   .stage, .slot { transition: none; }
 }
 
@@ -2204,12 +2199,9 @@ footer {
 }
 .facility-next button:disabled { background: var(--panel); color: var(--muted); cursor: default; }
 
-/* R128b — the roll-up's links out. These shipped as `class="linkish"`, a name
-   with NO RULE ANYWHERE, so four screen names rendered as default grey
-   buttons wedged mid-sentence — the sentence read as broken chrome rather
-   than as a sentence. They are links inside a line of prose, so they are
-   styled as links and given a real hit target on the way (R73's 40px floor
-   is for controls in a row; an inline link inherits the line it sits in). */
+/* R128b — the roll-up's links out, which shipped as `linkish`: a class name
+   with no rule anywhere, so four screen names rendered as grey buttons
+   wedged mid-sentence. Links in prose, styled as links. */
 .facility-delta { color: var(--goo); }
 .facility-elsewhere { display: block; margin: 10px 2px 0; line-height: 1.9; }
 .facility-goto {
@@ -2485,17 +2477,9 @@ button.dex-cell:focus-visible {
   background: linear-gradient(180deg, var(--accent-dim), transparent 70%);
 }
 .dominion-card h3 { color: var(--accent); }
-/* R99 — the note under the banner is `--muted`, and this card paints an
-   `--accent-dim` gradient behind it: measured at 4.43:1, under AA for text
-   this size. It is the line that admits the map has changed under you —
-   "3 back in coalition hands. Take them again." — so it is the last line on
-   the card that should be hard to read. Same fix R122 made on the feral
-   panel: `--text` is the readable foreground in every theme and the ground
-   is `--accent-dim` in every theme, so the pair holds across all five; the
-   hierarchy is carried by size, not by dimming the sentence.
-   Found by R99's own reach: the War Room had never been drawn by any gate,
-   because the fixture ships a duel in progress and that screen renders the
-   arena whenever one exists. */
+/* R99 — `--muted` on this card's `--accent-dim` gradient measured 4.43:1,
+   under AA, on the line that admits the map has changed under you. Same pair
+   R122 used on the feral panel; both tokens hold in all five themes. */
 .dominion-card .fine-print { color: var(--text); }
 
 /* --- R41: veterancy, the Sparring Ring, and names ----------------------

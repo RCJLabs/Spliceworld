@@ -1920,6 +1920,80 @@ const BREAKS = [
     anchor: "  'dex:genes':    { folded: 200,  open: 200 },",
     to: '',
   },
+  // --- gate: a11y (R99 — the two defects the entry names, replayed) --------
+  {
+    // R99's CRITERION, half one. The feral panel's body text goes back to
+    // `--muted` on the warn ground: 3.42:1, under AA, on the one panel that
+    // explains how not to lose a creature. It passed every run for four
+    // milestones — not because the contrast rule was wrong but because the
+    // fold walk never drew the panel.
+    n: 180, gate: A11Y, name: 'the feral panel is dim again, on the card that explains how not to lose a creature',
+    file: 'style.css',
+    anchor: '.feral-panel .fine-print { color: var(--text); }',
+    to: '.feral-panel .fine-print { color: var(--muted); }',
+  },
+  {
+    // R99's CRITERION, half two. The egg's Hurry button goes back inside
+    // `.encounter`, the flex line R86 found it overflowing: 110px past its
+    // card and 98px past the phone. A control that leaves its card still
+    // reports a full-size rect, so the 40px floor and the 6px gutter both
+    // pass it — which is why this shipped after a green run and was caught
+    // by screenshot.
+    n: 181, gate: A11Y, name: 'the egg\'s Hurry button goes back into its row, and off the side of the phone',
+    file: 'ranch/ui.js',
+    anchor: `      </div>
+      \${
+        // R86: under the row, not in it. \`.encounter\` is a flex line already
+        // holding a portrait, two lines of lineage and the countdown, and a
+        // full-width button dropped into it overlapped the text and ran past
+        // the card at 380px — measured, after the a11y gate had passed it,
+        // because that gate checks size and gutter and not overlap.
+        t < egg.hatchAt ? \`<div class="egg-rush">\${rushButton(rushQuote(state, 'egg', egg.id, content, t))}</div>\` : ''
+      }\`;`,
+    to: `        \${t < egg.hatchAt ? rushButton(rushQuote(state, 'egg', egg.id, content, t)) : ''}
+      </div>\`;`,
+  },
+  {
+    // R99 — THE REACH COLLAPSES IN SILENCE, which is the whole reason this
+    // milestone existed. The fold walk stops re-querying and every pass
+    // toggles the FIRST fold instead of its own, which is what the old
+    // one-shot `forEach(click)` did once the first click rerendered the
+    // screen. No rule breaks; the gate simply stops seeing. Caught only
+    // because the walk now has to prove what it drew.
+    n: 182, gate: A11Y, name: 'the fold walk stops re-querying, so the gate goes quietly blind again',
+    file: 'tools/a11y.js',
+    anchor: `          const b = document.querySelector('#screen-\${s} button[data-fold="\${id}"]');`,
+    to: `          const b = document.querySelector('#screen-\${s} button[data-fold]');`,
+  },
+  {
+    // R99 — two controls sit on top of each other. R80's gutter rule reads
+    // the overlap as a separation and reports the distance as though they
+    // were still apart.
+    n: 183, gate: A11Y, name: 'alternate subtabs slide onto their neighbours, and the gutter rule calls it a gap',
+    file: 'style.css',
+    anchor: '  gap: 6px;  /* R80 — the tightest strip in the game was the one with the most buttons in it. */',
+    to: '  gap: 6px;\n}\n.subtabs button:nth-child(even) { left: -26px;',
+  },
+  {
+    // R99 — the two transitions lose their off-switch. The arena's ground
+    // washes colour on a crit and both sprite slots fade in, for a player who
+    // asked their OS to stop moving things. Caught twice over: by the source
+    // rule and by the browser with the media query on.
+    n: 184, gate: A11Y, name: 'the arena moves again for a player who asked it not to',
+    file: 'style.css',
+    anchor: '  .stage, .slot { transition: none; }',
+    to: '',
+  },
+  {
+    // R99 — and one KEYFRAME loses its off-switch, which only the source half
+    // can see: `.poof` exists for nine tenths of a second in the middle of a
+    // graduation, and no browser pass will ever have it on screen when it
+    // looks. This is the break that proves the source rule earns its place.
+    n: 185, gate: A11Y, name: 'a graduation animation loses its off-switch, where no browser pass can see it',
+    file: 'style.css',
+    anchor: '  .grad-shake, .grad-flash, .poof { animation: none; }',
+    to: '  .grad-shake, .grad-flash { animation: none; }',
+  },
   // --- gate: facility (every track is bought where its system lives) ------
   {
     // R128 — the exact bug the entry's own proposal would have shipped. The

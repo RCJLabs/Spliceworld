@@ -326,6 +326,40 @@ const CONTRAST = `(() => {
   return out;
 })()`;
 
+// R99 — WHAT THE WALK MUST HAVE ACTUALLY DRAWN.
+//
+// This whole milestone exists because coverage collapsed in silence: the
+// fold walk stopped opening folds, `.feral-panel` stopped being rendered,
+// and the contrast rule kept passing because it had nothing to look at. The
+// run said "29 views" and that number went up over four milestones while the
+// thing it was supposed to measure went dark.
+//
+// A count cannot catch that. A LIST can: these are states whose only proof
+// of life is that something drew them, and a run that never reaches one has
+// lost the reach rather than fixed the bug. Each is the deepest thing on its
+// screen — the panel behind a fold, the tab behind a card, the board behind
+// a battle — so between them they hold every kind of reach this gate has.
+const LANDMARKS = {
+  '.feral-panel': "the Pens' feral alert, behind a creature's fold",
+  '.subtabs [data-pen-tab]': "the Pens' per-creature subtabs, which only exist inside an open card",
+  '.subtabs [data-war-tab]': 'the War Room\'s tab bar, which the arena hides whenever a duel exists',
+  '.dominion-card': 'the dominion banner, which needs a conquered county',
+  '.encounter': 'an encounter row — an egg, a contest or a loose specimen',
+};
+const SAW = `(() => {
+  const out = [];
+  for (const sel of ${JSON.stringify(Object.keys(LANDMARKS))}) {
+    for (const el of document.querySelectorAll(sel)) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+      out.push(sel); break;
+    }
+  }
+  return out;
+})()`;
+
 // R99 — AND DOES IT HOLD STILL WHEN ASKED TO? `prefers-reduced-motion` has
 // been EMULATED in this file since R80 — purely to make a battle round
 // resolve in one frame so the keyboard walk is quick — and nothing has ever
@@ -694,6 +728,7 @@ async function main() {
     const lists = new Map();
     const spills = new Map();
     const stacked = new Map();
+    const saw = new Map();
     const views = new Set();
     const collect = async (where) => {
       views.add(where);
@@ -702,6 +737,7 @@ async function main() {
         // leaked selector reports once however many screens render it.
         if (!lists.has(g.sel) || lists.get(g.sel).n < g.n) lists.set(g.sel, { ...g, where });
       }
+      for (const sel of await evaluate(SAW)) if (!saw.has(sel)) saw.set(sel, where);
       for (const o of await evaluate(CONTAINED)) {
         // Keyed by the element, and the WORST spill wins: one rule leaks the
         // same button on every screen that draws it.
@@ -1559,6 +1595,13 @@ async function main() {
     for (const o of [...stacked.values()].sort((a, b) => b.area - a.area)) {
       note(`${o.where}: ${o.a} "${o.la}" sits on top of ${o.b} "${o.lb}" by ${o.ox}x${o.oy}px`
         + ' — two targets a thumb cannot tell apart, and the gutter rule reads the overlap as a separation');
+    }
+
+    // ---- R99. The walk has to have DRAWN the things it claims to measure.
+    for (const [sel, what] of Object.entries(LANDMARKS)) {
+      if (saw.has(sel)) continue;
+      note(`nothing in the whole walk ever drew \`${sel}\` — ${what}. A rule with nothing`
+        + ' to look at passes; that is how a 3.42:1 panel survived four milestones of green runs');
     }
 
     // ---- 7. nothing narrated an error along the way ------------------------

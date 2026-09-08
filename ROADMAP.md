@@ -2505,6 +2505,63 @@ R102; R88–R90 remain.)*
   nothing animates). *Done when: both defects, replayed as battery breaks,
   are caught.*
 
+  **SHIPPED — AND ONLY ONE OF THE THREE WAS MISSING FOR THE REASON GIVEN.**
+  Both named defects were replayed first and **both passed green**, so the
+  criterion was real; but the causes were not the ones the entry assumed.
+
+  **The contrast rule was never missing.** R122 built a full WCAG composite
+  walk, run across all five themes, and it was correct the whole time. What
+  was missing was **reach**: `OPEN_EVERYTHING` captured a NodeList and clicked
+  each button, but a fold's handler rerenders the screen, so every click after
+  the first landed on a detached node — and R89's exclusive groups make "open
+  everything" a contradiction on the Pens and the Ranch anyway. Five folds on
+  the Pens, **two left open, neither the feral one**. `.feral-panel` was never
+  drawn while the gate was looking, and its **3.42:1** passed every run for
+  four milestones. *A rule with nothing to look at passes.*
+
+  Three reach fixes: folds opened **one at a time and re-queried**; subtabs
+  found by asking the DOM which `data-*-tab` bars exist rather than naming
+  `data-dex-tab`, so the Pens' four join the Dex's five; and the **War Room
+  walked at all** — the fixture ships a duel in progress and `#screen-battle`
+  renders the arena whenever one exists, so the map, the jobs board, the Labs
+  board, the bays and the wire had never been rendered by any gate.
+  **29 → 67 views, 80 → 87 controls, 53.7s → 70.1s.**
+
+  **The reduced-motion entry pointed at keyframes, and the keyframes were
+  fine** — all eleven were already covered. The gap was **transitions**: three
+  declared, only `.meter-fill` listed, so the arena's ground still washed
+  colour on a crit and both sprite slots still faded in.
+
+  **THREE LIVE DEFECTS, none of which any gate could previously see.** The new
+  reach found `.dominion-card`'s note at **4.43:1** on its `--accent-dim`
+  gradient — the line that admits the map has changed under you was the
+  hardest one on the card to read. The reduced-motion pass found the two
+  uncovered transitions. All three fixed.
+
+  **AND THE GATE NOW ASSERTS ITS OWN REACH.** A count cannot catch a coverage
+  collapse — "29 views" went *up* over four milestones while the panel it was
+  supposed to measure went dark. A **list** can: five landmarks whose only
+  proof of life is that something drew them. Reverting the fold walk turns the
+  run red on the landmarks alone, with no rule broken.
+
+  **The battery also caught my own gate from the session before.** R128b's
+  position rule was `at * 2 > of`, a knife edge on the one screen whose card
+  count moves on its own — the War Room draws a raid, contest or captive card
+  only when the world has one, and the fixture is stamped with `Date.now()`.
+  It measured **5 of 10** when written and **6 of 11** on the next run. It is
+  **never last** now, which catches every appended card and cannot be flipped
+  by an alert arriving above it.
+
+  **And the boot budget held without moving**, which R128's note asked for.
+  The battery caught this milestone 1 KB over at **1061 against 1060**, and
+  the whole breach was CSS comments — `+1,399 bytes` for three declarations.
+  They ship inside the render-blocking stylesheet; trimmed to proportion, the
+  sheet lands at **+206 bytes** and the ceiling never moved.
+
+  *Done when: both defects, replayed as battery breaks, are caught* — breaks
+  180 and 181, plus 182 on the reach collapse, 183 on overlap, 184 on the
+  transitions and 185 on a keyframe only the source half can see.
+
 **Platform and durability.**
 
 - **R100 — Ship the TWA: four unchecked boxes, an offline-second worker,
