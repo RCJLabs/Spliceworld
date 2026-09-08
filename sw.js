@@ -20,6 +20,7 @@ const SHELL = [
   'ui/cards.js',
   'ui/tabs.js',
   'ui/roster.js',
+  'ui/facility-card.js',
   'ui/icons.js',
   'ui/focus.js',
   'ui/live.js',

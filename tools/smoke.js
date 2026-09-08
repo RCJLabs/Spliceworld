@@ -3207,6 +3207,71 @@ if (inShard('team')) {
 }
 
 // --- Rehabilitation (§3.6): the OTHER future a captured chimera has.
+// --- R128: EVERY FACILITY TRACK IS BOUGHT WHERE ITS SYSTEM LIVES ---------
+//
+// Reported from play: "I don't see how to upgrade the surgery theater or
+// where it is." It exists — one upgrade, two levels — and it was in a card
+// called Facility on the RANCH, shut by default, behind a derelict-house
+// icon that names no system. All six tracks were listed there together.
+//
+// The data has said where each belongs since it was written. Every track in
+// facility.json carries a `screen`, and NOTHING READ IT — grep across
+// splice/facility.js and ranch/ui.js returned nothing — so nothing had ever
+// checked it either, and one of the six was wrong: `extract` names no
+// screen at all. The extraction sequence is an overlay you start from the
+// Ranch (main.js `onExtract`), not a place you can navigate to.
+//
+// That is the whole argument for this block. A field nobody reads is a
+// field nobody validates, and the entry's own proposal — "route each track
+// to the screen its data names" — would have shipped a track pointed at
+// nowhere.
+{
+  const { tracks } = await import('../splice/facility.js');
+  const { shellScreenMap } = await import('./handlers.js');
+  const real = new Set(shellScreenMap().map((s) => s.screen));
+  assert.ok(real.size >= 6, `the shell renders ${real.size} screens`);
+
+  // 1. EVERY TRACK NAMES A SCREEN THE SHELL ACTUALLY RENDERS. Derived from
+  //    main.js through the same reader R39 wrote, so a seventh screen or a
+  //    renamed one cannot drift away from this list.
+  for (const track of tracks(content)) {
+    assert.ok(track.screen, `${track.id} says which screen it belongs to`);
+    assert.ok(real.has(track.screen),
+      `${track.id} points at "${track.screen}", which is not a screen the shell renders (${[...real].join(', ')})`);
+  }
+
+  // 2. AND EVERY SCREEN NAMED RENDERS IT. The union has to be all six: a
+  //    track routed to a screen that does not draw it is worse than one on
+  //    the wrong screen, because nothing anywhere would show it.
+  const { facilityCard } = await import('../ui/facility-card.js');
+  const rich = { ...newGameState(), seed: 128, funds: 999999 };
+  rich.campaign.heldNodes = [...ALL_NODE_IDS];
+  const drawn = new Set();
+  for (const screen of real) {
+    const html = facilityCard(rich, content, screen) ?? '';
+    for (const track of tracks(content)) {
+      if (!html.includes(`data-track="${track.id}"`)) continue;
+      assert.equal(track.screen, screen,
+        `${track.id} is drawn on ${screen} but its data says ${track.screen}`);
+      drawn.add(track.id);
+    }
+  }
+  assert.deepEqual([...drawn].sort(), tracks(content).map((t) => t.id).sort(),
+    'every track is drawn on exactly one screen, and none is dropped on the floor');
+
+  // 3. THE CRITERION, AS A PLAYER WOULD MEET IT. Somebody who has never
+  //    opened the Ranch can still buy the Surgery Theater's upgrade.
+  {
+    const { renderTheaterScreen } = await import('../splice/theater-ui.js');
+    const root = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+    renderTheaterScreen(root, { state: rich, content, now: () => t0, save: () => {}, refreshTicker: () => {} });
+    assert.ok(root.innerHTML.includes('data-track="theater"'),
+      'the Surgery Theater upgrade is on the Surgery Theater screen');
+    assert.ok(!root.innerHTML.includes('data-track="infirmary"'),
+      "and the Infirmary's is not — each screen shows its own");
+  }
+}
+
 // --- Salvage is instant and certain and hands you enemy tech. Rehab costs
 // --- real-world time, money and those same parts, and pays out a whole
 // --- creature you could not have built. Both must stay worth choosing.
