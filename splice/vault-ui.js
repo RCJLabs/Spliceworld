@@ -168,6 +168,13 @@ export function renderVaultScreen(root, ctx) {
     ${fieldNote(guideForScreen(state, content, t, 'vault'))}
     ${lastMsg ? `<section class="card"><p class="ranch-msg">${lastMsg}</p></section>` : ''}
     ${runCard}
+    ${/* R128b — ABOVE THE LIST, NOT UNDER IT. Appending the card put it
+          last on every screen it moved to: 12th of 12 on the Pens, 2nd of 2
+          on the Vault, 4th of 4 here, 10th of 10 in the War Room — between
+          1.9 and 3.2 phone screens down. The Ranch it left had it THIRD of
+          25. Moving an upgrade from near the top of one screen to the bottom
+          of five is not making it findable, and the report said so. */ ''}
+    ${facilityCard(state, content, 'vault')}
     <section class="card">
       <h3>Gene Vault</h3>
       <p class="fine-print">${pressure.parts}/${pressure.capacity.parts} part token${
@@ -192,12 +199,7 @@ export function renderVaultScreen(root, ctx) {
         run ? '' : '; the vial is spent whether or not it takes'
       }. It is the only way an extraction is not forever.</p>
       <p class="fine-print">Every token remembers its donor forever. It&#39;s sentimental. And legally binding.</p>
-    </section>
-    ${/* R128 — the Extractor is bought here. Its data said `extract`, which
-          is not a screen: extraction is an overlay you start from the Ranch.
-          Two of its three grants are vault capacity, and this is the screen
-          where a player feels them run out. */ ''}
-    ${facilityCard(state, content, 'vault')}`;
+    </section>`;
   bindFacility(root, ctx, () => renderVaultScreen(root, ctx), (r) => { lastMsg = r.msg; });
 
   root.querySelectorAll('button[data-reseq]').forEach((btn) => {

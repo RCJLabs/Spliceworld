@@ -2195,6 +2195,26 @@ footer {
   cursor: pointer;
 }
 .facility-next button:disabled { background: var(--panel); color: var(--muted); cursor: default; }
+
+/* R128b — the roll-up's links out. These shipped as `class="linkish"`, a name
+   with NO RULE ANYWHERE, so four screen names rendered as default grey
+   buttons wedged mid-sentence — the sentence read as broken chrome rather
+   than as a sentence. They are links inside a line of prose, so they are
+   styled as links and given a real hit target on the way (R73's 40px floor
+   is for controls in a row; an inline link inherits the line it sits in). */
+.facility-delta { color: var(--goo); }
+.facility-elsewhere { display: block; margin: 10px 2px 0; line-height: 1.9; }
+.facility-goto {
+  background: none;
+  border: none;
+  padding: 2px 1px;
+  font: inherit;
+  color: var(--goo);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.facility-goto:hover, .facility-goto:focus-visible { color: var(--accent); }
 .locked-note { color: var(--warn); }
 .tier-line { font-size: 0.7rem; color: var(--muted); margin: 2px 0 8px; }
 .frame-picker button.locked { opacity: 0.4; cursor: default; }

@@ -1964,6 +1964,54 @@ const BREAKS = [
     to: '  return tracks(content);',
   },
   {
+    // R128b — the four breaks below are the report from play, replayed. Every
+    // gate R128 wrote was green when a player opened the game and could not
+    // find the upgrades, because all four assertions asked whether the card
+    // EXISTS and none asked where it was, what it was called, or whether the
+    // sentence pointing at it was still true.
+    //
+    // The card goes back to being APPENDED, which is where R128 shipped it:
+    // 12th of 12 cards on the Pens and 1.9 phone screens down, on a screen
+    // whose whole point was that a creature costs a row.
+    n: 176, gate: HEIGHT, name: 'the upgrade card is appended again, so it is the last thing on the screen',
+    file: 'splice/pens-ui.js',
+    anchor: `    facilityCard(state, content, 'pens') +
+    (cards ||
+      \`<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>\`);`,
+    to: `    (cards ||
+      \`<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>\`) +
+    facilityCard(state, content, 'pens');`,
+  },
+  {
+    // R128b — the roll-up's links lose their rule and become grey buttons
+    // wedged mid-sentence. This is the exact defect that shipped: I invented
+    // `linkish`, never wrote the CSS, and nothing noticed, because an
+    // unstyled class is not an error — it is a default button.
+    n: 177, gate: FACILITY, name: 'the roll-up paints a class with no rule, and four links render as grey chips',
+    file: 'ui/facility-card.js',
+    anchor: 'class="facility-goto" data-goto="${s}"',
+    to: 'class="linkish" data-goto="${s}"',
+  },
+  {
+    // R128b — the roll-up says `theater` and `battle` at the player again.
+    // Neither is a word this game shows anybody: those tabs read Splice and
+    // War, so the sentence sends someone looking for a tab that is not there.
+    n: 178, gate: FACILITY, name: 'the roll-up names screens by their internal ids, and points at tabs that do not exist',
+    file: 'ui/facility-card.js',
+    anchor: '>${screenName(s)}</button>',
+    to: '>${s}</button>',
+  },
+  {
+    // R128b — the card is titled after the LEVEL again. A player on the
+    // Splice screen reads "Tier I — Card Table & Optimism" and has no reason
+    // to think that row is the Surgery Theater's upgrade; the machine is
+    // what they came looking for, so the machine is the heading.
+    n: 179, gate: FACILITY, name: 'the card is titled after the level it owns instead of the machine it sells',
+    file: 'ui/facility-card.js',
+    anchor: '  const name = solo ? solo.name : \'Facility\';',
+    to: '  const name = solo ? (level ?? solo.name) : \'Facility\';',
+  },
+  {
     // R97 — the Dex stops keying generated specimens by lab. A rival mints a
     // fresh one every duel, so filing them raw put 253 entries in a save
     // that has 42 authored units, and none of them was ever rendered.

@@ -2398,6 +2398,47 @@ R102; R88–R90 remain.)*
   field names, and a player who has never opened the Ranch can still buy the
   Surgery Theater's upgrade* — both hold, and the second is asserted as a
   real `renderTheaterScreen` call rather than a string check on the card.
+
+  **R128b — FOUR GREEN GATES AND THE PLAYER STILL COULD NOT FIND IT.**
+  Reported from play against the merged build: *"I don't see the upgrades
+  anywhere… the buttons for battle and pens are weird, not in the same
+  style."* Every assertion above was passing. All four asked whether the
+  card EXISTS; **none asked where it was, what it was called, or whether
+  the sentences pointing at it were still true**, and each of those was
+  wrong:
+
+  - **It was appended, so it was last.** 12th of 12 cards on the Pens, 2nd
+    of 2 on the Vault, 4th of 4 on the Splice, 10th of 10 in the War Room —
+    **1.9 to 3.2 phone screens down**. The Ranch card it replaced was 3rd of
+    25. Moving an upgrade from near the top of one screen to the bottom of
+    five is not making it findable. Now 2/12, 1/2, 2/4 and 5/10, at 517px,
+    128px, 584px and 1,216px.
+  - **`class="linkish"` had no rule anywhere.** I invented the name and
+    never wrote the CSS, so the roll-up's screen links rendered as default
+    grey buttons wedged mid-sentence. **An unstyled class is not an error —
+    it is a default button**, which is why nothing caught it.
+  - **The roll-up printed internal ids at the player**: *"2 more upgrades on
+    battle, pens"*. Two of those four are not words this game shows anybody
+    — those tabs read **Splice** and **War**. An id in player-facing prose
+    is a wrong direction, not a terse one.
+  - **The Theater still said "bought at the Ranch."** R128 moved the
+    purchase and never touched the sentence pointing away from it — the
+    literal question the report asked, still answered wrongly by the screen
+    that now sells it.
+  - The card was also **titled after the level** (*Tier I — Card Table &
+    Optimism*), which names what you own rather than the machine you were
+    looking for. It names the machine now, with the tier in the summary.
+
+  Four new gates, each of which fails on the merged build: a **position
+  rule** in `tools/height.js` (a card below half a screen's cards, or more
+  than two phone screens down, is buried), a **class rule** (every class
+  `ui/facility-card.js` paints has a rule in style.css), a **name rule**
+  (`TAB_NAMES` is checked against index.html, and the roll-up must print
+  those labels), and a **title rule**.
+
+  *The lesson, written down: a gate that asks whether a thing EXISTS is not
+  a gate about whether it can be FOUND.* Four of them in a row asked the
+  first question and I read the greens as an answer to the second.
 - **R99 — The a11y gate learns to see overlap, contrast and motion.** This
   session shipped two defects the gate passed: **3.42:1** body text on the
   feral panel, and the egg's Hurry button overlapping its lineage text and

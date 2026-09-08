@@ -1,5 +1,73 @@
 # PROGRESS
 
+## Session 133b — R128b: four green gates and the player still could not find it ✅
+
+Reported from play against the merged build: *"I don't see the upgrades
+anywhere… the buttons for battle and pens are weird, not in the same style."*
+**Every R128 assertion was passing.** All four asked whether the card EXISTS.
+None asked where it was, what it was called, or whether the sentences
+pointing at it were still true — and each of those was wrong.
+
+### It was appended, so it was last
+
+| screen | R128 shipped | now |
+| --- | --- | --- |
+| pens | 12 of 12 · 1,511px | **2 of 12 · 517px** |
+| vault | 2 of 2 · 2,471px | **1 of 2 · 128px** |
+| theater | 4 of 4 · 1,820px | **2 of 4 · 584px** |
+| battle | 10 of 10 · 1,780px | **5 of 10 · 1,216px** |
+| ranch | 3 of 25 · 1,405px | 3 of 25 · 1,359px |
+
+**The Ranch card it replaced was third of twenty-five.** Moving an upgrade
+from near the top of one screen to the bottom of five is not making it
+findable, and a milestone whose entire subject was findability shipped it
+further from the player than it found it.
+
+### Three more, each a different way of not being read
+
+* **`class="linkish"` had no rule anywhere.** I invented the name and never
+  wrote the CSS, so four screen links rendered as default grey buttons
+  wedged mid-sentence — exactly what the report called weird. **An unstyled
+  class is not an error; it is a default button**, which is why nothing
+  caught it.
+* **The roll-up printed internal ids at the player** — *"2 more upgrades on
+  battle, pens"*. Two of those four are not words this game shows anybody:
+  the tabs read **Splice** and **War**. An id in player-facing prose is a
+  wrong direction, not a terse one.
+* **The Theater still said "bought at the Ranch."** R128 moved the purchase
+  and never touched the sentence pointing away from it — the report's literal
+  question, still answered wrongly by the screen that now sells it.
+
+The card was also titled after the LEVEL (*Tier I — Card Table & Optimism*),
+which names what you own rather than the machine you came looking for. It
+names the machine now, with the tier in the summary line under it.
+
+### Four new gates, each failing on the merged build
+
+| gate | rule |
+| --- | --- |
+| `tools/height.js` | a card below half a screen's cards, or more than two phone screens down, is **buried** |
+| smoke | every class `ui/facility-card.js` paints **has a rule in style.css** |
+| smoke | `TAB_NAMES` is checked against index.html, and the roll-up prints those labels |
+| smoke | a single-track card is titled after the **machine** |
+
+Proven by reverting the Pens placement: *"pens buries its facility card at 12
+of 12 cards."* Battery 176–179 replay all four; 4 caught, 0 missed.
+
+### The lesson, written down
+
+**A gate that asks whether a thing EXISTS is not a gate about whether it can
+be FOUND.** Four of them in a row asked the first question and I read the
+greens as an answer to the second.
+
+### Known issues / next session's first task
+
+* Carried: folding the Dex's Combos tab and the Vault's.
+* Carried: paginating the Ranch — 3,485px shut, growing with the herd, owed
+  since R46. It is also why the Ranch's own card sits at 1,359px.
+* The next boot-budget change should bring the number **down**.
+
+
 ## Session 133 — R128: the data said where it belonged and nothing read it ✅
 
 ### The first entry in four whose premise held exactly
