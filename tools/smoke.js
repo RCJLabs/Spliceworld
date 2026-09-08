@@ -18317,6 +18317,83 @@ if (inShard('fired')) {
   }
 }
 
+// --- R129: THE LAST LAB FALLS OPEN ----------------------------------------
+//
+// Asked for directly: beating the last rival releases the county's rival
+// stock. Measured before writing a line of it, because the entry's first
+// draft was wrong: R82's board is NOT a drip. Five 180-day walks spawn ~190
+// escapees and fight ~190 of them, and the board is EMPTY on every seed —
+// `maxLoose: 4` never binds, the 22h cooldown paces it. 181 of 200 minted
+// bodies are already distinct. The BATTLES half of the request is shipped.
+//
+// Two things are not, and both are ceilings rather than rates:
+//
+//   1. SPECIES. The five lab palettes union to 21 of 41 species, so half the
+//      bestiary can never be loose however many get out.
+//   2. WORTH KEEPING. 1,035 bagged in a walk, 40 bays full, 13 programmes
+//      ever started, ONE rehabilitated. A Wing graduate carries its old
+//      lab's grades, so it is worse than what the Theater builds and the
+//      walker's own R91 policy will not spend a stall on it. Capture is a
+//      dead end by design, and more escapees does not change that.
+//
+// So this block asks for the release AND for a reason to want what it
+// releases — Law 2, which says a conquest reward must expand what you can
+// CREATE. A trait the player cannot roll is that reason.
+if (inShard('fired')) {
+  const { tickBreakouts, looseSpecimens } = await import('../campaign/breakout.js');
+  const { rivalList } = await import('../campaign/rivals.js');
+
+  const HOUR129 = 3600000;
+  // Every lab beaten once, which is the condition the request names and
+  // which `campaign.js` already computes for two banner sentences.
+  const conquered = () => {
+    const s = { ...newGameState(), seed: 129, funds: 90000 };
+    s.lastTickAt = t0;
+    s.facility = { theater: 2, containment: 4, infirmary: 1, incubator: 1, extractor: 1, scanner: 1 };
+    s.campaign.rivals = Object.fromEntries(
+      rivalList(content).map((r) => [r.id, { defeats: 2, losses: 0, lastMetAt: null }])
+    );
+    return s;
+  };
+
+  // The union of every lab's palette — the ceiling an escapee cannot pass
+  // today. Derived from the rivals themselves so a sixth lab moves it (R61).
+  const labSpecies = new Set(rivalList(content).flatMap((r) => r.favoredSpecies));
+  const allSpecies = Object.keys(content.species);
+  assert.ok(labSpecies.size < allSpecies.length,
+    `the labs between them do not own every species (${labSpecies.size} of ${allSpecies.length})`);
+
+  // Run the board out far enough to see what a conquered county produces.
+  const s = conquered();
+  tickBreakouts(s, content, t0 + 400 * HOUR129, t0);
+  const loose = looseSpecimens(s);
+  assert.ok(loose.length > 0, 'a conquered county has something loose in it');
+
+  // 1. THE RELEASE IS AN EVENT. Beating the fifth lab has to do something
+  //    the twenty-second hour of the cooldown does not, or the story the
+  //    player was told did not happen.
+  assert.ok(s.campaign.released,
+    'beating the last lab releases the county\'s rival stock — the board records the event');
+
+  // 2. ANATOMY THE COUNTY HAS NEVER SEEN. The only way past the 21-of-41
+  //    ceiling, and the only reading of "numerous combinations" that means
+  //    anything when 181 of 200 bodies are already distinct.
+  const speciesOfLoose = new Set(loose.flatMap((e) =>
+    Object.values(e.unit.genome?.parts ?? {}).map((pid) => content.parts[pid]?.species)));
+  const offPalette = [...speciesOfLoose].filter((sp) => sp && !labSpecies.has(sp));
+  assert.ok(offPalette.length > 0,
+    `a released specimen carries anatomy from outside every lab palette (saw ${[...speciesOfLoose].join(', ')})`);
+
+  // 3. AND A TRAIT THE PLAYER CANNOT ROLL, which is what makes bagging one
+  //    worth a bay and a stall. Without this the release is more of the
+  //    thing a campaign already gets 190 of.
+  const traited = loose.filter((e) => (e.unit.traits ?? []).length
+    || Object.values(e.unit.genome?.traits ?? {}).length);
+  assert.ok(traited.length > 0,
+    `a released specimen carries a mutation trait (0 of ${loose.length} do; ${
+      Object.keys(content.traits).length} traits exist)`);
+}
+
 // ---------------------------------------------------------------------------
 // R77 — THE ROADMAP DESCRIBES A DIFFERENT GAME.
 //
