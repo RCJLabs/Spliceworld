@@ -2439,6 +2439,60 @@ R102; R88–R90 remain.)*
   *The lesson, written down: a gate that asks whether a thing EXISTS is not
   a gate about whether it can be FOUND.* Four of them in a row asked the
   first question and I read the greens as an answer to the second.
+- **R129 — The last lab falls open.** Asked for directly: *"once you beat the
+  last rival scientist, the chimeras from rival labs escape — a plethora of
+  free-roaming chimeras of numerous combinations, some with unique traits.
+  More battles with other chimeras and more chances to capture some."*
+
+  **MOST OF THIS ALREADY EXISTS, AS A TRICKLE.** R82 built the Breakout: an
+  escapee is a REAL rival chimera, minted by `rivalSpecimen` — the same
+  generator the ladder duels use — put on a **standing board with no
+  deadline**, fought like any encounter, and bagged through the Containment
+  Cannon into a bay and out through the Reorientation Wing at the grades its
+  old lab raised. The source, the board, the fight and the capture path are
+  all shipped. What is missing is the **event**, and the reasons to go and
+  get one.
+
+  Today it is deliberately a drip, tuned when there were still labs to beat:
+  `startsAfterDefeats: 1`, `cooldownHours: 22`, and **`maxLoose: 4`** — a cap
+  written so a fortnight away is a queue rather than a wall. Every escapee is
+  **one lab's parts at one lab's grades**, so five labs make five flavours of
+  the same thing, and none of them carries anything a player cannot already
+  build. `rivalsAllBeaten` is already computed in `campaign/campaign.js:111`
+  and is read by exactly two banner sentences.
+
+  **AND IT LANDS WHERE THE GAME IS EMPTIEST.** R87 measured the endgame: every
+  facility track maxed by median **day 28**, the county falls **day 35**, and
+  the remaining 145 days are **5.1 fights a day won 97% of the time**. R87
+  gave that money somewhere to go (tier IV, Gauntlet purses) and the Task
+  Force something to threaten. It did not give the player anything new to
+  *meet*. This is the entry that does.
+
+  Proposed, medium, and mostly data + wiring on shipped systems:
+
+  - **A phase change, not a faster drip.** Beating the fifth lab fails every
+    containment in the county at once — a one-off release with its own wire
+    line and its own board state, so the moment reads as an event rather than
+    as the cooldown getting shorter.
+  - **Cross-lab bodies.** The generator takes parts from ONE lab; after the
+    release it splices ACROSS them, which is the "numerous combinations" the
+    request asks for and is the only way five labs produce more than five
+    silhouettes. Their grades come from whichever lab contributed the socket.
+  - **Unique traits, which is what makes bagging one worth the trip.**
+    `data/traits.json` holds **12** mutation traits, and Law 2 says every
+    conquest reward must expand what you can CREATE. A loose apex carrying a
+    trait the player cannot roll is a body worth capturing, extracting and
+    splicing — it feeds the Vault, the Theater and the Dex at once.
+  - **A cap that fits a county-wide release** rather than the 4 written for a
+    ladder still in progress, with the board's no-deadline rule intact so a
+    week away is still a queue.
+
+  *Done when: beating the fifth lab visibly releases the county's rival
+  stock; a loose chimera can carry anatomy from more than one lab and a trait
+  the player cannot otherwise roll; and a 180-day walk that finishes the
+  ladder meets and captures measurably more rival anatomy after it than
+  before.*
+
 - **R99 — The a11y gate learns to see overlap, contrast and motion.** This
   session shipped two defects the gate passed: **3.42:1** body text on the
   feral panel, and the egg's Hurry button overlapping its lineage text and
