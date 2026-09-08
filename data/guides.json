@@ -114,7 +114,7 @@
       "order": 15,
       "icon": "derelict-house",
       "title": "The lab is upgradeable",
-      "body": "Six tracks, each bought in order, each gated by money and usually by territory. They buy things you cannot otherwise have: two more chassis at opposite ends of the scale, a second organ bay, a machine that reads alleles. Money has nowhere better to go.",
+      "body": "Six machines, each bought in order, each gated by money and usually by territory \u2014 and each bought on the screen of the thing it upgrades, not here. The Incubator and the Gene Scanner are the Ranch\u2019s two; the line under this card says where the rest live. They buy what you cannot otherwise have: two more chassis at opposite ends of the scale, a second organ bay, a machine that reads alleles. Money has nowhere better to go.",
       "reachable": [
         {
           "helper": "facilityAffordable"

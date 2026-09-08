@@ -187,12 +187,21 @@ export function renderTheaterScreen(root, ctx) {
       <div class="stage">${creaturePortrait(draftGenome(state, content), content, { idPrefix: 'thtr' })}</div>
       <p class="ranch-msg">${lastMsg}</p>
     </section>
+    ${/* R128b — ABOVE THE BENCH, NOT UNDER IT. Appended, this card was 4th
+          of 4 and 2.3 phone screens down; the Ranch card it replaced was 3rd
+          of 25. Moving an upgrade from near the top of one screen to the
+          bottom of five is not making it findable, and the report said so. */ ''}
+    ${facilityCard(state, content, 'theater')}
     <section class="card">
       <p class="tier-line">${
         levelData(content, 'theater', facilityLevel(state, 'theater'))?.name ?? 'Surgery Theater'
       }${(() => {
         const up = nextUpgrade(state, content, 'theater');
-        return up ? ` · next: ${up.level.name} — $${up.level.cost}, bought at the Ranch` : ' · fully equipped';
+        // R128b — this said "bought at the Ranch", and R128 moved the
+        // purchase HERE without touching the sentence pointing away from it.
+        // The card directly above sells it now, so this line names the price
+        // and stops giving directions.
+        return up ? ` · next: ${up.level.name} — $${up.level.cost}` : ' · fully equipped';
       })()}</p>
       <h3>Frame</h3>
       <div class="frame-picker" id="thtr-frames">${frameBtns}</div>
@@ -211,10 +220,7 @@ export function renderTheaterScreen(root, ctx) {
       ${panelRows}
       ${comboRows}
     </section>
-    ${/* R128 — the Surgery Theater's own upgrade, on the Surgery Theater.
-          It was on the Ranch, in a shut card named after no system, and a
-          player looking at this screen had no way to find it. */ ''}
-    ${facilityCard(state, content, 'theater')}`;
+`;
   bindFieldNote(root, ctx, () => renderTheaterScreen(root, ctx));
   // R128 — this screen had no fold until it had a facility card, so it
   // had never called this. A card whose header nothing listens to is a

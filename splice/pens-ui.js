@@ -510,10 +510,13 @@ export function renderPensScreen(root, ctx) {
   root.innerHTML = note + sparLine +
     (lastMsg ? `<section class="card"><p class="ranch-msg">${lastMsg}</p></section>` : '') +
     vatCard(state, content, t) +
+    // R128 — the Infirmary is bought where injuries are read, and R128b puts
+    // it ABOVE the roster: appended, it was 12th of 12 cards and 1.9 phone
+    // screens down, which is further from a player than the Ranch card it
+    // replaced.
+    facilityCard(state, content, 'pens') +
     (cards ||
-      `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`) +
-    // R128 — the Infirmary is bought where injuries are read.
-    facilityCard(state, content, 'pens');
+      `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`);
   bindFacility(root, ctx, () => renderPensScreen(root, ctx), (r) => { lastMsg = r.msg; });
 
   root.querySelectorAll('button[data-goto]').forEach((btn) => {

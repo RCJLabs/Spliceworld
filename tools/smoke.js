@@ -3243,7 +3243,7 @@ if (inShard('team')) {
   // 2. AND EVERY SCREEN NAMED RENDERS IT. The union has to be all six: a
   //    track routed to a screen that does not draw it is worse than one on
   //    the wrong screen, because nothing anywhere would show it.
-  const { facilityCard } = await import('../ui/facility-card.js');
+  const { facilityCard, facilityElsewhere } = await import('../ui/facility-card.js');
   const rich = { ...newGameState(), seed: 128, funds: 999999 };
   rich.campaign.heldNodes = [...ALL_NODE_IDS];
   const drawn = new Set();
@@ -3276,6 +3276,59 @@ if (inShard('team')) {
       'the Surgery Theater upgrade is on the Surgery Theater screen');
     assert.ok(!root.innerHTML.includes('data-track="infirmary"'),
       "and the Infirmary's is not — each screen shows its own");
+
+    // R128b — AND IT IS CALLED THE SURGERY THEATER. The heading named the
+    // LEVEL first: a player on this screen read "Tier I — Card Table &
+    // Optimism" and had no reason to connect that row to the machine they
+    // came looking for. The level is what you own; the machine is what you
+    // were looking for, so the machine is the heading.
+    const head = root.innerHTML.slice(root.innerHTML.indexOf('data-fold="facility-theater"'));
+    const title = head.slice(0, head.indexOf('</button>'));
+    assert.ok(title.includes(tracks(content).find((t) => t.id === 'theater').name),
+      `the card is titled after the machine, not its tier (${title.replace(/<[^>]*>/g, ' ').trim().slice(0, 60)})`);
+  }
+
+  // 3b. R128b — EVERY CLASS IT PAINTS HAS A RULE. Reported from play: the
+  //    roll-up's four screen links rendered as grey chips wedged mid-
+  //    sentence. They were `class="linkish"`, a name with NO RULE ANYWHERE
+  //    — I invented it and never wrote the CSS, and nothing noticed because
+  //    an unstyled class is not an error, it is a default button.
+  //
+  //    Scoped to this module rather than the whole tree, because the shared
+  //    helpers legitimately paint classes their own callers style; what a
+  //    module writes for itself, it owes a rule for.
+  {
+    const src = readFileSync(join(root, 'ui/facility-card.js'), 'utf8');
+    const css = readFileSync(join(root, 'style.css'), 'utf8');
+    const shared = new Set(['fine-print', 'lineage', 'locked-note', 'card', 'ui-icon']);
+    const painted = [...src.matchAll(/class="([a-z0-9 -]+)"/g)]
+      .flatMap((m) => m[1].split(/\s+/)).filter(Boolean);
+    assert.ok(painted.length >= 5, `it paints classes worth checking (${painted.length})`);
+    for (const cls of new Set(painted)) {
+      if (shared.has(cls)) continue;
+      assert.ok(new RegExp(`\\.${cls}[\\s,:{.]`).test(css),
+        `.${cls} has a rule in style.css — an unstyled class is not an error, it is a default button`);
+    }
+  }
+
+  // 3c. R128b — AND IT NAMES SCREENS THE WAY THE TABS DO. The roll-up read
+  //    "2 more upgrades on battle, pens" at the player. Two of those four
+  //    ids are not words this game shows anybody: those tabs say Splice and
+  //    War. An internal id in player-facing prose is a wrong direction, not
+  //    a terse one. `TAB_NAMES` is the headless fallback and index.html is
+  //    the truth, so they are checked against each other here (R61).
+  {
+    const { TAB_NAMES } = await import('../ui/facility-card.js');
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+    const nav = html.slice(html.indexOf('<nav class="tabs"'), html.indexOf('</nav>'));
+    const tabs = Object.fromEntries([...nav.matchAll(/data-screen="(\w+)">([^<]+)</g)].map((m) => [m[1], m[2].trim()]));
+    assert.ok(Object.keys(tabs).length >= 6, `the tab bar declares ${Object.keys(tabs).length} screens`);
+    assert.deepEqual(TAB_NAMES, tabs, 'the fallback names are exactly what the tab bar says');
+    const roll = facilityElsewhere({ ...rich, facility: {} }, content, 'ranch');
+    for (const [id, label] of Object.entries(tabs)) {
+      if (!roll.includes(`data-goto="${id}"`)) continue;
+      assert.ok(roll.includes(`>${label}<`), `the roll-up sends the player to "${label}", not to "${id}"`);
+    }
   }
 
   // 4. AND THE CARD CAN BE OPENED. It is a fold, and a fold whose header

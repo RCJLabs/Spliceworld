@@ -8,6 +8,24 @@ import { nodeName } from '../campaign/map.js';
 import { collapsibleCard, isOpen } from './cards.js';
 import { renderIcon } from './icons.js';
 
+// R128b — THE SCREEN'S OWN NAME, NOT ITS ID. The roll-up printed `theater`
+// and `battle` at the player, and neither is a word this game shows anybody:
+// those two tabs read Splice and War. An internal id in player-facing prose
+// is a wrong direction, not a terse one — it sends someone looking for a tab
+// that is not there.
+//
+// Read off the tab bar when there is a DOM, so the sentence cannot drift
+// from the button it points at. The table is the headless fallback (the
+// screens render to a string in the suite), and a gate asserts it still
+// matches index.html — typed once, never allowed to rot.
+export const TAB_NAMES = {
+  ranch: 'Ranch', pens: 'Pens', vault: 'Vault', theater: 'Splice', battle: 'War', dex: 'Dex',
+};
+export function screenName(id) {
+  const tab = globalThis.document?.querySelector?.(`nav.tabs button[data-screen="${id}"]`);
+  return tab?.textContent?.trim() || TAB_NAMES[id] || id;
+}
+
 // The tracks that belong to one screen, in data order.
 export function tracksFor(content, screen) {
   return tracks(content).filter((t) => t.screen === screen);
@@ -66,11 +84,18 @@ export function facilityCard(state, content, screen) {
   const upgrades = mine.map((t) => nextUpgrade(state, content, t.id)).filter(Boolean);
   const affordable = upgrades.filter((u) => u.affordable);
   const cheapest = upgrades.length ? Math.min(...upgrades.map((u) => u.level.cost)) : 0;
-  const name = mine.length === 1 ? (levelData(content, mine[0].id, facilityLevel(state, mine[0].id))?.name ?? mine[0].name) : 'Facility';
+  // R128b — THE TITLE NAMES THE MACHINE. It named the LEVEL first — a
+  // player on the Splice screen read "TIER I — CARD TABLE & OPTIMISM" and
+  // had no reason to think that row was the Surgery Theater's upgrade. The
+  // level is what you own; the machine is what you were looking for, so the
+  // machine is the heading and the level rides in the summary under it.
+  const solo = mine.length === 1 ? mine[0] : null;
+  const name = solo ? solo.name : 'Facility';
+  const level = solo ? levelData(content, solo.id, facilityLevel(state, solo.id))?.name : null;
   const summary = upgrades.length
-    ? `${affordable.length ? `<strong>${affordable.length} ready to buy</strong> · ` : ''}${upgrades.length} upgrade${
-        upgrades.length === 1 ? '' : 's'} left, from $${cheapest}.`
-    : 'Maxed. There is nothing left to buy and that is its own kind of sad.';
+    ? `${level ? `${level}. ` : ''}${affordable.length ? `<strong>${affordable.length} ready to buy</strong> · ` : ''}${
+        upgrades.length} upgrade${upgrades.length === 1 ? '' : 's'} left, from $${cheapest}.`
+    : `${level ? `${level}. ` : ''}Maxed. There is nothing left to buy and that is its own kind of sad.`;
   return collapsibleCard({
     id: `facility-${screen}`,
     title: `${renderIcon(mine.length === 1 ? mine[0].icon : 'derelict-house')} ${name}`,
@@ -98,7 +123,7 @@ export function facilityElsewhere(state, content, screen) {
   const where = [...new Set(open.map((x) => x.t.screen))];
   return `<p class="fine-print facility-elsewhere">${renderIcon('derelict-house')} ${
     open.length} more upgrade${open.length === 1 ? '' : 's'} on ${
-    where.map((s) => `<button type="button" class="linkish" data-goto="${s}">${s}</button>`).join(', ')
+    where.map((s) => `<button type="button" class="facility-goto" data-goto="${s}">${screenName(s)}</button>`).join(', ')
   } — each machine is bought on its own screen.</p>`;
 }
 

@@ -491,12 +491,17 @@ function renderMap(root, ctx) {
     ${raidCard ? `<section class="card contest-card raid-card"><h3>${renderIcon('warning-triangle')} Compliance Task Force</h3>${raidCard}</section>` : ''}
     ${contests ? `<section class="card contest-card"><h3>${renderIcon('shield')} Counter-Offensive</h3>${contests}</section>` : ''}
     ${captives ? `<section class="card captive-alert"><h3>⏳ Captured — Rescue Windows</h3>${captives}</section>` : ''}
+    ${/* R128 — Containment is bought where captives arrive. Its data has
+          said `battle` since R8 and nothing read the field.
+          R128b — ABOVE THE VIEW, NOT UNDER IT. Appended, it was 10th of 10
+          cards and 2.3 phone screens down, on a screen whose tabs swap the
+          content above it: a card that trails a switchable view is a card
+          the player never scrolls to twice. It sits with the rescue windows
+          now, which is the other thing Containment is for. */ ''}
+    ${facilityCard(state, content, 'battle')}
     ${warSubtabBar(state)}
     ${fieldNote(guideForScreen(state, content, t, 'battle'))}
-    ${views[warTab] ?? views.map}
-    ${/* R128 — Containment is bought where captives arrive. Its data has
-          said `battle` since R8 and nothing read the field. */ ''}
-    ${facilityCard(state, content, 'battle')}`;
+    ${views[warTab] ?? views.map}`;
 
   bindFieldNote(root, ctx, () => renderMap(root, ctx));
   bindFolds(root, ctx, () => renderMap(root, ctx));

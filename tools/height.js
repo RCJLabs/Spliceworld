@@ -297,14 +297,66 @@ try {
     await sleep(2000);
   };
 
+  // R128b — HOW FAR DOWN IS THE UPGRADE? Reported from play, on a build
+  // whose four gates were all green: "I don't see the upgrades anywhere."
+  // R128 moved each facility track to the screen its data names and
+  // APPENDED it there, which put it last on every screen it reached —
+  // 12th of 12 on the Pens, 2nd of 2 on the Vault, 4th of 4 on the Splice,
+  // 10th of 10 in the War Room, between 1.9 and 3.2 phone screens down.
+  // The Ranch card it replaced was 3rd of 25.
+  //
+  // Every assertion R128 wrote asked whether the card EXISTS. None asked
+  // where, so a milestone about findability shipped the thing further from
+  // the player than it found it. Two rules, because either alone has a hole:
+  // pixels miss a short screen whose card is still dead last (the Pens
+  // measured 1.9 screens down at 12 of 12), and position misses a screen
+  // with two enormous cards above one small one.
+  const facilityPlace = async (screen) => await evaluate(`(() => {
+    const scr = document.querySelector('#screen-${screen}');
+    const head = scr?.querySelector('[data-fold="facility-${screen}"]');
+    if (!head) return 'null';
+    const card = head.closest('.card');
+    const cards = [...scr.querySelectorAll(':scope > .card, :scope > section')];
+    return JSON.stringify({ at: cards.indexOf(card) + 1, of: cards.length,
+      top: Math.round(card.getBoundingClientRect().top + window.scrollY) });
+  })()`);
+  const FACILITY_TOP = 780 * 2;  // two phone screens, and not one more
+
   for (const screen of ['ranch', 'pens', 'theater', 'vault']) {
     await show(screen);
     const sel = `#screen-${screen}`;
     const folded = await heightOf(sel);
     const wordsShut = await wordsOf(sel);
+    // Measured SHUT and before `tallestOf` opens anything, which is the
+    // state a player actually arrives in.
+    const place = JSON.parse(await facilityPlace(screen));
+    if (place) {
+      if (place.at * 2 > place.of) {
+        problems.push(`${screen} buries its facility card at ${place.at} of ${place.of} cards`
+          + ' — an upgrade below half a screen\'s cards is one nobody scrolls to');
+      }
+      if (place.top > FACILITY_TOP) {
+        problems.push(`${screen}'s facility card is ${place.top}px down (${(place.top / 780).toFixed(1)} phone`
+          + ` screens), over the ${FACILITY_TOP}px it is allowed`);
+      }
+    }
     const tallest = BUDGET[screen]?.tallest === null ? null : await tallestOf(sel);
     // After `tallestOf`, which has opened everything the screen will allow.
-    rows.push({ id: screen, folded, tallest, wordsShut, wordsOpen: await wordsOf(sel) });
+    rows.push({ id: screen, folded, tallest, wordsShut, wordsOpen: await wordsOf(sel),
+      facilityAt: place && `${place.at}/${place.of} @ ${place.top}px` });
+  }
+  // The War Room is not in the height table (its map is a canvas the budget
+  // has never covered), but it draws a track, so it answers this rule too.
+  {
+    await show('battle');
+    const place = JSON.parse(await facilityPlace('battle'));
+    if (!place) problems.push('the War Room draws no facility card at all');
+    else if (place.at * 2 > place.of) {
+      problems.push(`battle buries its facility card at ${place.at} of ${place.of} cards`);
+    }
+    if (place && place.top > FACILITY_TOP) {
+      problems.push(`battle's facility card is ${place.top}px down, over the ${FACILITY_TOP}px it is allowed`);
+    }
   }
   await show('dex');
   for (const tab of ['roster', 'variants', 'combos', 'genes', 'foes']) {
@@ -343,13 +395,14 @@ for (const r of rows) {
   }
 }
 if (REPORT) {
-  console.log(`  screen          shut     tallest   budget          words shut/open   budget`);
+  console.log(`  screen          shut     tallest   budget          words shut/open   budget    upgrade at`);
   for (const r of rows) {
     const b = BUDGET[r.id] ?? {};
     const w = WORDS[r.id] ?? {};
     console.log(`  ${r.id.padEnd(14)} ${String(r.folded).padStart(5)}   ${String(r.tallest ?? '—').padStart(9)}   ${
       `${b.folded ?? '?'} / ${b.tallest ?? '—'}`.padEnd(14)}  ${
-      `${r.wordsShut} / ${r.wordsOpen}`.padStart(11)}   ${w.folded ?? '?'} / ${w.open ?? '?'}`);
+      `${r.wordsShut} / ${r.wordsOpen}`.padStart(11)}   ${
+      `${w.folded ?? '?'} / ${w.open ?? '?'}`.padEnd(9)}  ${r.facilityAt ?? ''}`);
   }
   console.log('');
 }
