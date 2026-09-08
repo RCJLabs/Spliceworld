@@ -118,6 +118,13 @@ const BOUNDS = {
   'campaign.loose[].unit.salvage':             { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
   'campaign.loose[].unit.salvageGrades':       { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
   'campaign.loose[].unit.tags':                { max: 8,  by: 'a body is a handful of tags' },
+  // Stated BEFORE a walk surfaces it. `arrayPaths` reads one record for the
+  // shape of all of them, and `unit.traits` only exists on a specimen that
+  // drew one — so whether this list is seen at all depends on which escapee
+  // happens to be first on the board, which is not a thing a gate should
+  // depend on. Both boards carry the same generated record.
+  'campaign.loose[].unit.traits':              { max: 4,  by: 'the release stamps one; the shape allows a handful' },
+  'campaign.containment[].unit.traits':        { max: 4,  by: 'whatever the specimen was carrying when it was bagged' },
   // The release stamps at most one mutation trait per specimen; the list is
   // a list so the shape matches every other trait-bearing thing in the save.
   'campaign.loose[].traits':                   { max: 4,  by: 'a released specimen carries at most a handful' },

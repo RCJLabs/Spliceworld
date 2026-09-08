@@ -194,8 +194,16 @@ export function tickBreakouts(state, content, now, since = now) {
   // week, and it still happens at the moment it was due. R78's lesson, which
   // the loop below was already written around.
   const rel = releaseTuning(content);
+  // A FLAG RATHER THAN A COMPARISON. The first draft returned
+  // `cam.released === since ? cam.released : null`, which reads "did the
+  // release happen on THIS tick" off a timestamp — and two ticks in the same
+  // millisecond share a `since`, so the headline could go out twice on a
+  // save that ticked on focus and on a timer in the same instant. The branch
+  // that fires it is the only thing that knows, so it says so.
+  let firedRelease = false;
   if (!cam.released && ladderFinished(state, content)) {
     cam.released = since;
+    firedRelease = true;
     const burst = [];
     for (let i = 0; i < (rel.burst ?? 6); i++) {
       if (cam.loose.length >= (rel.maxLoose ?? 9)) break;
@@ -231,7 +239,7 @@ export function tickBreakouts(state, content, now, since = now) {
     escaped.push({ ...escapee, lab: rival.name });
     scheduleNext(state, content, due);
   }
-  return { escaped, released: cam.released === since ? cam.released : null };
+  return { escaped, released: firedRelease ? cam.released : null };
 }
 
 // The encounter. One specimen, inline, so nothing has to exist in
