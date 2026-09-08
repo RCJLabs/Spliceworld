@@ -326,6 +326,82 @@ const CONTRAST = `(() => {
   return out;
 })()`;
 
+// R99 — AND DOES IT HOLD STILL WHEN ASKED TO? `prefers-reduced-motion` has
+// been EMULATED in this file since R80 — purely to make a battle round
+// resolve in one frame so the keyboard walk is quick — and nothing has ever
+// asserted the result. The setting was a speed trick, not a measurement.
+//
+// Two halves, because neither alone is enough. This one reads the source:
+// every selector that starts an animation or a transition must have an
+// off-switch in a `prefers-reduced-motion` block. It catches the ten arena
+// effects that only exist for four tenths of a second mid-fight, which no
+// browser pass will ever have on screen when it looks.
+const motionSwitches = () => {
+  const css = readFileSync(join(root, 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const uncovered = [];
+  // Everything a reduced-motion block turns off, by property.
+  const off = { animation: new Set(), transition: new Set() };
+  for (const m of css.matchAll(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{/g)) {
+    // Walk braces from the block's opening one so a nested rule ends where it
+    // really ends rather than at the first `}` in the file.
+    let depth = 0, i = m.index + m[0].length - 1, start = i + 1;
+    for (; i < css.length; i++) {
+      if (css[i] === '{') depth++;
+      else if (css[i] === '}' && --depth === 0) break;
+    }
+    for (const rule of css.slice(start, i).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      for (const prop of ['animation', 'transition']) {
+        if (!new RegExp(`\\b${prop}\\s*:\\s*none`).test(rule[2])) continue;
+        for (const sel of rule[1].split(',')) off[prop].add(sel.trim());
+      }
+    }
+  }
+  // Everything that MOVES, outside those blocks.
+  const outside = css.replace(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\n\}/g, '')
+    .replace(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[^{}]*\{[^{}]*\}[^{}]*\}/g, '');
+  for (const rule of outside.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sels = rule[1].split(',').map((x) => x.trim()).filter(Boolean);
+    if (!sels.length || sels.some((x) => x.startsWith('@') || x.includes('%'))) continue;
+    for (const [prop, re] of [['animation', /\banimation\s*:\s*([^;]+)/], ['transition', /\btransition\s*:\s*([^;]+)/]]) {
+      const d = rule[2].match(re);
+      if (!d || /^\s*none\b/.test(d[1])) continue;
+      // A zero-duration transition does not move anything.
+      if (prop === 'transition' && !/[0-9.]+m?s/.test(d[1])) continue;
+      if (/\b0s\b/.test(d[1]) && !/[1-9][0-9.]*m?s/.test(d[1])) continue;
+      for (const sel of sels) {
+        if (off[prop].has(sel)) continue;
+        uncovered.push({ sel, prop, value: d[1].trim().slice(0, 44) });
+      }
+    }
+  }
+  return uncovered;
+};
+
+// The other half, in the browser: with the media query on, nothing that is
+// ACTUALLY ON SCREEN may still be moving. A source rule cannot see a duration
+// that arrives from a variable, an inline style, or a selector nobody thought
+// to grep for.
+const STILL = `(() => {
+  const out = [];
+  for (const el of document.querySelectorAll('body *')) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    const dur = (v) => Math.max(0, ...String(v).split(',').map((x) => parseFloat(x) || 0));
+    const anim = cs.animationName !== 'none' && dur(cs.animationDuration) > 0;
+    const trans = dur(cs.transitionDuration) > 0;
+    if (!anim && !trans) continue;
+    out.push({
+      sel: el.tagName.toLowerCase()
+        + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).join('.') : ''),
+      what: anim ? 'animation ' + cs.animationName + ' ' + cs.animationDuration
+        : 'transition ' + cs.transitionProperty + ' ' + cs.transitionDuration,
+    });
+  }
+  return out;
+})()`;
+
 // R99 — DOES IT STAY IN ITS CARD, AND ON THE PHONE?
 //
 // R86 shipped the egg's Hurry button inside `.encounter`, a flex line
@@ -823,6 +899,16 @@ async function main() {
       else for (const x of over) note(`${where}: the arena does not scroll, and ${x}`);
     };
 
+    // R99 — the source half of the reduced-motion rule. No browser needed:
+    // it asks whether every moving thing HAS an off-switch, which is the only
+    // form of the question that can reach the ten arena effects that exist
+    // for four tenths of a second in the middle of a fight.
+    for (const m of motionSwitches()) {
+      note(`style.css: \`${m.sel}\` sets ${m.prop}: ${m.value} and no `
+        + '`prefers-reduced-motion: reduce` block turns it off — a player who asked their OS to stop'
+        + ' moving things still gets this one');
+    }
+
     await foundingPass();
     await briefingPass();
     await collect('shell');
@@ -1214,6 +1300,20 @@ async function main() {
     // reduced motion is the setting an accessibility gate should be
     // measuring anyway.
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    // R99 — and with it on, nothing ON SCREEN may still be moving. The media
+    // query has been emulated here since R80 and nothing ever read the
+    // result; this is that emulation finally being asked a question.
+    {
+      const still = new Map();
+      for (const s2 of ['ranch', 'pens', 'battle', 'vault', 'theater', 'dex']) {
+        await evaluate(`document.querySelector('#tabs button[data-screen="${s2}"]').click()`);
+        await sleep(450);
+        for (const m of await evaluate(STILL)) still.set(`${m.sel}|${m.what}`, { ...m, where: s2 });
+      }
+      for (const m of still.values()) {
+        note(`${m.where}: ${m.sel} still has ${m.what} with reduced motion asked for`);
+      }
+    }
     if (!(await openScreen('battle'))) note('the War Room tab cannot be reached by Tab');
     else {
       if (!(await evaluate(`!!document.getElementById('msg-next')`))) {
@@ -1486,7 +1586,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · the game is playable from the keyboard`);
+  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
 }
 
 // R88 — only when RUN, not when imported. This module owns the one fixture

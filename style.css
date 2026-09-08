@@ -1125,6 +1125,14 @@ body.in-battle .ticker { font-size: 0.66rem; }
   .float, .anim-lunge-fwd, .anim-hit, .anim-ko,
   .anim-wavein, .anim-buff, .anim-debuff,
   .grad-shake, .grad-flash, .poof { animation: none; }
+  /* R99 — the two TRANSITIONS nobody had listed. All eleven keyframes were
+     covered and both of these were not, which is what happens when a rule is
+     kept by hand: the arena's ground still washed colour on a crit and both
+     sprite slots still faded in, for a player who had asked their OS to stop
+     moving things. Safe to disable outright — nothing anywhere listens for
+     `transitionend`, and `animate()` already returns early under this query
+     so its `animationend` listener is never registered either. */
+  .stage, .slot { transition: none; }
 }
 
 /* Taller phones get a roomier field; short ones keep the menu reachable. */
