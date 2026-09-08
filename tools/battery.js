@@ -1878,6 +1878,37 @@ const BREAKS = [
     to: '    discoveredCombos: [],\n    auditTrail: [],',
   },
   {
+    // R98 — the Ranch loses the rule the Pens has had since R89 and goes
+    // back to twenty-three folds open at once: 935 words becomes 1,686 and
+    // 4,852px becomes 14,450. One argument, and it is the whole screen.
+    n: 169, gate: HEIGHT, name: 'every Ranch card can be open at once again, and the screen is twenty dossiers deep',
+    file: 'ranch/ui.js',
+    anchor: '    { exclusive: state.ranch.stock.map((animal) => `ranch-${animal.id}`) });',
+    to: '    {});',
+  },
+  {
+    // R98 — the shared fold helper stops shutting the others, which breaks
+    // the rule for the Pens as well as the Ranch. Aimed at `ui/cards.js`
+    // rather than either caller, because that is where "at most one" lives.
+    n: 170, gate: HEIGHT, name: 'opening one fold stops shutting its group, so at-most-one becomes any-number',
+    file: 'ui/cards.js',
+    anchor: '        for (const other of exclusive) if (other !== id) state.ui.collapsed[other] = true;',
+    to: '        for (const other of []) state.ui.collapsed[other] = true;',
+  },
+  {
+    // R98 — a screen ships with no word budget at all. The height half of
+    // this gate has refused an undeclared screen since R89; the word half
+    // has to refuse one too, or a new screen arrives measured on one axis.
+    // RE-AIMED. This first removed the GUARD — `WORDS[r.id] ?? Infinity` —
+    // and went MISSED, because every screen currently declares a budget so
+    // the fallback never fired. A break has to make the thing the rule
+    // forbids actually happen: a screen with no entry at all.
+    n: 171, gate: HEIGHT, name: 'a screen can ship without declaring what it is allowed to say',
+    file: 'tools/height.js',
+    anchor: "  'dex:genes':    { folded: 200,  open: 200 },",
+    to: '',
+  },
+  {
     // R97 — the Dex stops keying generated specimens by lab. A rival mints a
     // fresh one every duel, so filing them raw put 253 entries in a save
     // that has 42 authored units, and none of them was ever rendered.

@@ -7463,6 +7463,47 @@ if (inShard('regions')) {
     assert.ok(!shut.includes(AGENDA_CONTROL.graduate), '(shut cards render no body — R46)');
     const opened = drawRanch({ ...shown, ui: { collapsed: { [`ranch-${grown.id}`]: false } } });
     assert.ok(opened.includes(AGENDA_CONTROL.graduate), 'and its card, opened, is where the Extract button is');
+
+    // R98 — AT MOST ONE ANIMAL OPEN. `bindFolds` has taken an `exclusive`
+    // list since R89 and the Pens was its only caller, which is the entire
+    // difference between 291 words on that screen and 1,686 on this one.
+    // Asserted on the helper rather than through a render, because "opening
+    // one shuts the others" is a rule about the group and not about either
+    // screen — and because closing one must shut NOTHING, which is the half
+    // a click-through would be least likely to catch.
+    {
+      const { bindFolds } = await import('../ui/cards.js');
+      const ids = ['ranch-a', 'ranch-b', 'ranch-c'];
+      const st = { ui: { collapsed: { 'ranch-a': false, 'ranch-b': true, 'ranch-c': true } } };
+      // `aria-expanded` reads LIVE state, because in the app every toggle
+      // rerenders and the next click lands on a fresh button. A stub that
+      // froze the first render would have the helper reading a stale flag,
+      // which is a bug in the fixture rather than in the rule.
+      const btns = ids.map((id) => {
+        const listeners = [];
+        return {
+          dataset: { fold: id },
+          getAttribute: (a) => (a === 'aria-expanded' ? String(!st.ui.collapsed[id]) : null),
+          addEventListener: (_, fn) => listeners.push(fn),
+          click: () => listeners.forEach((fn) => fn()),
+        };
+      });
+      const root = { querySelectorAll: () => btns };
+      bindFolds(root, { state: st, save: () => {} }, () => {}, { exclusive: ids });
+      // Opening `ranch-b` (currently shut) shuts the other two.
+      btns[1].click();
+      assert.equal(st.ui.collapsed['ranch-b'], false, 'the one you opened is open');
+      assert.equal(st.ui.collapsed['ranch-a'], true, 'and the one that was open is shut');
+      assert.equal(st.ui.collapsed['ranch-c'], true, 'and so is the rest of the group');
+      // Closing the one that is open shuts NOTHING else: a group is "at most
+      // one open", never "exactly one". This is the half a click-through
+      // would be least likely to catch, because it looks like nothing
+      // happening.
+      btns[1].click();
+      assert.equal(st.ui.collapsed['ranch-b'], true, 'closing the open one closes it');
+      assert.equal(st.ui.collapsed['ranch-a'], true, 'and opens nothing to replace it');
+      assert.equal(st.ui.collapsed['ranch-c'], true, 'the group is at most one open, not exactly one');
+    }
     const vatChip = AGENDA.find((i) => i.id === 'vat');
     const pensRoot = stub();
     renderPensScreen(pensRoot, { state: shown, content, now: () => now, save: () => {} });

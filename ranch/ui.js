@@ -110,7 +110,7 @@ function facilityCard(state, content) {
           <strong>${renderIcon(track.icon)} ${current?.name ?? track.name}</strong>
           <span class="lineage">level ${level}${up ? '' : ' · maxed'}</span>
         </div>
-        <p class="fine-print">${current?.blurb ?? ''}</p>
+        ${up ? '' : `<p class="fine-print">${current?.blurb ?? ''}</p>`}
         ${up ? `
           <div class="facility-next">
             <div>
@@ -592,7 +592,21 @@ export function renderRanchScreen(root, ctx) {
     });
   });
   bindFieldNote(root, ctx, again);
-  bindFolds(root, ctx, again);
+  // R98 — AT MOST ONE ANIMAL OPEN, which is the rule the Pens has had since
+  // R89 and the Ranch never got. Measured on the day-180 save: the Pens has
+  // ten folds and allows one, so opening everything you can reach costs 291
+  // words and 2,033px; the Ranch had twenty-three and allowed all of them,
+  // at 1,686 words and 14,450px. Same screen shape, same cards, one rule
+  // apart.
+  //
+  // The BANDS are not in the group. "Ready to graduate", "Needs care" and
+  // "Growing" are how you find an animal rather than something you read, and
+  // shutting one because you opened another would fight the player instead
+  // of the clutter. Nor are Right Now, the Facility, the Breeding Pen or the
+  // Incubator: those are different kinds of thing, and a player comparing an
+  // animal against what the agenda is asking for wants both.
+  bindFolds(root, ctx, again,
+    { exclusive: state.ranch.stock.map((animal) => `ranch-${animal.id}`) });
   bindRush(root, ctx, (m) => { lastMsg = m; }, again);
   root.querySelectorAll('button[data-goto]').forEach((btn) => {
     btn.addEventListener('click', () => ctx.goto?.(btn.dataset.goto, btn.dataset.subtab));
