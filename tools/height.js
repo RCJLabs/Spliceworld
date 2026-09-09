@@ -94,15 +94,15 @@ const BUDGET = {
   // chrome alone is 2.3 phone screens, so no page size could have met it.
   // The chrome is R47's territory and has not been re-measured since; that
   // is the next thing worth doing to this screen, not a smaller page.
-  ranch:          { folded: 2500,  tallest: 4450 },
-  pens:           { folded: 2000,  tallest: 4000 },   // R89's criterion
+  ranch:          { folded: 2500,  tallest: 4450, opens: true },
+  pens:           { folded: 2000,  tallest: 4000, opens: true },   // R89's criterion
   // R128: 1900 -> 2080 open, measured at 1998. The shut half does not move
   // (1,827 against 1,900) — what moved is that this screen HAS an open half
   // now. Its two numbers were equal because the Theater had no fold at all,
   // and a `tallest` that equals `folded` does not budget a fold, it forbids
   // one. The Surgery Theater's own upgrade card is the fold, which is the
   // entire milestone: the machine is bought on the screen it runs.
-  theater:        { folded: 1900,  tallest: 2080 },
+  theater:        { folded: 1900,  tallest: 2080, opens: true },
   // R92 — THE VAULT'S HEIGHT IS DERIVED, NOT RATCHETED.
   //
   // R89 left this `null` because there was nothing honest to ratchet
@@ -146,7 +146,7 @@ const BUDGET = {
   // version of this milestone paged the parts and left the vials, and the
   // gate measured that bay at 16,821px — the fix is not a smaller page, it
   // is that a list is a list.
-  vault:          { folded: 2560,  tallest: 4100 },
+  vault:          { folded: 2560,  tallest: 4100, opens: true },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
   // R95: 1900 -> 2350, measured at 2293. The tab lists what you have found,
@@ -163,7 +163,7 @@ const BUDGET = {
   // Same answer R89 gave the Foes tab and for the same reason: the field
   // guide is looked things up in, not read, so the shut number is the one
   // that matters and the open one is a ratchet a reader pays deliberately.
-  'dex:genes':    { folded: 400,   tallest: 1250 },
+  'dex:genes':    { folded: 400,   tallest: 1250, opens: true },
   // R89's criterion names 2,500 for the Foes tab, and that is a budget on
   // how it PRESENTS: 4,113px shut was five and a half screens of reference
   // material nobody had asked for. Folded it is 664.
@@ -185,7 +185,7 @@ const BUDGET = {
   //
   // The number this milestone is judged on is the OTHER one. R97's criterion
   // is "Foes under two screens folded"; it is 764px shut, against 1,560.
-  'dex:foes':     { folded: 2500,  tallest: 6100 },
+  'dex:foes':     { folded: 2500,  tallest: 6100, opens: true },
 };
 
 // R98 — AND WHAT IT SAYS, not only how tall it is.
@@ -327,10 +327,22 @@ try {
     return tallest;
   };
 
+  // R131 — AND HOW MANY THINGS IT MANAGED TO OPEN, which this returned
+  // nothing about for two years. A height gate only ever fails UPWARDS: a
+  // screen that grows is caught, and a screen the walk can no longer open
+  // reports a small number and passes. That is not hypothetical — R131's
+  // first draft moved the Vault's rows behind the save while leaving the
+  // bays as raw `<details>`, so `openOne` set `.open = true` on forty-one
+  // empty shells and the gate reported 2,527px for a screen it could not
+  // open at all. The break that replays it (198) went MISSED against the
+  // budgets alone, which is how this rule got written.
+  let opened = 0;
   const tallestOf = async (sel, cap = 40) => {
     let tallest = await acrossTabs(sel);
+    opened = 0;
     for (let i = 0; i < cap; i++) {
       if (!await openOne(sel)) break;
+      opened += 1;
       await sleep(240);
       tallest = Math.max(tallest, await acrossTabs(sel));
     }
@@ -401,7 +413,7 @@ try {
     }
     const tallest = BUDGET[screen]?.tallest === null ? null : await tallestOf(sel);
     // After `tallestOf`, which has opened everything the screen will allow.
-    rows.push({ id: screen, folded, tallest, wordsShut, wordsOpen: await wordsOf(sel),
+    rows.push({ id: screen, folded, tallest, opened, wordsShut, wordsOpen: await wordsOf(sel),
       facilityAt: place && `${place.at}/${place.of} @ ${place.top}px` });
   }
   // The War Room is not in the height table (its map is a canvas the budget
@@ -424,7 +436,7 @@ try {
     const folded = await heightOf('#screen-dex');
     const wordsShut = await wordsOf('#screen-dex');
     const tallest = await tallestOf('#screen-dex');
-    rows.push({ id: `dex:${tab}`, folded, tallest, wordsShut, wordsOpen: await wordsOf('#screen-dex') });
+    rows.push({ id: `dex:${tab}`, folded, tallest, opened, wordsShut, wordsOpen: await wordsOf('#screen-dex') });
   }
 } finally {
   proc.kill();
@@ -441,6 +453,21 @@ for (const r of rows) {
   }
   if (b.tallest !== null && r.tallest > b.tallest) {
     problems.push(`${r.id} reaches ${r.tallest}px when opened, over its ${b.tallest}px budget (${(r.tallest / 780).toFixed(1)} phone screens)`);
+  }
+  // R131 — AND THE SCREEN HAS TO STILL OPEN. Every rule above fails upwards
+  // only, so a screen the walk can no longer get into reports a comfortable
+  // number and passes. `opens` is a declaration like the budgets: this
+  // screen has folds, so the walk must have got into at least one of them
+  // and the screen must have grown by doing it. A screen with nothing to
+  // open says so by leaving it out.
+  if (b.opens) {
+    if (!r.opened) {
+      problems.push(`${r.id} declares folds and the walk could not open ONE of them`
+        + ' — its budget is being met by a screen nobody can get into');
+    } else if (r.tallest <= r.folded) {
+      problems.push(`${r.id} opened ${r.opened} thing${r.opened === 1 ? '' : 's'} and did not grow`
+        + ` (${r.folded}px shut, ${r.tallest}px open) — the walk is opening empty containers`);
+    }
   }
   const w = WORDS[r.id];
   if (!w) { problems.push(`${r.id} has no word budget — a new screen has to declare one`); continue; }
@@ -470,5 +497,7 @@ if (problems.length) {
   for (const p of problems) console.error(`  · ${p}`);
   process.exit(1);
 }
+const opensRows = rows.filter((r) => BUDGET[r.id]?.opens);
 console.log(`height ✓  ${rows.length} screens on the day-180 save at ${VIEWPORT}px, every one inside its budget`
+  + ` · ${opensRows.length} of them still open, ${opensRows.reduce((n, r) => n + r.opened, 0)} folds walked`
   + ` · Pens ${rows.find((r) => r.id === 'pens')?.tallest}px at its tallest, Foes ${rows.find((r) => r.id === 'dex:foes')?.folded}px shut`);

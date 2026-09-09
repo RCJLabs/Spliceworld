@@ -3247,6 +3247,16 @@ const BREAKS = [
     to: '        <button type="button" class="bay-head" aria-expanded="${open}">',
   },
   {
+    // R131 — AND THE RULE THAT CATCHES 198 HAS TO BE LOAD-BEARING ITSELF.
+    // Dropping the `opens` declaration is how the hole comes back: the
+    // budgets alone cannot tell a screen that shrank from a screen that
+    // stopped opening, which is why 198 went MISSED the first time.
+    n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
+    file: 'tools/height.js',
+    anchor: '  vault:          { folded: 2560,  tallest: 4100, opens: true },',
+    to: '  vault:          { folded: 2560,  tallest: 4100 },',
+  },
+  {
     // The migration forgets the phase, so a save from v47 arrives with
     // `released` undefined — and `!cam.released` is true for a county that
     // has already been opened, which fires the burst a second time.
