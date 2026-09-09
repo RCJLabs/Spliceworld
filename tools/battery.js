@@ -7,9 +7,21 @@
 // was that a headline number nothing in the repo can reproduce is not
 // evidence. So it is a tool now.
 //
-//   node tools/battery.js            # exit 1 if any break survives
+//   node tools/battery.js            # exit 1 if any break survives (~47 min)
+//   node tools/battery.js --anchors  # every anchor still matches (~1 sec)
+//   node tools/battery.js --baseline # every gate green on a clean tree (~7 min)
+//   node tools/battery.js --only 1,2 # these breaks and nothing else
 //   node tools/battery.js --verbose  # the gate's own words for each
 //   SW_BATTERY_JOBS=1 node ...       # one worker, for a machine under load
+//
+// WHAT TO RUN WHEN. The full battery is a forty-seven minute answer to a
+// question that changes slowly: do the gates still catch defects? Gates
+// change when a milestone writes one. What changes EVERY session is whether
+// this milestone broke a gate — which the baseline answers in seven minutes
+// — and whether it moved a line a break aims at, which `--anchors` answers
+// in one second. R133 is the worked example: its only two real findings were
+// a gate the baseline caught and an anchor `--anchors` would have caught,
+// and the other 203 breaks were green twice for forty minutes each time.
 //
 // Every patch is applied by UNIQUE ANCHOR: if the anchor text does not appear
 // exactly once, the break reports BADANCH and is scored as a failure rather
@@ -3432,6 +3444,40 @@ async function pool(items, work, report = () => {}) {
 }
 
 const cleanup = () => { for (const d of DIRS) rmSync(d, { recursive: true, force: true }); };
+
+// R134 — EVERY ANCHOR STILL EXISTS, in about a second.
+//
+// A break that no longer matches its file is scored BADANCH, and finding
+// that out costs forty-seven minutes because it is discovered in the middle
+// of running two hundred gates. It does not have to be: an anchor check is a
+// string search over files already on disk. Break 85 went stale in R133 —
+// the milestone rewrote the sentence it aimed at — and the whole battery ran
+// to tell me something `grep` knew before it started.
+//
+// This is the cheap half of the battery's value. The breaks prove the GATES
+// still catch things, which changes slowly; the anchors prove the BREAKS
+// still point at real code, which changes every time anybody edits a file a
+// break aims at — which is to say, most milestones.
+if (process.argv.includes('--anchors')) {
+  const stale = [];
+  for (const b of BREAKS) {
+    let src;
+    try { src = readFileSync(join(SRC, b.file), 'utf8'); } catch {
+      stale.push(`${b.n}: ${b.file} is not there any more — ${b.name}`);
+      continue;
+    }
+    const hits = src.split(b.anchor).length - 1;
+    if (hits !== 1) stale.push(`${b.n}: ${hits} matches in ${b.file} — ${b.name}`);
+  }
+  cleanup();
+  if (stale.length) {
+    console.error(`battery ✗  ${stale.length} of ${BREAKS.length} breaks no longer aim at anything`);
+    for (const line of stale) console.error(`  · ${line}`);
+    process.exit(1);
+  }
+  console.log(`battery ✓  all ${BREAKS.length} anchors match exactly once`);
+  process.exit(0);
+}
 
 const BASELINE = [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, COVERAGE];
 
