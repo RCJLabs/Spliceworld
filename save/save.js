@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 47;
+export const SAVE_VERSION = 48;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -59,7 +59,7 @@ export function newGameState() {
     campaign: {
       heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,
-      loose: [], nextBreakAt: null, breakoutCount: 0,
+      loose: [], nextBreakAt: null, breakoutCount: 0, released: null,
       operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
       // R87: the Compliance Task Force. `raid` is the one at the gate,
       // `nextRaidAt` the schedule R9's rule requires, and the counters are

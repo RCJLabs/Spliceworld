@@ -179,6 +179,47 @@ function gradeFor(rival, meta, defeats, index, rng) {
 // with no acceptable candidate is left EMPTY on purpose — that is how an
 // Air specialist ends up with no hind legs, and physiology charges them
 // for it exactly as it would charge the player.
+// R129 — swap some sockets for anatomy from anywhere in the bestiary. Slot
+// is preserved, so the body still assembles; only its ancestry widens.
+function openTheDoors(parts, content, rng, chance) {
+  const bySlot = new Map();
+  for (const part of Object.values(content.parts)) {
+    if (part.species === 'salvage') continue;
+    // R129 — AND NOT A VARIANT. Found by R129's own verification: the first
+    // draft drew from every part in the bestiary, and the six variant lines
+    // are 34 of the 244. R95 built a whole milestone on those parts having
+    // exactly ONE door — a mutation in your own Incubator, which is why the
+    // walker breeds a line that still owes the Dex a variant — and a
+    // released specimen wearing one is a second door that skips it.
+    //
+    // Measured with breeding disabled outright: the five seeds that finish
+    // the ladder reached 20 to 34 variant parts anyway; the two that did not
+    // reached 2. So the release was handing over the rarest bloodlines in
+    // the county to a player who never bred for them, and giving them the
+    // PARTS without the animal — `dex.variants` stayed 0 on every seed while
+    // `dex.parts` filled up with anatomy off a creature they had never met.
+    //
+    // The release still widens what a specimen can be built from 21 species
+    // to 35, which is the whole ceiling this milestone exists to break.
+    if (content.species[part.species]?.variantOf) continue;
+    if (!bySlot.has(part.slot)) bySlot.set(part.slot, []);
+    bySlot.get(part.slot).push(part);
+  }
+  return parts.map((part) => {
+    if (rng() >= chance) return part;
+    const pool = bySlot.get(part.slot) ?? [];
+    return pool.length ? pool[Math.floor(rng() * pool.length)] : part;
+  });
+}
+
+// R129 — a trait this body can actually carry.
+function pickTrait(parts, content, rng) {
+  const slots = new Set(parts.map((p) => p.slot));
+  const fits = Object.values(content.traits ?? {})
+    .filter((tr) => (tr.slots ?? []).some((sl) => slots.has(sl)));
+  return fits.length ? fits[Math.floor(rng() * fits.length)].id : null;
+}
+
 function chooseParts(rival, targetClass, content, rng, dossier = null) {
   const byId = Object.values(content.parts).filter((p) => p.species !== 'salvage');
   // A rival's philosophy usually supplies the anatomy they want. When it
@@ -304,7 +345,7 @@ export function rivalTeam(state, rival, content) {
 // memory: same rng position, same specimen.
 export function rivalSpecimen(rival, content, {
   rng, meta, defeats = 0, index = 0, dossier = null, counter = null,
-  powerScale = rival.powerScale, names = new Set(), idSuffix = null,
+  powerScale = rival.powerScale, names = new Set(), idSuffix = null, wild = null,
 } = {}) {
   // Tier 1: the lead still flies their flag and the SECOND specimen
   // answers you. Tier 2 and up: the counter moves to the lead, because a
@@ -315,11 +356,25 @@ export function rivalSpecimen(rival, content, {
   const targetClass = counter && isCounter ? counter : rival.classBias;
   // Only the specimen built to answer you carries the anatomy counter;
   // the rest of the lab is still the lab.
-  const parts = chooseParts(rival, targetClass, content, rng, isCounter ? dossier : null);
+  let parts = chooseParts(rival, targetClass, content, rng, isCounter ? dossier : null);
+  // R129 — THE DOORS ARE OPEN. Before the release a specimen is its lab's
+  // taste and nothing else — the five palettes own 21 of the 41 species, so
+  // half the bestiary can never be met in the wild however many escape.
+  // Widened HERE, inside the one generator, so the wilder body still gets
+  // the lab's frame, grades, naming and physiology: a released specimen is
+  // still somebody's, it has just been eating things it was not issued.
+  if (wild) parts = openTheDoors(parts, content, rng, wild.socketChance ?? 0.45);
+  // And a trait the player cannot roll, which is what makes bagging one
+  // worth a bay and a stall. Drawn from the traits whose own `slots` this
+  // body has, and stamped on every token they fit — `splice/extract.js`'s
+  // rule, so the stamp is never a promise the anatomy cannot keep.
+  const trait = wild && rng() < (wild.traitChance ?? 0.6)
+    ? pickTrait(parts, content, rng) : null;
   const tokens = parts.map((part, n) => ({
     id: `${rival.id}-${index}-${n}`,
     partId: part.id,
     grade: gradeFor(rival, meta, defeats, index, rng),
+    traits: trait && (content.traits?.[trait]?.slots ?? []).includes(part.slot) ? [trait] : [],
     donor: { name: rival.name, species: part.species, stars: 5, extractedAt: 0 },
   }));
   // A9: a rival's authored `frames` list is their STYLE; answering you is
@@ -341,7 +396,7 @@ export function rivalSpecimen(rival, content, {
   }
   const name = creatureName(rival, rng, names);
   names.add(name);
-  return unitFromGenome(
+  const built = unitFromGenome(
     {
       // R97 — the shape `dexKeyFor` below reads, minted in its sight.
       id: `${rival.id}_spec${index}_${idSuffix ?? defeats}`,
@@ -353,6 +408,8 @@ export function rivalSpecimen(rival, content, {
     },
     content
   );
+  if (trait) built.traits = [trait];
+  return built;
 }
 
 // R97 — which Dex page a fielded unit belongs to. A rival's specimen is

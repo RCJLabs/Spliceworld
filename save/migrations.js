@@ -567,6 +567,19 @@ export const migrations = {
   // not find a lab for, which is the same "ignore what the build no longer
   // has" rule R72 and R79 settled on, rather than dropping a number the
   // player earned.
+  // R129 — THE LAST LAB FALLS OPEN. `campaign.released` is the timestamp the
+  // county's rival stock got out, and it fires once. A save from before this
+  // arrives WITHOUT it even if its ladder is already finished, which is
+  // deliberate: the release is an event, and a player who beat the fifth lab
+  // last week should watch it happen on their next tick rather than be told
+  // it happened while the file was on disk. `tickBreakouts` fires it from
+  // the start of the gap, so the moment is not lost either — it is dated to
+  // when it was due (R78's rule), not to when the migration ran.
+  48: (save) => {
+    save.campaign ??= {};
+    save.campaign.released ??= null;
+    return save;
+  },
   47: (save) => {
     save.dex ??= {};
     save.dex.sightings ??= {};

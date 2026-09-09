@@ -44,7 +44,7 @@ import {
 import { gradeOf, gradeIndexOf } from '../splice/extract.js';
 import { isContested } from './contest.js';
 import { speciesOf, classOf, enemyOf, rivalOf } from '../data/catalog.js';
-import { looseSpecimens, looseById } from './breakout.js';
+import { looseSpecimens, looseById, released, releaseTuning } from './breakout.js';
 import {
   operationList, freeCrew, startOperation, abortOperation, opOdds,
 } from './operations.js';
@@ -375,20 +375,46 @@ function renderMap(root, ctx) {
   // whole design of the system is that these wait for you, so the row shows
   // what it is and what it is worth, and nothing about how long you have.
   const loose = looseSpecimens(state);
+  // R129 — THE BOARD SAYS WHICH ERA IT IS IN. Before the last lab falls a
+  // loose specimen is a stray with a lab's name on it; after, the same board
+  // is the county's whole bestiary walking around loose. A player who was
+  // away when the headline scrolled past would otherwise meet the second
+  // board and read it as the first — so the state is standing copy here, the
+  // way R40's dominion banner is, rather than one line on the wire.
+  const openDoors = released(state);
+  const rel = releaseTuning(content);
+  const releaseCard = openDoors
+    ? `<section class="card release-card">
+        <h3>${renderIcon('chain')} The Labs Are Open</h3>
+        <p>${esc(rel.line ?? 'Every rival collection is loose at once.')}</p>
+        <p class="fine-print">${esc(rel.intel ?? '')}</p>
+      </section>`
+    : '';
+
   const looseCard = loose.length
     ? `<section class="card">
         <h3>${renderIcon('chain')} Loose Specimens</h3>
-        <p class="fine-print">Somebody else's science, unsupervised. Bag one with the Containment Cannon and the Reorientation Wing can talk it round.</p>
-        ${loose.map((esc) => {
-          const lab = rivalOf(content, esc.rivalId);
-          const cls = classOf(content, esc.unit.class);
+        <p class="fine-print">${openDoors
+          ? esc(rel.blurb ?? '') + ' Bag one with the Containment Cannon and the Reorientation Wing can talk it round — and whatever it is carrying comes out with it.'
+          : "Somebody else's science, unsupervised. Bag one with the Containment Cannon and the Reorientation Wing can talk it round."}</p>
+        ${loose.map((one) => {
+          const lab = rivalOf(content, one.rivalId);
+          const cls = classOf(content, one.unit.class);
+          // The trait is the reason to cross the county for this one, so it
+          // is on the row rather than behind a fight — same chip the Vault
+          // and the Pens use, so a player already knows what it means.
+          const carried = (one.traits ?? [])
+            .map((tr) => ` <span class="grade-badge grade-apex">${esc(content.traits[tr]?.name ?? tr)}</span>`)
+            .join('');
           return `<div class="encounter">
-            <div><strong>${esc.unit.name}</strong> <span class="lineage">${
+            <div><strong>${one.unit.name}</strong>${carried} <span class="lineage">${
               cls ? `${renderIcon(cls.icon)} ${cls.name} · ` : ''
-            }HP ${esc.unit.hp} · PWR ${esc.unit.power}</span><br>
-            <span class="fine-print">${lab ? `${lab.name}'s, and no longer ${lab.name}'s. ` : ''}Last seen ${esc.sighting}.</span></div>
-            <button type="button" data-breakout="${esc.id}"${canFight ? '' : ' disabled'}>${
-              canFight ? `Hunt — $${esc.reward}` : noneFit
+            }HP ${one.unit.hp} · PWR ${one.unit.power}</span><br>
+            <span class="fine-print">${lab ? (one.wild
+              ? `Was ${lab.name}'s. It has not been eating what ${lab.name} issued. `
+              : `${lab.name}'s, and no longer ${lab.name}'s. `) : ''}Last seen ${one.sighting}.</span></div>
+            <button type="button" data-breakout="${one.id}"${canFight ? '' : ' disabled'}>${
+              canFight ? `Hunt — $${one.reward}` : noneFit
             }</button>
           </div>`;
         }).join('')}
@@ -422,6 +448,7 @@ function renderMap(root, ctx) {
     map: regions,
     jobs: jobsCard(state, ctx, t),
     labs: `
+      ${releaseCard}
       ${dossier}
       ${dossierCard(state, content)}
       ${rivals ? `<section class="card"><h3>${renderIcon('petri-dish')} Rival Labs</h3>${rivals}</section>` : ''}

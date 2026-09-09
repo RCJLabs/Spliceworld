@@ -99,6 +99,11 @@ const SHARD_OF = {
   // runs SERIALLY here, because four shards on four cores plus a worker pool
   // inside one of them is oversubscription, not parallelism.
   wire: 'd', away: 'd',
+  // R129 — the release block. Its own name rather than riding on `fired`
+  // (R76's handler walk), because a battery gate that wants to aim at ONE
+  // block aims at the lane its name maps to, and two unrelated blocks under
+  // one name make that aim a guess. Shard a is the lightest of the four.
+  released: 'a',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -2222,6 +2227,12 @@ assert.deepEqual(m5.campaign, {
   // the player in range rather than by the upgrade.
   raid: null, nextRaidAt: null, raidCount: 0, raidsHeld: 0, leviedTotal: 0,
   notorietyCapped: false,
+  // R129: and the same claim for the release. A save from before the fifth
+  // lab could fall arrives with the phase UNFIRED, not retroactively opened
+  // — a player who beat the ladder in v47 gets the headline, the burst and
+  // the wild anatomy on their next tick, which is the moment they are
+  // sitting in front of the game to read it.
+  released: null,
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -18013,8 +18024,17 @@ if (inShard('wire')) {
   // Both RUN during boot, which is the rule this cap enforces; they are not
   // chrome sitting in front of the player. See the matching note on
   // FIRST_PAINT_KB in tools/boot.js.
+  //
+  // R129: 545 -> 548, measured at 545.0. The release, the pacing switch and
+  // the wild-anatomy widening are all in the world tick, which `main.js`
+  // runs on the first frame — see the FIRST_PAINT_KB note in tools/boot.js
+  // for the full accounting and for the 54.1 KB of `data/*.json` `_doc`
+  // prose that the next phase should spend instead of this ceiling. The cap
+  // sits just above the measurement rather than ON it: 545 against 545.0 is
+  // a knife edge, and a gate that fails on a rounding wobble teaches people
+  // to ignore it.
   const MODULE_CAP = 48;
-  const KB_CAP = 545;
+  const KB_CAP = 548;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,
@@ -18315,6 +18335,208 @@ if (inShard('fired')) {
       'and no clock already running — the first escape is still five hours after it becomes eligible');
     assert.equal(up.campaign.notoriety, s.campaign.notoriety, 'and nothing else about it moved');
   }
+}
+
+// --- R129: THE LAST LAB FALLS OPEN ----------------------------------------
+//
+// Asked for directly: beating the last rival releases the county's rival
+// stock. Measured before writing a line of it, because the entry's first
+// draft was wrong: R82's board is NOT a drip. Five 180-day walks spawn ~190
+// escapees and fight ~190 of them, and the board is EMPTY on every seed —
+// `maxLoose: 4` never binds, the 22h cooldown paces it. 181 of 200 minted
+// bodies are already distinct. The BATTLES half of the request is shipped.
+//
+// Two things are not, and both are ceilings rather than rates:
+//
+//   1. SPECIES. The five lab palettes union to 21 of 41 species, so half the
+//      bestiary can never be loose however many get out.
+//   2. WORTH KEEPING. 1,035 bagged in a walk, 40 bays full, 13 programmes
+//      ever started, ONE rehabilitated. A Wing graduate carries its old
+//      lab's grades, so it is worse than what the Theater builds and the
+//      walker's own R91 policy will not spend a stall on it. Capture is a
+//      dead end by design, and more escapees does not change that.
+//
+// So this block asks for the release AND for a reason to want what it
+// releases — Law 2, which says a conquest reward must expand what you can
+// CREATE. A trait the player cannot roll is that reason.
+if (inShard('released')) {
+  const { tickBreakouts, looseSpecimens, releaseTuning } = await import('../campaign/breakout.js');
+  const { rivalList } = await import('../campaign/rivals.js');
+  const rel = releaseTuning(content);
+
+  const HOUR129 = 3600000;
+  // Every lab beaten once, which is the condition the request names and
+  // which `campaign.js` already computes for two banner sentences.
+  const conquered = () => {
+    const s = { ...newGameState(), seed: 129, funds: 90000 };
+    s.lastTickAt = t0;
+    s.facility = { theater: 2, containment: 4, infirmary: 1, incubator: 1, extractor: 1, scanner: 1 };
+    s.campaign.rivals = Object.fromEntries(
+      rivalList(content).map((r) => [r.id, { defeats: 2, losses: 0, lastMetAt: null }])
+    );
+    return s;
+  };
+
+  // The union of every lab's palette — the ceiling an escapee cannot pass
+  // today. Derived from the rivals themselves so a sixth lab moves it (R61).
+  const labSpecies = new Set(rivalList(content).flatMap((r) => r.favoredSpecies));
+  const allSpecies = Object.keys(content.species);
+  assert.ok(labSpecies.size < allSpecies.length,
+    `the labs between them do not own every species (${labSpecies.size} of ${allSpecies.length})`);
+
+  // Run the board out far enough to see what a conquered county produces.
+  const s = conquered();
+  tickBreakouts(s, content, t0 + 400 * HOUR129, t0);
+  const loose = looseSpecimens(s);
+  assert.ok(loose.length > 0, 'a conquered county has something loose in it');
+
+  // 1. THE RELEASE IS AN EVENT. Beating the fifth lab has to do something
+  //    the twenty-second hour of the cooldown does not, or the story the
+  //    player was told did not happen.
+  assert.ok(s.campaign.released,
+    'beating the last lab releases the county\'s rival stock — the board records the event');
+
+  // 2. ANATOMY THE COUNTY HAS NEVER SEEN. The only way past the 21-of-41
+  //    ceiling, and the only reading of "numerous combinations" that means
+  //    anything when 181 of 200 bodies are already distinct.
+  const speciesOfLoose = new Set(loose.flatMap((e) =>
+    Object.values(e.unit.genome?.parts ?? {}).map((pid) => content.parts[pid]?.species)));
+  const offPalette = [...speciesOfLoose].filter((sp) => sp && !labSpecies.has(sp));
+  assert.ok(offPalette.length > 0,
+    `a released specimen carries anatomy from outside every lab palette (saw ${[...speciesOfLoose].join(', ')})`);
+
+  // 3. AND A TRAIT THE PLAYER CANNOT ROLL, which is what makes bagging one
+  //    worth a bay and a stall. Without this the release is more of the
+  //    thing a campaign already gets 190 of.
+  const traited = loose.filter((e) => (e.unit.traits ?? []).length
+    || Object.values(e.unit.genome?.traits ?? {}).length);
+  assert.ok(traited.length > 0,
+    `a released specimen carries a mutation trait (0 of ${loose.length} do; ${
+      Object.keys(content.traits).length} traits exist)`);
+
+  //    …BUT NOT THE SIX VARIANT LINES. They are 34 of the 244 parts and R95
+  //    built a milestone on their having exactly ONE door — a mutation in
+  //    your own Incubator — which is why the walker breeds a line that still
+  //    owes the Dex a variant. R129's first draft widened a socket to every
+  //    part in the bestiary and quietly became a second door: measured with
+  //    breeding disabled outright, the five seeds that finish the ladder
+  //    reached 20 to 34 variant parts anyway, and `dex.variants` stayed 0 on
+  //    every one of them — the parts without the animal.
+  //
+  //    Stated here rather than left to `tools/reach.js`, which only caught it
+  //    in combination with break 162: a rule that needs two failures at once
+  //    to become visible is not a rule anybody can act on.
+  //
+  //    OVER A SAMPLE, not over one board. The first version of this asked the
+  //    nine specimens on seed 129's board, and a socket lands on one of the
+  //    three off-palette variant lines about seven times in a hundred — so
+  //    the break that removes the guard went MISSED on the seed that happened
+  //    to be in front of it. A gate whose subject has to get unlucky to be
+  //    seen is the knife edge this session already learned about once.
+  const mintedSpecies = new Map(); // species -> how many seeds put it on a board
+  for (let seed = 200; seed < 224; seed++) {
+    const w = { ...newGameState(), seed, funds: 90000 };
+    w.lastTickAt = t0;
+    w.campaign.rivals = Object.fromEntries(
+      rivalList(content).map((r) => [r.id, { defeats: 2, losses: 0, lastMetAt: null }])
+    );
+    tickBreakouts(w, content, t0 + 900 * HOUR129, t0);
+    for (const one of looseSpecimens(w)) {
+      for (const pid of Object.values(one.unit.genome?.parts ?? {})) {
+        const sp = content.parts[pid]?.species;
+        if (sp) mintedSpecies.set(sp, (mintedSpecies.get(sp) ?? 0) + 1);
+      }
+    }
+  }
+  assert.ok(mintedSpecies.size > labSpecies.size,
+    `the sample is wide enough to see past the palettes (${mintedSpecies.size} species minted)`);
+
+  const labVariants = new Set([...labSpecies].filter((sp) => content.species[sp]?.variantOf));
+  const smuggled = [...mintedSpecies.keys()]
+    .filter((sp) => content.species[sp]?.variantOf && !labVariants.has(sp)).sort();
+  assert.deepEqual(smuggled, [],
+    `the release does not open a second door to the variant lines (${smuggled.join(', ')}`
+    + ` are on no lab's palette, so the Incubator must stay the only way to them)`);
+
+  // 4. AND THE GENE HAS TO REACH THE VAULT, or the trait is decoration on a
+  //    creature the player scraps. This is the clause the measurement
+  //    demanded: capture is only worth a bay and a stall if what comes OUT
+  //    of the Wing is something the Theater cannot build. A trait on the
+  //    loose unit that the graduate's tokens do not carry is exactly the
+  //    bug this asserts against — the programme mints tokens off the genome,
+  //    and the trait is not in the genome.
+  const { admitBay, startRehab, tickRehab, findBay } = await import('../campaign/rehab.js');
+  const carrier = traited[0];
+  const gene = (carrier.unit.traits ?? [])[0];
+  assert.ok(content.traits[gene], `the carried trait is a real one (${gene})`);
+
+  const g = conquered();
+  g.campaign.containment = [];
+  admitBay(g, content, {
+    id: 'bay-r129', unitId: carrier.unit.id, unit: carrier.unit,
+    rivalId: carrier.rivalId, capturedAt: t0, rehab: null,
+  });
+  const enrolled = startRehab(g, 'bay-r129', content, t0);
+  assert.ok(enrolled.ok, `a released specimen can enter the Wing (${enrolled.msg})`);
+  const done = tickRehab(g, content, t0 + findBay(g, 'bay-r129').rehab.hours * HOUR129 + 1);
+  assert.equal(done.graduates.length, 1, 'and it graduates');
+
+  const grad = done.graduates[0];
+  const stamped = Object.values(grad.tokens ?? {}).filter((tk) => (tk.traits ?? []).includes(gene));
+  assert.ok(stamped.length > 0,
+    `the graduate's tokens carry ${gene} out of the Wing (0 of ${
+      Object.keys(grad.tokens ?? {}).length} tokens stamped)`);
+  assert.ok((g.dex.traits ?? []).includes(gene),
+    'and the Dex learns the gene the moment one walks out');
+
+  // 5. AND THE BOARD HAS TO SAY WHICH ERA IT IS IN. The wire says it once;
+  //    a player who was away when it scrolled past meets the second board
+  //    and reads it as the first. R40's dominion banner exists for exactly
+  //    this reason, and R128b's lesson applies: a released specimen that
+  //    EXISTS is not the same as one a player can tell apart from a stray.
+  //    Rendered for real rather than grepped, because the question is what
+  //    the Labs tab paints.
+  {
+    const { renderWarRoomScreen } = await import('../campaign/ui.js');
+    const stub = () => ({ innerHTML: '', querySelectorAll: () => [], querySelector: () => null,
+      classList: { remove: () => {}, add: () => {} } });
+    const draw = (st) => {
+      const root = stub();
+      renderWarRoomScreen(root, { state: st, content, now: () => t0, save: () => {},
+        goto: () => {}, refreshTicker: () => {}, takeSubtab: () => 'labs' });
+      return root.innerHTML;
+    };
+    const open = draw(s);
+    assert.ok(open.includes('release-card'),
+      'the Labs board carries the release as a standing card, not one line on the wire');
+    assert.ok(open.includes(rel.line), 'and it is the copy from data/breakout.json');
+
+    // The same board BEFORE the release must not say it — a card that is
+    // always there says nothing, which is the failure R40's banner avoids by
+    // being conditional.
+    const quiet = { ...newGameState(), seed: 129, funds: 9000 };
+    quiet.lastTickAt = t0;
+    quiet.campaign.rivals = { [rivalList(content)[0].id]: { defeats: 1, losses: 0, lastMetAt: t0 } };
+    tickBreakouts(quiet, content, t0 + 400 * HOUR129, t0);
+    assert.ok(!quiet.campaign.released, 'one lab beaten is not the ladder');
+    assert.ok(!draw(quiet).includes('release-card'),
+      'and a county with four labs still standing is told nothing');
+
+    // The trait rides on the row, because it is the reason to cross the
+    // county for THAT one rather than the cheapest one.
+    const chip = content.traits[gene].name;
+    assert.ok(open.includes(chip),
+      `the row wears the gene it is carrying (${chip} missing from the Labs board)`);
+  }
+
+  // Printed, like every other block's line, because a summary is the only
+  // thing that proves this block RAN. `SW_SHARD=fired` cost this session an
+  // hour of reading a green suite that had executed none of it.
+  const sampledOff = [...mintedSpecies.keys()].filter((sp) => !labSpecies.has(sp));
+  console.log(`   R129 release: ${loose.length} loose · ${mintedSpecies.size} species over 24 seeds, ${
+    sampledOff.length} off every lab palette, 0 variant lines smuggled · ${
+    traited.length} of ${loose.length} carrying a gene · ${
+    gene} walks out of the Wing into the Vault`);
 }
 
 // ---------------------------------------------------------------------------

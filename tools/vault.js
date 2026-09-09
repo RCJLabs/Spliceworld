@@ -26,6 +26,8 @@
 //    HOURS: the walk builds 1,834 creatures to keep nine, because parts are
 //    free and dismantling hands them straight back.
 import { walkedSave } from './fixtures.js';
+import { tickBreakouts } from '../campaign/breakout.js';
+import { rivalList } from '../campaign/rivals.js';
 import { newGameState } from '../save/save.js';
 import { consolidateVault } from '../splice/vault.js';
 import { loadSimContent, campaignWalk } from './sim.js';
@@ -62,7 +64,14 @@ const BOUNDS = {
   'ranch.eggs':           { max: () => TUNING.penMaxCapacity, by: 'penMaxCapacity — an egg holds a pen slot' },
   'news':                 { max: 40,  by: 'WIRE_KEEP in campaign/wire.js' },
   'campaign.captives':    { max: 12,  by: 'one per chimera, and the stable is capped' },
-  'campaign.loose':       { max: 12,  by: 'one per chimera, and the stable is capped' },
+  // R129 — DERIVED, because the release moved it. R82 capped the board at 4
+  // and this said 12 "one per chimera"; the release raises the cap to 9, and
+  // a bound that was already a sentence rather than a number would have
+  // absorbed that silently. It is `maxLoose`, whichever era the save is in,
+  // read from the tuning so a data edit moves it here too.
+  'campaign.loose':       { max: (c) => Math.max(c.breakoutMeta?.maxLoose ?? 4,
+                                                 c.breakoutMeta?.release?.maxLoose ?? 9),
+                            by: 'maxLoose in data/breakout.json, before and after the release' },
   'gauntletBeaten':       { max: (c) => (c.gauntlet ?? []).length || 8, by: 'the Gauntlet has as many stages as it has' },
   'discoveredCombos':     { max: (c) => Object.keys(c.combos).length, by: 'the combo list' },
   'guidesSeen':           { max: (c) => (c.guides ?? []).length || 64, by: 'the guide list' },
@@ -101,6 +110,26 @@ const BOUNDS = {
   'campaign.containment[].unit.salvage':       { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
   'campaign.containment[].unit.salvageGrades': { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
   'campaign.containment[].unit.tags':          { max: 8,  by: 'a body is a handful of tags' },
+  // R129 — and the same four on the LOOSE board, which carries the identical
+  // generated record. They were invisible until now for a reason worth
+  // stating: a walk used to finish with an empty board (every escapee hunted
+  // down before day 180), so these lists existed in the engine and never
+  // once in a snapshot. The release puts nine on the board at a time, and
+  // the declare-yourself rule found them the first walk after.
+  'campaign.loose[].unit.moves':               { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },
+  'campaign.loose[].unit.salvage':             { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
+  'campaign.loose[].unit.salvageGrades':       { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
+  'campaign.loose[].unit.tags':                { max: 8,  by: 'a body is a handful of tags' },
+  // Stated BEFORE a walk surfaces it. `arrayPaths` reads one record for the
+  // shape of all of them, and `unit.traits` only exists on a specimen that
+  // drew one — so whether this list is seen at all depends on which escapee
+  // happens to be first on the board, which is not a thing a gate should
+  // depend on. Both boards carry the same generated record.
+  'campaign.loose[].unit.traits':              { max: 4,  by: 'the release stamps one; the shape allows a handful' },
+  'campaign.containment[].unit.traits':        { max: 4,  by: 'whatever the specimen was carrying when it was bagged' },
+  // The release stamps at most one mutation trait per specimen; the list is
+  // a list so the shape matches every other trait-bearing thing in the save.
+  'campaign.loose[].traits':                   { max: 4,  by: 'a released specimen carries at most a handful' },
   'chimeras[].scars':     { max: 12, by: 'one per socket, twice over' },
   'inventory.parts[].traits':  { max: 4, by: 'a part carries at most a handful' },
   'ranch.stock[].traits':      { max: 4, by: 'an animal carries at most a handful' },
@@ -153,7 +182,43 @@ if (total * MAX_SLOTS > QUOTA_KB * KB) {
 }
 
 // ---- 2. bounds -------------------------------------------------------
-const seen = arrayPaths(save);
+// R129 — THE SHAPE THE WALK HAPPENED NOT TO END ON.
+//
+// `arrayPaths` reads one record for the shape of all of them, so a list that
+// is EMPTY at the moment the walk stops is a list this gate cannot see. That
+// is not hypothetical: `campaign.loose` finished at 0 of 9 on the walk that
+// shipped this milestone and at 8 on the walk before it, and which one you
+// get moves with any change that touches the campaign's RNG. Six milestones
+// of the loose board's four nested lists going unbounded is what that blind
+// spot bought, and it was found by luck rather than by the rule.
+//
+// So the paths come from the walked save PLUS one board the release fills,
+// and the SIZE numbers above still come from the walk alone — a bound is a
+// claim about the shape of a record, and a record's shape does not depend on
+// whether a campaign happened to leave one lying around.
+function withLooseBoard(base) {
+  const s = structuredClone(base);
+  s.campaign.rivals = Object.fromEntries(
+    rivalList(content).map((r) => [r.id, { defeats: 2, losses: 0, lastMetAt: null }])
+  );
+  s.campaign.loose = [];
+  s.campaign.released = null;
+  s.campaign.nextBreakAt = null;
+  const t = s.lastTickAt ?? Date.now();
+  tickBreakouts(s, content, t + 900 * 3600000, t);
+  return s;
+}
+const populated = withLooseBoard(save);
+if (!populated.campaign.loose.length) {
+  fails.push('the bounds walk could not fill a loose board, so nothing checks its record shape'
+    + ' — a rule with nothing to look at passes');
+}
+const byPath = new Map();
+for (const row of [...arrayPaths(save), ...arrayPaths(populated)]) {
+  const prev = byPath.get(row.path);
+  if (!prev || row.n > prev.n) byPath.set(row.path, row);
+}
+const seen = [...byPath.values()];
 if (REPORT) console.log(`\n${seen.length} array paths in the save:`);
 for (const { path, n, bytes: b } of seen.sort((a, b) => b.n - a.n)) {
   const rule = BOUNDS[path] ?? (TOKEN_TRAITS.test(path) ? BOUNDS['inventory.parts[].traits'] : null);

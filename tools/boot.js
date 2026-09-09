@@ -119,7 +119,36 @@ const REPORT = process.argv.includes('--report');
 // number DOWN instead — R101 and R121 both did, by 35 and 51 KB, and the
 // same deferral work is still available (the Vault and the Theater screens
 // are lazy; `campaign/map.js` and `campaign/campaign.js` are not).
-const FIRST_PAINT_KB = 1060;
+//
+// R129 RAISES IT: 1060 -> 1070, measured at 1068. The note above asked the
+// next milestone that wanted a raise to bring the number DOWN instead, so
+// this one owes an accounting rather than an argument.
+//
+// WHAT IT COST. 6.4 KB of eager JS and 1.8 KB of data. Every kilobyte of the
+// JS is in the world tick — `campaign/world.js` runs `tickBreakouts` on the
+// first frame, so the release, the pacing switch and the wild-anatomy
+// widening in `campaign/rivals.js` are eager by this file's own rule (a
+// module belongs here only if booting RUNS it), and all four modules were
+// already in the graph for R82's reasons.
+//
+// WHY THE DEFERRAL THE OLD NOTE NAMED IS NOT AVAILABLE. Both candidates were
+// re-checked this session and both are honest: `campaign/map.js` is imported
+// by `ranch/agenda.js` and `ranch/onboarding.js`, which ARE the Ranch's first
+// paint, and `campaign/campaign.js` owns `tickCampaign`. R121's rule has
+// already collected the easy screens — the graph is 48 modules and every one
+// of them runs.
+//
+// SO HERE IS THE MEASUREMENT THE NEXT PHASE SHOULD SPEND, taken this
+// session: `data/*.json` carries 54.1 KB of `_doc` prose — developer notes
+// the game never reads, downloaded by every player on every cold boot. That
+// is five times what R129 added and eight times what R128 did, it is the
+// same class of finding as R81's 400 KB of geometry (a whole category of
+// bytes in front of a player who has no use for them), and it is the last
+// big one left in the first paint. It is a phase and not a `sed` because
+// `tools/gen-parts.js` regenerates `data/parts.json` from its own `_doc` and
+// eight source comments cross-reference notes by filename, so it needs a
+// home, a gate, and R127's generator kept exact. ROADMAP R130.
+const FIRST_PAINT_KB = 1070;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //

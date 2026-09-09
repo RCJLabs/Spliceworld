@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 47
+- save version: 48
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -2444,54 +2444,103 @@ R102; R88–R90 remain.)*
   free-roaming chimeras of numerous combinations, some with unique traits.
   More battles with other chimeras and more chances to capture some."*
 
-  **MOST OF THIS ALREADY EXISTS, AS A TRICKLE.** R82 built the Breakout: an
-  escapee is a REAL rival chimera, minted by `rivalSpecimen` — the same
-  generator the ladder duels use — put on a **standing board with no
-  deadline**, fought like any encounter, and bagged through the Containment
-  Cannon into a bay and out through the Reorientation Wing at the grades its
-  old lab raised. The source, the board, the fight and the capture path are
-  all shipped. What is missing is the **event**, and the reasons to go and
-  get one.
+  **MEASURED FIRST, AND THE FIRST DRAFT OF THIS ENTRY WAS WRONG.** It called
+  the Breakout a drip that needed opening up. Over five 180-day walks:
 
-  Today it is deliberately a drip, tuned when there were still labs to beat:
-  `startsAfterDefeats: 1`, `cooldownHours: 22`, and **`maxLoose: 4`** — a cap
-  written so a fortnight away is a queue rather than a wall. Every escapee is
-  **one lab's parts at one lab's grades**, so five labs make five flavours of
-  the same thing, and none of them carries anything a player cannot already
-  build. `rivalsAllBeaten` is already computed in `campaign/campaign.js:111`
-  and is read by exactly two banner sentences.
+  | the draft said | measured |
+  | --- | --- |
+  | a drip; `maxLoose: 4` binds | **~190 escapees per walk**, ~190 breakout fights, and **0 left on the board** on every seed — the cap NEVER binds |
+  | five labs, five silhouettes | **181 distinct bodies of 200** — `chooseParts` already mixes freely inside a lab |
+  | — | the real ceiling is **species: 21 of 41**. Half the bestiary can never be loose |
+  | no traits | **confirmed — 0 of 200**, against 12 in `data/traits.json` |
 
-  **AND IT LANDS WHERE THE GAME IS EMPTIEST.** R87 measured the endgame: every
-  facility track maxed by median **day 28**, the county falls **day 35**, and
-  the remaining 145 days are **5.1 fights a day won 97% of the time**. R87
-  gave that money somewhere to go (tier IV, Gauntlet purses) and the Task
-  Force something to threaten. It did not give the player anything new to
-  *meet*. This is the entry that does.
+  **So the BATTLES half of the request is already shipped, in volume.** An
+  escapee fight is ~190 of a campaign's fights, more than one a day, and the
+  bodies are varied. What is missing is not quantity.
 
-  Proposed, medium, and mostly data + wiring on shipped systems:
+  **THE CAPTURE HALF IS THE HOLE, AND IT IS A DEEP ONE.** The same walks:
+  **1,035 specimens bagged**, all **40 bays full**, **13 programmes ever
+  started**, **1 rehabilitated**, and **0 programmes running** on day 180.
+  The bays are a parking lot.
 
-  - **A phase change, not a faster drip.** Beating the fifth lab fails every
-    containment in the county at once — a one-off release with its own wire
-    line and its own board state, so the moment reads as an event rather than
-    as the cooldown getting shorter.
-  - **Cross-lab bodies.** The generator takes parts from ONE lab; after the
-    release it splices ACROSS them, which is the "numerous combinations" the
-    request asks for and is the only way five labs produce more than five
-    silhouettes. Their grades come from whichever lab contributed the socket.
-  - **Unique traits, which is what makes bagging one worth the trip.**
-    `data/traits.json` holds **12** mutation traits, and Law 2 says every
-    conquest reward must expand what you can CREATE. A loose apex carrying a
-    trait the player cannot roll is a body worth capturing, extracting and
-    splicing — it feeds the Vault, the Theater and the Dex at once.
-  - **A cap that fits a county-wide release** rather than the 4 written for a
-    ladder still in progress, with the board's no-deadline rule intact so a
-    week away is still a queue.
+  The cause is not plumbing — it is that **a captured specimen is not worth a
+  stall**. A Wing graduate carries its old lab's grades, so it is worse than
+  what the Surgery Theater can build, and the walker's own R91/R92 policy
+  refuses to enrol what it would only scrap. R91 measured that directly:
+  **141 of 278 creatures were Wing graduates scrapped one table-cycle after
+  walking out, median life ten hours.** Capture is a dead end by design, and
+  no amount of extra escapees changes that.
 
-  *Done when: beating the fifth lab visibly releases the county's rival
-  stock; a loose chimera can carry anatomy from more than one lab and a trait
+  So the milestone is **the release, and a reason to want what it releases**:
+
+  - **A phase change on the fifth lab.** `rivalsAllBeaten` is already computed
+    in `campaign/campaign.js:111` and read by two banner sentences. Beating
+    the last lab fails every containment in the county at once — its own wire
+    line, its own board state, so it reads as an event rather than as the
+    cooldown getting shorter.
+  - **Anatomy the county has never seen.** After the release an escapee draws
+    outside the five lab palettes, which is the only way past the **21 of 41**
+    species ceiling — and the only way "numerous combinations" means anything
+    when 181 of 200 bodies are already distinct.
+  - **A trait you cannot roll, which is the whole point.** Law 2: every
+    conquest reward must expand what you can CREATE. A loose apex carrying one
+    of the 12 mutation traits is a body worth a stall, worth a bay, worth
+    extracting — it feeds the Vault, the Theater and the Dex at once, and it
+    is the first thing in the game that makes a bagged specimen better than a
+    built one.
+
+  *Done when: beating the fifth lab visibly releases the county's rival stock;
+  a loose chimera can carry anatomy from outside every lab palette and a trait
   the player cannot otherwise roll; and a 180-day walk that finishes the
-  ladder meets and captures measurably more rival anatomy after it than
-  before.*
+  ladder captures and KEEPS measurably more than the 1 it keeps today.*
+
+  **SHIPPED.** Every clause measured on the built game:
+
+  | clause | before | after |
+  | --- | --- | --- |
+  | the release is an event | nothing happens on the fifth defeat | fires once, six out at once, its own wire line and a standing Labs card |
+  | anatomy past the palettes | the 5 palettes, **21 of 41 species**, and nothing else | **37 species across 540 minted specimens, 16 of them off every lab palette** — bear, falcon, goat, goose, gorilla, heron, jellyfish, moth, otter, porcupine, pufferfish, ram, skunk, tiger, tortoise, wolf |
+  | a trait you cannot roll | 0 of 200 | **62.2% of 540**, against a declared 60% |
+  | the walk KEEPS more | 1 rehabilitated in 180 days | **3** — and 5/4/4/3 on the other four seeds, every one improved |
+
+  A county with four labs still standing is untouched: 4 escapees, 7 species,
+  0 off-palette, 0 traits, R82's 22h cooldown and cap of 4 exactly as before.
+
+  **The release does NOT draw variant anatomy, and that is R129's own bug
+  caught by R129's own verification.** The first draft widened a socket to
+  every part in the bestiary — including the six variant lines, which are 34
+  of the 244 parts and which R95 built a whole milestone around having
+  exactly ONE door: a mutation in your own Incubator. Measured with breeding
+  disabled outright, the five seeds that finish the ladder reached **20 to 34
+  variant parts anyway** while the two that do not reached 2 — so the release
+  was handing over the county's rarest bloodlines to a player who never bred
+  for one, and handing over the PARTS without the animal (`dex.variants`
+  stayed 0 on every seed). It draws from the 35 non-variant species now, up
+  from the 18 non-variant species the labs own. The three variants the labs
+  themselves favour (iron tortoise, pale cobra, storm eagle) are reachable
+  exactly as they were before, by R82's rules.
+
+  The battery is what found it: break 162 — *"the buyer locks the breeder out
+  again"* — went from caught to **MISSED**, because the release had become a
+  second door to the parts that break exists to strand. With the fix it is
+  decisive again: the median campaign drops from 237 parts to **220 (90.2%)**
+  and 14 variant parts are reached by no seed at all.
+
+  Two things the milestone found rather than built. The **Genes tab** had
+  never been measured full — twelve genes could only be learned by breeding,
+  so a walk that now collects them all put it 75 px and 19 words over R89's
+  budget; it is folded, and its N identical "???" rows became one line that
+  names the slots those genes ride in on, which is A6's combo defect
+  surviving in the one tab A6 did not touch. And the **loose board's four
+  nested arrays** had no stated bound — invisible for six milestones because
+  a walk always ended with an empty board, and R91's rule found them the
+  first walk that did not.
+
+  *The lesson, written down: a battery gate that aims at a shard aims with
+  the LANE letter, not the block name.* `SW_SHARD='team'` had been aiming the
+  facility gate at nothing for a milestone, and it stayed red on R128's
+  breaks anyway — because the unsharded assertions caught them. A gate that
+  runs the wrong subject and still fails teaches you nothing.
 
 - **R99 — The a11y gate learns to see overlap, contrast and motion.** This
   session shipped two defects the gate passed: **3.42:1** body text on the
@@ -3807,3 +3856,32 @@ moved one of them: the first premise held exactly, the second did not.
   among those views, and the battery proves each fix load-bearing.* ✅ —
   **111 breaks, 111 caught**, five of them new (the class name, the two
   `--ink` reversions, the theme token, and `.sheet`'s ground).
+
+- **R130 — 54 KB of shop talk in front of every player.** `data/*.json`
+  carries **54.1 KB of `_doc` prose** — developer notes the game never reads,
+  keyed into the same objects the engine loads, downloaded on every cold boot
+  by every player. Measured this session while looking for the kilobytes R129
+  spent: it is **five times what R129 added**, **eight times what R128 did**,
+  and it is the last big one left in the first paint (1,068 KB of 1,070).
+
+  This is R81's finding pointed at a new target. That milestone took 400 KB
+  of geometry out of the first paint by splitting the file into the half that
+  says what things ARE and the half that says what they LOOK LIKE; this is
+  the half that says WHY, and it belongs to nobody who has ever opened the
+  game. The top ten alone are 31 KB: `regions` 5.0, `stance` 4.6, `species`
+  4.3, `rivals` 3.4, `facility` 3.0, `frames` 2.5, `taskforce` 2.4,
+  `training` 2.2, `operations` 2.2, `breakout` 2.0.
+
+  **It is a phase and not a `sed`, for three reasons already checked.**
+  `tools/gen-parts.js` regenerates `data/parts.json` from its own `_doc`, and
+  R127's gate says that generator must reproduce the shipped file exactly.
+  Eight source comments cross-reference notes by filename ("see
+  `data/frames.json` `_doc`"). And three of smoke's own rules skip the key by
+  name, so the notes have to keep a home a tool can find rather than simply
+  going away — the point is that the BROWSER stops fetching them, not that
+  the writing stops.
+
+  *Done when: the first paint is measurably smaller than 1,000 KB with every
+  note still in the repository and still findable from the file it documents;
+  `tools/gen-parts.js` still reproduces `data/parts.json` byte for byte; and
+  a gate fails if a note creeps back into a file `data/loader.js` fetches.*

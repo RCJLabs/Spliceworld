@@ -1,6 +1,6 @@
 {
   "_doc": "R101 — one real save per version, taken from the commit where that version was current. Regenerate with `npm run gen-saves`; `--check` regenerates and compares where git history is available, and falls back to these hashes where it is not (the break battery copies the tree without .git). Do not hand-edit a fixture: it stops being a save the game actually wrote.",
-  "fixtures": 47,
+  "fixtures": 48,
   "fromCommit": {
     "1": "70799bcd860a7b9b63fe49dbb7dbf607ddfe8c0a",
     "2": "a0ddede1f15e22abb17b9e1ec9870ec4cc204c17",
@@ -48,7 +48,8 @@
     "44": "bededdfcef650268c885750f5122548ae7135dca",
     "45": "a9cd2fe89a79eff04941e274655c8e05b468b217",
     "46": "603d33dfbbb0548e393b3226576ab6174e5cf71c",
-    "47": "5e59266db600e42fc57007cc9ec73c0d98aa31b2"
+    "47": "9570dfcbf0da76cc514a28f448659caf9b566ae1",
+    "48": "8ad152f3cbf117201b83bf98dd6da18b1d0a3293"
   },
   "sha256": {
     "v1.json": "0087bf9e6a5a9fd102b65dba0ef2f7e3ff30db37d9ff3aea9de7d9ba8dd3f792",
@@ -97,6 +98,7 @@
     "v44.json": "be27ddf8b8c02f6e153c36bae24e1d2d2e3fd94f74b493ebda913a262a768572",
     "v45.json": "4eae9e6e7ffa20f346321e44969a3f0365aba9b12c887ee313962cdc2df3c123",
     "v46.json": "89e61e23a180925a95e35efc53e35113587fee04c61d3caaa7ca51e32b309fe9",
-    "v47.json": "5c3ca1b894743760215ea2640718f7fdb3912257e513cdf8628b4bc2c8dcc30e"
+    "v47.json": "5c3ca1b894743760215ea2640718f7fdb3912257e513cdf8628b4bc2c8dcc30e",
+    "v48.json": "1896092106be1b73437b77efa99cf1fe8da583d4e55fb3fbfb55e8c55aa4b6ad"
   }
 }

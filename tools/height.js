@@ -121,7 +121,16 @@ const BUDGET = {
   // milestone's own success arriving on a screen with no fold. Folding the
   // Combos tab is owed alongside the Vault's.
   'dex:combos':   { folded: 2350,  tallest: 2350 },
-  'dex:genes':    { folded: 1100,  tallest: 1100 },
+  // R129 FOLDS IT, WHICH BRINGS THE SHUT HALF DOWN AND BUDGETS THE FOLD:
+  // 1100/1100 -> 400 shut (measured 291) and 1250 open (measured 1185).
+  // Twelve genes could only be learned by breeding for them, so this tab
+  // spent the game mostly unsequenced and its full shape was never measured
+  // — the release hands the player genes through the Wing, a day-180 walk
+  // now knows all twelve, and 219 words arrived on a screen with no fold.
+  // Same answer R89 gave the Foes tab and for the same reason: the field
+  // guide is looked things up in, not read, so the shut number is the one
+  // that matters and the open one is a ratchet a reader pays deliberately.
+  'dex:genes':    { folded: 400,   tallest: 1250 },
   // R89's criterion names 2,500 for the Foes tab, and that is a budget on
   // how it PRESENTS: 4,113px shut was five and a half screens of reference
   // material nobody had asked for. Folded it is 664.
@@ -199,7 +208,10 @@ const WORDS = {
   // eight, so it grew for a good reason and has no fold to hide behind. A
   // ratchet stops the creep; folding it is owed alongside the Vault's.
   'dex:combos':   { folded: 550,  open: 550 },
-  'dex:genes':    { folded: 200,  open: 200 },
+  // R129: 200/200 -> 100 shut (measured 50) and 250 open (measured 221).
+  // See the height note above — the words are the twelve descriptions, and
+  // they are now behind the fold that holds them.
+  'dex:genes':    { folded: 100,  open: 250 },
   'dex:foes':     { folded: 150,  open: 900 },
 };
 

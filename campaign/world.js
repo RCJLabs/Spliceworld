@@ -52,7 +52,12 @@ export function tickWorld(state, content, now) {
   // fight the player can go and have rather than a timer they have to beat.
   // Every escape says so on the wire, including the ones that happened while
   // the app was closed: the board they come back to has to be explained.
-  for (const e of tickBreakouts(state, content, now, since).escaped) {
+  // R129 — and once, a phase rather than a specimen. The release says so
+  // before the six bodies it let out do: a player returning to a board of
+  // nine wants the headline above the sightings, not buried under them.
+  const broke = tickBreakouts(state, content, now, since);
+  if (broke.released) emitNews(state, content, 'labs_open', {});
+  for (const e of broke.escaped) {
     emitNews(state, content, 'specimen_loose', { lab: e.lab, sighting: e.sighting });
   }
   // R85 — the top of the instability scale, after the scars and before the

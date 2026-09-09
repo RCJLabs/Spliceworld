@@ -58,6 +58,42 @@ export function breakoutEligible(state, content) {
   return beaten >= (t.startsAfterDefeats ?? 1);
 }
 
+// R129 — THE LAST LAB FALLS OPEN. Beating the fifth rival was the one rung
+// on the ladder with no consequence. Measured before any of this was
+// written: the board is not a drip — five 180-day walks already spawn ~190
+// escapees and the board is empty on every seed, so `maxLoose` never binds
+// and "more often" would have been invisible. The ceilings were elsewhere:
+// the lab palettes own 21 of 41 species, and a bagged specimen is not worth
+// a stall because a Wing graduate carries its old lab's grades. So this is a
+// PHASE — a moment, and something in it worth crossing the county for.
+export function releaseTuning(content) {
+  return breakoutTuning(content).release ?? {};
+}
+
+// Every lab beaten at least once. The same question `campaign.js` asks for
+// its banner, asked here rather than imported, because `campaign.js` imports
+// this module and the cycle is not worth one predicate.
+export function ladderFinished(state, content) {
+  const labs = rivalList(content);
+  return labs.length > 0
+    && labs.every((r) => (rivalRecord(state, r.id).defeats ?? 0) > 0);
+}
+
+// The county is open once the release has fired, and it fires exactly once.
+export function released(state) {
+  return state.campaign?.released ?? null;
+}
+
+// After the release the board is leakier and holds more. Before it, R82's
+// numbers stand untouched — this cannot make the early game busier.
+function pacing(state, content) {
+  const t = breakoutTuning(content);
+  const r = releaseTuning(content);
+  return released(state)
+    ? { cooldownHours: r.cooldownHours ?? t.cooldownHours, maxLoose: r.maxLoose ?? t.maxLoose }
+    : { cooldownHours: t.cooldownHours ?? 22, maxLoose: t.maxLoose ?? 4 };
+}
+
 // Which lab loses this one. Weighted by how badly they are losing to you:
 // a lab you have beaten four times is a lab whose paperwork has stopped
 // being careful. Seeded on the escape's own index, so a reload cannot
@@ -77,7 +113,7 @@ function scheduleNext(state, content, from) {
   const cam = state.campaign;
   const rng = rngStream(state.seed, 'breakout:schedule', cam.breakoutCount ?? 0);
   const jitter = 1 + (rng() * 2 - 1) * (t.jitter ?? 0);
-  cam.nextBreakAt = from + Math.round((t.cooldownHours ?? 22) * jitter * HOUR);
+  cam.nextBreakAt = from + Math.round(pacing(state, content).cooldownHours * jitter * HOUR);
 }
 
 // The specimen itself. Built by the rival generator, so a loose one is
@@ -94,16 +130,27 @@ function makeEscapee(state, content, rival, n, now) {
     meta.powerCap,
     rival.powerScale * (1 + (record.defeats ?? 0) * meta.powerPerDefeat)
   );
+  // R129 — after the release, the SAME generator is asked for a wilder
+  // specimen rather than a second generator being written beside it. R82's
+  // rule is that a loose one is indistinguishable from a duellist because it
+  // WAS one; a parallel builder would be two things to keep in step and the
+  // first place the two would drift.
+  const rel = releaseTuning(content);
+  const wild = released(state)
+    ? { socketChance: rel.wildSocketChance ?? 0.45, traitChance: rel.traitChance ?? 0.6 }
+    : null;
   const unit = rivalSpecimen(rival, content, {
     rng, meta, defeats: record.defeats ?? 0,
     index: Math.floor(rng() * Math.max(1, rival.frames.length)),
-    powerScale, idSuffix: `loose${n}`,
+    powerScale, idSuffix: `loose${n}`, wild,
   });
   const sightings = t.sightings ?? [];
   return {
     id: `loose-${n}`,
     rivalId: rival.id,
     unit,
+    wild: !!wild,
+    traits: unit.traits ?? [],
     escapedAt: now,
     sighting: sightings.length ? sightings[Math.floor(rng() * sightings.length)] : 'somewhere in the county',
     reward: Math.round((t.rewardBase ?? 140) + unit.power * (t.rewardPerPower ?? 5)),
@@ -142,6 +189,36 @@ export function tickBreakouts(state, content, now, since = now) {
     cam.nextBreakAt = since + Math.round((t.firstDelayHours ?? 5) * HOUR);
   }
 
+  // The release fires here rather than at the duel's end because this is the
+  // tick that already replays a gap: beat the fifth lab, close the app for a
+  // week, and it still happens at the moment it was due. R78's lesson, which
+  // the loop below was already written around.
+  const rel = releaseTuning(content);
+  // A FLAG RATHER THAN A COMPARISON. The first draft returned
+  // `cam.released === since ? cam.released : null`, which reads "did the
+  // release happen on THIS tick" off a timestamp — and two ticks in the same
+  // millisecond share a `since`, so the headline could go out twice on a
+  // save that ticked on focus and on a timer in the same instant. The branch
+  // that fires it is the only thing that knows, so it says so.
+  let firedRelease = false;
+  if (!cam.released && ladderFinished(state, content)) {
+    cam.released = since;
+    firedRelease = true;
+    const burst = [];
+    for (let i = 0; i < (rel.burst ?? 6); i++) {
+      if (cam.loose.length >= (rel.maxLoose ?? 9)) break;
+      const lab = labFor(state, content, cam.breakoutCount);
+      if (!lab) break;
+      const one = makeEscapee(state, content, lab, cam.breakoutCount, since);
+      cam.loose.push(one);
+      cam.breakoutCount += 1;
+      burst.push({ ...one, lab: lab.name });
+    }
+    escaped.push(...burst);
+    // The clock restarts from the release, on the release's own pacing.
+    scheduleNext(state, content, since);
+  }
+
   let guard = 0;
   while (guard++ < 400) {
     if (now < cam.nextBreakAt) break;
@@ -150,7 +227,7 @@ export function tickBreakouts(state, content, now, since = now) {
     // only hold so many loose science projects. The clock still advances
     // from when this one was due, so a player who clears the board does not
     // then wait a fresh cooldown for something that was already overdue.
-    if (cam.loose.length >= (t.maxLoose ?? 4)) {
+    if (cam.loose.length >= pacing(state, content).maxLoose) {
       scheduleNext(state, content, due);
       continue;
     }
@@ -162,7 +239,7 @@ export function tickBreakouts(state, content, now, since = now) {
     escaped.push({ ...escapee, lab: rival.name });
     scheduleNext(state, content, due);
   }
-  return { escaped };
+  return { escaped, released: firedRelease ? cam.released : null };
 }
 
 // The encounter. One specimen, inline, so nothing has to exist in

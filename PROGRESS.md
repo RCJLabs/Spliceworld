@@ -1,5 +1,122 @@
 # PROGRESS
 
+## Session 135 — R129: the last lab falls open ✅
+
+Asked for directly: *"once you beat the last rival scientist, the chimeras
+from rival labs escape."* The first thing I did was measure whether the game
+already did it, and **my own roadmap entry was wrong**. It called R82's
+breakout a drip that needed opening up. Over five 180-day walks:
+
+| the entry said | measured |
+| --- | --- |
+| a drip; `maxLoose: 4` binds | **~190 escapees a walk**, ~190 breakout fights, **0 left on the board** on every seed — the cap never binds |
+| five labs, five silhouettes | **181 distinct bodies of 200** |
+| — | the real ceiling is **species: 21 of 41**. Half the bestiary can never be loose |
+| no traits | confirmed, **0 of 200** against 12 in `data/traits.json` |
+
+So the **battles** half of the request was already shipped, in volume. What
+was missing was a *moment*, and a reason to want what it releases.
+
+### The capture half was the hole, and it was a deep one
+
+Same walks: **1,035 specimens bagged, 40 bays full, 13 programmes ever
+started, ONE rehabilitated.** The bays are a parking lot, and not for want of
+plumbing — a Wing graduate carries its old lab's grades, so it is worse than
+what the Theater can build and the walker's own R91 policy will not spend a
+stall on one. Capture was a dead end by design.
+
+### What shipped
+
+| clause | before | after |
+| --- | --- | --- |
+| the release is an event | nothing on the fifth defeat | fires once, six out at once, its own wire line, a standing Labs card |
+| anatomy past the palettes | the 5 palettes, **21 of 41 species**, and nothing else | **37 species across 540 specimens, 16 off every lab palette** |
+| a trait you cannot roll | 0 of 200 | **62.2% of 540**, against a declared 60% |
+| the walk KEEPS more | **1** rehabilitated in 180 days | **3** — and 5/4/4/3 on the other four seeds, every one improved |
+
+A county with four labs still standing is untouched: 4 escapees, 7 species,
+0 off-palette, 0 traits, R82's numbers exactly.
+
+The gene reaching the **Vault** is the clause that mattered. The Wing mints
+tokens off the genome and a released specimen's trait is on the *unit*, so it
+was dropped at the door — the trait existed for the length of one fight and
+then stopped. It is stamped on every token whose slot it fits now, the Dex
+learns it the moment one walks out, and the walker keeps a gene-bearing
+capture even under stall pressure, which is the thing R91's policy was never
+told about.
+
+### The bug this milestone shipped, and its own battery caught
+
+The first draft of the wild draw widened a socket to **every part in the
+bestiary** — including the six variant lines, which are 34 of the 244 parts
+and which R95 built a whole milestone around having exactly ONE door: a
+mutation in your own Incubator. Measured with breeding disabled outright,
+the five seeds that finish the ladder reached **20 to 34 variant parts
+anyway**; the two that do not reached 2. The release was handing the county's
+rarest bloodlines to a player who never bred for one — and handing over the
+PARTS without the animal, since `dex.variants` stayed 0 on every seed.
+
+What found it was break **162** going from caught to **MISSED**: *"the buyer
+locks the breeder out again, and the six variant lines are never rolled for"*
+stopped failing, because there was now another way in. Fixed, it is decisive
+again — the median campaign drops from 237 parts to **220 (90.2%)** with 14
+variant parts reached by no seed at all.
+
+*The lesson, and it is the same one R83 wrote down: a milestone that changes
+the walk has to re-derive every assertion the walk moves.* I read four green
+gates and one missed break as "a stale break" for twenty minutes before
+measuring it.
+
+### Two things the milestone found rather than built
+
+**The Genes tab had never been measured full.** Twelve genes could only be
+learned by breeding for them, so it spent the game mostly unsequenced; a walk
+that now collects all twelve put it **75 px and 19 words over budget** with
+no fold. Folded, like every other band of the field guide — **1,175 px shut
+becomes 291** — and its N identical `???` rows became one line naming the
+slots those genes ride in on, which is A6's combo defect surviving in the one
+tab A6 did not touch.
+
+**The loose board's four nested arrays had no stated bound.** Invisible for
+six milestones because a walk always ended with an empty board; R91's rule
+found them the first walk that did not.
+
+### The boot ceiling, and what I did not do about it
+
+R128 asked the next milestone that wanted a raise to bring the number DOWN
+instead. R129 wanted one: **1,060 → 1,070 KB, measured 1,068.** Every
+kilobyte is world-tick code — `campaign/world.js` runs `tickBreakouts` on the
+first frame — and both deferrals R128's note named were re-checked and are
+honest (`campaign/map.js` is the Ranch's own first paint; `campaign/
+campaign.js` owns `tickCampaign`).
+
+So the note carries an accounting instead of an argument, and a number to
+spend next time: **`data/*.json` ships 54.1 KB of `_doc` prose** the game
+never reads, to every player on every cold boot. Five times what R129 added,
+eight times what R128 did, and R81's 400 KB of geometry all over again.
+Queued as **R130** rather than done here, because `tools/gen-parts.js`
+regenerates `parts.json` from its own `_doc` and R127's gate says that has to
+stay byte-exact.
+
+### The lesson, written down
+
+*A battery gate that aims at a shard aims with the LANE letter, not the block
+name.* `SW_SHARD='team'` had been pointing the facility gate at nothing for a
+milestone — `inShard('team')` compares `SHARD_OF['team']`, which is `'c'`,
+against the string `'team'` — and it stayed red on R128's breaks anyway,
+because the unsharded assertions caught them. **A gate that runs the wrong
+subject and still fails teaches you nothing.** The same slip cost this
+session an hour on `SW_SHARD=fired` before I caught it. The release block has
+its own shard name now and prints its own summary line, which is the only
+thing that proves it ran.
+
+### Next session's first task
+
+R130 — take the 54.1 KB of `_doc` out of the browser's path without taking it
+out of the repository. Still carried from before: paginating the Ranch (owed
+since R46, 3,485 px shut), and folding the Vault's card and the Dex's Combos
+tab.
+
 ## Session 134 — R99: a rule with nothing to look at passes ✅
 
 Both named defects were replayed against the gate before anything was
