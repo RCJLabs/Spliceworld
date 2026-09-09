@@ -1,5 +1,94 @@
 # PROGRESS
 
+## Session 139 — R133: the Ranch's chrome earns its height (again) ✅
+
+R131 gave this screen a page ceiling and its own entry named what that could
+not reach: most of the Ranch was never the herd. Measured on the clock-pinned
+day-180 save at 380px, the roster was **686px of a 2,368px screen** — and the
+two biggest chrome cards arrived *open*, 44% of the screen before the player
+touched anything.
+
+| | before | after |
+| --- | ---: | ---: |
+| Ranch, shut | 2,368px | **1,831px** — 2.3 phone screens |
+| of that, chrome | 1,521px | **984px** |
+| words, shut | 391 | **287** |
+| the facility card sits | 1,199px down | **893px down** |
+
+### The agenda was teaching people who were already doing it
+
+Its 795px was seven rows of a label over a two-line fine-print, and every
+fine-print was the same two sentences — a live number, then a standing
+lesson:
+
+> "45 pairings the vat will take. *Two go in, one genome out that neither of
+> them was.*"
+
+Two facts make the lesson indefensible rather than merely long. `agenda()`
+returns **only rows whose `ready` predicate is true**, so a lesson is only
+ever shown to somebody already doing the thing it explains. And
+`data/guides.json` already teaches it — "Two adults make a third" is verbatim
+the breeding row's sentence. This is R37's rule against a duplication that
+has been on the screen ever since.
+
+The same reading found dead prose: the `graduate` row opened with `if
+(!ripe.length) return 'A grown animal becomes six parts…'`, which its own
+`ready` predicate makes **unreachable**. Same class as R130's `_doc` and
+R10's dead monologue slots.
+
+### The bound on a row is the shortest row on the screen
+
+My first version of that rule compared a row against a `spend` chip, and it
+was the wrong shape: a chip is a pill with a short number, a row is a label
+over a sentence, and holding them equal would have deleted the sentence R120
+built rather than shortening it. *Every label is one line, so a row that does
+not wrap is exactly as tall as every other row that does not; a row that
+wraps is taller than all of them.* Nothing typed (R61), and the gate names
+the offending sentence when it fails.
+
+### Two rules reversed on purpose, and one deliberately not
+
+R47 had the Breeding Pen open itself the moment a pairing existed — but on
+any save past the opening a pairing always exists (the walk offers 36), so
+the condition was decoration and the card was 257px on every visit. And
+`assault`'s stood-down line was a fixed sentence for most of a campaign,
+which is exactly what R120's own rule forbids: *"the same sentence whether
+one thing or twenty are waiting."*
+
+**R98's rule stands.** The chrome stays out of the animals' exclusive group,
+because a player comparing an animal against what the agenda is asking for
+wants both open. What changed is the default, not the rule.
+
+### What the chrome budget cannot prove, written down
+
+Breaks 204 and 205 grow the chrome and the rule fires — but the total fires
+with it, so neither break shows the chrome number doing anything the total
+was not already doing. The case it exists for is a **trade**: a milestone
+that shortens the roster and spends the saving on a taller agenda, where the
+total never moves. That is a two-place change and a break is one anchor. The
+rule is still worth having — R131 shipped against a total that hid exactly
+this — and `tools/height.js` says so, where somebody might otherwise read two
+green breaks as proof of more than they are.
+
+I also wrote the chrome budget as 900 *before* doing the work, as a target.
+The measurement is 984 and the last 84px are not there to find: 697 of the
+984 is the agenda, and everything else on the screen adds to 287. The budget
+sits above the measurement like every other number in that table rather than
+below it like a wish.
+
+**Verified:** height green (9 screens), suite green in 180.2s, a11y green,
+handlers 2,200 fired, boot 1,021 KB, stale and saves green across v1–v49. No
+`SAVE_VERSION` bump: the new `slush-fund` fold is a key in the existing
+`ui.collapsed` map, so an old save has no key and gets the default.
+
+**Known issue, carried.** The agenda still lists things that are also on the
+screen it is drawn on — "Expand the pens · $2350" is a chip in Right Now and
+a button inside the money card, 300px apart. The fix is for the chip to open
+the card it names, which turns the agenda into an index.
+
+**Next session's first task:** that chip-opens-the-card change, or the Dex's
+Combos tab — 2,293px with no fold, the last screen R131 left alone.
+
 ## Session 138 — R132: the break battery runs four at a time ✅
 
 Not a roadmap milestone — the tool that verifies every milestone had become
