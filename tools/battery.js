@@ -1930,7 +1930,7 @@ const BREAKS = [
     // forbids actually happen: a screen with no entry at all.
     n: 171, gate: HEIGHT, name: 'a screen can ship without declaring what it is allowed to say',
     file: 'tools/height.js',
-    anchor: "  'dex:genes':    { folded: 200,  open: 200 },",
+    anchor: "  'dex:genes':    { folded: 100,  open: 250 },",
     to: '',
   },
   // --- gate: a11y (R99 — the two defects the entry names, replayed) --------
@@ -2391,13 +2391,13 @@ const BREAKS = [
     n: 36, gate: BREAKOUT, name: 'the escape clock arms at the wrong end of a month away',
     file: 'campaign/breakout.js',
     anchor: '    cam.nextBreakAt = since + Math.round((t.firstDelayHours ?? 5) * HOUR);',
-    to: '    cam.nextBreakAt = now + Math.round((t.firstDelayHours ?? 5) * HOUR);\n    return { escaped };',
+    to: '    cam.nextBreakAt = now + Math.round((t.firstDelayHours ?? 5) * HOUR);\n    return { escaped, released: null };',
   },
   {
     n: 37, gate: BREAKOUT, name: 'the schedule advances from the wrong instant, so the replay drifts',
     file: 'campaign/breakout.js',
-    anchor: '    scheduleNext(state, content, due);\n  }\n  return { escaped };',
-    to: '    scheduleNext(state, content, now);\n  }\n  return { escaped };',
+    anchor: '    scheduleNext(state, content, due);\n  }\n  return { escaped, released:',
+    to: '    scheduleNext(state, content, now);\n  }\n  return { escaped, released:',
   },
   {
     n: 38, gate: BREAKOUT, name: 'nothing gates the escapes, so a save that beat nobody still loses specimens',

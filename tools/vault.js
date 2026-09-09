@@ -26,6 +26,8 @@
 //    HOURS: the walk builds 1,834 creatures to keep nine, because parts are
 //    free and dismantling hands them straight back.
 import { walkedSave } from './fixtures.js';
+import { tickBreakouts } from '../campaign/breakout.js';
+import { rivalList } from '../campaign/rivals.js';
 import { newGameState } from '../save/save.js';
 import { consolidateVault } from '../splice/vault.js';
 import { loadSimContent, campaignWalk } from './sim.js';
@@ -180,7 +182,43 @@ if (total * MAX_SLOTS > QUOTA_KB * KB) {
 }
 
 // ---- 2. bounds -------------------------------------------------------
-const seen = arrayPaths(save);
+// R129 — THE SHAPE THE WALK HAPPENED NOT TO END ON.
+//
+// `arrayPaths` reads one record for the shape of all of them, so a list that
+// is EMPTY at the moment the walk stops is a list this gate cannot see. That
+// is not hypothetical: `campaign.loose` finished at 0 of 9 on the walk that
+// shipped this milestone and at 8 on the walk before it, and which one you
+// get moves with any change that touches the campaign's RNG. Six milestones
+// of the loose board's four nested lists going unbounded is what that blind
+// spot bought, and it was found by luck rather than by the rule.
+//
+// So the paths come from the walked save PLUS one board the release fills,
+// and the SIZE numbers above still come from the walk alone — a bound is a
+// claim about the shape of a record, and a record's shape does not depend on
+// whether a campaign happened to leave one lying around.
+function withLooseBoard(base) {
+  const s = structuredClone(base);
+  s.campaign.rivals = Object.fromEntries(
+    rivalList(content).map((r) => [r.id, { defeats: 2, losses: 0, lastMetAt: null }])
+  );
+  s.campaign.loose = [];
+  s.campaign.released = null;
+  s.campaign.nextBreakAt = null;
+  const t = s.lastTickAt ?? Date.now();
+  tickBreakouts(s, content, t + 900 * 3600000, t);
+  return s;
+}
+const populated = withLooseBoard(save);
+if (!populated.campaign.loose.length) {
+  fails.push('the bounds walk could not fill a loose board, so nothing checks its record shape'
+    + ' — a rule with nothing to look at passes');
+}
+const byPath = new Map();
+for (const row of [...arrayPaths(save), ...arrayPaths(populated)]) {
+  const prev = byPath.get(row.path);
+  if (!prev || row.n > prev.n) byPath.set(row.path, row);
+}
+const seen = [...byPath.values()];
 if (REPORT) console.log(`\n${seen.length} array paths in the save:`);
 for (const { path, n, bytes: b } of seen.sort((a, b) => b.n - a.n)) {
   const rule = BOUNDS[path] ?? (TOKEN_TRAITS.test(path) ? BOUNDS['inventory.parts[].traits'] : null);
