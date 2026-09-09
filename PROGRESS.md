@@ -49,6 +49,22 @@ rather than left green asserting something untrue.
 **What the split is worth:** median chimera life **74.8 days**, against
 48.5 before. A cheap undo clears a failure without making the rebuild cheap.
 
+### The full battery retired a break, and that is the finding underneath
+
+206 of 207. The miss was break 164 — R95's conveyor belt, which removes the
+walker's minimum-tenure guard. On main that patch gives **2.92 days** of
+median chimera life and the gate catches it; on this tree it gives **13.3**
+and the gate passes.
+
+Measured four ways: *nothing on the dismantle side can make a conveyor belt
+any more.* A free dismantle with the guard also gone is **87.2 days** —
+longer still, because fewer creatures get made at all. Creating is the only
+throttle now, and a stronger one than the shared clock ever was. The rule's
+falsifier is a two-place change (a cheap splice AND room for the output), so
+it is not battery-reachable — the third rule in this repo with that shape.
+Retired with the numbers written into `tools/vault.js` rather than left
+MISSED or left green against a defect the game no longer has.
+
 ### Budgets that moved, all argued in place
 
 `KB_CAP` 553 → 557 and `FIRST_PAINT_KB` 1025 → 1030 — `tablePointer` and the

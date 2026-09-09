@@ -2224,15 +2224,35 @@ const BREAKS = [
   return null;`,
     to: '  return unitId;',
   },
-  {
-    // R95 — the conveyor belt. Without a minimum tenure the chaos vat runs
-    // 119 times in 180 days and every decant is scrapped within hours: 200
-    // creatures built to keep ten, median life thirty-six hours.
-    n: 164, gate: VAULT, name: 'a decant can be scrapped the hour it leaves the tank, and the vat becomes a conveyor belt',
-    file: 'tools/sim.js',
-    anchor: '        .filter((c) => isFit(c) && now - (c.createdAt ?? 0) >= KEEP_DAYS * WALK_DAY).pop();',
-    to: '        .filter((c) => isFit(c)).pop();',
-  },
+  // R135 RETIRES BREAK 164, and the measurement is the reason.
+  //
+  // It removed the walker's minimum-tenure guard in tools/sim.js, and on
+  // main that produced R95's conveyor belt: median chimera life 2.92 days
+  // against a floor of 5, caught. On R135's tree the same patch leaves it at
+  // 13.3 days and the gate passes, so the break stopped biting — the full
+  // battery caught that, which is what trigger #1 is for.
+  //
+  // WHY, measured four ways. A dismantle at 3h clears a slot quickly and
+  // then the walker waits 20h to splice, so CREATING became the only
+  // throttle — and a stronger one than the old shared clock. Nothing on the
+  // dismantle side can make a conveyor belt any more: a FREE dismantle with
+  // the tenure guard also gone measures 87.2 days, longer still, because
+  // fewer creatures get made at all.
+  //
+  //   main + no tenure guard            2.92 days   (gate fails — caught)
+  //   R135 + no tenure guard           13.3  days   (gate passes — missed)
+  //   R135 + free dismantle, no guard  87.2  days
+  //   R135 + a 30-minute SPLICE        62.7  days
+  //   …and the same with the vault +50% and the stable 8/16
+  //                                     2.0  days
+  //
+  // So the churn rule is still true and still worth having — R135 moved it
+  // from 48.5 days to 74.8 — but its falsifier is now a TWO-place change: a
+  // cheap splice AND room to put the output. A break is one anchor, so it is
+  // not battery-reachable, which is the third rule in this repo with that
+  // shape (see R133's chrome budget and the note in splice/facility.js).
+  // Retired rather than left MISSED, and rather than left green against a
+  // defect the game no longer has.
   {
     n: 150, gate: VAULT, name: 'a save that predates the cap is pruned instead of paid, so nine thousand parts are deleted in silence',
     file: 'splice/vault.js',

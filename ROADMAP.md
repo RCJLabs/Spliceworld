@@ -3475,6 +3475,18 @@ moved one of them: the first premise held exactly, the second did not.
   II; the screen where you dismantle names the upgrade that speeds it up and
   can reach it; and the busy message can say a time under an hour.*
 
+  **And it retired a battery break, which is the finding underneath.** The
+  full run came back 206 of 207, and the miss was break 164 — R95's conveyor
+  belt, which removes the walker's minimum-tenure guard. On main that patch
+  produces 2.92 days of median chimera life and the gate catches it; on this
+  tree it leaves 13.3 and the gate passes. Measured four ways, *nothing on
+  the dismantle side can make a conveyor belt any more* — a free dismantle
+  with the guard also gone is 87.2 days, longer still, because fewer
+  creatures get made at all. Creating is the only throttle now, and a
+  stronger one than the shared clock was. The rule's falsifier is a TWO-place
+  change (a cheap splice AND room for the output), so it is not
+  battery-reachable; the numbers live in `tools/vault.js` and `battery.js`.
+
   **Two budgets moved, both argued in place:** `KB_CAP` 553 → 557 and
   `FIRST_PAINT_KB` 1025 → 1030 — the pointer and the split clock are eager
   because the *Ranch* needs those modules, so the bytes are paid on a screen
