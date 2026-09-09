@@ -35,4 +35,4 @@ tools/                           dev-only: smoke test, part gallery
 
 ## The one rule that matters
 
-**All content is data.** A creature is a genome (`{frame, parts}`), parts are JSON shape specs, frames define standardized sockets, and any part fits any socket of its slot. Adding a species = adding JSON. If adding content ever requires touching engine code, the engine is wrong — fix the engine. Part-local drawing conventions are documented in `data/frames.json` (`_doc`).
+**All content is data.** A creature is a genome (`{frame, parts}`), parts are JSON shape specs, frames define standardized sockets, and any part fits any socket of its slot. Adding a species = adding JSON. If adding content ever requires touching engine code, the engine is wrong — fix the engine. Part-local drawing conventions are documented in `data/notes/frames.md` — every data file has a note there, and none of them is shipped to the browser (R130).

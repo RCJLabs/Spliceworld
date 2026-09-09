@@ -149,17 +149,30 @@ const REPORT = process.argv.includes('--report');
 // eight source comments cross-reference notes by filename, so it needs a
 // home, a gate, and R127's generator kept exact. ROADMAP R130.
 //
-// R131 RAISES IT AGAIN: 1070 -> 1080, measured at 1075, and this is the
-// SECOND consecutive raise, which is the pattern R128's note above exists to
-// stop. Said plainly rather than argued: `ui/pager.js` is 2.8 KB and the
-// Ranch is the screen the shell paints without a dynamic import, so it is
-// first-paint by the same rule that admits everything else here; the rest is
-// the two screens' own wiring. Trimming my own prose paid back 1 KB of it.
+// R131 RAISED IT AGAIN: 1070 -> 1080, measured at 1075, and both that note
+// and R129's said the same thing — the payment is `data/*.json`'s `_doc`,
+// not this ceiling.
 //
-// The payment is already measured and queued and it is not this ceiling:
-// R130, the 54.1 KB of `_doc` in `data/*.json`. Two raises in a row is the
-// argument for doing it, not against.
-const FIRST_PAINT_KB = 1080;
+// R130 COLLECTS IT: 1080 -> 1025, MEASURED AT 1021, and the first paint has
+// not been this small since R121. 53.8 KB of developer prose left the CORE
+// payload (401.1 KB -> 347.3) without one word leaving the repository: the
+// notes are `data/notes/<name>.md`, which is also what keeps them off the
+// wire, since the precache rule ships `.js|.json|.css|.html|.webmanifest`
+// and nothing else. Markdown is the mechanism, not a preference.
+//
+// This is R81's finding pointed at the last big class of bytes in front of
+// the first paint. What it cost: `tools/gen-parts.js` stopped writing a
+// `_doc` — and lost the loop where it read its own prose back in order to
+// rewrite it, which had piled twenty-one copies of one paragraph into the
+// file before anybody looked — and smoke gained three rules so it cannot
+// come back.
+//
+// The rule found two things this milestone was not looking for: `tiers.json`
+// carrying 365 characters under `_comment`, and one facility track carrying
+// 190 under `_screenNote` — two other spellings of the same idea, one of
+// them on a data file that had no note at all. The gate matches any
+// underscore-prefixed string over 120 characters for exactly that reason.
+const FIRST_PAINT_KB = 1025;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //

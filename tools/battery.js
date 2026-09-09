@@ -347,7 +347,7 @@ const TABLE = ['node', '-e', `
 
 // R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
 // "claws are on backwards". They were. Every part is drawn in a local space
-// where the head faces +x (frames.json _doc), and the `paw` archetype built
+// where the head faces +x (data/notes/frames.md), and the `paw` archetype built
 // its claws as near-equilateral triangles whose only visible point hung
 // down and BACKWARD, marching back across the toe pad (x = 15, 6, -3) so the
 // last one dangled off the heel. Twenty limbs, and not one forward claw
