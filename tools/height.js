@@ -94,7 +94,12 @@ const BUDGET = {
   // chrome alone is 2.3 phone screens, so no page size could have met it.
   // The chrome is R47's territory and has not been re-measured since; that
   // is the next thing worth doing to this screen, not a smaller page.
-  ranch:          { folded: 2500,  tallest: 4450, opens: 20 },
+  // R130 RE-RATES IT AGAINST A CLOCK THAT HOLDS STILL: 2500 -> 2450 shut,
+  // measured at 2,368. R131 set 2,500 from a reading of 2,453 and the same
+  // commit measured 2,540 the next day — see the PINNED_NOW note below.
+  // Every number in this table was drifting with the calendar; they mean
+  // something now, and this one is tightened to prove it.
+  ranch:          { folded: 2450,  tallest: 4450, opens: 20 },
   pens:           { folded: 2000,  tallest: 4000, opens: 20 },   // R89's criterion
   // R128: 1900 -> 2080 open, measured at 1998. The shut half does not move
   // (1,827 against 1,900) — what moved is that this screen HAS an open half
@@ -254,7 +259,25 @@ const WORDS = {
 // the same fifteen seconds every time. The guides-dismissed rule lives there
 // too, because a fixture that forgets it measures the guide DIALOG.
 const save = await walkedSave();
-save.lastTickAt = Date.now();
+// R130 — THE CLOCK IS PINNED TO THE WALK, and every number in the budget
+// table above depended on it not being, which nobody knew until one of them
+// broke. `campaignWalk` runs from a FIXED epoch (`Date.UTC(2026, 0, 1)`), so
+// a day-180 save's last tick is 2026-06-30 — and the browser renders it at
+// whatever today is. This line used to say `save.lastTickAt = Date.now()`,
+// which stops the world replaying the gap as upkeep but does nothing about
+// `birthAt`: every animal's AGE is a fixed birth measured against a moving
+// now, so creatures cross stage boundaries as the calendar advances, bands
+// re-sort, badges appear, and the screen changes height.
+//
+// Measured: the Ranch was 2,453px when R131 set its 2,500 budget and 2,540px
+// the next day, on the same commit. R131 merged green against a number that
+// was only ever true on the day it was taken — this project's oldest
+// recurring mistake, reaching a gate this time instead of a comment.
+//
+// So the page believes it is the moment the walk stopped. A height measured
+// today is then the same height next year, which is the only way a ratchet
+// means anything.
+const PINNED_NOW = save.lastTickAt;
 
 const { server, port } = await serve();
 const chrome = findChrome();
@@ -277,6 +300,23 @@ try {
   await send('Network.enable');
   await send('Network.setBypassServiceWorker', { bypass: true });
   await send('Emulation.setDeviceMetricsOverride', { width: VIEWPORT, height: 780, deviceScaleFactor: 1, mobile: true });
+  // Injected before any of the app's own code runs, so the shell's first
+  // `Date.now()` already sees the pinned moment.
+  await send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `(() => {
+      const FIXED = ${PINNED_NOW};
+      const Real = Date;
+      function Pinned(...args) {
+        if (!(this instanceof Pinned)) return new Real(FIXED).toString();
+        return args.length ? new Real(...args) : new Real(FIXED);
+      }
+      Pinned.prototype = Real.prototype;
+      Pinned.now = () => FIXED;
+      Pinned.parse = Real.parse;
+      Pinned.UTC = Real.UTC;
+      globalThis.Date = Pinned;
+    })();`,
+  });
   const url = `http://127.0.0.1:${port}/index.html`;
   await send('Page.navigate', { url });
   await sleep(1000);
