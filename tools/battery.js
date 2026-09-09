@@ -3198,6 +3198,43 @@ const BREAKS = [
     anchor: '    if (content.species[part.species]?.variantOf) continue;',
     to: '',
   },
+  // --- gate: R130, the notes are out of the browser's path ----------------
+  {
+    // Prose walks back into a file the loader fetches. This is the whole
+    // point of the milestone and the cheapest thing in the world to undo —
+    // somebody adds a helpful sentence to the object they are editing.
+    n: 200, gate: UNION, name: 'a data file starts carrying developer prose again, and every player downloads it',
+    file: 'data/breakout.json',
+    anchor: '  "sightings": [',
+    to: '  "_doc": "R82 — the Breakout. A rival lab that keeps losing to you starts losing other things: specimens, which accumulate on a standing board and wait for you to come and collect them.",\n  "sightings": [',
+  },
+  {
+    // Under a different name, which is how the two this milestone found got
+    // in: `_comment` on tiers.json and `_screenNote` on a facility track.
+    // A rule that matched `_doc` by name would have shipped both.
+    n: 201, gate: UNION, name: 'the prose comes back under a second spelling, the way `_comment` and `_screenNote` did',
+    file: 'data/breakout.json',
+    anchor: '  "sightings": [',
+    to: '  "_note": "R82 — the Breakout. A rival lab that keeps losing to you starts losing other things: specimens, which accumulate on a standing board and wait for you to come and collect them.",\n  "sightings": [',
+  },
+  {
+    // The gate that only asks "is there a note" would pass a stub. This one
+    // asks whether the note points at something that exists — a section
+    // documenting a key somebody renamed is worse than no section.
+    n: 202, gate: UNION, name: "a note documents a key its data file no longer has",
+    file: 'data/notes/breakout.md',
+    anchor: '## release',
+    to: '## releases',
+  },
+  {
+    // And the half that keeps them from simply being deleted: a data file
+    // with no note is a data file nobody has to explain.
+    n: 203, gate: UNION, name: 'a data file loses its note, and nothing says what it is for',
+    file: 'tools/smoke.js',
+    anchor: "  const undocumented = dataFiles.filter((f) => !noteSet.has(f.replace(/\\.json$/, '.md')));",
+    to: '  const undocumented = [];',
+  },
+
   // --- gate: R131, the page that is the ceiling ---------------------------
   //
   // Five breaks, and the shape of them matters: two put the multiply back
