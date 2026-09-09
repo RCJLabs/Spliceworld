@@ -25,7 +25,8 @@
               "organ"
             ],
             "stable": 6,
-            "tableHours": 20
+            "tableHours": 20,
+            "dismantleHours": 3
           }
         },
         {
@@ -55,7 +56,8 @@
               "organ2"
             ],
             "stable": 12,
-            "tableHours": 10
+            "tableHours": 10,
+            "dismantleHours": 0.5
           }
         }
       ]

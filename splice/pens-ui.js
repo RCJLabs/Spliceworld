@@ -45,7 +45,7 @@ import {
   activeVat, vatPlan, vatRemainingMs, startVat, cancelVat, isExhausted, chaosTuning,
 } from './chaos.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
-import { facilityCard, bindFacility } from '../ui/facility-card.js';
+import { facilityCard, bindFacility, tablePointer } from '../ui/facility-card.js';
 import { bandedHtml } from '../ui/roster.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { canSpar } from '../campaign/sparring.js';
@@ -515,6 +515,10 @@ export function renderPensScreen(root, ctx) {
     // screens down, which is further from a player than the Ranch card it
     // replaced.
     facilityCard(state, content, 'pens') +
+    // R135 — the Pens hosts the Dismantle button and sells nothing that
+    // speeds it up. One line, under the card that sells the machine this
+    // screen DOES own, pointing at the one it does not.
+    tablePointer(state, content) +
     (cards ||
       `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`);
   bindFacility(root, ctx, () => renderPensScreen(root, ctx), (r) => { lastMsg = r.msg; });

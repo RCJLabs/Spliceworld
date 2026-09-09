@@ -22,9 +22,23 @@
 //    thing that caps it, and is under that cap. An array path the table does
 //    not know about FAILS — R50's declare-yourself, so the next unbounded
 //    list added to a save cannot arrive quietly the way these nine did.
-// 3. CHURN. The median chimera lives longer than five days. Today it is TWO
-//    HOURS: the walk builds 1,834 creatures to keep nine, because parts are
-//    free and dismantling hands them straight back.
+// 3. CHURN. The median chimera lives longer than five days. When this was
+//    written it was TWO HOURS: the walk built 1,834 creatures to keep nine,
+//    because parts are free and dismantling hands them straight back.
+//
+//    R135 — WHAT ACTUALLY HOLDS THIS UP, measured, because it is no longer
+//    what the rule was written against. Splitting the table (a splice 20h,
+//    a dismantle 3h) took it from 48.5 days to 74.8: creating is now the
+//    only throttle, and a stronger one than the shared clock was. Nothing on
+//    the dismantle side can break it — a FREE dismantle with the walker's
+//    tenure guard also removed measures 87.2 days. What CAN break it is a
+//    cheap splice with room to put the output: a 30-minute splice alone is
+//    62.7 days, and the same with the vault +50% and the stable at 8/16 is
+//    2.0 days and 460 creatures built to keep 12.
+//
+//    So a full vault and a full stable are the brake, not the clock. That
+//    took a wrong diagnosis to learn — see tools/battery.js, where break 164
+//    is retired with the numbers.
 import { walkedSave } from './fixtures.js';
 import { tickBreakouts } from '../campaign/breakout.js';
 import { rivalList } from '../campaign/rivals.js';

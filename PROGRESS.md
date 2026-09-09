@@ -1,5 +1,88 @@
 # PROGRESS
 
+## Session 140 — R135: the table nobody could find ✅
+
+Reported from play, two complaints in one sentence: *"I don't see upgrades
+for the surgery table and it takes too long."*
+
+| | un-upgraded | Tier II |
+| --- | ---: | ---: |
+| **dismantle** | **3h** | **30m** |
+| splice | 20h | 10h |
+
+### Where the upgrades land — four things stacked
+
+You **dismantle on the Pens**. The Surgery Theater is sold on its own screen
+(R128, correctly). The roll-up saying where the other machines live renders
+**on the Ranch only** — its own comment says so. And that screen's tab reads
+**"Splice"**, so the words "surgery table" appear on no tab in the game.
+
+R128b checked the card is not buried on the screen it is *on*. Nothing had
+ever asked about the screen where the constraint is *felt*. `tablePointer`
+now names the machine there, quotes the dismantle clock and the price, and
+carries a button to it.
+
+### Hours stopped being the unit
+
+Every message rounded to whole hours, so a Tier II clock said "1h to go"
+whether it had thirty minutes left or two — *the upgrade you had just paid
+for appeared to have done nothing*. `spanOf` is shared between the refusal
+and the card that sells the upgrade, so the two cannot disagree about what
+half an hour is called.
+
+### I got the diagnosis wrong once, and it is worth writing down
+
+The session first took the whole table to 3h/30m. That moved the bottleneck
+from the table to the shelves — part reach 95.5% → 93.9%, under R95's floor
+— so the vault went +50% and the stable 6/12 → 8/16 to absorb it. Then the
+churn rule caught what was underneath: **460 creatures built to keep 12,
+median chimera life 2.0 days** against a floor of 5, which retires R41.
+
+I reported that as the fast splice's doing. **It was not.** Re-measured, a
+30-minute splice on the *shipped* shelves leaves median life at **62.7
+days**. The collapse needed the fast splice AND the enlarged storage: *a
+full vault and a full stable are the brake, and I had removed both and then
+blamed the accelerator.* The storage raises were reverted; only the split
+shipped. The battery break I had written on the bad premise was deleted
+rather than left green asserting something untrue.
+
+**What the split is worth:** median chimera life **74.8 days**, against
+48.5 before. A cheap undo clears a failure without making the rebuild cheap.
+
+### The full battery retired a break, and that is the finding underneath
+
+206 of 207. The miss was break 164 — R95's conveyor belt, which removes the
+walker's minimum-tenure guard. On main that patch gives **2.92 days** of
+median chimera life and the gate catches it; on this tree it gives **13.3**
+and the gate passes.
+
+Measured four ways: *nothing on the dismantle side can make a conveyor belt
+any more.* A free dismantle with the guard also gone is **87.2 days** —
+longer still, because fewer creatures get made at all. Creating is the only
+throttle now, and a stronger one than the shared clock ever was. The rule's
+falsifier is a two-place change (a cheap splice AND room for the output), so
+it is not battery-reachable — the third rule in this repo with that shape.
+Retired with the numbers written into `tools/vault.js` rather than left
+MISSED or left green against a defect the game no longer has.
+
+### Budgets that moved, all argued in place
+
+`KB_CAP` 553 → 557 and `FIRST_PAINT_KB` 1025 → 1030 — `tablePointer` and the
+split clock are eager because the *Ranch* needs those modules, so the bytes
+are paid on a screen that shows neither. `dex:combos` 2350 → 2450: the tab
+grew because the campaign now discovers more combos.
+
+**Verified:** suite green in 135.9s, height 9 screens, a11y, boot, vault
+(74.8 days) all green. Breaks 207 and 209. Full battery run per the R134
+policy — R135 changed an existing gate's logic (TABLE), which is trigger #1.
+
+**Known issue, carried.** The Dex's Combos tab is 2,403px with no fold — the
+last screen in the game without one. And the Ranch's agenda still lists
+things that are also on the screen it is drawn on.
+
+**Next session's first task:** fold the Combos tab, or make an agenda chip
+open the card it names.
+
 ## Session 139 — R133: the Ranch's chrome earns its height (again) ✅
 
 R131 gave this screen a page ceiling and its own entry named what that could

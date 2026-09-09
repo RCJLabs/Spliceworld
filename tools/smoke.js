@@ -3431,6 +3431,41 @@ if (inShard('team')) {
     }
   }
 
+  // 3b. R135 — AND THE SCREEN THAT HOSTS THE WAIT NAMES THE MACHINE.
+  //     Reported from play: "I don't see upgrades for the surgery table."
+  //     R128 is right that each machine is bought on its own screen, and
+  //     R128b checked the card is not buried on the screen it is ON. Neither
+  //     asked about the screen where the constraint is FELT: you dismantle on
+  //     the Pens, and the Pens sold nothing that shortened it.
+  //
+  //     The pointer must name the track, quote the DISMANTLE clock (the
+  //     question being asked on that screen), carry a real destination, and
+  //     stand down once there is nothing left to buy.
+  {
+    const { tablePointer } = await import('../ui/facility-card.js');
+    const { nextUpgrade } = await import('../splice/facility.js');
+    const fresh = { ...rich, facility: {} };
+    const line = tablePointer(fresh, content);
+    assert.ok(line, 'the Pens points at the table it does not sell');
+    assert.ok(/data-goto="theater"/.test(line), 'and the pointer is a real destination');
+    // Read through `nextUpgrade` rather than re-deriving which rung is next:
+    // the rungs are 1-indexed and picking `level === 1` off a fresh save
+    // silently matched the FREE one, so the rule asserted "$0".
+    const track = content.facility.theater;
+    const next = nextUpgrade(fresh, content, 'theater').level;
+    assert.ok(line.includes(`$${next.cost}`), `it quotes the price ($${next.cost})`);
+    // The DISMANTLE number, not the splice's: the two are different clocks
+    // now, and quoting the wrong one answers a question nobody asked here.
+    const { spanOf } = await import('../splice/facility.js');
+    assert.ok(line.includes(spanOf(next.grants.dismantleHours)),
+      `it quotes the dismantle clock (${spanOf(next.grants.dismantleHours)}), not the splice's`);
+    assert.ok(!line.includes(spanOf(next.grants.tableHours)),
+      'and does not quote the splice clock on the screen where you dismantle');
+    const maxed = { ...rich, facility: { theater: Math.max(...track.levels.map((l) => l.level)) } };
+    assert.equal(tablePointer(maxed, content), '',
+      'and it stands down once there is nothing left to buy');
+  }
+
   // 4. AND THE CARD CAN BE OPENED. It is a fold, and a fold whose header
   //    nothing listens to is exactly the bug this milestone exists to kill
   //    rather than relocate: the upgrade would be visible and unreachable,
@@ -18234,7 +18269,24 @@ if (inShard('wire')) {
   const MODULE_CAP = 49;
   // R131: 548 -> 553, measured at 550.3. `ui/pager.js` and the two screens
   // that use it; see the FIRST_PAINT_KB note in tools/boot.js.
-  const KB_CAP = 553;
+  // R135: 553 -> 557, measured at 555.2, and the raise has to argue.
+  //
+  // What it bought, both halves of a bug reported from play — "I don't see
+  // upgrades for the surgery table". `spanOf` in splice/facility.js, because
+  // the Tier II table is half an hour and every message in the game rounded
+  // to whole hours, so the upgrade a player had just paid for reported the
+  // same "1h" as the one they had not. And `tablePointer` in
+  // ui/facility-card.js, because the screen that hosts the wait sold nothing
+  // that shortened it and never said where to look.
+  //
+  // Both modules are eager because the RANCH needs them — the agenda reads
+  // `nextUpgrade`, the Ranch draws a facility card — so the bytes are paid on
+  // a screen that shows neither. That is the honest cost, and it is why this
+  // is 2 KB rather than nothing. I trimmed my own comment prose in both
+  // files twice (R129's move) and it covered half of it; the rest is the
+  // `dismantleHours` grant and the split clock that reads it, which is the
+  // milestone.
+  const KB_CAP = 557;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

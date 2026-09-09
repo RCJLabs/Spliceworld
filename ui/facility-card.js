@@ -3,7 +3,7 @@
 // nothing read it, so all six sat in one shut card on the Ranch and the
 // Surgery Theater's upgrade was unfindable. The argument and the numbers are
 // in tools/smoke.js's R128 block.
-import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade } from '../splice/facility.js';
+import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade, spanOf } from '../splice/facility.js';
 import { nodeName } from '../campaign/map.js';
 import { collapsibleCard, isOpen } from './cards.js';
 import { renderIcon } from './icons.js';
@@ -112,6 +112,23 @@ export function facilityCard(state, content, screen) {
     // upgrade left, from $900" without costing the height.
     open: isOpen(state, `facility-${screen}`, false),
   });
+}
+
+// R135 — the table is not bought where it is felt. Reported from play: "I
+// don't see upgrades for the surgery table." You dismantle on the Pens, the
+// Theater sells on its own screen, the roll-up saying so renders only on the
+// Ranch — and that tab reads "Splice", so the word being hunted for is on no
+// tab in the game.
+export function tablePointer(state, content) {
+  const up = nextUpgrade(state, content, 'theater');
+  const hours = up?.level?.grants?.dismantleHours;
+  if (hours == null) return '';
+  // The DISMANTLE number, because this line renders where dismantling
+  // happens. Quoting the splice clock here would answer a question the
+  // player standing on this screen is not asking.
+  return `<p class="fine-print facility-elsewhere">${renderIcon('derelict-house')} Dismantling takes the Surgery Theater's table. <strong>${
+    up.level.name}</strong> cuts it to ${spanOf(hours)} for $${up.level.cost}, on <button type="button" class="facility-goto" data-goto="theater">${
+    screenName('theater')}</button>.</p>`;
 }
 
 // R128 — the Ranch's roll-up: how many upgrades wait elsewhere and where,
