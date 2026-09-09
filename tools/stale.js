@@ -38,7 +38,9 @@ if (!chrome) {
   process.exit(0);
 }
 const profile = await mkdtemp(join(tmpdir(), 'sw-stale-'));
-const cdpPort = 9500 + (process.pid % 300);
+// R132 — `SW_CDP_PORT` so a parallel battery can give each worker a port of
+// its own; the pid fallback is what a lone run has always used.
+const cdpPort = Number(process.env.SW_CDP_PORT) || 9500 + (process.pid % 300);
 const proc = spawn(chrome, [
   '--headless=new', `--remote-debugging-port=${cdpPort}`, `--user-data-dir=${profile}`,
   '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', 'about:blank',

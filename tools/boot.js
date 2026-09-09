@@ -346,7 +346,9 @@ async function deployReaches(note) {
   });
   const port = await new Promise((r) => srv.listen(0, '127.0.0.1', () => r(srv.address().port)));
   const profile = await mkdtemp(join(tmpdir(), 'spliceworld-deploy-'));
-  const cdpPort = 9600 + Math.floor(process.pid % 90);
+  // R132 — see the note in tools/height.js. Two browsers run in this file,
+  // so the assigned port covers both: base here and base + 1 below.
+  const cdpPort = Number(process.env.SW_CDP_PORT) || 9600 + Math.floor(process.pid % 90);
   const proc = spawn(chrome, ['--headless=new', `--remote-debugging-port=${cdpPort}`,
     `--user-data-dir=${profile}`, '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', 'about:blank'],
     { stdio: 'ignore' });
@@ -387,7 +389,7 @@ async function main() {
   }
   const { server, port } = await serve();
   const profile = await mkdtemp(join(tmpdir(), 'spliceworld-boot-'));
-  const cdpPort = 9900 + Math.floor(process.pid % 90);
+  const cdpPort = (Number(process.env.SW_CDP_PORT) || 9899 + Math.floor(process.pid % 90)) + 1;
   const proc = spawn(chrome, [
     '--headless=new', `--remote-debugging-port=${cdpPort}`, `--user-data-dir=${profile}`,
     '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', 'about:blank',

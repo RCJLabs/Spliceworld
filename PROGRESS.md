@@ -1,5 +1,56 @@
 # PROGRESS
 
+## Session 138 — R132: the break battery runs four at a time ✅
+
+Not a roadmap milestone — the tool that verifies every milestone had become
+the reason a session ends. 202 breaks, each one a patch-run-restore against
+**one** shared temp tree, is a design that can only be serial.
+
+| | before | after |
+| --- | --- | --- |
+| full battery, wall clock | ~2h04m (the CPU total) | **46m20s** |
+| CPU burned | 124m54s | 124m54s — *unchanged, and that is the point* |
+| baseline pass alone | 15m37s | **6m30s** |
+
+**What is parallel here is the WAITING, not the work.** About forty breaks
+aim at browser gates; each launches Chrome and renders a 180-day save at
+70-90 seconds, and they were doing it one after another on a machine with
+four cores sitting idle. A tree copy is 5.3 MB, so the answer was one tree
+per worker: `SW_BATTERY_JOBS` sets the count, four by default. On a box with
+one core free, set it to 1 and expect the old two hours — the summary line
+is not a speedup you can quote anywhere.
+
+### The pid-derived ports were the one real hazard
+
+Four of the gates picked a debugging port with `9100 + process.pid % 200` or
+similar. That is unique per RUN, which is exactly the property that stops
+being enough the moment a run has workers: two headless Chromes on one port
+is a flake nobody would ever reproduce on purpose. `height`, `a11y`, `boot`
+and `stale` now take `SW_CDP_PORT`, the pool hands out one per worker ten
+apart (`boot` runs two browsers and takes base and base + 1), and each gate
+keeps its pid fallback for a lone run.
+
+### The other shared thing was the walk cache
+
+It is keyed by a hash of the source, so two workers holding *different*
+patches never collide — but workers holding *identical* trees all aim at the
+same file at the same time, and `writeFileSync` truncates before it writes.
+`walkedSave` already caught the torn read and rebuilt, so the answer was
+never wrong, only slow. It writes to a temp name and renames now: atomic, so
+a reader sees the whole old file or the whole new one.
+
+*Results come back — and print — in the order they were ASKED FOR, never the
+order they finished.* A finished break waits its turn to be printed, never to
+be run. A battery whose output shuffles between runs is one nobody can diff
+against the last one, which would have cost more than the half-hour it saves.
+
+**Verified:** 202 breaks · 202 caught · 0 missed, `BATTERY_EXIT=0`, all 34
+baseline gates PASS. Suite green in 176.2s. Boot gate green at 1,021 KB.
+
+**Next session's first task:** the Ranch's 1,756px of chrome (R47 territory),
+or folding the Dex's Combos tab — 2,293px with no fold, the last screen R131
+left alone.
+
 ## Session 137 — R130: 53.8 KB of shop talk leaves the browser's path ✅
 
 `data/*.json` kept its documentation *inside the objects the engine loads*.

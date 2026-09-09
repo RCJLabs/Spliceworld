@@ -692,7 +692,8 @@ async function main() {
   }
   const { server, port } = await serve();
   const profile = await mkdtemp(join(tmpdir(), 'spliceworld-a11y-'));
-  const cdpPort = 9500 + Math.floor(process.pid % 400);
+  // R132 — see the note in tools/height.js: a parallel battery assigns ports.
+  const cdpPort = Number(process.env.SW_CDP_PORT) || 9500 + Math.floor(process.pid % 400);
   const proc = spawn(chrome, [
     '--headless=new', `--remote-debugging-port=${cdpPort}`, `--user-data-dir=${profile}`,
     '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', 'about:blank',

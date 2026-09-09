@@ -17,7 +17,7 @@
 // are not duplication: the feral twin exists for the Pens' alert, the loose
 // specimen for the Labs tab's Hunt button, the second egg for the Ranch's
 // Hurry button. Each appears in exactly one file, which is the rule.
-import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -192,6 +192,18 @@ export function labCore({
 // budget and any at-scale question needs. CACHED ON DISK because the walk
 // costs about fifteen seconds and is perfectly deterministic from its seed:
 // every gate that wants one was paying that separately.
+// R132 — WRITE, THEN RENAME. The cache is keyed by a hash of the source, so
+// the parallel battery's workers running gates over identical trees all aim
+// at the same file at the same time. `writeFileSync` truncates first, and a
+// reader that arrives mid-write gets half a save: `walkedSave` catches the
+// parse and rebuilds, so the answer stays right, but a rename is atomic and
+// costs nothing — every reader sees the whole old file or the whole new one.
+function writeCache(file, text) {
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync(tmp, text);
+  renameSync(tmp, file);
+}
+
 // R95 — WHERE THE CACHE LIVES, so a caller that already has the walk can put
 // it there. `tools/coverage.js` runs a FULL walk of seed 2026 (it needs the
 // verb tally, which a save does not carry) and `tools/reach.js` then asked
@@ -209,7 +221,7 @@ function cacheFile(seed, days) {
 export function primeWalkCache(save, { seed = 2026, days = 180 } = {}) {
   try {
     mkdirSync(join(tmpdir(), 'sw-walk-cache'), { recursive: true });
-    writeFileSync(cacheFile(seed, days), JSON.stringify(withGuidesRead(save)));
+    writeCache(cacheFile(seed, days), JSON.stringify(withGuidesRead(save)));
   } catch { /* not fatal, ever */ }
 }
 
@@ -232,7 +244,7 @@ export function walkedSave({ days = 180, seed = 2026, fresh = false } = {}) {
   withGuidesRead(save);
   try {
     mkdirSync(cache, { recursive: true });
-    writeFileSync(file, JSON.stringify(save));
+    writeCache(file, JSON.stringify(save));
   } catch { /* a cache that cannot be written is still a correct answer */ }
   return save;
 }
