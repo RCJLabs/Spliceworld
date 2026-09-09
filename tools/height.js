@@ -287,7 +287,10 @@ if (!chrome) {
   process.exit(0);
 }
 const profile = await mkdtemp(join(tmpdir(), 'sw-height-'));
-const cdpPort = 9100 + (process.pid % 200);
+// R132 — `SW_CDP_PORT` so a parallel battery can hand each worker its own
+// debugging port. A pid modulo can collide between concurrent runs, and two
+// browsers on one port is a flake nobody would ever reproduce on purpose.
+const cdpPort = Number(process.env.SW_CDP_PORT) || 9100 + (process.pid % 200);
 const proc = spawn(chrome, ['--headless=new', `--remote-debugging-port=${cdpPort}`,
   `--user-data-dir=${profile}`, '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', 'about:blank'], { stdio: 'ignore' });
 

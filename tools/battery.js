@@ -9,6 +9,7 @@
 //
 //   node tools/battery.js            # exit 1 if any break survives
 //   node tools/battery.js --verbose  # the gate's own words for each
+//   SW_BATTERY_JOBS=1 node ...       # one worker, for a machine under load
 //
 // Every patch is applied by UNIQUE ANCHOR: if the anchor text does not appear
 // exactly once, the break reports BADANCH and is scored as a failure rather
@@ -19,9 +20,9 @@
 // break for free, so the pristine tree has to pass before any of this counts.
 
 import { cpSync, readFileSync, writeFileSync, rmSync, mkdtempSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { tmpdir, cpus } from 'node:os';
 
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -31,11 +32,38 @@ import { dirname } from 'node:path';
 import { SAVE_VERSION } from '../save/save.js';
 
 const SRC = dirname(dirname(fileURLToPath(import.meta.url)));
-const DIR = mkdtempSync(join(tmpdir(), 'sw-battery-'));
-cpSync(SRC, DIR, {
-  recursive: true,
-  filter: (p) => !p.includes('/.git') && !p.includes('/node_modules'),
+
+// R132 — ONE TREE PER WORKER, because the whole battery is 202 sequential
+// edits to the same files and that is the only reason it ran serially. The
+// run costs a bit over two HOURS of CPU — 124m54s of it, measured — and most
+// of that is the breaks aimed at browser gates: each launches Chrome and
+// renders a 180-day save at 70-90 seconds, one after another, on a machine
+// with four cores sitting mostly idle. Four workers put the same work on the
+// clock in 46m20s.
+//
+// Do not read a speedup off the summary line: what is parallel here is the
+// WAITING. The CPU total barely moves, so a machine with one core free is a
+// machine that should run `SW_BATTERY_JOBS=1` and expect the old two hours.
+//
+// A copy is 5.3 MB, so the tree is the cheap part. What each worker needs to
+// itself is the files it patches and a debugging port — the walk cache is
+// keyed by a hash of the source, so two workers with different patches write
+// different cache files and never collide, and `serve()` already binds an
+// ephemeral port. The pid-derived debugging ports the browser gates used were
+// the one real hazard: unique per RUN and therefore not unique per WORKER, so
+// each gate now takes `SW_CDP_PORT` and the pool hands out a distinct one.
+const JOBS = Math.max(1, Number(process.env.SW_BATTERY_JOBS) || Math.min(4, cpus().length));
+const DIRS = Array.from({ length: JOBS }, () => {
+  const d = mkdtempSync(join(tmpdir(), 'sw-battery-'));
+  cpSync(SRC, d, {
+    recursive: true,
+    filter: (p) => !p.includes('/.git') && !p.includes('/node_modules'),
+  });
+  return d;
 });
+// Distinct CDP ports, ten apart because tools/boot.js runs two browsers and
+// takes `base` and `base + 1`.
+const PORTS = DIRS.map((_, i) => 9100 + i * 10);
 
 const SCOPE = ['node', 'tools/scopecheck.js'];
 const HANDLERS = ['node', 'tools/handlers.js'];
@@ -3315,26 +3343,58 @@ const BREAKS = [
 ];
 
 const pristine = {};
-const restore = (file) => {
+const restore = (dir, file) => {
   pristine[file] ??= readFileSync(join(SRC, file), 'utf8');
-  writeFileSync(join(DIR, file), pristine[file]);
+  writeFileSync(join(dir, file), pristine[file]);
 };
 
-const run = (gate) => {
-  try {
-    const out = execFileSync(gate[0], gate.slice(1), { cwd: DIR, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-    return { ok: true, out };
-  } catch (e) {
-    return { ok: false, out: `${e.stdout ?? ''}${e.stderr ?? ''}` };
-  }
-};
+const run = (gate, dir, port) => new Promise((resolve) => {
+  execFile(gate[0], gate.slice(1), {
+    cwd: dir,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+    env: { ...process.env, SW_CDP_PORT: String(port) },
+  }, (err, stdout, stderr) => {
+    if (err) resolve({ ok: false, out: `${stdout ?? ''}${stderr ?? ''}` });
+    else resolve({ ok: true, out: stdout });
+  });
+});
 
-// The battery is worthless if the pristine tree does not pass, so prove that
-// first — a gate that fails on everything "catches" every break for free.
-console.log('baseline (pristine tree):');
-for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, COVERAGE]) {
-  const r = run(gate);
-  const label = gate === TWICE ? 'walkSurfaces twice in one process'
+// Hand `items` out to the workers, each of which owns one tree and one port.
+//
+// Results come back in the order they were ASKED FOR, not the order they
+// finished, and `report` is called in that same order the moment a result's
+// whole prefix has landed. Both halves matter: a battery whose output
+// shuffles between runs is one nobody can diff against the last one, and a
+// battery that prints nothing for six minutes and then two hundred lines is
+// one nobody can watch. So a finished break waits its turn to be printed —
+// never to be RUN.
+async function pool(items, work, report = () => {}) {
+  const out = new Array(items.length);
+  const done = new Array(items.length).fill(false);
+  let next = 0;
+  let printed = 0;
+  const flush = () => {
+    while (printed < items.length && done[printed]) report(out[printed], items[printed], printed++);
+  };
+  await Promise.all(DIRS.map((dir, w) => (async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await work(items[i], dir, PORTS[w], i);
+      done[i] = true;
+      flush();
+    }
+  })()));
+  return out;
+}
+
+const cleanup = () => { for (const d of DIRS) rmSync(d, { recursive: true, force: true }); };
+
+const BASELINE = [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, COVERAGE];
+
+const baselineLabel = (gate) => (
+  gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
       : gate === RETIRED ? 'a save read against a build that retired seven of its ids'
         : gate === BREAKOUT ? 'a specimen escapes, waits, is hunted and joins the roster'
@@ -3363,47 +3423,58 @@ for (const gate of [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, RO
                 : gate === UNION ? 'every sharded block is owned by exactly one shard'
                 : gate === FACILITY ? 'every facility track is bought where its system lives'
                 : gate === TABLE ? 'the Surgery Theater does one operation at a time'
-                              : gate.join(' ');
+                              : gate.join(' ')
+);
+
+// The battery is worthless if the pristine tree does not pass, so prove that
+// first — a gate that fails on everything "catches" every break for free.
+console.log(`baseline (pristine tree, ${JOBS} at a time):`);
+await pool(BASELINE, (gate, dir, port) => run(gate, dir, port), (r, gate) => {
+  const label = baselineLabel(gate);
   console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
   if (!r.ok) process.exitCode = 1;
-}
+});
 
 if (BASELINE_ONLY) {
-  rmSync(DIR, { recursive: true, force: true });
+  cleanup();
   console.log(process.exitCode ? '\nbaseline ✗  a gate fails on a pristine tree' : '\nbaseline ✓  every gate passes on a pristine tree');
   process.exit(process.exitCode ?? 0);
 }
 
 console.log('\nbreaks:');
-const results = [];
 const picked = ONLY ? BREAKS.filter((b) => ONLY.has(b.n)) : BREAKS;
 if (ONLY && picked.length !== ONLY.size) {
   const missing = [...ONLY].filter((n) => !BREAKS.some((b) => b.n === n));
   console.error(`battery ✗  no break numbered ${missing.join(', ')}`);
+  cleanup();
   process.exit(1);
 }
-for (const b of picked) {
-  restore(b.file);
-  const path = join(DIR, b.file);
+const results = await pool(picked, async (b, dir, port) => {
+  // The worker owns its tree, so patch-run-restore is safe to do in place:
+  // no other worker can see this file. Restore FIRST as well as last, because
+  // a break that dies mid-run would otherwise leave its defect behind for the
+  // next break this worker picks up.
+  restore(dir, b.file);
+  const path = join(dir, b.file);
   const src = readFileSync(path, 'utf8');
   const hits = src.split(b.anchor).length - 1;
-  if (hits !== 1) {
-    console.log(`  ${String(b.n).padStart(2)}. BADANCH (${hits} matches) — ${b.name}`);
-    results.push({ ...b, verdict: 'BADANCH' });
-    continue;
-  }
+  if (hits !== 1) return { ...b, verdict: 'BADANCH', hits };
   writeFileSync(path, src.replace(b.anchor, b.to));
-  const r = run(b.gate);
-  restore(b.file);
+  const r = await run(b.gate, dir, port);
+  restore(dir, b.file);
   const first = r.out.split('\n').find((l) => l.trim() && !l.startsWith('scopecheck: ')) ?? '';
-  const verdict = r.ok ? 'MISSED' : 'caught';
-  results.push({ ...b, verdict, line: first.trim() });
-  console.log(`  ${String(b.n).padStart(2)}. ${verdict === 'caught' ? '✓ caught' : '✗ MISSED'}  ${b.name}`);
-  if (verdict === 'caught' && VERBOSE) console.log(`        → ${first.trim().slice(0, 140)}`);
-}
+  return { ...b, verdict: r.ok ? 'MISSED' : 'caught', line: first.trim() };
+}, (res) => {
+  if (res.verdict === 'BADANCH') {
+    console.log(`  ${String(res.n).padStart(2)}. BADANCH (${res.hits} matches) — ${res.name}`);
+    return;
+  }
+  console.log(`  ${String(res.n).padStart(2)}. ${res.verdict === 'caught' ? '✓ caught' : '✗ MISSED'}  ${res.name}`);
+  if (res.verdict === 'caught' && VERBOSE) console.log(`        → ${res.line.slice(0, 140)}`);
+});
 
 const missed = results.filter((r) => r.verdict !== 'caught');
 console.log(`\n${results.length} breaks · ${results.length - missed.length} caught · ${missed.length} missed`);
 for (const m of missed) console.log(`  ${m.verdict} ${m.n}: ${m.name}`);
-rmSync(DIR, { recursive: true, force: true });
+cleanup();
 if (missed.length) process.exitCode = 1;
