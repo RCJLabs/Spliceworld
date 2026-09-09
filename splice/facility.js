@@ -98,7 +98,14 @@ export function theaterGrants(state, content, frameId = null) {
     // R91 — the Theater builds the creatures, so the Theater houses them,
     // and its one table decides how often it can change its mind.
     stable: g.stable ?? 12,
-    tableHours: g.tableHours ?? 10,
+    tableHours: g.tableHours ?? 20,
+    // R135 — taking a creature apart is not building one. One table, two
+    // prices: a splice stays 20h/10h (R91's note on the shared clock is
+    // load-bearing) and a dismantle is 3h/30m, which is the complaint this
+    // milestone was reported against. Measured: 74.8 days of median chimera
+    // life, against 48.5 before — a cheap undo lets a failure be cleared
+    // without the rebuild being cheap too. Fallback is the UNbought rung.
+    dismantleHours: g.dismantleHours ?? 3,
   };
 }
 
@@ -112,8 +119,10 @@ export function theaterGrants(state, content, frameId = null) {
 // what a facility track is for, and the clock is rushable like every other
 // sealed clock since R86 — so a player in a hurry pays money instead of
 // waiting, and nobody is ever simply stopped.
-export function theaterBusyFor(state, content) {
-  return theaterGrants(state, content).tableHours * 3600000;
+// `kind` is 'splice' or 'dismantle' — the two things that take the table.
+export function theaterBusyFor(state, content, kind = 'splice') {
+  const g = theaterGrants(state, content);
+  return (kind === 'dismantle' ? g.dismantleHours : g.tableHours) * 3600000;
 }
 
 export function theaterFree(state, now) {
@@ -125,14 +134,35 @@ export function theaterFree(state, now) {
 // different ways — and so `splice/extract.js` does not have to import the
 // whole Surgery Theater to say it. That import cost 20 KB of the boot
 // budget for one string.
-export function theaterBusyMsg(state, now) {
-  const hours = Math.max(1, Math.ceil(((state.theater?.busyUntil ?? 0) - now) / 3600000));
-  return `The table is still occupied — ${hours}h to go. Surgery is not a thing you do twice at once.`;
+// R135 — hours stopped being the unit: the Tier II table is half of one, and
+// anything rounding to whole hours reported "1h" for every clock under it,
+// so the upgrade just paid for looked like it had done nothing. Shared, so
+// the refusal and the card selling it agree on what to call half an hour.
+export function spanOf(hours) {
+  const mins = Math.round(hours * 60);
+  if (mins < 60) return `${mins}m`;
+  return mins % 60 === 0 ? `${mins / 60}h` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
-export function occupyTheater(state, content, now) {
+// `content` is optional: with it the refusal also says what the next tier
+// would make this — the one sentence read at the moment the wait bites.
+export function theaterBusyMsg(state, now, content = null, kind = 'splice') {
+  const left = Math.max(0, (state.theater?.busyUntil ?? 0) - now);
+  const mins = Math.max(1, Math.ceil(left / 60000));
+  const clock = mins < 60 ? `${mins}m` : `${Math.ceil(mins / 60)}h`;
+  const up = content ? nextUpgrade(state, content, 'theater') : null;
+  const grants = up?.level?.grants;
+  const faster = kind === 'dismantle' ? grants?.dismantleHours : grants?.tableHours;
+  const sell = faster == null ? ''
+    : ` ${up.level.name} would take ${kind === 'dismantle' ? 'a dismantle' : 'a splice'} to ${
+      spanOf(faster)}, for $${up.level.cost}.`;
+  return `The table is still occupied — ${clock} to go.`
+    + ` Surgery is not a thing you do twice at once.${sell}`;
+}
+
+export function occupyTheater(state, content, now, kind = 'splice') {
   state.theater ??= { busyUntil: 0 };
-  state.theater.busyUntil = now + theaterBusyFor(state, content);
+  state.theater.busyUntil = now + theaterBusyFor(state, content, kind);
 }
 
 // R91 — HOW MANY STALLS ARE SPOKEN FOR.

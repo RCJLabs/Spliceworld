@@ -381,8 +381,43 @@ const TABLE = ['node', '-e', `
   if (!(fast < slow)) bad.push('tier 2 does not clear the table faster than tier 1 (' + fast + ' vs ' + slow + ')');
   if (!(slow > 0)) bad.push('the table is not occupied at all');
 
+  // R135 — AND TAKING ONE APART IS CHEAPER THAN BUILDING ONE, at every tier.
+  // The two used to be one number, and the ORDERING is the rule rather than
+  // either number, so a future rebalance moves them without moving this.
+  //
+  // A correction worth keeping, because I got it wrong mid-milestone: a
+  // 30-minute splice does NOT collapse the game on its own. Measured on the
+  // shipped vault and stable it leaves median chimera life at 62.7 days,
+  // against 74.8 with the split clocks and a floor of 5. The 2.0-day
+  // collapse — 460 creatures built to keep 12 — needed a fast splice AND the
+  // enlarged shelves I had raised in the same sitting: a full vault and a
+  // full stable are what stop you rebuilding, and I had just removed both
+  // brakes and then blamed the accelerator. That is why there is no break
+  // here for it; it takes two anchors, like R133's chrome budget.
+  for (const tier of [1, 2]) {
+    const un = theaterBusyFor(lab(tier), content, 'dismantle');
+    const build = theaterBusyFor(lab(tier), content);
+    if (!(un < build)) bad.push('tier ' + tier + ': a dismantle costs the table as much as a splice (' + un + ' vs ' + build + ')');
+    if (!(un > 0)) bad.push('tier ' + tier + ': a dismantle does not occupy the table at all');
+  }
+  // And the dismantle actually USES its own clock rather than the splice's.
+  {
+    const s2 = lab(2);
+    spliceChimera(s2, 'M', { head: 'h2' }, content, t0);
+    const held = s2.theater.busyUntil - t0;
+    const d = lab(2);
+    spliceChimera(d, 'M', { head: 'h2' }, content, t0);
+    const freeAt = d.theater.busyUntil;
+    extractChimera(d, d.chimeras[0].id, content, freeAt);
+    if (!(d.theater.busyUntil - freeAt < held)) {
+      bad.push('a dismantle occupies the table for the splice clock, not its own');
+    }
+  }
+
   if (bad.length) { console.error('table ✗  ' + bad.join('; ')); process.exit(1); }
-  console.log('table ✓  one operation at a time, ' + (slow / HR) + 'h at tier 1 and ' + (fast / HR) + 'h at tier 2, and always a wait rather than a wall');
+  console.log('table ✓  one operation at a time, a splice ' + (slow / HR) + 'h at tier 1 and ' + (fast / HR)
+    + 'h at tier 2, a dismantle ' + (theaterBusyFor(lab(1), content, 'dismantle') / HR) + 'h and '
+    + (theaterBusyFor(lab(2), content, 'dismantle') / HR) + 'h, and always a wait rather than a wall');
 `];
 
 // R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
@@ -1914,7 +1949,8 @@ const BREAKS = [
   {
     n: 145, gate: TABLE, name: 'the Theater table is never occupied, so a creature can be built and scrapped in the same minute',
     file: 'splice/facility.js',
-    anchor: '  state.theater.busyUntil = now + theaterBusyFor(state, content);',
+    // R135 gave `occupyTheater` a `kind`, so the anchor moved with it.
+    anchor: '  state.theater.busyUntil = now + theaterBusyFor(state, content, kind);',
     to: '  state.theater.busyUntil = now;',
   },
   {
@@ -2107,12 +2143,19 @@ const BREAKS = [
     // whose whole point was that a creature costs a row.
     n: 176, gate: HEIGHT, name: 'the upgrade card is appended again, so it is the last thing on the screen',
     file: 'splice/pens-ui.js',
+    // R135 moved the anchor by one line — the Pens gained `tablePointer`
+    // under the card — so the patch now carries both past the roster.
     anchor: `    facilityCard(state, content, 'pens') +
+    // R135 — the Pens hosts the Dismantle button and sells nothing that
+    // speeds it up. One line, under the card that sells the machine this
+    // screen DOES own, pointing at the one it does not.
+    tablePointer(state, content) +
     (cards ||
       \`<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>\`);`,
     to: `    (cards ||
       \`<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>\`) +
-    facilityCard(state, content, 'pens');`,
+    facilityCard(state, content, 'pens') +
+    tablePointer(state, content);`,
   },
   {
     // R128b — the roll-up's links lose their rule and become grey buttons
@@ -3352,6 +3395,24 @@ const BREAKS = [
     file: 'tools/height.js',
     anchor: '  vault:          { folded: 2560,  tallest: 4100, opens: 20 },',
     to: '  vault:          { folded: 2560,  tallest: 4100 },',
+  },
+  {
+    // R135 — the dismantle goes back to costing what a splice costs, which
+    // is the state this milestone was reported against: a player watching a
+    // twenty-hour clock to take one creature apart.
+    n: 207, gate: TABLE, name: 'a dismantle costs the table as much as building a creature does',
+    file: 'splice/extract.js',
+    anchor: "  occupyTheater(state, content, now, 'dismantle');",
+    to: '  occupyTheater(state, content, now);',
+  },
+  {
+    // R135 — the screen that hosts the wait stops naming the machine that
+    // shortens it. This is the reported bug exactly: the Pens sells nothing
+    // that speeds a dismantle up and never said where to look.
+    n: 209, gate: FACILITY, name: 'the Pens stops pointing at the table it does not sell',
+    file: 'ui/facility-card.js',
+    anchor: "  const hours = up?.level?.grants?.dismantleHours;",
+    to: '  const hours = null;',
   },
   {
     // R133 — the Breeding Pen goes back to opening itself whenever a pairing

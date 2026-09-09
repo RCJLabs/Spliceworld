@@ -172,7 +172,13 @@ const REPORT = process.argv.includes('--report');
 // 190 under `_screenNote` — two other spellings of the same idea, one of
 // them on a data file that had no note at all. The gate matches any
 // underscore-prefixed string over 120 characters for exactly that reason.
-const FIRST_PAINT_KB = 1025;
+// R135: 1025 -> 1030, measured at 1025.0 — a knife edge, which is exactly
+// what R81's note below says a budget must not sit on. Two kilobytes bought
+// the Surgery Theater's clock the units it needed (a Tier II table is half
+// an hour and every message rounded to whole hours) and a pointer on the
+// screen where the wait is felt; see the KB_CAP note in tools/smoke.js for
+// why both land on the eager side.
+const FIRST_PAINT_KB = 1030;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //

@@ -191,7 +191,13 @@ const BUDGET = {
   // and a campaign now finds a median EIGHT combos where it found two — the
   // milestone's own success arriving on a screen with no fold. Folding the
   // Combos tab is owed alongside the Vault's.
-  'dex:combos':   { folded: 2350,  tallest: 2350 },
+  // R135: 2350 -> 2450, measured at 2403. The tab grew because the campaign
+  // DISCOVERS more, which is the good direction: a dismantle that costs 3h
+  // instead of 20 puts parts back on the shelf while the pair that unlocks a
+  // combo is still worth assembling. Same ratchet R95 wrote here, same
+  // reason, and folding this tab is still the answer — it is the last screen
+  // in the game with no fold at all.
+  'dex:combos':   { folded: 2450,  tallest: 2450 },
   // R129 FOLDS IT, WHICH BRINGS THE SHUT HALF DOWN AND BUDGETS THE FOLD:
   // 1100/1100 -> 400 shut (measured 291) and 1250 open (measured 1185).
   // Twelve genes could only be learned by breeding for them, so this tab

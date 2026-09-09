@@ -211,7 +211,7 @@ export function extractChimera(state, chimeraId, content, now) {
   // does, which is what turns "build one, scrap it, build another" from a
   // free action into a day's work. This is a WAIT, not a wall: the clock
   // always ends, and R86's rush will sell you the rest of it.
-  if (!theaterFree(state, now)) return { ok: false, msg: theaterBusyMsg(state, now) };
+  if (!theaterFree(state, now)) return { ok: false, msg: theaterBusyMsg(state, now, content, 'dismantle') };
 
   // R91 — A DISMANTLE IS NEVER REFUSED FOR WANT OF SHELF SPACE. Measured the hard way: with the
   // vault capped and this door closed, a walk with a full stable and a full
@@ -234,7 +234,7 @@ export function extractChimera(state, chimeraId, content, now) {
     donor: spec.donor ?? { name: chimera.name, species: content.parts[spec.partId].species, stars: 3, extractedAt: now },
   }));
   const door = admitParts(state, content, tokens);
-  occupyTheater(state, content, now);
+  occupyTheater(state, content, now, 'dismantle');
 
   const lostNames = preview.lose
     .map((socketId) => content.parts[chimera.tokens[socketId].partId]?.name)

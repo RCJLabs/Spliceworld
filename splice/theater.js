@@ -123,7 +123,7 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
       + ' Dismantle one, or expand the Surgery Theater.' };
   }
   if (!theaterFree(state, now)) {
-    return { ok: false, msg: theaterBusyMsg(state, now) };
+    return { ok: false, msg: theaterBusyMsg(state, now, content) };
   }
 
   // R72 - `content` was omitted here, which turned tokensFor's own retired-part
