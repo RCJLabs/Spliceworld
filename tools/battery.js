@@ -1250,7 +1250,12 @@ const OPENING = ['node', '-e', `
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const t0 = 1700000000000;
-  const PLAIN = 'Holding it pays every day and puts its fauna in the catalog.';
+  // R133 — the stood-down line counts open nodes now instead of repeating a
+  // fixed sentence, which is R120's own rule ("not the same sentence whether
+  // one thing or twenty are waiting"). This gate kept a SECOND copy of the
+  // constant that tools/smoke.js keeps, and updating one and not the other
+  // is how a baseline goes red an hour after a green suite.
+  const PLAIN = /^\\d+ nodes? you can take right now\\.$/;
   const openTo = (n) => {
     const s = { ...newGameState(), seed: 4242 };
     ensureRanchSeeded(s, content, t0);
@@ -1287,11 +1292,11 @@ const OPENING = ['node', '-e', `
     const hint = rowOf(one).hint;
     const said = (hint.match(/\\d+/g) ?? []).map(Number);
     const team = fitToFight(one, t0).length;
-    if (hint === PLAIN) bad.push('outnumbered, the row still reads as a reward');
+    if (PLAIN.test(hint)) bad.push('outnumbered, the row still stands down');
     if (!said.includes(bodiesOf(one)) || !said.includes(team)) bad.push('the row does not state the true bodies and team: "' + hint + '"');
     if (!/health bar/.test(hint)) bad.push('the row does not say it in A1 terms');
   }
-  if (rowOf(three).hint !== PLAIN) bad.push('the row cries wall at a team that can take the node');
+  if (!PLAIN.test(rowOf(three).hint)) bad.push('the row cries wall at a team that can take the node: "' + rowOf(three).hint + '"');
   // R79 — a wave list outlives the roster it names. Drop a unit the front
   // node still lists and the count has to follow, or the row tells a new
   // player to bring a body for an opponent that no longer exists. The
@@ -3021,10 +3026,15 @@ const BREAKS = [
   },
 
   {
-    n: 85, gate: OPENING, name: 'the assault row goes back to its reward line, so the opening hides the wall',
+    // R133 re-aims this. It used to anchor on the fixed reward sentence the
+    // no-wall branch returned, and R133 replaced that with a count — so the
+    // anchor stopped existing and the break went BADANCH, which is exactly
+    // the failure mode BADANCH is FOR. Same defect, current spelling: the
+    // row never sees a wall, so the opening stands down against three.
+    n: 85, gate: OPENING, name: 'the assault row never sees the wall, so the opening hides it',
     file: 'ranch/agenda.js',
-    anchor: "      const wall = assaultWall(state, content, now);\n      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';",
-    to: "      const wall = null;\n      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';",
+    anchor: "      const wall = assaultWall(state, content, now);\n      const open = reachableEncounterIds(state, content).length;",
+    to: "      const wall = null;\n      const open = reachableEncounterIds(state, content).length;",
   },
   {
     n: 86, gate: OPENING, name: 'the wall counts every chimera instead of the ones that can fight',
