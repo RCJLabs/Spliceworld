@@ -575,6 +575,14 @@ export const migrations = {
   // it happened while the file was on disk. `tickBreakouts` fires it from
   // the start of the gap, so the moment is not lost either — it is dated to
   // when it was due (R78's rule), not to when the migration ran.
+  // R131 — the page counter the Ranch and the Vault remember. A save from
+  // before it arrives on page one of everything, which is where a player who
+  // has never pressed the button would be anyway.
+  49: (save) => {
+    save.ui ??= {};
+    save.ui.pages ??= {};
+    return save;
+  },
   48: (save) => {
     save.campaign ??= {};
     save.campaign.released ??= null;

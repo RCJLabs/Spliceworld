@@ -78,7 +78,23 @@ const BUDGET = {
   // can reach is not a ratchet; it is a number waiting to excuse the next
   // regression. The shut half is untouched at 3,650 (measured 3,485) and is
   // still the one that should worry somebody: pagination is still unwritten.
-  ranch:          { folded: 3650,  tallest: 4450 },
+  // R131 SETS THE CEILING RATHER THAN FOLLOWING IT: 3650 -> 2500 shut,
+  // measured at 2,453 with a page of eight. Every ratchet above is the same
+  // admission — the folded row is per ANIMAL, so the screen is a
+  // multiplication and folding only divided the constant. 3,269px at four,
+  // 7,438 at twelve, 11,607 at twenty before R98; 3,499 at twenty after it.
+  //
+  // THE NUMBER IS NOW ARITHMETIC ANYBODY CAN CHECK, which is the point:
+  // 1,756px of Ranch chrome (the Path, Right Now, the facility card, the
+  // Breeding Pen, the Incubator) plus eight rows at 87px. It does not move
+  // when the herd grows, and the only things that can move it are a taller
+  // row or a bigger page — both deliberate, both visible in a diff.
+  //
+  // I set this to 1,950 before measuring the chrome and it was a guess: the
+  // chrome alone is 2.3 phone screens, so no page size could have met it.
+  // The chrome is R47's territory and has not been re-measured since; that
+  // is the next thing worth doing to this screen, not a smaller page.
+  ranch:          { folded: 2500,  tallest: 4450 },
   pens:           { folded: 2000,  tallest: 4000 },   // R89's criterion
   // R128: 1900 -> 2080 open, measured at 1998. The shut half does not move
   // (1,827 against 1,900) — what moved is that this screen HAS an open half
@@ -113,7 +129,24 @@ const BUDGET = {
   // where a player watches them run out — 56px of card header is what it
   // costs to be bought where it is felt. The derived open height is
   // untouched, because a fold adds nothing to a screen already 29,798px tall.
-  vault:          { folded: 2560,  tallest: Math.round(VAULT_ROWS * 68 * 1.1) },
+  // R131 — AND THE OPEN HALF STOPS BEING DERIVED FROM THE WHOLE SHELF.
+  // `VAULT_ROWS * 68 * 1.1` was an honest description of a screen that could
+  // put all 457 rows on at once: 41 bays of raw `<details>`, none of them
+  // exclusive, 29,708px measured. A budget that tracks the shelf is a budget
+  // that grows with the save, which is the thing this milestone exists to
+  // stop. The bays are one-at-a-time on the project's own fold machinery
+  // now and a bay shows a page, so the number is the shut shelf plus ONE
+  // open page. Measured at 4,009 with pages of eight; 4,100 sits just above
+  // it, and like the Ranch's it is arithmetic rather than a ratchet — the
+  // shut shelf plus sixteen rows, whatever the shelf holds.
+  //
+  // The bay this exists for is the shark bay, and it is worth writing the
+  // numbers down: on a day-180 save it holds 101 of the 337 parts AND 116
+  // of the 120 vials. One summary line, 217 rows behind it. The first
+  // version of this milestone paged the parts and left the vials, and the
+  // gate measured that bay at 16,821px — the fix is not a smaller page, it
+  // is that a list is a list.
+  vault:          { folded: 2560,  tallest: 4100 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
   // R95: 1900 -> 2350, measured at 2293. The tab lists what you have found,

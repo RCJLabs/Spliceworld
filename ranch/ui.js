@@ -24,7 +24,8 @@ import { incomePerDay } from '../campaign/campaign.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { facilityCard, facilityElsewhere, bindFacility } from '../ui/facility-card.js';
 import { agendaShape } from './agenda.js';
-import { bandedHtml } from '../ui/roster.js';
+import { banded, bandedHtml } from '../ui/roster.js';
+import { paginate, pagerRow, bindPager, trimPages } from '../ui/pager.js';
 import { renderIcon } from '../ui/icons.js';
 import { rushQuote, rushButton, bindRush } from '../splice/rush.js';
 
@@ -422,6 +423,7 @@ export function renderRanchScreen(root, ctx) {
   // R38 was written about: an animal that ages past Prime loses grade, and
   // nothing else on this screen has a deadline. It rides on the SHUT row.
   const careReadyCount = (animal) => CARE_ACTIONS.filter((a) => careStatus(animal, t)[a].ready).length;
+  const RANCH_PAGE = 'ranch-roster';
   const RANCH_BANDS = [
     { id: 'graduate', label: 'Ready to graduate' },
     { id: 'care', label: 'Needs care' },
@@ -433,7 +435,21 @@ export function renderRanchScreen(root, ctx) {
     return careReadyCount(animal) ? 'care' : 'growing';
   };
 
-  const cards = bandedHtml(state.ranch.stock, RANCH_BANDS, bandOf, (animal) => {
+  // R131 — A PAGE, WHICH IS THE CEILING THE FOLD NEVER GAVE THIS SCREEN.
+  // R98 folded the row and the screen went from 11,607px to 3,499 at twenty
+  // animals — a third of the height and exactly the same growth rate, one
+  // row per head with no cap on heads. This is the multiply.
+  //
+  // Paged in BAND ORDER, which is what makes the Ranch's own rule survive it:
+  // "Ready to graduate" is the band an animal lands in the moment it has a
+  // deadline (prime, or past it and losing grade), and it sorts first, so
+  // ALERTS NEVER HIDE comes out of the ordering rather than out of a second
+  // rule that could disagree with the first. A player who never presses the
+  // button still sees every animal that is costing them something.
+  const ordered = banded(state.ranch.stock, RANCH_BANDS, bandOf).flatMap((b) => b.items);
+  trimPages(state, RANCH_PAGE, ordered.length);
+  const page = paginate(ordered, state, RANCH_PAGE);
+  const cards = bandedHtml(page.rows, RANCH_BANDS, bandOf, (animal) => {
     const species = speciesOf(content, animal.species);
     const stage = ageStage(animal, content, t);
     const next = nextStage(animal, content, t);
@@ -518,7 +534,10 @@ export function renderRanchScreen(root, ctx) {
   // scrolls to is a note nobody reads.
   const note = fieldNote(guideForScreen(state, content, t, 'ranch'));
 
-  root.innerHTML = onboarding + note + rightNow + head + breeding + incubator + (cards || '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>');
+  const roster = cards
+    ? cards + pagerRow(page, 'more animals')
+    : '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>';
+  root.innerHTML = onboarding + note + rightNow + head + breeding + incubator + roster;
   const again = () => renderRanchScreen(root, ctx);
   root.querySelectorAll('button[data-rename]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -555,6 +574,7 @@ export function renderRanchScreen(root, ctx) {
   // animal against what the agenda is asking for wants both.
   bindFolds(root, ctx, again,
     { exclusive: state.ranch.stock.map((animal) => `ranch-${animal.id}`) });
+  bindPager(root, ctx, again);
   // R128 — the buy button is bound by the module that draws it now. The
   // Ranch's own `data-act` loop used to carry an `upgrade` branch; taking
   // that branch out without adding this left a live-looking button that did

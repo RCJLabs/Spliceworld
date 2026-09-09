@@ -1679,15 +1679,34 @@ footer {
   margin-bottom: 6px;
   padding: 2px 8px;
 }
-.vault-species summary {
+/* R131 — the bay head is a real button now, on the same `data-fold`
+   contract as every other fold in the game, so `bindFolds` can keep one open
+   and both browser gates can find it. Styled to sit exactly where the
+   `<summary>` sat: this is the shut Vault's whole height, forty-one of them,
+   and the budget has 120px of headroom. `min-height` is R73's 40px floor,
+   which the 35px summary never had to clear because it was not a control. */
+.vault-species > .bay-head {
   display: flex;
   align-items: center;
+  /* R99 found this leak on `.lab-pick` and called it the only instance in
+     the game; it was the only instance until this row became a button.
+     R73's global `button { justify-content: center }` centres a
+     shrink-wrapped label inside its 40px target, and a full-width flex row
+     inherits it — the a11y gate measured this one starting 98px into its own
+     348px line. A ragged left edge on a list you scan by name. */
+  justify-content: flex-start;
   gap: 8px;
+  width: 100%;
+  min-height: 40px;
   padding: 7px 2px;
   font-size: 0.82rem;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
   cursor: pointer;
 }
-.vault-species summary::-webkit-details-marker { color: var(--muted); }
+.vault-species > .bay-head .fold-caret { color: var(--muted); }
 .vault-species .token-list { margin-top: 0; }
 .vault-species .token-list li { background: var(--panel); font-size: 0.74rem; }
 /* R52 — a vial fold ranks by its best donor the way a token fold ranks by
