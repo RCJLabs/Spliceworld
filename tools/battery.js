@@ -3227,12 +3227,22 @@ const BREAKS = [
     to: '## releases',
   },
   {
-    // And the half that keeps them from simply being deleted: a data file
-    // with no note is a data file nobody has to explain.
-    n: 203, gate: UNION, name: 'a data file loses its note, and nothing says what it is for',
-    file: 'tools/smoke.js',
-    anchor: "  const undocumented = dataFiles.filter((f) => !noteSet.has(f.replace(/\\.json$/, '.md')));",
-    to: '  const undocumented = [];',
+    // THE POINTER BREAKS, which is the criterion's actual heart: "still
+    // findable from the file it documents". A note that names the wrong file
+    // has moved the prose out of the browser's path and out of everybody's
+    // reach at the same time.
+    //
+    // Two of the four rules carry no break, and honestly rather than
+    // silently: this battery patches file CONTENT, so it cannot delete a
+    // note to prove the missing-file half, and it cannot shorten one enough
+    // to trip the stub floor with a single anchored replacement. The first
+    // version of this break patched the GATE instead (`const undocumented =
+    // []`) and went MISSED, correctly — removing a check does not make
+    // anything else fail.
+    n: 203, gate: UNION, name: 'a note stops naming the file it documents, and points at nothing',
+    file: 'data/notes/feral.md',
+    anchor: '# data/feral.json',
+    to: '# data/feral.js',
   },
 
   // --- gate: R131, the page that is the ceiling ---------------------------
