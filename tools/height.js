@@ -99,7 +99,40 @@ const BUDGET = {
   // commit measured 2,540 the next day — see the PINNED_NOW note below.
   // Every number in this table was drifting with the calendar; they mean
   // something now, and this one is tightened to prove it.
-  ranch:          { folded: 2450,  tallest: 4450, opens: 20 },
+  //
+  // R133 ADDS THE CHROME NUMBER: how much of this screen the player gets
+  // through before the first animal. A single total hides the trade — trim
+  // two rows off the roster and a fatter agenda is paid for out of the
+  // saving, with the gate none the wiser.
+  //
+  // I WROTE 900 FIRST, as a target, before doing the work, and it was a
+  // guess: the measurement is 984 and the last 84px are not there to find.
+  // Of that 984, the agenda is 697 and EVERYTHING else on the screen — the
+  // money card, the facility, the Breeding Pen, the incubator line and the
+  // gaps between them — is 287. The agenda is what the screen is for, so
+  // the budget sits above the measurement like every other number in this
+  // table rather than below it like a wish.
+  //
+  // The headroom is one open row, not slack: the agenda is 53px per thing
+  // you can do right now and the fixture happens to have ten. A save with a
+  // raid and a captive on the clock is legitimately taller.
+  //
+  // WHAT THE BATTERY CANNOT PROVE ABOUT THIS NUMBER, said out loud. Breaks
+  // 204 and 205 grow the chrome and this rule fires — but so does the total
+  // above them, so neither break shows the chrome budget doing anything the
+  // total was not already doing. The case it exists for is a TRADE: a
+  // milestone that shortens the roster and spends the saving on a taller
+  // agenda, where the total never moves and only this number notices. That
+  // is a two-place change and a break is one anchor, so it is not reachable
+  // from the battery. The rule is still worth having — R131 shipped against
+  // a total that hid exactly this — and this comment is here so nobody reads
+  // two green breaks as proof of more than they are.
+  //
+  // The total comes down with it — 2450 -> 1900, measured 1,831. That is
+  // 2.3 phone screens, past the 2.5 R131 aimed at and could not reach with a
+  // page size, because a page only ever shortened the half of this screen
+  // that was never the problem.
+  ranch:          { folded: 1900,  tallest: 4450, opens: 20, chrome: 1050 },
   pens:           { folded: 2000,  tallest: 4000, opens: 20 },   // R89's criterion
   // R128: 1900 -> 2080 open, measured at 1998. The shut half does not move
   // (1,827 against 1,900) — what moved is that this screen HAS an open half
@@ -225,7 +258,13 @@ const WORDS = {
   // R128 collects here too: 950 -> 810 open, measured at 768. Same cause as
   // the pixel ceiling above — R98's one-at-a-time rule made the 950 word
   // budget unreachable, and an unreachable budget measures nothing.
-  ranch:          { folded: 700,  open: 810 },
+  // R133: 700/810 -> 400/550, measured 287 and 475. The agenda stopped
+  // teaching what its own `ready` predicate says the player is already
+  // doing, and the money card and the Breeding Pen stopped arriving open —
+  // so the screen says 104 fewer words before you touch it. A budget left
+  // at 700 against a 287-word screen is the ceiling nothing can reach that
+  // R131 warned about: it measures nothing and excuses the next regression.
+  ranch:          { folded: 400,  open: 550 },
   pens:           { folded: 300,  open: 400 },
   // R128: 300 -> 340 open, measured at 320. The upgrade card's twenty words
   // are the Tier II blurb and the grants line under it — what the gantry
@@ -386,6 +425,49 @@ try {
     // rather than a shorter screen.
     const foldsCount = async (sel) => Number(await evaluate(
       `document.querySelectorAll('${sel} button[data-fold]').length`));
+
+  // R133 — HOW MUCH OF THIS SCREEN IS NOT THE THING IT IS FOR.
+  //
+  // R131 gave the Ranch a page ceiling and its own entry named what that
+  // could not reach: the roster was 686px of a 2,368px screen, and the other
+  // 1,682 was chrome. A single total hides that completely — trim two rows
+  // off the roster and a fatter agenda is paid for out of the savings, with
+  // the gate none the wiser. So the chrome is its OWN number: the distance
+  // from the top of the screen to the top of the first roster element, which
+  // is every card above it plus the gaps between them and nothing else.
+  //
+  // Measured against the roster rather than by naming the chrome cards, so a
+  // card added above the herd tomorrow is inside the number automatically.
+  const chromeOf = async (sel) => Number(await evaluate(`(() => {
+    const scr = document.querySelector('${sel}');
+    if (!scr) return 0;
+    const first = scr.querySelector('.list-group, .pen-fold');
+    if (!first) return Math.round(scr.scrollHeight);
+    return Math.round(first.getBoundingClientRect().top - scr.getBoundingClientRect().top);
+  })()`));
+
+  // R133 — AND EVERY ROW IS ONE LINE.
+  //
+  // The first version of this rule compared a row against a `spend` chip and
+  // that was the wrong bound: a chip is a pill carrying a label and a short
+  // number, a row is a label over a sentence, and holding them equal would
+  // have deleted the sentence R120 built rather than shortening it.
+  //
+  // The bound that says what I actually mean is the SHORTEST ROW ON THE
+  // SCREEN. Every label is one line, so a row that does not wrap is exactly
+  // as tall as every other row that does not wrap; a row that wraps is
+  // taller than all of them. Nothing is typed, so a change to the type scale
+  // or the padding moves the rule with it (R61), and the chrome budget above
+  // covers the case this cannot see — every row wrapping equally.
+  const agendaShape = async (sel) => JSON.parse(await evaluate(`JSON.stringify((() => {
+    const rows = [...document.querySelectorAll('${sel} .agenda-row')]
+      .map((e) => ({ h: Math.round(e.getBoundingClientRect().height),
+        t: (e.innerText || '').split(String.fromCharCode(10)).pop() }));
+    if (!rows.length) return { rows: 0 };
+    const tallest = rows.reduce((a, b) => (b.h > a.h ? b : a));
+    return { rows: rows.length, tallest: tallest.h, shortest: Math.min(...rows.map((r) => r.h)),
+      worst: tallest.t };
+  })())`));
   const tallestOf = async (sel, cap = 40) => {
     let tallest = await acrossTabs(sel);
     opened = 0;
@@ -461,9 +543,14 @@ try {
           + ` screens), over the ${FACILITY_TOP}px it is allowed`);
       }
     }
+    // Both R133 numbers are taken SHUT, before `tallestOf` opens anything —
+    // the state a player arrives in, which is the whole complaint.
+    const chrome = await chromeOf(sel);
+    const agenda = await agendaShape(sel);
     const tallest = BUDGET[screen]?.tallest === null ? null : await tallestOf(sel);
     // After `tallestOf`, which has opened everything the screen will allow.
-    rows.push({ id: screen, folded, tallest, opened, foldsPainted, wordsShut, wordsOpen: await wordsOf(sel),
+    rows.push({ id: screen, folded, tallest, opened, foldsPainted, wordsShut, chrome, agenda,
+      wordsOpen: await wordsOf(sel),
       facilityAt: place && `${place.at}/${place.of} @ ${place.top}px` });
   }
   // The War Room is not in the height table (its map is a canvas the budget
@@ -527,6 +614,20 @@ for (const r of rows) {
       problems.push(`${r.id} opened ${r.opened} thing${r.opened === 1 ? '' : 's'} and did not grow`
         + ` (${r.folded}px shut, ${r.tallest}px open) — the walk is opening empty containers`);
     }
+  }
+  // R133 — the chrome budget, for the screens that declare one. It is opt-in
+  // rather than universal because the number only means something where the
+  // screen has a body the chrome sits above: the Dex tabs ARE the content,
+  // and a chrome number for them would be the whole tab.
+  if (b.chrome != null && r.chrome > b.chrome) {
+    problems.push(`${r.id} spends ${r.chrome}px before the first ${r.id === 'ranch' ? 'animal' : 'row'},`
+      + ` over its ${b.chrome}px chrome budget — that is ${(r.chrome / 780).toFixed(1)} phone screens`
+      + ' of preamble, and it is not what the screen is for');
+  }
+  if (r.agenda?.rows > 1 && r.agenda.tallest > r.agenda.shortest) {
+    problems.push(`${r.id}'s tallest agenda row is ${r.agenda.tallest}px against a ${
+      r.agenda.shortest}px row that fits — "${r.agenda.worst}" wraps, and a row that wraps`
+      + ' is a row carrying something other than what is true right now');
   }
   const w = WORDS[r.id];
   if (!w) { problems.push(`${r.id} has no word budget — a new screen has to declare one`); continue; }

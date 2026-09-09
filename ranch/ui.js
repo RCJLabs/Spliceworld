@@ -228,8 +228,25 @@ export function renderRanchScreen(root, ctx) {
   // 380px five cells wrapped to three rows, 106px of them. R40 already
   // solved this in the War Room: Net is the number, its derivation is its
   // subtitle. Three cells now, and the Ranch reads like the War Room.
-  const head = `
-    <section class="card">
+  // R133 — AND IT FOLDS, which it never has. Measured on the day-180 save at
+  // 380px this card is 252px: three stat cells, a pen-expansion button, the
+  // mail-order picker, its Order button and the message line. Every one of
+  // those is something you do OCCASIONALLY and the two numbers on it are
+  // something you check CONSTANTLY, so the numbers go on the head and the
+  // rest goes behind it. It was the only chrome card on this screen with no
+  // fold at all, which is why it survived R47 and R98 untouched.
+  //
+  // Not in the animals' exclusive group, and deliberately: R98 settled that
+  // the chrome and the herd are different kinds of thing and a player
+  // comparing one against the other wants both open. What R133 changes is
+  // the DEFAULT, not the rule.
+  const moneyOpen = isOpen(state, 'slush-fund', false);
+  const head = collapsibleCard({
+    id: 'slush-fund',
+    title: 'Slush fund',
+    badge: `$${Math.floor(state.funds)} · ${net < 0 ? '−' : '+'}$${Math.abs(net)}/day`,
+    open: moneyOpen,
+    body: `
       <div class="econ-row">
         <div><span class="econ-label">Slush fund</span><strong>$${Math.floor(state.funds)}</strong></div>
         <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${net < 0 ? '−' : '+'}$${Math.abs(net)}/day</strong><span class="econ-next">+$${TUNING.stipendPerDay + territory} in, −$${upkeep} upkeep</span></div>
@@ -254,8 +271,8 @@ export function renderRanchScreen(root, ctx) {
         })}
         <button type="button" data-act="order" ${catalog.length ? '' : 'disabled'}>Order</button>
       </div>
-      <p class="ranch-msg">${lastMsg}</p>
-    </section>
+      <p class="ranch-msg">${lastMsg}</p>`,
+  }) + `
     ${facilityCard(state, content, 'ranch')}
     ${facilityElsewhere(state, content, 'ranch')}`;
 
@@ -280,7 +297,12 @@ export function renderRanchScreen(root, ctx) {
   }
   const canPair = [...pairable.values()].some((sexes) => sexes.size > 1);
   const incubatorFull = state.ranch.eggs.length >= incubatorSlots(state, content);
-  const breedingOpen = isOpen(state, 'breeding-pen', canPair && !incubatorFull);
+  // R133 — SHUT ON ARRIVAL. The default used to be "open whenever a pairing
+  // exists", and on any save past the opening a pairing always exists: the
+  // day-180 walk offers 36 of them, so this card was 257px of two pickers
+  // and a button on every single visit. The badge already says `pairing
+  // available`, which is the part you need without opening anything.
+  const breedingOpen = isOpen(state, 'breeding-pen', false);
   if (!eligible.some((a) => a.id === pickA)) pickA = '';
   // Same STOCK, not the same species string: an Alpine Ram is still a ram,
   // and crossing a lucky mutant back into the good line is the point of it
@@ -405,11 +427,19 @@ export function renderRanchScreen(root, ctx) {
         t < egg.hatchAt ? `<div class="egg-rush">${rushButton(rushQuote(state, 'egg', egg.id, content, t))}</div>` : ''
       }`;
   }).join('');
-  const incubator = `
-    <section class="card">
-      <h3>Incubator (${state.ranch.eggs.length}/${incubatorSlots(state, content)})</h3>
-      ${eggCards || '<p class="ranch-msg">No eggs. The incubator hums expectantly.</p>'}
-    </section>`;
+  // R133 — an empty incubator is a LINE. The card was 64px to say "Incubator
+  // (0/12)" and "No eggs. The incubator hums expectantly." — a heading, its
+  // own count and a joke about having nothing in it. With eggs in it the card
+  // earns its space and keeps it; with none it is the definition of chrome.
+  // The Pens took this same decision in R98 ("the bucket as one LINE, not a
+  // card"), and the count stays on the line so nothing is lost but the box.
+  const incubator = state.ranch.eggs.length
+    ? `<section class="card">
+        <h3>Incubator (${state.ranch.eggs.length}/${incubatorSlots(state, content)})</h3>
+        ${eggCards}
+      </section>`
+    : `<p class="ranch-msg incubator-empty">Incubator 0/${
+        incubatorSlots(state, content)} — the incubator hums expectantly.</p>`;
 
   // R46. Measured at 380px, one animal card is 514px and the Ranch grew by
   // exactly that per head: 3,269px at four, 7,438px at twelve, 11,607px at

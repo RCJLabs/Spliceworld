@@ -3332,6 +3332,38 @@ const BREAKS = [
     to: '  vault:          { folded: 2560,  tallest: 4100 },',
   },
   {
+    // R133 — the Breeding Pen goes back to opening itself whenever a pairing
+    // exists, which is R47's rule and which on any save past the opening
+    // means ALWAYS: the day-180 walk offers thirty-six pairings. Measured,
+    // this trips BOTH the chrome rule (1,175 of 1,050) and the total (2,022
+    // of 1,900) — see the note in tools/height.js about what that does and
+    // does not prove about the chrome number.
+    n: 204, gate: HEIGHT, name: 'the Breeding Pen opens itself again, and the screen grows by a card',
+    file: 'ranch/ui.js',
+    anchor: "  const breedingOpen = isOpen(state, 'breeding-pen', false);",
+    to: "  const breedingOpen = isOpen(state, 'breeding-pen', canPair && !incubatorFull);",
+  },
+  {
+    // Same rule, the other card, and the one that had no fold at all before
+    // R133: arriving open, the money card puts two pickers and three
+    // buttons in front of the herd.
+    n: 205, gate: HEIGHT, name: 'the money card arrives open and the herd moves down the screen',
+    file: 'ranch/ui.js',
+    anchor: "  const moneyOpen = isOpen(state, 'slush-fund', false);",
+    to: "  const moneyOpen = isOpen(state, 'slush-fund', true);",
+  },
+  {
+    // R133 — the one-line rule. The lesson goes back onto the vat row, which
+    // is the exact sentence `data/guides.json` already teaches under "The
+    // vat crosses two chimeras". The row wraps to two lines and is then
+    // taller than every row that did not, which is what the gate measures —
+    // no constant to edit, so this cannot be met by moving a budget.
+    n: 206, gate: HEIGHT, name: 'an agenda row teaches a lesson the field guide already gives',
+    file: 'ranch/agenda.js',
+    anchor: "      return `${seen.size} pairing${seen.size === 1 ? '' : 's'} the vat will take.`;",
+    to: "      return `${seen.size} pairing${seen.size === 1 ? '' : 's'} the vat will take. Two go in, one genome out that neither of them was.`;",
+  },
+  {
     // The migration forgets the phase, so a save from v47 arrives with
     // `released` undefined — and `!cam.released` is true for a county that
     // has already been opened, which fires the burst a second time.

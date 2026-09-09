@@ -103,12 +103,11 @@ export const AGENDA = [
     id: 'raid', kind: 'campaign', screen: 'battle', label: 'Defend the ranch',
     hint: (state, content, now) => {
       const raid = activeRaid(state);
-      if (!raid) return 'The Compliance Task Force is at the gate.';
+      if (!raid) return 'The Task Force is at the gate.';
       const hours = Math.max(0, raidRemainingMs(raid, now)) / HOUR;
       const levy = levyOf(state, content);
-      return `The Compliance Task Force is at the gate. ${
-        hours < 1 ? 'Under an hour' : `${Math.floor(hours)}h`
-      } before they serve papers and leave with $${levy.fine}${levy.stock ? ` and ${levy.stock} of the herd` : ''}.`;
+      return `Papers in ${hours < 1 ? 'under an hour' : `${Math.floor(hours)}h`}: $${levy.fine}${
+        levy.stock ? ` and ${levy.stock} of the herd` : ''}.`;
     },
     ready: (state, content, now) => !!activeRaid(state) && fit(state, now).length > 0,
   },
@@ -120,9 +119,7 @@ export const AGENDA = [
     id: 'gauntlet', kind: 'campaign', screen: 'battle', subtab: 'labs', label: 'Answer an exhibition',
     hint: (state, content) => {
       const open = gauntletState(state, content).find((r) => r.status === 'open');
-      return open
-        ? `${open.stage.name} is waiting. $${open.stage.reward} and the hardest fight the coalition has.`
-        : 'The Gauntlet is open.';
+      return open ? `${open.stage.name} is waiting — $${open.stage.reward}.` : 'The Gauntlet is open.';
     },
     ready: (state, content, now) =>
       gauntletState(state, content).some((r) => r.status === 'open') && fit(state, now).length > 0,
@@ -146,7 +143,7 @@ export const AGENDA = [
       const { c, f } = pacing[0];
       const hours = Math.max(0, f.remainingMs) / HOUR;
       const who = pacing.length === 1 ? c.name : `${c.name} and ${pacing.length - 1} other${pacing.length === 2 ? '' : 's'}`;
-      return `${who} pacing the pen. ${hours < 1 ? 'Under an hour' : `${Math.floor(hours)}h`} before it stops taking your calls. Working with it at all is the fix.`;
+      return `${who} pacing the pen — ${hours < 1 ? 'under an hour' : `${Math.floor(hours)}h`} to answer.`;
     },
     ready: (state, content, now) =>
       (state.chimeras ?? []).some((c) => feralStatus(c, content, now).agitated),
@@ -154,12 +151,14 @@ export const AGENDA = [
   {
     id: 'graduate', kind: 'work', screen: 'ranch', label: 'Graduate a donor',
     hint: (state, content, now) => {
+      // R133 — no `!ripe.length` branch. This row's own `ready` predicate
+      // requires a grown animal, so the beginner sentence that used to sit
+      // here could never render: `agenda()` returns only rows that are open.
       const ripe = state.ranch.stock.filter((a) => ageStage(a, content, now) !== 'juvenile');
-      if (!ripe.length) return 'A grown animal becomes six parts. This is where chimeras come from.';
       const who = ripe.length === 1
-        ? `${ripe[0].name} the ${speciesOf(content, ripe[0].species)?.name ?? ripe[0].species} is grown`
+        ? `${ripe[0].name} the ${speciesOf(content, ripe[0].species)?.name ?? ripe[0].species}`
         : `${ripe.length} are grown`;
-      return `${who} — ${ripe.length === 1 ? 'six parts' : `six parts each, ${ripe.length * 6} in all`}. This is where chimeras come from.`;
+      return `${who} — ${ripe.length === 1 ? 'six parts' : `${ripe.length * 6} parts in all`}.`;
     },
     ready: (state, content, now) =>
       state.ranch.stock.some((a) => ageStage(a, content, now) !== 'juvenile'),
@@ -170,7 +169,7 @@ export const AGENDA = [
       const parts = state.inventory.parts ?? [];
       const species = new Set(parts.map((p) => content?.parts?.[p.partId]?.species).filter(Boolean));
       return `${parts.length} part${parts.length === 1 ? '' : 's'} in the vault from ${
-        species.size} donor${species.size === 1 ? '' : 's'}. Something could be wearing them.`;
+        species.size} donor${species.size === 1 ? '' : 's'}.`;
     },
     // A HEAD, not just parts: the Theater refuses a genome without one, so
     // "there are parts in the vault" could point at a splice the game will
@@ -189,7 +188,7 @@ export const AGENDA = [
           if (canBreed(state.ranch.stock[i], state.ranch.stock[j], state, content, now).ok) pairs++;
         }
       }
-      return `${pairs} pairing${pairs === 1 ? '' : 's'} the pens can make right now. Two adults of a species make a better third.`;
+      return `${pairs} pairing${pairs === 1 ? '' : 's'} the pens can make right now.`;
     },
     ready: (state, content, now) => state.ranch.stock.some((x, i) =>
       state.ranch.stock.slice(i + 1).some((y) => canBreed(x, y, state, content, now).ok)),
@@ -199,7 +198,7 @@ export const AGENDA = [
     hint: (state, content, now) => {
       const ready = (state.ranch.eggs ?? []).filter((e) => now >= e.hatchAt);
       return ready.length === 1
-        ? 'An egg has finished. Somebody is knocking.'
+        ? 'An egg has finished — somebody is knocking.'
         : `${ready.length} eggs have finished. Somebody is knocking.`;
     },
     ready: (state, content, now) => (state.ranch.eggs ?? []).some((e) => now >= e.hatchAt)
@@ -215,7 +214,7 @@ export const AGENDA = [
         if (n) { ready += n; animals++; }
       }
       return `${ready} thing${ready === 1 ? '' : 's'} to do for ${animals} animal${
-        animals === 1 ? '' : 's'}. Condition decides the grade they graduate at.`;
+        animals === 1 ? '' : 's'}.`;
     },
     ready: (state, content, now) =>
       state.ranch.stock.some((a) => Object.values(careStatus(a, now)).some((s) => s.ready)),
@@ -232,7 +231,7 @@ export const AGENDA = [
           try { if (vatPlan(state, a.id, b.id, content, now)?.ok) seen.add(key); } catch { /* not a pair */ }
         }
       }
-      return `${seen.size} pairing${seen.size === 1 ? '' : 's'} the vat will take. Two go in, one genome out that neither of them was.`;
+      return `${seen.size} pairing${seen.size === 1 ? '' : 's'} the vat will take.`;
     },
     ready: (state, content, now) => {
       if (activeVat(state)) return false;
@@ -258,7 +257,7 @@ export const AGENDA = [
     id: 'spar', kind: 'work', screen: 'battle', label: 'Spar a garrison',
     hint: (state, content, now) => {
       const { charges } = sparCharges(state, now, content);
-      return `${charges} charge${charges === 1 ? '' : 's'} in the ring — free xp against a garrison you already hold.`;
+      return `${charges} charge${charges === 1 ? '' : 's'} in the ring — free xp.`;
     },
     ready: (state, content, now) => canSpar(state, content, now).ok,
   },
@@ -273,7 +272,9 @@ export const AGENDA = [
     hint: (state, content, now) => {
       const soonest = Math.min(...(state.campaign.contested ?? []).map((c) => contestRemainingMs(c, now)));
       const hours = Math.max(0, soonest) / HOUR;
-      return `A convoy is rolling on ${state.campaign.contested.length === 1 ? 'a node you hold' : `${state.campaign.contested.length} nodes you hold`}. ${hours < 1 ? 'Under an hour' : `${Math.floor(hours)}h`} to answer it, and the income is suspended until you do.`;
+      return `Convoys on ${state.campaign.contested.length === 1 ? 'a node you hold' : `${
+        state.campaign.contested.length} of your nodes`} — ${
+        hours < 1 ? 'under an hour' : `${Math.floor(hours)}h`} to answer.`;
     },
     ready: (state, content, now) =>
       (state.campaign.contested ?? []).length > 0 && fit(state, now).length > 0,
@@ -283,7 +284,9 @@ export const AGENDA = [
     hint: (state, content, now) => {
       const soonest = Math.min(...(state.campaign.captives ?? []).map((c) => c.deadline - now));
       const hours = Math.max(0, soonest) / HOUR;
-      return `${state.campaign.captives.length === 1 ? state.campaign.captives[0].chimera.name : `${state.campaign.captives.length} of yours`} in the impound. ${hours < 1 ? 'Under an hour' : `${Math.floor(hours)}h`} before the unauthorized peer review.`;
+      return `${state.campaign.captives.length === 1 ? state.campaign.captives[0].chimera.name : `${
+        state.campaign.captives.length} of yours`} in the impound — ${
+        hours < 1 ? 'under an hour' : `${Math.floor(hours)}h`}.`;
     },
     ready: (state, content, now) =>
       (state.campaign.captives ?? []).some((c) => c.deadline > now) && fit(state, now).length > 0,
@@ -296,8 +299,7 @@ export const AGENDA = [
     hint: (state, content, now) => {
       const runnable = runnableOps(state, content, now);
       const purse = runnable.reduce((n, op) => Math.max(n, op.funds?.[1] ?? 0), 0);
-      return `${runnable.length} you can run right now${
-        purse ? `, the best worth up to $${purse}` : ''}. Costs heat, not creatures.`;
+      return `${runnable.length} you can run right now${purse ? `, best worth $${purse}` : ''}.`;
     },
     // Three lanes (see operations.js): a creature can be carried somewhere,
     // you can go yourself, and paperwork needs nobody. Rule 1 — something is
@@ -322,11 +324,21 @@ export const AGENDA = [
     // opening walking a new player into the one wall A1 designed around, in
     // the voice of a hint about how well it pays.
     hint: (state, content, now) => {
+      // R133 — the no-wall branch used to be the standing lesson ("Holding it
+      // pays every day and puts its fauna in the catalog"), and it is the
+      // branch that renders for most of a campaign: `assaultWall` returns
+      // null the moment your team outnumbers the front, which is every day
+      // after the opening. So the row spent the whole game saying the one
+      // thing on it that was not a number. The catalogue guide teaches that
+      // sentence already; this says how many doors are open.
       const wall = assaultWall(state, content, now);
-      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';
-      return `${wall.name} fields ${wall.bodies}; you can field ${wall.team}. One active per side,`
-        + ` so that is ${wall.bodies} health bars against ${wall.team} — ${
-          wall.short === 1 ? 'one more body' : `${wall.short} more bodies`} first.`;
+      const open = reachableEncounterIds(state, content).length;
+      if (!wall) return `${open} node${open === 1 ? '' : 's'} you can take right now.`;
+      // R133 keeps "health bars" — that is R106's criterion, not decoration:
+      // one active per side means a wave count is a number of health bars,
+      // and it is the Path's own phrase for the same wall.
+      return `${wall.name}: ${wall.bodies} health bars, you field ${wall.team} — ${
+        wall.short === 1 ? 'one' : wall.short} short.`;
     },
     ready: (state, content, now) =>
       reachableEncounterIds(state, content).length > 0 && fit(state, now).length > 0,

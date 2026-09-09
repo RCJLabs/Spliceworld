@@ -3416,6 +3416,64 @@ moved one of them: the first premise held exactly, the second did not.
     new measurement. The first paint is smaller than before this milestone
     started, which discharges most of R121 as a side effect.
 
+### 9.14 The Ranch's chrome, a second time (R133) — asked for directly
+
+- **R133 — The Ranch's chrome earns its height (again).** *In progress.*
+
+  R131 brought the Ranch from 3,499px to 2,453 by giving it a page ceiling,
+  and its own entry named what it could not reach: **1,756px of that is
+  chrome**, so no page size could have got the screen to the 2.5 phone
+  screens it was aiming at. R47 last looked at this and it has grown since.
+
+  Re-measured on the clock-pinned day-180 save at 380px, which is the only
+  honest baseline now that R130 pinned the page's `Date`:
+
+  | px | words | card |
+  | ---: | ---: | --- |
+  | **795** | 158 | **Right Now** — open by default |
+  | 257 | 32 | **Breeding Pen** — open by default |
+  | 252 | 34 | Slush Fund — the only chrome card with no fold at all |
+  | 83 | 18 | Facility (shut) |
+  | 64 | 8 | Incubator |
+  | 686 | 141 | the whole roster: 8 animal cards, 3 band heads, the pager |
+
+  Total 2,368px. **The two biggest chrome cards are open on arrival**, and
+  together they are 1,052px — 44% of the screen — before the player has
+  touched anything. The Ranch has had a one-at-a-time rule for *animals*
+  since R98; its chrome was deliberately exempted, and the exemption was
+  about whether two cards MAY be open together, not about what a player
+  should arrive to.
+
+  **What the 795 is made of.** Seven rows at 67px, each a 19px label over a
+  28px fine-print, plus three `spend` chips at 40px that already do the
+  thing the rows do not. Every fine-print is the same two sentences: a live
+  number and then a standing lesson.
+
+  > "15 are grown — six parts each, 90 in all. *This is where chimeras come
+  > from.*"
+  > "45 pairings the vat will take. *Two go in, one genome out that neither
+  > of them was.*"
+
+  Two facts make the lesson indefensible rather than merely long. `agenda()`
+  returns **only rows whose `ready` predicate is true**, so a lesson is only
+  ever shown to a player already doing the thing it explains. And the lesson
+  is *already taught* — `data/guides.json` carries 38 field-guide entries,
+  and "Two adults make a third" is verbatim the breeding row's sentence.
+  This is R37's rule ("the lesson is behind the wall it explains") against a
+  duplication that has been on the screen ever since.
+
+  The same reading found dead prose: the `graduate` row opens with a
+  beginner branch, `if (!ripe.length) return 'A grown animal becomes six
+  parts…'`, which its own `ready` predicate makes **unreachable**. Same
+  class as R130's `_doc` and R10's dead monologue slots.
+
+  *Done when: no agenda row repeats a lesson the field guide already
+  teaches; every open row is one line carrying its live number; nothing
+  above the roster is open on arrival except the agenda; and the Ranch is
+  under 1,950px — 2.5 phone screens, the number R131 named and could not
+  reach — with the height gate holding the chrome and the roster as separate
+  budgets, so a leaner roster can never pay for a fatter agenda.*
+
 ### 9.13 The generator was a trap (R127) — found while doing something else
 
 - **R127 — The data is what the generator produces, and now it has to stay
