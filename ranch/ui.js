@@ -435,17 +435,12 @@ export function renderRanchScreen(root, ctx) {
     return careReadyCount(animal) ? 'care' : 'growing';
   };
 
-  // R131 — A PAGE, WHICH IS THE CEILING THE FOLD NEVER GAVE THIS SCREEN.
-  // R98 folded the row and the screen went from 11,607px to 3,499 at twenty
-  // animals — a third of the height and exactly the same growth rate, one
-  // row per head with no cap on heads. This is the multiply.
-  //
-  // Paged in BAND ORDER, which is what makes the Ranch's own rule survive it:
-  // "Ready to graduate" is the band an animal lands in the moment it has a
-  // deadline (prime, or past it and losing grade), and it sorts first, so
-  // ALERTS NEVER HIDE comes out of the ordering rather than out of a second
-  // rule that could disagree with the first. A player who never presses the
-  // button still sees every animal that is costing them something.
+  // R131 — A PAGE, the ceiling R98's fold never gave this screen: folding the
+  // row took twenty animals from 11,607px to 3,499 and left the growth rate
+  // untouched. Paged in BAND ORDER, which is what makes the Ranch's own rule
+  // survive it — "Ready to graduate" is where an animal lands the moment it
+  // has a deadline and it sorts first, so ALERTS NEVER HIDE falls out of the
+  // ordering rather than out of a second rule that could disagree with it.
   const ordered = banded(state.ranch.stock, RANCH_BANDS, bandOf).flatMap((b) => b.items);
   trimPages(state, RANCH_PAGE, ordered.length);
   const page = paginate(ordered, state, RANCH_PAGE);
