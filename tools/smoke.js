@@ -11468,12 +11468,32 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       'a goat and a bear are not a pairing');
     assert.ok(/2 adults, no pair/.test(crossed), 'and it says so');
 
-    // …and the moment a real pairing exists it opens on its own.
+    // …and the moment a real pairing exists the card SAYS SO — on its face,
+    // without opening.
+    //
+    // R133 REVERSES R47'S OTHER HALF, deliberately. R47 had the card open
+    // itself the moment a pairing existed, and that reads well on a fresh
+    // save and badly on every other one: a pairing almost always exists —
+    // the day-180 walk offers thirty-six — so "opens when it can act" is
+    // "always open" wearing a condition, and it cost 257px of two pickers
+    // and a button on every single visit. What the player needs on arrival
+    // is to KNOW, which is the badge; what they need on a tap is the form.
     const pair = draw(ranch([{ sex: 'F' }, { sex: 'M' }]));
-    assert.ok(/data-fold="breeding-pen" aria-expanded="true"/.test(pair),
-      'a pairing opens the card without being asked');
-    assert.ok(pair.includes('data-act="breed"'), 'and the button is back');
-    assert.ok(pair.includes('pairing available'), 'with a badge that says so');
+    assert.ok(pair.includes('data-fold="breeding-pen"'), 'a pairing keeps the fold');
+    assert.ok(!/data-fold="breeding-pen" aria-expanded="true"/.test(pair),
+      'and it still arrives shut — a pairing is the normal case, not an alert');
+    assert.ok(pair.includes('pairing available'), 'with a badge that says a pairing is there');
+    assert.ok(pair.includes('A pairing is available.'), 'and a summary line under it');
+
+    // Opened, it is the same card it always was. This is the half the fold
+    // must not be allowed to eat: shutting a card by default is only honest
+    // if what is behind it still works.
+    const opened = ranch([{ sex: 'F' }, { sex: 'M' }]);
+    opened.ui = { collapsed: { 'breeding-pen': false } };
+    const openedHtml = draw(opened);
+    assert.ok(/data-fold="breeding-pen" aria-expanded="true"/.test(openedHtml),
+      'one tap opens it');
+    assert.ok(openedHtml.includes('data-act="breed"'), 'and the button is there');
 
     // A full incubator is the other reason it cannot act, and it is a
     // different sentence because it is a different fix.
@@ -17515,7 +17535,12 @@ if (inShard('preview')) {
   const { bandFor } = await import('../battle/forecast.js');
   const { fitToFight } = await import('../battle/statblock.js');
 
-  const PLAIN = 'Holding it pays every day and puts its fauna in the catalog.';
+  // R133 — the row's no-wall branch used to be this fixed sentence, and it
+  // was the branch that renders for most of a campaign. R120's own rule says
+  // what a hint must not be: "the same sentence whether one thing or twenty
+  // are waiting". It counts the open nodes now, so what stands down is the
+  // WALL language, not the row's ability to say a number.
+  const PLAIN = /^\d+ nodes? you can take right now\.$/;
 
   // The player's own opening, played by hand rather than by the walker:
   // graduate N starters, splice what comes out, hold the first node. This is
@@ -17581,7 +17606,7 @@ if (inShard('preview')) {
   //    milestone was written for.
   {
     const hint = rowOf(openTo(1)).hint;
-    assert.notEqual(hint, PLAIN, 'outnumbered, the row does not use the reward line');
+    assert.ok(!PLAIN.test(hint), 'outnumbered, the row does not use the stood-down line');
     assert.ok(hint.includes('3'), `it says how many they field: "${hint}"`);
     assert.ok(/\bone\b|\b1\b/.test(hint), `and how many you can (got "${hint}")`);
     assert.ok(/health bar/.test(hint), 'in A1’s own terms, which the Path already uses');
@@ -17590,7 +17615,9 @@ if (inShard('preview')) {
   // 4. NO FALSE ALARM. With the bodies to take it, the reward line is back —
   //    a warning that never stands down is a warning nobody reads.
   {
-    assert.equal(rowOf(openTo(3)).hint, PLAIN, 'three bodies against three: the plain line');
+    const stoodDown = rowOf(openTo(3)).hint;
+    assert.ok(PLAIN.test(stoodDown),
+      `three bodies against three: the row counts doors instead of walls (got "${stoodDown}")`);
   }
 
   // 5. THE GENERAL PROPERTY, over the opening the wall actually lives in.
@@ -17625,8 +17652,8 @@ if (inShard('preview')) {
         if (bodies > team) {
           outnumbered++;
           const said = (row.hint.match(/\d+/g) ?? []).map(Number);
-          if (row.hint === PLAIN || !said.includes(bodies) || !said.includes(team)) wrong++;
-        } else if (row.hint !== PLAIN) plainWhenClear++;
+          if (PLAIN.test(row.hint) || !said.includes(bodies) || !said.includes(team)) wrong++;
+        } else if (!PLAIN.test(row.hint)) plainWhenClear++;
       },
     });
     assert.ok(offered > 100, `the row is offered plenty over ten days (${offered})`);

@@ -7,9 +7,21 @@
 // was that a headline number nothing in the repo can reproduce is not
 // evidence. So it is a tool now.
 //
-//   node tools/battery.js            # exit 1 if any break survives
+//   node tools/battery.js            # exit 1 if any break survives (~47 min)
+//   node tools/battery.js --anchors  # every anchor still matches (~1 sec)
+//   node tools/battery.js --baseline # every gate green on a clean tree (~7 min)
+//   node tools/battery.js --only 1,2 # these breaks and nothing else
 //   node tools/battery.js --verbose  # the gate's own words for each
 //   SW_BATTERY_JOBS=1 node ...       # one worker, for a machine under load
+//
+// WHAT TO RUN WHEN. The full battery is a forty-seven minute answer to a
+// question that changes slowly: do the gates still catch defects? Gates
+// change when a milestone writes one. What changes EVERY session is whether
+// this milestone broke a gate — which the baseline answers in seven minutes
+// — and whether it moved a line a break aims at, which `--anchors` answers
+// in one second. R133 is the worked example: its only two real findings were
+// a gate the baseline caught and an anchor `--anchors` would have caught,
+// and the other 203 breaks were green twice for forty minutes each time.
 //
 // Every patch is applied by UNIQUE ANCHOR: if the anchor text does not appear
 // exactly once, the break reports BADANCH and is scored as a failure rather
@@ -1250,7 +1262,12 @@ const OPENING = ['node', '-e', `
   const R = (p) => JSON.parse(readFileSync('./data/' + p + '.json', 'utf8'));
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const t0 = 1700000000000;
-  const PLAIN = 'Holding it pays every day and puts its fauna in the catalog.';
+  // R133 — the stood-down line counts open nodes now instead of repeating a
+  // fixed sentence, which is R120's own rule ("not the same sentence whether
+  // one thing or twenty are waiting"). This gate kept a SECOND copy of the
+  // constant that tools/smoke.js keeps, and updating one and not the other
+  // is how a baseline goes red an hour after a green suite.
+  const PLAIN = /^\\d+ nodes? you can take right now\\.$/;
   const openTo = (n) => {
     const s = { ...newGameState(), seed: 4242 };
     ensureRanchSeeded(s, content, t0);
@@ -1287,11 +1304,11 @@ const OPENING = ['node', '-e', `
     const hint = rowOf(one).hint;
     const said = (hint.match(/\\d+/g) ?? []).map(Number);
     const team = fitToFight(one, t0).length;
-    if (hint === PLAIN) bad.push('outnumbered, the row still reads as a reward');
+    if (PLAIN.test(hint)) bad.push('outnumbered, the row still stands down');
     if (!said.includes(bodiesOf(one)) || !said.includes(team)) bad.push('the row does not state the true bodies and team: "' + hint + '"');
     if (!/health bar/.test(hint)) bad.push('the row does not say it in A1 terms');
   }
-  if (rowOf(three).hint !== PLAIN) bad.push('the row cries wall at a team that can take the node');
+  if (!PLAIN.test(rowOf(three).hint)) bad.push('the row cries wall at a team that can take the node: "' + rowOf(three).hint + '"');
   // R79 — a wave list outlives the roster it names. Drop a unit the front
   // node still lists and the count has to follow, or the row tells a new
   // player to bring a body for an opponent that no longer exists. The
@@ -3021,10 +3038,15 @@ const BREAKS = [
   },
 
   {
-    n: 85, gate: OPENING, name: 'the assault row goes back to its reward line, so the opening hides the wall',
+    // R133 re-aims this. It used to anchor on the fixed reward sentence the
+    // no-wall branch returned, and R133 replaced that with a count — so the
+    // anchor stopped existing and the break went BADANCH, which is exactly
+    // the failure mode BADANCH is FOR. Same defect, current spelling: the
+    // row never sees a wall, so the opening stands down against three.
+    n: 85, gate: OPENING, name: 'the assault row never sees the wall, so the opening hides it',
     file: 'ranch/agenda.js',
-    anchor: "      const wall = assaultWall(state, content, now);\n      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';",
-    to: "      const wall = null;\n      if (!wall) return 'Holding it pays every day and puts its fauna in the catalog.';",
+    anchor: "      const wall = assaultWall(state, content, now);\n      const open = reachableEncounterIds(state, content).length;",
+    to: "      const wall = null;\n      const open = reachableEncounterIds(state, content).length;",
   },
   {
     n: 86, gate: OPENING, name: 'the wall counts every chimera instead of the ones that can fight',
@@ -3332,6 +3354,38 @@ const BREAKS = [
     to: '  vault:          { folded: 2560,  tallest: 4100 },',
   },
   {
+    // R133 — the Breeding Pen goes back to opening itself whenever a pairing
+    // exists, which is R47's rule and which on any save past the opening
+    // means ALWAYS: the day-180 walk offers thirty-six pairings. Measured,
+    // this trips BOTH the chrome rule (1,175 of 1,050) and the total (2,022
+    // of 1,900) — see the note in tools/height.js about what that does and
+    // does not prove about the chrome number.
+    n: 204, gate: HEIGHT, name: 'the Breeding Pen opens itself again, and the screen grows by a card',
+    file: 'ranch/ui.js',
+    anchor: "  const breedingOpen = isOpen(state, 'breeding-pen', false);",
+    to: "  const breedingOpen = isOpen(state, 'breeding-pen', canPair && !incubatorFull);",
+  },
+  {
+    // Same rule, the other card, and the one that had no fold at all before
+    // R133: arriving open, the money card puts two pickers and three
+    // buttons in front of the herd.
+    n: 205, gate: HEIGHT, name: 'the money card arrives open and the herd moves down the screen',
+    file: 'ranch/ui.js',
+    anchor: "  const moneyOpen = isOpen(state, 'slush-fund', false);",
+    to: "  const moneyOpen = isOpen(state, 'slush-fund', true);",
+  },
+  {
+    // R133 — the one-line rule. The lesson goes back onto the vat row, which
+    // is the exact sentence `data/guides.json` already teaches under "The
+    // vat crosses two chimeras". The row wraps to two lines and is then
+    // taller than every row that did not, which is what the gate measures —
+    // no constant to edit, so this cannot be met by moving a budget.
+    n: 206, gate: HEIGHT, name: 'an agenda row teaches a lesson the field guide already gives',
+    file: 'ranch/agenda.js',
+    anchor: "      return `${seen.size} pairing${seen.size === 1 ? '' : 's'} the vat will take.`;",
+    to: "      return `${seen.size} pairing${seen.size === 1 ? '' : 's'} the vat will take. Two go in, one genome out that neither of them was.`;",
+  },
+  {
     // The migration forgets the phase, so a save from v47 arrives with
     // `released` undefined — and `!cam.released` is true for a county that
     // has already been opened, which fires the burst a second time.
@@ -3390,6 +3444,40 @@ async function pool(items, work, report = () => {}) {
 }
 
 const cleanup = () => { for (const d of DIRS) rmSync(d, { recursive: true, force: true }); };
+
+// R134 — EVERY ANCHOR STILL EXISTS, in about a second.
+//
+// A break that no longer matches its file is scored BADANCH, and finding
+// that out costs forty-seven minutes because it is discovered in the middle
+// of running two hundred gates. It does not have to be: an anchor check is a
+// string search over files already on disk. Break 85 went stale in R133 —
+// the milestone rewrote the sentence it aimed at — and the whole battery ran
+// to tell me something `grep` knew before it started.
+//
+// This is the cheap half of the battery's value. The breaks prove the GATES
+// still catch things, which changes slowly; the anchors prove the BREAKS
+// still point at real code, which changes every time anybody edits a file a
+// break aims at — which is to say, most milestones.
+if (process.argv.includes('--anchors')) {
+  const stale = [];
+  for (const b of BREAKS) {
+    let src;
+    try { src = readFileSync(join(SRC, b.file), 'utf8'); } catch {
+      stale.push(`${b.n}: ${b.file} is not there any more — ${b.name}`);
+      continue;
+    }
+    const hits = src.split(b.anchor).length - 1;
+    if (hits !== 1) stale.push(`${b.n}: ${hits} matches in ${b.file} — ${b.name}`);
+  }
+  cleanup();
+  if (stale.length) {
+    console.error(`battery ✗  ${stale.length} of ${BREAKS.length} breaks no longer aim at anything`);
+    for (const line of stale) console.error(`  · ${line}`);
+    process.exit(1);
+  }
+  console.log(`battery ✓  all ${BREAKS.length} anchors match exactly once`);
+  process.exit(0);
+}
 
 const BASELINE = [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, COVERAGE];
 

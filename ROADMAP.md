@@ -3416,6 +3416,117 @@ moved one of them: the first premise held exactly, the second did not.
     new measurement. The first paint is smaller than before this milestone
     started, which discharges most of R121 as a side effect.
 
+### 9.14 The Ranch's chrome, a second time (R133) — asked for directly
+
+- **R133 — The Ranch's chrome earns its height (again).** ✅ *Shipped.*
+
+  R131 brought the Ranch from 3,499px to 2,453 by giving it a page ceiling,
+  and its own entry named what it could not reach: most of this screen was
+  never the herd, so no page size could have got it to the 2.5 phone screens
+  it was aiming at. R47 last looked at the chrome and it has grown since.
+
+  *(R131 put the figure at 1,756px by subtracting the roster from the total,
+  which quietly counts the gaps between animals as chrome. Measured properly
+  — the distance from the top of the screen to the top of the first animal —
+  it is **1,521px**. The gate measures it that way now, so the number cannot
+  drift again.)*
+
+  Re-measured on the clock-pinned day-180 save at 380px, which is the only
+  honest baseline now that R130 pinned the page's `Date`:
+
+  | px | words | card |
+  | ---: | ---: | --- |
+  | **795** | 158 | **Right Now** — open by default |
+  | 257 | 32 | **Breeding Pen** — open by default |
+  | 252 | 34 | Slush Fund — the only chrome card with no fold at all |
+  | 83 | 18 | Facility (shut) |
+  | 64 | 8 | Incubator |
+  | 686 | 141 | the whole roster: 8 animal cards, 3 band heads, the pager |
+
+  Total 2,368px. **The two biggest chrome cards are open on arrival**, and
+  together they are 1,052px — 44% of the screen — before the player has
+  touched anything. The Ranch has had a one-at-a-time rule for *animals*
+  since R98; its chrome was deliberately exempted, and the exemption was
+  about whether two cards MAY be open together, not about what a player
+  should arrive to.
+
+  **What the 795 is made of.** Seven rows at 67px, each a 19px label over a
+  28px fine-print, plus three `spend` chips at 40px that already do the
+  thing the rows do not. Every fine-print is the same two sentences: a live
+  number and then a standing lesson.
+
+  > "15 are grown — six parts each, 90 in all. *This is where chimeras come
+  > from.*"
+  > "45 pairings the vat will take. *Two go in, one genome out that neither
+  > of them was.*"
+
+  Two facts make the lesson indefensible rather than merely long. `agenda()`
+  returns **only rows whose `ready` predicate is true**, so a lesson is only
+  ever shown to a player already doing the thing it explains. And the lesson
+  is *already taught* — `data/guides.json` carries 38 field-guide entries,
+  and "Two adults make a third" is verbatim the breeding row's sentence.
+  This is R37's rule ("the lesson is behind the wall it explains") against a
+  duplication that has been on the screen ever since.
+
+  The same reading found dead prose: the `graduate` row opens with a
+  beginner branch, `if (!ripe.length) return 'A grown animal becomes six
+  parts…'`, which its own `ready` predicate makes **unreachable**. Same
+  class as R130's `_doc` and R10's dead monologue slots.
+
+  *Done when: no agenda row repeats a lesson the field guide already
+  teaches; every open row is one line carrying its live number; nothing
+  above the roster is open on arrival except the agenda; and the Ranch is
+  under 1,950px — 2.5 phone screens, the number R131 named and could not
+  reach — with the height gate holding the chrome and the roster as separate
+  budgets, so a leaner roster can never pay for a fatter agenda.*
+
+  **SHIPPED.**
+
+  | | before | after |
+  | --- | ---: | ---: |
+  | Ranch, shut | 2,368px | **1,831px** — 2.3 phone screens |
+  | of that, chrome | 1,521px | **984px** |
+  | words, shut | 391 | **287** |
+  | the facility card sits | 1,199px down | **893px down** |
+
+  **The bound on a row is the shortest row on the screen.** The first
+  version of that rule compared a row against a `spend` chip and it was the
+  wrong shape — a chip is a pill with a short number, a row is a label over
+  a sentence, and holding them equal would have deleted the sentence R120
+  built rather than shortening it. Every label is one line, so a row that
+  does not wrap is exactly as tall as every other row that does not; a row
+  that wraps is taller than all of them. Nothing is typed (R61), and the
+  gate names the offending sentence when it fails.
+
+  **What the chrome budget cannot prove, said out loud.** Breaks 204 and 205
+  grow the chrome and the rule fires — but the total fires with it, so
+  neither break shows the chrome number doing anything the total was not.
+  The case it exists for is a TRADE: a milestone that shortens the roster
+  and spends the saving on a taller agenda, where the total never moves.
+  That is a two-place change and a break is one anchor, so it is not
+  reachable from the battery. It is still worth having — R131 shipped
+  against a total that hid exactly this — and `tools/height.js` says so
+  where somebody might otherwise read two green breaks as more than they are.
+
+  **Two rules were reversed on purpose, and both were mine to reverse.**
+  R47 had the Breeding Pen open itself the moment a pairing existed; on any
+  save past the opening a pairing always exists — the day-180 walk offers
+  thirty-six — so the condition was decoration and the card was 257px on
+  every visit. And `assault`'s stood-down line was a fixed sentence for most
+  of a campaign, which is precisely what R120's own rule forbids: *"what it
+  must not be is the same sentence whether one thing or twenty are
+  waiting."* It counts the open nodes now.
+
+  R98's rule is NOT reversed: the chrome stays out of the animals'
+  exclusive group, because a player comparing an animal against what the
+  agenda is asking for still wants both open. What changed is the default.
+
+  **Known issue, carried.** The agenda still lists things that are also on
+  the screen it is drawn on — "Expand the pens · $2350" is a chip in Right
+  Now and a button inside the money card. The obvious fix is for the chip to
+  open the card it names, which turns the agenda into an index; it is not
+  what the criterion asked for and it is the next thing worth doing here.
+
 ### 9.13 The generator was a trap (R127) — found while doing something else
 
 - **R127 — The data is what the generator produces, and now it has to stay

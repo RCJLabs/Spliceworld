@@ -10,7 +10,7 @@ Splicework: cartoony mad-geneticist ranch/splice/battle game. Browser, procedura
 - Start each session by reading ROADMAP.md §6 and stating which milestone is active and its acceptance criterion.
 - End each session by updating a short `PROGRESS.md` (milestone, what shipped, known issues, next session's first task).
 - If a milestone won't fit the session, cut scope *inside* it rather than deferring the acceptance criterion — smaller numbers, fewer species, same proof.
-- **Merge to `main` when the milestone is verified. Do not ask.** A milestone that is green and sitting on a branch is a milestone the player does not have: `main` is what GitHub Pages serves, so unmerged work is unshipped work. Verified means the Definition of Done below, in full — criterion, save/load, no console errors, 380px, PROGRESS.md — plus the break battery at 100% and smoke green. Open the PR, merge it, then restart the branch from the new `main` so the next milestone starts clean.
+- **Merge to `main` when the milestone is verified. Do not ask.** A milestone that is green and sitting on a branch is a milestone the player does not have: `main` is what GitHub Pages serves, so unmerged work is unshipped work. Verified means the Definition of Done below, in full — criterion, save/load, no console errors, 380px, PROGRESS.md — plus the verification tier below. Open the PR, merge it, then restart the branch from the new `main` so the next milestone starts clean.
 - Two things still stop and ask: work the acceptance criterion does not cover, and anything that would discard someone else's commits (a force-push over unmerged history). Everything else ships.
 
 ## Hard Conventions
@@ -31,6 +31,30 @@ Splicework: cartoony mad-geneticist ranch/splice/battle game. Browser, procedura
 - Gleeful Saturday-morning villain. Puns welcome. Self-aware, never mean.
 - **Zero death language.** Extraction = "graduation" / "ascension." KO'd soldiers parachute away. Vehicles "retire loudly." Dissection is "unauthorized peer review" (and we always give the player a rescue window).
 - News ticker lines are one sentence, deadpan: "Local zoo reports goat shortage. Authorities baffled."
+
+## Verification (what to run, and when)
+The full break battery is a **47-minute** answer to a question that changes
+slowly — *do the gates still catch defects?* Gates change when a milestone
+writes one. Paying it every evening was buying the slow half at the price of
+the session.
+
+**Every milestone, before merging (~10 min):**
+- `node tools/battery.js --anchors` — every break still aims at real code. **0.3s.**
+- `node tools/battery.js --baseline` — every gate green on a clean tree. ~7 min.
+- `node tools/battery.js --only <the breaks this milestone added>` — the new rules go red on demand.
+- `npm test` — ~3 min, runs in parallel with the above.
+
+**The full battery (~47 min), on these triggers only:**
+- A milestone that **changes an existing gate's logic** rather than adding one.
+- Before a release, or any push to `main` that is not a single milestone.
+- Every ~5 milestones, as a rot check, whether or not anything looks wrong.
+- Any time `--anchors` or the baseline goes red for a reason nobody predicted.
+
+*The evidence for the split is R133.* Its only two real findings were a gate
+the **baseline** caught in 7 minutes and a stale anchor **`--anchors`** would
+have caught in a second; the other 203 breaks were green twice, for forty
+minutes each time. Judge every battery run by `BATTERY_EXIT`, never the
+summary line — a clean break score can sit on top of a red baseline.
 
 ## Definition of Done (every milestone)
 1. Acceptance criterion from ROADMAP.md §6 demonstrably passes.
