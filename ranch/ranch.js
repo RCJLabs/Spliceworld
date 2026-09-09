@@ -291,7 +291,7 @@ export function buyMailOrder(state, speciesId, content, now) {
 }
 
 // R119 — which lab this save was founded in. The reasoning is in
-// data/starters.json's _doc; the short version is that the starter herd
+// data/notes/starters.md; the short version is that the starter herd
 // used to be a literal, and it opened the Theater with one buildable
 // creature. Falls back to the first authored lab so a caller that never
 // asked (every tool fixture, any save from before v43) seeds as it always
@@ -342,7 +342,7 @@ export function ensureRanchSeeded(state, content, now) {
   // The crate: two parts from a THIRD species, and the whole reason the
   // first splice is a decision rather than a formality. It holds no head,
   // so it cannot be spliced alone before the donor graduates — see
-  // starters.json's _doc for what that is worth, measured.
+  // data/notes/starters.md for what that is worth, measured.
   const grade = content?.starterMeta?.crateGrade ?? 'standard';
   for (const partId of lab?.crate ?? []) {
     const part = content.parts?.[partId];

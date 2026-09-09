@@ -2376,6 +2376,95 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   readFileSync(join(root, 'docs/TWA.md'));
 }
 
+// --- R130: THE NOTES ARE OUT OF THE BROWSER'S PATH AND STILL FINDABLE.
+//
+// `data/*.json` carried 53.3 KB of `_doc` — developer prose keyed into the
+// same objects the engine loads, so every player downloaded all of it on
+// every cold boot and no code ever read a word. That is R81's finding again
+// (400 KB of geometry in front of the first paint) pointed at the last big
+// class of bytes left in it: the CORE payload was 401.1 KB and is 347.9.
+//
+// The notes did not go away — they are `data/notes/<name>.md`, which is also
+// what keeps them off the wire, because the precache rule above ships
+// `.js|.json|.css|.html|.webmanifest` and nothing else. Markdown is the
+// mechanism, not a preference.
+//
+// Three rules, because "moved the prose" is not the invariant worth keeping:
+// nothing the loader fetches may carry prose again, every data file must
+// still have a note, and every note must point at something that exists.
+{
+  const dataDir = join(root, 'data');
+  const dataFiles = readdirSync(dataDir).filter((f) => f.endsWith('.json')).sort();
+
+  const docPaths = (v, p = '', out = []) => {
+    if (Array.isArray(v)) { for (const x of v) docPaths(x, `${p}[]`, out); return out; }
+    if (v && typeof v === 'object') {
+      for (const [k, x] of Object.entries(v)) {
+        // ANY underscore key holding prose, not `_doc` by name. The rule was
+        // written for `_doc` and found `tiers.json` carrying 365 characters
+        // under `_comment` and one facility track carrying 190 under
+        // `_screenNote` — two spellings of the same thing that nothing had
+        // ever looked for, one of them a whole data file with no note at all.
+        // A name-specific rule would have shipped them and invited a third.
+        if (k.startsWith('_') && typeof x === 'string' && x.length >= 120) {
+          out.push(`${p ? `${p}.` : ''}${k}`);
+        } else docPaths(x, p ? `${p}.${k}` : k, out);
+      }
+    }
+    return out;
+  };
+  const carrying = dataFiles
+    .map((f) => [f, docPaths(readJSON(`data/${f}`))])
+    .filter(([, found]) => found.length)
+    .map(([f, found]) => `${f} (${found.join(', ')})`);
+  assert.deepEqual(carrying, [],
+    'no file the browser fetches carries developer prose — the note belongs in data/notes/'
+    + ` (found: ${carrying.join('; ')})`);
+
+  const notes = readdirSync(join(dataDir, 'notes')).filter((f) => f.endsWith('.md')).sort();
+  const noteSet = new Set(notes);
+  const undocumented = dataFiles.filter((f) => !noteSet.has(f.replace(/\.json$/, '.md')));
+  assert.deepEqual(undocumented, [],
+    `every data file still says what it is for, in data/notes/ (missing: ${undocumented.join(', ')})`);
+
+  // A path like `tracks[].tuning` has to land on something real. This is the
+  // half that keeps a note honest as the data moves under it — a section
+  // documenting a key somebody renamed is worse than no section.
+  const resolves = (obj, path) => {
+    let cur = [obj];
+    for (const seg of path.split('.')) {
+      const key = seg.replace(/\[\]$/, '');
+      const next = [];
+      for (const o of cur) {
+        if (!o || typeof o !== 'object') continue;
+        const v = o[key];
+        if (v === undefined) continue;
+        if (seg.endsWith('[]')) { if (Array.isArray(v)) next.push(...v); } else next.push(v);
+      }
+      if (!next.length) return false;
+      cur = next;
+    }
+    return true;
+  };
+  for (const note of notes) {
+    const file = note.replace(/\.md$/, '.json');
+    assert.ok(noteSet.has(note) && dataFiles.includes(file),
+      `data/notes/${note} documents a data file that exists`);
+    const text = readFileSync(join(dataDir, 'notes', note), 'utf8');
+    assert.equal(text.split('\n')[0], `# data/${file}`,
+      `data/notes/${note} names the file it documents on its first line`);
+    // A stub would satisfy every rule above while documenting nothing.
+    assert.ok(text.length > 200, `data/notes/${note} actually says something (${text.length} chars)`);
+    const json = readJSON(`data/${file}`);
+    for (const [, section] of text.matchAll(/^## (.+)$/gm)) {
+      assert.ok(resolves(json, section),
+        `data/notes/${note}'s "${section}" section names a path data/${file} still has`);
+    }
+  }
+  console.log(`   R130 notes: ${dataFiles.length} data files, ${notes.length} notes,`
+    + ' 0 bytes of shop talk on the wire');
+}
+
 // --- M7: v8 migration backfills the dex from owned tokens.
 {
   const v7ish = await migrate(structuredClone(v1Save)); // gives v8 empty everything

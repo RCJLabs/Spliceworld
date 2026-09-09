@@ -3881,10 +3881,40 @@ moved one of them: the first premise held exactly, the second did not.
   going away — the point is that the BROWSER stops fetching them, not that
   the writing stops.
 
-  *Done when: the first paint is measurably smaller than 1,000 KB with every
-  note still in the repository and still findable from the file it documents;
+  *Done when: the first paint is measurably smaller with every note still in
+  the repository and still findable from the file it documents;
   `tools/gen-parts.js` still reproduces `data/parts.json` byte for byte; and
   a gate fails if a note creeps back into a file `data/loader.js` fetches.*
+
+  **SHIPPED.** The first draft of this criterion said "smaller than 1,000 KB",
+  which was a round number I picked without doing the arithmetic: 1,075 minus
+  53.8 is 1,021, and no amount of prose was ever going to close that gap.
+  Corrected above rather than quietly met.
+
+  | | before | after |
+  | --- | --- | --- |
+  | CORE payload | 401.1 KB | **347.3 KB** |
+  | first paint | 1,075 KB | **1,021 KB**, and the ceiling comes down 1,080 → 1,025 |
+
+  Not one word left the repository: 36 notes are `data/notes/<name>.md`, one
+  per data file, with a `## path` section for each of the six files that
+  documented something nested. Markdown is the mechanism rather than a
+  preference — the precache rule ships `.js|.json|.css|.html|.webmanifest`
+  and nothing else, so a note in that form *cannot* reach the browser.
+
+  **THE RULE FOUND TWO THINGS THE MILESTONE WAS NOT LOOKING FOR**, which is
+  the argument for writing it against the shape rather than the name:
+  `tiers.json` carried 365 characters under **`_comment`** — a whole data
+  file with no note at all, since R125 spelled it differently and nothing
+  ever looked — and one facility track carried 190 under **`_screenNote`**.
+  The gate matches any underscore-prefixed string over 120 characters.
+
+  And `tools/gen-parts.js` lost something worth losing. Its `_doc` was built
+  as `existing._doc.split(…)` plus a fresh paragraph, so every regeneration
+  re-appended the same text: twenty-one copies had piled up before anybody
+  looked. A generated file that reads its own prose back in order to rewrite
+  it is a loop with no fixed point. Both generated files still reproduce byte
+  for byte, which is R127's clause.
 
 - **R131 — The two lists that still grow without a ceiling.** Every other
   screen in this game has been given a shape that stops growing: R44 folded

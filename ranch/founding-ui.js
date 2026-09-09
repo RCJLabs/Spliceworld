@@ -1,7 +1,7 @@
 // The founding choice (R119) — the first thing a new player sees, and until
 // R119 the first thing they saw was somebody else's animals. The finding,
 // the crate rule and the measured balance are all in data/starters.json's
-// _doc; this file is the screen.
+// note; this file is the screen.
 //
 // It renders into the shared overlay (R73's dialog: focus trap, restore,
 // aria-label) with one difference — `data-locked`, because there is no game

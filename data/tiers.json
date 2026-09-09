@@ -1,5 +1,4 @@
 {
-  "_comment": "R125 - the chimera tier scale (F..S). Every number here was measured, not chosen: see ROADMAP 9.11 and tools/tierfit.js. The model predicts a build's SOLO WIN RATE over the whole shipped encounter table, and a letter is a band of that rate. Adding a tier, moving a cut or reweighting a term is a data edit; the engine reads this file and knows nothing about F or S.",
   "reference": {
     "what": "solo win rate across every encounter in enemies.json",
     "why": "a fixed reference the letter can be absolute against - a creature's grade must not move because you built something better elsewhere",

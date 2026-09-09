@@ -1,5 +1,4 @@
 {
-  "_doc": "The PLAYER's half of the §3.8 profile schema. It is deliberately the same shape as a rival's: a name, a title, a philosophy, and monologue slots — which is what §3.8 means by 'the villain-monologue feature drops in later with zero refactoring'. A philosophy is NARRATIVE ONLY and must stay that way: anatomy is where this game keeps its mechanics, and a build choice hiding inside a flavour menu would be exactly the kind of invisible stat the class triangle was built to replace. Slots: intro/victory/defeat fire in a rival duel as the other half of a conversation; conquest, capture, rehab and graduation fire in the news wire, so the voice you picked turns up across the whole game rather than only in three fights. Templates take {rival}, {creature}, {node} and {lab}. Names are ROLLED rather than typed: no screen in this game may render a native form control (see tools/smoke.js), and a seeded generator suits a procedural game better than a keyboard on a phone.",
   "labNames": {
     "titles": [
       "Director",

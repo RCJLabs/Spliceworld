@@ -347,7 +347,7 @@ const TABLE = ['node', '-e', `
 
 // R126 — CLAWS POINT WHERE THE CREATURE IS GOING. Reported from a phone:
 // "claws are on backwards". They were. Every part is drawn in a local space
-// where the head faces +x (frames.json _doc), and the `paw` archetype built
+// where the head faces +x (data/notes/frames.md), and the `paw` archetype built
 // its claws as near-equilateral triangles whose only visible point hung
 // down and BACKWARD, marching back across the toe pad (x = 15, 6, -3) so the
 // last one dangled off the heel. Twenty limbs, and not one forward claw
@@ -3198,6 +3198,53 @@ const BREAKS = [
     anchor: '    if (content.species[part.species]?.variantOf) continue;',
     to: '',
   },
+  // --- gate: R130, the notes are out of the browser's path ----------------
+  {
+    // Prose walks back into a file the loader fetches. This is the whole
+    // point of the milestone and the cheapest thing in the world to undo —
+    // somebody adds a helpful sentence to the object they are editing.
+    n: 200, gate: UNION, name: 'a data file starts carrying developer prose again, and every player downloads it',
+    file: 'data/breakout.json',
+    anchor: '  "sightings": [',
+    to: '  "_doc": "R82 — the Breakout. A rival lab that keeps losing to you starts losing other things: specimens, which accumulate on a standing board and wait for you to come and collect them.",\n  "sightings": [',
+  },
+  {
+    // Under a different name, which is how the two this milestone found got
+    // in: `_comment` on tiers.json and `_screenNote` on a facility track.
+    // A rule that matched `_doc` by name would have shipped both.
+    n: 201, gate: UNION, name: 'the prose comes back under a second spelling, the way `_comment` and `_screenNote` did',
+    file: 'data/breakout.json',
+    anchor: '  "sightings": [',
+    to: '  "_note": "R82 — the Breakout. A rival lab that keeps losing to you starts losing other things: specimens, which accumulate on a standing board and wait for you to come and collect them.",\n  "sightings": [',
+  },
+  {
+    // The gate that only asks "is there a note" would pass a stub. This one
+    // asks whether the note points at something that exists — a section
+    // documenting a key somebody renamed is worse than no section.
+    n: 202, gate: UNION, name: "a note documents a key its data file no longer has",
+    file: 'data/notes/breakout.md',
+    anchor: '## release',
+    to: '## releases',
+  },
+  {
+    // THE POINTER BREAKS, which is the criterion's actual heart: "still
+    // findable from the file it documents". A note that names the wrong file
+    // has moved the prose out of the browser's path and out of everybody's
+    // reach at the same time.
+    //
+    // Two of the four rules carry no break, and honestly rather than
+    // silently: this battery patches file CONTENT, so it cannot delete a
+    // note to prove the missing-file half, and it cannot shorten one enough
+    // to trip the stub floor with a single anchored replacement. The first
+    // version of this break patched the GATE instead (`const undocumented =
+    // []`) and went MISSED, correctly — removing a check does not make
+    // anything else fail.
+    n: 203, gate: UNION, name: 'a note stops naming the file it documents, and points at nothing',
+    file: 'data/notes/feral.md',
+    anchor: '# data/feral.json',
+    to: '# data/feral.js',
+  },
+
   // --- gate: R131, the page that is the ceiling ---------------------------
   //
   // Five breaks, and the shape of them matters: two put the multiply back

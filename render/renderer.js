@@ -3,7 +3,7 @@
 //
 // A genome is fully data: { frame: 'M', parts: { head: 'bear_head', ... } }.
 // Frames define standardized sockets; parts define shapes in socket-local
-// space (conventions documented in data/frames.json _doc). Any part fits
+// space (conventions documented in data/notes/frames.md). Any part fits
 // any socket of its slot — that contract is what makes splicing free-form.
 
 // SLOT TYPES: what kind of part something is. A part declares one of these.

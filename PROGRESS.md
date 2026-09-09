@@ -1,5 +1,58 @@
 # PROGRESS
 
+## Session 137 — R130: 53.8 KB of shop talk leaves the browser's path ✅
+
+`data/*.json` kept its documentation *inside the objects the engine loads*.
+Every player downloaded all of it on every cold boot; no code ever read a
+word. This is R81's finding — 400 KB of geometry in front of the first paint
+— pointed at the last big class of bytes left in it.
+
+| | before | after |
+| --- | --- | --- |
+| CORE payload | 401.1 KB | **347.3 KB** |
+| first paint | 1,075 KB | **1,021 KB** |
+| ceiling | 1,080 | **1,025** — down, after two milestones of raises |
+
+**Not one word left the repository.** 36 notes live at `data/notes/<name>.md`,
+one per data file, with a `## path` section for each of the six that
+documented something nested. Markdown is the mechanism rather than a
+preference: the precache rule ships `.js|.json|.css|.html|.webmanifest` and
+nothing else, so a note in that form *cannot* reach the browser. The
+existing rule does the enforcing; R130 just put the prose where it applies.
+
+### The rule found two things I was not looking for
+
+Writing it against the **shape** rather than the name is what did it:
+`tiers.json` carried 365 characters under **`_comment`** — a whole data file
+with no note at all, because R125 spelled it differently and nothing ever
+looked — and one facility track carried 190 under **`_screenNote`**. A rule
+matching `_doc` by name would have shipped both and invited a third. It now
+matches any underscore-prefixed string over 120 characters.
+
+### What the generator lost, and should have
+
+`tools/gen-parts.js` built its `_doc` as `existing._doc.split(…)` plus a
+fresh paragraph — so every regeneration re-appended the same text, and
+twenty-one copies had piled up before anybody looked. *A generated file that
+reads its own prose back in order to rewrite it is a loop with no fixed
+point.* Both generated files still reproduce byte for byte, which is R127's
+clause and the one I was most worried about.
+
+### And the criterion was wrong, again
+
+I wrote "smaller than 1,000 KB" without doing the arithmetic: 1,075 − 53.8
+is 1,021, so no amount of prose was ever going to close that gap. Corrected
+in the entry rather than quietly met. That is the third time this stretch a
+number I wrote before measuring turned out not to survive contact — R129's
+roadmap draft, R131's page budget, and now this.
+
+### Next session's first task
+
+The Ranch's chrome: **1,756px of its 2,453** is the Path, Right Now, the
+facility card, the Breeding Pen and the Incubator, and no page size can help
+that. R47 last looked at it and it has grown since. Also still carried:
+folding the Dex's Combos tab (2,293px, no fold).
+
 ## Session 136 — R131: a page is the ceiling a fold never gave ✅
 
 Asked for directly, and both halves are the same defect on two screens: a

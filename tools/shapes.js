@@ -3,7 +3,7 @@
 // Hand-drawing 150 parts at a consistent quality is not tractable, so parts
 // are built from archetype families parameterised per species. This is a DEV
 // tool: it emits plain JSON into data/parts.json, which the game loads with
-// no build step. Style contract (see data/parts.json _doc): thick @outline
+// no build step. Style contract (see data/notes/parts.md): thick @outline
 // strokes on masses, thinner on detail, two googly eyes with catchlights,
 // @white low-opacity sheen for form, @secondary bellies/muzzles, @accent
 // horns/beaks/claws.
@@ -180,7 +180,7 @@ const LIMBS = {
                li(`M ${-mass * 0.6} 8 q ${mass * 0.25} 24 ${mass * 0.05} 40`, W, 5, { opacity: 0.13 }),
                el(2, len, mass * 0.9, 13, digit)];
     // Claws sit on the FRONT of the toe pad and sweep FORWARD, because the
-    // head faces +x (see frames.json _doc) and a claw that trails behind the
+    // head faces +x (see data/notes/frames.md) and a claw that trails behind the
     // toe reads as a foot put on backwards — which is exactly how it was
     // reported. The old triangle was near-equilateral, so its only visible
     // point was the bottom vertex, and the run marched BACKWARD across the
