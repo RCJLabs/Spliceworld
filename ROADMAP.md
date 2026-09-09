@@ -3416,6 +3416,72 @@ moved one of them: the first premise held exactly, the second did not.
     new measurement. The first paint is smaller than before this milestone
     started, which discharges most of R121 as a side effect.
 
+### 9.15 The table nobody could find (R135) — reported from play
+
+- **R135 — The dismantle gets its own clock, and the Pens names the
+  machine.** ✅ *Shipped.*
+
+  Two complaints in one sentence: *"I don't see upgrades for the surgery
+  table and it takes too long."* Both true, and the first one located four
+  deep.
+
+  You **dismantle on the Pens**. The Surgery Theater is sold on its own
+  screen, which R128 is right about. The roll-up that says where the other
+  machines live (`facilityElsewhere`) renders **on the Ranch and nowhere
+  else** — its own comment says so. And the fourth is the worst: that
+  screen's tab reads **"Splice"**, so the words "surgery table" appear on no
+  tab in the game. R128b checked that the card is not buried on the screen it
+  is ON; nothing had ever asked about the screen where the constraint is
+  FELT.
+
+  | | un-upgraded | Tier II |
+  | --- | ---: | ---: |
+  | **dismantle** | **3h** | **30m** |
+  | splice | 20h | 10h |
+
+  One table, two prices. `theaterBusyFor` and `occupyTheater` take a `kind`;
+  `dismantleHours` is a grant beside `tableHours`, so the ladder stays data.
+
+  **Hours stopped being the unit.** Every message rounded to whole hours, so
+  a Tier II clock reported "1h to go" whether it had 30 minutes left or two,
+  and the upgrade just paid for looked like it had done nothing. `spanOf` is
+  shared, because the refusal and the card selling the upgrade have to agree
+  on what to call half an hour.
+
+  ### Why not both fast, which is where this started
+
+  The first decision taken was to speed up the whole table — 3h/30m for
+  splices too. Measured over seven seeds it moved the bottleneck from the
+  table to the shelves: `graduate` −19%, `buy` −17%, parts rendered at the
+  door +14%, and part reach 95.5% → **93.9%**, under R95's floor. Enlarging
+  the vault (+50%) and the stable (6/12 → 8/16) fixed reach and the Wing —
+  and then the churn rule caught what was underneath: **460 creatures built
+  to keep 12, median chimera life 2.0 days** against a floor of 5.
+
+  **A correction, because the first diagnosis was wrong.** That collapse was
+  blamed on the fast splice alone. Re-measured properly, a 30-minute splice
+  on the *shipped* shelves leaves median life at **62.7 days**. It took the
+  fast splice AND the enlarged storage together: a full vault and a full
+  stable are what stop a player rebuilding, and both brakes had been removed
+  in the same sitting before the accelerator was blamed. The storage raises
+  were reverted; only the split shipped.
+
+  What the split is worth: **74.8 days** of median chimera life, against
+  **48.5** before it. A cheap undo lets a failure be cleared without the
+  rebuild being cheap too — which is R91's shared-clock note kept for the
+  operation it was written about, and dropped for the one it was not.
+
+  *Done when: a dismantle takes 3 hours un-upgraded and 30 minutes at Tier
+  II; the screen where you dismantle names the upgrade that speeds it up and
+  can reach it; and the busy message can say a time under an hour.*
+
+  **Two budgets moved, both argued in place:** `KB_CAP` 553 → 557 and
+  `FIRST_PAINT_KB` 1025 → 1030 — the pointer and the split clock are eager
+  because the *Ranch* needs those modules, so the bytes are paid on a screen
+  that shows neither. `dex:combos` 2350 → 2450, because a cheap undo puts
+  parts back on the shelf while the pair that unlocks a combo is still worth
+  assembling; folding that tab is still owed.
+
 ### 9.14 The Ranch's chrome, a second time (R133) — asked for directly
 
 - **R133 — The Ranch's chrome earns its height (again).** ✅ *Shipped.*
