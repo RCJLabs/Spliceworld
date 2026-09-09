@@ -18,7 +18,8 @@ import { rushQuote, rushButton, bindRush } from './rush.js';
 // screens wired this and the sixth did not, so a note here could not have
 // been shown even if one had existed. The suite's hand-written screen list
 // happened to omit `vault` too, so nothing ever asked.
-import { fieldNote, bindFieldNote, bindFolds } from '../ui/cards.js';
+import { fieldNote, bindFieldNote, bindFolds, isOpen } from '../ui/cards.js';
+import { paginate, pagerRow, bindPager, trimPages } from '../ui/pager.js';
 import { facilityCard, bindFacility } from '../ui/facility-card.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { speciesOf, isRetired } from '../data/catalog.js';
@@ -148,9 +149,52 @@ export function renderVaultScreen(root, ctx) {
       || b.stars - a.stars
       || b.tokens.length - a.tokens.length
       || (a.sp.name > b.sp.name ? 1 : -1))
-    .map(({ sp, vials, tokens, stars, grade }) => `
-      <details class="vault-species">
-        <summary>
+    .map(({ sp, vials, tokens, stars, grade }) => {
+      // R131 — THE BAYS JOIN THE REST OF THE GAME'S FOLDS. These were the one
+      // fold in the project still riding on a raw `<details>`, which cost two
+      // things: the open state did not survive a repaint (and this screen
+      // repaints on every resequence, render and graduation), and nothing
+      // stopped all 41 being open at once. That second one is not
+      // theoretical — it is a state a player reaches by tapping, and it
+      // measured 29,708px, thirty-eight phone screens.
+      //
+      // So: open comes from the save, one at a time, exactly as the Pens
+      // (R89) and the Ranch (R98) do it.
+      const open = isOpen(state, `vault-${sp.id}`, false);
+      // …AND A BAY IS ITSELF A LIST THAT GROWS, TWICE OVER. The shark bay on
+      // a day-180 save holds 101 of the 337 parts AND 116 of the 120 vials —
+      // the whole shelf is three species deep in vials and one of them has
+      // 97% of them. The first draft paged the parts and left the vials
+      // alone, on the reasoning that 120 vials across 41 bays is thin: the
+      // gate then measured one open bay at 16,821px, and the 124 rows in it
+      // were 8 paged parts and 116 unpaged vials. A list is a list.
+      //
+      // Both are paged, and vials keep their own counter because they are
+      // the only thing on this screen with a button — a player working
+      // through them should not lose their place because they also opened
+      // the parts.
+      const vialPage = paginate(vials, state, `vault-vials-${sp.id}`);
+      const page = paginate(tokens, state, `vault-bay-${sp.id}`);
+      if (open) {
+        trimPages(state, `vault-vials-${sp.id}`, vials.length);
+        trimPages(state, `vault-bay-${sp.id}`, tokens.length);
+      }
+      // A BUTTON, NOT A `<summary>`. The first draft of this kept `<details>`
+      // and drove it from the save, and the height gate reported the Vault at
+      // 2,527px open — because `openOne` reaches a native `<details>` by
+      // setting `.open = true`, which revealed forty-one EMPTY shells once
+      // the rows moved behind the state. The gate was not measuring a shorter
+      // screen; it was measuring a screen it could no longer open, which is
+      // R99's lesson exactly and would have shipped as a green number.
+      //
+      // So the bays wear the same `data-fold` contract as every other fold in
+      // the game: `bindFolds` opens them, `exclusive` keeps one open, the
+      // save remembers which, and both browser gates find them because they
+      // are looking for the thing the rest of the project uses.
+      return `
+      <div class="vault-species${open ? ' is-open' : ''}">
+        <button type="button" class="bay-head" data-fold="vault-${sp.id}" aria-expanded="${open}">
+          <span class="fold-caret" aria-hidden="true">${open ? '▾' : '▸'}</span>
           <strong>${sp.name}</strong>
           <span class="lineage">${[
             vials.length ? `${vials.length} vial${vials.length === 1 ? '' : 's'}` : '',
@@ -158,10 +202,14 @@ export function renderVaultScreen(root, ctx) {
           ].filter(Boolean).join(' · ')}</span>
           ${vials.length ? `<span class="star-badge">★${stars.toFixed(1)}</span>` : ''}
           ${grade >= 0 ? `<span class="grade-badge grade-${GRADES[grade].id}">${GRADES[grade].name}</span>` : ''}
-        </summary>
-        ${vials.length ? `<ul class="token-list">${vials.map(vialRow).join('')}</ul>` : ''}
-        ${tokens.length ? `<ul class="token-list">${tokenRows(tokens)}</ul>` : ''}
-      </details>`)
+        </button>
+        ${!open ? '' : `
+          ${vialPage.rows.length ? `<ul class="token-list">${vialPage.rows.map(vialRow).join('')}</ul>` : ''}
+          ${pagerRow(vialPage, 'more vials')}
+          ${page.rows.length ? `<ul class="token-list">${tokenRows(page.rows)}</ul>` : ''}
+          ${pagerRow(page, 'more parts')}`}
+      </div>`;
+    })
     .join('');
 
   root.innerHTML = `
@@ -223,6 +271,12 @@ export function renderVaultScreen(root, ctx) {
   bindFieldNote(root, ctx, () => renderVaultScreen(root, ctx));
   // R128 — same as the Theater: the Vault's first fold arrived with the
   // Extractor's card, and nothing here had ever bound one.
-  bindFolds(root, ctx, () => renderVaultScreen(root, ctx));
+  // R131 — ONE BAY AT A TIME, the rule the Pens has had since R89 and the
+  // Ranch since R98. The facility card is deliberately NOT in the group: it
+  // is a different kind of thing, and a player checking what shelf space
+  // costs while looking at a full shelf wants both.
+  bindFolds(root, ctx, () => renderVaultScreen(root, ctx),
+    { exclusive: [...shelf.keys()].map((id) => `vault-${id}`) });
+  bindPager(root, ctx, () => renderVaultScreen(root, ctx));
   bindRush(root, ctx, (m) => { lastMsg = m; }, () => renderVaultScreen(root, ctx));
 }

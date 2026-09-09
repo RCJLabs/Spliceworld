@@ -1,5 +1,80 @@
 # PROGRESS
 
+## Session 136 — R131: a page is the ceiling a fold never gave ✅
+
+Asked for directly, and both halves are the same defect on two screens: a
+list that grows with the save. Every other screen in the game had already
+been given a shape that stops growing — R44 folded the Pens, R45 grouped the
+Dex, R89 folded the Foes tab, R98 folded the Ranch, R129 folded the Genes
+tab. These two were what was left, and they hold the things a campaign
+accumulates most of.
+
+**Measured first**, on the day-180 save at 380px (one phone screen = 780px):
+
+| | before | after |
+| --- | --- | --- |
+| Ranch, shut | **3,499px — 4.5 screens** | **2,453px** (1,756 of chrome + 8 rows × 87) |
+| Vault, fully open | **29,708px — 38 screens** | **4,009px** (the shut shelf + 16 rows) |
+
+Both are now sums with no campaign-sized term left in them, which is the
+whole criterion. Folding a row divides a constant; it never stopped the
+multiply — the Ranch was 3,269px at four animals and 11,607 at twenty before
+R98, and 3,499 at twenty after it. Same growth rate, a third of the height.
+
+One `ui/pager.js` serves both. The Ranch pages in **band order**, which is
+what makes its own rule survive paging: "Ready to graduate" is where an
+animal lands the moment it has a deadline, and it sorts first, so ALERTS
+NEVER HIDE falls out of the ordering rather than out of a second rule that
+could disagree with the first.
+
+### Two wrong turns, both caught by measuring rather than reasoning
+
+**Keeping `<details>` and driving it from the save reported 2,527px.** The
+height gate reaches a native `<details>` by setting `.open = true`, which
+after the change revealed forty-one EMPTY shells — it was not measuring a
+shorter screen, it was measuring one it could no longer open. That is R99's
+lesson exactly and it would have shipped as a green number. The bays wear
+the same `data-fold` contract as every other fold in the game now, which
+also makes them persist and makes them one-at-a-time.
+
+**Paging the parts but not the vials left one bay at 16,821px.** The shark
+bay holds 101 of the 337 parts *and* 116 of the 120 vials — 97% of every
+vial in the save, in one bay. The comment I wrote while skipping them called
+120 vials across 41 bays "thin". A list is a list.
+
+### What the project's own rules made me do
+
+R50 wanted the new module declared in the service worker and the module roll.
+The handler gate wanted a pager button some fixture had actually pressed, so
+`labCore` gains six animals and a nine-part bay — and the a11y walk went 67
+views to 75 and immediately found a ragged left edge, R73's global button
+centring leaking into a full-width flex row. R99 called that the only
+instance in the game; it was, until this row became a button.
+
+The Vault's old assertions had to change shape too, and the interesting one
+is "every vial keeps its Resequence button": a shut bay used to render its
+rows and hide them with CSS, so that question could be asked of the shut
+screen. A shut bay renders nothing now, so it is asked of a shelf a player
+can open. My own new alerts-never-hide test also caught my fixture using
+`adult` where it meant `prime`.
+
+### The cost, stated
+
+**Boot 1,070 → 1,080 KB, measured 1,075** — the second consecutive raise,
+which is the pattern R128's note exists to stop. `ui/pager.js` is 2.8 KB
+after I trimmed my own prose back by 1 KB, and the Ranch is the one screen
+the shell paints without a dynamic import. The payment is already measured
+and queued and it is not this ceiling: **R130**, the 54.1 KB of `_doc` in
+`data/*.json`. Two raises running is the argument for doing it.
+
+`SAVE_VERSION` 48 → 49 for `ui.pages`, with a migration.
+
+### Next session's first task
+
+R130. The boot ceiling has now moved twice in two milestones and there is a
+54 KB answer sitting in `data/`. Also still carried: the Ranch's 1,756px of
+chrome, which R47 last looked at and which no page size can help.
+
 ## Session 135 — R129: the last lab falls open ✅
 
 Asked for directly: *"once you beat the last rival scientist, the chimeras

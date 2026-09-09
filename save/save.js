@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 48;
+export const SAVE_VERSION = 49;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -78,8 +78,10 @@ export function newGameState() {
     // Field-guide notes the player has waved away (R29). The guides
     // themselves are derived; this is the only thing they persist.
     guidesSeen: [],
-    // Remembered UI: which cards are folded shut.
-    ui: { collapsed: {}, tierRead: false },
+    // Remembered UI: which cards are folded shut, and how many pages of a
+    // long list the player has asked for (R131 — a Ranch that bounced back
+    // to page one on every care action would be worse than the long screen).
+    ui: { collapsed: {}, tierRead: false, pages: {} },
     // The §3.8 profile: the player's half of the story schema. Unnamed
     // until they choose — nothing in this game waits behind a form.
     profile: { named: false, title: null, name: null, lab: null, philosophy: null },

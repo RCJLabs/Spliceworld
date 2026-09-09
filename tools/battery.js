@@ -3198,6 +3198,64 @@ const BREAKS = [
     anchor: '    if (content.species[part.species]?.variantOf) continue;',
     to: '',
   },
+  // --- gate: R131, the page that is the ceiling ---------------------------
+  //
+  // Five breaks, and the shape of them matters: two put the multiply back
+  // (the screen grows with the save again), one loses animals off the end of
+  // the pager, one buries an alert behind it, and one takes the Vault's bays
+  // back to a fold the save cannot remember.
+  {
+    n: 194, gate: HEIGHT, name: 'the Ranch hands over the whole herd again, and grows a row per animal forever',
+    file: 'ranch/ui.js',
+    anchor: '  const page = paginate(ordered, state, RANCH_PAGE);',
+    to: '  const page = { id: RANCH_PAGE, size: 999, total: ordered.length, shown: ordered.length, hidden: 0, rows: ordered };',
+  },
+  {
+    // The Vault's half of the same thing, and the sharper one: the shark bay
+    // alone is 101 parts and 116 vials, so one open bay was 16,821px.
+    n: 195, gate: HEIGHT, name: 'a Vault bay pours its whole shelf out again, 217 rows behind one summary line',
+    file: 'splice/vault-ui.js',
+    anchor: '      const page = paginate(tokens, state, `vault-bay-${sp.id}`);',
+    to: '      const page = { id: `vault-bay-${sp.id}`, size: 999, total: tokens.length, shown: tokens.length, hidden: 0, rows: tokens };',
+  },
+  {
+    // A ceiling that loses rows is not a ceiling, it is a bug. Paging to the
+    // end has to reach every animal — this caps the slice at one page
+    // forever, which looks identical on the first screen.
+    n: 196, gate: UNION, name: 'the pager stops revealing anything, so twelve animals are simply gone',
+    file: 'ui/pager.js',
+    anchor: '  const shown = Math.min(total, size * pagesShown(state, id));',
+    to: '  const shown = Math.min(total, size);',
+  },
+  {
+    // ALERTS NEVER HIDE. Paging in insertion order instead of band order
+    // puts an animal that is losing grade behind nineteen calves — the rule
+    // R98 wrote onto the shut row, undone by the thing that came after it.
+    n: 197, gate: UNION, name: 'the Ranch pages in herd order, so the animal on a deadline falls off page one',
+    file: 'ranch/ui.js',
+    anchor: '  const ordered = banded(state.ranch.stock, RANCH_BANDS, bandOf).flatMap((b) => b.items);',
+    to: '  const ordered = [...state.ranch.stock];',
+  },
+  {
+    // Back to a fold the save cannot remember and `exclusive` cannot bound.
+    // This is the one that would have shipped green: the height gate reaches
+    // a native `<details>` by setting `.open = true`, so it reports a SHORT
+    // screen while measuring one it can no longer open.
+    n: 198, gate: HEIGHT, name: 'the Vault bays go back to a raw fold, and the gate measures a screen it cannot open',
+    file: 'splice/vault-ui.js',
+    anchor: '        <button type="button" class="bay-head" data-fold="vault-${sp.id}" aria-expanded="${open}">',
+    to: '        <button type="button" class="bay-head" aria-expanded="${open}">',
+  },
+  {
+    // R131 — AND THE RULE THAT CATCHES 198 HAS TO BE LOAD-BEARING ITSELF.
+    // Dropping the `opens` declaration is how the hole comes back: the
+    // budgets alone cannot tell a screen that shrank from a screen that
+    // stopped opening, which is why 198 went MISSED the first time.
+    n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
+    file: 'tools/height.js',
+    anchor: '  vault:          { folded: 2560,  tallest: 4100, opens: 20 },',
+    to: '  vault:          { folded: 2560,  tallest: 4100 },',
+  },
   {
     // The migration forgets the phase, so a save from v47 arrives with
     // `released` undefined — and `!cam.released` is true for a county that

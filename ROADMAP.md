@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 48
+- save version: 49
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -3885,3 +3885,64 @@ moved one of them: the first premise held exactly, the second did not.
   note still in the repository and still findable from the file it documents;
   `tools/gen-parts.js` still reproduces `data/parts.json` byte for byte; and
   a gate fails if a note creeps back into a file `data/loader.js` fetches.*
+
+- **R131 — The two lists that still grow without a ceiling.** Every other
+  screen in this game has been given a shape that stops growing: R44 folded
+  the Pens, R45 grouped the Dex, R89 folded the Foes tab, R98 gave the Ranch
+  the Pens' one-at-a-time rule, R129 folded the Genes tab. Two are left, and
+  they are the two that hold the things a campaign accumulates most of.
+
+  **MEASURED on the day-180 save at 380px**, one phone screen being 780px:
+
+  | | today | what makes it |
+  | --- | --- | --- |
+  | Ranch, shut | **3,499px — 4.5 phone screens** | one folded row per animal × 20 animals |
+  | Vault, fully open | **29,708px — 38 phone screens** | 457 rows (337 parts + 120 vials) across 41 species bays |
+
+  Neither number is a card being too tall. Both are a multiplication with no
+  ceiling in it: the Ranch grew 3,269 → 7,438 → 11,607px at four, twelve and
+  twenty animals before R98 folded the row, and folding divided the constant
+  without touching the multiply. The pens still expand without a ceiling.
+
+  The Vault has a second, sharper version of the same thing **inside one
+  bay**: the shark bay on this save holds **101 of the 337 parts** — 30% of
+  the shelf behind one summary line, about nine phone screens if you open it.
+  And its bays are raw `<details>`, so they are the one fold in the game that
+  is neither persisted across a repaint nor exclusive: all 41 open at once is
+  a state the player can actually reach, and it is the 38 screens above.
+
+  So: **a page, not a fold** — the fold work is done, and it is the multiply
+  that is left. One `ui/pager.js`, used by both, because two implementations
+  of "show me the next ten" is how they drift. The Ranch's own rule decides
+  the page order and comes along unchanged: ALERTS NEVER HIDE, so an animal
+  with a deadline is on the first page or the rule is broken. The Vault's
+  bays move onto the project's own fold machinery at the same time, which is
+  what makes them persist and makes them one-at-a-time.
+
+  *Done when: neither screen can be made to grow by playing longer — the page
+  is the ceiling; every animal carrying a deadline is on the first page of
+  the Ranch; and the height gate holds both numbers as arithmetic anybody can
+  check rather than as a ratchet.*
+
+  **SHIPPED**, and the two numbers the criterion is really about:
+
+  | | before | after |
+  | --- | --- | --- |
+  | Ranch, shut | 3,499px | **2,453px** — 1,756 of chrome + 8 rows × 87 |
+  | Vault, fully open | 29,708px | **4,009px** — the shut shelf + 16 rows |
+
+  Both are now sums with no campaign-sized term in them. The Ranch's 2,453 is
+  3.1 phone screens rather than the 2.5 this entry first asked for, and the
+  reason is worth stating: **1,756px of it is chrome** — the Path, Right Now,
+  the facility card, the Breeding Pen, the Incubator — so no page size could
+  have met that number. R47 last looked at the Ranch's chrome and it has
+  grown since; that is the next thing worth doing to this screen.
+
+  Two things the build got wrong first, both caught by measuring rather than
+  by reasoning. Keeping `<details>` and driving it from the save made the
+  height gate report **2,527px** — it reaches a native `<details>` by setting
+  `.open = true`, which after the change revealed forty-one EMPTY shells, so
+  the gate was measuring a screen it could no longer open. And paging the
+  parts but not the vials left one bay at **16,821px**: the shark bay holds
+  101 of the 337 parts *and* 116 of the 120 vials, which the first draft's
+  comment cheerfully described as "thin".

@@ -156,7 +156,26 @@ export function labCore({
     });
   }
   s.ranch = { ...s.ranch, stock: [], penCapacity: 8, animalCount: 0, seeded: true };
-  for (const sp of ['goat', 'bear', 'cobra']) s.ranch.stock.push(createAnimal(s, sp, content, now));
+  // R131 — NINE ANIMALS AND A DEEP BAY, so the fixture reaches the state the
+  // pager exists for. Three animals and three spare parts never produced a
+  // "show 8 more" button anywhere, and R76's rule is that a `data-*` the game
+  // paints has had a handler RUN — a control the fixture cannot reach is a
+  // control no gate has ever pressed. R99 spent a milestone on exactly this
+  // shape of blindness; nine is one over the page so the button appears with
+  // one row behind it, which is the smallest honest version of the state.
+  for (const sp of ['goat', 'bear', 'cobra', 'goat', 'bear', 'cobra', 'goat', 'bear', 'cobra']) {
+    s.ranch.stock.push(createAnimal(s, sp, content, now));
+  }
+  // …and one species bay with more parts than a page holds, which is the
+  // Vault's half of the same rule. Goat, because the fixture already owns
+  // goat anatomy and a bay the player recognises beats an arbitrary one.
+  const goatParts = Object.values(content.parts).filter((pt) => pt.species === 'goat').slice(0, 9);
+  for (const [i, pt] of goatParts.entries()) {
+    s.inventory.parts.push({
+      id: `${prefix}-bay-${i}`, partId: pt.id, grade: 'standard',
+      donor: { name: 'Bulk order', species: 'goat', stars: 2, extractedAt: now },
+    });
+  }
   s.dex = {
     parts: Object.keys(content.parts).slice(0, 8),
     enemies: Object.keys(content.enemies).slice(0, 4),

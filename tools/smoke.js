@@ -6661,6 +6661,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'ui/theme.js': null,
     'ui/picker.js': null,
     'ui/roster.js': null,
+    // R131 — a page is chrome for the same reason a band is: the button says
+    // what it does and how much is left ("Show 8 more animals · 8 of 20"),
+    // so there is nothing a field note could add that the control does not
+    // already say at the moment it matters.
+    'ui/pager.js': null,
     'ui/tabs.js': null,
 
     // --- Screens. A screen is where systems are met; the note belongs to
@@ -11062,10 +11067,47 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   //    in the Pens, because a portrait is ~12KB of inline SVG and twenty
   //    of them is a quarter-megabyte of DOM rendering nothing.
   {
-    const page = drawRanch(herd(Array.from({ length: 20 }, () => ({}))));
-    const folds = [...page.matchAll(/data-fold="ranch-([^"]+)"/g)].map((m) => m[1]);
-    assert.equal(folds.length, 20, `every animal is a fold (${folds.length})`);
-    assert.equal(new Set(folds).size, 20, 'and each one only once');
+    const twentyHead = herd(Array.from({ length: 20 }, () => ({})));
+    const page = drawRanch(twentyHead);
+    const foldsIn = (html) => [...html.matchAll(/data-fold="ranch-([^"]+)"/g)].map((m) => m[1]);
+    const folds = foldsIn(page);
+    // R131 — A PAGE, so the claim R98 made here changes shape. It used to be
+    // "every animal is a fold", which was true and was also the defect: the
+    // screen was one row per head with no ceiling, and 3,499px at twenty.
+    // The claim now is the pair that actually matters — a bounded FIRST
+    // page, and every animal still reachable from it.
+    assert.equal(folds.length, 8, `a twenty-head Ranch hands over one page (${folds.length})`);
+    assert.equal(new Set(folds).size, 8, 'and each one only once');
+    assert.ok(page.includes('data-page="ranch-roster"'),
+      'and says there is more, on a control that names how much');
+
+    // …AND PAGING REACHES EVERY ONE. A ceiling that loses animals is not a
+    // ceiling, it is a bug: this walks the pager to the end and asks for the
+    // whole herd back, which is the half of the rule a row cap alone would
+    // pass while quietly hiding twelve creatures.
+    const paged = { ...twentyHead, ui: { collapsed: {}, pages: { 'ranch-roster': 3 } } };
+    const seen = foldsIn(drawRanch(paged));
+    assert.equal(seen.length, 20, `paging to the end reaches every animal (${seen.length})`);
+    assert.equal(new Set(seen).size, 20, 'and still each one only once');
+    assert.ok(!drawRanch(paged).includes('data-page="ranch-roster"'),
+      'and the button is gone once there is nothing behind it');
+
+    // ALERTS NEVER HIDE, which is the rule paging could most easily break.
+    // An animal at Prime is on a countdown to ageing out of it and that is
+    // real grade lost — R98 put it on the shut row for exactly this reason,
+    // and a first page that can bury it behind nineteen growing calves would
+    // undo that. It holds because the bands decide the page order and
+    // "Ready to graduate" sorts first; this asserts the consequence rather
+    // than trusting the ordering to stay that way.
+    const withPrime = herd([
+      ...Array.from({ length: 19 }, () => ({ ageHours: 1 })),
+      { ageHours: goat.prime + 1 },
+    ]);
+    const firstPage = foldsIn(drawRanch(withPrime));
+    assert.equal(firstPage.length, 8, 'a herd with one Prime in it still hands over one page');
+    const primeId = withPrime.ranch.stock.at(-1).id;
+    assert.ok(firstPage.includes(primeId),
+      'and the animal on a deadline is on it, however far down the herd it was added');
     assert.equal((page.match(/data-fold="ranch-[^"]*" aria-expanded="true"/g) ?? []).length, 0,
       'a twenty-head Ranch opens nothing by default');
     // Portraits only — R70 gave the class-group headers in the Mail-Order
@@ -12238,6 +12280,22 @@ if (inShard('spar')) {
     return root.innerHTML;
   };
   const count = (html, re) => (html.match(re) || []).length;
+  // R131 — REACHABLE, not merely present. Before this, a shut bay still
+  // rendered its rows and hid them with CSS, so "every vial keeps its
+  // Resequence button" could be asked of the shut screen. A shut bay now
+  // renders nothing at all, which is most of why the Vault went from
+  // 29,708px to 4,009 — so the questions below are asked of the shelf a
+  // player can actually open, with the pager wound to the end. `extras` is
+  // for the discontinued line, which by definition has no species entry.
+  const openShelf = (st, extras = []) => {
+    const ui = { collapsed: {}, pages: {} };
+    for (const sp of [...Object.keys(content.species), ...extras]) {
+      ui.collapsed[`vault-${sp}`] = false;
+      ui.pages[`vault-vials-${sp}`] = 40;
+      ui.pages[`vault-bay-${sp}`] = 40;
+    }
+    return { ...st, ui };
+  };
 
   // 1. R53 RETIRED R52's threshold rather than re-anchoring it. R52 kept a
   //    rack of four or fewer FLAT so a new player saw their vial without
@@ -12249,10 +12307,17 @@ if (inShard('spar')) {
   //    So the claim is now the opposite one, and it is stronger for having
   //    no threshold in it: every bay is closed, at every size.
   {
+    // R131 — the bays are `<div class="vault-species">` with a real
+    // `data-fold` button now, not `<details>`. That was not cosmetic: a raw
+    // `<details>` is the one fold in the game the save cannot remember and
+    // `exclusive` cannot bound, and the height gate reaches one by setting
+    // `.open = true`, so it measured forty-one empty shells the moment the
+    // rows moved behind the state. The claim is unchanged and the selector
+    // follows the markup.
     for (const n of [1, 4, 5, 40]) {
       const html = vault(withVials(n));
-      assert.ok(count(html, /<details/g) > 0, `${n} vials still shelve`);
-      assert.equal(count(html, /<details class="vault-species" open/g), 0,
+      assert.ok(count(html, /class="vault-species/g) > 0, `${n} vials still shelve`);
+      assert.equal(count(html, /aria-expanded="true"/g), 0,
         `and no bay opens itself at ${n} vials`);
     }
     // One card, not two: the merge is the phase, so assert it rather than
@@ -12268,7 +12333,7 @@ if (inShard('spar')) {
   //    only way a vial is ever spent.
   {
     for (const n of [1, 4, 5, 12, 40]) {
-      const html = vault(withVials(n));
+      const html = vault(openShelf(withVials(n)));
       assert.equal(count(html, /data-reseq="/g), n, `${n} vials, ${n} ways to spend one`);
       assert.equal(count(html, / essence/g), n, `and ${n} vial rows`);
       // R91 — the count line carries the CAPACITY now, which is the point of
@@ -12284,7 +12349,7 @@ if (inShard('spar')) {
       const parts = Object.values(content.parts).filter((pt) => pt.species !== 'salvage').slice(0, 24);
       st.inventory.parts = parts.map((pt, i) => ({ id: `p${i}`, partId: pt.id, grade: 'prime',
         donor: { name: 'Donor', stars: 4 }, traits: [] }));
-      const html = vault(st);
+      const html = vault(openShelf(st));
       assert.equal(count(html, /<li>/g), 3 + parts.length,
         `three vials and ${parts.length} parts, all shelved`);
       assert.ok(new RegExp(`${parts.length}/\\d+ part token`).test(html),
@@ -12316,12 +12381,18 @@ if (inShard('spar')) {
     const st = withVials(6);
     st.inventory.vials.push({ id: 'ghost', species: 'not_a_species', donorName: 'Nobody', stars: 3, traits: [] });
     st.inventory.parts = [{ id: 'pghost', partId: 'not_a_part', grade: 'prime', donor: { name: 'Nobody', stars: 3 }, traits: [] }];
-    const html = vault(st);
+    const html = vault(openShelf(st, ['not_a_species']));
     assert.equal(count(html, /data-reseq="/g), 6,
       'six real vials keep their button and the retired seventh does not get one');
-    assert.ok(!html.includes('not_a_species'), 'no raw species id is ever drawn');
-    assert.ok(!html.includes('not_a_part'), 'nor a token whose part left the roster');
-    assert.equal(count(html, /<details/g), 7, 'the discontinued line keeps a bay of its own');
+    // R131 — asked of the TEXT, because the bay's fold id is now
+    // `vault-<species>` and a raw `includes` on the markup would read an
+    // attribute as something the player can see. R79's rule was always about
+    // what is DRAWN: a player meeting a discontinued line should read
+    // "Discontinued Line", not an identifier.
+    const drawn = html.replace(/<[^>]*>/g, ' ');
+    assert.ok(!drawn.includes('not_a_species'), 'no raw species id is ever drawn');
+    assert.ok(!drawn.includes('not_a_part'), 'nor a token whose part left the roster');
+    assert.equal(count(html, /class="vault-species/g), 7, 'the discontinued line keeps a bay of its own');
     assert.ok(html.includes('Discontinued Line'), 'named as what it is');
     assert.ok(/Nothing in the catalogue matches that essence/.test(html),
       'and the vial says why it cannot be resequenced');
@@ -12343,10 +12414,14 @@ if (inShard('spar')) {
     st.inventory.vials = [{ id: 'v0', species: sp.id, donorName: 'Bessie', stars: 3.2, traits: [] }];
     st.inventory.parts = own.map((pt, i) => ({ id: `t${i}`, partId: pt.id, grade: 'standard',
       donor: { name: 'Bessie', stars: 3.2 }, traits: [] }));
+    // R131 — the summary line is the bay's fold head now, so it is sliced
+    // out by the button rather than by `<summary>`. What it has to SAY is
+    // unchanged, and that is the whole point of the rule: a shut bay still
+    // answers what you own, which is what made it safe to shut them all.
     const html = vault(st);
-    const at = html.indexOf('<summary>');
+    const at = html.indexOf('<button type="button" class="bay-head"');
     assert.notEqual(at, -1, 'the bay has a summary');
-    const summary = html.slice(at, html.indexOf('</summary>', at));
+    const summary = html.slice(at, html.indexOf('</button>', at));
     assert.ok(summary.includes(sp.name), 'which names the animal');
     assert.ok(summary.includes('1 vial'), `and says what is in it: vials (${summary.replace(/<[^>]+>/g, ' ').trim()})`);
     assert.ok(summary.includes(`${own.length} part`), 'and parts');
@@ -12355,7 +12430,8 @@ if (inShard('spar')) {
     // A bay with only one half says only that half — no "0 parts".
     const vialOnly = { ...st, inventory: { ...st.inventory, parts: [] } };
     const only = vault(vialOnly);
-    const onlySummary = only.slice(only.indexOf('<summary>'), only.indexOf('</summary>'));
+    const onlyAt = only.indexOf('<button type="button" class="bay-head"');
+    const onlySummary = only.slice(onlyAt, only.indexOf('</button>', onlyAt));
     assert.ok(onlySummary.includes('1 vial'), 'a vial-only bay still says so');
     assert.ok(!/0 part/.test(onlySummary), 'and does not advertise an empty half');
   }
@@ -18033,8 +18109,16 @@ if (inShard('wire')) {
   // sits just above the measurement rather than ON it: 545 against 545.0 is
   // a knife edge, and a gate that fails on a rounding wobble teaches people
   // to ignore it.
-  const MODULE_CAP = 48;
-  const KB_CAP = 548;
+  // R131: 48 -> 49. `ui/pager.js`, and the module cap is the number that is
+  // supposed to make a new eager module ARGUE rather than arrive — so: the
+  // Ranch is the one screen the shell paints without a dynamic import, it
+  // pages its roster on the first frame, and the alternative is the Vault
+  // and the Ranch each keeping their own copy of what a page is, which is
+  // the duplication R128 spent a milestone undoing.
+  const MODULE_CAP = 49;
+  // R131: 548 -> 553, measured at 550.3. `ui/pager.js` and the two screens
+  // that use it; see the FIRST_PAINT_KB note in tools/boot.js.
+  const KB_CAP = 553;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,
