@@ -94,15 +94,15 @@ const BUDGET = {
   // chrome alone is 2.3 phone screens, so no page size could have met it.
   // The chrome is R47's territory and has not been re-measured since; that
   // is the next thing worth doing to this screen, not a smaller page.
-  ranch:          { folded: 2500,  tallest: 4450, opens: true },
-  pens:           { folded: 2000,  tallest: 4000, opens: true },   // R89's criterion
+  ranch:          { folded: 2500,  tallest: 4450, opens: 20 },
+  pens:           { folded: 2000,  tallest: 4000, opens: 20 },   // R89's criterion
   // R128: 1900 -> 2080 open, measured at 1998. The shut half does not move
   // (1,827 against 1,900) — what moved is that this screen HAS an open half
   // now. Its two numbers were equal because the Theater had no fold at all,
   // and a `tallest` that equals `folded` does not budget a fold, it forbids
   // one. The Surgery Theater's own upgrade card is the fold, which is the
   // entire milestone: the machine is bought on the screen it runs.
-  theater:        { folded: 1900,  tallest: 2080, opens: true },
+  theater:        { folded: 1900,  tallest: 2080, opens: 1 },
   // R92 — THE VAULT'S HEIGHT IS DERIVED, NOT RATCHETED.
   //
   // R89 left this `null` because there was nothing honest to ratchet
@@ -146,7 +146,7 @@ const BUDGET = {
   // version of this milestone paged the parts and left the vials, and the
   // gate measured that bay at 16,821px — the fix is not a smaller page, it
   // is that a list is a list.
-  vault:          { folded: 2560,  tallest: 4100, opens: true },
+  vault:          { folded: 2560,  tallest: 4100, opens: 20 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
   // R95: 1900 -> 2350, measured at 2293. The tab lists what you have found,
@@ -163,7 +163,7 @@ const BUDGET = {
   // Same answer R89 gave the Foes tab and for the same reason: the field
   // guide is looked things up in, not read, so the shut number is the one
   // that matters and the open one is a ratchet a reader pays deliberately.
-  'dex:genes':    { folded: 400,   tallest: 1250, opens: true },
+  'dex:genes':    { folded: 400,   tallest: 1250, opens: 1 },
   // R89's criterion names 2,500 for the Foes tab, and that is a budget on
   // how it PRESENTS: 4,113px shut was five and a half screens of reference
   // material nobody had asked for. Folded it is 664.
@@ -185,7 +185,7 @@ const BUDGET = {
   //
   // The number this milestone is judged on is the OTHER one. R97's criterion
   // is "Foes under two screens folded"; it is 764px shut, against 1,560.
-  'dex:foes':     { folded: 2500,  tallest: 6100, opens: true },
+  'dex:foes':     { folded: 2500,  tallest: 6100, opens: 4 },
 };
 
 // R98 — AND WHAT IT SAYS, not only how tall it is.
@@ -337,6 +337,12 @@ try {
   // open at all. The break that replays it (198) went MISSED against the
   // budgets alone, which is how this rule got written.
   let opened = 0;
+    // R131 — how many folds the screen paints BEFORE the walk touches it.
+    // A screen that paints folds must declare how many the walk should get
+    // into: that is what makes "the bays lost their `data-fold`" a failure
+    // rather than a shorter screen.
+    const foldsCount = async (sel) => Number(await evaluate(
+      `document.querySelectorAll('${sel} button[data-fold]').length`));
   const tallestOf = async (sel, cap = 40) => {
     let tallest = await acrossTabs(sel);
     opened = 0;
@@ -397,6 +403,7 @@ try {
     await show(screen);
     const sel = `#screen-${screen}`;
     const folded = await heightOf(sel);
+    const foldsPainted = await foldsCount(sel);
     const wordsShut = await wordsOf(sel);
     // Measured SHUT and before `tallestOf` opens anything, which is the
     // state a player actually arrives in.
@@ -413,7 +420,7 @@ try {
     }
     const tallest = BUDGET[screen]?.tallest === null ? null : await tallestOf(sel);
     // After `tallestOf`, which has opened everything the screen will allow.
-    rows.push({ id: screen, folded, tallest, opened, wordsShut, wordsOpen: await wordsOf(sel),
+    rows.push({ id: screen, folded, tallest, opened, foldsPainted, wordsShut, wordsOpen: await wordsOf(sel),
       facilityAt: place && `${place.at}/${place.of} @ ${place.top}px` });
   }
   // The War Room is not in the height table (its map is a canvas the budget
@@ -434,9 +441,10 @@ try {
     await evaluate(`document.querySelector('#screen-dex [data-dex-tab="${tab}"]')?.click()`);
     await sleep(1700);
     const folded = await heightOf('#screen-dex');
+    const foldsPainted = await foldsCount('#screen-dex');
     const wordsShut = await wordsOf('#screen-dex');
     const tallest = await tallestOf('#screen-dex');
-    rows.push({ id: `dex:${tab}`, folded, tallest, opened, wordsShut, wordsOpen: await wordsOf('#screen-dex') });
+    rows.push({ id: `dex:${tab}`, folded, tallest, opened, foldsPainted, wordsShut, wordsOpen: await wordsOf('#screen-dex') });
   }
 } finally {
   proc.kill();
@@ -454,16 +462,24 @@ for (const r of rows) {
   if (b.tallest !== null && r.tallest > b.tallest) {
     problems.push(`${r.id} reaches ${r.tallest}px when opened, over its ${b.tallest}px budget (${(r.tallest / 780).toFixed(1)} phone screens)`);
   }
-  // R131 — AND THE SCREEN HAS TO STILL OPEN. Every rule above fails upwards
+  // R131 — AND THE SCREEN HAS TO STILL OPEN. Every rule above fails UPWARDS
   // only, so a screen the walk can no longer get into reports a comfortable
-  // number and passes. `opens` is a declaration like the budgets: this
-  // screen has folds, so the walk must have got into at least one of them
-  // and the screen must have grown by doing it. A screen with nothing to
-  // open says so by leaving it out.
-  if (b.opens) {
-    if (!r.opened) {
-      problems.push(`${r.id} declares folds and the walk could not open ONE of them`
-        + ' — its budget is being met by a screen nobody can get into');
+  // number and passes. `opens` is a declaration like the budgets, and it is
+  // a COUNT rather than a flag for a reason I got wrong first: the flag
+  // version was satisfied by the facility card alone, so the break that
+  // takes the Vault's forty-one bays off `data-fold` still passed with one
+  // fold walked. Measured (opened/painted): ranch 40/11, pens 40/11, vault
+  // 40/42, foes 5/5, theater and genes 1/1 — the exclusive screens saturate
+  // the walk's cap of 40 because each open shuts the last. The declared
+  // numbers sit well under those and well over what a broken screen gives.
+  if (r.foldsPainted > 0 && b.opens == null) {
+    problems.push(`${r.id} paints ${r.foldsPainted} folds and declares no \`opens\` count`
+      + ' — a screen with folds has to say how many the walk should get into');
+  }
+  if (b.opens != null) {
+    if (r.opened < b.opens) {
+      problems.push(`${r.id} declares ${b.opens} folds to walk and the gate got into ${r.opened}`
+        + ' — its height budget is being met by a screen nobody can open');
     } else if (r.tallest <= r.folded) {
       problems.push(`${r.id} opened ${r.opened} thing${r.opened === 1 ? '' : 's'} and did not grow`
         + ` (${r.folded}px shut, ${r.tallest}px open) — the walk is opening empty containers`);
@@ -488,7 +504,8 @@ if (REPORT) {
     console.log(`  ${r.id.padEnd(14)} ${String(r.folded).padStart(5)}   ${String(r.tallest ?? '—').padStart(9)}   ${
       `${b.folded ?? '?'} / ${b.tallest ?? '—'}`.padEnd(14)}  ${
       `${r.wordsShut} / ${r.wordsOpen}`.padStart(11)}   ${
-      `${w.folded ?? '?'} / ${w.open ?? '?'}`.padEnd(9)}  ${r.facilityAt ?? ''}`);
+      `${w.folded ?? '?'} / ${w.open ?? '?'}`.padEnd(9)}  ${
+      `${r.opened}/${r.foldsPainted} folds`.padEnd(13)}  ${r.facilityAt ?? ''}`);
   }
   console.log('');
 }

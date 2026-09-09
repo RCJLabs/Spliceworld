@@ -3253,7 +3253,7 @@ const BREAKS = [
     // stopped opening, which is why 198 went MISSED the first time.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 2560,  tallest: 4100, opens: true },',
+    anchor: '  vault:          { folded: 2560,  tallest: 4100, opens: 20 },',
     to: '  vault:          { folded: 2560,  tallest: 4100 },',
   },
   {
