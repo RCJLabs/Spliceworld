@@ -115,6 +115,9 @@ const SHARD_OF = {
   // R143 — the empire's books. Three 180-day walks at ~15s each, so it is
   // worth sharding; shard a is the lightest of the four.
   empire: 'a',
+  // R144 — the region questions. Three walks to derive the arrival grade,
+  // then six archetypes against five first nodes. Shard b.
+  regions: 'b',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -18573,6 +18576,64 @@ if (inShard('empire')) {
     + `(keeps ${(100 * (l.incomeRate - l.upkeepRate) / l.incomeRate).toFixed(0)}%, was 84%) — `
     + `${(100 * shown.upkeepShare).toFixed(0)}% of everything earned went on running it, `
     + `${shown.brokeHours}h broke, low-water $${shown.minFunds}`);
+}
+
+// R144 — EVERY REGION ASKS A QUESTION, AT THE GRADE YOU ARRIVE WITH.
+//
+// The field guide promises "each region asks a different question", and the
+// seventh audit measured two that do not. It measured them at STANDARD, and
+// that is why its diagnosis was wrong: four of the five are not reached at
+// standard. Foundry read 0/0/0 and was written up as answering nobody, when
+// what it is at the grade you reach it with is the sharpest class question in
+// the game. Drowned, which the audit passed at 83pp, is the one that had
+// quietly stopped asking.
+//
+// THE GRADE IS `benchGrade`, AND THIS MILESTONE FIRST GOT THAT WRONG TOO.
+// R144 began by deriving an "arrival grade" from the walk — the mean grade of
+// the roster the first time each region is held — and it disagreed with the
+// field for three regions out of five, which looked like a finding. It was a
+// units error. `benchGrade` is the grade at which the ARCHETYPE BENCH clears
+// the strip (the rule below this one has asserted exactly that since R26),
+// and a bench of one purebred is far weaker than a real roster: levelled,
+// trained, three different creatures. The walker clears foundry carrying a
+// prime-mean roster; a bare prime archetype wins 25% there. Two different
+// quantities, and only one of them is what the field claims.
+if (inShard('regions')) {
+  const { makeSimChimera: mkR144, scriptedBattle: fightR144,
+    ARCHETYPES: ARCH, partsOnFrame: onFrame } = await import('./sim.js');
+
+  // A region asks a question when some anatomy beats its first node and some
+  // anatomy does not. Both halves are load-bearing: a wall everybody clears
+  // is a corridor, and a wall nobody clears is a grade gate wearing a class
+  // question's clothes. The node may override its region's grade — exactly
+  // one does (greenfield/guard_post) — so read past it and you are measuring
+  // a different wall from the one the player fights.
+  const SEEDS = 16;
+  const rate = (key, encId, grade) => {
+    const a = ARCH[key];
+    const ch = mkR144(a.frame, onFrame(content, a.frame, a.partIds), grade, content);
+    let wins = 0;
+    for (let s = 0; s < SEEDS; s++) {
+      if (fightR144(ch, content.encounters[encId], content, hashString(`R144${key}${encId}${s}`), 3).outcome === 'win') wins++;
+    }
+    return wins / SEEDS;
+  };
+  const lines = [];
+  for (const r of Object.values(content.regions)) {
+    const node = r.nodes[0];
+    const grade = node.benchGrade ?? r.benchGrade;
+    const scored = Object.keys(ARCH).map((k) => [k, rate(k, node.encounter, grade)]);
+    const shown = scored.map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(' · ');
+    assert.ok(scored.some(([, v]) => v > 0.5),
+      `${r.id} (${grade}): some anatomy beats ${node.id} — ${shown}`);
+    assert.ok(scored.some(([, v]) => v < 0.5),
+      `${r.id} (${grade}): and some anatomy does NOT, or the region is a corridor rather than `
+      + `a question — ${shown}`);
+    const hi = Math.max(...scored.map(([, v]) => v));
+    const lo = Math.min(...scored.map(([, v]) => v));
+    lines.push(`${r.id}/${grade} ${Math.round(hi * 100)}-${Math.round(lo * 100)}%`);
+  }
+  console.log(`   R144 regions: ${lines.join(' · ')}`);
 }
 
 if (inShard('camo')) {
