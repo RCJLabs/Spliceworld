@@ -2012,9 +2012,8 @@
       "name": "Slag Gate",
       "tier": 4,
       "waves": [
-        "quench_rig",
         "slag_hauler",
-        "gantry_crane"
+        "arc_welder_rig"
       ],
       "reward": 480,
       "blurb": "A gate made of gates. The foreman has laminated the rules."

@@ -1,5 +1,124 @@
 # PROGRESS
 
+## Session 148 — R144: the wrong grade and the wrong team ✅
+
+**ROADMAP §9.23.** The entry was **right**. Its table was measured at the
+wrong grade, and this milestone got to the same answer the long way round —
+via two of my own measurement errors, both worth recording.
+
+### Both halves of a wall come from the data
+
+A region declares `benchGrade`; each node declares `benchTeam`. The audit
+measured all five at **standard** with a team of three. Four of the five are
+not reached at standard, and the first nodes declare teams of **1, 1, 1, 2, 2**.
+At each node's own grade and own numbers:
+
+| region | grade × team | spread | verdict |
+| --- | --- | ---: | --- |
+| greenfield | standard × 1 | 0pp | everything wins |
+| kestrel | prime × 1 | 100pp | asks |
+| drowned | prime × 1 | 100pp | asks |
+| foundry | apex × 2 | 0pp | **nobody** wins |
+| spire | apex × 2 | 81pp | asks |
+
+Greenfield asks nothing and foundry answers nobody — **exactly what the audit
+named.**
+
+### My two wrong turns
+
+1. **`benchGrade` is not a roster statistic.** I derived an "arrival grade"
+   from the walk and found it disagreed for three regions of five, and
+   reported that as a finding. Units error: the rule directly below it in
+   `tools/smoke.js` has asserted the real meaning since R26 — a bench of ONE
+   purebred is far weaker than a real roster, so the walker clears foundry
+   carrying a prime-mean roster while a bare prime archetype wins 25%.
+2. **Then I hardcoded a team of three.** `foundry_gate` fields three units
+   against a declared bench of two: at three it reads 100% for `noise`, at the
+   honest two it reads 0% for everybody. A wall measured at the wrong grade or
+   the wrong numbers is a different wall.
+
+### What shipped
+
+`foundry_gate` becomes **slag_hauler + arc_welder_rig** — all Ground, all
+Armored, two units against its declared bench of two. Its briefing has always
+read *"Gas does nothing to a machine … they are Ground class, so Air anatomy
+still flies over the top"* while the wall fielded one unit of each class. Now
+it is true: fumes 0%, air 100%.
+
+**The region you start in is exempt, derived not named.** Exactly one region
+has no `requires`, and the gate asserts that stays true. Every way of making
+that node discriminate breaks one of three promises:
+
+| attempt | works? | cost |
+| --- | --- | --- |
+| a third unit | yes, gills 25% | **83s of suite work** — `patrol_1` is the most-benched encounter in the game |
+| swap in the Infantry Squad | yes, gills 25% | spoils greenfield's police-then-military arc — that unit IS the National Guard at its last node |
+| raise its tier | yes, gills 13% | the ladder loses its bottom rung; `patrol_1` is the only tier-1 encounter |
+| `police_cruiser` | — | refused by a gate needing the encounter organic |
+
+So the field guide's promise is about the regions you CHOOSE to enter.
+
+### My third wrong turn, and the one the battery caught
+
+The new block was called `regions`, and R90's shard table already had a
+`regions` — forty lines above. JS does not error on a duplicate key, it takes
+the later one, so a block **nobody had touched** moved from shard c to shard b
+and both of R90's union rules stayed green: they read `Object.keys(SHARD_OF)`,
+and a duplicate key is gone before `keys` can see it. That is the exact
+failure those rules exist to prevent, walking straight past them.
+
+A **third union rule** now reads the table's source, which is the only place
+the second `regions:` still exists. Block renamed to `walls`; with both blocks
+in their intended lanes the suite came back **3.0s faster** (191.2s, budget
+195s). Break 230 puts the duplicate back.
+
+And break 227 — widen the entry-point exemption to every region — was
+**MISSED** on its first run: the loop then asserts nothing, and the gate
+printed a tidy line of exemptions and passed. *A rule with nothing to look at
+passes*, for the third time this quarter. The gate now counts what it
+measured.
+
+### Verification
+
+| | |
+| --- | --- |
+| gate-first | ✓ red on the shipped tree |
+| `--anchors` | ✓ 227 |
+| breaks 227–230 | ✓ 4 caught, 0 missed (`ONLY_EXIT=0`) |
+| `--baseline` | ✓ every gate passes on a pristine tree (`BASELINE_EXIT=0`) |
+| `npm test` | ✓ 10 jobs, **191.2s** wall-clock (sum 715s), budget 195s (`NPMTEST_EXIT=0`) |
+| full rot-check battery | deferred by Evan |
+| `SAVE_VERSION` | unchanged at 49 |
+
+### Next session's first task
+
+**Consolidate the three Kite censuses.** R141's 4-seed smoke census, the
+battery's WALK clause (now two seeds) and R143's have each been knocked over
+by milestones that never touched the Kite; each was given more samples rather
+than a looser floor. The deterministic 14.8pp rule in shard a stayed green
+throughout and is what actually protects the frame. Fold the three onto it.
+
+Also carried: **the liquidity gap** — livestock leaves this game only through
+extraction, and extraction costs money. Nothing can turn an asset back into
+cash, which bounds every future money sink.
+
+### Known issues / carried — now urgent
+
+- **Three walker-based Kite censuses, knocked over by two milestones that
+  never touched the Kite.** R141's 4-seed census, the battery's single-seed
+  WALK clause, and R143 before them. Each was given more SAMPLES rather than a
+  looser floor, but the frame is actually protected by the deterministic
+  14.8pp rule in shard a, green throughout. Consolidating the three onto that
+  rule is a milestone, not another patch.
+- **The suite has ~20s of headroom and content changes spend it.** A third
+  unit in the tier-1 encounter cost 83s. Worth knowing before the next content
+  milestone.
+- No way to sell livestock (carried from R143) — still the binding constraint
+  on every money sink.
+
+**Next session's first task:** consolidate the Kite censuses, or the liquidity
+gap. Both have measurements behind them.
+
 ## Session 147 — R143: an empire that cost nothing to run ✅
 
 **ROADMAP §9.22.** The entry's five numbers all held. **Its diagnosis did

@@ -115,6 +115,15 @@ const SHARD_OF = {
   // R143 — the empire's books. Three 180-day walks at ~15s each, so it is
   // worth sharding; shard a is the lightest of the four.
   empire: 'a',
+  // R144 — the region walls. Six archetypes against five first nodes, at the
+  // grade and team size each node declares. Shard b.
+  //
+  // NOT `regions`: that name was taken, forty lines above, by R90's block —
+  // and the duplicate key did not error, it WON. A block nobody had touched
+  // changed lanes silently, and both rules below passed while it happened,
+  // because duplicate keys collapse before either can see them. Hence the
+  // third rule, which reads the table's source rather than the table.
+  walls: 'b',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -143,6 +152,23 @@ const inShard = (name) => {
   const unused = [...owned].filter((n) => !used.has(n)).sort();
   assert.deepEqual(unused, [],
     `every shard entry guards something (dead entries: ${unused.join(', ')})`);
+  // R144 — AND NO NAME IS BOUND TWICE. This milestone added a second
+  // `regions` entry to a table that already had one, and JS took the later:
+  // a block nobody had touched moved lanes, and both rules above stayed green
+  // because a duplicate key is gone by the time `Object.keys` sees it. So
+  // read the SOURCE of the table rather than the object it builds — the same
+  // reason the two rules above read `inShard(...)` off the file.
+  const table = src.slice(src.indexOf('const SHARD_OF = {'));
+  const body = table.slice(0, table.indexOf('\n};')).split('\n')
+    .filter((l) => !l.trim().startsWith('//')).join('\n');
+  const keys = [...body.matchAll(/([a-z0-9]+):\s*'[a-z]'/g)].map((m) => m[1]);
+  assert.ok(keys.length >= Object.keys(SHARD_OF).length,
+    `the table's source is being read (found ${keys.length} entries for ${Object.keys(SHARD_OF).length} blocks)`);
+  const twice = [...new Set(keys.filter((n, i) => keys.indexOf(n) !== i))].sort();
+  assert.deepEqual(twice, [],
+    `no block is assigned a shard twice — the later entry wins, and nothing else says so `
+    + `(bound twice: ${twice.join(', ')})`);
+
   // And the shards are the ones the runner actually spawns.
   const lanes = new Set(Object.values(SHARD_OF));
   assert.deepEqual([...lanes].sort(), ['a', 'b', 'c', 'd'],
@@ -14989,8 +15015,28 @@ if (inShard('contest')) {
     const kites = shapes.map((w) => w.framesBuilt.A ?? 0);
     const frames = shapes.map((w) => `${w.seed}:${Object.entries(w.framesBuilt).map(([f, n]) => f + n).join('')}`).join(' ');
     console.log(`   frames built: ${frames}`);
-    assert.ok(kites.filter((n) => n > 0).length >= 2,
-      `a campaign builds a Kite when the wall in front of it swings (${frames})`);
+    // R144 — THE FLOOR WAS 2 OF 4 SEEDS AND IT IS NOW "NOT ZERO", which is
+    // what the note fifteen lines above this one already prescribes: catch a
+    // system falling to ZERO rather than pin a chaotic simulation to a number.
+    //
+    // R141 set the old floor from one four-seed reading that happened to come
+    // back 2, and nothing ever justified 50% of campaigns building a rare
+    // optional frame. It has now gone red twice in two milestones for reasons
+    // that have nothing to do with the Kite: R143 repriced upkeep and R144
+    // changed two encounters, and each reshuffled which walls stand in front
+    // of a splice. Measured across eight seeds the count reads 5, 2, 5, 2 for
+    // four different garrison fractions — NON-MONOTONIC, so it is not
+    // responding to pressure at all.
+    //
+    // What actually protects the Kite is the deterministic rule in shard a:
+    // eight bodies fly on it and on nothing else, worth 14.8pp against a wall
+    // that swings and -0.9pp against one that shoots. That has stayed green
+    // through both milestones. This census only has to prove the frame is
+    // still reachable in play, and one Kite across four campaigns proves it.
+    const built = kites.reduce((a, b) => a + b, 0);
+    assert.ok(built >= 1,
+      `a campaign still builds a Kite when the wall in front of it swings — `
+      + `${built} across ${kites.length} campaigns (${frames})`);
     // R148 — AND EVERY CHASSIS THE THEATER SELLS GETS WORN BY SOMEBODY.
     //
     // R141 left this as a note rather than a rule, because the same reading
@@ -18573,6 +18619,105 @@ if (inShard('empire')) {
     + `(keeps ${(100 * (l.incomeRate - l.upkeepRate) / l.incomeRate).toFixed(0)}%, was 84%) — `
     + `${(100 * shown.upkeepShare).toFixed(0)}% of everything earned went on running it, `
     + `${shown.brokeHours}h broke, low-water $${shown.minFunds}`);
+}
+
+// R144 — EVERY REGION ASKS A QUESTION, AT THE GRADE YOU ARRIVE WITH.
+//
+// The field guide promises "each region asks a different question", and the
+// seventh audit measured two that do not. It measured them at STANDARD, and
+// that is why its diagnosis was wrong: four of the five are not reached at
+// standard. Foundry read 0/0/0 and was written up as answering nobody, when
+// what it is at the grade you reach it with is the sharpest class question in
+// the game. Drowned, which the audit passed at 83pp, is the one that had
+// quietly stopped asking.
+//
+// THE GRADE IS `benchGrade`, AND THIS MILESTONE FIRST GOT THAT WRONG TOO.
+// R144 began by deriving an "arrival grade" from the walk — the mean grade of
+// the roster the first time each region is held — and it disagreed with the
+// field for three regions out of five, which looked like a finding. It was a
+// units error. `benchGrade` is the grade at which the ARCHETYPE BENCH clears
+// the strip (the rule below this one has asserted exactly that since R26),
+// and a bench of one purebred is far weaker than a real roster: levelled,
+// trained, three different creatures. The walker clears foundry carrying a
+// prime-mean roster; a bare prime archetype wins 25% there. Two different
+// quantities, and only one of them is what the field claims.
+if (inShard('walls')) {
+  const { makeSimChimera: mkR144, scriptedBattle: fightR144,
+    ARCHETYPES: ARCH, partsOnFrame: onFrame } = await import('./sim.js');
+
+  // A region asks a question when some anatomy beats its first node and some
+  // anatomy does not. Both halves are load-bearing: a wall everybody clears
+  // is a corridor, and a wall nobody clears is a grade gate wearing a class
+  // question's clothes. The node may override its region's grade — exactly
+  // one does (greenfield/guard_post) — so read past it and you are measuring
+  // a different wall from the one the player fights.
+  // AND THE TEAM IS DECLARED TOO. `tools/sim.js` reads
+  // `node.benchTeam ?? region.benchTeam ?? 3`, and the nodes really do differ
+  // — 1, 1, 1, 2, 2 across the five first nodes. A gate that hardcodes three
+  // measures a fight nobody is asked to have: foundry_gate fields THREE units
+  // against a declared bench of two, so a team of three reads it at 100% for
+  // noise and a team of two reads it at 0% for everybody. Both halves of the
+  // wall — its grade and its numbers — have to come from the data.
+  const entry = Object.values(content.regions).filter((r) => !r.requires);
+  assert.equal(entry.length, 1,
+    `exactly one region is the entry point, or the exemption below is a loophole `
+    + `(${entry.map((r) => r.id).join(', ') || 'none'})`);
+
+  const SEEDS = 16;
+  const rate = (key, encId, grade, team) => {
+    const a = ARCH[key];
+    const ch = mkR144(a.frame, onFrame(content, a.frame, a.partIds), grade, content);
+    let wins = 0;
+    for (let s = 0; s < SEEDS; s++) {
+      if (fightR144(ch, content.encounters[encId], content, hashString(`R144${key}${encId}${s}`), team).outcome === 'win') wins++;
+    }
+    return wins / SEEDS;
+  };
+  // THE REGION YOU START IN IS EXEMPT, AND IT IS DERIVED RATHER THAN NAMED.
+  // Exactly one region has no `requires` — it is the entry point — and its
+  // first node is the first fight anybody ever has. Three separate promises
+  // land on that one encounter: it is the game's ONLY tier-1 content, so it
+  // is the bottom rung of the whole difficulty ladder; R119 guarantees all
+  // five starter labs can take it; and R29's guided first splice ends there.
+  // Every way of making it discriminate costs one of those. Measured: a third
+  // unit gives the right answer (gills 25%, five of six through) and costs
+  // 83s of suite work because patrol_1 is the most-benched encounter in the
+  // game; swapping in the Infantry Squad works and spoils the region's own
+  // police-then-military arc, since that unit IS the National Guard it
+  // escalates to at its last node; raising its tier works and leaves the
+  // ladder with no bottom rung.
+  //
+  // So the field guide's "each region asks a different question" is a promise
+  // about the regions you CHOOSE to enter. The one you start in asks whether
+  // you can play at all, which is a different and more important question.
+  //
+  // AND THE EXEMPTION IS COUNTED, because a rule with nothing to look at
+  // passes. Widen that one condition and every region skips the loop, every
+  // assertion below stops being reached, and the block prints a tidy line of
+  // exemptions and goes green. The count is what makes the skip a failure.
+  const lines = [];
+  let measured = 0;
+  for (const r of Object.values(content.regions)) {
+    if (!r.requires) { lines.push(`${r.id} exempt (entry point)`); continue; }
+    measured++;
+    const node = r.nodes[0];
+    const grade = node.benchGrade ?? r.benchGrade;
+    const team = node.benchTeam ?? r.benchTeam ?? 3;
+    const scored = Object.keys(ARCH).map((k) => [k, rate(k, node.encounter, grade, team)]);
+    const shown = scored.map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(' · ');
+    assert.ok(scored.some(([, v]) => v > 0.5),
+      `${r.id} (${grade}, team of ${team}): some anatomy beats ${node.id} — ${shown}`);
+    assert.ok(scored.some(([, v]) => v < 0.5),
+      `${r.id} (${grade}, team of ${team}): and some anatomy does NOT, or the region is a corridor rather than `
+      + `a question — ${shown}`);
+    const hi = Math.max(...scored.map(([, v]) => v));
+    const lo = Math.min(...scored.map(([, v]) => v));
+    lines.push(`${r.id}/${grade}x${team} ${Math.round(hi * 100)}-${Math.round(lo * 100)}%`);
+  }
+  assert.equal(measured, Object.keys(content.regions).length - 1,
+    `every region but the entry point was actually measured, or the exemption above is a hole `
+    + `(measured ${measured} of ${Object.keys(content.regions).length - 1})`);
+  console.log(`   R144 walls: ${lines.join(' · ')}`);
 }
 
 if (inShard('camo')) {

@@ -3501,7 +3501,10 @@ triangle working, and each region genuinely asks a different question)*.
   money or defeat. *Done when: a campaign can be measurably set back, and
   the walker's end-of-run funds have somewhere to go.*
 
-- **R144 — Two of five regions ask no question.** The field guide promises
+- **R144 — Two of five regions ask no question.** ✅ **Shipped — see §9.23**,
+  where the entry turned out to be RIGHT and its table wrong: measured at each
+  region's own grade and own team, greenfield asks nothing and foundry answers
+  nobody, exactly as named. The field guide promises
   "each region asks a different question". Measured — one purebred build per
   class, team of three, against each region's first node:
 
@@ -3545,6 +3548,102 @@ triangle working, and each region genuinely asks a different question)*.
   still misses are missed for a reason the entry can state.*
 
 ---
+
+### 9.23 The wrong grade and the wrong team (R144) — seventh audit
+
+- **R144 — Two of five regions ask no question.** ✅ *Shipped. The entry was
+  right; its table was measured at the wrong grade, and this milestone got
+  there the long way round.*
+
+  #### Both halves of a wall come from the data
+
+  A region declares `benchGrade` — the grade at which the archetype bench
+  clears its strip — and each node declares `benchTeam`. The seventh audit
+  measured all five regions at **standard** with a team of three. Four of the
+  five are not reached at standard, and the five first nodes declare teams of
+  **1, 1, 1, 2, 2**. Measured at each node's own grade and own numbers:
+
+  | region | grade × team | spread | verdict |
+  | --- | --- | ---: | --- |
+  | greenfield | standard × 1 | 0pp | everything wins |
+  | kestrel | prime × 1 | 100pp | asks |
+  | drowned | prime × 1 | 100pp | asks |
+  | foundry | apex × 2 | 0pp | **nobody** wins |
+  | spire | apex × 2 | 81pp | asks |
+
+  Greenfield asks nothing of anybody and foundry answers nobody — **exactly
+  what the audit said**, reached by the measurement it should have used.
+
+  #### Two wrong turns, both worth recording
+
+  This milestone first derived an "arrival grade" from the walk — the roster's
+  mean grade the first time each region is held — and it disagreed with
+  `benchGrade` for three regions out of five, which looked like a finding. It
+  was a units error, and the rule directly below it in `tools/smoke.js` has
+  asserted the real meaning since R26: a bench of ONE purebred is far weaker
+  than a real roster, so the walker clears foundry carrying a prime-mean
+  roster while a bare prime archetype wins 25% there.
+
+  Then it hardcoded a team of three. `foundry_gate` fields three units against
+  a declared bench of two: at three it reads 100% for `noise`, at the honest
+  two it reads 0% for everybody. **A wall measured at the wrong grade or the
+  wrong numbers is a different wall.**
+
+  #### What shipped
+
+  `foundry_gate` becomes **slag_hauler + arc_welder_rig** — all Ground, all
+  Armored, two units against its declared bench of two. Its briefing has
+  always read *"Gas does nothing to a machine … they are Ground class, so Air
+  anatomy still flies over the top"* while the wall fielded one unit of EACH
+  class. Now the text is true: fumes 0%, air 100%. Neither removed unit is
+  orphaned.
+
+  **And the region you start in is exempt, derived rather than named.**
+  Exactly one region has no `requires`; the gate asserts that stays true so
+  the exemption cannot widen. Three promises land on that one encounter and
+  every fix breaks one: a third unit is right (gills 25%, five of six through)
+  and costs **83s of suite work** because `patrol_1` is the most-benched
+  encounter in the game; the Infantry Squad is right and spoils greenfield's
+  own police-then-military arc, being the National Guard it escalates to at
+  its last node; raising its tier is right and leaves the ladder with **no
+  bottom rung**, `patrol_1` being the only tier-1 encounter; and
+  `police_cruiser` was refused outright by a gate that needs the encounter
+  organic. So the field guide's promise is about the regions you CHOOSE to
+  enter. The one you start in asks whether you can play at all.
+
+  #### A third wrong turn, caught by the battery rather than by me
+
+  The new smoke block was first called `regions` — a name R90's shard table
+  had bound forty lines above it. JS does not error on a duplicate key; it
+  takes the later one. So a block **nobody had touched** moved from shard c to
+  shard b, and R90's two union rules both stayed green, because they read
+  `Object.keys(SHARD_OF)` and a duplicate key is gone before `keys` can see
+  it. Exactly the failure R90 wrote those rules to prevent, walking straight
+  past them.
+
+  A third union rule now reads the table's **source**, which is the only place
+  a second `regions:` still exists — the same reason the two rules above it
+  read `inShard(...)` off the file rather than off the object. The block is
+  `walls`, and the suite came back **3.0s faster** with both blocks in their
+  intended lanes (191.2s against a 195s budget).
+
+  The break that found the missing half was break 227: widen the entry-point
+  exemption to every region and the loop asserts *nothing*, so the gate
+  printed a tidy line of exemptions and passed. **A rule with nothing to look
+  at passes** — for the third time this quarter. The gate now counts what it
+  measured.
+
+  *Done when: every region's first node has a class that beats it and a class
+  that does not, at the grade a player arrives with.* True for all four
+  chosen regions, at the grade AND team each declares.
+
+  **Carried, and now urgent:** three separate walker-based Kite censuses have
+  been knocked over by two consecutive milestones that never touched the Kite
+  — R141's 4-seed census, the battery's single-seed WALK clause, and R143
+  before them. Both were given more samples rather than looser floors, but the
+  frame is protected by the deterministic 14.8pp rule in shard a, which stayed
+  green throughout. Consolidating the three onto that rule is a milestone, not
+  another patch.
 
 ### 9.22 An empire that cost nothing to run (R143) — seventh audit
 

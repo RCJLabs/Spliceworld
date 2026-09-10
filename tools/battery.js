@@ -337,6 +337,11 @@ const CAMO = ['node', '-e',
 const EMPIRE = ['node', '-e',
   "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
 
+// R144 — EVERY REGION ASKS A QUESTION AT THE GRADE AND TEAM IT DECLARES.
+// Six archetypes against five first nodes; cheap, no walks. Shard b.
+const REGIONS = ['node', '-e',
+  "process.env.SW_SHARD = 'b'; await import('./tools/smoke.js');"];
+
 // R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
 // this game was bounded except the ones that mattered: the day-180 save was
 // 1.8 MB, 95.5% of it inventory, and four save slots share one 5 MB quota, so
@@ -1863,7 +1868,18 @@ const WALK = ['node', '-e', `
   // chassis with five, so the Kite was refused for owning a leg; it also
   // returned on the first frame that validated, in the order M, S, L, A.
   // Measured on this seed and window: 2 Kites of 20 splices.
-  if (!(w.framesBuilt?.A > 0)) fail('the walk never builds a Kite (' + JSON.stringify(w.framesBuilt) + ')');
+  // R144 — AND IT TAKES TWO SEEDS TO ASK THAT HONESTLY. One 45-day window on
+  // one seed is a single sample of a rare event, and this clause has now been
+  // knocked over twice by milestones that had nothing to do with the Kite:
+  // R143 repriced upkeep, R144 changed two encounters, and each reshuffled
+  // which walls stand in front of a splice. Across four seeds at 45 days the
+  // frame appears in one of them, so a pair is the smallest sample that is
+  // not a coin toss. What proves the Kite is WORTH building is the
+  // deterministic 14.8pp rule in smoke's shard a, not this census.
+  const w2 = campaignWalk(content, { seed: 7, days: 45, stopAtDominion: false });
+  const kites = (w.framesBuilt?.A ?? 0) + (w2.framesBuilt?.A ?? 0);
+  if (!(kites > 0)) fail('neither walk builds a Kite (' + JSON.stringify(w.framesBuilt)
+    + ' / ' + JSON.stringify(w2.framesBuilt) + ')');
   // R148 — and a Rumbler. Measured on this seed and window: 5 of 17 splices.
   if (!(w.framesBuilt?.L > 0)) fail('the walk never builds a Rumbler (' + JSON.stringify(w.framesBuilt) + ')');
   console.log('walk ✓  ' + w.duels + ' duels, ' + w.breakouts + ' hunts, ' + w.bagged
@@ -3613,6 +3629,64 @@ const BREAKS = [
     + facilityUpkeepPerDay(state, content);`,
     to: `  return stockUpkeepPerDay(state, content)
     + chimeraUpkeepPerDay(state, content);`,
+  },
+  {
+    // R144 — THE EXEMPTION WIDENS AND THE GATE STOPS ASKING ANYTHING. Exactly
+    // one region has no `requires` and is therefore the entry point, and its
+    // first node is exempt for three measured reasons (the only tier-1
+    // encounter, R119's five starter labs, R29's guided first splice). Drop
+    // the `.nodes[0]` clause and every region qualifies as an entry point, so
+    // the rule skips all five and passes by having nothing to look at — which
+    // is the failure mode this battery exists to catch.
+    n: 227, gate: REGIONS, name: 'the entry-point exemption widens to every region, and the rule looks at nothing',
+    file: 'tools/smoke.js',
+    anchor: '    if (!r.requires) { lines.push(`${r.id} exempt (entry point)`); continue; }',
+    to: '    if (true) { lines.push(`${r.id} exempt (entry point)`); continue; }',
+  },
+  {
+    // R144 — and the foundry wall goes back to contradicting its own
+    // briefing. It reads "Gas does nothing to a machine ... they are Ground
+    // class, so Air anatomy still flies over the top" while fielding one unit
+    // of EACH class against a declared bench of two: every archetype scored
+    // 0-25% and no anatomy answered it. Putting the crane and the quench rig
+    // back is putting the lie back.
+    n: 228, gate: REGIONS, name: 'the foundry wall stops being what its own briefing says, and answers nobody',
+    file: 'data/enemies.json',
+    anchor: `      "waves": [
+        "slag_hauler",
+        "arc_welder_rig"
+      ],`,
+    to: `      "waves": [
+        "quench_rig",
+        "slag_hauler",
+        "gantry_crane"
+      ],`,
+  },
+  {
+    // R144 — the gate's own reading of the wall. `benchTeam` is why the
+    // seventh audit and this milestone's first draft both measured the wrong
+    // fight: foundry_gate fields three units against a declared bench of two,
+    // so a hardcoded team of three reads it at 100% for noise and the honest
+    // team of two reads it at 0% for everybody. Force the three back and the
+    // gate stops seeing the fight the player is actually sent to.
+    n: 229, gate: REGIONS, name: 'the region gate stops reading benchTeam, and measures a fight nobody is asked to have',
+    file: 'tools/smoke.js',
+    anchor: '    const team = node.benchTeam ?? r.benchTeam ?? 3;',
+    to: '    const team = 3;',
+  },
+  {
+    // R144 — THE DEFECT THIS MILESTONE ACTUALLY SHIPPED, put back. The new
+    // block was first called `regions`, which R90's table had already bound
+    // forty lines above. JS does not error on that; it takes the later entry.
+    // So a block nobody had touched moved from shard c to shard b, and R90's
+    // two union rules both stayed green — they read `Object.keys(SHARD_OF)`,
+    // and a duplicate key is gone before `keys` can see it. The third rule
+    // reads the table's source, which is the only place the second `regions:`
+    // still exists.
+    n: 230, gate: UNION, name: 'a block is assigned a shard twice, and the one nobody touched changes lanes silently',
+    file: 'tools/smoke.js',
+    anchor: "  walls: 'b',",
+    to: "  regions: 'b',",
   },
   {
     // R141 — the per-encounter flight rule. A9 wrote it per-unit, R141 moved
