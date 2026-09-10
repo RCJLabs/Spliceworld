@@ -3631,39 +3631,17 @@ const BREAKS = [
     + chimeraUpkeepPerDay(state, content);`,
   },
   {
-    // R144 — greenfield goes back to being a corridor. The tranq team is what
-    // makes the first wall ask anything at all: without it every one of the
-    // six archetypes clears the barn at 94-100% and the class triangle never
-    // decides a thing.
-    n: 227, gate: REGIONS, name: 'the first region stops asking anything, and every anatomy walks the barn',
-    file: 'data/enemies.json',
-    anchor: `      "waves": [
-        "riot_squad",
-        "net_trooper",
-        "tranq_team"
-      ],`,
-    to: `      "waves": [
-        "riot_squad",
-        "net_trooper"
-      ],`,
-  },
-  {
-    // R144 — and foundry goes back to answering nobody. Its demand text says
-    // "they are Ground class, so Air anatomy still flies over the top", and
-    // the wall used to field one unit of each class against a declared bench
-    // of two: every archetype scored 0-25%. Putting the crane and the quench
-    // rig back is putting the lie back.
-    n: 228, gate: REGIONS, name: 'the foundry wall stops being what its own briefing says, and answers nobody',
-    file: 'data/enemies.json',
-    anchor: `      "waves": [
-        "slag_hauler",
-        "arc_welder_rig"
-      ],`,
-    to: `      "waves": [
-        "quench_rig",
-        "slag_hauler",
-        "gantry_crane"
-      ],`,
+    // R144 — THE EXEMPTION WIDENS AND THE GATE STOPS ASKING ANYTHING. Exactly
+    // one region has no `requires` and is therefore the entry point, and its
+    // first node is exempt for three measured reasons (the only tier-1
+    // encounter, R119's five starter labs, R29's guided first splice). Drop
+    // the `.nodes[0]` clause and every region qualifies as an entry point, so
+    // the rule skips all five and passes by having nothing to look at — which
+    // is the failure mode this battery exists to catch.
+    n: 227, gate: REGIONS, name: 'the entry-point exemption widens to every region, and the rule looks at nothing',
+    file: 'tools/smoke.js',
+    anchor: '    if (!r.requires) { lines.push(`${r.id} exempt (entry point)`); continue; }',
+    to: '    if (true) { lines.push(`${r.id} exempt (entry point)`); continue; }',
   },
   {
     // R144 — the gate's own reading of the wall. `benchTeam` is why the

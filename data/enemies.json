@@ -1830,8 +1830,7 @@
       "blurb": "Two officers investigating 'suspicious kazoo noises.'",
       "waves": [
         "riot_squad",
-        "net_trooper",
-        "tranq_team"
+        "net_trooper"
       ],
       "reward": 80,
       "tier": 1

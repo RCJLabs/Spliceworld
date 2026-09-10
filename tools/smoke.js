@@ -18635,6 +18635,11 @@ if (inShard('regions')) {
   // against a declared bench of two, so a team of three reads it at 100% for
   // noise and a team of two reads it at 0% for everybody. Both halves of the
   // wall — its grade and its numbers — have to come from the data.
+  const entry = Object.values(content.regions).filter((r) => !r.requires);
+  assert.equal(entry.length, 1,
+    `exactly one region is the entry point, or the exemption below is a loophole `
+    + `(${entry.map((r) => r.id).join(', ') || 'none'})`);
+
   const SEEDS = 16;
   const rate = (key, encId, grade, team) => {
     const a = ARCH[key];
@@ -18645,8 +18650,26 @@ if (inShard('regions')) {
     }
     return wins / SEEDS;
   };
+  // THE REGION YOU START IN IS EXEMPT, AND IT IS DERIVED RATHER THAN NAMED.
+  // Exactly one region has no `requires` — it is the entry point — and its
+  // first node is the first fight anybody ever has. Three separate promises
+  // land on that one encounter: it is the game's ONLY tier-1 content, so it
+  // is the bottom rung of the whole difficulty ladder; R119 guarantees all
+  // five starter labs can take it; and R29's guided first splice ends there.
+  // Every way of making it discriminate costs one of those. Measured: a third
+  // unit gives the right answer (gills 25%, five of six through) and costs
+  // 83s of suite work because patrol_1 is the most-benched encounter in the
+  // game; swapping in the Infantry Squad works and spoils the region's own
+  // police-then-military arc, since that unit IS the National Guard it
+  // escalates to at its last node; raising its tier works and leaves the
+  // ladder with no bottom rung.
+  //
+  // So the field guide's "each region asks a different question" is a promise
+  // about the regions you CHOOSE to enter. The one you start in asks whether
+  // you can play at all, which is a different and more important question.
   const lines = [];
   for (const r of Object.values(content.regions)) {
+    if (!r.requires) { lines.push(`${r.id} exempt (entry point)`); continue; }
     const node = r.nodes[0];
     const grade = node.benchGrade ?? r.benchGrade;
     const team = node.benchTeam ?? r.benchTeam ?? 3;
