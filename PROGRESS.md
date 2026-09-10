@@ -1,5 +1,57 @@
 # PROGRESS
 
+## Session 142 — R137: half the agenda did nothing ✅
+
+R131 filed this as "the agenda lists things that are also on the screen it is
+drawn on". Measured, it was worse than duplication.
+
+**Five of the ten rows a day-180 save offers name `ranch` — the screen the
+agenda is drawn on.** Graduate a donor, Breed a pair, Care for the herd,
+Order from the catalog, Expand the pens. `showScreen` on the screen you are
+already on repaints and does nothing else, so *half the panel was buttons
+that did nothing*.
+
+And R133 sharpened it three milestones ago by shutting the money card and the
+Breeding Pen: "Order from the catalog" went nowhere **and** the catalogue was
+behind a fold the player had not opened. A milestone that fixed one thing
+quietly made another worse, and nothing caught it because no rule had ever
+asked where a row's destination pointed.
+
+### What a row does now
+
+It names a fold and opens it — then shuts the animals' exclusive group by
+hand the way a real click would, scrolls the card into view, and moves focus
+to its head. `opens` is read from the save like `hint` is, because which card
+answers "care for the herd" depends on which animal is asking. On the walked
+save the five resolve to `ranch-a2069`, `breeding-pen`, `ranch-a2088`,
+`slush-fund`, `slush-fund`.
+
+The gate has two halves, and the second is R128b's lesson: a row must name a
+fold **and it must be one this page actually paints**. A declared id nothing
+draws is the same dead button wearing an attribute.
+
+### The eager budget is the note worth carrying
+
+`KB_CAP` 557 → 560, measured 557.4 — the **third raise in seven milestones**
+(548 → 553 → 557 → 560), every one of them the Ranch gaining something.
+
+That is structural rather than sloppy: the Ranch is the first paint, so
+anything it needs on frame one is eager by definition, and the agenda —
+nineteen rows that each read the save — is the biggest such thing. I trimmed
+my own comment prose twice before raising, which covered about half of it.
+
+*The number to watch is not that cap; it is `FIRST_PAINT_KB`, which is what
+the player actually waits for.* If that starts moving every milestone too,
+the answer is a smaller eager agenda, not a bigger budget.
+
+**Verified:** suite green in 146.8s, height 9 screens, a11y green, handlers
+43 controls pressed (42 before — the new button is fired by the walk), breaks
+212 and 213 caught, all 210 anchors match. Ten-minute tier per R134.
+
+**Next session's first task:** nothing is queued. The eager-agenda trend
+above is the first real candidate — measure what the nineteen rows cost on
+frame one, and whether the Right Now card can read a smaller thing.
+
 ## Session 141 — R136: the last flat tab ✅
 
 R95 first wrote that folding the Combos tab was owed. R129 folded Genes

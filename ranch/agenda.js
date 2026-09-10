@@ -150,6 +150,11 @@ export const AGENDA = [
   },
   {
     id: 'graduate', kind: 'work', screen: 'ranch', label: 'Graduate a donor',
+    // R137 — opens the card of the animal it is talking about.
+    opens: (state, content, now) => {
+      const ripe = state.ranch.stock.find((a) => ageStage(a, content, now) !== 'juvenile');
+      return ripe ? `ranch-${ripe.id}` : null;
+    },
     hint: (state, content, now) => {
       // R133 — no `!ripe.length` branch. This row's own `ready` predicate
       // requires a grown animal, so the beginner sentence that used to sit
@@ -181,6 +186,7 @@ export const AGENDA = [
   },
   {
     id: 'breed', kind: 'work', screen: 'ranch', label: 'Breed a pair',
+    opens: () => 'breeding-pen',
     hint: (state, content, now) => {
       let pairs = 0;
       for (let i = 0; i < state.ranch.stock.length; i++) {
@@ -206,6 +212,10 @@ export const AGENDA = [
   },
   {
     id: 'care', kind: 'work', screen: 'ranch', label: 'Care for the herd',
+    opens: (state, content, now) => {
+      const who = state.ranch.stock.find((a) => Object.values(careStatus(a, now)).some((c) => c.ready));
+      return who ? `ranch-${who.id}` : null;
+    },
     hint: (state, content, now) => {
       let ready = 0;
       let animals = 0;
@@ -376,6 +386,8 @@ export const AGENDA = [
     // afford" is true and is the wrong number; a collector wants to know how
     // many of them are new anatomy. Measurement in tools/reach.js.
     id: 'buy', kind: 'spend', screen: 'ranch', label: 'Order from the catalog',
+    // The picker is inside the money card, which R133 shut by default.
+    opens: () => 'slush-fund',
     chip: (state, content) => {
       const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
       if (!afford.length) return null;
@@ -435,6 +447,7 @@ export const AGENDA = [
   },
   {
     id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',
+    opens: () => 'slush-fund',
     chip: (state) => `$${penUpgradeCost(state)}`,
     hint: (state) => `$${penUpgradeCost(state)} for the next pen — ${
       state.ranch.stock.length}/${state.ranch.penCapacity} full. Room for stock is room for parts.`,
@@ -446,7 +459,7 @@ export const AGENDA = [
 export function agenda(state, content, now) {
   return AGENDA.filter((item) => {
     try { return !!item.ready(state, content, now); } catch { return false; }
-  }).map(({ id, kind, screen, subtab, label, hint, chip }) => ({
+  }).map(({ id, kind, screen, subtab, label, hint, chip, opens }) => ({
     // R75: `subtab` travels with the entry. An agenda row names a
     // DESTINATION, and on the two screens that have sub-navigation the
     // screen alone is only half of one — "Run a job" landed on the map and
@@ -465,6 +478,10 @@ export function agenda(state, content, now) {
     // chip carries the short form on its face; the sentence stays in the
     // title for anyone with a pointer.
     chip: typeof chip === 'function' ? chip(state, content, now) : (chip ?? null),
+    // R137 — the fold to open when the destination is this screen. Read
+    // from the save like `hint`: which card answers "care for the herd"
+    // depends on which animal is asking.
+    opens: typeof opens === 'function' ? opens(state, content, now) : (opens ?? null),
   }));
 }
 

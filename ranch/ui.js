@@ -210,13 +210,19 @@ export function renderRanchScreen(root, ctx) {
     body: !rightNowOpen ? '' : KINDS.map(([kind, heading]) => {
       const items = shape.open.filter((i) => i.kind === kind);
       if (!items.length) return '';
+      // R137 — a row whose destination is the screen it is drawn on used to
+      // carry `data-goto="ranch"`, and `showScreen` on the screen you are
+      // already on repaints and nothing else: five of ten were dead buttons.
+      const act = (i) => (i.screen === 'ranch' && i.opens
+        ? ` data-open-fold="${i.opens}"`
+        : ` data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''}`);
       if (kind === 'spend') {
         return `<p class="agenda-head">${heading}</p><div class="agenda-chips">` + items.map((i) => `
-          <button type="button" class="agenda-chip" data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''} title="${i.hint}">${i.label}${
+          <button type="button" class="agenda-chip"${act(i)} title="${i.hint}">${i.label}${
             i.chip ? `<span class="chip-num">${i.chip}</span>` : ''}</button>`).join('') + '</div>';
       }
       return `<p class="agenda-head">${heading}</p>` + items.map((i) => `
-        <button type="button" class="agenda-row" data-goto="${i.screen}"${i.subtab ? ` data-subtab="${i.subtab}"` : ''}>
+        <button type="button" class="agenda-row"${act(i)}>
           <span class="agenda-label">${i.label}</span>
           <span class="fine-print">${i.hint}</span>
         </button>`).join('');
@@ -611,6 +617,27 @@ export function renderRanchScreen(root, ctx) {
   bindRush(root, ctx, (m) => { lastMsg = m; }, again);
   root.querySelectorAll('button[data-goto]').forEach((btn) => {
     btn.addEventListener('click', () => ctx.goto?.(btn.dataset.goto, btn.dataset.subtab));
+  });
+  // R137 — open the card the row names and take the player to it. Smoke
+  // asserts every id the agenda hands over is one this screen paints.
+  root.querySelectorAll('button[data-open-fold]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.openFold;
+      const state2 = ctx.state;
+      state2.ui ??= { collapsed: {} };
+      state2.ui.collapsed ??= {};
+      // The animals are exclusive (R98) and nothing has clicked, so shut
+      // the others by hand the way `bindFolds` would.
+      if (id.startsWith('ranch-')) {
+        for (const animal of state2.ranch.stock) state2.ui.collapsed[`ranch-${animal.id}`] = true;
+      }
+      state2.ui.collapsed[id] = false;
+      ctx.save();
+      again();
+      const card = root.querySelector(`[data-fold="${id}"]`)?.closest('.card');
+      card?.scrollIntoView({ block: 'start', behavior: 'auto' });
+      root.querySelector(`[data-fold="${id}"]`)?.focus();
+    });
   });
 
   bindPickers(root, {

@@ -3419,6 +3419,25 @@ const BREAKS = [
     to: '  vault:          { folded: 2560,  tallest: 4100 },',
   },
   {
+    // R137 — the five rows that point at the Ranch go back to navigating to
+    // the Ranch, which is where the player already is: `showScreen` repaints
+    // and nothing else, so half the panel is dead buttons again.
+    n: 212, gate: FACILITY, name: 'half the agenda goes back to navigating to the screen it is drawn on',
+    file: 'ranch/ui.js',
+    anchor: "        ? ` data-open-fold=\"${i.opens}\"`",
+    to: "        ? ` data-goto=\"${i.screen}\"`",
+  },
+  {
+    // The other half of the rule, and R128b's lesson in one token: the row
+    // declares a fold nothing paints. A declared id no screen draws is the
+    // same dead button wearing an attribute — asking whether a thing EXISTS
+    // is not asking whether it can be FOUND.
+    n: 213, gate: FACILITY, name: 'an agenda row opens a fold the Ranch does not paint',
+    file: 'ranch/agenda.js',
+    anchor: "    opens: () => 'breeding-pen',",
+    to: "    opens: () => 'breeding-pens',",
+  },
+  {
     // R136 — the Combos tab goes back to three flat lists, which is the
     // state it was in for six milestones: 2,403px and 529 words on a screen
     // the player looks things up in. Catches BOTH halves of the new budget —
