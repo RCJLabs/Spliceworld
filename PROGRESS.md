@@ -104,8 +104,9 @@ and priced in the note rather than left to be rediscovered:
 | gate-first | ✓ red on the pre-R149 tree, in its own words — `Camo defends against something (Sonic x1.5)` |
 | `--anchors` | ✓ 220 anchors match exactly once (217 re-aimed) |
 | breaks 221, 222, 223 | ✓ 3 caught, 0 missed |
-| `--baseline` | re-running after the boot fix — result pending |
-| `npm test` | re-running uncontended — result pending |
+| `--baseline` | ✓ green on a clean tree, `BASELINE_EXIT=0` |
+| `npm test` | ✓ 10 jobs, 162.6s wall-clock against the 195s budget, `NPMTEST_EXIT=0` |
+| `tools/boot.js` | ✓ green — 1030.4 KB under the raised 1035 ceiling |
 | `SAVE_VERSION` | unchanged at 49 — Camo is derived from the genome, never stored |
 
 Two process notes worth keeping, both mine. **Judge a run by its exit code,
