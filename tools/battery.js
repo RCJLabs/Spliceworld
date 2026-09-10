@@ -337,6 +337,11 @@ const CAMO = ['node', '-e',
 const EMPIRE = ['node', '-e',
   "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
 
+// R144 — EVERY REGION ASKS A QUESTION AT THE GRADE AND TEAM IT DECLARES.
+// Six archetypes against five first nodes; cheap, no walks. Shard b.
+const REGIONS = ['node', '-e',
+  "process.env.SW_SHARD = 'b'; await import('./tools/smoke.js');"];
+
 // R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
 // this game was bounded except the ones that mattered: the day-180 save was
 // 1.8 MB, 95.5% of it inventory, and four save slots share one 5 MB quota, so
@@ -3613,6 +3618,53 @@ const BREAKS = [
     + facilityUpkeepPerDay(state, content);`,
     to: `  return stockUpkeepPerDay(state, content)
     + chimeraUpkeepPerDay(state, content);`,
+  },
+  {
+    // R144 — greenfield goes back to being a corridor. The tranq team is what
+    // makes the first wall ask anything at all: without it every one of the
+    // six archetypes clears the barn at 94-100% and the class triangle never
+    // decides a thing.
+    n: 227, gate: REGIONS, name: 'the first region stops asking anything, and every anatomy walks the barn',
+    file: 'data/enemies.json',
+    anchor: `      "waves": [
+        "riot_squad",
+        "net_trooper",
+        "tranq_team"
+      ],`,
+    to: `      "waves": [
+        "riot_squad",
+        "net_trooper"
+      ],`,
+  },
+  {
+    // R144 — and foundry goes back to answering nobody. Its demand text says
+    // "they are Ground class, so Air anatomy still flies over the top", and
+    // the wall used to field one unit of each class against a declared bench
+    // of two: every archetype scored 0-25%. Putting the crane and the quench
+    // rig back is putting the lie back.
+    n: 228, gate: REGIONS, name: 'the foundry wall stops being what its own briefing says, and answers nobody',
+    file: 'data/enemies.json',
+    anchor: `      "waves": [
+        "slag_hauler",
+        "arc_welder_rig"
+      ],`,
+    to: `      "waves": [
+        "quench_rig",
+        "slag_hauler",
+        "gantry_crane"
+      ],`,
+  },
+  {
+    // R144 — the gate's own reading of the wall. `benchTeam` is why the
+    // seventh audit and this milestone's first draft both measured the wrong
+    // fight: foundry_gate fields three units against a declared bench of two,
+    // so a hardcoded team of three reads it at 100% for noise and the honest
+    // team of two reads it at 0% for everybody. Force the three back and the
+    // gate stops seeing the fight the player is actually sent to.
+    n: 229, gate: REGIONS, name: 'the region gate stops reading benchTeam, and measures a fight nobody is asked to have',
+    file: 'tools/smoke.js',
+    anchor: '    const team = node.benchTeam ?? r.benchTeam ?? 3;',
+    to: '    const team = 3;',
   },
   {
     // R141 — the per-encounter flight rule. A9 wrote it per-unit, R141 moved

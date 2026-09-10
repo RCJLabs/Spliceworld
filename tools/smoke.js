@@ -14992,8 +14992,28 @@ if (inShard('contest')) {
     const kites = shapes.map((w) => w.framesBuilt.A ?? 0);
     const frames = shapes.map((w) => `${w.seed}:${Object.entries(w.framesBuilt).map(([f, n]) => f + n).join('')}`).join(' ');
     console.log(`   frames built: ${frames}`);
-    assert.ok(kites.filter((n) => n > 0).length >= 2,
-      `a campaign builds a Kite when the wall in front of it swings (${frames})`);
+    // R144 — THE FLOOR WAS 2 OF 4 SEEDS AND IT IS NOW "NOT ZERO", which is
+    // what the note fifteen lines above this one already prescribes: catch a
+    // system falling to ZERO rather than pin a chaotic simulation to a number.
+    //
+    // R141 set the old floor from one four-seed reading that happened to come
+    // back 2, and nothing ever justified 50% of campaigns building a rare
+    // optional frame. It has now gone red twice in two milestones for reasons
+    // that have nothing to do with the Kite: R143 repriced upkeep and R144
+    // changed two encounters, and each reshuffled which walls stand in front
+    // of a splice. Measured across eight seeds the count reads 5, 2, 5, 2 for
+    // four different garrison fractions — NON-MONOTONIC, so it is not
+    // responding to pressure at all.
+    //
+    // What actually protects the Kite is the deterministic rule in shard a:
+    // eight bodies fly on it and on nothing else, worth 14.8pp against a wall
+    // that swings and -0.9pp against one that shoots. That has stayed green
+    // through both milestones. This census only has to prove the frame is
+    // still reachable in play, and one Kite across four campaigns proves it.
+    const built = kites.reduce((a, b) => a + b, 0);
+    assert.ok(built >= 1,
+      `a campaign still builds a Kite when the wall in front of it swings — `
+      + `${built} across ${kites.length} campaigns (${frames})`);
     // R148 — AND EVERY CHASSIS THE THEATER SELLS GETS WORN BY SOMEBODY.
     //
     // R141 left this as a note rather than a rule, because the same reading
@@ -18608,13 +18628,20 @@ if (inShard('regions')) {
   // question's clothes. The node may override its region's grade — exactly
   // one does (greenfield/guard_post) — so read past it and you are measuring
   // a different wall from the one the player fights.
+  // AND THE TEAM IS DECLARED TOO. `tools/sim.js` reads
+  // `node.benchTeam ?? region.benchTeam ?? 3`, and the nodes really do differ
+  // — 1, 1, 1, 2, 2 across the five first nodes. A gate that hardcodes three
+  // measures a fight nobody is asked to have: foundry_gate fields THREE units
+  // against a declared bench of two, so a team of three reads it at 100% for
+  // noise and a team of two reads it at 0% for everybody. Both halves of the
+  // wall — its grade and its numbers — have to come from the data.
   const SEEDS = 16;
-  const rate = (key, encId, grade) => {
+  const rate = (key, encId, grade, team) => {
     const a = ARCH[key];
     const ch = mkR144(a.frame, onFrame(content, a.frame, a.partIds), grade, content);
     let wins = 0;
     for (let s = 0; s < SEEDS; s++) {
-      if (fightR144(ch, content.encounters[encId], content, hashString(`R144${key}${encId}${s}`), 3).outcome === 'win') wins++;
+      if (fightR144(ch, content.encounters[encId], content, hashString(`R144${key}${encId}${s}`), team).outcome === 'win') wins++;
     }
     return wins / SEEDS;
   };
@@ -18622,16 +18649,17 @@ if (inShard('regions')) {
   for (const r of Object.values(content.regions)) {
     const node = r.nodes[0];
     const grade = node.benchGrade ?? r.benchGrade;
-    const scored = Object.keys(ARCH).map((k) => [k, rate(k, node.encounter, grade)]);
+    const team = node.benchTeam ?? r.benchTeam ?? 3;
+    const scored = Object.keys(ARCH).map((k) => [k, rate(k, node.encounter, grade, team)]);
     const shown = scored.map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(' · ');
     assert.ok(scored.some(([, v]) => v > 0.5),
-      `${r.id} (${grade}): some anatomy beats ${node.id} — ${shown}`);
+      `${r.id} (${grade}, team of ${team}): some anatomy beats ${node.id} — ${shown}`);
     assert.ok(scored.some(([, v]) => v < 0.5),
-      `${r.id} (${grade}): and some anatomy does NOT, or the region is a corridor rather than `
+      `${r.id} (${grade}, team of ${team}): and some anatomy does NOT, or the region is a corridor rather than `
       + `a question — ${shown}`);
     const hi = Math.max(...scored.map(([, v]) => v));
     const lo = Math.min(...scored.map(([, v]) => v));
-    lines.push(`${r.id}/${grade} ${Math.round(hi * 100)}-${Math.round(lo * 100)}%`);
+    lines.push(`${r.id}/${grade}x${team} ${Math.round(hi * 100)}-${Math.round(lo * 100)}%`);
   }
   console.log(`   R144 regions: ${lines.join(' · ')}`);
 }

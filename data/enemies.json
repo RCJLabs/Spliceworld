@@ -1830,7 +1830,8 @@
       "blurb": "Two officers investigating 'suspicious kazoo noises.'",
       "waves": [
         "riot_squad",
-        "net_trooper"
+        "net_trooper",
+        "tranq_team"
       ],
       "reward": 80,
       "tier": 1
@@ -2012,9 +2013,8 @@
       "name": "Slag Gate",
       "tier": 4,
       "waves": [
-        "quench_rig",
         "slag_hauler",
-        "gantry_crane"
+        "arc_welder_rig"
       ],
       "reward": 480,
       "blurb": "A gate made of gates. The foreman has laminated the rules."
