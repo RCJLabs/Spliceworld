@@ -119,7 +119,12 @@ export const AGENDA = [
     id: 'gauntlet', kind: 'campaign', screen: 'battle', subtab: 'labs', label: 'Answer an exhibition',
     hint: (state, content) => {
       const open = gauntletState(state, content).find((r) => r.status === 'open');
-      return open ? `${open.stage.name} is waiting — $${open.stage.reward}.` : 'The Gauntlet is open.';
+      // R143 — "Exhibition III — CRUCIBLE-9000 is waiting — $55000." is 50
+      // characters carrying two em-dashes, and it WRAPS. It had never been
+      // measured: the fixture's walker was rich enough to clear the Gauntlet
+      // before day 180, so this branch never rendered. A tighter economy
+      // leaves an exhibition open and the row was waiting to be too long.
+      return open ? `${open.stage.name} — $${open.stage.reward}.` : 'The Gauntlet is open.';
     },
     ready: (state, content, now) =>
       gauntletState(state, content).some((r) => r.status === 'open') && fit(state, now).length > 0,

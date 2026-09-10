@@ -329,6 +329,14 @@ const KITE = ['node', '-e',
 const CAMO = ['node', '-e',
   "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
 
+// R143 — AN EMPIRE HAS RUNNING COSTS. R25 pointed the upkeep economy at
+// livestock and nothing ever pointed it at territory or at the plant, so
+// income scaled with conquest and outgo did not — the empire's share of its
+// own gross ROSE as it grew, 28-67% on day ten against 76-85% from day twenty
+// on. Three 180-day walks; shard a, per SHARD_OF.
+const EMPIRE = ['node', '-e',
+  "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
+
 // R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
 // this game was bounded except the ones that mattered: the day-180 save was
 // 1.8 MB, 95.5% of it inventory, and four save slots share one 5 MB quota, so
@@ -3443,10 +3451,13 @@ const BREAKS = [
     // Dropping the `opens` declaration is how the hole comes back: the
     // budgets alone cannot tell a screen that shrank from a screen that
     // stopped opening, which is why 198 went MISSED the first time.
+    // R143 moved `tallest` 4100 -> 4120 (the shelf summarises a different
+    // spread), so the anchor follows the number it sits beside. What the
+    // break aims at is `opens`, which is untouched.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 2560,  tallest: 4100, opens: 20 },',
-    to: '  vault:          { folded: 2560,  tallest: 4100 },',
+    anchor: '  vault:          { folded: 2560,  tallest: 4120, opens: 20 },',
+    to: '  vault:          { folded: 2560,  tallest: 4120 },',
   },
   {
     // R137 — the five rows that point at the Ranch go back to navigating to
@@ -3566,6 +3577,42 @@ const BREAKS = [
     to: `      "attack": "Sonic",
       "defender": "Camo",
       "mult": 1,`,
+  },
+  {
+    // R143 — THE DEFECT ITSELF, PUT BACK. Territory free to hold is the half
+    // that matters most: income scales with conquest, so an outgo that does
+    // not is what let the late game bank 24-52 days of income with every
+    // facility level already bought. Zeroing the fraction rather than
+    // deleting the key is the sharper break — the field is still THERE, so
+    // anything that merely checks for its presence stays green.
+    n: 224, gate: EMPIRE, name: 'territory goes back to being free to hold, and conquest has no ceiling again',
+    file: 'data/facility.json',
+    anchor: '    "garrisonFraction": 0.08,',
+    to: '    "garrisonFraction": 0,',
+  },
+  {
+    // R143 — and the other half: $504,000 of plant that bills nothing per
+    // day is a one-time sink, not an economy. Aimed at the DATA rather than
+    // the default in splice/facility.js, because the data is what the game
+    // reads and the default is only what it falls back to.
+    n: 225, gate: EMPIRE, name: 'the facility stops costing anything to run, and the sink is one-time again',
+    file: 'data/facility.json',
+    anchor: '    "facilityRunningFraction": 0.0004',
+    to: '    "facilityRunningFraction": 0',
+  },
+  {
+    // R143 — the wiring, not the numbers. `upkeepPerDay` is what every screen
+    // and the clock both read, so dropping the two new terms there leaves the
+    // tuning in place and the ledger wrong: a break that changes a constant
+    // proves the constant is read, and this one proves the SUM is.
+    n: 226, gate: EMPIRE, name: 'the ledger stops adding territory and the plant, and only livestock is billed',
+    file: 'ranch/ranch.js',
+    anchor: `  return stockUpkeepPerDay(state, content)
+    + chimeraUpkeepPerDay(state, content)
+    + territoryUpkeepPerDay(state, content)
+    + facilityUpkeepPerDay(state, content);`,
+    to: `  return stockUpkeepPerDay(state, content)
+    + chimeraUpkeepPerDay(state, content);`,
   },
   {
     // R141 — the per-encounter flight rule. A9 wrote it per-unit, R141 moved

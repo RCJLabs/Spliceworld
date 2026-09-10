@@ -177,6 +177,11 @@ const BUDGET = {
   // open page. Measured at 4,009 with pages of eight; 4,100 sits just above
   // it, and like the Ranch's it is arithmetic rather than a ratchet — the
   // shut shelf plus sixteen rows, whatever the shelf holds.
+  // R143: 4100 -> 4120, measured at 4110, and it is the same arithmetic R95
+  // applied — the shut shelf summarises what KINDS of thing are on it, and a
+  // tighter economy walks a different campaign. Identical part count (334
+  // both), different spread across the species bays, one more line of summary
+  // to draw. The open page is untouched.
   //
   // The bay this exists for is the shark bay, and it is worth writing the
   // numbers down: on a day-180 save it holds 101 of the 337 parts AND 116
@@ -184,7 +189,7 @@ const BUDGET = {
   // version of this milestone paged the parts and left the vials, and the
   // gate measured that bay at 16,821px — the fix is not a smaller page, it
   // is that a list is a list.
-  vault:          { folded: 2560,  tallest: 4100, opens: 20 },
+  vault:          { folded: 2560,  tallest: 4120, opens: 20 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
 

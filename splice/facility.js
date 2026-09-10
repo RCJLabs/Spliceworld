@@ -71,10 +71,40 @@ const UPKEEP_DEFAULTS = {
   gradeCost: { standard: 1, prime: 5, apex: 12, prismatic: 22 },
   drawCost: 0.35,
   instabilityCost: 0.08,
+  // R143 — the two things that were free to own. R25 pointed the upkeep
+  // economy at livestock and nothing ever pointed it at territory or the
+  // plant, so income scaled with conquest and outgo did not. FRACTIONS, not
+  // tables: a garrison priced as a share of the node's own income can never
+  // exceed what the node pays, so conquest still pays and losing a node is
+  // never a relief — including for a region nobody has written yet.
+  // Calibration and the liquidity wall it hit are in ROADMAP §9.22.
+  garrisonFraction: 0.08,
+  facilityRunningFraction: 0.0004,
 };
 
 export function upkeepTuning(content) {
   return { ...UPKEEP_DEFAULTS, ...(content.upkeepMeta ?? {}) };
+}
+
+// R143 — what the map costs to hold, and what the plant costs to run. A
+// contested node still pays its garrison: income is suspended while the
+// convoy sits there, and a garrison that stopped would make being attacked a
+// saving. The plant is priced off what each level cost to build, so it is
+// zero on a fresh save and grows only as the player grows it.
+export function territoryUpkeepPerDay(state, content) {
+  const held = new Set(state.campaign?.heldNodes ?? []);
+  if (!held.size) return 0;
+  const f = upkeepTuning(content).garrisonFraction;
+  return Object.values(content.regions ?? {})
+    .flatMap((r) => r.nodes ?? [])
+    .reduce((n, node) => (held.has(node.id) ? n + (node.incomePerDay ?? 0) * f : n), 0);
+}
+
+export function facilityUpkeepPerDay(state, content) {
+  const f = upkeepTuning(content).facilityRunningFraction;
+  return tracks(content).reduce((n, t) => n + (t.levels ?? [])
+    .slice(0, facilityLevel(state, t.id))
+    .reduce((m, l) => m + (l.cost ?? 0) * f, 0), 0);
 }
 
 // What the Surgery Theater may build with right now.

@@ -100,6 +100,17 @@ function warSubtabBar(state) {
   });
 }
 
+// R143 — the upkeep line names its payers. Zero rows are dropped, so a fresh
+// ranch still reads "after $12 upkeep".
+function upkeepBreakdown(upkeep, parts) {
+  const named = [
+    ['stock', parts?.stock], ['stable', parts?.chimeras],
+    ['garrisons', parts?.territory], ['plant', parts?.facility],
+  ].filter(([, v]) => v > 0);
+  if (named.length < 2) return `after $${Math.round(upkeep)} upkeep`;
+  return `after $${Math.round(upkeep)} upkeep — ${named.map(([k, v]) => `$${v} ${k}`).join(', ')}`;
+}
+
 export function renderWarRoomScreen(root, ctx) {
   const { state } = ctx;
   // Battle mode locks the shell to one screen; every other view scrolls.
@@ -177,7 +188,7 @@ function renderMap(root, ctx) {
   const { state, content, now } = ctx;
   const t = now();
   const map = regionStates(state, content);
-  const { gen, income, suspended, bonus, nextRung, upkeep, net } = econRow(state, content);
+  const { gen, income, suspended, bonus, nextRung, upkeep, net, upkeepParts } = econRow(state, content);
 
   // Five strips instead of one (R26). A locked region still shows its name,
   // its identity and the one thing standing between you and it — a map that
@@ -511,7 +522,7 @@ function renderMap(root, ctx) {
         }</div>
         <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${
           net < 0 ? '−' : '+'
-        }$${Math.abs(net)}/day</strong><span class="econ-next">after $${upkeep} upkeep</span></div>
+        }$${Math.abs(net)}/day</strong><span class="econ-next">${upkeepBreakdown(upkeep, upkeepParts)}</span></div>
         <div><span class="econ-label">Record</span><strong>${state.warRecord.wins}W–${state.warRecord.losses}L</strong></div>
       </div>
     </section>

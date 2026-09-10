@@ -1,5 +1,123 @@
 # PROGRESS
 
+## Session 147 — R143: an empire that cost nothing to run ✅
+
+**ROADMAP §9.22.** The entry's five numbers all held. **Its diagnosis did
+not** — and that is the first finding.
+
+### "No failure state bites" is false
+
+R87's Compliance Task Force landed **137 levies across six campaigns** (271
+raids, 134 held, 25% of funds + 2 stock each) and R9's counter-offensives took
+**25 nodes** off seed 2026 alone. The world pushes back constantly. What it
+could not do was make anything *scarce*.
+
+### The defect was on the books
+
+`upkeepPerDay` counted **livestock and nothing else**. Territory was free to
+hold; the facility — $504,000 built out — cost nothing to run. Income scaled
+with conquest, outgo did not, so the empire's share of its own gross went **up**
+as it grew: 28-67% on day ten against 76-85% from day twenty. A 25% levy on a
+pile refilling at $4,830/day is friction, not scarcity, which is why the walker
+bought **every level of every track and still ended holding $118k-$259k**.
+
+| | before | after |
+| --- | ---: | ---: |
+| empire keeps, at full size | 80-84% | **64-75%** |
+| spent running it, over a campaign | 17-18% | **24-27%** |
+| low-water / broke / stalls | $164 / 0h / 0h | **unchanged** |
+
+Two fractions in `facility.json`, not tables: a garrison priced as a share of
+the node's own income can never exceed what the node pays, so conquest still
+pays and losing a node is never a relief — including for a region nobody has
+written yet.
+
+### The liquidity wall — the larger finding
+
+Tightening works to a hard limit, then the game stops functioning. Past ~0.15
+garrison the walker cannot afford to extract or buy pens, jobs keep delivering
+animals, and `ranch.stock` blows through R91's bound of 48 — **20 head at
+0.12, 56 at 0.15, 57 at 0.35.**
+
+**Livestock leaves this game only through extraction, which costs money. There
+is no sell mechanic.** A cash-poor player accumulates animals they cannot use,
+house or liquidate. *Money cannot be made scarce here until something can turn
+an asset back into cash.* That bounds every future sink.
+
+### Measuring rare things through a chaotic simulation
+
+At 0.12 R141's Kite census went red. **The Kite never fails on merit** —
+`bestSplice` produces a Kite plan 19-21 times across eight campaigns, coherent
+100% of the time. It dies one gate later: with the stable full, the walker
+builds only if the plan beats its worst creature by more than dismantling
+burns, and a 5-bay frame rarely clears that against a 6-bay incumbent.
+
+But R143 is **not causally responsible**. Kites over eight seeds by garrison:
+**5 at zero, 2 at 0.04, 5 at 0.08, 2 at 0.12.** Non-monotonic — pressure is
+not what moves it, reshuffling is. R141's census samples four campaigns and
+needs two, and measured exactly two before this milestone: no margin, ever.
+
+The obvious fix was tried and was **wrong**: extending R141's wall-blanking
+exemption to the replacement gate left the Kite at 2 and pushed churn from 209
+commits to **310**, back into what R91 spent a milestone fixing. Reverted.
+0.08 restores the census exactly — 2/4 on its own seeds, 4/8 wide, 5 Kites.
+
+### Five gates tripped; three were defects this exposed, not caused
+
+- **vault** — `campaign.captives[].chimera.moveset`/`.scars` had no stated
+  bound. The shape was always there; the old fixture never held a captive.
+- **agenda row** — `"Exhibition III — CRUCIBLE-9000 is waiting — $55000."` is
+  50 characters with two em-dashes and wraps. Never rendered before, because
+  the richer walker cleared the Gauntlet by day 180.
+- **ranch chrome** — the agenda went 10 rows to 13 (an unfought exhibition, a
+  captive to fetch, an untreated injury), 98px past R133's budget. Rows cap at
+  3 per kind with an overflow count — R47's chip logic one step on. The badge
+  already counts every open item, so it is a length decision, not disclosure.
+- **vault height** — 4100 → 4120, measured 4110. Same 334 parts, different
+  spread, one more summary line; the arithmetic the note itself prescribes.
+- **boot** — `KB_CAP` 560 → 562, measured 560.3.
+
+### Verification
+
+| | |
+| --- | --- |
+| gate-first | ✓ red on pre-R143 — `holding 21 nodes costs more to run than holding one ($1110/day vs $1110/day)` |
+| `--anchors` | ✓ 223 (199 re-aimed) |
+| breaks 224, 225, 226 | ✓ 3 caught, 0 missed |
+| `--baseline` | ✓ `BASELINE_EXIT=0`, every gate on a pristine tree |
+| `npm test` | ✓ 10 jobs, 174.3s against the 195s budget, `NPMTEST_EXIT=0` |
+| `SAVE_VERSION` | unchanged at 49 — upkeep is derived from `heldNodes` and facility levels |
+
+### Lessons
+
+- **Prose ships.** Second milestone running where my own comments blew a boot
+  budget. No build step: a 26-line note reaches every player on first paint.
+- **A gate can be anti-correlated with its own milestone.** The first version
+  of "money has somewhere to go" measured end-of-run funds; `WALK_RESERVE_DAYS
+  = 14` means raising upkeep raises the cash the walker sits on, so it scored
+  the fix as a regression. Replaced with a cumulative share.
+- **Three budgets raised across two sessions** (FIRST_PAINT_KB, KB_CAP, vault
+  height) and one floor lowered. `tools/smoke.js` names the test for stopping:
+  it has now been met, and 23.2 KB of deferrable eager modules is recorded.
+- **A cold fixture cache reads as a regression.** The suite came back 242.3s
+  against a 195s budget with every job green, `walks` at 114.6s. Warm, the
+  same tree is 174.3s and `walks` is 29.4s. R148 hit this exact red herring;
+  the rule is to re-run before believing a wall-clock failure.
+
+### Known issues / carried
+
+- **No way to sell livestock.** The binding constraint on every future money
+  sink. Should be its own milestone.
+- **R141's Kite census measures coin flips** — four campaigns, floor of two,
+  on an outcome that moves non-monotonically with any parameter. The next
+  milestone to touch the economy will move it again; the answer then is more
+  samples, not a tuning chosen to satisfy the gate.
+- `bestSplice` still fills one part per slot *type*, so it never uses the
+  second organ bay Tier II grants. Pre-existing, carried from R141.
+
+**Next session's first task:** a way to turn assets back into cash — it is now
+the thing blocking the economy, and it has measurements behind it.
+
 ## Session 146 — R149: a tag you were paid to avoid ✅
 
 **ROADMAP §9.21.** The milestone was aimed at the Scamper and **it did not

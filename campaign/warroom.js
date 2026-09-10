@@ -16,6 +16,7 @@
 // One of them was already wrong. See `contestAlerts`.
 
 import { isSettled } from '../splice/theater.js';
+import { territoryUpkeepPerDay, facilityUpkeepPerDay } from '../splice/facility.js';
 import { combatantFromChimera } from '../battle/engine.js';
 import { forecast } from '../battle/forecast.js';
 import { STABLE } from '../ranch/onboarding.js';
@@ -35,7 +36,7 @@ import {
   regionStates, threatGen, nextThreatRung, incomePerDay, incomeSuspended,
   regionBonusPerDay, regionComplete, nodeById, regionOfNode,
 } from './campaign.js';
-import { upkeepPerDay, TUNING } from '../ranch/ranch.js';
+import { upkeepPerDay, stockUpkeepPerDay, chimeraUpkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { liveWaves } from '../battle/engine.js';
 import { rivalOf } from '../data/catalog.js';
 
@@ -172,6 +173,15 @@ export function econRow(state, content) {
   const income = incomePerDay(state, content);
   const upkeep = upkeepPerDay(state, content);
   return {
+    // R143 — where the bill goes. A cost the player cannot see is a cost they
+    // cannot act on, and the point of a garrison is weighing it against what
+    // the node pays.
+    upkeepParts: {
+      stock: Math.round(stockUpkeepPerDay(state, content)),
+      chimeras: Math.round(chimeraUpkeepPerDay(state, content)),
+      territory: Math.round(territoryUpkeepPerDay(state, content)),
+      facility: Math.round(facilityUpkeepPerDay(state, content)),
+    },
     notoriety: state.campaign.notoriety,
     gen: threatGen(state, content),
     nextRung: nextThreatRung(state, content),

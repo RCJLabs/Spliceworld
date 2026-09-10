@@ -4,7 +4,7 @@
 // intervals).
 
 import { rngStream, pick, randInt, pickFresh } from '../util/rng.js';
-import { upkeepTuning } from '../splice/facility.js';
+import { upkeepTuning, territoryUpkeepPerDay, facilityUpkeepPerDay } from '../splice/facility.js';
 import { speciesOf } from '../data/catalog.js';
 
 export const STATS = ['hp', 'power', 'armor', 'speed', 'stamina'];
@@ -165,6 +165,9 @@ export function applyElapsed(state, content, now, since = null) {
   for (const chimera of state.chimeras ?? []) {
     upkeep += chimeraUpkeep(chimera, content) * (ownedMs(chimera.createdAt) / DAY);
   }
+  // R143 — the standing costs, billed across the whole span: charging them
+  // here is what makes `upkeepPerDay` a promise the clock keeps.
+  upkeep += (territoryUpkeepPerDay(state, content) + facilityUpkeepPerDay(state, content)) * dtDays;
   state.funds = Math.max(0, state.funds + TUNING.stipendPerDay * dtDays - upkeep);
 }
 
@@ -440,6 +443,10 @@ export function chimeraUpkeepPerDay(state, content) {
   return (state.chimeras ?? []).reduce((sum, c) => sum + chimeraUpkeep(c, content), 0);
 }
 
+// R143 — the whole ledger; see `garrisonFraction` in splice/facility.js.
 export function upkeepPerDay(state, content) {
-  return stockUpkeepPerDay(state, content) + chimeraUpkeepPerDay(state, content);
+  return stockUpkeepPerDay(state, content)
+    + chimeraUpkeepPerDay(state, content)
+    + territoryUpkeepPerDay(state, content)
+    + facilityUpkeepPerDay(state, content);
 }

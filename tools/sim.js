@@ -2247,6 +2247,14 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // Income the world is about to pay for this gap, at the holdings it
     // pays on — the ledger the R64 gate compares a month away against.
     state.__walkIncome = (state.__walkIncome ?? 0) + incomePerDay(state, content) * ((now - (state.lastTickAt ?? now)) / WALK_DAY);
+    // R143 — and the other side of the ledger, integrated from the game's own
+    // rate the same way. A snapshot of end-of-run FUNDS cannot answer whether
+    // money has anywhere to go: the walker refuses to spend below
+    // WALK_RESERVE_DAYS of upkeep, so raising the running costs raises the
+    // cash it sits on and a balance-sheet rule would score the fix as a
+    // regression. What is actually being asked is what share of everything
+    // ever earned the empire spends on existing, and that is cumulative.
+    state.__walkUpkeep = (state.__walkUpkeep ?? 0) + upkeepPerDay(state, content) * ((now - (state.lastTickAt ?? now)) / WALK_DAY);
     tick(state, content, now);
     for (const c of state.chimeras) if (c.agitatedAt) feralSeen.add(c.id);
     for (const c of state.chimeras) if (c.rehabilitated) rehabEver.add(c.id);
@@ -2340,6 +2348,12 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     stock: state.ranch.stock.length,
     parts: state.inventory.parts.length,
     funds: Math.round(state.funds),
+    // R143 — the campaign's whole ledger, integrated from the rates the War
+    // Room itself prints. `upkeepShare` is what running the place cost as a
+    // fraction of everything territory ever paid.
+    grossEarned: Math.round(state.__walkIncome ?? 0),
+    upkeepPaid: Math.round(state.__walkUpkeep ?? 0),
+    upkeepShare: (state.__walkIncome ?? 0) > 0 ? (state.__walkUpkeep ?? 0) / state.__walkIncome : 0,
     minFunds,
     // Hours the agenda offered nothing but ways to spend money. A4's measure,
     // read over a whole campaign instead of one save.
