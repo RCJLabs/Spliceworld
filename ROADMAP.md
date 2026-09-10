@@ -3486,7 +3486,10 @@ triangle working, and each region genuinely asks a different question)*.
   a healthy splices-per-campaign figure is, argues it against R135's churn
   guard, and the harness reports the ratio.*
 
-- **R143 — Nothing goes badly wrong.** Six campaigns: **0 hours broke, 0
+- **R143 — Nothing goes badly wrong.** ✅ **Shipped — see §9.22**, where the
+  entry's own diagnosis turned out to be wrong: the failure states bite
+  constantly (137 Task Force levies across six campaigns), and what was
+  missing was a running cost. Six campaigns: **0 hours broke, 0
   hours stalled, lowest balance ever $164 (day one), ending funds $110k to
   $644k, and 68 losses against 1,171 wins.** The game cannot be lost and
   money stops being a constraint before the first region falls. This is
@@ -3542,6 +3545,82 @@ triangle working, and each region genuinely asks a different question)*.
   still misses are missed for a reason the entry can state.*
 
 ---
+
+### 9.22 An empire that cost nothing to run (R143) — seventh audit
+
+- **R143 — Nothing goes badly wrong.** ✅ *Shipped, and the entry's diagnosis
+  was wrong.*
+
+  The audit's five numbers all held on re-measurement: 0 hours broke, 0 hours
+  stalled, lowest balance ever **$164** on day one, six-figure endings, a 5.7%
+  loss rate. Its diagnosis — *"no failure state bites"* — did not. R87's
+  Compliance Task Force landed **137 levies across six campaigns** (271 raids,
+  134 held) and R9's counter-offensives took 25 nodes off one of them. The
+  world pushes back constantly. What it could not do was make anything scarce.
+
+  #### The defect was on the books
+
+  `upkeepPerDay` counted **livestock and nothing else**. Territory was free to
+  hold and the facility — $504,000 built out — cost nothing at all to run. So
+  income scaled with conquest and outgo did not, and the empire's share of its
+  own gross went **UP** as it grew: 28-67% on day ten against 76-85% from day
+  twenty on. A 25% levy cannot fix that shape, because 25% of a pile refilling
+  at $4,830 a day is friction rather than scarcity. The walker bought **every
+  level of every track and still ended holding $118k-$259k.**
+
+  Two fractions in `facility.json` put both on the ledger:
+
+  | | before | after |
+  | --- | ---: | ---: |
+  | empire keeps, at full size | 80-84% | **64-75%** |
+  | spent running it, over a campaign | 17-18% | **24-27%** |
+  | low-water funds / broke hours / stalls | $164 / 0h / 0h | **unchanged** |
+
+  Both are **fractions rather than tables**, and that is load-bearing: a
+  garrison priced as a share of the node's own income can never exceed what
+  the node pays, so conquest still pays and losing a node is never a relief —
+  and that holds for a region nobody has written yet.
+
+  #### The liquidity wall, which is the larger finding
+
+  Tightening works up to a hard limit and then the game stops functioning.
+  Past roughly a **0.15 garrison** the walker can no longer afford to extract
+  or to buy pens, jobs keep delivering animals, and `ranch.stock` blows
+  through R91's bound of 48 — 20 head at 0.12, **56 at 0.15, 57 at 0.35**.
+
+  **Livestock leaves this game only through extraction, and extraction costs
+  money. There is no sell mechanic anywhere.** So a cash-poor player
+  accumulates animals they cannot use, house, or liquidate. *You cannot make
+  money scarce here until something can turn an asset back into cash* — which
+  bounds every future sink, not just this one.
+
+  #### And a lesson about measuring rare things
+
+  At a 0.12 garrison R141's Kite census went red, and the diagnosis is worth
+  more than the tuning. **The Kite never fails on merit**: `bestSplice`
+  generates a Kite plan just as often as before (19-21 across eight campaigns)
+  and it is coherent 100% of the time. It dies one gate later — with the
+  stable full, the walker builds only if the plan beats its worst creature by
+  more than dismantling burns, and a 5-bay frame rarely clears that against a
+  6-bay incumbent.
+
+  But R143 is **not causally responsible**. Kites over eight seeds, by
+  garrison: **5 at zero, 2 at 0.04, 5 at 0.08, 2 at 0.12.** Non-monotonic.
+  Pressure is not what moves that count; reshuffling the campaign is. R141's
+  census samples four campaigns and needs two, and it measured exactly two
+  before this milestone — it has never had any margin.
+
+  The obvious fix was tried first and was wrong: extending R141's
+  wall-blanking exemption to the replacement gate left the Kite at 2 and
+  pushed general churn from 209 commits to **310**, straight back into what
+  R91 spent a milestone fixing. Reverted rather than shipped. The tuning
+  landed at **0.08**, which restores the census exactly — 2/4 on its own
+  seeds, 4/8 wide, 5 Kites, all identical to before.
+
+  *Done when: a campaign can be measurably set back, and the walker's
+  end-of-run funds have somewhere to go.* The first half was already true and
+  the entry had missed it; the second is what shipped. **Carried:** a way to
+  sell livestock, without which no sink can be tightened further.
 
 ### 9.21 A tag you were paid to avoid (R149) — carried out of R148
 
