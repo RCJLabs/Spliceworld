@@ -104,6 +104,9 @@ const SHARD_OF = {
   // block aims at the lane its name maps to, and two unrelated blocks under
   // one name make that aim a guess. Shard a is the lightest of the four.
   released: 'a',
+  // R141 — the Kite gate flies ~4,400 battles to ask whether a frame is worth
+  // its missing bay. Shard a, beside the other two light blocks.
+  kite: 'a',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -14885,6 +14888,34 @@ if (inShard('contest')) {
     // survivor count measures how long the walk ran. This counts the chain.
     assert.ok(shapes.every((w) => w.rehabbedEver >= 1),
       `and somebody else's science ends up on the roster (${shapes.map((w) => w.rehabbedEver).join(', ')} rehabilitated)`);
+    // R141 — AND ALL FOUR CHASSIS GET WORN.
+    //
+    // Six campaigns and 64 surviving chimeras, before this milestone: M x 57,
+    // S x 4, L x 3, A x 0. The Kite was not unpopular, it was unreachable —
+    // `bestSplice` filled its sockets from the whole vault and then offered
+    // the result to a chassis with no hindlimbs, which refused it for owning
+    // a leg. Counted over every splice rather than the survivors, because the
+    // stable cap recycles a five-bay creature the moment the Theater builds a
+    // six-bay one, and the criterion is that a campaign BUILDS one.
+    //
+    // Measured: 4 Kites across these four seeds, on three of them. The floor
+    // is two seeds, not four, because the frame is answered by a wall the
+    // walk only sometimes has in front of it — which is the whole point of
+    // it being a choice.
+    const kites = shapes.map((w) => w.framesBuilt.A ?? 0);
+    const frames = shapes.map((w) => `${w.seed}:${Object.entries(w.framesBuilt).map(([f, n]) => f + n).join('')}`).join(' ');
+    console.log(`   frames built: ${frames}`);
+    assert.ok(kites.filter((n) => n > 0).length >= 2,
+      `a campaign builds a Kite when the wall in front of it swings (${frames})`);
+    // Not asserted here, and worth writing down where the next reader of this
+    // block will see it: the same line says the RUMBLER is never spliced
+    // either — M and S validate on every plan, they tie the L on grade sum,
+    // and ties go to the earlier frame. The three Rumblers in the old
+    // six-campaign census came off the Reorientation Wing, not the Theater.
+    // That is a second frame with no reason to be chosen and it is R148's,
+    // not R141's: this milestone's criterion is the Kite.
+    assert.ok((shapes[0].framesBuilt.M ?? 0) > 0 && (shapes[0].framesBuilt.S ?? 0) > 0,
+      `and the frames that were always reachable still are (${frames})`);
     // R25 priced $24,000 of facility depth and the walk had never bought a
     // dollar of it. R83 then measured every track maxing on every seed by
     // day 28 — real depth, exhausted before the county even fell, which is
@@ -17969,6 +18000,182 @@ if (inShard('preview')) {
 //   1. the intent is decided at the TOP of the turn, seeded, and written down
 //   2. a brace answers a telegraph — and only a telegraph
 //   3. the class that counters the telegraphed attacker comes in for free
+// ---------------------------------------------------------------------------
+// R141 — THE KITE FRAME IS THE ONLY WAY TO FLY SOMETHING HEAVY.
+//
+// Four frames ship. Across six 180-day campaigns and 64 surviving chimeras:
+// M x 57, S x 4, L x 3, A x 0. A9 built a fourth chassis and the game has
+// never worn it.
+//
+// Three separate things were wrong, and only the third is balance.
+//
+// 1. A CAMPAIGN COULD NOT BUILD ONE. `bestSplice` filled its sockets from the
+//    whole vault without asking which bays the chassis has, so a hindlimb
+//    part landed in `slots.hindlimbs` and the Kite — which has no hindlimbs —
+//    was refused for owning a leg. It also returned on the first frame that
+//    validated, in the order M, S, L, A. Both are fixed in tools/sim.js.
+//
+// 2. THE TAG THE FRAME BUYS WAS PRICED AT A FIFTH OF ITS VALUE. `tagChart`
+//    carries the hardest rule in the game — a Ground move does not merely
+//    resist against a flyer, it MISSES — and only 18 of 91 enemy moves
+//    carried the tag while 53 carried none at all. Ground was 23% of what the
+//    roster throws; tagging the earthbound moves took it to 34%, and the rule
+//    from 3.7pp to 8.1pp for a flier in the fights that throw it.
+//
+// 3. AND THE FRAME IS NOT A GENERAL-PURPOSE UPGRADE, WHICH IS THE POINT. Of
+//    the 40 bodies the catalogue can build with eagle wings, eight fly on the
+//    Kite and on nothing else — a bear, a tiger, a gorilla, a crocodile, all
+//    too heavy for the Scamper's lift. Those eight are worth 13.9pp more on
+//    the Kite than on a Scamper against a wall that swings low, and 1.3pp
+//    LESS against one that shoots. Everything light enough to fly on a
+//    Scamper already does, and there the Scamper's sixth bay wins by 5.3pp.
+//
+// So the answer to "when do I build a Kite" is: when the animal you want in
+// the air is too heavy to get there any other way, and the wall in front of
+// you swings. This gate asserts that sentence in both directions — the niche
+// pays, and outside it the frame does not — because a rule that only checks
+// the upside passes just as happily on a frame that is simply better.
+//
+// It is an OUTCOME rule rather than a tag census, deliberately. A census is
+// satisfied by tagging a rifle `Ground`, which would be a lie: the tag means
+// the attack travels along the ground, so a baton and a swing kick carry it
+// and a fifty-cal does not. The only honest way to ask whether flying is
+// worth a socket is to fly.
+if (inShard('kite')) {
+  const { makeSimChimera: mkKite, scriptedBattle: kiteFight } = await import('./sim.js');
+  const { analyze: kiteAnalyze } = await import('../splice/physiology.js');
+
+  // The rule the whole frame rests on, read off the chart rather than named.
+  // If a later milestone softens `Ground -> Airborne` from x0 to x0.5, the
+  // Kite stops being a frame you build for a reason and this says so first.
+  const blanked = content.tagChart.filter((r) => r.mult === 0 && r.defender === 'Airborne');
+  assert.ok(blanked.length,
+    'the chart still zeroes something against Airborne — it is the Kite Frame\'s only reason to exist');
+  const groundish = new Set(blanked.map((r) => r.attack));
+
+  // How much of a wall's damage travels along the ground. Power-weighted, not
+  // counted: a unit with one 88-power Ground move and three 20-power sprays
+  // is a wall a flyer walks through, and counting moves would call it 25%.
+  const lowShare = (enc) => {
+    let low = 0;
+    let all = 0;
+    for (const uid of enc.waves ?? []) {
+      for (const move of (content.enemies[uid]?.moves ?? [])) {
+        const power = move.power ?? 0;
+        if (!power) continue;   // a 0-power buff is not damage anybody dodges
+        all += power;
+        if ((move.tags ?? []).some((t) => groundish.has(t))) low += power;
+      }
+    }
+    return all ? low / all : 0;
+  };
+  const SWINGS = 0.4;   // measured: 10 encounters at or above, 0 before the tag pass
+  const SHOOTS = 0.15;  // measured: 7 below
+  const swinging = Object.keys(content.encounters).filter((id) => lowShare(content.encounters[id]) >= SWINGS);
+  const shooting = Object.keys(content.encounters).filter((id) => lowShare(content.encounters[id]) < SHOOTS);
+  assert.ok(swinging.length >= 7,
+    `enough of the table swings low for the frame to answer something (${swinging.length} at or above ${SWINGS} of their damage, measured 10)`);
+  assert.ok(shooting.length >= 5,
+    `and enough of it shoots, or the frame would have no downside (${shooting.length} below ${SHOOTS}, measured 7)`);
+
+  // The same parts on two frames, so the CHASSIS is the only variable.
+  const wingsOn = (body, frame) => {
+    const bays = content.frames[frame].slots ?? ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+    const ids = bays
+      .map((bay) => (bay === 'forelimbs' ? 'eagle_forelimbs' : `${body}_${bay}`))
+      .filter((pid) => content.parts[pid]);
+    if (!ids.some((pid) => content.parts[pid].slot === 'head')) return null;
+    const c = mkKite(frame, ids, 'prime', content);
+    return { c, flies: kiteAnalyze(frame, Object.values(c.tokens), content, ids.length).flight.capable };
+  };
+  const rateOver = (c, ids, seeds = 8) => {
+    let wins = 0;
+    let n = 0;
+    for (const id of ids) for (let i = 0; i < seeds; i++) {
+      n++;
+      if (kiteFight(c, content.encounters[id], content, 51000 + i, 3).outcome === 'win') wins++;
+    }
+    return (wins / n) * 100;
+  };
+
+  const bodies = [...new Set(Object.values(content.parts).map((p) => p.species))].filter(Boolean);
+  const onlyKite = [];
+  const eitherWay = [];
+  for (const body of bodies) {
+    const kite = wingsOn(body, 'A');
+    const scamper = wingsOn(body, 'S');
+    if (!kite || !scamper || !kite.flies) continue;
+    (scamper.flies ? eitherWay : onlyKite).push({ body, kite, scamper });
+  }
+  assert.ok(onlyKite.length >= 5,
+    `the Kite flies bodies nothing else will (${onlyKite.length} of ${bodies.length}, measured 8: ${onlyKite.map((r) => r.body).join(', ')})`);
+
+  // A frame that flies a body no other frame can is only a REASON if the
+  // fight rewards it, so both halves are measured on the same builds.
+  const gap = (rows, ids) => {
+    const a = rows.reduce((n, r) => n + rateOver(r.kite.c, ids), 0) / rows.length;
+    const s = rows.reduce((n, r) => n + rateOver(r.scamper.c, ids), 0) / rows.length;
+    return { a, s, d: a - s };
+  };
+  const sample = onlyKite.slice(0, 8);
+  const paid = gap(sample, swinging);
+  const wasted = gap(sample, shooting);
+  assert.ok(paid.d >= 8,
+    `the Kite's own bodies are worth the frame against a wall that swings low `
+    + `(${paid.a.toFixed(1)}% on the Kite vs ${paid.s.toFixed(1)}% on a Scamper, +${paid.d.toFixed(1)}pp, measured +13.9)`);
+  assert.ok(wasted.d <= 4,
+    `and are NOT worth it against one that shoots — a frame that wins everywhere is not a choice `
+    + `(${wasted.a.toFixed(1)}% vs ${wasted.s.toFixed(1)}%, ${wasted.d >= 0 ? '+' : ''}${wasted.d.toFixed(1)}pp, measured -1.3)`);
+
+  // The other direction: where the Scamper CAN fly the same body, its sixth
+  // bay beats the Kite's speed. Without this the gate would pass on a Kite
+  // that had simply been handed better numbers than every other chassis.
+  const shared = gap(eitherWay.slice(0, 8), swinging);
+  assert.ok(shared.d <= 4,
+    `and a body light enough for a Scamper belongs on one — six bays beat five `
+    + `(${shared.a.toFixed(1)}% on the Kite vs ${shared.s.toFixed(1)}% on a Scamper, `
+    + `${shared.d >= 0 ? '+' : ''}${shared.d.toFixed(1)}pp, measured -5.3)`);
+
+  // AND THE GAME SAYS WHICH. The briefing has carried the sentence since R35
+  // — `matchupNotes` puts it on the roster row of a creature that flies —
+  // and what it never had was a table where the sentence was true often
+  // enough to shape a build. Read through the function the War Room renders,
+  // not a copy of its wording, so a rewrite of the clause moves this with it.
+  const { matchupNotes: kiteNotes } = await import('../campaign/matchup.js');
+  const wall = content.encounters[swinging[0]];
+  const thrown = new Set((wall.waves ?? []).flatMap((uid) => (content.enemies[uid]?.moves ?? [])
+    .filter((m) => (m.power ?? 0) > 0).flatMap((m) => m.tags ?? [])));
+  const foeBody = new Set((wall.waves ?? []).flatMap((uid) => content.enemies[uid]?.tags ?? []));
+  const onARow = kiteNotes({
+    myTags: new Set(['Organic', 'Airborne']),
+    myAttackTags: new Set(['Airborne']),
+    foeTags: foeBody,
+    foeAttackTags: thrown,
+  }, content.tagChart);
+  const good = onARow.filter((note) => note.kind === 'good'
+    && [...groundish].some((t) => note.text.includes(t)));
+  assert.ok(good.length,
+    `a flier's row on a wall that swings (${wall.name}) says why it is the pick: `
+    + `${onARow.map((n) => `${n.kind}:${n.text}`).join(' | ') || '(nothing)'}`);
+  // And the SAME row on a wall that shoots does not, or the sentence is
+  // decoration rather than a reason to build the frame.
+  const quiet = content.encounters[shooting[0]];
+  const quietThrown = new Set((quiet.waves ?? []).flatMap((uid) => (content.enemies[uid]?.moves ?? [])
+    .filter((m) => (m.power ?? 0) > 0).flatMap((m) => m.tags ?? [])));
+  const quietNotes = kiteNotes({
+    myTags: new Set(['Organic', 'Airborne']),
+    myAttackTags: new Set(['Airborne']),
+    foeTags: new Set((quiet.waves ?? []).flatMap((uid) => content.enemies[uid]?.tags ?? [])),
+    foeAttackTags: quietThrown,
+  }, content.tagChart);
+  assert.ok(!quietNotes.some((note) => note.kind === 'good'
+    && [...groundish].some((t) => note.text.includes(t))),
+    `and stays quiet on one that shoots (${quiet.name}), or it is decoration`);
+
+  console.log(`   R141 Kite: ${onlyKite.length} bodies fly on it alone — ${paid.d.toFixed(1)}pp over a Scamper `
+    + `on the ${swinging.length} walls that swing, ${wasted.d.toFixed(1)}pp on the ${shooting.length} that shoot`);
+}
+
 //
 // The numbers this moved are in `npm run sim -- --agency`, which is where
 // they are watched from now on; this block holds the RULES, which are the

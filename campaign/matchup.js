@@ -2,16 +2,21 @@
 //
 // The briefing already showed the class triangle: a class icon per roster
 // row, the opposition's classes, and a "type advantage here" flag. What it
-// never showed was the OTHER matchup layer. Measured across the 24
-// encounters: 96% carry a tag beyond Organic (Vehicle in 19, Airborne in 13,
-// Armored and Aquatic in 11 each) and 71% throw at least one Ground move.
+// never showed was the OTHER matchup layer. Measured across the 26
+// encounters: 96% carry a tag beyond Organic (Vehicle in 21, Airborne in 15,
+// Armored in 13, Aquatic in 11) and 73% throw at least one Ground move.
 //
 // And that layer decides fights. Isolated with the same build on both sides
 // of the chart — the first attempt compared different builds and measured
-// the builds instead — `Ground misses Airborne` is worth 3.7pp to a flier in
-// the encounters that throw Ground, and `Sonic ignores Armor` is worth 7.4pp
-// against armoured opposition. None of it was on the screen where a player
-// picks who goes.
+// the builds instead — `Ground misses Airborne` is worth 8.1pp to an eagle
+// Kite in the encounters that throw Ground, and `Sonic ignores Armor` is
+// worth 9.0pp to a goose-and-foghorn build against armoured opposition.
+// None of it was on the screen where a player picks who goes.
+//
+// (R141 re-measured both. The Ground rule read 3.7pp when R35 shipped, on a
+// table where 53 of 91 enemy moves carried no tag at all; tagging the
+// earthbound ones took Ground from 23% of enemy move power to 34%, and the
+// rule with it.)
 //
 // Every clause is derived from data/keywords.json's chart, never restated,
 // so a new chart row shows up on the briefing with no engine edit.
@@ -74,7 +79,7 @@ export function matchupNotes({ myTags, myAttackTags, foeTags, foeAttackTags }, c
   // comment claiming "several waves can carry the same tag" — but the caller
   // collapses waves into Sets before this is ever reached, and the chart is
   // walked exactly once, so a repeated key cannot arise. Measured across all
-  // 24 encounters against a maximal tag set: zero duplicates. The break
+  // 26 encounters against a maximal tag set: zero duplicates. The break
   // battery reported removing the filter as a MISS, which is what dead code
   // guarded by a gate looks like.
   return notes;
@@ -148,7 +153,7 @@ export function hitReason(atkClass, defClass, mult, rules = {}) {
 // as fine.
 //
 // That silence sits on the bigger of the two layers. R18 measured the class
-// edge at 16-20pp; the chart rules are worth 3.7-7.4pp. And it is silent at
+// edge at 16-20pp; the chart rules are worth 8.1-9.0pp. And it is silent at
 // exactly the wrong moment: Precinct HQ, the node that gates the second
 // region, is 0% for a Ground stable and 0% for a Water one at standard
 // grade, against 75-83% for Air. A player is not told they cannot win it;

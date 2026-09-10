@@ -985,11 +985,11 @@ function renderBriefing(root, ctx) {
     : 'no declared class';
 
   // R35. The class triangle was the only matchup layer on this screen. The
-  // OTHER one — the tag chart — is live in 96% of the 24 encounters (Vehicle
-  // in 19, Airborne in 13, Armored and Aquatic in 11 each) and 71% of them
+  // OTHER one — the tag chart — is live in 96% of the 26 encounters (Vehicle
+  // in 21, Airborne in 15, Armored in 13, Aquatic in 11) and 73% of them
   // throw a Ground move. Isolated with the same build on both sides of the
-  // chart, `Ground misses Airborne` is worth 3.7pp to a flier and `Sonic
-  // ignores Armor` 7.4pp against armour. None of it was here.
+  // chart, `Ground misses Airborne` is worth 8.1pp to a flier and `Sonic
+  // ignores Armor` 9.0pp against armour. None of it was here.
   const tagLines = foeTagLines(foeTags, content.tagChart, foeAttackTags);
 
   const roster = state.chimeras.map((ch) => {
@@ -1005,7 +1005,7 @@ function renderBriefing(root, ctx) {
     const cb = combatantFromChimera(ch, content, t);
     const cls = classOf(content, cb.creatureClass);
     // Name the class it beats, not just that it beats something. Measured
-    // across the 24 encounters against a one-of-each stable, "type advantage
+    // across the 26 encounters against a one-of-each stable, "type advantage
     // here" is true of EVERY row in 21% of them — Slag Gate among them —
     // where it stops being information and becomes decoration. It
     // discriminates in the other 79%, so it stays; saying which class costs
@@ -1013,7 +1013,7 @@ function renderBriefing(root, ctx) {
     // R37. This used to be `beats their Water` when the triangle favoured
     // the row and an EMPTY STRING when it did not — R35 put losses beside
     // wins on the tag notes and left the class chip a sales brochure, on
-    // the bigger of the two layers (16-20pp against 3.7-7.4pp). Silence is
+    // the bigger of the two layers (16-20pp against 8.1-9.0pp). Silence is
     // not the same as "no problem", and it was silent at exactly the wrong
     // moment. Both directions now, rendered like the tag notes below.
     const clsNotes = classNotes(cb.creatureClass, foeClasses, content.classes);

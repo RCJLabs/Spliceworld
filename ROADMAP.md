@@ -3467,7 +3467,7 @@ triangle working, and each region genuinely asks a different question)*.
   takes. *Done when: the gate measures worn as well as seen, and the median
   campaign wears a number this entry names.*
 
-- **R141 — The Kite Frame has never been built.** Four frames ship. Across
+- **R141 — The Kite Frame has never been built.** ✅ **Shipped — see §9.19.** Four frames ship. Across
   six campaigns' 64 surviving chimeras: **M × 57, S × 4, L × 3, A × 0.** The
   A/Kite Frame is the only one with a restricted socket list (head,
   forelimbs, tail, hide, organ — no hindlimbs), which is what makes it the
@@ -3542,6 +3542,96 @@ triangle working, and each region genuinely asks a different question)*.
   still misses are missed for a reason the entry can state.*
 
 ---
+
+### 9.19 The frame nobody wore (R141) — seventh audit
+
+- **R141 — The Kite Frame has never been built.** ✅ *Shipped.*
+
+  Four chassis ship. Across six 180-day campaigns and 64 surviving chimeras:
+  **M × 57, S × 4, L × 3, A × 0.** A9 was a whole milestone spent building a
+  fourth frame and the game had never worn it.
+
+  Three separate things were wrong, and only the third was balance.
+
+  **1. A campaign could not build one.** `bestSplice` filled its sockets
+  from the whole vault *without asking which bays the chassis has*, then
+  offered the result to the Kite — which has no hindlimbs — and
+  `validateSplice` refused it: *"The Kite Frame has no hindlimbs to bolt
+  that to."* Owning a single leg part made the frame unreachable. It also
+  **returned on the first frame that validated**, in the fixed order M, S,
+  L, A, so A was unreachable the moment M worked. Neither is a balance
+  finding; the walker simply had no way to make the choice.
+
+  **2. The tag the frame buys was priced at a fifth of its value.**
+  `tagChart` carries the hardest rule in the game — a Ground move does not
+  merely resist against a flier, it **misses** — and only **18 of 91 enemy
+  moves carried the tag while 53 carried none at all**. Ground was 23% of
+  what the roster throws.
+
+  > `Ground` is a property of the **move**, not the unit. A baton and a
+  > tipper dump carry it; a fifty-cal, suppressing fire and a riot cannon
+  > reach a flier and must not. Eight earthbound moves were tagged — Baton
+  > Bonk, Bilge Wash, Undertow Bite, Bucket Chain, Tipper Dump, Wrench
+  > Hook, Forensic Grip, Quench Bath — every one of them a thing that has
+  > to touch you. Nothing thrown, nothing sprayed, nothing swung from a
+  > rope by an attacker already off the ground, and no 0-power utility.
+
+  That took Ground from **23% → 34%** of enemy move power, the encounters
+  that swing low from **3 → 10**, and `Ground misses Airborne` from
+  **3.7pp → 8.1pp** for a flier in the fights that throw it. The change is
+  surgical by construction: Ground has exactly one chart row, so it cannot
+  touch a grounded chimera's fight at all.
+
+  **3. And the frame is not a general-purpose upgrade, which is the point.**
+  Of the 40 bodies the catalogue can build with eagle wings, **eight fly on
+  the Kite and on nothing else** — bear, tiger, gorilla, crocodile,
+  tortoise, shark, abyssal shark, alpine ram, all too heavy for the
+  Scamper's lift.
+
+  | same parts, prime, team of 3 | Kite | Scamper | |
+  | --- | ---: | ---: | ---: |
+  | Kite-only bodies, walls that swing | **59.2%** | 45.3% | **+13.9pp** |
+  | Kite-only bodies, walls that shoot | 28.3% | 29.7% | −1.3pp |
+  | bodies that fly on both, walls that swing | 54.2% | 59.5% | −5.3pp |
+
+  So the answer to *"when do I build a Kite"* is: **when the animal you want
+  in the air is too heavy to get there any other way, and the wall in front
+  of you swings.** Put the same parts on a Scamper and they do not fly; put
+  a light body on a Kite and the Scamper's sixth bay wins.
+
+  **The walker reads the wall the same way the player does.** `bestSplice`
+  now fills every frame from its own socket list, tries a second fill that
+  prefers a part making lift, and scores both against the encounter in
+  front — how much of that wall's damage the build's tags simply blank,
+  derived from `content.tagChart` rather than the word "Ground". The weight
+  is measured, not chosen: a socket is worth ~12.5pp (a prime bear on a
+  Trotter wins 59.6% and 47.1% with its hindlimb bay taken away), a full
+  blank ~20pp, so a blank buys back 1.6 sockets. R83's "answer the class the
+  map asks for" rule got the same exemption R92 gave combos — a build that
+  blanks the wall is answering the briefing's *other* layer, and it will
+  almost never answer the class as well, because the Kite's bodies are
+  Ground and Water anatomy wearing one pair of Air wings.
+
+  Result: **4 Kites across the four gate seeds, on three of them**, where
+  before it was structurally impossible.
+
+  *Done when: a campaign builds a Kite chimera because it is the right
+  answer to something, and smoke says which.* The gate asserts the trade in
+  **both directions** — the niche pays, and outside it the frame does not —
+  because a rule that only checks the upside passes just as happily on a
+  frame that has simply been handed better numbers. It is an outcome rule
+  rather than a tag census on purpose: a census is satisfied by tagging a
+  rifle `Ground`, and the only honest way to ask whether flying is worth a
+  socket is to fly.
+
+  **Carried out of this milestone: the Rumbler is never spliced either.**
+  The same reading that found A × 0 says L × 0 on the Theater path — M and S
+  validate on every plan, tie the Rumbler on grade sum, and ties go to the
+  earlier frame. The three Rumblers in the old census came off the
+  Reorientation Wing. That is a second frame with no reason to be chosen,
+  and it is not R141's criterion. **R148 — the Rumbler has no reason to be
+  picked.** *Done when: bulk is worth a frame against something, a campaign
+  splices one for that reason, and the gate says which.*
 
 ### 9.17 Half the agenda did nothing (R137) — carried debt, asked for directly
 
