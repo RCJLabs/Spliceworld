@@ -3416,6 +3416,54 @@ moved one of them: the first premise held exactly, the second did not.
     new measurement. The first paint is smaller than before this milestone
     started, which discharges most of R121 as a side effect.
 
+### 9.16 The last flat tab (R136) — carried debt, asked for directly
+
+- **R136 — The Combos tab folds.** ✅ *Shipped.*
+
+  R95 first wrote that folding this tab was owed. R129 folded the Genes tab
+  beside it, R89 folded Foes above it, R131 paged the Vault — and the Combos
+  tab kept being ratcheted around, most recently by R135. It was the **last
+  tab in the game with no fold at all**.
+
+  Measured on the day-180 save at 380px, band by band:
+
+  | band | rows | px |
+  | --- | ---: | ---: |
+  | Both halves in hand | 12 | 811 |
+  | Discovered | 13 | 1,165 |
+  | Still rumoured | 2 | 83 |
+
+  **2,403px and 529 words** of three flat lists, on a tab the player looks
+  things up in rather than reads.
+
+  | | before | after |
+  | --- | ---: | ---: |
+  | Combos, shut | 2,403px | **497px** |
+  | words, shut | 529 | **78** |
+
+  **All three arrive shut, including the actionable one**, and that is the
+  part worth arguing. "Both halves in hand" is twelve combos you own the
+  parts for, so the obvious move is to open it when it is non-empty — and it
+  is non-empty for most of a campaign, which makes "opens when it can act"
+  into *always open wearing a condition*. That is the exact rule R133 had to
+  reverse on the Breeding Pen, and taking the same decision twice in two
+  milestones is how it becomes a rule rather than a coincidence. Shut is not
+  hidden: each summary carries the count and the verb.
+
+  The open number is **2,606px** against the 2,403 it was flat, and that
+  203px is the fold's own chrome — three heads and three summaries. Same
+  price R89 paid on the Foes tab, paid only by a reader who deliberately
+  opened all three.
+
+  `classFold` takes `openByDefault` now, defaulting to the `false` every
+  existing caller relied on, so the Combos bands state their answer in a
+  named constant where it can be argued with rather than inheriting a
+  literal — which is also what makes break 211 a one-token change.
+
+  *Done when: the Combos tab is under 800px shut on the day-180 save at
+  380px, each band's shut summary carries the count a player would open it
+  for, and the height gate budgets the fold rather than forbidding it.*
+
 ### 9.15 The table nobody could find (R135) — reported from play
 
 - **R135 — The dismantle gets its own clock, and the Pens names the
