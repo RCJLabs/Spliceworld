@@ -83,9 +83,9 @@ commits to **310**, back into what R91 spent a milestone fixing. Reverted.
 | --- | --- |
 | gate-first | ✓ red on pre-R143 — `holding 21 nodes costs more to run than holding one ($1110/day vs $1110/day)` |
 | `--anchors` | ✓ 223 (199 re-aimed) |
-| breaks 224, 225, 226 | PENDING |
+| breaks 224, 225, 226 | ✓ 3 caught, 0 missed |
 | `--baseline` | ✓ `BASELINE_EXIT=0`, every gate on a pristine tree |
-| `npm test` | PENDING — warm-cache re-run |
+| `npm test` | ✓ 10 jobs, 174.3s against the 195s budget, `NPMTEST_EXIT=0` |
 | `SAVE_VERSION` | unchanged at 49 — upkeep is derived from `heldNodes` and facility levels |
 
 ### Lessons
@@ -99,6 +99,10 @@ commits to **310**, back into what R91 spent a milestone fixing. Reverted.
 - **Three budgets raised across two sessions** (FIRST_PAINT_KB, KB_CAP, vault
   height) and one floor lowered. `tools/smoke.js` names the test for stopping:
   it has now been met, and 23.2 KB of deferrable eager modules is recorded.
+- **A cold fixture cache reads as a regression.** The suite came back 242.3s
+  against a 195s budget with every job green, `walks` at 114.6s. Warm, the
+  same tree is 174.3s and `walks` is 29.4s. R148 hit this exact red herring;
+  the rule is to re-run before believing a wall-clock failure.
 
 ### Known issues / carried
 
