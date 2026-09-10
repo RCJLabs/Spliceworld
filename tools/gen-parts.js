@@ -93,7 +93,7 @@ const SIGNATURE = {
   goose:        ['head', 'Goose Head', 'Unprovoked', M(36, 18, 100, ['Sonic'], { taunt: true, accDown: 1 })],
   moth:         ['organ', 'Scale Powder', 'Powder Burst', M(28, 20, 100, ['Gas'], { accDown: 1, evasionUp: 1 })],
   otter:        ['forelimbs', 'Otter Paws', 'Rock Trick', M(56, 24, 96, [], { ignoreArmor: true })],
-  jellyfish:    ['tail', 'Stinging Threads', 'Drift Net', M(32, 18, 100, ['Venomous'], { venom: 2, slow: 1 })],
+  jellyfish:    ['tail', 'Stinging Threads', 'Drift Net', M(32, 18, 100, ['Venomous', 'Aimed'], { venom: 2, slow: 1 })],
   pufferfish:   ['hide', 'Inflation Reflex', 'Inflate', M(0, 16, 100, [], { guard: true, thorns: 0.3 })],
   armadillo:    ['organ', 'Scream Bladder', 'Screaming Fit', M(30, 18, 100, ['Sonic'], { powerDown: 1, accDown: 1 })],
 };

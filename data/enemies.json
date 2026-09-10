@@ -56,7 +56,9 @@
           "power": 20,
           "cost": 15,
           "acc": 90,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {
             "trap": true
           }
@@ -93,7 +95,9 @@
           "power": 15,
           "cost": 15,
           "acc": 80,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {
             "sleep": 0.6
           }
@@ -225,7 +229,9 @@
           "power": 80,
           "cost": 35,
           "acc": 90,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {
             "charge": true
           }
@@ -320,7 +326,9 @@
           "power": 50,
           "cost": 22,
           "acc": 85,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {}
         },
         {
@@ -403,7 +411,9 @@
           "power": 48,
           "cost": 22,
           "acc": 88,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {}
         },
         {
@@ -411,7 +421,9 @@
           "power": 34,
           "cost": 18,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {
             "knockback": true
           }
@@ -575,7 +587,9 @@
           "power": 20,
           "cost": 16,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {
             "trap": true
           }
@@ -613,7 +627,9 @@
           "power": 28,
           "cost": 16,
           "acc": 100,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {
             "accDown": 1
           }
@@ -654,7 +670,9 @@
           "power": 22,
           "cost": 16,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {
             "trap": true
           }
@@ -693,7 +711,9 @@
           "power": 54,
           "cost": 26,
           "acc": 90,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {}
         },
         {
@@ -745,7 +765,9 @@
           "power": 44,
           "cost": 20,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {}
         },
         {
@@ -1324,7 +1346,9 @@
           "power": 46,
           "cost": 22,
           "acc": 90,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {}
         },
         {
@@ -1619,7 +1643,9 @@
           "power": 52,
           "cost": 26,
           "acc": 88,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {
             "knockback": true
           }
@@ -1709,7 +1735,9 @@
           "power": 88,
           "cost": 34,
           "acc": 90,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {
             "charge": true
           }
@@ -1719,7 +1747,9 @@
           "power": 30,
           "cost": 16,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Aimed"
+          ],
           "keywords": {
             "multiHit": 2
           }

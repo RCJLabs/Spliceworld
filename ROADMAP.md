@@ -3543,6 +3543,89 @@ triangle working, and each region genuinely asks a different question)*.
 
 ---
 
+### 9.21 A tag you were paid to avoid (R149) — carried out of R148
+
+- **R149 — Camo is a decision, not a label.** ✅ *Shipped, scoped down.*
+
+  The milestone was aimed at the Scamper and it did not survive contact.
+  What it found instead was a defect one tag over, of exactly the kind R141
+  found in Ground, and that is what shipped.
+
+  #### What Camo was
+
+  Six chameleon parts carry the `Camo` tag. It shipped with **exactly one
+  row in the tag chart and that row was a punishment** — `Sonic ≫ Camo ×1.5`,
+  "a shape you cannot see still echoes". A tag with a penalty and no upside
+  is not a defensive stat; it is a part you are paid to avoid, and the
+  chameleon was priced below zero for as long as it has been in the game.
+
+  It now answers the thing it should always have answered. Fifteen coalition
+  moves are tagged **`Aimed`** — nets, darts, cannon, the fifty-cal, the deck
+  gun — **22% of enemy move power across 6 of the 26 encounters**, and
+  `Aimed ≫ Camo ×0`: *you cannot aim at what you cannot find*. The echo
+  stays. Both directions now exist, which is the whole rule.
+
+  #### The bay is the price
+
+  A ×0 with no cost is not a decision either, so the tag is **earned, not
+  claimed**: `analyze` strips `Camo` off anything with armour above zero, and
+  armour in this game comes from hides and from nothing else (42 of 42 hides
+  carry it, 0 of the other 202 parts, 0 from every frame). Hiding therefore
+  costs you the hide bay — the most valuable slot on the creature.
+
+  | | with the plate | bay left empty |
+  | --- | ---: | ---: |
+  | the 5 walls that aim and never echo | — | **+4.7pp** |
+  | the 8 walls that carry Sonic | — | **−18.0pp** |
+
+  Means over sixteen builds: four bodies at each of the four grades. **The
+  grade sweep is not decoration.** Pinned to prime alone the same rule read
+  **+1.7pp** and at prismatic **+8.3pp** — the aimed walls sit near a prime
+  body's ceiling, and a stat cannot move a fight that was already won. One
+  grade is not a measurement.
+
+  R141's safety rule holds one tag over without being restated: no encounter
+  is 100% `Aimed`, so no wave is ever fully blanked by a disguise, and the
+  gate asserts it directly rather than trusting that.
+
+  *Done when: Camo is worth a bay against something, costs you against
+  something else, and the gate says which.* On the pre-R149 tree the gate
+  reports the defect in its own words — `Camo defends against something
+  (Sonic x1.5)`.
+
+  #### Two negative results, which are the rest of the milestone
+
+  **1. Speed cannot be a conditional identity.** The entry's ask was for the
+  Scamper to be worth a frame *against something*, the way R148 made the
+  Rumbler worth one in a grind. Nine candidate axes were measured against
+  the win-rate gap and every one came in at **|r| ≤ 0.21 against a 3.4pp
+  noise floor**. Speed helps a long fight (+8.1pp) exactly as much as a short
+  one (+7.8pp) — the opposite of bulk, which is the point. And it
+  **saturates**: +16 and +36 chassis speed produce byte-identical results,
+  because speed buys turn order and turn order is a threshold. There is no
+  fight speed is *for*, so no gate can say which one.
+
+  Speed-fed evasion was prototyped as a way out and rejected on evidence: in
+  all eight configurations tried — four continuous curves, four turn-limited
+  — it broke §9.20's Rumbler identity, because **evasion is itself a sustain
+  stat.** Dodges compound with fight length exactly the way health does, so
+  a fast frame becomes a grind frame and the two chassis collapse back into
+  each other from the other direction.
+
+  **2. A bay is worth more than blanking a whole weapon class.** The first
+  design put Camo on the Scamper's frame rather than on parts. Measured, that
+  is not close: even `Aimed → Camo ×0` returns **+6.9pp**, while losing the
+  hide bay costs about **19pp**. Nothing a chart row can do pays for a
+  socket. This is the reason Camo is priced in the hide bay and not in a
+  frame slot, and it is worth keeping: it bounds what any future tag can be
+  worth.
+
+  **The Scamper is therefore still unanswered, and honestly so.** It is not
+  worth a frame against anything the harness can find, and the two obvious
+  routes are now closed with measurements rather than opinions. If a later
+  milestone takes it up, it needs a *new axis* — something speed gates that
+  is not turn order — not a re-tuning of this one.
+
 ### 9.20 The chassis was a coin-flip (R148) — carried out of R141
 
 - **R148 — The Rumbler is a trade, not a staircase.** ✅ *Shipped.*
@@ -3763,11 +3846,12 @@ triangle working, and each region genuinely asks a different question)*.
 
   **Carried out of §9.20, in turn: the Scamper and the Trotter are the same
   creature** — 46.9% and 47.6% over the live band, and identical in a long
-  fight. **R149 — the Scamper has no reason to be picked either.** *Done
-  when: speed is worth a frame against something, a campaign splices a
-  Scamper for that reason, and the gate says which.* The obstacle is already
-  measured: speed is a threshold stat and the Scamper sits at 10 against an
-  enemy median of 11, so more of it helps everywhere rather than somewhere.
+  fight. **R149 — the Scamper has no reason to be picked either.** ⚠️
+  **Answered NO — see §9.21.** The stated obstacle turned out to be the whole
+  story: speed is a threshold stat, it saturates, and nine measured axes put
+  it at |r| ≤ 0.21 against a 3.4pp noise floor. R149 shipped a defect it
+  found one tag over instead, and closed both routes to a speed identity with
+  numbers. The Scamper stays open for a *new axis*, not a re-tuning.
 
   **Carried out of this milestone: the Rumbler is never spliced either.**
   The same reading that found A × 0 says L × 0 on the Theater path — M and S

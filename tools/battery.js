@@ -321,6 +321,14 @@ const BULK = ['node', '-e',
 const KITE = ['node', '-e',
   "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
 
+// R149 — CAMO IS A DECISION, NOT A LABEL. It shipped with exactly one chart
+// row and that row was a punishment (Sonic x1.5), so six chameleon parts were
+// priced below zero — the same defect R141 found in Ground. It now answers
+// the 22% of coalition damage that has to AIM, and it is stripped off anything
+// wearing a plate, so the hide bay is the price. Shard a, per SHARD_OF.
+const CAMO = ['node', '-e',
+  "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
+
 // R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
 // this game was bounded except the ones that mattered: the day-180 save was
 // 1.8 MB, 95.5% of it inventory, and four save slots share one 5 MB quota, so
@@ -3519,19 +3527,65 @@ const BREAKS = [
     to: '        + blank;',
   },
   {
+    // R149 — THE DEFECT ITSELF, PUT BACK. Camo shipped with one chart row and
+    // it was a penalty, which is a tag you are paid to avoid. Neutralising the
+    // multiplier rather than deleting the row is the sharper break: the row is
+    // still THERE, so anything that merely counts chart entries stays green
+    // and the gate has to read the sign to catch it.
+    n: 221, gate: CAMO, name: 'the tag that hides you stops hiding you, and six chameleon parts are a liability again',
+    file: 'data/keywords.json',
+    anchor: `      "attack": "Aimed",
+      "defender": "Camo",
+      "mult": 0,`,
+    to: `      "attack": "Aimed",
+      "defender": "Camo",
+      "mult": 1,`,
+  },
+  {
+    // R149 — and the other half: a tag you can CLAIM rather than earn. Without
+    // the strip a creature wears full plate and is invisible at the same time,
+    // so the hide bay stops being the price and Camo is a free stat. The
+    // physiology is where this has to live — every screen, the battle and the
+    // sim all read `analyze`, so a rule written anywhere else is a rule three
+    // of the four callers do not have.
+    n: 222, gate: CAMO, name: 'a creature in full plate is also invisible, and the bay stops being the price',
+    file: 'splice/physiology.js',
+    anchor: '  return armor > 0 ? list.filter((t) => t !== \'Camo\') : list;',
+    to: '  return list;',
+  },
+  {
+    // R149 — the third shape of the same mistake, pointed the other way: a
+    // tag with an upside and no downside. Strip the echo and hiding costs
+    // nothing but a bay you were free to leave empty anyway, and the gate's
+    // trade has only one side left to measure.
+    n: 223, gate: CAMO, name: 'nothing echoes through a hidden shape, and Camo becomes a free stat',
+    file: 'data/keywords.json',
+    anchor: `      "attack": "Sonic",
+      "defender": "Camo",
+      "mult": 1.5,`,
+    to: `      "attack": "Sonic",
+      "defender": "Camo",
+      "mult": 1,`,
+  },
+  {
     // R141 — the per-encounter flight rule. A9 wrote it per-unit, R141 moved
     // it to the encounter, and the thing it now protects is that no WAVE is
     // fully blanked by a pair of wings. Sunken Marina is the closest to the
     // line at 82% of its damage travelling along the ground — two swimmers
     // and a bite — so one more tag on the harbour diver's net takes it to
     // 100% and a flier stands there untouched.
+    // R149 gave that same net `Aimed`, so the break now SWAPS the tag rather
+    // than adding one — and `--anchors` is what said so, in 0.3s, the first
+    // time the milestone touched the file.
     n: 217, gate: FACILITY, name: 'a whole wave loses its answer to a flier, and the fight becomes a cutscene',
     file: 'data/enemies.json',
     anchor: `          "name": "Net Snag",
           "power": 22,
           "cost": 16,
           "acc": 95,
-          "tags": [],`,
+          "tags": [
+            "Aimed"
+          ],`,
     to: `          "name": "Net Snag",
           "power": 22,
           "cost": 16,

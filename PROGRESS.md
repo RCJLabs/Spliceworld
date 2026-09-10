@@ -1,5 +1,110 @@
 # PROGRESS
 
+## Session 146 — R149: a tag you were paid to avoid ✅
+
+**ROADMAP §9.21.** The milestone was aimed at the Scamper and **it did not
+survive contact.** What shipped is a defect one tag over, of exactly the kind
+R141 found in Ground. The Scamper half is written up as two measured negative
+results, which is the honest answer and the more useful one.
+
+### What shipped: Camo is a decision now
+
+Six chameleon parts carry `Camo`. It shipped with **exactly one row in the
+tag chart and that row was a punishment** — `Sonic ≫ Camo ×1.5`. A tag with a
+penalty and no upside is a part you are paid to avoid; the chameleon has been
+priced below zero for as long as it has existed.
+
+Fifteen coalition moves are now tagged **`Aimed`** — nets, darts, cannon, the
+fifty-cal, the deck gun — **22% of enemy move power across 6 of 26
+encounters** — and `Aimed ≫ Camo ×0`: *you cannot aim at what you cannot
+find.* The echo stays, so both directions exist.
+
+**The bay is the price.** `analyze` strips `Camo` off anything with armour
+above zero, and armour comes from hides and nothing else (42/42 hides carry
+it, 0/202 other parts, 0 from every frame). So hiding costs the hide bay:
+
+| | bay left empty |
+| --- | ---: |
+| the 5 walls that aim and never echo | **+4.7pp** |
+| the 8 walls that carry Sonic | **−18.0pp** |
+
+Means over **sixteen builds** — four bodies at each of the four grades. That
+sweep is not decoration: pinned to prime alone the identical rule read
+**+1.7pp**, at prismatic **+8.3pp**. The aimed walls sit near a prime body's
+ceiling, and **a stat cannot move a fight that was already won.** One grade
+is not a measurement.
+
+R141's safety rule holds one tag over without restating it: no encounter is
+100% `Aimed`, so no wave is ever fully blanked by a disguise — and the gate
+asserts that rather than trusting it.
+
+### What did not ship, and why — the Scamper
+
+**1. Speed cannot be a conditional identity.** Nine candidate axes measured
+against the win-rate gap, every one **|r| ≤ 0.21 against a 3.4pp noise
+floor.** Speed helps a long fight (+8.1pp) exactly as much as a short one
+(+7.8pp) — the opposite of bulk, which is the whole problem. And it
+**saturates**: +16 and +36 chassis speed give byte-identical results, because
+speed buys turn order and turn order is a threshold. There is no fight speed
+is *for*, so no gate can say which one.
+
+Speed-fed evasion was prototyped as the way out and rejected on evidence: all
+eight configurations (four continuous curves, four turn-limited) broke
+§9.20's Rumbler identity, because **evasion is itself a sustain stat.**
+Dodges compound with fight length the way health does, so the fast frame
+becomes a grind frame and the two chassis collapse into each other from the
+other direction.
+
+**2. A bay is worth more than blanking a whole weapon class.** The first
+design put Camo on the Scamper's frame instead of on parts. Not close: even
+`Aimed → Camo ×0` returns **+6.9pp**, while losing the hide bay costs about
+**19pp.** Nothing a chart row can do pays for a socket. That is why Camo is
+priced in the hide bay, and it bounds what any future tag can be worth.
+
+### Lessons
+
+- **One grade is not a measurement.** The first cut of this gate was pinned
+  at prime and read +1.7pp against a floor of 2 — red on a rule that was
+  true. Near a ceiling, a real effect measures as nothing.
+- **Hand-authored content lives in the generator** — except salvage, which
+  `gen-parts.js` preserves verbatim from `parts.json`. Editing the jellyfish
+  in the data file was rejected by R127's gate in one second; editing the
+  hydro jets there was correct. Same file, opposite answers.
+- **`--anchors` earns its 0.3s every time a milestone touches data.** R149
+  gave Net Snag an `Aimed` tag; break 217 had anchored on that move's empty
+  tag list. Caught immediately, re-aimed to swap the tag rather than add one.
+
+### Verification
+
+| | |
+| --- | --- |
+| gate-first | ✓ red on the pre-R149 tree, in its own words — `Camo defends against something (Sonic x1.5)` |
+| `--anchors` | ✓ 220 anchors match exactly once (217 re-aimed) |
+| `--baseline` | PENDING |
+| breaks 221, 222, 223 | PENDING |
+| `npm test` | PENDING |
+| `SAVE_VERSION` | unchanged at 49 — Camo is derived from the genome, never stored |
+
+### Known issues / carried
+
+- **The Scamper is still unanswered, and honestly so.** It is not worth a
+  frame against anything the harness can find, and the two obvious routes are
+  now closed with numbers rather than opinions. A later milestone needs a
+  **new axis** — something speed gates that is not turn order — not a
+  re-tuning of this one.
+- **Player anatomy barely aims.** A5's rule needs ≥2 limb parts per attack
+  tag; the catalogue had **none** that aim, and only two could honestly be
+  given it (Jet Wash, Drift Net). The coalition shoots; your creatures do
+  not, unless you salvage it off them. That is a content gap worth a
+  milestone, not a defect.
+- `bestSplice` still fills one part per slot *type*, so it never uses the
+  second organ bay Tier II grants. Pre-existing, carried from R141.
+
+**Next session's first task:** R143 from the seventh audit — nothing goes
+badly wrong — which is the one most likely to change how the game feels.
+Ranged player anatomy is the other candidate, and it now has evidence behind
+it.
+
 ## Session 145 — R148: the chassis was a coin-flip ✅
 
 **ROADMAP §9.20.** Carried out of R141 with its own evidence: **L × 0** on

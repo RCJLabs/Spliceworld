@@ -217,6 +217,12 @@
       "defender": "Vehicle",
       "mult": 0.5,
       "note": "You cannot poison a bumper"
+    },
+    {
+      "attack": "Aimed",
+      "defender": "Camo",
+      "mult": 0,
+      "note": "You cannot aim at what you cannot find"
     }
   ]
 }

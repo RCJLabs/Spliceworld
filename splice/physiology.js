@@ -44,6 +44,32 @@ function airborneTags(tags, canFly) {
   return canFly ? list : list.filter((t) => t !== 'Airborne');
 }
 
+// R149 — AND CAMO IS A CLAIM ABOUT ARMOUR, on exactly A9's pattern.
+//
+// Camo shipped with ONE chart row and it was a downside: `Sonic ≫ Camo ×1.5`,
+// "a shape you cannot see still echoes". So the six chameleon parts were a
+// pure liability — anatomy that made you easier to kill and never once made
+// you harder. R141 found the same shape in Ground, priced at a fifth of its
+// value; this one was priced below zero.
+//
+// It has an upside now (`Aimed → Camo ×0`, the fifteen enemy moves that have
+// to point at you), so the tag has to be EARNED rather than claimed. Armour
+// comes from hides and from nothing else — 42 of 42 hides carry it, 0 of the
+// other 202 parts do, and no chassis carries any — so the rule is about one
+// bay: chameleon anatomy says the creature can disappear, and a steel plate
+// bolted over it says otherwise.
+//
+// That makes Camo a real decision with a real price. Leaving the hide bay
+// empty costs the most valuable thing in the game — measured at ~19pp on the
+// walls that punish it — and buys +4.7pp on the five walls that are aimed at
+// you and carry nothing that echoes. Both numbers are means over sixteen
+// builds, four bodies at each of the four grades: pinned to ONE grade the
+// same rule read +1.7pp, because the aimed walls sit near a prime body's
+// ceiling and a stat cannot move a fight that was already won.
+function camoTags(list, armor) {
+  return armor > 0 ? list.filter((t) => t !== 'Camo') : list;
+}
+
 export function analyze(frameId, tokens, content, socketCount = 6) {
   // R79 - a save holds the frame id, so a retired chassis arrives here on
   // the battle and sim paths as well as the screen. The stand-in carries a
@@ -263,7 +289,7 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
     flight: { hasLiftSurface, lift, capable: canFly },
     creatureClass,
     classVotes,
-    tags: airborneTags(tags, canFly),
+    tags: camoTags(airborneTags(tags, canFly), stats.armor ?? 0),
     speciesCount,
     purebredSpecies,
     instability,
