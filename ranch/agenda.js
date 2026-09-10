@@ -124,7 +124,12 @@ export const AGENDA = [
       // measured: the fixture's walker was rich enough to clear the Gauntlet
       // before day 180, so this branch never rendered. A tighter economy
       // leaves an exhibition open and the row was waiting to be too long.
-      return open ? `${open.stage.name} — $${open.stage.reward}.` : 'The Gauntlet is open.';
+      // R144 — and the price comes off too. R143 cut "is waiting" and the row
+      // fitted at 40 characters ("Exhibition III — CRUCIBLE-9000 — $55000.");
+      // the fourth exhibition is "Exhibition IV — THE COMPLIANCE ENGINE" and
+      // the same sentence runs to 47. A stage name that already carries an
+      // em-dash cannot also carry a price. The Labs tab is where the money is.
+      return open ? `${open.stage.name}.` : 'The Gauntlet is open.';
     },
     ready: (state, content, now) =>
       gauntletState(state, content).some((r) => r.status === 'open') && fit(state, now).length > 0,

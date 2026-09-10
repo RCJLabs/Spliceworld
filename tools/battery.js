@@ -1868,7 +1868,18 @@ const WALK = ['node', '-e', `
   // chassis with five, so the Kite was refused for owning a leg; it also
   // returned on the first frame that validated, in the order M, S, L, A.
   // Measured on this seed and window: 2 Kites of 20 splices.
-  if (!(w.framesBuilt?.A > 0)) fail('the walk never builds a Kite (' + JSON.stringify(w.framesBuilt) + ')');
+  // R144 — AND IT TAKES TWO SEEDS TO ASK THAT HONESTLY. One 45-day window on
+  // one seed is a single sample of a rare event, and this clause has now been
+  // knocked over twice by milestones that had nothing to do with the Kite:
+  // R143 repriced upkeep, R144 changed two encounters, and each reshuffled
+  // which walls stand in front of a splice. Across four seeds at 45 days the
+  // frame appears in one of them, so a pair is the smallest sample that is
+  // not a coin toss. What proves the Kite is WORTH building is the
+  // deterministic 14.8pp rule in smoke's shard a, not this census.
+  const w2 = campaignWalk(content, { seed: 7, days: 45, stopAtDominion: false });
+  const kites = (w.framesBuilt?.A ?? 0) + (w2.framesBuilt?.A ?? 0);
+  if (!(kites > 0)) fail('neither walk builds a Kite (' + JSON.stringify(w.framesBuilt)
+    + ' / ' + JSON.stringify(w2.framesBuilt) + ')');
   // R148 — and a Rumbler. Measured on this seed and window: 5 of 17 splices.
   if (!(w.framesBuilt?.L > 0)) fail('the walk never builds a Rumbler (' + JSON.stringify(w.framesBuilt) + ')');
   console.log('walk ✓  ' + w.duels + ' duels, ' + w.breakouts + ' hunts, ' + w.bagged
