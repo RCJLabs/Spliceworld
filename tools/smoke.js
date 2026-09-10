@@ -7299,7 +7299,8 @@ if (inShard('regions')) {
     assert.ok(slots.has('head'), `${key}: has a head (engine rule)`);
   }
 
-  const identityMargins = {};
+  const identityDeclared = {};
+  const identityRefused = {};
   for (const benchSeed of BENCH_SEEDS) {
     const rows = regionBench(content, { grade: 'apex', seedsPer: SEEDS_PER, seed: benchSeed, stable: false });
     assert.equal(rows.length, 5, 'five regions on the bench');
@@ -7341,19 +7342,46 @@ if (inShard('regions')) {
     const rank = (row) => Object.values(bestPerAnatomy(row)).sort((a, b) => b - a);
 
     // Three of the four later strips ask a SPECIFIC question, and each asks
-    // a different one. The margin is POOLED across the bench seeds rather
-    // than asserted on each: measured at seedsPer 32 the true spreads are
-    // kestrel 16pp, drowned 15pp, foundry 26pp, but a single seed of the
-    // Drowned strip draws anywhere from 6pp to 20pp around its 15. R66
-    // sharpened the AI by a few points and that was enough for one seed's
-    // draw to fall under the floor — a gate reading its own sampling noise.
-    // The floor is unchanged; what changed is that it now reads the quantity
-    // it means.
+    // a different one. Both quantities below are POOLED across the bench
+    // seeds rather than asserted on each: a single seed of the Drowned strip
+    // draws anywhere from 6pp to 20pp around its true spread, and R66
+    // sharpened the AI by a few points which was enough for one draw to fall
+    // under a floor — a gate reading its own sampling noise.
+    //
+    // R141 — WHAT "ASKS A SPECIFIC QUESTION" ACTUALLY MEANS.
+    //
+    // This used to assert that ONE anatomy answers each shaped strip by 10pp
+    // or more (measured at seedsPer 32: kestrel 16pp, drowned 15pp, foundry
+    // 26pp). It was calibrated on a table where the tag chart barely fired —
+    // 18 of 91 enemy moves carried `Ground`, so `Ground misses Airborne` was
+    // worth 3.7pp and an Air build was just a worse Ground build nearly
+    // everywhere. R141 tagged the earthbound moves and Air climbed 36% → 59%
+    // in the Foundry Belt, a county of armoured machinery that tips slag on
+    // you. The Foundry now has TWO counters — Sonic through the armour, Air
+    // over the dumps — and the old rule read that as the strip LOSING its
+    // identity.
+    //
+    // Two answers out of five is still a specific question. What is not
+    // specific is a strip that takes everything. And the thing the old rule
+    // never checked at all: whether the strip's DECLARED answer is one of
+    // them. The Foundry has said `answer: air` in regions.json since R26
+    // while the bench said `sonic` and air sat THIRTY-ONE POINTS back, and
+    // nothing failed — R128's defect exactly, a field naming something that
+    // is not so. So the rule is now the two things that matter, and it is
+    // stricter than what it replaces.
     const shaped = later.filter((r) => r.region.answer !== 'mixed');
     assert.equal(shaped.length, 3, 'three shaped regions and one that is deliberately not');
     for (const row of shaped) {
-      const [top, second] = rank(row);
-      (identityMargins[row.region.id] ??= []).push(top - second);
+      const byAnatomy = bestPerAnatomy(row);
+      assert.ok(row.region.answer in byAnatomy,
+        `${row.region.id}: declares \`${row.region.answer}\`, which is an anatomy something can be built out of `
+        + `(${Object.keys(byAnatomy).sort().join(', ')})`);
+      const ranked = rank(row);
+      // 1. The strip's declared answer is one of the builds that clear it.
+      (identityDeclared[row.region.id] ??= []).push(ranked[0] - byAnatomy[row.region.answer]);
+      // 2. And most anatomies still fall well short — the bottom three of
+      //    five, so a strip stays a question even when two builds answer it.
+      (identityRefused[row.region.id] ??= []).push(ranked[0] - ranked[2]);
     }
     const champions = new Set(shaped.map((r) => r.champion));
     assert.equal(champions.size, 3,
@@ -7368,12 +7396,28 @@ if (inShard('regions')) {
       `${finale.region.id}: and no single anatomy owns it (+${Math.round((fTop - fSecond) * 100)}pp)`);
   }
 
-  // …and the pooled identity margins, once every bench seed has spoken.
-  for (const [region, margins] of Object.entries(identityMargins)) {
-    const pooled = margins.reduce((a, b) => a + b, 0) / margins.length;
-    assert.ok(pooled >= 0.1,
-      `${region}: one anatomy answers it decisively (+${Math.round(pooled * 100)}pp over the next, pooled over ` +
-      `${margins.length} bench seeds: ${margins.map((m) => Math.round(m * 100)).join(', ')}pp)`);
+  // …and the pooled identity numbers, once every bench seed has spoken.
+  const pool = (l) => l.reduce((a, b) => a + b, 0) / l.length;
+  const pp = (l) => l.map((m) => Math.round(m * 100)).join(', ');
+  // A CEILING, so the bar sits ABOVE what the seeds produce rather than
+  // below: measured 0, 0, 8pp (kestrel and drowned are answered by exactly
+  // what they declare; the Foundry's declared Air is 8pp behind Sonic). The
+  // pre-R141 Foundry read 31pp, so 12 catches that lie almost three times
+  // over while leaving a draw 50% of room to wander.
+  const DECLARED_BEHIND = 0.12;
+  for (const [region, gaps] of Object.entries(identityDeclared)) {
+    assert.ok(pool(gaps) <= DECLARED_BEHIND,
+      `${region}: the answer the map DECLARES is one of the builds that clear it ` +
+      `(${Math.round(pool(gaps) * 100)}pp behind the best anatomy, pooled over ${gaps.length} bench seeds: ${pp(gaps)}pp)`);
+  }
+  // And a floor, below the measurement for the usual reason: 22-23pp
+  // (kestrel), 30-31 (drowned), 33-34 (foundry).
+  const REFUSED_BY = 0.15;
+  for (const [region, gaps] of Object.entries(identityRefused)) {
+    assert.ok(pool(gaps) >= REFUSED_BY,
+      `${region}: and most anatomies still fall over there — a strip two builds answer is a question, ` +
+      `a strip everything answers is not (bottom three are ${Math.round(pool(gaps) * 100)}pp back, pooled over ` +
+      `${gaps.length} bench seeds: ${pp(gaps)}pp)`);
   }
 
   // Reachability, measured at the grade a player plausibly holds when each
@@ -7906,12 +7950,44 @@ if (inShard('frames')) {
   const groundMoves = enemyMoves.filter((m) => (m.tags ?? []).includes('Ground'));
   assert.ok(groundMoves.length / enemyMoves.length >= 0.15,
     `the coalition fights at ground level (${groundMoves.length}/${enemyMoves.length} moves are Ground)`);
-  // ...but never so much that one wing pair switches a unit off.
-  for (const unit of Object.values(content.enemies)) {
-    const attacks = (unit.moves ?? []).filter((m) => (m.power ?? 0) > 0);
+  // ...but never so much that one wing pair switches a FIGHT off.
+  //
+  // R141 moved this rule from the unit to the encounter, and the reason is
+  // that a unit is not what a player fights — every encounter is a wave of
+  // two or three, and the question a flier asks is of the wave.
+  //
+  // A9 wrote it per-unit, which reads as the safer rule and is really a
+  // different one: it says a riot squad carrying batons and a riot shield
+  // must be able to hit something fifty feet up. That is not caution, it is
+  // a fiction the game does not believe, and it caps the chart row the Kite
+  // Frame exists for. Measured: under the per-unit rule `Ground` can reach
+  // at most ~26% of enemy move power, `Ground misses Airborne` is worth
+  // 8.1pp at its absolute best, and a bay is worth 12.5pp — so the only
+  // frame in the game whose whole reason is that row could never be worth
+  // wearing. R141 §9.19 has the full arithmetic.
+  //
+  // Six units are now genuinely unable to reach a flier — Riot Squad,
+  // Sluice Hound, Leviathan Dredge, Slag Hauler, Foreman Ordnance, Audit
+  // Diver. Every one of them carries a baton, a bucket, a wrench or a
+  // grapple, and every one of them fights beside somebody who shoots.
+  //
+  // Two rules, both about what a player actually faces.
+  for (const enc of Object.values(content.encounters)) {
+    const attacks = (enc.waves ?? []).flatMap((uid) => (content.enemies[uid]?.moves ?? []))
+      .filter((m) => (m.power ?? 0) > 0);
     if (!attacks.length) continue;
-    assert.ok(!attacks.every((m) => (m.tags ?? []).includes('Ground')),
-      `${unit.id} keeps an answer to a flier (not every attack is Ground)`);
+    const low = attacks.filter((m) => (m.tags ?? []).includes('Ground'));
+    // 1. Somebody in the wave can reach up. Measured: every one of the 26
+    //    encounters keeps at least one such move.
+    assert.ok(low.length < attacks.length,
+      `${enc.name}: somebody in the wave keeps an answer to a flier (all ${attacks.length} attacks are Ground)`);
+    // 2. And a flier is advantaged, never invulnerable. Power-weighted,
+    //    because one 88-power gun answers three 20-power sprays. Measured
+    //    worst: Sunken Marina at 82%, which is two swimmers and a bite.
+    const power = (l) => l.reduce((n, m) => n + (m.power ?? 0), 0);
+    const swung = power(low) / power(attacks);
+    assert.ok(swung <= 0.9,
+      `${enc.name}: and still lands something on it (${Math.round(swung * 100)}% of its damage travels along the ground)`);
   }
   // The air region cannot ALSO be the one that punishes flying, or every
   // strip has the same answer.
@@ -15566,18 +15642,28 @@ if (inShard('timers')) {
   //    daily: the job comes home on its own clock either way.
   {
     // R68: the seed is CHOSEN, not hardcoded — the same lesson the R64 gate
-    // above already records. This pinned seed 2026, which now takes the
-    // whole map by day 28 and so has no day-40 snapshot to compare; a walk
-    // healthy enough to finish early is good news that should not read as a
-    // failure. The gate's subject is a job coming home on its own clock, so
-    // any seed still mid-campaign at day 40 serves.
-    let daily = null, gone = null, walked = null;
-    for (const seed of [2026, 7, 4242, 1, 808, 31337, 12, 240, 3]) {
-      const d = campaignWalk(content, { seed, days: 40, snapshotDays: [40] });
-      const g = campaignWalk(content, { seed, days: 40, away: { from: 25, days: 7 }, snapshotDays: [40] });
-      if (d.snapshots[40] && g.snapshots[40]) { daily = d; gone = g; walked = seed; break; }
-    }
-    assert.ok(daily && gone, 'some seed is still mid-campaign at day 40 to compare');
+    // above already records. This pinned seed 2026, which takes the whole map
+    // by day 28 and so has no day-40 snapshot to compare; a walk healthy
+    // enough to finish early is good news that should not read as a failure.
+    // R68's fix was a LIST of nine candidate seeds, and any one of them still
+    // mid-campaign at day 40 served.
+    //
+    // R141 exhausted the list. Not because campaigns got faster — the median
+    // dominion day across fifteen seeds moved 31.25 → 31.42 — but because the
+    // shuffle moved which particular seeds finish late, and all nine happened
+    // to land inside 40. A list of nine seeds is a hardcoded seed with nine
+    // chances, and it fails the same way, one milestone later.
+    //
+    // Derived instead: the walk simply does not halt at dominion, so every
+    // seed has a day-40 snapshot and there is nothing to hunt for. The gate's
+    // subject is a job coming home on its own clock whether the player shows
+    // up daily or goes away for a week; whether the county has already fallen
+    // by then is not part of the question.
+    const walked = 2026;
+    const upTo40 = (away) => campaignWalk(content, { seed: walked, days: 40, snapshotDays: [40], stopAtDominion: false, ...(away ? { away } : {}) });
+    const daily = upTo40(null);
+    const gone = upTo40({ from: 25, days: 7 });
+    assert.ok(daily.snapshots[40] && gone.snapshots[40], 'both walks reach day 40 to compare');
     assert.ok(gone.snapshots[40].funds > 0, 'and the absent one is solvent on return');
     console.log(`   walked (seed ${walked}): daily $${daily.snapshots[40].funds} vs a week away $${gone.snapshots[40].funds}`);
   }

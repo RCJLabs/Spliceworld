@@ -3488,6 +3488,41 @@ const BREAKS = [
         "hp": 8,`,
   },
   {
+    // R141 — the per-encounter flight rule. A9 wrote it per-unit, R141 moved
+    // it to the encounter, and the thing it now protects is that no WAVE is
+    // fully blanked by a pair of wings. Sunken Marina is the closest to the
+    // line at 82% of its damage travelling along the ground — two swimmers
+    // and a bite — so one more tag on the harbour diver's net takes it to
+    // 100% and a flier stands there untouched.
+    n: 217, gate: FACILITY, name: 'a whole wave loses its answer to a flier, and the fight becomes a cutscene',
+    file: 'data/enemies.json',
+    anchor: `          "name": "Net Snag",
+          "power": 22,
+          "cost": 16,
+          "acc": 95,
+          "tags": [],`,
+    to: `          "name": "Net Snag",
+          "power": 22,
+          "cost": 16,
+          "acc": 95,
+          "tags": [
+            "Ground"
+          ],`,
+  },
+  {
+    // R141 — and the other half of the rewritten region rule: a strip that
+    // DECLARES an answer it does not have. This is the defect the old rule
+    // could not see, and it was real for eighteen milestones — the Foundry
+    // said `air` while the bench said `sonic` and air sat 31pp back. Pointing
+    // it at `water` (25-30% there) is the same lie, louder.
+    n: 218, gate: FACILITY, name: 'a region declares an answer that does not clear it, and nothing notices',
+    file: 'data/regions.json',
+    anchor: `      "answer": "air",
+      "requires": {`,
+    to: `      "answer": "water",
+      "requires": {`,
+  },
+  {
     // And the walker goes back to taking the first frame that validates, in
     // the fixed order M, S, L, A — which is why six campaigns and 64 chimeras
     // contained no Kite at all. Aimed at WALK rather than the smoke block,

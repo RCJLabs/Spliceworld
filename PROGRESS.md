@@ -21,20 +21,17 @@ resist against a flier, it *misses* — and **18 of 91 enemy moves carried the
 tag while 53 carried none at all.**
 
 > `Ground` is a property of the **move**, not the unit. Eight earthbound
-> moves were tagged: Baton Bonk, Bilge Wash, Undertow Bite, Bucket Chain,
+> moves are tagged: Baton Bonk, Bilge Wash, Undertow Bite, Bucket Chain,
 > Tipper Dump, Wrench Hook, Forensic Grip, Quench Bath. Every one has to
 > touch you. Nothing thrown, nothing sprayed, nothing swung from a rope by
 > an attacker already off the ground, no 0-power utility. A fifty-cal,
 > suppressing fire and a riot cannon reach a flier and must not.
 
 23% → **34%** of enemy move power; 3 → **10** encounters that swing low;
-3.7pp → **8.1pp** for a flier in the fights that throw it. Surgical by
-construction: Ground has one chart row, so it cannot touch a grounded
-chimera's fight at all.
+3.7pp → **8.1pp** for a flier in the fights that throw it.
 
 **3. And the frame is not a general-purpose upgrade, which is the point.**
-Eight of the 40 buildable bodies fly on the Kite and on nothing else — bear,
-tiger, gorilla, crocodile, tortoise, shark, abyssal shark, alpine ram.
+Eight of the 40 buildable bodies fly on the Kite and on nothing else.
 
 | same parts, prime, team of 3 | Kite | Scamper | |
 | --- | ---: | ---: | ---: |
@@ -45,50 +42,69 @@ tiger, gorilla, crocodile, tortoise, shark, abyssal shark, alpine ram.
 **When do I build a Kite?** When the animal you want in the air is too heavy
 to get there any other way, and the wall in front of you swings.
 
-### What I got wrong on the way, and it cost most of the session
+### The session's real work was finding the ceiling, and it was A9's own rule
 
-I chased **"the Kite must have the best win rate on ground-heavy
-encounters"** for four measurements before noticing the top build there is a
-Rumbler with an iron-tortoise shell at 86%, winning on armour and nothing to
-do with the tag. *A frame's ceiling against a set of fights is not a
-measurement of the frame.* The right comparison is the one the player
-actually makes at the Theater: **these parts, which chassis?** That flipped
-the finding from "the Kite needs better numbers" to "the Kite already has an
-exclusive job", and a prototyped +11 hp / +3 speed chassis buff — which had
-made A the best frame in the game on every axis — was thrown away.
+Six of the eight tags broke a gate A9 wrote: **no unit may have every
+damaging move Ground**. Measured, that rule is the ceiling on the entire
+frame — under it `Ground` reaches at most 26% of enemy move power, the chart
+row is worth 8.1pp at its absolute best, a bay is worth 12.5pp, and with
+only the two legal tags the Kite sits at **−9.4pp** in its own niche.
 
-### The walker reads the wall the same way the player does
+The obvious alternative fails differently and is worth recording: paying for
+the missing bay in `frames.json` raises the Kite **uniformly** — at hp 34 /
+speed 8 it is +3.4pp on walls that swing and **+4.1pp on walls that shoot**.
+A buff, not a trade. It would have made the Kite the best frame in the game
+on every axis.
 
-Every frame is filled from its own socket list, a second fill prefers a part
-that makes lift, and both are scored against the encounter in front: how
-much of that wall's damage the build's tags simply blank, derived from
-`content.tagChart` rather than the word "Ground". The weight is measured — a
-socket is worth ~12.5pp (a prime bear on a Trotter: 59.6%, and 47.1% with
-its hindlimb bay gone), a full blank ~20pp, so a blank buys back 1.6
-sockets. R83's "answer the class the map asks for" rule got the exemption
-R92 gave combos: a build that blanks the wall is answering the briefing's
-*other* layer, and it will almost never answer the class as well, because
-the Kite's bodies are Ground and Water anatomy wearing one pair of Air
-wings.
+**Decision (user): move A9's rule from the unit to the encounter.** A unit is
+not what a player fights. Verified: with all eight tags, every one of the 26
+encounters still keeps a move that reaches up, and the most ground-bound
+wall in the game still lands 18% of its damage. Six units genuinely cannot
+touch a flier now, and every one of them carries a baton, a bucket, a wrench
+or a grapple, and fights beside somebody who shoots.
 
-**4 Kites across the four gate seeds, on three of them.**
+### What I got wrong on the way, twice
 
-### Gates
+- I chased **"the Kite must have the best win rate on ground-heavy
+  encounters"** for four measurements before noticing the top build there is
+  a Rumbler with an iron-tortoise shell at 86%, winning on armour and
+  nothing to do with the tag. *A frame's ceiling against a set of fights is
+  not a measurement of the frame.* The right comparison is the one the
+  player makes at the Theater: **these parts, which chassis?**
+- I shipped the eight tags without checking A9's per-unit rule, and the
+  suite caught it. A prototyped +11 hp / +3 speed chassis buff was built and
+  thrown away on the evidence above.
+
+### Two gates got stricter
+
+- **The region-identity rule.** It asserted one anatomy answers each shaped
+  strip by ≥10pp, and read the Foundry gaining a second answer as the strip
+  losing its identity. It also never checked the thing that was actually
+  wrong: **the Foundry has declared `answer: air` since R26 while the bench
+  said `sonic` and air sat 31pp back.** Now two rules — the declared answer
+  must be among the builds that clear it (≤12pp behind; measured 0, 0, 8),
+  and the bottom three anatomies must still fall short (≥15pp; measured
+  22–34).
+- **The away-week walk** hunted a seed still mid-campaign at day 40 from a
+  list of nine, and R141's shuffle put all nine inside 40. A list of nine
+  seeds is a hardcoded seed with nine chances. It now runs with
+  `stopAtDominion: false`, so there is nothing to hunt.
+
+### Gates and breaks
 
 `tools/smoke.js` gains a `kite` block (shard a) asserting the trade in
-**both directions** — the niche pays, and outside it the frame does not —
-because a rule that only checks the upside passes just as happily on a frame
-handed better numbers. It is an outcome rule, not a tag census: a census is
-satisfied by tagging a rifle `Ground`. The walk block and `tools/battery.js`'s
-`WALK` gate both assert a campaign builds one. Three battery breaks (214–216)
-in three files, aimed at three different assertions.
+**both directions**, because a rule that only checks the upside passes just
+as happily on a frame handed better numbers. It is an outcome rule, not a
+tag census: a census is satisfied by tagging a rifle `Ground`. Five battery
+breaks (214–218) across five files and five assertions.
+
+**4 Kites across the four gate seeds, on three of them.**
 
 ### Known issues / carried
 
 - **The Rumbler is never spliced either.** L × 0 on the Theater path — M and
-  S validate on every plan, tie the Rumbler on grade sum, and ties go to the
-  earlier frame. The three Rumblers in the old census came off the
-  Reorientation Wing. Filed as **R148**.
+  S validate on every plan, tie it on grade sum, and ties go to the earlier
+  frame. Filed as **R148**.
 - `bestSplice` still fills one part per slot *type*, so it never uses the
   second organ bay Tier II grants. Pre-existing; it makes every measurement
   here a 5-vs-6 comparison where the shipped game is 6-vs-7.
