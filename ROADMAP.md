@@ -3620,6 +3620,35 @@ triangle working, and each region genuinely asks a different question)*.
   socket list, never named, with a count beside it: R144's rule, one block
   over.
 
+  #### And the full battery found the same bug wearing different clothes
+
+  This milestone changes existing gates rather than only adding them, which
+  is the first trigger for the full battery — and it came back
+  `BATTERY_EXIT=1`: **229 of 230 caught, one MISSED.** Not R150's. Break 206,
+  R133's *"an agenda row teaches a lesson the field guide already gives"*,
+  which had been silently blind since R143.
+
+  R143 capped the agenda at **three rows per kind** for its own good reasons.
+  The vat row is **fifth of five** in `work` on the day-180 save, so from that
+  milestone onward break 206 patched a string the browser never received. The
+  rule was never broken — the same lesson on a *rendered* row still went red,
+  measured — but its only live target had walked off the screen, and two
+  milestones shipped green over it.
+
+  **`--anchors` cannot catch this class.** The anchor still matches its line
+  exactly; it is the *rendering* that changed. A break can go stale without a
+  single character moving, and only a full battery says so — which is the
+  argument for R134's rot-check trigger, paid for on the first run after it.
+
+  The gate now measures the hidden hints too: each is written into a **clone
+  of a real row** and read back, in the same browser and the same stylesheet,
+  so it inherits the type and width the player actually sees. `spend` is
+  excluded because it renders as chips and puts its hint in a `title` — a
+  tooltip has no width to wrap. The probe counts what it reached, because a
+  filter over nothing is an empty list and an empty list of problems is a
+  pass. Break 206 stays exactly where R133 aimed it; break 234 puts the
+  blindness back.
+
   *Done when: no gate asserts the Kite by running a campaign, the frame's
   reachability is proved by the planner itself, and reintroducing either of
   R141's two defects goes red.* All three hold.

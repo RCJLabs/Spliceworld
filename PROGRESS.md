@@ -53,16 +53,41 @@ R148's chassis loop keeps its walker, scoped to full-socket frames — derived
 from the socket list with a count beside it, never named. R144's rule, one
 block over.
 
+### The full battery found the same bug wearing different clothes
+
+It came back **`BATTERY_EXIT=1` — 229 of 230 caught, one MISSED**, and it was
+not R150's. Break 206 (R133's *"an agenda row teaches a lesson the field guide
+already gives"*) had been blind since **R143**, which capped the agenda at
+three rows per kind. The vat row is **fifth of five** in `work` on the
+day-180 save, so the break had been patching a string the browser never
+received.
+
+The rule was never broken — the same lesson on a *rendered* row still goes
+red, measured. Its only live target had walked off the screen.
+
+**`--anchors` cannot catch this class**: the anchor still matches its line
+exactly, it is the *rendering* that changed. A break can go stale without a
+character moving, and only a full battery says so — R134's rot-check trigger
+paying for itself on the first run after it.
+
+Fix: the gate measures the hidden hints too, each written into a **clone of a
+real row** so it inherits the type and width the player sees. `spend` is
+excluded — it renders as chips with the hint in a `title`, and a tooltip has
+no width to wrap. The probe counts what it reached, because a filter over
+nothing is an empty list and an empty list of problems is a pass. Break 206
+stays where R133 aimed it; break 234 puts the blindness back.
+
 ### Verification
 
 | | |
 | --- | --- |
 | gate-first | ✓ both R141 defects red on demand (leg refusal → L, first-frame → M) |
-| `--anchors` | ✓ 230 |
-| breaks 216, 231, 232, 233 | ✓ 4 caught, 0 missed (`ONLY_EXIT=0`) |
+| `--anchors` | ✓ 231 |
+| breaks 216, 231, 232, 233 | ✓ 4 caught, 0 missed |
+| breaks 206, 234 | ✓ 206 red against its **original** target; 234 red on the blindness |
 | `--baseline` | ✓ every gate passes on a pristine tree (`BASELINE_EXIT=0`) |
 | `npm test` | ✓ 10 jobs, **192.0s** wall-clock (sum 716s), budget 195s (`NPMTEST_EXIT=0`) |
-| full battery | PENDING — running at commit time. This milestone **changes existing gates' logic** rather than only adding one, which is CLAUDE.md's first trigger for it |
+| full battery | ran (CLAUDE.md's first trigger — this changes existing gates); **one miss found and fixed** |
 | `SAVE_VERSION` | unchanged at 49 |
 
 ### Next session's first task

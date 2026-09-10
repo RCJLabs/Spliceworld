@@ -26,6 +26,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { sleep, serve, findChrome, connect } from './cdp.js';
 import { walkedSave } from './fixtures.js';
+// R150 — the agenda's own row list, so the rule can reach the rows R143's
+// three-row cap keeps off the screen. Node-side only; the page is untouched.
+import { agenda as agendaRows } from '../ranch/agenda.js';
+import { loadSimContent } from './sim.js';
 
 const VIEWPORT = 380;
 const REPORT = process.argv.includes('--report');
@@ -348,6 +352,7 @@ const save = await walkedSave();
 // today is then the same height next year, which is the only way a ratchet
 // means anything.
 const PINNED_NOW = save.lastTickAt;
+const simContent = loadSimContent();
 
 const { server, port } = await serve();
 const chrome = findChrome();
@@ -490,6 +495,39 @@ try {
   // taller than all of them. Nothing is typed, so a change to the type scale
   // or the padding moves the rule with it (R61), and the chrome budget above
   // covers the case this cannot see — every row wrapping equally.
+  // R150 — AND EVERY ROW MEANS EVERY ROW, NOT THE THREE THAT FIT.
+  //
+  // R143 capped the agenda at three rows per kind, for good reasons of its
+  // own. What nobody noticed is that this rule can only see what RENDERS: on
+  // the day-180 save the vat row is fifth of five in `work`, so the break
+  // aimed at it — 206, "an agenda row teaches a lesson the field guide
+  // already gives" — patched a string the browser never received, and went
+  // MISSED in the first full battery since R141. The rule was intact the
+  // whole time; its only live target had walked off the screen.
+  //
+  // So the hidden hints are measured too, in the same browser and the same
+  // stylesheet: each one is written into a CLONE of a real row and read back.
+  // A clone rather than a re-render, because what is being asked is a
+  // question about type and width, and the clone inherits both from the row
+  // the player actually sees. `spend` is excluded because it renders as
+  // chips and puts its hint in a `title` — a tooltip has no width to wrap.
+  const probeHints = async (sel, hints) => JSON.parse(await evaluate(`JSON.stringify((() => {
+    const row = document.querySelector('${sel} .agenda-row');
+    if (!row) return null;
+    const fine = row.querySelector('.fine-print');
+    if (!fine) return null;
+    const clone = row.cloneNode(true);
+    row.parentNode.appendChild(clone);
+    const slot = clone.querySelector('.fine-print');
+    const out = [];
+    for (const h of ${JSON.stringify(hints)}) {
+      slot.textContent = h.hint;
+      out.push({ id: h.id, h: Math.round(clone.getBoundingClientRect().height), t: h.hint });
+    }
+    clone.remove();
+    return out;
+  })())`));
+
   const agendaShape = async (sel) => JSON.parse(await evaluate(`JSON.stringify((() => {
     const rows = [...document.querySelectorAll('${sel} .agenda-row')]
       .map((e) => ({ h: Math.round(e.getBoundingClientRect().height),
@@ -578,6 +616,24 @@ try {
     // the state a player arrives in, which is the whole complaint.
     const chrome = await chromeOf(sel);
     const agenda = await agendaShape(sel);
+    // R150 — the rows R143's cap keeps off the screen, measured anyway.
+    // Derived from the same save at the same pinned instant the page is
+    // rendering, so these are the sentences the player WOULD see the moment
+    // one of the three above it closes.
+    if (screen === 'ranch' && agenda?.rows > 0) {
+      const all = agendaRows(save, simContent, PINNED_NOW)
+        .filter((i) => i.kind !== 'spend')
+        .map((i) => ({ id: i.id, hint: String(i.hint ?? '') }));
+      const probed = await probeHints(sel, all);
+      // AND THE PROBE IS COUNTED. `filter` over nothing is an empty list and
+      // an empty list of problems is a pass — which is the exact shape of
+      // failure this milestone exists to remove. If the clone never lands,
+      // or the row list comes back empty, that is a broken rule, not a
+      // clean one, and it has to say so in the same voice as a real miss.
+      agenda.probed = probed?.length ?? 0;
+      agenda.expected = all.length;
+      if (probed) agenda.hidden = probed.filter((r) => r.h > agenda.shortest);
+    }
     const tallest = BUDGET[screen]?.tallest === null ? null : await tallestOf(sel);
     // After `tallestOf`, which has opened everything the screen will allow.
     rows.push({ id: screen, folded, tallest, opened, foldsPainted, wordsShut, chrome, agenda,
@@ -654,6 +710,21 @@ for (const r of rows) {
     problems.push(`${r.id} spends ${r.chrome}px before the first ${r.id === 'ranch' ? 'animal' : 'row'},`
       + ` over its ${b.chrome}px chrome budget — that is ${(r.chrome / 780).toFixed(1)} phone screens`
       + ' of preamble, and it is not what the screen is for');
+  }
+  // R150 — the probe reached every row it was given, or the rule below is
+  // measuring an empty list and reporting nothing.
+  if (r.id === 'ranch' && r.agenda?.rows > 0
+    && (!r.agenda.expected || r.agenda.probed !== r.agenda.expected)) {
+    problems.push(`ranch's agenda rule measured ${r.agenda.probed} of ${
+      r.agenda.expected} rows — a rule that reaches nothing passes, so this is a broken gate`);
+  }
+  // R150 — a row that is off the screen today is a row the player sees
+  // tomorrow, so it answers the same rule. Reported separately from the
+  // rendered ones so the message says WHICH kind of miss it is.
+  for (const h of r.agenda?.hidden ?? []) {
+    problems.push(`${r.id}'s "${h.id}" agenda row is ${h.h}px against a ${
+      r.agenda.shortest}px row that fits — "${h.t}" wraps. It is past R143's `
+      + 'three-row cap today, which is not the same as being short enough');
   }
   if (r.agenda?.rows > 1 && r.agenda.tallest > r.agenda.shortest) {
     problems.push(`${r.id}'s tallest agenda row is ${r.agenda.tallest}px against a ${

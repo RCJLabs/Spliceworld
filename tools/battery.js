@@ -3847,14 +3847,37 @@ const BREAKS = [
   },
   {
     // R133 — the one-line rule. The lesson goes back onto the vat row, which
-    // is the exact sentence `data/guides.json` already teaches under "The
-    // vat crosses two chimeras". The row wraps to two lines and is then
-    // taller than every row that did not, which is what the gate measures —
-    // no constant to edit, so this cannot be met by moving a budget.
+    // is the same thing `data/guides.json` already teaches under "The vat
+    // crosses two chimeras". The row wraps to two lines and is then taller
+    // than every row that did not, which is what the gate measures — no
+    // constant to edit, so this cannot be met by moving a budget.
+    //
+    // R150 — THIS BREAK WENT MISSED, AND IT WAS RIGHT ALL ALONG. R143 capped
+    // the agenda at three rows per kind; the vat row is fifth of five in
+    // `work` on the day-180 save, so from that milestone onward this patch
+    // changed a string the browser never received. The rule was intact — the
+    // same lesson on a RENDERED row still went red — but its only live
+    // target had walked off the screen, and nothing said so for two
+    // milestones. `--anchors` cannot catch this: the anchor still matches,
+    // it is the RENDERING that changed.
+    // The gate now measures the hidden hints too, in a clone of a real row,
+    // so the break is left exactly where R133 aimed it.
     n: 206, gate: HEIGHT, name: 'an agenda row teaches a lesson the field guide already gives',
     file: 'ranch/agenda.js',
     anchor: "      return `${seen.size} pairing${seen.size === 1 ? '' : 's'} the vat will take.`;",
     to: "      return `${seen.size} pairing${seen.size === 1 ? '' : 's'} the vat will take. Two go in, one genome out that neither of them was.`;",
+  },
+  {
+    // R150 — and the rows past the cap go back to being unmeasurable. This
+    // is the state the tree was in for two milestones: the probe reaches
+    // only what rendered, so a hint can grow to any length as long as three
+    // shorter ones sit above it. Aimed at the `spend` filter rather than at
+    // the probe itself, because that is the shape the mistake actually takes
+    // — a filter that looks reasonable and quietly empties the list.
+    n: 234, gate: HEIGHT, name: 'the agenda rule stops reaching the rows past the cap, and measures an empty list',
+    file: 'tools/height.js',
+    anchor: "        .filter((i) => i.kind !== 'spend')",
+    to: "        .filter((i) => i.kind === 'nothing')",
   },
   {
     // The migration forgets the phase, so a save from v47 arrives with
