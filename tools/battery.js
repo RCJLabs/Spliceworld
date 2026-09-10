@@ -307,6 +307,12 @@ const FACILITY = ['node', '-e',
 const RELEASE = ['node', '-e',
   "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
 
+// R148 — THE CHASSIS LADDER. Three six-bay frames level across the live band
+// (1.0pp apart, from 5.2), the Rumbler +2.3pp in a grind and +0.0pp in a
+// dash. Shard b, per SHARD_OF.
+const BULK = ['node', '-e',
+  "process.env.SW_SHARD = 'b'; await import('./tools/smoke.js');"];
+
 // R141 — THE KITE FRAME IS THE ONLY WAY TO FLY SOMETHING HEAVY. Eight bodies
 // fly on it and on nothing else, they are worth 14.8pp more there than on a
 // Scamper against a wall that swings low, and 0.9pp LESS against one that
@@ -1842,6 +1848,8 @@ const WALK = ['node', '-e', `
   // returned on the first frame that validated, in the order M, S, L, A.
   // Measured on this seed and window: 2 Kites of 20 splices.
   if (!(w.framesBuilt?.A > 0)) fail('the walk never builds a Kite (' + JSON.stringify(w.framesBuilt) + ')');
+  // R148 — and a Rumbler. Measured on this seed and window: 5 of 17 splices.
+  if (!(w.framesBuilt?.L > 0)) fail('the walk never builds a Rumbler (' + JSON.stringify(w.framesBuilt) + ')');
   console.log('walk ✓  ' + w.duels + ' duels, ' + w.breakouts + ' hunts, ' + w.bagged
     + ' bagged, lab at ' + levels + ', frames ' + JSON.stringify(w.framesBuilt) + ' over 45 days');
 `];
@@ -3486,6 +3494,29 @@ const BREAKS = [
         "hp": 24,`,
     to: `        "mass": 18,
         "hp": 8,`,
+  },
+  {
+    // R148 — the Rumbler goes back to being the best chassis in the game.
+    // Undoing one of the three repriced numbers is enough: 28 hp -> 36 puts
+    // it 5pp clear of the other two over the live band, which is what "no
+    // chassis is simply better" is there to refuse. Aimed at the spread
+    // rather than the niche, because a frame that wins everywhere has no
+    // niche to measure.
+    n: 219, gate: BULK, name: 'the Rumbler is handed its old hp back, and is simply the best chassis again',
+    file: 'data/frames.json',
+    anchor: `        "mass": 400,
+        "hp": 28,`,
+    to: `        "mass": 400,
+        "hp": 36,`,
+  },
+  {
+    // R148 — and the walker loses the reason, so the tie goes back to the
+    // iteration order and no campaign ever splices a Rumbler. WALK rather
+    // than the smoke block: a 45-day seeded walk answers it in seconds.
+    n: 220, gate: WALK, name: 'the plan stops reading how long the wall takes to clear, and the Rumbler is never picked',
+    file: 'tools/sim.js',
+    anchor: '        + blank + grindAgainst(content, frameId, wall);',
+    to: '        + blank;',
   },
   {
     // R141 — the per-encounter flight rule. A9 wrote it per-unit, R141 moved

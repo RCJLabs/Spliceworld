@@ -1,5 +1,107 @@
 # PROGRESS
 
+## Session 145 — R148: the chassis was a coin-flip ✅
+
+**ROADMAP §9.20.** Carried out of R141 with its own evidence: **L × 0** on
+the Theater path. All three claims held — six campaigns splice 79 Trotters,
+33 Scampers, 4 Kites and no Rumblers; with the Rumbler unlocked it **ties the
+winner in 250 of 321 splice decisions** and loses every one to the iteration
+order; and the one Rumbler in the old census ("Ingot Mk IX", level 0,
+all-prime) came off the Reorientation Wing.
+
+### The entry had the balance backwards, and that is the finding
+
+Bulk was never weak. Identical parts, prime, team of three, live band:
+
+| | Scamper | Trotter | Rumbler |
+| --- | ---: | ---: | ---: |
+| before | 46.9% | 47.6% | **52.5%** |
+| after | 46.9% | 47.6% | 48.2% |
+
+Two chassis that were the same creature to within 0.7pp, and a third quietly
+the best in the game. The M→L step decomposes exactly: +6 hp (+1.7pp), +6
+stamina (+1.8pp), +2 regen (+1.2pp) against −2 speed (−0.8pp) and +80 mass
+(−0.4pp). **Four and a half points of stats for one of cost.**
+
+### Why the price could not be paid in speed
+
+A9's sentence about the Airborne tag turns out to be true of the frames too.
+**Speed is a threshold, not a rate** — it buys turn order and nothing else,
+so it is worth a lot near your opponent and nothing under them. Median
+effective speed: Scamper 10, Trotter 7, Rumbler 4, against an enemy median of
+**eleven**. The Rumbler already loses initiative to almost everything, so
+slowing it further is free and every point of bulk above that floor is
+unpriced.
+
+So it pays in health and mass instead — **hp 36 → 28, mass 160 → 400,
+stamina 54 → 52**:
+
+| | short fights | long fights |
+| --- | ---: | ---: |
+| Rumbler − Scamper, before | +2.7pp | +6.5pp |
+| Rumbler − Scamper, after | **−0.2pp** | **+2.6pp** |
+
+### A tie-break is not a reason
+
+Fixing the iteration order alone would have made the Rumbler the
+unconditional pick, so `bestSplice` gets a reason. What predicts fight length
+is **not** how hard the wall swings (r = +0.08) but how many typical hits it
+takes to clear — total health over average move power, **r = +0.57**, best of
+nine things measured. Read off the encounter table, worth at most two grade
+steps.
+
+**M 55 · S 31 · L 25 · A 3** across six campaigns, from M 79 · S 33 · A 4 ·
+L 0. Every chassis the Theater sells is worn.
+
+### Two wrong turns, both caught by measuring
+
+- I eyeballed "bulk pays against chip damage, not alpha strikes" off a
+  sorted table and it did not survive: r = −0.37 against the biggest single
+  move, and the high-power walls are near-hopeless fights where nothing moves
+  anyway. Fight length was the real axis.
+- I extrapolated per-point stat prices measured on the Rumbler onto the
+  Scamper, and candidate A made the spread **worse** (5.2 → 7.1pp). Prices do
+  not transfer across frames; every later candidate was measured directly.
+
+### Three gates went red, and each one was right
+
+- **`npm test` budget.** The new bench put the suite at 226.8s against R90's
+  195s. The `walks` job showing 24s → 122s was a red herring: the fixture
+  cache regenerating after a data change. Second run 160.5s, green.
+- **R123's briefing gate.** `memberScore` shortlists on health, reach and
+  armour — a fair proxy while the frames were a staircase. Repriced, maxHp
+  reads **109 / 111 / 109** across the three, three numbers that say nothing,
+  while stamina reads 55 / 61 / 65. The gate found the suggestion **7.5pp off
+  the best team** on its worst roster against a bar of 5, before any player
+  could. Stamina and regen now enter at their measured worth (1 and 2).
+- **The R148 gate itself**, red first on the shipped tree, as it should be.
+
+### Verification
+
+| | |
+| --- | --- |
+| `npm test` | ✓ 10/10, 160.5s against the 195s budget |
+| `--anchors` | ✓ all 217 |
+| `--baseline` | ✓ green, `BASE_EXIT=0` |
+| breaks 219, 220 | ✓ 2/2 caught |
+
+### Known issues / carried
+
+- **The Scamper and the Trotter are still the same creature** — 46.9% and
+  47.6%, and identical in long fights. R148's criterion is the Rumbler; this
+  is the next one. **R149 — the Scamper has no reason to be picked either.**
+  *Done when: speed is worth a frame against something, a campaign splices a
+  Scamper for that reason, and the gate says which.* The measured obstacle is
+  already known: speed is a threshold stat and the Scamper sits at 10 against
+  an enemy median of 11, so more of it helps everywhere rather than
+  somewhere.
+- `bestSplice` still fills one part per slot *type*, so it never uses the
+  second organ bay Tier II grants. Pre-existing, carried from R141.
+
+**Next session's first task:** R149 (the Scamper), or R143 from the seventh
+audit — nothing goes badly wrong — which is the one most likely to change how
+the game feels.
+
 ## Session 144 — R141: the frame nobody wore ✅
 
 **ROADMAP §9.19.** Four chassis ship; across six 180-day campaigns and 64

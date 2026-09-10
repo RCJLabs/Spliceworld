@@ -377,9 +377,25 @@ function memberScore(chimera, foeClasses, content, now) {
     if (content.classes?.[u.creatureClass]?.beats === fc) edge += 1;
     if (content.classes?.[fc]?.beats === u.creatureClass) edge -= 1;
   }
+  // R148 — AND STAMINA, BECAUSE HP STOPPED BEING WHAT SEPARATES A CHASSIS.
+  //
+  // This shortlist is what the forecast budget gets spent on, so anything it
+  // cannot see is a team the briefing will never suggest. It read health,
+  // reach and armour, which was a fair proxy while the frames were a
+  // staircase — bigger chassis, more hp, better creature. R148 repriced them
+  // into a trade and that proxy stopped working: measured over every whole
+  // animal in the catalogue, maxHp now reads 109 / 111 / 109 across Scamper,
+  // Trotter and Rumbler, three numbers that say nothing, while stamina reads
+  // 55 / 61 / 65 and is where the Rumbler's long-fight edge actually lives.
+  //
+  // The gate caught it before a player could: the suggestion landed 7.5pp off
+  // the best team on its worst roster, against a bar of 5. The weights are
+  // the measured worth of a point relative to a point of health — stamina
+  // 1.07, regen 2.1 — rounded to 1 and 2.
   return {
     edge,
-    score: edge * 1000 + (u.maxHp ?? 0) + power * 4 + (u.armor ?? 0) * 3,
+    score: edge * 1000 + (u.maxHp ?? 0) + (u.stamina ?? 0) + (u.regen ?? 0) * 2
+      + power * 4 + (u.armor ?? 0) * 3,
     cls: u.creatureClass,
   };
 }
