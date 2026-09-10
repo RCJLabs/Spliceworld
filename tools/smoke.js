@@ -112,6 +112,9 @@ const SHARD_OF = {
   bulk: 'b',
   // R149 — the Camo trade, benched with and without a plate. Shard a.
   camo: 'a',
+  // R143 — the empire's books. Three 180-day walks at ~15s each, so it is
+  // worth sharding; shard a is the lightest of the four.
+  empire: 'a',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -18425,6 +18428,131 @@ if (inShard('bulk')) {
 // class's 22%. §9.21 has the arithmetic. The Scamper still has six bays and
 // still has no identity; what shipped is the tag that was broken on the way
 // past, and this gate is about the tag.
+// R143 — AN EMPIRE HAS RUNNING COSTS, AND THEY SCALE WITH IT.
+//
+// The seventh audit measured a campaign that cannot be lost: 0 hours broke,
+// 0 hours stalled, lowest balance ever $164 on day one. Its diagnosis was
+// "no failure state bites", and that half turned out to be WRONG — R87's
+// Compliance Task Force landed 137 levies across six campaigns and R9's
+// counter-offensives took 25 nodes off one of them. The world pushes back
+// plenty. What it cannot do is make anything scarce.
+//
+// The reason is on the books. `upkeepPerDay` counted LIVESTOCK and nothing
+// else: territory was free to hold and the facility, which costs $504,000 to
+// build out, cost nothing at all to run. So income scaled with conquest and
+// outgo did not, and the empire's share of its own gross went UP as it grew —
+// 28-67% on day ten, 76-85% from day twenty on. A percentage levy cannot fix
+// that shape: 25% of a pile refilling at $4,830 a day is friction, not
+// scarcity, which is why the walker banks $118k-$259k having already bought
+// every level of every track.
+//
+// The rules below are about the SHAPE, not the numbers. A bigger operation
+// keeps a smaller share of what it earns; conquest still pays, so no node is
+// a trap and losing one is never a relief; and none of it may break R85's
+// promise that a player who walks away comes back to a ranch rather than a
+// ruin.
+if (inShard('empire')) {
+  const EMPIRE_SEEDS = [2026, 7, 99];
+  const walks = EMPIRE_SEEDS.map((seed) => campaignWalk(content, {
+    seed, days: 180, stopAtDominion: false, snapshotDays: [10, 120],
+  }));
+
+  // 1. TERRITORY AND THE FACILITY ARE ON THE BOOKS, derived by moving one
+  //    thing at a time rather than by naming a field. Two states that differ
+  //    ONLY in what they hold must not cost the same to run — a rule with
+  //    nothing to look at is a rule that passes, so the comparison is built
+  //    rather than read.
+  {
+    const bare = walks[0].save;
+    const nodes = bare.campaign.heldNodes;
+    assert.ok(nodes.length > 1, `the fixture actually holds territory (${nodes.length} nodes)`);
+
+    const without = { ...bare, campaign: { ...bare.campaign, heldNodes: nodes.slice(0, 1) } };
+    assert.ok(upkeepPerDay(bare, content) > upkeepPerDay(without, content),
+      `holding ${nodes.length} nodes costs more to run than holding one `
+      + `($${Math.round(upkeepPerDay(bare, content))}/day vs $${Math.round(upkeepPerDay(without, content))}/day) `
+      + '— territory that is free to hold is why conquest has no ceiling');
+
+    const tracks = Object.keys(bare.facility ?? {});
+    assert.ok(tracks.length, 'the fixture actually bought a facility');
+    const stripped = { ...bare, facility: Object.fromEntries(tracks.map((t) => [t, 0])) };
+    assert.ok(upkeepPerDay(bare, content) > upkeepPerDay(stripped, content),
+      `and a built-out facility costs more to run than an empty one `
+      + `($${Math.round(upkeepPerDay(bare, content))}/day vs $${Math.round(upkeepPerDay(stripped, content))}/day) `
+      + '— $504,000 of plant that bills nothing is a one-time sink, not an economy');
+  }
+
+  // 2. GROWTH DOES NOT MAKE YOU MORE PROFITABLE. The share of gross income
+  //    the empire keeps, at full size. This is the whole defect in one
+  //    number: it read 76-85% at day 120 against 28-67% at day 10, which is
+  //    an economy that pays you MORE per dollar the less you need it.
+  for (const w of walks) {
+    const late = w.snapshots[120];
+    if (!late || !late.incomeRate) continue;
+    const kept = (late.incomeRate - late.upkeepRate) / late.incomeRate;
+    assert.ok(kept <= 0.5,
+      `seed ${w.seed}: a full-sized empire keeps ${(kept * 100).toFixed(1)}% of its gross at day 120 `
+      + `($${late.incomeRate}/day in, $${late.upkeepRate}/day out, ceiling 50%) `
+      + '— measured at 76-85% before this milestone');
+  }
+
+  // 3. BUT CONQUEST STILL PAYS. The running cost of a node must never reach
+  //    what the node earns, or taking one is a trap and losing one is a
+  //    relief — and R9's counter-offensives would become a favour. Measured
+  //    the only honest way: hold one more node and see both numbers move.
+  {
+    const w = walks[0];
+    const held = w.save.campaign.heldNodes;
+    const one = { ...w.save, campaign: { ...w.save.campaign, heldNodes: held.slice(0, 1) } };
+    const two = { ...w.save, campaign: { ...w.save.campaign, heldNodes: held.slice(0, 2) } };
+    const dIncome = incomePerDay(two, content) - incomePerDay(one, content);
+    const dUpkeep = upkeepPerDay(two, content) - upkeepPerDay(one, content);
+    assert.ok(dIncome > dUpkeep,
+      `the second node pays $${Math.round(dIncome)}/day and costs $${Math.round(dUpkeep)}/day to garrison `
+      + '— a node that costs more than it earns makes losing it a favour');
+  }
+
+  // 4. AND NOTHING BREAKS FROM ABSENCE. R85's promise and §8's third risk,
+  //    restated here because THIS is the milestone most likely to break it:
+  //    every rule above pushes outgo up, and the first thing that goes wrong
+  //    when you overshoot is a player who closes the app solvent and opens it
+  //    broke. `applyElapsed` clamps at zero, so "broke" means pinned there.
+  for (const w of walks) {
+    assert.equal(w.brokeHours, 0, `seed ${w.seed}: never broke across 180 days (${w.brokeHours}h at zero)`);
+    assert.ok(w.minFunds > 0, `seed ${w.seed}: and never reached zero (low-water $${w.minFunds})`);
+    assert.ok(w.longestStallHours <= 24,
+      `seed ${w.seed}: still always something productive open (worst ${w.longestStallHours}h)`);
+  }
+
+  // 5. THE MONEY HAS SOMEWHERE TO GO — measured CUMULATIVELY, and the first
+  //    draft of this rule got it wrong in a way worth keeping. It asked how
+  //    many days of income the walk ENDED holding, which sounds like the same
+  //    question and is not: `bestSplice` refuses to spend below
+  //    WALK_RESERVE_DAYS of upkeep, so every dollar added to the running
+  //    costs raised the cash the walker sat on, and the balance-sheet version
+  //    of this rule scored the fix as a REGRESSION (25.6 days after, against
+  //    24.4 before). A gate anti-correlated with its own milestone is worse
+  //    than no gate.
+  //
+  //    What is actually being asked is what share of everything the empire
+  //    ever earned it spends on existing. That is immune to the reserve
+  //    policy, to when a levy happens to land, and to where day 180 falls in
+  //    the cycle. It read 17.6% before this milestone.
+  for (const w of walks) {
+    assert.ok(w.upkeepShare >= 0.4,
+      `seed ${w.seed}: running the place costs ${(w.upkeepShare * 100).toFixed(1)}% of everything it earned `
+      + `($${w.upkeepPaid.toLocaleString()} of $${w.grossEarned.toLocaleString()}, floor 40%) `
+      + '— measured at 17.6% before this milestone');
+  }
+
+  const shown = walks[0];
+  const l = shown.snapshots[120];
+  console.log(`   R143 empire: $${l.incomeRate}/day in, $${l.upkeepRate}/day out at full size `
+    + `(keeps ${(100 * (l.incomeRate - l.upkeepRate) / l.incomeRate).toFixed(0)}%, was 84%) — `
+    + `${(100 * shown.upkeepShare).toFixed(0)}% of everything earned went on running it, `
+    + `${shown.brokeHours}h broke, low-water $${shown.minFunds}`);
+}
+
 if (inShard('camo')) {
   const { makeSimChimera: mkCamo, scriptedBattle: camoFight } = await import('./sim.js');
   const { analyze: camoAnalyze } = await import('../splice/physiology.js');

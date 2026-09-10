@@ -414,6 +414,8 @@
       "prismatic": 22
     },
     "drawCost": 0.35,
-    "instabilityCost": 0.08
+    "instabilityCost": 0.08,
+    "garrisonFraction": 0.35,
+    "facilityRunningFraction": 0.002
   }
 }

@@ -71,10 +71,64 @@ const UPKEEP_DEFAULTS = {
   gradeCost: { standard: 1, prime: 5, apex: 12, prismatic: 22 },
   drawCost: 0.35,
   instabilityCost: 0.08,
+  // R143 — THE TWO THINGS THAT WERE FREE TO OWN.
+  //
+  // R25 built an upkeep economy and pointed it at livestock, which is where
+  // the cost obviously was. Nothing ever pointed it at the other two things
+  // a player accumulates. Territory was free to hold, so income scaled with
+  // conquest and outgo did not; and the facility, $504,000 built out, cost
+  // nothing at all to run. The empire's share of its own gross therefore
+  // ROSE as it grew — 28-67% on day ten against 76-85% from day twenty on —
+  // and a campaign ended holding 24-52 days of income with every level of
+  // every track already bought.
+  //
+  // Both are FRACTIONS rather than tables, and that is the load-bearing
+  // choice. A garrison priced as a share of the node's own income can never
+  // exceed what the node pays, so conquest is still worth it and losing a
+  // node is never a relief — the rule holds for a region nobody has written
+  // yet, which a per-node column could not promise. A running cost priced as
+  // a share of what the level cost to build means a new facility tier prices
+  // itself; R25's own note is that a 42nd species should be a data edit, and
+  // this is the same rule one system over.
+  garrisonFraction: 0.35,
+  facilityRunningFraction: 0.002,
 };
 
 export function upkeepTuning(content) {
   return { ...UPKEEP_DEFAULTS, ...(content.upkeepMeta ?? {}) };
+}
+
+// R143 — what the map costs to hold. Read off the nodes the player actually
+// holds, so a contested node still costs its garrison: the income is
+// suspended while the convoy sits there (campaign.js), and a garrison you
+// stop paying the moment you are attacked would make being attacked a
+// saving.
+export function territoryUpkeepPerDay(state, content) {
+  const held = new Set(state.campaign?.heldNodes ?? []);
+  if (!held.size) return 0;
+  const { garrisonFraction } = upkeepTuning(content);
+  let cost = 0;
+  for (const region of Object.values(content.regions ?? {})) {
+    for (const node of region.nodes ?? []) {
+      if (held.has(node.id)) cost += (node.incomePerDay ?? 0) * garrisonFraction;
+    }
+  }
+  return cost;
+}
+
+// R143 — and what the plant costs to run, priced off what each level cost to
+// build. A track the player has not bought into bills nothing, so this is
+// zero on a fresh save and grows only as they choose to grow it.
+export function facilityUpkeepPerDay(state, content) {
+  const { facilityRunningFraction } = upkeepTuning(content);
+  let cost = 0;
+  for (const track of tracks(content)) {
+    const owned = facilityLevel(state, track.id);
+    for (const level of (track.levels ?? []).slice(0, owned)) {
+      cost += (level.cost ?? 0) * facilityRunningFraction;
+    }
+  }
+  return cost;
 }
 
 // What the Surgery Theater may build with right now.
