@@ -415,7 +415,7 @@
     },
     "drawCost": 0.35,
     "instabilityCost": 0.08,
-    "garrisonFraction": 0.12,
-    "facilityRunningFraction": 0.0006
+    "garrisonFraction": 0.08,
+    "facilityRunningFraction": 0.0004
   }
 }

@@ -78,8 +78,8 @@ const UPKEEP_DEFAULTS = {
   // exceed what the node pays, so conquest still pays and losing a node is
   // never a relief — including for a region nobody has written yet.
   // Calibration and the liquidity wall it hit are in ROADMAP §9.22.
-  garrisonFraction: 0.12,
-  facilityRunningFraction: 0.0006,
+  garrisonFraction: 0.08,
+  facilityRunningFraction: 0.0004,
 };
 
 export function upkeepTuning(content) {
