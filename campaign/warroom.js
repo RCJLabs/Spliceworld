@@ -173,11 +173,9 @@ export function econRow(state, content) {
   const income = incomePerDay(state, content);
   const upkeep = upkeepPerDay(state, content);
   return {
-    // R143 — WHERE THE BILL GOES, because a cost the player cannot see is a
-    // cost they cannot act on. Upkeep roughly tripled when territory and the
-    // plant went on the books, and a single number that silently got bigger
-    // is the difference between a decision and a mystery: the whole point of
-    // a garrison is that you can weigh it against what the node pays.
+    // R143 — where the bill goes. A cost the player cannot see is a cost they
+    // cannot act on, and the point of a garrison is weighing it against what
+    // the node pays.
     upkeepParts: {
       stock: Math.round(stockUpkeepPerDay(state, content)),
       chimeras: Math.round(chimeraUpkeepPerDay(state, content)),

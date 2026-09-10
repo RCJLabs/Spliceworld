@@ -221,11 +221,22 @@ export function renderRanchScreen(root, ctx) {
           <button type="button" class="agenda-chip"${act(i)} title="${i.hint}">${i.label}${
             i.chip ? `<span class="chip-num">${i.chip}</span>` : ''}</button>`).join('') + '</div>';
       }
-      return `<p class="agenda-head">${heading}</p>` + items.map((i) => `
+      // R143 — and the same rule one step further, for the same reason R47
+      // gave. A tighter economy leaves more open at once: the day-180 agenda
+      // went from 10 rows to 13 (an unfought exhibition, a captive to fetch,
+      // an untreated injury), which is 98px past the chrome budget R133 set —
+      // 1.5 phone screens of preamble before the first animal. Nothing is
+      // hidden that is not already stated: the badge above counts every open
+      // item, so the rows past the fold are a LENGTH decision, not a
+      // disclosure one.
+      const ROWS = 3;
+      const rest = items.length - ROWS;
+      return `<p class="agenda-head">${heading}</p>` + items.slice(0, ROWS).map((i) => `
         <button type="button" class="agenda-row"${act(i)}>
           <span class="agenda-label">${i.label}</span>
           <span class="fine-print">${i.hint}</span>
-        </button>`).join('');
+        </button>`).join('') + (rest > 0
+        ? `<p class="fine-print">and ${rest} more of these.</p>` : '');
     }).join('') || '<p class="fine-print">Nothing is open. Everything is on a timer — come back shortly.</p>',
   });
 

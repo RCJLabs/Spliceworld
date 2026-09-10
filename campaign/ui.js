@@ -100,10 +100,8 @@ function warSubtabBar(state) {
   });
 }
 
-// R143 — the upkeep line names its four payers rather than printing one
-// number that quietly got bigger. Zero-cost rows are dropped, so a fresh
-// ranch still reads "after $12 upkeep" and only grows the sentence as the
-// player grows the things it is charging for.
+// R143 — the upkeep line names its payers. Zero rows are dropped, so a fresh
+// ranch still reads "after $12 upkeep".
 function upkeepBreakdown(upkeep, parts) {
   const named = [
     ['stock', parts?.stock], ['stable', parts?.chimeras],

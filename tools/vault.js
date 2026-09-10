@@ -113,6 +113,13 @@ const BOUNDS = {
   // Per-record lists. These sit inside an already-bounded array, so the cap
   // that matters is the shape of one record, not how many records there are.
   'chimeras[].moveset':   { max: 4,  by: "R30's four move slots" },
+  // R143 — a CAPTIVE carries a whole chimera record, so it carries that
+  // record's per-body lists too. They never showed up before because the
+  // day-180 fixture happened to end with no captive held; a tighter economy
+  // changed which day the walk rescues on, and the shape was there all along.
+  // Same caps as the chimeras they are copies of.
+  'campaign.captives[].chimera.moveset': { max: 4,  by: "R30's four move slots" },
+  'campaign.captives[].chimera.scars':   { max: 12, by: 'one per socket, twice over' },
   // A bay holding a rival's chimera carries the GENERATED unit record — the
   // one `unitFromGenome` built, because that creature has no entry in
   // enemies.json to look up. Its lists are the shape of one body, so they
