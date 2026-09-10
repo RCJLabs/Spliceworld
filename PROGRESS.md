@@ -74,16 +74,47 @@ priced in the hide bay, and it bounds what any future tag can be worth.
   gave Net Snag an `Aimed` tag; break 217 had anchored on that move's empty
   tag list. Caught immediately, re-aimed to swap the tag rather than add one.
 
+### The boot budget, and the queue it is now part of
+
+R149's 647 bytes of content pushed the first-paint budget over: **1030.112 KB
+against 1030**, from 1028.561 before. The baseline caught it, which is the
+whole point of running it.
+
+Two things came out of chasing it. The first is that **the biggest single
+contributor was not the data — it was my own comment.** `splice/physiology.js`
+grew 12.3 → 13.8 KB, because there is no build step and prose ships to every
+player on first paint. A9's comment for the equivalent rule is twelve lines;
+mine was twenty-six. Trimmed to eleven, with the measurement left in §9.21
+where it belongs, that gave back 1.4 of the 2.1 KB.
+
+The second is the decision (Evan's): **raise 1030 → 1035.** This is the sixth
+such raise, and R121's note in that same file says a budget defended case by
+case is not a budget but a queue. So the two structural fixes are now measured
+and priced in the note rather than left to be rediscovered:
+
+| | back | cost |
+| --- | ---: | --- |
+| drop empty `"tags": []` / `"keywords": {}` from the data | **8.5 KB** | no content change; needs a read-site audit |
+| take `enemies.json` out of the eager graph (R81's move, one file over) | **45 KB** | its own milestone; `loader.js` fetches one bundle |
+
 ### Verification
 
 | | |
 | --- | --- |
 | gate-first | ✓ red on the pre-R149 tree, in its own words — `Camo defends against something (Sonic x1.5)` |
 | `--anchors` | ✓ 220 anchors match exactly once (217 re-aimed) |
-| `--baseline` | PENDING |
-| breaks 221, 222, 223 | PENDING |
-| `npm test` | PENDING |
+| breaks 221, 222, 223 | ✓ 3 caught, 0 missed |
+| `--baseline` | re-running after the boot fix — result pending |
+| `npm test` | re-running uncontended — result pending |
 | `SAVE_VERSION` | unchanged at 49 — Camo is derived from the genome, never stored |
+
+Two process notes worth keeping, both mine. **Judge a run by its exit code,
+not its last line** — piping the battery through `tail` truncated the failing
+gate off the top AND made `echo $?` report `tail`'s status, so a red baseline
+read as `BASELINE_EXIT=0`. That is CLAUDE.md's own warning arriving through a
+shell pipe. And **do not run the battery and `npm test` at once on four
+cores**: twelve heavy processes on four CPUs put the suite at 474.8s against a
+195s budget and it read as a real regression.
 
 ### Known issues / carried
 

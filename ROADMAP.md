@@ -3620,6 +3620,30 @@ triangle working, and each region genuinely asks a different question)*.
   frame slot, and it is worth keeping: it bounds what any future tag can be
   worth.
 
+  #### The bill this sent to the first paint
+
+  647 bytes of content took the first-paint budget from 1028.561 KB to
+  1030.112, over a ceiling of 1030 — and the baseline caught it, which is what
+  the baseline is for. Two things came out of chasing it.
+
+  The larger contributor was **not the data. It was the comment.**
+  `splice/physiology.js` grew 12.3 → 13.8 KB because there is no build step,
+  so prose ships to every player on the first paint. A9's note for the
+  equivalent rule is twelve lines; R149's first draft was twenty-six. Trimmed
+  to eleven, with the measurement left here where it belongs, that returned
+  1.4 of the 2.1 KB.
+
+  The rest was paid by **raising the budget 1030 → 1035, which is the sixth
+  such raise** — and R121's note in that same file says a budget defended case
+  by case is not a budget but a queue. So both structural fixes are now
+  measured and written into the note, rather than left to be rediscovered a
+  seventh time:
+
+  | | back | cost |
+  | --- | ---: | --- |
+  | drop empty `"tags": []` / `"keywords": {}` from the data | **8.5 KB** | no content change at all; needs a read-site audit |
+  | take `enemies.json` out of the eager graph — R81's move, one file over | **45 KB** | its own milestone; `loader.js` fetches one bundle |
+
   **The Scamper is therefore still unanswered, and honestly so.** It is not
   worth a frame against anything the harness can find, and the two obvious
   routes are now closed with measurements rather than opinions. If a later
