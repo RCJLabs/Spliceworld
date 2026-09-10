@@ -202,7 +202,23 @@ const BUDGET = {
   // the same price R89 paid on the Foes tab and for the same reason — it is
   // only paid by a reader who deliberately opened all three, and the ratchet
   // stops it growing further.
-  'dex:combos':   { folded: 550,   tallest: 2700, opens: 3 },
+  //
+  // R141 — 2,700 -> 2,950, measured 2,825, AND THE CAUSE IS NOT THE TAB.
+  //
+  // R136 set 2,700 against 2,606 on a day-180 save holding 197 parts. The
+  // same seed now ends on 228, because the walker churns less once it can
+  // pick a frame instead of taking the first that validates. Twenty-seven
+  // rows either way — what grew is the ROW: an undiscovered pairing's hint
+  // names the halves you are holding, so a fuller vault writes a longer
+  // sentence, and the count of rows that have something to say went up with
+  // it. That is R95's content reach arriving on a screen, not a regression.
+  //
+  // The bound is real and it is not this budget: R91 caps the vault at 260
+  // parts, so the longest this tab can ever get is 27 rows of "you hold both
+  // halves". 2,950 is the same ~4% headroom over the measurement that 2,700
+  // was over 2,606 — if a later milestone finds it at 2,900, the answer is
+  // to page the tab the way R131 paged the Vault, not to move this again.
+  'dex:combos':   { folded: 550,   tallest: 2950, opens: 3 },
   // R129 FOLDS IT, WHICH BRINGS THE SHUT HALF DOWN AND BUDGETS THE FOLD:
   // 1100/1100 -> 400 shut (measured 291) and 1250 open (measured 1185).
   // Twelve genes could only be learned by breeding for them, so this tab

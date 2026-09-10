@@ -3671,6 +3671,18 @@ triangle working, and each region genuinely asks a different question)*.
   census on purpose: a census is satisfied by tagging a rifle `Ground`, and
   the only honest way to ask whether flying is worth a bay is to fly.
 
+  **The Combos tab's budget moved, and the cause is not the tab.** The full
+  battery scored 215/215 and still exited 1 — a clean break score on a red
+  baseline, which is why that rule is written the way it is. `dex:combos`
+  reached 2825px against R136's 2700. The same day-180 seed now ends holding
+  **197 → 228 parts** because the walker churns less, and an undiscovered
+  pairing's hint names the halves you are holding, so a fuller vault writes a
+  longer sentence. Twenty-seven rows either way; the rows got taller. Budget
+  → 2950, the same ~4% headroom R136 left over its own 2606. R91 caps the
+  vault at 260 parts, so the ceiling is 27 rows of "you hold both halves" —
+  if a later milestone finds this at 2900, the answer is to page the tab the
+  way R131 paged the Vault, not to move the number again.
+
   **Carried out of this milestone: the Rumbler is never spliced either.**
   The same reading that found A × 0 says L × 0 on the Theater path — M and S
   validate on every plan, tie the Rumbler on grade sum, and ties go to the

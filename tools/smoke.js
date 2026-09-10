@@ -18198,11 +18198,18 @@ if (inShard('kite')) {
 
   // A frame that flies a body no other frame can is only a REASON if the
   // fight rewards it, so both halves are measured on the same builds.
+  //
+  // Both samples are asserted non-empty first. `gap` over nothing is NaN,
+  // and `NaN <= 4` is false, so an emptied list would fail here with a
+  // number nobody could read instead of the sentence that says what broke —
+  // R99's lesson, one gate over.
   const gap = (rows, ids) => {
     const a = rows.reduce((n, r) => n + rateOver(r.kite.c, ids), 0) / rows.length;
     const s = rows.reduce((n, r) => n + rateOver(r.scamper.c, ids), 0) / rows.length;
     return { a, s, d: a - s };
   };
+  assert.ok(eitherWay.length >= 5,
+    `and it shares the sky with the Scamper, so there is a trade to measure (${eitherWay.length} bodies fly on both, measured 30)`);
   const sample = onlyKite.slice(0, 8);
   const paid = gap(sample, swinging);
   const wasted = gap(sample, shooting);

@@ -100,6 +100,40 @@ breaks (214–218) across five files and five assertions.
 
 **4 Kites across the four gate seeds, on three of them.**
 
+### The full battery scored 215/215 and still exited 1
+
+Which is the exact case CLAUDE.md's rule exists for: *judge every battery
+run by `BATTERY_EXIT`, never the summary line — a clean break score can sit
+on top of a red baseline.* Every one of the 215 breaks was caught and the
+baseline had gone red underneath them, on `tools/height.js`:
+
+> `dex:combos` reaches 2825px when opened, over its 2700px budget
+
+I chased two wrong theories before measuring — that the tab is tallest when
+you have discovered fewest (it is not), and that it was the seed-4242
+fixture (the gate uses **2026**; 4242 was the wrong save entirely). The real
+cause is mundane: the same day-180 seed now ends holding **197 → 228 parts**,
+because the walker churns less once it can pick a frame instead of taking
+the first that validates. Twenty-seven rows either way — what grew is the
+**row**, since an undiscovered pairing's hint names the halves you are
+holding, and a fuller vault writes a longer sentence.
+
+That is R95's content reach arriving on a screen, not a regression, so the
+budget moves to **2950** against the 2825 measurement — the same ~4%
+headroom R136 left over its own 2606. The bound is real and it is not this
+budget: R91 caps the vault at 260 parts, so the tab's ceiling is 27 rows of
+"you hold both halves". **If a later milestone finds it at 2900, the answer
+is to page the tab the way R131 paged the Vault, not to move this again.**
+
+### Verification
+
+| | |
+| --- | --- |
+| `npm test` | ✓ 10/10, 2m19 |
+| full battery | ✓ 215/215 caught, 47m16 |
+| `--baseline` after the height fix | ✓ every gate green, `BASE_EXIT=0` |
+| the 15 HEIGHT breaks, re-run on the new budget | ✓ 15/15 caught |
+
 ### Known issues / carried
 
 - **The Rumbler is never spliced either.** L × 0 on the Theater path — M and
@@ -108,6 +142,13 @@ breaks (214–218) across five files and five assertions.
 - `bestSplice` still fills one part per slot *type*, so it never uses the
   second organ bay Tier II grants. Pre-existing; it makes every measurement
   here a 5-vs-6 comparison where the shipped game is 6-vs-7.
+- **Seed 4242's combo discovery fell 19 → 5.** Across the four gate seeds
+  the total is 47 → 33 and the other three barely moved (11→12, 8→7, 9→9),
+  so this is one campaign's trajectory diverging rather than the
+  combo-seeking bias breaking — I checked that directly by sweeping the lift
+  preference's weight (50/20/15 give 33/32/32 combos, so it is not the lift
+  fill outranking R92's +30 combo bonus). `tools/reach.js` still passes.
+  Worth a second look if another milestone touches the walker's planner.
 
 **Next session's first task:** R148 (the Rumbler), or one of the seventh
 audit's bigger phases — R143 (nothing goes badly wrong) is the one most
