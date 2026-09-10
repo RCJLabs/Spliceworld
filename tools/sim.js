@@ -1179,7 +1179,8 @@ function bestSplice(state, content, wanted = null, wall = null) {
       const byId = new Map(owned.map((t) => [t.id, t]));
       const blank = blankedAgainst(state, content, frameId, slots, wall);
       const score = 10 + Object.values(slots)
-        .reduce((n, id) => n + GRADE_ORDER.indexOf(byId.get(id)?.grade ?? 'standard'), 0) + blank;
+        .reduce((n, id) => n + GRADE_ORDER.indexOf(byId.get(id)?.grade ?? 'standard'), 0)
+        + blank + grindAgainst(content, frameId, wall);
       if (!best || score > best.score) best = { frameId, slots, score, blank };
     }
   }
@@ -1229,6 +1230,48 @@ function blankedAgainst(state, content, frameId, slots, wall) {
     }
   }
   return thrown ? Math.round(blanked / thrown * BLANK_WORTH) : 0;
+}
+
+// R148 — WHAT MASS BUYS AGAINST THE WALL IN FRONT.
+//
+// The grade sum ties the three six-bay chassis on almost every plan — with
+// the Rumbler unlocked it tied the winner in 250 of 321 splice decisions —
+// and a tie goes to whichever frame the loop reaches first, which is why six
+// campaigns spliced 79 Trotters and no Rumblers at all.
+//
+// A tie-break is not a reason, though, so this is the reason: bulk is worth a
+// frame against a LONG fight and costs you in a short one (+2.3pp and -0.0pp
+// after R148's repricing). What predicts how long a fight runs is not how
+// hard the wall swings — that correlates at r = +0.08 — but how many typical
+// hits it takes to clear: total health over the size of an average move,
+// r = +0.57 across the 26 encounters, the best of nine things measured.
+//
+// Both halves are read off the table rather than named, so an encounter added
+// to enemies.json moves this with no edit here. Worth at most two grade steps
+// — enough to break a tie the grade sum leaves, and never enough to outrank a
+// real difference in the parts on offer.
+const GRIND_WORTH = 2;
+function grindAgainst(content, frameId, wall) {
+  if (!wall) return 0;
+  const hitsToClear = (enc) => {
+    let hp = 0; let power = 0; let moves = 0;
+    for (const uid of enc.waves ?? []) {
+      const unit = content.enemies[uid];
+      if (!unit) continue;
+      hp += unit.hp ?? 0;
+      for (const move of (unit.moves ?? [])) { const p = move.power ?? 0; if (p) { power += p; moves++; } }
+    }
+    return moves && power ? hp / (power / moves) : 0;
+  };
+  const across = Object.values(content.encounters).map(hitsToClear);
+  const low = Math.min(...across);
+  const high = Math.max(...across);
+  if (!(high > low)) return 0;
+  const grind = Math.min(1, Math.max(0, (hitsToClear(wall) - low) / (high - low)));
+  const heaviest = Math.max(...Object.values(content.frames).map((f) => f.phys?.mass ?? 0));
+  if (!heaviest) return 0;
+  const bulk = (content.frames[frameId]?.phys?.mass ?? 0) / heaviest;
+  return Math.round(grind * bulk * GRIND_WORTH);
 }
 
 // R92 — how many stalls the opportunistic creators leave alone. A quarter of

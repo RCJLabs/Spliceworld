@@ -107,6 +107,9 @@ const SHARD_OF = {
   // R141 — the Kite gate flies ~4,400 battles to ask whether a frame is worth
   // its missing bay. Shard a, beside the other two light blocks.
   kite: 'a',
+  // R148 — the chassis ladder, which benches three frames over every whole
+  // animal in the catalogue. Shard b.
+  bulk: 'b',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -14983,15 +14986,22 @@ if (inShard('contest')) {
     console.log(`   frames built: ${frames}`);
     assert.ok(kites.filter((n) => n > 0).length >= 2,
       `a campaign builds a Kite when the wall in front of it swings (${frames})`);
-    // Not asserted here, and worth writing down where the next reader of this
-    // block will see it: the same line says the RUMBLER is never spliced
-    // either — M and S validate on every plan, they tie the L on grade sum,
-    // and ties go to the earlier frame. The three Rumblers in the old
-    // six-campaign census came off the Reorientation Wing, not the Theater.
-    // That is a second frame with no reason to be chosen and it is R148's,
-    // not R141's: this milestone's criterion is the Kite.
-    assert.ok((shapes[0].framesBuilt.M ?? 0) > 0 && (shapes[0].framesBuilt.S ?? 0) > 0,
-      `and the frames that were always reachable still are (${frames})`);
+    // R148 — AND EVERY CHASSIS THE THEATER SELLS GETS WORN BY SOMEBODY.
+    //
+    // R141 left this as a note rather than a rule, because the same reading
+    // said L x 0 too and that was the next milestone's criterion, not its
+    // own. Both are answered now: the Rumbler ties the Trotter on grade sum
+    // in 250 of 321 decisions and lost every one of them to the iteration
+    // order, and a tie-break is not a reason — so `grindAgainst` gives it
+    // one, and R148's repricing makes that reason true.
+    //
+    // Counted over every splice rather than the survivors, because the stable
+    // cap recycles on grade and a five-bay Kite goes first. Measured across
+    // six campaigns: M 55, S 31, L 25, A 3, against M 79, S 33, A 4, L 0.
+    for (const id of Object.keys(content.frames)) {
+      assert.ok(shapes.some((w) => (w.framesBuilt[id] ?? 0) > 0),
+        `every chassis the Theater sells gets worn by somebody — ${content.frames[id].name} never was (${frames})`);
+    }
     // R25 priced $24,000 of facility depth and the walk had never bought a
     // dollar of it. R83 then measured every track maxing on every seed by
     // day 28 — real depth, exhausted before the county even fell, which is
@@ -18267,6 +18277,127 @@ if (inShard('kite')) {
 
   console.log(`   R141 Kite: ${onlyKite.length} bodies fly on it alone — ${paid.d.toFixed(1)}pp over a Scamper `
     + `on the ${swinging.length} walls that swing, ${wasted.d.toFixed(1)}pp on the ${shooting.length} that shoot`);
+}
+
+// ---------------------------------------------------------------------------
+// R148 — THE CHASSIS IS A COIN-FLIP, AND THE BIGGEST COIN IS WEIGHTED.
+//
+// R141 found the Kite unbuildable and fixed it. The same reading said L x 0
+// on the Theater path, and this is that: across six 180-day campaigns the
+// walker splices 79 Trotters, 33 Scampers, 4 Kites and NO Rumblers. The
+// mechanism is not preference — with the Rumbler unlocked it ties the winner
+// in 250 of 321 splice decisions and loses every one of them, because the
+// plan's score is a grade sum and ties go to the earlier frame.
+//
+// But the entry filed for it had the balance backwards, and that is the part
+// worth keeping. Bulk was never weak. Identical parts, prime, team of three,
+// measured on the live band:
+//
+//     Scamper 46.9%   Trotter 47.6%   Rumbler 52.5%
+//
+// Two chassis that are the same creature to within 0.7pp, and a third that is
+// quietly the best in the game. The M->L step decomposes exactly: +6 hp
+// (+1.7pp), +6 stamina (+1.8pp), +2 regen (+1.2pp) against -2 speed (-0.8pp)
+// and +80 mass (-0.4pp). Four and a half points of stats for one of cost.
+//
+// WHY THE PRICE COULD NOT BE PAID IN SPEED, which is the finding under the
+// finding. Speed is a THRESHOLD, not a rate: it buys turn order and nothing
+// else, so it is worth a great deal while you are near your opponent and
+// nothing at all once you are under them. Median effective speed is Scamper
+// 10, Trotter 7, Rumbler 4 — against an enemy median of ELEVEN. The Rumbler
+// already loses initiative to almost everything it meets, so slowing it
+// further is free, and every point of bulk above that floor is unpriced.
+//
+// So the Rumbler pays in hp and in mass instead (36 -> 28, 160 -> 400), and
+// what is left is a shape rather than a bonus: it is the worst chassis in a
+// short fight and the best in a long one. Which is the whole rule below —
+// asserted in BOTH directions, because a frame that wins everywhere is not a
+// choice, and that is exactly the state this milestone found.
+if (inShard('bulk')) {
+  const { makeSimChimera: mkBulk, scriptedBattle: bulkFight } = await import('./sim.js');
+  const BAYS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+  const SIX = ['S', 'M', 'L'];
+  for (const f of SIX) {
+    assert.deepEqual(content.frames[f].slots ?? BAYS, BAYS,
+      `${f}: the three chassis this rule compares all carry the same six bays, so the FRAME is the only variable`);
+  }
+  // Purebred bodies only: a mixed build measures the parts, and the question
+  // here is the chassis. Every one of them is buildable out of parts that
+  // still exist, which is R72's rule and the reason this reads the catalogue.
+  const purebred = [...new Set(Object.values(content.parts).map((p) => p.species))].filter(Boolean)
+    .filter((sp) => BAYS.every((bay) => content.parts[`${sp}_${bay}`]));
+  assert.ok(purebred.length >= 20,
+    `enough whole animals to average over (${purebred.length} species carry all six bays, measured 38)`);
+
+  const SEEDS = 8;
+  // Every chassis against every encounter ONCE, then aggregated. The first
+  // cut benched the Trotter to build the buckets and then benched all three
+  // again over them, which is the same 24,000 battles twice; R90's rule is
+  // that the suite stays under three minutes, and this block is the biggest
+  // single thing in its shard.
+  const cell = {};
+  for (const frame of SIX) {
+    cell[frame] = {};
+    for (const sp of purebred) {
+      const c = mkBulk(frame, BAYS.map((bay) => `${sp}_${bay}`), 'prime', content);
+      for (const id of Object.keys(content.encounters)) {
+        const acc = (cell[frame][id] ??= { wins: 0, turns: 0, n: 0 });
+        for (let i = 0; i < SEEDS; i++) {
+          const r = bulkFight(c, content.encounters[id], content, 60000 + i, 3);
+          acc.n++; acc.turns += r.turns; if (r.outcome === 'win') acc.wins++;
+        }
+      }
+    }
+  }
+  const over = (frame, ids) => {
+    let wins = 0; let turns = 0; let n = 0;
+    for (const id of ids) { const a = cell[frame][id]; wins += a.wins; turns += a.turns; n += a.n; }
+    return { win: (wins / n) * 100, turns: turns / n };
+  };
+
+  // THE YARDSTICK IS MEASURED ON THE TROTTER AND THEN HELD STILL, so a
+  // chassis cannot move the band it is being judged against. Each encounter
+  // is bucketed by how long the middle frame takes to resolve it, and only
+  // fights whose outcome can actually move are counted: a 0% wall and a 100%
+  // walkover both report the same number for every chassis in the game.
+  const ref = {};
+  for (const id of Object.keys(content.encounters)) ref[id] = over('M', [id]);
+  const live = Object.keys(ref).filter((id) => ref[id].win > 5 && ref[id].win < 95);
+  const short = live.filter((id) => ref[id].turns < 9);
+  const long = live.filter((id) => ref[id].turns >= 11);
+  assert.ok(live.length >= 10, `enough fights whose outcome is in play (${live.length} of ${Object.keys(ref).length}, measured 15)`);
+  assert.ok(short.length >= 3, `and some of them are short (${short.length} under 9 turns, measured 4)`);
+  assert.ok(long.length >= 4, `and some are a grind (${long.length} at 11 turns or more, measured 7)`);
+
+  const on = Object.fromEntries(SIX.map((f) => [f, {
+    live: over(f, live).win, short: over(f, short).win, long: over(f, long).win,
+  }]));
+
+  // 1. NO CHASSIS IS SIMPLY BETTER. Measured 1.3pp across the three after the
+  //    repricing, against 5.5pp before it — and 5.5 is what "the Rumbler is
+  //    the best frame in the game" looks like as a number.
+  const spread = Math.max(...SIX.map((f) => on[f].live)) - Math.min(...SIX.map((f) => on[f].live));
+  const table = SIX.map((f) => `${f} ${on[f].live.toFixed(1)}%`).join(' · ');
+  assert.ok(spread <= 3,
+    `no chassis is simply better than the others over the whole live band (${table} — ${spread.toFixed(1)}pp apart, ceiling 3, measured 1.3)`);
+
+  // 2. BULK IS WORTH A FRAME AGAINST A GRIND. Measured +2.6pp.
+  const grind = on.L.long - on.S.long;
+  assert.ok(grind >= 1.5,
+    `and bulk is worth the frame against a long one (Rumbler ${on.L.long.toFixed(1)}% vs Scamper ${on.S.long.toFixed(1)}% `
+    + `over ${long.length} grinding fights, +${grind.toFixed(1)}pp, floor 1.5, measured +2.6)`);
+
+  // 3. AND COSTS YOU IN A SHORT ONE. Measured -0.2pp, against +2.7 before.
+  //    Without this half the rule passes on a Rumbler that was simply handed
+  //    better numbers, which is the defect the milestone exists to remove.
+  const dash = on.L.short - on.S.short;
+  assert.ok(dash <= 1,
+    `and costs you when the fight is over quickly — a chassis that wins everywhere is not a choice `
+    + `(Rumbler ${on.L.short.toFixed(1)}% vs Scamper ${on.S.short.toFixed(1)}% over ${short.length} short fights, `
+    + `${dash >= 0 ? '+' : ''}${dash.toFixed(1)}pp, ceiling 1, measured -0.2)`);
+
+  console.log(`   R148 chassis: ${table} over ${live.length} live fights (${spread.toFixed(1)}pp apart) — `
+    + `the Rumbler ${grind >= 0 ? '+' : ''}${grind.toFixed(1)}pp in a grind, ${dash >= 0 ? '+' : ''}${dash.toFixed(1)}pp in a dash`);
 }
 
 //

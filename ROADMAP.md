@@ -3543,6 +3543,84 @@ triangle working, and each region genuinely asks a different question)*.
 
 ---
 
+### 9.20 The chassis was a coin-flip (R148) — carried out of R141
+
+- **R148 — The Rumbler is a trade, not a staircase.** ✅ *Shipped.*
+
+  R141 carried this out with its own evidence: **L × 0** on the Theater path.
+  All three of the entry's claims held. Across six 180-day campaigns the
+  walker splices 79 Trotters, 33 Scampers, 4 Kites and no Rumblers; with the
+  Rumbler unlocked it **ties the winner in 250 of 321 splice decisions** and
+  loses every one of them, because the plan's score is a grade sum and ties
+  go to whichever frame the loop reaches first; and the one Rumbler in the
+  old census — "Ingot Mk IX", level 0, all-prime — came off the Reorientation
+  Wing, not the Surgery Theater.
+
+  **But the entry had the balance backwards, and that is the finding.** Bulk
+  was never weak. Identical parts, prime, team of three, over the live band:
+
+  | | Scamper | Trotter | Rumbler |
+  | --- | ---: | ---: | ---: |
+  | before | 46.9% | 47.6% | **52.5%** |
+  | after | 46.9% | 47.6% | 48.2% |
+
+  Two chassis that were the same creature to within 0.7pp, and a third that
+  was quietly the best in the game. The M→L step decomposes exactly: **+6 hp
+  (+1.7pp), +6 stamina (+1.8pp), +2 regen (+1.2pp)** against **−2 speed
+  (−0.8pp) and +80 mass (−0.4pp)** — four and a half points of stats for one
+  of cost, and the measured net is +3.2pp.
+
+  #### Why the price could not be paid in speed
+
+  The finding under the finding, and it is A9's sentence about the Airborne
+  tag turning out to be true of the frames as well. **Speed is a threshold,
+  not a rate:** it buys turn order and nothing else, so it is worth a great
+  deal while you are near your opponent and nothing at all once you are under
+  them. Median effective speed is Scamper 10, Trotter 7, Rumbler 4 — against
+  an enemy median of **eleven**. The Rumbler already loses initiative to
+  almost everything it meets, so slowing it further is free, and every point
+  of bulk above that floor is unpriced.
+
+  So it pays in health and in mass instead — **hp 36 → 28, mass 160 → 400,
+  stamina 54 → 52** — and what is left is a shape rather than a bonus:
+
+  | | short fights | long fights |
+  | --- | ---: | ---: |
+  | Rumbler − Scamper, before | +2.7pp | +6.5pp |
+  | Rumbler − Scamper, after | **−0.2pp** | **+2.6pp** |
+
+  The three chassis are 1.3pp apart over the live band, from 5.5pp. The
+  Rumbler is now the worst chassis in a short fight and the best in a grind,
+  which is the criterion read literally.
+
+  #### A tie-break is not a reason
+
+  Fixing the iteration order alone would have made the Rumbler the
+  unconditional pick, so `bestSplice` gets a reason instead. What predicts
+  how long a fight runs is **not** how hard the wall swings — that
+  correlates at r = +0.08 — but how many typical hits it takes to clear:
+  total health over the size of an average move, **r = +0.57**, the best of
+  nine quantities measured. Both halves are read off the encounter table
+  rather than named, and it is worth at most two grade steps: enough to break
+  a tie, never enough to outrank a real difference in the parts on offer.
+
+  Result: **M 55 · S 31 · L 25 · A 3** across six campaigns, against
+  M 79 · S 33 · A 4 · L 0. Every chassis the Theater sells is now worn.
+
+  *Done when: bulk is worth a frame against something, a campaign splices one
+  for that reason, and the gate says which.* The gate asserts all three, and
+  the second direction is the one that matters — a chassis that wins
+  everywhere is not a choice, and that is exactly the state this found.
+
+  **The briefing had to be taught the same lesson, and a gate caught it.**
+  `memberScore` shortlists teams on health, reach and armour, which was a
+  fair proxy while the frames were a staircase. Repriced, maxHp reads
+  **109 / 111 / 109** across the three — three numbers that say nothing —
+  while stamina reads 55 / 61 / 65. R123's gate found the suggestion landing
+  **7.5pp off the best team** on its worst roster against a bar of 5, before
+  any player could. Stamina and regen now enter the score at their measured
+  worth relative to health (1 and 2).
+
 ### 9.19 The frame nobody wore (R141) — seventh audit
 
 - **R141 — The Kite Frame is the only way to fly something heavy.** ✅
@@ -3683,13 +3761,20 @@ triangle working, and each region genuinely asks a different question)*.
   if a later milestone finds this at 2900, the answer is to page the tab the
   way R131 paged the Vault, not to move the number again.
 
+  **Carried out of §9.20, in turn: the Scamper and the Trotter are the same
+  creature** — 46.9% and 47.6% over the live band, and identical in a long
+  fight. **R149 — the Scamper has no reason to be picked either.** *Done
+  when: speed is worth a frame against something, a campaign splices a
+  Scamper for that reason, and the gate says which.* The obstacle is already
+  measured: speed is a threshold stat and the Scamper sits at 10 against an
+  enemy median of 11, so more of it helps everywhere rather than somewhere.
+
   **Carried out of this milestone: the Rumbler is never spliced either.**
   The same reading that found A × 0 says L × 0 on the Theater path — M and S
   validate on every plan, tie the Rumbler on grade sum, and ties go to the
   earlier frame. The three Rumblers in the old census came off the
-  Reorientation Wing. **R148 — the Rumbler has no reason to be picked.**
-  *Done when: bulk is worth a frame against something, a campaign splices
-  one for that reason, and the gate says which.*
+  Reorientation Wing. **R148 — the Rumbler has no reason to be picked.** ✅
+  **Shipped — see §9.20.**
 
 ### 9.17 Half the agenda did nothing (R137) — carried debt, asked for directly
 

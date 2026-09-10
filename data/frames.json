@@ -441,9 +441,9 @@
         }
       },
       "phys": {
-        "mass": 160,
-        "hp": 36,
-        "stamina": 54,
+        "mass": 400,
+        "hp": 28,
+        "stamina": 52,
         "regen": 11,
         "speed": 0
       },
