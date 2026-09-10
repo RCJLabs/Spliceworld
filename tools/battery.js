@@ -3644,6 +3644,25 @@ const BREAKS = [
     to: '    if (true) { lines.push(`${r.id} exempt (entry point)`); continue; }',
   },
   {
+    // R144 — and the foundry wall goes back to contradicting its own
+    // briefing. It reads "Gas does nothing to a machine ... they are Ground
+    // class, so Air anatomy still flies over the top" while fielding one unit
+    // of EACH class against a declared bench of two: every archetype scored
+    // 0-25% and no anatomy answered it. Putting the crane and the quench rig
+    // back is putting the lie back.
+    n: 228, gate: REGIONS, name: 'the foundry wall stops being what its own briefing says, and answers nobody',
+    file: 'data/enemies.json',
+    anchor: `      "waves": [
+        "slag_hauler",
+        "arc_welder_rig"
+      ],`,
+    to: `      "waves": [
+        "quench_rig",
+        "slag_hauler",
+        "gantry_crane"
+      ],`,
+  },
+  {
     // R144 — the gate's own reading of the wall. `benchTeam` is why the
     // seventh audit and this milestone's first draft both measured the wrong
     // fight: foundry_gate fields three units against a declared bench of two,
@@ -3654,6 +3673,20 @@ const BREAKS = [
     file: 'tools/smoke.js',
     anchor: '    const team = node.benchTeam ?? r.benchTeam ?? 3;',
     to: '    const team = 3;',
+  },
+  {
+    // R144 — THE DEFECT THIS MILESTONE ACTUALLY SHIPPED, put back. The new
+    // block was first called `regions`, which R90's table had already bound
+    // forty lines above. JS does not error on that; it takes the later entry.
+    // So a block nobody had touched moved from shard c to shard b, and R90's
+    // two union rules both stayed green — they read `Object.keys(SHARD_OF)`,
+    // and a duplicate key is gone before `keys` can see it. The third rule
+    // reads the table's source, which is the only place the second `regions:`
+    // still exists.
+    n: 230, gate: UNION, name: 'a block is assigned a shard twice, and the one nobody touched changes lanes silently',
+    file: 'tools/smoke.js',
+    anchor: "  walls: 'b',",
+    to: "  regions: 'b',",
   },
   {
     // R141 — the per-encounter flight rule. A9 wrote it per-unit, R141 moved

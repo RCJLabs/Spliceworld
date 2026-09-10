@@ -115,9 +115,15 @@ const SHARD_OF = {
   // R143 — the empire's books. Three 180-day walks at ~15s each, so it is
   // worth sharding; shard a is the lightest of the four.
   empire: 'a',
-  // R144 — the region questions. Three walks to derive the arrival grade,
-  // then six archetypes against five first nodes. Shard b.
-  regions: 'b',
+  // R144 — the region walls. Six archetypes against five first nodes, at the
+  // grade and team size each node declares. Shard b.
+  //
+  // NOT `regions`: that name was taken, forty lines above, by R90's block —
+  // and the duplicate key did not error, it WON. A block nobody had touched
+  // changed lanes silently, and both rules below passed while it happened,
+  // because duplicate keys collapse before either can see them. Hence the
+  // third rule, which reads the table's source rather than the table.
+  walls: 'b',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -146,6 +152,23 @@ const inShard = (name) => {
   const unused = [...owned].filter((n) => !used.has(n)).sort();
   assert.deepEqual(unused, [],
     `every shard entry guards something (dead entries: ${unused.join(', ')})`);
+  // R144 — AND NO NAME IS BOUND TWICE. This milestone added a second
+  // `regions` entry to a table that already had one, and JS took the later:
+  // a block nobody had touched moved lanes, and both rules above stayed green
+  // because a duplicate key is gone by the time `Object.keys` sees it. So
+  // read the SOURCE of the table rather than the object it builds — the same
+  // reason the two rules above read `inShard(...)` off the file.
+  const table = src.slice(src.indexOf('const SHARD_OF = {'));
+  const body = table.slice(0, table.indexOf('\n};')).split('\n')
+    .filter((l) => !l.trim().startsWith('//')).join('\n');
+  const keys = [...body.matchAll(/([a-z0-9]+):\s*'[a-z]'/g)].map((m) => m[1]);
+  assert.ok(keys.length >= Object.keys(SHARD_OF).length,
+    `the table's source is being read (found ${keys.length} entries for ${Object.keys(SHARD_OF).length} blocks)`);
+  const twice = [...new Set(keys.filter((n, i) => keys.indexOf(n) !== i))].sort();
+  assert.deepEqual(twice, [],
+    `no block is assigned a shard twice — the later entry wins, and nothing else says so `
+    + `(bound twice: ${twice.join(', ')})`);
+
   // And the shards are the ones the runner actually spawns.
   const lanes = new Set(Object.values(SHARD_OF));
   assert.deepEqual([...lanes].sort(), ['a', 'b', 'c', 'd'],
@@ -18618,7 +18641,7 @@ if (inShard('empire')) {
 // trained, three different creatures. The walker clears foundry carrying a
 // prime-mean roster; a bare prime archetype wins 25% there. Two different
 // quantities, and only one of them is what the field claims.
-if (inShard('regions')) {
+if (inShard('walls')) {
   const { makeSimChimera: mkR144, scriptedBattle: fightR144,
     ARCHETYPES: ARCH, partsOnFrame: onFrame } = await import('./sim.js');
 
@@ -18667,9 +18690,16 @@ if (inShard('regions')) {
   // So the field guide's "each region asks a different question" is a promise
   // about the regions you CHOOSE to enter. The one you start in asks whether
   // you can play at all, which is a different and more important question.
+  //
+  // AND THE EXEMPTION IS COUNTED, because a rule with nothing to look at
+  // passes. Widen that one condition and every region skips the loop, every
+  // assertion below stops being reached, and the block prints a tidy line of
+  // exemptions and goes green. The count is what makes the skip a failure.
   const lines = [];
+  let measured = 0;
   for (const r of Object.values(content.regions)) {
     if (!r.requires) { lines.push(`${r.id} exempt (entry point)`); continue; }
+    measured++;
     const node = r.nodes[0];
     const grade = node.benchGrade ?? r.benchGrade;
     const team = node.benchTeam ?? r.benchTeam ?? 3;
@@ -18684,7 +18714,10 @@ if (inShard('regions')) {
     const lo = Math.min(...scored.map(([, v]) => v));
     lines.push(`${r.id}/${grade}x${team} ${Math.round(hi * 100)}-${Math.round(lo * 100)}%`);
   }
-  console.log(`   R144 regions: ${lines.join(' · ')}`);
+  assert.equal(measured, Object.keys(content.regions).length - 1,
+    `every region but the entry point was actually measured, or the exemption above is a hole `
+    + `(measured ${measured} of ${Object.keys(content.regions).length - 1})`);
+  console.log(`   R144 walls: ${lines.join(' · ')}`);
 }
 
 if (inShard('camo')) {
