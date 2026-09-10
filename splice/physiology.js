@@ -44,6 +44,21 @@ function airborneTags(tags, canFly) {
   return canFly ? list : list.filter((t) => t !== 'Airborne');
 }
 
+// R149 — AND CAMO IS A CLAIM ABOUT ARMOUR, on exactly A9's pattern. Camo
+// shipped carrying ONE chart row and it was a downside (`Sonic > Camo x1.5`),
+// so the six chameleon parts were a pure liability: anatomy that made you
+// easier to kill and never once made you harder. It has an upside now
+// (`Aimed > Camo x0`, the fifteen coalition moves that have to point at
+// you), so the tag has to be EARNED. Armour comes from hides and nothing
+// else — 42 of 42 hides carry it, 0 of the other 202 parts, none from any
+// chassis — so the price of hiding is one bay: chameleon anatomy says the
+// creature can disappear, and a steel plate bolted over it says otherwise.
+// Worth +4.7pp against walls that aim and -18.0pp against walls that echo,
+// over sixteen builds; the measurement is in ROADMAP §9.21.
+function camoTags(list, armor) {
+  return armor > 0 ? list.filter((t) => t !== 'Camo') : list;
+}
+
 export function analyze(frameId, tokens, content, socketCount = 6) {
   // R79 - a save holds the frame id, so a retired chassis arrives here on
   // the battle and sim paths as well as the screen. The stand-in carries a
@@ -263,7 +278,7 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
     flight: { hasLiftSurface, lift, capable: canFly },
     creatureClass,
     classVotes,
-    tags: airborneTags(tags, canFly),
+    tags: camoTags(airborneTags(tags, canFly), stats.armor ?? 0),
     speciesCount,
     purebredSpecies,
     instability,

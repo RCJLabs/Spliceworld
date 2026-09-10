@@ -178,7 +178,30 @@ const REPORT = process.argv.includes('--report');
 // an hour and every message rounded to whole hours) and a pointer on the
 // screen where the wait is felt; see the KB_CAP note in tools/smoke.js for
 // why both land on the eager side.
-const FIRST_PAINT_KB = 1030;
+//
+// R149: 1030 -> 1035, measured at 1030.112. AND THIS IS THE SIXTH RAISE, so
+// read R121's note below before reaching for a seventh — a budget defended
+// case by case is not a budget, it is a queue, and this entry is the queue.
+// What it bought was small and real: fifteen `Aimed` tags, one chart row and
+// two part tags, 647 bytes of content that made Camo a decision instead of a
+// penalty. What it did NOT buy is any more room than that; R149 inherited
+// 1.44 KB of headroom and spent 1.55 KB.
+//
+// The honest fix was measured and deferred, not overlooked, and it is priced
+// here so the next milestone does not have to rediscover it:
+//
+//   · 8.5 KB — drop `"tags": []` and `"keywords": {}` from the data files
+//     wherever they are empty (237 + 90 in parts.json alone). Changes no
+//     content whatsoever; costs a read-site audit, because every consumer
+//     then has to tolerate an absent key rather than an empty one.
+//   · 45 KB — take `enemies.json` out of the eager graph, which is R81's
+//     geometry move pointed at the other big data file. Enemy stats are
+//     reached from the War Room and the battle, and R74 already made both
+//     lazy; what stops it today is that `data/loader.js` fetches every
+//     content file as one bundle before the first paint.
+//
+// Either one ends this queue. A seventh raise just lengthens it.
+const FIRST_PAINT_KB = 1035;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //

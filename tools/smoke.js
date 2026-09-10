@@ -110,6 +110,8 @@ const SHARD_OF = {
   // R148 — the chassis ladder, which benches three frames over every whole
   // animal in the catalogue. Shard b.
   bulk: 'b',
+  // R149 — the Camo trade, benched with and without a plate. Shard a.
+  camo: 'a',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -18398,6 +18400,120 @@ if (inShard('bulk')) {
 
   console.log(`   R148 chassis: ${table} over ${live.length} live fights (${spread.toFixed(1)}pp apart) — `
     + `the Rumbler ${grind >= 0 ? '+' : ''}${grind.toFixed(1)}pp in a grind, ${dash >= 0 ? '+' : ''}${dash.toFixed(1)}pp in a dash`);
+}
+
+// ---------------------------------------------------------------------------
+// R149 — A TAG THAT ONLY EVER COST YOU SOMETHING.
+//
+// Camo shipped with exactly one chart row and it was a downside: `Sonic ≫ Camo
+// ×1.5`, "a shape you cannot see still echoes". So the six chameleon parts
+// were a pure liability — anatomy that made a creature easier to kill and
+// never once made it harder. R141 found Ground priced at a fifth of its value;
+// this one was priced below zero, and no gate could say so because nothing
+// asked whether a defensive tag defends.
+//
+// It has an upside now — `Aimed → Camo ×0`, against the fifteen enemy moves
+// that have to point at you — so the tag has to be EARNED. Armour comes from
+// hides and from nothing else (42 of 42 hides carry it, 0 of the other 202
+// parts do, and no chassis carries any), so Camo is a rule about one bay:
+// chameleon anatomy says the creature can disappear, and a plate bolted over
+// it says otherwise. Same shape as A9's rule for Airborne, one tag over.
+//
+// WHAT THIS IS NOT. R149 set out to give the Scamper a reason to exist and
+// could not: going first is a flat per-turn effect that saturates, and a
+// five-bay chassis costs ~19pp against total immunity to a whole weapon
+// class's 22%. §9.21 has the arithmetic. The Scamper still has six bays and
+// still has no identity; what shipped is the tag that was broken on the way
+// past, and this gate is about the tag.
+if (inShard('camo')) {
+  const { makeSimChimera: mkCamo, scriptedBattle: camoFight } = await import('./sim.js');
+  const { analyze: camoAnalyze } = await import('../splice/physiology.js');
+
+  // 1. BOTH DIRECTIONS EXIST, read off the chart rather than named. A tag with
+  //    only one sign is the defect this milestone found.
+  const asDefender = content.tagChart.filter((r) => r.defender === 'Camo');
+  const helps = asDefender.filter((r) => r.mult != null && r.mult < 1);
+  const hurts = asDefender.filter((r) => r.mult != null && r.mult > 1);
+  assert.ok(helps.length, `Camo defends against something (${asDefender.map((r) => `${r.attack} x${r.mult}`).join(', ') || 'nothing'})`);
+  assert.ok(hurts.length, 'and is still punished by something, or it is a free tag');
+  const dodged = new Set(helps.map((r) => r.attack));
+  const echoes = new Set(hurts.map((r) => r.attack));
+
+  // 2. EARNED, NOT CLAIMED. The same anatomy, with and without a plate.
+  const BAYS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+  const wearing = (body, tail, bays, grade = 'prime') => {
+    const ids = bays.map((b) => (b === 'tail' ? tail : `${body}_${b}`)).filter((p) => content.parts[p]);
+    const c = mkCamo('M', ids, grade, content);
+    const a = camoAnalyze('M', Object.values(c.tokens), content, ids.length);
+    return { c, camo: (a.tags ?? []).includes('Camo'), armor: a.stats.armor ?? 0 };
+  };
+  const naked = BAYS.filter((b) => b !== 'hide');
+  const plated = wearing('bear', 'chameleon_tail', BAYS);
+  const hidden = wearing('bear', 'chameleon_tail', naked);
+  const plainNaked = wearing('bear', 'bear_tail', naked);
+  assert.ok(plated.armor > 0 && !plated.camo, `a plate gives it away (armour ${plated.armor}, camo ${plated.camo})`);
+  assert.ok(hidden.armor === 0 && hidden.camo, 'the same anatomy with the hide bay empty disappears');
+  assert.ok(!plainNaked.camo, 'and an empty hide bay alone is not a disguise — the anatomy still has to claim it');
+
+  // 3. THE WALL IT ANSWERS, derived from the chart's own attack tags.
+  const shareOf = (enc, tags) => {
+    let hit = 0; let all = 0;
+    for (const uid of enc.waves ?? []) {
+      for (const move of (content.enemies[uid]?.moves ?? [])) {
+        const power = move.power ?? 0;
+        if (!power) continue;
+        all += power;
+        if ((move.tags ?? []).some((t) => tags.has(t))) hit += power;
+      }
+    }
+    return all ? hit / all : 0;
+  };
+  const ids = Object.keys(content.encounters);
+  const aimedAt = ids.filter((id) => shareOf(content.encounters[id], dodged) >= 0.35
+    && shareOf(content.encounters[id], echoes) === 0);
+  const echoing = ids.filter((id) => shareOf(content.encounters[id], echoes) > 0);
+  assert.ok(aimedAt.length >= 3,
+    `enough walls point a weapon at you and carry nothing that echoes (${aimedAt.length}, measured 5)`);
+  assert.ok(echoing.length >= 5, `and enough of them echo (${echoing.length}, measured 8)`);
+
+  // 4. AND IT IS NEVER A FREE RIDE. R141's rule, one tag over: a flier that
+  //    nothing in the wave can touch is a cutscene, and so is a ghost.
+  for (const id of ids) {
+    const share = shareOf(content.encounters[id], dodged);
+    assert.ok(share < 1,
+      `${content.encounters[id].name}: something in the wave can still find it (${Math.round(share * 100)}% of its damage is aimed)`);
+  }
+
+  // 5. THE TRADE, BOTH WAYS. Same body, same tail, one bay's difference —
+  //    across every grade the Theater sells, because ONE GRADE IS NOT A
+  //    MEASUREMENT. Pinned at prime alone this read +1.7pp and at prismatic
+  //    +8.3pp off the identical rule: the aimed walls are near a body's
+  //    ceiling at some grades, and a stat that cannot move a fight it was
+  //    already winning looks worthless. Sixteen builds, four grades.
+  const GRADES = ['standard', 'prime', 'apex', 'prismatic'];
+  const rate = (c, list) => {
+    let wins = 0; let n = 0;
+    for (const id of list) for (let i = 0; i < 12; i++) {
+      n++;
+      if (camoFight(c, content.encounters[id], content, 70000 + i, 3).outcome === 'win') wins++;
+    }
+    return (wins / n) * 100;
+  };
+  const bodies = ['bear', 'tiger', 'goat', 'rhino'].filter((b) => content.parts[`${b}_head`]);
+  const builds = bodies.flatMap((b) => GRADES.map((g) => [b, g]));
+  const mean = (pick, list) => builds
+    .reduce((n, [b, g]) => n + rate(wearing(b, 'chameleon_tail', pick, g).c, list), 0) / builds.length;
+  const paidA = mean(naked, aimedAt) - mean(BAYS, aimedAt);
+  const paidE = mean(naked, echoing) - mean(BAYS, echoing);
+  assert.ok(paidA >= 2,
+    `taking the plate off is worth it against a wall that has to aim `
+    + `(+${paidA.toFixed(1)}pp over ${builds.length} builds, floor 2, measured +4.7)`);
+  assert.ok(paidE <= -5,
+    `and gets you killed by anything that echoes — a tag with no downside is not a decision `
+    + `(${paidE.toFixed(1)}pp against ${echoing.length} walls that carry ${[...echoes].join('/')}, ceiling -5, measured -18)`);
+
+  console.log(`   R149 camo: ${[...dodged].join('/')} x0 against it, ${[...echoes].join('/')} x1.5 through it — `
+    + `+${paidA.toFixed(1)}pp on the ${aimedAt.length} walls that aim, ${paidE.toFixed(1)}pp on the ${echoing.length} that echo`);
 }
 
 //

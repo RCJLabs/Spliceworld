@@ -4982,7 +4982,8 @@
         "cost": 18,
         "acc": 100,
         "tags": [
-          "Venomous"
+          "Venomous",
+          "Aimed"
         ],
         "keywords": {
           "venom": 2,
@@ -6622,7 +6623,9 @@
         "power": 52,
         "cost": 22,
         "acc": 94,
-        "tags": [],
+        "tags": [
+          "Aimed"
+        ],
         "keywords": {
           "knockback": true
         }
