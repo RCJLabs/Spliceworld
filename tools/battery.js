@@ -307,6 +307,14 @@ const FACILITY = ['node', '-e',
 const RELEASE = ['node', '-e',
   "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
 
+// R141 — THE KITE FRAME IS THE ONLY WAY TO FLY SOMETHING HEAVY. Eight bodies
+// fly on it and on nothing else, they are worth 14.8pp more there than on a
+// Scamper against a wall that swings low, and 0.9pp LESS against one that
+// shoots. Shard a, per SHARD_OF — the same lane as RELEASE, and a separate
+// name because a break that aims at one block should not read as the other.
+const KITE = ['node', '-e',
+  "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
+
 // R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
 // this game was bounded except the ones that mattered: the day-180 save was
 // 1.8 MB, 95.5% of it inventory, and four save slots share one 5 MB quota, so
@@ -1828,8 +1836,14 @@ const WALK = ['node', '-e', `
   if (w.bagged < 10) fail('the Containment Cannon is not being fired (' + w.bagged + ' bagged)');
   const levels = Object.values(w.facility ?? {}).reduce((a, b) => a + b, 0);
   if (levels < 12) fail('the lab is never bought (summed track levels ' + levels + ')');
+  // R141 — and the Kite gets worn. Before that milestone \`bestSplice\` dressed
+  // every frame from the same six-bay fill and then offered the result to a
+  // chassis with five, so the Kite was refused for owning a leg; it also
+  // returned on the first frame that validated, in the order M, S, L, A.
+  // Measured on this seed and window: 2 Kites of 20 splices.
+  if (!(w.framesBuilt?.A > 0)) fail('the walk never builds a Kite (' + JSON.stringify(w.framesBuilt) + ')');
   console.log('walk ✓  ' + w.duels + ' duels, ' + w.breakouts + ' hunts, ' + w.bagged
-    + ' bagged, lab at ' + levels + ' over 45 days');
+    + ' bagged, lab at ' + levels + ', frames ' + JSON.stringify(w.framesBuilt) + ' over 45 days');
 `];
 
 const ROADMAP = ['node', 'tools/roadmap.js'];
@@ -3436,6 +3450,87 @@ const BREAKS = [
     file: 'ranch/agenda.js',
     anchor: "    opens: () => 'breeding-pen',",
     to: "    opens: () => 'breeding-pens',",
+  },
+  // R141 — THE KITE FRAME. Three breaks for three separate things that were
+  // wrong, aimed at three different assertions, in three different files.
+  {
+    // The tag layer stops reaching the hit, so the whole chart is decoration
+    // and flying stops paying: the Kite's own bodies fall from +13.9pp over a
+    // Scamper to +5.5pp.
+    //
+    // My first attempt aimed at the DATA — one of the eight moves this
+    // milestone tagged — and went MISSED, which is the entry's own lesson
+    // twice over. The census floor is 7 against a measurement of 10, so no
+    // single tag can move it, and a battery break is one anchor. The eight
+    // tags are eight separate JSON sites with nothing in common to aim at;
+    // what they have in common is the LINE THAT READS THEM. Note that this
+    // is `step`'s call site, not `tagMultiplier` itself, so the direct-call
+    // gate (`Ground misses Airborne`, in the common path) stays green and
+    // this one has to do the catching.
+    n: 214, gate: KITE, name: 'the hit stops reading the move\'s tags, so the chart is decoration and flying pays nothing',
+    file: 'battle/engine.js',
+    anchor: `  const { mult, ignoreArmor } = tagMultiplier(move.tags, def.tags, content.tagChart);
+  if (move.power > 0 && mult === 0) {`,
+    to: `  const { mult, ignoreArmor } = tagMultiplier([], def.tags, content.tagChart);
+  if (move.power > 0 && mult === 0) {`,
+  },
+  {
+    // The chassis stops being worth its missing bay. 8 hp instead of 24 —
+    // still a frame, still flying, still the only thing that will lift a
+    // bear — and the eight bodies that fly on it alone fall from +13.9pp
+    // over a Scamper to +6.1pp. This is the assertion the milestone is
+    // actually about: a frame that flies and loses is not a choice.
+    n: 215, gate: KITE, name: 'the Kite chassis stops paying for the bay it does not have, so flying costs more than it returns',
+    file: 'data/frames.json',
+    anchor: `        "mass": 18,
+        "hp": 24,`,
+    to: `        "mass": 18,
+        "hp": 8,`,
+  },
+  {
+    // R141 — the per-encounter flight rule. A9 wrote it per-unit, R141 moved
+    // it to the encounter, and the thing it now protects is that no WAVE is
+    // fully blanked by a pair of wings. Sunken Marina is the closest to the
+    // line at 82% of its damage travelling along the ground — two swimmers
+    // and a bite — so one more tag on the harbour diver's net takes it to
+    // 100% and a flier stands there untouched.
+    n: 217, gate: FACILITY, name: 'a whole wave loses its answer to a flier, and the fight becomes a cutscene',
+    file: 'data/enemies.json',
+    anchor: `          "name": "Net Snag",
+          "power": 22,
+          "cost": 16,
+          "acc": 95,
+          "tags": [],`,
+    to: `          "name": "Net Snag",
+          "power": 22,
+          "cost": 16,
+          "acc": 95,
+          "tags": [
+            "Ground"
+          ],`,
+  },
+  {
+    // R141 — and the other half of the rewritten region rule: a strip that
+    // DECLARES an answer it does not have. This is the defect the old rule
+    // could not see, and it was real for eighteen milestones — the Foundry
+    // said `air` while the bench said `sonic` and air sat 31pp back. Pointing
+    // it at `water` (25-30% there) is the same lie, louder.
+    n: 218, gate: FACILITY, name: 'a region declares an answer that does not clear it, and nothing notices',
+    file: 'data/regions.json',
+    anchor: `      "answer": "air",
+      "requires": {`,
+    to: `      "answer": "water",
+      "requires": {`,
+  },
+  {
+    // And the walker goes back to taking the first frame that validates, in
+    // the fixed order M, S, L, A — which is why six campaigns and 64 chimeras
+    // contained no Kite at all. Aimed at WALK rather than the smoke block,
+    // because a 45-day seeded walk answers it in seconds.
+    n: 216, gate: WALK, name: 'the first frame that validates wins again, and a campaign can never build a Kite',
+    file: 'tools/sim.js',
+    anchor: '      if (!best || score > best.score) best = { frameId, slots, score, blank };',
+    to: '      if (!best) best = { frameId, slots, score, blank };',
   },
   {
     // R136 — the Combos tab goes back to three flat lists, which is the

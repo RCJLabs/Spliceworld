@@ -19,7 +19,9 @@
           "power": 35,
           "cost": 15,
           "acc": 95,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         },
         {
@@ -699,7 +701,9 @@
           "power": 30,
           "cost": 16,
           "acc": 100,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "accDown": 1
           }
@@ -981,7 +985,9 @@
           "power": 40,
           "cost": 18,
           "acc": 92,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "bleed": 1
           }
@@ -1156,7 +1162,9 @@
           "power": 26,
           "cost": 16,
           "acc": 100,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "multiHit": 3
           }
@@ -1199,7 +1207,9 @@
           "power": 50,
           "cost": 24,
           "acc": 88,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         },
         {
@@ -1285,7 +1295,9 @@
           "power": 40,
           "cost": 18,
           "acc": 92,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {}
         }
       ]
@@ -1476,7 +1488,9 @@
           "power": 42,
           "cost": 20,
           "acc": 92,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "trap": true
           }
@@ -1647,7 +1661,9 @@
           "power": 48,
           "cost": 24,
           "acc": 90,
-          "tags": [],
+          "tags": [
+            "Ground"
+          ],
           "keywords": {
             "slow": true
           }

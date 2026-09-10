@@ -1,5 +1,159 @@
 # PROGRESS
 
+## Session 144 — R141: the frame nobody wore ✅
+
+**ROADMAP §9.19.** Four chassis ship; across six 180-day campaigns and 64
+surviving chimeras the tally was **M × 57, S × 4, L × 3, A × 0**. A9 spent a
+whole milestone building a fourth frame and the game had never worn it.
+
+### Three things were wrong, and only the third was balance
+
+**1. A campaign could not build one.** `bestSplice` filled its sockets from
+the whole vault *without asking which bays the chassis has*, then offered
+the result to the Kite — which has no hindlimbs — and `validateSplice`
+refused it. **Owning a single leg part made the frame unreachable.** It also
+returned on the first frame that validated, in the fixed order M, S, L, A.
+The A × 0 in the audit was never a preference; it was arithmetic.
+
+**2. The tag the frame buys was priced at a fifth of its value.** `Ground →
+Airborne = ×0` is the hardest rule in the game — a ground move does not
+resist against a flier, it *misses* — and **18 of 91 enemy moves carried the
+tag while 53 carried none at all.**
+
+> `Ground` is a property of the **move**, not the unit. Eight earthbound
+> moves are tagged: Baton Bonk, Bilge Wash, Undertow Bite, Bucket Chain,
+> Tipper Dump, Wrench Hook, Forensic Grip, Quench Bath. Every one has to
+> touch you. Nothing thrown, nothing sprayed, nothing swung from a rope by
+> an attacker already off the ground, no 0-power utility. A fifty-cal,
+> suppressing fire and a riot cannon reach a flier and must not.
+
+23% → **34%** of enemy move power; 3 → **10** encounters that swing low;
+3.7pp → **8.1pp** for a flier in the fights that throw it.
+
+**3. And the frame is not a general-purpose upgrade, which is the point.**
+Eight of the 40 buildable bodies fly on the Kite and on nothing else.
+
+| same parts, prime, team of 3 | Kite | Scamper | |
+| --- | ---: | ---: | ---: |
+| Kite-only bodies, walls that swing | **59.2%** | 45.3% | **+13.9pp** |
+| Kite-only bodies, walls that shoot | 28.3% | 29.7% | −1.3pp |
+| bodies that fly on both, walls that swing | 54.2% | 59.5% | −5.3pp |
+
+**When do I build a Kite?** When the animal you want in the air is too heavy
+to get there any other way, and the wall in front of you swings.
+
+### The session's real work was finding the ceiling, and it was A9's own rule
+
+Six of the eight tags broke a gate A9 wrote: **no unit may have every
+damaging move Ground**. Measured, that rule is the ceiling on the entire
+frame — under it `Ground` reaches at most 26% of enemy move power, the chart
+row is worth 8.1pp at its absolute best, a bay is worth 12.5pp, and with
+only the two legal tags the Kite sits at **−9.4pp** in its own niche.
+
+The obvious alternative fails differently and is worth recording: paying for
+the missing bay in `frames.json` raises the Kite **uniformly** — at hp 34 /
+speed 8 it is +3.4pp on walls that swing and **+4.1pp on walls that shoot**.
+A buff, not a trade. It would have made the Kite the best frame in the game
+on every axis.
+
+**Decision (user): move A9's rule from the unit to the encounter.** A unit is
+not what a player fights. Verified: with all eight tags, every one of the 26
+encounters still keeps a move that reaches up, and the most ground-bound
+wall in the game still lands 18% of its damage. Six units genuinely cannot
+touch a flier now, and every one of them carries a baton, a bucket, a wrench
+or a grapple, and fights beside somebody who shoots.
+
+### What I got wrong on the way, twice
+
+- I chased **"the Kite must have the best win rate on ground-heavy
+  encounters"** for four measurements before noticing the top build there is
+  a Rumbler with an iron-tortoise shell at 86%, winning on armour and
+  nothing to do with the tag. *A frame's ceiling against a set of fights is
+  not a measurement of the frame.* The right comparison is the one the
+  player makes at the Theater: **these parts, which chassis?**
+- I shipped the eight tags without checking A9's per-unit rule, and the
+  suite caught it. A prototyped +11 hp / +3 speed chassis buff was built and
+  thrown away on the evidence above.
+
+### Two gates got stricter
+
+- **The region-identity rule.** It asserted one anatomy answers each shaped
+  strip by ≥10pp, and read the Foundry gaining a second answer as the strip
+  losing its identity. It also never checked the thing that was actually
+  wrong: **the Foundry has declared `answer: air` since R26 while the bench
+  said `sonic` and air sat 31pp back.** Now two rules — the declared answer
+  must be among the builds that clear it (≤12pp behind; measured 0, 0, 8),
+  and the bottom three anatomies must still fall short (≥15pp; measured
+  22–34).
+- **The away-week walk** hunted a seed still mid-campaign at day 40 from a
+  list of nine, and R141's shuffle put all nine inside 40. A list of nine
+  seeds is a hardcoded seed with nine chances. It now runs with
+  `stopAtDominion: false`, so there is nothing to hunt.
+
+### Gates and breaks
+
+`tools/smoke.js` gains a `kite` block (shard a) asserting the trade in
+**both directions**, because a rule that only checks the upside passes just
+as happily on a frame handed better numbers. It is an outcome rule, not a
+tag census: a census is satisfied by tagging a rifle `Ground`. Five battery
+breaks (214–218) across five files and five assertions.
+
+**4 Kites across the four gate seeds, on three of them.**
+
+### The full battery scored 215/215 and still exited 1
+
+Which is the exact case CLAUDE.md's rule exists for: *judge every battery
+run by `BATTERY_EXIT`, never the summary line — a clean break score can sit
+on top of a red baseline.* Every one of the 215 breaks was caught and the
+baseline had gone red underneath them, on `tools/height.js`:
+
+> `dex:combos` reaches 2825px when opened, over its 2700px budget
+
+I chased two wrong theories before measuring — that the tab is tallest when
+you have discovered fewest (it is not), and that it was the seed-4242
+fixture (the gate uses **2026**; 4242 was the wrong save entirely). The real
+cause is mundane: the same day-180 seed now ends holding **197 → 228 parts**,
+because the walker churns less once it can pick a frame instead of taking
+the first that validates. Twenty-seven rows either way — what grew is the
+**row**, since an undiscovered pairing's hint names the halves you are
+holding, and a fuller vault writes a longer sentence.
+
+That is R95's content reach arriving on a screen, not a regression, so the
+budget moves to **2950** against the 2825 measurement — the same ~4%
+headroom R136 left over its own 2606. The bound is real and it is not this
+budget: R91 caps the vault at 260 parts, so the tab's ceiling is 27 rows of
+"you hold both halves". **If a later milestone finds it at 2900, the answer
+is to page the tab the way R131 paged the Vault, not to move this again.**
+
+### Verification
+
+| | |
+| --- | --- |
+| `npm test` | ✓ 10/10, 2m19 |
+| full battery | ✓ 215/215 caught, 47m16 |
+| `--baseline` after the height fix | ✓ every gate green, `BASE_EXIT=0` |
+| the 15 HEIGHT breaks, re-run on the new budget | ✓ 15/15 caught |
+
+### Known issues / carried
+
+- **The Rumbler is never spliced either.** L × 0 on the Theater path — M and
+  S validate on every plan, tie it on grade sum, and ties go to the earlier
+  frame. Filed as **R148**.
+- `bestSplice` still fills one part per slot *type*, so it never uses the
+  second organ bay Tier II grants. Pre-existing; it makes every measurement
+  here a 5-vs-6 comparison where the shipped game is 6-vs-7.
+- **Seed 4242's combo discovery fell 19 → 5.** Across the four gate seeds
+  the total is 47 → 33 and the other three barely moved (11→12, 8→7, 9→9),
+  so this is one campaign's trajectory diverging rather than the
+  combo-seeking bias breaking — I checked that directly by sweeping the lift
+  preference's weight (50/20/15 give 33/32/32 combos, so it is not the lift
+  fill outranking R92's +30 combo bonus). `tools/reach.js` still passes.
+  Worth a second look if another milestone touches the walker's planner.
+
+**Next session's first task:** R148 (the Rumbler), or one of the seventh
+audit's bigger phases — R143 (nothing goes badly wrong) is the one most
+likely to change how the game feels.
+
 ## Session 143 — Seventh audit: ten phases, measured ✅
 
 Six probes over six seeded 180-day campaigns plus scripted battle sweeps.

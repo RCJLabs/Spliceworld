@@ -1078,7 +1078,9 @@ const WALK_DAY = 24 * WALK_HOUR;
 // player (R37's `demand` line). A player who reads it dresses the frame in
 // that anatomy first and fills the rest by grade; the first walker ignored
 // it and took a mixed-class roster to the Aerodrome 33 times.
-function bestSplice(state, content, wanted = null) {
+const GRADE_ORDER = ['standard', 'prime', 'apex', 'prismatic'];
+
+function bestSplice(state, content, wanted = null, wall = null) {
   const owned = state.inventory.parts;
   if (!owned.length) return null;
   // R92 — A PLAYER WHO OWNS BOTH HALVES OF A COMBO BUILDS WITH THEM.
@@ -1125,31 +1127,109 @@ function bestSplice(state, content, wanted = null) {
   const rank = (t) => (completable.has(t.partId) ? 30 : 0)
     + (wanted && content.parts[t.partId]?.classAffinity === wanted ? 10 : 0)
     + GRADE_ORDER.indexOf(t.grade);
+  // R141 — THE FRAME IS A CHOICE, AND THE WALK NEVER MADE IT.
+  //
+  // Six campaigns, 64 surviving chimeras: M x 57, S x 4, L x 3, A x 0. Two
+  // reasons, and this loop was both of them.
+  //
+  // It filled `slots` from the whole vault WITHOUT asking which sockets the
+  // chassis actually has, so a hindlimb part landed in `slots.hindlimbs` and
+  // `validateSplice` then refused the Kite outright — "The Kite Frame has no
+  // hindlimbs to bolt that to" — for owning a leg. And it RETURNED on the
+  // first frame that validated, in the fixed order M, S, L, A, so A was
+  // unreachable the moment M worked. Neither is balance: a campaign could
+  // not build a Kite if it wanted to.
+  //
+  // So every frame is filled from its own socket list, scored, and the best
+  // one wins. Ties go to the earlier frame, which keeps M, S, L exactly where
+  // they were whenever nothing distinguishes them.
+  //
+  // TWO FILLS PER FRAME, judged by the same score. The first is the vault's
+  // best by rank, unchanged. The second prefers a part that makes LIFT,
+  // because a player who reads "their Ground attacks miss it entirely" on
+  // the briefing does not reshuffle their grades — they go and bolt wings
+  // on, and the greedy fill above has no way to arrive at that. It matters
+  // for exactly one frame: of the 40 bodies the catalogue can build with
+  // eagle wings, EIGHT fly on the Kite and on nothing else at prime (nine at
+  // standard), and every one is a heavy animal — bear, tiger, gorilla,
+  // crocodile. Everything light enough to fly on a Scamper already does,
+  // with a sixth socket the Kite does not have.
+  const liftFirst = (t) => rank(t) + ((content.parts[t.partId]?.phys?.lift ?? 0) > 0 ? 50 : 0);
+  let best = null;
   for (const frameId of ['M', 'S', 'L', 'A']) {
-    if (!content.frames[frameId]) continue;
-    const used = new Set();
-    const slots = {};
-    for (const token of [...owned].sort((a, b) => rank(b) - rank(a))) {
-      const part = content.parts[token.partId];
-      if (!part || used.has(token.id) || slots[part.slot]) continue;
-      slots[part.slot] = token.id;
-      used.add(token.id);
-    }
-    if (!slots.head) continue;
-    if (validateSplice(state, frameId, slots, content).length === 0) {
+    const frame = content.frames[frameId];
+    if (!frame) continue;
+    const chassis = frame.slots ?? CHASSIS_SLOTS;
+    for (const order of [rank, liftFirst]) {
+      const used = new Set();
+      const slots = {};
+      for (const token of [...owned].sort((a, b) => order(b) - order(a))) {
+        const part = content.parts[token.partId];
+        if (!part || used.has(token.id) || slots[part.slot]) continue;
+        if (!chassis.includes(part.slot)) continue;
+        slots[part.slot] = token.id;
+        used.add(token.id);
+      }
+      if (!slots.head) continue;
+      if (validateSplice(state, frameId, slots, content).length !== 0) continue;
       // R91 — the plan carries its own score, on the SAME yardstick the
       // roster is ranked by (`quality`), so "is this worth dismantling
       // something for" is a comparison rather than a guess. A fresh splice
       // is level 1, hence the bare grade sum.
       const byId = new Map(owned.map((t) => [t.id, t]));
+      const blank = blankedAgainst(state, content, frameId, slots, wall);
       const score = 10 + Object.values(slots)
-        .reduce((n, id) => n + GRADE_ORDER.indexOf(byId.get(id)?.grade ?? 'standard'), 0);
-      return { frameId, slots, score };
+        .reduce((n, id) => n + GRADE_ORDER.indexOf(byId.get(id)?.grade ?? 'standard'), 0) + blank;
+      if (!best || score > best.score) best = { frameId, slots, score, blank };
     }
   }
-  return null;
+  return best;
 }
-const GRADE_ORDER = ['standard', 'prime', 'apex', 'prismatic'];
+const CHASSIS_SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+
+// R141 — WHAT THE FRAME BUYS AGAINST THE WALL IN FRONT.
+//
+// The grade sum above is blind to the matchup layer the BRIEFING has shown
+// the player since R35: the chart rules that fire between a build's tags and
+// the opposition's. A Kite gives up a socket — five, no hindlimbs, which
+// costs a bear build 17 of its 127 HP and one of its four moves — and takes
+// back whatever `Ground misses Airborne` is worth against this particular
+// wall. Same parts on both frames, prime, team of three: the eight bodies
+// that fly on the Kite and on nothing else are worth +13.9pp there over a
+// Scamper against the ten encounters that swing low, and -1.3pp against the
+// seven that shoot. That is exactly the trade a player reading the
+// opposition line makes, so the walker reads the same line.
+//
+// The weight is measured, not chosen. A socket is worth about 12.5pp — a
+// prime bear on a Trotter wins 59.6% of the table and 47.1% with its
+// hindlimb bay taken away. A full blank is worth about 20pp: the 13.9pp
+// above was bought against a wall that is roughly 70% Ground, not 100%. So
+// a full blank buys back 1.6 sockets, and a socket is the three grade steps
+// the sum above already counts in.
+//
+// Derived from `content.tagChart`, never from the word "Ground", so a new
+// chart row moves the walker with no edit here.
+const BLANK_WORTH = Math.round(1.6 * (GRADE_ORDER.length - 1));
+function blankedAgainst(state, content, frameId, slots, wall) {
+  if (!wall) return 0;
+  const tokens = Object.values(slots)
+    .map((id) => state.inventory.parts.find((t) => t.id === id)).filter(Boolean);
+  const report = analyze(frameId, tokens, content, tokens.length);
+  const mine = new Set(['Organic', ...(report.tags ?? [])]);
+  const dead = new Set((content.tagChart ?? [])
+    .filter((r) => r.mult === 0 && mine.has(r.defender)).map((r) => r.attack));
+  if (!dead.size) return 0;
+  let blanked = 0, thrown = 0;
+  for (const uid of wall.waves ?? []) {
+    for (const move of (content.enemies[uid]?.moves ?? [])) {
+      const power = move.power ?? 0;
+      if (!power) continue;
+      thrown += power;
+      if ((move.tags ?? []).some((t) => dead.has(t))) blanked += power;
+    }
+  }
+  return thrown ? Math.round(blanked / thrown * BLANK_WORTH) : 0;
+}
 
 // R92 — how many stalls the opportunistic creators leave alone. A quarter of
 // a twelve-stable, which is what it takes for the Surgery Theater to get a
@@ -1406,9 +1486,13 @@ function walkAct(state, content, now, open, opts = {}) {
   // sized the Pens screen for.
   const frontNode = () => regionStates(state, content).flatMap((r) => r.nodes).find((n) => n.status === 'available');
   const demanded = () => { const f = frontNode(); return f ? (f.node.answer ?? regionOfNode(content, f.node.id)?.answer ?? null) : null; };
+  // R141 — the same node, read for its MOVES rather than its class. The map's
+  // `answer` names a class; what decides whether a frame is worth its sockets
+  // is what the wall actually swings, which is the encounter.
+  const walling = () => { const f = frontNode(); return f ? (content.encounters[f.node.encounter] ?? null) : null; };
   if (has('splice')) {
     const wanted = demanded();
-    const plan = bestSplice(state, content, wanted);
+    const plan = bestSplice(state, content, wanted, walling());
     // Coherent, or not at all: with a class demanded, a build counts only
     // if most of its class-bearing sockets (head, limbs, tail — hides and
     // organs carry none) answer it. The first walker took two water parts
@@ -1435,7 +1519,21 @@ function walkAct(state, content, now, open, opts = {}) {
     const findsCombo = Object.values(content.combos ?? {}).some((k) =>
       (k.parts ?? []).length && k.parts.every((pid) => planPids.includes(pid))
       && !(state.discoveredCombos ?? []).includes(k.id));
-    const coherent = findsCombo || !wanted || state.chimeras.length < 3 || answers >= 3;
+    // R141 — AND SO IS A PLAN THAT BLANKS THE WALL.
+    //
+    // R83's rule reads one of the briefing's two matchup layers. A build
+    // whose tags make the opposition's attacks do nothing is answering the
+    // OTHER one, and it will almost never answer the class as well: the
+    // eight bodies that fly on the Kite and on nothing else are a bear, a
+    // tiger, a gorilla, a crocodile — Ground and Water anatomy wearing one
+    // pair of Air wings, so `answers` counts one socket and vetoes the
+    // creature. Same argument as R92's combo clause, one layer over.
+    //
+    // The bar is a whole socket's worth of blanking, not any at all: below
+    // that the chart did not decide the frame, and a build that merely
+    // happens to fly should still have to answer the map.
+    const blanksTheWall = (plan?.blank ?? 0) >= GRADE_ORDER.length - 1;
+    const coherent = findsCombo || blanksTheWall || !wanted || state.chimeras.length < 3 || answers >= 3;
     if (plan && coherent) {
       // R91 — THE CAP IS THE GAME'S NOW, NOT THE WALKER'S. `stableCap ?? 9`
       // was a hand-typed copy of a rule that did not exist anywhere else,
@@ -1502,7 +1600,7 @@ function walkAct(state, content, now, open, opts = {}) {
       }
       if (state.chimeras.length < cap) {
         const before = state.chimeras.length;
-        const again = bestSplice(state, content, wanted) ?? plan; // the vault just changed
+        const again = bestSplice(state, content, wanted, walling()) ?? plan; // the vault just changed
         spliceChimera(state, again.frameId, again.slots, content, now);
         if (state.chimeras.length > before) did('splice', { frame: again.frameId });
       }
@@ -2224,6 +2322,17 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // was no number that said so.
     fights: (state.__walkLog ?? []).reduce((tally, e) => {
       tally[e.kind] = (tally[e.kind] ?? 0) + 1;
+      return tally;
+    }, {}),
+    // R141 — WHICH CHASSIS A CAMPAIGN ACTUALLY BUILDS ON.
+    //
+    // Six campaigns and 64 surviving chimeras were the evidence that the
+    // Kite had never been worn, and reading it took a bespoke script every
+    // time because the walk reported how many creatures it made and never
+    // what it made them on. Counted over every splice, not the survivors, so
+    // a frame that gets built and later dismantled still shows.
+    framesBuilt: (state.__walkLog ?? []).reduce((tally, e) => {
+      if (e.kind === 'splice' && e.frame) tally[e.frame] = (tally[e.frame] ?? 0) + 1;
       return tally;
     }, {}),
     duels: (state.__walkLog ?? []).filter((e) => e.kind === 'rival').length,

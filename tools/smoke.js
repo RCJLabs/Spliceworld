@@ -104,6 +104,9 @@ const SHARD_OF = {
   // block aims at the lane its name maps to, and two unrelated blocks under
   // one name make that aim a guess. Shard a is the lightest of the four.
   released: 'a',
+  // R141 — the Kite gate flies ~4,400 battles to ask whether a frame is worth
+  // its missing bay. Shard a, beside the other two light blocks.
+  kite: 'a',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -7296,7 +7299,8 @@ if (inShard('regions')) {
     assert.ok(slots.has('head'), `${key}: has a head (engine rule)`);
   }
 
-  const identityMargins = {};
+  const identityDeclared = {};
+  const identityRefused = {};
   for (const benchSeed of BENCH_SEEDS) {
     const rows = regionBench(content, { grade: 'apex', seedsPer: SEEDS_PER, seed: benchSeed, stable: false });
     assert.equal(rows.length, 5, 'five regions on the bench');
@@ -7338,19 +7342,46 @@ if (inShard('regions')) {
     const rank = (row) => Object.values(bestPerAnatomy(row)).sort((a, b) => b - a);
 
     // Three of the four later strips ask a SPECIFIC question, and each asks
-    // a different one. The margin is POOLED across the bench seeds rather
-    // than asserted on each: measured at seedsPer 32 the true spreads are
-    // kestrel 16pp, drowned 15pp, foundry 26pp, but a single seed of the
-    // Drowned strip draws anywhere from 6pp to 20pp around its 15. R66
-    // sharpened the AI by a few points and that was enough for one seed's
-    // draw to fall under the floor — a gate reading its own sampling noise.
-    // The floor is unchanged; what changed is that it now reads the quantity
-    // it means.
+    // a different one. Both quantities below are POOLED across the bench
+    // seeds rather than asserted on each: a single seed of the Drowned strip
+    // draws anywhere from 6pp to 20pp around its true spread, and R66
+    // sharpened the AI by a few points which was enough for one draw to fall
+    // under a floor — a gate reading its own sampling noise.
+    //
+    // R141 — WHAT "ASKS A SPECIFIC QUESTION" ACTUALLY MEANS.
+    //
+    // This used to assert that ONE anatomy answers each shaped strip by 10pp
+    // or more (measured at seedsPer 32: kestrel 16pp, drowned 15pp, foundry
+    // 26pp). It was calibrated on a table where the tag chart barely fired —
+    // 18 of 91 enemy moves carried `Ground`, so `Ground misses Airborne` was
+    // worth 3.7pp and an Air build was just a worse Ground build nearly
+    // everywhere. R141 tagged the earthbound moves and Air climbed 36% → 59%
+    // in the Foundry Belt, a county of armoured machinery that tips slag on
+    // you. The Foundry now has TWO counters — Sonic through the armour, Air
+    // over the dumps — and the old rule read that as the strip LOSING its
+    // identity.
+    //
+    // Two answers out of five is still a specific question. What is not
+    // specific is a strip that takes everything. And the thing the old rule
+    // never checked at all: whether the strip's DECLARED answer is one of
+    // them. The Foundry has said `answer: air` in regions.json since R26
+    // while the bench said `sonic` and air sat THIRTY-ONE POINTS back, and
+    // nothing failed — R128's defect exactly, a field naming something that
+    // is not so. So the rule is now the two things that matter, and it is
+    // stricter than what it replaces.
     const shaped = later.filter((r) => r.region.answer !== 'mixed');
     assert.equal(shaped.length, 3, 'three shaped regions and one that is deliberately not');
     for (const row of shaped) {
-      const [top, second] = rank(row);
-      (identityMargins[row.region.id] ??= []).push(top - second);
+      const byAnatomy = bestPerAnatomy(row);
+      assert.ok(row.region.answer in byAnatomy,
+        `${row.region.id}: declares \`${row.region.answer}\`, which is an anatomy something can be built out of `
+        + `(${Object.keys(byAnatomy).sort().join(', ')})`);
+      const ranked = rank(row);
+      // 1. The strip's declared answer is one of the builds that clear it.
+      (identityDeclared[row.region.id] ??= []).push(ranked[0] - byAnatomy[row.region.answer]);
+      // 2. And most anatomies still fall well short — the bottom three of
+      //    five, so a strip stays a question even when two builds answer it.
+      (identityRefused[row.region.id] ??= []).push(ranked[0] - ranked[2]);
     }
     const champions = new Set(shaped.map((r) => r.champion));
     assert.equal(champions.size, 3,
@@ -7365,12 +7396,28 @@ if (inShard('regions')) {
       `${finale.region.id}: and no single anatomy owns it (+${Math.round((fTop - fSecond) * 100)}pp)`);
   }
 
-  // …and the pooled identity margins, once every bench seed has spoken.
-  for (const [region, margins] of Object.entries(identityMargins)) {
-    const pooled = margins.reduce((a, b) => a + b, 0) / margins.length;
-    assert.ok(pooled >= 0.1,
-      `${region}: one anatomy answers it decisively (+${Math.round(pooled * 100)}pp over the next, pooled over ` +
-      `${margins.length} bench seeds: ${margins.map((m) => Math.round(m * 100)).join(', ')}pp)`);
+  // …and the pooled identity numbers, once every bench seed has spoken.
+  const pool = (l) => l.reduce((a, b) => a + b, 0) / l.length;
+  const pp = (l) => l.map((m) => Math.round(m * 100)).join(', ');
+  // A CEILING, so the bar sits ABOVE what the seeds produce rather than
+  // below: measured 0, 0, 8pp (kestrel and drowned are answered by exactly
+  // what they declare; the Foundry's declared Air is 8pp behind Sonic). The
+  // pre-R141 Foundry read 31pp, so 12 catches that lie almost three times
+  // over while leaving a draw 50% of room to wander.
+  const DECLARED_BEHIND = 0.12;
+  for (const [region, gaps] of Object.entries(identityDeclared)) {
+    assert.ok(pool(gaps) <= DECLARED_BEHIND,
+      `${region}: the answer the map DECLARES is one of the builds that clear it ` +
+      `(${Math.round(pool(gaps) * 100)}pp behind the best anatomy, pooled over ${gaps.length} bench seeds: ${pp(gaps)}pp)`);
+  }
+  // And a floor, below the measurement for the usual reason: 22-23pp
+  // (kestrel), 30-31 (drowned), 33-34 (foundry).
+  const REFUSED_BY = 0.15;
+  for (const [region, gaps] of Object.entries(identityRefused)) {
+    assert.ok(pool(gaps) >= REFUSED_BY,
+      `${region}: and most anatomies still fall over there — a strip two builds answer is a question, ` +
+      `a strip everything answers is not (bottom three are ${Math.round(pool(gaps) * 100)}pp back, pooled over ` +
+      `${gaps.length} bench seeds: ${pp(gaps)}pp)`);
   }
 
   // Reachability, measured at the grade a player plausibly holds when each
@@ -7903,12 +7950,44 @@ if (inShard('frames')) {
   const groundMoves = enemyMoves.filter((m) => (m.tags ?? []).includes('Ground'));
   assert.ok(groundMoves.length / enemyMoves.length >= 0.15,
     `the coalition fights at ground level (${groundMoves.length}/${enemyMoves.length} moves are Ground)`);
-  // ...but never so much that one wing pair switches a unit off.
-  for (const unit of Object.values(content.enemies)) {
-    const attacks = (unit.moves ?? []).filter((m) => (m.power ?? 0) > 0);
+  // ...but never so much that one wing pair switches a FIGHT off.
+  //
+  // R141 moved this rule from the unit to the encounter, and the reason is
+  // that a unit is not what a player fights — every encounter is a wave of
+  // two or three, and the question a flier asks is of the wave.
+  //
+  // A9 wrote it per-unit, which reads as the safer rule and is really a
+  // different one: it says a riot squad carrying batons and a riot shield
+  // must be able to hit something fifty feet up. That is not caution, it is
+  // a fiction the game does not believe, and it caps the chart row the Kite
+  // Frame exists for. Measured: under the per-unit rule `Ground` can reach
+  // at most ~26% of enemy move power, `Ground misses Airborne` is worth
+  // 8.1pp at its absolute best, and a bay is worth 12.5pp — so the only
+  // frame in the game whose whole reason is that row could never be worth
+  // wearing. R141 §9.19 has the full arithmetic.
+  //
+  // Six units are now genuinely unable to reach a flier — Riot Squad,
+  // Sluice Hound, Leviathan Dredge, Slag Hauler, Foreman Ordnance, Audit
+  // Diver. Every one of them carries a baton, a bucket, a wrench or a
+  // grapple, and every one of them fights beside somebody who shoots.
+  //
+  // Two rules, both about what a player actually faces.
+  for (const enc of Object.values(content.encounters)) {
+    const attacks = (enc.waves ?? []).flatMap((uid) => (content.enemies[uid]?.moves ?? []))
+      .filter((m) => (m.power ?? 0) > 0);
     if (!attacks.length) continue;
-    assert.ok(!attacks.every((m) => (m.tags ?? []).includes('Ground')),
-      `${unit.id} keeps an answer to a flier (not every attack is Ground)`);
+    const low = attacks.filter((m) => (m.tags ?? []).includes('Ground'));
+    // 1. Somebody in the wave can reach up. Measured: every one of the 26
+    //    encounters keeps at least one such move.
+    assert.ok(low.length < attacks.length,
+      `${enc.name}: somebody in the wave keeps an answer to a flier (all ${attacks.length} attacks are Ground)`);
+    // 2. And a flier is advantaged, never invulnerable. Power-weighted,
+    //    because one 88-power gun answers three 20-power sprays. Measured
+    //    worst: Sunken Marina at 82%, which is two swimmers and a bite.
+    const power = (l) => l.reduce((n, m) => n + (m.power ?? 0), 0);
+    const swung = power(low) / power(attacks);
+    assert.ok(swung <= 0.9,
+      `${enc.name}: and still lands something on it (${Math.round(swung * 100)}% of its damage travels along the ground)`);
   }
   // The air region cannot ALSO be the one that punishes flying, or every
   // strip has the same answer.
@@ -14885,6 +14964,34 @@ if (inShard('contest')) {
     // survivor count measures how long the walk ran. This counts the chain.
     assert.ok(shapes.every((w) => w.rehabbedEver >= 1),
       `and somebody else's science ends up on the roster (${shapes.map((w) => w.rehabbedEver).join(', ')} rehabilitated)`);
+    // R141 — AND ALL FOUR CHASSIS GET WORN.
+    //
+    // Six campaigns and 64 surviving chimeras, before this milestone: M x 57,
+    // S x 4, L x 3, A x 0. The Kite was not unpopular, it was unreachable —
+    // `bestSplice` filled its sockets from the whole vault and then offered
+    // the result to a chassis with no hindlimbs, which refused it for owning
+    // a leg. Counted over every splice rather than the survivors, because the
+    // stable cap recycles a five-bay creature the moment the Theater builds a
+    // six-bay one, and the criterion is that a campaign BUILDS one.
+    //
+    // Measured: 4 Kites across these four seeds, on three of them. The floor
+    // is two seeds, not four, because the frame is answered by a wall the
+    // walk only sometimes has in front of it — which is the whole point of
+    // it being a choice.
+    const kites = shapes.map((w) => w.framesBuilt.A ?? 0);
+    const frames = shapes.map((w) => `${w.seed}:${Object.entries(w.framesBuilt).map(([f, n]) => f + n).join('')}`).join(' ');
+    console.log(`   frames built: ${frames}`);
+    assert.ok(kites.filter((n) => n > 0).length >= 2,
+      `a campaign builds a Kite when the wall in front of it swings (${frames})`);
+    // Not asserted here, and worth writing down where the next reader of this
+    // block will see it: the same line says the RUMBLER is never spliced
+    // either — M and S validate on every plan, they tie the L on grade sum,
+    // and ties go to the earlier frame. The three Rumblers in the old
+    // six-campaign census came off the Reorientation Wing, not the Theater.
+    // That is a second frame with no reason to be chosen and it is R148's,
+    // not R141's: this milestone's criterion is the Kite.
+    assert.ok((shapes[0].framesBuilt.M ?? 0) > 0 && (shapes[0].framesBuilt.S ?? 0) > 0,
+      `and the frames that were always reachable still are (${frames})`);
     // R25 priced $24,000 of facility depth and the walk had never bought a
     // dollar of it. R83 then measured every track maxing on every seed by
     // day 28 — real depth, exhausted before the county even fell, which is
@@ -15535,18 +15642,28 @@ if (inShard('timers')) {
   //    daily: the job comes home on its own clock either way.
   {
     // R68: the seed is CHOSEN, not hardcoded — the same lesson the R64 gate
-    // above already records. This pinned seed 2026, which now takes the
-    // whole map by day 28 and so has no day-40 snapshot to compare; a walk
-    // healthy enough to finish early is good news that should not read as a
-    // failure. The gate's subject is a job coming home on its own clock, so
-    // any seed still mid-campaign at day 40 serves.
-    let daily = null, gone = null, walked = null;
-    for (const seed of [2026, 7, 4242, 1, 808, 31337, 12, 240, 3]) {
-      const d = campaignWalk(content, { seed, days: 40, snapshotDays: [40] });
-      const g = campaignWalk(content, { seed, days: 40, away: { from: 25, days: 7 }, snapshotDays: [40] });
-      if (d.snapshots[40] && g.snapshots[40]) { daily = d; gone = g; walked = seed; break; }
-    }
-    assert.ok(daily && gone, 'some seed is still mid-campaign at day 40 to compare');
+    // above already records. This pinned seed 2026, which takes the whole map
+    // by day 28 and so has no day-40 snapshot to compare; a walk healthy
+    // enough to finish early is good news that should not read as a failure.
+    // R68's fix was a LIST of nine candidate seeds, and any one of them still
+    // mid-campaign at day 40 served.
+    //
+    // R141 exhausted the list. Not because campaigns got faster — the median
+    // dominion day across fifteen seeds moved 31.25 → 31.42 — but because the
+    // shuffle moved which particular seeds finish late, and all nine happened
+    // to land inside 40. A list of nine seeds is a hardcoded seed with nine
+    // chances, and it fails the same way, one milestone later.
+    //
+    // Derived instead: the walk simply does not halt at dominion, so every
+    // seed has a day-40 snapshot and there is nothing to hunt for. The gate's
+    // subject is a job coming home on its own clock whether the player shows
+    // up daily or goes away for a week; whether the county has already fallen
+    // by then is not part of the question.
+    const walked = 2026;
+    const upTo40 = (away) => campaignWalk(content, { seed: walked, days: 40, snapshotDays: [40], stopAtDominion: false, ...(away ? { away } : {}) });
+    const daily = upTo40(null);
+    const gone = upTo40({ from: 25, days: 7 });
+    assert.ok(daily.snapshots[40] && gone.snapshots[40], 'both walks reach day 40 to compare');
     assert.ok(gone.snapshots[40].funds > 0, 'and the absent one is solvent on return');
     console.log(`   walked (seed ${walked}): daily $${daily.snapshots[40].funds} vs a week away $${gone.snapshots[40].funds}`);
   }
@@ -17969,6 +18086,189 @@ if (inShard('preview')) {
 //   1. the intent is decided at the TOP of the turn, seeded, and written down
 //   2. a brace answers a telegraph — and only a telegraph
 //   3. the class that counters the telegraphed attacker comes in for free
+// ---------------------------------------------------------------------------
+// R141 — THE KITE FRAME IS THE ONLY WAY TO FLY SOMETHING HEAVY.
+//
+// Four frames ship. Across six 180-day campaigns and 64 surviving chimeras:
+// M x 57, S x 4, L x 3, A x 0. A9 built a fourth chassis and the game has
+// never worn it.
+//
+// Three separate things were wrong, and only the third is balance.
+//
+// 1. A CAMPAIGN COULD NOT BUILD ONE. `bestSplice` filled its sockets from the
+//    whole vault without asking which bays the chassis has, so a hindlimb
+//    part landed in `slots.hindlimbs` and the Kite — which has no hindlimbs —
+//    was refused for owning a leg. It also returned on the first frame that
+//    validated, in the order M, S, L, A. Both are fixed in tools/sim.js.
+//
+// 2. THE TAG THE FRAME BUYS WAS PRICED AT A FIFTH OF ITS VALUE. `tagChart`
+//    carries the hardest rule in the game — a Ground move does not merely
+//    resist against a flyer, it MISSES — and only 18 of 91 enemy moves
+//    carried the tag while 53 carried none at all. Ground was 23% of what the
+//    roster throws; tagging the earthbound moves took it to 34%, and the rule
+//    from 3.7pp to 8.1pp for a flier in the fights that throw it.
+//
+// 3. AND THE FRAME IS NOT A GENERAL-PURPOSE UPGRADE, WHICH IS THE POINT. Of
+//    the 40 bodies the catalogue can build with eagle wings, eight fly on the
+//    Kite and on nothing else — a bear, a tiger, a gorilla, a crocodile, all
+//    too heavy for the Scamper's lift. Those eight are worth 13.9pp more on
+//    the Kite than on a Scamper against a wall that swings low, and 1.3pp
+//    LESS against one that shoots. Everything light enough to fly on a
+//    Scamper already does, and there the Scamper's sixth bay wins by 5.3pp.
+//
+// So the answer to "when do I build a Kite" is: when the animal you want in
+// the air is too heavy to get there any other way, and the wall in front of
+// you swings. This gate asserts that sentence in both directions — the niche
+// pays, and outside it the frame does not — because a rule that only checks
+// the upside passes just as happily on a frame that is simply better.
+//
+// It is an OUTCOME rule rather than a tag census, deliberately. A census is
+// satisfied by tagging a rifle `Ground`, which would be a lie: the tag means
+// the attack travels along the ground, so a baton and a swing kick carry it
+// and a fifty-cal does not. The only honest way to ask whether flying is
+// worth a socket is to fly.
+if (inShard('kite')) {
+  const { makeSimChimera: mkKite, scriptedBattle: kiteFight } = await import('./sim.js');
+  const { analyze: kiteAnalyze } = await import('../splice/physiology.js');
+
+  // The rule the whole frame rests on, read off the chart rather than named.
+  // If a later milestone softens `Ground -> Airborne` from x0 to x0.5, the
+  // Kite stops being a frame you build for a reason and this says so first.
+  const blanked = content.tagChart.filter((r) => r.mult === 0 && r.defender === 'Airborne');
+  assert.ok(blanked.length,
+    'the chart still zeroes something against Airborne — it is the Kite Frame\'s only reason to exist');
+  const groundish = new Set(blanked.map((r) => r.attack));
+
+  // How much of a wall's damage travels along the ground. Power-weighted, not
+  // counted: a unit with one 88-power Ground move and three 20-power sprays
+  // is a wall a flyer walks through, and counting moves would call it 25%.
+  const lowShare = (enc) => {
+    let low = 0;
+    let all = 0;
+    for (const uid of enc.waves ?? []) {
+      for (const move of (content.enemies[uid]?.moves ?? [])) {
+        const power = move.power ?? 0;
+        if (!power) continue;   // a 0-power buff is not damage anybody dodges
+        all += power;
+        if ((move.tags ?? []).some((t) => groundish.has(t))) low += power;
+      }
+    }
+    return all ? low / all : 0;
+  };
+  const SWINGS = 0.4;   // measured: 10 encounters at or above, 0 before the tag pass
+  const SHOOTS = 0.15;  // measured: 7 below
+  const swinging = Object.keys(content.encounters).filter((id) => lowShare(content.encounters[id]) >= SWINGS);
+  const shooting = Object.keys(content.encounters).filter((id) => lowShare(content.encounters[id]) < SHOOTS);
+  assert.ok(swinging.length >= 7,
+    `enough of the table swings low for the frame to answer something (${swinging.length} at or above ${SWINGS} of their damage, measured 10)`);
+  assert.ok(shooting.length >= 5,
+    `and enough of it shoots, or the frame would have no downside (${shooting.length} below ${SHOOTS}, measured 7)`);
+
+  // The same parts on two frames, so the CHASSIS is the only variable.
+  const wingsOn = (body, frame) => {
+    const bays = content.frames[frame].slots ?? ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+    const ids = bays
+      .map((bay) => (bay === 'forelimbs' ? 'eagle_forelimbs' : `${body}_${bay}`))
+      .filter((pid) => content.parts[pid]);
+    if (!ids.some((pid) => content.parts[pid].slot === 'head')) return null;
+    const c = mkKite(frame, ids, 'prime', content);
+    return { c, flies: kiteAnalyze(frame, Object.values(c.tokens), content, ids.length).flight.capable };
+  };
+  const rateOver = (c, ids, seeds = 8) => {
+    let wins = 0;
+    let n = 0;
+    for (const id of ids) for (let i = 0; i < seeds; i++) {
+      n++;
+      if (kiteFight(c, content.encounters[id], content, 51000 + i, 3).outcome === 'win') wins++;
+    }
+    return (wins / n) * 100;
+  };
+
+  const bodies = [...new Set(Object.values(content.parts).map((p) => p.species))].filter(Boolean);
+  const onlyKite = [];
+  const eitherWay = [];
+  for (const body of bodies) {
+    const kite = wingsOn(body, 'A');
+    const scamper = wingsOn(body, 'S');
+    if (!kite || !scamper || !kite.flies) continue;
+    (scamper.flies ? eitherWay : onlyKite).push({ body, kite, scamper });
+  }
+  assert.ok(onlyKite.length >= 5,
+    `the Kite flies bodies nothing else will (${onlyKite.length} of ${bodies.length}, measured 8: ${onlyKite.map((r) => r.body).join(', ')})`);
+
+  // A frame that flies a body no other frame can is only a REASON if the
+  // fight rewards it, so both halves are measured on the same builds.
+  //
+  // Both samples are asserted non-empty first. `gap` over nothing is NaN,
+  // and `NaN <= 4` is false, so an emptied list would fail here with a
+  // number nobody could read instead of the sentence that says what broke —
+  // R99's lesson, one gate over.
+  const gap = (rows, ids) => {
+    const a = rows.reduce((n, r) => n + rateOver(r.kite.c, ids), 0) / rows.length;
+    const s = rows.reduce((n, r) => n + rateOver(r.scamper.c, ids), 0) / rows.length;
+    return { a, s, d: a - s };
+  };
+  assert.ok(eitherWay.length >= 5,
+    `and it shares the sky with the Scamper, so there is a trade to measure (${eitherWay.length} bodies fly on both, measured 30)`);
+  const sample = onlyKite.slice(0, 8);
+  const paid = gap(sample, swinging);
+  const wasted = gap(sample, shooting);
+  assert.ok(paid.d >= 8,
+    `the Kite's own bodies are worth the frame against a wall that swings low `
+    + `(${paid.a.toFixed(1)}% on the Kite vs ${paid.s.toFixed(1)}% on a Scamper, +${paid.d.toFixed(1)}pp, measured +13.9)`);
+  assert.ok(wasted.d <= 4,
+    `and are NOT worth it against one that shoots — a frame that wins everywhere is not a choice `
+    + `(${wasted.a.toFixed(1)}% vs ${wasted.s.toFixed(1)}%, ${wasted.d >= 0 ? '+' : ''}${wasted.d.toFixed(1)}pp, measured -1.3)`);
+
+  // The other direction: where the Scamper CAN fly the same body, its sixth
+  // bay beats the Kite's speed. Without this the gate would pass on a Kite
+  // that had simply been handed better numbers than every other chassis.
+  const shared = gap(eitherWay.slice(0, 8), swinging);
+  assert.ok(shared.d <= 4,
+    `and a body light enough for a Scamper belongs on one — six bays beat five `
+    + `(${shared.a.toFixed(1)}% on the Kite vs ${shared.s.toFixed(1)}% on a Scamper, `
+    + `${shared.d >= 0 ? '+' : ''}${shared.d.toFixed(1)}pp, measured -5.3)`);
+
+  // AND THE GAME SAYS WHICH. The briefing has carried the sentence since R35
+  // — `matchupNotes` puts it on the roster row of a creature that flies —
+  // and what it never had was a table where the sentence was true often
+  // enough to shape a build. Read through the function the War Room renders,
+  // not a copy of its wording, so a rewrite of the clause moves this with it.
+  const { matchupNotes: kiteNotes } = await import('../campaign/matchup.js');
+  const wall = content.encounters[swinging[0]];
+  const thrown = new Set((wall.waves ?? []).flatMap((uid) => (content.enemies[uid]?.moves ?? [])
+    .filter((m) => (m.power ?? 0) > 0).flatMap((m) => m.tags ?? [])));
+  const foeBody = new Set((wall.waves ?? []).flatMap((uid) => content.enemies[uid]?.tags ?? []));
+  const onARow = kiteNotes({
+    myTags: new Set(['Organic', 'Airborne']),
+    myAttackTags: new Set(['Airborne']),
+    foeTags: foeBody,
+    foeAttackTags: thrown,
+  }, content.tagChart);
+  const good = onARow.filter((note) => note.kind === 'good'
+    && [...groundish].some((t) => note.text.includes(t)));
+  assert.ok(good.length,
+    `a flier's row on a wall that swings (${wall.name}) says why it is the pick: `
+    + `${onARow.map((n) => `${n.kind}:${n.text}`).join(' | ') || '(nothing)'}`);
+  // And the SAME row on a wall that shoots does not, or the sentence is
+  // decoration rather than a reason to build the frame.
+  const quiet = content.encounters[shooting[0]];
+  const quietThrown = new Set((quiet.waves ?? []).flatMap((uid) => (content.enemies[uid]?.moves ?? [])
+    .filter((m) => (m.power ?? 0) > 0).flatMap((m) => m.tags ?? [])));
+  const quietNotes = kiteNotes({
+    myTags: new Set(['Organic', 'Airborne']),
+    myAttackTags: new Set(['Airborne']),
+    foeTags: new Set((quiet.waves ?? []).flatMap((uid) => content.enemies[uid]?.tags ?? [])),
+    foeAttackTags: quietThrown,
+  }, content.tagChart);
+  assert.ok(!quietNotes.some((note) => note.kind === 'good'
+    && [...groundish].some((t) => note.text.includes(t))),
+    `and stays quiet on one that shoots (${quiet.name}), or it is decoration`);
+
+  console.log(`   R141 Kite: ${onlyKite.length} bodies fly on it alone — ${paid.d.toFixed(1)}pp over a Scamper `
+    + `on the ${swinging.length} walls that swing, ${wasted.d.toFixed(1)}pp on the ${shooting.length} that shoot`);
+}
+
 //
 // The numbers this moved are in `npm run sim -- --agency`, which is where
 // they are watched from now on; this block holds the RULES, which are the
