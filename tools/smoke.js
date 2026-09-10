@@ -11006,9 +11006,15 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // R46 renamed the class: it stopped being Dex-only the moment the
     // Ranch and the Pens used the same heading.
     const groupAt = (html, label) => html.indexOf(`<p class="list-group">${label} `);
-    const readyAt = groupAt(page, 'Both halves in hand');
-    const foundAt = groupAt(page, 'Discovered');
-    const restAt = groupAt(page, 'Still rumoured');
+    // R136 — the three combo bands are FOLDS now, so they are found by the
+    // id the fold declares rather than by a band heading that no longer
+    // exists. Every rule below is unchanged and still worth having; only
+    // where it looks has moved. The gene list still uses `group()`, so
+    // `groupAt` stays for it.
+    const bandAt = (html, id) => html.indexOf(`data-fold="dex-combos-${id}"`);
+    const readyAt = bandAt(page, 'ready');
+    const foundAt = bandAt(page, 'found');
+    const restAt = bandAt(page, 'rumoured');
     assert.ok(readyAt > 0 && foundAt > 0 && restAt > 0,
       `all three groups are on the page (${readyAt}/${foundAt}/${restAt})`);
     assert.ok(readyAt < foundAt && foundAt < restAt,
@@ -11022,12 +11028,25 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // A heading over nothing is worse than no heading, so an empty group
     // is not rendered at all — which is most saves for two of the three.
     const zero = FRESH_PAGES.combos;
-    assert.equal(groupAt(zero, 'Discovered'), -1, 'a fresh save has no "Discovered" heading over an empty list');
-    assert.equal(groupAt(zero, 'Both halves in hand'), -1, 'nor an empty actionable group');
-    assert.ok(groupAt(zero, 'Still rumoured') > 0, 'but the group it does have is labelled');
+    assert.equal(bandAt(zero, 'found'), -1, 'a fresh save has no "Discovered" fold over an empty list');
+    assert.equal(bandAt(zero, 'ready'), -1, 'nor an empty actionable band');
+    assert.ok(bandAt(zero, 'rumoured') > 0, 'but the band it does have is there');
     const all = FULL_PAGES.combos;
-    assert.equal(groupAt(all, 'Still rumoured'), -1, 'and a finished save has nothing left to rumour');
-    assert.ok(groupAt(all, 'Discovered') > 0, 'only what it found');
+    assert.equal(bandAt(all, 'rumoured'), -1, 'and a finished save has nothing left to rumour');
+    assert.ok(bandAt(all, 'found') > 0, 'only what it found');
+
+    // R136 — AND ALL THREE ARRIVE SHUT, including the actionable one. It is
+    // non-empty for most of a campaign, so "opens when it can act" would be
+    // "always open" wearing a condition — the rule R133 had to reverse on
+    // the Breeding Pen. Shut is not hidden: the summary carries the count.
+    for (const id of ['ready', 'found', 'rumoured']) {
+      const at = bandAt(page, id);
+      if (at < 0) continue;
+      assert.ok(!/aria-expanded="true"/.test(page.slice(at, at + 120)),
+        `the ${id} band arrives shut`);
+    }
+    assert.ok(/pairing.? you already own the parts for/.test(page),
+      'and the shut actionable band says how many, and what to do with them');
     // Same rule on the gene list.
     assert.equal(groupAt(FRESH_PAGES.genes, 'Sequenced'), -1, 'no empty gene group either');
     assert.ok(groupAt(FULL_PAGES.genes, 'Sequenced') > 0, 'and the full one is labelled');

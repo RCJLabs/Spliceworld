@@ -187,17 +187,22 @@ const BUDGET = {
   vault:          { folded: 2560,  tallest: 4100, opens: 20 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
-  // R95: 1900 -> 2350, measured at 2293. The tab lists what you have found,
-  // and a campaign now finds a median EIGHT combos where it found two — the
-  // milestone's own success arriving on a screen with no fold. Folding the
-  // Combos tab is owed alongside the Vault's.
-  // R135: 2350 -> 2450, measured at 2403. The tab grew because the campaign
-  // DISCOVERS more, which is the good direction: a dismantle that costs 3h
-  // instead of 20 puts parts back on the shelf while the pair that unlocks a
-  // combo is still worth assembling. Same ratchet R95 wrote here, same
-  // reason, and folding this tab is still the answer — it is the last screen
-  // in the game with no fold at all.
-  'dex:combos':   { folded: 2450,  tallest: 2450 },
+
+  // R136 FOLDS IT, which R95 first said was owed and R135 ratcheted around
+  // one more time. This is the LAST tab in the game with no fold at all, and
+  // it had grown to 2,403px of three flat lists — 12 pairs you already own,
+  // 13 you have found, 2 still rumoured — on a screen the player looks
+  // things up in rather than reads.
+  //
+  // 800 was the target, written before the work so the gate went red first.
+  // SHIPPED: 550 shut, measured at 497 — 2,403 -> 497, and 529 words -> 78.
+  //
+  // The open number is 2,606 against the 2,403 it used to be flat, and that
+  // 203px is the fold's own chrome: three heads and three summaries. It is
+  // the same price R89 paid on the Foes tab and for the same reason — it is
+  // only paid by a reader who deliberately opened all three, and the ratchet
+  // stops it growing further.
+  'dex:combos':   { folded: 550,   tallest: 2700, opens: 3 },
   // R129 FOLDS IT, WHICH BRINGS THE SHUT HALF DOWN AND BUDGETS THE FOLD:
   // 1100/1100 -> 400 shut (measured 291) and 1250 open (measured 1185).
   // Twelve genes could only be learned by breeding for them, so this tab
@@ -284,13 +289,12 @@ const WORDS = {
   vault:          { folded: 350,  open: 5000 },
   'dex:roster':   { folded: 400,  open: 400 },
   'dex:variants': { folded: 200,  open: 200 },
-  // Measured at 527, and 350 was a guess I wrote before running it — a
-  // budget invented rather than measured is how a gate fails on its first
-  // run for a reason that has nothing to do with the milestone. The Combos
-  // tab lists what you have found and R95 took that from two discoveries to
-  // eight, so it grew for a good reason and has no fold to hide behind. A
-  // ratchet stops the creep; folding it is owed alongside the Vault's.
-  'dex:combos':   { folded: 550,  open: 550 },
+  // R136: 550/550 -> 150 shut (measured 78) and 600 open (measured 532).
+  // R95 left the shut budget at 550 against a 527-word screen because the
+  // tab had no fold to hide behind; it has three now, so the shut number is
+  // the one that matters and it is a fourteenth of what it was. The open
+  // half grew by the three summary lines the folds carry.
+  'dex:combos':   { folded: 150,  open: 600 },
   // R129: 200/200 -> 100 shut (measured 50) and 250 open (measured 221).
   // See the height note above — the words are the twelve descriptions, and
   // they are now behind the fold that holds them.

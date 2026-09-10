@@ -2977,8 +2977,10 @@ const BREAKS = [
   {
     n: 140, gate: HEIGHT, name: 'a band of the enemy field guide opens itself, and the Foes tab is five screens of unasked-for reference again',
     file: 'splice/dex-ui.js',
-    anchor: 'return collapsibleCard({ id, title, badge, summary, body, open: isOpen(state, id, false), extraClass: \'dex-band\' });',
-    to: 'return collapsibleCard({ id, title, badge, summary, body, open: isOpen(state, id, true), extraClass: \'dex-band\' });',
+    // R136 made the default a parameter, so the anchor moved to it. Same
+    // defect: every band of the field guide arrives open.
+    anchor: 'function classFold(id, title, badge, summary, body, state, openByDefault = false) {',
+    to: 'function classFold(id, title, badge, summary, body, state, openByDefault = true) {',
   },
   {
     n: 138, gate: STALE, name: 'the lazy migration module is fetched from a path that is not there, and a returning player is quietly handed a new ranch',
@@ -3415,6 +3417,27 @@ const BREAKS = [
     file: 'tools/height.js',
     anchor: '  vault:          { folded: 2560,  tallest: 4100, opens: 20 },',
     to: '  vault:          { folded: 2560,  tallest: 4100 },',
+  },
+  {
+    // R136 — the Combos tab goes back to three flat lists, which is the
+    // state it was in for six milestones: 2,403px and 529 words on a screen
+    // the player looks things up in. Catches BOTH halves of the new budget —
+    // the shut height and R131's `opens` count, since a band that is not a
+    // fold is a band the walk cannot get into.
+    n: 210, gate: HEIGHT, name: 'the Combos bands stop folding, and the last flat tab comes back',
+    file: 'splice/dex-ui.js',
+    anchor: '    ? classFold(`dex-combos-${id}`, label, `${list.length}`, summary(list.length),',
+    to: '    ? bandHead(label, list.length) + ((label, summary) => `<ul class="token-list">',
+  },
+  {
+    // The other half of R136's rule, as the one-token change somebody would
+    // actually make: the bands arrive open. On any save past the opening
+    // that is the whole tab back on the screen — the condition R133 had to
+    // take off the Breeding Pen, in its cheapest possible spelling.
+    n: 211, gate: HEIGHT, name: 'the combo bands arrive open, so the fold buys nothing',
+    file: 'splice/dex-ui.js',
+    anchor: 'const COMBO_BAND_OPEN = false;',
+    to: 'const COMBO_BAND_OPEN = true;',
   },
   {
     // R135 — the dismantle goes back to costing what a splice costs, which

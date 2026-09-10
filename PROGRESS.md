@@ -1,5 +1,57 @@
 # PROGRESS
 
+## Session 141 — R136: the last flat tab ✅
+
+R95 first wrote that folding the Combos tab was owed. R129 folded Genes
+beside it, R89 folded Foes above it, R131 paged the Vault — and Combos kept
+getting ratcheted around instead, most recently by R135 two milestones ago.
+It was **the last tab in the game with no fold at all**.
+
+| band | rows | px |
+| --- | ---: | ---: |
+| Both halves in hand | 12 | 811 |
+| Discovered | 13 | 1,165 |
+| Still rumoured | 2 | 83 |
+
+| | before | after |
+| --- | ---: | ---: |
+| Combos, shut | 2,403px | **497px** |
+| words, shut | 529 | **78** |
+
+### All three arrive shut, including the actionable one
+
+"Both halves in hand" is twelve combos you already own the parts for, so the
+obvious move is to open it when non-empty. It is non-empty for most of a
+campaign — *which makes "opens when it can act" into always-open wearing a
+condition*. That is exactly the rule R133 had to reverse on the Breeding Pen
+three sessions ago. Taking the same decision twice in two milestones is how
+it stops being a coincidence and becomes a rule.
+
+Shut is not hidden: each summary carries the count and the verb. The
+actionable one reads *"12 pairings you already own the parts for. Put one on
+a creature."*
+
+The open number is **2,606px** against 2,403 flat — 203px of fold chrome
+(three heads, three summaries), the same price R89 paid on Foes, and paid
+only by a reader who opened all three on purpose.
+
+### A named constant, so the argument has somewhere to live
+
+`classFold` takes `openByDefault` now, defaulting to the `false` every
+existing caller relied on. The Combos bands pass `COMBO_BAND_OPEN`, which
+exists so the one decision worth arguing about is written down where it can
+be argued with — and which makes break 211 a one-token change instead of the
+contrived state-mutation I wrote first and threw away.
+
+**Verified:** height green (Combos 497/2,606 inside 550/2,700, three folds
+walked), suite green in 130.8s, a11y green, breaks 140, 210 and 211 caught,
+all 208 anchors match. Ten-minute tier per R134 — this milestone added gate
+rules rather than changing one.
+
+**Next session's first task:** the Ranch's agenda still lists things that
+are also on the screen it is drawn on — "Expand the pens · $2350" is a chip
+in Right Now and a button in the money card, 300px apart.
+
 ## Session 140 — R135: the table nobody could find ✅
 
 Reported from play, two complaints in one sentence: *"I don't see upgrades

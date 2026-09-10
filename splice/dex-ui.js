@@ -145,6 +145,12 @@ function group(label, rows) {
   return rows.length ? bandHead(label, rows.length) + `<ul class="token-list">${rows.join('')}</ul>` : '';
 }
 
+// R136 — every combo band arrives SHUT, and this is a named constant rather
+// than a literal so the one decision worth arguing about has somewhere to be
+// argued. See `combosView`: the actionable band is non-empty for most of a
+// campaign, so opening it on that condition is "always open" wearing one.
+const COMBO_BAND_OPEN = false;
+
 // --- Combos. The tallest list in the Dex late (2,492px on its own), which
 // is most of why the single column had to be broken up — and twenty-seven
 // rows in content order meant the two you had actually found were buried
@@ -171,12 +177,34 @@ function combosView(state, content) {
   const rest = all.filter((c) => !state.discoveredCombos.includes(c.id));
   const ready = rest.filter((c) => comboHint(c, state, content).known === 2);
   const rumoured = rest.filter((c) => comboHint(c, state, content).known !== 2);
+
+  // R136 — THE LAST TAB WITH NO FOLD GETS ONE. Measured on the day-180 save
+  // at 380px: 2,403px and 529 words of three flat lists, on a tab the player
+  // looks things up in. The bands are 811px, 1,165px and 83px; the two big
+  // ones are most of the Dex.
+  //
+  // ALL THREE SHUT, including "Both halves in hand", and that is the part
+  // worth arguing. It is the actionable band — twelve combos you own the
+  // parts for — so the obvious move is to open it when it is non-empty. It
+  // is non-empty for most of a campaign (12 of 27 by day 180), which makes
+  // "opens when it can act" into "always open" wearing a condition: exactly
+  // the rule R133 had to reverse on the Breeding Pen for the same reason.
+  // Shut is not hidden — the summary carries the count and the verb, which
+  // is the whole question a player asks this tab from outside.
+  const band = (id, label, list, summary) => (list.length
+    ? classFold(`dex-combos-${id}`, label, `${list.length}`, summary(list.length),
+      `<ul class="token-list">${list.map(row).join('')}</ul>`, state, COMBO_BAND_OPEN)
+    : '');
   return `
     <section class="card">
       <h3>Combo Abilities (${found.length}/${all.length})</h3>
-      ${group('Both halves in hand', ready.map(row))}
-      ${group('Discovered', found.map(row))}
-      ${group('Still rumoured', rumoured.map(row))}
+      ${band('ready', 'Both halves in hand', ready,
+        (n) => `${n} pairing${n === 1 ? '' : 's'} you already own the parts for. Put one on a creature.`)}
+      ${band('found', 'Discovered', found,
+        (n) => `${n} combo${n === 1 ? '' : 's'} on file, with the pair that unlocks each.`)}
+      ${band('rumoured', 'Still rumoured', rumoured,
+        (n) => `${n} left, and the parts for them are somewhere you have not been.`)}
+      ${all.length === found.length ? '<p class="fine-print">Every pairing in the county is on file. The parts bin has nothing left to whisper.</p>' : ''}
     </section>`;
 }
 
@@ -220,8 +248,11 @@ function genesView(state, content) {
 // R89 — one shape for every band of the field guide, so a fourth class is a
 // data edit rather than a fourth copy of this markup. Shut by default: the
 // guide is looked things up in, not read.
-function classFold(id, title, badge, summary, body, state) {
-  return collapsibleCard({ id, title, badge, summary, body, open: isOpen(state, id, false), extraClass: 'dex-band' });
+// R136 — `openByDefault` is a parameter now, defaulting to the false every
+// existing caller relied on, so the Combos bands can state their own answer
+// where it can be argued with instead of inheriting a literal.
+function classFold(id, title, badge, summary, body, state, openByDefault = false) {
+  return collapsibleCard({ id, title, badge, summary, body, open: isOpen(state, id, openByDefault), extraClass: 'dex-band' });
 }
 
 // --- Foes: the rival dossiers and the enemy field guide. One tab, because
