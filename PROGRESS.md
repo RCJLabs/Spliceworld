@@ -1,5 +1,61 @@
 # PROGRESS
 
+## Session 143 — Seventh audit: ten phases, measured ✅
+
+Six probes over six seeded 180-day campaigns plus scripted battle sweeps.
+Written up as **ROADMAP §9.18, R138–R147**. Every number came from a script
+run this session; nothing in it is an impression.
+
+### Read the queue first
+
+**35 entries are already queued and unshipped** (R54–R67, R88, R93, R94,
+R96, R100, R102, R104, R105, R107–R118) — and the last ten milestones, R128
+through R137, were *all* reported-from-play or carried debt. **Nothing has
+been pulled from the queue in ten sessions.** Each of the ten new phases was
+checked against that list; R102 already owns the post-dominion emptiness
+(dominion lands day 40.8, so 139 of 180 days sit after the ending), so it
+was refreshed rather than re-proposed.
+
+### Four findings died on inspection, which is the method working
+
+- `classAffinity` missing on 128 of 244 parts — **designed**; `rivals.js`
+  reads absence as `neutral`.
+- Every chimera Unclassed — **my probe read `className`; the field is
+  `creatureClass`.** Real split: Ground 38% / Air 30% / Water 25% /
+  Unclassed 8%. R18 holds.
+- The news wire showing one distinct line — **items are plain strings**, not
+  objects, so `.text` was undefined.
+- The region ladder being non-monotonic — **that is the class triangle
+  working.** Each region really does ask a different question.
+
+Three of those four would have shipped as confident prose if I had reasoned
+instead of checked.
+
+### The ten
+
+| | phase | the number |
+| --- | --- | --- |
+| R138 | the empty middle of the level curve | L0×27, L10×25, 12 between |
+| R139 | the Wing reforms what it catches | 5,989 bagged → 86, **1.4%** |
+| R140 | collected 95%, worn 56% | 107 of 244 never installed |
+| R141 | the Kite Frame has never been built | M×57 S×4 L×3 **A×0** |
+| R142 | the splice is the rarest verb | 21 vs care 24,752 — **1,178:1** |
+| R143 | nothing goes badly wrong | 0h broke, 68 losses in 1,239 |
+| R144 | two of five regions ask no question | greenfield 0pp, foundry 0/0/0 |
+| R145 | a fight is nine turns | p90 15, max 37 |
+| R146 | the campaign marks five moments | nothing between day 4 and 41 |
+| R147 | fifteen combos are never found | median 12 of 27 |
+
+**R143 needed the most care.** "The player wins 94.5%" reads as *the game is
+too easy* — but a scripted sweep of 60 random builds loses **72% of 1,768
+fights**, so the difficulty is real and the walker simply picks fights it
+can win. The honest finding is the absence of consequence, not the presence
+of ease.
+
+**Next session's first task:** pick one. R141 (the Kite Frame) is the
+smallest — one frame, a reason to wear it, a gate. R143 is the biggest and
+the most likely to change how the game feels.
+
 ## Session 142 — R137: half the agenda did nothing ✅
 
 R131 filed this as "the agenda lists things that are also on the screen it is

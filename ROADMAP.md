@@ -3416,6 +3416,133 @@ moved one of them: the first premise held exactly, the second did not.
     new measurement. The first paint is smaller than before this milestone
     started, which discharges most of R121 as a side effect.
 
+## 9.18 Seventh audit (R138–R147) — measured, not brainstormed
+
+Six probes over six seeded 180-day campaigns, plus scripted battle sweeps.
+Every number below was produced by a script in this session; nothing here is
+an impression.
+
+**Read the queue before the findings.** There are **35 entries already
+queued** and unshipped (R54–R67, R88, R93, R94, R96, R100, R102, R104,
+R105, R107–R118), and the last ten milestones shipped — R128 through R137 —
+were **all** either reported from play or carried debt. Nothing has been
+pulled from the queue in ten sessions. That is not an argument for a bigger
+queue; it is the reason these ten are checked against it one by one below.
+
+**Four candidate findings were killed by checking**, and the method is worth
+keeping: `classAffinity` missing on 128 of 244 parts *(designed — rivals.js
+reads absence as `neutral`)*; every chimera Unclassed *(my probe read
+`className`; the field is `creatureClass` — the real split is Ground 38% /
+Air 30% / Water 25% / Unclassed 8%, so R18 holds)*; the news wire showing
+one distinct line *(items are plain strings, not objects — my probe read
+`.text`)*; and the region ladder being non-monotonic *(that is the class
+triangle working, and each region genuinely asks a different question)*.
+
+---
+
+- **R138 — The middle of the level curve is empty.** Across six campaigns'
+  surviving stables: **L0 × 27, L10 × 25, and twelve creatures spread over
+  every level between.** 42% of the stable has never fought; 39% is maxed.
+  Levelling is a step function — a creature is either a bench-warmer or
+  finished — so the XP curve does no pacing work at all. *Done when: a
+  median stable on day 180 has more creatures between L1 and L9 than at L0
+  and L10 combined, and the harness reports the distribution.*
+
+- **R139 — The Reorientation Wing reforms 1.4% of what it catches.** R8
+  shipped a whole facility track, a real-world programme clock and an
+  enrichment curriculum. Measured: **5,989 specimens bagged, 86 ever
+  rehabilitated — 1.4%.** The Wing is not broken (R83 made the walker use
+  it); it is starved, because bagging is cheap and a bay is scarce. *Done
+  when: a campaign that bags a thousand specimens graduates a number the
+  design can defend, and the entry states that number before the work.*
+
+- **R140 — You collect 95% of the parts and wear 56%.** R95 shipped a gate
+  on parts **seen** and holds it at 95%. Nobody has measured parts **worn**:
+  across six campaigns, **107 of 244 (44%) never go onto a creature**, even
+  in slots (organ 21, hide 19, head 19, forelimbs 17, tail 17, hindlimbs
+  14). Eight are salvage. Whole species are collected and shelved — tiger,
+  mantis, jellyfish, pufferfish, alpine_ram, glider_skunk and iron_tortoise
+  each have five of six parts never installed. This is not R61's orphan
+  content (which has no route at all); it is content with a route nobody
+  takes. *Done when: the gate measures worn as well as seen, and the median
+  campaign wears a number this entry names.*
+
+- **R141 — The Kite Frame has never been built.** Four frames ship. Across
+  six campaigns' 64 surviving chimeras: **M × 57, S × 4, L × 3, A × 0.** The
+  A/Kite Frame is the only one with a restricted socket list (head,
+  forelimbs, tail, hide, organ — no hindlimbs), which is what makes it the
+  flyer, and nothing has ever worn it. A9 shipped a fourth frame and the
+  game has never used it. *Done when: a campaign builds a Kite chimera
+  because it is the right answer to something, and smoke says which.*
+
+- **R142 — The splice is the rarest verb in the game.** A 180-day campaign,
+  median per seed: **care 24,752 · graduate 2,033 · buy 1,812 · job 1,189 ·
+  … · splice 21 · vat 2.** The Surgery Theater is M3, the game's title verb
+  and its central creative act, and it fires **once every 8.6 days** against
+  a chore that fires 137 times a day. The ratio is **1,178 : 1**. Nothing
+  here says splicing should be frequent — R135 has just re-established why
+  it must stay expensive — but a loop whose signature act is its rarest
+  event is worth looking at deliberately. *Done when: the entry states what
+  a healthy splices-per-campaign figure is, argues it against R135's churn
+  guard, and the harness reports the ratio.*
+
+- **R143 — Nothing goes badly wrong.** Six campaigns: **0 hours broke, 0
+  hours stalled, lowest balance ever $164 (day one), ending funds $110k to
+  $644k, and 68 losses against 1,171 wins.** The game cannot be lost and
+  money stops being a constraint before the first region falls. This is
+  *not* "the fights are too easy" — a scripted sweep of 60 random builds
+  loses 72% of 1,768 fights, so the difficulty is real and the walker simply
+  picks fights it can win. The finding is the absence of consequence: no
+  failure state bites, and the second half of the campaign has nothing to
+  spend on. R94 covers notoriety and R102 covers the ending; neither covers
+  money or defeat. *Done when: a campaign can be measurably set back, and
+  the walker's end-of-run funds have somewhere to go.*
+
+- **R144 — Two of five regions ask no question.** The field guide promises
+  "each region asks a different question". Measured — one purebred build per
+  class, team of three, against each region's first node:
+
+  | region | ground | air | water | spread |
+  | --- | ---: | ---: | ---: | ---: |
+  | greenfield | 100% | 100% | 100% | **0pp** |
+  | kestrel | 0% | 75% | 100% | 100pp |
+  | drowned | 100% | 25% | 100% | 75pp |
+  | foundry | 0% | 0% | 0% | **0pp** |
+  | spire | 25% | 0% | 4% | 25pp |
+
+  Greenfield asks nothing of anybody, and **foundry answers nobody** at
+  standard grade — it is a pure grade wall wearing a class question's
+  clothes. At apex the swings narrow to 54/0/50/37pp, so grade buys you out
+  of the triangle, which is the interesting half. *Done when: every region's
+  first node has a class that beats it and a class that does not, at the
+  grade a player arrives with.*
+
+- **R145 — A fight is nine turns.** Scripted sweep, 1,768 fights: **p10 5 ·
+  median 9 · p90 15 · max 37 turns.** Each turn is a beat-by-beat animation
+  on a phone. Nobody has ever measured how long a fight takes in seconds,
+  or whether a 37-turn fight is reachable in real play. This ships as a TWA;
+  a two-minute battle is a different product from a twenty-second one.
+  *Done when: fight length is measured in seconds on a real device, the
+  distribution has a stated ceiling, and the arena has a way to end a fight
+  that is already decided.*
+
+- **R146 — The campaign marks five moments in 180 days.** The walk's `at`
+  map records `firstParts` (day 0.0), `firstChimera` (0.2), `firstNode`
+  (0.3), `firstRegion` (4.3) and `dominion` (40.8) — and **nothing between
+  day 4 and day 41**, which is the stretch every pacing question is about.
+  The instrument that every "when does X happen" answer comes from can see
+  five things. *Done when: the walk marks every first-use of a shipped
+  system, and the harness prints a pacing table a designer can read.*
+
+- **R147 — Fifteen combos are never found.** R93b took combo discovery from
+  7% to a median **12 of 27** per campaign; the other **15 are never seen by
+  anybody**. The Combos tab (R136) now folds them out of sight, which makes
+  the shut summary the only thing most players read about them. *Done when:
+  a median campaign discovers a number this entry names, and the ones it
+  still misses are missed for a reason the entry can state.*
+
+---
+
 ### 9.17 Half the agenda did nothing (R137) — carried debt, asked for directly
 
 - **R137 — A row that points at this screen opens the thing it names.** ✅
