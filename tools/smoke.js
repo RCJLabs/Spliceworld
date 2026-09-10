@@ -15008,35 +15008,29 @@ if (inShard('contest')) {
     // stable cap recycles a five-bay creature the moment the Theater builds a
     // six-bay one, and the criterion is that a campaign BUILDS one.
     //
-    // Measured: 4 Kites across these four seeds, on three of them. The floor
-    // is two seeds, not four, because the frame is answered by a wall the
-    // walk only sometimes has in front of it — which is the whole point of
-    // it being a choice.
-    const kites = shapes.map((w) => w.framesBuilt.A ?? 0);
+    // R150 — the Kite's own count came out of this line; see below.
     const frames = shapes.map((w) => `${w.seed}:${Object.entries(w.framesBuilt).map(([f, n]) => f + n).join('')}`).join(' ');
     console.log(`   frames built: ${frames}`);
-    // R144 — THE FLOOR WAS 2 OF 4 SEEDS AND IT IS NOW "NOT ZERO", which is
-    // what the note fifteen lines above this one already prescribes: catch a
-    // system falling to ZERO rather than pin a chaotic simulation to a number.
+    // R150 — AND THE KITE IS NOT COUNTED HERE ANY MORE. Three separate
+    // censuses of this one rare event were knocked over by three consecutive
+    // milestones that never touched the frame, and every time the answer was
+    // more samples: R141 set a floor of 2 of 4 seeds from a single reading,
+    // R143 and R144 each reshuffled which walls stand in front of a splice
+    // and took it red, R144 weakened it to "not zero" and separately gave the
+    // battery's clause a second seed.
     //
-    // R141 set the old floor from one four-seed reading that happened to come
-    // back 2, and nothing ever justified 50% of campaigns building a rare
-    // optional frame. It has now gone red twice in two milestones for reasons
-    // that have nothing to do with the Kite: R143 repriced upkeep and R144
-    // changed two encounters, and each reshuffled which walls stand in front
-    // of a splice. Measured across eight seeds the count reads 5, 2, 5, 2 for
-    // four different garrison fractions — NON-MONOTONIC, so it is not
-    // responding to pressure at all.
+    // The event is rarer than any of those fixes admitted. Measured across
+    // sixteen seeds: 31% of 45-day walks build a Kite and 75% of 180-day
+    // walks, NEVER more than one — and seeds 7 and 99, two of the four this
+    // block walks, have never built one at either window. The census rode on
+    // 2026 and 4242 the whole time.
     //
-    // What actually protects the Kite is the deterministic rule in shard a:
-    // eight bodies fly on it and on nothing else, worth 14.8pp against a wall
-    // that swings and -0.9pp against one that shoots. That has stayed green
-    // through both milestones. This census only has to prove the frame is
-    // still reachable in play, and one Kite across four campaigns proves it.
-    const built = kites.reduce((a, b) => a + b, 0);
-    assert.ok(built >= 1,
-      `a campaign still builds a Kite when the wall in front of it swings — `
-      + `${built} across ${kites.length} campaigns (${frames})`);
+    // What it was trying to prove — that a campaign can reach the frame — is
+    // now proved deterministically in shard a, by asking `bestSplice` which
+    // chassis it picks in front of a wall that swings. That rule goes red on
+    // both of R141's actual defects; this one never could, because a walk
+    // that happens not to meet a swinging wall looks exactly like an engine
+    // that refuses to build Kites.
     // R148 — AND EVERY CHASSIS THE THEATER SELLS GETS WORN BY SOMEBODY.
     //
     // R141 left this as a note rather than a rule, because the same reading
@@ -15049,9 +15043,24 @@ if (inShard('contest')) {
     // Counted over every splice rather than the survivors, because the stable
     // cap recycles on grade and a five-bay Kite goes first. Measured across
     // six campaigns: M 55, S 31, L 25, A 3, against M 79, S 33, A 4, L 0.
-    for (const id of Object.keys(content.frames)) {
+    //
+    // R150 — SCOPED TO THE FULL-SOCKET FRAMES, derived rather than named.
+    // The Kite is the only chassis that gives a bay up (five sockets against
+    // six), and giving one up is exactly why it is a conditional pick rather
+    // than a routine one — so it is the one frame a campaign is not expected
+    // to wear on every seed, and the one this loop cannot honestly assert.
+    // Naming it would be the hole R144 wrote a rule against; reading the
+    // socket list is not. The three six-bay chassis appear on every seed
+    // measured, at both windows.
+    const SIX_BAYS = 6;
+    const routine = Object.keys(content.frames)
+      .filter((id) => (content.frames[id].slots ?? new Array(SIX_BAYS)).length >= SIX_BAYS);
+    assert.equal(routine.length, Object.keys(content.frames).length - 1,
+      `exactly one chassis trades a bay away, or the exemption above covers more than it says `
+      + `(full-socket frames: ${routine.join(', ')} of ${Object.keys(content.frames).join(', ')})`);
+    for (const id of routine) {
       assert.ok(shapes.some((w) => (w.framesBuilt[id] ?? 0) > 0),
-        `every chassis the Theater sells gets worn by somebody — ${content.frames[id].name} never was (${frames})`);
+        `every full-socket chassis the Theater sells gets worn by somebody — ${content.frames[id].name} never was (${frames})`);
     }
     // R25 priced $24,000 of facility depth and the walk had never bought a
     // dollar of it. R83 then measured every track maxing on every seed by
@@ -18326,8 +18335,81 @@ if (inShard('kite')) {
     && [...groundish].some((t) => note.text.includes(t))),
     `and stays quiet on one that shoots (${quiet.name}), or it is decoration`);
 
+  // R150 — AND THE PLANNER CHOOSES IT. This is the half that three separate
+  // censuses spent a campaign each failing to ask.
+  //
+  // Everything above measures whether the Kite is WORTH building. R141's
+  // actual defect was that a campaign could not build one if it wanted to:
+  // `bestSplice` filled `slots` from the whole vault without asking which
+  // sockets the chassis has, so a hindlimb landed in `slots.hindlimbs` and
+  // the Kite was refused for owning a leg — and it returned on the first
+  // frame that validated, in the order M, S, L, A, so A was unreachable the
+  // moment M worked. NOT ONE of the rules above can see either bug. They
+  // bench a Kite that has already been built.
+  //
+  // Three walker censuses covered that, and all three were the same coin
+  // toss: 31% of 45-day walks build a Kite, 75% of 180-day walks, never more
+  // than one, and two of smoke's own four seeds have never built one at any
+  // window. Each was knocked over by a milestone that had nothing to do with
+  // the frame, and each time the answer was more samples.
+  //
+  // `bestSplice` is a pure function of (state, content, wanted, wall). So
+  // ask it directly: hand it a vault and a wall and read which chassis comes
+  // back. No seed, no campaign, ~40ms, and it goes red on both of R141's
+  // defects — measured: the leg refusal returns L, the first-frame return
+  // returns M, where the shipped engine returns A.
+  //
+  // THE VAULT HOLDS ALL SIX BAYS, which is load-bearing rather than tidy: a
+  // vault stocked only with the five parts the Kite can wear would never put
+  // a hindlimb in front of the planner, and the leg refusal is exactly what
+  // happens when one is there. A gate that cannot present the leg cannot
+  // catch the bug about the leg.
+  const { labAt: kiteLab, bestSplice: kitePlan } = await import('./sim.js');
+  // The Theater tier that sells the frame, read off the track rather than
+  // named, so a facility rewrite moves this with it.
+  const sellsKite = (content.facility?.theater?.levels ?? [])
+    .find((l) => (l.grants?.frames ?? []).includes('A'));
+  assert.ok(sellsKite, 'some Theater tier sells the Kite, or nothing below can build one');
+  const ALL_BAYS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+  const chose = (body, wall) => {
+    const st = kiteLab({ theater: sellsKite.level });
+    st.inventory = {
+      vials: [],
+      tokenCount: 99,
+      parts: ALL_BAYS
+        .map((bay) => (bay === 'forelimbs' ? 'eagle_forelimbs' : `${body}_${bay}`))
+        .filter((pid) => content.parts[pid])
+        .map((pid, i) => ({ id: `k${i}`, partId: pid, grade: 'prime', traits: [] })),
+    };
+    st.discoveredCombos = [];
+    return kitePlan(st, content, null, wall ? content.encounters[wall] : null)?.frameId ?? 'none';
+  };
+  //
+  // Over `sample`, not a fresh slice of `onlyKite`: `every()` on an empty
+  // array is TRUE, and `sample` is the binding the bench rules above already
+  // proved non-empty. A milestone about rules that measure nothing does not
+  // get to reintroduce one three lines from the end.
+  const picked = { swings: [], shoots: [], blind: [] };
+  for (const { body } of sample) {
+    picked.swings.push(chose(body, swinging[0]));
+    picked.shoots.push(chose(body, shooting[0]));
+    picked.blind.push(chose(body, null));
+  }
+  assert.ok(picked.swings.every((f) => f === 'A'),
+    `the planner reaches for the Kite when the wall in front of it swings — `
+    + `${sample.map((r, i) => `${r.body} ${picked.swings[i]}`).join(', ')}`);
+  // Both directions, for the same reason every rule above has them: a frame
+  // the planner picks against everything is not a choice, it is a default.
+  assert.ok(picked.shoots.every((f) => f !== 'A'),
+    `and does NOT when it shoots (${sample.map((r, i) => `${r.body} ${picked.shoots[i]}`).join(', ')})`);
+  assert.ok(picked.blind.every((f) => f !== 'A'),
+    `nor with no wall named at all, which is where a frame that simply outscores the others would show `
+    + `(${sample.map((r, i) => `${r.body} ${picked.blind[i]}`).join(', ')})`);
+
   console.log(`   R141 Kite: ${onlyKite.length} bodies fly on it alone — ${paid.d.toFixed(1)}pp over a Scamper `
     + `on the ${swinging.length} walls that swing, ${wasted.d.toFixed(1)}pp on the ${shooting.length} that shoot`);
+  console.log(`   R150 planner: swinging wall -> ${[...new Set(picked.swings)].join('/')}, `
+    + `shooting -> ${[...new Set(picked.shoots)].join('/')}, no wall -> ${[...new Set(picked.blind)].join('/')}`);
 }
 
 // ---------------------------------------------------------------------------

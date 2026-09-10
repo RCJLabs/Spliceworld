@@ -1,5 +1,121 @@
 # PROGRESS
 
+## Session 149 — R150: three censuses of a rare event ✅
+
+**ROADMAP §9.24.** Carried out of R144, and the carried note undersold it:
+the thing three gates were asserting turns out to be a **31% event**.
+
+### A campaign is not a measurement
+
+Three gates asserted that a 180-day campaign builds a Kite. Three consecutive
+milestones that never touched the Kite knocked them over, and every time the
+answer was more samples — a floor of 2 of 4 seeds, then "not zero", then a
+second seed bolted onto the battery.
+
+Measured across sixteen seeds:
+
+| window | walks building a Kite | most in any walk |
+| --- | ---: | ---: |
+| 45 days (battery) | **5 of 16 — 31%** | 1 |
+| 180 days (smoke) | **6 of 8 — 75%** | 1 |
+
+**Seeds 7 and 99 have never built one at either window** — two of smoke's own
+four. The census rode on 2026 and 4242 the whole time. R144's second seed for
+the battery *was seed 7*: three seconds of walking, zero coverage.
+
+And two of the three were the same assertion. `built >= 1` is `sum ≥ 1`;
+R148's chassis loop six lines below asserts `some(seed > 0)` for every frame
+including A. Identical, written a milestone apart.
+
+### None of them could see the bug they existed for
+
+R141's defect was that `bestSplice` filled slots from the whole vault without
+asking the chassis, so the Kite was refused **for owning a leg** — and it
+returned on the first frame that validated. A walk that happens not to meet a
+swinging wall looks exactly like an engine that refuses to build Kites.
+
+### What replaced them
+
+`bestSplice` is pure. Ask it directly — vault in, wall in, chassis out. No
+seed, ~40ms:
+
+| wall | frame picked |
+| --- | --- |
+| swings low | **A — the Kite** |
+| shoots | L |
+| none | M |
+
+The vault holds **all six bays**, which is load-bearing: five parts would
+never put a hindlimb in front of the planner, and a gate that cannot present
+the leg cannot catch the bug about the leg.
+
+R148's chassis loop keeps its walker, scoped to full-socket frames — derived
+from the socket list with a count beside it, never named. R144's rule, one
+block over.
+
+### The full battery found the same bug wearing different clothes
+
+It came back **`BATTERY_EXIT=1` — 229 of 230 caught, one MISSED**, and it was
+not R150's. Break 206 (R133's *"an agenda row teaches a lesson the field guide
+already gives"*) had been blind since **R143**, which capped the agenda at
+three rows per kind. The vat row is **fifth of five** in `work` on the
+day-180 save, so the break had been patching a string the browser never
+received.
+
+The rule was never broken — the same lesson on a *rendered* row still goes
+red, measured. Its only live target had walked off the screen.
+
+**`--anchors` cannot catch this class**: the anchor still matches its line
+exactly, it is the *rendering* that changed. A break can go stale without a
+character moving, and only a full battery says so — R134's rot-check trigger
+paying for itself on the first run after it.
+
+Fix: the gate measures the hidden hints too, each written into a **clone of a
+real row** so it inherits the type and width the player sees. `spend` is
+excluded — it renders as chips with the hint in a `title`, and a tooltip has
+no width to wrap. The probe counts what it reached, because a filter over
+nothing is an empty list and an empty list of problems is a pass. Break 206
+stays where R133 aimed it; break 234 puts the blindness back.
+
+### Verification
+
+| | |
+| --- | --- |
+| gate-first | ✓ both R141 defects red on demand (leg refusal → L, first-frame → M) |
+| `--anchors` | ✓ 231 |
+| breaks 216, 231, 232, 233 | ✓ 4 caught, 0 missed |
+| breaks 206, 234 | ✓ 206 red against its **original** target; 234 red on the blindness |
+| all 16 HEIGHT breaks | ✓ 16 caught, 0 missed — re-run in full because this milestone changes that gate |
+| `--baseline` | ✓ every gate passes on a pristine tree (`BASELINE_EXIT=0`) |
+| `npm test` | ✓ 10 jobs, **185.9s** wall-clock (sum 698s), budget 195s (`NPMTEST_EXIT=0`) |
+| full battery | ran (CLAUDE.md's first trigger — this changes existing gates); **one miss found and fixed** |
+| `SAVE_VERSION` | unchanged at 49 |
+
+### And a measurement lesson that has now cost time three times
+
+The first `npm test` after the height change read **364.4s against a 195s
+budget** — with every job green. The break battery was running on all four
+cores at the same time. Alone, the same tree reads **185.9s**. The tell is in
+the line itself: *sum 698s of work* alone against *1417s* under load — the
+same work, double-counted CPU time.
+
+This is the third variant of one mistake this quarter (a cold fixture cache
+twice, CPU contention once). **A wall-clock budget can only be measured on an
+idle machine**, and the summary line says which kind of red it is if you read
+the `sum` beside it.
+
+### Next session's first task
+
+Pull from the seventh-audit queue: **R138** (the middle of the level curve is
+empty — 42% of a stable has never fought, 39% is maxed, twelve creatures
+spread over every level between) or **R139** (the Reorientation Wing reforms
+1.4% of what it catches). R138 is the larger design question; R139 has a
+number the entry must state before the work.
+
+Also carried: **the liquidity gap** — livestock leaves this game only through
+extraction, and extraction costs money. Nothing turns an asset back into cash,
+which bounds every future money sink.
+
 ## Session 148 — R144: the wrong grade and the wrong team ✅
 
 **ROADMAP §9.23.** The entry was **right**. Its table was measured at the

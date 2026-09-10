@@ -3549,6 +3549,118 @@ triangle working, and each region genuinely asks a different question)*.
 
 ---
 
+### 9.24 Three censuses of a rare event (R150) — carried out of R144
+
+- **R150 — A campaign is not a measurement.** ✅ *Shipped.*
+
+  Three separate gates asserted that a 180-day campaign builds a Kite Frame.
+  Three consecutive milestones that never touched the Kite knocked them over —
+  R143 repriced upkeep, R144 changed two encounters, and each reshuffled which
+  walls stand in front of a splice — and every time the answer was **more
+  samples**: a floor of 2 of 4 seeds, then "not zero", then a second seed
+  bolted onto the battery's clause.
+
+  #### The event is rarer than any of those fixes admitted
+
+  Measured across sixteen seeds, at both windows the gates use:
+
+  | window | walks building a Kite | most in any one walk |
+  | --- | ---: | ---: |
+  | 45 days (the battery's) | **5 of 16 — 31%** | 1 |
+  | 180 days (smoke's) | **6 of 8 — 75%** | 1 |
+
+  **Seeds 7 and 99 have never built one, at either window** — and they are two
+  of the four seeds smoke walks. The census rode on 2026 and 4242 the whole
+  time. R144's "two seeds is the smallest honest sample" added seed 7 to the
+  battery: three seconds of walking, and *zero* coverage, because seed 7 is
+  one of the two that never builds one.
+
+  Two of the three were also the **same assertion**. Smoke's `built >= 1` is
+  `sum ≥ 1`, and R148's all-chassis loop six lines below it asserts
+  `some(seed > 0)` for every frame including the Kite. Identical claims,
+  written a milestone apart, neither aware of the other.
+
+  #### None of them could see the bug they were there for
+
+  R141's defect was never balance: `bestSplice` filled `slots` from the whole
+  vault without asking which sockets the chassis has, so a hindlimb landed in
+  `slots.hindlimbs` and the Kite was refused **for owning a leg** — and it
+  returned on the first frame that validated, in the order M, S, L, A. A walk
+  that happens not to meet a swinging wall looks *exactly* like an engine that
+  refuses to build Kites. The census could not tell those apart; that is what
+  a 31% event asserted as a floor actually measures.
+
+  #### What replaced them
+
+  `bestSplice` is a pure function of `(state, content, wanted, wall)`. So the
+  gate asks it directly — hand it a vault and a wall, read which chassis comes
+  back. No seed, no campaign, ~40ms:
+
+  | wall in front of it | frame the planner picks |
+  | --- | --- |
+  | one that swings low | **A — the Kite** |
+  | one that shoots | L |
+  | none named at all | M |
+
+  All three directions are asserted, because a frame picked against everything
+  is a default rather than a choice. **The vault holds all six bays**, which is
+  load-bearing rather than tidy: a vault stocked only with the five parts the
+  Kite can wear would never put a hindlimb in front of the planner, and the leg
+  refusal is exactly what happens when one is there. A gate that cannot present
+  the leg cannot catch the bug about the leg.
+
+  Both of R141's defects now go red on demand — measured, the leg refusal
+  returns L and the first-frame return returns M, where the shipped engine
+  returns A. Break 216 moved off the walk it was riding; break 231 covers the
+  half **no gate has ever held**.
+
+  R148's chassis loop keeps its walker, scoped to the frames that carry the
+  full socket list — the Kite is the only chassis that trades a bay away, and
+  giving one up is precisely why it is a conditional pick. Derived from the
+  socket list, never named, with a count beside it: R144's rule, one block
+  over.
+
+  #### And the full battery found the same bug wearing different clothes
+
+  This milestone changes existing gates rather than only adding them, which
+  is the first trigger for the full battery — and it came back
+  `BATTERY_EXIT=1`: **229 of 230 caught, one MISSED.** Not R150's. Break 206,
+  R133's *"an agenda row teaches a lesson the field guide already gives"*,
+  which had been silently blind since R143.
+
+  R143 capped the agenda at **three rows per kind** for its own good reasons.
+  The vat row is **fifth of five** in `work` on the day-180 save, so from that
+  milestone onward break 206 patched a string the browser never received. The
+  rule was never broken — the same lesson on a *rendered* row still went red,
+  measured — but its only live target had walked off the screen, and two
+  milestones shipped green over it.
+
+  **`--anchors` cannot catch this class.** The anchor still matches its line
+  exactly; it is the *rendering* that changed. A break can go stale without a
+  single character moving, and only a full battery says so — which is the
+  argument for R134's rot-check trigger, paid for on the first run after it.
+
+  The gate now measures the hidden hints too: each is written into a **clone
+  of a real row** and read back, in the same browser and the same stylesheet,
+  so it inherits the type and width the player actually sees. `spend` is
+  excluded because it renders as chips and puts its hint in a `title` — a
+  tooltip has no width to wrap. The probe counts what it reached, because a
+  filter over nothing is an empty list and an empty list of problems is a
+  pass. Break 206 stays exactly where R133 aimed it; break 234 puts the
+  blindness back.
+
+  *Done when: no gate asserts the Kite by running a campaign, the frame's
+  reachability is proved by the planner itself, and reintroducing either of
+  R141's two defects goes red.* All three hold.
+
+  **The lesson, which is the reusable part:** *a campaign is not a
+  measurement.* A seeded walk is a coverage instrument — it proves systems
+  meet each other — and it is a terrible instrument for a rare binary outcome,
+  because every unrelated change reshuffles it and the only available repair
+  is more samples. When a gate about a rare event goes red for a reason that
+  has nothing to do with the event, the fix is not a bigger sample. It is to
+  find the deterministic function underneath and ask that instead.
+
 ### 9.23 The wrong grade and the wrong team (R144) — seventh audit
 
 - **R144 — Two of five regions ask no question.** ✅ *Shipped. The entry was
@@ -3643,7 +3755,9 @@ triangle working, and each region genuinely asks a different question)*.
   before them. Both were given more samples rather than looser floors, but the
   frame is protected by the deterministic 14.8pp rule in shard a, which stayed
   green throughout. Consolidating the three onto that rule is a milestone, not
-  another patch.
+  another patch. ✅ **Done — R150, §9.24**, and the census turned out to be
+  measuring a 31% event. Two of the four seeds smoke walks have never built a
+  Kite at any window.
 
 ### 9.22 An empire that cost nothing to run (R143) — seventh audit
 
