@@ -1080,7 +1080,7 @@ const WALK_DAY = 24 * WALK_HOUR;
 // it and took a mixed-class roster to the Aerodrome 33 times.
 const GRADE_ORDER = ['standard', 'prime', 'apex', 'prismatic'];
 
-function bestSplice(state, content, wanted = null, wall = null) {
+export function bestSplice(state, content, wanted = null, wall = null) {
   const owned = state.inventory.parts;
   if (!owned.length) return null;
   // R92 — A PLAYER WHO OWNS BOTH HALVES OF A COMBO BUILDS WITH THEM.

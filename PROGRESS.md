@@ -1,5 +1,82 @@
 # PROGRESS
 
+## Session 149 — R150: three censuses of a rare event ✅
+
+**ROADMAP §9.24.** Carried out of R144, and the carried note undersold it:
+the thing three gates were asserting turns out to be a **31% event**.
+
+### A campaign is not a measurement
+
+Three gates asserted that a 180-day campaign builds a Kite. Three consecutive
+milestones that never touched the Kite knocked them over, and every time the
+answer was more samples — a floor of 2 of 4 seeds, then "not zero", then a
+second seed bolted onto the battery.
+
+Measured across sixteen seeds:
+
+| window | walks building a Kite | most in any walk |
+| --- | ---: | ---: |
+| 45 days (battery) | **5 of 16 — 31%** | 1 |
+| 180 days (smoke) | **6 of 8 — 75%** | 1 |
+
+**Seeds 7 and 99 have never built one at either window** — two of smoke's own
+four. The census rode on 2026 and 4242 the whole time. R144's second seed for
+the battery *was seed 7*: three seconds of walking, zero coverage.
+
+And two of the three were the same assertion. `built >= 1` is `sum ≥ 1`;
+R148's chassis loop six lines below asserts `some(seed > 0)` for every frame
+including A. Identical, written a milestone apart.
+
+### None of them could see the bug they existed for
+
+R141's defect was that `bestSplice` filled slots from the whole vault without
+asking the chassis, so the Kite was refused **for owning a leg** — and it
+returned on the first frame that validated. A walk that happens not to meet a
+swinging wall looks exactly like an engine that refuses to build Kites.
+
+### What replaced them
+
+`bestSplice` is pure. Ask it directly — vault in, wall in, chassis out. No
+seed, ~40ms:
+
+| wall | frame picked |
+| --- | --- |
+| swings low | **A — the Kite** |
+| shoots | L |
+| none | M |
+
+The vault holds **all six bays**, which is load-bearing: five parts would
+never put a hindlimb in front of the planner, and a gate that cannot present
+the leg cannot catch the bug about the leg.
+
+R148's chassis loop keeps its walker, scoped to full-socket frames — derived
+from the socket list with a count beside it, never named. R144's rule, one
+block over.
+
+### Verification
+
+| | |
+| --- | --- |
+| gate-first | ✓ both R141 defects red on demand (leg refusal → L, first-frame → M) |
+| `--anchors` | ✓ 230 |
+| breaks 216, 231, 232, 233 | ✓ 4 caught, 0 missed (`ONLY_EXIT=0`) |
+| `--baseline` | ✓ every gate passes on a pristine tree (`BASELINE_EXIT=0`) |
+| `npm test` | ✓ 10 jobs, **192.0s** wall-clock (sum 716s), budget 195s (`NPMTEST_EXIT=0`) |
+| full battery | PENDING — running at commit time. This milestone **changes existing gates' logic** rather than only adding one, which is CLAUDE.md's first trigger for it |
+| `SAVE_VERSION` | unchanged at 49 |
+
+### Next session's first task
+
+Pull from the seventh-audit queue: **R138** (the middle of the level curve is
+empty — 42% of a stable has never fought, 39% is maxed, twelve creatures
+spread over every level between) or **R139** (the Reorientation Wing reforms
+1.4% of what it catches). R138 is the larger design question; R139 has a
+number the entry must state before the work.
+
+Also carried: **the liquidity gap** — livestock leaves this game only through
+extraction, and extraction costs money. Nothing turns an asset back into cash,
+which bounds every future money sink.
+
 ## Session 148 — R144: the wrong grade and the wrong team ✅
 
 **ROADMAP §9.23.** The entry was **right**. Its table was measured at the

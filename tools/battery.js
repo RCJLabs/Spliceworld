@@ -339,7 +339,12 @@ const EMPIRE = ['node', '-e',
 
 // R144 — EVERY REGION ASKS A QUESTION AT THE GRADE AND TEAM IT DECLARES.
 // Six archetypes against five first nodes; cheap, no walks. Shard b.
-const REGIONS = ['node', '-e',
+// R144 named this REGIONS after the one block it then aimed at; R150 aims at
+// a second block in the same lane, so it is named for the LANE. A gate
+// constant named after one of its blocks is how a reader comes to think the
+// lane holds one thing — which is the same mistake, one level up, as the
+// duplicate shard key R144 shipped and caught.
+const SHARD_B = ['node', '-e',
   "process.env.SW_SHARD = 'b'; await import('./tools/smoke.js');"];
 
 // R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
@@ -1863,23 +1868,16 @@ const WALK = ['node', '-e', `
   if (w.bagged < 10) fail('the Containment Cannon is not being fired (' + w.bagged + ' bagged)');
   const levels = Object.values(w.facility ?? {}).reduce((a, b) => a + b, 0);
   if (levels < 12) fail('the lab is never bought (summed track levels ' + levels + ')');
-  // R141 — and the Kite gets worn. Before that milestone \`bestSplice\` dressed
-  // every frame from the same six-bay fill and then offered the result to a
-  // chassis with five, so the Kite was refused for owning a leg; it also
-  // returned on the first frame that validated, in the order M, S, L, A.
-  // Measured on this seed and window: 2 Kites of 20 splices.
-  // R144 — AND IT TAKES TWO SEEDS TO ASK THAT HONESTLY. One 45-day window on
-  // one seed is a single sample of a rare event, and this clause has now been
-  // knocked over twice by milestones that had nothing to do with the Kite:
-  // R143 repriced upkeep, R144 changed two encounters, and each reshuffled
-  // which walls stand in front of a splice. Across four seeds at 45 days the
-  // frame appears in one of them, so a pair is the smallest sample that is
-  // not a coin toss. What proves the Kite is WORTH building is the
-  // deterministic 14.8pp rule in smoke's shard a, not this census.
-  const w2 = campaignWalk(content, { seed: 7, days: 45, stopAtDominion: false });
-  const kites = (w.framesBuilt?.A ?? 0) + (w2.framesBuilt?.A ?? 0);
-  if (!(kites > 0)) fail('neither walk builds a Kite (' + JSON.stringify(w.framesBuilt)
-    + ' / ' + JSON.stringify(w2.framesBuilt) + ')');
+  // R150 — THE KITE CLAUSE IS GONE FROM HERE, and the second walk with it.
+  // R141 asked this seed for a Kite, R144 added seed 7 to make the sample
+  // honest, and seed 7 is one of the seeds that has NEVER built one — at 45
+  // days or at 180. The pair passed on 4242 alone, so the fix bought three
+  // seconds of walking and no coverage at all.
+  // Measured across sixteen seeds: 31% of 45-day walks build a Kite, and
+  // never more than one. What R141 actually fixed — the planner refusing the
+  // frame for owning a leg, and returning on the first chassis that
+  // validated — is now asserted deterministically in smoke's shard a, by
+  // asking \`bestSplice\` which frame it picks in front of a wall that swings.
   // R148 — and a Rumbler. Measured on this seed and window: 5 of 17 splices.
   if (!(w.framesBuilt?.L > 0)) fail('the walk never builds a Rumbler (' + JSON.stringify(w.framesBuilt) + ')');
   console.log('walk ✓  ' + w.duels + ' duels, ' + w.breakouts + ' hunts, ' + w.bagged
@@ -3638,7 +3636,7 @@ const BREAKS = [
     // the `.nodes[0]` clause and every region qualifies as an entry point, so
     // the rule skips all five and passes by having nothing to look at — which
     // is the failure mode this battery exists to catch.
-    n: 227, gate: REGIONS, name: 'the entry-point exemption widens to every region, and the rule looks at nothing',
+    n: 227, gate: SHARD_B, name: 'the entry-point exemption widens to every region, and the rule looks at nothing',
     file: 'tools/smoke.js',
     anchor: '    if (!r.requires) { lines.push(`${r.id} exempt (entry point)`); continue; }',
     to: '    if (true) { lines.push(`${r.id} exempt (entry point)`); continue; }',
@@ -3650,7 +3648,7 @@ const BREAKS = [
     // of EACH class against a declared bench of two: every archetype scored
     // 0-25% and no anatomy answered it. Putting the crane and the quench rig
     // back is putting the lie back.
-    n: 228, gate: REGIONS, name: 'the foundry wall stops being what its own briefing says, and answers nobody',
+    n: 228, gate: SHARD_B, name: 'the foundry wall stops being what its own briefing says, and answers nobody',
     file: 'data/enemies.json',
     anchor: `      "waves": [
         "slag_hauler",
@@ -3669,7 +3667,7 @@ const BREAKS = [
     // so a hardcoded team of three reads it at 100% for noise and the honest
     // team of two reads it at 0% for everybody. Force the three back and the
     // gate stops seeing the fight the player is actually sent to.
-    n: 229, gate: REGIONS, name: 'the region gate stops reading benchTeam, and measures a fight nobody is asked to have',
+    n: 229, gate: SHARD_B, name: 'the region gate stops reading benchTeam, and measures a fight nobody is asked to have',
     file: 'tools/smoke.js',
     anchor: '    const team = node.benchTeam ?? r.benchTeam ?? 3;',
     to: '    const team = 3;',
@@ -3731,12 +3729,61 @@ const BREAKS = [
   {
     // And the walker goes back to taking the first frame that validates, in
     // the fixed order M, S, L, A — which is why six campaigns and 64 chimeras
-    // contained no Kite at all. Aimed at WALK rather than the smoke block,
-    // because a 45-day seeded walk answers it in seconds.
-    n: 216, gate: WALK, name: 'the first frame that validates wins again, and a campaign can never build a Kite',
+    // contained no Kite at all.
+    // R150 — RE-AIMED FROM WALK TO KITE. It was pointed at a 45-day seeded
+    // walk because that answered in seconds; what it never was is reliable.
+    // The walk it aimed at builds a Kite 31% of the time, so the break was
+    // being caught by a coin toss that happened to land the same way twice.
+    // The planner rule in shard a answers the same question with no seed at
+    // all: measured, this patch makes it return M against the wall that made
+    // it return A.
+    n: 216, gate: KITE, name: 'the first frame that validates wins again, and a campaign can never build a Kite',
     file: 'tools/sim.js',
     anchor: '      if (!best || score > best.score) best = { frameId, slots, score, blank };',
     to: '      if (!best) best = { frameId, slots, score, blank };',
+  },
+  {
+    // R150 — R141'S OTHER DEFECT, WHICH NO GATE HAS EVER HELD. `bestSplice`
+    // filled `slots` from the whole vault without asking which sockets the
+    // chassis actually has, so a hindlimb landed in `slots.hindlimbs` and
+    // `validateSplice` refused the Kite outright — "The Kite Frame has no
+    // hindlimbs to bolt that to" — for owning a leg. Six campaigns, 64
+    // chimeras, no Kite.
+    //
+    // Nothing in the battery aimed at it: break 216 covered the ordering
+    // half, and the frame-shopping half was only ever covered by a walker
+    // census that had a 31% chance of noticing. Measured, this patch returns
+    // L where the shipped engine returns A — and it is the reason the gate's
+    // vault carries all six bays rather than the five the Kite can wear.
+    n: 231, gate: KITE, name: 'the planner dresses every chassis from the whole vault, and the Kite is refused for owning a leg',
+    file: 'tools/sim.js',
+    anchor: '        if (!chassis.includes(part.slot)) continue;',
+    to: '        if (false) continue;',
+  },
+  {
+    // R150 — THE OTHER DIRECTION, which is the half that decides whether the
+    // Kite is a choice or a default. The frame's credit is what the wall in
+    // front of it actually throws along the ground: a wall that shoots blanks
+    // nothing, so wings buy a lost socket and no protection. Stop reading the
+    // wall's own moves and every wall looks like a wall that swings — the
+    // planner then reaches for the Kite against a gunship, which is the
+    // shape R141 was careful not to ship.
+    n: 232, gate: KITE, name: 'the frame is credited for blanking a wall that never swings, so the Kite is picked against gunships',
+    file: 'tools/sim.js',
+    anchor: '      if ((move.tags ?? []).some((t) => dead.has(t))) blanked += power;',
+    to: '      blanked += power;',
+  },
+  {
+    // R150 — and the chassis loop's exemption widens to everything. The
+    // Kite is left out of "every chassis gets worn by somebody" because it
+    // is the one frame that trades a bay away, DERIVED from the socket list
+    // rather than named — R144's rule, one block over. Widen the filter and
+    // every frame qualifies as full-socket, which is a different claim
+    // wearing the same words; the count below it is what says so.
+    n: 233, gate: SHARD_B, name: 'the full-socket exemption widens to every chassis, and the loop stops meaning what it says',
+    file: 'tools/smoke.js',
+    anchor: '      .filter((id) => (content.frames[id].slots ?? new Array(SIX_BAYS)).length >= SIX_BAYS);',
+    to: '      .filter((id) => (content.frames[id].slots ?? new Array(SIX_BAYS)).length >= 0);',
   },
   {
     // R136 — the Combos tab goes back to three flat lists, which is the
