@@ -85,10 +85,24 @@ stays where R133 aimed it; break 234 puts the blindness back.
 | `--anchors` | ✓ 231 |
 | breaks 216, 231, 232, 233 | ✓ 4 caught, 0 missed |
 | breaks 206, 234 | ✓ 206 red against its **original** target; 234 red on the blindness |
+| all 16 HEIGHT breaks | ✓ 16 caught, 0 missed — re-run in full because this milestone changes that gate |
 | `--baseline` | ✓ every gate passes on a pristine tree (`BASELINE_EXIT=0`) |
-| `npm test` | ✓ 10 jobs, **192.0s** wall-clock (sum 716s), budget 195s (`NPMTEST_EXIT=0`) |
+| `npm test` | ✓ 10 jobs, **185.9s** wall-clock (sum 698s), budget 195s (`NPMTEST_EXIT=0`) |
 | full battery | ran (CLAUDE.md's first trigger — this changes existing gates); **one miss found and fixed** |
 | `SAVE_VERSION` | unchanged at 49 |
+
+### And a measurement lesson that has now cost time three times
+
+The first `npm test` after the height change read **364.4s against a 195s
+budget** — with every job green. The break battery was running on all four
+cores at the same time. Alone, the same tree reads **185.9s**. The tell is in
+the line itself: *sum 698s of work* alone against *1417s* under load — the
+same work, double-counted CPU time.
+
+This is the third variant of one mistake this quarter (a cold fixture cache
+twice, CPU contention once). **A wall-clock budget can only be measured on an
+idle machine**, and the summary line says which kind of red it is if you read
+the `sum` beside it.
 
 ### Next session's first task
 
