@@ -3416,6 +3416,47 @@ moved one of them: the first premise held exactly, the second did not.
     new measurement. The first paint is smaller than before this milestone
     started, which discharges most of R121 as a side effect.
 
+### 9.17 Half the agenda did nothing (R137) — carried debt, asked for directly
+
+- **R137 — A row that points at this screen opens the thing it names.** ✅
+  *Shipped.*
+
+  R131 filed this as "the agenda lists things that are also on the screen it
+  is drawn on". Measured, it was worse than duplication. Of the ten rows a
+  day-180 save offers, **five name `ranch` — the screen the agenda is on**:
+  Graduate a donor, Breed a pair, Care for the herd, Order from the catalog,
+  Expand the pens. `showScreen` on the screen you are already on repaints
+  and does nothing else, so **half the panel was buttons that did nothing.**
+
+  And R133 sharpened it three milestones ago by shutting the money card and
+  the Breeding Pen: "Order from the catalog" went nowhere *and* the
+  catalogue was behind a fold the player had not opened.
+
+  Such a row now names a **fold** and opens it, shuts the animals' exclusive
+  group by hand the way a real click would, scrolls the card into view and
+  moves focus to its head. `opens` is read from the save like `hint` is,
+  because which card answers "care for the herd" depends on which animal is
+  asking — it resolves to `ranch-a2069`, `breeding-pen`, `ranch-a2088`,
+  `slush-fund`, `slush-fund` on the walked save.
+
+  The gate has two halves, and the second is R128b's lesson: the row must
+  name a fold, **and it must be one this page actually paints**. A declared
+  id nothing draws is the same dead button wearing an attribute.
+
+  *Done when: no agenda row rendered on the Ranch is a button that navigates
+  to the Ranch; every such row opens the card it names and brings it into
+  view; and a gate fails if a row's destination is the screen it is drawn on
+  without naming a fold that screen paints.*
+
+  **The eager budget is the note worth carrying.** `KB_CAP` 557 → 560,
+  measured 557.4 — the third raise in seven milestones (548 → 553 → 557 →
+  560), and every one of them the Ranch gaining something. That is
+  structural rather than sloppy: the Ranch is the first paint, so anything
+  it needs on frame one is eager by definition, and the agenda is the
+  biggest such thing. The number to watch is `FIRST_PAINT_KB`, which is what
+  the player actually waits for; if that starts moving every milestone too,
+  the answer is a smaller eager agenda rather than a bigger budget.
+
 ### 9.16 The last flat tab (R136) — carried debt, asked for directly
 
 - **R136 — The Combos tab folds.** ✅ *Shipped.*

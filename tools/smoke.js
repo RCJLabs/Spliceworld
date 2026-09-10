@@ -11591,9 +11591,16 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     // the Ranch — the facility roll-up, which says where the upgrades that
     // left this screen went. Those are destinations too; they are simply
     // not agenda items, and this block is about the agenda's shape.
+    // R137 — ONE ACTION PER ITEM, of either kind. This counted `data-goto`
+    // alone, which stopped being the whole story the moment a row whose
+    // destination is this screen started opening a card instead of
+    // navigating to where the player already is.
     const gotos = [...page.matchAll(/class="agenda-(?:chip|row)" data-goto="(\w+)"/g)].map((m) => m[1]);
-    assert.equal(gotos.length, shape.open.length, 'one destination per open item, chips included');
+    const opensAttrs = [...page.matchAll(/class="agenda-(?:chip|row)" data-open-fold="([\w-]+)"/g)].map((m) => m[1]);
+    assert.equal(gotos.length + opensAttrs.length, shape.open.length,
+      `one action per open item, chips included (${gotos.length} goto + ${opensAttrs.length} open vs ${shape.open.length})`);
     for (const item of shape.open) {
+      if (item.screen === 'ranch') continue;   // checked below, as an open
       assert.ok(gotos.includes(item.screen), `"${item.label}" still routes to ${item.screen}`);
     }
     // And the hint survives on the chip, where a title is the only room
@@ -11601,6 +11608,32 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     for (const item of spend) {
       assert.ok(page.includes(`title="${item.hint}"`), `"${item.label}" keeps its hint`);
     }
+
+    // R137 — A ROW THAT POINTS AT THIS SCREEN OPENS SOMETHING ON IT.
+    //
+    // Five of the ten rows a day-180 save offers name `ranch`, which is the
+    // screen the agenda is drawn on, and `showScreen` on the screen you are
+    // already on repaints and does nothing else. Half the panel was buttons
+    // that did nothing — and R133 sharpened it by shutting the money card
+    // and the Breeding Pen, so "Order from the catalog" now goes nowhere AND
+    // the catalogue is behind a fold nobody opened.
+    //
+    // So such a row must name a FOLD, and the fold has to be one this page
+    // actually paints — a declared id nothing draws is the same dead button
+    // wearing an attribute (R128b's lesson, that asking whether a thing
+    // EXISTS is not asking whether it can be FOUND).
+    const here = shape.open.filter((i) => i.screen === 'ranch');
+    assert.ok(here.length >= 2, `this save has rows pointing at their own screen (${here.length})`);
+    for (const item of here) {
+      assert.ok(item.opens, `"${item.label}" points at the Ranch and names a fold to open`);
+      assert.ok(page.includes(`data-fold="${item.opens}"`),
+        `"${item.label}" opens "${item.opens}", which the Ranch actually paints`);
+      assert.ok(page.includes(`data-open-fold="${item.opens}"`),
+        `"${item.label}" carries the open as its own action rather than a navigation`);
+    }
+    // …and it is not ALSO a navigation to the screen it is already on.
+    assert.ok(!/class="agenda-(?:chip|row)" data-goto="ranch"/.test(page),
+      'no agenda button on the Ranch navigates to the Ranch');
   }
 
   // 3. One subtraction, shown once. R40 already settled this in the War
@@ -18305,7 +18338,22 @@ if (inShard('wire')) {
   // files twice (R129's move) and it covered half of it; the rest is the
   // `dismantleHours` grant and the split clock that reads it, which is the
   // milestone.
-  const KB_CAP = 557;
+  // R137: 557 -> 560, measured at 557.4. What it bought: five agenda rows
+  // that pointed at the screen they were drawn on stopped being dead
+  // buttons and started opening the card they name.
+  //
+  // AND THE TREND IS THE REAL NOTE. 548 -> 553 (R131) -> 557 (R135) -> 560,
+  // three raises in seven milestones, every one of them the RANCH gaining
+  // something. That is structural rather than sloppy: the Ranch is the first
+  // paint, so anything it needs on frame one is eager by definition, and the
+  // agenda — nineteen rows that each read the save — is the biggest thing it
+  // needs. Nothing here is lazy-able without making the Ranch paint twice.
+  //
+  // The number to watch is not this cap; it is FIRST_PAINT_KB in
+  // tools/boot.js, which is what the player actually waits for. If that one
+  // starts moving every milestone too, the answer is a smaller eager agenda,
+  // not a bigger budget.
+  const KB_CAP = 560;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,
