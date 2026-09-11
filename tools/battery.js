@@ -1968,6 +1968,26 @@ const BREAKS = [
     to: 'const clockRoom = () => true;',
   },
   {
+    // R154 — the paddock stops buying stable room, and "Expand the pens" goes
+    // back to meaning only livestock. Aimed at the derivation rather than at
+    // the data, because a ratio of zero would read as a content choice.
+    n: 251, gate: COVERAGE, name: 'a pen stops buying a stall, so the Pens screen and the pen button mean different things again',
+    file: 'splice/facility.js',
+    anchor: '  const past = (state.ranch?.penCapacity ?? 0) - (meta.freePens ?? 0);',
+    to: '  const past = 0;',
+  },
+  {
+    // R154 — the room is bought and nothing stands in it. The cap still grows,
+    // so the first half of the rule passes and only the second catches this:
+    // a stall the roster never fills is the feature shipping as a number on a
+    // screen. R157 could not write this break at all — at a fixed grant the
+    // walker lands in the same place whichever way the constant reads.
+    n: 252, gate: COVERAGE, name: 'the stable grows and the roster does not, so a bought stall stands empty',
+    file: 'tools/sim.js',
+    anchor: '      const cap = Math.min(room.cap - THEATER_STALLS, opts.stableCap ?? Infinity);',
+    to: '      const cap = Math.min(12 - THEATER_STALLS, opts.stableCap ?? Infinity);',
+  },
+  {
     // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
     // the rule that stops the splice policy taking it. Break it and the walker
     // splices to the whole grant, both clocks starve, and coverage says so.
@@ -2022,7 +2042,9 @@ const BREAKS = [
   {
     n: 146, gate: VAULT, name: 'the stable stops having a size, so nothing bounds how many creatures a save carries',
     file: 'splice/facility.js',
-    anchor: '  const cap = theaterGrants(state, content).stable;',
+    // R154 added the paddock's half to this line; the rule is unchanged and
+    // the anchor follows it rather than being retired.
+    anchor: '  const cap = theaterGrants(state, content).stable + stallsFromPens(state, content);',
     to: '  const cap = Infinity;',
   },
   {
@@ -3243,8 +3265,11 @@ const BREAKS = [
   {
     n: 104, gate: SITTING, name: 'a row goes back to a fixed sentence that cannot say how much is waiting',
     file: 'ranch/agenda.js',
-    anchor: `    hint: (state) => \`$\${penUpgradeCost(state)} for the next pen — \${`,
-    to: "    hint: 'Room for more stock, which is room for more parts.', unusedHint: (state) => `x${",
+    // R154 turned this hint into a block that counts pens AND stalls, so the
+    // anchor moved with it. The rule is the same one: a row that cannot say
+    // how much is waiting is a row that stopped reading the save.
+    anchor: '      const room = stableRoom(state, content);',
+    to: "      return 'Room for more stock, which is room for more parts.';\n      const room = stableRoom(state, content);",
   },
   {
     n: 105, gate: SITTING, name: 'the care row stops counting and reads the same at three animals and nine',

@@ -181,6 +181,40 @@ const COMBO_REACH = 0.22;
   }
 }
 
+// ---- 4. R154: the paddock buys stable room, and the roster uses it -----
+//
+// R157 derived the walker's roster ceiling from the Theater's grant instead of
+// the nine it had been given by hand, and then could not gate it: at a fixed
+// grant of twelve the walk lands on nine spliced plus graduations whichever
+// way the constant reads, so re-typing it left every gate green. R154 sells a
+// bigger stable — a stall per six pens past the starting four — which is what
+// makes the derivation observable at all.
+//
+// IT LIVES HERE RATHER THAN IN SMOKE because smoke's campaign block halts at
+// dominion, on day 24-39, and the stalls exist long before there is time to
+// fill them: measured there, rosters read 11/10/11 against a grant of 12 and
+// the assertion is simply false. This walk runs the full 180 days, which is
+// the only place the claim is true. Measured at sixteen seeds: every campaign
+// ends over the grant, seed 2026 on fifteen against a cap of sixteen.
+{
+  const { stableRoom } = await import('../splice/facility.js');
+  const grant = Math.max(...(content.facility.theater.levels ?? []).map((l) => l.grants?.stable ?? 0));
+  const cap = stableRoom(walk.save, content).cap;
+  const roster = walk.save.chimeras?.length ?? 0;
+  if (REPORT) console.log(`\n  stable: Theater grants ${grant}, paddock took it to ${cap}, roster ${roster}`);
+  if (cap <= grant) {
+    fails.push(`the paddock buys no stable room: cap ${cap} against the Theater's grant of ${grant}`
+      + ` — "Expand the pens" is back to meaning only livestock`);
+  }
+  // And the other half, which is the one worth having: room nobody stands in
+  // is not room. A cap that grows while the roster does not would be the
+  // feature shipping as a number on a screen.
+  if (roster <= grant) {
+    fails.push(`the stable grew to ${cap} and the campaign finished on ${roster}`
+      + ` — at or under the Theater's own ${grant}, so the stalls a paddock bought went unused`);
+  }
+}
+
 // ---- verdict ---------------------------------------------------------
 if (fails.length) {
   console.error(`\ncoverage ✗  ${fails.length} gap${fails.length === 1 ? '' : 's'}:`);
