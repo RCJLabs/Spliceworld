@@ -188,7 +188,7 @@ const REACH_FLOOR = 0.94;
 // part ends up on a creature has no shelf left to raid. Measured at 54.9%
 // after the Theater started marking what you have never bolted on and the
 // walker started reading that mark.
-const WORN_FLOOR = 0.50;
+const WORN_FLOOR = 0.57;
 const TOTAL_PARTS = Object.keys(content.parts).length;
 {
   const per = [];
@@ -223,10 +223,27 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
   }
   // R140 — worn, on the same walks and the same statistic, so the two numbers
   // are about one campaign and can be read side by side. R157 moved both to
-  // the mean at once for that reason: worn is the jumpier of the two by far
-  // (per-seed swings of 77 parts against 7), so if either needed averaging it
-  // was this one. The floor does not move — 50% is R140's design number, and
-  // the mean clears it by ten points.
+  // the mean, and for worn the reason is break 245 rather than the sample.
+  //
+  // THE FLOOR MOVES BECAUSE THE PULL IS WORTH HALF WHAT IT WAS. Break 245
+  // deletes R140's never-built-with tie-break, and the four readings that
+  // matter are these, on the gate's seven walks:
+  //
+  //                          median            mean
+  //   before R157            134 (54.9%)    149.9 (61.4%)
+  //   before R157, broken    106 (43.4%)    115.0 (47.1%)
+  //   after  R157            148 (60.7%)    147.7 (60.5%)
+  //   after  R157, broken    144 (59.0%)    132.4 (54.3%)
+  //
+  // The pull was worth 34.9 parts and is now worth 15.3, because the vat and
+  // the Wing put parts on creatures across more seeds than they used to and
+  // the Theater's preference is no longer the only thing doing that work.
+  // R140's 50% had 35 parts of daylight under it; nothing near 50% has any
+  // now. The MEAN separates the break four times better than the median does
+  // (15.3 parts against 4), which is why worn averages too, and 57% is the
+  // line between: the tree clears it by 8.6 parts, the break misses it by
+  // 6.7. Thinner than R140's margin on purpose, and said out loud so the next
+  // milestone to move worn knows how much room it is spending.
   {
     const meanWorn = mean(per.map((r) => r.worn.size));
     const wornRatio = meanWorn / TOTAL_PARTS;

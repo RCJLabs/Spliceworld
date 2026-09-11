@@ -63,8 +63,33 @@ the gate averages now — parts and worn together, since worn is the jumpier of
 the two by far. `REACH_FLOOR` is 94%, a point lower because a right-skewed
 sample's mean sits below its median, not because a campaign reaches less.
 Break **160** — the collector rule, worth three parts — still goes red, which
-is the only thing a floor is for. `WORN_FLOOR` does not
-move: 50% is R140's design number and the mean clears it by ten points.
+is the only thing a floor is for.
+
+### The battery caught the thing I was pleased about
+
+The first pass left `WORN_FLOOR` at 50% and wrote "the mean clears it by ten
+points" as if that were reassuring. `--only` came back **8 of 9**, and break
+245 — delete R140's never-built-with tie-break — was the miss. Measured on
+the gate's seven walks, four readings:
+
+| | median | mean |
+| --- | ---: | ---: |
+| before R157 | 134 (54.9%) | 149.9 (61.4%) |
+| before R157, broken | 106 (43.4%) | 115.0 (47.1%) |
+| after R157 | 148 (60.7%) | 147.7 (60.5%) |
+| after R157, broken | 144 (59.0%) | **132.4 (54.3%)** |
+
+**The pull was worth 34.9 parts and is now worth 15.3** — the vat and the Wing
+wear parts across more seeds, so the Theater's preference is no longer the
+only thing doing that work. R140's 50% had thirty-five parts of daylight under
+it and now has none; on the *median* the break lands 4 parts from the tree and
+is not gate-able at all. `WORN_FLOOR` is **57%**: tree clear by 8.6 parts,
+break short by 6.7. The mean is what makes it gate-able, separating the break
+four times better than the median.
+
+A floor is only a ratchet while something can still push it over. I checked
+that for reach and not for worn, and the battery is why that cost a re-run
+rather than a shipped hole.
 
 ### Numbers
 
@@ -73,7 +98,7 @@ move: 50% is R140's design number and the mean clears it by ten points.
 | walker's roster ceiling | `stableCap = 9`, hand-typed | grant − `THEATER_STALLS` |
 | reach statistic | median of 7 | **mean of 7** |
 | `REACH_FLOOR` | 95% (median 233) | **94%** (mean 230.7 = 94.6%) |
-| `WORN_FLOOR` | 50% (median 134) | 50% (mean 147.7 = **60.5%**) |
+| `WORN_FLOOR` | 50% (median 134) | **57%** (mean 147.7 = 60.5%) |
 | breaks | 245 | **246** |
 
 ### Known issues

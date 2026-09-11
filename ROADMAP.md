@@ -3751,8 +3751,30 @@ triangle working, and each region genuinely asks a different question)*.
   median, not because a campaign reaches less. Break **160**, the collector
   rule worth three parts, still goes red, which is the only thing a floor is
   for.
-  `WORN_FLOOR` does not move: 50% is R140's design number and the mean clears
-  it by ten points.
+
+  #### And the thing that only shows up when you try to break it
+
+  `WORN_FLOOR` had to move too, and the reason is the milestone rather than
+  the statistic. Break 245 deletes R140's never-built-with tie-break, and on
+  the gate's seven walks:
+
+  | | median | mean |
+  | --- | ---: | ---: |
+  | before R157 | 134 (54.9%) | 149.9 (61.4%) |
+  | before R157, broken | 106 (43.4%) | 115.0 (47.1%) |
+  | after R157 | 148 (60.7%) | 147.7 (60.5%) |
+  | after R157, broken | 144 (59.0%) | **132.4 (54.3%)** |
+
+  **The pull was worth 34.9 parts and is now worth 15.3.** The vat and the
+  Wing put parts on creatures across more seeds than they used to, so the
+  Theater's preference is no longer the only thing doing that work — and
+  R140's 50%, which had thirty-five parts of daylight under it, has none. The
+  first pass shipped this as "the mean clears the floor by ten points", which
+  was true and was the wrong thing to be pleased about: the battery caught it,
+  `--only` came back 8 of 9, and break 245 was the miss. `WORN_FLOOR` is
+  **57%** — the tree clears it by 8.6 parts, the break misses it by 6.7 — and
+  the mean is what makes that gate-able at all, separating the break four
+  times better than the median (15.3 parts against 4).
 
   **The lesson:** *a constant that is load-bearing for a rule it never names
   is a rule nobody can find — and the number you check it with has to be a
@@ -3764,7 +3786,7 @@ triangle working, and each region genuinely asks a different question)*.
   names.* The budget grows; `stableCap` defaults to the grant less the working
   room the vat and the Wing need; coverage is green, reach is green at
   **230.7 of 244 (94.6%)** against a re-derived 94%, and worn is green at
-  **147.7 (60.5%)** against an unchanged 50%.
+  **147.7 (60.5%)** against a re-derived **57%**.
 
 - **R156 — The suite budget drifts 30% in a unit that was supposed to be
   flat.** R151 replaced a wall-clock budget with CPU-seconds and proved the
