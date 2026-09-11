@@ -18,10 +18,12 @@
 // and A9/R32 priced flight and turn order in that currency. Veterancy must
 // not scramble it.
 
-const FALLBACK = { xpPerWave: 12, lossFraction: 0.4, sparringFraction: 0.5, levels: [], statPerLevel: 0, sparScale: 0.75, sparCooldownHours: 0.75 };
+const FALLBACK = { xpPerWave: 12, xpPerSession: 0, lossFraction: 0.4, sparringFraction: 0.5, levels: [], statPerLevel: 0, sparScale: 0.75, sparCooldownHours: 0.75 };
 
 export function trainingTuning(content) {
-  return { ...FALLBACK, ...(content.trainingMeta ?? {}) };
+  // R138 — optional: the FALLBACK exists for a partial content bundle, and
+  // three `trainChimera` callers predate its content argument.
+  return { ...FALLBACK, ...(content?.trainingMeta ?? {}) };
 }
 
 // Cumulative thresholds: the level is how many of them the xp has reached.

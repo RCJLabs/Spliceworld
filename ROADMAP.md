@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 49
+- save version: 50
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -3440,7 +3440,11 @@ triangle working, and each region genuinely asks a different question)*.
 
 ---
 
-- **R138 — The middle of the level curve is empty.** Across six campaigns'
+- **R138 — The middle of the level curve is empty.** ✅ **Shipped — see
+  §9.27**, where the numbers held and the diagnosis moved: the curve was a
+  symptom. xp had one source (a real fight), and training — the verb for a
+  creature you are NOT fielding — granted bond and could not level anything.
+  Across six campaigns'
   surviving stables: **L0 × 27, L10 × 25, and twelve creatures spread over
   every level between.** 42% of the stable has never fought; 39% is maxed.
   Levelling is a step function — a creature is either a bench-warmer or
@@ -3551,6 +3555,87 @@ triangle working, and each region genuinely asks a different question)*.
   still misses are missed for a reason the entry can state.*
 
 ---
+
+### 9.27 The verb that could not level anything (R138) — seventh audit
+
+- **R138 — The middle of the level curve is empty.** ✅ *Shipped. The entry's
+  numbers were right and it blamed the wrong thing.*
+
+  Six campaigns, 62 surviving creatures: **L0 × 24, L10 × 25, thirteen spread
+  over every level between** — the entry said 27/25/12 and it was right. But
+  the curve was a symptom, not the cause.
+
+  #### Two populations, neither of them a curve problem
+
+  The maxed creatures held **29,530 xp against a cap of 1,450** — twenty times
+  over. The others held **exactly zero**, some of them **155 days old**. Not
+  "fought less": never fielded once, in any verb.
+
+  xp had **one source — a real fight**. You field your best three, so your
+  best three max out and nothing else ever moves. And the game already had
+  the verb for working with a creature you are *not* fielding: training, $5,
+  a 15-hour cooldown, **908 sessions a campaign** — which granted bond and
+  **could not level anything**.
+
+  | | before | after |
+  | --- | ---: | ---: |
+  | between L1 and L9 | 13 | **46** |
+  | at L0 or L10 | 49 | **20** |
+  | stuck at level zero | 24 of 62 | **1 of 66** |
+  | median chimera life | 3.4 days (mid-work) | **59.4 days** |
+
+  #### Four dead ends, each costing a measurement cycle
+
+  1. **Spar the bench.** Sparring xp is a FIXED pool; moving it off the A-team
+     slowed dominion from day 32 to 66–90.
+  2. **Raise `statPerLevel`** to hold power constant. At 0.075 the wrong
+     anatomy starts winning **88%**, which breaks R41's own rule — *levels
+     season a build, they do not replace it*.
+  3. **Decouple `quality` from level** (grades × 10 + level). Much WORSE, not
+     better: combo reach 18% → **9%** and the vat stopped running entirely.
+  4. **Training xp with the walker unchanged.** Barely moved the distribution,
+     because the walker never trained its bench either — `sort((y.xp) -
+     (x.xp))`, descending, since the line was written.
+
+  #### What shipped, and the one line that mattered
+
+  A session grants xp (`xpPerSession`, read off the tuning as data). The curve
+  spans a career rather than the first 5% of one. And the walker trains **two
+  fighters and one of the bench** — not three of either. All-best never
+  touched the bench; all-bench fires far MORE sessions, because the best three
+  share one cooldown and are usually refused while a rotating bench is always
+  ready, which ate the walk's per-tick action budget and crowded out
+  collecting. Both content-reach ratchets go red on all-bench and stay green
+  here.
+
+  **The lesson:** *when a thing never happens, look for the verb that should
+  cause it before you retune the thing itself.* The curve was the visible
+  symptom; the missing cause was a button that did half its job.
+
+  *Done when: a median stable on day 180 has more creatures between L1 and L9
+  than at L0 and L10 combined, and the harness reports the distribution.*
+  46 vs 20, asserted over R143's three full-length walks — the only ones in
+  the suite that reach day 180, which is what the criterion names.
+
+  **`SAVE_VERSION` 49 → 50.** Nothing migrates: `levelOf` derives level from
+  stored xp and never stored it. The version moves anyway, because a returning
+  player's veteran now reads a different number on its card and a silent
+  change to something somebody earned is the worst kind. No save is reset and
+  no xp is lost — the ladder is longer, not the climb shorter. A news-wire
+  line was written into the migration and taken out again: prepending news
+  makes a migrated save a different SHAPE from a new one, and smoke asserts
+  those match.
+
+- **R152 — Upkeep does not scale with a richer empire.** R138 raised R143's
+  day-120 ceiling from 78% to 80%, and the reason is worth its own entry: the
+  outgo did not change ($1,242 → $1,254 on seed 2026), the INCOME did
+  ($3,535 → $5,755), because this milestone's walker reaches full territory
+  sooner. R143's upkeep is only partly proportional — garrisons and the plant
+  scale with the empire, livestock and the stable do not — so **the better a
+  player gets, the more of their gross they keep**, and the ceiling drifts up
+  with competence rather than with any change to prices. *Done when: the share
+  an empire keeps is flat against how fast it got there, and the entry states
+  what that share should be.*
 
 ### 9.26 Queued out of R146
 

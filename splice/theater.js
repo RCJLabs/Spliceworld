@@ -252,9 +252,14 @@ export function trainChimera(state, chimeraId, now, content) {
   chimera.lastTrainedAt = now;
   attend(chimera, now);   // R85: working with a creature is what stops it drifting
   chimera.bond = Math.min(100, chimera.bond + TRAINING.bondGain);
+  // R138 — a session is experience, not only affection. Read off the tuning,
+  // not through veterancy.js: this module boots, and that import cost 2 KB.
+  const xpGained = content?.trainingMeta?.xpPerSession ?? 0;
+  if (xpGained) chimera.xp = (chimera.xp ?? 0) + xpGained;
   // Trust makes a creature braver, and gentler with it (§3.5).
   driftFromTraining(chimera, content);
-  return { ok: true, msg: `${chimera.name} nails the obstacle course and earns a treat. Bond ${chimera.bond}/100.` };
+  return { ok: true, xpGained,
+    msg: `${chimera.name} nails the obstacle course and earns a treat. Bond ${chimera.bond}/100.` };
 }
 
 // --- R30: four slots, and you retrain to change them --------------------

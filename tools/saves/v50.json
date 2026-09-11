@@ -1,0 +1,215 @@
+{
+  "saveVersion": 50,
+  "seed": 424242,
+  "starterLab": "bramble_barn",
+  "createdAt": 1700000000000,
+  "spliceCount": 0,
+  "genome": null,
+  "directorStats": {
+    "partUse": {},
+    "tagUse": {},
+    "dissections": [],
+    "announced": []
+  },
+  "funds": 300,
+  "ranch": {
+    "stock": [
+      {
+        "id": "a0",
+        "species": "goat",
+        "name": "Blossom",
+        "sex": "F",
+        "birthAt": 1700000000000,
+        "condition": 60,
+        "potential": {
+          "hp": 3,
+          "power": 2,
+          "armor": 3,
+          "speed": 1,
+          "stamina": 4
+        },
+        "traits": [],
+        "genotype": {
+          "thick_hide": 1,
+          "hyperthyroid": 1
+        },
+        "parents": null,
+        "lastCare": {
+          "feed": 0,
+          "groom": 0,
+          "exercise": 0,
+          "enrich": 0
+        }
+      },
+      {
+        "id": "a1",
+        "species": "goat",
+        "name": "Waldo",
+        "sex": "M",
+        "birthAt": 1700000000000,
+        "condition": 60,
+        "potential": {
+          "hp": 3,
+          "power": 4,
+          "armor": 2,
+          "speed": 4,
+          "stamina": 5
+        },
+        "traits": [],
+        "genotype": {
+          "hyperthyroid": 1
+        },
+        "parents": null,
+        "lastCare": {
+          "feed": 0,
+          "groom": 0,
+          "exercise": 0,
+          "enrich": 0
+        }
+      },
+      {
+        "id": "a2",
+        "species": "bear",
+        "name": "Boris",
+        "sex": "F",
+        "birthAt": 1700000000000,
+        "condition": 60,
+        "potential": {
+          "hp": 5,
+          "power": 3,
+          "armor": 1,
+          "speed": 3,
+          "stamina": 3
+        },
+        "traits": [],
+        "genotype": {},
+        "parents": null,
+        "lastCare": {
+          "feed": 0,
+          "groom": 0,
+          "exercise": 0,
+          "enrich": 0
+        }
+      }
+    ],
+    "penCapacity": 4,
+    "animalCount": 3,
+    "seeded": true,
+    "eggs": [],
+    "eggCount": 0
+  },
+  "lastTickAt": null,
+  "activeScreen": "ranch",
+  "inventory": {
+    "vials": [],
+    "parts": [
+      {
+        "id": "starter-eagle_forelimbs",
+        "partId": "eagle_forelimbs",
+        "grade": "standard",
+        "donor": {
+          "name": "Founding crate",
+          "species": "eagle",
+          "stars": 3,
+          "extractedAt": 1700000000000
+        }
+      },
+      {
+        "id": "starter-eagle_hindlimbs",
+        "partId": "eagle_hindlimbs",
+        "grade": "standard",
+        "donor": {
+          "name": "Founding crate",
+          "species": "eagle",
+          "stars": 3,
+          "extractedAt": 1700000000000
+        }
+      }
+    ],
+    "tokenCount": 0
+  },
+  "resequencer": null,
+  "resequenceCount": 0,
+  "chimeras": [],
+  "chimeraCount": 0,
+  "theater": {
+    "busyUntil": 0
+  },
+  "renderCount": 0,
+  "discoveredCombos": [],
+  "battle": null,
+  "warRecord": {
+    "wins": 0,
+    "losses": 0
+  },
+  "dominionAt": null,
+  "sparCount": 0,
+  "sparRefillAt": 0,
+  "gauntletBeaten": [],
+  "campaign": {
+    "heldNodes": [],
+    "notoriety": 0,
+    "captives": [],
+    "containment": [],
+    "rivals": {},
+    "faunaGranted": [],
+    "contested": [],
+    "nextContestAt": null,
+    "defences": {},
+    "contestCount": 0,
+    "loose": [],
+    "nextBreakAt": null,
+    "breakoutCount": 0,
+    "released": null,
+    "operations": [],
+    "opCooldowns": {},
+    "opCount": 0,
+    "opReport": null,
+    "heat": 0,
+    "heatAt": null,
+    "raid": null,
+    "nextRaidAt": null,
+    "raidCount": 0,
+    "raidsHeld": 0,
+    "leviedTotal": 0,
+    "notorietyCapped": false
+  },
+  "news": [],
+  "settings": {
+    "muted": false,
+    "battleSpeed": 1
+  },
+  "dex": {
+    "parts": [],
+    "enemies": [],
+    "beaten": [],
+    "traits": [],
+    "variants": [],
+    "sightings": {}
+  },
+  "facility": {
+    "theater": 1,
+    "containment": 1,
+    "incubator": 1,
+    "extractor": 1,
+    "scanner": 1,
+    "infirmary": 1
+  },
+  "guidesSeen": [],
+  "ui": {
+    "collapsed": {},
+    "tierRead": false,
+    "pages": {}
+  },
+  "profile": {
+    "named": false,
+    "title": null,
+    "name": null,
+    "lab": null,
+    "philosophy": null
+  },
+  "vat": null,
+  "vatCount": 0,
+  "rushCount": 0,
+  "sentCount": 0
+}

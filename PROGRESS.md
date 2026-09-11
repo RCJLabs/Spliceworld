@@ -1,5 +1,87 @@
 # PROGRESS
 
+## Session 151 — R138: the verb that could not level anything ✅
+
+**ROADMAP §9.27.** The entry's numbers were right (L0 × 24, L10 × 25, thirteen
+between — it said 27/25/12). It blamed the curve. The curve was a symptom.
+
+### Two populations, one cause
+
+The maxed creatures held **29,530 xp against a cap of 1,450**. The others held
+**exactly zero**, some **155 days old** — never fielded once, in any verb.
+
+xp had **one source: a real fight**. You field your best three, they max out,
+nothing else moves. And the game already had the verb for a creature you are
+*not* fielding — training, $5, a 15-hour cooldown, **908 sessions a campaign**
+— which granted bond and could not level anything.
+
+| | before | after |
+| --- | ---: | ---: |
+| between L1 and L9 | 13 | **46** |
+| at L0 or L10 | 49 | **20** |
+| stuck at level zero | 24 of 62 | **1 of 66** |
+
+### Four dead ends, each a full measurement cycle
+
+1. **Spar the bench** — sparring xp is a FIXED pool; moving it off the A-team
+   slowed dominion from day 32 to 66–90.
+2. **Raise `statPerLevel`** — at 0.075 the wrong anatomy wins **88%**, which
+   breaks R41's *levels season a build, they do not replace it*.
+3. **Decouple `quality` from level** — my own recommendation, and **worse**:
+   combo reach 18% → **9%**, and the vat stopped running.
+4. **Training xp alone** — barely moved it, because the walker trained its
+   *best* three. That line had sorted descending since it was written, and
+   R92's note eleven lines below saw the shape: *"nine of which the A-team
+   policy never touches."*
+
+### What shipped
+
+Two fighters and one of the bench — not three of either. All-bench fires far
+MORE sessions (the best three share one cooldown and get refused; a rotating
+bench is always ready), which ate the walk's action budget and crowded out
+collecting. Both content-reach ratchets go red on all-bench and stay green
+here. Halving the curve fixed R135's churn guard: median chimera life
+**3.4 → 59.4 days**.
+
+**The lesson:** *when a thing never happens, look for the verb that should
+cause it before you retune the thing itself.*
+
+### Six ratchets moved, five green by fixing, one re-derived
+
+R138 changed walker policy, and the walker is the instrument every economic
+and content ratchet is calibrated on. Five were fixed. The sixth — R143's
+day-120 ceiling, 78% → 80% — was re-derived, and the reason is filed as
+**R152**: outgo barely moved ($1,242 → $1,254), INCOME did ($3,535 → $5,755),
+because this walker reaches full territory sooner. R143's upkeep is only
+partly proportional, so **the better a player gets, the more of their gross
+they keep**. That is a gap in the model, not a number to nudge.
+
+### Verification
+
+| | |
+| --- | --- |
+| Criterion | ✓ **46 middle vs 20 ends**, 1 of 66 at L0 — asserted over R143's three full-length walks, the only ones reaching day 180 |
+| `--anchors` | ✓ 236 |
+| `--baseline` | ✓ every gate passes on a pristine tree (0 FAILs) |
+| breaks 238, 239 | ✓ 2 caught, 0 missed (`ONLY_EXIT=0`) |
+| `npm test` | ✓ **every job passed**; wall-clock red for the environmental reason filed as R151 (main reads 242s on this box) |
+| `SAVE_VERSION` | **49 → 50**, migration is a pure no-op — level is derived and was never stored |
+
+### Three things this milestone broke and fixed on the way
+
+`trainingTuning` threw on a partial content bundle (three `trainChimera`
+callers predate its content argument); importing veterancy into theater.js put
+2 KB of battle code in front of first paint, so the tuning is read as data
+instead; and a news line in the migration made a migrated save a different
+*shape* from a new one, which smoke asserts against — the announcement belongs
+in release notes, not in somebody's save file.
+
+### Next session's first task
+
+**R140** (95% of parts collected, 56% worn) or **R151** (the suite budget is a
+wall-clock gate on a box that drifts 30%). R151 is small and unblocks honest
+timing for everything after it.
+
 ## Session 150 — R146: the instrument, not the game ✅
 
 **ROADMAP §9.25.** The entry's five numbers were **exactly right**. Its
