@@ -15029,6 +15029,42 @@ if (inShard('contest')) {
     // survivor count measures how long the walk ran. This counts the chain.
     assert.ok(shapes.every((w) => w.rehabbedEver >= 1),
       `and somebody else's science ends up on the roster (${shapes.map((w) => w.rehabbedEver).join(', ')} rehabilitated)`);
+    // R154 — AND THE ROSTER TRACKS THE STABLE THE GAME SELLS.
+    //
+    // R157 derived the walker's roster ceiling from the Theater's grant
+    // instead of the hand-typed nine it had carried since R91, and then could
+    // not write this rule: at a fixed grant of twelve the walker lands on nine
+    // spliced plus graduations either way, so re-typing the constant left
+    // every gate in this file green. R154 is the milestone that sells a bigger
+    // stable, which is what makes the derivation observable at all.
+    //
+    // Asserted on the SPREAD rather than on any one campaign, because the
+    // roster is chaotic in exactly the way R150 and R157 both got caught by:
+    // per-seed it swings, but a paddock that buys stalls cannot leave the
+    // whole sample where it found it. Measured across sixteen seeds, twelve
+    // pens per stall: rosters run 11-14 against a Theater grant of 12, and at
+    // six they run 13-16. What is being checked is that SOMETHING in the
+    // sample got past the grant — which is only possible if a pen bought it.
+    {
+      const { stableRoom } = await import('../splice/facility.js');
+      const grant = Math.max(...(content.facility.theater.levels ?? [])
+        .map((l) => l.grants?.stable ?? 0));
+      const caps = shapes.map((w) => stableRoom(w.save, content).cap);
+      const rosters = shapes.map((w) => w.chimeras);
+      console.log(`   stable: grant ${grant}, caps ${caps.join('/')}, rosters ${rosters.join('/')}`);
+      assert.ok(caps.every((c) => c > grant),
+        `every campaign's paddock buys stable room past the Theater's ${grant} (caps ${caps.join(', ')})`);
+      // THE OTHER HALF IS NOT ASSERTED HERE, AND THE REASON IS THE POINT.
+      // "A stall nobody stands in is not a stall" wants `rosters.some(r > grant)`
+      // — and measured on these four seeds it is FALSE: this block halts at
+      // dominion (day 24-39), so the stalls exist and the campaign ends long
+      // before anything fills them (rosters 11/10/11 against a grant of 12).
+      // Over a full 180 days it is true on one seed of three. Whether that is
+      // worth gating depends on `pensPerStall`, which is still being decided:
+      // at twelve the median roster IS the grant, at six it is two above. The
+      // assertion lands with that decision rather than before it.
+    }
+
     // R141 — AND ALL FOUR CHASSIS GET WORN.
     //
     // Six campaigns and 64 surviving chimeras, before this milestone: M x 57,
