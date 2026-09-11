@@ -1330,6 +1330,17 @@ function grindAgainst(content, frameId, wall) {
 // a twelve-stable, which is what it takes for the Surgery Theater to get a
 // turn at all on a 180-day campaign.
 const THEATER_STALLS = 3;
+// R157 — THE CLOCKS' HALF OF THAT RULE, IN ONE PLACE. The vat and the Wing may
+// only start while the Theater still has stalls to build into; R61's rule says
+// derive the predicate rather than re-type it, and this one was typed twice.
+//
+// It has to be its own line for a second reason. Break 152 takes the reserved
+// stalls away and proves a campaign falls from four combos to one — and it did
+// that by zeroing THEATER_STALLS, which since R157 ALSO raises the splice
+// ceiling from nine to twelve. The two effects cancelled and the break came
+// back MISSED on the full battery. One constant, three readers: a break aimed
+// at the constant no longer names a single rule, so it aims here instead.
+const clockRoom = (state, content) => stableRoom(state, content).free > THEATER_STALLS;
 
 // R92 — THE HERD THE WALKER WORKS, which is not the paddock it could fill.
 //
@@ -1962,7 +1973,7 @@ function walkAct(state, content, now, open, opts = {}) {
     const bayTraits = (bayUnit?.traits ?? []).filter((tr) => content.traits?.[tr]);
     const carriesGene = bayTraits.some((tr) => !(state.dex.traits ?? []).includes(tr));
     const keeps = carriesGene
-      || !displaced || stableRoom(state, content).free > THEATER_STALLS;
+      || !displaced || clockRoom(state, content);
     if (!keeps) continue;
     if (startRehab(state, entry.id, content, now).ok) did('rehab-start', { who: entry.id });
   }
@@ -2061,7 +2072,7 @@ function walkAct(state, content, now, open, opts = {}) {
   // Never the A-team. A player does not put their two best fighters through
   // a process that costs them both a grade on everything, and the walker
   // ranking every creature by `quality` already knows which three those are.
-  if (has('vat') && !activeVat(state) && stableRoom(state, content).free > THEATER_STALLS) {
+  if (has('vat') && !activeVat(state) && clockRoom(state, content)) {
     const ranked = [...state.chimeras].sort((x, y) => quality(y) - quality(x)).slice(3);
     let ran = false;
     for (const a of ranked) {
