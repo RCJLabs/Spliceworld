@@ -1,5 +1,106 @@
 # PROGRESS
 
+## Session 156 — R157: what a bigger stable costs ✅
+
+**ROADMAP §9.29a.** R155's blocker, and the decision it refused to make alone.
+User's call going in: **let the action budget grow with the ranch.** It does —
+and it turns out to cost nothing, which took twenty-one campaigns to prove.
+
+### The nine was never a cap
+
+`campaignWalk` defaulted `stableCap = 9` while the Theater sells 12, and R91's
+comment beside it said the option exists "only so a caller can ask for a
+SMALLER stable". Nobody had noticed what the nine was actually *doing*: the
+chaos vat and the Reorientation Wing only start with more than
+`THEATER_STALLS` stalls free, so asking for nine of twelve was reserving the
+stalls those two clocks graduate into.
+
+Take the reservation away — splice to the whole grant — and the roster pins at
+twelve, `stableRoom().free` is zero forever, and both systems stop:
+
+| seeds 2026 / 7 / 99 | `stableCap = 9` | the whole grant |
+| --- | ---: | ---: |
+| vat gestations | 5 / 9 / 3 | **0 / 2 / 0** |
+| Wing graduations | 15 / 20 / 13 | **0 / 1 / 1** |
+
+That is R155's entire cascade, and `tools/coverage.js` goes red for it —
+**break 249**. So the splice policy now reserves the same working room the
+other two require, derived from the Theater's grant instead of typed into the
+harness. Nine at today's twelve; R154's bigger pens will move it with no edit.
+
+### The part where I nearly shipped a story
+
+The seven-seed reach gate went red (median 233 → 231 against a 95% floor) and
+there was a tidy explanation waiting: a busier vat crowds out the breeding the
+six variant lines need. I had the table drafted. Then I censused 21 seeds on
+both trees:
+
+| over 21 campaigns | parts seen | parts worn | vat gestations |
+| --- | ---: | ---: | ---: |
+| mean, before | 230.0 | 144.6 | 9.9 |
+| mean, after | **230.0** | 137.9 | 9.7 |
+| per-seed delta | mean **+0.00**, sd 2.85 | mean −6.8, sd 35.3 | — |
+
+Individual seeds swing 7 parts and 77 worn in **both** directions. Every
+number in my draft — "vats 5/9/3 → 9/37/18", "worn 134/156/131 → 167/169/184"
+— was three cherries picked off a noise distribution. R150 wrote this lesson
+down one milestone ago and I still had to be shown it: *pressure is not what
+moves it, chaos is.*
+
+### So the gate's statistic was the defect, not its threshold
+
+The census indicts the gate on `main` alone. Median of the first n seeds:
+
+| n | 7 | 9 | 11 | 13 | 15 | 17 | 19 | 21 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| before | 95.5% | **94.3%** | **94.3%** | 95.5% | 95.5% | 95.5% | 95.5% | 95.5% |
+| after | 94.7% | 94.7% | 94.7% | 95.1% | 95.1% | 95.1% | 95.1% | 95.1% |
+
+Today's shipped tree fails its own 95% floor on two of those samples. The
+median of seven is not a statistic. The **mean** over the same seven walks
+costs no extra walk and stays inside 0.7 points at every n on both trees, so
+the gate averages now — parts and worn together, since worn is the jumpier of
+the two by far. `REACH_FLOOR` is 94%, a point lower because a right-skewed
+sample's mean sits below its median, not because a campaign reaches less.
+Break **160** — the collector rule, worth three parts — still goes red, which
+is the only thing a floor is for. `WORN_FLOOR` does not
+move: 50% is R140's design number and the mean clears it by ten points.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| walker's roster ceiling | `stableCap = 9`, hand-typed | grant − `THEATER_STALLS` |
+| reach statistic | median of 7 | **mean of 7** |
+| `REACH_FLOOR` | 95% (median 233) | **94%** (mean 230.7 = 94.6%) |
+| `WORN_FLOOR` | 50% (median 134) | 50% (mean 147.7 = **60.5%**) |
+| breaks | 245 | **246** |
+
+### Known issues
+
+- **R158 filed.** Thirteen seeds is where the *median* settles too, and it is
+  six more 180-day walks — ~360 CPU-seconds onto a suite reading ~1022 against
+  a 1200 ceiling. Blocked on R156 (what a CPU-second on this box is worth),
+  not on the design.
+- **R155 is not unblocked by this milestone.** The walker still lands on a
+  roster of nine at the Theater's twelve, so nothing drifts and a gate for the
+  reserve exemption would still pass with the fix reverted. It is unblocked by
+  **R154**, which is the milestone that sells a bigger stable.
+- §9.22's liquidity gap is visible on both trees and the herd is the one
+  number that drifts at all: median delta **+0**, mean **+5.9** head on a sd
+  of 17.8, and seeds finishing over R91's 48-head bound go **2 of 21 → 4 of
+  21** (worst 62 → 68). Nothing gates on it — the warehouse rule is a 45-day
+  walk on seed 2026 and still reads 20 — but it is the same "livestock leaves
+  only through extraction, which costs money" gap, and it is not getting
+  smaller.
+
+### Next session's first task
+
+**R154 — the pens upgrade the pens.** The patch is parked at
+`scratchpad/pens/R154-pens.patch`. It now carries a second job: it is the
+milestone where the roster can be *seen* to track the grant, so the gate R157
+could not write (raise the stable, assert the roster grows) ships with it.
+
 ## Session 155 — R153: read the exemption list as a bill ✅
 
 **ROADMAP §9.29a.** Six raises and a seventh in R140. `tools/boot.js` has

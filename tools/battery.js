@@ -1963,6 +1963,15 @@ const BREAKS = [
     to: 'const THEATER_STALLS = 0;',
   },
   {
+    // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
+    // the rule that stops the splice policy taking it. Break it and the walker
+    // splices to the whole grant, both clocks starve, and coverage says so.
+    n: 249, gate: COVERAGE, name: 'the splice policy takes the whole grant again, so the vat and the Wing never get a stall',
+    file: 'tools/sim.js',
+    anchor: '      const cap = Math.min(room.cap - THEATER_STALLS, opts.stableCap ?? Infinity);',
+    to: '      const cap = Math.min(room.cap, opts.stableCap ?? Infinity);',
+  },
+  {
     n: 153, gate: COVERAGE, name: 'the walker stops running the Resequencer, so what a vial is worth goes back to being unmeasured',
     file: 'tools/sim.js',
     anchor: "      did('resequence', { species: best.species, stars: best.stars });",
