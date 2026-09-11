@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 50;
+export const SAVE_VERSION = 51;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -73,7 +73,7 @@ export function newGameState() {
     // exactly like one you flattened.
     // R97 — `sightings` counts a lab's generated specimens under the same
     // `lab:{id}` key. The lists say what you met; this says how often.
-    dex: { parts: [], enemies: [], beaten: [], traits: [], variants: [], sightings: {} },
+    dex: { parts: [], worn: [], enemies: [], beaten: [], traits: [], variants: [], sightings: {} },
     facility: { theater: 1, containment: 1, incubator: 1, extractor: 1, scanner: 1, infirmary: 1 },
     // Field-guide notes the player has waved away (R29). The guides
     // themselves are derived; this is the only thing they persist.

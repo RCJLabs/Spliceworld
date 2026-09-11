@@ -595,6 +595,25 @@ export const migrations = {
   // prepends news makes a migrated save a different SHAPE from a new one, and
   // smoke asserts those match. The announcement belongs in the release notes,
   // not in somebody's save file.
+  // R140 — `dex.worn` is what the player has BUILT with, alongside
+  // `dex.parts`, which is what they have handled. A returning save has no
+  // history to recover it from: a part worn on a chimera dismantled last
+  // month left no trace anywhere. So this backfills what CAN be known — the
+  // roster standing right now — and the field fills in properly from the
+  // next tick onward. Nothing is reset and nothing is lost; the worst case
+  // is that a long-running save under-reports its own past, which is the
+  // honest answer rather than a guessed one.
+  51: (save) => {
+    save.dex ??= {};
+    const worn = new Set(save.dex.worn ?? []);
+    for (const chimera of save.chimeras ?? []) {
+      for (const token of Object.values(chimera.tokens ?? {})) {
+        if (token?.partId) worn.add(token.partId);
+      }
+    }
+    save.dex.worn = [...worn];
+    return save;
+  },
   50: (save) => save,
   49: (save) => {
     save.ui ??= {};

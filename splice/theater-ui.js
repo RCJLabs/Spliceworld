@@ -81,6 +81,13 @@ export function renderTheaterScreen(root, ctx) {
   };
 
   // 236 parts across 40 animals: grouped, and never through an OS dropdown.
+  // R140 — WHAT YOU HAVE NEVER BUILT WITH, said where you choose. A campaign
+  // handles 95% of the part list and puts 43% of it on a creature, and the
+  // reason is that nothing ever pointed at the difference: the vault sorts by
+  // grade, the best grade is usually one you have already used, and the row
+  // gave you no reason to look further down. `dex.worn` is written by
+  // `tickWorld`, so this is the same field the harness reports.
+  const built = new Set(state.dex?.worn ?? []);
   const slotOptions = (socketId) => {
     const slot = slotOfSocket(socketId);
     const owned = state.inventory.parts.filter((t) => content.parts[t.partId]?.slot === slot);
@@ -109,7 +116,8 @@ export function renderTheaterScreen(root, ctx) {
               // the part, not only in the panel after you have already fitted it.
               sub: `${part.ability} \u00b7 ${part.phys.mass} mass${
                 part.phys.lift ? ` \u00b7 ${Math.round(part.phys.lift * grade.mult)} lift` : ''
-              } \u00b7 essence of ${t.donor.name} \u2605${t.donor.stars}`,
+              } \u00b7 essence of ${t.donor.name} \u2605${t.donor.stars}${
+                built.has(t.partId) ? '' : ' \u00b7 never bolted on'}`,
               disabled: chosen.has(t.id) && draft.slots[socketId] !== t.id,
             };
           }),

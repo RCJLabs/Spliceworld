@@ -32,6 +32,21 @@ export function elapsedSince(state, now) {
   return { since, dt: Math.max(0, now - since) };
 }
 
+// R140 — see the call in `tickWorld`. Cheap by construction: a roster is at
+// most a dozen creatures and the set is a plain array on the save, so this is
+// a few dozen string comparisons on a tick that already walks the roster
+// three times.
+function noteWorn(state) {
+  if (!state.dex) return;
+  const worn = (state.dex.worn ??= []);
+  const known = new Set(worn);
+  for (const chimera of state.chimeras ?? []) {
+    for (const token of Object.values(chimera.tokens ?? {})) {
+      if (token?.partId && !known.has(token.partId)) { known.add(token.partId); worn.push(token.partId); }
+    }
+  }
+}
+
 export function tickWorld(state, content, now) {
   const { since } = elapsedSince(state, now);
   // R91 — before anything else, because every system below this reads the
@@ -46,6 +61,15 @@ export function tickWorld(state, content, now) {
   for (const line of tickVat(state, content, now).news) pushNews(state, line);
   for (const line of tickResequencer(state, content, now).news) pushNews(state, line);
   ensureTemperaments(state, content, now);
+  // R140 — WHAT THE PLAYER HAS BUILT WITH, not just what they have seen.
+  // `dex.parts` has recorded every part ever HANDLED since R95; nothing has
+  // ever recorded which of them went onto a creature, and across seven
+  // campaigns that is 95% seen against 43% worn. Read off the roster here
+  // rather than hooked into the splice, because a part arrives on a chimera
+  // five ways — the Theater, the vat, a rehabilitated captive, a rescue, a
+  // returned specimen — and a hook on one verb would go quietly wrong the
+  // day a sixth is added. Every route ticks.
+  noteWorn(state);
   for (const line of tickScars(state, content, now).news) pushNews(state, line);
   // R82 — the breakout, last, because an escape is a consequence of the
   // campaign tick above (a rival's defeat count is what lets one out) and a

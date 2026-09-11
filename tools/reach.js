@@ -148,14 +148,30 @@ for (const part of Object.values(content.parts)) {
 // combo figure would be two answers nobody could put side by side.
 const REACH_SEEDS = [2026, 7, 101, 4242, 55, 900, 31];
 const REACH_FLOOR = 0.95;
+// R140 — AND THE HALF THIS GATE NEVER ASKED. `dex.parts` is what a campaign
+// HANDLED; `dex.worn` is what it put on a creature, and until this milestone
+// nothing anywhere recorded the second. Measured on the same seven seeds: a
+// median campaign saw 95% of the part list and built with 43.4% of it, and
+// 34 parts were worn by no seed at all while being seen by several. That is
+// not R61's orphan content, which has no route; it is content with a route
+// nobody takes.
+//
+// THE FLOOR IS 50%, AND IT IS A DESIGN NUMBER RATHER THAN THE MEASUREMENT.
+// You collect nearly everything and you build with half of it: the half you
+// leave is what makes the next campaign different, and a game where every
+// part ends up on a creature has no shelf left to raid. Measured at 54.9%
+// after the Theater started marking what you have never bolted on and the
+// walker started reading that mark.
+const WORN_FLOOR = 0.50;
 const TOTAL_PARTS = Object.keys(content.parts).length;
 {
   const per = [];
   for (const seed of REACH_SEEDS) {
     const save = walkedSave({ seed, days: 180 });
     const held = new Set(save.dex.parts ?? []);
+    const worn = new Set(save.dex.worn ?? []);
     const species = new Set([...held].map((p) => content.parts[p]?.species).filter(Boolean));
-    per.push({ seed, parts: held.size, species: species.size, held });
+    per.push({ seed, parts: held.size, species: species.size, held, worn });
   }
   const sorted = [...per].sort((a, b) => a.parts - b.parts);
   const median = sorted[Math.floor(sorted.length / 2)];
@@ -178,6 +194,37 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
       console.log(`    ${sp.padEnd(16)} ${String(ps.length).padStart(2)} parts unreached  (${route?.id ?? 'no route'})`);
     }
   }
+  // R140 — worn, on the same walks and the same median, so the two numbers
+  // are about one campaign and can be read side by side.
+  {
+    const wornSorted = [...per].sort((a, b) => a.worn.size - b.worn.size);
+    const wornMedian = wornSorted[Math.floor(wornSorted.length / 2)];
+    const wornRatio = wornMedian.worn.size / TOTAL_PARTS;
+    const wornUnion = new Set(per.flatMap((r) => [...r.worn]));
+    // A rule with nothing to look at passes: if no save carries the field,
+    // every ratio is 0 and this would read as a catastrophic regression
+    // rather than as a missing field. Say which it is.
+    assert_worn: {
+      if (per.every((r) => r.worn.size === 0)) {
+        fails.push('parts worn: no save in the sample carries `dex.worn` at all'
+          + ' — the field the Theater marks and the walker reads is not being written');
+        break assert_worn;
+      }
+      if (REPORT) {
+        const seenNotWorn = [...new Set(per.flatMap((r) => [...r.held]))].filter((p) => !wornUnion.has(p));
+        console.log(`  worn: ${per.map((r) => `${r.seed}: ${r.worn.size}`).join(', ')}`);
+        console.log(`  median worn ${wornMedian.worn.size} (${(100 * wornRatio).toFixed(1)}%)`
+          + ` · union ${wornUnion.size} · seen by some seed and worn by none ${seenNotWorn.length}`);
+      }
+      if (wornRatio < WORN_FLOOR) {
+        fails.push(`parts worn: the median campaign builds with ${wornMedian.worn.size} of ${TOTAL_PARTS} parts`
+          + ` (${(100 * wornRatio).toFixed(1)}%, under ${(100 * WORN_FLOOR).toFixed(0)}%)`
+          + ` — ${per.map((r) => `${r.seed}: ${r.worn.size}`).join(', ')}`
+          + `; ${TOTAL_PARTS - wornUnion.size} parts go onto no creature in any seed`);
+      }
+    }
+  }
+
   if (ratio < REACH_FLOOR) {
     const missing = Object.values(content.parts).filter((p) => !union.has(p.id));
     const bySpecies = {};
@@ -279,5 +326,6 @@ if (fails.length) {
   process.exit(1);
 }
 console.log(`reach ✓  ${Object.keys(content.species).length} species all routed,`
-  + ` a median campaign sees ${(100 * REACH_FLOOR).toFixed(0)}%+ of ${TOTAL_PARTS} parts,`
+  + ` a median campaign sees ${(100 * REACH_FLOOR).toFixed(0)}%+ of ${TOTAL_PARTS} parts`
+  + ` and builds with ${(100 * WORN_FLOOR).toFixed(0)}%+ of them,`
   + ' and every wall names the grade it takes');
