@@ -3532,7 +3532,10 @@ triangle working, and each region genuinely asks a different question)*.
   distribution has a stated ceiling, and the arena has a way to end a fight
   that is already decided.*
 
-- **R146 — The campaign marks five moments in 180 days.** The walk's `at`
+- **R146 — The campaign marks five moments in 180 days.** ✅ **Shipped — see
+  §9.25**, where the numbers held and the conclusion moved: the gap between
+  day 4 and day 41 is a gap in the INSTRUMENT, not the game. Thirteen of
+  twenty-eight systems are first used in exactly that window. The walk's `at`
   map records `firstParts` (day 0.0), `firstChimera` (0.2), `firstNode`
   (0.3), `firstRegion` (4.3) and `dominion` (40.8) — and **nothing between
   day 4 and day 41**, which is the stretch every pacing question is about.
@@ -3548,6 +3551,94 @@ triangle working, and each region genuinely asks a different question)*.
   still misses are missed for a reason the entry can state.*
 
 ---
+
+### 9.26 Queued out of R146
+
+- **R151 — The suite budget is a wall-clock gate on a box that drifts 30%.**
+  R90 set `npm test` at 195s and it has held for sixty milestones. During
+  R146 it went red, and the measurement that followed is the entry: the
+  **same commit** read **185.9s** and then **242.1s an hour later**, with a
+  single 180-day walk timing identically on both trees (19.5s vs 19.9s) and
+  all four smoke shards growing evenly. That is the machine, not the code.
+  Ruled out by measuring: the fixture cache (warm re-run, same), ten stale
+  battery temp dirs (cleared, no change), and R146's own per-tick work
+  (disabling it moved a walk by 0.2s).
+
+  A gate nobody can pass on a bad afternoon is a gate that gets raised until
+  it means nothing — R90's budget is load-bearing and should not die that
+  way. *Done when: the suite's budget is expressed in a unit that does not
+  move with the box (sum-of-work, or a measured idle baseline the gate
+  calibrates against), the entry states what the real number is on a quiet
+  machine, and re-running it twice an hour apart gives the same verdict.*
+
+### 9.25 The instrument, not the game (R146) — seventh audit
+
+- **R146 — The campaign marks five moments in 180 days.** ✅ *Shipped. The
+  entry's numbers were exactly right and its conclusion was about the wrong
+  thing.*
+
+  The `at` map records `firstParts` (0.0), `firstChimera` (0.17), `firstNode`
+  (0.25), `firstRegion` (4.25) and `dominion` (32–52). All confirmed. The
+  audit read the gap between day 4 and day 41 as a quiet stretch of campaign.
+
+  **It is a quiet stretch of instrument.** Measured over the same four walks,
+  **thirteen of twenty-eight systems are first used between day 4 and day
+  41** — treat, render, pens, breed, hatch, facility, combo, trait, breakout,
+  vat, rehab, raid. The middle of the campaign is the busiest part of it.
+  Nothing was looking.
+
+  #### Four of the five marks were constants
+
+  | mark | day | varies across seeds? |
+  | --- | ---: | --- |
+  | firstParts | 0 | no |
+  | firstChimera | 0.17 | no |
+  | firstNode | 0.25 | no |
+  | firstRegion | 4.25 | no |
+  | dominion | 32–52 | **yes** |
+
+  The walker's opening is deterministic, so a five-row table had **one** row
+  that carried information. And `firstRegion` was never a region: it is
+  `heldNodes >= 5`, a node count wearing a region's name, written wrong and
+  never read by anything — so nothing noticed. Renamed `fifthNode`, because
+  "how long to a fifth node" is a real question; it is just not the one the
+  old name asked.
+
+  #### The data was already there
+
+  R120 made the walk log every action, and it has been writing **32,609
+  entries** a campaign ever since. First use falls straight out of it. So
+  `at` stops being a hand-kept list of five beside a derivable table of
+  twenty-eight: `campaignWalk` now returns `firstUse`, one entry per system,
+  keyed by kind and valued by the day it first happened. A system added later
+  is timed without anybody remembering to mark it, which is the failure the
+  five-row map actually was.
+
+  #### The two systems nobody could place in time
+
+  `tools/coverage.js` names eight systems and proves each RAN by a count. Six
+  are verbs the walk logs. **Combos and traits are counted by scanning the
+  finished state**, which says whether and can never say when — they were the
+  only shipped systems with no moment at all. Both now log an observation at
+  the tick that already looks at the walk's own state: first combo day 4.9,
+  first trait day 7.8. Asserted by name, because neither is an agenda row and
+  the row roll looks straight past them.
+
+  #### One exemption, and it is a finding
+
+  Every agenda row has a first day except **the Gauntlet**, and the rule reads
+  the reason rather than stating it: `campaign/gauntlet.js` gates on
+  `!!state.dominionAt`, and these walks stop at dominion. So the Gauntlet is
+  **the only shipped system a player cannot meet before the campaign is
+  already won** — its median first use (36.25) and median dominion (36.17) are
+  the same day. Ungate it and the exemption goes red in both directions.
+
+  *Done when: the walk marks every first-use of a shipped system, and the
+  harness prints a pacing table a designer can read.* Twenty-eight systems,
+  ordered by when the player meets them, with the spread across four
+  campaigns beside each — `care` never moves, `trait` moves by ten days,
+  `rehab` by eleven. A system whose first use swings by a fortnight is a
+  system some campaigns effectively do not have, and that is now visible.
 
 ### 9.24 Three censuses of a rare event (R150) — carried out of R144
 

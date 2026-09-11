@@ -3786,6 +3786,44 @@ const BREAKS = [
     to: '      .filter((id) => (content.frames[id].slots ?? new Array(SIX_BAYS)).length >= 0);',
   },
   {
+    // R146 — THE GAUNTLET STOPS BEING ENDGAME. Its gate is `!!state.dominionAt`
+    // and that single fact is why the pacing table has exactly one exemption:
+    // these walks stop at dominion, so the one system that OPENS at dominion
+    // is the one they cannot time. Ungate it and the exemption is a lie in
+    // both directions — the row becomes timeable, and the reason the rule
+    // reads off the source stops being true. Also a real design change: four
+    // exhibitions priced $55,000 and up, offered on day one.
+    n: 235, gate: SHARD_B, name: 'the Gauntlet opens before the campaign is won, and the pacing exemption becomes a lie',
+    file: 'campaign/gauntlet.js',
+    anchor: '  let gate = !!state.dominionAt;',
+    to: '  let gate = true;',
+  },
+  {
+    // R146 — the walk stops marking first use, and the table has nothing to
+    // read. This is the instrument itself, so the break is the milestone
+    // undone: `at` goes back to five hand-written marks, four of which are
+    // the same on every seed, and every question about pacing goes back to
+    // being unanswerable. The floor below it is what makes an empty map a
+    // failure rather than a clean run — R150's lesson, one milestone on.
+    n: 236, gate: SHARD_B, name: 'the walk stops marking when each system was first used, and the pacing table reads an empty map',
+    file: 'tools/sim.js',
+    anchor: '    firstUse: (state.__walkLog ?? []).reduce((first, e) => {',
+    to: '    firstUse: ([]).reduce((first, e) => {',
+  },
+  {
+    // R146 — and the two systems that had no moment go back to having none.
+    // Combos and traits are counted by scanning the finished state, which
+    // says whether and never when; this milestone gave each an observation
+    // at the tick. Stop the combo one firing and the table is one row
+    // shorter — which nothing else would notice, because a combo is not an
+    // agenda row and the row roll looks straight past it. That is why the
+    // two are asserted by name.
+    n: 237, gate: SHARD_B, name: 'the first combo goes back to being counted but never timed',
+    file: 'tools/sim.js',
+    anchor: '    if (!sawCombo && (state.discoveredCombos ?? []).length) {',
+    to: '    if (false) {',
+  },
+  {
     // R136 — the Combos tab goes back to three flat lists, which is the
     // state it was in for six milestones: 2,403px and 529 words on a screen
     // the player looks things up in. Catches BOTH halves of the new budget —
