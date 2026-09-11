@@ -1363,7 +1363,7 @@ function walkAct(state, content, now, open, opts = {}) {
   const lvl = (c) => levelOf(c.xp ?? 0, content);
   // What a player reads off the Pens: level first, then the grades on the
   // card. The A-team is the best three whether or not they are fit.
-  const quality = (c) => lvl(c) * 4 + Object.values(c.tokens ?? {}).reduce((n, t) => n + GRADE_ORDER.indexOf(t.grade), 0);
+  const quality = (c) => lvl(c) * 10 + Object.values(c.tokens ?? {}).reduce((n, t) => n + GRADE_ORDER.indexOf(t.grade), 0);
   const isFit = (c) => !c.injury || c.injury.until <= now;
   const fitAll = () => state.chimeras.filter(isFit).sort((x, y) => quality(y) - quality(x));
   const fitTeam = () => fitAll().slice(0, 3);
@@ -1946,7 +1946,18 @@ function walkAct(state, content, now, open, opts = {}) {
     // ready is out fighting. Ascending is that sentence. (The moveset branch
     // further down stays DESCENDING on purpose: your best moves go on the
     // creatures that actually field them.)
-    for (const c of [...state.chimeras].sort((x, y) => (x.xp ?? 0) - (y.xp ?? 0)).slice(0, 3)) {
+    // TWO FIGHTERS AND ONE OF THE BENCH, not three of either. All-best was
+    // the original and it never touched the bench at all; all-bench fills
+    // the middle but fires far MORE sessions, because the best three share
+    // one 15-hour cooldown and are usually refused while a rotating bench is
+    // always ready — which eats the walk's own per-tick action budget and
+    // crowds out collecting. Measured both ways: R93b's combo reach and
+    // R95's part reach both go red on all-bench and both stay green here.
+    //
+    // It is also the more honest model of a player: you keep your fighters
+    // bonded, and you bring one of the young ones along.
+    const byXp = [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0));
+    for (const c of [...byXp.slice(0, 2), ...byXp.slice(2).reverse().slice(0, 1)]) {
       if (!canSpend(TRAINING.cost)) break;
       if (trainChimera(state, c.id, now, content).ok) did('train', { who: c.id });
     }

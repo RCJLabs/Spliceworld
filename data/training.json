@@ -1,7 +1,7 @@
 {
   "tuning": {
     "xpPerWave": 12,
-    "xpPerSession": 30,
+    "xpPerSession": 8,
     "lossFraction": 0.4,
     "sparringFraction": 0.5,
     "levels": [
