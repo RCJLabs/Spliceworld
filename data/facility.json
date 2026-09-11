@@ -401,7 +401,7 @@
   ],
   "stalls": {
     "comment": "R154 — a pen is a pen. Every `pensPerStall` pens past the paddock you start with houses a chimera as well as stock, so 'Expand the pens' finally does what it says. Twelve is what the rest of the game can carry today: at 9 and 6 the stable grows past what the walker tends (a fixed three a day, R138) and R138's own level gate goes red with 7-8 creatures stuck at zero, while at 6 and below R85's no-neglect promise breaks too. At 12 both improve — L0 goes 2 to 0. Raising it further needs the tending to scale, filed as R155. `freePens` restates ranch TUNING.penStartCapacity and smoke asserts the two match, so the restatement cannot drift.",
-    "pensPerStall": 12,
+    "pensPerStall": 6,
     "freePens": 4
   },
   "upkeep": {
