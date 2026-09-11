@@ -3632,6 +3632,81 @@ triangle working, and each region genuinely asks a different question)*.
 
 ### 9.29a Queued out of R140
 
+- **R155 — The walker models a player who never grows.** *Investigated and
+  not shipped — the premise in this entry's own first draft was wrong, and
+  the half that is right cannot be gated on its own. Measurements below so
+  nobody repeats them.*
+
+  Two hand-typed constants make the harness a player whose ranch is the same
+  size on day 180 as on day 20:
+
+  1. **It asks for a smaller stable than the game grants.** `campaignWalk`
+     defaults `stableCap = 9` while the Theater sells 12, and R91's own
+     comment beside the read says the option "survives only so a caller can
+     ask for a SMALLER stable than the facility grants" — so the default *is*
+     the asking, and nothing the Ranch or the Theater sells can be seen by a
+     gate while it stands.
+  2. **It trains two fighters and one of the bench**, which is R138's shape
+     and a constant rather than a share.
+
+  #### The cause was (2), and it was not
+
+  The first draft blamed the tending policy for not scaling and proposed a
+  bench share. Measured, that is wrong twice over. A bench share of
+  `ceil(roster/6)` **does** fix the level curve — but so does doing nothing to
+  it: the real cause is that drift-tending read `canSpend`, which holds the
+  walk's cash reserve back, so **the first thing a tight week stopped was the
+  five dollars that keeps a creature.** A bigger stable is poorer per head. On
+  the reserve exemption alone, with R138's policy untouched:
+
+  | stable | stuck at L0 | lost to neglect |
+  | ---: | ---: | ---: |
+  | 12 | 0 of 36 | 0 |
+  | 16 | 0 of 48 | **0** (was 1) |
+  | 18 | 0 of 54 | **0** (was 1) |
+
+  And the bench share is actively harmful: it spends the per-tick action
+  budget on training and starves everything else, which is R138's own
+  documented tension arriving on schedule — the vat and the Wing stop running
+  entirely, and part reach falls to 94.7% against R95's 95%.
+
+  #### Why it cannot ship alone
+
+  The reserve exemption is **unobservable at today's cap**. With `stableCap`
+  at 9 a walk reaches 13 chimeras and nothing ever drifts, so a gate written
+  for it passes whether the fix is present or not — checked by reverting the
+  fix under the new rule, which stayed green. A change no break can make red
+  is not a change this project ships.
+
+  So it is blocked on (1), and (1) is not a one-line fix either. Unlocking the
+  cap moves three gates at once, each a real consequence rather than a stale
+  number: the **vat and the Wing stop being used at all** (0 of each across
+  180 days), **part reach 94.7%** against R95's 95% and **worn 45.9%** against
+  R140's 50%, and the herd trips R92's warehouse rule at **22** — while seeds
+  7 and 99 end on 46 and 50 head against R91's bound of 48, which is §9.22's
+  liquidity gap by another door.
+
+  Choosing between those is a design decision — does a bigger stable cost you
+  content reach, or does the action budget grow? — and it is re-filed as
+  **R157** rather than settled inside a milestone about tending.
+
+  *Done when: R157 decides what a bigger stable costs, and then the reserve
+  exemption ships with a break that can make it red.*
+
+- **R157 — What a bigger stable costs.** R155's blocker, and the decision it
+  refused to make on its own. The walker asks for a stable of 9 while the game
+  sells 12, and R154 wants to sell more; letting it field what it owns is what
+  makes any of that visible to a gate. Measured on `stableCap = null` alone:
+  the **vat and the Reorientation Wing stop running entirely** across 180 days,
+  **part reach 94.7%** (R95's floor is 95%) and **worn 45.9%** (R140's is 50%),
+  the herd trips R92's warehouse rule at 22, and R91's 48-head bound goes to 46
+  and 50 on seeds 7 and 99. None of those is a stale number — they are what a
+  walker that builds twelve instead of nine actually does with the same per-tick
+  action budget and less money per head. *Done when: the entry says whether a
+  bigger stable is meant to cost content reach or whether the action budget
+  grows with the ranch, the walker fields the stable the game grants, and every
+  content ratchet holds at the number the entry names.*
+
 - **R156 — The suite budget drifts 30% in a unit that was supposed to be
   flat.** R151 replaced a wall-clock budget with CPU-seconds and proved the
   new unit flat against contention (idle 910, four burners 921, a battery
