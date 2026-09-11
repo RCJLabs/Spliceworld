@@ -3556,6 +3556,105 @@ triangle working, and each region genuinely asks a different question)*.
 
 ---
 
+### 9.28 A budget in a unit the box cannot move (R151) — queued out of R146
+
+- **R151 — The suite budget is a wall-clock gate on a box that drifts 30%.**
+  ✅ *Shipped. Every number in the entry was right, and the drift was not
+  the machine being moody — it was the suite asking for a third more box than
+  it has.*
+
+  R90 set `npm test` at 195s of wall-clock and it held for sixty milestones.
+  The entry's evidence: the **same commit** read **185.9s** and then
+  **242.1s** an hour later. Confirmed, and narrowed. A worktree checked out at
+  that exact commit was run cold and then warm: **241.2s and 241.2s.** Not
+  cache. A fixed integer-hash benchmark read **16–18ms** before and after,
+  and **four concurrent copies of it scaled perfectly** — 495, 492, 509, 500ms
+  against 522ms alone. Four real cores, at the speed they always were.
+
+  #### A Node process is not one core
+
+  Measure any single job on an idle box and it burns about **1.3 CPU-seconds
+  per wall-second**. `handlers`: 41.5s wall, **54.5s CPU**. `smoke:b`: 124.6s
+  wall, **166.2s CPU**. V8 runs concurrent marking and background compilation
+  off the main thread, and `--v8-pool-size=0` barely dents it (1.31 → 1.29).
+
+  So four lanes on four cores is **5.2 cores of demand on 4**, and whether
+  that 30% costs anything is decided by the host, invisibly, outside the VM.
+  On a generous afternoon `smoke:b` reads 130.5s; on an ordinary one, 168s.
+  Same code, same box, same idle.
+
+  R90's own comment names this exact mistake and then makes a smaller version
+  of it: *"AT MOST ONE JOB PER CORE... oversubscription does not add
+  throughput, it just makes every job's timing a lie about its own cost."* It
+  fixed eight-on-four and called four-on-four solved.
+
+  #### Both units the entry offered move; the third does not
+
+  The same suite, the same commit, twenty minutes apart — the second run with
+  four spinning processes on the cores beside it:
+
+  | | idle box | four burners | battery beside it |
+  | --- | ---: | ---: | ---: |
+  | wall-clock | 241.0s | 429.5s | 450.7s |
+  | sum-of-wall (the old `work` line) | 926s | 1648s | 1729s |
+  | **CPU-seconds** | **910s** | **921s** | **946s** |
+  | effective lanes | 3.8 | 2.1 | 2.1 |
+
+  Wall-clock and sum-of-wall both move **+78%**. CPU-seconds moves **+1.2%**.
+  Sum-of-wall is not a second opinion about wall-clock — it is the same opinion
+  added up ten times, and it drifted 698 → 902 on identical source right
+  alongside it.
+
+  **910 CPU-seconds is what this suite costs on a quiet machine.** The budget
+  is **1000**, and the reason it is not 955 is the third column: CPU-seconds
+  are not perfectly flat either, because contention costs real cycles in
+  stalls and context switches. The ceiling sits above the worst honest
+  reading (+5.7%) rather than above the quietest one, because the failure
+  this milestone exists to end is a gate that goes red for the machine. Creep
+  worth catching is tens of percent, not four — breaking the walk cache costs
+  **1255**, and unguarding the shards costs **2116**.
+
+  And the verdict holds. Two clean runs **two and a half hours apart** read
+  **910** and **924 CPU-seconds** — both green, 1.5% apart — while the
+  wall-clock between them went 241.0s, 450.7s, 245.7s.
+
+  Read from fields 16 and 17 of `/proc/self/stat` — `cutime` and `cstime`,
+  the CPU of every child this process has reaped. No wrapper around the jobs,
+  no change to how they are spawned. If the number cannot be read the suite
+  **fails**: there is no wall-clock fallback, because a rule with nothing to
+  look at is a rule that always agrees with you.
+
+  Wall-clock is still printed, and never gated — with `effective lanes`
+  beside it (cpu ÷ wall), which says how many of the lanes you asked for the
+  box actually gave you. A slow afternoon is the host's business, not a
+  failing test.
+
+  #### The gate that had never been broken
+
+  `SUITE` has been declared in `tools/battery.js` since R90 and **no break
+  ever used it**. For sixty milestones the one gate that watches what the
+  tests cost was itself unwatched — and it could not have been otherwise: a
+  break runs inside a battery already four trees deep on four cores, so under
+  a wall-clock budget every break would have been "caught" by the contention
+  rather than by the defect. In CPU-seconds it does not matter what else is on
+  the box, so breaks 240 and 241 are possible at all. Both are pure cost:
+  every assertion still passes under them, only the bill changes. 240 breaks
+  the walk cache, so the two gates that share seven campaigns walk fourteen:
+  **1255 CPU-seconds.** 241 makes `inShard` stop guarding, so every sharded
+  block runs in all four shards — the exact failure R90's comment describes
+  and could not test, and one smoke's own union rules cannot see, because
+  every `inShard(...)` call and the whole table are still there.
+
+  **The lesson:** *a measurement you do not own the denominator of is not a
+  measurement.* Wall-clock divides the suite's work by a number the host picks
+  and never tells you.
+
+  *Done when: the suite's budget is expressed in a unit that does not move
+  with the box, the entry states what the real number is on a quiet machine,
+  and re-running it twice an hour apart gives the same verdict.* CPU-seconds;
+  910 on a quiet machine against a 1000 budget; and the verdict held across a
+  run whose wall-clock was 78% longer, which is a harder test than an hour.
+
 ### 9.27 The verb that could not level anything (R138) — seventh audit
 
 - **R138 — The middle of the level curve is empty.** ✅ *Shipped. The entry's
@@ -3639,22 +3738,7 @@ triangle working, and each region genuinely asks a different question)*.
 
 ### 9.26 Queued out of R146
 
-- **R151 — The suite budget is a wall-clock gate on a box that drifts 30%.**
-  R90 set `npm test` at 195s and it has held for sixty milestones. During
-  R146 it went red, and the measurement that followed is the entry: the
-  **same commit** read **185.9s** and then **242.1s an hour later**, with a
-  single 180-day walk timing identically on both trees (19.5s vs 19.9s) and
-  all four smoke shards growing evenly. That is the machine, not the code.
-  Ruled out by measuring: the fixture cache (warm re-run, same), ten stale
-  battery temp dirs (cleared, no change), and R146's own per-tick work
-  (disabling it moved a walk by 0.2s).
-
-  A gate nobody can pass on a bad afternoon is a gate that gets raised until
-  it means nothing — R90's budget is load-bearing and should not die that
-  way. *Done when: the suite's budget is expressed in a unit that does not
-  move with the box (sum-of-work, or a measured idle baseline the gate
-  calibrates against), the entry states what the real number is on a quiet
-  machine, and re-running it twice an hour apart gives the same verdict.*
+- R151 shipped; see §9.28.
 
 ### 9.25 The instrument, not the game (R146) — seventh audit
 

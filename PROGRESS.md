@@ -1,5 +1,97 @@
 # PROGRESS
 
+## Session 152 — R151: a budget in a unit the box cannot move ✅
+
+**ROADMAP §9.28.** R90's `npm test` budget was 195 seconds of wall-clock. The
+entry said the same commit read 185.9s and then 242.1s an hour later, and
+called it the machine. It was right about the drift and wrong about the
+machine: the suite was asking for a third more box than it has.
+
+### Ruled out, by measuring
+
+| | |
+| --- | --- |
+| The code | worktree at the exact commit, run cold then warm: **241.2s and 241.2s** |
+| The fixture cache | same two runs — warm changed nothing |
+| CPU speed | fixed integer-hash benchmark: **16–18ms**, before and after |
+| Core count | four concurrent copies: 495/492/509/500ms vs 522ms alone — **perfect scaling** |
+
+### A Node process is not one core
+
+Any single job on an idle box burns about **1.3 CPU-seconds per wall-second**.
+`handlers`: 41.5s wall, **54.5s CPU**. `smoke:b`: 124.6s wall, **166.2s CPU**.
+V8 marks and compiles off the main thread, and `--v8-pool-size=0` barely dents
+it (1.31 → 1.29).
+
+Four lanes on four cores is therefore **5.2 cores of demand on 4** — and
+whether that 30% costs anything is the host's decision, made outside the VM
+where nothing inside can see it. R90's own comment names the mistake and then
+makes a smaller version of it: *"AT MOST ONE JOB PER CORE... oversubscription
+does not add throughput, it just makes every job's timing a lie about its own
+cost."* It fixed eight-on-four and called four-on-four solved.
+
+### Both units the entry offered move. The third does not.
+
+Same suite, same commit, twenty minutes apart; the second run with four
+spinning processes on the cores beside it:
+
+| | idle box | four burners | battery beside it |
+| --- | ---: | ---: | ---: |
+| wall-clock | 241.0s | 429.5s | 450.7s |
+| sum-of-wall (the old `work` line) | 926s | 1648s | 1729s |
+| **CPU-seconds** | **910s** | **921s** | **946s** |
+| effective lanes | 3.8 | 2.1 | 2.1 |
+
+Wall-clock and sum-of-wall both move **+78%**; CPU-seconds moves **+1.2%**.
+Sum-of-wall was not a second opinion — it is the same opinion added up ten
+times. The budget is **1000 CPU-seconds** against a measured **910** on a
+quiet box — not 955, because the third column shows CPU-seconds are not
+perfectly flat either (contention costs real cycles in stalls and context
+switches), so the ceiling sits above the worst honest reading rather than the
+quietest one. Creep worth catching is tens of percent: breaking the walk
+cache costs **1255**. Read
+from `cutime`/`cstime` in `/proc/self/stat` (the CPU of every child this
+process has reaped — no wrapper, no change to how jobs spawn). If the number
+cannot be read, the suite **fails**: no wall-clock fallback, because a rule
+with nothing to look at always agrees with you.
+
+Wall-clock is still printed and never gated, with **effective lanes**
+(cpu ÷ wall) beside it — how many of the lanes you asked for the box gave you.
+
+### The gate that had never been broken
+
+`SUITE` has been declared in `tools/battery.js` since R90 and **no break ever
+used it**. It could not have been: a break runs inside a battery already four
+trees deep on four cores, so under a wall-clock budget every break would have
+been "caught" by contention rather than by the defect. CPU-seconds do not care
+what else is on the box, which is what makes breaks 240 and 241 possible —
+both pure cost, every assertion still passing underneath. 240 breaks the walk
+cache (**1255 CPU-seconds**); 241 makes `inShard` stop guarding, so every
+sharded block runs in all four shards — the failure R90's comment describes
+and could not test, and one the union rules cannot see, because every
+`inShard(...)` call and the whole table are still in the source.
+
+**The lesson:** *a measurement you do not own the denominator of is not a
+measurement.*
+
+### Verification
+
+| | |
+| --- | --- |
+| Criterion | ✓ CPU-seconds. **910 on a quiet machine** against a 1000 budget, and two clean runs **two and a half hours apart** read 910 and 924 — both green, 1.5% apart — while the wall-clock between them went 241.0s, 450.7s, 245.7s |
+| `--anchors` | ✓ 238 |
+| `--baseline` | ✓ every gate passes on a pristine tree |
+| breaks 240, 241 | ✓ 2 caught, 0 missed (`ONLY_EXIT=0`) — and each was run by hand to read the reason: **1255** and **2116** CPU-seconds, both under *"every job passed, but…"*, so the budget produced the red and not a failing job |
+| `npm test` | ✓ **924 CPU-seconds of 1000**, 245.7s wall, 3.8 effective lanes |
+| `SAVE_VERSION` | unchanged (50) — no save schema touched |
+
+### Next session's first task
+
+**R152 — upkeep does not scale with a richer empire.** R138 raised R143's
+day-120 ceiling 78% → 80% with outgo flat ($1,242 → $1,254) and income up
+($3,535 → $5,755): garrisons and the plant scale, livestock and the stable do
+not, so the better a player gets the more of their gross they keep.
+
 ## Session 151 — R138: the verb that could not level anything ✅
 
 **ROADMAP §9.27.** The entry's numbers were right (L0 × 24, L10 × 25, thirteen

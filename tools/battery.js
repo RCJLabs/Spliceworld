@@ -3848,6 +3848,33 @@ const BREAKS = [
     anchor: '    const byXp = [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0));',
     to: '    const byXp = [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0)).slice(0, 3);',
   },
+  // R151 — THE SUITE'S OWN BUDGET, WHICH HAS NEVER HAD A BREAK AIMED AT IT.
+  // `SUITE` has been declared in this file since R90 and no entry used it, so
+  // for sixty milestones the one gate that watches what the test suite costs
+  // was itself unwatched. It could not have had one: the budget was
+  // wall-clock, and a break runs inside a battery that is already four trees
+  // deep on four cores, so every break would have been "caught" by the
+  // contention rather than by the defect. In CPU-seconds it does not matter
+  // what else is on the box, which is what makes these two possible at all.
+  //
+  // Both breaks are PURE COST. Every assertion in the suite still passes
+  // under them; the only thing that changes is the bill.
+  {
+    n: 240, gate: SUITE, name: 'the walk cache never hits, so the two gates that share seven campaigns walk fourteen',
+    file: 'tools/fixtures.js',
+    anchor: '  if (!fresh && existsSync(file)) {',
+    to: '  if (fresh && existsSync(file)) {',
+  },
+  {
+    // Every `inShard('...')` call and the whole SHARD_OF table stay in the
+    // source, so smoke's own union rules still see exactly what they expect
+    // and stay green. Nothing but the cost gate can notice this one — which
+    // is the shape R90's comment describes and could never test.
+    n: 241, gate: SUITE, name: 'the shard guard stops guarding, so every block runs in all four shards',
+    file: 'tools/smoke.js',
+    anchor: '  return !SHARD || SHARD_OF[name] === SHARD;',
+    to: '  return true;',
+  },
   {
     // R136 — the Combos tab goes back to three flat lists, which is the
     // state it was in for six milestones: 2,403px and 529 words on a screen
