@@ -1935,7 +1935,18 @@ function walkAct(state, content, now, open, opts = {}) {
   if (has('train')) {
     // The three that actually fight. Training the whole stable is how the
     // first policy went broke.
-    for (const c of [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0)).slice(0, 3)) {
+    // R138 — LEAST EXPERIENCED FIRST, which is the other half of why the
+    // middle of the level curve was empty. This sorted DESCENDING: every
+    // training session went to the three creatures that had already fought
+    // the most, so the bench was never worked with in any verb at all.
+    // R92's note eleven lines below already saw the shape of it — "nine of
+    // which the A-team policy never touches" — and fixed only the feral case.
+    //
+    // A player trains the creature that is NOT ready yet; the one that is
+    // ready is out fighting. Ascending is that sentence. (The moveset branch
+    // further down stays DESCENDING on purpose: your best moves go on the
+    // creatures that actually field them.)
+    for (const c of [...state.chimeras].sort((x, y) => (x.xp ?? 0) - (y.xp ?? 0)).slice(0, 3)) {
       if (!canSpend(TRAINING.cost)) break;
       if (trainChimera(state, c.id, now, content).ok) did('train', { who: c.id });
     }

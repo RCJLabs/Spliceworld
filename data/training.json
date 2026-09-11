@@ -1,19 +1,20 @@
 {
   "tuning": {
     "xpPerWave": 12,
+    "xpPerSession": 30,
     "lossFraction": 0.4,
     "sparringFraction": 0.5,
     "levels": [
-      40,
-      100,
-      180,
-      280,
-      400,
-      550,
-      730,
-      940,
-      1180,
-      1450
+      150,
+      450,
+      950,
+      1700,
+      2800,
+      4300,
+      6200,
+      8600,
+      11800,
+      16000
     ],
     "statPerLevel": 0.05,
     "sparScale": 0.75,

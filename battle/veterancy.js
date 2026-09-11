@@ -18,7 +18,7 @@
 // and A9/R32 priced flight and turn order in that currency. Veterancy must
 // not scramble it.
 
-const FALLBACK = { xpPerWave: 12, lossFraction: 0.4, sparringFraction: 0.5, levels: [], statPerLevel: 0, sparScale: 0.75, sparCooldownHours: 0.75 };
+const FALLBACK = { xpPerWave: 12, xpPerSession: 0, lossFraction: 0.4, sparringFraction: 0.5, levels: [], statPerLevel: 0, sparScale: 0.75, sparCooldownHours: 0.75 };
 
 export function trainingTuning(content) {
   return { ...FALLBACK, ...(content.trainingMeta ?? {}) };
@@ -88,6 +88,31 @@ export function xpForBattle(battle, content) {
 // creature still earns — it was there, and temperament drift already treats
 // a KO as something that happened to it, not something it should be docked
 // for.
+// R138 — THE VERB THAT COULD NOT LEVEL ANYTHING.
+//
+// Six campaigns, 62 surviving creatures: 24 of them held EXACTLY ZERO xp,
+// some 155 days old. Not "fought less" — never fielded once. The cause is
+// not the curve, it is that xp had a single source: a real fight. You field
+// your best three, so your best three max out and nothing else ever moves.
+//
+// And the game already had the answer sitting unused. Training is the thing
+// you do with a creature you are NOT fielding — the Pens, $5, a 15-hour
+// cooldown, 908 sessions in a 180-day campaign — and it granted bond and
+// nothing else. A creature could be worked with every day for half a year
+// and stay level zero.
+//
+// So a session is worth xp. Deliberately less than a fight (a fight is the
+// real thing and should stay the fastest way up), and it comes out of the
+// same tuning file, so the ratio is one number somebody can argue with.
+export function grantTrainingXp(chimera, content) {
+  const { xpPerSession } = trainingTuning(content);
+  if (!xpPerSession) return null;
+  const before = levelOf(chimera.xp ?? 0, content);
+  chimera.xp = (chimera.xp ?? 0) + xpPerSession;
+  const after = levelOf(chimera.xp, content);
+  return { gained: xpPerSession, level: after, leveled: after > before };
+}
+
 export function grantBattleXp(state, battle, content) {
   const gained = xpForBattle(battle, content);
   const report = [];

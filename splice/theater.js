@@ -8,6 +8,8 @@ import { analyze } from './physiology.js';
 import { theaterGrants, stableRoom, theaterFree, occupyTheater, theaterBusyMsg } from './facility.js';
 import { driftFromTraining } from './temperament.js';
 import { MOVE_SLOTS, activeMoves } from '../battle/moves.js';
+// R138 - a training session is experience, not only affection.
+import { grantTrainingXp } from '../battle/veterancy.js';
 import { defaultMoveset } from '../battle/moves.js';
 import { movesFromTokens } from '../battle/statblock.js';
 import { attend } from './feral.js';
@@ -252,9 +254,13 @@ export function trainChimera(state, chimeraId, now, content) {
   chimera.lastTrainedAt = now;
   attend(chimera, now);   // R85: working with a creature is what stops it drifting
   chimera.bond = Math.min(100, chimera.bond + TRAINING.bondGain);
+  // R138 - and the session counts as experience, not only as affection.
+  const vet = grantTrainingXp(chimera, content);
   // Trust makes a creature braver, and gentler with it (§3.5).
   driftFromTraining(chimera, content);
-  return { ok: true, msg: `${chimera.name} nails the obstacle course and earns a treat. Bond ${chimera.bond}/100.` };
+  return { ok: true, vet,
+    msg: `${chimera.name} nails the obstacle course and earns a treat. Bond ${chimera.bond}/100.`
+      + (vet?.leveled ? ` Level ${vet.level} \u2014 the drills are paying off.` : '') };
 }
 
 // --- R30: four slots, and you retrain to change them --------------------
