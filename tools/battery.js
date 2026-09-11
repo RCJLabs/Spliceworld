@@ -3470,8 +3470,8 @@ const BREAKS = [
     // break aims at is `opens`, which is untouched.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 2560,  tallest: 4120, opens: 20 },',
-    to: '  vault:          { folded: 2560,  tallest: 4120 },',
+    anchor: '  vault:          { folded: 2560,  tallest: 4140, opens: 20 },',
+    to: '  vault:          { folded: 2560,  tallest: 4140 },',
   },
   {
     // R137 — the five rows that point at the Ranch go back to navigating to
@@ -3874,6 +3874,30 @@ const BREAKS = [
     file: 'tools/smoke.js',
     anchor: '  return !SHARD || SHARD_OF[name] === SHARD;',
     to: '  return true;',
+  },
+  // R152 — THE SHAPE OF THE ECONOMY, NOT ITS PRICES. R143 put territory and
+  // the plant on the books and breaks 224-226 prove they are billed. Neither
+  // of those can see what this milestone fixed: the share an empire KEEPS
+  // climbing as it grows, stopped only by the map running out of nodes.
+  {
+    // The completion bonus goes back to being income nobody defends — 21% of
+    // gross at full map, and the most competence-shaped money in the game.
+    // `whole` is still computed, so anything that only checks the loop still
+    // runs still sees it run.
+    n: 242, gate: EMPIRE, name: 'the garrison stops billing the completion bonuses, so finishing a region is free to hold',
+    file: 'splice/facility.js',
+    anchor: '    if (whole) gross += region.completionBonus ?? 0;',
+    to: '    if (whole) gross += 0;',
+  },
+  {
+    // The fraction goes flat again, which is R143's shape: proportional
+    // garrison over a fixed stable, so `kept` climbs toward 1 - fraction and
+    // the next authored region raises it for free. Zeroed rather than
+    // deleted, for break 224's reason — the field is still there.
+    n: 243, gate: EMPIRE, name: 'the garrison fraction goes flat again, and a bigger map is a strictly better deal',
+    file: 'data/facility.json',
+    anchor: '    "garrisonPerNode": 0.0075,',
+    to: '    "garrisonPerNode": 0,',
   },
   {
     // R136 — the Combos tab goes back to three flat lists, which is the

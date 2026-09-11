@@ -1,5 +1,113 @@
 # PROGRESS
 
+## Session 153 — R152: the ceiling was the map ✅
+
+**ROADMAP §9.29.** The entry's diagnosis was right, its evidence was wrong,
+and the defect underneath was much worse than either.
+
+### The premise, measured
+
+The entry said the share an empire keeps drifts up **with competence**: R138's
+walker reached full territory sooner, seed 2026's day-120 income went
+$3,535 → $5,755 against an outgo that barely moved ($1,242 → $1,254). Every
+number correct. The inference is not.
+
+Sixteen campaigns, day-120 share kept against the day dominion was reached:
+**r = 0.089** (t = 0.34, n = 16). No gradient — because **by day 120 every
+campaign holds the whole map**, so income is the same $5,755/day whether you
+got there on day 27 or day 77. R138 moved the walker across the finish line
+before day 120 instead of after. That is a saturation, not a slope. *The
+criterion was already met, by a number nobody had measured.*
+
+### The real defect is size
+
+`kept` is `1 − fixed/income − garrisonFraction`, and garrison was the only
+proportional term (18–28% of the bill). On one fixed stable, swept node by
+node:
+
+| nodes held | 1 | 8 | 12 | 16 | 20 | 23 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| share kept | −2357% | −29% | 33% | 58% | 69% | **77%** |
+
+Still climbing when it ran out of map. **The 80% ceiling was measuring how
+many nodes have been authored, not the economy.** And the garrison billed the
+nodes but not the completion bonuses — $1,210 of $5,755, 21% of gross, the
+reward for finishing a region and free to hold — so the true asymptote was
+93.7%.
+
+### What shipped
+
+The garrison bills everything the map pays, bonuses included, at a fraction
+that rises with the border (`garrisonPerNode` 0.0075, capped at 0.5 as a guard
+rather than a target).
+
+**The escalation is why this was possible at all.** R143 hit a liquidity wall
+past a flat 0.15 — a flat fraction taxes the early game hardest, which is
+exactly where that wall lives. Progressive is untouched where R143 measured it
+and bites where money stops being scarce. Confirmed by overshooting: at
+0.012/node seed 2026 ends on **63 head** and the wall is back.
+
+| over sixteen campaigns | before | after |
+| --- | ---: | ---: |
+| share kept at day 120 | 64.4–78.2% | **45.4–58.5%** |
+| proportional share of the bill | 18–28% | **45–60%** |
+| upkeep as a share of everything earned | 23.2–33.9% | **41.8–48.9%** |
+| hours broke / low-water | 0h / $164 | 0h / $164 |
+
+**The share, stated: a full-sized empire keeps a little over half of its gross
+— 45–59%, mean 55% — and that is the most it can ever keep.** Doubling the map
+now takes seed 2026 from 55.0% across 22 nodes to **48.8% across 46**, same
+stable. Under the old model the same comparison read 76.7% → 85.2%.
+
+That counterfactual is the new gate — it builds a doubled world and asks the
+real functions, because a ceiling you can raise by authoring content is not a
+ceiling.
+
+### The boot budget, paid rather than raised
+
+The new garrison put `splice/facility.js` 1.2 KB over R138's 563 KB eager cap
+— it is on the Ranch's first paint. *Prose ships.* The explanation moved to
+§9.29 and the module kept a pointer: **562.8 KB**, under the cap, no raise.
+
+**The lesson:** *a limit you only reach by running out of content is not a
+limit — it is a coincidence.*
+
+### Known, and not this milestone's
+
+Across sixteen seeds the walk ends on up to **68 head** against R91's bound of
+48 — before this milestone (68) as well as after (66). The suite asserts that
+bound on its own three seeds, where it holds. Same liquidity gap §9.22 carries.
+
+### Verification
+
+| | |
+| --- | --- |
+| Criterion | ✓ flat against pace (r = 0.089 before, 0.119 after — neither significant at n = 16), and the share is **55%**; now flat against *size* too — doubling the map takes 55.0% → 48.8% where it used to take 76.7% → 85.2% |
+| `--anchors` | ✓ 240 — and it caught my own stale one: raising the vault budget broke break 199's anchor, in 0.3s |
+| `--baseline` | ✓ 34 gates on a pristine tree (`BASELINE_EXIT=0`) |
+| breaks 242, 243 | ✓ caught — run with R143's **224, 225, 226** to prove the new model did not blind the old breaks: 5 caught, 0 missed (`ONLY_EXIT=0`) |
+| `npm test` | ✓ **823 CPU-seconds of 1000**, 259.3s wall |
+| `SAVE_VERSION` | unchanged (50) — tuning, not schema |
+
+### Two red herrings, both R151's lesson arriving early
+
+The first `--baseline` was genuinely red (the vault, above). The second was red
+on the *same* gate with a different message — *"pens declares 20 folds to walk
+and the gate got into 8"* — because it ran alongside a break battery driving
+two shard-a smokes on four cores. A browser gate under contention measures a
+screen mid-layout. Run alone: 34 PASS, exit 0.
+
+And the break run reported **5 caught, 0 missed** while exiting 1, because the
+same contended preflight was failing underneath it. That is precisely R151's
+rule — *judge by the exit code, never the summary line* — landing on the very
+next milestone. Both were re-run on a quiet box before anything was believed.
+
+### Next session's first task
+
+**R140 — 95% of parts collected, 56% worn**, or the older backlog (R139, R142,
+R145, R147, then R54–R67 and the rest). The carried liquidity gap is still
+open and now has a second milestone's worth of evidence behind it.
+
 ## Session 152 — R151: a budget in a unit the box cannot move ✅
 
 **ROADMAP §9.28.** R90's `npm test` budget was 195 seconds of wall-clock. The

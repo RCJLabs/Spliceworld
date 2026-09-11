@@ -193,7 +193,18 @@ const BUDGET = {
   // version of this milestone paged the parts and left the vials, and the
   // gate measured that bay at 16,821px — the fix is not a smaller page, it
   // is that a list is a list.
-  vault:          { folded: 2560,  tallest: 4120, opens: 20 },
+  // R152: 4120 -> 4140, measured at 4122, and it is R143's cause again in
+  // the same place. The hoard did not grow — seed 2026 ends on 333 parts
+  // where it held 338 before, and one FEWER chimera. What moved is the
+  // SPREAD: a garrison that bills the whole map walks a poorer campaign into
+  // a different set of species bays, and the shut shelf summarises what kinds
+  // of thing are on it, so a bay more or less is a summary line more or less.
+  // This is the second economy milestone to move it by that mechanism, which
+  // is worth saying out loud: this number tracks the fixture's species spread
+  // and will move again the next time anybody touches prices. It is arithmetic
+  // over a fixture, not a ratchet against growth — the growth guard is R91's
+  // 260-part cap, and that is what actually bounds this screen.
+  vault:          { folded: 2560,  tallest: 4140, opens: 20 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   'dex:variants': { folded: 1100,  tallest: 1100 },
 
@@ -311,7 +322,11 @@ const WORDS = {
   // 400 parts and 120 vials, each a line. Its words are inventory rather
   // than prose, and the fold work it is owed is a height problem; a ratchet
   // keeps it from growing further meanwhile.
-  vault:          { folded: 350,  open: 5000 },
+  // R152: 350 -> 375, measured at 359. Same cause as the height above and
+  // the same ~4% headroom R141 left on `dex:combos` — the shut shelf names
+  // the KINDS on it, so a different species spread writes a different number
+  // of summary lines. 333 parts against 338, so nothing the player holds grew.
+  vault:          { folded: 375,  open: 5000 },
   'dex:roster':   { folded: 400,  open: 400 },
   'dex:variants': { folded: 200,  open: 200 },
   // R136: 550/550 -> 150 shut (measured 78) and 600 open (measured 532).

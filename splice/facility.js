@@ -74,11 +74,14 @@ const UPKEEP_DEFAULTS = {
   // R143 — the two things that were free to own. R25 pointed the upkeep
   // economy at livestock and nothing ever pointed it at territory or the
   // plant, so income scaled with conquest and outgo did not. FRACTIONS, not
-  // tables: a garrison priced as a share of the node's own income can never
-  // exceed what the node pays, so conquest still pays and losing a node is
+  // tables: a garrison priced as a share of the empire's own income can never
+  // exceed what the empire pays, so conquest still pays and losing a node is
   // never a relief — including for a region nobody has written yet.
   // Calibration and the liquidity wall it hit are in ROADMAP §9.22.
   garrisonFraction: 0.08,
+  // R152 — per node past the first; the cap is a guard. ROADMAP §9.29.
+  garrisonPerNode: 0.0075,
+  garrisonFractionMax: 0.5,
   facilityRunningFraction: 0.0004,
 };
 
@@ -87,17 +90,33 @@ export function upkeepTuning(content) {
 }
 
 // R143 — what the map costs to hold, and what the plant costs to run. A
-// contested node still pays its garrison: income is suspended while the
-// convoy sits there, and a garrison that stopped would make being attacked a
-// saving. The plant is priced off what each level cost to build, so it is
-// zero on a fresh save and grows only as the player grows it.
+// contested node still pays its garrison: a garrison that stopped would make
+// being attacked a saving. The plant is priced off what each level cost to
+// build, so it is zero on a fresh save and grows as the player grows it.
+//
+// R152 — it billed the nodes and not the completion bonuses, and at a flat
+// share, so `kept` rose with size until the map ran out. ROADMAP §9.29.
+export function garrisonFractionFor(heldCount, content) {
+  const t = upkeepTuning(content);
+  return Math.min(t.garrisonFractionMax,
+    t.garrisonFraction + t.garrisonPerNode * Math.max(0, heldCount - 1));
+}
+
 export function territoryUpkeepPerDay(state, content) {
   const held = new Set(state.campaign?.heldNodes ?? []);
   if (!held.size) return 0;
-  const f = upkeepTuning(content).garrisonFraction;
-  return Object.values(content.regions ?? {})
-    .flatMap((r) => r.nodes ?? [])
-    .reduce((n, node) => (held.has(node.id) ? n + (node.incomePerDay ?? 0) * f : n), 0);
+  let gross = 0;
+  let count = 0;
+  for (const region of Object.values(content.regions ?? {})) {
+    const nodes = region.nodes ?? [];
+    let whole = nodes.length > 0;
+    for (const node of nodes) {
+      if (held.has(node.id)) { gross += node.incomePerDay ?? 0; count += 1; }
+      else whole = false;
+    }
+    if (whole) gross += region.completionBonus ?? 0;
+  }
+  return gross * garrisonFractionFor(count, content);
 }
 
 export function facilityUpkeepPerDay(state, content) {
