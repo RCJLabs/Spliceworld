@@ -65,7 +65,20 @@ const BOUNDS = {
   'inventory.parts':      { max: 400, by: 'vault capacity, sold like pens' },
   'inventory.vials':      { max: 120, by: 'vault capacity; older vials retire into the Dex' },
   'campaign.containment': { max: 40,  by: 'bay count, from the Containment track' },
-  'chimeras':             { max: 12,  by: 'stable capacity, from the Theater track' },
+  // R154 — the stable is the Theater track PLUS the paddock now, so this
+  // derives both halves rather than restating one of them. The paddock's own
+  // ceiling comes from `penMaxCapacity`, the same tuning `ranch.stock` two
+  // lines down already reads, so a paddock that grows moves this with it.
+  'chimeras':             { max: (c) => (c.facility?.theater?.levels ?? [])
+                              .reduce((n, l) => Math.max(n, l.grants?.stable ?? 0), 0)
+                            + Math.floor((TUNING.penMaxCapacity - (c.stallMeta?.freePens ?? 0))
+                                         / (c.stallMeta?.pensPerStall || Infinity)),
+                            by: 'stable capacity: the Theater track, plus a stall per `pensPerStall` pens' },
+  // R154 — a bagged specimen carries a whole chimera, and the walk only
+  // started reaching these once the roster could grow past twelve. Bounded
+  // by what a chimera itself is bounded by, which is where they came from.
+  'campaign.containment[].chimera.moveset': { max: 8, by: 'MOVE_SLOTS plus the combos a genome can unlock' },
+  'campaign.containment[].chimera.scars':   { max: 12, by: 'one scar per socket, twice over' },
   // R92 — DERIVED, and with the one designed exception stated. R91 wrote
   // "40, by penCapacity" when penCapacity had no ceiling of its own, so the
   // bound was a sentence: a walk that ran the Resequencer bought 97 pen

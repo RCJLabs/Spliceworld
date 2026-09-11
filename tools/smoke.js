@@ -335,6 +335,29 @@ const m2 = await migrate(structuredClone(v2Save));
 assert.equal(m2.saveVersion, SAVE_VERSION);
 assert.equal(m2.funds, 512, 'v2→v3 leaves ranch/economy untouched');
 
+// --- R154: a pen is a pen, and the two halves of that cannot drift apart.
+//
+// `facility.json` restates the paddock a player starts with so `stallsFromPens`
+// can count from it without the facility data reaching into ranch tuning. A
+// restatement is a copy, and a copy goes stale (R61) — so the copy is asserted
+// against the original here rather than trusted. The data comment promises
+// exactly this assertion; without it the promise was the only thing holding it.
+{
+  const meta = content.stallMeta;
+  assert.ok(meta, 'facility.json carries a `stalls` block — a pen buys stable room');
+  assert.equal(meta.freePens, TUNING.penStartCapacity,
+    `stalls.freePens (${meta.freePens}) restates TUNING.penStartCapacity (${TUNING.penStartCapacity})`);
+  assert.ok(meta.pensPerStall > 0, 'stalls.pensPerStall is a real ratio');
+  // And the derivation it feeds: the paddock you start with buys nothing, the
+  // next `pensPerStall` buys one. Asserted through `stallsFromPens` rather than
+  // by redoing the arithmetic, because that function is what the game reads.
+  const { stallsFromPens } = await import('../splice/facility.js');
+  const at = (pens) => stallsFromPens({ ranch: { penCapacity: pens } }, content);
+  assert.equal(at(TUNING.penStartCapacity), 0, 'the starting paddock is not a stall');
+  assert.equal(at(TUNING.penStartCapacity + meta.pensPerStall - 1), 0, 'one pen short buys nothing');
+  assert.equal(at(TUNING.penStartCapacity + meta.pensPerStall), 1, 'and the one that completes it buys a stall');
+}
+
 // --- M1 ranch: species carry the required husbandry data.
 for (const sp of Object.values(content.species)) {
   assert.ok(content.frames[sp.frame], `${sp.id}: unknown frame ${sp.frame}`);

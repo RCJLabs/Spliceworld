@@ -229,8 +229,19 @@ export function occupyTheater(state, content, now, kind = 'splice') {
 // graduation — which means the stall has to be reserved while the clock
 // runs, or a player could enrol at eleven, splice to twelve, and graduate
 // into thirteen.
+// R154 — A PEN IS A PEN. Reported from play: "it says upgrade pens but it
+// upgrades the ranch." It did — the word was doing two jobs. Derived from
+// `penCapacity` rather than stored, so no save version moves. ROADMAP §9.31.
+export function stallsFromPens(state, content) {
+  const meta = content.stallMeta ?? {};
+  const per = meta.pensPerStall ?? 0;
+  if (!per) return 0;
+  const past = (state.ranch?.penCapacity ?? 0) - (meta.freePens ?? 0);
+  return Math.max(0, Math.floor(past / per));
+}
+
 export function stableRoom(state, content) {
-  const cap = theaterGrants(state, content).stable;
+  const cap = theaterGrants(state, content).stable + stallsFromPens(state, content);
   // A CAPTURED OR FERAL CREATURE STILL HAS A STALL. Its rescue window is a
   // clock the player is running, exactly like a Wing programme, and it comes
   // home to the roster when it closes — so leaving it out would let a player

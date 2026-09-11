@@ -97,6 +97,9 @@ export function indexContent(raw) {
     // Daily upkeep constants (R25). Kept beside the facility because the
     // tracks below are what a player buys with what upkeep leaves them.
     upkeepMeta: raw.facility ? raw.facility.upkeep ?? null : null,
+    // R154 — how many pens house a chimera. Beside the tracks for the same
+    // reason upkeep is: it prices what the Ranch sells.
+    stallMeta: raw.facility ? raw.facility.stalls ?? null : null,
     philosophies: raw.philosophies ? byId(raw.philosophies.philosophies) : {},
     operations: raw.operations ? byId(raw.operations.operations) : {},
     operationMeta: raw.operations ? raw.operations.tuning : null,
