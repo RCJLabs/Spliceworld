@@ -3899,6 +3899,49 @@ const BREAKS = [
     anchor: '    "garrisonPerNode": 0.0075,',
     to: '    "garrisonPerNode": 0,',
   },
+  // R140 — WHAT YOU BUILD WITH, not just what you collect. R95's reach gate
+  // has held parts SEEN at 95% since it was written and nothing measured the
+  // other half: a median campaign put 43% of the list on a creature, and 34
+  // parts went onto no creature in any seed while being seen in several.
+  {
+    // The tick stops recording, so `dex.worn` is never written and the reach
+    // gate has nothing to read. Aimed at the VACUITY GUARD rather than the
+    // floor: a percentage computed over an absent field reads as 0% and would
+    // otherwise look like a catastrophic regression instead of a missing
+    // field, which is the difference between a gate that tells you what broke
+    // and one that tells you something broke.
+    n: 244, gate: REACH, name: 'the world stops recording what went onto a creature, and the worn number has nothing to read',
+    file: 'campaign/world.js',
+    anchor: '        if (t?.partId && !known.has(t.partId)) { known.add(t.partId); worn.push(t.partId); }',
+    to: '        if (false) { known.add(t.partId); worn.push(t.partId); }',
+  },
+  {
+    // The pull goes away and the Theater reaches for the same best-graded
+    // part every time, which is the 43% this milestone started from.
+    n: 245, gate: REACH, name: 'a part you have never built with stops breaking a tie, and the campaign wears 43% again',
+    file: 'tools/sim.js',
+    anchor: '    + (built.has(t.partId) ? 0 : 0.5);',
+    to: '    + (built.has(t.partId) ? 0 : 0);',
+  },
+  {
+    // The screen stops saying it. The walker's preference is only legitimate
+    // if a player can see the same thing, so this is not cosmetic: it is the
+    // difference between moving the game and moving the instrument.
+    n: 246, gate: SHARD_B, name: 'the Theater stops marking a part you have never built with, and only the walker knows',
+    file: 'splice/theater-ui.js',
+    anchor: "                built.has(t.partId) ? '' : ' \\u00b7 never bolted on'}`,",
+    to: "                built.has(t.partId) ? '' : ''}`,",
+  },
+  {
+    // And the opposite failure, which no reach percentage can see: a pull big
+    // enough to move the number is also big enough to take a Standard over an
+    // Apex. R41's rule — grades season a build, they do not replace it — and
+    // the only gate that can catch it is the one that asks directly.
+    n: 247, gate: SHARD_B, name: 'the never-built-with pull outgrows a grade step, and a Standard beats an Apex',
+    file: 'tools/sim.js',
+    anchor: '    + (built.has(t.partId) ? 0 : 0.5);',
+    to: '    + (built.has(t.partId) ? 0 : 5);',
+  },
   {
     // R136 — the Combos tab goes back to three flat lists, which is the
     // state it was in for six milestones: 2,403px and 529 words on a screen

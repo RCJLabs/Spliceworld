@@ -201,7 +201,28 @@ const REPORT = process.argv.includes('--report');
 //     content file as one bundle before the first paint.
 //
 // Either one ends this queue. A seventh raise just lengthens it.
-const FIRST_PAINT_KB = 1035;
+//
+// R140: 1035 -> 1036, measured at 1035.4, AND THIS IS THAT SEVENTH RAISE.
+// Taken deliberately and with the alternative costed rather than waved at,
+// because the note above exists to stop exactly this from happening quietly:
+//
+//   · What it bought: `tickWorld` records `dex.worn` — ten lines in
+//     `campaign/world.js`. That is the whole of R140's boot-path cost, and it
+//     is what turns "you collect 95% and build with 43%" from a claim nobody
+//     could check into a number the reach gate holds at 50%.
+//   · Why it was not paid from the queue: the empty-keys option is 7.0 KB
+//     today, not the 8.5 the note estimated — re-counted, 286 `"tags": []`
+//     and 129 `"keywords": {}` across five data files. It is still eleven
+//     times what this raise needs. What stops it is the read-site audit the
+//     note names: ~20 sites do a bare `part.tags.join(...)` with no fallback,
+//     across physiology, statblock and the director, and rewriting those
+//     inside an unrelated milestone is how a content-reach change ships a
+//     battle-maths regression.
+//
+// So it is filed instead of fudged: ROADMAP R153 carries both options with
+// today's prices, and this budget should come DOWN when it lands rather than
+// stay wherever the last feature left it.
+const FIRST_PAINT_KB = 1036;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //
