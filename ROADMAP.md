@@ -3556,6 +3556,113 @@ triangle working, and each region genuinely asks a different question)*.
 
 ---
 
+### 9.29 The ceiling was the map (R152) — queued out of R138
+
+- **R152 — Upkeep does not scale with a richer empire.** ✅ *Shipped. The
+  entry's diagnosis was right, the evidence it offered for it was wrong, and
+  the defect underneath was much worse than either.*
+
+  #### The premise, measured over sixteen campaigns
+
+  The entry said the share an empire keeps drifts up **with competence** —
+  R138's walker reached full territory sooner, seed 2026's day-120 income went
+  $3,535 → $5,755 against an outgo that barely moved ($1,242 → $1,254), so the
+  ceiling had to be raised 78% → 80%. Every one of those numbers is correct.
+  The inference from them is not.
+
+  Sixteen campaigns, day-120 share kept against the day dominion was reached:
+  **r = 0.089** (t = 0.34, n = 16 — nowhere near significance). There was no
+  competence gradient to find, because **by day 120 every campaign holds the
+  whole map**: income is the same $5,755/day whether you got there on day 27
+  or day 77. What R138 actually moved was the walker crossing the finish line
+  *before* day 120 instead of after — a one-time saturation, not a slope. The
+  criterion as written ("flat against how fast it got there") was already met,
+  by a number nobody had measured.
+
+  #### The real defect is size, and the gate was measuring the map
+
+  `kept` is `1 − fixed/income − garrisonFraction`. Garrison was the only
+  proportional term (18–28% of the bill), so as the empire grew the middle
+  term shrank and the share climbed **monotonically**. On one fixed stable,
+  swept node by node:
+
+  | nodes held | 1 | 8 | 12 | 16 | 20 | 23 |
+  | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+  | share kept | −2357% | −29% | 33% | 58% | 69% | **77%** |
+
+  It was still climbing when it ran out of map. **The 80% ceiling was not
+  measuring the economy — it was measuring how many nodes have been
+  authored**, and the next region anybody wrote would have raised it for free.
+
+  And the garrison billed the **nodes** and not the **completion bonuses** —
+  $1,210 of $5,755 at full map, 21% of gross, and the most competence-shaped
+  income in the game. The reward for finishing a region cost nothing to hold,
+  which put the true asymptote at **93.7%**, not 92%.
+
+  #### What shipped: the whole map, at a fraction that rises with the border
+
+  Two data keys and one rewritten function. The garrison bills everything the
+  map pays, bonuses included — a completed strip is more to defend, not less.
+  And `garrisonPerNode` (0.0075) is what each node past the first adds to the
+  fraction, capped at 0.5 as a guard rather than a target.
+
+  **The escalation is why this could be done at all.** R143 measured a
+  liquidity wall past a flat 0.15 garrison — the walker can no longer afford
+  to extract or buy pens, and `ranch.stock` blows through R91's bound of 48.
+  A flat fraction taxes the early game hardest, which is exactly where that
+  wall lives. A progressive one is untouched at the sizes R143 measured and
+  bites where the money stops being scarce. Confirmed by overshooting on
+  purpose: at 0.012/node seed 2026 ends on **63 head of livestock** and the
+  wall is back.
+
+  | over sixteen campaigns | before | after |
+  | --- | ---: | ---: |
+  | share kept at day 120 | 64.4–78.2% | **45.4–58.5%** |
+  | proportional share of the bill | 18–28% | **45–60%** |
+  | upkeep as a share of everything earned | 23.2–33.9% | **41.8–48.9%** |
+  | share kept vs. speed to dominion | r = 0.089 | r = 0.119 |
+  | hours broke / low-water | 0h / $164 | 0h / $164 |
+
+  #### The share, stated
+
+  **A full-sized empire keeps a little over half of its gross — 45–59%, mean
+  55% — and that is the most it can ever keep.** The curve now peaks at
+  today's map edge and falls past it: doubling the map takes seed 2026 from
+  **55.0% across 22 nodes to 48.8% across 46**, on the same stable, the same
+  pens and the same plant. Under the old model the same comparison read 76.7%
+  → 85.2%.
+
+  That counterfactual is the new gate, and it is the one the old gate could
+  not have been: it builds a **doubled world** — every region mirrored under a
+  fresh id, every node of it held — and asks the real functions. A ceiling
+  that can be raised by authoring content is not a ceiling.
+
+  #### Known, and not this milestone's
+
+  Across sixteen seeds the walk ends on up to **68 head of livestock** against
+  R91's bound of 48 — before this milestone as well as after (66). The suite
+  asserts that bound on its own three seeds, where it holds. It is the same
+  liquidity gap §9.22 carries: livestock leaves this game only through
+  extraction, which costs money, and nothing turns an asset back into cash.
+
+  The new garrison also put `splice/facility.js` 1.2 KB over R138's 563 KB
+  eager-import cap — it is on the Ranch's first paint. *Prose ships.* The
+  explanation moved here and the module kept a pointer: **562.8 KB**, under
+  the cap, paid for rather than raised. The vault's height budget did move
+  (4120 → 4140, 350 → 375 words), for R143's reason in the same place: the
+  hoard did not grow (333 parts against 338, one fewer chimera), but a poorer
+  campaign fills a different set of species bays and the shut shelf summarises
+  what kinds are on it.
+
+  **The lesson:** *a limit you only reach by running out of content is not a
+  limit — it is a coincidence.*
+
+  *Done when: the share an empire keeps is flat against how fast it got there,
+  and the entry states what that share should be.* Flat, and it always was:
+  r = 0.089 before, r = 0.119 after, neither significant at n = 16. The share
+  is **55%**, and the milestone is the half the criterion did not ask for —
+  it is now flat against how *big* it got, too.
+
 ### 9.28 A budget in a unit the box cannot move (R151) — queued out of R146
 
 - **R151 — The suite budget is a wall-clock gate on a box that drifts 30%.**
@@ -3725,16 +3832,7 @@ triangle working, and each region genuinely asks a different question)*.
   makes a migrated save a different SHAPE from a new one, and smoke asserts
   those match.
 
-- **R152 — Upkeep does not scale with a richer empire.** R138 raised R143's
-  day-120 ceiling from 78% to 80%, and the reason is worth its own entry: the
-  outgo did not change ($1,242 → $1,254 on seed 2026), the INCOME did
-  ($3,535 → $5,755), because this milestone's walker reaches full territory
-  sooner. R143's upkeep is only partly proportional — garrisons and the plant
-  scale with the empire, livestock and the stable do not — so **the better a
-  player gets, the more of their gross they keep**, and the ceiling drifts up
-  with competence rather than with any change to prices. *Done when: the share
-  an empire keeps is flat against how fast it got there, and the entry states
-  what that share should be.*
+- R152 shipped; see §9.29.
 
 ### 9.26 Queued out of R146
 

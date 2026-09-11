@@ -18689,6 +18689,8 @@ if (inShard('empire')) {
     // Measured both ways: 1 of 66 at level zero at day 180, 10 of 39 at
     // dominion. Same tree, same rule, two different questions.
     const { levelOf: lvlOf } = await import('../battle/veterancy.js');
+    // R152 — the garrison's own two functions, for the counterfactuals below.
+    const { territoryUpkeepPerDay, garrisonFractionFor } = await import('../splice/facility.js');
     const stableLv = walks.flatMap((w) => (w.save.chimeras ?? []).map((c) => lvlOf(c.xp ?? 0, content)));
     assert.ok(stableLv.length >= 20,
       `there are stables to measure (${stableLv.length} surviving creatures across ${walks.length} campaigns)`);
@@ -18762,29 +18764,104 @@ if (inShard('empire')) {
   //    but the next milestone to touch the economy will move it again, and
   //    the answer then is a census with enough samples to mean something,
   //    not a tuning chosen to satisfy four coin flips.
+  //    R152 RE-RATCHETS IT TO 60%, AND THE CEILING IS NO LONGER THE MAP.
+  //
+  //    R138 raised this 78% -> 80% and filed the reason as R152: upkeep is
+  //    only PARTLY proportional, so the share drifts up as the empire grows.
+  //    That diagnosis was right. The evidence offered for it was not, and
+  //    sixteen campaigns say so: the share kept at day 120 correlates with
+  //    how fast the walk reached dominion at r=0.089 (t=0.34, n=16). There
+  //    was never a competence gradient to find — by day 120 EVERY campaign
+  //    holds the whole map, so income is the same $5,755/day whether you got
+  //    there on day 27 or day 77, and the whole spread is how expensive a
+  //    stable the walk happens to be running.
+  //
+  //    The real defect is SIZE, and it was much worse than the entry thought.
+  //    See the counterfactual below.
   for (const w of walks) {
     const late = w.snapshots[120];
     if (!late || !late.incomeRate) continue;
     const kept = (late.incomeRate - late.upkeepRate) / late.incomeRate;
-    // R138 RE-RATCHETS: 78% -> 80%, measured at 78.2/73.4/77.5.
-    //
-    // The raise is not a cut to upkeep — R143's two fractions are untouched
-    // and the day-120 outgo is the same ($1,242 -> $1,254 on seed 2026).
-    // What moved is the INCOME: this milestone's walker reaches full
-    // territory sooner, and seed 2026 went from $3,535/day to $5,755/day at
-    // the same instant. A bigger numerator over the same denominator is a
-    // bigger share kept.
-    //
-    // Which exposes something R143 did not have to face: its upkeep is only
-    // PARTLY proportional. Garrisons and the plant scale with the empire;
-    // livestock and the stable do not. So the better a player gets, the more
-    // of their gross they keep, and the ceiling drifts up with competence
-    // rather than with any change to the prices. That is a real gap in the
-    // model rather than a number to nudge, and it is filed as R152.
-    assert.ok(kept <= 0.80,
+    assert.ok(kept <= 0.60,
       `seed ${w.seed}: a full-sized empire keeps ${(kept * 100).toFixed(1)}% of its gross at day 120 `
-      + `($${late.incomeRate}/day in, $${late.upkeepRate}/day out, ceiling 80%) `
-      + '— measured at 80-84% before this milestone, 63-71% after');
+      + `($${late.incomeRate}/day in, $${late.upkeepRate}/day out, ceiling 60%) `
+      + '— measured at 64-78% before this milestone (16 seeds), 45-59% after');
+  }
+
+  // 2b. R152 — AND A BIGGER MAP CANNOT RAISE IT. THIS IS THE RULE THE OLD
+  //     GATE COULD NOT HAVE.
+  //
+  //     `kept` is 1 - fixed/income - garrisonFraction. With a FLAT fraction
+  //     the middle term shrinks as the empire grows and the share climbs
+  //     monotonically toward 1 - fraction — on one fixed stable, swept node
+  //     by node, it read -2357% at one node, 33% at twelve, 58% at sixteen,
+  //     76.7% at the full twenty-three. It was still climbing when it ran out
+  //     of map. So the 80% ceiling was not measuring the economy at all: it
+  //     was measuring how many nodes have been authored, and the next region
+  //     anybody writes would have pushed it up again for free.
+  //
+  //     Worse, the garrison did not bill the completion bonuses — $1,210 of
+  //     $5,755 at full map, 21% of gross, and the most competence-shaped
+  //     income in the game. The reward for finishing a region cost nothing to
+  //     hold, so the true asymptote was 93.7%, not 92%.
+  //
+  //     Measured the only honest way, the way R143's other rules are: build a
+  //     bigger world and ask the real functions. The map is DOUBLED — every
+  //     region mirrored under a fresh id, every node of it held — so income
+  //     roughly doubles while the stable, the pens and the plant do not move
+  //     a dollar. Under the old model that is a strictly better deal. It must
+  //     not be.
+  {
+    const w = walks[0];
+    const mirror = Object.fromEntries(Object.entries(content.regions ?? {}).map(([id, r]) => [`r152x_${id}`, {
+      ...r, id: `r152x_${r.id ?? id}`, nodes: (r.nodes ?? []).map((n) => ({ ...n, id: `r152x_${n.id}` })),
+    }]));
+    const bigger = { ...content, regions: { ...content.regions, ...mirror } };
+    const everything = Object.values(bigger.regions).flatMap((r) => r.nodes ?? []).map((n) => n.id);
+    const wide = { ...w.save, campaign: { ...w.save.campaign, heldNodes: everything, contested: [] } };
+    const here = { ...w.save, campaign: { ...w.save.campaign, contested: [] } };
+
+    const keptOn = (state, c) => {
+      const income = incomePerDay(state, c);
+      return (income - upkeepPerDay(state, c)) / income;
+    };
+    const small = keptOn(here, content);
+    const large = keptOn(wide, bigger);
+    assert.ok(everything.length > w.save.campaign.heldNodes.length * 1.5,
+      `the doubled map is actually bigger (${everything.length} nodes against ${w.save.campaign.heldNodes.length} held)`);
+    assert.ok(large <= small,
+      `doubling the map does not make the empire more profitable: it keeps ${(large * 100).toFixed(1)}% `
+      + `of gross across ${everything.length} nodes against ${(small * 100).toFixed(1)}% across `
+      + `${w.save.campaign.heldNodes.length} — same stable, same pens, same plant `
+      + '(before this milestone: 76.7% -> 85.2%, because the garrison was a flat share and the '
+      + 'completion bonuses were not on the books at all)');
+    console.log(`   R152 shape: ${w.save.campaign.heldNodes.length} nodes keeps ${(small * 100).toFixed(1)}%, `
+      + `${everything.length} nodes keeps ${(large * 100).toFixed(1)}% `
+      + `(garrison ${(100 * garrisonFractionFor(w.save.campaign.heldNodes.length, content)).toFixed(1)}% `
+      + `-> ${(100 * garrisonFractionFor(everything.length, bigger)).toFixed(1)}% of gross)`);
+  }
+
+  // 2c. R152 — AND THE GARRISON BILLS THE WHOLE MAP, BONUS INCLUDED. Built
+  //     rather than read, for R143's reason: two states that differ only in
+  //     whether a region is FINISHED must not cost the same to hold. The last
+  //     node of a region brings its own income and the completion bonus with
+  //     it, so taking it must cost more garrison than its own income alone
+  //     would buy — otherwise the reward for finishing a strip is income
+  //     nobody has to defend.
+  {
+    const region = Object.values(content.regions ?? {}).find((r) => (r.completionBonus ?? 0) > 0 && (r.nodes ?? []).length > 1);
+    assert.ok(region, 'some region pays a completion bonus, or there is nothing to test');
+    const ids = region.nodes.map((n) => n.id);
+    const last = region.nodes[region.nodes.length - 1];
+    const base = { ...walks[0].save, campaign: { ...walks[0].save.campaign, heldNodes: ids.slice(0, -1) } };
+    const done = { ...walks[0].save, campaign: { ...walks[0].save.campaign, heldNodes: ids } };
+    const step = territoryUpkeepPerDay(done, content) - territoryUpkeepPerDay(base, content);
+    const alone = (last.incomePerDay ?? 0) * garrisonFractionFor(ids.length, content);
+    assert.ok(step > alone,
+      `finishing ${region.id ?? 'a region'} costs $${Math.round(step)}/day more to garrison than holding it `
+      + `one node short, which is more than the last node's own income buys ($${Math.round(alone)}/day) `
+      + `— the $${region.completionBonus}/day completion bonus is on the books too `
+      + '(before this milestone it was not, and 21% of gross at full map was income nobody defended)');
   }
 
   // 3. BUT CONQUEST STILL PAYS. The running cost of a node must never reach
@@ -18829,11 +18906,17 @@ if (inShard('empire')) {
   //    ever earned it spends on existing. That is immune to the reserve
   //    policy, to when a levy happens to land, and to where day 180 falls in
   //    the cycle. It read 17.6% before this milestone.
+  //
+  //    R152 RE-RATCHETS: 22% -> 40%, measured at 42.6/45.6/42.1 here and
+  //    41.8-48.9% across sixteen campaigns. Half the bill is now
+  //    proportional (45-60%, against 18-28% before), which is the whole
+  //    point: this is the number that says the empire is a going concern
+  //    rather than a score.
   for (const w of walks) {
-    assert.ok(w.upkeepShare >= 0.22,
+    assert.ok(w.upkeepShare >= 0.40,
       `seed ${w.seed}: running the place costs ${(w.upkeepShare * 100).toFixed(1)}% of everything it earned `
-      + `($${w.upkeepPaid.toLocaleString()} of $${w.grossEarned.toLocaleString()}, floor 22%) `
-      + '— measured at 16.8-18.2% before this milestone, 24.3-26.7% after');
+      + `($${w.upkeepPaid.toLocaleString()} of $${w.grossEarned.toLocaleString()}, floor 40%) `
+      + '— measured at 16.8-18.2% before R143, 23.2-33.9% before this milestone, 41.8-48.9% after');
   }
 
   const shown = walks[0];

@@ -416,6 +416,8 @@
     "drawCost": 0.35,
     "instabilityCost": 0.08,
     "garrisonFraction": 0.08,
+    "garrisonPerNode": 0.0075,
+    "garrisonFractionMax": 0.5,
     "facilityRunningFraction": 0.0004
   }
 }
