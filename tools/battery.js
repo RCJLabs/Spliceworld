@@ -3927,7 +3927,7 @@ const BREAKS = [
   {
     // The pull goes away and the Theater reaches for the same best-graded
     // part every time, which is the 43% this milestone started from.
-    n: 245, gate: REACH, name: 'a part you have never built with stops breaking a tie, and the campaign wears 43% again',
+    n: 245, gate: REACH, name: 'a part you have never built with stops breaking a tie, and the campaign wears 54% instead of 60%',
     file: 'tools/sim.js',
     anchor: '    + (built.has(t.partId) ? 0 : 0.5);',
     to: '    + (built.has(t.partId) ? 0 : 0);',
