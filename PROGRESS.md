@@ -1,5 +1,77 @@
 # PROGRESS
 
+## Session 150 — R146: the instrument, not the game ✅
+
+**ROADMAP §9.25.** The entry's five numbers were **exactly right**. Its
+conclusion was about the wrong object.
+
+### The quiet stretch was the instrument
+
+The audit read "nothing between day 4 and day 41" off the `at` map and took
+it for a quiet stretch of campaign. Measured over the same four walks,
+**13 of 28 systems are first used in that window** — treat, render, pens,
+breed, hatch, facility, combo, trait, breakout, vat, rehab, raid. The middle
+of the campaign is the busiest part of it.
+
+### Four of the five marks were constants
+
+| mark | day | varies? |
+| --- | ---: | --- |
+| firstParts | 0 | no |
+| firstChimera | 0.17 | no |
+| firstNode | 0.25 | no |
+| firstRegion | 4.25 | no |
+| dominion | 32–52 | **yes** |
+
+The walker's opening is deterministic, so a five-row table had **one** row
+carrying information. And `firstRegion` was never a region — it is
+`heldNodes >= 5`, a node count wearing a region's name. Nothing read it, so
+nothing noticed. Renamed `fifthNode`.
+
+### The data was already there
+
+R120 made the walk log every action: **32,609 entries** a campaign. First use
+falls straight out. `campaignWalk` now returns `firstUse` — one entry per
+system, keyed by kind, valued by the day. A system added later is timed
+without anybody remembering to mark it, which is what the five-row map
+actually failed at.
+
+### The two systems nobody could place in time
+
+Combos and traits are counted by scanning the finished state — whether, never
+when. Both now log an observation at the tick that already looks at the walk's
+own state: first combo **day 4.9**, first trait **day 7.8**. Asserted by name,
+because neither is an agenda row and the row roll looks straight past them.
+
+### One exemption, and it is a finding
+
+Every agenda row has a first day except the **Gauntlet**, and the rule reads
+the reason instead of stating it: `campaign/gauntlet.js` gates on
+`!!state.dominionAt` and these walks stop at dominion. The Gauntlet is the
+only shipped system a player cannot meet before the campaign is already won —
+median first use 36.25 against median dominion 36.17, the same day.
+
+### Verification
+
+| | |
+| --- | --- |
+| Done when | ✓ 28 systems timed, pacing table printed with spread across 4 campaigns |
+| `--anchors` | ✓ 234 |
+| breaks 235, 236, 237 | PENDING |
+| `--baseline` / `npm test` | PENDING |
+| full battery | not triggered — this adds gates, it does not change one |
+| `SAVE_VERSION` | unchanged at 49 |
+
+### Next session's first task
+
+**R138** (the level curve is a step function — 42% of a stable has never
+fought, 39% is maxed) or **R140** (you collect 95% of parts and wear 56%).
+R138 is the larger design question; R146 just built the instrument that can
+argue it, and the pacing table's spread column is the tool for it.
+
+Also carried: **the liquidity gap** — nothing turns an asset back into cash,
+which bounds every future money sink.
+
 ## Session 149 — R150: three censuses of a rare event ✅
 
 **ROADMAP §9.24.** Carried out of R144, and the carried note undersold it:

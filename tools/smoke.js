@@ -15069,6 +15069,90 @@ if (inShard('contest')) {
     // still had a knob to turn ($480k together), so the ceiling is 21 rather
     // than 17 and the walk is NO LONGER expected to reach it by dominion:
     // that is the sink working, so the floor is what this asserts.
+    // R146 — WHEN DOES THE PLAYER MEET EACH SYSTEM?
+    //
+    // The walk's `at` map recorded FIVE moments: firstParts, firstChimera,
+    // firstNode, firstRegion, dominion. The seventh audit read that as
+    // "nothing happens between day 4 and day 41" — the stretch every pacing
+    // question is about. It was reading the instrument, not the game.
+    // Measured over these same walks: TWELVE systems are first used in
+    // exactly that window. The window was never empty; nothing was looking.
+    //
+    // And four of the five marks were constants. firstParts 0, firstChimera
+    // 0.17, firstNode 0.25, firstRegion 4.25 — identical on every seed,
+    // because the walker's opening is deterministic. Only `dominion` moved.
+    // A five-row table of which four never vary is one number.
+    //
+    // `firstRegion` was not even a region: it is `heldNodes >= 5`, a node
+    // count wearing a region's name.
+    //
+    // So the table is DERIVED from the log R120 already writes, rather than
+    // hand-marked. Every verb the walk performs gets a first day for free,
+    // and a system added later is timed without anybody remembering to mark
+    // it — which is the failure the five-row map actually was.
+    const { AGENDA: PACE_ROWS } = await import('../ranch/agenda.js');
+    // Two aliases, the same two `tools/coverage.js` keeps and for the same
+    // reason: a row id is not always the verb the walker logs. Each would
+    // read NEVER rather than fail silently if it went stale.
+    const VERB_OF = { settle: 'rush', spar: 'sparring' };
+    // Read off `w.firstUse`, which the walk derives from its own log, rather
+    // than re-deriving it here: two derivations of one number is how the
+    // shard table came to hold `regions` twice.
+    const firstDays = {};
+    for (const w of shapes) {
+      for (const [kind, day] of Object.entries(w.firstUse ?? {})) (firstDays[kind] ??= []).push(day);
+    }
+    assert.ok(Object.keys(firstDays).length >= 20,
+      `the walks report a first-use map at all (${Object.keys(firstDays).length} systems across ${shapes.length} campaigns)`);
+    const median = (a) => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
+    const paced = Object.entries(firstDays)
+      .map(([kind, days]) => ({ kind, day: median(days), spread: +(Math.max(...days) - Math.min(...days)).toFixed(2) }))
+      .sort((a, b) => a.day - b.day);
+
+    // THE GATE: every row the agenda offers has a day, or the table has a
+    // hole the report would not show. One exemption, and it is DERIVED.
+    const untimed = PACE_ROWS.filter((r) => !firstDays[VERB_OF[r.id] ?? r.id]);
+    assert.deepEqual(untimed.map((r) => r.id), ['gauntlet'],
+      `every agenda row has a first day except the one the walk cannot reach `
+      + `(untimed: ${untimed.map((r) => r.id).join(', ') || 'none'})`);
+    // AND THE REASON IS READ, NOT ASSERTED. These walks stop at dominion —
+    // all four reach it, at day 32 to 52 — and the Gauntlet's own gate is
+    // `!!state.dominionAt`, so it opens exactly when the walk stops. That is
+    // a finding rather than a gap: the Gauntlet is the only shipped system a
+    // player cannot meet before the campaign is already won. If somebody
+    // ungates it, this line goes red and the exemption above has to go.
+    assert.ok(readFileSync(join(root, 'campaign/gauntlet.js'), 'utf8').includes('!!state.dominionAt'),
+      'the Gauntlet is gated on dominion, which is the only reason a walk that stops there cannot time it');
+    assert.ok(shapes.every((w) => w.at.dominion != null),
+      `and every one of these walks does stop at dominion (${shapes.map((w) => w.at.dominion).join(', ')})`);
+
+    // THE TWO OBSERVATIONS, BY NAME, because nothing else can see them go
+    // quiet. Combos and traits are the two systems `tools/coverage.js` counts
+    // and could never time — they are not agenda rows, so the roll above
+    // looks straight past them, and the table would simply be two rows
+    // shorter with no rule the poorer.
+    for (const k of ['combo', 'trait']) {
+      assert.equal(firstDays[k]?.length ?? 0, shapes.length,
+        `${k}: every campaign says WHEN, not just how many — a system counted at the end `
+        + `and never timed is the gap this milestone closed `
+        + `(${firstDays[k]?.length ?? 0} of ${shapes.length} campaigns: ${(firstDays[k] ?? []).join(', ') || 'none'})`);
+    }
+
+    // The pacing table itself, ordered by when the player meets each thing.
+    // `spread` is the half a designer reads: `care` never moves, `rescue`
+    // moves by weeks, and a system whose first use swings by a month is a
+    // system some campaigns effectively do not have.
+    console.log(`   R146 pacing (${paced.length} systems, median day of first use across ${shapes.length} campaigns):`);
+    for (let i = 0; i < paced.length; i += 6) {
+      console.log('     ' + paced.slice(i, i + 6)
+        .map((r) => `${r.kind} d${r.day}${r.spread ? `±${r.spread}` : ''}`).join(' · '));
+    }
+    const mid = paced.filter((r) => r.day > 4 && r.day < 41);
+    console.log(`     between day 4 and day 41 — the stretch the audit called empty: ${mid.length} of ${paced.length}`);
+    assert.ok(mid.length >= 6,
+      `the middle of the campaign is not empty, and the table can say so `
+      + `(${mid.length} systems first used between day 4 and 41: ${mid.map((r) => r.kind).join(', ')})`);
+
     const levels = shapes.map((w) => Object.values(w.facility ?? {}).reduce((a, b) => a + b, 0));
     assert.ok(levels.every((n) => n >= 12),
       `the lab is actually built (summed track levels ${levels.join(', ')}; six tracks now max at 21)`);

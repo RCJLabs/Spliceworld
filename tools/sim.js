@@ -1188,6 +1188,36 @@ export function bestSplice(state, content, wanted = null, wall = null) {
 }
 const CHASSIS_SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
 
+// R146 — EVERY HERITABLE TRAIT THE CAMPAIGN CAN SEE, in one place.
+//
+// This scan was written inline inside the walk's report to count traits, and
+// R146 needed the same three lists to answer WHEN the first one showed. Two
+// copies of a scan is how the shard table came to hold `regions` twice, so
+// it is one function with two callers: the report asks for `.size`, the tick
+// asks whether there is anything at all.
+//
+// Stock, stable and vault, because a trait is stamped into a part at
+// extraction and rides it into whatever wears it — so a trait can be present
+// in the vault with no animal left carrying it.
+function traitsOn(state) {
+  const seen = new Set();
+  for (const a of state.ranch.stock) for (const t of a.traits ?? []) seen.add(t);
+  for (const c of state.chimeras) {
+    for (const tk of Object.values(c.tokens ?? {})) for (const t of tk.traits ?? []) seen.add(t);
+  }
+  for (const tk of state.inventory.parts) for (const t of tk.traits ?? []) seen.add(t);
+  return seen;
+}
+// The tick wants the first one only, and stops as soon as it has it.
+function firstTraitOn(state) {
+  for (const a of state.ranch.stock) for (const t of a.traits ?? []) return t;
+  for (const c of state.chimeras) {
+    for (const tk of Object.values(c.tokens ?? {})) for (const t of tk.traits ?? []) return t;
+  }
+  for (const tk of state.inventory.parts) for (const t of tk.traits ?? []) return t;
+  return null;
+}
+
 // R141 — WHAT THE FRAME BUYS AGAINST THE WALL IN FRONT.
 //
 // The grade sum above is blind to the matchup layer the BRIEFING has shown
@@ -2187,6 +2217,14 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
 
   const at = {};
   const mark = (key, now) => { if (at[key] === undefined) at[key] = +((now - t0) / WALK_DAY).toFixed(2); };
+  // R146 — see the observation block below. `noteFirst` writes into the same
+  // `__walkLog` the action logger uses and stamps the day the same way
+  // `mark` does, so an observation and a verb are one kind of record and the
+  // pacing table does not need to know which is which.
+  const noteFirst = (kind, id, now) =>
+    (state.__walkLog ??= []).push({ day: +((now - t0) / WALK_DAY).toFixed(2), kind, id });
+  let sawCombo = false;
+  let sawTrait = false;
   let stall = 0;
   let longestStall = 0;
   let stallStartedAt = null;
@@ -2266,8 +2304,39 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     if (state.inventory.parts.length) mark('firstParts', now);
     if (state.chimeras.length) mark('firstChimera', now);
     if (state.campaign.heldNodes.length) mark('firstNode', now);
-    if (state.campaign.heldNodes.length >= 5) mark('firstRegion', now);
+    // R146 — WAS `firstRegion`, WHICH IT NEVER WAS. This marks the fifth
+    // NODE, not the first region; the name has been wrong since it was
+    // written and nothing read it, so nothing noticed. Renamed rather than
+    // deleted because "how long to a fifth node" is a real pacing question —
+    // it is just not the question the old name asked.
+    if (state.campaign.heldNodes.length >= 5) mark('fifthNode', now);
     if (state.dominionAt) mark('dominion', now);
+    // R146 — THE TWO SYSTEMS NOBODY COULD PLACE IN TIME.
+    //
+    // `tools/coverage.js` names eight systems and proves each one RAN by a
+    // count. Six of them are verbs the walk logs, so the day each was first
+    // used falls out of the log for free. Combos and traits are the other
+    // two: both are counted at the end by scanning the finished state, which
+    // says whether they happened and can never say when. They were the only
+    // shipped systems with no moment at all.
+    //
+    // Logged here rather than at the splice, because a combo is DISCOVERED
+    // by the engine as a consequence of a build and a trait is EXPRESSED by
+    // breeding — neither is an action the walker takes, so neither has a
+    // call site to hang it on. This block is already the walk's once-a-tick
+    // look at its own state, which is exactly what an observation is.
+    //
+    // Both guard on a flag before scanning: `traits` walks the stock, the
+    // stable and the vault, and that is real work to repeat every tick of a
+    // 180-day campaign for an answer that cannot change back.
+    if (!sawCombo && (state.discoveredCombos ?? []).length) {
+      sawCombo = true;
+      noteFirst('combo', state.discoveredCombos[0], now);
+    }
+    if (!sawTrait) {
+      const t = firstTraitOn(state);
+      if (t) { sawTrait = true; noteFirst('trait', t, now); }
+    }
 
     const shape = agendaShape(state, content, now);
     if (shape.productive === 0) {
@@ -2437,15 +2506,18 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     resequences: verbs.resequence ?? 0,
     movesetTrains: verbs.moveset ?? 0,
     eggs: verbs.hatch ?? 0,
-    traitsSeen: (() => {
-      const seen = new Set();
-      for (const a of state.ranch.stock) for (const t of a.traits ?? []) seen.add(t);
-      for (const c of state.chimeras) {
-        for (const tk of Object.values(c.tokens ?? {})) for (const t of tk.traits ?? []) seen.add(t);
-      }
-      for (const tk of state.inventory.parts) for (const t of tk.traits ?? []) seen.add(t);
-      return seen.size;
-    })(),
+    traitsSeen: traitsOn(state).size,
+    // R146 — EVERY FIRST USE, DERIVED FROM THE LOG THE WALK ALREADY KEEPS.
+    //
+    // `at` above is five hand-written marks, four of which are the same on
+    // every seed. This is the same question asked of the record instead of
+    // of a list somebody remembered to extend: one entry per verb the walk
+    // performed, keyed by kind, valued by the day it first happened. A
+    // system added later is timed without anybody touching this file.
+    firstUse: (state.__walkLog ?? []).reduce((first, e) => {
+      if (first[e.kind] === undefined) first[e.kind] = e.day;
+      return first;
+    }, {}),
     rushSpent: Math.round(state.__walkRushSpent ?? 0),
     treated: state.__walkTreated ?? 0,
     facility: { ...state.facility },
