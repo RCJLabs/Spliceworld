@@ -270,10 +270,10 @@ export function directEncounter(state, encounter, content) {
 
 // The world announces itself once per rule, in the news wire. Returns the
 // line to push, or null if this rule has already made the papers.
-export function directorNews(state, directed) {
-  if (!directed?.news) return null;
-  state.directorStats.announced ??= [];
-  if (state.directorStats.announced.includes(directed.ruleId)) return null;
-  state.directorStats.announced.push(directed.ruleId);
-  return directed.news;
-}
+// R153 — `directorNews` LIVED HERE AND MOVED TO `campaign/campaign.js`.
+// It was seven lines that read nothing from this module — no profile, no
+// rng, no map — and it was the ONLY reason `campaign.js` imported the
+// director. A static import is an eager one, so those seven lines held all
+// 11.9 KB of this file in the boot graph, where `--report` had it listed as
+// running nothing on either first paint. The whole of the director is now
+// reached from the War Room and the briefing, which R74 already made lazy.

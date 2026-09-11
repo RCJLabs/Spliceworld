@@ -3632,31 +3632,82 @@ triangle working, and each region genuinely asks a different question)*.
 
 ### 9.29a Queued out of R140
 
+- **R156 — The suite budget drifts 30% in a unit that was supposed to be
+  flat.** R151 replaced a wall-clock budget with CPU-seconds and proved the
+  new unit flat against contention (idle 910, four burners 921, a battery
+  alongside 946 — 1.2%, against wall-clock's 78%). The wording it shipped,
+  *"does not move with the box"*, over-claimed: contention is not the only
+  thing a box does. Readings on the suite since: **910, 823, 783, 1022**, and
+  R153 pinned it with a same-box A/B in one ten-minute window — the branch
+  read 1012 and `main` read **1022**, so the code costs nothing and the
+  machine costs 30%. R151's own fixed integer benchmark moved with it
+  (509–535ms then, 605ms now), which is the tell: a stalled cycle is still a
+  charged cycle. R153 raised the ceiling to 1200 to keep it from blocking, and
+  that is a smoke alarm rather than a stopwatch. *Done when: the gate
+  calibrates against a probe it runs itself — R151's own criterion offered
+  "a measured idle baseline the gate calibrates against" and took the
+  simpler half — and two runs a day apart give the same verdict.*
+
 - **R153 — The boot budget has taken three raises in three milestones.**
+  ✅ *Shipped. Both budgets came down, and the note that priced the fix was
+  aimed at the wrong one of them.*
+
   R143 moved the eager cap 560 → 562, R138 562 → 563, R140 563 → 564; R149
-  moved first paint 1030 → 1035 and R140 1035 → 1036. Every one bought
-  something real and small, and `tools/boot.js` has carried a note since R149
-  saying the queue ends when somebody pays it down instead. Both options are
-  re-counted and priced as of R140:
+  moved first paint 1030 → 1035 and R140 1035 → 1036. `tools/boot.js` has
+  carried a note since R149 pricing the way out — drop the empty
+  `"tags": []` and `"keywords": {}` from the data files — and saying *"a
+  seventh raise just lengthens this queue."*
 
-  - **7.0 KB** — drop `"tags": []` and `"keywords": {}` from the data files
-    wherever they are empty: **286 and 129** of them across `parts.json`,
-    `enemies.json`, `combos.json`, `species.json` and `operations.json`. (The
-    R149 note estimated 8.5 KB; the real number today is 7.0.) Changes no
-    content at all. What it costs is the read-site audit — **about 20 sites
-    do a bare `part.tags.join(...)`** with no fallback, in `physiology.js`,
-    `statblock.js`, `director.js` and four screens, and each has to tolerate
-    an absent key rather than an empty one.
-  - **45 KB** — take `enemies.json` out of the eager graph, R81's geometry
-    move pointed at the other big data file. Enemy stats are reached from the
-    War Room and the battle and R74 made both lazy; what stops it is that
-    `data/loader.js` fetches every content file as one bundle before the
-    first paint.
+  #### Two budgets, two levers
 
-  The first is a day's careful work and ends the queue eleven times over; the
-  second is the real answer and is a milestone. *Done when: both budgets come
-  DOWN rather than up, the entry states what they land at, and the gate that
-  holds them says which of the two paid for it.*
+  **The note was aimed at first paint only.** Empty data keys are bytes over
+  the wire: they move `FIRST_PAINT_KB` and cannot move `KB_CAP` by a single
+  byte, because that one counts eager **JS**. R140's own ledger conflated the
+  two and sent this milestone at the wrong lever. The thing that moves BOTH is
+  a module that is fetched *and* compiled and then runs nothing.
+
+  #### Seven lines were holding 11.9 KB
+
+  `campaign/director.js` was the largest of them, and `--report` had listed it
+  as idle since R121. It was in the graph because `campaign/campaign.js`
+  imported `directorNews` — **seven lines that read nothing from the
+  director**: no profile, no rng, no map, just a rule id pushed onto an
+  announced list. A static import is an eager one whatever you use from the
+  module. Moved to its caller, and the whole file left the boot graph.
+
+  | | before | after |
+  | --- | ---: | ---: |
+  | eager JS | 564.8 KB | **552.0 KB** |
+  | eager modules | 49 | **48** |
+  | first paint | 1035 KB | **1024 KB** |
+  | idle eager modules | 5 | **4** |
+  | `KB_CAP` | 564 | **554** |
+  | `FIRST_PAINT_KB` | 1036 | **1026** |
+
+  Its exemption in `RUNS_NOTHING_BUT_BELONGS` is gone too, and that list is
+  the point: the reason recorded there was true and was never a reason to
+  carry 11.9 KB. **An exemption is where a cost goes to stop being
+  questioned.** The two that remain — `battle/moves.js` (7.2 KB) and
+  `campaign/monologue.js` (4.1) — each have more than one eager importer,
+  which is why they are still there and the director is not.
+
+  The 7.0 KB of empty keys is still worth taking and so are the 45 KB of
+  `enemies.json`; neither was needed to get both budgets below where they
+  started.
+
+  #### What it found on the way
+
+  A same-box A/B run to check this milestone's own cost found the suite budget
+  has drifted 783 → 1022 CPU-seconds on identical code. That is R151's unit
+  doing the thing R151 said it would not, and it is filed above as R156.
+
+  **The lesson:** *when a budget has an exemption list, read it as a bill.*
+
+  *Done when: both budgets come DOWN rather than up, the entry states what
+  they land at, and the gate that holds them says which of the two paid for
+  it.* 554 and 1026, from 564 and 1036; both ledgers name `campaign/director.js`
+  and say why the data-key option could only ever have paid half.
+
 
 ### 9.29 The ceiling was the map (R152) — queued out of R138
 

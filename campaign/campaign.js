@@ -12,7 +12,6 @@ import { infirmaryGrants } from '../splice/facility.js';
 import { applyInjury, finishBattle } from '../battle/statblock.js';
 import { attend } from '../splice/feral.js';
 import { recordRivalResult, scoutStable, dexKeyFor, labOfDexKey } from './rivals.js';
-import { directorNews } from './director.js';
 import { tickRehab, findBay, admitBay } from './rehab.js';
 import { resolveRaid, capNotoriety } from './taskforce.js';
 import { tickContests, resolveContest, isContested } from './contest.js';
@@ -340,6 +339,19 @@ export function tickCampaign(state, content, now, since = state.lastTickAt ?? no
 
 // Wraps engine.finishBattle: conquest, notoriety, capture-on-loss,
 // containment intake, rescue resolution, news. UI calls THIS.
+// R153 — THE DIRECTOR ANNOUNCES ITSELF ONCE, AND THAT IS ALL THIS FILE
+// NEEDED FROM IT. Moved out of `campaign/director.js`, which it read nothing
+// from: `directed` arrives already built, and the only state it touches is
+// the announced list. It is here because `campaign.js` is eager and the
+// director is not — see the note left in its place.
+export function directorNews(state, directed) {
+  if (!directed?.news) return null;
+  state.directorStats.announced ??= [];
+  if (state.directorStats.announced.includes(directed.ruleId)) return null;
+  state.directorStats.announced.push(directed.ruleId);
+  return directed.news;
+}
+
 export function resolveBattle(state, battle, content, now) {
   const context = battle.context ?? {};
   // Splice-Dex: every unit that took the field is now a known quantity.

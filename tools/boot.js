@@ -202,27 +202,26 @@ const REPORT = process.argv.includes('--report');
 //
 // Either one ends this queue. A seventh raise just lengthens it.
 //
-// R140: 1035 -> 1036, measured at 1035.4, AND THIS IS THAT SEVENTH RAISE.
-// Taken deliberately and with the alternative costed rather than waved at,
-// because the note above exists to stop exactly this from happening quietly:
+// R153 COMES DOWN: 1036 -> 1026, measured at 1024. THE QUEUE ENDS HERE, AND
+// THE NOTE ABOVE WAS AIMED AT THE WRONG BUDGET.
 //
-//   · What it bought: `tickWorld` records `dex.worn` — ten lines in
-//     `campaign/world.js`. That is the whole of R140's boot-path cost, and it
-//     is what turns "you collect 95% and build with 43%" from a claim nobody
-//     could check into a number the reach gate holds at 50%.
-//   · Why it was not paid from the queue: the empty-keys option is 7.0 KB
-//     today, not the 8.5 the note estimated — re-counted, 286 `"tags": []`
-//     and 129 `"keywords": {}` across five data files. It is still eleven
-//     times what this raise needs. What stops it is the read-site audit the
-//     note names: ~20 sites do a bare `part.tags.join(...)` with no fallback,
-//     across physiology, statblock and the director, and rewriting those
-//     inside an unrelated milestone is how a content-reach change ships a
-//     battle-maths regression.
+// Six raises and a seventh in R140, each one small and real. What this note
+// has priced since R149 is the DATA — empty `"tags": []` and `"keywords":
+// {}`, re-counted at 7.0 KB. That is a first-paint saving and only a
+// first-paint saving: the eager-JS cap in `tools/smoke.js` never sees a byte
+// of it. R140's own ledger conflated the two and pointed both at the same
+// fix. They have different levers.
 //
-// So it is filed instead of fudged: ROADMAP R153 carries both options with
-// today's prices, and this budget should come DOWN when it lands rather than
-// stay wherever the last feature left it.
-const FIRST_PAINT_KB = 1036;
+// The lever that moves BOTH is a module that is fetched AND compiled and
+// then runs nothing. `campaign/director.js` was 11.9 KB of it, held in the
+// graph by seven dependency-free lines of `directorNews` that `campaign.js`
+// imported statically. Moving those seven lines to their caller took the
+// whole module out: first paint 1035 -> 1024, eager JS 564.8 -> 552.0.
+//
+// The 7.0 KB of empty keys is still there and still worth taking, and so are
+// the 45 KB of `enemies.json`. They are no longer the only thing on the
+// list, and neither is needed to get this budget under where it started.
+const FIRST_PAINT_KB = 1026;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //
@@ -318,7 +317,12 @@ function eagerGraph(entry = 'main.js') {
 const RUNS_NOTHING_BUT_BELONGS = {
   'ui/theme.js': 'applyTheme reads BASE_THEME and THEMES on the first frame; it calls nothing',
   'battle/moves.js': 'battle/statblock.js reads MOVE_SLOTS and activeMoves synchronously to describe a creature',
-  'campaign/director.js': 'campaign.js calls directorNews inside resolveBattle, which the headless harness runs synchronously',
+  // R153 — `campaign/director.js` WAS HERE, AND THE EXEMPTION WAS THE BUG.
+  // The reason given was true and was never a reason to carry 11.9 KB: the
+  // seven lines of `directorNews` read nothing from the director, so they
+  // moved to `campaign/campaign.js` and the whole module left the eager
+  // graph. An exemption is a place a cost goes to stop being questioned;
+  // this list should be read as a bill, not a settled account.
   'campaign/monologue.js': 'rivalLine and playerLine are read on the same synchronous battle-resolution path',
   // R91 — GRADES and GRADE_INDEX and nothing else. Two constants that half
   // the game reads synchronously to name a grade; the module has no code to
