@@ -62,7 +62,8 @@ they keep**. That is a gap in the model, not a number to nudge.
 | --- | --- |
 | Criterion | ✓ **46 middle vs 20 ends**, 1 of 66 at L0 — asserted over R143's three full-length walks, the only ones reaching day 180 |
 | `--anchors` | ✓ 236 |
-| breaks 238, 239 | PENDING at time of writing |
+| `--baseline` | ✓ every gate passes on a pristine tree (0 FAILs) |
+| breaks 238, 239 | ✓ 2 caught, 0 missed (`ONLY_EXIT=0`) |
 | `npm test` | ✓ **every job passed**; wall-clock red for the environmental reason filed as R151 (main reads 242s on this box) |
 | `SAVE_VERSION` | **49 → 50**, migration is a pure no-op — level is derived and was never stored |
 
