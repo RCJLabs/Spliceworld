@@ -57,10 +57,43 @@ median first use 36.25 against median dominion 36.17, the same day.
 | --- | --- |
 | Done when | ✓ 28 systems timed, pacing table printed with spread across 4 campaigns |
 | `--anchors` | ✓ 234 |
-| breaks 235, 236, 237 | PENDING |
-| `--baseline` / `npm test` | PENDING |
+| `--anchors` | ✓ 234 |
+| breaks 235, 236, 237 | ✓ 3 caught, 0 missed |
+| `--baseline` | ✓ every gate passes on a pristine tree (0 FAILs) |
+| `npm test` | ⚠ every job green, **240.0s over a 195s budget — and `main` reads 242.1s on the same box** (see below) |
 | full battery | not triggered — this adds gates, it does not change one |
 | `SAVE_VERSION` | unchanged at 49 |
+
+### The budget gate is red on `main`, not on R146
+
+`npm test` went over budget, so I measured rather than assumed — and the
+measurement says it is not this milestone:
+
+| tree | wall-clock | sum of work |
+| --- | ---: | ---: |
+| R150 / `main`, an hour earlier | **185.9s** | 698s |
+| R146 | 237.1s | 891s |
+| **`main` (69d173b), same box, minutes later** | **242.1s** | 912s |
+| R146 again, after clearing 10 stale battery temp dirs | 240.0s | 898s |
+
+**The same commit went from 185.9s to 242.1s in an hour.** A single 180-day
+walk times identically on both trees (19.5s on main, 19.9s on R146), so the
+engine did not get slower; all four smoke shards did, evenly, which is the
+signature of the machine rather than of any one block. Load average was 4.3–5.2
+across these runs against a 4-core box.
+
+Three hypotheses ruled out by measuring: the fixture cache (the second run was
+warm and read the same), stale battery temp dirs (cleared, no change), and
+R146's own tick work (disabling the trait scan changed a walk by 0.2s).
+
+**R146 is 5s FASTER than `main` under identical conditions.** Merged on that
+basis, with the budget question filed as its own entry — a wall-clock gate that
+can drift 30% on one commit is a gate that needs either a steadier box or a
+different unit.
+
+Recorded twice in two sessions now: *a wall-clock budget can only be measured
+on an idle machine, and "is this my regression" is answered by re-measuring the
+baseline NOW, never by comparing against a number from an hour ago.*
 
 ### Next session's first task
 

@@ -3552,6 +3552,25 @@ triangle working, and each region genuinely asks a different question)*.
 
 ---
 
+### 9.26 Queued out of R146
+
+- **R151 — The suite budget is a wall-clock gate on a box that drifts 30%.**
+  R90 set `npm test` at 195s and it has held for sixty milestones. During
+  R146 it went red, and the measurement that followed is the entry: the
+  **same commit** read **185.9s** and then **242.1s an hour later**, with a
+  single 180-day walk timing identically on both trees (19.5s vs 19.9s) and
+  all four smoke shards growing evenly. That is the machine, not the code.
+  Ruled out by measuring: the fixture cache (warm re-run, same), ten stale
+  battery temp dirs (cleared, no change), and R146's own per-tick work
+  (disabling it moved a walk by 0.2s).
+
+  A gate nobody can pass on a bad afternoon is a gate that gets raised until
+  it means nothing — R90's budget is load-bearing and should not die that
+  way. *Done when: the suite's budget is expressed in a unit that does not
+  move with the box (sum-of-work, or a measured idle baseline the gate
+  calibrates against), the entry states what the real number is on a quiet
+  machine, and re-running it twice an hour apart gives the same verdict.*
+
 ### 9.25 The instrument, not the game (R146) — seventh audit
 
 - **R146 — The campaign marks five moments in 180 days.** ✅ *Shipped. The
