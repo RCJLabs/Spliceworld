@@ -3943,6 +3943,19 @@ const BREAKS = [
     to: '    + (built.has(t.partId) ? 0 : 5);',
   },
   {
+    // R153 — THE DIRECTOR GOES BACK IN FRONT OF THE FIRST PAINT. Seven
+    // dependency-free lines of `directorNews` held all 11.9 KB of
+    // `campaign/director.js` in the eager graph, because a static import is
+    // an eager one whatever you use from the module. Re-exporting the
+    // director from `campaign.js` puts it straight back, which is the defect
+    // in its purest form: nothing about the game changes, and the player
+    // waits for 11.9 KB that runs nothing to reach the screen.
+    n: 248, gate: BOOT, name: 'the whole AI director rides back into the boot graph on one re-export',
+    file: 'campaign/campaign.js',
+    anchor: 'export function directorNews(state, directed) {',
+    to: "export * from './director.js';\nexport function directorNews(state, directed) {",
+  },
+  {
     // R136 — the Combos tab goes back to three flat lists, which is the
     // state it was in for six milestones: 2,403px and 529 words on a screen
     // the player looks things up in. Catches BOTH halves of the new budget —

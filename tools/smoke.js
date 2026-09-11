@@ -4077,8 +4077,13 @@ if (inShard('team')) {
 // --- data has existed since M0; this is the session it started acting.
 if (inShard('mercy')) {
   const {
-    directorProfile, directorRead, directEncounter, directorNews, directorReach, classOfParts,
+    directorProfile, directorRead, directEncounter, directorReach, classOfParts,
   } = await import('../campaign/director.js');
+  // R153 — `directorNews` moved to `campaign/campaign.js`. It was the one
+  // thing an eager module wanted from the director, and a static import is an
+  // eager one, so seven dependency-free lines were holding 11.9 KB in front
+  // of the first paint.
+  const { directorNews } = await import('../campaign/campaign.js');
 
   const P = {
     ground: ['gorilla_head', 'gorilla_forelimbs', 'gorilla_hindlimbs', 'tiger_tail', 'pangolin_hide', 'wolf_organ'],
@@ -19637,21 +19642,29 @@ if (inShard('wire')) {
   //
   // R140 RE-RATCHETS: 563 -> 564, measured at 563.4, AND THIS IS THE SECOND
   // RAISE IN THREE MILESTONES, WHICH IS THE THING THE NOTE AT THE TOP WARNS
-  // ABOUT. Said plainly rather than buried: R152 paid its 1.2 KB back by
-  // moving prose out of `splice/facility.js` and landed at 562.8, and this
-  // one cannot — the 0.6 KB is `tickWorld` recording `dex.worn`, ten lines of
-  // loop in `campaign/world.js` with the explanation already cut to four
-  // lines and the helper already inlined. Shaving further would buy 0.4 KB by
-  // deleting the reason the code exists.
+  // ABOUT. R152 paid its 1.2 KB back by moving prose out of
+  // `splice/facility.js`; R140's 0.6 KB was `tickWorld` recording `dex.worn`
+  // and could not be shaved without deleting the reason the code exists.
   //
-  // So the ledger above is now the bill rather than a footnote. 23.2 KB of
-  // eager modules run nothing on either first paint — `campaign/director.js`
-  // (11.9), `battle/moves.js` (7.2), `campaign/monologue.js` (4.1) — which is
-  // thirty-eight times this raise and more than every raise since R143 put
-  // together. It is filed rather than promised: ROADMAP R153 carries it with
-  // today's re-counted prices, and this cap should come DOWN when that lands
-  // rather than stay wherever the last feature left it.
-  const KB_CAP = 564;
+  // R153 COMES DOWN: 564 -> 554, measured at 552.0, AND IT IS THE LEDGER
+  // ABOVE THAT PAID. 23.2 KB of eager modules ran nothing on either first
+  // paint, and the biggest was `campaign/director.js` at 11.9 — held in the
+  // graph by SEVEN DEPENDENCY-FREE LINES. `campaign.js` imported the whole
+  // director for `directorNews`, which reads no profile, no rng and no map:
+  // it only pushes a rule id onto an announced list. Moved to its caller,
+  // and the module left the boot graph entirely. 49 eager modules to 48.
+  //
+  // WHAT THE OTHER OPTION WOULD AND WOULD NOT HAVE DONE, because R140's
+  // ledger got this wrong and sent the next milestone at the wrong lever:
+  // the 7.0 KB of empty `"tags": []` and `"keywords": {}` in the data files
+  // is a FIRST-PAINT saving. This cap counts eager JS and would not have
+  // moved a byte. Two budgets, two levers; `tools/boot.js` carries the other.
+  //
+  // The remaining exemptions in boot.js's RUNS_NOTHING_BUT_BELONGS are the
+  // rest of this bill — `battle/moves.js` (7.2) and `campaign/monologue.js`
+  // (4.1) are real and each has more than one eager importer, which is why
+  // they are still there and the director is not.
+  const KB_CAP = 554;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

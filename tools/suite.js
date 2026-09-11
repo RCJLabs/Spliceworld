@@ -199,7 +199,29 @@ if (failed.length) {
 // for the machine, and a gate nobody can pass on a bad afternoon is a gate
 // that gets raised until it means nothing. Creep worth catching is tens of
 // percent: breaking the walk cache costs 1255.
-const CPU_BUDGET_S = 1000;
+// R153 — 1000 -> 1200, AND R151'S INVARIANCE CLAIM WAS TOO STRONG.
+//
+// R151 replaced a wall-clock budget with CPU-seconds and proved the new unit
+// flat against CONTENTION: idle 910, four spinning burners 921, a full break
+// battery alongside 946 — 1.2% against wall-clock's 78%. That evidence is
+// still good and the unit is still the right one. What it did not test, and
+// what the wording "does not move with the box" over-claimed, is the host's
+// per-cycle throughput over HOURS.
+//
+// Measured here the only honest way, a same-box A/B in the same ten minutes:
+// this branch read 1012 and `main` at 200ac47 read 1022 — so the milestone
+// costs nothing, and the suite that read 783 on the same commit earlier in
+// the day now reads 1022. Readings since R151: 910, 823, 783, 1022. R151's
+// own fixed integer benchmark moved with it (509-535ms then, 605ms now),
+// which is the tell: it is the machine, and CPU-seconds see it because a
+// stalled cycle is still a charged cycle.
+//
+// 1200 is a ceiling over the worst honest reading with headroom, not a
+// measurement. THE REAL FIX IS THE ONE R151's OWN CRITERION OFFERED AND DID
+// NOT TAKE — "a measured idle baseline the gate calibrates against": run the
+// fixed probe at suite start and scale the budget by what it reads. Filed as
+// R156. Until then this number is a smoke alarm, not a stopwatch.
+const CPU_BUDGET_S = 1200;
 const cpu = childCpuSeconds();
 const work = (results.reduce((a, r) => a + r.ms, 0) / 1000).toFixed(0);
 // A budget that cannot read its own number must not pass quietly: a rule

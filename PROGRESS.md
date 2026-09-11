@@ -1,5 +1,69 @@
 # PROGRESS
 
+## Session 155 — R153: read the exemption list as a bill ✅
+
+**ROADMAP §9.29a.** Six raises and a seventh in R140. `tools/boot.js` has
+carried a note since R149 pricing the way out and saying *"a seventh raise
+just lengthens this queue."*
+
+### Two budgets, two levers — and the note aimed at one of them
+
+The priced fix (drop empty `"tags": []` / `"keywords": {}`, 7.0 KB) is bytes
+over the wire: it moves **first paint** and cannot move the **eager-JS cap**
+by a byte. R140's ledger conflated the two and sent this milestone at the
+wrong lever. What moves both is a module fetched *and* compiled that then runs
+nothing.
+
+### Seven lines were holding 11.9 KB
+
+`campaign/director.js` has been listed as idle since R121. It was in the graph
+because `campaign.js` imported `directorNews` — **seven lines that read
+nothing from the director**: no profile, no rng, no map, just a rule id pushed
+onto an announced list. A static import is an eager one whatever you use from
+the module. Moved to its caller; the whole file left the boot graph.
+
+| | before | after |
+| --- | ---: | ---: |
+| eager JS | 564.8 KB | **552.0 KB** |
+| eager modules | 49 | **48** |
+| first paint | 1035 KB | **1024 KB** |
+| `KB_CAP` | 564 | **554** |
+| `FIRST_PAINT_KB` | 1036 | **1026** |
+
+Its `RUNS_NOTHING_BUT_BELONGS` exemption is gone, and that list is the point:
+the reason recorded there was true and was never a reason to carry 11.9 KB.
+**An exemption is where a cost goes to stop being questioned.**
+
+### What the A/B found
+
+Checking this milestone's own cost turned up something bigger: the suite
+budget has drifted **783 → 1022 CPU-seconds on identical code**. Proved with a
+same-box A/B in one ten-minute window — this branch 1012, `main` at 200ac47
+**1022**. R151's unit is flat against *contention* (its own 910/921/946 stands)
+but not against the host's throughput over hours, and R151's wording
+over-claimed. Ceiling raised to 1200 to keep it from blocking, and filed as
+**R156**: the real fix is the half R151's criterion offered and did not take —
+calibrate against a probe the gate runs itself.
+
+**The lesson:** *when a budget has an exemption list, read it as a bill.*
+
+### Verification
+
+| | |
+| --- | --- |
+| Criterion | ✓ both budgets DOWN — 554 from 564, 1026 from 1036 — and both ledgers name `campaign/director.js` and why the data-key option could only pay half |
+| `--anchors` | ✓ 245 |
+| `--baseline` | ✓ 34 gates on a pristine tree (`BASELINE_EXIT=0`) |
+| break 248 | ✓ caught (`ONLY_EXIT=0`) — one `export *` puts the director back in the boot graph |
+| `npm test` | ✓ **1002 CPU-seconds of 1200**, every job passed |
+| `SAVE_VERSION` | unchanged (51) |
+
+### Next session's first task
+
+**R155 — the walker tends a fixed three a day** (blocks any chimera-cap rise),
+then **R154 — a pen is a pen**, which is parked as a patch in the scratchpad
+and ready to re-apply once R155 lands.
+
 ## Session 154 — R140: a route nobody takes ✅
 
 **ROADMAP §9.30.** The entry was right that nobody had measured parts *worn*.
