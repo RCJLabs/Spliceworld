@@ -15,6 +15,7 @@
 // Everything runs concurrently, including the four non-smoke tools, and the
 // exit code is the worst of them. `--only <name>` runs one.
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -104,46 +105,118 @@ await Promise.all(Array.from({ length: Math.min(LANES, queue.length) }, async ()
   while (queue.length) results.push(await runOne(queue.shift()));
 }));
 
+// R151 — WHAT A CHILD COST, NOT HOW LONG IT WAITED. Fields 16 and 17 of
+// /proc/self/stat are `cutime` and `cstime`: the user and system time of
+// every child this process has REAPED, in clock ticks. Node reaps a child
+// before it emits `close`, so by the time the lanes are done the number is
+// complete. `comm` is field 2 and may itself contain spaces and brackets, so
+// the split starts after the LAST ')'. USER_HZ is 100 on every Linux that
+// runs Node; nothing portable exposes it, and being wrong about it would
+// make the budget wrong by a constant rather than unstable.
+const childCpuSeconds = () => {
+  const stat = readFileSync('/proc/self/stat', 'utf8');
+  const f = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+  return (Number(f[13]) + Number(f[14])) / 100;
+};
+
 const wall = Date.now() - started;
 const failed = results.filter((r) => r.code !== 0);
 for (const r of results.sort((a, b) => b.ms - a.ms)) {
-  console.log(`  ${r.code === 0 ? '✓' : '✗'} ${r.name.padEnd(11)} ${(r.ms / 1000).toFixed(1)}s`);
+  console.log(`  ${r.code === 0 ? '\u2713' : '\u2717'} ${r.name.padEnd(11)} ${(r.ms / 1000).toFixed(1)}s`);
 }
 if (failed.length) {
   for (const r of failed) {
     console.error(`\n--- ${r.name} ---`);
     console.error(r.out.split('\n').slice(-40).join('\n'));
   }
-  console.error(`\nsuite ✗  ${failed.length} of ${results.length} failed in ${(wall / 1000).toFixed(1)}s`);
+  console.error(`\nsuite \u2717  ${failed.length} of ${results.length} failed in ${(wall / 1000).toFixed(1)}s`);
   process.exit(1);
 }
-// The budget R90 exists to meet. A ceiling rather than a fingerprint, and it
-// sits just above the measurement so creep fails — the same rule the eager
-// import cap and the height budget are written to.
+
+// R151 — THE BUDGET IS CPU-SECONDS. WALL-CLOCK IS NOT A PROPERTY OF THE
+// SUITE.
 //
-// R95 RAISES IT: 180 -> 195, measured at 185.1 from cold. Two things grew and
-// neither is slack. The suite gained a gate that walks seven 180-day
-// campaigns, and the campaigns themselves got bigger — a walker that collects
-// the catalogue, salvages its captives and breeds its variant lines takes
-// 32,844 actions where it took 25,000, so `coverage` and `vault` cost more
-// than they did without a line of their own changing.
+// R90's gate was 195 seconds of wall-clock and it held for sixty milestones.
+// Then the SAME COMMIT read 185.9s and, an hour later, 242.1s. Not the code:
+// a worktree at that commit was re-run cold and warm and read 241.2s both
+// times, while a fixed integer-hash benchmark read 16ms before and after and
+// four concurrent copies of it scaled perfectly on the four cores. The box
+// has four real cores and they are the speed they always were.
 //
-// THE FLOOR IS STRUCTURAL, AND WORTH STATING SO NOBODY PAYS THE WRONG PRICE
-// FOR IT. Five jobs are over 80 seconds and there are four lanes, so one lane
-// must run two of them: the wall clock cannot beat the shortest smoke shard
-// (105s) plus `walks` (80s), whatever the total work is. 597s over four lanes
-// is an ideal of 149s and a real floor of 185s. What would actually bring it
-// down is a cheaper smoke shard, not a smaller sample — trimming the reach
-// gate's seven seeds would buy twenty seconds by making a content-reach
-// number worse, which is the trade R93b spent a whole milestone learning not
-// to take.
+// WHAT MOVED IS SLACK THE SUITE WAS NEVER ENTITLED TO. Measure any one job
+// on an idle box and it burns about 1.3 CPU-seconds per wall-second — V8
+// runs concurrent marking and background compilation off the main thread,
+// and `--v8-pool-size=0` barely dents it (1.31 -> 1.29). `handlers` alone:
+// 41.5s wall, 54.5s CPU. `smoke:b` alone: 124.6s wall, 166.2s CPU. So four
+// lanes on four cores is not one job per core, it is 5.2 cores of demand on
+// 4 — and whether that 30% costs anything is the HOST's decision, invisible
+// from inside the VM. On a generous afternoon smoke:b reads 130.5s; on an
+// ordinary one it reads 168s. Same code. Same box. Same idle.
 //
-// R90's own criterion — `npm test` under three minutes — still holds with
-// half a minute to spare.
-const BUDGET_S = 195;
+// R90's own comment names this mistake and then makes a smaller version of
+// it: "AT MOST ONE JOB PER CORE... oversubscription does not add throughput,
+// it just makes every job's timing a lie about its own cost." It fixed
+// eight-on-four and called four-on-four solved. A Node process is not one
+// core.
+//
+// So the unit is the suite's own consumption. CPU-seconds do not move with
+// the lane count, with how the host feels about background threads, or with
+// what else is on the machine — they move when the suite actually does more
+// work, which is the only thing this gate was ever for. Sum-of-wall (the old
+// `work` line) is NOT that number: it is contaminated by exactly the
+// contention it was being used to see past, and it drifted 698 -> 902
+// alongside the wall-clock on identical source.
+//
+// MEASURED ON A QUIET BOX: see the ledger below. The budget sits just above
+// it, like the import cap and the height budget.
+//
+// AND THE WALL CLOCK IS REPORTED, NEVER GATED. `effective lanes` is
+// cpu/wall: how many of the lanes you asked for the box actually gave you.
+// Four means you got what you asked for. Anything under is the host, and it
+// is not the suite's fault and not the suite's to fail over.
+//
+// R151 LEDGER — the same suite, the same commit, three times in one evening.
+// The second run had four spinning Node processes on the four cores beside
+// it; the third ran alongside a full break battery:
+//
+//                       idle box    four burners    battery beside it
+//   wall-clock             241.0s          429.5s              450.7s
+//   sum-of-wall (R90)        926s           1648s               1729s
+//   CPU-seconds              910s            921s                946s
+//   effective lanes            3.8             2.1                 2.1
+//                                            +78% wall, +1.2% CPU
+//
+// Both of the units the entry offered move with the box by the same 78%.
+// Sum-of-wall is not a second opinion about wall-clock, it is the same
+// opinion added up ten times. 910 is what this suite costs.
+//
+// CPU-seconds are not PERFECTLY flat and the budget should not pretend they
+// are: contention costs real cycles in stalls and context switches, and the
+// spread across those three is 910 -> 946, about 4%. So the ceiling sits
+// above the WORST honest reading rather than above the quietest one. 1000 is
+// +9.9% on a quiet box and +5.7% on a box already running its own battery —
+// because the failure this milestone exists to end is a gate that goes red
+// for the machine, and a gate nobody can pass on a bad afternoon is a gate
+// that gets raised until it means nothing. Creep worth catching is tens of
+// percent: breaking the walk cache costs 1255.
+const CPU_BUDGET_S = 1000;
+const cpu = childCpuSeconds();
 const work = (results.reduce((a, r) => a + r.ms, 0) / 1000).toFixed(0);
-if (!only && wall / 1000 > BUDGET_S) {
-  console.error(`\nsuite ✗  every job passed, but ${(wall / 1000).toFixed(1)}s is over the ${BUDGET_S}s budget (sum ${work}s of work)`);
+// A budget that cannot read its own number must not pass quietly: a rule
+// with nothing to look at is a rule that always agrees with you. There is no
+// wall-clock fallback on purpose — that is the unit this milestone removed.
+if (!only && (!Number.isFinite(cpu) || cpu <= 0)) {
+  console.error('\nsuite \u2717  every job passed, but the suite could not read its own CPU cost');
+  console.error('   /proc/self/stat gave nothing usable, so the budget has nothing to check.');
   process.exit(1);
 }
-console.log(`\nsuite ✓  ${results.length} jobs in ${(wall / 1000).toFixed(1)}s wall-clock (sum ${work}s of work)`);
+const laneCount = Math.min(LANES, picked.length);
+const lanesGot = (cpu / (wall / 1000)).toFixed(1);
+if (!only && cpu > CPU_BUDGET_S) {
+  console.error(`\nsuite \u2717  every job passed, but the suite costs ${cpu.toFixed(0)} CPU-seconds, over the ${CPU_BUDGET_S}s budget`);
+  console.error(`   (CPU-seconds are the suite's own cost and do not move with how busy the box is.`);
+  console.error(`    This run: ${(wall / 1000).toFixed(1)}s wall on ${laneCount} lanes, ${lanesGot} effective, sum-of-wall ${work}s.)`);
+  process.exit(1);
+}
+console.log(`\nsuite \u2713  ${results.length} jobs, ${cpu.toFixed(0)} CPU-seconds of ${CPU_BUDGET_S} budgeted`);
+console.log(`   ${(wall / 1000).toFixed(1)}s wall on ${laneCount} lanes (${lanesGot} effective), sum-of-wall ${work}s`);
