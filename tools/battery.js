@@ -3824,6 +3824,31 @@ const BREAKS = [
     to: '    if (false) {',
   },
   {
+    // R138 — TRAINING GOES BACK TO BEING AFFECTION ONLY. Six campaigns, 62
+    // creatures: 24 held EXACTLY ZERO xp, some of them 155 days old, because
+    // xp had one source — a real fight — and you field your best three. The
+    // game already had the verb for working with a creature you are NOT
+    // fielding; it granted bond and could not level anything. Zero the number
+    // and the bench is frozen again.
+    n: 238, gate: KITE, name: 'a training session goes back to granting bond and nothing else, and the bench is frozen at level zero',
+    file: 'data/training.json',
+    anchor: '    "xpPerSession": 8,',
+    to: '    "xpPerSession": 0,',
+  },
+  {
+    // R138 — and the walker goes back to working only with its best. This
+    // sorted DESCENDING for the whole of the project's history, so every
+    // training session went to creatures that had already fought the most.
+    // R92's note eleven lines below it saw the shape — "nine of which the
+    // A-team policy never touches" — and fixed only the feral case.
+    // The replacement here is the ORIGINAL line, so this break is the state
+    // the tree was actually in rather than an invented one.
+    n: 239, gate: KITE, name: 'the walker trains only the creatures that already fight, and nothing else ever levels',
+    file: 'tools/sim.js',
+    anchor: '    const byXp = [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0));',
+    to: '    const byXp = [...state.chimeras].sort((x, y) => (y.xp ?? 0) - (x.xp ?? 0)).slice(0, 3);',
+  },
+  {
     // R136 — the Combos tab goes back to three flat lists, which is the
     // state it was in for six milestones: 2,403px and 529 words on a screen
     // the player looks things up in. Catches BOTH halves of the new budget —

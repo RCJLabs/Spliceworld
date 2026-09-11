@@ -578,6 +578,24 @@ export const migrations = {
   // R131 — the page counter the Ranch and the Vault remember. A save from
   // before it arrives on page one of everything, which is where a player who
   // has never pressed the button would be anyway.
+  // R138 — THE CURVE MOVED UNDER EVERY CREATURE ALREADY EARNED.
+  //
+  // Nothing in the save changes: `levelOf` DERIVES level from stored xp and
+  // has never stored it, so there is no field to migrate and this returns
+  // the save untouched. The version still goes up, because a returning
+  // player's veteran is about to read a different number on its card and a
+  // silent change to something somebody earned is the worst kind.
+  //
+  // The Ascent rule holds either way — no save is reset and no xp is lost.
+  // Every point a creature earned is still there; the ladder it is measured
+  // against is longer, because xp now has a second source (training) and a
+  // career runs to roughly 8,000 rather than capping at 1,450.
+  //
+  // A wire line was written here first and taken out again: a migration that
+  // prepends news makes a migrated save a different SHAPE from a new one, and
+  // smoke asserts those match. The announcement belongs in the release notes,
+  // not in somebody's save file.
+  50: (save) => save,
   49: (save) => {
     save.ui ??= {};
     save.ui.pages ??= {};
