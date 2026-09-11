@@ -1363,7 +1363,7 @@ function walkAct(state, content, now, open, opts = {}) {
   const lvl = (c) => levelOf(c.xp ?? 0, content);
   // What a player reads off the Pens: level first, then the grades on the
   // card. The A-team is the best three whether or not they are fit.
-  const quality = (c) => lvl(c) * 10 + Object.values(c.tokens ?? {}).reduce((n, t) => n + GRADE_ORDER.indexOf(t.grade), 0);
+  const quality = (c) => lvl(c) * 4 + Object.values(c.tokens ?? {}).reduce((n, t) => n + GRADE_ORDER.indexOf(t.grade), 0);
   const isFit = (c) => !c.injury || c.injury.until <= now;
   const fitAll = () => state.chimeras.filter(isFit).sort((x, y) => quality(y) - quality(x));
   const fitTeam = () => fitAll().slice(0, 3);
