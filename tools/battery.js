@@ -1957,10 +1957,24 @@ const BREAKS = [
     to: '  const rank = (t) => (false ? 30 : 0)',
   },
   {
+    // R157 re-aimed this. It used to zero THEATER_STALLS, which now has THREE
+    // readers -- the two clocks and the splice ceiling -- so zeroing it took
+    // the reservation away AND raised the ceiling from nine to twelve, the two
+    // cancelled, and the break came back MISSED. It aims at the clocks' own
+    // predicate instead, which is the rule its name describes.
     n: 152, gate: COVERAGE, name: 'the Wing and the vat take every stall again, and the Surgery Theater never gets one',
     file: 'tools/sim.js',
-    anchor: 'const THEATER_STALLS = 3;',
-    to: 'const THEATER_STALLS = 0;',
+    anchor: 'const clockRoom = (state, content) => stableRoom(state, content).free > THEATER_STALLS;',
+    to: 'const clockRoom = () => true;',
+  },
+  {
+    // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
+    // the rule that stops the splice policy taking it. Break it and the walker
+    // splices to the whole grant, both clocks starve, and coverage says so.
+    n: 249, gate: COVERAGE, name: 'the splice policy takes the whole grant again, so the vat and the Wing never get a stall',
+    file: 'tools/sim.js',
+    anchor: '      const cap = Math.min(room.cap - THEATER_STALLS, opts.stableCap ?? Infinity);',
+    to: '      const cap = Math.min(room.cap, opts.stableCap ?? Infinity);',
   },
   {
     n: 153, gate: COVERAGE, name: 'the walker stops running the Resequencer, so what a vial is worth goes back to being unmeasured',
@@ -3918,7 +3932,7 @@ const BREAKS = [
   {
     // The pull goes away and the Theater reaches for the same best-graded
     // part every time, which is the 43% this milestone started from.
-    n: 245, gate: REACH, name: 'a part you have never built with stops breaking a tie, and the campaign wears 43% again',
+    n: 245, gate: REACH, name: 'a part you have never built with stops breaking a tie, and the campaign wears 54% instead of 60%',
     file: 'tools/sim.js',
     anchor: '    + (built.has(t.partId) ? 0 : 0.5);',
     to: '    + (built.has(t.partId) ? 0 : 0);',

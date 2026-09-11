@@ -1330,6 +1330,17 @@ function grindAgainst(content, frameId, wall) {
 // a twelve-stable, which is what it takes for the Surgery Theater to get a
 // turn at all on a 180-day campaign.
 const THEATER_STALLS = 3;
+// R157 — THE CLOCKS' HALF OF THAT RULE, IN ONE PLACE. The vat and the Wing may
+// only start while the Theater still has stalls to build into; R61's rule says
+// derive the predicate rather than re-type it, and this one was typed twice.
+//
+// It has to be its own line for a second reason. Break 152 takes the reserved
+// stalls away and proves a campaign falls from four combos to one — and it did
+// that by zeroing THEATER_STALLS, which since R157 ALSO raises the splice
+// ceiling from nine to twelve. The two effects cancelled and the break came
+// back MISSED on the full battery. One constant, three readers: a break aimed
+// at the constant no longer names a single rule, so it aims here instead.
+const clockRoom = (state, content) => stableRoom(state, content).free > THEATER_STALLS;
 
 // R92 — THE HERD THE WALKER WORKS, which is not the paddock it could fill.
 //
@@ -1637,8 +1648,22 @@ function walkAct(state, content, now, open, opts = {}) {
       // it churned against its own constant. R61's rule — derive the
       // predicate, never re-type it — and the option survives only so a
       // caller can ask for a SMALLER stable than the facility grants.
+      //
+      // R157 — AND THE NINE WAS NEVER A CAP. It was headroom, written where
+      // nothing said so. The vat and the Wing only start with more than
+      // THEATER_STALLS free, so asking for nine of twelve was reserving the
+      // stalls those two clocks graduate INTO. Letting the splice policy take
+      // the whole grant took that away and both systems stopped: vats
+      // 5/9/3 -> 0/2/0, Wing graduations 15/20/13 -> 0/1/1, parts worn
+      // 134/156/131 -> 115/136/101, and the herd reached 61 head on seed 2026.
+      //
+      // So the splice policy reserves the same working room the other two
+      // require, and where it stops now comes from the Theater's grant rather
+      // than from this file. A ranch that buys a bigger stable gets a bigger
+      // roster AND keeps its working room, with no edit here. Measured on the
+      // same three seeds: vats 9/37/18, Wing 23/23/27, worn 167/169/184.
       const room = stableRoom(state, content);
-      const cap = Math.min(room.cap, opts.stableCap ?? room.cap);
+      const cap = Math.min(room.cap - THEATER_STALLS, opts.stableCap ?? Infinity);
       // NOT `!room.free`. A stall RESERVED by a running Wing programme
       // stops a new creature being made; it is not a reason to take an
       // existing one apart. Reading it as one produced the whole remaining
@@ -1948,7 +1973,7 @@ function walkAct(state, content, now, open, opts = {}) {
     const bayTraits = (bayUnit?.traits ?? []).filter((tr) => content.traits?.[tr]);
     const carriesGene = bayTraits.some((tr) => !(state.dex.traits ?? []).includes(tr));
     const keeps = carriesGene
-      || !displaced || stableRoom(state, content).free > THEATER_STALLS;
+      || !displaced || clockRoom(state, content);
     if (!keeps) continue;
     if (startRehab(state, entry.id, content, now).ok) did('rehab-start', { who: entry.id });
   }
@@ -2047,7 +2072,7 @@ function walkAct(state, content, now, open, opts = {}) {
   // Never the A-team. A player does not put their two best fighters through
   // a process that costs them both a grade on everything, and the walker
   // ranking every creature by `quality` already knows which three those are.
-  if (has('vat') && !activeVat(state) && stableRoom(state, content).free > THEATER_STALLS) {
+  if (has('vat') && !activeVat(state) && clockRoom(state, content)) {
     const ranked = [...state.chimeras].sort((x, y) => quality(y) - quality(x)).slice(3);
     let ran = false;
     for (const a of ranked) {
@@ -2253,7 +2278,7 @@ function walkAutoplay(battle, content) {
 // `tick` is the world-advancing function; the game's own (campaign/world.js)
 // by default. A harness knob only: it exists so an experiment can ask which
 // passive system moves a result, by ticking without it.
-export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = 9, away = null, snapshotDays = [], markDay = null, tick = tickWorld, stopAtDominion = true, priceBeats = false } = {}) {
+export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = null, away = null, snapshotDays = [], markDay = null, tick = tickWorld, stopAtDominion = true, priceBeats = false } = {}) {
   const t0 = Date.UTC(2026, 0, 1);
   const state = { ...newGameState(), seed };
   ensureRanchSeeded(state, content, t0);

@@ -2216,8 +2216,8 @@ R102; R88–R90 remain.)*
   paginating the Ranch has been owed since R46.
 
   `tools/reach.js` holds all three rules: every species reachable by a
-  mechanism that resolves, 95% of the part list across seven seeds, and every
-  wall naming its price. *Done when: a 180-day walk sees at least 95% of
+  mechanism that resolves, 95% of the part list across seven seeds (R157: the
+  MEAN of those seven, and 94%), and every wall naming its price. *Done when: a 180-day walk sees at least 95% of
   parts, and every encounter has a standard-grade build that beats it at
   least half the time* — first clause met at 95.5%; second answered with
   numbers, because meeting it as written would flatten the grade ladder.
@@ -3628,9 +3628,165 @@ triangle working, and each region genuinely asks a different question)*.
 
   *Done when: the gate measures worn as well as seen, and the median campaign
   wears a number this entry names.* `tools/reach.js` holds worn at 50%
-  alongside seen at 95%; the median campaign wears **54.9%**.
+  alongside seen at 95%; the median campaign wears **54.9%**. (R157 moved both
+  to the MEAN of the same seven walks and seen to 94% with it — the median of
+  seven turned out not to be a statistic. The worn floor is untouched.)
 
 ### 9.29a Queued out of R140
+
+- **R155 — The walker models a player who never grows.** *Investigated and
+  not shipped — the premise in this entry's own first draft was wrong, and
+  the half that is right cannot be gated on its own. Measurements below so
+  nobody repeats them.*
+
+  Two hand-typed constants make the harness a player whose ranch is the same
+  size on day 180 as on day 20:
+
+  1. **It asks for a smaller stable than the game grants.** `campaignWalk`
+     defaults `stableCap = 9` while the Theater sells 12, and R91's own
+     comment beside the read says the option "survives only so a caller can
+     ask for a SMALLER stable than the facility grants" — so the default *is*
+     the asking, and nothing the Ranch or the Theater sells can be seen by a
+     gate while it stands.
+  2. **It trains two fighters and one of the bench**, which is R138's shape
+     and a constant rather than a share.
+
+  #### The cause was (2), and it was not
+
+  The first draft blamed the tending policy for not scaling and proposed a
+  bench share. Measured, that is wrong twice over. A bench share of
+  `ceil(roster/6)` **does** fix the level curve — but so does doing nothing to
+  it: the real cause is that drift-tending read `canSpend`, which holds the
+  walk's cash reserve back, so **the first thing a tight week stopped was the
+  five dollars that keeps a creature.** A bigger stable is poorer per head. On
+  the reserve exemption alone, with R138's policy untouched:
+
+  | stable | stuck at L0 | lost to neglect |
+  | ---: | ---: | ---: |
+  | 12 | 0 of 36 | 0 |
+  | 16 | 0 of 48 | **0** (was 1) |
+  | 18 | 0 of 54 | **0** (was 1) |
+
+  And the bench share is actively harmful: it spends the per-tick action
+  budget on training and starves everything else, which is R138's own
+  documented tension arriving on schedule — the vat and the Wing stop running
+  entirely, and part reach falls to 94.7% against R95's 95%.
+
+  #### Why it cannot ship alone
+
+  The reserve exemption is **unobservable at today's cap**. With `stableCap`
+  at 9 a walk reaches 13 chimeras and nothing ever drifts, so a gate written
+  for it passes whether the fix is present or not — checked by reverting the
+  fix under the new rule, which stayed green. A change no break can make red
+  is not a change this project ships.
+
+  So it is blocked on (1), and (1) is not a one-line fix either. Unlocking the
+  cap moves three gates at once, each a real consequence rather than a stale
+  number: the **vat and the Wing stop being used at all** (0 of each across
+  180 days), **part reach 94.7%** against R95's 95% and **worn 45.9%** against
+  R140's 50%, and the herd trips R92's warehouse rule at **22** — while seeds
+  7 and 99 end on 46 and 50 head against R91's bound of 48, which is §9.22's
+  liquidity gap by another door.
+
+  Choosing between those is a design decision — does a bigger stable cost you
+  content reach, or does the action budget grow? — and it is re-filed as
+  **R157** rather than settled inside a milestone about tending.
+
+  *Done when: R157 decides what a bigger stable costs, and then the reserve
+  exemption ships with a break that can make it red.* **R157 has decided and
+  is shipped: the budget grows, and it costs nothing.** What it did NOT do is
+  make this observable — the walker still reaches a roster of nine at the
+  Theater's twelve, because the three stalls it now leaves are the ones the
+  vat and the Wing graduate into, so nothing drifts and a gate written for the
+  exemption would still pass with the fix reverted. This is unblocked by
+  **R154**, not by R157: a bigger stable is what makes the reserve visible,
+  and R154 is the milestone that sells one.
+
+- **R157 — What a bigger stable costs.** *Shipped, and the answer is
+  **nothing** — but only once the thing the old constant was really doing is
+  written down. Both options this entry offered assumed the constraint was
+  money per head. It was stalls.*
+
+  `campaignWalk`'s `stableCap = 9` was never a cap. The chaos vat and the
+  Reorientation Wing only start when more than `THEATER_STALLS` stalls are
+  free, so asking for nine of twelve was **reserving the stalls those two
+  clocks graduate INTO** — load-bearing work done by a line that named none of
+  it. Take the reservation away by letting the splice policy splice to the
+  whole grant and the roster pins at twelve, `stableRoom().free` is zero
+  forever, and both systems stop: **vat gestations 5 / 9 / 3 → 0 / 2 / 0 and
+  Wing graduations 15 / 20 / 13 → 0 / 1 / 1** on seeds 2026 / 7 / 99. That is
+  R155's whole cascade, arriving through a door nobody had looked at, and
+  `tools/coverage.js` goes red for it — break **249**.
+
+  So the splice policy reserves the same working room the other two require,
+  and where it stops comes from the Theater's grant instead of from the
+  harness: nine at today's twelve, and R154's larger pens will move it with no
+  edit here. **The action budget grows with the ranch.**
+
+  #### And it costs nothing, which took twenty-one campaigns to establish
+
+  The seven-seed reach gate went red — median 233 → 231 against a 95% floor —
+  and the tempting story was that a busier vat crowds out the breeding that
+  the six variant lines need. Censused across 21 seeds on both trees, that
+  story is false:
+
+  | over 21 campaigns | parts seen | parts worn | vat gestations |
+  | --- | ---: | ---: | ---: |
+  | mean, before | 230.0 | 144.6 | 9.9 |
+  | mean, after | **230.0** | 137.9 | 9.7 |
+  | per-seed delta | mean **+0.00**, median +0, sd 2.85 | mean −6.8, median +0, sd 35.3 | — |
+
+  Individual seeds swing by up to 7 parts and 77 worn in *both* directions.
+  This is R150's finding at a second gate: **pressure is not what moves it,
+  chaos is** — and a statistic taken over seven samples of that is not a
+  statistic. The census proves it on `main` alone: the median of the first n
+  seeds reads 95.5% at seven, **94.3% at nine and at eleven**, and 95.5% again
+  from thirteen. Today's shipped tree fails its own floor on two of those
+  samples.
+
+  So the gate averages instead, which costs no extra walk: the mean reads
+  94.96% before and **230.7 of 244, 94.6%**, after, and stays inside 0.7
+  points at every sample size from 7 to 21 on both trees. `REACH_FLOOR` is
+  94% — a point lower because a right-skewed sample's mean sits below its
+  median, not because a campaign reaches less. Break **160**, the collector
+  rule worth three parts, still goes red, which is the only thing a floor is
+  for.
+
+  #### And the thing that only shows up when you try to break it
+
+  `WORN_FLOOR` had to move too, and the reason is the milestone rather than
+  the statistic. Break 245 deletes R140's never-built-with tie-break, and on
+  the gate's seven walks:
+
+  | | median | mean |
+  | --- | ---: | ---: |
+  | before R157 | 134 (54.9%) | 149.9 (61.4%) |
+  | before R157, broken | 106 (43.4%) | 115.0 (47.1%) |
+  | after R157 | 148 (60.7%) | 147.7 (60.5%) |
+  | after R157, broken | 144 (59.0%) | **132.4 (54.3%)** |
+
+  **The pull was worth 34.9 parts and is now worth 15.3.** The vat and the
+  Wing put parts on creatures across more seeds than they used to, so the
+  Theater's preference is no longer the only thing doing that work — and
+  R140's 50%, which had thirty-five parts of daylight under it, has none. The
+  first pass shipped this as "the mean clears the floor by ten points", which
+  was true and was the wrong thing to be pleased about: the battery caught it,
+  `--only` came back 8 of 9, and break 245 was the miss. `WORN_FLOOR` is
+  **57%** — the tree clears it by 8.6 parts, the break misses it by 6.7 — and
+  the mean is what makes that gate-able at all, separating the break four
+  times better than the median (15.3 parts against 4).
+
+  **The lesson:** *a constant that is load-bearing for a rule it never names
+  is a rule nobody can find — and the number you check it with has to be a
+  statistic before it can be a ratchet.*
+
+  *Done when: the entry says whether a bigger stable costs content reach or
+  whether the action budget grows with the ranch, the walker fields the stable
+  the game grants, and every content ratchet holds at the number the entry
+  names.* The budget grows; `stableCap` defaults to the grant less the working
+  room the vat and the Wing need; coverage is green, reach is green at
+  **230.7 of 244 (94.6%)** against a re-derived 94%, and worn is green at
+  **147.7 (60.5%)** against a re-derived **57%**.
 
 - **R156 — The suite budget drifts 30% in a unit that was supposed to be
   flat.** R151 replaced a wall-clock budget with CPU-seconds and proved the
@@ -3647,6 +3803,21 @@ triangle working, and each region genuinely asks a different question)*.
   calibrates against a probe it runs itself — R151's own criterion offered
   "a measured idle baseline the gate calibrates against" and took the
   simpler half — and two runs a day apart give the same verdict.*
+
+- **R158 — The reach gate should average thirteen campaigns, not seven.**
+  R157 moved `tools/reach.js` from the median of seven to the mean of seven,
+  which is the free half of the fix. The other half costs walks. Censused at
+  21 seeds on two trees, the MEDIAN settles from thirteen seeds onward — 95.5%
+  on `main` and 95.1% after R157, steady through 21 — while at seven, nine and
+  eleven it reads 95.5%, 94.3% and 94.3% on `main` alone. Thirteen seeds is
+  therefore the sample at which either statistic means something, and it is
+  six more 180-day walks: roughly **360 CPU-seconds** onto a suite that reads
+  ~1022 against a 1200 ceiling. So this is blocked on the budget rather than
+  on the design, which makes it R156's dependant: settle what a CPU-second on
+  this box is worth, then buy the six walks. *Done when: the reach gate reads
+  a sample whose statistic does not move when a milestone that changes nothing
+  is measured with it — checked by re-running R157's own census against the
+  new sample and reading a delta of zero.*
 
 - **R153 — The boot budget has taken three raises in three milestones.**
   ✅ *Shipped. Both budgets came down, and the note that priced the fix was
