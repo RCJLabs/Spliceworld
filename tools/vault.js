@@ -90,6 +90,10 @@ const BOUNDS = {
   'discoveredCombos':     { max: (c) => Object.keys(c.combos).length, by: 'the combo list' },
   'guidesSeen':           { max: (c) => (c.guides ?? []).length || 64, by: 'the guide list' },
   'dex.parts':            { max: (c) => Object.keys(c.parts).length, by: 'the part list' },
+  // R140 — what you have BUILT with, which is a subset of what you have seen
+  // and therefore capped by the same list. It cannot outgrow `dex.parts`: a
+  // part has to be in the vault before it can go onto a creature.
+  'dex.worn':             { max: (c) => Object.keys(c.parts).length, by: 'the part list' },
   // R97 TURNS THESE TWO FROM RATCHETS INTO BOUNDS. R91 left them at 260
   // against 42 real enemies and named the entry that owed the fix, which is
   // this one. A generated rival chimera or escapee is not a Dex page — it is

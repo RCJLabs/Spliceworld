@@ -1,5 +1,83 @@
 # PROGRESS
 
+## Session 154 — R140: a route nobody takes ✅
+
+**ROADMAP §9.30.** The entry was right that nobody had measured parts *worn*.
+The reason nobody had is that there was nothing to measure: the field did not
+exist. `dex.parts` is every part a save has handled; there was no second one.
+The entry's own 56% came from a bespoke script nobody could re-run, and
+re-measured on today's tree it is **43.4%**.
+
+| across the reach gate's seven seeds | before | after |
+| --- | ---: | ---: |
+| median parts **seen** | 232/244 (95%) | 233/244 (95%) |
+| median parts **worn** | 106/244 (**43.4%**) | 134/244 (**54.9%**) |
+| worn by no seed at all | 34 | **14** |
+| seen by some seed, worn by none | 34 | **10** |
+| combos discovered (median) | 11 | **14** |
+
+### Three pieces, in this order
+
+**The game records it.** `tickWorld` writes `dex.worn`, read off the roster
+rather than hooked to the splice — a part reaches a chimera five ways and a
+hook on one verb goes wrong the day a sixth is added. Stored, not derived,
+because a part worn on a creature you dismantled last month is still a part
+you built with. **`SAVE_VERSION` 50 → 51**, backfilling the roster standing
+now; a long save under-reports its own past, which is honest rather than
+guessed.
+
+**The screen says it.** The Theater's picker marks a part you have never
+bolted on. Not decoration — the walker prefers such a part, and that is only
+legitimate if a player can see the same thing. R146's lesson.
+
+**The walker reads the same field.** `bestSplice` gains a never-built-with
+term worth **half a grade step**. Half, deliberately: grades move in whole
+numbers, so 0.5 breaks a tie between two Standards and can never take a
+Standard over a Prime — R41's rule. Smoke asserts **both** halves, because a
+pull big enough to move the number is also big enough to wreck the build and
+only one of those shows up in a percentage. 1.0 reads 61% and starts trading
+grades; 2.0 reads 51.6%. Non-monotonic — R150's lesson, not an invitation.
+
+**The number: a median campaign sees 95% and builds with half.** Floor 50%,
+measured 54.9%. Fifty is a design number, not the measurement — the half you
+leave on the shelf is what makes the next campaign different.
+
+### What it cost, and why that bill is now filed
+
+0.6 KB of boot budget tripped **both** eager caps (563 → 564, first paint
+1035 → 1036). `tools/boot.js` has said since R149 that "a seventh raise just
+lengthens this queue" — this is that raise. Taken with the alternative
+re-priced: the empty-keys option is **7.0 KB today, not the 8.5 estimated**
+(286 `"tags": []`, 129 `"keywords": {}`), and what stops it is ~20 read sites
+doing a bare `part.tags.join(...)`. Rewriting those inside a content-reach
+milestone is how a battle-maths regression ships. Filed as **R153** with
+today's prices rather than promised in a comment.
+
+R152's day-120 ceiling moved 60% → 65% — a correction, not a regression. 60
+was set 1.5pp above the max of the three seeds the suite walks, on a statistic
+with a ten-point spread. Re-censused over sixteen: **51.1–60.6%, mean 55.8**,
+spread *tightening* 13.2pp → 9.6.
+
+**The lesson:** *a number that has never been recorded is not a number anybody
+has an opinion about — build the field before you argue about the target.*
+
+### Verification
+
+| | |
+| --- | --- |
+| Criterion | ✓ `tools/reach.js` holds **worn at 50%** beside seen at 95%; median campaign wears **54.9%** |
+| `--anchors` | ✓ 244 |
+| `--baseline` | ✓ 34 gates on a pristine tree (`BASELINE_EXIT=0`) |
+| breaks 244–247 | ✓ 4 caught, 0 missed (`ONLY_EXIT=0`) — the recorder, the pull, the screen mark, and the pull outgrowing a grade step |
+| `npm test` | ✓ **783 CPU-seconds of 1000**, 206.7s wall |
+| `SAVE_VERSION` | **50 → 51**, `dex.worn` backfilled from the live roster |
+
+### Next session's first task
+
+**R153 — the boot budget has taken three raises in three milestones**, priced
+above. Otherwise R139 (the Wing reforms 1.4% of what it catches), R142 (the
+splice is the rarest verb), R145, R147, then the R54–R67 backlog.
+
 ## Session 153 — R152: the ceiling was the map ✅
 
 **ROADMAP §9.29.** The entry's diagnosis was right, its evidence was wrong,

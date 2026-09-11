@@ -46,6 +46,19 @@ export function tickWorld(state, content, now) {
   for (const line of tickVat(state, content, now).news) pushNews(state, line);
   for (const line of tickResequencer(state, content, now).news) pushNews(state, line);
   ensureTemperaments(state, content, now);
+  // R140 — what the player has BUILT with, beside what they have seen. Read
+  // off the roster rather than hooked to the splice: a part reaches a chimera
+  // five ways and a hook on one verb goes wrong the day a sixth is added.
+  // ROADMAP §9.30.
+  if (state.dex) {
+    const worn = (state.dex.worn ??= []);
+    const known = new Set(worn);
+    for (const c of state.chimeras ?? []) {
+      for (const t of Object.values(c.tokens ?? {})) {
+        if (t?.partId && !known.has(t.partId)) { known.add(t.partId); worn.push(t.partId); }
+      }
+    }
+  }
   for (const line of tickScars(state, content, now).news) pushNews(state, line);
   // R82 — the breakout, last, because an escape is a consequence of the
   // campaign tick above (a rival's defeat count is what lets one out) and a

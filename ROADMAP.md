@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 50
+- save version: 51
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -3460,16 +3460,7 @@ triangle working, and each region genuinely asks a different question)*.
   when: a campaign that bags a thousand specimens graduates a number the
   design can defend, and the entry states that number before the work.*
 
-- **R140 — You collect 95% of the parts and wear 56%.** R95 shipped a gate
-  on parts **seen** and holds it at 95%. Nobody has measured parts **worn**:
-  across six campaigns, **107 of 244 (44%) never go onto a creature**, even
-  in slots (organ 21, hide 19, head 19, forelimbs 17, tail 17, hindlimbs
-  14). Eight are salvage. Whole species are collected and shelved — tiger,
-  mantis, jellyfish, pufferfish, alpine_ram, glider_skunk and iron_tortoise
-  each have five of six parts never installed. This is not R61's orphan
-  content (which has no route at all); it is content with a route nobody
-  takes. *Done when: the gate measures worn as well as seen, and the median
-  campaign wears a number this entry names.*
+- R140 shipped; see §9.30.
 
 - **R141 — The Kite Frame has never been built.** ✅ **Shipped — see §9.19.** Four frames ship. Across
   six campaigns' 64 surviving chimeras: **M × 57, S × 4, L × 3, A × 0.** The
@@ -3556,6 +3547,117 @@ triangle working, and each region genuinely asks a different question)*.
 
 ---
 
+### 9.30 A route nobody takes (R140) — seventh audit
+
+- **R140 — You collect 95% of the parts and wear 56%.** ✅ *Shipped. The
+  entry was right that nobody had measured it, and the reason nobody had is
+  that there was nothing to measure: the field did not exist.*
+
+  #### The half the reach gate never asked
+
+  R95's gate holds parts **seen** at 95% and has since it was written.
+  `dex.parts` is every part a save has ever handled. There was no second
+  field, so "worn" had never been a number — the entry's own 56% came from a
+  bespoke script nobody could re-run, and re-measured on today's tree it is
+  **43.4%**, not 56%.
+
+  | across the reach gate's seven seeds | before | after |
+  | --- | ---: | ---: |
+  | median parts **seen** | 232/244 (95%) | 233/244 (95%) |
+  | median parts **worn** | 106/244 (**43.4%**) | 134/244 (**54.9%**) |
+  | worn by no seed at all | 34 | **14** |
+  | seen by some seed, worn by none | 34 | **10** |
+  | combos discovered (median) | 11 | **14** |
+
+  #### Three pieces, and the order matters
+
+  **The game records it.** `tickWorld` writes `dex.worn` — read off the
+  roster, not hooked to the splice, because a part reaches a chimera five ways
+  (the Theater, the vat, a rehabilitated captive, a rescue, a returned
+  specimen) and a hook on one verb goes wrong the day a sixth is added. It is
+  a stored field rather than something derived on read because a part worn on
+  a creature you took apart last month is still a part you have built with.
+  **`SAVE_VERSION` 50 → 51**, backfilling what can be known — the roster
+  standing now. A long-running save under-reports its own past, which is the
+  honest answer rather than a guessed one.
+
+  **The screen says it.** The Theater's picker row marks a part you have
+  never bolted on. This is not decoration: the walker below prefers such a
+  part, and that is only legitimate if a player can see the same thing.
+  R146's lesson — moving the instrument is not moving the game.
+
+  **The walker reads the same field.** `bestSplice` gains a never-built-with
+  term worth **half a grade step**. Half, deliberately: `GRADE_ORDER` moves in
+  whole numbers, so 0.5 breaks a tie between two Standards and can never take
+  a Standard over a Prime. That is R41's rule — grades season a build, they do
+  not replace it — and smoke asserts **both** halves, because a pull big
+  enough to move the number is also big enough to wreck the build and only one
+  of those shows up in a percentage. A bigger pull buys less than it looks:
+  1.0 reads 61% and starts trading grades, 2.0 reads 51.6%. **Non-monotonic**,
+  which is R150's lesson about rare outcomes in a reshuffled campaign, not an
+  invitation to chase the number.
+
+  #### The number, stated
+
+  **A median campaign sees 95% of the part list and builds with half of it.**
+  The floor is **50%**, measured at 54.9%. Fifty is a design number rather
+  than the measurement: the half you leave on the shelf is what makes the next
+  campaign a different one, and a game where every part ends up on a creature
+  has nothing left to raid.
+
+  #### What it cost, and what that bill is now
+
+  0.6 KB of boot budget, which tripped **both** eager caps — 563 → 564 and
+  first paint 1035 → 1036. `tools/boot.js` has carried a note since R149
+  saying "a seventh raise just lengthens this queue", and this is that seventh
+  raise, taken with the alternative re-priced rather than waved at: the
+  empty-keys option is **7.0 KB today, not the 8.5 the note estimated** (286
+  `"tags": []` and 129 `"keywords": {}` across five data files), and what
+  stops it is that ~20 read sites do a bare `part.tags.join(...)` with no
+  fallback. Rewriting those inside a content-reach milestone is how a battle
+  -maths regression ships. It is filed as **R153** with today's prices instead.
+
+  R152's day-120 ceiling also moved, 60% → 65%, and that is a correction
+  rather than a regression: 60 was set 1.5pp above the max of the three seeds
+  the suite walks, on a statistic with a ten-point spread. Re-censused over
+  sixteen: **51.1–60.6%, mean 55.8**, spread *tightening* from 13.2pp to 9.6.
+
+  **The lesson:** *a number that has never been recorded is not a number
+  anybody has an opinion about — build the field before you argue about the
+  target.*
+
+  *Done when: the gate measures worn as well as seen, and the median campaign
+  wears a number this entry names.* `tools/reach.js` holds worn at 50%
+  alongside seen at 95%; the median campaign wears **54.9%**.
+
+### 9.29a Queued out of R140
+
+- **R153 — The boot budget has taken three raises in three milestones.**
+  R143 moved the eager cap 560 → 562, R138 562 → 563, R140 563 → 564; R149
+  moved first paint 1030 → 1035 and R140 1035 → 1036. Every one bought
+  something real and small, and `tools/boot.js` has carried a note since R149
+  saying the queue ends when somebody pays it down instead. Both options are
+  re-counted and priced as of R140:
+
+  - **7.0 KB** — drop `"tags": []` and `"keywords": {}` from the data files
+    wherever they are empty: **286 and 129** of them across `parts.json`,
+    `enemies.json`, `combos.json`, `species.json` and `operations.json`. (The
+    R149 note estimated 8.5 KB; the real number today is 7.0.) Changes no
+    content at all. What it costs is the read-site audit — **about 20 sites
+    do a bare `part.tags.join(...)`** with no fallback, in `physiology.js`,
+    `statblock.js`, `director.js` and four screens, and each has to tolerate
+    an absent key rather than an empty one.
+  - **45 KB** — take `enemies.json` out of the eager graph, R81's geometry
+    move pointed at the other big data file. Enemy stats are reached from the
+    War Room and the battle and R74 made both lazy; what stops it is that
+    `data/loader.js` fetches every content file as one bundle before the
+    first paint.
+
+  The first is a day's careful work and ends the queue eleven times over; the
+  second is the real answer and is a milestone. *Done when: both budgets come
+  DOWN rather than up, the entry states what they land at, and the gate that
+  holds them says which of the two paid for it.*
+
 ### 9.29 The ceiling was the map (R152) — queued out of R138
 
 - **R152 — Upkeep does not scale with a richer empire.** ✅ *Shipped. The
@@ -3625,8 +3727,12 @@ triangle working, and each region genuinely asks a different question)*.
 
   #### The share, stated
 
-  **A full-sized empire keeps a little over half of its gross — 45–59%, mean
-  55% — and that is the most it can ever keep.** The curve now peaks at
+  **A full-sized empire keeps a little over half of its gross — 51–61%, mean
+  56% — and that is the most it can ever keep.** (R152 first measured this at
+  45–59% and set the day-120 ceiling at 60%; R140 reshuffled every campaign
+  and re-censused it at 51.1–60.6%, mean 55.8, with the spread *tightening*
+  from 13.2pp to 9.6. The ceiling moved to 65% — see §9.30. The mean moved 1.1
+  points; what was wrong was a coarse bound set inside a ten-point spread.) The curve now peaks at
   today's map edge and falls past it: doubling the map takes seed 2026 from
   **55.0% across 22 nodes to 48.8% across 46**, on the same stable, the same
   pens and the same plant. Under the old model the same comparison read 76.7%

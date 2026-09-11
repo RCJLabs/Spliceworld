@@ -1124,9 +1124,31 @@ export function bestSplice(state, content, wanted = null, wall = null) {
     if (!need.length || found.has(combo.id)) continue;
     if (need.every((pid) => ownedIds.has(pid))) for (const pid of need) completable.add(pid);
   }
+  // R140 — AND A PART YOU HAVE NEVER BUILT WITH BREAKS A TIE.
+  //
+  // R95 shipped a reach gate on parts SEEN and holds it at 95%. Nobody had
+  // measured parts WORN: 95% seen against a median 43% worn, because this
+  // scoring had no reason to prefer a part it had never installed and the
+  // greedy fill below just took whichever equal-ranked token came first.
+  //
+  // WORTH HALF A GRADE STEP, DELIBERATELY. `GRADE_ORDER.indexOf` moves in
+  // whole numbers, so 0.5 can break a tie between two parts of the same
+  // grade and can never take a Prime over an Apex — R41's rule, that levels
+  // (and grades) season a build rather than replace it. Measured across the
+  // reach gate's seven seeds: worn 43.4% -> 54.9%, dominion day 41.0 -> 43.4,
+  // and combos found 11 -> 14, because a builder who varies its parts walks
+  // into pairs it was passing over. A bigger pull buys less than it looks:
+  // 1.0 reads 61% but starts trading grades away, and 2.0 reads 51.6% —
+  // NON-MONOTONIC, which is R150's lesson about rare outcomes arriving in a
+  // reshuffled campaign, not a reason to chase the number.
+  //
+  // It reads `dex.worn`, the field the game writes and the Theater shows,
+  // so the walker knows exactly what a player reading the screen knows.
+  const built = new Set(state.dex?.worn ?? []);
   const rank = (t) => (completable.has(t.partId) ? 30 : 0)
     + (wanted && content.parts[t.partId]?.classAffinity === wanted ? 10 : 0)
-    + GRADE_ORDER.indexOf(t.grade);
+    + GRADE_ORDER.indexOf(t.grade)
+    + (built.has(t.partId) ? 0 : 0.5);
   // R141 — THE FRAME IS A CHOICE, AND THE WALK NEVER MADE IT.
   //
   // Six campaigns, 64 surviving chimeras: M x 57, S x 4, L x 3, A x 0. Two
@@ -2479,6 +2501,11 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // time because the walk reported how many creatures it made and never
     // what it made them on. Counted over every splice, not the survivors, so
     // a frame that gets built and later dismantled still shows.
+    // R140 — the other half of R95's reach number, and it is the GAME'S own
+    // field rather than a tally this file keeps: `tickWorld` writes
+    // `dex.worn` on every tick, so the harness reports exactly what the
+    // player's save says and cannot drift from it.
+    worn: [...(state.dex?.worn ?? [])],
     framesBuilt: (state.__walkLog ?? []).reduce((tally, e) => {
       if (e.kind === 'splice' && e.frame) tally[e.frame] = (tally[e.frame] ?? 0) + 1;
       return tally;
