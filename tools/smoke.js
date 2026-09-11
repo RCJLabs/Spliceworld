@@ -18669,6 +18669,48 @@ if (inShard('empire')) {
     seed, days: 180, stopAtDominion: false, snapshotDays: [10, 120],
   }));
 
+    // R138 — THE MIDDLE OF THE LEVEL CURVE.
+    //
+    // Six campaigns before this milestone: L0 x24, L10 x25, and THIRTEEN
+    // creatures spread over every level between. 39% of a stable had never
+    // fought and 40% was maxed, so a level said which of two buckets a
+    // creature was in and nothing else.
+    //
+    // The cause was not the curve. xp had ONE source — a real fight — and you
+    // field your best three, so your best three maxed out (29,530 xp against
+    // a cap of 1,450) and the rest sat at exactly zero for months. Training,
+    // the thing you do with a creature you are NOT fielding, granted bond and
+    // could not level anything.
+    //
+    // Asserted over R143's three walks, because they are the only ones in
+    // the suite that run the FULL 180 days — the criterion says "a median
+    // stable on day 180", and smoke's other walks stop at dominion around
+    // day 35, where a third of the stable is simply too new to have trained.
+    // Measured both ways: 1 of 66 at level zero at day 180, 10 of 39 at
+    // dominion. Same tree, same rule, two different questions.
+    const { levelOf: lvlOf } = await import('../battle/veterancy.js');
+    const stableLv = walks.flatMap((w) => (w.save.chimeras ?? []).map((c) => lvlOf(c.xp ?? 0, content)));
+    assert.ok(stableLv.length >= 20,
+      `there are stables to measure (${stableLv.length} surviving creatures across ${walks.length} campaigns)`);
+    const hist = {};
+    for (const l of stableLv) hist[l] = (hist[l] ?? 0) + 1;
+    const top = Math.max(...Object.keys(hist).map(Number));
+    const ends = (hist[0] ?? 0) + (hist[top] ?? 0);
+    const middle = stableLv.length - ends;
+    console.log(`   R138 stableLv: ${Object.entries(hist).sort((a, b) => a[0] - b[0])
+      .map(([l, n]) => `L${l}x${n}`).join(' ')} — middle ${middle}, ends ${ends}`);
+    // THE CRITERION. A curve whose middle is emptier than its two ends is a
+    // step function wearing ten labels, which is what this was.
+    assert.ok(middle > ends,
+      `more creatures are partway up the curve than parked at either end — `
+      + `L1-L${top - 1} x${middle} against L0 x${hist[0] ?? 0} + L${top} x${hist[top] ?? 0} `
+      + `(measured 46 vs 20; before this milestone, 13 vs 49)`);
+    // And nobody is frozen at zero: that was 24 of 62, some of them 155 days
+    // old, and it is the half a longer curve alone could never have fixed.
+    assert.ok((hist[0] ?? 0) <= stableLv.length / 10,
+      `and hardly anybody is stuck at level zero — ${hist[0] ?? 0} of ${stableLv.length} `
+      + `(measured 1; before this milestone, 24 of 62)`);
+
   // 1. TERRITORY AND THE FACILITY ARE ON THE BOOKS, derived by moving one
   //    thing at a time rather than by naming a field. Two states that differ
   //    ONLY in what they hold must not cost the same to run — a rule with
@@ -19381,7 +19423,14 @@ if (inShard('wire')) {
   // and battle/forecast.js are using their data at boot. That is a false
   // positive in the IDLE heuristic and worth knowing before anybody chases
   // it. The other 23.2 KB is eleven times what this raise bought.
-  const KB_CAP = 562;
+  // R138 RE-RATCHETS: 562 -> 563, measured at 562.2. The raise is ~200 bytes
+  // in `splice/theater.js` — a training session now reads `xpPerSession` off
+  // the tuning and adds it, which is the whole of this milestone's boot-path
+  // cost. The first attempt imported `grantTrainingXp` from
+  // `battle/veterancy.js` instead and cost 2 KB; reading the data directly is
+  // what brought it back to 0.2, and the ledger above still holds — the 23.2
+  // KB of idle eager modules it names is a hundred times this raise.
+  const KB_CAP = 563;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,
