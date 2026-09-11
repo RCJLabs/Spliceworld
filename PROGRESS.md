@@ -1,5 +1,100 @@
 # PROGRESS
 
+## Session 157 — R154: a pen is a pen ✅
+
+**ROADMAP §9.29a.** Reported from play: *"it says upgrade pens but it upgrades
+the ranch. Have it upgrade storage for both so I can have more chimeras."*
+
+### The word was doing two jobs
+
+Verified before building, and the collision is wider than the report.
+`buyPenUpgrade` raised `ranch.penCapacity` and nothing else — livestock. The
+chimera cap was `theaterGrants().stable`, a different track on a different
+screen. And **"Pens" already named the chimera tab**: `splice/pens-ui.js` opens
+"the chimera roster", `ui/facility-card.js` renders `pens: 'Pens'`. So the
+button bought the one you were not looking at.
+
+`stallsFromPens` derives stable room from the paddock — a stall per six pens
+past the starting four, taking the Theater's 12 to **16** at a full paddock.
+Derived, not stored, so no save version moves.
+
+### Three pieces of prose that claimed things the code did not do
+
+All inherited, all would have shipped if the parked patch had just been applied
+and the gates run green.
+
+1. **A smoke assertion that did not exist.** `facility.json` promised "smoke
+   asserts the two match, so the restatement cannot drift" about `freePens` vs
+   `TUNING.penStartCapacity`. Nothing checked it. Written now.
+2. **A ratio justified by gates that do not move it.** The patch chose 12
+   because 9 and 6 supposedly red-lined R138's level curve and R85's
+   no-neglect promise. At **sixteen seeds**, feral losses are 0/16 and
+   level-zero creatures 0 at *both* ratios. A three-seed sweep flipped red at 9
+   and 18 on a single feral loss each, with the bigger roster losing none —
+   R150's chaos.
+3. **A bound naming a mechanism it does not have.** `ranch.stock` read
+   `penMaxCapacity + 8`, "the paddock plus the jobs that can be in the field at
+   once". That bounds *concurrency*; what fills a barn is arrivals that stayed
+   — ~1,189 jobs a campaign, each delivering unconditionally by R11's design,
+   with extraction the only removal. No ceiling to derive from, so +8 was a
+   number that fitted.
+
+### The ratio, and what it costs
+
+| | ratio 6 | ratio 12 |
+| --- | ---: | ---: |
+| roster min/median/max | 13 / 14 / 16 | 11 / 12 / 14 |
+| seeds finishing over the grant of 12 | **16 / 16** | 1 / 3 |
+| feral lost | 0 / 16 | 0 / 16 |
+| stock median / mean | 24 / 29.4 | 20 / 24.1 |
+| seeds over the old 48-head bound | 2 / 16 | 0 / 16 |
+
+Twelve is nearly invisible as a feature — the median campaign never fills the
+stalls it bought. **Six** was the user's call and is what the report asked for.
+The herd is the price, and the bound is now stated honestly as a design ceiling
+(twice the paddock) rather than a fake derivation, with §9.22 named as the real
+fix.
+
+### The gate R157 could not write
+
+R157 derived the roster ceiling from the grant and could not gate it: at a
+fixed grant of 12 the walk lands in the same place either way. A bigger stable
+makes it observable. It lives in `tools/coverage.js` rather than smoke because
+**smoke's campaign block halts at dominion** — measured there the claim is
+false (rosters 11/10/11 against a grant of 12). Over a full 180 days both
+halves hold, and coverage now prints:
+
+```
+stable: Theater grants 12, paddock took it to 16, roster 15
+```
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| stable at a full paddock | 12 | **16** |
+| `pensPerStall` | — | **6** |
+| `ranch.stock` bound | `penMaxCapacity + 8` = 48 | **`× 2`** = 80, design ceiling |
+| breaks | 246 | **248** |
+
+### Known issues
+
+- **The vault gate walks seed 2026 alone**, which finishes on 38 head and would
+  have sat green through both breaching seeds. Recorded in the gate itself and
+  filed to R158 — the same "one seed is not a sample" problem R157 found in
+  reach.
+- **§9.22 is now load-bearing.** At ratio 6 the herd is what stops the ratio
+  tightening further. Livestock leaves only through extraction, which costs
+  money.
+- **R155 is unblocked at last.** A bigger stable is what makes the reserve
+  exemption observable, which is what it was waiting for.
+
+### Next session's first task
+
+**R155 — the reserve exemption**, now gateable: drift-tending reads `canSpend`,
+so the first thing a tight week stops is the five dollars that keeps a
+creature. At a stable of 16 there is finally enough roster for that to show.
+
 ## Session 156 — R157: what a bigger stable costs ✅
 
 **ROADMAP §9.29a.** R155's blocker, and the decision it refused to make alone.

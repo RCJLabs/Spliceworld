@@ -3634,6 +3634,78 @@ triangle working, and each region genuinely asks a different question)*.
 
 ### 9.29a Queued out of R140
 
+- **R154 — A pen is a pen.** ✅ *Shipped. Reported from play, and the word was
+  doing two jobs.*
+
+  "It says upgrade pens but it upgrades the ranch." It did. `buyPenUpgrade`
+  raised `ranch.penCapacity` and nothing else, which is **livestock**; the
+  chimera cap was `theaterGrants().stable`, a different track on a different
+  screen. And "Pens" already named the chimera tab — `splice/pens-ui.js` opens
+  *"the chimera roster"*, `ui/facility-card.js` renders `pens: 'Pens'`. One
+  word, two things, and the button bought the one you were not looking at.
+
+  `stallsFromPens` derives stable room from the paddock: a stall for every six
+  pens past the four you start with, so the Theater's twelve becomes sixteen at
+  a full paddock. Derived rather than stored, so no save version moves. The
+  Theater's refusal names both doors now, which was half the reason the
+  purchase read as doing nothing — a player who had already bought Tier II was
+  told to buy it again.
+
+  #### Six, and the reason twelve was wrong
+
+  The parked patch chose twelve and justified it with gates that do not decide
+  it: 9 and 6 were said to red-line R138's level curve with 7–8 creatures at
+  zero and break R85's no-neglect promise. Censused at **sixteen seeds** on the
+  post-R157 tree, feral losses are **0/16 and level-zero creatures 0 at both**.
+  A three-seed sweep did flip red at 9 and 18 — a single feral loss each time,
+  with the *bigger* roster losing none. R150's chaos, not a ratio.
+
+  What twelve actually costs is the feature. Rosters run 11–14 against a grant
+  of 12, so the median campaign never fills the stalls it bought. At six they
+  run 13–16 and **16 of 16 seeds finish over the grant**. The price is the
+  herd, and it is stated rather than hidden: 2 of 16 campaigns end past the 48
+  head `ranch.stock` was bounded at.
+
+  #### The bound bounded the wrong thing
+
+  `ranch.stock` read `penMaxCapacity + 8`, *"plus livestock a job delivers over
+  it"*, and its comment finished *"the jobs that can be in the field at once"*.
+  That is a **concurrency** limit. What fills a barn is arrivals that *stayed*:
+  ~1,189 jobs a campaign, each delivering unconditionally — `operations.js`
+  says so out loud, *"the animal ALWAYS arrives, even into a barn that is
+  already full"* (R11, deliberate) — with extraction the only removal and it
+  costs money. There is no ceiling to derive from, so `+ 8` was a number that
+  fitted. It is now **twice the paddock**, labelled a design ceiling rather
+  than a derivation: twice over is a herd that stopped turning over. R91's
+  199-head runaway is still caught by a wide margin, which is what the bound
+  was built for. It comes back down when §9.22 gives livestock a door out that
+  is not the Extractor.
+
+  #### And the gate R157 could not write
+
+  R157 derived the walker's roster ceiling from the grant and then could not
+  gate it: at a fixed grant of twelve the walk lands in the same place whichever
+  way the constant reads. A bigger stable is what makes it observable, so the
+  rule ships here. It lives in `tools/coverage.js` rather than smoke because
+  smoke's campaign block **halts at dominion** — measured there the claim is
+  false (rosters 11/10/11 against a grant of 12), the stalls existing long
+  before there is time to fill them. Over a full 180 days both halves hold:
+  the paddock buys room past the grant, **and the roster fills it**, because
+  room nobody stands in is not room.
+
+  **The lesson:** *three separate pieces of prose in this feature claimed
+  something the code did not do — a smoke assertion that did not exist, a
+  ratio justified by gates that do not move, and a bound naming a mechanism it
+  does not have. All three were inherited, and all three would have shipped if
+  the patch had simply been applied and the gates run green.*
+
+  *Done when: buying a pen raises both what the ranch can house and what the
+  stable can hold, so "Expand the pens" stops lying about which pens; and the
+  walker's roster grows with the grant, proved by a break that goes red when it
+  stops.* Both: a pen past the fourth buys a stall, coverage reports *"Theater
+  grants 12, paddock took it to 16, roster 15"*, and breaks **251** and **252**
+  take those two halves away.
+
 - **R155 — The walker models a player who never grows.** *Investigated and
   not shipped — the premise in this entry's own first draft was wrong, and
   the half that is right cannot be gated on its own. Measurements below so
