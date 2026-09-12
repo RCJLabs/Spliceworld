@@ -4074,6 +4074,15 @@ triangle working, and each region genuinely asks a different question)*.
   if the probe does not track, 900 says so loudly instead of 1200 saying
   nothing.
 
+  Breaks **256** (the probe measures half as much work) and **257** (it reads
+  zero, and the budget divides by it). Full battery 253/253, baseline green,
+  `npm test` 722 of 900 cold.
+
+  **The lesson:** *the entry named one cause and was right about it, and the
+  larger one was sitting in the same number unlabelled. Two variables in one
+  reading look like one noisy variable — and the 30% nobody could explain was
+  15% of cache and the rest of a box, added together on different days.*
+
 - **R158 — The reach gate should average thirteen campaigns, not seven.**
   R157 moved `tools/reach.js` from the median of seven to the mean of seven,
   which is the free half of the fix. The other half costs walks. Censused at

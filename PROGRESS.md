@@ -54,6 +54,22 @@ reporter invalidated the cache, and the first run with the new line printed
 | probe reproducibility | — | **0.6%** |
 | breaks | 251 | **253** |
 
+### Verification
+
+| | |
+| --- | --- |
+| `battery --anchors` | 253 anchors, each matching exactly once |
+| `battery --baseline` | green |
+| `battery --only 256,257` | 2 caught · 0 missed |
+| full battery | **253 breaks · 253 caught · 0 missed · `BATTERY_EXIT=0`** |
+| `npm test` | **722 of 900** on the reference box, cold cache, probe 1.00x |
+
+Full battery required rather than optional: this changes an existing gate's
+logic in `tools/suite.js` and `tools/fixtures.js`. Note the baseline does not
+run the suite gate — that would be circular, since the suite runs the other
+gates — so `npm test` above IS the clean suite reading, and the three breaks
+that target it (241, 256, 257) are what exercise it under patching.
+
 ### Known issues
 
 - **The day-apart half of the criterion is not demonstrated, and could not
