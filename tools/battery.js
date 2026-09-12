@@ -2041,39 +2041,51 @@ const BREAKS = [
     anchor: '      if (state.funds < TRAINING.cost) break;',
     to: '      if (!canSpend(TRAINING.cost)) break;',
   },
-  // --- gate: suite (R156 — the budget calibrates against a probe) ----------
+  // --- gate: suite (R160 — the budget is denominated in the walk cache) ----
+  //
+  // R156's two breaks lived here and both aimed at `tools/probe.js`, which
+  // R160 deleted: twenty runs of byte-identical work put the probe's
+  // correlation with that work at r = 0.001, and it read 95ms through a suite
+  // that swung from 728 to 929. A break aimed at a deleted instrument is the
+  // stalest kind of anchor, so they go with it. These three aim at the two
+  // terms that replaced it.
   {
-    // The probe stops doing the work the reference was measured on. Aimed at
-    // the ROUNDS rather than at the arithmetic because that is the change
-    // somebody makes for a good reason — "the probe costs 100ms of every
-    // suite run, let us halve it" — and it silently doubles every budget
-    // afterwards, since the reference milliseconds no longer describe the
-    // same work. The pinned hash is what refuses it: halve the rounds and the
-    // number changes, and a budget calibrated against a different amount of
-    // work is calibrated against nothing.
-    n: 256, gate: SUITE, name: 'the probe quietly measures half as much work, and every budget after it doubles',
-    file: 'tools/probe.js',
-    anchor: 'export const PROBE_ROUNDS = 3e7;',
-    to: 'export const PROBE_ROUNDS = 1.5e7;',
+    // THE CACHE HAS TO LAND. R132 made the write atomic — write to a temp
+    // file, then rename — and the rename is the half that can be dropped by
+    // somebody tidying. Drop it and nothing is ever cached: every run rebuilds
+    // all thirteen walks, pays 200 CPU-seconds for work it already did, and
+    // the allowance reads zero because nothing appeared during the run. The
+    // budget would then fail for a reason it could not name, which is the
+    // failure R151 through R158 spent four milestones chasing.
+    n: 260, gate: SUITE, name: 'the walk cache is never written, so every run rebuilds what it already had',
+    file: 'tools/fixtures.js',
+    anchor: '  renameSync(tmp, file);',
+    to: '',
   },
   {
-    // And the failure R154 shipped and R155 inherited, one level up: a
-    // calibration that reads nothing. `cpuUsage` deltas come back zero on a
-    // clock that does not tick, the factor goes to zero, and `cpu / 0` is
-    // Infinity — which is not a budget failure, it is every budget failing
-    // forever. Zeroed rather than NaN'd on purpose: NaN would sail through
-    // the comparison silently, Infinity fails loudly, and the guard has to
-    // catch BOTH kinds of nothing rather than the one that happens to be
-    // noisy.
-    // R158 renames this: the budget no longer divides by the probe, so the
-    // old name ("and the budget divides by it") describes a gate that was
-    // withdrawn the day after it shipped. The guard still earns its place —
-    // a diagnostic printed on every run that silently reads zero is a
-    // diagnostic nobody can trust the next time the box moves.
-    n: 257, gate: SUITE, name: 'the box probe reads zero, and every run reports a box speed of nothing',
-    file: 'tools/probe.js',
-    anchor: '    reads.push((d.user + d.system) / 1000);',
-    to: '    reads.push(0);',
+    // AND THE BUDGET HAS TO BITE. R90 shards smoke four ways and the whole
+    // design rests on one predicate; fail it open and every shard runs the
+    // whole file. Nothing goes red on its own — every assertion still passes,
+    // four times over — and the suite silently costs double. That is the
+    // exact shape R90 named as the dangerous one, and the budget is the only
+    // thing in the tree that can see it. Measured at 1621 against 820.
+    n: 261, gate: SUITE, name: 'the shard filter fails open, so all four shards run the whole of smoke',
+    file: 'tools/smoke.js',
+    anchor: '  return !SHARD || SHARD_OF[name] === SHARD;',
+    to: '  return true;',
+  },
+  {
+    // THE ONE THAT PROVES THE TIGHTENING BOUGHT SOMETHING. Sampling is the
+    // realistic way this suite gets expensive — a session wants a steadier
+    // number and multiplies the seeds — and it is invisible, because a bigger
+    // sample makes every gate MORE right. Measured at 1070: over R160's 820
+    // by 30%, and comfortably UNDER R158's 1100, which would have waved it
+    // through. A budget with 51% of slack in it is a budget that only catches
+    // what nobody would have shipped anyway.
+    n: 262, gate: SUITE, name: 'the balance sweep quadruples its sampling, and the old budget had room for it',
+    file: 'tools/smoke.js',
+    anchor: '      balanceTasks.push({ builds: 40, seedsPer: 8, teamSize: 3, grade, seed: poolSeed });',
+    to: '      balanceTasks.push({ builds: 40, seedsPer: 32, teamSize: 3, grade, seed: poolSeed });',
   },
   // --- gate: facility (R161 — a refusal is not a ceremony) -----------------
   {
