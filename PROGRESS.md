@@ -157,6 +157,22 @@ across four lanes**. Corrected in CLAUDE.md; the deeper fix — a browser gate
 that says "the page did not settle" instead of "the screen does not open" —
 is filed as **R159**.
 
+### Verification
+
+| | |
+| --- | --- |
+| `battery --anchors` | 250 anchors, each matching exactly once |
+| `battery --baseline` | every gate green on a pristine tree |
+| full battery | **250 breaks · 250 caught · 0 missed · `BATTERY_EXIT=0`** |
+| `npm test` | 10 jobs, **940 CPU-seconds of 1200**, 464s wall |
+| height gate at 380px | 9 screens, all inside budget, 130 folds walked |
+
+The full battery ran twice. The first ended `BATTERY_EXIT=1` at 249/250 —
+break 245, above — and the second, after the re-derivation, is the clean one.
+Required this milestone rather than optional: R154 changes existing gate logic
+in `tools/vault.js`, `tools/height.js` and `tools/reach.js` rather than only
+adding gates.
+
 ### Known issues
 
 - **The vault gate walks seed 2026 alone**, which finishes on 38 head and would
