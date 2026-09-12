@@ -114,6 +114,29 @@ before it is used.
 | Pens budget | flat 2,000px / 300 words | **derived: 2,180 / 366 at a full stable** |
 | breaks | 246 | **250** |
 
+### Break 245 missed, for the second milestone running
+
+The full battery came back **249 of 250**. A stable of sixteen builds more
+creatures than a stable of twelve, so more of the part list ends up on one:
+
+| seven walks each | tree | with break 245 applied | the pull |
+| --- | ---: | ---: | ---: |
+| after R157 | 147.7 (60.5%) | 132.4 (54.3%) | 15.3 parts |
+| **after R154** | **170.0 (69.7%)** | **159.9 (65.5%)** | **10.1 parts** |
+
+Both sailed over a 57% floor that had not moved. Re-derived to **67.6%** —
+balanced at 5.1 parts each way rather than generous on either side.
+
+Second consecutive milestone to re-type it, so the cause is written down
+rather than the number alone: **one number is doing two jobs.** R140 wrote
+50% as a design floor (you collect nearly everything and build with half of
+it; the half you leave is what makes the next campaign different) and it has
+since been dragged twice to wherever break 245 lands. A design floor must not
+move when the roster does; a break-catcher has to. Folded into **R158**, with
+the other half of the measurement: the pull is worth 10.1 parts against a
+**standard error of 9.1** on seven seeds, so the break-catcher is reading at
+the edge of its own noise.
+
 ### The verification protocol itself was wrong, and it cost a run
 
 `--only` came back **4 caught / 0 missed** with `BATTERY_EXIT=1`, because the
@@ -143,6 +166,9 @@ is filed as **R159**.
 - **§9.22 is now load-bearing.** At ratio 6 the herd is what stops the ratio
   tightening further. Livestock leaves only through extraction, which costs
   money.
+- **`WORN_FLOOR` is provisional.** 67.6% is measured and balanced, but it is
+  a level standing in for a difference and R158 owns the fix. A third
+  re-typing is the thing to refuse.
 - **R155 is unblocked at last.** A bigger stable is what makes the reserve
   exemption observable, which is what it was waiting for.
 - **The Pens still is not paged.** The budget now describes the multiplication

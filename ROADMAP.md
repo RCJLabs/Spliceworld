@@ -3738,6 +3738,27 @@ triangle working, and each region genuinely asks a different question)*.
   this project's oldest lesson, *a rule with nothing to look at passes*,
   arriving by a door that did not exist until the budgets stopped being typed.
 
+  #### And a floor that had to be re-typed for the second milestone running
+
+  The full battery came back **249 of 250**, and the miss was break 245 —
+  R157's, re-derived by R157, missed again. A stable of sixteen builds more
+  creatures than a stable of twelve, so more of the part list ends up on one:
+  measured on both trees, seven walks each, the tree went **147.7 worn to
+  170.0** and the broken tree **132.4 to 159.9**, and both sailed over a 57%
+  floor that had not moved. Re-derived to **67.6%**, balanced at 5.1 parts of
+  clearance each way rather than generous on either side.
+
+  That is the second consecutive milestone to re-type it and the third is not
+  acceptable, so the cause is written down rather than the number alone: **one
+  number is doing two jobs.** R140 wrote 50% as a design floor — you collect
+  nearly everything and build with half of it, and the half you leave is what
+  makes the next campaign different — and it has since been dragged twice to
+  wherever break 245 lands. A design floor must not move when the roster does;
+  a break-catcher has to. R158 carries the split, together with the other half
+  of the measurement: the pull is now worth **10.1 parts against a standard
+  error of 9.1** on seven seeds, so the break-catcher is reading at the edge
+  of its own noise.
+
   **The lesson:** *four separate pieces of prose in this feature claimed
   something the code did not do — a smoke assertion that did not exist, a
   ratio justified by gates that do not move, a bound naming a mechanism it
@@ -3752,7 +3773,8 @@ triangle working, and each region genuinely asks a different question)*.
   grants 12, paddock took it to 16, roster 15"*, and breaks **251** and **252**
   take those two halves away. **253** and **254** hold the Pens' derived
   budgets — one takes the stalls back out of the arithmetic, the other makes
-  it `NaN` and proves the gate notices rather than going quiet.
+  it `NaN` and proves the gate notices rather than going quiet. Full battery
+  **250/250**, baseline green, `npm test` 940 CPU-seconds of 1200.
 
 - **R155 — The walker models a player who never grows.** *Investigated and
   not shipped — the premise in this entry's own first draft was wrong, and
@@ -3934,10 +3956,30 @@ triangle working, and each region genuinely asks a different question)*.
   six more 180-day walks: roughly **360 CPU-seconds** onto a suite that reads
   ~1022 against a 1200 ceiling. So this is blocked on the budget rather than
   on the design, which makes it R156's dependant: settle what a CPU-second on
-  this box is worth, then buy the six walks. *Done when: the reach gate reads
-  a sample whose statistic does not move when a milestone that changes nothing
-  is measured with it — checked by re-running R157's own census against the
-  new sample and reading a delta of zero.*
+  this box is worth, then buy the six walks.
+
+  **R154 adds the sharper half, and it is not really about the sample.**
+  `WORN_FLOOR` was re-typed for the second consecutive milestone — R157 moved
+  it 50% to 57%, R154 moves it to 67.6% — and a third time is R92's
+  "number being dragged along behind the thing it was supposed to hold".
+  The cause is that **one number is doing two jobs.** R140 wrote 50% as a
+  DESIGN floor: you collect nearly everything and build with half of it, and
+  the half you leave is what makes the next campaign different. It has since
+  been dragged twice to wherever break 245 happens to land. A design floor
+  must not move when the roster does; a break-catcher has to.
+
+  And the break-catcher half is now measuring at the edge of its own noise.
+  Measured on both trees after R154, seven walks each: **170.0 worn (sd
+  24.1)** against **159.9 broken (sd 24.2)** — the never-built-with pull is
+  worth **10.1 parts against a standard error of 9.1**. Nothing is wrong with
+  the game; a stable of sixteen builds more creatures than one of twelve, so
+  both trees rose (147.7 → 170.0 and 132.4 → 159.9) and sailed over a floor
+  that had not moved. *Done when: the reach gate reads a sample whose
+  statistic does not move when a milestone that changes nothing is measured
+  with it — checked by re-running R157's own census against the new sample
+  and reading a delta of zero — and the design floor and the break-catcher
+  are two rules, the second stated as a difference the gate can normalise
+  rather than a level every roster change moves underneath it.*
 
 - **R159 — Two browser gates under load report a screen nobody can open.**
   R154's verification ran `npm test` alongside `battery --baseline`, which is
