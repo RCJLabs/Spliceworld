@@ -67,6 +67,28 @@ supplies the 18h.
 | reach mean worn | 170.0 | **170.0**, seed for seed |
 | breaks | 250 | **251** |
 
+### Verification
+
+| | |
+| --- | --- |
+| `battery --anchors` | 251 anchors, each matching exactly once |
+| `battery --baseline` | green |
+| `battery --only 255` | **1 caught · 0 missed · `BATTERY_EXIT=0`** |
+| `npm test` | **898 CPU-seconds of 1200**, 237s wall on 3.8 lanes |
+| `tools/reach.js` | green, worn mean 170.0 — identical seed for seed |
+
+Full battery run too, though R155 only ADDS a gate: it changes **walker
+behaviour**, which is the shared input every gate measures, and that is the
+class of change that made R157's breaks 152 and 245 go MISSED. Same risk, so
+the same 90 minutes.
+
+**And the suite's own numbers corrected a line I wrote last session.** CLAUDE.md
+now says ~900 CPU-s and ~4 min because that is what it reads ALONE; R154's "940
+and ~8 min" was measured contending with the battery. Run alone: 237s wall, 3.8
+effective lanes. Contended: 464s, 2.0. Sharing the box roughly doubles the
+suite's wall time on top of false-redding the browser gates — there was never a
+saving to collect.
+
 ### Known issues
 
 - **`agitated` has no rule and probably should not get one.** It cannot be zero
