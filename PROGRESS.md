@@ -1,5 +1,98 @@
 # PROGRESS
 
+## Session 159 — R156: the suite budget calibrates against a probe ✅
+
+**ROADMAP §9.29a.** R151 made the budget CPU-seconds and proved it flat against
+contention; R153 found it drifting 30% anyway and raised the ceiling to 1200,
+calling it a smoke alarm rather than a stopwatch. This builds the stopwatch —
+and finds that the bigger of the two things moving the number was never the box.
+
+### The probe, and the candidate that should have won
+
+`tools/probe.js` runs a fixed integer loop before and after the jobs; the budget
+is denominated in what it reads. Three candidates, idle and under eight burners:
+
+| probe | idle | 8 burners | idle again | verdict |
+| --- | ---: | ---: | ---: | --- |
+| integer hash | 211.8ms | 213.1ms | 212.7ms | **0.6% spread** |
+| pointer chase (8MB) | 126.0ms | 130.7ms | 133.6ms | 6%, and *rising* |
+| alloc + GC | 27.9ms | 27.8ms | 29.1ms | GC noise, tiny |
+
+The pointer chase should have won — every step is a cache miss, so it ought to
+see the stalls that inflate the suite. It drifted upward across three
+consecutive runs **with the load in the middle**: a probe with its own weather.
+A calibration is only worth having if it is quieter than what it calibrates.
+
+The hash output is pinned, so the probe cannot quietly stop being the same
+probe. Break **256** halves the rounds — the change somebody makes for a good
+reason — and the pinned hash refuses it.
+
+### The bigger variable was the walk cache, not the machine
+
+Measured back to back in one window, probe steady at 1.00x:
+
+| | raw CPU-seconds |
+| --- | ---: |
+| warm walk cache | **643**, then **631** |
+| cold walk cache | **736**, then **722** |
+
+**15%, and nothing recorded which kind of run a reading was.** The cache key
+covers every game file, so any milestone that edits one starts cold — most of
+them — and every such reading was compared against warm ones. R153's "read 783
+earlier in the day, now reads 1022" spans exactly that boundary.
+
+The demonstration was free: editing `tools/fixtures.js` to *add* the cache
+reporter invalidated the cache, and the first run with the new line printed
+`walk cache COLD (0/7 seeds)`.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| budget | 1200, "a smoke alarm" | **900, on the reference box** |
+| what a reading carries | one number | cost + probe factor + cache state |
+| probe reproducibility | — | **0.6%** |
+| breaks | 251 | **253** |
+
+### Verification
+
+| | |
+| --- | --- |
+| `battery --anchors` | 253 anchors, each matching exactly once |
+| `battery --baseline` | green |
+| `battery --only 256,257` | 2 caught · 0 missed |
+| full battery | **253 breaks · 253 caught · 0 missed · `BATTERY_EXIT=0`** |
+| `npm test` | **722 of 900** on the reference box, cold cache, probe 1.00x |
+
+Full battery required rather than optional: this changes an existing gate's
+logic in `tools/suite.js` and `tools/fixtures.js`. Note the baseline does not
+run the suite gate — that would be circular, since the suite runs the other
+gates — so `npm test` above IS the clean suite reading, and the three breaks
+that target it (241, 256, 257) are what exercise it under patching.
+
+### Known issues
+
+- **The day-apart half of the criterion is not demonstrated, and could not
+  be.** The drift is hours-scale and cannot be induced — contention does not
+  cause it (probe flat under 8 and 16 burners; R151 measured the suite at 1.2%)
+  and this box has essentially no steal (1 tick in 111,489). The confirmation is
+  now a *read*: next session's first suite run prints a probe factor beside its
+  cost. If the probe does not track, 900 says so loudly where 1200 said nothing.
+- **900 is a bet on that.** If a slow box turns up and the probe misses it, the
+  suite blocks a session. The failure line names box, cache and code so the
+  diagnosis is immediate, and raising it back is one number.
+- **`PROBE_REF_MS` is this box.** A different machine would want its own
+  reference; the gate would read a constant factor and still be internally
+  consistent, but the number would stop being comparable to these notes.
+
+### Next session's first task
+
+**R158 — the reach gate's sample**, which was blocked on this: settle what a
+CPU-second is worth, then buy the six extra 180-day walks. The budget now has
+178 CPU-seconds of headroom measured cold, and R158 needs about 360 — so the
+first question is whether the warm/cold split just found pays for half of it.
+
+
 ## Session 158 — R155: the reserve exemption ✅
 
 **ROADMAP §9.29a.** Third attempt. The mechanism was right all three times;

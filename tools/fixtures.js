@@ -234,6 +234,20 @@ function withGuidesRead(save) {
   return save;
 }
 
+// R156 — WAS THIS RUN'S CACHE WARM? A suite that rebuilds every 180-day walk
+// costs 15% more than one that reads them back (736 CPU-seconds against 639,
+// measured back to back in one window), and nothing anywhere said which kind
+// of run a reading was. A budget compared across runs without that fact is
+// comparing two different amounts of work — and the 30% "machine drift" R153
+// recorded was measured across exactly that boundary, because the cache key
+// includes every game file, so any milestone that edits one starts cold.
+export function walkCacheState({ days = 180, seeds = [2026] } = {}) {
+  const dir = join(tmpdir(), 'sw-walk-cache');
+  let hits = 0;
+  for (const seed of seeds) if (existsSync(cacheFile(seed, days))) hits++;
+  return { dir, hits, of: seeds.length, warm: hits === seeds.length };
+}
+
 export function walkedSave({ days = 180, seed = 2026, fresh = false } = {}) {
   const cache = join(tmpdir(), 'sw-walk-cache');
   const file = cacheFile(seed, days);

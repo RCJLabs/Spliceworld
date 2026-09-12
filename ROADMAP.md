@@ -3999,7 +3999,9 @@ triangle working, and each region genuinely asks a different question)*.
   **147.7 (60.5%)** against a re-derived **57%**.
 
 - **R156 — The suite budget drifts 30% in a unit that was supposed to be
-  flat.** R151 replaced a wall-clock budget with CPU-seconds and proved the
+  flat.** ✅ *Shipped. The probe works and the budget came down — and the
+  bigger of the two things moving this number turned out not to be the box
+  at all.* R151 replaced a wall-clock budget with CPU-seconds and proved the
   new unit flat against contention (idle 910, four burners 921, a battery
   alongside 946 — 1.2%, against wall-clock's 78%). The wording it shipped,
   *"does not move with the box"*, over-claimed: contention is not the only
@@ -4013,6 +4015,73 @@ triangle working, and each region genuinely asks a different question)*.
   calibrates against a probe it runs itself — R151's own criterion offered
   "a measured idle baseline the gate calibrates against" and took the
   simpler half — and two runs a day apart give the same verdict.*
+
+  #### The probe, and the two candidates that lost
+
+  `tools/probe.js` runs a fixed integer loop before and after the jobs and the
+  budget is denominated in what it reads. Three candidates were measured, idle
+  and under eight burners:
+
+  | probe | idle | 8 burners | idle again | verdict |
+  | --- | ---: | ---: | ---: | --- |
+  | integer hash | 211.8ms | 213.1ms | 212.7ms | **0.6% spread** |
+  | pointer chase (8MB) | 126.0ms | 130.7ms | 133.6ms | 6%, and *rising* |
+  | alloc + GC | 27.9ms | 27.8ms | 29.1ms | GC noise, tiny |
+
+  The pointer chase was the one that *should* have won — every step is a cache
+  miss, so it ought to see the stalls that inflate the suite. It is the one
+  that failed: it drifted upward across three consecutive runs with the load in
+  the **middle**, which is a probe with its own weather. A calibration is only
+  worth having if it is quieter than the thing it calibrates. The hash is also
+  pinned to a fixed output, so the probe cannot quietly stop being the same
+  probe — break **256** halves the rounds and the gate says so.
+
+  #### And the bigger variable was not the machine
+
+  Measured back to back in one window, probe steady at 1.00x:
+
+  | | raw CPU-seconds |
+  | --- | ---: |
+  | warm walk cache | **643**, then **631** |
+  | cold walk cache | **736**, then **722** |
+
+  **The walk cache is worth 15%, and nothing anywhere recorded which kind of
+  run a reading was.** The cache key covers every game file, so *any* milestone
+  that edits one starts cold — which is most of them, and every one of those
+  readings was being compared against warm ones. R153's "the suite that read
+  783 on the same commit earlier in the day now reads 1022" spans exactly that
+  boundary. The demonstration was free: editing `tools/fixtures.js` to add the
+  cache reporter invalidated the cache, and the first run with the new line
+  printed `walk cache COLD (0/7 seeds)`.
+
+  So the suite now prints both, and **1200 comes down to 900** — +18% over the
+  worst honest reading this milestone can produce, which is one more drift of
+  the size still unattributed. When it fires, the line underneath says whether
+  to blame the box, the cache or the code.
+
+  #### What is NOT demonstrated
+
+  The criterion's second half — *two runs a day apart give the same verdict* —
+  **is not shown here, and could not be.** The drift is hours-scale and cannot
+  be induced: contention does not cause it (the probe is flat under 8 and 16
+  burners, and R151 measured the suite at 1.2%), and this box shows essentially
+  no hypervisor steal (1 tick in 111,489). What is shown is that the instrument
+  is reproducible to **0.6%**, that the two confounds are now separated and
+  printed, and that R151's own historical pair points the right way: its
+  benchmark read 509-535ms when the suite read 910 and 605ms when it read 1022
+  — +16% against +12%. The confirmation is now a **read rather than a rerun**:
+  the next session's first suite run prints a probe factor beside its cost, and
+  if the probe does not track, 900 says so loudly instead of 1200 saying
+  nothing.
+
+  Breaks **256** (the probe measures half as much work) and **257** (it reads
+  zero, and the budget divides by it). Full battery 253/253, baseline green,
+  `npm test` 722 of 900 cold.
+
+  **The lesson:** *the entry named one cause and was right about it, and the
+  larger one was sitting in the same number unlabelled. Two variables in one
+  reading look like one noisy variable — and the 30% nobody could explain was
+  15% of cache and the rest of a box, added together on different days.*
 
 - **R158 — The reach gate should average thirteen campaigns, not seven.**
   R157 moved `tools/reach.js` from the median of seven to the mean of seven,

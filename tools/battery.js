@@ -2041,6 +2041,35 @@ const BREAKS = [
     anchor: '      if (state.funds < TRAINING.cost) break;',
     to: '      if (!canSpend(TRAINING.cost)) break;',
   },
+  // --- gate: suite (R156 — the budget calibrates against a probe) ----------
+  {
+    // The probe stops doing the work the reference was measured on. Aimed at
+    // the ROUNDS rather than at the arithmetic because that is the change
+    // somebody makes for a good reason — "the probe costs 100ms of every
+    // suite run, let us halve it" — and it silently doubles every budget
+    // afterwards, since the reference milliseconds no longer describe the
+    // same work. The pinned hash is what refuses it: halve the rounds and the
+    // number changes, and a budget calibrated against a different amount of
+    // work is calibrated against nothing.
+    n: 256, gate: SUITE, name: 'the probe quietly measures half as much work, and every budget after it doubles',
+    file: 'tools/probe.js',
+    anchor: 'export const PROBE_ROUNDS = 3e7;',
+    to: 'export const PROBE_ROUNDS = 1.5e7;',
+  },
+  {
+    // And the failure R154 shipped and R155 inherited, one level up: a
+    // calibration that reads nothing. `cpuUsage` deltas come back zero on a
+    // clock that does not tick, the factor goes to zero, and `cpu / 0` is
+    // Infinity — which is not a budget failure, it is every budget failing
+    // forever. Zeroed rather than NaN'd on purpose: NaN would sail through
+    // the comparison silently, Infinity fails loudly, and the guard has to
+    // catch BOTH kinds of nothing rather than the one that happens to be
+    // noisy.
+    n: 257, gate: SUITE, name: 'the box probe reads zero, and the budget divides by it',
+    file: 'tools/probe.js',
+    anchor: '    reads.push((d.user + d.system) / 1000);',
+    to: '    reads.push(0);',
+  },
   {
     // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
     // the rule that stops the splice policy taking it. Break it and the walker

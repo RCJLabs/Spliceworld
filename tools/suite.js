@@ -19,6 +19,11 @@ import { readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+// R156 — the box's own speed, so the budget below is denominated in it.
+import { boxProbe, PROBE_REF_MS, PROBE_HASH } from './probe.js';
+// R156 — and whether this run had to rebuild the 180-day walks, which is
+// worth 15% and was never in the reading.
+import { walkCacheState } from './fixtures.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : null;
@@ -69,6 +74,12 @@ if (!picked.length) {
 // 266s of wall-clock, against a 180s budget. Oversubscription does not add
 // throughput, it just makes every job's timing a lie about its own cost.
 const LANES = Math.max(1, availableParallelism());
+// R156 — BEFORE ANYTHING ELSE RUNS. Taken on an otherwise idle box, which is
+// the only moment in this script where that is true, and taken in the PARENT
+// — `childCpuSeconds` reads cutime+cstime, so the probe's own cost is not
+// charged to the budget it calibrates.
+const probeBefore = boxProbe();
+const cacheAtStart = walkCacheState({ seeds: [2026, 7, 101, 4242, 55, 900, 31] });
 const started = Date.now();
 const queue = [...picked];
 const results = [];
@@ -216,29 +227,99 @@ if (failed.length) {
 // which is the tell: it is the machine, and CPU-seconds see it because a
 // stalled cycle is still a charged cycle.
 //
-// 1200 is a ceiling over the worst honest reading with headroom, not a
-// measurement. THE REAL FIX IS THE ONE R151's OWN CRITERION OFFERED AND DID
-// NOT TAKE — "a measured idle baseline the gate calibrates against": run the
-// fixed probe at suite start and scale the budget by what it reads. Filed as
-// R156. Until then this number is a smoke alarm, not a stopwatch.
-const CPU_BUDGET_S = 1200;
+// R156 TAKES THAT FIX, AND THE CEILING COMES BACK DOWN TO R151's NUMBER.
+//
+// `tools/probe.js` runs a fixed amount of integer work before and after the
+// jobs and reports what it cost. The budget is denominated in that reading,
+// so the number this gate checks is "CPU-seconds ON THE REFERENCE BOX" — a
+// property of the suite — rather than CPU-seconds on whatever this machine
+// felt like being today. A box 16% slower inflates the suite AND the probe,
+// and the ratio does not move.
+//
+// AND THE SECOND VARIABLE, WHICH NOBODY WAS TRACKING AT ALL. Measured back
+// to back in one window on one tree, probe steady at 1.00x:
+//
+//   warm walk cache      643   ·   again   631      (0.6% apart)
+//   cold walk cache      736                        (+15%)
+//
+// The cache key covers every game file, so ANY milestone that edits one runs
+// cold — which is most of them, and every one of those readings was being
+// compared against a warm one. R153's "the suite that read 783 earlier in the
+// day now reads 1022" spans exactly that boundary. So the run says which kind
+// it was, because 15% that nobody names gets read as the machine.
+//
+// 1200 -> 900. Measured cold on a 1.00x box: 736. R151 measured contention at
+// about 4% (910 -> 946 with a battery alongside), so 900 is +18% over the
+// worst honest reading this milestone could produce, which is one more drift
+// of the size still unattributed (736 cold today against 898 cold yesterday,
+// and yesterday had no probe to ask). It is a ratchet again rather than a
+// smoke alarm, and when it does fire the line underneath says whether to
+// blame the box, the cache or the code.
+//
+// TWO READINGS, NOT ONE, and the mean of them. The probe runs after the jobs
+// as well as before, because a box that changes speed halfway through a
+// four-minute suite would otherwise be calibrated against the half it was
+// not. When the two disagree by more than a little the run says so — that
+// disagreement is the drift itself, caught live.
+const CPU_BUDGET_S = 900;
+const probeAfter = boxProbe();
 const cpu = childCpuSeconds();
 const work = (results.reduce((a, r) => a + r.ms, 0) / 1000).toFixed(0);
 // A budget that cannot read its own number must not pass quietly: a rule
 // with nothing to look at is a rule that always agrees with you. There is no
-// wall-clock fallback on purpose — that is the unit this milestone removed.
+// wall-clock fallback on purpose — that is the unit R151 removed.
 if (!only && (!Number.isFinite(cpu) || cpu <= 0)) {
   console.error('\nsuite \u2717  every job passed, but the suite could not read its own CPU cost');
   console.error('   /proc/self/stat gave nothing usable, so the budget has nothing to check.');
   process.exit(1);
 }
+// R156 — AND THE SAME RULE FOR THE CALIBRATION. A probe that reads NaN, zero
+// or a wild number would silently scale the budget to anything at all, which
+// is worse than no calibration: R154 shipped a budget that could go NaN and
+// `x > NaN` is false, so every comparison passes in silence. The band is
+// deliberately wide — a box half the speed of the reference is a box this
+// should still calibrate for — and anything outside it is a broken probe
+// rather than a slow machine.
+const probeMs = (probeBefore.ms + probeAfter.ms) / 2;
+const probeFactor = probeMs / PROBE_REF_MS;
+if (!only) {
+  const bad = [];
+  for (const [when, p] of [['before', probeBefore], ['after', probeAfter]]) {
+    if (!Number.isFinite(p.ms) || p.ms <= 0) bad.push(`the ${when} reading is ${p.ms}, not a duration`);
+    if (p.hash !== PROBE_HASH) {
+      bad.push(`the ${when} probe computed ${p.hash} where the pinned answer is ${PROBE_HASH}`
+        + ' — it is no longer doing the work the reference was measured on');
+    }
+  }
+  if (probeFactor < 0.25 || probeFactor > 4) {
+    bad.push(`the box reads ${probeFactor.toFixed(2)}x the reference (${probeMs.toFixed(1)}ms`
+      + ` against ${PROBE_REF_MS}ms), which is outside anything a machine does`);
+  }
+  if (bad.length) {
+    console.error('\nsuite \u2717  every job passed, but the budget has nothing to calibrate against');
+    for (const b of bad) console.error(`   \u00b7 ${b}`);
+    process.exit(1);
+  }
+}
 const laneCount = Math.min(LANES, picked.length);
 const lanesGot = (cpu / (wall / 1000)).toFixed(1);
-if (!only && cpu > CPU_BUDGET_S) {
-  console.error(`\nsuite \u2717  every job passed, but the suite costs ${cpu.toFixed(0)} CPU-seconds, over the ${CPU_BUDGET_S}s budget`);
-  console.error(`   (CPU-seconds are the suite's own cost and do not move with how busy the box is.`);
+const onRef = cpu / probeFactor;
+const drift = Math.abs(probeAfter.ms - probeBefore.ms) / probeMs;
+const box = `probe ${probeMs.toFixed(0)}ms = ${probeFactor.toFixed(2)}x the reference`
+  + (drift > 0.05 ? `, and it MOVED under the suite (${probeBefore.ms.toFixed(0)} -> ${probeAfter.ms.toFixed(0)}ms)` : '');
+// R156 — the OTHER thing that moves this number, and the one nobody was
+// tracking. Cold is not a fault; it is what any milestone that edits a game
+// file gets, because the cache key covers them. It just has to be SAID, or
+// the 15% it costs gets read as the machine.
+const cacheLine = cacheAtStart.warm
+  ? 'walk cache warm'
+  : `walk cache COLD (${cacheAtStart.hits}/${cacheAtStart.of} seeds) — worth about 15%`;
+if (!only && onRef > CPU_BUDGET_S) {
+  console.error(`\nsuite \u2717  every job passed, but the suite costs ${onRef.toFixed(0)} CPU-seconds on the reference box, over the ${CPU_BUDGET_S}s budget`);
+  console.error(`   (raw ${cpu.toFixed(0)}s, ${box}, ${cacheLine} — if that factor is near 1.00 and the cache was warm, this is the CODE.`);
   console.error(`    This run: ${(wall / 1000).toFixed(1)}s wall on ${laneCount} lanes, ${lanesGot} effective, sum-of-wall ${work}s.)`);
   process.exit(1);
 }
-console.log(`\nsuite \u2713  ${results.length} jobs, ${cpu.toFixed(0)} CPU-seconds of ${CPU_BUDGET_S} budgeted`);
+console.log(`\nsuite \u2713  ${results.length} jobs, ${onRef.toFixed(0)} CPU-seconds of ${CPU_BUDGET_S} budgeted on the reference box`);
 console.log(`   ${(wall / 1000).toFixed(1)}s wall on ${laneCount} lanes (${lanesGot} effective), sum-of-wall ${work}s`);
+console.log(`   raw ${cpu.toFixed(0)}s CPU \u00b7 ${box} \u00b7 ${cacheLine}`);
