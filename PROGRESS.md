@@ -1,5 +1,82 @@
 # PROGRESS
 
+## Session 162 — R160: the probe was innocent, and so was the box ✅
+
+**ROADMAP §9.29a.** Four milestones — R151, R153, R156, R158 — argued about a
+"drift" in what `npm test` costs. R160 went looking for a probe that tracks it
+and found that there was nothing to track.
+
+### The criterion asked for three day-apart pairs
+
+Which is one reading against one reading, three times — exactly the shape that
+produced the claim in the first place. Interleaving answers it properly in one
+sitting: **twenty runs of ONE fixed 180-day walk**, same seed, byte-identical
+work, each bracketed by all three candidates on an idle box.
+
+| candidate | mean | spread | **r vs the work it brackets** |
+| --- | ---: | ---: | ---: |
+| integer hash (shipped) | 95.0ms | 0.8% | **0.001** |
+| pointer chase (the nominee) | 193.0ms | **293%** | **0.098** |
+| alloc + GC | 10.9ms | 37% | **-0.012** |
+
+None correlate. The nominee is the **worst** of the three and its 293% spread
+is on an *idle* box — R156 rejected it for 6% under load and was right for a
+reason it never gave. Three memory-bandwidth burners then move the chase
+**+160%** and the workload **+1.3%**: a suite deaf to contention cannot be
+tracked by an instrument that is loud about it.
+
+### The box never moved. The walk cache did.
+
+The hash held **94.8-95.6ms** across the window while the same code cost
+between 15.8s and 16.9s. Five suite runs, one tree, one evening, probe flat at
+95-97ms:
+
+| walks rebuilt | predicted | observed |
+| ---: | ---: | ---: |
+| 0 | 728.3 | **729 · 725 · 731** (0.8% apart) |
+| 6 | 820.7 | **817** |
+| 13 | 928.5 | **929** |
+
+The middle row is a **prediction** — six cache files deleted by hand, the cost
+read off the line fitted to the other two — and it landed 0.5% out. Every
+"drift" in the record since R151 spans a cache boundary.
+
+### So the budget gets two terms, and the probe is deleted
+
+A warm run is 728 and gets **820**: 12.6% of headroom against a *measured*
+0.8% spread. A cold one gets the same 820 plus **16s per walk it actually
+rebuilt**, counted as the cache before minus the cache after, so no seed list
+can go stale the way R158 had to fix one level down. `tools/probe.js` is gone —
+it read 95ms through a 728-to-929 swing.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| suite budget | 1100 flat | **820 + 16/rebuilt walk** |
+| headroom over a warm run | 51% | **12.6%** |
+| what justifies it | a 14% cross-day claim from n=1 | **0.8% measured over n=3** |
+| probe candidates correlating | untested | **0 of 3** (best r = 0.098) |
+| breaks | 255 | **256** (256/257 retired, 260-262 added) |
+
+### Known issues
+
+- **The allowance forgives added seeds.** A milestone that walks 21 campaigns
+  instead of 13 pays the rebuild once and is then free, because a cached walk
+  genuinely costs nothing to read. Correct per-run, but it means the budget
+  does not notice the *count* growing. No gate on `cacheAtEnd.hits` yet.
+- **Cross-day is still unmeasured, honestly.** Everything here is one evening.
+  The claim is not "the box never drifts" — it is that nothing in this record
+  needs a drift to explain it, and that no probe tried so far can see one.
+- **The 722-vs-826 pair that filed this entry is only partly explained.** The
+  cache model fits today's readings to 0.5% and that historical pair to ~11%.
+  Said rather than smoothed over.
+
+### Next session's first task
+
+**R159 — the browser gates false-red under load** (the height gate reports
+"the screen does not open" when it was only starved of CPU).
+
 ## Session 161 — R161: a refusal is not a ceremony ✅
 
 **ROADMAP §9.29a.** Reported from play with two screenshots: tapping **Extract**

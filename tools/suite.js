@@ -19,10 +19,8 @@ import { readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-// R156 — the box's own speed, so the budget below is denominated in it.
-import { boxProbe, PROBE_REF_MS, PROBE_HASH } from './probe.js';
-// R156 — and whether this run had to rebuild the 180-day walks, which is
-// worth 15% and was never in the reading.
+// R160 — the one thing that moves this suite's cost: how many 180-day walks
+// the run had to rebuild. R156's box probe used to sit here too; it is gone.
 import { walkCacheState } from './fixtures.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -74,11 +72,9 @@ if (!picked.length) {
 // 266s of wall-clock, against a 180s budget. Oversubscription does not add
 // throughput, it just makes every job's timing a lie about its own cost.
 const LANES = Math.max(1, availableParallelism());
-// R156 — BEFORE ANYTHING ELSE RUNS. Taken on an otherwise idle box, which is
-// the only moment in this script where that is true, and taken in the PARENT
-// — `childCpuSeconds` reads cutime+cstime, so the probe's own cost is not
-// charged to the budget it calibrates.
-const probeBefore = boxProbe();
+// R160 — BEFORE ANYTHING ELSE RUNS, because the difference between this and
+// the same reading at the end is exactly the number of walks this run paid to
+// rebuild, and that is what the budget is denominated in.
 const cacheAtStart = walkCacheState();
 const started = Date.now();
 const queue = [...picked];
@@ -227,70 +223,63 @@ if (failed.length) {
 // which is the tell: it is the machine, and CPU-seconds see it because a
 // stalled cycle is still a charged cycle.
 //
-// R156 TAKES THAT FIX, AND THE CEILING COMES BACK DOWN TO R151's NUMBER.
+// R160 — THERE WAS NO BOX DRIFT. THERE WAS A WALK CACHE.
 //
-// `tools/probe.js` runs a fixed amount of integer work before and after the
-// jobs and reports what it cost. The budget is denominated in that reading,
-// so the number this gate checks is "CPU-seconds ON THE REFERENCE BOX" — a
-// property of the suite — rather than CPU-seconds on whatever this machine
-// felt like being today. A box 16% slower inflates the suite AND the probe,
-// and the ratio does not move.
+// R156 answered R151's "the box moves over hours" by running a fixed integer
+// loop before and after the jobs and dividing the suite's cost by it. R158
+// falsified that on the next day — suite +14% while the probe said the box
+// was 11% FASTER — withdrew the division, kept the probe as a diagnostic, and
+// filed R160 to find a probe that does correlate. The nominated candidate was
+// the pointer chase R156 had rejected for being noisy, on the theory that a
+// memory-bound loop is the one shaped like a suite of allocation and GC.
 //
-// AND THE SECOND VARIABLE, WHICH NOBODY WAS TRACKING AT ALL. Measured back
-// to back in one window on one tree, probe steady at 1.00x:
+// R160 measured it instead of theorising. Twenty runs of ONE fixed 180-day
+// walk — byte-identical work, same seed — each bracketed by all three
+// candidates, on an idle box:
 //
-//   warm walk cache      643   ·   again   631      (0.6% apart)
-//   cold walk cache      736                        (+15%)
+//   candidate        mean      spread     r vs the work it brackets
+//   integer hash     95.0ms      0.8%          0.001
+//   pointer chase   193.0ms    293%            0.098
+//   alloc + GC       10.9ms     37%           -0.012
 //
-// The cache key covers every game file, so ANY milestone that edits one runs
-// cold — which is most of them, and every one of those readings was being
-// compared against a warm one. R153's "the suite that read 783 earlier in the
-// day now reads 1022" spans exactly that boundary. So the run says which kind
-// it was, because 15% that nobody names gets read as the machine.
+// None of them correlate with anything. The nominated chase is the WORST of
+// the three and its 293% spread is on an idle box. And the hash — the quiet
+// one — held 94.8-95.6ms across the whole window while the same code cost
+// anywhere from 15.8s to 16.9s. The box was not moving. The work was.
 //
-// R158 — AND THE DIVISION IS WITHDRAWN, ONE DAY LATER, BECAUSE THE PROBE
-// MEASURES THE WRONG THING.
+// SO WHAT MOVES THE SUITE? THE THING R156 ITSELF ADDED AND THEN DID NOT GATE
+// ON. Five suite runs on one tree in one evening, probe flat at 95-97ms:
 //
-// R156 shipped the normalisation as a stated bet: the probe would track what
-// makes the suite expensive, and PROGRESS said so out loud. The day-apart
-// reading the criterion asked for arrived on the very next session, on the
-// identical seven seeds with a cold cache both times:
+//   walks rebuilt    predicted        observed
+//         0          728.3         729 · 725 · 731   (0.8% apart)
+//         6          820.7         817
+//        13          928.5         929
 //
-//                    raw CPU    probe        normalised
-//   yesterday          722      107ms 1.00x     722
-//   today              826       95ms 0.89x     931
+// The middle row is a PREDICTION, made before the run and landing 0.5% out —
+// six cache files deleted by hand, the cost read off the line fitted to the
+// other two. The count of walks a run had to rebuild explains this suite's
+// cost to within a percent, and the probe read the same number through all
+// 28% of it. Every "drift" in the record since R151 spans a cache boundary.
 //
-// The suite got 14% MORE expensive while the probe says the box got 11%
-// FASTER. Whatever the integer loop measures, it is not what this suite
-// spends its cycles on — and dividing by it did not remove the drift, it
-// nearly doubled it. One pair is enough to falsify "the ratio does not
-// move"; it is not enough to say what the relationship is.
-//
-// The probe was chosen for being the quietest of three candidates. The one
-// it beat was a pointer chase over 8MB — every step a cache miss — rejected
-// for a 6% spread that was read as its own weather. This suite is allocation
-// and GC, not register arithmetic, so the rejected probe was the one shaped
-// like the workload, and its "noise" was never tested against the suite's.
-// That is the experiment R160 is filed for.
-//
-// SO THE PROBE STAYS AND THE DIVISION GOES. It is printed on every run,
-// because a box that moved 11% overnight is worth knowing about and nothing
-// else in the tree could say so. It is a diagnostic, not a denominator.
-//
-// 1100, ON RAW CPU-SECONDS. The observed spread on IDENTICAL work across two
-// days is 722 -> 826, 14%; R158's six extra reach seeds cost about 105 more
-// (931 measured cold today); so 1100 covers the expensive day with 18% over
-// it, which is the size of the drift actually observed rather than a number
-// chosen to feel safe. R153's 1200 was closer to right than R156's 900, and
-// saying so is cheaper than discovering it again.
-//
-// TWO READINGS, NOT ONE, and the mean of them. The probe runs after the jobs
-// as well as before, because a box that changes speed halfway through a
-// four-minute suite would otherwise be calibrated against the half it was
-// not. When the two disagree by more than a little the run says so — that
-// disagreement is the drift itself, caught live.
-const CPU_BUDGET_S = 1100;
-const probeAfter = boxProbe();
+// THE BUDGET THEREFORE HAS TWO TERMS INSTEAD OF ONE SLACK NUMBER. A warm run
+// is 728 and gets 820 — 12.6%, against a MEASURED run-to-run spread of 0.8%.
+// A cold one gets the same 820 plus the walks it actually paid for. That is
+// a budget that can catch a 13% regression instead of a 51% one, and it is
+// tight only because the variance it used to hide behind turned out to have
+// a name. `tools/probe.js` is deleted: it is the instrument that read 95ms
+// through a 728-to-929 swing.
+const CPU_BUDGET_S = 820;
+// Measured twice, two ways: 15.4s from this suite's own cold-minus-warm
+// delta over 13 walks, and 16.4s for one walk timed alone twenty times. 16
+// is the middle of the two, not a cushion.
+const WALK_REBUILD_S = 16;
+const cacheAtEnd = walkCacheState();
+// What this run actually rebuilt. Self-calibrating on purpose: a run ends
+// with a full cache, so the walks that APPEARED during it are exactly the
+// ones it paid for. No hand-typed count of seeds to go stale — which is the
+// bug R158 had to fix in `walkCacheState` itself one level down.
+const rebuilt = Math.max(0, cacheAtEnd.hits - cacheAtStart.hits);
+const budget = CPU_BUDGET_S + WALK_REBUILD_S * rebuilt;
 const cpu = childCpuSeconds();
 const work = (results.reduce((a, r) => a + r.ms, 0) / 1000).toFixed(0);
 // A budget that cannot read its own number must not pass quietly: a rule
@@ -301,54 +290,34 @@ if (!only && (!Number.isFinite(cpu) || cpu <= 0)) {
   console.error('   /proc/self/stat gave nothing usable, so the budget has nothing to check.');
   process.exit(1);
 }
-// R156 — AND THE SAME RULE FOR THE CALIBRATION. A probe that reads NaN, zero
-// or a wild number would silently scale the budget to anything at all, which
-// is worse than no calibration: R154 shipped a budget that could go NaN and
-// `x > NaN` is false, so every comparison passes in silence. The band is
-// deliberately wide — a box half the speed of the reference is a box this
-// should still calibrate for — and anything outside it is a broken probe
-// rather than a slow machine.
-const probeMs = (probeBefore.ms + probeAfter.ms) / 2;
-const probeFactor = probeMs / PROBE_REF_MS;
-if (!only) {
-  const bad = [];
-  for (const [when, p] of [['before', probeBefore], ['after', probeAfter]]) {
-    if (!Number.isFinite(p.ms) || p.ms <= 0) bad.push(`the ${when} reading is ${p.ms}, not a duration`);
-    if (p.hash !== PROBE_HASH) {
-      bad.push(`the ${when} probe computed ${p.hash} where the pinned answer is ${PROBE_HASH}`
-        + ' — it is no longer doing the work the reference was measured on');
-    }
-  }
-  if (probeFactor < 0.25 || probeFactor > 4) {
-    bad.push(`the box reads ${probeFactor.toFixed(2)}x the reference (${probeMs.toFixed(1)}ms`
-      + ` against ${PROBE_REF_MS}ms), which is outside anything a machine does`);
-  }
-  if (bad.length) {
-    console.error('\nsuite \u2717  every job passed, but the budget has nothing to calibrate against');
-    for (const b of bad) console.error(`   \u00b7 ${b}`);
-    process.exit(1);
-  }
+// R160 — AND THE SAME RULE FOR THE TERM THE BUDGET IS MADE OF. R156's
+// version of this guarded the probe; there is no probe now, and the thing
+// that can silently go wrong instead is the cache itself. A run that ENDS
+// with nothing cached is a run whose cache is not being written — every
+// future run then pays 200 CPU-seconds for walks it already has, and the
+// allowance above quietly reads zero, so the budget would fail for a reason
+// it cannot name. Say it plainly rather than let it arrive as a mystery.
+if (!only && cacheAtEnd.hits <= 0) {
+  console.error('\nsuite \u2717  every job passed, but the walk cache is empty AFTER the run');
+  console.error(`   ${cacheAtEnd.dir} holds nothing for this tree, so every 180-day walk was rebuilt`);
+  console.error('   and the next run will rebuild them again. The cache is not being written.');
+  process.exit(1);
 }
 const laneCount = Math.min(LANES, picked.length);
 const lanesGot = (cpu / (wall / 1000)).toFixed(1);
-// R158 — reported, not divided by. See the note above.
-const onRef = cpu / probeFactor;
-const drift = Math.abs(probeAfter.ms - probeBefore.ms) / probeMs;
-const box = `probe ${probeMs.toFixed(0)}ms = ${probeFactor.toFixed(2)}x the reference`
-  + (drift > 0.05 ? `, and it MOVED under the suite (${probeBefore.ms.toFixed(0)} -> ${probeAfter.ms.toFixed(0)}ms)` : '');
-// R156 — the OTHER thing that moves this number, and the one nobody was
-// tracking. Cold is not a fault; it is what any milestone that edits a game
-// file gets, because the cache key covers them. It just has to be SAID, or
-// the 15% it costs gets read as the machine.
-const cacheLine = cacheAtStart.warm
-  ? `walk cache warm (${cacheAtStart.hits} walks ready)`
-  : 'walk cache COLD — every 180-day walk rebuilt, worth about 15%';
-if (!only && cpu > CPU_BUDGET_S) {
-  console.error(`\nsuite \u2717  every job passed, but the suite costs ${cpu.toFixed(0)} CPU-seconds, over the ${CPU_BUDGET_S}s budget`);
-  console.error(`   (${box} would put it at ${onRef.toFixed(0)} on the reference box, ${cacheLine} — both are reported, neither is gated on.`);
+// R160 — THE LINE THAT REPLACED THE PROBE. It says the two terms the budget
+// is actually made of, so a reading can be compared with another reading
+// without anybody having to guess which kind of run it was. That guessing is
+// the whole of what R151, R153, R156 and R158 were doing.
+const cacheLine = rebuilt > 0
+  ? `${rebuilt} walk${rebuilt === 1 ? '' : 's'} rebuilt (+${WALK_REBUILD_S * rebuilt}s allowed), ${cacheAtEnd.hits} now cached`
+  : `walk cache warm — ${cacheAtStart.hits} walks ready, nothing rebuilt`;
+if (!only && cpu > budget) {
+  console.error(`\nsuite \u2717  every job passed, but the suite costs ${cpu.toFixed(0)} CPU-seconds, over the ${budget}s budget`);
+  console.error(`   (${CPU_BUDGET_S} base + ${WALK_REBUILD_S * rebuilt} for rebuilt walks \u2014 ${cacheLine}.`);
   console.error(`    This run: ${(wall / 1000).toFixed(1)}s wall on ${laneCount} lanes, ${lanesGot} effective, sum-of-wall ${work}s.)`);
   process.exit(1);
 }
-console.log(`\nsuite \u2713  ${results.length} jobs, ${cpu.toFixed(0)} CPU-seconds of ${CPU_BUDGET_S} budgeted`);
+console.log(`\nsuite \u2713  ${results.length} jobs, ${cpu.toFixed(0)} CPU-seconds of ${budget} budgeted`);
 console.log(`   ${(wall / 1000).toFixed(1)}s wall on ${laneCount} lanes (${lanesGot} effective), sum-of-wall ${work}s`);
-console.log(`   ${box} (${onRef.toFixed(0)} on the reference box, reported only) \u00b7 ${cacheLine}`);
+console.log(`   ${CPU_BUDGET_S} base + ${WALK_REBUILD_S * rebuilt} rebuild allowance \u00b7 ${cacheLine}`);

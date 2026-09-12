@@ -4262,18 +4262,70 @@ triangle working, and each region genuinely asks a different question)*.
   are the same bug as an engine that crashes. R91 wrote the sentence, wrote the
   reason, and shipped it to nobody.*
 
-- **R160 — The probe measures the wrong work.** R156 chose a fixed integer
-  loop for being the quietest of three candidates (0.6% spread, against 6% for
-  a pointer chase over 8MB and GC noise for an allocation loop) and divided the
-  suite budget by it. One day later, on identical work: the suite cost **+14%**
-  and the probe read **-11%**. Whatever a register-only loop measures, it is
-  not what a suite of allocation and GC spends its cycles on — and the probe it
-  beat was the one shaped like the workload, rejected for a variance nobody
-  tested against the suite's own. R158 withdrew the division and kept the probe
-  as a diagnostic. *Done when: a probe's reading is shown to move WITH the
-  suite's cost across at least three day-apart pairs — the pointer chase is the
-  first candidate to re-test, and "quieter" is not the criterion, "correlated"
-  is.*
+- **R160 — The probe measures the wrong work.** ✅ *Shipped, in the negative:
+  no probe measures it, because the thing it was built to explain was never
+  the box.* R156 chose a fixed integer loop for being the quietest of three
+  candidates and divided the suite budget by it; R158 falsified that on the
+  next day (suite **+14%** while the probe read **-11%**), withdrew the
+  division, kept the probe as a diagnostic and filed this. The nominated
+  candidate was the pointer chase R156 had rejected — on the theory that a
+  memory-bound loop is the one shaped like a suite of allocation and GC.
+
+  #### The criterion said day-apart pairs. Three points cannot tell you that.
+
+  R156's evidence was one reading against one reading, and so was R158's
+  refutation. An interleaved design gets the same question answered properly
+  in one sitting: **twenty runs of ONE fixed 180-day walk** — same seed,
+  byte-identical work — each bracketed by all three candidates, idle box.
+
+  | candidate | mean | spread | **r vs the work it brackets** |
+  | --- | ---: | ---: | ---: |
+  | integer hash (shipped) | 95.0ms | 0.8% | **0.001** |
+  | pointer chase (this entry's nominee) | 193.0ms | **293%** | **0.098** |
+  | alloc + GC | 10.9ms | 37% | **-0.012** |
+
+  None of them correlate with anything. The nominee is the **worst** of the
+  three and its 293% spread is on an *idle* box — R156 rejected it for 6%
+  under load and was right for a reason it never stated. An intervention arm
+  says the same thing from the other side: three memory-bandwidth burners move
+  the chase **+160%** and the workload **+1.3%**. A suite that is deaf to
+  contention cannot be tracked by an instrument that is loud about it.
+
+  #### The box never moved. The walk cache did.
+
+  The hash held **94.8–95.6ms** across the whole window while the same code
+  cost anywhere from 15.8s to 16.9s. So the variance was never the machine —
+  and the term that does explain it is the one R156 itself added and then did
+  not gate on. Five suite runs, one tree, one evening, probe flat at 95–97ms:
+
+  | walks rebuilt | predicted | observed |
+  | ---: | ---: | ---: |
+  | 0 | 728.3 | **729 · 725 · 731** (0.8% apart) |
+  | 6 | 820.7 | **817** |
+  | 13 | 928.5 | **929** |
+
+  The middle row is a **prediction**, made before the run and landing 0.5%
+  out: six cache files deleted by hand, the cost read off the line fitted to
+  the other two. Every "drift" in the record since R151 spans a cache
+  boundary, including the 722-vs-826 pair this entry was filed on.
+
+  #### So the budget gets two terms and `tools/probe.js` is deleted
+
+  A warm run is 728 and gets **820** — 12.6% of headroom against a *measured*
+  0.8% spread; a cold one gets the same 820 plus **16s** for each walk it
+  actually rebuilt, counted as the difference between the cache before and
+  after so no seed list can go stale. The old ceiling was **1100**, which is
+  51% of slack over a warm run. Break **262** is what that slack was costing:
+  the balance sweep quadruples its sampling, the suite reads **1070**, and
+  1100 would have waved it through. Breaks **260** (the cache is never
+  written) and **261** (the shard filter fails open, 1621 against 820) hold
+  the other two rules. R156's two breaks are retired with the file they aimed
+  at.
+
+  **The lesson:** *four milestones argued about a drift that nobody had
+  sampled more than once. The instrument was innocent; so was the box. The
+  variable was sitting in the same script the whole time, printed on every
+  run, and never gated on.*
 
 - **R159 — Two browser gates under load report a screen nobody can open.**
   R154's verification ran `npm test` alongside `battery --baseline`, which is
