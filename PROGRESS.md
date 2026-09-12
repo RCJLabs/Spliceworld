@@ -1,5 +1,87 @@
 # PROGRESS
 
+## Session 160 — R158: thirteen campaigns, and R156 falsified ✅
+
+**ROADMAP §9.29a.** Three findings, and the third is about yesterday's work.
+
+### The blocker was priced wrong by three times
+
+R158 was filed as blocked on "roughly 360 CPU-seconds" for six more 180-day
+walks. Measured: **one fresh walk is 20.1 CPU-seconds, a cached one is 0.00**,
+and the gate reads the cached path. The real marginal cost in the suite is
+**105**. Two milestones waited on a number nobody had measured.
+
+### Seven seeds were measuring noise
+
+Censused at 21 seeds, both trees:
+
+| n | reach mean | margin over the 94% floor | the pull | SE | pull/SE |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 7 | 94.15% | **0.4 parts** | 10.1 | 9.1 | **1.11** |
+| 13 | 94.74% | 1.8 parts | 21.5 | 7.8 | 2.78 |
+| 21 | 94.89% | 2.2 parts | 20.8 | 5.9 | 3.52 |
+
+The gate was passing by four parts, and **the pull is worth twice what seven
+seeds could see, at one sigma.** R157 and R154 both moved `WORN_FLOOR` to chase
+it — they were calibrating against standard error.
+
+### The break never needed a statistic
+
+`bestSplice` is what break 245 patches, and smoke has asserted its tie-break
+**directly** since R140: two hand-built parts, same grade, one already used,
+the Theater must take the other. Break 245 is aimed there now and fails with
+*"with both at Standard and bear_head already built with, the Theater reaches
+for tiger_head"* — the criterion's "difference the gate can normalise", with no
+sample, no roster and no campaign in it. `WORN_FLOOR` returns to R140's **50%**.
+
+### R156's probe was falsified on its first day
+
+Yesterday's milestone divided the budget by a fixed integer probe and PROGRESS
+called it a bet. The day-apart reading arrived immediately — identical seven
+seeds, cold cache both times:
+
+| | raw CPU | probe | normalised |
+| --- | ---: | ---: | ---: |
+| yesterday | 722 | 107ms (1.00x) | 722 |
+| today | **826** | **95ms (0.89x)** | **931** |
+
+The suite got **14% more expensive while the probe said the box got 11%
+faster**. Dividing nearly doubled the drift instead of removing it, and 900 was
+blocking the suite on unchanged code. The division is withdrawn; the probe
+stays printed, because nothing else could have said the box moved overnight.
+Budget **1100 on raw CPU-seconds** — R153's 1200 was closer to right than my
+900. Filed as **R160**: the rejected pointer-chase probe is the one shaped like
+this workload, and "quieter" was never the right criterion.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| reach sample | 7 seeds | **13** |
+| reach mean / margin | 94.15% / 0.4 parts | **94.74% / 1.8 parts** |
+| `WORN_FLOOR` | 67.6%, chasing a break | **50%, R140's design floor** |
+| break 245 | REACH, 1.1 sigma | **BULK, deterministic** |
+| suite budget | 900 normalised | **1100 raw** |
+| suite, 13 seeds cold | — | **908 of 1100** |
+
+### Known issues
+
+- **21 seeds would zero the delta and does not fit** (+14 walks). At 13 the
+  tree-vs-broken reach delta is 0.50 points against 0.70 at seven; at 21 it is
+  0.12. Halved, not zeroed, and said rather than claimed.
+- **The suite's cross-day spread on identical work is 14%** and nothing yet
+  explains it. That is R160.
+- **`WORN_FLOOR` at 50% has 21 points of daylight** — deliberate for a design
+  floor, but R140's prose says a campaign "builds with half" and today's builds
+  with 71%. Whether the shelf still has anything left on it is a design
+  question, filed not fixed.
+
+### Next session's first task
+
+**R160 — re-test the probe against the suite**, three day-apart pairs, starting
+with the pointer chase R156 rejected.
+
+
 ## Session 159 — R156: the suite budget calibrates against a probe ✅
 
 **ROADMAP §9.29a.** R151 made the budget CPU-seconds and proved it flat against

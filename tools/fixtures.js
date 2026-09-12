@@ -241,11 +241,19 @@ function withGuidesRead(save) {
 // comparing two different amounts of work — and the 30% "machine drift" R153
 // recorded was measured across exactly that boundary, because the cache key
 // includes every game file, so any milestone that edits one starts cold.
-export function walkCacheState({ days = 180, seeds = [2026] } = {}) {
+// R158 — counts what is actually there for THIS stamp rather than checking a
+// hand-typed seed list. R156's version asked about seven seeds; the reach gate
+// now walks thirteen, so it reported "0/7" for a run that was rebuilding
+// thirteen. A cache reporter with a stale list of what to look for is the same
+// bug one level down from the one it was written to catch.
+export function walkCacheState({ days = 180 } = {}) {
   const dir = join(tmpdir(), 'sw-walk-cache');
+  const stamp = sourceStamp();
   let hits = 0;
-  for (const seed of seeds) if (existsSync(cacheFile(seed, days))) hits++;
-  return { dir, hits, of: seeds.length, warm: hits === seeds.length };
+  try {
+    for (const f of readdirSync(dir)) if (f.endsWith(`-${stamp}.json`) && f.includes(`-${days}-`)) hits++;
+  } catch { /* no cache dir at all is simply cold */ }
+  return { dir, hits, warm: hits > 0 };
 }
 
 export function walkedSave({ days = 180, seed = 2026, fresh = false } = {}) {

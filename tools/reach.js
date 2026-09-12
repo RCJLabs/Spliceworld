@@ -148,7 +148,23 @@ for (const part of Object.values(content.parts)) {
 // The coverage gate's seeds, deliberately: the two numbers are about the
 // same walks, and a reach figure measured on a different sample than the
 // combo figure would be two answers nobody could put side by side.
-const REACH_SEEDS = [2026, 7, 101, 4242, 55, 900, 31];
+// R158 — THIRTEEN, AND THE SIX EXTRA WALKS COST A THIRD OF WHAT THE ENTRY
+// PRICED THEM AT. R158 was filed as blocked on the suite budget: "roughly 360
+// CPU-seconds" for six more 180-day walks. Measured: one fresh walk is 20.1
+// CPU-seconds and a cached one is 0.00, so six is about 121 cold and nothing
+// warm. The number that blocked this for two milestones was wrong by 3x.
+//
+// WHAT THE SAMPLE ACTUALLY BUYS. Censused at 21 seeds on this tree, the reach
+// MEAN reads 94.15% at seven and 94.89% at twenty-one — a 0.74-point climb,
+// which is small until you notice the floor is 94%. At seven seeds this gate
+// passed by 0.15 points, which is FOUR PARTS; at thirteen it passes by 0.74,
+// which is eighteen. The sample was not wrong about the game, it was too
+// small to sit that close to its own floor.
+//
+// Thirteen rather than twenty-one because twenty-one does not fit: +14 walks
+// is 282 CPU-seconds against the 178 R156 left under the 900 ceiling, and a
+// gate that has to raise the budget to measure better is not an improvement.
+const REACH_SEEDS = [2026, 7, 101, 4242, 55, 900, 31, 3, 12, 77, 123, 404, 808];
 // R157 — THE MEDIAN OF SEVEN CAMPAIGNS IS NOT A STATISTIC, and this gate
 // spent two milestones believing it was. Censused at 21 seeds on the tree
 // before R157 and the tree after, the median of the first n reads:
@@ -188,7 +204,7 @@ const REACH_FLOOR = 0.94;
 // part ends up on a creature has no shelf left to raid. Measured at 54.9%
 // after the Theater started marking what you have never bolted on and the
 // walker started reading that mark.
-const WORN_FLOOR = 0.676;   // R154 — see the calibration note below; provisional, blocked on R158
+const WORN_FLOOR = 0.50;   // R158 — R140's design floor, no longer chasing a break
 const TOTAL_PARTS = Object.keys(content.parts).length;
 {
   const per = [];
@@ -224,56 +240,52 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
   // R140 — worn, on the same walks and the same statistic, so the two numbers
   // are about one campaign and can be read side by side. R157 moved both to
   // the mean, and for worn the reason is break 245 rather than the sample.
+  // R158 — THIS FLOOR STOPS CHASING BREAK 245, AND GOES BACK TO BEING R140's.
   //
-  // THE FLOOR MOVES BECAUSE THE PULL IS WORTH HALF WHAT IT WAS. Break 245
-  // deletes R140's never-built-with tie-break, and the four readings that
-  // matter are these, on the gate's seven walks:
+  // It was re-typed twice in three milestones: R157 moved it 50% -> 57% and
+  // R154 57% -> 67.6%, both times so that break 245 — which deletes the
+  // never-built-with tie-break — would still land under it. That is R92's
+  // "number being dragged along behind the thing it was supposed to hold",
+  // and the cause was that ONE NUMBER WAS DOING TWO JOBS: a design floor and
+  // a break-catcher, which want opposite things. A design floor must NOT move
+  // when the roster does. A break-catcher has to.
   //
-  //                          median            mean
-  //   before R157            134 (54.9%)    149.9 (61.4%)
-  //   before R157, broken    106 (43.4%)    115.0 (47.1%)
-  //   after  R157            148 (60.7%)    147.7 (60.5%)
-  //   after  R157, broken    144 (59.0%)    132.4 (54.3%)
+  // The break-catcher moved out, and it did not need a statistic at all.
+  // `bestSplice` is the function break 245 patches, and `tools/smoke.js`
+  // already asserts its tie-break DIRECTLY, on two parts and no walk: with
+  // both at Standard and one already built with, the Theater reaches for the
+  // other — and an Apex it has used still beats a Standard it has not,
+  // because the pull is half a grade step and a grade step is one. Break 245
+  // is aimed there now. It reads
   //
-  // The pull was worth 34.9 parts and is now worth 15.3, because the vat and
-  // the Wing put parts on creatures across more seeds than they used to and
-  // the Theater's preference is no longer the only thing doing that work.
-  // R140's 50% had 35 parts of daylight under it; nothing near 50% has any
-  // now. The MEAN separates the break four times better than the median does
-  // (15.3 parts against 4), which is why worn averages too, and 57% is the
-  // line between: the tree clears it by 8.6 parts, the break misses it by
-  // 6.7. Thinner than R140's margin on purpose, and said out loud so the next
-  // milestone to move worn knows how much room it is spending.
+  //     with both at Standard and bear_head already built with,
+  //     the Theater reaches for tiger_head
   //
-  // R154 IS THAT MILESTONE, AND IT SPENT ALL OF IT. Break 245 went MISSED on
-  // the full battery. Measured on both trees again, seven walks each:
+  // which is the same defect stated as a DIFFERENCE between two choices
+  // rather than as a level a whole campaign has to fall under. No sample, no
+  // calibration, no roster: the two parts are built by hand.
   //
-  //                          mean worn        sd     the pull
-  //   after  R154            170.0 (69.7%)   24.1
-  //   after  R154, broken    159.9 (65.5%)   24.2    10.1 parts
+  // WHAT THE LEVEL WAS WORTH AS A BREAK-CATCHER, measured at 21 seeds on both
+  // trees, is the other half of the argument for moving it:
   //
-  // Nothing is wrong with the game: a stable of sixteen builds more creatures
-  // than a stable of twelve, so more of the list ends up on one. Both trees
-  // rose — 147.7 to 170.0 and 132.4 to 159.9 — and sailed over a floor that
-  // had not moved. 67.6% is the line between them now, balanced rather than
-  // generous: 5.1 parts of clearance each way.
+  //     seeds    worn tree   worn broken    the pull   SE     pull/SE
+  //        7       170.0       159.9          10.1     9.1      1.11
+  //       13       172.2       150.7          21.5     7.8      2.78
+  //       21       174.3       153.5          20.8     5.9      3.52
   //
-  // THAT IS THE SECOND CONSECUTIVE MILESTONE TO RE-TYPE THIS NUMBER, and the
-  // third is not acceptable — R92: "a ratchet that moves every milestone is
-  // not a ratchet, it is a number being dragged along behind the thing it was
-  // supposed to hold." The reason it keeps moving is that ONE NUMBER IS DOING
-  // TWO JOBS. R140 wrote 50% as a DESIGN floor — you collect nearly
-  // everything and build with half of it, and the half you leave is what
-  // makes the next campaign different — and it has since been dragged twice
-  // to wherever break 245 happens to land. A design floor does not move when
-  // the roster does; a break-catcher has to.
+  // Seven seeds measured the pull at HALF its size and one standard error
+  // wide. R157 and R154 were not calibrating a floor against a defect, they
+  // were calibrating it against noise, twice.
   //
-  // And the break-catcher half is now measuring at the edge of its own noise:
-  // the pull is worth 10.1 parts against a standard error of 9.1 on seven
-  // seeds. R158 already owns the sample size and this is the same problem
-  // with a sharper edge — it wants the two rules separated and the
-  // break-catcher stated as a DIFFERENCE the gate can normalise, not a level
-  // that every roster change moves underneath it.
+  // SO 50%, WHICH IS R140's NUMBER AND R140's REASON: you collect nearly
+  // everything and you build with half of it, and the half you leave is what
+  // makes the next campaign different. A campaign that wears less than half
+  // the list has stopped exploring, and that is the thing worth a rule.
+  // Today's campaigns wear 71% (174.3 of 244 at 21 seeds), so the daylight is
+  // twenty-one points and it is deliberate — a floor is a minimum, not a
+  // ratchet. That the game now leaves 29% where R140's prose says "half" is a
+  // DESIGN question about whether the shelf still has anything on it, not a
+  // calibration; filed rather than fixed here.
   {
     const meanWorn = mean(per.map((r) => r.worn.size));
     const wornRatio = meanWorn / TOTAL_PARTS;
