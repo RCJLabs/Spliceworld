@@ -2020,8 +2020,26 @@ function walkAct(state, content, now, open, opts = {}) {
     // it works with that one, and working with a creature is what stops it
     // drifting; the walker does the same rather than letting the alert sit
     // there for 180 days.
+    //
+    // R155 — AND THIS ONE DOES NOT ASK THE RESERVE. Every other purchase in
+    // this function goes through `canSpend`, which refuses to spend below
+    // WALK_RESERVE_DAYS of upkeep, and that is right for a pen, a tier, a
+    // splice: a player who cannot make payroll next week should not buy a
+    // gantry this week. It is wrong for FIVE DOLLARS that stops a creature
+    // going feral, and a bigger stable is poorer per head, so the first thing
+    // a tight week stopped was the one purchase that cannot wait.
+    //
+    // Measured before the change, 21 seeds, against a 24-hour window: the
+    // reserve held a warned creature for 18 consecutive hours on seed 7 and
+    // 20 on seed 314 — 75% and 83% of the time that creature had. Nothing
+    // was lost, on any seed, which is exactly why this needed a rule rather
+    // than a bug report: R85's promise was being kept by four hours of luck.
+    //
+    // The floor is the price itself, not a buffer. Going broke is recoverable
+    // and losing a creature is the one thing R85 promises cannot happen to a
+    // player who shows up.
     for (const c of state.chimeras) {
-      if (!canSpend(TRAINING.cost)) break;
+      if (state.funds < TRAINING.cost) break;
       if (!feralStatus(c, content, now).atRisk) continue;
       if (trainChimera(state, c.id, now, content).ok) did('train', { who: c.id, why: 'drifting' });
     }
@@ -2332,6 +2350,28 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   // constantly, so it is exactly the player this must not touch.
   const feralSeen = new Set();
   const feralBays = new Set();
+  // R155 — AND THE MARGIN, WHICH IS THE NUMBER THE PROMISE ACTUALLY RESTS ON.
+  //
+  // `lost` is the promise and `agitated` is the warning, and neither could
+  // see the defect this milestone shipped: the reserve held a warned creature
+  // for 20 of its 24 hours on one seed of 21 and lost nothing on any of them.
+  // A rule written on `lost` passes whether the fix is there or not — checked,
+  // and that is what blocked R155 for two milestones.
+  //
+  // So this counts the longest run of consecutive hours the walker left a
+  // creature AT RISK after taking its turn. Cause-agnostic on purpose: it
+  // reads the state after `walkAct` rather than any one refusal inside it, so
+  // a future budget, cooldown or agenda change that starves drift-tending
+  // fails here too, not just the reserve check R155 removed.
+  //
+  // Zero is the honest floor and what the fix produces — the walker attends
+  // every at-risk creature on the tick it sees one. It is not the same
+  // question as `agitated`, which cannot be zero and should not be: the
+  // warning fires in `tick()` BEFORE the walker acts, so a creature the
+  // walker settles immediately is still a creature that was warned. R85's
+  // shape is that the Pens paints a warning and the player answers it.
+  const heldRun = new Map();
+  let heldHours = 0;
   // R87 — every specimen the Wing has EVER graduated, by id, not the ones
   // still standing at the end. A rehabilitated creature carries its old
   // lab's grades, so the walker's stable cap dismantles it as soon as the
@@ -2416,6 +2456,14 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       stall = 0;
     }
     walkAct(state, content, now, shape.open, { t0, stepHours, sparsPerDay, stableCap, priceBeats });
+    // R155 — whoever is STILL at risk after the walker has had its turn.
+    for (const c of state.chimeras) {
+      if (feralStatus(c, content, now).atRisk) {
+        const run = (heldRun.get(c.id) ?? 0) + stepHours;
+        heldRun.set(c.id, run);
+        if (run > heldHours) heldHours = run;
+      } else heldRun.delete(c.id);
+    }
     // R91 — HOW LONG DOES A CHIMERA LIVE? The criterion asks for a median
     // and nothing in the tree could produce one: `chimeras` reports how many
     // are standing at the end, which on a walk with a stable cap is just the
@@ -2545,10 +2593,17 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     rehabbed: state.chimeras.filter((c) => c.rehabilitated).length,
     rehabbedEver: rehabEver.size,
     // R85: how many of the walker's creatures ever paced their pen, and how
-    // many it actually lost to it. Both should be zero for a walker that
+    // many it actually lost to it. `lost` must be zero for a walker that
     // plays every day; the away-runs are where the mechanic is supposed to
     // bite.
-    feral: { agitated: feralSeen.size, lost: feralBays.size },
+    // R155 CORRECTS THE OTHER HALF OF THAT SENTENCE. It used to read "BOTH
+    // should be zero", and `agitated` cannot be: `tick()` stamps the warning
+    // before the walker takes its turn, so a creature the walker settles on
+    // the same tick is still a creature that was warned. 14 across 21 seeds,
+    // and the number did not move when R155 fixed the thing it was supposed
+    // to be reporting — which is what sent this milestone looking for
+    // `heldHours` instead.
+    feral: { agitated: feralSeen.size, lost: feralBays.size, heldHours },
     // R86: how often the walker paid to hurry a clock, what it spent, and how
     // often it bought out of the Infirmary — the yardstick's view of the one
     // purchase that buys time rather than things.

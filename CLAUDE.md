@@ -42,10 +42,15 @@ the session.
 - `node tools/battery.js --anchors` — every break still aims at real code. **0.3s.**
 - `node tools/battery.js --baseline` — every gate green on a clean tree. ~7 min.
 - `node tools/battery.js --only <the breaks this milestone added>` — the new rules go red on demand.
-- `npm test` — **~8 min wall, 940 CPU-seconds on four lanes.** Run it BEFORE
-  or AFTER the battery, not alongside it: R154 followed the old "~3 min, runs
-  in parallel" advice and starved the height gate's fold walk into a false red
-  (`pens declares 20 folds to walk and the gate got into 1`). Filed as R159.
+- `npm test` — **~4 min wall, ~900 CPU-seconds on four lanes, run alone.**
+  Run it BEFORE or AFTER the battery, never alongside it. R154 followed the old
+  "~3 min, runs in parallel" advice and starved the height gate's fold walk into
+  a false red (`pens declares 20 folds to walk and the gate got into 1`), and
+  R155 measured what the parallelism actually costs: alone the suite reads 237s
+  wall on 3.8 effective lanes, alongside the battery 464s on 2.0. So sharing the
+  box roughly DOUBLES the suite's wall time and false-reds the browser gates —
+  there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
+  contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
 **The full battery (~47 min), on these triggers only:**
 - A milestone that **changes an existing gate's logic** rather than adding one.
