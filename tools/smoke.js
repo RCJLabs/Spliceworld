@@ -11449,6 +11449,51 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     }
   }
 
+  // R159 — A SLOW BOX AND A BROKEN SCREEN ARE DIFFERENT SENTENCES.
+  //
+  // The height gate walks folds in a real browser, so the state this rule is
+  // about — a screen that came up short WHILE STILL REPAINTING — is weather,
+  // not a fixture: it took 40 CPU burners on four cores to produce once, and a
+  // break battery on an idle box cannot produce it at all. That is why the
+  // decision lives in `tools/settling.js` as a pure function of what the walk
+  // saw. Here it is asked both questions, which is the only way either answer
+  // is worth anything: R131's rule has to keep firing on a genuinely dead
+  // screen, and has to stop firing on a live one that was merely starved.
+  {
+    const { foldVerdict, STALLED, UNOPENABLE } = await import('./settling.js');
+
+    // 1. Still repainting when it ran out: a starved run. NOT "nobody can open".
+    const slow = foldVerdict({ id: 'pens', opened: 1, want: 20, moved: true });
+    assert.equal(slow?.kind, STALLED, 'a short walk on a screen still repainting is a stall');
+    assert.match(slow.msg, /DID NOT SETTLE/, 'and it says so in those words');
+    assert.ok(!/nobody can open/.test(slow.msg),
+      'and it does NOT say nobody can open it — that sentence is the false red R159 exists to end');
+
+    // 2. Perfectly still and still nothing to open: R131's defect, undiluted.
+    const dead = foldVerdict({ id: 'pens', opened: 1, want: 20, moved: false });
+    assert.equal(dead?.kind, UNOPENABLE, 'a short walk on a screen that has stopped moving is the real defect');
+    assert.match(dead.msg, /nobody can open/, "and R131's sentence still gets said");
+    assert.ok(!/DID NOT SETTLE/.test(dead.msg), 'and it is not excused as a slow box');
+
+    // 3. A walk that got what the screen declares is not a problem either way
+    //    — including when the box was slow enough to make it wait for them.
+    assert.equal(foldVerdict({ id: 'pens', opened: 20, want: 20, moved: true }), null,
+      'a walk that reached the declared count is fine even if it had to wait');
+    assert.equal(foldVerdict({ id: 'pens', opened: 40, want: 20, moved: false }), null,
+      'and so is one that went past it');
+
+    // 4. A screen that declares nothing cannot be judged on it. Guarded
+    //    because `want` of 0 through a `<` comparison is the vacuous-pass
+    //    shape this repo keeps finding: every screen would look perfect.
+    assert.equal(foldVerdict({ id: 'battle', opened: 0, want: 0, moved: false }), null,
+      'a screen with no declared opens count is not judged on one');
+
+    // 5. AND THE TWO VERDICTS ARE NOT THE SAME STRING. A refactor that
+    //    collapsed them would pass every rule above that only greps one.
+    assert.notEqual(slow.msg, dead.msg, 'the two verdicts read differently');
+    assert.notEqual(STALLED, UNOPENABLE, 'and they are distinct kinds, not one kind twice');
+  }
+
   // 1. THE CRITERION. Every animal is a fold, every fold is SHUT, and a
   //    shut fold builds NO PORTRAIT — the same measurement that mattered
   //    in the Pens, because a portrait is ~12KB of inline SVG and twenty

@@ -26,6 +26,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { sleep, serve, findChrome, connect } from './cdp.js';
 import { walkedSave } from './fixtures.js';
+// R159 — the verdict decision, in its own file so both of its branches can
+// be unit-tested without a browser. See the note at the top of settling.js.
+import { foldVerdict } from './settling.js';
 // R150 — the agenda's own row list, so the rule can reach the rows R143's
 // three-row cap keeps off the screen. Node-side only; the page is untouched.
 import { agenda as agendaRows } from '../ranch/agenda.js';
@@ -450,6 +453,10 @@ const proc = spawn(chrome, ['--headless=new', `--remote-debugging-port=${cdpPort
 
 const problems = [];
 const rows = [];
+// R159 — which screens never went quiet. Declared out here with `rows`,
+// because the rules that read it run after the browser is gone.
+const stalls = new Map();
+const stalled = (id, why) => stalls.set(id, [...(stalls.get(id) ?? []), why]);
 try {
   const { send, evaluate } = await connect(cdpPort);
   await send('Runtime.enable');
@@ -479,9 +486,99 @@ try {
   await sleep(1000);
   await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(save))})`);
   await send('Page.navigate', { url });
-  await sleep(5000);
+  // R159 — a floor, not the wait. The real one is the settle below, once the
+  // helpers it needs exist: this used to be a flat 5000ms, and a cold
+  // Chromium on a fresh container does not have the game on screen by then.
+  await sleep(800);
 
   const heightOf = async (sel) => Number(await evaluate(`Math.round(document.querySelector('${sel}')?.scrollHeight ?? 0)`));
+
+  // R159 — WAIT FOR THE PAGE, NOT FOR THE CLOCK.
+  //
+  // Every wait in this gate used to be a fixed sleep — 5000ms for the load,
+  // 2000 to show a screen, 1700 for a Dex tab, 320 for an inner tab, 240
+  // after each fold. On a box that renders slower than the number somebody
+  // typed, the walk measures a page that is not finished: `openOne` finds no
+  // closed fold because the screen has not painted one yet, returns 0, and
+  // the walk stops. `opened` then comes back at 4 or 1, and R131's rule —
+  // which is right, and load-bearing — reports "a screen nobody can open".
+  //
+  // REPRODUCED WITH NO LOAD AT ALL, which is what R159's entry got wrong.
+  // The entry blamed `npm test` running alongside. Twice in a row on an idle
+  // box, same tree, same commit, a container three minutes old:
+  //
+  //   run 1   RED    ranch 4, pens 1, vault 1, combos 1 folds; theater 2157
+  //                  against its 2080 budget                    40.5s
+  //   run 2   GREEN  130 folds walked, every screen inside budget  1m51.7s
+  //
+  // The first run was FASTER because it gave up on every screen early. A
+  // cold Chromium — no code cache, no font cache, a profile being created —
+  // is enough on its own, and every fresh container starts cold. Note the
+  // theater line: an unsettled page corrupts the HEIGHTS too, not just the
+  // counts, so the budget rules have to answer this as well.
+  //
+  // So: poll a cheap signature of the screen until it stops changing, with a
+  // deadline instead of a duration. The common case is FASTER than the sleep
+  // it replaces — 240ms of guessing becomes ~150ms of knowing — and a slow
+  // box gets the time it actually needs rather than the time a fast box
+  // needed once.
+  // AND READINESS IS PART OF IT, which the first version of this got wrong
+  // in the most instructive way. A screen is `hidden` and EMPTY until its
+  // module lazy-loads, and an empty element has a perfectly stable
+  // signature — so settling on stability alone returned true instantly, on
+  // nothing, and the walk measured a blank screen even faster than the sleep
+  // had. Under eight burners it reported `ranch ... got into 0`, which is
+  // the very sentence this milestone exists to stop printing.
+  //
+  // So a reading taken before the screen is up is not a quiet reading, it is
+  // no reading: it returns '' and resets the count.
+  // AND READINESS IS PART OF IT, which the first version of this got wrong
+  // in the most instructive way. A screen is `hidden` and EMPTY until its
+  // module lazy-loads, and an empty element has a perfectly STABLE
+  // signature — so settling on stability alone returned true instantly, on
+  // nothing, and the walk measured a blank screen faster than the sleep had.
+  // Under eight burners it reported `ranch ... got into 0`, which is the
+  // exact sentence this milestone exists to stop printing. A reading taken
+  // before the screen is up is not a quiet reading, it is NO reading: it
+  // comes back empty and resets the count.
+  const READY = '!el.hidden && el.children.length > 0 && el.scrollHeight > 0';
+  const signature = async (sel, ready) => await evaluate('(() => {'
+    + `  const el = document.querySelector('${sel}');`
+    + '  if (!el) return "";'
+    + (ready ? `  if (!(${ready})) return "";` : '')
+    + '  return [Math.round(el.scrollHeight), el.querySelectorAll("*").length,'
+    + '    el.querySelectorAll("[data-fold]").length,'
+    + '    el.querySelectorAll("button[data-fold][aria-expanded=\'false\']").length,'
+    + '    el.querySelectorAll("details:not([open])").length,'
+    + '    document.readyState].join("/");'
+    + '})()');
+
+  // THREE QUIET POLLS, not one. A screen that lazy-imports its module paints
+  // in two phases, and a single equal pair can land in the gap between them
+  // — which would be this gate's own bug one level down: a wait that returns
+  // early measures the same unfinished page the sleep did.
+  const settle = async (sel, { deadline = 4000, gap = 50, quiet = 3, id = null, ready = READY } = {}) => {
+    const t0 = Date.now();
+    let last = null;
+    let runs = 0;
+    while (Date.now() - t0 < deadline) {
+      const sig = await signature(sel, ready);
+      if (sig && sig === last) {
+        if (++runs >= quiet) return { settled: true, waited: Date.now() - t0 };
+      } else { runs = 0; last = sig; }
+      await sleep(gap);
+    }
+    if (id) stalled(id, `${sel} was still changing, or still not painted, after ${deadline}ms`);
+    return { settled: false, waited: Date.now() - t0 };
+  };
+
+  // The boot, answered by the page rather than by a number. The game opens
+  // on the Ranch, so that screen going quiet IS the app being up — and the
+  // readiness half of the check does the real work here, because every
+  // screen div exists in `index.html` from the first byte, empty and hidden.
+  if (!(await settle('#screen-ranch', { deadline: 20000 })).settled) {
+    stalled('boot', 'the Ranch never painted and went quiet within 20s of loading');
+  }
   // R98 — `innerText`, so it is what the player READS: hidden folds and
   // display:none contribute nothing, which is exactly the difference a fold
   // is there to make.
@@ -512,13 +609,13 @@ try {
       .flatMap((n) => [...n.querySelectorAll('button')].map((b) => b.getAttribute(b.getAttributeNames().find((a) => a.startsWith('data-')) ?? 'x')))
       .filter(Boolean))`));
 
-  const acrossTabs = async (sel) => {
+  const acrossTabs = async (sel, id = null) => {
     let tallest = await heightOf(sel);
     const tabs = await innerTabs(sel);
     for (const t of tabs) {
       const clicked = await evaluate(`(() => { const b = document.querySelector('${sel} nav.subtabs:not(#dex-subtabs) button[data-pen-tab="${t}"]'); if (b) { b.click(); return 1; } return 0; })()`);
       if (!Number(clicked)) continue;
-      await sleep(320);
+      await settle(sel, { deadline: 3000, id });
       tallest = Math.max(tallest, await heightOf(sel));
     }
     return tallest;
@@ -534,6 +631,9 @@ try {
   // open at all. The break that replays it (198) went MISSED against the
   // budgets alone, which is how this rule got written.
   let opened = 0;
+  // R159 — and whether the screen was still repainting when the walk came up
+  // short, which is the whole of what tells a slow box from a broken screen.
+  let stillMoving = false;
     // R131 — how many folds the screen paints BEFORE the walk touches it.
     // A screen that paints folds must declare how many the walk should get
     // into: that is what makes "the bays lost their `data-fold`" a failure
@@ -616,21 +716,72 @@ try {
     return { rows: rows.length, tallest: tallest.h, shortest: Math.min(...rows.map((r) => r.h)),
       worst: tallest.t };
   })())`));
-  const tallestOf = async (sel, cap = 40) => {
-    let tallest = await acrossTabs(sel);
+  // R159 — THE DISCRIMINATOR, and the whole point of the milestone.
+  //
+  // "The walk found nothing to open" has two causes that look identical from
+  // here: the screen is FINISHED and has nothing left, or it has not finished
+  // ARRIVING. Settling cannot separate them — under 40 burners the Pens
+  // painted its card shell, went quiet for the three polls, and had no roster
+  // yet, so the walk reported `got into 0` exactly as before.
+  //
+  // What separates them is whether the screen is still MOVING. Wait for the
+  // thing to turn up and watch the signature while waiting: if it changes,
+  // this screen was still being painted and the run is starved; if it sits
+  // perfectly still for fifteen seconds and the thing never comes, the screen
+  // really is finished and really has nothing — which is precisely the defect
+  // R131 wrote `opens` for, and it still gets said.
+  const waitForIt = async (sel, testExpr, { deadline = 15000, gap = 100 } = {}) => {
+    const first = await signature(sel, READY);
+    let moved = false;
+    const t0 = Date.now();
+    while (Date.now() - t0 < deadline) {
+      if (Number(await evaluate(testExpr))) return { got: true, moved };
+      const sig = await signature(sel, READY);
+      if (sig !== first) moved = true;
+      await sleep(gap);
+    }
+    return { got: false, moved };
+  };
+
+  const closedFoldIn = (sel) => `(() => { const el = document.querySelector('${sel}');`
+    + ' return el && (el.querySelector(\'button[data-fold][aria-expanded="false"]\')'
+    + ' || el.querySelector("details:not([open])")) ? 1 : 0; })()';
+
+  const tallestOf = async (sel, cap = 40, id = null, want = 0) => {
+    let tallest = await acrossTabs(sel, id);
     opened = 0;
+    stillMoving = false;
     for (let i = 0; i < cap; i++) {
-      if (!await openOne(sel)) break;
+      if (!await openOne(sel)) {
+        // Nothing left to open. Finished, or not yet arrived?
+        if (!want || opened >= want) break;
+        const { got, moved } = await waitForIt(sel, closedFoldIn(sel));
+        if (got) continue;
+        stillMoving = moved;
+        break;
+      }
       opened += 1;
-      await sleep(240);
-      tallest = Math.max(tallest, await acrossTabs(sel));
+      // A fold click rerenders, and the rerender is what the next `openOne`
+      // reads. Give it a deadline rather than 240ms of hope.
+      if (!(await settle(sel, { deadline: 3000, id })).settled) break;
+      tallest = Math.max(tallest, await acrossTabs(sel, id));
     }
     return tallest;
   };
 
-  const show = async (screen) => {
-    await evaluate(`document.querySelector('[data-screen="${screen}"]')?.click()`);
-    await sleep(2000);
+  // R159 — AND THE RETRY THE CRITERION ASKS FOR. A screen that does not go
+  // quiet is shown again with twice the patience before anything is measured
+  // off it, because the cheapest fix for a slow box is to wait longer, and
+  // the second attempt costs nothing on a box that never needed it.
+  const show = async (screen, { id = screen } = {}) => {
+    const sel = `#screen-${screen}`;
+    for (const deadline of [4000, 8000, 16000]) {
+      await evaluate(`document.querySelector('[data-screen="${screen}"]')?.click()`);
+      const r = await settle(sel, { deadline });
+      if (r.settled) return r;
+    }
+    stalled(id, `it would not go quiet in 4s, 8s or 16s`);
+    return { settled: false };
   };
 
   // R128b — HOW FAR DOWN IS THE UPGRADE? Reported from play, on a build
@@ -713,9 +864,9 @@ try {
       agenda.expected = all.length;
       if (probed) agenda.hidden = probed.filter((r) => r.h > agenda.shortest);
     }
-    const tallest = BUDGET[screen]?.tallest === null ? null : await tallestOf(sel);
+    const tallest = BUDGET[screen]?.tallest === null ? null : await tallestOf(sel, 40, screen, BUDGET[screen]?.opens ?? 0);
     // After `tallestOf`, which has opened everything the screen will allow.
-    rows.push({ id: screen, folded, tallest, opened, foldsPainted, wordsShut, chrome, agenda,
+    rows.push({ id: screen, folded, tallest, opened, moved: stillMoving, foldsPainted, wordsShut, chrome, agenda,
       wordsOpen: await wordsOf(sel),
       facilityAt: place && `${place.at}/${place.of} @ ${place.top}px` });
   }
@@ -723,8 +874,17 @@ try {
   // has never covered), but it draws a track, so it answers this rule too.
   {
     await show('battle');
-    const place = JSON.parse(await facilityPlace('battle'));
-    if (!place) problems.push('the War Room draws no facility card at all');
+    // R159 — same question as the fold walk, same discriminator. Under load
+    // the War Room painted its shell and not its cards, and this line called
+    // that "draws no facility card at all".
+    let place = JSON.parse(await facilityPlace('battle'));
+    if (!place) {
+      const { got, moved } = await waitForIt('#screen-battle',
+        '(document.querySelector(\'#screen-battle [data-fold="facility-battle"]\') ? 1 : 0)');
+      if (got) place = JSON.parse(await facilityPlace('battle'));
+      else if (moved) stalled('battle', 'its facility card never arrived and the screen was still repainting');
+      else problems.push('the War Room draws no facility card at all');
+    }
     else if (place.of > 1 && place.at === place.of) {
       problems.push(`battle buries its facility card last of ${place.of} cards`);
     }
@@ -735,12 +895,16 @@ try {
   await show('dex');
   for (const tab of ['roster', 'variants', 'combos', 'genes', 'foes']) {
     await evaluate(`document.querySelector('#screen-dex [data-dex-tab="${tab}"]')?.click()`);
-    await sleep(1700);
+    // R159 — the Dex tabs rebuild the whole panel, so this was the longest
+    // fixed sleep in the file and still the one most likely to be short.
+    if (!(await settle('#screen-dex', { deadline: 6000 })).settled) {
+      await settle('#screen-dex', { deadline: 12000, id: `dex:${tab}` });
+    }
     const folded = await heightOf('#screen-dex');
     const foldsPainted = await foldsCount('#screen-dex');
     const wordsShut = await wordsOf('#screen-dex');
-    const tallest = await tallestOf('#screen-dex');
-    rows.push({ id: `dex:${tab}`, folded, tallest, opened, foldsPainted, wordsShut, wordsOpen: await wordsOf('#screen-dex') });
+    const tallest = await tallestOf('#screen-dex', 40, `dex:${tab}`, BUDGET[`dex:${tab}`]?.opens ?? 0);
+    rows.push({ id: `dex:${tab}`, folded, tallest, opened, moved: stillMoving, foldsPainted, wordsShut, wordsOpen: await wordsOf('#screen-dex') });
   }
 } finally {
   proc.kill();
@@ -749,9 +913,32 @@ try {
   try { await rm(profile, { recursive: true, force: true }); } catch { /* the OS will get it */ }
 }
 
+// R159 — THE BOOT, BEFORE ANY SCREEN IS JUDGED. If the app never arrived,
+// every row below it is a measurement of an empty shell.
+if (stalls.has('boot')) {
+  problems.push('THE PAGE DID NOT SETTLE: the app never went quiet in 20s, so nothing was measured'
+    + ' on a finished render — this is a starved run, not a broken game. Re-run the gate alone.');
+}
+
 for (const r of rows) {
   const b = BUDGET[r.id];
   if (!b) { problems.push(`${r.id} has no height budget — a new screen has to declare one`); continue; }
+  // R159 — AND THE VERDICT THIS MILESTONE EXISTS FOR. Every rule below reads
+  // a number off the page; if the page never stopped changing, the number is
+  // about a render that had not finished, not about the game. R131's `opens`
+  // rule in particular then says "a screen nobody can open" — the single most
+  // misleading sentence this gate can print, because the screen is fine and
+  // the box was slow. So a stalled screen gets its OWN verdict and none of
+  // the others: it still fails, because a rule that goes quiet on a page it
+  // could not read is the false green R131 exists to prevent, but it fails
+  // saying the true thing.
+  if (stalls.has(r.id)) {
+    problems.push(`${r.id} — THE PAGE DID NOT SETTLE (${stalls.get(r.id).join('; ')}).`
+      + ' Its budgets and its fold count are NOT reported: they would be measurements of an'
+      + ' unfinished render. This is a starved or cold run, not a screen nobody can open —'
+      + ' re-run the gate on an idle box before believing anything about this screen.');
+    continue;
+  }
   if (r.folded > b.folded) {
     problems.push(`${r.id} is ${r.folded}px shut, over its ${b.folded}px budget (${(r.folded / 780).toFixed(1)} phone screens before anything is opened)`);
   }
@@ -773,9 +960,13 @@ for (const r of rows) {
       + ' — a screen with folds has to say how many the walk should get into');
   }
   if (b.opens != null) {
-    if (r.opened < b.opens) {
-      problems.push(`${r.id} declares ${b.opens} folds to walk and the gate got into ${r.opened}`
-        + ' — its height budget is being met by a screen nobody can open');
+    // R159 — ONE READER, AND IT IS THE ONE SMOKE TESTS. The sentence this used
+    // to print was the false red the whole milestone is about, so the choice
+    // between "did not settle" and "nobody can open" is made in
+    // `tools/settling.js` and asserted in both directions by smoke.
+    const verdict = foldVerdict({ id: r.id, opened: r.opened, want: b.opens, moved: r.moved });
+    if (verdict) {
+      problems.push(verdict.msg);
     } else if (r.tallest <= r.folded) {
       problems.push(`${r.id} opened ${r.opened} thing${r.opened === 1 ? '' : 's'} and did not grow`
         + ` (${r.folded}px shut, ${r.tallest}px open) — the walk is opening empty containers`);
@@ -847,12 +1038,26 @@ if (REPORT) {
   }
   console.log('');
 }
+// R159 — AND NO STALL GOES UNREPORTED. The rules above read `stalls` per
+// ROW, and not everything this gate walks is a row: the War Room has no
+// height budget, so a stall recorded against it would have been collected
+// and silently dropped. A gate that records a problem and then loses it is
+// worse than one that never looked.
+for (const [id, why] of stalls) {
+  if (id === 'boot' || rows.some((r) => r.id === id)) continue;
+  problems.push(`${id} — THE PAGE DID NOT SETTLE (${why.join('; ')}). Nothing about this screen`
+    + ' is reported: it is a starved or cold run rather than a broken screen.');
+}
 if (problems.length) {
-  console.error(`height ✗  ${problems.length} screen${problems.length === 1 ? '' : 's'} over budget on the day-180 save`);
-  for (const p of problems) console.error(`  · ${p}`);
+  console.error(`height \u2717  ${problems.length} problem${problems.length === 1 ? '' : 's'} on the day-180 save`
+    + (stalls.size
+      ? ` \u2014 ${stalls.size} of them a page that never settled, which is a slow box rather than a broken screen`
+      : ''));
+  for (const p of problems) console.error(`  \u00b7 ${p}`);
   process.exit(1);
 }
 const opensRows = rows.filter((r) => BUDGET[r.id]?.opens);
 console.log(`height ✓  ${rows.length} screens on the day-180 save at ${VIEWPORT}px, every one inside its budget`
   + ` · ${opensRows.length} of them still open, ${opensRows.reduce((n, r) => n + r.opened, 0)} folds walked`
-  + ` · Pens ${rows.find((r) => r.id === 'pens')?.tallest}px at its tallest, Foes ${rows.find((r) => r.id === 'dex:foes')?.folded}px shut`);
+  + ` · Pens ${rows.find((r) => r.id === 'pens')?.tallest}px at its tallest, Foes ${rows.find((r) => r.id === 'dex:foes')?.folded}px shut`
+  + ' · every screen settled before it was measured');
