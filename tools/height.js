@@ -30,6 +30,9 @@ import { walkedSave } from './fixtures.js';
 // three-row cap keeps off the screen. Node-side only; the page is untouched.
 import { agenda as agendaRows } from '../ranch/agenda.js';
 import { loadSimContent } from './sim.js';
+// R154 — `penMaxCapacity`, for the Pens budgets below. Same tuning
+// `tools/vault.js` already reads to bound the herd.
+import { TUNING } from '../ranch/ranch.js';
 
 const VIEWPORT = 380;
 const REPORT = process.argv.includes('--report');
@@ -43,13 +46,39 @@ const REPORT = process.argv.includes('--report');
 // and one per vial, so this is the shape of the tallest Vault a save can
 // reach (R61: derive the number, never re-type it).
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const VAULT_CAP = JSON.parse(readFileSync(join(root, 'data', 'facility.json'), 'utf8'))
+const FACILITY = JSON.parse(readFileSync(join(root, 'data', 'facility.json'), 'utf8'));
+const VAULT_CAP = FACILITY
   .tracks.find((t) => t.id === 'extractor').levels
   .reduce((m, l) => ({
     parts: Math.max(m.parts, l.grants.vaultParts ?? 0),
     vials: Math.max(m.vials, l.grants.vaultVials ?? 0),
   }), { parts: 0, vials: 0 });
 const VAULT_ROWS = VAULT_CAP.parts + VAULT_CAP.vials;
+
+// R154 — AND HOW MANY CHIMERAS THE PENS CAN EVER HOLD, for the same reason
+// and out of the same file. The Theater's top grant plus a stall for every
+// `pensPerStall` pens past the paddock you start with: the whole stable a
+// save can buy. `tools/vault.js` derives its `chimeras` bound from exactly
+// this arithmetic — if the two ever disagree, one of them is typed.
+const STABLE_CAP = FACILITY.tracks.find((t) => t.id === 'theater').levels
+    .reduce((n, l) => Math.max(n, l.grants?.stable ?? 0), 0)
+  + Math.floor((TUNING.penMaxCapacity - (FACILITY.stalls?.freePens ?? 0))
+               / (FACILITY.stalls?.pensPerStall || Infinity));
+
+// What one folded pen card costs, and what the screen costs before the first
+// one. MEASURED ON TWO TREES rather than fitted to one: the same day-180 walk
+// with `pensPerStall` off (stable 12, roster 11) and on (stable 16, roster 16)
+// — 1,494px/242 words at eleven cards, 1,923px/318 words at sixteen. That is
+// 85.8px and 15.2 words a card, 550px and 74.8 words of chrome, on both. The
+// numbers below round each up, so the budgets carry ~4% the way R141 left it
+// on `dex:combos` and R152 on the Vault's shelf.
+//
+// The open card is a FLAT allowance, not a per-card one: the Pens keep one
+// card open at a time (R89's exclusive folds), and that card measured 723px
+// and 749px, 86 words and 86 words, across a roster that changed by five.
+const PEN_CARD = { px: 90, words: 16 };
+const PEN_CHROME = { px: 560, words: 78 };
+const PEN_OPEN_WORDS = 90;
 
 const BUDGET = {
   // R91 RE-RATCHETS: 12500 -> 12700, measured at 12623. Not a regression in
@@ -137,7 +166,29 @@ const BUDGET = {
   // page size, because a page only ever shortened the half of this screen
   // that was never the problem.
   ranch:          { folded: 1900,  tallest: 4450, opens: 20, chrome: 1050 },
-  pens:           { folded: 2000,  tallest: 4000, opens: 20 },   // R89's criterion
+  // R154 — THE PENS' SHUT HEIGHT IS DERIVED TOO, for R92's reason and
+  // R131's cause. This screen is the multiplication R131 named — one folded
+  // card per chimera — and, alone among the screens R131 paged, it never got
+  // a page (`ui/pager.js` is imported by `ranch/ui.js` and by nothing in
+  // `splice/pens-ui.js`). That cost nothing for sixty milestones because the
+  // stable held twelve whatever the player bought. R154 sells stable room by
+  // the pen, so this screen's card count moved for the first time — eleven to
+  // sixteen on the same walk — and a flat ratchet would now want a bump every
+  // time somebody sells another stall. That is "a number being dragged along
+  // behind the thing it was supposed to hold", which is R92's whole complaint.
+  //
+  // So the budget is the screen at a FULL stable rather than at this walk's
+  // roster: 2,180px against 1,923 measured. It moves when somebody sells more
+  // stable room — a decision visible in facility.json — and it fails if a
+  // card gets taller, which is the thing worth catching. A flat 2,000 would
+  // have gone red at eighteen chimeras with nothing wrong, which is the trap
+  // this replaces rather than a failure it would have caught.
+  //
+  // `tallest` stays a flat 4,000 and is NOT derived: that one is R89's
+  // criterion — "the day-180 save's expanded Pens under 4,000px" — and it
+  // budgets the single open card, not the multiplication.
+  pens:           { folded: PEN_CHROME.px + PEN_CARD.px * STABLE_CAP,
+                    tallest: 4000, opens: 20 },   // `tallest` is R89's criterion
   // R128: 1900 -> 2080 open, measured at 1998. The shut half does not move
   // (1,827 against 1,900) — what moved is that this screen HAS an open half
   // now. Its two numbers were equal because the Theater had no fold at all,
@@ -299,9 +350,16 @@ const WORDS = {
   // cannot drift back toward the wall it was.
   //
   // The Ranch is allowed more than the Pens for a reason that is not
-  // slack: it holds twenty animals against the Pens' ten, and it is also
-  // where the money, the catalogue, breeding, the incubator and the whole
-  // facility tree live. R128 will take most of the facility off it.
+  // slack: it is where the money, the catalogue, breeding, the incubator and
+  // the whole facility tree live. R128 will take most of the facility off it.
+  // R154 STRIKES THE REST OF THAT SENTENCE. It used to read "it holds twenty
+  // animals against the Pens' ten", and the herd is the one thing it is NOT:
+  // R131 paged this screen at eight and left the Pens unpaged, so the Ranch's
+  // words are a constant and the Pens' are a multiplication. Measured across
+  // a change that took the stable from twelve to sixteen: the Ranch moved 262
+  // words to 261 and held twelve folds, while the Pens moved 242 to 318 and
+  // eleven folds to sixteen. The relationship the sentence claimed is the
+  // reverse of the one the screens have.
   // R128 collects here too: 950 -> 810 open, measured at 768. Same cause as
   // the pixel ceiling above — R98's one-at-a-time rule made the 950 word
   // budget unreachable, and an unreachable budget measures nothing.
@@ -312,7 +370,13 @@ const WORDS = {
   // at 700 against a 287-word screen is the ceiling nothing can reach that
   // R131 warned about: it measures nothing and excuses the next regression.
   ranch:          { folded: 400,  open: 550 },
-  pens:           { folded: 300,  open: 400 },
+  // R154 — the same arithmetic as the Pens' height, out of the same two
+  // measurements; see the note in BUDGET above for why it is derived at all.
+  // 78 words of chrome plus 16 a card says 366 at a full stable, against 318
+  // measured. The open half is that plus ONE card, because this screen keeps
+  // one open at a time — and the card cost exactly 86 words on both trees.
+  pens:           { folded: PEN_CHROME.words + PEN_CARD.words * STABLE_CAP,
+                    open:   PEN_CHROME.words + PEN_CARD.words * STABLE_CAP + PEN_OPEN_WORDS },
   // R128: 300 -> 340 open, measured at 320. The upgrade card's twenty words
   // are the Tier II blurb and the grants line under it — what the gantry
   // costs and what it buys. The shut budget is unchanged at 300 (measured
@@ -748,6 +812,19 @@ for (const r of rows) {
   }
   const w = WORDS[r.id];
   if (!w) { problems.push(`${r.id} has no word budget — a new screen has to declare one`); continue; }
+  // R154 — AND A BUDGET HAS TO BE A NUMBER. The Pens' four budgets are read
+  // out of facility.json now rather than typed, and a derivation can go NaN
+  // where a literal cannot: `undefined - freePens` is NaN, `1923 > NaN` is
+  // false, and every comparison in this block would pass in silence. That is
+  // the shape of every miss this project has had — a rule with nothing to
+  // look at passes — so a budget says it is a real number before it is used.
+  for (const [k, v] of [['folded', b.folded], ['tallest', b.tallest], ['chrome', b.chrome],
+                        ['folded-words', w.folded], ['open-words', w.open]]) {
+    if (v != null && !Number.isFinite(v)) {
+      problems.push(`${r.id}'s ${k} budget is ${v} rather than a number — a derived budget that`
+        + ' goes NaN or Infinity does not fail, it stops asking');
+    }
+  }
   if (r.wordsShut > w.folded) {
     problems.push(`${r.id} says ${r.wordsShut} words shut, over its ${w.folded}-word budget`
       + ' — that is what the player is handed before they ask for anything');

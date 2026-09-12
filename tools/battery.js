@@ -1988,6 +1988,34 @@ const BREAKS = [
     to: '      const cap = Math.min(12 - THEATER_STALLS, opts.stableCap ?? Infinity);',
   },
   {
+    // R154 — the Pens' budgets go back to the Theater's grant alone, which is
+    // what they were worth before a pen bought stable room. The screen is one
+    // folded card per chimera and the walk now keeps sixteen, so a budget cut
+    // to twelve cards is 1,640px against 1,923 and the gate says so. The break
+    // exists because a DERIVED budget can rot in a way a typed one cannot:
+    // nothing else in this file would notice the stall term going away, and a
+    // budget that stopped tracking the stable would simply be too tight and
+    // get bumped back by hand — which is the number-dragged-behind-the-thing
+    // R92 named, arriving by the back door.
+    n: 253, gate: HEIGHT, name: "the Pens' budget stops counting the stalls a pen buys",
+    file: 'tools/height.js',
+    anchor: '  + Math.floor((TUNING.penMaxCapacity - (FACILITY.stalls?.freePens ?? 0))',
+    to: '  + 0 * Math.floor((TUNING.penMaxCapacity - (FACILITY.stalls?.freePens ?? 0))',
+  },
+  {
+    // R154 — and the other failure a derivation can have, which is the one
+    // that does NOT announce itself. `undefined - freePens` is NaN, NaN
+    // propagates through the multiply, and `1923 > NaN` is false: every
+    // height and word comparison on this screen passes, in silence, forever.
+    // Aimed at the measured constant rather than at the tuning it multiplies,
+    // so the patch is one token and the gate has to catch the value rather
+    // than the missing import.
+    n: 254, gate: HEIGHT, name: 'a Pens budget arrives NaN, and every comparison on the screen quietly passes',
+    file: 'tools/height.js',
+    anchor: 'const PEN_CHROME = { px: 560, words: 78 };',
+    to: 'const PEN_CHROME = { px: NaN, words: 78 };',
+  },
+  {
     // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
     // the rule that stops the splice policy taking it. Break it and the walker
     // splices to the whole grant, both clocks starve, and coverage says so.

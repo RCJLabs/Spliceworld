@@ -3693,18 +3693,66 @@ triangle working, and each region genuinely asks a different question)*.
   the paddock buys room past the grant, **and the roster fills it**, because
   room nobody stands in is not room.
 
-  **The lesson:** *three separate pieces of prose in this feature claimed
+  #### The screen that was a multiplication and had never been paged
+
+  The height gate went red on the merge: the Pens ran **318 words shut against
+  a 300-word budget**, because this screen paints one folded card per chimera
+  and the roster went 11 to 16. Bumping 300 to 340 was the obvious fix and it
+  is the exact creep `tools/height.js` warns about three comments above the
+  number — *"a budget left at 700 against a 287-word screen is the ceiling
+  nothing can reach"*.
+
+  What the failure actually found is that the Pens is the one screen R131
+  named and never fixed. R131's own note says it: *"the folded row is per
+  ANIMAL, so the screen is a multiplication and folding only divided the
+  constant."* It paged the Ranch at eight and paged the Vault; `ui/pager.js`
+  is imported by `ranch/ui.js` and by nothing in `splice/pens-ui.js`. That
+  cost nothing for sixty milestones because the stable held twelve whatever
+  the player bought — **R154 is the first milestone that could move it**, and
+  a flat ratchet would now want a bump every time somebody sells a stall.
+
+  So the budget is derived instead, R92's Vault treatment on the screen that
+  needed it: **chrome plus a card, times the stable a save can buy.** Measured
+  on two trees rather than fitted to one — the same day-180 walk with the
+  stalls off (11 cards) and on (16) — a card is 85.8px and 15.2 words and the
+  chrome is 550px and 74.8 words, on both. At a full stable of eighteen that
+  is 2,180px and 366 words, against 1,923 and 318 today. The number moves when
+  somebody sells more stable room, which is a line in `facility.json`, and it
+  fails when a card gets taller, which is the thing worth catching. **The flat
+  2,000px height budget would have gone red at eighteen chimeras with nothing
+  wrong** — a trap for whoever raises the cap next, and it is gone too.
+
+  And the fourth piece of stale prose was sitting on the budget it justified:
+  *"The Ranch is allowed more than the Pens for a reason that is not slack: it
+  holds twenty animals against the Pens' ten."* The herd is the one thing it
+  is not. Across a change that took the stable 12 to 16, the **Ranch moved 262
+  words to 261** and held twelve folds, while the **Pens moved 242 to 318** and
+  eleven folds to sixteen. The Ranch is a constant because R131 paged it; the
+  Pens are a multiplication because nobody did. The sentence had the
+  relationship backwards.
+
+  A derived budget can also rot in a way a typed one cannot, so it is guarded:
+  `undefined - freePens` is `NaN`, `1923 > NaN` is `false`, and every height
+  and word comparison on the screen would pass in silence forever. Every
+  budget now declares itself a finite number before it is compared — which is
+  this project's oldest lesson, *a rule with nothing to look at passes*,
+  arriving by a door that did not exist until the budgets stopped being typed.
+
+  **The lesson:** *four separate pieces of prose in this feature claimed
   something the code did not do — a smoke assertion that did not exist, a
-  ratio justified by gates that do not move, and a bound naming a mechanism it
-  does not have. All three were inherited, and all three would have shipped if
-  the patch had simply been applied and the gates run green.*
+  ratio justified by gates that do not move, a bound naming a mechanism it
+  does not have, and a budget comment whose comparison ran the other way. All
+  four were inherited, and all four would have shipped if the patch had simply
+  been applied and the gates run green.*
 
   *Done when: buying a pen raises both what the ranch can house and what the
   stable can hold, so "Expand the pens" stops lying about which pens; and the
   walker's roster grows with the grant, proved by a break that goes red when it
   stops.* Both: a pen past the fourth buys a stall, coverage reports *"Theater
   grants 12, paddock took it to 16, roster 15"*, and breaks **251** and **252**
-  take those two halves away.
+  take those two halves away. **253** and **254** hold the Pens' derived
+  budgets — one takes the stalls back out of the arithmetic, the other makes
+  it `NaN` and proves the gate notices rather than going quiet.
 
 - **R155 — The walker models a player who never grows.** *Investigated and
   not shipped — the premise in this entry's own first draft was wrong, and

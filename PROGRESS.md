@@ -18,7 +18,7 @@ button bought the one you were not looking at.
 past the starting four, taking the Theater's 12 to **16** at a full paddock.
 Derived, not stored, so no save version moves.
 
-### Three pieces of prose that claimed things the code did not do
+### Four pieces of prose that claimed things the code did not do
 
 All inherited, all would have shipped if the parked patch had just been applied
 and the gates run green.
@@ -38,6 +38,12 @@ and the gates run green.
    — ~1,189 jobs a campaign, each delivering unconditionally by R11's design,
    with extraction the only removal. No ceiling to derive from, so +8 was a
    number that fitted.
+4. **A budget comment whose comparison ran the other way.** `tools/height.js`
+   allowed the Ranch more words than the Pens because "it holds twenty animals
+   against the Pens' ten". The herd is the one thing it is not: across a change
+   that took the stable 12 to 16, the **Ranch moved 262 words to 261** and held
+   twelve folds, while the **Pens moved 242 to 318** and eleven folds to
+   sixteen. R131 paged the Ranch at eight; nobody ever paged the Pens.
 
 ### The ratio, and what it costs
 
@@ -68,6 +74,36 @@ halves hold, and coverage now prints:
 stable: Theater grants 12, paddock took it to 16, roster 15
 ```
 
+### The height gate went red, and the bump was the wrong fix
+
+Pens at **318 words shut against 300**, because the screen is one folded card
+per chimera and the roster went 11 to 16. Bumping to 340 is the creep the file
+warns about three comments above the number. The real finding: the Pens is the
+screen R131 named as "a multiplication" and never paged — `ui/pager.js` is
+imported by `ranch/ui.js` and by nothing in `splice/pens-ui.js` — and it never
+bit because the stable held 12 whatever the player bought. **R154 is the first
+milestone that could move it.**
+
+So both budgets are derived now, R92's Vault treatment: **chrome plus a card,
+times the stable a save can buy.** Measured on two trees, not fitted to one:
+
+| | 11 cards (stalls off) | 16 cards (stalls on) | per card | chrome |
+| --- | ---: | ---: | ---: | ---: |
+| height | 1,494px | 1,923px | 85.8px | 550px |
+| words shut | 242 | 318 | 15.2 | 74.8 |
+| one open card | +749px / +86 words | +723px / +86 words | flat | — |
+
+At a full stable of 18: **2,180px and 366 words.** It moves when somebody sells
+stable room in `facility.json`, and fails when a card gets taller. The flat
+2,000px budget **would have gone red at 18 chimeras with nothing wrong** — a
+trap for whoever raises the cap next, now gone. `tallest` stays flat at 4,000:
+that one is R89's criterion and it budgets the single open card.
+
+Guarded, because a derived budget rots in a way a typed one cannot: `undefined
+- freePens` is `NaN`, `1923 > NaN` is `false`, and every comparison on the
+screen would pass in silence forever. Every budget declares itself finite
+before it is used.
+
 ### Numbers
 
 | | before | after |
@@ -75,7 +111,8 @@ stable: Theater grants 12, paddock took it to 16, roster 15
 | stable at a full paddock | 12 | **16** |
 | `pensPerStall` | — | **6** |
 | `ranch.stock` bound | `penMaxCapacity + 8` = 48 | **`× 2`** = 80, design ceiling |
-| breaks | 246 | **248** |
+| Pens budget | flat 2,000px / 300 words | **derived: 2,180 / 366 at a full stable** |
+| breaks | 246 | **250** |
 
 ### Known issues
 
@@ -88,6 +125,15 @@ stable: Theater grants 12, paddock took it to 16, roster 15
   money.
 - **R155 is unblocked at last.** A bigger stable is what makes the reserve
   exemption observable, which is what it was waiting for.
+- **The Pens still is not paged.** The budget now describes the multiplication
+  honestly instead of pretending it is a constant, but 16 cards is 1,923px of
+  shut screen — 2.5 phone screens before the player opens anything. R131's fix
+  is eight lines of `ui/pager.js` away and belongs in its own milestone.
+- **`VAULT_ROWS` in `tools/height.js` is dead.** R131 replaced the derived
+  expression with a literal and left the constant behind; nothing reads it or
+  `VAULT_CAP` except a comment. Not removed here — it is R92's record, and no
+  gate catches an unused module-level const, which is the more interesting
+  half.
 
 ### Next session's first task
 
