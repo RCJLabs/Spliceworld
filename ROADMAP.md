@@ -4181,6 +4181,8 @@ triangle working, and each region genuinely asks a different question)*.
   (0.12 at twenty-one, which did not fit and is said rather than claimed), and
   the design floor and the break-catcher are now two rules, the second a direct
   two-part comparison. Breaks **245** (re-aimed to `bulk`), **256**, **257**.
+  Full battery 253/253, baseline green, `npm test` 908 of 1100 at thirteen
+  seeds cold.
 
   **The lesson:** *a gate calibrated against noise will be re-calibrated
   forever. The pull was worth twice what seven seeds could see, and two

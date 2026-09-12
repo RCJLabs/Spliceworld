@@ -64,6 +64,19 @@ this workload, and "quieter" was never the right criterion.
 | suite budget | 900 normalised | **1100 raw** |
 | suite, 13 seeds cold | — | **908 of 1100** |
 
+### Verification
+
+| | |
+| --- | --- |
+| `battery --anchors` | 253 anchors, each matching exactly once |
+| `battery --baseline` | green |
+| `battery --only 245,256,257` | 3 caught · 0 missed |
+| full battery | **253 breaks · 253 caught · 0 missed · `BATTERY_EXIT=0`** |
+| `npm test` | **908 of 1100**, 13 seeds, cold cache, probe 0.89x reported |
+
+Full battery required: this changes existing gate logic in `tools/reach.js`,
+`tools/suite.js` and `tools/fixtures.js`.
+
 ### Known issues
 
 - **21 seeds would zero the delta and does not fit** (+14 walks). At 13 the
