@@ -55,6 +55,21 @@ versions asserted on an absence and passed for the wrong reason.
 | readers of the fit predicate | 1 (engine only) | **1, shared with the button** |
 | breaks | 253 | **255** |
 
+### And it cost two budgets, which is the lesson twice
+
+The first version went **2 KB over first paint** — because the explanation
+above was written into `ranch/ui.js` and `splice/extract.js`, both eager, and
+**prose ships; there is no build step** (R130, learned again the hard way).
+Moving the story to ROADMAP R161 recovered most of it. What remains is **724
+bytes** of real code, so `FIRST_PAINT_KB` goes 1026 → 1027 and `KB_CAP` 554 →
+555 — the smallest number that fits a defect the player hit, not a raise to
+accommodate drift.
+
+One wrong turn is worth recording: `vialSVG` looked like it was keeping the
+5.4 KB ceremony eager, and moving it to `ui/icons.js` made first paint
+*worse* — `splice/vault-ui.js` is itself lazy, so the ceremony was never in
+the eager graph at all. Reverted.
+
 ### Known issues
 
 - **The refusal is still reachable by keyboard on a disabled control in odd
