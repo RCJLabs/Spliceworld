@@ -119,8 +119,12 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
   // deciding against.
   const stable = stableRoom(state, content);
   if (!stable.free) {
+    // R154 — and it names BOTH doors now. This sentence sent every full
+    // stable to the Surgery Theater, which is half the reason the pen
+    // purchase read as doing nothing: a player who had already bought Tier
+    // II was told to buy it again.
     return { ok: false, msg: `The stable holds ${stable.cap}${stable.pending ? ` and ${stable.pending} of them are spoken for` : ''}.`
-      + ' Dismantle one, or expand the Surgery Theater.' };
+      + ' Dismantle one, expand the Surgery Theater, or build more pens.' };
   }
   if (!theaterFree(state, now)) {
     return { ok: false, msg: theaterBusyMsg(state, now, content) };

@@ -3634,6 +3634,149 @@ triangle working, and each region genuinely asks a different question)*.
 
 ### 9.29a Queued out of R140
 
+- **R154 — A pen is a pen.** ✅ *Shipped. Reported from play, and the word was
+  doing two jobs.*
+
+  "It says upgrade pens but it upgrades the ranch." It did. `buyPenUpgrade`
+  raised `ranch.penCapacity` and nothing else, which is **livestock**; the
+  chimera cap was `theaterGrants().stable`, a different track on a different
+  screen. And "Pens" already named the chimera tab — `splice/pens-ui.js` opens
+  *"the chimera roster"*, `ui/facility-card.js` renders `pens: 'Pens'`. One
+  word, two things, and the button bought the one you were not looking at.
+
+  `stallsFromPens` derives stable room from the paddock: a stall for every six
+  pens past the four you start with, so the Theater's twelve becomes sixteen at
+  a full paddock. Derived rather than stored, so no save version moves. The
+  Theater's refusal names both doors now, which was half the reason the
+  purchase read as doing nothing — a player who had already bought Tier II was
+  told to buy it again.
+
+  #### Six, and the reason twelve was wrong
+
+  The parked patch chose twelve and justified it with gates that do not decide
+  it: 9 and 6 were said to red-line R138's level curve with 7–8 creatures at
+  zero and break R85's no-neglect promise. Censused at **sixteen seeds** on the
+  post-R157 tree, feral losses are **0/16 and level-zero creatures 0 at both**.
+  A three-seed sweep did flip red at 9 and 18 — a single feral loss each time,
+  with the *bigger* roster losing none. R150's chaos, not a ratio.
+
+  What twelve actually costs is the feature. Rosters run 11–14 against a grant
+  of 12, so the median campaign never fills the stalls it bought. At six they
+  run 13–16 and **16 of 16 seeds finish over the grant**. The price is the
+  herd, and it is stated rather than hidden: 2 of 16 campaigns end past the 48
+  head `ranch.stock` was bounded at.
+
+  #### The bound bounded the wrong thing
+
+  `ranch.stock` read `penMaxCapacity + 8`, *"plus livestock a job delivers over
+  it"*, and its comment finished *"the jobs that can be in the field at once"*.
+  That is a **concurrency** limit. What fills a barn is arrivals that *stayed*:
+  ~1,189 jobs a campaign, each delivering unconditionally — `operations.js`
+  says so out loud, *"the animal ALWAYS arrives, even into a barn that is
+  already full"* (R11, deliberate) — with extraction the only removal and it
+  costs money. There is no ceiling to derive from, so `+ 8` was a number that
+  fitted. It is now **twice the paddock**, labelled a design ceiling rather
+  than a derivation: twice over is a herd that stopped turning over. R91's
+  199-head runaway is still caught by a wide margin, which is what the bound
+  was built for. It comes back down when §9.22 gives livestock a door out that
+  is not the Extractor.
+
+  #### And the gate R157 could not write
+
+  R157 derived the walker's roster ceiling from the grant and then could not
+  gate it: at a fixed grant of twelve the walk lands in the same place whichever
+  way the constant reads. A bigger stable is what makes it observable, so the
+  rule ships here. It lives in `tools/coverage.js` rather than smoke because
+  smoke's campaign block **halts at dominion** — measured there the claim is
+  false (rosters 11/10/11 against a grant of 12), the stalls existing long
+  before there is time to fill them. Over a full 180 days both halves hold:
+  the paddock buys room past the grant, **and the roster fills it**, because
+  room nobody stands in is not room.
+
+  #### The screen that was a multiplication and had never been paged
+
+  The height gate went red on the merge: the Pens ran **318 words shut against
+  a 300-word budget**, because this screen paints one folded card per chimera
+  and the roster went 11 to 16. Bumping 300 to 340 was the obvious fix and it
+  is the exact creep `tools/height.js` warns about three comments above the
+  number — *"a budget left at 700 against a 287-word screen is the ceiling
+  nothing can reach"*.
+
+  What the failure actually found is that the Pens is the one screen R131
+  named and never fixed. R131's own note says it: *"the folded row is per
+  ANIMAL, so the screen is a multiplication and folding only divided the
+  constant."* It paged the Ranch at eight and paged the Vault; `ui/pager.js`
+  is imported by `ranch/ui.js` and by nothing in `splice/pens-ui.js`. That
+  cost nothing for sixty milestones because the stable held twelve whatever
+  the player bought — **R154 is the first milestone that could move it**, and
+  a flat ratchet would now want a bump every time somebody sells a stall.
+
+  So the budget is derived instead, R92's Vault treatment on the screen that
+  needed it: **chrome plus a card, times the stable a save can buy.** Measured
+  on two trees rather than fitted to one — the same day-180 walk with the
+  stalls off (11 cards) and on (16) — a card is 85.8px and 15.2 words and the
+  chrome is 550px and 74.8 words, on both. At a full stable of eighteen that
+  is 2,180px and 366 words, against 1,923 and 318 today. The number moves when
+  somebody sells more stable room, which is a line in `facility.json`, and it
+  fails when a card gets taller, which is the thing worth catching. **The flat
+  2,000px height budget would have gone red at eighteen chimeras with nothing
+  wrong** — a trap for whoever raises the cap next, and it is gone too.
+
+  And the fourth piece of stale prose was sitting on the budget it justified:
+  *"The Ranch is allowed more than the Pens for a reason that is not slack: it
+  holds twenty animals against the Pens' ten."* The herd is the one thing it
+  is not. Across a change that took the stable 12 to 16, the **Ranch moved 262
+  words to 261** and held twelve folds, while the **Pens moved 242 to 318** and
+  eleven folds to sixteen. The Ranch is a constant because R131 paged it; the
+  Pens are a multiplication because nobody did. The sentence had the
+  relationship backwards.
+
+  A derived budget can also rot in a way a typed one cannot, so it is guarded:
+  `undefined - freePens` is `NaN`, `1923 > NaN` is `false`, and every height
+  and word comparison on the screen would pass in silence forever. Every
+  budget now declares itself a finite number before it is compared — which is
+  this project's oldest lesson, *a rule with nothing to look at passes*,
+  arriving by a door that did not exist until the budgets stopped being typed.
+
+  #### And a floor that had to be re-typed for the second milestone running
+
+  The full battery came back **249 of 250**, and the miss was break 245 —
+  R157's, re-derived by R157, missed again. A stable of sixteen builds more
+  creatures than a stable of twelve, so more of the part list ends up on one:
+  measured on both trees, seven walks each, the tree went **147.7 worn to
+  170.0** and the broken tree **132.4 to 159.9**, and both sailed over a 57%
+  floor that had not moved. Re-derived to **67.6%**, balanced at 5.1 parts of
+  clearance each way rather than generous on either side.
+
+  That is the second consecutive milestone to re-type it and the third is not
+  acceptable, so the cause is written down rather than the number alone: **one
+  number is doing two jobs.** R140 wrote 50% as a design floor — you collect
+  nearly everything and build with half of it, and the half you leave is what
+  makes the next campaign different — and it has since been dragged twice to
+  wherever break 245 lands. A design floor must not move when the roster does;
+  a break-catcher has to. R158 carries the split, together with the other half
+  of the measurement: the pull is now worth **10.1 parts against a standard
+  error of 9.1** on seven seeds, so the break-catcher is reading at the edge
+  of its own noise.
+
+  **The lesson:** *four separate pieces of prose in this feature claimed
+  something the code did not do — a smoke assertion that did not exist, a
+  ratio justified by gates that do not move, a bound naming a mechanism it
+  does not have, and a budget comment whose comparison ran the other way. All
+  four were inherited, and all four would have shipped if the patch had simply
+  been applied and the gates run green.*
+
+  *Done when: buying a pen raises both what the ranch can house and what the
+  stable can hold, so "Expand the pens" stops lying about which pens; and the
+  walker's roster grows with the grant, proved by a break that goes red when it
+  stops.* Both: a pen past the fourth buys a stall, coverage reports *"Theater
+  grants 12, paddock took it to 16, roster 15"*, and breaks **251** and **252**
+  take those two halves away. **253** and **254** hold the Pens' derived
+  budgets — one takes the stalls back out of the arithmetic, the other makes
+  it `NaN` and proves the gate notices rather than going quiet. The full
+  battery ran **249 of 250** with break 245 the miss; re-derived and re-run
+  **250/250**, baseline green, `npm test` 940 CPU-seconds of 1200.
+
 - **R155 — The walker models a player who never grows.** *Investigated and
   not shipped — the premise in this entry's own first draft was wrong, and
   the half that is right cannot be gated on its own. Measurements below so
@@ -3814,10 +3957,53 @@ triangle working, and each region genuinely asks a different question)*.
   six more 180-day walks: roughly **360 CPU-seconds** onto a suite that reads
   ~1022 against a 1200 ceiling. So this is blocked on the budget rather than
   on the design, which makes it R156's dependant: settle what a CPU-second on
-  this box is worth, then buy the six walks. *Done when: the reach gate reads
-  a sample whose statistic does not move when a milestone that changes nothing
-  is measured with it — checked by re-running R157's own census against the
-  new sample and reading a delta of zero.*
+  this box is worth, then buy the six walks.
+
+  **R154 adds the sharper half, and it is not really about the sample.**
+  `WORN_FLOOR` was re-typed for the second consecutive milestone — R157 moved
+  it 50% to 57%, R154 moves it to 67.6% — and a third time is R92's
+  "number being dragged along behind the thing it was supposed to hold".
+  The cause is that **one number is doing two jobs.** R140 wrote 50% as a
+  DESIGN floor: you collect nearly everything and build with half of it, and
+  the half you leave is what makes the next campaign different. It has since
+  been dragged twice to wherever break 245 happens to land. A design floor
+  must not move when the roster does; a break-catcher has to.
+
+  And the break-catcher half is now measuring at the edge of its own noise.
+  Measured on both trees after R154, seven walks each: **170.0 worn (sd
+  24.1)** against **159.9 broken (sd 24.2)** — the never-built-with pull is
+  worth **10.1 parts against a standard error of 9.1**. Nothing is wrong with
+  the game; a stable of sixteen builds more creatures than one of twelve, so
+  both trees rose (147.7 → 170.0 and 132.4 → 159.9) and sailed over a floor
+  that had not moved. *Done when: the reach gate reads a sample whose
+  statistic does not move when a milestone that changes nothing is measured
+  with it — checked by re-running R157's own census against the new sample
+  and reading a delta of zero — and the design floor and the break-catcher
+  are two rules, the second stated as a difference the gate can normalise
+  rather than a level every roster change moves underneath it.*
+
+- **R159 — Two browser gates under load report a screen nobody can open.**
+  R154's verification ran `npm test` alongside `battery --baseline`, which is
+  what CLAUDE.md prescribes, and the baseline went **red on the height gate**
+  — *"ranch declares 20 folds to walk and the gate got into 4"*, *"pens ...
+  got into 1"*, and a Theater 77px over. Run alone, on the identical tree,
+  the same gate walked **40/12 and 40/16 folds and passed**, twice, and so
+  did the whole baseline. So the red is starvation, and the tell is in the
+  message: every one of those is a REACH failure, not a budget overrun. The
+  gate opens folds on a timer, and the suite now costs **464s wall and 940
+  CPU-seconds across four lanes**, not the "~3 min" the protocol still
+  quoted.
+
+  This is R131's own rule turned on its author: `opens` exists because "every
+  rule above fails UPWARDS only, so a screen the walk can no longer get into
+  reports a comfortable number and passes". It does its job — the trouble is
+  it cannot tell a screen that stopped opening from a screen that was not
+  given the CPU to open, and a 47-minute battery that false-reds at random is
+  a battery nobody will trust the fifth time. *Done when: a browser gate
+  starved of CPU says so instead of failing — the fold walk retries or reports
+  "the page did not settle" as a distinct verdict from "the screen does not
+  open" — checked by running the height gate against a deliberate load and
+  reading that verdict rather than a budget failure.*
 
 - **R153 — The boot budget has taken three raises in three milestones.**
   ✅ *Shipped. Both budgets came down, and the note that priced the fix was

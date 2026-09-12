@@ -188,7 +188,7 @@ const REACH_FLOOR = 0.94;
 // part ends up on a creature has no shelf left to raid. Measured at 54.9%
 // after the Theater started marking what you have never bolted on and the
 // walker started reading that mark.
-const WORN_FLOOR = 0.57;
+const WORN_FLOOR = 0.676;   // R154 — see the calibration note below; provisional, blocked on R158
 const TOTAL_PARTS = Object.keys(content.parts).length;
 {
   const per = [];
@@ -244,6 +244,36 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
   // line between: the tree clears it by 8.6 parts, the break misses it by
   // 6.7. Thinner than R140's margin on purpose, and said out loud so the next
   // milestone to move worn knows how much room it is spending.
+  //
+  // R154 IS THAT MILESTONE, AND IT SPENT ALL OF IT. Break 245 went MISSED on
+  // the full battery. Measured on both trees again, seven walks each:
+  //
+  //                          mean worn        sd     the pull
+  //   after  R154            170.0 (69.7%)   24.1
+  //   after  R154, broken    159.9 (65.5%)   24.2    10.1 parts
+  //
+  // Nothing is wrong with the game: a stable of sixteen builds more creatures
+  // than a stable of twelve, so more of the list ends up on one. Both trees
+  // rose — 147.7 to 170.0 and 132.4 to 159.9 — and sailed over a floor that
+  // had not moved. 67.6% is the line between them now, balanced rather than
+  // generous: 5.1 parts of clearance each way.
+  //
+  // THAT IS THE SECOND CONSECUTIVE MILESTONE TO RE-TYPE THIS NUMBER, and the
+  // third is not acceptable — R92: "a ratchet that moves every milestone is
+  // not a ratchet, it is a number being dragged along behind the thing it was
+  // supposed to hold." The reason it keeps moving is that ONE NUMBER IS DOING
+  // TWO JOBS. R140 wrote 50% as a DESIGN floor — you collect nearly
+  // everything and build with half of it, and the half you leave is what
+  // makes the next campaign different — and it has since been dragged twice
+  // to wherever break 245 happens to land. A design floor does not move when
+  // the roster does; a break-catcher has to.
+  //
+  // And the break-catcher half is now measuring at the edge of its own noise:
+  // the pull is worth 10.1 parts against a standard error of 9.1 on seven
+  // seeds. R158 already owns the sample size and this is the same problem
+  // with a sharper edge — it wants the two rules separated and the
+  // break-catcher stated as a DIFFERENCE the gate can normalise, not a level
+  // that every roster change moves underneath it.
   {
     const meanWorn = mean(per.map((r) => r.worn.size));
     const wornRatio = meanWorn / TOTAL_PARTS;
@@ -265,7 +295,7 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
       }
       if (wornRatio < WORN_FLOOR) {
         fails.push(`parts worn: the average campaign builds with ${meanWorn.toFixed(1)} of ${TOTAL_PARTS} parts`
-          + ` (${(100 * wornRatio).toFixed(1)}%, under ${(100 * WORN_FLOOR).toFixed(0)}%)`
+          + ` (${(100 * wornRatio).toFixed(1)}%, under ${(100 * WORN_FLOOR).toFixed(1)}%)`
           + ` — ${per.map((r) => `${r.seed}: ${r.worn.size}`).join(', ')}`
           + `; ${TOTAL_PARTS - wornUnion.size} parts go onto no creature in any seed`);
       }
@@ -374,5 +404,5 @@ if (fails.length) {
 }
 console.log(`reach ✓  ${Object.keys(content.species).length} species all routed,`
   + ` an average campaign sees ${(100 * REACH_FLOOR).toFixed(0)}%+ of ${TOTAL_PARTS} parts`
-  + ` and builds with ${(100 * WORN_FLOOR).toFixed(0)}%+ of them,`
+  + ` and builds with ${(100 * WORN_FLOOR).toFixed(1)}%+ of them,`
   + ' and every wall names the grade it takes');

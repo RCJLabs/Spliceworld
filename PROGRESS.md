@@ -1,5 +1,208 @@
 # PROGRESS
 
+## Session 157 — R154: a pen is a pen ✅
+
+**ROADMAP §9.29a.** Reported from play: *"it says upgrade pens but it upgrades
+the ranch. Have it upgrade storage for both so I can have more chimeras."*
+
+### The word was doing two jobs
+
+Verified before building, and the collision is wider than the report.
+`buyPenUpgrade` raised `ranch.penCapacity` and nothing else — livestock. The
+chimera cap was `theaterGrants().stable`, a different track on a different
+screen. And **"Pens" already named the chimera tab**: `splice/pens-ui.js` opens
+"the chimera roster", `ui/facility-card.js` renders `pens: 'Pens'`. So the
+button bought the one you were not looking at.
+
+`stallsFromPens` derives stable room from the paddock — a stall per six pens
+past the starting four, taking the Theater's 12 to **16** at a full paddock.
+Derived, not stored, so no save version moves.
+
+### Four pieces of prose that claimed things the code did not do
+
+All inherited, all would have shipped if the parked patch had just been applied
+and the gates run green.
+
+1. **A smoke assertion that did not exist.** `facility.json` promised "smoke
+   asserts the two match, so the restatement cannot drift" about `freePens` vs
+   `TUNING.penStartCapacity`. Nothing checked it. Written now.
+2. **A ratio justified by gates that do not move it.** The patch chose 12
+   because 9 and 6 supposedly red-lined R138's level curve and R85's
+   no-neglect promise. At **sixteen seeds**, feral losses are 0/16 and
+   level-zero creatures 0 at *both* ratios. A three-seed sweep flipped red at 9
+   and 18 on a single feral loss each, with the bigger roster losing none —
+   R150's chaos.
+3. **A bound naming a mechanism it does not have.** `ranch.stock` read
+   `penMaxCapacity + 8`, "the paddock plus the jobs that can be in the field at
+   once". That bounds *concurrency*; what fills a barn is arrivals that stayed
+   — ~1,189 jobs a campaign, each delivering unconditionally by R11's design,
+   with extraction the only removal. No ceiling to derive from, so +8 was a
+   number that fitted.
+4. **A budget comment whose comparison ran the other way.** `tools/height.js`
+   allowed the Ranch more words than the Pens because "it holds twenty animals
+   against the Pens' ten". The herd is the one thing it is not: across a change
+   that took the stable 12 to 16, the **Ranch moved 262 words to 261** and held
+   twelve folds, while the **Pens moved 242 to 318** and eleven folds to
+   sixteen. R131 paged the Ranch at eight; nobody ever paged the Pens.
+
+### The ratio, and what it costs
+
+| | ratio 6 | ratio 12 |
+| --- | ---: | ---: |
+| roster min/median/max | 13 / 14 / 16 | 11 / 12 / 14 |
+| seeds finishing over the grant of 12 | **16 / 16** | 1 / 3 |
+| feral lost | 0 / 16 | 0 / 16 |
+| stock median / mean | 24 / 29.4 | 20 / 24.1 |
+| seeds over the old 48-head bound | 2 / 16 | 0 / 16 |
+
+Twelve is nearly invisible as a feature — the median campaign never fills the
+stalls it bought. **Six** was the user's call and is what the report asked for.
+The herd is the price, and the bound is now stated honestly as a design ceiling
+(twice the paddock) rather than a fake derivation, with §9.22 named as the real
+fix.
+
+### The gate R157 could not write
+
+R157 derived the roster ceiling from the grant and could not gate it: at a
+fixed grant of 12 the walk lands in the same place either way. A bigger stable
+makes it observable. It lives in `tools/coverage.js` rather than smoke because
+**smoke's campaign block halts at dominion** — measured there the claim is
+false (rosters 11/10/11 against a grant of 12). Over a full 180 days both
+halves hold, and coverage now prints:
+
+```
+stable: Theater grants 12, paddock took it to 16, roster 15
+```
+
+### The height gate went red, and the bump was the wrong fix
+
+Pens at **318 words shut against 300**, because the screen is one folded card
+per chimera and the roster went 11 to 16. Bumping to 340 is the creep the file
+warns about three comments above the number. The real finding: the Pens is the
+screen R131 named as "a multiplication" and never paged — `ui/pager.js` is
+imported by `ranch/ui.js` and by nothing in `splice/pens-ui.js` — and it never
+bit because the stable held 12 whatever the player bought. **R154 is the first
+milestone that could move it.**
+
+So both budgets are derived now, R92's Vault treatment: **chrome plus a card,
+times the stable a save can buy.** Measured on two trees, not fitted to one:
+
+| | 11 cards (stalls off) | 16 cards (stalls on) | per card | chrome |
+| --- | ---: | ---: | ---: | ---: |
+| height | 1,494px | 1,923px | 85.8px | 550px |
+| words shut | 242 | 318 | 15.2 | 74.8 |
+| one open card | +749px / +86 words | +723px / +86 words | flat | — |
+
+At a full stable of 18: **2,180px and 366 words.** It moves when somebody sells
+stable room in `facility.json`, and fails when a card gets taller. The flat
+2,000px budget **would have gone red at 18 chimeras with nothing wrong** — a
+trap for whoever raises the cap next, now gone. `tallest` stays flat at 4,000:
+that one is R89's criterion and it budgets the single open card.
+
+Guarded, because a derived budget rots in a way a typed one cannot: `undefined
+- freePens` is `NaN`, `1923 > NaN` is `false`, and every comparison on the
+screen would pass in silence forever. Every budget declares itself finite
+before it is used.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| stable at a full paddock | 12 | **16** |
+| `pensPerStall` | — | **6** |
+| `ranch.stock` bound | `penMaxCapacity + 8` = 48 | **`× 2`** = 80, design ceiling |
+| Pens budget | flat 2,000px / 300 words | **derived: 2,180 / 366 at a full stable** |
+| breaks | 246 | **250** |
+
+### Break 245 missed, for the second milestone running
+
+The full battery came back **249 of 250**. A stable of sixteen builds more
+creatures than a stable of twelve, so more of the part list ends up on one:
+
+| seven walks each | tree | with break 245 applied | the pull |
+| --- | ---: | ---: | ---: |
+| after R157 | 147.7 (60.5%) | 132.4 (54.3%) | 15.3 parts |
+| **after R154** | **170.0 (69.7%)** | **159.9 (65.5%)** | **10.1 parts** |
+
+Both sailed over a 57% floor that had not moved. Re-derived to **67.6%** —
+balanced at 5.1 parts each way rather than generous on either side.
+
+Second consecutive milestone to re-type it, so the cause is written down
+rather than the number alone: **one number is doing two jobs.** R140 wrote
+50% as a design floor (you collect nearly everything and build with half of
+it; the half you leave is what makes the next campaign different) and it has
+since been dragged twice to wherever break 245 lands. A design floor must not
+move when the roster does; a break-catcher has to. Folded into **R158**, with
+the other half of the measurement: the pull is worth 10.1 parts against a
+**standard error of 9.1** on seven seeds, so the break-catcher is reading at
+the edge of its own noise.
+
+### The verification protocol itself was wrong, and it cost a run
+
+`--only` came back **4 caught / 0 missed** with `BATTERY_EXIT=1`, because the
+baseline went red on the height gate:
+
+```
+· ranch declares 20 folds to walk and the gate got into 4
+· pens  declares 20 folds to walk and the gate got into 1
+· theater reaches 2157px when opened, over its 2080px budget
+```
+
+Run alone on the identical tree, the same gate walked **40/12 and 40/16 folds
+and passed**, twice, and so did the whole baseline. Starvation — and the tell
+is in the message: all three are **reach** failures, not budget overruns. The
+gate opens folds on a timer, and CLAUDE.md told me to run `npm test` alongside
+it on the strength of a "~3 min" that is now **464s wall and 940 CPU-seconds
+across four lanes**. Corrected in CLAUDE.md; the deeper fix — a browser gate
+that says "the page did not settle" instead of "the screen does not open" —
+is filed as **R159**.
+
+### Verification
+
+| | |
+| --- | --- |
+| `battery --anchors` | 250 anchors, each matching exactly once |
+| `battery --baseline` | every gate green on a pristine tree |
+| full battery | **250 breaks · 250 caught · 0 missed · `BATTERY_EXIT=0`** |
+| `npm test` | 10 jobs, **940 CPU-seconds of 1200**, 464s wall |
+| height gate at 380px | 9 screens, all inside budget, 130 folds walked |
+
+The full battery ran twice. The first ended `BATTERY_EXIT=1` at 249/250 —
+break 245, above — and the second, after the re-derivation, is the clean one.
+Required this milestone rather than optional: R154 changes existing gate logic
+in `tools/vault.js`, `tools/height.js` and `tools/reach.js` rather than only
+adding gates.
+
+### Known issues
+
+- **The vault gate walks seed 2026 alone**, which finishes on 38 head and would
+  have sat green through both breaching seeds. Recorded in the gate itself and
+  filed to R158 — the same "one seed is not a sample" problem R157 found in
+  reach.
+- **§9.22 is now load-bearing.** At ratio 6 the herd is what stops the ratio
+  tightening further. Livestock leaves only through extraction, which costs
+  money.
+- **`WORN_FLOOR` is provisional.** 67.6% is measured and balanced, but it is
+  a level standing in for a difference and R158 owns the fix. A third
+  re-typing is the thing to refuse.
+- **R155 is unblocked at last.** A bigger stable is what makes the reserve
+  exemption observable, which is what it was waiting for.
+- **The Pens still is not paged.** The budget now describes the multiplication
+  honestly instead of pretending it is a constant, but 16 cards is 1,923px of
+  shut screen — 2.5 phone screens before the player opens anything. R131's fix
+  is eight lines of `ui/pager.js` away and belongs in its own milestone.
+- **`VAULT_ROWS` in `tools/height.js` is dead.** R131 replaced the derived
+  expression with a literal and left the constant behind; nothing reads it or
+  `VAULT_CAP` except a comment. Not removed here — it is R92's record, and no
+  gate catches an unused module-level const, which is the more interesting
+  half.
+
+### Next session's first task
+
+**R155 — the reserve exemption**, now gateable: drift-tending reads `canSpend`,
+so the first thing a tight week stops is the five dollars that keeps a
+creature. At a stable of 16 there is finally enough roster for that to show.
+
 ## Session 156 — R157: what a bigger stable costs ✅
 
 **ROADMAP §9.29a.** R155's blocker, and the decision it refused to make alone.

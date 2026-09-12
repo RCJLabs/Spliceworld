@@ -65,7 +65,20 @@ const BOUNDS = {
   'inventory.parts':      { max: 400, by: 'vault capacity, sold like pens' },
   'inventory.vials':      { max: 120, by: 'vault capacity; older vials retire into the Dex' },
   'campaign.containment': { max: 40,  by: 'bay count, from the Containment track' },
-  'chimeras':             { max: 12,  by: 'stable capacity, from the Theater track' },
+  // R154 — the stable is the Theater track PLUS the paddock now, so this
+  // derives both halves rather than restating one of them. The paddock's own
+  // ceiling comes from `penMaxCapacity`, the same tuning `ranch.stock` two
+  // lines down already reads, so a paddock that grows moves this with it.
+  'chimeras':             { max: (c) => (c.facility?.theater?.levels ?? [])
+                              .reduce((n, l) => Math.max(n, l.grants?.stable ?? 0), 0)
+                            + Math.floor((TUNING.penMaxCapacity - (c.stallMeta?.freePens ?? 0))
+                                         / (c.stallMeta?.pensPerStall || Infinity)),
+                            by: 'stable capacity: the Theater track, plus a stall per `pensPerStall` pens' },
+  // R154 — a bagged specimen carries a whole chimera, and the walk only
+  // started reaching these once the roster could grow past twelve. Bounded
+  // by what a chimera itself is bounded by, which is where they came from.
+  'campaign.containment[].chimera.moveset': { max: 8, by: 'MOVE_SLOTS plus the combos a genome can unlock' },
+  'campaign.containment[].chimera.scars':   { max: 12, by: 'one scar per socket, twice over' },
   // R92 — DERIVED, and with the one designed exception stated. R91 wrote
   // "40, by penCapacity" when penCapacity had no ceiling of its own, so the
   // bound was a sentence: a walk that ran the Resequencer bought 97 pen
@@ -74,7 +87,30 @@ const BOUNDS = {
   // arrives whether or not there is room (operations.js says so out loud,
   // because a reward that evaporates is worse than no reward), so the bound
   // is the paddock plus the jobs that can be in the field at once.
-  'ranch.stock':          { max: () => TUNING.penMaxCapacity + 8, by: 'penMaxCapacity, plus livestock a job delivers over it' },
+  //
+  // R154 — AND THAT LAST CLAUSE BOUNDS THE WRONG THING. Jobs in the field
+  // at once is a concurrency limit; what fills a barn is arrivals that
+  // STAYED. A 180-day campaign runs about 1,189 of them, each delivering
+  // unconditionally, and the only thing that takes an animal back out is
+  // extraction — which costs money (ROADMAP §9.22). So the overflow has no
+  // mechanical ceiling to derive from, and `+ 8` was a number that fitted
+  // rather than a mechanism: measured at R154's six-pens-per-stall across
+  // sixteen seeds, campaigns finish on a median of 22 head and a maximum of
+  // 56, with two of sixteen past the old 48.
+  //
+  // So this is a DESIGN ceiling and says so. Twice the paddock is not a herd
+  // that turned over slowly, it is one that stopped: the player has quit
+  // extracting and the save is accumulating. That still catches R91's
+  // runaway by a wide margin — 199 head is well past 80 — which is the thing
+  // this bound was built for. It comes back down when §9.22 gives livestock
+  // a door out that is not the Extractor.
+  //
+  // ONE SEED IS NOT A SAMPLE, and this gate walks seed 2026 alone. At R154's
+  // ratio 2026 finishes on 38, so it would have sat green through both of
+  // the seeds that breached. That is R158's problem in a second gate and is
+  // filed there rather than papered over here.
+  'ranch.stock':          { max: () => TUNING.penMaxCapacity * 2,
+                            by: 'twice the paddock — a design ceiling on a herd that stopped turning over, not a mechanism' },
   'ranch.eggs':           { max: () => TUNING.penMaxCapacity, by: 'penMaxCapacity — an egg holds a pen slot' },
   'news':                 { max: 40,  by: 'WIRE_KEEP in campaign/wire.js' },
   'campaign.captives':    { max: 12,  by: 'one per chimera, and the stable is capped' },

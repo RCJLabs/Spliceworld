@@ -32,7 +32,7 @@
 //   campaign — you push on the world: a job, an assault, a rival.
 import { careStatus, catalogFor, isNewToDex, penUpgradeCost, ageStage } from './ranch.js';
 import { canBreed } from './breeding.js';
-import { nextUpgrade, tracks } from '../splice/facility.js';
+import { nextUpgrade, tracks, stableRoom } from '../splice/facility.js';
 import { TRAINING } from '../splice/theater.js';
 import { treatmentCost } from '../splice/scars.js';
 import { activeVat, vatPlan } from '../splice/chaos.js';
@@ -456,11 +456,18 @@ export const AGENDA = [
     ready: (state, content) => tracks(content).some((t) => nextUpgrade(state, content, t.id)?.affordable),
   },
   {
+    // R154 — a pen houses stock OR a chimera, so the hint says both.
     id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',
     opens: () => 'slush-fund',
     chip: (state) => `$${penUpgradeCost(state)}`,
-    hint: (state) => `$${penUpgradeCost(state)} for the next pen — ${
-      state.ranch.stock.length}/${state.ranch.penCapacity} full. Room for stock is room for parts.`,
+    hint: (state, content) => {
+      const room = stableRoom(state, content);
+      const per = content.stallMeta?.pensPerStall || 0;
+      const toGo = per - ((state.ranch.penCapacity - (content.stallMeta?.freePens ?? 0)) % (per || 1));
+      return `$${penUpgradeCost(state)} — ${state.ranch.stock.length}/${state.ranch.penCapacity} pens full, `
+        + `${room.used}/${room.cap} chimeras. `
+        + (per ? `${toGo <= 1 ? 'The next' : `${toGo} more`} opens a chimera stall.` : '');
+    },
     ready: (state) => state.funds >= penUpgradeCost(state),
   },
 ];
