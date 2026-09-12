@@ -2065,7 +2065,12 @@ const BREAKS = [
     // the comparison silently, Infinity fails loudly, and the guard has to
     // catch BOTH kinds of nothing rather than the one that happens to be
     // noisy.
-    n: 257, gate: SUITE, name: 'the box probe reads zero, and the budget divides by it',
+    // R158 renames this: the budget no longer divides by the probe, so the
+    // old name ("and the budget divides by it") describes a gate that was
+    // withdrawn the day after it shipped. The guard still earns its place —
+    // a diagnostic printed on every run that silently reads zero is a
+    // diagnostic nobody can trust the next time the box moves.
+    n: 257, gate: SUITE, name: 'the box probe reads zero, and every run reports a box speed of nothing',
     file: 'tools/probe.js',
     anchor: '    reads.push((d.user + d.system) / 1000);',
     to: '    reads.push(0);',
