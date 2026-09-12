@@ -11378,9 +11378,6 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       return st;
     };
     // Prime, not merely adult: the Extract control only exists in the "Ready
-    // to graduate" band, which is `prime` or `elder`. An adult fixture renders
-    // no button at all and the rule below would pass on an absence.
-    // Prime, not merely adult: the Extract control only exists in the "Ready
     // to graduate" band, which is `prime` or `elder`. And the card has to be
     // OPEN — R98 gave the Pens one-card-at-a-time and the body is not rendered
     // while it is shut, so a fixture that only ages the animal asserts on an
