@@ -221,7 +221,19 @@ const REPORT = process.argv.includes('--report');
 // The 7.0 KB of empty keys is still there and still worth taking, and so are
 // the 45 KB of `enemies.json`. They are no longer the only thing on the
 // list, and neither is needed to get this budget under where it started.
-const FIRST_PAINT_KB = 1026;
+// R161 — 1026 -> 1027, and it is a FEATURE rather than drift. A full vault
+// refuses a graduation, and before this the Pens offered one anyway and the
+// ceremony that followed could not finish — reported from play, no way out but
+// closing the app. The fix costs the eager graph one shared predicate
+// (`extractionFit`) and a button that asks it. Measured at 724 bytes across
+// `ranch/ui.js` and `splice/extract.js`, after the explanation was moved to
+// ROADMAP R161 rather than shipped in the comment — R130's rule, applied to
+// the milestone that tripped over it.
+//
+// R153's warning against a seventh raise stands and this is not one of those:
+// those were raises to accommodate DRIFT, on a cap nobody had moved the code
+// under. This is the smallest number that fits a defect the player hit.
+const FIRST_PAINT_KB = 1027;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //

@@ -19878,7 +19878,10 @@ if (inShard('wire')) {
   // rest of this bill — `battle/moves.js` (7.2) and `campaign/monologue.js`
   // (4.1) are real and each has more than one eager importer, which is why
   // they are still there and the director is not.
-  const KB_CAP = 554;
+  // R161 — 554 -> 555, for the reason in tools/boot.js's FIRST_PAINT_KB
+// note: a shared `extractionFit` and a button that asks it, 724 bytes,
+// so a full vault stops offering a graduation it cannot finish.
+const KB_CAP = 555;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

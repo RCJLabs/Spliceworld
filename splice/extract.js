@@ -73,30 +73,14 @@ export function gradeFor(animal, content, now, state = null) {
   return GRADES[0];
 }
 
-// R161 — CAN THIS ANIMAL GRADUATE AT ALL? ONE READER, SO THE SCREEN AND THE
-// ENGINE CANNOT DISAGREE.
-//
-// R91 taught `extractAnimal` to refuse a full vault and wrote a good sentence
-// explaining it. Nothing ever displayed that sentence: the Pens offered the
-// button anyway, the ceremony played anyway, and `showResults` then read
-// `result.tokens.map` on a refusal that has no tokens — so the overlay was
-// stranded mid-ceremony with its own buttons already removed, and the only
-// way out was to close the app. Reported from play, and the animal was still
-// in the pen afterwards, which is R91's rule working exactly as intended and
-// nobody being told.
-//
-// Exported because the BUTTON has to ask the same question the engine asks.
-// R49's rule: a control reads the predicate rather than restating it.
+// R161 — one reader for "can this graduate", so the button asks what the
+// engine enforces. Story in ROADMAP R161.
 export function extractionFit(state, animal, content) {
   const yields = Object.values(content.parts).filter((p) => p.species === animal.species).length;
   const fit = vaultFit(state, content, yields);
-  return {
-    ...fit,
-    yields,
-    msg: fit.fits ? null
-      : `The vault holds ${fit.room} more part${fit.room === 1 ? '' : 's'} and `
-        + `${animal.name} yields ${yields}. Render something down, or buy shelf space from the Extractor.`,
-  };
+  return { ...fit, yields, msg: fit.fits ? null
+    : `The vault holds ${fit.room} more part${fit.room === 1 ? '' : 's'} and ${animal.name} yields `
+      + `${yields}. Render something down, or buy shelf space from the Extractor.` };
 }
 
 // Graduate a stock animal into a DNA vial + one token per species part.

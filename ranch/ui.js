@@ -555,16 +555,13 @@ export function renderRanchScreen(root, ctx) {
           <p class="fine-print outlook">${outlookLine(outlook, animal.name)}</p>
           <div class="care-row">${buttons}</div>
           ${(() => {
-            // R161 — THE BUTTON READS THE PREDICATE (R49). A full vault refuses
-            // a graduation; before this the Pens offered it anyway and the
-            // player found out halfway through a ceremony that could not
-            // finish. Disabled with the reason ON it, the way a care button
-            // that is still on cooldown says how long.
+            // R161 — the button reads the predicate (R49).
             const fit = extractionFit(state, animal, content);
-            return fit.fits
-              ? `<button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}">${renderIcon('graduation-cap')} Extract (graduate ${animal.name})</button>`
-              : `<button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}" disabled>${renderIcon('graduation-cap')} Vault full \u2014 ${animal.name} yields ${fit.yields}, shelf has ${fit.room}</button>
-                 <p class="fine-print">${fit.msg}</p>`;
+            const label = fit.fits ? `Extract (graduate ${animal.name})`
+              : `Vault full \u2014 ${animal.name} yields ${fit.yields}, shelf has ${fit.room}`;
+            return `<button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}"${
+              fit.fits ? '' : ' disabled'}>${renderIcon('graduation-cap')} ${label}</button>${
+              fit.fits ? '' : `<p class="fine-print">${fit.msg}</p>`}`;
           })()}
         </div>
       </section>`;

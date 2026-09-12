@@ -4241,6 +4241,23 @@ triangle working, and each region genuinely asks a different question)*.
   carries R91's sentence, and there is no kazoo. Breaks **258** and **259**,
   each aimed at one of the two fixes; the rule goes red on the pre-R161 tree.
 
+  #### And it cost two budgets, which is the milestone's own lesson twice
+
+  The first version went **2 KB over first paint** — because the explanation
+  above was written into `ranch/ui.js` and `splice/extract.js`, both eager, and
+  **prose ships; there is no build step** (R130, learned again the hard way).
+  Moving the story here recovered most of it. What remains is **724 bytes** of
+  real code — one shared predicate and a button that asks it — so
+  `FIRST_PAINT_KB` goes 1026 → 1027 and `KB_CAP` 554 → 555.
+
+  R153 warned that a seventh raise just lengthens the queue, and that warning
+  holds: those were raises to accommodate **drift**, on caps nobody had moved
+  the code under. This is the smallest number that fits a defect the player
+  hit. One wrong turn on the way is worth recording too — `vialSVG` looked like
+  it was keeping the 5.4 KB ceremony eager, and moving it to `ui/icons.js` made
+  first paint *worse*, because `splice/vault-ui.js` is itself lazy and the
+  ceremony was never in the graph. Reverted.
+
   **The lesson:** *an engine that refuses politely and a screen that never asks
   are the same bug as an engine that crashes. R91 wrote the sentence, wrote the
   reason, and shipped it to nobody.*
