@@ -3837,7 +3837,8 @@ triangle working, and each region genuinely asks a different question)*.
   *Done when: R157 decides what a bigger stable costs, and then the reserve
   exemption ships with a break that can make it red.* Both: R157 decided (the
   budget grows and costs nothing), and break **255** puts `canSpend` back and
-  the empire shard reads **18h of a 24-hour window**. **R157 has decided and
+  the empire shard reads **18h of a 24-hour window**. Full battery 251/251,
+  baseline green, `npm test` 898 CPU-seconds of 1200. **R157 has decided and
   is shipped: the budget grows, and it costs nothing.** What it did NOT do is
   make this observable — the walker still reaches a roster of nine at the
   Theater's twelve, because the three stalls it now leaves are the ones the

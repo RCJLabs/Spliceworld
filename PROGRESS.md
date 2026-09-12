@@ -76,6 +76,7 @@ supplies the 18h.
 | `battery --only 255` | **1 caught · 0 missed · `BATTERY_EXIT=0`** |
 | `npm test` | **898 CPU-seconds of 1200**, 237s wall on 3.8 lanes |
 | `tools/reach.js` | green, worn mean 170.0 — identical seed for seed |
+| full battery | **251 breaks · 251 caught · 0 missed · `BATTERY_EXIT=0`** |
 
 Full battery run too, though R155 only ADDS a gate: it changes **walker
 behaviour**, which is the shared input every gate measures, and that is the
