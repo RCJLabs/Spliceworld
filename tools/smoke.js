@@ -13518,6 +13518,15 @@ if (inShard('spar')) {
   assert.equal(walk.feral.lost, 0,
     `a walk that plays every day never loses a creature to neglect (${walk.feral.lost})`);
 
+  //  5a. R155's MARGIN RULE IS NOT HERE, and the reason is this walk.
+  //      `walk.feral.heldHours` says the longest the walker left a WARNED
+  //      creature waiting, and R155 asserts it is zero — but this block walks
+  //      seed 2026 for 45 days, and seed 2026 holds nobody for 0h with the
+  //      fix AND 0h without it. Written here first and measured: green both
+  //      ways, which is the vacuous gate R155's own roadmap entry spent two
+  //      milestones warning about. It lives in the `empire` shard below, on
+  //      R143's three full-180-day walks, where reverting the fix reads 18h.
+
   // 5a2. R120 — THE WALK CAN BE READ AS A SITTING, AND THE RANCH LOOP RUNS.
   //      `__walkLog` was written in one place — the `fight` helper — so 90
   //      days of it held 502 entries and every one was a battle. Every
@@ -18822,6 +18831,49 @@ if (inShard('empire')) {
   const walks = EMPIRE_SEEDS.map((seed) => campaignWalk(content, {
     seed, days: 180, stopAtDominion: false, snapshotDays: [10, 120],
   }));
+
+  // R155 — THE MARGIN R85's PROMISE IS BEING KEPT BY.
+  //
+  // `walk.feral.lost` is the promise — a player who shows up never loses a
+  // creature to neglect — and it has never fired, on any seed, which is
+  // exactly why it could not gate this. Drift-tending asked the walk's cash
+  // reserve before spending FIVE DOLLARS on a creature the Pens was already
+  // painting a warning on, and a bigger stable is poorer per head, so the
+  // first thing a tight week stopped was the one purchase that cannot wait.
+  //
+  // Measured across 21 seeds before the fix, against a 24-hour window: the
+  // reserve held a warned creature for 18 consecutive hours on seed 7 and 20
+  // on seed 314 — 75% and 83% of the time that creature had — and lost
+  // nothing anywhere. The promise was being kept by four hours of luck and
+  // `lost` reported a clean sheet.
+  //
+  // ZERO, not "under the window". A budget is a number somebody bumps; there
+  // is nothing to bump here, because the walker attends every at-risk
+  // creature on the tick it sees one. `heldHours` counts only hours the player
+  // was PRESENT — away ticks are skipped before it is measured — so this does
+  // not contradict R9's rule that no absence of any length can cost you an
+  // animal.
+  //
+  // HERE rather than beside `feral.lost` in the campaign block, for R138's
+  // reason three rules down: these are the only walks in the suite that run
+  // the full 180 days. And the seed matters as much as the length — seed 2026
+  // reads 0h whether the fix is present or not, so the rule is the MAX across
+  // all three walks. On the reverted tree that max is 18h, from seed 7.
+  //
+  // NOT asserted on `agitated`: the warning is stamped by `tick()` BEFORE the
+  // walker takes its turn, so a creature settled on the same tick still
+  // counts as warned. 14 across those 21 seeds, and the number did not move
+  // when the fix landed — which is what sent this milestone looking for a
+  // different instrument rather than trusting the one it was handed.
+  {
+    const held = Math.max(...walks.map((w) => w.feral.heldHours));
+    assert.equal(held, 0,
+      'a player who shows up never leaves a warned creature waiting for the'
+      + ` reserve — worst hold ${held}h of a 24h window, across seeds `
+      + `${EMPIRE_SEEDS.join('/')} (${walks.map((w) => `${w.feral.heldHours}h`).join(', ')})`);
+    assert.equal(walks.reduce((n, w) => n + w.feral.lost, 0), 0,
+      'and none of the three full-length walks lost one');
+  }
 
     // R138 — THE MIDDLE OF THE LEVEL CURVE.
     //

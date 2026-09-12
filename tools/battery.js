@@ -2015,6 +2015,32 @@ const BREAKS = [
     anchor: 'const PEN_CHROME = { px: 560, words: 78 };',
     to: 'const PEN_CHROME = { px: NaN, words: 78 };',
   },
+  // --- gate: empire (R155 — the reserve exemption) -------------------------
+  {
+    // R155's CRITERION, and the break its roadmap entry said twice could not
+    // be written. Drift-tending goes back to asking the walk's cash reserve
+    // before spending five dollars on a creature the Pens is already painting
+    // a warning on. Nothing is LOST when it does — 0 across 21 seeds, which is
+    // why `feral.lost` could not gate this and why R155 sat blocked for two
+    // milestones — but the walker holds a warned creature for 18 consecutive
+    // hours of its 24-hour window on seed 7, and `feral.heldHours` says so.
+    //
+    // Aimed at the reserve read rather than at the loop, because the loop is
+    // not what was wrong: R138's policy trains the drifting creature and
+    // always did. The defect was one word of reuse — the same `canSpend` that
+    // correctly refuses a gantry also refused the one purchase that cannot
+    // wait. `state.funds < TRAINING.cost` is the floor that replaced it, so
+    // the patch swaps a floor for a buffer and nothing else.
+    //
+    // THE SEED IS PART OF THE BREAK. Seed 2026 reads 0h with the reserve check
+    // and 0h without it, so a rule on 2026 alone is green either way — which
+    // is exactly the vacuous gate this entry warned about. The rule takes the
+    // max across R143's three walks and this goes red on seed 7's 18h.
+    n: 255, gate: EMPIRE, name: 'the cash reserve goes back to refusing the five dollars that keeps a creature',
+    file: 'tools/sim.js',
+    anchor: '      if (state.funds < TRAINING.cost) break;',
+    to: '      if (!canSpend(TRAINING.cost)) break;',
+  },
   {
     // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
     // the rule that stops the splice policy taking it. Break it and the walker
