@@ -47,9 +47,24 @@ export function runExtraction(overlay, ctx, animalId, onDone) {
   overlay.querySelector('#grad-no').addEventListener('click', () => close(overlay, onDone, false));
   overlay.querySelector('#grad-go').addEventListener('click', () => {
     const result = extractAnimal(state, animalId, content, ctx.now());
+    // R161 — a refusal has no tokens; playing on strands the overlay.
+    if (!result.ok) return showRefusal(overlay, result, onDone);
     ctx.save();
     playCeremony(overlay, ctx, result, onDone);
   });
+}
+
+// R161 — the sentence R91 wrote and nothing ever showed.
+function showRefusal(overlay, result, onDone) {
+  overlay.innerHTML = `
+    <div class="ceremony card">
+      <h3>Not today</h3>
+      <p>${result.msg}</p>
+      <div class="ceremony-btns">
+        <button type="button" id="grad-back" class="big-btn">Back to the pens</button>
+      </div>
+    </div>`;
+  overlay.querySelector('#grad-back').addEventListener('click', () => close(overlay, onDone, false));
 }
 
 function playCeremony(overlay, ctx, result, onDone) {

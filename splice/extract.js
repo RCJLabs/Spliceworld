@@ -73,6 +73,16 @@ export function gradeFor(animal, content, now, state = null) {
   return GRADES[0];
 }
 
+// R161 — one reader for "can this graduate", so the button asks what the
+// engine enforces. Story in ROADMAP R161.
+export function extractionFit(state, animal, content) {
+  const yields = Object.values(content.parts).filter((p) => p.species === animal.species).length;
+  const fit = vaultFit(state, content, yields);
+  return { ...fit, yields, msg: fit.fits ? null
+    : `The vault holds ${fit.room} more part${fit.room === 1 ? '' : 's'} and ${animal.name} yields `
+      + `${yields}. Render something down, or buy shelf space from the Extractor.` };
+}
+
 // Graduate a stock animal into a DNA vial + one token per species part.
 // Permanent by design: the donor leaves the herd and lives on as lineage.
 export function extractAnimal(state, animalId, content, now) {
@@ -88,12 +98,8 @@ export function extractAnimal(state, animalId, content, now) {
   // still in the pen afterwards, which is the whole point: nothing is lost,
   // and the shelf space is a decision. Counted BEFORE the animal leaves the
   // herd, so a refusal costs nothing.
-  const yieldCount = Object.values(content.parts).filter((p) => p.species === animal.species).length;
-  const fit = vaultFit(state, content, yieldCount);
-  if (!fit.fits) {
-    return { ok: false, msg: `The vault holds ${fit.room} more part${fit.room === 1 ? '' : 's'} and `
-      + `${animal.name} yields ${yieldCount}. Render something down, or buy shelf space from the Extractor.` };
-  }
+  const fit = extractionFit(state, animal, content);
+  if (!fit.fits) return { ok: false, msg: fit.msg };
 
   state.ranch.stock.splice(idx, 1);
   const inv = state.inventory;

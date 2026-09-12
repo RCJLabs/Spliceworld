@@ -8,7 +8,7 @@ import {
   penUpgradeCost, buyPenUpgrade, buyMailOrder, stockGenome, upkeepPerDay,
   catalogFor, isNewToDex, newToDex, TUNING,
 } from './ranch.js';
-import { gradeFor, gradeOutlook, outlookLine } from '../splice/extract.js';
+import { gradeFor, gradeOutlook, outlookLine, extractionFit } from '../splice/extract.js';
 import { renameCreature } from '../splice/theater.js';
 import { openPrompt } from '../ui/picker.js';
 import {
@@ -554,7 +554,15 @@ export function renderRanchScreen(root, ctx) {
           }</p>
           <p class="fine-print outlook">${outlookLine(outlook, animal.name)}</p>
           <div class="care-row">${buttons}</div>
-          <button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}">${renderIcon('graduation-cap')} Extract (graduate ${animal.name})</button>
+          ${(() => {
+            // R161 — the button reads the predicate (R49).
+            const fit = extractionFit(state, animal, content);
+            const label = fit.fits ? `Extract (graduate ${animal.name})`
+              : `Vault full \u2014 ${animal.name} yields ${fit.yields}, shelf has ${fit.room}`;
+            return `<button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}"${
+              fit.fits ? '' : ' disabled'}>${renderIcon('graduation-cap')} ${label}</button>${
+              fit.fits ? '' : `<p class="fine-print">${fit.msg}</p>`}`;
+          })()}
         </div>
       </section>`;
 
