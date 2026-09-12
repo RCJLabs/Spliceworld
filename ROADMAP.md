@@ -3939,6 +3939,29 @@ triangle working, and each region genuinely asks a different question)*.
   is measured with it — checked by re-running R157's own census against the
   new sample and reading a delta of zero.*
 
+- **R159 — Two browser gates under load report a screen nobody can open.**
+  R154's verification ran `npm test` alongside `battery --baseline`, which is
+  what CLAUDE.md prescribes, and the baseline went **red on the height gate**
+  — *"ranch declares 20 folds to walk and the gate got into 4"*, *"pens ...
+  got into 1"*, and a Theater 77px over. Run alone, on the identical tree,
+  the same gate walked **40/12 and 40/16 folds and passed**, twice, and so
+  did the whole baseline. So the red is starvation, and the tell is in the
+  message: every one of those is a REACH failure, not a budget overrun. The
+  gate opens folds on a timer, and the suite now costs **464s wall and 940
+  CPU-seconds across four lanes**, not the "~3 min" the protocol still
+  quoted.
+
+  This is R131's own rule turned on its author: `opens` exists because "every
+  rule above fails UPWARDS only, so a screen the walk can no longer get into
+  reports a comfortable number and passes". It does its job — the trouble is
+  it cannot tell a screen that stopped opening from a screen that was not
+  given the CPU to open, and a 47-minute battery that false-reds at random is
+  a battery nobody will trust the fifth time. *Done when: a browser gate
+  starved of CPU says so instead of failing — the fold walk retries or reports
+  "the page did not settle" as a distinct verdict from "the screen does not
+  open" — checked by running the height gate against a deliberate load and
+  reading that verdict rather than a budget failure.*
+
 - **R153 — The boot budget has taken three raises in three milestones.**
   ✅ *Shipped. Both budgets came down, and the note that priced the fix was
   aimed at the wrong one of them.*

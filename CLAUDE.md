@@ -42,7 +42,10 @@ the session.
 - `node tools/battery.js --anchors` — every break still aims at real code. **0.3s.**
 - `node tools/battery.js --baseline` — every gate green on a clean tree. ~7 min.
 - `node tools/battery.js --only <the breaks this milestone added>` — the new rules go red on demand.
-- `npm test` — ~3 min, runs in parallel with the above.
+- `npm test` — **~8 min wall, 940 CPU-seconds on four lanes.** Run it BEFORE
+  or AFTER the battery, not alongside it: R154 followed the old "~3 min, runs
+  in parallel" advice and starved the height gate's fold walk into a false red
+  (`pens declares 20 folds to walk and the gate got into 1`). Filed as R159.
 
 **The full battery (~47 min), on these triggers only:**
 - A milestone that **changes an existing gate's logic** rather than adding one.

@@ -114,6 +114,26 @@ before it is used.
 | Pens budget | flat 2,000px / 300 words | **derived: 2,180 / 366 at a full stable** |
 | breaks | 246 | **250** |
 
+### The verification protocol itself was wrong, and it cost a run
+
+`--only` came back **4 caught / 0 missed** with `BATTERY_EXIT=1`, because the
+baseline went red on the height gate:
+
+```
+· ranch declares 20 folds to walk and the gate got into 4
+· pens  declares 20 folds to walk and the gate got into 1
+· theater reaches 2157px when opened, over its 2080px budget
+```
+
+Run alone on the identical tree, the same gate walked **40/12 and 40/16 folds
+and passed**, twice, and so did the whole baseline. Starvation — and the tell
+is in the message: all three are **reach** failures, not budget overruns. The
+gate opens folds on a timer, and CLAUDE.md told me to run `npm test` alongside
+it on the strength of a "~3 min" that is now **464s wall and 940 CPU-seconds
+across four lanes**. Corrected in CLAUDE.md; the deeper fix — a browser gate
+that says "the page did not settle" instead of "the screen does not open" —
+is filed as **R159**.
+
 ### Known issues
 
 - **The vault gate walks seed 2026 alone**, which finishes on 38 head and would
