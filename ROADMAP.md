@@ -3773,7 +3773,8 @@ triangle working, and each region genuinely asks a different question)*.
   grants 12, paddock took it to 16, roster 15"*, and breaks **251** and **252**
   take those two halves away. **253** and **254** hold the Pens' derived
   budgets — one takes the stalls back out of the arithmetic, the other makes
-  it `NaN` and proves the gate notices rather than going quiet. Full battery
+  it `NaN` and proves the gate notices rather than going quiet. The full
+  battery ran **249 of 250** with break 245 the miss; re-derived and re-run
   **250/250**, baseline green, `npm test` 940 CPU-seconds of 1200.
 
 - **R155 — The walker models a player who never grows.** *Investigated and
