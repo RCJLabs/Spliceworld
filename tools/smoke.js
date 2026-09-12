@@ -11349,6 +11349,109 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   };
   const goat = content.species.goat.growthHours;
 
+  // R161 — A FULL VAULT REFUSES A GRADUATION, AND THE PENS HAS TO SAY SO
+  //        BEFORE THE PLAYER COMMITS.
+  //
+  // Reported from play: tapping Extract opened the Graduation Ceremony, the
+  // kazoo played, the portrait poofed, the buttons removed themselves — and
+  // then nothing, forever, with no way out but closing the app. Twice, because
+  // a full vault stays full. The animal was still in the pen afterwards.
+  //
+  // R91 built that refusal on purpose ("the animal is still in the pen
+  // afterwards, which is the whole point") and wrote the sentence explaining
+  // it. Nothing ever showed the sentence: `runExtraction` handed whatever came
+  // back to `playCeremony`, and `showResults` then read `result.tokens.map` on
+  // a refusal that has no tokens.
+  //
+  // Why 253 breaks and nineteen gates all missed it: every one of them walks a
+  // save whose vault has room. R99's rule — a gate has to REACH the state the
+  // defect lives in — so this fixture fills the shelf first.
+  {
+    const { extractionFit, extractAnimal } = await import('../splice/extract.js');
+    const { vaultRoom } = await import('../splice/vault.js');
+    const fill = (st) => {
+      const any = Object.values(content.parts)[0];
+      const room = vaultRoom(st, content).parts;
+      for (let i = 0; i < room; i++) {
+        st.inventory.parts.push({ id: `fill${i}`, partId: any.id, grade: 'standard', donor: { name: 'x', stars: 1 } });
+      }
+      return st;
+    };
+    // Prime, not merely adult: the Extract control only exists in the "Ready
+    // to graduate" band, which is `prime` or `elder`. An adult fixture renders
+    // no button at all and the rule below would pass on an absence.
+    // Prime, not merely adult: the Extract control only exists in the "Ready
+    // to graduate" band, which is `prime` or `elder`. And the card has to be
+    // OPEN — R98 gave the Pens one-card-at-a-time and the body is not rendered
+    // while it is shut, so a fixture that only ages the animal asserts on an
+    // absence and passes for the wrong reason. Both were got wrong once here.
+    const ready = (st) => {
+      st.ui = { collapsed: { [`ranch-${st.ranch.stock[0].id}`]: false } };
+      return st;
+    };
+    const roomy = ready(herd([{ ageHours: goat.prime + 1 }]));
+    const full = ready(fill(herd([{ ageHours: goat.prime + 1 }])));
+
+    // 1. The predicate the button reads and the predicate the engine enforces
+    //    are ONE reader. They disagreed for as long as the button did not ask.
+    for (const [name, st] of [['a shelf with room', roomy], ['a full shelf', full]]) {
+      const animal = st.ranch.stock[0];
+      const fit = extractionFit(st, animal, content);
+      const engine = extractAnimal({ ...st, ranch: { ...st.ranch, stock: [...st.ranch.stock] },
+        inventory: JSON.parse(JSON.stringify(st.inventory)), dex: JSON.parse(JSON.stringify(st.dex)) },
+      animal.id, content, t0);
+      assert.equal(fit.fits, engine.ok !== false || !engine.msg?.includes('vault'),
+        `on ${name} the button's predicate and the engine agree`);
+    }
+
+    // 2. THE CRITERION. With the shelf full the Pens does not offer a
+    //    graduation it cannot finish, and it says why on the control itself.
+    const shut = drawRanch(full);
+    assert.ok(/extract-btn[^>]*\bdisabled\b/.test(shut),
+      'a full vault leaves the Extract button disabled rather than armed');
+    assert.ok(/Vault full/.test(shut), 'and the button says what is wrong, on the button');
+    assert.ok(/Render something down|buy shelf space/.test(shut),
+      'and the card carries R91\'s sentence about what to do next');
+
+    // 3. And with room it is a live button again, or rule 2 passes by
+    //    disabling extraction for everybody.
+    const open = drawRanch(roomy);
+    assert.ok(/extract-btn/.test(open) && !/extract-btn[^>]*\bdisabled\b/.test(open),
+      'with shelf space the Extract button is armed');
+    assert.ok(!/Vault full/.test(open), 'and says nothing about a full vault');
+
+    // 4. AND THE CEREMONY ITSELF, WHICH IS WHAT THE PLAYER ACTUALLY HIT.
+    //    The button is the braces; this is the belt. Press Graduate with the
+    //    shelf full and the overlay must offer a way out — before this it
+    //    played the whole ceremony, removed its own buttons, and then threw
+    //    inside `showResults` on a refusal that has no tokens. A stub that
+    //    records handlers by selector is enough: the defect is entirely in
+    //    which branch runs, not in any layout.
+    {
+      const { runExtraction } = await import('../splice/extract-ui.js');
+      const handlers = {};
+      const overlay = {
+        hidden: true, innerHTML: '',
+        querySelector: (sel) => ({ addEventListener: (_e, fn) => { handlers[sel] = fn; },
+          classList: { add: () => {} }, remove: () => {}, set textContent(_v) {}, set innerHTML(_v) {} }),
+        querySelectorAll: () => [],
+      };
+      const st = full;
+      const animal = st.ranch.stock[0];
+      runExtraction(overlay, { state: st, content, now: () => t0, save: () => {} }, animal.id, () => {});
+      assert.ok(handlers['#grad-go'], 'the confirm dialog offers a Graduate button');
+      const herdBefore = st.ranch.stock.length;
+      handlers['#grad-go']();          // this threw before R161, mid-ceremony
+      assert.equal(st.ranch.stock.length, herdBefore,
+        'a refused graduation leaves the animal in the pen (R91)');
+      assert.ok(/Render something down|buy shelf space/.test(overlay.innerHTML),
+        'and the overlay says why instead of playing a ceremony it cannot finish');
+      assert.ok(!/kazoo/.test(overlay.innerHTML),
+        'no kazoo for a graduation that did not happen');
+      assert.ok(handlers['#grad-back'], 'and there is a way back to the pens');
+    }
+  }
+
   // 1. THE CRITERION. Every animal is a fold, every fold is SHUT, and a
   //    shut fold builds NO PORTRAIT — the same measurement that mattered
   //    in the Pens, because a portrait is ~12KB of inline SVG and twenty

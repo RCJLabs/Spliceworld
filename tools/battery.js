@@ -2075,6 +2075,32 @@ const BREAKS = [
     anchor: '    reads.push((d.user + d.system) / 1000);',
     to: '    reads.push(0);',
   },
+  // --- gate: facility (R161 — a refusal is not a ceremony) -----------------
+  {
+    // The Pens goes back to offering a graduation the vault will refuse. This
+    // is the half the player pressed: R91 built the refusal and nothing ever
+    // asked it, so the button was armed on a full shelf and the ceremony that
+    // followed could not finish.
+    //
+    // Aimed at the PREDICATE rather than at the `disabled` attribute, because
+    // the defect was never a missing attribute — it was a control that did not
+    // ask the question the engine answers (R49).
+    n: 258, gate: FACILITY, name: 'the Extract button stops asking whether the vault can take the yield',
+    file: 'ranch/ui.js',
+    anchor: '            const fit = extractionFit(state, animal, content);',
+    to: '            const fit = { fits: true, yields: 0, room: 0, msg: null };',
+  },
+  {
+    // And the belt behind that pair of braces: the ceremony plays for a
+    // refusal again. `showResults` then reads `result.tokens.map` on a result
+    // that has none, the overlay is stranded with its own buttons already
+    // removed, and the only way out is closing the app. That is exactly what
+    // was reported from play, twice, because a full vault stays full.
+    n: 259, gate: FACILITY, name: 'a refused graduation plays the whole ceremony and strands the overlay',
+    file: 'splice/extract-ui.js',
+    anchor: '    if (!result.ok) return showRefusal(overlay, result, onDone);',
+    to: '',
+  },
   {
     // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
     // the rule that stops the splice policy taking it. Break it and the walker

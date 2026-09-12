@@ -47,9 +47,31 @@ export function runExtraction(overlay, ctx, animalId, onDone) {
   overlay.querySelector('#grad-no').addEventListener('click', () => close(overlay, onDone, false));
   overlay.querySelector('#grad-go').addEventListener('click', () => {
     const result = extractAnimal(state, animalId, content, ctx.now());
+    // R161 — A REFUSAL IS NOT A CEREMONY. This went straight to
+    // `playCeremony` whatever came back, and a refusal has no tokens: the
+    // kazoo played, the portrait poofed, the buttons were removed, and then
+    // `showResults` read `result.tokens.map` on `undefined` and threw. The
+    // overlay was left with no way out but closing the app — reported from
+    // play, twice in a row, because a full vault stays full.
+    if (!result.ok) return showRefusal(overlay, result, onDone);
     ctx.save();
     playCeremony(overlay, ctx, result, onDone);
   });
+}
+
+// R161 — the sentence R91 wrote and nothing ever showed. No state changed,
+// so the only thing to offer is the way back; the Pens button is disabled
+// with the same reason on it, so this is the belt to that pair of braces.
+function showRefusal(overlay, result, onDone) {
+  overlay.innerHTML = `
+    <div class="ceremony card">
+      <h3>Not today</h3>
+      <p>${result.msg}</p>
+      <div class="ceremony-btns">
+        <button type="button" id="grad-back" class="big-btn">Back to the pens</button>
+      </div>
+    </div>`;
+  overlay.querySelector('#grad-back').addEventListener('click', () => close(overlay, onDone, false));
 }
 
 function playCeremony(overlay, ctx, result, onDone) {

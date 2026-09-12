@@ -4188,6 +4188,63 @@ triangle working, and each region genuinely asks a different question)*.
   forever. The pull was worth twice what seven seeds could see, and two
   milestones moved a floor to chase a number that was mostly standard error.*
 
+- **R161 — A refusal is not a ceremony.** ✅ *Shipped. Reported from play: the
+  Graduation Ceremony opened, the kazoo played, and then nothing, forever, with
+  no way out but closing the app.*
+
+  Tapping **Extract** on a full vault stranded the overlay. The screenshot shows
+  it exactly: the portrait box empty, the buttons gone, `~ kazoo noises ~` where
+  the forecast should be. Twice in a row, because a full vault stays full — and
+  the animal was still in the pen afterwards.
+
+  #### R91 wrote the refusal and nothing ever showed it
+
+  `extractAnimal` has refused a full vault since R91, on purpose: *"the animal
+  is still in the pen afterwards, which is the whole point: nothing is lost,
+  and the shelf space is a decision."* It returns `{ ok: false, msg }` with a
+  good sentence naming the fix. **No code path has ever displayed that
+  sentence.** `runExtraction` handed whatever came back straight to
+  `playCeremony`, which removes the buttons and poofs the portrait, and
+  `showResults` then read `result.tokens.map` on a refusal that has no tokens.
+  Reproduced headlessly in one call:
+
+  ```
+  result.ok  : false
+  result.msg : The vault holds 0 more parts and Winifred yields 6. Render
+               something down, or buy shelf space from the Extractor.
+  animal still in the pen: true
+  showResults THROWS: TypeError: Cannot read properties of undefined ('map')
+  ```
+
+  #### Two fixes, and the first one is R49's
+
+  The **button reads the predicate** now — `extractionFit` is exported so the
+  Pens asks the same question the engine answers, and a full shelf leaves the
+  control disabled with the reason on it, the way a care button on cooldown
+  says how long. And the **ceremony refuses to play for a refusal**: the
+  overlay shows R91's sentence and a way back to the pens. Belt and braces,
+  because the stuck overlay had neither.
+
+  #### Why 255 breaks and nineteen gates missed it
+
+  Every one of them walks a save whose vault has room. R99's rule — *a gate has
+  to reach the state the defect lives in* — so the fixture fills the shelf
+  first, and it took two goes to build: an adult animal renders no Extract
+  control at all (the band is `prime` or `elder`), and a shut card renders no
+  body, so the first two versions of this rule asserted on an absence and
+  passed for the wrong reason.
+
+  *Done when: a full vault never offers a graduation it cannot finish, and a
+  refusal that reaches the ceremony leaves a way out rather than a stranded
+  overlay.* Both, and the rule presses the button: smoke drives the real
+  confirm handler on a full shelf and asserts the animal stays, the overlay
+  carries R91's sentence, and there is no kazoo. Breaks **258** and **259**,
+  each aimed at one of the two fixes; the rule goes red on the pre-R161 tree.
+
+  **The lesson:** *an engine that refuses politely and a screen that never asks
+  are the same bug as an engine that crashes. R91 wrote the sentence, wrote the
+  reason, and shipped it to nobody.*
+
 - **R160 — The probe measures the wrong work.** R156 chose a fixed integer
   loop for being the quietest of three candidates (0.6% spread, against 6% for
   a pointer chase over 8MB and GC noise for an allocation loop) and divided the

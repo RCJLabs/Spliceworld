@@ -8,7 +8,7 @@ import {
   penUpgradeCost, buyPenUpgrade, buyMailOrder, stockGenome, upkeepPerDay,
   catalogFor, isNewToDex, newToDex, TUNING,
 } from './ranch.js';
-import { gradeFor, gradeOutlook, outlookLine } from '../splice/extract.js';
+import { gradeFor, gradeOutlook, outlookLine, extractionFit } from '../splice/extract.js';
 import { renameCreature } from '../splice/theater.js';
 import { openPrompt } from '../ui/picker.js';
 import {
@@ -554,7 +554,18 @@ export function renderRanchScreen(root, ctx) {
           }</p>
           <p class="fine-print outlook">${outlookLine(outlook, animal.name)}</p>
           <div class="care-row">${buttons}</div>
-          <button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}">${renderIcon('graduation-cap')} Extract (graduate ${animal.name})</button>
+          ${(() => {
+            // R161 — THE BUTTON READS THE PREDICATE (R49). A full vault refuses
+            // a graduation; before this the Pens offered it anyway and the
+            // player found out halfway through a ceremony that could not
+            // finish. Disabled with the reason ON it, the way a care button
+            // that is still on cooldown says how long.
+            const fit = extractionFit(state, animal, content);
+            return fit.fits
+              ? `<button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}">${renderIcon('graduation-cap')} Extract (graduate ${animal.name})</button>`
+              : `<button type="button" class="extract-btn" data-act="extract" data-animal="${animal.id}" disabled>${renderIcon('graduation-cap')} Vault full \u2014 ${animal.name} yields ${fit.yields}, shelf has ${fit.room}</button>
+                 <p class="fine-print">${fit.msg}</p>`;
+          })()}
         </div>
       </section>`;
 

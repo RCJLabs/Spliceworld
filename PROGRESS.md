@@ -1,5 +1,75 @@
 # PROGRESS
 
+## Session 161 — R161: a refusal is not a ceremony ✅
+
+**ROADMAP §9.29a.** Reported from play with two screenshots: tapping **Extract**
+opened the Graduation Ceremony and then nothing, forever — empty portrait box,
+no buttons, `~ kazoo noises ~` where the forecast should be. Only way out was
+closing the app. Twice in a row. The creature was still in the pen.
+
+### The diagnosis is in the screenshot
+
+`~ kazoo noises ~` is written by `playCeremony` and nowhere else. So this was
+never the confirm dialog failing to draw — **the ceremony had already run**:
+buttons removed, portrait poofed, and then `showResults` never arrived.
+
+### R91 wrote the refusal and nothing ever showed it
+
+`extractAnimal` has refused a full vault since R91, deliberately — *"the animal
+is still in the pen afterwards, which is the whole point"* — returning
+`{ok:false, msg}` with a sentence naming the fix. **Nothing has ever displayed
+that sentence.** `runExtraction` passed whatever came back to `playCeremony`,
+and `showResults` read `result.tokens.map` on a refusal that has none.
+Reproduced headlessly:
+
+```
+result.ok  : false
+result.msg : The vault holds 0 more parts and Winifred yields 6. Render
+             something down, or buy shelf space from the Extractor.
+animal still in the pen: true
+showResults THROWS: TypeError: Cannot read properties of undefined ('map')
+```
+
+### Two fixes
+
+**The button reads the predicate** (R49). `extractionFit` is exported so the
+Pens asks the question the engine answers; a full shelf leaves the control
+disabled with the reason on it, the way a care button on cooldown says how
+long. **And the ceremony refuses to play for a refusal** — R91's sentence and a
+way back to the pens. Belt and braces, because the stuck overlay had neither.
+
+### Why 255 breaks and nineteen gates missed it
+
+Every one walks a save whose vault has room (R99: *a gate has to reach the state
+the defect lives in*). Building the fixture took two goes and both mistakes are
+worth recording: an **adult** animal renders no Extract control at all (the band
+is `prime` or `elder`), and a **shut card renders no body**. Both earlier
+versions asserted on an absence and passed for the wrong reason.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| full-vault Extract | armed, then stranded | **disabled, with the reason** |
+| refused graduation | ceremony + TypeError | **R91's sentence + a way out** |
+| readers of the fit predicate | 1 (engine only) | **1, shared with the button** |
+| breaks | 253 | **255** |
+
+### Known issues
+
+- **The refusal is still reachable by keyboard on a disabled control in odd
+  states** — that is what the ceremony guard is for, and it is gated
+  separately (break 259).
+- **Nothing sweeps for the same shape elsewhere.** `{ok:false}` returned by an
+  engine call and used as success is a class, not an instance; this fixed the
+  one the player found.
+
+### Next session's first task
+
+**R160 — re-test the probe against the suite** (carried from R158), three
+day-apart pairs, starting with the pointer chase R156 rejected.
+
+
 ## Session 160 — R158: thirteen campaigns, and R156 falsified ✅
 
 **ROADMAP §9.29a.** Three findings, and the third is about yesterday's work.
