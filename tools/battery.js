@@ -2065,7 +2065,12 @@ const BREAKS = [
     // the comparison silently, Infinity fails loudly, and the guard has to
     // catch BOTH kinds of nothing rather than the one that happens to be
     // noisy.
-    n: 257, gate: SUITE, name: 'the box probe reads zero, and the budget divides by it',
+    // R158 renames this: the budget no longer divides by the probe, so the
+    // old name ("and the budget divides by it") describes a gate that was
+    // withdrawn the day after it shipped. The guard still earns its place —
+    // a diagnostic printed on every run that silently reads zero is a
+    // diagnostic nobody can trust the next time the box moves.
+    n: 257, gate: SUITE, name: 'the box probe reads zero, and every run reports a box speed of nothing',
     file: 'tools/probe.js',
     anchor: '    reads.push((d.user + d.system) / 1000);',
     to: '    reads.push(0);',
@@ -4038,9 +4043,24 @@ const BREAKS = [
     to: '        if (false) { known.add(t.partId); worn.push(t.partId); }',
   },
   {
-    // The pull goes away and the Theater reaches for the same best-graded
-    // part every time, which is the 43% this milestone started from.
-    n: 245, gate: REACH, name: 'a part you have never built with stops breaking a tie, and the campaign builds with less of the list',
+    // The pull goes away and the Theater reaches for the same best-graded part
+    // every time, which is the 43% R140 started from.
+    //
+    // R158 RE-AIMS THIS FROM REACH TO BULK, and it is the same patch — what
+    // changed is which rule is asked to notice. As a REACH break it needed a
+    // whole campaign's worn total to fall under a floor, and measured at 21
+    // seeds the pull is worth 20.8 parts against a standard error of 9.1 at
+    // the seven seeds that gate used: ONE sigma. That is why it went MISSED
+    // under R157 and again under R154, and why the floor was re-typed twice
+    // chasing it.
+    //
+    // `bestSplice` is this function, and smoke already asserts its tie-break
+    // directly on two hand-built parts: same grade, one already built with,
+    // the Theater takes the other. Deterministic, no walk, no sample. It
+    // fails with the exact sentence "with both at Standard and bear_head
+    // already built with, the Theater reaches for tiger_head", which is the
+    // defect said out loud rather than inferred from a percentage.
+    n: 245, gate: BULK, name: 'a part you have never built with stops breaking a tie, and the Theater re-picks its favourite',
     file: 'tools/sim.js',
     anchor: '    + (built.has(t.partId) ? 0 : 0.5);',
     to: '    + (built.has(t.partId) ? 0 : 0);',

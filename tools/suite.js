@@ -79,7 +79,7 @@ const LANES = Math.max(1, availableParallelism());
 // — `childCpuSeconds` reads cutime+cstime, so the probe's own cost is not
 // charged to the budget it calibrates.
 const probeBefore = boxProbe();
-const cacheAtStart = walkCacheState({ seeds: [2026, 7, 101, 4242, 55, 900, 31] });
+const cacheAtStart = walkCacheState();
 const started = Date.now();
 const queue = [...picked];
 const results = [];
@@ -248,20 +248,48 @@ if (failed.length) {
 // day now reads 1022" spans exactly that boundary. So the run says which kind
 // it was, because 15% that nobody names gets read as the machine.
 //
-// 1200 -> 900. Measured cold on a 1.00x box: 736. R151 measured contention at
-// about 4% (910 -> 946 with a battery alongside), so 900 is +18% over the
-// worst honest reading this milestone could produce, which is one more drift
-// of the size still unattributed (736 cold today against 898 cold yesterday,
-// and yesterday had no probe to ask). It is a ratchet again rather than a
-// smoke alarm, and when it does fire the line underneath says whether to
-// blame the box, the cache or the code.
+// R158 — AND THE DIVISION IS WITHDRAWN, ONE DAY LATER, BECAUSE THE PROBE
+// MEASURES THE WRONG THING.
+//
+// R156 shipped the normalisation as a stated bet: the probe would track what
+// makes the suite expensive, and PROGRESS said so out loud. The day-apart
+// reading the criterion asked for arrived on the very next session, on the
+// identical seven seeds with a cold cache both times:
+//
+//                    raw CPU    probe        normalised
+//   yesterday          722      107ms 1.00x     722
+//   today              826       95ms 0.89x     931
+//
+// The suite got 14% MORE expensive while the probe says the box got 11%
+// FASTER. Whatever the integer loop measures, it is not what this suite
+// spends its cycles on — and dividing by it did not remove the drift, it
+// nearly doubled it. One pair is enough to falsify "the ratio does not
+// move"; it is not enough to say what the relationship is.
+//
+// The probe was chosen for being the quietest of three candidates. The one
+// it beat was a pointer chase over 8MB — every step a cache miss — rejected
+// for a 6% spread that was read as its own weather. This suite is allocation
+// and GC, not register arithmetic, so the rejected probe was the one shaped
+// like the workload, and its "noise" was never tested against the suite's.
+// That is the experiment R160 is filed for.
+//
+// SO THE PROBE STAYS AND THE DIVISION GOES. It is printed on every run,
+// because a box that moved 11% overnight is worth knowing about and nothing
+// else in the tree could say so. It is a diagnostic, not a denominator.
+//
+// 1100, ON RAW CPU-SECONDS. The observed spread on IDENTICAL work across two
+// days is 722 -> 826, 14%; R158's six extra reach seeds cost about 105 more
+// (931 measured cold today); so 1100 covers the expensive day with 18% over
+// it, which is the size of the drift actually observed rather than a number
+// chosen to feel safe. R153's 1200 was closer to right than R156's 900, and
+// saying so is cheaper than discovering it again.
 //
 // TWO READINGS, NOT ONE, and the mean of them. The probe runs after the jobs
 // as well as before, because a box that changes speed halfway through a
 // four-minute suite would otherwise be calibrated against the half it was
 // not. When the two disagree by more than a little the run says so — that
 // disagreement is the drift itself, caught live.
-const CPU_BUDGET_S = 900;
+const CPU_BUDGET_S = 1100;
 const probeAfter = boxProbe();
 const cpu = childCpuSeconds();
 const work = (results.reduce((a, r) => a + r.ms, 0) / 1000).toFixed(0);
@@ -303,6 +331,7 @@ if (!only) {
 }
 const laneCount = Math.min(LANES, picked.length);
 const lanesGot = (cpu / (wall / 1000)).toFixed(1);
+// R158 — reported, not divided by. See the note above.
 const onRef = cpu / probeFactor;
 const drift = Math.abs(probeAfter.ms - probeBefore.ms) / probeMs;
 const box = `probe ${probeMs.toFixed(0)}ms = ${probeFactor.toFixed(2)}x the reference`
@@ -312,14 +341,14 @@ const box = `probe ${probeMs.toFixed(0)}ms = ${probeFactor.toFixed(2)}x the refe
 // file gets, because the cache key covers them. It just has to be SAID, or
 // the 15% it costs gets read as the machine.
 const cacheLine = cacheAtStart.warm
-  ? 'walk cache warm'
-  : `walk cache COLD (${cacheAtStart.hits}/${cacheAtStart.of} seeds) — worth about 15%`;
-if (!only && onRef > CPU_BUDGET_S) {
-  console.error(`\nsuite \u2717  every job passed, but the suite costs ${onRef.toFixed(0)} CPU-seconds on the reference box, over the ${CPU_BUDGET_S}s budget`);
-  console.error(`   (raw ${cpu.toFixed(0)}s, ${box}, ${cacheLine} — if that factor is near 1.00 and the cache was warm, this is the CODE.`);
+  ? `walk cache warm (${cacheAtStart.hits} walks ready)`
+  : 'walk cache COLD — every 180-day walk rebuilt, worth about 15%';
+if (!only && cpu > CPU_BUDGET_S) {
+  console.error(`\nsuite \u2717  every job passed, but the suite costs ${cpu.toFixed(0)} CPU-seconds, over the ${CPU_BUDGET_S}s budget`);
+  console.error(`   (${box} would put it at ${onRef.toFixed(0)} on the reference box, ${cacheLine} — both are reported, neither is gated on.`);
   console.error(`    This run: ${(wall / 1000).toFixed(1)}s wall on ${laneCount} lanes, ${lanesGot} effective, sum-of-wall ${work}s.)`);
   process.exit(1);
 }
-console.log(`\nsuite \u2713  ${results.length} jobs, ${onRef.toFixed(0)} CPU-seconds of ${CPU_BUDGET_S} budgeted on the reference box`);
+console.log(`\nsuite \u2713  ${results.length} jobs, ${cpu.toFixed(0)} CPU-seconds of ${CPU_BUDGET_S} budgeted`);
 console.log(`   ${(wall / 1000).toFixed(1)}s wall on ${laneCount} lanes (${lanesGot} effective), sum-of-wall ${work}s`);
-console.log(`   raw ${cpu.toFixed(0)}s CPU \u00b7 ${box} \u00b7 ${cacheLine}`);
+console.log(`   ${box} (${onRef.toFixed(0)} on the reference box, reported only) \u00b7 ${cacheLine}`);

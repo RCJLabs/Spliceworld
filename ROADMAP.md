@@ -4084,7 +4084,9 @@ triangle working, and each region genuinely asks a different question)*.
   15% of cache and the rest of a box, added together on different days.*
 
 - **R158 — The reach gate should average thirteen campaigns, not seven.**
-  R157 moved `tools/reach.js` from the median of seven to the mean of seven,
+  ✅ *Shipped. The number that blocked it for two milestones was wrong by 3x,
+  the break it was calibrated against did not need a statistic at all, and the
+  probe R156 shipped the day before was falsified in the process.* R157 moved `tools/reach.js` from the median of seven to the mean of seven,
   which is the free half of the fix. The other half costs walks. Censused at
   21 seeds on two trees, the MEDIAN settles from thirteen seeds onward — 95.5%
   on `main` and 95.1% after R157, steady through 21 — while at seven, nine and
@@ -4117,6 +4119,87 @@ triangle working, and each region genuinely asks a different question)*.
   and reading a delta of zero — and the design floor and the break-catcher
   are two rules, the second stated as a difference the gate can normalise
   rather than a level every roster change moves underneath it.*
+
+  #### The blocker was priced wrong by three times
+
+  "Roughly 360 CPU-seconds" for six more 180-day walks. Measured: **one fresh
+  walk is 20.1 CPU-seconds and a cached one is 0.00.** The gate reads
+  `walkedSave`, which is the cached path, so the six cost about 121 standalone
+  and nothing on a warm run. In the suite, where the six new seeds are walked
+  by `reach` alone (`coverage`'s `COMBO_SEEDS` are the original seven), the
+  marginal cost measured **105 CPU-seconds**. Not 360.
+
+  #### What the sample actually buys, at 21 seeds on this tree
+
+  | n | reach mean | margin over the 94% floor | the pull | SE | pull/SE |
+  | ---: | ---: | ---: | ---: | ---: | ---: |
+  | 7 | 94.15% | **0.4 parts** | 10.1 | 9.1 | **1.11** |
+  | 13 | 94.74% | 1.8 parts | 21.5 | 7.8 | 2.78 |
+  | 21 | 94.89% | 2.2 parts | 20.8 | 5.9 | 3.52 |
+
+  Two things fall out. The gate was passing by **four parts** at seven seeds,
+  against a floor it sits right on top of. And **seven seeds measured the pull
+  at half its true size and one standard error wide** — R157 and R154 were not
+  calibrating a floor against a defect, they were calibrating it against noise,
+  twice. Thirteen, not twenty-one: +14 walks did not fit.
+
+  #### The break did not need a statistic at all
+
+  `bestSplice` is the function break 245 patches, and `tools/smoke.js` has
+  asserted its tie-break **directly** since R140 — two hand-built parts, same
+  grade, one already built with, and the Theater must take the other. Break 245
+  is aimed there now and fails with
+
+  > with both at Standard and bear_head already built with, the Theater reaches
+  > for tiger_head
+
+  which is the criterion's "difference the gate can normalise", in its purest
+  form: a difference between two choices, with no sample, no roster and no
+  campaign in it. So `WORN_FLOOR` goes back to **R140's 50%**, a design floor
+  with twenty-one points of deliberate daylight, and stops being dragged.
+
+  #### And R156's probe was falsified on its first day
+
+  R156 shipped the budget divided by a fixed integer probe, and PROGRESS called
+  it a bet. The day-apart reading arrived here, identical seven seeds, cold
+  cache both times:
+
+  | | raw CPU | probe | normalised |
+  | --- | ---: | ---: | ---: |
+  | yesterday | 722 | 107ms (1.00x) | 722 |
+  | today | **826** | **95ms (0.89x)** | **931** |
+
+  The suite got 14% more expensive while the probe said the box got 11%
+  faster. **Dividing by it nearly doubled the drift instead of removing it**,
+  and 900 was blocking the suite on unchanged code. The division is withdrawn;
+  the probe stays as a printed diagnostic, because nothing else in the tree
+  could have told us the box moved 11% overnight. The budget is **1100 on raw
+  CPU-seconds** — R153's 1200 was closer to right than R156's 900.
+
+  *Done when* — both halves: the sample is thirteen and the reach mean's
+  tree-vs-broken delta falls from **0.70 points at seven to 0.50 at thirteen**
+  (0.12 at twenty-one, which did not fit and is said rather than claimed), and
+  the design floor and the break-catcher are now two rules, the second a direct
+  two-part comparison. Breaks **245** (re-aimed to `bulk`), **256**, **257**.
+  Full battery 253/253, baseline green, `npm test` 908 of 1100 at thirteen
+  seeds cold.
+
+  **The lesson:** *a gate calibrated against noise will be re-calibrated
+  forever. The pull was worth twice what seven seeds could see, and two
+  milestones moved a floor to chase a number that was mostly standard error.*
+
+- **R160 — The probe measures the wrong work.** R156 chose a fixed integer
+  loop for being the quietest of three candidates (0.6% spread, against 6% for
+  a pointer chase over 8MB and GC noise for an allocation loop) and divided the
+  suite budget by it. One day later, on identical work: the suite cost **+14%**
+  and the probe read **-11%**. Whatever a register-only loop measures, it is
+  not what a suite of allocation and GC spends its cycles on — and the probe it
+  beat was the one shaped like the workload, rejected for a variance nobody
+  tested against the suite's own. R158 withdrew the division and kept the probe
+  as a diagnostic. *Done when: a probe's reading is shown to move WITH the
+  suite's cost across at least three day-apart pairs — the pointer chase is the
+  first candidate to re-test, and "quieter" is not the criterion, "correlated"
+  is.*
 
 - **R159 — Two browser gates under load report a screen nobody can open.**
   R154's verification ran `npm test` alongside `battery --baseline`, which is
