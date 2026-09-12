@@ -3777,10 +3777,9 @@ triangle working, and each region genuinely asks a different question)*.
   battery ran **249 of 250** with break 245 the miss; re-derived and re-run
   **250/250**, baseline green, `npm test` 940 CPU-seconds of 1200.
 
-- **R155 — The walker models a player who never grows.** *Investigated and
-  not shipped — the premise in this entry's own first draft was wrong, and
-  the half that is right cannot be gated on its own. Measurements below so
-  nobody repeats them.*
+- **R155 — The walker models a player who never grows.** ✅ *Shipped at the
+  third attempt. The mechanism was right all three times; the evidence was
+  wrong twice, and the instrument was wrong twice.*
 
   Two hand-typed constants make the harness a player whose ranch is the same
   size on day 180 as on day 20:
@@ -3836,7 +3835,9 @@ triangle working, and each region genuinely asks a different question)*.
   **R157** rather than settled inside a milestone about tending.
 
   *Done when: R157 decides what a bigger stable costs, and then the reserve
-  exemption ships with a break that can make it red.* **R157 has decided and
+  exemption ships with a break that can make it red.* Both: R157 decided (the
+  budget grows and costs nothing), and break **255** puts `canSpend` back and
+  the empire shard reads **18h of a 24-hour window**. **R157 has decided and
   is shipped: the budget grows, and it costs nothing.** What it did NOT do is
   make this observable — the walker still reaches a roster of nine at the
   Theater's twelve, because the three stalls it now leaves are the ones the
@@ -3844,6 +3845,71 @@ triangle working, and each region genuinely asks a different question)*.
   exemption would still pass with the fix reverted. This is unblocked by
   **R154**, not by R157: a bigger stable is what makes the reserve visible,
   and R154 is the milestone that sells one.
+
+  #### R154 did not unblock it either, and neither did the loss
+
+  R154 sold the bigger stable and `PROGRESS.md` recorded R155 as "unblocked at
+  last". It was not. Re-measured on the post-R154 tree across **21 seeds**, the
+  exemption and the reserve check are **indistinguishable** through the gate
+  this entry wanted to use: `agitated` 14 either way, `lost` **0 either way**.
+  The table above claiming "lost 0 (was 1)" at a stable of 16 does not
+  reproduce — A/B'd directly, byte-identical output. Three milestones of
+  waiting for `feral.lost` to become observable, and it never was going to be:
+  a rare event is not an instrument (R150).
+
+  #### The margin is the instrument
+
+  What the reserve actually does is measurable and damning. Against a creature's
+  **24-hour window**, drift-tending was refused for runs of:
+
+  | seed | consecutive hold | of the window |
+  | ---: | ---: | ---: |
+  | 314 | **20h** | 83% |
+  | 7 | **18h** | 75% |
+  | 5150 | 2h | 8% |
+  | the other 18 | 0h | — |
+
+  Nothing was lost on any of the 21. **R85's promise was being kept by four
+  hours of luck, and `lost` reported a clean sheet for three milestones.** So
+  the walk reports `feral.heldHours` — the longest run of consecutive hours it
+  left a creature at risk *after taking its turn* — and the rule is that it is
+  **zero**. Not "under the window": a budget is a number somebody bumps, and
+  there is nothing to bump when the walker attends every at-risk creature on
+  the tick it sees one. Cause-agnostic by construction, reading the state after
+  `walkAct` rather than any one refusal inside it, so a future budget, cooldown
+  or agenda change that starves drift-tending fails here too — not just the
+  `canSpend` read this milestone removed.
+
+  #### Where the rule lives, which is half the work
+
+  Beside `feral.lost` it is **vacuous**: that block walks seed 2026 for 45
+  days, and seed 2026 reads 0h with the fix and 0h without it. Written there
+  first and measured green both ways — the exact trap this entry warned about
+  twice. It ships in the `empire` shard on R143's three 180-day walks, for
+  R138's reason three rules above it (the only full-length walks in the suite)
+  and one more R138 did not need: **the seed is part of the gate.** The rule
+  takes the max across all three, and seed 7 supplies the 18h that makes
+  break **255** red.
+
+  #### Two more pieces of stale prose
+
+  The walk's own report said `agitated` and `lost` "both should be zero for a
+  walker that plays every day". `agitated` cannot be and should not be:
+  `tick()` stamps the warning *before* the walker acts, so a creature settled
+  on the same tick still counts as warned. That is R85's shape — the Pens
+  paints a warning and the player answers it — and the number not moving when
+  the fix landed is what sent this milestone looking for a different
+  instrument. And the first draft's cause, a bench training share, is still
+  wrong and still harmful for R138's documented reason.
+
+  **It costs nothing in reach.** The seven reach seeds wear the same parts,
+  seed for seed, before and after — mean 170.0 both ways — so the extra
+  sessions buy a creature's safety and spend nothing R157 was worried about.
+
+  **The lesson:** *a promise with a clean record is not a gate. `feral.lost`
+  had never fired in three milestones of looking, which reads as safety and
+  was actually a missing instrument — the margin had been down to four hours
+  and nothing in the tree could say so.*
 
 - **R157 — What a bigger stable costs.** *Shipped, and the answer is
   **nothing** — but only once the thing the old constant was really doing is

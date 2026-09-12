@@ -1,5 +1,89 @@
 # PROGRESS
 
+## Session 158 — R155: the reserve exemption ✅
+
+**ROADMAP §9.29a.** Third attempt. The mechanism was right all three times;
+the evidence was wrong twice and the instrument was wrong twice.
+
+### The fix is one word of reuse, undone
+
+Drift-tending went through `canSpend`, which refuses to spend below
+`WALK_RESERVE_DAYS` of upkeep. Right for a pen, a tier or a splice; wrong for
+**five dollars that stops a creature going feral** — and a bigger stable is
+poorer per head, so the first thing a tight week stopped was the one purchase
+that cannot wait. The floor is now the price itself.
+
+### The entry's evidence did not reproduce, and neither did PROGRESS's
+
+The entry claimed the exemption takes neglect losses from 1 to 0 at a stable of
+16. Last session's PROGRESS recorded R155 as "unblocked at last". Both wrong.
+A/B'd on the post-R154 tree across **21 seeds**:
+
+| | `agitated` | `lost` |
+| --- | ---: | ---: |
+| reserve check (tree) | 14 | **0** |
+| reserve exemption | 14 | **0** |
+
+Byte-identical. `feral.lost` was never going to become observable — a rare
+event is not an instrument (R150), and three milestones were spent waiting for
+one to fire.
+
+### The margin is the instrument
+
+Against a creature's **24-hour window**, the reserve held a warned creature for:
+
+| seed | consecutive hold | of the window |
+| ---: | ---: | ---: |
+| 314 | **20h** | 83% |
+| 7 | **18h** | 75% |
+| 5150 | 2h | 8% |
+| the other 18 | 0h | — |
+
+Nothing lost on any of the 21. **R85's promise was being kept by four hours of
+luck while `lost` reported a clean sheet.** So the walk reports
+`feral.heldHours` — the longest run of consecutive hours it left a creature at
+risk *after taking its turn* — and the rule is **zero**. Not "under the
+window": there is nothing to bump when the walker attends every at-risk
+creature on the tick it sees one. Cause-agnostic by construction: it reads the
+state after `walkAct`, so a future budget, cooldown or agenda change that
+starves drift-tending fails here too.
+
+### Where the rule lives was half the work
+
+Beside `feral.lost` it is **vacuous** — that block walks seed 2026 for 45 days,
+and seed 2026 reads 0h with the fix and 0h without it. Written there first,
+measured green both ways, withdrawn with a note. It ships in the `empire` shard
+on R143's three 180-day walks (R138's reason, one rule above) plus one R138 did
+not need: **the seed is part of the gate.** Max across all three; seed 7
+supplies the 18h.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| worst hold, 21 seeds | **20h of 24** | **0h** |
+| `feral.lost` | 0 | 0 (unchanged, and that is the point) |
+| `feral.agitated` | 14 | 14 (stamped before the walker acts) |
+| reach mean worn | 170.0 | **170.0**, seed for seed |
+| breaks | 250 | **251** |
+
+### Known issues
+
+- **`agitated` has no rule and probably should not get one.** It cannot be zero
+  by design, and any bound on it would be a number tracking how often the
+  warning fires rather than whether it is answered.
+- **One gate now depends on seed 7 specifically.** If a future milestone makes
+  seed 7 rich enough never to touch the reserve, break 255 goes MISSED even
+  though the rule is sound. Named in the break's own comment; the real answer
+  is R158's larger sample.
+- **The Pens still is not paged** (carried from R154).
+
+### Next session's first task
+
+**R156 — the suite CPU budget**, which R158 is blocked on: settle what a
+CPU-second on this box is worth, then buy the six extra reach walks.
+
+
 ## Session 157 — R154: a pen is a pen ✅
 
 **ROADMAP §9.29a.** Reported from play: *"it says upgrade pens but it upgrades
