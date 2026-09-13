@@ -1,5 +1,79 @@
 # PROGRESS
 
+## Session 171 — R166: the queue lied about itself ✅
+
+**ROADMAP §9.18 / new §9.0.** The session started on R54, "saves you can
+carry", because §9.18 listed it among the oldest entries still queued. R54
+shipped in Session 76. So this is the milestone R54 turned into.
+
+### R54's criterion, proved by running it
+
+| clause | result |
+| --- | --- |
+| a save can leave the browser and come back | **297.8 KB** export, round-trips with all 13 chimeras, `spliceworld-lab-v51-2026-09-13.json` |
+| an import can never destroy the game in progress | full disk → `backup-failed`, outgoing save still in storage |
+| every refusal says which rule it broke | `not-json`, `not-spliceworld`, `no-version`, `from-the-future`, `migration-failed` — five, each named |
+
+`save/slots.js` has carried all of it since Session 76, and the smoke block
+that gates it sits in the **common path** — so every shard of every suite run
+for ninety-five sessions has been proving a feature the roadmap said did not
+exist. The entry's own "~38 KB" was a guess and was 7.8x low.
+
+### The queue was wrong three ways at once
+
+§9.18 announced **35 entries already queued**, enumerated **34**, and **15 of
+the 34 had shipped**: R54–R67 in Sessions 76–90, R88 in Session 117. The real
+queue is **19**.
+
+Nothing caught it because status was prose, written three ways — a ✅, a
+`(shipped)` inside the title, or a section heading claiming a whole range — so
+no two sentences could be compared. **R88 carried both answers at once** for
+fifty-four sessions: queued on its §9.5 audit line, shipped on its §9.9 log
+line, in the same file.
+
+That is R77 one level up. R77 moved §4.0's *numbers* into a block that runs,
+on the rule that a design document is prose and prose does not run — and left
+the queue, which is the part a session reads before choosing what to build.
+
+### What ships
+
+- **One marker.** A ✅ in the entry's title, and nothing else counts. 68
+  entries that had shipped without one got it; all 168 now declare a status in
+  the same place. The tick has to live in the *title* because bodies quote ✅
+  about other things.
+- **§9.0 Queue, as measured** — the list, and its size, checked both ways
+  against the ticks by `tools/roadmap.js`, the same shape §4.0 already had.
+- **Three rules** beside R77's two: duplicate entries must agree; §9.0 matches
+  the ticks; no paragraph may call a ✅ entry *unshipped*.
+- **Breaks 275–278**, one per rule.
+- §9.18's sentence and PROGRESS's two copies of it are corrected in place.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| roadmap entries declaring a status in one place | 83 of 167 | **168 of 168** |
+| entries actually queued | claimed 35, named 34 | **19, derived** |
+| entries claimed queued that had shipped | 15 | **0** |
+| rules in `tools/roadmap.js` | 2 | **5** |
+| breaks | 272 | **276** |
+
+### Known issues
+
+- **The prose rule keys on one word.** "Unshipped" only, never "queued" —
+  because half the roadmap says "queued out of" a phase that shipped and every
+  one of those sentences is true. The cost is that prose discussing this defect
+  has to describe the old sentence rather than quote it; R166's own write-up
+  does exactly that.
+- **PROGRESS.md is not gated**, deliberately: it is dated history and gets the
+  same exemption §6 onward has. Its stale lines are annotated, not rewritten.
+- **19 queued entries, and 12 of them are R107–R118** — a single sixth-audit
+  block nobody has pulled from. That is now visible rather than buried.
+
+### Next session's first task
+
+**ROADMAP §9.0** — it is the queue now. R93 is the oldest of the 19.
+
 ## Session 170 — R165: the brake was working, and I nearly deleted it ✅
 
 **ROADMAP §9.18.** R147 measured the chaos-vat brake on the three empire seeds,
@@ -54,6 +128,11 @@ rather than an artefact of which campaigns the gate happens to walk.
 ### Next session's first task
 
 The **R54–R67 backlog**, the oldest unshipped entries. Nothing is blocked.
+
+> *R166 (Session 171): this line was wrong. R54–R67 all shipped in Sessions
+> 76–90; the backlog phrasing came from a §9.18 sentence that had been stale
+> since Session 143. The live queue is ROADMAP §9.0, which is derived from the
+> entries and gated.*
 
 ## Session 169 — R164: the premise was mine, and it was backwards ✅
 
@@ -2744,6 +2823,9 @@ Written up as **ROADMAP §9.18, R138–R147**. Every number came from a script
 run this session; nothing in it is an impression.
 
 ### Read the queue first
+
+*R166 (Session 171): the count below was wrong — 35 announced, 34 named, and
+15 of those had shipped. Left as written; PROGRESS is history.*
 
 **35 entries are already queued and unshipped** (R54–R67, R88, R93, R94,
 R96, R100, R102, R104, R105, R107–R118) — and the last ten milestones, R128

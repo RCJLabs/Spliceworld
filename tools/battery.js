@@ -2994,6 +2994,41 @@ const BREAKS = [
     to: '### 4.0b Retired',
   },
 
+  // R166 — the queue. Four rules, four breaks. Each aims at a DIFFERENT way
+  // the roadmap can lie about what is built, because the one that actually
+  // happened (a sentence in §9.18 calling fifteen shipped entries queued)
+  // would have been caught by exactly one of them.
+  {
+    // The R88 shape: an entry written twice — an audit line and its log line
+    // — that disagree. R88 carried both answers for fifty-four sessions.
+    n: 275, gate: ROADMAP, name: "an entry's two lines disagree about whether it shipped",
+    file: 'ROADMAP.md',
+    anchor: '- **R88 — Send them, instead of watching them.** ✅',
+    to: '- **R88 — Send them, instead of watching them.**',
+  },
+  {
+    // §9.0 is the queue a session reads. A tick added without the list being
+    // told is the drift that makes it worth reading at all.
+    n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
+    file: 'ROADMAP.md',
+    anchor: '- **R116 — The jobs board is a slot machine.**',
+    to: '- **R116 — The jobs board is a slot machine.** ✅',
+  },
+  {
+    // The other direction: the count beside the list stops matching the list.
+    // Typed numbers are exactly what R77 was filed for.
+    n: 277, gate: ROADMAP, name: 'the queue states a size the list does not have',
+    file: 'ROADMAP.md', anchor: '**19 entries queued.**', to: '**20 entries queued.**',
+  },
+  {
+    // The defect itself: a paragraph somewhere else in the document calls a
+    // shipped entry unshipped, and a session picks it up and builds it again.
+    n: 278, gate: ROADMAP, name: 'a paragraph calls a shipped entry unshipped',
+    file: 'ROADMAP.md',
+    anchor: '**Read the queue before the findings.** The queue was long and nothing had',
+    to: '**Read the queue before the findings.** R54 and R88 are unshipped. The queue was long and nothing had',
+  },
+
   // --- gate: walk (the walk fights the whole game) -------------------------
   {
     // The hole R83 closed, put back: the walker stops challenging rivals.
