@@ -3452,13 +3452,67 @@ triangle working, and each region genuinely asks a different question)*.
   median stable on day 180 has more creatures between L1 and L9 than at L0
   and L10 combined, and the harness reports the distribution.*
 
-- **R139 — The Reorientation Wing reforms 1.4% of what it catches.** R8
-  shipped a whole facility track, a real-world programme clock and an
-  enrichment curriculum. Measured: **5,989 specimens bagged, 86 ever
-  rehabilitated — 1.4%.** The Wing is not broken (R83 made the walker use
-  it); it is starved, because bagging is cheap and a bay is scarce. *Done
-  when: a campaign that bags a thousand specimens graduates a number the
-  design can defend, and the entry states that number before the work.*
+- **R139 — The Reorientation Wing reforms 1.4% of what it catches.**
+  *In progress. The criterion asks for the number BEFORE the work, so this
+  half of the entry is committed before a line of the fix is written.*
+
+  R8 shipped a facility track, a real-world programme clock and an enrichment
+  curriculum. The entry recorded **5,989 bagged, 86 rehabilitated — 1.4%** and
+  diagnosed starvation: *"bagging is cheap and a bay is scarce."*
+
+  #### Re-measured, 13 campaigns x 180 days
+
+  | stage | total | per campaign |
+  | --- | ---: | ---: |
+  | bagged (battle captures) | 13,641 | 1,049 |
+  | bay board | — | **40, and full on day 180** |
+  | acted on (salvaged or enrolled) | ~520 | 40 |
+  | enrolled | 325 | 25 |
+  | **graduated** | **325** | **25** |
+  | still in the roster on day 180 | 16 | 1.2 |
+
+  **Both halves of the entry are wrong.** The rate is **2.38%**, not 1.4%. And
+  the Wing is not starved: it graduates **100% of every programme it starts**,
+  and the graduates that survive are the best creatures on the ranch — seed
+  2026 ends with two, at **apex** and **prismatic** across all six sockets,
+  beside standard-grade chimeras the player built and kept.
+
+  #### The number this design can defend
+
+  Stated before the work, as the criterion demands. Per ~1,000 bagged:
+
+  - **20-30 graduate.** Reforming a rival's creature is an occasional chosen
+    event, not a conveyor. *Today: 25.* ✓
+  - **Of the bays actually reached, ~60% enrol and ~40% salvage.** Picking one
+    is the point (R95: salvage is the only door enemy tech comes through).
+    *Today: 25 of 40.* ✓
+  - **100% of programmes started, finish.** A fee, a clock and a curriculum the
+    player abandons would be the real failure. *Today: 100%.* ✓
+
+  So the game already hits every number the design can defend, and 1.4% was
+  computed against a denominator that was **never a queue**. 1,049 captures
+  arrive in 180 days — six a day — against 40 bays. Roughly **96% are disposed
+  of without the player ever being offered them.**
+
+  #### And that disposal is silent, which is the actual defect
+
+  `admitBay` decides it carefully: past capacity the oldest bay with no
+  programme running is released, never one mid-programme, never the newest;
+  and if every bay is busy the new capture walks free instead. R91 wrote down
+  why that matters — *"which is a real cost and the reason the Containment
+  track sells more doors"* — and the function returns `released` and
+  `turnedAway` on every single admission so somebody can say so.
+
+  **Both call sites discard the return value. Nothing in the tree reads either
+  field.** The player charges a Containment Cannon, wins the capture, and the
+  game quietly lets something go about a thousand times a campaign without a
+  word. It is R161's shape exactly: a sentence written, shipped, and shown to
+  nobody — and it is why the Containment track's own selling point has never
+  been motivated, because no player has ever seen a door close.
+
+  *Done when: the funnel above is reported by the harness and pinned by a
+  gate, and a capture that costs the player an older specimen — or that walks
+  free because every bay is busy — says so on the wire.*
 
 - R140 shipped; see §9.30.
 
