@@ -4262,6 +4262,26 @@ triangle working, and each region genuinely asks a different question)*.
   are the same bug as an engine that crashes. R91 wrote the sentence, wrote the
   reason, and shipped it to nobody.*
 
+- **R162 — The battery's "47 minutes" is stale, and R160 is why.** R159's full
+  battery ran **~1h29m** for 258 breaks (258 caught, 0 missed) against the
+  ~47 minutes CLAUDE.md still quotes for the decision of when to pay for it.
+  Two measured contributions, in opposite directions: R159 took the 18
+  HEIGHT-gated breaks from ~112s to ~53s each, which is about **18 minutes
+  back**; R160 replaced two cheap probe breaks with three deliberately
+  expensive suite ones, and their wall times measured directly the same day
+  were **350s, 420s and 282s** — about **17 minutes** for those three alone,
+  against roughly 8 for the pair they replaced. There are now **5** SUITE-gated
+  breaks, each of which runs the whole suite.
+
+  That does not add up to 42 minutes of overrun, so something else is in there
+  too and I am not going to guess what: R160's own lesson is that a timing
+  claim from one run is how four milestones end up arguing about a drift nobody
+  sampled twice. *Done when: the battery reports its own wall-clock and a
+  per-gate breakdown at the end of a run, and the figure in CLAUDE.md is
+  replaced by one measured across at least three runs — with the option of
+  making the expensive suite breaks cheaper (a smaller `--only`-style suite for
+  break purposes) considered and either taken or written down as rejected.*
+
 - **R160 — The probe measures the wrong work.** ✅ *Shipped, in the negative:
   no probe measures it, because the thing it was built to explain was never
   the box.* R156 chose a fixed integer loop for being the quietest of three

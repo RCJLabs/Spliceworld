@@ -52,7 +52,8 @@ the session.
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~47 min), on these triggers only:**
+**The full battery (~47 min is STALE — R159's run measured ~1h29m for 258
+breaks; see ROADMAP R162), on these triggers only:**
 - A milestone that **changes an existing gate's logic** rather than adding one.
 - Before a release, or any push to `main` that is not a single milestone.
 - Every ~5 milestones, as a rot check, whether or not anything looks wrong.

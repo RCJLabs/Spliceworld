@@ -81,6 +81,11 @@ not the same as not saying it.
   Those were R154's contended readings; R160 measured 707-929 depending on
   cache state.
 
+- **The full battery took ~1h29m, not the ~47 minutes CLAUDE.md quotes.** This
+  milestone took 18 minutes OFF it (18 height breaks at ~53s instead of ~112s)
+  and R160's three new suite breaks put ~17 back, which still does not explain
+  the gap. Filed as **R162** with the measurements rather than guessed at.
+
 ### Next session's first task
 
 **R139, R142, R145 or R147** — the oldest unshipped entries. Nothing is
