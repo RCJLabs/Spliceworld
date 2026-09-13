@@ -18977,6 +18977,61 @@ if (inShard('empire')) {
     seed, days: 180, stopAtDominion: false, snapshotDays: [10, 120],
   }));
 
+  // R139 — THE WING'S FUNNEL, BECAUSE ONE RATIO HID FIVE NUMBERS.
+  //
+  // The entry read "5,989 bagged, 86 rehabilitated — 1.4%", called the Wing
+  // starved and asked for a number the design can defend. Re-measured over 13
+  // campaigns the ratio is 2.38% and every word of the diagnosis is wrong:
+  //
+  //   bagged 1,049 · salvaged 23 · enrolled 25 · graduated 25 · kept 1.2
+  //
+  // The Wing graduates EVERYTHING it starts, and the graduates that stay are
+  // the best creatures on the ranch — seed 2026 ends holding two at apex and
+  // prismatic across all six sockets, beside standard-grade chimeras the
+  // player built. What 1.4% actually measured is that `bagged` was never a
+  // queue: about 1,049 captures arrive against a board of 40 bays, so ~96%
+  // are released without ever reaching a decision — and every one of those is
+  // something the player had already declined, because anything carrying tech
+  // the Dex has not seen is salvaged BEFORE it can be evicted. Measured: of
+  // ~290 released specimens per campaign, ZERO carried an unseen part.
+  //
+  // So the rules below pin the stages rather than the quotient. A ratio is
+  // what let a wrong story survive three years; five numbers cannot be read
+  // as a throughput failure by accident.
+  for (const walk of walks) {
+    const w = walk.wing;
+    assert.ok(w, 'the harness reports the Wing funnel at all');
+
+    // 1. THE ONE THAT MATTERS. A fee, a real-world clock and a curriculum
+    //    that the campaign abandons half way would be the actual failure the
+    //    entry described. It has never happened: every programme finishes.
+    assert.equal(w.graduated, w.enrolled,
+      `every programme started graduates (${w.graduated} of ${w.enrolled})`);
+
+    // 2. AND IT IS NOT VACUOUS. `0 === 0` would satisfy the rule above on a
+    //    campaign that never enrolled anything, which is exactly the shape
+    //    this repo keeps finding. The band is wide on purpose — it is a
+    //    sanity bound on a design intent, not a ratchet on a measurement.
+    assert.ok(w.enrolled >= 10 && w.enrolled <= 60,
+      `a campaign enrols 10-60 specimens (got ${w.enrolled})`);
+
+    // 3. PICKING ONE IS THE POINT (R95: salvage is the only door the eight
+    //    enemy-tech parts come through). A campaign that only ever enrolled,
+    //    or only ever salvaged, would have stopped making the choice R8 and
+    //    R95 exist to pose.
+    assert.ok(w.salvaged > 0 && w.enrolled > 0,
+      `both futures get used — salvaged ${w.salvaged}, enrolled ${w.enrolled}`);
+
+    // 4. THE DENOMINATOR IS NOT A QUEUE, stated as a rule so nobody recomputes
+    //    graduations-over-captures and files this entry again. The board ends
+    //    AT capacity against a four-figure intake: what the Wing declines is
+    //    not what it failed to reach.
+    assert.equal(w.bays, w.cap,
+      `the bay board ends full (${w.bays} of ${w.cap}) — intake is saturated, not starved`);
+    assert.ok(w.bagged > w.cap * 10,
+      `and captures dwarf it (${w.bagged} bagged against ${w.cap} bays)`);
+  }
+
   // R155 — THE MARGIN R85's PROMISE IS BEING KEPT BY.
   //
   // `walk.feral.lost` is the promise — a player who shows up never loses a

@@ -3453,8 +3453,10 @@ triangle working, and each region genuinely asks a different question)*.
   and L10 combined, and the harness reports the distribution.*
 
 - **R139 — The Reorientation Wing reforms 1.4% of what it catches.**
-  *In progress. The criterion asks for the number BEFORE the work, so this
-  half of the entry is committed before a line of the fix is written.*
+  ✅ *Shipped, and the entry was wrong in every particular — including three
+  fixes I wrote and reverted because each turned out to be a rule with nothing
+  to look at. The number was committed before the work, in its own commit, as
+  the criterion demands.*
 
   R8 shipped a facility track, a real-world programme clock and an enrichment
   curriculum. The entry recorded **5,989 bagged, 86 rehabilitated — 1.4%** and
@@ -3510,9 +3512,47 @@ triangle working, and each region genuinely asks a different question)*.
   nobody — and it is why the Containment track's own selling point has never
   been motivated, because no player has ever seen a door close.
 
-  *Done when: the funnel above is reported by the harness and pinned by a
-  gate, and a capture that costs the player an older specimen — or that walks
-  free because every bay is busy — says so on the wire.*
+  #### Three fixes, all reverted, each for the same reason
+
+  The Done-when above asked for a wire line when a capture costs the player a
+  specimen. Measured before shipping it, and none of the three candidates
+  survived contact:
+
+  | the line | measured | why it was dropped |
+  | --- | ---: | --- |
+  | one per eviction | **449/campaign** | 2.5 a day into a 12-line ticker would bury every conquest |
+  | `turnedAway` — the capture walks free | **0** across 3 campaigns | needs every bay mid-programme; 25 programmes against 40 bays cannot do it |
+  | evictions carrying tech the Dex has not seen | **0** of ~290 | the loop salvages those BEFORE they can be evicted |
+
+  The third is the one that settles it. Every specimen this game throws away
+  is something the player had already declined: unseen tech is salvaged on
+  sight, anything worth a stall is enrolled and graduates, and the remainder is
+  jeep wreckage. R10's rule — no slot without a caller — applies to a caller
+  that cannot be reached just as much as to copy nobody calls, so all three
+  came back out. **The Wing has no defect. The statistic did.**
+
+  #### What ships instead
+
+  `campaignWalk` now reports the whole funnel as `wing` — bagged, salvaged,
+  enrolled, sessions, graduated, retained, bays, cap — and five rules in the
+  `empire` block pin the stages rather than the quotient: every programme
+  finishes, the enrolment count sits in a defensible band (which stops
+  `0 === 0` passing rule one), both futures get used, the board ends AT
+  capacity, and captures dwarf it. Breaks **265** (the cap is inflated so the
+  board can never fill, and the entry's story becomes true again) and **266**
+  (the walker enrols everything, so R95's choice stops being made). The
+  finish-rate rule could not get a break of its own: both engine regressions
+  aimed at it are already caught by R8's own unit tests, which is the right
+  answer and is recorded in the battery rather than papered over.
+
+  **The lesson:** *a ratio is a claim with its denominator hidden. This one
+  survived three years and shaped two milestones' worth of plans because no
+  gate reported the stages it was made of — and the fix for a wrong number is
+  not a better number, it is the five numbers underneath it.*
+
+  **Filed, not fixed:** the intake itself. Bagging six specimens a day against
+  a board of forty is a design question — whether the Containment Cannon
+  should catch that much at all — and it is not R139's to answer.
 
 - R140 shipped; see §9.30.
 

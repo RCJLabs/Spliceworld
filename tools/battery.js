@@ -2041,6 +2041,40 @@ const BREAKS = [
     anchor: '      if (state.funds < TRAINING.cost) break;',
     to: '      if (!canSpend(TRAINING.cost)) break;',
   },
+  // --- gate: empire (R139 — the Wing's funnel, not its ratio) --------------
+  //
+  // R139 was filed on one number — "5,989 bagged, 86 rehabilitated, 1.4%" —
+  // and every word of the diagnosis around it was wrong. The Wing graduates
+  // EVERY programme it starts; what the ratio measured is that `bagged` was
+  // never a queue. These two aim at the halves of that correction that
+  // nothing else in the tree asserts.
+  //
+  // Worth recording honestly: the finish-rate rule (`graduated === enrolled`)
+  // could NOT get a break of its own. Both engine regressions tried for it —
+  // nothing ever graduating, and a graduate never joining the roster — are
+  // already caught by R8's own unit tests, which is the right answer for the
+  // codebase and leaves that rule double-covered rather than unguarded.
+  {
+    // The claim the whole correction rests on: the board is FULL, so the ~96%
+    // the Wing never reformed is what it declined rather than what it failed
+    // to reach. Inflate the cap and the board can never fill, which is the
+    // shape a well-meaning "give the player more room" change has — and it
+    // would quietly turn the entry's story back into a true one.
+    n: 265, gate: EMPIRE, name: 'the bay board can never fill, so the Wing looks starved again',
+    file: 'data/facility.json',
+    anchor: '            "bays": 40',
+    to: '            "bays": 4000',
+  },
+  {
+    // R95's choice, which is the other reason the funnel narrows: salvage is
+    // the only door the eight enemy-tech parts come through, so a campaign
+    // that enrols everything is a campaign for which those parts do not
+    // exist. Remove the branch and the walker stops picking.
+    n: 266, gate: EMPIRE, name: 'the walker enrols everything, so salvage stops being a choice anybody makes',
+    file: 'tools/sim.js',
+    anchor: "    if (carriesNew) {\n      if (salvageUnit(state, entry.id, content, now).ok) did('salvage', { unit: entry.unitId });\n      continue;\n    }\n",
+    to: '',
+  },
   // --- gate: suite (R160 — the budget is denominated in the walk cache) ----
   //
   // R156's two breaks lived here and both aimed at `tools/probe.js`, which

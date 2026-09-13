@@ -1,5 +1,71 @@
 # PROGRESS
 
+## Session 164 — R139: the Wing has no defect, the statistic did ✅
+
+**ROADMAP §9.29a.** The criterion asked for a number the design can defend,
+*stated before the work*. It is in its own commit (`c5a4936`) ahead of every
+line of the fix, which is the only way that clause is checkable rather than
+claimed.
+
+### The entry was wrong in every particular
+
+| the entry said | measured, 13 campaigns |
+| --- | --- |
+| 1.4% reformed | **2.38%** |
+| "it is starved" | it graduates **100% of every programme it starts** |
+| bagging is cheap, bays scarce | bays ARE full — and what it declines is not what it failed to reach |
+
+Per campaign: **1,049 bagged · 529 admitted · 449 released · 23 salvaged · 25
+enrolled · 25 graduated · 1.2 kept.** The graduates that stay are the best
+creatures on the ranch — seed 2026 ends holding two at **apex** and
+**prismatic** across all six sockets, beside standard-grade chimeras the player
+built and kept.
+
+### Three fixes written, three reverted
+
+| the line | measured | why it went |
+| --- | ---: | --- |
+| one wire line per eviction | **449/campaign** | 2.5 a day would bury a 12-line ticker |
+| `turnedAway` | **0** across 3 campaigns | needs every bay mid-programme — impossible at 25 programmes / 40 bays |
+| evictions carrying unseen tech | **0** of ~290 | those are salvaged *before* they can be evicted |
+
+The third settles it: every specimen the game throws away is one the player had
+already declined. R10's rule covers a caller that cannot be reached as much as
+copy nobody calls, so all three came out.
+
+### What shipped
+
+`campaignWalk` reports the funnel as `wing`, and five rules in the `empire`
+block pin the **stages instead of the quotient** — every programme finishes,
+enrolment sits in a defensible band (so `0 === 0` cannot pass rule one), both
+futures get used, the board ends at capacity, captures dwarf it. Breaks **265**
+and **266**.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| the Wing's funnel | one ratio, ungated | **8 fields, 5 rules** |
+| the rate | 1.4% (stale) | **2.38%, and not the interesting number** |
+| breaks | 258 | **260** |
+
+### Known issues
+
+- **The finish-rate rule has no break of its own.** Both engine regressions
+  aimed at it — nothing graduating, and a graduate never joining the roster —
+  are already caught by R8's unit tests. Recorded in the battery rather than
+  faked with a third contrivance.
+- **The intake is filed, not fixed.** Six captures a day against forty bays is
+  a design question about the Containment Cannon, not about the Wing.
+- **`retained` is not gated.** 25 graduate and 1.2 survive; whether that is
+  healthy churn or waste needs a comparison against spliced chimeras' lifetimes
+  that nothing measures yet.
+
+### Next session's first task
+
+**R142** (the splice is the rarest verb — 1,178:1 against care) or **R145/R147**.
+Nothing is blocked.
+
 ## Session 163 — R159: a slow box is not a broken screen ✅
 
 **ROADMAP §9.29a.** The height gate has been telling the truth about the wrong
