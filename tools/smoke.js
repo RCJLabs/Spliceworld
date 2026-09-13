@@ -19318,7 +19318,14 @@ if (inShard('empire')) {
   //     ("a content-reach number needs a sample, and more than one is not a
   //     sample"), R157's and R158's after it. If the garrison ever does go
   //     flat again every seed moves together and the median moves with them;
-  //     break 152 is what proves that rather than this comment.
+  //     breaks 243 (garrisonPerNode to zero) and 242 (the completion bonuses
+  //     off the books) are what prove that rather than this comment.
+  //
+  //     A median is weaker than an all-seeds rule by construction, and that is
+  //     the price: it would survive ONE seed going bad. The two breaks above
+  //     are what say the price was worth paying — both move every seed at
+  //     once, because the garrison is a property of the map and not of the
+  //     campaign that walked it.
   {
     const mirror = Object.fromEntries(Object.entries(content.regions ?? {}).map(([id, r]) => [`r152x_${id}`, {
       ...r, id: `r152x_${r.id ?? id}`, nodes: (r.nodes ?? []).map((n) => ({ ...n, id: `r152x_${n.id}` })),
