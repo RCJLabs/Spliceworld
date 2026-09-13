@@ -1,5 +1,86 @@
 # PROGRESS
 
+## Session 168 — R147: the bay nobody filled ✅
+
+**ROADMAP §9.18.** R147 had **no entry**, like R145 — §9.18 was titled
+"R138–R147" with no R147 in it. The premise was stale, the stated cause was
+staler, and underneath both was a bay the balance model could not fill.
+
+### Two inherited explanations, both retired by later milestones
+
+R93b declined "half the roster" and named species reach; **R95 fixed reach**
+(40 of 41 species, so 24 of 27 assemblable). `coverage.js` then wrote the
+successor — *"a campaign makes a median FIFTEEN splices, and you cannot
+discover twenty-five combos in fifteen creatures"* — and R138, R157 and R163
+retired that one too: **35 splices, 60 creatures made**. Both sentences stayed
+on the page describing games that no longer existed.
+
+### The actual bound
+
+| | |
+| --- | --- |
+| campaigns reaching Theater Tier 2 | **7 of 7** |
+| chimeras wearing the second organ bay | **0 of 98** |
+| `full_spectrum`, `powder_keg` | assemblable **7/7**, found **0/7** |
+
+Tier II grants `organ2` and says so in its blurb. The game always allowed it —
+renderer, `validateSplice`, an "Organ II" picker. Only the walker could not:
+`CHASSIS_SLOTS` had six entries and the fill was keyed by the part's natural
+slot, so a second organ found `organ` taken and was dropped. **Every number
+this repo derives from the walk had been computed on a game with one fewer bay
+than the one that ships.**
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| chimeras wearing `organ2` | **0 of 98** | **68 of 96** |
+| combos never found, 7 seeds | 5 | **3** |
+| combos found, median | 14 | 17 of 27 |
+| combos found, total | 100 | 113 of 169 |
+| breaks | 267 | **269** |
+
+**The median is not the honest headline.** Seeds 101 and 4242 go 13 → 19; seeds
+55 and 31 *fall*, 17 → 11 and 12 → 11. A different build order finds a
+different set. What holds per-seed is the bay being worn and the two organ-pair
+combos becoming reachable — which is what the gate asserts.
+
+### The cascade was a single-seed gate, not a broken economy
+
+R152's rule went red at 44.6% against 43.9%. It read `walks[0]`. Across all
+three empire walks it holds on two and fails on one by the smallest margin in
+the set (+0.78 vs −2.24, −1.99), and the confound is **held-node count**: the
+small-map share tracks nodes held almost perfectly (19 → 23.4%, 20 → 30.6%,
+21 → 43.9%, 23 → 43.8–49.1%) while the doubled map sits at 40.8–45.0%
+regardless. Now a median of three, spread printed. Breaks 243 and 242 still
+catch it, which is what justifies the weaker formulation.
+
+### Three of my own mistakes, all caught by running rather than reading
+
+- **`hpMax` for `maxHp`** in R145's calibration — every fraction NaN.
+- **`git stash push` on an already-committed file** — stashed nothing, and the
+  `pop` landed an unrelated pre-existing stash on the tree. Recovered via
+  `git show HEAD:<path>`; both stash entries left intact.
+- **An orphaned `w`/`small`/`large`** in a report line after rewriting R152's
+  rule. `node --check` passes it; only running the shard finds it — the same
+  trap R159 hit with its `stalls` Map.
+
+### Known issues
+
+- **R147 absorbed a second milestone's worth of work** (R152's gate). It was in
+  scope only because a red baseline blocks the merge. If this recurs, file
+  rather than absorb.
+- **The three combos still never found are reach-limited** — `double_dose`
+  (4/7), `ball_lightning` (4/7), `downwind` (1/7) — R95's territory, not the
+  build model's.
+- **The full battery was obligatory here**, not optional: this changed an
+  existing gate's logic (CLAUDE.md's first trigger), and the ~5-milestone rot
+  check was due (last full run R159, session 163).
+
+### Next session's first task
+
+**R164** (the 20-to-60-turn grind, filed by R145), or the R54–R67 backlog.
+
 ## Session 167 — R145: the guard was doing the engine's job ✅
 
 **ROADMAP §9.18.** R145 had **no entry at all** — §9.18 is titled "R138–R147"
