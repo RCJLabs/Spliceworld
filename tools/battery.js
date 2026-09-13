@@ -2108,6 +2108,22 @@ const BREAKS = [
     anchor: "  battle.outcome = won ? 'win' : 'loss';",
     to: '  battle.over = true;',
   },
+  {
+    // R164 — INVERT THE BAND RULE. The census's `bands` reports win rate by
+    // fight length, and the rule says the longest band wins at least as often
+    // as the whole census. Compare against the WRONG side and the assertion
+    // becomes "the longest fights must lose more than average", which is what
+    // R145 believed and filed as fact.
+    //
+    // The break exists because the defect this milestone found was a CLAIM, not
+    // a behaviour: the tail was measured correctly and then explained with a
+    // mechanism nobody tested. A rule about a shape needs a break that proves
+    // the rule can tell the shape apart from its opposite.
+    n: 274, gate: TURNS, name: 'the band rule reads the comparison backwards, and a losing grind passes',
+    file: 'tools/smoke.js',
+    anchor: '    assert.ok(long.winPct >= c.winPct,',
+    to: '    assert.ok(long.winPct <= c.winPct,',
+  },
   // --- gate: coverage (R147 — the bay nobody filled) -----------------------
   {
     // THE PLANNER GOES BACK TO A PRIVATE COPY OF THE SOCKET LIST. This is the
