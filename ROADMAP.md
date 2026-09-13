@@ -3644,6 +3644,40 @@ triangle working, and each region genuinely asks a different question)*.
   against a guard means reading it — and this one had been enforcing a floor on
   the single seed that never approaches it.*
 
+- **R165 — The chaos vat's brake may no longer be load-bearing.** Filed out of
+  R147 with its numbers, because retiring a break is not the same as retiring
+  the rule it aimed at.
+
+  R163 shipped `VAT_KEEP_DAYS = 14` — a decant cannot be dismantled for a
+  fortnight — because the walker was running **120 gestations** on seed 7 and
+  vat-born creatures were dying at a median of **2.17 days**, under R135's
+  five-day churn floor. The brake worked.
+
+  R147 then taught the planner the Surgery Theater's second organ bay, and a
+  splice became a better answer than a decant. Re-measured across the three
+  empire seeds:
+
+  | seed | vats, brake on | vats, brake off | median life, on | off |
+  | --- | ---: | ---: | ---: | ---: |
+  | 2026 | 6 | 9 | 40.9d | **53.0d** |
+  | 7 | 4 | 10 | 71.1d | 65.1d |
+  | 99 | 1 | 3 | 67.5d | 63.7d |
+
+  **Seed 7 runs four gestations where R163 measured 120.** Every reading is an
+  order of magnitude clear of the five-day floor with the brake *off*, and two
+  of the three are better without it. Break 268 was retired on R160's
+  precedent rather than left to go MISSED, which means the constant now has no
+  break aimed at it at all — the state this repo treats as a gate that has
+  quietly stopped being tested.
+
+  Three seeds are not proof it can never bind, and removing a floor is a
+  behaviour change, so R147 left it in place and filed this instead. The
+  question is whether the brake still earns its line, or whether R147 removed
+  the condition it existed for. *Done when: either the constant is gone and the
+  churn floor still holds across the empire seeds with a break that proves it,
+  or a seed is found where the brake binds and break 268 comes back aimed at
+  that.*
+
 - **R164 — Ninety-five fights in 3,536 run past twenty turns.** Filed out of
   R145 with its numbers, rather than fixed there: shortening a grind moves win
   rates across the whole roster, and R145's criterion was that a fight *ends*,
@@ -3831,6 +3865,122 @@ triangle working, and each region genuinely asks a different question)*.
   succeeds at hiding something is indistinguishable from a guard that never
   fires. What made this visible was not reading the code; it was asking the
   census how long the longest fight was.*
+
+- **R147 — Fifteen combos are never found, and the reason had changed twice.**
+  ✅ *Shipped. Like R145 the entry did not exist — §9.18 was titled "R138–R147"
+  with no R147 in it, and the only record was one row of the audit table. The
+  premise was stale, the stated cause was staler, and underneath both was a bay
+  the balance model could not fill.*
+
+  #### The row, and two inherited explanations
+
+  The seventh audit wrote `| R147 | fifteen combos are never found | median 12
+  of 27 |` and never wrote the entry. Two milestones had already answered
+  versions of it:
+
+  **R93b** declined "at least half the roster" as the wrong target and said why
+  with numbers: 25 of the 27 combos need parts from two different species, a
+  campaign then touched 23 of 41, so a median **nine** were even assemblable.
+  It named species reach as R95's problem. **R95 did it** — a campaign now
+  reaches 40 of 41 species, so **24 of 27 are assemblable**.
+
+  `tools/coverage.js` then wrote down what it believed replaced reach as the
+  binding constraint: *"a campaign makes a median FIFTEEN splices, and you
+  cannot discover twenty-five combos in fifteen creatures."* Measured today
+  that is **35 splices and 60 creatures made** — R138's training pass, R157's
+  action budget and R163's vat brake took it there, and nothing re-read the
+  sentence. The same shape as R142's care:splice ratio going three years stale
+  while being quoted.
+
+  #### The bay nobody filled
+
+  Re-measured over seven campaigns, only **five** combos are never found, not
+  fifteen — and two of them are damning: `full_spectrum` (owl+bat organ) and
+  `powder_keg` (moth+skunk organ) were **assemblable in 7 of 7 and discovered
+  in 0**. They are the only two combos that need two organs.
+
+  Surgery Theater Tier II grants `organ2` and says so in its own blurb — *"a
+  gantry, a winch, and a second organ bay … lets you install two organs."*
+  **Every one of the seven campaigns reaches Tier 2. Not one of the 98 chimeras
+  they kept wore a second organ.**
+
+  The game had always allowed it: `render/renderer.js` lists the socket,
+  `validateSplice` grants it, the Theater UI has an "Organ II" picker with its
+  own copy. Only the walker could not — `tools/sim.js` kept a private
+  six-entry `CHASSIS_SLOTS` with no `organ2`, and filled by the part's natural
+  slot, so a second organ found `slots.organ` taken and was dropped. Invisible
+  twice over.
+
+  **So every number this repo derives from the walk — win rates, the `[OP]`
+  gate, tier grades, the combo ratio itself — had been computed on a game with
+  one fewer bay than the one that ships.**
+
+  #### What ships
+
+  The planner reads `theaterGrants(...).sockets` — the same list
+  `validateSplice` checks — filtered by the frame's own slots, and fills by
+  **socket** rather than by the part's natural slot. R157's lesson: one constant
+  with three readers goes stale in two of them. The next bay the Theater sells
+  is filled the day it is sold, with no edit to the planner.
+
+  | | before | after |
+  | --- | ---: | ---: |
+  | chimeras wearing `organ2` | **0 of 98** | **68 of 96** |
+  | combos never found, 7 seeds | 5 | **3** |
+  | combos found, median | 14 | 17 of 27 |
+  | combos found, total | 100 | 113 of 169 |
+
+  **The median is not the honest headline and the entry will not pretend it
+  is.** Seeds 101 and 4242 go 13 → 19; seeds 55 and 31 *fall*, 17 → 11 and
+  12 → 11, because a different build order discovers a different set. The gains
+  that hold per-seed are the bay being worn and the two organ-pair combos
+  becoming reachable, and those are what the gate asserts. The three still
+  never found — `double_dose` (assemblable 4/7), `ball_lightning` (4/7),
+  `downwind` (1/7) — are reach-limited, which is R95's territory.
+
+  The gate is written about **sockets**, not about `organ2`: every bay the
+  Theater sells must be worn by somebody, with the sellable list read from
+  `facility.json` so a bay added there is covered with no edit. Today: head 96,
+  forelimbs 96, hindlimbs 96, tail 96, hide 96, organ 96, **organ2 68**.
+  Breaks **272** (the planner keeps a private list again) and **273** (sockets
+  matched by name rather than by the slot they take — the "fix" that adds
+  `organ2` to the list and still ships a dead bay).
+
+  #### The cascade, and what it turned out to be
+
+  A second organ on 70% of chimeras is real stats, and the baseline went red on
+  **R152's** rule — "doubling the map does not make the empire more
+  profitable" — at 44.6% of gross across 46 nodes against 43.9% across 21.
+  First read was that R147 had broken the economy. It had not.
+
+  The rule read `walks[0]` and nothing else. Across all three empire walks it
+  holds on two and fails on one, by the smallest margin in the set (+0.78
+  against −2.24 and −1.99). **The confound is held-node count**: over eight
+  seeds the small-map share tracks how many nodes the campaign finished holding
+  almost perfectly — 19 nodes 23.4%, 20 nodes 30.6%, 21 nodes 43.9%, 23 nodes
+  43.8–49.1% — while the doubled map sits at 40.8–45.0% regardless. Fixed costs
+  weigh heavier on a smaller empire, so a campaign that under-conquers makes
+  doubling look like a bargain. That is arithmetic about node counts, not
+  evidence that upkeep stopped scaling.
+
+  So the rule asks all three walks and takes the **median**, printing the
+  per-seed spread rather than hiding it behind a pass. A median is weaker than
+  an all-seeds rule by construction and would survive one seed going bad; the
+  reason that trade is acceptable is that breaks **243** and **242** move every
+  seed at once, because the garrison is a property of the map rather than of
+  the campaign that walked it — and both still go red.
+
+  *Done when: no bay the Surgery Theater sells goes unworn across the campaigns
+  the harness walks, the two combos that need the second organ are discovered,
+  and why a combo goes unfound is a number the gate reports rather than a
+  sentence in a comment.*
+
+  **The lesson:** *a constraint that has been fixed leaves its explanation
+  behind. R93b's answer was right and R95 retired it; coverage.js wrote the
+  successor and R138, R157 and R163 retired that one too. Both sentences stayed
+  on the page, each describing a game that no longer existed, and the actual
+  bound — a bay the model could not fill — was never anybody's explanation
+  because nothing had ever looked at it.*
 
 - **R163 — Chaos-vat churn breaks R135's floor on a quarter of seeds.**
   ✅ *Shipped. The rule written to stop the conveyor was setting its cadence,

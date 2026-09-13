@@ -132,6 +132,15 @@ for (const [name, { key, what, min }] of Object.entries(SYSTEMS)) {
 // it can still catch the planner going blind rather than where it would
 // demand something the stable cannot do.
 //
+// R147 — THE PARAGRAPH ABOVE IS STALE AND IS KEPT FOR THE SHAPE OF ITS
+// MISTAKE. "A median fifteen splices" was true when it was written; R138's
+// training pass, R157's action budget and R163's vat brake took it to a median
+// THIRTY-FIVE, with sixty creatures made. The ceiling it names had already
+// stopped binding, and nothing re-read it — the same way R142's care:splice
+// ratio went three years stale while being quoted.
+//
+// The real bound was a bay nobody filled. See the socket rule below.
+//
 // AND ONE BREAK IS RETIRED HERE, WITH ITS NUMBERS. R93b's break 157 — the
 // planner boosting combos it has ALREADY discovered — was worth 16.5pp on
 // the pre-R95 tree (71.4% against 54.9%) and is worth 5.1pp now (32.6%
@@ -178,6 +187,56 @@ const COMBO_REACH = 0.22;
     fails.push(`combo reach: ${found} of the ${possible} combos these campaigns could assemble`
       + ` (${Math.round(ratio * 100)}%, under ${Math.round(COMBO_REACH * 100)}%) — ${per.join(', ')}`
       + ' — a pair you own and never put on one creature is a reward going unclaimed');
+  }
+
+  // ---- R147: EVERY BAY THE THEATER SELLS GETS FILLED BY SOMEBODY ---------
+  //
+  // The defect this rule is named after: Tier II grants `organ2` and says so
+  // in its own blurb — "a gantry, a winch, and a second organ bay ... lets you
+  // install two organs". All seven campaigns reach Tier 2. NOT ONE of the 98
+  // chimeras they kept wore a second organ, because the walker's planner kept
+  // a private six-entry slot list with no `organ2` in it and filled by the
+  // part's natural slot, so a second organ found `organ` taken and was
+  // dropped. The game had always allowed it; only the balance model could not.
+  //
+  // So every number this repo derives from the walk — win rates, the [OP]
+  // gate, tier grades, the combo ratio above — was computed on a game with one
+  // fewer bay than the one that ships. That is worth a rule of its own, and
+  // the rule is deliberately about SOCKETS rather than about `organ2`: the
+  // next bay the Theater sells will be dead on arrival the same way, and this
+  // asks the question for all of them at once.
+  //
+  // Counted over kept chimeras, which is the population every other statistic
+  // is drawn from. Today: 68 of 96 wear a second organ, 9-11 per seed.
+  {
+    const worn = new Map();
+    let bodies = 0;
+    for (const seed of COMBO_SEEDS) {
+      const save = seed === 2026 ? walk.save : walkedSave({ seed, days: 180 });
+      for (const c of save.chimeras ?? []) {
+        bodies++;
+        for (const socketId of Object.keys(c.tokens ?? {})) {
+          worn.set(socketId, (worn.get(socketId) ?? 0) + 1);
+        }
+      }
+    }
+    // The sockets the Theater can grant at all, read from the track rather
+    // than listed here — a bay added to facility.json is covered with no edit.
+    const sellable = new Set(
+      (content.facility?.theater?.levels ?? []).flatMap((lv) => lv.grants?.sockets ?? [])
+    );
+    const dead = [...sellable].filter((socketId) => !(worn.get(socketId) > 0));
+    if (REPORT) {
+      console.log(`
+sockets across ${bodies} kept chimeras: `
+        + [...sellable].map((k) => `${k} ${worn.get(k) ?? 0}`).join(', '));
+    }
+    if (dead.length) {
+      fails.push(`dead bay: the Surgery Theater sells ${dead.join(', ')} and not one of the`
+        + ` ${bodies} chimeras these campaigns kept is wearing it`
+        + ' — a bay the balance model cannot fill makes every number it derives'
+        + ' a measurement of a different game');
+    }
   }
 }
 

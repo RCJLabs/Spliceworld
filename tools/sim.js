@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { indexContent } from '../render/renderer.js';
+import { indexContent, slotOfSocket } from '../render/renderer.js';
 import { CONTENT_FILES } from '../data/loader.js';
 import { seedTemperament } from '../splice/temperament.js';
 import { rushable, rush } from '../splice/rush.js';
@@ -1129,7 +1129,7 @@ import { careAction, careStatus, buyMailOrder, buyPenUpgrade, catalogFor, isNewT
 import { extractAnimal, extractChimera, avgStars } from '../splice/extract.js';
 import { salvagePreview } from '../splice/extract.js';
 import { vaultPressure, surplusParts, renderDown } from '../splice/vault.js';
-import { stableRoom } from '../splice/facility.js';
+import { stableRoom, theaterGrants } from '../splice/facility.js';
 import { spliceChimera, validateSplice, trainChimera, TRAINING, setMoveset, moveTrainingReady } from '../splice/theater.js';
 import { MOVE_SLOTS } from '../battle/moves.js';
 import { feralStatus } from '../splice/feral.js';
@@ -1257,15 +1257,46 @@ export function bestSplice(state, content, wanted = null, wall = null) {
   for (const frameId of ['M', 'S', 'L', 'A']) {
     const frame = content.frames[frameId];
     if (!frame) continue;
-    const chassis = frame.slots ?? CHASSIS_SLOTS;
+    // R147 — FILL BY SOCKET, NOT BY SLOT, AND ASK THE THEATER WHICH SOCKETS
+    // EXIST. The old loop keyed `slots` by `part.slot` against a private
+    // six-entry slot list of its own, so the Theater's SECOND ORGAN BAY was
+    // invisible twice over: `organ2` was not in the list, and even listed it
+    // could not have been filled, because the second organ part would find
+    // `slots.organ` already taken and be skipped.
+    //
+    // Tier II grants `organ2` and says so in its own blurb ("a gantry, a
+    // winch, and a second organ bay ... lets you install two organs"). Every
+    // one of the seven census campaigns reaches Tier 2. Not one of the 98
+    // chimeras they kept wore a second organ, and the only two combos that
+    // need one — full_spectrum (owl+bat) and powder_keg (moth+skunk) — were
+    // assemblable in 7 of 7 and discovered in 0.
+    //
+    // `theaterGrants(...).sockets` is the same list `validateSplice` checks
+    // against, which is the point: R157's lesson is that one constant with
+    // three readers goes stale in two of them. The planner now reads the
+    // grant rather than keeping a copy of it, so the next bay the Theater
+    // sells is filled the day it is sold, with no edit here.
+    //
+    // ONE READER, NOT TWO. The first draft filtered this list again by the
+    // frame's own slots — and `theaterGrants(state, content, frameId)` has
+    // already done exactly that (splice/facility.js: `frameSlots ?
+    // sockets.filter(...) : sockets`). The two guards were redundant, either
+    // one alone held, and break 231 aimed at mine, so the break went MISSED in
+    // R147's full battery: it patched a line that could not change an answer.
+    // R157's lesson landing on the commit that quoted it.
+    const granted = theaterGrants(state, content, frameId).sockets;
     for (const order of [rank, liftFirst]) {
       const used = new Set();
       const slots = {};
       for (const token of [...owned].sort((a, b) => order(b) - order(a))) {
         const part = content.parts[token.partId];
-        if (!part || used.has(token.id) || slots[part.slot]) continue;
-        if (!chassis.includes(part.slot)) continue;
-        slots[part.slot] = token.id;
+        if (!part || used.has(token.id)) continue;
+        // The first granted socket of this part's slot that is still open —
+        // so two organs land in `organ` and `organ2` rather than the second
+        // being dropped on the floor.
+        const socketId = granted.find((sid) => slotOfSocket(sid) === part.slot && !slots[sid]);
+        if (!socketId) continue;
+        slots[socketId] = token.id;
         used.add(token.id);
       }
       if (!slots.head) continue;
@@ -1284,7 +1315,6 @@ export function bestSplice(state, content, wanted = null, wall = null) {
   }
   return best;
 }
-const CHASSIS_SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
 
 // R146 — EVERY HERITABLE TRAIT THE CAMPAIGN CAN SEE, in one place.
 //

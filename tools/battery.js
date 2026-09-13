@@ -2051,23 +2051,33 @@ const BREAKS = [
     to: '      if (!canSpend(TRAINING.cost)) break;',
   },
   // --- gate: empire (R163 — the vat's brake) -------------------------------
-  {
-    // Put the decant back on the general two-day dismantle floor and the
-    // conveyor restarts: 120 gestations, 238 creatures built to keep 16, a
-    // median chimera life of 2.5 days under R135's floor of 5. That is the
-    // exact state R142 measured and could not gate, on a seed the churn rule
-    // in `tools/vault.js` has never walked.
-    //
-    // R95 shipped the two-day floor to stop this and its comment says the vat
-    // "is self-limiting the moment its output is allowed to occupy a stall".
-    // It was not: vat-born creatures died at a median of 2.17 days on every
-    // seed, which is the floor plus rounding. The walker was not being
-    // stopped, it was being paced.
-    n: 268, gate: EMPIRE, name: 'the decant goes back on the general dismantle floor, and the vat is a conveyor again',
-    file: 'tools/sim.js',
-    anchor: '      const VAT_KEEP_DAYS = 14;',
-    to: '      const VAT_KEEP_DAYS = 2;',
-  },
+  //
+  // BREAK 268 IS RETIRED HERE, WITH ITS NUMBERS, on R160's precedent: "a break
+  // the gate can only catch by luck is a break that teaches the battery to
+  // lie, so it is removed rather than left to go MISSED."
+  //
+  // It put the decant back on the general two-day dismantle floor, and on the
+  // tree R163 shipped that restarted the conveyor — 120 gestations, a median
+  // chimera life of 2.5 days under R135's floor of 5. It went MISSED in R147's
+  // full battery, and re-measurement says why rather than guessing:
+  //
+  //           median chimera life        vat gestations
+  //   seed    KEEP=14     KEEP=2         KEEP=14   KEEP=2
+  //   2026    40.9d       53.0d          6         9
+  //      7    71.1d       65.1d          4        10
+  //     99    67.5d       63.7d          1         3
+  //
+  // Every reading is an order of magnitude clear of the 5-day floor with the
+  // brake OFF, and two of the three are HIGHER without it. The mechanism is
+  // the vat count: R163 measured seed 7 running 120 gestations and it now runs
+  // four. R147 taught the planner the second organ bay, so a splice is a
+  // better answer than a decant and the walker stopped flooding the vat —
+  // which is the condition R163's brake existed to survive.
+  //
+  // The brake is LEFT IN PLACE: a floor that rarely binds is not a rule that
+  // was wrong, removing it is a behaviour change R147's criterion does not
+  // cover, and three seeds are not proof it can never bind. Whether it still
+  // earns its place is filed as R165.
   // --- gate: turns (R145 — a fight ends, and it ends the right way) --------
   {
     // TAKE THE CAP OFF. This does not restore the old code exactly — it moves
@@ -2097,6 +2107,36 @@ const BREAKS = [
     file: 'battle/engine.js',
     anchor: "  battle.outcome = won ? 'win' : 'loss';",
     to: '  battle.over = true;',
+  },
+  // --- gate: coverage (R147 — the bay nobody filled) -----------------------
+  {
+    // THE PLANNER GOES BACK TO A PRIVATE COPY OF THE SOCKET LIST. This is the
+    // defect exactly as it shipped: CHASSIS_SLOTS has six entries and no
+    // `organ2`, so the Surgery Theater's second organ bay is invisible to the
+    // balance model while Tier II sells it in every campaign. The coverage
+    // gate's socket rule goes red with "dead bay: the Surgery Theater sells
+    // organ2 and not one of the 96 chimeras these campaigns kept is wearing
+    // it".
+    //
+    // R157's lesson is the reason this break exists rather than a comment: one
+    // constant with three readers goes stale in two of them, and the only way
+    // to keep the planner honest is to make a private copy FAIL.
+    n: 272, gate: COVERAGE, name: 'the build planner keeps its own socket list again, and the second organ bay dies',
+    file: 'tools/sim.js',
+    anchor: '    const granted = theaterGrants(state, content, frameId).sockets;',
+    to: "    const granted = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];",
+  },
+  {
+    // THE OTHER HALF, AND THE SUBTLER ONE. Leave the grant in place but match
+    // sockets by name instead of by the slot they accept: `organ2` is then
+    // never chosen for an organ part, because the socket id and the part's
+    // slot differ by one character. The list is right and the fill is wrong —
+    // which is how the original could have been "fixed" by adding organ2 to
+    // CHASSIS_SLOTS and still shipped a dead bay.
+    n: 273, gate: COVERAGE, name: 'sockets are matched by name rather than by the slot they take',
+    file: 'tools/sim.js',
+    anchor: '        const socketId = granted.find((sid) => slotOfSocket(sid) === part.slot && !slots[sid]);',
+    to: '        const socketId = granted.find((sid) => sid === part.slot && !slots[sid]);',
   },
   {
     // THE VERDICT READS A FIELD THAT DOES NOT EXIST. `hpMax` for `maxHp` — my
@@ -4076,10 +4116,29 @@ const BREAKS = [
     // census that had a 31% chance of noticing. Measured, this patch returns
     // L where the shipped engine returns A — and it is the reason the gate's
     // vault carries all six bays rather than the five the Kite can wear.
+    // R147 RE-AIMED THIS, and `--anchors` is why it was noticed. The planner
+    // used to test `chassis.includes(part.slot)` inside the fill loop; it now
+    // filters the granted socket list by the frame's own slots once, before
+    // filling. Same rule, one level up — so the break drops the filter instead
+    // of the guard, and a hindlimb part finds a `hindlimbs` socket on a Kite
+    // that has none. `validateSplice` then refuses the frame exactly as R141
+    // measured. A break whose anchor rots into nothing is a gate that has
+    // quietly stopped being tested.
+    // R147 RE-AIMED THIS TWICE, and the second time is the instructive one.
+    // It was pointed at a filter the planner applied over the granted socket
+    // list — and `theaterGrants(state, content, frameId)` had ALREADY filtered
+    // by the frame's slots. Two guards, either one holding alone, and the
+    // break aimed at the redundant one, so it patched a line that could not
+    // change an answer: the Kite census read byte-identical with it applied.
+    // The redundant filter is gone and this aims at the guard that remains.
+    //
+    // TWO WAYS A BREAK ROTS. `--anchors` catches the first in a second — the
+    // anchor stops matching. Only a full run catches the second: the anchor
+    // matches, the patch applies, and the defect no longer manifests.
     n: 231, gate: KITE, name: 'the planner dresses every chassis from the whole vault, and the Kite is refused for owning a leg',
-    file: 'tools/sim.js',
-    anchor: '        if (!chassis.includes(part.slot)) continue;',
-    to: '        if (false) continue;',
+    file: 'splice/facility.js',
+    anchor: '    sockets: frameSlots ? sockets.filter((s) => frameSlots.includes(slotOfSocket(s))) : sockets,',
+    to: '    sockets,',
   },
   {
     // R150 — THE OTHER DIRECTION, which is the half that decides whether the
