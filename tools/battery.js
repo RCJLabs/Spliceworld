@@ -2098,6 +2098,36 @@ const BREAKS = [
     anchor: "  battle.outcome = won ? 'win' : 'loss';",
     to: '  battle.over = true;',
   },
+  // --- gate: coverage (R147 — the bay nobody filled) -----------------------
+  {
+    // THE PLANNER GOES BACK TO A PRIVATE COPY OF THE SOCKET LIST. This is the
+    // defect exactly as it shipped: CHASSIS_SLOTS has six entries and no
+    // `organ2`, so the Surgery Theater's second organ bay is invisible to the
+    // balance model while Tier II sells it in every campaign. The coverage
+    // gate's socket rule goes red with "dead bay: the Surgery Theater sells
+    // organ2 and not one of the 96 chimeras these campaigns kept is wearing
+    // it".
+    //
+    // R157's lesson is the reason this break exists rather than a comment: one
+    // constant with three readers goes stale in two of them, and the only way
+    // to keep the planner honest is to make a private copy FAIL.
+    n: 272, gate: COVERAGE, name: 'the build planner keeps its own socket list again, and the second organ bay dies',
+    file: 'tools/sim.js',
+    anchor: '    const granted = theaterGrants(state, content, frameId).sockets',
+    to: '    const granted = CHASSIS_SLOTS',
+  },
+  {
+    // THE OTHER HALF, AND THE SUBTLER ONE. Leave the grant in place but match
+    // sockets by name instead of by the slot they accept: `organ2` is then
+    // never chosen for an organ part, because the socket id and the part's
+    // slot differ by one character. The list is right and the fill is wrong —
+    // which is how the original could have been "fixed" by adding organ2 to
+    // CHASSIS_SLOTS and still shipped a dead bay.
+    n: 273, gate: COVERAGE, name: 'sockets are matched by name rather than by the slot they take',
+    file: 'tools/sim.js',
+    anchor: '        const socketId = granted.find((sid) => slotOfSocket(sid) === part.slot && !slots[sid]);',
+    to: '        const socketId = granted.find((sid) => sid === part.slot && !slots[sid]);',
+  },
   {
     // THE VERDICT READS A FIELD THAT DOES NOT EXIST. `hpMax` for `maxHp` — my
     // own slip, in the calibration that chose 60, and it is invisible to every
@@ -4076,10 +4106,18 @@ const BREAKS = [
     // census that had a 31% chance of noticing. Measured, this patch returns
     // L where the shipped engine returns A — and it is the reason the gate's
     // vault carries all six bays rather than the five the Kite can wear.
+    // R147 RE-AIMED THIS, and `--anchors` is why it was noticed. The planner
+    // used to test `chassis.includes(part.slot)` inside the fill loop; it now
+    // filters the granted socket list by the frame's own slots once, before
+    // filling. Same rule, one level up — so the break drops the filter instead
+    // of the guard, and a hindlimb part finds a `hindlimbs` socket on a Kite
+    // that has none. `validateSplice` then refuses the frame exactly as R141
+    // measured. A break whose anchor rots into nothing is a gate that has
+    // quietly stopped being tested.
     n: 231, gate: KITE, name: 'the planner dresses every chassis from the whole vault, and the Kite is refused for owning a leg',
     file: 'tools/sim.js',
-    anchor: '        if (!chassis.includes(part.slot)) continue;',
-    to: '        if (false) continue;',
+    anchor: '      .filter((socketId) => chassis.includes(slotOfSocket(socketId)));',
+    to: '      .filter(() => true);',
   },
   {
     // R150 — THE OTHER DIRECTION, which is the half that decides whether the
