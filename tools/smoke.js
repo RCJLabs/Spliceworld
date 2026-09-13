@@ -19352,10 +19352,11 @@ if (inShard('empire')) {
       + `— same stable, same pens, same plant (${shown}) `
       + '(before R152: 76.7% -> 85.2%, because the garrison was a flat share and the '
       + 'completion bonuses were not on the books at all)');
-    console.log(`   R152 shape: ${w.save.campaign.heldNodes.length} nodes keeps ${(small * 100).toFixed(1)}%, `
-      + `${everything.length} nodes keeps ${(large * 100).toFixed(1)}% `
-      + `(garrison ${(100 * garrisonFractionFor(w.save.campaign.heldNodes.length, content)).toFixed(1)}% `
-      + `-> ${(100 * garrisonFractionFor(everything.length, bigger)).toFixed(1)}% of gross)`);
+    console.log(`   R152 garrison: ${scaled[0].held} nodes bills `
+      + `${(100 * garrisonFractionFor(scaled[0].held, content)).toFixed(1)}% of gross, `
+      + `${everything.length} nodes bills `
+      + `${(100 * garrisonFractionFor(everything.length, bigger)).toFixed(1)}% — `
+      + 'the share has to RISE with the map, which is the mechanism the median above measures');
   }
 
   // 2c. R152 — AND THE GARRISON BILLS THE WHOLE MAP, BONUS INCLUDED. Built
