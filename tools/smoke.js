@@ -18976,7 +18976,29 @@ if (inShard('bulk')) {
 }
 
 if (inShard('empire')) {
-  const EMPIRE_SEEDS = [2026, 7, 99];
+  // R165 — SEED 11 IS THE CANARY, and it is here because R147 got this wrong.
+  //
+  // R163's churn floor is asked of the empire seeds, and on those the answer is
+  // never close: 40.9, 71.1 and 67.5 days against a floor of 5, so roughly 35
+  // days of headroom. A rule with that much slack cannot catch a regression —
+  // which is how R147 came to measure the vat brake on those three seeds, find
+  // it made no difference, and conclude it had stopped being load-bearing.
+  //
+  // Widened to twelve seeds, the brake binds hard on exactly one of them:
+  //
+  //   seed 11, VAT_KEEP_DAYS 14 -> 2:  median life 6.8d -> 2.0d
+  //                                    vat gestations 6 -> 443
+  //                                    creatures made 65 -> 737
+  //
+  // 443 gestations against the 120 R163 was fixing. The conveyor is alive and
+  // the brake is the only thing holding it; every other seed measured stays
+  // between 15.2 and 80.3 days either way. So the brake earns its line, and
+  // seed 11 joins the walk set so the floor is watched on a campaign that
+  // actually approaches it — 1.8 days of headroom rather than 35.
+  //
+  // It costs one more 180-day walk in this shard. That is the price of a rule
+  // that can fail.
+  const EMPIRE_SEEDS = [2026, 7, 99, 11];
   const walks = EMPIRE_SEEDS.map((seed) => campaignWalk(content, {
     seed, days: 180, stopAtDominion: false, snapshotDays: [10, 120],
   }));

@@ -3644,39 +3644,64 @@ triangle working, and each region genuinely asks a different question)*.
   against a guard means reading it — and this one had been enforcing a floor on
   the single seed that never approaches it.*
 
-- **R165 — The chaos vat's brake may no longer be load-bearing.** Filed out of
-  R147 with its numbers, because retiring a break is not the same as retiring
-  the rule it aimed at.
+- **R165 — The chaos vat's brake may no longer be load-bearing.** ✅ *Shipped
+  on the second branch: it is load-bearing, R147 was wrong, and the reason it
+  looked redundant is that the gate watching it had thirty-five days of slack.*
 
-  R163 shipped `VAT_KEEP_DAYS = 14` — a decant cannot be dismantled for a
-  fortnight — because the walker was running **120 gestations** on seed 7 and
-  vat-born creatures were dying at a median of **2.17 days**, under R135's
-  five-day churn floor. The brake worked.
+  R163 shipped `VAT_KEEP_DAYS = 14` against a conveyor — 120 gestations on seed
+  7, vat-born creatures dying at a median of 2.17 days under R135's five-day
+  floor. R147 then measured the brake on the three **empire** seeds, found it
+  made no difference, and retired break 268. That conclusion came from three
+  campaigns that all sit far from the floor.
 
-  R147 then taught the planner the Surgery Theater's second organ bay, and a
-  splice became a better answer than a decant. Re-measured across the three
-  empire seeds:
+  #### Twelve seeds, and the brake binds on one of them
 
-  | seed | vats, brake on | vats, brake off | median life, on | off |
-  | --- | ---: | ---: | ---: | ---: |
-  | 2026 | 6 | 9 | 40.9d | **53.0d** |
-  | 7 | 4 | 10 | 71.1d | 65.1d |
-  | 99 | 1 | 3 | 67.5d | 63.7d |
+  | seed | median life, brake on | brake off | vat runs, on → off |
+  | --- | ---: | ---: | ---: |
+  | 900 | 82.5d | 67.0d | 7 → 10 |
+  | 7 | 71.1d | 65.1d | 4 → 10 |
+  | 4242 | 68.6d | 42.7d | 4 → 7 |
+  | 99 | 67.5d | 63.7d | 1 → 3 |
+  | 55 | 67.3d | 80.3d | 3 → 1 |
+  | 42 | 63.7d | 59.8d | 7 → 8 |
+  | 101 | 59.6d | 53.8d | 2 → 3 |
+  | 2026 | 40.9d | 53.0d | 6 → 9 |
+  | 31337 | 25.8d | 28.0d | 4 → 4 |
+  | 5150 | 15.3d | 24.3d | 6 → 5 |
+  | 31 | 14.7d | 15.2d | 2 → 1 |
+  | **11** | **6.8d** | **2.0d** | **6 → 443** |
 
-  **Seed 7 runs four gestations where R163 measured 120.** Every reading is an
-  order of magnitude clear of the five-day floor with the brake *off*, and two
-  of the three are better without it. Break 268 was retired on R160's
-  precedent rather than left to go MISSED, which means the constant now has no
-  break aimed at it at all — the state this repo treats as a gate that has
-  quietly stopped being tested.
+  **Seed 11 runs 443 gestations with the brake off** — against the 120 R163 was
+  fixing — builds 737 creatures to keep 14, and drops the median chimera life to
+  **2.0 days, under the floor**. Every other seed measured stays between 15.2
+  and 80.3 days either way. The conveyor is alive; the brake is the only thing
+  holding it shut.
 
-  Three seeds are not proof it can never bind, and removing a floor is a
-  behaviour change, so R147 left it in place and filed this instead. The
-  question is whether the brake still earns its line, or whether R147 removed
-  the condition it existed for. *Done when: either the constant is gone and the
-  churn floor still holds across the empire seeds with a break that proves it,
-  or a seed is found where the brake binds and break 268 comes back aimed at
-  that.*
+  #### Why three seeds could not see it
+
+  The empire seeds clear the floor by 35 days. A rule with that much headroom
+  passes whatever happens to the mechanism underneath it — which is what made
+  break 268 go MISSED in R147's full battery, and what made "the brake has
+  stopped being load-bearing" look like a measurement instead of an artefact of
+  which campaigns the gate happens to walk.
+
+  #### What ships
+
+  **Seed 11 joins `EMPIRE_SEEDS`**, so the churn floor is watched on a campaign
+  with 1.8 days of headroom rather than 35, and **break 268 is restored** aimed
+  at a seed that can feel it. The constant is untouched: it was right all along.
+  The cost is one more 180-day walk in shard a, which is the price of a rule
+  that can fail.
+
+  *Done when: either the constant is gone and the churn floor still holds with a
+  break that proves it, or a seed is found where the brake binds and break 268
+  comes back aimed at that.* ✅ — **the second clause.**
+
+  **The lesson:** *a guard that looks redundant may only be untested. Before
+  deleting one, check whether the rule that watches it could fail at all — a
+  floor with thirty-five days of slack will report "no difference" for a
+  mechanism doing all of the work, and the sample that says so will look like
+  evidence.*
 
 - **R164 — Ninety-five fights in 3,536 run past twenty turns.** ✅ *Shipped as
   a refutation. I filed this during R145 and its premise is backwards: the
