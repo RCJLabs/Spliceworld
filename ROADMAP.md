@@ -3644,6 +3644,40 @@ triangle working, and each region genuinely asks a different question)*.
   against a guard means reading it — and this one had been enforcing a floor on
   the single seed that never approaches it.*
 
+- **R165 — The chaos vat's brake may no longer be load-bearing.** Filed out of
+  R147 with its numbers, because retiring a break is not the same as retiring
+  the rule it aimed at.
+
+  R163 shipped `VAT_KEEP_DAYS = 14` — a decant cannot be dismantled for a
+  fortnight — because the walker was running **120 gestations** on seed 7 and
+  vat-born creatures were dying at a median of **2.17 days**, under R135's
+  five-day churn floor. The brake worked.
+
+  R147 then taught the planner the Surgery Theater's second organ bay, and a
+  splice became a better answer than a decant. Re-measured across the three
+  empire seeds:
+
+  | seed | vats, brake on | vats, brake off | median life, on | off |
+  | --- | ---: | ---: | ---: | ---: |
+  | 2026 | 6 | 9 | 40.9d | **53.0d** |
+  | 7 | 4 | 10 | 71.1d | 65.1d |
+  | 99 | 1 | 3 | 67.5d | 63.7d |
+
+  **Seed 7 runs four gestations where R163 measured 120.** Every reading is an
+  order of magnitude clear of the five-day floor with the brake *off*, and two
+  of the three are better without it. Break 268 was retired on R160's
+  precedent rather than left to go MISSED, which means the constant now has no
+  break aimed at it at all — the state this repo treats as a gate that has
+  quietly stopped being tested.
+
+  Three seeds are not proof it can never bind, and removing a floor is a
+  behaviour change, so R147 left it in place and filed this instead. The
+  question is whether the brake still earns its line, or whether R147 removed
+  the condition it existed for. *Done when: either the constant is gone and the
+  churn floor still holds across the empire seeds with a break that proves it,
+  or a seed is found where the brake binds and break 268 comes back aimed at
+  that.*
+
 - **R164 — Ninety-five fights in 3,536 run past twenty turns.** Filed out of
   R145 with its numbers, rather than fixed there: shortening a grind moves win
   rates across the whole roster, and R145's criterion was that a fight *ends*,

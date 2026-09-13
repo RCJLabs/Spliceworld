@@ -38,7 +38,7 @@ than the one that ships.**
 | combos never found, 7 seeds | 5 | **3** |
 | combos found, median | 14 | 17 of 27 |
 | combos found, total | 100 | 113 of 169 |
-| breaks | 267 | **269** |
+| breaks | 267 | **266** (2 added, 1 retired, 1 re-pointed) |
 
 **The median is not the honest headline.** Seeds 101 and 4242 go 13 → 19; seeds
 55 and 31 *fall*, 17 → 11 and 12 → 11. A different build order finds a
@@ -55,7 +55,33 @@ small-map share tracks nodes held almost perfectly (19 → 23.4%, 20 → 30.6%,
 regardless. Now a median of three, spread printed. Breaks 243 and 242 still
 catch it, which is what justifies the weaker formulation.
 
-### Three of my own mistakes, all caught by running rather than reading
+### The full battery found two MISSED breaks, and they needed different answers
+
+121 minutes, 267 breaks, **265 caught, 2 missed**, baseline clean. Both were
+breaks R147's own change invalidated.
+
+**231 was re-pointed** after removing the redundancy behind it. Replacing the
+planner's private slot list with `theaterGrants(...).sockets`, I added a filter
+beside that call which `theaterGrants` had **already applied**. Two guards,
+either one holding alone, and the break aimed at the redundant one — it patched
+a line that could not change an answer, and the Kite census read byte-identical
+with it applied. R157's "one constant, three readers", violated in the commit
+that quoted it.
+
+**268 was retired with its numbers** on R160's precedent, because no honest
+re-point existed: R163's vat brake has stopped being load-bearing. With
+`VAT_KEEP_DAYS` off, median chimera life reads 53.0 / 65.1 / 63.7 days against
+a five-day floor — two of three seeds *better* without it — because R147
+collapsed vat usage from R163's 120 gestations to **four**. The brake stays in
+the code; whether it still earns its place is **R165**.
+
+**Two ways a break rots, and this milestone hit both.** `--anchors` catches the
+first in a second: the anchor stops matching real code. Only a full run catches
+the second: the anchor matches, the patch applies, and the defect no longer
+manifests. That is the argument for the full battery being mandatory when a
+milestone changes what the walker builds, and it just paid for itself.
+
+### Four of my own mistakes, all caught by running rather than reading
 
 - **`hpMax` for `maxHp`** in R145's calibration — every fraction NaN.
 - **`git stash push` on an already-committed file** — stashed nothing, and the
@@ -64,6 +90,11 @@ catch it, which is what justifies the weaker formulation.
 - **An orphaned `w`/`small`/`large`** in a report line after rewriting R152's
   rule. `node --check` passes it; only running the shard finds it — the same
   trap R159 hit with its `stalls` Map.
+- **A retirement that deleted six breaks instead of one**, slicing
+  comment-header to comment-header and taking R145's 269-271 and R147's
+  272-273 with break 268. `--anchors` read 261 against an expected 266 and
+  caught it; `battery.js` was restored from HEAD and the edits redone against
+  exact block boundaries.
 
 ### Known issues
 
