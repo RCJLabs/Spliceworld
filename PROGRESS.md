@@ -1,5 +1,96 @@
 # PROGRESS
 
+## Session 163 — R159: a slow box is not a broken screen ✅
+
+**ROADMAP §9.29a.** The height gate has been telling the truth about the wrong
+thing. When it could not read a page it said *"its height budget is being met
+by a screen nobody can open"* — about a screen that was fine.
+
+### The entry blamed load. It is a cold box.
+
+Reproduced twice in a row on an **idle** box, same tree, container three
+minutes old:
+
+| run | verdict | wall |
+| --- | --- | ---: |
+| 1 | **RED** — ranch 4, pens 1, vault 1, combos 1 folds; theater 2157px vs 2080 | 40.5s |
+| 2 | **GREEN** — 130 folds walked | 1m51.7s |
+
+The first run was *faster* because it gave up early. A cold Chromium is enough
+on its own, and every fresh container is one. The theater line matters too: an
+unsettled page corrupts the **heights**, not only the fold counts.
+
+### Wait for the page, not for the clock
+
+Five fixed sleeps (5000/2000/1700/320/240ms) became deadlines on a polled
+signature of the screen, with `show` retrying at 4s, 8s, 16s. The common case
+got **faster**, because the gate stops waiting when the page is ready:
+
+| condition | verdict | folds | wall |
+| --- | --- | ---: | ---: |
+| idle, before | green | 130 | 1m51.7s |
+| idle, after | green | 130 | **52.9s** |
+| 8 burners on 4 cores | green | 130 | 56.1s |
+| **40 burners on 4 cores** | green | 129 | 1m17.8s |
+| **alongside a full `npm test`** (R154's scenario) | green | 130 | 57.3s |
+
+At 19 runs per full battery, that 59s is about **18 minutes** back.
+
+### Stability is not readiness, and that cost me the first attempt
+
+Settling on "the signature stopped changing" made it **worse**: a screen is
+`hidden` and empty until its module lazy-loads, an empty element has a
+perfectly stable signature, so the walk settled instantly on nothing and
+reported `ranch ... got into 0`. A wait that returns early measures the same
+unfinished page the sleep did.
+
+### The discriminator, and why weather cannot be a fixture
+
+"Nothing left to open" means either *finished* or *not finished arriving*. What
+separates them is whether the screen is still **moving** when the walk runs
+short. Both still fail — a rule that goes quiet on a page it could not read is
+the false green R131 exists to prevent — but they fail saying different true
+things. The decision is `tools/settling.js`, a pure function of
+`(opened, want, moved)`, because the evidence above took 40 burners to produce
+once and a battery on an idle box cannot produce it at all. Breaks **263** and
+**264** aim at each direction. Smoke also caught my first draft of the stalled
+message, which read *"not a screen nobody can open"* — denying a sentence is
+not the same as not saying it.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| fixed sleeps guarding a render | 5 | **0** |
+| height gate, idle | 1m51.7s | **52.9s** |
+| false red on a cold container | 1 run in 2 | **0 in 5 conditions** |
+| verdicts for a short walk | 1 | **2, and distinct** |
+| breaks | 256 | **258** |
+
+### Known issues
+
+- **`tools/a11y.js` has 56 fixed sleeps** — more than this gate had, and the
+  other half of the entry's title. It has no `opens`-style reach rule so it
+  cannot print this particular false sentence, but it is the same shape. Left
+  alone deliberately rather than half-done; the criterion named the height
+  gate.
+- **The stall verdict has never been seen in anger.** Starvation could not
+  defeat the retries at 10x oversubscription, which is the good outcome, but it
+  means the STALLED branch is proven only by unit test, not by weather.
+- **The entry's suite numbers were stale** ("464s wall and 940 CPU-seconds").
+  Those were R154's contended readings; R160 measured 707-929 depending on
+  cache state.
+
+- **The full battery took ~1h29m, not the ~47 minutes CLAUDE.md quotes.** This
+  milestone took 18 minutes OFF it (18 height breaks at ~53s instead of ~112s)
+  and R160's three new suite breaks put ~17 back, which still does not explain
+  the gap. Filed as **R162** with the measurements rather than guessed at.
+
+### Next session's first task
+
+**R139, R142, R145 or R147** — the oldest unshipped entries. Nothing is
+blocked; pick by what the game needs rather than by number.
+
 ## Session 162 — R160: the probe was innocent, and so was the box ✅
 
 **ROADMAP §9.29a.** Four milestones — R151, R153, R156, R158 — argued about a

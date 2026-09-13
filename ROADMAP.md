@@ -4262,6 +4262,26 @@ triangle working, and each region genuinely asks a different question)*.
   are the same bug as an engine that crashes. R91 wrote the sentence, wrote the
   reason, and shipped it to nobody.*
 
+- **R162 — The battery's "47 minutes" is stale, and R160 is why.** R159's full
+  battery ran **~1h29m** for 258 breaks (258 caught, 0 missed) against the
+  ~47 minutes CLAUDE.md still quotes for the decision of when to pay for it.
+  Two measured contributions, in opposite directions: R159 took the 18
+  HEIGHT-gated breaks from ~112s to ~53s each, which is about **18 minutes
+  back**; R160 replaced two cheap probe breaks with three deliberately
+  expensive suite ones, and their wall times measured directly the same day
+  were **350s, 420s and 282s** — about **17 minutes** for those three alone,
+  against roughly 8 for the pair they replaced. There are now **5** SUITE-gated
+  breaks, each of which runs the whole suite.
+
+  That does not add up to 42 minutes of overrun, so something else is in there
+  too and I am not going to guess what: R160's own lesson is that a timing
+  claim from one run is how four milestones end up arguing about a drift nobody
+  sampled twice. *Done when: the battery reports its own wall-clock and a
+  per-gate breakdown at the end of a run, and the figure in CLAUDE.md is
+  replaced by one measured across at least three runs — with the option of
+  making the expensive suite breaks cheaper (a smaller `--only`-style suite for
+  break purposes) considered and either taken or written down as rejected.*
+
 - **R160 — The probe measures the wrong work.** ✅ *Shipped, in the negative:
   no probe measures it, because the thing it was built to explain was never
   the box.* R156 chose a fixed integer loop for being the quietest of three
@@ -4328,27 +4348,82 @@ triangle working, and each region genuinely asks a different question)*.
   run, and never gated on.*
 
 - **R159 — Two browser gates under load report a screen nobody can open.**
-  R154's verification ran `npm test` alongside `battery --baseline`, which is
-  what CLAUDE.md prescribes, and the baseline went **red on the height gate**
-  — *"ranch declares 20 folds to walk and the gate got into 4"*, *"pens ...
-  got into 1"*, and a Theater 77px over. Run alone, on the identical tree,
-  the same gate walked **40/12 and 40/16 folds and passed**, twice, and so
-  did the whole baseline. So the red is starvation, and the tell is in the
-  message: every one of those is a REACH failure, not a budget overrun. The
-  gate opens folds on a timer, and the suite now costs **464s wall and 940
-  CPU-seconds across four lanes**, not the "~3 min" the protocol still
-  quoted.
+  ✅ *Shipped, and the entry's diagnosis was right about the mechanism and
+  wrong about the cause.* R154's baseline went red on the height gate —
+  *"ranch declares 20 folds to walk and the gate got into 4"*, *"pens ... got
+  into 1"*, a Theater 77px over — and green when run alone, so the entry
+  blamed `npm test` running alongside.
 
-  This is R131's own rule turned on its author: `opens` exists because "every
-  rule above fails UPWARDS only, so a screen the walk can no longer get into
-  reports a comfortable number and passes". It does its job — the trouble is
-  it cannot tell a screen that stopped opening from a screen that was not
-  given the CPU to open, and a 47-minute battery that false-reds at random is
-  a battery nobody will trust the fifth time. *Done when: a browser gate
-  starved of CPU says so instead of failing — the fold walk retries or reports
-  "the page did not settle" as a distinct verdict from "the screen does not
-  open" — checked by running the height gate against a deliberate load and
-  reading that verdict rather than a budget failure.*
+  #### It is not load. It is a cold box, and every fresh container is one.
+
+  Reproduced twice in a row on an IDLE box, same tree, same commit, in a
+  container three minutes old:
+
+  | run | verdict | wall |
+  | --- | --- | ---: |
+  | 1 | **RED** — ranch 4, pens 1, vault 1, combos 1 folds; theater 2157px against its 2080 budget | 40.5s |
+  | 2 | **GREEN** — 130 folds walked, every screen inside budget | 1m51.7s |
+
+  The first run was *faster* because it gave up on every screen early. A cold
+  Chromium — no code cache, no font cache, a profile being created — is enough
+  on its own. And note the theater line: an unsettled page corrupts the
+  **heights**, not only the counts, so this was never only R131's rule.
+
+  #### Wait for the page, not for the clock
+
+  Every wait in the gate was a fixed sleep: 5000ms for the load, 2000 to show
+  a screen, 1700 for a Dex tab, 320 for an inner tab, 240 after each fold.
+  They are now deadlines on a polled signature of the screen, and `show`
+  retries at 4s, 8s and 16s. The common case got FASTER, because the gate
+  stops waiting when the page is ready instead of always paying the number
+  somebody typed once:
+
+  | condition | verdict | folds | wall |
+  | --- | --- | ---: | ---: |
+  | idle, before | green | 130 | 1m51.7s |
+  | idle, after | green | 130 | **52.9s** |
+  | 8 burners on 4 cores | green | 130 | 56.1s |
+  | **40 burners on 4 cores** | green | 129 | 1m17.8s |
+  | **alongside a full `npm test`** (R154's own scenario) | green | 130 | 57.3s |
+
+  At 19 runs per full battery that 59s is about **18 minutes** back.
+
+  #### Stability is not readiness, which cost me the first attempt
+
+  The first version settled on the signature going quiet and it made things
+  WORSE: a screen is `hidden` and empty until its module lazy-loads, an empty
+  element has a perfectly stable signature, so the walk settled instantly on
+  nothing and reported `ranch ... got into 0`. A wait that returns early
+  measures the same unfinished page the sleep did. Readiness — painted,
+  unhidden, non-empty — is now half the check.
+
+  #### The discriminator, and why it is a separate file
+
+  "Nothing left to open" has two causes that are identical from the walk's
+  seat: the screen is finished, or it has not finished arriving. What separates
+  them is whether the screen is still MOVING when the walk runs short. Both
+  still fail — a rule that goes quiet on a page it could not read is the false
+  green R131 exists to prevent — but they now fail saying different true
+  things. That decision is `tools/settling.js`, a pure function of
+  `(opened, want, moved)`, because **weather cannot be a fixture**: the
+  evidence above took 40 burners to produce once, and a rule only reachable
+  under load is a rule with nothing to look at. Smoke asks it both questions;
+  breaks **263** (the stall verdict is deleted, so a starved run blames the
+  screen again) and **264** (every short walk is excused as a slow box, so
+  R131's hole is back with a reassuring explanation over it) aim at each
+  direction. Smoke also caught the first draft of the stalled message, which
+  read *"not a screen nobody can open"* — denying a sentence is not the same
+  as not saying it, and a grep cannot tell the difference.
+
+  **The lesson:** *a gate that cannot tell "I could not read the page" from
+  "the page is wrong" will eventually be believed about the wrong one. The
+  honest verdict is a third answer, not a louder version of the second.*
+
+  **Known issue, filed not fixed:** `tools/a11y.js` has **56** fixed sleeps —
+  more than this gate had — and is the other half of the entry's title. It has
+  no `opens`-style reach rule, so it cannot print this particular false
+  sentence, and its starvation failures would be different ones. Left alone
+  deliberately rather than half-done: the criterion named the height gate.
 
 - **R153 — The boot budget has taken three raises in three milestones.**
   ✅ *Shipped. Both budgets came down, and the note that priced the fix was

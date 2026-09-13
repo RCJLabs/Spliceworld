@@ -2087,6 +2087,34 @@ const BREAKS = [
     anchor: '      balanceTasks.push({ builds: 40, seedsPer: 8, teamSize: 3, grade, seed: poolSeed });',
     to: '      balanceTasks.push({ builds: 40, seedsPer: 32, teamSize: 3, grade, seed: poolSeed });',
   },
+  // --- gate: facility (R159 — a slow box is not a broken screen) -----------
+  //
+  // R159's evidence was gathered under 40 CPU burners on four cores, which is
+  // not a state a battery on an idle box can produce. That is exactly why the
+  // decision lives in `tools/settling.js` as a pure function: weather cannot
+  // be a fixture, so the rule it feeds would have had nothing to look at.
+  {
+    // A starved run goes back to blaming the screen. This is the sentence the
+    // milestone exists to stop printing — "its height budget is being met by a
+    // screen nobody can open", about a screen that was fine and a box that was
+    // busy — and a 47-minute battery that says it at random is a battery
+    // nobody trusts the fifth time.
+    n: 263, gate: FACILITY, name: 'a starved height run goes back to reporting a screen nobody can open',
+    file: 'tools/settling.js',
+    anchor: '  if (moved) {',
+    to: '  if (false) {',
+  },
+  {
+    // And the dangerous direction, which is the one worth more. R131 built the
+    // `opens` count because every other height rule fails upwards: a screen
+    // the walk cannot get into reports a comfortable number and passes. If
+    // every short walk is excused as a slow box then that hole is back, and
+    // this time with a reassuring explanation printed over it.
+    n: 264, gate: FACILITY, name: 'a screen nobody can open is excused as a slow box, and R131 is undone',
+    file: 'tools/settling.js',
+    anchor: '    kind: UNOPENABLE,',
+    to: '    kind: STALLED,',
+  },
   // --- gate: facility (R161 — a refusal is not a ceremony) -----------------
   {
     // The Pens goes back to offering a graduation the vault will refuse. This
