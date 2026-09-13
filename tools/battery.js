@@ -347,6 +347,15 @@ const EMPIRE = ['node', '-e',
 const SHARD_B = ['node', '-e',
   "process.env.SW_SHARD = 'b'; await import('./tools/smoke.js');"];
 
+// R145 — A FIGHT ENDS, AND IT ENDS THE RIGHT WAY. Six sample seeds x 3,536
+// scripted fights: median 9 on every one of them, and before this milestone
+// two fights on seed 11 that never ended at all, because the engine had no
+// turn cap and the harness's 300-turn guard was standing in for one. Shard d,
+// per SHARD_OF — the first break in this battery to aim at that lane, so the
+// constant is new rather than borrowed.
+const TURNS = ['node', '-e',
+  "process.env.SW_SHARD = 'd'; await import('./tools/smoke.js');"];
+
 // R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
 // this game was bounded except the ones that mattered: the day-180 save was
 // 1.8 MB, 95.5% of it inventory, and four save slots share one 5 MB quota, so
@@ -2058,6 +2067,52 @@ const BREAKS = [
     file: 'tools/sim.js',
     anchor: '      const VAT_KEEP_DAYS = 14;',
     to: '      const VAT_KEEP_DAYS = 2;',
+  },
+  // --- gate: turns (R145 — a fight ends, and it ends the right way) --------
+  {
+    // TAKE THE CAP OFF. This does not restore the old code exactly — it moves
+    // the limit out of reach, which is the same thing from the fight's point
+    // of view and keeps the patch to one token.
+    //
+    // WHICH RULE CATCHES IT IS THE POINT. `max <= TURN_LIMIT` reads the
+    // constant, so raising the constant satisfies it — the rule that goes red
+    // is `stalls === 0`, because the two grind-locked fights on sample seed 11
+    // run the harness's own 300-turn guard out and come back with no verdict.
+    // A gate that checked only the limit it was handed would be green here,
+    // which is why R145 asserts both halves.
+    n: 269, gate: TURNS, name: 'the engine loses its turn cap and two fights stop ending',
+    file: 'battle/engine.js',
+    anchor: 'export const TURN_LIMIT = 60;',
+    to: 'export const TURN_LIMIT = 6000;',
+  },
+  {
+    // A FIGHT THAT ENDS WITH NO VERDICT. The plausible half-fix: stop the
+    // fight, forget to say who won. `over` is true so nothing loops forever
+    // and the turn count looks healthy, but `outcome` stays null — which
+    // `scriptedBattle` reports as a stall and the War Room reports to the
+    // player as "Defeat." This is the shape of the bug R145 found, reached by
+    // a different route, and it goes red on the FIRST seed rather than the
+    // second: every seed has a fight that reaches the limit.
+    n: 270, gate: TURNS, name: 'the called fight stops without saying who won',
+    file: 'battle/engine.js',
+    anchor: "  battle.outcome = won ? 'win' : 'loss';",
+    to: '  battle.over = true;',
+  },
+  {
+    // THE VERDICT READS A FIELD THAT DOES NOT EXIST. `hpMax` for `maxHp` — my
+    // own slip, in the calibration that chose 60, and it is invisible to every
+    // rule about how LONG a fight is: `mine` is NaN, so `ours >= them` is
+    // always false and every called fight is a loss, including the one where
+    // the opposition is already at zero health. The census recomputes the
+    // verdict from the field the call read and `misjudged` goes non-zero.
+    //
+    // Worth a break of its own because it is the failure a turn cap invites:
+    // three rules can prove every fight terminates while the thing it
+    // terminates into is wrong.
+    n: 271, gate: TURNS, name: 'the called verdict compares NaN and hands every grind to the opposition',
+    file: 'battle/engine.js',
+    anchor: '  const mine = team.reduce((s, c) => s + c.maxHp, 0);',
+    to: '  const mine = team.reduce((s, c) => s + c.hpMax, 0);',
   },
   // --- gate: empire (R142 — the ratio the harness prints) ------------------
   {

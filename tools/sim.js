@@ -18,7 +18,7 @@ import { activeRaid, raidEncounter } from '../campaign/taskforce.js';
 import { gauntletState, gauntletEncounter } from '../campaign/gauntlet.js';
 import { treatInjury, treatmentCost } from '../splice/scars.js';
 import { analyze } from '../splice/physiology.js';
-import { createBattle, step, playerActions, playerActive } from '../battle/engine.js';
+import { createBattle, step, playerActions, playerActive, TURN_LIMIT } from '../battle/engine.js';
 import { movesFromTokens } from '../battle/statblock.js';
 import { knownMoves } from '../battle/moves.js';
 import { rivalEncounter, rivalList, rivalStatus } from '../campaign/rivals.js';
@@ -156,7 +156,83 @@ export function scriptedBattle(chimera, encounter, content, seed, teamSize = 1) 
     if (!action) break;
     step(battle, action, content);
   }
-  return { outcome: battle.outcome ?? 'stall', turns: battle.turn };
+  // R145 — `called` and `field` exist so a gate can check the VERDICT of a
+  // called fight and not merely that one was issued. Nothing touches health
+  // after the call, so this IS the state the engine's rule read: recomputing
+  // the verdict here is a deliberate second opinion on the engine's
+  // arithmetic, and the two must agree.
+  const alive = battle.player.team.reduce((t, c) => t + Math.max(0, c.hp), 0);
+  const pool = battle.player.team.reduce((t, c) => t + c.maxHp, 0);
+  return {
+    outcome: battle.outcome ?? 'stall',
+    turns: battle.turn,
+    // A fight that reaches the limit was called (or, rarely, ended naturally
+    // on that turn — which the verdict rule below agrees with either way).
+    // Read off the turn count rather than a field on the battle, because the
+    // battle is part of the save and a new field there costs a SAVE_VERSION
+    // bump and a migration.
+    called: battle.turn >= TURN_LIMIT ? battle.turn : null,
+    field: {
+      queued: battle.enemy.queue.length,
+      mine: pool ? alive / pool : 0,
+      theirs: battle.enemy.active.maxHp
+        ? Math.max(0, battle.enemy.active.hp) / battle.enemy.active.maxHp
+        : 0,
+    },
+  };
+}
+
+// R145 — HOW LONG IS A FIGHT? The seventh audit measured this once with a
+// throwaway probe — median 9, p90 15, max 37 — wrote the number into a table,
+// and never wrote the entry: §9.18 was titled "R138-R147" with no R145 in it
+// until the milestone that added this function. Nothing reported the number in
+// between, and it had moved — the tail was more than twice what the audit
+// recorded, and two fights past the end of it never finished at all.
+//
+// A census rather than a mean, because the mean is the half that was never in
+// question. The median has been 9 turns throughout and is fine for a
+// turn-based creature battler; what nobody could see is the shape past p90,
+// where a single grinding matchup turns a two-minute fight into a ten-minute
+// one played out beat by beat on a phone (R2's replay, R7's single screen).
+//
+// 12 builds x 2 grades x every encounter, teams of three: 3,536 fights in
+// about a second, and the percentiles land on the same numbers as a 10,608
+// fight sweep (median 9, p90 15/16, p99 26/25). Cheap enough to gate.
+//
+// `stalls` is the load-bearing field. Before R145 it was 2 on sample seed 11:
+// a fight that ran the harness's 300-turn guard out and came back with no
+// verdict at all. The engine's TURN_LIMIT is what makes it 0, and the gate
+// reads that constant rather than restating the number.
+export function turnCensus(content, { builds = 12, grades = ['standard', 'apex'], seed = 2026 } = {}) {
+  const sample = sampleBuilds(content, builds, seed);
+  const encs = Object.keys(content.encounters);
+  const turns = [];
+  let stalls = 0;
+  let called = 0;
+  let misjudged = 0;
+  for (const grade of grades) {
+    for (const b of sample) {
+      for (const e of encs) {
+        const r = scriptedBattle(makeSimChimera(b.frame, b.partIds, grade, content), e, content, 13, 3);
+        if (r.outcome === 'stall') stalls++;
+        if (r.called != null) {
+          called++;
+          // The opposition has to be finished AND behind. Recomputed from the
+          // field the call read, so a verdict that ignores either half — or
+          // that reads a field name the combatant does not have, and compares
+          // NaN — shows up here as a disagreement.
+          const deserved = r.field.queued === 0 && r.field.mine >= r.field.theirs ? 'win' : 'loss';
+          if (r.outcome !== deserved) misjudged++;
+        }
+        turns.push(r.turns);
+      }
+    }
+  }
+  turns.sort((a, b) => a - b);
+  const q = (p) => turns[Math.floor((turns.length - 1) * p)] ?? 0;
+  return { n: turns.length, stalls, called, misjudged,
+    median: q(0.5), p90: q(0.9), p99: q(0.99), max: q(1),
+    over20: turns.filter((t) => t > 20).length, over30: turns.filter((t) => t > 30).length };
 }
 
 export function buildLabel(frame, partIds, grade) {

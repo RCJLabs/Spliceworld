@@ -106,6 +106,14 @@ export function replayCost(events) {
 // The guard is the same 400 the harness has used since R83. A fight that
 // cannot end in 400 actions is a bug in the engine, and swallowing it here
 // would hide it.
+//
+// R145: it was right, and it was hiding one. The engine had no turn cap, so
+// this guard was the only thing ending a grind-locked fight — and it ended it
+// by returning over:false, which the War Room reports to the player as
+// "Defeat." The engine's own TURN_LIMIT now guarantees termination at 60, so
+// this is a backstop rather than the rule. It stays: a guard that can never
+// fire costs nothing, and the next engine change to get this wrong should hit
+// a net rather than an infinite loop.
 export function autoResolve(battle, content, { capture = true } = {}) {
   const events = [];
   let guard = 0;

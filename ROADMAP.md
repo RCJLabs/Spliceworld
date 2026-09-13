@@ -3644,6 +3644,194 @@ triangle working, and each region genuinely asks a different question)*.
   against a guard means reading it — and this one had been enforcing a floor on
   the single seed that never approaches it.*
 
+- **R164 — Ninety-five fights in 3,536 run past twenty turns.** Filed out of
+  R145 with its numbers, rather than fixed there: shortening a grind moves win
+  rates across the whole roster, and R145's criterion was that a fight *ends*,
+  not that it ends quickly.
+
+  R145 gave the engine a `TURN_LIMIT` of 60, so nothing runs forever any more.
+  What is left is the shape underneath it, measured over the same 21,216
+  scripted fights (12 builds × 2 grades × every encounter × 6 sample seeds,
+  teams of three):
+
+  | | per 3,536 fights | share |
+  | --- | ---: | ---: |
+  | over 20 turns | 92–98 | 2.7% |
+  | over 30 turns | 19–22 | 0.6% |
+  | reaching the 60-turn limit | 2–4 | 0.08% |
+
+  A median fight is 9 turns; p99 is 25–26. So roughly one fight in forty runs
+  more than twice the typical length, and the mechanism is legible in the worst
+  of them: **armour outruns power.** The Siege Tank's 52 armour against a
+  52-power move is chip damage, and `ARMOR_FACTOR = 0.7` is applied without any
+  floor that scales with the attacker — so a build that is merely *outclassed*
+  grinds instead of losing, which is the less interesting of the two.
+
+  This is not the same complaint as R143's ("nothing goes badly wrong"). That
+  was about consequence; this is about *duration*, and the player-facing cost
+  is specific: R2's replay plays a called fight beat by beat, and R7 puts it on
+  one 380px screen. Sixty of those is a bad evening even when it terminates.
+
+  Two candidate directions, neither measured yet: a damage floor that rises
+  with the attacker's power so armour caps a fight's length rather than its
+  damage, or escalating pressure past some turn so a grind resolves itself.
+  The first is a balance change to every armoured unit; the second adds a
+  mechanic. *Done when: no more than ~1 fight in 500 passes 20 turns across
+  all six census seeds, the median stays at 9, and the change is priced against
+  the existing `[OP]` gate rather than against the census alone.*
+
+- **R145 — A fight is nine turns, and two of them never end.** ✅ *Shipped.
+  The entry did not exist: §9.18 is titled "R138–R147" and R145 appeared
+  nowhere in this file — the only record was one row of the audit table in
+  PROGRESS.md. Written and shipped together, because the number it recorded
+  was half right and the half it got wrong was hiding a fight with no ending.*
+
+  #### The audit's one row, checked
+
+  The seventh audit measured the length of a fight once, with a throwaway
+  probe, wrote `| R145 | a fight is nine turns | p90 15, max 37 |` in the
+  table, and never wrote the entry. Nothing has reported the number since.
+
+  Re-measured over **21,216 scripted fights** — 12 builds × 2 grades × every
+  encounter × 6 sample seeds, teams of three:
+
+  | | audit | today |
+  | --- | ---: | ---: |
+  | median | 9 | **9** |
+  | p90 | 15 | **15** |
+  | p99 | — | 25–26 |
+  | max | 37 | **76** |
+  | never ended | — | **2** |
+
+  The median and p90 reproduce **exactly**, which is worth saying plainly:
+  nine turns is a healthy fight for a turn-based creature battler and it has
+  not moved. The tail had more than doubled, and past the end of it, on one
+  sample seed of six, were two fights that did not end at all.
+
+  #### The engine had no stalemate rule, and a comment had already said so
+
+  `battle/engine.js` had no turn cap. Two guards were standing in for one:
+  the harness's `guard++ < 300` in `tools/sim.js`, and `autoResolve`'s 400 in
+  `battle/autoplay.js`. R88 wrote down what the second one meant —
+
+  > The guard is the same 400 the harness has used since R83. A fight that
+  > cannot end in 400 actions is a bug in the engine, and swallowing it here
+  > would hide it.
+
+  — and it was right, and it had been swallowing one ever since, because
+  **nothing ever asserted the guard was unreached.**
+
+  The fight: a team of three standard-grade Simulacra (`abyssal:shark_tail +
+  anglerfish:head + chameleon:hindlimbs + eagle:organ`) sent at **Procurement**.
+  Armour 52 against a 52-power move is chip damage, so the Siege Tank sheds
+  **0.4 HP a turn** while the last chimera sits on 14 and is never finished
+  either. It converges — around turn 900.
+
+  What the player got. Sent rather than watched, `autoResolve` returned
+  `over: false, outcome: null` after **1,218 beats**; `resolveBattle` then ran
+  on an unfinished battle, and `aftermathText`'s final `else` reported it as
+  **"Defeat."** — the one word for it that is not true. A *watching* player can
+  always flee (R19's Tactical Scamper), so nobody is trapped; the autopilot
+  never flees, so the reachable path is the Send button.
+
+  #### What ships: a limit, calibrated rather than picked
+
+  `TURN_LIMIT = 60`, and at that turn the fight is **called** instead of left
+  open. The number is chosen from the cost of choosing it — for each candidate
+  cap, how many fights it reaches and how many verdicts it reverses against
+  the ending the fight would really have had:
+
+  | cap | fights reached | real fights reversed |
+  | ---: | ---: | ---: |
+  | 20 | 682 (3.2%) | 176 |
+  | 30 | 125 (0.59%) | 49 |
+  | 40 | 51 (0.24%) | 13 |
+  | 50 | 21 (0.10%) | 1 |
+  | **60** | **15 (0.07%)** | **0** |
+
+  60 is the smallest cap in that set that takes nothing away from anybody.
+  Every fight it touches was already decided; the reversals at 40 and 50 are
+  real comebacks (`spire_lobby` at turn 42, `drowned_rig` at 60), which is why
+  this is not 40 however much a 60-turn fight grinds.
+
+  The call has two clauses. **Waves still queued means the opposition has not
+  been beaten** — you cannot be declared the winner of a fight you have not
+  finished, and no amount of remaining health argues otherwise. Otherwise it
+  is the larger **share of health still standing**, the player's whole team
+  against the unit in front of them, each as a fraction of what it brought;
+  ties go to the player, who was the one pushing.
+
+  After: **stalls 0, max 60** on every seed, with median 9, p90 15, p99 25–26
+  and the counts over 20 and over 30 turns byte-identical to before. Nothing
+  legitimate moved. The grind-locked fight now ends at turn 60 with a verdict,
+  in 186 beats rather than 1,218.
+
+  #### The gate, and the rule that exists because I got it wrong
+
+  `turnCensus` in `tools/sim.js` reports the distribution, and the `turns`
+  block asks four things of all six sample seeds. Three are about length —
+  every fight comes back with a verdict, none runs past the engine's own
+  limit, the median stays in 7–12, and p99 stays under 35 (today 25–26, set
+  above that and below twice it, so the drift that already happened once would
+  be caught). `max` is deliberately not gated: rule 1 pins it to `TURN_LIMIT`,
+  so a rule on it would say nothing.
+
+  The fourth rule checks that a called fight was called **correctly**, and it
+  exists because the calibration above was first run against `hpMax` — a field
+  a combatant does not have; it is `maxHp`. Every fraction was `NaN`, every
+  comparison silently false, and the rule actually under measurement was "call
+  everything a loss". It agreed with the real ending 12 times out of 15 by
+  luck. Three rules can prove every fight terminates while the thing it
+  terminates into is wrong, so the census recomputes the verdict from the same
+  field the call read and `misjudged` must be 0. **269** takes the cap off
+  (caught by `stalls`, *not* by the limit rule, which reads the constant the
+  break moved); **270** stops the fight without saying who won.
+
+  #### Break 271 went MISSED, and the reason is the milestone's best finding
+
+  The census rules could not catch the `hpMax` slip, and running the battery is
+  the only reason that is known. **`NaN` is falsy**, so `mine ? … : 0` collapses
+  the player's share to **0** rather than to NaN — and "0 ≥ theirs" is the
+  *correct* verdict for every called fight in 21,216, because **a player who is
+  ahead on health with a live opponent finishes the fight instead of grinding to
+  turn 60.** The one state that separates the right rule from the broken one
+  does not occur naturally. Four rules over 21,216 fights, all green, all blind.
+
+  So rule 5 constructs it: three bodies at full health against a live opponent
+  at half, nothing queued, `turn` set to the limit minus one, one rest action.
+  The correct engine calls that a win; the broken one calls it a loss, and
+  `AssertionError: the side that is ahead on health with nothing left queued
+  wins the call (got loss at turn 60)` is what the battery now reads. The same
+  fixture covers the mirror case and the queue clause — a player far ahead with
+  a wave still coming still loses, because the opposition was never beaten.
+
+  **This is R99's rule, arriving from the other direction.** R99 said a gate has
+  to reach the state the defect lives in; the new part is that *a census cannot
+  be relied on to contain that state*, however large. The sample was 21,216
+  fights and the missing case was not rare in it — it was **absent by
+  construction**, because the mechanic that produces long fights is the same one
+  that excludes a winning player from them.
+
+  #### Not done, and filed
+
+  The grind itself. Between 20 and 60 turns there are still ~95 fights per
+  3,536 that run long, and a 60-turn fight on a phone is a bad evening even
+  though it ends. Shortening it is balance work this criterion does not cover
+  and which would move win rates across the whole roster, so it is filed as
+  **R164** with the numbers rather than smuggled in here.
+
+  *Done when: no fight anywhere in the census fails to end on the engine's own
+  terms, the distribution is a number the harness prints rather than one a
+  probe measured once, and a fight that is called goes to the side that was
+  ahead.*
+
+  **The lesson:** *two guards standing in for one rule is not redundancy — it
+  is an invariant nobody owns. The comment above the second guard named the
+  bug exactly and still could not catch it, because a guard that silently
+  succeeds at hiding something is indistinguishable from a guard that never
+  fires. What made this visible was not reading the code; it was asking the
+  census how long the longest fight was.*
+
 - **R163 — Chaos-vat churn breaks R135's floor on a quarter of seeds.**
   ✅ *Shipped. The rule written to stop the conveyor was setting its cadence,
   and the mechanistic fix was measured and refuted before the fitted one went
