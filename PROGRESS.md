@@ -1,5 +1,60 @@
 # PROGRESS
 
+## Session 170 — R165: the brake was working, and I nearly deleted it ✅
+
+**ROADMAP §9.18.** R147 measured the chaos-vat brake on the three empire seeds,
+found it made no difference, and retired break 268. R165 widened to twelve
+seeds. The conclusion was wrong.
+
+### The brake binds on seed 11, and only on seed 11
+
+| | brake on (`VAT_KEEP_DAYS = 14`) | brake off (`= 2`) |
+| --- | ---: | ---: |
+| median chimera life | 6.8d | **2.0d** — under R135's 5-day floor |
+| vat gestations | 6 | **443** |
+| creatures made | 65 | **737** |
+| splices | 39 | 168 |
+
+443 gestations against the **120** R163 was fixing. Every other seed of the
+twelve stays between 15.2 and 80.3 days whether the brake is on or off.
+
+### Why three seeds could not see it
+
+The empire seeds clear the floor by about 35 days — 40.9, 71.1, 67.5 against a
+floor of 5. **A rule with that much headroom passes whatever the mechanism
+underneath it does.** That is why break 268 went MISSED in R147's full battery,
+and why "the brake has stopped being load-bearing" read like a measurement
+rather than an artefact of which campaigns the gate happens to walk.
+
+### What ships
+
+- **Seed 11 joins `EMPIRE_SEEDS`** — the churn floor is now watched on a
+  campaign with **1.8 days of headroom instead of 35**.
+- **Break 268 is restored**, aimed at a seed that can feel it.
+- The constant is untouched. It was right all along.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| seeds watching the churn floor | 3 | **4** |
+| headroom on the tightest | ~35d | **1.8d** |
+| breaks | 267 | **268** |
+| `VAT_KEEP_DAYS` | 14 | **14, unchanged** |
+
+### Known issues
+
+- **One more 180-day walk in shard a**, ~15s CPU. The suite was 862 of 916
+  budgeted; this pushes it closer. That is the price of a rule that can fail,
+  but the margin is now worth watching.
+- **1.8 days of headroom is tight.** The walk is seeded and deterministic, so
+  there is no noise — a red means something real moved — but a future balance
+  change will feel this rule first.
+
+### Next session's first task
+
+The **R54–R67 backlog**, the oldest unshipped entries. Nothing is blocked.
+
 ## Session 169 — R164: the premise was mine, and it was backwards ✅
 
 **ROADMAP §9.18.** I filed R164 during R145 with a stated cause and a proposed
@@ -125,8 +180,12 @@ a line that could not change an answer, and the Kite census read byte-identical
 with it applied. R157's "one constant, three readers", violated in the commit
 that quoted it.
 
-**268 was retired with its numbers** on R160's precedent, because no honest
-re-point existed: R163's vat brake has stopped being load-bearing. With
+**268 was retired with its numbers** on R160's precedent — and **R165 proved
+that wrong the next session and restored it.** The brake had not stopped being
+load-bearing: all three empire seeds sit ~35 days clear of the churn floor, so
+none of them can feel it. On seed 11 the brake is worth 6.8 days against 2.0,
+and 6 vat gestations against 443. The readings below are accurate for these
+three seeds; the conclusion drawn from them was not. With
 `VAT_KEEP_DAYS` off, median chimera life reads 53.0 / 65.1 / 63.7 days against
 a five-day floor — two of three seeds *better* without it — because R147
 collapsed vat usage from R163's 120 gestations to **four**. The brake stays in

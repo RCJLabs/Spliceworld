@@ -2051,33 +2051,30 @@ const BREAKS = [
     to: '      if (!canSpend(TRAINING.cost)) break;',
   },
   // --- gate: empire (R163 — the vat's brake) -------------------------------
-  //
-  // BREAK 268 IS RETIRED HERE, WITH ITS NUMBERS, on R160's precedent: "a break
-  // the gate can only catch by luck is a break that teaches the battery to
-  // lie, so it is removed rather than left to go MISSED."
-  //
-  // It put the decant back on the general two-day dismantle floor, and on the
-  // tree R163 shipped that restarted the conveyor — 120 gestations, a median
-  // chimera life of 2.5 days under R135's floor of 5. It went MISSED in R147's
-  // full battery, and re-measurement says why rather than guessing:
-  //
-  //           median chimera life        vat gestations
-  //   seed    KEEP=14     KEEP=2         KEEP=14   KEEP=2
-  //   2026    40.9d       53.0d          6         9
-  //      7    71.1d       65.1d          4        10
-  //     99    67.5d       63.7d          1         3
-  //
-  // Every reading is an order of magnitude clear of the 5-day floor with the
-  // brake OFF, and two of the three are HIGHER without it. The mechanism is
-  // the vat count: R163 measured seed 7 running 120 gestations and it now runs
-  // four. R147 taught the planner the second organ bay, so a splice is a
-  // better answer than a decant and the walker stopped flooding the vat —
-  // which is the condition R163's brake existed to survive.
-  //
-  // The brake is LEFT IN PLACE: a floor that rarely binds is not a rule that
-  // was wrong, removing it is a behaviour change R147's criterion does not
-  // cover, and three seeds are not proof it can never bind. Whether it still
-  // earns its place is filed as R165.
+  {
+    // RESTORED BY R165, aimed at a seed where it reproduces.
+    //
+    // R163 shipped VAT_KEEP_DAYS = 14 against a conveyor: 120 gestations, a
+    // median chimera life of 2.5 days under R135's floor of 5. R147 retired
+    // this break when it went MISSED, having measured the brake on the three
+    // EMPIRE seeds and found it made no difference — 40.9, 71.1 and 67.5 days
+    // with it, 53.0, 65.1 and 63.7 without.
+    //
+    // That was the wrong conclusion from too small a sample, and R165 says so
+    // with twelve seeds. On seed 11 the brake is doing all of the work:
+    //
+    //           median life    vat gestations    made
+    //   KEEP=14      6.8d           6             65
+    //   KEEP=2       2.0d         443            737
+    //
+    // 443 gestations against the 120 R163 was fixing. Seed 11 is now in
+    // EMPIRE_SEEDS, so this break lands on a campaign that can feel it and the
+    // churn rule goes red. A break is only as good as the seed it is asked on.
+    n: 268, gate: EMPIRE, name: 'the decant goes back on the general dismantle floor, and the vat is a conveyor again',
+    file: 'tools/sim.js',
+    anchor: '      const VAT_KEEP_DAYS = 14;',
+    to: '      const VAT_KEEP_DAYS = 2;',
+  },
   // --- gate: turns (R145 — a fight ends, and it ends the right way) --------
   {
     // TAKE THE CAP OFF. This does not restore the old code exactly — it moves
