@@ -3678,41 +3678,68 @@ triangle working, and each region genuinely asks a different question)*.
   or a seed is found where the brake binds and break 268 comes back aimed at
   that.*
 
-- **R164 — Ninety-five fights in 3,536 run past twenty turns.** Filed out of
-  R145 with its numbers, rather than fixed there: shortening a grind moves win
-  rates across the whole roster, and R145's criterion was that a fight *ends*,
-  not that it ends quickly.
+- **R164 — Ninety-five fights in 3,536 run past twenty turns.** ✅ *Shipped as
+  a refutation. I filed this during R145 and its premise is backwards: the
+  longest fights are the ones the player WINS. The entry says so with numbers,
+  which is what R93b's escape hatch is for, and the shape is now gated so the
+  claim cannot go stale again.*
 
-  R145 gave the engine a `TURN_LIMIT` of 60, so nothing runs forever any more.
-  What is left is the shape underneath it, measured over the same 21,216
-  scripted fights (12 builds × 2 grades × every encounter × 6 sample seeds,
-  teams of three):
+  #### What the entry claimed
 
-  | | per 3,536 fights | share |
-  | --- | ---: | ---: |
-  | over 20 turns | 92–98 | 2.7% |
-  | over 30 turns | 19–22 | 0.6% |
-  | reaching the 60-turn limit | 2–4 | 0.08% |
+  That R145's 20-turn tail was **"a build that is merely outclassed grinds
+  instead of losing"**, caused by `ARMOR_FACTOR` having no floor that scales
+  with the attacker, and that the fix was a damage floor to make outclassed
+  builds lose faster. *Done when: no more than ~1 fight in 500 passes 20
+  turns.*
 
-  A median fight is 9 turns; p99 is 25–26. So roughly one fight in forty runs
-  more than twice the typical length, and the mechanism is legible in the worst
-  of them: **armour outruns power.** The Siege Tank's 52 armour against a
-  52-power move is chip damage, and `ARMOR_FACTOR = 0.7` is applied without any
-  floor that scales with the attacker — so a build that is merely *outclassed*
-  grinds instead of losing, which is the less interesting of the two.
+  #### The win rate is U-shaped, and the tail is the top of it
 
-  This is not the same complaint as R143's ("nothing goes badly wrong"). That
-  was about consequence; this is about *duration*, and the player-facing cost
-  is specific: R2's replay plays a called fight beat by beat, and R7 puts it on
-  one 380px screen. Sixty of those is a bad evening even when it terminates.
+  Measured across 21,216 fights — 12 builds × 2 grades × every encounter × 6
+  sample seeds, teams of three:
 
-  Two candidate directions, neither measured yet: a damage floor that rises
-  with the attacker's power so armour caps a fight's length rather than its
-  damage, or escalating pressure past some turn so a grind resolves itself.
-  The first is a balance change to every armoured unit; the second adds a
-  mechanic. *Done when: no more than ~1 fight in 500 passes 20 turns across
-  all six census seeds, the median stays at 9, and the change is priced against
-  the existing `[OP]` gate rather than against the census alone.*
+  | turns | fights | win % | |
+  | --- | ---: | ---: | --- |
+  | 1–5 | 2,884 | **59.5** | the player overwhelms |
+  | 6–10 | 10,663 | 40.1 | |
+  | 11–15 | 5,904 | **37.3** | the trough — losing, and fairly quickly |
+  | 16–20 | 1,191 | 41.3 | |
+  | 21–30 | 455 | 45.9 | |
+  | 31+ | 119 | **63.0** | grinding something tanky down, and **winning** |
+
+  The longest fights are won more often than any band but the blowouts, and
+  well above the 42.7% census average. **They are not outclassed builds
+  grinding; they are the player earning a hard win.** Hitting the stated
+  target — one in 500 past twenty turns — would have meant deleting those wins.
+
+  #### Four mechanisms, all measured, none of them the cause
+
+  | candidate | test | result |
+  | --- | --- | --- |
+  | armour outruns power | `CHIP_FLOOR = 0.6` (armour takes ≤40% of a move) | `over20` 92–98 → 90–96. **Three fights.** Reverted. |
+  | stamina starvation | share of turns with no affordable move | **0.0%**, long and short alike |
+  | the bracing policy | a pilot that never braces | p99 **worse** (26 → 28), win rate 42.7% → 42.1% |
+  | more waves | mean waves per fight | 2.54 long vs 2.38 short |
+
+  The armour change is reverted rather than kept: a behaviour change with no
+  measured benefit is not a smaller version of a fix, it is a liability with a
+  comment attached.
+
+  #### What ships
+
+  `turnCensus` reports win rate by length band, and the `turns` block asserts
+  the **31+ band wins at least as often as the whole census**. That is the rule
+  that would have stopped R145 filing this — the failure was never the tail, it
+  was a claim about the tail that nothing checked. Break **274** inverts it.
+
+  *Done when — as R93b's second clause: the entry says with numbers why its own
+  target was wrong, and the shape it misread is a fact the gate reports rather
+  than a sentence in prose.* ✅
+
+  **The lesson:** *a filed entry is a hypothesis with a number attached, and the
+  number being right is not the same as the story being right. R145 measured the
+  tail correctly — 92–98 fights past twenty turns, reproduced exactly — and then
+  explained it with a mechanism it never tested. Four candidates, four
+  refutations, and the true shape was one query away the whole time.*
 
 - **R145 — A fight is nine turns, and two of them never end.** ✅ *Shipped.
   The entry did not exist: §9.18 is titled "R138–R147" and R145 appeared

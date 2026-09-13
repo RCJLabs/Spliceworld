@@ -19716,6 +19716,42 @@ if (inShard('turns')) {
   //    a seed reach the limit, and if balance work ever takes that to zero the
   //    verdict rule would pass with nothing to read — which is the failure
   //    mode three of this session's reverted fixes had.
+  // 6. A LONG FIGHT IS NOT A LOSING GRIND — R164, which is the rule that would
+  //    have stopped R145 filing a false premise.
+  //
+  //    R145 recorded the 20-turn tail as "a build that is merely OUTCLASSED
+  //    grinds instead of losing" and proposed a damage floor to make such
+  //    builds lose faster. Measured over 21,216 fights the win rate is
+  //    U-shaped and the claim is backwards:
+  //
+  //      1-5 turns  59.5%   ← the player overwhelms
+  //      6-10       40.1%
+  //      11-15      37.3%   ← the trough: losing, and fairly quickly
+  //      16-20      41.3%
+  //      21-30      45.9%
+  //      31+        63.0%   ← the player grinding something tanky down, and WINNING
+  //
+  //    Four mechanisms were tested and none of them is the cause: a chip floor
+  //    at 0.6 (armour taking at most 40% of a move) moved `over20` by three
+  //    fights; forced rests from stamina starvation are 0.0% of turns; a pilot
+  //    that never braces makes p99 WORSE (26 -> 28); and long fights average
+  //    2.54 waves against 2.38 for short ones.
+  //
+  //    So the tail is not a defect to shorten — shortening it would take wins
+  //    away. What is worth gating is the shape itself, because the thing that
+  //    went wrong was a claim about it that nobody checked.
+  const LONG_BAND = '31+';
+  for (const c of census) {
+    const long = c.bands.find((b) => b.band === LONG_BAND);
+    assert.ok(long && long.n > 0,
+      `seed ${c.seed}: fights still reach the ${LONG_BAND} band, so this rule has something to read`);
+    assert.ok(long.winPct >= c.winPct,
+      `seed ${c.seed}: the longest fights are not a losing grind — the ${LONG_BAND} band wins `
+      + `${long.winPct}% against ${c.winPct}% across the whole census (${long.n} fights). `
+      + 'R164 filed the opposite as fact and proposed a fix for it; if this ever goes red the '
+      + 'tail really has become outclassed builds grinding, and THEN it is worth shortening');
+  }
+
   const calls = census.reduce((t, c) => t + c.called, 0);
   assert.ok(calls >= census.length,
     `fights are still reaching the limit, so the verdict rule has something to read `
@@ -19776,6 +19812,7 @@ if (inShard('turns')) {
   }
 
   console.log(`   R145 turns: ${census.map((c) => `s${c.seed} med${c.median}/p90 ${c.p90}/p99 ${c.p99}/max ${c.max}`).join(' · ')} · ${calls} called, ${census.reduce((t, c) => t + c.misjudged, 0)} misjudged`);
+  console.log(`   R164 bands: ${census[0].bands.map((b) => `${b.band} ${b.winPct ?? '—'}%`).join(' · ')} — overall ${census[0].winPct}% (seed ${census[0].seed})`);
 }
 
 

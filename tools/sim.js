@@ -207,6 +207,7 @@ export function turnCensus(content, { builds = 12, grades = ['standard', 'apex']
   const sample = sampleBuilds(content, builds, seed);
   const encs = Object.keys(content.encounters);
   const turns = [];
+  const outcomes = [];
   let stalls = 0;
   let called = 0;
   let misjudged = 0;
@@ -225,12 +226,30 @@ export function turnCensus(content, { builds = 12, grades = ['standard', 'apex']
           if (r.outcome !== deserved) misjudged++;
         }
         turns.push(r.turns);
+        outcomes.push({ turns: r.turns, win: r.outcome === 'win' });
       }
     }
   }
+  // R164 — WHO WINS THE LONG ONES. R145 filed the 20-turn tail as "a build
+  // that is merely outclassed grinds instead of losing", and that is backwards:
+  // across 21,216 fights the win rate is U-shaped — 59.5% at 1-5 turns, a
+  // TROUGH of 37.3% at 11-15, and 63.0% at 31+. The longest fights are the ones
+  // the player WINS, grinding down something tanky. A fix that shortened them
+  // would have been taking wins away, so the band is reported rather than
+  // capped, and the rule below is what keeps the claim from going stale again.
+  const bands = [[1, 5], [6, 10], [11, 15], [16, 20], [21, 30], [31, Infinity]]
+    .map(([lo, hi]) => {
+      const inBand = outcomes.filter((o) => o.turns >= lo && o.turns <= hi);
+      return {
+        band: hi === Infinity ? `${lo}+` : `${lo}-${hi}`,
+        n: inBand.length,
+        winPct: inBand.length ? +(100 * inBand.filter((o) => o.win).length / inBand.length).toFixed(1) : null,
+      };
+    });
   turns.sort((a, b) => a - b);
   const q = (p) => turns[Math.floor((turns.length - 1) * p)] ?? 0;
-  return { n: turns.length, stalls, called, misjudged,
+  return { n: turns.length, stalls, called, misjudged, bands,
+    winPct: +(100 * outcomes.filter((o) => o.win).length / outcomes.length).toFixed(1),
     median: q(0.5), p90: q(0.9), p99: q(0.99), max: q(1),
     over20: turns.filter((t) => t > 20).length, over30: turns.filter((t) => t > 30).length };
 }

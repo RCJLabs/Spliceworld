@@ -1,5 +1,62 @@
 # PROGRESS
 
+## Session 169 — R164: the premise was mine, and it was backwards ✅
+
+**ROADMAP §9.18.** I filed R164 during R145 with a stated cause and a proposed
+fix. Measured, the cause is refuted and the fix would have removed wins.
+
+### The win rate is U-shaped, and the tail is the top of it
+
+21,216 fights — 12 builds × 2 grades × every encounter × 6 seeds, teams of 3:
+
+| turns | fights | win % | |
+| --- | ---: | ---: | --- |
+| 1–5 | 2,884 | **59.5** | the player overwhelms |
+| 6–10 | 10,663 | 40.1 | |
+| 11–15 | 5,904 | **37.3** | the trough — losing, and fairly quickly |
+| 16–20 | 1,191 | 41.3 | |
+| 21–30 | 455 | 45.9 | |
+| 31+ | 119 | **63.0** | grinding something tanky down, and **winning** |
+
+R164 claimed the tail was "a build that is merely outclassed grinding instead
+of losing". The longest fights are won more often than any band but the
+blowouts, and well above the 42.7% average. **Hitting the stated target — one
+in 500 past twenty turns — would have meant deleting those wins.**
+
+### Four mechanisms, all measured, none of them the cause
+
+| candidate | test | result |
+| --- | --- | --- |
+| armour outruns power | `CHIP_FLOOR = 0.6` | `over20` 92–98 → 90–96. **Three fights.** Reverted. |
+| stamina starvation | turns with no affordable move | **0.0%**, long and short alike |
+| the bracing policy | a pilot that never braces | p99 **worse** (26 → 28), win rate 42.7% → 42.1% |
+| more waves | mean waves per fight | 2.54 long vs 2.38 short |
+
+The armour change is reverted, not kept at a smaller value: a behaviour change
+with no measured benefit is a liability with a comment attached.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| the tail | 92–98 past 20 turns | **unchanged, and correctly so** |
+| win rate by length | unmeasured | **reported by `turnCensus`** |
+| rules in the `turns` block | 5 | **6** |
+| breaks | 266 | **267** |
+
+### Known issues
+
+- **A 60-turn win is still a long evening on a phone.** R2's replay plays it
+  beat by beat. That is a UX question about replay speed, not a balance defect,
+  and it is not filed as one — `battleSpeed` already exists in settings.
+- **The 31+ band is 119 fights of 21,216.** The rule asserts it is non-empty
+  before comparing, so it cannot pass on an empty band, but it is a thin sample
+  and a future balance change could make it thinner.
+
+### Next session's first task
+
+**R165** (whether the vat brake still earns its line), or the R54–R67 backlog.
+
 ## Session 168 — R147: the bay nobody filled ✅
 
 **ROADMAP §9.18.** R147 had **no entry**, like R145 — §9.18 was titled
