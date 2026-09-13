@@ -1066,7 +1066,7 @@ import { regionStates } from '../campaign/campaign.js';
 import { regionOfNode } from '../campaign/map.js';
 import { contestEncounter } from '../campaign/contest.js';
 import { looseSpecimens, breakoutEncounter } from '../campaign/breakout.js';
-import { rehabPlan, startRehab, rehabSession, sessionReadyAt } from '../campaign/rehab.js';
+import { rehabPlan, startRehab, rehabSession, sessionReadyAt, rehabGrants } from '../campaign/rehab.js';
 
 const WALK_HOUR = 3600000;
 const WALK_DAY = 24 * WALK_HOUR;
@@ -2592,6 +2592,31 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     bagged: (state.__walkLog ?? []).reduce((n, e) => n + (e.bagged ?? 0), 0),
     rehabbed: state.chimeras.filter((c) => c.rehabilitated).length,
     rehabbedEver: rehabEver.size,
+    // R139 — THE WHOLE FUNNEL, IN ONE PLACE, because the entry that filed
+    // this milestone was a single ratio computed against the wrong
+    // denominator and nothing in the tree could contradict it.
+    //
+    // "The Wing reforms 1.4% of what it catches" reads as a throughput
+    // failure. Measured across 13 campaigns it is not one: the Wing
+    // graduates EVERY programme it starts, and the graduates that stay are
+    // the best creatures on the ranch. What the ratio was really measuring is
+    // that `bagged` was never a queue — a campaign bags about 1,049 specimens
+    // against a board of 40 bays, and the ~96% that never reach a decision
+    // are things the player had already declined, because anything carrying
+    // tech the Dex has not seen is salvaged before it can be evicted.
+    //
+    // Each of those is a separate number and the ratio hid all of them. So
+    // the harness reports the stages instead of the quotient.
+    wing: {
+      bagged: (state.__walkLog ?? []).reduce((n, e) => n + (e.bagged ?? 0), 0),
+      salvaged: verbs.salvage ?? 0,
+      enrolled: verbs['rehab-start'] ?? 0,
+      sessions: verbs['rehab-session'] ?? 0,
+      graduated: rehabEver.size,
+      retained: state.chimeras.filter((c) => c.rehabilitated).length,
+      bays: (state.campaign.containment ?? []).length,
+      cap: rehabGrants(state, content).bays,
+    },
     // R85: how many of the walker's creatures ever paced their pen, and how
     // many it actually lost to it. `lost` must be zero for a walker that
     // plays every day; the away-runs are where the mechanic is supposed to
