@@ -120,9 +120,26 @@ at 51.**
   true where it used to be a lie, but the player is not told the mechanism on
   the path the bug was reachable from. Two lines in `campaign/ui.js`, and
   outside this criterion — deliberately left rather than smuggled in.
-- **The full battery was not run.** This adds a gate rather than changing one,
-  and `npm test` is what would catch an engine regression. The rot-check
-  trigger is due, though: the last full run was R154's.
+- **The full battery was not run, and is not yet due.** This adds a gate rather
+  than changing one, and `npm test` is what would catch an engine regression.
+  The last full run was **R159's, in session 163** (~1h29m, 258 breaks), which
+  makes R145 the fourth milestone since — so the ~5-milestone rot check comes
+  due next session or the one after, not this one. Recorded because the first
+  draft of this line said "the last full run was R154's" and that was wrong;
+  the difference is whether ninety minutes was owed today.
+
+### Verification
+
+| check | result |
+| --- | --- |
+| `--anchors` | 265 anchors, each matching exactly once |
+| `--baseline` | 34 gates, 0 failures |
+| `--only 269,270,271` | 3 caught, 0 missed, **`BATTERY_EXIT=0`** |
+| break 271, hand-applied | rule 5 red: *"the side that is ahead on health with nothing left queued wins the call (got loss at turn 60)"* |
+| `npm test` (alone) | **10 jobs, 819 CPU-s of 916 budgeted, 258s wall** |
+| save/load mid-fight | a battle saved at turn 59, JSON round-tripped, resumes and is called at 60 with the same verdict |
+| 380px · fresh and migrated saves | baseline: no screen outgrows its budget on a day-180 save; a real old save still opens quietly; every version still migrates |
+| full battery | not due — see Known issues |
 
 ### Next session's first task
 
