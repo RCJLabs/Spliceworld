@@ -35,6 +35,43 @@ const VENOM_TICK = 3;
 const VENOM_CAP = 5;
 const REJECTION_MULT = 0.75;
 
+// R145 — A FIGHT HAS TO END. The engine had no turn cap and no stalemate
+// rule, so nothing in it guaranteed a battle terminates. Two guards had been
+// standing in for one: the harness's 300 (tools/sim.js) and the autopilot's
+// 400 (battle/autoplay.js). R88 wrote down what the second one meant —
+// "a fight that cannot end in 400 actions is a bug in the engine, and
+// swallowing it here would hide it" — and it was right, and it had been
+// swallowing one ever since, because nothing ever asserted the guard was
+// unreached.
+//
+// The fight it swallows: a team of three standard-grade Simulacra
+// (abyssal:shark_tail + anglerfish:head + chameleon:hindlimbs + eagle:organ)
+// sent at Procurement. Armour 52 against a 52-power move is chip damage, so
+// the Siege Tank sheds 0.4 HP a turn while the last chimera sits on 14 and
+// is never finished either. It converges — around turn 900. Sent rather than
+// watched it returns over:false, outcome:null after 1,218 beats, and
+// aftermathText's final `else` reports it to the player as "Defeat.": the one
+// word for it that is not true.
+//
+// THE LIMIT IS CALIBRATED, NOT PICKED. Across 21,216 scripted fights (12
+// builds x 2 grades x every encounter x 6 sample seeds, teams of three),
+// counting how many fights a cap reaches and how many verdicts it reverses
+// against the fight's real ending:
+//
+//   cap 20 — reached 682 (3.2%), reverses 176 real fights
+//   cap 30 — reached 125 (0.59%), reverses 49
+//   cap 40 — reached  51 (0.24%), reverses 13
+//   cap 50 — reached  21 (0.10%), reverses 1
+//   cap 60 — reached  15 (0.07%), reverses 0   <-- and ends the 2 that never end
+//
+// 60 is the smallest cap in that set that takes nothing away from anybody.
+// Every fight it touches was already decided; the reversals at 40 and 50 are
+// real comebacks (spire_lobby at turn 42, drowned_rig at 60), which is the
+// reason this is not 40 however much a 60-turn fight grinds. Shortening the
+// grind itself is balance work and is filed separately — this rule only makes
+// sure the grind stops.
+export const TURN_LIMIT = 60;
+
 // R103 — bracing and the counter-switch, priced in data/stance.json. The
 // defaults mirror that file exactly and smoke holds them equal: the data
 // wins, so a default that disagrees is a lie waiting for somebody to retune
@@ -1039,6 +1076,54 @@ function handleEnemyKO(battle, events, content) {
   }
 }
 
+// R145 — THE CALL. At TURN_LIMIT the fight stops and is decided on the field
+// rather than left open, and the verdict goes to whoever was actually ahead.
+//
+// Two clauses, in this order:
+//   1. Waves still queued means the opposition has not been beaten. You
+//      cannot be declared the winner of a fight you have not finished, and
+//      no amount of remaining health argues otherwise.
+//   2. Otherwise it is the larger share of health still standing — the
+//      player's whole team against the unit in front of them, each as a
+//      fraction of what it brought. Ties go to the player: they were the
+//      ones pushing.
+//
+// The read is `maxHp`, not `hpMax`. The first draft of the calibration above
+// used `hpMax`, which does not exist on a combatant, so every fraction was
+// NaN and every comparison silently false — the rule under measurement was
+// "call everything a loss", and it agreed with the real ending 12 times out
+// of 15 by luck. R139's lesson, landing on the session that quotes it: a
+// ratio is a claim with its denominator hidden.
+function callFight(battle, events) {
+  const team = battle.player.team;
+  const mine = team.reduce((s, c) => s + c.maxHp, 0);
+  const theirs = battle.enemy.active.maxHp;
+  const ours = mine ? team.reduce((s, c) => s + Math.max(0, c.hp), 0) / mine : 0;
+  const them = theirs ? Math.max(0, battle.enemy.active.hp) / theirs : 0;
+  const won = !battle.enemy.queue.length && ours >= them;
+  battle.over = true;
+  battle.outcome = won ? 'win' : 'loss';
+  // A fight that is over has no replacement pending. The limit can land on
+  // the turn a chimera goes down, and `playerActions` returns nothing once
+  // `over` is set — so leaving the flag up would show a "choose a
+  // replacement" prompt with no buttons under it. The bench is not ignored:
+  // `ours` counts the whole team, so a player who still had bodies left is
+  // credited with them.
+  battle.pendingReplace = false;
+  // NO `calledAt` FIELD, DELIBERATELY. An in-progress battle is part of the
+  // save (R103 bumped SAVE_VERSION to 42 and wrote a migration to add
+  // `battle.intent`), and a flag saying how this one ended would earn a bump
+  // and a migration of its own for nothing: `turn === TURN_LIMIT` already
+  // identifies a called fight to anything that cares, and a fight that
+  // happened to end naturally on that turn agrees with the same verdict rule
+  // anyway. The Ascent rule is not worth spending on a convenience.
+  if (won) {
+    events.push({ text: `${TURN_LIMIT} turns. The county's noise ordinance kicks in and ${battle.enemy.active.name} is escorted off the premises — the field is yours on points.`, kind: 'victory' });
+  } else {
+    events.push({ text: `${TURN_LIMIT} turns and the inspectors call it. ${battle.enemy.active.name} is still up; your team withdraws on points and files a strongly worded grievance.`, kind: 'defeat' });
+  }
+}
+
 function handlePlayerKO(battle, events) {
   const me = playerActive(battle);
   if (me.hp > 0) return;
@@ -1252,6 +1337,10 @@ export function step(battle, action, content) {
     if (!battle.pendingReplace) handlePlayerKO(battle, events);
   }
   battle.turn++;
+  // R145 — after the increment, so the limit is the turn number the player
+  // sees. A fight is never left open: the engine, not a harness guard, is
+  // what guarantees this returns.
+  if (!battle.over && battle.turn >= TURN_LIMIT) callFight(battle, events);
   battle.log.push(...events.texts());
   if (battle.log.length > 60) battle.log.splice(0, battle.log.length - 60);
   return events.list;

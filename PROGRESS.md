@@ -1,5 +1,109 @@
 # PROGRESS
 
+## Session 167 — R145: the guard was doing the engine's job ✅
+
+**ROADMAP §9.18.** R145 had **no entry at all** — §9.18 is titled "R138–R147"
+and `grep -c R145 ROADMAP.md` returned **0**. The only record was one row of
+the seventh audit's table: `| R145 | a fight is nine turns | p90 15, max 37 |`.
+So the entry and its Done-when were written this session, and then shipped.
+
+### Half the audit's number was exactly right
+
+21,216 scripted fights — 12 builds × 2 grades × every encounter × 6 sample
+seeds, teams of three:
+
+| | audit | today |
+| --- | ---: | ---: |
+| median | 9 | **9** |
+| p90 | 15 | **15** |
+| max | 37 | **76** |
+| never ended | — | **2** |
+
+Median and p90 reproduce exactly. The tail had more than doubled, and past the
+end of it were two fights, on one sample seed of six, that did not end.
+
+### The engine had no stalemate rule, and a comment had already said so
+
+`autoResolve`'s guard carried this since R88: *"A fight that cannot end in 400
+actions is a bug in the engine, and swallowing it here would hide it."* It was
+right, and it had been swallowing one, because nothing ever asserted the guard
+was unreached. Three standard Simulacra (`abyssal:shark_tail + anglerfish:head
++ chameleon:hindlimbs + eagle:organ`) at **Procurement**: armour 52 against a
+52-power move, so the Siege Tank sheds **0.4 HP a turn** while the last chimera
+sits on 14. It converges around turn 900.
+
+**Sent rather than watched, it returned `over: false, outcome: null` after 1,218
+beats — and `aftermathText`'s final `else` told the player "Defeat."** A
+watching player can flee; the autopilot never does, so Send is the live path.
+
+### The limit is calibrated, not picked
+
+For each candidate cap: fights reached, and verdicts reversed against the real
+ending.
+
+| cap | reached | real fights reversed |
+| ---: | ---: | ---: |
+| 30 | 125 (0.59%) | 49 |
+| 40 | 51 (0.24%) | 13 |
+| 50 | 21 (0.10%) | 1 |
+| **60** | **15 (0.07%)** | **0** |
+
+`TURN_LIMIT = 60` is the smallest cap that takes nothing from anybody. A called
+fight goes to the side that was ahead: waves still queued means the opposition
+was never beaten, otherwise the larger share of health standing, ties to the
+player.
+
+### My own denominator was hidden, and rule 4 exists because of it
+
+The calibration was first run against **`hpMax`** — a combatant has `maxHp`. So
+every fraction was `NaN`, every comparison false, and the rule actually being
+measured was "call everything a loss"; it agreed with the real ending 12 times
+of 15 by luck. Three rules can prove every fight terminates while the thing it
+terminates into is wrong, so the census recomputes the verdict from the field
+the call read and asserts `misjudged === 0`. Break **271** is that exact slip.
+
+### The save schema is untouched, deliberately
+
+The first draft put `calledAt` on the battle so the harness could tell a called
+fight from a fought one. An in-progress battle **is** part of the save — R103
+bumped `SAVE_VERSION` to 42 and wrote a migration to add `battle.intent` — so
+that field would have cost a bump and a migration for a convenience. It came
+back out: `turn === TURN_LIMIT` identifies a called fight, and a fight that
+happens to end naturally on that turn satisfies the same verdict rule anyway
+(checked: `misjudged` is 0 on all six seeds either way). **`SAVE_VERSION` stays
+at 51.**
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| fights that never end (6 seeds) | **2** | **0** |
+| longest fight | 76 turns | **60** |
+| beats in the grind-locked fight | 1,218 | **186** |
+| median / p90 / p99 | 9 / 15 / 25–26 | **unchanged** |
+| fights over 20 and over 30 turns | 92–98 / 19–22 | **identical** |
+| gates in the new `turns` block | 0 | **4 rules × 6 seeds** |
+| breaks | 262 | **265** |
+
+### Known issues
+
+- **The grind is untouched, and is filed as R164.** ~95 fights per 3,536 still
+  pass 20 turns and 2–4 reach the limit. `ARMOR_FACTOR` has no floor that
+  scales with the attacker, so an outclassed build grinds instead of losing.
+  Shortening that moves win rates across the roster — balance work this
+  criterion does not cover.
+- **`called` is 2–4 per seed**, which is a thin sample for the verdict rule.
+  It is asserted to be non-zero before `misjudged` is checked, so the rule
+  cannot pass with nothing to read — but if R164 lands, both need re-deriving.
+- **The full battery was not run.** This adds a gate rather than changing one,
+  and `npm test` is what would catch an engine regression. The rot-check
+  trigger is due, though: the last full run was R154's.
+
+### Next session's first task
+
+**R147** (fifteen combos never found, median 12 of 27), or **R164** if the
+60-turn grind wants attention before the queue does.
+
 ## Session 166 — R163: the guard was the metronome ✅
 
 **ROADMAP §9.29a.** R142 handed this over: two of the three seeds the `empire`

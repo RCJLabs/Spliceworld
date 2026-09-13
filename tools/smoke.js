@@ -124,6 +124,10 @@ const SHARD_OF = {
   // because duplicate keys collapse before either can see them. Hence the
   // third rule, which reads the table's source rather than the table.
   walls: 'b',
+  // R145 — the turn census: six sample seeds x 3,536 scripted fights, about
+  // 10s in total. Worth a lane rather than four copies. Shard d, which carries
+  // the four smallest blocks.
+  turns: 'd',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -19595,6 +19599,93 @@ if (inShard('camo')) {
   console.log(`   R149 camo: ${[...dodged].join('/')} x0 against it, ${[...echoes].join('/')} x1.5 through it — `
     + `+${paidA.toFixed(1)}pp on the ${aimedAt.length} walls that aim, ${paidE.toFixed(1)}pp on the ${echoing.length} that echo`);
 }
+
+// R145 — A FIGHT ENDS, AND THE DISTRIBUTION IS ON THE RECORD.
+//
+// The seventh audit measured this once with a throwaway probe (median 9, p90
+// 15, max 37), never wrote the entry, and nothing has reported the number
+// since. Re-measured, the median is exactly what the audit said and the TAIL
+// HAD MORE THAN DOUBLED — and past the end of it were two fights, on one
+// sample seed of six, that did not end at all: the engine had no turn cap, so
+// the only thing stopping them was the harness's own 300-turn guard.
+//
+// Four rules, and the first is the one with teeth.
+if (inShard('turns')) {
+  const { turnCensus } = await import('./sim.js');
+  const { TURN_LIMIT } = await import('../battle/engine.js');
+
+  // The census is cheap (about 1.7s) but the point of the seeds is that the
+  // stall was on exactly ONE of them. A single-seed census would have shipped
+  // this milestone green and blind — which is what the audit's probe did.
+  const SEEDS = [7, 11, 42, 99, 2026, 31337];
+  const census = SEEDS.map((seed) => ({ seed, ...turnCensus(content, { seed }) }));
+
+  // 0. THE CENSUS LOOKED AT SOMETHING. A rule with nothing to read passes,
+  //    and three of this session's reverted fixes were exactly that.
+  for (const c of census) {
+    assert.ok(c.n >= 3000,
+      `seed ${c.seed} benched a real sample of fights (got ${c.n})`);
+  }
+
+  // 1. EVERY FIGHT ENDS. Not "usually" and not "within the harness's guard":
+  //    the ENGINE is what guarantees it, so no fight may come back without a
+  //    verdict and none may run past the limit the engine sets. Both halves
+  //    matter — before R145 the first was 2 on seed 11, and a fix that set
+  //    `over` without setting `outcome` would leave the second happy.
+  for (const c of census) {
+    assert.equal(c.stalls, 0,
+      `seed ${c.seed}: every fight came back with a verdict (${c.stalls} of ${c.n} did not — `
+      + `a fight that runs the harness's guard out is an engine with no stalemate rule)`);
+    assert.ok(c.max <= TURN_LIMIT,
+      `seed ${c.seed}: the longest fight is inside the engine's own limit `
+      + `(longest ${c.max} turns, TURN_LIMIT ${TURN_LIMIT})`);
+  }
+
+  // 2. THE MEDIAN IS STILL NINE. The audit's headline number, and the half of
+  //    this that was never in question — a band rather than an equality,
+  //    because a creature battler whose typical fight drifts to four turns or
+  //    to fourteen has changed genre, and either direction is news.
+  const MEDIAN_BAND = [7, 12];
+  for (const c of census) {
+    assert.ok(c.median >= MEDIAN_BAND[0] && c.median <= MEDIAN_BAND[1],
+      `seed ${c.seed}: a typical fight is ${MEDIAN_BAND[0]}-${MEDIAN_BAND[1]} turns (median ${c.median})`);
+  }
+
+  // 3. AND THE TAIL CANNOT DOUBLE AGAIN UNNOTICED, which is the whole reason
+  //    the audit's number went stale: nothing was watching p99. Today it is
+  //    25-26 across the six seeds. The ceiling is set above that and BELOW
+  //    twice it, so the drift that already happened once would be caught.
+  //    Not `max`: max is pinned to TURN_LIMIT by rule 1 and would say nothing.
+  const P99_CEILING = 35;
+  for (const c of census) {
+    assert.ok(c.p99 <= P99_CEILING,
+      `seed ${c.seed}: the slow 1% of fights stays under ${P99_CEILING} turns (p99 ${c.p99}) — `
+      + `the audit's tail was 37 and had grown to 76 before anything asked`);
+  }
+
+  // 4. AND A CALLED FIGHT IS CALLED CORRECTLY. Rules 1-3 are all satisfied by
+  //    an engine that ends every fight with the WRONG verdict, which is not a
+  //    hypothetical: the calibration behind TURN_LIMIT was first run against
+  //    `hpMax`, a field a combatant does not have, so every comparison was NaN
+  //    and the rule under measurement was "call everything a loss". It agreed
+  //    with the real ending 12 times out of 15 by luck.
+  //
+  //    `called` is asserted before `misjudged` on purpose. Two or four fights
+  //    a seed reach the limit, and if balance work ever takes that to zero the
+  //    verdict rule would pass with nothing to read — which is the failure
+  //    mode three of this session's reverted fixes had.
+  const calls = census.reduce((t, c) => t + c.called, 0);
+  assert.ok(calls >= census.length,
+    `fights are still reaching the limit, so the verdict rule has something to read `
+    + `(${calls} called across ${census.length} seeds: ${census.map((c) => c.called).join('/')})`);
+  for (const c of census) {
+    assert.equal(c.misjudged, 0,
+      `seed ${c.seed}: every called fight went to the side that was ahead `
+      + `(${c.misjudged} of ${c.called} disagreed with the field they were called on)`);
+  }
+  console.log(`   R145 turns: ${census.map((c) => `s${c.seed} med${c.median}/p90 ${c.p90}/p99 ${c.p99}/max ${c.max}`).join(' · ')} · ${calls} called, 0 misjudged`);
+}
+
 
 //
 // The numbers this moved are in `npm run sim -- --agency`, which is where
