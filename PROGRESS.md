@@ -1,5 +1,80 @@
 # PROGRESS
 
+## Session 165 — R142: arguing against the guard meant reading it ✅
+
+**ROADMAP §9.29a.** The criterion had three parts — state a healthy
+splices-per-campaign figure, argue it against R135's churn guard, and have the
+harness report the ratio. The middle clause turned out to be the valuable one,
+and not for its stated reason.
+
+### The entry is a third stale
+
+| verb | entry | today |
+| --- | ---: | ---: |
+| care | 24,752 | 25,660 |
+| **splice** | **21** | **38** |
+| ratio | **1,178 : 1** | **675 : 1** |
+| cadence | one per 8.6 days | **one per 4.7 days** |
+
+Splicing has nearly doubled. R157's action budget and R138's training pass are
+the likely cause. Nobody knew because **nothing printed the ratio**.
+
+### The figure, and the argument
+
+**25–45 splices per 180 days.** Today's median is 38. The floor is R142's own
+worry — below 25 the Theater is decoration. The ceiling is R135's, and it is
+measured, not guessed: cheap splicing built **460 creatures to keep 12 at a
+median life of 2.0 days**.
+
+### Arguing against the guard meant reading it, and it is looking at one seed
+
+R135's floor — median chimera life above **5 days** — lives in `tools/vault.js`
+and walks **seed 2026 alone**, which is the healthiest seed measured:
+
+| seed | splices | vat runs | made | kept | median life |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 2026 | 39 | 9 | 65 | 15 | **59.2d** ← the only seed gated |
+| 7 | 74 | **120** | 238 | 16 | **2.5d** ← breaches |
+| 99 | 42 | 26 | 97 | 14 | **2.8d** ← breaches |
+
+**Two of the three seeds the `empire` gate already walks are in breach.** Over
+eight seeds, two breach and a third sits at 9.3d. The driver is not the splice
+— vat runs track the collapse exactly, and seed 7's life distribution is
+bimodal (p25 **2.04d**, p75 **72.08d**): two-day chaos-vat output scrapped
+beside a healthy roster. R12 priced the vat in **grades**; it never priced the
+**roster slot** a decant holds for two days.
+
+### What shipped
+
+`campaignWalk` reports `theater` — splices, vats, care-per-splice,
+days-per-splice, made, kept, median life — so the ratio is a printed fact. The
+**floor** is gated across all three `empire` seeds. The **ceiling is not**,
+because gating it honestly goes red on two of three today and the fix is vat
+balance, which this criterion does not cover: filed as **R163** with the
+numbers rather than ratcheted to today's behaviour.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| the ratio | prose, 3 years stale | **printed every walk** |
+| splice floor | ungated | **25, on 3 seeds** |
+| breaks | 260 | **261** |
+
+### Known issues
+
+- **Break 267 guards the report, not the floor.** Two breaks aimed at the
+  splice floor are already caught upstream — no splicing trips R119's day-one
+  rule, and dropping R92's stall reservation trips R154's herd bound. Recorded
+  in the battery rather than contrived around.
+- **R163 is the real finding and it is unfixed.** A quarter of seeds breach a
+  floor the project believed was enforced.
+
+### Next session's first task
+
+**R163** — the vat churn, and the churn floor gated across every seed the suite
+already walks.
+
 ## Session 164 — R139: the Wing has no defect, the statistic did ✅
 
 **ROADMAP §9.29a.** The criterion asked for a number the design can defend,

@@ -2041,6 +2041,27 @@ const BREAKS = [
     anchor: '      if (state.funds < TRAINING.cost) break;',
     to: '      if (!canSpend(TRAINING.cost)) break;',
   },
+  // --- gate: empire (R142 — the ratio the harness prints) ------------------
+  {
+    // R142's whole deliverable is that the care:splice ratio stops being a
+    // number in prose and becomes a fact the walk computes. The entry's
+    // "1,178 : 1" went stale to 675 : 1 without anything noticing, because a
+    // ratio nobody prints goes stale silently — so freeze the report to a
+    // constant and the rule has to say so. This is R160's lesson in one line:
+    // an instrument that reads the same thing whatever happens is worse than
+    // no instrument, because it looks like evidence.
+    //
+    // Recorded honestly: this is the break that MY rules catch alone. Two
+    // aimed at the splice FLOOR were tried first and both are already caught
+    // upstream — stopping the walker splicing trips R119's day-one chimera
+    // rule, and dropping R92's Theater stall reservation trips R154's herd
+    // bound. That is the right answer for the codebase, and it leaves the
+    // floor covered by construction rather than unguarded.
+    n: 267, gate: EMPIRE, name: 'the care:splice ratio becomes a constant and stops tracking the campaign',
+    file: 'tools/sim.js',
+    anchor: '        carePerSplice: splices ? Math.round((verbs.care ?? 0) / splices) : null,',
+    to: '        carePerSplice: 675,',
+  },
   // --- gate: empire (R139 — the Wing's funnel, not its ratio) --------------
   //
   // R139 was filed on one number — "5,989 bagged, 86 rehabilitated, 1.4%" —

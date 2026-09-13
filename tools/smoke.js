@@ -18977,6 +18977,40 @@ if (inShard('empire')) {
     seed, days: 180, stopAtDominion: false, snapshotDays: [10, 120],
   }));
 
+  // R142 — THE THEATER IS NOT DECORATION.
+  //
+  // The game is named after an operation, and R142 was filed because that
+  // operation is the rarest verb a campaign performs: "care 24,752 ... splice
+  // 21", one every 8.6 days, 1,178 : 1. Re-measured it is 38 and 675 : 1, so
+  // the entry was a third stale — and the only reason anybody knew is that
+  // somebody re-ran the census by hand. Hence `walk.theater`, and hence this.
+  //
+  // THE FLOOR ONLY, AND THE CEILING DELIBERATELY NOT. R142 states a healthy
+  // band of 25-45 splices per 180 days. The floor is R142's own worry and
+  // passes on every seed here (39 / 74 / 42). The ceiling belongs to R135's
+  // churn guard — cheap splicing built 460 creatures to keep 12 at a median
+  // life of 2.0 days — and gating it today would go RED on two of these three
+  // seeds: 7 reads 74 splices and a 2.5-day median, 99 reads 42 and 2.8, both
+  // under R135's 5-day floor, which `tools/vault.js` only ever checks on seed
+  // 2026 at 59.2 days. The driver is the chaos vat rather than the Theater —
+  // 9 / 120 / 26 runs against 59.2 / 2.5 / 2.8 days — and that is balance work
+  // R142's criterion does not cover. Filed as R163 with the numbers rather
+  // than ratcheted to today's behaviour, which would have blessed it.
+  const SPLICE_FLOOR = 25;
+  for (const walk of walks) {
+    const t = walk.theater;
+    assert.ok(t, 'the harness reports the Theater ratio at all');
+    assert.ok(t.splices >= SPLICE_FLOOR,
+      `a campaign splices at least ${SPLICE_FLOOR} times in 180 days (got ${t.splices})`);
+    // AND THE RATIO IS DERIVED, not a constant somebody typed. A report whose
+    // numbers do not move with the walk is the shape R160 spent a milestone
+    // removing: an instrument that reads the same thing whatever happens.
+    assert.equal(t.carePerSplice, Math.round((walk.verbs.care ?? 0) / t.splices),
+      'the care:splice ratio is computed from the walk it describes');
+    assert.ok(t.daysPerSplice > 0 && t.daysPerSplice < 30,
+      `and the cadence is a real number of days (${t.daysPerSplice})`);
+  }
+
   // R139 — THE WING'S FUNNEL, BECAUSE ONE RATIO HID FIVE NUMBERS.
   //
   // The entry read "5,989 bagged, 86 rehabilitated — 1.4%", called the Wing

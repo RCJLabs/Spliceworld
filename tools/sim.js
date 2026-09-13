@@ -2509,6 +2509,12 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   const verbs = {};
   for (const e of state.__walkLog ?? []) verbs[e.kind] = (verbs[e.kind] ?? 0) + 1;
 
+  // R142 — ONE READER FOR THE LIFETIMES. `chimeraLives` built this inline and
+  // R142's report needs the same array; two copies of "survivors fold in at
+  // their current age" is two places for R91's rule to drift out of.
+  const allLives = [...lives, ...state.chimeras.map((c) => (state.lastTickAt - (c.createdAt ?? state.lastTickAt)) / WALK_DAY)]
+    .sort((a, b) => a - b);
+
   return {
     seed,
     at,
@@ -2529,8 +2535,33 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // ones. `chimerasMade` is the churn the save pays for: 1,834 creatures
     // built to keep nine.
     chimerasMade: state.chimeraCount ?? 0,
-    chimeraLives: [...lives, ...state.chimeras.map((c) => (state.lastTickAt - (c.createdAt ?? state.lastTickAt)) / WALK_DAY)]
-      .sort((a, b) => a - b),
+    // R142 — THE RATIO, AS A FACT THE HARNESS PRINTS RATHER THAN PROSE.
+    //
+    // The entry read "splice 21, care 24,752, 1,178 : 1" and asked whether the
+    // game's signature act being its rarest event is a problem. It is 38 and
+    // 675 : 1 now, which is a third of the reason the entry was stale — and
+    // the only reason anybody found that out is that somebody re-ran the
+    // census by hand. A ratio nobody prints is a ratio that goes stale
+    // silently, which is this entry's whole history.
+    //
+    // `life` is here beside it deliberately. R135 measured what happens when
+    // splicing gets cheap — 460 creatures built to keep 12, median life 2.0
+    // days — so the cadence and the churn are one question, and a report that
+    // gave the numerator without the brake would invite exactly the change
+    // R135 already proved wrong.
+    theater: (() => {
+      const splices = verbs.splice ?? 0;
+      return {
+        splices,
+        vats: verbs.vat ?? 0,
+        carePerSplice: splices ? Math.round((verbs.care ?? 0) / splices) : null,
+        daysPerSplice: splices ? +(days / splices).toFixed(1) : null,
+        made: state.chimeraCount ?? 0,
+        kept: state.chimeras.length,
+        medianLifeDays: allLives.length ? +allLives[Math.floor((allLives.length - 1) / 2)].toFixed(1) : 0,
+      };
+    })(),
+    chimeraLives: allLives,
     stock: state.ranch.stock.length,
     parts: state.inventory.parts.length,
     funds: Math.round(state.funds),

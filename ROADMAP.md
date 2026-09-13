@@ -3564,16 +3564,100 @@ triangle working, and each region genuinely asks a different question)*.
   game has never used it. *Done when: a campaign builds a Kite chimera
   because it is the right answer to something, and smoke says which.*
 
-- **R142 — The splice is the rarest verb in the game.** A 180-day campaign,
-  median per seed: **care 24,752 · graduate 2,033 · buy 1,812 · job 1,189 ·
-  … · splice 21 · vat 2.** The Surgery Theater is M3, the game's title verb
-  and its central creative act, and it fires **once every 8.6 days** against
-  a chore that fires 137 times a day. The ratio is **1,178 : 1**. Nothing
-  here says splicing should be frequent — R135 has just re-established why
-  it must stay expensive — but a loop whose signature act is its rarest
-  event is worth looking at deliberately. *Done when: the entry states what
-  a healthy splices-per-campaign figure is, argues it against R135's churn
-  guard, and the harness reports the ratio.*
+- **R142 — The splice is the rarest verb in the game.** ✅ *Shipped: the
+  figure is stated and argued, the harness reports the ratio, and the argument
+  turned up something the entry could not have known — the guard it asked me to
+  argue against is breached on two of the three seeds it is supposed to cover.*
+
+  The entry recorded a median campaign as **care 24,752 · graduate 2,033 · buy
+  1,812 · job 1,189 · … · splice 21 · vat 2**, one splice every 8.6 days, a
+  ratio of **1,178 : 1**.
+
+  #### Re-measured, 7 seeds x 180 days
+
+  | verb | entry | today |
+  | --- | ---: | ---: |
+  | care | 24,752 | 25,660 |
+  | graduate | 2,033 | 1,422 |
+  | buy | 1,812 | 1,261 |
+  | job | 1,189 | 1,189 |
+  | **splice** | **21** | **38** |
+  | vat | 2 | 1 (median) |
+
+  Splicing has **nearly doubled** since the entry and the ratio has almost
+  halved: **675 : 1**, one splice every **4.7 days** rather than 8.6. R157's
+  action budget and R138's training pass are the likely cause; either way the
+  premise is a third stale.
+
+  #### The figure, and the argument against R135
+
+  **A healthy 180-day campaign splices 25-45 times** — one every four to seven
+  days. Today's median is 38.
+
+  The floor is R142's own worry: below about 25, the Theater is decoration, and
+  a game named after an operation the player performs twice a month has a
+  signature act it never signs. The ceiling is R135's, and it is not a guess —
+  R135 measured what happens when splicing gets cheap: **460 creatures built to
+  keep 12, median chimera life 2.0 days** against a floor of 5. So the figure
+  cannot be "more" in any direction; the Theater is rare because a cheap
+  rebuild is what kills a roster, and R135 already paid for that lesson.
+
+  #### And the guard cannot arbitrate, because it samples one seed
+
+  R135's floor lives in `tools/vault.js`: median chimera life must exceed **5
+  days**. It walks **seed 2026 alone** — and 2026 is the healthiest seed
+  measured. The three seeds the `empire` gate already uses:
+
+  | seed | splices | vat runs | made | kept | median life |
+  | ---: | ---: | ---: | ---: | ---: | ---: |
+  | 2026 | 39 | 9 | 65 | 15 | **59.2d** ← the only seed gated |
+  | 7 | 74 | **120** | 238 | 16 | **2.5d** ← breaches the 5d floor |
+  | 99 | 42 | 26 | 97 | 14 | **2.8d** ← breaches the 5d floor |
+
+  Two of three. Across eight seeds, two breach and one more sits at 9.3d. The
+  driver is not the splice: **vat runs track the collapse exactly** (9 / 120 /
+  26 against 59.2 / 2.5 / 2.8 days), and on seed 7 the life distribution is
+  bimodal — p25 **2.04d**, p75 **72.08d** — a mass of two-day chaos-vat output
+  scrapped beside a healthy long-lived roster. R12 priced the vat in grades; it
+  did not price it in roster slots.
+
+  So the honest answer to "should splicing be more frequent" is that on a
+  quarter of seeds the *rebuild loop* is already too frequent and nothing
+  catches it, because the one gate that would has been looking at the one seed
+  where it does not happen.
+
+  #### What ships
+
+  `campaignWalk` reports `theater` — splices, the care:splice ratio, days per
+  splice, creatures made, kept, and median life — so the ratio the criterion
+  asks for is a fact the harness prints rather than a number in prose. The
+  **floor** is gated across all three `empire` seeds, which is R142's own worry
+  and passes today at 39/74/42. Break **267** drops the splice below it.
+
+  The **ceiling is deliberately not gated**, because gating it honestly would
+  go red on two of three seeds today, and the fix is vat churn — balance work
+  this criterion does not cover. Filed as **R163** with the numbers rather than
+  ratcheted to today's behaviour, which would have blessed the defect.
+
+  **The lesson:** *"argue it against the churn guard" was the most valuable
+  clause in the criterion, and not for the reason it was written. Arguing
+  against a guard means reading it — and this one had been enforcing a floor on
+  the single seed that never approaches it.*
+
+- **R163 — Chaos-vat churn breaks R135's floor on a quarter of seeds.** The
+  churn guard in `tools/vault.js` requires a median chimera life above **5
+  days** and walks **seed 2026** alone, which reads 59.2d. Measured over eight
+  seeds: **seed 7 reads 2.5d and seed 99 reads 2.8d**, both in the `empire`
+  gate's own seed set, and seed 31 sits at 9.3d. Vat use is the driver — 9,
+  120 and 26 runs against 59.2, 2.5 and 2.8 days — and seed 7's distribution is
+  bimodal (p25 2.04d, p75 72.08d): a mass of two-day vat output beside a
+  healthy roster. R12 priced the vat in **grades**, deliberately and well; what
+  it never priced is the **roster slot** a decant occupies for two days before
+  being rendered down, which is the churn R135 exists to forbid. *Done when:
+  the churn floor is gated across every seed the suite already walks and passes
+  on all of them, with the vat's cost re-derived rather than the floor lowered
+  — and R142's splice CEILING of 45 goes on at the same time, since it is the
+  same statistic from the other side.*
 
 - **R143 — Nothing goes badly wrong.** ✅ **Shipped — see §9.22**, where the
   entry's own diagnosis turned out to be wrong: the failure states bite
