@@ -307,9 +307,14 @@ export function checkQueue(md = readFileSync(join(root, 'ROADMAP.md'), 'utf8')) 
   // "unshipped" and not "queued": half the roadmap says "queued out of R138"
   // about a phase R138 SHIPPED, which is a true sentence about where the work
   // came from. "Unshipped" only ever means the one thing.
-  const [before, after = ''] = md.split('### 9.0 Queue, as measured');
-  const paras = [before, after.split(/\n#{3} /).slice(1).join('\n### ')].join('\n\n').split(/\n\s*\n/);
-  for (const para of paras) {
+  //
+  // The ONLY exemption is §9.0's list paragraph itself, which rule 3b already
+  // checks id by id. Exempting the whole section instead would have left the
+  // one block a session is told to trust as the one block nothing reads — and
+  // the prose under the list is where a future correction would go.
+  const listing = `**${parts[1]} entries queued.**${parts[2].split(/\n\s*\n/)[0]}`;
+  for (const para of md.split(/\n\s*\n/)) {
+    if (para.includes(listing.slice(0, 40))) continue;
     if (!/\bunshipped\b/i.test(para)) continue;
     const claimed = idsIn(para).filter((id) => shipped.has(id));
     if (claimed.length) {

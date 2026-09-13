@@ -287,14 +287,18 @@ one place instead of from a sentence written nine audits ago.
 **19 entries queued.** R93, R94, R96, R100, R102, R104, R105, R107, R108,
 R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
 
-R166 wrote this block because the sentence it replaces was wrong in three
-ways at once. §9.18 announced "**35 entries already queued** and unshipped"
-and then enumerated **34**; of those 34, **fifteen had shipped** — R54 through
-R67, and R88 — R54 of them ninety sessions earlier. Status was prose, and
-prose was written three different ways (a ✅, a "(shipped)" inside the title, a
-section heading claiming a whole range), so nothing could notice a fourth
-sentence elsewhere saying the opposite. R88 was carrying both answers at
-once: queued at line 1753, shipped at line 5774.
+R166 wrote this block because the sentence it replaces was wrong in three ways
+at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
+and **fifteen of the 34 had already shipped** — R54 through R67 in Sessions
+76–90, and R88 in Session 117. Status was prose, and prose was written three
+different ways (a ✅, a "(shipped)" inside the title, a section heading claiming
+a whole range), so nothing could notice a fourth sentence elsewhere saying the
+opposite. R88 carried both answers at once for fifty-four sessions: queued on
+its §9.5 audit line, shipped on its §9.9 milestone-log line, in this file.
+
+Only the list above is exempt from the rule that no paragraph may contradict a
+✅ — this paragraph is not, which is why it describes the old sentence instead
+of quoting it.
 
 ### 9.1 Audited queue (R20–R29) — **all ten shipped**
 From a full audit of the shipped code, not a wishlist — each line names the
