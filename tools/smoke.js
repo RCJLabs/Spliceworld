@@ -18996,10 +18996,33 @@ if (inShard('empire')) {
   // 9 / 120 / 26 runs against 59.2 / 2.5 / 2.8 days — and that is balance work
   // R142's criterion does not cover. Filed as R163 with the numbers rather
   // than ratcheted to today's behaviour, which would have blessed it.
+  // R163 — AND THE CEILING GOES ON, which R142 measured and could not gate.
+  //
+  // R142 stated the band as 25-45 and shipped the floor alone, because the
+  // ceiling went RED on two of these three seeds: 74 splices on seed 7, 42 on
+  // 99, and median chimera lives of 2.5 and 2.8 days under R135's 5-day floor.
+  // The driver was the chaos vat, whose output died at a median of 2.17 days
+  // on every seed — the walker waiting out the 2-day dismantle floor and then
+  // rendering the decant down, so a rule meant to stop a conveyor belt was
+  // setting its cadence. R163 raised that floor to 14 days FOR DECANTS ONLY,
+  // and both halves of the band now hold on every seed here.
+  //
+  // THE CHURN FLOOR IS THE POINT. R135 priced it: a cheap rebuild built 460
+  // creatures to keep 12 at a median life of 2.0 days. `tools/vault.js` has
+  // enforced it since, on seed 2026 alone — which is the seed where it never
+  // happens. Here it is asked of all three.
   const SPLICE_FLOOR = 25;
+  const SPLICE_CEILING = 45;
+  const CHURN_FLOOR_DAYS = 5;
   for (const walk of walks) {
     const t = walk.theater;
     assert.ok(t, 'the harness reports the Theater ratio at all');
+    assert.ok(t.medianLifeDays > CHURN_FLOOR_DAYS,
+      `the median chimera outlives R135's ${CHURN_FLOOR_DAYS}-day churn floor `
+      + `(${t.medianLifeDays}d on ${t.made} made to keep ${t.kept}, ${t.vats} vat runs)`);
+    assert.ok(t.splices <= SPLICE_CEILING,
+      `and a campaign splices at most ${SPLICE_CEILING} times in 180 days (got ${t.splices})`
+      + ' — past that is the rebuild loop R135 measured, not a busier Theater');
     assert.ok(t.splices >= SPLICE_FLOOR,
       `a campaign splices at least ${SPLICE_FLOOR} times in 180 days (got ${t.splices})`);
     // AND THE RATIO IS DERIVED, not a constant somebody typed. A report whose

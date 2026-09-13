@@ -1,5 +1,75 @@
 # PROGRESS
 
+## Session 166 — R163: the guard was the metronome ✅
+
+**ROADMAP §9.29a.** R142 handed this over: two of the three seeds the `empire`
+gate walks breach R135's 5-day churn floor, and the gate that enforces it walks
+only the seed where it never happens.
+
+### The rule written to stop the conveyor was pacing it
+
+R95 gave the walker a two-day dismantle floor and wrote that the vat "is
+self-limiting the moment its output is allowed to occupy a stall". It is not:
+
+| seed | vat runs | vat-born median life | everything else |
+| ---: | ---: | ---: | ---: |
+| 2026 | 9 | **3.25d** | 55.83d |
+| 7 | 119 | **2.17d** | 9.75d |
+| 99 | 26 | **2.17d** | 3.50d |
+
+**2.17 days against a two-day floor is the rule reporting its own setting.**
+Seed 7 runs 120 gestations — more than the 119 R95 was fixing.
+
+### The mechanistic fix was measured and refuted
+
+A decant arrives at **instability 84-100** (a splice: 0-24), instability never
+decays, and upkeep is charged on it — but `quality` is level and grades only,
+so the walker is blind to the liability. Pricing it in makes things **much
+worse**: at every weight the decant becomes permanently the lowest-quality
+creature, so it is always dismantled and immediately re-decanted. Every seed
+collapsed to **2.2-3.0 days**. Valuing a permanent liability correctly builds a
+churn engine.
+
+### And the brake belongs on the decant alone
+
+My first attempt raised the floor for every creature outside the top three, and
+`npm test` caught two cascades: **R129's rehab reach lost a seed**, and
+**R152's upkeep share went 40.6% -> 43.9% across a doubled map**. So
+`VAT_KEEP_DAYS = 14` applies to `vatBorn` only.
+
+| seed | before | after |
+| ---: | ---: | ---: |
+| 2026 | 59.2d · 39 splices | 41.8d · 34 |
+| 7 | **2.5d** · 74 | **59.4d** · 37 |
+| 99 | **2.8d** · 42 | **14.0d** · 37 |
+
+Ten seeds: worst median life **2.5d -> 9.3d**, splices 23-43.
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| churn floor seeds gated | 1 (seed 2026) | **3** |
+| R142's splice ceiling | ungated | **45, gated** |
+| worst median chimera life | **2.5d** | **9.3d** |
+| breaks | 261 | **262** |
+
+### Known issues
+
+- **14 is fitted and the entry says so.** 6 leaves the ceiling breached, 10
+  leaves a seed at 67 splices, 20 puts three seeds outside a band. The
+  mechanism was tried and refuted; if someone finds a real one the constant
+  should go.
+- **`tools/vault.js` still walks seed 2026 alone.** Its churn rule is now
+  redundant with the empire block's, which covers three — left rather than
+  touched, since it also carries R91's save-weight rules.
+- **Two wider seeds sit under R142's splice floor** (23 and, at other
+  settings, 16). The floor is gated on the empire seeds only, where it passes.
+
+### Next session's first task
+
+**R145 or R147** — the oldest unshipped entries. Nothing is blocked.
+
 ## Session 165 — R142: arguing against the guard meant reading it ✅
 
 **ROADMAP §9.29a.** The criterion had three parts — state a healthy

@@ -1701,12 +1701,57 @@ function walkAct(state, content, now, open, opts = {}) {
       // not a system being exercised, it was a conveyor belt, and it is
       // self-limiting the moment its output is allowed to occupy a stall.
       //
-      // Two days is the floor: a decant settles, fights once, and gets to be
-      // judged on that rather than on the scoreboard the minute it is out of
-      // the tank.
+      // R163 — TWO WAS THE CADENCE, NOT THE BRAKE.
+      //
+      // The paragraph above says the vat "is self-limiting the moment its
+      // output is allowed to occupy a stall". Measured on today's tree it is
+      // not: seed 7 runs **120** gestations, more than the 119 this rule was
+      // written to stop, and vat-born creatures die at a median of **2.17
+      // days** on every seed measured — 2026 included, where the campaign
+      // otherwise looks healthy at 55.8 days for everything else. The walker
+      // was not being stopped by the floor, it was waiting exactly as long as
+      // the floor demanded and then rendering the decant down. A timer that
+      // every discard clears is a schedule.
+      //
+      // The consequence is R135's, and it was invisible: median chimera life
+      // **2.5d on seed 7 and 2.8d on seed 99**, under the 5-day churn floor,
+      // on two of the three seeds the `empire` gate already walks. The floor
+      // lives in `tools/vault.js` and checks seed 2026 alone, at 59.2 days.
+      //
+      // WHY A TIMER AND NOT A PRICE. The obvious fix is to let the walker SEE
+      // the liability: a decant arrives at instability 84-100 against 0-24 for
+      // a splice, instability never decays, and `ranch.js` charges upkeep on
+      // it — yet `quality` is level and grades only. Pricing instability into
+      // `quality` was measured and is much WORSE: at every weight tried the
+      // decant becomes permanently the lowest-quality creature, so it is
+      // always the one dismantled and the walker immediately decants again.
+      // Every seed collapsed to 2.2-3.0 days. The liability is permanent, so
+      // valuing it correctly builds a churn engine; occupying the stall is the
+      // only cost that bites, which is what the paragraph above says.
+      //
+      // FOURTEEN, AND IT IS FITTED — said plainly, because this project has a
+      // name for numbers that are not. Swept vat-only across ten seeds: 6
+      // leaves the ceiling breached (53 and 67 splices), 10 leaves one seed at
+      // 67, 20 puts three seeds outside a band. Fourteen is the best of them —
+      // worst median life 9.3 days against today's 2.5, splices 23-43 — and on
+      // the three seeds the gates actually walk it reads 41.8 / 59.4 / 14.0
+      // days and 34 / 37 / 37 splices, inside both bands with room.
+      //
+      // What it is NOT is a mechanism. The honest one was tried and refuted
+      // above. The day somebody finds a real one, this constant should go.
+      //
+      // AND IT APPLIES TO THE DECANT ALONE, which the first attempt got wrong
+      // and the suite caught: raising the floor for EVERY creature outside the
+      // top three slows every dismantle, and two unrelated gated invariants
+      // moved with it — R129's rehab reach lost a seed entirely, and R152's
+      // upkeep share went from 40.6% to 43.9% across a doubled map, which is
+      // the thing that rule exists to forbid. The churn being fixed is the
+      // vat's, so the brake belongs on the vat's output and nowhere else.
       const KEEP_DAYS = 2;
+      const VAT_KEEP_DAYS = 14;
+      const keepFloor = (c) => (c.vatBorn ? VAT_KEEP_DAYS : KEEP_DAYS) * WALK_DAY;
       const weakest = ranked.slice(3)
-        .filter((c) => isFit(c) && now - (c.createdAt ?? 0) >= KEEP_DAYS * WALK_DAY).pop();
+        .filter((c) => isFit(c) && now - (c.createdAt ?? 0) >= keepFloor(c)).pop();
       if (full && weakest) {
         const sockets = Object.values(weakest.tokens ?? {}).length;
         const back = salvagePreview(state, weakest, content).tokens.length;

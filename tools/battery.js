@@ -2041,6 +2041,24 @@ const BREAKS = [
     anchor: '      if (state.funds < TRAINING.cost) break;',
     to: '      if (!canSpend(TRAINING.cost)) break;',
   },
+  // --- gate: empire (R163 — the vat's brake) -------------------------------
+  {
+    // Put the decant back on the general two-day dismantle floor and the
+    // conveyor restarts: 120 gestations, 238 creatures built to keep 16, a
+    // median chimera life of 2.5 days under R135's floor of 5. That is the
+    // exact state R142 measured and could not gate, on a seed the churn rule
+    // in `tools/vault.js` has never walked.
+    //
+    // R95 shipped the two-day floor to stop this and its comment says the vat
+    // "is self-limiting the moment its output is allowed to occupy a stall".
+    // It was not: vat-born creatures died at a median of 2.17 days on every
+    // seed, which is the floor plus rounding. The walker was not being
+    // stopped, it was being paced.
+    n: 268, gate: EMPIRE, name: 'the decant goes back on the general dismantle floor, and the vat is a conveyor again',
+    file: 'tools/sim.js',
+    anchor: '      const VAT_KEEP_DAYS = 14;',
+    to: '      const VAT_KEEP_DAYS = 2;',
+  },
   // --- gate: empire (R142 — the ratio the harness prints) ------------------
   {
     // R142's whole deliverable is that the care:splice ratio stops being a
