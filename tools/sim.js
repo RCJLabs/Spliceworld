@@ -1257,10 +1257,9 @@ export function bestSplice(state, content, wanted = null, wall = null) {
   for (const frameId of ['M', 'S', 'L', 'A']) {
     const frame = content.frames[frameId];
     if (!frame) continue;
-    const chassis = frame.slots ?? CHASSIS_SLOTS;
     // R147 — FILL BY SOCKET, NOT BY SLOT, AND ASK THE THEATER WHICH SOCKETS
     // EXIST. The old loop keyed `slots` by `part.slot` against a private
-    // six-entry CHASSIS_SLOTS, so the Surgery Theater's SECOND ORGAN BAY was
+    // six-entry slot list of its own, so the Theater's SECOND ORGAN BAY was
     // invisible twice over: `organ2` was not in the list, and even listed it
     // could not have been filled, because the second organ part would find
     // `slots.organ` already taken and be skipped.
@@ -1277,8 +1276,15 @@ export function bestSplice(state, content, wanted = null, wall = null) {
     // three readers goes stale in two of them. The planner now reads the
     // grant rather than keeping a copy of it, so the next bay the Theater
     // sells is filled the day it is sold, with no edit here.
-    const granted = theaterGrants(state, content, frameId).sockets
-      .filter((socketId) => chassis.includes(slotOfSocket(socketId)));
+    //
+    // ONE READER, NOT TWO. The first draft filtered this list again by the
+    // frame's own slots — and `theaterGrants(state, content, frameId)` has
+    // already done exactly that (splice/facility.js: `frameSlots ?
+    // sockets.filter(...) : sockets`). The two guards were redundant, either
+    // one alone held, and break 231 aimed at mine, so the break went MISSED in
+    // R147's full battery: it patched a line that could not change an answer.
+    // R157's lesson landing on the commit that quoted it.
+    const granted = theaterGrants(state, content, frameId).sockets;
     for (const order of [rank, liftFirst]) {
       const used = new Set();
       const slots = {};
@@ -1309,7 +1315,6 @@ export function bestSplice(state, content, wanted = null, wall = null) {
   }
   return best;
 }
-const CHASSIS_SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
 
 // R146 — EVERY HERITABLE TRAIT THE CAMPAIGN CAN SEE, in one place.
 //
