@@ -53,14 +53,32 @@ fight goes to the side that was ahead: waves still queued means the opposition
 was never beaten, otherwise the larger share of health standing, ties to the
 player.
 
-### My own denominator was hidden, and rule 4 exists because of it
+### Break 271 went MISSED, and that is the best finding in the milestone
 
 The calibration was first run against **`hpMax`** — a combatant has `maxHp`. So
 every fraction was `NaN`, every comparison false, and the rule actually being
 measured was "call everything a loss"; it agreed with the real ending 12 times
 of 15 by luck. Three rules can prove every fight terminates while the thing it
 terminates into is wrong, so the census recomputes the verdict from the field
-the call read and asserts `misjudged === 0`. Break **271** is that exact slip.
+the call read and asserts `misjudged === 0`.
+
+**And that was not enough.** Break 271 — the slip itself — went **MISSED**
+against those four rules, and running the battery is the only reason it is
+known. `NaN` is **falsy**, so `mine ? … : 0` collapses the player's share to
+**0**, not to NaN — and "0 ≥ theirs" is the *correct* verdict for every called
+fight in 21,216, because a player who is ahead on health with a live opponent
+finishes the fight instead of grinding to turn 60. The one state that separates
+the right rule from the broken one is **absent by construction**: the mechanic
+that produces long fights is the same one that excludes a winning player from
+them.
+
+So rule 5 builds it — three bodies at full health, a live opponent at half,
+nothing queued, `turn` at the limit minus one, one rest action. Correct engine:
+win. Broken engine: `AssertionError: the side that is ahead on health with
+nothing left queued wins the call (got loss at turn 60)`. The same fixture
+covers the mirror case and the queue clause. **R99's lesson from the other
+direction: a census cannot be relied on to contain the state the defect lives
+in, however large it is.**
 
 ### The save schema is untouched, deliberately
 
@@ -82,7 +100,7 @@ at 51.**
 | beats in the grind-locked fight | 1,218 | **186** |
 | median / p90 / p99 | 9 / 15 / 25–26 | **unchanged** |
 | fights over 20 and over 30 turns | 92–98 / 19–22 | **identical** |
-| gates in the new `turns` block | 0 | **4 rules × 6 seeds** |
+| gates in the new `turns` block | 0 | **4 rules × 6 seeds, + 4 constructed** |
 | breaks | 262 | **265** |
 
 ### Known issues
@@ -95,6 +113,13 @@ at 51.**
 - **`called` is 2–4 per seed**, which is a thin sample for the verdict rule.
   It is asserted to be non-zero before `misjudged` is checked, so the rule
   cannot pass with nothing to read — but if R164 lands, both need re-deriving.
+  Rule 5's constructed cases do not depend on the sample and would survive.
+- **A sent called fight does not say it was called.** A watched one shows the
+  engine's line in the battle log; a sent one reports "Defeat." plus
+  `whatDecidedIt`, which reads damage and KO beats only. The outcome is now
+  true where it used to be a lie, but the player is not told the mechanism on
+  the path the bug was reachable from. Two lines in `campaign/ui.js`, and
+  outside this criterion — deliberately left rather than smuggled in.
 - **The full battery was not run.** This adds a gate rather than changing one,
   and `npm test` is what would catch an engine regression. The rot-check
   trigger is due, though: the last full run was R154's.

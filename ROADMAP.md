@@ -3783,10 +3783,34 @@ triangle working, and each region genuinely asks a different question)*.
   everything a loss". It agreed with the real ending 12 times out of 15 by
   luck. Three rules can prove every fight terminates while the thing it
   terminates into is wrong, so the census recomputes the verdict from the same
-  field the call read and `misjudged` must be 0. Break **271** is that exact
-  slip; **269** takes the cap off (caught by `stalls`, *not* by the limit rule,
-  which reads the constant the break moved); **270** stops the fight without
-  saying who won.
+  field the call read and `misjudged` must be 0. **269** takes the cap off
+  (caught by `stalls`, *not* by the limit rule, which reads the constant the
+  break moved); **270** stops the fight without saying who won.
+
+  #### Break 271 went MISSED, and the reason is the milestone's best finding
+
+  The census rules could not catch the `hpMax` slip, and running the battery is
+  the only reason that is known. **`NaN` is falsy**, so `mine ? … : 0` collapses
+  the player's share to **0** rather than to NaN — and "0 ≥ theirs" is the
+  *correct* verdict for every called fight in 21,216, because **a player who is
+  ahead on health with a live opponent finishes the fight instead of grinding to
+  turn 60.** The one state that separates the right rule from the broken one
+  does not occur naturally. Four rules over 21,216 fights, all green, all blind.
+
+  So rule 5 constructs it: three bodies at full health against a live opponent
+  at half, nothing queued, `turn` set to the limit minus one, one rest action.
+  The correct engine calls that a win; the broken one calls it a loss, and
+  `AssertionError: the side that is ahead on health with nothing left queued
+  wins the call (got loss at turn 60)` is what the battery now reads. The same
+  fixture covers the mirror case and the queue clause — a player far ahead with
+  a wave still coming still loses, because the opposition was never beaten.
+
+  **This is R99's rule, arriving from the other direction.** R99 said a gate has
+  to reach the state the defect lives in; the new part is that *a census cannot
+  be relied on to contain that state*, however large. The sample was 21,216
+  fights and the missing case was not rare in it — it was **absent by
+  construction**, because the mechanic that produces long fights is the same one
+  that excludes a winning player from them.
 
   #### Not done, and filed
 

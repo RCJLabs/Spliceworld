@@ -19611,7 +19611,7 @@ if (inShard('camo')) {
 //
 // Four rules, and the first is the one with teeth.
 if (inShard('turns')) {
-  const { turnCensus } = await import('./sim.js');
+  const { turnCensus, makeSimChimera: mkTurn, sampleBuilds: turnBuilds } = await import('./sim.js');
   const { TURN_LIMIT } = await import('../battle/engine.js');
 
   // The census is cheap (about 1.7s) but the point of the seeds is that the
@@ -19683,7 +19683,57 @@ if (inShard('turns')) {
       `seed ${c.seed}: every called fight went to the side that was ahead `
       + `(${c.misjudged} of ${c.called} disagreed with the field they were called on)`);
   }
-  console.log(`   R145 turns: ${census.map((c) => `s${c.seed} med${c.median}/p90 ${c.p90}/p99 ${c.p99}/max ${c.max}`).join(' · ')} · ${calls} called, 0 misjudged`);
+  // 5. THE CALL IS EXERCISED DIRECTLY, because the census cannot reach the
+  //    state the verdict gets wrong. Break 271 (the `hpMax`/`maxHp` slip) was
+  //    MISSED by rules 0-4 and the reason is worth the extra twenty lines:
+  //    `NaN` is FALSY, so `mine ? … : 0` collapses the player's share to 0
+  //    rather than to NaN, and "0 >= theirs" is the right answer for every
+  //    called fight in 21,216 — because a player who is AHEAD on health with a
+  //    live opponent finishes the fight instead of grinding to turn 60. The
+  //    one state that separates the correct rule from the broken one does not
+  //    occur naturally, so it is constructed. R99's lesson: a gate has to
+  //    reach the state the defect lives in.
+  //
+  //    Two waves, so the queue clause can be tested with the same fixture:
+  //    the no-queue cases empty it, the third leaves it.
+  {
+    const body = turnBuilds(content, 1, 2026)[0];
+    const one = mkTurn(body.frame, body.partIds, 'prime', content);
+    const trio = () => [one, { ...one, id: 'r145b' }, { ...one, id: 'r145c' }];
+    // Margins, not slivers. A single round of damage lands between the setup
+    // and the call, and 1.0-vs-0.5 cannot be flipped by one hit — whereas an
+    // enemy left on 1 HP might be finished by a bleed tick and win by KO,
+    // which would pass this assertion for the wrong reason.
+    const called = ({ mine, theirs, queued }) => {
+      const b = createBattle(trio(), content.encounters.spire_procurement, content, 13, 1);
+      if (!queued) b.enemy.queue = [];
+      for (const c of b.player.team) c.hp = Math.max(1, Math.round(c.maxHp * mine));
+      b.enemy.active.hp = Math.max(1, Math.round(b.enemy.active.maxHp * theirs));
+      b.turn = TURN_LIMIT - 1;
+      step(b, playerActions(b).find((a) => a.type === 'rest'), content);
+      return b;
+    };
+
+    const ahead = called({ mine: 1, theirs: 0.5, queued: false });
+    assert.ok(ahead.over, 'a fight at the limit is over');
+    assert.equal(ahead.outcome, 'win',
+      'the side that is ahead on health with nothing left queued wins the call '
+      + `(got ${ahead.outcome} at turn ${ahead.turn})`);
+
+    const behind = called({ mine: 0.1, theirs: 1, queued: false });
+    assert.equal(behind.outcome, 'loss',
+      `and the side that is behind loses it (got ${behind.outcome})`);
+
+    // The clause that is not about health at all.
+    const unfinished = called({ mine: 1, theirs: 0.5, queued: true });
+    assert.equal(unfinished.outcome, 'loss',
+      'a fight with a wave still queued is lost however far ahead the player is — '
+      + `the opposition was never beaten (got ${unfinished.outcome})`);
+    assert.equal(unfinished.pendingReplace, false,
+      'and a called fight leaves no replacement prompt behind it');
+  }
+
+  console.log(`   R145 turns: ${census.map((c) => `s${c.seed} med${c.median}/p90 ${c.p90}/p99 ${c.p99}/max ${c.max}`).join(' · ')} · ${calls} called, ${census.reduce((t, c) => t + c.misjudged, 0)} misjudged`);
 }
 
 
