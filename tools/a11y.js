@@ -1042,6 +1042,7 @@ async function main() {
 
       // (iii) A SCREEN YOU HAVE LEFT COSTS NOTHING. Every later style
       // recalculation walks what is still in the document, hidden or not.
+      const leftBehind = [];
       for (const s of screens) {
         await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
         await sleep(450);
@@ -1050,6 +1051,7 @@ async function main() {
         await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
         await sleep(450);
         const left = Number(await evaluate(`document.querySelector('#screen-${s}')?.querySelectorAll('*').length ?? 0`));
+        if (s !== 'ranch') leftBehind.push(left);
         if (s !== 'ranch' && left > LEFT_BEHIND) {
           note(`leaving ${s} left ${left} nodes in the document (budget ${LEFT_BEHIND})`);
         }
@@ -1083,9 +1085,16 @@ async function main() {
       } else if (dexKb > DEX_FIRST_PAINT_KB) {
         note(`the Dex paints ${dexKb} KB before the player has scrolled (budget ${DEX_FIRST_PAINT_KB} KB)`);
       }
-      return { muts, identity, dexKb };
+      return { muts, identity, dexKb, leftBehind };
     };
     const repaint = await repaintPass();
+    // Say the four numbers even when they pass. A budget that only speaks
+    // when it is broken cannot show it is still being measured, and these
+    // four were 63, 5-of-5, 496 and 275 KB the day before this gate existed.
+    console.log(`a11y: an unchanged tick rewrote ${repaint.muts} nodes; a tap on one pen card destroyed `
+      + `${repaint.identity.before - repaint.identity.after} of the ${repaint.identity.before} it did not touch; `
+      + `the worst screen left ${Math.max(0, ...repaint.leftBehind)} nodes behind; `
+      + `the Dex paints ${repaint.dexKb} KB before a scroll`);
 
     // ---- 1b. …and the arena on a short phone. 780px lands in the
     //      `min-height: 760px` band (a roomier stage, taller move cells);
@@ -1775,7 +1784,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
+  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · an unchanged tick touches nothing · a tap rebuilds one card · a screen you left costs nothing · the Dex paints what you can see · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
 }
 
 // R88 — only when RUN, not when imported. This module owns the one fixture
