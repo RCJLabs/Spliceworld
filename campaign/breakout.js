@@ -165,25 +165,28 @@ function makeEscapee(state, content, rival, n, now) {
   const wild = released(state)
     ? { socketChance: rel.wildSocketChance ?? 0.45, traitChance: rel.traitChance ?? 0.6 }
     : null;
-  const unit = rivalSpecimen(rival, content, {
-    rng, meta, defeats: record.defeats ?? 0,
-    index: Math.floor(rng() * Math.max(1, rival.frames.length)),
-    powerScale, idSuffix: `loose${n}`, wild,
-  });
-  // R93 — the rest of the pack, through the same generator and R27's own
-  // dossier, so a pack is the lab's considered answer rather than more
-  // bodies. `index` walks from 1 so the counter lands where rivalSpecimen
-  // already decides it does, instead of this file re-implementing that rule.
+  // R93 — THE WHOLE PACK THROUGH ONE LOOP, leader included, because
+  // `rivalSpecimen` decides which INDEX carries the counter and this file must
+  // not second-guess it. The first draft built the leader without a dossier
+  // and walked the extras from index 1 — and `counterSlot` is 0 whenever
+  // `counterLeads` is true, which is every tier from 2 up. So at exactly the
+  // tiers R27 says a lab has stopped treating you as a variable, the pack
+  // carried no counter at all: break 281 moved the post-dominion rate by 0.6
+  // points because there was almost nothing there to cut.
+  //
+  // A solo escapee is index 0 and gets the lab's read too, which is right: one
+  // specimen from a lab that has studied you IS the specimen it would send.
   const size = packSize(content, escapesFrom(state, rival.id));
-  const dossier = size > 1 ? rivalDossier(state, rival, content) : null;
-  const pack = [];
-  for (let i = 1; i < size; i++) {
-    pack.push(rivalSpecimen(rival, content, {
+  const dossier = rivalDossier(state, rival, content);
+  const bodies = [];
+  for (let i = 0; i < size; i++) {
+    bodies.push(rivalSpecimen(rival, content, {
       rng, meta, defeats: record.defeats ?? 0, index: i, dossier,
       counter: dossier?.counterClass ?? null,
-      powerScale, idSuffix: `loose${n}p${i}`, wild,
+      powerScale, idSuffix: i ? `loose${n}p${i}` : `loose${n}`, wild,
     }));
   }
+  const [unit, ...pack] = bodies;
   const sightings = t.sightings ?? [];
   const power = unit.power + pack.reduce((sum, u) => sum + u.power, 0);
   return {
