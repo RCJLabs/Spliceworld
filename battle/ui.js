@@ -23,7 +23,7 @@ import { moveReadout } from './readout.js';
 import { beatCost } from './autoplay.js';
 import { resolveBattle } from '../campaign/campaign.js';
 import { openPicker } from '../ui/picker.js';
-import { moveSummary, moveDetail } from './moves.js';
+import { moveSummary, moveDetail } from './move-text.js';
 import { renderIcon } from '../ui/icons.js';
 
 // Move names and keyword sentences are authored content, not player input,

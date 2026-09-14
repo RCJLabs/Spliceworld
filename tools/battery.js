@@ -2996,6 +2996,19 @@ const BREAKS = [
     to: '### 4.0b Retired',
   },
 
+  // R167 — the description half goes back into the eager module, which is
+  // exactly the state R93 paid two cap raises for. Aimed at BOOT rather than
+  // the eager-JS cap because first paint is the budget a player feels.
+  {
+    n: 283, gate: BOOT, name: 'the move descriptions go back into the eager graph',
+    // Aimed at an EAGER importer, because that is the only way the split can
+    // be undone: battle/ui.js is lazy, so importing move-text there changes
+    // nothing. statblock.js is compiled before the first paint.
+    file: 'battle/statblock.js',
+    anchor: "import { MOVE_SLOTS, activeMoves, defaultPick, partMoveId, comboMoveId } from './moves.js';",
+    to: "import { MOVE_SLOTS, activeMoves, defaultPick, partMoveId, comboMoveId } from './moves.js';\n"
+      + "import { moveSummary } from './move-text.js';\nexport const __r167 = moveSummary;",
+  },
   // R93 — the late game has stakes. Four breaks: the tuning that makes a pack
   // a pack, the threshold that decides whether one ever forms, the
   // counter-bias that makes it the lab's answer rather than more bodies, and

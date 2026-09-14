@@ -254,7 +254,19 @@ const REPORT = process.argv.includes('--report');
 // point. Taking it costs a read-site audit (32 unguarded `.tags` reads) and a
 // change to `tools/gen-parts.js`, because R127's gate holds the generator to
 // reproducing parts.json exactly. That is a milestone, not a paragraph.
-const FIRST_PAINT_KB = 1030;
+// R167 — 1030 -> 1027, MEASURED AT 1027, AND THE DEBT IS REPAID RATHER THAN
+// REFINANCED. R93 raised this to 1030 for 2.9 KB of escapee packs and priced
+// the way back; this is that way back, taken. `battle/move-text.js` carries
+// the four functions that turn a move into words — `moveSummary`,
+// `moveDetail`, `keywordEffect`, `tagNote` — read only by `battle/ui.js` and
+// `splice/pens-ui.js`, both lazy since R74. The leaf the engine reads stays
+// eager; the prose arrives with the screen.
+//
+// The note above said the lever here was 7.0 KB of empty data keys. That is
+// still true and still uncollected, re-measured at 3.1 KB on today's files —
+// and it is no longer the only thing on the list, which is the same sentence
+// R153 wrote and the reason this one was gettable.
+const FIRST_PAINT_KB = 1027;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //
