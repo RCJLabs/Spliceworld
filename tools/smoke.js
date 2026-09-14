@@ -19203,10 +19203,25 @@ if (inShard('empire')) {
       `the late game is actually being played — ${hunts.n} hunts and ${defs.n} defences `
       + `after dominion across seeds ${EMPIRE_SEEDS.join('/')}`);
 
+    // A BAND, NOT A CEILING — and the ceiling alone was shipped first, which
+    // is how break 282 went MISSED in R93's own verification. Making the pack
+    // tally count bodies instead of escapes compounds the escalation: hunts
+    // 87.2% -> 60.1% won and the hunt COUNT 1,059 -> 1,488, because a lost
+    // hunt leaves the pack standing to be fought again. Every one of those
+    // numbers is worse for the player, and a rule that only asks "is it too
+    // easy" waved it through.
+    //
+    // The floor is what separates stakes from grind. 75 sits 12pp under the
+    // shipped 87.2 and 15pp over the draft that failed, so it catches the
+    // runaway without going red on ordinary balance drift.
     assert.ok(hunts.pct < 90,
       'an escapee hunt is a fight, not a formality: post-dominion hunts are won '
       + `${hunts.pct}% of the time (${hunts.won}/${hunts.n}), and the late game is `
       + `${(hunts.n / defs.n).toFixed(1)}x more hunt than defence`);
+    assert.ok(hunts.pct > 75,
+      'and a fight, not a wall: post-dominion hunts are won '
+      + `${hunts.pct}% of the time (${hunts.won}/${hunts.n}). Below this the pack `
+      + 'stops being a stake and starts being the same pack, fought twice');
 
     assert.ok(defs.pct < 90,
       `a county can be lost: post-dominion defences are held ${defs.pct}% of the time `
@@ -19222,6 +19237,45 @@ if (inShard('empire')) {
     console.log(`   R93 late game: ${hunts.n} hunts ${hunts.pct}% won · ${defs.n} defences `
       + `${defs.pct}% held · ${pool((l) => l.assaults).n} assaults, from day `
       + `${late.map((l) => l.fromDay).join('/')}`);
+  }
+
+  // R93 — A PACK IS THE LAB'S ANSWER, AND A RATE CANNOT SEE IT.
+  //
+  // The entry asked for the pack to carry "the rival's counter-bias (R27's
+  // machinery, already built)", and R93 wired `rivalDossier` into the extras
+  // so the second specimen is built for whatever you have been beating them
+  // with. Break 281 cuts that wire — and the measured cost is **0.6 points**
+  // of post-dominion win rate (87.2% -> 87.8%), which no band this side of
+  // useless would catch. A win rate is the wrong instrument for a wiring
+  // question, so this asks the wiring directly: the escapee generator is run
+  // against a lab that HAS a read on the player, and the pack it produces has
+  // to differ from the pack the same lab produces with no read at all.
+  {
+    const { tickBreakouts } = await import('../campaign/breakout.js');
+    const rival = rivalList(content)[0];
+    const buildLab = (scouted) => {
+      const st = newGameState();
+      st.seed = 4242;
+      st.campaign.rivals = { [rival.id]: { defeats: 6, losses: 0, scouted: null } };
+      // Above `afterEscapes`, so the next escape from this lab is a pack.
+      st.campaign.escapesByLab = { [rival.id]: 40 };
+      st.campaign.nextBreakAt = 0;
+      if (scouted) scoutStable(st, rival.id, scouted, content);
+      tickBreakouts(st, content, HOUR, 0);
+      return st.campaign.loose[0];
+    };
+
+    const blind = buildLab(null);
+    assert.ok(blind && blind.pack.length >= 1,
+      `a lab ${40} escapes deep sends a pack — got ${blind ? blind.pack.length + 1 : 0} specimen(s)`);
+
+    // A stable the lab can actually read. `scoutStable` is R27's own recorder,
+    // so this is the file a real duel would have written.
+    const read = buildLab(walks[0].save.chimeras.slice(0, 3));
+    const classesOf = (one) => one.pack.map((u) => u.class).join(',');
+    assert.notEqual(classesOf(read), classesOf(blind),
+      'a lab that has watched your stable sends a different pack than one that has not — '
+      + `read ${classesOf(read) || '(none)'} vs blind ${classesOf(blind) || '(none)'}`);
   }
 
     // R138 — THE MIDDLE OF THE LEVEL CURVE.
