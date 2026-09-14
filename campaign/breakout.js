@@ -116,18 +116,13 @@ function scheduleNext(state, content, from) {
   cam.nextBreakAt = from + Math.round(pacing(state, content).cooldownHours * jitter * HOUR);
 }
 
-// R93 — HOW MANY COME BACK. Keyed on the lab's own ESCAPES, not on how many
-// times you have beaten it: defeats top out at 2-6 in a 180-day campaign, so
-// a rule waiting on a third defeat waits on something a third of campaigns
-// never reach. Escapes run to ~56 per lab and are what the entry asked for.
-// `maxSize` lives in data because it is all that stands between this and a
-// twelve-specimen wall. The numbers, and the drafts that failed: ROADMAP R93.
+// R93 — how many come back. Keyed on the lab's own ESCAPES: defeats top out
+// at 2-6 a campaign, escapes run to ~56. `maxSize` lives in data. ROADMAP R93.
 export function escapesFrom(state, rivalId) {
   return (state.campaign?.escapesByLab ?? {})[rivalId] ?? 0;
 }
 
-// One escape is one event, NOT one per body: counting bodies compounds, and
-// measured it took the hunt to 53.2% won in about thirty days. ROADMAP R93.
+// One escape is one event, not one per body: counting bodies compounds.
 function noteEscape(cam, rivalId) {
   cam.escapesByLab ??= {};
   cam.escapesByLab[rivalId] = (cam.escapesByLab[rivalId] ?? 0) + 1;
@@ -170,11 +165,9 @@ function makeEscapee(state, content, rival, n, now) {
     index: Math.floor(rng() * Math.max(1, rival.frames.length)),
     powerScale, idSuffix: `loose${n}`, wild,
   });
-  // R93 — the extras, and which of them is the answer. `index` does double
-  // duty in rivalSpecimen: it picks the frame AND it is compared against
-  // `counterSlot`, which is 0 from tier 2 up. So the leader keeps its own
-  // random frame and the FIRST EXTRA is aimed at the slot. Two earlier drafts
-  // and what each cost: ROADMAP R93.
+  // R93 — `index` picks the frame AND selects the counter slot (0 from tier 2
+  // up), so the leader keeps its frame and the first EXTRA is aimed at the
+  // slot. Two earlier drafts and what each cost: ROADMAP R93.
   const size = packSize(content, escapesFrom(state, rival.id));
   const dossier = size > 1 ? rivalDossier(state, rival, content) : null;
   const slot = dossier?.counterLeads ? 0 : 1;
@@ -193,15 +186,12 @@ function makeEscapee(state, content, rival, n, now) {
     id: `loose-${n}`,
     rivalId: rival.id,
     unit,
-    // Always an array, never absent — a sometimes-missing field is one every
-    // reader has to remember to default.
     pack,
     wild: !!wild,
     traits: unit.traits ?? [],
     escapedAt: now,
     sighting: sightings.length ? sightings[Math.floor(rng() * sightings.length)] : 'somewhere in the county',
-    // Worth more than one and less than its head count: the extras are the
-    // lab's problem, not a jackpot. Priced in data.
+    // Worth more than one and less than its head count. Priced in data.
     reward: Math.round((t.rewardBase ?? 140) + power * (t.rewardPerPower ?? 5)
       * (pack.length ? 1 - (1 - (t.pack?.rewardPerExtra ?? 1)) * (pack.length / (pack.length + 1)) : 1)),
   };
@@ -296,8 +286,7 @@ export function tickBreakouts(state, content, now, since = now) {
 
 // The encounter. One specimen, inline, so nothing has to exist in
 // enemies.json for a creature the player's own rival invented this morning.
-// R93 — every wave of a loose entry, leader first. One accessor, because a
-// default spelled in five places gets spelled wrong in one.
+// R93 — every wave of a loose entry, leader first.
 export function packOf(loose) {
   return loose ? [loose.unit, ...(loose.pack ?? [])] : [];
 }
