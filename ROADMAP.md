@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**18 entries queued.** R94, R96, R100, R102, R104, R105, R107, R108,
+**17 entries queued.** R94, R100, R102, R104, R105, R107, R108,
 R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
@@ -2474,18 +2474,79 @@ R102; R88–R90 remain.)*
   parts, and every encounter has a standard-grade build that beats it at
   least half the time* — first clause met at 95.5%; second answered with
   numbers, because meeting it as written would flatten the grade ladder.
-- **R96 — Creatures that move.** The renderer holds **0 `<animate>`
-  elements**; the stylesheet 11 keyframes; a chimera's temperament (two
-  axes), condition, injuries and ten scar types are all *text beside a
-  static portrait*. §8 risk 1 says the renderer is the whole first
-  impression. Proposed, medium-large, zero art assets: a procedural **idle
-  layer** (breathing, blink, tail sway — on the existing shape groups, off
-  under reduced motion); **temperament in the posture** (Skittish crouches,
-  Bullish squares up); **injury and scar marks** drawn as part-space
-  overlays; and a **victory and KO beat** in the arena. All driven by state
-  the save already carries. *Done when: a Skittish and a Bullish chimera
-  with the same genome render visibly differently, a scarred one shows it,
-  and the boot and a11y (reduced-motion) gates still pass.*
+- **R96 — Creatures that move.** ✅ *Shipped — the two things the criterion
+  names, one of the four proposals, and one claim in my own entry that was
+  wrong.*
+
+  #### Re-measured before building
+
+  | the entry said | today |
+  | --- | --- |
+  | **0 `<animate>` elements** | true — 0, anywhere in the tree |
+  | the stylesheet holds **11 keyframes** | true — 11, now 12 |
+  | **ten scar types** | true — ten, every one of them text |
+  | temperament, condition, injuries "all text beside a static portrait" | **condition was not**: M1 already draws dirt on a scruffy animal and sparkles on a gleaming one, and asserts both |
+
+  So the premise was three-quarters right, and the quarter that was wrong is
+  the one worth knowing: the renderer already had a vocabulary for drawing
+  state — `DIRT_SHAPES`, `SPARKLE_SPOTS`, clipped to the silhouette — and
+  R96 is that vocabulary extended, not invented.
+
+  #### What ships
+
+  **Posture.** `renderCreatureSVG` takes a stance and wraps each socket in
+  it, so a Skittish creature sinks 16 units and shrinks to 0.95 while a
+  Bullish one rises and squares up at 1.03, head forward. The deltas are
+  **data** (`temperament.json`'s `posture`), keyed by the same bands
+  `describe()` names — a stance and the caption under it cannot disagree —
+  and they ride the sockets the FRAME already positions, so a new frame
+  inherits posture for free. Composed *outside* the socket transform: a
+  socket is where the frame says a limb attaches, and a mood may not move it.
+
+  **Scars.** Ten types, ten marks, drawn in torso space and clipped to the
+  silhouette exactly as R85's dirt is. Which mark a scar wears is content
+  (one word per scar in `scars.json`); the five mark shapes are overlay
+  chrome beside the dirt and the sparkles. Placement is **seeded off the
+  scar id**, so a new scar costs one word and lands in the same spot on
+  every screen that draws the creature, with nothing stored.
+
+  **An idle layer, opt-in.** One breath, 4.4s, on a wrapper group so the
+  posture transform underneath stays a presentation attribute CSS never
+  overrides. Opt-in because R104 measured **58,043 nodes** on one day-180
+  screen and a roster of breathing portraits is a bill nobody asked for: the
+  Pens card takes it (R44 opens one pen at a time), the arena does not (R2's
+  beats are its animation vocabulary and a breathing sprite fights them).
+
+  Not built: the **victory and KO beat**. It is the one proposal the
+  criterion does not name, it belongs to the arena's own beat machinery
+  rather than to the renderer, and it is queued rather than half-built.
+
+  #### The budget, and how it was paid
+
+  The eager renderer is compiled before the first paint because the Ranch
+  draws stock animals on it — and a stock animal has neither a temperament
+  nor a scar. Only the Pens card and the arena do, and **both are lazy since
+  R74**. So the bands, the deltas, the marks and the placement went into a
+  new **`render/mood.js`** (R167's split, same reasoning), and the eager
+  renderer kept only the lines that apply what it returns.
+
+  | | cost |
+  | --- | ---: |
+  | kept OUT of the eager graph by the split | **4.6 KB** |
+  | eager renderer (applying a stance) | 853 B |
+  | stylesheet (one keyframe, one rule, one off switch) | 636 B |
+  | data (posture bands, ten marks) | 702 B |
+
+  `FIRST_PAINT_KB` **1027 → 1029**, `KB_CAP` **554 → 555**. This is a
+  deliberate spend of what R167 repaid, and the entry says so rather than
+  leaving a note: both still sit under R93's 1030 and 557, and what bought
+  them is the thing §8 risk 1 calls the whole first impression.
+
+  *Done when: a Skittish and a Bullish chimera with the same genome render
+  visibly differently, a scarred one shows it, and the boot and a11y
+  (reduced-motion) gates still pass.* All four hold — a11y reports "nothing
+  moves when the OS asks it not to" with `.sw-idle` in its reduced-motion
+  block, and breaks 284–286 turn each rule red on demand.
 
 **UI.**
 

@@ -3009,6 +3009,34 @@ const BREAKS = [
     to: "import { MOVE_SLOTS, activeMoves, defaultPick, partMoveId, comboMoveId } from './moves.js';\n"
       + "import { moveSummary } from './move-text.js';\nexport const __r167 = moveSummary;",
   },
+  // R96 — a creature that shows what it is. Three breaks, one per rule the
+  // milestone added: the posture data that makes two temperaments two
+  // animals, the mark that puts a scar ON the creature rather than in the
+  // caption beside it, and the off switch that stops it breathing when the
+  // player has asked their OS to stop moving things.
+  {
+    n: 284, gate: EMPIRE, name: 'temperament goes back to being a caption',
+    // Aimed at the DATA, not the renderer: posture is content, and the way it
+    // breaks in practice is a band nobody authored, not a function nobody
+    // called.
+    file: 'data/temperament.json',
+    anchor: '"posture": {', to: '"postureRetired": {',
+  },
+  {
+    n: 285, gate: EMPIRE, name: 'a scar is authored with no mark to draw',
+    // The exact defect this milestone shipped and its own gate caught: a
+    // `mark` value with no geometry behind it draws nothing and says nothing.
+    file: 'data/scars.json',
+    anchor: '"id": "brine_grudge",\n      "mark": "patch",',
+    to: '"id": "brine_grudge",',
+  },
+  {
+    n: 286, gate: A11Y, name: 'the idle layer keeps breathing under reduced motion',
+    file: 'style.css',
+    anchor: '.sw-idle { animation: none; }',
+    to: '/* .sw-idle { animation: none; } */',
+  },
+
   // R93 — the late game has stakes. Four breaks: the tuning that makes a pack
   // a pack, the threshold that decides whether one ever forms, the
   // counter-bias that makes it the lab's answer rather than more bodies, and

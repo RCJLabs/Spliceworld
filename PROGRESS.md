@@ -1,5 +1,96 @@
 # PROGRESS
 
+## Session 175 — R96: a creature that shows what it is ✅
+
+**ROADMAP §9.0 → §9 (Renderer).** Temperament has been two numbers and a
+caption since R13, and ten scar types have been a sentence beside a still
+portrait since the same milestone. Now the animal carries both.
+
+### The gate went red first
+
+`creaturePortrait` took a genome and a condition and nothing else, so the
+proof was two lines: the same genome with opposite temperaments returned
+**byte-identical SVG**, and so did a clean creature and a scarred one. Both
+assertions were written, run and seen failing (`SMOKE_EXIT=1`) before a line
+of renderer changed.
+
+### What ships
+
+- **Posture** — a Skittish creature sinks 16 and shrinks to 0.95; a Bullish
+  one rises and squares up at 1.03 with its head forward. Deltas are **data**
+  in `temperament.json`, keyed by the same bands `describe()` names, so the
+  stance and the caption under it cannot disagree. Composed *outside* the
+  socket transform: a socket is where the frame says a limb attaches, and a
+  mood may not move it.
+- **Scars** — ten types, five marks, clipped to the silhouette exactly as
+  R85's dirt is. Which mark a scar wears is one word of content; **placement
+  is seeded off the scar id**, so a new scar costs one word and lands in the
+  same spot on every screen, with nothing stored.
+- **An idle layer, opt-in** — one 4.4s breath on a wrapper group. Opt-in
+  because R104 measured 58,043 nodes on one day-180 screen: the Pens card
+  takes it (R44 opens one pen at a time), the arena does not (R2's beats are
+  its animation vocabulary).
+
+Not built: the **victory and KO beat**. The criterion does not name it, it
+belongs to the arena's beat machinery rather than the renderer, and it is
+queued rather than half-built.
+
+### The premise was three-quarters right
+
+The entry said temperament, condition, injuries and scars were "all text
+beside a static portrait." **Condition was not**: M1 already draws dirt on a
+scruffy animal and sparkles on a gleaming one, and asserts both. That is the
+useful quarter — the renderer already had a vocabulary for drawing state, and
+R96 is that vocabulary extended rather than invented.
+
+### The budget, paid twice over
+
+The eager renderer is compiled before the first paint because the Ranch draws
+stock animals on it — and a stock animal has neither a temperament nor a scar.
+Only the Pens card and the arena do, and **both are lazy since R74**. So the
+bands, marks and placement went into a new **`render/mood.js`** (R167's split,
+same reasoning), keeping **4.6 KB out of the eager graph**. What remained:
+
+| | bytes |
+| --- | ---: |
+| eager renderer (applying a stance) | 853 |
+| stylesheet (keyframe, rule, off switch) | 636 |
+| data (posture bands, ten marks) | 702 |
+
+`FIRST_PAINT_KB` **1027 → 1029**, `KB_CAP` **554 → 555** — a deliberate spend
+of what R167 repaid last session, priced in both notes, and still under R93's
+1030 and 557.
+
+### My own gate caught my own defect
+
+I authored `"mark": "flinch"` for two scars and never wrote a `flinch`
+geometry, so both drew nothing while the data looked complete. The loop I had
+just added — *every scar the content declares can be drawn* — is what found
+it. A one-word content value with no geometry behind it is exactly the defect
+break 285 now reproduces on demand.
+
+### Known issues
+
+- **Both caps sit at their measurement again** (1029 vs 1029, 554.8 vs 555).
+  The next feature that touches the eager graph pays the same way this one
+  did: split first, then price what is left.
+- **The data lever is still untaken** — 3.1 KB of empty `"tags": []` /
+  `"keywords": {}` behind a 62-site read audit. It would have paid for this
+  milestone outright.
+- **`postureOf` composes two axes additively.** Brave+Fierce and Skittish+
+  Gentle are the ends the gate checks; the six mixed bands are authored but
+  only eyeballed.
+
+**The lesson:** *the cheapest byte is the one that never enters the eager
+graph. R167 had to split a module to find that out; R96 asked the question
+first and paid a third of what it would otherwise have cost.*
+
+### Next session's first task
+
+**ROADMAP §9.0** — 17 queued. R104 ("the shell repaints blind") is the one
+with the worst measured numbers: a 300 ms Vault tick over 58,043 nodes, and
+57,489 of them left in the document after the player leaves the screen.
+
 ## Session 174 — R167: both caps come down, and the bill gets a total ✅
 
 **ROADMAP §9.0 → §9.18.** R93 raised two budgets by 2.9 KB and left the levers

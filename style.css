@@ -1115,6 +1115,15 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .battle-log p:last-child { color: var(--goo); opacity: 1; }
 .battle-log .log-bark { color: var(--zap); font-style: italic; }
 
+/* R96 — one breath, slower than a real one so a pen does not read as a
+   panicking animal, on a WRAPPER group so the posture transform underneath
+   stays a presentation attribute CSS never overrides. See ROADMAP R96. */
+@keyframes sw-breathe {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.014) translateY(-3px); }
+}
+.sw-idle { animation: sw-breathe 4.4s ease-in-out infinite; transform-origin: 50% 78%; transform-box: fill-box; }
+
 @media (prefers-reduced-motion: reduce) {
   .meter-fill { transition: none; }
   /* R75 — the graduation ceremony's three were missing: a player who has
@@ -1128,6 +1137,9 @@ body.in-battle .ticker { font-size: 0.66rem; }
   /* R99 — the two transitions nobody had listed, while all eleven keyframes
      were. Safe: nothing listens for `transitionend`. */
   .stage, .slot { transition: none; }
+  /* R96 — a creature that breathes holds its breath when asked to. Safe:
+     nothing waits on `animationend` to show a portrait. */
+  .sw-idle { animation: none; }
 }
 
 /* Taller phones get a roomier field; short ones keep the menu reachable. */

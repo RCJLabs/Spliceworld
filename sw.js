@@ -16,6 +16,7 @@ const SHELL = [
   'save/slots.js',
   'save/settings-ui.js',
   'render/renderer.js',
+  'render/mood.js',
   'ui/picker.js',
   'ui/cards.js',
   'ui/tabs.js',

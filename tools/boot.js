@@ -266,7 +266,14 @@ const REPORT = process.argv.includes('--report');
 // still true and still uncollected, re-measured at 3.1 KB on today's files —
 // and it is no longer the only thing on the list, which is the same sentence
 // R153 wrote and the reason this one was gettable.
-const FIRST_PAINT_KB = 1027;
+// R96 — 1027 -> 1029. A deliberate SPEND, and the first one since R167 repaid
+// R93's: temperament, ten scar types and an idle layer cost 2.1 KB of first
+// paint (853 B renderer, 636 B stylesheet, 702 B data) to stop being captions
+// beside a still portrait, which is what §8 risk 1 calls the whole first
+// impression. The cheap half was taken first: `render/mood.js` keeps 4.6 KB
+// of bands, marks and placement OUT of the eager graph, because the only
+// screens that draw a chimera are lazy. Still 1 KB under R93's 1030.
+const FIRST_PAINT_KB = 1029;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //

@@ -119,6 +119,7 @@ export function indexContent(raw) {
     temperamentByRole: raw.temperament ? raw.temperament.byRole : null,
     temperamentBySpecies: raw.temperament ? raw.temperament.bySpecies : null,
     temperamentLabels: raw.temperament ? raw.temperament.labels : null,
+    temperamentPosture: raw.temperament ? raw.temperament.posture ?? null : null,
     chaosNames: raw.chaos ? raw.chaos.names : null,
     chaosLines: raw.chaos ? raw.chaos.lines : null,
     resequencerLines: raw.resequencer ? raw.resequencer.lines : null,
@@ -464,7 +465,10 @@ function developingPortrait() {
 // idPrefix keeps defs ids unique when several creatures share a document.
 // condition: null | 'gleaming' | 'scruffy' (see ranch.conditionTier).
 // extraScale multiplies the frame scale (juvenile portraits render small).
-export function renderCreatureSVG(genome, content, { idPrefix = 'cw', condition = null, extraScale = 1 } = {}) {
+export function renderCreatureSVG(
+  genome, content,
+  { idPrefix = 'cw', condition = null, extraScale = 1, posture = null, scarMarks = '', idle = false } = {}
+) {
   const errors = validateGenome(genome, content);
   if (errors.length) throw new Error('Bad genome: ' + errors.join('; '));
 
@@ -504,13 +508,17 @@ export function renderCreatureSVG(genome, content, { idPrefix = 'cw', condition 
     const socket = frame.sockets[socketName];
     if (!socket) continue; // frame simply lacks this socket — legal
     const shade = socket.shade ? ' style="filter:brightness(0.8)"' : '';
-    layers.push(
-      `<g transform="${socketTransform(socket)}"${shade}>${shapesToSVG(part.shapes ?? [], palette)}</g>`
-    );
+    // Wraps the socket rather than editing it: far and near limb move together.
+    const stance = posture?.[slot] ?? '';
+    const body = `<g transform="${socketTransform(socket)}"${shade}>${shapesToSVG(part.shapes ?? [], palette)}</g>`;
+    layers.push(stance ? `<g transform="${stance}">${body}</g>` : body);
   }
 
   const scale = frame.scale * extraScale;
-  const frameScale = scale !== 1 ? ` transform="scale(${scale})"` : '';
+  const stance = posture?.body ?? '';
+  const frameScale = scale !== 1 || stance
+    ? ` transform="${stance}${stance && scale !== 1 ? ' ' : ''}${scale !== 1 ? `scale(${scale})` : ''}"`
+    : '';
   const groundShadow = frame.shadow
     ? `<ellipse cx="0" cy="${frame.shadow.cy}" rx="${frame.shadow.rx}" ry="${frame.shadow.ry}" ` +
       `fill="${OUTLINE}" stroke="none" opacity="0.28"/>`
@@ -522,10 +530,18 @@ export function renderCreatureSVG(genome, content, { idPrefix = 'cw', condition 
           `transform="translate(${p.x} ${p.y}) scale(${p.s})"/>`
       ).join('')
     : '';
+  // R96 — OPT-IN, because R104 measured 58,043 nodes on one day-180 screen
+  // and a roster of breathing portraits is a bill nobody asked for. The off
+  // switch is in style.css, where R99's gate can see it.
+  const [idleOpen, idleClose] = idle ? ['<g class="sw-idle">', '</g>'] : ['', ''];
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-230 -230 460 440" role="img" aria-label="Spliced creature">` +
     `<defs><clipPath id="${clipId}">${silhouetteToSVG(frame.silhouette)}</clipPath></defs>` +
-    `<g${frameScale}>${groundShadow}${layers.join('')}</g>` +
+    idleOpen +
+    `<g${frameScale}>${groundShadow}${layers.join('')}` +
+    (scarMarks ? `<g clip-path="url(#${clipId})">${scarMarks}</g>` : '') +
+    `</g>` +
+    idleClose +
     sparkles +
     `</svg>`
   );

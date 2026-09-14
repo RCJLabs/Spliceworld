@@ -62,5 +62,15 @@
       "low": { "id": "gentle", "name": "Gentle", "perk": "paces itself — recovers stamina faster" },
       "mid": { "id": "even", "name": "Even", "perk": "takes it as it comes" }
     }
+  },
+  "posture": {
+    "nerve": {
+      "low": { "body": { "dy": 16, "scale": 0.95 }, "head": { "dy": 13, "angle": -9 }, "tail": { "dy": 9, "angle": 24 } },
+      "high": { "body": { "dy": -5, "scale": 1.03 }, "head": { "dy": -9, "angle": 4 }, "tail": { "angle": -9 } }
+    },
+    "temper": {
+      "high": { "head": { "dx": 11, "angle": 6 }, "forelimbs": { "dx": 8, "angle": -5 } },
+      "low": { "head": { "dy": 6, "angle": -4 }, "forelimbs": { "dx": -4 } }
+    }
   }
 }
