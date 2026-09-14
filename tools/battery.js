@@ -2567,14 +2567,16 @@ const BREAKS = [
     n: 176, gate: HEIGHT, name: 'the upgrade card is appended again, so it is the last thing on the screen',
     file: 'splice/pens-ui.js',
     // R135 moved the anchor by one line — the Pens gained `tablePointer`
-    // under the card — so the patch now carries both past the roster.
+    // under the card — so the patch now carries both past the roster. R104
+    // closed it with a second bracket: the screen is painted by a call now,
+    // not by an assignment.
     anchor: `    facilityCard(state, content, 'pens') +
     // R135 — the Pens hosts the Dismantle button and sells nothing that
     // speeds it up. One line, under the card that sells the machine this
     // screen DOES own, pointing at the one it does not.
     tablePointer(state, content) +
     (cards ||
-      \`<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>\`);`,
+      \`<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>\`));`,
     to: `    (cards ||
       \`<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>\`) +
     facilityCard(state, content, 'pens') +
@@ -2741,7 +2743,9 @@ const BREAKS = [
   {
     n: 9, gate: HANDLERS, name: 'an existing binder is deleted, leaving a dead button',
     file: 'splice/pens-ui.js',
-    anchor: "  root.querySelectorAll('button[data-treat]').forEach((btn) => {",
+    // R104 renamed the query: a patched screen asks for what is NOT yet
+    // bound, or a kept node gets its listener twice.
+    anchor: "  unbound(root, 'button[data-treat]').forEach((btn) => {",
     to: "  [].forEach((btn) => {",
   },
   {
@@ -3009,6 +3013,39 @@ const BREAKS = [
     to: "import { MOVE_SLOTS, activeMoves, defaultPick, partMoveId, comboMoveId } from './moves.js';\n"
       + "import { moveSummary } from './move-text.js';\nexport const __r167 = moveSummary;",
   },
+  // R104 — the shell repaints on a change. Four breaks, one per rule the
+  // milestone added, each aimed at the mechanism rather than at the symptom:
+  // the gate that reads them is the same a11y run, so a break that only
+  // slowed the screen down would go green and prove nothing.
+  {
+    n: 287, gate: A11Y, name: 'the tick repaints whether or not anything moved',
+    file: 'main.js',
+    anchor: 'const changed = force || Object.keys(moved).length > 0;',
+    to: 'const changed = true;',
+  },
+  {
+    n: 288, gate: A11Y, name: 'a screen you left keeps its DOM for the session',
+    file: 'main.js',
+    anchor: 'if (s !== name && el.childElementCount) el.replaceChildren();',
+    to: '// left standing',
+  },
+  {
+    n: 289, gate: A11Y, name: 'one tap rebuilds every card again',
+    // Aimed at the KEY, not at paintScreen itself: a diff that cannot tell
+    // two cards apart matches them positionally, and every card after the
+    // one that changed shifts and is replaced. That is the failure this is
+    // actually likely to regress into.
+    file: 'ui/patch.js',
+    anchor: "const keyOf = (el) => el.querySelector?.('[data-fold]')?.dataset.fold",
+    to: 'const keyOf = (el) => (el ? null : null) ??',
+  },
+  {
+    n: 290, gate: A11Y, name: 'the Dex paints every portrait before anyone scrolls',
+    file: 'splice/dex-ui.js',
+    anchor: 'const DEX_EAGER_CELLS = 9;',
+    to: 'const DEX_EAGER_CELLS = 99;',
+  },
+
   // R96 — a creature that shows what it is. Three breaks, one per rule the
   // milestone added: the posture data that makes two temperaments two
   // animals, the mark that puts a scar ON the creature rather than in the
