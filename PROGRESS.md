@@ -1,5 +1,73 @@
 # PROGRESS
 
+## Session 173 — R94: built the bribe, measured it, reverted it ⏸
+
+**ROADMAP §9.18.** R94 is **still queued**, deliberately. Two thirds of it had
+already shipped, and the remaining third is not safe to add on its own.
+
+### Already built, and the entry never knew
+
+| clause | state |
+| --- | --- |
+| a **cap** | R87 — `capNotoriety` pins at **600** |
+| a **spend** | R87 — **140** back per raid held; `taskforce.js` calls it "the spend notoriety never had" |
+| a **decay** | nothing |
+| day-180 **under** the cap | **4 of 6 seeds finish exactly on it** |
+
+"3,833 on day 180" is stale *because* the cap arrived — the value is clamped.
+
+### The entry's decay is aimed at a state that never happens
+
+**148 heat-days out of 148** on seed 2026; 129 of 130 on seed 7. There is no
+lying low in this game, so a decay keyed on quiet would gate on nothing.
+
+### The bribe: built, measured, reverted
+
+Money is the obvious lever — post-dominion funds run $80k–$570k with little to
+spend them on. Built it fully: `data/taskforce.json` tuning, `bribeCost` /
+`bribeOffer` / `bribe`, an agenda row, a walker branch, **save v53** with a
+migration, and a notoriety **high-water mark** so buying quiet could not lock a
+region you had already opened (`regionBlockers` reads `req.notoriety` — the
+meter is a key as well as a heat level, which is its own trap).
+
+It works. It is still wrong:
+
+| | raids | dominion | funds (seed 2026) |
+| --- | ---: | --- | ---: |
+| before | 44 | day 32 | $139,922 |
+| bribe, eligibility on the live number | **0** | **NEVER** | $432,647 |
+| bribe, eligibility on the peak | 45 | **NEVER** | **$58,908** |
+
+**The bribe and `taskforceEligible` read the same number, and the bribe always
+wins the race.** The walker buys quiet the instant the meter touches 600, so
+the Task Force never fires — taking ~40 fights of xp and `rewardScale` 2.4 with
+it. Reading the peak instead never closes the file: 45 raids each levying a
+quarter of the bank.
+
+### What shipped instead
+
+- The two clauses that hold are **asserted**; the failing one is **reported**
+  — `R94 notoriety: cap 600 · spend 140 · day-180 600/600/600/45 · 3/4 pinned`
+  prints on every shard-a run. A gate written to pass today would have to
+  bless one of the two broken states above.
+- ROADMAP R94 carries every number, and its scope now **includes R87's
+  trigger**: the retune is what the criterion actually needs, not a clause
+  beside it.
+
+**The lesson:** *a spend is only a spend if something else still gets to
+happen. This one shared its input with the mechanic it switches off.*
+
+### Known issues
+
+- **R94 is still open** and is now a larger entry than it looked. It needs a
+  Task Force trigger a purchase cannot race.
+- **`SAVE_VERSION` stays 52.** The v53 work was reverted with the engine.
+
+### Next session's first task
+
+**ROADMAP §9.0** — 19 queued. R96 is the oldest untouched; R94 is now scoped
+and waiting on the R87 retune.
+
 ## Session 172 — R93: the late game could not be lost ✅
 
 **ROADMAP §9.18.** Half the entry was right and much bigger than filed; the

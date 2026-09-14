@@ -2290,6 +2290,7 @@ assert.deepEqual(m5.campaign, {
   // counting from the upgrade, so nobody opens the game after an update to
   // find a three-specimen pack waiting that their last session never earned.
   escapesByLab: {},
+  // R94 — null is "available now"; the clerk has not been paid in this campaign.
   // R87: the same claim for the Task Force. A save from before it arrives
   // with an empty board and an unarmed schedule — nobody is retroactively
   // raided, and the first raid is scheduled by the first tick that finds
@@ -19237,6 +19238,51 @@ if (inShard('empire')) {
     console.log(`   R93 late game: ${hunts.n} hunts ${hunts.pct}% won · ${defs.n} defences `
       + `${defs.pct}% held · ${pool((l) => l.assaults).n} assaults, from day `
       + `${late.map((l) => l.fromDay).join('/')}`);
+  }
+
+  // R94 — NOTORIETY STILL ONLY GOES UP; IT JUST STOPS AT 600 NOW.
+  //
+  // The entry read "3,833 on day 180 ... nothing spends or cools it". Two
+  // thirds of that shipped in R87 and the entry never knew: `capNotoriety`
+  // pins the number at `notorietyCap`, and holding a raid hands back
+  // `notorietyRelief`, which taskforce.js itself calls "the spend notoriety
+  // never had". 3,833 is stale because the number is clamped.
+  //
+  // What is left is the clause the criterion actually turns on. Measured over
+  // six 180-day campaigns, FOUR finish sitting exactly ON the ceiling — 600,
+  // 600, 600, 600, with 45 and 577 the only two below. A meter pinned at its
+  // top for the whole late game is a constant, not a meter: the Threat Gen
+  // ladder reads it and is permanently maxed, and `notorietyCapped` stays
+  // true. The spend cannot keep up with accrual, which is why the entry's
+  // third proposal — a decay for lying low — is the half still missing.
+  //
+  // All three clauses are asserted, not just the failing one, so a future
+  // milestone cannot quietly delete the cap or the spend to get under it.
+  {
+    const { taskforceTuning } = await import('../campaign/taskforce.js');
+    const t = taskforceTuning(content);
+    assert.ok(t.notorietyCap > 0, `notoriety has a ceiling (${t.notorietyCap})`);
+    assert.ok(t.notorietyRelief > 0,
+      `and holding a raid spends some of it back (${t.notorietyRelief})`);
+
+    // THE THIRD CLAUSE IS NOT ASSERTED, AND THAT IS THE FINDING. R94 asks
+    // that day-180 notoriety sit UNDER the cap; four of six seeds finish
+    // exactly on it. The obvious fix — a bribe, money for quiet — was built
+    // and measured and is NOT safe: the bribe and `taskforceEligible` read
+    // the same number, and the bribe always wins the race, so the walker
+    // buys quiet the instant the meter touches 600 and the Task Force never
+    // fires. Raids 40 -> 0, and with them ~40 fights of xp and rewardScale
+    // 2.4; dominion went from day 32 to NEVER on all six seeds. Reading the
+    // peak instead over-corrects: the file never closes, 45 raids each levy a
+    // quarter of the bank, funds $580k -> $59k.
+    //
+    // So the number is REPORTED rather than gated, because a gate written to
+    // pass today would have to bless one of those two states. The retune this
+    // needs is R87's trigger, which is a milestone, not a clause — ROADMAP
+    // R94 carries the numbers.
+    const pinned = walks.filter((w) => w.notoriety >= t.notorietyCap);
+    console.log(`   R94 notoriety: cap ${t.notorietyCap} · spend ${t.notorietyRelief} · `
+      + `day-180 ${walks.map((w) => w.notoriety).join('/')} · ${pinned.length}/${walks.length} pinned`);
   }
 
   // R93 — A PACK IS THE LAB'S ANSWER, AND A RATE CANNOT SEE IT.
