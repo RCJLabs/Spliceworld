@@ -3070,8 +3070,16 @@ const BREAKS = [
   {
     // The other direction: the count beside the list stops matching the list.
     // Typed numbers are exactly what R77 was filed for.
+    //
+    // R167 — this anchored on the literal '**19 entries queued.**' and went
+    // stale the first time a milestone shipped, which is the one thing an
+    // anchor may not do: --anchors caught it, but a break that needs editing
+    // every session is a break that will one day be edited wrong. So it
+    // patches the LIST instead, past a prefix no count can move, and breaks
+    // the same rule both ways at once — the list is one longer than the
+    // stated size, and R999 is not an entry §9 has.
     n: 277, gate: ROADMAP, name: 'the queue states a size the list does not have',
-    file: 'ROADMAP.md', anchor: '**19 entries queued.**', to: '**20 entries queued.**',
+    file: 'ROADMAP.md', anchor: ' entries queued.**', to: ' entries queued.** R999,',
   },
   {
     // The defect itself: a paragraph somewhere else in the document calls a

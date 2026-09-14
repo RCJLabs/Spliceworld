@@ -662,8 +662,19 @@ async function main() {
       console.log('');
     }
     const eagerKb = [...eager.values()].reduce((n, b) => n + b, 0) / 1024;
+    // R167 — R153 said to read RUNS_NOTHING_BUT_BELONGS as a bill, and a bill
+    // whose total nobody prints is a settled account by another name. The
+    // line COUNT is not the total: a module the engine reads for constants is
+    // eager and runs nothing by construction, so splitting one adds a line
+    // rather than removing it (R167 split `battle/moves.js` and the list
+    // still holds four names). The figure that can move is the weight behind
+    // them — 18.2 KB before R167, 11.0 after — so it prints on every run,
+    // not only under --report where no gate ever looks.
+    const excusedKb = idle.filter((f) => f in RUNS_NOTHING_BUT_BELONGS)
+      .reduce((n, f) => n + eager.get(f), 0) / 1024;
     console.log(`boot: ${eager.size} modules compiled eagerly (${eagerKb.toFixed(1)} KB), `
-      + `${idle.length} of them running nothing on either first paint`);
+      + `${idle.length} of them running nothing on either first paint `
+      + `(${excusedKb.toFixed(1)} KB excused by name)`);
   } finally {
     try { cdp?.ws.close(); } catch { /* already gone */ }
     proc.kill();

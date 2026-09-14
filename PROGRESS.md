@@ -1,5 +1,78 @@
 # PROGRESS
 
+## Session 174 — R167: both caps come down, and the bill gets a total ✅
+
+**ROADMAP §9.0 → §9.18.** R93 raised two budgets by 2.9 KB and left the levers
+that would pay them back priced rather than taken. This is the repayment.
+
+### The split
+
+`battle/moves.js` was 12.0 KB eager, and the engine reads five small things
+from it — `MOVE_SLOTS`, `activeMoves`, `defaultPick`, `partMoveId`,
+`comboMoveId`, all synchronous in `statblock.js` and `engine.js`. The rest was
+prose (`moveSummary`, `moveDetail`, `keywordEffect`, `tagNote`), read only by
+`battle/ui.js` and `splice/pens-ui.js`, both lazy. The prose moved to the new
+**`battle/move-text.js`**; the leaf stayed.
+
+| budget | R93 left it | R167 lands it | measured |
+| --- | ---: | ---: | ---: |
+| `FIRST_PAINT_KB` | 1030 | **1027** | 1027 KB, 82 requests, 226ms |
+| `KB_CAP` | 557 | **554** | 553.9 KB over 48 modules |
+
+R93 found these at 1027 and 555 before raising them, so first paint returns
+**exactly** to where it stood and eager JS lands a kilobyte **under** it — the
+raises are repaid, not absorbed. R50's two declaration rules both fired on the
+new module — the `sw.js` precache list and `tools/smoke.js`'s module-note
+registry.
+
+### My own Done-when had a clause that measured the wrong thing
+
+*"…the exemption list in `tools/boot.js` is shorter by at least one line."* It
+is not, and it could not have been: a module the engine reads for **constants**
+is eager and runs nothing by construction, so splitting one **adds** a leaf.
+`RUNS_NOTHING_BUT_BELONGS` still holds four names. What moved is the weight —
+`moves.js` 12.0 → 4.8 KB, the whole bill **18.2 → 11.0 KB** — so `boot.js` now
+prints that total on every run (`4 of them running nothing on either first
+paint (11.0 KB excused by name)`) instead of only under `--report`, where no
+gate has ever looked. The clause was corrected in the entry, with the reason.
+
+### An anchor that had to be edited every session
+
+`--anchors` went red on break 277, which anchored on the literal
+`**19 entries queued.**` — R166's own count, which changes the moment any
+milestone ships. It now patches the list past a prefix no count can move
+(`' entries queued.**'` → `+ ' R999,'`), breaking the same rule both ways: the
+list is one longer than the stated size, and R999 is not an entry §9 has.
+
+### Known issues
+
+- **Both caps sit at their measurement** — 1027.0 against 1027, 553.9 against
+  554. That is the ratchet working as intended, and it means the next byte of
+  eager JS is a deliberate decision, not an accident.
+- **The data lever is still untaken**, and not for time: 3.1 KB of empty
+  `"tags": []` / `"keywords": {}` behind a **62-site read audit** (32 `.tags`,
+  30 `.keywords`) and a `gen-parts.js` change under R127's byte-exact gate. It
+  moves first paint and **not** eager JS — R153's warning, which R140 already
+  got wrong once.
+- **`campaign/monologue.js` (4.1 KB) is the next line on the bill** and the
+  same shape `moves.js` was, but it only leaves the eager graph if
+  `campaign/campaign.js` does, and that is a milestone rather than a clause.
+- **R159 reconfirmed, from the other side.** I started `--only 277` and
+  `--only 283` as two concurrent runs to save wall-clock; both baselines then
+  false-redded the height gate (`pens` and `theater` — THE PAGE DID NOT
+  SETTLE). Two batteries share a box exactly as badly as a battery and
+  `npm test` do. Killed both, re-ran as one `--only 277,283`, which pays for
+  the baseline once anyway. **There was never a saving to collect.**
+
+**The lesson:** *a criterion can be precise and still point at the wrong unit.
+"One line shorter" was unattainable by construction; "7.2 KB lighter" was the
+thing I actually did, and nothing was measuring it.*
+
+### Next session's first task
+
+**ROADMAP §9.0** — 18 queued. R96, "creatures that move", is the oldest
+untouched and now has the first-paint headroom it was waiting on.
+
 ## Session 173 — R94: built the bribe, measured it, reverted it ⏸
 
 **ROADMAP §9.18.** R94 is **still queued**, deliberately. Two thirds of it had
