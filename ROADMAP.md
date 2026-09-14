@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**19 entries queued.** R93, R94, R96, R100, R102, R104, R105, R107, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
+**19 entries queued.** R94, R96, R100, R102, R104, R105, R107, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R167.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -2151,7 +2151,75 @@ R102; R88–R90 remain.)*
   removing the planner's exclusion fails the build.
 
 - **R93 — Breakouts and contests are the whole late game, and neither has
-  stakes.** After dominion: **157 breakout hunts at 1.1 a day, 100% won**,
+  stakes.** ✅ *Shipped — one half of the premise confirmed and much bigger
+  than filed, the other half refuted.*
+
+  #### Re-measured before building, over six 180-day campaigns
+
+  | the entry said | today |
+  | --- | --- |
+  | 157 hunts at 1.1/day, **100% won** | **1,624 hunts**, 1.12–2.72/day, **99.0% won** |
+  | 8 assaults | 99 assaults |
+  | 93 defences at **92%** | 483 defences at **82.4%** — already under the bar |
+  | "the only cost of a loss is suspended income" | false: `resolveContest` drops the node out of `heldNodes` |
+
+  So the **defence half was already done**, and its stated cause was wrong —
+  you lose the county, not its rent. Its rule ships green, to keep it that
+  way. By volume the late game *is* the hunt: 1,624 against 483 and 99.
+
+  And the hunt was not drift. R82 designed it — *"NO DEADLINE … IT IS NOT
+  ABOUT LAND. No node, no income, no suspension"* — and `resolveBreakout`
+  returns `cleared: false` on a loss, so the escapee stays on the board and
+  you try again. Every one of those is a good reason for a system that exists
+  to put rival anatomy in front of the player. None is a reason the fight
+  should be a formality.
+
+  #### What ships: escapee packs
+
+  The entry's own first proposal, and the machinery really was already built:
+  `rivalSpecimen` takes `dossier` and `counter`, and `rivalDossier` computes
+  what a lab has learned about your stable from duels against **them**. So a
+  pack is the lab's considered answer, not more bodies — the second one is
+  built for whatever you have been winning with. `SAVE_VERSION` 51 → **52**,
+  with `pack` normalised and `escapesByLab` started at zero rather than
+  backdated: inventing opponents inside a running campaign is a difficulty
+  change applied retroactively, not a migration.
+
+  #### Three things measurement caught that guessing would not have
+
+  1. **Keyed on defeats, it does nothing.** The obvious key is rival defeats —
+     the number that already scales an escapee's power. Defeats top out at
+     **2–6** over a whole campaign (the walker duels each rival about five
+     times in half a year), so seeds 2026 and 4242 formed **not one pack** and
+     stayed at 99.2%. Escapes per lab run to ~56 and are what the entry asked
+     for in the first place.
+  2. **Counting bodies compounds.** A pack of three adds three to the tally
+     deciding the next pack's size: pairs to triples to triples-everywhere in
+     about thirty days. Measured **53.2% won**, with a third *more* hunts.
+  3. **A lost hunt leaves the pack on the board.** So a harsher setting buys
+     its win rate partly by making the player re-fight the same pack, which is
+     grind rather than stakes. That is why `25/60/3` (87.2% on the gate's
+     seeds, +3% hunts) was chosen over `22/55/3` (81.4%, +17% hunts).
+
+  #### What it cost, and what is now queued
+
+  Two budgets, both by the same 2.9 KB of eager JS in `campaign/breakout.js`
+  — which is eager legitimately, since `world.js` imports `tickBreakouts` for
+  the boot tick. Comments moved here first (R130's rule, R161's example),
+  paying back 2 of the original 5 KB; the rest is code. First paint 1027 →
+  **1030**, eager JS 555 → **557**, both priced in their notes. The levers
+  that would give the room back are measured and **queued as R167**.
+
+  **The lesson:** *a key that already exists is not the same as a key that
+  moves. Defeats scale the specimen and top out at six; escapes are the number
+  the late game actually produces.*
+
+  *Done when: post-dominion breakout and defence win rates are under 90% on
+  the walker's diet, and the walk still reaches day 180 solvent.* Across six
+  seeds: hunts **99.0% → 82.4%**, defences **81.8%**, no seed broke, min funds
+  $164. Breaks 279–282.
+
+  The original entry, for the record: After dominion: **157 breakout hunts at 1.1 a day, 100% won**,
   against 8 assaults; **93 defences at 92%**, where the only cost of a loss
   is suspended income. Proposed, medium: **escapee packs** — a lab that has
   lost N specimens sends them back together, with the rival's counter-bias
@@ -2161,6 +2229,36 @@ R102; R88–R90 remain.)*
   days pays a bonus and its loss costs a facility level. *Done when:
   post-dominion breakout and defence win rates are under 90% on the walker's
   diet, and the walk still reaches day 180 solvent.*
+- **R167 — Two budgets, two levers, and both of them measured.** Queued out
+  of R93, which raised both caps by 2.9 KB and left this priced rather than
+  taken. Neither lever is speculative; both have numbers.
+
+  **First paint** (`FIRST_PAINT_KB`, now 1030). The empty `"tags": []` and
+  `"keywords": {}` in the data files — priced at 8.5 KB in R149, re-counted at
+  7.0 in R153, and **re-measured at 3.1 KB on today's files** (2.6 KB of it in
+  `parts.json`). It costs a read-site audit: **32 unguarded `.tags` reads**
+  across `director.js`, `ranch/ui.js`, `operations.js`, `theater.js` and
+  `dossier.js` must tolerate an absent key rather than an empty one. And
+  `parts.json` is generated, so `tools/gen-parts.js` has to stop emitting the
+  empties — R127 holds it to reproducing the file exactly, which is the gate
+  that will prove the change is content-neutral.
+
+  **Eager JS** (`KB_CAP`, now 557). The data fix does not move this by a byte
+  — R153's warning, and R140 got it wrong once already. The lever here is
+  `battle/moves.js` (7.2 KB), and the exemption note has been wrong about why
+  it stays: "more than one eager importer" is true and is not the question.
+  `statblock.js` and `engine.js` take five small things from it — `MOVE_SLOTS`,
+  `activeMoves`, `defaultPick`, `partMoveId`, `comboMoveId` — while the bulk
+  (`moveSummary`, `moveDetail`, `keywordEffect`, `tagNote`) is read only by
+  `battle/ui.js` and `splice/pens-ui.js`, both lazy. So the move is a **split**
+  — the leaf the engine reads, the descriptions the screens read — across six
+  importers of battle-critical code. `campaign/monologue.js` (4.1 KB) is the
+  same shape and worth checking after.
+
+  *Done when: both caps come DOWN rather than up, the entry states what they
+  land at, and the exemption list in `tools/boot.js` is shorter by at least one
+  line — read as a bill, which is what R153 said it was.*
+
 - **R94 — Notoriety is a number that goes up.** **3,833 on day 180**; the
   Threat Gen ladder is its only reader and tops out at Gen 3; every job adds
   heat and nothing spends or cools it. Proposed, medium: notoriety as a

@@ -1,5 +1,84 @@
 # PROGRESS
 
+## Session 172 — R93: the late game could not be lost ✅
+
+**ROADMAP §9.18.** Half the entry was right and much bigger than filed; the
+other half was already done and its stated cause was wrong.
+
+### Re-measured first, six 180-day campaigns
+
+| the entry said | today |
+| --- | --- |
+| 157 hunts at 1.1/day, **100% won** | **1,624 hunts**, 1.12–2.72/day, **99.0% won** |
+| 8 assaults | 99 assaults |
+| 93 defences at **92%** | 483 at **82.4%** — already under the criterion's bar |
+| loss costs "suspended income" | false — `resolveContest` drops the node out of `heldNodes` |
+
+By volume the late game **is** the hunt: 1,624 against 483 defences and 99
+assaults. And it was not drift — R82 designed the board that way, and
+`resolveBreakout` returns `cleared: false` on a loss so the escapee stays put.
+Good reasons for a system that exists to show the player rival anatomy; none
+of them a reason the fight should be a formality.
+
+### What ships
+
+**Escapee packs** — the entry's own first proposal. A lab that has lost N
+specimens sends them back together, built through `rivalSpecimen` with
+`rivalDossier`, so the extras carry R27's counter-bias and the pack is the
+lab's considered answer rather than more bodies. `SAVE_VERSION` 51 → **52**;
+`escapesByLab` starts at zero rather than backdated.
+
+### Three things the measurement caught
+
+1. **Keyed on defeats it does nothing.** Defeats top out at **2–6** a
+   campaign, so two of six seeds formed no pack at all and stayed at 99.2%.
+   Escapes per lab run to ~56 — and are what the entry actually asked for.
+2. **Counting bodies compounds** — 53.2% won and a third *more* hunts.
+3. **A lost hunt leaves the pack on the board**, so a harsher setting buys its
+   win rate with grind. `25/60/3` (87.2%, +3% hunts) over `22/55/3` (81.4%,
+   +17%).
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| post-dominion hunts won | 99.0% | **82.4%** |
+| post-dominion defences held | 82.4% | **81.8%** |
+| hunts, six seeds | 1,624 | 1,736 |
+| broke hours, any seed | 0 | **0** |
+| `SAVE_VERSION` | 51 | **52** |
+| breaks | 272 | **276** |
+
+### What BATTERY_EXIT caught that the summary line hid
+
+`4 breaks · 4 caught · 0 missed` sitting on **three red baseline gates**:
+smoke's hand-written campaign shape didn't know `escapesByLab`; `sw.js` still
+said `spliceworld-v51`, so the migration would have shipped to nobody; and
+boot was 5 KB over budget — mine, proved by reverting `campaign/`.
+
+Two budgets moved, both for the same 2.9 KB: first paint 1027 → **1030**,
+eager JS 555 → **557**. Comments went to the ROADMAP first (R130's rule),
+paying back 2 of the original 5 KB. `breakout.js` is eager legitimately —
+`world.js` imports `tickBreakouts` for the boot tick — so R153's dead-module
+lever does not apply here.
+
+### Known issues
+
+- **Both caps went up**, which R153's note warns about. The two levers that
+  give the room back are measured and **queued as R167**: 3.1 KB of empty data
+  keys (32 read sites + a `gen-parts.js` change) and a `battle/moves.js` split
+  (five small exports the engine reads, the description half the screens read).
+- **The eager-JS note was wrong about why `moves.js` stays exempt** — "more
+  than one eager importer" is true and is not the question. Corrected in place.
+- **87.2% on the gate's four seeds against a 90% bar** is 2.8pp of headroom.
+  The walks are deterministic so a red means something real moved, but it is
+  tighter than the six-seed 82.4% suggests.
+
+### Next session's first task
+
+**ROADMAP §9.0** — 19 queued. R94 is the oldest; R167 is the newest and is the
+one that pays back this milestone's debt.
+
 ## Session 171 — R166: the queue lied about itself ✅
 
 **ROADMAP §9.18 / new §9.0.** The session started on R54, "saves you can
