@@ -2951,7 +2951,9 @@ const BREAKS = [
   {
     n: 41, gate: BREAKOUT, name: 'the briefing stops being the specimen on the board',
     file: 'campaign/breakout.js',
-    anchor: '    waves: [loose.unit],',
+    // R93 — re-aimed. The line was `waves: [loose.unit]`; a loose entry is now
+    // a leader plus a pack and every reader goes through `packOf`.
+    anchor: '    waves: packOf(loose),',
     to: "    waves: ['riot_squad'],",
   },
   // --- gate: roadmap (the design doc describes the shipped game) -----------
@@ -2994,6 +2996,44 @@ const BREAKS = [
     to: '### 4.0b Retired',
   },
 
+  // R93 — the late game has stakes. Four breaks: the tuning that makes a pack
+  // a pack, the threshold that decides whether one ever forms, the
+  // counter-bias that makes it the lab's answer rather than more bodies, and
+  // the tally its size is keyed on. Each aims at a different way the hunt
+  // could quietly go back to being a formality.
+  {
+    // The ceiling drops to one and every escapee is solo again — which is
+    // exactly the shipped game before this milestone, at 99.0% won.
+    n: 279, gate: EMPIRE, name: 'the pack is capped at one and the hunt is a formality again',
+    file: 'data/breakout.json', anchor: '"maxSize": 3,', to: '"maxSize": 1,',
+  },
+  {
+    // Packs shipped, tested, and never actually formed. R93's first draft
+    // keyed on rival DEFEATS and failed exactly this way on two of six seeds:
+    // defeats top out at 2-6 over a campaign and the threshold was 3.
+    n: 280, gate: EMPIRE, name: 'the pack threshold is raised past what a campaign ever reaches',
+    file: 'data/breakout.json', anchor: '"afterEscapes": 25,', to: '"afterEscapes": 9999,',
+  },
+  {
+    // The extras stop carrying R27's dossier, so a pack is more bodies rather
+    // than the lab's considered answer. The entry asked for the counter-bias
+    // by name; this says it is still wired.
+    n: 281, gate: EMPIRE, name: 'a pack stops answering your stable and is just more bodies',
+    file: 'campaign/breakout.js',
+    anchor: '      counter: dossier?.counterClass ?? null,',
+    to: '      counter: null,',
+  },
+  {
+    // The tally counts bodies again. It compounds — pairs to triples to
+    // triples-everywhere in about thirty days — and measured 53.2% won with a
+    // third more hunts, because a lost hunt leaves the pack on the board to be
+    // fought again. Aimed at the direction the defect goes, not only at its
+    // absence.
+    n: 282, gate: EMPIRE, name: 'the escape tally counts bodies again and the escalation runs away',
+    file: 'campaign/breakout.js',
+    anchor: '  cam.escapesByLab[rivalId] = (cam.escapesByLab[rivalId] ?? 0) + 1;',
+    to: '  cam.escapesByLab[rivalId] = (cam.escapesByLab[rivalId] ?? 0) + 3;',
+  },
   // R166 — the queue. Four rules, four breaks. Each aims at a DIFFERENT way
   // the roadmap can lie about what is built, because the one that actually
   // happened (a sentence in §9.18 calling fifteen shipped entries queued)
