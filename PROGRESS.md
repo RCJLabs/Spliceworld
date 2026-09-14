@@ -56,7 +56,7 @@ the queue, which is the part a session reads before choosing what to build.
 | entries actually queued | claimed 35, named 34 | **19, derived** |
 | entries claimed queued that had shipped | 15 | **0** |
 | rules in `tools/roadmap.js` | 2 | **5** |
-| breaks | 272 | **276** |
+| breaks | 268 | **272** |
 
 ### Known issues
 
@@ -67,8 +67,27 @@ the queue, which is the part a session reads before choosing what to build.
   does exactly that.
 - **PROGRESS.md is not gated**, deliberately: it is dated history and gets the
   same exemption §6 onward has. Its stale lines are annotated, not rewritten.
+- **The one exemption inside ROADMAP is §9.0's list paragraph**, which rule 3b
+  already checks id by id. The first cut exempted the whole §9.0 section, which
+  would have left the one block a session is told to trust as the one block
+  nothing reads — narrowing it went red immediately on §9.0's own prose.
 - **19 queued entries, and 12 of them are R107–R118** — a single sixth-audit
   block nobody has pulled from. That is now visible rather than buried.
+
+### Verification
+
+`node tools/roadmap.js` green · `--anchors` 272 match exactly once · baseline
+34/34 · `--only 275,276,277,278` 4 caught 0 missed. `npm test` **run alone**:
+723 CPU-seconds of 820, 192s wall on 3.8 effective lanes, cache warm. **Full
+battery** — two triggers due at once, the five-milestone rot check since R159
+and a milestone that touches an existing gate's file: **272 breaks, 272 caught,
+0 missed, `BATTERY_EXIT=0`**. Breaks 49–53 confirm R77's two original
+directions still bite with `checkQueue` folded into `checkRoadmap`.
+
+No runtime code changed. `SAVE_VERSION` stays **51**, no save schema moved and
+no screen was touched, so the reload, fresh-save, migrated-save and 380px
+clauses are carried by the unchanged build the battery's browser gates
+(`boot`, `a11y`, `height`, `union`) just passed.
 
 ### Next session's first task
 
