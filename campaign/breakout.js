@@ -31,7 +31,7 @@
 // SOURCE of specimens, not a second way to own one.
 
 import { rngStream } from '../util/rng.js';
-import { rivalList, rivalRecord, rivalSpecimen } from './rivals.js';
+import { rivalList, rivalRecord, rivalSpecimen, rivalDossier } from './rivals.js';
 import { rivalOf } from '../data/catalog.js';
 
 const HOUR = 3600000;
@@ -116,6 +116,60 @@ function scheduleNext(state, content, from) {
   cam.nextBreakAt = from + Math.round(pacing(state, content).cooldownHours * jitter * HOUR);
 }
 
+// R93 — HOW MANY COME BACK.
+//
+// Measured before this was written: post-dominion the walk fought 1,624
+// escapee hunts across six 180-day campaigns — 3.4x more hunts than defences
+// — and won 99.0% of them. One wave, one specimen, every time, for the rest
+// of the game. R82's reasons for a standing board with no deadline and no
+// land at stake are all still good; none of them was a reason the fight
+// itself should be a formality.
+//
+// KEYED ON THE LAB'S OWN LOSSES, and the first draft got this wrong in a way
+// worth keeping: it keyed on DEFEATS — how many times you have beaten that
+// rival in a duel — because that is the number already scaling an escapee's
+// power. Measured over six 180-day campaigns, defeats top out at 2 to 6. The
+// walker duels each rival about five times in half a year, so any rule that
+// waits for a third defeat is waiting on something two of six campaigns never
+// reach: seeds 2026 and 4242 produced not one pack, and the late game was
+// exactly as free as before.
+//
+// Escapes are the number the late game actually produces — 199 to 398 per
+// campaign, across five labs — and they are also what the entry asked for in
+// the first place: "a lab that has lost N specimens sends them back
+// together". A lab bleeding stock is a lab whose fences are the problem, and
+// the fences get worse as the campaign runs, which is where the criterion
+// lives.
+//
+// Data, not code: `maxSize` is the only thing standing between this and a
+// twelve-specimen wall, and it belongs where a designer can see it.
+export function escapesFrom(state, rivalId) {
+  return (state.campaign?.escapesByLab ?? {})[rivalId] ?? 0;
+}
+
+// Counts ESCAPES, not bodies — and the first draft counted bodies, on the
+// reasoning that a lab which loses three at once has lost three. It compounds:
+// a pack of three adds three to the tally that decides the next pack's size,
+// so the county goes from pairs to triples to triples-everywhere in about
+// thirty days. Measured, that draft took post-dominion hunts to 53.2% won and
+// raised the hunt COUNT by a third, because a lost hunt leaves the pack on the
+// board to be fought again.
+//
+// One escape is one event. The escalation stays linear and stays tunable.
+function noteEscape(cam, rivalId) {
+  cam.escapesByLab ??= {};
+  cam.escapesByLab[rivalId] = (cam.escapesByLab[rivalId] ?? 0) + 1;
+}
+
+export function packSize(content, escapes) {
+  const p = breakoutTuning(content).pack ?? {};
+  const after = p.afterEscapes ?? Infinity;
+  const per = Math.max(1, p.escapesPerExtra ?? 12);
+  const max = Math.max(1, p.maxSize ?? 1);
+  if (!(escapes >= after)) return 1;
+  return Math.min(max, 2 + Math.floor((escapes - after) / per));
+}
+
 // The specimen itself. Built by the rival generator, so a loose one is
 // indistinguishable from one still on the ladder — it was on the ladder.
 // `idSuffix` keeps a rival's escapees distinct from that rival's current
@@ -144,16 +198,45 @@ function makeEscapee(state, content, rival, n, now) {
     index: Math.floor(rng() * Math.max(1, rival.frames.length)),
     powerScale, idSuffix: `loose${n}`, wild,
   });
+  // R93 — THE REST OF THE PACK, through the same generator and R27's own
+  // dossier. The entry asked for "the rival's counter-bias (R27's machinery,
+  // already built)" and it is genuinely already built: `rivalSpecimen` takes
+  // `dossier` and `counter`, and `rivalDossier` computes what this lab has
+  // learned about your stable from duels against THEM. Passing it here means
+  // a pack is not just more bodies, it is the lab's considered answer — the
+  // second one is built for whatever you have been winning with.
+  //
+  // `index` walks from 1 so the counter lands the way rivalSpecimen already
+  // decides it does, rather than this file re-implementing that rule.
+  const size = packSize(content, escapesFrom(state, rival.id));
+  const dossier = size > 1 ? rivalDossier(state, rival, content) : null;
+  const pack = [];
+  for (let i = 1; i < size; i++) {
+    pack.push(rivalSpecimen(rival, content, {
+      rng, meta, defeats: record.defeats ?? 0, index: i, dossier,
+      counter: dossier?.counterClass ?? null,
+      powerScale, idSuffix: `loose${n}p${i}`, wild,
+    }));
+  }
   const sightings = t.sightings ?? [];
+  const power = unit.power + pack.reduce((sum, u) => sum + u.power, 0);
   return {
     id: `loose-${n}`,
     rivalId: rival.id,
     unit,
+    // Always an array, never absent: a field that is sometimes missing is a
+    // field every reader has to remember to default, and the save gate reads
+    // a new game as the specification for every migrated one.
+    pack,
     wild: !!wild,
     traits: unit.traits ?? [],
     escapedAt: now,
     sighting: sightings.length ? sightings[Math.floor(rng() * sightings.length)] : 'somewhere in the county',
-    reward: Math.round((t.rewardBase ?? 140) + unit.power * (t.rewardPerPower ?? 5)),
+    // A pack is worth more than one, and by less than its head count: the
+    // extras are the lab's problem, not a jackpot. `rewardPerExtra` prices
+    // them in data so the ratio is tunable without an engine edit.
+    reward: Math.round((t.rewardBase ?? 140) + power * (t.rewardPerPower ?? 5)
+      * (pack.length ? 1 - (1 - (t.pack?.rewardPerExtra ?? 1)) * (pack.length / (pack.length + 1)) : 1)),
   };
 }
 
@@ -212,6 +295,7 @@ export function tickBreakouts(state, content, now, since = now) {
       const one = makeEscapee(state, content, lab, cam.breakoutCount, since);
       cam.loose.push(one);
       cam.breakoutCount += 1;
+      noteEscape(cam, lab.id);
       burst.push({ ...one, lab: lab.name });
     }
     escaped.push(...burst);
@@ -236,6 +320,7 @@ export function tickBreakouts(state, content, now, since = now) {
     const escapee = makeEscapee(state, content, rival, cam.breakoutCount, due);
     cam.loose.push(escapee);
     cam.breakoutCount += 1;
+    noteEscape(cam, rival.id);
     escaped.push({ ...escapee, lab: rival.name });
     scheduleNext(state, content, due);
   }
@@ -244,6 +329,13 @@ export function tickBreakouts(state, content, now, since = now) {
 
 // The encounter. One specimen, inline, so nothing has to exist in
 // enemies.json for a creature the player's own rival invented this morning.
+// R93 — every wave of a loose entry, leader first. One accessor because a
+// save written before packs existed has no `pack` at all, and a default
+// spelled in five places is a default that will be spelled wrong in one.
+export function packOf(loose) {
+  return loose ? [loose.unit, ...(loose.pack ?? [])] : [];
+}
+
 export function breakoutEncounter(state, content, id) {
   const loose = looseById(state, id);
   if (!loose) return null;
@@ -253,10 +345,14 @@ export function breakoutEncounter(state, content, id) {
     id: `breakout_${loose.id}`,
     breakoutId: loose.id,
     rivalId: loose.rivalId,
-    name: `${loose.unit.name} — loose`,
-    blurb: `${loose.unit.name} was ${loose.sighting}. ${t.blurb ?? ''}`.trim(),
-    intel: (t.intel ?? '').replace('{lab}', rival?.name ?? 'somebody'),
-    waves: [loose.unit],
+    name: packOf(loose).length > 1
+      ? `${loose.unit.name} +${packOf(loose).length - 1} — loose`
+      : `${loose.unit.name} — loose`,
+    blurb: `${loose.unit.name} was ${loose.sighting}. `
+      + `${packOf(loose).length > 1 ? (t.pack?.blurb ?? '') : (t.blurb ?? '')}`.trim(),
+    intel: ((packOf(loose).length > 1 ? t.pack?.intel : null) ?? t.intel ?? '')
+      .replace(/\{lab\}/g, rival?.name ?? 'somebody'),
+    waves: packOf(loose),
     reward: loose.reward,
     tier: null,
   };
