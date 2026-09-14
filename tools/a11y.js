@@ -1025,6 +1025,10 @@ async function main() {
         const r = document.querySelector('#screen-pens');
         window.__r104 = [...r.querySelectorAll('[data-fold]')]
           .map((b) => b.closest('section, article, div')).filter(Boolean);
+        // The tapped card is SUPPOSED to be rebuilt - it is the one whose
+        // markup changed. The rule is about the others.
+        const tapped = r.querySelector('[data-fold]')?.closest('section, article, div');
+        window.__r104 = window.__r104.filter((el) => el !== tapped);
         const before = window.__r104.length;
         r.querySelector('[data-fold]')?.click();
         return new Promise((res) => setTimeout(() => res(JSON.stringify({
@@ -1032,7 +1036,7 @@ async function main() {
         })), 450));
       })()`));
       if (identity.before > 1 && identity.after < identity.before) {
-        note(`opening one pen destroyed ${identity.before - identity.after} of ${identity.before} cards on the screen`
+        note(`opening one pen destroyed ${identity.before - identity.after} of the ${identity.before} cards it did NOT touch`
           + ' — every card is rebuilt because one of them changed');
       }
 
@@ -1413,16 +1417,19 @@ async function main() {
       // probe node DISAPPEAR, because every repaint replaced every node. Both
       // halves of that changed: the tick no longer paints a world that did
       // not move, and a paint now keeps the nodes whose markup is unchanged.
-      // So the world is made to move two minutes — what a player hands the
-      // shell by coming back to a tab — and the repaint is proven by watching
-      // for ANY mutation rather than for a particular node's death. Nothing
-      // here takes focus, which is what is being measured.
+      // So the world is made to move TWO HOURS. Two minutes was the first
+      // try and it proved the fix rather than the focus: the report fired,
+      // the screen repainted, and the keyed paint correctly rewrote nothing,
+      // leaving no mutation to observe. A repaint with no work in it cannot
+      // lose anyone's focus — but it cannot demonstrate keeping it either, so
+      // the clock moves far enough to change what the cards say. Nothing here
+      // takes focus, which is the thing being measured.
       const painted = Number(await evaluate(`(() => {
         let n = 0;
         const obs = new MutationObserver((rs) => { n += rs.length; });
         obs.observe(document.querySelector('.screen:not([hidden])'),
           { childList: true, subtree: true, attributes: true, characterData: true });
-        const R = Date.now.bind(Date); Date.now = () => R() + 120000;
+        const R = Date.now.bind(Date); Date.now = () => R() + 2 * 3600000;
         document.dispatchEvent(new Event('visibilitychange'));
         return new Promise((res) => setTimeout(() => { obs.disconnect(); res(n); }, 500));
       })()`));
