@@ -20343,7 +20343,24 @@ if (inShard('wire')) {
   // R161 — 554 -> 555, for the reason in tools/boot.js's FIRST_PAINT_KB
 // note: a shared `extractionFit` and a button that asks it, 724 bytes,
 // so a full vault stops offering a graduation it cannot finish.
-const KB_CAP = 555;
+// R93 — 555 -> 557, measured at 557.0, and it is the same 2.9 KB that moved
+// tools/boot.js's FIRST_PAINT_KB: escapee packs in `campaign/breakout.js`,
+// which is eager because `world.js` imports `tickBreakouts` for the boot tick.
+// What it buys is in that note and in ROADMAP R93 — post-dominion hunts went
+// from 99.0% won to 82.4%, on the verb that is 3.4x the rest of the late game.
+//
+// AND IT CORRECTS THIS NOTE'S OWN CLAIM ABOVE, which says `battle/moves.js`
+// (7.2 KB) is still exempt because it "has more than one eager importer".
+// True, and not the question. The eager importers — `statblock.js` and
+// `engine.js` — take five small things from it: MOVE_SLOTS, activeMoves,
+// defaultPick, partMoveId, comboMoveId. The bulk is `moveSummary`,
+// `moveDetail`, `keywordEffect` and `tagNote`, read only by `battle/ui.js`
+// and `splice/pens-ui.js`, both lazy. So the lever is not removal, it is a
+// SPLIT — the leaf the engine reads, and the descriptions the screens read —
+// which is R153's move with one more step. Six importers of a battle-critical
+// module is a milestone, not a paragraph, so it is QUEUED AS R167 beside the
+// data fix with its price attached.
+const KB_CAP = 557;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,
