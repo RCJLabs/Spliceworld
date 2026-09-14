@@ -1049,6 +1049,13 @@ async function main() {
       // Dex is the one screen whose weight is art rather than text, so it is
       // the one that has to earn what it draws before it is looked at.
       await evaluate(`document.querySelector('#tabs button[data-screen="dex"]').click()`);
+      // …ON THE TAB A PLAYER LANDS ON. The walk above visits every Dex
+      // subtab and leaves the screen on the LAST one, so measuring here
+      // without saying which view is meant measures whichever tab the
+      // previous rule happened to finish on — which is how this clause went
+      // green twice while the screen it names paints 274 KB.
+      await sleep(250);
+      await evaluate(`document.querySelector('#screen-dex #dex-subtabs button')?.click()`);
       // R159's rule, and this gate broke it on its first run: a 700ms sleep
       // measured the Dex mid-load — it is a LAZY screen, so what was on the
       // glass was still "Warming up the lab…" and the rule went green at
