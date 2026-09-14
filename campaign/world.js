@@ -32,8 +32,13 @@ export function elapsedSince(state, now) {
   return { since, dt: Math.max(0, now - since) };
 }
 
+// R107 — the pair this tick diffed, for the shell. See ROADMAP R107.
+export const lastTick = { dt: 0, before: null, after: null };
+
 export function tickWorld(state, content, now) {
   const before = worldSnapshot(state, now);
+  lastTick.dt = Math.max(0, now - (state.lastTickAt ?? now));
+  lastTick.before = before;
   const { since } = elapsedSince(state, now);
   // R91 — before anything else, because every system below this reads the
   // vault and none of them should have to wonder whether it is over its
@@ -86,9 +91,10 @@ export function tickWorld(state, content, now) {
   // so this is the one place that clamp lives.
   for (const line of tickTaskforce(state, content, now).news) pushNews(state, line);
   state.lastTickAt = now;
-  // R104 — WHAT MOVED; the shell repaints on this rather than on a timer,
-  // and R107 reads it to say what happened while nobody was home.
-  return changesBetween(before, worldSnapshot(state, now));
+  // R104 — WHAT MOVED; the shell repaints on this rather than on a timer.
+  const after = worldSnapshot(state, now);
+  lastTick.after = after;
+  return changesBetween(before, after);
 }
 
 // Scalars only, every one something a player would notice: a count rather

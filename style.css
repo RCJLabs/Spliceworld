@@ -2830,10 +2830,7 @@ button.dex-cell:focus-visible {
   color: var(--muted);
 }
 
-/* R107 — the welcome-back digest. Built entirely from the existing tokens, so
-   it inherits every theme (and R99's reduced-motion pass) rather than adding a
-   block per theme that the next theme would forget. Lives above the screens
-   and outside them; see index.html. */
+/* R107 — welcome-back digest; tokens only, so every theme inherits it. */
 .welcome {
   background: var(--panel);
   border: 1px solid var(--line);

@@ -1,28 +1,35 @@
-// R107 — the welcome-back card. LAZY, and that is the point.
+// R107 — the welcome-back card. LAZY, AND IT OWNS THE WHOLE DECISION.
 //
-// This is shown on the first load after a gap of six hours or more, which on
-// any normal week is a small minority of loads. Compiling it before every
-// first paint would be paying for it on all of them; `main.js` imports it
-// only once it already has lines to show. R74's split, same reasoning.
+// Shown on the first load after a gap of six hours or more, which on a normal
+// week is a small minority of loads. Everything about it lives behind that
+// import — the threshold, the digest, the phrasing of how long you were gone,
+// the dismissal — so the shell carries one line and one condition rather than
+// a feature it has to understand. R74's split, taken as far as it goes.
 //
-// The digest itself is DOM-free (campaign/digest.js) so the gate can assert
-// it against the tick's change report rather than against a screen. This
-// module is the other half: it knows nothing about what a line MEANS.
+// The digest itself is DOM-free (campaign/digest.js) so the gate can assert it
+// against the tick's change report rather than against a screen; this module
+// is the other half, and knows nothing about what a line MEANS.
 import { esc } from './cards.js';
+import { awayDigest, awayFor } from '../campaign/digest.js';
 
-export function renderWelcome(root, digest, onDismiss) {
-  if (!root) return;
-  if (!digest) {
-    root.hidden = true;
-    if (root.childElementCount) root.replaceChildren();
-    return;
-  }
-  root.hidden = false;
-  root.innerHTML = `<h2 id="welcome-h">While you were away — ${esc(digest.for)}</h2>`
-    + `<ul class="welcome-lines">${digest.lines.map((l) => `<li>${esc(l.text)}</li>`).join('')}</ul>`
-    + '<button type="button" id="welcome-dismiss">Right, back to work</button>';
-  // Bound by id rather than a `data-*` attribute: R89 reserves `data-*` for
-  // controls a screen's own walker presses, and this card is not on a screen
-  // — the same reason `#settings` in the footer is bound this way.
-  root.querySelector('#welcome-dismiss')?.addEventListener('click', onDismiss);
+export function showWelcome(root, tick, content, onDone) {
+  if (!root) return false;
+  const lines = awayDigest(tick.before, tick.after, tick.dt, content);
+  if (!lines.length) return false;
+  const paint = () => {
+    root.hidden = false;
+    root.innerHTML = `<h2 id="welcome-h">While you were away — ${esc(awayFor(tick.dt))}</h2>`
+      + `<ul class="welcome-lines">${lines.map((l) => `<li>${esc(l.text)}</li>`).join('')}</ul>`
+      + '<button type="button" id="welcome-dismiss">Right, back to work</button>';
+    // Bound by id rather than a `data-*` attribute: R89 reserves `data-*` for
+    // controls a screen's own walker presses, and this card is not on a screen
+    // — the same reason `#settings` in the footer is bound this way.
+    root.querySelector('#welcome-dismiss')?.addEventListener('click', () => {
+      root.hidden = true;
+      root.replaceChildren();
+      onDone?.();
+    });
+  };
+  paint();
+  return true;
 }

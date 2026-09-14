@@ -3055,6 +3055,47 @@ const BREAKS = [
     anchor: 'const DEX_EAGER_CELLS = 9;',
     to: 'const DEX_EAGER_CELLS = 99;',
   },
+  // R107 — welcome back. Four breaks, one per thing the milestone claims:
+  // the counters that let the report see an event that resolved inside the
+  // gap, the six-hour floor, the one-line-per-category rule, and the card
+  // actually reaching the glass.
+  //
+  // Break 291 is the one worth reading. `contestCount` is what R107 added to
+  // the snapshot precisely because `contested` ends a week where it started
+  // on three seeds in five; take it out again and the gate must notice that
+  // the week of siege has gone quiet, which is the whole premise.
+  {
+    n: 291, gate: TURNS, name: 'the report goes back to reading levels, so a week of convoys is silent',
+    file: 'campaign/world.js',
+    anchor: '    contestCount: c.contestCount ?? 0,',
+    to: '    contestCount: 0,',
+  },
+  {
+    // The threshold is about TIME. An hour away already moves funds, so a
+    // digest keyed on "did the report say anything" fires on a coffee break;
+    // dropping the floor to a minute is that mistake made concrete.
+    n: 292, gate: TURNS, name: 'the welcome-back card starts firing on a coffee break',
+    file: 'campaign/digest.js',
+    anchor: 'export const AWAY_MIN_MS = 6 * 3600000;',
+    to: 'export const AWAY_MIN_MS = 60 * 1000;',
+  },
+  {
+    // A line for a category that did not move is the wire again: twelve
+    // headings, most of them zero. The rule is one line per thing that
+    // CHANGED, and this removes the check that enforces it.
+    n: 293, gate: TURNS, name: 'the digest starts reporting categories that did not move',
+    file: 'campaign/digest.js',
+    anchor: '    if (a === b) continue;',
+    to: '    if (false) continue;',
+  },
+  {
+    // And the card itself. The a11y clause exists because this feature
+    // shipped once with the gate unable to see it at all.
+    n: 294, gate: A11Y, name: 'a week away opens the app with nothing to show for it',
+    file: 'main.js',
+    anchor: '  if (gap.dt >= 6 * 3600000) {',
+    to: '  if (false) {',
+  },
 
   // R96 — a creature that shows what it is. Three breaks, one per rule the
   // milestone added: the posture data that makes two temperaments two

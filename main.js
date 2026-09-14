@@ -13,7 +13,7 @@ import { renderRanchScreen } from './ranch/ui.js';
 // pull in the whole campaign module, and the director, the rehab wing and
 // the gauntlet behind it, for a five-line function that appends to an array.
 import { pushNews } from './campaign/wire.js';
-import { tickWorld, worldSnapshot } from './campaign/world.js';
+import { tickWorld, lastTick } from './campaign/world.js';
 import * as sfx from './audio/sfx.js';
 import { watchSignals, cuesFor } from './audio/sfx.js';
 import { renderIcon } from './ui/icons.js';
@@ -185,18 +185,6 @@ function applyTheme() {
 }
 
 let pendingSubtab = null;
-
-// R107 — the gap you just crossed, not saved state. Card is lazy. See R107.
-let welcome = null;
-
-async function paintWelcome() {
-  const { renderWelcome } = await import('./ui/welcome.js');
-  renderWelcome($('#welcome'), welcome, () => {
-    welcome = null;
-    paintWelcome();
-    $(`#tabs button[data-screen="${state.activeScreen}"]`)?.focus();
-  });
-}
 
 function showScreen(name, subtab) {
   if (!SCREENS[name]) name = 'ranch';
@@ -441,19 +429,17 @@ async function boot() {
   // time the dialog controller looks, focus is already back where the
   // player left it and its guard correctly does nothing.
   installFocusKeeper([...Object.keys(SCREENS).map((s) => $(`#screen-${s}`)), $('#overlay')].filter(Boolean));
-  // R107 — the only tick that spans a gap is the first after a load: snapshot
-  // before it, tick across it, diff after. See ROADMAP R107.
-  const since = state.lastTickAt ?? NOW();
-  const gapMs = Math.max(0, NOW() - since);
-  const beforeGap = worldSnapshot(state, since);
+  // R107 — the only tick that spans a gap is the first after a load, and it
+  // published the pair it diffed. COPIED before `showScreen`, which ticks
+  // again and would leave `lastTick` describing a zero-width gap.
   tick();
-  if (gapMs >= 6 * 3600000) {
-    const { awayDigest, awayFor, AWAY_MIN_MS } = await import('./campaign/digest.js');
-    const lines = awayDigest(beforeGap, worldSnapshot(state, NOW()), gapMs, content);
-    if (lines.length) welcome = { lines, for: awayFor(gapMs), min: AWAY_MIN_MS };
-  }
+  const gap = { ...lastTick };
   showScreen(state.activeScreen);
-  if (welcome) await paintWelcome();
+  if (gap.dt >= 6 * 3600000) {
+    const { showWelcome } = await import('./ui/welcome.js');
+    showWelcome($('#welcome'), gap, content,
+      () => $(`#tabs button[data-screen="${state.activeScreen}"]`)?.focus());
+  }
 
   // R81 — the geometry, now that there is something on screen. 400 KB of
   // `shapes` used to sit in front of the first paint; it is fetched here
