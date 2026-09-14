@@ -137,7 +137,7 @@ function variantsView(state, content) {
       const base = speciesOf(content, sp.variantOf);
       return `
         <div class="variant-row ${found ? '' : 'variant-locked'}">
-          <div class="variant-portrait">${creaturePortrait(stockGenome(sp.id, content), content, { idPrefix: `var-${sp.id}`, extraScale: 0.8 })}</div>
+          <div class="variant-portrait" data-portrait="${sp.id}"></div>
           <div style="flex:1;min-width:0">
             <strong>${found ? sp.name : '???'}</strong>
             ${found ? `<span class="variant-badge">✦ bred</span>` : ''}
@@ -502,6 +502,7 @@ export function renderDexScreen(root, ctx) {
   // Tap a species for the entry the grid has no room for: what it is, what
   // four of its parts buy you, and which of its six you have actually met.
   // A read-only sheet, so `onPick` closes and does nothing.
+  // Both views' cells, on whichever tab is showing.
   fillPortraits(root, content);
 
   root.querySelectorAll?.('button[data-species]').forEach((btn) => {
@@ -542,8 +543,13 @@ function fillPortraits(root, content) {
   const draw = (cell) => {
     const id = cell.dataset.portrait;
     if (!id || !content.species[id]) return;
+    // The prefix is not decoration: it keeps the clip-path ids unique when
+    // several creatures share a document, and the roster and the variants
+    // list can both hold the same species. Filling every cell with `dex-`
+    // would collide the two and clip one creature to the other's silhouette.
+    const variant = cell.classList.contains('variant-portrait');
     cell.innerHTML = creaturePortrait(stockGenome(id, content), content,
-      { idPrefix: `dex-${id}`, extraScale: 0.85 });
+      { idPrefix: `${variant ? 'var' : 'dex'}-${id}`, extraScale: variant ? 0.8 : 0.85 });
     delete cell.dataset.portrait;
   };
   if (typeof IntersectionObserver !== 'function') {
