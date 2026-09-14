@@ -6892,6 +6892,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'battle/statblock.js': null,
     'battle/ai.js': null,
     'battle/moves.js': null,
+    // R167 — the description half of moves.js, split out so the eager graph
+    // stops compiling it. Exempt for the same reason as the module it came
+    // from: a player meets a move's words on the battle screen and in the
+    // Pens, never as a system of its own.
+    'battle/move-text.js': null,
     'battle/forecast.js': null,
     'battle/readout.js': null,
     'battle/tagtext.js': null,
