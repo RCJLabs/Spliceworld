@@ -2296,7 +2296,49 @@ R102; R88–R90 remain.)*
   land at, and the exemption list in `tools/boot.js` is shorter by at least one
   line — read as a bill, which is what R153 said it was.*
 
-- **R94 — Notoriety is a number that goes up.** **3,833 on day 180**; the
+- **R94 — Notoriety is a number that goes up.** *Measured in Session 173, and
+  still queued — two thirds of it shipped in R87, and the remaining third is
+  not safe to add without retuning R87's trigger.*
+
+  **What is already built.** `capNotoriety` pins the number at
+  `notorietyCap` **600**, and holding a raid hands back `notorietyRelief`
+  **140** — `campaign/taskforce.js` calls that "the spend notoriety never
+  had" in its own comment. So the cap and the spend both exist, and **3,833
+  is stale precisely because the cap the entry asked for arrived**: the value
+  is clamped.
+
+  **What is still wrong.** Over six 180-day campaigns, **four finish sitting
+  exactly on the ceiling** (600, 600, 600, 600; 45 and 577 the only two
+  below). A meter pinned at its top for the whole late game is a constant:
+  the Threat Gen ladder reads it and is permanently maxed, `notorietyCapped`
+  never clears, and ~40 raids held at 140 apiece — **~5,600 of relief** — does
+  not bring it down.
+
+  **The entry's own decay is aimed at a state that never happens.** "Lying
+  low" needs quiet days; the walker has **148 heat-days out of 148**, and 129
+  of 130 on the next seed. There is no lying low in this game.
+
+  **The bribe was built, measured and reverted.** Money is the obvious lever
+  — post-dominion funds run $80k–$570k with little to spend them on — and the
+  implementation works. It is still wrong, for a reason that only shows up in
+  a walk: **the bribe and `taskforceEligible` read the same number, and the
+  bribe always wins the race.** The walker buys quiet the instant the meter
+  touches 600, so the Task Force never fires: raids **40 → 0**, taking ~40
+  fights of xp and `rewardScale` 2.4 with them, and **dominion goes from day
+  32 to NEVER on all six seeds**. Reading the peak instead over-corrects — the
+  file never closes, 45 raids each levy a quarter of the bank, funds **$580k →
+  $59k**. A $10k purchase that deletes the endgame's clock is not a spend.
+
+  **The lesson:** *a spend is only a spend if something else still gets to
+  happen. This one shares its input with the mechanic it switches off.*
+
+  *Done when: notoriety has a cap, a decay and a spend, and the walker's
+  notoriety on day 180 is under the cap* — **and the retune that makes room
+  for the spend is part of it**: `taskforceEligible` needs a trigger that a
+  purchase cannot race, which is R87's mechanic and belongs in this entry's
+  scope rather than beside it. The original text follows.
+
+  **3,833 on day 180**; the
   Threat Gen ladder is its only reader and tops out at Gen 3; every job adds
   heat and nothing spends or cools it. Proposed, medium: notoriety as a
   **meter with a top** that summons R87's task force, a **decay** through
