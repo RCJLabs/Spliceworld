@@ -1088,14 +1088,6 @@ async function main() {
       return { muts, identity, dexKb, leftBehind };
     };
     const repaint = await repaintPass();
-    // Say the four numbers even when they pass. A budget that only speaks
-    // when it is broken cannot show it is still being measured, and these
-    // four were 63, 5-of-5, 496 and 275 KB the day before this gate existed.
-    console.log(`a11y: an unchanged tick rewrote ${repaint.muts} nodes; a tap on one pen card destroyed `
-      + `${repaint.identity.before - repaint.identity.after} of the ${repaint.identity.before} it did not touch; `
-      + `the worst screen left ${Math.max(0, ...repaint.leftBehind)} nodes behind; `
-      + `the Dex paints ${repaint.dexKb} KB before a scroll`);
-
     // ---- 1b. …and the arena on a short phone. 780px lands in the
     //      `min-height: 760px` band (a roomier stage, taller move cells);
     //      640 lands in `max-height: 640px`, which exists precisely because
@@ -1770,6 +1762,82 @@ async function main() {
       for (const v of [...views].sort()) console.log(`    ${v}`);
       console.log('');
     }
+    // ---- 9. R107 — AND THE CARD THAT ONLY EXISTS AFTER A GAP.
+    //
+    // This gate's fixture is built at `Date.now()`, so its gap is zero and
+    // the welcome-back card correctly never appears — which means the whole
+    // feature shipped unmeasured on the only gate that looks at pixels. The
+    // control count did not move when it landed, and that is the tell.
+    //
+    // So: the same fixture with its one clock wound back a week, loaded on
+    // its own. Everything above measured the steady state; this measures the
+    // arrival, which is the only state the card is ever in.
+    //
+    // LAST, because it RELOADS THE PAGE. Run in the middle it cost the
+    // keyboard walk sixteen of its controls and broke two focus rules that
+    // depend on where the walk had got to - a gate disturbing its own
+    // fixture, which is the R104 lesson one floor down. Nothing follows it
+    // but the report, so its reloads can reach nothing.
+    //
+    // The dismiss button is therefore NOT in the generic 40px sweep above,
+    // which is why this block measures its height itself.
+    {
+      const week = JSON.parse(fixture);
+      week.lastTickAt = Date.now() - 7 * 24 * 3600000;
+      await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(week))})`);
+      await send('Page.navigate', { url });
+      await sleep(2400);
+      const card = JSON.parse(await evaluate(`(() => {
+        const el = document.querySelector('#welcome');
+        const btn = el?.querySelector('#welcome-dismiss');
+        const r = btn?.getBoundingClientRect();
+        return JSON.stringify({
+          shown: !!el && !el.hidden,
+          lines: el?.querySelectorAll('.welcome-lines li').length ?? 0,
+          heading: el?.querySelector('h2')?.textContent ?? '',
+          btnH: r ? Math.round(r.height) : 0,
+          // It must sit ABOVE the screen it opened on, not inside it.
+          inside: !!el?.closest('.screen'),
+        });
+      })()`));
+      if (!card.shown) {
+        note('a week away opens the app with no welcome-back card (R107)');
+      } else {
+        if (!card.lines) note('the welcome-back card is on screen with nothing in it');
+        if (card.inside) note('the welcome-back card is inside a screen root, so leaving empties it');
+        if (card.btnH && card.btnH < FLOOR) {
+          note(`the welcome-back dismiss button is ${card.btnH}px, under the ${FLOOR}px floor`);
+        }
+        if (!/away/i.test(card.heading)) note(`the card does not say how long you were gone (${card.heading})`);
+        // AND IT GOES AWAY WHEN ASKED, taking its focus somewhere real.
+        const after = JSON.parse(await evaluate(`(() => {
+          document.querySelector('#welcome-dismiss')?.click();
+          return new Promise((res) => setTimeout(() => res(JSON.stringify({
+            shown: !document.querySelector('#welcome')?.hidden,
+            focus: document.activeElement?.tagName ?? 'NONE',
+          })), 300));
+        })()`));
+        if (after.shown) note('the welcome-back card does not dismiss');
+        if (after.focus === 'BODY' || after.focus === 'NONE') {
+          note(`dismissing the welcome-back card drops focus to ${after.focus}`);
+        }
+        console.log(`a11y: a week away opens with a ${card.lines}-line welcome-back card, `
+          + `dismissed to ${after.focus}`);
+      }
+      // Back to the steady-state save for everything after this.
+      await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
+      await send('Page.navigate', { url });
+      await sleep(2200);
+    }
+
+    // Say the four numbers even when they pass. A budget that only speaks
+    // when it is broken cannot show it is still being measured, and these
+    // four were 63, 5-of-5, 496 and 275 KB the day before this gate existed.
+    console.log(`a11y: an unchanged tick rewrote ${repaint.muts} nodes; a tap on one pen card destroyed `
+      + `${repaint.identity.before - repaint.identity.after} of the ${repaint.identity.before} it did not touch; `
+      + `the worst screen left ${Math.max(0, ...repaint.leftBehind)} nodes behind; `
+      + `the Dex paints ${repaint.dexKb} KB before a scroll`);
+
     console.log(`a11y: ${controls.length} distinct controls measured at ${VIEWPORT}px across ${views.size} views (boxes re-read at ${BAND_TOP}px, the top of the phone band)`);
     console.log(`a11y: ${kbScreens}/${screens.length} screens opened, ${kbControls} controls tabbed to and a duel fought with Tab and Enter alone`);
   } finally {
@@ -1784,7 +1852,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · an unchanged tick touches nothing · a tap rebuilds one card · a screen you left costs nothing · the Dex paints what you can see · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
+  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · an unchanged tick touches nothing · a tap rebuilds one card · a screen you left costs nothing · the Dex paints what you can see · a week away says what it did · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
 }
 
 // R88 — only when RUN, not when imported. This module owns the one fixture

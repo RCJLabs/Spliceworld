@@ -83,6 +83,7 @@ const SHELL = [
   'campaign/wire.js',
   'campaign/world.js',
   'campaign/digest.js',
+  'ui/welcome.js',
   'campaign/warroom.js',
   'campaign/ui.js',
   'audio/sfx.js',

@@ -287,7 +287,19 @@ const REPORT = process.argv.includes('--report');
 // 1033 rather than 1032 because the measurement is a float and the note
 // rounds it: "1032 KB, over the budget of 1032 KB" is what a cap set to the
 // printed number says about a page that actually weighs 1032-point-something.
-const FIRST_PAINT_KB = 1033;
+// R107 — 1033 -> 1034. The welcome-back card itself is LAZY (`ui/welcome.js`,
+// shown on a minority of loads); what is eager is the eight lines of shell
+// glue that decide whether to import it, and the four event counters
+// `worldSnapshot` gained so the digest can see a convoy that came and went.
+//
+// THE LEVER THIS MILESTONE DID NOT TAKE, named so the next one can. The
+// exemption bill above is 11.0 KB across four modules, and the largest is
+// `campaign/monologue.js` at 4.2 KB — it is eager only because
+// `campaign/wire.js` imports it and `campaign/world.js` imports the wire.
+// That is R153's exact shape (it took `campaign/director.js`, 11.9 KB, out
+// the same way) and it is a milestone's worth of care, not an end-of-session
+// change. See ROADMAP R107.
+const FIRST_PAINT_KB = 1034;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //

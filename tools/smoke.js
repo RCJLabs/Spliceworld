@@ -6902,6 +6902,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // --- Shared UI machinery. A fold, a picker, a tab bar and a band are
     // how systems are shown, not systems themselves.
     'ui/cards.js': null,
+    'ui/welcome.js': null,
     // R80. Neither is a system: one keeps focus where the player left it
     // across a repaint, the other is the single live region every panel
     // announces into. A player never meets either — which is the whole
@@ -20659,7 +20660,10 @@ if (inShard('wire')) {
 // R104 — 555 -> 559. Same purchase as FIRST_PAINT_KB above: the eager half
 // of a shell that repaints on a change rather than on a clock. See ROADMAP
 // R104 for what each kilobyte does and which two levers were spent first.
-const KB_CAP = 559;
+// R107 — 559 -> 560. The same purchase as FIRST_PAINT_KB: the card is lazy,
+// the shell glue that decides whether to load it is not. The unspent lever is
+// named in tools/boot.js beside the exemption bill. See ROADMAP R107.
+const KB_CAP = 560;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,
