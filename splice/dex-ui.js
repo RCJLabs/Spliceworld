@@ -18,10 +18,14 @@
 import { creaturePortrait, renderUnitSVG, renderRivalSVG } from '../render/renderer.js';
 
 // R104 — how many species cells draw their creature before anyone scrolls.
-// Eighteen is two phone screens of a three-column grid: enough that the tab
-// never looks empty, few enough that the other 27 portraits - 5.8 KB of SVG
-// each - are not paid for by a player who came to read the trait list.
-const DEX_EAGER_CELLS = 18;
+//
+// Nine is three rows of the three-column grid, which is what a 380px phone
+// shows above the fold. Eighteen was the first number, chosen as "two
+// screens" against an estimate of 5.8 KB a portrait; the tab measured 153 KB
+// instead of the expected 118, because the portraits on this grid run to
+// 7-9 KB and an average taken over every SVG on the screen is not the size
+// of the ones being deferred.
+const DEX_EAGER_CELLS = 9;
 import { renderIcon } from '../ui/icons.js';
 import { stockGenome } from '../ranch/ranch.js';
 import { comboHint } from './theater.js';
@@ -562,6 +566,12 @@ function fillPortraits(root, content) {
       draw(e.target);
       obs.unobserve(e.target);
     }
-  }, { rootMargin: '400px' });
+    // 150px, not 400: a margin wide enough to hold a screen's worth of cells
+    // fills them the instant the tab opens, which puts the art back into the
+    // first paint by another route and is how this measured 153 KB with only
+    // half the grid drawn eagerly. This is far enough ahead that a scroll
+    // never shows an empty cell, and near enough that arriving does not draw
+    // what nobody has looked at.
+  }, { rootMargin: '150px' });
   for (const cell of pending) obs.observe(cell);
 }
