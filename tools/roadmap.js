@@ -177,6 +177,151 @@ export function checkRoadmap() {
       note(`${claim.name} points at ${marker[1]}, which this roadmap does not carry as a phase`);
     }
   }
+  // --- 3. the queue says the same thing the entries do --------------------
+  problems.push(...checkQueue(roadmap));
+  return problems;
+}
+
+
+// R166 — THE QUEUE LIED ABOUT ITSELF.
+//
+// R54 was picked as a session's milestone because §9.18 listed it among "35
+// entries already queued and unshipped". R54 shipped in Session 76. So did
+// the thirteen entries after it and R88 — fifteen of the thirty-four that
+// line enumerates (it says 35 and names 34, which is the same defect wearing
+// a different hat). The session that picked it spent its opening reading
+// `save/slots.js` to discover that `exportSave`, `importSave` and the
+// backup-or-refuse rule had been there for ninety-five sessions, gated in the
+// suite's COMMON PATH the whole time — every shard of every run had been
+// proving the feature the roadmap said did not exist.
+//
+// The cause is that an entry's STATUS was prose, and prose was written three
+// ways: a ✅, a "(shipped)" inside the title, or a section heading claiming
+// the whole range. Nothing read any of them, so nothing could notice when a
+// fourth sentence somewhere else said the opposite. R77's own first line —
+// "a design document is prose and prose does not run" — applied to the
+// numbers and never to the queue.
+//
+// So the queue moves into the block that runs, with the same two-way shape
+// §4.0 already has:
+//
+//   3a. ✅ IN THE TITLE IS THE ONLY MARKER. One convention, so there is
+//       nothing to disagree with. An id that appears more than once — an
+//       audit entry and its milestone-log entry — must agree at every
+//       occurrence. This alone catches R88, whose two lines disagreed.
+//   3b. §9.0 lists exactly the un-✅ entries, and says how many. Typed once
+//       and checked against the ticks, so a session reads the queue in one
+//       place instead of trusting a sentence.
+//   3c. No prose may call a ✅ entry unshipped. This is the rule that would
+//       have caught §9.18 the day it was written.
+//
+// PROGRESS.md is deliberately out of scope: it is dated history, and the
+// same exemption §6 onward gets here applies to a log that records what a
+// session believed at the time.
+const ENTRY = /^- \*\*(R\d+[ab]?|A\d+) — /;
+
+// An entry's TITLE is its bold run — almost always one line, six times two,
+// because a long headline wraps. The marker has to live there rather than
+// anywhere in the body: bodies quote ✅ about other things ("✅ all five —
+// R61 gained checks..."), and a status that can be set by a sentence about
+// something else is not a status.
+export function roadmapEntries(md = readFileSync(join(root, 'ROADMAP.md'), 'utf8')) {
+  const lines = md.split('\n');
+  const entries = [];
+  lines.forEach((line, i) => {
+    const m = line.match(ENTRY);
+    if (!m) return;
+    let title = line, j = i;
+    while (!title.slice(m[0].length).includes('**') && j + 1 < lines.length && lines[j + 1].trim()) {
+      title += '\n' + lines[++j];
+    }
+    entries.push({ id: m[1], line: i + 1, shipped: title.includes('✅') });
+  });
+  return entries;
+}
+
+// "R107–R118" is one range and eleven of the ids in it are never written
+// down, so a rule that reads only the literals it can see agrees with a
+// sentence that quietly covers twelve entries.
+function idsIn(text) {
+  const out = [];
+  for (const m of text.matchAll(/\bR(\d+)\s*[–—-]\s*R(\d+)\b/g)) {
+    for (let n = Number(m[1]); n <= Number(m[2]); n++) out.push(`R${n}`);
+  }
+  for (const m of text.replace(/\bR\d+\s*[–—-]\s*R\d+\b/g, '').matchAll(/\b(R\d+[ab]?|A\d+)\b/g)) out.push(m[1]);
+  return [...new Set(out)];
+}
+
+export function checkQueue(md = readFileSync(join(root, 'ROADMAP.md'), 'utf8')) {
+  const problems = [];
+  const note = (m) => problems.push(m);
+  const entries = roadmapEntries(md);
+  if (entries.length < 100) {
+    note(`only ${entries.length} roadmap entries were found — the entry format has changed`);
+    return problems;
+  }
+
+  // --- 3a. one id, one status --------------------------------------------
+  const byId = new Map();
+  for (const e of entries) (byId.get(e.id) ?? byId.set(e.id, []).get(e.id)).push(e);
+  for (const [id, rows] of byId) {
+    if (rows.length > 1 && new Set(rows.map((r) => r.shipped)).size > 1) {
+      note(`${id} is written ${rows.length} times and they disagree about whether it shipped: `
+        + rows.map((r) => `line ${r.line} says ${r.shipped ? 'shipped' : 'queued'}`).join(', '));
+    }
+  }
+  const shipped = new Set(entries.filter((e) => e.shipped).map((e) => e.id));
+  const queued = [...byId.keys()].filter((id) => !shipped.has(id));
+
+  // --- 3b. §9.0 is the queue, and it is checked --------------------------
+  const block = md.split('### 9.0 Queue, as measured')[1]?.split(/\n#{3} /)[0] ?? '';
+  if (!block.trim()) {
+    note('ROADMAP.md has no "### 9.0 Queue, as measured" block to check');
+    return problems;
+  }
+  // The list is the paragraph that opens "**N entries queued.**" and nothing
+  // else in the section: the prose underneath it explains what went wrong by
+  // NAMING the entries that were wrongly queued, and a rule that read the
+  // whole block would take that history for the list.
+  const parts = block.split(/\*\*(\d+) entries queued\.\*\*/);
+  if (parts.length < 3) {
+    note('§9.0 does not say "**N entries queued.**" followed by the list');
+    return problems;
+  }
+  const listed = idsIn(parts[2].split(/\n\s*\n/)[0]);
+  for (const id of listed) if (!queued.includes(id)) {
+    note(`§9.0 queues ${id}, which is marked shipped at line ${byId.get(id)?.[0].line ?? '?'}`);
+  }
+  for (const id of queued) if (!listed.includes(id)) {
+    note(`§9.0 does not queue ${id}, which carries no ✅ (line ${byId.get(id)[0].line})`);
+  }
+  if (Number(parts[1]) !== queued.length) {
+    note(`§9.0 says ${parts[1]} entries are queued; ${queued.length} carry no ✅`);
+  }
+
+  // --- 3c. no sentence elsewhere may contradict a ✅ ----------------------
+  //
+  // Paragraph by paragraph, because the line that started this wrapped its
+  // list across three of them and a per-line rule would have read "R96,
+  // R100, R102, R104, R105, R107–R118" as a paragraph with no claim in it.
+  // "unshipped" and not "queued": half the roadmap says "queued out of R138"
+  // about a phase R138 SHIPPED, which is a true sentence about where the work
+  // came from. "Unshipped" only ever means the one thing.
+  //
+  // The ONLY exemption is §9.0's list paragraph itself, which rule 3b already
+  // checks id by id. Exempting the whole section instead would have left the
+  // one block a session is told to trust as the one block nothing reads — and
+  // the prose under the list is where a future correction would go.
+  const listing = `**${parts[1]} entries queued.**${parts[2].split(/\n\s*\n/)[0]}`;
+  for (const para of md.split(/\n\s*\n/)) {
+    if (para.includes(listing.slice(0, 40))) continue;
+    if (!/\bunshipped\b/i.test(para)) continue;
+    const claimed = idsIn(para).filter((id) => shipped.has(id));
+    if (claimed.length) {
+      note(`a paragraph calls ${claimed.join(', ')} unshipped; the roadmap marks ${claimed.length === 1 ? 'it' : 'them'} ✅:\n`
+        + `      ${para.trim().replace(/\s+/g, ' ').slice(0, 140)}`);
+    }
+  }
   return problems;
 }
 
@@ -188,5 +333,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   }
   const n = Object.keys(shippedNumbers()).length;
+  const entries = roadmapEntries();
+  const ids = new Set(entries.map((e) => e.id));
+  const queued = new Set(entries.filter((e) => !e.shipped).map((e) => e.id));
   console.log(`roadmap ✓  ${n} stated numbers match the data · every named mechanic exists or is queued`);
+  console.log(`   §9: ${ids.size} entries · ${queued.size} carry no ✅, and §9.0 lists exactly those`);
 }
