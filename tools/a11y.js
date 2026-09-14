@@ -37,6 +37,14 @@ const FLOOR = 40;          // px, both dimensions
 const GUTTER = 6;          // px, between two adjacent controls
 const RAG = 1;             // px, how far into its own line a full-width row may start
 const BAND_TOP = 420;      // px, the wide end of the stylesheet's phone media query
+// R104 — what a repaint is allowed to cost. Zero is not a stylistic choice:
+// a tick that changed nothing has nothing to say, and every node it rewrites
+// is a text selection lost, a scroll position dropped and a card's identity
+// destroyed. The other three are budgets rather than zeroes because a screen
+// legitimately keeps a shell, and the Dex legitimately draws SOME art.
+const REPAINT_MUTATIONS = 0;
+const LEFT_BEHIND = 50;
+const DEX_FIRST_PAINT_KB = 100;
 const VIEWPORT = 380;      // px, the reference phone width
 const REPORT = process.argv.includes('--report');
 
@@ -969,6 +977,125 @@ async function main() {
       await subtabPass(s, s);
       await foldPass(s);
     }
+    // ---- 1a2. R104 — WHAT DOES A REPAINT COST? Four numbers, one loop.
+    //
+    // The shell rebuilds the active screen from a string every 30 seconds
+    // and after every tap, whether or not anything moved, and a hidden
+    // screen keeps its DOM for the rest of the session. None of that is
+    // visible to any rule the gate had: every screen looked right, and the
+    // cost of keeping it right was unmeasured.
+    //
+    // Measured HERE rather than in a gate of its own because the browser is
+    // already open on a save with something on every screen, which is the
+    // expensive half of the question.
+    const repaintPass = async () => {
+      // (i) A TICK THAT CHANGES NOTHING MUST TOUCH NOTHING. The clock is not
+      // pinned in this gate, so a second tick inside the same wall-clock
+      // second is the honest form of "nothing moved": the save advances by
+      // no elapsed time it can act on.
+      await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
+      await sleep(500);
+      const muts = Number(await evaluate(`(() => {
+        let n = 0;
+        const obs = new MutationObserver((rs) => {
+          for (const r of rs) n += 1 + r.addedNodes.length + r.removedNodes.length;
+        });
+        obs.observe(document.querySelector('#screen-ranch'), {
+          childList: true, subtree: true, attributes: true, characterData: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+        return new Promise((res) => setTimeout(() => { obs.disconnect(); res(n); }, 350));
+      })()`));
+      if (muts > REPAINT_MUTATIONS) {
+        note(`a tick that changed nothing rewrote ${muts} nodes on the Ranch (budget ${REPAINT_MUTATIONS})`
+          + ' — the shell repaints on a timer rather than on a change');
+      }
+
+      // (ii) A TAP ON ONE CARD IS NOT A REASON TO REBUILD THE OTHERS. Node
+      // identity, not HTML equality: a card rebuilt to the same string still
+      // loses its selection, its scroll position and its focus.
+      await evaluate(`document.querySelector('#tabs button[data-screen="pens"]').click()`);
+      await sleep(600);
+      // Held as REFERENCES, never as a marker attribute. Stamping the cards
+      // with `data-r104` to find them afterwards is the same trap the fix
+      // itself had to design around: the attribute lands in `outerHTML`, so
+      // every stamped card differs from its freshly built markup and the
+      // keyed paint replaces all of them. The gate then measures the damage
+      // it did itself and reports the fix does not work.
+      const identity = JSON.parse(await evaluate(`(() => {
+        const r = document.querySelector('#screen-pens');
+        window.__r104 = [...r.querySelectorAll('[data-fold]')]
+          .map((b) => b.closest('section, article, div')).filter(Boolean);
+        // The tapped card is SUPPOSED to be rebuilt - it is the one whose
+        // markup changed. The rule is about the others.
+        const tapped = r.querySelector('[data-fold]')?.closest('section, article, div');
+        window.__r104 = window.__r104.filter((el) => el !== tapped);
+        const before = window.__r104.length;
+        r.querySelector('[data-fold]')?.click();
+        return new Promise((res) => setTimeout(() => res(JSON.stringify({
+          before, after: window.__r104.filter((el) => document.contains(el)).length,
+        })), 450));
+      })()`));
+      if (identity.before > 1 && identity.after < identity.before) {
+        note(`opening one pen destroyed ${identity.before - identity.after} of the ${identity.before} cards it did NOT touch`
+          + ' — every card is rebuilt because one of them changed');
+      }
+
+      // (iii) A SCREEN YOU HAVE LEFT COSTS NOTHING. Every later style
+      // recalculation walks what is still in the document, hidden or not.
+      const leftBehind = [];
+      for (const s of screens) {
+        await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
+        await sleep(450);
+        await evaluate(OPEN_DETAILS);
+        await sleep(250);
+        await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
+        await sleep(450);
+        const left = Number(await evaluate(`document.querySelector('#screen-${s}')?.querySelectorAll('*').length ?? 0`));
+        if (s !== 'ranch') leftBehind.push(left);
+        if (s !== 'ranch' && left > LEFT_BEHIND) {
+          note(`leaving ${s} left ${left} nodes in the document (budget ${LEFT_BEHIND})`);
+        }
+      }
+
+      // (iv) THE FIRST PAINT OF A SCREEN IS WHAT THE PLAYER WAITS FOR. The
+      // Dex is the one screen whose weight is art rather than text, so it is
+      // the one that has to earn what it draws before it is looked at.
+      await evaluate(`document.querySelector('#tabs button[data-screen="dex"]').click()`);
+      // …ON THE TAB A PLAYER LANDS ON. The walk above visits every Dex
+      // subtab and leaves the screen on the LAST one, so measuring here
+      // without saying which view is meant measures whichever tab the
+      // previous rule happened to finish on — which is how this clause went
+      // green twice while the screen it names paints 274 KB.
+      await sleep(250);
+      await evaluate(`document.querySelector('#screen-dex #dex-subtabs button')?.click()`);
+      // R159's rule, and this gate broke it on its first run: a 700ms sleep
+      // measured the Dex mid-load — it is a LAZY screen, so what was on the
+      // glass was still "Warming up the lab…" and the rule went green at
+      // 1 KB against a screen that actually paints 274. Wait for the page.
+      let dexKb = 0;
+      for (let i = 0; i < 25; i++) {
+        await sleep(200);
+        const now = Number(await evaluate(
+          `Math.round((document.querySelector('#screen-dex')?.innerHTML.length ?? 0) / 1024)`));
+        if (now > 0 && now === dexKb) break;
+        dexKb = now;
+      }
+      if (!dexKb) {
+        note('the Dex never painted, so nothing measured what its first paint costs');
+      } else if (dexKb > DEX_FIRST_PAINT_KB) {
+        note(`the Dex paints ${dexKb} KB before the player has scrolled (budget ${DEX_FIRST_PAINT_KB} KB)`);
+      }
+      return { muts, identity, dexKb, leftBehind };
+    };
+    const repaint = await repaintPass();
+    // Say the four numbers even when they pass. A budget that only speaks
+    // when it is broken cannot show it is still being measured, and these
+    // four were 63, 5-of-5, 496 and 275 KB the day before this gate existed.
+    console.log(`a11y: an unchanged tick rewrote ${repaint.muts} nodes; a tap on one pen card destroyed `
+      + `${repaint.identity.before - repaint.identity.after} of the ${repaint.identity.before} it did not touch; `
+      + `the worst screen left ${Math.max(0, ...repaint.leftBehind)} nodes behind; `
+      + `the Dex paints ${repaint.dexKb} KB before a scroll`);
+
     // ---- 1b. …and the arena on a short phone. 780px lands in the
     //      `min-height: 760px` band (a roomier stage, taller move cells);
     //      640 lands in `max-height: 640px`, which exists precisely because
@@ -1294,11 +1421,29 @@ async function main() {
     }
     if (!held) note('no control inside any screen can be reached by Tab');
     else {
-      await evaluate(`window.__repaintProbe = document.querySelector('.screen:not([hidden]) *')`);
       if (await evaluate(`document.hidden`)) note('the page reports itself hidden, so the tick never runs and 7b proves nothing');
-      await evaluate(`document.dispatchEvent(new Event('visibilitychange'))`);
-      await sleep(600);
-      if (await evaluate(`document.contains(window.__repaintProbe)`)) {
+      // R104 — this rule used to prove the repaint happened by watching a
+      // probe node DISAPPEAR, because every repaint replaced every node. Both
+      // halves of that changed: the tick no longer paints a world that did
+      // not move, and a paint now keeps the nodes whose markup is unchanged.
+      // So the world is made to move TWO HOURS. Two minutes was the first
+      // try and it proved the fix rather than the focus: the report fired,
+      // the screen repainted, and the keyed paint correctly rewrote nothing,
+      // leaving no mutation to observe. A repaint with no work in it cannot
+      // lose anyone's focus — but it cannot demonstrate keeping it either, so
+      // the clock moves far enough to change what the cards say. Nothing here
+      // takes focus, which is the thing being measured.
+      const painted = Number(await evaluate(`(() => {
+        let n = 0;
+        const obs = new MutationObserver((rs) => { n += rs.length; });
+        obs.observe(document.querySelector('.screen:not([hidden])'),
+          { childList: true, subtree: true, attributes: true, characterData: true });
+        const R = Date.now.bind(Date); Date.now = () => R() + 2 * 3600000;
+        document.dispatchEvent(new Event('visibilitychange'));
+        return new Promise((res) => setTimeout(() => { obs.disconnect(); res(n); }, 500));
+      })()`));
+      await sleep(200);
+      if (!painted) {
         note('the tick did not repaint the active screen, so the focus check proves nothing');
       }
       const after = await evaluate(FOCUSED);
@@ -1639,7 +1784,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
+  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · an unchanged tick touches nothing · a tap rebuilds one card · a screen you left costs nothing · the Dex paints what you can see · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
 }
 
 // R88 — only when RUN, not when imported. This module owns the one fixture

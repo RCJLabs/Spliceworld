@@ -33,6 +33,7 @@ export function elapsedSince(state, now) {
 }
 
 export function tickWorld(state, content, now) {
+  const before = worldSnapshot(state, now);
   const { since } = elapsedSince(state, now);
   // R91 — before anything else, because every system below this reads the
   // vault and none of them should have to wonder whether it is over its
@@ -85,4 +86,60 @@ export function tickWorld(state, content, now) {
   // so this is the one place that clamp lives.
   for (const line of tickTaskforce(state, content, now).news) pushNews(state, line);
   state.lastTickAt = now;
+  // R104 — WHAT MOVED; the shell repaints on this rather than on a timer,
+  // and R107 reads it to say what happened while nobody was home.
+  return changesBetween(before, worldSnapshot(state, now));
+}
+
+// Scalars only, every one something a player would notice: a count rather
+// than an array, so reordering a list is not a change. See ROADMAP R104.
+export function worldSnapshot(state, now = state?.lastTickAt ?? 0) {
+  const c = state?.campaign ?? {};
+  const r = state?.ranch ?? {};
+  // A pending clock is what makes a countdown go stale with nothing else
+  // moving. Bucketed to the minute; zero when nothing is counting.
+  // ONE PASS. This is called twice per tick, and a tick happens on every day
+  // of every seed of every walk: four separate scans of the herd here cost
+  // the suite ~310 CPU-seconds, which is most of a budget overrun for four
+  // numbers that one loop can carry.
+  const herd = state?.chimeras ?? [];
+  let injured = 0;
+  let scarred = 0;
+  let agitated = 0;
+  let settling = 0;
+  for (const x of herd) {
+    if (x?.injury) injured++;
+    scarred += x?.scars?.length ?? 0;
+    if (x?.agitatedUntil > now) agitated++;
+    if (x?.settleUntil > now) settling++;
+  }
+  const counting = (r.eggs?.length ?? 0) + (state?.vat ? 1 : 0) + (state?.resequencer ? 1 : 0)
+    + settling + (c.contested?.length ?? 0);
+  return {
+    funds: Math.round(state?.funds ?? 0),
+    notoriety: Math.round(c.notoriety ?? 0),
+    heldNodes: c.heldNodes?.length ?? 0,
+    contested: c.contested?.length ?? 0,
+    loose: c.loose?.length ?? 0,
+    captives: c.captives?.length ?? 0,
+    bays: c.bays?.length ?? 0,
+    raids: c.taskforce?.raids ?? 0,
+    stock: r.stock?.length ?? 0,
+    eggs: r.eggs?.length ?? 0,
+    chimeras: herd.length,
+    injured,
+    scarred,
+    agitated,
+    parts: state?.inventory?.length ?? 0,
+    news: state?.news?.length ?? 0,
+    tick: counting ? Math.floor(now / 60000) : 0,
+  };
+}
+
+export function changesBetween(before, after) {
+  const moved = {};
+  for (const k of Object.keys(after)) {
+    if (before?.[k] !== after[k]) moved[k] = [before?.[k], after[k]];
+  }
+  return moved;
 }

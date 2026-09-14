@@ -6948,6 +6948,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // Pens, never as a system of its own.
     'battle/move-text.js': null,
   'render/mood.js': null,
+  'ui/patch.js': null,
     'battle/forecast.js': null,
     'battle/readout.js': null,
     'battle/tagtext.js': null,
@@ -14032,7 +14033,11 @@ if (inShard('spar')) {
   //    firing is a browser behaviour the harness cannot hear.
   {
     const shell = readFileSync(join(root, 'main.js'), 'utf8');
-    const at = shell.indexOf('function tick()');
+    // R104 gave tick a parameter (`force`), and this looked for the literal
+    // `function tick()`. The RULE is unchanged — the shell still has to play
+    // what changed — so only the anchor moves: match the name and the open
+    // paren, which survives a signature growing an argument.
+    const at = shell.indexOf('function tick(');
     assert.notEqual(at, -1, 'tick exists');
     const body = shell.slice(at, shell.indexOf('\n}', at));
     assert.ok(/watchSignals\(state\)/.test(body), 'tick snapshots before the systems advance');
@@ -15554,7 +15559,14 @@ if (inShard('away')) {
   //    times in a tick and keep two elapsed timestamps.
   {
     const shell = readFileSync(join(root, 'main.js'), 'utf8');
-    const tickBody = shell.slice(shell.indexOf('function tick()'), shell.indexOf('function updateTicker'));
+    // R104 — `function tick(` for the reason R59's rule above needed the same
+    // widening: the signature took a `force` argument. Worth noting how this
+    // one failed, because it is nastier than a plain -1: indexOf returned -1,
+    // slice(-1, …) is a legal call that yields a garbage window, and the rule
+    // then counted NOW() in text that was never the tick body at all. A
+    // missing anchor that throws is a kindness; one that silently reframes
+    // the measurement is how a gate starts lying.
+    const tickBody = shell.slice(shell.indexOf('function tick('), shell.indexOf('function updateTicker'));
     assert.equal((tickBody.match(/NOW\(\)/g) ?? []).length, 1, 'tick() reads the clock once');
     assert.ok(tickBody.includes('tickWorld('), 'and advances the world through campaign/world.js');
     for (const gone of ['applyElapsed(', 'tickCampaign(', 'tickVat(', 'tickScars(']) {
@@ -19062,7 +19074,25 @@ if (inShard('empire')) {
   //
   // It costs one more 180-day walk in this shard. That is the price of a rule
   // that can fail.
-  const EMPIRE_SEEDS = [2026, 7, 99, 11];
+  // R104's rot check — AND SEED 7 STOPPED REPRODUCING R155's DEFECT.
+  //
+  // Break 255 reverts drift-tending to asking the cash reserve before spending
+  // five dollars on a warned creature. R155 aimed it at seed 7, which read 18h
+  // of holding on the reverted tree. Five milestones later the break came back
+  // MISSED on this branch AND on `main`: seed 7 now reads 0h either way, so the
+  // rule was green against code it was written to reject.
+  //
+  // Re-censused across sixteen seeds with the reserve check restored. The
+  // defect did not go away, it MOVED: 314 reads 16h, 42 reads 10h, 9001 reads
+  // 8h, 21 reads 2h, and the other twelve — seed 7 among them — read 0. All
+  // four read 0h on the shipped tree, so the rule still passes what it should.
+  // 314 joins the set because it holds the longest and because R155's own
+  // entry already named it as a campaign where the creature waits.
+  //
+  // It costs one more 180-day walk in this shard, the same price R165 paid for
+  // seed 11 and for the same reason: a rule that cannot fail is not a rule.
+  // The cost is noted against R168, which owns the suite's budget.
+  const EMPIRE_SEEDS = [2026, 7, 99, 11, 314];
   const walks = EMPIRE_SEEDS.map((seed) => campaignWalk(content, {
     seed, days: 180, stopAtDominion: false, snapshotDays: [10, 120],
   }));
@@ -19205,7 +19235,7 @@ if (inShard('empire')) {
   // reason three rules down: these are the only walks in the suite that run
   // the full 180 days. And the seed matters as much as the length — seed 2026
   // reads 0h whether the fix is present or not, so the rule is the MAX across
-  // all three walks. On the reverted tree that max is 18h, from seed 7.
+  // all the walks. On the reverted tree that max is 16h, from seed 314.
   //
   // NOT asserted on `agitated`: the warning is stamped by `tick()` BEFORE the
   // walker takes its turn, so a creature settled on the same tick still
@@ -19219,7 +19249,7 @@ if (inShard('empire')) {
       + ` reserve — worst hold ${held}h of a 24h window, across seeds `
       + `${EMPIRE_SEEDS.join('/')} (${walks.map((w) => `${w.feral.heldHours}h`).join(', ')})`);
     assert.equal(walks.reduce((n, w) => n + w.feral.lost, 0), 0,
-      'and none of the three full-length walks lost one');
+      `and none of the ${walks.length} full-length walks lost one`);
   }
 
   // R93 — THE LATE GAME HAS TO BE ABLE TO GO WRONG.
@@ -20528,7 +20558,10 @@ if (inShard('wire')) {
 // R96 — 554 -> 555. The eager half of the posture work is the 853 bytes that
 // APPLY a stance; the bands and the marks that compute one are in the lazy
 // `render/mood.js`. Two under R93's 557. See ROADMAP R96.
-const KB_CAP = 555;
+// R104 — 555 -> 559. Same purchase as FIRST_PAINT_KB above: the eager half
+// of a shell that repaints on a change rather than on a clock. See ROADMAP
+// R104 for what each kilobyte does and which two levers were spent first.
+const KB_CAP = 559;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

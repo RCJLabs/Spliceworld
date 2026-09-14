@@ -37,9 +37,28 @@ export function fieldNote(guide) {
 // The Dex renders to a plain `{ innerHTML }` in the test harness so its
 // output can be asserted as a string rather than scraped out of a DOM —
 // binding is a no-op there rather than a crash.
+// A node that survived a paint kept its listeners with it, so binding it a
+// second time would fire everything twice — a fold that opens and shuts on
+// one press. Handlers ask for what is NOT yet bound.
+//
+// A WeakSet rather than a `data-bound` attribute, and the difference is the
+// whole mechanism: an attribute serializes into `outerHTML`, so every card
+// would differ from its freshly-built markup by the very mark that says it
+// was kept, and `paintScreen` would replace all of them. It also has to be
+// a WeakSet rather than a Set so a node that leaves the document is not held
+// alive by the thing that remembers binding it.
+const BOUND = new WeakSet();
+export function unbound(root, selector) {
+  return [...root.querySelectorAll(selector)].filter((el) => {
+    if (BOUND.has(el)) return false;
+    BOUND.add(el);
+    return true;
+  });
+}
+
 export function bindFieldNote(root, ctx, rerender) {
   if (!root?.querySelectorAll) return;
-  root.querySelectorAll('button[data-dismiss-guide]').forEach((btn) => {
+  unbound(root, 'button[data-dismiss-guide]').forEach((btn) => {
     btn.addEventListener('click', () => {
       dismissGuide(ctx.state, btn.dataset.dismissGuide);
       ctx.save();
@@ -84,7 +103,7 @@ export function collapsibleCard({ id, title, badge = '', summary = '', body, ope
 // was the wrong shape; the screen already knows which ids it made.
 export function bindFolds(root, ctx, rerender, { exclusive = [] } = {}) {
   if (!root?.querySelectorAll) return;
-  root.querySelectorAll('button[data-fold]').forEach((btn) => {
+  unbound(root, 'button[data-fold]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.fold;
       const state = ctx.state;
@@ -104,3 +123,4 @@ export function bindFolds(root, ctx, rerender, { exclusive = [] } = {}) {
     });
   });
 }
+

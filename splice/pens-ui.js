@@ -46,7 +46,8 @@ import { pickerField, bindPickers, openPicker, openPrompt } from '../ui/picker.j
 import {
   activeVat, vatPlan, vatRemainingMs, startVat, cancelVat, isExhausted, chaosTuning,
 } from './chaos.js';
-import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
+import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen, unbound } from '../ui/cards.js';
+import { paintScreen } from '../ui/patch.js';
 import { facilityCard, bindFacility, tablePointer } from '../ui/facility-card.js';
 import { bandedHtml } from '../ui/roster.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
@@ -143,7 +144,7 @@ function bindVat(root, ctx, redraw) {
   // of, and that lives one tap in. Recorded on `state.ui` because it is a
   // fact about the player rather than about any one creature, and `ui` is
   // already carried across runs.
-  for (const d of root.querySelectorAll('details[data-dossier]')) {
+  for (const d of unbound(root, 'details[data-dossier]')) {
     d.addEventListener('toggle', () => {
       if (!d.open || state.ui?.tierRead) return;
       state.ui = { ...(state.ui ?? {}), tierRead: true };
@@ -515,7 +516,9 @@ export function renderPensScreen(root, ctx) {
     </p>`;
 
   const note = fieldNote(guideForScreen(state, content, t, 'pens'));
-  root.innerHTML = note + sparLine +
+  // R104 — patched, not replaced: opening one pen used to destroy all five
+  // cards' nodes, and with them the player's selection and focus.
+  paintScreen(root, note + sparLine +
     (lastMsg ? `<section class="card"><p class="ranch-msg">${lastMsg}</p></section>` : '') +
     vatCard(state, content, t) +
     // R128 — the Infirmary is bought where injuries are read, and R128b puts
@@ -528,15 +531,15 @@ export function renderPensScreen(root, ctx) {
     // screen DOES own, pointing at the one it does not.
     tablePointer(state, content) +
     (cards ||
-      `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`);
+      `<section class="card"><p class="ranch-msg">No chimeras yet. The Splice tab accepts walk-ins.</p></section>`));
   bindFacility(root, ctx, () => renderPensScreen(root, ctx), (r) => { lastMsg = r.msg; });
 
-  root.querySelectorAll('button[data-goto]').forEach((btn) => {
+  unbound(root, 'button[data-goto]').forEach((btn) => {
     btn.addEventListener('click', () => ctx.goto?.(btn.dataset.goto));
   });
 
   // R41: a creature you keep for a whole campaign is a creature you name.
-  root.querySelectorAll('button[data-rename]').forEach((btn) => {
+  unbound(root, 'button[data-rename]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const ch = state.chimeras.find((c) => c.id === btn.dataset.rename);
       if (!ch) return;
@@ -573,7 +576,7 @@ export function renderPensScreen(root, ctx) {
   // Dismantling is irreversible and returns less than it consumed, so the
   // sheet shows the EXACT parts that will come back — seeded on the
   // chimera, so the preview and the outcome can never disagree.
-  root.querySelectorAll('button[data-dismantle]').forEach((btn) => {
+  unbound(root, 'button[data-dismantle]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const ch = state.chimeras.find((c) => c.id === btn.dataset.dismantle);
       if (!ch) return;
@@ -609,7 +612,7 @@ export function renderPensScreen(root, ctx) {
       });
     });
   });
-  root.querySelectorAll('button[data-treat]').forEach((btn) => {
+  unbound(root, 'button[data-treat]').forEach((btn) => {
     btn.addEventListener('click', () => {
       lastMsg = treatInjury(state, btn.dataset.treat, content, ctx.now()).msg;
       ctx.save();
@@ -619,7 +622,7 @@ export function renderPensScreen(root, ctx) {
   // R30: the retraining sheet. Every move the creature knows, four
   // checkable, and it will not let you leave with five or with none —
   // "something has to go" is the mechanic, so the sheet says which.
-  root.querySelectorAll('button[data-moves]').forEach((btn) => {
+  unbound(root, 'button[data-moves]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const ch = state.chimeras.find((c) => c.id === btn.dataset.moves);
       if (!ch) return;
@@ -682,7 +685,7 @@ export function renderPensScreen(root, ctx) {
     });
   });
 
-  root.querySelectorAll('button[data-train]').forEach((btn) => {
+  unbound(root, 'button[data-train]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const result = trainChimera(state, btn.dataset.train, ctx.now(), content);
       lastMsg = result.msg;

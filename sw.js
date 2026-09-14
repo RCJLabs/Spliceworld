@@ -19,6 +19,7 @@ const SHELL = [
   'render/mood.js',
   'ui/picker.js',
   'ui/cards.js',
+  'ui/patch.js',
   'ui/tabs.js',
   'ui/roster.js',
   'ui/pager.js',
