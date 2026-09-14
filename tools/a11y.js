@@ -1015,14 +1015,20 @@ async function main() {
       // loses its selection, its scroll position and its focus.
       await evaluate(`document.querySelector('#tabs button[data-screen="pens"]').click()`);
       await sleep(600);
+      // Held as REFERENCES, never as a marker attribute. Stamping the cards
+      // with `data-r104` to find them afterwards is the same trap the fix
+      // itself had to design around: the attribute lands in `outerHTML`, so
+      // every stamped card differs from its freshly built markup and the
+      // keyed paint replaces all of them. The gate then measures the damage
+      // it did itself and reports the fix does not work.
       const identity = JSON.parse(await evaluate(`(() => {
         const r = document.querySelector('#screen-pens');
-        const folds = [...r.querySelectorAll('[data-fold]')];
-        folds.forEach((b, i) => { const c = b.closest('section, article, div'); if (c) c.dataset.r104 = 'k' + i; });
-        const before = r.querySelectorAll('[data-r104]').length;
-        folds[0]?.click();
+        window.__r104 = [...r.querySelectorAll('[data-fold]')]
+          .map((b) => b.closest('section, article, div')).filter(Boolean);
+        const before = window.__r104.length;
+        r.querySelector('[data-fold]')?.click();
         return new Promise((res) => setTimeout(() => res(JSON.stringify({
-          before, after: document.querySelectorAll('#screen-pens [data-r104]').length,
+          before, after: window.__r104.filter((el) => document.contains(el)).length,
         })), 450));
       })()`));
       if (identity.before > 1 && identity.after < identity.before) {
@@ -1402,18 +1408,26 @@ async function main() {
     }
     if (!held) note('no control inside any screen can be reached by Tab');
     else {
-      await evaluate(`window.__repaintProbe = document.querySelector('.screen:not([hidden]) *')`);
       if (await evaluate(`document.hidden`)) note('the page reports itself hidden, so the tick never runs and 7b proves nothing');
-      // R104 — the tick no longer repaints a world that did not move, which
-      // is the milestone; this rule therefore has to make the world MOVE
-      // rather than merely fire the event. Two minutes of elapsed time is
-      // what a player hands the shell by coming back to the tab, and it is
-      // the honest trigger for "a repaint must not move focus": nothing here
-      // takes focus the way clicking a control to force one would.
-      await evaluate(`(() => { const R = Date.now.bind(Date); Date.now = () => R() + 120000; })()`);
-      await evaluate(`document.dispatchEvent(new Event('visibilitychange'))`);
-      await sleep(600);
-      if (await evaluate(`document.contains(window.__repaintProbe)`)) {
+      // R104 — this rule used to prove the repaint happened by watching a
+      // probe node DISAPPEAR, because every repaint replaced every node. Both
+      // halves of that changed: the tick no longer paints a world that did
+      // not move, and a paint now keeps the nodes whose markup is unchanged.
+      // So the world is made to move two minutes — what a player hands the
+      // shell by coming back to a tab — and the repaint is proven by watching
+      // for ANY mutation rather than for a particular node's death. Nothing
+      // here takes focus, which is what is being measured.
+      const painted = Number(await evaluate(`(() => {
+        let n = 0;
+        const obs = new MutationObserver((rs) => { n += rs.length; });
+        obs.observe(document.querySelector('.screen:not([hidden])'),
+          { childList: true, subtree: true, attributes: true, characterData: true });
+        const R = Date.now.bind(Date); Date.now = () => R() + 120000;
+        document.dispatchEvent(new Event('visibilitychange'));
+        return new Promise((res) => setTimeout(() => { obs.disconnect(); res(n); }, 500));
+      })()`));
+      await sleep(200);
+      if (!painted) {
         note('the tick did not repaint the active screen, so the focus check proves nothing');
       }
       const after = await evaluate(FOCUSED);
