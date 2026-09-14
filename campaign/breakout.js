@@ -174,10 +174,14 @@ function makeEscapee(state, content, rival, n, now) {
   // carried no counter at all: break 281 moved the post-dominion rate by 0.6
   // points because there was almost nothing there to cut.
   //
-  // A solo escapee is index 0 and gets the lab's read too, which is right: one
-  // specimen from a lab that has studied you IS the specimen it would send.
+  // PACKS ONLY. Giving a solo escapee the lab's read is defensible — one
+  // specimen from a lab that has studied you is the specimen it would send —
+  // but it changes every escape from day one, which is a different milestone
+  // than this one. Measured, it moved a 45-day walk's herd from 20 animals to
+  // 21 and went red on R154's bound. R93's criterion is about the LATE game;
+  // the pack is the late game's own escalation, so the read arrives with it.
   const size = packSize(content, escapesFrom(state, rival.id));
-  const dossier = rivalDossier(state, rival, content);
+  const dossier = size > 1 ? rivalDossier(state, rival, content) : null;
   const bodies = [];
   for (let i = 0; i < size; i++) {
     bodies.push(rivalSpecimen(rival, content, {
