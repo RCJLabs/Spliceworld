@@ -46,7 +46,8 @@ import { pickerField, bindPickers, openPicker, openPrompt } from '../ui/picker.j
 import {
   activeVat, vatPlan, vatRemainingMs, startVat, cancelVat, isExhausted, chaosTuning,
 } from './chaos.js';
-import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen, paintScreen, unbound } from '../ui/cards.js';
+import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen, unbound } from '../ui/cards.js';
+import { paintScreen } from '../ui/patch.js';
 import { facilityCard, bindFacility, tablePointer } from '../ui/facility-card.js';
 import { bandedHtml } from '../ui/roster.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';

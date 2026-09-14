@@ -86,23 +86,18 @@ export function tickWorld(state, content, now) {
   // so this is the one place that clamp lives.
   for (const line of tickTaskforce(state, content, now).news) pushNews(state, line);
   state.lastTickAt = now;
-  // R104 — WHAT MOVED. The shell used to repaint on a timer; now it repaints
-  // on this. R107 reads the same report to say what happened while nobody was
-  // home, which is why the categories are the player's ("a job came back")
-  // rather than the engine's ("operations[3].state changed").
+  // R104 — WHAT MOVED; the shell repaints on this rather than on a timer,
+  // and R107 reads it to say what happened while nobody was home.
   return changesBetween(before, worldSnapshot(state, now));
 }
 
-// Scalars only, and every one of them something a player would notice. A
-// derived count belongs here rather than a raw array so that two ticks which
-// reorder the same list read as the same world.
+// Scalars only, every one something a player would notice: a count rather
+// than an array, so reordering a list is not a change. See ROADMAP R104.
 export function worldSnapshot(state, now = state?.lastTickAt ?? 0) {
   const c = state?.campaign ?? {};
   const r = state?.ranch ?? {};
-  // A pending clock is what makes a countdown on screen go stale without
-  // anything else moving. Bucketed to the minute, so a screen showing
-  // "3h 11m" repaints when that text would change and not forty times in
-  // between; zero when nothing is counting, so a quiet world is quiet.
+  // A pending clock is what makes a countdown go stale with nothing else
+  // moving. Bucketed to the minute; zero when nothing is counting.
   const counting = (r.eggs?.length ?? 0) + (state?.vat ? 1 : 0) + (state?.resequencer ? 1 : 0)
     + (state?.chimeras ?? []).filter((x) => x?.settleUntil > now).length
     + (c.contested?.length ?? 0);

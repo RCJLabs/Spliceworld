@@ -6948,6 +6948,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // Pens, never as a system of its own.
     'battle/move-text.js': null,
   'render/mood.js': null,
+  'ui/patch.js': null,
     'battle/forecast.js': null,
     'battle/readout.js': null,
     'battle/tagtext.js': null,

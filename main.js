@@ -53,10 +53,8 @@ const ctx = {
   // vat or empties the tank it just finished. Without this a rushed vat
   // would read "0s to go" for up to thirty seconds, which is a button that
   // looks broken for exactly as long as it takes to lose faith in it.
-  // R104 — forced: a screen calls this because the PLAYER did something, and
-  // the report only knows what the WORLD did. A rushed vat moves a clock the
-  // snapshot does not watch, and a care action moves a cooldown it does not
-  // either; both must still reach the glass.
+  // R104 — forced: the PLAYER did something, and the report only knows what
+  // the WORLD did. See ROADMAP R104 for the three callers that need this.
   tick: () => tick({ force: true }),
   refreshTicker: () => updateTicker(),
   pushNews: (line) => { pushNews(state, line); updateTicker(); },
@@ -197,11 +195,8 @@ function showScreen(name, subtab) {
   if (name !== 'battle') document.body.classList.remove('in-battle');
   state.activeScreen = name;
   saveGame(state);
-  // R104 — a screen you have left is emptied, not merely hidden. 496 nodes
-  // of Dex behind `hidden` are 496 nodes every later style recalculation
-  // still walks. The DOM is rebuilt from state on the way back in, which is
-  // what `force` below is for; folds survive because `isOpen` reads the save
-  // rather than the document.
+  // R104 — emptied, not merely hidden: 496 nodes of Dex behind `hidden` are
+  // 496 every style recalculation still walks. Rebuilt from state on return.
   for (const s of Object.keys(SCREENS)) {
     const el = $(`#screen-${s}`);
     el.hidden = s !== name;
@@ -219,10 +214,8 @@ function showScreen(name, subtab) {
 
 // Timestamps, not intervals: recompute elapsed effects on load, on focus,
 // and on a slow display refresh (settling countdowns, care cooldowns).
-// R104 — `force` is for the one caller that knows something changed without
-// the world moving: arriving on a screen. Everything else — the 30-second
-// timer, a return to the tab — repaints only if `tickWorld` says something
-// a player would notice actually moved.
+// R104 — `force` is for callers that know something changed without the world
+// moving. Everything else repaints only if `tickWorld` says something did.
 function tick({ force = false } = {}) {
   // R59: what deserves a sound is decided in one place (audio/sfx.js) from a
   // snapshot of scalars. tick() is where every passive system advances, so
