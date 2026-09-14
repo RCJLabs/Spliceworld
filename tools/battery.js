@@ -2041,10 +2041,20 @@ const BREAKS = [
     // wait. `state.funds < TRAINING.cost` is the floor that replaced it, so
     // the patch swaps a floor for a buffer and nothing else.
     //
-    // THE SEED IS PART OF THE BREAK. Seed 2026 reads 0h with the reserve check
-    // and 0h without it, so a rule on 2026 alone is green either way — which
-    // is exactly the vacuous gate this entry warned about. The rule takes the
-    // max across R143's three walks and this goes red on seed 7's 18h.
+    // THE SEED IS PART OF THE BREAK, AND THE SEED WENT STALE. Seed 2026 reads
+    // 0h with the reserve check and 0h without it, so a rule on 2026 alone is
+    // green either way — which is exactly the vacuous gate R155 warned about.
+    // R155 aimed this at seed 7's 18h; five milestones later seed 7 read 0h
+    // BOTH WAYS and this break came back MISSED, on the branch and on `main`
+    // alike. A sixteen-seed census with the reserve check restored found the
+    // defect had moved rather than gone: 314 holds 16h, 42 holds 10h, 9001
+    // holds 8h, 21 holds 2h, everything else 0. Seed 314 joined EMPIRE_SEEDS
+    // and the rule takes the max across all five walks.
+    //
+    // The general lesson is worth more than the seed: A BREAK AIMED AT ONE
+    // SEED IS AIMED AT ONE CAMPAIGN'S WEATHER, and the weather moves every
+    // time the economy does. Nothing warns you — the break just stops being a
+    // break. Only the five-milestone rot check found this.
     n: 255, gate: EMPIRE, name: 'the cash reserve goes back to refusing the five dollars that keeps a creature',
     file: 'tools/sim.js',
     anchor: '      if (state.funds < TRAINING.cost) break;',

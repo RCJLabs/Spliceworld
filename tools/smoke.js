@@ -19074,7 +19074,25 @@ if (inShard('empire')) {
   //
   // It costs one more 180-day walk in this shard. That is the price of a rule
   // that can fail.
-  const EMPIRE_SEEDS = [2026, 7, 99, 11];
+  // R104's rot check — AND SEED 7 STOPPED REPRODUCING R155's DEFECT.
+  //
+  // Break 255 reverts drift-tending to asking the cash reserve before spending
+  // five dollars on a warned creature. R155 aimed it at seed 7, which read 18h
+  // of holding on the reverted tree. Five milestones later the break came back
+  // MISSED on this branch AND on `main`: seed 7 now reads 0h either way, so the
+  // rule was green against code it was written to reject.
+  //
+  // Re-censused across sixteen seeds with the reserve check restored. The
+  // defect did not go away, it MOVED: 314 reads 16h, 42 reads 10h, 9001 reads
+  // 8h, 21 reads 2h, and the other twelve — seed 7 among them — read 0. All
+  // four read 0h on the shipped tree, so the rule still passes what it should.
+  // 314 joins the set because it holds the longest and because R155's own
+  // entry already named it as a campaign where the creature waits.
+  //
+  // It costs one more 180-day walk in this shard, the same price R165 paid for
+  // seed 11 and for the same reason: a rule that cannot fail is not a rule.
+  // The cost is noted against R168, which owns the suite's budget.
+  const EMPIRE_SEEDS = [2026, 7, 99, 11, 314];
   const walks = EMPIRE_SEEDS.map((seed) => campaignWalk(content, {
     seed, days: 180, stopAtDominion: false, snapshotDays: [10, 120],
   }));
@@ -19217,7 +19235,7 @@ if (inShard('empire')) {
   // reason three rules down: these are the only walks in the suite that run
   // the full 180 days. And the seed matters as much as the length — seed 2026
   // reads 0h whether the fix is present or not, so the rule is the MAX across
-  // all three walks. On the reverted tree that max is 18h, from seed 7.
+  // all the walks. On the reverted tree that max is 16h, from seed 314.
   //
   // NOT asserted on `agitated`: the warning is stamped by `tick()` BEFORE the
   // walker takes its turn, so a creature settled on the same tick still
@@ -19231,7 +19249,7 @@ if (inShard('empire')) {
       + ` reserve — worst hold ${held}h of a 24h window, across seeds `
       + `${EMPIRE_SEEDS.join('/')} (${walks.map((w) => `${w.feral.heldHours}h`).join(', ')})`);
     assert.equal(walks.reduce((n, w) => n + w.feral.lost, 0), 0,
-      'and none of the three full-length walks lost one');
+      `and none of the ${walks.length} full-length walks lost one`);
   }
 
   // R93 — THE LATE GAME HAS TO BE ABLE TO GO WRONG.
