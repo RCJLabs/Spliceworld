@@ -15559,7 +15559,14 @@ if (inShard('away')) {
   //    times in a tick and keep two elapsed timestamps.
   {
     const shell = readFileSync(join(root, 'main.js'), 'utf8');
-    const tickBody = shell.slice(shell.indexOf('function tick()'), shell.indexOf('function updateTicker'));
+    // R104 — `function tick(` for the reason R59's rule above needed the same
+    // widening: the signature took a `force` argument. Worth noting how this
+    // one failed, because it is nastier than a plain -1: indexOf returned -1,
+    // slice(-1, …) is a legal call that yields a garbage window, and the rule
+    // then counted NOW() in text that was never the tick body at all. A
+    // missing anchor that throws is a kindness; one that silently reframes
+    // the measurement is how a gate starts lying.
+    const tickBody = shell.slice(shell.indexOf('function tick('), shell.indexOf('function updateTicker'));
     assert.equal((tickBody.match(/NOW\(\)/g) ?? []).length, 1, 'tick() reads the clock once');
     assert.ok(tickBody.includes('tickWorld('), 'and advances the world through campaign/world.js');
     for (const gone of ['applyElapsed(', 'tickCampaign(', 'tickVat(', 'tickScars(']) {
