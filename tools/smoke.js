@@ -20529,7 +20529,10 @@ if (inShard('wire')) {
 // R96 — 554 -> 555. The eager half of the posture work is the 853 bytes that
 // APPLY a stance; the bands and the marks that compute one are in the lazy
 // `render/mood.js`. Two under R93's 557. See ROADMAP R96.
-const KB_CAP = 555;
+// R104 — 555 -> 559. Same purchase as FIRST_PAINT_KB above: the eager half
+// of a shell that repaints on a change rather than on a clock. See ROADMAP
+// R104 for what each kilobyte does and which two levers were spent first.
+const KB_CAP = 559;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

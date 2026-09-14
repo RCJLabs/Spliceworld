@@ -273,7 +273,21 @@ const REPORT = process.argv.includes('--report');
 // impression. The cheap half was taken first: `render/mood.js` keeps 4.6 KB
 // of bands, marks and placement OUT of the eager graph, because the only
 // screens that draw a chimera are lazy. Still 1 KB under R93's 1030.
-const FIRST_PAINT_KB = 1029;
+// R104 — 1029 -> 1033. The only cap raise in this project bought with work
+// REMOVED rather than a feature added: the shell used to rebuild the active
+// screen from a string every thirty seconds and after every tap, whether or
+// not anything had changed, and a screen you had left kept its DOM for the
+// rest of the session. What the 3 KB buys is the machinery that stops both -
+// the change report a repaint is now gated on (1.9 KB, and R107 reads the
+// same report), the forced-tick distinction that keeps a player's own
+// presses reaching the glass (1.0 KB), and the bound-set the keyed paint
+// needs (0.8 KB). The levers were taken first: `paintScreen` went into a
+// lazy module and the reasoning went to ROADMAP R104, which together held
+// 2.7 KB out of this number.
+// 1033 rather than 1032 because the measurement is a float and the note
+// rounds it: "1032 KB, over the budget of 1032 KB" is what a cap set to the
+// printed number says about a page that actually weighs 1032-point-something.
+const FIRST_PAINT_KB = 1033;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //
