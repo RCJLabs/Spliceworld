@@ -42,12 +42,40 @@ lab's considered answer rather than more bodies. `SAVE_VERSION` 51 → **52**;
 
 | | before | after |
 | --- | ---: | ---: |
-| post-dominion hunts won | 99.0% | **82.4%** |
-| post-dominion defences held | 82.4% | **81.8%** |
-| hunts, six seeds | 1,624 | 1,736 |
-| broke hours, any seed | 0 | **0** |
+| post-dominion hunts won (gate seeds) | 99.2% | **82.2%** |
+| post-dominion defences held | 84.1% | **85.6%** |
 | `SAVE_VERSION` | 51 | **52** |
 | breaks | 272 | **276** |
+
+### The verification found more than the build did
+
+Two of four breaks went **MISSED** on the first full run — under a summary line
+reading "4 caught", over a red `BATTERY_EXIT`. Measured per variant, each in
+its own process:
+
+| | hunts | won |
+| --- | ---: | ---: |
+| shipped | 1,059 | 87.2% |
+| 281 counter stripped | 1,054 | 87.8% |
+| 282 tally counts bodies | 1,488 | 60.1% |
+
+- **282 makes the game harder** and the rule only asked "too easy?". Now a
+  band, floor 75.
+- **281 moves the rate 0.6 points** — no band catches that. A win rate is the
+  wrong instrument for a wiring question, so it gets a property assertion: a
+  lab that has read your stable must send a different pack than one that has
+  not.
+
+**That assertion then found a real defect in my own code.** `rivalSpecimen`
+compares `index` to `counterSlot`, which is 0 from tier 2 up — so walking the
+extras from index 1 with no dossier on the leader meant the pack carried **no
+counter at all** at exactly the tiers R27 cares about. 0.6 points was what was
+left of the wire.
+
+Three drafts to fix, because `index` picks the frame AND selects the counter:
+putting the leader in the loop at index 0 fixed the counter and took away its
+random frame, moving a 45-day walk's herd 20 → 21 and going red on R154. The
+shipped answer leaves the leader alone and aims the first EXTRA at the slot.
 
 ### What BATTERY_EXIT caught that the summary line hid
 
@@ -70,9 +98,14 @@ lever does not apply here.
   (five small exports the engine reads, the description half the screens read).
 - **The eager-JS note was wrong about why `moves.js` stays exempt** — "more
   than one eager importer" is true and is not the question. Corrected in place.
-- **87.2% on the gate's four seeds against a 90% bar** is 2.8pp of headroom.
-  The walks are deterministic so a red means something real moved, but it is
-  tighter than the six-seed 82.4% suggests.
+- **82.2% sits between a 75 floor and a 90 ceiling** — 7.2pp and 7.8pp of
+  headroom. The walks are deterministic, so a red means something real moved.
+- **My first diagnosis of the MISSED breaks was wrong and built on a broken
+  probe**: re-importing `tools/sim.js` with a cache-busting query re-evaluates
+  sim.js but reuses the already-loaded `campaign/breakout.js`, so all three
+  "variants" ran identical code and returned identical numbers. The data sweeps
+  earlier in the session worked only because `loadSimContent()` re-reads JSON
+  from disk. **Patching source needs a fresh process.**
 
 ### Next session's first task
 

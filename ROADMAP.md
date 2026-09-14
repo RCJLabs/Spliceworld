@@ -2210,14 +2210,51 @@ R102; R88–R90 remain.)*
   **1030**, eager JS 555 → **557**, both priced in their notes. The levers
   that would give the room back are measured and **queued as R167**.
 
+  #### What the verification found that the build did not
+
+  Two of the four breaks went **MISSED** on the first full run — with the
+  summary line reading "4 caught" over a red `BATTERY_EXIT`, which is the whole
+  reason that rule exists. Measured per variant, each in its own process:
+
+  | | hunts | won |
+  | --- | ---: | ---: |
+  | shipped | 1,059 | 87.2% |
+  | 281, counter stripped | 1,054 | 87.8% |
+  | 282, tally counts bodies | 1,488 | 60.1% |
+
+  **282 makes the game harder**, and the rule only asked whether it had got too
+  easy. It is a BAND now, floor 75 — twelve points under shipped, fifteen over
+  the draft that failed. R157's lesson again.
+
+  **281 moves the rate by 0.6 points**, which no band could catch, because a
+  win rate is the wrong instrument for a wiring question. It gets a property
+  assertion instead — a lab that has read your stable must send a different
+  pack than one that has not — and that assertion immediately found a **real
+  defect in this milestone's own code**. `rivalSpecimen` compares `index`
+  against `counterSlot`, which is 0 whenever `counterLeads`, i.e. every tier
+  from 2 up; the first draft walked the extras from index 1 and gave the leader
+  no dossier, so at exactly the tiers where R27 says a lab has stopped treating
+  you as a variable, **the pack carried no counter at all**. 0.6 points was
+  what remained.
+
+  Fixing it took three drafts, because `index` does double duty — it picks the
+  frame AND it selects the counter. Putting the leader in the loop at index 0
+  fixed the counter and silently took away its random frame, changing every
+  escape from day one: a 45-day walk's herd went 20 → 21 animals and R154's
+  bound went red. The shipped answer leaves the leader alone and aims the first
+  EXTRA at the counter slot, so nothing before the first pack moves.
+
   **The lesson:** *a key that already exists is not the same as a key that
-  moves. Defeats scale the specimen and top out at six; escapes are the number
-  the late game actually produces.*
+  moves, and a statistic that moves is not the same as a statistic your rule
+  can see. Defeats scale the specimen and top out at six; escapes are the
+  number the late game produces; and 0.6 points of win rate was a wire that was
+  never connected.*
 
   *Done when: post-dominion breakout and defence win rates are under 90% on
   the walker's diet, and the walk still reaches day 180 solvent.* Across six
-  seeds: hunts **99.0% → 82.4%**, defences **81.8%**, no seed broke, min funds
-  $164. Breaks 279–282.
+  gate seeds: hunts **99.0% → 82.2%**, defences **85.6%**, no seed broke, min
+  funds $164. Breaks 279–282, all four caught only after the band and the
+  property assertion replaced a single one-sided rule.
 
   The original entry, for the record: After dominion: **157 breakout hunts at 1.1 a day, 100% won**,
   against 8 assaults; **93 defences at 92%**, where the only cost of a loss
