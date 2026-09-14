@@ -603,6 +603,23 @@ export const migrations = {
   // next tick onward. Nothing is reset and nothing is lost; the worst case
   // is that a long-running save under-reports its own past, which is the
   // honest answer rather than a guessed one.
+  // R93 — the loose board gains a pack. An escapee written before this
+  // milestone is a single specimen and stays one: `pack` is normalised to an
+  // empty array rather than backfilled with bodies, because inventing
+  // opponents inside somebody's running campaign is not a migration, it is a
+  // difficulty change applied retroactively. New escapes come back in packs;
+  // the ones already standing in the county are exactly what the player was
+  // shown when they escaped.
+  52: (save) => {
+    save.campaign ??= {};
+    for (const loose of save.campaign.loose ?? []) loose.pack ??= [];
+    // The per-lab tally packs are keyed on. Starting every returning save at
+    // zero is deliberate: it is the count of what has escaped SINCE the rule
+    // existed, and backdating it would drop a three-specimen pack on a player
+    // the first time they opened the game after an update.
+    save.campaign.escapesByLab ??= {};
+    return save;
+  },
   51: (save) => {
     save.dex ??= {};
     const worn = new Set(save.dex.worn ?? []);

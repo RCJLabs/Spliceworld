@@ -2285,6 +2285,11 @@ assert.deepEqual(m5.campaign, {
   // claim of the v38 migration — the first escape is still five hours after
   // the save becomes eligible, not five hours after it was upgraded.
   loose: [], nextBreakAt: null, breakoutCount: 0,
+  // R93: and the same claim for the pack. The per-lab tally a returning save
+  // arrives with is EMPTY, not backdated — the county's escalation starts
+  // counting from the upgrade, so nobody opens the game after an update to
+  // find a three-specimen pack waiting that their last session never earned.
+  escapesByLab: {},
   // R87: the same claim for the Task Force. A save from before it arrives
   // with an empty board and an unarmed schedule — nobody is retroactively
   // raided, and the first raid is scheduled by the first tick that finds
@@ -19158,6 +19163,121 @@ if (inShard('empire')) {
       'and none of the three full-length walks lost one');
   }
 
+  // R93 — THE LATE GAME HAS TO BE ABLE TO GO WRONG.
+  //
+  // After dominion the campaign is two verbs, and by volume it is mostly one:
+  // across six seeds, 1,624 escapee hunts against 483 defences and 99
+  // assaults. The hunt is the endgame, and the hunt could not be lost —
+  // 99.0%, one to nearly three times a day, for the rest of the campaign.
+  //
+  // That is not drift. R82 designed it: "NO DEADLINE ... IT IS NOT ABOUT
+  // LAND. No node, no income, no suspension", and `resolveBreakout` returns
+  // `cleared: false` on a loss, so the board keeps the entry and you try
+  // again. Every one of those reasons is good for a system that exists to put
+  // rival anatomy in front of the player. None of them is a reason the fight
+  // itself should be a formality.
+  //
+  // THE DEFENCE HALF OF THE ENTRY WAS ALREADY WRONG. It claimed 92% held and
+  // "the only cost of a loss is suspended income". Both are stale: defences
+  // are held 85.0% of the time on these four seeds, and `resolveContest`
+  // drops the node out of `heldNodes` — you lose the county, not its rent.
+  // So the defence rule below is green the day it is written, and it is here
+  // to keep it that way rather than to change anything.
+  //
+  // POOLED, NOT PER-SEED. A rate is a rate: seed 11 fights 20 defences in its
+  // whole post-dominion life and reads 100%, which is four fights of noise,
+  // not a finding. Pooling asks the question the criterion asks.
+  {
+    const late = walks.map((w) => w.lateGame);
+    const pool = (pick) => {
+      const n = late.reduce((t, l) => t + pick(l).n, 0);
+      const won = late.reduce((t, l) => t + pick(l).won, 0);
+      return { n, won, pct: n ? +(100 * won / n).toFixed(1) : null };
+    };
+    const hunts = pool((l) => l.hunts);
+    const defs = pool((l) => l.defences);
+
+    // The sample has to exist before a rate means anything: a walk that
+    // stopped hunting would otherwise pass this by fighting nothing.
+    assert.ok(hunts.n >= 400 && defs.n >= 150,
+      `the late game is actually being played — ${hunts.n} hunts and ${defs.n} defences `
+      + `after dominion across seeds ${EMPIRE_SEEDS.join('/')}`);
+
+    // A BAND, NOT A CEILING — and the ceiling alone was shipped first, which
+    // is how break 282 went MISSED in R93's own verification. Making the pack
+    // tally count bodies instead of escapes compounds the escalation: hunts
+    // 87.2% -> 60.1% won and the hunt COUNT 1,059 -> 1,488, because a lost
+    // hunt leaves the pack standing to be fought again. Every one of those
+    // numbers is worse for the player, and a rule that only asks "is it too
+    // easy" waved it through.
+    //
+    // The floor is what separates stakes from grind. 75 sits 12pp under the
+    // shipped 87.2 and 15pp over the draft that failed, so it catches the
+    // runaway without going red on ordinary balance drift.
+    assert.ok(hunts.pct < 90,
+      'an escapee hunt is a fight, not a formality: post-dominion hunts are won '
+      + `${hunts.pct}% of the time (${hunts.won}/${hunts.n}), and the late game is `
+      + `${(hunts.n / defs.n).toFixed(1)}x more hunt than defence`);
+    assert.ok(hunts.pct > 75,
+      'and a fight, not a wall: post-dominion hunts are won '
+      + `${hunts.pct}% of the time (${hunts.won}/${hunts.n}). Below this the pack `
+      + 'stops being a stake and starts being the same pack, fought twice');
+
+    assert.ok(defs.pct < 90,
+      `a county can be lost: post-dominion defences are held ${defs.pct}% of the time `
+      + `(${defs.won}/${defs.n})`);
+
+    // ...and the campaign still has to work. R93's second clause, and the one
+    // that stops "make it harder" from being the whole answer.
+    for (const w of walks) {
+      assert.equal(w.brokeHours, 0,
+        `seed ${w.seed ?? '?'} reaches day 180 solvent — ${w.brokeHours}h broke, `
+        + `min funds $${w.minFunds}`);
+    }
+    console.log(`   R93 late game: ${hunts.n} hunts ${hunts.pct}% won · ${defs.n} defences `
+      + `${defs.pct}% held · ${pool((l) => l.assaults).n} assaults, from day `
+      + `${late.map((l) => l.fromDay).join('/')}`);
+  }
+
+  // R93 — A PACK IS THE LAB'S ANSWER, AND A RATE CANNOT SEE IT.
+  //
+  // The entry asked for the pack to carry "the rival's counter-bias (R27's
+  // machinery, already built)", and R93 wired `rivalDossier` into the extras
+  // so the second specimen is built for whatever you have been beating them
+  // with. Break 281 cuts that wire — and the measured cost is **0.6 points**
+  // of post-dominion win rate (87.2% -> 87.8%), which no band this side of
+  // useless would catch. A win rate is the wrong instrument for a wiring
+  // question, so this asks the wiring directly: the escapee generator is run
+  // against a lab that HAS a read on the player, and the pack it produces has
+  // to differ from the pack the same lab produces with no read at all.
+  {
+    const { tickBreakouts } = await import('../campaign/breakout.js');
+    const rival = rivalList(content)[0];
+    const buildLab = (scouted) => {
+      const st = newGameState();
+      st.seed = 4242;
+      st.campaign.rivals = { [rival.id]: { defeats: 6, losses: 0, scouted: null } };
+      // Above `afterEscapes`, so the next escape from this lab is a pack.
+      st.campaign.escapesByLab = { [rival.id]: 40 };
+      st.campaign.nextBreakAt = 0;
+      if (scouted) scoutStable(st, rival.id, scouted, content);
+      tickBreakouts(st, content, HOUR, 0);
+      return st.campaign.loose[0];
+    };
+
+    const blind = buildLab(null);
+    assert.ok(blind && blind.pack.length >= 1,
+      `a lab ${40} escapes deep sends a pack — got ${blind ? blind.pack.length + 1 : 0} specimen(s)`);
+
+    // A stable the lab can actually read. `scoutStable` is R27's own recorder,
+    // so this is the file a real duel would have written.
+    const read = buildLab(walks[0].save.chimeras.slice(0, 3));
+    const classesOf = (one) => one.pack.map((u) => u.class).join(',');
+    assert.notEqual(classesOf(read), classesOf(blind),
+      'a lab that has watched your stable sends a different pack than one that has not — '
+      + `read ${classesOf(read) || '(none)'} vs blind ${classesOf(blind) || '(none)'}`);
+  }
+
     // R138 — THE MIDDLE OF THE LEVEL CURVE.
     //
     // Six campaigns before this milestone: L0 x24, L10 x25, and THIRTEEN
@@ -20277,7 +20397,24 @@ if (inShard('wire')) {
   // R161 — 554 -> 555, for the reason in tools/boot.js's FIRST_PAINT_KB
 // note: a shared `extractionFit` and a button that asks it, 724 bytes,
 // so a full vault stops offering a graduation it cannot finish.
-const KB_CAP = 555;
+// R93 — 555 -> 557, measured at 557.0, and it is the same 2.9 KB that moved
+// tools/boot.js's FIRST_PAINT_KB: escapee packs in `campaign/breakout.js`,
+// which is eager because `world.js` imports `tickBreakouts` for the boot tick.
+// What it buys is in that note and in ROADMAP R93 — post-dominion hunts went
+// from 99.0% won to 82.4%, on the verb that is 3.4x the rest of the late game.
+//
+// AND IT CORRECTS THIS NOTE'S OWN CLAIM ABOVE, which says `battle/moves.js`
+// (7.2 KB) is still exempt because it "has more than one eager importer".
+// True, and not the question. The eager importers — `statblock.js` and
+// `engine.js` — take five small things from it: MOVE_SLOTS, activeMoves,
+// defaultPick, partMoveId, comboMoveId. The bulk is `moveSummary`,
+// `moveDetail`, `keywordEffect` and `tagNote`, read only by `battle/ui.js`
+// and `splice/pens-ui.js`, both lazy. So the lever is not removal, it is a
+// SPLIT — the leaf the engine reads, and the descriptions the screens read —
+// which is R153's move with one more step. Six importers of a battle-critical
+// module is a milestone, not a paragraph, so it is QUEUED AS R167 beside the
+// data fix with its price attached.
+const KB_CAP = 557;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

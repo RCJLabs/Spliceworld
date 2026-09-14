@@ -1,5 +1,130 @@
 # PROGRESS
 
+## Session 172 — R93: the late game could not be lost ✅
+
+**ROADMAP §9.18.** Half the entry was right and much bigger than filed; the
+other half was already done and its stated cause was wrong.
+
+### Re-measured first, six 180-day campaigns
+
+| the entry said | today |
+| --- | --- |
+| 157 hunts at 1.1/day, **100% won** | **1,624 hunts**, 1.12–2.72/day, **99.0% won** |
+| 8 assaults | 99 assaults |
+| 93 defences at **92%** | 483 at **82.4%** — already under the criterion's bar |
+| loss costs "suspended income" | false — `resolveContest` drops the node out of `heldNodes` |
+
+By volume the late game **is** the hunt: 1,624 against 483 defences and 99
+assaults. And it was not drift — R82 designed the board that way, and
+`resolveBreakout` returns `cleared: false` on a loss so the escapee stays put.
+Good reasons for a system that exists to show the player rival anatomy; none
+of them a reason the fight should be a formality.
+
+### What ships
+
+**Escapee packs** — the entry's own first proposal. A lab that has lost N
+specimens sends them back together, built through `rivalSpecimen` with
+`rivalDossier`, so the extras carry R27's counter-bias and the pack is the
+lab's considered answer rather than more bodies. `SAVE_VERSION` 51 → **52**;
+`escapesByLab` starts at zero rather than backdated.
+
+### Three things the measurement caught
+
+1. **Keyed on defeats it does nothing.** Defeats top out at **2–6** a
+   campaign, so two of six seeds formed no pack at all and stayed at 99.2%.
+   Escapes per lab run to ~56 — and are what the entry actually asked for.
+2. **Counting bodies compounds** — 53.2% won and a third *more* hunts.
+3. **A lost hunt leaves the pack on the board**, so a harsher setting buys its
+   win rate with grind. `25/60/3` (87.2%, +3% hunts) over `22/55/3` (81.4%,
+   +17%).
+
+### Numbers
+
+| | before | after |
+| --- | ---: | ---: |
+| post-dominion hunts won (gate seeds) | 99.2% | **82.2%** |
+| post-dominion defences held | 84.1% | **85.6%** |
+| `SAVE_VERSION` | 51 | **52** |
+| breaks | 272 | **276** |
+
+### The verification found more than the build did
+
+Two of four breaks went **MISSED** on the first full run — under a summary line
+reading "4 caught", over a red `BATTERY_EXIT`. Measured per variant, each in
+its own process:
+
+| | hunts | won |
+| --- | ---: | ---: |
+| shipped | 1,059 | 87.2% |
+| 281 counter stripped | 1,054 | 87.8% |
+| 282 tally counts bodies | 1,488 | 60.1% |
+
+- **282 makes the game harder** and the rule only asked "too easy?". Now a
+  band, floor 75.
+- **281 moves the rate 0.6 points** — no band catches that. A win rate is the
+  wrong instrument for a wiring question, so it gets a property assertion: a
+  lab that has read your stable must send a different pack than one that has
+  not.
+
+**That assertion then found a real defect in my own code.** `rivalSpecimen`
+compares `index` to `counterSlot`, which is 0 from tier 2 up — so walking the
+extras from index 1 with no dossier on the leader meant the pack carried **no
+counter at all** at exactly the tiers R27 cares about. 0.6 points was what was
+left of the wire.
+
+Three drafts to fix, because `index` picks the frame AND selects the counter:
+putting the leader in the loop at index 0 fixed the counter and took away its
+random frame, moving a 45-day walk's herd 20 → 21 and going red on R154. The
+shipped answer leaves the leader alone and aims the first EXTRA at the slot.
+
+### What BATTERY_EXIT caught that the summary line hid
+
+`4 breaks · 4 caught · 0 missed` sitting on **three red baseline gates**:
+smoke's hand-written campaign shape didn't know `escapesByLab`; `sw.js` still
+said `spliceworld-v51`, so the migration would have shipped to nobody; and
+boot was 5 KB over budget — mine, proved by reverting `campaign/`.
+
+Two budgets moved, both for the same 2.9 KB: first paint 1027 → **1030**,
+eager JS 555 → **557**. Comments went to the ROADMAP first (R130's rule),
+paying back 2 of the original 5 KB. `breakout.js` is eager legitimately —
+`world.js` imports `tickBreakouts` for the boot tick — so R153's dead-module
+lever does not apply here.
+
+### Verification
+
+`npm test` **run alone**: `NPM_TEST_EXIT=0`, 970 CPU-seconds of 1028, 380s wall,
+13 walks rebuilt (source changed, so the cache was cold). All four shards green
+on save v52. Battery: 276 anchors match, baseline **34/34**, breaks 279–282
+**4 caught, 0 missed**, `BATTERY_EXIT=0`.
+
+It took five rounds to get there, and every red was real: smoke's expected
+campaign shape, `sw.js`'s cache version, the boot budget twice, the eager-JS
+cap, R154's herd bound, and two breaks that could not see the defects they
+were aimed at. Nothing was ratcheted to fit — R154's bound stands where it was,
+and the second eager-JS raise was avoided by moving prose to the ROADMAP.
+
+### Known issues
+
+- **Both caps went up**, which R153's note warns about. The two levers that
+  give the room back are measured and **queued as R167**: 3.1 KB of empty data
+  keys (32 read sites + a `gen-parts.js` change) and a `battle/moves.js` split
+  (five small exports the engine reads, the description half the screens read).
+- **The eager-JS note was wrong about why `moves.js` stays exempt** — "more
+  than one eager importer" is true and is not the question. Corrected in place.
+- **82.2% sits between a 75 floor and a 90 ceiling** — 7.2pp and 7.8pp of
+  headroom. The walks are deterministic, so a red means something real moved.
+- **My first diagnosis of the MISSED breaks was wrong and built on a broken
+  probe**: re-importing `tools/sim.js` with a cache-busting query re-evaluates
+  sim.js but reuses the already-loaded `campaign/breakout.js`, so all three
+  "variants" ran identical code and returned identical numbers. The data sweeps
+  earlier in the session worked only because `loadSimContent()` re-reads JSON
+  from disk. **Patching source needs a fresh process.**
+
+### Next session's first task
+
+**ROADMAP §9.0** — 19 queued. R94 is the oldest; R167 is the newest and is the
+one that pays back this milestone's debt.
+
 ## Session 171 — R166: the queue lied about itself ✅
 
 **ROADMAP §9.18 / new §9.0.** The session started on R54, "saves you can

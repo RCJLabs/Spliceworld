@@ -44,7 +44,7 @@ import {
 import { gradeOf, gradeIndexOf } from '../splice/extract.js';
 import { isContested } from './contest.js';
 import { speciesOf, classOf, enemyOf, rivalOf } from '../data/catalog.js';
-import { looseSpecimens, looseById, released, releaseTuning } from './breakout.js';
+import { looseSpecimens, looseById, released, releaseTuning, packOf } from './breakout.js';
 import {
   operationList, freeCrew, startOperation, abortOperation, opOdds,
 } from './operations.js';
@@ -417,13 +417,23 @@ function renderMap(root, ctx) {
           const carried = (one.traits ?? [])
             .map((tr) => ` <span class="grade-badge grade-apex">${esc(content.traits[tr]?.name ?? tr)}</span>`)
             .join('');
+          // R93 — a pack is the one thing on this row that decides whether
+          // the player should go NOW or finish the splice first, so it is
+          // stated in the name and totalled in the stat line rather than
+          // discovered on the briefing screen. HP and PWR are the pack's,
+          // because that is what the team is walking into.
+          const bodies = packOf(one);
+          const packHp = bodies.reduce((n, u) => n + u.hp, 0);
+          const packPwr = bodies.reduce((n, u) => n + u.power, 0);
           return `<div class="encounter">
-            <div><strong>${one.unit.name}</strong>${carried} <span class="lineage">${
+            <div><strong>${one.unit.name}${bodies.length > 1 ? ` +${bodies.length - 1}` : ''}</strong>${carried} <span class="lineage">${
               cls ? `${renderIcon(cls.icon)} ${cls.name} · ` : ''
-            }HP ${one.unit.hp} · PWR ${one.unit.power}</span><br>
-            <span class="fine-print">${lab ? (one.wild
-              ? `Was ${lab.name}'s. It has not been eating what ${lab.name} issued. `
-              : `${lab.name}'s, and no longer ${lab.name}'s. `) : ''}Last seen ${one.sighting}.</span></div>
+            }HP ${packHp} · PWR ${packPwr}</span><br>
+            <span class="fine-print">${bodies.length > 1
+              ? `${bodies.length} of them, travelling together${lab ? `, all ${lab.name}'s` : ''}. `
+              : `${lab ? (one.wild
+                ? `Was ${lab.name}'s. It has not been eating what ${lab.name} issued. `
+                : `${lab.name}'s, and no longer ${lab.name}'s. `) : ''}`}Last seen ${one.sighting}.</span></div>
             <button type="button" data-breakout="${one.id}"${canFight ? '' : ' disabled'}>${
               canFight ? `Hunt — $${one.reward}` : noneFit
             }</button>

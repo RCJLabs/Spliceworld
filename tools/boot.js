@@ -233,7 +233,28 @@ const REPORT = process.argv.includes('--report');
 // R153's warning against a seventh raise stands and this is not one of those:
 // those were raises to accommodate DRIFT, on a cap nobody had moved the code
 // under. This is the smallest number that fits a defect the player hit.
-const FIRST_PAINT_KB = 1027;
+// R93 — 1027 -> 1030, measured at 1030.0 exactly. THIS IS A RAISE AND IT IS
+// NOT FREE, so it is priced rather than waved through.
+//
+// What it buys: the late game can be lost. Post-dominion the walk fought
+// 1,624 escapee hunts across six campaigns and won 99.0% of them, 3.4x more
+// hunts than defences — by volume the endgame was one verb that could not go
+// wrong. Escapee packs cost `campaign/breakout.js` 2.9 KB and `campaign/ui.js`
+// 0.7 KB, and `breakout.js` is legitimately eager: `world.js` imports
+// `tickBreakouts` for the boot tick, so this is not R153's dead-module lever
+// pointed at a new file. The comments were trimmed to the code a reader needs
+// and the reasoning moved to ROADMAP R93 first — R130's rule, R161's example —
+// which paid back 2 KB of the 5 KB this started at.
+//
+// What it does NOT buy is any more room. The 7.0 KB of empty `"tags": []` and
+// `"keywords": {}` is still sitting there, re-measured this session at 3.1 KB
+// on today's data files (2.6 KB of it in parts.json alone). It was priced in
+// R149, still uncollected in R153, and it is now QUEUED AS R167 rather than
+// left in this comment where the queue cannot see it — which is R166's whole
+// point. Taking it costs a read-site audit (32 unguarded `.tags` reads) and a
+// change to `tools/gen-parts.js`, because R127's gate holds the generator to
+// reproducing parts.json exactly. That is a milestone, not a paragraph.
+const FIRST_PAINT_KB = 1030;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //

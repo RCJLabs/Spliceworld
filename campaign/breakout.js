@@ -31,7 +31,7 @@
 // SOURCE of specimens, not a second way to own one.
 
 import { rngStream } from '../util/rng.js';
-import { rivalList, rivalRecord, rivalSpecimen } from './rivals.js';
+import { rivalList, rivalRecord, rivalSpecimen, rivalDossier } from './rivals.js';
 import { rivalOf } from '../data/catalog.js';
 
 const HOUR = 3600000;
@@ -116,6 +116,27 @@ function scheduleNext(state, content, from) {
   cam.nextBreakAt = from + Math.round(pacing(state, content).cooldownHours * jitter * HOUR);
 }
 
+// R93 — how many come back. Keyed on the lab's own ESCAPES: defeats top out
+// at 2-6 a campaign, escapes run to ~56. `maxSize` lives in data. ROADMAP R93.
+export function escapesFrom(state, rivalId) {
+  return (state.campaign?.escapesByLab ?? {})[rivalId] ?? 0;
+}
+
+// One escape is one event, not one per body: counting bodies compounds.
+function noteEscape(cam, rivalId) {
+  cam.escapesByLab ??= {};
+  cam.escapesByLab[rivalId] = (cam.escapesByLab[rivalId] ?? 0) + 1;
+}
+
+export function packSize(content, escapes) {
+  const p = breakoutTuning(content).pack ?? {};
+  const after = p.afterEscapes ?? Infinity;
+  const per = Math.max(1, p.escapesPerExtra ?? 12);
+  const max = Math.max(1, p.maxSize ?? 1);
+  if (!(escapes >= after)) return 1;
+  return Math.min(max, 2 + Math.floor((escapes - after) / per));
+}
+
 // The specimen itself. Built by the rival generator, so a loose one is
 // indistinguishable from one still on the ladder — it was on the ladder.
 // `idSuffix` keeps a rival's escapees distinct from that rival's current
@@ -144,16 +165,35 @@ function makeEscapee(state, content, rival, n, now) {
     index: Math.floor(rng() * Math.max(1, rival.frames.length)),
     powerScale, idSuffix: `loose${n}`, wild,
   });
+  // R93 — `index` picks the frame AND selects the counter slot (0 from tier 2
+  // up), so the leader keeps its frame and the first EXTRA is aimed at the
+  // slot. Two earlier drafts and what each cost: ROADMAP R93.
+  const size = packSize(content, escapesFrom(state, rival.id));
+  const dossier = size > 1 ? rivalDossier(state, rival, content) : null;
+  const slot = dossier?.counterLeads ? 0 : 1;
+  const pack = [];
+  for (let i = 1; i < size; i++) {
+    pack.push(rivalSpecimen(rival, content, {
+      rng, meta, defeats: record.defeats ?? 0,
+      index: i === 1 ? slot : slot + i, dossier,
+      counter: dossier?.counterClass ?? null,
+      powerScale, idSuffix: `loose${n}p${i}`, wild,
+    }));
+  }
   const sightings = t.sightings ?? [];
+  const power = unit.power + pack.reduce((sum, u) => sum + u.power, 0);
   return {
     id: `loose-${n}`,
     rivalId: rival.id,
     unit,
+    pack,
     wild: !!wild,
     traits: unit.traits ?? [],
     escapedAt: now,
     sighting: sightings.length ? sightings[Math.floor(rng() * sightings.length)] : 'somewhere in the county',
-    reward: Math.round((t.rewardBase ?? 140) + unit.power * (t.rewardPerPower ?? 5)),
+    // Worth more than one and less than its head count. Priced in data.
+    reward: Math.round((t.rewardBase ?? 140) + power * (t.rewardPerPower ?? 5)
+      * (pack.length ? 1 - (1 - (t.pack?.rewardPerExtra ?? 1)) * (pack.length / (pack.length + 1)) : 1)),
   };
 }
 
@@ -212,6 +252,7 @@ export function tickBreakouts(state, content, now, since = now) {
       const one = makeEscapee(state, content, lab, cam.breakoutCount, since);
       cam.loose.push(one);
       cam.breakoutCount += 1;
+      noteEscape(cam, lab.id);
       burst.push({ ...one, lab: lab.name });
     }
     escaped.push(...burst);
@@ -236,6 +277,7 @@ export function tickBreakouts(state, content, now, since = now) {
     const escapee = makeEscapee(state, content, rival, cam.breakoutCount, due);
     cam.loose.push(escapee);
     cam.breakoutCount += 1;
+    noteEscape(cam, rival.id);
     escaped.push({ ...escapee, lab: rival.name });
     scheduleNext(state, content, due);
   }
@@ -244,6 +286,11 @@ export function tickBreakouts(state, content, now, since = now) {
 
 // The encounter. One specimen, inline, so nothing has to exist in
 // enemies.json for a creature the player's own rival invented this morning.
+// R93 — every wave of a loose entry, leader first.
+export function packOf(loose) {
+  return loose ? [loose.unit, ...(loose.pack ?? [])] : [];
+}
+
 export function breakoutEncounter(state, content, id) {
   const loose = looseById(state, id);
   if (!loose) return null;
@@ -253,10 +300,14 @@ export function breakoutEncounter(state, content, id) {
     id: `breakout_${loose.id}`,
     breakoutId: loose.id,
     rivalId: loose.rivalId,
-    name: `${loose.unit.name} — loose`,
-    blurb: `${loose.unit.name} was ${loose.sighting}. ${t.blurb ?? ''}`.trim(),
-    intel: (t.intel ?? '').replace('{lab}', rival?.name ?? 'somebody'),
-    waves: [loose.unit],
+    name: packOf(loose).length > 1
+      ? `${loose.unit.name} +${packOf(loose).length - 1} — loose`
+      : `${loose.unit.name} — loose`,
+    blurb: `${loose.unit.name} was ${loose.sighting}. `
+      + `${packOf(loose).length > 1 ? (t.pack?.blurb ?? '') : (t.blurb ?? '')}`.trim(),
+    intel: ((packOf(loose).length > 1 ? t.pack?.intel : null) ?? t.intel ?? '')
+      .replace(/\{lab\}/g, rival?.name ?? 'somebody'),
+    waves: packOf(loose),
     reward: loose.reward,
     tier: null,
   };
