@@ -14033,7 +14033,11 @@ if (inShard('spar')) {
   //    firing is a browser behaviour the harness cannot hear.
   {
     const shell = readFileSync(join(root, 'main.js'), 'utf8');
-    const at = shell.indexOf('function tick()');
+    // R104 gave tick a parameter (`force`), and this looked for the literal
+    // `function tick()`. The RULE is unchanged — the shell still has to play
+    // what changed — so only the anchor moves: match the name and the open
+    // paren, which survives a signature growing an argument.
+    const at = shell.indexOf('function tick(');
     assert.notEqual(at, -1, 'tick exists');
     const body = shell.slice(at, shell.indexOf('\n}', at));
     assert.ok(/watchSignals\(state\)/.test(body), 'tick snapshots before the systems advance');
