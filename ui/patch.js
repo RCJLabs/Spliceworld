@@ -22,18 +22,37 @@ const keyOf = (el) => el.querySelector?.('[data-fold]')?.dataset.fold
   ?? el.getAttribute?.('data-key')
   ?? null;
 
+// CAN THIS ENVIRONMENT DIFF? Probed once, by trying it.
+//
+// Two wrong versions came before this one, and both asked a question the
+// answer to which did not settle anything. `document?.createElement` throws
+// in Node, where the identifier is not declared at all — optional chaining
+// guards a null VALUE, not an undeclared one. Then `typeof document ===
+// 'undefined'` got past that and still broke, because the handler walk's stub
+// HAS createElement and returns an element whose `children` is not iterable.
+//
+// Asking whether a document exists was never the question. The question is
+// whether this environment can do the three things the diff needs, so the
+// probe does them: build an element, read its children as a list, and find
+// insertBefore. Where the answer is no, painting means assigning — the stub
+// measures MARKUP, which is identical either way.
+const CAN_DIFF = (() => {
+  try {
+    const probe = document.createElement('div');
+    probe.innerHTML = '<i></i>';
+    return [...probe.children].length === 1 && typeof probe.insertBefore === 'function';
+  } catch {
+    return false;
+  }
+})();
+
 export function paintScreen(root, html) {
   // R104 — the gates run this in a DOM stub that has no `createElement`, and
   // a screen that throws while painting is a screen the gate reports as
   // missing rather than as broken. Where there is no document to diff
   // against, assign: the stub is measuring the MARKUP, which is identical
   // either way, and node identity is a question only a browser can ask.
-  // `typeof`, not `document?.` — optional chaining guards a null VALUE, not
-  // an undeclared IDENTIFIER, and in Node `document` was never declared at
-  // all, so `document?.createElement` throws the ReferenceError it looks
-  // like it is preventing. The guards elsewhere in this codebase read
-  // `root?.querySelectorAll` and are fine: `root` is a parameter.
-  if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
+  if (!CAN_DIFF) {
     root.innerHTML = html;
     return;
   }
