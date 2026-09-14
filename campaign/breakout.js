@@ -165,32 +165,41 @@ function makeEscapee(state, content, rival, n, now) {
   const wild = released(state)
     ? { socketChance: rel.wildSocketChance ?? 0.45, traitChance: rel.traitChance ?? 0.6 }
     : null;
-  // R93 — THE WHOLE PACK THROUGH ONE LOOP, leader included, because
-  // `rivalSpecimen` decides which INDEX carries the counter and this file must
-  // not second-guess it. The first draft built the leader without a dossier
-  // and walked the extras from index 1 — and `counterSlot` is 0 whenever
-  // `counterLeads` is true, which is every tier from 2 up. So at exactly the
-  // tiers R27 says a lab has stopped treating you as a variable, the pack
-  // carried no counter at all: break 281 moved the post-dominion rate by 0.6
-  // points because there was almost nothing there to cut.
+  const unit = rivalSpecimen(rival, content, {
+    rng, meta, defeats: record.defeats ?? 0,
+    index: Math.floor(rng() * Math.max(1, rival.frames.length)),
+    powerScale, idSuffix: `loose${n}`, wild,
+  });
+  // R93 — THE EXTRAS, AND WHICH OF THEM IS THE ANSWER.
   //
-  // PACKS ONLY. Giving a solo escapee the lab's read is defensible — one
-  // specimen from a lab that has studied you is the specimen it would send —
-  // but it changes every escape from day one, which is a different milestone
-  // than this one. Measured, it moved a 45-day walk's herd from 20 animals to
-  // 21 and went red on R154's bound. R93's criterion is about the LATE game;
-  // the pack is the late game's own escalation, so the read arrives with it.
+  // `rivalSpecimen` decides what "being the answer" means; this file only
+  // decides WHICH of its specimens gets to be it. `index` does double duty in
+  // that function — it picks the frame AND it is compared against
+  // `counterSlot`, which is 0 whenever `counterLeads` (every tier from 2 up).
+  //
+  // The first draft walked the extras from index 1 and never passed the leader
+  // a dossier, so from tier 2 the pack carried no counter at all: break 281
+  // moved the post-dominion rate by 0.6 points because there was nothing there
+  // to cut. The second draft put the leader in the loop at index 0 — which
+  // fixed the counter and ALSO took away the leader's random frame, changing
+  // every escape in the game from day one. Measured, a 45-day walk's herd went
+  // 20 -> 21 animals and R154's bound went red.
+  //
+  // So the leader is untouched, and the FIRST EXTRA is aimed at the counter
+  // slot directly. The lab's read arrives with the pack, which is the late
+  // game's own escalation, and nothing before the first pack moves at all.
   const size = packSize(content, escapesFrom(state, rival.id));
   const dossier = size > 1 ? rivalDossier(state, rival, content) : null;
-  const bodies = [];
-  for (let i = 0; i < size; i++) {
-    bodies.push(rivalSpecimen(rival, content, {
-      rng, meta, defeats: record.defeats ?? 0, index: i, dossier,
+  const slot = dossier?.counterLeads ? 0 : 1;
+  const pack = [];
+  for (let i = 1; i < size; i++) {
+    pack.push(rivalSpecimen(rival, content, {
+      rng, meta, defeats: record.defeats ?? 0,
+      index: i === 1 ? slot : slot + i, dossier,
       counter: dossier?.counterClass ?? null,
-      powerScale, idSuffix: i ? `loose${n}p${i}` : `loose${n}`, wild,
+      powerScale, idSuffix: `loose${n}p${i}`, wild,
     }));
   }
-  const [unit, ...pack] = bodies;
   const sightings = t.sightings ?? [];
   const power = unit.power + pack.reduce((sum, u) => sum + u.power, 0);
   return {
