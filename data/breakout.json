@@ -4,6 +4,14 @@
   "cooldownHours": 22,
   "jitter": 0.3,
   "maxLoose": 4,
+  "pack": {
+    "afterEscapes": 25,
+    "escapesPerExtra": 60,
+    "maxSize": 3,
+    "rewardPerExtra": 0.6,
+    "blurb": "They did not come back alone.",
+    "intel": "A pack — {lab} lost this many at once, and they have been travelling together since. Expect the second one to be built for you."
+  },
   "rewardBase": 140,
   "rewardPerPower": 5,
   "notoriety": 5,
