@@ -6878,6 +6878,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'campaign/warroom.js': 'regions',
     'campaign/wire.js': 'regions',
     'campaign/world.js': 'regions',
+    'campaign/digest.js': 'regions',
 
     // --- The shell and the save. Not systems; the ground everything
     // stands on.
@@ -15551,7 +15552,7 @@ if (inShard('contest')) {
 
 // --- R64: being away was strictly profitable -------------------------------
 if (inShard('away')) {
-  const { tickWorld, elapsedSince } = await import('../campaign/world.js');
+  const { tickWorld, elapsedSince, worldSnapshot, changesBetween } = await import('../campaign/world.js');
   const { tickContests, contestTuning } = await import('../campaign/contest.js');
   const DAY = 24 * HOUR;
   const ct = contestTuning(content);
@@ -15815,6 +15816,103 @@ if (inShard('away')) {
     console.log(`   across seeds: banked ${Math.round(bankedTotal)} of ${Math.round(payTotal)} (${Math.round(share * 100)}%)`);
     assert.ok(share < 1, `a month away is not a month of full pay (${Math.round(share * 100)}%)`);
     assert.ok(share > 0.6, `and it is a cost rather than a fine (${Math.round(share * 100)}%)`);
+  }
+
+  // 6. R107 — THE WELCOME BACK DIGEST. R64 proved a month away pays fairly.
+  //    Nothing told the player what it paid.
+  //
+  //    MEASURED BEFORE A LINE OF IT WAS BUILT. On a walked day-25 save a week
+  //    away moves EIGHT categories, and the wire — which keeps twelve lines —
+  //    gets seven to ten, so the week arrives as a handful of petting-zoo
+  //    results and no account of itself.
+  //
+  //    THE REPORT READS LEVELS; A GAP IS EVENTS. R104's change report was the
+  //    obvious source and on its own it was not enough: across five seeds,
+  //    five or six convoys came, waited and left during the week, and on
+  //    THREE of those seeds the report never mentioned contests at all,
+  //    because `contested` ends where it started. Same for a breakout that
+  //    was re-caught and a job that came home. So `worldSnapshot` gained the
+  //    four counters that only go up. Asking it for those also turned up a
+  //    field that could never move: `raids` read `campaign.taskforce.raids`,
+  //    a key nothing has ever written.
+  //
+  //    AND THE FIXTURE THE CRITERION NAMES COULD NOT PROVE IT. `empire()` has
+  //    no chimeras, no scheduled convoy and no job, so a week moves exactly
+  //    ONE category — funds — and "names everything that changed and nothing
+  //    that did not" passes on a one-line digest. That is the vacuous gate
+  //    R106 and R155 each shipped once. It is wound up here instead.
+  const wound = () => {
+    const st = empire();
+    tickContests(st, content, t0, 2);
+    for (let i = 0; i < 4; i++) {
+      st.chimeras.push({ id: `c${i}`, name: `C${i}`, frame: 'L', tokens: {}, xp: 0,
+        createdAt: t0 - 10 * DAY, settleUntil: t0 + 2 * DAY });
+    }
+    st.chimeras[0].injury = { kind: 'bruise', until: t0 + 2 * DAY };
+    st.chimeras[1].injury = { kind: 'bruise', until: t0 + 3 * DAY };
+    st.chimeras[2].agitatedUntil = t0 + 12 * HOUR;
+    return st;
+  };
+  {
+    const { awayDigest, AWAY_MIN_MS, awayFor } = await import('../campaign/digest.js');
+    // `news` is the wire, which is the thing this card exists BECAUSE of, and
+    // `tick` is R104's repaint heartbeat. Neither is an event, so neither
+    // earns a line — named here so the exclusion is a decision rather than an
+    // oversight the loop below would otherwise hide.
+    const NOT_EVENTS = ['news', 'tick'];
+
+    const s = wound();
+    const before = worldSnapshot(s, t0);
+    const away = t0 + 7 * DAY;
+    tickWorld(s, content, away);
+    const after = worldSnapshot(s, away);
+    const lines = awayDigest(before, after, 7 * DAY, content);
+    const named = new Set(lines.map((l) => l.key));
+    const changed = Object.keys(changesBetween(before, after)).filter((k) => !NOT_EVENTS.includes(k));
+
+    for (const k of changed) {
+      assert.ok(named.has(k), `the digest names ${k}, which moved while you were away `
+        + `(${before[k]} -> ${after[k]}) — it names ${[...named].join(', ') || 'nothing'}`);
+    }
+    for (const k of named) {
+      assert.ok(changed.includes(k), `and names nothing that did not move — ${k} did not`);
+    }
+    assert.ok(lines.length >= 4,
+      `a week away is worth reading about (${lines.length} lines: ${[...named].join(', ')})`);
+    assert.ok(named.has('contestCount'),
+      'and the week of siege is in it — the half a level-only report could not see');
+    for (const l of lines) {
+      assert.ok(l.text && !/undefined|NaN|\[object/.test(l.text), `every line is a sentence: ${l.text}`);
+    }
+    assert.ok(/week|day|hour/.test(awayFor(7 * DAY)), 'and the heading says how long you were gone');
+
+    // EVERY FIELD THE REPORT CARRIES HAS SOMETHING TO SAY. One synthetic pair
+    // per key, costing nothing: without this, a field added to the snapshot
+    // later joins the report and is silently never mentioned, which is
+    // exactly how `raids` sat dead in it.
+    for (const key of Object.keys(before)) {
+      const got = awayDigest({ ...before }, { ...before, [key]: (before[key] ?? 0) + 1 }, 7 * DAY, content);
+      if (NOT_EVENTS.includes(key)) {
+        assert.equal(got.length, 0, `${key} is not an event and earns no line`);
+      } else {
+        assert.deepEqual(got.map((l) => l.key), [key],
+          `${key} moving on its own produces exactly its own line`);
+      }
+    }
+
+    // AND IT NEVER APPEARS FOR A SHORT GAP. Time, not movement: an hour away
+    // already moves funds, so a rule keyed on "did the report say anything"
+    // would fire on a coffee break.
+    const brief = wound();
+    const b0 = worldSnapshot(brief, t0);
+    tickWorld(brief, content, t0 + HOUR);
+    const b1 = worldSnapshot(brief, t0 + HOUR);
+    assert.ok(Object.keys(changesBetween(b0, b1)).length > 0,
+      'an hour away does move the save (so the rule below is about time, not movement)');
+    assert.deepEqual(awayDigest(b0, b1, HOUR, content), [],
+      'but an hour away gets no welcome-back card');
+    assert.ok(AWAY_MIN_MS >= HOUR, `and the threshold is at least an hour (${AWAY_MIN_MS}ms)`);
+    console.log(`   R107 welcome back: a wound-up week fills ${lines.length} lines — ${[...named].join(', ')}`);
   }
 }
 
