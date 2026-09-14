@@ -90,6 +90,19 @@ paying back 2 of the original 5 KB. `breakout.js` is eager legitimately —
 `world.js` imports `tickBreakouts` for the boot tick — so R153's dead-module
 lever does not apply here.
 
+### Verification
+
+`npm test` **run alone**: `NPM_TEST_EXIT=0`, 970 CPU-seconds of 1028, 380s wall,
+13 walks rebuilt (source changed, so the cache was cold). All four shards green
+on save v52. Battery: 276 anchors match, baseline **34/34**, breaks 279–282
+**4 caught, 0 missed**, `BATTERY_EXIT=0`.
+
+It took five rounds to get there, and every red was real: smoke's expected
+campaign shape, `sw.js`'s cache version, the boot budget twice, the eager-JS
+cap, R154's herd bound, and two breaks that could not see the defects they
+were aimed at. Nothing was ratcheted to fit — R154's bound stands where it was,
+and the second eager-JS raise was avoided by moving prose to the ROADMAP.
+
 ### Known issues
 
 - **Both caps went up**, which R153's note warns about. The two levers that
