@@ -28,7 +28,12 @@ export function paintScreen(root, html) {
   // missing rather than as broken. Where there is no document to diff
   // against, assign: the stub is measuring the MARKUP, which is identical
   // either way, and node identity is a question only a browser can ask.
-  if (typeof document?.createElement !== 'function') {
+  // `typeof`, not `document?.` — optional chaining guards a null VALUE, not
+  // an undeclared IDENTIFIER, and in Node `document` was never declared at
+  // all, so `document?.createElement` throws the ReferenceError it looks
+  // like it is preventing. The guards elsewhere in this codebase read
+  // `root?.querySelectorAll` and are fine: `root` is a parameter.
+  if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
     root.innerHTML = html;
     return;
   }
