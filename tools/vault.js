@@ -181,6 +181,15 @@ const BOUNDS = {
   'campaign.loose[].unit.salvage':             { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
   'campaign.loose[].unit.salvageGrades':       { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
   'campaign.loose[].unit.tags':                { max: 8,  by: 'a body is a handful of tags' },
+  // R93 — the pack. `maxSize` is what stands between a loose entry and a
+  // twelve-specimen wall, so the ceiling is READ from the data rather than
+  // typed here: raising it in data/breakout.json raises this with it, and
+  // there is no second number to forget.
+  'campaign.loose[].pack':                     { max: (c) => Math.max(0, (c.breakoutMeta?.pack?.maxSize ?? 1) - 1), by: 'pack.maxSize, less the leader' },
+  'campaign.loose[].pack[].moves':             { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },
+  'campaign.loose[].pack[].salvage':           { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
+  'campaign.loose[].pack[].salvageGrades':     { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
+  'campaign.loose[].pack[].tags':              { max: 8,  by: 'a body is a handful of tags' },
   // Stated BEFORE a walk surfaces it. `arrayPaths` reads one record for the
   // shape of all of them, and `unit.traits` only exists on a specimen that
   // drew one — so whether this list is seen at all depends on which escapee
