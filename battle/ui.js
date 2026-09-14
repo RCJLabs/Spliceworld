@@ -15,6 +15,7 @@
 //    one tap away, because a battle you have to scroll is not a battle.
 
 import { creaturePortrait, renderUnitSVG, drawableGenome } from '../render/renderer.js';
+import { moodOf } from '../render/mood.js';
 import { chimeraGenome } from '../splice/theater.js';
 import {
   step, playerActions, playerActive, turnForecast, intentOf, bracePreview, braceTitle,
@@ -131,7 +132,15 @@ function spriteFor(side, refId, ctx, battle) {
   const chimera =
     state.chimeras.find((c) => c.id === refId) ??
     state.campaign.captives.find((c) => c.chimera.id === refId)?.chimera;
-  return chimera ? creaturePortrait(chimeraGenome(chimera, content), content, { idPrefix: `me-${refId}` }) : '';
+  // R96 — the arena shows one creature a side, and a fight is where a
+  // temperament is doing the most work: the perks it grants are being spent
+  // on this screen. No `idle` — the arena has its own animation vocabulary
+  // (R2's beats) and a breathing sprite fights it.
+  return chimera
+    ? creaturePortrait(chimeraGenome(chimera, content), content, {
+        idPrefix: `me-${refId}`, ...moodOf(chimera, content),
+      })
+    : '';
 }
 
 function hpBox(side, c, content, extra = '') {

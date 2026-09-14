@@ -5979,6 +5979,56 @@ if (inShard('curve')) {
     assert.ok(fierce > even, `a Fierce creature hits harder in the actual engine (${even.toFixed(1)} → ${fierce.toFixed(1)})`);
     assert.ok(fierce < even * 1.4, 'but not absurdly so');
   }
+
+  // R96 — ACCEPTANCE: the same genome, two temperaments, two creatures on
+  // the screen. Everything above this line is a number in a fight; §8 risk 1
+  // says the renderer is the whole first impression, and a temperament the
+  // player can only read in a caption is a stat, not an animal.
+  {
+    const s = tempLab(960, ['bear_head', 'bear_forelimbs', 'bear_hindlimbs', 'bear_hide'], 'apex');
+    const ch = s.chimeras[0];
+    ch.settleUntil = t0;
+    const genome = chimeraGenome(ch, content);
+
+    // Through the path the SCREENS use, not a private one: `moodOf` is what
+    // the Pens card and the arena call, so a gate that bypassed it would go
+    // green on a feature no player could see.
+    const { moodOf } = await import('../render/mood.js');
+    const portrait = (opts) => creaturePortrait(genome, content, opts);
+    const withMood = (temperament, scars = []) => portrait(moodOf({ temperament, scars }, content));
+    const skittish = withMood({ nerve: -70, temper: -60, from: 'bear' });
+    const bullish = withMood({ nerve: 70, temper: 70, from: 'bear' });
+    assert.notEqual(
+      skittish, bullish,
+      'the SAME genome renders differently when the creature is Skittish and when it is Bullish'
+    );
+
+    // Both are still the creature, not two different ones: the parts on it
+    // do not change because it is nervous.
+    const plain = portrait({});
+    for (const svg of [skittish, bullish]) {
+      assert.ok(svg.startsWith('<svg') && svg.endsWith('</svg>'), 'and both still draw');
+      assert.equal(
+        (svg.match(/<g/g) ?? []).length >= (plain.match(/<g/g) ?? []).length, true,
+        'posture adds to the portrait rather than dropping parts out of it'
+      );
+    }
+
+    // …and a scarred one shows it. Ten scar types have been text beside a
+    // static portrait since R13.
+    const scarId = Object.keys(content.scars)[0];
+    assert.ok(scarId, 'there are scars to draw');
+    assert.notEqual(
+      withMood(null, []), withMood(null, [scarId]),
+      'a scar is ON the creature, not only in the sentence next to it'
+    );
+    // Every scar the content declares can be drawn — a scar added without a
+    // mark would otherwise be silently invisible.
+    for (const [id, scar] of Object.entries(content.scars)) {
+      assert.ok(scar.mark, `${id} says which mark it wears`);
+      assert.notEqual(withMood(null, [id]), plain, `${id} actually draws one`);
+    }
+  }
 }
 
 // --- Injury scarring (§3.5: "untreated injuries can scar into permanent
@@ -6897,6 +6947,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // from: a player meets a move's words on the battle screen and in the
     // Pens, never as a system of its own.
     'battle/move-text.js': null,
+  'render/mood.js': null,
     'battle/forecast.js': null,
     'battle/readout.js': null,
     'battle/tagtext.js': null,
@@ -20474,7 +20525,10 @@ if (inShard('wire')) {
 // eager and still runs nothing, because MOVE_SLOTS and activeMoves are read
 // synchronously to describe a creature. That exemption is honest; the entry's
 // own Done-when asked for a shorter list and the measurement says no.
-const KB_CAP = 554;
+// R96 — 554 -> 555. The eager half of the posture work is the 853 bytes that
+// APPLY a stance; the bands and the marks that compute one are in the lazy
+// `render/mood.js`. Two under R93's 557. See ROADMAP R96.
+const KB_CAP = 555;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

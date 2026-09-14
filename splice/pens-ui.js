@@ -3,6 +3,7 @@
 // later milestones — for now the pens are a proud, slightly humming nursery.
 
 import { creaturePortrait } from '../render/renderer.js';
+import { moodOf } from '../render/mood.js';
 import { gradeOf, salvagePreview, extractChimera } from './extract.js';
 import {
   chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING,
@@ -272,7 +273,13 @@ export function renderPensScreen(root, ctx) {
       // phone the same as showing it.
       const open = isOpen(state, `pen-${ch.id}`, false);
       const portrait = open
-        ? creaturePortrait(chimeraGenome(ch, content), content, { idPrefix: `pen-${ch.id}` })
+        ? creaturePortrait(chimeraGenome(ch, content), content, {
+            idPrefix: `pen-${ch.id}`,
+            // R96 — the card already says Skittish and lists the scars; now
+            // the animal on it does too. `idle` is safe here because R44
+            // opens one pen at a time.
+            ...moodOf(ch, content), idle: true,
+          })
         : '';
       const manifest = !open ? '' : Object.entries(ch.tokens)
         .map(([slot, token]) => {

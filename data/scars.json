@@ -6,6 +6,7 @@
   "scars": [
     {
       "id": "jeep_shy",
+      "mark": "flinch",
       "name": "Jeep Shyness",
       "line": "{name} has developed strong opinions about anything with an engine, and gives it a wide, twitchy berth.",
       "vs": ["Vehicle"],
@@ -13,6 +14,7 @@
     },
     {
       "id": "uniform_grudge",
+      "mark": "slash",
       "name": "Grudge Against Uniforms",
       "line": "{name} has learned what a clipboard means and no longer waits to find out which kind.",
       "vs": ["Organic"],
@@ -20,12 +22,14 @@
     },
     {
       "id": "kazoo_tinnitus",
+      "mark": "notch",
       "name": "Kazoo Tinnitus",
       "line": "There is a ringing. {name} cannot locate the ringing. {name} has stopped trusting the middle distance.",
       "effects": { "acc": -6, "evasion": 0.07 }
     },
     {
       "id": "sky_wariness",
+      "mark": "flinch",
       "name": "Sky Wariness",
       "line": "{name} now checks upward first, every time, before doing literally anything else.",
       "vs": ["Airborne"],
@@ -33,18 +37,21 @@
     },
     {
       "id": "reinforced_limp",
+      "mark": "stitch",
       "name": "Reinforced Limp",
       "line": "It set crooked and it set STRONG. {name} moves like weather and arrives like furniture.",
       "effects": { "armor": 0.1, "speed": -2 }
     },
     {
       "id": "wound_memory",
+      "mark": "slash",
       "name": "Wound Memory",
       "line": "{name} remembers exactly how that felt and has decided to be the one doing it from now on.",
       "effects": { "power": 0.1, "regen": -1 }
     },
     {
       "id": "brine_grudge",
+      "mark": "patch",
       "name": "Salt-Water Grudge",
       "line": "Something wet was involved. {name} has not forgiven the sea, or anything that reminds it of the sea.",
       "vs": ["Aquatic"],
@@ -52,18 +59,21 @@
     },
     {
       "id": "overcompensating_jaw",
+      "mark": "notch",
       "name": "Overcompensating Jaw",
       "line": "{name} bites harder now. {name} also misses more, because {name} bites harder now.",
       "effects": { "power": 0.09, "acc": -7 }
     },
     {
       "id": "chipped_plating",
+      "mark": "patch",
       "name": "Chipped Plating",
       "line": "Lighter, in the way that losing pieces of yourself is technically lighter. {name} is noticeably quicker about it.",
       "effects": { "armor": -0.08, "speed": 3 }
     },
     {
       "id": "learned_flinch",
+      "mark": "stitch",
       "name": "Learned Flinch",
       "line": "{name} has acquired a flinch. It is a very good flinch. It is not a helpful flinch when attacking.",
       "effects": { "evasion": 0.09, "power": -0.07 }
