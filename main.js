@@ -53,7 +53,11 @@ const ctx = {
   // vat or empties the tank it just finished. Without this a rushed vat
   // would read "0s to go" for up to thirty seconds, which is a button that
   // looks broken for exactly as long as it takes to lose faith in it.
-  tick: () => tick(),
+  // R104 — forced: a screen calls this because the PLAYER did something, and
+  // the report only knows what the WORLD did. A rushed vat moves a clock the
+  // snapshot does not watch, and a care action moves a cooldown it does not
+  // either; both must still reach the glass.
+  tick: () => tick({ force: true }),
   refreshTicker: () => updateTicker(),
   pushNews: (line) => { pushNews(state, line); updateTicker(); },
   // R121 — the extraction sequence arrives with the press, not with the
@@ -193,7 +197,16 @@ function showScreen(name, subtab) {
   if (name !== 'battle') document.body.classList.remove('in-battle');
   state.activeScreen = name;
   saveGame(state);
-  for (const s of Object.keys(SCREENS)) $(`#screen-${s}`).hidden = s !== name;
+  // R104 — a screen you have left is emptied, not merely hidden. 496 nodes
+  // of Dex behind `hidden` are 496 nodes every later style recalculation
+  // still walks. The DOM is rebuilt from state on the way back in, which is
+  // what `force` below is for; folds survive because `isOpen` reads the save
+  // rather than the document.
+  for (const s of Object.keys(SCREENS)) {
+    const el = $(`#screen-${s}`);
+    el.hidden = s !== name;
+    if (s !== name && el.childElementCount) el.replaceChildren();
+  }
   document.querySelectorAll('#tabs button').forEach((b) => {
     const on = b.dataset.screen === name;
     b.classList.toggle('active', on);
@@ -201,12 +214,16 @@ function showScreen(name, subtab) {
     if (on) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
-  tick();
+  tick({ force: true });
 }
 
 // Timestamps, not intervals: recompute elapsed effects on load, on focus,
 // and on a slow display refresh (settling countdowns, care cooldowns).
-function tick() {
+// R104 — `force` is for the one caller that knows something changed without
+// the world moving: arriving on a screen. Everything else — the 30-second
+// timer, a return to the tab — repaints only if `tickWorld` says something
+// a player would notice actually moved.
+function tick({ force = false } = {}) {
   // R59: what deserves a sound is decided in one place (audio/sfx.js) from a
   // snapshot of scalars. tick() is where every passive system advances, so
   // it is the only place that can see a job come back or a node fall while
@@ -215,10 +232,13 @@ function tick() {
   // R64: one `now` for every system, one elapsed clock, one place that
   // decides the order (campaign/world.js). This used to read the clock
   // seven times and keep two elapsed timestamps.
-  tickWorld(state, content, NOW());
+  const moved = tickWorld(state, content, NOW());
+  const changed = force || Object.keys(moved).length > 0;
+  // Writing the save is cheap and silent; painting is neither.
   saveGame(state);
-  updateTicker();
+  if (changed) updateTicker();
   for (const cue of cuesFor(beforeCues, watchSignals(state))) sfx.play(cue);
+  if (!changed) return;
   const name = state.activeScreen;
   const root = $(`#screen-${name}`);
   if (root && !root.hidden) SCREENS[name](root);
@@ -430,7 +450,9 @@ async function boot() {
   // macrotask, is the idiom for "the player is looking at the game now".
   requestAnimationFrame(() => setTimeout(() => {
     loadShapes(content).then((ok) => {
-      if (ok) tick();
+      // R104 — forced: the geometry landing is not a change to the world, it
+      // is the arrival of the thing every creature on screen is drawn from.
+      if (ok) tick({ force: true });
     });
   }, 0));
 
