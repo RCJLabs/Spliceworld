@@ -1404,6 +1404,13 @@ async function main() {
     else {
       await evaluate(`window.__repaintProbe = document.querySelector('.screen:not([hidden]) *')`);
       if (await evaluate(`document.hidden`)) note('the page reports itself hidden, so the tick never runs and 7b proves nothing');
+      // R104 — the tick no longer repaints a world that did not move, which
+      // is the milestone; this rule therefore has to make the world MOVE
+      // rather than merely fire the event. Two minutes of elapsed time is
+      // what a player hands the shell by coming back to the tab, and it is
+      // the honest trigger for "a repaint must not move focus": nothing here
+      // takes focus the way clicking a control to force one would.
+      await evaluate(`(() => { const R = Date.now.bind(Date); Date.now = () => R() + 120000; })()`);
       await evaluate(`document.dispatchEvent(new Event('visibilitychange'))`);
       await sleep(600);
       if (await evaluate(`document.contains(window.__repaintProbe)`)) {
