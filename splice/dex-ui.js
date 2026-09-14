@@ -31,6 +31,14 @@ const DEX_EAGER_CELLS = 9;
 // check on the global: in Node the identifier is not declared at all, and
 // reading it directly throws the ReferenceError the check exists to avoid.
 const DEFERS = typeof IntersectionObserver === 'function';
+
+// R104 / R89's ruling — WHICH CELLS ARE STILL TO DRAW, carried in JS rather
+// than in a `data-portrait` attribute. R76's gate reads a data-* in source as
+// "a handler is bound by this", and nothing is ever bound to a marker the
+// observer reads; R89 hit the same wall with `data-fold-group` and concluded
+// the gate is right about the general case and the attribute was the wrong
+// shape. The screen already knows which ids it deferred, so it says so.
+let pending = [];
 import { renderIcon } from '../ui/icons.js';
 import { stockGenome } from '../ranch/ranch.js';
 import { comboHint } from './theater.js';
@@ -94,9 +102,10 @@ function rosterView(state, content) {
       const portrait = !DEFERS || i <= DEX_EAGER_CELLS
         ? creaturePortrait(stockGenome(sp.id, content), content, { idPrefix: `dex-${sp.id}`, extraScale: 0.85 })
         : '';
+      if (!portrait) pending.push({ id: sp.id, variant: false });
       return `
         <button type="button" class="dex-cell dex-open" data-species="${sp.id}">
-          <div class="dex-portrait" ${portrait ? '' : `data-portrait="${sp.id}"`}>${portrait}</div>
+          <div class="dex-portrait${portrait ? '' : ' dex-later'}">${portrait}</div>
           <strong>${sp.name}</strong>
           <span class="fine-print">${sp.role}${sp.tags.length ? ` · ${sp.tags.join(', ')}` : ''}</span>
           <span class="fine-print">parts ${found}/${total}</span>
@@ -152,8 +161,9 @@ function variantsView(state, content) {
       const base = speciesOf(content, sp.variantOf);
       return `
         <div class="variant-row ${found ? '' : 'variant-locked'}">
-          <div class="variant-portrait"${DEFERS ? ` data-portrait="${sp.id}"` : ''}>${
-            DEFERS ? '' : creaturePortrait(stockGenome(sp.id, content), content, { idPrefix: `var-${sp.id}`, extraScale: 0.8 })
+          <div class="variant-portrait${DEFERS ? ' dex-later' : ''}">${
+            DEFERS ? (pending.push({ id: sp.id, variant: true }), '')
+              : creaturePortrait(stockGenome(sp.id, content), content, { idPrefix: `var-${sp.id}`, extraScale: 0.8 })
           }</div>
           <div style="flex:1;min-width:0">
             <strong>${found ? sp.name : '???'}</strong>
@@ -494,6 +504,10 @@ function progressStrip(progress) {
 
 export function renderDexScreen(root, ctx) {
   const { state, content } = ctx;
+  // Emptied per paint: the views below fill it as they build their markup,
+  // and a list that survived a render would pair this screen's cells with
+  // the last one's ids.
+  pending = [];
   const progress = dexProgress(state, content);
   const view = VIEWS[dexTab] ?? VIEWS.roster;
 
@@ -519,8 +533,9 @@ export function renderDexScreen(root, ctx) {
   // Tap a species for the entry the grid has no room for: what it is, what
   // four of its parts buy you, and which of its six you have actually met.
   // A read-only sheet, so `onPick` closes and does nothing.
-  // Both views' cells, on whichever tab is showing.
-  fillPortraits(root, content);
+  // Both views' cells, on whichever tab is showing, paired with the ids the
+  // render just deferred.
+  fillPortraits(root, content, pending);
 
   root.querySelectorAll?.('button[data-species]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -554,20 +569,20 @@ export function renderDexScreen(root, ctx) {
 // DOM stub with no observer, and a gate that measured a screen missing two
 // thirds of its art would be measuring a page no player ever sees. So the
 // stub renders all of them and the browser renders what is on the glass.
-function fillPortraits(root, content) {
-  const pending = [...(root.querySelectorAll?.('[data-portrait]') ?? [])];
-  if (!pending.length) return;
-  const draw = (cell) => {
-    const id = cell.dataset.portrait;
+function fillPortraits(root, content, queue) {
+  const cells = [...(root.querySelectorAll?.('.dex-later') ?? [])];
+  if (!cells.length || !queue.length) return;
+  const draw = (cell, entry) => {
+    const id = entry?.id;
     if (!id || !content.species[id]) return;
     // The prefix is not decoration: it keeps the clip-path ids unique when
     // several creatures share a document, and the roster and the variants
     // list can both hold the same species. Filling every cell with `dex-`
     // would collide the two and clip one creature to the other's silhouette.
-    const variant = cell.classList.contains('variant-portrait');
+    const variant = entry.variant;
     cell.innerHTML = creaturePortrait(stockGenome(id, content), content,
       { idPrefix: `${variant ? 'var' : 'dex'}-${id}`, extraScale: variant ? 0.8 : 0.85 });
-    delete cell.dataset.portrait;
+    cell.classList.remove('dex-later');
   };
   if (typeof IntersectionObserver !== 'function') {
     for (const cell of pending) draw(cell);
@@ -586,5 +601,5 @@ function fillPortraits(root, content) {
     // never shows an empty cell, and near enough that arriving does not draw
     // what nobody has looked at.
   }, { rootMargin: '150px' });
-  for (const cell of pending) obs.observe(cell);
+  for (const cell of cells) obs.observe(cell);
 }
