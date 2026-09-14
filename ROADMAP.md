@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**19 entries queued.** R94, R96, R100, R102, R104, R105, R107, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R167.
+**18 entries queued.** R94, R96, R100, R102, R104, R105, R107, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -2208,7 +2208,9 @@ R102; R88–R90 remain.)*
   the boot tick. Comments moved here first (R130's rule, R161's example),
   paying back 2 of the original 5 KB; the rest is code. First paint 1027 →
   **1030**, eager JS 555 → **557**, both priced in their notes. The levers
-  that would give the room back are measured and **queued as R167**.
+  that would give the room back were measured and queued as R167, which
+  **repaid both** in the next session: 1027 and 554, below where this
+  milestone found them.
 
   #### What the verification found that the build did not
 
@@ -2266,35 +2268,77 @@ R102; R88–R90 remain.)*
   days pays a bonus and its loss costs a facility level. *Done when:
   post-dominion breakout and defence win rates are under 90% on the walker's
   diet, and the walk still reaches day 180 solvent.*
-- **R167 — Two budgets, two levers, and both of them measured.** Queued out
-  of R93, which raised both caps by 2.9 KB and left this priced rather than
-  taken. Neither lever is speculative; both have numbers.
+- **R167 — Two budgets, two levers, and both of them measured.** ✅ *Shipped —
+  one lever taken, the other still priced, and the third clause of my own
+  Done-when measured the wrong thing.* Queued out of R93, which raised both
+  caps by 2.9 KB and left this priced rather than taken.
 
-  **First paint** (`FIRST_PAINT_KB`, now 1030). The empty `"tags": []` and
-  `"keywords": {}` in the data files — priced at 8.5 KB in R149, re-counted at
-  7.0 in R153, and **re-measured at 3.1 KB on today's files** (2.6 KB of it in
-  `parts.json`). It costs a read-site audit: **32 unguarded `.tags` reads**
-  across `director.js`, `ranch/ui.js`, `operations.js`, `theater.js` and
-  `dossier.js` must tolerate an absent key rather than an empty one. And
-  `parts.json` is generated, so `tools/gen-parts.js` has to stop emitting the
-  empties — R127 holds it to reproducing the file exactly, which is the gate
-  that will prove the change is content-neutral.
+  #### What ships: the split
 
-  **Eager JS** (`KB_CAP`, now 557). The data fix does not move this by a byte
-  — R153's warning, and R140 got it wrong once already. The lever here is
-  `battle/moves.js` (7.2 KB), and the exemption note has been wrong about why
-  it stays: "more than one eager importer" is true and is not the question.
-  `statblock.js` and `engine.js` take five small things from it — `MOVE_SLOTS`,
-  `activeMoves`, `defaultPick`, `partMoveId`, `comboMoveId` — while the bulk
-  (`moveSummary`, `moveDetail`, `keywordEffect`, `tagNote`) is read only by
-  `battle/ui.js` and `splice/pens-ui.js`, both lazy. So the move is a **split**
-  — the leaf the engine reads, the descriptions the screens read — across six
-  importers of battle-critical code. `campaign/monologue.js` (4.1 KB) is the
-  same shape and worth checking after.
+  `battle/moves.js` was 12.0 KB compiled and eager, and only five small things
+  in it are read before the first paint — `MOVE_SLOTS`, `activeMoves`,
+  `defaultPick`, `partMoveId`, `comboMoveId`, all of which `statblock.js` and
+  `engine.js` take synchronously to describe a creature. The bulk was prose:
+  `moveSummary`, `moveDetail`, `keywordEffect`, `tagNote`, read only by
+  `battle/ui.js` and `splice/pens-ui.js`, both lazy. So the descriptions moved
+  to **`battle/move-text.js`** (new module, declared twice per R50 — the `sw.js`
+  precache list and `tools/smoke.js`'s module-note registry), and the leaf the
+  engine reads stayed put.
+
+  | budget | R93 left it at | R167 lands it at | measured |
+  | --- | ---: | ---: | ---: |
+  | `FIRST_PAINT_KB` (`tools/boot.js`) | 1030 | **1027** | 1027 KB, 82 requests |
+  | `KB_CAP` (`tools/smoke.js`) | 557 | **554** | 553.9 KB over 48 modules |
+
+  R93 found them at 1027 and 555 and left them at 1030 and 557, so first paint
+  returns **exactly** to where it stood before that milestone and eager JS
+  lands a kilobyte **under** it: the two raises are repaid, not absorbed.
+  Break 283 aims
+  at `statblock.js` — the only importer eager enough to undo the split — and
+  goes red on BOOT, because first paint is the budget a player feels.
+
+  #### The clause that was wrong
+
+  *"…and the exemption list in `tools/boot.js` is shorter by at least one
+  line."* It is not, and it could not have been. A module the engine reads
+  for **constants** is eager and runs nothing by construction, so splitting one
+  **adds** a leaf rather than removing it — `RUNS_NOTHING_BUT_BELONGS` still
+  holds four names. The figure that can move is the weight behind them, and
+  R153's "read it as a bill" was always about the bill, not the line count:
+
+  | excused | before | after |
+  | --- | ---: | ---: |
+  | `battle/moves.js` | 12.0 KB | **4.8 KB** |
+  | `campaign/monologue.js` | 4.1 KB | 4.1 KB |
+  | `ui/theme.js` | 1.1 KB | 1.1 KB |
+  | `splice/grades.js` | 1.0 KB | 1.0 KB |
+  | **total** | **18.2 KB** | **11.0 KB** |
+
+  So `boot.js` now prints that total on **every** run — `4 of them running
+  nothing on either first paint (11.0 KB excused by name)` — instead of only
+  under `--report`, where no gate has ever looked. A bill nobody prints the
+  total of is a settled account with extra steps. The exemption note on
+  `moves.js` was also wrong about *why* it stays ("more than one eager
+  importer" is true and is not the question); it now names `statblock.js` and
+  what it reads.
+
+  #### Still priced, still not taken: the data lever
+
+  The empty `"tags": []` and `"keywords": {}` in the data files — 8.5 KB in
+  R149, 7.0 in R153, **3.1 KB on today's files** (2.6 KB of it `parts.json`).
+  Not skipped for time: it costs a **62-site read audit** (32 unguarded
+  `.tags`, 30 `.keywords`) across `director.js`, `ranch/ui.js`, `operations.js`,
+  `theater.js` and `dossier.js`, each of which must tolerate an absent key
+  rather than an empty one, plus a `tools/gen-parts.js` change under R127's
+  byte-exact gate. It moves first paint and **not** eager JS — R153's warning,
+  which R140 got wrong once already. `campaign/monologue.js` (4.1 KB) is the
+  next-largest line on the bill and is the same shape as `moves.js` was, but
+  it leaves the eager graph only if `campaign/campaign.js` does, which is a
+  milestone, not a clause.
 
   *Done when: both caps come DOWN rather than up, the entry states what they
-  land at, and the exemption list in `tools/boot.js` is shorter by at least one
-  line — read as a bill, which is what R153 said it was.*
+  land at, and the exemption list is read as a bill — which, corrected, means
+  its total is smaller and printed, not its line count.*
 
 - **R94 — Notoriety is a number that goes up.** *Measured in Session 173, and
   still queued — two thirds of it shipped in R87, and the remaining third is

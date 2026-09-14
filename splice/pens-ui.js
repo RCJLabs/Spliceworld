@@ -8,7 +8,8 @@ import {
   chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING,
   setMoveset, moveTrainingReady,
 } from './theater.js';
-import { MOVE_SLOTS, activeMoves, knownMoves, moveSummary, moveDetail } from '../battle/moves.js';
+import { MOVE_SLOTS, activeMoves, knownMoves } from '../battle/moves.js';
+import { moveSummary, moveDetail } from '../battle/move-text.js';
 import { toggleRow } from '../ui/picker.js';
 import { movesFromTokens } from '../battle/statblock.js';
 import { analyze } from './physiology.js';

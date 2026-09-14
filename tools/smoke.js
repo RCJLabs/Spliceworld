@@ -6892,6 +6892,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'battle/statblock.js': null,
     'battle/ai.js': null,
     'battle/moves.js': null,
+    // R167 — the description half of moves.js, split out so the eager graph
+    // stops compiling it. Exempt for the same reason as the module it came
+    // from: a player meets a move's words on the battle screen and in the
+    // Pens, never as a system of its own.
+    'battle/move-text.js': null,
     'battle/forecast.js': null,
     'battle/readout.js': null,
     'battle/tagtext.js': null,
@@ -8513,8 +8518,10 @@ if (inShard('frames')) {
 {
   const {
     MOVE_SLOTS, activeMoves, defaultPick, defaultMoveset,
-    moveSummary, moveDetail, keywordEffect,
   } = await import('../battle/moves.js');
+  // R167 — the description half lives in its own module now, so the eager
+  // graph stops compiling it before the first paint.
+  const { moveSummary, moveDetail, keywordEffect } = await import('../battle/move-text.js');
   const { combatantFromChimera } = await import('../battle/engine.js');
   const { movesFromTokens } = await import('../battle/statblock.js');
   const { setMoveset, moveTrainingReady, MOVE_TRAINING } = await import('../splice/theater.js');
@@ -20460,7 +20467,14 @@ if (inShard('wire')) {
 // which is R153's move with one more step. Six importers of a battle-critical
 // module is a milestone, not a paragraph, so it is QUEUED AS R167 beside the
 // data fix with its price attached.
-const KB_CAP = 557;
+// R167 — 557 -> 554, measured at 553.9, and BELOW where R93 found it (555).
+// The split this note asked for, taken: see tools/boot.js's FIRST_PAINT_KB
+// note and ROADMAP R167. What it does NOT do is shorten
+// RUNS_NOTHING_BUT_BELONGS — `battle/moves.js` is 7.2 KB lighter but still
+// eager and still runs nothing, because MOVE_SLOTS and activeMoves are read
+// synchronously to describe a creature. That exemption is honest; the entry's
+// own Done-when asked for a shorter list and the measurement says no.
+const KB_CAP = 554;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

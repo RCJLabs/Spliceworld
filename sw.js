@@ -61,6 +61,7 @@ const SHELL = [
   'splice/dexentry.js',
   'battle/ai.js',
   'battle/moves.js',
+  'battle/move-text.js',
   'splice/resequencer.js',
   'battle/readout.js',
   'battle/forecast.js',

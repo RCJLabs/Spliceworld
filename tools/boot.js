@@ -254,7 +254,19 @@ const REPORT = process.argv.includes('--report');
 // point. Taking it costs a read-site audit (32 unguarded `.tags` reads) and a
 // change to `tools/gen-parts.js`, because R127's gate holds the generator to
 // reproducing parts.json exactly. That is a milestone, not a paragraph.
-const FIRST_PAINT_KB = 1030;
+// R167 — 1030 -> 1027, MEASURED AT 1027, AND THE DEBT IS REPAID RATHER THAN
+// REFINANCED. R93 raised this to 1030 for 2.9 KB of escapee packs and priced
+// the way back; this is that way back, taken. `battle/move-text.js` carries
+// the four functions that turn a move into words — `moveSummary`,
+// `moveDetail`, `keywordEffect`, `tagNote` — read only by `battle/ui.js` and
+// `splice/pens-ui.js`, both lazy since R74. The leaf the engine reads stays
+// eager; the prose arrives with the screen.
+//
+// The note above said the lever here was 7.0 KB of empty data keys. That is
+// still true and still uncollected, re-measured at 3.1 KB on today's files —
+// and it is no longer the only thing on the list, which is the same sentence
+// R153 wrote and the reason this one was gettable.
+const FIRST_PAINT_KB = 1027;
 
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //
@@ -650,8 +662,19 @@ async function main() {
       console.log('');
     }
     const eagerKb = [...eager.values()].reduce((n, b) => n + b, 0) / 1024;
+    // R167 — R153 said to read RUNS_NOTHING_BUT_BELONGS as a bill, and a bill
+    // whose total nobody prints is a settled account by another name. The
+    // line COUNT is not the total: a module the engine reads for constants is
+    // eager and runs nothing by construction, so splitting one adds a line
+    // rather than removing it (R167 split `battle/moves.js` and the list
+    // still holds four names). The figure that can move is the weight behind
+    // them — 18.2 KB before R167, 11.0 after — so it prints on every run,
+    // not only under --report where no gate ever looks.
+    const excusedKb = idle.filter((f) => f in RUNS_NOTHING_BUT_BELONGS)
+      .reduce((n, f) => n + eager.get(f), 0) / 1024;
     console.log(`boot: ${eager.size} modules compiled eagerly (${eagerKb.toFixed(1)} KB), `
-      + `${idle.length} of them running nothing on either first paint`);
+      + `${idle.length} of them running nothing on either first paint `
+      + `(${excusedKb.toFixed(1)} KB excused by name)`);
   } finally {
     try { cdp?.ws.close(); } catch { /* already gone */ }
     proc.kill();

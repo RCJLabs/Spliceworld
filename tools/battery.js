@@ -2996,6 +2996,19 @@ const BREAKS = [
     to: '### 4.0b Retired',
   },
 
+  // R167 — the description half goes back into the eager module, which is
+  // exactly the state R93 paid two cap raises for. Aimed at BOOT rather than
+  // the eager-JS cap because first paint is the budget a player feels.
+  {
+    n: 283, gate: BOOT, name: 'the move descriptions go back into the eager graph',
+    // Aimed at an EAGER importer, because that is the only way the split can
+    // be undone: battle/ui.js is lazy, so importing move-text there changes
+    // nothing. statblock.js is compiled before the first paint.
+    file: 'battle/statblock.js',
+    anchor: "import { MOVE_SLOTS, activeMoves, defaultPick, partMoveId, comboMoveId } from './moves.js';",
+    to: "import { MOVE_SLOTS, activeMoves, defaultPick, partMoveId, comboMoveId } from './moves.js';\n"
+      + "import { moveSummary } from './move-text.js';\nexport const __r167 = moveSummary;",
+  },
   // R93 — the late game has stakes. Four breaks: the tuning that makes a pack
   // a pack, the threshold that decides whether one ever forms, the
   // counter-bias that makes it the lab's answer rather than more bodies, and
@@ -3057,8 +3070,16 @@ const BREAKS = [
   {
     // The other direction: the count beside the list stops matching the list.
     // Typed numbers are exactly what R77 was filed for.
+    //
+    // R167 — this anchored on the literal '**19 entries queued.**' and went
+    // stale the first time a milestone shipped, which is the one thing an
+    // anchor may not do: --anchors caught it, but a break that needs editing
+    // every session is a break that will one day be edited wrong. So it
+    // patches the LIST instead, past a prefix no count can move, and breaks
+    // the same rule both ways at once — the list is one longer than the
+    // stated size, and R999 is not an entry §9 has.
     n: 277, gate: ROADMAP, name: 'the queue states a size the list does not have',
-    file: 'ROADMAP.md', anchor: '**19 entries queued.**', to: '**20 entries queued.**',
+    file: 'ROADMAP.md', anchor: ' entries queued.**', to: ' entries queued.** R999,',
   },
   {
     // The defect itself: a paragraph somewhere else in the document calls a
