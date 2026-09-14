@@ -19158,6 +19158,67 @@ if (inShard('empire')) {
       'and none of the three full-length walks lost one');
   }
 
+  // R93 — THE LATE GAME HAS TO BE ABLE TO GO WRONG.
+  //
+  // After dominion the campaign is two verbs, and by volume it is mostly one:
+  // across six seeds, 1,624 escapee hunts against 483 defences and 99
+  // assaults. The hunt is the endgame, and the hunt could not be lost —
+  // 99.0%, one to nearly three times a day, for the rest of the campaign.
+  //
+  // That is not drift. R82 designed it: "NO DEADLINE ... IT IS NOT ABOUT
+  // LAND. No node, no income, no suspension", and `resolveBreakout` returns
+  // `cleared: false` on a loss, so the board keeps the entry and you try
+  // again. Every one of those reasons is good for a system that exists to put
+  // rival anatomy in front of the player. None of them is a reason the fight
+  // itself should be a formality.
+  //
+  // THE DEFENCE HALF OF THE ENTRY WAS ALREADY WRONG. It claimed 92% held and
+  // "the only cost of a loss is suspended income". Both are stale: defences
+  // are held 85.0% of the time on these four seeds, and `resolveContest`
+  // drops the node out of `heldNodes` — you lose the county, not its rent.
+  // So the defence rule below is green the day it is written, and it is here
+  // to keep it that way rather than to change anything.
+  //
+  // POOLED, NOT PER-SEED. A rate is a rate: seed 11 fights 20 defences in its
+  // whole post-dominion life and reads 100%, which is four fights of noise,
+  // not a finding. Pooling asks the question the criterion asks.
+  {
+    const late = walks.map((w) => w.lateGame);
+    const pool = (pick) => {
+      const n = late.reduce((t, l) => t + pick(l).n, 0);
+      const won = late.reduce((t, l) => t + pick(l).won, 0);
+      return { n, won, pct: n ? +(100 * won / n).toFixed(1) : null };
+    };
+    const hunts = pool((l) => l.hunts);
+    const defs = pool((l) => l.defences);
+
+    // The sample has to exist before a rate means anything: a walk that
+    // stopped hunting would otherwise pass this by fighting nothing.
+    assert.ok(hunts.n >= 400 && defs.n >= 150,
+      `the late game is actually being played — ${hunts.n} hunts and ${defs.n} defences `
+      + `after dominion across seeds ${EMPIRE_SEEDS.join('/')}`);
+
+    assert.ok(hunts.pct < 90,
+      'an escapee hunt is a fight, not a formality: post-dominion hunts are won '
+      + `${hunts.pct}% of the time (${hunts.won}/${hunts.n}), and the late game is `
+      + `${(hunts.n / defs.n).toFixed(1)}x more hunt than defence`);
+
+    assert.ok(defs.pct < 90,
+      `a county can be lost: post-dominion defences are held ${defs.pct}% of the time `
+      + `(${defs.won}/${defs.n})`);
+
+    // ...and the campaign still has to work. R93's second clause, and the one
+    // that stops "make it harder" from being the whole answer.
+    for (const w of walks) {
+      assert.equal(w.brokeHours, 0,
+        `seed ${w.seed ?? '?'} reaches day 180 solvent — ${w.brokeHours}h broke, `
+        + `min funds $${w.minFunds}`);
+    }
+    console.log(`   R93 late game: ${hunts.n} hunts ${hunts.pct}% won · ${defs.n} defences `
+      + `${defs.pct}% held · ${pool((l) => l.assaults).n} assaults, from day `
+      + `${late.map((l) => l.fromDay).join('/')}`);
+  }
+
     // R138 — THE MIDDLE OF THE LEVEL CURVE.
     //
     // Six campaigns before this milestone: L0 x24, L10 x25, and THIRTEEN

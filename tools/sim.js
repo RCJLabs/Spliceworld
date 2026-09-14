@@ -2786,6 +2786,37 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     }, {}),
     duels: (state.__walkLog ?? []).filter((e) => e.kind === 'rival').length,
     breakouts: (state.__walkLog ?? []).filter((e) => e.kind === 'breakout').length,
+    // R93 — THE LATE GAME, WHICH IS THE PART NOTHING MEASURED.
+    //
+    // The entry's criterion is about POST-DOMINION win rates and the walk
+    // reported neither. `defences`/`defencesHeld` are whole-campaign counts,
+    // and the interesting number is what happens after the map is yours:
+    // before dominion a defence is a fight you might lose the campaign over,
+    // after it the same fight is the campaign.
+    //
+    // Reading it took a bespoke script, which is how the entry's own figures
+    // went stale — it claimed 157 hunts at 100% and 93 defences at 92%; the
+    // hunts are 1,624 across six seeds at 99.0% and the defences 483 at
+    // 82.4%, so one half of its premise was right and the other had moved
+    // ten points without anybody noticing. R142's lesson, applied to the two
+    // verbs that dominate the endgame by volume.
+    lateGame: (() => {
+      const dom = at.dominion;
+      const post = dom == null ? [] : (state.__walkLog ?? []).filter((e) => e.day >= dom);
+      const rate = (kind) => {
+        const es = post.filter((e) => e.kind === kind);
+        const won = es.filter((e) => e.outcome === 'win').length;
+        return { n: es.length, won, pct: es.length ? +(100 * won / es.length).toFixed(1) : null };
+      };
+      const span = dom == null ? 0 : days - dom;
+      const hunts = rate('breakout');
+      return {
+        fromDay: dom, days: +span.toFixed(1),
+        hunts, huntsPerDay: span ? +(hunts.n / span).toFixed(2) : null,
+        defences: rate('defend'),
+        assaults: rate('assault'),
+      };
+    })(),
     // The two halves of R8 the harness could never see: how many specimens
     // were bagged, and how many of those were talked round rather than
     // taken apart.
