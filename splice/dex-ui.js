@@ -26,6 +26,11 @@ import { creaturePortrait, renderUnitSVG, renderRivalSVG } from '../render/rende
 // 7-9 KB and an average taken over every SVG on the screen is not the size
 // of the ones being deferred.
 const DEX_EAGER_CELLS = 9;
+
+// Whether this environment can fill a cell later. `typeof`, not a truthiness
+// check on the global: in Node the identifier is not declared at all, and
+// reading it directly throws the ReferenceError the check exists to avoid.
+const DEFERS = typeof IntersectionObserver === 'function';
 import { renderIcon } from '../ui/icons.js';
 import { stockGenome } from '../ranch/ranch.js';
 import { comboHint } from './theater.js';
@@ -80,7 +85,13 @@ function rosterView(state, content) {
       // worth" is a number, and a number cannot disagree with the layout the
       // way a measurement taken before the paint can.
       i += 1;
-      const portrait = i <= DEX_EAGER_CELLS
+      // DEFERRED WHERE THE MARKUP IS BUILT, not where the DOM is walked. The
+      // gates render this in a stub that has no IntersectionObserver AND no
+      // element to find afterwards, so a cell left empty here stays empty
+      // there and the gate measures a Dex two thirds of the way drawn — 9
+      // portraits against the 34 it asserts. Where there is no observer to
+      // fill them later, draw them now.
+      const portrait = !DEFERS || i <= DEX_EAGER_CELLS
         ? creaturePortrait(stockGenome(sp.id, content), content, { idPrefix: `dex-${sp.id}`, extraScale: 0.85 })
         : '';
       return `
@@ -141,7 +152,9 @@ function variantsView(state, content) {
       const base = speciesOf(content, sp.variantOf);
       return `
         <div class="variant-row ${found ? '' : 'variant-locked'}">
-          <div class="variant-portrait" data-portrait="${sp.id}"></div>
+          <div class="variant-portrait"${DEFERS ? ` data-portrait="${sp.id}"` : ''}>${
+            DEFERS ? '' : creaturePortrait(stockGenome(sp.id, content), content, { idPrefix: `var-${sp.id}`, extraScale: 0.8 })
+          }</div>
           <div style="flex:1;min-width:0">
             <strong>${found ? sp.name : '???'}</strong>
             ${found ? `<span class="variant-badge">✦ bred</span>` : ''}
