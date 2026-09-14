@@ -37,6 +37,14 @@ const FLOOR = 40;          // px, both dimensions
 const GUTTER = 6;          // px, between two adjacent controls
 const RAG = 1;             // px, how far into its own line a full-width row may start
 const BAND_TOP = 420;      // px, the wide end of the stylesheet's phone media query
+// R104 — what a repaint is allowed to cost. Zero is not a stylistic choice:
+// a tick that changed nothing has nothing to say, and every node it rewrites
+// is a text selection lost, a scroll position dropped and a card's identity
+// destroyed. The other three are budgets rather than zeroes because a screen
+// legitimately keeps a shell, and the Dex legitimately draws SOME art.
+const REPAINT_MUTATIONS = 0;
+const LEFT_BEHIND = 50;
+const DEX_FIRST_PAINT_KB = 100;
 const VIEWPORT = 380;      // px, the reference phone width
 const REPORT = process.argv.includes('--report');
 
@@ -969,6 +977,88 @@ async function main() {
       await subtabPass(s, s);
       await foldPass(s);
     }
+    // ---- 1a2. R104 — WHAT DOES A REPAINT COST? Four numbers, one loop.
+    //
+    // The shell rebuilds the active screen from a string every 30 seconds
+    // and after every tap, whether or not anything moved, and a hidden
+    // screen keeps its DOM for the rest of the session. None of that is
+    // visible to any rule the gate had: every screen looked right, and the
+    // cost of keeping it right was unmeasured.
+    //
+    // Measured HERE rather than in a gate of its own because the browser is
+    // already open on a save with something on every screen, which is the
+    // expensive half of the question.
+    const repaintPass = async () => {
+      // (i) A TICK THAT CHANGES NOTHING MUST TOUCH NOTHING. The clock is not
+      // pinned in this gate, so a second tick inside the same wall-clock
+      // second is the honest form of "nothing moved": the save advances by
+      // no elapsed time it can act on.
+      await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
+      await sleep(500);
+      const muts = Number(await evaluate(`(() => {
+        let n = 0;
+        const obs = new MutationObserver((rs) => {
+          for (const r of rs) n += 1 + r.addedNodes.length + r.removedNodes.length;
+        });
+        obs.observe(document.querySelector('#screen-ranch'), {
+          childList: true, subtree: true, attributes: true, characterData: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+        return new Promise((res) => setTimeout(() => { obs.disconnect(); res(n); }, 350));
+      })()`));
+      if (muts > REPAINT_MUTATIONS) {
+        note(`a tick that changed nothing rewrote ${muts} nodes on the Ranch (budget ${REPAINT_MUTATIONS})`
+          + ' — the shell repaints on a timer rather than on a change');
+      }
+
+      // (ii) A TAP ON ONE CARD IS NOT A REASON TO REBUILD THE OTHERS. Node
+      // identity, not HTML equality: a card rebuilt to the same string still
+      // loses its selection, its scroll position and its focus.
+      await evaluate(`document.querySelector('#tabs button[data-screen="pens"]').click()`);
+      await sleep(600);
+      const identity = JSON.parse(await evaluate(`(() => {
+        const r = document.querySelector('#screen-pens');
+        const folds = [...r.querySelectorAll('[data-fold]')];
+        folds.forEach((b, i) => { const c = b.closest('section, article, div'); if (c) c.dataset.r104 = 'k' + i; });
+        const before = r.querySelectorAll('[data-r104]').length;
+        folds[0]?.click();
+        return new Promise((res) => setTimeout(() => res(JSON.stringify({
+          before, after: document.querySelectorAll('#screen-pens [data-r104]').length,
+        })), 450));
+      })()`));
+      if (identity.before > 1 && identity.after < identity.before) {
+        note(`opening one pen destroyed ${identity.before - identity.after} of ${identity.before} cards on the screen`
+          + ' — every card is rebuilt because one of them changed');
+      }
+
+      // (iii) A SCREEN YOU HAVE LEFT COSTS NOTHING. Every later style
+      // recalculation walks what is still in the document, hidden or not.
+      for (const s of screens) {
+        await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
+        await sleep(450);
+        await evaluate(OPEN_DETAILS);
+        await sleep(250);
+        await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
+        await sleep(450);
+        const left = Number(await evaluate(`document.querySelector('#screen-${s}')?.querySelectorAll('*').length ?? 0`));
+        if (s !== 'ranch' && left > LEFT_BEHIND) {
+          note(`leaving ${s} left ${left} nodes in the document (budget ${LEFT_BEHIND})`);
+        }
+      }
+
+      // (iv) THE FIRST PAINT OF A SCREEN IS WHAT THE PLAYER WAITS FOR. The
+      // Dex is the one screen whose weight is art rather than text, so it is
+      // the one that has to earn what it draws before it is looked at.
+      await evaluate(`document.querySelector('#tabs button[data-screen="dex"]').click()`);
+      await sleep(700);
+      const dexKb = Number(await evaluate(
+        `Math.round((document.querySelector('#screen-dex')?.innerHTML.length ?? 0) / 1024)`));
+      if (dexKb > DEX_FIRST_PAINT_KB) {
+        note(`the Dex paints ${dexKb} KB before the player has scrolled (budget ${DEX_FIRST_PAINT_KB} KB)`);
+      }
+      return { muts, identity, dexKb };
+    };
+    const repaint = await repaintPass();
+
     // ---- 1b. …and the arena on a short phone. 780px lands in the
     //      `min-height: 760px` band (a roomier stage, taller move cells);
     //      640 lands in `max-height: 640px`, which exists precisely because
