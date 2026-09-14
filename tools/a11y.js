@@ -1049,10 +1049,21 @@ async function main() {
       // Dex is the one screen whose weight is art rather than text, so it is
       // the one that has to earn what it draws before it is looked at.
       await evaluate(`document.querySelector('#tabs button[data-screen="dex"]').click()`);
-      await sleep(700);
-      const dexKb = Number(await evaluate(
-        `Math.round((document.querySelector('#screen-dex')?.innerHTML.length ?? 0) / 1024)`));
-      if (dexKb > DEX_FIRST_PAINT_KB) {
+      // R159's rule, and this gate broke it on its first run: a 700ms sleep
+      // measured the Dex mid-load — it is a LAZY screen, so what was on the
+      // glass was still "Warming up the lab…" and the rule went green at
+      // 1 KB against a screen that actually paints 274. Wait for the page.
+      let dexKb = 0;
+      for (let i = 0; i < 25; i++) {
+        await sleep(200);
+        const now = Number(await evaluate(
+          `Math.round((document.querySelector('#screen-dex')?.innerHTML.length ?? 0) / 1024)`));
+        if (now > 0 && now === dexKb) break;
+        dexKb = now;
+      }
+      if (!dexKb) {
+        note('the Dex never painted, so nothing measured what its first paint costs');
+      } else if (dexKb > DEX_FIRST_PAINT_KB) {
         note(`the Dex paints ${dexKb} KB before the player has scrolled (budget ${DEX_FIRST_PAINT_KB} KB)`);
       }
       return { muts, identity, dexKb };
