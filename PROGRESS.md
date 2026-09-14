@@ -55,6 +55,20 @@ walk cache is healthy (2–26 ms a walk), the disk has 27 GB free, and R151's
 deleted fixed-hash probe reads **91.2 ms** against R160's 95.0 — the box's
 integer throughput is *better*. Queued as **R168**.
 
+### The rot check earned its 1.5 hours
+
+The full battery ran (R104 changed R80's focus rule) and came back
+`BATTERY_EXIT=1` on one MISSED break: 255, R155's reserve exemption. Missed on
+`main` too, so it is not this milestone's — it is rot from the milestones
+since R155. The defect had **moved, not gone**: censused over sixteen seeds
+with the reserve check restored, seed 314 holds a warned creature **16h**, 42
+holds 10h, 9001 holds 8h, 21 holds 2h — and seed 7, R155's original 18h
+campaign, now reads 0h *either way*. The rule had been green against the code
+it was written to reject. 314 joins `EMPIRE_SEEDS`, shard a is green with the
+fifth campaign, break 255 is caught again.
+
+*A break aimed at one seed is aimed at one campaign's weather.*
+
 ### Known issues
 
 - **`npm test` is red on `main`, not only here** — 1054 against an 820

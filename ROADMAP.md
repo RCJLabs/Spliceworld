@@ -3278,6 +3278,38 @@ suite can check.
   paid again: a plausible cause that fits the shape of a number is not a
   measurement, and the A/B that falsifies it costs ten minutes.
 
+  #### What the rot check found, five milestones on
+
+  The full battery ran because this milestone changed R80's focus rule, and it
+  came back `BATTERY_EXIT=1` on **one MISSED break** — 255, R155's reserve
+  exemption. Run alone it is missed on this branch *and* on `main`, so it is
+  not R104's; it is rot that accumulated over the milestones since R155, and
+  nothing but the periodic full run could have found it.
+
+  **The defect had not gone away. It had moved.** Censused across sixteen
+  seeds with the reserve check restored, reading `feral.heldHours`:
+
+  | seed | 314 | 42 | 9001 | 21 | the other twelve |
+  | --- | ---: | ---: | ---: | ---: | ---: |
+  | hours a warned creature waits | **16h** | 10h | 8h | 2h | 0h |
+
+  Seed 7 — the 18h campaign R155 aimed the break at — now reads **0h with the
+  reserve check and 0h without it**, so the rule had been green against the
+  exact code it was written to reject. All four reproducing seeds read 0h on
+  the shipped tree, so the rule still passes what it should. **314 joins
+  `EMPIRE_SEEDS`**: it holds longest, and R155's own entry already named it as
+  a campaign where the creature waits. Shard a is green with the fifth
+  campaign and break 255 is caught again. Cost: one more 180-day walk, the
+  same price R165 paid for seed 11, noted against R168.
+
+  A stale message went the same way and is fixed with it: "none of the *three*
+  full-length walks lost one", printed by a block that had walked four since
+  R165. It reads `walks.length` now.
+
+  **The lesson:** *a break aimed at one seed is aimed at one campaign's
+  weather, and the weather moves every time the economy does.* Nothing warns
+  you — the break simply stops being a break.
+
   *Done when: a tick on an unchanged day-180 save touches zero DOM nodes (a
   MutationObserver count in the a11y gate), a tap on one Pens card leaves
   every other card's node identity intact, leaving any screen leaves under 50
