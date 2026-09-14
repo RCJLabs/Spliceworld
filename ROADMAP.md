@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**17 entries queued.** R94, R100, R102, R104, R105, R107, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
+**17 entries queued.** R94, R100, R102, R105, R107, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R168.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -3177,33 +3177,113 @@ suite can check.
   15 points and random by at least 25, without the forecast pilot's win rate
   falling against any encounter — so the game gets harder to play badly, not
   harder.*
-- **R104 — The shell repaints blind.** `main.js` rebuilds the active screen
-  from a string on a **30-second interval and after every tap**, whether or
-  not anything changed, and hidden screens keep their DOM. Measured in
-  Chromium: on a fresh save the Dex tick costs **16 ms of script and 10 ms
-  of layout for 3,106 nodes** every half minute while the player reads it;
-  on the day-180 save the Vault tick is **300 ms** for **58,043 nodes**
-  (the string alone is **2,841 KB, 66,047 words, 1,955 buttons and 3,909
-  SVGs**, built in 217 ms; with its folds open the screen is **557,274 px
-  tall — 714 phone screens**), and after the player *leaves* the Vault,
-  **57,489 of those nodes stay in the document** behind `hidden` for the
-  rest of the session, so every later theme change and style recalculation
-  pays for a screen nobody is looking at. Every tick **destroys a text
-  selection** (87 → 0 characters on the Ranch) and every card's DOM
-  identity. R89 and R91 shrink the worst screen; this is about the loop that
-  paints them. Proposed, medium-large: `tickWorld` returns a **change
-  report** (what moved: funds, clocks, arrivals — R107 needs the same
-  report), and the shell repaints only when the report is non-empty or the
-  screen has declared a live countdown; **keyed cards** — `ui/cards.js`
-  grows a `patchList(root, items, keyOf, render)` that replaces only the
-  cards whose HTML changed, so a tap on one chimera re-renders one card;
-  **screens empty on leave**, so a visited Vault costs nothing afterwards;
-  and Dex portraits paint **lazily** below the fold (with the stub rendering
-  all, so the gates keep measuring everything). *Done when: a tick on an
-  unchanged day-180 save touches zero DOM nodes (a MutationObserver count in
-  the a11y gate), a tap on one Pens card leaves every other card's node
-  identity intact, leaving any screen leaves under 50 nodes behind, and the
-  fresh Dex's first paint is under 100 KB.*
+- **R104 — The shell repaints blind.** ✅ *Shipped — all four criteria, and
+  this milestone's own diagnosis of a suite overrun falsified by a same-box
+  A/B it should have run first.*
+
+  #### Re-measured before building
+
+  | the entry said | today |
+  | --- | --- |
+  | repaints on a **30s interval and after every tap**, changed or not | true — a tick that moved nothing rewrote **63 nodes** on the Ranch |
+  | hidden screens **keep their DOM** | true — leaving the Vault left **280 of its 280 nodes** in the document |
+  | the day-180 Vault tick is **300 ms for 58,043 nodes** | not re-measurable as written; on a **fresh** save the whole document is **3,334 nodes** and a tick costs **28 ms** for **25 mutations** |
+  | every tick destroys **every card's DOM identity** | true — opening one pen destroyed **5 of the 5** cards on the screen |
+  | the Dex is the heavy screen | true — **2,521 nodes, 274 KB**, all of it painted before a scroll |
+
+  The 58,043-node figure is the *opened-folds* reading of a day-180 save and
+  the entry quotes it as the shut one. The shape of the defect is right; the
+  headline number is four screens of accumulated detail, not one.
+
+  #### The gate went red first
+
+  All four rules were written into `tools/a11y.js`, run, and seen failing
+  (`A11Y_EXIT=1`, seven problems) before a line of the shell changed —
+  including the two that turned out to be measuring their own interference
+  and the one that went green twice against a screen that had not painted.
+
+  | | before | after |
+  | --- | ---: | ---: |
+  | nodes an unchanged tick rewrites (Ranch) | 63 | **0** |
+  | untouched Pens cards destroyed by one tap | 5 of 5 | **0 of 4** |
+  | nodes the worst screen leaves behind | 496 (Dex) | **0** |
+  | Dex first paint | 275 KB | **91 KB** |
+
+  #### What ships
+
+  **The change report.** `tickWorld` returns what moved, diffed from a
+  `worldSnapshot` taken before and after — funds, notoriety, held and
+  contested nodes, loose specimens, captives, bays, raids, stock, eggs, herd
+  size, injuries, scars, agitation, parts, news. The shell repaints only when
+  that report is non-empty. Three callers still force a paint because their
+  change is not in the save: arriving on a screen, finishing an action, and
+  the shapes file landing. R107 reads the same report.
+
+  **Keyed paint.** New lazy **`ui/patch.js`**: `paintScreen` matches the
+  screen's top-level children by fold id (or by position) and keeps every node
+  whose markup is byte-identical, so a tap on one chimera rebuilds one card.
+  `ui/cards.js` grew `unbound(root, selector)` — a **WeakSet**, deliberately
+  not a `data-bound` attribute, because an attribute lands in `outerHTML` and
+  would make every bound card differ from its own freshly built markup and
+  defeat the diff it exists to support.
+
+  **Screens empty on leave.** `showScreen` calls `replaceChildren()` on every
+  screen it is not showing, so a visited Vault costs nothing for the rest of
+  the session.
+
+  **Dex portraits draw late.** Nine cells eagerly, the rest through an
+  `IntersectionObserver` with a **150px** margin. The deferral happens where
+  the **markup is built**, not where the DOM is walked, so the Node stub —
+  which has `createElement` but no iterable `children` and no
+  `IntersectionObserver` — still renders every portrait and the gates keep
+  measuring all of them. The deferred ids travel in JS with a `.dex-later`
+  class rather than in a `data-*` attribute, because R89 already ruled that
+  `data-*` means *you can press it*. Each cell derives its own id prefix and
+  scale, so a roster creature cannot be clipped to a variant's silhouette — a
+  collision no byte-counting gate would have seen.
+
+  #### The budget, and how it was paid
+
+  `FIRST_PAINT_KB` **1029 → 1033**, `KB_CAP` **555 → 559**. Both levers were
+  taken before the caps were asked for — `ui/patch.js` is lazy, and the boot
+  gate now prints the **total** of its exemption bill rather than only the
+  count, so the next milestone can see what the excuse is worth.
+
+  #### The claim this milestone made about the suite, and then disproved
+
+  `npm test` went over budget during this milestone and commit `f602f41`
+  blamed `worldSnapshot`'s four separate scans of the herd, claiming "about
+  310" of the overrun. **That attribution is wrong, and this entry says so
+  rather than leaving it standing in the log.** The one-pass loop is still the
+  better code and stays; what it bought is not measurable.
+
+  Measured the only honest way — same box, ten minutes apart, both trees warm,
+  each run alone:
+
+  | suite, run alone | CPU-seconds |
+  | --- | ---: |
+  | `main` at `93710b5` (R96, already shipped green) | **1054** |
+  | this branch at `f602f41` | **1031** |
+
+  R104 is **23 CPU-seconds cheaper** than the tree it branched from, and
+  `main` is over the 820s budget on its own. One shard alone reads the same
+  way: **150.6s** wall on the branch against **153.7s** on `main`. The walk
+  cache is not the cause (a cached 180-day walk returns in **2–26 ms**), the
+  disk is not the cause (27 GB free), and the box's integer throughput is not
+  the cause — R151's deleted fixed-hash probe reads **91.2 ms** today against
+  R160's **95.0 ms**, slightly *faster*. So the overrun is real, is not this
+  milestone's, and has no identified cause. It is queued as **R168**.
+
+  The lesson is the one R151 and R158 already paid for, and this milestone
+  paid again: a plausible cause that fits the shape of a number is not a
+  measurement, and the A/B that falsifies it costs ten minutes.
+
+  *Done when: a tick on an unchanged day-180 save touches zero DOM nodes (a
+  MutationObserver count in the a11y gate), a tap on one Pens card leaves
+  every other card's node identity intact, leaving any screen leaves under 50
+  nodes behind, and the fresh Dex's first paint is under 100 KB.* All four
+  hold — 0 nodes, 0 of 4 cards, 0 left behind, 91 KB — and breaks 287–290
+  turn each rule red on demand.
 - **R105 — The county calendar.** The game runs entirely on real
   timestamps — CLAUDE.md's own rule — and nothing in it knows what time it
   is: **zero** hits for time of day, season or weather anywhere in the code
@@ -4905,6 +4985,40 @@ triangle working, and each region genuinely asks a different question)*.
   and re-running it twice an hour apart gives the same verdict.* CPU-seconds;
   910 on a quiet machine against a 1000 budget; and the verdict held across a
   run whose wall-clock was 78% longer, which is a harder test than an hour.
+
+- **R168 — The suite is 29% over budget on `main`, and nothing explains it.**
+  R160 closed this lineage with "there was no box drift, there was a walk
+  cache," and set `CPU_BUDGET_S` at **820** against a measured warm run of
+  **728**. Today, warm, on an idle four-core box, the *shipped* tree reads
+  **1054** and R104's branch reads **1031** — an A/B run ten minutes apart,
+  each alone, neither rebuilding a walk. So the budget is red on `main`, and
+  it is red for something no instrument in this section can see:
+
+  | suspect | ruled out by |
+  | --- | --- |
+  | the milestone's code | branch **1031** vs `main` **1054** — the newer tree is cheaper |
+  | the walk cache (R160's answer) | 13 walks ready, 0 rebuilt, and a cached 180-day walk returns in **2–26 ms** |
+  | the disk (a cache that cannot be written) | **27 GB** free; the cache is 158 MB across 972 files |
+  | the box's integer throughput (R151's instrument) | the deleted fixed-hash probe reads **91.2 ms** against R160's **95.0 ms** — *faster* |
+  | contention | `effective lanes 3.8` of 4, load 0.59, no other process on the box |
+
+  One shard alone tells the same story and rules out the lane count with it:
+  `smoke:b` reads **153.7s** wall on `main` today against the **124.6s** this
+  section records for the same job. Nothing in the suite's own reporting
+  distinguishes "the work grew" from "the cycles got dearer", which is exactly
+  the question R151, R156, R158 and R160 each answered differently.
+
+  The likeliest untested explanation is the dullest one: **twelve milestones
+  have shipped since R160 set the number**, each adding assertions to a smoke
+  that has never been re-baselined. If that is it, the budget is working
+  correctly and is simply out of date — but *nobody has measured it*, and
+  raising a budget on a guess is how the gate stops meaning anything. Note
+  that the 728 and 910 readings in this section were taken on other days, so
+  a same-box comparison against an old commit is the only honest instrument
+  left. *Done when: the suite's cost is attributed — a commit range, a
+  per-job delta, or a host effect demonstrated by re-running an old commit on
+  today's box — and `CPU_BUDGET_S` is either justified where it stands or
+  moved for a stated, measured reason.*
 
 ### 9.27 The verb that could not level anything (R138) — seventh audit
 

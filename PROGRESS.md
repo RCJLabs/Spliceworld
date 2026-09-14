@@ -1,5 +1,83 @@
 # PROGRESS
 
+## Session 176 — R104: the shell paints on a change report ✅
+
+**ROADMAP §9.0 → §9.6 (UI).** `main.js` rebuilt the active screen from a
+string every 30 seconds and after every tap, changed or not, and every screen
+the player left kept its DOM for the rest of the session.
+
+### The gate went red first
+
+Four rules into `tools/a11y.js`, run and seen failing (`A11Y_EXIT=1`, seven
+problems) before the shell changed:
+
+| | before | after |
+| --- | ---: | ---: |
+| nodes an unchanged tick rewrites (Ranch) | 63 | **0** |
+| untouched Pens cards destroyed by one tap | 5 of 5 | **0 of 4** |
+| nodes the worst screen leaves behind | 496 (Dex) | **0** |
+| Dex first paint | 275 KB | **91 KB** |
+
+The gate now prints those four on a pass, the way `tools/boot.js` prints its
+bill. A budget that speaks only when broken cannot show it is still running.
+
+### What ships
+
+- **A change report.** `tickWorld` diffs a `worldSnapshot` taken before and
+  after — funds, nodes, clocks, arrivals, injuries, news — and the shell
+  repaints only when something moved. Three callers still force a paint
+  because their change is not in the save. **R107 reads the same report.**
+- **Keyed paint.** New lazy `ui/patch.js` matches top-level children by fold
+  id and keeps every byte-identical node, so one tap rebuilds one card.
+  `unbound()` is a **WeakSet**, not a `data-bound` attribute — an attribute
+  lands in `outerHTML` and would defeat the very diff it marks.
+- **Screens empty on leave**, so a visited Vault costs nothing afterwards.
+- **Dex portraits draw late** — nine cells eager, the rest on an
+  `IntersectionObserver`. Deferred at markup-build time so the Node stub still
+  renders every portrait and the gates keep measuring all of them.
+
+`FIRST_PAINT_KB` **1029 → 1033**, `KB_CAP` **555 → 559**, levers taken first.
+
+### I blamed the wrong thing for a suite overrun, and the A/B says so
+
+`npm test` went over budget mid-milestone. Commit `f602f41` blamed
+`worldSnapshot`'s four scans of the herd and claimed "about 310" CPU-seconds
+of the overrun. **Wrong.** Same box, ten minutes apart, both warm, each alone:
+
+| suite | CPU-seconds |
+| --- | ---: |
+| `main` at `93710b5` (R96, shipped green) | **1054** |
+| this branch at `f602f41` | **1031** |
+
+R104 is 23 CPU-seconds *cheaper* than the tree it branched from. The one-pass
+loop is still better code and stays; its claimed saving does not exist. The
+walk cache is healthy (2–26 ms a walk), the disk has 27 GB free, and R151's
+deleted fixed-hash probe reads **91.2 ms** against R160's 95.0 — the box's
+integer throughput is *better*. Queued as **R168**.
+
+### Known issues
+
+- **`npm test` is red on `main`, not only here** — 1054 against an 820
+  budget, cause unidentified. R168 is the milestone; raising the number on a
+  guess is how a gate stops meaning anything.
+- **Both caps are now past R93's ceilings** — `FIRST_PAINT_KB` 1033 against
+  1030, `KB_CAP` 559 against 557. R167's repayment is fully consumed, and the
+  next milestone that touches the eager graph has no slack to spend: it splits
+  first or it does not ship.
+- **`paintScreen` falls back to `innerHTML`** wherever `CAN_DIFF` is false —
+  every Node gate takes that path, so the keyed diff itself is only ever
+  exercised in the browser, by the a11y gate.
+
+**The lesson:** *a plausible cause that fits the shape of a number is not a
+measurement. The A/B that falsifies it costs ten minutes; R151 and R158 each
+paid for this lesson already.*
+
+### Next session's first task
+
+**R107 ("welcome back")** — it was blocked on R104's change report, which now
+exists and returns exactly what it needs. Or **R168**, if a red `npm test` on
+`main` should be cleared before anything is built on top of it.
+
 ## Session 175 — R96: a creature that shows what it is ✅
 
 **ROADMAP §9.0 → §9 (Renderer).** Temperament has been two numbers and a
