@@ -116,46 +116,18 @@ function scheduleNext(state, content, from) {
   cam.nextBreakAt = from + Math.round(pacing(state, content).cooldownHours * jitter * HOUR);
 }
 
-// R93 — HOW MANY COME BACK.
-//
-// Measured before this was written: post-dominion the walk fought 1,624
-// escapee hunts across six 180-day campaigns — 3.4x more hunts than defences
-// — and won 99.0% of them. One wave, one specimen, every time, for the rest
-// of the game. R82's reasons for a standing board with no deadline and no
-// land at stake are all still good; none of them was a reason the fight
-// itself should be a formality.
-//
-// KEYED ON THE LAB'S OWN LOSSES, and the first draft got this wrong in a way
-// worth keeping: it keyed on DEFEATS — how many times you have beaten that
-// rival in a duel — because that is the number already scaling an escapee's
-// power. Measured over six 180-day campaigns, defeats top out at 2 to 6. The
-// walker duels each rival about five times in half a year, so any rule that
-// waits for a third defeat is waiting on something two of six campaigns never
-// reach: seeds 2026 and 4242 produced not one pack, and the late game was
-// exactly as free as before.
-//
-// Escapes are the number the late game actually produces — 199 to 398 per
-// campaign, across five labs — and they are also what the entry asked for in
-// the first place: "a lab that has lost N specimens sends them back
-// together". A lab bleeding stock is a lab whose fences are the problem, and
-// the fences get worse as the campaign runs, which is where the criterion
-// lives.
-//
-// Data, not code: `maxSize` is the only thing standing between this and a
-// twelve-specimen wall, and it belongs where a designer can see it.
+// R93 — HOW MANY COME BACK. Keyed on the lab's own ESCAPES, not on how many
+// times you have beaten it: defeats top out at 2-6 in a 180-day campaign, so
+// a rule waiting on a third defeat waits on something a third of campaigns
+// never reach. Escapes run to ~56 per lab and are what the entry asked for.
+// `maxSize` lives in data because it is all that stands between this and a
+// twelve-specimen wall. The numbers, and the drafts that failed: ROADMAP R93.
 export function escapesFrom(state, rivalId) {
   return (state.campaign?.escapesByLab ?? {})[rivalId] ?? 0;
 }
 
-// Counts ESCAPES, not bodies — and the first draft counted bodies, on the
-// reasoning that a lab which loses three at once has lost three. It compounds:
-// a pack of three adds three to the tally that decides the next pack's size,
-// so the county goes from pairs to triples to triples-everywhere in about
-// thirty days. Measured, that draft took post-dominion hunts to 53.2% won and
-// raised the hunt COUNT by a third, because a lost hunt leaves the pack on the
-// board to be fought again.
-//
-// One escape is one event. The escalation stays linear and stays tunable.
+// One escape is one event, NOT one per body: counting bodies compounds, and
+// measured it took the hunt to 53.2% won in about thirty days. ROADMAP R93.
 function noteEscape(cam, rivalId) {
   cam.escapesByLab ??= {};
   cam.escapesByLab[rivalId] = (cam.escapesByLab[rivalId] ?? 0) + 1;
@@ -198,16 +170,10 @@ function makeEscapee(state, content, rival, n, now) {
     index: Math.floor(rng() * Math.max(1, rival.frames.length)),
     powerScale, idSuffix: `loose${n}`, wild,
   });
-  // R93 — THE REST OF THE PACK, through the same generator and R27's own
-  // dossier. The entry asked for "the rival's counter-bias (R27's machinery,
-  // already built)" and it is genuinely already built: `rivalSpecimen` takes
-  // `dossier` and `counter`, and `rivalDossier` computes what this lab has
-  // learned about your stable from duels against THEM. Passing it here means
-  // a pack is not just more bodies, it is the lab's considered answer — the
-  // second one is built for whatever you have been winning with.
-  //
-  // `index` walks from 1 so the counter lands the way rivalSpecimen already
-  // decides it does, rather than this file re-implementing that rule.
+  // R93 — the rest of the pack, through the same generator and R27's own
+  // dossier, so a pack is the lab's considered answer rather than more
+  // bodies. `index` walks from 1 so the counter lands where rivalSpecimen
+  // already decides it does, instead of this file re-implementing that rule.
   const size = packSize(content, escapesFrom(state, rival.id));
   const dossier = size > 1 ? rivalDossier(state, rival, content) : null;
   const pack = [];
@@ -224,17 +190,15 @@ function makeEscapee(state, content, rival, n, now) {
     id: `loose-${n}`,
     rivalId: rival.id,
     unit,
-    // Always an array, never absent: a field that is sometimes missing is a
-    // field every reader has to remember to default, and the save gate reads
-    // a new game as the specification for every migrated one.
+    // Always an array, never absent — a sometimes-missing field is one every
+    // reader has to remember to default.
     pack,
     wild: !!wild,
     traits: unit.traits ?? [],
     escapedAt: now,
     sighting: sightings.length ? sightings[Math.floor(rng() * sightings.length)] : 'somewhere in the county',
-    // A pack is worth more than one, and by less than its head count: the
-    // extras are the lab's problem, not a jackpot. `rewardPerExtra` prices
-    // them in data so the ratio is tunable without an engine edit.
+    // Worth more than one and less than its head count: the extras are the
+    // lab's problem, not a jackpot. Priced in data.
     reward: Math.round((t.rewardBase ?? 140) + power * (t.rewardPerPower ?? 5)
       * (pack.length ? 1 - (1 - (t.pack?.rewardPerExtra ?? 1)) * (pack.length / (pack.length + 1)) : 1)),
   };
@@ -329,9 +293,8 @@ export function tickBreakouts(state, content, now, since = now) {
 
 // The encounter. One specimen, inline, so nothing has to exist in
 // enemies.json for a creature the player's own rival invented this morning.
-// R93 — every wave of a loose entry, leader first. One accessor because a
-// save written before packs existed has no `pack` at all, and a default
-// spelled in five places is a default that will be spelled wrong in one.
+// R93 — every wave of a loose entry, leader first. One accessor, because a
+// default spelled in five places gets spelled wrong in one.
 export function packOf(loose) {
   return loose ? [loose.unit, ...(loose.pack ?? [])] : [];
 }

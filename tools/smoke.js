@@ -2285,6 +2285,11 @@ assert.deepEqual(m5.campaign, {
   // claim of the v38 migration — the first escape is still five hours after
   // the save becomes eligible, not five hours after it was upgraded.
   loose: [], nextBreakAt: null, breakoutCount: 0,
+  // R93: and the same claim for the pack. The per-lab tally a returning save
+  // arrives with is EMPTY, not backdated — the county's escalation starts
+  // counting from the upgrade, so nobody opens the game after an update to
+  // find a three-specimen pack waiting that their last session never earned.
+  escapesByLab: {},
   // R87: the same claim for the Task Force. A save from before it arrives
   // with an empty board and an unarmed schedule — nobody is retroactively
   // raided, and the first raid is scheduled by the first tick that finds
