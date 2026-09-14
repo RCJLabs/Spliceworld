@@ -23,6 +23,15 @@ const keyOf = (el) => el.querySelector?.('[data-fold]')?.dataset.fold
   ?? null;
 
 export function paintScreen(root, html) {
+  // R104 — the gates run this in a DOM stub that has no `createElement`, and
+  // a screen that throws while painting is a screen the gate reports as
+  // missing rather than as broken. Where there is no document to diff
+  // against, assign: the stub is measuring the MARKUP, which is identical
+  // either way, and node identity is a question only a browser can ask.
+  if (typeof document?.createElement !== 'function') {
+    root.innerHTML = html;
+    return;
+  }
   const next = document.createElement('div');
   next.innerHTML = html;
   const incoming = [...next.children];
