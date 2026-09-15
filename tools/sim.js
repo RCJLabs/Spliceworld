@@ -2510,6 +2510,9 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     condition: state.ranch.stock.length ? +(state.ranch.stock.reduce((n, a) => n + a.condition, 0) / state.ranch.stock.length).toFixed(1) : null,
     injured: state.chimeras.filter((c) => c.injury && c.injury.until > t0 + day * WALK_DAY).length,
     notoriety: state.campaign.notoriety,
+    // R94 — the meter AND the ratchet. A gate that only saw the meter could
+    // not tell a world that de-escalated from one that never escalated.
+    notorietyPeak: state.campaign.notorietyPeak ?? 0,
     news: [...(state.news ?? [])],
   });
   const awayStart = away ? away.from * 24 : Infinity;
@@ -2871,6 +2874,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // answered and held, exhibitions entered and won, and what the State
     // took from the ones that were not answered.
     raids: state.__walkRaids ?? 0,
+    notorietyPeak: state.campaign.notorietyPeak ?? 0,
     raidsHeld: state.__walkRaidsHeld ?? 0,
     raidsMissed: (state.campaign.raidCount ?? 0) - (state.__walkRaidsHeld ?? 0),
     levied: Math.round(state.campaign.leviedTotal ?? 0),

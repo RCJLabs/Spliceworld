@@ -44,8 +44,14 @@ export function threatLadder(content) {
   return [{ gen: 1, at: 0 }, { gen: 2, at }];
 }
 
+// R94 — THE LADDER IS A RATCHET. It reads `notorietyPeak`, the high-water
+// mark, rather than the live meter: the military does not stop returning
+// your calls because you had a quiet fortnight. Before the split, holding a
+// raid dropped notoriety 140 and could drop the whole world a generation —
+// 82 drops over seven campaigns, 80.1% of days below the generation already
+// reached. See ROADMAP R94.
 export function threatGen(state, content) {
-  const notoriety = state.campaign?.notoriety ?? 0;
+  const notoriety = state.campaign?.notorietyPeak ?? state.campaign?.notoriety ?? 0;
   let gen = 1;
   for (const rung of threatLadder(content)) if (notoriety >= rung.at) gen = Math.max(gen, rung.gen);
   return gen;

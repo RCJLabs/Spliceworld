@@ -108,6 +108,16 @@ export function capNotoriety(state, content) {
   const t = taskforceTuning(content);
   const cam = state.campaign ?? {};
   const before = cam.notoriety ?? 0;
+  // R94 — THE HIGH-WATER MARK, and it is the whole milestone. Notoriety is
+  // how hot you are RIGHT NOW: it falls when you hold a raid, and R94 gives
+  // it a decay besides, so it is free to move. `notorietyPeak` is how
+  // seriously the world has learned to take you, and it only ever goes up.
+  // Measured before the split: the ladder read the live number, so holding a
+  // raid — a WIN — could drop you a Threat Generation, and seven campaigns
+  // spent 80.1% of their days below the generation they had already reached,
+  // across 82 drops. Seed 11 finished as a "Local Nuisance" having held 40
+  // Task Force raids. See ROADMAP R94.
+  cam.notorietyPeak = Math.max(cam.notorietyPeak ?? 0, Math.min(before, t.notorietyCap));
   if (before <= t.notorietyCap) return false;
   cam.notoriety = t.notorietyCap;
   // Said once, on the tick that first pins it, rather than on every tick
@@ -123,12 +133,25 @@ export function capNotoriety(state, content) {
 // runs regardless of notoriety. Before it, the ceiling is the trigger, and
 // `minHeld` keeps a floundering player who has been running jobs for heat
 // out of range entirely.
+// R94 — AND IT READS THE PEAK, NOT THE METER. This is the retune the R94
+// entry put in its own scope: "`taskforceEligible` needs a trigger that a
+// purchase cannot race". A bribe, a decay and the relief for holding a raid
+// all lower `notoriety`; none of them lowers `notorietyPeak`, so none of
+// them can switch the Task Force off. The file opens once and the State
+// does not forget.
+//
+// This is NOT the naive peak-read Session 173 measured and reverted. That
+// one made the raw peak the trigger with nothing else changed, and the file
+// never closed. Here the peak is clamped to the cap by `capNotoriety`
+// above, the relief still works on the meter, and what the peak governs is
+// whether they are INTERESTED — the schedule, the cooldown and the
+// escalation are unchanged.
 export function taskforceEligible(state, content) {
   const t = taskforceTuning(content);
   const cam = state.campaign ?? {};
   if (!(t.pool ?? []).some((id) => content.encounters?.[id])) return false;
   if (state.dominionAt) return true;
-  return (cam.notoriety ?? 0) >= t.notorietyCap && (cam.heldNodes ?? []).length >= t.minHeld;
+  return (cam.notorietyPeak ?? 0) >= t.notorietyCap && (cam.heldNodes ?? []).length >= t.minHeld;
 }
 
 export function escalationOf(state, content) {
@@ -206,6 +229,27 @@ export function tickTaskforce(state, content, now) {
   const lines = taskforceLines(content);
   const news = [];
   const levied = [];
+
+  // R94 — THE DECAY, and it is flat rather than conditional. The entry asked
+  // for cooling through "lying low", and the walker has no quiet days to lie
+  // low ON: 148 heat-days out of 148. A decay gated on idleness is a decay
+  // that never runs, which is the same defect as a rule nobody can reach.
+  //
+  // So heat fades on its own, slowly, and an active player outruns it — which
+  // is what makes the meter a meter rather than a ceiling you park against.
+  // It is safe ONLY because the ladder and the Task Force now read
+  // `notorietyPeak`: before R94 split them, anything that lowered this number
+  // de-escalated the world and switched the raids off.
+  //
+  // A TIMESTAMP, NOT AN INTERVAL (CLAUDE.md): prorated by the hours actually
+  // elapsed, so a week away cools exactly a week's worth and a tab left open
+  // cools nothing extra.
+  const since = Math.max(0, now - (cam.notorietyCooledAt ?? now));
+  if (t.notorietyDecayPerDay > 0 && since > 0) {
+    const cooled = (since / 86400000) * t.notorietyDecayPerDay;
+    cam.notoriety = Math.max(0, (cam.notoriety ?? 0) - cooled);
+  }
+  cam.notorietyCooledAt = now;
 
   if (capNotoriety(state, content) && lines.capped) news.push(lines.capped);
 
