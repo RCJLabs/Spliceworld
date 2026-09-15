@@ -410,6 +410,16 @@ function eagerGraph(entry = 'main.js') {
     for (const m of src.matchAll(/^\s*import\s(?:[\s\S]*?)from\s*['"](\.[^'"]+)['"]/gm)) {
       walk(relative(root, resolve(dirname(join(root, rel)), m[1])));
     }
+    // R169 — AND A RE-EXPORT, which is an eager import wearing a hat.
+    // `export * from './director.js'` pulls the whole module into the
+    // graph exactly as a static import does, and this walk could not see
+    // it. Break 248 re-adds the 11.9 KB director that way, and it went
+    // MISSED the moment R169 gave FIRST_PAINT_KB some slack — because the
+    // browser waterfall was the ONLY rule that had ever caught it, and the
+    // other three all read this function. See ROADMAP R169.
+    for (const m of src.matchAll(/^\s*export\s(?:[\s\S]*?)from\s*['"](\.[^'"]+)['"]/gm)) {
+      walk(relative(root, resolve(dirname(join(root, rel)), m[1])));
+    }
     for (const m of src.matchAll(/^\s*import\s*['"](\.[^'"]+)['"]/gm)) {
       walk(relative(root, resolve(dirname(join(root, rel)), m[1])));
     }
