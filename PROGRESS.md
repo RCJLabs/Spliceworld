@@ -107,6 +107,21 @@ break went and the measurement is written where the filter is.
   wants the room should bring the number down instead — `campaign/campaign.js`
   (17.5 KB dead) and `campaign/rivals.js` (16.0) are where it is.
 
+### The full battery found one more, and it is not this milestone's
+
+292 breaks, 291 caught, `BATTERY_EXIT=0`. The miss is **262, "the balance
+sweep quadruples its sampling"** — and the same break run against `main`
+itself, in a worktree at `e3fd32f`, misses identically. Pre-existing, queued
+as **R170**, not folded into R169.
+
+Two causes. Break 262 measured **1070 against a budget of 820**; R168 raised
+`CPU_BUDGET_S` to **1150**, above the break, and it survived only because
+R168's box read **998** CPU-seconds. Today's reads **786**, so the broken run
+fits. And R168's box-independent share rule is guarded `if (!only && rebuilt
+=== 0)` — warm runs only — while every battery break patches a source file
+and so busts the walk-cache stamp. **The share rule is skipped for every
+break in the battery, always.**
+
 ### The rule worth carrying forward
 
 **When a milestone creates headroom, the breaks that used to live in it are

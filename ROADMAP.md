@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**15 entries queued.** R94, R100, R102, R105, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
+**16 entries queued.** R94, R100, R102, R105, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R170.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -5220,6 +5220,39 @@ triangle working, and each region genuinely asks a different question)*.
   stated, measured reason.* All three forms of attribution, and the budget
   moved with its reason and its new limits stated. `npm test` is green for the
   first time since R104, and breaks 240, 295 and 296 all go red on demand.
+
+- **R170 — The suite budget is blind again, and the rule that was meant to
+  cover it cannot run.** R169's full battery returned 292 breaks, 291 caught,
+  **1 MISSED** — break 262, "the balance sweep quadruples its sampling". It is
+  NOT R169's: the same break, run against `main` itself in a worktree at
+  `e3fd32f`, misses identically. Two causes, and the second is the worse one.
+
+  **The budget has room for the regression it was written to catch.** Break
+  262's own note records it measuring **1070 against a budget of 820**. R168
+  raised `CPU_BUDGET_S` to **1150** — above the break — and it stayed caught
+  only because R168's box read **998** CPU-seconds, putting the broken run
+  near 1248. Today's box reads **786** for the same suite, so the broken run
+  lands near 1036 and fits. R168's own thesis, firing in the direction R168
+  did not check: the host moved 21% the OTHER way inside two milestones, and a
+  raise sized for a slow afternoon is now a licence.
+
+  **And R168's box-independent rule can never run under the battery.**
+  `tools/suite.js` guards the share check with `if (!only && rebuilt === 0)`
+  — warm runs only, for the good reason R168 measured (a cold run's rebuilds
+  take `walks` from 4.1% to 15.2% and deflate every other share). But every
+  battery break patches a source file, which changes `sourceStamp()`, which
+  busts the walk cache, which makes `rebuilt > 0`. **So the share rule is
+  skipped for every break in the battery, always.** R168 invoked R50 when it
+  put that rule in its own module — "a rule the battery cannot reach is a rule
+  nobody notices stop working" — and the rule it was protecting is exactly
+  that.
+
+  *Done when: break 262 goes red on demand on today's box, and the rule that
+  catches it is one the battery can actually reach — either the share check
+  runs for a break (a warm baseline share, a rebuild-adjusted band, or a
+  cheaper invariant), or a new rule with no CPU-seconds in it does the job.
+  `CPU_BUDGET_S` is re-derived on today's box either way, and the entry says
+  what the number means when the host can move 21% in two milestones.*
 
 - **R169 — The exemption bill has a 4.2 KB line on it.** ✅ *Shipped. The
   line was half that size, and the biggest line on the bill was never on it.*
