@@ -11,6 +11,7 @@ import { MOVE_SLOTS, activeMoves } from '../battle/moves.js';
 import { defaultMoveset } from '../battle/moves.js';
 import { movesFromTokens } from '../battle/statblock.js';
 import { attend } from './feral.js';
+import { TRAINING } from './chimera.js';
 
 const CHIMERA_NAMES = [
   // R41: fifteen names for a stable the game encourages past nine was a
@@ -221,30 +222,12 @@ export function chimeraGenome(chimera, content) {
   return { frame: chimera.frame, parts };
 }
 
-export function isSettled(chimera, now) {
-  return now >= chimera.settleUntil;
-}
-
-export function settleRemainingMs(chimera, now) {
-  return Math.max(0, chimera.settleUntil - now);
-}
-
-// Training (M7 obedience UX): bond is earned, not assigned (§3.5).
-// R41: a creature you keep for a whole campaign is a creature you get to
-// name. Free, instant, and sanitised rather than escaped-at-forty-callsites:
-// names are interpolated into markup all over the game, so the honest fix is
-// to never store markup in one.
-export function renameCreature(list, id, rawName) {
-  const target = (list ?? []).find((c) => c.id === id);
-  if (!target) return { ok: false, msg: 'No such creature.' };
-  const name = String(rawName ?? '').replace(/[<>&"'`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
-  if (!name) return { ok: false, msg: 'A name needs at least one printable character. House rules.' };
-  const old = target.name;
-  target.name = name;
-  return { ok: true, msg: `${old} is now ${name}. The paperwork has been amended and partially eaten.`, name };
-}
-
-export const TRAINING = { cost: 5, bondGain: 8, cooldownHours: 15 };
+// R169 — the settling clock, the rename and the TRAINING price now live in
+// `splice/chimera.js`, and taking this module out of the eager graph is what
+// that bought. Deliberately NOT re-exported from here: a re-export is an
+// import path, and an import path back into the Theater is how 19.5 KB
+// walks into the first paint again without anybody deciding to let it.
+// See ROADMAP R169.
 
 export function trainChimera(state, chimeraId, now, content) {
   const chimera = state.chimeras.find((c) => c.id === chimeraId);

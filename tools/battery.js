@@ -3118,6 +3118,47 @@ const BREAKS = [
     to: "  'smoke:a': 57.2,",
   },
 
+  // R169 — the first paint carries functions no boot calls. Three breaks:
+  // the defect the rule exists for, and the two ways the measurement can
+  // quietly stop measuring. The second and third aim at the PROBE rather
+  // than at the game, which is the only honest way to test an instrument —
+  // a budget computed wrong reads green forever, and R168's break 240 is
+  // what that costs when nobody checks.
+  {
+    // The whole of R169, run backwards. `splice/theater.js` is 19.5 KB of
+    // splicing machinery and boot calls `isSettled` — 73 bytes — and nothing
+    // else, which is why the settling clock moved to `splice/chimera.js`.
+    // Point one eager reader back at the Theater and 13.4 KB of functions no
+    // boot calls come with it. R121's module rule stays GREEN through this,
+    // because theater.js does run a function: that is the blind spot, and
+    // this is the break that proves the byte budget covers it.
+    n: 297, gate: BOOT, name: 'a 19 KB module comes back into the first paint to supply one 73-byte predicate',
+    file: 'battle/statblock.js',
+    anchor: "import { isSettled } from '../splice/chimera.js';",
+    to: "import { isSettled } from '../splice/theater.js';",
+  },
+  // A THIRD BREAK WAS WRITTEN HERE AND DELETED, which is worth a sentence.
+  // It dropped the nesting filter in the dead-byte walk, on the assumption
+  // that counting every inner function on top of the outer one that
+  // contains it would inflate the number past the budget. It MISSED: the
+  // total goes 160.3 -> 163.8, because V8 reports no coverage at all for
+  // functions nested inside a function that was never called, so the filter
+  // only ever removes dead helpers sitting inside LIVE ones. 3.5 KB is
+  // below what a budget sized for module-scale events can see, and
+  // tightening the budget to make the break fire would be tuning the gate
+  // to its own test. The filter stays because it is correct; it is not
+  // claimed to be gated. See ROADMAP R169.
+  {
+    // The two boots are a union, not a sequence: `splice/extract.js` runs
+    // ten of its fourteen functions drawing a herd and none at all for a
+    // player who has none yet, so a function live in EITHER is live. Take
+    // the merge away and the fresh boot's idle half is counted as dead.
+    n: 299, gate: BOOT, name: 'the second first paint stops counting, so a module that only runs for a player with a herd reads dead',
+    file: 'tools/boot.js',
+    anchor: "          mine.set(key, { start: at.startOffset, end: at.endOffset, ran: (mine.get(key)?.ran ?? false) || lit });",
+    to: "          mine.set(key, { start: at.startOffset, end: at.endOffset, ran: lit });",
+  },
+
   // R96 — a creature that shows what it is. Three breaks, one per rule the
   // milestone added: the posture data that makes two temperaments two
   // animals, the mark that puts a scar ON the creature rather than in the
@@ -3724,8 +3765,8 @@ const BREAKS = [
   {
     n: 126, gate: BOOT, name: 'an exemption is kept for a module that does run, so the list stops meaning anything',
     file: 'tools/boot.js',
-    anchor: "  'ui/theme.js': 'applyTheme reads BASE_THEME and THEMES on the first frame; it calls nothing',",
-    to: "  'ui/theme.js': 'applyTheme reads BASE_THEME and THEMES on the first frame; it calls nothing',\n  'ranch/agenda.js': 'stale excuse for a module that is on the first screen',",
+    anchor: "  'ui/theme.js': 'main.js reads BASE_THEME and THEMES on the first frame; it calls nothing',",
+    to: "  'ui/theme.js': 'main.js reads BASE_THEME and THEMES on the first frame; it calls nothing',\n  'ranch/agenda.js': 'stale excuse for a module that is on the first screen',",
   },
   {
     n: 127, gate: BOOT, name: 'coverage is armed after the navigate, so the modules that only run at boot read as idle',

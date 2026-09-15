@@ -9,7 +9,7 @@ import { chooseMoveIndex, skillFor } from './ai.js';
 import { levelOf, levelMult, grantBattleXp } from './veterancy.js';
 import { analyze } from '../splice/physiology.js';
 import { GRADE_INDEX, gradeIndexOf } from '../splice/extract.js';
-import { isSettled } from '../splice/theater.js';
+import { isSettled } from '../splice/chimera.js';
 import { perksOf, driftFromBattle } from '../splice/temperament.js';
 import { flatModifiers, scarEffects, againstTags } from '../splice/scars.js';
 import { infirmaryGrants } from '../splice/facility.js';

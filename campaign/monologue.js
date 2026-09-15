@@ -15,14 +15,15 @@
 // where this game keeps its mechanics; a stat bonus hiding inside a
 // flavour menu would be exactly the invisible modifier the class triangle
 // was built to replace.
-
-import { rngStream, pick } from '../util/rng.js';
+//
+// R169 — WHAT IS LEFT HERE IS THE HALF BOOT CAN REACH. The name roll, the
+// philosophy menu and `duelBarks` went to `campaign/identity.js`, which
+// only the lazy War Room imports. Everything below is called from
+// `campaign.js`, `rehab.js`, `rivals.js` and `wire.js` — all eager, all on
+// the synchronous battle-resolution path — so this module stays on the
+// exemption list and is now the size of what actually justifies it.
 
 export const DEFAULT_PHILOSOPHY = 'improver';
-
-export function philosophyList(content) {
-  return Object.values(content.philosophies ?? {});
-}
 
 export function philosophyOf(state, content) {
   const id = state.profile?.philosophy ?? DEFAULT_PHILOSOPHY;
@@ -41,39 +42,6 @@ export function profileOf(state, content) {
     lab: state.profile?.lab ?? 'an unregistered barn',
     philosophy,
   };
-}
-
-// Names are ROLLED, not typed: no screen in this game may render a native
-// form control (tools/smoke.js guards it), and on a phone a seeded
-// generator beats a keyboard anyway. `n` candidates from one seed, so the
-// same roll always offers the same list and a reload mid-choice is safe.
-export function rollIdentities(content, seed, n = 6) {
-  const names = content.labNames;
-  if (!names) return [];
-  const out = [];
-  const seen = new Set();
-  for (let i = 0; out.length < n && i < n * 8; i++) {
-    const rng = rngStream(seed, 'identity', i);
-    const identity = {
-      title: pick(rng, names.titles),
-      name: `${pick(rng, names.firsts)} ${pick(rng, names.lasts)}`,
-      lab: pick(rng, names.labs),
-    };
-    if (seen.has(identity.name)) continue;
-    seen.add(identity.name);
-    out.push({ id: `id${i}`, ...identity });
-  }
-  return out;
-}
-
-export function setIdentity(state, identity) {
-  state.profile = { ...(state.profile ?? {}), ...identity, named: true };
-  return state.profile;
-}
-
-export function setPhilosophy(state, philosophyId) {
-  state.profile = { ...(state.profile ?? {}), philosophy: philosophyId };
-  return state.profile;
 }
 
 // {rival} {creature} {node} {lab} {name}. An unknown placeholder is left
@@ -96,16 +64,4 @@ export function playerLine(state, content, slot, vars = {}) {
 export function rivalLine(content, rivalId, slot, vars = {}) {
   const rival = content.rivals?.[rivalId];
   return fill(rival?.monologue?.[slot], { name: rival?.name, ...vars });
-}
-
-// The player's half of a rival duel. Handed to createBattle in the
-// context so the engine stays a data consumer: it emits whatever barks it
-// was given and has no opinion about who is talking.
-export function duelBarks(state, content, rival) {
-  const slots = {};
-  for (const slot of ['intro', 'victory', 'defeat']) {
-    const line = playerLine(state, content, slot, { rival: rival?.name });
-    if (line) slots[slot] = line;
-  }
-  return slots;
 }

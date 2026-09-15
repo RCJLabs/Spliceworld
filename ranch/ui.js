@@ -9,7 +9,7 @@ import {
   catalogFor, isNewToDex, newToDex, TUNING,
 } from './ranch.js';
 import { gradeFor, gradeOutlook, outlookLine, extractionFit } from '../splice/extract.js';
-import { renameCreature } from '../splice/theater.js';
+import { renameCreature } from '../splice/chimera.js';
 import { openPrompt } from '../ui/picker.js';
 import {
   canBreed, breedPair, hatchEgg, BREEDING, isVariant, baseSpecies, incubatorSlots,

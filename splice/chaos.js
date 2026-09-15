@@ -24,7 +24,7 @@ import { rngStream, pick, pickFresh } from '../util/rng.js';
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { GRADES, gradeIndexOf } from './extract.js';
 import { analyze } from './physiology.js';
-import { isSettled } from './theater.js';
+import { isSettled } from './chimera.js';
 import { stableRoom } from './facility.js';
 
 const HOUR = 3600000;

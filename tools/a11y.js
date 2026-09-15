@@ -159,7 +159,7 @@ export async function fixtureSave() {
   // exists when somebody is talking.
   const { rivalEncounter } = await import('../campaign/rivals.js');
   const { createBattle } = await import('../battle/engine.js');
-  const { duelBarks } = await import('../campaign/monologue.js');
+  const { duelBarks } = await import('../campaign/identity.js');
   const { rivalOf } = await import('../data/catalog.js');
   const rival = rivalOf(content, 'mantissa');
   s.battle = createBattle(s.chimeras.slice(0, 1), rivalEncounter(s, rival, content), content, 7, now, {

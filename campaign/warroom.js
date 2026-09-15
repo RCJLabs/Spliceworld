@@ -15,7 +15,7 @@
 //
 // One of them was already wrong. See `contestAlerts`.
 
-import { isSettled } from '../splice/theater.js';
+import { isSettled } from '../splice/chimera.js';
 import { territoryUpkeepPerDay, facilityUpkeepPerDay } from '../splice/facility.js';
 import { combatantFromChimera } from '../battle/engine.js';
 import { forecast } from '../battle/forecast.js';

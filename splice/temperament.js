@@ -20,7 +20,7 @@
 //      already occupies that space and is the only thing allowed to.
 
 import { rngStream } from '../util/rng.js';
-import { isSettled } from './theater.js';
+import { isSettled } from './chimera.js';
 
 const DEFAULTS = {
   spread: 22,

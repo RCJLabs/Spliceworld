@@ -301,6 +301,49 @@ const REPORT = process.argv.includes('--report');
 // change. See ROADMAP R107.
 const FIRST_PAINT_KB = 1034;
 
+// R169 — AND IT STAYS AT 1034, measured at 1016. Every previous milestone
+// either raised this number or brought it down to sit just above the
+// measurement, and bringing it to 1020 here would undo the thing R169 was
+// asked for. The entry's own evidence: the baseline went red once at 1034
+// against 1034, which is a gate failing on a slow afternoon rather than on
+// a regression. Eighteen kilobytes of slack is the deliverable, not an
+// oversight — the next feature should be able to cost a few KB without
+// anyone touching this line, because a budget nobody can afford is a
+// budget that gets raised. See ROADMAP R169.
+
+// R169 — THE BILL BELOW COUNTS MODULES. THIS COUNTS BYTES.
+//
+// `RUNS_NOTHING_BUT_BELONGS` excuses a module that runs NO function during
+// boot, and R167 made its weight print on every run so it would read as a
+// bill. Both are module-level, and that is the blind spot: a module where
+// boot calls one function passes R121's rule outright, whatever else it is
+// carrying. Measured on the tree that first ran this, `splice/theater.js`
+// was 19.5 KB in the eager graph and boot called `isSettled` — 73 bytes of
+// it — and nothing else. `battle/statblock.js` was 17.4 KB for two
+// predicates totalling 195. Neither was ever on the bill, because neither
+// was idle; both were the same defect the bill exists to catch.
+//
+// The honest figure is the one below: every top-level function in the eager
+// graph that no boot ever calls, summed. It was 174.2 KB of 559.4 when
+// R169 first asked — 31% of the JS a player waits on. Moving those two
+// modules' leaves out took the graph to 541.3 KB and this number with it.
+//
+// The budget is deliberately GROSS: it will not catch one dead function, and
+// it is not meant to. What it catches is a MODULE-scale event — another
+// 19 KB arriving in front of the player to supply a predicate, which has now
+// happened twice without any gate noticing. At 170 against 160.3 it fires on
+// anything from 9.7 KB up.
+//
+// The margin is arithmetic rather than noise, which is why it can be this
+// tight: three consecutive runs read 160.3 KB to the byte. The boot this
+// measures is seeded and the second one loads a fixed fixture, so unlike
+// FIRST_PAINT_KB — transferSize out of a real browser, which went red once
+// at 1034 against 1034 — there is no afternoon for this number to have.
+//
+// A milestone that genuinely needs the room raises it and writes down what
+// it bought, like every other number in this file.
+const DEAD_AT_BOOT_KB = 170;
+
 // R101 — HOW MUCH OF THE SAVE SYSTEM DOES A PLAYER DOWNLOAD TO SEE A RANCH?
 //
 // `save/save.js` was 47.3 KB, and all of it eager, because `main.js` needs
@@ -392,16 +435,44 @@ function eagerGraph(entry = 'main.js') {
 //
 // Note what is NOT in this list: a screen. R74, R120 and R121 have each
 // found one sitting eager, and no screen has ever had a reason to be.
+//
+// R169 WENT THROUGH ALL FOUR LINES. Two were re-justified, one was paid in
+// half, and the fourth turned out never to have been the expensive one.
+//
+//   ui/theme.js (1.1 KB)      RE-JUSTIFIED. `main.js` imports BASE_THEME and
+//                             THEMES directly. Constants, on the first frame,
+//                             with no function to defer. Correct as written.
+//   splice/grades.js (1.0 KB) RE-JUSTIFIED. Same shape, same verdict.
+//   battle/moves.js (4.8 KB)  RE-JUSTIFIED, and the note was understated:
+//                             statblock reads five symbols from it, not two.
+//                             Deferring it means making `unitFromGenome`
+//                             async, which makes `resolveBattle` async, which
+//                             breaks CLAUDE.md's rule that the balance
+//                             harness flies the same battle code the browser
+//                             does. 4.8 KB is not worth that.
+//   campaign/monologue.js     PAID IN HALF, 4.1 -> 2.8 KB. The entry read
+//                             this as a 4.1 KB line. It was not: `fill`,
+//                             `playerLine`, `rivalLine` and DEFAULT_PHILOSOPHY
+//                             are read by FOUR eager modules, so moving them
+//                             anywhere eager saves exactly nothing. What could
+//                             leave did: the name roll, the philosophy menu
+//                             and `duelBarks` went to `campaign/identity.js`,
+//                             whose only caller is the lazy War Room.
+//
+// So the bill could fund 1.3 KB of the 8 KB the milestone owed, and the
+// other 16.8 came from somewhere the bill cannot see at all — see
+// DEAD_AT_BOOT_KB above. Read this list as a bill, not a settled account;
+// read the byte budget as the bigger bill nobody had opened.
 const RUNS_NOTHING_BUT_BELONGS = {
-  'ui/theme.js': 'applyTheme reads BASE_THEME and THEMES on the first frame; it calls nothing',
-  'battle/moves.js': 'battle/statblock.js reads MOVE_SLOTS and activeMoves synchronously to describe a creature',
+  'ui/theme.js': 'main.js reads BASE_THEME and THEMES on the first frame; it calls nothing',
+  'battle/moves.js': 'battle/statblock.js reads MOVE_SLOTS, activeMoves, defaultPick, partMoveId and comboMoveId synchronously to describe a creature',
   // R153 — `campaign/director.js` WAS HERE, AND THE EXEMPTION WAS THE BUG.
   // The reason given was true and was never a reason to carry 11.9 KB: the
   // seven lines of `directorNews` read nothing from the director, so they
   // moved to `campaign/campaign.js` and the whole module left the eager
   // graph. An exemption is a place a cost goes to stop being questioned;
   // this list should be read as a bill, not a settled account.
-  'campaign/monologue.js': 'rivalLine and playerLine are read on the same synchronous battle-resolution path',
+  'campaign/monologue.js': 'wire.js reads fill and DEFAULT_PHILOSOPHY to phrase a news line, and campaign.js, rehab.js and rivals.js read playerLine and rivalLine on the same synchronous battle-resolution path',
   // R91 — GRADES and GRADE_INDEX and nothing else. Two constants that half
   // the game reads synchronously to name a grade; the module has no code to
   // run. It exists apart from `splice/extract.js` so that `splice/vault.js`
@@ -610,6 +681,12 @@ async function main() {
     // it: the bytes were parsed and compiled in front of the player to sit
     // there.
     const ranAFunction = new Map();
+    // R169 — and the same coverage, one level finer. `ranAFunction` answers
+    // "did ANY function run", which is the question R121 asked; `spans`
+    // keeps every function's byte range and whether it ever ran, which is
+    // the question R169 found nobody was asking. Keyed on the range so the
+    // two boots merge: a function that ran in EITHER is live, same rule.
+    const spans = new Map();
     const harvest = async () => {
       const cov = (await send('Profiler.takePreciseCoverage'))?.result?.result ?? [];
       for (const script of cov) {
@@ -620,6 +697,15 @@ async function main() {
         // definition and therefore proves nothing.
         const ran = script.functions.some((f) => f.functionName !== '' && f.ranges.some((r) => r.count > 0));
         ranAFunction.set(file, (ranAFunction.get(file) ?? false) || ran);
+        if (!spans.has(file)) spans.set(file, new Map());
+        const mine = spans.get(file);
+        for (const f of script.functions) {
+          if (f.functionName === '') continue;
+          const at = f.ranges[0];
+          const key = `${at.startOffset}-${at.endOffset}`;
+          const lit = f.ranges.some((r) => r.count > 0);
+          mine.set(key, { start: at.startOffset, end: at.endOffset, ran: (mine.get(key)?.ran ?? false) || lit });
+        }
       }
     };
     await harvest();
@@ -708,6 +794,44 @@ async function main() {
     console.log(`boot: ${eager.size} modules compiled eagerly (${eagerKb.toFixed(1)} KB), `
       + `${idle.length} of them running nothing on either first paint `
       + `(${excusedKb.toFixed(1)} KB excused by name)`);
+
+    // ---- R169. the same question, per FUNCTION rather than per module ----
+    //
+    // Nested functions are dropped rather than counted twice: a live
+    // function's helpers are inside its span already, and a dead one's
+    // helpers are dead with it either way. Worth 3.5 KB and no more (160.3
+    // against 163.8 without it), because V8 reports no coverage at all for
+    // functions inside a function nobody called — so this only ever removes
+    // dead helpers sitting inside LIVE ones. It is correct rather than
+    // load-bearing, and the battery says so: R169 wrote a break for it,
+    // watched it MISS, and deleted it rather than tighten the budget until
+    // it fired.
+    {
+      const deadBy = [];
+      for (const file of eager.keys()) {
+        const mine = spans.get(file);
+        if (!mine) continue;
+        const fns = [...mine.values()].sort((a, b) => a.start - b.start || b.end - a.end);
+        const top = [];
+        for (const f of fns) if (!top.some((t) => f.start >= t.start && f.end <= t.end)) top.push(f);
+        const dead = top.filter((f) => !f.ran).reduce((n, f) => n + (f.end - f.start), 0);
+        if (dead) deadBy.push({ file, dead });
+      }
+      const deadKb = deadBy.reduce((n, r) => n + r.dead, 0) / 1024;
+      deadBy.sort((a, b) => b.dead - a.dead);
+      if (deadKb > DEAD_AT_BOOT_KB) {
+        note(`the first paint compiles ${deadKb.toFixed(1)} KB of functions no boot calls, over the budget of `
+          + `${DEAD_AT_BOOT_KB} KB — worst: `
+          + `${deadBy.slice(0, 3).map((r) => `${r.file} ${(r.dead / 1024).toFixed(1)}KB`).join(', ')}`);
+      } else {
+        console.log(`boot: ${deadKb.toFixed(1)} KB of it is functions no boot calls, under the ${DEAD_AT_BOOT_KB} KB budget`
+          + ` (worst: ${deadBy.slice(0, 3).map((r) => `${r.file} ${(r.dead / 1024).toFixed(1)}KB`).join(', ')})`);
+      }
+      if (REPORT) {
+        for (const r of deadBy) console.log(`  dead  ${(r.dead / 1024).toFixed(1).padStart(7)} KB  ${r.file}`);
+        console.log('');
+      }
+    }
   } finally {
     try { cdp?.ws.close(); } catch { /* already gone */ }
     proc.kill();

@@ -21,7 +21,8 @@ import {
   GRADES, GRADE_INDEX, gradeFor, avgStars, extractAnimal,
 } from '../splice/extract.js';
 import { analyze } from '../splice/physiology.js';
-import { spliceChimera, validateSplice, isSettled, chimeraGenome } from '../splice/theater.js';
+import { spliceChimera, validateSplice, chimeraGenome } from '../splice/theater.js';
+import { isSettled } from '../splice/chimera.js';
 import { combatantFromChimera, combatantFromUnit, createBattle, step, playerActions, playerActive, tagMultiplier, turnForecast, tierScaleFor, previewMove } from '../battle/engine.js';
 import { isInjured, movesFromTokens, finishBattle } from '../battle/statblock.js';
 import {
@@ -37,7 +38,8 @@ import {
   tickCampaign, resolveBattle, salvageUnit,
 } from '../campaign/campaign.js';
 import { canBreed, breedPair, hatchEgg, expressedTraits, BREEDING, pairingForecast, incubatorSlots } from '../ranch/breeding.js';
-import { trainChimera, TRAINING } from '../splice/theater.js';
+import { trainChimera } from '../splice/theater.js';
+import { TRAINING } from '../splice/chimera.js';
 import { obediencePercent, obedienceIgnoreChance } from '../battle/statblock.js';
 import {
   onboardingSteps, onboardingActive, guideStates, guideForScreen, dismissGuide, GUIDE_HELPERS,
@@ -4823,9 +4825,11 @@ if (inShard('curve')) {
 // --- should trigger them instead of sitting in the JSON being admired.
 {
   const {
-    fill, profileOf, philosophyList, philosophyOf, playerLine, rivalLine,
-    rollIdentities, setIdentity, setPhilosophy, duelBarks, DEFAULT_PHILOSOPHY,
+    fill, profileOf, philosophyOf, playerLine, rivalLine, DEFAULT_PHILOSOPHY,
   } = await import('../campaign/monologue.js');
+  const {
+    philosophyList, rollIdentities, setIdentity, setPhilosophy, duelBarks,
+  } = await import('../campaign/identity.js');
   const { rivalEncounter } = await import('../campaign/rivals.js');
   const { startRehab, tickRehab, rehabPlan } = await import('../campaign/rehab.js');
 
@@ -6864,6 +6868,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'ranch/breeding.js': 'breeding',
     'ranch/ranch.js': 'stable',
     'splice/chaos.js': 'chaos',
+    'splice/chimera.js': 'stable',
     'splice/extract.js': 'grades',
     'splice/grades.js': 'grades',
     'splice/vault.js': 'vault',
@@ -6958,6 +6963,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'battle/tagtext.js': null,
     'campaign/matchup.js': null,
     'campaign/monologue.js': null,
+    'campaign/identity.js': null,
     'splice/dossier.js': null,
 
     // --- The onboarding machinery itself. It cannot be taught by one of
@@ -10358,7 +10364,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
 {
   const { levelOf, levelMult, xpProgress, xpForBattle, trainingTuning, maxLevel } = await import('../battle/veterancy.js');
   const { sparEncounter, sparCharges, startSpar, sparPartners } = await import('../campaign/sparring.js');
-  const { renameCreature } = await import('../splice/theater.js');
+  const { renameCreature } = await import('../splice/chimera.js');
   const { pickFresh } = await import('../util/rng.js');
   const tune = trainingTuning(content);
 
@@ -17987,7 +17993,7 @@ if (inShard('preview')) {
 // temperament have to be the same.
 {
   const { rush, rushable, rushPrice, rushQuote, RUSH_KINDS, rushLines } = await import('../splice/rush.js');
-  const { isSettled: isSettled86 } = await import('../splice/theater.js');
+  const { isSettled: isSettled86 } = await import('../splice/chimera.js');
   const { startVat: startVat86 } = await import('../splice/chaos.js');
   const { startResequence: startResequence86 } = await import('../splice/resequencer.js');
   const { breedPair: breedPair86, hatchEgg: hatchEgg86 } = await import('../ranch/breeding.js');
@@ -20715,7 +20721,20 @@ if (inShard('wire')) {
 // R107 — 559 -> 560. The same purchase as FIRST_PAINT_KB: the card is lazy,
 // the shell glue that decides whether to load it is not. The unspent lever is
 // named in tools/boot.js beside the exemption bill. See ROADMAP R107.
-const KB_CAP = 560;
+// R169 — 560 -> 543, measured at 541.3. `splice/theater.js` (19.5 KB) left
+// the eager graph: boot called exactly one function in it, `isSettled`, 73
+// bytes, and the settling clock, the rename and the TRAINING price now live
+// in `splice/chimera.js` (2.7 KB) where every eager reader can have them
+// without the splicing machinery attached. `campaign/monologue.js` gave up
+// its back half to `campaign/identity.js` at the same time.
+//
+// This cap sits tight against the measurement where tools/boot.js's
+// FIRST_PAINT_KB deliberately keeps 18 KB of slack, and the difference is
+// not a mood: this one is a static walk of file sizes on disk, so it reads
+// the same number twice, while FIRST_PAINT_KB is transferSize out of a real
+// browser and went red once at 1034 against 1034 on a slow afternoon.
+// A deterministic budget can afford to be tight. See ROADMAP R169.
+const KB_CAP = 543;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

@@ -17,7 +17,7 @@ import { createBattle, combatantFromChimera } from '../battle/engine.js';
 import { isInjured, fitToFight, obediencePercent } from '../battle/statblock.js';
 import { forecast, diagnose, wantsDiagnosis } from '../battle/forecast.js';
 import { autoResolve, canSend, whatDecidedIt } from '../battle/autoplay.js';
-import { isSettled } from '../splice/theater.js';
+import { isSettled } from '../splice/chimera.js';
 import { fmtDuration } from '../ranch/ui.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { activeRaid, raidRemainingMs, levyOf, raidEncounter } from './taskforce.js';
@@ -48,9 +48,10 @@ import { looseSpecimens, looseById, released, releaseTuning, packOf } from './br
 import {
   operationList, freeCrew, startOperation, abortOperation, opOdds,
 } from './operations.js';
+import { profileOf } from './monologue.js';
 import {
-  profileOf, philosophyList, rollIdentities, setIdentity, setPhilosophy, duelBarks,
-} from './monologue.js';
+  philosophyList, rollIdentities, setIdentity, setPhilosophy, duelBarks,
+} from './identity.js';
 import {
   WAR_TABS, tabBadge, warTargetEncounter, frontierRegionId, sparVerdict, econRow,
   stripState, contestAlerts, heatBand, jobsModel, jobRow, foeRead, obedienceRead,
