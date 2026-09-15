@@ -15,8 +15,8 @@
 // Everything runs concurrently, including the four non-smoke tools, and the
 // exit code is the worst of them. `--only <name>` runs one.
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { availableParallelism } from 'node:os';
+import { readFileSync, rmSync } from 'node:fs';
+import { availableParallelism, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 // R160 — the one thing that moves this suite's cost: how many 180-day walks
@@ -77,6 +77,21 @@ const LANES = Math.max(1, availableParallelism());
 // the same reading at the end is exactly the number of walks this run paid to
 // rebuild, and that is what the budget is denominated in.
 const cacheAtStart = walkCacheState();
+// R168 — AND THE CACHE HAS TO BE READ, NOT MERELY WRITTEN.
+//
+// `walkedSave` computes only after a miss and logs each computation, so a walk
+// that appears TWICE in one run was recomputed while already on disk. A cold
+// run computes each once; a warm run computes none. Only a cache that is
+// written but never read repeats itself.
+//
+// Break 240 is exactly that defect, and the seconds budget used to catch it by
+// the ~200 CPU-seconds it costs. R168 raised that budget for the host drift
+// and the break came back MISSED in the full battery: a rule loosened for one
+// reason went blind to another. This one is in no units at all, and it works
+// cold or warm — which matters because the break edits `fixtures.js` and so
+// starts every run of itself with a fresh cache stamp.
+const computedLog = join(tmpdir(), 'sw-walk-cache', '.computed');
+try { rmSync(computedLog, { force: true }); } catch { /* nothing to clear */ }
 const started = Date.now();
 const queue = [...picked];
 const results = [];
@@ -341,6 +356,26 @@ if (!only && cpu > budget) {
   console.error('   the one to trust. If it is not, the cost is yours and the per-job times say where.');
   process.exit(1);
 }
+// R168 — no walk is computed twice in one run. See above.
+if (!only) {
+  const seen = new Map();
+  try {
+    for (const line of readFileSync(computedLog, 'utf8').split('\n')) {
+      if (line) seen.set(line, (seen.get(line) ?? 0) + 1);
+    }
+  } catch { /* nothing computed at all is a fully warm run */ }
+  const twice = [...seen].filter(([, n]) => n > 1);
+  if (twice.length) {
+    const total = twice.reduce((a, [, n]) => a + n, 0);
+    console.error(`\nsuite \u2717  ${twice.length} walks were computed more than once `
+      + `(${total} computations for ${twice.length} campaigns)`);
+    console.error('   The walk cache is being WRITTEN but not READ, so every job pays for walks');
+    console.error('   another job has already done. Cost is about 16 CPU-seconds each.');
+    console.error(`   First: ${twice.slice(0, 3).map(([f, n]) => `${f} x${n}`).join(', ')}`);
+    process.exit(1);
+  }
+}
+
 // R168 — the host-invariant half of this gate. The reasoning, the numbers and
 // the band all live in tools/shares.js, which the battery can reach.
 if (!only && rebuilt === 0) {
