@@ -66,7 +66,7 @@ export function newGameState() {
       // what the escalation and the wire read.
       raid: null, nextRaidAt: null, raidCount: 0, raidsHeld: 0, leviedTotal: 0, notorietyCapped: false,
       // R94: the high-water mark. The meter falls; this does not.
-      notorietyPeak: 0, notorietyCooledAt: null,
+      notorietyPeak: 0,
     },
     news: [],
     settings: { muted: false, battleSpeed: 1 },

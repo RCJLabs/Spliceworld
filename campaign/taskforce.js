@@ -232,26 +232,28 @@ export function tickTaskforce(state, content, now) {
   const news = [];
   const levied = [];
 
-  // R94 — THE DECAY, and it is flat rather than conditional. The entry asked
+  // R94 — A TIME DECAY WAS BUILT HERE, MEASURED, AND REMOVED. The entry asked
   // for cooling through "lying low", and the walker has no quiet days to lie
-  // low ON: 148 heat-days out of 148. A decay gated on idleness is a decay
-  // that never runs, which is the same defect as a rule nobody can reach.
+  // low ON — 148 heat-days out of 148 — so the version written was flat and
+  // prorated by elapsed hours. It worked: a fortnight away cooled exactly 84
+  // points at 6/day.
   //
-  // So heat fades on its own, slowly, and an active player outruns it — which
-  // is what makes the meter a meter rather than a ceiling you park against.
-  // It is safe ONLY because the ladder and the Task Force now read
-  // `notorietyPeak`: before R94 split them, anything that lowered this number
-  // de-escalated the world and switched the raids off.
+  // It went because of what it cost and what it did NOT buy. Once the ladder,
+  // the Task Force trigger, region access and rival interest all read
+  // `notorietyMark`, the live meter drives nothing mechanical, so a time decay
+  // moves a number on the screen. And it cost robustness: R142's splice floor
+  // is 25, and across this gate's five seeds the minimum read
   //
-  // A TIMESTAMP, NOT AN INTERVAL (CLAUDE.md): prorated by the hours actually
-  // elapsed, so a week away cools exactly a week's worth and a tab left open
-  // cools nothing extra.
-  const since = Math.max(0, now - (cam.notorietyCooledAt ?? now));
-  if (t.notorietyDecayPerDay > 0 && since > 0) {
-    const cooled = (since / 86400000) * t.notorietyDecayPerDay;
-    cam.notoriety = Math.max(0, (cam.notoriety ?? 0) - cooled);
-  }
-  cam.notorietyCooledAt = now;
+  //     decay 0/day  35 32 28 30 33   min 28
+  //     decay 2/day  33 36 28 30 23   min 23
+  //     decay 4/day  43 36 31 36 25   min 25
+  //     decay 6/day  34 23 27 29 25   min 23
+  //
+  // — not a smooth relationship, which is the tell: the decay was not costing
+  // splices systematically, it was adding walk divergence that sometimes shoved
+  // a seed under the floor. The meter still falls, because holding a raid hands
+  // back `notorietyRelief` and every seed's meter reaches 0-14 at some point.
+  // See ROADMAP R94.
 
   if (capNotoriety(state, content) && lines.capped) news.push(lines.capped);
 

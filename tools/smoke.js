@@ -2295,9 +2295,8 @@ assert.equal(m5.battle, null);
 assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
 assert.deepEqual(m5.campaign, {
   heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
-  // R94: the high-water mark and the cooling stamp. A v1 save has neither
-  // a reputation nor a clock, so both arrive at the empty value.
-  notorietyPeak: 0, notorietyCooledAt: null,
+  // R94: the high-water mark. A v1 save has no reputation yet.
+  notorietyPeak: 0,
   contested: [], nextContestAt: null, defences: {}, contestCount: 0,
   operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
   // R64: the campaign's own clock is gone — one elapsed clock per save.
@@ -19542,15 +19541,11 @@ if (inShard('empire')) {
     // pass today would have to bless one of those two states. The retune this
     // needs is R87's trigger, which is a milestone, not a clause — ROADMAP
     // R94 carries the numbers.
-    // R94 — AND THE THIRD CLAUSE IS GATED NOW, PLUS THE ONE THAT MATTERED MORE.
-    //
-    // The decay exists, and it is flat rather than gated on lying low: the
-    // walker has 148 heat-days out of 148, so a decay conditioned on idleness
-    // would never run. Measured on the away path — a fortnight off cools 84
-    // points, exactly `notorietyDecayPerDay` x 14, and the peak does not move.
-    assert.ok(t.notorietyDecayPerDay > 0,
-      `and heat fades on its own (${t.notorietyDecayPerDay}/day)`);
-
+    // R94 — AND THE METER FALLS, which is the clause the entry cared about.
+    // Not through a time decay: one was built, measured and removed (see
+    // campaign/taskforce.js for the four readings that sent it back). It falls
+    // because holding a raid hands the relief back, and every campaign's meter
+    // reaches single digits at some point in its run.
     // THE RATCHET. This is what R94 turned out to be about. The ladder used to
     // read the live meter, so holding a raid — a WIN — dropped notoriety by
     // the relief and could drop the whole world a Threat Generation: 82 drops
@@ -19588,7 +19583,7 @@ if (inShard('empire')) {
       + `just notoriety again (${walks.map((w) => `${Math.round(w.notoriety)}/${w.notorietyPeak}`).join(' ')})`);
 
     console.log(`   R94 notoriety: cap ${t.notorietyCap} · relief ${t.notorietyRelief} · `
-      + `decay ${t.notorietyDecayPerDay}/day · day-180 meter `
+      + `day-180 meter `
       + `${walks.map((w) => Math.round(w.notoriety)).join('/')} · `
       + `peak ${walks.map((w) => Math.round(w.notorietyPeak)).join('/')} · `
       + `${moved.length}/${walks.length} below their own peak \u00b7 0 gen drops`);

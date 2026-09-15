@@ -619,10 +619,6 @@ export const migrations = {
     // arrives. Clamped, because the meter is clamped.
     const cap = 600;
     save.campaign.notorietyPeak ??= Math.min(cap, Math.max(0, save.campaign.notoriety ?? 0));
-    // Null, not now(): the first tick stamps it, and a save that sat on a
-    // shelf for a month should not be handed a month of free cooling for
-    // heat it earned before the rule existed.
-    save.campaign.notorietyCooledAt ??= null;
     return save;
   },
   52: (save) => {
