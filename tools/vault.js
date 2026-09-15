@@ -61,6 +61,26 @@ const MEDIAN_LIFE_DAYS = 5;
 // DERIVED rather than copied, because a hand-typed 153 goes stale the first
 // time somebody adds a part (R61). `by` names the mechanism in the game, and
 // is what a reader checks when a bound looks wrong.
+// ONE GENERATED SPECIMEN'S LISTS, wherever a save happens to be holding it.
+//
+// `rivalSpecimen` builds every unit in the game that has no entry in
+// enemies.json to look up, and its record carries five lists that are the
+// shape of one BODY — bounded by the anatomy, not by anything a campaign
+// accumulates. See the R94 note below for why they are written here once
+// instead of three times in the table.
+const SPECIMEN = (at) => ({
+  [`${at}.moves`]:         { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },
+  [`${at}.salvage`]:       { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
+  [`${at}.salvageGrades`]: { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
+  [`${at}.tags`]:          { max: 8,  by: 'a body is a handful of tags' },
+  // Stated BEFORE a walk surfaces it. `arrayPaths` reads one record for the
+  // shape of all of them, so whether this list is seen at all depends on
+  // which specimen happens to be FIRST in its list — and only a specimen
+  // that drew a mutation trait has one. That is not a thing a gate should
+  // depend on.
+  [`${at}.traits`]:        { max: 4,  by: 'the release stamps one; the shape allows a handful' },
+});
+
 const BOUNDS = {
   'inventory.parts':      { max: 400, by: 'vault capacity, sold like pens' },
   'inventory.vials':      { max: 120, by: 'vault capacity; older vials retire into the Dex' },
@@ -160,43 +180,37 @@ const BOUNDS = {
   // Same caps as the chimeras they are copies of.
   'campaign.captives[].chimera.moveset': { max: 4,  by: "R30's four move slots" },
   'campaign.captives[].chimera.scars':   { max: 12, by: 'one per socket, twice over' },
-  // A bay holding a rival's chimera carries the GENERATED unit record — the
-  // one `unitFromGenome` built, because that creature has no entry in
-  // enemies.json to look up. Its lists are the shape of one body, so they
-  // are bounded by the anatomy rather than by anything a campaign
-  // accumulates. The gate found these the first time a walk ended with a
-  // generated unit in bay zero, which is the declare-yourself rule working
-  // on a shape nobody had looked at.
-  'campaign.containment[].unit.moves':         { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },
-  'campaign.containment[].unit.salvage':       { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
-  'campaign.containment[].unit.salvageGrades': { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
-  'campaign.containment[].unit.tags':          { max: 8,  by: 'a body is a handful of tags' },
-  // R129 — and the same four on the LOOSE board, which carries the identical
-  // generated record. They were invisible until now for a reason worth
-  // stating: a walk used to finish with an empty board (every escapee hunted
-  // down before day 180), so these lists existed in the engine and never
-  // once in a snapshot. The release puts nine on the board at a time, and
-  // the declare-yourself rule found them the first walk after.
-  'campaign.loose[].unit.moves':               { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },
-  'campaign.loose[].unit.salvage':             { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
-  'campaign.loose[].unit.salvageGrades':       { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
-  'campaign.loose[].unit.tags':                { max: 8,  by: 'a body is a handful of tags' },
-  // R93 — the pack. `maxSize` is what stands between a loose entry and a
-  // twelve-specimen wall, so the ceiling is READ from the data rather than
-  // typed here: raising it in data/breakout.json raises this with it, and
-  // there is no second number to forget.
+  // THREE PLACES A SAVE CAN PARK A GENERATED SPECIMEN. The gate found the
+  // first (a bay) the first time a walk ended with a generated unit in bay
+  // zero, which is the declare-yourself rule working on a shape nobody had
+  // looked at. R129 found the second (the LOOSE board) six milestones later,
+  // because a walk used to finish with an empty board — every escapee hunted
+  // down before day 180 — so those lists existed in the engine and never once
+  // in a snapshot. R93 added the third, the pack standing behind a leader.
+  //
+  // R94 — AND ALL THREE COPIES DISAGREED ABOUT WHAT A SPECIMEN IS.
+  //
+  // Three prefixes, three hand-typed transcriptions of one record's shape, so
+  // `traits` got stated for two of them and forgotten for the third. Nothing
+  // could catch that: `arrayPaths` reads ONE record for the shape of all of
+  // them, so the pack's missing bound was only ever going to surface on a
+  // walk that happened to put a trait-carrying specimen first in a pack.
+  // R94's ratchet moved the trajectory and the pack's turn finally came up,
+  // three milestones after the pack did.
+  //
+  // So the shape is written once, above, and parked at each prefix. A sixth
+  // list on a generated body is now one line in one place, and cannot land on
+  // two boards out of three. R157's break 152: one constant, one home,
+  // however many readers.
+  ...SPECIMEN('campaign.containment[].unit'),
+  ...SPECIMEN('campaign.loose[].unit'),
+  ...SPECIMEN('campaign.loose[].pack[]'),
+  // The pack ITSELF is not a body, it is a list of them. `maxSize` is what
+  // stands between a loose entry and a twelve-specimen wall, so the ceiling
+  // is READ from the data rather than typed here: raising it in
+  // data/breakout.json raises this with it, and there is no second number to
+  // forget.
   'campaign.loose[].pack':                     { max: (c) => Math.max(0, (c.breakoutMeta?.pack?.maxSize ?? 1) - 1), by: 'pack.maxSize, less the leader' },
-  'campaign.loose[].pack[].moves':             { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },
-  'campaign.loose[].pack[].salvage':           { max: (c) => SOCKET_MAX(c), by: 'one part per socket' },
-  'campaign.loose[].pack[].salvageGrades':     { max: (c) => SOCKET_MAX(c), by: 'one grade per salvaged part' },
-  'campaign.loose[].pack[].tags':              { max: 8,  by: 'a body is a handful of tags' },
-  // Stated BEFORE a walk surfaces it. `arrayPaths` reads one record for the
-  // shape of all of them, and `unit.traits` only exists on a specimen that
-  // drew one — so whether this list is seen at all depends on which escapee
-  // happens to be first on the board, which is not a thing a gate should
-  // depend on. Both boards carry the same generated record.
-  'campaign.loose[].unit.traits':              { max: 4,  by: 'the release stamps one; the shape allows a handful' },
-  'campaign.containment[].unit.traits':        { max: 4,  by: 'whatever the specimen was carrying when it was bagged' },
   // The release stamps at most one mutation trait per specimen; the list is
   // a list so the shape matches every other trait-bearing thing in the save.
   'campaign.loose[].traits':                   { max: 4,  by: 'a released specimen carries at most a handful' },

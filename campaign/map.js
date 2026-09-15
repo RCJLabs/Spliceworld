@@ -44,21 +44,18 @@ export function threatLadder(content) {
   return [{ gen: 1, at: 0 }, { gen: 2, at }];
 }
 
-// R94 — THE RATCHET, and it is one expression with two readers (this file's
-// ladder and taskforce.js's trigger), so it lives here rather than being
-// spelled twice — R157's break 152.
+// R94 — THE RATCHET. One expression, two readers (this file's ladder and
+// taskforce.js's trigger), so it lives here rather than being spelled twice —
+// R157's break 152.
 //
-// The high-water mark, and the live meter is PART OF IT: `notorietyPeak` is
-// only written by `capNotoriety`, so between a conquest adding heat and the
-// next tick the true high-water mark is the number on the meter. Taking the
-// max is not a fallback for a missing field, it is the definition.
+// The meter is PART of the mark, not a fallback for a missing field: only
+// `capNotoriety` writes the peak, so between a conquest adding heat and the
+// next tick the true high-water mark IS the meter.
 //
-// Why a ratchet at all: the ladder used to read the live meter, so holding a
-// Task Force raid — a WIN — dropped notoriety by the relief and could drop
-// the whole world a Threat Generation. 82 drops over seven campaigns, 80.1%
-// of days spent below the generation already reached, and one seed finishing
-// as a "Local Nuisance" having held 40 raids. The military does not stop
-// returning your calls because you had a quiet fortnight. See ROADMAP R94.
+// Why a ratchet: the ladder read the meter, so holding a Task Force raid — a
+// WIN — could drop the whole world a Threat Generation. The military does not
+// stop returning your calls because you had a quiet fortnight. ROADMAP R94 has
+// the 82 drops and the seed that finished a "Local Nuisance" holding 40 raids.
 export function notorietyMark(state) {
   const cam = state.campaign ?? {};
   return Math.max(cam.notorietyPeak ?? 0, cam.notoriety ?? 0);
@@ -100,8 +97,7 @@ export function regionBlockers(state, content, region) {
     blockers.push({ kind: 'threatGen', gen: req.threatGen, label: `needs Threat Gen ${req.threatGen}` });
   }
   // R94 — the mark, not the meter: a door you were notorious enough to open
-  // does not close again because you held a raid. Same rule as the ladder
-  // two lines up, and for the same reason.
+  // does not close because you held a raid. Same rule as the ladder above.
   if (req.notoriety && notorietyMark(state) < req.notoriety) {
     blockers.push({
       kind: 'notoriety',

@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**14 entries queued.** R100, R102, R105, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
+**15 entries queued.** R100, R102, R105, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R171.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -5428,6 +5428,26 @@ triangle working, and each region genuinely asks a different question)*.
   what the number means when the host can move 21% in two milestones.* Both:
   the share check runs on every run, and the battle count is what actually
   catches 262. Breaks 262, 296, 300 and 301 all caught.
+
+
+- **R171 — The eager-JS budget charges the player for the comments.** Found
+  while shipping R94, whose gate went red on a milestone that added **400
+  bytes of code**. `KB_CAP` in `tools/smoke.js` is a static walk of file sizes
+  on disk, so a comment weighs exactly what a statement weighs, and R169 left
+  the cap 1.7 KB above the measurement — which makes it the first budget in
+  the repo a *paragraph* can breach. This is not obviously wrong: there is no
+  build step, so those bytes really are downloaded and parsed, and this repo
+  writes its reasoning at the code on purpose. But it means the cap is
+  enforcing a house style nobody chose, at a lever nobody reads it as. The
+  alternative is to strip comments before summing and leave the transferred
+  bytes to `FIRST_PAINT_KB`, which measures them in a real browser — except
+  that one keeps 18 KB of slack deliberately, so **nothing** would then catch a
+  15 KB comment, and R169's whole milestone was about bytes hiding in slack.
+  Proposed, small: decide which of the two budgets owns prose, say so in both
+  notes, and give the loser a rule that cannot be breached by explaining
+  yourself. *Done when: a milestone can add a paragraph to an eager module
+  without moving a cap, AND a break that adds 15 KB of comments to one goes red
+  on a named gate.*
 
 
 - **R169 — The exemption bill has a 4.2 KB line on it.** ✅ *Shipped. The

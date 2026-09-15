@@ -110,15 +110,10 @@ export function capNotoriety(state, content) {
   const t = taskforceTuning(content);
   const cam = state.campaign ?? {};
   const before = cam.notoriety ?? 0;
-  // R94 — THE HIGH-WATER MARK, and it is the whole milestone. Notoriety is
-  // how hot you are RIGHT NOW: it falls when you hold a raid, and R94 gives
-  // it a decay besides, so it is free to move. `notorietyPeak` is how
-  // seriously the world has learned to take you, and it only ever goes up.
-  // Measured before the split: the ladder read the live number, so holding a
-  // raid — a WIN — could drop you a Threat Generation, and seven campaigns
-  // spent 80.1% of their days below the generation they had already reached,
-  // across 82 drops. Seed 11 finished as a "Local Nuisance" having held 40
-  // Task Force raids. See ROADMAP R94.
+  // R94 — THE HIGH-WATER MARK, and this line is its ONLY writer. `notoriety`
+  // is how hot you are RIGHT NOW and is free to fall; `notorietyPeak` is how
+  // seriously the world has learned to take you. See campaign/map.js for the
+  // readers, ROADMAP R94 for what reading the meter cost.
   cam.notorietyPeak = Math.max(cam.notorietyPeak ?? 0, Math.min(before, t.notorietyCap));
   if (before <= t.notorietyCap) return false;
   cam.notoriety = t.notorietyCap;
@@ -135,19 +130,12 @@ export function capNotoriety(state, content) {
 // runs regardless of notoriety. Before it, the ceiling is the trigger, and
 // `minHeld` keeps a floundering player who has been running jobs for heat
 // out of range entirely.
-// R94 — AND IT READS THE PEAK, NOT THE METER. This is the retune the R94
-// entry put in its own scope: "`taskforceEligible` needs a trigger that a
-// purchase cannot race". A bribe, a decay and the relief for holding a raid
-// all lower `notoriety`; none of them lowers `notorietyPeak`, so none of
-// them can switch the Task Force off. The file opens once and the State
-// does not forget.
-//
-// This is NOT the naive peak-read Session 173 measured and reverted. That
-// one made the raw peak the trigger with nothing else changed, and the file
-// never closed. Here the peak is clamped to the cap by `capNotoriety`
-// above, the relief still works on the meter, and what the peak governs is
-// whether they are INTERESTED — the schedule, the cooldown and the
-// escalation are unchanged.
+// R94 — AND IT READS THE PEAK, NOT THE METER: the retune the entry asked for,
+// "a trigger that a purchase cannot race". A bribe and the relief for holding
+// a raid both lower `notoriety` and neither lowers the peak, so the file opens
+// once and the State does not forget. Not Session 173's naive peak-read — the
+// peak is CLAMPED to the cap by `capNotoriety` above, so the schedule, the
+// cooldown and the escalation are untouched. See ROADMAP R94.
 export function taskforceEligible(state, content) {
   const t = taskforceTuning(content);
   const cam = state.campaign ?? {};
@@ -232,28 +220,11 @@ export function tickTaskforce(state, content, now) {
   const news = [];
   const levied = [];
 
-  // R94 — A TIME DECAY WAS BUILT HERE, MEASURED, AND REMOVED. The entry asked
-  // for cooling through "lying low", and the walker has no quiet days to lie
-  // low ON — 148 heat-days out of 148 — so the version written was flat and
-  // prorated by elapsed hours. It worked: a fortnight away cooled exactly 84
-  // points at 6/day.
-  //
-  // It went because of what it cost and what it did NOT buy. Once the ladder,
-  // the Task Force trigger, region access and rival interest all read
-  // `notorietyMark`, the live meter drives nothing mechanical, so a time decay
-  // moves a number on the screen. And it cost robustness: R142's splice floor
-  // is 25, and across this gate's five seeds the minimum read
-  //
-  //     decay 0/day  35 32 28 30 33   min 28
-  //     decay 2/day  33 36 28 30 23   min 23
-  //     decay 4/day  43 36 31 36 25   min 25
-  //     decay 6/day  34 23 27 29 25   min 23
-  //
-  // — not a smooth relationship, which is the tell: the decay was not costing
-  // splices systematically, it was adding walk divergence that sometimes shoved
-  // a seed under the floor. The meter still falls, because holding a raid hands
-  // back `notorietyRelief` and every seed's meter reaches 0-14 at some point.
-  // See ROADMAP R94.
+  // R94 — A TIME DECAY WAS BUILT HERE, MEASURED, AND REMOVED. It worked, and
+  // it bought nothing mechanical: every consumer reads `notorietyMark` now, so
+  // the meter drives only what is on the screen — and it moved R142's splice
+  // floor around unevenly. The four readings are in ROADMAP R94. The meter
+  // still falls, on `notorietyRelief`, which is what it is for.
 
   if (capNotoriety(state, content) && lines.capped) news.push(lines.capped);
 

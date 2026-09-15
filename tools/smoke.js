@@ -20803,7 +20803,28 @@ if (inShard('wire')) {
 // the same number twice, while FIRST_PAINT_KB is transferSize out of a real
 // browser and went red once at 1034 against 1034 on a slow afternoon.
 // A deterministic budget can afford to be tight. See ROADMAP R169.
-const KB_CAP = 543;
+// R94 — 543 -> 545, measured at 544.3, and it is THE FIRST LINE ON THIS
+// LEDGER THAT BUYS NO CODE. The ratchet is about 400 bytes: a four-line
+// `notorietyMark` in campaign/map.js, one line that writes the peak, and four
+// reads that changed which number they ask. The other 2.6 KB is the milestone
+// EXPLAINING ITSELF at the call sites — and that is charged to the player,
+// because there is no build step and every comment in an eager module is
+// downloaded and parsed like code.
+//
+// Nobody had written that down, and R169 left 1.7 KB of headroom, so R94 is
+// the first milestone to discover that this budget forbids a paragraph. The
+// right first response was taken rather than argued around: R94's notes
+// DUPLICATED the tables in its own ROADMAP entry, so the measurements went
+// back there and the code kept pointers — 4.8 KB down to 3.0. What is left is
+// load-bearing, and trimming load-bearing prose to fit a budget is how a file
+// ends up unexplained.
+//
+// THE OPEN QUESTION IS WHOSE BUDGET PROSE IS. This one is a static byte walk,
+// so it counts comments; FIRST_PAINT_KB measures the same bytes in a real
+// browser and keeps 18 KB of slack, so if this cap stripped comments nothing
+// would catch a 15 KB one. Two budgets, two levers, and which lever owns prose
+// is a milestone rather than a paragraph — QUEUED AS R171.
+const KB_CAP = 545;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

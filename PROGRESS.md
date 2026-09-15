@@ -58,6 +58,27 @@ Not smooth — it was adding walk divergence, not cost. With the ladder
 reverted to the live meter seed 7 reads **20**, so the ratchet is an
 improvement and the decay was the price. R142's floor was not lowered to fit.
 
+### Two other gates went red, and both were telling the truth
+
+**The save-weight gate (R91).** `campaign.loose[].pack[].traits` had no stated
+bound. The ratchet moved the walk's trajectory, which put a trait-carrying
+specimen first in a pack for the first time — and `arrayPaths` reads ONE record
+for the shape of all of them, so that was the only way it could ever surface.
+Root cause: one `rivalSpecimen` shape was transcribed by hand at three prefixes
+(a bay, the loose board, a leader's pack), and `traits` got stated at two of
+them. It is now `SPECIMEN(at)` written once and spread at each prefix, so a
+sixth list on a generated body cannot land on two boards out of three. Break
+191 re-anchored onto the spread, which makes it a bigger target than the single
+line it used to delete.
+
+**The eager-JS cap (R169).** `KB_CAP` went red at 546 against 543 — on a
+milestone that added **400 bytes of code**. The gate is a static byte walk, so
+it counts comments, and with no build step those bytes really are downloaded.
+R94's notes duplicated the tables in its own ROADMAP entry, so the measurements
+went back there and the code kept pointers: **4.8 KB → 3.0 KB**. The cap moved
+543 → 545 for the rest, argued on the ledger in `tools/smoke.js` — the first
+line on it that buys no code.
+
 ### Known issues
 
 - **One clause is deliberately unmet.** "Day-180 notoriety under the cap"
@@ -66,10 +87,15 @@ improvement and the decay was the price. R142's floor was not lowered to fit.
   teeth is a separate design question.
 - Six smoke assertions moved. Two caught real bugs I introduced — including a
   conquest that would never have announced THREAT LEVEL UP again.
+- **Filed as R171:** which budget owns prose. `KB_CAP` counts comments and now
+  has 0.7 KB of headroom, so the next milestone that explains itself in an
+  eager module hits it too; `FIRST_PAINT_KB` measures the same bytes in a real
+  browser but keeps 18 KB of slack, so stripping comments here would leave
+  nothing catching a 15 KB one.
 
 ### Next session's first task
 
-Pick from the 14-entry queue in §9.0 — R100 is now the oldest open entry.
+Pick from the 15-entry queue in §9.0 — R100 is still the oldest open entry.
 
 ## Session 180 — R170: a proportion cannot see a proportional change ✅
 

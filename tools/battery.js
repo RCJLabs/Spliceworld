@@ -4051,9 +4051,15 @@ const BREAKS = [
     // were invisible for six milestones because a walk always ended with an
     // empty board; stating no bound for them is how the save grows in a
     // place nobody is looking.
+    //
+    // R94 — RE-ANCHORED, and onto a bigger target. The five lists this used
+    // to remove one of are one `SPECIMEN(...)` spread now, so the break takes
+    // the whole record's shape off the loose board instead of a single line.
+    // Same rule, same red; the anchor moved because the table stopped being
+    // three hand-typed copies of one shape.
     n: 191, gate: VAULT, name: 'the loose board\'s lists go back to having no stated bound',
     file: 'tools/vault.js',
-    anchor: "  'campaign.loose[].unit.moves':               { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },",
+    anchor: "  ...SPECIMEN('campaign.loose[].unit'),",
     to: '',
   },
   {
