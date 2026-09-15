@@ -1,5 +1,77 @@
 # PROGRESS
 
+## Session 177 — R107: what the week did while nobody was home ✅
+
+**ROADMAP §9.0 → §9.6 (UI).** R64 proved a month away pays fairly. Nothing
+told the player what it paid: a week away from day 25 moves eight categories
+of the save, and the wire — twelve lines, ring buffer — gets seven to ten, so
+a week arrived as petting-zoo results and no account of itself.
+
+### Re-measured before building
+
+Event counts exact, money stale. A week from day 25, seed 2026: **6
+counter-offensives** (entry said 6 ✓), **4 loose** (✓), a job home (✓), **7–13
+wire lines** (entry said eight ✓) — but **+$12,930**, not the entry's
++$18,035. Two weeks from day 60: **+$40,688**, not +$71,331. R143's garrison
+and R152's upkeep landed after that entry was written.
+
+### The report read levels, and a gap is events
+
+R104's change report was the obvious source and was not enough on its own.
+Across five seeds five or six convoys came, waited and left — and on **three
+of the five the report never mentioned contests at all**, because `contested`
+ends where it started. `worldSnapshot` gained the four counters that only go
+up, plus `settling`, which it was computing and throwing away.
+
+**Asking for a raid counter found a field that could never move.** `raids`
+read `campaign.taskforce.raids`; nothing has ever written a `taskforce` key.
+The Task Force raid — R87's answer to risk 5 — had been invisible to the
+report since I added it in R104, three commits earlier.
+
+### Three defects the gates caught
+
+1. **`contested` had no line** — folded into another sentence, so a real
+   category could move with nothing to show. Caught by the digest's own
+   synthetic pass: one before/after pair per report field.
+2. **The card shipped where no gate could see it.** a11y builds its fixture at
+   `Date.now()`, so its gap is zero and the card never appeared; the only tell
+   was that the control count did not move. The new clause winds the fixture's
+   clock back a week. It runs **last**, because it reloads the page — in the
+   middle it cost the keyboard walk sixteen controls.
+3. **The lazy-import refactor broke it**, and clause 2 caught that too:
+   `showScreen` ticks again, so `lastTick` described a zero-width gap by the
+   time the shell read it.
+
+### The budget wall, met head-on
+
+`FIRST_PAINT_KB` **1033 → 1034**, `KB_CAP` **559 → 560**. Last session's
+PROGRESS said the next milestone to touch the eager graph splits first or does
+not ship — it split (the card is lazy), and still did not fit until the whole
+decision moved behind the import (eager **560.0 → 559.3 KB**). The baseline
+went red once at **1034 against 1034**: a cap sitting on its own measurement.
+
+### Known issues
+
+- **The first-paint margin is gone.** Three milestones have raised this cap
+  and prose-trimming is spent. Queued as **R169**: the exemption bill is 11.0
+  KB across four modules and `campaign/monologue.js` is 4.2 KB of it, eager
+  only through `wire.js` ← `world.js` — R153's exact shape.
+- **`npm test` is still red** (R168), and not for anything here: warm, every
+  job passing, this tree reads **998 CPU-seconds** against `main`'s 1054 and
+  R104's 1044 earlier the same day. Dropping the shell's two duplicate
+  `worldSnapshot` calls is the only change that could have helped.
+- **`awayFor` says "7 days", not "a week"** past 48 hours. Fine, and blunter
+  than the card's voice deserves.
+
+**The lesson:** *a feature whose gate cannot reach it is unverified however
+green the run is — and the tell is not a red line, it is a number that did not
+move.*
+
+### Next session's first task
+
+**R169** if the eager graph should stop being a recurring tax, or **R168** if
+a green `npm test` matters more. Otherwise §9.0 — 17 queued.
+
 ## Session 176 — R104: the shell paints on a change report ✅
 
 **ROADMAP §9.0 → §9.6 (UI).** `main.js` rebuilt the active screen from a

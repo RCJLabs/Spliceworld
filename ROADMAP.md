@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**17 entries queued.** R94, R100, R102, R105, R107, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R168.
+**17 entries queued.** R94, R100, R102, R105, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R168, R169.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -3399,24 +3399,107 @@ suite can check.
   Path's sixth step quotes the same grade the Ranch card would print for the
   same animal.* ✅ **All four, plus the R79 case: five new battery breaks,
   89 caught of 89.**
-- **R107 — Welcome back.** A week away from day 25: **+$18,035** earned,
-  **6 counter-offensives** came, **4 specimens** got loose, a job came home
-  — and the wire, which keeps twelve lines, has **eight** new ones to show
-  for it, one of which is the game's only digest (*"While nobody was home, 5
-  convoys came, waited at the gate, and left stern letters"*) and the rest
-  of which are petting-zoo results. Two weeks away from day 60: **+$71,331,
-  12 contests, 4 loose, seven lines.** R64 proved a month away pays fairly;
-  nothing tells the player what it paid. Proposed, medium: a **Welcome back**
-  card at the top of whichever screen opens when the gap is over six hours,
-  built from the tick's change report (R104) rather than from the wire —
-  income earned and upkeep paid, contests held and lost, raids missed and
-  what they took, breakouts, jobs returned (and the animal in the van), eggs
-  hatched, injuries healed, creatures now pacing (with their countdown),
-  chimeras settled — one line per category that moved, none for those that
-  did not; dismissable; DOM-free so smoke can assert it against the diff.
+- **R107 — Welcome back.** ✅ *Shipped — the digest, the card, and three
+  defects the gates caught: one of mine from R104, one the criterion's own
+  fixture could not have found, and one my last refactor introduced.*
+
+  #### Re-measured before building
+
+  A week away from day 25, across five seeds, and two weeks from day 60:
+
+  | the entry said | today |
+  | --- | --- |
+  | **+$18,035** for a week from day 25 | **+$12,930** (seed 2026); $8,335–$15,464 across five seeds |
+  | **6 counter-offensives** | **6** on seed 2026; 5–6 across seeds ✓ |
+  | **4 specimens** loose | **4** on every seed ✓ |
+  | a job came home | ✓ `operations` 1 → 0 on every seed |
+  | the wire keeps **twelve** lines | ✓ `WIRE_KEEP = 12` |
+  | **eight** new lines to show for it | ✓ 7–10 typical, 13 on one seed |
+  | two weeks from day 60: **+$71,331, 12 contests, 4 loose** | **+$40,688**, 12 ✓, 4 ✓ |
+
+  **The event counts are exact; the money is stale by 30–43%**, because R143's
+  garrison and R152's upkeep both landed after this entry was written.
+
+  #### The report read levels, and a gap is events
+
+  R104's change report was the obvious source and on its own it was not
+  enough. Across five seeds five or six convoys came, waited and left during
+  the week — and on **three of the five the report never mentioned contests at
+  all**, because `contested` ends where it started. Same for a breakout that
+  was re-caught and a job that came home. So `worldSnapshot` gained the four
+  counters that only go up — `contestCount`, `breakoutCount`, `opCount`,
+  `raidCount` — plus `settling`, which it was computing and discarding.
+
+  **And asking it for a raid counter found a field that could never move.**
+  `raids` read `campaign.taskforce.raids`; nothing has ever written a
+  `taskforce` key. The Compliance Task Force's raid — R87's whole answer to §8
+  risk 5 — had been invisible to the change report since R104 added it three
+  commits earlier. Mine, and fixed.
+
+  #### The fixture the criterion names could not prove it
+
+  `empire()` has no chimeras, no scheduled convoy and no job, so a week moves
+  exactly **one** category — funds — and *"names every category that changed
+  and nothing that did not"* passes on a one-line digest. That is the vacuous
+  gate R106 and R155 each shipped once. The gate winds the same fixture up
+  instead: **six lines on a week, none on an hour** — and an hour *does* move
+  funds, so the rule has to be about time rather than about movement.
+
+  #### What ships
+
+  **`campaign/digest.js`** is DOM-free and returns `{key, text}` lines, so the
+  gate asserts it against the tick's change report rather than against a
+  screen. One line per category that **moved**, none for those that did not —
+  a digest that always says the same twelve things is the wire again.
+
+  **`ui/welcome.js`** is lazy and owns the whole decision: threshold, digest,
+  phrasing, dismissal. The shell carries one condition and one call.
+
+  `tickWorld` publishes the pair it already diffed (`lastTick`), so the shell
+  stopped calling `worldSnapshot` twice more for numbers the tick had just
+  computed.
+
+  #### Three defects the gates caught
+
+  | | caught by |
+  | --- | --- |
+  | `contested` was a report field with no line — foldable into another sentence, so a real category could move with nothing to show | the digest's own synthetic pass, one before/after pair per report field |
+  | the card shipped where **no gate could see it** — a11y builds its fixture at `Date.now()`, so its gap is zero and the control count never moved | the control count not moving, which is the only tell there was |
+  | after the lazy-import refactor the card stopped appearing: `showScreen` ticks again, so `lastTick` described a zero-width gap by the time the shell read it | the a11y clause written for the defect above, three commits earlier |
+
+  The second is the one worth keeping: **a feature whose gate cannot reach it
+  is unverified however green the run is.** The new clause winds the fixture's
+  one clock back a week and asserts the card is shown, has lines, sits outside
+  the screen roots, clears the 40px floor, says how long you were gone,
+  dismisses, and puts focus somewhere real. It runs **last**, because it
+  reloads the page: in the middle it cost the keyboard walk sixteen controls
+  and broke two focus rules — a gate disturbing its own fixture.
+
+  #### The budget, and a lever left on the table
+
+  `FIRST_PAINT_KB` **1033 → 1034**, `KB_CAP` **559 → 560**. The card is lazy;
+  what is eager is the shell glue that decides whether to import it and the
+  counters the report gained. Consolidating the whole decision behind the
+  import took eager modules **560.0 → 559.3 KB**, which is the only reason it
+  fit at all.
+
+  **Three milestones running have now raised this cap, and the margin is
+  thin** — the baseline went red once at 1034 against 1034, which is a gate
+  failing on a slow afternoon rather than on a regression. Trimming prose
+  (R130) bought it back, and that is a lever with nothing left in it.
+
+  The lever *not* taken, named so the next milestone can: the exemption bill
+  is **11.0 KB across four modules**, and the largest is
+  **`campaign/monologue.js` at 4.2 KB**, eager only because
+  `campaign/wire.js` imports it and `campaign/world.js` imports the wire.
+  That is R153's exact shape — it took `campaign/director.js`, 11.9 KB, out
+  the same way — and it is a milestone's worth of care rather than an
+  end-of-session change. Queued as **R169**.
+
   *Done when: for the R64 away fixture the digest names every category that
   changed and nothing that did not, and it never appears for a gap under an
-  hour.*
+  hour.* Both hold, on a fixture wound up enough for the first clause to mean
+  something, and breaks 291–294 turn each rule red on demand.
 - **R108 — Specimen cards, and the fights they carry.** §8 risk 1 says the
   renderer is the whole first impression, and there is **no way to take a
   creature out of the app**: the only download in the game is the save file,
@@ -5051,6 +5134,27 @@ triangle working, and each region genuinely asks a different question)*.
   per-job delta, or a host effect demonstrated by re-running an old commit on
   today's box — and `CPU_BUDGET_S` is either justified where it stands or
   moved for a stated, measured reason.*
+
+- **R169 — The exemption bill has a 4.2 KB line on it.** `FIRST_PAINT_KB` has
+  gone **1029 → 1033 → 1034** across R96, R104 and R107, and the last of those
+  only fit by consolidating a feature behind one lazy import and then trimming
+  prose to buy the final fraction. The baseline went red once at **1034
+  against 1034**, which is a gate failing on a slow afternoon rather than on a
+  regression. There is nothing left to trim.
+  What there *is*: `tools/boot.js`'s exemption list, **11.0 KB across four
+  modules that run nothing on either first paint**, and R153's note on it
+  reads *"an exemption is a place a cost goes to stop being questioned; this
+  list should be read as a bill, not a settled account."* The largest line is
+  **`campaign/monologue.js`, 4.2 KB**, eager only because `campaign/wire.js`
+  imports `fill`/`philosophyOf` and `campaign/world.js` imports the wire —
+  R153's exact shape, which took `campaign/director.js` (11.9 KB) out by
+  moving seven lines that read nothing from it. The other three are
+  `battle/moves.js` (4.8 KB, read by `statblock.js`), `ui/theme.js` (1.1 KB)
+  and `splice/grades.js` (1.0 KB), and each deserves the same question.
+  *Done when: the eager graph has at least 8 KB of headroom under
+  `FIRST_PAINT_KB` without the cap moving up to make it, every remaining
+  exemption states what boot reads from it, and the entry says which lines of
+  the bill were paid and which were re-justified.*
 
 ### 9.27 The verb that could not level anything (R138) — seventh audit
 

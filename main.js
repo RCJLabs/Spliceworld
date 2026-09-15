@@ -13,7 +13,7 @@ import { renderRanchScreen } from './ranch/ui.js';
 // pull in the whole campaign module, and the director, the rehab wing and
 // the gauntlet behind it, for a five-line function that appends to an array.
 import { pushNews } from './campaign/wire.js';
-import { tickWorld } from './campaign/world.js';
+import { tickWorld, lastTick } from './campaign/world.js';
 import * as sfx from './audio/sfx.js';
 import { watchSignals, cuesFor } from './audio/sfx.js';
 import { renderIcon } from './ui/icons.js';
@@ -429,7 +429,17 @@ async function boot() {
   // time the dialog controller looks, focus is already back where the
   // player left it and its guard correctly does nothing.
   installFocusKeeper([...Object.keys(SCREENS).map((s) => $(`#screen-${s}`)), $('#overlay')].filter(Boolean));
+  // R107 — the only tick that spans a gap is the first after a load, and it
+  // published the pair it diffed. COPIED before `showScreen`, which ticks
+  // again and would leave `lastTick` describing a zero-width gap.
+  tick();
+  const gap = { ...lastTick };
   showScreen(state.activeScreen);
+  if (gap.dt >= 6 * 3600000) {
+    const { showWelcome } = await import('./ui/welcome.js');
+    showWelcome($('#welcome'), gap, content,
+      () => $(`#tabs button[data-screen="${state.activeScreen}"]`)?.focus());
+  }
 
   // R81 — the geometry, now that there is something on screen. 400 KB of
   // `shapes` used to sit in front of the first paint; it is fetched here
