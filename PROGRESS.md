@@ -59,6 +59,36 @@ of slack is the deliverable. The two static budgets stay tight, because a
 walk of file sizes reads the same number twice and the dead-byte walk read
 160.3 three times to the byte.
 
+### Break 248 went MISSED, and that was the real finding
+
+None of CLAUDE.md's four full-battery triggers fired after a green baseline.
+The narrower question did: **do existing breaks aim at what this milestone
+moved?** Forty-four did, and one failed.
+
+Break 248 re-adds `campaign/director.js` (11.9 KB) via
+`export * from './director.js'`. Reproducing it by hand:
+
+| | clean | with break 248 |
+| --- | ---: | ---: |
+| eager modules / KB | 48 / 541.3 | **48 / 541.3** |
+| modules running nothing | 4 | **4** |
+| functions no boot calls | 160.3 KB | **160.3 KB** |
+| first paint (real browser) | 1016 KB | **1028 KB** |
+
+Only the browser moved. `eagerGraph()` matched `import … from` and nothing
+else, so **a re-export was invisible to the static walk** — and `KB_CAP`, the
+module-runs-nothing list and this milestone's own dead-byte budget all read
+that walk. Three rules blind at once, leaving `FIRST_PAINT_KB` as 248's only
+reader at 1046 over 1034. Take the measurement to 1016, keep the cap at 1034
+deliberately, and 1028 fits.
+
+I had argued in this same milestone that tightening a budget cannot blind a
+break. True, and beside the point: **leaving a cap still while the measurement
+falls under it is loosening by omission.** Both walks follow `export … from`
+now; 248 is caught by three rules and the slack survives. The clean tree is
+unchanged, because the tree's one real re-export names a module already
+imported on the line above.
+
 ### The break I deleted
 
 Three breaks were written; **297** and **299** go red on demand. The third
@@ -76,6 +106,13 @@ break went and the measurement is written where the filter is.
 - The dead-byte figure is 160.3 KB and the budget 170. The next milestone that
   wants the room should bring the number down instead — `campaign/campaign.js`
   (17.5 KB dead) and `campaign/rivals.js` (16.0) are where it is.
+
+### The rule worth carrying forward
+
+**When a milestone creates headroom, the breaks that used to live in it are
+the first thing to re-run.** Forty-four targeted breaks cost eleven minutes
+and found what a green baseline, a green suite and 292 matching anchors all
+missed.
 
 ### Next session's first task
 
