@@ -1,5 +1,65 @@
 # PROGRESS
 
+## Session 178 — R168: it was the weather ✅
+
+**ROADMAP §9.28.** `npm test` has been red on `main` since R104 and every
+milestone since has shipped past it. R168's Done-when asked for one specific
+experiment; it took twenty minutes and settled four milestones of mystery.
+
+### R160's own tree, on today's box
+
+| | CPU-seconds |
+| --- | ---: |
+| R160's tree, when R160 measured it | **728** |
+| R160's tree, **today**, byte-identical | **941** |
+| today's tree, fifteen milestones on | **998** |
+
+**728 × 1.29 × 1.06 = 995** against 998 measured. **+29% host, +6% code.**
+R160 closed this lineage with "there was no box drift, there was a walk
+cache" — right about the swing it investigated, wrong as a general claim. R151,
+which it overturned, was right that the host moves.
+
+### What ships
+
+- **`CPU_BUDGET_S` 820 → 1150**, the slowest honest reading plus 15%. It will
+  not catch a 13% regression and the comment says so; its job is now gross.
+- **A rule the box cannot move: each job's share of the suite.** If everything
+  slows 29%, every share is unchanged. Across three warm runs spanning fifteen
+  milestones and that swing, the largest share movement is **3.4pp** — and it
+  is explained (R104's fifth campaign in shard a). Band **6pp**.
+- **Warm runs only**, measured: a cold run's rebuilds take `walks` from 4.1%
+  to **15.2%** and deflate everything else. Cold shares describe the cache.
+- **The failure message now prints the A/B recipe**, because the number alone
+  answers neither question and that is why this sat red for four milestones.
+
+### The rule caught its own author
+
+My first share table was rounded to whole percent and summed to **101%**.
+Shares of one run cannot. The assertion I had written thirty seconds earlier
+caught it before it shipped; the table is one decimal now, because these are
+readings rather than roundings.
+
+`tools/shares.js` is its own module because `tools/suite.js` spawns the whole
+suite on import, and a rule the battery cannot reach is a rule nobody notices
+stop working (R50's shape).
+
+### Known issues
+
+- **1150 is calibrated to a host that was 29% slow today.** If the box speeds
+  back up, the seconds budget becomes very loose — the share rule is what
+  carries the precision, deliberately.
+- **Three warm runs is a thin sample for a 6pp band.** It is twice the largest
+  movement measured, but the next milestone to see a share rule fire should
+  check the reading before believing it.
+
+**The lesson:** *a budget denominated in a unit the host can move will
+eventually measure the host. The fix is not a better unit — it is a second
+rule with no units at all.*
+
+### Next session's first task
+
+**R169** (the eager graph's 11.0 KB exemption bill), or §9.0 — 16 queued.
+
 ## Session 177 — R107: what the week did while nobody was home ✅
 
 **ROADMAP §9.0 → §9.6 (UI).** R64 proved a month away pays fairly. Nothing

@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 // R160 — the one thing that moves this suite's cost: how many 180-day walks
 // the run had to rebuild. R156's box probe used to sit here too; it is gone.
 import { walkCacheState } from './fixtures.js';
+import { shareProblems, SHARE_BAND } from './shares.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : null;
@@ -340,52 +341,10 @@ if (!only && cpu > budget) {
   console.error('   the one to trust. If it is not, the cost is yours and the per-job times say where.');
   process.exit(1);
 }
-// R168 — AND THE RULE THAT DOES NOT MOVE WITH THE BOX: EACH JOB'S SHARE.
-//
-// R151 chose CPU-seconds because they are flat against CONTENTION, and they
-// are: 910 / 921 / 946 across an idle box, four burners and a battery. What
-// nobody tested is the host's throughput over DAYS, and R168 did:
-//
-//   R160's tree, when R160 measured it      728
-//   R160's tree, today, byte-identical      941      +29%, all host
-//   today's tree                            998      +6% on top, real growth
-//
-// 728 x 1.29 x 1.06 = 995. The arithmetic closes, and the overrun that has
-// failed this gate since R104 is four-fifths weather.
-//
-// So the CPU budget cannot be tight AND honest at the same time, and a gate
-// nobody can pass on a bad afternoon is a gate that gets raised until it
-// means nothing (R151's own words). It keeps its job — catching a GROSS
-// regression — and hands the precise work to this rule, which is immune to
-// the box by construction: if every job slows by 29%, every SHARE is
-// unchanged. A job that grows relative to its peers is code.
-//
-// MEASURED, three warm runs spanning fifteen milestones and that 29% swing:
-// the largest share movement is 3.4pp (smoke:a, and it is EXPLAINED — R104
-// put a fifth campaign in that shard), and the largest unexplained is 3.1pp
-// of run-to-run noise on smoke:c. The band is 6pp, about twice the explained
-// movement and twice the noise, which catches a job growing by roughly a
-// third relative to the rest.
-const SHARE = {
-  'smoke:a': 27, 'smoke:b': 19, 'smoke:c': 22, 'smoke:d': 21,
-  handlers: 5, walks: 4, vault: 3,
-};
-const SHARE_BAND = 6;
-// WARM RUNS ONLY, and this is measured rather than cautious: a cold run pays
-// for its walk rebuilds inside the `walks` job, which takes that job from
-// 4.1% to 15.2% and deflates every other share to match. On a cold run the
-// shares describe the cache, not the code.
+// R168 — the host-invariant half of this gate. The reasoning, the numbers and
+// the band all live in tools/shares.js, which the battery can reach.
 if (!only && rebuilt === 0) {
-  const total = results.reduce((a, r) => a + r.ms, 0);
-  const off = [];
-  for (const r of results) {
-    const want = SHARE[r.name];
-    if (want == null || !total) continue;
-    const got = (r.ms / total) * 100;
-    if (Math.abs(got - want) > SHARE_BAND) {
-      off.push(`${r.name} is ${got.toFixed(1)}% of the suite, declared ${want}%`);
-    }
-  }
+  const off = shareProblems(results);
   if (off.length) {
     console.error(`\nsuite ✗  a job's share of the suite moved past ${SHARE_BAND}pp, which the box cannot explain`);
     for (const line of off) console.error(`   · ${line}`);

@@ -3096,6 +3096,27 @@ const BREAKS = [
     anchor: '  if (gap.dt >= 6 * 3600000) {',
     to: '  if (false) {',
   },
+  // R168 — the suite's two budgets. The seconds one is now the gross catcher
+  // and the shares one is the precise, host-invariant one; both need a break
+  // that reaches them, and neither can be a five-minute `npm test` per break.
+  {
+    // THE BAND STOPS BEING A BAND. At 60pp nothing can ever be outside it,
+    // which is the shape every budget takes on the day somebody widens it to
+    // stop a red rather than to describe a measurement.
+    n: 295, gate: TURNS, name: 'the share band widens until no job can ever be outside it',
+    file: 'tools/shares.js',
+    anchor: 'export const SHARE_BAND = 6;',
+    to: 'export const SHARE_BAND = 60;',
+  },
+  {
+    // AND THE TABLE STOPS DESCRIBING THE SUITE. Shares of one run cannot sum
+    // past 100; this break is the exact mistake the rule caught on its first
+    // run, when the first draft of the table was rounded to whole percent.
+    n: 296, gate: TURNS, name: 'the declared shares stop adding up to one suite',
+    file: 'tools/shares.js',
+    anchor: "  'smoke:a': 27.2,",
+    to: "  'smoke:a': 57.2,",
+  },
 
   // R96 — a creature that shows what it is. Three breaks, one per rule the
   // milestone added: the posture data that makes two temperaments two
