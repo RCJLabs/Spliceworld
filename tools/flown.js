@@ -48,10 +48,25 @@ export function createBattle(...args) {
 // they all append to. `tools/suite.js` clears it before the run.
 export const FLOWN_LOG = join(tmpdir(), 'sw-walk-cache', '.flown');
 
-process.on('exit', () => {
+// WRITTEN EXPLICITLY, NOT ONLY ON EXIT, and the reason is a defect this
+// module shipped with for one measurement. `tools/pool.js` ends the balance
+// sweep with `w.terminate()`, which kills a worker thread outright — no exit
+// event, no handler, no line in the log. So the sweep, which is the single
+// biggest block in the suite and the exact thing break 262 quadruples,
+// contributed NOTHING to the count: 470,735 battles with the break applied
+// and 470,735 without, while CPU went 744 to 1094. A counter that cannot see
+// the work it was built to measure is worse than no counter, because it
+// reads as a clean answer.
+export function flushFlown() {
   if (!flown) return;
+  const n = flown;
+  flown = 0;
   try {
     mkdirSync(join(tmpdir(), 'sw-walk-cache'), { recursive: true });
-    appendFileSync(FLOWN_LOG, `${process.env.SW_JOB ?? 'unnamed'}\t${flown}\n`);
+    appendFileSync(FLOWN_LOG, `${process.env.SW_JOB ?? 'unnamed'}\t${n}\n`);
   } catch { /* suite.js fails loudly on a log it cannot read; see there */ }
-});
+}
+
+// The main thread of every job still flushes on the way out; a worker thread
+// flushes per task, because it is never allowed to reach this.
+process.on('exit', flushFlown);
