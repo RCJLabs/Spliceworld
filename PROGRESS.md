@@ -32,6 +32,25 @@ which it overturned, was right that the host moves.
 - **The failure message now prints the A/B recipe**, because the number alone
   answers neither question and that is why this sat red for four milestones.
 
+### The full battery caught me loosening a rule that was carrying something
+
+290 breaks, 289 caught, **1 MISSED** — mine. Break 240 flips the walk cache's
+read condition and leaves the write; the gate that caught it was the seconds
+budget, by the ~200 CPU-seconds it costs. Raising that budget for the host
+drift went blind to a defect with nothing to do with the host, and the share
+rule could not cover it either — the rebuild cost spreads across every job
+proportionally, so no share moves.
+
+The fix measures the defect directly: **`walkedSave` logs each walk it
+computes, and the suite fails if any campaign is computed twice in one run.**
+Cold computes each once, warm computes none; only a cache written-but-never-
+read repeats itself. My first attempt used cache-file mtimes guarded on
+"started warm" — useless here, because the break edits `fixtures.js` and so
+starts with a fresh stamp every time.
+
+`primeWalkCache` now skips when the file exists; it wrote unconditionally,
+which made the invariant untrue by one file every run.
+
 ### The rule caught its own author
 
 My first share table was rounded to whole percent and summed to **101%**.

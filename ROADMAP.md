@@ -5180,16 +5180,46 @@ triangle working, and each region genuinely asks a different question)*.
   neither question. It now prints the A/B recipe — worktree an older commit,
   run it twice, compare — which is what settled it here in twenty minutes.
 
+  #### And raising it blinded a break, which the battery caught
+
+  The full battery came back **290 breaks, 289 caught, 1 MISSED** — and the
+  missed one was this milestone's doing. **Break 240** flips the walk cache's
+  read condition and leaves the write, so every job recomputes a walk another
+  job already did, and the gate that caught it was the seconds budget, by the
+  ~200 CPU-seconds it costs. Raising that budget for the host drift went blind
+  to a defect that has nothing to do with the host. The share rule could not
+  cover it either: the rebuild cost spreads across every job proportionally,
+  so no share moves.
+
+  That is the whole argument for the full battery as the trigger on a
+  gate-logic change, and it is the second time in this milestone that
+  loosening one rule turned out to tighten nothing.
+
+  So the defect is measured directly, and in no units: **`walkedSave` logs
+  each walk it actually computes, and the suite fails if any campaign is
+  computed twice in one run.** A cold run computes each once, a warm run
+  computes none; only a cache written but never read repeats itself. It works
+  cold *or* warm — which matters, because the break edits `fixtures.js` and so
+  starts every run of itself with a fresh cache stamp. An mtime rule guarded
+  on "started warm" would have stayed blind for exactly that reason, which is
+  how it was written first.
+
+  `primeWalkCache` now skips when the file is already there. It wrote
+  unconditionally, making *"a warm run recomputes nothing"* untrue by one file
+  every run — an exception the rule would have had to carve out and explain
+  forever. Better to make the invariant true.
+
   **The lesson:** *a budget denominated in a unit the host can move is a
   budget that will eventually measure the host. The fix is not a better unit,
-  it is a second rule with no units at all.*
+  it is a second rule with no units at all — and when you loosen the old one,
+  the full battery is how you find out what it was quietly carrying.*
 
   *Done when: the suite's cost is attributed — a commit range, a per-job
   delta, or a host effect demonstrated by re-running an old commit on today's
   box — and `CPU_BUDGET_S` is either justified where it stands or moved for a
   stated, measured reason.* All three forms of attribution, and the budget
   moved with its reason and its new limits stated. `npm test` is green for the
-  first time since R104: **1030 of 1150**.
+  first time since R104, and breaks 240, 295 and 296 all go red on demand.
 
 - **R169 — The exemption bill has a 4.2 KB line on it.** `FIRST_PAINT_KB` has
   gone **1029 → 1033 → 1034** across R96, R104 and R107, and the last of those
