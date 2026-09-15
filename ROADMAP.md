@@ -5330,6 +5330,47 @@ triangle working, and each region genuinely asks a different question)*.
   filter is — **tightening the budget until my own break fired would have been
   tuning the gate to its test.**
 
+  #### And then break 248 went MISSED, which was the real finding
+
+  Nothing in CLAUDE.md's four triggers fired after the green baseline, so the
+  full battery was not owed. What was owed was the narrower question: **do any
+  existing breaks aim at what this milestone moved?** Forty-four did — every
+  `BOOT` break plus everything pointed at a re-pointed module — and one of them
+  failed.
+
+  **Break 248 re-adds `campaign/director.js` (11.9 KB) with
+  `export * from './director.js'`.** Reproducing it by hand read the whole
+  story off four numbers:
+
+  | | clean | with break 248 |
+  | --- | ---: | ---: |
+  | eager modules / KB (static walk) | 48 / 541.3 | **48 / 541.3** |
+  | modules running nothing | 4 | **4** |
+  | functions no boot calls | 160.3 KB | **160.3 KB** |
+  | first paint (real browser) | 1016 KB | **1028 KB** |
+
+  Only the last one moved. `eagerGraph()` matched `import … from` and nothing
+  else, so **a re-export was invisible to the static walk** — and `KB_CAP`, the
+  module-runs-nothing list and R169's own dead-byte budget all read that walk.
+  Three rules blind at once, leaving `FIRST_PAINT_KB` as the only gate that had
+  ever caught 248, at 1046 over 1034. Take the measurement to 1016, leave the
+  cap at 1034 on purpose, and 1028 fits.
+
+  I had argued in this very entry that tightening a budget cannot blind a
+  break. That is true and it was beside the point: **leaving a cap still while
+  the measurement falls under it is loosening by omission**, and it cost an
+  entire defect class its last reader.
+
+  The fix is the hole, not the budget. Both walks — `tools/boot.js` and its
+  copy in `tools/smoke.js` — follow `export … from` now, so 248 is caught by
+  three rules and `FIRST_PAINT_KB` keeps its slack. The clean tree does not
+  move: the one real re-export in the tree, `splice/extract.js` re-exporting
+  `splice/grades.js`, names a module already imported directly on the line
+  above.
+
+  That walk change IS existing gate logic, so the full battery was run after
+  it, and only then.
+
   `wire.js` imported `philosophyOf` and never used it. Dropped.
 
   **The lesson:** *a bill that counts whole modules will always be smaller than
@@ -5338,6 +5379,11 @@ triangle working, and each region genuinely asks a different question)*.
   seven modules; the same question asked per FUNCTION found sixteen times more.
   When a rule stops catching things, suspect its denominator before its
   threshold.*
+
+  *And the second lesson, cheaper to read here than to find twice:* **when a
+  milestone creates headroom, the breaks that used to live in it are the first
+  thing to re-run.** Forty-four targeted breaks cost eleven minutes and found
+  what a green baseline, a green suite and 292 matching anchors all missed.
 
   *Done when: the eager graph has at least 8 KB of headroom under
   `FIRST_PAINT_KB` without the cap moving up to make it, every remaining
