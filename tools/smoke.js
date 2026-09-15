@@ -23,7 +23,9 @@ import {
 import { analyze } from '../splice/physiology.js';
 import { spliceChimera, validateSplice, chimeraGenome } from '../splice/theater.js';
 import { isSettled } from '../splice/chimera.js';
-import { combatantFromChimera, combatantFromUnit, createBattle, step, playerActions, playerActive, tagMultiplier, turnForecast, tierScaleFor, previewMove } from '../battle/engine.js';
+import { combatantFromChimera, combatantFromUnit, step, playerActions, playerActive, tagMultiplier, turnForecast, tierScaleFor, previewMove } from '../battle/engine.js';
+// R170 — counted, not bare. See tools/flown.js.
+import { createBattle } from './flown.js';
 import { isInjured, movesFromTokens, finishBattle } from '../battle/statblock.js';
 import {
   runSim, plantBrokenCombo, makeSimChimera, scriptedBattle, loadSimContent, campaignWalk,

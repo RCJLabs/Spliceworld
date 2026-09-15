@@ -92,6 +92,9 @@ const cacheAtStart = walkCacheState();
 // starts every run of itself with a fresh cache stamp.
 const computedLog = join(tmpdir(), 'sw-walk-cache', '.computed');
 try { rmSync(computedLog, { force: true }); } catch { /* nothing to clear */ }
+// R170 — and the battle counter's log, same shape, same reason.
+const flownLog = join(tmpdir(), 'sw-walk-cache', '.flown');
+try { rmSync(flownLog, { force: true }); } catch { /* nothing to clear */ }
 const started = Date.now();
 const queue = [...picked];
 const results = [];
@@ -113,7 +116,8 @@ const runOne = async (job) => {
   let out = '';
   let code = 0;
   for (const file of job.files ?? [job.file]) {
-    const r = await spawnOne(file, job.env);
+    // R170 — the child tags its battle count with this. See tools/flown.js.
+    const r = await spawnOne(file, { ...job.env, SW_JOB: job.name });
     out += r.out;
     // Every tool in the job runs even when an earlier one fails: a job that
     // stopped at the first red would hide the second gate's verdict, and the
