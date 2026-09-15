@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 // R160 — the one thing that moves this suite's cost: how many 180-day walks
 // the run had to rebuild. R156's box probe used to sit here too; it is gone.
 import { walkCacheState } from './fixtures.js';
-import { shareProblems, SHARE_BAND } from './shares.js';
+import { shareProblems, SHARE_BAND, battleProblem } from './shares.js';
 import { FLOWN_LOG } from './flown.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -298,12 +298,33 @@ if (failed.length) {
 // TREE on a later box, byte-identical, warm: 941. The host moved 29% in three
 // days, and R151 — which R160 overturned — was right that it does.
 //
-// 1150 is the slowest honest reading (998, today, every job passing) plus
-// 15%. It will NOT catch a 13% regression; nothing denominated in seconds can
-// while the host does this. That work now belongs to the share rule below,
-// which is invariant to the box by construction. This number's remaining job
-// is the gross one: a suite that has doubled, or a cache that has stopped
-// being written.
+// R170 — RE-DERIVED ON TODAY'S BOX, AND IT STAYS AT 1150. Four warm readings
+// of a comparable tree now exist, and they are not four readings of the code:
+//
+//   R160's box, R160's tree                728
+//   R160's tree, on R168's box             941
+//   today's tree, on R168's box            998
+//   today's tree, TODAY                    743
+//
+// The host has moved -26% since R168 measured, two milestones ago, having
+// moved +29% in the three days before that. 1150 is 998 plus 15% and it has
+// to stay there: set it to 850 for today's box and the next 998 afternoon
+// turns it red for a reason nobody can name — which is exactly the four
+// milestones R104 through R107 spent red.
+//
+// SO SAY PLAINLY WHAT THIS NUMBER MEANS. It is a ceiling over the slowest
+// HOST ever observed, not over the code. Against today's 743 it carries 55%
+// of slack, and R170 is the entry that found out what that costs: break 262
+// quadruples the balance sweep's sampling, reads 1084, and fits. A budget in
+// a unit the host can move cannot be tight and honest at the same time, and
+// no re-derivation will change that.
+//
+// Its remaining job is the gross one: a suite that has doubled, or a cache
+// that has stopped being written. The precise work belongs to the two rules
+// in tools/shares.js — the share table for a job growing against its peers,
+// and the BATTLE COUNT for a sample growing against nothing at all. R168
+// wrote the first and R170 found it could not see a proportional change; the
+// second is the one that catches break 262, at 2.4x against a 10% band.
 const CPU_BUDGET_S = 1150;
 // Measured twice, two ways: 15.4s from this suite's own cold-minus-warm
 // delta over 13 walks, and 16.4s for one walk timed alone twenty times. 16
@@ -382,9 +403,49 @@ if (!only) {
   }
 }
 
+// R170 — THE BATTLE COUNT, which is the only rule here a proportional change
+// cannot hide from. Read off the log every job appends to; the reasoning and
+// the budget live in tools/shares.js beside the shares.
+if (!only) {
+  const byJob = new Map();
+  let lines = 0;
+  try {
+    for (const line of readFileSync(FLOWN_LOG, 'utf8').split('\n')) {
+      if (!line) continue;
+      const [job, n] = line.split('\t');
+      byJob.set(job, (byJob.get(job) ?? 0) + Number(n || 0));
+      lines += 1;
+    }
+  } catch { /* handled directly below */ }
+  // A counter that reads zero is a counter that is not wired, not a suite
+  // that flew no fights — and R170 shipped exactly that for one measurement,
+  // when the balance sweep's worker threads were killed before they could
+  // write. Say so rather than pass.
+  if (!lines) {
+    console.error('\nsuite \u2717  every job passed, but no job recorded a single battle');
+    console.error(`   ${FLOWN_LOG} is empty, so the battle budget has nothing to check.`);
+    console.error('   Every tool that flies a fight imports createBattle from tools/flown.js;');
+    console.error('   a worker thread ended with terminate() must flushFlown() itself.');
+    process.exit(1);
+  }
+  const problem = battleProblem(byJob);
+  if (problem) {
+    console.error(`\nsuite \u2717  every job passed, but ${problem}`);
+    console.error('   Battles are host-invariant: a slow box flies exactly as many as a fast one.');
+    console.error('   So this is SAMPLING, which is the way this suite gets expensive without');
+    console.error('   anything looking wrong — a bigger sample makes every gate more right.');
+    console.error('   Raise BATTLE_BUDGET in tools/shares.js with what the extra fights bought.');
+    process.exit(1);
+  }
+}
+
 // R168 — the host-invariant half of this gate. The reasoning, the numbers and
 // the band all live in tools/shares.js, which the battery can reach.
-if (!only && rebuilt === 0) {
+// R170 — AND IT RUNS ON EVERY RUN NOW, not only a warm one. The old
+// `rebuilt === 0` guard meant the battery, which busts the walk cache with
+// every break it patches, never once reached it. `walks` is excluded from
+// the table instead, which is where the cold-run distortion lives.
+if (!only) {
   const off = shareProblems(results);
   if (off.length) {
     console.error(`\nsuite ✗  a job's share of the suite moved past ${SHARE_BAND}pp, which the box cannot explain`);
