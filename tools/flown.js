@@ -42,8 +42,6 @@ export function createBattle(...args) {
   return engineCreateBattle(...args);
 }
 
-export const battlesFlown = () => flown;
-
 // Beside the walk cache's `.computed` log, and for the same reason: the
 // suite's jobs are separate processes (and the balance sweep's are worker
 // threads inside them), so the only place a total can be assembled is a file

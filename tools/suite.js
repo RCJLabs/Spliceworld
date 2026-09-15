@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 // the run had to rebuild. R156's box probe used to sit here too; it is gone.
 import { walkCacheState } from './fixtures.js';
 import { shareProblems, SHARE_BAND } from './shares.js';
+import { FLOWN_LOG } from './flown.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : null;
@@ -92,9 +93,10 @@ const cacheAtStart = walkCacheState();
 // starts every run of itself with a fresh cache stamp.
 const computedLog = join(tmpdir(), 'sw-walk-cache', '.computed');
 try { rmSync(computedLog, { force: true }); } catch { /* nothing to clear */ }
-// R170 — and the battle counter's log, same shape, same reason.
-const flownLog = join(tmpdir(), 'sw-walk-cache', '.flown');
-try { rmSync(flownLog, { force: true }); } catch { /* nothing to clear */ }
+// R170 — and the battle counter's log, same shape, same reason. The PATH
+// comes from the module that writes it rather than being typed twice, which
+// is R157's break 152: one constant, one home, however many readers.
+try { rmSync(FLOWN_LOG, { force: true }); } catch { /* nothing to clear */ }
 const started = Date.now();
 const queue = [...picked];
 const results = [];
