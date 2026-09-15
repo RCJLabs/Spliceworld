@@ -17,7 +17,7 @@
 // are not duplication: the feral twin exists for the Pens' alert, the loose
 // specimen for the Labs tab's Hunt button, the second egg for the Ranch's
 // Hurry button. Each appears in exactly one file, which is the rule.
-import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync, readdirSync, appendFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -220,8 +220,16 @@ function cacheFile(seed, days) {
 // written is a slower answer, never a wrong one.
 export function primeWalkCache(save, { seed = 2026, days = 180 } = {}) {
   try {
+    const file = cacheFile(seed, days);
+    // R168 — NOTHING TO DO IF IT IS ALREADY THERE. The point of priming is
+    // that the next reader finds it, and a reader finds the file that exists
+    // just as well as the one we would overwrite it with. Rewriting it made
+    // the suite's "a warm run recomputes nothing" rule untrue by exactly one
+    // file every run, which is an exception the rule would have had to carve
+    // out and then explain forever.
+    if (existsSync(file)) return;
     mkdirSync(join(tmpdir(), 'sw-walk-cache'), { recursive: true });
-    writeCache(cacheFile(seed, days), JSON.stringify(withGuidesRead(save)));
+    writeCache(file, JSON.stringify(withGuidesRead(save)));
   } catch { /* not fatal, ever */ }
 }
 
@@ -267,6 +275,12 @@ export function walkedSave({ days = 180, seed = 2026, fresh = false } = {}) {
   try {
     mkdirSync(cache, { recursive: true });
     writeCache(file, JSON.stringify(save));
+    // R168 — ONE LINE PER WALK ACTUALLY COMPUTED, so the suite can see a walk
+    // done TWICE in one run. A cold run computes each one once and a warm run
+    // computes none; only a cache that is written but never read repeats
+    // itself. The suite clears this at the start of a run; it is a dotfile, so
+    // `walkCacheState` (which counts `-<stamp>.json`) never sees it.
+    appendFileSync(join(cache, '.computed'), `walk-${seed}-${days}\n`);
   } catch { /* a cache that cannot be written is still a correct answer */ }
   return save;
 }

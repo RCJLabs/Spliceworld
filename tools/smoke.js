@@ -91,6 +91,8 @@ const SHARD_OF = {
   // shard: 228s of the suite's work was those two blocks, four times over.
   // Measured with SW_SHARD=z, which runs the common path and nothing else.
   fired: 'c', mercy: 'd', planted: 'a', combos: 'b',
+  // R168 — a pure function on synthetic timings; it costs nothing.
+  shares: 'd',
   // R90 — the last of the common path worth guarding. Measured with
   // SW_SHARD=z: these four were 17.7s that every shard paid, 53s of the
   // suite's work for four copies of the same answer.
@@ -15552,6 +15554,56 @@ if (inShard('contest')) {
 }
 
 // --- R64: being away was strictly profitable -------------------------------
+if (inShard('shares')) {
+// R168 — THE SHARE RULE, ON SYNTHETIC TIMINGS.
+  //
+  //    `npm test` is the only thing that runs the share check for real, and
+  //    the battery cannot afford a five-minute suite per break — so the rule
+  //    is a pure function and this is where it is proved. R50's shape: a rule
+  //    no break can reach is a rule nobody notices stop working.
+  {
+    const { shareProblems, SHARE, SHARE_BAND } = await import('./shares.js');
+    // Read from the source, not imported: tools/suite.js spawns the whole
+    // suite the moment anything imports it.
+    const JOB_NAMES = [...readFileSync(join(root, 'tools/suite.js'), 'utf8')
+      .matchAll(/\{ name: '([^']+)'/g)].map((m) => m[1]);
+    assert.ok(JOB_NAMES.length >= 8, `the suite's job list is readable (${JOB_NAMES.length})`);
+    // Declared shares have to be a plausible whole: they are percentages of
+    // one run, so they cannot sum past 100, and if they sum far under it the
+    // table has stopped describing the suite.
+    const declared = Object.values(SHARE).reduce((a, b) => a + b, 0);
+    assert.ok(declared > 90 && declared <= 100,
+      `the declared shares describe one whole suite (${declared.toFixed(1)}%)`);
+    for (const name of Object.keys(SHARE)) {
+      assert.ok(JOB_NAMES.includes(name), `${name} is a job the suite actually runs`);
+    }
+
+    // A run at exactly the declared shares is clean...
+    const total = 1000;
+    const perfect = Object.entries(SHARE).map(([name, pct]) => ({ name, ms: total * pct / 100 }));
+    assert.deepEqual(shareProblems(perfect), [], 'a suite at its declared shares has nothing to say');
+
+    // ...and one job growing past the band is not. Grown by half again, which
+    // is the shape of a real regression: one job dearer, the rest unchanged.
+    const skewed = perfect.map((j) => (j.name === 'smoke:a' ? { ...j, ms: j.ms * 1.5 } : j));
+    const off = shareProblems(skewed);
+    assert.equal(off.length, 1, `one job over the band is named once (${off.join('; ')})`);
+    assert.ok(off[0].startsWith('smoke:a'), `and it is the one that grew (${off[0]})`);
+
+    // THE BOX CANNOT TRIP IT. Every job slowed by 29% — the exact drift R168
+    // measured — is the same suite on a worse afternoon, and says nothing.
+    const slow = perfect.map((j) => ({ ...j, ms: j.ms * 1.29 }));
+    assert.deepEqual(shareProblems(slow), [],
+      'a box 29% slower moves every share by nothing, which is the whole point');
+
+    // And the band is a band, not a rounding error.
+    assert.ok(SHARE_BAND >= 4 && SHARE_BAND <= 10,
+      `the share band is wide enough for noise and tight enough to catch a third (${SHARE_BAND}pp)`);
+    console.log(`   R168 shares: ${Object.keys(SHARE).length} jobs declared, ${declared.toFixed(1)}% of the suite, `
+      + `${SHARE_BAND}pp band — a 29% slower box moves none of them`);
+  }
+}
+
 if (inShard('away')) {
   const { tickWorld, elapsedSince, worldSnapshot, changesBetween } = await import('../campaign/world.js');
   const { tickContests, contestTuning } = await import('../campaign/contest.js');

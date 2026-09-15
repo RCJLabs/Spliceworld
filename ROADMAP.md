@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**17 entries queued.** R94, R100, R102, R105, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R168, R169.
+**16 entries queued.** R94, R100, R102, R105, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R169.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -5101,39 +5101,125 @@ triangle working, and each region genuinely asks a different question)*.
   910 on a quiet machine against a 1000 budget; and the verdict held across a
   run whose wall-clock was 78% longer, which is a harder test than an hour.
 
-- **R168 — The suite is 29% over budget on `main`, and nothing explains it.**
-  R160 closed this lineage with "there was no box drift, there was a walk
-  cache," and set `CPU_BUDGET_S` at **820** against a measured warm run of
-  **728**. Today, warm, on an idle four-core box, the *shipped* tree reads
-  **1054** and R104's branch reads **1031** — an A/B run ten minutes apart,
-  each alone, neither rebuilding a walk. So the budget is red on `main`, and
-  it is red for something no instrument in this section can see:
+- **R168 — The suite is 29% over budget on `main`.** ✅ *Shipped — it was the
+  weather, four-fifths of it, and R160's closing claim was too strong.*
 
-  | suspect | ruled out by |
-  | --- | --- |
-  | the milestone's code | branch **1031** vs `main` **1054** — the newer tree is cheaper |
-  | the walk cache (R160's answer) | 13 walks ready, 0 rebuilt, and a cached 180-day walk returns in **2–26 ms** |
-  | the disk (a cache that cannot be written) | **27 GB** free; the cache is 158 MB across 972 files |
-  | the box's integer throughput (R151's instrument) | the deleted fixed-hash probe reads **91.2 ms** against R160's **95.0 ms** — *faster* |
-  | contention | `effective lanes 3.8` of 4, load 0.59, no other process on the box |
+  #### The A/B this entry's own Done-when asked for
 
-  One shard alone tells the same story and rules out the lane count with it:
-  `smoke:b` reads **153.7s** wall on `main` today against the **124.6s** this
-  section records for the same job. Nothing in the suite's own reporting
-  distinguishes "the work grew" from "the cycles got dearer", which is exactly
-  the question R151, R156, R158 and R160 each answered differently.
+  R160's tree, checked out fresh, byte-identical, run warm on a later box:
 
-  The likeliest untested explanation is the dullest one: **twelve milestones
-  have shipped since R160 set the number**, each adding assertions to a smoke
-  that has never been re-baselined. If that is it, the budget is working
-  correctly and is simply out of date — but *nobody has measured it*, and
-  raising a budget on a guess is how the gate stops meaning anything. Note
-  that the 728 and 910 readings in this section were taken on other days, so
-  a same-box comparison against an old commit is the only honest instrument
-  left. *Done when: the suite's cost is attributed — a commit range, a
-  per-job delta, or a host effect demonstrated by re-running an old commit on
-  today's box — and `CPU_BUDGET_S` is either justified where it stands or
-  moved for a stated, measured reason.*
+  | | CPU-seconds |
+  | --- | ---: |
+  | R160's tree, when R160 measured it | **728** |
+  | R160's tree, **today** | **941** |
+  | today's tree, fifteen milestones on | **998** |
+
+  **728 × 1.29 × 1.06 = 995**, against 998 measured. The arithmetic closes:
+  **+29% host, +6% code.** The gate had been red on `main` since R104 for a
+  reason that was never in the repository.
+
+  R160 closed this lineage with *"there was no box drift, there was a walk
+  cache."* That was right about the 728-to-929 swing it investigated — the
+  cache explains that one completely — and wrong as a general claim. R151,
+  which R160 overturned, was right that the host moves. Both were half right,
+  and neither had run the one experiment that separates them.
+
+  #### The unit has a limit, and it is written down now
+
+  R151 proved CPU-seconds flat against **contention** — 910 / 921 / 946 across
+  an idle box, four spinning burners and a full battery — and that evidence is
+  still good. What nobody tested is throughput over **days**, which moves 29%.
+  A budget in seconds cannot be both tight and honest while that is true.
+
+  `CPU_BUDGET_S` **820 → 1150**: the slowest honest reading (998) plus 15%. It
+  will not catch a 13% regression and its comment says so. Its remaining job
+  is the gross one — a suite that has doubled, or a cache that has stopped
+  being written.
+
+  #### And a rule the box cannot move: each job's share
+
+  If every job slows by 29%, every **share** is unchanged. A job that grows
+  relative to its peers is code. Measured across three warm runs spanning
+  fifteen milestones and that 29% swing:
+
+  | | R160's tree | today | shift |
+  | --- | ---: | ---: | ---: |
+  | smoke:a | 23.9% | 27.2% | **+3.3pp** |
+  | smoke:c | 24.2% | 21.6% | −2.7pp |
+  | smoke:d | 20.5% | 20.6% | +0.1pp |
+  | smoke:b | 18.8% | 18.9% | +0.2pp |
+  | handlers | 5.5% | 4.7% | −0.7pp |
+  | walks | 4.4% | 4.1% | −0.3pp |
+  | vault | 2.4% | 2.7% | +0.2pp |
+
+  The largest movement is **explained** — R104 put a fifth campaign in shard
+  a. The largest unexplained is 3.1pp of run-to-run noise. The band is **6pp**,
+  about twice either, which catches a job growing by roughly a third relative
+  to the rest.
+
+  **Warm runs only, and that is measured rather than cautious:** a cold run
+  pays its walk rebuilds inside the `walks` job, which takes it from 4.1% to
+  **15.2%** and deflates every other share to match. Cold shares describe the
+  cache, not the code.
+
+  #### The rule caught its own author first
+
+  The first draft of the share table was rounded to whole percent and summed
+  to **101%**. Shares of one run cannot. The assertion written thirty seconds
+  earlier caught it, and the table is written to one decimal now because these
+  are readings rather than roundings.
+
+  The rule lives in **`tools/shares.js`** rather than in `suite.js`, because
+  `suite.js` spawns the whole suite the moment anything imports it — and the
+  battery cannot afford a five-minute `npm test` per break. As a pure function
+  on synthetic timings it is asserted in smoke and broken by 295 and 296.
+
+  #### And the failure message says how to tell
+
+  This gate sat red for four milestones because a number on its own answers
+  neither question. It now prints the A/B recipe — worktree an older commit,
+  run it twice, compare — which is what settled it here in twenty minutes.
+
+  #### And raising it blinded a break, which the battery caught
+
+  The full battery came back **290 breaks, 289 caught, 1 MISSED** — and the
+  missed one was this milestone's doing. **Break 240** flips the walk cache's
+  read condition and leaves the write, so every job recomputes a walk another
+  job already did, and the gate that caught it was the seconds budget, by the
+  ~200 CPU-seconds it costs. Raising that budget for the host drift went blind
+  to a defect that has nothing to do with the host. The share rule could not
+  cover it either: the rebuild cost spreads across every job proportionally,
+  so no share moves.
+
+  That is the whole argument for the full battery as the trigger on a
+  gate-logic change, and it is the second time in this milestone that
+  loosening one rule turned out to tighten nothing.
+
+  So the defect is measured directly, and in no units: **`walkedSave` logs
+  each walk it actually computes, and the suite fails if any campaign is
+  computed twice in one run.** A cold run computes each once, a warm run
+  computes none; only a cache written but never read repeats itself. It works
+  cold *or* warm — which matters, because the break edits `fixtures.js` and so
+  starts every run of itself with a fresh cache stamp. An mtime rule guarded
+  on "started warm" would have stayed blind for exactly that reason, which is
+  how it was written first.
+
+  `primeWalkCache` now skips when the file is already there. It wrote
+  unconditionally, making *"a warm run recomputes nothing"* untrue by one file
+  every run — an exception the rule would have had to carve out and explain
+  forever. Better to make the invariant true.
+
+  **The lesson:** *a budget denominated in a unit the host can move is a
+  budget that will eventually measure the host. The fix is not a better unit,
+  it is a second rule with no units at all — and when you loosen the old one,
+  the full battery is how you find out what it was quietly carrying.*
+
+  *Done when: the suite's cost is attributed — a commit range, a per-job
+  delta, or a host effect demonstrated by re-running an old commit on today's
+  box — and `CPU_BUDGET_S` is either justified where it stands or moved for a
+  stated, measured reason.* All three forms of attribution, and the budget
+  moved with its reason and its new limits stated. `npm test` is green for the
+  first time since R104, and breaks 240, 295 and 296 all go red on demand.
 
 - **R169 — The exemption bill has a 4.2 KB line on it.** `FIRST_PAINT_KB` has
   gone **1029 → 1033 → 1034** across R96, R104 and R107, and the last of those
