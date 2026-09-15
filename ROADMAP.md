@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**16 entries queued.** R94, R100, R102, R105, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R169.
+**15 entries queued.** R94, R100, R102, R105, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -5221,26 +5221,131 @@ triangle working, and each region genuinely asks a different question)*.
   moved with its reason and its new limits stated. `npm test` is green for the
   first time since R104, and breaks 240, 295 and 296 all go red on demand.
 
-- **R169 — The exemption bill has a 4.2 KB line on it.** `FIRST_PAINT_KB` has
-  gone **1029 → 1033 → 1034** across R96, R104 and R107, and the last of those
-  only fit by consolidating a feature behind one lazy import and then trimming
-  prose to buy the final fraction. The baseline went red once at **1034
-  against 1034**, which is a gate failing on a slow afternoon rather than on a
-  regression. There is nothing left to trim.
-  What there *is*: `tools/boot.js`'s exemption list, **11.0 KB across four
-  modules that run nothing on either first paint**, and R153's note on it
-  reads *"an exemption is a place a cost goes to stop being questioned; this
-  list should be read as a bill, not a settled account."* The largest line is
-  **`campaign/monologue.js`, 4.2 KB**, eager only because `campaign/wire.js`
-  imports `fill`/`philosophyOf` and `campaign/world.js` imports the wire —
-  R153's exact shape, which took `campaign/director.js` (11.9 KB) out by
-  moving seven lines that read nothing from it. The other three are
-  `battle/moves.js` (4.8 KB, read by `statblock.js`), `ui/theme.js` (1.1 KB)
-  and `splice/grades.js` (1.0 KB), and each deserves the same question.
+- **R169 — The exemption bill has a 4.2 KB line on it.** ✅ *Shipped. The
+  line was half that size, and the biggest line on the bill was never on it.*
+
+  #### What the entry asked for, and what measuring it said
+
+  Three claims, checked before anything was built.
+
+  | the entry said | measured |
+  | --- | --- |
+  | `monologue.js` is eager "only because `wire.js` imports it" | **four** eager modules import it: `wire.js`, `campaign.js`, `rehab.js`, `rivals.js` |
+  | that line is worth 4.2 KB | **1.3 KB.** Moving code between two eager modules saves nothing |
+  | the bill is 11.0 KB across four modules | true, and it is **6%** of the real number |
+
+  The first two follow from each other. `fill`, `playerLine`, `rivalLine` and
+  `DEFAULT_PHILOSOPHY` are read on the synchronous battle-resolution path by
+  four modules boot runs, so there is nowhere eager to move them TO. What can
+  leave is the other half — the name roll, the philosophy menu and
+  `duelBarks`, whose only caller in the game is `campaign/ui.js`, lazy since
+  R74. That is `campaign/identity.js`, and `monologue.js` goes **4.1 → 2.8 KB**.
+
+  #### The bill counts modules. Nobody was counting bytes.
+
+  `RUNS_NOTHING_BUT_BELONGS` excuses a module that runs **no** function during
+  boot. R167 made its weight print on every run so it would read as a bill
+  rather than a settled account. Both are module-level, and that is the blind
+  spot: **a module where boot calls ONE function passes R121's rule outright,
+  whatever else it is carrying.**
+
+  Asked per function instead — every top-level function in the eager graph
+  that no boot ever calls, summed over both first paints — the answer was
+  **174.2 KB of 559.4**. Thirty-one percent of the JS a player waits on, against
+  an 11.0 KB bill. The three worst offenders were never on the list, because
+  none of them was idle:
+
+  | | eager | what boot actually calls |
+  | --- | ---: | --- |
+  | `splice/theater.js` | 19.5 KB | `isSettled`, **73 bytes** |
+  | `battle/statblock.js` | 17.4 KB | `isInjured` + `fitToFight`, **195 bytes** |
+  | `campaign/rivals.js` | 22.2 KB | four functions, **1.3 KB** |
+
+  #### The Theater leaves, the statblock stays, and the difference is the rule
+
+  Six eager modules imported `splice/theater.js` and between them wanted three
+  things: `isSettled` (four of them), the `TRAINING` constant (the agenda) and
+  `renameCreature` (the Ranch). None is about MAKING a creature, which is what
+  the other 19.5 KB does. They are **`splice/chimera.js`** (2.7 KB) now and the
+  Theater is lazy — R153's move exactly, the one that took `campaign/director.js`
+  out by relocating seven lines that read nothing from it.
+
+  Deliberately **no re-export** from `theater.js`. A re-export is an import
+  path, and an import path back into the Theater is how 19.5 KB walks into the
+  first paint again without anybody deciding to let it.
+
+  `battle/statblock.js` cannot follow, and the reason is the honest one:
+  `campaign.js` wants `applyInjury` and `finishBattle`, `rivals.js` and
+  `rehab.js` want `unitFromGenome`. Deferring those makes `resolveBattle`
+  async, and CLAUDE.md's rule is that the balance harness flies the same
+  battle code the browser does, DOM-free and without a build step. 17.4 KB is
+  not worth that trade. Written down rather than rediscovered.
+
+  #### The numbers
+
+  | | before | after |
+  | --- | ---: | ---: |
+  | first paint | 1034 KB | **1016 KB** |
+  | `FIRST_PAINT_KB` | 1034 | **1034, unmoved** |
+  | eager JS | 559.4 KB | **541.3 KB** |
+  | `KB_CAP` | 560 | **543** |
+  | functions no boot calls | 174.2 KB | **160.3 KB**, budgeted at 170 |
+  | the exemption bill | 11.0 KB | **9.8 KB** |
+
+  Every line of the bill is now paid or re-justified **by name**, in
+  `tools/boot.js`: `ui/theme.js` and `splice/grades.js` are constants read on
+  the first frame with no function to defer; `battle/moves.js` is the
+  `resolveBattle` trade above and its note was understated (statblock reads
+  five symbols from it, not two); `monologue.js` is paid in half.
+
+  #### One budget keeps its slack and two do not, on purpose
+
+  `FIRST_PAINT_KB` does **not** come down to sit on 1016. Every milestone
+  before this either raised it or trimmed it to just above the measurement,
+  and the entry's own evidence is why that stops here: the baseline went red
+  once at **1034 against 1034**, which is a gate failing on a slow afternoon
+  rather than on a regression. Eighteen kilobytes of slack is the deliverable.
+
+  `KB_CAP` and `DEAD_AT_BOOT_KB` stay tight against theirs, and the difference
+  is not a mood. `KB_CAP` is a static walk of file sizes on disk and the dead-
+  byte walk read **160.3 KB three times to the byte** — both boots are seeded
+  and the second loads a fixed fixture. A deterministic budget has no
+  afternoon to have; `transferSize` out of a real browser does.
+
+  #### The break I deleted
+
+  Three breaks were written. **297** runs the whole milestone backwards — point
+  one eager reader back at the Theater and 13.4 KB of uncalled functions come
+  with it, while R121's module rule stays green throughout, which is the blind
+  spot proved. **299** takes away the union of the two first paints, so
+  `splice/extract.js`, which runs ten of fourteen functions drawing a herd and
+  none at all for a player with none, reads dead.
+
+  The third dropped the nesting filter, on the assumption that counting inner
+  functions on top of their outer ones would blow the budget. It **MISSED**:
+  160.3 → 163.8, because V8 reports no coverage at all for functions inside a
+  function nobody called, so the filter only removes dead helpers sitting
+  inside LIVE ones. 3.5 KB is below what a budget sized for module-scale
+  events can see. It was deleted, with the measurement written where the
+  filter is — **tightening the budget until my own break fired would have been
+  tuning the gate to its test.**
+
+  `wire.js` imported `philosophyOf` and never used it. Dropped.
+
+  **The lesson:** *a bill that counts whole modules will always be smaller than
+  the debt, because the cheapest way to stop being on it is to run one
+  function. R121 asked "does booting RUN this module" and got a real answer for
+  seven modules; the same question asked per FUNCTION found sixteen times more.
+  When a rule stops catching things, suspect its denominator before its
+  threshold.*
+
   *Done when: the eager graph has at least 8 KB of headroom under
   `FIRST_PAINT_KB` without the cap moving up to make it, every remaining
   exemption states what boot reads from it, and the entry says which lines of
-  the bill were paid and which were re-justified.*
+  the bill were paid and which were re-justified.* **18 KB of headroom** with
+  the cap unmoved, all four exemptions named above, and the paid/re-justified
+  split is the table in `tools/boot.js`.
+
 
 ### 9.27 The verb that could not level anything (R138) — seventh audit
 
