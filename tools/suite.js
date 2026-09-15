@@ -431,10 +431,11 @@ if (!only) {
   const problem = battleProblem(byJob);
   if (problem) {
     console.error(`\nsuite \u2717  every job passed, but ${problem}`);
-    console.error('   Battles are host-invariant: a slow box flies exactly as many as a fast one.');
-    console.error('   So this is SAMPLING, which is the way this suite gets expensive without');
-    console.error('   anything looking wrong — a bigger sample makes every gate more right.');
-    console.error('   Raise BATTLE_BUDGET in tools/shares.js with what the extra fights bought.');
+    console.error('   Battles are host-invariant: a slow box flies exactly as many as a fast one,');
+    console.error('   so neither direction here is the machine. Over the budget is SAMPLING, which is');
+    console.error('   how this suite gets expensive without anything looking wrong. Under the floor is');
+    console.error('   the COUNTER, not the suite: a job that flew fights and never wrote them down.');
+    console.error('   The budget, the floor and the reasoning are in tools/shares.js.');
     process.exit(1);
   }
 }

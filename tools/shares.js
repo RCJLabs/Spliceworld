@@ -108,12 +108,32 @@ export function shareProblems(jobs, want = SHARE, band = SHARE_BAND) {
 // for sampling, which moves in multiples and would blow this by 100% or more.
 export const BATTLE_BUDGET = 940_000;
 
-export function battleProblem(byJob, budget = BATTLE_BUDGET) {
+// AND A FLOOR, which matters more than the ceiling and exists because R170
+// shipped the defect it catches. `tools/pool.js` ends the balance sweep with
+// `w.terminate()`, and a terminated worker thread runs no exit handler — so
+// the sweep, 404,736 of the suite's 855,308 fights, wrote nothing to the log
+// and the count read the same with break 262 applied as without it.
+//
+// A ceiling cannot see that. A counter going blind makes its number FALL, and
+// a falling number under a ceiling is indistinguishable from good news. This
+// is the same failure R168's share rule had and R170's first draft repeated:
+// a rule that can only ever pass. 770,000 is 855,308 minus 10%; losing the
+// sweep alone reads 450,572, less than half the floor.
+export const BATTLE_FLOOR = 770_000;
+
+export function battleProblem(byJob, budget = BATTLE_BUDGET, floor = BATTLE_FLOOR) {
   const counted = [...byJob].filter(([name]) => name !== 'walks');
   const total = counted.reduce((a, [, n]) => a + n, 0);
-  if (total <= budget) return null;
-  const worst = counted.sort((a, b) => b[1] - a[1]).slice(0, 3)
+  const worst = () => counted.slice().sort((a, b) => b[1] - a[1]).slice(0, 3)
     .map(([name, n]) => `${name} ${n.toLocaleString('en-US')}`).join(', ');
-  return `the suite flies ${total.toLocaleString('en-US')} battles, over the budget of `
-    + `${budget.toLocaleString('en-US')} (worst: ${worst})`;
+  if (total > budget) {
+    return `the suite flies ${total.toLocaleString('en-US')} battles, over the budget of `
+      + `${budget.toLocaleString('en-US')} (worst: ${worst()})`;
+  }
+  if (total < floor) {
+    return `the suite recorded only ${total.toLocaleString('en-US')} battles, under the floor of `
+      + `${floor.toLocaleString('en-US')} — work has gone MISSING from the count, not from the `
+      + `suite (got: ${worst() || 'nothing'})`;
+  }
+  return null;
 }
