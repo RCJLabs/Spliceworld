@@ -268,7 +268,21 @@ if (failed.length) {
 // tight only because the variance it used to hide behind turned out to have
 // a name. `tools/probe.js` is deleted: it is the instrument that read 95ms
 // through a 728-to-929 swing.
-const CPU_BUDGET_S = 820;
+// R168 — 820 -> 1150, AND THE UNIT'S LIMIT IS NOW WRITTEN DOWN.
+//
+// R160 set 820 against a measured 728 and closed the lineage with "there was
+// no box drift, there was a walk cache." That was right about the 728-to-929
+// swing it investigated and wrong as a general claim. R168 ran R160's OWN
+// TREE on a later box, byte-identical, warm: 941. The host moved 29% in three
+// days, and R151 — which R160 overturned — was right that it does.
+//
+// 1150 is the slowest honest reading (998, today, every job passing) plus
+// 15%. It will NOT catch a 13% regression; nothing denominated in seconds can
+// while the host does this. That work now belongs to the share rule below,
+// which is invariant to the box by construction. This number's remaining job
+// is the gross one: a suite that has doubled, or a cache that has stopped
+// being written.
+const CPU_BUDGET_S = 1150;
 // Measured twice, two ways: 15.4s from this suite's own cold-minus-warm
 // delta over 13 walks, and 16.4s for one walk timed alone twenty times. 16
 // is the middle of the two, not a cushion.
@@ -316,7 +330,70 @@ if (!only && cpu > budget) {
   console.error(`\nsuite \u2717  every job passed, but the suite costs ${cpu.toFixed(0)} CPU-seconds, over the ${budget}s budget`);
   console.error(`   (${CPU_BUDGET_S} base + ${WALK_REBUILD_S * rebuilt} for rebuilt walks \u2014 ${cacheLine}.`);
   console.error(`    This run: ${(wall / 1000).toFixed(1)}s wall on ${laneCount} lanes, ${lanesGot} effective, sum-of-wall ${work}s.)`);
+  // R168 — SAY HOW TO TELL WHETHER IT IS YOU OR THE BOX. This gate was red on
+  // `main` for four milestones because the number on its own answers neither
+  // question. The A/B below settled it in twenty minutes.
+  console.error('\n   Whether this is your code or the machine takes one A/B, same box, same hour:');
+  console.error('     git worktree add /tmp/ref <a commit from before the change> --detach');
+  console.error('     ( cd /tmp/ref && node tools/suite.js )   # twice; the second is warm');
+  console.error('   If the old tree is also over, the host has moved and the share rule below is');
+  console.error('   the one to trust. If it is not, the cost is yours and the per-job times say where.');
   process.exit(1);
+}
+// R168 — AND THE RULE THAT DOES NOT MOVE WITH THE BOX: EACH JOB'S SHARE.
+//
+// R151 chose CPU-seconds because they are flat against CONTENTION, and they
+// are: 910 / 921 / 946 across an idle box, four burners and a battery. What
+// nobody tested is the host's throughput over DAYS, and R168 did:
+//
+//   R160's tree, when R160 measured it      728
+//   R160's tree, today, byte-identical      941      +29%, all host
+//   today's tree                            998      +6% on top, real growth
+//
+// 728 x 1.29 x 1.06 = 995. The arithmetic closes, and the overrun that has
+// failed this gate since R104 is four-fifths weather.
+//
+// So the CPU budget cannot be tight AND honest at the same time, and a gate
+// nobody can pass on a bad afternoon is a gate that gets raised until it
+// means nothing (R151's own words). It keeps its job — catching a GROSS
+// regression — and hands the precise work to this rule, which is immune to
+// the box by construction: if every job slows by 29%, every SHARE is
+// unchanged. A job that grows relative to its peers is code.
+//
+// MEASURED, three warm runs spanning fifteen milestones and that 29% swing:
+// the largest share movement is 3.4pp (smoke:a, and it is EXPLAINED — R104
+// put a fifth campaign in that shard), and the largest unexplained is 3.1pp
+// of run-to-run noise on smoke:c. The band is 6pp, about twice the explained
+// movement and twice the noise, which catches a job growing by roughly a
+// third relative to the rest.
+const SHARE = {
+  'smoke:a': 27, 'smoke:b': 19, 'smoke:c': 22, 'smoke:d': 21,
+  handlers: 5, walks: 4, vault: 3,
+};
+const SHARE_BAND = 6;
+// WARM RUNS ONLY, and this is measured rather than cautious: a cold run pays
+// for its walk rebuilds inside the `walks` job, which takes that job from
+// 4.1% to 15.2% and deflates every other share to match. On a cold run the
+// shares describe the cache, not the code.
+if (!only && rebuilt === 0) {
+  const total = results.reduce((a, r) => a + r.ms, 0);
+  const off = [];
+  for (const r of results) {
+    const want = SHARE[r.name];
+    if (want == null || !total) continue;
+    const got = (r.ms / total) * 100;
+    if (Math.abs(got - want) > SHARE_BAND) {
+      off.push(`${r.name} is ${got.toFixed(1)}% of the suite, declared ${want}%`);
+    }
+  }
+  if (off.length) {
+    console.error(`\nsuite ✗  a job's share of the suite moved past ${SHARE_BAND}pp, which the box cannot explain`);
+    for (const line of off) console.error(`   · ${line}`);
+    console.error('   Shares are host-invariant: if the machine were slow, every share would be unchanged.');
+    console.error('   So this is work that got more expensive relative to the rest. Find it, or re-declare');
+    console.error('   the share in tools/suite.js with what bought it.');
+    process.exit(1);
+  }
 }
 console.log(`\nsuite \u2713  ${results.length} jobs, ${cpu.toFixed(0)} CPU-seconds of ${budget} budgeted`);
 console.log(`   ${(wall / 1000).toFixed(1)}s wall on ${laneCount} lanes (${lanesGot} effective), sum-of-wall ${work}s`);
