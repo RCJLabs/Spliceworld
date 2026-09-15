@@ -45,7 +45,8 @@ import { newGameState } from '../save/save.js';
 import { labCore } from './fixtures.js';
 import { createAnimal } from '../ranch/ranch.js';
 import { spliceChimera } from '../splice/theater.js';
-import { createBattle } from '../battle/engine.js';
+// R170 — counted, not bare. See tools/flown.js.
+import { createBattle } from './flown.js';
 import { recordingRoot, installDom, memoryStorage, fakeEvent, attrsOfFire, dataAttrsIn } from './domstub.js';
 import { moduleFiles } from './scopecheck.js';
 

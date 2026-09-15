@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**16 entries queued.** R94, R100, R102, R105, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R170.
+**15 entries queued.** R94, R100, R102, R105, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -5222,37 +5222,124 @@ triangle working, and each region genuinely asks a different question)*.
   first time since R104, and breaks 240, 295 and 296 all go red on demand.
 
 - **R170 — The suite budget is blind again, and the rule that was meant to
-  cover it cannot run.** R169's full battery returned 292 breaks, 291 caught,
-  **1 MISSED** — break 262, "the balance sweep quadruples its sampling". It is
-  NOT R169's: the same break, run against `main` itself in a worktree at
-  `e3fd32f`, misses identically. Two causes, and the second is the worse one.
+  cover it cannot run.** ✅ *Shipped. The rule had two holes, and the second
+  one meant fixing the first would have changed nothing.*
 
-  **The budget has room for the regression it was written to catch.** Break
-  262's own note records it measuring **1070 against a budget of 820**. R168
-  raised `CPU_BUDGET_S` to **1150** — above the break — and it stayed caught
-  only because R168's box read **998** CPU-seconds, putting the broken run
-  near 1248. Today's box reads **786** for the same suite, so the broken run
-  lands near 1036 and fits. R168's own thesis, firing in the direction R168
-  did not check: the host moved 21% the OTHER way inside two milestones, and a
-  raise sized for a slow afternoon is now a licence.
+  #### The hole everybody could see
 
-  **And R168's box-independent rule can never run under the battery.**
-  `tools/suite.js` guards the share check with `if (!only && rebuilt === 0)`
-  — warm runs only, for the good reason R168 measured (a cold run's rebuilds
-  take `walks` from 4.1% to 15.2% and deflate every other share). But every
-  battery break patches a source file, which changes `sourceStamp()`, which
-  busts the walk cache, which makes `rebuilt > 0`. **So the share rule is
-  skipped for every break in the battery, always.** R168 invoked R50 when it
-  put that rule in its own module — "a rule the battery cannot reach is a rule
-  nobody notices stop working" — and the rule it was protecting is exactly
-  that.
+  R168's share rule is guarded `rebuilt === 0` in `tools/suite.js` — warm runs
+  only. Every break in the battery patches a source file, which changes
+  `sourceStamp()`, which busts the walk cache. **So it was skipped for every
+  break, always.** R168 invoked R50 when it put that rule in its own module so
+  the battery could reach it; the battery could reach it and it never ran.
+
+  That much was in the queued entry. Measuring it first found the rest.
+
+  #### The hole that mattered
+
+  **The share rule could not have caught break 262 even running.** R90 splits
+  the balance sweep round-robin across all four shards, so quadrupling its
+  sampling inflates all four EQUALLY:
+
+  | | declared | with break 262 | Δ |
+  | --- | ---: | ---: | ---: |
+  | smoke:a | 27.2 | 26.4 | 0.8pp |
+  | smoke:b | 18.9 | 20.3 | 1.4pp |
+  | smoke:c | 21.6 | 22.6 | 1.0pp |
+  | smoke:d | 20.6 | 21.7 | 1.1pp |
+
+  Against a 6pp band. **A proportion cannot see a proportional change**, and no
+  band would fix that — tightening it to 1pp would false-red on ordinary noise
+  (R168 measured 3.1pp of it) while still missing a sweep that doubled.
+
+  The clinching evidence came from the new counter. Per-job battle counts are
+  wildly uneven — **269k / 245k / 183k / 156k** — while per-job CPU is nearly
+  level — 202 / 141 / 164 / 155 seconds. **The shards are balanced by cost, not
+  by work.** Any rule denominated in seconds, or in shares of seconds, is
+  structurally unable to see sampling.
+
+  #### What ships: a rule with no seconds and no proportions in it
+
+  `tools/flown.js` wraps `createBattle` and counts the fights the suite asks
+  the engine to fly. `battle/engine.js` is untouched — CLAUDE.md's rule is that
+  the harness flies the same battle code the browser does, so the counting is a
+  wrapper in `tools/`, never a line in `battle/`.
+
+  | | battles | CPU-seconds |
+  | --- | ---: | ---: |
+  | clean | **855,308** | 743 |
+  | break 262 | **2,069,516** | 1084 |
+
+  2.4x the work, fitting comfortably under a seconds budget of 1150.
+  `BATTLE_BUDGET` is 940,000 — the measurement plus 10%, headroom sized for
+  CONTENT (a species adds fights to the benches that iterate the catalogue)
+  rather than for sampling, which moves in multiples.
+
+  **And a floor, which matters more than the ceiling.** See below.
+
+  The share rule keeps its job and runs on **every** run now. The guard is
+  gone; `walks` leaves the table instead, which is where the entire cold-run
+  distortion lives — measured, rebuild cost lands wholly in that job (241.8s
+  cold, 31.0s warm) and the remaining shares agree cold-to-warm within
+  **0.47pp**. Break 301 puts `walks` back and a cold run reads its rebuilds as
+  a 24.9% job declared at 4.1%, which is what makes the exclusion load-bearing
+  rather than tidy.
+
+  #### The defect this milestone shipped, for one measurement
+
+  The first counter read **470,735 battles with break 262 applied and 470,735
+  without**, while CPU went 744 to 1084. `tools/pool.js` ends the balance sweep
+  with `w.terminate()`, and a terminated worker thread runs no exit handler —
+  so the sweep, **404,736 of the suite's 855,308 fights**, wrote nothing at all.
+
+  A ceiling cannot see that. **A counter going blind makes its number FALL, and
+  a falling number under a ceiling is indistinguishable from good news.** That
+  is the identical failure R168's share rule had, reproduced in a brand-new
+  unit inside the milestone written to fix it. Hence `BATTLE_FLOOR` at 770,000,
+  `flushFlown()` called per task by the worker, a suite that fails loudly on a
+  count of zero, and break 300 aimed squarely at it.
+
+  #### `CPU_BUDGET_S` re-derived, and what the number means
+
+  Four warm readings of a comparable tree now exist, and they are readings of
+  the host rather than the code:
+
+  | | CPU-seconds |
+  | --- | ---: |
+  | R160's box, R160's tree | 728 |
+  | R160's tree, on R168's box | 941 |
+  | today's tree, on R168's box | 998 |
+  | today's tree, **today** | **743** |
+
+  **−26% in the two milestones since R168, after +29% in the three days
+  before.** It stays at **1150** — 998 plus 15% — and setting it to 850 for
+  today's box turns the next 998 afternoon red for a reason nobody can name,
+  which is precisely what R104 through R107 already cost.
+
+  So the file now says plainly what it is: **a ceiling over the slowest HOST
+  ever observed, not over the code.** Against today's 743 it carries 55% slack,
+  and that slack is exactly what let break 262 through at 1084. A budget in a
+  unit the host can move cannot be tight and honest at once, and no
+  re-derivation changes that. Its job is gross — a suite that has doubled, a
+  cache that stopped being written — and the precise work belongs to the two
+  rules in `tools/shares.js`.
+
+  **The lesson:** *R168 answered "the host moves" with a rule immune to the
+  host, and that was right. What it did not ask is whether the new rule could
+  see the defect — and a proportion is blind to a proportional change by
+  construction. Every rule should be made to say, in its own comment, what it
+  CANNOT catch; the three in this suite now do. And a rule that can only ever
+  pass is not a rule: gate both directions, or a gate going quiet reads exactly
+  like a gate going green.*
 
   *Done when: break 262 goes red on demand on today's box, and the rule that
   catches it is one the battery can actually reach — either the share check
-  runs for a break (a warm baseline share, a rebuild-adjusted band, or a
-  cheaper invariant), or a new rule with no CPU-seconds in it does the job.
+  runs for a break, or a new rule with no CPU-seconds in it does the job.
   `CPU_BUDGET_S` is re-derived on today's box either way, and the entry says
-  what the number means when the host can move 21% in two milestones.*
+  what the number means when the host can move 21% in two milestones.* Both:
+  the share check runs on every run, and the battle count is what actually
+  catches 262. Breaks 262, 296, 300 and 301 all caught.
+
 
 - **R169 — The exemption bill has a 4.2 KB line on it.** ✅ *Shipped. The
   line was half that size, and the biggest line on the bill was never on it.*

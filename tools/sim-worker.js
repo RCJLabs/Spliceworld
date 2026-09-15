@@ -9,12 +9,16 @@
 // more on structured cloning than the sim saved.
 import { parentPort } from 'node:worker_threads';
 import { loadSimContent, runSim } from './sim.js';
+// R170 — this thread is ended with `terminate()`, so it never gets an exit
+// event to flush on. It flushes per task instead. See tools/flown.js.
+import { flushFlown } from './flown.js';
 
 const content = loadSimContent();
 
 parentPort.on('message', ({ i, task }) => {
   try {
     const { flags, rows } = runSim(content, task);
+    flushFlown();
     parentPort.postMessage({ i, result: { flags, rowCount: rows.length } });
   } catch (err) {
     parentPort.postMessage({ i, error: err?.stack ?? String(err) });

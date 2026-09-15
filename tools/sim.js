@@ -18,7 +18,9 @@ import { activeRaid, raidEncounter } from '../campaign/taskforce.js';
 import { gauntletState, gauntletEncounter } from '../campaign/gauntlet.js';
 import { treatInjury, treatmentCost } from '../splice/scars.js';
 import { analyze } from '../splice/physiology.js';
-import { createBattle, step, playerActions, playerActive, TURN_LIMIT } from '../battle/engine.js';
+import { step, playerActions, playerActive, TURN_LIMIT } from '../battle/engine.js';
+// R170 — counted, not bare. See tools/flown.js.
+import { createBattle } from './flown.js';
 import { movesFromTokens } from '../battle/statblock.js';
 import { knownMoves } from '../battle/moves.js';
 import { rivalEncounter, rivalList, rivalStatus } from '../campaign/rivals.js';

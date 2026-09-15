@@ -3114,8 +3114,8 @@ const BREAKS = [
     // run, when the first draft of the table was rounded to whole percent.
     n: 296, gate: TURNS, name: 'the declared shares stop adding up to one suite',
     file: 'tools/shares.js',
-    anchor: "  'smoke:a': 27.2,",
-    to: "  'smoke:a': 57.2,",
+    anchor: "  'smoke:a': 28.3,",
+    to: "  'smoke:a': 58.3,",
   },
 
   // R169 — the first paint carries functions no boot calls. Three breaks:
@@ -3137,6 +3137,34 @@ const BREAKS = [
     anchor: "import { isSettled } from '../splice/chimera.js';",
     to: "import { isSettled } from '../splice/theater.js';",
   },
+  // R170 — the suite's two host-invariant rules, and both breaks aim at a
+  // defect that actually happened rather than one imagined for the occasion.
+  {
+    // THE ONE R170 SHIPPED. `tools/pool.js` ends the balance sweep with
+    // `w.terminate()`, which runs no exit handler, so the worker flushes its
+    // count per task instead. Take that away and the sweep — 404,736 of the
+    // suite's 855,308 fights — writes nothing, and the count reads 450,572
+    // with break 262 applied exactly as it does without it. Caught by the
+    // FLOOR, because a blind counter's number falls, and no ceiling has ever
+    // been able to see that.
+    n: 300, gate: SUITE, name: 'the balance sweep stops writing down the fights it flew, and the count reads clean',
+    file: 'tools/sim-worker.js',
+    anchor: '    flushFlown();',
+    to: '    void flushFlown;',
+  },
+  {
+    // R170 lifted the share rule's `rebuilt === 0` guard — which had kept it
+    // from ever running under the battery — by taking `walks` out of the
+    // table instead, since that is where the whole cold-run distortion lives.
+    // Put `walks` back and the exclusion stops being load-bearing: on the
+    // cold run every break gets, rebuilds take that job to 24.9% of a suite
+    // where it is declared at 4.1%.
+    n: 301, gate: SUITE, name: 'the walks job rejoins the share table, and a cold run reads its cache as a regression',
+    file: 'tools/shares.js',
+    anchor: "  handlers: 5.2, vault: 2.8, scopecheck: 0.2,",
+    to: "  handlers: 5.2, vault: 2.8, scopecheck: 0.2, walks: 4.1,",
+  },
+
   // A THIRD BREAK WAS WRITTEN HERE AND DELETED, which is worth a sentence.
   // It dropped the nesting filter in the dead-byte walk, on the assumption
   // that counting every inner function on top of the outer one that

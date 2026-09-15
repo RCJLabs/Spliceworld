@@ -1,5 +1,78 @@
 # PROGRESS
 
+## Session 180 — R170: a proportion cannot see a proportional change ✅
+
+**ROADMAP §9.28.** The queued entry said R168's share rule was unreachable.
+It was, and fixing that would have changed nothing.
+
+### Two holes, and the second one is the milestone
+
+**Unreachable.** Guarded `rebuilt === 0`, warm runs only; every battery break
+patches a source file and busts the walk cache, so it was skipped for every
+break, always.
+
+**Blind anyway.** R90 splits the balance sweep round-robin across all four
+shards, so break 262's 4x sampling inflates all four EQUALLY — worst share
+movement **1.4pp against a 6pp band**. No band fixes that.
+
+The new counter clinched it: per-job battles are **269k / 245k / 183k / 156k**
+while per-job CPU is **202 / 141 / 164 / 155s**. The shards are balanced by
+COST, not by WORK, so anything denominated in seconds or shares of seconds is
+structurally blind to sampling.
+
+### What ships
+
+- **`tools/flown.js`** wraps `createBattle` and counts the fights the suite
+  flies. `battle/engine.js` untouched — the wrapper is in `tools/`.
+- **`BATTLE_BUDGET` 940,000** and **`BATTLE_FLOOR` 770,000**, over the
+  non-walks jobs.
+- **The share rule runs on every run.** Guard gone; `walks` leaves the table
+  instead, where the cold distortion actually lives (0.47pp across the rest).
+- **`CPU_BUDGET_S` stays 1150**, re-derived, with the file finally saying what
+  it is: a ceiling over the slowest HOST, not the code.
+
+| | battles | CPU-seconds |
+| --- | ---: | ---: |
+| clean | 855,308 | 743 |
+| break 262 | 2,069,516 | 1084 |
+
+### The defect I shipped, for one measurement
+
+The first counter read **470,735 with break 262 applied and 470,735 without**,
+while CPU went 744 to 1084. `tools/pool.js` ends the sweep with
+`w.terminate()`; a terminated worker runs no exit handler, so the sweep —
+404,736 of 855,308 fights — wrote nothing.
+
+A ceiling cannot see that: **a blind counter's number FALLS, and a falling
+number under a ceiling looks like good news.** The same failure R168 had,
+reproduced in a new unit inside the milestone written to fix it. Hence the
+floor, the per-task flush, a suite that fails on a count of zero, and break
+300.
+
+### Host drift, four readings
+
+| | CPU-seconds |
+| --- | ---: |
+| R160's box, R160's tree | 728 |
+| R160's tree, R168's box | 941 |
+| today's tree, R168's box | 998 |
+| today's tree, **today** | **743** |
+
+−26% in two milestones, after +29% in three days.
+
+### Known issues
+
+- `CPU_BUDGET_S` carries 55% slack against today and cannot be tightened
+  without false-redding the next slow afternoon. That is now stated in the
+  file rather than rediscovered.
+- `BATTLE_BUDGET`'s 10% headroom is for content growth. A milestone adding a
+  lot of catalogue will need to raise it and say what the fights bought.
+
+### Next session's first task
+
+Pick from the 15-entry queue in §9.0 — R94 (notoriety is a number that goes
+up) is the oldest open entry.
+
 ## Session 179 — R169: the bill was counting the wrong unit ✅
 
 **ROADMAP §9.28.** The entry pointed at `campaign/monologue.js`, 4.2 KB, as the
