@@ -40,7 +40,7 @@
 
 import { rngStream, pick } from '../util/rng.js';
 import { analyze } from '../splice/physiology.js';
-import { isSettled } from '../splice/theater.js';
+import { isSettled } from '../splice/chimera.js';
 import { createAnimal } from '../ranch/ranch.js';
 import { infirmaryGrants } from '../splice/facility.js';
 import { applyInjury } from '../battle/statblock.js';

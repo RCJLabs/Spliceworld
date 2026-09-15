@@ -22,7 +22,7 @@ import { analyze } from '../splice/physiology.js';
 import { GRADE_INDEX, gradeIndexOf } from '../splice/extract.js';
 import { classOf } from '../data/catalog.js';
 import { MOVE_SLOTS, activeMoves, defaultPick, partMoveId, comboMoveId } from './moves.js';
-import { isSettled } from '../splice/theater.js';
+import { isSettled } from '../splice/chimera.js';
 import { rngStream, pick } from '../util/rng.js';
 import { grantBattleXp } from './veterancy.js';
 import { driftFromBattle } from '../splice/temperament.js';

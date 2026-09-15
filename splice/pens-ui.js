@@ -5,10 +5,8 @@
 import { creaturePortrait } from '../render/renderer.js';
 import { moodOf } from '../render/mood.js';
 import { gradeOf, salvagePreview, extractChimera } from './extract.js';
-import {
-  chimeraGenome, isSettled, settleRemainingMs, trainChimera, TRAINING,
-  setMoveset, moveTrainingReady,
-} from './theater.js';
+import { chimeraGenome, trainChimera, setMoveset, moveTrainingReady } from './theater.js';
+import { isSettled, settleRemainingMs, TRAINING } from './chimera.js';
 import { MOVE_SLOTS, activeMoves, knownMoves } from '../battle/moves.js';
 import { moveSummary, moveDetail } from '../battle/move-text.js';
 import { toggleRow } from '../ui/picker.js';
@@ -17,7 +15,7 @@ import { analyze } from './physiology.js';
 import { dossierRows, dossierSummary } from './dossier.js';
 import { tierOf } from './tier.js';
 import { xpProgress, maxLevel } from '../battle/veterancy.js';
-import { renameCreature } from './theater.js';
+import { renameCreature } from './chimera.js';
 import { frameOf, classOf } from '../data/catalog.js';
 
 // Everything this genome grants, which is what the four slots are chosen

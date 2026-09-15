@@ -1,5 +1,139 @@
 # PROGRESS
 
+## Session 179 — R169: the bill was counting the wrong unit ✅
+
+**ROADMAP §9.28.** The entry pointed at `campaign/monologue.js`, 4.2 KB, as the
+largest line on `tools/boot.js`'s exemption bill. Measuring it first was the
+whole milestone.
+
+### Three claims, checked before building
+
+| the entry said | measured |
+| --- | --- |
+| `monologue.js` is eager "only because `wire.js` imports it" | **four** eager modules import it |
+| that line is worth 4.2 KB | **1.3 KB** — moving code between two eager modules saves nothing |
+| the bill is 11.0 KB | true, and it is **6%** of the real number |
+
+### The bill counts modules; nobody was counting bytes
+
+`RUNS_NOTHING_BUT_BELONGS` excuses a module that runs **no** function at boot.
+So the cheapest way off the list is to run one — and a module where boot calls
+one function passes R121's rule outright, whatever else it carries.
+
+Asked per **function** instead: **174.2 KB of 559.4** of eager JS was code no
+boot ever calls. Thirty-one percent. The worst offenders were never on the
+bill, because none of them was idle:
+
+| | eager | what boot calls |
+| --- | ---: | --- |
+| `splice/theater.js` | 19.5 KB | `isSettled`, **73 bytes** |
+| `battle/statblock.js` | 17.4 KB | two predicates, **195 bytes** |
+| `campaign/rivals.js` | 22.2 KB | four functions, **1.3 KB** |
+
+### What ships
+
+- **`splice/chimera.js` (2.7 KB)** — the settling clock, `renameCreature` and
+  the `TRAINING` price, which were the only three things six eager modules
+  wanted from the Theater. **`splice/theater.js` is now lazy.** No re-export
+  from it: an import path back in is how 19.5 KB returns without a decision.
+- **`campaign/identity.js`** — the name roll, the philosophy menu and
+  `duelBarks`, whose only caller is the lazy War Room. `monologue.js`
+  4.1 → 2.8 KB, and it stays on the bill at the size that justifies it.
+- **`DEAD_AT_BOOT_KB = 170`** in `tools/boot.js` — the second rule, in a
+  different unit, printed on every run.
+- Every exemption paid or re-justified **by name**, in a table in that file.
+- `wire.js` imported `philosophyOf` and never used it. Dropped.
+
+| | before | after |
+| --- | ---: | ---: |
+| first paint | 1034 KB | **1016 KB** |
+| `FIRST_PAINT_KB` | 1034 | **1034, unmoved** |
+| eager JS | 559.4 KB | **541.3 KB** |
+| `KB_CAP` | 560 | **543** |
+| functions no boot calls | 174.2 KB | **160.3 KB** |
+| the exemption bill | 11.0 KB | **9.8 KB** |
+
+`FIRST_PAINT_KB` deliberately does **not** come down onto 1016. It went red
+once at 1034 against 1034 — a slow afternoon, not a regression — so the 18 KB
+of slack is the deliverable. The two static budgets stay tight, because a
+walk of file sizes reads the same number twice and the dead-byte walk read
+160.3 three times to the byte.
+
+### Break 248 went MISSED, and that was the real finding
+
+None of CLAUDE.md's four full-battery triggers fired after a green baseline.
+The narrower question did: **do existing breaks aim at what this milestone
+moved?** Forty-four did, and one failed.
+
+Break 248 re-adds `campaign/director.js` (11.9 KB) via
+`export * from './director.js'`. Reproducing it by hand:
+
+| | clean | with break 248 |
+| --- | ---: | ---: |
+| eager modules / KB | 48 / 541.3 | **48 / 541.3** |
+| modules running nothing | 4 | **4** |
+| functions no boot calls | 160.3 KB | **160.3 KB** |
+| first paint (real browser) | 1016 KB | **1028 KB** |
+
+Only the browser moved. `eagerGraph()` matched `import … from` and nothing
+else, so **a re-export was invisible to the static walk** — and `KB_CAP`, the
+module-runs-nothing list and this milestone's own dead-byte budget all read
+that walk. Three rules blind at once, leaving `FIRST_PAINT_KB` as 248's only
+reader at 1046 over 1034. Take the measurement to 1016, keep the cap at 1034
+deliberately, and 1028 fits.
+
+I had argued in this same milestone that tightening a budget cannot blind a
+break. True, and beside the point: **leaving a cap still while the measurement
+falls under it is loosening by omission.** Both walks follow `export … from`
+now; 248 is caught by three rules and the slack survives. The clean tree is
+unchanged, because the tree's one real re-export names a module already
+imported on the line above.
+
+### The break I deleted
+
+Three breaks were written; **297** and **299** go red on demand. The third
+dropped the nesting filter and **MISSED**: 160.3 → 163.8 only, because V8
+reports no coverage inside a function nobody called. Tightening the budget
+until my own break fired would have been tuning the gate to its test, so the
+break went and the measurement is written where the filter is.
+
+### Known issues
+
+- `battle/statblock.js` stays eager at 17.4 KB for 195 bytes of predicate, and
+  that is now written down rather than rediscovered: deferring it makes
+  `resolveBattle` async, which breaks CLAUDE.md's rule that the harness flies
+  the same battle code the browser does.
+- The dead-byte figure is 160.3 KB and the budget 170. The next milestone that
+  wants the room should bring the number down instead — `campaign/campaign.js`
+  (17.5 KB dead) and `campaign/rivals.js` (16.0) are where it is.
+
+### The full battery found one more, and it is not this milestone's
+
+292 breaks, 291 caught, `BATTERY_EXIT=0`. The miss is **262, "the balance
+sweep quadruples its sampling"** — and the same break run against `main`
+itself, in a worktree at `e3fd32f`, misses identically. Pre-existing, queued
+as **R170**, not folded into R169.
+
+Two causes. Break 262 measured **1070 against a budget of 820**; R168 raised
+`CPU_BUDGET_S` to **1150**, above the break, and it survived only because
+R168's box read **998** CPU-seconds. Today's reads **786**, so the broken run
+fits. And R168's box-independent share rule is guarded `if (!only && rebuilt
+=== 0)` — warm runs only — while every battery break patches a source file
+and so busts the walk-cache stamp. **The share rule is skipped for every
+break in the battery, always.**
+
+### The rule worth carrying forward
+
+**When a milestone creates headroom, the breaks that used to live in it are
+the first thing to re-run.** Forty-four targeted breaks cost eleven minutes
+and found what a green baseline, a green suite and 292 matching anchors all
+missed.
+
+### Next session's first task
+
+Pick from the 15-entry queue in §9.0 — R94 (notoriety is a number that goes
+up) is the oldest open entry.
+
 ## Session 178 — R168: it was the weather ✅
 
 **ROADMAP §9.28.** `npm test` has been red on `main` since R104 and every

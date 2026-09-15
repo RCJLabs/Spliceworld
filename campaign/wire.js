@@ -20,7 +20,7 @@
 // it. `threat_rung` now prints what the data says.
 
 import { rngStream, hashString } from '../util/rng.js';
-import { fill, philosophyOf, DEFAULT_PHILOSOPHY } from './monologue.js';
+import { fill, DEFAULT_PHILOSOPHY } from './monologue.js';
 
 const WIRE_KEEP = 12;
 

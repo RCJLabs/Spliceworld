@@ -33,7 +33,7 @@
 import { careStatus, catalogFor, isNewToDex, penUpgradeCost, ageStage } from './ranch.js';
 import { canBreed } from './breeding.js';
 import { nextUpgrade, tracks, stableRoom } from '../splice/facility.js';
-import { TRAINING } from '../splice/theater.js';
+import { TRAINING } from '../splice/chimera.js';
 import { treatmentCost } from '../splice/scars.js';
 import { activeVat, vatPlan } from '../splice/chaos.js';
 import { operationList, opReady, activeOps, laneFree, runnableOps } from '../campaign/operations.js';
