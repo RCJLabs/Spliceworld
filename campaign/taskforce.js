@@ -54,6 +54,8 @@
 // through the same functions the War Room does.
 
 import { rngStream } from '../util/rng.js';
+// R94 — the ratchet's one definition; see campaign/map.js.
+import { notorietyMark } from './map.js';
 
 const HOUR = 3600000;
 
@@ -151,7 +153,7 @@ export function taskforceEligible(state, content) {
   const cam = state.campaign ?? {};
   if (!(t.pool ?? []).some((id) => content.encounters?.[id])) return false;
   if (state.dominionAt) return true;
-  return (cam.notorietyPeak ?? 0) >= t.notorietyCap && (cam.heldNodes ?? []).length >= t.minHeld;
+  return notorietyMark(state) >= t.notorietyCap && (cam.heldNodes ?? []).length >= t.minHeld;
 }
 
 export function escalationOf(state, content) {

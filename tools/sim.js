@@ -24,7 +24,7 @@ import { createBattle } from './flown.js';
 import { movesFromTokens } from '../battle/statblock.js';
 import { knownMoves } from '../battle/moves.js';
 import { rivalEncounter, rivalList, rivalStatus } from '../campaign/rivals.js';
-import { rescueEncounterFor } from '../campaign/map.js';
+import { rescueEncounterFor, threatGen } from '../campaign/map.js';
 import { mulberry32, hashString, pick, rngStream } from '../util/rng.js';
 import { chooseMoveIndex, choosePlayerAction } from '../battle/ai.js';
 import { pilotAction, autoResolve, canSend, replayCost } from '../battle/autoplay.js';
@@ -2491,6 +2491,19 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   let worstStallDay = null;
   let minFunds = Infinity;
   let broke = 0;
+  // R94 — HOW OFTEN THE WORLD DE-ESCALATES. Threat Generation is meant to be
+  // a ladder; before R94 it read the live notoriety meter, so holding a Task
+  // Force raid — a win — could drop it a rung. Counted rather than inferred,
+  // because the defect is a TRAJECTORY: no single state shows a number going
+  // backwards. Measured at 82 drops over seven campaigns before the split,
+  // and it must be zero. See ROADMAP R94.
+  let lastGen = null;
+  let genDrops = 0;
+  const watchGen = () => {
+    const g = threatGen(state, content);
+    if (lastGen !== null && g < lastGen) genDrops += 1;
+    lastGen = g;
+  };
 
   const snapshots = {};
   const snap = (day) => ({
@@ -2579,6 +2592,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // ever earned the empire spends on existing, and that is cumulative.
     state.__walkUpkeep = (state.__walkUpkeep ?? 0) + upkeepPerDay(state, content) * ((now - (state.lastTickAt ?? now)) / WALK_DAY);
     tick(state, content, now);
+    watchGen();   // R94 — after the tick that could have moved it.
     for (const c of state.chimeras) if (c.agitatedAt) feralSeen.add(c.id);
     for (const c of state.chimeras) if (c.rehabilitated) rehabEver.add(c.id);
     for (const b of state.campaign.containment ?? []) if (b.feral) feralBays.add(b.id);
@@ -2875,6 +2889,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // took from the ones that were not answered.
     raids: state.__walkRaids ?? 0,
     notorietyPeak: state.campaign.notorietyPeak ?? 0,
+    threatGenDrops: genDrops,
     raidsHeld: state.__walkRaidsHeld ?? 0,
     raidsMissed: (state.campaign.raidCount ?? 0) - (state.__walkRaidsHeld ?? 0),
     levied: Math.round(state.campaign.leviedTotal ?? 0),
