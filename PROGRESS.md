@@ -56,7 +56,10 @@ went red once at **1034 against 1034**: a cap sitting on its own measurement.
   and prose-trimming is spent. Queued as **R169**: the exemption bill is 11.0
   KB across four modules and `campaign/monologue.js` is 4.2 KB of it, eager
   only through `wire.js` ← `world.js` — R153's exact shape.
-- **`npm test` is still red on `main`** (R168), unchanged by this milestone.
+- **`npm test` is still red** (R168), and not for anything here: warm, every
+  job passing, this tree reads **998 CPU-seconds** against `main`'s 1054 and
+  R104's 1044 earlier the same day. Dropping the shell's two duplicate
+  `worldSnapshot` calls is the only change that could have helped.
 - **`awayFor` says "7 days", not "a week"** past 48 hours. Fine, and blunter
   than the card's voice deserves.
 
