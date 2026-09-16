@@ -3227,7 +3227,7 @@ const BREAKS = [
     // from the outside: the dialog still says the right words.
     n: 311, gate: SHARD_B, name: 'the legacy is offered and then dropped, so the ceremony is a lie',
     file: 'campaign/legacy.js',
-    anchor: '      out.chimeras = [carryChimera(source)];',
+    anchor: '      out.chimeras = [carryChimera(source, content, now)];',
     to: '      out.chimeras = [];',
   },
   {
@@ -3240,6 +3240,44 @@ const BREAKS = [
     file: 'campaign/legacy.js',
     anchor: '  if (taken >= (t.maxPicks ?? 1)) return fresh;',
     to: '  if (false) return fresh;',
+  },
+
+  // R172 — the three rules the crossing's price rests on, one break each.
+  {
+    // THE LIST THAT DID NOT CHECK ITSELF, which is the defect R102 actually
+    // shipped: four of its six field names were not fields at all, and
+    // nothing could tell because a list of strings is compared to nothing.
+    // Dropping the real settle clock out of the table reproduces exactly
+    // that — a creature arriving mid-settle on the old run's clock, up to
+    // 38.4 days into a run that has not started. Caught by the rule that
+    // reads a WALKED creature's own keys and requires the table to name
+    // every one of them.
+    n: 313, gate: SHARD_B, name: 'a clock a real chimera holds drops out of CARRY_CLOCKS, so the old run\'s time crosses',
+    file: 'campaign/legacy.js',
+    anchor: '  settleUntil: (now) => now,      // and it is not still settling from last time',
+    to: '',
+  },
+  {
+    // AND THE TABLE STOPS BEING APPLIED. Rule 6 says the list is complete;
+    // this is the other half, because a complete list nobody reads is the
+    // same bug with better documentation.
+    n: 314, gate: SHARD_B, name: 'the crossing stops re-stamping its clocks, so a veteran arrives on last run\'s calendar',
+    file: 'campaign/legacy.js',
+    anchor: '  for (const [key, stamp] of Object.entries(CARRY_CLOCKS)) c[key] = stamp(now);',
+    to: '',
+  },
+  {
+    // THE PRICE ITSELF. Skip the grade reset and the creature arrives at the
+    // grades a finished county paid for: measured across nine seeds, A1's
+    // wall goes from a median 0% back to a median 81% with ONE body against
+    // the second node — the invariant R106 and R119 were each built around,
+    // and the one R119 rejected its own tuning for taking to 46%. Caught
+    // twice over: by the rule that reads the arriving tokens' grades, and by
+    // the wall itself.
+    n: 315, gate: SHARD_B, name: 'a carried veteran keeps its grades, so the second run walks the wall on day one',
+    file: 'campaign/legacy.js',
+    anchor: '  if (t.cost?.resetsGrades) {',
+    to: '  if (false) {',
   },
 
   // R171 — the two halves of the entry's Done-when, one break each.

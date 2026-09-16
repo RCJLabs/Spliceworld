@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**13 entries queued.** R105, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R172.
+**12 entries queued.** R105, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -3139,22 +3139,103 @@ R102; R88–R90 remain.)*
   the herd and vault and county and money do not, and a second pick does not
   stack. Breaks 311 and 312 caught.
 
-  **Known issue, unmeasured:** a carried veteran is a *power* carry-over as well
-  as a story one, and what a level-9 chimera does to an opening that R106 and
-  R119 spent milestones designing has not been walked. Queued as R172.
+  **Known issue, now measured and answered by R172:** a carried veteran was a
+  *power* carry-over as well as a story one. Walked: it took 5.5 days off the
+  campaign's only ending and read a median 81% against A1's wall, where a first
+  run reads 0%. Grade and level were on the wrong side of "what it is versus
+  what it had"; they stay behind now, and the anatomy still crosses.
 
-- **R172 — What a legacy veteran does to the opening.** R102 ships the run
-  boundary and carries a chimera across it with its genome, level and scars
-  intact. That is the right story — it is the creature you kept — and it is an
-  unmeasured change to the first hour, which R106 tuned around a player who
-  fields three bodies and R119 around one who has just picked a founding lab.
-  Nobody has walked a second run. Proposed, small: walk one, bucket the opening
-  the way R103 bucketed agency, and decide from the number whether the veteran
-  needs a stated cost (arriving at a reset grade, or the Task Force already
-  interested) or whether a strong start is simply what finishing a run buys.
+- **R172 — What a legacy veteran does to the opening.** ✅ *Shipped.* The
+  entry proposed walking a second run; **nothing in the tree could walk one.**
+  `campaignWalk` had only ever started from an empty ranch, so R102 shipped a
+  run boundary whose far side no yardstick could reach. It takes a `from`
+  state now, and that is the instrument the rest of this entry is made of.
+
+  **The control is what makes any of these numbers mean anything.** A second
+  run that packs **nothing** reproduces its first run's dominion day *exactly*
+  on all fifteen seeds — so the walk is deterministic across the boundary and
+  anything that moves is the creature, not the seeded stream reordering.
+  (R157's lesson, paid before the measurement rather than after it.)
+
+  | measured, 15 seeds | first run | 2nd, packed nothing | 2nd, carried a veteran |
+  | --- | --- | --- | --- |
+  | dominion day (median) | **30.83** | **30.83** | **25.33** |
+  | beat its own control | — | — | **11 of 14** |
+  | day 10: funds | $6,980 | $6,980 | **$10,798** |
+  | day 10: fights lost | 7 | 7 | **1** |
+  | day 10: chimeras | 5 | 5 | **10** |
+
+  **And A1's wall was gone.** One body against the second node reads **0%** for
+  a first run — the invariant R106 and R119 were each built around — and a
+  **median 81%** (38–100% across nine seeds) for a second one carrying its
+  best creature. R119 rejected *its own tuning* for taking one body to 46%;
+  R102 shipped 81% and no gate looked. So the veteran needed a cost, and the
+  entry's guess about which one was wrong.
+
+  **The entry's proposed cost does not work, and the measurement says so.** A
+  stated acclimatisation clock — lock the veteran in the pens on arrival —
+  recovers almost nothing: **7 days of lockout buys back 2.2 of the 8.6-day
+  gap** and 28 days, longer than the campaign's own median ending, buys 5.0.
+  The advantage is not the veteran fighting on day zero; it compounds through
+  everything that follows. Not built.
+
+  **What crossed that should not have is GRADE and LEVEL.** A grade is how a
+  donor animal was doing the morning it graduated, in a lab that is now
+  somebody else's problem; a level is a record against a county no longer on
+  the map. Both are what a creature **had**. Its anatomy — which species sit
+  in which socket, the thing a whole run was spent assembling — is what it
+  **is**, and crosses untouched. That is **R119's founding-lab rule applied to
+  the run boundary: the choice changes WHICH creature, never HOW MUCH.**
+
+  Priced, in `data/legacy.json`'s `cost` block, with the founder's grade read
+  from `starters.json` rather than typed twice (R157):
+
+  | after the cost, 15 seeds | first run | 2nd, nothing | 2nd, veteran |
+  | --- | --- | --- | --- |
+  | dominion day (median) | 30.83 | 30.83 | **30.92** |
+  | beat its own control | — | — | **6 of 15** — a coin flip |
+  | day 10: funds | $6,980 | $6,980 | $7,993 |
+  | day 10: nodes / splices | 8 / 5 | 8 / 5 | 8 / 5 |
+  | day 10: chimeras | 5 | 5 | 9 |
+  | A1's wall, one body | 0% | 0% | **median 0%** (was 81%) |
+
+  So a second run is still a head start — a body from day zero and the roster
+  it carries, 9 kept against 5 — and it is no longer a shortcut to the ending.
+  It also un-broke one seed: 15 of 15 reach dominion now, against 14 of 15.
+
+  **The residual is stated rather than tuned away.** Three of nine seeds still
+  read 25–50% on the wall with one body, and the cause is the **genome**: they
+  are purebred or near-purebred builds, and R34's set bonuses are real. That is
+  the creature itself, and stripping it would mean carrying nothing — the
+  other failure mode this whole system exists between. The smoke rule is
+  therefore written on R172's **worst** measured case, not its median.
+
+  **Four of R102's six deletes were not fields.** `carryChimera` named
+  `injuredUntil`, `settlingUntil`, `containedAt` and `sparredAt`; a chimera has
+  none of them. The real settle clock is `settleUntil` and it rode through
+  untouched, so across **88 offers on seven seeds** a creature arrived
+  mid-settle a **median 19.4 days and up to 38.4** into a run that had not
+  started — an arbitrary lottery decided by when it happened to be spliced in
+  the *last* run, and the ceremony said nothing. It carried `lastAttendedAt`
+  too, putting R85's neglect clock a month into the future, and it invented a
+  `record` field no chimera has and nothing reads. The fix is a table,
+  `CARRY_CLOCKS`, and **the gate requires it to name every clock-shaped field a
+  WALKED creature actually holds** — because a list of strings compared
+  against nothing is exactly how four wrong names survived a milestone.
+
+  **No `SAVE_VERSION` bump, deliberately.** The save *schema* is unchanged;
+  what moved is what happens at the moment of a crossing. A save whose veteran
+  already crossed under the old rules keeps what it was given, inert `record`
+  and all — never reset player saves.
+
+  **The ceremony's card was selling the thing the boundary takes back.** Its
+  detail line read `3 scars · level 9`. It counts species now, which is what
+  survives and what the run actually bought.
+
   *Done when: a second run's first ten days are measured against a first run's,
   and the veteran either carries a stated cost or the entry records that it
-  needs none.*
+  needs none.* ✅ Both tables above, against a control; the cost is in data and
+  the ceremony prints it. **Three new battery breaks, 313–315, all caught.**
 
   **The entry as filed, kept for its reasoning — its numbers are superseded by
   the table above and should not be read as current:** R87 gave the endgame a stake

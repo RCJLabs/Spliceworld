@@ -53,11 +53,17 @@ export function legacyOffers(state, content) {
         kind: 'veteran',
         id: c.id,
         label: c.name ?? 'an unnamed creature',
-        // What the ceremony shows underneath the name, so the player is
-        // choosing between creatures rather than between ids.
+        // R172 — what the ceremony shows underneath the name has to be what
+        // SURVIVES the crossing, or the card sells a level the boundary takes
+        // back. Scars and anatomy cross; the level does not, so the line
+        // counts species instead — which is the thing a whole run bought.
         detail: [
           (c.scars ?? []).length ? `${(c.scars ?? []).length} scar${(c.scars ?? []).length === 1 ? '' : 's'}` : null,
-          c.level ? `level ${c.level}` : null,
+          (() => {
+            const n = new Set(Object.values(c.tokens ?? {})
+              .map((tk) => content?.parts?.[tk?.partId]?.species).filter(Boolean)).size;
+            return n ? `${n} species` : null;
+          })(),
         ].filter(Boolean).join(' · '),
       });
     }
@@ -91,26 +97,72 @@ export function legacyOffers(state, content) {
   return offers;
 }
 
-// R102 — one chimera, stripped of the run it came from.
+// R102, corrected and priced by R172 — one chimera, stripped of the run it
+// came from.
 //
 // "Arrives with its history and none of its old roster" is the entry's own
 // wording and the two halves pull against each other, so the line is drawn at
-// WHAT IT IS versus WHAT IT HAD. Its genome, name, scars, temperament and
-// level are what make it that creature rather than a fresh body wearing its
-// name; its injuries, its place in a stable that no longer exists and any
-// clock it was standing in are what it HAD, and those do not travel.
-function carryChimera(source) {
+// WHAT IT IS versus WHAT IT HAD. Its anatomy, name, scars and temperament are
+// what make it that creature rather than a fresh body wearing its name. Its
+// injuries, its place in a stable that no longer exists, any clock it was
+// standing in, the GRADES its parts were cut at and the LEVEL it earned in a
+// county that is no longer on the map are what it HAD.
+//
+// R102 PUT LEVEL AND GRADE ON THE WRONG SIDE OF THAT LINE, and R172 measured
+// the bill. A1's wall — one body against the second node, the invariant R106
+// and R119 were each built around — reads 0% for a first run and a median 81%
+// for a second one carrying its best creature. Moving both to the HAD side
+// takes that back to a median 0% while the anatomy, which is the thing a
+// whole run was spent assembling, crosses untouched. That is R119's own rule
+// for founding labs applied to the run boundary: the choice changes WHICH
+// creature, never HOW MUCH.
+//
+// A GRADE IS NOT ANATOMY. It is how well a donor animal was doing on the
+// morning it graduated, in a lab that is now somebody else's problem — which
+// is why `bloodline` already says "at the grade a founder starts at" and why
+// the number itself is read from data/starters.json rather than typed here
+// (R157: one constant, one home, however many readers).
+
+// EVERY CLOCK A CROSSING RE-STAMPS, DECLARED RATHER THAN GUESSED.
+//
+// R102 shipped a hand-typed delete list, and FOUR of its six names were not
+// fields: `injuredUntil`, `settlingUntil`, `containedAt` and `sparredAt` do
+// not exist on a chimera, and the real settle clock — `settleUntil` — was
+// carried through untouched. Measured across 88 offers on seven seeds, that
+// left a creature arriving mid-settle a median of 19.4 days and up to 38.4
+// into a run that had not started, purely because of when it happened to be
+// spliced in the last one. It also carried `lastAttendedAt` from the old
+// clock, which put R85's neglect timer a month into the future.
+//
+// So the rule is a table, and `tools/smoke.js` requires every clock-shaped
+// field on a REAL chimera to appear in it. A list nobody checks is how four
+// wrong names survived a milestone.
+export const CARRY_CLOCKS = {
+  createdAt: (now) => now,        // it arrives today, wherever it was born
+  settleUntil: (now) => now,      // and it is not still settling from last time
+  lastAttendedAt: (now) => now,   // R85's neglect clock starts on arrival
+  lastTrainedAt: () => 0,
+  lastMoveTrainAt: () => 0,
+  exhaustedUntil: () => 0,        // the old lab's chaos vat is behind it
+  agitatedAt: () => null,
+};
+
+function carryChimera(source, content, now) {
   const c = structuredClone(source);
-  // Run-scoped state. A creature that crosses mid-infirmary would arrive in a
-  // building that does not exist yet.
-  delete c.injury;
-  delete c.injuredUntil;
-  delete c.settlingUntil;
-  delete c.agitatedAt;
-  delete c.containedAt;
-  delete c.sparredAt;
-  // It has fought nothing in this county.
-  c.record = { wins: 0, losses: 0 };
+  for (const [key, stamp] of Object.entries(CARRY_CLOCKS)) c[key] = stamp(now);
+  // Not clock-shaped, so it is named rather than matched: an injury is a
+  // timer inside an object, and a creature that crossed mid-infirmary would
+  // arrive in a building that does not exist yet.
+  c.injury = null;
+
+  const t = legacyTuning(content);
+  if (t.cost?.resetsLevel) c.xp = 0;
+  if (t.cost?.resetsGrades) {
+    const grade = content?.starterMeta?.crateGrade ?? 'standard';
+    c.tokens = Object.fromEntries(
+      Object.entries(c.tokens ?? {}).map(([socket, token]) => [socket, { ...token, grade }])
+    );
+  }
   return c;
 }
 
@@ -120,7 +172,7 @@ function carryChimera(source) {
 //
 // Returns the state either way: a refused second pick is not an error the UI
 // has to handle, it is simply the first pick still being the answer.
-export function applyLegacy(fresh, pick, previous, content) {
+export function applyLegacy(fresh, pick, previous, content, now = Date.now()) {
   const t = legacyTuning(content);
   if (!pick) return fresh;
   // THE CEILING. Not "replace", not "append" — refuse. See the note above.
@@ -135,7 +187,7 @@ export function applyLegacy(fresh, pick, previous, content) {
     case 'chimera': {
       const source = (previous?.chimeras ?? []).find((c) => c.id === pick.id);
       if (!source) return fresh;
-      out.chimeras = [carryChimera(source)];
+      out.chimeras = [carryChimera(source, content, now)];
       out.chimeraCount = 1;
       break;
     }
