@@ -349,6 +349,7 @@ export function openSettings(overlay, ctx) {
             <strong>${kinds[o.kind]?.name ?? o.kind}</strong> — ${o.label}
             ${o.detail ? `<span class="lineage">${o.detail}</span>` : ''}
           </button>`).join('')}
+        ${t.cost?.line ? `<p class="fine-print">${t.cost.line}</p>` : ''}
         <button type="button" class="care-train legacy-pick" data-legacy="" aria-pressed="true">
           <strong>${c.noneLabel ?? 'Travel light'}</strong>
           <span class="lineage">${c.noneBlurb ?? ''}</span>

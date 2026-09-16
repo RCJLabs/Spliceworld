@@ -2469,9 +2469,20 @@ function walkAutoplay(battle, content) {
 // `tick` is the world-advancing function; the game's own (campaign/world.js)
 // by default. A harness knob only: it exists so an experiment can ask which
 // passive system moves a result, by ticking without it.
-export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = null, away = null, snapshotDays = [], markDay = null, tick = tickWorld, stopAtDominion = true, priceBeats = false } = {}) {
+export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = null, away = null, snapshotDays = [], markDay = null, tick = tickWorld, stopAtDominion = true, priceBeats = false, from = null } = {}) {
   const t0 = Date.UTC(2026, 0, 1);
-  const state = { ...newGameState(), seed };
+  // R172 — `from` walks a SECOND RUN. The walker has only ever started from
+  // an empty ranch, so R102's run boundary shipped with nobody able to ask
+  // what the far side of it plays like. A legacy state is `startNewRun` +
+  // `applyLegacy`: a fresh save that already holds one carried thing.
+  //
+  // The epoch is re-stamped and NOTHING ELSE IS. The walk's whole clock is
+  // `t0`, and a state built by `startNewRun` carries `Date.now()`, so a run
+  // that kept its real createdAt would be measured a thousand days into its
+  // own past. Every other timestamp on the carried creature is left exactly
+  // as the engine wrote it, because those are the measurement — see the
+  // settle debt in ROADMAP R172.
+  const state = from ? { ...structuredClone(from), seed, createdAt: t0 } : { ...newGameState(), seed };
   ensureRanchSeeded(state, content, t0);
   state.lastTickAt = t0;
 

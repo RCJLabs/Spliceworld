@@ -13893,6 +13893,130 @@ if (inShard('legacy')) {
     assert.ok(SAVE_VERSION >= 54, `SAVE_VERSION moved for the new shape (${SAVE_VERSION})`);
   }
 
+  // ------------------------------------------------------------------
+  // R172 — WHAT THE CROSSING COSTS, AND THE LIST THAT DID NOT CHECK ITSELF.
+  //
+  // R102 shipped the boundary and nobody had walked the far side of it: the
+  // campaign walker could only ever start from an empty ranch. `campaignWalk`
+  // takes a `from` state now, and the first thing it measured was the bill.
+  //
+  // THE CONTROL IS WHAT MAKES THESE NUMBERS MEAN ANYTHING. A second run that
+  // packs NOTHING reproduces its first run's dominion day EXACTLY on all
+  // fifteen seeds — so the walker is deterministic across the boundary and
+  // any movement is the creature, not the seeded stream reordering (R157's
+  // lesson, paid up front this time). Carrying the best veteran moved the
+  // median from day 30.83 to 25.33, beating its own control on 11 of 14
+  // paired seeds, and at day 10 the second run held more nodes on 57% more
+  // money with one loss against seven.
+  //
+  // AND A1'S WALL WENT. One body against the second node reads 0% for a first
+  // run — the invariant R106 and R119 were each built around — and a median
+  // 81% for a second one. R119 rejected its own tuning for taking one body to
+  // 46%; R102 shipped 81% without anyone looking.
+  //
+  // THE COST IS IN data/legacy.json AND THE CEREMONY SAYS IT. A grade is how
+  // a donor animal was doing the morning it graduated and a level is a record
+  // against a county no longer on the map: both are what the creature HAD.
+  // Its anatomy — the thing a whole run was spent assembling — is what it IS,
+  // and crosses untouched. That is R119's founding-lab rule at the run
+  // boundary: the choice changes WHICH creature, never HOW MUCH.
+  {
+    const { CARRY_CLOCKS } = await import('../campaign/legacy.js');
+    const { campaignWalk: walkFrom, scriptedStableBattle } = await import('./sim.js');
+    const { levelOf: levelOfXp } = await import('../battle/veterancy.js');
+
+    // A REAL creature, not a fixture: the shape of the thing that actually
+    // crosses is the whole subject, and a hand-written stand-in cannot grow
+    // the field this rule exists to notice.
+    const run1 = walkFrom(content, { seed: 2026, days: 120, stopAtDominion: true });
+    assert.ok(run1.save.dominionAt, 'the walk reaches an ending to retire from');
+    const real = run1.save.chimeras;
+    assert.ok(real.length > 0, 'and finishes holding creatures worth keeping');
+
+    // 6. THE LIST DECLARES ITSELF. R102's delete list named six fields and
+    //    FOUR of them did not exist — `injuredUntil`, `settlingUntil`,
+    //    `containedAt`, `sparredAt` — while the real settle clock rode
+    //    through untouched. Nothing could notice, because a list of strings
+    //    is checked against nothing. This checks it against the creature.
+    const clockish = new Set();
+    for (const c of real) {
+      for (const k of Object.keys(c)) if (/(At|Until)$/.test(k)) clockish.add(k);
+    }
+    assert.ok(clockish.size >= 5, `a walked creature carries clocks to re-stamp (${clockish.size})`);
+    for (const k of clockish) {
+      assert.ok(k in CARRY_CLOCKS,
+        `\`${k}\` is a clock on a real chimera and CARRY_CLOCKS does not name it — `
+        + `a crossing would carry the old run's time into the new one`);
+    }
+    for (const k of Object.keys(CARRY_CLOCKS)) {
+      assert.ok(clockish.has(k), `CARRY_CLOCKS names \`${k}\`, which no real chimera has`);
+    }
+
+    // 7. AND THE CROSSING ACTUALLY RE-STAMPS THEM. The rule above says the
+    //    table is complete; this says the table is applied.
+    const T = Date.UTC(2031, 0, 1);
+    const best = [...real].sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0))[0];
+    const offer = legacyOffers(run1.save, content).find((o) => o.kind === 'veteran' && o.id === best.id);
+    assert.ok(offer, 'the best creature of a finished run is offerable');
+    const crossed = applyLegacy(startNewRun(run1.save), offer, run1.save, content, T).chimeras[0];
+
+    assert.equal(crossed.settleUntil, T,
+      'it is not still settling from a splice in a lab that no longer exists');
+    assert.equal(crossed.lastAttendedAt, T,
+      "and R85's neglect clock starts on arrival rather than a month in the future");
+    assert.equal(crossed.createdAt, T, 'it arrives today');
+    assert.equal(crossed.injury, null, 'no injury crosses into a ranch with no infirmary');
+    assert.ok(!('record' in crossed),
+      'and the crossing does not invent a `record` field no chimera has and nothing reads');
+
+    // 8. THE COST, AND IT IS DATA. A fourth kind is a JSON edit; so is a
+    //    different cost. The GRADE is read from starters.json, not typed
+    //    twice — R157's rule, one constant one home.
+    const cost = legacyTuning(content).cost ?? {};
+    const founderGrade = content.starterMeta?.crateGrade ?? 'standard';
+    assert.ok(cost.line?.length > 20, 'the cost is stated in words the ceremony can print');
+    assert.ok(cost.resetsGrades && cost.resetsLevel, 'and in flags the engine reads');
+    assert.equal(levelOfXp(crossed.xp ?? 0, content), 0,
+      'the level does not cross: it was earned against a county that is not on the new map');
+    for (const [socket, token] of Object.entries(crossed.tokens)) {
+      assert.equal(token.grade, founderGrade,
+        `${socket} arrives at a founder's grade (${token.grade}), not the one it was cut at`);
+    }
+
+    // 9. BUT THE CREATURE IS STILL THE CREATURE. A cost that took the anatomy
+    //    would make the pick worthless, and "carries nothing" is the other
+    //    failure mode this whole system is built around.
+    assert.equal(crossed.name, best.name, 'it keeps its name');
+    assert.deepEqual(crossed.scars, best.scars, 'and its scars');
+    assert.deepEqual(Object.keys(crossed.tokens), Object.keys(best.tokens), 'and every socket it had');
+    for (const [socket, token] of Object.entries(crossed.tokens)) {
+      assert.equal(token.partId, best.tokens[socket].partId,
+        `${socket} is the same part — the anatomy is what a run was spent assembling`);
+    }
+
+    // 10. AND A1'S WALL HOLDS ON THE FAR SIDE. R119's bar, at the run
+    //     boundary: one body does not take the second node, three do. The
+    //     median across nine seeds reads 0% and 100%; this is the one seed,
+    //     so the bar is the WORST case R172 measured rather than the median
+    //     — the residual is a purebred genome, which is the creature itself
+    //     and is stated in ROADMAP R172 rather than tuned away.
+    const enc = content.encounters.patrol_2;
+    const rate = (n) => {
+      let w = 0;
+      const team = Array.from({ length: n }, (_, i) => ({ ...crossed, id: `r172-${i}`, settleUntil: T - 1 }));
+      for (let k = 0; k < 16; k++) {
+        if (scriptedStableBattle(team, enc, content, 1000 + k).outcome === 'win') w++;
+      }
+      return Math.round((w / 16) * 100);
+    };
+    const one = rate(1), three = rate(3);
+    assert.ok(one <= 50, `a carried veteran does not walk the second node alone (${one}%, was 75% before the cost)`);
+    assert.ok(three >= 80, `and three bodies still take it (${three}%)`);
+
+    console.log(`   R172 crossing: ${clockish.size} clocks re-stamped \u00b7 arrives at ${founderGrade}, level 0, `
+      + `keeping ${Object.keys(crossed.tokens).length} sockets \u00b7 the wall reads ${one}% with one and ${three}% with three`);
+  }
+
   console.log(`   R102 boundary: the county falls ~day 29 and 151 days follow it \u00b7 `
     + `a finished run offers ${legacyOffers(finished(), content).length} things to keep, and one crosses`);
 }

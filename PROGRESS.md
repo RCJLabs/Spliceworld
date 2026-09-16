@@ -1,5 +1,82 @@
 # PROGRESS
 
+## Session 185 — R172: what a legacy veteran does to the opening ✅
+
+**ROADMAP §9.** R102's honest half. The entry asked for a measurement and the
+first finding was that the measurement was impossible.
+
+### Nothing could walk a second run
+
+`campaignWalk` had only ever started from an empty ranch, so R102 shipped a run
+boundary whose far side no yardstick could reach. It takes a `from` state now.
+That is the instrument; everything below is what it said.
+
+### The control came first this time
+
+A second run that packs **nothing** reproduces its first run's dominion day
+*exactly* on all fifteen seeds. So the walk is deterministic across the
+boundary and anything that moves is the creature, not the stream reordering —
+R157's lesson, paid before the measurement instead of after it.
+
+| 15 seeds | first run | 2nd, nothing | 2nd, veteran |
+| --- | --- | --- | --- |
+| dominion day | 30.83 | 30.83 | **25.33** |
+| day 10 funds | $6,980 | $6,980 | **$10,798** |
+| day 10 losses | 7 | 7 | **1** |
+
+**And A1's wall was gone.** One body against the second node: **0%** for a
+first run, **median 81%** for a second. R119 rejected its own tuning for taking
+one body to 46%; R102 shipped 81% and no gate looked.
+
+### The entry's proposed cost does not work
+
+A stated acclimatisation clock recovers almost nothing — seven days of lockout
+buys back 2.2 of the 8.6-day gap, twenty-eight buys 5.0. The advantage is not
+the veteran fighting on day zero; it compounds. **Not built**, and the
+measurement is in the entry instead.
+
+### Grade and level were on the wrong side of the line
+
+A grade is how a donor was doing the morning it graduated; a level is a record
+against a county no longer on the map. Both are what a creature **had**. Its
+anatomy is what it **is**, and crosses untouched — R119's founding-lab rule at
+the run boundary: *the choice changes WHICH creature, never HOW MUCH.*
+
+Priced in `data/legacy.json`'s `cost` block (the founder's grade read from
+`starters.json`, not typed twice): dominion **30.92 against a 30.83 control**,
+beating that control on **6 of 15** seeds — a coin flip — and the wall back to
+a median 0%. Still a head start (9 chimeras kept against 5); no longer a
+shortcut to the ending. 15 of 15 seeds reach dominion now, against 14.
+
+The residual — three seeds at 25–50%, all purebred genomes and R34's set
+bonuses — is **stated, not tuned away**, so the smoke rule is written on the
+worst measured case rather than the median.
+
+### Four of R102's six deletes were not fields
+
+`injuredUntil`, `settlingUntil`, `containedAt`, `sparredAt` — a chimera has
+none of them. The real settle clock rode through, so across 88 offers a
+creature arrived mid-settle a median 19.4 days and up to 38.4 into a run that
+had not started. It also carried `lastAttendedAt` from the old clock (R85's
+neglect timer, a month in the future) and invented a `record` field nothing
+reads. Fixed with `CARRY_CLOCKS`, and **the gate requires the table to name
+every clock-shaped field a walked creature actually holds** — a list compared
+against nothing is how four wrong names survived a milestone.
+
+No `SAVE_VERSION` bump: the schema is unchanged, only what happens at a
+crossing. Saves that already crossed keep what they were given.
+
+### Known issues
+
+- The day-10 roster reads 9 against a control's 5 on the same five splices.
+  The number is reported as measured; nobody has established the mechanism.
+- The ceremony's cost line is covered by source assertions rather than the
+  handler walk, for R102's reason: the settings overlay is not a screen.
+
+### Next session's first task
+
+The queue is **12** and **R105 is the oldest**.
+
 ## Session 184 — R102: a run can end, and you choose what survives it ✅
 
 **ROADMAP §9.** The third part of R87, deferred on purpose. Its numbers were
