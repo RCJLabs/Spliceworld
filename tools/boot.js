@@ -538,7 +538,11 @@ const WATCH_FIRST_RENDER = `(() => {
 // a reload and re-requests nothing, so the first version of this reported
 // BOTH workers as broken. Leaving the page and coming back is the honest
 // simulation of reopening the app.
+// Two markers, because the two delivery paths need separate observables: if
+// both legs looked for the same value, whichever ran second would find the
+// first one's answer already on screen and prove nothing.
 const MARKER = '\n:root{--deploy-marker:7}\n';
+const MARKER_2 = '\n:root{--deploy-marker:8}\n';
 
 // R100 — AND WHAT A DEPLOY IS CHANGED UNDER IT.
 //
@@ -570,6 +574,7 @@ const DEPLOY_OPENS = 2;
 async function deployReaches(note) {
   const chrome = findChrome();
   let override = null;
+  let bumpCache = false;
   const srv = createServer(async (req, res) => {
     const path = decodeURIComponent(req.url.split('?')[0]);
     const file = join(root, path === '/' ? '/index.html' : path);
@@ -580,7 +585,7 @@ async function deployReaches(note) {
       // The version half of the deploy. Bumping CACHE is what tells the
       // browser there is a new build; without it the worker is right to keep
       // serving what it has.
-      if (override && path.endsWith('sw.js')) {
+      if (bumpCache && path.endsWith('sw.js')) {
         body = Buffer.from(String(body).replace(/const CACHE = '([^']+)'/, "const CACHE = '$1-deploy'"));
       }
       res.writeHead(200, {
@@ -611,20 +616,57 @@ async function deployReaches(note) {
       note('the service worker never took control, so nothing measured whether a deploy reaches a player');
       return;
     }
-    override = MARKER;                        // the deploy
-    let opens = 0;
-    let got = null;
-    while (opens < DEPLOY_OPENS && got !== '7') {
-      opens += 1;
-      await send('Page.navigate', { url: 'about:blank' }); await sleep(500);
-      await send('Page.navigate', { url }); await sleep(3200);
-      got = await evaluate(`getComputedStyle(document.body).getPropertyValue('--deploy-marker').trim()`);
-    }
-    if (got !== '7') {
+    // TWO DELIVERY PATHS, AND THEY ARE DIFFERENT CODE. R100's first version of
+    // this gate tested only the bumped one and called it done; the battery
+    // then reported break 305 MISSED, because removing the background
+    // revalidation entirely changed nothing a single bumped deploy could see.
+    // A gate that cannot tell its two mechanisms apart is testing one of them.
+    const openUntilMarked = async (want) => {
+      let opens = 0;
+      let got = null;
+      while (opens < DEPLOY_OPENS && got !== want) {
+        opens += 1;
+        await send('Page.navigate', { url: 'about:blank' }); await sleep(500);
+        await send('Page.navigate', { url }); await sleep(3200);
+        got = await evaluate(`getComputedStyle(document.body).getPropertyValue('--deploy-marker').trim()`);
+      }
+      return { got, opens };
+    };
+
+    // 1. THE REAL DEPLOY FIRST — a changed file AND a bumped CACHE, which is
+    // what a release actually is. A new worker installs and refetches the
+    // whole shell.
+    //
+    // THE ORDER IS LOAD-BEARING AND WAS THE OTHER WAY ROUND FIRST. With the
+    // unbumped leg running first, its revalidation (`cache: 'no-cache'`)
+    // refreshes the BROWSER's HTTP cache as a side effect, so by the time
+    // `install` ran it could not have read a stale copy even if it tried —
+    // break 112 went MISSED against a gate that had quietly pre-fixed the
+    // thing it was testing. Installing against an HTTP cache that still holds
+    // the old file is the state a real phone is in.
+    override = MARKER;
+    bumpCache = true;
+    const bumped = await openUntilMarked('7');
+    if (bumped.got !== '7') {
       note(`a new build does NOT reach a browser that already has the app cached in ${DEPLOY_OPENS} opens`
         + ' — the service worker is still serving the previous deploy');
     } else if (REPORT) {
-      console.log(`boot: a bumped CACHE reaches a cached browser in ${opens} open${opens > 1 ? 's' : ''}`);
+      console.log(`boot: a BUMPED CACHE reaches a cached browser in ${bumped.opens} open(s), by reinstall`);
+    }
+
+    // 2. THE UNBUMPED CHANGE — the safety net. Somebody edits a file and
+    // forgets `npm run release -- --fix`. `tools/release.js` is what should
+    // stop that reaching production at all, but if it does, the background
+    // revalidation is the only thing that ever corrects it: the version has
+    // not moved, so no new worker installs. Without it this browser is stale
+    // forever, which is R122's original bug report.
+    override = MARKER_2;               // CACHE stays where the bumped leg left it
+    const unbumped = await openUntilMarked('8');
+    if (unbumped.got !== '8') {
+      note(`a changed file does NOT reach a cached browser in ${DEPLOY_OPENS} opens when CACHE was not bumped`
+        + ' — nothing revalidates behind the response, so a forgotten bump is permanent');
+    } else if (REPORT) {
+      console.log(`boot: an UNBUMPED change reaches a cached browser in ${unbumped.opens} open(s), by revalidation`);
     }
   } finally {
     try { cdp?.ws.close(); } catch { /* already gone */ }

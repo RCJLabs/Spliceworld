@@ -28,7 +28,7 @@
 // which is R122's original bug report — a phone stuck on a broken build.
 // `tools/release.js` is the answer and exists for this: CACHE is checked
 // against SAVE_VERSION by a gate rather than by anybody remembering.
-const CACHE = 'spliceworld-v53-r94';
+const CACHE = 'spliceworld-v53-109661d0';
 
 const SHELL = [
   '.',
@@ -154,12 +154,17 @@ const SHELL = [
 ];
 
 // R100 — `cache: 'reload'` on every shell entry, for R122b's reason one layer
-// up. `cache.addAll` fetches through the browser's HTTP cache, and Pages sends
-// the shell with `max-age=600`, so a worker installing in the ten minutes
-// after a deploy would fill its brand-new versioned cache with the PREVIOUS
-// build and then serve that indefinitely, because nothing revalidates a cache
-// entry that keeps being found. Under network-first that mistake drained on
-// its own; under cache-first it does not.
+// up: `cache.addAll` fetches through the browser's HTTP cache, and Pages sends
+// the shell with `max-age=600`, so a worker installing inside that window
+// would fill its brand-new versioned cache with the PREVIOUS build.
+//
+// AND IT IS BELT AND BRACES, WHICH THE BATTERY ESTABLISHED RATHER THAN THE
+// REASONING. Break 112 was pointed here and went MISSED twice, the second time
+// against a gate reordered specifically so install ran with the old file still
+// in the HTTP cache. Whatever a stale install caches, the revalidation below
+// replaces on the next open, so from outside the two are indistinguishable.
+// This line stays because it is correct and costs nothing — it just is not
+// what holds the rule up. The revalidation is; break 112 aims there now.
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)

@@ -1,5 +1,79 @@
 # PROGRESS
 
+## Session 182 — R100: the shell answers from cache, the save outlives the browser ✅
+
+**ROADMAP §9.5.** Two of the entry's three premises were measured wrong, and
+the third was in the wrong place.
+
+### Where the entry was wrong
+
+| the entry said | measured |
+| --- | --- |
+| network-first for **95** shell entries | network-first ✅, **116** entries / 1,856 KB |
+| localStorage "5 MB, evictable" — quota pressure | R91 cut the save 1,843 KB → **170.4 KB**; four slots now cross 5 MB near **day 1,352** |
+| "every cold open waits on the network" | true, and **offline is the case it accidentally handled** |
+
+### The defect is a slow network, not a dead one
+
+Cold open, app already cached, to first game pixel:
+
+| | open | requests to the server |
+| --- | ---: | ---: |
+| wire cut | **125ms** | 0 |
+| +150ms | 2,414ms | 85 |
+| +800ms | **12,162ms** | 85 |
+
+A dead port refuses instantly, so the entry's own Done-when — "opens offline in
+under a second" — **passed on the unfixed tree**. `tools/offline.js` measures a
+**slope** instead: with the app cached, the open must not depend on the network.
+Network-first 9,725ms, cache-first **47ms**. Counting blocking requests was
+tried and is the wrong instrument — it cannot tell a blocking fetch from a
+background revalidation.
+
+`sw.js` serves anything it holds from cache and revalidates behind the response.
+R122b's conditional request is unchanged, just off the critical path.
+
+### The save survives eviction, not size
+
+iOS clears localStorage after seven days at any size. localStorage stays the
+synchronous source of truth; `save/durable.js` is a backup read **only** when it
+comes up empty, so it cannot produce a stale save. The slot registry is restored
+first — without it `activeSlotId` answers 1 and every lab but the first is
+stranded, which the gate caught by opening an empty slot 3.
+
+### Three boxes became commands
+
+`npm run release` hashes the shell into `CACHE`; `npm run assets` renders the
+512px icon and five screenshots into a gitignored `dist/store/`. **The device
+test is not closed and cannot be** — Android device, JDK+SDK, signing key.
+`docs/TWA.md` says so and lists what the suite asserts in its place.
+
+### What the battery taught that reasoning did not
+
+- **Break 112 went MISSED twice.** `cache: 'reload'` on install looked
+  load-bearing and is belt-and-braces: whatever a stale install caches, the
+  revalidation replaces next open. It stays (correct, free); the break aims at
+  the revalidation now, which is where R122b's rule actually lives.
+- **The gate was pre-fixing its own test.** `deployReaches` ran the unbumped
+  leg first, and its revalidation refreshed the browser's HTTP cache, so
+  `install` could not have read a stale copy. Reordered, with a marker each.
+- **Break 308 was badly written** — it disabled the gate's own comparison. No
+  gate catches its own disabling; it aims at a changed shell file now.
+
+### Known issues
+
+- **R171 is overdue and now has evidence.** `KB_CAP` went red again at 547/545
+  — one milestone after R94 filed R171 predicting exactly that. Trimmed 1.2 KB
+  of prose to one-liners, then raised it on ~900 bytes of real eager code. Two
+  consecutive raises is the pattern that entry was written about.
+- `--disable-features=ServiceWorker` in `tools/assets.js` is belt-and-braces
+  and untested; the screenshots are correct with it.
+
+### Next session's first task
+
+Pick from the 14-entry queue in §9.0 — **R171** is the one this session made
+the case for twice. R102 is the oldest.
+
 ## Session 181 — R94: a meter and a ladder are different instruments ✅
 
 **ROADMAP §9.5.** The entry's title is wrong on today's tree. Notoriety does
