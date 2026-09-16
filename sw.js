@@ -41,6 +41,7 @@ const SHELL = [
   'save/save.js',
   'save/migrations.js',
   'save/slots.js',
+  'save/durable.js',
   'save/settings-ui.js',
   'render/renderer.js',
   'render/mood.js',

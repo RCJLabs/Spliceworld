@@ -5443,6 +5443,12 @@ triangle working, and each region genuinely asks a different question)*.
   bytes to `FIRST_PAINT_KB`, which measures them in a real browser — except
   that one keeps 18 KB of slack deliberately, so **nothing** would then catch a
   15 KB comment, and R169's whole milestone was about bytes hiding in slack.
+  **R100 hit it on its very first `npm test`**, one milestone after this entry
+  was filed predicting exactly that — and paid the same tax twice over, trimming
+  real explanation to one-liners to buy back 1.2 KB before raising the cap
+  again. Two consecutive raises is the pattern the ledger in `tools/smoke.js`
+  was written to make visible. This is no longer a prediction.
+
   Proposed, small: decide which of the two budgets owns prose, say so in both
   notes, and give the loser a rule that cannot be breached by explaining
   yourself. *Done when: a milestone can add a paragraph to an eager module

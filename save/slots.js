@@ -112,6 +112,11 @@ export function deleteSlot(slotId, storage = globalThis.localStorage) {
   try {
     storage.removeItem(slotKey(slotId));
   } catch { /* best effort — the listing no longer names it either way */ }
+  // R100 — AND OUT OF THE BACKUP, or the next eviction resurrects it. This is
+  // the one thing save/durable.js could otherwise cost a player: a lab they
+  // deliberately retired coming back because the recovery path found a copy
+  // nobody deleted. Not awaited, for saveGame's reason.
+  import('./durable.js').then(({ forget }) => forget(slotKey(slotId))).catch(() => {});
   return { ok: true };
 }
 

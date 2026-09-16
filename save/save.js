@@ -175,12 +175,14 @@ export function loadSlotRegistry(storage = globalThis.localStorage) {
 }
 
 export function saveSlotRegistry(registry, storage = globalThis.localStorage) {
+  const raw = JSON.stringify(registry);
   try {
-    storage.setItem(SLOTS_KEY, JSON.stringify(registry));
-    return true;
+    storage.setItem(SLOTS_KEY, raw);
   } catch {
     return false;
   }
+  mirrorSave(SLOTS_KEY, raw);   // R100 — see saveGame
+  return true;
 }
 
 // Self-healing against a registry whose active pointer somehow names a slot
@@ -190,6 +192,16 @@ export function activeSlotId(storage = globalThis.localStorage) {
   const reg = loadSlotRegistry(storage);
   if (reg.slots.some((s) => s.id === reg.activeId)) return reg.activeId;
   return reg.slots[0]?.id ?? 1;
+}
+
+// R100 — see save/durable.js. Null for every reason it could fail.
+async function recoverSave(key) {
+  try {
+    const { recover } = await import('./durable.js');
+    return await recover(key);
+  } catch {
+    return null;
+  }
 }
 
 export async function loadSlot(slotId, storage = globalThis.localStorage) {
@@ -204,6 +216,12 @@ export async function loadSlot(slotId, storage = globalThis.localStorage) {
     raw = storage.getItem(key);
   } catch {
     return fresh(); // storage unavailable (private mode etc.)
+  }
+  // R100 — EMPTY IS NOT THE SAME AS "NEW PLAYER". Only this branch reads the
+  // backup, so a save that is present is never second-guessed. durable.js.
+  if (!raw) {
+    raw = await recoverSave(key);
+    if (raw) console.info('Save recovered from the durable backup — localStorage had been cleared.');
   }
   if (!raw) return fresh();
   let save;
@@ -244,7 +262,16 @@ export async function loadSlot(slotId, storage = globalThis.localStorage) {
   return migrated;
 }
 
-export function loadSave(storage = globalThis.localStorage) {
+export async function loadSave(storage = globalThis.localStorage) {
+  // R100 — THE REGISTRY GOES FIRST, or every lab but the first is stranded:
+  // `activeSlotId` answers 1 for a missing registry. Restoring it before the
+  // question is asked keeps every registry reader synchronous.
+  try {
+    if (!storage.getItem(SLOTS_KEY)) {
+      const raw = await recoverSave(SLOTS_KEY);
+      if (raw) storage.setItem(SLOTS_KEY, raw);
+    }
+  } catch { /* nothing to restore, or nowhere to put it — carry on */ }
   return loadSlot(activeSlotId(storage), storage);
 }
 
@@ -261,11 +288,23 @@ export function loadSave(storage = globalThis.localStorage) {
 
 export function saveGame(state, storage = globalThis.localStorage) {
   state.saveVersion = SAVE_VERSION;
+  const key = slotKey(state.slotId ?? activeSlotId(storage));
+  const raw = JSON.stringify(state);
   try {
-    storage.setItem(slotKey(state.slotId ?? activeSlotId(storage)), JSON.stringify(state));
-    return true;
+    storage.setItem(key, raw);
   } catch (err) {
     console.error('Save write failed:', err);
     return false;
   }
+  // R100 — a copy where the browser does not sweep. Not awaited: durable.js.
+  mirrorSave(key, raw);
+  return true;
+}
+
+// R100 — lazy: this module is eager, the backup is not needed until after a
+// save, and `saveGame` stays synchronous. See save/durable.js.
+function mirrorSave(key, raw) {
+  import('./durable.js')
+    .then(({ mirror }) => mirror(key, raw))
+    .catch(() => { /* no IndexedDB here; localStorage already has the save */ });
 }
