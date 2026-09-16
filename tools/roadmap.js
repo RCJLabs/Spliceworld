@@ -41,6 +41,7 @@ import { GRADES } from '../splice/extract.js';
 import { GRADE_MOVE_BONUS } from '../battle/statblock.js';
 import { PHYS_TUNING } from '../splice/physiology.js';
 import { moduleFiles } from './scopecheck.js';
+import { stripComments } from './source.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJSON = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -152,7 +153,6 @@ export function checkRoadmap() {
   // in that sentence and scored the promise as kept. A probe a comment can
   // satisfy is R10's dead-prose problem inverted — prose with no code behind
   // it, passing for code.
-  const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
   const engineSource = moduleFiles()
     .map((f) => relative(root, f))
     .filter((f) => !f.startsWith('tools/'))

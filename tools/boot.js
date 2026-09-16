@@ -43,6 +43,7 @@ import { join, dirname, extname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sleep, serve, findChrome, connect, CHROME_CANDIDATES, MIME } from './cdp.js';
 import { fixtureSave } from './a11y.js';
+import { proseBytes, stripComments } from './source.js';
 
 // R122b's freshness check serves the repo itself, with the headers GitHub
 // Pages sends. `serve()` cannot be reused for it: it deliberately sends no
@@ -299,6 +300,18 @@ const REPORT = process.argv.includes('--report');
 // That is R153's exact shape (it took `campaign/director.js`, 11.9 KB, out
 // the same way) and it is a milestone's worth of care, not an end-of-session
 // change. See ROADMAP R107.
+// R171 — AND IT IS THE ONE THAT OWNS THE WIRE, which is now stated rather than
+// implied. This gate measures `transferSize` out of a real browser, so unlike
+// the static caps in tools/smoke.js it sees what a player actually pays after
+// compression — and that is where R171's uncomfortable number lives. Brotli
+// over the eager graph: 179.0 KB with the comments, 87.7 KB without. HALF OF
+// WHAT THIS BUDGET COUNTS IS PROSE.
+//
+// It was never going to catch prose creep on its own and should not be asked
+// to: R169 gave it 18 KB of deliberate slack because it is a browser reading
+// that went red once at 1034 against 1034 on a slow afternoon, and a budget
+// with slack cannot police a 15 KB comment. `PROSE_CAP` in tools/smoke.js does
+// that, deterministically. This one keeps the slack and the whole truth.
 const FIRST_PAINT_KB = 1034;
 
 // R169 — AND IT STAYS AT 1034, measured at 1016. Every previous milestone
@@ -360,7 +373,18 @@ const DEAD_AT_BOOT_KB = 170;
 // So the budget is on the SAVE SYSTEM'S SHARE of the first paint, not on
 // one filename: split it into three modules and the number is unchanged if
 // main.js still eagerly imports all three. Measured at 11.0 KB after R101.
-const SAVE_EAGER_KB = 15;
+//
+// R171 — AND IT IS CODE NOW, which took the budget from 13.0 to 6.4. R101 asked
+// how much of the save system the first paint CARRIES, and answered it in raw
+// bytes, so `save/save.js` — 13.0 KB on disk, 6.4 KB of program and 6.6 KB of
+// the reasoning behind SAVE_VERSION — read as though it were twice the weight.
+// A paragraph about the Ascent rule is not save machinery arriving at boot.
+//
+// The number moved once already for that reason and nobody saw it: R100 added
+// the recovery branch and its notes and took this reading 11.5 -> 13.0, which
+// is 1.5 KB of mostly English against a 15 KB budget. Re-derived here as code,
+// with headroom sized like the others.
+const SAVE_EAGER_KB = 9;
 
 
 // R121 — THE RULE FOR WHAT THE FIRST PAINT CARRIES, and the reason it is
@@ -831,13 +855,15 @@ async function main() {
     // eagerly without this seeing it.
     {
       const saveFiles = [...eager].filter(([f]) => f.startsWith('save/'));
-      const bytes = saveFiles.reduce((a, [, n]) => a + n, 0);
-      const kb = bytes / 1024;
+      // R171 — code, not bytes on disk. See the note beside SAVE_EAGER_KB.
+      const sized = saveFiles.map(([f]) => [f,
+        Buffer.byteLength(stripComments(readFileSync(join(root, f), 'utf8')))]);
+      const kb = sized.reduce((a, [, n]) => a + n, 0) / 1024;
       if (kb > SAVE_EAGER_KB) {
         note(`the first paint carries ${kb.toFixed(1)} KB of the save system, over the budget of ${SAVE_EAGER_KB} KB`
-          + ` (${saveFiles.map(([f, n]) => `${f} ${(n / 1024).toFixed(1)}KB`).join(', ')})`);
+          + ` (${sized.map(([f, n]) => `${f} ${(n / 1024).toFixed(1)}KB`).join(', ')})`);
       } else {
-        console.log(`boot: ${kb.toFixed(1)} KB of the save system is eager, under the ${SAVE_EAGER_KB} KB budget`);
+        console.log(`boot: ${kb.toFixed(1)} KB of save-system CODE is eager, under the ${SAVE_EAGER_KB} KB budget`);
       }
     }
 
@@ -884,7 +910,13 @@ async function main() {
     // not only under --report where no gate ever looks.
     const excusedKb = idle.filter((f) => f in RUNS_NOTHING_BUT_BELONGS)
       .reduce((n, f) => n + eager.get(f), 0) / 1024;
-    console.log(`boot: ${eager.size} modules compiled eagerly (${eagerKb.toFixed(1)} KB), `
+    // R171 — the split is reported where a person reads it, not only where a
+    // gate asserts it. "545.8 KB" was true and told nobody that 43% of it is
+    // English.
+    const proseKb = [...eager.keys()]
+      .reduce((n, rel) => n + proseBytes(readFileSync(join(root, rel), 'utf8')), 0) / 1024;
+    console.log(`boot: ${eager.size} modules compiled eagerly (${eagerKb.toFixed(1)} KB — `
+      + `${(eagerKb - proseKb).toFixed(1)} code, ${proseKb.toFixed(1)} prose), `
       + `${idle.length} of them running nothing on either first paint `
       + `(${excusedKb.toFixed(1)} KB excused by name)`);
 

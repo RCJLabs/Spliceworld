@@ -347,13 +347,16 @@ const EMPIRE = ['node', '-e',
 const SHARD_B = ['node', '-e',
   "process.env.SW_SHARD = 'b'; await import('./tools/smoke.js');"];
 
-// R145 — A FIGHT ENDS, AND IT ENDS THE RIGHT WAY. Six sample seeds x 3,536
-// scripted fights: median 9 on every one of them, and before this milestone
-// two fights on seed 11 that never ended at all, because the engine had no
-// turn cap and the harness's 300-turn guard was standing in for one. Shard d,
-// per SHARD_OF — the first break in this battery to aim at that lane, so the
-// constant is new rather than borrowed.
-const TURNS = ['node', '-e',
+// Shard d, per SHARD_OF. R145 opened this lane (a fight ends, and it ends the
+// right way: six seeds x 3,536 scripted fights, median 9 on every one, against
+// two on seed 11 that never ended at all before it) and named the constant
+// TURNS after that one block.
+//
+// R171 — RENAMED FOR THE LANE, which is the rule SHARD_B states four lines up
+// and this constant was the counter-example to. A second milestone now aims at
+// shard d — the eager-graph budgets live in the `wire` block — and `gate:
+// TURNS` on a break about kilobytes of comments would read as a mistake.
+const SHARD_D = ['node', '-e',
   "process.env.SW_SHARD = 'd'; await import('./tools/smoke.js');"];
 
 // R91 — THE VAULT HAS A BOTTOM, AND THE THEATER HAS ONE TABLE. Every list in
@@ -2119,7 +2122,7 @@ const BREAKS = [
     // run the harness's own 300-turn guard out and come back with no verdict.
     // A gate that checked only the limit it was handed would be green here,
     // which is why R145 asserts both halves.
-    n: 269, gate: TURNS, name: 'the engine loses its turn cap and two fights stop ending',
+    n: 269, gate: SHARD_D, name: 'the engine loses its turn cap and two fights stop ending',
     file: 'battle/engine.js',
     anchor: 'export const TURN_LIMIT = 60;',
     to: 'export const TURN_LIMIT = 6000;',
@@ -2132,7 +2135,7 @@ const BREAKS = [
     // player as "Defeat." This is the shape of the bug R145 found, reached by
     // a different route, and it goes red on the FIRST seed rather than the
     // second: every seed has a fight that reaches the limit.
-    n: 270, gate: TURNS, name: 'the called fight stops without saying who won',
+    n: 270, gate: SHARD_D, name: 'the called fight stops without saying who won',
     file: 'battle/engine.js',
     anchor: "  battle.outcome = won ? 'win' : 'loss';",
     to: '  battle.over = true;',
@@ -2148,7 +2151,7 @@ const BREAKS = [
     // a behaviour: the tail was measured correctly and then explained with a
     // mechanism nobody tested. A rule about a shape needs a break that proves
     // the rule can tell the shape apart from its opposite.
-    n: 274, gate: TURNS, name: 'the band rule reads the comparison backwards, and a losing grind passes',
+    n: 274, gate: SHARD_D, name: 'the band rule reads the comparison backwards, and a losing grind passes',
     file: 'tools/smoke.js',
     anchor: '    assert.ok(long.winPct >= c.winPct,',
     to: '    assert.ok(long.winPct <= c.winPct,',
@@ -2194,7 +2197,7 @@ const BREAKS = [
     // Worth a break of its own because it is the failure a turn cap invites:
     // three rules can prove every fight terminates while the thing it
     // terminates into is wrong.
-    n: 271, gate: TURNS, name: 'the called verdict compares NaN and hands every grind to the opposition',
+    n: 271, gate: SHARD_D, name: 'the called verdict compares NaN and hands every grind to the opposition',
     file: 'battle/engine.js',
     anchor: '  const mine = team.reduce((s, c) => s + c.maxHp, 0);',
     to: '  const mine = team.reduce((s, c) => s + c.hpMax, 0);',
@@ -3087,7 +3090,7 @@ const BREAKS = [
   // on three seeds in five; take it out again and the gate must notice that
   // the week of siege has gone quiet, which is the whole premise.
   {
-    n: 291, gate: TURNS, name: 'the report goes back to reading levels, so a week of convoys is silent',
+    n: 291, gate: SHARD_D, name: 'the report goes back to reading levels, so a week of convoys is silent',
     file: 'campaign/world.js',
     anchor: '    contestCount: c.contestCount ?? 0,',
     to: '    contestCount: 0,',
@@ -3096,7 +3099,7 @@ const BREAKS = [
     // The threshold is about TIME. An hour away already moves funds, so a
     // digest keyed on "did the report say anything" fires on a coffee break;
     // dropping the floor to a minute is that mistake made concrete.
-    n: 292, gate: TURNS, name: 'the welcome-back card starts firing on a coffee break',
+    n: 292, gate: SHARD_D, name: 'the welcome-back card starts firing on a coffee break',
     file: 'campaign/digest.js',
     anchor: 'export const AWAY_MIN_MS = 6 * 3600000;',
     to: 'export const AWAY_MIN_MS = 60 * 1000;',
@@ -3105,7 +3108,7 @@ const BREAKS = [
     // A line for a category that did not move is the wire again: twelve
     // headings, most of them zero. The rule is one line per thing that
     // CHANGED, and this removes the check that enforces it.
-    n: 293, gate: TURNS, name: 'the digest starts reporting categories that did not move',
+    n: 293, gate: SHARD_D, name: 'the digest starts reporting categories that did not move',
     file: 'campaign/digest.js',
     anchor: '    if (a === b) continue;',
     to: '    if (false) continue;',
@@ -3125,7 +3128,7 @@ const BREAKS = [
     // THE BAND STOPS BEING A BAND. At 60pp nothing can ever be outside it,
     // which is the shape every budget takes on the day somebody widens it to
     // stop a red rather than to describe a measurement.
-    n: 295, gate: TURNS, name: 'the share band widens until no job can ever be outside it',
+    n: 295, gate: SHARD_D, name: 'the share band widens until no job can ever be outside it',
     file: 'tools/shares.js',
     anchor: 'export const SHARE_BAND = 6;',
     to: 'export const SHARE_BAND = 60;',
@@ -3134,7 +3137,7 @@ const BREAKS = [
     // AND THE TABLE STOPS DESCRIBING THE SUITE. Shares of one run cannot sum
     // past 100; this break is the exact mistake the rule caught on its first
     // run, when the first draft of the table was rounded to whole percent.
-    n: 296, gate: TURNS, name: 'the declared shares stop adding up to one suite',
+    n: 296, gate: SHARD_D, name: 'the declared shares stop adding up to one suite',
     file: 'tools/shares.js',
     anchor: "  'smoke:a': 28.3,",
     to: "  'smoke:a': 58.3,",
@@ -3212,6 +3215,33 @@ const BREAKS = [
     file: 'tools/shares.js',
     anchor: "  handlers: 5.2, vault: 2.8, scopecheck: 0.2,",
     to: "  handlers: 5.2, vault: 2.8, scopecheck: 0.2, walks: 4.1,",
+  },
+
+  // R171 — the two halves of the entry's Done-when, one break each.
+  {
+    // FIFTEEN KILOBYTES OF COMMENTS, which is the number the entry names. The
+    // padding is built rather than typed: a literal would put 15 KB of filler
+    // in this file to prove that 15 KB of filler is catchable, which is the
+    // joke writing itself. `PROSE_CAP` has 10.3 KB of headroom, so this clears
+    // it by half again and no more — a break that overshoots by an order of
+    // magnitude proves the gate fires, not that it fires at the right place.
+    n: 309, gate: SHARD_D, name: 'fifteen kilobytes of comments ride into the boot graph and no budget notices',
+    file: 'campaign/map.js',
+    anchor: 'export function threatGen(state, content) {',
+    to: `${'// R171 break: a paragraph nobody asked for, two hundred and thirty times.\n'.repeat(230)}`
+      + 'export function threatGen(state, content) {',
+  },
+  {
+    // AND THE OTHER HALF: KB_CAP still does the job it was written for. Its own
+    // note names this exact regression — "putting `import { renderWarRoomScreen }`
+    // back at the top of main.js costs 8 modules at once" — and until R171 the
+    // cap that would have caught it was also absorbing every paragraph anybody
+    // wrote. Now it is code alone, so this is the only kind of thing that moves
+    // it, and the break proves the split did not cost the original rule.
+    n: 310, gate: SHARD_D, name: 'the War Room rejoins the eager graph, and the code budget sleeps through it',
+    file: 'main.js',
+    anchor: "  battle: lazy(() => import('./campaign/ui.js'), 'renderWarRoomScreen'),",
+    to: "  battle: { render: (await import('./campaign/ui.js')).renderWarRoomScreen },",
   },
 
   // R100 — the worker, the backup and the release discipline. Every one of

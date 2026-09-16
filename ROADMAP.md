@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**14 entries queued.** R102, R105, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R171.
+**13 entries queued.** R102, R105, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -5485,9 +5485,52 @@ triangle working, and each region genuinely asks a different question)*.
   catches 262. Breaks 262, 296, 300 and 301 all caught.
 
 
-- **R171 — The eager-JS budget charges the player for the comments.** Found
-  while shipping R94, whose gate went red on a milestone that added **400
-  bytes of code**. `KB_CAP` in `tools/smoke.js` is a static walk of file sizes
+- **R171 — The eager-JS budget charges the player for the comments.** ✅
+  *Shipped. Nobody had weighed the prose, and it is half the wire.*
+
+  #### The measurement the entry never took
+
+  | the 48-module eager graph | raw | brotli (what Pages sends) |
+  | --- | ---: | ---: |
+  | total | 545.8 KB | 179.0 KB |
+  | code | 311.1 KB | 87.7 KB |
+  | **prose** | **234.7 KB (43%)** | **91.3 KB (51%)** |
+
+  Comments were assumed to compress away. They do not — code compresses just as
+  well — so **half of what a player downloads before the game appears is this
+  repo explaining itself**, comparable to what R81's whole geometry split
+  bought. That is not reversed here: there is no build step by convention, and
+  the reasoning in these files is what stops the same mistake being made twice.
+  It is made visible and given its own line, so it can be re-decided later with
+  a number attached.
+
+  #### One question, one cap
+
+  `KB_CAP` 547 → **314**, code only, back to catching the one thing its note
+  says it is for. `PROSE_CAP` **245** against 234.7 measured — 10.3 KB of
+  headroom, sized so a paragraph (300–900 bytes) fits and 15 KB does not.
+  `FIRST_PAINT_KB` keeps the compressed wire and its 18 KB of deliberate slack,
+  and says it is no longer the only thing watching prose. `SAVE_EAGER_KB`
+  15 → **9**, also code: `save/save.js` is 13.0 KB on disk and 6.4 KB of
+  program, and that reading had already drifted 11.5 → 13.0 during R100 on
+  mostly English with nobody watching.
+
+  #### Five strippers, one of them wrong about strings
+
+  `tools/source.js` is one `stripComments` with five readers (R157's break 152
+  as a function). The five spellings disagreed by 3.7 KB over the same graph,
+  and `tools/smoke.js`'s had no idea what a string literal was: it ate
+  `"http://www.w3.org/2000/svg"` out of `render/renderer.js` five times.
+  Harmless, because the three assertions using it search identifiers in files
+  with no URL in them — harmless by luck. It is a scanner now, verified by every
+  one of the 115 modules still parsing after being stripped.
+
+  *Done when: a milestone can add a paragraph to an eager module without moving
+  a cap, AND a break that adds 15 KB of comments to one goes red on a named
+  gate.* Both: no cap counts prose except the one named for it, and break 309
+  goes red on `PROSE_CAP`. Break 310 proves the split did not cost `KB_CAP` its
+  original job. Found while shipping R94, whose gate went red on a milestone
+  that added **400 bytes of code**. `KB_CAP` in `tools/smoke.js` is a static walk of file sizes
   on disk, so a comment weighs exactly what a statement weighs, and R169 left
   the cap 1.7 KB above the measurement — which makes it the first budget in
   the repo a *paragraph* can breach. This is not obviously wrong: there is no
