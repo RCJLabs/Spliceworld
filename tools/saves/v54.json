@@ -1,5 +1,5 @@
 {
-  "saveVersion": 53,
+  "saveVersion": 54,
   "seed": 424242,
   "starterLab": "bramble_barn",
   "createdAt": 1700000000000,
@@ -143,6 +143,7 @@
     "losses": 0
   },
   "dominionAt": null,
+  "legacy": null,
   "sparCount": 0,
   "sparRefillAt": 0,
   "gauntletBeaten": [],

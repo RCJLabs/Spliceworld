@@ -1,5 +1,65 @@
 # PROGRESS
 
+## Session 184 — R102: a run can end, and you choose what survives it ✅
+
+**ROADMAP §9.** The third part of R87, deferred on purpose. Its numbers were
+stale in the direction that makes the problem worse.
+
+### Re-measured before building
+
+| the entry said | measured, 13 seeds |
+| --- | --- |
+| county falls median day **35–54** | **28.6** — 24 earliest, 39 latest, 13/13 reach it |
+| **~130** days with no terminus | **151** |
+| `startNewRun` in `save/save.js` | `save/slots.js` — R101 split them |
+
+84% of a 180-day campaign happens after the only thing the game calls an ending.
+
+### Exactly one thing
+
+The boundary existed and was empty: `startNewRun` carried a sound toggle and
+some read receipts. `data/legacy.json` declares the kinds and `maxPicks`;
+`campaign/legacy.js` owns what a kind *means* and throws on an unimplemented
+`carries` rather than quietly keeping nothing (R41's lesson). **A second pick is
+refused, not replaced** — refusing is what a player understands from one try.
+The offer is derived from the run, and an unfinished one offers nothing.
+
+A veteran keeps what it **is** (genome, name, scars, temperament, level), not
+what it **had** (injuries, settling clocks, a record in a county it never fought
+in). `SAVE_VERSION` 54; the migration is deliberately dull, because `legacy` is
+what a run was *started* with and null is the true answer for every save
+already in progress.
+
+### Nine declare-yourself rules, and one found a real gap
+
+sw.js precache, the content list, `indexContent`'s whitelist (`CONTENT_FILES`
+is not enough — R41 again), MODULE_NOTES, DATA_NOTES, the systems roll, the
+guide walk, the v54 fixture, the handler gate. All nine correct; the guide
+rightly lights beside the Gauntlet and the Task Force, because dominion opens
+all three.
+
+**R55's reset gate matched on spelling.** It asserted the literal
+`adoptSave(startNewRun(state), storage, state.slotId)` twice; loosening it to
+ignore the first argument reported **three**. The third is R54's *import* path,
+which adopts a save from a file and had never been covered. The invariant —
+whatever is adopted goes to `storage` and the slot it was loaded from, which is
+what break 8 violated — now covers all three.
+
+### Known issues
+
+- **A carried veteran is an unmeasured power carry-over.** It is the right
+  story, and nobody has walked a second run to see what a level-9 chimera does
+  to an opening R106 and R119 spent milestones tuning. **Queued as R172** with
+  a Done-when; it is the first thing R102 should be judged on.
+- The ceremony's pick buttons are covered by source assertions rather than by
+  the handler walk, because the settings overlay is not a screen. Stated in
+  `ELSEWHERE` rather than left implicit.
+
+### Next session's first task
+
+**R172** — measure what the veteran does to the opening. Otherwise the queue is
+13 and R105 is the oldest.
+
 ## Session 183 — R171: half of what boot downloads is English ✅
 
 **ROADMAP §9.** The entry asked which of two budgets owns prose. Nobody had

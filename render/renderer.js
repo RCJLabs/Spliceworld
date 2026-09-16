@@ -70,6 +70,8 @@ export function indexContent(raw) {
     // tier.js` reads the whole of it so a band can move without an engine
     // edit.
     tiers: raw.tiers ?? null,
+    // R102 — flat tuning, same as `tiers` below. See data/notes/legacy.md.
+    legacy: raw.legacy ?? null,
     // R82: the breakout's whole tuning is one flat object, so it is
     // indexed as one rather than split into a list and a meta block.
     breakoutMeta: raw.breakout ?? null,

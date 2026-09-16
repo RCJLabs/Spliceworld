@@ -3217,6 +3217,31 @@ const BREAKS = [
     to: "  handlers: 5.2, vault: 2.8, scopecheck: 0.2, walks: 4.1,",
   },
 
+  // R102 — the run boundary. Both breaks aim at the two ways a legacy system
+  // fails, and they are opposite: carrying nothing makes the ceremony a lie,
+  // carrying more than one makes it a save editor.
+  {
+    // NOTHING CROSSES. `applyLegacy` stops writing the pick, so the ceremony
+    // offers a choice, takes it, and hands back the same empty run it always
+    // did — which is the state this game was in before R102 and is invisible
+    // from the outside: the dialog still says the right words.
+    n: 311, gate: SHARD_B, name: 'the legacy is offered and then dropped, so the ceremony is a lie',
+    file: 'campaign/legacy.js',
+    anchor: '      out.chimeras = [carryChimera(source)];',
+    to: '      out.chimeras = [];',
+  },
+  {
+    // AND THE CEILING. A second pick replaces the first instead of being
+    // refused, which is how "carry exactly one thing" becomes "carry one thing
+    // per visit to this dialog" — a save editor with a ceremony around it.
+    // Caught by the gate that takes two picks in a row and expects the FIRST
+    // to still be the answer.
+    n: 312, gate: SHARD_B, name: 'a second legacy pick overwrites the first, so exactly one becomes one at a time',
+    file: 'campaign/legacy.js',
+    anchor: '  if (taken >= (t.maxPicks ?? 1)) return fresh;',
+    to: '  if (false) return fresh;',
+  },
+
   // R171 — the two halves of the entry's Done-when, one break each.
   {
     // FIFTEEN KILOBYTES OF COMMENTS, which is the number the entry names. The

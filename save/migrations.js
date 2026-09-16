@@ -610,6 +610,16 @@ export const migrations = {
   // difficulty change applied retroactively. New escapes come back in packs;
   // the ones already standing in the county are exactly what the player was
   // shown when they escaped.
+  // R102 — THE RUN BOUNDARY, and the migration is deliberately the dullest
+  // one in this table. `legacy` is what a run was STARTED with, so there is
+  // nothing in an old save to derive it from: a campaign already in progress
+  // was not started with anything, and null is the true answer rather than a
+  // default standing in for one. Every returning player is a first run by
+  // this field's reckoning, which is correct — they are.
+  54: (save) => {
+    save.legacy ??= null;
+    return save;
+  },
   53: (save) => {
     save.campaign ??= {};
     // R94 — the high-water mark. A returning save has already earned its

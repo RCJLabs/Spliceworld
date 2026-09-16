@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 53
+- save version: 54
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**13 entries queued.** R102, R105, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
+**13 entries queued.** R105, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R172.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -3084,9 +3084,81 @@ R102; R88–R90 remain.)*
   +150ms 241ms, both under the second; a 2 MB save and its registry survive
   `localStorage.clear()`; three of four boxes closed by tooling and the fourth
   documented as hardware-bound. Breaks 112, 304–308 all caught.
-- **R102 — The run boundary: "Relocate the lab".** The third part of R87,
-  deliberately deferred rather than half-built. R87 gave the endgame a stake
-  and a sink; what it still has no shape for is an **ending the player
+- **R102 — The run boundary: "Relocate the lab".** ✅ *Shipped. The entry's
+  numbers were stale in the direction that makes it worse.*
+
+  #### Re-measured before building
+
+  | the entry said | measured, 13 seeds |
+  | --- | --- |
+  | the county falls on median day **35–54** | median day **28.6** — 24 at the earliest, 39 at the latest, and all 13 get there |
+  | **~130 days** with no terminus | **151** |
+  | `startNewRun` et al. live in `save/save.js` | `save/slots.js` — R101 split them |
+
+  So 84% of a 180-day campaign happens after the only thing the game calls an
+  ending. R94, R138, R154 and R157 each made the player stronger since R87
+  measured this.
+
+  #### Exactly one thing
+
+  The boundary already existed and was empty: `startNewRun` carried `settings`,
+  `guidesSeen` and `ui` — a sound toggle and some read receipts. `data/legacy.json`
+  declares the kinds (a named veteran, a bloodline, the doctrine) and `maxPicks`,
+  so a fourth kind is a JSON object; `campaign/legacy.js` owns what a kind
+  *means* and throws on a `carries` it does not implement rather than quietly
+  keeping nothing (R41's lesson). **`applyLegacy` refuses a second pick rather
+  than replacing the first** — refusing is what a player can understand from one
+  try. The offer is derived from the run, and an unfinished one offers nothing:
+  the pick is what finishing buys.
+
+  A veteran keeps what it **is** — genome, name, scars, temperament, level — and
+  not what it **had**: injuries, settling clocks, and its record in a county it
+  has never fought in. `SAVE_VERSION` 54, with a deliberately dull migration,
+  because `legacy` is what a run was *started* with and null is the true answer
+  for every save already in progress.
+
+  #### Nine declare-yourself rules, and one found a real gap
+
+  sw.js precache, the content list, `indexContent`'s whitelist (adding to
+  `CONTENT_FILES` is not enough), MODULE_NOTES, DATA_NOTES, the shipped-systems
+  roll, the guide walk, the v54 fixture and the handler gate all caught this on
+  the way in. The guide correctly lights on the same step as the Gauntlet and
+  the Task Force, because dominion opens all three.
+
+  **R55's reset gate matched on spelling.** It asserted the literal
+  `adoptSave(startNewRun(state), storage, state.slotId)` exactly twice; R102
+  changed the confirmed path's first argument, and loosening the match reported
+  **three**. The third is R54's *import* path, `adoptSave(parsed.save, …)`,
+  which adopts a save from a file and had never been covered by that rule. The
+  invariant — whatever is adopted goes to `storage` and the slot it was loaded
+  from, which is what break 8 violated — now covers all three.
+
+  *Done when: a completed run can be retired into a new one carrying exactly
+  one chosen thing, and smoke asserts the new save keeps that one thing and
+  nothing else.* Both, in the R102 block: one chimera crosses with its scars,
+  the herd and vault and county and money do not, and a second pick does not
+  stack. Breaks 311 and 312 caught.
+
+  **Known issue, unmeasured:** a carried veteran is a *power* carry-over as well
+  as a story one, and what a level-9 chimera does to an opening that R106 and
+  R119 spent milestones designing has not been walked. Queued as R172.
+
+- **R172 — What a legacy veteran does to the opening.** R102 ships the run
+  boundary and carries a chimera across it with its genome, level and scars
+  intact. That is the right story — it is the creature you kept — and it is an
+  unmeasured change to the first hour, which R106 tuned around a player who
+  fields three bodies and R119 around one who has just picked a founding lab.
+  Nobody has walked a second run. Proposed, small: walk one, bucket the opening
+  the way R103 bucketed agency, and decide from the number whether the veteran
+  needs a stated cost (arriving at a reset grade, or the Task Force already
+  interested) or whether a strong start is simply what finishing a run buys.
+  *Done when: a second run's first ten days are measured against a first run's,
+  and the veteran either carries a stated cost or the entry records that it
+  needs none.*
+
+  **The entry as filed, kept for its reasoning — its numbers are superseded by
+  the table above and should not be read as current:** R87 gave the endgame a stake
+  and a sink; what it still had no shape for was an **ending the player
   chooses**. Measured there: the county falls on median day 35–54 and the
   remaining ~130 days have no terminus, so a campaign stops when the player
   gets bored rather than when they decide it is finished. Proposed, large:

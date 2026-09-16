@@ -561,6 +561,14 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // would be. Listing it here is an admission, not a dismissal.
   const ELSEWHERE = {
     screen: 'index.html nav, bound in main.js at boot — exercised by tools/a11y.js in a real browser',
+    // R102 — the run boundary's pick buttons live in the settings ceremony,
+    // which is an overlay rather than a screen: no `shellScreenMap` entry
+    // renders it, so this walk cannot reach it by construction. What covers it
+    // is the R102 block in tools/smoke.js, which asserts the panel hands the
+    // pick to `applyLegacy` and adopts what it returns, on top of testing the
+    // engine directly against a finished run. Listing it here is an admission,
+    // not a dismissal — same as `screen` above.
+    legacy: 'the settings ceremony, not a screen render — covered by the R102 block in tools/smoke.js',
   };
 
   // The proof. A literal reader is `dataset.thing` or a `[data-thing]`

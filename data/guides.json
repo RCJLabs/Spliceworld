@@ -113,7 +113,7 @@
       "order": 15,
       "icon": "derelict-house",
       "title": "The lab is upgradeable",
-      "body": "Six machines, each bought in order, each gated by money and usually by territory \u2014 and each bought on the screen of the thing it upgrades, not here. The Incubator and the Gene Scanner are the Ranch\u2019s two; the line under this card says where the rest live. They buy what you cannot otherwise have: two more chassis at opposite ends of the scale, a second organ bay, a machine that reads alleles. Money has nowhere better to go.",
+      "body": "Six machines, each bought in order, each gated by money and usually by territory — and each bought on the screen of the thing it upgrades, not here. The Incubator and the Gene Scanner are the Ranch’s two; the line under this card says where the rest live. They buy what you cannot otherwise have: two more chassis at opposite ends of the scale, a second organ bay, a machine that reads alleles. Money has nowhere better to go.",
       "reachable": [
         {
           "helper": "facilityAffordable"
@@ -775,6 +775,25 @@
           "path": "renderCount",
           "min": 1,
           "default": 0
+        }
+      ]
+    },
+    {
+      "id": "legacy",
+      "screen": "battle",
+      "order": 56,
+      "icon": "flag",
+      "title": "Pack one thing",
+      "body": "The county is yours, which means the interesting part is over and the paperwork has started. You can stop here on purpose: relocate the lab, and start again somewhere that has not heard of you. Exactly ONE thing crosses with you — a named veteran, a bloodline off your ranch, or the doctrine the old lab was built on. Not two. The rest stays for the next tenant, including the money, the county and the vault. It is an ending you choose rather than one you drift out of, and the creature that comes with you arrives with its scars and its name and absolutely nothing else.",
+      "reachable": [
+        {
+          "path": "dominionAt"
+        }
+      ],
+      "done": [
+        {
+          "path": "legacy",
+          "default": null
         }
       ]
     }

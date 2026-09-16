@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 53;
+export const SAVE_VERSION = 54;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -50,6 +50,11 @@ export function newGameState() {
     warRecord: { wins: 0, losses: 0 },
     // R40: when the whole county was first held. Null until it is.
     dominionAt: null,
+    // R102 — the one thing carried out of the run before this one, or null
+    // for a first run and for anybody who travelled light. Written by
+    // `applyLegacy` and read by the ceremony and the opening; see
+    // campaign/legacy.js for why it is one and not a list.
+    legacy: null,
     // R41/R43: the Sparring Ring's seed counter, and the moment its charge
     // bucket next stands full (0 = full now).
     sparCount: 0,

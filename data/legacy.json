@@ -1,0 +1,30 @@
+{
+  "maxPicks": 1,
+  "openedBy": "dominionAt",
+  "ceremony": {
+    "title": "Relocate the lab",
+    "blurb": "The county is yours and the paperwork is somebody else's problem now. Pack one thing. The rest stays for the next tenant.",
+    "noneLabel": "Travel light",
+    "noneBlurb": "Nothing crosses. A clean bench and no ghosts."
+  },
+  "kinds": {
+    "veteran": {
+      "name": "A named veteran",
+      "carries": "chimera",
+      "blurb": "One creature walks out with you \u2014 its scars, its temperament, its name. It will be the only thing in the new pens.",
+      "fine": "It keeps what it is. It does not keep what it had."
+    },
+    "bloodline": {
+      "name": "A bloodline",
+      "carries": "species",
+      "blurb": "A founding animal of the line you raised, so the new ranch starts from stock you already trust.",
+      "fine": "One animal, at the grade a founder starts at."
+    },
+    "doctrine": {
+      "name": "The doctrine",
+      "carries": "philosophy",
+      "blurb": "The philosophy the old lab was built on, carried to the new one instead of being rolled again.",
+      "fine": "Narrative only. Anatomy is where this game keeps its mechanics."
+    }
+  }
+}
