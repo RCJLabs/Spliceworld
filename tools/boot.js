@@ -540,6 +540,33 @@ const WATCH_FIRST_RENDER = `(() => {
 // simulation of reopening the app.
 const MARKER = '\n:root{--deploy-marker:7}\n';
 
+// R100 — AND WHAT A DEPLOY IS CHANGED UNDER IT.
+//
+// R122b wrote this against a network-first worker, where a deploy was simply
+// "new bytes on the server": every request went to the network anyway, so
+// editing style.css behind the worker's back was a faithful simulation. Under
+// cache-first it is not a deploy at all, it is a file that changed with
+// nothing to notice — and the gate went red on exactly that, correctly, the
+// moment sw.js turned round.
+//
+// So the simulated deploy now does what a real one does: it changes the file
+// AND bumps `CACHE`, which is the version. The browser revalidates sw.js on
+// every navigation, so a changed CACHE installs a new worker, which refetches
+// the whole shell and claims the page.
+//
+// IT TAKES TWO OPENS, and that is the tradeoff R100 bought, stated here rather
+// than discovered on a phone. The page being looked at when the new worker
+// installs was already served by the old one. Two is asserted rather than
+// assumed: without a bound, "eventually" is indistinguishable from "never",
+// which is the bug R122 was reported for.
+//
+// THE OTHER HALF OF THIS RULE IS NOT HERE. A deploy that forgets to bump CACHE
+// now goes stale indefinitely rather than for ten minutes, and no browser gate
+// can catch that — by construction, the worker is behaving correctly. That is
+// `tools/release.js`, which checks CACHE against SAVE_VERSION before a release
+// rather than trusting anybody to remember.
+const DEPLOY_OPENS = 2;
+
 async function deployReaches(note) {
   const chrome = findChrome();
   let override = null;
@@ -550,6 +577,12 @@ async function deployReaches(note) {
     try {
       let body = await readFile(file);
       if (override && path.endsWith('style.css')) body = Buffer.concat([body, Buffer.from(override)]);
+      // The version half of the deploy. Bumping CACHE is what tells the
+      // browser there is a new build; without it the worker is right to keep
+      // serving what it has.
+      if (override && path.endsWith('sw.js')) {
+        body = Buffer.from(String(body).replace(/const CACHE = '([^']+)'/, "const CACHE = '$1-deploy'"));
+      }
       res.writeHead(200, {
         'content-type': MIME[extname(file)] ?? 'application/octet-stream',
         'cache-control': 'max-age=600',      // what GitHub Pages sends
@@ -579,11 +612,19 @@ async function deployReaches(note) {
       return;
     }
     override = MARKER;                        // the deploy
-    await send('Page.navigate', { url: 'about:blank' }); await sleep(500);
-    await send('Page.navigate', { url }); await sleep(3200);
-    const got = await evaluate(`getComputedStyle(document.body).getPropertyValue('--deploy-marker').trim()`);
+    let opens = 0;
+    let got = null;
+    while (opens < DEPLOY_OPENS && got !== '7') {
+      opens += 1;
+      await send('Page.navigate', { url: 'about:blank' }); await sleep(500);
+      await send('Page.navigate', { url }); await sleep(3200);
+      got = await evaluate(`getComputedStyle(document.body).getPropertyValue('--deploy-marker').trim()`);
+    }
     if (got !== '7') {
-      note('a new build does NOT reach a browser that already has the app cached — the service worker is serving the previous deploy');
+      note(`a new build does NOT reach a browser that already has the app cached in ${DEPLOY_OPENS} opens`
+        + ' — the service worker is still serving the previous deploy');
+    } else if (REPORT) {
+      console.log(`boot: a bumped CACHE reaches a cached browser in ${opens} open${opens > 1 ? 's' : ''}`);
     }
   } finally {
     try { cdp?.ws.close(); } catch { /* already gone */ }

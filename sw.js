@@ -1,6 +1,33 @@
-// Service worker (M7): network-first with cache fallback. Fresh deploys win
-// whenever the network is up; offline play falls back to the last good
-// build. Bump CACHE with SAVE_VERSION-sized releases so stale caches drain.
+// Service worker. CACHE-FIRST for the versioned shell, network-first for
+// everything else, and the cache name IS the version.
+//
+// R100 — WHY IT TURNED ROUND. M7 shipped this network-first and R81 filed the
+// consequence as a known issue without a number on it. Measured, cold open,
+// app already cached, timed to the moment a screen first holds a game:
+//
+//     wire cut      125ms     0 requests reached the server
+//     server +0ms   200ms    85
+//     server +150ms 2414ms   85
+//     server +300ms 4683ms   85
+//
+// OFFLINE WAS THE CASE NETWORK-FIRST ACCIDENTALLY HANDLED — a dead port
+// refuses instantly, so all 85 failures cost 125ms between them. The case it
+// did not handle is the ordinary one: a phone with a signal, where a request
+// does not fail, it waits. At 300ms of latency the game took 4.7 seconds to
+// appear from a disk it was already on, 37x slower than with the wire cut.
+//
+// THE COST OF TURNING IT ROUND, stated rather than discovered later: a deploy
+// now lands on the NEXT open rather than this one. The browser revalidates
+// this file on every navigation, so a changed CACHE installs a new worker,
+// which refetches the whole shell and claims the page — but the page being
+// looked at was already served from the old one. R122b's gate asserts exactly
+// this and is updated to two opens with the reason written beside it.
+//
+// WHICH MAKES THE BUMP LOAD-BEARING. Under network-first a forgotten CACHE
+// bump cost ten minutes of staleness; under cache-first it is indefinite,
+// which is R122's original bug report — a phone stuck on a broken build.
+// `tools/release.js` is the answer and exists for this: CACHE is checked
+// against SAVE_VERSION by a gate rather than by anybody remembering.
 const CACHE = 'spliceworld-v53-r94';
 
 const SHELL = [
@@ -125,9 +152,18 @@ const SHELL = [
   'data/guides.json',
 ];
 
+// R100 — `cache: 'reload'` on every shell entry, for R122b's reason one layer
+// up. `cache.addAll` fetches through the browser's HTTP cache, and Pages sends
+// the shell with `max-age=600`, so a worker installing in the ten minutes
+// after a deploy would fill its brand-new versioned cache with the PREVIOUS
+// build and then serve that indefinitely, because nothing revalidates a cache
+// entry that keeps being found. Under network-first that mistake drained on
+// its own; under cache-first it does not.
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then((cache) => cache.addAll(SHELL.map((path) => new Request(path, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -139,28 +175,59 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// R122b — REVALIDATE, or "network-first" is a lie for ten minutes after
-// every deploy. A plain `fetch(request)` reads through the BROWSER's HTTP
-// cache, and GitHub Pages serves the shell with `Cache-Control: max-age=600`
-// — so for ten minutes after a push this returned the old file while
-// believing it had gone to the network, and then wrote that stale copy into
-// the freshly-named cache, where it outlived the ten minutes. A phone could
-// sit on the previous build indefinitely; that is how R122's fix appeared
-// not to ship. `cache: 'no-cache'` forces a conditional request instead:
-// a changed file comes back 200 with new bytes, an unchanged one 304 with
-// almost none. The offline fallback below is untouched.
+// R122b — REVALIDATE, or "network-first" is a lie for ten minutes after every
+// deploy. A plain `fetch(request)` reads through the BROWSER's HTTP cache, and
+// GitHub Pages serves the shell with `Cache-Control: max-age=600` — so for ten
+// minutes after a push this returned the old file while believing it had gone
+// to the network, and then wrote that stale copy into the freshly-named cache,
+// where it outlived the ten minutes. `cache: 'no-cache'` forces a conditional
+// request instead: a changed file comes back 200 with new bytes, an unchanged
+// one 304 with almost none.
+//
+// R100 KEEPS THAT EXACTLY AS IT WAS and changes only WHEN it runs. For a shell
+// entry the conditional request now happens AFTER the response has already
+// gone to the page, instead of in front of it. Same request, same headers,
+// same freshness; it is no longer on the critical path.
+const revalidate = (request) => fetch(request, { cache: 'no-cache' })
+  .then((response) => {
+    // An error page must never be written over a good cached copy: a 502 from
+    // a proxy is not a new build, and caching it would brick the app until the
+    // next CACHE bump.
+    if (response && response.ok) {
+      const copy = response.clone();
+      return caches.open(CACHE).then((cache) => cache.put(request, copy)).then(() => response);
+    }
+    return response;
+  })
+  // Offline, or a browser that refuses the `cache` option. Either way the
+  // cached copy the page already has is still the right answer.
+  .catch(() => null);
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    fetch(event.request, { cache: 'no-cache' })
-      .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE).then((cache) => cache.put(event.request, copy));
-        return response;
-      })
-      // Both arms matter: a dead network, and a browser that refuses the
-      // `cache` option. Either way the last good build is still here.
-      .catch(() => fetch(event.request).catch(() => null))
-      .then((r) => r ?? caches.match(event.request, { ignoreSearch: true }))
+    caches.match(event.request, { ignoreSearch: true }).then((cached) => {
+      // THE SHELL: answer now, check later. `caches.match` hitting IS the
+      // definition of "an entry this browser already has" — there is no second
+      // list of paths to keep in step with SHELL above, which is R157's break
+      // 152 (one constant, one home, however many readers).
+      if (cached) {
+        event.waitUntil(revalidate(event.request));
+        return cached;
+      }
+      // EVERYTHING ELSE: unchanged from M7. Anything not precached is either
+      // new since the last release or not ours, and for both of those the
+      // network is the right first question.
+      return fetch(event.request, { cache: 'no-cache' })
+        .then((response) => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => fetch(event.request).catch(() => null))
+        .then((r) => r ?? caches.match(event.request, { ignoreSearch: true }));
+    })
   );
 });
