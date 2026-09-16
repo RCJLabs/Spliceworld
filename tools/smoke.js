@@ -151,6 +151,10 @@ const SHARD_OF = {
   calendar: 'b',
   // R108 — specimen cards. String work and one scripted fight; cheap. Shard a.
   card: 'a',
+  // R109 — the voice. One 180-day walk (~15s) and then string matching over
+  // its 4,697 lines. Shard d, which R145's note calls the lane carrying the
+  // four smallest blocks.
+  voice: 'd',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -14547,6 +14551,61 @@ if (inShard('card')) {
 
   console.log('   R108 cards: a genome leaves as one SVG and comes back the same creature '
     + '\u00b7 the code is retypable \u00b7 an unknown part is refused by name');
+}
+
+// R109 — WHAT A CAMPAIGN SOUNDS LIKE.
+//
+// The wire pushes 4,697 lines over 180 days and says them with 67 phrasings.
+// Nothing in the tree could see that before this milestone, because the wire
+// keeps twelve lines: `pushNews` now appends to a harness-only `__wire` and
+// `voiceDiet` maps every line back to the AUTHORED TEMPLATE it came from.
+// That mapping is the measurement — the same 4,697 lines read as 1,341
+// distinct sentences if you count printed text, and counting printed text is
+// how the audit that queued this milestone got 181 where the truth is 67.
+//
+// FOUR RULES, ONE WALK. Three are the entry's criterion and its premise; the
+// fourth is the rule that makes the other three reachable, because a
+// sentence written inside an engine module cannot be pooled, cannot be
+// counted, and cannot be rewritten without an engine edit.
+if (inShard('voice')) {
+  const walk = campaignWalk(content, { seed: 2026, days: 180, stopAtDominion: false });
+  const v = walk.voice;
+
+  // 0. THE MEASUREMENT IS ON A REAL CAMPAIGN. A walk that said nothing would
+  //    pass every rule below by having no wire at all, which is the shape of
+  //    gate this project has shipped twice (R157's worn floor, R163's
+  //    median) and had to come back and fix.
+  assert.ok(v.total > 3000, `the walk actually played and the world talked (${v.total} lines)`);
+  assert.ok(v.authored > 100, `and there is a corpus to draw on (${v.authored} phrasings authored)`);
+
+  // 1. EVERY LINE THE WORLD SAYS IS IN data/. CLAUDE.md: "All content is
+  //    data. Adding content must never require engine edits. If it does, the
+  //    engine is wrong — fix the engine." A line with no authored template
+  //    is a sentence somebody wrote inside a module, and no pool, no
+  //    rotation and no rewrite can reach it. 1,667 of 4,697 today.
+  assert.equal(v.unmatched, 0,
+    `every line the world says is authored in data/ (${v.unmatched} of ${v.total} are written in engine modules: ${v.unmatchedShapes.slice(0, 3).map((x) => JSON.stringify(x.slice(0, 60))).join(', ')})`);
+
+  // 2. NO PHRASING IS MORE THAN A TWENTIETH OF THE VOICE. The entry's
+  //    criterion. A player hearing one sentence 684 times in a campaign is
+  //    the whole complaint.
+  assert.deepEqual(v.over5pct.map((r) => `${(r.share * 100).toFixed(1)}% ${r.t.slice(0, 50)}`), [],
+    `no phrasing is more than 5% of the wire (loudest ${(v.topShare * 100).toFixed(1)}%)`);
+
+  // 3. AND THERE ARE AT LEAST FOUR HUNDRED OF THEM. The other half of the
+  //    criterion, and the half that cannot be met by deleting the loud ones:
+  //    a wire that says nothing has no phrasing over 5% either.
+  assert.ok(v.distinct >= 400,
+    `the campaign speaks at least 400 distinct phrasings (${v.distinct})`);
+
+  // 4. AND NOTHING IN news.json IS NEVER SAID. R57/R58's shape, which this
+  //    project has now found six times: authored content with no reader.
+  //    Ten of the wire's own lines never play in 180 days today.
+  assert.deepEqual(v.silent, [],
+    `every line in news.json is spoken at least once in 180 days (${v.silent.length} silent)`);
+
+  console.log(`   R109 voice: ${v.total} lines from ${v.distinct} phrasings \u00b7 loudest `
+    + `${(v.topShare * 100).toFixed(1)}% \u00b7 nothing written in an engine module, nothing authored and unsaid`);
 }
 
 // R56. Every measurement this project owns is a SLICE — runSim benches a

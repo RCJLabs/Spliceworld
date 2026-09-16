@@ -2510,6 +2510,17 @@ export function voicePhrasings(content) {
   return [...out];
 }
 
+// Just the wire's own file. Used for the silence check, not for matching.
+function wireOnly(content) {
+  const out = new Set();
+  for (const spec of Object.values(content?.news ?? {})) {
+    for (const line of [...(spec.lines ?? []), ...Object.values(spec.by ?? {}).flat()]) {
+      if (typeof line === 'string' && line.replace(/\{\w+\}/g, '').trim().length >= 12) out.add(line);
+    }
+  }
+  return [...out];
+}
+
 const phrasingRe = (t) => new RegExp('^'
   + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{\w+\\\}/g, '[\\s\\S]{0,120}?')
   + '$');
@@ -2538,9 +2549,17 @@ export function voiceDiet(lines, content) {
     topShare: total ? +(ranked[0]?.[1] ?? 0) / total : 0,
     topLine: ranked[0]?.[0] ?? null,
     over5pct: ranked.filter(([, n]) => n / total > 0.05).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(3) })),
-    // Authored and never once said in 180 days. R57/R58's shape: content
-    // with no reader is content nobody wrote.
-    silent: phrasings.filter((t) => !heard.has(t)),
+    // Authored in data/news.json and never once said in 180 days. R57/R58's
+    // shape: content with no reader is content nobody wrote.
+    //
+    // NARROWED TO news.json ON PURPOSE. The corpus above is deliberately
+    // wide so that any authored sentence reaching the wire MATCHES, but most
+    // of what it sweeps up — a region's blurb, a gauntlet stage's pitch — is
+    // screen copy that was never going to be on the wire, and counting those
+    // as "silent" reported 298 dead lines where the honest figure is a
+    // fraction of that. news.json is the file whose whole purpose is the
+    // wire, so it is the file that has to be fully spoken.
+    silent: wireOnly(content).filter((t) => !heard.has(t)),
     // Lines that match no phrasing in the data — sentences written in an
     // engine module. The count the "all content is data" rule is about.
     unmatched: unmatched.length,
