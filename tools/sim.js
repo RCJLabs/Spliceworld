@@ -2485,6 +2485,7 @@ function walkAutoplay(battle, content) {
 // becomes a thing the harness counts.
 export function voicePhrasings(content) {
   const out = new Set();
+  const seen = new Set();
   const harvest = (v) => {
     if (typeof v === 'string') {
       // A phrasing has words of its own. "{announce}" is a pass-through —
@@ -2492,21 +2493,26 @@ export function voicePhrasings(content) {
       // it as a phrasing reported 30% of the wire as one line.
       if (v.replace(/\{\w+\}/g, '').trim().length >= 12) out.add(v);
     } else if (Array.isArray(v)) v.forEach(harvest);
-    else if (v && typeof v === 'object') Object.values(v).forEach(harvest);
+    else if (v && typeof v === 'object') {
+      if (seen.has(v)) return;
+      seen.add(v);
+      Object.values(v).forEach(harvest);
+    }
   };
-  harvest(content?.news ?? {});
-  harvest(content?.philosophies ?? {});
-  harvest(content?.rivals ?? {});
-  harvest(content?.operations ?? {});
-  harvest(content?.feralLines ?? {});
-  harvest(content?.taskforceLines ?? {});
-  harvest(content?.scars ?? {});
-  harvest(content?.chaos ?? {});
-  harvest(content?.resequencer ?? {});
-  harvest(content?.regions ?? {});
-  harvest(content?.breakoutMeta ?? {});
-  harvest(content?.gauntlet ?? {});
-  harvest(content?.ticker ?? {});
+  // THE WHOLE OF CONTENT, not a list of keys somebody keeps up to date.
+  // The first draft named the keys it thought carried copy and got three of
+  // them wrong: the contest lines are under `campaignMeta.contestation`, the
+  // threat ladder under `campaignMeta.threatGens`, and the vat's lines under
+  // `resequencerLines` — none of which is called what the data file calls
+  // it, because `indexContent` reshapes as it indexes. The gate then
+  // reported 1,667 lines as "written in an engine module" when they were
+  // authored in data all along.
+  //
+  // That is R41's bug exactly — nineteen names for twenty files, and the
+  // missing one failed silently. A hand-kept list of content keys is the
+  // same list with the same failure, so there is not one: walk everything,
+  // and a key added tomorrow is harvested tomorrow.
+  harvest(content ?? {});
   return [...out];
 }
 
@@ -2563,7 +2569,13 @@ export function voiceDiet(lines, content) {
     // Lines that match no phrasing in the data — sentences written in an
     // engine module. The count the "all content is data" rule is about.
     unmatched: unmatched.length,
-    unmatchedShapes: [...new Set(unmatched)].slice(0, 40),
+    // Ranked by volume, because the work of moving copy into data is worth
+    // doing loudest-first: three shapes are a quarter of the wire.
+    unmatchedShapes: (() => {
+      const t = new Map();
+      for (const l of unmatched) t.set(l, (t.get(l) ?? 0) + 1);
+      return [...t.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40).map(([line, n]) => ({ line, n }));
+    })(),
     top: ranked.slice(0, 20).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(3) })),
   };
 }

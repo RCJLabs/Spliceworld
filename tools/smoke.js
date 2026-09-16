@@ -14584,7 +14584,7 @@ if (inShard('voice')) {
   //    is a sentence somebody wrote inside a module, and no pool, no
   //    rotation and no rewrite can reach it. 1,667 of 4,697 today.
   assert.equal(v.unmatched, 0,
-    `every line the world says is authored in data/ (${v.unmatched} of ${v.total} are written in engine modules: ${v.unmatchedShapes.slice(0, 3).map((x) => JSON.stringify(x.slice(0, 60))).join(', ')})`);
+    `every line the world says is authored in data/ (${v.unmatched} of ${v.total} are written in engine modules: ${v.unmatchedShapes.slice(0, 3).map((x) => `${x.n}x ${JSON.stringify(x.line.slice(0, 50))}`).join(', ')})`);
 
   // 2. NO PHRASING IS MORE THAN A TWENTIETH OF THE VOICE. The entry's
   //    criterion. A player hearing one sentence 684 times in a campaign is
