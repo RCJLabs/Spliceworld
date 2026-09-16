@@ -44,8 +44,25 @@ export function threatLadder(content) {
   return [{ gen: 1, at: 0 }, { gen: 2, at }];
 }
 
+// R94 — THE RATCHET. One expression, two readers (this file's ladder and
+// taskforce.js's trigger), so it lives here rather than being spelled twice —
+// R157's break 152.
+//
+// The meter is PART of the mark, not a fallback for a missing field: only
+// `capNotoriety` writes the peak, so between a conquest adding heat and the
+// next tick the true high-water mark IS the meter.
+//
+// Why a ratchet: the ladder read the meter, so holding a Task Force raid — a
+// WIN — could drop the whole world a Threat Generation. The military does not
+// stop returning your calls because you had a quiet fortnight. ROADMAP R94 has
+// the 82 drops and the seed that finished a "Local Nuisance" holding 40 raids.
+export function notorietyMark(state) {
+  const cam = state.campaign ?? {};
+  return Math.max(cam.notorietyPeak ?? 0, cam.notoriety ?? 0);
+}
+
 export function threatGen(state, content) {
-  const notoriety = state.campaign?.notoriety ?? 0;
+  const notoriety = notorietyMark(state);
   let gen = 1;
   for (const rung of threatLadder(content)) if (notoriety >= rung.at) gen = Math.max(gen, rung.gen);
   return gen;
@@ -79,7 +96,9 @@ export function regionBlockers(state, content, region) {
   if (req.threatGen && threatGen(state, content) < req.threatGen) {
     blockers.push({ kind: 'threatGen', gen: req.threatGen, label: `needs Threat Gen ${req.threatGen}` });
   }
-  if (req.notoriety && (state.campaign?.notoriety ?? 0) < req.notoriety) {
+  // R94 — the mark, not the meter: a door you were notorious enough to open
+  // does not close because you held a raid. Same rule as the ladder above.
+  if (req.notoriety && notorietyMark(state) < req.notoriety) {
     blockers.push({
       kind: 'notoriety',
       need: req.notoriety,

@@ -610,6 +610,17 @@ export const migrations = {
   // difficulty change applied retroactively. New escapes come back in packs;
   // the ones already standing in the county are exactly what the player was
   // shown when they escaped.
+  53: (save) => {
+    save.campaign ??= {};
+    // R94 — the high-water mark. A returning save has already earned its
+    // notoriety, so the peak starts at whatever the meter reads now rather
+    // than at zero: a player who is sitting on 600 is not demoted to Local
+    // Nuisance by an update, and the Task Force they were expecting still
+    // arrives. Clamped, because the meter is clamped.
+    const cap = 600;
+    save.campaign.notorietyPeak ??= Math.min(cap, Math.max(0, save.campaign.notoriety ?? 0));
+    return save;
+  },
   52: (save) => {
     save.campaign ??= {};
     for (const loose of save.campaign.loose ?? []) loose.pack ??= [];

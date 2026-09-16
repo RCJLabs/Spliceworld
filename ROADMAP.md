@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 52
+- save version: 53
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**15 entries queued.** R94, R100, R102, R105, R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
+**15 entries queued.** R100, R102, R105, R108,
+R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R171.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -2340,9 +2340,98 @@ R102; R88–R90 remain.)*
   land at, and the exemption list is read as a bill — which, corrected, means
   its total is smaller and printed, not its line count.*
 
-- **R94 — Notoriety is a number that goes up.** *Measured in Session 173, and
-  still queued — two thirds of it shipped in R87, and the remaining third is
-  not safe to add without retuning R87's trigger.*
+- **R94 — Notoriety is a number that goes up.** ✅ *Shipped. It is not — it
+  goes up and down, and the thing reading it treated every fall as the world
+  calming down.*
+
+  #### Three of the entry's claims were stale, and the truth inverts the title
+
+  | the entry said | measured on today's tree |
+  | --- | --- |
+  | "a meter pinned at its top for the whole late game" | **22.2%** of days 45–180 sit at the cap; median late-game notoriety 18–539 by seed |
+  | "`notorietyCapped` never clears" | `resolveRaid:290` clears it |
+  | "the Threat Gen ladder is permanently maxed" | the reverse — **82 DROPS**, and **1009/1260 days (80.1%)** below the generation already reached |
+
+  Seed 11 finished as a **"Local Nuisance"** — Threat Generation 1 — having
+  held 40 Task Force raids and taken the county.
+
+  #### The defect: positive feedback in both directions
+
+  The ladder read the LIVE meter. Holding a raid is a **win**, and it hands
+  back `notorietyRelief` 140 — which could drop the whole world a generation.
+  So: lose raids → sit at 600 → draw gen-4 enemies → lose more. Win them →
+  fall to 45 → draw the easiest → win more. The seeds pinned at the ceiling
+  were the ones **losing** (mean 24.1 held, 19.4 missed, $784k levied).
+
+  #### The number splits in two
+
+  `notoriety` is how hot you are **right now** — it falls to the relief and is
+  free to move. `notorietyPeak` is how seriously the world has learned to take
+  you, and it only goes up. `notorietyMark(state)` is `max(peak, live)`, one
+  definition in `campaign/map.js` with two importers (R157's break 152),
+  because between a conquest adding heat and the next tick the true high-water
+  mark **is** the live number.
+
+  The ladder, the Task Force trigger, region access and rival interest all read
+  the mark. That is also the retune the entry put in its own scope — *"
+  `taskforceEligible` needs a trigger that a purchase cannot race"*: a bribe, a
+  decay and the relief all lower the meter, and none of them lowers the peak.
+
+  | | before | after |
+  | --- | ---: | ---: |
+  | threat-gen drops | 82 | **0** |
+  | days below the generation reached | 80.1% | **10.2%** (the rest is the climb TO gen 4) |
+  | final gen, worst seed | 1 | **4** |
+  | raids held/missed | — | barely moved; Session 173's feared over-correction does not happen |
+
+  #### The decay was built, measured, and removed
+
+  The entry asked for cooling through "lying low" and the walker has no quiet
+  days to lie low on — 148 heat-days out of 148 — so the version built was
+  flat and prorated by elapsed hours. It worked: a fortnight away cooled
+  exactly 84 points at 6/day, and the peak did not move.
+
+  It went for two measured reasons. **It bought nothing mechanical**: once the
+  ladder, the trigger, access and interest all read the mark, the live meter
+  drives only what is on the screen. **And it cost robustness** — R142's splice
+  floor is 25, and across that gate's five seeds:
+
+  | decay | splices per seed | min |
+  | ---: | --- | ---: |
+  | **0/day** | 35 32 28 30 33 | **28** |
+  | 2/day | 33 36 28 30 23 | 23 |
+  | 4/day | 43 36 31 36 25 | 25 |
+  | 6/day | 34 23 27 29 25 | 23 |
+
+  Not a smooth relationship, which is the tell: the decay was not costing
+  splices systematically, it was adding walk divergence that sometimes shoved a
+  seed under the floor. The diagnostic that settles the blame: with the ladder
+  reverted to the live meter, seed 7 reads **20** and seed 314 **24** — so the
+  RATCHET is an improvement and the decay was the cost. R142's floor was not
+  lowered to fit this, which would have been tuning the gate to the test.
+
+  #### One clause is deliberately unmet, and here is its price
+
+  *"the walker's notoriety on day 180 is under the cap"* reads **2 of 5** on the
+  gate's seeds without the decay, against **11 of 12** on a wider census with
+  it. The clause was a proxy for "the meter is not a constant", written when
+  the belief was that it never moved; it does — every campaign's meter reaches
+  single digits at some point, and 0 of them keeps a Threat Generation it has
+  not earned. The trade was taken knowingly: a robust splice floor over an
+  endpoint reading. A decay with real teeth — one the meter's own consumers can
+  feel — is a separate design question and not this entry's.
+
+  **The lesson:** *a meter and a ladder are different instruments, and the bug
+  was reading one number for both. Escalation should ratchet; heat should not.
+  When a system feeds back into its own difficulty, check the SIGN before
+  reaching for the magnitude — 82 drops were not a tuning problem, they were an
+  input wired to the wrong quantity.*
+
+  *Done when: notoriety has a cap, a decay and a spend, and the walker's
+  notoriety on day 180 is under the cap — and the retune that makes room for
+  the spend is part of it.* Cap and spend were already shipped in R87; the
+  retune is the ratchet, which is the milestone; the decay and the day-180
+  clause are the stated trade above. The original text follows.
 
   **What is already built.** `capNotoriety` pins the number at
   `notorietyCap` **600**, and holding a raid hands back `notorietyRelief`
@@ -5339,6 +5428,26 @@ triangle working, and each region genuinely asks a different question)*.
   what the number means when the host can move 21% in two milestones.* Both:
   the share check runs on every run, and the battle count is what actually
   catches 262. Breaks 262, 296, 300 and 301 all caught.
+
+
+- **R171 — The eager-JS budget charges the player for the comments.** Found
+  while shipping R94, whose gate went red on a milestone that added **400
+  bytes of code**. `KB_CAP` in `tools/smoke.js` is a static walk of file sizes
+  on disk, so a comment weighs exactly what a statement weighs, and R169 left
+  the cap 1.7 KB above the measurement — which makes it the first budget in
+  the repo a *paragraph* can breach. This is not obviously wrong: there is no
+  build step, so those bytes really are downloaded and parsed, and this repo
+  writes its reasoning at the code on purpose. But it means the cap is
+  enforcing a house style nobody chose, at a lever nobody reads it as. The
+  alternative is to strip comments before summing and leave the transferred
+  bytes to `FIRST_PAINT_KB`, which measures them in a real browser — except
+  that one keeps 18 KB of slack deliberately, so **nothing** would then catch a
+  15 KB comment, and R169's whole milestone was about bytes hiding in slack.
+  Proposed, small: decide which of the two budgets owns prose, say so in both
+  notes, and give the loser a rule that cannot be breached by explaining
+  yourself. *Done when: a milestone can add a paragraph to an eager module
+  without moving a cap, AND a break that adds 15 KB of comments to one goes red
+  on a named gate.*
 
 
 - **R169 — The exemption bill has a 4.2 KB line on it.** ✅ *Shipped. The

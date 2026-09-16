@@ -504,6 +504,13 @@ export function resolveBattle(state, battle, content, now) {
       const genBefore = threatGen(state, content);
       state.campaign.heldNodes.push(node.id);
       state.campaign.notoriety += node.notoriety;
+      // R94 — AND THE WORLD NOTICES BEFORE WE ASK WHETHER IT NOTICED. Only
+      // `capNotoriety` writes the peak the ladder reads, and this function's
+      // own call to it runs far too late: `genNow` below would read the mark
+      // as it stood BEFORE this conquest, so the rung-up would never announce.
+      // Caught by the M5 test that has asserted THREAT LEVEL UP since R26,
+      // which is what that test is for.
+      capNotoriety(state, content);
       emitNews(state, content, 'node_seized', { node: node.name, income: node.incomePerDay });
       const claim = playerLine(state, content, 'conquest', { node: node.name });
       if (claim) pushNews(state, claim);

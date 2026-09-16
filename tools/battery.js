@@ -3137,6 +3137,33 @@ const BREAKS = [
     anchor: "import { isSettled } from '../splice/chimera.js';",
     to: "import { isSettled } from '../splice/theater.js';",
   },
+  // R94 — the ladder is a ratchet. Both breaks aim at the defect that was
+  // actually shipped for six milestones, not one imagined for the occasion:
+  // Threat Generation read the live notoriety meter, so holding a Task Force
+  // raid could de-escalate the whole world.
+  {
+    // THE DEFECT ITSELF. Point the ladder back at the meter and the world
+    // starts forgetting you again: 82 drops over seven campaigns, and one
+    // seed finishing as a "Local Nuisance" having held 40 raids. Caught by
+    // the drop count, which is a TRAJECTORY — no single state can show a
+    // number going backwards, which is why the walk counts them.
+    n: 302, gate: EMPIRE, name: 'the Threat Gen ladder reads the live meter again, and winning calms the world down',
+    file: 'campaign/map.js',
+    anchor: '  const notoriety = notorietyMark(state);',
+    to: '  const notoriety = state.campaign?.notoriety ?? 0;',
+  },
+  {
+    // AND THE HALF THAT MAKES IT A RATCHET RATHER THAN A SECOND METER. Drop
+    // the peak from the mark and `notorietyMark` is just `notoriety` wearing
+    // a different name — every reader de-escalates again, and the Task Force
+    // trigger goes back to being something a spend can race, which is the
+    // clause R94's entry put in its own scope.
+    n: 303, gate: EMPIRE, name: 'the high-water mark stops counting, so the mark is just the meter again',
+    file: 'campaign/map.js',
+    anchor: '  return Math.max(cam.notorietyPeak ?? 0, cam.notoriety ?? 0);',
+    to: '  return cam.notoriety ?? 0;',
+  },
+
   // R170 — the suite's two host-invariant rules, and both breaks aim at a
   // defect that actually happened rather than one imagined for the occasion.
   {
@@ -4024,9 +4051,15 @@ const BREAKS = [
     // were invisible for six milestones because a walk always ended with an
     // empty board; stating no bound for them is how the save grows in a
     // place nobody is looking.
+    //
+    // R94 — RE-ANCHORED, and onto a bigger target. The five lists this used
+    // to remove one of are one `SPECIMEN(...)` spread now, so the break takes
+    // the whole record's shape off the loose board instead of a single line.
+    // Same rule, same red; the anchor moved because the table stopped being
+    // three hand-typed copies of one shape.
     n: 191, gate: VAULT, name: 'the loose board\'s lists go back to having no stated bound',
     file: 'tools/vault.js',
-    anchor: "  'campaign.loose[].unit.moves':               { max: 16, by: 'one per socket, plus the combos an anatomy unlocks' },",
+    anchor: "  ...SPECIMEN('campaign.loose[].unit'),",
     to: '',
   },
   {

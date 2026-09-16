@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 52;
+export const SAVE_VERSION = 53;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -65,6 +65,8 @@ export function newGameState() {
       // `nextRaidAt` the schedule R9's rule requires, and the counters are
       // what the escalation and the wire read.
       raid: null, nextRaidAt: null, raidCount: 0, raidsHeld: 0, leviedTotal: 0, notorietyCapped: false,
+      // R94: the high-water mark. The meter falls; this does not.
+      notorietyPeak: 0,
     },
     news: [],
     settings: { muted: false, battleSpeed: 1 },

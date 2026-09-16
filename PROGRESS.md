@@ -1,5 +1,102 @@
 # PROGRESS
 
+## Session 181 — R94: a meter and a ladder are different instruments ✅
+
+**ROADMAP §9.5.** The entry's title is wrong on today's tree. Notoriety does
+not go up — it goes up and down, and the thing reading it treated every fall
+as the world calming down.
+
+### Three stale claims, and the truth inverts the headline
+
+| the entry said | measured |
+| --- | --- |
+| "pinned at its top for the whole late game" | **22.2%** of days 45–180 |
+| "`notorietyCapped` never clears" | `resolveRaid:290` clears it |
+| "the Threat Gen ladder is permanently maxed" | the reverse — **82 drops**, **80.1%** of days below the generation already reached |
+
+Seed 11 finished as a **"Local Nuisance"** having held 40 Task Force raids.
+
+### The defect
+
+The ladder read the LIVE meter, and holding a raid — a win — hands back 140.
+Lose raids → sit at 600 → gen-4 enemies → lose more. Win them → fall to 45 →
+easiest enemies → win more. The pinned seeds were the ones **losing**: mean
+24.1 held, 19.4 missed, $784k levied.
+
+### What ships
+
+`notoriety` is how hot you are now; **`notorietyPeak`** is how seriously the
+world takes you and only goes up. `notorietyMark = max(peak, live)` — one
+definition, two importers. The ladder, the Task Force trigger, region access
+and rival interest all read it, which is also the entry's own retune clause:
+nothing that lowers the meter can race the trigger.
+
+| | before | after |
+| --- | ---: | ---: |
+| threat-gen drops | 82 | **0** |
+| days below the generation reached | 80.1% | **10.2%** |
+| final gen, worst seed | 1 | **4** |
+
+SAVE_VERSION 52 → 53, migration starts the peak at the save's current
+notoriety so nobody is demoted by an update.
+
+### The decay was built, measured, removed
+
+A flat prorated decay worked — a fortnight away cooled exactly 84 points at
+6/day. It went because it bought nothing mechanical (with everything reading
+the mark, the live meter drives only the screen) and cost robustness against
+R142's splice floor of 25:
+
+| decay | splices per seed | min |
+| ---: | --- | ---: |
+| **0/day** | 35 32 28 30 33 | **28** |
+| 2/day | 33 36 28 30 23 | 23 |
+| 4/day | 43 36 31 36 25 | 25 |
+| 6/day | 34 23 27 29 25 | 23 |
+
+Not smooth — it was adding walk divergence, not cost. With the ladder
+reverted to the live meter seed 7 reads **20**, so the ratchet is an
+improvement and the decay was the price. R142's floor was not lowered to fit.
+
+### Two other gates went red, and both were telling the truth
+
+**The save-weight gate (R91).** `campaign.loose[].pack[].traits` had no stated
+bound. The ratchet moved the walk's trajectory, which put a trait-carrying
+specimen first in a pack for the first time — and `arrayPaths` reads ONE record
+for the shape of all of them, so that was the only way it could ever surface.
+Root cause: one `rivalSpecimen` shape was transcribed by hand at three prefixes
+(a bay, the loose board, a leader's pack), and `traits` got stated at two of
+them. It is now `SPECIMEN(at)` written once and spread at each prefix, so a
+sixth list on a generated body cannot land on two boards out of three. Break
+191 re-anchored onto the spread, which makes it a bigger target than the single
+line it used to delete.
+
+**The eager-JS cap (R169).** `KB_CAP` went red at 546 against 543 — on a
+milestone that added **400 bytes of code**. The gate is a static byte walk, so
+it counts comments, and with no build step those bytes really are downloaded.
+R94's notes duplicated the tables in its own ROADMAP entry, so the measurements
+went back there and the code kept pointers: **4.8 KB → 3.0 KB**. The cap moved
+543 → 545 for the rest, argued on the ledger in `tools/smoke.js` — the first
+line on it that buys no code.
+
+### Known issues
+
+- **One clause is deliberately unmet.** "Day-180 notoriety under the cap"
+  reads **2/5** without the decay against **11/12** with it. Traded knowingly
+  for a robust splice floor; the entry carries the numbers. A decay with real
+  teeth is a separate design question.
+- Six smoke assertions moved. Two caught real bugs I introduced — including a
+  conquest that would never have announced THREAT LEVEL UP again.
+- **Filed as R171:** which budget owns prose. `KB_CAP` counts comments and now
+  has 0.7 KB of headroom, so the next milestone that explains itself in an
+  eager module hits it too; `FIRST_PAINT_KB` measures the same bytes in a real
+  browser but keeps 18 KB of slack, so stripping comments here would leave
+  nothing catching a 15 KB one.
+
+### Next session's first task
+
+Pick from the 15-entry queue in §9.0 — R100 is still the oldest open entry.
+
 ## Session 180 — R170: a proportion cannot see a proportional change ✅
 
 **ROADMAP §9.28.** The queued entry said R168's share rule was unreachable.

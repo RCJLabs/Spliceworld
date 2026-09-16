@@ -33,6 +33,8 @@ import {
   ladderBench, ladderRate, STARTER_BUILD, partsOnFrame, sampleBuilds, bestSplice,
 } from './sim.js';
 import { skillFor, RIVAL_SKILL, chooseMoveIndex } from '../battle/ai.js';
+// R94 — the rule that owns the ceiling AND the high-water mark.
+import { capNotoriety } from '../campaign/taskforce.js';
 import {
   nodeStates, threatGen, threatLadder, regionStates, regionBlockers, regionOpen, nodeById,
   regionList,
@@ -1993,8 +1995,18 @@ camp.lastTickAt = t0;
 tickCampaign(camp, content, t0 + 2 * 24 * HOUR);
 assert.ok(Math.abs(camp.funds - regionOf0.nodes[0].incomePerDay * 2) < 0.01,
   `two days of one held node pays two days of that node (${camp.funds})`);
+// R94 — AND THE LADDER READS THE HIGH-WATER MARK, NOT THE METER. Raising
+// the live number is not enough on its own, which is the whole point: the
+// meter falls when you hold a raid or lie low, and the world does not
+// un-notice you when it does. `capNotoriety` is the one rule that owns both
+// — it runs in the tick and on every conquest — so this asks it rather than
+// setting the peak by hand.
 camp.campaign.notoriety = 65; // past threatGen2At
-assert.equal(threatGen(camp, content), 2);
+assert.equal(threatGen(camp, content), 2, 'heat promotes you the moment you earn it');
+capNotoriety(camp, content);   // the tick records the mark
+camp.campaign.notoriety = 0;   // held a raid, lay low, paid somebody off
+assert.equal(threatGen(camp, content), 2,
+  'and cooling off does not demote you — the ladder is a ratchet (R94)');
 assert.equal(nodeStates(camp, content)[4].status, 'locked', 'still strip-gated behind the boss');
 
 // --- M5 ACCEPTANCE: losing a battle creates a rescue mission with a live timer.
@@ -2283,6 +2295,8 @@ assert.equal(m5.battle, null);
 assert.deepEqual(m5.warRecord, { wins: 0, losses: 0 });
 assert.deepEqual(m5.campaign, {
   heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
+  // R94: the high-water mark. A v1 save has no reputation yet.
+  notorietyPeak: 0,
   contested: [], nextContestAt: null, defences: {}, contestCount: 0,
   operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
   // R64: the campaign's own clock is gone — one elapsed clock per save.
@@ -19527,9 +19541,52 @@ if (inShard('empire')) {
     // pass today would have to bless one of those two states. The retune this
     // needs is R87's trigger, which is a milestone, not a clause — ROADMAP
     // R94 carries the numbers.
-    const pinned = walks.filter((w) => w.notoriety >= t.notorietyCap);
-    console.log(`   R94 notoriety: cap ${t.notorietyCap} · spend ${t.notorietyRelief} · `
-      + `day-180 ${walks.map((w) => w.notoriety).join('/')} · ${pinned.length}/${walks.length} pinned`);
+    // R94 — AND THE METER FALLS, which is the clause the entry cared about.
+    // Not through a time decay: one was built, measured and removed (see
+    // campaign/taskforce.js for the four readings that sent it back). It falls
+    // because holding a raid hands the relief back, and every campaign's meter
+    // reaches single digits at some point in its run.
+    // THE RATCHET. This is what R94 turned out to be about. The ladder used to
+    // read the live meter, so holding a raid — a WIN — dropped notoriety by
+    // the relief and could drop the whole world a Threat Generation: 82 drops
+    // over seven campaigns, and 80.1% of days spent below the generation the
+    // player had already reached. Seed 11 finished as a "Local Nuisance"
+    // having held 40 Task Force raids.
+    //
+    // Asserted over the WALKS rather than by calling threatGen on a stub,
+    // because the defect is a trajectory: a single state cannot show a number
+    // going backwards.
+    walks.forEach((w, i) => {
+      const seed = EMPIRE_SEEDS[i];
+      assert.ok(w.notorietyPeak >= w.notoriety,
+        `the peak is never below the meter (seed ${seed}: ${w.notorietyPeak} vs ${Math.round(w.notoriety)})`);
+      assert.ok(w.notorietyPeak <= t.notorietyCap,
+        `and never above the ceiling (seed ${seed}: ${w.notorietyPeak})`);
+      // THE RULE A FUTURE EDIT WOULD BREAK: the world never de-escalates.
+      // Counted over the whole trajectory rather than read off day 180,
+      // because where the meter happens to sit on the last day is NOISE —
+      // 3 of these 5 seeds end under the ceiling, 11 of 12 across a wider
+      // census, and which ones depends on how the last fortnight's raids
+      // went. The drop count is not noise: 82 over seven campaigns when the
+      // ladder read the live meter, zero when it reads the peak.
+      assert.equal(w.threatGenDrops, 0,
+        `Threat Generation never falls — the State does not un-notice you `
+        + `(seed ${seed}: ${w.threatGenDrops} drops)`);
+    });
+
+    // AND THE METER IS STILL A METER. Without this the ratchet above would be
+    // trivially satisfied by a number that only ever goes up — which is the
+    // entry's title, and exactly what R94 was asked to stop.
+    const moved = walks.filter((w) => w.notoriety < w.notorietyPeak);
+    assert.ok(moved.length,
+      `and the meter itself still falls, or the ladder is not a ratchet — it is `
+      + `just notoriety again (${walks.map((w) => `${Math.round(w.notoriety)}/${w.notorietyPeak}`).join(' ')})`);
+
+    console.log(`   R94 notoriety: cap ${t.notorietyCap} · relief ${t.notorietyRelief} · `
+      + `day-180 meter `
+      + `${walks.map((w) => Math.round(w.notoriety)).join('/')} · `
+      + `peak ${walks.map((w) => Math.round(w.notorietyPeak)).join('/')} · `
+      + `${moved.length}/${walks.length} below their own peak \u00b7 0 gen drops`);
   }
 
   // R93 — A PACK IS THE LAB'S ANSWER, AND A RATE CANNOT SEE IT.
@@ -20746,7 +20803,28 @@ if (inShard('wire')) {
 // the same number twice, while FIRST_PAINT_KB is transferSize out of a real
 // browser and went red once at 1034 against 1034 on a slow afternoon.
 // A deterministic budget can afford to be tight. See ROADMAP R169.
-const KB_CAP = 543;
+// R94 — 543 -> 545, measured at 544.3, and it is THE FIRST LINE ON THIS
+// LEDGER THAT BUYS NO CODE. The ratchet is about 400 bytes: a four-line
+// `notorietyMark` in campaign/map.js, one line that writes the peak, and four
+// reads that changed which number they ask. The other 2.6 KB is the milestone
+// EXPLAINING ITSELF at the call sites — and that is charged to the player,
+// because there is no build step and every comment in an eager module is
+// downloaded and parsed like code.
+//
+// Nobody had written that down, and R169 left 1.7 KB of headroom, so R94 is
+// the first milestone to discover that this budget forbids a paragraph. The
+// right first response was taken rather than argued around: R94's notes
+// DUPLICATED the tables in its own ROADMAP entry, so the measurements went
+// back there and the code kept pointers — 4.8 KB down to 3.0. What is left is
+// load-bearing, and trimming load-bearing prose to fit a budget is how a file
+// ends up unexplained.
+//
+// THE OPEN QUESTION IS WHOSE BUDGET PROSE IS. This one is a static byte walk,
+// so it counts comments; FIRST_PAINT_KB measures the same bytes in a real
+// browser and keeps 18 KB of slack, so if this cap stripped comments nothing
+// would catch a 15 KB one. Two budgets, two levers, and which lever owns prose
+// is a milestone rather than a paragraph — QUEUED AS R171.
+const KB_CAP = 545;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

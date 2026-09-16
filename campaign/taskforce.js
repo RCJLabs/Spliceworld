@@ -54,6 +54,8 @@
 // through the same functions the War Room does.
 
 import { rngStream } from '../util/rng.js';
+// R94 — the ratchet's one definition; see campaign/map.js.
+import { notorietyMark } from './map.js';
 
 const HOUR = 3600000;
 
@@ -108,6 +110,11 @@ export function capNotoriety(state, content) {
   const t = taskforceTuning(content);
   const cam = state.campaign ?? {};
   const before = cam.notoriety ?? 0;
+  // R94 — THE HIGH-WATER MARK, and this line is its ONLY writer. `notoriety`
+  // is how hot you are RIGHT NOW and is free to fall; `notorietyPeak` is how
+  // seriously the world has learned to take you. See campaign/map.js for the
+  // readers, ROADMAP R94 for what reading the meter cost.
+  cam.notorietyPeak = Math.max(cam.notorietyPeak ?? 0, Math.min(before, t.notorietyCap));
   if (before <= t.notorietyCap) return false;
   cam.notoriety = t.notorietyCap;
   // Said once, on the tick that first pins it, rather than on every tick
@@ -123,12 +130,18 @@ export function capNotoriety(state, content) {
 // runs regardless of notoriety. Before it, the ceiling is the trigger, and
 // `minHeld` keeps a floundering player who has been running jobs for heat
 // out of range entirely.
+// R94 — AND IT READS THE PEAK, NOT THE METER: the retune the entry asked for,
+// "a trigger that a purchase cannot race". A bribe and the relief for holding
+// a raid both lower `notoriety` and neither lowers the peak, so the file opens
+// once and the State does not forget. Not Session 173's naive peak-read — the
+// peak is CLAMPED to the cap by `capNotoriety` above, so the schedule, the
+// cooldown and the escalation are untouched. See ROADMAP R94.
 export function taskforceEligible(state, content) {
   const t = taskforceTuning(content);
   const cam = state.campaign ?? {};
   if (!(t.pool ?? []).some((id) => content.encounters?.[id])) return false;
   if (state.dominionAt) return true;
-  return (cam.notoriety ?? 0) >= t.notorietyCap && (cam.heldNodes ?? []).length >= t.minHeld;
+  return notorietyMark(state) >= t.notorietyCap && (cam.heldNodes ?? []).length >= t.minHeld;
 }
 
 export function escalationOf(state, content) {
@@ -206,6 +219,12 @@ export function tickTaskforce(state, content, now) {
   const lines = taskforceLines(content);
   const news = [];
   const levied = [];
+
+  // R94 — A TIME DECAY WAS BUILT HERE, MEASURED, AND REMOVED. It worked, and
+  // it bought nothing mechanical: every consumer reads `notorietyMark` now, so
+  // the meter drives only what is on the screen — and it moved R142's splice
+  // floor around unevenly. The four readings are in ROADMAP R94. The meter
+  // still falls, on `notorietyRelief`, which is what it is for.
 
   if (capNotoriety(state, content) && lines.capped) news.push(lines.capped);
 

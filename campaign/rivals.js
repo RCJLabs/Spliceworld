@@ -10,6 +10,7 @@
 // the identical opposition.
 
 import { rngStream, pick } from '../util/rng.js';
+import { notorietyMark } from './map.js';
 import { unitFromGenome } from '../battle/statblock.js';
 import { analyze } from '../splice/physiology.js';
 import { rivalLine } from './monologue.js';
@@ -42,7 +43,9 @@ export function rivalStatus(state, content) {
     const record = rivalRecord(state, rival.id);
     const missingNodes = (rival.requiresNodes ?? []).filter((n) => !state.campaign.heldNodes.includes(n));
     const missingRivals = (rival.requiresRivals ?? []).filter((r) => rivalRecord(state, r).defeats === 0);
-    const notorious = state.campaign.notoriety >= (rival.notorietyAt ?? 0);
+    // R94 — the mark, not the meter. A rival who came looking because you
+    // were famous does not lose interest when you have a quiet fortnight.
+    const notorious = notorietyMark(state) >= (rival.notorietyAt ?? 0);
     const open = !missingNodes.length && !missingRivals.length && notorious;
     const status = open ? (record.defeats > 0 ? 'rematch' : 'available') : 'locked';
     const need = [];
