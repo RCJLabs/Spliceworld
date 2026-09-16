@@ -49,6 +49,7 @@ import { spliceChimera } from '../splice/theater.js';
 import { createBattle } from './flown.js';
 import { recordingRoot, installDom, memoryStorage, fakeEvent, attrsOfFire, dataAttrsIn } from './domstub.js';
 import { moduleFiles } from './scopecheck.js';
+import { stripComments } from './source.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const HOUR = 3600000;
@@ -519,7 +520,7 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   for (const f of [...moduleFiles(root), join(root, 'index.html')]) {
     const rel = relative(root, f).replaceAll('\\', '/');
     if (rel.startsWith('tools/')) continue;
-    const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+    const src = stripComments(readFileSync(f, 'utf8'));
     for (const a of dataAttrsIn(src)) inSource.add(a);
     // `ui/tabs.js` writes EVERY sub-tab button as `data-${attr}=`, which the
     // regex above is structurally unable to see. Those attributes were in the
@@ -574,7 +575,7 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     for (const f of [...moduleFiles(root), join(root, 'index.html'), join(root, 'style.css')]) {
       const rel = relative(root, f).replaceAll('\\', '/');
       if (rel.startsWith('tools/')) continue;
-      const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+      const src = stripComments(readFileSync(f, 'utf8'));
       if (new RegExp(`dataset\\.${camelAttr}\\b|\\[data-${attr}[\\]~^$*|=]`).test(src)) readers.push(rel);
     }
     if (readers.length) {

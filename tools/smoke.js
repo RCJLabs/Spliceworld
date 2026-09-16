@@ -66,6 +66,7 @@ import { moveReadout } from '../battle/readout.js';
 import { defaultMoveset, knownMoves } from '../battle/moves.js';
 import { CONTENT_FILES } from '../data/loader.js';
 import { runPool } from './pool.js';
+import { stripComments, proseBytes } from './source.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -12544,7 +12545,7 @@ if (inShard('spar')) {
   //    private copies of the injury filter — that is how the map came to
   //    disagree with the Right Now panel about the same save.
   for (const f of ['ranch/agenda.js', 'campaign/sparring.js', 'campaign/ui.js']) {
-    const src = readFileSync(join(root, f), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+    const src = stripComments(readFileSync(join(root, f), 'utf8'));
     assert.ok(src.includes('fitToFight'), `${f} reads the shared predicate`);
     assert.ok(!/filter\(\s*\(c\)\s*=>\s*!isInjured\(/.test(src),
       `${f} no longer keeps its own copy of it`);
@@ -12581,13 +12582,11 @@ if (inShard('spar')) {
   }
 
   // The Ranch has to put it in the markup, and hand it to goto on click.
-  const ranchSrc = readFileSync(join(root, 'ranch/ui.js'), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+  const ranchSrc = stripComments(readFileSync(join(root, 'ranch/ui.js'), 'utf8'));
   assert.ok(ranchSrc.includes('data-subtab'), 'the agenda renders the subtab');
   assert.ok(ranchSrc.includes('ctx.goto?.(btn.dataset.goto, btn.dataset.subtab)'),
     'and the click carries it to the shell');
-  const shellSrc = readFileSync(join(root, 'main.js'), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+  const shellSrc = stripComments(readFileSync(join(root, 'main.js'), 'utf8'));
   assert.ok(/goto:\s*\(name, subtab\)\s*=>\s*showScreen\(name, subtab\)/.test(shellSrc),
     'the shell accepts a subtab');
   assert.ok(shellSrc.includes('takeSubtab'), 'and parks it for whoever paints next');
@@ -20583,7 +20582,14 @@ if (inShard('wire')) {
   };
 
   const eager = graphFrom('main.js');
+  // R171 — THREE NUMBERS FROM ONE WALK, because they answer three questions
+  // and for six milestones one cap was being asked all of them at once. `kb`
+  // is what boot compiles, `codeKb` is how much of that is program, `proseKb`
+  // is how much is the repo explaining itself. See the notes on the caps below.
   const kb = [...eager.values()].reduce((n, b) => n + b, 0) / 1024;
+  const proseKb = [...eager.keys()]
+    .reduce((n, rel) => n + proseBytes(readFileSync(join(root, rel), 'utf8')), 0) / 1024;
+  const codeKb = kb - proseKb;
   // R81 brought both down, which is the third clause of its criterion.
   // Measured after the split: 49 modules and 537 KB, from 51 and 616. What
   // moved: `save/settings-ui.js` is imported when the gear is pressed rather
@@ -20829,6 +20835,42 @@ if (inShard('wire')) {
 // browser and keeps 18 KB of slack, so if this cap stripped comments nothing
 // would catch a 15 KB one. Two budgets, two levers, and which lever owns prose
 // is a milestone rather than a paragraph — QUEUED AS R171.
+//
+// R171 — TAKEN, AND THE ANSWER IS THAT NEITHER BUDGET OWNED PROSE BECAUSE
+// NOBODY HAD WEIGHED IT. Measured on the 48-module eager graph with the
+// scanner in tools/source.js:
+//
+//     total   545.8 KB          what this cap used to be
+//     code    311.1 KB  (57%)
+//     prose   234.7 KB  (43%)
+//
+// And it does not compress away, which was the thing worth checking before
+// deciding it was cheap. Brotli, which is what Pages sends: 179.0 KB with the
+// comments, 87.7 KB without. PROSE IS 51% OF THE WIRE — 91.3 KB of what a
+// player downloads before the game appears is this repo explaining itself.
+// That is comparable to what R81's whole geometry split bought.
+//
+// THE REPO PAYS IT ON PURPOSE. CLAUDE.md has no build step, so a comment is
+// downloaded like a statement; and the reasoning in these files is what stops
+// the same mistake being made twice, which this session alone demonstrated
+// three times. The decision is not being reversed here. It is being made
+// VISIBLE, and given its own line so it can be re-decided later with a number
+// attached instead of a shrug.
+//
+// So: one question, one cap.
+//   KB_CAP     — the CODE. What it was always for: catching the graph
+//                re-growing by a screen, which costs eight modules of program.
+//                A paragraph can no longer move it, which is the half of
+//                R171's Done-when that R94 and R100 both paid for in trimmed
+//                explanation.
+//   PROSE_CAP  — the COMMENTS, below. Deterministic, so it can be tight.
+//   FIRST_PAINT_KB (tools/boot.js) — the real transferred bytes, compressed,
+//                out of a browser. It keeps its 18 KB of slack and no longer
+//                has to be the only thing watching prose.
+//
+// The two caps together are 559 against the old single 547, which is looser in
+// total and stricter about causes: whichever one fires names what actually
+// grew, and that is the property the single cap could not have.
 // R100 — 545 -> 547, measured at 545.8, and THIS ONE IS ARGUED ON CODE. The
 // eager half of the durable save is about 900 bytes: the `if (!raw)` branch in
 // `loadSlot` that tells an evicted browser apart from a new player, the
@@ -20844,11 +20886,32 @@ if (inShard('wire')) {
 // evidence for the entry is now this ledger rather than an argument in it —
 // and R100 paid the same tax R94 did, trimming real explanation down to
 // one-liners to buy back 1.2 KB before raising anything.
-const KB_CAP = 547;
+const KB_CAP = 314;        // CODE only, measured at 311.1
+
+// R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
+// that is allowed to be spent deliberately.
+//
+// 234.7 KB measured, capped at 245. The 10.3 KB of headroom is sized from both
+// halves of R171's Done-when: a paragraph is 300-900 bytes and has to fit
+// without anybody touching a constant, and 15 KB of comments has to go red.
+// Ten kilobytes is roughly a dozen ordinary milestone notes, so this moves
+// about once a year rather than about once a milestone — and when it does
+// move, the ledger will say prose grew, which is a true sentence that the old
+// cap could not produce.
+//
+// IT IS A STATIC BYTE WALK, so it reads the same number twice and can sit this
+// close. That is the same argument R169 made for keeping KB_CAP tight while
+// FIRST_PAINT_KB keeps slack; the difference is that this one is measuring the
+// thing it is named after.
+const PROSE_CAP = 245;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
-  assert.ok(kb <= KB_CAP,
-    `boot imports ${kb.toFixed(0)} KB of JS eagerly, over the cap of ${KB_CAP} KB`);
+  assert.ok(codeKb <= KB_CAP,
+    `boot imports ${codeKb.toFixed(0)} KB of eager CODE, over the cap of ${KB_CAP} KB `
+    + `(${kb.toFixed(0)} KB total, ${proseKb.toFixed(0)} KB of it comments)`);
+  assert.ok(proseKb <= PROSE_CAP,
+    `the eager graph carries ${proseKb.toFixed(0)} KB of comments, over the cap of ${PROSE_CAP} KB `
+    + '— prose ships uncompiled and is about half of what a player downloads, so it has its own budget');
 
   // The screens the shell defers, read from the shell rather than restated —
   // and the modules behind them must genuinely be absent from the graph
