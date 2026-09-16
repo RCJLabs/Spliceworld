@@ -23,6 +23,7 @@ import { STABLE } from '../ranch/onboarding.js';
 import { isInjured, obediencePercent, obedienceIgnoreChance } from '../battle/statblock.js';
 import { canSpar, sparEncounter } from './sparring.js';
 import { gauntletEncounter } from './gauntlet.js';
+import { visitingEncounter } from './visiting.js';
 import { raidEncounter, activeRaid } from './taskforce.js';
 import { breakoutEncounter } from './breakout.js';
 import { rivalEncounter } from './rivals.js';
@@ -67,6 +68,12 @@ export function warTargetEncounter(state, target, content, now) {
   // rather the point.
   if (target.kind === 'breakout') {
     return withLiveWaves(breakoutEncounter(state, content, target.breakoutId), content);
+  }
+  // R108: somebody else's creature, signed in at the gate. The director does
+  // NOT rewrite it, and that is the whole promise of the card: what a friend
+  // handed you is what you fight, or the exhibition is not a comparison.
+  if (target.kind === 'visiting') {
+    return withLiveWaves(visitingEncounter(state, content), content);
   }
   // R42: a Gauntlet stage. The director does not rewrite it — this IS the
   // coalition's answer.

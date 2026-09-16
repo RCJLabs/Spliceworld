@@ -449,6 +449,7 @@ export function renderPensScreen(root, ctx) {
               <button type="button" class="care-train" data-train="${ch.id}" ${trainReady ? '' : 'disabled'}>
                 ${trainReady ? `${renderIcon('target')} Train ($${TRAINING.cost}, +${TRAINING.bondGain} bond)` : `Train (${fmtDuration(trainReadyAt - t)})`}
               </button>
+              <button type="button" data-card="${ch.id}">${renderIcon('document')} Specimen card</button>
               <button type="button" class="pen-dismantle" data-dismantle="${ch.id}">${renderIcon('wrench')} Dismantle</button>
             </div>
             ${'<!--R89:ALERTS-->'}
@@ -680,6 +681,42 @@ export function renderPensScreen(root, ctx) {
         });
       };
       draw();
+    });
+  });
+
+  // R108 — print one. The card module is imported where it is USED rather
+  // than at the top of this file: a player who never exports one should not
+  // download the renderer's second customer to find that out.
+  unbound(root, 'button[data-card]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const ch = state.chimeras.find((c) => c.id === btn.dataset.card);
+      if (!ch) return;
+      const { cardSVG } = await import('./card.js');
+      const svg = cardSVG(ch, state, content);
+      const file = `${(ch.name ?? 'specimen').replace(/[^A-Za-z0-9]+/g, '-').toLowerCase()}-card.svg`;
+      state.cardCount = (state.cardCount ?? 0) + 1;
+      ctx.save();
+      // The share sheet first, because this is a phone and the whole point
+      // is handing the thing to somebody. A browser without it, or a player
+      // who dismisses it, gets the save exporter's own download path.
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const shareable = typeof File === 'function' ? new File([blob], file, { type: 'image/svg+xml' }) : null;
+      if (shareable && navigator.canShare?.({ files: [shareable] })) {
+        // A dismissed share sheet rejects, and that is not an error the
+        // player needs told about: they closed it on purpose.
+        await navigator.share({ files: [shareable], title: ch.name ?? 'Specimen' }).catch(() => {});
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      lastMsg = `${ch.name} has been photographed for the records. Hand the card to somebody.`;
+      renderPensScreen(root, ctx);
     });
   });
 

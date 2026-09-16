@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 54
+- save version: 55
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**11 entries queued.** R108,
-R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
+**10 entries queued.** R109, R110, R111, R112, R113, R114, R115, R116, R117,
+R118.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -3932,7 +3932,67 @@ suite can check.
   changed and nothing that did not, and it never appears for a gap under an
   hour.* Both hold, on a fixture wound up enough for the first clause to mean
   something, and breaks 291–294 turn each rule red on demand.
-- **R108 — Specimen cards, and the fights they carry.** §8 risk 1 says the
+- **R108 — Specimen cards, and the fights they carry.** ✅ *Shipped.* Every
+  premise held, which is unusual: there genuinely was no way out of the app.
+  The only `download` the game has ever produced is the save file,
+  `navigator.share` appeared nowhere in the tree, and `creaturePortrait` has
+  always returned a standalone `<svg>` string that nothing ever handed to
+  anybody.
+
+  **What shipped.** `splice/card.js` turns a chimera into one self-contained
+  SVG — portrait, name, lab, grade letters, stat line, moves, the genome in
+  `<metadata>` as JSON, and a printed code under the portrait. The Pens grow
+  a *Specimen card* button per creature, which goes out through the Web Share
+  API when the browser has it and falls back to the save exporter's own Blob
+  download when it does not. `campaign/visiting.js` takes one back: the War
+  Room's *Visiting Specimen* card accepts a card file or a typed code, books
+  it as `state.visiting` (SAVE_VERSION **55**, one slot rather than a list —
+  R91's rule, applied to a list somebody else would be filling) and offers it
+  as an exhibition with `reward: 0`, `capturable: false`, no notoriety and no
+  tier. Every sentence including every refusal is in `data/cards.json`.
+
+  **TWO DEFECTS, BOTH FOUND BY THE GATE, BOTH IN THIS MILESTONE'S OWN CODE.**
+
+  *The card did not round-trip.* The first draft sorted sockets into a fixed
+  head-forelimbs-hindlimbs order so that two cards of one creature would be
+  the same string. They already are — a creature is one object with one key
+  order — and the sort cost something real: `movesFromTokens` walks tokens in
+  the order it is handed them, so a card handed back a creature with the same
+  five stats and a DIFFERENT moveset. The criterion says *identical genome
+  and stat block*, and it was the stat-block half that was quietly failing.
+  Order is now carried end to end and a gate says so in its own assertion, so
+  the next person to reach for a sort finds out here rather than in a fight.
+
+  *The code was not retypable.* Carrying the socket name as well as the part
+  id put the fixture's own code at **127** characters and the worst genome
+  today's parts can build at **179**. The socket is derivable from the part
+  (`content.parts[id].slot`), so it came out: the worst case is now **138**
+  and `codeLimit` is **140** in data. The gate checks the stated limit against
+  the content rather than against a literal, so adding a species with a long
+  name fails the build instead of silently producing a code nobody would
+  retype — and caps the limit itself at 160, because past that the second
+  door stops being a door.
+
+  **R114 IS NOT HERE, SO R108 DID ITS OWN.** This is the first feature that
+  takes a file from another person, and R114 has already measured that 263
+  `.name` fields in this tree are interpolated unescaped. Waiting would have
+  meant opening the hole R114 exists to close, one milestone early. The card
+  escapes what it draws; one `safeText` — one function, so there is one thing
+  to audit — strips markup characters from a stranger's name and lab and
+  bounds them to 40. A creature called `<script>alert(1)</script>` is drawn as
+  the text it is, and the gate checks both the card and the encounter.
+
+  **AND R105 SHIPPED TWO PARAGRAPHS OF FICTION.** Found while wiring this
+  milestone's guide: the `calendar` field note still promised a travelling
+  menagerie and a ring that refills slower in the rain, and
+  `data/notes/calendar.md` still documented `stocks` and `ringRegenScale`.
+  Both were measured away inside R105 and neither is in the data. Corrected
+  here rather than left for an audit, because a field note that describes a
+  mechanic the game does not have is worse than no field note.
+
+  The original entry follows.
+
+- **R108 (as queued) — Specimen cards.** §8 risk 1 says the
   renderer is the whole first impression, and there is **no way to take a
   creature out of the app**: the only download in the game is the save file,
   `navigator.share` is used nowhere, and the renderer already produces

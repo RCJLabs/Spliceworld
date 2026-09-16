@@ -1,5 +1,86 @@
 # PROGRESS
 
+## Session 187 — R108: specimen cards, and the fights they carry ✅
+
+**ROADMAP §9.** Every premise held, which almost never happens: there really
+was no way to take a creature out of this app. The only `download` the game
+has ever produced is the save file, `navigator.share` appeared nowhere in the
+tree, and `creaturePortrait` has always returned a standalone `<svg>` string
+that nothing ever handed to anybody.
+
+### What shipped
+
+A card is one self-contained SVG — portrait, name, lab, grade letters, stat
+line, moves, the genome in `<metadata>` as JSON, and a printed code under the
+portrait. The Pens grow a **Specimen card** button per creature: Web Share API
+where the browser has it, the save exporter's own Blob download where it does
+not. The War Room grows a **Visiting Specimen** card that takes one back —
+open a card file, or type the code — books it as `state.visiting`
+(**SAVE_VERSION 55**) and offers it as an exhibition with no purse, no
+notoriety, nothing captured and no tier.
+
+Every sentence including every refusal is in `data/cards.json`. A refusal is
+the most-read prose in an import feature and CLAUDE.md's rule has no carve-out
+for error text.
+
+### Two defects, both in this milestone's own code, both caught by its gate
+
+**The card did not round-trip.** The first draft sorted sockets into a
+canonical head-forelimbs-hindlimbs order so two cards of one creature would be
+the same string. They already are — a creature is one object with one key
+order — and the sort cost something real: `movesFromTokens` walks tokens in
+the order it is given them, so a card handed back a creature with the same
+five stats and a **different moveset**. The criterion says *identical genome
+and stat block*; it was the stat-block half quietly failing. Order is carried
+end to end now, with its own assertion saying why.
+
+**The code was not retypable.** Carrying the socket name as well as the part
+id put the fixture's code at **127** characters and the worst genome today's
+parts can build at **179**. The socket is derivable from the part
+(`content.parts[id].slot`), so it came out: worst case **138**, `codeLimit`
+**140** in data. The gate measures the stated limit against the CONTENT, so a
+species with a long name fails the build rather than silently producing a code
+nobody would retype — and caps the limit at 160, because past that the second
+door stops being a door.
+
+### R114 is not here, so R108 did its own escaping
+
+This is the first feature that takes a file from another person, and R114 has
+already measured **263** unescaped `.name` interpolations in this tree.
+Waiting would have meant opening the hole R114 exists to close, one milestone
+early. The card escapes what it draws; one `safeText` — one function, so there
+is one thing to audit — strips markup characters from a stranger's name and
+lab and bounds them to 40. A creature called `<script>alert(1)</script>` draws
+as the text it is, on the card and in the encounter, and the gate checks both.
+
+### One thing I broke last session and fixed this one
+
+The `calendar` field note still promised a travelling menagerie and a ring
+that refills slower in the rain, and `data/notes/calendar.md` still documented
+`stocks` and `ringRegenScale`. **Both were measured away inside R105 and
+neither is in the data.** Two paragraphs of fiction, shipped to `main`.
+Corrected here: a field note describing a mechanic the game does not have is
+worse than no field note. Outside R108's criterion, inside R108's honesty.
+
+### Known issues
+
+- The file-import path (`<input type=file>`, built imperatively so it never
+  enters a screen's markup — the no-native-controls rule) is not reachable by
+  the headless handler gate, same as the save importer's since R55. `readCard`
+  itself is covered directly.
+- The full break battery is still unrunnable on this box (4 cores, load 10;
+  R159 measured ~1h29m for 258 breaks and there are 317 now). Verified with
+  targeted `--only` runs plus `--anchors` and `--baseline`, as R133's split
+  allows.
+
+### Next session's first task
+
+R109 — the voice repeats: 4,034 wire lines in 180 days from 181 distinct
+phrasings, the top one 670 times. *Done when: over 180 days no phrasing
+exceeds 5% of the wire and the distinct-phrasing count is at least 400.*
+
+---
+
 ## Session 186 — R105: the county calendar ✅
 
 **ROADMAP §9.** The oldest entry on the queue and the largest. Three of its

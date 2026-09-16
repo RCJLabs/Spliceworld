@@ -77,6 +77,10 @@ export function indexContent(raw) {
     // nothing. Adding it to CONTENT_FILES is NOT enough — R41's lesson, paid
     // again by R102 one line up.
     calendar: raw.calendar ?? null,
+    // R108 — the specimen card: its palette and bounds, the exhibition's
+    // words, and every refusal sentence the importer can print. Flat tuning
+    // again, read whole by splice/card.js. Same lesson, third payment.
+    cards: raw.cards ?? null,
     // R82: the breakout's whole tuning is one flat object, so it is
     // indexed as one rather than split into a list and a meta block.
     breakoutMeta: raw.breakout ?? null,

@@ -1,0 +1,36 @@
+{
+  "card": {
+    "width": 420,
+    "height": 560,
+    "codeLimit": 140,
+    "nameLimit": 40,
+    "palette": {
+      "ground": "#0e1116",
+      "rule": "#3ad17a",
+      "ink": "#e6edf3",
+      "muted": "#9fb3c8"
+    },
+    "labFallback": "An unlicensed laboratory",
+    "nameFallback": "Specimen",
+    "footer": "Cut along the dotted line. There is no dotted line."
+  },
+  "exhibition": {
+    "title": "Visiting Specimen",
+    "blurb": "On loan from {lab}. No stakes, no paperwork, no witnesses.",
+    "blurbAnonymous": "Somebody left this on the doorstep. No stakes, no paperwork, no witnesses.",
+    "koLine": "{name} bows, collects its things, and is escorted politely to the gate.",
+    "accepted": "{name} is signed in at the gate and shown to the visitors' pen."
+  },
+  "refusals": {
+    "notAFile": "That is not a card. Paste the SVG, or type the specimen code.",
+    "noSpecimen": "No specimen in that file. A card carries its genome in its metadata.",
+    "noCode": "That is not a specimen code. It should start with a frame letter.",
+    "noAnatomy": "That code has a frame but no anatomy, so there is nothing to build.",
+    "badChunk": "\"{chunk}\" is not a socket. Each piece reads socket.part.grade.",
+    "nothing": "There is no specimen in that.",
+    "badFrame": "This card is built on a frame this lab does not have: \"{frame}\".",
+    "emptyTokens": "This card has a frame but no anatomy on it.",
+    "badPart": "This card names a part nobody has: \"{partId}\", in the {socket} socket.",
+    "badGrade": "\"{grade}\" is not a grade this lab recognises."
+  }
+}

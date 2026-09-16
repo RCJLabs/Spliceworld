@@ -31,7 +31,9 @@ import { matchupNotes, attackTags, foeTagLines, classNotes } from './matchup.js'
 import { guideForScreen, STABLE as TEAM_CAP } from '../ranch/onboarding.js';
 import { startSpar } from './sparring.js';
 import { gauntletState } from './gauntlet.js';
-import { toggleRow, pickerField, bindPickers, openPicker } from '../ui/picker.js';
+import { visitingEncounter, acceptCard, clearVisitor } from './visiting.js';
+import { readCard } from '../splice/card.js';
+import { toggleRow, pickerField, bindPickers, openPicker, openPrompt } from '../ui/picker.js';
 import { creaturePortrait, renderRivalSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
 import { rescueEncounterFor } from './map.js';
@@ -65,6 +67,11 @@ let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, l
 
 let draftTeam = [];
 let lastAftermath = null;
+// R108 — what the visitors' gate last said. Module-level for the same
+// reason `lastAftermath` above it is: this screen answers in a full
+// re-render, so a line appended to a DOM the next paint replaces is a line
+// nobody reads.
+let visitMsg = null;
 // R123 — why the last suggestion picked who it picked. Held here rather
 // than recomputed on render: the answer costs twelve forecasts, and a
 // briefing that re-ran them on every checkbox press would be the R74
@@ -498,6 +505,33 @@ function renderMap(root, ctx) {
       </section>`
     : '';
 
+  // R108 — THE VISITORS' GATE. Two doors in and, once somebody has handed
+  // you a creature, one fight. It sits on the War Room rather than the Pens
+  // because what arrives is not yours: it never joins the roster, it cannot
+  // be trained, salvaged or bred, and the only thing you can do with it is
+  // the thing this screen is for.
+  const visitCard = (() => {
+    const enc = visitingEncounter(state, content);
+    const row = enc
+      ? `<div class="encounter">
+          <div><strong>${esc(enc.name)}</strong> <span class="lineage">1 wave \u00b7 no purse</span><br>
+          <span class="fine-print">${esc(enc.blurb)}</span></div>
+          <button type="button" data-visit-fight="1"${canFight ? '' : ' disabled'}>${canFight ? 'Answer' : noneFit}</button>
+        </div>
+        <button type="button" class="pen-dismantle" data-visit-clear="1">${renderIcon('wrench')} Show it out</button>`
+      : '<p class="fine-print">Nobody has handed you one yet.</p>';
+    return `<section class="card visiting-card">
+      <h3>${renderIcon('document')} Visiting Specimen</h3>
+      <p class="fine-print">Take a card file, or type the code printed under its portrait. One visitor at a time; an exhibition pays nothing and takes nothing.</p>
+      <div class="pen-actions">
+        <button type="button" data-visit-file="1">${renderIcon('package')} Open a card</button>
+        <button type="button" data-visit-code="1">${renderIcon('pencil')} Type a code</button>
+      </div>
+      ${visitMsg ? `<p class="ranch-msg">${esc(visitMsg)}</p>` : ''}
+      ${row}
+    </section>`;
+  })();
+
   // R42: the Gauntlet card. Only ever rendered once the county is yours —
   // before that the coalition is still pretending it has nothing in storage.
   const gauntletCard = state.dominionAt
@@ -518,6 +552,7 @@ function renderMap(root, ctx) {
 
   root.innerHTML = `
     ${dominionCard}
+    ${visitCard}
     ${gauntletCard}
     ${lastAftermath ? `<section class="card"><h3>Last Sortie</h3><p class="ranch-msg">${lastAftermath}</p></section>` : ''}
     <section class="card">
@@ -561,6 +596,63 @@ function renderMap(root, ctx) {
   });
   bindDossier(root, ctx, () => renderMap(root, ctx));
   bindJobs(root, ctx, () => renderMap(root, ctx));
+  // R108 — the visitors' gate. `acceptCard` does the validating and owns
+  // every sentence; these only carry text into it and repaint.
+  const signIn = (text) => {
+    const taken = acceptCard(state, readCard(text ?? '', content), content, ctx.now());
+    visitMsg = taken.msg ?? (taken.ok ? null : 'That card could not be read.');
+    if (taken.ok) ctx.save();
+    renderMap(root, ctx);
+  };
+  root.querySelectorAll('button[data-visit-code]').forEach((btn) =>
+    btn.addEventListener('click', () => openPrompt({
+      title: 'Sign in a visitor',
+      label: 'The code under the portrait',
+      // A code is the whole genome, so the field has to hold one: the card
+      // module's own limit, rather than a number picked here that could
+      // silently truncate somebody's creature into a refusal.
+      maxLength: content.cards?.card?.codeLimit ?? 120,
+      onSubmit: signIn,
+    }))
+  );
+  // The file door is BUILT rather than rendered, and the rule is why: a
+  // native file control written into a screen's markup is exactly what the
+  // no-native-controls gate exists to stop. This one never enters the frame
+  // — it is created, it opens the OS sheet, and it is gone — which is the
+  // same shape the save importer has used since R55.
+  root.querySelectorAll('button[data-visit-file]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const picker = document.createElement('input');
+      picker.type = 'file';
+      picker.accept = 'image/svg+xml,.svg';
+      picker.addEventListener('change', async (e) => {
+        const picked = e.target.files?.[0];
+        if (!picked) return;
+        const read = await picked.text().catch(() => null);
+        if (read === null) {
+          visitMsg = 'That file could not be read.';
+          return renderMap(root, ctx);
+        }
+        signIn(read);
+      });
+      picker.click();
+    })
+  );
+  root.querySelectorAll('button[data-visit-clear]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      clearVisitor(state);
+      visitMsg = 'Shown out, with a bag of something for the road.';
+      ctx.save();
+      renderMap(root, ctx);
+    })
+  );
+  root.querySelectorAll('button[data-visit-fight]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      if (!visitingEncounter(state, content)) return;
+      draftTarget = { kind: 'visiting', encounterId: 'visiting_specimen', label: 'Visiting Specimen' };
+      renderWarRoomScreen(root, ctx);
+    })
+  );
   root.querySelectorAll('button[data-gauntlet]').forEach((btn) =>
     btn.addEventListener('click', () => {
       const row = gauntletState(state, content).find((r) => r.stage.id === btn.dataset.gauntlet);

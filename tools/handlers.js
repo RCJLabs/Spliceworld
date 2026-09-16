@@ -45,6 +45,8 @@ import { newGameState } from '../save/save.js';
 import { labCore } from './fixtures.js';
 import { createAnimal } from '../ranch/ranch.js';
 import { spliceChimera } from '../splice/theater.js';
+import { cardSVG, readCard } from '../splice/card.js';
+import { acceptCard } from '../campaign/visiting.js';
 // R170 — counted, not bare. See tools/flown.js.
 import { createBattle } from './flown.js';
 import { recordingRoot, installDom, memoryStorage, fakeEvent, attrsOfFire, dataAttrsIn } from './domstub.js';
@@ -222,6 +224,15 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     // fixture only runs three, so arming from `t0` would leave the board
     // empty and the Hunt button unpainted.
     tickBreakouts(s, content, now, t0 - 24 * HOUR);
+
+    // R108 — a visitor signed in at the gate, so the War Room paints its
+    // Answer and Show-it-out buttons. Built by exporting one of the fixture's
+    // own creatures and importing it back through the real path — `cardSVG`,
+    // `readCard`, `acceptCard` — rather than by hand-writing `s.visiting`: a
+    // hand-written one would keep passing after a rename, which is the exact
+    // way a fixture stops testing the thing it is named for.
+    s.visiting = null;
+    acceptCard(s, readCard(cardSVG(s.chimeras[0], s, content), content), content, now);
 
     // A job in the field and an unread report from the last one.
     const op = operationList(content)[0];

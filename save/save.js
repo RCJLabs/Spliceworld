@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 54;
+export const SAVE_VERSION = 55;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -55,6 +55,16 @@ export function newGameState() {
     // `applyLegacy` and read by the ceremony and the opening; see
     // campaign/legacy.js for why it is one and not a list.
     legacy: null,
+    // R108 — the one card somebody else handed you, or null. A GENOME and
+    // not a stat block: the numbers are derived on every read through the
+    // same physiology the rivals use, so a visitor cannot carry a promise
+    // about a fight the engine has stopped making. One at a time, because
+    // R91's rule is that every list in the save has a ceiling somebody
+    // chose and a board fed by other people's files is the worst kind.
+    visiting: null,
+    // How many cards the player has printed. The cards guide's
+    // done-condition reads it, the way `rushCount` backs R86's.
+    cardCount: 0,
     // R41/R43: the Sparring Ring's seed counter, and the moment its charge
     // bucket next stands full (0 = full now).
     sparCount: 0,
