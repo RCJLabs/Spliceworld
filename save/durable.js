@@ -3,17 +3,33 @@
 // `SAVE_VERSION` and the migration table protect a save from THIS CODE
 // changing under it. R54 gave it a door out of the browser entirely. Neither
 // protects it from the browser deciding, on its own, that this site is not
-// important enough to keep: iOS Safari clears localStorage after seven days
-// with the app unopened, at any size, and a TWA wrapper does not change that.
-// Seven days is an ordinary gap for an evening game.
+// important enough to keep.
 //
-// WHAT THIS IS NOT FOR, because the R100 entry said it was. The entry inherited
-// R91's note that four campaigns cross the 5 MB localStorage quota "around day
-// 124" — measured when a day-180 save was 1,843 KB. R91's own milestone then
-// cut it to 170 KB. Re-derived on today's tree: four slots cross 5 MB around
-// day 1,352, and one slot reaches 2 MB around day 2,163. Size is not the
-// problem and has not been for sixty milestones. EVICTION is the problem, and
-// it arrives on day seven regardless of how small the save is.
+// WHAT THIS DOES AND DOES NOT SURVIVE, corrected — the first version of this
+// note claimed iOS clears localStorage after seven days "and a TWA wrapper
+// does not change that", and that is wrong in both directions. Safari's
+// seven-day sweep takes ALL script-writable storage together — localStorage,
+// IndexedDB, Cache Storage, the service worker registration — so a backup in
+// IndexedDB does not survive it and never could. What the sweep exempts is the
+// case R100 is actually about: a site installed to the Home Screen, and an
+// Android TWA, which is not subject to it at all.
+//
+// So the honest bill is narrower and still worth paying:
+//   - A localStorage QUOTA FAILURE. `saveGame` catches it, returns false, and
+//     none of main.js's four call sites reads the result — R91 found that and
+//     it is still true. The save reaches IndexedDB even when the 5 MB cap
+//     refuses it, because IndexedDB's quota is a share of free disk instead.
+//   - EVICTION THAT TAKES WEB STORAGE FIRST. Under pressure, engines drop the
+//     small synchronous store before the big asynchronous one.
+//   - It does NOT survive a person clearing site data, which takes everything
+//     an origin owns, and should not: that is someone asking to start over.
+//
+// THE ENTRY'S OWN REASON WAS STALE. It inherited R91's note that four campaigns
+// cross the 5 MB localStorage quota "around day 124" — measured when a day-180
+// save was 1,843 KB. R91's own milestone then cut it to 170 KB. Re-derived on
+// today's tree: four slots cross 5 MB around day 1,352, one reaches 2 MB around
+// day 2,163. So the quota is not close, and the reason to write twice is the
+// list above rather than the one the entry gave.
 //
 // SO localStorage STAYS THE SOURCE OF TRUTH. It is synchronous, which is what
 // `saveGame` is and what every one of its call sites assumes; making the save

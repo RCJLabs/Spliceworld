@@ -35,7 +35,14 @@ R122b's conditional request is unchanged, just off the critical path.
 
 ### The save survives eviction, not size
 
-iOS clears localStorage after seven days at any size. localStorage stays the
+**A premise I got wrong and corrected mid-milestone, without changing the
+code.** I justified the backup with Safari's seven-day sweep; that sweep takes
+IndexedDB along with localStorage, so a backup there never survives it. The real
+bill is narrower: a quota refusal `saveGame` still swallows (R91), and eviction
+that drops Web Storage before IndexedDB. Home Screen and TWA installs — R100's
+actual target — are exempt from the sweep.
+
+localStorage stays the
 synchronous source of truth; `save/durable.js` is a backup read **only** when it
 comes up empty, so it cannot produce a stale save. The slot registry is restored
 first — without it `activeSlotId` answers 1 and every lab but the first is

@@ -3053,8 +3053,14 @@ R102; R88–R90 remain.)*
 
   #### The save survives eviction, not size
 
-  iOS clears localStorage after seven days unopened at any size, and `loadSlot`
-  could not tell that from a new player. localStorage stays the synchronous
+  `loadSlot` could not tell an empty localStorage from a new player. **The
+  justification here was corrected mid-milestone and the code did not change.**
+  The first version claimed Safari's seven-day sweep as the risk; that sweep
+  takes ALL script-writable storage together, IndexedDB included, so a backup
+  there never survives it. What it does survive is narrower and real: a quota
+  refusal `saveGame` still swallows (R91), and eviction that drops the small
+  synchronous store before the big asynchronous one. The Home Screen and TWA
+  cases — which is what R100 is for — are exempt from the sweep entirely. localStorage stays the synchronous
   source of truth — making the save path async to chase durability would put a
   rewrite through the one system CLAUDE.md calls sacred — and `save/durable.js`
   is a backup read **only** when localStorage comes up empty, so it can never

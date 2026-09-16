@@ -9,7 +9,9 @@ Do this after v0.1 has been live on Pages for a bit.
 - [x] HTTPS hosting (GitHub Pages)
 - [x] Mobile-first layout (380px verified every milestone)
 - [x] Saves in `localStorage` with `SAVE_VERSION` migrations, backed up to
-      IndexedDB so seven days away does not cost a campaign (R100)
+      IndexedDB against a quota refusal or an eviction that takes Web Storage
+      first (R100). Note for the store listing's data-safety answer: nothing
+      leaves the device either way.
 
 ## Wrap it
 1. `npm i -g @bubblewrap/cli` (tooling only — not a game dependency).
@@ -57,8 +59,10 @@ and generating the assets keeps both true.
       phone.
 
       What the suite CAN say about it, so the manual pass has less to find:
-      - saves persist → `tools/durable.js` clears `localStorage` the way iOS
-        does and requires a 2 MB save and its slot registry back.
+      - saves persist → `tools/durable.js` clears `localStorage`, leaves the
+        rest of the origin's storage standing, and requires a 2 MB save and its
+        slot registry back. It does NOT model Safari's seven-day sweep, which
+        takes IndexedDB too — see save/durable.js.
       - timers compute on resume → `tools/smoke.js` runs the offline-tick path
         on every milestone; CLAUDE.md's "timers are timestamps, not intervals".
       - opens offline → `tools/offline.js` opens the app with the HTTP server

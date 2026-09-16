@@ -1,13 +1,18 @@
 // R100 — THE SEVEN-DAY PROBLEM, RUN.
 //
-// iOS Safari clears localStorage after seven days with the app unopened, at
-// any size, and a TWA wrapper does not change that. Until R100 the game could
-// not tell that apart from a new player: `loadSlot` read null and handed back
-// a fresh ranch over the top of a campaign that still existed.
+// Until R100 the game could not tell an empty localStorage apart from a new
+// player: `loadSlot` read null and handed back a fresh ranch over the top of a
+// campaign that still existed. That happens whenever Web Storage goes and the
+// rest of the origin's storage does not — a quota refusal `saveGame` swallows
+// (R91), or an eviction that takes the small synchronous store first.
 //
-// This gate is that exact morning. Play, save, THROW LOCALSTORAGE AWAY the way
-// the browser would, reopen, and require the campaign back — byte for byte,
-// slot registry included, with no console errors on the way through.
+// NOT the seven-day Safari sweep, which this gate deliberately does not claim
+// to model: that takes IndexedDB along with everything else. See the corrected
+// note in save/durable.js for what the backup does and does not survive.
+//
+// This gate is the recoverable morning. Play, save, THROW LOCALSTORAGE AWAY and
+// leave the rest standing, reopen, and require the campaign back — byte for
+// byte, slot registry included, with no console errors on the way through.
 //
 // WHY IT IS A BROWSER GATE AND NOT A HEADLESS ONE. Node has no IndexedDB, so a
 // headless version would have to supply a fake, and a fake IndexedDB proves
