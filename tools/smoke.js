@@ -113,6 +113,11 @@ const SHARD_OF = {
   // block aims at the lane its name maps to, and two unrelated blocks under
   // one name make that aim a guess. Shard a is the lightest of the four.
   released: 'a',
+  // R102 — its own name, for R129's reason one entry up. Shard b: the comment
+  // above calls shard a "the lightest of the four" and that went stale, which
+  // is why this is a measurement rather than a quote — a 212s, b 134s, c 174s,
+  // d 166s on the run that placed this.
+  legacy: 'b',
   // R141 — the Kite gate flies ~4,400 battles to ask whether a frame is worth
   // its missing bay. Shard a, beside the other two light blocks.
   kite: 'a',
@@ -6763,6 +6768,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // the subtab bar, two agenda rows and a first-use moment that arrives
     // the day the State notices you.
     'taskforce',
+    // R102. The run boundary: a data file, a module, a ceremony on the one
+    // screen that announces the county is yours, and a first-use moment that
+    // arrives exactly once per campaign — at the end of it. The strongest
+    // case for a note there is, because whatever is not explained at the
+    // ceremony is explained never.
+    'legacy',
     // R103. Telegraph, brace and the counter-switch: a data file, an intent
     // on the battle, a line above the command bar, two buttons that mean
     // something new, and a first-use moment that arrives with the first win.
@@ -6828,6 +6839,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // to point at here. Exempted for the same reason the wire is, from the
     // other end: this one is met before anything else rather than through
     // everything else.
+    // R102 — the run boundary, taught where it is reached: the War Room, which
+    // is where the county being yours is announced and therefore where the
+    // offer to leave it behind belongs.
+    'legacy.json': 'legacy',
     'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
@@ -6872,6 +6887,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'splice/feral.js': 'feral',
     'splice/rush.js': 'rush',
     'campaign/taskforce.js': 'taskforce',
+    // R102 — the run boundary. A system the player meets exactly once per
+    // campaign, at the end of it, which is the strongest case for a note
+    // there is: whatever is not explained at the ceremony is explained
+    // never.
+    'campaign/legacy.js': 'legacy',
     'campaign/sparring.js': 'veterans',
     'campaign/campaign.js': 'regions',
     'campaign/map.js': 'regions',
@@ -7141,7 +7161,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // on its own, so both notes light on the same step. The first cut gave
     // the Task Force a step of its own further down and this walk caught it:
     // by then the note had already been live for two steps.
-    ['the county is theirs', () => { lab.dominionAt = t0; }, ['gauntlet', 'taskforce']],
+    // R102 — and the way OUT of the county lights on the same step, for the
+    // same reason: taking the whole thing is what opens the boundary. Three
+    // notes on one step is the most this walk lights anywhere, which is
+    // correct — dominion is the moment the game changes shape.
+    ['the county is theirs', () => { lab.dominionAt = t0; }, ['gauntlet', 'taskforce', 'legacy']],
     // R85: and the player finally builds something at the top of the scale.
     // The note is reachable the moment they OWN a creature that could go
     // feral — while there is still bond to build — rather than once one is
@@ -13710,6 +13734,140 @@ if (inShard('spar')) {
     assert.ok(reset.ok, 'and a reset aimed at slot 2 lands the same way');
     assert.notEqual(JSON.parse(store.map.get('spliceworld_save_2')).seed, 77, 'a fresh run, still in slot 2');
   }
+}
+
+// R102 — A RUN CAN END, AND THE PLAYER CHOOSES WHAT SURVIVES IT.
+//
+// The county falls on median day 28.6 across thirteen seeds — 24 at the
+// earliest, 39 at the latest, and all thirteen get there. A campaign is 180
+// days, so 151 of them happen AFTER the only thing the game calls an ending.
+// R87 built the stake and the sink and deferred this on purpose; the entry's
+// own numbers (median day 35-54, "~130 days") were measured before R94, R138,
+// R154 and R157 each made the player stronger, and both moved the wrong way.
+//
+// Before R102 the boundary existed and was empty: `startNewRun` carried
+// `settings`, `guidesSeen` and `ui` — a sound toggle and some read receipts —
+// so retiring a finished county produced a run that was identical to the first
+// one and merely emptier. "New game plus" that carries nothing is new game.
+//
+// THE RULE IS EXACTLY ONE THING, and the gate is built around the word
+// exactly, because both failure modes are real: carrying nothing makes the
+// ceremony a lie, and carrying two is how a legacy system becomes a save
+// editor. What one thing IS comes from data/legacy.json, so a fourth kind is
+// a JSON edit; that it is ONE is engine, and is asserted here.
+if (inShard('legacy')) {
+  const { newGameState, SAVE_VERSION } = await import('../save/save.js');
+  const { startNewRun, CARRIED_ACROSS_RUNS } = await import('../save/slots.js');
+  const { legacyOffers, applyLegacy, legacyTuning } = await import('../campaign/legacy.js');
+
+  // A finished run: the county taken, a roster, a vault, a herd, money.
+  const finished = () => {
+    const st = newGameState();
+    st.dominionAt = Date.now() - 3600000;
+    st.funds = 91000;
+    st.profile = { ...(st.profile ?? {}), lab: 'The Institute for Applied Regret', philosophy: 'purity' };
+    st.chimeras = [
+      { id: 'c1', name: 'Chompers', genome: { head: 'wolf_head' }, scars: ['jeep_shy'],
+        temperament: { brave: 40, fierce: 20 }, level: 9, bond: 88 },
+      { id: 'c2', name: 'Doorstop', genome: { head: 'tortoise_head' }, scars: [], level: 4, bond: 30 },
+    ];
+    st.ranch = { ...(st.ranch ?? {}), stock: [{ id: 'a1', species: 'wolf', stars: 4 }] };
+    st.inventory = { ...(st.inventory ?? {}), parts: [{ partId: 'wolf_head', grade: 'apex' }] };
+    st.campaign = { ...(st.campaign ?? {}), heldNodes: ['n1', 'n2'], notoriety: 600, notorietyPeak: 600 };
+    return st;
+  };
+
+  // 1. THE OFFER IS DERIVED FROM THE RUN, not from a fixed menu. You cannot
+  //    keep a veteran you never built, and a run with an empty ranch must not
+  //    offer a bloodline — an option that cannot be taken is a dead end
+  //    dressed as a choice.
+  {
+    const offers = legacyOffers(finished(), content);
+    assert.ok(offers.length >= 2, `a finished run offers something to keep (${offers.length})`);
+    for (const o of offers) {
+      assert.ok(o.kind && o.id && o.label, `every offer names its kind, its id and itself (${JSON.stringify(o)})`);
+      assert.ok(o.kind in legacyTuning(content).kinds, `${o.kind} is a kind the data declares`);
+    }
+    const kinds = new Set(offers.map((o) => o.kind));
+    assert.ok(kinds.has('veteran'), 'a run with two chimeras offers a veteran');
+
+    const empty = newGameState();
+    empty.dominionAt = Date.now();
+    assert.deepEqual(legacyOffers(empty, content), [],
+      'a run with nothing in it offers nothing — the ceremony does not invent a choice');
+
+    const unfinished = finished();
+    unfinished.dominionAt = null;
+    assert.deepEqual(legacyOffers(unfinished, content), [],
+      'and an unfinished run offers nothing: the pick is what FINISHING buys');
+  }
+
+  // 2. EXACTLY ONE THING CROSSES. The old roster, the vault, the herd, the
+  //    map and the money do not, and neither does a second pick.
+  {
+    const before = finished();
+    const vet = legacyOffers(before, content).find((o) => o.kind === 'veteran' && o.id === 'c1');
+    assert.ok(vet, 'the named veteran is offerable by id');
+    const after = applyLegacy(startNewRun(before), vet, before, content);
+
+    assert.equal(after.chimeras.length, 1, 'one chimera crosses, not the roster');
+    assert.equal(after.chimeras[0].name, 'Chompers', 'and it is the one that was chosen');
+    // ITS HISTORY, which is what makes it that creature rather than a fresh
+    // body wearing its name.
+    assert.deepEqual(after.chimeras[0].scars, ['jeep_shy'], 'it arrives with its scars');
+    assert.ok(after.chimeras[0].temperament, 'and its temperament');
+    // AND NONE OF ITS OLD LIFE.
+    assert.equal(after.ranch.stock.length, 0, 'the herd does not come');
+    assert.equal(after.inventory.parts.length, 0, 'the vault does not come');
+    assert.deepEqual(after.campaign.heldNodes, [], 'the county does not come');
+    assert.equal(after.campaign.notorietyPeak ?? 0, 0, 'and the State has never heard of you');
+    assert.equal(after.funds, newGameState().funds, 'the money does not come');
+    assert.equal(after.dominionAt ?? null, null, 'the new run has not finished anything');
+
+    // The save records WHAT was kept, so the ceremony and the Dex can say so
+    // and a second pick has something to refuse.
+    assert.equal(after.legacy?.kind, 'veteran', 'the save records the kind');
+    assert.equal(after.legacy?.id, 'c1', 'and which one');
+    assert.ok(after.legacy?.from?.lab, 'and the lab it came from, because that is the story');
+  }
+
+  // 3. ONE IS A CEILING, NOT A DEFAULT. Applying a second pick refuses rather
+  //    than stacking — this is the rule that keeps a legacy from becoming a
+  //    way to carry a whole run forward one milestone at a time.
+  {
+    const before = finished();
+    const offers = legacyOffers(before, content);
+    const first = offers.find((o) => o.kind === 'veteran');
+    const second = offers.find((o) => o.kind !== 'veteran');
+    assert.ok(second, 'the run offers a second KIND to try to smuggle');
+    const once = applyLegacy(startNewRun(before), first, before, content);
+    const twice = applyLegacy(once, second, before, content);
+    assert.equal(twice.legacy?.kind, 'veteran', 'the second pick does not overwrite the first');
+    assert.equal(twice.chimeras.length, 1, 'and does not add to what crossed');
+    assert.equal(legacyTuning(content).maxPicks, 1, 'and the data says one, out loud');
+  }
+
+  // 4. NO PICK IS STILL A RUN. Retiring without choosing must work exactly as
+  //    it did before R102 — the old behaviour is the floor, not a fallback
+  //    nobody tested.
+  {
+    const plain = startNewRun(finished());
+    assert.equal(plain.legacy ?? null, null, 'no pick, no legacy');
+    assert.equal(plain.chimeras.length, 0, 'and an empty ranch, as R55 built it');
+    for (const key of CARRIED_ACROSS_RUNS) {
+      assert.ok(key in plain, `${key} still carries across, as it always did`);
+    }
+  }
+
+  // 5. AND THE SCHEMA KNOWS ABOUT IT. A field the migration chain does not
+  //    create is a field an old save reaches the new engine without.
+  {
+    assert.ok('legacy' in newGameState(), 'a fresh save declares the field');
+    assert.ok(SAVE_VERSION >= 54, `SAVE_VERSION moved for the new shape (${SAVE_VERSION})`);
+  }
+
+  console.log(`   R102 boundary: the county falls ~day 29 and 151 days follow it \u00b7 `
+    + `a finished run offers ${legacyOffers(finished(), content).length} things to keep, and one crosses`);
 }
 
 // R56. Every measurement this project owns is a SLICE — runSim benches a
