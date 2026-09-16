@@ -1,0 +1,6 @@
+# R100 — the Play listing's raster art, produced by `npm run assets` rather
+# than kept. CLAUDE.md's "procedural SVG only, no image files" is about what
+# the GAME draws; a storefront's metadata is not that, and generating it keeps
+# both true — nothing raster is committed, and the assets are reproducible from
+# the same icon.svg the app ships.
+dist/

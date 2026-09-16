@@ -364,6 +364,28 @@ const TURNS = ['node', '-e',
 // bound for every array, and whether a chimera lives longer than an evening.
 const VAULT = ['node', 'tools/vault.js'];
 
+// R100 — THE THREE RULES THE TWA NEEDED, AND NONE OF THEM COULD BE RUN BEFORE.
+//
+// OFFLINE is the one path every other browser gate deliberately bypasses:
+// a11y, height and boot all set `Network.setBypassServiceWorker`, on purpose,
+// because they measure what the SITE costs and a cache would make that a lie.
+// So the code that decides whether the app opens on a train had never been
+// executed by anything. Its rule is a slope — with the app already cached, how
+// long it takes to open must not depend on the network.
+//
+// DURABLE is the seven-day problem: iOS clears localStorage after a week
+// unopened, and until R100 `loadSlot` could not tell that apart from a new
+// player. It plays, saves, throws localStorage away and requires 2 MB back.
+//
+// CACHEBUMP is the box that stopped being a box. `CACHE` carries a hash of the
+// shell, so a release that changes a precached file and forgets the bump goes
+// red. Under cache-first that mistake no longer drains in ten minutes. (Named
+// for what it checks rather than for the tool: `RELEASE` above is R129's
+// breakout release and got there first.)
+const OFFLINE = ['node', 'tools/offline.js'];
+const DURABLE = ['node', 'tools/durable.js'];
+const CACHEBUMP = ['node', 'tools/release.js'];
+
 // R91 — THE SURGERY THEATER DOES ONE OPERATION AT A TIME.
 //
 // This gate exists because break 145 went MISSED against `tools/vault.js`,
@@ -3192,6 +3214,66 @@ const BREAKS = [
     to: "  handlers: 5.2, vault: 2.8, scopecheck: 0.2, walks: 4.1,",
   },
 
+  // R100 — the worker, the backup and the release discipline. Every one of
+  // these aims at the behaviour that actually shipped for sixty milestones,
+  // not at a defect invented for the occasion.
+  {
+    // THE DEFECT ITSELF, and it is the M7 service worker verbatim. Serve the
+    // shell from the network first and a cached app waits on 85 round trips
+    // for bytes already on the device: 2,431ms at +150ms of latency against
+    // 12,155ms at +800ms, a slope of 9,725ms where cache-first reads 47ms.
+    // Caught by the SLOPE, not the stopwatch — the absolute number moves with
+    // the host and the ratio does not.
+    n: 304, gate: OFFLINE, name: 'the worker asks the network first again, so a cached app waits on a slow one',
+    file: 'sw.js',
+    anchor: '      if (cached) {',
+    to: '      if (false) {',
+  },
+  {
+    // AND THE HALF THAT MAKES IT CACHE-FIRST RATHER THAN CACHE-ONLY. Drop the
+    // background revalidation and the app is fast and permanently stale: it
+    // would pass the slope rule and fail the players, which is why R122b's
+    // deploy check in tools/boot.js is a separate rule and stays one.
+    n: 305, gate: BOOT, name: 'the shell stops revalidating behind the response, so a cached app never updates',
+    file: 'sw.js',
+    anchor: '        event.waitUntil(revalidate(event.request));',
+    to: '        void revalidate;',
+  },
+  {
+    // A save is written to localStorage and nowhere else, which is where this
+    // game was until R100. The gate clears localStorage the way iOS does and
+    // finds an empty ranch on top of a campaign that still existed.
+    n: 306, gate: DURABLE, name: 'the save stops being backed up, so seven days away costs the campaign',
+    file: 'save/save.js',
+    anchor: '  mirrorSave(key, raw);',
+    to: '  void mirrorSave;',
+  },
+  {
+    // THE HALF THAT IS EASY TO FORGET, and the gate found it live: the SAVE
+    // comes back and the REGISTRY does not, so `activeSlotId` answers 1 and
+    // every lab but the first is stranded. It read 0 bytes of a 2 MB payload
+    // by opening the empty slot the missing registry pointed at.
+    n: 307, gate: DURABLE, name: 'the slot registry is not restored, so every lab but the first is stranded',
+    file: 'save/save.js',
+    anchor: '      if (raw) storage.setItem(SLOTS_KEY, raw);',
+    to: '      if (false) storage.setItem(SLOTS_KEY, raw);',
+  },
+  {
+    // THE MISTAKE ITSELF: a precached file is edited and nobody bumps CACHE.
+    // Under network-first that cost ten minutes; under cache-first the browser
+    // that already has the app never asks again, so it is permanent.
+    //
+    // The first version of this break edited `tools/release.js` to make its
+    // own comparison trivially true, and went MISSED — correctly, and it was
+    // a badly written break rather than a finding. NO GATE CATCHES ITS OWN
+    // DISABLING; what a break has to simulate is the defect in the SHIPPED
+    // code, which is this.
+    n: 308, gate: CACHEBUMP, name: 'a precached file changes and CACHE does not, so a stale build ships forever',
+    file: 'manifest.webmanifest',
+    anchor: '  "orientation": "portrait",',
+    to: '  "orientation": "any",',
+  },
+
   // A THIRD BREAK WAS WRITTEN HERE AND DELETED, which is worth a sentence.
   // It dropped the nesting filter in the dead-byte walk, on the assumption
   // that counting every inner function on top of the outer one that
@@ -3647,10 +3729,31 @@ const BREAKS = [
   overflow-y: auto;`,
   },
   {
+    // R100 — RE-ANCHORED, because the defect moved house rather than going
+    // away. R122b's finding is that a plain `fetch` reads through the
+    // BROWSER's HTTP cache, and Pages serves the shell with max-age=600, so a
+    // stale copy gets written into a freshly-named cache where it outlives the
+    // ten minutes. Under the old network-first worker that happened on the
+    // fetch path, which is where this break used to point.
+    //
+    // ITS TRUE HOME UNDER CACHE-FIRST IS `revalidate`, AND THAT TOOK TWO
+    // WRONG ANCHORS TO ESTABLISH. The obvious candidate was `install`, which
+    // is how a bumped deploy is delivered — but pointed there the break went
+    // MISSED twice, including after the gate's two legs were reordered so
+    // install ran against an HTTP cache that still held the old file. The
+    // measurement says what the reasoning did not: `cache: 'reload'` on
+    // install is BELT AND BRACES. Whatever a stale install caches, the
+    // background revalidation replaces on the next open, so the two paths
+    // cannot be told apart from outside. It stays in `install` because it is
+    // correct and free; it is simply not the thing a break can aim at.
+    //
+    // The revalidation IS load-bearing, and its freshness with it: read that
+    // through the browser's HTTP cache and every correction is up to ten
+    // minutes stale, which is R122b's finding verbatim at its new address.
     n: 112, gate: BOOT, name: 'the service worker reads through the HTTP cache again, so a deploy never reaches a phone that already has the app',
     file: 'sw.js',
-    anchor: "    fetch(event.request, { cache: 'no-cache' })",
-    to: '    fetch(event.request)',
+    anchor: "const revalidate = (request) => fetch(request, { cache: 'no-cache' })",
+    to: 'const revalidate = (request) => fetch(request)',
   },
   {
     n: 113, gate: SENT, name: 'the send stops reading the band, so a coin-flip fight is offered as a certainty',

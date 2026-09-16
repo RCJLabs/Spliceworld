@@ -6916,6 +6916,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'save/migrations.js': null,
     'save/slots.js': null,
     'save/settings-ui.js': null,
+    // R100 — a storage LOCATION, not a system. There is nothing here a player
+    // can be taught, do, or decide: it is the same save, written twice, and
+    // the second copy is read only when the browser has thrown the first away.
+    // A note explaining it would be a note about the browser.
+    'save/durable.js': null,
     'data/loader.js': null,
     'data/catalog.js': null,
     'util/rng.js': null,
@@ -20824,7 +20829,22 @@ if (inShard('wire')) {
 // browser and keeps 18 KB of slack, so if this cap stripped comments nothing
 // would catch a 15 KB one. Two budgets, two levers, and which lever owns prose
 // is a milestone rather than a paragraph — QUEUED AS R171.
-const KB_CAP = 545;
+// R100 — 545 -> 547, measured at 545.8, and THIS ONE IS ARGUED ON CODE. The
+// eager half of the durable save is about 900 bytes: the `if (!raw)` branch in
+// `loadSlot` that tells an evicted browser apart from a new player, the
+// registry restore that has to run before `activeSlotId` is asked, and two
+// four-line lazy-import wrappers. The backup itself, `save/durable.js`, is 4.6
+// KB and never enters this graph — it is imported after a save has already
+// been written, which is the whole reason it is a separate module.
+//
+// R171 IS NOW OVERDUE, and it is no longer a prediction. R94 filed it saying
+// "the next milestone that explains itself in an eager module hits it too";
+// R100 is the next milestone and hit it on the very first `npm test`. Two
+// consecutive raises is the pattern that note was written about, so the
+// evidence for the entry is now this ledger rather than an argument in it —
+// and R100 paid the same tax R94 did, trimming real explanation down to
+// one-liners to buy back 1.2 KB before raising anything.
+const KB_CAP = 547;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(kb <= KB_CAP,

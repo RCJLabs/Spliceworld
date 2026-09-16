@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**15 entries queued.** R100, R102, R105, R108,
+**14 entries queued.** R102, R105, R108,
 R109, R110, R111, R112, R113, R114, R115, R116, R117, R118, R171.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
@@ -3017,18 +3017,73 @@ R102; R88–R90 remain.)*
 **Platform and durability.**
 
 - **R100 — Ship the TWA: four unchecked boxes, an offline-second worker,
-  and a save that lives in localStorage.** `docs/TWA.md` has **four items
-  open** (device test, 512 px icon, screenshots, cache-bump discipline);
-  `sw.js` is **network-first for all 95 shell entries** — a known issue since
-  R81, so every cold open waits on the network before it will use the cache;
-  the save lives only in localStorage (5 MB, evictable on iOS) though export
-  and import are already built. Proposed, medium: cache-first for the
-  versioned shell with background revalidation; IndexedDB as the primary
-  store with localStorage as a mirror; an export reminder in settings after
-  N days; the icon and screenshots; and a `tools/release.js` that checks
-  `CACHE` against `SAVE_VERSION` rather than remembering to. *Done when: the
-  app opens offline in under a second from cache, the checklist is empty,
-  and a 2 MB save round-trips through IndexedDB.*
+  and a save that lives in localStorage.** ✅ *Shipped. Two of the entry's
+  three premises were measured wrong, and the third was in the wrong place.*
+
+  #### Where the entry was wrong
+
+  | the entry said | measured |
+  | --- | --- |
+  | "network-first for all **95** shell entries" | network-first ✅, but **116** entries / 1,856 KB |
+  | "5 MB, evictable" — quota pressure, from R91's day-124 note | R91's own milestone cut the save 1,843 KB → **170.4 KB**. Four slots cross 5 MB around **day 1,352**, one reaches 2 MB around **day 2,163** |
+  | "every cold open waits on the network" | true, and **offline is the case it accidentally handled** |
+
+  #### The defect is a slow network, not a dead one
+
+  Cold open, app already cached, timed to the moment a screen first holds a
+  game:
+
+  | | open | requests that reached the server |
+  | --- | ---: | ---: |
+  | wire cut | **125ms** | 0 |
+  | server +150ms | 2,414ms | 85 |
+  | server +800ms | **12,162ms** | 85 |
+
+  A dead port refuses instantly, so all 85 failures cost 125ms between them —
+  which is why the entry's own Done-when, "opens offline in under a second",
+  **passed on the unfixed tree**. The harm is a phone with a signal, where a
+  request does not fail, it waits: 4.7s at +300ms to show a game already on
+  disk. `tools/offline.js` measures it as a **slope** rather than a stopwatch
+  (R151's lesson) — with the app cached, how long it takes to open must not
+  depend on the network. Network-first reads 9,725ms; cache-first reads 47ms.
+
+  Counting blocking requests was tried first and is the wrong instrument: it
+  cannot tell a blocking fetch from a background revalidation, and reported 12
+  "blocking" requests against a 216ms open at +150ms, which does not fit.
+
+  #### The save survives eviction, not size
+
+  `loadSlot` could not tell an empty localStorage from a new player. **The
+  justification here was corrected mid-milestone and the code did not change.**
+  The first version claimed Safari's seven-day sweep as the risk; that sweep
+  takes ALL script-writable storage together, IndexedDB included, so a backup
+  there never survives it. What it does survive is narrower and real: a quota
+  refusal `saveGame` still swallows (R91), and eviction that drops the small
+  synchronous store before the big asynchronous one. The Home Screen and TWA
+  cases — which is what R100 is for — are exempt from the sweep entirely. localStorage stays the synchronous
+  source of truth — making the save path async to chase durability would put a
+  rewrite through the one system CLAUDE.md calls sacred — and `save/durable.js`
+  is a backup read **only** when localStorage comes up empty, so it can never
+  produce a stale save. The slot registry is backed up and restored first;
+  without it `activeSlotId` answers 1 and every lab but the first is stranded.
+
+  #### The boxes that became commands
+
+  Three of the four. `npm run release` hashes the shell into `CACHE`, so a
+  forgotten bump fails the build — which matters more than it did, because
+  under cache-first a stale cache no longer drains in ten minutes. `npm run
+  assets` renders the 512px icon and five phone-aspect screenshots into a
+  gitignored `dist/store/`, keeping "no image files" true of the repo.
+
+  **The device test is not closed and cannot be**: it needs an Android device,
+  a JDK and SDK for `bubblewrap build`, and a signing key. `docs/TWA.md` says
+  so plainly and lists what the suite can now assert in its place.
+
+  *Done when: the app opens offline in under a second from cache, the checklist
+  is empty, and a 2 MB save round-trips through IndexedDB.* Offline 258ms and
+  +150ms 241ms, both under the second; a 2 MB save and its registry survive
+  `localStorage.clear()`; three of four boxes closed by tooling and the fourth
+  documented as hardware-bound. Breaks 112, 304–308 all caught.
 - **R102 — The run boundary: "Relocate the lab".** The third part of R87,
   deliberately deferred rather than half-built. R87 gave the endgame a stake
   and a sink; what it still has no shape for is an **ending the player
@@ -5443,6 +5498,12 @@ triangle working, and each region genuinely asks a different question)*.
   bytes to `FIRST_PAINT_KB`, which measures them in a real browser — except
   that one keeps 18 KB of slack deliberately, so **nothing** would then catch a
   15 KB comment, and R169's whole milestone was about bytes hiding in slack.
+  **R100 hit it on its very first `npm test`**, one milestone after this entry
+  was filed predicting exactly that — and paid the same tax twice over, trimming
+  real explanation to one-liners to buy back 1.2 KB before raising the cap
+  again. Two consecutive raises is the pattern the ledger in `tools/smoke.js`
+  was written to make visible. This is no longer a prediction.
+
   Proposed, small: decide which of the two budgets owns prose, say so in both
   notes, and give the loser a rule that cannot be breached by explaining
   yourself. *Done when: a milestone can add a paragraph to an eager module

@@ -840,7 +840,19 @@ async function main() {
     // fixture that makes every other view reachable is exactly what hides
     // it. Cleared, measured, then the fixture is put back.
     const foundingPass = async () => {
-      await evaluate(`localStorage.clear()`);
+      // R100 — AND THE BACKUP, or this is no longer an empty browser. Clearing
+      // localStorage alone used to mean "new player"; since the durable save
+      // it means "evicted player", and `loadSlot` correctly restores the
+      // campaign from IndexedDB instead of showing the founding picker. This
+      // gate went red on exactly that, which is the recovery path working.
+      //
+      // Both stores is also what a person means by "clear site data" — a
+      // browser clears an origin's storage together — so this is the real
+      // fresh-browser state rather than a convenience for the test.
+      await evaluate(`(async () => {
+        localStorage.clear();
+        await new Promise((r) => { const q = indexedDB.deleteDatabase('spliceworld'); q.onsuccess = r; q.onerror = r; q.onblocked = r; });
+      })()`);
       await send('Page.navigate', { url });
       await sleep(2200);
       if (!await evaluate(`!document.querySelector('#overlay').hidden && !!document.querySelector('.founding')`)) {
