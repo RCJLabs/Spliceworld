@@ -1165,6 +1165,7 @@ import { regionOfNode } from '../campaign/map.js';
 import { contestEncounter } from '../campaign/contest.js';
 import { looseSpecimens, breakoutEncounter } from '../campaign/breakout.js';
 import { rehabPlan, startRehab, rehabSession, sessionReadyAt, rehabGrants } from '../campaign/rehab.js';
+import { seasonOf } from '../campaign/calendar.js';
 
 const WALK_HOUR = 3600000;
 const WALK_DAY = 24 * WALK_HOUR;
@@ -2482,7 +2483,14 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   // own past. Every other timestamp on the carried creature is left exactly
   // as the engine wrote it, because those are the measurement — see the
   // settle debt in ROADMAP R172.
-  const state = from ? { ...structuredClone(from), seed, createdAt: t0 } : { ...newGameState(), seed };
+  // R105 — AND A BIRTHDAY ON ITS OWN CALENDAR. `newGameState()` stamps
+  // `createdAt` with the real wall clock while this walk's whole clock is
+  // `t0`, so every day of a 180-day campaign read as "day 0" to the calendar
+  // and the walk crossed exactly one season. Stamping it is what makes the
+  // save internally consistent rather than half in 2026 and half in today.
+  const state = from
+    ? { ...structuredClone(from), seed, createdAt: t0 }
+    : { ...newGameState(), seed, createdAt: t0 };
   ensureRanchSeeded(state, content, t0);
   state.lastTickAt = t0;
 
@@ -2496,6 +2504,10 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     (state.__walkLog ??= []).push({ day: +((now - t0) / WALK_DAY).toFixed(2), kind, id });
   let sawCombo = false;
   let sawTrait = false;
+  // R105 — which seasons this campaign actually lived through. The entry's
+  // fourth clause is that 180 days cross all four, and nothing could answer
+  // that because nothing knew what a season was.
+  const seasons = new Set();
   let stall = 0;
   let longestStall = 0;
   let stallStartedAt = null;
@@ -2604,6 +2616,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     state.__walkUpkeep = (state.__walkUpkeep ?? 0) + upkeepPerDay(state, content) * ((now - (state.lastTickAt ?? now)) / WALK_DAY);
     tick(state, content, now);
     watchGen();   // R94 — after the tick that could have moved it.
+    seasons.add(seasonOf(state, content, now).id);   // R105
     for (const c of state.chimeras) if (c.agitatedAt) feralSeen.add(c.id);
     for (const c of state.chimeras) if (c.rehabilitated) rehabEver.add(c.id);
     for (const b of state.campaign.containment ?? []) if (b.feral) feralBays.add(b.id);
@@ -2719,6 +2732,12 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   return {
     seed,
     at,
+    // R105 — how many of the year's seasons a campaign of this length
+    // actually reaches. Four over 180 days is the entry's own clause; a
+    // number here rather than an assertion in one gate means the next
+    // milestone that shortens a campaign finds out what it did to the year.
+    seasonsSeen: seasons.size,
+    seasonsCrossed: [...seasons],
     // R89 — the save the walk ends on, which is the only honest fixture for
     // "the day-180 screen". Every height this project has quoted at scale
     // was measured on one, and nothing in the tree could produce one: the

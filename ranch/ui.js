@@ -28,6 +28,7 @@ import { banded, bandedHtml } from '../ui/roster.js';
 import { paginate, pagerRow, bindPager, trimPages } from '../ui/pager.js';
 import { renderIcon } from '../ui/icons.js';
 import { rushQuote, rushButton, bindRush } from '../splice/rush.js';
+import { calendarLine } from '../campaign/calendar.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -130,7 +131,7 @@ export function renderRanchScreen(root, ctx) {
   const territory = incomePerDay(state, content);
   const net = Math.round(TUNING.stipendPerDay + territory - upkeep);
   const scanner = scannerGrants(state, content);
-  const catalog = catalogFor(state, content);
+  const catalog = catalogFor(state, content, t);
   if (!catalog.some((sp) => sp.id === catalogPick)) catalogPick = catalog[0]?.id ?? '';
   const catalogSpecies = catalog.find((sp) => sp.id === catalogPick) ?? null;
 
@@ -587,7 +588,11 @@ export function renderRanchScreen(root, ctx) {
   const roster = cards
     ? cards + pagerRow(page, 'more animals')
     : '<section class="card"><p class="ranch-msg">The pens are empty. Suspiciously tidy, though.</p></section>';
-  root.innerHTML = onboarding + note + rightNow + head + breeding + incubator + roster;
+
+  // R105 — the calendar as ONE LINE, not a card: R133 spent a milestone
+  // getting things off the top of this screen.
+  const calendar = `<p class="calendar-line">${calendarLine(state, content, t)}</p>`;
+  root.innerHTML = onboarding + note + rightNow + calendar + head + breeding + incubator + roster;
   const again = () => renderRanchScreen(root, ctx);
   root.querySelectorAll('button[data-rename]').forEach((btn) => {
     btn.addEventListener('click', () => {

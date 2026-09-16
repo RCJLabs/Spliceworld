@@ -3280,6 +3280,52 @@ const BREAKS = [
     to: '  if (false) {',
   },
 
+  // R105 — the county calendar. One break per clause of the Done-when.
+  {
+    // THE SKY STOPS BEING A CLOCK. Pin the hour and every moment of the day
+    // renders the same header — which is the state the whole entry describes
+    // ("the Ranch at 3 a.m. is the Ranch at 3 p.m."), reintroduced. Caught by
+    // the 24-hour sweep rather than by a single pair, because a two-state
+    // day-and-night sky would pass a 3 a.m. / 3 p.m. comparison.
+    n: 316, gate: SHARD_B, name: 'the sky stops reading the hour, so every moment of the day looks the same',
+    file: 'campaign/calendar.js',
+    anchor: '  const hour = local.getHours() + local.getMinutes() / 60;',
+    to: '  const hour = 12;',
+  },
+  {
+    // HUSBANDRY BECOMES POWER. The one line the entry drew, and the easiest
+    // to cross by accident: a season that scales a stat is a difficulty
+    // setting the player did not choose and cannot see coming. The break adds
+    // the key to the DATA, because that is where somebody would add it.
+    n: 317, gate: SHARD_B, name: 'a season scales a stat, so the calendar quietly becomes a difficulty dial',
+    file: 'data/calendar.json',
+    anchor: '      "decayScale": 0.95,',
+    to: '      "decayScale": 0.95,\n      "powerScale": 1.1,',
+  },
+  {
+    // THE ROTATION STARTS GATING. Replace rather than widen, and a species
+    // conquest opened last month is off the shelf this month — which is
+    // exactly the milestone R95 measured and declined to build. Caught by the
+    // rule that walks four months and requires everything `faunaUnlocked`
+    // returns to be orderable in all of them.
+    n: 318, gate: SHARD_B, name: 'the season replaces the catalogue instead of widening it, so conquest can be undone by a date',
+    file: 'ranch/ranch.js',
+    anchor: '    for (const id of seasonOf(state, content, now).stocks) open.add(id);',
+    to: '    open.clear(); for (const id of seasonOf(state, content, now).stocks) open.add(id);',
+  },
+  {
+    // THE YEAR STOPS TURNING OVER. Season zero forever: every husbandry
+    // multiplier freezes at Splicetember's, the catalogue never rotates, and
+    // nothing on any screen is visibly wrong. This is the failure the walk's
+    // `seasonsSeen` exists for — it is invisible to every other gate, and it
+    // is the shape of the bug the walker actually had before this milestone
+    // stamped `createdAt`.
+    n: 319, gate: SHARD_B, name: 'the calendar never turns over, so a 180-day campaign lives in one season',
+    file: 'campaign/calendar.js',
+    anchor: '  const index = order.length ? Math.floor(elapsed / span) % order.length : 0;',
+    to: '  const index = 0;',
+  },
+
   // R171 — the two halves of the entry's Done-when, one break each.
   {
     // FIFTEEN KILOBYTES OF COMMENTS, which is the number the entry names. The

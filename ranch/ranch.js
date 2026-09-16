@@ -6,6 +6,7 @@
 import { rngStream, pick, randInt, pickFresh } from '../util/rng.js';
 import { upkeepTuning, territoryUpkeepPerDay, facilityUpkeepPerDay } from '../splice/facility.js';
 import { speciesOf } from '../data/catalog.js';
+import { seasonOf } from '../campaign/calendar.js';
 
 export const STATS = ['hp', 'power', 'armor', 'speed', 'stamina'];
 export const AGE_STAGES = ['juvenile', 'adult', 'prime', 'elder'];
@@ -152,10 +153,13 @@ export function applyElapsed(state, content, now, since = null) {
   // decayed it to the condition floor for a month it had not lived through.
   const ownedMs = (arrivedAt) => Math.max(0, now - Math.max(last, arrivedAt ?? last));
 
+  // R105 — the season scales the drift. The floor is untouched, so a season
+  // still cannot break an animal (R65's promise, one multiplier later).
+  const drift = TUNING.decayPerHour * seasonOf(state, content, now).decayScale;
   for (const animal of state.ranch.stock) {
     animal.condition = Math.max(
       TUNING.conditionFloor,
-      animal.condition - TUNING.decayPerHour * (ownedMs(animal.birthAt) / HOUR)
+      animal.condition - drift * (ownedMs(animal.birthAt) / HOUR)
     );
   }
   let upkeep = 0;
@@ -252,8 +256,16 @@ function isFaunaGated(speciesId, content) {
   return false;
 }
 
-export function catalogFor(state, content) {
+export function catalogFor(state, content, now = Date.now()) {
   const open = faunaUnlocked(state, content);
+  // R105 — THE SEASON ADDS, AND ONLY ADDS: the same promise the
+  // grandfathering note above makes, one system later. And it visits labs
+  // that are on the map — with no territory the catalogue is the two species
+  // it has always been, a floor the jobs board and R119's founding both rest
+  // on. See data/notes/calendar.md.
+  if (state.campaign?.heldNodes?.length) {
+    for (const id of seasonOf(state, content, now).stocks) open.add(id);
+  }
   return Object.values(content.species)
     .filter((s) => s.mailOrderPrice && open.has(s.id))
     .sort((a, b) => a.mailOrderPrice - b.mailOrderPrice);

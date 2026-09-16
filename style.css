@@ -2846,3 +2846,39 @@ button.dex-cell:focus-visible {
   gap: 4px;
 }
 .welcome .welcome-lines li { color: var(--text); }
+
+/* R105 — the county calendar.
+   The sky is an overlay INSIDE the header, never a theme token: five themes
+   ship and a dusk that reached into the palette would make Blueprint at
+   7 p.m. a sixth theme nobody designed. Every theme keeps its own colours
+   and simply has an evening. */
+header { position: relative; overflow: hidden; }
+header > *:not(.sky-layer) { position: relative; z-index: 1; }
+.sky-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  color: var(--ink, #fff);
+  background: var(--sky-tint, transparent);
+  opacity: var(--sky-alpha, 0);
+  /* The tint is the band's; the shapes ride at full strength on top of it,
+     or a 6% midday alpha would erase the sun along with the wash. */
+}
+.sky-layer .sky { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.9; }
+/* The moon's bite is cut with the header's own ground, so a crescent reads
+   on every theme without this file knowing any of their colours. */
+.sky-layer[data-band="night"], .sky-layer[data-band="evening"] { --sky-cut: var(--bg, #000); }
+
+.calendar-line {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  opacity: 0.75;
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Nothing here animates, but the sky is decoration and a viewer who has
+     asked for less can have less of it. R99's pass. */
+  .sky-layer { opacity: calc(var(--sky-alpha, 0) * 0.5); }
+}

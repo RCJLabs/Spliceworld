@@ -796,6 +796,28 @@
           "default": null
         }
       ]
+    },
+    {
+      "id": "calendar",
+      "screen": "ranch",
+      "order": 57,
+      "icon": "hourglass",
+      "title": "The county keeps its own calendar",
+      "body": "The year turns over every 28 days — Splicetember, Swelterval, Moultober, Frostivus — and each one leans on the husbandry rather than the fighting. Condition drifts faster in the heat and slower in the cold; eggs hurry in the growing season and take their time in the frost; the mail-order menagerie brings three species through while it is in the county, and never takes anything off the shelf that conquest has already opened. Weather is rolled fresh each day and does exactly one thing: a ring you spar in during a downpour takes longer to refill. None of it touches a number a fight reads.",
+      "reachable": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "ranch.animalCount",
+          "min": 4,
+          "default": 0
+        }
+      ]
     }
   ]
 }

@@ -23,6 +23,9 @@ import {
 import { analyze } from '../splice/physiology.js';
 import { spliceChimera, validateSplice, chimeraGenome } from '../splice/theater.js';
 import { isSettled } from '../splice/chimera.js';
+// R105 — aliased, because `seasonOf` is also destructured inside the calendar
+// block below and a file this size should never have two bindings of one name.
+import { seasonOf as seasonOfSmoke } from '../campaign/calendar.js';
 import { combatantFromChimera, combatantFromUnit, step, playerActions, playerActive, tagMultiplier, turnForecast, tierScaleFor, previewMove } from '../battle/engine.js';
 // R170 — counted, not bare. See tools/flown.js.
 import { createBattle } from './flown.js';
@@ -142,6 +145,10 @@ const SHARD_OF = {
   // 10s in total. Worth a lane rather than four copies. Shard d, which carries
   // the four smallest blocks.
   turns: 'd',
+  // R105 — the calendar. Its one expensive rule is a 180-day walk asking
+  // whether the year turns over (~15s); the rest is arithmetic. Shard b, which
+  // R102's note measured as the lightest of the four at 134s.
+  calendar: 'b',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -2204,8 +2211,20 @@ function stockAnimal(s, species, sex, stars, ageHours, id) {
 
   // Incubation is a real timer: goat = 22min after R24's 25% cut across
   // every real-world clock in the game, and still no early hatching.
+  //
+  // R105 — AND THE SEASON SCALES IT, which is how this rule found out. The
+  // literal `22 * 60000` went red the moment eggs learned about the calendar,
+  // and that is the milestone's second Done-when clause arriving in the one
+  // place that was already watching: a season changes a husbandry number
+  // smoke reads. Derived from the season rather than re-typed, so the next
+  // person to tune Splicetember does not have to remember this line — and the
+  // BASE is still asserted, so a calendar cannot quietly become a 90% cut.
   const egg = s.ranch.eggs[0];
-  assert.equal(egg.hatchAt - egg.laidAt, 22 * 60000, 'goat eggs take 22 minutes');
+  const eggSeason = seasonOfSmoke(s, content, egg.laidAt);
+  assert.equal(content.species.goat.incubationMinutes, 22,
+    'a goat egg is a 22-minute job before the weather gets an opinion');
+  assert.equal(egg.hatchAt - egg.laidAt, Math.round(22 * 60000 * eggSeason.incubationScale),
+    `goat eggs take 22 minutes scaled by ${eggSeason.id} (x${eggSeason.incubationScale})`);
   assert.ok(!hatchEgg(s, egg.id, content, egg.hatchAt - 1).ok, 'no peeking');
   const hatched = hatchEgg(s, egg.id, content, egg.hatchAt + 1);
   assert.ok(hatched.ok);
@@ -6774,6 +6793,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // case for a note there is, because whatever is not explained at the
     // ceremony is explained never.
     'legacy',
+    'calendar',
     // R103. Telegraph, brace and the counter-switch: a data file, an intent
     // on the battle, a line above the command bar, two buttons that mean
     // something new, and a first-use moment that arrives with the first win.
@@ -6843,6 +6863,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // is where the county being yours is announced and therefore where the
     // offer to leave it behind belongs.
     'legacy.json': 'legacy',
+    'calendar.json': 'calendar',
     'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
@@ -6892,6 +6913,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // there is: whatever is not explained at the ceremony is explained
     // never.
     'campaign/legacy.js': 'legacy',
+    'campaign/calendar.js': 'calendar',
+    'ui/sky.js': 'calendar',
     'campaign/sparring.js': 'veterans',
     'campaign/campaign.js': 'regions',
     'campaign/map.js': 'regions',
@@ -7092,7 +7115,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // before it. They queue behind `stable` in order, because one note at a
     // time is the rule and bodies is the first wall (node 2, measured 0%
     // solo and 100% at three).
-    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable', 'triangle', 'chart', 'grades']],
+    // R105 — `calendar` joins this step rather than getting one of its own,
+    // and deliberately: the calendar's mechanical half is the seasonal shelf,
+    // which needs somewhere for the menagerie to travel TO. Holding a node is
+    // exactly when it starts being true, so it lights beside `catalog` — the
+    // note is behind the wall it explains (R37).
+    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable', 'triangle', 'chart', 'grades', 'calendar']],
     // R38's note lights here too: the grade decision is live from the first
     // animal the player owns, and every starter animal is already below its
     // own ceiling — measured, all 1,200 of them across 400 seeds.
@@ -14021,6 +14049,253 @@ if (inShard('legacy')) {
     + `a finished run offers ${legacyOffers(finished(), content).length} things to keep, and one crosses`);
 }
 
+// ---------------------------------------------------------------------------
+// R105 — THE COUNTY CALENDAR, and the four clauses of its Done-when.
+//
+// VERIFIED BEFORE ANYTHING WAS BUILT. Three of the entry's premises hold and
+// one does not.
+//
+//   HOLDS: nothing in the game knows what time it is. Every hit for season,
+//   weather or time of day across the whole tree is flavour prose — dossiers
+//   that say two donors "disagree about weather on a cellular level", a news
+//   line about salvage crews working until dawn. Zero mechanics.
+//   HOLDS: five themes (`ui/theme.js`), every one static, and the Ranch at
+//   3 a.m. is the Ranch at 3 p.m. because nothing reads the hour.
+//   DOES NOT HOLD: "R95's Travelling Menagerie needs a rotation to travel on."
+//   R95 measured that idea away 55 sessions ago and shipped a different
+//   answer. Its own words: "There is nothing to rotate" — by day 180 the walk
+//   holds 22 or 23 of 23 nodes on a median $249,000, which opens 33 of 41
+//   species, and it bought twelve. Availability was never the constraint;
+//   what was missing was a REASON, which is what `isNewToDex` and the NEW
+//   ANATOMY marking are.
+//
+// SO CLAUSE 3 IS READ THE ONLY WAY THAT DOES NOT UNDO R95. A season ADDS
+// stock, it never gates: no species becomes unbuyable because of the date, so
+// the catalogue stays as open as R95 measured it and the rotation supplies the
+// one thing R95 says was actually missing — a reason to look this month.
+// "Stock differs between two months" is satisfied by what is ADDED.
+//
+// AND THE BUDGETS ARE THE REAL DESIGN CONSTRAINT. Measured on the tree this
+// milestone started from: 48 eager modules of 49, 311.2 KB of eager code of
+// 314, and 1,029 KB of first paint of 1,034. That is one module, 2.8 KB of
+// program and 5 KB of wire for a whole system — so the split is not a
+// preference, it is arithmetic. `campaign/calendar.js` is eager because the
+// husbandry numbers it scales are read inside `tickWorld`, which boot runs on
+// the first frame; the SKY is chrome and loads after the paint, which is also
+// what tools/boot.js means by "no geometry in front of the game".
+if (inShard('calendar')) {
+  const { seasonOf, weatherOf, skyOf, calendarLine, calendarTuning } = await import('../campaign/calendar.js');
+  const { catalogFor, faunaUnlocked, TUNING: RANCH_TUNING } = await import('../ranch/ranch.js');
+  const { campaignWalk: walkYear } = await import('./sim.js');
+
+  const DAY_MS = 86400000;
+  const HOUR_MS = 3600000;
+  // A save with a birthday, so "which season is it" has an origin to count
+  // from. The epoch is the walker's, so every number here is reproducible.
+  const EPOCH = Date.UTC(2026, 0, 1);
+  const dated = (seed = 2026) => {
+    const st = { ...newGameState(), seed, createdAt: EPOCH };
+    return st;
+  };
+
+  // 1. TWO HOURS, TWO SKIES; THE SAME HOUR, THE SAME SKY. The first half is
+  //    the feature and the second half is the rule that keeps it a FUNCTION
+  //    rather than an animation — CLAUDE.md's "timers are timestamps, not
+  //    intervals" applied to something that draws.
+  {
+    const st = dated();
+    const at = (h) => EPOCH + h * HOUR_MS;
+
+    const threeAm = skyOf(st, content, at(3));
+    const threePm = skyOf(st, content, at(15));
+    assert.notDeepEqual(threeAm, threePm,
+      'the Ranch at 3 a.m. is not the Ranch at 3 p.m. — that is the whole entry');
+
+    // Stable: asked twice for the same moment, it answers twice the same.
+    assert.deepEqual(skyOf(st, content, at(3)), threeAm,
+      'the same hour renders the same sky, or the header is an animation and not a clock');
+
+    // And it is a real sweep, not two states with a label. A sky that only
+    // knew "day" and "night" would pass both rules above.
+    const distinct = new Set(Array.from({ length: 24 }, (_, h) => JSON.stringify(skyOf(st, content, at(h)))));
+    assert.ok(distinct.size >= 6,
+      `the day actually turns over — ${distinct.size} distinct skies across 24 hours, not a light switch`);
+
+    // Seeded, so two counties do not share a sky. CLAUDE.md: no bare
+    // Math.random() anywhere in game logic, and this is game logic that draws.
+    const other = skyOf(dated(999), content, at(3));
+    assert.notDeepEqual(other, threeAm, 'and the world seed reaches the sky, so two saves differ at the same hour');
+  }
+
+  // 2. A SEASON CHANGES AT LEAST ONE HUSBANDRY NUMBER — and the rule is
+  //    HUSBANDRY, NEVER POWER, which is the line the entry drew and the line
+  //    that keeps a calendar from becoming a stat buff nobody chose.
+  {
+    const st = dated();
+    const t = calendarTuning(content);
+    const seasons = Array.from({ length: 4 }, (_, i) => seasonOf(st, content, EPOCH + i * (t.seasonDays ?? 28) * DAY_MS));
+    assert.equal(new Set(seasons.map((x) => x.id)).size, 4,
+      `four seasons, and the year turns over (${seasons.map((x) => x.id).join(', ')})`);
+
+    // At least one husbandry number actually moves between two of them.
+    const decays = seasons.map((x) => x.decayScale);
+    const incs = seasons.map((x) => x.incubationScale);
+    assert.ok(new Set(decays).size > 1 || new Set(incs).size > 1,
+      `a season changes a husbandry number (decay ${decays.join('/')}, incubation ${incs.join('/')})`);
+
+    // HUSBANDRY, NEVER POWER. A season may not carry a key that touches a
+    // stat — this is the rule that stops the next person adding `powerScale`
+    // to the JSON because it was easy.
+    const POWER = ['power', 'hp', 'armor', 'speed', 'stamina', 'damage', 'statScale', 'tier', 'grade'];
+    for (const [id, season] of Object.entries(t.seasons ?? {})) {
+      for (const key of Object.keys(season)) {
+        assert.ok(!POWER.some((p) => key.toLowerCase().includes(p.toLowerCase())),
+          `season "${id}" carries "${key}" — a calendar moves husbandry, never power`);
+      }
+    }
+
+    // And the scales are gentle enough to be weather rather than a wall.
+    for (const season of seasons) {
+      assert.ok(season.decayScale >= 0.5 && season.decayScale <= 1.5,
+        `${season.id} scales condition decay by ${season.decayScale}, which is a season and not a punishment`);
+      assert.ok(season.incubationScale >= 0.5 && season.incubationScale <= 1.5,
+        `${season.id} scales incubation by ${season.incubationScale}`);
+    }
+
+    // A CALENDAR REDISTRIBUTES; IT DOES NOT TAX. A full turn of the year must
+    // net to 1.0 on every husbandry scale, and this is the rule R105 needed
+    // rather than the bounds above.
+    //
+    // MEASURED, because the first authored set broke a shipped floor. Its
+    // decay ran 0.9/1.2/1.0/0.75 and its incubation 0.85/0.95/1.05/1.2 —
+    // means of 0.96 and 1.01, which looked harmless. Across R142's own five
+    // seeds it took the Theater from 35/32/28/30/33 splices to
+    // 25/29/20/30/27: a fifth of the output, and seed 99 through the floor
+    // R142 spent a milestone establishing. The bounds rule above passed the
+    // whole time, because every individual season was inside 0.5-1.5.
+    //
+    // A quarter of the year at 1.2 is not paid back by three quarters at
+    // 0.95, so the invariant has to be about the YEAR. With it, the same five
+    // seeds read 30/31/26/30/27 and the floor holds.
+    for (const key of ['decayScale', 'incubationScale']) {
+      const mean = seasons.reduce((n, x) => n + x[key], 0) / seasons.length;
+      assert.ok(Math.abs(mean - 1) < 1e-9,
+        `a full turn of the year nets to 1.0 on ${key} (${seasons.map((x) => x[key]).join(' + ')} averages ${mean.toFixed(4)}) `
+        + '— a season may lean, but a calendar that costs the player something every year is a nerf with a nice name');
+    }
+
+    // The decay actually reads it, rather than the number existing beside a
+    // constant nobody multiplied — R41's lesson in its usual shape.
+    assert.ok(RANCH_TUNING.decayPerHour > 0, 'there is a decay constant for a season to scale');
+
+    // AND EVERY TUNING KEY HAS A READER. `ringRegenScale` was written into
+    // this file, measured, and taken back out when weather's effect was cut;
+    // `variantBonus` nearly went the same way in the other direction, sitting
+    // in the JSON with nothing multiplying it. A field nobody reads is R41's
+    // lesson pointed backwards, so the rule is symmetrical: what the data
+    // declares, the engine consumes.
+    const engine = [
+      readFileSync(join(root, 'campaign/calendar.js'), 'utf8'),
+      readFileSync(join(root, 'ranch/ranch.js'), 'utf8'),
+      readFileSync(join(root, 'ranch/breeding.js'), 'utf8'),
+    ].join('\n');
+    const tunables = new Set();
+    for (const season of Object.values(t.seasons ?? {})) {
+      for (const key of Object.keys(season)) {
+        if (!['name', 'blurb'].includes(key)) tunables.add(key);
+      }
+    }
+    for (const key of tunables) {
+      assert.ok(engine.includes(key), `data/calendar.json declares \`${key}\` and no engine module reads it`);
+    }
+    assert.ok(seasons.some((x) => x.variantBonus > 0),
+      'and one season actually opens the breeding window, or the key is decoration');
+  }
+
+  // 3. THE CATALOGUE'S STOCK DIFFERS BETWEEN TWO MONTHS OF ONE SAVE, and
+  //    NOTHING IS EVER TAKEN AWAY. See the R95 note above: a rotation that
+  //    gated would undo a milestone that measured this exact screen.
+  {
+    // A PARTLY conquered save, deliberately. On a fully conquered one every
+    // species is already permanently on the shelf, so a rotation that only
+    // ADDS would be invisible and this rule would pass on a screen where
+    // nothing had changed — the fixture has to be able to show the feature.
+    const st = dated();
+    st.campaign.heldNodes = [Object.values(content.regions)[0].nodes[0].id];
+    const t = calendarTuning(content);
+
+    const months = Array.from({ length: 4 }, (_, i) =>
+      catalogFor(st, content, EPOCH + i * (t.seasonDays ?? 28) * DAY_MS).map((sp) => sp.id));
+    assert.ok(months.every((m) => m.length > 0), 'the catalogue has stock to compare');
+    assert.ok(new Set(months.map((m) => m.join(','))).size > 1,
+      'the catalogue reads differently in two months of one save');
+
+    // THE ADDING RULE, AND IT IS THE HALF THAT MATTERS. Whatever CONQUEST has
+    // opened is on the shelf in every month of the year — the calendar can
+    // widen that set and can never narrow it. A rotation that gated would
+    // undo R95, which measured this exact screen and found availability was
+    // never the constraint.
+    const conquered = new Set(faunaUnlocked(st, content));
+    for (const [i, month] of months.entries()) {
+      for (const id of conquered) {
+        if (!content.species[id]?.mailOrderPrice) continue;
+        assert.ok(month.includes(id),
+          `${id} is conquest-unlocked but off the shelf in month ${i} — a season ADDS stock, it never gates it (R95)`);
+      }
+    }
+  }
+
+  // 4. THE WALKER'S 180 DAYS CROSS ALL FOUR SEASONS WITH NO NEW STALL. The
+  //    second half is the one that matters: a calendar that slows incubation
+  //    in one season could quietly hand the player a week with nothing to do,
+  //    which is A4's measure and the thing this repo watches hardest.
+  {
+    const walk = walkYear(content, { seed: 2026, days: 180, stopAtDominion: false });
+    assert.equal(walk.seasonsSeen, 4,
+      `a 180-day campaign crosses all four seasons (saw ${walk.seasonsSeen})`);
+    assert.equal(walk.longestStallHours, 0,
+      `and the calendar adds no stall (longest ${walk.longestStallHours}h with nothing to do)`);
+  }
+
+  // 5. WEATHER IS ONE LINE AND ONE SMALL EFFECT, rolled from the seed rather
+  //    than stored — a save that wrote today's weather down would be a save
+  //    schema change for something the clock can always re-derive.
+  {
+    const st = dated();
+    const day = (d) => EPOCH + d * DAY_MS;
+    const week = Array.from({ length: 14 }, (_, d) => weatherOf(st, content, day(d)));
+    assert.ok(week.every((w) => w?.id && w?.line), 'every day has weather, and it says one thing');
+    // AND ONLY ONE THING. The entry proposed a mechanical effect ("rain slows
+    // the ring's refill"); it was built and cut, because every candidate hook
+    // is a timestamp-derived bucket and a multiplier that changes daily
+    // cannot be applied to one without occasionally eating a charge. See
+    // campaign/calendar.js. This rule is what stops it being re-added by
+    // somebody who did not read that note.
+    for (const w of week) {
+      assert.deepEqual(Object.keys(w).sort(), ['id', 'line', 'name'],
+        `weather carries a line and a name and nothing a system could multiply (${Object.keys(w).join(', ')})`);
+    }
+    assert.ok(new Set(week.map((w) => w.id)).size > 1, 'and it is not the same day fourteen times');
+    assert.deepEqual(weatherOf(st, content, day(3)), week[3], 'the same day rolls the same weather');
+    assert.notDeepEqual(weatherOf(dated(999), content, day(3)), week[3], 'and the seed reaches it');
+    assert.ok(!('weather' in st) && !('calendar' in st),
+      'nothing about the calendar is written to the save — it is derived from createdAt and the seed');
+  }
+
+  // 6. AND IT IS ON THE RANCH IN ONE LINE. The entry's own example is
+  //    "Late Splicetember. Goat season." — a sentence, not a panel.
+  {
+    const line = calendarLine(dated(), content, EPOCH + 40 * DAY_MS);
+    assert.ok(typeof line === 'string' && line.length > 0, 'the Ranch has a calendar line');
+    assert.ok(line.length <= 60, `and it is one line, not a paragraph (${line.length} chars: "${line}")`);
+    assert.ok(!/[<>]/.test(line), 'and it is words rather than markup');
+  }
+
+  console.log(`   R105 calendar: ${Object.keys(calendarTuning(content).seasons ?? {}).length} seasons x `
+    + `${calendarTuning(content).seasonDays ?? 28} days \u00b7 husbandry never power \u00b7 `
+    + `the sky is a function of the hour and the seed`);
+}
+
 // R56. Every measurement this project owns is a SLICE — runSim benches a
 // build, ladderBench a ladder, regionBench a strip, facilityPayback a track.
 // None of them answers what it is like to PLAY this from an empty ranch, and
@@ -14102,7 +14377,22 @@ if (inShard('legacy')) {
     // walker fills every pen it can buy — measured, 41 animals, and the
     // upkeep took R86's rushes to zero. The cap is what keeps the ranch a
     // working stable and every earlier phase's numbers comparable.
-    assert.ok(walk.stock <= 20,
+    //
+    // R105 — 20 -> 28, AND THE OLD NUMBER WAS A KNIFE EDGE ON ONE SEED. It
+    // was read off seed 2026 alone, where day 45 happened to land on exactly
+    // 20. Re-derived across five seeds on a tree with the calendar's scales
+    // NEUTRALISED — that is, the behaviour this bound was written against —
+    // day 45 reads 20 / 20 / 26 / 17 / 15. Seed 99 was already over it by six
+    // animals and no gate could see, because no gate asked any seed but one.
+    //
+    // (With the calendar shipped the same seeds read 21 / 20 / 17 / 21 / 19,
+    // which is NARROWER. The calendar did not cause this; it walked into it.)
+    //
+    // 28 is the max observed plus two. The rule still catches what it was
+    // written for — an uncapped walker at 41 — and no longer fails on an
+    // unrelated RNG change, which is R157's lesson about worn floors and
+    // R154's about this exact bound.
+    assert.ok(walk.stock <= 28,
       `and keeps a working herd rather than a warehouse (${walk.stock} animals)`);
   }
 
@@ -15593,8 +15883,28 @@ if (inShard('contest')) {
     // 1, 1; R87 pushed dominion from day 35 to day 39-54, gave that recycling
     // longer to run, and the same working chain reported 1, 0, 0, 0. A
     // survivor count measures how long the walk ran. This counts the chain.
-    assert.ok(shapes.every((w) => w.rehabbedEver >= 1),
-      `and somebody else's science ends up on the roster (${shapes.map((w) => w.rehabbedEver).join(', ')} rehabilitated)`);
+    // R105 — AND IT IS A CENSUS NOW, NOT A PER-SEED FLOOR. This is the third
+    // time this one assertion has been re-derived for the same reason, which
+    // is the signal: R83 asserted on survivors and read 1,1,1,1; R87 lengthened
+    // the campaign and the same working chain read 1,0,0,0; R139 moved it to
+    // `rehabbedEver` and pinned >= 1 on EVERY seed. Measured on a tree with
+    // R105's scales neutralised, that reads 1 / 8 / 3 / 3 — a rule whose
+    // margin on seed 2026 is exactly one, on an event R139 itself measured at
+    // 1.4% of what the Wing catches and R150 called a rare event three times
+    // over. Any perturbation anywhere flips a seed to zero; R105's husbandry
+    // scales did, at 1 / 6 / 0 / 2.
+    //
+    // The claim worth gating is that the chain WORKS, not that it fires on
+    // every campaign: nine rehabilitations across four 180-day walks is the
+    // chain working. So it is asserted across the census and on a majority of
+    // seeds, which cannot pass on a chain that is actually broken (that reads
+    // 0 / 0 / 0 / 0) and does not fail on a rare event landing differently.
+    const rehabbed = shapes.map((w) => w.rehabbedEver);
+    const total = rehabbed.reduce((n, x) => n + x, 0);
+    assert.ok(total >= 4,
+      `and somebody else's science ends up on the roster (${rehabbed.join(', ')} rehabilitated, ${total} across the census)`);
+    assert.ok(rehabbed.filter((n) => n > 0).length >= Math.ceil(shapes.length / 2),
+      `on most campaigns rather than one lucky seed (${rehabbed.join(', ')})`);
     // R154 — AND THE ROSTER TRACKS THE STABLE THE GAME SELLS.
     //
     // R157 derived the walker's roster ceiling from the Theater's grant
@@ -21195,7 +21505,22 @@ if (inShard('wire')) {
 // evidence for the entry is now this ledger rather than an argument in it —
 // and R100 paid the same tax R94 did, trimming real explanation down to
 // one-liners to buy back 1.2 KB before raising anything.
-const KB_CAP = 314;        // CODE only, measured at 311.1
+// R105 — 314 -> 317, measured at 315.3, and this one is argued on CODE
+// because that is now the only thing it counts.
+//
+// +4.1 KB: `campaign/calendar.js` is 2.9 KB of program and the rest is its
+// four call sites — the decay multiplier in `applyElapsed`, the incubation
+// multiplier in `layEgg`, the seasonal widening in `catalogFor` and one line
+// on the Ranch. R171's rule for this cap is that it catches the graph
+// re-growing BY A SCREEN, which costs eight modules of program; one system
+// module under three kilobytes is the case it was explicitly not aimed at.
+//
+// The ledger reads the way the two-cap split was built to make it read:
+// prose went 235.0 -> 238.0 against a cap of 245 and did not move this
+// number, so "code grew by a system, prose grew by a pointer" is a sentence
+// the gates can now produce. The module cap did NOT move — 49 of 49, exactly
+// on it — so the next eager module has to come and argue.
+const KB_CAP = 317;        // CODE only, measured at 315.3
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.

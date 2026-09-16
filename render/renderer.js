@@ -72,6 +72,11 @@ export function indexContent(raw) {
     tiers: raw.tiers ?? null,
     // R102 — flat tuning, same as `tiers` below. See data/notes/legacy.md.
     legacy: raw.legacy ?? null,
+    // R105 — the calendar. Flat tuning again: seasons, weather and the sky's
+    // hour bands are read whole by campaign/calendar.js, which indexes
+    // nothing. Adding it to CONTENT_FILES is NOT enough — R41's lesson, paid
+    // again by R102 one line up.
+    calendar: raw.calendar ?? null,
     // R82: the breakout's whole tuning is one flat object, so it is
     // indexed as one rather than split into a list and a meta block.
     breakoutMeta: raw.breakout ?? null,

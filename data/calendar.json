@@ -1,0 +1,150 @@
+{
+  "seasonDays": 28,
+  "order": [
+    "splicetember",
+    "swelterval",
+    "moultober",
+    "frostivus"
+  ],
+  "seasons": {
+    "splicetember": {
+      "name": "Splicetember",
+      "blurb": "Everything is growing, including the things that should not be.",
+      "decayScale": 0.95,
+      "incubationScale": 0.95,
+      "variantBonus": 0,
+      "stocks": [
+        "frog",
+        "goose",
+        "jellyfish"
+      ]
+    },
+    "swelterval": {
+      "name": "Swelterval",
+      "blurb": "Too hot for the pens, too hot for the paperwork, perfect for the vat.",
+      "decayScale": 1.05,
+      "incubationScale": 1.0,
+      "variantBonus": 0,
+      "stocks": [
+        "skunk",
+        "mantis",
+        "armadillo"
+      ]
+    },
+    "moultober": {
+      "name": "Moultober",
+      "blurb": "Half the county is shedding and the other half is collecting it.",
+      "decayScale": 1.0,
+      "incubationScale": 1.05,
+      "variantBonus": 0.15,
+      "stocks": [
+        "moth",
+        "bat",
+        "porcupine"
+      ]
+    },
+    "frostivus": {
+      "name": "Frostivus",
+      "blurb": "Nothing hatches in a hurry and nothing needs much grooming either.",
+      "decayScale": 1.0,
+      "incubationScale": 1.0,
+      "variantBonus": 0,
+      "stocks": [
+        "ram",
+        "pufferfish",
+        "wolf"
+      ]
+    }
+  },
+  "weather": {
+    "order": [
+      "clear",
+      "drizzle",
+      "swelter",
+      "fog",
+      "downpour"
+    ],
+    "kinds": {
+      "clear": {
+        "name": "Clear",
+        "line": "Clear over the county. Visibility excellent, which suits nobody here."
+      },
+      "drizzle": {
+        "name": "Drizzle",
+        "line": "Persistent drizzle. The sparring ring is taking its time drying out."
+      },
+      "swelter": {
+        "name": "Swelter",
+        "line": "Heat advisory. Livestock reported lying down in protest."
+      },
+      "fog": {
+        "name": "Fog",
+        "line": "Fog to the treeline. Three separate people have reported a large shape."
+      },
+      "downpour": {
+        "name": "Downpour",
+        "line": "Downpour. The ring is a pond and the ducks have opinions."
+      }
+    }
+  },
+  "sky": {
+    "bands": [
+      {
+        "id": "night",
+        "from": 0,
+        "name": "small hours",
+        "tint": "#0b1020",
+        "alpha": 0.42,
+        "body": "moon"
+      },
+      {
+        "id": "dawn",
+        "from": 5,
+        "name": "first light",
+        "tint": "#c2582f",
+        "alpha": 0.22,
+        "body": "sun"
+      },
+      {
+        "id": "morning",
+        "from": 8,
+        "name": "morning",
+        "tint": "#8fb6d6",
+        "alpha": 0.1,
+        "body": "sun"
+      },
+      {
+        "id": "noon",
+        "from": 11,
+        "name": "midday",
+        "tint": "#cfe3f2",
+        "alpha": 0.06,
+        "body": "sun"
+      },
+      {
+        "id": "afternoon",
+        "from": 15,
+        "name": "afternoon",
+        "tint": "#d8a24a",
+        "alpha": 0.12,
+        "body": "sun"
+      },
+      {
+        "id": "dusk",
+        "from": 18,
+        "name": "dusk",
+        "tint": "#7a3b6e",
+        "alpha": 0.3,
+        "body": "sun"
+      },
+      {
+        "id": "evening",
+        "from": 21,
+        "name": "after dark",
+        "tint": "#101a33",
+        "alpha": 0.38,
+        "body": "moon"
+      }
+    ]
+  }
+}
