@@ -53,6 +53,10 @@ function fmtAgo(ts, now) {
   return `${Math.round(hours / 24)}d ago`;
 }
 
+// R102 — the run boundary's engine. This module is lazy (R81), so importing it
+// here costs the first paint nothing; see campaign/legacy.js.
+import { legacyOffers, applyLegacy, legacyTuning } from '../campaign/legacy.js';
+
 export function openSettings(overlay, ctx) {
   const { state } = ctx;
   const storage = globalThis.localStorage;
@@ -323,8 +327,38 @@ export function openSettings(overlay, ctx) {
     });
   };
 
+  // R102 — WHAT YOU PACK, offered only to a run that finished. `legacyOffers`
+  // returns nothing for an unfinished campaign, so this whole branch is
+  // invisible until the county is yours: the pick is what finishing buys, and
+  // a choice shown to somebody who cannot take it is a dead end with a button
+  // on it. Everything the ceremony says comes from data/legacy.json.
+  let picked = null;
+  const legacyBlock = () => {
+    const offers = legacyOffers(state, ctx.content);
+    if (!offers.length) return '';
+    const t = legacyTuning(ctx.content);
+    const c = t.ceremony ?? {};
+    const kinds = t.kinds ?? {};
+    return `
+      <div class="legacy-pack">
+        <h4>${c.title ?? 'Pack one thing'}</h4>
+        <p class="ranch-msg">${c.blurb ?? ''}</p>
+        ${offers.map((o) => `
+          <button type="button" class="care-train legacy-pick" data-legacy="${o.kind}:${o.id}"
+                  aria-pressed="false">
+            <strong>${kinds[o.kind]?.name ?? o.kind}</strong> — ${o.label}
+            ${o.detail ? `<span class="lineage">${o.detail}</span>` : ''}
+          </button>`).join('')}
+        <button type="button" class="care-train legacy-pick" data-legacy="" aria-pressed="true">
+          <strong>${c.noneLabel ?? 'Travel light'}</strong>
+          <span class="lineage">${c.noneBlurb ?? ''}</span>
+        </button>
+      </div>`;
+  };
+
   const confirmNewRun = () => {
     const sum = runSummary(state);
+    picked = null;
     overlay.hidden = false;
     overlay.innerHTML = `
       <div class="ceremony card">
@@ -338,13 +372,31 @@ export function openSettings(overlay, ctx) {
         <button type="button" id="cnr-export" class="big-btn">⬇ Download it first</button>
         <p class="fine-print">Your sound setting and the field notes you have already read carry over.
           Everything else starts again from an empty ranch.</p>
+        ${legacyBlock()}
         <button type="button" id="cnr-go" class="pen-dismantle">Yes, start over</button>
         <button type="button" id="cnr-back" class="care-train">Cancel</button>
       </div>`;
     overlay.querySelector('#cnr-back').addEventListener('click', () => render());
     overlay.querySelector('#cnr-export').addEventListener('click', () => downloadSave());
+    // R102 — one pressed at a time, which is the ceiling made visible. The
+    // engine refuses a second pick anyway; this is so the player never gets
+    // as far as being refused.
+    for (const btn of overlay.querySelectorAll('.legacy-pick')) {
+      btn.addEventListener('click', () => {
+        for (const other of overlay.querySelectorAll('.legacy-pick')) {
+          other.setAttribute('aria-pressed', String(other === btn));
+        }
+        const [kind, id] = (btn.dataset.legacy ?? '').split(':');
+        picked = kind
+          ? legacyOffers(state, ctx.content).find((o) => o.kind === kind && o.id === id) ?? null
+          : null;
+      });
+    }
     overlay.querySelector('#cnr-go').addEventListener('click', () => {
-      const written = adoptSave(startNewRun(state), storage, state.slotId);
+      // `applyLegacy` is a no-op for a null pick, so travelling light goes
+      // through exactly the path it always did.
+      const fresh = applyLegacy(startNewRun(state), picked, state, ctx.content);
+      const written = adoptSave(fresh, storage, state.slotId);
       if (!written.ok) return render(written.msg);
       location.reload();
     });

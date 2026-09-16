@@ -13447,8 +13447,35 @@ if (inShard('spar')) {
     // shell: the mechanism was gated, its USE was not — R49's lesson, that
     // a shared predicate needs every reader asserted, not just the
     // predicate.
-    assert.equal((panel.match(/adoptSave\(startNewRun\(state\), storage, state\.slotId\)/g) ?? []).length, 2,
-      'both reset paths — confirmed and empty — go through adoptSave, targeting the slot it was loaded from');
+    // R102 — MATCHED ON THE ARGUMENTS THAT MATTER, AND IT FOUND A THIRD PATH.
+    //
+    // This asserted the literal `adoptSave(startNewRun(state), storage,
+    // state.slotId)` exactly twice. R102 changed the confirmed path's first
+    // argument to what `applyLegacy` returns, so the gate went red on a change
+    // that preserved everything it was guarding — and loosening it to ignore
+    // the first argument reported THREE. The third is R54's import path at
+    // `adoptSave(parsed.save, …)`, which adopts a save from a file and was
+    // never covered by this rule at all, because it never spelled
+    // `startNewRun(state)`.
+    //
+    // So the invariant is stated on all three: whatever is being adopted, it
+    // goes to `storage` and to the slot this save was loaded from. That is
+    // what break 8 violated by writing localStorage directly from the shell,
+    // and it is now checked on the import as well as on the two resets.
+    const adoptions = panel.match(/adoptSave\([^,]+, storage, state\.slotId\)/g) ?? [];
+    assert.equal(adoptions.length, 3,
+      'every adoption — the two resets and the import — targets the slot this save was loaded from');
+    assert.ok(/adoptSave\(startNewRun\(state\), storage, state\.slotId\)/.test(panel),
+      'the empty-run reset adopts a fresh run directly');
+    assert.ok(/adoptSave\(parsed\.save, storage, state\.slotId\)/.test(panel),
+      'and the import adopts the file it parsed');
+    // R102 — and the pick rides the confirmed path only. `applyLegacy` is a
+    // no-op on a null pick, so travelling light is byte-for-byte the old
+    // behaviour rather than a second branch that could drift from it.
+    assert.ok(/applyLegacy\(startNewRun\(state\), picked, state, ctx\.content\)/.test(panel),
+      'the confirmed path offers the pick to applyLegacy');
+    assert.ok(/const fresh = applyLegacy/.test(panel) && /adoptSave\(fresh,/.test(panel),
+      'and adopts what it returns');
     assert.ok(!/localStorage\.(setItem|getItem|removeItem)/.test(panel),
       'and the panel never calls storage directly: every write goes through the `storage` save.js hands back');
   }
