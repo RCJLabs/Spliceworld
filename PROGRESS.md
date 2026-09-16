@@ -1,5 +1,61 @@
 # PROGRESS
 
+## Session 183 — R171: half of what boot downloads is English ✅
+
+**ROADMAP §9.** The entry asked which of two budgets owns prose. Nobody had
+weighed it, and the answer changed the question.
+
+### The measurement
+
+| the 48-module eager graph | raw | brotli (what Pages sends) |
+| --- | ---: | ---: |
+| total | 545.8 KB | 179.0 KB |
+| code | 311.1 KB | 87.7 KB |
+| **prose** | **234.7 KB (43%)** | **91.3 KB (51%)** |
+
+I expected comments to compress away. They do not — code compresses just as
+well. **91.3 KB of what a player downloads before the game appears is this repo
+explaining itself**, which is comparable to what R81's whole geometry split
+bought.
+
+Not reversed. No build step is a convention, and the notes are what stop
+mistakes repeating — three times this session alone. Made visible instead, with
+its own line and its own budget.
+
+### One question, one cap
+
+- `KB_CAP` **547 → 314**, code only. Back to its stated job: catching the graph
+  re-growing by a screen.
+- `PROSE_CAP` **245** (234.7 measured). 10.3 KB headroom, sized from both halves
+  of the Done-when — a paragraph fits, 15 KB does not.
+- `SAVE_EAGER_KB` **15 → 9**, also code. `save.js` is 13.0 KB on disk, 6.4 KB of
+  program. That number had drifted 11.5 → 13.0 during R100 on mostly English and
+  nobody saw it, because the verification tailed two lines.
+- `FIRST_PAINT_KB` unchanged at 1034 — it owns the compressed wire and keeps its
+  18 KB of slack, and now says so.
+
+### Five strippers, one wrong about strings
+
+`tools/source.js` is one `stripComments` with five readers. The five spellings
+disagreed by **3.7 KB** over the same graph, and smoke.js's ate
+`"http://www.w3.org/2000/svg"` out of `render/renderer.js` five times — harmless
+only because those assertions search identifiers in files without URLs. It is a
+scanner now, checked by all **115 modules still parsing** after being stripped.
+
+### Known issues
+
+- **The 91.3 KB is now a stated cost, not a fixed one.** If it ever wants
+  reducing, the only lever that does not touch the prose is a build step, and
+  that is a CLAUDE.md convention — so it is a conversation, not a milestone
+  someone can just take.
+- `PROSE_CAP`'s headroom is about a dozen ordinary milestone notes. It should
+  move roughly once a year; if it starts moving every few milestones, the
+  budget is wrong rather than the writing.
+
+### Next session's first task
+
+Pick from the 13-entry queue in §9.0 — **R102** is the oldest open entry.
+
 ## Session 182 — R100: the shell answers from cache, the save outlives the browser ✅
 
 **ROADMAP §9.5.** Two of the entry's three premises were measured wrong, and
