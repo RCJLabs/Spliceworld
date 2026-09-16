@@ -18,6 +18,8 @@ import * as sfx from './audio/sfx.js';
 import { watchSignals, cuesFor } from './audio/sfx.js';
 import { renderIcon } from './ui/icons.js';
 import { installFocusKeeper } from './ui/focus.js';
+import { skyOf } from './campaign/calendar.js';
+import { mulberry32, hashString } from './util/rng.js';
 
 // Dev time-warp: ?warp=48 pretends 48 hours have passed. QA-only — the
 // warp lives in the URL, never in the save, so removing it can produce a
@@ -457,6 +459,18 @@ async function boot() {
       // is the arrival of the thing every creature on screen is drawn from.
       if (ok) tick({ force: true });
     });
+    // R105 — and the sky, in the same after-the-paint window and for the
+    // same reason: the drawing is chrome. Repainted on the same 30s cadence
+    // as everything else, because the sky is a pure function of the clock and
+    // a repaint is just asking again.
+    import('./ui/sky.js').then(({ paintSky }) => {
+      const header = document.querySelector('header');
+      const draw = () => paintSky(header, skyOf(state, content, Date.now()),
+        mulberry32(hashString(`${state.seed}:sky`)));
+      draw();
+      setInterval(() => { if (!document.hidden) draw(); }, 30000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) draw(); });
+    }).catch(() => { /* a header without weather is still a header */ });
   }, 0));
 
   document.addEventListener('visibilitychange', () => {

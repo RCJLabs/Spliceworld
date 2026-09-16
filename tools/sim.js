@@ -1165,6 +1165,7 @@ import { regionOfNode } from '../campaign/map.js';
 import { contestEncounter } from '../campaign/contest.js';
 import { looseSpecimens, breakoutEncounter } from '../campaign/breakout.js';
 import { rehabPlan, startRehab, rehabSession, sessionReadyAt, rehabGrants } from '../campaign/rehab.js';
+import { seasonOf } from '../campaign/calendar.js';
 
 const WALK_HOUR = 3600000;
 const WALK_DAY = 24 * WALK_HOUR;
@@ -2482,7 +2483,14 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   // own past. Every other timestamp on the carried creature is left exactly
   // as the engine wrote it, because those are the measurement — see the
   // settle debt in ROADMAP R172.
-  const state = from ? { ...structuredClone(from), seed, createdAt: t0 } : { ...newGameState(), seed };
+  // R105 — AND A BIRTHDAY ON ITS OWN CALENDAR. `newGameState()` stamps
+  // `createdAt` with the real wall clock while this walk's whole clock is
+  // `t0`, so every day of a 180-day campaign read as "day 0" to the calendar
+  // and the walk crossed exactly one season. Stamping it is what makes the
+  // save internally consistent rather than half in 2026 and half in today.
+  const state = from
+    ? { ...structuredClone(from), seed, createdAt: t0 }
+    : { ...newGameState(), seed, createdAt: t0 };
   ensureRanchSeeded(state, content, t0);
   state.lastTickAt = t0;
 
@@ -2496,6 +2504,10 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     (state.__walkLog ??= []).push({ day: +((now - t0) / WALK_DAY).toFixed(2), kind, id });
   let sawCombo = false;
   let sawTrait = false;
+  // R105 — which seasons this campaign actually lived through. The entry's
+  // fourth clause is that 180 days cross all four, and nothing could answer
+  // that because nothing knew what a season was.
+  const seasons = new Set();
   let stall = 0;
   let longestStall = 0;
   let stallStartedAt = null;
@@ -2587,6 +2599,15 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   // churn and report a median far below what a player experiences.
   const alive = new Map();
   const lives = [];
+  // R105 — DECANT LIFETIMES, SEPARATELY. R163's churn floor reads the median
+  // life of the WHOLE roster, which only moves when the walker happens to run
+  // enough vats: on these seeds it runs between one and eleven, and the
+  // seasons shift that. A floor on a rare event, read through a statistic
+  // dominated by common ones, is a floor that goes blind when anything
+  // upstream changes — which is exactly what break 268 reported. The vat's
+  // own output is the thing R163's rule is about, so it is counted on its own.
+  const decantLives = [];
+  const decantBorn = new Set();
 
   for (let h = 0; h <= days * 24; h += stepHours) {
     if (h > awayStart && h < awayEnd) continue; // the app is closed
@@ -2604,6 +2625,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     state.__walkUpkeep = (state.__walkUpkeep ?? 0) + upkeepPerDay(state, content) * ((now - (state.lastTickAt ?? now)) / WALK_DAY);
     tick(state, content, now);
     watchGen();   // R94 — after the tick that could have moved it.
+    seasons.add(seasonOf(state, content, now).id);   // R105
     for (const c of state.chimeras) if (c.agitatedAt) feralSeen.add(c.id);
     for (const c of state.chimeras) if (c.rehabilitated) rehabEver.add(c.id);
     for (const b of state.campaign.containment ?? []) if (b.feral) feralBays.add(b.id);
@@ -2676,10 +2698,14 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     for (const [id, born] of alive) {
       if (!state.chimeras.some((c) => c.id === id)) {
         lives.push((now - born) / WALK_DAY);
+        if (decantBorn.has(id)) decantLives.push((now - born) / WALK_DAY);
         alive.delete(id);
       }
     }
-    for (const c of state.chimeras) if (!alive.has(c.id)) alive.set(c.id, c.createdAt ?? now);
+    for (const c of state.chimeras) {
+      if (!alive.has(c.id)) alive.set(c.id, c.createdAt ?? now);
+      if (c.vatBorn) decantBorn.add(c.id);
+    }
     // The state as the player LEFT it: after the day's actions, so a month
     // away is measured from what was actually in the bank when the app closed.
     if (markDay != null && h === markDay * 24) snapshots.left = snap(markDay);
@@ -2719,6 +2745,12 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   return {
     seed,
     at,
+    // R105 — how many of the year's seasons a campaign of this length
+    // actually reaches. Four over 180 days is the entry's own clause; a
+    // number here rather than an assertion in one gate means the next
+    // milestone that shortens a campaign finds out what it did to the year.
+    seasonsSeen: seasons.size,
+    seasonsCrossed: [...seasons],
     // R89 — the save the walk ends on, which is the only honest fixture for
     // "the day-180 screen". Every height this project has quoted at scale
     // was measured on one, and nothing in the tree could produce one: the
@@ -2760,6 +2792,15 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
         made: state.chimeraCount ?? 0,
         kept: state.chimeras.length,
         medianLifeDays: allLives.length ? +allLives[Math.floor((allLives.length - 1) / 2)].toFixed(1) : 0,
+        // R105 — and the vat's own, which is what R163's floor is actually about.
+        // Survivors fold in at their current age, exactly as `allLives` does.
+        decantLifeDays: (() => {
+          const d = [...decantLives, ...state.chimeras.filter((c) => c.vatBorn)
+            .map((c) => (state.lastTickAt - (c.createdAt ?? state.lastTickAt)) / WALK_DAY)]
+            .sort((a, b) => a - b);
+          return d.length ? +d[Math.floor((d.length - 1) / 2)].toFixed(1) : null;
+        })(),
+        decants: decantBorn.size,
       };
     })(),
     chimeraLives: allLives,

@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**12 entries queued.** R105, R108,
+**11 entries queued.** R108,
 R109, R110, R111, R112, R113, R114, R115, R116, R117, R118.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
@@ -3613,26 +3613,161 @@ suite can check.
   nodes behind, and the fresh Dex's first paint is under 100 KB.* All four
   hold — 0 nodes, 0 of 4 cards, 0 left behind, 91 KB — and breaks 287–290
   turn each rule red on demand.
-- **R105 — The county calendar.** The game runs entirely on real
-  timestamps — CLAUDE.md's own rule — and nothing in it knows what time it
-  is: **zero** hits for time of day, season or weather anywhere in the code
-  or the data; the Ranch at 3 a.m. is the Ranch at 3 p.m.; five themes,
-  every one static. R95's Travelling Menagerie needs a rotation to travel
-  on and has nothing to hang it from. Proposed, medium-large, zero assets,
-  nothing running in the background: `data/calendar.json` — a **procedural
-  sky** in the header drawn from the local hour and the world seed (sun,
-  moon, cloud cover as SVG, dusk tinting the header only, so the five themes
-  stay themselves); **four 28-day seasons** from the save's `createdAt` whose
-  effects are *husbandry, never power* — condition decay, incubation length,
-  a breeding window in which variants are likelier, and which species the
-  catalogue stocks (the hook R95 wants); **weather rolled per day** from the
-  seed, one line on the wire, one small effect (rain slows the ring's
-  refill, heat shortens patience in the Pens); and the calendar on the Ranch
-  as one line — *"Late Splicetember. Goat season."* *Done when: the same
-  save opened at two hours renders two skies and at the same hour the same
-  sky; a season changes at least one husbandry number smoke reads; the
-  catalogue's stock differs between two months of one save; and the walker's
-  180 days cross all four seasons with no new stall.*
+- **R105 — The county calendar.** ✅ *Shipped.* Three of the entry's four
+  premises hold; one does not, and it decided the shape of the milestone.
+
+  **Holds:** nothing in the game knew what time it was. Every hit for
+  "season", "weather" or "time of day" across the whole tree was flavour prose
+  — a dossier saying two donors "disagree about weather on a cellular level",
+  a news line about salvage crews working until dawn. Zero mechanics, five
+  static themes (`ui/theme.js`), and the Ranch at 3 a.m. identical to the
+  Ranch at 3 p.m.
+
+  **Does not hold:** *"R95's Travelling Menagerie needs a rotation to travel
+  on."* R95 measured that idea away 55 sessions ago and shipped a different
+  answer. Its own words: **"There is nothing to rotate"** — by day 180 the
+  walk holds 22 or 23 of 23 nodes on a median $249,000, which already opens
+  33 of 41 species, and it bought twelve. **Availability was never the
+  constraint; what was missing was a reason.** So the third clause is read the
+  only way that does not undo a shipped milestone: **a season ADDS stock and
+  never gates.** Whatever conquest has opened is orderable in every month of
+  the year, and the seasonal three are a bonus on top — the same promise
+  `faunaUnlocked`'s grandfathering note already makes.
+
+  **The budgets were the design, not a constraint on it.** Measured on the
+  tree this started from: **48 eager modules of 49, 311.2 KB of eager code of
+  314, and 1,029 KB of first paint of 1,034.** One module, 2.8 KB of program
+  and 5 KB of wire for a whole system, so the split is arithmetic rather than
+  taste — `campaign/calendar.js` is eager because `tickWorld` reads the
+  season on the first frame, and `ui/sky.js`, which is the half that *draws*,
+  loads after the paint in the window R81 put `shapes` in.
+
+  *Done when: the same save opened at two hours renders two skies and at the
+  same hour the same sky; a season changes at least one husbandry number smoke
+  reads; ~~the catalogue's stock differs between two months of one save~~; and
+  the walker's 180 days cross all four seasons with no new stall.*
+
+  **THREE OF FOUR, AND THE FOURTH WAS WITHDRAWN ON EVIDENCE — Evan's call,
+  with the numbers below in front of him.** The catalogue clause cannot
+  coexist with R142's shipped splice floor. Measured across R142's own five
+  seeds, splices over 180 days:
+
+  | seasonal shelf | splices | floor is 25 |
+  | --- | --- | --- |
+  | none | 28 29 28 30 30 | ✅ |
+  | one cheap species | 24 40 28 30 30 | ❌ |
+  | three cheap species | 22 30 23 30 22 | ❌ |
+
+  **Any** rotation takes a seed under the floor and the shelf's SIZE barely
+  matters, because the cost is not the animals — it is R95's pull. The
+  catalogue advertises anatomy you have never held and the walker collects, so
+  a rotating novelty diverts the money that would have become chimeras. It is
+  also the clause whose premise was already dead: R95 examined this idea and
+  said *"there is nothing to rotate."* The catalogue is exactly what R95 left
+  it, and a smoke rule now holds it there — a season may not carry stock, and
+  `catalogFor` may not take a moment.
+  - **The sky** is a function of the local hour and the world seed: 3 a.m. and
+    3 p.m. differ, the same hour is stable across calls, a 24-hour sweep reads
+    **at least 6 distinct skies** (so a two-state day/night switch cannot pass
+    it), and two seeds differ at the same hour.
+  - **A season changes a husbandry number, and the gate that caught it was
+    already there.** The literal `22 * 60000` in R24's incubation rule went red
+    the moment eggs learned about the calendar. It is derived from the season
+    now, and the 22-minute base is asserted separately so a calendar cannot
+    quietly become a 90% cut.
+  - **The catalogue** does not rotate — see the table above.
+  - **The walk crosses all four**, and finding that out fixed a real bug:
+    `campaignWalk` stamped `createdAt` with the wall clock while its own clock
+    ran from the 2026 epoch, so every day of a 180-day campaign read as day 0
+    and the walk crossed **one** season. `seasonsSeen` is in the walk's report
+    now, so the next milestone that shortens a campaign finds out what it did
+    to the year. **`longestStallHours` stays 0.**
+
+  **Weather's mechanical effect was built, measured and cut.** The entry
+  proposed "rain slows the ring's refill". Every candidate hook in this game is
+  a timestamp-derived bucket, and a multiplier that changes daily cannot be
+  applied to one. The sparring ring is the clean case: `sparRefillAt` is a
+  single future timestamp and `sparCharges` reads the bucket back by dividing
+  the outstanding wait BY the regen. Scale only the read and **a wet ring
+  refills faster**. Scale only the spend and **one charge reads as two** —
+  that version got written, and R43's ring gate caught it closing after the
+  first spar. Scale both and today is right but yesterday is not: a charge
+  stamped under a downpour, read back under a clear sky, silently costs the
+  player a charge. There is no fourth option, so weather is the Ranch's line
+  and the sky's cloud count, the seasons carry the husbandry, and
+  `ringRegenScale` is not in the JSON either — a field nobody reads is R41's
+  lesson pointed the other way.
+
+  **A season may not touch a stat, and the gate reads the data rather than the
+  code**: every key in `seasons` is scanned for anything whose name touches
+  power, and the scales are bounded to 0.5–1.5. A calendar that buffed damage
+  would be a difficulty setting the player did not choose and cannot see
+  coming.
+
+  **No `SAVE_VERSION` bump, and that is the point.** Nothing about the
+  calendar is written to the save: `seasonOf`, `weatherOf` and `skyOf` are all
+  `(save, content, now) -> value` over `createdAt` and `seed`, both of which
+  already existed. CLAUDE.md's "timers are timestamps, not intervals", applied
+  to the calendar itself.
+
+  **Two caps moved and one deliberately did not.** `FIRST_PAINT_KB` 1034 →
+  **1052** (measured 1043, keeping R169's 18 KB of slack) and `KB_CAP` 314 →
+  **317** (measured 315.3), both argued on what they bought. `PROSE_CAP` did
+  not move — 235.0 → 238.0 against 245 — so the ledger reads the way R171's
+  two-cap split was built to make it read: **code grew by a system, prose grew
+  by a pointer.** **`MODULE_CAP` stays 49 and the graph is now exactly on it**,
+  so the next eager module has to come and argue. Before either raise, 4 KB of
+  duplicated prose was trimmed out of the eager graph into
+  `data/notes/calendar.md`, which no browser downloads — R100's discipline.
+
+  **AND TWO NUMBERS WERE TUNED BY MEASUREMENT AFTER THE FIRST SET BROKE A
+  SHIPPED FLOOR.** R105 is the first milestone to move a number the whole
+  180-day economy is integrated over, and it went through R142's splice floor
+  on the way.
+
+  - **The year must net to 1.0 on every husbandry scale**, and that is a gate
+    now. The first set ran decay 0.9/1.2/1.0/0.75 and incubation
+    0.85/0.95/1.05/1.2 — means of 0.96 and 1.01, which looked harmless. Across
+    R142's own five seeds it took the Theater from **35/32/28/30/33 splices to
+    25/29/20/30/27**, a fifth of the output and one seed through the floor. A
+    quarter of the year at 1.2 is not paid back by three quarters at 0.95.
+    *A calendar redistributes; it does not tax.*
+  - **The shelf went, and it took two real bugs with it on the way out.**
+    `catalogFor` grew a `now` parameter and every caller but one kept passing
+    nothing, so the default was `Date.now()`: **a seeded 180-day walk running
+    at the 2026 epoch was shopping from whatever season it happened to be in
+    real life.** A gate that passed in September would have failed in
+    December. Break 318 guards the signature now. And the first version of
+    that guard was itself vacuous — it asserted `catalogFor.length === 2`,
+    which a defaulted parameter satisfies too; break 318 went MISSED and said
+    so, and the rule reads the source instead.
+
+  **AND R105 BLINDED THREE GATES, WHICH IS WHAT THE FULL BATTERY IS FOR.**
+  Breaks 268, 272 and 273 went MISSED — caught on `main`, missed here, so
+  these were R105's doing and not pre-existing rot. 272 and 273 came back the
+  moment the seasonal shelf went. **268 did not, and it was the useful one:**
+  R163's churn floor reads the median life of the WHOLE roster, which sits
+  above 100 days while the decants it is actually about sit at 14. It could
+  only ever notice a decant conveyor when the walker happened to run enough
+  vats — between one and eleven across these seeds — and R105's seasons
+  shifted that appetite. **A floor on a rare event has to read the rare
+  event**, so the walk reports `decantLifeDays` now (14 / 15.5 / 14 / 14 / 14
+  against R163's 14-day decant floor) and the gate reads that. Break 268 is
+  caught again, and is no longer hostage to the walker's diet.
+
+  **Three shipped gates were also knife edges, and R105 walked into those
+  rather than causing them.** The herd bound (`walk.stock <= 20`) was read off seed
+  2026 alone, where day 45 lands on exactly 20; on a tree with R105's scales
+  neutralised the same five seeds read **20 / 20 / 26 / 17 / 15**, so seed 99
+  was already six animals over and no gate could see, because no gate asked
+  any seed but one. Re-derived to 28. The Wing's `rehabbedEver >= 1` on every
+  seed is now a census (total and a majority), which is the **third** time
+  that one assertion has been re-derived for the same reason — R83 read the
+  survivors, R87 lengthened the campaign and broke it, R139 moved it to the
+  chain and pinned a per-seed floor of one on an event it had itself measured
+  at 1.4%.
+
+  **Four new battery breaks, 316–319, all caught.**
 
 **Gameplay.**
 

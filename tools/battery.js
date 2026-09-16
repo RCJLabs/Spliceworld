@@ -3280,6 +3280,55 @@ const BREAKS = [
     to: '  if (false) {',
   },
 
+  // R105 — the county calendar. One break per clause of the Done-when.
+  {
+    // THE SKY STOPS BEING A CLOCK. Pin the hour and every moment of the day
+    // renders the same header — which is the state the whole entry describes
+    // ("the Ranch at 3 a.m. is the Ranch at 3 p.m."), reintroduced. Caught by
+    // the 24-hour sweep rather than by a single pair, because a two-state
+    // day-and-night sky would pass a 3 a.m. / 3 p.m. comparison.
+    n: 316, gate: SHARD_B, name: 'the sky stops reading the hour, so every moment of the day looks the same',
+    file: 'campaign/calendar.js',
+    anchor: '  const hour = local.getHours() + local.getMinutes() / 60;',
+    to: '  const hour = 12;',
+  },
+  {
+    // HUSBANDRY BECOMES POWER. The one line the entry drew, and the easiest
+    // to cross by accident: a season that scales a stat is a difficulty
+    // setting the player did not choose and cannot see coming. The break adds
+    // the key to the DATA, because that is where somebody would add it.
+    n: 317, gate: SHARD_B, name: 'a season scales a stat, so the calendar quietly becomes a difficulty dial',
+    file: 'data/calendar.json',
+    anchor: '      "decayScale": 0.95,',
+    to: '      "decayScale": 0.95,\n      "powerScale": 1.1,',
+  },
+  {
+    // THE CATALOGUE LEARNS TO READ A CLOCK AGAIN. R105 built a seasonal shelf,
+    // measured it against R142's splice floor, and took it out — but the way
+    // it FAILED is the thing worth guarding: `catalogFor` grew a `now`
+    // parameter, every caller but one kept passing nothing, and the default
+    // was `Date.now()`. A simulated campaign running at the 2026 epoch was
+    // shopping from whatever season it happened to be in real life, which is
+    // a seeded walk quietly reading the wall clock. Caught by the rule that
+    // requires the function to take no moment at all.
+    n: 318, gate: SHARD_B, name: 'the catalogue takes a moment again, so a seeded walk can read the wall clock',
+    file: 'ranch/ranch.js',
+    anchor: 'export function catalogFor(state, content) {',
+    to: 'export function catalogFor(state, content, now = Date.now()) {',
+  },
+  {
+    // THE YEAR STOPS TURNING OVER. Season zero forever: every husbandry
+    // multiplier freezes at Splicetember's, the catalogue never rotates, and
+    // nothing on any screen is visibly wrong. This is the failure the walk's
+    // `seasonsSeen` exists for — it is invisible to every other gate, and it
+    // is the shape of the bug the walker actually had before this milestone
+    // stamped `createdAt`.
+    n: 319, gate: SHARD_B, name: 'the calendar never turns over, so a 180-day campaign lives in one season',
+    file: 'campaign/calendar.js',
+    anchor: '  const index = order.length ? Math.floor(elapsed / span) % order.length : 0;',
+    to: '  const index = 0;',
+  },
+
   // R171 — the two halves of the entry's Done-when, one break each.
   {
     // FIFTEEN KILOBYTES OF COMMENTS, which is the number the entry names. The

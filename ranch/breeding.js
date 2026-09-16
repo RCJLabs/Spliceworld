@@ -10,6 +10,7 @@ import { STATS, AGE_STAGES, TUNING, ageStage } from './ranch.js';
 import { avgStars } from '../splice/extract.js';
 import { incubatorGrants } from '../splice/facility.js';
 import { speciesOf } from '../data/catalog.js';
+import { seasonOf } from '../campaign/calendar.js';
 
 export const BREEDING = {
   incubatorSlots: 3,
@@ -191,7 +192,15 @@ export function breedPair(state, sireId, damId, content, now) {
     const mutable = Object.values(content.traits).filter((t) => t.mutationOnly);
     const candidates = variantsOf(sire.species, content).filter((v) => v.id !== species);
     const roll = rng();
-    if (roll < (incubatorGrants(state, content).variantShare ?? BREEDING.variantShare) && candidates.length) {
+    // R105 — the breeding window. Moultober is the one season that leans on
+    // this, and it leans on the SHARE of mutations that come out as a variant
+    // rather than on `mutationChance`: a season that made mutation itself
+    // likelier would be a power dial, and the calendar does not get one. The
+    // Incubator's grant still wins where it is set, so a facility upgrade is
+    // worth exactly what it was.
+    const variantShare = (incubatorGrants(state, content).variantShare ?? BREEDING.variantShare)
+      + seasonOf(state, content, now).variantBonus;
+    if (roll < variantShare && candidates.length) {
       const variant = pick(rng, candidates);
       species = variant.id;
       variantNote = null; // the mutation note says it louder
@@ -216,7 +225,10 @@ export function breedPair(state, sireId, damId, content, now) {
     variantNote,
     sex: rng() < 0.5 ? 'F' : 'M',
     laidAt: now,
-    hatchAt: now + Math.round(speciesOf(content, species).incubationMinutes * 60000 * incubatorGrants(state, content).hourScale),
+    // R105 — and the season. The Incubator's own grant is untouched, so a
+    // facility upgrade is worth exactly what it was.
+    hatchAt: now + Math.round(speciesOf(content, species).incubationMinutes * 60000
+      * incubatorGrants(state, content).hourScale * seasonOf(state, content, now).incubationScale),
     potential,
     genotype,
     mutationNote,

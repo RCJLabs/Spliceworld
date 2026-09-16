@@ -6,6 +6,7 @@
 import { rngStream, pick, randInt, pickFresh } from '../util/rng.js';
 import { upkeepTuning, territoryUpkeepPerDay, facilityUpkeepPerDay } from '../splice/facility.js';
 import { speciesOf } from '../data/catalog.js';
+import { seasonOf } from '../campaign/calendar.js';
 
 export const STATS = ['hp', 'power', 'armor', 'speed', 'stamina'];
 export const AGE_STAGES = ['juvenile', 'adult', 'prime', 'elder'];
@@ -152,10 +153,13 @@ export function applyElapsed(state, content, now, since = null) {
   // decayed it to the condition floor for a month it had not lived through.
   const ownedMs = (arrivedAt) => Math.max(0, now - Math.max(last, arrivedAt ?? last));
 
+  // R105 — the season scales the drift. The floor is untouched, so a season
+  // still cannot break an animal (R65's promise, one multiplier later).
+  const drift = TUNING.decayPerHour * seasonOf(state, content, now).decayScale;
   for (const animal of state.ranch.stock) {
     animal.condition = Math.max(
       TUNING.conditionFloor,
-      animal.condition - TUNING.decayPerHour * (ownedMs(animal.birthAt) / HOUR)
+      animal.condition - drift * (ownedMs(animal.birthAt) / HOUR)
     );
   }
   let upkeep = 0;

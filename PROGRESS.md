@@ -1,5 +1,132 @@
 # PROGRESS
 
+## Session 186 — R105: the county calendar ✅
+
+**ROADMAP §9.** The oldest entry on the queue and the largest. Three of its
+four premises hold; one does not, and it decided the shape of the milestone.
+
+### What held, and what did not
+
+Nothing in the game knew what time it was — every hit for season, weather or
+time of day across the whole tree was flavour prose. Five static themes. The
+Ranch at 3 a.m. identical to the Ranch at 3 p.m.
+
+**But "R95's Travelling Menagerie needs a rotation to travel on" is stale.**
+R95 measured that idea away 55 sessions ago: *"There is nothing to rotate"* —
+by day 180 the walk holds 22 of 23 nodes on a median $249,000, which already
+opens 33 of 41 species. Availability was never the constraint. So a season
+**ADDS** stock and never gates: whatever conquest opened is orderable in every
+month, and the seasonal three are a bonus on top.
+
+### The budgets were the design
+
+48 eager modules of 49, 311.2 KB of eager code of 314, 1,029 KB of first paint
+of 1,034. One module, 2.8 KB of program, 5 KB of wire — so the split is
+arithmetic: `campaign/calendar.js` is eager because `tickWorld` reads the
+season on the first frame, and `ui/sky.js` (the half that *draws*) loads after
+the paint, in the window R81 put `shapes` in.
+
+### All four clauses
+
+- **Two hours, two skies** — and a 24-hour sweep reads ≥6 distinct skies, so a
+  day/night light switch cannot pass it. Same hour, same sky; seed reaches it.
+- **A season moves a husbandry number**, and the gate that caught it was
+  already there: R24's literal `22 * 60000` incubation rule went red the
+  moment eggs learned about the calendar. Derived from the season now, with
+  the 22-minute base asserted separately.
+- **The catalogue does not rotate** — clause 3 was withdrawn on evidence
+  (Evan's call). See below.
+- **The walk crosses all four**, and finding that out fixed a real bug:
+  `campaignWalk` stamped `createdAt` with the wall clock while its own clock
+  ran from the 2026 epoch, so a 180-day campaign crossed **one** season.
+  `longestStallHours` stays 0.
+
+### Weather's effect was built, measured and cut
+
+The entry proposed "rain slows the ring's refill". Every candidate hook here
+is a timestamp-derived bucket. Scale only the read and **a wet ring refills
+faster**; scale only the spend and **one charge reads as two** — that version
+got written and R43's ring gate caught it; scale both and a charge stamped
+under a downpour, read back under a clear sky, silently costs the player a
+charge. No fourth option, so weather is a line and a cloud count, and
+`ringRegenScale` is not in the JSON either.
+
+### Two numbers tuned by measurement, after the first set broke a shipped floor
+
+R105 is the first milestone to move a number the whole 180-day economy is
+integrated over, and it went through R142's splice floor on the way.
+
+- **The year must net to 1.0 on every husbandry scale** — now a gate. The
+  first set (decay 0.9/1.2/1.0/0.75, incubation 0.85/0.95/1.05/1.2, means of
+  0.96 and 1.01) took the Theater from **35/32/28/30/33 splices to
+  25/29/20/30/27** across R142's own seeds. A quarter of the year at 1.2 is
+  not paid back by three quarters at 0.95. *A calendar redistributes; it does
+  not tax.*
+- **Clause 3 was withdrawn.** Splices across R142's seeds: no shelf
+  28/29/28/30/30 (floor 25); one cheap species 24/40/28/30/30; three
+  22/30/23/30/22. **Any** rotation takes a seed under the floor and the size
+  barely matters, because the cost is R95's pull — the catalogue advertises
+  unheld anatomy and the walker collects. The clause's premise was already
+  dead: R95 said *"there is nothing to rotate."*
+
+### R105 blinded three gates, and the full battery is what caught it
+
+Breaks 268, 272 and 273 went MISSED — caught on `main`, missed here, so mine,
+not rot. 272 and 273 came back when the shelf went. **268 did not, and it was
+the useful one:** R163's churn floor reads the median life of the whole roster
+(>100 days) while the decants it is about sit at 14, so it could only notice a
+conveyor when the walker happened to run enough vats — one to eleven across
+these seeds. The walk reports `decantLifeDays` now and the gate reads that.
+
+Two real bugs fell out of the shelf on the way: `catalogFor` defaulted `now`
+to `Date.now()`, so **a seeded walk at the 2026 epoch was shopping from the
+real-world season** — a gate passing in September would fail in December. And
+my first guard against it asserted `catalogFor.length === 2`, which a defaulted
+parameter satisfies; break 318 went MISSED and said so.
+
+### Three shipped gates were also knife edges
+
+R105 walked into them rather than causing them. `walk.stock <= 20` was read
+off seed 2026 alone; with R105's scales **neutralised** the same five seeds
+read 20 / 20 / 26 / 17 / 15, so seed 99 was already six over and no gate could
+see, because no gate asked any seed but one. Re-derived to 28. The Wing's
+`rehabbedEver >= 1` per seed is a census now — the **third** re-derivation of
+that one assertion for the same reason (R83, R87, R139).
+
+### Caps
+
+`FIRST_PAINT_KB` 1034 → **1052** (measured 1043) and `KB_CAP` 314 → **317**
+(measured 315.3), both argued on what they bought, after 4 KB of duplicated
+prose was trimmed into `data/notes/calendar.md` first. `PROSE_CAP` did not
+move (238.0 of 245) — so the ledger reads *code grew by a system, prose grew
+by a pointer*, which is what R171's split was built for. **`MODULE_CAP` stays
+49 and the graph is exactly on it**: the next eager module has to argue.
+
+No `SAVE_VERSION` bump — nothing about the calendar is stored; it is read from
+`createdAt` and `seed`.
+
+### Known issues
+
+- The sky is painted on the same 30s cadence as the world tick, so a band
+  change can land up to 30s late. Nothing measures the seam.
+- The splice count is chaotic seed to seed and the floor of 25 has thin
+  margin: the shipped tree reads 28/29/28/30/30. R105 did not move the floor,
+  but the next milestone that perturbs the economy will meet it.
+- **The full battery could not be run to completion on this machine.** 4 cores
+  at load 10; it managed 23 of 312 breaks in 39 minutes, which extrapolates to
+  ~8 hours against CLAUDE.md's ~90. It was stopped and replaced by a targeted
+  run of the breaks aimed at every gate R105 changed, plus the three it
+  blinded. Worth its own entry: the battery's stated cost assumes a box this
+  one is not.
+- The breeding window is the entry's fourth proposal and it is wired:
+  Moultober raises the SHARE of mutations that come out as a variant, not
+  `mutationChance` itself — a season that made mutation likelier would be a
+  power dial, and the calendar does not get one.
+
+### Next session's first task
+
+The queue is **11** and **R108 is the oldest**.
+
 ## Session 185 — R172: what a legacy veteran does to the opening ✅
 
 **ROADMAP §9.** R102's honest half. The entry asked for a measurement and the
