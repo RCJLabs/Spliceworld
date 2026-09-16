@@ -30,6 +30,17 @@ export function pushNews(state, line) {
   if (!line) return;
   state.news.push(line);
   if (state.news.length > WIRE_KEEP) state.news.splice(0, state.news.length - WIRE_KEEP);
+  // R109 — THE WIRE IS TWELVE LINES LONG AND THE QUESTION IS ABOUT FIVE
+  // THOUSAND. Every line the world says goes past here and then falls off the
+  // end, so nothing in the tree could answer "what does a campaign actually
+  // sound like" — the audit that queued this milestone had to guess, and
+  // guessed 4,034 lines from 181 phrasings against a measured 4,697 from 85.
+  //
+  // Only the harness ever sets this. It is a `__` field, which `campaignWalk`
+  // strips from the save it returns for exactly the reason R91 gives: a
+  // fixture carrying scratch fields measures a save no player has. A browser
+  // never creates it, so a player pays one `if` per line for it.
+  if (state.__wire) state.__wire.push(line);
 }
 
 export function newsEvents(content) {
