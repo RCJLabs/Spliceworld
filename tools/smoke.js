@@ -149,6 +149,8 @@ const SHARD_OF = {
   // whether the year turns over (~15s); the rest is arithmetic. Shard b, which
   // R102's note measured as the lightest of the four at 134s.
   calendar: 'b',
+  // R108 — specimen cards. String work and one scripted fight; cheap. Shard a.
+  card: 'a',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -6794,6 +6796,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // ceremony is explained never.
     'legacy',
     'calendar',
+    // R108 — the card: a data file, two modules, a control on the Pens, an
+    // import on the War Room and an exhibition that only exists while
+    // somebody else's creature is signed in. On the roll so that dropping
+    // its note fails the build like everything else here.
+    'cards',
     // R103. Telegraph, brace and the counter-switch: a data file, an intent
     // on the battle, a line above the command bar, two buttons that mean
     // something new, and a first-use moment that arrives with the first win.
@@ -6864,6 +6871,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // offer to leave it behind belongs.
     'legacy.json': 'legacy',
     'calendar.json': 'calendar',
+    'cards.json': 'cards',
     'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
@@ -6915,6 +6923,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'campaign/legacy.js': 'legacy',
     'campaign/calendar.js': 'calendar',
     'ui/sky.js': 'calendar',
+    // R108 — the card and the fight it carries. Two modules, one system:
+    // a card that cannot be imported is a screenshot, and an exhibition
+    // with nothing to import is an empty row.
+    'splice/card.js': 'cards',
+    'campaign/visiting.js': 'cards',
     'campaign/sparring.js': 'veterans',
     'campaign/campaign.js': 'regions',
     'campaign/map.js': 'regions',
@@ -7133,7 +7146,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
       // teach a player who has one. It cannot ride on `parts in the vault`
       // below, because a vault full of parts and no creature has nothing to
       // grade.
-    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers']],
+      // R108 — a card is a picture of a creature, so the note that offers
+      // one cannot be true before there is a creature to photograph. Same
+      // step, same reason as the tier letter above it.
+    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers', 'cards']],
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
@@ -14299,6 +14315,238 @@ if (inShard('calendar')) {
   console.log(`   R105 calendar: ${Object.keys(calendarTuning(content).seasons ?? {}).length} seasons x `
     + `${calendarTuning(content).seasonDays ?? 28} days \u00b7 husbandry never power \u00b7 `
     + `the sky is a function of the hour and the seed`);
+}
+
+// ---------------------------------------------------------------------------
+// R108 — A CREATURE YOU CAN HAND TO SOMEBODY.
+//
+// VERIFIED BEFORE ANYTHING WAS BUILT. Three of the entry's premises hold and
+// two do not, and one of the two changes what this milestone has to do itself.
+//
+//   HOLDS: `navigator.share` appears nowhere in the tree. The only download
+//   the game has ever produced is the save file (`save/settings-ui.js`). And
+//   `render/renderer.js` already emits standalone `<svg xmlns=...>` strings,
+//   so the portrait is a solved problem.
+//   STALE: "the cards double as the store screenshots R100 still needs."
+//   R100 shipped `npm run assets` — five screens at 1080x1920 off a walked
+//   save — so that box is closed and this milestone does not reopen it.
+//   UNSHIPPED: "imported genomes pass R114's validation." R114 IS STILL ON
+//   THE QUEUE. There is no `save/schema.js` and no `ui/html.js`.
+//
+// SO R108 OWNS ITS OWN REFUSAL, AND ITS OWN ESCAPING. The second half is the
+// part worth saying out loud: R114 measured that 263 `.name` fields are
+// interpolated unescaped, and R108 is the first feature in this game to take
+// a file from ANOTHER PERSON. Shipping a card importer that renders a
+// stranger's creature name through one of those 263 sites would be opening
+// the exact hole R114 exists to close, a milestone before it closes. So the
+// card's own render escapes, and a rule below proves it with a name that is
+// a script tag.
+if (inShard('card')) {
+  const { genomeCode, decodeCode, cardSVG, readCard, visitingSpecimen } =
+    await import('../splice/card.js');
+  const { unitFromGenome } = await import('../battle/statblock.js');
+  const { visitingEncounter, acceptCard, clearVisitor } = await import('../campaign/visiting.js');
+
+  // A real creature, spliced the way the game splices one, rather than a
+  // literal: a card is a round trip and a hand-built fixture can round-trip
+  // through a bug that a real genome would not survive.
+  const built = (() => {
+    const st = { ...newGameState(), seed: 4242 };
+    ensureRanchSeeded(st, content, t0);
+    st.lastTickAt = t0;
+    for (const a of [...st.ranch.stock]) extractAnimal(st, a.id, content, t0);
+    const bySlot = {};
+    for (const part of st.inventory.parts) {
+      const slot = content.parts[part.partId]?.slot;
+      if (slot && !bySlot[slot]) bySlot[slot] = part.id;
+    }
+    clearTable(st);
+    const made = spliceChimera(st, 'M', bySlot, content, t0);
+    assert.ok(made.ok ?? st.chimeras.length, `the fixture splices (${made.msg ?? 'ok'})`);
+    const c = st.chimeras[st.chimeras.length - 1];
+    c.settleUntil = t0 - 1;
+    return { state: st, chimera: c };
+  })();
+
+  // 1. THE CARD ROUND-TRIPS. Export, import, and the genome AND the stat
+  //    block come back identical — the stat block because a genome that
+  //    survives while the numbers drift is a card that lies about the fight
+  //    it is offering.
+  {
+    const svg = cardSVG(built.chimera, built.state, content);
+    assert.ok(svg.startsWith('<svg') && svg.includes('xmlns'),
+      'the card is a self-contained SVG, not a fragment that needs the app around it');
+
+    const card = readCard(svg, content);
+    assert.ok(card.ok, `and it reads back (${card.msg ?? ''})`);
+    assert.equal(card.frame, built.chimera.frame, 'the frame survives');
+    assert.deepEqual(
+      Object.values(card.tokens).map((t) => t.partId).sort(),
+      Object.values(built.chimera.tokens).map((t) => t.partId).sort(),
+      'and every part'
+    );
+    assert.deepEqual(
+      Object.values(card.tokens).map((t) => t.grade).sort(),
+      Object.values(built.chimera.tokens).map((t) => t.grade).sort(),
+      'and every grade — a card that drops them is a card that lies about the fight'
+    );
+
+    // THE STAT BLOCK, through the same physiology the rivals use.
+    const mine = unitFromGenome({ id: 'x', name: 'x', frame: built.chimera.frame,
+      tokens: Object.values(built.chimera.tokens) }, content);
+    const theirs = visitingSpecimen(card, content);
+    assert.ok(theirs.ok, `the card builds a specimen (${theirs.msg ?? ''})`);
+    for (const stat of ['hp', 'power', 'armor', 'speed', 'stamina']) {
+      assert.equal(theirs.unit[stat], mine[stat],
+        `${stat} comes back identical (${theirs.unit[stat]} against ${mine[stat]})`);
+    }
+    assert.deepEqual(theirs.unit.moves.map((m) => m.id ?? m), mine.moves.map((m) => m.id ?? m),
+      'and so does the moveset');
+
+    // AND THE SOCKET ORDER, which is not decoration. `movesFromTokens` walks
+    // the tokens in the order it is handed them, so a card that tidies them
+    // into a canonical order hands back a creature with the same stats and a
+    // different moveset — which is this milestone's own first defect, caught
+    // by the assertion above. This is the assertion that says WHY, so the
+    // next person to reach for a sort finds out here rather than in a fight.
+    assert.deepEqual(Object.keys(card.tokens), Object.keys(built.chimera.tokens),
+      'the sockets come back in the order they went out');
+    const firstSocket = Object.keys(built.chimera.tokens)[0];
+    assert.ok(genomeCode(built.chimera)
+      .startsWith(`${built.chimera.frame}~${built.chimera.tokens[firstSocket].partId}.`),
+      'and the printed code carries that order too, rather than one of its own');
+  }
+
+  // 2. THE PRINTED CODE IS A SECOND DOOR. The entry asks for a short genome
+  //    code under the portrait, because an SVG is a file and a file is a
+  //    thing phones lose: a player who can read the card can retype it.
+  {
+    const code = genomeCode(built.chimera);
+    const limit = content.cards.card.codeLimit;
+    assert.ok(typeof code === 'string' && code.length > 0, 'there is a code');
+    assert.ok(code.length <= limit, `and it is inside the stated limit (${code.length} of ${limit})`);
+
+    // AND THE LIMIT IS HONEST ABOUT THE CONTENT, which is the half a literal
+    // cannot do. The stated bound is checked against the WORST genome today's
+    // parts can build — longest part id in every slot — so adding a species
+    // with a long name fails here rather than silently producing a code
+    // nobody would retype. The first draft said 120 and the fixture alone
+    // ran to 127; carrying the socket name as well as the part id took the
+    // worst case to 179.
+    const longestPerSlot = {};
+    for (const [id, part] of Object.entries(content.parts)) {
+      if ((longestPerSlot[part.slot] ?? '').length < id.length) longestPerSlot[part.slot] = id;
+    }
+    const worst = 1 + Object.values(longestPerSlot)
+      .reduce((n, id) => n + 1 + id.length + 2, 0);
+    assert.ok(worst <= limit,
+      `and the worst genome the content can build is inside it too (${worst} of ${limit})`);
+    // …and the limit is a claim about a HUMAN, so it cannot be raised out of
+    // trouble indefinitely. Past this, the code stops being a second door.
+    assert.ok(limit <= 160, `while staying retypable at all (${limit})`);
+    assert.ok(!/[^A-Za-z0-9._~-]/.test(code),
+      `and safe to put in a URL or read down a phone (${code})`);
+    assert.ok(cardSVG(built.chimera, built.state, content).includes(code),
+      'and the card prints it, or the second door is not on the card');
+
+    const back = decodeCode(code, content);
+    assert.ok(back.ok, `it decodes (${back.msg ?? ''})`);
+    assert.equal(back.frame, built.chimera.frame, 'to the same frame');
+    assert.deepEqual(
+      Object.values(back.tokens).map((t) => t.partId).sort(),
+      Object.values(built.chimera.tokens).map((t) => t.partId).sort(),
+      'and the same parts');
+  }
+
+  // 3. A CARD NAMING A PART THAT DOES NOT EXIST IS REFUSED, WITH A SENTENCE.
+  //    R114 is not here yet, so this is R108's own validation and it has to
+  //    be real: an id nobody has, a frame nobody has, and a shape that is not
+  //    a genome at all.
+  {
+    const good = readCard(cardSVG(built.chimera, built.state, content), content);
+    const swap = (partId) => ({
+      ...good,
+      tokens: Object.fromEntries(Object.entries(good.tokens).map(([k, t], i) =>
+        [k, i === 0 ? { ...t, partId } : t])),
+    });
+
+    const ghost = visitingSpecimen(swap('unicorn_horn'), content);
+    assert.ok(!ghost.ok, 'a card naming a part that does not exist is refused');
+    assert.ok(/unicorn_horn/.test(ghost.msg ?? ''),
+      `and the refusal names the part (${ghost.msg})`);
+
+    const noFrame = visitingSpecimen({ ...good, frame: 'zeppelin' }, content);
+    assert.ok(!noFrame.ok && /zeppelin/.test(noFrame.msg ?? ''),
+      `a frame nobody has is refused by name (${noFrame.msg})`);
+
+    for (const junk of [null, {}, { frame: 'M' }, { frame: 'M', tokens: 'hello' }, { tokens: {} }]) {
+      const out = visitingSpecimen(junk, content);
+      assert.ok(!out.ok && typeof out.msg === 'string' && out.msg.length > 0,
+        `${JSON.stringify(junk)} is refused with a sentence rather than a throw`);
+    }
+    assert.ok(!readCard('<svg></svg>', content).ok, 'an SVG with no specimen in it is refused');
+    assert.ok(!readCard('not xml at all', content).ok, 'and so is something that is not a card');
+  }
+
+  // 4. AND IT IS FOUGHT. The whole point of the card is that two people with
+  //    no server between them can put their creatures in a room.
+  {
+    const card = readCard(cardSVG(built.chimera, built.state, content), content);
+    const host = { ...newGameState(), seed: 77 };
+    assert.equal(visitingEncounter(host, content), null,
+      'no card, no exhibition — the row does not exist until somebody hands you one');
+
+    const taken = acceptCard(host, card, content, t0);
+    assert.ok(taken.ok, `a card is accepted (${taken.msg ?? ''})`);
+    const enc = visitingEncounter(host, content);
+    assert.ok(enc, 'and the exhibition is offered');
+    assert.equal(enc.reward, 0, 'an exhibition has no purse — it is a friendly');
+    assert.equal(enc.waves.length, 1, 'one visitor, one fight');
+    assert.ok(enc.waves[0] && typeof enc.waves[0] === 'object',
+      'the unit rides inline, because it is nobody in content.enemies');
+
+    // AND IT IS AN ACTUAL FIGHT, driven by the same engine every other
+    // encounter is. An exhibition that assembles and then throws on the
+    // first turn is not a feature, and the inline unit is the part most
+    // likely to: nothing else in `content.encounters` arrives as an object.
+    const home = { ...built.chimera, id: 'home', settleUntil: t0 - 1 };
+    const tk = Object.values(home.tokens);
+    home.moveset = defaultMoveset(movesFromTokens(tk, analyze(home.frame, tk, content), content));
+    const fight = createBattle([home], enc, content, 1234, 0);
+    let guard = 0;
+    while (!fight.over && guard++ < 300) {
+      const acts = playerActions(fight);
+      if (!acts.length) break;
+      step(fight, acts.find((a) => a.type === 'move') ?? acts[0], content);
+    }
+    assert.ok(fight.over, `and it actually resolves (${fight.turns} turns)`);
+    assert.ok(['win', 'loss'].includes(fight.outcome), `to a result (${fight.outcome})`);
+
+    // A refused card never becomes a visitor.
+    const bad = acceptCard({ ...newGameState(), seed: 5 },
+      { frame: 'M', tokens: { head: { partId: 'unicorn_horn', grade: 'standard' } } }, content, t0);
+    assert.ok(!bad.ok, 'and a card the validator refused is not accepted either');
+  }
+
+  // 5. A STRANGER'S NAME IS TEXT. R114 has not shipped and this is the first
+  //    feature that takes a file from somebody else, so the card escapes what
+  //    it draws rather than waiting for the milestone that will.
+  {
+    const nasty = { ...built.chimera, name: '<script>alert(1)</script>' };
+    const svg = cardSVG(nasty, built.state, content);
+    assert.ok(!svg.includes('<script>'),
+      'a creature called <script> does not put a script tag in the card');
+    assert.ok(svg.includes('&lt;script&gt;'), 'it is drawn as the text it is');
+
+    const host = { ...newGameState(), seed: 9 };
+    acceptCard(host, readCard(svg, content), content, t0);
+    const enc = visitingEncounter(host, content);
+    assert.ok(!/<script>/.test(JSON.stringify(enc ?? {})),
+      'and the name does not arrive in the encounter as markup either');
+  }
+
+  console.log('   R108 cards: a genome leaves as one SVG and comes back the same creature '
+    + '\u00b7 the code is retypable \u00b7 an unknown part is refused by name');
 }
 
 // R56. Every measurement this project owns is a SLICE — runSim benches a

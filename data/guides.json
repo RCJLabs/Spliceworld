@@ -803,7 +803,7 @@
       "order": 57,
       "icon": "hourglass",
       "title": "The county keeps its own calendar",
-      "body": "The year turns over every 28 days — Splicetember, Swelterval, Moultober, Frostivus — and each one leans on the husbandry rather than the fighting. Condition drifts faster in the heat and slower in the cold; eggs hurry in the growing season and take their time in the frost; the mail-order menagerie brings three species through while it is in the county, and never takes anything off the shelf that conquest has already opened. Weather is rolled fresh each day and does exactly one thing: a ring you spar in during a downpour takes longer to refill. None of it touches a number a fight reads.",
+      "body": "The year turns over every 28 days — Splicetember, Swelterval, Moultober, Frostivus — and each one leans on the husbandry rather than the fighting. Condition drifts faster in the heat and slower in the cold; eggs hurry in the growing season and take their time in the frost; the moulting month throws more variants than any other. Across a full year every one of those scales nets back to where it started, so a calendar redistributes the work rather than taxing it. Weather is rolled fresh each day and is a line and a sky and nothing else — it moves no number at all. None of this touches anything a fight reads.",
       "reachable": [
         {
           "path": "campaign.heldNodes",
@@ -815,6 +815,28 @@
         {
           "path": "ranch.animalCount",
           "min": 4,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "cards",
+      "screen": "pens",
+      "order": 58,
+      "icon": "document",
+      "title": "Hand one to somebody",
+      "body": "Any creature in the Pens can be printed as a specimen card: a single picture with its portrait, its grades, its moves and its whole genome written into the file. Share the card and a friend can load it here — or read them the code under the portrait and let them type it. An imported creature never joins your roster and never touches your money: it is booked as a Visiting Specimen and offered as one exhibition fight, no purse, no notoriety, nothing captured. One visitor at a time; the next card you accept shows the last one out. A card naming a part this lab has never heard of is turned away at the door, by name.",
+      "reachable": [
+        {
+          "path": "chimeras",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "cardCount",
+          "min": 1,
           "default": 0
         }
       ]

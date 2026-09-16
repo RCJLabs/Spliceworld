@@ -344,6 +344,13 @@ const EMPIRE = ['node', '-e',
 // constant named after one of its blocks is how a reader comes to think the
 // lane holds one thing — which is the same mistake, one level up, as the
 // duplicate shard key R144 shipped and caught.
+// R108 — shard a, per SHARD_OF. The `card` block is cheap in itself (one
+// splice, one scripted fight, the rest string work) but a break pays the
+// whole lane, and shard a is the most expensive of the four. Named for the
+// LANE and not for the block, which is the rule the note below states.
+const SHARD_A = ['node', '-e',
+  "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
+
 const SHARD_B = ['node', '-e',
   "process.env.SW_SHARD = 'b'; await import('./tools/smoke.js');"];
 
@@ -3327,6 +3334,61 @@ const BREAKS = [
     file: 'campaign/calendar.js',
     anchor: '  const index = order.length ? Math.floor(elapsed / span) % order.length : 0;',
     to: '  const index = 0;',
+  },
+
+  // R108 — the five rules of the card, one break each. Every one of these is
+  // a shape the milestone could have shipped: the first two ARE shapes it
+  // shipped and the gate caught.
+  {
+    // THE SOCKETS GET TIDIED, and the creature comes back with the same five
+    // stats and a different moveset. This is R108's own first defect,
+    // restored: `movesFromTokens` walks the tokens in the order it is given
+    // them, so a canonical sort is a silent re-roll of which four moves a
+    // visitor can press. Nothing on the card looks wrong.
+    n: 320, gate: SHARD_A, name: 'the card tidies its sockets, so a creature comes back with a different moveset',
+    file: 'splice/card.js',
+    anchor: 'const socketOrder = (tokens) => Object.keys(tokens ?? {});',
+    to: 'const socketOrder = (tokens) => Object.keys(tokens ?? {}).sort();',
+  },
+  {
+    // THE SECOND DOOR IS NOT ON THE CARD. The code still exists, still
+    // decodes, still round-trips in isolation — it is simply not printed, so
+    // the player holding the picture cannot read it to anybody. A feature
+    // that is only reachable from a function nobody calls is not shipped.
+    n: 321, gate: SHARD_A, name: 'the genome code stops being printed on the card, so only the file works',
+    file: 'splice/card.js',
+    anchor: '    + text(516, 11, p.rule, code)',
+    to: '    + text(516, 11, p.rule, \'\')',
+  },
+  {
+    // A PART NOBODY HAS IS WAVED THROUGH. The refusal goes, and an id that
+    // does not exist reaches `unitFromGenome`, which reads
+    // `content.parts[partId].species` — so a stranger\'s typo stops being a
+    // sentence a player can act on and becomes a throw inside the War Room\'s
+    // render. The third clause of the criterion, exactly.
+    n: 322, gate: SHARD_A, name: 'a card naming a part nobody has is accepted, so a stranger can crash the War Room',
+    file: 'splice/card.js',
+    anchor: "      return no(content, 'badPart', { partId, socket });",
+    to: '      partId;',
+  },
+  {
+    // THE EXHIBITION PAYS. One number, and the friendly becomes a farm: a
+    // visitor is a unit whose stats a STRANGER chose, so an exhibition with a
+    // purse is an income any player can print by editing a file. "No stakes"
+    // is the whole promise of the fight.
+    n: 323, gate: SHARD_A, name: 'the exhibition grows a purse, so somebody else\'s creature becomes an income',
+    file: 'campaign/visiting.js',
+    anchor: '    reward: 0,',
+    to: '    reward: 500,',
+  },
+  {
+    // THE CARD STOPS ESCAPING. R114 has not shipped, so this file is the only
+    // thing standing between a stranger\'s creature name and the markup of a
+    // card the player is about to hand to somebody else.
+    n: 324, gate: SHARD_A, name: 'the card stops escaping what it draws, so a stranger names a creature <script>',
+    file: 'splice/card.js',
+    anchor: "    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')",
+    to: '',
   },
 
   // R171 — the two halves of the entry's Done-when, one break each.

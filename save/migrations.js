@@ -22,6 +22,15 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R108 — the visitors' pen and the print counter. `visiting` is one slot
+  // rather than a list on purpose (see data/notes/cards.md); a save that has
+  // never been handed a card has null there, which is also what a new game
+  // has, so nothing about an existing save changes.
+  55: (save) => {
+    save.visiting ??= null;
+    save.cardCount ??= 0;
+    return save;
+  },
   // v2 (M1): ranch, stock, and the upkeep economy.
   2: (save) => {
     save.funds = 300;
