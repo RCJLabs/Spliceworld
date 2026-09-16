@@ -14212,37 +14212,42 @@ if (inShard('calendar')) {
       'and one season actually opens the breeding window, or the key is decoration');
   }
 
-  // 3. THE CATALOGUE'S STOCK DIFFERS BETWEEN TWO MONTHS OF ONE SAVE, and
-  //    NOTHING IS EVER TAKEN AWAY. See the R95 note above: a rotation that
-  //    gated would undo a milestone that measured this exact screen.
+  // 3. THE CATALOGUE DOES NOT ROTATE, AND THIS RULE IS THE RECORD OF WHY.
+  //
+  // R105's third clause asked that "the catalogue's stock differs between two
+  // months of one save". It was built, measured, and taken back out, because
+  // it cannot coexist with R142's shipped splice floor.
+  //
+  // MEASURED ACROSS R142's OWN FIVE SEEDS, splices over 180 days:
+  //     no seasonal shelf      28 29 28 30 30   (floor is 25)
+  //     one cheap species      24 40 28 30 30
+  //     three cheap species    22 30 23 30 22
+  // Any rotation at all takes a seed under the floor, and the SIZE of the
+  // shelf barely matters. The cause is R95's: the catalogue advertises
+  // anatomy you have never held and the walker collects, so a rotating
+  // novelty diverts the money that would have become chimeras.
+  //
+  // It is also the clause whose premise was already dead. R95 examined a
+  // Travelling Menagerie and said "there is nothing to rotate" — by day 180
+  // the walk holds 22 of 23 nodes on a median $249,000, which already opens
+  // 33 of 41 species. Availability was never the constraint.
+  //
+  // So the catalogue is exactly what R95 left, and this rule holds it there:
+  // a season may not carry stock, and `catalogFor` may not read a clock.
   {
-    // A PARTLY conquered save, deliberately. On a fully conquered one every
-    // species is already permanently on the shelf, so a rotation that only
-    // ADDS would be invisible and this rule would pass on a screen where
-    // nothing had changed — the fixture has to be able to show the feature.
-    const st = dated();
-    st.campaign.heldNodes = [Object.values(content.regions)[0].nodes[0].id];
     const t = calendarTuning(content);
-
-    const months = Array.from({ length: 4 }, (_, i) =>
-      catalogFor(st, content, EPOCH + i * (t.seasonDays ?? 28) * DAY_MS).map((sp) => sp.id));
-    assert.ok(months.every((m) => m.length > 0), 'the catalogue has stock to compare');
-    assert.ok(new Set(months.map((m) => m.join(','))).size > 1,
-      'the catalogue reads differently in two months of one save');
-
-    // THE ADDING RULE, AND IT IS THE HALF THAT MATTERS. Whatever CONQUEST has
-    // opened is on the shelf in every month of the year — the calendar can
-    // widen that set and can never narrow it. A rotation that gated would
-    // undo R95, which measured this exact screen and found availability was
-    // never the constraint.
-    const conquered = new Set(faunaUnlocked(st, content));
-    for (const [i, month] of months.entries()) {
-      for (const id of conquered) {
-        if (!content.species[id]?.mailOrderPrice) continue;
-        assert.ok(month.includes(id),
-          `${id} is conquest-unlocked but off the shelf in month ${i} — a season ADDS stock, it never gates it (R95)`);
-      }
+    for (const [id, season] of Object.entries(t.seasons ?? {})) {
+      assert.ok(!('stocks' in season),
+        `season "${id}" carries stock again — measured, any rotation takes a seed under R142's splice floor`);
     }
+    // READ THE SOURCE, NOT `Function.length`. The first version of this rule
+    // asserted `catalogFor.length === 2`, which cannot fail: a parameter with
+    // a default does not count toward `length`, so `(state, content, now =
+    // Date.now())` reads as 2 as well. Break 318 went MISSED and said so.
+    const ranchSrc = readFileSync(join(root, 'ranch/ranch.js'), 'utf8');
+    assert.ok(/export function catalogFor\(state, content\) \{/.test(ranchSrc),
+      '`catalogFor` takes no moment: a catalogue that reads a clock is a catalogue that changes '
+      + 'under a walk, which is how the wall clock got inside a simulated campaign');
   }
 
   // 4. THE WALKER'S 180 DAYS CROSS ALL FOUR SEASONS WITH NO NEW STALL. The
@@ -19930,12 +19935,34 @@ if (inShard('empire')) {
   const SPLICE_FLOOR = 25;
   const SPLICE_CEILING = 45;
   const CHURN_FLOOR_DAYS = 5;
+  // R163's decant-only floor, which `tools/sim.js` calls VAT_KEEP_DAYS.
+  const VAT_KEEP_FLOOR_DAYS = 14;
   for (const walk of walks) {
     const t = walk.theater;
     assert.ok(t, 'the harness reports the Theater ratio at all');
     assert.ok(t.medianLifeDays > CHURN_FLOOR_DAYS,
       `the median chimera outlives R135's ${CHURN_FLOOR_DAYS}-day churn floor `
       + `(${t.medianLifeDays}d on ${t.made} made to keep ${t.kept}, ${t.vats} vat runs)`);
+
+    // R105 — AND THE VAT'S OWN OUTPUT, WHICH IS WHAT R163's FLOOR IS ABOUT.
+    //
+    // The rule above reads the median of the WHOLE roster, and that is a
+    // statistic dominated by creatures the vat never made: it sits above 100
+    // days while the decants sit at 14. It can only notice a decant conveyor
+    // when the walker happens to run enough vats, and the walker runs between
+    // one and eleven across these seeds. Break 268 — which puts decants back
+    // on the general dismantle floor — went MISSED the moment R105's seasons
+    // shifted that appetite, on a rule nobody had touched.
+    //
+    // A floor on a rare event has to read the rare event. `decantLifeDays`
+    // measures exactly what R163 raised: it reads 14 / 15.5 / 14 / 14 / 14
+    // here, against the 14-day floor R163 set for decants ONLY, and a
+    // conveyor drops it to the general floor of two.
+    if (t.decants > 0) {
+      assert.ok(t.decantLifeDays >= VAT_KEEP_FLOOR_DAYS,
+        `and a decant is kept the ${VAT_KEEP_FLOOR_DAYS} days R163 bought it, not the general `
+        + `dismantle floor (${t.decantLifeDays}d across ${t.decants} decants)`);
+    }
     assert.ok(t.splices <= SPLICE_CEILING,
       `and a campaign splices at most ${SPLICE_CEILING} times in 180 days (got ${t.splices})`
       + ' — past that is the rebuild loop R135 measured, not a busier Theater');

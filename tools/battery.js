@@ -3303,15 +3303,18 @@ const BREAKS = [
     to: '      "decayScale": 0.95,\n      "powerScale": 1.1,',
   },
   {
-    // THE ROTATION STARTS GATING. Replace rather than widen, and a species
-    // conquest opened last month is off the shelf this month — which is
-    // exactly the milestone R95 measured and declined to build. Caught by the
-    // rule that walks four months and requires everything `faunaUnlocked`
-    // returns to be orderable in all of them.
-    n: 318, gate: SHARD_B, name: 'the season replaces the catalogue instead of widening it, so conquest can be undone by a date',
+    // THE CATALOGUE LEARNS TO READ A CLOCK AGAIN. R105 built a seasonal shelf,
+    // measured it against R142's splice floor, and took it out — but the way
+    // it FAILED is the thing worth guarding: `catalogFor` grew a `now`
+    // parameter, every caller but one kept passing nothing, and the default
+    // was `Date.now()`. A simulated campaign running at the 2026 epoch was
+    // shopping from whatever season it happened to be in real life, which is
+    // a seeded walk quietly reading the wall clock. Caught by the rule that
+    // requires the function to take no moment at all.
+    n: 318, gate: SHARD_B, name: 'the catalogue takes a moment again, so a seeded walk can read the wall clock',
     file: 'ranch/ranch.js',
-    anchor: '    for (const id of seasonOf(state, content, now).stocks) open.add(id);',
-    to: '    open.clear(); for (const id of seasonOf(state, content, now).stocks) open.add(id);',
+    anchor: 'export function catalogFor(state, content) {',
+    to: 'export function catalogFor(state, content, now = Date.now()) {',
   },
   {
     // THE YEAR STOPS TURNING OVER. Season zero forever: every husbandry

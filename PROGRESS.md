@@ -34,9 +34,8 @@ the paint, in the window R81 put `shapes` in.
   already there: R24's literal `22 * 60000` incubation rule went red the
   moment eggs learned about the calendar. Derived from the season now, with
   the 22-minute base asserted separately.
-- **The catalogue differs across four months**, measured on a *partly*
-  conquered fixture — on a fully conquered one a rotation that only adds is
-  invisible and the rule would pass on a screen where nothing changed.
+- **The catalogue does not rotate** — clause 3 was withdrawn on evidence
+  (Evan's call). See below.
 - **The walk crosses all four**, and finding that out fixed a real bug:
   `campaignWalk` stamped `createdAt` with the wall clock while its own clock
   ran from the 2026 epoch, so a 180-day campaign crossed **one** season.
@@ -63,16 +62,29 @@ integrated over, and it went through R142's splice floor on the way.
   25/29/20/30/27** across R142's own seeds. A quarter of the year at 1.2 is
   not paid back by three quarters at 0.95. *A calendar redistributes; it does
   not tax.*
-- **The seasonal shelf is the cheap end of the catalogue**, and the reason is
-  R95's. Isolated: the scales alone cost essentially nothing (28/29/28/30/30
-  against a neutral 35/32/28/30/33); the shelf alone took seed 99 to 22. It is
-  not how many species a season carries — **one expensive species does the
-  same damage as three** — it is the price. R95 taught the catalogue to
-  advertise anatomy you have never held and the walker collects, so a season
-  parading scorpions ($210) past a player redirects money that would have
-  become chimeras.
+- **Clause 3 was withdrawn.** Splices across R142's seeds: no shelf
+  28/29/28/30/30 (floor 25); one cheap species 24/40/28/30/30; three
+  22/30/23/30/22. **Any** rotation takes a seed under the floor and the size
+  barely matters, because the cost is R95's pull — the catalogue advertises
+  unheld anatomy and the walker collects. The clause's premise was already
+  dead: R95 said *"there is nothing to rotate."*
 
-### Three shipped gates were knife edges
+### R105 blinded three gates, and the full battery is what caught it
+
+Breaks 268, 272 and 273 went MISSED — caught on `main`, missed here, so mine,
+not rot. 272 and 273 came back when the shelf went. **268 did not, and it was
+the useful one:** R163's churn floor reads the median life of the whole roster
+(>100 days) while the decants it is about sit at 14, so it could only notice a
+conveyor when the walker happened to run enough vats — one to eleven across
+these seeds. The walk reports `decantLifeDays` now and the gate reads that.
+
+Two real bugs fell out of the shelf on the way: `catalogFor` defaulted `now`
+to `Date.now()`, so **a seeded walk at the 2026 epoch was shopping from the
+real-world season** — a gate passing in September would fail in December. And
+my first guard against it asserted `catalogFor.length === 2`, which a defaulted
+parameter satisfies; break 318 went MISSED and said so.
+
+### Three shipped gates were also knife edges
 
 R105 walked into them rather than causing them. `walk.stock <= 20` was read
 off seed 2026 alone; with R105's scales **neutralised** the same five seeds
@@ -98,9 +110,14 @@ No `SAVE_VERSION` bump — nothing about the calendar is stored; it is read from
 - The sky is painted on the same 30s cadence as the world tick, so a band
   change can land up to 30s late. Nothing measures the seam.
 - The splice count is chaotic seed to seed and the floor of 25 has thin
-  margin: the shipped tree reads 28/29/28/30/30 against a neutral
-  35/32/28/30/33. R105 did not move the floor, but the next milestone that
-  perturbs the economy will meet it.
+  margin: the shipped tree reads 28/29/28/30/30. R105 did not move the floor,
+  but the next milestone that perturbs the economy will meet it.
+- **The full battery could not be run to completion on this machine.** 4 cores
+  at load 10; it managed 23 of 312 breaks in 39 minutes, which extrapolates to
+  ~8 hours against CLAUDE.md's ~90. It was stopped and replaced by a targeted
+  run of the breaks aimed at every gate R105 changed, plus the three it
+  blinded. Worth its own entry: the battery's stated cost assumes a box this
+  one is not.
 - The breeding window is the entry's fourth proposal and it is wired:
   Moultober raises the SHARE of mutations that come out as a variant, not
   `mutationChance` itself — a season that made mutation likelier would be a

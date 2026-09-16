@@ -12,48 +12,28 @@
       "blurb": "Everything is growing, including the things that should not be.",
       "decayScale": 0.95,
       "incubationScale": 0.95,
-      "variantBonus": 0,
-      "stocks": [
-        "frog",
-        "goose",
-        "jellyfish"
-      ]
+      "variantBonus": 0
     },
     "swelterval": {
       "name": "Swelterval",
       "blurb": "Too hot for the pens, too hot for the paperwork, perfect for the vat.",
       "decayScale": 1.05,
       "incubationScale": 1.0,
-      "variantBonus": 0,
-      "stocks": [
-        "skunk",
-        "mantis",
-        "armadillo"
-      ]
+      "variantBonus": 0
     },
     "moultober": {
       "name": "Moultober",
       "blurb": "Half the county is shedding and the other half is collecting it.",
       "decayScale": 1.0,
       "incubationScale": 1.05,
-      "variantBonus": 0.15,
-      "stocks": [
-        "moth",
-        "bat",
-        "porcupine"
-      ]
+      "variantBonus": 0.15
     },
     "frostivus": {
       "name": "Frostivus",
       "blurb": "Nothing hatches in a hurry and nothing needs much grooming either.",
       "decayScale": 1.0,
       "incubationScale": 1.0,
-      "variantBonus": 0,
-      "stocks": [
-        "ram",
-        "pufferfish",
-        "wolf"
-      ]
+      "variantBonus": 0
     }
   },
   "weather": {

@@ -2599,6 +2599,15 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   // churn and report a median far below what a player experiences.
   const alive = new Map();
   const lives = [];
+  // R105 — DECANT LIFETIMES, SEPARATELY. R163's churn floor reads the median
+  // life of the WHOLE roster, which only moves when the walker happens to run
+  // enough vats: on these seeds it runs between one and eleven, and the
+  // seasons shift that. A floor on a rare event, read through a statistic
+  // dominated by common ones, is a floor that goes blind when anything
+  // upstream changes — which is exactly what break 268 reported. The vat's
+  // own output is the thing R163's rule is about, so it is counted on its own.
+  const decantLives = [];
+  const decantBorn = new Set();
 
   for (let h = 0; h <= days * 24; h += stepHours) {
     if (h > awayStart && h < awayEnd) continue; // the app is closed
@@ -2689,10 +2698,14 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     for (const [id, born] of alive) {
       if (!state.chimeras.some((c) => c.id === id)) {
         lives.push((now - born) / WALK_DAY);
+        if (decantBorn.has(id)) decantLives.push((now - born) / WALK_DAY);
         alive.delete(id);
       }
     }
-    for (const c of state.chimeras) if (!alive.has(c.id)) alive.set(c.id, c.createdAt ?? now);
+    for (const c of state.chimeras) {
+      if (!alive.has(c.id)) alive.set(c.id, c.createdAt ?? now);
+      if (c.vatBorn) decantBorn.add(c.id);
+    }
     // The state as the player LEFT it: after the day's actions, so a month
     // away is measured from what was actually in the bank when the app closed.
     if (markDay != null && h === markDay * 24) snapshots.left = snap(markDay);
@@ -2779,6 +2792,15 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
         made: state.chimeraCount ?? 0,
         kept: state.chimeras.length,
         medianLifeDays: allLives.length ? +allLives[Math.floor((allLives.length - 1) / 2)].toFixed(1) : 0,
+        // R105 — and the vat's own, which is what R163's floor is actually about.
+        // Survivors fold in at their current age, exactly as `allLives` does.
+        decantLifeDays: (() => {
+          const d = [...decantLives, ...state.chimeras.filter((c) => c.vatBorn)
+            .map((c) => (state.lastTickAt - (c.createdAt ?? state.lastTickAt)) / WALK_DAY)]
+            .sort((a, b) => a - b);
+          return d.length ? +d[Math.floor((d.length - 1) / 2)].toFixed(1) : null;
+        })(),
+        decants: decantBorn.size,
       };
     })(),
     chimeraLives: allLives,

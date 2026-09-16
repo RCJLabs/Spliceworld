@@ -256,16 +256,8 @@ function isFaunaGated(speciesId, content) {
   return false;
 }
 
-export function catalogFor(state, content, now = Date.now()) {
+export function catalogFor(state, content) {
   const open = faunaUnlocked(state, content);
-  // R105 — THE SEASON ADDS, AND ONLY ADDS: the same promise the
-  // grandfathering note above makes, one system later. And it visits labs
-  // that are on the map — with no territory the catalogue is the two species
-  // it has always been, a floor the jobs board and R119's founding both rest
-  // on. See data/notes/calendar.md.
-  if (state.campaign?.heldNodes?.length) {
-    for (const id of seasonOf(state, content, now).stocks) open.add(id);
-  }
   return Object.values(content.species)
     .filter((s) => s.mailOrderPrice && open.has(s.id))
     .sort((a, b) => a.mailOrderPrice - b.mailOrderPrice);

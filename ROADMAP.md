@@ -3644,8 +3644,28 @@ suite can check.
 
   *Done when: the same save opened at two hours renders two skies and at the
   same hour the same sky; a season changes at least one husbandry number smoke
-  reads; the catalogue's stock differs between two months of one save; and the
-  walker's 180 days cross all four seasons with no new stall.* ✅ **All four.**
+  reads; ~~the catalogue's stock differs between two months of one save~~; and
+  the walker's 180 days cross all four seasons with no new stall.*
+
+  **THREE OF FOUR, AND THE FOURTH WAS WITHDRAWN ON EVIDENCE — Evan's call,
+  with the numbers below in front of him.** The catalogue clause cannot
+  coexist with R142's shipped splice floor. Measured across R142's own five
+  seeds, splices over 180 days:
+
+  | seasonal shelf | splices | floor is 25 |
+  | --- | --- | --- |
+  | none | 28 29 28 30 30 | ✅ |
+  | one cheap species | 24 40 28 30 30 | ❌ |
+  | three cheap species | 22 30 23 30 22 | ❌ |
+
+  **Any** rotation takes a seed under the floor and the shelf's SIZE barely
+  matters, because the cost is not the animals — it is R95's pull. The
+  catalogue advertises anatomy you have never held and the walker collects, so
+  a rotating novelty diverts the money that would have become chimeras. It is
+  also the clause whose premise was already dead: R95 examined this idea and
+  said *"there is nothing to rotate."* The catalogue is exactly what R95 left
+  it, and a smoke rule now holds it there — a season may not carry stock, and
+  `catalogFor` may not take a moment.
   - **The sky** is a function of the local hour and the world seed: 3 a.m. and
     3 p.m. differ, the same hour is stable across calls, a 24-hour sweep reads
     **at least 6 distinct skies** (so a two-state day/night switch cannot pass
@@ -3655,10 +3675,7 @@ suite can check.
     the moment eggs learned about the calendar. It is derived from the season
     now, and the 22-minute base is asserted separately so a calendar cannot
     quietly become a 90% cut.
-  - **The catalogue** reads differently across four months of one save, on a
-    *partly* conquered fixture — deliberately, because on a fully conquered
-    one a rotation that only adds is invisible and the rule would pass on a
-    screen where nothing changed.
+  - **The catalogue** does not rotate — see the table above.
   - **The walk crosses all four**, and finding that out fixed a real bug:
     `campaignWalk` stamped `createdAt` with the wall clock while its own clock
     ran from the 2026 epoch, so every day of a 180-day campaign read as day 0
@@ -3715,18 +3732,31 @@ suite can check.
     25/29/20/30/27**, a fifth of the output and one seed through the floor. A
     quarter of the year at 1.2 is not paid back by three quarters at 0.95.
     *A calendar redistributes; it does not tax.*
-  - **The seasonal shelf is the cheap end of the catalogue, and the reason is
-    R95's.** Isolated: the husbandry scales alone cost the Theater essentially
-    nothing (**28/29/28/30/30** against a neutral 35/32/28/30/33); the shelf
-    ALONE took seed 99 to 22. It is not how many species a season carries —
-    **one expensive species does the same damage as three** — it is the price.
-    R95 taught the catalogue to advertise anatomy you have never held and the
-    walker collects, so a season parading scorpions ($210) past a player
-    redirects money that would have become chimeras. The shipped shelf is
-    drawn from species at $140 or less and reads the scales' own number.
+  - **The shelf went, and it took two real bugs with it on the way out.**
+    `catalogFor` grew a `now` parameter and every caller but one kept passing
+    nothing, so the default was `Date.now()`: **a seeded 180-day walk running
+    at the 2026 epoch was shopping from whatever season it happened to be in
+    real life.** A gate that passed in September would have failed in
+    December. Break 318 guards the signature now. And the first version of
+    that guard was itself vacuous — it asserted `catalogFor.length === 2`,
+    which a defaulted parameter satisfies too; break 318 went MISSED and said
+    so, and the rule reads the source instead.
 
-  **Three shipped gates were knife edges, and R105 walked into them rather
-  than causing them.** The herd bound (`walk.stock <= 20`) was read off seed
+  **AND R105 BLINDED THREE GATES, WHICH IS WHAT THE FULL BATTERY IS FOR.**
+  Breaks 268, 272 and 273 went MISSED — caught on `main`, missed here, so
+  these were R105's doing and not pre-existing rot. 272 and 273 came back the
+  moment the seasonal shelf went. **268 did not, and it was the useful one:**
+  R163's churn floor reads the median life of the WHOLE roster, which sits
+  above 100 days while the decants it is actually about sit at 14. It could
+  only ever notice a decant conveyor when the walker happened to run enough
+  vats — between one and eleven across these seeds — and R105's seasons
+  shifted that appetite. **A floor on a rare event has to read the rare
+  event**, so the walk reports `decantLifeDays` now (14 / 15.5 / 14 / 14 / 14
+  against R163's 14-day decant floor) and the gate reads that. Break 268 is
+  caught again, and is no longer hostage to the walker's diet.
+
+  **Three shipped gates were also knife edges, and R105 walked into those
+  rather than causing them.** The herd bound (`walk.stock <= 20`) was read off seed
   2026 alone, where day 45 lands on exactly 20; on a tree with R105's scales
   neutralised the same five seeds read **20 / 20 / 26 / 17 / 15**, so seed 99
   was already six animals over and no gate could see, because no gate asked

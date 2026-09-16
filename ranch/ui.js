@@ -131,7 +131,7 @@ export function renderRanchScreen(root, ctx) {
   const territory = incomePerDay(state, content);
   const net = Math.round(TUNING.stipendPerDay + territory - upkeep);
   const scanner = scannerGrants(state, content);
-  const catalog = catalogFor(state, content, t);
+  const catalog = catalogFor(state, content);
   if (!catalog.some((sp) => sp.id === catalogPick)) catalogPick = catalog[0]?.id ?? '';
   const catalogSpecies = catalog.find((sp) => sp.id === catalogPick) ?? null;
 
