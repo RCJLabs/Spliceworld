@@ -483,10 +483,16 @@ export function recordRivalResult(state, rivalId, outcome, content) {
     // Every rematch after the first is announced in their OWN voice: a
     // lab that keeps losing to you should sound like it, not like a
     // scoreboard (§3.8 `rematch`).
-    return (
-      rivalLine(content, rivalId, 'rematch') ??
-      newsFor(state, content, 'rival_beaten_again', { rival: rival.name, times: record.defeats })
-    );
+    //
+    // NO GENERIC FALLBACK, and R109's own gate is why. A four-line pool was
+    // authored here for the rivals that had no `rematch` of their own, and
+    // rule 4 reported all four as never spoken: every one of the five rivals
+    // has a `rematch` line, so the `??` arm was unreachable the day it was
+    // written. That is R57/R58's shape — authored content with no reader —
+    // caught this time in content one commit old rather than six phases.
+    // A rival that ships without a voice should fail the build, not be
+    // papered over by a house line nobody can hear.
+    return rivalLine(content, rivalId, 'rematch');
   }
   record.losses += 1;
   return newsFor(state, content, 'rival_won', { rival: rival.name });

@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 55;
+export const SAVE_VERSION = 56;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -84,6 +84,13 @@ export function newGameState() {
       notorietyPeak: 0,
     },
     news: [],
+    // R109 — where each event is in its own pool of phrasings, so a pool
+    // empties itself before it repeats. One small integer per event, which is
+    // bounded by the number of events rather than by a window length somebody
+    // has to choose (R91's rule). See campaign/wire.js for the two drafts
+    // that failed before this one, and why neither a roll nor a global
+    // window can rotate a pool at all.
+    wireAt: {},
     settings: { muted: false, battleSpeed: 1 },
     // R51: `beaten` is the field guide's second dimension — `enemies` is a
     // sighting log and always was, so a unit that flattened you read

@@ -19,7 +19,7 @@
 // authored content with no reader — with the engine's own copy shouting over
 // it. `threat_rung` now prints what the data says.
 
-import { rngStream, hashString } from '../util/rng.js';
+import { rngStream } from '../util/rng.js';
 import { fill, DEFAULT_PHILOSOPHY } from './monologue.js';
 
 const WIRE_KEEP = 12;
@@ -61,27 +61,57 @@ export function poolFor(state, content, event) {
   return mine?.length ? mine : (spec.lines ?? null);
 }
 
-// The line for an event, filled. Seeded on the params rather than on a
-// counter: the same event about the same node always reads the same way, so
-// a reload cannot reroll the wire, and no save field had to be invented to
-// hold a position. Different nodes still get different phrasings, which is
-// the whole point of a pool.
+// R109 — A CURSOR PER EVENT, SO A POOL EMPTIES ITSELF BEFORE IT REPEATS.
 //
-// The seed alone was not enough. An event with no params — a spar, the
-// county holding — hashes to the same position every time, so a pool of
-// three authored phrasings printed one of them for the life of the save and
-// the other two had never once played. So a repeat rotates: while the last
-// telling of this exact event is still on the wire, the next telling moves
-// to the next phrasing. Still a function of the save, still no new field,
-// and the wire stops saying the same sentence twice in a row.
+// The rule this replaces rotated "while the last telling of this exact event
+// is still on the wire". The wire keeps twelve lines and a campaign says
+// twenty-six a day, so a telling is off the end in under half a day and the
+// rotation almost never fired. What was left was the seed: `base` is hashed
+// from the PARAMS, so an event whose params repeat — three operations, five
+// rivals — picks the same variant every time for the life of the save.
+//
+// Measured on the five-line `op_failed` pool the moment it existed: 724
+// tellings, three distinct operations, one phrasing took 256 of them and two
+// were never heard at all. Authoring more variants into that is authoring
+// more silence, which is why this comes before the writing.
+//
+// TWO DRAFTS FAILED BEFORE THIS ONE, and both failed the same way — they
+// left the CHOICE to a roll instead of to memory.
+//
+//   1. A seeded roll per telling. `rngStream` is re-seeded from its
+//      arguments on every call, so a stream keyed on the window's LENGTH
+//      returns the same first number forever once that length pins at its
+//      cap. It picked the same slot every time and took the distinct count
+//      DOWN, 107 to 102.
+//   2. A global no-repeat window of the last twenty phrasings — which is
+//      what the milestone entry asks for, and it does not work on its own.
+//      Twenty lines is eighteen hours of wire, so a busy event's own keys
+//      fall out of the window between tellings, every variant reads as
+//      unseen, and the pick lands on the same one again. 101 distinct.
+//
+// So the memory is PER EVENT and it is a cursor, not a history: `wireAt`
+// holds the next index for each event, and every telling advances it. A pool
+// of five is heard five times before any line is heard twice, exactly, with
+// no randomness in the rotation at all. The seed still chooses where each
+// save STARTS in each pool, so two campaigns do not open the same event on
+// the same sentence.
+//
+// It is bounded by the number of events (R91's rule) rather than by a window
+// somebody has to pick a length for, and it is in the save, so a reload
+// replays the wire rather than rerolling it.
 export function newsFor(state, content, event, params = {}) {
   const pool = poolFor(state, content, event);
   if (!pool?.length) return null;
-  const rng = rngStream(state?.seed ?? 0, `news:${event}`, hashString(JSON.stringify(params)));
-  const base = Math.floor(rng() * pool.length) % pool.length;
-  const wire = state?.news ?? [];
-  const repeats = pool.filter((line) => wire.includes(fill(line, params))).length;
-  return fill(pool[(base + repeats) % pool.length], params);
+  // Where this save opens this pool. A function of the seed and the event
+  // name and nothing else, so it is the same on every load.
+  const rng = rngStream(state?.seed ?? 0, `news:${event}`, 0);
+  const offset = Math.floor(rng() * pool.length) % pool.length;
+  const at = state?.wireAt?.[event] ?? 0;
+  const choice = (offset + at) % pool.length;
+  if (state) {
+    state.wireAt = { ...(state.wireAt ?? {}), [event]: (at + 1) % pool.length };
+  }
+  return fill(pool[choice], params);
 }
 
 // What an engine calls: say what happened, not what to print.

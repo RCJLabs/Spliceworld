@@ -167,14 +167,6 @@
         "{rival} defeated. Somebody over there is drafting the word “anomaly”."
       ]
     },
-    "rival_beaten_again": {
-      "lines": [
-        "{rival} beaten again ({times}×). They are taking this personally and it shows in the budget.",
-        "{rival} beaten again — {times} now. The press release has stopped pretending.",
-        "That is {times} for {rival}. Their board has asked for “a different kind of update”.",
-        "{rival} loses again ({times}×) and books the good lawyers for next time."
-      ]
-    },
     "rival_won": {
       "lines": [
         "{rival} wins the exchange and issues a press release about it. Rude.",

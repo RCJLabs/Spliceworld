@@ -22,6 +22,12 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R109 — where the wire is in each pool of phrasings. An existing save
+  // starts at the top of every pool, which is exactly what a new game does.
+  56: (save) => {
+    save.wireAt ??= {};
+    return save;
+  },
   // R108 — the visitors' pen and the print counter. `visiting` is one slot
   // rather than a list on purpose (see data/notes/cards.md); a save that has
   // never been handed a card has null there, which is also what a new game
