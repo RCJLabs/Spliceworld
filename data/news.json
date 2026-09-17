@@ -16,7 +16,18 @@
       "lines": [
         "Sparring session concluded. The garrison applauds politely and re-chalks the ring.",
         "Sparring session concluded. Somebody fetches the good chalk.",
-        "Sparring session concluded. No territory changed hands and everyone had a nice time."
+        "Sparring session concluded. No territory changed hands and everyone had a nice time.",
+        "Sparring session concluded. The chalk line survives, barely.",
+        "Sparring concluded. Nothing was proved and everything was practised.",
+        "Sparring session over. The garrison has gone back to pretending to work.",
+        "Sparring concluded. One participant is very pleased with itself.",
+        "Sparring session done. The ring is swept, the notes are useless.",
+        "Sparring concluded. A crowd formed, then thought better of it.",
+        "Sparring session over. Two bruises, no paperwork, one nap earned.",
+        "Sparring concluded. The ring smells faintly of triumph and wet straw.",
+        "Sparring done. Somebody has drawn a face on the practice dummy again.",
+        "Sparring session concluded. The dummy has been retired loudly.",
+        "Sparring over. Form was discussed at length by people not in the ring."
       ]
     },
     "dissection_done": {
@@ -27,7 +38,16 @@
     "rescued": {
       "lines": [
         "{creature} rescued from the impound lot! Bond deepened. Paperwork ignored.",
-        "{creature} is home from the impound lot, furious and adored. Nobody signed anything."
+        "{creature} is home from the impound lot, furious and adored. Nobody signed anything.",
+        "{creature} is out of the impound lot and back in its own straw.",
+        "{creature} walked out of the impound lot. Nobody stopped it twice.",
+        "{creature} is home. The impound lot has revised its fencing plans.",
+        "Sprung: {creature}. The paperwork remains beautifully incomplete.",
+        "{creature} is back, smug, and slightly damp.",
+        "{creature} collected from impound. No receipt was offered or wanted.",
+        "{creature} came home tonight and went straight to the good corner.",
+        "{creature} is back on the ranch and back to being insufferable.",
+        "{creature} recovered from the lot. The gate is a formality now."
       ]
     },
     "gauntlet_cleared": {
@@ -39,7 +59,14 @@
       "lines": [
         "{node} seized. Income +${income}/day. Locals adjusting surprisingly well.",
         "{node} seized. Income +${income}/day. The locals have decided this is fine.",
-        "{node} changes hands. +${income}/day, and nobody has filed anything about it."
+        "{node} changes hands. +${income}/day, and nobody has filed anything about it.",
+        "{node} is yours. +${income}/day, and the signage has already changed.",
+        "{node} taken. Income +${income}/day. The neighbours are being very normal about it.",
+        "{node} falls. +${income}/day, effective the moment anyone notices.",
+        "{node} changes hands quietly. +${income}/day.",
+        "{node} secured. +${income}/day and one very confused caretaker.",
+        "{node} is under new management. +${income}/day.",
+        "{node} taken without a shot, a siren, or a form. +${income}/day."
       ],
       "by": {
         "naturalist": [
@@ -58,13 +85,28 @@
     "salvaged": {
       "lines": [
         "Salvage crews work through the night at {node}. One {unit} is now, legally speaking, scrap you own.",
-        "Salvage crews strip {node} until dawn. One {unit} is yours, in the way a paperweight is yours."
+        "Salvage crews strip {node} until dawn. One {unit} is yours, in the way a paperweight is yours.",
+        "The crews take {node} apart by torchlight. One {unit} is yours now.",
+        "Salvage at {node} runs late. A {unit} comes home in pieces worth having.",
+        "{node} stripped to the bolts. The {unit} was the good bit.",
+        "Salvage crews finish {node} by morning. One {unit}, lightly used.",
+        "Everything portable has left {node}. Including one {unit}.",
+        "{node} is picked clean. The {unit} is in the workshop already.",
+        "Salvage at {node}: one {unit}, and a lot of wire nobody will admit to."
       ]
     },
     "chimera_captured": {
       "lines": [
         "{creature} CAPTURED! \"Unauthorized peer review\" scheduled in {hours}h. Mount a rescue.",
-        "{creature} CAPTURED! They have booked \"unauthorized peer review\" for {hours}h from now. There is still time."
+        "{creature} CAPTURED! They have booked \"unauthorized peer review\" for {hours}h from now. There is still time.",
+        "{creature} has been taken. {hours} hours before the peer review starts.",
+        "They have {creature}. There are {hours} hours on the clock.",
+        "{creature} is in somebody else's bay. {hours} hours to fetch it.",
+        "{creature} has been booked in elsewhere. The window is {hours} hours.",
+        "{creature} taken. {hours} hours, and then the diagrams start.",
+        "{creature} is being “assessed”. You have {hours} hours to object.",
+        "{creature} is on a stranger's clipboard. {hours} hours.",
+        "They took {creature}. {hours} hours before it becomes a footnote."
       ]
     },
     "last_stand": {
@@ -75,7 +117,13 @@
     "dismantled": {
       "lines": [
         "{unit} dismantled with great enthusiasm. Enemy tech acquired.",
-        "{unit} taken apart on the workshop floor. The parts are ours and the manual is missing."
+        "{unit} taken apart on the workshop floor. The parts are ours and the manual is missing.",
+        "{unit} has been taken to bits with great care and no sympathy.",
+        "{unit} is now a parts diagram. The parts are better than the diagram.",
+        "{unit} disassembled. Whoever built it did not expect this.",
+        "{unit} reduced to components, most of which still work.",
+        "{unit} comes apart easily once you know where to look. We know.",
+        "{unit} is in drawers now, sorted, labelled and improved upon."
       ]
     },
     "rehab_enrolled": {
@@ -86,7 +134,13 @@
     },
     "rehab_graduated": {
       "lines": [
-        "{creature} graduates the Reorientation Wing and reports for duty, cautiously."
+        "{creature} graduates the Reorientation Wing and reports for duty, cautiously.",
+        "{creature} leaves the Wing with a certificate nobody will honour.",
+        "{creature} has completed the programme and would like that noted.",
+        "{creature} graduates the Reorientation Wing, reformed and unrepentant.",
+        "{creature} is out of the Wing and into the good pen.",
+        "{creature} finishes the programme early. The staff are relieved.",
+        "{creature} graduates. The Wing describes the outcome as “encouraging”."
       ]
     },
     "rehab_graduated_honours": {
@@ -103,19 +157,46 @@
       "lines": [
         "BREAKOUT: {lab} confirms one specimen is unaccounted for. It was last seen {sighting}. The lab describes the situation as “fluid.”",
         "{lab} has misplaced a chimera. It is {sighting} and it is not coming when called.",
-        "A specimen belonging to {lab} was reported {sighting} this morning. The county has been advised to carry on normally."
+        "A specimen belonging to {lab} was reported {sighting} this morning. The county has been advised to carry on normally.",
+        "{lab} reports a gate open, a pen empty, and no further comment.",
+        "Something belonging to {lab} was seen {sighting}. It did not stop.",
+        "{lab} has lost track of a specimen. It was last seen {sighting}.",
+        "A {lab} animal is out. The county has been advised to look busy.",
+        "{lab} confirms an “unscheduled departure”. It was {sighting}.",
+        "One of {lab}'s is loose and was {sighting} an hour ago.",
+        "{lab} would like everyone to know this is fine. It is {sighting}.",
+        "A specimen has left {lab} without signing out. Seen {sighting}.",
+        "{lab} is missing one. Reports place it {sighting} and unhurried.",
+        "The {lab} inventory is one short. The one is {sighting}."
       ]
     },
     "specimen_bagged": {
       "lines": [
         "THWOOMP. {creature} is off the streets and into a bay. {lab} has been sent an invoice for the inconvenience.",
-        "{creature} has been impounded. {lab} is welcome to file a claim and will be ignored politely."
+        "{creature} has been impounded. {lab} is welcome to file a claim and will be ignored politely.",
+        "{creature} has been collected. {lab} will hear about it in writing.",
+        "{creature} is in a bay and {lab} is on hold.",
+        "Netted: {creature}. {lab} is invited to collect it, at length.",
+        "{creature} has been taken into care. {lab}'s care was the problem.",
+        "{creature} bagged without fuss. {lab} is drafting something indignant.",
+        "{creature} is contained. {lab} has been sent the standard letter.",
+        "{creature} is ours for the moment. {lab} disagrees, on paper.",
+        "One {creature}, safely boxed. {lab} may apply through channels.",
+        "{creature} secured. {lab} would like it back and will be asking nicely."
       ]
     },
     "specimen_recovered": {
       "lines": [
         "{creature} was talked down, and {lab} collected it in an unmarked van. Everyone waved.",
-        "{creature} has been retrieved by {lab}, who arrived with a net and no apology."
+        "{creature} has been retrieved by {lab}, who arrived with a net and no apology.",
+        "{lab} has collected {creature} and said thank you through gritted teeth.",
+        "{creature} went back to {lab} in a van with the good locks.",
+        "{lab} retrieved {creature}. Both parties describe it as amicable.",
+        "{creature} is back with {lab}, who arrived faster than expected.",
+        "{lab} came for {creature} and left without making eye contact.",
+        "{creature} returned to {lab}. The county is briefly calm.",
+        "{lab} has {creature} again and is being very quiet about how.",
+        "{creature} handed back to {lab}, who counted it twice."
       ]
     },
     "rendered": {
@@ -138,7 +219,17 @@
         "{op} is filed under “attempted”. The crew are already blaming the van.",
         "{op} produced no money and one strongly worded receipt.",
         "{op} did not go to plan. It did not go to a plan, exactly. It went.",
-        "Nothing came back from {op} except the crew, eventually."
+        "Nothing came back from {op} except the crew, eventually.",
+        "{op} is being described internally as “a learning experience”.",
+        "{op} returned the van, the crew and nothing else.",
+        "{op} went quiet around midnight and stayed that way.",
+        "No takings from {op}. The crew have questions about the map.",
+        "{op} is over. What it was, exactly, remains unclear.",
+        "{op} concluded without incident, income, or applause.",
+        "{op} found the place locked. It was not locked last time.",
+        "{op} ends with a shrug and a mileage claim.",
+        "Whatever {op} was going to be, it was not this.",
+        "{op}: nothing doing. The crew send their regards and an invoice."
       ]
     },
     "op_paid": {
@@ -147,7 +238,17 @@
         "{op} cleared ${funds}, and nobody has asked how.",
         "{op} came good: ${funds}, counted twice because the first count was better.",
         "${funds} from {op}. The paperwork says “consultancy”.",
-        "{op} settled up at ${funds}. The crew would like this noted in their file."
+        "{op} settled up at ${funds}. The crew would like this noted in their file.",
+        "{op} banked ${funds} and a small amount of goodwill.",
+        "{op} returns ${funds}. The ledger calls it “miscellaneous”.",
+        "${funds} in from {op}, in notes, in a bag, in the van.",
+        "{op} paid ${funds} and the crew took the long way home.",
+        "{op} is good for ${funds}. Nobody is asking for a receipt.",
+        "The {op} float came back ${funds} heavier than it left.",
+        "{op}: ${funds}, and one very calm walk past a security desk.",
+        "${funds} from {op}. The accountant has stopped asking.",
+        "{op} settles at ${funds}. Everyone agrees it went fine.",
+        "{op} clears ${funds} and one mildly singed clipboard."
       ]
     },
     "op_paid_animal": {
@@ -156,7 +257,14 @@
         "{op} cleared ${funds}. {creature} was in the van and nobody put it there.",
         "${funds} from {op}, plus {creature}, who seems to have volunteered.",
         "{op} returned ${funds} and {creature}. Only one of those was on the list.",
-        "{op}: ${funds} banked, {creature} acquired, questions deferred."
+        "{op}: ${funds} banked, {creature} acquired, questions deferred.",
+        "{op} paid ${funds}. {creature} was found in the back, asleep.",
+        "${funds} from {op}, and {creature} let itself into the van.",
+        "{op}: ${funds} banked and {creature} adopted, in that order.",
+        "{op} returns ${funds} and {creature}, who is now everyone's favourite.",
+        "{op} brought back ${funds} and {creature}. Nobody is admitting whose idea that was.",
+        "${funds} and {creature} out of {op}. The crew are calling it a bonus.",
+        "{op} cleared ${funds}. {creature} came too, and has opinions about the van."
       ]
     },
     "rival_first_defeat": {
@@ -172,7 +280,13 @@
         "{rival} wins the exchange and issues a press release about it. Rude.",
         "{rival} takes the exchange, then takes a photograph of themselves taking it.",
         "{rival} wins, and the county hears about it before you are back at the gate.",
-        "{rival} comes out ahead and has the graph printed by lunchtime."
+        "{rival} comes out ahead and has the graph printed by lunchtime.",
+        "{rival} takes it, and will be insufferable about it for a fortnight.",
+        "{rival} wins. The graph is already on somebody's wall.",
+        "{rival} comes out on top and tells the local paper first.",
+        "{rival} wins the exchange. A statement follows within the hour.",
+        "That one goes to {rival}, who is milking it.",
+        "{rival} wins, and celebrates in a way that involves a lectern."
       ]
     }
   },

@@ -19,8 +19,7 @@
 // authored content with no reader — with the engine's own copy shouting over
 // it. `threat_rung` now prints what the data says.
 
-import { rngStream } from '../util/rng.js';
-import { fill, DEFAULT_PHILOSOPHY } from './monologue.js';
+import { fill, pickPooled, DEFAULT_PHILOSOPHY } from './monologue.js';
 
 const WIRE_KEEP = 12;
 
@@ -102,16 +101,7 @@ export function poolFor(state, content, event) {
 export function newsFor(state, content, event, params = {}) {
   const pool = poolFor(state, content, event);
   if (!pool?.length) return null;
-  // Where this save opens this pool. A function of the seed and the event
-  // name and nothing else, so it is the same on every load.
-  const rng = rngStream(state?.seed ?? 0, `news:${event}`, 0);
-  const offset = Math.floor(rng() * pool.length) % pool.length;
-  const at = state?.wireAt?.[event] ?? 0;
-  const choice = (offset + at) % pool.length;
-  if (state) {
-    state.wireAt = { ...(state.wireAt ?? {}), [event]: (at + 1) % pool.length };
-  }
-  return fill(pool[choice], params);
+  return fill(pickPooled(state, `news:${event}`, pool), params);
 }
 
 // What an engine calls: say what happened, not what to print.
