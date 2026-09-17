@@ -22284,7 +22284,25 @@ if (inShard('wire')) {
 // eager module — 49 of 49, unchanged, which is the number that would have had
 // to move if `util/text.js` had come with it. It did not, and ROADMAP R175
 // says how.
-const KB_CAP = 318;        // CODE only, measured at 317.7
+// R114 — 318 -> 319, measured at 318.3, and the accounting matters because
+// R174's note asked the next milestone wanting a raise to bring the number
+// DOWN instead. Measured per file against the pre-R114 tree:
+//
+//     util/text.js        +392   the escaper and the cleaner
+//     save/save.js        +116   the repair on the load path
+//     render/renderer.js   -59   its private escaper, deleted
+//     ui/cards.js          -91   ditto
+//     splice/chimera.js    -19   its private strip rule, deleted
+//                         ----
+//                         +339   +0.33 KB
+//
+// THREE OF THE FIVE FILES ARE NET NEGATIVE, which is the shape a consolidation
+// should have. What is left is one escaper and one cleaner that the boot path
+// genuinely did not have: `render/renderer.js` calls the escaper on every
+// creature it draws, and it now escapes `>` and `'`, which the copy it replaced
+// did not. That is a correctness gain on the first paint, bought for a third of
+// a kilobyte. R176 is still the eviction that pays this back.
+const KB_CAP = 319;        // CODE only, measured at 318.3
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
@@ -22322,7 +22340,14 @@ const KB_CAP = 318;        // CODE only, measured at 317.7
 // explained the same change and now one does. The note above says the lever is
 // R174 rather than 247; R174 is this, and the lever it actually hands on is the
 // eviction named beside MODULE_CAP.
-const PROSE_CAP = 247;
+// R114 — 247 -> 249, measured at 248.1. +1.8 KB, and 1.0 of it is
+// `util/text.js` explaining the five-escaper finding and why cleaning and
+// escaping are two rules. That explanation is the thing that stops the
+// duplication coming back — R171's and R174's whole lesson — so it belongs in
+// the one home and nowhere else. The four other sites were consolidated down
+// to one-line pointers on the way here; the first draft of this milestone
+// explained the same finding in five files and cost 0.6 KB more.
+const PROSE_CAP = 249;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(codeKb <= KB_CAP,

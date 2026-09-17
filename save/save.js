@@ -270,13 +270,8 @@ export async function loadSlot(slotId, storage = globalThis.localStorage) {
     } catch { /* storage full — nothing more we can do */ }
     return fresh();
   }
-  // R114 — AND THE SHAPE, ON THE WAY IN. A save that has picked up a broken
-  // field — a half-written write, a hand-edited localStorage, an import from
-  // a build that got something wrong — is repaired rather than replaced. The
-  // Ascent rule: a save is never DESTROYED, so the damage is fixed and the run
-  // continues. Silent by design on this path; the import panel is where a
-  // player is told, because there they handed over a file and are waiting for
-  // an answer about it.
+  // R114 — and the shape: a broken field is repaired, never replaced (the
+  // Ascent rule). Silent here; the import panel is where a player is told.
   try {
     const { cleanSave } = await import('./schema.js');
     cleanSave(migrated);

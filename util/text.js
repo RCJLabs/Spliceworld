@@ -28,21 +28,19 @@ export function copy(content, id, vars = {}) {
   return typeof at === 'string' ? fill(at, vars) : null;
 }
 
-// R114 — THE ONE CLEANER, AND THE ONE ESCAPER. Both live here for R171's
-// reason: the tree had FIVE escapers and THREE copies of the strip rule, they
-// disagreed, and the weakest of each was the one with the most callers.
+// R114 — THE ONE CLEANER AND THE ONE ESCAPER, and the only place either is
+// explained. The tree had FIVE escapers and THREE copies of the strip rule;
+// they disagreed, and the weakest of each was the one with the most callers.
 //
-// They are two rules rather than one because they are asked at two moments. A
-// name is CLEANED once, where a person types it or where a file hands it over,
-// so the save never carries a character that could open a tag. Everything the
-// screens print is ESCAPED at the moment of printing, so a field nobody
-// thought to clean still renders as text. Either alone is one forgotten field
-// or one forgotten site away from the defect R114 found shipped.
+// Two rules, not one, because they are asked at two moments. A name is CLEANED
+// where a person types it or a file hands it over, so the save never carries a
+// character that could open a tag. Everything is ESCAPED at the moment of
+// printing, so a field nobody thought to clean still renders as text. Either
+// alone is one forgotten field, or one forgotten site, from the same defect.
 
-// A person's typed text, narrowed. Markup characters are REMOVED rather than
-// escaped, which is the rule `renameCreature` has applied since M3: a name is
-// a label, not a document, and a stored `&amp;` would read as `&amp;` in every
-// place that is not HTML — the export filename, the card, a page title.
+// Typed text, narrowed. Markup characters are REMOVED rather than escaped —
+// `renameCreature`'s rule since M3: a name is a label, not a document, and a
+// stored `&amp;` reads as `&amp;` everywhere that is not HTML.
 export function safeText(value, limit = 40) {
   return String(value ?? '')
     .replace(/[<>&"'`]/g, '')
@@ -51,10 +49,9 @@ export function safeText(value, limit = 40) {
     .slice(0, Math.max(1, limit));
 }
 
-// And the escaper, for the printing side. All five characters, because the
-// screens interpolate into single-quoted and double-quoted attributes as well
-// as into text — `aria-label="Rename ${animal.name}"` on the Ranch is one —
-// and the copy that had 26 callers escaped neither `>` nor `'`.
+// The printing side. All five characters: screens interpolate into single- and
+// double-quoted attributes as well as text, and the copy with 26 callers
+// escaped neither `>` nor `'`.
 const ENTITY = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, (c) => ENTITY[c]);

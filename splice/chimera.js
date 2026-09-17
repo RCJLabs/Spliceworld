@@ -25,8 +25,7 @@
 // The settling clock. A chimera comes out of the vat disoriented and is not
 // yours to send anywhere until it is over; every system that asks "can this
 // one work yet" asks here.
-// R114 — the one cleaner. `renameCreature` below was the FIRST of three
-// copies of the strip rule; util/text.js is the only one now.
+// R114 — the one cleaner; `renameCreature` held the first of three copies.
 import { safeText } from '../util/text.js';
 
 export function isSettled(chimera, now) {

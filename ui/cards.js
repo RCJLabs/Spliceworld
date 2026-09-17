@@ -18,9 +18,8 @@ import { renderIcon } from './icons.js';
 //
 // It matters wherever a PLAYER-TYPED string reaches markup, which creature
 // names do — the Pens hand out a rename sheet.
-// R114 — re-exported rather than defined, so every screen that reaches for
-// the escaper through the card helpers keeps working while there is only one
-// implementation to be wrong. util/text.js.
+// R114 — re-exported, not defined, so the screens that reach for it through
+// here are unchanged while only one implementation can be wrong. util/text.js.
 import { esc } from '../util/text.js';
 export { esc };
 

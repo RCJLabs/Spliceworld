@@ -14,8 +14,7 @@ import {
   SAVE_VERSION, STORAGE_KEY, MAX_SLOTS, slotKey,
   newGameState, migrate, loadSlot, loadSlotRegistry, saveSlotRegistry, activeSlotId,
 } from './save.js';
-// R114 — the one cleaner. `renameSlot` below is the third copy of a rule
-// `renameCreature` has applied since M3, and the only one that never applied it.
+// R114 — the one cleaner; `renameSlot` was the third copy, and never applied it.
 import { safeText } from '../util/text.js';
 
 // A lightweight, on-demand summary of a slot's own stored save. Read
