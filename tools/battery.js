@@ -3523,6 +3523,18 @@ const BREAKS = [
     to: '  entry.name = name.trim().slice(0, 40) || null;',
   },
 
+  {
+    // THE REPAIR EATS THE SPLICE-DEX. This is the defect R114 shipped into its
+    // own working tree and did not catch for two hours: pruning keyed by bare
+    // key name rather than by path, so `dex.parts` (part ids, strings) was
+    // pruned alongside `inventory.parts` (objects) and 227 entries went on
+    // every load. The Ascent rule broken by the thing written to keep it.
+    n: 346, gate: SHARD_B, name: 'the shape repair prunes by key name again, and a played save loses its Dex',
+    file: 'save/schema.js',
+    anchor: "        if (!ROW_LISTS.has(at)) continue;",
+    to: "        if (![...ROW_LISTS].some((r) => r.split('.').pop() === key)) continue;",
+  },
+
   // R175 — the stable says how big it is and what makes it bigger.
   {
     // THE MAIN SCREEN STOPS SAYING HOW FULL THE STABLE IS, which is the state

@@ -59,7 +59,25 @@ const BOUNDS = {
 // The lists whose entries a screen iterates and then reads fields off. A `7`
 // in `chimeras` reaches every screen that reads `c.name`, and there is no
 // render that survives it.
-const ARRAY_OF_OBJECTS = new Set(['chimeras', 'stock', 'eggs', 'vials', 'parts', 'captives', 'containment', 'contested', 'loose', 'operations']);
+//
+// KEYED BY FULL PATH, and the first draft was keyed by bare NAME — which is
+// the worst bug this milestone produced and the one its own gate caught.
+// `inventory.parts` holds objects; `dex.parts` holds part IDS AS STRINGS. A
+// name-keyed rule pruned both, so every load silently emptied 227 entries of
+// the player's Splice-Dex: the exact "never reset" violation this module was
+// written to prevent, committed by the repair itself.
+//
+// The height gate found it, and found it sideways — the Dex's combo bands read
+// `dex.parts` to decide which pairings you own the halves for, so a band went
+// empty and a fold the gate expected to open was not there. Nothing was
+// asserting the Dex directly. Something is now.
+const ROW_LISTS = new Set([
+  'chimeras',
+  'ranch.stock', 'ranch.eggs',
+  'inventory.vials', 'inventory.parts',
+  'campaign.captives', 'campaign.containment', 'campaign.contested',
+  'campaign.loose', 'campaign.operations',
+]);
 
 // Angle brackets, everywhere. Measured before this was written: a day-60 save
 // holds 3,120 strings and NOT ONE of them contains `<` or `>`. That is what
@@ -132,19 +150,21 @@ export function cleanSave(save, { limit = TEXT_LIMIT } = {}) {
 
   // 3. Rows that are not rows. A `7` in `chimeras` reaches every screen that
   //    reads `c.name`, and there is no render that survives it.
-  const pruneRows = (node) => {
+  const pruneRows = (node, path) => {
     if (!node || typeof node !== 'object') return;
     for (const [key, value] of Object.entries(node)) {
-      if (Array.isArray(value) && ARRAY_OF_OBJECTS.has(key)) {
+      const at = path ? `${path}.${key}` : key;
+      if (Array.isArray(value)) {
+        if (!ROW_LISTS.has(at)) continue;
         const kept = value.filter((row) => row && typeof row === 'object' && !Array.isArray(row));
         if (kept.length !== value.length) {
-          node[key] = kept; repairs.push({ at: key, why: 'not-a-row', dropped: value.length - kept.length });
+          node[key] = kept;
+          repairs.push({ at, why: 'not-a-row', dropped: value.length - kept.length });
         }
-        for (const row of node[key]) pruneRows(row);
-      } else if (value && typeof value === 'object' && !Array.isArray(value)) pruneRows(value);
+      } else if (value && typeof value === 'object') pruneRows(value, at);
     }
   };
-  pruneRows(save);
+  pruneRows(save, '');
 
   // 4. The numbers, clamped into the range the screens can draw.
   const clamp = (node) => {

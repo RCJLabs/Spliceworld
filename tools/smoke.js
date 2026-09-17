@@ -22962,6 +22962,58 @@ if (inShard('untrusted')) {
     assert.equal(safeText(undefined), '', 'and so is undefined');
   }
 
+  // 3b. EVERY ENTRANCE NARROWS, which is the rule this milestone is actually
+  //     about. One implementation is worth nothing if a door does not use it,
+  //     and that was the shipped state: `renameCreature` narrowed, R108's
+  //     `safeText` narrowed, and `renameSlot` — the third — did not, for the
+  //     whole of its life. Break 345 went MISSED against the first draft of
+  //     this gate for exactly that reason: it asserted the cleaner existed and
+  //     that the file boundary called it, and never that the keyboard did.
+  {
+    const { renameCreature } = await import('../splice/chimera.js');
+    const { renameSlot, createSlot } = await import('../save/slots.js');
+    const { visitingSpecimen } = await import('../splice/card.js');
+    const RAW = '<b>Chompers</b>';
+
+    const list = [{ id: 'c1', name: 'Before' }];
+    const renamed = renameCreature(list, 'c1', RAW);
+    assert.ok(renamed.ok && !/[<>]/.test(list[0].name),
+      `the Pens narrow a typed creature name (${list[0].name})`);
+
+    // The slot registry, through a storage stand-in — `renameSlot` writes on
+    // its way out, so a real one is the only way to read back what it stored.
+    {
+      const map = new Map();
+      const store = {
+        getItem: (k) => (map.has(k) ? map.get(k) : null),
+        setItem: (k, v) => map.set(k, v),
+        removeItem: (k) => map.delete(k),
+      };
+      const made = createSlot(newGameState(), store);
+      const id = made?.slot?.id ?? made?.id ?? 1;
+      const r = renameSlot(id, RAW, store);
+      assert.ok(r.ok, `a lab can be renamed (${r.msg ?? r.reason ?? ''})`);
+      const stored = JSON.stringify([...map.values()]);
+      assert.ok(!stored.includes('<b>'),
+        `and the settings panel narrows a typed lab name too (${stored.slice(0, 120)})`);
+    }
+
+    // And the card, which is the entrance a STRANGER uses.
+    {
+      const frame = Object.keys(content.frames)[0];
+      const partId = Object.keys(content.parts).find((id) => content.parts[id].slot === 'head');
+      const built = visitingSpecimen(
+        { frame, name: RAW, lab: RAW,
+          tokens: { head: { partId, grade: 'standard' } } },
+        content
+      );
+      if (built.ok) {
+        assert.ok(!/[<>]/.test(built.unit.name),
+          `and a stranger's card narrows the name it carries (${built.unit.name})`);
+      }
+    }
+  }
+
   // The save from the top of this note, built the way the handler walk builds
   // its laboratory so the hostile names sit on a state with everything alive.
   const hostile = () => {
@@ -23047,6 +23099,28 @@ if (inShard('untrusted')) {
     const { save, repairs } = cleanSave(structuredClone(good));
     assert.deepEqual(repairs, [], 'a clean save repairs nothing');
     assert.deepEqual(save, good, 'and comes back unchanged');
+
+    // A FRESH SAVE IS THE EASY HALF. A PLAYED ONE IS THE HALF THAT MATTERED.
+    //
+    // The first draft of the schema keyed its row-pruning by bare key NAME, so
+    // `dex.parts` — which holds part IDS AS STRINGS — was pruned alongside
+    // `inventory.parts`, which holds objects. Every load silently emptied 227
+    // entries of the player's Splice-Dex: the exact "never reset" violation the
+    // module exists to prevent, committed by the repair itself.
+    //
+    // Nothing here caught it. The HEIGHT gate did, sideways and two hours
+    // later, because the Dex's combo bands read `dex.parts` to decide which
+    // pairings you own the halves for, so a band went empty and a fold it
+    // expected to open was not there. This is that finding, asserted where it
+    // belongs: a real played save goes through the repair and comes out the
+    // same save, field for field.
+    const played = walkedSave({ days: 60 });
+    const before = JSON.stringify(played);
+    const { save: after, repairs: none } = cleanSave(played);
+    assert.deepEqual(none, [],
+      `a real played save needs no repair (${none.map((r) => `${r.at}:${r.why}`).join(', ')})`);
+    assert.equal(JSON.stringify(after), before,
+      'and is returned byte for byte — a repair that edits a healthy save is a bug, not a guard');
   }
 
   // 7. THE FUZZ. Every case above is one somebody thought of; this is for the
