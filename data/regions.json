@@ -81,7 +81,7 @@
           "encounter": "boss_clampdown",
           "incomePerDay": 150,
           "notoriety": 25,
-          "blurb": "Captain Clampdown\u2019s office. There is a tarp in the motor pool. It is humming.",
+          "blurb": "Captain Clampdown’s office. There is a tarp in the motor pool. It is humming.",
           "boss": true,
           "unlocksFauna": [
             "bear",
@@ -112,7 +112,7 @@
       "id": "kestrel",
       "name": "Kestrel Reach",
       "subtitle": "The sky over the county, and everyone in it.",
-      "demand": "Everything here is Airborne \u2014 your Ground-tagged moves swing through empty air. Their class is Air, so Water anatomy owns them.",
+      "demand": "Everything here is Airborne — your Ground-tagged moves swing through empty air. Their class is Air, so Water anatomy owns them.",
       "answer": "water",
       "requires": {
         "nodes": [
@@ -180,7 +180,7 @@
       "id": "drowned",
       "name": "The Drowned Quarter",
       "subtitle": "The harbour district, at high tide, permanently.",
-      "demand": "Aquatic and Water class throughout \u2014 Ground anatomy walks all over them, and Electric doubles on anything wet. Bring boots, not gills: their generators read Aquatic as a target.",
+      "demand": "Aquatic and Water class throughout — Ground anatomy walks all over them, and Electric doubles on anything wet. Bring boots, not gills: their generators read Aquatic as a target.",
       "answer": "ground",
       "requires": {
         "nodes": [
@@ -229,7 +229,7 @@
         },
         {
           "id": "harbor_rig",
-          "name": "Harbormaster\u2019s Rig",
+          "name": "Harbormaster’s Rig",
           "encounter": "drowned_rig",
           "incomePerDay": 220,
           "notoriety": 40,
@@ -247,8 +247,8 @@
     {
       "id": "foundry",
       "name": "The Foundry Belt",
-      "subtitle": "Where the coalition\u2019s vehicles come from.",
-      "demand": "Vehicle and Armored, wall to wall. Gas does nothing to a machine and Venom is half-wasted \u2014 Sonic ignores their plating, and they are Ground class, so Air anatomy still flies over the top.",
+      "subtitle": "Where the coalition’s vehicles come from.",
+      "demand": "Vehicle and Armored, wall to wall. Gas does nothing to a machine and Venom is half-wasted — Sonic ignores their plating, and they are Ground class, so Air anatomy still flies over the top.",
       "answer": "air",
       "requires": {
         "nodes": [
@@ -312,7 +312,7 @@
       "id": "spire",
       "name": "The Compliance Spire",
       "subtitle": "Head office. They have a lanyard policy.",
-      "demand": "All three classes on one ladder \u2014 no single anatomy answers the whole building. Bring a stable, not a team.",
+      "demand": "All three classes on one ladder — no single anatomy answers the whole building. Bring a stable, not a team.",
       "answer": "mixed",
       "requires": {
         "nodes": [
@@ -409,9 +409,38 @@
     "blurb": "They have been back to the drawing board and the drawing board had a bigger budget.",
     "intel": "Counter-offensive: the same garrison at {pct}% strength. They have held a grudge and, worse, a budget.",
     "news": {
-      "opened": "COUNTER-OFFENSIVE: a convoy is rolling on {node}. Revenue suspended pending, quote, \"the situation.\"",
-      "held": "{node} holds. The convoy reverses at speed and one vehicle does not reverse at all.",
-      "lost": "{node} has been retaken by the coalition. They have already put up a sign about it. You can take it back.",
+      "opened": [
+        "COUNTER-OFFENSIVE: a convoy is rolling on {node}. Revenue suspended pending, quote, \"the situation.\"",
+        "COUNTER-OFFENSIVE: vehicles on the road to {node}. Revenue is suspended while everyone shouts.",
+        "A convoy is rolling on {node}. The coalition has remembered it owns trucks.",
+        "{node} is being contested. Somebody has brought a megaphone and a grievance.",
+        "Convoy inbound on {node}. Income paused, patience shorter.",
+        "The coalition is coming for {node}, in formation, in daylight, in about an hour.",
+        "{node} is on somebody's list again. The list is being driven up the road.",
+        "COUNTER-OFFENSIVE on {node}. They have brought the good trucks this time.",
+        "{node} contested. Revenue held pending the outcome and the paperwork.",
+        "They are moving on {node}. Nobody is pretending this is routine."
+      ],
+      "held": [
+        "{node} holds. The convoy reverses at speed and one vehicle does not reverse at all.",
+        "{node} holds. The convoy turns around slower than it arrived.",
+        "{node} is still yours. The coalition is filing this under weather.",
+        "They did not take {node}. They took a wing mirror home instead.",
+        "{node} holds, comfortably, and somebody is already back on the kettle.",
+        "The push on {node} stops at the gate and thinks better of it.",
+        "{node} held. Revenue resumes and the road is quiet again.",
+        "{node} stands. The convoy reverses with what dignity is left to it.",
+        "The coalition leaves {node} the way it came, minus a bumper."
+      ],
+      "lost": [
+        "{node} has been retaken by the coalition. They have already put up a sign about it. You can take it back.",
+        "{node} is theirs again. The sign went up before the dust came down.",
+        "{node} has changed hands. You know where it is.",
+        "{node} lost. It will keep. It is not going anywhere.",
+        "The coalition has {node} back and is being smug in a press release.",
+        "{node} gone, for now. The gate still opens the same way.",
+        "{node} retaken. They have repainted it already, badly."
+      ],
       "expired": "{node} was abandoned without a shot. The coalition is describing this as a victory and, annoyingly, it is.",
       "missed": "While nobody was home, {count} convoys came, waited at the gate, and left stern letters. The nodes they sat on paid nothing for {days} days between them."
     }
