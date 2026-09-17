@@ -106,6 +106,8 @@ const SHARD_OF = {
   // R175 — the stable's readout and the three refusals. Shard b is the
   // lightest lane (134s against a's 212s), and this block renders one screen.
   stable: 'b',
+  // R174 — one filler and its contract. Cheap: a source walk and six asserts.
+  fill: 'b',
   // R168 — a pure function on synthetic timings; it costs nothing.
   shares: 'd',
   // R90 — the last of the common path worth guarding. Measured with
@@ -14640,6 +14642,82 @@ if (inShard('card')) {
 // sentence written inside an engine module cannot be pooled, cannot be
 // counted, and cannot be rewritten without an engine edit.
 
+
+// R174 — ONE FILLER, AND IT HAS A CONTRACT.
+//
+// R62 set the rule the first time copy went into data: a placeholder whose key
+// nobody passed is left ALONE, so a typo reads oddly instead of breaking the
+// sentence it is in. Six implementations of that rule had accumulated, and
+// measured against each other THREE OF THEM DISAGREED:
+//
+//     "A {mystery} appeared."  {}        "HP is {hp}."  {hp: null}
+//     monologue / text / chaos / resequencer
+//                "A {mystery} appeared."  "HP is {hp}."   <- the rule
+//     battle/engine.js (stanceLine)
+//                "A {mystery} appeared."  "HP is null."   <- prints it
+//     splice/card.js (say)
+//                "A  appeared."           "HP is ."       <- deletes it
+//
+// That is R171's finding one floor down: five comment strippers that did not
+// agree, one of them wrong about strings. `card.js` is the worse of the two,
+// because the card is the one artefact this game hands to another person, and
+// a missing key vanished from it without trace.
+//
+// So the gate is not "there is a fill". It is that there is exactly ONE, found
+// by reading the source rather than by anybody remembering, and that it answers
+// the four questions a filler can be wrong about.
+if (inShard('fill')) {
+  const { fill } = await import('../util/text.js');
+
+  // 1. ONE IMPLEMENTATION, counted off the tree.
+  //
+  // The shape is the giveaway: every one of the six was a `.replace()` against
+  // a braces-and-word-characters pattern. A seventh would be written the same
+  // way, which is why this counts the PATTERN rather than the function name —
+  // three of the six were anonymous arrows and one was inline.
+  {
+    const FILLER = /\.replace\(\s*\/\\\{\(\\w\+\)\\\}\/g/;
+    const found = [];
+    for (const file of moduleFiles()) {
+      const rel = relative(root, file).replaceAll('\\', '/');
+      if (rel.startsWith('tools/')) continue;      // the harness is not the game
+      const src = stripComments(readFileSync(file, 'utf8'));
+      for (const [i, line] of src.split('\n').entries()) {
+        if (FILLER.test(line)) found.push(`${rel}:${i + 1}`);
+      }
+    }
+    assert.equal(found.length, 1,
+      `exactly one placeholder filler in the tree (${found.join(', ')})`);
+    assert.ok(found[0].startsWith('util/text.js:'), `and it is util/text.js's (${found[0]})`);
+  }
+
+  // 2. THE CONTRACT, one case per way a filler has actually been wrong here.
+  {
+    assert.equal(fill('A {mystery} appeared.', {}), 'A {mystery} appeared.',
+      'an unknown key is LEFT ALONE — R62, and the reason card.js was wrong');
+    assert.equal(fill('HP is {hp}.', { hp: null }), 'HP is {hp}.',
+      'a null is not a value — and the reason stanceLine was wrong');
+    assert.equal(fill('Cost {n} stamina.', { n: 0 }), 'Cost 0 stamina.',
+      'but zero IS one, which is the bug a truthiness check would introduce');
+    assert.equal(fill('{a} and {b}', { a: 'x' }), 'x and {b}',
+      'one key filled does not swallow the other');
+    assert.equal(fill(null, { a: 1 }), null, 'no template is null, not "null"');
+    assert.equal(fill(42, {}), '42', 'a non-string template is coerced rather than thrown at');
+  }
+
+  // 3. AND THE CARD, which is where the wrong one lived. The refusals a
+  //    stranger's card can trigger are the most-read prose in an import
+  //    feature (R108), and a key nobody passed used to disappear from them.
+  {
+    const { say } = await import('../splice/card.js');
+    const said = say(content, 'not_a_real_refusal_key', {});
+    assert.ok(said && !said.includes('undefined'), `a missing refusal still refuses (${said})`);
+    const holes = say(content, '{who} brought {what}', {});
+    assert.equal(holes, '{who} brought {what}',
+      'and an unfilled placeholder survives to be seen rather than vanishing');
+  }
+}
+
 // R175 — THE STABLE SAYS HOW BIG IT IS, AND WHAT MAKES IT BIGGER.
 //
 // Reported from play: "I don't know where or what increases that and nothing
@@ -21929,7 +22007,38 @@ if (inShard('wire')) {
   // pages its roster on the first frame, and the alternative is the Vault
   // and the Ranch each keeping their own copy of what a page is, which is
   // the duplication R128 spent a milestone undoing.
-  const MODULE_CAP = 49;
+  // R174: 49 -> 50, AND THIS IS THE ARGUMENT THE CAP EXISTS TO DEMAND.
+  //
+  // The fiftieth is `util/text.js`: `fill` and `copy`, the one filler and the
+  // one reader for prose that lives in data. It is eager because
+  // `campaign/monologue.js` and `splice/chaos.js` are, and they take `fill`.
+  //
+  // WHAT IT BUYS is not tidiness. R110 filed this merge saying two `fill`s;
+  // counting found SIX, and three of them disagreed about the single thing a
+  // filler can be wrong about — what happens to a key nobody passed:
+  //
+  //     "A {mystery} appeared."  {}       "HP is {hp}."  {hp: null}
+  //     four of the six  "A {mystery} appeared."   "HP is {hp}."   the rule
+  //     battle/engine.js "A {mystery} appeared."   "HP is null."
+  //     splice/card.js   "A  appeared."            "HP is ."
+  //
+  // R62 set the rule: an unknown key is LEFT ALONE so a typo reads oddly rather
+  // than breaking the sentence. `splice/card.js` deleted it — on the specimen
+  // card, the one artefact this game hands to another person — and nothing
+  // could have caught that, because there was no one implementation to gate.
+  // That is R171's five-comment-strippers finding one floor down, and it is
+  // worth a module.
+  //
+  // THE BILL, so this does not become a settled account (R153's rule for
+  // `RUNS_NOTHING_BUT_BELONGS`, which applies to this number too): the
+  // eviction candidate is `campaign/monologue.js`, 4.0 KB and IDLE. It is
+  // eager only because `campaign.js`, `rehab.js` and `rivals.js` import
+  // `playerLine` and `rivalLine` at module level, and those are called during
+  // BATTLE RESOLUTION, not during boot. That is exactly R153's director shape
+  // — seven dependency-free lines holding 11.9 KB in the graph — and if it
+  // works the count goes back to 49. It is a milestone, not a paragraph, so it
+  // is queued rather than half-done here.
+  const MODULE_CAP = 50;
   // R131: 548 -> 553, measured at 550.3. `ui/pager.js` and the two screens
   // that use it; see the FIRST_PAINT_KB note in tools/boot.js.
   // R135: 553 -> 557, measured at 555.2, and the raise has to argue.
@@ -22196,7 +22305,14 @@ const KB_CAP = 318;        // CODE only, measured at 317.7
 // the eager graph and R171 measured that it does not compress away; the lever
 // is R174, which takes `util/text.js` and one of the two `fill`s out of the
 // duplication this cap keeps paying for in comments explaining the split.
-const PROSE_CAP = 246;
+// R174 — 246 -> 247, measured at 246.5, and it is ONE MODULE ARRIVING rather
+// than prose growing: `util/text.js` carries ~1.0 KB of comment and entered the
+// eager graph whole. Measured per file, the six modules R174 touched are NET
+// NEGATIVE on prose (-278 bytes) after three consolidation passes — four files
+// explained the same change and now one does. The note above says the lever is
+// R174 rather than 247; R174 is this, and the lever it actually hands on is the
+// eviction named beside MODULE_CAP.
+const PROSE_CAP = 247;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(codeKb <= KB_CAP,

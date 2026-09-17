@@ -31,6 +31,7 @@ import { creaturePortrait } from '../render/renderer.js';
 import { chimeraGenome } from './theater.js';
 import { unitFromGenome } from '../battle/statblock.js';
 import { GRADE_INDEX } from './grades.js';
+import { fill } from '../util/text.js';
 
 // The card's own, because `render/renderer.js` keeps its `esc` private and a
 // second copy here is cheaper than widening that module's surface for one
@@ -63,7 +64,9 @@ export function say(content, key, vars = {}) {
   const line = cardTuning(content).refusals[key]
     ?? cardTuning(content).exhibition[key]
     ?? key;
-  return String(line).replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? ''));
+  // R174 — through the one `fill`. This used `vars[k] ?? ''`, which DELETED an
+  // unfilled placeholder from the one artefact handed to another person.
+  return fill(line, vars) ?? '';
 }
 
 const no = (content, key, vars) => ({ ok: false, msg: say(content, key, vars) });

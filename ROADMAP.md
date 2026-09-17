@@ -285,7 +285,7 @@ is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
 **10 entries queued.** R111, R112, R113, R114, R115, R116, R117, R118, R173,
-R174.
+R176.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4369,7 +4369,53 @@ suite can check.
   caught, the assertion names which parts no seed reaches, and the full battery
   reports 0 missed.*
 
-- **R174 — Two `fill`s, and the fiftieth eager module.** R110 gave copy-as-data
+- **R174 — Two `fill`s, and the fiftieth eager module.** ✅ *Shipped, and the
+  entry undercounted by three.* It said two; the tree had **six**, and three of
+  them disagreed about the single thing a filler can be wrong about — what
+  happens to a key nobody passed:
+
+      "A {mystery} appeared."  {}        "HP is {hp}."  {hp: null}
+      monologue / text / chaos / resequencer
+                  "A {mystery} appeared."   "HP is {hp}."    <- R62's rule
+      battle/engine.js (stanceLine)
+                  "A {mystery} appeared."   "HP is null."
+      splice/card.js (say)
+                  "A  appeared."            "HP is ."
+
+  **R62 set the rule the first time copy went into data:** an unknown key is
+  LEFT ALONE, so a typo reads oddly instead of breaking the sentence.
+  `splice/card.js` **deleted** it — on the specimen card, the one artefact this
+  game hands to another person — and `battle/engine.js` printed the word
+  `null`. Neither could have been caught, because there was no one
+  implementation to gate. That is R171's five-comment-strippers finding one
+  floor down.
+
+  **Shipped:** one `fill` in `util/text.js`; `campaign/monologue.js`
+  re-exports it so `wire.js` and `rehab.js` are unchanged; the other four
+  import it. Both wrong behaviours are now the right one. The gate counts the
+  `.replace()` **shape** rather than the function name, because three of the six
+  were anonymous and a name-based count would have found three.
+
+  **The cap argument, which is what the entry actually asked for.** No module
+  could be evicted to pay for it, so three budgets moved for one leaf:
+
+      MODULE_CAP      49 -> 50     the fiftieth is util/text.js
+      FIRST_PAINT_KB  1060 -> 1070 measured 1061, nine KB of slack (R109's)
+      PROSE_CAP       246 -> 247   measured 246.5
+
+  `PROSE_CAP` moving is one module ARRIVING, not prose growing: across the six
+  modules R174 touched the prose is **net −278 bytes** after three consolidation
+  passes, because four files explained the same change and now one does.
+
+  **THE BILL IS NAMED, not settled.** `campaign/monologue.js` is 4.0 KB and
+  IDLE, eager only because `campaign.js`, `rehab.js` and `rivals.js` import
+  `playerLine` and `rivalLine` at module level — and those run during BATTLE
+  RESOLUTION, not boot. That is exactly R153's director shape, and if it works
+  the count goes back to 49. Queued as **R176** rather than half-done here.
+
+  The original entry follows.
+
+- **R174 (as queued) — Two `fill`s, and the fiftieth eager module.** R110 gave copy-as-data
   one reader in `util/text.js`, and left `fill` duplicated: `campaign/monologue.js`
   keeps its own, because it is EAGER and importing from `util/text.js` would
   make that module the **fiftieth** against `MODULE_CAP` 49 — a cap the tree
@@ -4429,6 +4475,21 @@ suite can check.
   **And the break battery caught a duplication I wrote.** `pensToStall` copied
   the subtraction `stallsFromPens` already had; break 251 started matching in
   two places and said so. One `pensPastFree`, two readers (R61).
+
+- **R176 — The fiftieth module, and the one that should have left instead.**
+  R174 took `MODULE_CAP` 49 -> 50 for `util/text.js` because nothing could be
+  evicted to pay for it, and named the candidate rather than leaving the raise
+  as a settled account. **`campaign/monologue.js` is 4.0 KB and reads IDLE on
+  both first paints.** It is in the eager graph only because `campaign.js`,
+  `rehab.js` and `rivals.js` import `playerLine` and `rivalLine` at module
+  level — and those are called during BATTLE RESOLUTION, which is not boot.
+  That is R153's director shape exactly: seven dependency-free lines held 11.9
+  KB in the graph until somebody moved them to the caller, and the whole module
+  left. If it works here, `util/text.js` is paid for and the count returns to
+  49. Proposed, small-to-medium, and it is a measurement first: establish
+  whether anything on the boot path actually calls those two before moving
+  them. *Done when: `MODULE_CAP` is back to 49 with a ledger line naming what
+  left, or the attempt is written up saying why the two cannot move.*
 
 ### 9.7 The opening, and the sitting (R119–R120) — asked for directly
 

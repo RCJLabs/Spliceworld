@@ -22,6 +22,7 @@ import { incubatorGrants } from './facility.js';
 import { admitVial } from './vault.js';
 import { STATS, TUNING, createAnimal } from '../ranch/ranch.js';
 import { expressedTraits } from '../ranch/breeding.js';
+import { fill } from '../util/text.js';
 
 const HOUR = 3600000;
 
@@ -104,8 +105,7 @@ export function startResequence(state, vialId, content, now) {
     const pool = content.resequencerLines?.[key];
     const list = Array.isArray(pool) ? pool : [pool].filter(Boolean);
     if (!list.length) return null;
-    return String(pick(rng, list))
-      .replace(/\{(\w+)\}/g, (whole, k) => (vars[k] != null ? String(vars[k]) : whole));
+    return fill(pick(rng, list), vars);
   };
   if (mutated) {
     // The same three shapes breeding uses, so a mutation here reads as the
