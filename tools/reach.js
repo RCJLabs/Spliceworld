@@ -189,7 +189,15 @@ const REACH_SEEDS = [2026, 7, 101, 4242, 55, 900, 31, 3, 12, 77, 123, 404, 808];
 //
 // R158 carries the rest: thirteen seeds is where the MEDIAN settles too, and
 // it costs six more 180-day walks than the suite's CPU budget has room for.
-const REACH_FLOOR = 0.94;
+// R173 — 0.94 -> 0.95, RE-DERIVED FROM THE CLEAN MEASUREMENT instead of from
+// where three tunings ago left it. Measured across these thirteen seeds on the
+// post-R114 tree: per-seed 235-242 parts (96%-99%), mean 237.2 (97.2%). Under
+// break 162 the mean is 229.4 (94.0%) — so the old floor of 0.94 was false by
+// `0.9402 < 0.94`, a rounding hair, and the break walked. At 0.95 the clean
+// mean keeps 2.2pp of room and the break misses by a full point.
+//
+// The mean is still the statistic, not the median: R158's note above says why.
+const REACH_FLOOR = 0.95;
 // R140 — AND THE HALF THIS GATE NEVER ASKED. `dex.parts` is what a campaign
 // HANDLED; `dex.worn` is what it put on a creature, and until this milestone
 // nothing anywhere recorded the second. Measured on the same seven seeds: a
@@ -311,6 +319,35 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
           + ` — ${per.map((r) => `${r.seed}: ${r.worn.size}`).join(', ')}`
           + `; ${TOTAL_PARTS - wornUnion.size} parts go onto no creature in any seed`);
       }
+    }
+  }
+
+  // R173 — THE SHARP SIGNAL, ASSERTED AT LAST. This number was computed and
+  // PRINTED from the day the gate was written, and nothing ever compared it to
+  // anything: `--report` said "never reached by any seed 0" and the run passed
+  // on the mean alone.
+  //
+  // It is the better guard because it is CATEGORICAL. Break 162 locks the
+  // buyer out of the breeder, so the variant lines are never rolled for — and
+  // `pale_cobra`, a bred species, goes from reachable to unreachable. Two parts
+  // crossing 0 -> 2 is a fact; 97.2% -> 94.0% is a slope, and a slope can land
+  // on a floor and stop. That is R157's break-245 shape a second time: a floor
+  // that does not move with the statistic it guards.
+  //
+  // No tolerance, deliberately. A part with no route in 180 days across
+  // thirteen seeds is content nobody can have (R61's rule), and the failure
+  // NAMES which parts and which species so the next reader is not left
+  // counting. If a part is ever meant to be unreachable, it needs a reason
+  // written here rather than a number quietly raised.
+  {
+    const unreached = Object.values(content.parts).filter((p) => !union.has(p.id));
+    if (unreached.length) {
+      const bySpecies = {};
+      for (const p of unreached) (bySpecies[p.species] ??= []).push(p.id);
+      fails.push(`part reach: ${unreached.length} part(s) are reached by NO seed of ${REACH_SEEDS.length}`
+        + ` — ${Object.entries(bySpecies).sort((a, b) => b[1].length - a[1].length)
+          .map(([sp, ps]) => `${sp} (${ps.join(', ')})`).join('; ')}`
+        + `; the union is ${union.size} of ${TOTAL_PARTS}`);
     }
   }
 
