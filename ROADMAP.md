@@ -284,8 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**10 entries queued.** R111, R112, R113, R114, R115, R116, R117, R118, R173,
-R176.
+**9 entries queued.** R111, R112, R113, R115, R116, R117, R118, R173, R176.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -3973,13 +3972,15 @@ suite can check.
   retype — and caps the limit itself at 160, because past that the second
   door stops being a door.
 
-  **R114 IS NOT HERE, SO R108 DID ITS OWN.** This is the first feature that
-  takes a file from another person, and R114 has already measured that 263
-  `.name` fields in this tree are interpolated unescaped. Waiting would have
-  meant opening the hole R114 exists to close, one milestone early. The card
-  escapes what it draws; one `safeText` — one function, so there is one thing
-  to audit — strips markup characters from a stranger's name and lab and
-  bounds them to 40. A creature called `<script>alert(1)</script>` is drawn as
+  **R114 WAS NOT HERE YET, SO R108 DID ITS OWN.** This was the first feature to
+  take a file from another person, and waiting would have meant opening the
+  hole R114 exists to close, one milestone early. The card escapes what it
+  draws; one `safeText` strips markup characters from a stranger's name and lab
+  and bounds them to 40. *(R114 has since shipped and found that `safeText` was
+  the SECOND of three copies of that rule rather than the only one — see its
+  entry. It is now re-exported from `util/text.js`, so the sentence this
+  paragraph originally made — one function, one thing to audit — is true for
+  the first time. The 263 figure it quoted measured 361.)* A creature called `<script>alert(1)</script>` is drawn as
   the text it is, and the gate checks both the card and the encounter.
 
   **AND R105 SHIPPED TWO PARAGRAPHS OF FICTION.** Found while wiring this
@@ -4248,7 +4249,122 @@ suite can check.
 
 **Durability and tooling.**
 
-- **R114 — A save is untrusted input.** Verified this session: a save with a
+- **R114 — A save is untrusted input.** ✅ *Shipped, and the entry was wrong
+  about where the defect lived.*
+
+  **The premise reproduced exactly.** A save carrying a chimera named
+  `<b onmouseover=alert(1)>Chompers</b>` and a goat named
+  `Bessie <img src=x onerror=alert(2)>` imported without complaint; the image
+  rendered RAW on the Ranch and the bold on the Pens. Every shape-broken save
+  loaded too — `chimeras: "hello"`, `funds: "lots"`, `funds: -999999`,
+  `ranch: null`, `day: 1e308`. `importSave` checked five things (JSON, object,
+  app id, `saveVersion` a number, `seed` a number) and handed the rest to the
+  migrations. R108 is what made this reachable rather than theoretical:
+  specimen cards mean a save-shaped file now arrives from another person, and
+  `splice/card.js` carried the IOU in a comment addressed to R114 by name.
+
+  **BUT TWO OF ITS CLAIMS WERE WRONG, BOTH IN R174'S DIRECTION.** The entry
+  said "the renderer owns the game's one `esc()`". There were FIVE, and they
+  disagreed:
+
+      &   <   >   "   '   null-safe
+      ui/cards.js         Y   Y   Y   Y   Y   Y
+      battle/ui.js        Y   Y   Y   Y   Y   Y
+      splice/card.js      Y   Y   Y   Y   Y   Y
+      ranch/founding-ui   Y   Y   Y   Y   N   N
+      render/renderer.js  Y   Y   N   Y   N   N
+
+  **The copy with the most callers was the weakest of the five.** It escaped
+  neither `>` nor `'`, on the module that draws every creature — and the Ranch
+  interpolates a name into `aria-label="Rename ${animal.name}"`, a
+  double-quoted attribute, while other screens use single quotes.
+
+  And "263 `.name` fields unescaped" was 361 — but the count is the wrong lever
+  either way, because most of them read `content.*.name`, which is authored in
+  this repo. **The free text a SAVE carries comes from three typed sources**:
+  chimera names, animal names, and the profile, plus a card's name and lab.
+
+  **THE GAME ALREADY HAD THE RULE, THREE TIMES, AND ONE OF THEM DID NOTHING.**
+  `renameCreature` has stripped markup out of a name since M3. R108's
+  `safeText` did it again for cards, describing itself as "the one place a
+  stranger's words are narrowed". `renameSlot` did not strip at all. That is
+  R171's five comment strippers and R174's six fillers **a third time** — and
+  this time the missing copy was the one on the file boundary.
+
+  **Shipped: one cleaner and one escaper, both in `util/text.js`.** Two rules
+  rather than one, because they answer at two moments — a name is CLEANED once
+  where a person types it or a file hands it over, and everything is ESCAPED at
+  the moment of printing, so a field nobody thought to clean still renders as
+  text. Either alone is one forgotten field or one forgotten site away from the
+  same defect. `save/schema.js` repairs shape on import and on load; it is lazy,
+  behind R101's door, so `MODULE_CAP` stays at 50.
+
+  **The measurement that licensed a universal rule instead of a path list:** a
+  day-60 save holds **3,120 strings and not one contains `<` or `>`**. So
+  angle brackets come out of every string, while the six name keys get the full
+  strip; prose keeps its apostrophes, because a captive's `koLine` reads
+  "collected by Dr. Mantissa's very patient interns" and the name rule would
+  eat that.
+
+  **THREE DEFECTS IN THIS MILESTONE WERE CAUGHT BY GATES RATHER THAN BY ME, AND
+  THE MIDDLE ONE WOULD HAVE DESTROYED PLAYER DATA.**
+
+  **(1) The fuzz, in the first minute it ran.** 200 mutated day-180 saves found
+  `campaign.captives: null` breaking the War Room — the shape repair walked only
+  the top level, which looks thorough and covers a fifth of the fields. It
+  recurses now, against `newGameState` as the authority.
+
+  **(2) The height gate, sideways, two hours later — and this one was the bad
+  one.** The row-pruning was keyed by bare key NAME. `inventory.parts` holds
+  objects; **`dex.parts` holds part ids as STRINGS**. So every load silently
+  emptied **227 entries of the player's Splice-Dex**: the exact "never reset"
+  violation this module was written to prevent, committed by the repair itself.
+
+  Nothing was checking the Dex. The height gate found it because the Dex's combo
+  bands read `dex.parts` to decide which pairings you own the halves for, so a
+  band went empty and a fold it expected to open was not there — *"dex:combos
+  declares 3 folds to walk and the gate got into 2"*. Deterministic 2/2, and
+  green on the pre-R114 tree, which is what ruled out R159's browser-gate flake.
+  Now keyed by full path, and the gate runs a PLAYED save through the repair and
+  demands it back unchanged — the fresh save it used before has empty arrays and
+  therefore nothing to destroy.
+
+  **(3) A missed break.** 345 went MISSED on the first run: the gate asserted the
+  cleaner exists and that the FILE boundary calls it, and never that the KEYBOARD
+  does. All three entrances are asserted now.
+
+  **And the budgets.** The unsharded smoke went red on `KB_CAP` — 318.3 against
+  318, with prose 248.9 against 247, because R174 and R175 had each set their cap
+  at the measurement. Paid down first, as R174's note asked: the same finding had
+  been explained in five files and is in one now (~0.6 KB recovered). Then raised
+  by the measured remainder, with the per-file accounting beside each cap — three
+  of the five files are **net negative on code**, because the escapers came out.
+  `KB_CAP` 318 → 319, `PROSE_CAP` 247 → 249.
+
+  Two more, found on the way: `campaign/ui.js` had a local named `esc` in a
+  module that also IMPORTS `esc`, so inside that block the escaper was
+  unreachable by its own name; and R174's `RUNS_NOTHING_BUT_BELONGS` line for
+  `util/text.js` is **gone, settled by use rather than eviction** — the module
+  now holds the escaper, and `render/renderer.js` calls it on every creature it
+  draws.
+
+  **What was cut, and why.** The entry's step (1) was an `html` tagged template
+  with all 361 sites migrated. A field list of six stays enumerable; a site
+  list of 361 is a migration that has to stay right forever, and escaping at
+  361 sites is still one missed site from the same defect. The boundary strip
+  plus one correct escaper reaches the criterion with a fraction of the blast
+  radius. Id-exists checking was cut too, and that one is a correctness
+  argument rather than a scope one: a part renamed between builds would see a
+  player's chimera DELETED by the thing meant to protect it. R79's catalogue
+  already declines to render a retired id rather than destroying it.
+
+  *Done when: the injection save renders as text on every screen and the fuzz
+  gate passes.* — met: six screens, walked from `shellScreenMap()` so a
+  seventh is covered the day it lands.
+
+  The original entry follows.
+
+- **R114 (as queued) — A save is untrusted input.** Verified this session: a save with a
   chimera named `<b onmouseover=alert(1)>Chompers</b>` and a goat named
   `Bessie <img src=x onerror=alert(2)>` **imports without complaint and both
   tags render raw** on the Pens and the Ranch. `importSave` checks JSON,

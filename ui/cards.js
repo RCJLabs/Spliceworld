@@ -18,8 +18,10 @@ import { renderIcon } from './icons.js';
 //
 // It matters wherever a PLAYER-TYPED string reaches markup, which creature
 // names do — the Pens hand out a rename sheet.
-export const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) =>
-  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// R114 — re-exported, not defined, so the screens that reach for it through
+// here are unchanged while only one implementation can be wrong. util/text.js.
+import { esc } from '../util/text.js';
+export { esc };
 
 // One note, or nothing. Deliberately singular: a wall of tips is wallpaper.
 export function fieldNote(guide) {

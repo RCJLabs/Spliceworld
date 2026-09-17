@@ -1,5 +1,153 @@
 # PROGRESS
 
+## Session 192 — R114: a save is untrusted input ✅
+
+**The premise reproduced exactly, and two of the entry's claims did not.**
+
+### What was actually true
+
+A save carrying a chimera named `<b onmouseover=alert(1)>Chompers</b>` and a
+goat named `Bessie <img src=x onerror=alert(2)>` imported without complaint.
+The image rendered **raw on the Ranch**, the bold **raw on the Pens**. Every
+shape-broken save loaded too: `chimeras: "hello"`, `funds: "lots"`,
+`funds: -999999`, `ranch: null`, `day: 1e308`. `importSave` checked five things
+and handed the rest to the migrations.
+
+R108 is what made this reachable rather than theoretical — specimen cards mean
+a save-shaped file now arrives from another person — and it had written the IOU
+into `splice/card.js` addressed to R114 by name.
+
+### What measurement changed
+
+The entry said *"the renderer owns the game's one `esc()`"*. There were **five**:
+
+                        &   <   >   "   '   null-safe
+    ui/cards.js         Y   Y   Y   Y   Y   Y
+    battle/ui.js        Y   Y   Y   Y   Y   Y
+    splice/card.js      Y   Y   Y   Y   Y   Y
+    ranch/founding-ui   Y   Y   Y   Y   N   N
+    render/renderer.js  Y   Y   N   Y   N   N
+
+**The copy with the most callers was the weakest of the five** — no `>`, no
+`'`, on the module that draws every creature.
+
+"263 `.name` fields unescaped" measured **361**, but the count is the wrong
+lever: most read `content.*.name`, authored in this repo. The free text a SAVE
+carries comes from three typed sources plus a card's name and lab.
+
+**And the game already had the rule, three times, one of them doing nothing.**
+`renameCreature` (M3) stripped markup. R108's `safeText` did it again, calling
+itself "the one place a stranger's words are narrowed". `renameSlot` did not
+strip at all — R171's five comment strippers and R174's six fillers a **third**
+time, and this time the missing copy was the one on the file boundary.
+
+### Shipped
+
+One cleaner and one escaper, both in `util/text.js`. Two rules, not one,
+because they answer at two moments: a name is **cleaned** where a person types
+it or a file hands it over; everything is **escaped** at the moment of
+printing, so a field nobody thought to clean still renders as text.
+`save/schema.js` repairs shape on import and on load — lazy, behind R101's
+door, so `MODULE_CAP` stays at 50.
+
+The measurement that licensed a universal rule over a path list: a day-60 save
+holds **3,120 strings and not one contains `<` or `>`**. Prose keeps its
+apostrophes, because a captive's `koLine` says "Dr. Mantissa's very patient
+interns" and the name rule would eat that.
+
+### Three defects were caught by gates rather than by me
+
+**(1) The fuzz, in its first minute.** 200 mutated day-180 saves found
+`campaign.captives: null` breaking the War Room. My shape repair walked only the
+top level — which looks thorough and covers a fifth of the fields. It recurses
+now, against `newGameState` as the authority.
+
+**(2) The height gate, sideways, two hours later — and this was the bad one.**
+The row-pruning was keyed by bare key NAME. `inventory.parts` holds objects;
+**`dex.parts` holds part ids as STRINGS**. Every load silently emptied **227
+entries of the player's Splice-Dex** — the exact "never reset" violation the
+module exists to prevent, committed by the repair itself.
+
+Nothing was checking the Dex. The height gate found it because the combo bands
+read `dex.parts`, so a band went empty and a fold went missing: *"dex:combos
+declares 3 folds to walk and the gate got into 2"*. Deterministic 2/2, green on
+the pre-R114 tree — which is what ruled out R159's browser-gate flake. Keyed by
+full path now, and the gate runs a **played** save through the repair and
+demands it back unchanged. The fresh save it used before has empty arrays, so it
+had nothing to destroy and proved nothing.
+
+**(3) A missed break.** 345 went MISSED first time: the gate asserted the
+cleaner exists and that the FILE boundary calls it, never that the KEYBOARD
+does. All three entrances are asserted now.
+
+The copy ledger caught a fourth, smaller one: `save/schema.js`'s first draft
+pushed English sentences as repair messages. They are `{ at, why }` now — a
+field path and a reason id — and the words belong in `data/copy.json`.
+
+### The budgets, paid down then raised
+
+The unsharded smoke went red on `KB_CAP`: 318.3 against 318, prose 248.9
+against 247, because R174 and R175 had each set their cap at the measurement.
+Paid down first, as R174's note asked — the same finding had been explained in
+five files and is in one now (~0.6 KB back). Then raised by the remainder, with
+the per-file accounting beside each cap:
+
+    util/text.js        +392   the escaper and the cleaner
+    save/save.js        +116   the repair on the load path
+    render/renderer.js   -59   its private escaper, deleted
+    ui/cards.js          -91   ditto
+    splice/chimera.js    -19   its private strip rule, deleted
+                        ----
+                        +339   KB_CAP 318->319, PROSE_CAP 247->249
+
+Three of five files are **net negative on code**. What is left is an escaper the
+boot path did not have, and `render/renderer.js` now escapes `>` and `'` on
+every creature it draws.
+
+### Also found
+
+- `campaign/ui.js` had a local named `esc` in a module that **imports** `esc`,
+  so inside that block the escaper was unreachable by its own name.
+- R174's `RUNS_NOTHING_BUT_BELONGS` line for `util/text.js` is **gone, settled
+  by use rather than eviction**: the module holds the escaper now, and
+  `render/renderer.js` calls it on every creature it draws.
+
+### Cut, and why
+
+The entry's step (1) was an `html` tagged template with 361 sites migrated. A
+field list of six stays enumerable; a site list of 361 has to stay right
+forever, and is still one missed site from the same defect. Id-exists checking
+was cut on correctness rather than scope: a part renamed between builds would
+see a player's chimera **deleted** by the thing meant to protect it.
+
+### Verified
+
+- `--anchors` **339/339** (break 324 lost its anchor when the card's private
+  escaper went; re-aimed at the call, the more durable target)
+- **`BATTERY_EXIT=0`** — clean baseline, **7 of 7 breaks caught, 0 missed**
+- `npm test` **green, run alone**: 269s wall, 849 CPU-s of 1246 budgeted
+- unsharded smoke `UNION_EXIT=0`; `BOOT_EXIT=0`
+- height gate green at **130 folds walked**, the same figure the pre-R114 tree
+  reported — the Dex is intact, not merely quiet
+
+### The full battery ran, and it was the right call
+
+Trigger 4 — the baseline went red for a reason nobody predicted (`KB_CAP`, which
+I misdiagnosed twice before finding). **339 breaks, 0 baseline failures, 1 miss:
+break 162, which is the already-filed R173.** No new rot.
+
+It took two runs because the first hit its own 9,000s timeout at 312 breaks; the
+remaining 27 took 1,702s. **So the real cost is ~2h45m at 339 breaks**, against
+the ~1h29m for 258 that CLAUDE.md carried. That note has now been wrong three
+times in a row, so it says to budget by break count rather than by the last
+number written down.
+
+### Next session's first task
+
+R173 — the reach gate misses break 162 by a rounding hair and does not assert
+the union it already computes. Small, and the battery currently reports one
+missed break that everybody knows about.
+
 ## Session 191 — R174: one filler, and the fiftieth module ✅
 
 **The entry said two `fill`s. The tree had six, and three of them disagreed.**

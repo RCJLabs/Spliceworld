@@ -270,6 +270,12 @@ export async function loadSlot(slotId, storage = globalThis.localStorage) {
     } catch { /* storage full — nothing more we can do */ }
     return fresh();
   }
+  // R114 — and the shape: a broken field is repaired, never replaced (the
+  // Ascent rule). Silent here; the import panel is where a player is told.
+  try {
+    const { cleanSave } = await import('./schema.js');
+    cleanSave(migrated);
+  } catch { /* the repair is a belt, not the braces — a load never fails on it */ }
   migrated.slotId = slotId;
   // Best-effort "last opened" stamp for the slot picker — cosmetic only,
   // so a failure here never affects the load it is riding along with.

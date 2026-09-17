@@ -549,13 +549,12 @@ function eagerGraph(entry = 'main.js') {
 // read the byte budget as the bigger bill nobody had opened.
 const RUNS_NOTHING_BUT_BELONGS = {
   'ui/theme.js': 'main.js reads BASE_THEME and THEMES on the first frame; it calls nothing',
-  // R174 — and this one is the exemption list working as a bill rather than a
-  // settled account. `util/text.js` runs nothing during boot because nothing
-  // FILLS a sentence on the first frame; it is in the graph because
-  // `campaign/monologue.js` and `splice/chaos.js` take `fill` at module level.
-  // The eviction candidate that would remove BOTH it and monologue.js is named
-  // beside MODULE_CAP in tools/smoke.js.
-  'util/text.js': 'monologue.js and chaos.js take fill at module level to phrase a line during the battle-resolution tick',
+  // R174 put `util/text.js` here, and R114 TOOK IT OFF — which is the bill
+  // being settled by USE rather than by eviction. It was excused because
+  // nothing FILLS a sentence on the first frame; it now holds the escaper as
+  // well, and `render/renderer.js` calls that on every creature it draws, so
+  // the module earns its place in the graph on the first paint. The line was
+  // an honest bill for one milestone and is not owed any more.
   'battle/moves.js': 'battle/statblock.js reads MOVE_SLOTS, activeMoves, defaultPick, partMoveId and comboMoveId synchronously to describe a creature',
   // R153 — `campaign/director.js` WAS HERE, AND THE EXEMPTION WAS THE BUG.
   // The reason given was true and was never a reason to carry 11.9 KB: the

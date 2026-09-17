@@ -10,7 +10,7 @@ import { renderIcon } from '../ui/icons.js';
 import { foundLab } from './ranch.js';
 import { speciesOf } from '../data/catalog.js';
 
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+import { esc } from '../util/text.js';
 
 // What a lab is, in the player's words rather than the schema's. Read off
 // the same content the seeder reads, so a lab card cannot advertise a herd
