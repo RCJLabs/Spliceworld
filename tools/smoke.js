@@ -10,6 +10,8 @@ import { indexContent, renderCreatureSVG, creaturePortrait, validateGenome, draw
 import { renderIcon, iconIds } from '../ui/icons.js';
 import { walkSurfaces, shellScreenMap } from './handlers.js';
 import { checkTree, runSelfTests, runLinkTests, moduleFiles, SELF_TESTS, LINK_TESTS } from './scopecheck.js';
+import { stringLiterals } from './source.js';
+import { copy } from '../util/text.js';
 import { rngStream, hashString } from '../util/rng.js';
 import { newGameState, migrate, SAVE_VERSION } from '../save/save.js';
 import {
@@ -6892,6 +6894,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // files do not already teach. Its gate is the voice block: every line in
     // it has to be reachable and none may be over 5% of what gets said.
     'voice-pools.json': null,
+    // R110 — the battle's own beats and whatever follows them out of the
+    // modules. A player meets these AS the thing they describe: the line that
+    // says a specimen is trapped arrives at the moment it is trapped. There is
+    // no lesson here that the fight does not teach by happening, and the guide
+    // that covers battle already exists. Its gate is the id walk below —
+    // copy nobody reads and a reader with no copy both fail the build.
+    'copy.json': null,
     'philosophies.json': null,
     'guides.json': null,
     // R119: the founding labs are the FIRST screen, and a note that teaches
@@ -7016,6 +7025,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'data/loader.js': null,
     'data/catalog.js': null,
     'util/rng.js': null,
+    // R110 — `fill` and `copy`, the one reader for prose that lives in data.
+    // A leaf with no imports of its own, which is the point: the battle
+    // engine, the ranch and the save system all read copy, so its reader
+    // cannot live in any of them.
+    'util/text.js': null,
     'render/renderer.js': null,
     'audio/sfx.js': null,
 
@@ -14598,6 +14612,55 @@ if (inShard('card')) {
 // fourth is the rule that makes the other three reachable, because a
 // sentence written inside an engine module cannot be pooled, cannot be
 // counted, and cannot be rewritten without an engine edit.
+// R110 — COPY NOBODY READS, AND A READER WITH NO COPY, BOTH FAIL THE BUILD.
+//
+// R20's rule pointed at `data/copy.json`, and R57/R58's shape is why it is
+// worth pointing: authored content with no reader has been found in this tree
+// six times, and R109 found it a seventh — four lines written into an
+// unreachable `??` arm, caught by its own gate one commit later.
+//
+// Both directions, read off the SOURCE rather than off a list somebody keeps:
+// every `copy(content, 'x.y')` in the tree must name an id the file carries,
+// and every id in the file must be asked for somewhere. A pool of sentences
+// nobody can reach is not content, it is a comment with quotes around it.
+if (inShard('voice')) {
+  const copyDoc = JSON.parse(readFileSync(join(root, 'data/copy.json'), 'utf8'));
+  const ids = new Set();
+  const walkIds = (node, path) => {
+    if (typeof node === 'string') return ids.add(path);
+    if (node && typeof node === 'object') {
+      for (const [k, v] of Object.entries(node)) walkIds(v, path ? `${path}.${k}` : k);
+    }
+  };
+  walkIds(copyDoc, '');
+  assert.ok(ids.size >= 40, `data/copy.json actually carries copy (${ids.size} ids)`);
+
+  const asked = new Set();
+  for (const file of moduleFiles()) {
+    const rel = relative(root, file).replaceAll('\\', '/');
+    if (rel.startsWith('tools/')) continue;
+    for (const m of readFileSync(file, 'utf8').matchAll(/\bcopy\(\s*content\s*,\s*'([\w.]+)'/g)) asked.add(m[1]);
+    // The one call that picks its id at run time — envenomed one vs many —
+    // is named here rather than parsed, because a gate that tried to evaluate
+    // a ternary would be a worse gate than one that says which line it cannot
+    // read. If this list grows past a couple of entries the answer is that
+    // the callers should stop being clever, not that the list should grow.
+  }
+  for (const both of ['battle.envenomed_many', 'battle.envenomed_one']) asked.add(both);
+
+  const unread = [...ids].filter((id) => !asked.has(id));
+  assert.deepEqual(unread, [], `every id in data/copy.json is asked for somewhere (${unread.join(', ')})`);
+  const missing = [...asked].filter((id) => !ids.has(id));
+  assert.deepEqual(missing, [], `every copy() call names an id the file carries (${missing.join(', ')})`);
+
+  // And the reader does what the wire's `fill` does with a key nobody passed:
+  // leaves it alone. A sentence with a visible {name} in it reads as a bug;
+  // a sentence with "undefined" in it reads as the game being broken.
+  assert.equal(copy(content, 'battle.awakened', {}), '{name} is rudely awakened.',
+    'an unfilled placeholder is left alone rather than printed as undefined');
+  assert.equal(copy(content, 'battle.nothing.here'), null, 'and an id nobody wrote comes back null');
+}
+
 if (inShard('voice')) {
   const walk = campaignWalk(content, { seed: 2026, days: 180, stopAtDominion: false });
   const v = walk.voice;
@@ -15652,18 +15715,28 @@ if (inShard('orphans')) {
       walkJSON(JSON.parse(readFileSync(join(root, 'data', f), 'utf8')), f, '');
     }
     assert.ok(scanned > 2000, `and the walk actually read the strings in them (${scanned})`);
-    // …and the strings the engine prints. Comments are shop talk too, so they
-    // come out first: this rule is about what a player reads.
-    const stripComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-    const STRINGS = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g;
+    // …and the strings the engine prints.
+    //
+    // R110 — THROUGH THE REAL SCANNER NOW. This block used to carry its own
+    // comment stripper and its own string regex, which is precisely the bug
+    // R171 wrote `tools/source.js` to end: a regex cannot tell a string from a
+    // comment from a regex literal, so `//` inside a sentence ended the
+    // sentence and everything after it went unread. The gate that enforces the
+    // tone rule was reading an unknown fraction of the tree, and reporting
+    // clean either way.
+    let literals = 0;
     for (const [file, text] of source) {
       if (file.startsWith('tools/')) continue; // the harness talks to me, not to a player
-      for (const m of stripComments(text).matchAll(STRINGS)) {
-        const lit = m[1] ?? m[2] ?? m[3] ?? '';
+      for (const { text: lit } of stringLiterals(text)) {
+        literals += 1;
         if (BANNED.test(lit) && !allowed(lit)) hits.push(`${file}: "${lit.slice(0, 60)}"`);
         BANNED.lastIndex = 0;
       }
     }
+    // The same coverage floor the JSON walk carries, for the same reason: a
+    // walk that silently read nothing passes, and a passing gate that read
+    // nothing is worse than no gate.
+    assert.ok(literals > 3000, `the tone gate read the modules too (${literals} literals)`);
     assert.deepEqual(hits, [], `zero death language (${hits.join(' | ')})`);
 
     // An exemption must be a PHRASE, and the comment above saying so was not

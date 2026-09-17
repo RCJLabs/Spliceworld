@@ -1,5 +1,92 @@
 # PROGRESS
 
+## Session 189 — R110: copy is data ✅ (as a ratchet)
+
+**ROADMAP §9.** The headline held. The map did not, and the map is what a
+milestone acts on.
+
+### Measured before writing anything
+
+**5,043 words** of player-facing prose in JS string literals against **15,385**
+in `data/*.json` — 24.6% of everything the game says, where the data rule
+cannot see it, the tone sweep cannot read it, and R98's terse mode has no
+switch. The entry said 5,310 and 21%, so the complaint is real and roughly the
+size it claimed.
+
+But two of the five files it names as heaviest are already done, and **the
+heaviest file in the tree is not in the entry at all**:
+
+    splice/theater.js    436 -> 244        battle/ui.js       363 -> 47
+    campaign/ui.js       361 -> 320        render/renderer.js 299 -> 11
+    ranch/agenda.js      274 -> 213        battle/engine.js     — -> 386
+
+`battle/engine.js` is the worst of the set on principle, not only on size:
+CLAUDE.md requires battle logic to stay DOM-free so `tools/sim.js` runs the
+same code headlessly, and there was no `battle.json` anywhere in `/data`. It is
+R109's finding one floor down.
+
+### Why this ships as a ratchet
+
+659 literals, mean 7.6 words, 59 modules, 8 directories. Getting under 300
+words is several sessions of hand-editing interpolated HTML, and **a rule that
+demanded zero today would have to be switched off today** — a gate that is off
+is worse than no gate, because it reads as covered. So the ledger records what
+each module carries now, and the gate holds three lines: a module absent from
+it carries none, a module in it carries EXACTLY its number, and the total only
+moves down.
+
+Exactness is the property. "At most" lets prose accumulate up to the number,
+and a budget nobody re-derives is the shape of R157's worn floor, which stopped
+moving with the statistic it guarded and missed the break it was written for.
+
+    battle/engine.js   386 -> 14 words      COPY_CAP  5,043 -> 4,671
+    data/copy.json     49 ids               boot      1051 -> 1055 KB (cap 1060)
+
+### The tone gate was reading an unknown fraction of the tree
+
+The third clause looked already met — the sweep walked data and JS both. It did
+it with **its own comment stripper and its own string regex**, which is exactly
+the bug R171 wrote `tools/source.js` to end: a regex cannot tell a string from
+a comment from a regex literal, so `//` inside a sentence ended the sentence and
+everything after went unread. **It reported clean either way.** It runs on the
+real scanner now, with a coverage floor like the JSON walk's, and break 334
+proves the floor fires.
+
+### Two things already half-right
+
+`stance.json` has shipped all ten of its lines since R103 while the engine
+carried a `STANCE_LINES` mirror of them behind a smoke assertion holding the
+two equal. A mirror gated to be identical is not a safety net, it is a second
+place to edit. Deleted — **74 words** for a twelve-line deletion, and break 97
+re-aimed at what replaced it.
+
+And the 49 ids are walked both ways against the source: copy nobody reads and a
+reader with no copy are both build failures. That is R20's rule and R57's
+shape, found a seventh time.
+
+### Known issues
+
+- **`fill` is still duplicated** between `util/text.js` and
+  `campaign/monologue.js`. Merging makes `util/text.js` the **fiftieth** eager
+  module against `MODULE_CAP` 49, which the tree has sat exactly on since R169
+  spent a milestone getting one out. That is a cap argument, not a paragraph at
+  the end of an unrelated migration. Filed as **R174**.
+- The 14 words left in `battle/engine.js` are `ABSENT_UNIT`'s `koLine` — the
+  fallback the engine falls back TO when content did not load, and so the one
+  line that cannot read from content.
+- **4,671 words still live in modules.** The criterion's number is 300. The
+  gate now makes that a descent rather than a hope, but it is a descent, and
+  the next sessions have to walk it: `campaign/ui.js` 320, `save/settings-ui.js`
+  261, `splice/theater.js` 244, `splice/physiology.js` 233.
+
+### Next session's first task
+
+R111 — feel: creature voices, ambience and haptics. *Done when: smoke asserts
+two genomes yield two voice specs and one genome always the same, and the
+settings panel carries volume, ambience and haptics controls.*
+
+---
+
 ## Session 188 — R109: the voice repeats ✅
 
 **ROADMAP §9.** The complaint holds. Three of the entry's numbers were stale,

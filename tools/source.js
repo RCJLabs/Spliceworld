@@ -126,3 +126,108 @@ export function stripComments(src) {
 export function proseBytes(src) {
   return Buffer.byteLength(src, 'utf8') - Buffer.byteLength(stripComments(src), 'utf8');
 }
+
+// R110 — THE COPY SCANNER. What the player reads, found in the source rather
+// than trusted to a grep.
+//
+// `proseBytes` above weighs the comments, which are for the developer. This
+// weighs the STRING LITERALS, which are for the player, and it exists because
+// CLAUDE.md's "all content is data" had never been counted: 5,012 words of
+// player-facing prose were living in JS, invisible to the data rule, to the
+// tone sweep, and to R98's terse mode, which has nowhere to switch off a
+// sentence that is not in a file it can read.
+//
+// Built on `stripComments` for the same reason every other reader is: a regex
+// cannot tell a string from a comment from a regex literal in JavaScript, and
+// the one place that knows how is forty lines up.
+
+// A template hole. U+0001 because no source file contains one, so it cannot
+// collide with anything the scanner is reading.
+const HOLE = String.fromCharCode(1);
+
+// Every string literal in a module, as {text, kind, line}. A template literal
+// yields its STATIC chunks with each ${...} replaced by the sentinel: a hole is
+// a value the player never reads, and it has to be a word BOUNDARY rather than
+// a deletion, or `${a}and${b}` fuses into one word that was never written.
+export function stringLiterals(src) {
+  const s = stripComments(src);
+  const out = [];
+  let i = 0;
+  let line = 1;
+  while (i < s.length) {
+    const c = s[i];
+    if (c === '\n') { line++; i++; continue; }
+    if (c === '"' || c === "'") {
+      const quote = c;
+      let j = i + 1;
+      let text = '';
+      while (j < s.length && s[j] !== quote) {
+        if (s[j] === '\\') { text += s[j + 1] === 'n' ? ' ' : s[j + 1]; j += 2; continue; }
+        if (s[j] === '\n') break;                  // unterminated; give up on it
+        text += s[j++];
+      }
+      out.push({ text, kind: 'quote', line });
+      i = j + 1;
+      continue;
+    }
+    if (c === '`') {
+      let j = i + 1;
+      let text = '';
+      const startLine = line;
+      while (j < s.length) {
+        if (s[j] === '\\') { text += s[j + 1]; j += 2; continue; }
+        if (s[j] === '`') break;
+        if (s[j] === '$' && s[j + 1] === '{') {
+          let depth = 1;
+          j += 2;
+          while (j < s.length && depth > 0) {
+            if (s[j] === '{') depth++;
+            else if (s[j] === '}') depth--;
+            else if (s[j] === '\n') line++;
+            j++;
+          }
+          text += ` ${HOLE} `;
+          continue;
+        }
+        if (s[j] === '\n') line++;
+        text += s[j++];
+      }
+      out.push({ text, kind: 'template', line: startLine });
+      i = j + 1;
+      continue;
+    }
+    i++;
+  }
+  return out;
+}
+
+// The words a player would actually read in one literal: markup out, template
+// holes out, entities out, {placeholders} out.
+//
+// TOKENISED ON WHITESPACE, which is the whole difference between a measurement
+// and a number. The first draft matched letter runs, so `save/migrations.js`
+// scored three words and sw.js's precache manifest reported 372 words of
+// player-facing prose. A word is a thing with space on both sides of it.
+export function proseWords(text) {
+  const plain = String(text)
+    .replace(/<[^>]*>/g, ' ')                      // tags, never their contents
+    .split(HOLE).join(' ')
+    .replace(/&[a-z]+;|&#\d+;/gi, ' ')
+    .replace(/\{[^}]*\}/g, ' ');                   // the wire's own placeholders
+  return plain.split(/\s+/)
+    .filter((t) => /^[A-Za-z][A-Za-z'’]*[.,!?:;—-]?$/.test(t) && t.length > 1);
+}
+
+// What one module says to the player: the words in every literal carrying at
+// least `floor` of them. Three is the bar R110 was filed with and the one the
+// scopecheck rule uses — under it a literal is a label, a class list or an
+// aria string, and this repo has plenty of those that are not copy.
+export function copyWords(src, floor = 3) {
+  let words = 0;
+  const found = [];
+  for (const lit of stringLiterals(src)) {
+    const w = proseWords(lit.text);
+    if (w.length >= floor) { words += w.length; found.push({ ...lit, words: w.length }); }
+  }
+  return { words, found };
+}
