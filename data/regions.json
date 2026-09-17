@@ -409,38 +409,9 @@
     "blurb": "They have been back to the drawing board and the drawing board had a bigger budget.",
     "intel": "Counter-offensive: the same garrison at {pct}% strength. They have held a grudge and, worse, a budget.",
     "news": {
-      "opened": [
-        "COUNTER-OFFENSIVE: a convoy is rolling on {node}. Revenue suspended pending, quote, \"the situation.\"",
-        "COUNTER-OFFENSIVE: vehicles on the road to {node}. Revenue is suspended while everyone shouts.",
-        "A convoy is rolling on {node}. The coalition has remembered it owns trucks.",
-        "{node} is being contested. Somebody has brought a megaphone and a grievance.",
-        "Convoy inbound on {node}. Income paused, patience shorter.",
-        "The coalition is coming for {node}, in formation, in daylight, in about an hour.",
-        "{node} is on somebody's list again. The list is being driven up the road.",
-        "COUNTER-OFFENSIVE on {node}. They have brought the good trucks this time.",
-        "{node} contested. Revenue held pending the outcome and the paperwork.",
-        "They are moving on {node}. Nobody is pretending this is routine."
-      ],
-      "held": [
-        "{node} holds. The convoy reverses at speed and one vehicle does not reverse at all.",
-        "{node} holds. The convoy turns around slower than it arrived.",
-        "{node} is still yours. The coalition is filing this under weather.",
-        "They did not take {node}. They took a wing mirror home instead.",
-        "{node} holds, comfortably, and somebody is already back on the kettle.",
-        "The push on {node} stops at the gate and thinks better of it.",
-        "{node} held. Revenue resumes and the road is quiet again.",
-        "{node} stands. The convoy reverses with what dignity is left to it.",
-        "The coalition leaves {node} the way it came, minus a bumper."
-      ],
-      "lost": [
-        "{node} has been retaken by the coalition. They have already put up a sign about it. You can take it back.",
-        "{node} is theirs again. The sign went up before the dust came down.",
-        "{node} has changed hands. You know where it is.",
-        "{node} lost. It will keep. It is not going anywhere.",
-        "The coalition has {node} back and is being smug in a press release.",
-        "{node} gone, for now. The gate still opens the same way.",
-        "{node} retaken. They have repainted it already, badly."
-      ],
+      "opened": "COUNTER-OFFENSIVE: a convoy is rolling on {node}. Revenue suspended pending, quote, \"the situation.\"",
+      "held": "{node} holds. The convoy reverses at speed and one vehicle does not reverse at all.",
+      "lost": "{node} has been retaken by the coalition. They have already put up a sign about it. You can take it back.",
       "expired": "{node} was abandoned without a shot. The coalition is describing this as a victory and, annoyingly, it is.",
       "missed": "While nobody was home, {count} convoys came, waited at the gate, and left stern letters. The nodes they sat on paid nothing for {days} days between them."
     }

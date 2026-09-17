@@ -1809,7 +1809,16 @@ const BREAKOUT = ['node', '-e', `
   const a = jump.campaign.loose.map((e) => e.unit.name).join(',');
   const b = stepped.campaign.loose.map((e) => e.unit.name).join(',');
   if (a !== b) fail('one jump replays to a different board than stepping there (' + a + ' vs ' + b + ')');
-  if (!jump.news.some((n) => /BREAKOUT|misplaced|unaccounted/i.test(n))) {
+  // R109 — the LAB, not three keywords. This matched BREAKOUT, misplaced or
+  // unaccounted until the escape event became a pool of twenty-six and the
+  // cursor handed back a phrasing using none of those words. Every phrasing in
+  // that pool names the lab, and the lab's NAME is only on the news burst, so
+  // it is resolved through content from the board entry. Same fix as the twin
+  // in tools/smoke.js.
+  const looseLabs = [...new Set(jump.campaign.loose
+    .map((e) => content.rivals[e.rivalId]?.name).filter(Boolean))];
+  if (!looseLabs.length) fail('the board names no lab it lost a specimen from');
+  if (!jump.news.some((n) => looseLabs.some((lab) => n.includes(lab)))) {
     fail('an escape nobody was there for said nothing on the wire');
   }
 
@@ -1852,7 +1861,13 @@ const BREAKOUT = ['node', '-e', `
   if (detail.outcome !== 'win') fail('the fight did not resolve as a win');
   if (looseSpecimens(s).length !== boardBefore - 1) fail('a win did not close the entry on the board');
   if (s.campaign.containment.length !== 1) fail('the bagged specimen did not reach a bay');
-  if (!s.news.some((n) => /THWOOMP|impounded/.test(n))) fail('the wire did not say it was bagged');
+  // R109 — the creature's NAME, not two keywords. The bagging event is a pool
+  // of twenty-two now and only two of them say THWOOMP; every one names the
+  // animal, which is what "the wire said it was bagged" actually means. Same
+  // fix as the twin in tools/smoke.js.
+  const bagged = s.campaign.containment[0]?.unit?.name;
+  if (!bagged) fail('the bay does not know what is in it');
+  if (!s.news.some((n) => n.includes(bagged))) fail('the wire did not say it was bagged');
 
   // Bagged in a LOST fight still closes the entry — one wave makes that
   // unreachable in play, so the contract is checked directly.
@@ -3429,6 +3444,17 @@ const BREAKS = [
     file: 'campaign/campaign.js',
     anchor: "      } else emitNews(state, content, 'op_paid', { op: extra.name, funds: extra.funds });",
     to: '      } else pushNews(state, null);',
+  },
+  {
+    // A POOL'S PATH STOPS RESOLVING. `voice-pools.json` is keyed by the path
+    // into the indexed content, so a typo is not an error — the merge simply
+    // skips it and twenty-seven authored phrasings are never said by anything.
+    // That is R41's training.json bug in a new file: content added, fetched,
+    // and silently dropped. The section-reach gate has to see it.
+    n: 329, gate: SHARD_D, name: 'a pool is keyed to a path that does not exist, and its phrasings are silently dropped',
+    file: 'data/voice-pools.json',
+    anchor: '"news.spar_done.lines": [',
+    to: '"news.spar_done.linez": [',
   },
 
   // R171 — the two halves of the entry's Done-when, one break each.

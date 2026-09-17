@@ -96,11 +96,10 @@ export function startResequence(state, vialId, content, now) {
   // R109 — the two artefact sentences used to be written right here. They are
   // pools in resequencer.json now, so a third phrasing is a JSON edit.
   //
-  // A LOCAL FILLER, the way splice/chaos.js keeps one. `fill` lives in
-  // campaign/monologue.js and this is splice/: importing it would point a
-  // husbandry module at the campaign for one regex. Three copies is one too
-  // many and R110 is the milestone that owns copy-as-data wholesale; this
-  // one does not widen its scope to chase it.
+  // A LOCAL FILLER, the way splice/chaos.js keeps one: `fill` lives in
+  // campaign/monologue.js and importing it would point a husbandry module at
+  // the campaign for one regex. Three copies is one too many, and R110 owns
+  // copy-as-data wholesale.
   const pickLine = (key, vars) => {
     const pool = content.resequencerLines?.[key];
     const list = Array.isArray(pool) ? pool : [pool].filter(Boolean);

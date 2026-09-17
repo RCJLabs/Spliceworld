@@ -54,12 +54,10 @@ export function fill(template, vars = {}) {
 }
 
 // R109 — ONE ROTATION FOR THE WHOLE VOICE. `newsFor` and `playerLine` both
-// need to walk a pool without repeating, and this is the leaf both import,
-// so the mechanism lives here rather than twice. A cursor per key, advanced
-// on every telling: a pool of five is heard five times before any line is
-// heard twice, with no randomness in the rotation. The seed decides only
-// where a save OPENS each pool. See campaign/wire.js for the two drafts that
-// failed before this shape.
+// walk a pool without repeating, and this is the leaf both import, so the
+// mechanism lives here rather than twice. A cursor per key, advanced on every
+// telling; the seed decides only where a save OPENS each pool. See
+// campaign/wire.js, and ROADMAP R109 for the two drafts that failed.
 export function pickPooled(state, key, pool) {
   const list = Array.isArray(pool) ? pool.filter(Boolean) : [pool].filter(Boolean);
   if (!list.length) return null;
@@ -72,9 +70,9 @@ export function pickPooled(state, key, pool) {
 
 export function playerLine(state, content, slot, vars = {}) {
   const profile = profileOf(state, content);
-  // R109 — a slot may hold one line or a pool of them, and the player's own
-  // voice was the loudest single phrasing in the game: one `capture` line
-  // spoke 684 times in 180 days, 14.6% of everything the world said.
+  // R109 — a slot may hold one line or a pool. The player's own voice was the
+  // loudest phrasing in the game: one `capture` line, 684 tellings in 180
+  // days, 14.6% of everything the world said.
   const id = profile.philosophy?.id ?? 'philosophy';
   return fill(pickPooled(state, `say:${id}:${slot}`, profile.philosophy?.monologue?.[slot]), {
     lab: profile.lab,

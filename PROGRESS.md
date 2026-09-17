@@ -81,8 +81,56 @@ selector it was measuring and reported the three spar phrasings at 528/1/1;
 with the real window they are 180/179/171. Recorded in the commit so it
 cannot come back as received wisdom.
 
+### 300 new variants put 29 KB in front of the first paint
+
+The pools are content, and CORE content downloads before the game appears.
+`tools/boot.js` went to **1,081 KB against a 1,052 KB budget** the moment the
+writing landed — a real regression, and raising the cap to cover it would have
+been negotiating with the measurement.
+
+R81's split, applied to words. `data/voice-pools.json` holds every pool's TAIL
+and is fetched in the second round beside the geometry; the first line of each
+pool stays in the file that owns it, so the wire, the ticker and the player's
+own voice all work before it lands and simply start rotating after. **1,081 ->
+1,054**, and no line is ever lost.
+
+**The first draft of the merge hand-listed its six pool families**, which made
+a seventh an engine edit — the exact thing CLAUDE.md forbids. Keyed by the PATH
+into the indexed content instead (`news.spar_done.lines`,
+`philosophies.improver.monologue.capture`), `attachVoicePools` is one walk,
+519 bytes smaller, and a new pool anywhere `indexContent` already puts an array
+needs no engine change at all.
+
+### Three budgets, and R94's rule paid two of them
+
+The remaining 2 KB was **prose**: +6.4 KB of eager comment against +2.0 KB of
+code. R94 settled this case — notes that duplicate their own ROADMAP entry go
+back to the entry and the code keeps pointers. The two failed selector drafts
+and the 724/256 table are in ROADMAP R109 in full, so 2.5 KB of duplicate came
+out of `wire.js`, `rivals.js`, `renderer.js`, `monologue.js` and
+`resequencer.js`.
+
+    KB_CAP       317.4 -> 316.5  under 317, untouched   (the path-keyed merge)
+    PROSE_CAP    245.8 -> 243.8  under 245, untouched   (R94's rule)
+    MODULE_CAP      49 of 49     untouched
+    FIRST_PAINT   1047 -> 1051   1052 -> 1060, argued
+
+`FIRST_PAINT_KB` is the one that moved, and **the raise corrects the note above
+it first.** R105 wrote that 1052 "keeps R169's 18 KB of deliberate slack above
+the 1043 measurement". 1052 − 1043 is **9**: R105 halved R169's slack while
+saying it had not. Nine is what this gate has actually run on for four
+milestones without a false red, so nine is what 1060 keeps over 1051 — kept,
+not restored. The 30 KB of pools is not in that number at all.
+
 ### Known issues
 
+- **`tools/scopecheck.js` mis-lexes a backticked word inside a `//` comment in
+  `tools/battery.js`** — `` `specimen_loose` `` and `` `rivalId` `` in a new
+  comment were both reported as unbound names. A minimal module with the same
+  comment does not reproduce it, so it is a lexer state carried from somewhere
+  earlier in that 3,000-line file. Worked around by dropping the backticks;
+  the gate is a false POSITIVE here, not a false negative, which is the safe
+  direction. Queued rather than chased inside this milestone.
 - Four existing gates changed logic, which is CLAUDE.md's first full-battery
   trigger. The full battery remains unrunnable on this box (4 cores; R159
   measured ~1h29m for 258 breaks, and there are 321 now), so it was

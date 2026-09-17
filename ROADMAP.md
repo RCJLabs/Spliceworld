@@ -4067,6 +4067,31 @@ suite can check.
   PATHS with live emitters, and `dominion`'s two endings are reached by two
   different saves. It is an emitter check read off the source now.
 
+  **THE WRITING COST 29 KB OF FIRST PAINT**, because pools are CORE content and
+  CORE downloads before the game appears. `data/voice-pools.json` takes R81's
+  split and applies it to words: every pool's TAIL is fetched in the second
+  round beside the geometry, the first line stays in the file that owns it, and
+  the voice works before it lands and rotates after. 1,081 -> 1,054 -> **1,051**
+  with R94's prose rule applied to this milestone's own comments. The file is
+  keyed by the PATH into the indexed content rather than by pool family — the
+  first draft hand-listed six families, which would have made a seventh an
+  engine edit.
+
+      KB_CAP    316.5 / 317   PROSE_CAP  243.8 / 245   MODULE_CAP  49 / 49
+      FIRST_PAINT_KB  1052 -> 1060, measured at 1051
+
+  **AND THE RAISE CORRECTS THE NOTE ABOVE IT.** R105 wrote that 1052 "keeps
+  R169's 18 KB of deliberate slack above the 1043 measurement". 1052 − 1043 is
+  9; R105 halved R169's slack while saying it had not. Nine is what the gate
+  has run on for four milestones without a false red, so nine is what 1060
+  keeps over 1051.
+
+  **Filed:** `tools/scopecheck.js` reports a backticked word inside a `//`
+  comment in `tools/battery.js` as an unbound name (`specimen_loose`,
+  `rivalId`). A minimal module with the same comment does not reproduce it, so
+  it is lexer state carried from earlier in that 3,000-line file. A false
+  positive, not a false negative. Worked around by dropping the backticks.
+
   The original entry follows.
 
 - **R109 (as queued) — The voice repeats.** The wire pushed **4,034 lines in 180 days**

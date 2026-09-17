@@ -62,42 +62,18 @@ export function poolFor(state, content, event) {
 
 // R109 — A CURSOR PER EVENT, SO A POOL EMPTIES ITSELF BEFORE IT REPEATS.
 //
-// The rule this replaces rotated "while the last telling of this exact event
-// is still on the wire". The wire keeps twelve lines and a campaign says
-// twenty-six a day, so a telling is off the end in under half a day and the
-// rotation almost never fired. What was left was the seed: `base` is hashed
-// from the PARAMS, so an event whose params repeat — three operations, five
-// rivals — picks the same variant every time for the life of the save.
+// What this replaces rotated only while the last telling was still on the
+// wire — twelve lines against twenty-six a day, so it almost never fired —
+// and fell back to a seed hashed from the PARAMS, which pins an event whose
+// params repeat to one variant for the life of the save.
 //
-// Measured on the five-line `op_failed` pool the moment it existed: 724
-// tellings, three distinct operations, one phrasing took 256 of them and two
-// were never heard at all. Authoring more variants into that is authoring
-// more silence, which is why this comes before the writing.
-//
-// TWO DRAFTS FAILED BEFORE THIS ONE, and both failed the same way — they
-// left the CHOICE to a roll instead of to memory.
-//
-//   1. A seeded roll per telling. `rngStream` is re-seeded from its
-//      arguments on every call, so a stream keyed on the window's LENGTH
-//      returns the same first number forever once that length pins at its
-//      cap. It picked the same slot every time and took the distinct count
-//      DOWN, 107 to 102.
-//   2. A global no-repeat window of the last twenty phrasings — which is
-//      what the milestone entry asks for, and it does not work on its own.
-//      Twenty lines is eighteen hours of wire, so a busy event's own keys
-//      fall out of the window between tellings, every variant reads as
-//      unseen, and the pick lands on the same one again. 101 distinct.
-//
-// So the memory is PER EVENT and it is a cursor, not a history: `wireAt`
-// holds the next index for each event, and every telling advances it. A pool
-// of five is heard five times before any line is heard twice, exactly, with
-// no randomness in the rotation at all. The seed still chooses where each
-// save STARTS in each pool, so two campaigns do not open the same event on
-// the same sentence.
-//
-// It is bounded by the number of events (R91's rule) rather than by a window
-// somebody has to pick a length for, and it is in the save, so a reload
-// replays the wire rather than rerolling it.
+// `wireAt` holds the next index per event and every telling advances it, so
+// a pool of five is heard five times before any line is heard twice. The
+// seed chooses only where each save OPENS each pool. Bounded by the event
+// count (R91's rule) rather than by a window somebody has to pick a length
+// for, and it is in the save, so a reload replays the wire rather than
+// rerolling it. Two earlier drafts rolled instead of remembering and both
+// made it worse; ROADMAP R109 has them and the numbers.
 export function newsFor(state, content, event, params = {}) {
   const pool = poolFor(state, content, event);
   if (!pool?.length) return null;

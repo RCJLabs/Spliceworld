@@ -49,15 +49,7 @@
       },
       "success": "You leave a polite note and an entirely fictional receipt.",
       "failure": "The attendant was not bored. The attendant was WAITING. You leave without incident and without livestock.",
-      "news": [
-        "Petting zoo reports one (1) goat unaccounted for. Attendant describes suspect as \"determined\".",
-        "Petting zoo down one exhibit. Staff describe the gate as \"technically still a gate\".",
-        "Petting zoo announces a temporary closure and a permanent change of policy.",
-        "Petting zoo inventory is short. The children saw nothing and are lying.",
-        "Petting zoo reports a goat-shaped absence. No further detail offered.",
-        "Petting zoo installs a taller fence. The fence is not the issue and they know it.",
-        "Petting zoo staff report \"an orderly departure\" by something that should not be orderly."
-      ]
+      "news": "Petting zoo reports one (1) goat unaccounted for. Attendant describes suspect as \"determined\"."
     },
     {
       "id": "feed_coop",
@@ -81,14 +73,7 @@
       "livestock": null,
       "success": "The books balance. They balance beautifully. They balance towards you.",
       "failure": "The co-op has hired an accountant with a suspicious mind and a calculator with a receipt roll.",
-      "news": [
-        "Agricultural co-op announces \"routine\" audit. Announcement is described by staff as \"not routine\".",
-        "Feed co-op reports a discrepancy of several tonnes and a shrug.",
-        "Feed co-op's stocktake does not balance. It is being balanced by other means.",
-        "Agricultural co-op tightens security on a barn that no longer contains anything.",
-        "Feed co-op notes an unusual volume of night deliveries, outbound.",
-        "Agricultural co-op declines to comment on the weighbridge. At length."
-      ]
+      "news": "Agricultural co-op announces \"routine\" audit. Announcement is described by staff as \"not routine\"."
     },
     {
       "id": "grant_application",
@@ -112,14 +97,7 @@
       "livestock": null,
       "success": "Funded. The panel particularly admired the diagrams, which were of a goat.",
       "failure": "Rejected. The panel had, it turns out, exactly one biologist, and she has questions.",
-      "news": [
-        "Regional innovation fund backs local agritech venture. Fund declines to specify which agri, or indeed which tech.",
-        "Innovation grant awarded. The application's diagrams were called \"ambitious\".",
-        "Regional fund disburses to an applicant it is now trying to locate.",
-        "Grant approved on the strength of a phrase nobody on the panel understood.",
-        "Innovation fund reports a successful placement and a mild headache.",
-        "Regional fund's quarterly report includes one line item and no photograph."
-      ]
+      "news": "Regional innovation fund backs local agritech venture. Fund declines to specify which agri, or indeed which tech."
     },
     {
       "id": "county_fair",

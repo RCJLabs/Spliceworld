@@ -6886,6 +6886,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // one — every part and every unit has exactly one body.
     'parts-shapes.json': null,
     'enemies-shapes.json': null,
+    // R109 — the spare phrasings, split out of six CORE files for the reason
+    // in render/renderer.js. A player meets these as the wire, the ticker and
+    // their own voice; there is nothing here to teach that the pools' own
+    // files do not already teach. Its gate is the voice block: every line in
+    // it has to be reachable and none may be over 5% of what gets said.
+    'voice-pools.json': null,
     'philosophies.json': null,
     'guides.json': null,
     // R119: the founding labs are the FIRST screen, and a note that teaches
@@ -15575,7 +15581,25 @@ if (inShard('orphans')) {
           && Object.keys(value).length > 0
           && ['parts', 'enemies', 'species', 'frames', 'combos'].some((into) =>
             indexed[into] && Object.entries(value).every(([id, v]) => eq(indexed[into][id]?.[key], v)));
-        if (!named && !distributed && (scalar || !hits.length)) dropped.push(`${file}.json:${key}`);
+        // R109 — and a section can reach runtime as ONE END OF A POOL that
+        // another file completes. `voice-pools.json` is keyed by the PATH into
+        // the indexed content and holds each pool's TAIL, and the file that
+        // owns the pool keeps its HEAD, so neither block ever appears anywhere
+        // as a block: what is live is `[...head, ...tail]` at that path. Both
+        // ends are checked the same way, and it is R81's `distributed` shape
+        // — a stronger claim than the whole-value match, not an exemption.
+        // Drop one line from either end, or rename a path, and it stops
+        // matching. (`news.json:ticker` is the head case: the four the shell
+        // can show before the second round lands.)
+        const poured = !scalar && Array.isArray(value) && value.length > 0
+          && (() => {
+            let at = indexed;
+            for (const part of key.split('.')) at = at?.[part];
+            if (!Array.isArray(at) || at.length < value.length) return false;
+            return eq(at.slice(0, value.length), value)
+              || eq(at.slice(at.length - value.length), value);
+          })();
+        if (!named && !distributed && !poured && (scalar || !hits.length)) dropped.push(`${file}.json:${key}`);
       }
     }
     assert.ok(sections >= 40, `the scan actually walked the data (${sections} sections)`);
