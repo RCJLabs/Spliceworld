@@ -1,5 +1,100 @@
 # PROGRESS
 
+## Session 192 — R114: a save is untrusted input ✅
+
+**The premise reproduced exactly, and two of the entry's claims did not.**
+
+### What was actually true
+
+A save carrying a chimera named `<b onmouseover=alert(1)>Chompers</b>` and a
+goat named `Bessie <img src=x onerror=alert(2)>` imported without complaint.
+The image rendered **raw on the Ranch**, the bold **raw on the Pens**. Every
+shape-broken save loaded too: `chimeras: "hello"`, `funds: "lots"`,
+`funds: -999999`, `ranch: null`, `day: 1e308`. `importSave` checked five things
+and handed the rest to the migrations.
+
+R108 is what made this reachable rather than theoretical — specimen cards mean
+a save-shaped file now arrives from another person — and it had written the IOU
+into `splice/card.js` addressed to R114 by name.
+
+### What measurement changed
+
+The entry said *"the renderer owns the game's one `esc()`"*. There were **five**:
+
+                        &   <   >   "   '   null-safe
+    ui/cards.js         Y   Y   Y   Y   Y   Y
+    battle/ui.js        Y   Y   Y   Y   Y   Y
+    splice/card.js      Y   Y   Y   Y   Y   Y
+    ranch/founding-ui   Y   Y   Y   Y   N   N
+    render/renderer.js  Y   Y   N   Y   N   N
+
+**The copy with the most callers was the weakest of the five** — no `>`, no
+`'`, on the module that draws every creature.
+
+"263 `.name` fields unescaped" measured **361**, but the count is the wrong
+lever: most read `content.*.name`, authored in this repo. The free text a SAVE
+carries comes from three typed sources plus a card's name and lab.
+
+**And the game already had the rule, three times, one of them doing nothing.**
+`renameCreature` (M3) stripped markup. R108's `safeText` did it again, calling
+itself "the one place a stranger's words are narrowed". `renameSlot` did not
+strip at all — R171's five comment strippers and R174's six fillers a **third**
+time, and this time the missing copy was the one on the file boundary.
+
+### Shipped
+
+One cleaner and one escaper, both in `util/text.js`. Two rules, not one,
+because they answer at two moments: a name is **cleaned** where a person types
+it or a file hands it over; everything is **escaped** at the moment of
+printing, so a field nobody thought to clean still renders as text.
+`save/schema.js` repairs shape on import and on load — lazy, behind R101's
+door, so `MODULE_CAP` stays at 50.
+
+The measurement that licensed a universal rule over a path list: a day-60 save
+holds **3,120 strings and not one contains `<` or `>`**. Prose keeps its
+apostrophes, because a captive's `koLine` says "Dr. Mantissa's very patient
+interns" and the name rule would eat that.
+
+### The fuzz earned its place in the first minute it ran
+
+200 mutated day-180 saves found **`campaign.captives: null` breaking the War
+Room**. My shape repair walked only the top level — which looks thorough and
+covers a fifth of the fields. It recurses now, against `newGameState` as the
+authority.
+
+The copy ledger caught the second one: the first draft of `save/schema.js`
+pushed English sentences as repair messages. They are `{ at, why }` now — a
+field path and a reason id — and the words belong in `data/copy.json`.
+
+### Also found
+
+- `campaign/ui.js` had a local named `esc` in a module that **imports** `esc`,
+  so inside that block the escaper was unreachable by its own name.
+- R174's `RUNS_NOTHING_BUT_BELONGS` line for `util/text.js` is **gone, settled
+  by use rather than eviction**: the module holds the escaper now, and
+  `render/renderer.js` calls it on every creature it draws.
+
+### Cut, and why
+
+The entry's step (1) was an `html` tagged template with 361 sites migrated. A
+field list of six stays enumerable; a site list of 361 has to stay right
+forever, and is still one missed site from the same defect. Id-exists checking
+was cut on correctness rather than scope: a part renamed between builds would
+see a player's chimera **deleted** by the thing meant to protect it.
+
+### Verified
+
+`--anchors` 338/338 (break 324 lost its anchor when the card's private escaper
+went; re-aimed at the call, which is the more durable target). Baseline green.
+Breaks 324 and 341–345 red on demand. `npm test` green, run alone. Boot green:
+50 modules, and the excuse list one line shorter.
+
+### Next session's first task
+
+R173 — the reach gate misses break 162 by a rounding hair and does not assert
+the union it already computes. Small, and the battery currently reports one
+missed break that everybody knows about.
+
 ## Session 191 — R174: one filler, and the fiftieth module ✅
 
 **The entry said two `fill`s. The tree had six, and three of them disagreed.**

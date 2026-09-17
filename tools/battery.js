@@ -3397,13 +3397,15 @@ const BREAKS = [
     to: '    reward: 500,',
   },
   {
-    // THE CARD STOPS ESCAPING. R114 has not shipped, so this file is the only
-    // thing standing between a stranger\'s creature name and the markup of a
-    // card the player is about to hand to somebody else.
+    // THE CARD STOPS ESCAPING WHAT IT DRAWS. R108 aimed this at the private
+    // escaper this file used to keep; R114 collapsed five of those into one,
+    // so it now aims at the CALL instead — which is the more durable target
+    // anyway, because the next milestone to move the implementation will not
+    // move the fact that the card's own label is escaped before it is drawn.
     n: 324, gate: SHARD_A, name: 'the card stops escaping what it draws, so a stranger names a creature <script>',
     file: 'splice/card.js',
-    anchor: "    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')",
-    to: '',
+    anchor: '    + `role="img" aria-label="Specimen card: ${esc(name)}">`',
+    to: '    + `role="img" aria-label="Specimen card: ${name}">`',
   },
 
   // R109 — the four rules of the voice, one break each. The first two are
@@ -3472,6 +3474,53 @@ const BREAKS = [
     file: 'util/text.js',
     anchor: '    vars[key] != null ? String(vars[key]) : whole',
     to: '    vars[key] !== undefined ? String(vars[key]) : whole',
+  },
+
+  // R114 — a save is untrusted input.
+  {
+    // A SIXTH ESCAPER APPEARS. The case the count is for: somebody needs to
+    // print a name, writes the four-line replace rather than importing one,
+    // and the tree quietly has two rules about markup again — which is how it
+    // came to have five, one of them missing two characters.
+    n: 341, gate: SHARD_B, name: 'a module grows its own escaper again, and the tree has two rules about markup',
+    file: 'splice/vault.js',
+    anchor: 'export function vaultRoom(state, content) {',
+    to: "const R114_BREAK = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => c);\nexport function vaultRoom(state, content) {",
+  },
+  {
+    // AND IT GOES BACK TO BEING THE WEAK ONE. This is the exact rule the copy
+    // with 26 callers had: the ampersand, the less-than and the double quote,
+    // and neither `>` nor `'`. A name in a single-quoted attribute walks
+    // straight out of it.
+    n: 342, gate: SHARD_B, name: "the one escaper stops escaping the apostrophe, and a name leaves its attribute",
+    file: 'util/text.js',
+    anchor: "  return String(v ?? '').replace(/[&<>\"']/g, (c) => ENTITY[c]);",
+    to: "  return String(v ?? '').replace(/[&<\"]/g, (c) => ENTITY[c]);",
+  },
+  {
+    n: 343, gate: SHARD_B, name: 'the import stops cleaning what it was handed, and a tag reaches the screen',
+    file: 'save/slots.js',
+    anchor: '    const { save: sound, repairs } = cleanSave(structuredClone(save));',
+    to: '    const sound = structuredClone(save); const repairs = [];',
+  },
+  {
+    // THE SHAPE WALK STOPS RECURSING. Top level only — which LOOKS thorough,
+    // passes `chimeras: "hello"`, and leaves `campaign.captives: null` to take
+    // out the War Room. The fuzz found this one inside a minute the first time
+    // it ran, and it is the reason the fuzz is in the gate rather than a list
+    // of cases somebody thought of.
+    n: 344, gate: SHARD_B, name: 'the shape repair stops recursing, and a broken field one level in still loads',
+    file: 'save/schema.js',
+    anchor: '        } else shape(wantAt, gotAt, at);',
+    to: '        }',
+  },
+  {
+    // AND THE THIRD ENTRANCE FORGETS AGAIN. `renameSlot` is where the rule was
+    // missing for the whole of its life; this is that state restored.
+    n: 345, gate: SHARD_B, name: 'renaming a lab stops narrowing what was typed, the way it never did',
+    file: 'save/slots.js',
+    anchor: '  entry.name = safeText(name, 40) || null;',
+    to: '  entry.name = name.trim().slice(0, 40) || null;',
   },
 
   // R175 — the stable says how big it is and what makes it bigger.

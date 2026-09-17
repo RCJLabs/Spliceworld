@@ -679,11 +679,15 @@ function renderMap(root, ctx) {
   });
   root.querySelectorAll('button[data-breakout]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const esc = looseById(state, btn.dataset.breakout);
-      if (!esc) return;
+      // R114 — `escapee` rather than `esc`: this block is in a module that
+      // imports the escaper under that name, so the one thing it could not
+      // reach here was the function that makes a name safe to print.
+      const escapee = looseById(state, btn.dataset.breakout);
+      if (!escapee) return;
       draftTarget = {
-        kind: 'breakout', breakoutId: esc.id, rivalId: esc.rivalId,
-        looseUnitId: esc.unit.id, encounterId: `breakout_${esc.id}`, label: `${esc.unit.name} — loose`,
+        kind: 'breakout', breakoutId: escapee.id, rivalId: escapee.rivalId,
+        looseUnitId: escapee.unit.id, encounterId: `breakout_${escapee.id}`,
+        label: `${escapee.unit.name} — loose`,
       };
       draftTeam = [];
       renderBriefing(root, ctx);

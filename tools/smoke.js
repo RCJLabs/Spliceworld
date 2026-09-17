@@ -108,6 +108,10 @@ const SHARD_OF = {
   stable: 'b',
   // R174 — one filler and its contract. Cheap: a source walk and six asserts.
   fill: 'b',
+  // R114 — the untrusted-input gate. It fuzzes 200 saves and paints every
+  // screen for each survivor, so it is the heaviest block added since R100;
+  // shard b is still the lightest lane and absorbs it best.
+  untrusted: 'b',
   // R168 — a pure function on synthetic timings; it costs nothing.
   shares: 'd',
   // R90 — the last of the common path worth guarding. Measured with
@@ -7024,6 +7028,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // bytes live does not, and saying so here is cheaper than pretending.
     'save/migrations.js': null,
     'save/slots.js': null,
+    // R114 — a RULE about the save, not a system in it. There is nothing here
+    // a player can be taught, do or decide: it repairs a field that arrived
+    // broken and strips a character that could open a tag, on a path they
+    // never see. The thing they CAN see — that an imported save says what it
+    // had to fix — belongs to the import panel's note, not to this module.
+    'save/schema.js': null,
     'save/settings-ui.js': null,
     // R100 — a storage LOCATION, not a system. There is nothing here a player
     // can be taught, do, or decide: it is the same save, written twice, and
@@ -22856,5 +22866,248 @@ if (inShard('released')) {
   assert.ok(Object.keys(shippedNumbers()).length >= 15,
     'and there is a real number of numbers to check');
 }
+
+// R114 — A SAVE IS UNTRUSTED INPUT, AND SO IS A STRANGER'S CARD.
+//
+// Verified on the tree this milestone started from: a save carrying a chimera
+// named `<b onmouseover=alert(1)>Chompers</b>` and a goat named
+// `Bessie <img src=x onerror=alert(2)>` IMPORTED WITHOUT COMPLAINT, and both
+// tags rendered RAW — the image on the Ranch, the bold on the Pens. R108 made
+// that reachable rather than theoretical: specimen cards mean a save-shaped
+// file now arrives from another person.
+//
+// THE ENTRY BLAMED 263 UNESCAPED INTERPOLATIONS. There are 361, and the count
+// is the wrong lever anyway: most of them read `content.*.name`, which is
+// authored in this repo. The free text a SAVE carries comes from exactly three
+// typed sources — chimera names, animal names, the profile — plus a card's
+// name and lab. A field list of six stays enumerable; a site list of 361 is a
+// migration that would have to stay right forever.
+//
+// AND THE GAME ALREADY HAD THE RULE. `renameCreature` has stripped markup out
+// of a name since M3, and R108's `safeText` did it again for cards.
+// `renameSlot` did not do it at all. Three copies, one missing — R171's five
+// comment strippers and R174's six fillers a third time, and this time the
+// copy that was missing was the one on the file boundary.
+//
+// So: ONE cleaner, ONE escaper, the boundary applies the first and every
+// screen is defended by the second. Both halves, because either alone is one
+// forgotten field or one forgotten site away from the same defect.
+if (inShard('untrusted')) {
+  const { safeText, esc } = await import('../util/text.js');
+  const { importSave, exportSave } = await import('../save/slots.js');
+  const { cleanSave } = await import('../save/schema.js');
+  const { labCore, walkedSave } = await import('./fixtures.js');
+  const now = t0 + 48 * HOUR;
+
+  // Enough DOM for a screen to paint and bind. The screens are walked from
+  // `shellScreenMap()` below rather than typed out, so this has to satisfy
+  // whatever the seventh one does too — `querySelector` returns an element
+  // rather than null because the Theater binds to one after it renders.
+  const stubEl = () => ({
+    innerHTML: '', textContent: '', value: '', dataset: {}, style: {},
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    addEventListener() {}, removeEventListener() {}, appendChild() {}, setAttribute() {},
+    getAttribute: () => null, querySelector: () => stubEl(), querySelectorAll: () => [],
+    closest: () => null, focus() {}, click() {}, remove() {}, scrollIntoView() {},
+  });
+  globalThis.document ??= {
+    querySelector: () => stubEl(), querySelectorAll: () => [], getElementById: () => stubEl(),
+    createElement: () => stubEl(), body: stubEl(),
+  };
+
+  // 1. ONE CLEANER AND ONE ESCAPER, counted off the tree rather than
+  //    remembered. Counted by SHAPE for R174's reason: three of its six
+  //    fillers were anonymous, so a name-based count found three and reported
+  //    clean. An escaper is a `.replace()` against the markup characters
+  //    however it is spelled; a cleaner is the same against the strip set.
+  {
+    const ESCAPER = /\.replace\(\s*\/(\[&<>"'\]|&\/g)/;
+    const STRIPPER = /\.replace\(\s*\/\[<>&"'`\]\/g\s*,\s*''\)/;
+    const found = { esc: [], strip: [] };
+    for (const file of moduleFiles()) {
+      const rel = relative(root, file).replaceAll('\\', '/');
+      if (rel.startsWith('tools/')) continue;
+      const src = stripComments(readFileSync(file, 'utf8'));
+      for (const [i, line] of src.split('\n').entries()) {
+        if (ESCAPER.test(line)) found.esc.push(`${rel}:${i + 1}`);
+        if (STRIPPER.test(line)) found.strip.push(`${rel}:${i + 1}`);
+      }
+    }
+    assert.deepEqual([...new Set(found.esc.map((f) => f.split(':')[0]))], ['util/text.js'],
+      `exactly one escaper in the tree (${found.esc.join(', ')})`);
+    assert.deepEqual([...new Set(found.strip.map((f) => f.split(':')[0]))], ['util/text.js'],
+      `and exactly one cleaner (${found.strip.join(', ')})`);
+  }
+
+  // 2. THE ESCAPER IS COMPLETE. The one with 26 callers escaped three of the
+  //    five characters — not `>` and not `'` — which is the combination that
+  //    matters, because names go into single AND double quoted attributes and
+  //    `aria-label="Rename ${animal.name}"` on the Ranch is one of them.
+  {
+    for (const [ch, want] of [['&', '&amp;'], ['<', '&lt;'], ['>', '&gt;'], ['"', '&quot;'], ["'", '&#39;']]) {
+      assert.equal(esc(ch), want, `the escaper handles ${ch}`);
+    }
+    assert.equal(esc(null), '', 'and null is empty, not the word null');
+    assert.equal(esc(0), '0', 'and zero survives, which a truthiness check would eat');
+  }
+
+  // 3. THE CLEANER'S CONTRACT — one case per way the three copies differed.
+  {
+    assert.equal(safeText('<b>Chompers</b>'), 'bChompers/b',
+      'markup characters come out of a typed name');
+    assert.equal(safeText('  Bessie   the   Third '), 'Bessie the Third',
+      'and whitespace collapses — renameCreature did this, safeText did not');
+    assert.equal(safeText('x'.repeat(200), 24).length, 24, 'the length is bounded');
+    assert.equal(safeText(null), '', 'null is empty rather than the word');
+    assert.equal(safeText(undefined), '', 'and so is undefined');
+  }
+
+  // The save from the top of this note, built the way the handler walk builds
+  // its laboratory so the hostile names sit on a state with everything alive.
+  const hostile = () => {
+    const { s } = labCore({ now, prefix: 'x',
+      facility: { theater: 2, containment: 1, incubator: 1, extractor: 1, scanner: 1, infirmary: 1 },
+      spares: [['goat_head', 'standard'], ['bear_organ', 'prime']] });
+    s.chimeras[0].name = '<b onmouseover=alert(1)>Chompers</b>';
+    if (s.ranch.stock.length) s.ranch.stock[0].name = 'Bessie <img src=x onerror=alert(2)>';
+    s.profile = { ...(s.profile ?? {}), name: '<script>alert(3)</script>', lab: '" onload="alert(4)' };
+    return s;
+  };
+
+  // 4. THE BOUNDARY. It still imports — refusing would lose somebody a real
+  //    game over one bad character — and comes back with nothing to render.
+  {
+    const r = await importSave(exportSave(hostile()));
+    assert.ok(r.ok, `the hostile save still IMPORTS (${r.msg ?? ''})`);
+    const strings = [];
+    (function walk(o) {
+      for (const v of Object.values(o ?? {})) {
+        if (typeof v === 'string') strings.push(v);
+        else if (Array.isArray(v)) {
+          for (const x of v) {
+            if (typeof x === 'string') strings.push(x);
+            else if (x && typeof x === 'object') walk(x);
+          }
+        } else if (v && typeof v === 'object') walk(v);
+      }
+    })(r.save);
+    const tagged = strings.filter((v) => /[<>]/.test(v));
+    assert.deepEqual(tagged, [],
+      `and carries no angle bracket anywhere after import (${tagged.slice(0, 3).join(' | ')})`);
+    // A day-60 save has 3,120 strings and not one of them holds an angle
+    // bracket, which is the measurement that licenses the rule above being
+    // about every string rather than a list of paths somebody maintains.
+  }
+
+  // 5. THE CRITERION: it renders as TEXT, on every screen the shell knows —
+  //    read from `shellScreenMap()` rather than typed out, so a seventh screen
+  //    is covered the day it lands (R39's rule).
+  {
+    const r = await importSave(exportSave(hostile()));
+    const screens = shellScreenMap();
+    assert.ok(screens.length >= 6, `the shell's screens are being read (${screens.length})`);
+    for (const { screen, fn, file } of screens) {
+      const el = stubEl();
+      (await import(`../${file}`))[fn](el,
+        { state: r.save, content, now: () => now, save: () => {}, refreshTicker: () => {} });
+      assert.ok(!/<[a-z]+\b[^>]*\son[a-z]+\s*=/i.test(el.innerHTML),
+        `${screen} renders no live event handler out of the save`);
+      assert.ok(!/<script/i.test(el.innerHTML), `${screen} renders no script tag`);
+    }
+  }
+
+  // 6. THE SHAPE. Nothing checked one: `chimeras: "hello"` loaded, and so did
+  //    `funds: "lots"`, `ranch: null` and `day: 1e308`. The rule is REPAIR and
+  //    never reset — the Ascent rule — so a broken field is clamped or dropped
+  //    and the run it belongs to survives.
+  {
+    const cases = [
+      ['chimeras: "hello"', { chimeras: 'hello' }, (s) => Array.isArray(s.chimeras)],
+      ['funds: "lots"', { funds: 'lots' }, (s) => Number.isFinite(s.funds)],
+      ['funds: -999999', { funds: -999999 }, (s) => s.funds >= 0],
+      ['ranch: null', { ranch: null }, (s) => !!s.ranch && typeof s.ranch === 'object'],
+      ['day: 1e308', { day: 1e308 }, (s) => Number.isFinite(s.day) && s.day < 1e7],
+      ['chimeras: [7, null]', { chimeras: [7, null, 'x'] }, (s) => s.chimeras.every((c) => c && typeof c === 'object')],
+    ];
+    for (const [what, patch, ok] of cases) {
+      const { save, repairs } = cleanSave({ ...structuredClone(newGameState()), seed: 1, ...patch });
+      const said = repairs.map((r) => `${r.at}:${r.why}`).join(', ');
+      assert.ok(ok(save), `${what} is repaired rather than taken as-is`);
+      assert.ok(repairs.length > 0, `${what} says what it repaired (${said})`);
+      // A repair names a FIELD and a REASON ID, never a sentence — the words a
+      // player reads about it are data/copy.json's job (R110), and the copy
+      // ledger caught the first draft of this module holding 23 words of prose.
+      assert.ok(repairs.every((r) => r.at && /^[a-z-]+$/.test(r.why ?? '')),
+        `and says it as data rather than as prose (${said})`);
+      assert.equal(save.seed, 1, `${what} does not reset the run — the Ascent rule`);
+    }
+    // And a clean save is untouched, which is what stops the repair becoming
+    // a rewrite every player pays for on every load.
+    const good = { ...structuredClone(newGameState()), seed: 9, funds: 250 };
+    const { save, repairs } = cleanSave(structuredClone(good));
+    assert.deepEqual(repairs, [], 'a clean save repairs nothing');
+    assert.deepEqual(save, good, 'and comes back unchanged');
+  }
+
+  // 7. THE FUZZ. Every case above is one somebody thought of; this is for the
+  //    rest. A real day-180 save, mutated at one field, must import or refuse
+  //    — never throw — and whatever survives must paint every screen.
+  {
+    const base = walkedSave({ days: 180 });
+    const rng = rngStream(hashString('r114-fuzz'));
+    const paths = [];
+    (function walk(o, p) {
+      for (const [k, v] of Object.entries(o ?? {})) {
+        const at = p ? `${p}.${k}` : k;
+        paths.push(at);
+        if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, at);
+      }
+    })(base, '');
+    const MUTANTS = [
+      () => '<img src=x onerror=alert(1)>', () => '" onload="alert(2)', () => null,
+      () => 1e308, () => -1e308, () => Number.NaN, () => [], () => ({}), () => 'hello',
+      () => Number.MAX_SAFE_INTEGER, () => "'; DROP TABLE pens; --",
+    ];
+    const N = 200;
+    let imported = 0, refused = 0;
+    for (let i = 0; i < N; i++) {
+      const s = structuredClone(base);
+      const path = paths[Math.floor(rng() * paths.length)].split('.');
+      const leaf = path.pop();
+      let at = s;
+      for (const k of path) at = at?.[k];
+      if (!at || typeof at !== 'object') continue;
+      const where = [...path, leaf].join('.');
+      at[leaf] = MUTANTS[Math.floor(rng() * MUTANTS.length)]();
+      let r;
+      try {
+        r = await importSave(JSON.stringify(s));
+      } catch (err) {
+        assert.fail(`mutating ${where} THREW out of importSave: ${err.message}`);
+      }
+      if (!r.ok) {
+        refused++;
+        assert.ok(r.reason && r.msg, `a refusal names its reason (${where})`);
+        continue;
+      }
+      imported++;
+      for (const { screen, fn, file } of shellScreenMap()) {
+        const el = stubEl();
+        try {
+          (await import(`../${file}`))[fn](el,
+            { state: r.save, content, now: () => now, save: () => {}, refreshTicker: () => {} });
+        } catch (err) {
+          assert.fail(`mutating ${where} broke the ${screen} render: ${err.message}`);
+        }
+        assert.ok(!/<[a-z]+\b[^>]*\son[a-z]+\s*=/i.test(el.innerHTML),
+          `mutating ${where} put a live handler on ${screen}`);
+      }
+    }
+    assert.ok(imported + refused >= N * 0.8,
+      `the fuzz actually reached a field ${imported + refused} times of ${N}`);
+    assert.ok(imported > 0, 'and a mutated save is usually survivable rather than always refused');
+  }
+}
+
 
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);

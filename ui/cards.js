@@ -18,8 +18,11 @@ import { renderIcon } from './icons.js';
 //
 // It matters wherever a PLAYER-TYPED string reaches markup, which creature
 // names do — the Pens hand out a rename sheet.
-export const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) =>
-  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// R114 — re-exported rather than defined, so every screen that reaches for
+// the escaper through the card helpers keeps working while there is only one
+// implementation to be wrong. util/text.js.
+import { esc } from '../util/text.js';
+export { esc };
 
 // One note, or nothing. Deliberately singular: a wall of tips is wallpaper.
 export function fieldNote(guide) {

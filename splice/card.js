@@ -31,16 +31,12 @@ import { creaturePortrait } from '../render/renderer.js';
 import { chimeraGenome } from './theater.js';
 import { unitFromGenome } from '../battle/statblock.js';
 import { GRADE_INDEX } from './grades.js';
-import { fill } from '../util/text.js';
+import { fill, esc, safeText } from '../util/text.js';
 
 // The card's own, because `render/renderer.js` keeps its `esc` private and a
 // second copy here is cheaper than widening that module's surface for one
 // caller. Five characters, the same five.
-function esc(v) {
-  return String(v ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
+// R114 — was a fifth copy of this. util/text.js.
 
 const DEFAULTS = {
   card: { width: 420, height: 560, codeLimit: 120, nameLimit: 40, palette: {} },
@@ -269,8 +265,9 @@ export function visitingSpecimen(card, content) {
   };
 }
 
-// The one place a stranger's words are narrowed, so there is one thing to
-// audit rather than two. Markup characters out, length bounded.
-export function safeText(value, limit = 40) {
-  return String(value ?? '').replace(/[<>&"'`]/g, '').trim().slice(0, Math.max(1, limit));
-}
+// R114 — RE-EXPORTED, not defined. R108 wrote "the one place a stranger's
+// words are narrowed, so there is one thing to audit rather than two" — and it
+// was the second of three, because `renameCreature` had been doing the same
+// thing since M3 and `renameSlot` was doing none of it. There is one now, in
+// util/text.js, and `campaign/visiting.js` reaches it through here unchanged.
+export { safeText };

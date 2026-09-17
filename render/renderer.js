@@ -6,6 +6,10 @@
 // space (conventions documented in data/notes/frames.md). Any part fits
 // any socket of its slot — that contract is what makes splicing free-form.
 
+// R114 — the one escaper. This module used to keep its own, with more callers
+// than any other copy and less escaping than any of them.
+import { esc } from '../util/text.js';
+
 // SLOT TYPES: what kind of part something is. A part declares one of these.
 export const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
 
@@ -345,9 +349,9 @@ function resolveColor(token, palette) {
   }
 }
 
-function esc(v) {
-  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-}
+// R114 — this was the copy with the most callers and the least escaping: it
+// handled `&`, `<` and `"`, and neither `>` nor `'`, on the module that draws
+// every creature. util/text.js.
 
 function shapeToSVG(shape, palette) {
   const fill = resolveColor(shape.fill ?? 'none', palette);

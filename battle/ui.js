@@ -30,8 +30,7 @@ import { renderIcon } from '../ui/icons.js';
 // Move names and keyword sentences are authored content, not player input,
 // but they land in innerHTML and an apostrophe in a name should not be able
 // to shape the markup around it.
-const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) =>
-  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+import { esc } from '../util/text.js';
 import * as sfx from '../audio/sfx.js';
 
 // Beat lengths moved to battle/autoplay.js in R88, and are imported rather

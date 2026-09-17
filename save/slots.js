@@ -14,6 +14,9 @@ import {
   SAVE_VERSION, STORAGE_KEY, MAX_SLOTS, slotKey,
   newGameState, migrate, loadSlot, loadSlotRegistry, saveSlotRegistry, activeSlotId,
 } from './save.js';
+// R114 — the one cleaner. `renameSlot` below is the third copy of a rule
+// `renameCreature` has applied since M3, and the only one that never applied it.
+import { safeText } from '../util/text.js';
 
 // A lightweight, on-demand summary of a slot's own stored save. Read
 // straight from storage rather than cached in the registry, so it can never
@@ -124,7 +127,7 @@ export function renameSlot(slotId, name, storage = globalThis.localStorage) {
   const reg = loadSlotRegistry(storage);
   const entry = reg.slots.find((s) => s.id === slotId);
   if (!entry) return { ok: false, reason: 'no-such-slot', msg: 'That lab no longer exists.' };
-  entry.name = name.trim().slice(0, 40) || null;
+  entry.name = safeText(name, 40) || null;
   if (!saveSlotRegistry(reg, storage)) return { ok: false, reason: 'write-failed', msg: 'Could not save the new name.' };
   return { ok: true };
 }
@@ -190,8 +193,19 @@ export async function importSave(text) {
       msg: `That save is v${save.saveVersion} and this build reads v${SAVE_VERSION}. Update the game rather than downgrading the save.`,
     };
   }
+  // R114 — AND THEN THE SHAPE. Everything above this line answers "is this a
+  // Spliceworld save at all"; nothing answered "is it a save this build can
+  // render". `chimeras: "hello"` passed all five checks and took out the Pens
+  // on the first paint, and a name carrying a tag rendered it.
+  //
+  // Repaired rather than refused, because a file that arrives slightly wrong
+  // is somebody's run and the Ascent rule says we do not throw those away. The
+  // repairs are reported so the panel can say what it had to fix; they are not
+  // a refusal and the import still succeeds.
   try {
-    return { ok: true, save: await migrate(structuredClone(save)), from: save.saveVersion };
+    const { cleanSave } = await import('./schema.js');
+    const { save: sound, repairs } = cleanSave(structuredClone(save));
+    return { ok: true, save: await migrate(sound), from: save.saveVersion, repairs };
   } catch (err) {
     return { ok: false, reason: 'migration-failed', msg: `That save could not be brought forward: ${err.message}` };
   }

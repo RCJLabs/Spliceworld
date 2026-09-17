@@ -25,6 +25,10 @@
 // The settling clock. A chimera comes out of the vat disoriented and is not
 // yours to send anywhere until it is over; every system that asks "can this
 // one work yet" asks here.
+// R114 — the one cleaner. `renameCreature` below was the FIRST of three
+// copies of the strip rule; util/text.js is the only one now.
+import { safeText } from '../util/text.js';
+
 export function isSettled(chimera, now) {
   return now >= chimera.settleUntil;
 }
@@ -46,7 +50,7 @@ export const TRAINING = { cost: 5, bondGain: 8, cooldownHours: 15 };
 export function renameCreature(list, id, rawName) {
   const target = (list ?? []).find((c) => c.id === id);
   if (!target) return { ok: false, msg: 'No such creature.' };
-  const name = String(rawName ?? '').replace(/[<>&"'`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
+  const name = safeText(rawName, 24);
   if (!name) return { ok: false, msg: 'A name needs at least one printable character. House rules.' };
   const old = target.name;
   target.name = name;
