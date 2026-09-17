@@ -2576,7 +2576,7 @@ export function voiceDiet(lines, content) {
       for (const l of unmatched) t.set(l, (t.get(l) ?? 0) + 1);
       return [...t.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40).map(([line, n]) => ({ line, n }));
     })(),
-    top: ranked.slice(0, 20).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(3) })),
+    top: ranked.slice(0, 120).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(3) })),
   };
 }
 

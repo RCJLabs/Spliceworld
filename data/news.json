@@ -131,6 +131,75 @@
         "Every containment door in the county opened within the same hour. Five laboratories report nothing missing, in writing, at length.",
         "County-wide advisory: rival stock is loose in numbers, in combinations nobody filed paperwork for, and some of it is carrying things that were not on the manifest."
       ]
+    },
+    "op_failed": {
+      "lines": [
+        "{op} came to nothing, which happens.",
+        "{op} is filed under “attempted”. The crew are already blaming the van.",
+        "{op} produced no money and one strongly worded receipt.",
+        "{op} did not go to plan. It did not go to a plan, exactly. It went.",
+        "Nothing came back from {op} except the crew, eventually."
+      ]
+    },
+    "op_paid": {
+      "lines": [
+        "{op} also paid out: ${funds}.",
+        "{op} cleared ${funds}, and nobody has asked how.",
+        "{op} came good: ${funds}, counted twice because the first count was better.",
+        "${funds} from {op}. The paperwork says “consultancy”.",
+        "{op} settled up at ${funds}. The crew would like this noted in their file."
+      ]
+    },
+    "op_paid_animal": {
+      "lines": [
+        "{op} also paid out: ${funds}, and {creature} came back in the van.",
+        "{op} cleared ${funds}. {creature} was in the van and nobody put it there.",
+        "${funds} from {op}, plus {creature}, who seems to have volunteered.",
+        "{op} returned ${funds} and {creature}. Only one of those was on the list.",
+        "{op}: ${funds} banked, {creature} acquired, questions deferred."
+      ]
+    },
+    "rival_first_defeat": {
+      "lines": [
+        "{rival} defeated. Their lab is already ordering more petri dishes — and better ones.",
+        "{rival} defeated. A polite notice goes up about “temporary rescheduling of all demonstrations”.",
+        "{rival} defeated, and the loading bay at their facility has been very busy since.",
+        "{rival} defeated. Somebody over there is drafting the word “anomaly”."
+      ]
+    },
+    "rival_beaten_again": {
+      "lines": [
+        "{rival} beaten again ({times}×). They are taking this personally and it shows in the budget.",
+        "{rival} beaten again — {times} now. The press release has stopped pretending.",
+        "That is {times} for {rival}. Their board has asked for “a different kind of update”.",
+        "{rival} loses again ({times}×) and books the good lawyers for next time."
+      ]
+    },
+    "rival_won": {
+      "lines": [
+        "{rival} wins the exchange and issues a press release about it. Rude.",
+        "{rival} takes the exchange, then takes a photograph of themselves taking it.",
+        "{rival} wins, and the county hears about it before you are back at the gate.",
+        "{rival} comes out ahead and has the graph printed by lunchtime."
+      ]
     }
-  }
+  },
+  "ticker": [
+    "Local zoo reports goat shortage. Authorities baffled.",
+    "Feed store owner retires early, thanks “one extremely loyal customer.”",
+    "Study finds ranch animals happiest when brushed by cackling owners.",
+    "Mail-order livestock industry booming. Postal service requests hazard pay.",
+    "Area geneticist “just asking questions” about eagle wingspans.",
+    "Hardware store sells out of googly eyes. No one is asking why.",
+    "Weather service issues advisory for “unusually confident livestock.”",
+    "City council votes to pretend everything is normal.",
+    "Ethics board postpones meeting indefinitely, cites scheduling.",
+    "Mysterious kazoo noises reported near old barn. Investigation pending.",
+    "Ornithologists puzzled by goat seen “filing a flight plan.”",
+    "County fair cancels livestock category. Offers no replacement and no comment.",
+    "Barn cat unionises. Demands are described as “modest but firm”.",
+    "Veterinary college quietly adds a module called “Advanced Improvisation”.",
+    "Local man insists his dog said good morning. Dog unavailable for comment.",
+    "Agricultural inspector requests transfer. Gives “the barn” as the reason."
+  ]
 }

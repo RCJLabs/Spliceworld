@@ -120,6 +120,13 @@ export function indexContent(raw) {
     gauntlet: raw.gauntlet ? raw.gauntlet.stages : [],
     // R62: the wire's copy, keyed by event id.
     news: raw.news ? raw.news.events : {},
+    // R109 — the deadpan filler the header shows when the world has not said
+    // anything yet. Eleven of these lived in `main.js`, the one place
+    // CLAUDE.md says content may not, and the shell picked ONE of them by
+    // `seed % 11` — so a player met exactly one for the life of the save and
+    // the other ten were unreachable. R41's lesson again: adding it to
+    // CONTENT_FILES is not enough, it has to be indexed to be read.
+    ticker: raw.news?.ticker ?? [],
     sparBlurbs: raw.training ? raw.training.sparBlurbs : null,
     scars: raw.scars ? byId(raw.scars.scars) : {},
     scarMeta: raw.scars ? raw.scars.tuning : null,

@@ -251,10 +251,17 @@ export function tickCampaign(state, content, now, since = state.lastTickAt ?? no
       const boast = playerLine(state, content, 'capture', { creature: res.animal?.name ?? 'the prize' });
       if (res.animal && boast) pushNews(state, boast);
     }
+    // R109 — three sentences used to be written here, and between them they
+    // were 1,190 of the 4,697 lines a 180-day campaign says: a quarter of the
+    // game's whole voice, in an engine module, where no pool can reach it and
+    // rewriting one is an engine edit. They are events now, like everything
+    // else the world says.
     for (const extra of job.results.slice(unread ? 0 : 1)) {
-      pushNews(state, extra.success
-        ? `${extra.name} also paid out: $${extra.funds}${extra.animal ? `, and ${extra.animal.name} came back in the van` : ''}.`
-        : `${extra.name} came to nothing, which happens.`);
+      if (!extra.success) emitNews(state, content, 'op_failed', { op: extra.name });
+      else if (extra.animal) {
+        emitNews(state, content, 'op_paid_animal',
+          { op: extra.name, funds: extra.funds, creature: extra.animal.name });
+      } else emitNews(state, content, 'op_paid', { op: extra.name, funds: extra.funds });
     }
   }
 
