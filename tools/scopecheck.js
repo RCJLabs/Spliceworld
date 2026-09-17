@@ -63,6 +63,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
+import { copyWords } from './source.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -1446,6 +1447,142 @@ export function checkTree() {
   return out;
 }
 
+// --- R110: copy is data ----------------------------------------------------
+//
+// CLAUDE.md has said "all content is data" since M0, and until R110 nobody had
+// counted. **5,043 words of player-facing prose were living in JS string
+// literals**, against 15,385 in `data/*.json` — a QUARTER of everything this
+// game says, written where the data rule cannot see it, where the tone sweep
+// cannot read it, and where R98's terse mode has no switch to turn it off.
+//
+// That is R109's finding one floor down. R109 found 1,265 wire lines written
+// inside engine modules and moved them; this is the same defect across every
+// other surface, and the reason it survived nine audits is that nothing ever
+// produced a number for it.
+//
+// THIS IS A RATCHET, NOT A WALL, and the difference is deliberate. Migrating
+// 5,043 words is ~620 literals across 59 modules, most of them inside
+// interpolated HTML — several sessions of work, not one. A rule that demanded
+// zero today would have to be turned off today, and a gate that is off is
+// worse than no gate because it reads as covered. So the ledger below records
+// what each module carries RIGHT NOW, exactly, and the gate holds three lines:
+//
+//   1. A module absent from the ledger carries NO copy. A new screen cannot
+//      start life with prose in it, which is the case that matters most —
+//      every entry below was once somebody adding "just one sentence".
+//   2. A module in the ledger carries EXACTLY its number. Not "at most":
+//      exactly. An off-by-one in either direction fails, so the ledger cannot
+//      quietly drift out of date the way R157's worn floor did, and finishing
+//      a migration is a visible edit rather than a silent improvement.
+//   3. The total never exceeds `COPY_CAP`, which only ever moves DOWN.
+//
+// Rule 2 costs a line of bookkeeping per migration and buys the property that
+// this file always tells the truth about the tree. That is the trade R127 made
+// for the parts generator and R101 made for the save fixtures.
+const COPY_CAP = 4671;
+
+// Measured by `copyWords` in tools/source.js, which is also what the gate runs,
+// so the ledger and the check cannot disagree about what a word is.
+const COPY_BUDGET = {
+  'battle/autoplay.js': 41,
+  'battle/engine.js': 14,   // R110: ABSENT_UNIT's koLine, the fallback for when content did not load
+
+  'battle/forecast.js': 149,
+  'battle/move-text.js': 18,
+  'battle/statblock.js': 17,
+  'battle/tagtext.js': 18,
+  'battle/ui.js': 47,
+  'campaign/breakout.js': 7,
+  'campaign/campaign.js': 72,
+  'campaign/contest.js': 9,
+  'campaign/digest.js': 170,
+  'campaign/gauntlet.js': 28,
+  'campaign/legacy.js': 22,
+  'campaign/map.js': 3,
+  'campaign/matchup.js': 50,
+  'campaign/monologue.js': 3,
+  'campaign/operations.js': 103,
+  'campaign/rehab.js': 176,
+  'campaign/rivals.js': 9,
+  'campaign/sparring.js': 28,
+  'campaign/taskforce.js': 21,
+  'campaign/ui.js': 320,
+  'campaign/warroom.js': 70,
+  'data/catalog.js': 28,
+  'data/loader.js': 3,
+  'main.js': 105,
+  'ranch/agenda.js': 213,
+  'ranch/breeding.js': 104,
+  'ranch/founding-ui.js': 73,
+  'ranch/onboarding.js': 122,
+  'ranch/ranch.js': 129,
+  'ranch/ui.js': 202,
+  'render/renderer.js': 11,
+  'save/save.js': 35,
+  'save/settings-ui.js': 261,
+  'save/slots.js': 208,
+  'splice/chaos.js': 125,
+  'splice/chimera.js': 22,
+  'splice/dex-ui.js': 146,
+  'splice/dexentry.js': 16,
+  'splice/dossier.js': 165,
+  'splice/extract-ui.js': 31,
+  'splice/extract.js': 115,
+  'splice/facility.js': 56,
+  'splice/pens-ui.js': 203,
+  'splice/physiology.js': 233,
+  'splice/resequencer.js': 50,
+  'splice/rush.js': 53,
+  'splice/scars.js': 44,
+  'splice/theater-ui.js': 87,
+  'splice/theater.js': 244,
+  'splice/tier.js': 60,
+  'splice/vault-ui.js': 56,
+  'splice/vault.js': 17,
+  'ui/facility-card.js': 40,
+  'ui/focus.js': 3,
+  'ui/icons.js': 5,
+  'ui/picker.js': 3,
+  'ui/welcome.js': 8,
+};
+
+// `tools/` is the developer's half of the repo and never reaches a player, so
+// it is not copy and not counted. `dist/` is build output. Everything else
+// that ships is in scope, including `sw.js` and `data/loader.js`.
+const COPY_SCOPE = (rel) => !rel.startsWith('tools/') && !rel.startsWith('dist/');
+
+export function checkCopy(sources) {
+  const failures = [];
+  let total = 0;
+  for (const [rel, src] of Object.entries(sources)) {
+    if (!COPY_SCOPE(rel)) continue;
+    const { words, found } = copyWords(src);
+    total += words;
+    const budget = COPY_BUDGET[rel];
+    if (budget === undefined) {
+      if (words) {
+        const worst = found.sort((a, b) => b.words - a.words)[0];
+        failures.push(`${rel}: ${words} words of player-facing prose in a module with no copy budget`
+          + ` — copy belongs in data/copy.json (worst, line ${worst.line}: "${worst.text.trim().slice(0, 60)}")`);
+      }
+      continue;
+    }
+    if (words !== budget) {
+      failures.push(`${rel}: carries ${words} words of prose, ledger says ${budget}`
+        + (words < budget
+          ? ' — prose came out; bring the ledger down to match in tools/scopecheck.js'
+          : ' — prose went in; put it in data/copy.json, or declare it here and say why'));
+    }
+  }
+  for (const rel of Object.keys(COPY_BUDGET)) {
+    if (!(rel in sources)) failures.push(`${rel}: has a copy budget but is not a module in this tree`);
+  }
+  if (total > COPY_CAP) {
+    failures.push(`the tree carries ${total} words of prose outside data/, over the cap of ${COPY_CAP}`);
+  }
+  return { failures, total };
+}
+
 // --- CLI --------------------------------------------------------------------
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
@@ -1472,9 +1609,25 @@ if (isMain) {
       free++;
     }
   }
+  // R110 — the copy ledger, reported beside the unbound names because it is the
+  // same question asked of the same walk: what is in this module that should
+  // not be.
+  const copy = checkCopy(Object.fromEntries(
+    results.map((r) => [r.file, readFileSync(join(root, r.file), 'utf8')])
+  ));
+  for (const f of copy.failures) console.error(`copy: ${f}`);
+  console.log(`scopecheck: ${copy.total} words of player-facing prose outside data/, cap ${COPY_CAP}`);
+
   const ms = Date.now() - started;
-  if (free) {
-    console.error(`\nscopecheck ✗  ${free} unbound name${free === 1 ? '' : 's'} across ${results.length} modules (${ms}ms)`);
+  if (free || copy.failures.length) {
+    // Two findings, counted apart. R157's break 152 is the reason: one number
+    // standing for two questions is a number nobody can act on.
+    const parts = [];
+    if (free) parts.push(`${free} unbound name${free === 1 ? '' : 's'}`);
+    if (copy.failures.length) {
+      parts.push(`${copy.failures.length} copy finding${copy.failures.length === 1 ? '' : 's'}`);
+    }
+    console.error(`\nscopecheck ✗  ${parts.join(' and ')} across ${results.length} modules (${ms}ms)`);
     process.exit(1);
   }
   console.log(`scopecheck ✓  ${results.length} modules, every name bound and every import answered (${ms}ms)`);

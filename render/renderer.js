@@ -120,6 +120,12 @@ export function indexContent(raw) {
     gauntlet: raw.gauntlet ? raw.gauntlet.stages : [],
     // R62: the wire's copy, keyed by event id.
     news: raw.news ? raw.news.events : {},
+    // R110 — player-facing copy that has no system file of its own, keyed by
+    // dotted id and read through `copy` in util/text.js. It ships in CORE
+    // rather than in R81's second round on purpose: a fight that opened
+    // before a LATE fetch landed would print nothing at all, and an empty
+    // battle log is worse than a late portrait.
+    copy: raw.copy ?? {},
     // R109 — the deadpan filler the header shows before the world has said
     // anything. Eleven of these lived in `main.js`, which CLAUDE.md forbids,
     // and the shell picked one by `seed % 11` — ten were unreachable.

@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**10 entries queued.** R110, R111, R112, R113, R114, R115, R116, R117, R118,
-R173.
+**10 entries queued.** R111, R112, R113, R114, R115, R116, R117, R118, R173,
+R174.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4114,7 +4114,58 @@ suite can check.
   cut; **(3)** a smoke gate over the walker's diet. *Done when: over 180
   days no phrasing exceeds 5% of the wire and the distinct-phrasing count is
   at least 400.*
-- **R110 — Copy is data.** Counted with comments stripped: **5,310 words of
+- **R110 — Copy is data.** ✅ *Shipped, as a ratchet.* The headline held and
+  the map did not: **5,043 words** measured on today's tree against the
+  entry's 5,310, but two of the five files it names as heaviest have already
+  been emptied by intervening milestones (`battle/ui.js` 363 -> **47**,
+  `render/renderer.js` 299 -> **11**), and **the actual heaviest file is not in
+  the entry at all** — `battle/engine.js`, **386 words** of battle beats
+  written inside the engine that `tools/sim.js` runs headlessly.
+
+  **The scale is why this ships as a ratchet rather than a wall.** 5,043 words
+  is 659 literals across 59 modules, most inside interpolated HTML — several
+  sessions, not one. A rule demanding zero today would have to be switched off
+  today, and a gate that is off reads as covered.
+
+      data/copy.json     49 ids, read through copy(content, id, vars)
+      battle/engine.js   386 -> 14 words   (ABSENT_UNIT's koLine, see below)
+      COPY_CAP         5,043 -> 4,671      down only, never up
+
+  **What the gate holds**, per module and in total: a module absent from the
+  ledger carries NO copy, so a new screen cannot be born with prose in it; a
+  module in the ledger carries EXACTLY its number, not "at most", so the ledger
+  cannot drift out of date the way R157's worn floor did; and the total never
+  exceeds `COPY_CAP`, which only moves down.
+
+  **THE TONE GATE WAS READING AN UNKNOWN FRACTION OF THE TREE.** Its third
+  clause looked already met — the sweep walked data and JS both — but through
+  its own comment stripper and its own string regex, which is precisely the bug
+  R171 wrote `tools/source.js` to end: a regex cannot tell a string from a
+  comment from a regex literal, so `//` inside a sentence ended the sentence
+  and everything after it went unread. It reported clean either way. It runs on
+  the real scanner now, with a coverage floor of 3,000 literals.
+
+  **Two things were already half-right and are now whole.** `stance.json` has
+  shipped all ten of its lines since R103 while `battle/engine.js` carried a
+  `STANCE_LINES` mirror of them behind a smoke assertion holding the two equal
+  — a mirror that is gated to be identical is not a safety net, it is a second
+  place to edit. Deleted; **74 words**. And the file's 49 ids are walked both
+  ways against the source, so copy nobody reads and a reader with no copy are
+  both build failures (R20's rule, R57's shape, found a seventh time).
+
+  **The 14 words left in the engine** are `ABSENT_UNIT`'s `koLine` — the
+  fallback unit the engine falls back TO when content did not load, which is
+  the one line in the game that cannot read from content.
+
+  **Filed as R174:** `fill` is still duplicated between `util/text.js` and
+  `campaign/monologue.js`. Merging them makes `util/text.js` the **fiftieth**
+  eager module against `MODULE_CAP` 49, and R169 spent a whole milestone
+  getting one module out of that graph. That is a cap argument, not a paragraph
+  at the end of an unrelated migration.
+
+  The original entry follows.
+
+- **R110 (as queued) — Copy is data.** Counted with comments stripped: **5,310 words of
   player-facing prose live in JS string literals** against 20,393 in
   `data/*.json` — **21% of everything the game says is invisible to the data
   rule**, to the tone sweep (which can only read JSON with confidence), and
@@ -4317,6 +4368,19 @@ suite can check.
   rather than from where it was set three tunings ago. *Done when: break 162 is
   caught, the assertion names which parts no seed reaches, and the full battery
   reports 0 missed.*
+
+- **R174 — Two `fill`s, and the fiftieth eager module.** R110 gave copy-as-data
+  one reader in `util/text.js`, and left `fill` duplicated: `campaign/monologue.js`
+  keeps its own, because it is EAGER and importing from `util/text.js` would
+  make that module the **fiftieth** against `MODULE_CAP` 49 — a cap the tree
+  has sat exactly on since R169 spent a milestone getting `splice/theater.js`
+  out of the graph. So the duplication is deliberate and gated rather than
+  forgotten. Proposed, small, but it is a BUDGET argument and that is the
+  work: either find the module that should leave the eager graph to pay for
+  this one, or argue the cap up with what the fiftieth buys. R93's note on
+  `battle/moves.js` is the worked example of the first. *Done when: one `fill`
+  has one home, every reader imports it, and `MODULE_CAP` is either unchanged
+  or raised with a ledger line saying what left.*
 
 ### 9.7 The opening, and the sitting (R119–R120) — asked for directly
 

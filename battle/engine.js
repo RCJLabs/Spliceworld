@@ -5,6 +5,7 @@
 // deterministically (rolls derive from seed + rollCount).
 
 import { rngStream, pick } from '../util/rng.js';
+import { copy } from '../util/text.js';
 import { chooseMoveIndex, skillFor } from './ai.js';
 import { levelOf, levelMult, grantBattleXp } from './veterancy.js';
 import { analyze } from '../splice/physiology.js';
@@ -90,26 +91,13 @@ function guardAbsorb(def, content) {
   return stanceTuning(content).absorb * (1 - (def.perks?.guardLoss ?? 0));
 }
 
-// The stance's sentences, in data with its numbers. They were written out
-// here as literals in the first draft and `stance.json` carried a `lines`
-// block nobody read — content that says one thing and an engine that says
-// another, which is the exact shape of the bug R9's rule exists to stop.
-// The defaults mirror the file; smoke holds them equal.
-const STANCE_LINES = {
-  brace: '{name} sets its feet and braces — {cost} stamina spent standing still.',
-  breath: '{name} catches its breath: +{gain} stamina.',
-  absorbed: "{name}'s guard absorbs {pct}% of the blow.",
-  counter: '{name} comes in on the turn and lands one for free.',
-  braceLive: 'Take {pct}% off {move} — costs {cost} stamina',
-  braceIdle: 'Nothing to brace against — catch your breath for +{gain}',
-  braceThrough: '{move} goes straight through a guard — this is stamina only, +{gain}',
-  braceHeld: 'Braced last turn — this one is stamina only, +{gain}',
-  braceSpent: 'Not enough stamina to hold a brace — catch your breath for +{gain}',
-  braceNothingLeft: 'Nothing left to swing — catch your breath for +{gain}',
-};
-
+// R110 — THE DEFAULTS ARE GONE. This block mirrored all ten lines of
+// `stance.json` as a fallback, and the file has shipped every one of them
+// since R103 with a smoke assertion holding the two equal. A mirror that is
+// gated to be identical is not a safety net, it is a second place to edit —
+// which is the bug this comment used to describe happening to somebody else.
 export function stanceLine(content, key, vars = {}) {
-  const raw = content?.stanceLines?.[key] ?? STANCE_LINES[key] ?? '';
+  const raw = content?.stanceLines?.[key] ?? '';
   return raw.replace(/\{(\w+)\}/g, (whole, k) => (vars[k] === undefined ? whole : String(vars[k])));
 }
 
@@ -555,7 +543,7 @@ export function createBattle(chimeras, encounter, content, seed, now, context = 
   // colon here made the wave announcement read as something the rival said.
   battle.log.push(`${encounter.name} — ${battle.enemy.active.name} moves in!`);
   const first = battle.player.team[0];
-  if (first.rejection) battle.log.push(`${first.name} is unsettled — Rejection saps its power and speed.`);
+  if (first.rejection) battle.log.push(copy(content, 'battle.unsettled_rejection', { name: first.name }));
   return battle;
 }
 
@@ -656,13 +644,13 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
       (1 - jumpy) *
       (1 - theirs.evasion);
   if (roll(battle) > hitChance) {
-    events.push({ text: `${atk.name} uses ${move.name} — it whiffs spectacularly!`, kind: 'miss', actor: from, target: at, move: move.name });
+    events.push({ text: copy(content, 'battle.whiff', { name: atk.name, move: move.name }), kind: 'miss', actor: from, target: at, move: move.name });
     return;
   }
 
   const { mult, ignoreArmor } = tagMultiplier(move.tags, def.tags, content.tagChart);
   if (move.power > 0 && mult === 0) {
-    events.push({ text: `${atk.name} uses ${move.name} — it has no effect on ${def.name}. (${chartNote(move.tags, def.tags, content)})`, kind: 'immune', actor: from, target: at, move: move.name });
+    events.push({ text: copy(content, 'battle.no_effect', { name: atk.name, move: move.name, target: def.name, why: chartNote(move.tags, def.tags, content) }), kind: 'immune', actor: from, target: at, move: move.name });
   } else if (move.power > 0) {
     const clsMult = classMultiplier(atk.creatureClass, def.creatureClass, content);
     // Brave: cornered, it starts landing telling blows.
@@ -709,7 +697,7 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
     }
     let line = `${atk.name} uses ${move.name} — ${dmg} damage`;
     if (hits > 1) line += ` across ${hits} hits`;
-    if (crit) line += ' — CORNERED AND FURIOUS!';
+    if (crit) line += copy(content, 'battle.cornered');
     if (mult > 1) line += ' (super effective!)';
     // R79 - the multiplier survives a retirement that the NAMES do not: a
     // class still named on an enemy record after it left classes.json makes
@@ -749,19 +737,19 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
     if (clsFirst) events.push({ text: clsWhy, kind: 'info' });
     if (def.status.sleep) {
       def.status.sleep = false;
-      events.push({ text: `${def.name} is rudely awakened.`, kind: 'status', target: at });
+      events.push({ text: copy(content, 'battle.awakened', { name: def.name }), kind: 'status', target: at });
     }
     if (move.keywords.recoil) {
       const r = Math.max(1, Math.round(dmg * move.keywords.recoil));
       atk.hp = Math.max(0, atk.hp - r);
-      events.push({ text: `${atk.name} takes ${r} recoil. Worth it. Probably.`, kind: 'damage', actor: from, target: from, amount: r, recoil: true, mult: 1 });
+      events.push({ text: copy(content, 'battle.recoil', { name: atk.name, amount: r }), kind: 'damage', actor: from, target: from, amount: r, recoil: true, mult: 1 });
     }
     // Thorns belongs to the DEFENDER, so it resolves here rather than in the
     // keyword block: whoever chose to touch the porcupine pays for it.
     if (def.status.thorns > 0 && atk.hp > 0) {
       const t = Math.max(1, Math.round(dmg * def.status.thorns));
       atk.hp = Math.max(0, atk.hp - t);
-      events.push({ text: `${def.name} is covered in spines — ${atk.name} takes ${t} back.`, kind: 'damage', actor: at, target: from, amount: t, mult: 1 });
+      events.push({ text: copy(content, 'battle.thorns', { name: def.name, target: atk.name, amount: t }), kind: 'damage', actor: at, target: from, amount: t, mult: 1 });
     }
   } else {
     events.push({ text: `${atk.name} uses ${move.name}.`, kind: 'setup', actor: from, target: at, move: move.name });
@@ -769,18 +757,18 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
 
   const kw = move.keywords;
   if (kw.venom && def.hp > 0) {
-    if (def.tags.includes('Vehicle')) events.push(`Venom drips off the chassis. Machines remain unimpressed.`);
+    if (def.tags.includes('Vehicle')) events.push(copy(content, 'battle.venom_vehicle'));
     else {
       def.status.venom = Math.min(VENOM_CAP, def.status.venom + kw.venom);
-      events.push({ text: `${def.name} is envenomed (${def.status.venom} stack${def.status.venom > 1 ? 's' : ''}).`, kind: 'debuff', target: at });
+      events.push({ text: copy(content, def.status.venom > 1 ? 'battle.envenomed_many' : 'battle.envenomed_one', { name: def.name, stacks: def.status.venom }), kind: 'debuff', target: at });
     }
   }
   if (kw.stun && def.hp > 0 && roll(battle) < kw.stun) {
     def.status.stun = true;
-    events.push({ text: `${def.name} is seeing cartoon birdies — stunned!`, kind: 'debuff', target: at });
+    events.push({ text: copy(content, 'battle.stunned', { name: def.name }), kind: 'debuff', target: at });
   }
   if (kw.sleep && def.hp > 0) {
-    if (def.tags.includes('Vehicle')) events.push(`${def.name} has no bedtime. The dart pings off.`);
+    if (def.tags.includes('Vehicle')) events.push(copy(content, 'battle.stun_immune', { name: def.name }));
     else if (roll(battle) < kw.sleep) {
       def.status.sleep = true;
       events.push({ text: `${def.name} falls asleep mid-shift.`, kind: 'debuff', target: at });
@@ -788,22 +776,22 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
   }
   if (kw.trap && def.hp > 0) {
     def.status.trapped = true;
-    events.push({ text: `${def.name} is trapped — no switching out!`, kind: 'debuff', target: at });
+    events.push({ text: copy(content, 'battle.trapped', { name: def.name }), kind: 'debuff', target: at });
   }
   if (kw.guard) {
     atk.status.guard = true;
-    events.push({ text: `${atk.name} braces behind a guard.`, kind: 'buff', target: from });
+    events.push({ text: copy(content, 'battle.guard', { name: atk.name }), kind: 'buff', target: from });
   }
   if (kw.accUp) { atk.stages.acc = Math.min(STAGE_CAP, atk.stages.acc + kw.accUp); events.push({ text: `${atk.name}'s accuracy sharpens.`, kind: 'buff', target: from }); }
   if (kw.accDown && def.hp > 0) { def.stages.acc = Math.max(-STAGE_CAP, def.stages.acc - kw.accDown); events.push({ text: `${def.name}'s accuracy drops.`, kind: 'debuff', target: at }); }
-  if (kw.powerUp) { atk.stages.power = Math.min(STAGE_CAP, atk.stages.power + kw.powerUp); events.push({ text: `${atk.name} flexes menacingly — power up!`, kind: 'buff', target: from }); }
+  if (kw.powerUp) { atk.stages.power = Math.min(STAGE_CAP, atk.stages.power + kw.powerUp); events.push({ text: copy(content, 'battle.power_up', { name: atk.name }), kind: 'buff', target: from }); }
   if (kw.powerDown && def.hp > 0) { def.stages.power = Math.max(-STAGE_CAP, def.stages.power - kw.powerDown); events.push({ text: `${def.name}'s power wilts.`, kind: 'debuff', target: at }); }
-  if (kw.evasionUp) { atk.stages.evasion = Math.min(STAGE_CAP, atk.stages.evasion + kw.evasionUp); events.push({ text: `${atk.name} gets slippery — evasion up!`, kind: 'buff', target: from }); }
+  if (kw.evasionUp) { atk.stages.evasion = Math.min(STAGE_CAP, atk.stages.evasion + kw.evasionUp); events.push({ text: copy(content, 'battle.evasion_up', { name: atk.name }), kind: 'buff', target: from }); }
   if (kw.staminaRestore) { atk.stamina = Math.min(atk.staminaMax, atk.stamina + kw.staminaRestore); events.push({ text: `${atk.name} recovers ${kw.staminaRestore} stamina.`, kind: 'buff', target: from }); }
   if (kw.heal) {
     const h = Math.round(atk.maxHp * kw.heal);
     atk.hp = Math.min(atk.maxHp, atk.hp + h);
-    events.push({ text: `${atk.name} patches up ${h} HP.`, kind: 'heal', target: from, amount: h });
+    events.push({ text: copy(content, 'battle.heal', { name: atk.name, amount: h }), kind: 'heal', target: from, amount: h });
   }
   if (kw.knockback && def.hp > 0) knockback(battle, def, events, content);
   // Bleed is Venom for things that do not breathe. The chart zeroes Venomous
@@ -811,26 +799,26 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
   // this ticks on anything with hit points.
   if (kw.bleed && def.hp > 0) {
     def.status.bleed = Math.min(BLEED_CAP, (def.status.bleed ?? 0) + kw.bleed);
-    events.push({ text: `${def.name} is leaking something. Oil, ichor, morale.`, kind: 'debuff', target: at });
+    events.push({ text: copy(content, 'battle.bleed', { name: def.name }), kind: 'debuff', target: at });
   }
   if (kw.staminaDrain && def.hp > 0) {
     const d = Math.min(def.stamina, kw.staminaDrain);
     def.stamina -= d;
     atk.stamina = Math.min(atk.staminaMax, atk.stamina + Math.round(d / 2));
-    events.push({ text: `${atk.name} siphons ${d} stamina off ${def.name}.`, kind: 'debuff', target: at });
+    events.push({ text: copy(content, 'battle.siphon', { name: atk.name, amount: d, target: def.name }), kind: 'debuff', target: at });
   }
   if (kw.slow && def.hp > 0) {
     const before = def.speed;
     def.speed = Math.max(1, Math.round(def.speed * (1 - kw.slow)));
-    if (def.speed < before) events.push({ text: `${def.name} bogs down — speed ${before} → ${def.speed}.`, kind: 'debuff', target: at });
+    if (def.speed < before) events.push({ text: copy(content, 'battle.slow', { name: def.name, from: before, to: def.speed }), kind: 'debuff', target: at });
   }
   if (kw.thorns) {
     atk.status.thorns = Math.max(atk.status.thorns ?? 0, kw.thorns);
-    events.push({ text: `${atk.name} bristles. Touching it is now a decision.`, kind: 'buff', target: from });
+    events.push({ text: copy(content, 'battle.bristle', { name: atk.name }), kind: 'buff', target: from });
   }
   if (kw.regen) {
     atk.status.regen = { amount: kw.regen, turns: REGEN_TURNS };
-    events.push({ text: `${atk.name} starts knitting itself back together.`, kind: 'buff', target: from });
+    events.push({ text: copy(content, 'battle.regen', { name: atk.name }), kind: 'buff', target: from });
   }
   // Rally is the one keyword that reaches past the active fighter. The enemy
   // queue holds ids rather than combatants, so on that side it lands on the
@@ -838,14 +826,14 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
   if (kw.rally) {
     const squad = from === 'player' ? battle.player.team.filter((c) => c.hp > 0) : [atk];
     for (const c of squad) c.stages.power = Math.min(STAGE_CAP, c.stages.power + kw.rally);
-    events.push({ text: `${atk.name} rallies the whole outfit — everyone stands taller.`, kind: 'buff', target: from });
+    events.push({ text: copy(content, 'battle.rally', { name: atk.name }), kind: 'buff', target: from });
   }
   // Taunt does not take the turn away (§3.5: never remove player control) —
   // it takes the OPTIONS away. You may still choose, but only from the
   // things that involve hitting the creature waving at you.
   if (kw.taunt && def.hp > 0) {
     def.status.taunted = TAUNT_TURNS;
-    events.push({ text: `${def.name} is thoroughly provoked and cannot think about anything else.`, kind: 'debuff', target: at });
+    events.push({ text: copy(content, 'battle.taunt', { name: def.name }), kind: 'debuff', target: at });
   }
 }
 
@@ -877,12 +865,12 @@ function markKnocked(battle, side) {
 function knockback(battle, target, events, content) {
   const side = target.kind === 'unit' ? 'enemy' : 'player';
   if (knockedRecently(battle, side)) {
-    events.push({ text: `${target.name} digs in — no one is getting punted twice in a row.`, kind: 'info' });
+    events.push({ text: copy(content, 'battle.anchor_dug_in', { name: target.name }), kind: 'info' });
     return;
   }
   if (target.kind === 'unit') {
     if (battle.enemy.queue.length === 0) {
-      events.push({ text: `${target.name} skids back but holds the line — no reinforcements to rotate in.`, kind: 'info' });
+      events.push({ text: copy(content, 'battle.anchor_no_bench', { name: target.name }), kind: 'info' });
       return;
     }
     // Re-queue by whatever the wave list uses: a roster id, or the whole
@@ -891,28 +879,28 @@ function knockback(battle, target, events, content) {
     const nextId = battle.enemy.queue.shift();
     battle.enemy.active = combatantFor(content, nextId, battle.enemyScale);
     markKnocked(battle, 'enemy');
-    events.push({ text: `${target.name} is punted out of formation! ${battle.enemy.active.name} scrambles in.`, kind: 'waveIn', target: 'enemy' });
+    events.push({ text: copy(content, 'battle.punted', { name: target.name, next: battle.enemy.active.name }), kind: 'waveIn', target: 'enemy' });
   } else {
     const bench = livingBench(battle);
     if (!bench.length) {
-      events.push({ text: `${target.name} staggers but has nowhere to go.`, kind: 'info' });
+      events.push({ text: copy(content, 'battle.punt_nowhere', { name: target.name }), kind: 'info' });
       return;
     }
     const swap = bench[Math.floor(roll(battle) * bench.length)];
     battle.player.active = swap.i;
     markKnocked(battle, 'player');
-    events.push({ text: `${target.name} is sent tumbling! ${swap.c.name} is shoved onto the field.`, kind: 'waveIn', target: 'player' });
+    events.push({ text: copy(content, 'battle.tumbled', { name: target.name, next: swap.c.name }), kind: 'waveIn', target: 'player' });
   }
 }
 
-function actUnavailable(c, events) {
+function actUnavailable(c, events, content) {
   if (c.status.sleep) {
-    events.push({ text: `${c.name} is fast asleep. Adorable. Tactically ruinous.`, kind: 'blocked', target: sideOf(c) });
+    events.push({ text: copy(content, 'battle.asleep', { name: c.name }), kind: 'blocked', target: sideOf(c) });
     return true;
   }
   if (c.status.stun) {
     c.status.stun = false;
-    events.push({ text: `${c.name} is stunned and loses the turn!`, kind: 'blocked', target: sideOf(c) });
+    events.push({ text: copy(content, 'battle.stun_lost_turn', { name: c.name }), kind: 'blocked', target: sideOf(c) });
     return true;
   }
   return false;
@@ -928,7 +916,7 @@ function performMove(battle, side, moveIndex, events, content, powerScale = 1) {
   const atk = side === 'player' ? playerActive(battle) : battle.enemy.active;
   const def = side === 'player' ? battle.enemy.active : playerActive(battle);
   if (atk.hp <= 0) return;
-  if (actUnavailable(atk, events)) return;
+  if (actUnavailable(atk, events, content)) return;
   atk.status.guard = false; // guard lasts until your next action
   atk.status.justBraced = false; // …and a creature that acted is not turtling
 
@@ -936,7 +924,7 @@ function performMove(battle, side, moveIndex, events, content, powerScale = 1) {
   if (move.keywords.charge && atk.status.charging == null) {
     atk.status.charging = moveIndex;
     atk.stamina = Math.max(0, atk.stamina - Math.ceil(move.cost / 2));
-    events.push({ text: `${atk.name} winds up ${move.name} — something enormous is coming.`, kind: 'charge', actor: sideOf(atk), move: move.name });
+    events.push({ text: copy(content, 'battle.winding_up', { name: atk.name, move: move.name }), kind: 'charge', actor: sideOf(atk), move: move.name });
     return;
   }
   if (atk.status.charging != null) atk.status.charging = null;
@@ -1010,36 +998,36 @@ export function intentOf(battle, content) {
   return battle.intent;
 }
 
-function endOfTurn(battle, events) {
+function endOfTurn(battle, events, content) {
   for (const c of [playerActive(battle), battle.enemy.active]) {
     if (c.hp <= 0) continue;
     if (c.status.venom > 0) {
       const v = c.status.venom * VENOM_TICK;
       c.hp = Math.max(0, c.hp - v);
-      events.push({ text: `Venom simmers: ${c.name} takes ${v}.`, kind: 'damage', target: sideOf(c), amount: v, dot: true, mult: 1 });
+      events.push({ text: copy(content, 'battle.venom_tick', { name: c.name, amount: v }), kind: 'damage', target: sideOf(c), amount: v, dot: true, mult: 1 });
     }
     if (c.status.bleed > 0) {
       const b = c.status.bleed * BLEED_TICK;
       c.hp = Math.max(0, c.hp - b);
-      events.push({ text: `${c.name} is still leaking: ${b}.`, kind: 'damage', target: sideOf(c), amount: b, dot: true, mult: 1 });
+      events.push({ text: copy(content, 'battle.bleed_tick', { name: c.name, amount: b }), kind: 'damage', target: sideOf(c), amount: b, dot: true, mult: 1 });
     }
     if (c.status.regen) {
       const h = Math.max(1, Math.round(c.maxHp * c.status.regen.amount));
       c.hp = Math.min(c.maxHp, c.hp + h);
-      events.push({ text: `${c.name} knits ${h} HP back.`, kind: 'heal', target: sideOf(c), amount: h });
+      events.push({ text: copy(content, 'battle.regen_tick', { name: c.name, amount: h }), kind: 'heal', target: sideOf(c), amount: h });
       if (--c.status.regen.turns <= 0) c.status.regen = null;
     }
     if (c.status.taunted > 0) c.status.taunted -= 1;
     if (c.status.sleep && roll(battle) < 0.5) {
       c.status.sleep = false;
-      events.push({ text: `${c.name} wakes up, refreshed and furious.`, kind: 'status', target: sideOf(c) });
+      events.push({ text: copy(content, 'battle.wakes', { name: c.name }), kind: 'status', target: sideOf(c) });
     }
     // Gentle creatures pace themselves. Expressed as a share of the
     // stamina POOL rather than a flat number, so it means the same thing
     // to a small creature as to a large one.
     const calm = Math.round((c.perks?.regen ?? 0) * (c.staminaMax / 10));
     c.stamina = Math.max(0, Math.min(c.staminaMax, c.stamina + c.regen + calm));
-    if (c.regen < 0) events.push({ text: `${c.name} runs hot — stamina bleeds ${-c.regen}.`, kind: 'debuff', target: sideOf(c) });
+    if (c.regen < 0) events.push({ text: copy(content, 'battle.overheat', { name: c.name, amount: -c.regen }), kind: 'debuff', target: sideOf(c) });
   }
   // A trap only holds while the trapper stands.
   if (battle.enemy.active.hp <= 0) playerActive(battle).status.trapped = false;
@@ -1052,9 +1040,9 @@ function handleEnemyKO(battle, events, content) {
   if (e.transformInto) {
     // A boss with no authored line still announces its second stage rather
     // than blanking the message box for a beat: four of five shipped that way.
-    events.push({ text: e.transformLine ?? `${battle.enemy.active.name} takes the field!`, kind: 'ko', target: 'enemy' });
+    events.push({ text: e.transformLine ?? copy(content, 'battle.takes_field', { name: battle.enemy.active.name }), kind: 'ko', target: 'enemy' });
     battle.enemy.active = combatantFor(content, e.transformInto, battle.enemyScale);
-    events.push({ text: `${battle.enemy.active.name} looms over the field!`, kind: 'waveIn', target: 'enemy', transform: true });
+    events.push({ text: copy(content, 'battle.looms', { name: battle.enemy.active.name }), kind: 'waveIn', target: 'enemy', transform: true });
     return;
   }
   events.push({ text: e.koLine, kind: 'ko', target: 'enemy' });
@@ -1072,7 +1060,7 @@ function handleEnemyKO(battle, events, content) {
     battle.outcome = 'win';
     if (battle.barks?.defeat) events.push({ text: barkLine(battle, 'enemy', battle.barks.defeat), kind: 'bark' });
     if (battle.playerBarks?.victory) events.push({ text: barkLine(battle, 'player', battle.playerBarks.victory), kind: 'bark' });
-    events.push({ text: `Victory! The area is yours (pending paperwork).`, kind: 'victory' });
+    events.push({ text: copy(content, 'battle.victory'), kind: 'victory' });
   }
 }
 
@@ -1094,7 +1082,7 @@ function handleEnemyKO(battle, events, content) {
 // "call everything a loss", and it agreed with the real ending 12 times out
 // of 15 by luck. R139's lesson, landing on the session that quotes it: a
 // ratio is a claim with its denominator hidden.
-function callFight(battle, events) {
+function callFight(battle, events, content) {
   const team = battle.player.team;
   const mine = team.reduce((s, c) => s + c.maxHp, 0);
   const theirs = battle.enemy.active.maxHp;
@@ -1118,16 +1106,16 @@ function callFight(battle, events) {
   // happened to end naturally on that turn agrees with the same verdict rule
   // anyway. The Ascent rule is not worth spending on a convenience.
   if (won) {
-    events.push({ text: `${TURN_LIMIT} turns. The county's noise ordinance kicks in and ${battle.enemy.active.name} is escorted off the premises — the field is yours on points.`, kind: 'victory' });
+    events.push({ text: copy(content, 'battle.called_win', { turns: TURN_LIMIT, name: battle.enemy.active.name }), kind: 'victory' });
   } else {
-    events.push({ text: `${TURN_LIMIT} turns and the inspectors call it. ${battle.enemy.active.name} is still up; your team withdraws on points and files a strongly worded grievance.`, kind: 'defeat' });
+    events.push({ text: copy(content, 'battle.called_loss', { turns: TURN_LIMIT, name: battle.enemy.active.name }), kind: 'defeat' });
   }
 }
 
-function handlePlayerKO(battle, events) {
+function handlePlayerKO(battle, events, content) {
   const me = playerActive(battle);
   if (me.hp > 0) return;
-  events.push({ text: `${me.name} is down — dramatic slow-motion flop!`, kind: 'ko', target: 'player' });
+  events.push({ text: copy(content, 'battle.down', { name: me.name }), kind: 'ko', target: 'player' });
   battle.enemy.active.status.trapped = false;
   if (livingBench(battle).length) {
     battle.pendingReplace = true;
@@ -1137,7 +1125,7 @@ function handlePlayerKO(battle, events) {
     battle.outcome = 'loss';
     if (battle.barks?.victory) events.push({ text: barkLine(battle, 'enemy', battle.barks.victory), kind: 'bark' });
     if (battle.playerBarks?.defeat) events.push({ text: barkLine(battle, 'player', battle.playerBarks.defeat), kind: 'bark' });
-    events.push({ text: `The team is out. Regroup at the lab — the Infirmary awaits.`, kind: 'defeat' });
+    events.push({ text: copy(content, 'battle.team_out'), kind: 'defeat' });
   }
 }
 
@@ -1152,8 +1140,8 @@ export function step(battle, action, content) {
     if (action.type !== 'switch') return [];
     battle.player.active = action.index;
     battle.pendingReplace = false;
-    events.push({ text: `${playerActive(battle).name} takes the field!`, kind: 'waveIn', target: 'player' });
-    if (playerActive(battle).rejection) events.push({ text: `${playerActive(battle).name} is unsettled — Rejection applies.`, kind: 'debuff', target: 'player' });
+    events.push({ text: copy(content, 'battle.takes_field', { name: playerActive(battle).name }), kind: 'waveIn', target: 'player' });
+    if (playerActive(battle).rejection) events.push({ text: copy(content, 'battle.unsettled_applies', { name: playerActive(battle).name }), kind: 'debuff', target: 'player' });
     battle.log.push(...events.texts());
     // The plan was made against the creature that just went down. A
     // replacement is a free action, so the next real turn plans afresh.
@@ -1195,7 +1183,7 @@ export function step(battle, action, content) {
       .filter(({ m, i }) => m.cost <= me.stamina && i !== action.index);
     if (affordable.length) {
       const alt = affordable[Math.floor(roll(battle) * affordable.length)];
-      events.push({ text: `${me.name} ignores orders and improvises!`, kind: 'disobey', target: 'player' });
+      events.push({ text: copy(content, 'battle.disobey', { name: me.name }), kind: 'disobey', target: 'player' });
       playerAction = { type: 'move', index: alt.i };
     }
   }
@@ -1203,7 +1191,7 @@ export function step(battle, action, content) {
   if (playerAction.type === 'flee') {
     battle.over = true;
     battle.outcome = 'fled';
-    events.push({ text: `You beat a tactical retreat. The kazoo plays taps.`, kind: 'flee' });
+    events.push({ text: copy(content, 'battle.retreat'), kind: 'flee' });
     battle.log.push(...events.texts());
     return events.list;
   }
@@ -1212,7 +1200,7 @@ export function step(battle, action, content) {
     const foe = battle.enemy.active;
     battle.cannon.charge = 0;
     battle.captured.push(foe.refId);
-    events.push({ text: `THWOOMP. The Containment Cannon fires — ${foe.name} poofs into the impound queue!`, kind: 'capture', target: 'enemy' });
+    events.push({ text: copy(content, 'battle.cannon', { name: foe.name }), kind: 'capture', target: 'enemy' });
     me.status.trapped = false;
     if (battle.enemy.queue.length) {
       const nextId = battle.enemy.queue.shift();
@@ -1223,7 +1211,7 @@ export function step(battle, action, content) {
       battle.outcome = 'win';
       if (battle.barks?.defeat) events.push({ text: barkLine(battle, 'enemy', battle.barks.defeat), kind: 'bark' });
       if (battle.playerBarks?.victory) events.push({ text: barkLine(battle, 'player', battle.playerBarks.victory), kind: 'bark' });
-      events.push({ text: `Victory! The area is yours (pending paperwork).`, kind: 'victory' });
+      events.push({ text: copy(content, 'battle.victory'), kind: 'victory' });
     }
     battle.turn++;
     battle.log.push(...events.texts());
@@ -1234,7 +1222,7 @@ export function step(battle, action, content) {
   if (playerAction.type === 'switch') {
     battle.player.active = playerAction.index;
     const incoming = playerActive(battle);
-    events.push({ text: `${me.name} tags out. ${incoming.name} takes the field!`, kind: 'waveIn', target: 'player' });
+    events.push({ text: copy(content, 'battle.tag_out', { name: me.name, next: incoming.name }), kind: 'waveIn', target: 'player' });
     // R103 — THE COUNTER-SWITCH.
     //
     // A switch has always cost the whole turn, and until the intent was
@@ -1249,7 +1237,7 @@ export function step(battle, action, content) {
     const rules = content.classRules ?? {};
     const counters = intent && incoming.creatureClass && intent.creatureClass
       && classMultiplier(incoming.creatureClass, intent.creatureClass, content) === rules.advantage;
-    if (counters && !actUnavailable(incoming, events)) {
+    if (counters && !actUnavailable(incoming, events, content)) {
       const idx = chooseMoveIndex(battle, incoming, battle.enemy.active, content, 1, () => roll(battle));
       if (idx >= 0) {
         // SAID OUT LOUD, and not only for the player. A free hit that arrives
@@ -1264,7 +1252,7 @@ export function step(battle, action, content) {
       }
     }
   } else if (playerAction.type === 'rest') {
-    if (!actUnavailable(me, events)) {
+    if (!actUnavailable(me, events, content)) {
       // R103 — it braces, against the blow it was actually told about. The
       // three conditions and the two numbers are `bracePreview`'s, which is
       // also what the button quotes: one rule, one place (R61).
@@ -1311,7 +1299,7 @@ export function step(battle, action, content) {
       if (idx < 0) restCombatant(current, events, content);
       else performMove(battle, side, idx, events, content);
       handleEnemyKO(battle, events, content);
-      handlePlayerKO(battle, events);
+      handlePlayerKO(battle, events, content);
       if (battle.pendingReplace) break; // replacement happens before anything else
     }
   } else if (battle.enemy.active === plannedFoe) {
@@ -1319,7 +1307,7 @@ export function step(battle, action, content) {
     // the creature that planned the move is no longer the one standing there.
     if (enemyMove < 0) restCombatant(battle.enemy.active, events, content);
     else performMove(battle, 'enemy', enemyMove, events, content);
-    handlePlayerKO(battle, events);
+    handlePlayerKO(battle, events, content);
   }
 
   if (!battle.over) {
@@ -1330,17 +1318,17 @@ export function step(battle, action, content) {
     // round of every effect they had spent turns applying. Measured: 74
     // damage of venom and bleed on a quiet turn, 0 on the turn a chimera
     // went down.
-    endOfTurn(battle, events);
+    endOfTurn(battle, events, content);
     handleEnemyKO(battle, events, content);
     // …but the KO itself has already been announced and the prompt already
     // raised, so it is not announced twice.
-    if (!battle.pendingReplace) handlePlayerKO(battle, events);
+    if (!battle.pendingReplace) handlePlayerKO(battle, events, content);
   }
   battle.turn++;
   // R145 — after the increment, so the limit is the turn number the player
   // sees. A fight is never left open: the engine, not a harness guard, is
   // what guarantees this returns.
-  if (!battle.over && battle.turn >= TURN_LIMIT) callFight(battle, events);
+  if (!battle.over && battle.turn >= TURN_LIMIT) callFight(battle, events, content);
   battle.log.push(...events.texts());
   if (battle.log.length > 60) battle.log.splice(0, battle.log.length - 60);
   return events.list;
@@ -1367,7 +1355,7 @@ export function step(battle, action, content) {
 // COMPRESSED from 15.8pp to 11.5. A defensive buff both sides receive is not
 // a decision either side makes.
 function restCombatant(c, events, content) {
-  if (actUnavailable(c, events)) return;
+  if (actUnavailable(c, events, content)) return;
   const gain = Math.round(c.staminaMax * stanceTuning(content).stamina);
   c.stamina = Math.min(c.staminaMax, c.stamina + gain);
   events.push({ text: stanceLine(content, 'breath', { name: c.name, gain }), kind: 'rest', target: sideOf(c) });

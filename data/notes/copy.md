@@ -1,0 +1,9 @@
+# data/copy.json
+
+R110 — player-facing copy that has no system file of its own, keyed by dotted id and read through `copy(content, id, vars)` in `util/text.js`. Every other file in this directory is about a SYSTEM — what a part is, what a rival says, what a facility costs — and copy that belongs to one of those belongs in that file. This is for the sentences that belong to no system: the battle's own beats, and whatever follows them out of the modules.
+
+It exists because CLAUDE.md's "all content is data" had never been counted. R109 found 1,265 wire lines written inside engine modules; counting the rest found **5,043 more words** of player-facing prose in JS string literals — a quarter of everything this game says, invisible to the data rule, to the tone sweep, and to R98's terse mode, which has nowhere to switch off a sentence that is not in a file it can read. The ledger in `tools/scopecheck.js` records what each module still carries and can only ratchet down.
+
+It is in CORE, not in R81's second round, and that is deliberate: a fight that opened before a LATE fetch landed would print nothing at all, and an empty battle log is worse than a late portrait. The cost is about 2.5 KB of first paint, which is what leaving the same words in a lazy module cost the player anyway once they opened a screen.
+
+Placeholders are `{braces}` filled by `fill`, which leaves an unknown key ALONE rather than printing "undefined" — R62's rule for the wire, for the same reason: a typo should read oddly rather than break the sentence it is in. `copy` returns null for an id the file does not carry, which is what makes the gate possible: smoke walks every id asked for in the source against every id in this file, both ways, so copy nobody reads and a reader with no copy are both build failures (R20's rule, R57's shape).

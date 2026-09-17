@@ -28,7 +28,7 @@
 // which is R122's original bug report — a phone stuck on a broken build.
 // `tools/release.js` is the answer and exists for this: CACHE is checked
 // against SAVE_VERSION by a gate rather than by anybody remembering.
-const CACHE = 'spliceworld-v56-5650b215';
+const CACHE = 'spliceworld-v56-9906685c';
 
 const SHELL = [
   '.',
@@ -38,6 +38,7 @@ const SHELL = [
   'manifest.webmanifest',
   'icon.svg',
   'util/rng.js',
+  'util/text.js',
   'save/save.js',
   'save/migrations.js',
   'save/slots.js',
@@ -132,6 +133,7 @@ const SHELL = [
   'data/training.json',
   'data/gauntlet.json',
   'data/news.json',
+  'data/copy.json',
   'data/parts.json',
   // R81: the geometry, split out of parts.json and enemies.json and fetched
   // after the first paint. Still precached — offline needs the pictures too,

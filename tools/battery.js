@@ -3445,6 +3445,53 @@ const BREAKS = [
     anchor: "      } else emitNews(state, content, 'op_paid', { op: extra.name, funds: extra.funds });",
     to: '      } else pushNews(state, null);',
   },
+  // R110 — copy is data. One break per clause of the new rule.
+  {
+    // A NEW SCREEN IS BORN WITH PROSE IN IT. The case that matters most: every
+    // one of the 59 entries in the ledger was once somebody adding "just one
+    // sentence" to a module, and nothing ever said no.
+    n: 330, gate: SCOPE, name: 'a module with no copy budget grows a sentence, and nothing says no',
+    file: 'ui/tabs.js',
+    anchor: 'export function bindSubtabs(root, attr, onPick) {',
+    to: "const R110_BREAK = 'The county has been advised to carry on normally.';\nexport function bindSubtabs(root, attr, onPick) {",
+  },
+  {
+    // AND THE LEDGER DRIFTS. Exactness is the property: "at most" lets prose
+    // accumulate up to the number, and a budget nobody has to re-derive is the
+    // shape of R157's worn floor, which stopped moving with the statistic it
+    // guarded and missed the break it was written for.
+    n: 331, gate: SCOPE, name: 'prose goes back into a budgeted module, and the ledger does not notice',
+    file: 'splice/vault.js',
+    anchor: 'export function vaultRoom(state, content) {',
+    to: "const R110_BREAK2 = 'one more sentence nobody declared anywhere';\nexport function vaultRoom(state, content) {",
+  },
+  {
+    // COPY NOBODY CAN REACH. R57/R58's shape, which this project has now found
+    // seven times — most recently in R109's own content, one commit old.
+    n: 332, gate: SHARD_D, name: 'a sentence is authored into data/copy.json that no module ever asks for',
+    file: 'data/copy.json',
+    anchor: '"awakened": "{name} is rudely awakened.",',
+    to: '"awakened": "{name} is rudely awakened.",\n    "unreachable": "Nobody will ever read this sentence.",',
+  },
+  {
+    // AND THE OTHER DIRECTION: a reader asking for copy nobody wrote. `copy`
+    // returns null, the event carries no text, and the fight goes quiet at the
+    // moment it should be loudest.
+    n: 333, gate: SHARD_D, name: 'the engine asks for a copy id nobody wrote, and the beat goes silent',
+    file: 'battle/engine.js',
+    anchor: "copy(content, 'battle.retreat')",
+    to: "copy(content, 'battle.retreat_typo')",
+  },
+  {
+    // THE TONE GATE READS NOTHING AND REPORTS CLEAN. This is the defect R110
+    // found in the gate itself: it carried its own comment stripper and its own
+    // string regex, so what it actually read was unknown. The coverage floor is
+    // what makes "zero death language" mean the tree rather than a fraction.
+    n: 334, gate: FACILITY, name: 'the tone gate stops reading the modules and still says zero death language',
+    file: 'tools/smoke.js',
+    anchor: '      for (const { text: lit } of stringLiterals(text)) {',
+    to: '      for (const { text: lit } of []) {',
+  },
   {
     // A POOL'S PATH STOPS RESOLVING. `voice-pools.json` is keyed by the path
     // into the indexed content, so a typo is not an error — the merge simply
@@ -4357,10 +4404,17 @@ const BREAKS = [
     to: "  if (!p.braced) return stanceLine(content, 'braceLive', { pct: Math.round(p.absorb * 100), move: intent?.name, cost: p.cost });",
   },
   {
+    // R110 RE-AIMED THIS. It used to patch `stanceLine` to prefer a
+    // STANCE_LINES constant over the file — and that constant is gone, because
+    // it mirrored all ten lines of stance.json behind a smoke assertion
+    // holding the two equal. A mirror that is gated to be identical is not a
+    // safety net, it is a second place to edit. The break the rule is actually
+    // about is the same one: the engine stops reading the file and says its
+    // own sentence instead.
     n: 97, gate: STANCE, name: "the stance's sentences go back to being literals the data cannot reach",
     file: 'battle/engine.js',
-    anchor: "  const raw = content?.stanceLines?.[key] ?? STANCE_LINES[key] ?? '';",
-    to: "  const raw = STANCE_LINES[key] ?? '';",
+    anchor: "  const raw = content?.stanceLines?.[key] ?? '';",
+    to: "  const raw = key === 'brace' ? '{name} sets its feet and braces.' : (content?.stanceLines?.[key] ?? '');",
   },
   {
     n: 98, gate: STANCE, name: 'the pilot keeps a second copy of the stance table',
