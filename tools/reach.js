@@ -339,6 +339,24 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
   // NAMES which parts and which species so the next reader is not left
   // counting. If a part is ever meant to be unreachable, it needs a reason
   // written here rather than a number quietly raised.
+  //
+  // AND THE HONEST LIMIT, because R173 looked for it and did not find it: on
+  // today's tree there is NO break this catches that the mean floor misses.
+  // Four trees were measured —
+  //
+  //     clean                97.2%  union 244/244   both pass
+  //     break 162            94.0%  union 242/244   both fire
+  //     break 161            89.8%  union 236/244   both fire
+  //     R95's pair-sort gone 95.1%  union 244/244   NEITHER fires
+  //
+  // So this is defence in depth rather than a second net with its own catch.
+  // What it buys is INDEPENDENCE FROM WHERE THE FLOOR SITS — break 162 passed
+  // the old 0.94 floor by two hundredths of a point and this would have caught
+  // it anyway — and a failure that names the stranded content instead of
+  // printing a percentage. Both are worth having; neither is "it catches more".
+  //
+  // The fourth row is a finding in its own right and is filed as R177: losing
+  // R95's pair-ordering costs five parts of mean reach and nothing goes red.
   {
     const unreached = Object.values(content.parts).filter((p) => !union.has(p.id));
     if (unreached.length) {

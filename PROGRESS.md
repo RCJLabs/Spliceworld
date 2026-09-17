@@ -1,5 +1,59 @@
 # PROGRESS
 
+## Session 193 — R173: the reach gate asserts what it was only printing ✅
+
+**The one miss of 339 breaks, closed — and a negative result I went looking for
+and did not get.**
+
+### The premises, re-measured on the post-R114 tree
+
+                   clean            with break 162      floor
+    part reach     237.2 (97.2%)    229.4 (94.0%)       REACH_FLOOR 0.94
+    parts worn     153.4 (62.9%)    156.5 (64.2%) UP    WORN_FLOOR 0.50
+    union seen     244 of 244       242 of 244          nothing asserted
+
+`0.9402 < 0.94` is false, so the gate passed on a tree where two parts had
+become unreachable. `WORN_FLOOR` could never have helped: a smaller herd holds
+fewer parts, so the ones held are worn **more** and that figure goes **up**
+under the break. R157's break-245 shape a second time.
+
+### Shipped
+
+The union — computed and printed since the gate was written, never compared to
+anything — is now asserted with no tolerance, and names the stranded content.
+Under break 162 it reads `pale_cobra (pale_cobra_head, pale_cobra_tail)`: a
+**bred** species, which is the break's own mechanism showing up in the failure
+text. `REACH_FLOOR` 0.94 → 0.95, re-derived from the clean spread.
+
+### The honest limit
+
+The entry implied the union would be the sharper net. I measured four trees
+looking for a break it catches and the floor misses, and there isn't one:
+
+    clean                 97.2%  union 244/244   both pass
+    break 162             94.0%  union 242/244   both fire
+    break 161             89.8%  union 236/244   both fire
+    R95's pair-sort gone  95.1%  union 244/244   NEITHER fires
+
+So it is **defence in depth, not a second catch**. What it buys is independence
+from where the floor sits — break 162 cleared the old floor by two hundredths
+of a point — and a failure that names content instead of a percentage. Saying
+"it catches more" would have been untrue, so the gate says so in its own
+comment.
+
+### The fourth row is a new entry
+
+Losing R95's pair-ordering costs five parts of mean reach and **nothing goes
+red** — filed as **R177**. I deliberately did not ratchet the floor to 0.96 to
+cover it: the clean worst seed is 96.3%, so 0.96 leaves 0.3pp and would
+false-red on content churn, which R158 established is the worse failure. That
+is the same trade R173 exists to stop making.
+
+### Next session's first task
+
+R177, or R111 if the queue order is preferred — R177 is small and is R173's own
+leftover, which usually argues for taking it while the measurements are fresh.
+
 ## Session 192 — R114: a save is untrusted input ✅
 
 **The premise reproduced exactly, and two of the entry's claims did not.**
