@@ -93,6 +93,20 @@ export function startResequence(state, vialId, content, now) {
   const potential = { ...(plan.vial.potential ?? reconstructPotential(plan.stars, rng)) };
   const genotype = { ...(plan.vial.genotype ?? {}) };
   let mutationNote = null;
+  // R109 — the two artefact sentences used to be written right here. They are
+  // pools in resequencer.json now, so a third phrasing is a JSON edit.
+  //
+  // A LOCAL FILLER, the way splice/chaos.js keeps one: `fill` lives in
+  // campaign/monologue.js and importing it would point a husbandry module at
+  // the campaign for one regex. Three copies is one too many, and R110 owns
+  // copy-as-data wholesale.
+  const pickLine = (key, vars) => {
+    const pool = content.resequencerLines?.[key];
+    const list = Array.isArray(pool) ? pool : [pool].filter(Boolean);
+    if (!list.length) return null;
+    return String(pick(rng, list))
+      .replace(/\{(\w+)\}/g, (whole, k) => (vars[k] != null ? String(vars[k]) : whole));
+  };
   if (mutated) {
     // The same three shapes breeding uses, so a mutation here reads as the
     // same phenomenon rather than a second unrelated system.
@@ -100,11 +114,11 @@ export function startResequence(state, vialId, content, now) {
     if (mutable.length && rng() < 0.5) {
       const trait = pick(rng, mutable);
       genotype[trait.id] = Math.min(2, (genotype[trait.id] ?? 0) + 1);
-      mutationNote = `Resequencing artefact: a ${trait.name} gene that was not in the sample. The lab denies responsibility.`;
+      mutationNote = pickLine('artefactGene', { trait: trait.name });
     } else {
       const stat = pick(rng, STATS);
       potential[stat] = Math.min(5, (potential[stat] ?? 3) + 1);
-      mutationNote = `Resequencing artefact: a spontaneous ${stat.toUpperCase()} surge. Nobody planned this.`;
+      mutationNote = pickLine('artefactStat', { stat: stat.toUpperCase() });
     }
   }
 

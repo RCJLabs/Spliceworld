@@ -1,5 +1,163 @@
 # PROGRESS
 
+## Session 188 — R109: the voice repeats ✅
+
+**ROADMAP §9.** The complaint holds. Three of the entry's numbers were stale,
+and the biggest finding is not in the entry at all.
+
+### The baseline, measured before writing anything
+
+Seed 2026 over 180 days: **4,697** wire lines from **67 distinct phrasings**,
+loudest **14.6%**. The entry said 4,034 from 181 — that 181 counted printed
+SENTENCES, and "Hazmat rescued from the impound lot" and "Napoleon
+Bitey-parte rescued from the impound lot" are one phrasing heard twice.
+
+**And 1,265 of those 4,697 — 26.9% — were written inside engine modules.**
+CLAUDE.md has said content lives in data since the beginning; nothing had
+ever counted. That is the finding the entry does not have, and it had to be
+fixed first: a sentence in a module cannot be pooled, rotated or rewritten
+without an engine edit.
+
+    unmatched   1,265 -> 0        distinct  67 -> 411
+    loudest     14.6% -> 1.6%     SAVE_VERSION 56 (`wireAt`)
+
+### The selector came before the writing, and two drafts of it failed
+
+The old rule rotated *while the last telling is still on the wire* — twelve
+lines against twenty-six a day, so it almost never fired. What was left was a
+seed hashed from the PARAMS, and with three operations and five rivals that
+is the same variant for the life of the save. The five-line `op_failed` pool
+read **256 / … / 0 / 0** across 724 tellings. Authoring more variants into
+that is authoring more silence.
+
+- **Draft one, a seeded roll per telling.** `rngStream` re-seeds from its
+  arguments every call, so a stream keyed on a window's LENGTH returns the
+  same first number forever once that length pins at its cap. Distinct went
+  **down**, 107 to 102.
+- **Draft two, the global no-repeat window of twenty** — which is what the
+  entry asks for, and it does not work alone. Twenty lines is eighteen hours
+  of wire, so a busy event's own keys fall out *between* tellings, every
+  variant reads as unseen, and it lands on the same one. **101.**
+- **What works is a cursor per event.** `op_failed` reads
+  **145 / 145 / 145 / 145 / 144**.
+
+Both failures are in the module comment. They failed the same way: they left
+the choice to a roll instead of to memory.
+
+### The loudest line in the game was the player's own
+
+`philosophies.json` gave each philosophy a single `capture` sentence, and the
+improver's ran **684 times in 180 days** — more than any news event, and it
+was never on the wire at all. The voice a player picks in their first five
+minutes was the thing they heard most. Ten variants each, across all five.
+
+### Four gates asserted on one sentence's wording
+
+Pooling the voice found all four: `/CAPTURED/`, `/THWOOMP|impounded/`,
+`/BREAKOUT|misplaced|unaccounted/`, and `news[key].includes('{node}')`
+against what is now an array. **That last was silently weaker than it
+looked** — `includes` on an array is true when any element matches, so a pool
+whose ninth line forgot `{node}` would have passed. Each now asks what it
+meant: does the capture name the creature, does the escape name the lab, does
+EVERY phrasing carry the placeholder.
+
+### The gate caught its own author twice
+
+- A four-line `rival_beaten_again` pool, written for a `??` arm that is
+  unreachable: all five rivals have a `rematch` line. Cut — a rival shipping
+  without a voice should fail the build, not be papered over.
+- **Rule 4 was framed twice as "content the walk never reached"**, which is a
+  fact about the walker rather than the voice. `dissection_done`,
+  `last_stand` and `rehab_enrolled` are rare PATHS with live emitters;
+  `dominion`'s two endings are reached by two different saves. It is an
+  emitter check read off the source now, and the cursor makes the thing the
+  earlier framings guarded against impossible by construction.
+
+### A measurement that cost a wrong conclusion
+
+The first attempt to read the wire lifted `WIRE_KEEP` to see the whole log —
+and `newsFor`'s rotation READS that window. The instrument disabled the
+selector it was measuring and reported the three spar phrasings at 528/1/1;
+with the real window they are 180/179/171. Recorded in the commit so it
+cannot come back as received wisdom.
+
+### 300 new variants put 29 KB in front of the first paint
+
+The pools are content, and CORE content downloads before the game appears.
+`tools/boot.js` went to **1,081 KB against a 1,052 KB budget** the moment the
+writing landed — a real regression, and raising the cap to cover it would have
+been negotiating with the measurement.
+
+R81's split, applied to words. `data/voice-pools.json` holds every pool's TAIL
+and is fetched in the second round beside the geometry; the first line of each
+pool stays in the file that owns it, so the wire, the ticker and the player's
+own voice all work before it lands and simply start rotating after. **1,081 ->
+1,054**, and no line is ever lost.
+
+**The first draft of the merge hand-listed its six pool families**, which made
+a seventh an engine edit — the exact thing CLAUDE.md forbids. Keyed by the PATH
+into the indexed content instead (`news.spar_done.lines`,
+`philosophies.improver.monologue.capture`), `attachVoicePools` is one walk,
+519 bytes smaller, and a new pool anywhere `indexContent` already puts an array
+needs no engine change at all.
+
+### Three budgets, and R94's rule paid two of them
+
+The remaining 2 KB was **prose**: +6.4 KB of eager comment against +2.0 KB of
+code. R94 settled this case — notes that duplicate their own ROADMAP entry go
+back to the entry and the code keeps pointers. The two failed selector drafts
+and the 724/256 table are in ROADMAP R109 in full, so 2.5 KB of duplicate came
+out of `wire.js`, `rivals.js`, `renderer.js`, `monologue.js` and
+`resequencer.js`.
+
+    KB_CAP       317.4 -> 316.5  under 317, untouched   (the path-keyed merge)
+    PROSE_CAP    245.8 -> 243.8  under 245, untouched   (R94's rule)
+    MODULE_CAP      49 of 49     untouched
+    FIRST_PAINT   1047 -> 1051   1052 -> 1060, argued
+
+`FIRST_PAINT_KB` is the one that moved, and **the raise corrects the note above
+it first.** R105 wrote that 1052 "keeps R169's 18 KB of deliberate slack above
+the 1043 measurement". 1052 − 1043 is **9**: R105 halved R169's slack while
+saying it had not. Nine is what this gate has actually run on for four
+milestones without a false red, so nine is what 1060 keeps over 1051 — kept,
+not restored. The 30 KB of pools is not in that number at all.
+
+### Known issues
+
+- **`tools/scopecheck.js` mis-lexes a backticked word inside a `//` comment in
+  `tools/battery.js`** — `` `specimen_loose` `` and `` `rivalId` `` in a new
+  comment were both reported as unbound names. A minimal module with the same
+  comment does not reproduce it, so it is a lexer state carried from somewhere
+  earlier in that 3,000-line file. Worked around by dropping the backticks;
+  the gate is a false POSITIVE here, not a false negative, which is the safe
+  direction. Queued rather than chased inside this milestone.
+- **The full battery RAN this time**, rather than being substituted for the
+  third session running. Six existing gates changed logic, which is CLAUDE.md's
+  first trigger, and the two sessions before this one logged the substitution
+  as a known issue. **322 breaks, 321 caught, 1 missed, baseline 34/34 green.**
+  It cost about two hours in the background and it found something four
+  milestones of targeted `--only` runs could not.
+- **Break 162 is MISSED, and it is not R109's** — it misses identically on the
+  pre-R109 tree. The reach gate's floor sits 3.2pp above the clean measurement
+  and the break lands exactly ON it (97.2% -> 94.0% against a 94% floor), while
+  the worn floor goes the WRONG WAY under the same break because a smaller herd
+  wears the few parts it holds harder. The sharp signal — two parts reached by
+  none of thirteen seeds, 244 -> 242 — is computed, printed by `--report`, and
+  asserted on by nothing. Filed as **R173** with the numbers, rather than
+  widening this milestone past its criterion.
+- `splice/resequencer.js` keeps a local pool filler rather than importing
+  `pickPooled` from `campaign/monologue.js`: that would point a husbandry
+  module at the campaign for one regex. Three copies of `fill` is one too
+  many and R110 owns copy-as-data wholesale.
+
+### Next session's first task
+
+R110 — copy is data: 5,310 words of prose still live in JS modules. *Done
+when: game modules carry under 300 prose words and the scopecheck rule fails
+a 3+-word string literal outside `data/`.*
+
+---
+
 ## Session 187 — R108: specimen cards, and the fights they carry ✅
 
 **ROADMAP §9.** Every premise held, which almost never happens: there really

@@ -21,6 +21,7 @@
 // Losing one is never final: a lost node drops back to `available` and
 // can be assaulted again.
 
+import { pickPooled } from './monologue.js';
 import { rngStream } from '../util/rng.js';
 import { allNodes, nodeById, nodeName } from './map.js';
 
@@ -60,7 +61,12 @@ export function contestTuning(content) {
   return { ...DEFAULTS, ...(content.campaignMeta?.contestation ?? {}) };
 }
 
-const line = (tmpl, nodeName) => (tmpl ?? '').replace('{node}', nodeName);
+// R109 — a contest line may be one sentence or a pool of them. The convoy
+// rolls 129 times in a 180-day campaign and held 109 of those; two sentences
+// said that 238 times between them. `pickPooled` walks the pool one line per
+// telling, so the war stops narrating itself with a stamp.
+const line = (state, key, tmpl, nodeName) =>
+  (pickPooled(state, `contest:${key}`, tmpl) ?? '').replace('{node}', nodeName);
 
 export function contestOn(state, nodeId) {
   return (state.campaign.contested ?? []).find((c) => c.nodeId === nodeId) ?? null;
@@ -231,7 +237,7 @@ export function tickContests(state, content, now, gen) {
       cam.contested = cam.contested.filter((c) => c !== expiring);
       cam.heldNodes = cam.heldNodes.filter((id) => id !== expiring.nodeId);
       scheduleNext(state, content, expiring.deadline);
-      news.push(line(t.news.expired, nameOf(expiring.nodeId)));
+      news.push(line(state, 'expired', t.news.expired, nameOf(expiring.nodeId)));
       continue;
     }
 
@@ -256,7 +262,7 @@ export function tickContests(state, content, now, gen) {
       gen,
     });
     cam.nextContestAt = null; // rescheduled when this one resolves
-    news.push(line(t.news.opened, node.name));
+    news.push(line(state, 'opened', t.news.opened, node.name));
   }
   if (missed.length && t.news.missed) {
     const nodeDays = missed.reduce((n, m) => n + (m.leftAt - m.arrivedAt), 0) / (24 * HOUR);
@@ -280,9 +286,9 @@ export function resolveContest(state, content, nodeId, outcome, now) {
     state.campaign.defences[nodeId] = defencesOf(state, nodeId) + 1;
     state.campaign.notoriety += t.notoriety;
     scheduleNext(state, content, now, defencesOf(state, nodeId) * t.cooldownPerDefenceHours);
-    return { news: line(t.news.held, name), held: true };
+    return { news: line(state, 'held', t.news.held, name), held: true };
   }
   state.campaign.heldNodes = state.campaign.heldNodes.filter((id) => id !== nodeId);
   scheduleNext(state, content, now);
-  return { news: line(t.news.lost, name), held: false };
+  return { news: line(state, 'lost', t.news.lost, name), held: false };
 }

@@ -2470,6 +2470,116 @@ function walkAutoplay(battle, content) {
 // `tick` is the world-advancing function; the game's own (campaign/world.js)
 // by default. A harness knob only: it exists so an experiment can ask which
 // passive system moves a result, by ticking without it.
+// R109 — EVERY PHRASING THE GAME OWNS, AND WHICH ONES IT ACTUALLY SAYS.
+//
+// A phrasing is an authored template; a LINE is that template with a
+// creature, a lab or a node dropped into it. The difference is the whole
+// measurement: 4,697 lines over 180 days come back as 1,341 distinct
+// sentences and 85 distinct phrasings, and only the second number says
+// anything about whether the voice repeats.
+//
+// The corpus is read from CONTENT, never from source, and that is the rule
+// rather than a convenience: a sentence written inside an engine module has
+// no template here, so it comes back `unmatched` and the gate can say so.
+// CLAUDE.md's "all content is data" stops being a thing to remember and
+// becomes a thing the harness counts.
+export function voicePhrasings(content) {
+  const out = new Set();
+  const seen = new Set();
+  const harvest = (v) => {
+    if (typeof v === 'string') {
+      // A phrasing has words of its own. "{announce}" is a pass-through —
+      // it carries no sentence, it forwards somebody else's, and counting
+      // it as a phrasing reported 30% of the wire as one line.
+      if (v.replace(/\{\w+\}/g, '').trim().length >= 12) out.add(v);
+    } else if (Array.isArray(v)) v.forEach(harvest);
+    else if (v && typeof v === 'object') {
+      if (seen.has(v)) return;
+      seen.add(v);
+      Object.values(v).forEach(harvest);
+    }
+  };
+  // THE WHOLE OF CONTENT, not a list of keys somebody keeps up to date.
+  // The first draft named the keys it thought carried copy and got three of
+  // them wrong: the contest lines are under `campaignMeta.contestation`, the
+  // threat ladder under `campaignMeta.threatGens`, and the vat's lines under
+  // `resequencerLines` — none of which is called what the data file calls
+  // it, because `indexContent` reshapes as it indexes. The gate then
+  // reported 1,667 lines as "written in an engine module" when they were
+  // authored in data all along.
+  //
+  // That is R41's bug exactly — nineteen names for twenty files, and the
+  // missing one failed silently. A hand-kept list of content keys is the
+  // same list with the same failure, so there is not one: walk everything,
+  // and a key added tomorrow is harvested tomorrow.
+  harvest(content ?? {});
+  return [...out];
+}
+
+// Just the wire's own file. Used for the silence check, not for matching.
+function wireOnly(content) {
+  const out = new Set();
+  for (const spec of Object.values(content?.news ?? {})) {
+    for (const line of [...(spec.lines ?? []), ...Object.values(spec.by ?? {}).flat()]) {
+      if (typeof line === 'string' && line.replace(/\{\w+\}/g, '').trim().length >= 12) out.add(line);
+    }
+  }
+  return [...out];
+}
+
+const phrasingRe = (t) => new RegExp('^'
+  + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{\w+\\\}/g, '[\\s\\S]{0,120}?')
+  + '$');
+
+export function voiceDiet(lines, content) {
+  const phrasings = voicePhrasings(content);
+  // Longest first, so a specific phrasing wins over one that is a prefix of
+  // it — otherwise a short template swallows every line a longer one owns.
+  const pats = phrasings.slice().sort((a, b) => b.length - a.length)
+    .map((t) => ({ t, re: phrasingRe(t) }));
+  const heard = new Map();
+  const unmatched = [];
+  for (const line of lines) {
+    const hit = pats.find((p) => p.re.test(line));
+    if (hit) heard.set(hit.t, (heard.get(hit.t) ?? 0) + 1);
+    else unmatched.push(line);
+  }
+  const total = lines.length;
+  const ranked = [...heard.entries()].sort((a, b) => b[1] - a[1]);
+  return {
+    total,
+    authored: phrasings.length,
+    distinct: heard.size,
+    // The loudest phrasing, as a share of everything the world said. This is
+    // the number the criterion is about.
+    topShare: total ? +(ranked[0]?.[1] ?? 0) / total : 0,
+    topLine: ranked[0]?.[0] ?? null,
+    over5pct: ranked.filter(([, n]) => n / total > 0.05).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(3) })),
+    // Authored in data/news.json and never once said in 180 days. R57/R58's
+    // shape: content with no reader is content nobody wrote.
+    //
+    // NARROWED TO news.json ON PURPOSE. The corpus above is deliberately
+    // wide so that any authored sentence reaching the wire MATCHES, but most
+    // of what it sweeps up — a region's blurb, a gauntlet stage's pitch — is
+    // screen copy that was never going to be on the wire, and counting those
+    // as "silent" reported 298 dead lines where the honest figure is a
+    // fraction of that. news.json is the file whose whole purpose is the
+    // wire, so it is the file that has to be fully spoken.
+    silent: wireOnly(content).filter((t) => !heard.has(t)),
+    // Lines that match no phrasing in the data — sentences written in an
+    // engine module. The count the "all content is data" rule is about.
+    unmatched: unmatched.length,
+    // Ranked by volume, because the work of moving copy into data is worth
+    // doing loudest-first: three shapes are a quarter of the wire.
+    unmatchedShapes: (() => {
+      const t = new Map();
+      for (const l of unmatched) t.set(l, (t.get(l) ?? 0) + 1);
+      return [...t.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40).map(([line, n]) => ({ line, n }));
+    })(),
+    top: ranked.slice(0, 120).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(3) })),
+  };
+}
+
 export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = null, away = null, snapshotDays = [], markDay = null, tick = tickWorld, stopAtDominion = true, priceBeats = false, from = null } = {}) {
   const t0 = Date.UTC(2026, 0, 1);
   // R172 — `from` walks a SECOND RUN. The walker has only ever started from
@@ -2493,6 +2603,10 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     : { ...newGameState(), seed, createdAt: t0 };
   ensureRanchSeeded(state, content, t0);
   state.lastTickAt = t0;
+  // R109 — the wire keeps twelve lines and the question is about five
+  // thousand. `pushNews` appends here when the array exists; nothing in the
+  // browser ever creates it. See campaign/wire.js.
+  state.__wire = [];
 
   const at = {};
   const mark = (key, now) => { if (at[key] === undefined) at[key] = +((now - t0) / WALK_DAY).toFixed(2); };
@@ -2751,6 +2865,13 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // milestone that shortens a campaign finds out what it did to the year.
     seasonsSeen: seasons.size,
     seasonsCrossed: [...seasons],
+    // R109 — WHAT A CAMPAIGN SOUNDS LIKE. Every line the world said, keyed
+    // by the PHRASING it came from rather than by the sentence it printed:
+    // "Napoleon Bitey-parte rescued from the impound lot" and "Hazmat
+    // rescued from the impound lot" are one phrasing heard twice, and a
+    // tally that counted them as two distinct lines is how the audit that
+    // queued this milestone read 181 where the truth is 85.
+    voice: voiceDiet(state.__wire ?? [], content),
     // R89 — the save the walk ends on, which is the only honest fixture for
     // "the day-180 screen". Every height this project has quoted at scale
     // was measured on one, and nothing in the tree could produce one: the

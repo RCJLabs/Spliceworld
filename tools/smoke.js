@@ -151,6 +151,10 @@ const SHARD_OF = {
   calendar: 'b',
   // R108 — specimen cards. String work and one scripted fight; cheap. Shard a.
   card: 'a',
+  // R109 — the voice. One 180-day walk (~15s) and then string matching over
+  // its 4,697 lines. Shard d, which R145's note calls the lane carrying the
+  // four smallest blocks.
+  voice: 'd',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -2056,7 +2060,13 @@ const windowH = (captive.deadline - tReady) / HOUR;
 assert.ok(windowH >= 12 && windowH <= 24, `live rescue window of ${windowH}h`);
 tickCampaign(m5lab, content, tReady + HOUR);
 assert.equal(m5lab.campaign.captives.length, 1, 'window still open — timer is live, not instant');
-assert.ok(m5lab.news.some((n) => n.includes('CAPTURED')), 'the ticker knows');
+// R109 — the name, not the wording. This matched the literal "CAPTURED"
+// until `chimera_captured` became a pool of ten and the cursor handed back a
+// variant that does not shout. The assertion's intent is that the capture
+// reached the wire at all, and every phrasing in that pool names the
+// creature, so that is what it asks now. A gate coupled to one sentence's
+// capitalisation is a gate against rewriting the sentence.
+assert.ok(m5lab.news.some((n) => n.includes(doomed.name)), 'the ticker knows');
 
 // Rescue raid: win it, get the creature back (injured, fonder of you).
 // R103 — over five seeds rather than one. A prismatic pair beating the
@@ -4524,8 +4534,17 @@ if (inShard('curve')) {
   assert.ok(ct.rewardScale > 1, 'and pays more than the original');
   assert.ok(ct.windowHours > 0 && ct.cooldownHours > ct.windowHours, 'the window closes well before the next one opens');
   assert.ok(ct.intel.includes('{pct}'), 'the intel line quotes the strength');
+  // R109 — a contest line is a pool now, and EVERY phrasing in it has to name
+  // the node. This read `ct.news[key].includes('{node}')` against a single
+  // string; on an array that happens to be true whenever any element does,
+  // so a pool whose ninth line forgot the placeholder would have passed.
   for (const key of ['opened', 'held', 'lost', 'expired']) {
-    assert.ok(ct.news[key]?.includes('{node}'), `the ${key} wire line names the node`);
+    const pool = Array.isArray(ct.news[key]) ? ct.news[key] : [ct.news[key]].filter(Boolean);
+    assert.ok(pool.length, `the ${key} wire line exists`);
+    for (const l of pool) {
+      assert.ok(l.includes('{node}'), `every ${key} wire phrasing names the node (${l.slice(0, 40)})`);
+    }
+    assert.equal(new Set(pool).size, pool.length, `the ${key} pool has no duplicate phrasing`);
   }
 
   // An empire at Threat Gen 2 holding four nodes, cloned per test.
@@ -4900,11 +4919,21 @@ if (inShard('curve')) {
   for (const ph of philosophies) {
     assert.deepEqual(Object.keys(ph.monologue).sort(), playerSlots, `${ph.id} carries the same slots as the rest`);
     assert.ok(ph.tagline && ph.blurb && ph.name, `${ph.id} is a complete profile`);
-    for (const [slot, text] of Object.entries(ph.monologue)) {
-      assert.ok(text.length > 30, `${ph.id}.${slot} is prose, not a placeholder`);
-      for (const [, key] of text.matchAll(/\{(\w+)\}/g)) {
-        assert.ok(PLACEHOLDERS.has(key), `${ph.id}.${slot} uses an unknown placeholder {${key}}`);
+    // R109 — a slot holds one line or a pool of them, and every line in the
+    // pool is held to what the single line was held to. `capture` became ten
+    // because the improver's one sentence was 14.6% of everything the world
+    // said; a pool is not a licence for the ninth line to be a stub.
+    for (const [slot, value] of Object.entries(ph.monologue)) {
+      const pool = Array.isArray(value) ? value : [value];
+      assert.ok(pool.length, `${ph.id}.${slot} says something`);
+      for (const text of pool) {
+        assert.ok(text.length > 30, `${ph.id}.${slot} is prose, not a placeholder`);
+        for (const [, key] of text.matchAll(/\{(\w+)\}/g)) {
+          assert.ok(PLACEHOLDERS.has(key), `${ph.id}.${slot} uses an unknown placeholder {${key}}`);
+        }
       }
+      // And no pool repeats itself, which is the whole milestone in one line.
+      assert.equal(new Set(pool).size, pool.length, `${ph.id}.${slot} has no duplicate phrasing`);
     }
   }
   const rivalSlots = Object.keys(rivals[0].monologue).sort();
@@ -6857,6 +6886,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // one — every part and every unit has exactly one body.
     'parts-shapes.json': null,
     'enemies-shapes.json': null,
+    // R109 — the spare phrasings, split out of six CORE files for the reason
+    // in render/renderer.js. A player meets these as the wire, the ticker and
+    // their own voice; there is nothing here to teach that the pools' own
+    // files do not already teach. Its gate is the voice block: every line in
+    // it has to be reachable and none may be over 5% of what gets said.
+    'voice-pools.json': null,
     'philosophies.json': null,
     'guides.json': null,
     // R119: the founding labs are the FIRST screen, and a note that teaches
@@ -14549,6 +14584,83 @@ if (inShard('card')) {
     + '\u00b7 the code is retypable \u00b7 an unknown part is refused by name');
 }
 
+// R109 — WHAT A CAMPAIGN SOUNDS LIKE.
+//
+// The wire pushes 4,697 lines over 180 days and says them with 67 phrasings.
+// Nothing in the tree could see that before this milestone, because the wire
+// keeps twelve lines: `pushNews` now appends to a harness-only `__wire` and
+// `voiceDiet` maps every line back to the AUTHORED TEMPLATE it came from.
+// That mapping is the measurement — the same 4,697 lines read as 1,341
+// distinct sentences if you count printed text, and counting printed text is
+// how the audit that queued this milestone got 181 where the truth is 67.
+//
+// FOUR RULES, ONE WALK. Three are the entry's criterion and its premise; the
+// fourth is the rule that makes the other three reachable, because a
+// sentence written inside an engine module cannot be pooled, cannot be
+// counted, and cannot be rewritten without an engine edit.
+if (inShard('voice')) {
+  const walk = campaignWalk(content, { seed: 2026, days: 180, stopAtDominion: false });
+  const v = walk.voice;
+
+  // 0. THE MEASUREMENT IS ON A REAL CAMPAIGN. A walk that said nothing would
+  //    pass every rule below by having no wire at all, which is the shape of
+  //    gate this project has shipped twice (R157's worn floor, R163's
+  //    median) and had to come back and fix.
+  assert.ok(v.total > 3000, `the walk actually played and the world talked (${v.total} lines)`);
+  assert.ok(v.authored > 100, `and there is a corpus to draw on (${v.authored} phrasings authored)`);
+
+  // 1. EVERY LINE THE WORLD SAYS IS IN data/. CLAUDE.md: "All content is
+  //    data. Adding content must never require engine edits. If it does, the
+  //    engine is wrong — fix the engine." A line with no authored template
+  //    is a sentence somebody wrote inside a module, and no pool, no
+  //    rotation and no rewrite can reach it. 1,667 of 4,697 today.
+  assert.equal(v.unmatched, 0,
+    `every line the world says is authored in data/ (${v.unmatched} of ${v.total} are written in engine modules: ${v.unmatchedShapes.slice(0, 3).map((x) => `${x.n}x ${JSON.stringify(x.line.slice(0, 50))}`).join(', ')})`);
+
+  // 2. NO PHRASING IS MORE THAN A TWENTIETH OF THE VOICE. The entry's
+  //    criterion. A player hearing one sentence 684 times in a campaign is
+  //    the whole complaint.
+  assert.deepEqual(v.over5pct.map((r) => `${(r.share * 100).toFixed(1)}% ${r.t.slice(0, 50)}`), [],
+    `no phrasing is more than 5% of the wire (loudest ${(v.topShare * 100).toFixed(1)}%)`);
+
+  // 3. AND THERE ARE AT LEAST FOUR HUNDRED OF THEM. The other half of the
+  //    criterion, and the half that cannot be met by deleting the loud ones:
+  //    a wire that says nothing has no phrasing over 5% either.
+  assert.ok(v.distinct >= 400,
+    `the campaign speaks at least 400 distinct phrasings (${v.distinct})`);
+
+  // 4. EVERY EVENT AUTHORED IN news.json HAS AN EMITTER. R57/R58's shape,
+  //    which this project has now found six times: content with no reader.
+  //
+  //    READ OFF THE SOURCE, NOT OFF A WALK, and two discarded drafts are the
+  //    argument. The first asked that every line be spoken once in 180 days;
+  //    it flagged `dissection_done`, `last_stand` and `rehab_enrolled`, all
+  //    three of which have live emitters and are simply RARE PATHS — a
+  //    captive lost to peer review, the last creature on the roster, a
+  //    booking into the Wing. The second asked that no pool be larger than
+  //    its event fires; it flagged `dominion`, which happens once per
+  //    campaign and whose two endings are reached by two different SAVES,
+  //    because the cursor's offset is seeded. Both drafts were measuring how
+  //    far the walker gets, which is a fact about the walker.
+  //
+  //    There is no unreachable-line defect left to guard: `pickPooled` walks
+  //    a pool one line per telling from a seeded start, so every line in
+  //    every pool is reachable by construction. What can still go wrong is
+  //    an event nobody emits, and that is a question about the source.
+  {
+    const src = readdirSync(root, { recursive: true })
+      .filter((f) => typeof f === 'string' && f.endsWith('.js') && !f.startsWith('tools'))
+      .map((f) => { try { return readFileSync(join(root, f), 'utf8'); } catch { return ''; } })
+      .join('\n');
+    const orphans = Object.keys(content.news ?? {}).filter((ev) => !src.includes(`'${ev}'`));
+    assert.deepEqual(orphans, [],
+      `every event in news.json is emitted by something (${orphans.join(', ')})`);
+  }
+
+  console.log(`   R109 voice: ${v.total} lines from ${v.distinct} phrasings \u00b7 loudest `
+    + `${(v.topShare * 100).toFixed(1)}% \u00b7 nothing written in an engine module, nothing authored and unsaid`);
+}
+
 // R56. Every measurement this project owns is a SLICE — runSim benches a
 // build, ladderBench a ladder, regionBench a strip, facilityPayback a track.
 // None of them answers what it is like to PLAY this from an empty ranch, and
@@ -15469,7 +15581,25 @@ if (inShard('orphans')) {
           && Object.keys(value).length > 0
           && ['parts', 'enemies', 'species', 'frames', 'combos'].some((into) =>
             indexed[into] && Object.entries(value).every(([id, v]) => eq(indexed[into][id]?.[key], v)));
-        if (!named && !distributed && (scalar || !hits.length)) dropped.push(`${file}.json:${key}`);
+        // R109 — and a section can reach runtime as ONE END OF A POOL that
+        // another file completes. `voice-pools.json` is keyed by the PATH into
+        // the indexed content and holds each pool's TAIL, and the file that
+        // owns the pool keeps its HEAD, so neither block ever appears anywhere
+        // as a block: what is live is `[...head, ...tail]` at that path. Both
+        // ends are checked the same way, and it is R81's `distributed` shape
+        // — a stronger claim than the whole-value match, not an exemption.
+        // Drop one line from either end, or rename a path, and it stops
+        // matching. (`news.json:ticker` is the head case: the four the shell
+        // can show before the second round lands.)
+        const poured = !scalar && Array.isArray(value) && value.length > 0
+          && (() => {
+            let at = indexed;
+            for (const part of key.split('.')) at = at?.[part];
+            if (!Array.isArray(at) || at.length < value.length) return false;
+            return eq(at.slice(0, value.length), value)
+              || eq(at.slice(at.length - value.length), value);
+          })();
+        if (!named && !distributed && !poured && (scalar || !hits.length)) dropped.push(`${file}.json:${key}`);
       }
     }
     assert.ok(sections >= 40, `the scan actually walked the data (${sections} sections)`);
@@ -21959,7 +22089,18 @@ if (inShard('fired')) {
       stepped.campaign.loose.map((e) => e.unit.name),
       'and one jump replays to the same board as stepping there two hours at a time'
     );
-    assert.ok(jump.news.some((n) => /BREAKOUT|misplaced|unaccounted/i.test(n)),
+    // R109 — the LAB, not three keywords. This matched /BREAKOUT|misplaced|
+    // unaccounted/ until `specimen_loose` became a pool of twenty-six and the
+    // cursor handed back a phrasing using none of those words. What the
+    // assertion is really about is that an escape nobody watched still
+    // reaches the wire, and every phrasing in that pool names the lab it
+    // escaped from, so that is the thing to look for.
+    // The board entry carries `rivalId`; the lab's NAME is only attached to
+    // the news burst, so it is resolved through content here.
+    const looseLabs = [...new Set(jump.campaign.loose
+      .map((e) => content.rivals[e.rivalId]?.name).filter(Boolean))];
+    assert.ok(looseLabs.length, 'the board names the labs it lost specimens from');
+    assert.ok(jump.news.some((n) => looseLabs.some((lab) => n.includes(lab))),
       'every escape says so on the wire, including the ones nobody was there for');
     // The board is a queue, not a wall.
     const long = armed();
@@ -22040,7 +22181,13 @@ if (inShard('fired')) {
     assert.equal(looseSpecimens(s).length, boardBefore - 1, 'a win closes the entry on the board');
     assert.equal(s.campaign.containment.length, 1, 'and the specimen is in a bay');
     assert.equal(s.campaign.containment[0].rivalId, esc.rivalId, 'which remembers whose lab built it');
-    assert.ok(s.news.some((n) => /THWOOMP|impounded/.test(n)), 'and the wire says it was bagged');
+    // R109 — the creature's name, not two keywords. `specimen_bagged` is a
+    // pool of twenty-two now and only two of them say THWOOMP. Every one of
+    // them names the animal, which is what "the wire says it was bagged"
+    // actually means.
+    const bagged = s.campaign.containment[0]?.unit?.name;
+    assert.ok(bagged, 'the bay knows what is in it');
+    assert.ok(s.news.some((n) => n.includes(bagged)), 'and the wire says it was bagged');
 
     const bay = s.campaign.containment[0];
     const plan = rehabPlan(s, bay, content);

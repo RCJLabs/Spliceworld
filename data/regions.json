@@ -81,7 +81,7 @@
           "encounter": "boss_clampdown",
           "incomePerDay": 150,
           "notoriety": 25,
-          "blurb": "Captain Clampdown\u2019s office. There is a tarp in the motor pool. It is humming.",
+          "blurb": "Captain Clampdown’s office. There is a tarp in the motor pool. It is humming.",
           "boss": true,
           "unlocksFauna": [
             "bear",
@@ -112,7 +112,7 @@
       "id": "kestrel",
       "name": "Kestrel Reach",
       "subtitle": "The sky over the county, and everyone in it.",
-      "demand": "Everything here is Airborne \u2014 your Ground-tagged moves swing through empty air. Their class is Air, so Water anatomy owns them.",
+      "demand": "Everything here is Airborne — your Ground-tagged moves swing through empty air. Their class is Air, so Water anatomy owns them.",
       "answer": "water",
       "requires": {
         "nodes": [
@@ -180,7 +180,7 @@
       "id": "drowned",
       "name": "The Drowned Quarter",
       "subtitle": "The harbour district, at high tide, permanently.",
-      "demand": "Aquatic and Water class throughout \u2014 Ground anatomy walks all over them, and Electric doubles on anything wet. Bring boots, not gills: their generators read Aquatic as a target.",
+      "demand": "Aquatic and Water class throughout — Ground anatomy walks all over them, and Electric doubles on anything wet. Bring boots, not gills: their generators read Aquatic as a target.",
       "answer": "ground",
       "requires": {
         "nodes": [
@@ -229,7 +229,7 @@
         },
         {
           "id": "harbor_rig",
-          "name": "Harbormaster\u2019s Rig",
+          "name": "Harbormaster’s Rig",
           "encounter": "drowned_rig",
           "incomePerDay": 220,
           "notoriety": 40,
@@ -247,8 +247,8 @@
     {
       "id": "foundry",
       "name": "The Foundry Belt",
-      "subtitle": "Where the coalition\u2019s vehicles come from.",
-      "demand": "Vehicle and Armored, wall to wall. Gas does nothing to a machine and Venom is half-wasted \u2014 Sonic ignores their plating, and they are Ground class, so Air anatomy still flies over the top.",
+      "subtitle": "Where the coalition’s vehicles come from.",
+      "demand": "Vehicle and Armored, wall to wall. Gas does nothing to a machine and Venom is half-wasted — Sonic ignores their plating, and they are Ground class, so Air anatomy still flies over the top.",
       "answer": "air",
       "requires": {
         "nodes": [
@@ -312,7 +312,7 @@
       "id": "spire",
       "name": "The Compliance Spire",
       "subtitle": "Head office. They have a lanyard policy.",
-      "demand": "All three classes on one ladder \u2014 no single anatomy answers the whole building. Bring a stable, not a team.",
+      "demand": "All three classes on one ladder — no single anatomy answers the whole building. Bring a stable, not a team.",
       "answer": "mixed",
       "requires": {
         "nodes": [

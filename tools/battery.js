@@ -1809,7 +1809,16 @@ const BREAKOUT = ['node', '-e', `
   const a = jump.campaign.loose.map((e) => e.unit.name).join(',');
   const b = stepped.campaign.loose.map((e) => e.unit.name).join(',');
   if (a !== b) fail('one jump replays to a different board than stepping there (' + a + ' vs ' + b + ')');
-  if (!jump.news.some((n) => /BREAKOUT|misplaced|unaccounted/i.test(n))) {
+  // R109 — the LAB, not three keywords. This matched BREAKOUT, misplaced or
+  // unaccounted until the escape event became a pool of twenty-six and the
+  // cursor handed back a phrasing using none of those words. Every phrasing in
+  // that pool names the lab, and the lab's NAME is only on the news burst, so
+  // it is resolved through content from the board entry. Same fix as the twin
+  // in tools/smoke.js.
+  const looseLabs = [...new Set(jump.campaign.loose
+    .map((e) => content.rivals[e.rivalId]?.name).filter(Boolean))];
+  if (!looseLabs.length) fail('the board names no lab it lost a specimen from');
+  if (!jump.news.some((n) => looseLabs.some((lab) => n.includes(lab)))) {
     fail('an escape nobody was there for said nothing on the wire');
   }
 
@@ -1852,7 +1861,13 @@ const BREAKOUT = ['node', '-e', `
   if (detail.outcome !== 'win') fail('the fight did not resolve as a win');
   if (looseSpecimens(s).length !== boardBefore - 1) fail('a win did not close the entry on the board');
   if (s.campaign.containment.length !== 1) fail('the bagged specimen did not reach a bay');
-  if (!s.news.some((n) => /THWOOMP|impounded/.test(n))) fail('the wire did not say it was bagged');
+  // R109 — the creature's NAME, not two keywords. The bagging event is a pool
+  // of twenty-two now and only two of them say THWOOMP; every one names the
+  // animal, which is what "the wire said it was bagged" actually means. Same
+  // fix as the twin in tools/smoke.js.
+  const bagged = s.campaign.containment[0]?.unit?.name;
+  if (!bagged) fail('the bay does not know what is in it');
+  if (!s.news.some((n) => n.includes(bagged))) fail('the wire did not say it was bagged');
 
   // Bagged in a LOST fight still closes the entry — one wave makes that
   // unreachable in play, so the contract is checked directly.
@@ -3389,6 +3404,57 @@ const BREAKS = [
     file: 'splice/card.js',
     anchor: "    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')",
     to: '',
+  },
+
+  // R109 — the four rules of the voice, one break each. The first two are
+  // shapes the tree actually shipped; the gate is what found them.
+  {
+    // THE CURSOR STOPS ADVANCING. Every pool answers with the line its seed
+    // opened on, forever — which is what the wire did before this milestone,
+    // and it is invisible unless something counts: no error, no warning,
+    // every sentence in the game still perfectly good English.
+    n: 325, gate: SHARD_D, name: 'the pool cursor stops advancing, so every event says one sentence for the life of the save',
+    file: 'campaign/monologue.js',
+    anchor: '  const at = state?.wireAt?.[key] ?? 0;',
+    to: '  const at = 0;',
+  },
+  {
+    // A SENTENCE GOES BACK INTO AN ENGINE MODULE. This is the exact line
+    // R109 found 724 tellings of — a quarter of the game's voice written
+    // where no pool can reach it and no rewrite is a data edit.
+    n: 326, gate: SHARD_D, name: 'a wire sentence is written in an engine module again, out of reach of any pool',
+    file: 'campaign/campaign.js',
+    anchor: "      if (!extra.success) emitNews(state, content, 'op_failed', { op: extra.name });",
+    to: "      if (!extra.success) pushNews(state, `${extra.name} came to nothing, which happens.`);",
+  },
+  {
+    // A JOB STOPS ROTATING ITS HEADLINE. One operation, one sentence, 274
+    // tellings — 5.8% of the wire from a single job the player happens to
+    // like. The pool is still authored; it is simply not read.
+    n: 327, gate: SHARD_D, name: 'a job stops rotating its headline, so one sentence is 5% of the wire again',
+    file: 'campaign/operations.js',
+    anchor: '    const headline = pickPooled(state, `op:${op.id}`, op.news);',
+    to: '    const headline = Array.isArray(op.news) ? op.news[0] : op.news;',
+  },
+  {
+    // AN EVENT LOSES ITS EMITTER. The pool stays in news.json, fully
+    // authored, and nothing in the game can ever say it — R57/R58's shape,
+    // which this project has now found six times.
+    n: 328, gate: SHARD_D, name: 'an authored event loses its emitter, so a whole pool becomes unsayable',
+    file: 'campaign/campaign.js',
+    anchor: "      } else emitNews(state, content, 'op_paid', { op: extra.name, funds: extra.funds });",
+    to: '      } else pushNews(state, null);',
+  },
+  {
+    // A POOL'S PATH STOPS RESOLVING. `voice-pools.json` is keyed by the path
+    // into the indexed content, so a typo is not an error — the merge simply
+    // skips it and twenty-seven authored phrasings are never said by anything.
+    // That is R41's training.json bug in a new file: content added, fetched,
+    // and silently dropped. The section-reach gate has to see it.
+    n: 329, gate: SHARD_D, name: 'a pool is keyed to a path that does not exist, and its phrasings are silently dropped',
+    file: 'data/voice-pools.json',
+    anchor: '"news.spar_done.lines": [',
+    to: '"news.spar_done.linez": [',
   },
 
   // R171 — the two halves of the entry's Done-when, one break each.

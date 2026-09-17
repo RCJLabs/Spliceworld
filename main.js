@@ -27,19 +27,6 @@ import { mulberry32, hashString } from './util/rng.js';
 const WARP_MS = (Number(new URLSearchParams(location.search).get('warp')) || 0) * 3600000;
 const NOW = () => Date.now() + WARP_MS;
 
-const TICKER_LINES = [
-  'Local zoo reports goat shortage. Authorities baffled.',
-  'Feed store owner retires early, thanks "one extremely loyal customer."',
-  'Study finds ranch animals happiest when brushed by cackling owners.',
-  'Mail-order livestock industry booming. Postal service requests hazard pay.',
-  'Area geneticist "just asking questions" about eagle wingspans.',
-  'Hardware store sells out of googly eyes. No one is asking why.',
-  'Weather service issues advisory for "unusually confident livestock."',
-  'City council votes to pretend everything is normal.',
-  'Ethics board postpones meeting indefinitely, cites scheduling.',
-  'Mysterious kazoo noises reported near old barn. Investigation pending.',
-  'Ornithologists puzzled by goat seen "filing a flight plan."',
-];
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -241,9 +228,17 @@ function tick({ force = false } = {}) {
 
 // Latest news leads; otherwise a seeded deadpan default.
 function updateTicker() {
+  // R109 — the filler lines are data now (news.json `ticker`), and they
+  // ROTATE. They used to be eleven literals in this file picked by
+  // `seed % 11`, which is not a choice that ever changes: a save met one of
+  // them on its first morning and never saw the other ten. Keyed on the day
+  // as well as the seed, so the county has a different thing to say on
+  // Tuesday, and still the same thing all Tuesday.
+  const filler = content?.ticker ?? [];
+  const day = Math.floor((Date.now() - (state.createdAt ?? 0)) / 86400000);
   const line = state.news.length
     ? state.news[state.news.length - 1]
-    : TICKER_LINES[Math.abs(state.seed) % TICKER_LINES.length];
+    : (filler.length ? filler[Math.abs(state.seed + day) % filler.length] : '');
   const ticker = $('#ticker');
   ticker.innerHTML = `${renderIcon('satellite', { size: 13 })}<span class="ticker-lead">BREAKING: </span>`;
   ticker.append(line);

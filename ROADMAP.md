@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 55
+- save version: 56
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,8 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**10 entries queued.** R109, R110, R111, R112, R113, R114, R115, R116, R117,
-R118.
+**10 entries queued.** R110, R111, R112, R113, R114, R115, R116, R117, R118,
+R173.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4014,7 +4014,88 @@ suite can check.
 
 **Content and voice.**
 
-- **R109 — The voice repeats.** The wire pushed **4,034 lines in 180 days**
+- **R109 — The voice repeats.** ✅ *Shipped.* The complaint holds and is worse
+  than the entry states; three of its numbers were stale, and the largest
+  finding is not in it at all.
+
+  **Measured before a line was written**, seed 2026 over 180 days: **4,697**
+  wire lines (entry: 4,034), spoken with **67 distinct phrasings** (entry:
+  181 — that count was of printed SENTENCES, and "Hazmat rescued from the
+  impound lot" and "Napoleon Bitey-parte rescued from the impound lot" are
+  one phrasing heard twice). Loudest **14.6%**. And **1,265 of the 4,697 —
+  26.9% — were written inside engine modules**, where no pool can reach them
+  and rewriting one is an engine edit. CLAUDE.md has said content lives in
+  data since the beginning; nothing had ever counted.
+
+  **Shipped:** every line in data, `pickPooled` as one rotation for the whole
+  voice, and the pools to use it.
+
+      unmatched   1,265 -> 0        distinct  67 -> 411
+      loudest     14.6% -> 1.6%     SAVE_VERSION 56 (`wireAt`)
+
+  **THE SELECTOR CAME BEFORE THE WRITING, and two drafts of it failed.** The
+  old rule rotated "while the last telling is still on the wire" — twelve
+  lines against twenty-six a day, so it almost never fired, and what was left
+  was a seed hashed from the PARAMS: three operations, five rivals, the same
+  variant for the life of the save. The five-line `op_failed` pool read
+  **256 / … / 0 / 0** across 724 tellings. Draft one rolled per telling and
+  `rngStream` re-seeds from its arguments, so a stream keyed on a window's
+  LENGTH returns the same number forever once that length pins — distinct
+  went DOWN, 107 to 102. Draft two was the global no-repeat window of twenty
+  the entry asks for, and twenty lines is eighteen hours of wire, so a busy
+  event's keys fall out BETWEEN tellings and it picks the same one again —
+  101. What works is a cursor per event. `op_failed` reads
+  **145 / 145 / 145 / 145 / 144**.
+
+  **THE LOUDEST LINE IN THE GAME WAS THE PLAYER'S OWN**, and it was not on
+  the wire. `philosophies.json` gave each philosophy one `capture` sentence
+  and the improver's ran **684 times** — more than any news event. The voice
+  a player chooses in their first five minutes was the thing they heard most.
+
+  **FOUR GATES ASSERTED ON ONE SENTENCE'S WORDING**, and pooling the voice
+  found all four: `/CAPTURED/`, `/THWOOMP|impounded/`,
+  `/BREAKOUT|misplaced|unaccounted/`, and `news[key].includes('{node}')`
+  against what is now an array. That last was silently weaker than it looked
+  — `includes` on an array is true when any element matches, so a pool whose
+  ninth line forgot `{node}` would have passed. All four now ask what they
+  meant.
+
+  **AND THE GATE CAUGHT ITS OWN AUTHOR TWICE.** A four-line
+  `rival_beaten_again` pool was written for an arm that is unreachable — all
+  five rivals have a `rematch` line, so the `??` never fires; cut. And rule 4
+  was framed twice as "content the walk never reached", which is a fact about
+  the walker: `dissection_done`, `last_stand` and `rehab_enrolled` are rare
+  PATHS with live emitters, and `dominion`'s two endings are reached by two
+  different saves. It is an emitter check read off the source now.
+
+  **THE WRITING COST 29 KB OF FIRST PAINT**, because pools are CORE content and
+  CORE downloads before the game appears. `data/voice-pools.json` takes R81's
+  split and applies it to words: every pool's TAIL is fetched in the second
+  round beside the geometry, the first line stays in the file that owns it, and
+  the voice works before it lands and rotates after. 1,081 -> 1,054 -> **1,051**
+  with R94's prose rule applied to this milestone's own comments. The file is
+  keyed by the PATH into the indexed content rather than by pool family — the
+  first draft hand-listed six families, which would have made a seventh an
+  engine edit.
+
+      KB_CAP    316.5 / 317   PROSE_CAP  243.8 / 245   MODULE_CAP  49 / 49
+      FIRST_PAINT_KB  1052 -> 1060, measured at 1051
+
+  **AND THE RAISE CORRECTS THE NOTE ABOVE IT.** R105 wrote that 1052 "keeps
+  R169's 18 KB of deliberate slack above the 1043 measurement". 1052 − 1043 is
+  9; R105 halved R169's slack while saying it had not. Nine is what the gate
+  has run on for four milestones without a false red, so nine is what 1060
+  keeps over 1051.
+
+  **Filed:** `tools/scopecheck.js` reports a backticked word inside a `//`
+  comment in `tools/battery.js` as an unbound name (`specimen_loose`,
+  `rivalId`). A minimal module with the same comment does not reproduce it, so
+  it is lexer state carried from earlier in that 3,000-line file. A false
+  positive, not a false negative. Worked around by dropping the backticks.
+
+  The original entry follows.
+
+- **R109 (as queued) — The voice repeats.** The wire pushed **4,034 lines in 180 days**
   — 22 a day — from **181 distinct phrasings**, each heard **22 times** on
   average. The top one, *"…came to nothing, which happens,"* ran **670
   times**; the five sparring blurbs covered **539 of 543 spars**. The
@@ -4208,6 +4289,34 @@ suite can check.
   creature falls — and retire the exemption. *Done when: `venom_gland` clears
   the same 1.5× bar as every other gene on at least four independent salts,
   and `UNRESOLVED_BY_THIS_PROBE` is empty.*
+
+- **R173 — The reach gate misses a break by a rounding hair, and does not
+  assert the thing it prints.** Found by R109's full battery, and **not R109's
+  doing** — break 162 misses identically on the pre-R109 tree, so this is rot
+  that four milestones of targeted `--only` runs could not see. That is the
+  rot check earning its keep, exactly as CLAUDE.md says it should.
+
+  Break 162 patches `tools/sim.js` so `herdRoom` ignores `chasing` — the buyer
+  locks the breeder out, which is the regression R95 wrote the gate against.
+  Measured over thirteen seeds:
+
+      part reach   237.2 (97.2%)  ->  229.4 (94.0%)   REACH_FLOOR = 0.94
+      parts worn   153.4 (62.9%)  ->  156.5 (64.2%)   WORN_FLOOR  = 0.50
+      union seen   244 of 244     ->  242 of 244      nothing asserts on this
+
+  The damage is real; the break simply lands **on** the floor, so `<` is false
+  by a hair. `WORN_FLOOR` cannot help and never could: a smaller herd holds
+  fewer parts, so the ones held are worn MORE and the worn figure goes UP under
+  the break. That is R157's break-245 shape a second time — a floor that does
+  not move with the statistic it guards.
+
+  The sharp signal is already computed and only PRINTED: `--report` says "never
+  reached by any seed", and two parts crossing 0 -> 2 is a categorical change
+  where 97.2 -> 94.0 is a gradual one. Proposed, small: assert on the union as
+  well as the mean, and re-derive `REACH_FLOOR` from the clean measurement
+  rather than from where it was set three tunings ago. *Done when: break 162 is
+  caught, the assertion names which parts no seed reaches, and the full battery
+  reports 0 missed.*
 
 ### 9.7 The opening, and the sitting (R119–R120) — asked for directly
 

@@ -11,6 +11,8 @@
     "successMutated": "The tank clears — and something is different this time.",
     "failure": "The resequencer produces a sound nobody has heard before and then produces nothing at all. The vial is spent. Science is like that.",
     "cancel": "Resequencer drained. The vial went back in the rack, no worse for the experience.",
-    "penFull": "It is ready to decant and there is nowhere to put it. Free a pen and come back — nothing is lost while it waits."
+    "penFull": "It is ready to decant and there is nowhere to put it. Free a pen and come back — nothing is lost while it waits.",
+    "artefactGene": "Resequencing artefact: a {trait} gene that was not in the sample. The lab denies responsibility.",
+    "artefactStat": "Resequencing artefact: a spontaneous {stat} surge. Nobody planned this."
   }
 }

@@ -120,6 +120,10 @@ export function indexContent(raw) {
     gauntlet: raw.gauntlet ? raw.gauntlet.stages : [],
     // R62: the wire's copy, keyed by event id.
     news: raw.news ? raw.news.events : {},
+    // R109 — the deadpan filler the header shows before the world has said
+    // anything. Eleven of these lived in `main.js`, which CLAUDE.md forbids,
+    // and the shell picked one by `seed % 11` — ten were unreachable.
+    ticker: raw.news?.ticker ?? [],
     sparBlurbs: raw.training ? raw.training.sparBlurbs : null,
     scars: raw.scars ? byId(raw.scars.scars) : {},
     scarMeta: raw.scars ? raw.scars.tuning : null,
@@ -157,7 +161,9 @@ export function indexContent(raw) {
   };
   // R81: present for a Node tool that read every file off disk, absent in
   // the browser until the first paint is over. Same merge either way.
-  return attachShapes(indexed, raw);
+  // R109 — same for the pools: a Node tool has them in hand, so the harness
+  // scores the voice the player actually hears.
+  return attachVoicePools(attachShapes(indexed, raw), raw);
 }
 
 // Human units and vehicles: same shape interpreter, literal palettes.
@@ -207,6 +213,31 @@ function portraitRng(seed) {
 //
 // A Node tool that hands `indexContent` the shapes files alongside the rest
 // gets them merged here and never notices the split at all.
+// R109 — THE SPARE PHRASINGS ARRIVE AFTER THE FIRST PAINT. Pooling the voice
+// put 29 KB in front of it, and none of that is needed to paint: the first
+// line of every pool ships in the file it belongs to and the VARIANTS attach
+// here. Before they land the wire says what it said last milestone; after,
+// it rotates. R81's split, applied to words instead of geometry.
+//
+// KEYED BY THE PATH INTO THE INDEXED CONTENT, not by pool family. The first
+// draft hand-listed the six families it knew about, which made a seventh an
+// ENGINE edit — the thing CLAUDE.md says content must never need. A path is
+// data, so `data/voice-pools.json` can grow a pool anywhere `indexContent`
+// already puts an array and nothing here changes.
+export function attachVoicePools(content, raw) {
+  for (const [path, more] of Object.entries(raw?.['voice-pools'] ?? {})) {
+    if (!more?.length) continue;
+    const keys = path.split('.');
+    const leaf = keys.pop();
+    let at = content;
+    for (const k of keys) at = at?.[k];
+    if (!at) continue;
+    const one = at[leaf];
+    at[leaf] = [...(Array.isArray(one) ? one : [one].filter(Boolean)), ...more];
+  }
+  return content;
+}
+
 export function attachShapes(content, raw) {
   // Keyed by FILE NAME, like every other entry in `raw` — the browser hands
   // over what it fetched and a Node tool hands over what it read, and there

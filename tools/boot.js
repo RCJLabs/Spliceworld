@@ -332,11 +332,32 @@ const REPORT = process.argv.includes('--report');
 // window R81 put `shapes` in, and boot's own report shows it in the "after
 // it" column. That split is why this raise is 18 KB and not 22.
 //
-// 1052 keeps R169's 18 KB of deliberate slack above the 1043 measurement,
-// which is the property the note below is about: a browser reading that sits
-// ON its measurement goes red on a slow afternoon and teaches people to
-// ignore it. It is the same slack, moved with the tree.
-const FIRST_PAINT_KB = 1052;
+// 1052 keeps slack above the 1043 measurement, which is the property the note
+// below is about: a browser reading that sits ON its measurement goes red on a
+// slow afternoon and teaches people to ignore it. It is the same slack, moved
+// with the tree.
+// R109 — 1052 -> 1060, measured at 1051, AND IT CORRECTS THE LINE ABOVE FIRST.
+// R105 wrote that 1052 "keeps R169's 18 KB of deliberate slack above the 1043
+// measurement". 1052 - 1043 is 9. R169's slack was 18 (1034 over 1016) and
+// R105 halved it while saying it had not; the claim is struck and the number
+// it describes is what the ledger now carries. Nine is what this gate has
+// actually run on for four milestones without a false red, so nine is what is
+// being kept rather than restored.
+//
+// WHAT THE 4 KB BOUGHT, net of R108's +4 (1043 -> 1047 before this milestone
+// touched anything): the whole voice. 1,265 lines of the 4,697 a campaign
+// speaks were written inside engine modules; they are in `/data` now, the
+// pools behind them took 67 distinct phrasings to 411, and the loudest single
+// sentence went 14.6% -> 1.6%. See ROADMAP R109.
+//
+// AND THE 29 KB IT DID NOT COST is the part this note exists for. The pools
+// themselves are 30 KB and NONE of it is in this number: `data/voice-pools.json`
+// is fetched in R81's second round beside the geometry, because the first line
+// of every pool ships in its own CORE file and only the variants ride behind
+// the paint. What is left here is program — `pickPooled`, `attachVoicePools`,
+// the loader's LATE round — and about 3 KB of eager comment, which is R94's
+// tax and was paid down twice before this raise was written.
+const FIRST_PAINT_KB = 1060;
 
 // R169 — AND IT STAYS AT 1034, measured at 1016. Every previous milestone
 // either raised this number or brought it down to sit just above the

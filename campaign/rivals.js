@@ -14,6 +14,7 @@ import { notorietyMark } from './map.js';
 import { unitFromGenome } from '../battle/statblock.js';
 import { analyze } from '../splice/physiology.js';
 import { rivalLine } from './monologue.js';
+import { newsFor } from './wire.js';
 import { rivalOf } from '../data/catalog.js';
 
 // Slots a rival will try to fill, in the order they commit to them. Head
@@ -474,17 +475,21 @@ export function recordRivalResult(state, rivalId, outcome, content) {
   if (outcome === 'win') {
     record.defeats += 1;
     state.campaign.notoriety += rival.notoriety;
-    if (record.defeats === 1) {
-      return `${rival.name} defeated. Their lab is already ordering more petri dishes — and better ones.`;
-    }
+    // R109 — these three were written here and are pools in news.json now.
+    // `newsFor` rather than `emitNews`: this function RETURNS a line and its
+    // caller decides where it goes, so emitting here would put it on the
+    // wire twice.
+    if (record.defeats === 1) return newsFor(state, content, 'rival_first_defeat', { rival: rival.name });
     // Every rematch after the first is announced in their OWN voice: a
     // lab that keeps losing to you should sound like it, not like a
     // scoreboard (§3.8 `rematch`).
-    return (
-      rivalLine(content, rivalId, 'rematch') ??
-      `${rival.name} beaten again (${record.defeats}×). They are taking this personally and it shows in the budget.`
-    );
+    //
+    // NO GENERIC FALLBACK: all five rivals have a `rematch` line, so the `??`
+    // arm was unreachable, and a rival shipped without a voice should fail
+    // the build rather than be papered over by a house line nobody hears.
+    // R109's rule 4 caught the pool written into it; see ROADMAP R109.
+    return rivalLine(content, rivalId, 'rematch');
   }
   record.losses += 1;
-  return `${rival.name} wins the exchange and issues a press release about it. Rude.`;
+  return newsFor(state, content, 'rival_won', { rival: rival.name });
 }

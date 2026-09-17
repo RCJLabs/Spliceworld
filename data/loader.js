@@ -8,13 +8,21 @@
 // So the shell boots on the half that decides what things ARE, and the half
 // that decides what they LOOK LIKE arrives behind it.
 
-import { indexContent, attachShapes } from '../render/renderer.js';
+import { indexContent, attachShapes, attachVoicePools } from '../render/renderer.js';
 
 // Everything the game needs to know before it can show you anything.
 export const CORE = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout', 'feral', 'rush', 'taskforce', 'stance', 'starters', 'tiers', 'legacy', 'calendar', 'cards'];
 
 // …and everything it needs before it can draw one.
 export const GEOMETRY = ['parts-shapes', 'enemies-shapes'];
+
+// R109 — and the spare phrasings, for the same reason. Pooling the voice put
+// 29 KB in front of the first paint; the first line of every pool ships with
+// its own file and the variants ride here. See render/renderer.js.
+export const POOLS = ['voice-pools'];
+
+// Everything the second round fetches, whatever it is for.
+export const LATE = [...GEOMETRY, ...POOLS];
 
 // R85 — and both halves together, for the Node tools.
 //
@@ -31,7 +39,7 @@ export const GEOMETRY = ['parts-shapes', 'enemies-shapes'];
 // This is the list the GAME loads, so a tool built from it is by definition
 // scoring the same content the player has. R81's lesson, again: derive it,
 // do not name it.
-export const CONTENT_FILES = [...CORE, ...GEOMETRY];
+export const CONTENT_FILES = [...CORE, ...LATE];
 
 async function grab(base, name) {
   const res = await fetch(`${base}/data/${name}.json`);
@@ -58,8 +66,10 @@ export async function loadContent(base = '.') {
 // nothing and returns whether it landed, and the shell decides what to say.
 export async function loadShapes(content, base = '.') {
   try {
-    const files = await Promise.all(GEOMETRY.map((name) => grab(base, name)));
-    attachShapes(content, Object.fromEntries(GEOMETRY.map((name, i) => [name, files[i]])));
+    const files = await Promise.all(LATE.map((name) => grab(base, name)));
+    const raw = Object.fromEntries(LATE.map((name, i) => [name, files[i]]));
+    attachShapes(content, raw);
+    attachVoicePools(content, raw);
     return true;
   } catch {
     return false;

@@ -28,7 +28,7 @@
 // which is R122's original bug report — a phone stuck on a broken build.
 // `tools/release.js` is the answer and exists for this: CACHE is checked
 // against SAVE_VERSION by a gate rather than by anybody remembering.
-const CACHE = 'spliceworld-v55-0d30ff41';
+const CACHE = 'spliceworld-v56-5650b215';
 
 const SHELL = [
   '.',
@@ -138,6 +138,9 @@ const SHELL = [
   // it just does not need them before the shell is on screen.
   'data/parts-shapes.json',
   'data/enemies-shapes.json',
+  // R109: the spare phrasings, fetched in the same round for the same
+  // reason. Offline gets the whole voice, it just does not wait for it.
+  'data/voice-pools.json',
   'data/species.json',
   'data/combos.json',
   'data/enemies.json',

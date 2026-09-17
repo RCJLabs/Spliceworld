@@ -39,6 +39,7 @@
 // on a timer, with the authorities taking an interest.
 
 import { rngStream, pick } from '../util/rng.js';
+import { pickPooled } from './monologue.js';
 import { analyze } from '../splice/physiology.js';
 import { isSettled } from '../splice/chimera.js';
 import { createAnimal } from '../ranch/ranch.js';
@@ -397,7 +398,12 @@ function resolveOperation(state, content, now, run) {
     state.funds += funds;
     result.funds = funds;
     state.campaign.notoriety += op.notoriety ?? 0;
-    if (op.news) news.push(op.news);
+    // R109 — a job's own headline may be one line or a pool of them. The
+    // petting zoo's single sentence ran 274 times in 180 days, 5.8% of
+    // everything the world said, because a job the player likes gets run
+    // again and again and said the same thing every time.
+    const headline = pickPooled(state, `op:${op.id}`, op.news);
+    if (headline) news.push(headline);
     if (species && content.species[species]) {
       // The animal ALWAYS arrives, even into a barn that is already full.
       // A reward the player earned and cannot see is a reward they will
