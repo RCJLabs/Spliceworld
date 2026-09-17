@@ -130,6 +130,18 @@ see a player's chimera **deleted** by the thing meant to protect it.
 - height gate green at **130 folds walked**, the same figure the pre-R114 tree
   reported — the Dex is intact, not merely quiet
 
+### The full battery ran, and it was the right call
+
+Trigger 4 — the baseline went red for a reason nobody predicted (`KB_CAP`, which
+I misdiagnosed twice before finding). **339 breaks, 0 baseline failures, 1 miss:
+break 162, which is the already-filed R173.** No new rot.
+
+It took two runs because the first hit its own 9,000s timeout at 312 breaks; the
+remaining 27 took 1,702s. **So the real cost is ~2h45m at 339 breaks**, against
+the ~1h29m for 258 that CLAUDE.md carried. That note has now been wrong three
+times in a row, so it says to budget by break count rather than by the last
+number written down.
+
 ### Next session's first task
 
 R173 — the reach gate misses break 162 by a rounding hair and does not assert
