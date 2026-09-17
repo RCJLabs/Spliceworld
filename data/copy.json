@@ -49,5 +49,14 @@
     "retreat": "You beat a tactical retreat. The kazoo plays taps.",
     "cannon": "THWOOMP. The Containment Cannon fires — {name} poofs into the impound queue!",
     "tag_out": "{name} tags out. {next} takes the field!"
+  },
+  "stable": {
+    "levers": "Expand the Surgery Theater, or build more pens — every {per} pens past the first {free} houses a chimera too.",
+    "full_theater": "The stable holds {cap} and every stall is taken.",
+    "full_theater_pending": "The stable holds {cap}, and {pending} of them are spoken for.",
+    "full_vat": "The stable holds {cap} and there is nowhere to put whatever comes out.",
+    "full_wing": "The stable holds {cap} and a graduate needs somewhere to graduate INTO.",
+    "spoken_for": "spoken for",
+    "stall_chip": "opens a chimera stall"
   }
 }

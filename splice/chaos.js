@@ -25,7 +25,7 @@ import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { GRADES, gradeIndexOf } from './extract.js';
 import { analyze } from './physiology.js';
 import { isSettled } from './chimera.js';
-import { stableRoom } from './facility.js';
+import { stableRoom, stallRule } from './facility.js';
 
 const HOUR = 3600000;
 
@@ -44,6 +44,11 @@ const DEFAULTS = {
   extraInstability: 14,
   minSockets: 2,
 };
+
+// R110 filed this as a local filler; R175 hoisted it to module scope rather
+// than add a second. Not `util/text.js`'s: this module is EAGER and the reader
+// is not. See splice/facility.js.
+const fill = (s, vars) => (s ?? '').replace(/\{(\w+)\}/g, (whole, k) => (vars[k] != null ? String(vars[k]) : whole));
 
 export function chaosTuning(content) {
   return { ...DEFAULTS, ...(content.chaosMeta ?? {}) };
@@ -201,8 +206,9 @@ export function startVat(state, sireId, damId, content, now) {
   // started gets to finish.
   const stable = stableRoom(state, content);
   if (!stable.free) {
-    return { ok: false, msg: `The stable holds ${stable.cap} and there is nowhere to put whatever comes out. `
-      + 'Dismantle something, or expand the Surgery Theater.' };
+    // R175 — this one named only the Theater, so a player who had already
+    // bought Tier II was told to buy it again.
+    return { ok: false, msg: `${fill(content.copy?.stable?.full_vat, { cap: stable.cap })} ${fill(content.copy?.stable?.levers, stallRule(content))}` };
   }
 
   state.vatCount = (state.vatCount ?? 0) + 1;
@@ -309,7 +315,6 @@ export function tickVat(state, content, now) {
   state.chimeras.push(child);
 
   const lines = content.chaosLines ?? {};
-  const fill = (s, vars) => (s ?? '').replace(/\{(\w+)\}/g, (whole, k) => (vars[k] != null ? String(vars[k]) : whole));
   const news = [];
   const decant = fill(lines.decant, {
     child: child.name,

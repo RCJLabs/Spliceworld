@@ -18,7 +18,7 @@ import {
 import { onboardingSteps, onboardingActive, guideForScreen, pathOwnsScreen } from './onboarding.js';
 import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
-import { scannerGrants } from '../splice/facility.js';
+import { scannerGrants, stableRoom, pensToStall } from '../splice/facility.js';
 import { speciesOf } from '../data/catalog.js';
 import { incomePerDay } from '../campaign/campaign.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
@@ -130,6 +130,16 @@ export function renderRanchScreen(root, ctx) {
   // had to look at it. It can now.
   const territory = incomePerDay(state, content);
   const net = Math.round(TUNING.stipendPerDay + territory - upkeep);
+  // R175 — the stable, beside the pens and never mistaken for them. The only
+  // capacity readout here was `Pens`, which is the ANIMAL herd, so the number
+  // that looked like the answer was about the wrong population. The fragments
+  // carry no placeholders on purpose; see splice/facility.js.
+  const stable = stableRoom(state, content);
+  const toStall = pensToStall(state, content);
+  const stallNext = toStall != null && toStall <= TUNING.penUpgradeSize
+    && state.ranch.penCapacity < TUNING.penMaxCapacity;
+  const spokenFor = content.copy?.stable?.spoken_for ?? '';
+  const stallChip = content.copy?.stable?.stall_chip ?? '';
   const scanner = scannerGrants(state, content);
   const catalog = catalogFor(state, content);
   if (!catalog.some((sp) => sp.id === catalogPick)) catalogPick = catalog[0]?.id ?? '';
@@ -269,9 +279,10 @@ export function renderRanchScreen(root, ctx) {
         <div><span class="econ-label">Slush fund</span><strong>$${Math.floor(state.funds)}</strong></div>
         <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${net < 0 ? '−' : '+'}$${Math.abs(net)}/day</strong><span class="econ-next">+$${TUNING.stipendPerDay + territory} in, −$${upkeep} upkeep</span></div>
         <div><span class="econ-label">Pens</span><strong>${state.ranch.stock.length}/${state.ranch.penCapacity}</strong></div>
+        <div><span class="econ-label">Stable</span><strong>${stable.used}/${stable.cap}</strong>${stable.pending ? `<span class="econ-next">${stable.pending} ${spokenFor}</span>` : ''}</div>
       </div>
       <div class="ranch-actions">
-        <button type="button" data-act="pen">Expand pens +${TUNING.penUpgradeSize} — $${penUpgradeCost(state)}</button>
+        <button type="button" data-act="pen">Expand pens +${TUNING.penUpgradeSize} — $${penUpgradeCost(state)}${stallNext ? ` · ${stallChip}` : ''}</button>
       </div>
       <div class="catalog">
         ${pickerField({

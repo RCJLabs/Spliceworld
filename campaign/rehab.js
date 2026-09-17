@@ -22,13 +22,14 @@
 // already offers (splice/theater.js).
 
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
-import { grantsOf, stableRoom } from '../splice/facility.js';
+import { grantsOf, stableRoom, stallRule } from '../splice/facility.js';
 import { playerLine } from './monologue.js';
 import { newsFor } from './wire.js';
 // R85 — the same function the rival ladder turns a genome into a fightable
 // record with, so a feral creature's bay card is built the way every other
 // bay card is.
 import { unitFromGenome } from '../battle/statblock.js';
+import { fill } from './monologue.js';
 
 const HOUR = 3600000;
 
@@ -251,8 +252,11 @@ export function startRehab(state, ref, content, now) {
   // graduation would take a creature they had already paid and waited for.
   const stable = stableRoom(state, content);
   if (!stable.free) {
-    return { ok: false, msg: `The stable holds ${stable.cap} and every stall is spoken for. `
-      + 'A graduate needs somewhere to graduate INTO.' };
+    // R175 — and this one named no door at all.
+    // `fill` from the campaign's own monologue.js rather than `util/text.js`:
+    // this module is EAGER and the reader is not. See splice/facility.js.
+    const said = fill(content.copy?.stable?.full_wing, { cap: stable.cap });
+    return { ok: false, msg: `${said} ${fill(content.copy?.stable?.levers, stallRule(content))}` };
   }
   if (state.funds < plan.fee) {
     return { ok: false, msg: `Short by $${Math.ceil(plan.fee - state.funds)}. Enrichment toys are, inexplicably, not cheap.` };

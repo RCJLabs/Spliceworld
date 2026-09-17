@@ -232,12 +232,39 @@ export function occupyTheater(state, content, now, kind = 'splice') {
 // R154 — A PEN IS A PEN. Reported from play: "it says upgrade pens but it
 // upgrades the ranch." It did — the word was doing two jobs. Derived from
 // `penCapacity` rather than stored, so no save version moves. ROADMAP §9.31.
-export function stallsFromPens(state, content) {
+// How many pens the player has bought past the paddock they started with. One
+// subtraction, read by both the stall count and the "how many more" the button
+// quotes — R175's first draft wrote it twice, and break 251 said so by
+// matching in two places (R61, caught by the anchor rule rather than by me).
+function pensPastFree(state, content) {
   const meta = content.stallMeta ?? {};
-  const per = meta.pensPerStall ?? 0;
+  return (state.ranch?.penCapacity ?? 0) - (meta.freePens ?? 0);
+}
+
+export function stallsFromPens(state, content) {
+  const per = content.stallMeta?.pensPerStall ?? 0;
   if (!per) return 0;
-  const past = (state.ranch?.penCapacity ?? 0) - (meta.freePens ?? 0);
+  const past = pensPastFree(state, content);
   return Math.max(0, Math.floor(past / per));
+}
+
+// R175 — how many more pens buy the next stall. One arithmetic beside the rule
+// it is about, so the button and the agenda row agree (R61).
+// R175 — the stall rule, read by the three refusals that name it. The numbers
+// live here and the sentence in data/copy.json, so they cannot drift (R61).
+// The eager callers fill it with a filler they already had rather than import
+// `util/text.js`, which would be the fiftieth eager module; ROADMAP R175.
+export function stallRule(content) {
+  const meta = content.stallMeta ?? {};
+  return { per: meta.pensPerStall ?? 0, free: meta.freePens ?? 0 };
+}
+
+export function pensToStall(state, content) {
+  const per = content.stallMeta?.pensPerStall ?? 0;
+  if (!per) return null;
+  const past = pensPastFree(state, content);
+  if (past < 0) return -past + per;
+  return per - (past % per);
 }
 
 export function stableRoom(state, content) {

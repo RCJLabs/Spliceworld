@@ -840,6 +840,28 @@
           "default": 0
         }
       ]
+    },
+    {
+      "id": "stable_cap",
+      "screen": "ranch",
+      "order": 67,
+      "icon": "graduation-cap",
+      "title": "Pens hold animals. The stable holds chimeras.",
+      "body": "Two populations, two ceilings, and the Ranch shows both. <em>Pens</em> is livestock — the donors you buy, breed and raise. <em>Stable</em> is the chimeras you have spliced, and it is the one that stops you building another. Exactly two things raise it. The <strong>Surgery Theater</strong> grants most of it, and Tier II doubles what Tier I gives you. Then every sixth pen past the paddock you started with houses a chimera as well as stock — so <em>Expand the pens</em> really does grow the roster, a stall at a time, and the button says so on the press that lands one. A stall is also held by anything on its way back to you: a specimen in the Reorientation Wing, one gone feral in Containment, one waiting to be rescued, and whatever is gestating in the chaos vat. That is why the stable can read full while the roster looks short — the missing ones are spoken for, and the Ranch says how many.",
+      "reachable": [
+        {
+          "path": "chimeras",
+          "min": 2,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "ranch.penCapacity",
+          "min": 10,
+          "default": 4
+        }
+      ]
     }
   ]
 }

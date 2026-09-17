@@ -1479,7 +1479,7 @@ export function checkTree() {
 // Rule 2 costs a line of bookkeeping per migration and buys the property that
 // this file always tells the truth about the tree. That is the trade R127 made
 // for the parts generator and R101 made for the save fixtures.
-const COPY_CAP = 4671;
+const COPY_CAP = 4625;
 
 // Measured by `copyWords` in tools/source.js, which is also what the gate runs,
 // so the ledger and the check cannot disagree about what a word is.
@@ -1502,7 +1502,7 @@ const COPY_BUDGET = {
   'campaign/matchup.js': 50,
   'campaign/monologue.js': 3,
   'campaign/operations.js': 103,
-  'campaign/rehab.js': 176,
+  'campaign/rehab.js': 161,
   'campaign/rivals.js': 9,
   'campaign/sparring.js': 28,
   'campaign/taskforce.js': 21,
@@ -1516,12 +1516,12 @@ const COPY_BUDGET = {
   'ranch/founding-ui.js': 73,
   'ranch/onboarding.js': 122,
   'ranch/ranch.js': 129,
-  'ranch/ui.js': 202,
+  'ranch/ui.js': 203,   // R175: the Stable label, beside the Pens one
   'render/renderer.js': 11,
   'save/save.js': 35,
   'save/settings-ui.js': 261,
   'save/slots.js': 208,
-  'splice/chaos.js': 125,
+  'splice/chaos.js': 106,
   'splice/chimera.js': 22,
   'splice/dex-ui.js': 146,
   'splice/dexentry.js': 16,
@@ -1535,7 +1535,7 @@ const COPY_BUDGET = {
   'splice/rush.js': 53,
   'splice/scars.js': 44,
   'splice/theater-ui.js': 87,
-  'splice/theater.js': 244,
+  'splice/theater.js': 231,
   'splice/tier.js': 60,
   'splice/vault-ui.js': 56,
   'splice/vault.js': 17,
