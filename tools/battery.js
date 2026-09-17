@@ -3391,6 +3391,46 @@ const BREAKS = [
     to: '',
   },
 
+  // R109 — the four rules of the voice, one break each. The first two are
+  // shapes the tree actually shipped; the gate is what found them.
+  {
+    // THE CURSOR STOPS ADVANCING. Every pool answers with the line its seed
+    // opened on, forever — which is what the wire did before this milestone,
+    // and it is invisible unless something counts: no error, no warning,
+    // every sentence in the game still perfectly good English.
+    n: 325, gate: SHARD_D, name: 'the pool cursor stops advancing, so every event says one sentence for the life of the save',
+    file: 'campaign/monologue.js',
+    anchor: '  const at = state?.wireAt?.[key] ?? 0;',
+    to: '  const at = 0;',
+  },
+  {
+    // A SENTENCE GOES BACK INTO AN ENGINE MODULE. This is the exact line
+    // R109 found 724 tellings of — a quarter of the game's voice written
+    // where no pool can reach it and no rewrite is a data edit.
+    n: 326, gate: SHARD_D, name: 'a wire sentence is written in an engine module again, out of reach of any pool',
+    file: 'campaign/campaign.js',
+    anchor: "      if (!extra.success) emitNews(state, content, 'op_failed', { op: extra.name });",
+    to: "      if (!extra.success) pushNews(state, `${extra.name} came to nothing, which happens.`);",
+  },
+  {
+    // A JOB STOPS ROTATING ITS HEADLINE. One operation, one sentence, 274
+    // tellings — 5.8% of the wire from a single job the player happens to
+    // like. The pool is still authored; it is simply not read.
+    n: 327, gate: SHARD_D, name: 'a job stops rotating its headline, so one sentence is 5% of the wire again',
+    file: 'campaign/operations.js',
+    anchor: '    const headline = pickPooled(state, `op:${op.id}`, op.news);',
+    to: '    const headline = Array.isArray(op.news) ? op.news[0] : op.news;',
+  },
+  {
+    // AN EVENT LOSES ITS EMITTER. The pool stays in news.json, fully
+    // authored, and nothing in the game can ever say it — R57/R58's shape,
+    // which this project has now found six times.
+    n: 328, gate: SHARD_D, name: 'an authored event loses its emitter, so a whole pool becomes unsayable',
+    file: 'campaign/campaign.js',
+    anchor: "      } else emitNews(state, content, 'op_paid', { op: extra.name, funds: extra.funds });",
+    to: '      } else pushNews(state, null);',
+  },
+
   // R171 — the two halves of the entry's Done-when, one break each.
   {
     // FIFTEEN KILOBYTES OF COMMENTS, which is the number the entry names. The

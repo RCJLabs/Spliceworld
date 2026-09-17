@@ -284,8 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**10 entries queued.** R109, R110, R111, R112, R113, R114, R115, R116, R117,
-R118.
+**9 entries queued.** R110, R111, R112, R113, R114, R115, R116, R117, R118.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4014,7 +4013,63 @@ suite can check.
 
 **Content and voice.**
 
-- **R109 — The voice repeats.** The wire pushed **4,034 lines in 180 days**
+- **R109 — The voice repeats.** ✅ *Shipped.* The complaint holds and is worse
+  than the entry states; three of its numbers were stale, and the largest
+  finding is not in it at all.
+
+  **Measured before a line was written**, seed 2026 over 180 days: **4,697**
+  wire lines (entry: 4,034), spoken with **67 distinct phrasings** (entry:
+  181 — that count was of printed SENTENCES, and "Hazmat rescued from the
+  impound lot" and "Napoleon Bitey-parte rescued from the impound lot" are
+  one phrasing heard twice). Loudest **14.6%**. And **1,265 of the 4,697 —
+  26.9% — were written inside engine modules**, where no pool can reach them
+  and rewriting one is an engine edit. CLAUDE.md has said content lives in
+  data since the beginning; nothing had ever counted.
+
+  **Shipped:** every line in data, `pickPooled` as one rotation for the whole
+  voice, and the pools to use it.
+
+      unmatched   1,265 -> 0        distinct  67 -> 411
+      loudest     14.6% -> 1.6%     SAVE_VERSION 56 (`wireAt`)
+
+  **THE SELECTOR CAME BEFORE THE WRITING, and two drafts of it failed.** The
+  old rule rotated "while the last telling is still on the wire" — twelve
+  lines against twenty-six a day, so it almost never fired, and what was left
+  was a seed hashed from the PARAMS: three operations, five rivals, the same
+  variant for the life of the save. The five-line `op_failed` pool read
+  **256 / … / 0 / 0** across 724 tellings. Draft one rolled per telling and
+  `rngStream` re-seeds from its arguments, so a stream keyed on a window's
+  LENGTH returns the same number forever once that length pins — distinct
+  went DOWN, 107 to 102. Draft two was the global no-repeat window of twenty
+  the entry asks for, and twenty lines is eighteen hours of wire, so a busy
+  event's keys fall out BETWEEN tellings and it picks the same one again —
+  101. What works is a cursor per event. `op_failed` reads
+  **145 / 145 / 145 / 145 / 144**.
+
+  **THE LOUDEST LINE IN THE GAME WAS THE PLAYER'S OWN**, and it was not on
+  the wire. `philosophies.json` gave each philosophy one `capture` sentence
+  and the improver's ran **684 times** — more than any news event. The voice
+  a player chooses in their first five minutes was the thing they heard most.
+
+  **FOUR GATES ASSERTED ON ONE SENTENCE'S WORDING**, and pooling the voice
+  found all four: `/CAPTURED/`, `/THWOOMP|impounded/`,
+  `/BREAKOUT|misplaced|unaccounted/`, and `news[key].includes('{node}')`
+  against what is now an array. That last was silently weaker than it looked
+  — `includes` on an array is true when any element matches, so a pool whose
+  ninth line forgot `{node}` would have passed. All four now ask what they
+  meant.
+
+  **AND THE GATE CAUGHT ITS OWN AUTHOR TWICE.** A four-line
+  `rival_beaten_again` pool was written for an arm that is unreachable — all
+  five rivals have a `rematch` line, so the `??` never fires; cut. And rule 4
+  was framed twice as "content the walk never reached", which is a fact about
+  the walker: `dissection_done`, `last_stand` and `rehab_enrolled` are rare
+  PATHS with live emitters, and `dominion`'s two endings are reached by two
+  different saves. It is an emitter check read off the source now.
+
+  The original entry follows.
+
+- **R109 (as queued) — The voice repeats.** The wire pushed **4,034 lines in 180 days**
   — 22 a day — from **181 distinct phrasings**, each heard **22 times** on
   average. The top one, *"…came to nothing, which happens,"* ran **670
   times**; the five sparring blurbs covered **539 of 543 spars**. The
