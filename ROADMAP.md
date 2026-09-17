@@ -4306,11 +4306,40 @@ suite can check.
   "collected by Dr. Mantissa's very patient interns" and the name rule would
   eat that.
 
-  **THE FUZZ EARNED ITS PLACE IN THE FIRST MINUTE IT RAN.** 200 mutated day-180
-  saves found `campaign.captives: null` breaking the War Room — the shape
-  repair walked only the top level, which looks thorough and covers a fifth of
-  the fields. It recurses now, against `newGameState` as the authority, so a
-  field added to the save is covered the day it lands.
+  **THREE DEFECTS IN THIS MILESTONE WERE CAUGHT BY GATES RATHER THAN BY ME, AND
+  THE MIDDLE ONE WOULD HAVE DESTROYED PLAYER DATA.**
+
+  **(1) The fuzz, in the first minute it ran.** 200 mutated day-180 saves found
+  `campaign.captives: null` breaking the War Room — the shape repair walked only
+  the top level, which looks thorough and covers a fifth of the fields. It
+  recurses now, against `newGameState` as the authority.
+
+  **(2) The height gate, sideways, two hours later — and this one was the bad
+  one.** The row-pruning was keyed by bare key NAME. `inventory.parts` holds
+  objects; **`dex.parts` holds part ids as STRINGS**. So every load silently
+  emptied **227 entries of the player's Splice-Dex**: the exact "never reset"
+  violation this module was written to prevent, committed by the repair itself.
+
+  Nothing was checking the Dex. The height gate found it because the Dex's combo
+  bands read `dex.parts` to decide which pairings you own the halves for, so a
+  band went empty and a fold it expected to open was not there — *"dex:combos
+  declares 3 folds to walk and the gate got into 2"*. Deterministic 2/2, and
+  green on the pre-R114 tree, which is what ruled out R159's browser-gate flake.
+  Now keyed by full path, and the gate runs a PLAYED save through the repair and
+  demands it back unchanged — the fresh save it used before has empty arrays and
+  therefore nothing to destroy.
+
+  **(3) A missed break.** 345 went MISSED on the first run: the gate asserted the
+  cleaner exists and that the FILE boundary calls it, and never that the KEYBOARD
+  does. All three entrances are asserted now.
+
+  **And the budgets.** The unsharded smoke went red on `KB_CAP` — 318.3 against
+  318, with prose 248.9 against 247, because R174 and R175 had each set their cap
+  at the measurement. Paid down first, as R174's note asked: the same finding had
+  been explained in five files and is in one now (~0.6 KB recovered). Then raised
+  by the measured remainder, with the per-file accounting beside each cap — three
+  of the five files are **net negative on code**, because the escapers came out.
+  `KB_CAP` 318 → 319, `PROSE_CAP` 247 → 249.
 
   Two more, found on the way: `campaign/ui.js` had a local named `esc` in a
   module that also IMPORTS `esc`, so inside that block the escaper was

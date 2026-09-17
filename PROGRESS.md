@@ -55,16 +55,54 @@ holds **3,120 strings and not one contains `<` or `>`**. Prose keeps its
 apostrophes, because a captive's `koLine` says "Dr. Mantissa's very patient
 interns" and the name rule would eat that.
 
-### The fuzz earned its place in the first minute it ran
+### Three defects were caught by gates rather than by me
 
-200 mutated day-180 saves found **`campaign.captives: null` breaking the War
-Room**. My shape repair walked only the top level — which looks thorough and
-covers a fifth of the fields. It recurses now, against `newGameState` as the
-authority.
+**(1) The fuzz, in its first minute.** 200 mutated day-180 saves found
+`campaign.captives: null` breaking the War Room. My shape repair walked only the
+top level — which looks thorough and covers a fifth of the fields. It recurses
+now, against `newGameState` as the authority.
 
-The copy ledger caught the second one: the first draft of `save/schema.js`
+**(2) The height gate, sideways, two hours later — and this was the bad one.**
+The row-pruning was keyed by bare key NAME. `inventory.parts` holds objects;
+**`dex.parts` holds part ids as STRINGS**. Every load silently emptied **227
+entries of the player's Splice-Dex** — the exact "never reset" violation the
+module exists to prevent, committed by the repair itself.
+
+Nothing was checking the Dex. The height gate found it because the combo bands
+read `dex.parts`, so a band went empty and a fold went missing: *"dex:combos
+declares 3 folds to walk and the gate got into 2"*. Deterministic 2/2, green on
+the pre-R114 tree — which is what ruled out R159's browser-gate flake. Keyed by
+full path now, and the gate runs a **played** save through the repair and
+demands it back unchanged. The fresh save it used before has empty arrays, so it
+had nothing to destroy and proved nothing.
+
+**(3) A missed break.** 345 went MISSED first time: the gate asserted the
+cleaner exists and that the FILE boundary calls it, never that the KEYBOARD
+does. All three entrances are asserted now.
+
+The copy ledger caught a fourth, smaller one: `save/schema.js`'s first draft
 pushed English sentences as repair messages. They are `{ at, why }` now — a
 field path and a reason id — and the words belong in `data/copy.json`.
+
+### The budgets, paid down then raised
+
+The unsharded smoke went red on `KB_CAP`: 318.3 against 318, prose 248.9
+against 247, because R174 and R175 had each set their cap at the measurement.
+Paid down first, as R174's note asked — the same finding had been explained in
+five files and is in one now (~0.6 KB back). Then raised by the remainder, with
+the per-file accounting beside each cap:
+
+    util/text.js        +392   the escaper and the cleaner
+    save/save.js        +116   the repair on the load path
+    render/renderer.js   -59   its private escaper, deleted
+    ui/cards.js          -91   ditto
+    splice/chimera.js    -19   its private strip rule, deleted
+                        ----
+                        +339   KB_CAP 318->319, PROSE_CAP 247->249
+
+Three of five files are **net negative on code**. What is left is an escaper the
+boot path did not have, and `render/renderer.js` now escapes `>` and `'` on
+every creature it draws.
 
 ### Also found
 
@@ -84,10 +122,13 @@ see a player's chimera **deleted** by the thing meant to protect it.
 
 ### Verified
 
-`--anchors` 338/338 (break 324 lost its anchor when the card's private escaper
-went; re-aimed at the call, which is the more durable target). Baseline green.
-Breaks 324 and 341–345 red on demand. `npm test` green, run alone. Boot green:
-50 modules, and the excuse list one line shorter.
+- `--anchors` **339/339** (break 324 lost its anchor when the card's private
+  escaper went; re-aimed at the call, the more durable target)
+- **`BATTERY_EXIT=0`** — clean baseline, **7 of 7 breaks caught, 0 missed**
+- `npm test` **green, run alone**: 269s wall, 849 CPU-s of 1246 budgeted
+- unsharded smoke `UNION_EXIT=0`; `BOOT_EXIT=0`
+- height gate green at **130 folds walked**, the same figure the pre-R114 tree
+  reported — the Dex is intact, not merely quiet
 
 ### Next session's first task
 
