@@ -5,7 +5,7 @@
 // deterministically (rolls derive from seed + rollCount).
 
 import { rngStream, pick } from '../util/rng.js';
-import { copy } from '../util/text.js';
+import { copy, fill } from '../util/text.js';
 import { chooseMoveIndex, skillFor } from './ai.js';
 import { levelOf, levelMult, grantBattleXp } from './veterancy.js';
 import { analyze } from '../splice/physiology.js';
@@ -97,8 +97,9 @@ function guardAbsorb(def, content) {
 // gated to be identical is not a safety net, it is a second place to edit —
 // which is the bug this comment used to describe happening to somebody else.
 export function stanceLine(content, key, vars = {}) {
-  const raw = content?.stanceLines?.[key] ?? '';
-  return raw.replace(/\{(\w+)\}/g, (whole, k) => (vars[k] === undefined ? whole : String(vars[k])));
+  // R174 — through the one `fill`. Its own `=== undefined` test treated a null
+  // as a value and printed "null" into a battle line.
+  return fill(content?.stanceLines?.[key] ?? '', vars) ?? '';
 }
 
 // R103 — WHAT THE BRACE BUTTON IS ABOUT TO DO, worked out once. `step`

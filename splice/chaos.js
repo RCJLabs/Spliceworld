@@ -26,6 +26,7 @@ import { GRADES, gradeIndexOf } from './extract.js';
 import { analyze } from './physiology.js';
 import { isSettled } from './chimera.js';
 import { stableRoom, stallRule } from './facility.js';
+import { fill } from '../util/text.js';
 
 const HOUR = 3600000;
 
@@ -44,11 +45,6 @@ const DEFAULTS = {
   extraInstability: 14,
   minSockets: 2,
 };
-
-// R110 filed this as a local filler; R175 hoisted it to module scope rather
-// than add a second. Not `util/text.js`'s: this module is EAGER and the reader
-// is not. See splice/facility.js.
-const fill = (s, vars) => (s ?? '').replace(/\{(\w+)\}/g, (whole, k) => (vars[k] != null ? String(vars[k]) : whole));
 
 export function chaosTuning(content) {
   return { ...DEFAULTS, ...(content.chaosMeta ?? {}) };

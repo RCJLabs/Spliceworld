@@ -1,5 +1,72 @@
 # PROGRESS
 
+## Session 191 — R174: one filler, and the fiftieth module ✅
+
+**The entry said two `fill`s. The tree had six, and three of them disagreed.**
+
+### What the count found
+
+    "A {mystery} appeared."  {}        "HP is {hp}."  {hp: null}
+    monologue / text / chaos / resequencer
+                "A {mystery} appeared."   "HP is {hp}."    <- R62's rule
+    battle/engine.js (stanceLine)
+                "A {mystery} appeared."   "HP is null."
+    splice/card.js (say)
+                "A  appeared."            "HP is ."
+
+R62 set the rule the first time copy went into data: an unknown key is **left
+alone**, so a typo reads oddly instead of breaking the sentence it is in.
+`splice/card.js` **deleted** it — on the specimen card, the one artefact this
+game hands to another person — and `battle/engine.js` printed the word `null`.
+
+**Neither could have been caught**, because there was no one implementation to
+gate. That is R171's five-comment-strippers finding one floor down, and it is
+the reason this was worth a module rather than a tidy-up.
+
+### Shipped
+
+One `fill` in `util/text.js`. `campaign/monologue.js` re-exports it so
+`wire.js` and `rehab.js` are untouched; the other four import it. Both wrong
+behaviours are the right one now.
+
+**The gate counts the `.replace()` SHAPE, not the function name** — three of
+the six were anonymous arrows or inline, so a name-based count would have found
+three and reported clean.
+
+### The cap argument, which is what the entry actually asked for
+
+Nothing could be evicted to pay for the leaf, so three budgets moved:
+
+    MODULE_CAP      49 -> 50      the fiftieth is util/text.js
+    FIRST_PAINT_KB  1060 -> 1070  measured 1061, nine KB of slack (R109's)
+    PROSE_CAP       246 -> 247    measured 246.5
+
+`PROSE_CAP` moving is **one module arriving, not prose growing**: across the six
+modules touched the prose is **net −278 bytes** after three consolidation
+passes, because four files were explaining the same change and now one does.
+
+### The bill is named, not settled
+
+`campaign/monologue.js` is 4.0 KB and reads IDLE on both first paints. It is
+eager only because `campaign.js`, `rehab.js` and `rivals.js` import
+`playerLine` and `rivalLine` at module level — and those run during **battle
+resolution**, not boot. R153's director shape exactly. Queued as **R176**;
+if it works, the count goes back to 49 and `util/text.js` is paid for.
+
+### Known issues
+
+- Break 97 lost its anchor for the second milestone running, because
+  `stanceLine` changed shape again. `--anchors` caught it in 0.3s both times,
+  which is the cheap half of the battery doing its job.
+
+### Next session's first task
+
+R176 — the fiftieth module, and the one that should have left instead. *Done
+when: `MODULE_CAP` is back to 49 with a ledger line naming what left, or the
+attempt is written up saying why the two cannot move.*
+
+---
+
 ## Session 190 — R175: pens hold animals, the stable holds chimeras ✅
 
 **Asked for directly, from play:** *"I don't know where or what increases that

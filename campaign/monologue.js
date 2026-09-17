@@ -24,6 +24,7 @@
 // exemption list and is now the size of what actually justifies it.
 
 import { rngStream } from '../util/rng.js';
+import { fill } from '../util/text.js';
 export const DEFAULT_PHILOSOPHY = 'improver';
 
 export function philosophyOf(state, content) {
@@ -48,10 +49,9 @@ export function profileOf(state, content) {
 // {rival} {creature} {node} {lab} {name}. An unknown placeholder is left
 // alone rather than printed as "undefined" — a line with a typo in it
 // should read oddly, not break.
-export function fill(template, vars = {}) {
-  if (!template) return null;
-  return template.replace(/\{(\w+)\}/g, (whole, key) => (vars[key] != null ? String(vars[key]) : whole));
-}
+// R174 — re-exported, not reimplemented: wire.js and rehab.js have taken
+// `fill` from here since R62 and the churn buys nothing. One copy, in util/.
+export { fill };
 
 // R109 — ONE ROTATION FOR THE WHOLE VOICE. `newsFor` and `playerLine` both
 // walk a pool without repeating, and this is the leaf both import, so the

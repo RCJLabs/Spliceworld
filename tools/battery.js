@@ -3445,6 +3445,35 @@ const BREAKS = [
     anchor: "      } else emitNews(state, content, 'op_paid', { op: extra.name, funds: extra.funds });",
     to: '      } else pushNews(state, null);',
   },
+  // R174 — one filler, one contract.
+  {
+    // A SEVENTH FILLER APPEARS. The case the gate is for: somebody needs to
+    // fill a placeholder, writes the four-line replace rather than importing
+    // one, and the tree quietly has two rules again.
+    n: 338, gate: SHARD_B, name: 'a module grows its own placeholder filler again, and the tree has two rules',
+    file: 'splice/vault.js',
+    anchor: 'export function vaultRoom(state, content) {',
+    to: "const R174_BREAK = (t, v) => t.replace(/\\{(\\w+)\\}/g, (w, k) => (v[k] != null ? String(v[k]) : w));\nexport function vaultRoom(state, content) {",
+  },
+  {
+    // THE CONTRACT BREAKS THE WAY card.js BROKE IT: an unfilled placeholder is
+    // deleted instead of left alone. This is the defect R174 found shipped, on
+    // the one artefact handed to another person.
+    n: 339, gate: SHARD_B, name: 'the one filler goes back to deleting a placeholder nobody filled',
+    file: 'util/text.js',
+    anchor: '    vars[key] != null ? String(vars[key]) : whole',
+    to: "    vars[key] != null ? String(vars[key]) : ''",
+  },
+  {
+    // AND THE OTHER WAY IT BROKE: a null counted as a value, so "null" printed
+    // into a battle line. A truthiness check would also swallow a zero, which
+    // is why the contract tests both.
+    n: 340, gate: SHARD_B, name: 'a null counts as a value again, and the word null prints into a sentence',
+    file: 'util/text.js',
+    anchor: '    vars[key] != null ? String(vars[key]) : whole',
+    to: '    vars[key] !== undefined ? String(vars[key]) : whole',
+  },
+
   // R175 — the stable says how big it is and what makes it bigger.
   {
     // THE MAIN SCREEN STOPS SAYING HOW FULL THE STABLE IS, which is the state
@@ -4441,8 +4470,8 @@ const BREAKS = [
     // own sentence instead.
     n: 97, gate: STANCE, name: "the stance's sentences go back to being literals the data cannot reach",
     file: 'battle/engine.js',
-    anchor: "  const raw = content?.stanceLines?.[key] ?? '';",
-    to: "  const raw = key === 'brace' ? '{name} sets its feet and braces.' : (content?.stanceLines?.[key] ?? '');",
+    anchor: "  return fill(content?.stanceLines?.[key] ?? '', vars) ?? '';",
+    to: "  return fill(key === 'brace' ? '{name} sets its feet and braces.' : (content?.stanceLines?.[key] ?? ''), vars) ?? '';",
   },
   {
     n: 98, gate: STANCE, name: 'the pilot keeps a second copy of the stance table',
