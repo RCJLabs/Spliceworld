@@ -1,5 +1,82 @@
 # PROGRESS
 
+## Session 190 — R175: pens hold animals, the stable holds chimeras ✅
+
+**Asked for directly, from play:** *"I don't know where or what increases that
+and nothing says."*
+
+### The complaint is sharper than undocumented
+
+**The one capacity readout on the main screen was about the wrong population.**
+The Ranch econ strip showed `Pens 4/12` — the ANIMAL herd. The chimera roster
+had no standing readout anywhere in the game. The only `used/cap` figure for it
+lived inside the hint text of one agenda row, visible only when that row
+happened to be up. Everything else was a refusal after the fact.
+
+### The rule, measured on a fresh save
+
+    capacity = the Surgery Theater's `stable` grant
+             + one stall per `pensPerStall` pens past `freePens`
+
+    Theater Tier I     6      pens  4 -> +0       fresh save    6
+    Theater Tier II   12      pens 40 -> +6       everything   18
+
+`used` counts more than the visible roster — a specimen in the Wing, one gone
+feral, a captive awaiting rescue, the vat's occupant — which is exactly why the
+stable reads full at a roster that looks short. That surprise is now named on
+the screen rather than discovered at a refusal.
+
+### Shipped
+
+    Pens    0/4        the livestock
+    Stable  0/6        the chimeras, with "N spoken for" when anything is away
+    button  Expand pens +2 — $550 · opens a chimera stall
+
+R40's three-cell rule was **re-derived rather than bumped**: it guards against
+one subtraction shown twice, which is the two assertions under it, and a second
+population is not a derivation. Both are asserted separately now.
+
+### It found R154's leftovers
+
+R154 made a pen genuinely house a chimera and fixed the Theater's refusal. The
+**chaos vat still named only the Theater** — telling a player at capacity to
+buy a tier they may already own — and the **Wing named no lever at all**. All
+three compose one sentence from `data/copy.json` now, filled from one
+`stallRule`, so they cannot drift apart a second time.
+
+### The eager graph decided the shape
+
+`util/text.js` is lazy and three of the four modules here are not. Importing
+`copy` into any of them made it the **fiftieth** eager module and broke the
+boot, code and prose budgets in one go. The eager side composes with fillers it
+already had; only the lazy Theater uses the reader. That is **R174's cap
+argument, met by not spending it**.
+
+    KB_CAP     317 -> 318   measured 317.7, argued on code
+    PROSE_CAP  245 -> 246   measured 245.3, after paying R94's trim tax twice
+    MODULE_CAP 49 of 49     untouched
+    FIRST_PAINT 1059/1060   untouched
+
+### The battery caught a duplication I wrote
+
+`pensToStall` copied the subtraction `stallsFromPens` already had. Break 251
+started matching in **two places** and `--anchors` said so in 0.3s. One
+`pensPastFree`, two readers (R61) — found by the gate, not by me.
+
+### Known issues
+
+- `PROSE_CAP` has now moved in two of the last three milestones, which its own
+  note warns about. The lever is **R174**, not 247: the comments it is paying
+  for are largely explanations of the `fill` split.
+
+### Next session's first task
+
+R111 — feel: creature voices, ambience and haptics. *Done when: smoke asserts
+two genomes yield two voice specs and one genome always the same, and the
+settings panel carries volume, ambience and haptics controls.*
+
+---
+
 ## Session 189 — R110: copy is data ✅ (as a ratchet)
 
 **ROADMAP §9.** The headline held. The map did not, and the map is what a

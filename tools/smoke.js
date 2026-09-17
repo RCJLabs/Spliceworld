@@ -103,6 +103,9 @@ const SHARD_OF = {
   // shard: 228s of the suite's work was those two blocks, four times over.
   // Measured with SW_SHARD=z, which runs the common path and nothing else.
   fired: 'c', mercy: 'd', planted: 'a', combos: 'b',
+  // R175 — the stable's readout and the three refusals. Shard b is the
+  // lightest lane (134s against a's 212s), and this block renders one screen.
+  stable: 'b',
   // R168 — a pure function on synthetic timings; it costs nothing.
   shares: 'd',
   // R90 — the last of the common path worth guarding. Measured with
@@ -6777,7 +6780,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // no button to press, just the two charts that decide fights. They are
     // on the roll for the same reason everything else is: so that removing
     // the note fails the build.
-    'stable', 'triangle', 'chart', 'veterans',
+    // R175 — `stable_cap` is the CAPACITY note, and `stable` above is the
+    // patrol-size one. Two different lessons that R7 happened to give similar
+    // names; the ids are what the roll checks, so both are on it by name.
+    'stable', 'stable_cap', 'triangle', 'chart', 'veterans',
     'grades', 'breeding', 'incubator', 'genes', 'pairing', 'facility', 'upkeep', 'catalog',
     // R39. The Vault had no note of any kind, and the Resequencer (R31) was
     // a fully shipped system — data file, module, UI, a tick in main.js —
@@ -7215,9 +7221,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['a wing turns up', () => {
       lab.inventory.parts.push({ id: 't3', partId: 'eagle_forelimbs' });
     }, ['flight']],
+    // R175 — the capacity note lights beside the vat's, and they belong
+    // together: the vat is one of the four things that holds a stall while
+    // it works, which is why a stable can read full at a roster that looks
+    // short. One chimera cannot teach a ceiling; two can.
     ['a second settled chimera', () => {
       lab.chimeras.push({ id: 'c2', frame: 'M', tokens: {}, settleUntil: 0, bond: 5, scars: [] });
-    }, ['chaos']],
+    }, ['chaos', 'stable_cap']],
     ['something gets hurt', () => { lab.chimeras[0].injury = { name: 'Sprained Everything', until: t0 + HOUR }; }, ['infirmary']],
     ['and it sets badly', () => { lab.chimeras[0].scars = ['gun_shy']; }, ['scars']],
     ['a bay is occupied', () => { lab.campaign.containment = [{ id: 'bay-0', unitId: 'riot_squad' }]; }, ['containment']],
@@ -12150,9 +12160,26 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const page = draw(ranch([{ sex: 'F' }, { sex: 'M' }]));
     const row = page.slice(page.indexOf('class="econ-row"'), page.indexOf('ranch-actions'));
     const cells = (row.match(/<span class="econ-label">/g) ?? []).length;
-    assert.equal(cells, 3, `the economy reads as three cells, not five (${cells})`);
+    // R175 — 3 -> 4, AND THE RULE IS UNCHANGED. R40's rule is "one subtraction,
+    // shown once": the Ranch was printing Income, Upkeep and Net as three
+    // cells, and the fix was Net plus a subtitle. That rule is the two
+    // assertions below this one, not the count — the count was a proxy for it.
+    //
+    // The fourth cell is not a derivation of anything already shown. It is a
+    // SECOND POPULATION: `Pens` is the animal herd and `Stable` is the chimera
+    // roster, and the whole of R175 is that the game had one capacity readout
+    // on this screen and it answered the wrong question. Merging them into one
+    // cell, or hanging the stable off the pens as a subtitle, would keep the
+    // count at three by re-creating the confusion the milestone exists to end.
+    //
+    // So the number moves and the guard against R40's actual defect stays:
+    // Net is still one cell with its derivation as a subtitle, asserted below.
+    assert.equal(cells, 4, `the economy reads as four cells, not five (${cells})`);
     assert.ok(/econ-label">Net</.test(row), 'Net is one of them');
     assert.ok(/econ-next/.test(row), 'with its derivation as a subtitle');
+    // And the two capacities are separate, named, and never one number.
+    assert.ok(/econ-label">Pens</.test(row), 'the animal pens are one cell');
+    assert.ok(/econ-label">Stable</.test(row), 'the chimera stable is another');
     assert.ok(/upkeep/.test(row), 'that still names upkeep');
     assert.ok(!/econ-label">Income</.test(row), 'and Income is not its own cell any more');
     assert.ok(!/econ-label">Upkeep</.test(row), 'nor Upkeep');
@@ -14612,6 +14639,126 @@ if (inShard('card')) {
 // fourth is the rule that makes the other three reachable, because a
 // sentence written inside an engine module cannot be pooled, cannot be
 // counted, and cannot be rewritten without an engine edit.
+
+// R175 — THE STABLE SAYS HOW BIG IT IS, AND WHAT MAKES IT BIGGER.
+//
+// Reported from play: "I don't know where or what increases that and nothing
+// says." Measured, and the complaint is sharper than undocumented — the one
+// capacity readout on the main screen is about the WRONG POPULATION. The Ranch
+// econ strip shows `Pens 4/12`, which is the animal herd; the chimera roster
+// had no standing readout anywhere, and the only used/cap figure for it in the
+// whole UI lived inside the hint text of one agenda row, visible only when that
+// row happened to be up. Everything else was a refusal after the fact.
+//
+// The rule itself, measured on a fresh save and unchanged by this milestone:
+//
+//     capacity = the Surgery Theater's `stable` grant + one stall per
+//                `pensPerStall` pens past `freePens`
+//
+//     Theater Tier I    6        pens  4 -> +0      fresh save      6
+//     Theater Tier II  12        pens 40 -> +6      everything     18
+//
+// And `used` counts more than the visible roster: a creature in the Wing or
+// gone feral, a captive awaiting rescue, and the vat's occupant all hold a
+// stall, which is what makes "full" surprising at a roster below the cap.
+if (inShard('stable')) {
+  const { renderRanchScreen } = await import('../ranch/ui.js');
+  const { stableRoom } = await import('../splice/facility.js');
+
+  const full = () => {
+    const s = { ...newGameState(), seed: 4242, funds: 50000 };
+    const room = stableRoom(s, content);
+    s.chimeras = Array.from({ length: room.cap }, (_, i) =>
+      makeSimChimera('L', STARTER_BUILD.partIds, 'standard', content));
+    for (const [i, c] of s.chimeras.entries()) { c.id = `f${i}`; c.name = `Full ${i}`; c.settleUntil = 0; }
+    return s;
+  };
+
+  // 1. A STANDING READOUT, on the screen a player opens the game to.
+  {
+    const s = { ...newGameState(), seed: 7 };
+    const root = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+    renderRanchScreen(root, { state: s, content, now: () => Date.now(), save: () => {}, refreshTicker: () => {} });
+    const html = root.innerHTML;
+    const room = stableRoom(s, content);
+    // Derived, never a literal: the assertion has to move with the tuning, or
+    // it is R157's worn floor again — a check that stops tracking the number
+    // it guards and passes for the wrong reason.
+    assert.ok(html.includes(`${room.used}/${room.cap}`),
+      `the Ranch says how full the stable is (${room.used}/${room.cap})`);
+    assert.ok(/stable/i.test(html), 'and calls it the stable, so it is not read as the pens');
+    // The pens line is a DIFFERENT number about a different population, and
+    // the two must not collide into one readout that answers neither.
+    assert.ok(html.includes(`${s.ranch.stock.length}/${s.ranch.penCapacity}`),
+      'the animal pens still have their own line');
+  }
+
+  // 2. THE BUTTON SAYS WHAT THE NEXT PRESS BUYS. "Expand pens +2" is true and
+  //    incomplete: every `pensPerStall` pens past the paddock also houses a
+  //    chimera, which is the whole of R154, and the control never said so.
+  {
+    const per = content.stallMeta?.pensPerStall ?? 0;
+    assert.ok(per > 0, 'the stall rule is in data');
+    const s = { ...newGameState(), seed: 9 };
+    // One press short of a stall, so the button has something to promise.
+    s.ranch.penCapacity = (content.stallMeta?.freePens ?? 0) + per - 2;
+    const root = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+    renderRanchScreen(root, { state: s, content, now: () => Date.now(), save: () => {}, refreshTicker: () => {} });
+    assert.ok(/stall/i.test(root.innerHTML),
+      'the pen control says when the next press also buys a chimera stall');
+  }
+
+  // 3. EVERY REFUSAL NAMES BOTH DOORS, from ONE sentence.
+  //
+  // R154 fixed the Theater's refusal and left two behind: the chaos vat named
+  // only the Theater, and the Wing named neither. A player at capacity was
+  // told to buy a tier they might already own — which is half the reason the
+  // pen purchase read as doing nothing.
+  //
+  // Composed rather than repeated, so the levers cannot drift apart again:
+  // three call sites, one string, and this asserts they all carry it rather
+  // than asserting any particular wording (R109's rule — a gate that reads a
+  // sentence breaks when the sentence is rewritten, and says nothing when the
+  // meaning changes).
+  {
+    // Through the SAME function the engine calls, not a second read of the
+    // same id: a gate that fills the template differently from the caller is
+    // comparing two sentences and reporting on neither (this one did, first
+    // time round — it asked for the raw template and the engine ships it
+    // filled).
+    const { stallRule } = await import('../splice/facility.js');
+    const levers = copy(content, 'stable.levers', stallRule(content));
+    assert.ok(levers && levers.length > 10, 'one sentence names what raises the stable');
+    assert.ok(!/\{\w+\}/.test(levers), 'and it ships filled, not as a template');
+
+    const { spliceChimera } = await import('../splice/theater.js');
+    const { startVat } = await import('../splice/chaos.js');
+
+    const refusals = [];
+    {
+      const s = full();
+      // Stocked, so the refusal that comes back is the STABLE's and not the
+      // vault's — a fixture that trips an earlier check proves nothing about
+      // the one under test.
+      s.inventory.parts = [tk('cobra_head'), tk('cobra_organ'), tk('goat_hindlimbs')];
+      s.theater = { busyUntil: 0 };
+      const tokens = { head: 'tk-cobra_head-standard', organ: 'tk-cobra_organ-standard', hindlimbs: 'tk-goat_hindlimbs-standard' };
+      const r = spliceChimera(s, 'S', tokens, content, Date.now());
+      if (!r.ok) refusals.push(['the Surgery Theater', r.msg]);
+    }
+    {
+      const s = full();
+      const r = startVat(s, s.chimeras[0].id, s.chimeras[1].id, content, Date.now());
+      if (!r.ok) refusals.push(['the chaos vat', r.msg]);
+    }
+    assert.ok(refusals.length >= 2, `a full stable actually refuses (${refusals.length})`);
+    for (const [where, msg] of refusals) {
+      assert.ok(String(msg).includes(levers),
+        `${where} names what raises the stable, not only that it is full (${msg})`);
+    }
+  }
+}
+
 // R110 — COPY NOBODY READS, AND A READER WITH NO COPY, BOTH FAIL THE BUILD.
 //
 // R20's rule pointed at `data/copy.json`, and R57/R58's shape is why it is
@@ -14639,7 +14786,14 @@ if (inShard('voice')) {
   for (const file of moduleFiles()) {
     const rel = relative(root, file).replaceAll('\\', '/');
     if (rel.startsWith('tools/')) continue;
-    for (const m of readFileSync(file, 'utf8').matchAll(/\bcopy\(\s*content\s*,\s*'([\w.]+)'/g)) asked.add(m[1]);
+    const src = readFileSync(file, 'utf8');
+    for (const m of src.matchAll(/\bcopy\(\s*content\s*,\s*'([\w.]+)'/g)) asked.add(m[1]);
+    // R175 — AND A DIRECT READ COUNTS TOO. The Ranch is the first paint, so it
+    // cannot import `util/text.js` (see R174) and reaches for
+    // `content.copy?.stable?.stall_chip` instead. That is still copy living in
+    // data; a gate that only recognised one spelling would have reported three
+    // live fragments as unreachable and taught somebody to delete them.
+    for (const m of src.matchAll(/content\??\.copy\??\.([\w]+)\??\.([\w]+)/g)) asked.add(`${m[1]}.${m[2]}`);
     // The one call that picks its id at run time — envenomed one vs many —
     // is named here rather than parsed, because a gate that tried to evaluate
     // a ternary would be a worse gate than one that says which line it cannot
@@ -21998,7 +22152,20 @@ if (inShard('wire')) {
 // number, so "code grew by a system, prose grew by a pointer" is a sentence
 // the gates can now produce. The module cap did NOT move — 49 of 49, exactly
 // on it — so the next eager module has to come and argue.
-const KB_CAP = 317;        // CODE only, measured at 315.3
+// R175 — 317 -> 318, measured at 317.7, AND IT IS ARGUED ON CODE.
+//
+// +1.1 KB across four modules, none of them new: `stallRule` and `pensToStall`
+// in `splice/facility.js` (the two-line arithmetic that says when the next pen
+// buys a chimera stall), the `Stable` cell and its chip in `ranch/ui.js`, one
+// hoisted filler in `splice/chaos.js`, and three refusals that compose a
+// sentence instead of each writing their own.
+//
+// R171's rule for this cap is that it catches the graph re-growing BY A SCREEN,
+// which costs eight modules of program. This is four call sites and no new
+// eager module — 49 of 49, unchanged, which is the number that would have had
+// to move if `util/text.js` had come with it. It did not, and ROADMAP R175
+// says how.
+const KB_CAP = 318;        // CODE only, measured at 317.7
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
@@ -22015,7 +22182,21 @@ const KB_CAP = 317;        // CODE only, measured at 315.3
 // close. That is the same argument R169 made for keeping KB_CAP tight while
 // FIRST_PAINT_KB keeps slack; the difference is that this one is measuring the
 // thing it is named after.
-const PROSE_CAP = 245;
+// R175 — 245 -> 246, measured at 245.3, AND THE NOTE ABOVE IS RIGHT THAT THIS
+// IS THE THIRD MILESTONE IN A ROW TO SPEND IT. R109 took prose 239.4 -> 243.8,
+// R110 held it, and this one wants 1.5 KB more. The rule that note sets is to
+// pay R94's tax first, and it was paid twice here: the three near-identical
+// "why the reader is lazy" notes became one explanation in
+// `splice/facility.js` and two pointers, and `facility.js`'s own two notes came
+// down from 1,167 bytes to 430. What is left is why the fourth econ cell
+// exists and why the eager side does not import the reader — both of which are
+// the questions somebody will ask of this diff.
+//
+// IF THE NEXT MILESTONE WANTS IT AGAIN, the answer is not 247. Prose is 43% of
+// the eager graph and R171 measured that it does not compress away; the lever
+// is R174, which takes `util/text.js` and one of the two `fill`s out of the
+// duplication this cap keeps paying for in comments explaining the split.
+const PROSE_CAP = 246;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(codeKb <= KB_CAP,

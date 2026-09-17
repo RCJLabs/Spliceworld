@@ -2029,8 +2029,8 @@ const BREAKS = [
     // the data, because a ratio of zero would read as a content choice.
     n: 251, gate: COVERAGE, name: 'a pen stops buying a stall, so the Pens screen and the pen button mean different things again',
     file: 'splice/facility.js',
-    anchor: '  const past = (state.ranch?.penCapacity ?? 0) - (meta.freePens ?? 0);',
-    to: '  const past = 0;',
+    anchor: '  return (state.ranch?.penCapacity ?? 0) - (meta.freePens ?? 0);',
+    to: '  return 0;',
   },
   {
     // R154 — the room is bought and nothing stands in it. The cap still grows,
@@ -3445,6 +3445,34 @@ const BREAKS = [
     anchor: "      } else emitNews(state, content, 'op_paid', { op: extra.name, funds: extra.funds });",
     to: '      } else pushNews(state, null);',
   },
+  // R175 — the stable says how big it is and what makes it bigger.
+  {
+    // THE MAIN SCREEN STOPS SAYING HOW FULL THE STABLE IS, which is the state
+    // the milestone was reported from: the only capacity readout on the Ranch
+    // was `Pens`, and that is the ANIMAL herd.
+    n: 335, gate: SHARD_B, name: 'the Ranch stops saying how full the stable is, leaving only the animal pens',
+    file: 'ranch/ui.js',
+    anchor: '<div><span class="econ-label">Stable</span>',
+    to: '<div hidden><span class="econ-lbl">Stable</span>',
+  },
+  {
+    // THE BUTTON GOES BACK TO NOT SAYING WHAT THE PRESS BUYS. R154 made a pen
+    // house a chimera and the control never mentioned it, which is why the
+    // purchase read as doing nothing to the roster.
+    n: 336, gate: SHARD_B, name: 'the pen button stops saying when the next press buys a chimera stall',
+    file: 'ranch/ui.js',
+    anchor: "${stallNext ? ` · ${stallChip}` : ''}",
+    to: '',
+  },
+  {
+    // A REFUSAL NAMES ONE DOOR AGAIN. Exactly R154's leftover: the vat told a
+    // player at capacity to expand a Theater they may already have bought.
+    n: 337, gate: SHARD_B, name: 'the chaos vat goes back to naming only the Theater when the stable is full',
+    file: 'splice/chaos.js',
+    anchor: "${fill(content.copy?.stable?.levers, stallRule(content))}",
+    to: 'Expand the Surgery Theater.',
+  },
+
   // R110 — copy is data. One break per clause of the new rule.
   {
     // A NEW SCREEN IS BORN WITH PROSE IN IT. The case that matters most: every

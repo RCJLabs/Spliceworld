@@ -5,13 +5,14 @@
 import { rngStream, pick, pickFresh } from '../util/rng.js';
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
 import { analyze } from './physiology.js';
-import { theaterGrants, stableRoom, theaterFree, occupyTheater, theaterBusyMsg } from './facility.js';
+import { theaterGrants, stableRoom, theaterFree, occupyTheater, theaterBusyMsg, stallRule } from './facility.js';
 import { driftFromTraining } from './temperament.js';
 import { MOVE_SLOTS, activeMoves } from '../battle/moves.js';
 import { defaultMoveset } from '../battle/moves.js';
 import { movesFromTokens } from '../battle/statblock.js';
 import { attend } from './feral.js';
 import { TRAINING } from './chimera.js';
+import { copy } from '../util/text.js';
 
 const CHIMERA_NAMES = [
   // R41: fifteen names for a stable the game encourages past nine was a
@@ -124,8 +125,11 @@ export function spliceChimera(state, frameId, slotTokens, content, now) {
     // stable to the Surgery Theater, which is half the reason the pen
     // purchase read as doing nothing: a player who had already bought Tier
     // II was told to buy it again.
-    return { ok: false, msg: `The stable holds ${stable.cap}${stable.pending ? ` and ${stable.pending} of them are spoken for` : ''}.`
-      + ' Dismantle one, expand the Surgery Theater, or build more pens.' };
+    // R175 — the situation, then the ONE sentence that names both doors.
+    const said = stable.pending
+      ? copy(content, 'stable.full_theater_pending', { cap: stable.cap, pending: stable.pending })
+      : copy(content, 'stable.full_theater', { cap: stable.cap });
+    return { ok: false, msg: `${said} ${copy(content, 'stable.levers', stallRule(content))}` };
   }
   if (!theaterFree(state, now)) {
     return { ok: false, msg: theaterBusyMsg(state, now, content) };

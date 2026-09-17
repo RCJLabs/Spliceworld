@@ -4382,6 +4382,54 @@ suite can check.
   has one home, every reader imports it, and `MODULE_CAP` is either unchanged
   or raised with a ledger line saying what left.*
 
+- **R175 — Pens hold animals. The stable holds chimeras.** ✅ *Shipped.* Asked
+  for directly, from play: *"I want to specify what actually increases the
+  number of chimeras you can have and be visible and clear about it because I
+  don't know where or what increases that and nothing says."*
+
+  **The complaint is sharper than "undocumented": the one capacity readout on
+  the main screen was about the wrong population.** The Ranch econ strip showed
+  `Pens 4/12`, which is the ANIMAL herd. The chimera roster had no standing
+  readout anywhere in the game; the only `used/cap` figure for it lived inside
+  the hint text of one agenda row, visible only when that row happened to be
+  up. Everything else was a refusal after the fact.
+
+  **The rule, measured on a fresh save and unchanged by this milestone:**
+
+      capacity = the Surgery Theater's `stable` grant
+               + one stall per `pensPerStall` pens past `freePens`
+
+      Theater Tier I     6      pens  4 -> +0        fresh save    6
+      Theater Tier II   12      pens 40 -> +6        everything   18
+
+  `used` counts more than the visible roster — a specimen in the Wing, one gone
+  feral, a captive awaiting rescue and the vat's occupant each hold a stall —
+  which is why the stable can read full at a roster that looks short.
+
+  **Shipped:** a `Stable` cell beside `Pens` on the Ranch, with the spoken-for
+  count broken out; a pen button that says **"opens a chimera stall"** on the
+  press that lands one; and a field note. R40's three-cell rule was re-derived
+  rather than bumped — it guards against *one subtraction shown twice*, which
+  is the two assertions under it, and a second population is not a derivation.
+
+  **AND IT FOUND R154'S LEFTOVERS.** R154 made a pen really house a chimera and
+  fixed the Theater's refusal; the chaos vat still named **only the Theater**,
+  so a player at capacity was told to buy a tier they may already own, and the
+  Wing named **no lever at all**. All three now compose one sentence from
+  `data/copy.json`, filled from one `stallRule`.
+
+  **The eager graph decided the shape.** `util/text.js` is lazy and three of the
+  four modules here are not, so importing `copy` made it the **fiftieth** eager
+  module and broke the boot, code and prose budgets at once. The eager side
+  composes with fillers it already had; only the lazy Theater uses the reader.
+  That is R174's cap argument, met by not spending it. `KB_CAP` 317 -> 318 and
+  `PROSE_CAP` 245 -> 246 after paying R94's trim tax twice; `MODULE_CAP` 49 and
+  `FIRST_PAINT_KB` 1060 untouched.
+
+  **And the break battery caught a duplication I wrote.** `pensToStall` copied
+  the subtraction `stallsFromPens` already had; break 251 started matching in
+  two places and said so. One `pensPastFree`, two readers (R61).
+
 ### 9.7 The opening, and the sitting (R119–R120) — asked for directly
 
 Both phases were **measured before either was written**, and the measurement
