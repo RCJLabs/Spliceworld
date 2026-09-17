@@ -131,11 +131,20 @@ not restored. The 30 KB of pools is not in that number at all.
   earlier in that 3,000-line file. Worked around by dropping the backticks;
   the gate is a false POSITIVE here, not a false negative, which is the safe
   direction. Queued rather than chased inside this milestone.
-- Four existing gates changed logic, which is CLAUDE.md's first full-battery
-  trigger. The full battery remains unrunnable on this box (4 cores; R159
-  measured ~1h29m for 258 breaks, and there are 321 now), so it was
-  substituted with `--anchors`, `--baseline` and targeted `--only` runs, as
-  R105 did. Filed here rather than left implicit.
+- **The full battery RAN this time**, rather than being substituted for the
+  third session running. Six existing gates changed logic, which is CLAUDE.md's
+  first trigger, and the two sessions before this one logged the substitution
+  as a known issue. **322 breaks, 321 caught, 1 missed, baseline 34/34 green.**
+  It cost about two hours in the background and it found something four
+  milestones of targeted `--only` runs could not.
+- **Break 162 is MISSED, and it is not R109's** — it misses identically on the
+  pre-R109 tree. The reach gate's floor sits 3.2pp above the clean measurement
+  and the break lands exactly ON it (97.2% -> 94.0% against a 94% floor), while
+  the worn floor goes the WRONG WAY under the same break because a smaller herd
+  wears the few parts it holds harder. The sharp signal — two parts reached by
+  none of thirteen seeds, 244 -> 242 — is computed, printed by `--report`, and
+  asserted on by nothing. Filed as **R173** with the numbers, rather than
+  widening this milestone past its criterion.
 - `splice/resequencer.js` keeps a local pool filler rather than importing
   `pickPooled` from `campaign/monologue.js`: that would point a husbandry
   module at the campaign for one regex. Three copies of `fill` is one too

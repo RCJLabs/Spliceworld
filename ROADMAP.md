@@ -284,7 +284,8 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**9 entries queued.** R110, R111, R112, R113, R114, R115, R116, R117, R118.
+**10 entries queued.** R110, R111, R112, R113, R114, R115, R116, R117, R118,
+R173.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4288,6 +4289,34 @@ suite can check.
   creature falls — and retire the exemption. *Done when: `venom_gland` clears
   the same 1.5× bar as every other gene on at least four independent salts,
   and `UNRESOLVED_BY_THIS_PROBE` is empty.*
+
+- **R173 — The reach gate misses a break by a rounding hair, and does not
+  assert the thing it prints.** Found by R109's full battery, and **not R109's
+  doing** — break 162 misses identically on the pre-R109 tree, so this is rot
+  that four milestones of targeted `--only` runs could not see. That is the
+  rot check earning its keep, exactly as CLAUDE.md says it should.
+
+  Break 162 patches `tools/sim.js` so `herdRoom` ignores `chasing` — the buyer
+  locks the breeder out, which is the regression R95 wrote the gate against.
+  Measured over thirteen seeds:
+
+      part reach   237.2 (97.2%)  ->  229.4 (94.0%)   REACH_FLOOR = 0.94
+      parts worn   153.4 (62.9%)  ->  156.5 (64.2%)   WORN_FLOOR  = 0.50
+      union seen   244 of 244     ->  242 of 244      nothing asserts on this
+
+  The damage is real; the break simply lands **on** the floor, so `<` is false
+  by a hair. `WORN_FLOOR` cannot help and never could: a smaller herd holds
+  fewer parts, so the ones held are worn MORE and the worn figure goes UP under
+  the break. That is R157's break-245 shape a second time — a floor that does
+  not move with the statistic it guards.
+
+  The sharp signal is already computed and only PRINTED: `--report` says "never
+  reached by any seed", and two parts crossing 0 -> 2 is a categorical change
+  where 97.2 -> 94.0 is a gradual one. Proposed, small: assert on the union as
+  well as the mean, and re-derive `REACH_FLOOR` from the clean measurement
+  rather than from where it was set three tunings ago. *Done when: break 162 is
+  caught, the assertion names which parts no seed reaches, and the full battery
+  reports 0 missed.*
 
 ### 9.7 The opening, and the sitting (R119–R120) — asked for directly
 
