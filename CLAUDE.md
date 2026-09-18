@@ -52,11 +52,13 @@ the session.
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~2h45m — R114 measured it at 339 breaks: a 9,000s run
-reached 312 and was cut off by its own timeout, and the remaining 27 took
-1,702s. The older figures here were ~47 min, then R159's ~1h29m for 258; the
-cost is growing with the break count, so budget by breaks, not by the last
-number written down), on these triggers only:**
+**The full battery (~2h20m warm, ~3h cold, measured at 339 breaks — R173's
+single run was 8,277s with the walk cache warm; R114's was ~2h58m across two
+runs with it cold, the first cut off by its own 9,000s timeout. At this size the
+CACHE STATE moves the number more than the break count does, so warm the cache
+first and budget three hours if you cannot. Earlier figures here were ~47 min,
+then R159's ~1h29m for 258 — this note has been stale three times, so treat any
+number in it as a floor), on these triggers only:**
 - A milestone that **changes an existing gate's logic** rather than adding one.
 - Before a release, or any push to `main` that is not a single milestone.
 - Every ~5 milestones, as a rot check, whether or not anything looks wrong.

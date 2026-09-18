@@ -49,6 +49,20 @@ cover it: the clean worst seed is 96.3%, so 0.96 leaves 0.3pp and would
 false-red on content churn, which R158 established is the worse failure. That
 is the same trade R173 exists to stop making.
 
+### Verified
+
+- clean tree `reach ✓` at the new floor, `REACH_EXIT=0`
+- break 162 red on **both** clauses, `REACH_EXIT=1`, naming `pale_cobra`
+- `--anchors` **339/339**
+- `npm test` green **alone**: 202s wall, 744 CPU-s of 1150 (walk cache warm)
+- **full battery: 339 breaks, 339 caught, 0 missed, `BATTERY_EXIT=0`** — the
+  criterion's own third clause, and break 162 is caught by name
+
+**The battery took 8,277s (2h18m) with a warm walk cache**, against R114's
+~2h58m across two runs with a cold one. So the honest range at 339 breaks is
+**~2h20m warm, ~3h cold** — the cache state matters more than the break count
+at this size, which the CLAUDE.md note now says.
+
 ### Next session's first task
 
 R177, or R111 if the queue order is preferred — R177 is small and is R173's own
