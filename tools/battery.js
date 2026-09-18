@@ -3476,6 +3476,20 @@ const BREAKS = [
     to: '    vars[key] !== undefined ? String(vars[key]) : whole',
   },
 
+  {
+    // R177 — R95'S PAIR-ORDERING GOES, AND THE VARIANT LINES STOP BEING ROLLED
+    // FOR. This is the break the entry was filed about: deleting one sort line
+    // costs five parts of mean reach and, before R177, NOTHING WENT RED —
+    // 232.1 of 244 is 95.1%, which clears the 0.95 floor, and the union stays
+    // 244/244 because thirteen seeds between them still stumble onto every
+    // line. The variant-line floor is the only clause that sees it, which is
+    // the whole reason it exists.
+    n: 347, gate: REACH, name: "the breeding pairs stop favouring a line that still owes the Dex a variant",
+    file: 'tools/sim.js',
+    anchor: '    pairs.sort((x, y) => (wantsVariant(y[0]) ? 1 : 0) - (wantsVariant(x[0]) ? 1 : 0));',
+    to: '    ',
+  },
+
   // R114 — a save is untrusted input.
   {
     // A SIXTH ESCAPER APPEARS. The case the count is for: somebody needs to
