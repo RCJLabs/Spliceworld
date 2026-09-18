@@ -15,6 +15,12 @@ import { facilityCard, bindFacility } from '../ui/facility-card.js';
 import { fieldNote, bindFieldNote, bindFolds } from '../ui/cards.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { speciesOf, classOf } from '../data/catalog.js';
+// R112 — the naming ceremony. Static, but not eager: this whole screen is
+// behind R74's lazy door, so `campaign/identity.js` stays out of the boot
+// graph exactly as R169 left it.
+import { rollIdentities, setIdentity } from '../campaign/identity.js';
+// R112 — every word the ceremony says lives in data/copy.json (R110's rule).
+import { copy } from '../util/text.js';
 
 const SLOT_LABELS = {
   head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
@@ -279,28 +285,94 @@ export function renderTheaterScreen(root, ctx) {
   });
 }
 
+// R112 — WHERE THE PLAYER GETS A NAME.
+//
+// It used to be on the War Room's Labs tab, three taps in, with no guide and
+// no agenda row pointing at it — so a 180-day walk reached the end of the
+// county still reading `named: false`, and every duel had the coalition
+// talking to "Unregistered Operator". A dossier nobody is sent to is a
+// dossier nobody fills in.
+//
+// So it moves to the moment it MEANS something: the first decant. You are
+// not a person with a lab until something of yours is alive, and that is
+// the one screen in the game where the player has just done the thing the
+// title is for. Rolled and not typed, like every other name here (R169's
+// rule: no screen in this game opens the phone keyboard). It appears once —
+// `named` is true forever after — and the dossier still edits it.
+let identityRoll = 0;
+
 function showSpliceResult(ctx, result, onClose) {
-  const { content } = ctx;
+  const { state, content } = ctx;
   const overlay = document.querySelector('#overlay');
   const genome = { frame: result.chimera.frame, parts: {} };
   for (const [slot, token] of Object.entries(result.chimera.tokens)) genome.parts[slot] = token.partId;
   const combos = result.newCombos.length
     ? `<p class="combo-toast">✦ Combo discovered: <strong>${result.newCombos.map((c) => c.name).join(', ')}</strong> — logged in the Splice-Dex.</p>`
     : '';
-  overlay.hidden = false;
-  overlay.innerHTML = `
+  const paint = () => {
+    const named = !!state.profile?.named;
+    overlay.innerHTML = `
     <div class="ceremony card">
       <h3>⚡ IT'S ALIVE(-ADJACENT)!</h3>
       <div class="grad-portrait">${creaturePortrait(genome, content, { idPrefix: 'born' })}</div>
       <p><strong>${result.chimera.name}</strong> · instability ${result.report.instability}/100</p>
       <p class="fine-print">Settling for ~${Math.round(result.report.settlingMs / 60000)} minutes. Deploying early causes Rejection. Patience is a stat.</p>
       ${combos}
+      ${named
+        ? `<p class="fine-print">${copy(content, 'dossier.door_filed', {
+            who: `${state.profile.title} ${state.profile.name}`, lab: state.profile.lab,
+          })}</p>`
+        : `<p class="ranch-msg">${copy(content, 'dossier.alive')}</p>
+           ${pickerField({
+             id: 'born-identity',
+             label: copy(content, 'dossier.door_label'),
+             value: copy(content, 'dossier.door_empty'),
+             hint: copy(content, 'dossier.door_hint'),
+           })}`}
       <button type="button" id="born-done" class="big-btn">To the Pens</button>
     </div>`;
-  overlay.querySelector('#born-done').addEventListener('click', () => {
-    overlay.hidden = true;
-    overlay.innerHTML = '';
-    onClose();
-    document.querySelector('#tabs button[data-screen="pens"]')?.click();
-  });
+    bindPickers(overlay, {
+      'born-identity': () => ({
+        title: copy(content, 'dossier.roll_title'),
+        subtitle: copy(content, 'dossier.roll_sub'),
+        groups: [
+          {
+            label: null,
+            options: rollIdentities(content, state.seed + identityRoll, 6).map((id) => ({
+              id: id.id,
+              label: `${id.title} ${id.name}`,
+              sub: copy(content, 'dossier.roll_of', { lab: id.lab }),
+            })),
+          },
+          {
+            label: null,
+            options: [{
+              id: '__reroll',
+              label: `${renderIcon('dice')} ${copy(content, 'dossier.roll_again')}`,
+              sub: copy(content, 'dossier.roll_again_sub'),
+            }],
+          },
+        ],
+        selectedId: '',
+        onPick: (value) => {
+          if (value === '__reroll') {
+            identityRoll += 1;
+          } else {
+            const chosen = rollIdentities(content, state.seed + identityRoll, 6).find((i) => i.id === value);
+            if (chosen) setIdentity(state, { title: chosen.title, name: chosen.name, lab: chosen.lab });
+          }
+          ctx.save();
+          paint();
+        },
+      }),
+    });
+    overlay.querySelector('#born-done').addEventListener('click', () => {
+      overlay.hidden = true;
+      overlay.innerHTML = '';
+      onClose();
+      document.querySelector('#tabs button[data-screen="pens"]')?.click();
+    });
+  };
+  overlay.hidden = false;
+  paint();
 }

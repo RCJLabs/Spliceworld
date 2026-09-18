@@ -862,6 +862,27 @@
           "default": 4
         }
       ]
+    },
+    {
+      "id": "yearbook",
+      "screen": "dex",
+      "order": 68,
+      "icon": "book",
+      "title": "Somebody has been counting",
+      "body": "The lab has kept a tally of everything you have ever done to this county, since the first day, and has never once mentioned it. The Dex's Yearbook tab is where it all is: fights by kind, chimeras made, animals raised, parts extracted, raids held and what the ones you lost cost you, how bad your notoriety ever got, and which part you reach for more than you think. None of it changes a fight. All of it is evidence.",
+      "reachable": [
+        {
+          "path": "warRecord.wins",
+          "min": 3,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "profile.named",
+          "default": 0
+        }
+      ]
     }
   ]
 }

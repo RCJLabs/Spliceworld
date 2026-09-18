@@ -1,5 +1,165 @@
 # PROGRESS
 
+## Session 197 — R112: the dossier and the Yearbook ✅
+
+**The save has counted about twenty things since M0 and shown the player one
+of them.**
+
+### Two of the entry's claims were wrong, and checking them was the first hour
+
+| the entry said | what the code says |
+|---|---|
+| no screen renders any of the ~20 counters | `warRecord` is on the War Room econ row — `campaign/ui.js:572`, `"Record 922W–42L"` — and has been since M5 |
+| without a philosophy `duelBarks` returns nothing | `philosophyOf` falls back to `DEFAULT_PHILOSOPHY = 'improver'`, which is fully authored; on a fresh save all three slots come back and the opener names the rival |
+| `runSummary` shows five fields | six — five display fields and `empty`, a predicate. Counting display fields the entry was right |
+
+The second one matters most, because it changes the fix. The player's half of a
+duel was never **silent** — it was the **same** half for everybody who never
+picked a philosophy. That is a real flatness and worth a prompt; it is not a
+rescue, and building one would have been building for a bug that does not
+exist.
+
+What DID hold: the dossier was three taps behind a subtab with no guide and no
+agenda row pointing at it (the one guide that says "dossier" means the RIVAL's
+read on you), a 180-day walk ends `named: false`, and `spliceCount` has been
+declared in `newGameState` since M0 and **written by nothing ever since** — the
+only mention outside the save system is a comment in `util/rng.js` describing a
+stream that reads `chimeraCount`.
+
+### The Yearbook is a loop over a data file
+
+`data/yearbook.json` — five sections, 22 rows. A row names a dotted `from` path
+into the save and a `fmt`; `save/yearbook.js` resolves and formats it. Adding a
+counter to the screen is one object in the file and no code.
+
+`from` is credited as a **prefix**, so `{"from": "warRecord", "fmt": "record"}`
+covers both leaves and reads as `922W–42L` rather than as two numbers a player
+has to pair up themselves.
+
+`derive` is the one thing that still costs an engine edit, deliberately: days
+played, longest-serving chimera and most-used part are computed, not stored,
+and a statistic nobody has computed yet is a computation rather than content.
+Smoke asserts every `derive` in the file resolves, so a typo is a red gate
+rather than a row that reads "—" forever.
+
+### The gate IS the criterion
+
+Smoke walks `newGameState()` for numeric leaves and splits them three ways:
+
+    CLOCK     createdAt, lastTickAt, anything ending At or Until      4
+    DIAL      a reading that falls as well as rises                  14
+    COUNTER   a monotonic tally — must be covered by a `from`        20
+
+The fourteen dials are exempted **with the screen that already shows each one
+written beside it** — funds in the header, pen capacity on the Ranch, notoriety
+and heat on their own cards, six facility tiers on the facility card, two
+device settings in Settings. An exemption nobody has to justify is how a list
+becomes a dumping ground.
+
+A counter added by a future milestone now fails the gate on the commit that
+adds it.
+
+### `spliceCount` is gone — SAVE_VERSION 58
+
+The only migration in the table that **deletes** a field. The Ascent rule holds
+in full: version bumped, migration written, runs once, and what it removes
+provably never held a player's progress. Forty-two milestones of serializing a
+zero.
+
+### A name at the first decant
+
+The naming ceremony moved off the Labs tab and onto the "IT'S ALIVE" card,
+which is the only screen in the game where the player has just done the thing
+the title is for. Rolled, never typed. The dossier still edits it. The
+philosophy picker follows the first conquest, as a card on the War Room map
+driven by a **state predicate** (`heldNodes.length && !profile.philosophy`)
+rather than an event hook — it survives a reload and cannot fire twice, and it
+reuses the dossier's own picker id so the two can never disagree.
+
+`runSummary` now takes an optional third `content` and carries the rows the
+data file marks `headline`, so R102's relocation confirmation says what the run
+WAS and not only what is currently on the shelf. Its `days` comes from
+`daysPlayed` in the same module the Yearbook reads, so the two screens cannot
+disagree by one.
+
+### Two things the baseline found on the way, neither of them R112's
+
+**`stripComments` cannot count a bare brace.** tools/source.js walks a template
+literal by counting `${` and `}` and ignores a plain `{`, so an object literal
+inside a hole leaves its depth one short. Harmless at the top level — the
+imbalance is symmetric and the closing backtick still lands right. Inside a
+NESTED template it ends the outer one early, and every comment after it is read
+as player-facing copy. Written inline, the philosophy card added **36 phantom
+words** to the copy ledger, all of them from comments two hundred lines further
+down. The card is a function now, which sidesteps it. The scanner is still
+wrong.
+
+**`content.voice` is `{}` in the browser.** R111 shipped `data/voice.json` as
+LATE, and `loadShapes` merges `attachShapes` (geometry) and `attachVoicePools`
+(the spare phrasings) and nothing else. Nothing attaches `voice` itself, so
+every creature in the browser is running on `voiceSpec`'s fallback tuning. Node
+tools read it directly through `indexContent`, which is why the timbre gate is
+green. Filed against R111; this is also why R112's Yearbook data is in CORE
+rather than LATE — there is no working LATE path for a whole file.
+
+**And FIRST_PAINT_KB had drifted seven kilobytes without anyone noticing.**
+R174's ledger said "measured at 1061 ... nine KB of slack", five milestones
+ago. Measured at `dfa2359`: **1068**. The gate has been running on two
+kilobytes. R112's own cost is 8 KB and one request; the rest was already there.
+1070 → 1085, and the ledger now says which half is which and tells the next
+milestone to re-measure first.
+
+### The full battery came back 357 of 358, and the one miss was the best finding
+
+Break 357 — "a save whose battle slot holds a list still reaches the arena
+renderer" — went **MISSED**. Nothing about the rule, the pass or the renderer
+had changed. The **gate** had, by accident.
+
+R114's `OBJECT_SLOTS` pass exists because its 200-sample fuzz reached
+`state.battle` for the first time in its life; R111's three new `settings` keys
+had shifted the sampling onto it. The fuzz draws (path, mutant) pairs out of a
+day-180 save's several thousand paths off one seeded stream, so **which fields
+it reaches is a function of the save's shape**. R112 removed one key and the
+sampling moved straight back off. That is R157's worn floor again: a gate whose
+reach is incidental is a gate that goes quiet without telling you.
+
+The fuzz keeps its job — finding what nobody listed. Smoke now also walks
+`OBJECT_SLOTS` itself: every slot, six non-object values each, asserting the
+field is emptied, that the repair names itself, and that every screen still
+paints. The list is read off the engine, so a fifth slot is covered the day it
+is added. `357 caught` again, on demand.
+
+(The first draft of that walk asserted `undefined` was left alone. It is not,
+and should not be: a save arrives as JSON, JSON has no `undefined`, and
+`cleanSave` normalising it to null is right. My own new assertion caught my own
+wrong claim, which is the argument for writing the explicit case at all.)
+
+### Known issues
+
+- The philosophy card is a prompt on the map view, not a ceremony overlay. It
+  is the cheaper half of the entry's proposal and the criterion does not cover
+  it; a real ceremony at the moment of conquest is still open.
+- `chimeras graduated` and `chimeras dismantled` are on the entry's wish list
+  and NOT on the Yearbook: no counter exists for either. `renderCount` counts
+  vault clear-outs, not creatures. Adding them means adding counters, which the
+  criterion does not ask for — scope cut inside the milestone rather than at
+  its edge.
+- `cleanSave`'s `shape()` pass still replaces `save.ranch` wholesale if it is
+  not a plain object — a herd wipe in code that runs on every load. R114's,
+  not R112's, and no evidence it has ever fired. Worth guarding.
+
+- The `stripComments` brace-counting bug is filed, not fixed. It is a gate
+  looking at the wrong text, which is the shape R110 and R174 both spent a
+  milestone on; worth one of its own.
+
+### Next session's first task
+
+R113 — Vivarium and the fine print: the theme and type pass. Verify its
+premises first: 665 of 1,143 text nodes under 12 px, Vivarium failing 7,353
+contrast checks, and `$153249` printing without separators. R112 added a
+`grouped()` to `save/yearbook.js` that R113's one `fmtMoney` should absorb.
+
+
 ## Session 196 — R178: the release gate is in no tier ✅
 
 **A gate wired to a break but to no tier is checked in one direction only. R100

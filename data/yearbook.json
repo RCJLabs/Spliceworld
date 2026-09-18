@@ -1,0 +1,205 @@
+{
+  "tuning": {
+    "emptyNote": "Nothing here yet. Go and do something the county will remember."
+  },
+  "sections": [
+    {
+      "id": "war",
+      "label": "The War",
+      "icon": "boxing-glove",
+      "blurb": "Every fight the county has filed against you, by kind.",
+      "rows": [
+        {
+          "id": "record",
+          "label": "Record",
+          "from": "warRecord",
+          "fmt": "record",
+          "sub": "Wins and losses, all comers",
+          "headline": true
+        },
+        {
+          "id": "spars",
+          "label": "Spars",
+          "from": "sparCount",
+          "fmt": "count",
+          "sub": "Practice bouts at the Sparring Ring"
+        },
+        {
+          "id": "contests",
+          "label": "Counter-offensives",
+          "from": "campaign.contestCount",
+          "fmt": "count",
+          "sub": "Times the coalition came to take a node back"
+        },
+        {
+          "id": "breakouts",
+          "label": "Breakouts",
+          "from": "campaign.breakoutCount",
+          "fmt": "count",
+          "sub": "Specimens who let themselves out"
+        },
+        {
+          "id": "jobs",
+          "label": "Jobs run",
+          "from": "campaign.opCount",
+          "fmt": "count",
+          "sub": "Contracts taken off the Jobs board"
+        },
+        {
+          "id": "sent",
+          "label": "Sent, not watched",
+          "from": "sentCount",
+          "fmt": "count",
+          "sub": "Fights the autopilot flew for you"
+        }
+      ]
+    },
+    {
+      "id": "taskforce",
+      "label": "The Compliance Task Force",
+      "icon": "warning-triangle",
+      "blurb": "The State's paperwork, and what it cost you.",
+      "rows": [
+        {
+          "id": "raids",
+          "label": "Raids",
+          "from": "campaign.raidCount",
+          "fmt": "count",
+          "sub": "Times inspectors arrived at the gate"
+        },
+        {
+          "id": "held",
+          "label": "Raids held",
+          "from": "campaign.raidsHeld",
+          "fmt": "count",
+          "sub": "Times they left with nothing"
+        },
+        {
+          "id": "levied",
+          "label": "Levied",
+          "from": "campaign.leviedTotal",
+          "fmt": "money",
+          "sub": "What the ones you did not hold cost"
+        },
+        {
+          "id": "peak",
+          "label": "Notoriety, at its worst",
+          "from": "campaign.notorietyPeak",
+          "fmt": "count",
+          "sub": "The meter falls. This does not."
+        }
+      ]
+    },
+    {
+      "id": "lab",
+      "label": "The Lab",
+      "icon": "test-tube",
+      "blurb": "What the Surgery Theater and everything around it has produced.",
+      "rows": [
+        {
+          "id": "chimeras",
+          "label": "Chimeras made",
+          "from": "chimeraCount",
+          "fmt": "count",
+          "sub": "Every creature that has ever left the slab",
+          "headline": true
+        },
+        {
+          "id": "vat",
+          "label": "Vat runs",
+          "from": "vatCount",
+          "fmt": "count",
+          "sub": "Chaos breeding, and its consequences"
+        },
+        {
+          "id": "resequences",
+          "label": "Resequences",
+          "from": "resequenceCount",
+          "fmt": "count",
+          "sub": "Second opinions on a finished genome"
+        },
+        {
+          "id": "tokens",
+          "label": "Parts extracted",
+          "from": "inventory.tokenCount",
+          "fmt": "count",
+          "sub": "Tokens pulled off donors, ever"
+        },
+        {
+          "id": "rendered",
+          "label": "Shelf clear-outs",
+          "from": "renderCount",
+          "fmt": "count",
+          "sub": "Times you sold the surplus on purpose"
+        },
+        {
+          "id": "rushed",
+          "label": "Clocks hurried",
+          "from": "rushCount",
+          "fmt": "count",
+          "sub": "Waits you paid to skip"
+        },
+        {
+          "id": "cards",
+          "label": "Cards printed",
+          "from": "cardCount",
+          "fmt": "count",
+          "sub": "Specimens handed to other people"
+        }
+      ]
+    },
+    {
+      "id": "ranch",
+      "label": "The Ranch",
+      "icon": "wheat",
+      "blurb": "The quiet half of the operation, which does most of the work.",
+      "rows": [
+        {
+          "id": "animals",
+          "label": "Animals raised",
+          "from": "ranch.animalCount",
+          "fmt": "count",
+          "sub": "Bought, bred and hatched, all told",
+          "headline": true
+        },
+        {
+          "id": "eggs",
+          "label": "Eggs laid",
+          "from": "ranch.eggCount",
+          "fmt": "count",
+          "sub": "Breeding pairs that agreed with each other"
+        }
+      ]
+    },
+    {
+      "id": "tenure",
+      "label": "The Tenure",
+      "icon": "book",
+      "blurb": "Not counters — the things the counters cannot say.",
+      "rows": [
+        {
+          "id": "days",
+          "label": "Days on the books",
+          "derive": "days",
+          "fmt": "days",
+          "sub": "Since the lab first opened",
+          "headline": true
+        },
+        {
+          "id": "veteran",
+          "label": "Longest serving",
+          "derive": "longestServing",
+          "fmt": "text",
+          "sub": "The one who has been here the whole time"
+        },
+        {
+          "id": "favourite",
+          "label": "Most-used part",
+          "derive": "mostUsedPart",
+          "fmt": "text",
+          "sub": "You have a type. Everyone has noticed."
+        }
+      ]
+    }
+  ]
+}

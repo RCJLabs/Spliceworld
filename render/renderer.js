@@ -130,6 +130,12 @@ export function indexContent(raw) {
     // before a LATE fetch landed would print nothing at all, and an empty
     // battle log is worse than a late portrait.
     copy: raw.copy ?? {},
+    // R112 — the Yearbook's sections and rows. CORE rather than LATE, unlike
+    // `voice`: `runSummary` reads it to tell a player what relocating the lab
+    // is about to cost them, and a destructive confirmation that printed a
+    // dash because a second-round fetch had not landed would be the worst
+    // possible place to save 4 KB.
+    yearbook: raw.yearbook ?? {},
     // R111 — the creature voices' tuning. LATE, unlike `copy`: nothing makes a
     // sound before the first paint, and a voice that arrives a beat after the
     // portrait costs the player nothing. `{}` until then, and `voiceSpec`

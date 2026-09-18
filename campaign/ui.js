@@ -19,6 +19,8 @@ import { forecast, diagnose, wantsDiagnosis } from '../battle/forecast.js';
 import { autoResolve, canSend, whatDecidedIt } from '../battle/autoplay.js';
 import { isSettled } from '../splice/chimera.js';
 import { fmtDuration } from '../ranch/ui.js';
+// R112 — the philosophy prompt's words, out of data/copy.json (R110's rule).
+import { copy } from '../util/text.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { activeRaid, raidRemainingMs, levyOf, raidEncounter } from './taskforce.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen, esc } from '../ui/cards.js';
@@ -555,6 +557,7 @@ function renderMap(root, ctx) {
     ${visitCard}
     ${gauntletCard}
     ${lastAftermath ? `<section class="card"><h3>Last Sortie</h3><p class="ranch-msg">${lastAftermath}</p></section>` : ''}
+    ${creedCard(state, content)}
     <section class="card">
       <div class="econ-row">
         <div><span class="econ-label">Notoriety</span><strong>${state.campaign.notoriety}</strong></div>
@@ -759,6 +762,36 @@ function renderMap(root, ctx) {
 // menu that looks like a build choice and is not would be worse than no
 // menu at all.
 let identityRoll = 0;
+
+// R112 — THE PHILOSOPHY PICKER FOLLOWS THE FIRST CONQUEST, on the screen the
+// conquest happened on. A state predicate rather than an event hook — you hold
+// ground and you have not said what you are for — so it survives a reload
+// mid-ceremony and cannot fire twice. The picker id belongs to the dossier, so
+// `bindDossier` already binds it and the two can never disagree; the two cards
+// live on different subtabs, so the id is never in the document twice.
+//
+// A FUNCTION RATHER THAN A TERNARY IN THE MAP'S TEMPLATE, and that is not
+// taste. `stripComments` in tools/source.js walks a template by counting `${`
+// and `}` and does not count a bare `{`, so an object literal inside a hole
+// leaves its depth one short — harmless at the top level, but inside a NESTED
+// template it ends the outer one early and every comment after it is read as
+// copy. Written inline this card added 36 phantom words to the copy ledger,
+// all of them from comments two hundred lines further down. Filed for the
+// scanner; avoided here.
+function creedCard(state, content) {
+  if (!state.campaign.heldNodes.length || state.profile?.philosophy) return '';
+  return `
+    <section class="card dossier-mine">
+      <h3>${renderIcon('document')} ${copy(content, 'dossier.creed_title')}</h3>
+      <p class="ranch-msg">${copy(content, 'dossier.creed_body')}</p>
+      ${pickerField({
+        id: 'me-philosophy',
+        label: copy(content, 'dossier.creed_label'),
+        value: copy(content, 'dossier.creed_empty'),
+        hint: copy(content, 'dossier.creed_hint'),
+      })}
+    </section>`;
+}
 
 function dossierCard(state, content) {
   const me = profileOf(state, content);

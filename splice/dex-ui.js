@@ -52,6 +52,10 @@ import { gauntletStages } from '../campaign/gauntlet.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { classReason } from '../campaign/matchup.js';
 import { speciesOf, classOf } from '../data/catalog.js';
+// R112 — the Yearbook's rows come out of `data/yearbook.json` through this
+// reader. Lazy along with the whole Dex screen, so neither the module nor
+// the 4 KB of counters it reads is in the eager graph.
+import { yearbook } from '../save/yearbook.js';
 
 // R72 - the Dex used to name the three shipped classes here, which decided
 // three separate things at once: which sections the roster grows, which runs
@@ -66,6 +70,9 @@ const DEX_TABS = [
   { id: 'combos', icon: 'lightning', label: 'Combos' },
   { id: 'genes', icon: 'test-tube', label: 'Genes' },
   { id: 'foes', icon: 'eye', label: 'Foes' },
+  // R112 — the only Dex tab about the PLAYER rather than the content. It sits
+  // last because it is the one you read when you are done looking things up.
+  { id: 'yearbook', icon: 'book', label: 'Yearbook' },
 ];
 let dexTab = 'roster';
 
@@ -476,12 +483,41 @@ function foesView(state, content) {
     </section>`;
 }
 
+// --- The Yearbook (R112): every counter the save keeps.
+//
+// The screen is a loop over `data/yearbook.json` and nothing else — no row
+// is named here, no section is ordered here. That is the whole point: a
+// counter arriving in the save is one object in the data file away from
+// being on this screen, and a counter that arrives without one fails the
+// gate in tools/smoke.js rather than going quietly unseen for forty
+// milestones, which is what happened to the twenty this tab now shows.
+function yearbookView(state, content, now) {
+  const sections = yearbook(state, content, now);
+  if (!sections.length) {
+    return `<section class="card"><p class="ranch-msg">${content?.yearbook?.tuning?.emptyNote ?? ''}</p></section>`;
+  }
+  return sections.map((section, i) => collapsibleCard({
+    id: `yearbook-${section.id}`,
+    // Shut by default except the first, which is R133's rule for a screen of
+    // cards: one thing open on arrival, and the rest a tap away.
+    open: isOpen(state, `yearbook-${section.id}`, i === 0),
+    title: `${renderIcon(section.icon)} ${section.label}`,
+    summary: section.blurb,
+    body: `<div class="econ-row">${section.rows.map((row) => `
+        <div><span class="econ-label">${row.label}</span><strong>${row.value}</strong>${
+          row.sub ? `<span class="econ-next">${row.sub}</span>` : ''
+        }</div>`).join('')}</div>`,
+    extraClass: 'dex-band',
+  })).join('');
+}
+
 const VIEWS = {
   roster: rosterView,
   variants: variantsView,
   combos: combosView,
   genes: genesView,
   foes: foesView,
+  yearbook: yearbookView,
 };
 
 // Completion is why this screen exists, so it does not go behind a tab.
@@ -520,7 +556,7 @@ export function renderDexScreen(root, ctx) {
     ${fieldNote(guideForScreen(state, content, ctx.now?.() ?? Date.now(), 'dex'))}
     ${progressStrip(progress)}
     ${subtabBar({ tabs: DEX_TABS, active: dexTab, attr: 'dex-tab', id: 'dex-subtabs', badgeFor })}
-    ${view(state, content)}`;
+    ${view(state, content, ctx.now?.() ?? Date.now())}`;
 
   bindFieldNote(root, ctx, () => renderDexScreen(root, ctx));
   bindFolds(root, ctx, () => renderDexScreen(root, ctx));

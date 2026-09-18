@@ -22,6 +22,22 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R112 — THE ONE MIGRATION THAT DELETES A FIELD, and the reason it is safe
+  // to is that the field has never held anything. `spliceCount` was declared
+  // in `newGameState` at M0 and no line of game code has written it since:
+  // the Theater counts with `chimeraCount`, `util/rng.js` names it only in a
+  // comment about a stream that reads `chimeraCount` instead. Forty-two
+  // milestones of serializing a zero.
+  //
+  // The Ascent rule is that a save is never reset and a schema change is
+  // never silent. Both hold: this bumps the version, it runs once, and what
+  // it removes provably carried no player's progress. A counter that DOES
+  // hold something goes on the Yearbook instead — that is R112's criterion,
+  // and `tools/smoke.js` will not let the next one be deleted quietly.
+  58: (save) => {
+    delete save.spliceCount;
+    return save;
+  },
   // R111 — the three controls the voices needed. `muted` was the WHOLE audio
   // settings surface since M7: no volume, no way to keep the stingers and lose
   // the room tone, nothing for haptics because there were none.
