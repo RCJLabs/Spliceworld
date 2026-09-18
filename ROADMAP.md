@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**9 entries queued.** R111, R112, R113, R115, R116, R117, R118, R173, R176.
+**9 entries queued.** R111, R112, R113, R115, R116, R117, R118, R176, R177.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4458,6 +4458,48 @@ suite can check.
   and `UNRESOLVED_BY_THIS_PROBE` is empty.*
 
 - **R173 — The reach gate misses a break by a rounding hair, and does not
+  assert the thing it prints.** ✅ *Shipped — and the search for a break that
+  proves the new assertion independent came up empty, which is recorded rather
+  than hidden.*
+
+  **Re-measured on the post-R114 tree; every number in the entry held.** Clean:
+  mean 237.2 (97.2%), union **244 of 244**. Under break 162: mean 229.4
+  (**94.0%**) against `REACH_FLOOR` 0.94, so `0.9402 < 0.94` was false and the
+  gate passed on a tree where two parts had become unreachable. Parts worn went
+  **up** under the break (62.9% → 64.2%), confirming `WORN_FLOOR` could never
+  have helped.
+
+  **Shipped:** the union is asserted, with no tolerance, and the failure names
+  the stranded content — under break 162 it reads `pale_cobra (pale_cobra_head,
+  pale_cobra_tail)`, which is the break's own mechanism (lock the buyer out of
+  the breeder and the variant lines are never rolled for) surfacing in the
+  failure text. `REACH_FLOOR` 0.94 → **0.95**, re-derived from the clean spread
+  (per-seed 235–242, 96–99%, mean 97.2%) rather than from three tunings ago.
+
+  **AND THE HONEST LIMIT.** The entry implied the union would be a sharper net.
+  Four trees were measured looking for a break it catches and the floor misses,
+  and there isn't one:
+
+      clean                 97.2%  union 244/244   both pass
+      break 162             94.0%  union 242/244   both fire
+      break 161             89.8%  union 236/244   both fire
+      R95's pair-sort gone  95.1%  union 244/244   NEITHER fires
+
+  So the union is **defence in depth, not a second catch**. What it buys is
+  independence from where the floor sits — break 162 cleared the old floor by
+  two hundredths of a point and the union would have caught it regardless — and
+  a failure that names content instead of printing a percentage. Both are worth
+  having; "it catches more" would have been untrue.
+
+  The fourth row is a finding of its own and is filed as **R177**: losing R95's
+  pair-ordering costs five parts of mean reach and nothing goes red. R173 did
+  not ratchet the floor to 0.96 to cover it, because the clean worst seed is
+  96.3% and that would false-red on content churn — R158's lesson that a flaky
+  gate is the worse failure.
+
+  The original entry follows.
+
+- **R173 (as queued) — The reach gate misses a break by a rounding hair, and does not
   assert the thing it prints.** Found by R109's full battery, and **not R109's
   doing** — break 162 misses identically on the pre-R109 tree, so this is rot
   that four milestones of targeted `--only` runs could not see. That is the
@@ -4484,6 +4526,26 @@ suite can check.
   rather than from where it was set three tunings ago. *Done when: break 162 is
   caught, the assertion names which parts no seed reaches, and the full battery
   reports 0 missed.*
+
+- **R177 — Losing R95's pair-ordering costs five parts and nothing goes red.**
+  Found by R173 while looking for a break its new union assertion would catch
+  and the mean floor would miss. `tools/sim.js` sorts breeding candidates so a
+  line that still owes the Splice-Dex a variant pairs first — R95's rule, and
+  the whole reason five of the six variant lines stopped being "never even
+  rolled for". **Delete that one `pairs.sort(...)` line and the reach gate stays
+  green:** mean part reach falls 237.2 → **232.1 (95.1%)**, which clears the
+  0.95 floor by a tenth of a point, and the union stays at 244/244 because
+  thirteen seeds between them still stumble onto every line.
+
+  So a real, five-part regression in the rule R95 spent a milestone writing is
+  currently unguarded, and it is unguarded in exactly the shape R173 was filed
+  about: a continuous statistic landing just the right side of a threshold.
+  R173 deliberately did **not** ratchet the floor to 0.96 to cover it — the
+  clean worst seed is 96.3%, so 0.96 leaves 0.3pp of headroom and would
+  false-red on ordinary content churn, which R158 established is the worse
+  failure. *Done when: removing the pair-ordering line fails a gate, and the
+  thing that fails is about variant lines being rolled for rather than about a
+  percentage.*
 
 - **R174 — Two `fill`s, and the fiftieth eager module.** ✅ *Shipped, and the
   entry undercounted by three.* It said two; the tree had **six**, and three of
