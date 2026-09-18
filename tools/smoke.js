@@ -7069,6 +7069,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // rather than a system the player learns. The Pens note already teaches
     // what a chimera IS; nothing about hearing one needs its own lesson.
     'audio/voice.js': null,
+    // R111 — and the room under it. Not a system either: a bed and a buzz are
+    // how a screen FEELS, and the two toggles that govern them explain
+    // themselves in the settings panel where they are switched.
+    'audio/room.js': null,
 
     // --- Shared UI machinery. A fold, a picker, a tab bar and a band are
     // how systems are shown, not systems themselves.
@@ -22627,7 +22631,29 @@ if (inShard('wire')) {
 // creature it draws, and it now escapes `>` and `'`, which the copy it replaced
 // did not. That is a correctness gain on the first paint, bought for a third of
 // a kilobyte. R176 is still the eviction that pays this back.
-const KB_CAP = 319;        // CODE only, measured at 318.3
+// R111 — 319 -> 321, measured at 320.1, AND IT IS ARGUED ON CODE.
+//
+// A system arrived: the synth gained a modulation path and a volume every
+// sound passes through, the shell gained a room tone and a buzz, and a
+// creature gained a voice. What is left in the eager graph after the tax
+// below is ~1.6 KB of that.
+//
+// THE TAX WAS PAID FIRST, and it is the lever this cap's note asked for
+// rather than another raise. `audio/room.js` — the noise buffer, the bed and
+// the vibration patterns — is LAZY, so 1.5 KB of code and 2.5 KB of prose
+// never enter this graph at all. Nothing in it is first-frame work: there is
+// no AudioContext before a gesture, so a bed cannot start before one. The
+// judgement that decides whether a sound is allowed stays eager, beside the
+// mute, which is the half that had to.
+//
+// WHAT THE NEXT MILESTONE SHOULD DO IS EVICT `audio/sfx.js` ITSELF. It is
+// eager for one reason — main.js wants the mute on the first frame — and it
+// is 6.0 KB of code for a module that cannot make a noise until somebody
+// touches the screen. `watchSignals` and `cuesFor` are pure functions over
+// scalars and are the only parts `tick` needs synchronously. R176 is already
+// queued to evict a module and pay MODULE_CAP back to 49; this is the second
+// candidate, and it is worth more.
+const KB_CAP = 321;        // CODE only, measured at 318.3
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
@@ -22672,7 +22698,26 @@ const KB_CAP = 319;        // CODE only, measured at 318.3
 // the one home and nowhere else. The four other sites were consolidated down
 // to one-line pointers on the way here; the first draft of this milestone
 // explained the same finding in five files and cost 0.6 KB more.
-const PROSE_CAP = 249;
+// R111 — 249 -> 251, measured at 250.2, AND THIS IS THE FOURTH CONSECUTIVE
+// RAISE, which the note above says is not an answer. So here is the answer.
+//
+// The tax was paid three ways before this number moved. `audio/room.js` takes
+// 2.5 KB of explanation out of the graph by being lazy. `audio/sfx.js`'s own
+// R111 prose was written at 3.3 KB and cut to 1.3 by moving the reasoning to
+// the two lazy modules and to `data/notes/voice.md`. And R59's history block
+// — "the game was scored for its fights and silent everywhere else" — went to
+// that note as well, because R111 is the milestone that ANSWERED it and a
+// module should not carry the story of a problem that is fixed.
+//
+// What is left is 1.3 KB explaining why the mute has one home, why a second
+// caller of the synth is a bypass, and why the room is lazy. Those are the
+// three questions the next reader of this diff will ask.
+//
+// THE LEVER IS THE SAME ONE KB_CAP NAMES: evicting `audio/sfx.js` takes 2.9 KB
+// of prose with it. Prose is 44% of the eager graph and R171 measured that it
+// does not compress away, so the only real move left is fewer eager modules —
+// and MODULE_CAP is at 50 of 50 with no headroom at all.
+const PROSE_CAP = 251;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(codeKb <= KB_CAP,

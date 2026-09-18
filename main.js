@@ -191,9 +191,8 @@ function showScreen(name, subtab) {
     el.hidden = s !== name;
     if (s !== name && el.childElementCount) el.replaceChildren();
   }
-  // R111 — the room under the screen. One call per navigation; `startAmbience`
-  // is a no-op when the bed is already the right one, so this cannot restart
-  // the barn every time a card opens.
+  // R111 — one call per navigation. A no-op when the bed is already the right
+  // one, so this cannot restart the barn every time a card opens.
   sfx.startAmbience(name, content);
   document.querySelectorAll('#tabs button').forEach((b) => {
     const on = b.dataset.screen === name;
@@ -223,9 +222,9 @@ function tick({ force = false } = {}) {
   // Writing the save is cheap and silent; painting is neither.
   saveGame(state);
   if (changed) updateTicker();
-  // R111 — and the same cue decides whether the phone shakes. `buzz` knows
-  // only three patterns, so the other cues pass through it silently: what
-  // deserves a buzz stays one decision in data, next to what deserves a sound.
+  // R111 — the same cue decides whether the phone shakes. `buzz` knows three
+  // patterns, so the rest pass through silently: what deserves a buzz is one
+  // decision in data, beside what deserves a sound.
   for (const cue of cuesFor(beforeCues, watchSignals(state))) {
     sfx.play(cue);
     sfx.buzz(cue, content);
@@ -486,12 +485,11 @@ async function boot() {
   }, 30000);
 
   // Audio: context on first gesture (autoplay policy), settings persisted.
-  // R111 — all four preferences through one call, so the boot cannot apply
-  // mute and forget volume the way it forgot everything but mute until now.
+  // R111 — all four preferences through one call, so the boot cannot apply the
+  // mute and forget the volume, which is what it did until this milestone.
   sfx.applyAudioSettings(state.settings);
-  // The bed cannot start before there is a context, and there is no context
-  // before a gesture — so the first gesture starts the room the player is
-  // already standing in, rather than making them navigate to hear it.
+  // No context before a gesture, so the first gesture starts the room the
+  // player is already in rather than making them navigate to hear it.
   document.addEventListener('pointerdown', () => {
     sfx.initAudio();
     sfx.startAmbience(state.activeScreen, content);

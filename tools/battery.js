@@ -3597,7 +3597,7 @@ const BREAKS = [
     // one, so the room tone becomes a click track: the failure is not silence,
     // it is a noise that arrives every time you touch the tab bar.
     n: 352, gate: SHARD_D, name: 'the room tone restarts on every navigation instead of holding',
-    file: 'audio/sfx.js',
+    file: 'audio/room.js',
     anchor: '  if (bed?.screen === screen) return;',
     to: '  if (false) return;',
   },
