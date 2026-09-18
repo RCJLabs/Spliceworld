@@ -3607,7 +3607,7 @@ const BREAKS = [
     // meeting, which is the worst failure in this milestone.
     n: 353, gate: SHARD_D, name: 'a muted game still shakes the phone on every KO',
     file: 'audio/sfx.js',
-    anchor: '  if (!haptics || muted) return;',
+    anchor: '  if (!haptics || muted) return Promise.resolve();',
     to: '  if (!haptics) return;',
   },
   {
