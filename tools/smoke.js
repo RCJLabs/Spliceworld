@@ -15599,30 +15599,35 @@ if (inShard('timbre')) {
   }
 
   // 7. AMBIENCE is a bed the player can stop, and one bed at a time.
+  //
+  // AWAITED, because R111 moved the bed behind a lazy import to keep it out
+  // of the eager budget — so `startAmbience` returns a promise and the first
+  // draft of this rule read `made.src` before the module had loaded. The
+  // shell fires it and forgets, which is right there and wrong here.
   {
     sfx.applyAudioSettings({ muted: false, volume: 1, ambience: true, haptics: false });
-    reset(); sfx.startAmbience('ranch', content);
+    reset(); await sfx.startAmbience('ranch', content);
     assert.equal(made.src.length, 1, 'the Ranch hums');
 
     // The same screen twice must not restart it — `showScreen` calls this on
     // every navigation, and a bed that restarts on each one is a click track.
-    reset(); sfx.startAmbience('ranch', content);
+    reset(); await sfx.startAmbience('ranch', content);
     assert.equal(made.src.length, 0, 'and arriving at the Ranch again does not restart it');
 
-    reset(); sfx.startAmbience('vault', content);
+    reset(); await sfx.startAmbience('vault', content);
     assert.equal(made.src.length, 1, 'a different room is a different bed');
 
     // A screen with no entry in the table is silent rather than broken,
     // which is what lets a screen ship without one.
-    reset(); sfx.startAmbience('nowhere', content);
+    reset(); await sfx.startAmbience('nowhere', content);
     assert.equal(made.src.length, 0, 'a screen the table has never heard of simply has no room tone');
 
     sfx.applyAudioSettings({ ambience: false });
-    reset(); sfx.startAmbience('ranch', content);
+    reset(); await sfx.startAmbience('ranch', content);
     assert.equal(made.src.length, 0, 'and the toggle stops it');
 
     sfx.applyAudioSettings({ muted: true, ambience: true });
-    reset(); sfx.startAmbience('ranch', content);
+    reset(); await sfx.startAmbience('ranch', content);
     assert.equal(made.src.length, 0, 'as does the mute');
   }
 
@@ -15638,27 +15643,27 @@ if (inShard('timbre')) {
     asNavigator({ vibrate: (p) => { buzzed.push(p); return true; } });
 
     sfx.applyAudioSettings({ muted: false, volume: 1, ambience: false, haptics: true });
-    for (const kind of Object.keys(content.voice.haptics)) sfx.buzz(kind, content);
+    for (const kind of Object.keys(content.voice.haptics)) await sfx.buzz(kind, content);
     assert.deepEqual(buzzed, Object.values(content.voice.haptics),
       'each of the three moments buzzes its own pattern');
 
     buzzed.length = 0;
     // The other cues pass through silently, which is what keeps "what
     // deserves a buzz" one decision in data beside "what deserves a sound".
-    for (const cue of ['click', 'hit', 'alarm', 'report', 'decant']) sfx.buzz(cue, content);
+    for (const cue of ['click', 'hit', 'alarm', 'report', 'decant']) await sfx.buzz(cue, content);
     assert.deepEqual(buzzed, [], 'and a tap does not shake the phone');
 
     sfx.applyAudioSettings({ haptics: false });
-    sfx.buzz('ko', content);
+    await sfx.buzz('ko', content);
     assert.deepEqual(buzzed, [], 'the toggle stops it');
     sfx.applyAudioSettings({ muted: true, haptics: true });
-    sfx.buzz('ko', content);
+    await sfx.buzz('ko', content);
     assert.deepEqual(buzzed, [], 'and so does the mute — one switch for the whole device');
 
     // A device that cannot vibrate is a device, not a crash.
     asNavigator({});
     sfx.applyAudioSettings({ muted: false, haptics: true });
-    sfx.buzz('ko', content);
+    await sfx.buzz('ko', content);
     if (priorNav) Object.defineProperty(globalThis, 'navigator', priorNav);
   }
 
