@@ -58,5 +58,20 @@
     "full_wing": "The stable holds {cap} and a graduate needs somewhere to graduate INTO.",
     "spoken_for": "spoken for",
     "stall_chip": "opens a chimera stall"
+  },
+  "settings": {
+    "volume_label": "Volume",
+    "ambience_on": "Room tone on",
+    "ambience_off": "Room tone off",
+    "ambience_note": "The barn, the lab and the war room each hum their own way under the taps.",
+    "haptics_on": "Haptics on",
+    "haptics_off": "Haptics off",
+    "haptics_note": "A short buzz when a creature goes down, when one is collected, and when a county falls. Nothing else shakes.",
+    "volume_full": "Full",
+    "volume_full_sub": "As loud as it was written",
+    "volume_half": "Half",
+    "volume_half_sub": "Present, not insistent",
+    "volume_quiet": "Quiet",
+    "volume_quiet_sub": "Just enough to know it happened"
   }
 }

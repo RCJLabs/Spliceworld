@@ -24,6 +24,8 @@ import { renderIcon } from '../ui/icons.js';
 import { openPicker, openPrompt, toggleRow } from '../ui/picker.js';
 import * as sfx from '../audio/sfx.js';
 import { announce } from '../ui/live.js';
+// R111 — the panel's own words, out of the module and into data (R110).
+import { copy } from '../util/text.js';
 // R81 — the theme list moved to ui/theme.js so the shell can read it on boot
 // without importing this whole panel: main.js needs to know which
 // [data-theme] to stamp before anything paints, and needed a 16 KB modal to
@@ -34,6 +36,15 @@ import { THEMES, BASE_THEME, themeName } from '../ui/theme.js';
 // these are three fixed multipliers the ARENA implements, not content: a
 // sixth speed would need engine work, so a JSON file promising one would be
 // a lie of the kind CLAUDE.md's "all content is data" rule exists to stop.
+// R111 — volume as a picker rather than a range input, because Wave 1.5's
+// rule is that no OS control appears anywhere in this game and a slider is
+// one. Three steps is all a kazoo needs, and the words are data (R110).
+const volumes = (content) => [
+  { id: 1, label: copy(content, 'settings.volume_full'), sub: copy(content, 'settings.volume_full_sub') },
+  { id: 0.5, label: copy(content, 'settings.volume_half'), sub: copy(content, 'settings.volume_half_sub') },
+  { id: 0.2, label: copy(content, 'settings.volume_quiet'), sub: copy(content, 'settings.volume_quiet_sub') },
+];
+
 const SPEEDS = [
   { id: 1, label: 'Normal', sub: 'Every beat, at the pace it was written' },
   { id: 2, label: 'Quick', sub: 'Twice as fast, same fight' },
@@ -58,7 +69,12 @@ function fmtAgo(ts, now) {
 import { legacyOffers, applyLegacy, legacyTuning } from '../campaign/legacy.js';
 
 export function openSettings(overlay, ctx) {
-  const { state } = ctx;
+  // R111 — `content` beside `state`, because the copy ledger scans the source
+  // for the reader's exact spelling. A call made through `ctx` instead is copy
+  // the gate cannot see, and it read seven live ids as unreachable.
+  // (This comment named the spelling literally on its first draft, and the
+  // ledger counted the example — a gate that reads source reads comments too.)
+  const { state, content } = ctx;
   const storage = globalThis.localStorage;
   // Set once the panel is closed (by any path — Close, a reload-bound
   // action, reopening fresh). Guards the one truly async gap below: an
@@ -141,12 +157,21 @@ export function openSettings(overlay, ctx) {
       .join('');
 
     overlay.hidden = false;
+    // Read once, used twice each — and written as two straight calls rather
+    // than one `copy(content, cond ? a : b)`, so the ledger can see both ids.
+    const bedOn = state.settings.ambience !== false;
+    const buzzOn = state.settings.haptics !== false;
     overlay.innerHTML = `
       <div class="ceremony card settings-card">
         <h3>${renderIcon('settings')} Settings</h3>
 
         <p class="settings-heading">Sound</p>
         ${toggleRow({ id: 'sound', label: state.settings.muted ? 'Muted' : 'Sound on', checked: !state.settings.muted })}
+        <button type="button" class="care-train" id="set-volume">${copy(content, 'settings.volume_label')}: ${volumes(content).find((v) => v.id === (state.settings.volume ?? 1))?.label ?? ''}</button>
+        ${toggleRow({ id: 'ambience', label: bedOn ? copy(content, 'settings.ambience_on') : copy(content, 'settings.ambience_off'), checked: bedOn })}
+        <p class="fine-print">${copy(content, 'settings.ambience_note')}</p>
+        ${toggleRow({ id: 'haptics', label: buzzOn ? copy(content, 'settings.haptics_on') : copy(content, 'settings.haptics_off'), checked: buzzOn })}
+        <p class="fine-print">${copy(content, 'settings.haptics_note')}</p>
 
         <p class="settings-heading">Theme</p>
         <button type="button" class="care-train" id="set-theme">Theme: ${themeName(state.settings.theme ?? BASE_THEME)}</button>
@@ -195,9 +220,40 @@ export function openSettings(overlay, ctx) {
 
     overlay.querySelector('[data-toggle="sound"]').addEventListener('click', () => {
       state.settings.muted = !state.settings.muted;
-      sfx.setMuted(state.settings.muted);
+      sfx.applyAudioSettings(state.settings);
       ctx.save();
       if (!state.settings.muted) sfx.play('click');
+      render();
+    });
+
+    overlay.querySelector('#set-volume').addEventListener('click', () => {
+      openPicker({
+        title: copy(content, 'settings.volume_label'),
+        groups: [{ label: null, options: volumes(content) }],
+        selectedId: state.settings.volume ?? 1,
+        onPick: (id) => {
+          state.settings.volume = id;
+          sfx.applyAudioSettings(state.settings);
+          ctx.save();
+          if (!state.settings.muted) sfx.play('click');
+          render();
+        },
+      });
+    });
+
+    overlay.querySelector('[data-toggle="ambience"]').addEventListener('click', () => {
+      state.settings.ambience = state.settings.ambience === false;
+      sfx.applyAudioSettings(state.settings);
+      ctx.save();
+      render();
+    });
+
+    overlay.querySelector('[data-toggle="haptics"]').addEventListener('click', () => {
+      state.settings.haptics = state.settings.haptics === false;
+      sfx.applyAudioSettings(state.settings);
+      ctx.save();
+      // The one honest way to show a haptic setting is to fire it once.
+      if (state.settings.haptics) sfx.buzz('ko', content);
       render();
     });
 

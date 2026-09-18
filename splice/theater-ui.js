@@ -266,6 +266,10 @@ export function renderTheaterScreen(root, ctx) {
     lastMsg = result.msg;
     if (result.ok) {
       sfx.play('splice');
+      // R111 — the first sound a new chimera ever makes, and the moment its
+      // voice is most worth hearing: the machine noise says a splice landed,
+      // the voice says WHAT landed. The two are deliberately different lengths.
+      sfx.speak(result.chimera, content, 'decant');
       draft = { frame: draft.frame, slots: {} };
       ctx.save();
       showSpliceResult(ctx, result, () => renderTheaterScreen(root, ctx));

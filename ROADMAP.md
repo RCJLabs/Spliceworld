@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 56
+- save version: 57
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**8 entries queued.** R111, R112, R113, R115, R116, R117, R118, R176.
+**8 entries queued.** R112, R113, R115, R116, R117, R118, R176, R178.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4180,7 +4180,7 @@ suite can check.
   short developer allowlist, and the tone sweep promoted to a gate over one
   tree. *Done when: game modules carry under 300 prose words, the scopecheck
   rule holds, and the tone gate reads every player-facing word.*
-- **R111 — Feel: creature voices, ambience and haptics.** `audio/sfx.js`
+- **R111 — Feel: creature voices, ambience and haptics.** ✅ `audio/sfx.js`
   holds **19 stingers** and **none of them depends on the creature** — a
   goat-headed tank and a moth-winged kite land the same `hit`; the Ranch,
   Pens, Vault, Theater and Dex are silent between taps; the only audio
@@ -4197,6 +4197,52 @@ suite can check.
   the creatures motion; this gives them a sound. *Done when: smoke asserts
   two genomes yield two voice specs and one genome always the same, and the
   settings panel carries volume, ambience and haptics controls.*
+
+  **Shipped (Session 195).** Every premise held on re-measurement: **19**
+  stingers, none of them creature-dependent, one gesture, zero haptics, and
+  mute as the entire audio settings surface.
+
+  `data/voice.json` + `audio/voice.js` (lazy, LATE): mass to pitch walked
+  backwards so heavier is lower, the head's first tag to waveform,
+  the organ's `phys.draw` to modulation depth, and temperament to contour —
+  the first thing in the game to read BOTH of R13's axes. Seeded on the
+  creature's id, so a rename does not change what it sounds like. Heard on a
+  dossier opened, a KO and a decant. `SAVE_VERSION` **57**: `volume`,
+  `ambience`, `haptics`, all arriving on, behind the mute.
+
+  **The slider is a picker.** The entry asked for one; Wave 1.5's rule is
+  that no OS control appears anywhere in this game, and a range input is one.
+  Three steps — Full, Half, Quiet — is all a kazoo needs, and the words are
+  data.
+
+  **The gate hears rather than reads.** `timbre` (shard d) drives the shipped
+  synth through a fake `AudioContext`, because a panel that renders a control
+  and a synth that ignores it passes a source check twice. It asks each of the
+  four anatomical axes SEPARATELY, and that clause found both of this
+  milestone's real defects. (1) `data/voice.json` was fetched and never named
+  in `indexContent`, so `content.voice` came back undefined — and 41 of 41
+  specs still came back distinct, because the module's own fallbacks keep
+  pitch, modulation and contour moving. Only the wave collapsed, to one value
+  for the whole county. R41's training.json for the third time; R102 and R108
+  each paid it once between. (2) All 43 organs declare a `phys.draw` of 2 or 3
+  — 42 of them declare 3 — so reading the draw alone gave the catalogue **two**
+  modulation depths while the module's own comment said "every organ differs".
+  The id now spreads each organ inside its draw band: **36 depths**, bands
+  still disjoint, so a draw-3 organ always wobbles harder than the draw-2 one.
+  R59's "exactly one function reaches the synth" also refused `speak` as a
+  second door within the hour; it hands its tone to `play` instead.
+
+  **And three the gates found after it was green.** The orphan gate called
+  `setMuted` dead once nothing outside its file called it (`applyAudioSettings`
+  delegates now rather than restating what a mute does). The eager budget fired,
+  so `audio/room.js` is new and LAZY — the noise buffer, the bed and the
+  vibration patterns, none of it first-frame work — and after that tax KB_CAP
+  319 → 321 and PROSE_CAP 249 → 251, both ledgers naming the same next lever:
+  evict `audio/sfx.js` itself. And R114's fuzz reached `state.battle` for the
+  first time in its life, because three new `settings` keys shifted its path
+  sampling: `battle: []` is truthy, so the War Room handed it to `renderArena`.
+  Not an R111 bug — a standing one, found by R111's shape. `save/schema.js`
+  gains a SLOTS pass. Breaks 348–357, all caught.
 
 **UI.**
 
@@ -4720,6 +4766,25 @@ suite can check.
   whether anything on the boot path actually calls those two before moving
   them. *Done when: `MODULE_CAP` is back to 49 with a ledger line naming what
   left, or the attempt is written up saying why the two cannot move.*
+
+- **R178 — The release gate is in no tier, and a comment can empty the cache.**
+  Found in R111, by hand, one command after `npm test` came back green.
+  `node tools/release.js` is **not in the battery's `BASELINE` list and not in
+  `npm test`** — the battery's `RELEASE` constant is shard a of smoke, which is
+  a different thing wearing the same name. So the only rule that reads the
+  service worker's shell as the browser will is one nobody's tier runs.
+  What it caught: an **apostrophe inside an sw.js comment** ("the eager
+  budget's sake"). `SHELL` is parsed by splitting on quotes, so one apostrophe
+  turned 38 real entries into fragments — and `install()` rejects if any
+  precached path is missing, which means **nothing is cached at all** and the
+  TWA has no offline shell. Smoke's own PWA block missed it because its regex
+  only matches quoted strings ending in a known extension, so the fragments
+  were invisible and it silently checked a shorter list: a false negative in a
+  gate that reported PASS. Proposed, small: put `RELEASE_REAL` in `BASELINE`,
+  make smoke's shell parser assert the COUNT it found rather than only the
+  files it recognised, and rename the battery's `RELEASE` so two gates do not
+  share a name. *Done when: a stray apostrophe in an sw.js comment fails
+  `--baseline`, and a break proves it.*
 
 ### 9.7 The opening, and the sitting (R119–R120) — asked for directly
 

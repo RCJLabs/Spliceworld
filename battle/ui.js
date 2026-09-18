@@ -142,6 +142,21 @@ function spriteFor(side, refId, ctx, battle) {
     : '';
 }
 
+// R111 — which ANIMAL a beat happened to, for the voice. `spriteFor` already
+// walks this path to draw one; a KO needs the creature itself rather than its
+// portrait, and an enemy unit has no genome-backed chimera to speak with, so
+// only the player's side has a voice here. That asymmetry is the point: the
+// sound tells you it was YOURS.
+function chimeraOf(side, snap, ctx) {
+  if (side !== 'player') return null;
+  const refId = snap?.player?.refId;
+  if (!refId) return null;
+  const { state } = ctx;
+  return state.chimeras.find((c) => c.id === refId)
+    ?? state.campaign.captives.find((c) => c.chimera.id === refId)?.chimera
+    ?? null;
+}
+
 function hpBox(side, c, content, extra = '') {
   return `
     <div class="hp-box hp-${side}" id="${side}-box">
@@ -346,7 +361,7 @@ function wireCommands(root, ctx, onDone, actions, me, foe) {
   const battle = state.battle;
   const fire = (action) => {
     if (playing) return;
-    if (action.type === 'capture') sfx.play('capture');
+    if (action.type === 'capture') { sfx.play('capture'); sfx.buzz('capture', content); }
     const events = step(battle, action, content);
     ctx.save();
     playRound(root, ctx, onDone, events);
@@ -584,6 +599,13 @@ function applyBeat(root, ctx, battle, e, msg) {
   } else if (e.kind === 'ko') {
     animate(spriteOf(e.target), 'anim-ko');
     sfx.play('ko');
+    // R111 — and the creature says so in its own voice. This is the moment
+    // the whole milestone is for: a player who knows which of their chimeras
+    // just went down WITHOUT reading the box. The stinger is the event; the
+    // voice is which animal it happened to.
+    sfx.buzz('ko', ctx.content);
+    const down = chimeraOf(e.target, snap, ctx);
+    if (down) sfx.speak(down, ctx.content, 'ko');
   } else if (e.kind === 'buff' || e.kind === 'rest') {
     animate(spriteOf(e.target), 'anim-buff');
     sfx.play('buff');

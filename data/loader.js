@@ -21,8 +21,13 @@ export const GEOMETRY = ['parts-shapes', 'enemies-shapes'];
 // its own file and the variants ride here. See render/renderer.js.
 export const POOLS = ['voice-pools'];
 
+// R111 — the creature voices' tuning. LATE for the same reason as the pools:
+// nothing makes a sound before the first paint, and a player who never taps a
+// creature never needs it.
+export const TIMBRE = ['voice'];
+
 // Everything the second round fetches, whatever it is for.
-export const LATE = [...GEOMETRY, ...POOLS];
+export const LATE = [...GEOMETRY, ...POOLS, ...TIMBRE];
 
 // R85 — and both halves together, for the Node tools.
 //

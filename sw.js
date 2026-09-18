@@ -28,7 +28,7 @@
 // which is R122's original bug report — a phone stuck on a broken build.
 // `tools/release.js` is the answer and exists for this: CACHE is checked
 // against SAVE_VERSION by a gate rather than by anybody remembering.
-const CACHE = 'spliceworld-v56-d1a45cc6';
+const CACHE = 'spliceworld-v57-ef0b7f77';
 
 const SHELL = [
   '.',
@@ -124,6 +124,12 @@ const SHELL = [
   'campaign/warroom.js',
   'campaign/ui.js',
   'audio/sfx.js',
+  // R111: the creature voices. Lazy in the browser, precached here — an
+  // offline player still gets a chimera that sounds like itself.
+  'audio/voice.js',
+  // R111: the room tone and the haptics. Lazy, to keep them out of the eager
+  // budget; precached for the same reason as the voice — offline gets all of it.
+  'audio/room.js',
   'data/breakout.json',
   'data/taskforce.json',
   'data/legacy.json',
@@ -144,6 +150,8 @@ const SHELL = [
   // R109: the spare phrasings, fetched in the same round for the same
   // reason. Offline gets the whole voice, it just does not wait for it.
   'data/voice-pools.json',
+  // R111: the voice tuning, fetched in that same late round.
+  'data/voice.json',
   'data/species.json',
   'data/combos.json',
   'data/enemies.json',

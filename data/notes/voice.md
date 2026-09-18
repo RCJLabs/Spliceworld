@@ -1,0 +1,15 @@
+# data/voice.json
+
+R111 — what a creature SOUNDS like, derived from what it is. `audio/sfx.js` has held sixteen stingers since M7 and not one of them depended on the animal: a goat-headed tank and a moth-winged kite landed the identical `hit`. R96 gave every splice its own motion, so by this milestone the game had creatures that looked unique and sounded interchangeable. This file is the tuning that closes that: four anatomical readings, each mapped to one property of a note.
+
+`wave.byTag` maps a HEAD's first tag to a waveform — Aquatic and Gas sing on a sine, Armored and Electric buzz on a square, Sonic and Venomous rasp on a sawtooth — with a `fallback` for the seven heads that carry no tag at all. The head decides the family because the head is what a player says the creature IS. `pitch` walks the measured mass range BACKWARDS between `low` and `high`, so heavier is lower, and `jitter` spreads two animals of one mass apart by a few hertz seeded on the creature's id. `mod` is the organ's wobble, read off its `phys.draw` where it has one — an organ that costs more to run wobbles harder. `contour` is the first thing in the game to read BOTH temperament axes: under `nerveMid` the note rises like a question, over `temperMid` it falls like a statement, and everything in between holds level, which is most of them. `dur` is how long each of the four occasions lasts: a tap, a hit, a graduation, a decant.
+
+`ambience` is the room under the screen — filtered noise at a couple of percent, keyed by screen name, and a screen with no entry here simply has no bed. `haptics` is three vibration patterns and exactly three: a KO, a capture, a conquest. Each is something that happened TO the player rather than something they tapped, which is the same rule `cuesFor` in audio/sfx.js already applies to sound.
+
+Adding a species with a new tag gets a waveform for free; adding a screen gets a room tone by adding a key. `audio/voice.js` reads every number here and hard-codes none of them, which is what lets the whole table be retuned without touching a module. LATE in the loader (`TIMBRE`), because nothing makes a sound before the first paint.
+
+## haptics
+
+R59 is the other half of this file's story, and R111 is what answered it. The game was scored for its fights and silent everywhere else: nineteen stingers, nine of the call sites in `battle/ui.js`, and taking a node, a counter-offensive landing on one you hold, a job coming back and a resequenced donor decanting all happened without a sound. `cuesFor` in audio/sfx.js closed the events; this file's `ambience` closes the silence BETWEEN them, and `haptics` gives the three heaviest of those events a second channel on a phone.
+
+The three are `ko`, `capture` and `conquest`, and the list is short on purpose: each is something that happened TO the player rather than something they tapped, which is exactly the rule `cuesFor` applies to sound. A fourth pattern here is a decision that a fourth moment has that weight, which is why adding one is an edit to this file and to nothing else.

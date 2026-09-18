@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 56;
+export const SAVE_VERSION = 57;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -91,7 +91,7 @@ export function newGameState() {
     // that failed before this one, and why neither a roll nor a global
     // window can rotate a pool at all.
     wireAt: {},
-    settings: { muted: false, battleSpeed: 1 },
+    settings: { muted: false, battleSpeed: 1, volume: 1, ambience: true, haptics: true },
     // R51: `beaten` is the field guide's second dimension — `enemies` is a
     // sighting log and always was, so a unit that flattened you read
     // exactly like one you flattened.

@@ -3549,6 +3549,113 @@ const BREAKS = [
     to: "        if (![...ROW_LISTS].some((r) => r.split('.').pop() === key)) continue;",
   },
 
+  // R111 — a creature's voice, and the three controls over it.
+  {
+    // THE VOICE STOPS READING THE ANATOMY. Every head takes the fallback, so
+    // every creature in the county has the same waveform — which is the state
+    // the milestone was filed about, one property at a time. The axis floors
+    // are the only clause that sees it: the specs still DIFFER (the pitch
+    // jitter alone guarantees that), so "two genomes, two specs" stays green
+    // while three of the four mappings stand still.
+    n: 348, gate: SHARD_D, name: 'every head takes the fallback waveform, and the county speaks with one voice',
+    file: 'audio/voice.js',
+    anchor: '    const wave = tuning.wave?.byTag?.[tag];',
+    to: '    const wave = null;',
+  },
+  {
+    // AND THE VOICE DRIFTS. Seeded on the call rather than on the creature,
+    // which is the difference between a voice and a noise: a player cannot
+    // learn which chimera just went down if it sounds different each time.
+    n: 349, gate: SHARD_D, name: 'the pitch jitter stops being seeded on the creature, and a voice drifts',
+    file: 'audio/voice.js',
+    anchor: "  const jitter = spread ? ((hashString(String(chimera?.id ?? '')) % (spread * 2)) - spread) : 0;",
+    to: '  const jitter = spread ? Math.floor(Math.random() * spread) : 0;',
+  },
+  {
+    // THE FILE IS LOADED AND NEVER INDEXED. This is the defect R111 shipped
+    // into its own working tree: `data/voice.json` reached the browser, the
+    // whitelist in `indexContent` did not name it, `content.voice` came back
+    // undefined and every spec ran on the module's own fallbacks. It LOOKED
+    // like it worked. R41's training.json, a third time — R102 and R108 each
+    // paid it once between.
+    n: 350, gate: SHARD_D, name: 'the voice tuning is fetched and never indexed, so every spec runs on fallbacks',
+    file: 'render/renderer.js',
+    anchor: '    voice: raw.voice ?? {},',
+    to: '',
+  },
+  {
+    // THE VOLUME CONTROL CONTROLS NOTHING. The panel renders it, the save
+    // keeps it, the synth ignores it — a setting that is a decoration, which
+    // is exactly what a source-only gate would have certified.
+    n: 351, gate: SHARD_D, name: 'the volume setting stops reaching the synth, and every stinger is full volume',
+    file: 'audio/sfx.js',
+    anchor: '  const level = Math.max(0.0001, vol * volume);',
+    to: '  const level = vol;',
+  },
+  {
+    // THE BED RESTARTS ON EVERY NAVIGATION. `showScreen` calls this on each
+    // one, so the room tone becomes a click track: the failure is not silence,
+    // it is a noise that arrives every time you touch the tab bar.
+    n: 352, gate: SHARD_D, name: 'the room tone restarts on every navigation instead of holding',
+    file: 'audio/room.js',
+    anchor: '  if (bed?.screen === screen) return;',
+    to: '  if (false) return;',
+  },
+  {
+    // THE MUTE STOPS REACHING THE PHONE. One switch for the whole device is
+    // the rule; this is the version where a muted game still buzzes in a
+    // meeting, which is the worst failure in this milestone.
+    n: 353, gate: SHARD_D, name: 'a muted game still shakes the phone on every KO',
+    file: 'audio/sfx.js',
+    anchor: '  if (!haptics || muted) return Promise.resolve();',
+    to: '  if (!haptics) return;',
+  },
+  {
+    // A PREFERENCE THAT DOES NOT SURVIVE THE RELOAD. The toggle works, the
+    // synth is told, and the next time the player opens the game it is back
+    // where it started — which is the shape of bug nobody files because it
+    // looks like they misremembered.
+    n: 354, gate: SHARD_D, name: 'the haptics toggle stops writing the save, and the setting forgets itself',
+    file: 'save/settings-ui.js',
+    anchor: '      state.settings.haptics = state.settings.haptics === false;\n      sfx.applyAudioSettings(state.settings);\n      ctx.save();',
+    to: '      state.settings.haptics = state.settings.haptics === false;\n      sfx.applyAudioSettings(state.settings);',
+  },
+  {
+    // AND THE BOOT GOES BACK TO APPLYING THE MUTE AND NOTHING ELSE. This is
+    // the pre-R111 shell exactly: three of the four preferences are honoured
+    // only once the panel has been opened, so a player who set the volume
+    // last session gets full volume until they go looking for the gear.
+    n: 355, gate: SHARD_D, name: 'the boot applies the mute and forgets the other three preferences',
+    file: 'main.js',
+    anchor: '  sfx.applyAudioSettings(state.settings);',
+    to: '  sfx.setMuted(state.settings.muted);',
+  },
+  {
+    // AND THE ORGAN GOES BACK TO BEING TWO ORGANS. This is not a hypothetical:
+    // it is the code R111 shipped in its own first draft. Every organ in the
+    // game declares a `phys.draw` of 2 or 3 — 42 of 43 declare 3 — so reading
+    // the draw alone gives the entire catalogue TWO modulation depths, under a
+    // comment promising that every organ differs. The whole-spec count sees
+    // nothing (the pitch jitter keeps 41 of 41 distinct); only the mod floor
+    // does.
+    n: 356, gate: SHARD_D, name: 'the organ wobble goes back to reading the draw alone, and 43 organs become 2',
+    file: 'audio/voice.js',
+    anchor: '  const within = ((hashString(organ) % 1000) / 1000 - 0.5) * spread;',
+    to: '  const within = 0;',
+  },
+  {
+    // AND THE SLOTS STOP BEING EMPTIED. `state.battle = []` is TRUTHY, so the
+    // War Room's `if (state.battle)` hands it to `renderArena`, which reads
+    // `.player.team` off nothing and takes the screen down. R114's fuzz never
+    // reached this field until R111 added three keys to `settings` and shifted
+    // its path sampling — which is the argument for a fuzz over a list of
+    // cases somebody thought of, made by the fuzz itself.
+    n: 357, gate: SHARD_B, name: 'a save whose battle slot holds a list still reaches the arena renderer',
+    file: 'save/schema.js',
+    anchor: "      if (OBJECT_SLOTS.has(at)) {",
+    to: "      if (false) {",
+  },
+
   // R175 — the stable says how big it is and what makes it bigger.
   {
     // THE MAIN SCREEN STOPS SAYING HOW FULL THE STABLE IS, which is the state

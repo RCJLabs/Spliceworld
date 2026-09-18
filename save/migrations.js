@@ -22,6 +22,22 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R111 — the three controls the voices needed. `muted` was the WHOLE audio
+  // settings surface since M7: no volume, no way to keep the stingers and lose
+  // the room tone, nothing for haptics because there were none.
+  //
+  // All three arrive ON, and that is a deliberate choice rather than a default
+  // nobody thought about. A player who has muted the game stays muted — these
+  // sit behind that — and each new thing has its own switch a tap away. The
+  // alternative, shipping a feature off, is how R21's dead content happened:
+  // nobody turns on a thing they have never heard.
+  57: (save) => {
+    save.settings ??= {};
+    save.settings.volume ??= 1;
+    save.settings.ambience ??= true;
+    save.settings.haptics ??= true;
+    return save;
+  },
   // R109 — where the wire is in each pool of phrasings. An existing save
   // starts at the top of every pool, which is exactly what a new game does.
   56: (save) => {

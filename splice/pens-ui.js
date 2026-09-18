@@ -55,6 +55,7 @@ import { rushQuote, rushButton, bindRush } from './rush.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { renderIcon } from '../ui/icons.js';
 import { announce } from '../ui/live.js';
+import * as sfx from '../audio/sfx.js';
 
 let lastMsg = '';
 let vatPick = { a: null, b: null };
@@ -144,7 +145,13 @@ function bindVat(root, ctx, redraw) {
   // already carried across runs.
   for (const d of unbound(root, 'details[data-dossier]')) {
     d.addEventListener('toggle', () => {
-      if (!d.open || state.ui?.tierRead) return;
+      if (!d.open) return;
+      // R111 — and the animal answers. Opening a dossier is the one gesture
+      // in the game that means "this creature, specifically", so it is where
+      // a voice belongs: everything else is a screen or a button.
+      const ch = state.chimeras.find((c) => c.id === d.dataset.dossier);
+      if (ch) sfx.speak(ch, content, 'tap');
+      if (state.ui?.tierRead) return;
       state.ui = { ...(state.ui ?? {}), tierRead: true };
       ctx.save();
     });

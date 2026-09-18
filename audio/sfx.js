@@ -6,6 +6,10 @@
 
 let ctx = null;
 let muted = false;
+// R111 — `muted` was the whole surface until this milestone. See voice.md.
+let volume = 1;
+let ambience = true;
+let haptics = true;
 
 export function initAudio() {
   if (ctx) return;
@@ -16,17 +20,43 @@ export function initAudio() {
 
 export function setMuted(m) {
   muted = m;
+  if (muted) stopAmbience();
+}
+
+// R111 — one call from the shell and the settings panel, so a preference
+// cannot be applied in one and forgotten in the other. It DELEGATES the mute
+// rather than restating what one does.
+export function applyAudioSettings(settings = {}) {
+  setMuted(!!settings.muted);
+  volume = Number.isFinite(settings.volume) ? Math.min(Math.max(settings.volume, 0), 1) : 1;
+  ambience = settings.ambience !== false;
+  haptics = settings.haptics !== false;
+  if (!ambience) stopAmbience();
 }
 
 // One voice: type, frequency glide, duration, volume envelope.
-function voice({ type = 'square', from = 440, to = from, at = 0, dur = 0.15, vol = 0.12 }) {
+function voice({ type = 'square', from = 440, to = from, at = 0, dur = 0.15, vol = 0.12, mod = 0 }) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   const t0 = ctx.currentTime + at;
   osc.type = type;
   osc.frequency.setValueAtTime(from, t0);
   osc.frequency.exponentialRampToValueAtTime(Math.max(1, to), t0 + dur);
-  gain.gain.setValueAtTime(vol, t0);
+  // R111 — the organ's wobble: on the FREQUENCY, not the gain, so it reads as
+  // a voice catching rather than a tremolo laid over one.
+  if (mod > 0) {
+    const lfo = ctx.createOscillator();
+    const depth = ctx.createGain();
+    lfo.frequency.setValueAtTime(6, t0);
+    depth.gain.setValueAtTime(mod, t0);
+    lfo.connect(depth).connect(osc.frequency);
+    lfo.start(t0);
+    lfo.stop(t0 + dur + 0.02);
+  }
+  // R111 — one place every sound passes through, so a stinger added later
+  // cannot forget to be quiet. The floor keeps the ramp below legal.
+  const level = Math.max(0.0001, vol * volume);
+  gain.gain.setValueAtTime(level, t0);
   gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
   osc.connect(gain).connect(ctx.destination);
   osc.start(t0);
@@ -99,19 +129,14 @@ const STINGERS = {
   ],
 };
 
-// R59 — the game was scored for its fights and silent everywhere else.
-// Fifteen call sites, NINE of them in battle/ui.js: taking a node, a
-// counter-offensive landing on one you hold, a job coming back and a
-// resequenced donor decanting all happened without a sound.
+// R59 — the mapper lives here rather than across four screens, because "what
+// deserves a sound" is one decision and four copies of it drift. A snapshot of
+// scalars, so it is DOM-free and the suite asserts every cue without a browser.
 //
-// The mapper lives here rather than being sprinkled across four screens,
-// because "what deserves a sound" is one decision and four copies of it
-// drift. It reads a snapshot of scalars, so it is DOM-free and the suite can
-// assert every cue without a browser or an AudioContext.
-//
-// The rule these four share: a sound marks a change in your POSITION —
-// something arrived, completed, or was taken from you. Navigation and taps
-// are not events; the game already has one `click` and does not need more.
+// THE RULE these four share: a sound marks a change in your POSITION —
+// something arrived, completed, or was taken from you. Navigation and taps are
+// not events. R111's `buzz` reads the same cues for the same reason; the story
+// of what was silent before either is in `data/notes/voice.md`.
 export function watchSignals(state) {
   return {
     nodes: state?.campaign?.heldNodes?.length ?? 0,
@@ -136,10 +161,59 @@ export function cuesFor(before, after) {
   return cues;
 }
 
+// R111 — A TONE AS WELL AS A NAME, because a creature's voice is built rather
+// than written down. `speak` hands its tone here instead of growing a door of
+// its own: R59's "exactly one function reaches the synth" is what stops a new
+// sound arriving with its own path around the mute.
 export function play(name) {
-  if (muted || !ctx || !STINGERS[name]) return;
+  const tones = typeof name === 'string' ? STINGERS[name] : name;
+  if (muted || !ctx || !tones) return;
   try {
     if (ctx.state === 'suspended') ctx.resume();
-    for (const v of STINGERS[name]) voice(v);
+    for (const v of tones) voice(v);
+  } catch { /* stay silent, stay alive */ }
+}
+
+// R111 — the room tone and the buzz are in `audio/room.js`, lazily; that file
+// says why. What stays here is the JUDGEMENT of whether a sound is allowed at
+// all, so the mute keeps one home.
+//
+// WRITTEN AS A DIRECT DYNAMIC IMPORT WITH A DESTRUCTURED THEN, THREE TIMES. The
+// orphan gate scans for that exact shape; `await import()` into a variable is
+// invisible to it, and so is a `room()` helper that returns the promise —
+// both were tried, and both had it report a live export dead. No cache here
+// either: a repeated dynamic import of one specifier is already one fetch and
+// one module instance, so a cache would only have hidden the shape the gate
+// reads. `everStarted` exists so a stop never fetches a file to discover
+// there is no bed.
+let everStarted = false;
+
+export function stopAmbience() {
+  if (!everStarted) return;
+  import('./room.js').then(({ stopAmbience: stop }) => stop()).catch(() => {});
+}
+
+export function startAmbience(screen, content) {
+  if (muted || !ambience || !ctx) return Promise.resolve();
+  everStarted = true;
+  return import('./room.js')
+    .then(({ startAmbience: start }) => start(ctx, screen, content, volume))
+    .catch(() => { /* no bed today; the game is unchanged */ });
+}
+
+export function buzz(kind, content) {
+  if (!haptics || muted) return Promise.resolve();
+  return import('./room.js')
+    .then(({ buzz: fire }) => fire(kind, content))
+    .catch(() => { /* not every device shakes */ });
+}
+
+// R111 — the creature itself. `audio/voice.js` is lazy for the same reason as
+// the room: nothing has a voice before something is on a screen.
+export async function speak(chimera, content, kind = 'tap') {
+  if (muted || !ctx || !chimera) return;
+  try {
+    const { voiceSpec, voiceTone } = await import('./voice.js');
+    play([voiceTone(voiceSpec(chimera, content, kind))]);
   } catch { /* stay silent, stay alive */ }
 }
