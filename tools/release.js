@@ -96,7 +96,24 @@ function saveVersion() {
   return n;
 }
 
-if (FIX) {
+// R178 — RUN THE GATE ONLY WHEN THIS IS THE COMMAND, NOT WHEN IT IS IMPORTED.
+//
+// This file exports `shellFiles` AND checked the release at module scope, so
+// `await import('./release.js')` ran the whole gate as a side effect — printing
+// into its importer's output and, on a red tree, calling `process.exit(1)`
+// before the importer's own code got a line. R178 makes tools/smoke.js read the
+// shell through `shellFiles`, which would have killed the suite mid-block and
+// reported the right answer for entirely the wrong reason.
+//
+// `node tools/release.js`, `npm run release` and the battery's CACHEBUMP gate
+// all still take this branch: they ARE the command. Nothing about the gate's
+// behaviour moves — only whether importing the parser drags it along.
+const RUN_AS_COMMAND = process.argv[1]
+  && fileURLToPath(import.meta.url) === process.argv[1];
+
+if (!RUN_AS_COMMAND) {
+  // imported for `shellFiles` / `shellHash` / `checkRelease`; nothing to do.
+} else if (FIX) {
   const sw = readFileSync(swPath, 'utf8');
   const want = `spliceworld-v${saveVersion()}-${shellHash(sw)}`;
   const was = sw.match(CACHE_LINE)?.[1];

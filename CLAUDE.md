@@ -40,7 +40,12 @@ the session.
 
 **Every milestone, before merging (~10 min):**
 - `node tools/battery.js --anchors` — every break still aims at real code. **0.3s.**
-- `node tools/battery.js --baseline` — every gate green on a clean tree. ~7 min.
+- `node tools/battery.js --baseline` — every gate green on a clean tree. **~10
+  min** (583s measured at R178, on 4 lanes). It was ~7 until R178 put R100's
+  three ship gates into the list — `tools/release.js`, the offline cold open
+  and the IndexedDB round-trip — which had been wired to breaks but to neither
+  tier, so the whole TWA story was only ever checked in the go-red direction.
+  They cost 72 CPU-seconds between them; the rest of the rise is lane packing.
 - `node tools/battery.js --only <the breaks this milestone added>` — the new rules go red on demand.
 - `npm test` — **~4 min wall, ~900 CPU-seconds on four lanes, run alone.**
   Run it BEFORE or AFTER the battery, never alongside it. R154 followed the old

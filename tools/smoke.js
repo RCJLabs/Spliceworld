@@ -2,7 +2,7 @@
 // requirement the M4.5 balance harness will lean on) and that all content
 // data is coherent. Run: node tools/smoke.js
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
 import assert from 'node:assert/strict';
@@ -2492,6 +2492,35 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   assert.ok(shellFiles.length > 20, 'precache list is populated');
   for (const f of shellFiles) {
     assert.ok(readFileSync(join(root, f)), `sw precaches a real file: ${f}`);
+  }
+
+  // R178 — AND THE SAME LIST AS `tools/release.js` READS IT, which is the
+  // browser's reading rather than this one.
+  //
+  // The regex above is TOO FORGIVING to see the failure that matters. Put an
+  // apostrophe inside an sw.js comment — "the eager budget's sake" — and the
+  // quote pairing shifts for the rest of the literal; `install()` is
+  // all-or-nothing, so the app caches NOTHING. This block reported PASS on
+  // exactly that tree: it found 131 files and 0 missing, the same count as a
+  // clean one, because a pattern that demands a known extension simply skips
+  // the fragments and resynchronises at the next plausible pair. The count
+  // cannot show it either — 131 both ways. `shellFiles()` in release.js takes
+  // EVERY quoted run inside the SHELL literal, so it saw 139 entries, 38 of
+  // them not files, which is what the browser would have choked on.
+  //
+  // Imported rather than reimplemented: R174's rule, and this block is the
+  // counter-example that earned it. (The weaker pair above is left in place
+  // because it answers a different question — whether every path this scanner
+  // recognises exists — and rewriting it is a gate's logic rather than a rule
+  // added beside it. Collapsing the two belongs to a milestone that can pay
+  // for the full battery.)
+  {
+    const { shellFiles: shellAsShipped } = await import('./release.js');
+    const precached = shellAsShipped(sw);
+    const missing = precached.filter((f) => !existsSync(join(root, f)));
+    assert.deepEqual(missing, [],
+      `every entry in the SHELL literal is a real file, or install() rejects and nothing is `
+      + `cached at all (${missing.length} of ${precached.length} are not: ${missing.slice(0, 3).join(', ')})`);
   }
   // …and the other direction, which is the one that actually bites. The
   // check above only ever caught a DELETED file; two modules shipped in
