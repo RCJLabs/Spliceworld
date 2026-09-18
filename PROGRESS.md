@@ -1,5 +1,70 @@
 # PROGRESS
 
+## Session 194 — R177: the gate was measuring the wrong subject ✅
+
+**R173 left this regression measured and unguarded. R177 is the proof R173
+could not produce.**
+
+### The regression nothing caught
+
+Delete R95's one `pairs.sort(...)` — the rule that makes a line still owing the
+Splice-Dex a variant pair first — and mean part reach falls 237.2 → 232.1.
+That is **95.1% against a 95% floor**, and the union stays 244/244 because
+thirteen seeds between them still stumble onto every line. Both part clauses
+green on a tree that has genuinely lost content.
+
+### The fix was not a tighter floor
+
+Ratcheting to 0.96 was available and wrong: the clean worst seed is 96.3%, so it
+leaves 0.3pp and false-reds on churn. R173 refused that, and the refusal was
+right for a reason worth naming — **the gate was measuring the wrong thing.**
+R95's rule is about which LINES get rolled for, and 34 of the 244 parts sit on
+six species that arrive by one door.
+
+                         clean      pair-sort deleted
+    mean lines           5.92/6     5.15/6
+    seeds at 6/6         12 of 13    4 of 13
+    seeds at 4/6          0 of 13    2 of 13
+    union                 6/6        6/6
+
+`VARIANT_LINE_FLOOR = 5.5` — the midpoint of a measured gap, tolerating five
+seeds each losing a line before it fires.
+
+**The mean, not the minimum.** The minimum separates too (5 vs 4) and feels more
+categorical, but the clean tree's own worst seed IS 5 (seed 123 finishes without
+`glider_skunk`), so a floor there has zero headroom. That is the brittleness
+R173 declined to ship; this declines it again.
+
+**The union is deliberately not asserted here** — both trees reach all six lines
+across thirteen seeds, so it would not separate them. Saying so in the gate
+beats letting the next reader assume it is covered.
+
+### And it fires alone
+
+On the broken tree the part-reach clauses stay green and only this one goes red:
+
+    reach ✗  1 gap:
+      - variant lines: the average campaign rolls for 5.15 of 6 variant lines
+        (under 5.5) — 2026 missed glider_skunk; 7 missed
+        alpine_ram/abyssal_shark; ... 808 missed abyssal_shark
+
+That is the independence R173 went looking for and could not demonstrate for its
+union. **R173 and R177 are one finding at two scales**, and the lesson is not
+"tighten floors": *when a gate cannot see a regression, check whether it is
+measuring the wrong subject before moving its threshold.*
+
+### Verified
+
+- clean `reach ✓`, broken `REACH_EXIT=1` on the variant clause alone
+- `--anchors` **340/340**; break 347 caught, `BATTERY_EXIT=0`
+- `npm test` green **alone**: 199s wall, 737 CPU-s of 1150
+- **full battery: 340 breaks, 340 caught, 0 missed, `BATTERY_EXIT=0`** (7,782s)
+
+### Next session's first task
+
+R111, R112 or R113 — the queue's presentation and content entries. R176 (evict
+`campaign/monologue.js`, pay MODULE_CAP back to 49) is the other small one.
+
 ## Session 193 — R173: the reach gate asserts what it was only printing ✅
 
 **The one miss of 339 breaks, closed — and a negative result I went looking for

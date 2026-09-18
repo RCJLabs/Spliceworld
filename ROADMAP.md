@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**9 entries queued.** R111, R112, R113, R115, R116, R117, R118, R176, R177.
+**8 entries queued.** R111, R112, R113, R115, R116, R117, R118, R176.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4527,7 +4527,59 @@ suite can check.
   caught, the assertion names which parts no seed reaches, and the full battery
   reports 0 missed.*
 
-- **R177 — Losing R95's pair-ordering costs five parts and nothing goes red.**
+- **R177 — Losing R95's pair-ordering costs five parts and nothing goes red.** ✅
+  *Shipped — and it is the proof R173 could not produce.*
+
+  **The fix was not a tighter floor. It was a different subject.** R173 left
+  this regression measured and unguarded: delete R95's one `pairs.sort(...)`
+  and mean part reach falls 237.2 → 232.1, which is **95.1% against a 95%
+  floor**, while the union stays 244/244 because thirteen seeds between them
+  still stumble onto every line. Both part clauses green on a tree that has
+  genuinely lost content.
+
+  The temptation is to ratchet the floor. R173 already refused that — the clean
+  worst seed is 96.3%, so 0.96 leaves 0.3pp and false-reds on churn — and the
+  refusal was right for a reason worth naming: **the gate was measuring the
+  wrong thing.** R95's rule is about which LINES get rolled for, and 34 of the
+  244 parts sit on six species that arrive by one door. Measured per seed:
+
+                           clean      pair-sort deleted
+      mean lines           5.92/6     5.15/6
+      seeds at 6/6         12 of 13    4 of 13
+      seeds at 4/6          0 of 13    2 of 13
+      union                 6/6        6/6
+
+  `VARIANT_LINE_FLOOR = 5.5`, the midpoint of a measured gap rather than a round
+  figure; it tolerates five seeds each losing a line before firing. **The mean,
+  not the minimum** — the minimum separates too (5 vs 4) and feels more
+  categorical, but the clean tree's own worst seed IS 5 (seed 123 finishes
+  without `glider_skunk`), so a floor there has zero headroom. That is the
+  brittleness R173 declined to ship, declined again.
+
+  **The union is deliberately NOT asserted here**, because it does not separate:
+  both trees reach all six lines across thirteen seeds. Saying so in the gate is
+  cheaper than letting the next reader assume it is covered.
+
+  **AND IT FIRES ALONE**, which is what R173 went looking for and could not
+  find. On the broken tree the part-reach clauses stay green and only this one
+  goes red:
+
+      reach ✗  1 gap:
+        - variant lines: the average campaign rolls for 5.15 of 6 variant lines
+          (under 5.5) — 2026 missed glider_skunk; 7 missed
+          alpine_ram/abyssal_shark; ... 808 missed abyssal_shark
+
+  So R173 and R177 are one finding at two scales, and the lesson is not "tighten
+  floors": **when a gate cannot see a regression, check whether it is measuring
+  the wrong subject before moving its threshold.** Break 347 carries it.
+
+  *Done when: removing the pair-ordering line fails a gate, and the thing that
+  fails is about variant lines being rolled for rather than about a percentage.*
+  — both met.
+
+  The original entry follows.
+
+- **R177 (as queued) — Losing R95's pair-ordering costs five parts and nothing goes red.**
   Found by R173 while looking for a break its new union assertion would catch
   and the mean floor would miss. `tools/sim.js` sorts breeding candidates so a
   line that still owes the Splice-Dex a variant pairs first — R95's rule, and
