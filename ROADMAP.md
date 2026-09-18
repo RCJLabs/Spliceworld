@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**8 entries queued.** R112, R113, R115, R116, R117, R118, R176, R178.
+**7 entries queued.** R112, R113, R115, R116, R117, R118, R176.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4767,7 +4767,7 @@ suite can check.
   them. *Done when: `MODULE_CAP` is back to 49 with a ledger line naming what
   left, or the attempt is written up saying why the two cannot move.*
 
-- **R178 — The release gate is in no tier, and a comment can empty the cache.**
+- **R178 — The release gate is in no tier, and a comment can empty the cache.** ✅
   Found in R111, by hand, one command after `npm test` came back green.
   `node tools/release.js` is **not in the battery's `BASELINE` list and not in
   `npm test`** — the battery's `RELEASE` constant is shard a of smoke, which is
@@ -4786,7 +4786,31 @@ suite can check.
   share a name. *Done when: a stray apostrophe in an sw.js comment fails
   `--baseline`, and a break proves it.*
 
-### 9.7 The opening, and the sitting (R119–R120) — asked for directly
+  **Shipped (Session 196), and the entry was wrong three ways — which is why
+  the premises were checked first.** The constant is not missing: it is
+  `CACHEBUMP`, and break 308 already aimed at it. The names do not collide: a
+  comment in battery.js documents `RELEASE` as R129's breakout block and
+  `CACHEBUMP` as named for what it checks. And "assert the COUNT smoke found"
+  cannot work — smoke sees **131 files and 0 missing on the broken tree, the
+  same count as a clean one**, because its regex demands a known extension, so
+  it skips the fragments and resynchronises at the next plausible pair.
+
+  **The hole was bigger than one gate.** `CACHEBUMP`, `OFFLINE` and `DURABLE`
+  — all three of R100's ship gates — are in neither `BASELINE` nor `npm test`.
+  Each was wired to a break, which proves a gate goes RED on demand, and never
+  to the list that proves it is GREEN on a clean tree. The whole TWA story was
+  verified in one direction only, for eight milestones. Proven before anything
+  was built: with the apostrophe in place, `--baseline` printed *every gate
+  passes on a pristine tree* on a build that caches nothing.
+
+  All three now join the list. They cost **72 CPU-seconds** between them
+  (release 0.0s, durable 8.1s, offline 63.9s); the baseline reads **583s**
+  against the ~7 min it was, and CLAUDE.md now says so. Smoke reads the shell
+  through release.js's exported `shellFiles` — imported, not reimplemented —
+  and that import found a second defect: `release.js` ran its whole gate at
+  module scope, so importing the parser called `process.exit(1)` and would
+  have killed the suite for the right verdict by the wrong mechanism. It is
+  guarded to run only as a command. Breaks 358 and 359, one per tier.
 
 Both phases were **measured before either was written**, and the measurement
 moved one of them: the first premise held exactly, the second did not.

@@ -1,5 +1,97 @@
 # PROGRESS
 
+## Session 196 — R178: the release gate is in no tier ✅
+
+**A gate wired to a break but to no tier is checked in one direction only. R100
+built three of those and nobody noticed for eight milestones.**
+
+### The entry was wrong three ways, and checking it was the whole first hour
+
+I wrote R178 myself, last session, in the ten minutes after finding its
+instance. Every specific in it was wrong:
+
+| the entry said | what the code says |
+|---|---|
+| the constant is missing; add `RELEASE_REAL` | it is `CACHEBUMP`, and break 308 already aims at it |
+| two gates share the name `RELEASE` | they don't — a comment documents `RELEASE` as R129's breakout block |
+| make smoke assert the COUNT it found | the count is **131 both ways**; it cannot reveal the corruption |
+
+That last one matters most. Smoke's regex demands a known extension, so when
+one apostrophe splits the SHELL literal it simply **skips the fragments and
+resynchronises at the next plausible pair** — recovering all 131 real files and
+reporting 0 missing. `shellFiles()` in release.js takes every quoted run and
+saw 139 entries, 38 of them not files. A tolerant parser is not a weak gate; it
+is a blind one.
+
+### The hole, proven before anything was built
+
+    apostrophe in an sw.js comment, then:
+      node tools/release.js   RED   — and in no tier
+      node tools/battery.js --baseline
+        baseline ✓  every gate passes on a pristine tree
+
+Green, on a build whose service worker caches **nothing**. `install()` is
+all-or-nothing.
+
+And it is not one gate. Filtering the shard aliases and machinery out of
+battery.js's 48 constants leaves exactly three that are in neither `BASELINE`
+nor `npm test` — and they are all of R100's ship gates:
+
+    CACHEBUMP   tools/release.js    the shell the worker actually holds
+    OFFLINE     tools/offline.js    a cached game opens on a train
+    DURABLE     tools/durable.js    2 MB survives localStorage being emptied
+
+Each has a break. None had the list that proves it green on a clean tree.
+
+### The fix is a list, not a rewrite
+
+All three join `BASELINE`. They cost **72 CPU-seconds** between them — release
+0.0s, durable 8.1s, offline 63.9s — against a baseline already spending ~1,700
+across four lanes. **The cheapest three gates in the tree were the three nobody
+ran.** The baseline now measures **583s**; CLAUDE.md said ~7 min and now says
+what it costs.
+
+Smoke reads the shell through release.js's exported `shellFiles`, imported
+rather than reimplemented (R174's rule; this block is the counter-example that
+earned it). The weaker regex stays beside it — it answers a different question,
+and rewriting it is a gate's *logic* rather than a rule added next to it, which
+is a full-battery trigger this milestone did not need to pay.
+
+### Two more, both found checking my own work
+
+**`release.js` self-executed on import.** It exports `shellFiles` and also ran
+the whole gate at module scope, so `await import('./release.js')` printed into
+its importer's output and, on a red tree, called `process.exit(1)` before the
+importer's next line. Smoke would have gone red for the right verdict by
+entirely the wrong mechanism, pointing at the wrong file. Guarded to run only
+as a command; `node tools/release.js`, `npm run release` and CACHEBUMP all
+still take the branch, and break 308 still fires.
+
+**Break 359's first draft went MISSED, correctly.** It disabled smoke's new
+rule — and blinding a gate on a clean tree makes nothing red. A break has to
+introduce the defect, not remove the rule that catches it. Re-aimed at the
+apostrophe with smoke as the gate, so the two breaks now prove the two tiers
+independently.
+
+### Verified
+
+- `--anchors` **352/352**
+- breaks **358, 359 and 308: 3 of 3 caught**, `BATTERY_EXIT=0`
+- `--baseline` **green with all three new gates showing**, `BASELINE_EXIT=0`,
+  583s wall
+- `npm test` green **alone**
+- the independence, measured on the sabotaged tree: old regex 131 files / 0
+  missing → green; shared parser 131 entries / 38 missing → red
+
+### Next session's first task
+
+R112 — the player's own dossier, the naming ceremony, and the twenty-odd
+counters the save keeps that no screen renders. R176 (evict
+`campaign/monologue.js`, pay MODULE_CAP back to 49) is the small one, and R111
+left it a second candidate worth more: evicting `audio/sfx.js`, which is 6.0 KB
+of eager code for a module that cannot make a noise until somebody touches the
+screen.
+
 ## Session 195 — R111: creature voices, ambience and haptics ✅
 
 **Every premise of the entry held. The interesting part is what the gate found
