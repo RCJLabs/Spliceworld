@@ -31,12 +31,19 @@ export function setMuted(m) {
 
 // One call from the shell and the settings panel, so a preference cannot be
 // applied in one place and forgotten in the other.
+//
+// It DELEGATES the mute rather than reassigning it, and that is not ceremony:
+// the first draft set `muted` here and repeated "muting stops the bed" as its
+// own clause, so two places knew what a mute does. `setMuted` stays exported
+// because it is still the narrow operation — one preference, one call — and
+// R59's gate names it as the path the toggle reaches. The orphan gate caught
+// the gap the moment nothing outside this file called it any more.
 export function applyAudioSettings(settings = {}) {
-  muted = !!settings.muted;
+  setMuted(!!settings.muted);
   volume = Number.isFinite(settings.volume) ? Math.min(Math.max(settings.volume, 0), 1) : 1;
   ambience = settings.ambience !== false;
   haptics = settings.haptics !== false;
-  if (muted || !ambience) stopAmbience();
+  if (!ambience) stopAmbience();
 }
 
 // One voice: type, frequency glide, duration, volume envelope.
