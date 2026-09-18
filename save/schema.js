@@ -92,7 +92,15 @@ const ROW_LISTS = new Set([
 // The repair is `null`, and it costs the player nothing: neither an array nor
 // a number is a fight, so there is no run being discarded — which is the test
 // the Ascent rule actually asks of a repair.
-const OBJECT_SLOTS = new Set([
+// R112 — EXPORTED, because the gate that proved this rule was a lottery. The
+// rule was found by R114's 200-sample fuzz reaching `battle` for the first
+// time in its life, which R111's three new `settings` keys had shifted it into
+// — and R112 taking ONE key out of the save (`spliceCount`) shifted it
+// straight back out. Break 357 went from caught to MISSED with nothing about
+// this pass changed. `tools/smoke.js` now walks this list explicitly, so the
+// gate does not depend on the dice, and adding a slot here is covered the day
+// it is added rather than the day the sampling happens to find it.
+export const OBJECT_SLOTS = new Set([
   'battle', 'resequencer', 'genome', 'campaign.opReport',
 ]);
 

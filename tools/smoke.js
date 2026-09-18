@@ -23819,6 +23819,85 @@ if (inShard('untrusted')) {
       'and is returned byte for byte — a repair that edits a healthy save is a bug, not a guard');
   }
 
+
+  // 6c. R112 — EVERY OBJECT SLOT, EXPLICITLY, BECAUSE THE FUZZ IS A LOTTERY.
+  //
+  //     R114's OBJECT_SLOTS pass exists because the fuzz below reached
+  //     `state.battle` for the first time in its life: `[]` is TRUTHY, the War
+  //     Room's `if (state.battle)` handed it to `renderArena`, and the screen
+  //     went down. The entry called that an argument for a fuzz over a list of
+  //     cases somebody thought of, and it is — for FINDING the rule.
+  //
+  //     It is not a gate for KEEPING it. The fuzz draws 200 (path, mutant)
+  //     pairs out of a day-180 save's several thousand paths, off one seeded
+  //     stream, so which fields it reaches is a function of the save's SHAPE.
+  //     R111 added three keys to `settings` and the sampling moved onto
+  //     `battle`; R112 removed one key (`spliceCount`) and it moved straight
+  //     off again. Break 357 went from caught to MISSED with nothing about the
+  //     rule, the pass or the renderer changed — the dice rolled differently.
+  //
+  //     So the fuzz keeps its job of finding what nobody listed, and this
+  //     walks the list the engine actually holds. Read off `OBJECT_SLOTS`
+  //     itself rather than typed here (R72's rule), so a fifth slot is covered
+  //     the day it is added.
+  {
+    const { cleanSave, OBJECT_SLOTS } = await import('../save/schema.js');
+    const slots = [...OBJECT_SLOTS];
+    assert.ok(slots.length >= 4, `the engine's slot list is being read (${slots.join(', ')})`);
+
+    // Everything truthy that is not an object, plus the falsy ones that must
+    // be left alone. A slot is a thing or it is nothing; there is no third
+    // state, and a repair to `null` discards no run — which is the test the
+    // Ascent rule asks of a repair.
+    const NOT_A_SLOT = [[], [1, 2], 'hello', 42, 1e308, true];
+    // `null` only. A save arrives as JSON and JSON has no `undefined` —
+    // `JSON.stringify` drops the key entirely — so an absent slot reaches
+    // `cleanSave` as a missing key or as null, never as the third thing. The
+    // first draft of this asserted `undefined` was left alone, which is a
+    // claim about a value no save can carry: `cleanSave` normalises it to
+    // null and is right to.
+    const LEFT_ALONE = [null];
+
+    for (const at of slots) {
+      const path = at.split('.');
+      const leaf = path.pop();
+      for (const bad of NOT_A_SLOT) {
+        const s = walkedSave({ days: 180 });
+        let node = s;
+        for (const k of path) node = node?.[k];
+        assert.ok(node && typeof node === 'object', `${at} has somewhere to sit on a real save`);
+        node[leaf] = structuredClone(bad);
+        const { save: fixed, repairs } = cleanSave(s);
+        let got = fixed;
+        for (const k of [...path, leaf]) got = got?.[k];
+        assert.equal(got, null,
+          `${at} = ${JSON.stringify(bad)} is emptied rather than handed to a renderer`);
+        assert.ok(repairs.some((r) => r.at === at && r.why === 'not-a-slot'),
+          `and the repair says which field and why (${repairs.map((r) => r.at).join(', ')})`);
+
+        // The half that matters to a player: every screen still paints.
+        for (const { screen, fn, file } of shellScreenMap()) {
+          const el = stubEl();
+          try {
+            (await import(`../${file}`))[fn](el,
+              { state: fixed, content, now: () => now, save: () => {}, refreshTicker: () => {} });
+          } catch (err) {
+            assert.fail(`${at} = ${JSON.stringify(bad)} broke the ${screen} render: ${err.message}`);
+          }
+        }
+      }
+      for (const fine of LEFT_ALONE) {
+        const s = walkedSave({ days: 180 });
+        let node = s;
+        for (const k of path) node = node?.[k];
+        node[leaf] = fine;
+        const { repairs } = cleanSave(s);
+        assert.ok(!repairs.some((r) => r.at === at),
+          `${at} = ${String(fine)} is already empty and is not "repaired" (${JSON.stringify(repairs)})`);
+      }
+    }
+  }
+
   // 7. THE FUZZ. Every case above is one somebody thought of; this is for the
   //    rest. A real day-180 save, mutated at one field, must import or refuse
   //    — never throw — and whatever survives must paint every screen.
