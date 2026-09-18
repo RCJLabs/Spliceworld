@@ -3672,13 +3672,20 @@ const BREAKS = [
     to: "  // R111: the room tone and the haptics, lazy for the eager budget's sake",
   },
   {
-    // AND THE SMOKE BLOCK STOPS READING THE SHELL THE WAY THE BROWSER DOES.
-    // The weaker regex beside it still passes on this tree — that is the whole
-    // finding — so this break proves the ADDED rule is the one doing the work.
-    n: 359, gate: SHARD_A, name: 'smoke stops parsing the shell as shipped, and a split literal reads clean again',
-    file: 'tools/smoke.js',
-    anchor: "    const precached = shellAsShipped(sw);",
-    to: "    const precached = [];",
+    // THE SAME APOSTROPHE, AIMED AT THE OTHER TIER. 358 proves `--baseline`
+    // sees it; this proves `npm test` does, because R178's point is that the
+    // defect must not be able to cross EITHER of them.
+    //
+    // The first draft of this break disabled smoke's new rule instead — and
+    // went MISSED, correctly: blinding a gate on a clean tree makes nothing
+    // red. A break has to introduce the defect, not remove the rule that
+    // catches it. Note what this one demonstrates in passing: the weaker
+    // regex two lines above the new assertion stays GREEN on this tree, so
+    // the red comes entirely from reading the shell as shipped.
+    n: 359, gate: SHARD_A, name: 'an apostrophe in an sw.js comment, and the suite is the tier that has to see it',
+    file: 'sw.js',
+    anchor: '  // R111: the room tone and the haptics. Lazy, to keep them out of the eager',
+    to: "  // R111: the room tone and the haptics, lazy for the budget's sake",
   },
 
   // R175 — the stable says how big it is and what makes it bigger.
