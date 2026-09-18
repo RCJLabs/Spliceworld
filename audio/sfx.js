@@ -178,31 +178,32 @@ export function play(name) {
 // says why. What stays here is the JUDGEMENT of whether a sound is allowed at
 // all, so the mute keeps one home.
 //
-// WRITTEN AS `import().then({ … })` ON PURPOSE. `await import()` into a
-// variable reads better and the orphan gate cannot see through it — it scans
-// for this exact shape, so the destructured form is what keeps a lazy export
-// from being reported dead. The gate's blind spot is real and worth widening
-// one day; using the house idiom is the cheaper answer today. The promise is
-// cached rather than the module, so two navigations cannot race two fetches.
-let roomP = null;
-const room = () => (roomP ??= import('./room.js'));
+// WRITTEN AS A DIRECT DYNAMIC IMPORT WITH A DESTRUCTURED THEN, THREE TIMES. The
+// orphan gate scans for that exact shape; `await import()` into a variable is
+// invisible to it, and so is a `room()` helper that returns the promise —
+// both were tried, and both had it report a live export dead. No cache here
+// either: a repeated dynamic import of one specifier is already one fetch and
+// one module instance, so a cache would only have hidden the shape the gate
+// reads. `everStarted` exists so a stop never fetches a file to discover
+// there is no bed.
+let everStarted = false;
 
-// Nothing loaded means nothing is playing, so a stop never fetches a file
-// just to discover there is no bed.
 export function stopAmbience() {
-  if (roomP) roomP.then(({ stopAmbience: stop }) => stop()).catch(() => {});
+  if (!everStarted) return;
+  import('./room.js').then(({ stopAmbience: stop }) => stop()).catch(() => {});
 }
 
 export function startAmbience(screen, content) {
   if (muted || !ambience || !ctx) return Promise.resolve();
-  return room()
+  everStarted = true;
+  return import('./room.js')
     .then(({ startAmbience: start }) => start(ctx, screen, content, volume))
     .catch(() => { /* no bed today; the game is unchanged */ });
 }
 
 export function buzz(kind, content) {
   if (!haptics || muted) return Promise.resolve();
-  return room()
+  return import('./room.js')
     .then(({ buzz: fire }) => fire(kind, content))
     .catch(() => { /* not every device shakes */ });
 }
