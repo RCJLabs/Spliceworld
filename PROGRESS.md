@@ -83,19 +83,86 @@ table is silent rather than broken, and a muted game does not shake the phone.
 A panel that renders a control and a synth that ignores it passes a source check
 twice. That is the whole argument for the fake context.
 
+### Three more the gates found, after the feature was already green
+
+**4. `setMuted` went dead.** Routing the shell and the panel through
+`applyAudioSettings` left nothing calling it. Not an exemption: the first draft
+SET `muted` there and repeated "muting stops the bed" as its own clause, so two
+functions in one file knew what a mute does. It delegates now.
+
+**5. The eager budget.** R111 put 2.6 KB of code and 3.3 KB of prose into
+`audio/sfx.js`, which is eager, and both caps fired. The note beside KB_CAP says
+the answer to a third raise is the lever, not the number — so `audio/room.js` is
+new and LAZY, holding the noise buffer, the bed and the vibration patterns. None
+of it is first-frame work: there is no AudioContext before a gesture, so a bed
+cannot start before one. Prose paid three ways (the lazy module, sfx.js's own
+comments cut 3.3 KB → 1.3, and R59's history block moved to `data/notes/voice.md`
+because R111 is the milestone that answered it). What was left is a system
+arriving: **KB_CAP 319 → 321** (measured 320.1), **PROSE_CAP 249 → 251** (250.2).
+Both ledgers name the same next lever, and it is real: evict `audio/sfx.js`
+itself — 6.0 KB of code for a module that cannot make a noise until somebody
+touches the screen. MODULE_CAP is at 50 of 50 with no headroom, which is the
+same finding from the other end.
+
+**6. `state.battle = []` crashes the War Room.** This one is NOT an R111 bug —
+it has always been true. R114's fuzz simply never reached the field until R111's
+three new `settings` keys shifted its path sampling. `[]` is truthy, so
+`if (state.battle)` handed it to `renderArena`, which read `.player.team` off
+nothing. `save/schema.js` gains a fifth pass for SLOTS that hold one thing or
+nothing; the repair is `null`, which discards no run. That is the argument for a
+fuzz over a list of cases somebody thought of, made by the fuzz itself.
+
+### Two I caused, both the same shape
+
+Making the room lazy turned `startAmbience` and `buzz` into promises, and the
+gate's assertions had to await them. Then the orphan scanner reported
+`startAmbience` dead **twice**: it matches a dynamic import followed immediately
+by a destructured `.then`, so both `await import()` into a variable and a
+`room()` helper returning the promise hid the shape. Three direct imports now,
+checked against the gate's own regex before running the suite rather than after.
+The scanner's blind spot is real and worth widening; it is a gate's logic, so it
+was not this milestone's to change.
+
+(`stopAmbience` and `buzz` escaped being called dead only because their names
+appear in that file's PROSE — the gate over-counting toward "has a reader",
+which its own comment says is the safe direction.)
+
 ### Verified
 
-- `--anchors` **349/349**
-- breaks 348–356 caught; `BATTERY_EXIT=0`
-- baseline green on a pristine tree
-- `npm test` green **alone**
-- no console errors on a fresh save or a migrated one; 380px holds
+- `--anchors` **350/350**
+- `--baseline` — every gate green on a pristine tree, `BATTERY_EXIT=0`
+- breaks **348–357: 10 of 10 caught, 0 missed**, `BATTERY_EXIT=0`
+- `smoke ✓ … save v57`; the timbre block reports **41/41 distinct voices, 3
+  controls heard through a fake context**
+- `npm test` green **alone**: 996 CPU-s of 1246 budgeted, 316.1s wall on 3.2
+  effective lanes. (CLAUDE.md records 237s on 3.8 clean; this box ran slower
+  across the board, and the budget is what the gate asserts.)
+- the browser gates in the baseline cover the rest of the Definition of Done —
+  keyboard walk, 380px heights, and a real old save opening quietly
+
+### And one the gates did not find — R178, filed
+
+After `npm test` came back green I ran `node tools/release.js` out of habit, and
+it was **red**. An apostrophe inside an sw.js comment ("the eager budget's
+sake"): `SHELL` is parsed by splitting on quotes, so one apostrophe turned 38
+real entries into fragments — and `install()` rejects if any precached path is
+missing, so **nothing would have been cached at all**. The TWA would have
+shipped with no offline shell.
+
+`node tools/release.js` is in NEITHER tier: not in the battery's `BASELINE`
+list, not in `npm test`. The battery's `RELEASE` constant is shard a of smoke,
+a different gate wearing the same name. And smoke's own PWA block missed it
+because its regex only matches quoted strings ending in a known extension, so
+the fragments were invisible and it checked a shorter list while reporting PASS.
+
+Filed as **R178** rather than fixed here: putting a gate into `BASELINE` is work
+this milestone's criterion does not cover.
 
 ### Next session's first task
 
-R112 — the player's own dossier, the naming ceremony, and about twenty counters
-the save keeps that no screen renders. R176 (evict `campaign/monologue.js`, pay
-MODULE_CAP back to 49) is the small one if the evening is short.
+**R178** — it is small, it is a hole in the verification tier itself, and this
+session only caught its instance by luck. Then R112 (the player's dossier and
+the twenty counters no screen renders), or R176 if the evening is short.
 
 ## Session 194 — R177: the gate was measuring the wrong subject ✅
 

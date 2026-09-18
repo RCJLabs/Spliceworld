@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**7 entries queued.** R112, R113, R115, R116, R117, R118, R176.
+**8 entries queued.** R112, R113, R115, R116, R117, R118, R176, R178.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4230,8 +4230,19 @@ suite can check.
   The id now spreads each organ inside its draw band: **36 depths**, bands
   still disjoint, so a draw-3 organ always wobbles harder than the draw-2 one.
   R59's "exactly one function reaches the synth" also refused `speak` as a
-  second door within the hour; it hands its tone to `play` instead. Breaks
-  348–356.
+  second door within the hour; it hands its tone to `play` instead.
+
+  **And three the gates found after it was green.** The orphan gate called
+  `setMuted` dead once nothing outside its file called it (`applyAudioSettings`
+  delegates now rather than restating what a mute does). The eager budget fired,
+  so `audio/room.js` is new and LAZY — the noise buffer, the bed and the
+  vibration patterns, none of it first-frame work — and after that tax KB_CAP
+  319 → 321 and PROSE_CAP 249 → 251, both ledgers naming the same next lever:
+  evict `audio/sfx.js` itself. And R114's fuzz reached `state.battle` for the
+  first time in its life, because three new `settings` keys shifted its path
+  sampling: `battle: []` is truthy, so the War Room handed it to `renderArena`.
+  Not an R111 bug — a standing one, found by R111's shape. `save/schema.js`
+  gains a SLOTS pass. Breaks 348–357, all caught.
 
 **UI.**
 
@@ -4755,6 +4766,25 @@ suite can check.
   whether anything on the boot path actually calls those two before moving
   them. *Done when: `MODULE_CAP` is back to 49 with a ledger line naming what
   left, or the attempt is written up saying why the two cannot move.*
+
+- **R178 — The release gate is in no tier, and a comment can empty the cache.**
+  Found in R111, by hand, one command after `npm test` came back green.
+  `node tools/release.js` is **not in the battery's `BASELINE` list and not in
+  `npm test`** — the battery's `RELEASE` constant is shard a of smoke, which is
+  a different thing wearing the same name. So the only rule that reads the
+  service worker's shell as the browser will is one nobody's tier runs.
+  What it caught: an **apostrophe inside an sw.js comment** ("the eager
+  budget's sake"). `SHELL` is parsed by splitting on quotes, so one apostrophe
+  turned 38 real entries into fragments — and `install()` rejects if any
+  precached path is missing, which means **nothing is cached at all** and the
+  TWA has no offline shell. Smoke's own PWA block missed it because its regex
+  only matches quoted strings ending in a known extension, so the fragments
+  were invisible and it silently checked a shorter list: a false negative in a
+  gate that reported PASS. Proposed, small: put `RELEASE_REAL` in `BASELINE`,
+  make smoke's shell parser assert the COUNT it found rather than only the
+  files it recognised, and rename the battery's `RELEASE` so two gates do not
+  share a name. *Done when: a stray apostrophe in an sw.js comment fails
+  `--baseline`, and a break proves it.*
 
 ### 9.7 The opening, and the sitting (R119–R120) — asked for directly
 
