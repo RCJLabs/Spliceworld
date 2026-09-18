@@ -79,6 +79,24 @@ const ROW_LISTS = new Set([
   'campaign.loose', 'campaign.operations',
 ]);
 
+// R111 — SLOTS THAT HOLD ONE THING IN PROGRESS, OR NOTHING. `newGameState`
+// has all of these as `null`, so the shape walk below cannot tell them from a
+// slot that will later hold a string id (`starterLab` is exactly that), which
+// is why this is a list rather than a rule derived from the fresh state.
+//
+// `battle` is the one that was found. R114's fuzz never reached it — until
+// R111 added three keys to `settings`, which shifted the path sampling and
+// put `state.battle` under the mutator for the first time. A `[]` or a big
+// number there is TRUTHY, so the War Room's `if (state.battle)` handed it
+// straight to `renderArena`, which read `.player.team` off nothing.
+//
+// The repair is `null`, and it costs the player nothing: neither an array nor
+// a number is a fight, so there is no run being discarded — which is the test
+// the Ascent rule actually asks of a repair.
+const OBJECT_SLOTS = new Set([
+  'battle', 'resequencer', 'genome', 'campaign.opReport',
+]);
+
 // Angle brackets, everywhere. Measured before this was written: a day-60 save
 // holds 3,120 strings and NOT ONE of them contains `<` or `>`. That is what
 // licenses a rule about every string rather than a list of paths somebody has
@@ -179,6 +197,20 @@ export function cleanSave(save, { limit = TEXT_LIMIT } = {}) {
     }
   };
   clamp(save);
+
+  // 5. The slots, emptied when they hold something that is not a thing.
+  const slots = (node, path) => {
+    if (!node || typeof node !== 'object') return;
+    for (const [key, value] of Object.entries(node)) {
+      const at = path ? `${path}.${key}` : key;
+      if (OBJECT_SLOTS.has(at)) {
+        if (value !== null && (typeof value !== 'object' || Array.isArray(value))) {
+          node[key] = null; repairs.push({ at, why: 'not-a-slot' });
+        }
+      } else if (value && typeof value === 'object' && !Array.isArray(value)) slots(value, at);
+    }
+  };
+  slots(save, '');
 
   return { save, repairs };
 }

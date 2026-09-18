@@ -3643,6 +3643,18 @@ const BREAKS = [
     anchor: '  const within = ((hashString(organ) % 1000) / 1000 - 0.5) * spread;',
     to: '  const within = 0;',
   },
+  {
+    // AND THE SLOTS STOP BEING EMPTIED. `state.battle = []` is TRUTHY, so the
+    // War Room's `if (state.battle)` hands it to `renderArena`, which reads
+    // `.player.team` off nothing and takes the screen down. R114's fuzz never
+    // reached this field until R111 added three keys to `settings` and shifted
+    // its path sampling — which is the argument for a fuzz over a list of
+    // cases somebody thought of, made by the fuzz itself.
+    n: 357, gate: SHARD_B, name: 'a save whose battle slot holds a list still reaches the arena renderer',
+    file: 'save/schema.js',
+    anchor: "      if (OBJECT_SLOTS.has(at)) {",
+    to: "      if (false) {",
+  },
 
   // R175 — the stable says how big it is and what makes it bigger.
   {
