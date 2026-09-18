@@ -130,6 +130,11 @@ export function indexContent(raw) {
     // before a LATE fetch landed would print nothing at all, and an empty
     // battle log is worse than a late portrait.
     copy: raw.copy ?? {},
+    // R111 — the creature voices' tuning. LATE, unlike `copy`: nothing makes a
+    // sound before the first paint, and a voice that arrives a beat after the
+    // portrait costs the player nothing. `{}` until then, and `voiceSpec`
+    // falls back rather than throwing — silence is an acceptable first frame.
+    voice: raw.voice ?? {},
     // R109 — the deadpan filler the header shows before the world has said
     // anything. Eleven of these lived in `main.js`, which CLAUDE.md forbids,
     // and the shell picked one by `seed % 11` — ten were unreachable.
