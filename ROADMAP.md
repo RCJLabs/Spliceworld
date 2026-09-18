@@ -4333,6 +4333,18 @@ suite can check.
   claimed 1061 with nine KB of slack, and the tree measured 1068 the commit
   before this one. 1070 → 1085, with the ledger saying which half is R112's.
 
+  **THE FULL BATTERY CAME BACK 357 OF 358, AND THE ONE MISS WAS THE BEST
+  FINDING OF THE SESSION.** Break 357 — `battle: []` reaching `renderArena` —
+  went MISSED with nothing about the rule, the pass or the renderer changed.
+  R114's `OBJECT_SLOTS` was found by a 200-sample fuzz that reached
+  `state.battle` only because R111's three new `settings` keys had shifted its
+  path sampling onto it; R112 removed ONE key and it shifted straight back off.
+  A gate whose reach is incidental is R157's worn floor. The fuzz keeps finding
+  what nobody listed, and smoke now walks `OBJECT_SLOTS` itself — every slot,
+  six non-object values each, emptied, named in the repairs, and every screen
+  still painting — with the list read off the engine so a fifth slot is covered
+  the day it is added.
+
   *Done when: every non-clock counter in `newGameState` is either on the
   Yearbook or gone, and smoke walks a fresh save to a name without visiting
   the Labs tab.* — **both green.** The counter walk is executable rather than

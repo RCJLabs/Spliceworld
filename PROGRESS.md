@@ -109,6 +109,31 @@ kilobytes. R112's own cost is 8 KB and one request; the rest was already there.
 1070 → 1085, and the ledger now says which half is which and tells the next
 milestone to re-measure first.
 
+### The full battery came back 357 of 358, and the one miss was the best finding
+
+Break 357 — "a save whose battle slot holds a list still reaches the arena
+renderer" — went **MISSED**. Nothing about the rule, the pass or the renderer
+had changed. The **gate** had, by accident.
+
+R114's `OBJECT_SLOTS` pass exists because its 200-sample fuzz reached
+`state.battle` for the first time in its life; R111's three new `settings` keys
+had shifted the sampling onto it. The fuzz draws (path, mutant) pairs out of a
+day-180 save's several thousand paths off one seeded stream, so **which fields
+it reaches is a function of the save's shape**. R112 removed one key and the
+sampling moved straight back off. That is R157's worn floor again: a gate whose
+reach is incidental is a gate that goes quiet without telling you.
+
+The fuzz keeps its job — finding what nobody listed. Smoke now also walks
+`OBJECT_SLOTS` itself: every slot, six non-object values each, asserting the
+field is emptied, that the repair names itself, and that every screen still
+paints. The list is read off the engine, so a fifth slot is covered the day it
+is added. `357 caught` again, on demand.
+
+(The first draft of that walk asserted `undefined` was left alone. It is not,
+and should not be: a save arrives as JSON, JSON has no `undefined`, and
+`cleanSave` normalising it to null is right. My own new assertion caught my own
+wrong claim, which is the argument for writing the explicit case at all.)
+
 ### Known issues
 
 - The philosophy card is a prompt on the map view, not a ceremony overlay. It
@@ -122,6 +147,10 @@ milestone to re-measure first.
 - `cleanSave`'s `shape()` pass still replaces `save.ranch` wholesale if it is
   not a plain object — a herd wipe in code that runs on every load. R114's,
   not R112's, and no evidence it has ever fired. Worth guarding.
+
+- The `stripComments` brace-counting bug is filed, not fixed. It is a gate
+  looking at the wrong text, which is the shape R110 and R174 both spent a
+  milestone on; worth one of its own.
 
 ### Next session's first task
 
