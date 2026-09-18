@@ -4319,6 +4319,20 @@ suite can check.
   `daysPlayed` in the same module, so the two screens cannot disagree by one.
   The third argument is optional, so every two-argument caller is untouched.
 
+  **TWO FINDINGS THE BASELINE HANDED OVER, NEITHER OF THEM THIS MILESTONE'S.**
+  `stripComments` in tools/source.js counts `${` and `}` and not a bare `{`, so
+  an object literal inside a template hole leaves its depth one short — harmless
+  at the top level, but inside a NESTED template it ends the outer one early and
+  every comment after it is counted as player-facing copy. Written inline, the
+  philosophy card added **36 phantom words** to the copy ledger from comments
+  two hundred lines away. And `content.voice` is `{}` in the browser: R111
+  shipped it LATE, and `loadShapes` attaches geometry and voice POOLS and
+  nothing else, so every creature is on fallback tuning. Node reads it through
+  `indexContent`, which is why the timbre gate is green. Both filed, neither
+  fixed here. **FIRST_PAINT_KB had also drifted seven kilobytes**: R174's ledger
+  claimed 1061 with nine KB of slack, and the tree measured 1068 the commit
+  before this one. 1070 → 1085, with the ledger saying which half is R112's.
+
   *Done when: every non-clock counter in `newGameState` is either on the
   Yearbook or gone, and smoke walks a fresh save to a name without visiting
   the Labs tab.* — **both green.** The counter walk is executable rather than

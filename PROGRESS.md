@@ -82,6 +82,33 @@ WAS and not only what is currently on the shelf. Its `days` comes from
 `daysPlayed` in the same module the Yearbook reads, so the two screens cannot
 disagree by one.
 
+### Two things the baseline found on the way, neither of them R112's
+
+**`stripComments` cannot count a bare brace.** tools/source.js walks a template
+literal by counting `${` and `}` and ignores a plain `{`, so an object literal
+inside a hole leaves its depth one short. Harmless at the top level — the
+imbalance is symmetric and the closing backtick still lands right. Inside a
+NESTED template it ends the outer one early, and every comment after it is read
+as player-facing copy. Written inline, the philosophy card added **36 phantom
+words** to the copy ledger, all of them from comments two hundred lines further
+down. The card is a function now, which sidesteps it. The scanner is still
+wrong.
+
+**`content.voice` is `{}` in the browser.** R111 shipped `data/voice.json` as
+LATE, and `loadShapes` merges `attachShapes` (geometry) and `attachVoicePools`
+(the spare phrasings) and nothing else. Nothing attaches `voice` itself, so
+every creature in the browser is running on `voiceSpec`'s fallback tuning. Node
+tools read it directly through `indexContent`, which is why the timbre gate is
+green. Filed against R111; this is also why R112's Yearbook data is in CORE
+rather than LATE — there is no working LATE path for a whole file.
+
+**And FIRST_PAINT_KB had drifted seven kilobytes without anyone noticing.**
+R174's ledger said "measured at 1061 ... nine KB of slack", five milestones
+ago. Measured at `dfa2359`: **1068**. The gate has been running on two
+kilobytes. R112's own cost is 8 KB and one request; the rest was already there.
+1070 → 1085, and the ledger now says which half is which and tells the next
+milestone to re-measure first.
+
 ### Known issues
 
 - The philosophy card is a prompt on the map view, not a ceremony overlay. It
