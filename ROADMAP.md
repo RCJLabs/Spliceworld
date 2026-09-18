@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**8 entries queued.** R111, R112, R113, R115, R116, R117, R118, R176.
+**7 entries queued.** R112, R113, R115, R116, R117, R118, R176.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4180,7 +4180,7 @@ suite can check.
   short developer allowlist, and the tone sweep promoted to a gate over one
   tree. *Done when: game modules carry under 300 prose words, the scopecheck
   rule holds, and the tone gate reads every player-facing word.*
-- **R111 — Feel: creature voices, ambience and haptics.** `audio/sfx.js`
+- **R111 — Feel: creature voices, ambience and haptics.** ✅ `audio/sfx.js`
   holds **19 stingers** and **none of them depends on the creature** — a
   goat-headed tank and a moth-winged kite land the same `hit`; the Ranch,
   Pens, Vault, Theater and Dex are silent between taps; the only audio
@@ -4197,6 +4197,41 @@ suite can check.
   the creatures motion; this gives them a sound. *Done when: smoke asserts
   two genomes yield two voice specs and one genome always the same, and the
   settings panel carries volume, ambience and haptics controls.*
+
+  **Shipped (Session 195).** Every premise held on re-measurement: **19**
+  stingers, none of them creature-dependent, one gesture, zero haptics, and
+  mute as the entire audio settings surface.
+
+  `data/voice.json` + `audio/voice.js` (lazy, LATE): mass to pitch walked
+  backwards so heavier is lower, the head's first tag to waveform,
+  the organ's `phys.draw` to modulation depth, and temperament to contour —
+  the first thing in the game to read BOTH of R13's axes. Seeded on the
+  creature's id, so a rename does not change what it sounds like. Heard on a
+  dossier opened, a KO and a decant. `SAVE_VERSION` **57**: `volume`,
+  `ambience`, `haptics`, all arriving on, behind the mute.
+
+  **The slider is a picker.** The entry asked for one; Wave 1.5's rule is
+  that no OS control appears anywhere in this game, and a range input is one.
+  Three steps — Full, Half, Quiet — is all a kazoo needs, and the words are
+  data.
+
+  **The gate hears rather than reads.** `timbre` (shard d) drives the shipped
+  synth through a fake `AudioContext`, because a panel that renders a control
+  and a synth that ignores it passes a source check twice. It asks each of the
+  four anatomical axes SEPARATELY, and that clause found both of this
+  milestone's real defects. (1) `data/voice.json` was fetched and never named
+  in `indexContent`, so `content.voice` came back undefined — and 41 of 41
+  specs still came back distinct, because the module's own fallbacks keep
+  pitch, modulation and contour moving. Only the wave collapsed, to one value
+  for the whole county. R41's training.json for the third time; R102 and R108
+  each paid it once between. (2) All 43 organs declare a `phys.draw` of 2 or 3
+  — 42 of them declare 3 — so reading the draw alone gave the catalogue **two**
+  modulation depths while the module's own comment said "every organ differs".
+  The id now spreads each organ inside its draw band: **36 depths**, bands
+  still disjoint, so a draw-3 organ always wobbles harder than the draw-2 one.
+  R59's "exactly one function reaches the synth" also refused `speak` as a
+  second door within the hour; it hands its tone to `play` instead. Breaks
+  348–356.
 
 **UI.**
 

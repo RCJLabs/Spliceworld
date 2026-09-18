@@ -1,5 +1,102 @@
 # PROGRESS
 
+## Session 195 — R111: creature voices, ambience and haptics ✅
+
+**Every premise of the entry held. The interesting part is what the gate found
+after the feature was already "working".**
+
+### Re-measured before building
+
+    19 stingers in audio/sfx.js        confirmed
+    none creature-dependent            confirmed — a goat tank and a moth kite land the same `hit`
+    Ranch/Pens/Vault/Theater/Dex       silent between taps
+    audio settings surface             `muted`, and nothing else
+    gestures in the whole game         one (the arena's hold)
+    haptics                            zero
+
+### The voice
+
+`data/voice.json` + `audio/voice.js` (lazy, LATE in the loader). Four readings
+of the anatomy, one property of a note each:
+
+    mass         -> pitch       walked BACKWARDS, so heavier is lower
+    head's tag   -> waveform    Aquatic sings, Armored buzzes, 7 tagless heads take the fallback
+    organ        -> modulation  draw sets the band, the organ's id sets its place in it
+    temperament  -> contour     Skittish rises, Bullish falls, most hold level
+
+Seeded on the creature's id, so a rename does not change what it sounds like.
+Heard on a dossier opened, a KO, and a decant. `SAVE_VERSION` **57**: `volume`,
+`ambience`, `haptics`, all arriving on, behind the mute that already existed.
+
+**The slider is a picker.** The entry asked for a volume slider; Wave 1.5's rule
+is that no OS control appears anywhere in this game, and a range input is one.
+Three steps — Full, Half, Quiet.
+
+### Three defects, all found by gates, none by me
+
+**1. The tuning file was fetched and never indexed.** `data/voice.json` reached
+the browser; the whitelist in `indexContent` did not name it; `content.voice`
+came back `undefined`; every spec ran on the module's own fallbacks. It looked
+like it worked. R41's training.json for the third time — R102 and R108 each paid
+it once between.
+
+What makes this one worth writing down is *how nearly invisible it was*:
+
+                          clean     tuning unindexed
+    distinct specs        41/41     41/41
+    wave values            4         1
+    pitch values          20        20
+    mod values            36        36
+    contour values         3         3
+
+The criterion's own sentence — two genomes, two specs — stays **green on the
+broken tree**, because the module's fallbacks keep three axes moving. Only
+asking each axis SEPARATELY sees it.
+
+**2. The organ mapping was two organs wide.** All 43 organs declare a
+`phys.draw` of 2 or 3 — 42 of them declare 3 — so reading the draw alone gave
+the entire catalogue **two** modulation depths, under a comment in my own module
+promising that every organ differs. The axis floor is what made anyone look.
+Fixed by letting the id spread each organ *inside* its draw band: 36 depths,
+bands still disjoint, so a draw-3 organ always wobbles harder than the draw-2
+one. The meaning survives; the resolution arrives.
+
+**3. `speak` was a second door to the synth.** R59's "exactly one function
+reaches the synth" refused it within the hour, and was right to: that rule is
+what stops a new sound arriving with its own path around the mute. `speak` now
+hands its tone to `play` instead of reaching the oscillator itself. One mute
+check for every sound this game makes.
+
+(A fourth, smaller: the noise buffer's `Math.random()`. Two seconds of looped
+hiss is the one place in this repo where nobody could tell — which is exactly
+why CLAUDE.md's rule has no "unless it does not matter" clause. Seeded.)
+
+### The gate hears rather than reads
+
+`timbre`, shard d. Both halves of the criterion are asserted on BEHAVIOUR. The
+three controls are driven through a **fake `AudioContext`**, so the gate hears
+what the player would: the volume actually scales every gain node, zero volume
+does not produce an illegal exponential ramp, the bed does not restart when you
+navigate back to a screen you are already on, a screen with no entry in the
+table is silent rather than broken, and a muted game does not shake the phone.
+
+A panel that renders a control and a synth that ignores it passes a source check
+twice. That is the whole argument for the fake context.
+
+### Verified
+
+- `--anchors` **349/349**
+- breaks 348–356 caught; `BATTERY_EXIT=0`
+- baseline green on a pristine tree
+- `npm test` green **alone**
+- no console errors on a fresh save or a migrated one; 380px holds
+
+### Next session's first task
+
+R112 — the player's own dossier, the naming ceremony, and about twenty counters
+the save keeps that no screen renders. R176 (evict `campaign/monologue.js`, pay
+MODULE_CAP back to 49) is the small one if the evening is short.
+
 ## Session 194 — R177: the gate was measuring the wrong subject ✅
 
 **R173 left this regression measured and unguarded. R177 is the proof R173

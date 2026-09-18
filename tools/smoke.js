@@ -15407,15 +15407,21 @@ if (inShard('timbre')) {
   // so a species added next milestone is in the sample the day it lands.
   const heads = Object.values(content.parts).filter((p) => p.slot === 'head');
   const organs = Object.values(content.parts).filter((p) => p.slot === 'organ');
-  const mk = (i, head, organ, extra = {}) => ({
+  // R13 puts a temperament on every settled chimera, so the sample carries one
+  // too — three of them, rotated, covering the skittish / bullish / neither
+  // split the contour reads. A sample without temperaments would show that
+  // axis standing still and the floor below would be measuring the FIXTURE
+  // rather than the mapping.
+  const MOODS = [{ nerve: 12, temper: 0 }, { nerve: 88, temper: 55 }, { nerve: 88, temper: -55 }];
+  const mk = (i, head, organ) => ({
     id: `voice-${i}`,
     name: `Subject ${i}`,
     frame: 'standard',
+    temperament: MOODS[i % MOODS.length],
     tokens: {
       head: { partId: head.id },
       ...(organ ? { organ: { partId: organ.id } } : {}),
     },
-    ...extra,
   });
   const herd = heads.map((h, i) => mk(i, h, organs[i % organs.length]));
   assert.ok(herd.length >= 20, `a sample worth the name (${herd.length} heads)`);
@@ -15429,14 +15435,24 @@ if (inShard('timbre')) {
   assert.ok(distinct.size >= Math.ceil(herd.length * 0.8),
     `${distinct.size} distinct voices across ${herd.length} creatures — a voice, not a noise`);
 
-  // And every axis the design names actually moves. This is the assertion
-  // that would have caught the bug this milestone shipped and then fixed:
-  // `data/voice.json` was loaded but never indexed, so `content.voice` came
-  // back undefined and `voiceSpec` ran on its own fallbacks. The specs still
-  // differed — the pitch jitter alone guaranteed that — and only asking each
-  // axis separately shows three of the four standing still. R41's bug, which
-  // R102 and R108 each paid again.
-  for (const [axis, floor] of [['wave', 2], ['pitch', 8], ['mod', 4], ['contour', 2]]) {
+  // And every axis the design names actually moves — asked SEPARATELY, which
+  // is the only way either of this milestone's two real defects is visible.
+  //
+  // Measured on the tree where `data/voice.json` was loaded but never named in
+  // `indexContent` (the bug R111 shipped and then fixed): 41 of 41 specs stay
+  // distinct, because the module's own fallbacks keep the pitch, the
+  // modulation and the contour moving. Only the WAVE collapses — to one
+  // value, for every creature in the county — and the clause below is the
+  // only thing in the suite that can see it. R41's training.json a third
+  // time; R102 and R108 each paid it once between.
+  //
+  // The `mod` floor is the one that has already earned its keep. Every organ
+  // in the game declares a `phys.draw` of 2 or 3 — 42 of the 43 declare 3 —
+  // so reading the draw alone gave the WHOLE CATALOGUE two modulation depths
+  // while the module's own comment said "every organ differs". The id now
+  // spreads each organ inside its draw band, and this floor is why anyone
+  // looked.
+  for (const [axis, floor] of [['wave', 2], ['pitch', 8], ['mod', 12], ['contour', 3]]) {
     const seen = new Set(specs.map((s) => s[axis]));
     assert.ok(seen.size >= floor,
       `the ${axis} reads the anatomy — ${seen.size} values across the roster, floor ${floor}`);
@@ -15609,8 +15625,13 @@ if (inShard('timbre')) {
   // 8. HAPTICS fire on the three moments the table names and nothing else.
   {
     const buzzed = [];
-    const priorNav = globalThis.navigator;
-    globalThis.navigator = { vibrate: (p) => { buzzed.push(p); return true; } };
+    // `globalThis.navigator` is a GETTER in Node 22 — a plain assignment
+    // throws under ESM's strict mode, which is how this rule first ran. The
+    // descriptor is configurable, so it is replaced and restored properly.
+    const priorNav = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    const asNavigator = (value) =>
+      Object.defineProperty(globalThis, 'navigator', { value, configurable: true, writable: true });
+    asNavigator({ vibrate: (p) => { buzzed.push(p); return true; } });
 
     sfx.applyAudioSettings({ muted: false, volume: 1, ambience: false, haptics: true });
     for (const kind of Object.keys(content.voice.haptics)) sfx.buzz(kind, content);
@@ -15631,10 +15652,10 @@ if (inShard('timbre')) {
     assert.deepEqual(buzzed, [], 'and so does the mute — one switch for the whole device');
 
     // A device that cannot vibrate is a device, not a crash.
-    globalThis.navigator = {};
+    asNavigator({});
     sfx.applyAudioSettings({ muted: false, haptics: true });
     sfx.buzz('ko', content);
-    globalThis.navigator = priorNav;
+    if (priorNav) Object.defineProperty(globalThis, 'navigator', priorNav);
   }
 
   // 9. THE PANEL CARRIES ALL THREE, and every one of them persists. The

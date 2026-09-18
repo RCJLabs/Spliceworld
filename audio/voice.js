@@ -46,15 +46,25 @@ function waveFor(chimera, content, tuning) {
   return tuning.wave?.fallback ?? 'triangle';
 }
 
-// The organ is the thing bolted inside, so it is what wobbles the note. Read
-// off the part's own draw where it has one — an organ that costs more to run
-// wobbles harder — and off its id otherwise, so every organ differs.
+// The organ is the thing bolted inside, so it is what wobbles the note. An
+// organ that costs more to run wobbles harder — and then its own id spreads it
+// inside that band, because THE DRAW IS ALMOST A CONSTANT: all 43 organs in
+// the game today declare a `phys.draw` of 2 or 3, so reading the draw alone
+// gave the whole catalogue exactly TWO modulation depths.
+//
+// That was this milestone's own comment lying about its own code — it said
+// "so every organ differs" while shipping two values — and the axis floor in
+// the smoke gate is what caught it. The band still carries the meaning (draw
+// 3 wobbles harder than draw 2, always, because the spread is narrower than
+// the gap); the id only decides where inside the band an organ sits.
 function modFor(chimera, content, tuning) {
   const organ = chimera?.tokens?.organ?.partId ?? chimera?.tokens?.organ2?.partId;
-  const { low = 0, high = 22 } = tuning.mod ?? {};
+  const { low = 0, high = 22, spread = 0.1 } = tuning.mod ?? {};
   if (!organ) return low;
   const draw = content?.parts?.[organ]?.phys?.draw;
-  const n = Number.isFinite(draw) ? across(draw, 0, 8) : (hashString(organ) % 1000) / 1000;
+  const band = Number.isFinite(draw) ? across(draw, 0, 8) : 0.5;
+  const within = ((hashString(organ) % 1000) / 1000 - 0.5) * spread;
+  const n = clamp(band + within, 0, 1);
   return Math.round((low + n * (high - low)) * 100) / 100;
 }
 

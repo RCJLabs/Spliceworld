@@ -172,11 +172,21 @@ export function cuesFor(before, after) {
   return cues;
 }
 
+// R111 — AND IT TAKES A TONE AS WELL AS A NAME. A creature's voice is not a
+// named stinger: it is built per creature, so the obvious shape was a second
+// exported function reaching the oscillator itself. R59's gate refused that
+// inside the hour, and rightly — "exactly one function reaches the synth" is
+// the rule that stops a new sound arriving with its own path around the mute,
+// and a second caller is that bypass whether or not it happens to check.
+//
+// So `speak` hands its tone HERE rather than growing a door of its own. One
+// mute check, one resume, one loop, for every sound this game makes.
 export function play(name) {
-  if (muted || !ctx || !STINGERS[name]) return;
+  const tones = typeof name === 'string' ? STINGERS[name] : name;
+  if (muted || !ctx || !tones) return;
   try {
     if (ctx.state === 'suspended') ctx.resume();
-    for (const v of STINGERS[name]) voice(v);
+    for (const v of tones) voice(v);
   } catch { /* stay silent, stay alive */ }
 }
 
@@ -254,7 +264,6 @@ export async function speak(chimera, content, kind = 'tap') {
   if (muted || !ctx || !chimera) return;
   try {
     const { voiceSpec, voiceTone } = await import('./voice.js');
-    if (ctx.state === 'suspended') ctx.resume();
-    voice(voiceTone(voiceSpec(chimera, content, kind)));
+    play([voiceTone(voiceSpec(chimera, content, kind))]);
   } catch { /* stay silent, stay alive */ }
 }

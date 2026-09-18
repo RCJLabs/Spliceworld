@@ -21,7 +21,8 @@
   },
   "mod": {
     "low": 0,
-    "high": 22
+    "high": 22,
+    "spread": 0.1
   },
   "contour": {
     "nerveMid": 50,

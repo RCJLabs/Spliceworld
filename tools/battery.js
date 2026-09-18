@@ -3630,6 +3630,19 @@ const BREAKS = [
     anchor: '  sfx.applyAudioSettings(state.settings);',
     to: '  sfx.setMuted(state.settings.muted);',
   },
+  {
+    // AND THE ORGAN GOES BACK TO BEING TWO ORGANS. This is not a hypothetical:
+    // it is the code R111 shipped in its own first draft. Every organ in the
+    // game declares a `phys.draw` of 2 or 3 — 42 of 43 declare 3 — so reading
+    // the draw alone gives the entire catalogue TWO modulation depths, under a
+    // comment promising that every organ differs. The whole-spec count sees
+    // nothing (the pitch jitter keeps 41 of 41 distinct); only the mod floor
+    // does.
+    n: 356, gate: SHARD_D, name: 'the organ wobble goes back to reading the draw alone, and 43 organs become 2',
+    file: 'audio/voice.js',
+    anchor: '  const within = ((hashString(organ) % 1000) / 1000 - 0.5) * spread;',
+    to: '  const within = 0;',
+  },
 
   // R175 — the stable says how big it is and what makes it bigger.
   {
