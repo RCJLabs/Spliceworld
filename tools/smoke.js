@@ -166,6 +166,10 @@ const SHARD_OF = {
   // its 4,697 lines. Shard d, which R145's note calls the lane carrying the
   // four smallest blocks.
   voice: 'd',
+  // R111 — the creature voices. No walk: a roster of specs, a fake
+  // AudioContext and some string work. Shard d, beside the other cheap ones
+  // — and NOT `voice`, which R109's wire pools took one entry up.
+  timbre: 'd',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -2612,7 +2616,11 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // grow, and it did its job here — the v44 migration adds a field and this
   // is where it was noticed. A settings bag nobody is watching is where a
   // device preference quietly becomes part of a run.
-  assert.deepEqual(v7ish.settings, { muted: false, battleSpeed: 1 });
+  // R111 — and volume, ambience and haptics, which is the same decision
+  // being forced a third time: three device preferences arrived in one
+  // milestone and every one of them had to be named here to land.
+  assert.deepEqual(v7ish.settings,
+    { muted: false, battleSpeed: 1, volume: 1, ambience: true, haptics: true });
   // R97 — `sightings` joins the Dex, and this deepEqual is the same forcing
   // function the settings one above is: a bag nobody is watching is where a
   // field quietly appears in half the saves and not the other half.
@@ -6906,6 +6914,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // files do not already teach. Its gate is the voice block: every line in
     // it has to be reachable and none may be over 5% of what gets said.
     'voice-pools.json': null,
+    // R111 — the creature voices' tuning, and exempt for a different reason
+    // from the pools above: a player never meets this as content at all. It
+    // is what a genome SOUNDS like, the way parts-shapes.json is what one
+    // looks like, and a field guide teaching somebody to hear is a field
+    // guide nobody needs. Its gate is the voice block — two genomes must
+    // differ and one genome must never drift.
+    'voice.json': null,
     // R110 — the battle's own beats and whatever follows them out of the
     // modules. A player meets these AS the thing they describe: the line that
     // says a specimen is trapped arrives at the moment it is trapped. There is
@@ -7050,6 +7065,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'util/text.js': null,
     'render/renderer.js': null,
     'audio/sfx.js': null,
+    // R111 — a genome read as a note, which is a rendering of the creature
+    // rather than a system the player learns. The Pens note already teaches
+    // what a chimera IS; nothing about hearing one needs its own lesson.
+    'audio/voice.js': null,
 
     // --- Shared UI machinery. A fold, a picker, a tab bar and a band are
     // how systems are shown, not systems themselves.
@@ -15364,6 +15383,291 @@ if (inShard('voice')) {
     assert.ok(/^(?:export )?function play\b/.test(synths[0].trim()),
       'and it is the one that checks the mute');
   }
+}
+
+// R111 — A CREATURE'S VOICE, AND THE THREE CONTROLS OVER IT.
+//
+// `audio/sfx.js` has held sixteen stingers since M7 and NOT ONE of them
+// depended on the creature: a goat-headed tank and a moth-winged kite landed
+// the identical `hit`. R96 gave every splice its own motion, so the game
+// arrived at this milestone with creatures that looked unique and sounded
+// interchangeable — and with `muted` as the entire audio settings surface.
+//
+// THE CRITERION, in two halves. Two genomes yield two voice specs and one
+// genome always the same; and the settings panel carries volume, ambience and
+// haptics. Both halves are asserted on BEHAVIOUR rather than on source: the
+// spec is a plain object by design, and the three controls are driven through
+// a fake AudioContext so the gate can hear what the player would.
+if (inShard('timbre')) {
+  const { voiceSpec, voiceTone } = await import('../audio/voice.js');
+  const sfx = await import('../audio/sfx.js');
+
+  // A roster of real chimeras, one per species that can supply a head, built
+  // the way the game builds them. Read off the catalogue rather than listed,
+  // so a species added next milestone is in the sample the day it lands.
+  const heads = Object.values(content.parts).filter((p) => p.slot === 'head');
+  const organs = Object.values(content.parts).filter((p) => p.slot === 'organ');
+  const mk = (i, head, organ, extra = {}) => ({
+    id: `voice-${i}`,
+    name: `Subject ${i}`,
+    frame: 'standard',
+    tokens: {
+      head: { partId: head.id },
+      ...(organ ? { organ: { partId: organ.id } } : {}),
+    },
+    ...extra,
+  });
+  const herd = heads.map((h, i) => mk(i, h, organs[i % organs.length]));
+  assert.ok(herd.length >= 20, `a sample worth the name (${herd.length} heads)`);
+
+  // 1. TWO GENOMES, TWO SPECS — and not two by luck. The whole roster is
+  //    spec'd, and the count of DISTINCT specs is the number that matters:
+  //    a generator that returned one spec for every animal would satisfy
+  //    "these two differ" on any pair it happened to get right.
+  const specs = herd.map((c) => voiceSpec(c, content, 'tap'));
+  const distinct = new Set(specs.map((s) => JSON.stringify(s)));
+  assert.ok(distinct.size >= Math.ceil(herd.length * 0.8),
+    `${distinct.size} distinct voices across ${herd.length} creatures — a voice, not a noise`);
+
+  // And every axis the design names actually moves. This is the assertion
+  // that would have caught the bug this milestone shipped and then fixed:
+  // `data/voice.json` was loaded but never indexed, so `content.voice` came
+  // back undefined and `voiceSpec` ran on its own fallbacks. The specs still
+  // differed — the pitch jitter alone guaranteed that — and only asking each
+  // axis separately shows three of the four standing still. R41's bug, which
+  // R102 and R108 each paid again.
+  for (const [axis, floor] of [['wave', 2], ['pitch', 8], ['mod', 4], ['contour', 2]]) {
+    const seen = new Set(specs.map((s) => s[axis]));
+    assert.ok(seen.size >= floor,
+      `the ${axis} reads the anatomy — ${seen.size} values across the roster, floor ${floor}`);
+  }
+
+  // 2. ONE GENOME, ALWAYS THE SAME. This is what separates a voice from a
+  //    noise: a player learns which of their chimeras just went down without
+  //    looking at the screen, and that only works if it never drifts.
+  {
+    const one = herd[0];
+    const first = voiceSpec(one, content, 'tap');
+    for (let i = 0; i < 25; i++) {
+      assert.deepEqual(voiceSpec(one, content, 'tap'), first, 'the same creature, asked again');
+    }
+    // Across a save round-trip, which is how a creature actually survives
+    // between the two times a player hears it.
+    assert.deepEqual(voiceSpec(JSON.parse(JSON.stringify(one)), content, 'tap'), first,
+      'and after the save it was written to and read back from');
+    // A rename is not a new animal. The seed is the id, so it must not be
+    // anything a player can type.
+    assert.deepEqual(voiceSpec({ ...one, name: 'Something Else' }, content, 'tap'), first,
+      'and renaming it does not change what it sounds like');
+  }
+
+  // 3. DERIVED, NOT DECORATED. Move one thing about the anatomy and exactly
+  //    the property it maps to moves. Four separate rules, because "the spec
+  //    changed" is satisfied by a hash of the whole creature and that is the
+  //    thing this gate exists to distinguish a real mapping from.
+  {
+    const base = herd[0];
+    const tagged = (tag) => heads.find((h) => (h.tags ?? [])[0] === tag);
+    const [a, b] = [tagged('Aquatic'), tagged('Armored')];
+    if (a && b) {
+      const wa = voiceSpec({ ...base, tokens: { ...base.tokens, head: { partId: a.id } } }, content).wave;
+      const wb = voiceSpec({ ...base, tokens: { ...base.tokens, head: { partId: b.id } } }, content).wave;
+      assert.equal(wa, content.voice.wave.byTag.Aquatic, 'an Aquatic head sings');
+      assert.equal(wb, content.voice.wave.byTag.Armored, 'an Armored one buzzes');
+      assert.notEqual(wa, wb, 'and the two are not the same waveform');
+    }
+    // Temperament: skittish rises, bullish falls, and neither holds level.
+    const c = content.voice.contour;
+    const nerve = voiceSpec({ ...base, temperament: { nerve: 5, temper: 0 } }, content).contour;
+    const temper = voiceSpec({ ...base, temperament: { nerve: 95, temper: 80 } }, content).contour;
+    const flat = voiceSpec({ ...base, temperament: { nerve: 95, temper: -80 } }, content).contour;
+    assert.equal(nerve, c.rise, 'a skittish creature asks a question');
+    assert.equal(temper, c.fall, 'a bullish one makes a statement');
+    assert.equal(flat, c.level, 'and most of them hold the note');
+  }
+
+  // 4. EVERY NUMBER IS IN DATA. CLAUDE.md: adding a species must never mean
+  //    editing a module, and the way that fails quietly is a module that
+  //    reads the file AND keeps its own copy of the numbers. Retune the
+  //    table and the output has to move with it.
+  {
+    const retuned = { ...content, voice: structuredClone(content.voice) };
+    retuned.voice.pitch.low = 300;
+    retuned.voice.pitch.high = 305;
+    retuned.voice.contour.rise = 3.5;
+    const spread = new Set(herd.map((h) => voiceSpec(h, retuned).pitch));
+    assert.ok(Math.max(...spread) <= 330 && Math.min(...spread) >= 275,
+      `the pitch range comes off the file (${Math.min(...spread)}..${Math.max(...spread)} Hz)`);
+    assert.equal(
+      voiceSpec({ ...herd[0], temperament: { nerve: 5, temper: 0 } }, retuned).contour, 3.5,
+      'and so does the contour');
+    // A tag the table has never heard of takes the fallback rather than
+    // nothing, which is what lets a species ship with a new tag.
+    const bare = { ...content, voice: { ...content.voice, wave: { byTag: {}, fallback: 'sawtooth' } } };
+    assert.equal(voiceSpec(herd[0], bare).wave, 'sawtooth', 'an unknown tag still gets a waveform');
+  }
+
+  // 5. THE SPEC BECOMES A NOTE THE ONE SYNTH ALREADY UNDERSTANDS. The whole
+  //    reason `voiceTone` exists is that there must not be a second
+  //    oscillator path around the mute — R59's rule, one milestone on.
+  {
+    const tone = voiceTone(voiceSpec(herd[0], content, 'ko'), 0.09);
+    assert.equal(tone.type, voiceSpec(herd[0], content, 'ko').wave, 'the note carries the waveform');
+    assert.equal(tone.dur, content.voice.dur.ko, 'and the duration the occasion asks for');
+    assert.ok(tone.to !== tone.from || voiceSpec(herd[0], content, 'ko').contour === 1,
+      'and glides unless the creature holds level');
+  }
+
+  // --- The three controls, heard rather than read off the source.
+  //
+  // `initAudio` builds `new window.AudioContext()`, so a fake window is all
+  // it takes to run the real synth headlessly. Everything below drives the
+  // shipped functions — no source matching, because a panel that renders the
+  // control and a synth that ignores it would pass a source check twice.
+  const made = { osc: [], gain: [], src: [] };
+  const param = () => ({
+    value: null,
+    setValueAtTime(v) { this.value = v; return this; },
+    exponentialRampToValueAtTime() { return this; },
+  });
+  const node = (kind, extra = {}) => {
+    const n = { kind, connect: (to) => to, ...extra };
+    made[kind]?.push(n);
+    return n;
+  };
+  const fakeCtx = {
+    currentTime: 0,
+    sampleRate: 8000,
+    state: 'running',
+    destination: { kind: 'out', connect: (to) => to },
+    resume() {},
+    createOscillator: () => node('osc', { type: '', frequency: param(), start() {}, stop() {} }),
+    createGain: () => node('gain', { gain: param() }),
+    createBiquadFilter: () => node('filter', { type: '', frequency: param() }),
+    createBuffer: (_ch, n) => ({ getChannelData: () => new Float32Array(n) }),
+    createBufferSource: () => node('src', { buffer: null, loop: false, start() {}, stop() {} }),
+  };
+  globalThis.window = { AudioContext: function () { return fakeCtx; } };
+  sfx.initAudio();
+  const reset = () => { made.osc = []; made.gain = []; made.src = []; };
+
+  // 6. VOLUME actually scales the synth, and mute still wins outright.
+  {
+    sfx.applyAudioSettings({ volume: 1, ambience: false, haptics: false });
+    reset(); sfx.play('click');
+    assert.ok(made.gain.length, 'a stinger reaches the synth at full volume');
+    const loud = made.gain.map((g) => g.gain.value);
+
+    sfx.applyAudioSettings({ volume: 0.2, ambience: false, haptics: false });
+    reset(); sfx.play('click');
+    const quiet = made.gain.map((g) => g.gain.value);
+    assert.equal(quiet.length, loud.length, 'the same stinger, the same number of voices');
+    for (const [i, v] of quiet.entries()) {
+      assert.ok(Math.abs(v - loud[i] * 0.2) < 1e-9,
+        `voice ${i} is a fifth as loud (${v} vs ${loud[i]})`);
+    }
+
+    // Zero is not silence-by-rounding: `exponentialRampToValueAtTime` throws
+    // on a zero start, so the floor exists and the setting stays usable.
+    sfx.applyAudioSettings({ volume: 0 });
+    reset(); sfx.play('click');
+    assert.ok(made.gain.every((g) => g.gain.value > 0), 'and zero volume does not produce an illegal ramp');
+
+    sfx.applyAudioSettings({ muted: true, volume: 1 });
+    reset(); sfx.play('click');
+    assert.equal(made.gain.length, 0, 'muted is still muted, whatever the volume says');
+  }
+
+  // 7. AMBIENCE is a bed the player can stop, and one bed at a time.
+  {
+    sfx.applyAudioSettings({ muted: false, volume: 1, ambience: true, haptics: false });
+    reset(); sfx.startAmbience('ranch', content);
+    assert.equal(made.src.length, 1, 'the Ranch hums');
+
+    // The same screen twice must not restart it — `showScreen` calls this on
+    // every navigation, and a bed that restarts on each one is a click track.
+    reset(); sfx.startAmbience('ranch', content);
+    assert.equal(made.src.length, 0, 'and arriving at the Ranch again does not restart it');
+
+    reset(); sfx.startAmbience('vault', content);
+    assert.equal(made.src.length, 1, 'a different room is a different bed');
+
+    // A screen with no entry in the table is silent rather than broken,
+    // which is what lets a screen ship without one.
+    reset(); sfx.startAmbience('nowhere', content);
+    assert.equal(made.src.length, 0, 'a screen the table has never heard of simply has no room tone');
+
+    sfx.applyAudioSettings({ ambience: false });
+    reset(); sfx.startAmbience('ranch', content);
+    assert.equal(made.src.length, 0, 'and the toggle stops it');
+
+    sfx.applyAudioSettings({ muted: true, ambience: true });
+    reset(); sfx.startAmbience('ranch', content);
+    assert.equal(made.src.length, 0, 'as does the mute');
+  }
+
+  // 8. HAPTICS fire on the three moments the table names and nothing else.
+  {
+    const buzzed = [];
+    const priorNav = globalThis.navigator;
+    globalThis.navigator = { vibrate: (p) => { buzzed.push(p); return true; } };
+
+    sfx.applyAudioSettings({ muted: false, volume: 1, ambience: false, haptics: true });
+    for (const kind of Object.keys(content.voice.haptics)) sfx.buzz(kind, content);
+    assert.deepEqual(buzzed, Object.values(content.voice.haptics),
+      'each of the three moments buzzes its own pattern');
+
+    buzzed.length = 0;
+    // The other cues pass through silently, which is what keeps "what
+    // deserves a buzz" one decision in data beside "what deserves a sound".
+    for (const cue of ['click', 'hit', 'alarm', 'report', 'decant']) sfx.buzz(cue, content);
+    assert.deepEqual(buzzed, [], 'and a tap does not shake the phone');
+
+    sfx.applyAudioSettings({ haptics: false });
+    sfx.buzz('ko', content);
+    assert.deepEqual(buzzed, [], 'the toggle stops it');
+    sfx.applyAudioSettings({ muted: true, haptics: true });
+    sfx.buzz('ko', content);
+    assert.deepEqual(buzzed, [], 'and so does the mute — one switch for the whole device');
+
+    // A device that cannot vibrate is a device, not a crash.
+    globalThis.navigator = {};
+    sfx.applyAudioSettings({ muted: false, haptics: true });
+    sfx.buzz('ko', content);
+    globalThis.navigator = priorNav;
+  }
+
+  // 9. THE PANEL CARRIES ALL THREE, and every one of them persists. The
+  //    controls are rendered markup, so this half is read off the source —
+  //    but what the source has to show is the ROUND TRIP: a control, a
+  //    handler, the field written, the save called, and the synth told.
+  {
+    const panel = readFileSync(join(root, 'save/settings-ui.js'), 'utf8');
+    for (const [id, field] of [['#set-volume', 'volume'], ['[data-toggle="ambience"]', 'ambience'], ['[data-toggle="haptics"]', 'haptics']]) {
+      const at = panel.indexOf(`querySelector('${id}')`);
+      assert.notEqual(at, -1, `the panel binds ${field}`);
+      const handler = panel.slice(at, at + 700);
+      assert.ok(new RegExp(`state\\.settings\\.${field}\\s*=`).test(handler), `${field} is written to the save`);
+      assert.ok(/ctx\.save\(\)/.test(handler), `and ${field} survives the reload`);
+      assert.ok(/sfx\.applyAudioSettings\(state\.settings\)/.test(handler),
+        `and ${field} reaches the synth through the one call`);
+    }
+    // And the shell applies the persisted set on boot, or a preference is
+    // honoured until the panel is next opened and not before.
+    const shell = readFileSync(join(root, 'main.js'), 'utf8');
+    assert.ok(/sfx\.applyAudioSettings\(state\.settings\)/.test(shell),
+      'the boot applies every audio preference, not just the mute');
+    assert.ok(/sfx\.startAmbience\(/.test(shell), 'and the shell is what starts the room');
+
+    // The defaults exist in a new game AND arrive by migration, which is the
+    // rule that keeps one save shape rather than two.
+    for (const field of ['volume', 'ambience', 'haptics']) {
+      assert.ok(field in newGameState().settings, `a new game has ${field}`);
+    }
+  }
+
+  console.log(`   R111 timbre: ${distinct.size}/${herd.length} distinct voices,`
+    + ' 3 controls heard through a fake context');
 }
 
 // --- R60: the War Room's decisions, out where they can be tested.
