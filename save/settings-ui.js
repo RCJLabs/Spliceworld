@@ -414,7 +414,7 @@ export function openSettings(overlay, ctx) {
   };
 
   const confirmNewRun = () => {
-    const sum = runSummary(state);
+    const sum = runSummary(state, Date.now(), content);
     picked = null;
     overlay.hidden = false;
     overlay.innerHTML = `
@@ -424,6 +424,13 @@ export function openSettings(overlay, ctx) {
           <strong>${sum.animals}</strong> animal${sum.animals === 1 ? '' : 's'} on the ranch,
           <strong>${sum.parts}</strong> part token${sum.parts === 1 ? '' : 's'},
           <strong>${sum.nodes}</strong> node${sum.nodes === 1 ? '' : 's'} held, over ${sum.days} day${sum.days === 1 ? '' : 's'}.</p>
+        ${/* R112 — and what the run ADDS UP TO, which the five list lengths
+              above cannot say: a player who graduated a thousand chimeras and
+              keeps nine was being shown the nine. The Yearbook's headline
+              rows, so this line grows when a counter does. */ ''}
+        ${sum.lifetime.length
+          ? `<p class="fine-print">${sum.lifetime.map((r) => `${r.label}: <strong>${r.value}</strong>`).join(' &middot; ')} &mdash; the whole of it is on the Dex's Yearbook.</p>`
+          : ''}
         <p class="fine-print">The run is kept in this browser as a backup — but a backup you cannot
           see is not a plan. Take the file first.</p>
         <button type="button" id="cnr-export" class="big-btn">⬇ Download it first</button>

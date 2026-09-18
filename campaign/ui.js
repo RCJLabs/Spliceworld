@@ -555,6 +555,25 @@ function renderMap(root, ctx) {
     ${visitCard}
     ${gauntletCard}
     ${lastAftermath ? `<section class="card"><h3>Last Sortie</h3><p class="ranch-msg">${lastAftermath}</p></section>` : ''}
+    ${/* R112 — THE PHILOSOPHY PICKER FOLLOWS THE FIRST CONQUEST, on the screen
+          the conquest happened on. It is a state predicate rather than an
+          event hook — you hold a node and you have not said what you are for
+          — so it survives a reload mid-ceremony and cannot fire twice. The
+          picker id is the dossier's own, so `bindDossier` already binds it
+          and the two can never disagree; the two cards live on different
+          subtabs, so the id is never in the document twice. */ ''}
+    ${state.campaign.heldNodes.length && !state.profile?.philosophy
+      ? `<section class="card dossier-mine">
+          <h3>${renderIcon('document')} What are you FOR?</h3>
+          <p class="ranch-msg">You hold ground now, which means the wire will start quoting you. It would help to know what you were going to say.</p>
+          ${pickerField({
+            id: 'me-philosophy',
+            label: 'Philosophy',
+            value: 'Decide later',
+            hint: 'Flavour only — your anatomy is where the mechanics live',
+          })}
+        </section>`
+      : ''}
     <section class="card">
       <div class="econ-row">
         <div><span class="econ-label">Notoriety</span><strong>${state.campaign.notoriety}</strong></div>

@@ -3688,6 +3688,63 @@ const BREAKS = [
     to: "  // R111: the room tone and the haptics, lazy for the budget's sake",
   },
 
+  // R112 — the Yearbook, and the rule that a counter is either on it or gone.
+  {
+    // A COUNTER LOSES ITS ROW. `inventory.tokenCount` stops being covered by
+    // any `from` in the data file — it is still written on every extraction
+    // and now appears on no screen, which is the exact state the milestone
+    // found twenty counters in.
+    n: 360, gate: SHARD_A, name: 'a counter drops off the Yearbook and nothing notices',
+    file: 'data/yearbook.json',
+    anchor: '"from": "inventory.tokenCount",',
+    to: '"from": "inventory.vials",',
+  },
+  {
+    // `spliceCount` COMES BACK. A new counter declared in `newGameState` with
+    // no row is the general case; this is the specific one the milestone
+    // retired, and it must not be re-addable in silence.
+    n: 361, gate: SHARD_A, name: 'a counter is added to the save with no Yearbook row',
+    file: 'save/save.js',
+    anchor: '    createdAt: Date.now(),',
+    to: '    createdAt: Date.now(),\n    spliceCount: 0,',
+  },
+  {
+    // THE CEREMONY STOPS OFFERING A NAME, which is the pre-R112 game: the
+    // only route to a name is War Room -> Labs -> the dossier, and the walk
+    // has to be the thing that says so.
+    n: 362, gate: SHARD_A, name: 'the first decant stops offering a name on the door',
+    file: 'splice/theater-ui.js',
+    anchor: '    const named = !!state.profile?.named;',
+    to: '    const named = true;',
+  },
+  {
+    // THE RUN BOUNDARY STOPS READING THE YEARBOOK. R102's confirmation goes
+    // back to five list lengths — what is on the shelf rather than what the
+    // run was — while every caller still passes `content` and looks correct.
+    n: 363, gate: SHARD_A, name: 'the relocation confirmation stops reading the Yearbook',
+    file: 'save/slots.js',
+    anchor: '    lifetime: content ? yearbookHeadline(state, content, now) : [],',
+    to: '    lifetime: [],',
+  },
+  {
+    // A `derive` NAMES SOMETHING THE MODULE DOES NOT OFFER. One letter in a
+    // data file, and the row reads a dash forever with nothing to say it is
+    // broken — the failure mode a data-driven screen is most exposed to.
+    n: 364, gate: SHARD_A, name: 'a Yearbook row derives a statistic nobody wrote',
+    file: 'data/yearbook.json',
+    anchor: '"derive": "longestServing",',
+    to: '"derive": "longestServed",',
+  },
+  {
+    // THE TAB LEAVES THE BAR. The rows still exist and the module still
+    // works; there is simply no way to reach any of it, which is R45's
+    // lesson and the whole shape of what R112 was fixing.
+    n: 365, gate: SHARD_A, name: 'the Yearbook tab disappears from the Dex bar',
+    file: 'splice/dex-ui.js',
+    anchor: "  { id: 'yearbook', icon: 'book', label: 'Yearbook' },",
+    to: '',
+  },
+
   // R175 — the stable says how big it is and what makes it bigger.
   {
     // THE MAIN SCREEN STOPS SAYING HOW FULL THE STABLE IS, which is the state

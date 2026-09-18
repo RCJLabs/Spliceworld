@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 57;
+export const SAVE_VERSION = 58;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -20,7 +20,6 @@ export function newGameState() {
     // holding somebody else's animals.
     starterLab: null,
     createdAt: Date.now(),
-    spliceCount: 0,
     // The current creature on the Surgery Theater slab.
     genome: null,
     // Stub for the AI director (ROADMAP §8.5): record tag/part usage from

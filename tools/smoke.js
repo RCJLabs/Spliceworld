@@ -374,7 +374,9 @@ assert.equal(migrated.saveVersion, SAVE_VERSION, 'v1 chains all the way up');
 assert.equal(migrated.funds, 300);
 assert.deepEqual(migrated.ranch, { stock: [], penCapacity: 4, animalCount: 0, seeded: false, eggs: [], eggCount: 0 });
 assert.deepEqual(migrated.inventory, { vials: [], parts: [], tokenCount: 0 });
-assert.equal(migrated.spliceCount, 3, 'migration preserves existing progress');
+assert.equal(migrated.spliceCount, undefined,
+  'R112 — `spliceCount` is RETIRED by migration 58, not carried forever: nothing has written it since M0');
+assert.deepEqual(migrated.directorStats.partUse, { bear_head: 3 }, 'migration preserves existing progress');
 assert.deepEqual(migrated.genome, acceptance, 'migration preserves the slab creature');
 const v2Save = { ...structuredClone(v1Save), saveVersion: 2, funds: 512, ranch: { stock: [], penCapacity: 6, animalCount: 2, seeded: true }, lastTickAt: 1, activeScreen: 'slab' };
 const m2 = await migrate(structuredClone(v2Save));
@@ -1331,9 +1333,9 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
 // so a gate that reads it has to be able to change tabs. bindSubtabs asks
 // the root for its tab buttons and registers a click handler on each; this
 // stub hands back fakes and keeps the handlers, which is what lets the
-// harness walk all five views without a DOM. Shared by the R21 findability
+// harness walk all six views without a DOM. Shared by the R21 findability
 // gate and R45's own, so both agree on what "the Dex" is.
-const DEX_TAB_IDS = ['roster', 'variants', 'combos', 'genes', 'foes'];
+const DEX_TAB_IDS = ['roster', 'variants', 'combos', 'genes', 'foes', 'yearbook'];
 function dexPages(state) {
   const handlers = new Map();
   const root = {
@@ -6841,6 +6843,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'vault',
     'temperament', 'bond', 'infirmary', 'scars',
     'combos', 'chaos', 'flight',
+    // R112. The Yearbook is a screen with a tab of its own, reading twenty
+    // counters the save has always kept and never shown. A system by every
+    // test on this roll — and the one most in need of a note, because its
+    // whole problem was that nobody knew it was there.
+    'yearbook',
     'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director', 'gauntlet',
     // R82. The breakout is the rival ladder's consequence rather than a
     // second ladder: it is on the roll in its own right because it has a
@@ -6970,6 +6977,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // is where the county being yours is announced and therefore where the
     // offer to leave it behind belongs.
     'legacy.json': 'legacy',
+    'yearbook.json': 'yearbook',
     'calendar.json': 'calendar',
     'cards.json': 'cards',
     'starters.json': null,
@@ -7021,6 +7029,9 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // there is: whatever is not explained at the ceremony is explained
     // never.
     'campaign/legacy.js': 'legacy',
+    // R112 — the Yearbook's reader. It implements the system the note
+    // teaches: what the save has been counting, and where to read it.
+    'save/yearbook.js': 'yearbook',
     'campaign/calendar.js': 'calendar',
     'ui/sky.js': 'calendar',
     // R108 — the card and the fight it carries. Two modules, one system:
@@ -7310,7 +7321,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // R88's send note lights on the same step and for the same reason: the
     // offer cannot exist before there is a fight to forecast, and the first
     // thing on the war record is the first moment it can.
-    ['a few wins on the board', () => { lab.warRecord = { wins: 4, losses: 1 }; }, ['director', 'stance', 'sent']],
+    ['a few wins on the board', () => { lab.warRecord = { wins: 4, losses: 1 }; }, ['director', 'stance', 'sent', 'yearbook']],
     ['the Dex fills up', () => { lab.dex.parts = Object.keys(content.parts).slice(0, 8); }, ['dex']],
     // Dr. Mantissa is gated on the Highway Checkpoint, so the rival note
     // opens on the same push that opens Kestrel Reach.
@@ -11237,7 +11248,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   const FRESH_PAGES = pages(newGameState());
   const FULL_PAGES = pages(everything());
 
-  // 1. THE CRITERION. One tab's content is on the page, and the other four
+  // 1. THE CRITERION. One tab's content is on the page, and the other five
   //    are not — including their portraits, which are the expensive part.
   //    Not "hidden": absent.
   {
@@ -11248,6 +11259,10 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       combos: 'Combo Abilities',
       genes: 'Trait Genes',
       foes: 'Field Guide — Opposition',
+      // R112 — the Yearbook's own mark is a section label out of
+      // `data/yearbook.json`, so the gate reads the file rather than a
+      // string typed here: rename the section and this follows.
+      yearbook: content.yearbook.sections[0].label,
     };
     for (const id of DEX_IDS) {
       assert.ok(page[id].includes(marks[id]), `tab "${id}" renders its own section`);
@@ -11278,6 +11293,9 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
       combos: 0,
       genes: 0,
       foes: Object.keys(content.enemies).length + Object.keys(content.rivals).length,
+      // R112 — the Yearbook is numbers. It draws no creature at all, which
+      // is why it is the cheapest tab in the Dex and can afford 22 rows.
+      yearbook: 0,
     };
     assert.deepEqual(svgs, owed, `each tab draws its own portraits and no others (${JSON.stringify(svgs)})`);
     const total = Object.values(svgs).reduce((a, b) => a + b, 0);
@@ -11289,7 +11307,7 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   }
 
   // 2. COMPLETION NEVER GOES BEHIND A TAB. It sits above the bar, so it is
-  //    on all five views — and so does the field note, which is this
+  //    on all six views — and so does the field note, which is this
   //    screen's only expiring thing.
   {
     const page = FRESH_PAGES.roster;
@@ -11402,18 +11420,31 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   // 4. The only badge a tab earns is "nothing left here". A count of what
   //    you are missing would sit on every tab from the first minute, and a
   //    badge that is always lit is a badge nobody reads.
+  //
+  //    R112 — THE YEARBOOK IS NOT A COLLECTION, so it is not on this list.
+  //    Every other tab counts things the player is collecting and can finish
+  //    collecting; the Yearbook counts things they have DONE, which has no
+  //    ceiling and therefore no "nothing left here". `badgeFor` reads
+  //    `byTab[id]?.complete` and gets `undefined`, which is the right answer
+  //    rather than a hole — a tab with nothing to complete shows no badge.
+  //    The exclusion is written here, with its reason, so a future collection
+  //    tab that forgets its counts still fails.
   {
+    const COLLECTED = DEX_IDS.filter((id) => id !== 'yearbook');
+    assert.equal(COLLECTED.length, DEX_IDS.length - 1, 'exactly one tab is not a collection');
     const zero = dexProgress(newGameState(), content);
     assert.ok(
-      DEX_IDS.every((id) => !zero.byTab[id]?.complete),
+      COLLECTED.every((id) => !zero.byTab[id]?.complete),
       'a fresh save has no completed tab'
     );
     const all = dexProgress(everything(), content);
     assert.ok(
-      DEX_IDS.every((id) => all.byTab[id]?.complete),
-      `a finished save has every tab complete (${JSON.stringify(all.byTab)})`
+      COLLECTED.every((id) => all.byTab[id]?.complete),
+      `a finished save has every collection tab complete (${JSON.stringify(all.byTab)})`
     );
-    for (const id of DEX_IDS) assert.ok(all.byTab[id], `tab "${id}" has counts of its own`);
+    assert.equal(all.byTab.yearbook, undefined,
+      'and the Yearbook has no completion to claim, on a finished save or any other');
+    for (const id of COLLECTED) assert.ok(all.byTab[id], `tab "${id}" has counts of its own`);
     const page = FULL_PAGES.roster;
     assert.ok(page.includes('subtab-badge'), 'and the finished tabs are marked on the bar');
     assert.ok(!FRESH_PAGES.roster.includes('subtab-badge'), 'while a fresh one is not');
@@ -13302,7 +13333,7 @@ if (inShard('spar')) {
 
   // 1. A save goes out and comes back the same save.
   {
-    const st = { ...newGameState(), seed: 54, funds: 1234, spliceCount: 7 };
+    const st = { ...newGameState(), seed: 54, funds: 1234, rushCount: 7 };
     st.dex.beaten = ['riot_squad'];
     const back = await importSave(exportSave(st));
     assert.ok(back.ok, `a freshly exported save imports (${back.msg ?? ''})`);
@@ -13721,6 +13752,242 @@ if (inShard('spar')) {
     assert.ok(adoptSave(incoming, bare).ok, 'an import into an empty browser lands');
     assert.equal(JSON.parse(fresh.get('spliceworld_save')).settings.muted, false,
       'carrying nothing, because there was nothing to carry');
+  }
+}
+
+// --- R112: THE YEARBOOK, and the rule that keeps it honest.
+//
+// The criterion is "every non-clock counter in `newGameState` is either on
+// the Yearbook or gone". This is that sentence, executable. It walks the
+// shape a new game actually has — not a list somebody typed here — so a
+// counter added by a future milestone fails this gate on the commit that
+// adds it, rather than being written faithfully for forty milestones and
+// shown to nobody. Which is exactly what happened: twenty lifetime tallies,
+// one of them rendered.
+//
+// The three-way split is the whole design. A numeric leaf is a CLOCK (a
+// timestamp, excluded by name), a DIAL (a reading that goes up AND down, and
+// every one of them is already on a screen — listed below WITH the screen,
+// because an exemption nobody has to justify is how a list becomes a
+// dumping ground), or a COUNTER, which must be on the Yearbook.
+{
+  const { yearbook, yearbookHeadline, yearbookRow, DERIVATIONS, daysPlayed } =
+    await import('../save/yearbook.js');
+  const { runSummary } = await import('../save/slots.js');
+
+  // Named by the save, not by the gate: `createdAt`, `lastTickAt`, and
+  // anything ending `At` or `Until`. Timestamps are not achievements.
+  const isClock = (path) => {
+    const leaf = path.split('.').pop();
+    return leaf === 'createdAt' || leaf === 'lastTickAt' || /(At|Until)$/.test(leaf);
+  };
+
+  // NOT counters, and each one owes a reason. The test is the same for all
+  // of them: the number can fall, and a screen already shows it.
+  const DIALS = {
+    saveVersion: 'bookkeeping — the schema version, not a score',
+    seed: 'bookkeeping — the world seed',
+    funds: 'a balance, and the header prints it on every screen',
+    'ranch.penCapacity': 'a capacity the Ranch prints beside the herd (R175)',
+    'campaign.notoriety': 'a meter that falls; its high-water mark IS on the Yearbook',
+    'campaign.heat': "the Task Force's own meter, shown on the raid card",
+    'settings.battleSpeed': 'a device preference, shown in Settings',
+    'settings.volume': 'a device preference, shown in Settings',
+    'facility.theater': 'a facility tier, shown on the facility card',
+    'facility.containment': 'a facility tier, shown on the facility card',
+    'facility.incubator': 'a facility tier, shown on the facility card',
+    'facility.extractor': 'a facility tier, shown on the facility card',
+    'facility.scanner': 'a facility tier, shown on the facility card',
+    'facility.infirmary': 'a facility tier, shown on the facility card',
+  };
+
+  const leaves = [];
+  const walk = (node, path) => {
+    for (const [key, value] of Object.entries(node)) {
+      const at = path ? `${path}.${key}` : key;
+      if (typeof value === 'number') leaves.push(at);
+      else if (value && typeof value === 'object' && !Array.isArray(value)) walk(value, at);
+    }
+  };
+  walk(newGameState(), '');
+
+  const counters = leaves.filter((p) => !isClock(p) && !(p in DIALS));
+  // Every `from` in the file, as a coverage prefix: a row reading
+  // `warRecord` with the `record` format covers both of its leaves.
+  const froms = (content.yearbook?.sections ?? [])
+    .flatMap((s) => s.rows ?? [])
+    .map((r) => r.from)
+    .filter(Boolean);
+  const uncovered = counters.filter((p) => !froms.some((f) => p === f || p.startsWith(`${f}.`)));
+  assert.deepEqual(uncovered, [],
+    `THE R112 CRITERION: every non-clock counter in newGameState is on the Yearbook or gone. `
+    + `These are neither: ${uncovered.join(', ')}. Put each on data/yearbook.json, retire it with a `
+    + `SAVE_VERSION bump and a migration, or — if it is a dial rather than a tally — add it to DIALS `
+    + `above WITH the screen that already shows it.`);
+  assert.ok(counters.length >= 20,
+    `and the walk is actually finding them (${counters.length} counters)`);
+
+  // The other half of "or gone": `spliceCount` was declared at M0, written
+  // by nothing, and serialized every session since. Migration 58 removes it.
+  assert.equal('spliceCount' in newGameState(), false,
+    'R112 — spliceCount is retired, not carried');
+  assert.equal(
+    readFileSync(join(root, 'save/save.js'), 'utf8').includes('spliceCount'), false,
+    'and no longer declared anywhere in the save shape');
+
+  // Every `from` points at something a save has, and every `derive` names a
+  // derivation the module offers. A typo in the data file is a red gate
+  // rather than a row that silently reads "—" forever.
+  {
+    const fresh = newGameState();
+    const reach = (state, path) => {
+      let at = state;
+      for (const key of String(path).split('.')) at = at?.[key];
+      return at;
+    };
+    for (const section of content.yearbook.sections) {
+      for (const row of section.rows ?? []) {
+        assert.ok(row.from || row.derive, `yearbook row ${section.id}.${row.id} reads something`);
+        if (row.from) {
+          assert.notEqual(reach(fresh, row.from), undefined,
+            `yearbook row ${section.id}.${row.id} reads ${row.from}, which a fresh save has`);
+        }
+        if (row.derive) {
+          assert.ok(DERIVATIONS.includes(row.derive),
+            `yearbook row ${section.id}.${row.id} derives "${row.derive}", which the module offers`);
+        }
+      }
+    }
+  }
+
+  // And it renders the numbers, not the paths.
+  {
+    const lived = newGameState();
+    lived.chimeraCount = 1853;
+    lived.ranch.animalCount = 1992;
+    lived.inventory.tokenCount = 21745;
+    lived.warRecord = { wins: 922, losses: 42 };
+    lived.campaign.leviedTotal = 445000;
+    lived.directorStats.partUse = { bear_head: 128, goat_hide: 40 };
+    lived.chimeras = [
+      { id: 'c9', name: 'Later', createdAt: lived.createdAt + 5000 },
+      { id: 'c1', name: 'Chompers', createdAt: lived.createdAt + 1 },
+    ];
+    const now = lived.createdAt + 180 * 86400000;
+    const rows = Object.fromEntries(
+      yearbook(lived, content, now).flatMap((s) => s.rows).map((r) => [r.id, r.value])
+    );
+    assert.equal(rows.record, '922W–42L', 'the record reads as a record');
+    assert.equal(rows.chimeras, '1,853', 'and the big counters are grouped');
+    assert.equal(rows.levied, '$445,000', 'and money carries its sign');
+    assert.equal(rows.days, '180 days', 'and the tenure counts days');
+    assert.equal(rows.veteran, 'Chompers', 'the longest-serving chimera is the oldest, not the first in the list');
+    assert.equal(rows.favourite, 'Bear Head · 128', 'and the most-used part names itself');
+    assert.equal(daysPlayed(lived, now), 180, 'one definition of a day');
+
+    // `runSummary` reads the Yearbook, so R102's relocation has something to
+    // show besides five list lengths — and the two cannot disagree about a
+    // day, because there is only one `daysPlayed`.
+    const sum = runSummary(lived, now, content);
+    assert.ok(sum.lifetime.length >= 3, 'the relocation confirmation gets the headline rows');
+    assert.deepEqual(sum.lifetime.map((r) => r.id), yearbookHeadline(lived, content, now).map((r) => r.id),
+      'and they are the rows the data file marked, in its order');
+    assert.equal(sum.days, 180, 'and it counts the same days the Yearbook does');
+    assert.deepEqual(runSummary(lived, now).lifetime, [],
+      'a two-argument caller is untouched and gets no lifetime');
+
+    // One row by id, for a caller that wants a statistic and not the page.
+    assert.equal(yearbookRow(lived, content, 'levied', now)?.value, '$445,000');
+    assert.equal(yearbookRow(lived, content, 'no_such_row', now), null,
+      'and an id nobody wrote comes back null rather than blank');
+  }
+
+  // A fresh save reads zero everywhere rather than throwing or printing
+  // "undefined" — this screen is reachable on day one.
+  {
+    const fresh = yearbook(newGameState(), content, Date.now());
+    const all = fresh.flatMap((s) => s.rows);
+    assert.ok(all.length >= 20, 'the Yearbook has rows on a fresh save');
+    assert.deepEqual(all.filter((r) => /undefined|NaN|\[object/.test(r.value)), [],
+      'and none of them print a bug');
+    assert.equal(all.find((r) => r.id === 'veteran')?.value, '—',
+      'an empty stable has no longest-serving chimera, and says so');
+  }
+}
+
+// --- R112, THE CRITERION'S SECOND HALF: a fresh save reaches a name without
+// --- ever visiting the Labs tab.
+//
+// Not a grep — a walk. It installs the DOM stub, paints the Surgery Theater
+// on a brand-new save, presses the controls a player would press, and asserts
+// the profile comes back named. The War Room module is never imported, which
+// is the point: before this milestone the ONLY route to a name was War Room →
+// Labs → Your Dossier → Name on the door, three taps behind a subtab with no
+// guide and no agenda row pointing at it, and a 180-day walk finished the
+// county still reading `named: false`.
+{
+  const { recordingRoot, installDom, memoryStorage } = await import('./domstub.js');
+  const { renderTheaterScreen } = await import('../splice/theater-ui.js');
+
+  const root = recordingRoot();
+  const overlay = recordingRoot();
+  const picker = recordingRoot();
+  const restore = installDom({ overlay, picker, storage: memoryStorage() });
+  try {
+    const t0 = 1700000000000;
+    const state = newGameState();
+    state.seed = 909;
+    state.starterLab = 'barn';
+    // One head is all a splice needs; the Theater refuses without one.
+    state.inventory.parts.push({
+      id: 'tok-head', partId: 'goat_head', grade: 'standard',
+      donor: { name: 'Bessie', species: 'goat', stars: 3, extractedAt: t0 },
+    });
+    const ctx = {
+      state, content, now: () => t0,
+      save() {}, pushNews() {}, refreshTicker() {}, takeSubtab: () => null,
+    };
+
+    // Fire the first handler whose element carries `data-<attr>` (or whose id
+    // matches), the way a finger would.
+    const press = (rec, find) => {
+      const hit = rec.bound.find(find);
+      assert.ok(hit, `R112 walk: nothing to press (${rec.bound.map((b) => b.sel).join(' | ')})`);
+      hit.fn({ preventDefault() {}, stopPropagation() {}, target: hit.el, currentTarget: hit.el });
+    };
+
+    assert.equal(state.profile.named, false, 'a fresh save has nobody on the door');
+
+    renderTheaterScreen(root.host, ctx);
+    // Install the head: open the socket picker, take the first real option.
+    press(root, (b) => b.el?.dataset?.picker === 'slot-head');
+    press(picker, (b) => b.el?.dataset?.value === 'tok-head');
+    // …and splice, which is the moment the player becomes somebody.
+    press(root, (b) => b.el?.id === 'thtr-splice');
+
+    assert.equal(state.chimeras.length, 1, 'the walk actually decanted something');
+    assert.ok(overlay.host.innerHTML.includes('data-picker="born-identity"'),
+      'and the ceremony offers a name on the door, on the screen the splice happened on');
+
+    // The picker host's `bound` list ACCUMULATES across sheets — the socket
+    // rows from two presses ago are still in it, and one of them carries a
+    // `data-value` too. So snapshot the length first and read only what this
+    // sheet bound, or the walk "picks a name" by pressing a part token.
+    const before = picker.bound.length;
+    press(overlay, (b) => b.el?.dataset?.picker === 'born-identity');
+    const rolled = picker.bound.slice(before)
+      .filter((b) => b.el?.dataset?.value && b.el.dataset.value !== '__reroll');
+    assert.ok(rolled.length >= 2, `the roll offers a choice (${rolled.length} names)`);
+    rolled[0].fn({ preventDefault() {}, target: rolled[0].el, currentTarget: rolled[0].el });
+
+    assert.equal(state.profile.named, true,
+      'THE R112 CRITERION: a fresh save reaches a name without visiting the Labs tab');
+    assert.ok(state.profile.name && state.profile.title && state.profile.lab,
+      `and the whole identity lands (${JSON.stringify(state.profile)})`);
+    assert.ok(overlay.host.innerHTML.includes(state.profile.name),
+      'and the ceremony says so rather than still offering the choice');
+  } finally {
+    restore();
   }
 }
 

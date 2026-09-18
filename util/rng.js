@@ -24,7 +24,7 @@ export function hashString(str) {
 }
 
 // Derive an independent stream from the world seed + a label + a counter,
-// e.g. rngStream(state.seed, 'splice', state.spliceCount).
+// e.g. rngStream(state.seed, 'chimera', state.chimeraCount).
 export function rngStream(worldSeed, label, counter = 0) {
   return mulberry32(hashString(`${worldSeed}:${label}:${counter}`));
 }

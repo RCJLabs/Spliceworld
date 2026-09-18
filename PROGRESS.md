@@ -1,5 +1,109 @@
 # PROGRESS
 
+## Session 197 — R112: the dossier and the Yearbook ✅
+
+**The save has counted about twenty things since M0 and shown the player one
+of them.**
+
+### Two of the entry's claims were wrong, and checking them was the first hour
+
+| the entry said | what the code says |
+|---|---|
+| no screen renders any of the ~20 counters | `warRecord` is on the War Room econ row — `campaign/ui.js:572`, `"Record 922W–42L"` — and has been since M5 |
+| without a philosophy `duelBarks` returns nothing | `philosophyOf` falls back to `DEFAULT_PHILOSOPHY = 'improver'`, which is fully authored; on a fresh save all three slots come back and the opener names the rival |
+| `runSummary` shows five fields | six — five display fields and `empty`, a predicate. Counting display fields the entry was right |
+
+The second one matters most, because it changes the fix. The player's half of a
+duel was never **silent** — it was the **same** half for everybody who never
+picked a philosophy. That is a real flatness and worth a prompt; it is not a
+rescue, and building one would have been building for a bug that does not
+exist.
+
+What DID hold: the dossier was three taps behind a subtab with no guide and no
+agenda row pointing at it (the one guide that says "dossier" means the RIVAL's
+read on you), a 180-day walk ends `named: false`, and `spliceCount` has been
+declared in `newGameState` since M0 and **written by nothing ever since** — the
+only mention outside the save system is a comment in `util/rng.js` describing a
+stream that reads `chimeraCount`.
+
+### The Yearbook is a loop over a data file
+
+`data/yearbook.json` — five sections, 22 rows. A row names a dotted `from` path
+into the save and a `fmt`; `save/yearbook.js` resolves and formats it. Adding a
+counter to the screen is one object in the file and no code.
+
+`from` is credited as a **prefix**, so `{"from": "warRecord", "fmt": "record"}`
+covers both leaves and reads as `922W–42L` rather than as two numbers a player
+has to pair up themselves.
+
+`derive` is the one thing that still costs an engine edit, deliberately: days
+played, longest-serving chimera and most-used part are computed, not stored,
+and a statistic nobody has computed yet is a computation rather than content.
+Smoke asserts every `derive` in the file resolves, so a typo is a red gate
+rather than a row that reads "—" forever.
+
+### The gate IS the criterion
+
+Smoke walks `newGameState()` for numeric leaves and splits them three ways:
+
+    CLOCK     createdAt, lastTickAt, anything ending At or Until      4
+    DIAL      a reading that falls as well as rises                  14
+    COUNTER   a monotonic tally — must be covered by a `from`        20
+
+The fourteen dials are exempted **with the screen that already shows each one
+written beside it** — funds in the header, pen capacity on the Ranch, notoriety
+and heat on their own cards, six facility tiers on the facility card, two
+device settings in Settings. An exemption nobody has to justify is how a list
+becomes a dumping ground.
+
+A counter added by a future milestone now fails the gate on the commit that
+adds it.
+
+### `spliceCount` is gone — SAVE_VERSION 58
+
+The only migration in the table that **deletes** a field. The Ascent rule holds
+in full: version bumped, migration written, runs once, and what it removes
+provably never held a player's progress. Forty-two milestones of serializing a
+zero.
+
+### A name at the first decant
+
+The naming ceremony moved off the Labs tab and onto the "IT'S ALIVE" card,
+which is the only screen in the game where the player has just done the thing
+the title is for. Rolled, never typed. The dossier still edits it. The
+philosophy picker follows the first conquest, as a card on the War Room map
+driven by a **state predicate** (`heldNodes.length && !profile.philosophy`)
+rather than an event hook — it survives a reload and cannot fire twice, and it
+reuses the dossier's own picker id so the two can never disagree.
+
+`runSummary` now takes an optional third `content` and carries the rows the
+data file marks `headline`, so R102's relocation confirmation says what the run
+WAS and not only what is currently on the shelf. Its `days` comes from
+`daysPlayed` in the same module the Yearbook reads, so the two screens cannot
+disagree by one.
+
+### Known issues
+
+- The philosophy card is a prompt on the map view, not a ceremony overlay. It
+  is the cheaper half of the entry's proposal and the criterion does not cover
+  it; a real ceremony at the moment of conquest is still open.
+- `chimeras graduated` and `chimeras dismantled` are on the entry's wish list
+  and NOT on the Yearbook: no counter exists for either. `renderCount` counts
+  vault clear-outs, not creatures. Adding them means adding counters, which the
+  criterion does not ask for — scope cut inside the milestone rather than at
+  its edge.
+- `cleanSave`'s `shape()` pass still replaces `save.ranch` wholesale if it is
+  not a plain object — a herd wipe in code that runs on every load. R114's,
+  not R112's, and no evidence it has ever fired. Worth guarding.
+
+### Next session's first task
+
+R113 — Vivarium and the fine print: the theme and type pass. Verify its
+premises first: 665 of 1,143 text nodes under 12 px, Vivarium failing 7,353
+contrast checks, and `$153249` printing without separators. R112 added a
+`grouped()` to `save/yearbook.js` that R113's one `fmtMoney` should absorb.
+
+
 ## Session 196 — R178: the release gate is in no tier ✅
 
 **A gate wired to a break but to no tier is checked in one direction only. R100

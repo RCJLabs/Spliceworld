@@ -45,7 +45,6 @@ const TEXT_LIMIT = 40;
 const BOUNDS = {
   funds: [0, 1e12],
   day: [0, 1e6],
-  spliceCount: [0, 1e9],
   chimeraCount: [0, 1e6],
   renderCount: [0, 1e9],
   cardCount: [0, 1e9],

@@ -16,6 +16,8 @@ import {
 } from './save.js';
 // R114 — the one cleaner; `renameSlot` was the third copy, and never applied it.
 import { safeText } from '../util/text.js';
+// R112 — the Yearbook is the one place that knows what a run adds up to.
+import { daysPlayed, yearbookHeadline } from './yearbook.js';
 
 // A lightweight, on-demand summary of a slot's own stored save. Read
 // straight from storage rather than cached in the registry, so it can never
@@ -248,9 +250,22 @@ export function startNewRun(state) {
 
 // What the confirmation has to say out loud. DOM-free so the numbers a
 // player is asked to give up are asserted rather than eyeballed.
-export function runSummary(state, now = Date.now()) {
-  const days = state?.createdAt ? Math.max(0, Math.floor((now - state.createdAt) / 86400000)) : 0;
+//
+// R112 — `content` is optional and third, so every existing two-argument
+// caller is untouched; pass it and the summary carries `lifetime`, the
+// Yearbook's headline rows. The point is that R102's relocation now has
+// something to show BESIDES what is currently on the shelf: five list
+// lengths said what you were holding, not what the run was. Which rows
+// those are is a `headline` flag in `data/yearbook.json`, so this file has
+// no opinion about it.
+//
+// And `days` comes from `daysPlayed` rather than from arithmetic repeated
+// here, because the Yearbook prints the same number two inches away and two
+// definitions of a day is how they end up disagreeing by one.
+export function runSummary(state, now = Date.now(), content = null) {
+  const days = daysPlayed(state, now);
   return {
+    lifetime: content ? yearbookHeadline(state, content, now) : [],
     chimeras: state?.chimeras?.length ?? 0,
     animals: state?.ranch?.stock?.length ?? 0,
     nodes: state?.campaign?.heldNodes?.length ?? 0,

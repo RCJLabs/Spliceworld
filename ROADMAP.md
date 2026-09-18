@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 57
+- save version: 58
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**7 entries queued.** R112, R113, R115, R116, R117, R118, R176.
+**6 entries queued.** R113, R115, R116, R117, R118, R176.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4246,29 +4246,87 @@ suite can check.
 
 **UI.**
 
-- **R112 — The dossier: a name on the door, and a yearbook.** The player's
-  own dossier — name, lab, philosophy — lives on the War Room's Labs tab; no
-  guide and no agenda row points at it (the one guide that says "dossier"
-  means the rival's), and the walker's profile reads **`named: false` on day
-  180**. Without a philosophy the player's half of every duel conversation
-  is **silent** (`duelBarks` returns nothing) and the card reads
-  *Unregistered Operator*. Meanwhile the save keeps **about twenty
-  counters nobody can see**: `warRecord` 922–42, 1,853 chimeras made, 1,992
-  animals raised, 21,745 tokens, 543 spars, 144 contests, 190 breakouts,
-  1,189 jobs, 42 raids and **$445k levied**, `directorStats.partUse` with
-  128 parts — no screen renders any of them, `runSummary` shows five fields,
-  and `spliceCount` has **never been written** since M0. Proposed, medium,
-  two steps: **(1)** the **naming ceremony** moves to the first decant —
-  `showSpliceResult` offers *Name on the door* (rolled, as now) the moment
-  the player becomes a villain, the philosophy picker follows the first
-  conquest, both stay editable in the dossier; **(2)** **the Yearbook**, a
-  Dex tab: fights by kind, chimeras made and graduated and dismantled,
-  longest-serving chimera, most-used part, raids held and missed and what
-  they cost, notoriety's peak, days played — every counter the save keeps,
-  with `spliceCount` retired and `runSummary` reading the Yearbook so R102's
-  relocation has something to show. *Done when: every non-clock counter in
-  `newGameState` is either on the Yearbook or gone, and smoke walks a fresh
-  save to a name without visiting the Labs tab.*
+- **R112 — The dossier: a name on the door, and a yearbook.** ✅ *Shipped,
+  and two of the entry's claims were wrong.*
+
+  **The premise held where it mattered.** The dossier was on the War Room's
+  Labs tab, behind a subtab, with no guide and no agenda row pointing at it —
+  the one guide that says "dossier" means the RIVAL's read on you. A fresh
+  save reads `named: false`, `profileOf` falls back to "Director the Management
+  of an unregistered barn", and the card says *Unregistered Operator*. And the
+  save really was keeping about twenty lifetime tallies with **one** of them
+  on a screen: `chimeraCount`, `ranch.animalCount`, `ranch.eggCount`,
+  `inventory.tokenCount`, `resequenceCount`, `renderCount`, `cardCount`,
+  `sparCount`, `contestCount`, `breakoutCount`, `opCount`, `raidCount`,
+  `raidsHeld`, `leviedTotal`, `notorietyPeak`, `vatCount`, `rushCount`,
+  `sentCount` — and `spliceCount`, **declared at M0 and written by nothing
+  ever since**. The only line of code that mentions it outside the save system
+  is a comment in `util/rng.js` describing a stream that reads `chimeraCount`.
+
+  **BUT "no screen renders any of them" WAS WRONG.** `warRecord` is on the War
+  Room's econ row — `campaign/ui.js:572`, `"Record 922W–42L"` — and has been
+  since M5. One of twenty is a much better sentence than none of twenty, and it
+  is the one that made the Yearbook's `record` row obvious: the pair reads as
+  a record, not as two numbers a player has to put together.
+
+  **AND "`duelBarks` returns nothing" WAS WRONG, IN THE OTHER DIRECTION.**
+  `philosophyOf` falls back to `DEFAULT_PHILOSOPHY = 'improver'`, which is
+  fully authored — run on a fresh save, `duelBarks` returns all three slots
+  and the opener names the rival. The player's half of a duel was never
+  silent; it was the **same** half for everybody who never picked. That is a
+  real flatness and worth fixing, but it is not the bug the entry described,
+  and the fix is a prompt rather than a rescue. (The entry also said
+  `runSummary` shows five fields. It returns six — five display fields and
+  `empty`, a predicate. Counting the display fields, the entry was right.)
+
+  **THE YEARBOOK IS A LOOP OVER A DATA FILE.** `data/yearbook.json` carries
+  five sections and 22 rows; each row names a dotted `from` path into the save
+  and a `fmt`, and `save/yearbook.js` resolves and formats it. Adding a
+  counter to the screen is one object in the file and no code, which is
+  CLAUDE.md's rule. A `from` is credited as a **prefix**, so
+  `{"from": "warRecord", "fmt": "record"}` covers both of its leaves.
+
+  **THE GATE IS THE CRITERION, EXECUTABLE.** `tools/smoke.js` walks
+  `newGameState()` for numeric leaves and splits them three ways: a **clock**
+  (`createdAt`, `lastTickAt`, anything ending `At` or `Until`), a **dial**
+  (a reading that falls as well as rises — funds, pen capacity, notoriety,
+  heat, the two device settings, six facility tiers), or a **counter**, which
+  must be covered by a `from`. The fourteen dials are exempted **with the
+  screen that already shows each one written beside it**, because an exemption
+  nobody has to justify is how a list becomes a dumping ground. A counter
+  added by a future milestone fails the gate on the commit that adds it.
+
+  **`spliceCount` IS GONE, AND IT IS THE ONLY MIGRATION IN THE TABLE THAT
+  DELETES A FIELD.** SAVE_VERSION 58, migration 58, `delete save.spliceCount`.
+  The Ascent rule holds in full: the version is bumped, the migration runs
+  once, and what it removes provably never held a player's progress — forty-two
+  milestones of serializing a zero. Everything else that counts is on the
+  Yearbook instead.
+
+  **THE NAMING CEREMONY MOVED TO THE FIRST DECANT**, which is the only screen
+  in the game where the player has just done the thing the title is for. The
+  "IT'S ALIVE" card offers *Name on the door* — rolled, never typed — and says
+  who filed the paperwork once it is chosen; the dossier still edits it. The
+  philosophy picker follows the first conquest, as a card on the War Room map
+  driven by a **state predicate** (`heldNodes.length && !profile.philosophy`)
+  rather than an event hook, so it survives a reload and cannot fire twice. It
+  reuses the dossier's own picker id, so the two can never disagree.
+
+  **`runSummary` READS THE YEARBOOK.** R102's relocation confirmation listed
+  five things you were currently holding — two chimeras, three animals, two
+  nodes — which says what is on the shelf, not what the run was. It now also
+  prints the rows the data file marks `headline`, and takes its `days` from
+  `daysPlayed` in the same module, so the two screens cannot disagree by one.
+  The third argument is optional, so every two-argument caller is untouched.
+
+  *Done when: every non-clock counter in `newGameState` is either on the
+  Yearbook or gone, and smoke walks a fresh save to a name without visiting
+  the Labs tab.* — **both green.** The counter walk is executable rather than
+  a list, and the naming walk is a real one: it installs the DOM stub, paints
+  the Surgery Theater on a fresh save, presses the socket picker, presses
+  SPLICE, presses the ceremony's name field and takes a rolled identity, and
+  asserts `profile.named`. `campaign/ui.js` is never imported.
+
 - **R113 — Vivarium and the fine print: the theme and type pass.** Of
   **1,143 text nodes** on the fresh screens, **665 (58%) are under 12 px**
   and 354 under 11 px: `.fine-print` at 11.5 px ×191, `.lineage` at 10.9 px
