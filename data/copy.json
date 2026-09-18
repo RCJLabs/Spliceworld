@@ -73,5 +73,22 @@
     "volume_half_sub": "Present, not insistent",
     "volume_quiet": "Quiet",
     "volume_quiet_sub": "Just enough to know it happened"
+  },
+  "dossier": {
+    "alive": "Something of yours is alive. Whoever the county blames for it needs a name.",
+    "door_label": "Name on the door",
+    "door_empty": "Choose a name",
+    "door_hint": "You can change it later, in your dossier.",
+    "door_filed": "Filed by {who} of {lab}.",
+    "roll_title": "Name on the door",
+    "roll_sub": "Rolled, not typed — this game does not open the phone keyboard for anybody.",
+    "roll_again": "Roll a different set",
+    "roll_again_sub": "None of these. Try again.",
+    "roll_of": "of {lab}",
+    "creed_title": "What are you FOR?",
+    "creed_body": "You hold ground now, which means the wire will start quoting you. It would help to know what you were going to say.",
+    "creed_label": "Philosophy",
+    "creed_empty": "Decide later",
+    "creed_hint": "Flavour only — your anatomy is where the mechanics live"
   }
 }

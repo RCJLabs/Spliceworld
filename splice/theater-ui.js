@@ -19,6 +19,8 @@ import { speciesOf, classOf } from '../data/catalog.js';
 // behind R74's lazy door, so `campaign/identity.js` stays out of the boot
 // graph exactly as R169 left it.
 import { rollIdentities, setIdentity } from '../campaign/identity.js';
+// R112 — every word the ceremony says lives in data/copy.json (R110's rule).
+import { copy } from '../util/text.js';
 
 const SLOT_LABELS = {
   head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
@@ -317,30 +319,39 @@ function showSpliceResult(ctx, result, onClose) {
       <p class="fine-print">Settling for ~${Math.round(result.report.settlingMs / 60000)} minutes. Deploying early causes Rejection. Patience is a stat.</p>
       ${combos}
       ${named
-        ? `<p class="fine-print">Filed by <strong>${state.profile.title} ${state.profile.name}</strong> of ${state.profile.lab}.</p>`
-        : `<p class="ranch-msg">Something of yours is alive. Whoever the county blames for it needs a name.</p>
+        ? `<p class="fine-print">${copy(content, 'dossier.door_filed', {
+            who: `${state.profile.title} ${state.profile.name}`, lab: state.profile.lab,
+          })}</p>`
+        : `<p class="ranch-msg">${copy(content, 'dossier.alive')}</p>
            ${pickerField({
              id: 'born-identity',
-             label: 'Name on the door',
-             value: 'Choose a name',
-             hint: 'You can change it later, in your dossier.',
+             label: copy(content, 'dossier.door_label'),
+             value: copy(content, 'dossier.door_empty'),
+             hint: copy(content, 'dossier.door_hint'),
            })}`}
       <button type="button" id="born-done" class="big-btn">To the Pens</button>
     </div>`;
     bindPickers(overlay, {
       'born-identity': () => ({
-        title: 'Name on the door',
-        subtitle: 'Rolled, not typed — this game does not open the phone keyboard for anybody.',
+        title: copy(content, 'dossier.roll_title'),
+        subtitle: copy(content, 'dossier.roll_sub'),
         groups: [
           {
             label: null,
             options: rollIdentities(content, state.seed + identityRoll, 6).map((id) => ({
               id: id.id,
               label: `${id.title} ${id.name}`,
-              sub: `of ${id.lab}`,
+              sub: copy(content, 'dossier.roll_of', { lab: id.lab }),
             })),
           },
-          { label: null, options: [{ id: '__reroll', label: `${renderIcon('dice')} Roll a different set`, sub: 'None of these. Try again.' }] },
+          {
+            label: null,
+            options: [{
+              id: '__reroll',
+              label: `${renderIcon('dice')} ${copy(content, 'dossier.roll_again')}`,
+              sub: copy(content, 'dossier.roll_again_sub'),
+            }],
+          },
         ],
         selectedId: '',
         onPick: (value) => {

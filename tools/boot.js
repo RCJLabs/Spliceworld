@@ -362,7 +362,35 @@ const REPORT = process.argv.includes('--report');
 // KB of slack over the measurement, which is the property R109 restored and the
 // same arithmetic it used — this gate is a browser reading and one that sits on
 // its measurement goes red on a slow afternoon.
-const FIRST_PAINT_KB = 1070;
+// R112 — 1070 -> 1085, measured at 1076, AND THE NOTE ABOVE HAD GONE STALE BY
+// SEVEN KILOBYTES. R174 wrote "measured at 1061 ... nine KB of slack", and
+// that was five milestones ago. Measured at dfa2359, the commit before this
+// one: 89 requests and 1068 KB. The slack this gate has actually been running
+// on was TWO kilobytes, not nine, and nobody knew because the number in the
+// ledger was the last one somebody typed rather than the last one anybody
+// took. R114, R173, R177, R111 and R178 each added a little and none of them
+// re-measured, which is the same drift R157's worn floor had and R159 caught
+// in the suite budget.
+//
+// So this raise is two things and the ledger says which is which. R112's own
+// cost is 8 KB and one request: `data/yearbook.json` (5.4 KB) in CORE, plus
+// the new guide and the ceremony's copy. The other 7 KB is drift that was
+// already sitting against the cap.
+//
+// WHY THE YEARBOOK IS IN CORE and not in R81's second round, which would have
+// made this a non-event: `runSummary` reads it to tell a player what
+// relocating the lab is about to cost them, and a destructive confirmation
+// that printed a dash because a second-round fetch had not landed is a worse
+// outcome than 5 KB. There is also no working LATE path for a whole file —
+// `loadShapes` merges shapes and voice POOLS and nothing else, which is why
+// `content.voice` is still `{}` in the browser after R111 shipped it as LATE.
+// That is a bug, it is R111's, and it is filed rather than fixed here.
+//
+// 1085 restores the nine-KB slack over the measurement that R169 asked for and
+// R174 claimed. THE NEXT MILESTONE TO WANT THIS SHOULD RE-MEASURE FIRST and
+// write the reading down, because the lesson of this raise is that half of it
+// was invisible.
+const FIRST_PAINT_KB = 1085;
 
 // R169 — AND IT STAYS AT 1034, measured at 1016. Every previous milestone
 // either raised this number or brought it down to sit just above the
