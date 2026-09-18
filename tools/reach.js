@@ -55,6 +55,8 @@ import { loadSimContent, runSim, sampleBuilds, makeSimChimera } from './sim.js';
 import { walkedSave } from './fixtures.js';
 import { GRADES } from '../splice/grades.js';
 import { diagnose, forecast, bandFor } from '../battle/forecast.js';
+// R177 — the variant lines are a species question, so ask the module that owns it.
+import { isVariant } from '../ranch/breeding.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REPORT = process.argv.includes('--report');
@@ -213,6 +215,12 @@ const REACH_FLOOR = 0.95;
 // after the Theater started marking what you have never bolted on and the
 // walker started reading that mark.
 const WORN_FLOOR = 0.50;   // R158 — R140's design floor, no longer chasing a break
+// R177 — 5.5 OF 6 VARIANT LINES, and the number is the midpoint of a measured
+// gap rather than a round figure: 5.92 clean, 5.15 with R95's pair-ordering
+// deleted. Six species carry a variant and 34 of the 244 parts are on one, so
+// a campaign that stops rolling for them loses content the part floor cannot
+// see — 95.1% still clears 95%.
+const VARIANT_LINE_FLOOR = 5.5;
 const TOTAL_PARTS = Object.keys(content.parts).length;
 {
   const per = [];
@@ -319,6 +327,56 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
           + ` — ${per.map((r) => `${r.seed}: ${r.worn.size}`).join(', ')}`
           + `; ${TOTAL_PARTS - wornUnion.size} parts go onto no creature in any seed`);
       }
+    }
+  }
+
+  // R177 — AND THE LINES THEMSELVES, WHICH IS A DIFFERENT QUESTION FROM PARTS.
+  //
+  // R95 sorts breeding candidates so a line that still owes the Splice-Dex a
+  // variant pairs first. Delete that one `pairs.sort(...)` and NOTHING WENT
+  // RED: mean part reach falls 237.2 -> 232.1 (95.1%), which clears the 0.95
+  // floor by a tenth of a point, and the union stays 244/244 because thirteen
+  // seeds between them still stumble onto every line eventually.
+  //
+  // So the part statistics cannot see it, and that is not a floor that needs
+  // tightening — it is the WRONG SUBJECT. R95's rule is about which lines get
+  // ROLLED FOR, and 34 of the 244 parts sit on six species that arrive by one
+  // door: a mutation in the Incubator, on a pairing whose stock has a variant
+  // to become. Measured per seed:
+  //
+  //                      clean      pair-sort deleted
+  //     mean lines       5.92/6     5.15/6
+  //     seeds at 6/6     12 of 13    4 of 13
+  //     seeds at 4/6      0 of 13    2 of 13
+  //     union             6/6        6/6
+  //
+  // THE MEAN, NOT THE MINIMUM, and that is R173's lesson applied rather than
+  // repeated. The minimum separates too (5 clean, 4 broken), but the clean
+  // tree's own worst seed IS 5 — seed 123 finishes without `glider_skunk` —
+  // so a floor there has zero headroom and one unlucky seed false-reds it.
+  // The mean sits with room on both sides: 0.42 above clean, 0.35 below the
+  // break, and it tolerates five seeds each losing a line before it fires.
+  //
+  // The union is NOT asserted here, because it does not separate: both trees
+  // reach all six lines across thirteen seeds. Saying so is cheaper than
+  // letting the next reader assume it is covered.
+  {
+    const linesOf = (held) => new Set([...held]
+      .map((id) => content.parts[id]?.species)
+      .filter((sp) => sp && isVariant(sp, content)));
+    const ALL_LINES = Object.values(content.species).filter((sp) => sp.variantOf).map((sp) => sp.id);
+    const perLines = per.map((r) => ({ seed: r.seed, lines: linesOf(r.held) }));
+    const meanLines = perLines.reduce((n, r) => n + r.lines.size, 0) / perLines.length;
+    if (REPORT) {
+      console.log(`  variant lines: ${perLines.map((r) => `${r.seed}: ${r.lines.size}`).join(', ')}`);
+      console.log(`  mean ${meanLines.toFixed(2)} of ${ALL_LINES.length} lines`);
+    }
+    if (meanLines < VARIANT_LINE_FLOOR) {
+      const short = perLines.filter((r) => r.lines.size < ALL_LINES.length)
+        .map((r) => `${r.seed} missed ${ALL_LINES.filter((l) => !r.lines.has(l)).join('/')}`);
+      fails.push(`variant lines: the average campaign rolls for ${meanLines.toFixed(2)} of`
+        + ` ${ALL_LINES.length} variant lines (under ${VARIANT_LINE_FLOOR})`
+        + ` — ${short.join('; ')}`);
     }
   }
 
