@@ -3655,6 +3655,31 @@ const BREAKS = [
     anchor: "      if (OBJECT_SLOTS.has(at)) {",
     to: "      if (false) {",
   },
+  // R178 — the release gate joins a tier.
+  {
+    // ONE APOSTROPHE, AND THE APP CACHES NOTHING. This is not a hypothetical:
+    // it is the tree R111 ran `npm test` on, green, one command before
+    // `tools/release.js` said otherwise by hand. `SHELL` is read by pairing
+    // quotes, so "budget's" opens a string that swallows the rest of the line
+    // and shifts every pair after it — 38 fragments that are not files, and
+    // `install()` is all-or-nothing.
+    //
+    // Aimed at CACHEBUMP because that is the gate this milestone put into
+    // BASELINE; before R178 this break had nothing in either tier to fire.
+    n: 358, gate: CACHEBUMP, name: 'an apostrophe in an sw.js comment empties the precache and no tier notices',
+    file: 'sw.js',
+    anchor: '  // R111: the room tone and the haptics. Lazy, to keep them out of the eager',
+    to: "  // R111: the room tone and the haptics, lazy for the eager budget's sake",
+  },
+  {
+    // AND THE SMOKE BLOCK STOPS READING THE SHELL THE WAY THE BROWSER DOES.
+    // The weaker regex beside it still passes on this tree — that is the whole
+    // finding — so this break proves the ADDED rule is the one doing the work.
+    n: 359, gate: SHARD_A, name: 'smoke stops parsing the shell as shipped, and a split literal reads clean again',
+    file: 'tools/smoke.js',
+    anchor: "    const precached = shellAsShipped(sw);",
+    to: "    const precached = [];",
+  },
 
   // R175 — the stable says how big it is and what makes it bigger.
   {
@@ -5552,10 +5577,31 @@ if (process.argv.includes('--anchors')) {
   process.exit(0);
 }
 
-const BASELINE = [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, COVERAGE];
+// R178 — THE THREE SHIP GATES JOIN THE LIST, AND THEY WERE THE ONLY THREE
+// MISSING. R100 built `offline.js`, `durable.js` and `release.js` and wired
+// each one to a break, which proves a gate goes RED on demand — and never put
+// any of them here, which is the half that proves it is GREEN on a clean tree.
+// So the whole TWA story was verified in one direction only, and for eight
+// milestones the per-milestone tier could not see it at all.
+//
+// Found the way these things are always found: `npm test` came back green on a
+// tree whose service worker cached NOTHING, because one apostrophe inside an
+// sw.js comment ("the eager budget's sake") split the SHELL literal and left
+// 38 fragments that are not files. `install()` is all-or-nothing, so the app
+// would have shipped with no offline story whatever. `--baseline` passed that
+// tree too; only `node tools/release.js`, run by hand, said a word.
+//
+// They cost 72 CPU-seconds between them — release 0.0s, durable 8.1s, offline
+// 63.9s — against a baseline that already spends about 1,700 across four
+// lanes. That is the whole argument: the cheapest three gates in the tree were
+// the three nobody ran.
+const BASELINE = [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, COVERAGE, CACHEBUMP, OFFLINE, DURABLE];
 
 const baselineLabel = (gate) => (
-  gate === TWICE ? 'walkSurfaces twice in one process'
+  gate === CACHEBUMP ? 'the worker precaches a shell that is actually there'
+    : gate === OFFLINE ? 'a cached game opens on a train'
+    : gate === DURABLE ? 'a 2 MB save survives localStorage being emptied'
+    : gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
       : gate === RETIRED ? 'a save read against a build that retired seven of its ids'
         : gate === BREAKOUT ? 'a specimen escapes, waits, is hunted and joins the roster'
