@@ -28,7 +28,6 @@ export function copy(content, id, vars = {}) {
   return typeof at === 'string' ? fill(at, vars) : null;
 }
 
-// R113 — the one money formatter. `$153249` was printed at 72 sites.
 export function fmtMoney(n) {
   const v = Math.round(Number(n) || 0);
   return `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString('en-US')}`;

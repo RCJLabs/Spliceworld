@@ -117,8 +117,8 @@ function upkeepBreakdown(upkeep, parts) {
     ['stock', parts?.stock], ['stable', parts?.chimeras],
     ['garrisons', parts?.territory], ['plant', parts?.facility],
   ].filter(([, v]) => v > 0);
-  if (named.length < 2) return `after ${fmtMoney(Math.round(upkeep))} upkeep`;
-  return `after ${fmtMoney(Math.round(upkeep))} upkeep — ${named.map(([k, v]) => `${fmtMoney(v)} ${k}`).join(', ')}`;
+  if (named.length < 2) return `after ${fmtMoney(upkeep)} upkeep`;
+  return `after ${fmtMoney(upkeep)} upkeep — ${named.map(([k, v]) => `${fmtMoney(v)} ${k}`).join(', ')}`;
 }
 
 export function renderWarRoomScreen(root, ctx) {

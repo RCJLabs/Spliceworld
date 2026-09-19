@@ -22954,7 +22954,23 @@ if (inShard('wire')) {
 // scalars and are the only parts `tick` needs synchronously. R176 is already
 // queued to evict a module and pay MODULE_CAP back to 49; this is the second
 // candidate, and it is worth more.
-const KB_CAP = 321;        // CODE only, measured at 318.3
+// R113 — 321 -> 322, measured at 321.1. ONE MONEY FORMATTER, and the honest
+// accounting is that it cost more bytes than it saved: `${fmtMoney(x)}` is
+// eleven characters longer than `$${x}` at each of 39 eager sites, plus ten
+// import lines and the function itself. What it bought is that the game stops
+// printing `$153249`, in all 73 places it prints money, from one definition
+// instead of 73 hand-rolled interpolations that could each drift.
+//
+// R111'S NOTE SAYS THE NEXT LEVER IS EVICTING `audio/sfx.js`, and this is not
+// the milestone that pulls it: R113 is a type and theme pass, and a milestone
+// that rearranges the audio graph while also moving 78 font sizes is two
+// milestones wearing one hat. The lever is still there and still named.
+//
+// The prose half of this was PAID rather than raised. `util/text.js` carried a
+// one-line comment introducing `fmtMoney`; PROSE_CAP was also at exactly its
+// cap, so the line came out and the explanation is in ROADMAP R113, where the
+// argument for the function already had to be written anyway.
+const KB_CAP = 322;        // CODE only, measured at 321.1
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
