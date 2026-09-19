@@ -1941,6 +1941,49 @@ async function main() {
     }
     if (!picked) note('no option picker on any screen offered a row to choose, so nothing committed a pick');
 
+    // 6h. R115 — AND THE SETTINGS PANEL'S OWN FOUR, which are the only
+    //     controls in the game that change how the game itself behaves:
+    //     volume, battle speed, theme, and the lab's name. Every one of their
+    //     `onPick`/`onSubmit` bodies writes to `state.settings`, calls
+    //     `ctx.save()` and re-renders, and not one of them had ever been run
+    //     — a theme picker that saved nothing would have passed every gate.
+    //
+    //     LAST IN THE WALK ON PURPOSE. Committing these changes the theme,
+    //     the volume and the speed for real; anything measured afterwards
+    //     would be measured under settings this pass chose.
+    await evaluate(`document.querySelector('#settings').click()`);
+    await sleep(500);
+    const setPickers = await evaluate(`[...document.querySelectorAll('#overlay button[data-picker]:not([disabled])')].map((b) => b.dataset.picker)`);
+    if (!setPickers.length) note('the settings panel offered no picker, so none of its choices were committed');
+    let committed = 0;
+    for (const id of setPickers) {
+      await evaluate(`document.querySelector('#overlay button[data-picker="${id}"]')?.click()`);
+      await sleep(450);
+      const kind = await evaluate(`(() => {
+        if (document.querySelector('#picker .prompt-input')) return 'prompt';
+        return document.querySelectorAll('#picker .pick-row').length ? 'rows' : 'empty';
+      })()`);
+      if (kind === 'prompt') {
+        await evaluate(`(() => { const i = document.querySelector('#picker .prompt-input'); if (i) i.value = 'Coverage Lab'; })()`);
+        await evaluate(`document.querySelector('#picker #prompt-go')?.click()`);
+        committed += 1;
+      } else if (kind === 'rows') {
+        // The LAST row, not the first: the first is usually what is already
+        // selected, and re-choosing it exercises the callback without
+        // proving it changed anything.
+        await evaluate(`(() => { const r = [...document.querySelectorAll('#picker .pick-row')]; r[r.length - 1].click(); })()`);
+        committed += 1;
+      } else {
+        await evaluate(`document.querySelector('#picker .pick-close')?.click()`);
+      }
+      await sleep(500);
+    }
+    if (setPickers.length && committed < setPickers.length) {
+      note(`${committed} of the settings panel's ${setPickers.length} pickers offered anything to choose`);
+    }
+    await evaluate(`document.querySelector('#set-close')?.click()`);
+    await sleep(300);
+
     // ---- everything measured across every view, now that the walk is done -
     const controls = [...seen.values()].sort((a, b) => Math.min(a.h, a.w) - Math.min(b.h, b.w));
     const under = controls.filter((c) => c.h < FLOOR || c.w < FLOOR);
