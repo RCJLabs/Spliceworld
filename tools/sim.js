@@ -1159,7 +1159,7 @@ import { activeVat, vatPlan, startVat } from '../splice/chaos.js';
 import { activeResequence, resequencePlan, startResequence } from '../splice/resequencer.js';
 import {
   startOperation, operationList, opReady, laneFree, runnableOps, freeCrew, opOdds,
-  contractList, contractPerHour, activeContract, signContract,
+  contractList, contractPerDay, activeContract, signContract,
 } from '../campaign/operations.js';
 import { startSpar, canSpar, sparEncounter, sparPartners } from '../campaign/sparring.js';
 import { levelOf } from '../battle/veterancy.js';
@@ -1925,11 +1925,11 @@ function walkAct(state, content, now, open, opts = {}) {
     // R116 — THE STANDING ARRANGEMENT, signed once and then left alone. It
     // costs no charge and asks for nobody, so the only decision is which one,
     // and the walker takes the best-paying it can see. Re-checked each time
-    // rather than signed on day one, because `contractPerHour` is derived
+    // rather than signed on day one, because `contractPerDay` is derived
     // from the job and a later milestone may change what one is worth.
     {
       const best = contractList(content)
-        .map((op) => ({ op, rate: contractPerHour(op, content) }))
+        .map((op) => ({ op, rate: contractPerDay(op, content) }))
         .sort((a, b) => b.rate - a.rate)[0];
       const held = activeContract(state);
       if (best && held?.opId !== best.op.id && signContract(state, best.op.id, content, now).ok) {
@@ -2707,6 +2707,13 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     lastGen = g;
   };
 
+  // What the standing arrangement pays a day, or nothing if none is signed.
+  const contractDayRate = (s, c) => {
+    const held = activeContract(s);
+    const op = held && c.operations?.[held.opId];
+    return op ? contractPerDay(op, c) : 0;
+  };
+
   const snapshots = {};
   const snap = (day) => ({
     day,
@@ -2716,7 +2723,17 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     contestCount: state.campaign.contestCount ?? 0,
     income: Math.round(state.__walkIncome ?? 0),
     // The daily rates at this moment: what a month of full pay would be.
+    // R116 — AND THE RETAINER IS ONE OF THEM. `incomePerDay` is territory,
+    // and it is the number `tickWorld` actually pays with, so a standing
+    // arrangement must not be folded into it or the player is paid twice.
+    // But a contract is still passive income a PRESENT player collects, and
+    // the away rule compares what a month away banked against what a month
+    // of full pay would have been. Leaving it out of that denominator makes
+    // a signed retainer look like an absent player out-earning a present
+    // one — which is what it did: seed 4242 banked 8,661 against a 6,960
+    // that had never heard of contracts.
     incomeRate: Math.round(incomePerDay(state, content)),
+    contractRate: Math.round(contractDayRate(state, content)),
     upkeepRate: Math.round(upkeepPerDay(state, content)),
     captives: (state.campaign.captives ?? []).length,
     dissections: (state.directorStats?.dissections ?? []).length,

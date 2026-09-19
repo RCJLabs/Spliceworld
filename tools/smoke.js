@@ -17948,7 +17948,16 @@ if (inShard('away')) {
       // of graduation is unknown, which it is. The FLOOR is unchanged — the
       // claim was never the thing that was wrong.
       const upkeepAcross = ((left.upkeepRate ?? 0) + (back.upkeepRate ?? left.upkeepRate ?? 0)) / 2;
-      const fullPay = (left.incomeRate + TUNING.stipendPerDay - upkeepAcross) * AWAY;
+      // R116 — AND THE RETAINER IS PART OF FULL PAY, by the same argument one
+      // paragraph up. A standing arrangement is passive income a PRESENT
+      // player collects too, so a denominator that had never heard of one
+      // read a signed contract as an absent player out-earning a present
+      // one: seed 4242 banked 8,661 against a "full pay" of 6,960. Averaged
+      // across the window like upkeep, and for the same reason — the walker
+      // may sign or swap while nobody is looking, so the rate at the instant
+      // it left is not what the window actually paid.
+      const contractAcross = ((left.contractRate ?? 0) + (back.contractRate ?? left.contractRate ?? 0)) / 2;
+      const fullPay = (left.incomeRate + contractAcross + TUNING.stipendPerDay - upkeepAcross) * AWAY;
       const banked = back.funds - left.funds;
       // An empire already underwater at the moment of leaving cannot measure
       // what a month away costs — there is no pay to bank a share of. That
@@ -18127,7 +18136,7 @@ if (inShard('away')) {
 // --- R65: timers that started when you looked -----------------------------
 if (inShard('timers')) {
   const { tickWorld } = await import('../campaign/world.js');
-  const { startOperation, abortOperation, opReady, operationList } = await import('../campaign/operations.js');
+  const { startOperation, abortOperation, opReady, operationList, boardOps } = await import('../campaign/operations.js');
   const DAY = 24 * HOUR;
   const chim = (id, extra = {}) => ({
     ...makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'prime', content),
@@ -18291,18 +18300,24 @@ if (inShard('timers')) {
   {
     const src = readFileSync(join(root, 'campaign/operations.js'), 'utf8');
     assert.equal((src.match(/opCooldowns\[[^\]]*\] =/g) ?? []).length, 1, 'exactly one place writes a cooldown');
-    const op = operationList(content).find((o) => o.crew === 'none') ?? operationList(content)[0];
+    // R116 — OFF `boardOps` AND WITH A CREW. This used to take the first job
+    // whose `crew` was 'none' and send nobody, and both halves of that are
+    // now wrong: the three jobs that needed nobody carried anywhere became
+    // standing contracts, so the pick found a job that is no longer ON the
+    // board and `startOperation` correctly refused it. The cooldown rule
+    // this block is actually about did not change at all.
+    const op = boardOps(content)[0];
     const cd = (op.cooldownHours ?? 6) * HOUR;
     const s = { ...newGameState(), seed: 66, funds: 5000 };
     ensureRanchSeeded(s, content, t0); s.lastTickAt = t0; s.chimeras = [chim('c0')];
-    assert.ok(startOperation(s, op.id, null, content, t0).ok, 'a job starts');
+    assert.ok(startOperation(s, op.id, 'c0', content, t0).ok, 'a job starts');
     const run = s.campaign.operations[0];
     abortOperation(s, content, op.id, t0 + HOUR);
     assert.equal(s.campaign.opCooldowns[op.id], t0 + HOUR + cd, 'an abort is on the clock from the moment it is called off');
     assert.ok(s.campaign.opCooldowns[op.id] > run.startedAt + cd, 'which is later than pretending it ended when it began');
     const s2 = { ...newGameState(), seed: 66, funds: 5000 };
     ensureRanchSeeded(s2, content, t0); s2.lastTickAt = t0; s2.chimeras = [chim('c0')];
-    startOperation(s2, op.id, null, content, t0);
+    startOperation(s2, op.id, 'c0', content, t0);
     const until = s2.campaign.operations[0].until;
     tickWorld(s2, content, until + 5 * DAY);
     assert.equal(s2.campaign.opCooldowns[op.id], until + cd, 'and a resolved job is on the clock from when it ended');

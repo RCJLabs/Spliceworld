@@ -83,21 +83,10 @@ export function operationList(content) {
   return Object.values(content.operations ?? {});
 }
 
-// R116 — THE BOARD AND THE CONTRACTS ARE TWO DIFFERENT THINGS NOW, and which
-// is which is a field in the data rather than a rule in here.
-//
-// The board is what you WORK: a charge, a creature, a decision about which of
-// them goes where. A contract is what you ARRANGE: it pays while you are not
-// looking and asks nothing of the roster.
-//
-// The split is the cure for a defect the charge bucket created. One shared
-// scarce charge makes a lower-purse job strictly dominated — measured, the
-// petting zoo, the feed co-op and the county fair ran 0, 2 and 6 times in a
-// 180-day campaign, and the same at day 20, so it was not an early-game
-// argument either. Pricing a charge by the purse inverts it exactly (the
-// cheap jobs then take 1,079 of 1,081 launches). The jobs that lost were the
-// three that need nobody carried anywhere — which is precisely the set that
-// did not want to be a tap in the first place.
+// R116 — the board is what you WORK and a contract is what you ARRANGE, and
+// which a job is is `contract: true` in the data rather than a rule in here.
+// Why the set splits where it does, and the two charge pricings that were
+// tried and rejected first: data/notes/operations.md, `operations[]`.
 export function boardOps(content) {
   return operationList(content).filter((op) => !op.contract);
 }
@@ -111,15 +100,19 @@ export function contractList(content) {
 // never drift away from the job it replaced, and adding one is still a JSON
 // object rather than an engine edit.
 //
-// `contractRate` is the discount, and it is the whole bargain: a contract
-// earns about half what working the job earned, in exchange for costing no
-// charge, no creature and no visit. A player with an empty roster can still
-// sign one, which is the rule the solo lane existed for and predates A4.
+// `contractRate` is the discount and it is the whole bargain; the note has
+// the argument.
 export function contractPerHour(op, content) {
   const t = opTuning(content);
   const purse = ((op.funds?.[0] ?? 0) + (op.funds?.[1] ?? 0)) / 2;
   const cycle = Math.max(1, (op.hours ?? 1) + (op.cooldownHours ?? 0));
   return (purse * (op.baseChance ?? 0) / cycle) * (t.contractRate ?? 0.5);
+}
+
+// A DAY OF IT, which is the unit every reader wanted and three of them were
+// hand-rolling. R174's rule: one home, however many readers.
+export function contractPerDay(op, content) {
+  return contractPerHour(op, content) * 24;
 }
 
 export function activeContract(state) {
@@ -162,37 +155,19 @@ export function settleContracts(state, content, now) {
   c.paidThrough = now;
   if (paid > 0) state.funds = (state.funds ?? 0) + paid;
 
-  // R116 — ONE LEDGER LINE A DAY, which is the entry's own third clause and
-  // turns out to be load-bearing for R109 rather than decoration. Taking the
-  // three quiet jobs off the board silenced their headline pools completely
-  // and the wire fell to 381 distinct phrasings, below R109's floor of 400 —
-  // the county stopped noticing the missing goats because nobody was driving
-  // to fetch them. A retainer is still a thing that happens in public.
-  //
-  // DAY-STAMPED, NOT TICK-STAMPED. The wire is fed off `contractDay`, the
-  // whole days that have elapsed, so a player who opens the app six times an
-  // hour hears the arrangement once a day and a player who was away a week
-  // hears it as the week it was — never once per visit, which is how a
-  // passive line becomes the loudest thing in the county.
+  // R116 — ONE LEDGER LINE A DAY, DAY-STAMPED AND NOT TICK-STAMPED, so six
+  // visits an hour hear the arrangement once and a week away hears it as the
+  // week it was. Why the wire depends on this at all: the note, `operations[]`.
   const news = [];
   const day = Math.floor(now / DAY);
   const last = c.saidOn ?? Math.floor((c.signedAt ?? now) / DAY) - 1;
   for (let d = last + 1; d <= day && news.length < CONTRACT_LINES_MAX; d++) {
-    // TWO POOLS, ALTERNATING. The job's own headline keeps the county
-    // noticing the goats — that is the pool that went silent when these
-    // three left the board — and `op_contract` is the ledger line the entry
-    // asked for, which is a different KIND of sentence: a heist is an event,
-    // a retainer is a line item, and one pool cannot be both without the
-    // tone gate noticing.
-    // The ledger line goes through `newsFor` like every other event in the
-    // game rather than reaching into the pool by hand. Two reasons, and the
-    // second is the one that bit: it is the shared emitter, so pooling,
-    // rotation and `fill` all behave the way R109 built them — and the wire
-    // gate scans the SOURCE for emitter calls by name, so an event reached
-    // any other way reads as authored-and-never-said. (Spelling the example
-    // out here is not idle: the first draft of this comment quoted the call
-    // shape verbatim and the scanner counted the COMMENT as an emitter of an
-    // event called `id`.)
+    // TWO POOLS, ALTERNATING — a heist is an event and a retainer is a line
+    // item, and one pool cannot be both. The ledger line goes through the
+    // shared emitter rather than reaching into the pool by hand, because the
+    // wire gate scans the SOURCE for emitter calls by name and anything
+    // reached another way reads as authored-and-never-said. Do not quote the
+    // call shape in a comment here: the scanner counts that as an emitter.
     const headline = d % 2
       ? fill(pickPooled(state, `op:${op.id}`, op.news), { op: op.name })
       : newsFor(state, content, 'op_contract', { op: op.name });
@@ -302,24 +277,11 @@ export function opReady(state, opId, now) {
 }
 
 // R116 — THE BOARD HOLDS CHARGES, and they are the only thing that decides
-// how often it can be worked.
-//
-// Measured before this existed: 1,189 launches in 180 days, 6.61 a day, and
-// `byOp` byte-identical on five different seeds — 721 petting zoo, 360 feed
-// co-op, 108 grant. The board was not a slot machine, it was a METRONOME.
-// Every job is its own clock (`hours + cooldownHours`) and the board was the
-// sum of seven of them: 4.00/day on the solo lane plus 6.05/day of crewed
-// jobs in parallel lanes, a 10.05/day ceiling no constant could move because
-// no constant expressed it. Heat brakes AMBITION — it lowers the odds — and
-// never once brakes the tapping.
-//
-// A shared bucket makes every launch cost something the next one wanted, so
-// the board stops being a tap and starts being a choice: a charge spent on a
-// $35 petting zoo is a charge not spent on a $270 aquarium. That is the same
-// bargain the Sparring Ring struck in R43, and this is deliberately the SAME
-// SHAPE as `sparCharges` — one timestamp, everything derived off it, a
-// refill time in the past meaning simply full — because a player who has
-// learned the ring has already learned this.
+// how often it can be worked. Deliberately the SAME SHAPE as R43's
+// `sparCharges` — one timestamp, everything derived off it, a refill time in
+// the past meaning simply full — because a player who has learned the ring
+// has already learned this. The metronome it replaces is measured in
+// data/notes/operations.md, `tuning`.
 export function boardCharges(state, content, now) {
   const t = opTuning(content);
   const max = Math.max(1, t.boardCharges ?? 3);
@@ -337,25 +299,6 @@ export function boardCharges(state, content, now) {
   };
 }
 
-// WHAT A JOB COSTS TO PUT ON. DERIVED FROM ITS PURSE, not authored, because
-// seven more numbers in the data file are seven more numbers to keep in step
-// with the seven they duplicate — and R127's lesson is that a generator which
-// reproduces the data beats a table somebody has to maintain.
-//
-// A FLAT COST WAS THE FIRST DRAFT AND IT COLLAPSED THE BOARD. With one
-// shared charge and one price, expected value per charge is just chance x
-// purse, so the fattest job wins every single time: measured over 180 days
-// the walker ran the aquarium 162 times, the reptile house 148, and the
-// petting zoo, the feed co-op and the county fair a combined EIGHT. The
-// cheap end of the board went dark, and the wire went with it — the loudest
-// line in the county doubled from 1.55% to 3.25% because one job was being
-// done over and over. That is the metronome this milestone set out to break,
-// rebuilt at the other end of the board.
-//
-// Pricing a job by what it pays flattens value-per-charge, so the question
-// stops being "which job pays most" and becomes "which job can I actually
-// do" — anatomy, class and who is free, which is the decision the demands
-// were written for.
 // Spending one. Kept beside the reader so the pair cannot drift, and written
 // the way `spendSparCharge` is: `max(refillAt, now)` so a bucket that has
 // been full for a week starts its first regen from NOW rather than from

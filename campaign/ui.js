@@ -51,7 +51,7 @@ import { speciesOf, classOf, enemyOf, rivalOf } from '../data/catalog.js';
 import { looseSpecimens, looseById, released, releaseTuning, packOf } from './breakout.js';
 import {
   operationList, freeCrew, startOperation, abortOperation, opOdds,
-  contractList, contractPerHour, activeContract, signContract, cancelContract, boardOps,
+  contractList, contractPerDay, activeContract, signContract, cancelContract, boardOps,
 } from './operations.js';
 import { profileOf } from './monologue.js';
 import {
@@ -909,7 +909,7 @@ function jobsCard(state, ctx, t) {
         <p class="fine-print">${fill(content.copy?.board?.card_blurb, {})}</p>
         ${retainers.map((op) => {
     const mine = held?.opId === op.id;
-    const perDay = Math.round(contractPerHour(op, content) * 24);
+    const perDay = Math.round(contractPerDay(op, content));
     return `
           <div class="op-row${mine ? ' is-selected' : ''}">
             <strong>${op.name}</strong>

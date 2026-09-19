@@ -38,7 +38,7 @@ import { treatmentCost } from '../splice/scars.js';
 import { activeVat, vatPlan } from '../splice/chaos.js';
 import {
   operationList, opReady, activeOps, laneFree, runnableOps,
-  contractList, activeContract, contractPerHour,
+  contractList, activeContract, contractPerDay,
 } from '../campaign/operations.js';
 import { reachableEncounterIds, regionStates } from '../campaign/map.js';
 import { enemyOf, speciesOf } from '../data/catalog.js';
@@ -347,7 +347,7 @@ export const AGENDA = [
     label: (state, content) => fill(content.copy?.board?.agenda_label, {}),
     hint: (state, content, now) => {
       const best = contractList(content)
-        .map((op) => contractPerHour(op, content) * 24).sort((a, b) => b - a)[0] ?? 0;
+        .map((op) => contractPerDay(op, content)).sort((a, b) => b - a)[0] ?? 0;
       return fill(content.copy?.board?.agenda_hint, { best: fmtMoney(Math.round(best)) });
     },
     ready: (state, content) => !activeContract(state) && contractList(content).length > 0,
