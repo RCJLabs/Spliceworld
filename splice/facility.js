@@ -6,6 +6,7 @@
 // is allowed to build with; it does not know what a "tier" is.
 
 import { SOCKETS, slotOfSocket } from '../render/renderer.js';
+import { fmtMoney } from '../util/text.js';
 
 export function tracks(content) {
   return Object.values(content.facility ?? {});
@@ -204,7 +205,7 @@ export function theaterBusyMsg(state, now, content = null, kind = 'splice') {
   const faster = kind === 'dismantle' ? grants?.dismantleHours : grants?.tableHours;
   const sell = faster == null ? ''
     : ` ${up.level.name} would take ${kind === 'dismantle' ? 'a dismantle' : 'a splice'} to ${
-      spanOf(faster)}, for $${up.level.cost}.`;
+      spanOf(faster)}, for ${fmtMoney(up.level.cost)}.`;
   return `The table is still occupied — ${clock} to go.`
     + ` Surgery is not a thing you do twice at once.${sell}`;
 }
@@ -310,7 +311,7 @@ export function buyUpgrade(state, content, trackId) {
   }
   const fundsBlock = next.blockers.find((b) => b.kind === 'funds');
   if (fundsBlock) {
-    return { ok: false, msg: `Short by $${fundsBlock.short}. Science is not free. Science is, in fact, quite expensive.` };
+    return { ok: false, msg: `Short by ${fmtMoney(fundsBlock.short)}. Science is not free. Science is, in fact, quite expensive.` };
   }
 
   state.funds -= next.level.cost;

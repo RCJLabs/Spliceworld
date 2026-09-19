@@ -21,6 +21,7 @@
 // destroyed, which is the same promise `SAVE_VERSION` makes about saves.
 import { extractorGrants } from './facility.js';
 import { GRADE_INDEX } from './grades.js';
+import { fmtMoney } from '../util/text.js';
 
 // What a part fetches when it is rendered down. A grade is worth more, which
 // is the same staircase the rest of the game prices things on; the numbers
@@ -98,7 +99,7 @@ export function renderDown(state, content, ids) {
   state.renderCount = (state.renderCount ?? 0) + 1;
   return {
     ok: true, count: going.length, paid,
-    msg: `${going.length} part${going.length === 1 ? '' : 's'} rendered down for $${paid}. The shelves can breathe.`,
+    msg: `${going.length} part${going.length === 1 ? '' : 's'} rendered down for ${fmtMoney(paid)}. The shelves can breathe.`,
   };
 }
 

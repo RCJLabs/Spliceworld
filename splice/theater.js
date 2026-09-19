@@ -12,7 +12,7 @@ import { defaultMoveset } from '../battle/moves.js';
 import { movesFromTokens } from '../battle/statblock.js';
 import { attend } from './feral.js';
 import { TRAINING } from './chimera.js';
-import { copy } from '../util/text.js';
+import { copy, fmtMoney } from '../util/text.js';
 
 const CHIMERA_NAMES = [
   // R41: fifteen names for a stable the game encourages past nine was a
@@ -304,7 +304,7 @@ export function setMoveset(state, chimeraId, next, known, now, content) {
   const t = moveTrainingReady(chimera, now, content);
   if (!t.ready) return { ok: false, msg: `${chimera.name} has had enough drilling for now.` };
   if (state.funds < t.cost) {
-    return { ok: false, msg: `Short by $${Math.ceil(t.cost - state.funds)}. Treats are not free.` };
+    return { ok: false, msg: `Short by ${fmtMoney(Math.ceil(t.cost - state.funds))}. Treats are not free.` };
   }
   state.funds -= t.cost;
   chimera.lastMoveTrainAt = now;

@@ -24,6 +24,7 @@ import { facilityCard, bindFacility } from '../ui/facility-card.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { speciesOf, isRetired } from '../data/catalog.js';
 import { vaultPressure, surplusParts, renderDown, renderValue } from './vault.js';
+import { fmtMoney } from '../util/text.js';
 
 let lastMsg = '';
 
@@ -239,7 +240,7 @@ export function renderVaultScreen(root, ctx) {
       }</p>` : ''}
       ${surplus.length ? `<div class="pen-actions">
         <button type="button" class="pen-dismantle" data-render-surplus="${surplus.length}">${
-          renderIcon('wrench')} Render down ${surplus.length} duplicate${surplus.length === 1 ? '' : 's'} for $${surplusValue}</button>
+          renderIcon('wrench')} Render down ${surplus.length} duplicate${surplus.length === 1 ? '' : 's'} for ${fmtMoney(surplusValue)}</button>
       </div>
       <p class="fine-print">Duplicates only, worst grade first — never the last of an anatomy and never one carrying a gene. The vat pays cash and asks nothing.</p>` : ''}
       ${bays || '<p class="ranch-msg">The vault echoes. Graduate someone.</p>'}

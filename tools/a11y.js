@@ -34,6 +34,18 @@ import { sleep, serve, findChrome, connect, CHROME_CANDIDATES } from './cdp.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FLOOR = 40;          // px, both dimensions
+// R113 - THE TYPE FLOOR. 12px is the smallest text this game is allowed to
+// print, measured on the element that OWNS the sentence rather than on the
+// stylesheet: a rule at 0.72rem is 11.52px only until something nests it
+// inside a shrunken parent, and what a player squints at is the computed
+// value. Rides the contrast walk, so it is checked on every screen, in every
+// theme, at every save shape, for the cost of one extra field.
+//
+// Measured before it was written: 78 declarations in style.css under 12px,
+// the worst of them `.mode-tag` at 8.32px. Flooring all 78 costs +15px on one
+// screen (dex:foes) and breaks only the battle arena, which is the one screen
+// that does not scroll - 7 failures, all there. See ROADMAP R113.
+const TYPE_FLOOR = 12;     // px, the smallest computed font-size allowed
 const GUTTER = 6;          // px, between two adjacent controls
 const RAG = 1;             // px, how far into its own line a full-width row may start
 const BAND_TOP = 420;      // px, the wide end of the stylesheet's phone media query
@@ -324,7 +336,7 @@ const CONTRAST = `(() => {
     const px = parseFloat(cs.fontSize);
     const name = el.tagName.toLowerCase()
       + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
-    if (!grounds) { out.push({ sel: name, txt: txt.replace(/\\s+/g, ' ').slice(0, 34), unmeasured: true }); continue; }
+    if (!grounds) { out.push({ sel: name, txt: txt.replace(/\\s+/g, ' ').slice(0, 34), px, unmeasured: true }); continue; }
     // The worst ground it passes over: text that is legible on four stops of
     // five is text you cannot read a fifth of.
     let bg = grounds[0];
@@ -334,6 +346,7 @@ const CONTRAST = `(() => {
     out.push({
       sel: name,
       txt: txt.replace(/\\s+/g, ' ').slice(0, 34),
+      px,
       ratio: Math.round(worst * 100) / 100,
       need: large ? 3 : 4.5,
       color: cs.color,
@@ -740,6 +753,7 @@ async function main() {
     const seen = new Map();
     const pairs = new Map();
     const dim = new Map();
+    const small = new Map();
     const unpainted = new Map();
     const seeThrough = new Map();
     const cards = new Map();
@@ -773,6 +787,14 @@ async function main() {
         if (!c.opaque) seeThrough.set(`${c.host}|${c.sel}`, { ...c, where });
       }
       for (const t of await evaluate(CONTRAST)) {
+        // R113 - the type floor is judged on EVERY text node the walk sees,
+        // including the ones whose contrast cannot be read off a painted
+        // background. Being on a gradient is a reason not to know the ratio;
+        // it is not a reason to be allowed to print 9px.
+        if (t.px < TYPE_FLOOR) {
+          const key = `${t.sel}|${t.px}`;
+          if (!small.has(key)) small.set(key, { ...t, where });
+        }
         if (t.unmeasured) { unpainted.set(t.sel, { ...t, where }); continue; }
         // Keyed by what is WRONG (this selector, this pair of colours) and
         // not by the sentence, so one bad rule reports once however many
@@ -949,6 +971,12 @@ async function main() {
     // This is what keeps the gutter fix honest: Retreat stopped crowding
     // the settings gear by taking ten more pixels of footer, and in a
     // locked-height layout ten pixels come out of something else.
+    // R113 - AND IT SAYS WHAT THE COLUMN IS MADE OF. A failure that reports
+    // "clips 14px" tells you the size of the problem and nothing about where
+    // to take the 14px from; three separate fixes were aimed at this message
+    // by guesswork and all three were no-ops. The breakdown is the diagnosis:
+    // the chrome above and below, then every child of the arena with the
+    // height it actually took.
     const arenaFits = async (where) => {
       const over = await evaluate(`(() => {
         if (!document.body.classList.contains('in-battle')) return null;
@@ -957,7 +985,17 @@ async function main() {
           const el = document.querySelector(sel);
           if (!el) continue;
           const spill = el.scrollHeight - el.clientHeight;
-          if (spill > 1) out.push(sel + ' clips ' + Math.round(spill) + 'px of its own content');
+          if (spill > 1) {
+            let why = '';
+            if (sel === '.arena') {
+              const kids = [...el.children].map((k) => (k.className || k.tagName).toString().trim().split(/\\s+/)[0]
+                + ' ' + Math.round(k.getBoundingClientRect().height)).join(', ');
+              const box = (q) => { const n = document.querySelector(q); return n ? Math.round(n.getBoundingClientRect().height) : 0; };
+              why = ' [' + innerHeight + 'dvh = header ' + box('header') + ' + footer ' + box('footer')
+                + ' + main ' + box('main') + '; column: ' + kids + ']';
+            }
+            out.push(sel + ' clips ' + Math.round(spill) + 'px of its own content' + why);
+          }
         }
         return out;
       })()`);
@@ -1716,6 +1754,18 @@ async function main() {
     }
     for (const t of contrast.filter((x) => x.ratio < x.need)) {
       note(`${t.where}: ${t.sel} "${t.txt}" reads ${t.ratio}:1 against what is behind it, under the ${t.need}:1 floor (${t.color} on ${t.bg})`);
+    }
+
+    // ---- 1f2. R113 - and is big enough to read at all --------------------
+    const tiny = [...small.values()].sort((a, b) => a.px - b.px);
+    if (REPORT) {
+      for (const t of tiny.slice(0, 40)) {
+        console.log(`  ${String(t.px).padStart(6)}px  ${t.where.padEnd(14)} ${t.sel}  "${t.txt}"`);
+      }
+      console.log('');
+    }
+    for (const t of tiny) {
+      note(`${t.where}: ${t.sel} "${t.txt}" prints at ${t.px}px, under the ${TYPE_FLOOR}px type floor`);
     }
     if (REPORT) {
       for (const c of cards.values()) {

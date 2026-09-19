@@ -42,6 +42,7 @@
 import { speciesOf } from '../data/catalog.js';
 import { attend } from './feral.js';
 import { renderIcon } from '../ui/icons.js';
+import { fmtMoney } from '../util/text.js';
 
 const HOUR = 3600000;
 const DEFAULTS = { base: 25, perHour: 18 };
@@ -153,7 +154,7 @@ export function rush(state, kind, id, content, now) {
   if (msLeft <= 0) return { ok: false, msg: 'That one has already finished. Patience was free.' };
   const price = rushPrice(msLeft, content);
   if ((state.funds ?? 0) < price) {
-    return { ok: false, msg: `Short by $${Math.ceil(price - state.funds)}. Time is the one thing here that does not take promises.` };
+    return { ok: false, msg: `Short by ${fmtMoney(Math.ceil(price - state.funds))}. Time is the one thing here that does not take promises.` };
   }
   state.funds -= price;
   def.set(target, now);
@@ -175,10 +176,10 @@ export function rushButton(quote) {
   if (!quote || quote.msLeft <= 0) return '';
   const short = !quote.affordable;
   const title = short
-    ? `Short by $${Math.ceil(quote.price - 0)} — the rest of the wait is free`
+    ? `Short by ${fmtMoney(Math.ceil(quote.price - 0))} — the rest of the wait is free`
     : 'Pay for the rest of the wait. Same answer, sooner.';
   return `<button type="button" class="care-train rush-btn" data-rush="${quote.kind}:${quote.id}"${
-    short ? ' disabled' : ''} title="${title}">${renderIcon('lightning')} Hurry ($${quote.price})</button>`;
+    short ? ' disabled' : ''} title="${title}">${renderIcon('lightning')} Hurry (${fmtMoney(quote.price)})</button>`;
 }
 
 export function bindRush(root, ctx, onMsg, redraw) {

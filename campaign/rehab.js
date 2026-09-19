@@ -30,6 +30,7 @@ import { newsFor } from './wire.js';
 // bay card is.
 import { unitFromGenome } from '../battle/statblock.js';
 import { fill } from './monologue.js';
+import { fmtMoney } from '../util/text.js';
 
 const HOUR = 3600000;
 
@@ -259,7 +260,7 @@ export function startRehab(state, ref, content, now) {
     return { ok: false, msg: `${said} ${fill(content.copy?.stable?.levers, stallRule(content))}` };
   }
   if (state.funds < plan.fee) {
-    return { ok: false, msg: `Short by $${Math.ceil(plan.fee - state.funds)}. Enrichment toys are, inexplicably, not cheap.` };
+    return { ok: false, msg: `Short by ${fmtMoney(Math.ceil(plan.fee - state.funds))}. Enrichment toys are, inexplicably, not cheap.` };
   }
 
   state.funds -= plan.fee;
@@ -300,7 +301,7 @@ export function rehabSession(state, ref, content, now) {
   if (now < sessionReadyAt(entry, content)) {
     return { ok: false, msg: 'Too soon. Even a reformed apex predator needs a nap between breakthroughs.' };
   }
-  if (state.funds < t.sessionCost) return { ok: false, msg: `Short by $${Math.ceil(t.sessionCost - state.funds)} for the session.` };
+  if (state.funds < t.sessionCost) return { ok: false, msg: `Short by ${fmtMoney(Math.ceil(t.sessionCost - state.funds))} for the session.` };
 
   const unit = bayUnit(entry, content);
   state.funds -= t.sessionCost;

@@ -56,6 +56,7 @@ import { guideForScreen } from '../ranch/onboarding.js';
 import { renderIcon } from '../ui/icons.js';
 import { announce } from '../ui/live.js';
 import * as sfx from '../audio/sfx.js';
+import { fmtMoney } from '../util/text.js';
 
 let lastMsg = '';
 let vatPick = { a: null, b: null };
@@ -102,8 +103,8 @@ function vatCard(state, content, t) {
       ${pickerField({ id: 'vat-b', label: 'Second donor', value: label(vatPick.b), hint: 'must be a different one' })}
       ${plan?.ok
         ? `<p class="vat-price">⚠ Both parents permanently drop <strong>one grade on every part</strong> — ${plan.gradeSteps} grade${plan.gradeSteps === 1 ? '' : 's'} in total, and you do not get them back. They then need ${tune.exhaustionHours}h off.</p>
-           <p class="fine-print">Gestation ${plan.hours}h · fee <strong>$${plan.fee}</strong> · up to ${plan.sockets.length} sockets to inherit.</p>
-           <button type="button" id="vat-go" class="big-btn" ${plan.affordable ? '' : 'disabled'}>${renderIcon('test-tube')} Seal the vat — $${plan.fee}</button>`
+           <p class="fine-print">Gestation ${plan.hours}h · fee <strong>${fmtMoney(plan.fee)}</strong> · up to ${plan.sockets.length} sockets to inherit.</p>
+           <button type="button" id="vat-go" class="big-btn" ${plan.affordable ? '' : 'disabled'}>${renderIcon('test-tube')} Seal the vat — ${fmtMoney(plan.fee)}</button>`
         : `<p class="fine-print">${plan ? plan.msg : 'Pick two.'}</p>`}
     </section>`;
 }
@@ -444,7 +445,7 @@ export function renderPensScreen(root, ctx) {
                 ${known.length > MOVE_SLOTS ? `
                   <button type="button" class="care-train" data-moves="${ch.id}" ${mt.ready ? '' : 'disabled'}>
                     ${mt.ready
-                      ? `${renderIcon('brain')} Retrain moves ($${mt.cost})`
+                      ? `${renderIcon('brain')} Retrain moves (${fmtMoney(mt.cost)})`
                       : `Retrain moves (${fmtDuration(mt.msRemaining)})`}
                   </button>
                   <p class="fine-print">${known.length - active.length} more it knows and cannot currently press. Swapping one in means giving one up.</p>`
@@ -454,7 +455,7 @@ export function renderPensScreen(root, ctx) {
             ${'<!--R89:OVERVIEW-->'}
             <div class="pen-actions">
               <button type="button" class="care-train" data-train="${ch.id}" ${trainReady ? '' : 'disabled'}>
-                ${trainReady ? `${renderIcon('target')} Train ($${TRAINING.cost}, +${TRAINING.bondGain} bond)` : `Train (${fmtDuration(trainReadyAt - t)})`}
+                ${trainReady ? `${renderIcon('target')} Train (${fmtMoney(TRAINING.cost)}, +${TRAINING.bondGain} bond)` : `Train (${fmtDuration(trainReadyAt - t)})`}
               </button>
               <button type="button" data-card="${ch.id}">${renderIcon('document')} Specimen card</button>
               <button type="button" class="pen-dismantle" data-dismantle="${ch.id}">${renderIcon('wrench')} Dismantle</button>
@@ -471,7 +472,7 @@ export function renderPensScreen(root, ctx) {
             ${isInjured(ch, t)
               ? `<p class="settle">${renderIcon('bandage')} Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} of dramatic convalescing left.</p>
                  <p class="fine-print scar-warn">Left to itself it may set badly and stay that way. Treating it costs money and guarantees it will not.</p>
-                 <button type="button" class="care-train" data-treat="${ch.id}">${renderIcon('bandage')} Treat ($${treatmentCost(ch, content, t, state)})</button>`
+                 <button type="button" class="care-train" data-treat="${ch.id}">${renderIcon('bandage')} Treat (${fmtMoney(treatmentCost(ch, content, t, state))})</button>`
               : ''}
             ${'<!--R89:HISTORY-->'}
             ${(() => {
@@ -642,7 +643,7 @@ export function renderPensScreen(root, ctx) {
           <div class="sheet move-sheet">
             <div class="pick-head">
               <h3>${ch.name}'s repertoire</h3>
-              <p class="fine-print">Pick ${MOVE_SLOTS}. It knows ${known.length}. Learning one costs $${moveTrainingReady(ch, ctx.now(), content).cost} and a rest; reordering is free.</p>
+              <p class="fine-print">Pick ${MOVE_SLOTS}. It knows ${known.length}. Learning one costs ${fmtMoney(moveTrainingReady(ch, ctx.now(), content).cost)} and a rest; reordering is free.</p>
               <button type="button" class="pick-close" data-close="1" aria-label="Close">&#10005;</button>
             </div>
             <p class="ranch-msg" id="mv-count" role="status" aria-live="polite">${chosen.size}/${MOVE_SLOTS} slots filled${full ? ' — uncheck one to swap' : ''}</p>

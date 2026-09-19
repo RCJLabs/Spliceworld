@@ -11,6 +11,7 @@ import { extractorGrants, theaterFree, occupyTheater, theaterBusyMsg } from './f
 import { admitParts, admitVial, vaultFit } from './vault.js';
 import { speciesOf } from '../data/catalog.js';
 import { GRADES, GRADE_INDEX } from './grades.js';
+import { fmtMoney } from '../util/text.js';
 
 // R91 — the staircase moved to its own module so `splice/vault.js` can
 // price a rendering without importing the Extractor that imports IT. The
@@ -253,7 +254,7 @@ export function extractChimera(state, chimeraId, content, now) {
     msg:
       `${chimera.name} has been honourably disassembled. ` +
       `${door.admitted} part${door.admitted === 1 ? '' : 's'} back in the vault, one grade the worse for it` +
-      `${door.rendered ? `; ${door.rendered} rendered down for $${door.paid}, the shelves being what they are` : ''}` +
+      `${door.rendered ? `; ${door.rendered} rendered down for ${fmtMoney(door.paid)}, the shelves being what they are` : ''}` +
       `${lostNames.length ? `; ${lostNames.join(', ')} did not survive the paperwork.` : '.'}`,
   };
 }

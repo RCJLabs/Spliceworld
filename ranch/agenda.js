@@ -45,6 +45,7 @@ import { sparCharges, canSpar } from '../campaign/sparring.js';
 import { feralStatus } from '../splice/feral.js';
 import { activeRaid, raidRemainingMs, levyOf } from '../campaign/taskforce.js';
 import { gauntletState } from '../campaign/gauntlet.js';
+import { fmtMoney } from '../util/text.js';
 
 const HOUR = 3600000;
 const fit = fitToFight;
@@ -106,7 +107,7 @@ export const AGENDA = [
       if (!raid) return 'The Task Force is at the gate.';
       const hours = Math.max(0, raidRemainingMs(raid, now)) / HOUR;
       const levy = levyOf(state, content);
-      return `Papers in ${hours < 1 ? 'under an hour' : `${Math.floor(hours)}h`}: $${levy.fine}${
+      return `Papers in ${hours < 1 ? 'under an hour' : `${Math.floor(hours)}h`}: ${fmtMoney(levy.fine)}${
         levy.stock ? ` and ${levy.stock} of the herd` : ''}.`;
     },
     ready: (state, content, now) => !!activeRaid(state) && fit(state, now).length > 0,
@@ -319,7 +320,7 @@ export const AGENDA = [
     hint: (state, content, now) => {
       const runnable = runnableOps(state, content, now);
       const purse = runnable.reduce((n, op) => Math.max(n, op.funds?.[1] ?? 0), 0);
-      return `${runnable.length} you can run right now${purse ? `, best worth $${purse}` : ''}.`;
+      return `${runnable.length} you can run right now${purse ? `, best worth ${fmtMoney(purse)}` : ''}.`;
     },
     // Three lanes (see operations.js): a creature can be carried somewhere,
     // you can go yourself, and paperwork needs nobody. Rule 1 — something is
@@ -375,7 +376,7 @@ export const AGENDA = [
       const cheapest = affordable.length
         ? Math.min(...affordable.map((c) => treatmentCost(c, content, now, state))) : 0;
       return `${hurt.length} in the Infirmary, ${affordable.length} you can afford out${
-        cheapest ? ` from $${cheapest}` : ''}. Cheaper the closer they are to walking out on their own.`;
+        cheapest ? ` from ${fmtMoney(cheapest)}` : ''}. Cheaper the closer they are to walking out on their own.`;
     },
     ready: (state, content, now) => state.chimeras.some((c) =>
       isInjured(c, now) && state.funds >= treatmentCost(c, content, now, state)),
@@ -386,7 +387,7 @@ export const AGENDA = [
       `${state.chimeras.filter((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR).length} ready`,
     hint: (state, content, now) => {
       const due = state.chimeras.filter((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR);
-      return `${due.length} ready for a session at $${TRAINING.cost} each. Bond is obedience, and obedience is whether your orders happen.`;
+      return `${due.length} ready for a session at ${fmtMoney(TRAINING.cost)} each. Bond is obedience, and obedience is whether your orders happen.`;
     },
     ready: (state, content, now) => state.funds >= TRAINING.cost
       && state.chimeras.some((c) => now >= (c.lastTrainedAt ?? 0) + TRAINING.cooldownHours * HOUR),
@@ -403,8 +404,8 @@ export const AGENDA = [
       if (!afford.length) return null;
       const fresh = afford.filter((sp) => isNewToDex(state, content, sp.id));
       return fresh.length
-        ? `${fresh.length} new from $${Math.min(...fresh.map((sp) => sp.mailOrderPrice))}`
-        : `${afford.length} from $${Math.min(...afford.map((sp) => sp.mailOrderPrice))}`;
+        ? `${fresh.length} new from ${fmtMoney(Math.min(...fresh.map((sp) => sp.mailOrderPrice)))}`
+        : `${afford.length} from ${fmtMoney(Math.min(...afford.map((sp) => sp.mailOrderPrice)))}`;
     },
     hint: (state, content) => {
       const afford = catalogFor(state, content).filter((sp) => state.funds >= sp.mailOrderPrice);
@@ -418,11 +419,11 @@ export const AGENDA = [
         // comparing the row at three animals and at nine: a hint about the
         // catalogue alone reads the same on both, which is a fixed sentence
         // wearing a callback.
-        return `${fresh.length} species you have never held, from $${pick.mailOrderPrice} `
+        return `${fresh.length} species you have never held, from ${fmtMoney(pick.mailOrderPrice)} `
           + `(${pick.name}), and ${room} pen${room === 1 ? '' : 's'} free. `
           + 'The Splice-Dex is a shopping list; each of those is six parts you cannot build with yet.';
       }
-      return `${afford.length} species you can afford${cheapest ? ` from $${cheapest}` : ''}, ${
+      return `${afford.length} species you can afford${cheapest ? ` from ${fmtMoney(cheapest)}` : ''}, ${
         room} pen${room === 1 ? '' : 's'} free. New anatomy is how a losing matchup stops being one.`;
     },
     ready: (state, content) => state.ranch.stock.length < state.ranch.penCapacity
@@ -432,7 +433,7 @@ export const AGENDA = [
     id: 'facility', kind: 'spend', screen: 'ranch', label: 'Buy a lab upgrade',
     chip: (state, content) => {
       const open = tracks(content).map((t) => nextUpgrade(state, content, t.id)).filter((up) => up?.affordable);
-      return open.length ? `from $${Math.min(...open.map((up) => up.level.cost))}` : null;
+      return open.length ? `from ${fmtMoney(Math.min(...open.map((up) => up.level.cost)))}` : null;
     },
     hint: (state, content) => {
       const open = tracks(content)
@@ -440,8 +441,8 @@ export const AGENDA = [
         .filter((up) => up?.affordable);
       if (!open.length) return 'Bigger chassis, more bays, better odds — permanently.';
       const cheapest = open.reduce((a, b) => (a.level.cost <= b.level.cost ? a : b));
-      return `${open.length} upgrade${open.length === 1 ? '' : 's'} you can afford, from $${
-        cheapest.level.cost} (${cheapest.level.name ?? cheapest.track?.name ?? 'the lab'}). Permanent.`;
+      return `${open.length} upgrade${open.length === 1 ? '' : 's'} you can afford, from ${fmtMoney(
+        cheapest.level.cost)} (${cheapest.level.name ?? cheapest.track?.name ?? 'the lab'}). Permanent.`;
     },
     // R83 — this row has never once appeared. It read two fields
     // `nextUpgrade` does not return: `up.cost` (the cost lives at
@@ -459,12 +460,12 @@ export const AGENDA = [
     // R154 — a pen houses stock OR a chimera, so the hint says both.
     id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',
     opens: () => 'slush-fund',
-    chip: (state) => `$${penUpgradeCost(state)}`,
+    chip: (state) => `${fmtMoney(penUpgradeCost(state))}`,
     hint: (state, content) => {
       const room = stableRoom(state, content);
       const per = content.stallMeta?.pensPerStall || 0;
       const toGo = per - ((state.ranch.penCapacity - (content.stallMeta?.freePens ?? 0)) % (per || 1));
-      return `$${penUpgradeCost(state)} — ${state.ranch.stock.length}/${state.ranch.penCapacity} pens full, `
+      return `${fmtMoney(penUpgradeCost(state))} — ${state.ranch.stock.length}/${state.ranch.penCapacity} pens full, `
         + `${room.used}/${room.cap} chimeras. `
         + (per ? `${toGo <= 1 ? 'The next' : `${toGo} more`} opens a chimera stall.` : '');
     },

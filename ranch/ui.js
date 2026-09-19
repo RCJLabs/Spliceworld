@@ -29,6 +29,7 @@ import { paginate, pagerRow, bindPager, trimPages } from '../ui/pager.js';
 import { renderIcon } from '../ui/icons.js';
 import { rushQuote, rushButton, bindRush } from '../splice/rush.js';
 import { calendarLine } from '../campaign/calendar.js';
+import { fmtMoney } from '../util/text.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -160,8 +161,8 @@ export function renderRanchScreen(root, ctx) {
         id: sp.id,
         label: sp.name,
         mark: classMark(content, sp.class),
-        badge: `<span class="pick-price ${state.funds >= sp.mailOrderPrice ? '' : 'too-rich'}">$${sp.mailOrderPrice}</span>`,
-        sub: `${isNewToDex(state, content, sp.id) ? 'NEW ANATOMY · ' : ''}${sp.role} · ${sp.tags.join(', ') || 'no tags'} · upkeep $${sp.upkeepPerDay}/day`,
+        badge: `<span class="pick-price ${state.funds >= sp.mailOrderPrice ? '' : 'too-rich'}">${fmtMoney(sp.mailOrderPrice)}</span>`,
+        sub: `${isNewToDex(state, content, sp.id) ? 'NEW ANATOMY · ' : ''}${sp.role} · ${sp.tags.join(', ') || 'no tags'} · upkeep ${fmtMoney(sp.upkeepPerDay)}/day`,
       })),
     };
   });
@@ -272,17 +273,17 @@ export function renderRanchScreen(root, ctx) {
   const head = collapsibleCard({
     id: 'slush-fund',
     title: 'Slush fund',
-    badge: `$${Math.floor(state.funds)} · ${net < 0 ? '−' : '+'}$${Math.abs(net)}/day`,
+    badge: `${fmtMoney(Math.floor(state.funds))} · ${net < 0 ? '−' : '+'}${fmtMoney(Math.abs(net))}/day`,
     open: moneyOpen,
     body: `
       <div class="econ-row">
-        <div><span class="econ-label">Slush fund</span><strong>$${Math.floor(state.funds)}</strong></div>
-        <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${net < 0 ? '−' : '+'}$${Math.abs(net)}/day</strong><span class="econ-next">+$${TUNING.stipendPerDay + territory} in, −$${upkeep} upkeep</span></div>
+        <div><span class="econ-label">Slush fund</span><strong>${fmtMoney(Math.floor(state.funds))}</strong></div>
+        <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${net < 0 ? '−' : '+'}${fmtMoney(Math.abs(net))}/day</strong><span class="econ-next">+${fmtMoney(TUNING.stipendPerDay + territory)} in, −${fmtMoney(upkeep)} upkeep</span></div>
         <div><span class="econ-label">Pens</span><strong>${state.ranch.stock.length}/${state.ranch.penCapacity}</strong></div>
         <div><span class="econ-label">Stable</span><strong>${stable.used}/${stable.cap}</strong>${stable.pending ? `<span class="econ-next">${stable.pending} ${spokenFor}</span>` : ''}</div>
       </div>
       <div class="ranch-actions">
-        <button type="button" data-act="pen">Expand pens +${TUNING.penUpgradeSize} — $${penUpgradeCost(state)}${stallNext ? ` · ${stallChip}` : ''}</button>
+        <button type="button" data-act="pen">Expand pens +${TUNING.penUpgradeSize} — ${fmtMoney(penUpgradeCost(state))}${stallNext ? ` · ${stallChip}` : ''}</button>
       </div>
       <div class="catalog">
         ${pickerField({
@@ -293,7 +294,7 @@ export function renderRanchScreen(root, ctx) {
             ? `${classMark(content, catalogSpecies.class)}${catalogSpecies.name}`
             : '— conquer territory to open the catalog —',
           hint: catalogSpecies
-            ? `$${catalogSpecies.mailOrderPrice} · ${catalogSpecies.role} · ${catalogSpecies.tags.join(', ') || 'no tags'}`
+            ? `${fmtMoney(catalogSpecies.mailOrderPrice)} · ${catalogSpecies.role} · ${catalogSpecies.tags.join(', ') || 'no tags'}`
               + (isNewToDex(state, content, catalogSpecies.id) ? ' · never held' : '')
             : '',
           disabled: !catalog.length,
@@ -516,7 +517,7 @@ export function renderRanchScreen(root, ctx) {
       extraScale: STAGE_SCALE[stage],
     });
     const buttons = !open ? '' : CARE_ACTIONS.map((action) => {
-      const cost = action === 'feed' ? ` $${species.feedCost}` : '';
+      const cost = action === 'feed' ? ` ${fmtMoney(species.feedCost)}` : '';
       const label = care[action].ready
         ? `${CARE_LABELS[action]}${cost}`
         : `${CARE_LABELS[action]} (${fmtDuration(care[action].msRemaining)})`;
@@ -681,7 +682,7 @@ export function renderRanchScreen(root, ctx) {
       // R95 — the count that decides whether the sheet is worth opening.
       subtitle: (() => {
         const fresh = newToDex(state, content).length;
-        return `Slush fund $${Math.floor(state.funds)}. `
+        return `Slush fund ${fmtMoney(Math.floor(state.funds))}. `
           + (fresh ? `${fresh} of these are anatomy you have never held. ` : '')
           + 'Livestock arrives in an unmarked van, as tradition demands.';
       })(),
