@@ -1115,11 +1115,31 @@ async function main() {
     const ceremonyPass = async () => {
       await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]')?.click()`);
       await sleep(600);
-      const opened = await evaluate(`(() => {
-        const b = document.querySelector('#screen-ranch button.extract-btn:not([disabled])');
-        if (!b) return false; b.click(); return true;
-      })()`);
-      if (!opened) { note('the Ranch offered nobody to graduate, so the ceremony was never measured'); return; }
+      // AN ANIMAL CARD HAS TO BE OPENED FIRST, and only one can be: R89 made
+      // the roster's folds exclusive because nine open cards are 16,657px of
+      // screen, and a shut card does not populate its body at all. The first
+      // draft of this pass queried for the button on arrival, found zero —
+      // not disabled, ABSENT — and reported that the Ranch had nobody to
+      // graduate. It had eight, all of them shut.
+      const folds = await evaluate(`[...document.querySelectorAll('#screen-ranch .fold-head[data-fold^="ranch-"]')].map((b) => b.dataset.fold)`);
+      if (!folds.length) { note('the Ranch drew no animal cards, so the ceremony was never measured'); return; }
+      let opened = false;
+      for (const id of folds) {
+        await evaluate(`document.querySelector('#screen-ranch .fold-head[data-fold="${id}"]')?.click()`);
+        await sleep(450);
+        // A full vault disables the button and says so in its own label, which
+        // is R161's rule. That is a different screen; walk on to the next
+        // animal rather than pressing a control the game has refused.
+        opened = await evaluate(`(() => {
+          const b = document.querySelector('#screen-ranch button.extract-btn:not([disabled])');
+          if (!b) return false; b.click(); return true;
+        })()`);
+        if (opened) break;
+      }
+      if (!opened) {
+        note(`no animal on the Ranch could be graduated (${folds.length} tried), so the ceremony was never measured`);
+        return;
+      }
       await sleep(900);
       if (!await evaluate(`!!document.querySelector('#overlay #grad-go')`)) {
         note('pressing Graduate did not open the ceremony, so nothing behind it ran');
