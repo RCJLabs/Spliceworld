@@ -2482,8 +2482,23 @@ function walkAct(state, content, now, open, opts = {}) {
     // So when a line still owes the Dex a variant and the pens hold only one
     // of it, buy the mate. It is the cheapest thing on this list to want and
     // the only way those 34 parts exist.
+    // R116 — UP TO A PAIR, not the second of one. This read `heldOf === 1`,
+    // which buys the mate for a line you happen to be holding and NEVER buys
+    // the first of one you are not. That gap was invisible for as long as the
+    // board kept handing them over: five of the six variant species — ram,
+    // skunk, eagle, cobra, tortoise — are livestock on a job, and the petting
+    // zoo alone ran 721 times in 180 days rolling {goat, ram} at 40%. R116
+    // turned the petting zoo into a standing contract, which pays money and
+    // nothing else, and the only board job left carrying ram or skunk is the
+    // county fair — the least-run job on the board. Measured after that: ram
+    // bought TWICE in a campaign, skunk ZERO, and `alpine_ram` and
+    // `glider_skunk` are the two lines R177's gate reports missing.
+    //
+    // A player working the Splice-Dex for `glider_skunk` buys two skunks.
+    // Neither of the lists above reaches them: `fresh` is species never held
+    // at all, and ram and skunk have been in the Dex since the first hour.
     const heldOf = (id) => state.ranch.stock.filter((a) => a.species === id).length;
-    const mates = affordable.filter((sp) => heldOf(sp.id) === 1
+    const mates = affordable.filter((sp) => heldOf(sp.id) < 2
       && variantsOf(sp.id, content).some((v) => Object.values(content.parts)
         .some((p) => p.species === v.id && !(state.dex.parts ?? []).includes(p.id))));
     // R95 — one extraction is not six parts. An Extractor run yields a
