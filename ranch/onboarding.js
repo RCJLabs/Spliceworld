@@ -236,7 +236,9 @@ export const GUIDE_HELPERS = {
     (state.inventory.parts ?? []).some((t) => t.donor?.species === 'salvage'),
   rehabilitatedChimera: (state) => state.chimeras.some((c) => c.rehabilitated),
   rivalAvailable: (state, content) => rivalStatus(state, content).some((r) => r.status !== 'locked'),
-  rivalBeaten: (state) => Object.values(state.campaign.rivals ?? {}).some((r) => (r.defeats ?? 0) > 0),
+  // Through `rivalStatus` and never `state.campaign.rivals` directly: the map
+  // is untrusted input, and a raw walk of it threw on a null entry (R114).
+  rivalBeaten: (state, content) => rivalStatus(state, content).some((r) => r.record.defeats > 0),
   contestOpen: (state) => (state.campaign.contested ?? []).length > 0,
   specimenLoose: (state) => (state.campaign.loose ?? []).length > 0,
   // R125. Reachable the moment there is a creature to grade at all, which

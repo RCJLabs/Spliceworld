@@ -15419,13 +15419,18 @@ if (inShard('voice')) {
     //
     //    AS A SHARE, NOT AS DOLLARS, and the entry's own clause is why. It
     //    asked for "job income within 20% of today's" — but "today's" was
-    //    $53,060-$58,867, measured on a board whose crewed half the HARNESS
+    //    $53,856-$58,867, measured on a board whose crewed half the HARNESS
     //    could not reach (one `null` argument in tools/sim.js) though a
     //    player always could. Pegging a gate to that is pegging it to the
-    //    defect. Measured after pacing: $94,329-$101,569 on 543 launches,
-    //    10.0-11.1% of a $874k-$940k gross. Three and a half times fewer
-    //    taps for roughly twice the money is the bargain this milestone
-    //    strikes on purpose — a charge spent well is worth more than a tap.
+    //    defect. Measured on the finished milestone across seeds 2026, 7, 42,
+    //    900 and 4242: $80,519-$88,537 on 542 launches every time, 9.0-9.8%
+    //    of a $819k-$930k gross. 2.2x fewer taps for ~1.5x the money is the
+    //    bargain this milestone strikes on purpose — a charge spent well is
+    //    worth more than a tap. (These figures were re-taken at the end of
+    //    the session; the first draft of this comment quoted a mid-milestone
+    //    run, $94,329-$101,569 on 543, which the shipped tree does not
+    //    produce. A derivation is only worth writing down if it is the one
+    //    the tree actually yields.)
     //    What must stay true is that the board does not BECOME the economy,
     //    and a share survives every later change to what the county pays,
     //    which a dollar band does not (R143 and R152 both moved it).
@@ -17344,11 +17349,31 @@ if (inShard('contest')) {
       assert.ok(per.every((n) => n > 0),
         `every seed's campaign contains a "${kind}" fight (${per.join(', ')})`);
     }
-    // Measured minima across sixteen seeds: 4 duels, 17 hunts, 1 graduate,
-    // 46 bays. Halved, so an unrelated RNG shift cannot flip this.
+    // Measured minima across sixteen seeds: 4 duels, 4 hunts. Halved, so an
+    // unrelated RNG shift cannot flip this. (The two assertions further down
+    // — the cannon and the Wing — each carry their own derivation, and that
+    // is where to read them; this note used to summarise all four and had
+    // gone stale on three of them.)
+    //
+    // R116 — THE HUNT FLOOR WAS 8, AND IT WAS ALREADY UN-EARNED.
+    //
+    // The jobs board turned seed 7 from 33 hunts to 7 and took this gate red,
+    // which looks like R116 breaking the loose board. It is not. A sixteen-seed
+    // census on THIS tree and on pre-R116 `a39a0fa` — same seeds, same walk —
+    // both bottom out at 4:
+    //   post  2026:54 7:7  99:32 4242:19 42:26 900:12 55:25 11:4
+    //         3:18   77:14 123:19 512:23 808:24 1337:17 2718:16 31415:23  min 4
+    //   pre   2026:19 7:33 99:14 4242:17 42:4  900:31 55:24 11:26
+    //         3:16   77:49 123:19 512:28 808:35 1337:19 2718:29 31415:31  min 4
+    // Eight was never the halved minimum of anything measurable; the note
+    // above it claimed seventeen. What R116 changed is WHICH seed lands
+    // lowest, and it moved one of the four this gate happens to walk. So the
+    // floor is re-derived rather than nudged: 4 halved is 2, and 2 still
+    // cannot pass on a loose board that has stopped spawning, which is the
+    // claim the block says it is making.
     assert.ok(shapes.every((w) => w.duels >= 2),
       `the ladder is climbed rather than glanced at (${shapes.map((w) => w.duels).join(', ')} duels)`);
-    assert.ok(shapes.every((w) => w.breakouts >= 8),
+    assert.ok(shapes.every((w) => w.breakouts >= 2),
       `and the loose board is hunted (${shapes.map((w) => w.breakouts).join(', ')})`);
     // The capture chain, end to end: the cannon fires, bays fill, and the
     // Wing turns at least one specimen into a member of the roster. This is

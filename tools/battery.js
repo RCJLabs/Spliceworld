@@ -3943,6 +3943,88 @@ const BREAKS = [
     to: 'arr[i] = local[i];',
   },
 
+  // R116 — the board has a pace, a mix, and a half that is not a tap.
+  {
+    // THE BUCKET STOPS REFUSING. Every other rule about the board still
+    // holds — jobs cost money, lanes are limited, heat still climbs — and
+    // the launch rate goes straight back to the metronome this milestone
+    // was written to break: seven independent cooldowns summing to 10.05 a
+    // day that no constant can move.
+    n: 383, gate: SHARD_D, name: 'the board stops charging for a launch, and goes back to a metronome',
+    file: 'campaign/operations.js',
+    anchor: '  if (!bucket.ready) return { ok: false, msg: fill(content.copy?.board?.no_leads, {}) };',
+    to: '  if (false) return { ok: false, msg: fill(content.copy?.board?.no_leads, {}) };',
+  },
+  {
+    // …AND THE SAME DEFECT FROM THE OTHER END. The check stays, the spend
+    // does not, so the bucket reads full forever. A pace that is enforced
+    // but never paid for is not a pace, and a gate that only watched the
+    // refusal would call this clean.
+    n: 384, gate: SHARD_D, name: 'a launch never spends the lead it used, so the bucket never empties',
+    file: 'campaign/operations.js',
+    anchor: '  state.campaign.boardRefillAt = Math.max(refillAt, now) + regen;',
+    to: '  state.campaign.boardRefillAt = Math.max(refillAt, now);',
+  },
+  {
+    // THE WALKER STOPS CARRYING ANYBODY — the defect this whole milestone
+    // was found by. One argument. `opOdds` blocks a crew-required job with
+    // no rider, so the four jobs that read a chimera's tags and class go
+    // back to running ZERO times in 180 days, and the harness goes back to
+    // reporting that as a fact about the game.
+    n: 385, gate: SHARD_D, name: 'the walker passes null as the crew again, and the crewed half of the board dies',
+    file: 'tools/sim.js',
+    anchor: 'const started = op && startOperation(state, op.id, best.rider?.id ?? null, content, now);',
+    to: 'const started = op && startOperation(state, op.id, null, content, now);',
+  },
+  {
+    // CHARGES SET THE PACE; COOLDOWNS SET THE SPREAD. Take the per-job
+    // cooldown away and the pace rule still passes — the bucket is doing
+    // its job — while the single best-value job takes every charge the
+    // board has. That is the metronome again wearing a different hat, and
+    // only the MIX rule sees it.
+    n: 386, gate: SHARD_D, name: 'a job never goes quiet, so the best one takes the whole board',
+    file: 'campaign/operations.js',
+    anchor: "  state.campaign.opCooldowns[opId] = endedAt + Math.round((op?.cooldownHours ?? 6) * HOUR);",
+    to: '  state.campaign.opCooldowns[opId] = endedAt;',
+  },
+  {
+    // THE RETAINER PAYS NOTHING. A4's floor is that a player with no
+    // territory, no money and no creatures still has a way back, and since
+    // this milestone that way is a standing arrangement rather than a job
+    // they can tap. Money in, or the floor is a button that does nothing.
+    n: 387, gate: SHARD_B, name: 'a standing arrangement stops paying, and a lab with nothing has no way back',
+    file: 'campaign/operations.js',
+    anchor: '  if (paid > 0) state.funds = (state.funds ?? 0) + paid;',
+    to: '  if (paid > 0) state.funds = (state.funds ?? 0);',
+  },
+  {
+    // AND THE LEDGER LINE STOPS REACHING THE WIRE. This one is here because
+    // it is the coupling the milestone did not predict: taking three jobs
+    // off the board silenced their headline pools, and the county's voice
+    // fell from 411 distinct phrasings to 381, under R109's floor of 400.
+    // The daily line is what pays that back, so a gate that watched only
+    // the board would never know the wire depended on it.
+    n: 388, gate: SHARD_D, name: 'the retainer stops filing its daily line, and the county runs out of things to say',
+    file: 'campaign/operations.js',
+    anchor: '    if (headline) news.push(headline);\n  }\n  c.saidOn = day;',
+    to: '    if (headline) news.length = news.length;\n  }\n  c.saidOn = day;',
+  },
+  {
+    // THE ONBOARDING WALKS THE RIVAL MAP RAW AGAIN — the line R116 found by
+    // accident. `campaign.rivals` is untrusted input, and `Object.values` of
+    // it hands the predicate whatever is in the save: a null entry and the
+    // Ranch stops rendering. This is not a new rule, it is R114's fuzz doing
+    // its job, and it only fired because R116 added a key to `campaign` and
+    // moved the seeded sample onto `campaign.rivals.mantissa`. The break is
+    // here so the next shift in that sample is not what re-finds it: every
+    // other reader in the game goes through `rivalRecord`, which defaults a
+    // missing or junk record, and this one now does too.
+    n: 389, gate: SHARD_B, name: 'the guide reads the rival map raw, and one junk record stops the Ranch rendering',
+    file: 'ranch/onboarding.js',
+    anchor: '  rivalBeaten: (state, content) => rivalStatus(state, content).some((r) => r.record.defeats > 0),',
+    to: '  rivalBeaten: (state) => Object.values(state.campaign.rivals ?? {}).some((r) => (r.defeats ?? 0) > 0),',
+  },
+
   // R175 — the stable says how big it is and what makes it bigger.
   {
     // THE MAIN SCREEN STOPS SAYING HOW FULL THE STABLE IS, which is the state
