@@ -40,6 +40,64 @@ const USE = process.argv[process.argv.indexOf('--use') + 1];
 // nobody has to justify is how a list becomes a dumping ground, so the reason
 // is a required field and the gate counts the entries.
 const ALLOWED = [
+  {
+    file: 'save/durable.js', fn: /^(req|t)\.on(error|blocked|abort)$/,
+    why: 'IndexedDB failure modes — a quota refusal, an upgrade blocked by another tab, '
+      + 'a transaction the browser aborts under memory pressure. None can be provoked in a '
+      + 'headless Chromium without replacing IDB with a fake, at which point the thing under '
+      + 'test is the fake. R100\'s durable gate proves the success path end to end, and every '
+      + 'one of these resolves to null, which is the same answer as "no backup".',
+  },
+  {
+    file: 'battle/ui.js', fn: 'STATUS_ICONS',
+    why: 'The five status formatters — venom, sleep, stun, trapped, guard. Each runs only while '
+      + 'a creature carries that status, and the walk fights ONE scripted duel; reaching all five '
+      + 'means five more fights driven to five specific states, which is a balance harness rather '
+      + 'than an accessibility walk. tools/sim.js fights thousands and asserts the statuses; what '
+      + 'is unmeasured here is the glyph, not the mechanic.',
+  },
+  {
+    file: /-ui\.js$|^campaign\/ui\.js$/, fn: /^(lastMsg|lastAftermath)$/,
+    why: 'The result binder `bindFacility` takes on four screens. It fires only when a facility '
+      + 'purchase SUCCEEDS, which spends money the fixture is holding for other cards and '
+      + 'changes the tier every other assertion on that screen is written against. One callback '
+      + 'shape in four places; R128 already gates that every track names a real screen.',
+  },
+  {
+    file: 'main.js', fn: /^(tick|pushNews|goto)$/,
+    why: 'Forwarding arrows in the ctx object the shell hands to screens — `goto: (n, s) => '
+      + 'showScreen(n, s)`. V8 names the WRAPPER after its property key, so these read as '
+      + 'uncalled while the functions they forward to run on every walk. An adapter with a '
+      + 'covered target is not untested code; it is the same code counted at the wrong end.',
+  },
+  {
+    file: /^(battle\/ui|main)\.js$/, fn: /^(document|el)\.addEventListener\.once$|^flash$/,
+    why: 'Browser events a headless walk does not produce: an `animationend` that never fires '
+      + 'because the gate runs under reduced motion (R99, deliberately), and the one-shot '
+      + '`pointerdown` that unlocks audio, which needs a real user gesture rather than a '
+      + 'synthesised click. Both are unreachable BECAUSE of rules this repo chose.',
+  },
+  {
+    file: 'splice/pens-ui.js', fn: /^(rows|vat-a|vat-b)$/,
+    why: 'The chaos vat\'s two donor pickers and the roster they build from. The fixture runs a '
+      + 'GESTATION so the countdown card and `vatRemainingMs` exist — and a vat that is running '
+      + 'is exactly when its donor pickers are disabled. The two states are mutually exclusive '
+      + 'in one save, and the countdown is the larger half. A second save shape would reach '
+      + 'them; it would also double this walk.',
+  },
+  {
+    file: 'battle/autoplay.js', fn: 'whatDecidedIt',
+    why: 'The aftermath line for a fight SENT rather than watched. R88\'s "Send them without me" '
+      + 'only appears when the forecast calls a fight a walkover, and the walk needs its one '
+      + 'battle in progress for the arena. Sending it would spend the arena pass.',
+  },
+  {
+    file: 'ranch/ui.js', fn: /^(showVariantCeremony|breed-b)$/,
+    why: 'A variant hatch, and the second parent picker. A variant is a rare roll the fixture '
+      + 'cannot force without writing the outcome by hand — which would assert against a shape '
+      + 'the breeder does not produce — and the picker pass commits the FIRST row, which builds '
+      + 'the first parent\'s options and never the second\'s.',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -136,7 +194,10 @@ export function judge(dir) {
   }
 
   const unloaded = shipped.filter((p) => !paint.has(p));
-  const excused = (m) => ALLOWED.find((a) => a.file === m.rel && (a.fn instanceof RegExp ? a.fn.test(m.name) : a.fn === m.name));
+  // Both fields take a string or a RegExp: one entry covers a rule, and a rule
+  // that spans four screens should not need four entries to say so.
+  const hit = (pat, value) => (pat instanceof RegExp ? pat.test(value) : pat === value);
+  const excused = (m) => ALLOWED.find((a) => hit(a.file, m.rel) && hit(a.fn, m.name));
   const failures = misses.filter((m) => !excused(m)).sort((a, b) => a.rel.localeCompare(b.rel) || a.line - b.line);
   return { procs, shipped, code, dead, anon, named, misses, unloaded, failures };
 }
