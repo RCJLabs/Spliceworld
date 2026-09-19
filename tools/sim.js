@@ -2128,7 +2128,44 @@ function walkAct(state, content, now, open, opts = {}) {
       .map((id) => ({ id, next: nextUpgrade(state, content, id) }))
       .filter((o) => o.next?.affordable)
       .sort((a, b) => a.next.level.cost - b.next.level.cost);
-    const pick2 = offers.find((o) => canSpend(o.next.level.cost));
+    // R116 — EXCEPT WHEN THE VAULT IS FULL, in which case the game has
+    // already told the player which upgrade to buy and cheapest-first is not
+    // listening. `extractionFit`'s own refusal reads "Render something down,
+    // or buy shelf space from the Extractor", and once `surplusParts` is
+    // empty — every part on the shelf a singleton, which is what a board of
+    // exotic fauna produces — the first half of that advice is not available
+    // and the second half is the only way out.
+    //
+    // Measured on seed 2026 over 180 days without this. Pre-R116 the walker
+    // finished on a 400-part shelf holding 330, not tight, 8 renderable and
+    // every graduation fitting. Post-R116 it finished on a 260-part shelf
+    // holding 259, tight, ZERO renderable and every graduation refused — so
+    // the pens filled to 115 head, the buy gate (which counts the whole pen)
+    // stopped buying at 265 against 1,772, and R177's variant lines went
+    // with it. One unbought shelf upgrade, and the whole ranch conveyor
+    // seized behind it.
+    //
+    // Found BY track rather than by name: whichever track grants shelf space
+    // is the one the refusal is about, and a typed id here would go stale
+    // the day the facility file is rearranged.
+    // AND IT SAVES FOR IT. Preferring the shelf only when it happens to be
+    // affordable fixed two of four seeds and left 2026 and 4242 jammed at
+    // 260 of 260: cheapest-first kept spending the money on something else
+    // before the shelf was ever reachable. A player told to buy shelf space
+    // stops buying other things. So while the vault is tight and a shelf
+    // upgrade still exists, this visit buys the shelf or buys nothing.
+    const shelfOf = (o) => (o.next?.level?.grants?.vaultParts ?? 0) > 0;
+    const tight = vaultPressure(state, content).tight;
+    // ONLY IF MONEY IS THE ONLY THING IN THE WAY. A shelf gated on a node
+    // the campaign has not taken is not something saving up reaches, and
+    // holding out for it would stop the walker buying ANY upgrade for the
+    // rest of the run — which is what the first draft did on seed 2026:
+    // facility stuck at 12 levels where the others reached 15.
+    const wantsShelf = tight && Object.keys(content.facility ?? {})
+      .map((id) => ({ id, next: nextUpgrade(state, content, id) }))
+      .some((o) => o.next && shelfOf(o) && !o.next.blockers.some((b) => b.kind !== 'funds'));
+    const shelf = wantsShelf && offers.find((o) => shelfOf(o) && canSpend(o.next.level.cost));
+    const pick2 = shelf || (wantsShelf ? null : offers.find((o) => canSpend(o.next.level.cost)));
     if (pick2 && buyUpgrade(state, content, pick2.id).ok) did('facility', { track: pick2.id });
   }
 
