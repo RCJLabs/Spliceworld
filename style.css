@@ -719,10 +719,19 @@ main {
 .encounter {
   display: flex;
   /* R113: a HELD node puts three children in this row — the description, the
-     HELD tag and the Spar button — and the button is `flex: 0 0 auto`, so at
-     150% text the row ran 86px past the card rather than giving way. Wrapping
-     costs nothing at 100%, where it already fits; the description gets
-     `min-width: 0` so it is the part that yields first. */
+     HELD tag and the Spar button — where every other status puts two, and the
+     button is `flex: 0 0 auto`. At 150% text the row ran 86px past its card
+     rather than giving way. Wrapping costs nothing at 100%, where it already
+     fits, and at 150% the tag and the button drop under the description
+     instead of squeezing it.
+
+     `.encounter > div { flex: 1 1 auto; min-width: 0 }` was shipped beside
+     this and then taken back out: measured against the exact stylesheet of
+     the commit before, EITHER one alone brings the row from 86px over to
+     12px inside. Two rules for one defect means a break aimed at either is
+     caught by the other, which is a rule nothing can go red for. Wrapping is
+     the one kept because it is one declaration and because it keeps the
+     description readable rather than shrinking it. */
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
@@ -734,7 +743,6 @@ main {
   border-radius: 8px;
   font-size: 0.82rem;
 }
-.encounter > div { flex: 1 1 auto; min-width: 0; }
 .encounter button {
   background: var(--goo);
   color: var(--on-accent);

@@ -4378,8 +4378,18 @@ suite can check.
   that did not wrap, and a HELD node puts three children in it — the
   description, the HELD tag and the Spar button — where every other status
   puts two. The button is `flex: 0 0 auto`, so the row had nothing to give.
-  One `flex-wrap: wrap` and a `min-width: 0` on the description, both inert at
-  100% where it already fits.
+  One `flex-wrap: wrap`, inert at 100% where the row already fits.
+
+  **AND THE FIX WAS SHIPPED TWICE BEFORE IT WAS MEASURED ONCE.** It went in as
+  `flex-wrap: wrap` AND `.encounter > div { flex: 1 1 auto; min-width: 0 }`,
+  on the assumption that the row needed both a place to wrap to and a column
+  willing to yield. Run against the exact stylesheet of the commit before —
+  the whole file swapped in, not `!important` guesses at the cascade — either
+  one alone takes the row from **86px over to 12px inside**. Two rules for one
+  defect is worse than one: a break aimed at either is caught by the other, so
+  the rule is one nothing can go red for. The `> div` rule came back out. This
+  is the fourth time this milestone that a fix was believed before it was
+  measured, and the second time the measurement said the fix did nothing.
 
   **THE TYPE FLOOR IS THE MILESTONE, AND IT IS THE ONE HALF OF THE ENTRY THAT
   MEASURED TRUE.** Not re-derived as 665 of 1,143 nodes — that is a count of

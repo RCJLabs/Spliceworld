@@ -31,9 +31,25 @@ it ran. Made into a lap of the tab bar on a day-180 save, it found:
 `.encounter` is a flex row with `justify-content: space-between`, and a **HELD**
 node puts three children in it — the description, the HELD tag and the Spar
 button — where every other status puts two. `.encounter button` is
-`flex: 0 0 auto`, and the description `<div>` had no `min-width: 0`, so nothing
-in the row could give. One `flex-wrap: wrap` and one `min-width: 0`; both are
-inert at 100%, where it already fits.
+`flex: 0 0 auto`, so the row had nowhere to give. One `flex-wrap: wrap`, inert
+at 100% where it already fits.
+
+**And that fix was shipped twice before it was measured once.** It went in as
+the wrap AND `.encounter > div { flex: 1 1 auto; min-width: 0 }`. Measured by
+swapping the whole stylesheet of the previous commit into a running page —
+the real cascade, not `!important` guesses at it:
+
+    as shipped (both)          -12px
+    before the fix              86px
+    without flex-wrap: wrap    -12px
+    without .encounter > div   -12px
+    without either              86px
+
+**Either one alone is the fix.** Two rules for one defect is worse than one:
+the break aimed at either is caught by the other, so it is a rule nothing can
+go red for. The `> div` rule came out; the wrap stayed, because it is one
+declaration and because at 150% it drops the tag and the button under the
+description instead of squeezing it.
 
 **One screen out of six is not an answer about a layout.** The probe is a lap
 now, and it says which screen in the failure.
