@@ -1,16 +1,21 @@
 /* R113 - THE CUTOUT AND THE ROUNDED CORNERS.
-   Each inset reads `var(--safe-*, env(safe-area-inset-*))`. The fallback is
-   the real thing and is what ships; the variable exists so tools/a11y.js can
-   set a 47px cutout and measure that the header actually clears it, which a
-   headless desktop browser has no notch to produce on its own. A rule nobody
-   can test is a rule nobody knows works.
    `viewport-fit=cover` in index.html lets the page paint under a notch and a
-   home indicator; these insets are what stop it painting the game there. The
+   home indicator; these insets are what stop it painting the GAME there. The
    header, main and footer each add `env(safe-area-inset-*)` to the padding
    they already had, so on a phone with no cutout every value resolves to 0 and
    nothing moves. The arena carries its own pair because `body.in-battle`
-   overrides both. tools/a11y.js simulates a 47px cutout and asserts the
-   header clears it. See ROADMAP R113. */
+   overrides both.
+
+   Every inset reads `var(--safe-*, env(safe-area-inset-*))`. The env is the
+   real thing and is what ships; the variable exists so tools/a11y.js can set a
+   47px cutout and measure that the header actually clears it, which a headless
+   desktop browser has no notch to produce on its own. A rule nobody can test
+   is a rule nobody knows works.
+
+   The other half is in tools/smoke.js, because the simulation passes whether
+   or not the env behind the variable ever resolves - and it resolves to ZERO
+   on every device without `viewport-fit=cover`. Smoke reads the shell for that
+   attribute and this file for the var() form. See ROADMAP R113. */
 
 /* R113 - THE 12px TYPE FLOOR.
    Nothing in this file may declare a font-size under 0.75rem. 78 rules did,
@@ -713,6 +718,12 @@ main {
 
 .encounter {
   display: flex;
+  /* R113: a HELD node puts three children in this row — the description, the
+     HELD tag and the Spar button — and the button is `flex: 0 0 auto`, so at
+     150% text the row ran 86px past the card rather than giving way. Wrapping
+     costs nothing at 100%, where it already fits; the description gets
+     `min-width: 0` so it is the part that yields first. */
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
@@ -723,6 +734,7 @@ main {
   border-radius: 8px;
   font-size: 0.82rem;
 }
+.encounter > div { flex: 1 1 auto; min-width: 0; }
 .encounter button {
   background: var(--goo);
   color: var(--on-accent);

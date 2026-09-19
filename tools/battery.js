@@ -3745,6 +3745,101 @@ const BREAKS = [
     to: '',
   },
 
+  // R113 — the type floor, the cutout, 150% text, and both save shapes.
+  {
+    // A SENTENCE GOES BACK UNDER THE FLOOR, at exactly the size it was before
+    // this milestone: `.fine-print` shipped at 0.72rem and printed 191 times
+    // on the fresh screens alone. The browser gate judges the COMPUTED size on
+    // the element that owns the words, so this is the half of the rule that
+    // sees a nested shrink the stylesheet cannot be read for.
+    n: 366, gate: A11Y, name: 'the fine print goes back under the 12px type floor',
+    file: 'style.css',
+    anchor: '.fine-print { font-size: 0.75rem; color: var(--muted); }',
+    to: '.fine-print { font-size: 0.72rem; color: var(--muted); }',
+  },
+  {
+    // …AND THE SAME DEFECT SOMEWHERE THE WALK CANNOT GO. The boot failure card
+    // is drawn when the game cannot start, which is not a state any browser
+    // gate reaches on a working tree — so a 10.9px rule in it is invisible to
+    // the pass above and still a 10.9px sentence to whoever is reading it at
+    // the worst possible moment. The stylesheet read is what catches this one.
+    n: 367, gate: SHARD_A, name: 'a screen the walk never renders drops under the type floor',
+    file: 'style.css',
+    anchor: '.boot-fail-card code { background: var(--well); padding: 1px 4px; border-radius: 4px; font-size: 0.82rem; }',
+    to: '.boot-fail-card code { background: var(--well); padding: 1px 4px; border-radius: 4px; font-size: 0.68rem; }',
+  },
+  {
+    // THE INSETS GO INERT, and every one of them still reads as correct. This
+    // is R73's `var(--bg)` one level up: `env(safe-area-inset-*)` resolves to
+    // zero on every device unless the viewport says `viewport-fit=cover`, and
+    // the browser gate SIMULATES the notch through `--safe-top`, so it passes
+    // either way. Only the shell can be asked this question.
+    n: 368, gate: SHARD_A, name: 'the viewport stops covering the cutout, and fourteen insets resolve to zero',
+    file: 'index.html',
+    anchor: '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
+    to: '<meta name="viewport" content="width=device-width, initial-scale=1">',
+  },
+  {
+    // AND THE OTHER DIRECTION: an inset written bare, so the browser gate can
+    // no longer simulate it. Aimed at the in-battle FOOTER, which the cutout
+    // probe does not measure — the probe asks about the header, because that
+    // is where a notch is. A bare `env()` there is a rule with no test.
+    n: 369, gate: SHARD_A, name: 'an inset is written bare, where no browser gate can simulate it',
+    file: 'style.css',
+    anchor: 'calc(2px + var(--safe-bottom, env(safe-area-inset-bottom)))',
+    to: 'calc(2px + env(safe-area-inset-bottom))',
+  },
+  {
+    // THE HEADER STOPS CLEARING THE NOTCH. The rule is still in the file on
+    // three edges and the shell still says `viewport-fit=cover`, so every
+    // static read of this tree passes; what is gone is the one inset a phone
+    // with a cutout actually needs, and only a browser with a simulated notch
+    // in it can say so.
+    n: 370, gate: A11Y, name: 'the header stops padding for the cutout it paints under',
+    file: 'style.css',
+    anchor: 'padding: calc(14px + var(--safe-top, env(safe-area-inset-top))) calc(12px + var(--safe-right, env(safe-area-inset-right))) 4px',
+    to: 'padding: 14px calc(12px + var(--safe-right, env(safe-area-inset-right))) 4px',
+  },
+  {
+    // THE ARENA STOPS FITTING, which is what the type floor cost. Raising 78
+    // declarations to 12px broke exactly one screen — the one that does not
+    // scroll — and the fix was this query, not the three other things that
+    // were tried first. Put 280 back and the battle column overruns again.
+    n: 371, gate: A11Y, name: 'the stage takes its 20px back and the arena stops fitting the phone',
+    file: 'style.css',
+    anchor: '@media (min-height: 760px) { .stage { min-height: 260px; } .mv { min-height: 54px; } }',
+    to: '@media (min-height: 760px) { .stage { min-height: 280px; } .mv { min-height: 54px; } }',
+  },
+  {
+    // A READER TURNS THE TEXT UP AND A ROW WALKS OFF THE CARD. `.encounter` is
+    // a flex row and a HELD node puts three children in it; the Spar button is
+    // `flex: 0 0 auto`, so without the wrap the row ran 86px past its card at
+    // 150%. It fits perfectly at 100%, which is why one reading at one size on
+    // one screen reported this layout as clean.
+    n: 372, gate: A11Y, name: 'a held node row stops wrapping, and runs off the card at 150% text',
+    file: 'style.css',
+    anchor: '  flex-wrap: wrap;\n  justify-content: space-between;\n  align-items: center;\n  gap: 8px;\n  padding: 8px 9px;',
+    to: '  justify-content: space-between;\n  align-items: center;\n  gap: 8px;\n  padding: 8px 9px;',
+  },
+  {
+    // A COLOUR ONLY A NEW PLAYER EVER SEES. `.locked-tag` is printed by a
+    // save with no territory taken, which the gate's mid-game fixture does not
+    // have — so this one is caught by the FRESH pass or by nothing. 1.32:1.
+    n: 373, gate: A11Y, name: 'a tag only a fresh save prints loses its contrast',
+    file: 'style.css',
+    anchor: '.locked-tag { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }',
+    to: '.locked-tag { background: var(--panel-2); color: var(--line); border: 1px solid var(--line); }',
+  },
+  {
+    // AND ONE ONLY A LONG CAMPAIGN EVER SEES. An S-tier chimera is 180 days of
+    // work; nothing shorter than that puts this badge on a screen. 1.15:1, and
+    // caught by the DAY-180 pass or by nothing.
+    n: 374, gate: A11Y, name: 'a badge only a day-180 save prints loses its contrast',
+    file: 'style.css',
+    anchor: '.tier-S { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }',
+    to: '.tier-S { background: var(--accent); color: var(--text); border-color: var(--accent); }',
+  },
+
   // R175 — the stable says how big it is and what makes it bigger.
   {
     // THE MAIN SCREEN STOPS SAYING HOW FULL THE STABLE IS, which is the state

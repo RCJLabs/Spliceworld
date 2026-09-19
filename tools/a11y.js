@@ -1007,27 +1007,6 @@ async function main() {
       else for (const x of over) note(`${where}: the arena does not scroll, and ${x}`);
     };
 
-    // ---- 1h. R113 - AND IT SURVIVES A READER WHO TURNED THE TEXT UP ------
-    //
-    //      Everything in this stylesheet is sized in `rem`, so the OS text
-    //      setting scales the whole layout rather than one paragraph of it.
-    //      That is the right way round, and it is also the way that overflows:
-    //      at 150% the Ranch and Pens used to spill 70px past the edge of the
-    //      phone, at 200% 216px. Measured by moving the root size and asking
-    //      the SAME containment question the 100% pass asks.
-    {
-      await evaluate(`document.documentElement.style.fontSize = '${16 * TEXT_SCALE}px'`);
-      await sleep(400);
-      for (const o of await evaluate(CONTAINED)) {
-        const worst = Math.max(o.right, o.left, o.past);
-        if (worst > 1) {
-          note(`at ${Math.round(TEXT_SCALE * 100)}% text: ${o.sel} leaves its card or the phone by ${Math.round(worst)}px`);
-        }
-      }
-      await evaluate(`document.documentElement.style.fontSize = ''`);
-      await sleep(300);
-    }
-
     // ---- 1i. R113 - AND THE HEADER CLEARS A CUTOUT -----------------------
     //
     //      `viewport-fit=cover` lets the page paint under a notch; the insets
@@ -1285,8 +1264,6 @@ async function main() {
     }
     await evaluate(`delete document.documentElement.dataset.theme`);
     await sleep(200);
-
-
 
     // R122 — the readings are taken here but JUDGED at the end of the run,
     // because `collect` is called again further down: the keyboard walk opens
@@ -1788,7 +1765,6 @@ async function main() {
       if (before === '') note('the rename prompt opened with no name in it');
     }
 
-
     // ---- everything measured across every view, now that the walk is done -
     const controls = [...seen.values()].sort((a, b) => Math.min(a.h, a.w) - Math.min(b.h, b.w));
     const under = controls.filter((c) => c.h < FLOOR || c.w < FLOOR);
@@ -1858,6 +1834,54 @@ async function main() {
         await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(day180))})`);
       });
     }
+
+    // ---- 1h. R113 - AND IT SURVIVES A READER WHO TURNED THE TEXT UP ------
+    //
+    //      Everything in this stylesheet is sized in `rem`, so the OS text
+    //      setting scales the whole layout rather than one paragraph of it.
+    //      That is the right way round, and it is also the way that overflows.
+    //      Measured by moving the root size and asking the SAME containment
+    //      question the 100% pass asks.
+    //
+    //      IT IS A LAP OF THE TAB BAR, NOT ONE READING, and that is the whole
+    //      value of it. The first draft of this probe scaled the text and
+    //      measured whatever screen the walk happened to be standing on. It
+    //      reported zero, which is how R113's entry came to record "150% text
+    //      overflows nothing" as already true. It was not: a held node row on
+    //      the War Room ran 86px past its card, because `.encounter` is a
+    //      flex row that does not wrap and a held node puts THREE children in
+    //      it. One screen out of six is not an answer about the layout.
+    //
+    //      Runs on the day-180 save the pass above just loaded - the busiest
+    //      shape the game has, and the only one with held territory in it.
+    {
+      await evaluate(`document.documentElement.style.fontSize = '${16 * TEXT_SCALE}px'`);
+      await sleep(400);
+      const spilt = new Map();
+      const tabs = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
+      for (const sc of tabs.length ? tabs : [null]) {
+        if (sc) {
+          await evaluate(`document.querySelector('#tabs button[data-screen="${sc}"]')?.click()`);
+          await sleep(500);
+          await evaluate(OPEN_DETAILS);
+          await sleep(300);
+        }
+        for (const o of await evaluate(CONTAINED)) {
+          const worst = Math.max(o.right, o.left, o.past);
+          if (worst > 1) {
+            const key = `${sc}|${o.sel}`;
+            if (!spilt.has(key) || spilt.get(key).worst < worst) spilt.set(key, { ...o, sc, worst });
+          }
+        }
+      }
+      for (const o of [...spilt.values()].sort((a, b) => b.worst - a.worst)) {
+        note(`at ${Math.round(TEXT_SCALE * 100)}% text on ${o.sc}: ${o.sel} "${o.label}"`
+          + ` leaves its ${o.card} or the phone by ${Math.round(o.worst)}px`);
+      }
+      await evaluate(`document.documentElement.style.fontSize = ''`);
+      await sleep(300);
+    }
+
     // Nothing reads the DOM after this, so there is no need to navigate back.
 
     // ---- 1f. and every word of it can be read off the screen -------------
@@ -2030,7 +2054,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · an unchanged tick touches nothing · a tap rebuilds one card · a screen you left costs nothing · the Dex paints what you can see · a week away says what it did · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
+  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor, in every theme and on a fresh save and a day-180 one · nothing prints under ${TYPE_FLOOR}px · nothing leaves its card at ${Math.round(TEXT_SCALE * 100)}% text · the header clears a ${CUTOUT}px cutout · every full-width row starts at the left of it · every dialog card paints its own ground · an unchanged tick touches nothing · a tap rebuilds one card · a screen you left costs nothing · the Dex paints what you can see · a week away says what it did · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
 }
 
 // R88 — only when RUN, not when imported. This module owns the one fixture

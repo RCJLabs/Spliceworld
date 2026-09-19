@@ -19604,6 +19604,49 @@ if (inShard('preview')) {
   assert.ok(/installDialogBehaviour/.test(shell), 'the dialog behaviour is installed centrally');
   // The floor, and the ring, exist as rules at all.
   assert.ok(/min-height:\s*40px/.test(css), 'the 40px floor is stated in the stylesheet');
+
+  // R113 — THE TYPE FLOOR AND THE CUTOUT, asserted on the source, because
+  // the browser gate that measures both can be fooled in opposite directions
+  // and neither failure is visible from the other side.
+  //
+  //   · TYPE. `tools/a11y.js` reads the COMPUTED size of every text node it
+  //     can reach, which is the right question and reaches only what the walk
+  //     opens. A declaration under 12px in a rule the walk never renders is
+  //     invisible to it and is still a 9px sentence waiting for the screen
+  //     that shows it. So the stylesheet is read too: no rule declares a
+  //     px size under the floor, and no rule declares a rem size that lands
+  //     under it at the 16px root the shell actually uses.
+  //   · THE CUTOUT. The browser gate SIMULATES the notch by setting
+  //     `--safe-top`, which is what makes it measurable on a desktop headless
+  //     browser with no notch in it. That simulation passes whether or not
+  //     the real `env()` behind the variable ever resolves to anything — and
+  //     `env(safe-area-inset-*)` is 0 on every device unless the viewport
+  //     says `viewport-fit=cover`. Shipping the insets without it is the
+  //     exact shape of R73's `var(--bg)`: a rule that reads as correct and
+  //     resolves to nothing, on the one device it was written for.
+  {
+    const sizes = [...css.matchAll(/font-size:\s*([\d.]+)(px|rem)/g)]
+      .map((m) => ({ txt: m[0], px: m[2] === 'rem' ? parseFloat(m[1]) * 16 : parseFloat(m[1]) }));
+    assert.ok(sizes.length > 100, `the stylesheet states its type sizes (${sizes.length})`);
+    const under = [...new Set(sizes.filter((s2) => s2.px < 12).map((s2) => s2.txt))].sort();
+    assert.deepEqual(under, [],
+      `no rule declares text under the 12px floor (${under.join(', ')})`);
+
+    const envs = [...css.matchAll(/env\(safe-area-inset-(top|right|bottom|left)\)/g)];
+    assert.ok(envs.length >= 12,
+      `the chrome keeps clear of the cutout on every edge it can reach (${envs.length} insets)`);
+    assert.deepEqual([...new Set(envs.map((m) => m[1]))].sort(), ['bottom', 'left', 'right', 'top'],
+      'all four edges are inset, not only the one a notch is usually on');
+    // Every one of them is reachable by the browser gate's simulation.
+    const bare = [...css.matchAll(/(.{0,40})env\(safe-area-inset-/g)]
+      .filter((m) => !/var\(--safe-(top|right|bottom|left),\s*$/.test(m[1]))
+      .map((m) => m[0].trim());
+    assert.deepEqual(bare, [],
+      `every inset is written as var(--safe-*, env(...)) so the gate can simulate it (${bare.join(' | ')})`);
+    // …and the one line without which all fourteen of them resolve to zero.
+    assert.ok(/<meta name="viewport"[^>]*viewport-fit=cover/.test(html),
+      'the viewport covers the cutout, which is what makes env(safe-area-inset-*) a number at all');
+  }
   assert.ok(/:focus-visible\s*\{[^}]*outline:/.test(css), 'focus draws a visible outline');
   assert.ok(!/outline:\s*none/.test(css), 'and nothing takes it away again');
   // A <label for> cannot be tabbed to or activated with Enter, so it must

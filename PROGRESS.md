@@ -1,5 +1,147 @@
 # PROGRESS
 
+## Session 198 — R113: the 12px type floor, and three things it uncovered ✅
+
+**78 declarations in `style.css` set text under 12px, the worst at 8.32px.
+That half of the entry measured true. Almost nothing else in it did.**
+
+### The entry's two loudest numbers, checked first
+
+| the entry said | what the tree says |
+|---|---|
+| Vivarium fails 7,353 of 72,171 nodes (10.5%); Biohazard 136, Lab and Blueprint 87, Saturday 95; `.fine-print` at 2.3–2.6:1, SPLICE IT at 3.3–4.0 | **zero failures, all five themes.** R99 is recorded in the entry as "the gate"; it was the gate AND the pass. The entry was written against the tree before it |
+| at 150% text the Ranch and Pens spill 70px | **not on the Ranch and not on the Pens** — but see below, because the reading that said so was also wrong |
+| `style.css` has no safe-area insets, no light scheme, and money prints as `$153249` | all three held |
+
+Deleting the contrast work was the right call and it was also the easy half.
+The 150% claim is the one worth writing down.
+
+### The probe that reported "already true" was reading one screen
+
+The first 150% probe scaled the root font size and asked the same containment
+question the 100% pass asks. It reported nothing, anywhere. That reading nearly
+went into the ROADMAP as *the entry was wrong, this is already clean*.
+
+It was measuring **whatever screen the walk happened to be standing on** when
+it ran. Made into a lap of the tab bar on a day-180 save, it found:
+
+    button.spar-btn     slack  +7px at 100%  ->  -86px at 150%
+    span.spar-charges   slack +21px at 100%  ->  -72px at 150%
+
+`.encounter` is a flex row with `justify-content: space-between`, and a **HELD**
+node puts three children in it — the description, the HELD tag and the Spar
+button — where every other status puts two. `.encounter button` is
+`flex: 0 0 auto`, and the description `<div>` had no `min-width: 0`, so nothing
+in the row could give. One `flex-wrap: wrap` and one `min-width: 0`; both are
+inert at 100%, where it already fits.
+
+**One screen out of six is not an answer about a layout.** The probe is a lap
+now, and it says which screen in the failure.
+
+### The type floor: 78 declarations, one screen, one budget
+
+All 78 sub-12px `font-size` rules go to `0.75rem` — worst was `.mode-tag` at
+8.32px — and five em-relative rules are re-anchored so a shrunken parent cannot
+put them back under it. 98 gate failures to 0.
+
+Every height budget was re-measured against the change **before** it was
+applied. Eight of nine absorbed it, `dex:roster` and `dex:variants` included,
+which run at *exactly* their budget and did not move because what they draw is
+portraits rather than small print. `dex:foes` is the longest list of fine print
+in the game — 42 units and 5 rivals — so half a pixel a line adds up:
+6100 → 6150, measured at 6115. R97's folded number did not move.
+
+### Three no-op fixes aimed at one failure message
+
+The battle arena is the one screen that does not scroll, so it is the only one
+the floor actually broke. The gate said *"the arena clips 14px of its own
+content"*, and three fixes were aimed at that sentence:
+
+    log cap 46vh -> 43vh          never the binding constraint   REVERTED
+    .stage min-height 210 -> 196  not the floor in play          REVERTED
+    flex: 1 1 auto -> 1 1 0       correct, and not what bound    KEPT
+
+The actual fix was `@media (min-height: 760px) { .stage { min-height: 280px } }`
+→ 260, and it was found in **one reading** once the gate was made to print the
+column instead of the total:
+
+    [780dvh = header 25 + footer 53 + main 658;
+     column: stage 280, msg-box 122, intent 44, cmd 198]
+
+A failure that reports the size of a problem and nothing about where to take it
+from is a failure that gets guessed at. The arena chrome gives back 14px on top
+(header 6→4, main 8/6→6/4, footer 12→8, gaps 8→6), which is what pays for 12px
+type in a fixed column.
+
+### Two rules for the cutout, because either one alone is a lie
+
+`viewport-fit=cover` on the viewport, and `env(safe-area-inset-*)` on the
+header, main, footer and both in-battle rules — **fourteen insets, all four
+edges**.
+
+The browser gate SIMULATES the notch by setting `--safe-top`, which is why
+every inset ships as `var(--safe-*, env(safe-area-inset-*))`: the `env` is what
+a phone resolves, the variable is what a headless desktop browser with no notch
+can be told. **That simulation passes whether or not the `env` behind it ever
+resolves to anything** — and without `viewport-fit=cover` it resolves to zero
+on every device. That is R73's `var(--bg)` one level up: a rule that reads as
+correct and resolves to nothing, on the one device it was written for.
+
+So smoke reads the shell for that one attribute, and reads the stylesheet to
+prove every inset is still written in the form the simulation can reach.
+
+### And two rules for the type floor, for the mirror reason
+
+The browser judges the **computed** size on the element that owns the sentence,
+which is the only way to see a rule that is fine until something nests it. It
+reaches only what the walk opens — so a 10.9px rule on the **boot-failure
+card**, a screen no gate reaches on a working tree, is invisible to it and is
+still 10.9px to whoever is reading it at the worst possible moment. Smoke reads
+the 160 declared sizes for the same floor.
+
+### The contrast walk runs on both save shapes now
+
+The gate's fixture is a mid-game lab: the right save for measuring CONTROLS,
+the wrong one for measuring TYPE AND COLOUR, because what a screen prints
+depends on what the save holds. Measured across the six tabs:
+
+    fresh only, vs the fixture and day-180   3 selectors   .locked-tag, button.locked, li.current
+    day-180 only, vs the fixture and fresh  12 selectors   .tier-S/-A/-B/-C, .held-tag, .grade-prismatic, …
+
+`.tier-S` is 180 days of work; `.locked-tag` needs a map with nothing taken on
+it. Two reloads and a lap each, carrying the type floor with them.
+
+### One fmtMoney, and it cost bytes
+
+73 sites in 14 files stop printing `$153249`. `${fmtMoney(x)}` is eleven
+characters longer than `$${x}` at each of 39 eager sites, plus ten imports and
+the function itself: **KB_CAP 321 → 322**, measured 321.1. R111's named lever
+(evict `audio/sfx.js`) is acknowledged and deliberately not pulled — a
+milestone that rearranges the audio graph while moving 78 font sizes is two
+milestones wearing one hat.
+
+PROSE_CAP was at exactly its cap and was **paid** rather than raised: the one
+comment introducing `fmtMoney` came out, and the argument for it is in ROADMAP
+R113, where it had to be written anyway.
+
+### Not built
+
+**The light theme.** The entry proposes one, or an existing theme honouring
+`prefers-color-scheme: light`. It is not in the criterion, it is substantial
+visual-identity work rather than a pass, and CLAUDE.md says work the criterion
+does not cover stops and asks. Still queued.
+
+### Still filed, still unfixed
+
+- `stripComments` cannot count a bare brace (R112).
+- `content.voice` is `{}` in the browser (R111).
+- `cleanSave`'s `shape()` pass replaces `save.ranch` wholesale when it is not a
+  plain object.
+
+### Next session's first task
+
+R115.
+
 ## Session 197 — R112: the dossier and the Yearbook ✅
 
 **The save has counted about twenty things since M0 and shown the player one

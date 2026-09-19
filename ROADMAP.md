@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**6 entries queued.** R113, R115, R116, R117, R118, R176.
+**5 entries queued.** R115, R116, R117, R118, R176.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4353,29 +4353,118 @@ suite can check.
   SPLICE, presses the ceremony's name field and takes a rolled identity, and
   asserts `profile.named`. `campaign/ui.js` is never imported.
 
-- **R113 — Vivarium and the fine print: the theme and type pass.** Of
-  **1,143 text nodes** on the fresh screens, **665 (58%) are under 12 px**
-  and 354 under 11 px: `.fine-print` at 11.5 px ×191, `.lineage` at 10.9 px
-  ×67, buttons at 10.9. Contrast, measured against the effective background
-  under every theme: Biohazard fails **136 of 72,171** nodes, Lab and
-  Blueprint 87, Saturday 95 — and **Vivarium fails 7,353 (10.5%)**, almost
-  all of it `.grade-badge` at 4.23:1 on every vial. Common to all five:
-  `.fine-print` at **2.3–2.6:1**, `.lineage` at 2.3–2.6, the **SPLICE IT**
-  button at 3.3–4.0, `.button` at 3.5–4.0, and 84 decorative `?` cards at
-  2.6–2.8. At 150% text the Ranch and Pens spill **70 px** past the edge, at
-  200% 216 px. `style.css` has **no safe-area insets, no `forced-colors`,
-  no light scheme** — five themes, all dark, `color-scheme: dark` — and
-  money prints as `$153249`. R99 is the gate; this is the pass it will
-  guard. Proposed, medium: a **12 px type floor** (R98's copy budget absorbs
-  the height); per-theme tokens for muted ink, badges and the big button so
-  every theme clears AA; the `?` cards marked decorative; `viewport-fit=cover`
-  with `env(safe-area-inset-*)` on header, footer and arena; the one
-  overflowing span; one **`fmtMoney`** through `Intl.NumberFormat`; and a
-  **light theme** (or one existing theme honouring
-  `prefers-color-scheme: light`). *Done when: the contrast pass reports zero
-  failures on all five themes on fresh and day-180 saves, no text node is
-  under 12 px, 150% text overflows nothing, and the header clears a
-  simulated 47 px cutout.*
+- **R113 — Vivarium and the fine print: the theme and type pass.** ✅
+  *Shipped, and the entry's two loudest numbers were both wrong — one because
+  a previous milestone had already fixed it, the other because the reading
+  that "falsified" it was taken on one screen.*
+
+  **THE CONTRAST HALF WAS ALREADY DONE, BY R99.** The entry said Vivarium
+  fails 7,353 of 72,171 nodes (10.5%), Biohazard 136, Lab and Blueprint 87,
+  Saturday 95, with `.fine-print` at 2.3–2.6:1 and the SPLICE IT button at
+  3.3–4.0. Measured on this tree, across all five themes, on the fresh
+  screens, the founding picker, the briefing and the keyboard walk: **zero**.
+  R99 is recorded in the entry as "the gate"; it was the gate AND the pass,
+  and the entry was written against the tree before it. Nothing in this
+  milestone moved a colour.
+
+  **THE 150% CLAIM WAS WRONG TWICE.** The entry said the Ranch and Pens spill
+  70px at 150% text. The first probe written for it scaled the root font size
+  and asked the containment question — and reported nothing, on any screen, at
+  any theme. That reading is what nearly went into this entry as "already
+  true". It was a reading of ONE SCREEN: the probe measured whatever the walk
+  happened to be standing on when it ran. Made into a lap of the tab bar on a
+  day-180 save, it found the War Room's held-node row running **86px** past
+  its card, with the charge badge 72px behind it. `.encounter` is a flex row
+  that did not wrap, and a HELD node puts three children in it — the
+  description, the HELD tag and the Spar button — where every other status
+  puts two. The button is `flex: 0 0 auto`, so the row had nothing to give.
+  One `flex-wrap: wrap` and a `min-width: 0` on the description, both inert at
+  100% where it already fits.
+
+  **THE TYPE FLOOR IS THE MILESTONE, AND IT IS THE ONE HALF OF THE ENTRY THAT
+  MEASURED TRUE.** Not re-derived as 665 of 1,143 nodes — that is a count of
+  what was on screen at one moment — but as its cause: **78 declarations** in
+  `style.css` under 12px, the worst `.mode-tag` at 0.52rem (8.32px). All 78 go
+  to `0.75rem`, and five em-relative rules are re-anchored so they cannot drift
+  back under it through a shrunken parent. The gate went from **98** distinct
+  failures to 0.
+
+  **IT COSTS EXACTLY ONE SCREEN AND ONE BUDGET.** Every height budget was
+  re-measured against the change before it was applied. Eight of nine absorbed
+  it, including `dex:roster` and `dex:variants`, which run at *exactly* their
+  budget and did not move because what they draw is portraits rather than
+  small print. `dex:foes` is the longest list of fine print in the game — 42
+  units and 5 rivals — so 0.5px a line adds up to 15: 6100 → 6150, measured at
+  6115. The folded number R97's criterion is actually judged on did not move.
+
+  **AND THE BATTLE ARENA, WHICH IS THE ONE SCREEN THAT DOES NOT SCROLL.**
+  Three fixes were aimed at it by reading the failure — "the arena clips 14px"
+  — and **all three were no-ops**: the log cap from 46vh to 43vh (never the
+  binding constraint), `.stage`'s `min-height` from 210 to 196 (not the floor
+  in play), and `flex: 1 1 auto` to `1 1 0` (correct, and not what was
+  binding). The fix was `@media (min-height: 760px) { .stage { min-height:
+  280px } }` → 260, and it was found in one reading once the gate was made to
+  PRINT THE COLUMN: `[780dvh = header 25 + footer 53 + main 658; column: stage
+  280, msg-box 122, intent 44, cmd 198]`. A failure that reports the size of a
+  problem and nothing about where to take it from is a failure that gets
+  guessed at. The arena chrome also gives back 14px (header 6→4, main 8/6→6/4,
+  footer 12→8, gaps 8→6), which is what pays for 12px type in a fixed column.
+
+  **THE CUTOUT IS TWO RULES, BECAUSE EITHER ONE ALONE IS A LIE.**
+  `viewport-fit=cover` on the viewport, and `env(safe-area-inset-*)` on the
+  header, main, footer and both in-battle rules — fourteen insets, all four
+  edges. The browser gate SIMULATES the notch by setting `--safe-top`, which
+  is why every inset ships as `var(--safe-*, env(safe-area-inset-*))`: the
+  `env` is what a phone resolves, the variable is what a headless desktop
+  browser with no notch can be told. That simulation passes whether or not the
+  `env` behind it ever resolves to anything — and it resolves to **zero on
+  every device** without `viewport-fit=cover`. So `tools/smoke.js` reads the
+  shell for that one attribute, and reads the stylesheet to prove every inset
+  is still reachable by the simulation. R73's `var(--bg)`, one level up: a
+  rule that reads as correct and resolves to nothing, on the one device it was
+  written for.
+
+  **THE TYPE FLOOR IS ALSO TWO RULES, FOR THE MIRROR REASON.** The browser
+  judges the COMPUTED size on the element that owns the sentence, which is the
+  only way to see a rule that is fine until something nests it. It reaches
+  only what the walk opens — so a 10.9px rule on the boot-failure card, a
+  screen no gate reaches on a working tree, is invisible to it and is still
+  10.9px to whoever is reading it at the worst possible moment. Smoke reads
+  the 160 declared sizes for the same floor.
+
+  **AND THE CONTRAST WALK NOW RUNS ON BOTH SAVE SHAPES.** The gate's fixture
+  is a mid-game lab, which is the right save for measuring CONTROLS and the
+  wrong one for measuring TYPE AND COLOUR: what a screen prints depends on
+  what the save holds. Measured, on the six tabs: a fresh save prints three
+  selectors neither the fixture nor a day-180 save does, and a day-180 save
+  prints twelve neither of the others does — `.tier-S` is 180 days of work,
+  `.locked-tag` needs a map with nothing taken on it. Two reloads and a lap
+  each, carrying the type floor with them.
+
+  **ONE `fmtMoney`, AND THE HONEST ACCOUNTING IS THAT IT COST BYTES.** 73
+  sites in 14 files stop printing `$153249`. `${fmtMoney(x)}` is eleven
+  characters longer than `$${x}` at each of 39 eager sites, plus ten imports
+  and the function: KB_CAP 321 → 322, measured 321.1, with R111's named lever
+  (evict `audio/sfx.js`) acknowledged and explicitly not pulled here — a
+  milestone that rearranges the audio graph while moving 78 font sizes is two
+  milestones wearing one hat. PROSE_CAP was at exactly its cap and was PAID
+  rather than raised: the one comment introducing `fmtMoney` came out, and the
+  argument for it lives here instead.
+
+  **NOT BUILT: the light theme.** The entry proposes one, or an existing theme
+  honouring `prefers-color-scheme: light`. It is not in the criterion, it is
+  substantial visual-identity work rather than a pass, and CLAUDE.md says work
+  the criterion does not cover stops and asks. Still queued.
+
+  *Done when: the contrast pass reports zero failures on all five themes on
+  fresh and day-180 saves, no text node is under 12 px, 150% text overflows
+  nothing, and the header clears a simulated 47 px cutout.* — **all four
+  green, and all four gated.** Breaks 366–374: the fine print back under the
+  floor and a screen the walk cannot reach doing the same; the viewport losing
+  `viewport-fit=cover` and an inset written bare where nothing can simulate
+  it; the header losing the one inset that matters; the stage taking its 20px
+  back; the held-node row losing its wrap; and one contrast break per save
+  shape, each on a selector only that shape ever prints.
 
 **Durability and tooling.**
 
