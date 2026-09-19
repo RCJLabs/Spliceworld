@@ -4466,6 +4466,19 @@ suite can check.
   substantial visual-identity work rather than a pass, and CLAUDE.md says work
   the criterion does not cover stops and asks. Still queued.
 
+  **THE FULL BATTERY CAME BACK 366 OF 367, AND THE MISS WAS THE WRAP AGAIN.**
+  Break 181 — R86's egg Hurry button put back inside `.encounter`, where it
+  ran 110px past its card and 98px past the phone — went MISSED with nothing
+  about the gate, the rule or the markup changed. `flex-wrap: wrap` fixes
+  R86's defect too: measured with the button put back, the row runs 110px over
+  at `nowrap` and sits **15px INSIDE** its card at `wrap`. That is the right
+  outcome for the game and the wrong one for a break, so 181's patch now takes
+  the wrap off the row it is breaking and says why. R86's markup stays, as a
+  layout decision rather than a bug fix — a full-width button under the row
+  reads better than one wrapped onto a second flex line. Three times in one
+  milestone, then: a fix believed before it was measured, and the measurement
+  disagreeing each time.
+
   *Done when: the contrast pass reports zero failures on all five themes on
   fresh and day-180 saves, no text node is under 12 px, 150% text overflows
   nothing, and the header clears a simulated 47 px cutout.* — **all four

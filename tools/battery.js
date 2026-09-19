@@ -2513,7 +2513,20 @@ const BREAKS = [
     // reports a full-size rect, so the 40px floor and the 6px gutter both
     // pass it — which is why this shipped after a green run and was caught
     // by screenshot.
-    n: 181, gate: A11Y, name: 'the egg\'s Hurry button goes back into its row, and off the side of the phone',
+    //
+    // R113 — AND THE PATCH NOW HAS TO TAKE THE WRAP OFF THE ROW, because
+    // this break went MISSED on R113's full battery with nothing about the
+    // gate, the rule or the markup changed. `.encounter` gained
+    // `flex-wrap: wrap` for a held node row at 150% text, and that one
+    // declaration fixes R86's defect too: measured with the button put back,
+    // the row runs 110px past its card at `nowrap` and sits 15px INSIDE it
+    // at `wrap`. The defect is structurally unreachable now, which is the
+    // right outcome for the game and the wrong one for a break — so the
+    // patch reconstructs the geometry the stylesheet forbids, and says so.
+    // R86's markup stays because a full-width button under the row reads
+    // better than one wrapped onto a second flex line; it is a layout
+    // decision now rather than a bug fix.
+    n: 181, gate: A11Y, name: 'the egg\'s Hurry button goes back into a row that cannot wrap, and off the side of the phone',
     file: 'ranch/ui.js',
     anchor: `      </div>
       \${
@@ -2525,7 +2538,7 @@ const BREAKS = [
         t < egg.hatchAt ? \`<div class="egg-rush">\${rushButton(rushQuote(state, 'egg', egg.id, content, t))}</div>\` : ''
       }\`;`,
     to: `        \${t < egg.hatchAt ? rushButton(rushQuote(state, 'egg', egg.id, content, t)) : ''}
-      </div>\`;`,
+      </div><style>.encounter { flex-wrap: nowrap; }</style>\`;`,
   },
   {
     // R99 — THE REACH COLLAPSES IN SILENCE, which is the whole reason this

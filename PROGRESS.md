@@ -140,6 +140,28 @@ PROSE_CAP was at exactly its cap and was **paid** rather than raised: the one
 comment introducing `fmtMoney` came out, and the argument for it is in ROADMAP
 R113, where it had to be written anyway.
 
+### The full battery: 366 of 367, and the miss was the wrap again
+
+Baseline clean, every gate PASS. One break MISSED, and it was not rot:
+
+**Break 181** — R86's egg Hurry button put back inside `.encounter`, where it
+ran 110px past its card and 98px past the phone — went green with nothing
+about the gate, the rule or the markup changed. `flex-wrap: wrap` fixes R86's
+defect too. Measured with the button actually put back:
+
+    .encounter at flex-wrap: nowrap    110px past the card, 98px past the phone
+    .encounter at flex-wrap: wrap       15px INSIDE the card
+
+Structurally unreachable now. Right outcome for the game, wrong one for a
+break — so 181's patch takes the wrap off the row it is breaking, and the
+comment says why it has to. R86's markup stays: a full-width button under the
+row reads better than one wrapped onto a second flex line, so it is a layout
+decision now rather than a bug fix.
+
+That is the third time this session a fix was believed before it was measured
+(the three no-op arena guesses, the redundant `.encounter` pair, and this),
+and the third time the measurement disagreed.
+
 ### Not built
 
 **The light theme.** The entry proposes one, or an existing theme honouring
