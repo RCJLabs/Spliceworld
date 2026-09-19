@@ -24,7 +24,7 @@
 // browser search.
 
 import { mkdtemp, rm } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -727,12 +727,50 @@ async function main() {
   const problems = [];
   const note = (msg) => problems.push(msg);
   let cdp;
+  let snap = null;
   try {
     cdp = await connect(cdpPort);
-    const { send, evaluate, errors } = cdp;
+    const { evaluate, errors } = cdp;
+    // R115 — SNAPSHOT BEFORE EVERY NAVIGATION, because precise coverage lives
+    // in the isolate and a reload throws away what the previous document ran.
+    // One `takePreciseCoverage` at the end reports the LAST page load and
+    // nothing else, and this walk reloads a dozen times — the founding pass,
+    // the briefing pass and both save shapes each start with one. Every
+    // snapshot is written as its own file and the merge takes the max, which
+    // is the same thing it already does across the suite's processes.
+    let covSnaps = 0;
+    const snapCoverage = async () => {
+      try {
+        const cov = await cdp.send('Profiler.takePreciseCoverage');
+        const origin = `http://127.0.0.1:${port}/`;
+        const result = (cov.result?.result ?? [])
+          .filter((r) => r.url.startsWith(origin))
+          .map((r) => ({ ...r, url: `file://${join(root, r.url.slice(origin.length).split('?')[0])}` }));
+        if (!result.length) return;
+        writeFileSync(join(process.env.SW_COVERAGE, `coverage-a11y-${process.pid}-${covSnaps++}.json`),
+          JSON.stringify({ result }));
+      } catch { /* the page is between documents; the next snapshot catches it */ }
+    };
+    snap = snapCoverage;
+    const send = process.env.SW_COVERAGE
+      ? async (method, params) => {
+        if (method === 'Page.navigate') await snapCoverage();
+        return cdp.send(method, params);
+      }
+      : cdp.send;
     await send('Runtime.enable');
     await send('Page.enable');
     await send('Network.enable');
+    // R115 — AND THE ONLY PLACE THE SHIPPED SCREENS ACTUALLY RUN. Six modules
+    // — `main.js`, the founding picker, the focus keeper, the sky, `sw.js` —
+    // are never loaded by anything in Node, so a coverage merge taken from the
+    // suite alone reports them as wholly dead and can say nothing about them.
+    // This walk opens every screen on three saves; it is the browser half of
+    // the merge, and it costs one CDP call at each end. Off unless asked.
+    if (process.env.SW_COVERAGE) {
+      await send('Profiler.enable');
+      await send('Profiler.startPreciseCoverage', { callCount: true, detailed: true });
+    }
     await send('Network.setCacheDisabled', { cacheDisabled: true });
     // The service worker caches the whole shell; without this a run measures
     // the PREVIOUS build's CSS and reports a floor it never actually met.
@@ -2094,6 +2132,7 @@ async function main() {
     console.log(`a11y: ${controls.length} distinct controls measured at ${VIEWPORT}px across ${views.size} views (boxes re-read at ${BAND_TOP}px, the top of the phone band)`);
     console.log(`a11y: ${kbScreens}/${screens.length} screens opened, ${kbControls} controls tabbed to and a duel fought with Tab and Enter alone`);
   } finally {
+    if (process.env.SW_COVERAGE && cdp && snap) await snap();
     try { cdp?.ws.close(); } catch { /* already gone */ }
     proc.kill();
     server.close();
