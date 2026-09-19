@@ -1951,36 +1951,54 @@ async function main() {
     //     so every `onPick` in the game — the vat's two donors, the breeding
     //     pen's two parents, the dossier's identity and philosophy, three in
     //     Settings — was a callback nothing had ever fired.
-    let picked = false;
-    for (const screen of ['pens', 'ranch', 'theater']) {
+    //     EVERY PICKER, NOT THE FIRST ONE. The first draft opened one picker,
+    //     committed it and stopped — and `breed-a`, `breed-b` and `vat-b`
+    //     stayed uncalled through a fixture change made specifically to give
+    //     them something to build from. Each of these is a LAZY option
+    //     provider keyed by picker id: it runs when that picker opens and
+    //     never otherwise, so "a pick was committed somewhere" covers exactly
+    //     one of them. The walk has to open all of them.
+    let picked = 0;
+    let offered = 0;
+    for (const screen of ['pens', 'ranch', 'theater', 'vault', 'dex']) {
       await evaluate(`document.querySelector('#tabs button[data-screen="${screen}"]')?.click()`);
       await sleep(500);
       await evaluate(OPEN_DETAILS);
-      for (const id of await evaluate(FOLD_IDS(screen)) ?? []) {
-        await evaluate(`(() => { const b = document.querySelector('#screen-${screen} button[data-fold="${id}"]');
-          if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); })()`);
-        await sleep(250);
-        if (await evaluate(`!!document.querySelector('#screen-${screen} button[data-picker]:not([disabled])')`)) break;
+      // Folds are exclusive on some screens, so each one is opened, its
+      // pickers taken, and then the next — rather than opening all of them
+      // and reading a screen that only ever had the last one showing.
+      const folds = await evaluate(FOLD_IDS(screen)) ?? [];
+      for (const id of [...folds, null]) {
+        if (id) {
+          await evaluate(`(() => { const b = document.querySelector('#screen-${screen} button[data-fold="${id}"]');
+            if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); })()`);
+          await sleep(250);
+        }
+        const ids = await evaluate(`[...document.querySelectorAll('#screen-${screen} button[data-picker]:not([disabled])')].map((b) => b.dataset.picker)`);
+        for (const pid of ids) {
+          if (!await evaluate(`(() => { const b = document.querySelector('#screen-${screen} button[data-picker="${pid}"]:not([disabled])');
+            if (!b) return false; b.click(); return true; })()`)) continue;
+          await sleep(450);
+          offered += 1;
+          const rows = await evaluate(`document.querySelectorAll('#picker .pick-row').length`);
+          if (!rows) {
+            // An empty sheet is a real state and not this one.
+            await evaluate(`document.querySelector('#picker .pick-close')?.click()`);
+            await sleep(200);
+            continue;
+          }
+          await evaluate(`document.querySelector('#picker .pick-row').click()`);
+          await sleep(500);
+          if (!await evaluate(`document.getElementById('picker').hidden`)) {
+            note(`${screen}/${pid}: choosing a row left the picker sheet open`);
+            await evaluate(`document.querySelector('#picker .pick-close')?.click()`);
+            await sleep(200);
+          }
+          picked += 1;
+        }
       }
-      if (!await evaluate(`(() => { const b = document.querySelector('#screen-${screen} button[data-picker]:not([disabled])');
-        if (!b) return false; b.click(); return true; })()`)) continue;
-      await sleep(500);
-      const rows = await evaluate(`document.querySelectorAll('#picker .pick-row').length`);
-      if (!rows) {
-        // An empty sheet is a real state and not this one. Close it and move on.
-        await evaluate(`document.querySelector('#picker .pick-close')?.click()`);
-        await sleep(250);
-        continue;
-      }
-      await evaluate(`document.querySelector('#picker .pick-row').click()`);
-      await sleep(600);
-      if (!await evaluate(`document.getElementById('picker').hidden`)) {
-        note(`${screen}: choosing a row left the picker sheet open`);
-      }
-      picked = true;
-      break;
     }
-    if (!picked) note('no option picker on any screen offered a row to choose, so nothing committed a pick');
+    if (!picked) note(`no option picker on any screen offered a row to choose (${offered} opened), so nothing committed a pick`);
 
     // 6h. R115 — AND THE SETTINGS PANEL'S OWN FOUR, which are the only
     //     controls in the game that change how the game itself behaves:
