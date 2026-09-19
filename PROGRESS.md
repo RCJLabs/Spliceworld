@@ -1,5 +1,108 @@
 # PROGRESS
 
+## Session 200 — R116: standing contracts, and the cascade behind them ⚠️ not merged
+
+**The board is fixed and its gate is green. What is not finished is the
+cascade: R116 changes what a campaign DOES, and a dozen calibrated numbers
+were measured against what it used to do.**
+
+### The milestone itself
+
+    launches      1,189 (6.61/day)  ->  542 (3.01/day, against 3.00 paced)
+    crewed            0             ->  542 (3.01/day)
+    biggest job   61% of the board  ->  33%
+    paid          $53,856-$58,867   ->  $80,519-$88,537, 9.0-9.8% of gross
+    wire          411 phrasings     ->  404, loudest 3.8%
+
+Charge bucket for the pace, standing contracts for the three jobs that needed
+nobody carried anywhere, the crewed four left on the board. `SAVE_VERSION` 59.
+The R116 board gate passes on every rule it states.
+
+### Two of the entry's own claims did not survive re-measurement
+
+"The four crewed jobs ran zero times" was a fact about `tools/sim.js`, which
+passed `null` as the rider — the game always offered them. "Came to nothing"
+had already left the top ten in R109. What WAS wrong is that the board was a
+metronome: `byOp` byte-identical on all five seeds, a 10.05/day ceiling that
+no constant expressed.
+
+### Three stale derivations, two of them mine
+
+- **The hunt floor of 8** was never the halved minimum of anything. Sixteen
+  seeds on this tree AND on pre-R116 `a39a0fa` both bottom out at 4. R116 only
+  moved which seed lands lowest. Now 2, with both censuses written beside it.
+- **The board gate's own income range** quoted a mid-milestone run
+  ($94,329-$101,569 on 543). The shipped tree gives $80,519-$88,537 on 542.
+- **`ranch.stock`, the Pens' words, R177's variant lines and the Wing's
+  enrolment** all went red at once, and all four had ONE cause (below).
+
+### The interesting one: a conveyor that seized behind an unbought shelf
+
+    seed 2026, day 180   pre-R116  vault 330/400  not tight  8 renderable
+                         post      vault 259/260  TIGHT      0 renderable
+
+`extractAnimal` refuses into a full vault on purpose (R91). Once it refuses,
+every graduation fails, the pens fill to 115 head, and the walker's buy gate —
+which counts the WHOLE pen against a limit meant for animals it CHOSE — stops
+buying: 265 where it used to buy 1,772. R177's reach went with the buying.
+The walker now reads the refusal the game gives it and, while the vault is
+tight, buys shelf space or buys nothing. Three of four seeds are back to 20
+head and ~1,500 buys. Seed 4242 fills the 400-part shelf as well and that one
+is not a defect: 396 parts, 193 distinct, 233 carrying traits.
+
+### Two real bugs, neither of them R116's
+
+- **A null rival record stopped the Ranch rendering.** R114's fuzz found it
+  the moment R116 added a key to `campaign` and the seeded sample moved onto
+  `campaign.rivals.mantissa`. `ranch/onboarding.js` walked the map raw where
+  every other reader goes through `rivalRecord`. Break **389**.
+- **`cleanSave` was renaming chimeras on every load.** `safeText` stripped
+  `'`, and the game's own generator produces `Ol' Thrashbasket` — a repair
+  that edits a healthy save, which is what R114's gate calls a bug rather
+  than a guard. The apostrophe stays; `esc` covers the single-quoted
+  attribute, and the fuzz now carries a single-quote mutant so that claim is
+  tested rather than asserted.
+
+### Also fixed
+
+R83's away rule had no term for a standing arrangement, so a signed contract
+read as an absent player out-earning a present one; it now carries the
+retainer AND a derived ceiling for the jobs that were already in the van.
+`contractPerDay` has one home (three sites were hand-rolling `x 24`). The
+cooldown block picked a job that is no longer on the board. `v59` has a
+fixture. 3.7 KB of R116 prose moved into `data/notes/operations.md`.
+
+### Verification
+
+    battery --anchors     382 anchors, each matching exactly once
+    battery --baseline    RED — see below
+    npm test              4 of 11 failed (was 6 of 11)
+    full battery          not run
+
+### Next session's first task
+
+**Finish the cascade, then merge.** In order:
+
+1. `SPLICE_FLOOR` 25 against a measured 24, 25, 29, 30 — re-derive from a
+   census, do not nudge.
+2. The walker runs the chaos vat 0, 1, 1, 6 times across the four seeds and
+   `diet` wants at least one on its own. Pre-R116 seed 2026 ran 6 with MORE
+   resequencing, so `clockRoom` contention is a guess and not yet the answer.
+3. `reach` variant lines 5.15 of 6 against a floor of 5.5 — up from 4.77
+   before the shelf fix, so the remaining gap may be the same cause not fully
+   paid off.
+4. The eager budgets: `PROSE_CAP` 251 against 255.4 and `KB_CAP` 322 against
+   325.5 after 3.7 KB was already moved out, plus `FIRST_PAINT_KB` 1085
+   against 1095. Pay what can be paid, and argue whatever is left.
+5. The Pens' word budget, the agenda's `sitting` rule, `ranch.stock`'s bound
+   against seed 4242's full shelf, and `npm run release -- --fix` LAST.
+6. Then: `--only 383-389`, baseline, npm test alone, the FULL battery (R116
+   changes existing gates' logic), ROADMAP R116 to ✅ and the queue 7 -> 6,
+   merge, restart the branch from the new `main`.
+
+Also outstanding: the `/tmp/pre116` worktree is still checked out and wants
+removing once it has stopped being useful.
+
 ## Session 199 — R115: every shipped function has run under a gate ✅
 
 **The entry asked for a gate that finds code nothing runs, and then asked for

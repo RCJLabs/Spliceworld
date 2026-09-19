@@ -46,9 +46,23 @@ export function fmtMoney(n) {
 // Typed text, narrowed. Markup characters are REMOVED rather than escaped —
 // `renameCreature`'s rule since M3: a name is a label, not a document, and a
 // stored `&amp;` reads as `&amp;` everywhere that is not HTML.
+//
+// THE APOSTROPHE IS NOT ONE OF THEM, and this cost a player their name for
+// two milestones. The game's own generator produces `Ol' Thrashbasket`; a
+// stripping `'` made `cleanSave` rewrite that on every load — a repair that
+// edits a healthy save, which is the exact thing R114's own gate calls a bug
+// rather than a guard, and R91's "never reset a save" wearing a small hat.
+// It went unseen because no walk had landed that name in front of the rule
+// until R116 reshuffled the RNG.
+//
+// It is safe to keep because the OTHER half of the pair covers it: `esc`
+// below escapes `'` to `&#39;`, which is what a single-quoted attribute
+// needs, and R114's fuzz now carries a single-quote mutant so that claim is
+// tested rather than asserted. What still goes is anything that can open a
+// tag or an entity, or close a template literal.
 export function safeText(value, limit = 40) {
   return String(value ?? '')
-    .replace(/[<>&"'`]/g, '')
+    .replace(/[<>&"`]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, Math.max(1, limit));

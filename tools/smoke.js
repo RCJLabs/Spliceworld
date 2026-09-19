@@ -17899,6 +17899,8 @@ if (inShard('away')) {
     // inside sixty days, so the seeds are CHOSEN rather than listed — every
     // seed that survives the window is compared, and at least two must.
     const FROM = 10, AWAY = 30, END = FROM + AWAY;
+    const { boardOps } = await import('../campaign/operations.js');
+    const boardJobs = boardOps(content);
     const SEEDS = [2026, 7, 99, 4242, 1, 55, 808, 31337, 12, 777, 240, 91, 5150, 64, 1999, 3];
     const rows = [];
     let compared = 0;
@@ -17977,8 +17979,24 @@ if (inShard('away')) {
       // which is the schedule working. "A month away is not a month of full
       // pay" is therefore an aggregate claim, asserted once below, not a
       // per-seed one that a quiet month turns red.
-      assert.ok(banked <= fullPay,
-        `seed ${seed}: being away never pays BETTER than being there (${banked} of ${fullPay})`);
+      // R116 — PLUS THE JOBS THAT WERE ALREADY OUT. An away player launches
+      // nothing, but the board does not un-send what is already in the van:
+      // a job started before leaving resolves inside the window and pays,
+      // stamped at `run.until` the way R65 insists. That is not an absent
+      // player out-earning a present one — a present player banks the same
+      // purse and can then launch again — it is money the rate-based
+      // denominator above has no term for. Seed 7 banked 4,930 against a
+      // full pay of 4,815, and the $115 is one crewed job coming home.
+      //
+      // The ceiling is DERIVED and deliberately generous: at most one run
+      // per board job can be in flight, so the most the board can hand an
+      // absent player is the sum of the board's top purses. Nothing else
+      // can slip under it — a second month's worth of launches cannot
+      // happen with nobody there to press the button.
+      const inFlight = boardJobs.reduce((n, op) => n + (op.funds?.[1] ?? 0), 0);
+      assert.ok(banked <= fullPay + inFlight,
+        `seed ${seed}: being away never pays BETTER than being there (${banked} of ${fullPay}`
+        + `, +${inFlight} the board could still have been carrying)`);
       // R68: this was a flat per-seed floor of 0.35 on FOUR seeds, and the
       // comment above it already knew that was thin — it recorded 52% as
       // the worst of three. The walk is a chaotic simulation: any change to
@@ -23874,7 +23892,12 @@ if (inShard('untrusted')) {
   //    however it is spelled; a cleaner is the same against the strip set.
   {
     const ESCAPER = /\.replace\(\s*\/(\[&<>"'\]|&\/g)/;
-    const STRIPPER = /\.replace\(\s*\/\[<>&"'`\]\/g\s*,\s*''\)/;
+    // R116 — THE SET LOST ITS APOSTROPHE, and this pattern is the shape of
+    // the set. `safeText` stopped stripping `'` because the game's own
+    // names carry one and `cleanSave` was rewriting them on every load;
+    // see util/text.js. The rule here is still "exactly one cleaner", and
+    // it still has to describe the cleaner that exists.
+    const STRIPPER = /\.replace\(\s*\/\[<>&"`\]\/g\s*,\s*''\)/;
     const found = { esc: [], strip: [] };
     for (const file of moduleFiles()) {
       const rel = relative(root, file).replaceAll('\\', '/');
@@ -24170,6 +24193,13 @@ if (inShard('untrusted')) {
     })(base, '');
     const MUTANTS = [
       () => '<img src=x onerror=alert(1)>', () => '" onload="alert(2)', () => null,
+      // R116 — THE SINGLE-QUOTED ATTRIBUTE, which this list had never tried.
+      // `safeText` used to strip `'` outright, so nothing downstream was ever
+      // asked to cope with one; it stopped doing that because the game's own
+      // names contain apostrophes and the repair was rewriting them. The
+      // claim that took its place is that `esc` covers the case, and a claim
+      // is worth what its test is worth.
+      () => "' onfocus='alert(3)",
       () => 1e308, () => -1e308, () => Number.NaN, () => [], () => ({}), () => 'hello',
       () => Number.MAX_SAFE_INTEGER, () => "'; DROP TABLE pens; --",
     ];
