@@ -1802,20 +1802,51 @@ async function main() {
     //      - because the 40px floor and the 6px gutter are properties of the
     //      stylesheet and do not move with the save. Two reloads and a lap of
     //      the tab bar each, rather than two more full walks.
+    //      IT DOES NOT CALL `foundingPass`. The first draft did, to get past
+    //      the picker, and `foundingPass` ends by writing the LAB FIXTURE back
+    //      and reloading — so both passes measured the same mid-game save the
+    //      walk had already measured, twice, and reported clean. The battery
+    //      is what said so: a contrast break on `.tier-S`, a badge only a
+    //      180-day campaign can print, went MISSED. Clearing both stores and
+    //      pressing a lab is four lines; borrowing a helper that puts the
+    //      state back was one, and it silently answered a different question.
+    const shapeSeen = new Map();
     const shapePass = async (label, setup) => {
-      await evaluate(`localStorage.clear()`);
+      // Both stores, per R100: localStorage alone means "evicted player" and
+      // the campaign comes back out of IndexedDB.
+      await evaluate(`(async () => {
+        localStorage.clear();
+        await new Promise((r) => { const q = indexedDB.deleteDatabase('spliceworld'); q.onsuccess = r; q.onerror = r; q.onblocked = r; });
+      })()`);
       await setup();
       await send('Page.navigate', { url });
       await sleep(2200);
-      await foundingPass();
+      // A save-less browser opens on the founding choice; pick a lab and take
+      // whatever the first splice puts up, because what this pass is for is
+      // the screens BEHIND that, which no other pass reaches on a fresh save.
+      if (await evaluate(`!!document.querySelector('.founding .lab-pick')`)) {
+        await evaluate(`document.querySelector('.founding .lab-pick').click()`);
+        await sleep(1400);
+        for (let i = 0; i < 3; i++) {
+          if (await evaluate(`document.querySelector('#overlay').hidden`)) break;
+          await evaluate(`(() => { const b = document.querySelector('#overlay button'); if (b) b.click(); })()`);
+          await sleep(700);
+        }
+      }
+      if (await evaluate(`!!document.querySelector('.founding')`)) {
+        note(`${label}: the founding picker never closed, so nothing behind it was measured`);
+        return;
+      }
       const tabs = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
       if (!tabs.length) { note(`${label}: the shell painted no tabs, so nothing was measured on it`); return; }
+      const saw = new Set();
       for (const sc of tabs) {
         await evaluate(`document.querySelector('#tabs button[data-screen="${sc}"]')?.click()`);
         await sleep(500);
         await evaluate(OPEN_DETAILS);
         await sleep(300);
         for (const t of await evaluate(CONTRAST)) {
+          saw.add(t.sel);
           if (t.px < TYPE_FLOOR) {
             const key = `${label}|${t.sel}|${t.px}`;
             if (!small.has(key)) small.set(key, { ...t, where: `${label}:${sc}` });
@@ -1825,6 +1856,7 @@ async function main() {
           if (!dim.has(key) || dim.get(key).ratio > t.ratio) dim.set(key, { ...t, where: `${label}:${sc}` });
         }
       }
+      shapeSeen.set(label, saw);
     };
     await shapePass('fresh', async () => {});
     {
@@ -1833,6 +1865,25 @@ async function main() {
       await shapePass('day180', async () => {
         await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(day180))})`);
       });
+    }
+    // AND THE TWO SHAPES HAVE TO BE TWO SHAPES. This is the assertion the
+    // first draft needed and did not have: if a save fails to load, or a
+    // helper quietly puts another one back, both laps measure the same screens
+    // and report clean for the wrong reason. A fresh save and a 180-day
+    // campaign each print things the other never does — a locked node and an
+    // S-tier badge are the extremes of it — so if either set is a subset of
+    // the other, one of these passes did not happen.
+    {
+      const a = shapeSeen.get('fresh');
+      const b = shapeSeen.get('day180');
+      if (a && b) {
+        const onlyA = [...a].filter((x) => !b.has(x));
+        const onlyB = [...b].filter((x) => !a.has(x));
+        if (!onlyA.length || !onlyB.length) {
+          note(`the fresh and day-180 laps drew the same ${a.size} and ${b.size} selectors`
+            + ` (${onlyA.length} and ${onlyB.length} of their own), so one of the two saves never loaded`);
+        }
+      }
     }
 
     // ---- 1h. R113 - AND IT SURVIVES A READER WHO TURNED THE TEXT UP ------
