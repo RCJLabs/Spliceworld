@@ -118,7 +118,7 @@ export function openPicker({ title, subtitle, groups, selectedId, onPick }) {
     row.addEventListener('click', () => {
       const value = row.dataset.value;
       closePicker();
-      onPick(value);
+      onPick?.(value);
     })
   );
   // The selected row is where the player's attention already is, so it is

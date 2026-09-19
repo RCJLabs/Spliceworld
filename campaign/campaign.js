@@ -20,7 +20,7 @@ import { playerLine, rivalLine } from './monologue.js';
 import { tickOperations } from './operations.js';
 import {
   regionList, allNodes, nodeById, regionOfNode,
-  threatGen as mapThreatGen, threatLadder, threatRung, nextThreatRung,
+  threatGen as mapThreatGen, threatLadder, nextThreatRung,
   regionBlockers, regionOpen, nodeStates as mapNodeStates, regionStates as mapRegionStates,
 } from './map.js';
 
@@ -48,7 +48,7 @@ export function regionOf(content) {
 // because the War Room has always reached for the campaign module. The two
 // wrappers thread the contest list through, which map.js deliberately does
 // not know about.
-export { threatLadder, threatRung, nextThreatRung, regionBlockers, regionOpen };
+export { threatLadder, nextThreatRung, regionBlockers, regionOpen };
 export const threatGen = mapThreatGen;
 
 const contestedIds = (state) => (state.campaign.contested ?? []).map((c) => c.nodeId);

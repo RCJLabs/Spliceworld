@@ -68,12 +68,6 @@ export function threatGen(state, content) {
   return gen;
 }
 
-// The rung you are standing on, for the banner text.
-export function threatRung(state, content) {
-  const gen = threatGen(state, content);
-  return threatLadder(content).find((r) => r.gen === gen) ?? { gen, at: 0 };
-}
-
 // The next rung and how far off it is — a ladder whose next step you cannot
 // see is just a number that occasionally changes.
 export function nextThreatRung(state, content) {

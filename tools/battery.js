@@ -413,7 +413,12 @@ const CACHEBUMP = ['node', 'tools/release.js'];
 // is a system whose balance has never been measured. Four of the eight R92
 // named had quietly been closed by other milestones and nobody noticed,
 // because there was nothing watching either way.
-const COVERAGE = ['node', 'tools/coverage.js'];
+const DIET = ['node', 'tools/diet.js'];
+// R115 — the service worker against a stubbed cache, and the coverage merge
+// against itself. Both are arithmetic and both run in under a second, which
+// is the only reason a gate this load-bearing can afford eight breaks.
+const WORKER = ['node', 'tools/worker.js'];
+const COVSELF = ['node', 'tools/coverage.js', '--self'];
 
 // R95 — CAN A PLAYER ACTUALLY GET TO THE CONTENT? Three rules of one gate:
 // every species is reachable by a mechanism that resolves, a 180-day walk
@@ -1950,7 +1955,7 @@ const BREAKS = [
   // results cross over. The fix is still in `tools/sim.js` and still right —
   // what is gone is the gate's ability to see it, and a break that only goes
   // red by luck teaches this battery to lie about its own coverage. The
-  // numbers are in tools/coverage.js.
+  // numbers are in tools/diet.js.
   {
     // RULE 1 — the route table. A species nobody can obtain is content that
     // does not exist, and the only reason none ships today is that nothing
@@ -2007,7 +2012,7 @@ const BREAKS = [
     to: '    if (true) continue;',
   },
   {
-    n: 151, gate: COVERAGE, name: 'the planner stops weighing combos, so a campaign never discovers one again',
+    n: 151, gate: DIET, name: 'the planner stops weighing combos, so a campaign never discovers one again',
     file: 'tools/sim.js',
     anchor: '  const rank = (t) => (completable.has(t.partId) ? 30 : 0)',
     to: '  const rank = (t) => (false ? 30 : 0)',
@@ -2018,7 +2023,7 @@ const BREAKS = [
     // the reservation away AND raised the ceiling from nine to twelve, the two
     // cancelled, and the break came back MISSED. It aims at the clocks' own
     // predicate instead, which is the rule its name describes.
-    n: 152, gate: COVERAGE, name: 'the Wing and the vat take every stall again, and the Surgery Theater never gets one',
+    n: 152, gate: DIET, name: 'the Wing and the vat take every stall again, and the Surgery Theater never gets one',
     file: 'tools/sim.js',
     anchor: 'const clockRoom = (state, content) => stableRoom(state, content).free > THEATER_STALLS;',
     to: 'const clockRoom = () => true;',
@@ -2027,7 +2032,7 @@ const BREAKS = [
     // R154 — the paddock stops buying stable room, and "Expand the pens" goes
     // back to meaning only livestock. Aimed at the derivation rather than at
     // the data, because a ratio of zero would read as a content choice.
-    n: 251, gate: COVERAGE, name: 'a pen stops buying a stall, so the Pens screen and the pen button mean different things again',
+    n: 251, gate: DIET, name: 'a pen stops buying a stall, so the Pens screen and the pen button mean different things again',
     file: 'splice/facility.js',
     anchor: '  return (state.ranch?.penCapacity ?? 0) - (meta.freePens ?? 0);',
     to: '  return 0;',
@@ -2038,7 +2043,7 @@ const BREAKS = [
     // a stall the roster never fills is the feature shipping as a number on a
     // screen. R157 could not write this break at all — at a fixed grant the
     // walker lands in the same place whichever way the constant reads.
-    n: 252, gate: COVERAGE, name: 'the stable grows and the roster does not, so a bought stall stands empty',
+    n: 252, gate: DIET, name: 'the stable grows and the roster does not, so a bought stall stands empty',
     file: 'tools/sim.js',
     anchor: '      const cap = Math.min(room.cap - THEATER_STALLS, opts.stableCap ?? Infinity);',
     to: '      const cap = Math.min(12 - THEATER_STALLS, opts.stableCap ?? Infinity);',
@@ -2191,7 +2196,7 @@ const BREAKS = [
     // R157's lesson is the reason this break exists rather than a comment: one
     // constant with three readers goes stale in two of them, and the only way
     // to keep the planner honest is to make a private copy FAIL.
-    n: 272, gate: COVERAGE, name: 'the build planner keeps its own socket list again, and the second organ bay dies',
+    n: 272, gate: DIET, name: 'the build planner keeps its own socket list again, and the second organ bay dies',
     file: 'tools/sim.js',
     anchor: '    const granted = theaterGrants(state, content, frameId).sockets;',
     to: "    const granted = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];",
@@ -2203,7 +2208,7 @@ const BREAKS = [
     // slot differ by one character. The list is right and the fill is wrong —
     // which is how the original could have been "fixed" by adding organ2 to
     // CHASSIS_SLOTS and still shipped a dead bay.
-    n: 273, gate: COVERAGE, name: 'sockets are matched by name rather than by the slot they take',
+    n: 273, gate: DIET, name: 'sockets are matched by name rather than by the slot they take',
     file: 'tools/sim.js',
     anchor: '        const socketId = granted.find((sid) => slotOfSocket(sid) === part.slot && !slots[sid]);',
     to: '        const socketId = granted.find((sid) => sid === part.slot && !slots[sid]);',
@@ -2383,31 +2388,31 @@ const BREAKS = [
     // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
     // the rule that stops the splice policy taking it. Break it and the walker
     // splices to the whole grant, both clocks starve, and coverage says so.
-    n: 249, gate: COVERAGE, name: 'the splice policy takes the whole grant again, so the vat and the Wing never get a stall',
+    n: 249, gate: DIET, name: 'the splice policy takes the whole grant again, so the vat and the Wing never get a stall',
     file: 'tools/sim.js',
     anchor: '      const cap = Math.min(room.cap - THEATER_STALLS, opts.stableCap ?? Infinity);',
     to: '      const cap = Math.min(room.cap, opts.stableCap ?? Infinity);',
   },
   {
-    n: 153, gate: COVERAGE, name: 'the walker stops running the Resequencer, so what a vial is worth goes back to being unmeasured',
+    n: 153, gate: DIET, name: 'the walker stops running the Resequencer, so what a vial is worth goes back to being unmeasured',
     file: 'tools/sim.js',
     anchor: "      did('resequence', { species: best.species, stars: best.stars });",
     to: '      void 0;',
   },
   {
-    n: 154, gate: COVERAGE, name: 'the chaos vat goes back to being the one agenda row with nothing behind it',
+    n: 154, gate: DIET, name: 'the chaos vat goes back to being the one agenda row with nothing behind it',
     file: 'tools/sim.js',
     anchor: "        if (startVat(state, a.id, b.id, content, now).ok) { did('vat', { sire: a.id, dam: b.id }); ran = true; }",
     to: '        ran = true;',
   },
   {
-    n: 155, gate: COVERAGE, name: 'a moveset retrain stops being logged, so four slots are exercised and nothing says so',
+    n: 155, gate: DIET, name: 'a moveset retrain stops being logged, so four slots are exercised and nothing says so',
     file: 'tools/sim.js',
     anchor: "      if (setMoveset(state, c.id, pick, known, now, content).ok) did('moveset', { who: c.id });",
     to: '      setMoveset(state, c.id, pick, known, now, content);',
   },
   {
-    n: 156, gate: COVERAGE, name: 'an agenda row is added that no walker verb answers, and the coverage rule lets it through',
+    n: 156, gate: DIET, name: 'an agenda row is added that no walker verb answers, and the coverage rule lets it through',
     file: 'ranch/agenda.js',
     anchor: "    id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',",
     to: "    id: 'audit', kind: 'spend', screen: 'ranch', label: 'Audit the paperwork',\n    hint: () => 'x', ready: () => true,\n  },\n  {\n    id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',",
@@ -3851,6 +3856,91 @@ const BREAKS = [
     file: 'style.css',
     anchor: '.tier-S { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }',
     to: '.tier-S { background: var(--accent); color: var(--text); border-color: var(--accent); }',
+  },
+
+  // R115 — the worker, and the merge that reads what the gates ran.
+  {
+    // A 502 BRICKS THE APP UNTIL THE NEXT RELEASE. The background revalidation
+    // writes whatever comes back, so one proxy error page lands in the cache
+    // under `index.html` and every cold open after it serves the error — with
+    // no network needed to keep serving it. The cache-first read still works,
+    // the offline open still works, and the app is dead.
+    n: 375, gate: WORKER, name: 'a proxy error page is cached over the shell and the app never recovers',
+    file: 'sw.js',
+    anchor: '    if (response && response.ok) {\n      const copy = response.clone();\n      return caches.open(CACHE).then((cache) => cache.put(request, copy)).then(() => response);',
+    to: '    if (response) {\n      const copy = response.clone();\n      return caches.open(CACHE).then((cache) => cache.put(request, copy)).then(() => response);',
+  },
+  {
+    // THE REVALIDATION STOPS BEING CONDITIONAL. R100's whole argument for
+    // checking after the paint rather than before it is that the check costs
+    // one 304. Drop `no-cache` and it is a full download of every shell entry
+    // on every visit, silently — the page still paints from cache, so nothing
+    // a user or a screenshot can see says so.
+    n: 376, gate: WORKER, name: 'the background check refetches the whole shell instead of asking if it changed',
+    file: 'sw.js',
+    anchor: "const revalidate = (request) => fetch(request, { cache: 'no-cache' })",
+    to: 'const revalidate = (request) => fetch(request)',
+  },
+  {
+    // THE OLD CACHES ARE NEVER SWEPT. Every `CACHE` bump leaves its
+    // predecessor on disk forever, which on a phone is the app quietly growing
+    // without limit — and nothing about the current release looks wrong.
+    n: 377, gate: WORKER, name: 'activate stops evicting the caches it replaced, so every release leaks one',
+    file: 'sw.js',
+    anchor: 'Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))',
+    to: 'Promise.all(keys.filter((k) => k === null).map((k) => caches.delete(k)))',
+  },
+  {
+    // THE NEW WORKER WAITS FOR EVERY TAB TO CLOSE. Without `skipWaiting` a
+    // release reaches a player who keeps the app open only when they finally
+    // shut every copy of it — which, for a TWA on a phone, can be never.
+    n: 378, gate: WORKER, name: 'a new build sits in waiting instead of taking over',
+    file: 'sw.js',
+    anchor: '.then(() => self.skipWaiting())',
+    to: '.then(() => undefined)',
+  },
+  {
+    // A POST GOES THROUGH THE CACHE. `caches.match` on a non-GET is a
+    // guaranteed miss, so it falls to the network path — and then tries to
+    // `cache.put` the response, which throws on any method but GET. The
+    // failure is asynchronous and swallowed, so it shows up as nothing at all.
+    n: 379, gate: WORKER, name: 'the worker stops passing non-GET requests straight through',
+    file: 'sw.js',
+    anchor: "  if (event.request.method !== 'GET') return;",
+    to: "  if (event.request.method === 'NEVER') return;",
+  },
+  {
+    // THE QUERY STAYS ON THE PATH — the defect this milestone shipped and then
+    // found. tools/handlers.js imports each screen module as `…/ui.js?run=230`
+    // so every surface renders fresh; keeping the query means `readSrc` misses
+    // and the whole lane is discarded. It cost 307 lines and eight functions
+    // read as dead that run on every suite, and nothing about the gate's own
+    // output looked wrong — it simply reported more work to do.
+    n: 380, gate: COVSELF, name: 'a cache-busted import is filed under a path no file has, and its lane is dropped',
+    file: 'tools/coverage.js',
+    anchor: "const rel = r.url.slice(`file://${root}/`.length).replace(/[?#].*$/, '');",
+    to: 'const rel = r.url.slice(`file://${root}/`.length);',
+  },
+  {
+    // AN UNRUN BRANCH READS AS RUN. V8 says "this block did not execute" with
+    // a zero-count range INSIDE a called function's range, so within one
+    // process the inner range has to overwrite its parent. Take the max here
+    // instead and every function that was called anywhere reads as fully
+    // covered: the first draft of this merge reported the tree 0.0% dead.
+    n: 381, gate: COVSELF, name: 'a dead branch inside a live function is painted with its parent count',
+    file: 'tools/coverage.js',
+    anchor: 'for (let i = rg.startOffset; i < rg.endOffset && i < local.length; i++) local[i] = rg.count;',
+    to: 'for (let i = rg.startOffset; i < rg.endOffset && i < local.length; i++) local[i] = Math.max(local[i], rg.count);',
+  },
+  {
+    // AND ACROSS PROCESSES THE LAST LANE WINS. Thirty-seven processes report on
+    // the same files; a lane that imported a module without calling into it
+    // would erase the lane that exercised it, and which one that is depends on
+    // directory order. Green or red by filesystem enumeration is not a gate.
+    n: 382, gate: COVSELF, name: 'a lane that skipped a function erases the lane that ran it',
+    file: 'tools/coverage.js',
+    anchor: 'arr[i] = arr[i] === -1 ? local[i] : Math.max(arr[i], local[i]);',
+    to: 'arr[i] = local[i];',
   },
 
   // R175 — the stable says how big it is and what makes it bigger.
@@ -5767,7 +5857,7 @@ if (process.argv.includes('--anchors')) {
 // 63.9s — against a baseline that already spends about 1,700 across four
 // lanes. That is the whole argument: the cheapest three gates in the tree were
 // the three nobody ran.
-const BASELINE = [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, COVERAGE, CACHEBUMP, OFFLINE, DURABLE];
+const BASELINE = [SCOPE, HANDLERS, WORKER, COVSELF, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, DIET, CACHEBUMP, OFFLINE, DURABLE];
 
 const baselineLabel = (gate) => (
   gate === CACHEBUMP ? 'the worker precaches a shell that is actually there'

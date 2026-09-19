@@ -22,7 +22,9 @@
     "stale": "node tools/stale.js",
     "test": "node tools/suite.js",
     "vault": "node tools/vault.js",
+    "diet": "node tools/diet.js",
     "coverage": "node tools/coverage.js",
+    "worker": "node tools/worker.js",
     "reach": "node tools/reach.js"
   }
 }

@@ -24,13 +24,16 @@
 // browser search.
 
 import { mkdtemp, rm } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 // R81 — the driver moved to its own module so tools/boot.js could use it too.
 import { sleep, serve, findChrome, connect, CHROME_CANDIDATES } from './cdp.js';
+// R115 — the boot-failure pass drives the future-save branch, which needs to
+// know what "one version ahead" is. Read off the engine, never typed twice.
+import { SAVE_VERSION } from '../save/save.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FLOOR = 40;          // px, both dimensions
@@ -50,6 +53,9 @@ const TYPE_FLOOR = 12;     // px, the smallest computed font-size allowed
 // browser never will: a reader who has turned their text up, and a cutout.
 const TEXT_SCALE = 1.5;    // 150% text, the accessibility setting people use
 const CUTOUT = 47;         // px, a notch the header has to clear
+// R115 — `CEREMONY_MS` in splice/extract-ui.js is 2100. Waiting it out plus
+// a margin is the whole trick: the results card does not exist until it ends.
+const CEREMONY_WAIT = 3000;
 const GUTTER = 6;          // px, between two adjacent controls
 const RAG = 1;             // px, how far into its own line a full-width row may start
 const BAND_TOP = 420;      // px, the wide end of the stylesheet's phone media query
@@ -133,6 +139,53 @@ export async function fixtureSave() {
       sample: { potential, genotype: {} },
       outcome: { succeeded: true, mutated: false, potential, genotype: {}, mutationNote: null } };
   }
+  // R115 — A GESTATING VAT AND A BREEDABLE HERD, because two whole cards
+  // were unreachable on this fixture and a rule with nothing to look at
+  // passes. The vat's countdown (`vatRemainingMs`, and the second donor
+  // picker behind it) and the breeding pen's two parent pickers had never
+  // been rendered by any gate — not disabled, never drawn.
+  //
+  // Both are made by CALLING THE GAME rather than by hand-writing the state.
+  // A vat's `conception` is sealed at the moment it starts so a reload
+  // cannot reroll it; a fixture that forged one would be asserting against a
+  // shape the game does not actually write, which is how a gate ends up
+  // green on a save no player can have.
+  {
+    // The herd ships juvenile, and two consenting adults are what the pen
+    // asks for. `growthHours.adult` is the threshold, so birth that far back.
+    //
+    // A MATCHED PAIR, not the first two. The first draft aged whichever two
+    // animals came first and called them adults — which on this herd is a goat
+    // and a bear. Parent A's picker filled; Parent B's is "same species,
+    // opposite sex" and had nobody in it, so its sheet opened empty and its
+    // `onPick` stayed the last uncalled function in the game. A fixture that
+    // gives a screen two of something the screen cannot pair is a fixture that
+    // looks like coverage and is not.
+    const { speciesOf: sp } = await import('../data/catalog.js');
+    const grown = (a) => {
+      const hours = sp(content, a.species)?.growthHours?.adult;
+      return hours ? now - Math.round((hours + 1) * 3600000) : null;
+    };
+    const pair = s.ranch.stock.flatMap((a, i) =>
+      s.ranch.stock.slice(i + 1)
+        .filter((b) => b.species === a.species && b.sex !== a.sex && grown(a) && grown(b))
+        .map((b) => [a, b]))[0];
+    if (!pair) throw new Error('the fixture has no same-species, opposite-sex pair to age into a breeding pen');
+    for (const animal of pair) animal.birthAt = grown(animal);
+
+    // …and a gestation running, started the way the Pens starts one.
+    const { startVat } = await import('../splice/chaos.js');
+    const settled = s.chimeras.filter((c) => c.settleUntil <= now);
+    if (settled.length >= 2) {
+      const started = startVat(s, settled[0].id, settled[1].id, content, now);
+      if (!started.ok) throw new Error(`the fixture could not start a vat: ${started.msg}`);
+      // Half-run, so the card shows a countdown rather than a decant.
+      s.vat.startedAt = now - Math.round((s.vat.until - now) / 2);
+    } else {
+      throw new Error(`the fixture has ${settled.length} settled chimeras; a vat needs two`);
+    }
+  }
+
   // R82 — one loose specimen, so the Labs tab paints its Hunt button and
   // this gate measures it like every other control. Built the way the world
   // builds one: a lab that has lost to you, and a clock dated far enough
@@ -727,12 +780,50 @@ async function main() {
   const problems = [];
   const note = (msg) => problems.push(msg);
   let cdp;
+  let snap = null;
   try {
     cdp = await connect(cdpPort);
-    const { send, evaluate, errors } = cdp;
+    const { evaluate, errors } = cdp;
+    // R115 — SNAPSHOT BEFORE EVERY NAVIGATION, because precise coverage lives
+    // in the isolate and a reload throws away what the previous document ran.
+    // One `takePreciseCoverage` at the end reports the LAST page load and
+    // nothing else, and this walk reloads a dozen times — the founding pass,
+    // the briefing pass and both save shapes each start with one. Every
+    // snapshot is written as its own file and the merge takes the max, which
+    // is the same thing it already does across the suite's processes.
+    let covSnaps = 0;
+    const snapCoverage = async () => {
+      try {
+        const cov = await cdp.send('Profiler.takePreciseCoverage');
+        const origin = `http://127.0.0.1:${port}/`;
+        const result = (cov.result?.result ?? [])
+          .filter((r) => r.url.startsWith(origin))
+          .map((r) => ({ ...r, url: `file://${join(root, r.url.slice(origin.length).split('?')[0])}` }));
+        if (!result.length) return;
+        writeFileSync(join(process.env.SW_COVERAGE, `coverage-a11y-${process.pid}-${covSnaps++}.json`),
+          JSON.stringify({ result }));
+      } catch { /* the page is between documents; the next snapshot catches it */ }
+    };
+    snap = snapCoverage;
+    const send = process.env.SW_COVERAGE
+      ? async (method, params) => {
+        if (method === 'Page.navigate') await snapCoverage();
+        return cdp.send(method, params);
+      }
+      : cdp.send;
     await send('Runtime.enable');
     await send('Page.enable');
     await send('Network.enable');
+    // R115 — AND THE ONLY PLACE THE SHIPPED SCREENS ACTUALLY RUN. Six modules
+    // — `main.js`, the founding picker, the focus keeper, the sky, `sw.js` —
+    // are never loaded by anything in Node, so a coverage merge taken from the
+    // suite alone reports them as wholly dead and can say nothing about them.
+    // This walk opens every screen on three saves; it is the browser half of
+    // the merge, and it costs one CDP call at each end. Off unless asked.
+    if (process.env.SW_COVERAGE) {
+      await send('Profiler.enable');
+      await send('Profiler.startPreciseCoverage', { callCount: true, detailed: true });
+    }
     await send('Network.setCacheDisabled', { cacheDisabled: true });
     // The service worker caches the whole shell; without this a run measures
     // the PREVIOUS build's CSS and reports a floor it never actually met.
@@ -1060,7 +1151,82 @@ async function main() {
         + ' moving things still gets this one');
     }
 
+    // R115 — THE GRADUATION CEREMONY, PLAYED. `runExtraction` is reached by
+    //      every gate that fires handlers; the three functions BEHIND it are
+    //      reached by none. `tools/handlers.js` hands every screen an
+    //      `onExtract` stub, which is the only honest thing it can do from
+    //      Node — the ceremony is a lazy import, an overlay, a 2.1-second
+    //      animation and a second card — so the first ceremony a new player
+    //      sees had never run anywhere. 66 of this module's lines, measured.
+    //
+    //      It is also a screen, so it is COLLECTED as one: two cards with
+    //      controls on them that no floor, gutter or contrast rule had ever
+    //      been applied to.
+    const ceremonyPass = async () => {
+      await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]')?.click()`);
+      await sleep(600);
+      // AN ANIMAL CARD HAS TO BE OPENED FIRST, and only one can be: R89 made
+      // the roster's folds exclusive because nine open cards are 16,657px of
+      // screen, and a shut card does not populate its body at all. The first
+      // draft of this pass queried for the button on arrival, found zero —
+      // not disabled, ABSENT — and reported that the Ranch had nobody to
+      // graduate. It had eight, all of them shut.
+      const folds = await evaluate(`[...document.querySelectorAll('#screen-ranch .fold-head[data-fold^="ranch-"]')].map((b) => b.dataset.fold)`);
+      if (!folds.length) { note('the Ranch drew no animal cards, so the ceremony was never measured'); return; }
+      let opened = false;
+      for (const id of folds) {
+        await evaluate(`document.querySelector('#screen-ranch .fold-head[data-fold="${id}"]')?.click()`);
+        await sleep(450);
+        // A full vault disables the button and says so in its own label, which
+        // is R161's rule. That is a different screen; walk on to the next
+        // animal rather than pressing a control the game has refused.
+        opened = await evaluate(`(() => {
+          const b = document.querySelector('#screen-ranch button.extract-btn:not([disabled])');
+          if (!b) return false; b.click(); return true;
+        })()`);
+        if (opened) break;
+      }
+      if (!opened) {
+        note(`no animal on the Ranch could be graduated (${folds.length} tried), so the ceremony was never measured`);
+        return;
+      }
+      await sleep(900);
+      if (!await evaluate(`!!document.querySelector('#overlay #grad-go')`)) {
+        note('pressing Graduate did not open the ceremony, so nothing behind it ran');
+        return;
+      }
+      await collect('ceremony/confirm');
+      await evaluate(`document.querySelector('#overlay #grad-go').click()`);
+      // The animation is presentation-only and 2.1s of it; the results card
+      // is what the next assertion needs, so this waits it out rather than
+      // racing it.
+      await sleep(CEREMONY_WAIT);
+      // A refusal is a different card with a different button. It is a real
+      // screen too, and it is NOT the one this pass exists to reach, so say
+      // so rather than reporting a ceremony that never played.
+      if (await evaluate(`!!document.querySelector('#overlay #grad-back')`)) {
+        note('the graduation was refused, so the ceremony and its results never played');
+        await evaluate(`document.querySelector('#overlay #grad-back').click()`);
+        return;
+      }
+      if (!await evaluate(`!!document.querySelector('#overlay #grad-done')`)) {
+        note('the ceremony never reached its results card');
+        return;
+      }
+      await collect('ceremony/results');
+      await evaluate(`document.querySelector('#overlay #grad-done').click()`);
+      await sleep(600);
+      if (!await evaluate(`document.querySelector('#overlay').hidden`)) {
+        note('collecting the essence left the ceremony overlay on screen');
+      }
+      // Put the fixture back: a graduation spends an animal and writes a save.
+      await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
+      await send('Page.navigate', { url });
+      await sleep(2200);
+    };
+
     await foundingPass();
+    await ceremonyPass();
     await briefingPass();
     await collect('shell');
     const screens = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
@@ -1765,6 +1931,200 @@ async function main() {
       if (before === '') note('the rename prompt opened with no name in it');
     }
 
+    // 6f. R115 — AND THE HALF OF R80'S RULE NOBODY HAD RUN. The pass above
+    //     proves Enter on ✕ CANCELS, which is the bug R80 fixed. It never
+    //     proved the other direction: that the sheet's own commit button
+    //     commits. `submit` in ui/picker.js, and every `onSubmit` behind it,
+    //     had never been called by anything — so a rename sheet that silently
+    //     dropped the name would have passed every gate in this repo.
+    const commitPrompt = await evaluate(`(() => {
+      const b = document.querySelector('#screen-ranch .rename-btn:not([disabled])');
+      if (!b) return false; b.click(); return true;
+    })()`);
+    if (!commitPrompt) note('no rename prompt could be opened, so committing one is untested');
+    else {
+      await sleep(400);
+      await evaluate(`(() => { const i = document.querySelector('.prompt-input'); if (i) i.value = 'Gerald Prime'; })()`);
+      await evaluate(`document.querySelector('#picker #prompt-go')?.click()`);
+      await sleep(600);
+      const after = await evaluate(`(() => ({
+        hidden: document.getElementById('picker').hidden,
+        named: document.body.innerHTML.includes('Gerald Prime'),
+      }))()`);
+      if (!after.hidden) note('pressing the rename sheet\'s commit button left the sheet open');
+      if (!after.named) note('pressing the rename sheet\'s commit button did not apply the new name');
+    }
+
+    // 6g. R115 — AND AN OPTION PICKER, COMMITTED. Same shape, other sheet:
+    //     the walk opened pickers to measure them and never chose anything,
+    //     so every `onPick` in the game — the vat's two donors, the breeding
+    //     pen's two parents, the dossier's identity and philosophy, three in
+    //     Settings — was a callback nothing had ever fired.
+    //     EVERY PICKER, NOT THE FIRST ONE. The first draft opened one picker,
+    //     committed it and stopped — and `breed-a`, `breed-b` and `vat-b`
+    //     stayed uncalled through a fixture change made specifically to give
+    //     them something to build from. Each of these is a LAZY option
+    //     provider keyed by picker id: it runs when that picker opens and
+    //     never otherwise, so "a pick was committed somewhere" covers exactly
+    //     one of them. The walk has to open all of them.
+    let picked = 0;
+    let offered = 0;
+    // The War Room is in the list because the DOSSIER lives there — the
+    // identity and philosophy pickers are two of the game's option builders
+    // and the only ones on that screen.
+    for (const screen of ['pens', 'ranch', 'theater', 'vault', 'dex', 'battle']) {
+      await evaluate(`document.querySelector('#tabs button[data-screen="${screen}"]')?.click()`);
+      await sleep(500);
+      await evaluate(OPEN_DETAILS);
+      // Folds are exclusive on some screens, so each one is opened, its
+      // pickers taken, and then the next — rather than opening all of them
+      // and reading a screen that only ever had the last one showing.
+      const folds = await evaluate(FOLD_IDS(screen)) ?? [];
+      for (const id of [...folds, null]) {
+        if (id) {
+          await evaluate(`(() => { const b = document.querySelector('#screen-${screen} button[data-fold="${id}"]');
+            if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); })()`);
+          await sleep(250);
+        }
+        const ids = await evaluate(`[...document.querySelectorAll('#screen-${screen} button[data-picker]:not([disabled])')].map((b) => b.dataset.picker)`);
+        for (const pid of ids) {
+          if (!await evaluate(`(() => { const b = document.querySelector('#screen-${screen} button[data-picker="${pid}"]:not([disabled])');
+            if (!b) return false; b.click(); return true; })()`)) continue;
+          await sleep(450);
+          offered += 1;
+          // AN ENABLED ROW, not the first one. A `.pick-row` carries the
+          // `disabled` attribute when the option is offered-but-refused — the
+          // juvenile in the breeding pen, the injured chimera in the briefing
+          // — and a disabled button swallows a synthesised click without a
+          // word. So the sweep pressed rows that could not be pressed and
+          // counted it as a pick: `breed-b`'s and the dismantle sheet's
+          // `onPick` both stayed uncalled while this reported success.
+          const rows = await evaluate(`document.querySelectorAll('#picker .pick-row:not([disabled])').length`);
+          if (!rows) {
+            // A sheet with nothing choosable is a real state — the Dex's
+            // catalogue sheets are ALL disabled rows on purpose — and not
+            // this one.
+            await evaluate(`document.querySelector('#picker .pick-close')?.click()`);
+            await sleep(200);
+            continue;
+          }
+          await evaluate(`document.querySelector('#picker .pick-row:not([disabled])').click()`);
+          await sleep(500);
+          if (!await evaluate(`document.getElementById('picker').hidden`)) {
+            note(`${screen}/${pid}: choosing a row left the picker sheet open`);
+            await evaluate(`document.querySelector('#picker .pick-close')?.click()`);
+            await sleep(200);
+          }
+          picked += 1;
+        }
+      }
+    }
+    if (!picked) note(`no option picker on any screen offered a row to choose (${offered} opened), so nothing committed a pick`);
+
+    // 6h. R115 — AND THE SETTINGS PANEL'S OWN FOUR, which are the only
+    //     controls in the game that change how the game itself behaves:
+    //     volume, battle speed, theme, and the lab's name. Every one of their
+    //     `onPick`/`onSubmit` bodies writes to `state.settings`, calls
+    //     `ctx.save()` and re-renders, and not one of them had ever been run
+    //     — a theme picker that saved nothing would have passed every gate.
+    //
+    //     LAST IN THE WALK ON PURPOSE. Committing these changes the theme,
+    //     the volume and the speed for real; anything measured afterwards
+    //     would be measured under settings this pass chose.
+    await evaluate(`document.querySelector('#settings').click()`);
+    await sleep(500);
+    //     THE PANEL DOES NOT USE `data-picker`. Screens wire their pickers
+    //     through `bindPickers`, which reads that attribute; Settings wires
+    //     four NAMED buttons by id and calls `openPicker`/`openPrompt`
+    //     directly. The first draft of this pass queried the screen
+    //     convention inside the panel and reported that it offered no picker
+    //     at all. Two conventions for "a button that opens a picker" is worth
+    //     a milestone of its own; this one just has to know about both.
+    const setPickers = await evaluate(`[
+      ...['#set-volume', '#set-theme', '#set-speed'],
+      ...[...document.querySelectorAll('#overlay [data-rename-slot]')].slice(0, 1).map(() => '[data-rename-slot]'),
+    ].filter((sel) => { const b = document.querySelector('#overlay ' + sel); return b && !b.disabled; })`);
+    if (!setPickers.length) note('the settings panel offered none of its four choices, so none were committed');
+    let committed = 0;
+    for (const sel of setPickers) {
+      await evaluate(`document.querySelector('#overlay ${sel}')?.click()`);
+      await sleep(450);
+      const kind = await evaluate(`(() => {
+        if (document.querySelector('#picker .prompt-input')) return 'prompt';
+        return document.querySelectorAll('#picker .pick-row').length ? 'rows' : 'empty';
+      })()`);
+      if (kind === 'prompt') {
+        await evaluate(`(() => { const i = document.querySelector('#picker .prompt-input'); if (i) i.value = 'Coverage Lab'; })()`);
+        await evaluate(`document.querySelector('#picker #prompt-go')?.click()`);
+        committed += 1;
+      } else if (kind === 'rows') {
+        // The LAST row, not the first: the first is usually what is already
+        // selected, and re-choosing it exercises the callback without
+        // proving it changed anything.
+        await evaluate(`(() => { const r = [...document.querySelectorAll('#picker .pick-row')]; r[r.length - 1].click(); })()`);
+        committed += 1;
+      } else {
+        await evaluate(`document.querySelector('#picker .pick-close')?.click()`);
+      }
+      await sleep(500);
+    }
+    if (setPickers.length && committed < setPickers.length) {
+      note(`${committed} of the settings panel's ${setPickers.length} pickers offered anything to choose`);
+    }
+    await evaluate(`document.querySelector('#set-close')?.click()`);
+    await sleep(300);
+
+    // 6i. R115 — THE BOOT-FAILURE CARD, AND THE ASCENT RULE IT ENFORCES.
+    //     `renderBootFailure` replaces the whole body — R71's rule, so a
+    //     half-live shell cannot leave tabs a player can tap that do nothing
+    //     — and it had never run. It is the screen a player sees on the worst
+    //     day the game has, and no floor, gutter or contrast rule had ever
+    //     been applied to it.
+    //
+    //     Driven through the FUTURE-SAVE branch, which is the one worth
+    //     proving: a save from a newer build must be REFUSED AND LEFT ALONE.
+    //     That is the Ascent rule at the one moment it can be broken by
+    //     accident, and this asserts it byte-for-byte rather than trusting
+    //     that nothing in the failure path writes.
+    //
+    //     LAST IN THE WALK, because it destroys the document.
+    {
+      const future = JSON.parse(fixture);
+      future.saveVersion = SAVE_VERSION + 1;
+      const futureText = JSON.stringify(future);
+      await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(futureText)})`);
+      await send('Page.navigate', { url });
+      await sleep(2200);
+      const boot = await evaluate(`(() => ({
+        card: !!document.querySelector('.boot-fail-card'),
+        heading: document.querySelector('.boot-fail-card h1')?.textContent ?? '',
+        reload: !!document.getElementById('boot-reload'),
+        shell: !!document.getElementById('tabs'),
+        buttons: [...document.querySelectorAll('.boot-fail-card button')].map((b) => b.textContent.trim()),
+        saved: localStorage.getItem('spliceworld_save'),
+      }))()`);
+      if (!boot.card) {
+        note(`a save one version ahead did not reach the boot-failure card (heading "${boot.heading}")`);
+      } else {
+        await collect('boot-failure');
+        if (!/newer build/i.test(boot.heading)) {
+          note(`a save from a newer build reached the wrong failure card ("${boot.heading}")`);
+        }
+        if (!boot.reload) note('the boot-failure card offers no way to reload');
+        if (boot.shell) note('the boot-failure card left the tab bar standing over a main that will never render');
+        // R71: every failure offers a reload and NOTHING else. A reset here
+        // is a second, worse way to lose a save on top of whatever already
+        // went wrong.
+        const offersReset = boot.buttons.filter((b) => /reset|new run|start over|clear/i.test(b));
+        if (offersReset.length) {
+          note(`the boot-failure card offers ${offersReset.join(', ')} — a reset here is a second way to lose the save`);
+        }
+        if (boot.saved !== futureText) {
+          note('THE FUTURE SAVE WAS MODIFIED by a build that cannot read it — the Ascent rule is broken');
+        }
+      }
+    }
+
     // ---- everything measured across every view, now that the walk is done -
     const controls = [...seen.values()].sort((a, b) => Math.min(a.h, a.w) - Math.min(b.h, b.w));
     const under = controls.filter((c) => c.h < FLOOR || c.w < FLOOR);
@@ -2094,6 +2454,7 @@ async function main() {
     console.log(`a11y: ${controls.length} distinct controls measured at ${VIEWPORT}px across ${views.size} views (boxes re-read at ${BAND_TOP}px, the top of the phone band)`);
     console.log(`a11y: ${kbScreens}/${screens.length} screens opened, ${kbControls} controls tabbed to and a duel fought with Tab and Enter alone`);
   } finally {
+    if (process.env.SW_COVERAGE && cdp && snap) await snap();
     try { cdp?.ws.close(); } catch { /* already gone */ }
     proc.kill();
     server.close();

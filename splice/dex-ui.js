@@ -592,7 +592,6 @@ export function renderDexScreen(root, ctx) {
           })),
         }],
         selectedId: '',
-        onPick: () => {},
       });
     });
   });
