@@ -1960,7 +1960,10 @@ async function main() {
     //     one of them. The walk has to open all of them.
     let picked = 0;
     let offered = 0;
-    for (const screen of ['pens', 'ranch', 'theater', 'vault', 'dex']) {
+    // The War Room is in the list because the DOSSIER lives there — the
+    // identity and philosophy pickers are two of the game's option builders
+    // and the only ones on that screen.
+    for (const screen of ['pens', 'ranch', 'theater', 'vault', 'dex', 'battle']) {
       await evaluate(`document.querySelector('#tabs button[data-screen="${screen}"]')?.click()`);
       await sleep(500);
       await evaluate(OPEN_DETAILS);
