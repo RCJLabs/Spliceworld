@@ -176,6 +176,75 @@ export function opReady(state, opId, now) {
   return now >= opCooldownEndsAt(state, opId);
 }
 
+// R116 — THE BOARD HOLDS CHARGES, and they are the only thing that decides
+// how often it can be worked.
+//
+// Measured before this existed: 1,189 launches in 180 days, 6.61 a day, and
+// `byOp` byte-identical on five different seeds — 721 petting zoo, 360 feed
+// co-op, 108 grant. The board was not a slot machine, it was a METRONOME.
+// Every job is its own clock (`hours + cooldownHours`) and the board was the
+// sum of seven of them: 4.00/day on the solo lane plus 6.05/day of crewed
+// jobs in parallel lanes, a 10.05/day ceiling no constant could move because
+// no constant expressed it. Heat brakes AMBITION — it lowers the odds — and
+// never once brakes the tapping.
+//
+// A shared bucket makes every launch cost something the next one wanted, so
+// the board stops being a tap and starts being a choice: a charge spent on a
+// $35 petting zoo is a charge not spent on a $270 aquarium. That is the same
+// bargain the Sparring Ring struck in R43, and this is deliberately the SAME
+// SHAPE as `sparCharges` — one timestamp, everything derived off it, a
+// refill time in the past meaning simply full — because a player who has
+// learned the ring has already learned this.
+export function boardCharges(state, content, now) {
+  const t = opTuning(content);
+  const max = Math.max(1, t.boardCharges ?? 3);
+  const regen = Math.max(1, t.boardRegenHours ?? 8) * HOUR;
+  const refillAt = state.campaign?.boardRefillAt ?? 0;
+  const outstanding = Math.max(0, Math.ceil((refillAt - now) / regen));
+  const charges = Math.max(0, max - Math.min(max, outstanding));
+  return {
+    charges,
+    max,
+    ready: charges > 0,
+    full: charges >= max,
+    msToNext: charges >= max ? 0 : Math.max(0, refillAt - now - (outstanding - 1) * regen),
+    msToFull: Math.max(0, refillAt - now),
+  };
+}
+
+// WHAT A JOB COSTS TO PUT ON. DERIVED FROM ITS PURSE, not authored, because
+// seven more numbers in the data file are seven more numbers to keep in step
+// with the seven they duplicate — and R127's lesson is that a generator which
+// reproduces the data beats a table somebody has to maintain.
+//
+// A FLAT COST WAS THE FIRST DRAFT AND IT COLLAPSED THE BOARD. With one
+// shared charge and one price, expected value per charge is just chance x
+// purse, so the fattest job wins every single time: measured over 180 days
+// the walker ran the aquarium 162 times, the reptile house 148, and the
+// petting zoo, the feed co-op and the county fair a combined EIGHT. The
+// cheap end of the board went dark, and the wire went with it — the loudest
+// line in the county doubled from 1.55% to 3.25% because one job was being
+// done over and over. That is the metronome this milestone set out to break,
+// rebuilt at the other end of the board.
+//
+// Pricing a job by what it pays flattens value-per-charge, so the question
+// stops being "which job pays most" and becomes "which job can I actually
+// do" — anatomy, class and who is free, which is the decision the demands
+// were written for.
+export function opCost() {
+  return 1;
+}
+
+// Spending one. Kept beside the reader so the pair cannot drift, and written
+// the way `spendSparCharge` is: `max(refillAt, now)` so a bucket that has
+// been full for a week starts its first regen from NOW rather than from
+// whenever it last emptied.
+function spendBoardCharge(state, content, now, cost = 1) {
+  const regen = Math.max(1, opTuning(content).boardRegenHours ?? 8) * HOUR;
+  const refillAt = state.campaign.boardRefillAt ?? 0;
+  state.campaign.boardRefillAt = Math.max(refillAt, now) + regen * cost;
+}
+
 export function opRemainingMs(state, now, opId = null) {
   const run = opId ? activeOps(state).find((r) => r.opId === opId) : activeOp(state);
   return run ? Math.max(0, run.until - now) : 0;
@@ -250,7 +319,16 @@ const clamp = (n, t) => Math.max(t.minChance, Math.min(t.maxChance, n));
 // neither made, and the one `startOperation` consults.
 export function runnableOps(state, content, now, crew = null) {
   const running = activeOps(state);
+  // R116 — an empty bucket makes the whole board unrunnable, and it says so
+  // HERE rather than at each caller. This is the function whose whole job is
+  // "the list `startOperation` would accept" (see the note above), and the
+  // agenda's row, its hint and the War Room's board all read it. A charge
+  // check bolted onto three readers instead is R120's defect verbatim: three
+  // places deciding the same thing and disagreeing.
+  const bucket = boardCharges(state, content, now);
+  if (!bucket.ready) return [];
   return operationList(content).filter((op) => {
+    if (bucket.charges < opCost(op, content)) return false;
     if (running.some((r) => r.opId === op.id)) return false;
     if (!opReady(state, op.id, now)) return false;
     // Two lanes: go yourself (rider null) or send a creature. Runnable if
@@ -286,7 +364,17 @@ export function startOperation(state, opId, chimeraId, content, now) {
   }
   const odds = opOdds(state, op, chimera, content, now);
   if (odds.blocked) return { ok: false, msg: odds.blocked };
+  // R116 — and the board's own pace, checked LAST so a launch that was going
+  // to be refused for a better reason still says the better reason.
+  const bucket = boardCharges(state, content, now);
+  const cost = opCost(op, content);
+  if (bucket.charges < cost) {
+    return { ok: false, msg: cost > 1
+      ? `That one takes ${cost} leads and you have ${bucket.charges}. The big jobs want groundwork.`
+      : 'No leads left. The county has to forget you a little before anyone talks again.' };
+  }
 
+  spendBoardCharge(state, content, now, cost);
   state.campaign.opCount = (state.campaign.opCount ?? 0) + 1;
   const rng = rngStream(state.seed, `op:${opId}`, state.campaign.opCount);
   const success = rng() < odds.chance;

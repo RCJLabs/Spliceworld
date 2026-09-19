@@ -16,7 +16,9 @@
     "heatPenalty": 0.35,
     "heatMax": 100,
     "heatPerJob": 5,
-    "heatHalfLifeHours": 13.5
+    "heatHalfLifeHours": 13.5,
+    "boardCharges": 3,
+    "boardRegenHours": 8
   },
   "operations": [
     {

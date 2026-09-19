@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 58;
+export const SAVE_VERSION = 59;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -74,6 +74,10 @@ export function newGameState() {
       heldNodes: [], notoriety: 0, captives: [], containment: [], rivals: {}, faunaGranted: [],
       contested: [], nextContestAt: null, defences: {}, contestCount: 0,
       loose: [], nextBreakAt: null, breakoutCount: 0, released: null, escapesByLab: {},
+      // R116 — the jobs board's charge bucket. Zero means full, the way
+      // `sparRefillAt` has since R43: a refill time in the past is a bucket
+      // that finished refilling, so a new lab opens with every lead going.
+      boardRefillAt: 0,
       operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
       // R87: the Compliance Task Force. `raid` is the one at the gate,
       // `nextRaidAt` the schedule R9's rule requires, and the counters are

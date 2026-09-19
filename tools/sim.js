@@ -1157,7 +1157,7 @@ import { MOVE_SLOTS } from '../battle/moves.js';
 import { feralStatus } from '../splice/feral.js';
 import { activeVat, vatPlan, startVat } from '../splice/chaos.js';
 import { activeResequence, resequencePlan, startResequence } from '../splice/resequencer.js';
-import { startOperation, operationList, opReady, laneFree } from '../campaign/operations.js';
+import { startOperation, operationList, opReady, laneFree, runnableOps, freeCrew, opOdds } from '../campaign/operations.js';
 import { startSpar, canSpar, sparEncounter, sparPartners } from '../campaign/sparring.js';
 import { levelOf } from '../battle/veterancy.js';
 import { regionStates } from '../campaign/campaign.js';
@@ -1905,8 +1905,49 @@ function walkAct(state, content, now, open, opts = {}) {
     // landed in opReady's `now`, so the comparison was against an object and
     // every job read as on cooldown — the walker has never run one. laneFree
     // was never reached to throw.
-    const op = operationList(content).find((o) => opReady(state, o.id, now) && laneFree(state, content, now, o, null));
-    if (op && startOperation(state, op.id, null, content, now).ok) did('job', { op: op.id });
+    // R116 — THE WALKER CAN CARRY SOMEBODY. Until now it passed `null` as the
+    // crew on every launch it ever made, which is not a preference the
+    // campaign expressed — it is the only call the walker knew how to make.
+    // `opOdds` returns `blocked: 'Somebody has to actually go. Send a
+    // chimera.'` for a crew-required job with no rider, so the four crewed
+    // jobs could not start, and "the crewed half of the board ran zero times"
+    // was a fact about this line rather than about the design.
+    //
+    // A POLICY PER DEMAND, as R116 asks: `runnableOps` is the list
+    // `startOperation` would actually accept, every free creature is priced
+    // against every job on it by the game's own `opOdds`, and the walker
+    // takes the best expected payout. Solo stays in the running — it is a
+    // rider of `null` like any other — so a campaign with nobody free still
+    // works the board exactly as it did.
+    // `runnableOps` returns [] on an empty bucket, so the walker inherits the
+    // board's pace without knowing the mechanic exists.
+    const meanPay = (o) => (o.funds[0] + o.funds[1]) / 2;
+    const riders = [null, ...freeCrew(state, now)];
+    const best = runnableOps(state, content, now)
+      .flatMap((o) => riders.map((rider) => {
+        if (!laneFree(state, content, now, o, rider)) return null;
+        const odds = opOdds(state, o, rider, content, now);
+        return odds.blocked ? null : { o, rider, ev: odds.chance * meanPay(o) };
+      }))
+      .filter(Boolean)
+      .sort((a, b) => b.ev - a.ev)[0];
+    const op = best?.o;
+    // R116 — WHAT THE JOB WAS, not just that one happened. The board is the
+    // busiest verb in the game (1,189 launches on seed 2026, against 28
+    // splices) and the walk reported a single tally under `job`, so which
+    // job, whether anybody was carried, and what it paid all had to be
+    // re-derived by hand every time somebody asked. `startOperation` seals
+    // the outcome at launch — see campaign/operations.js — so the answer is
+    // already in the result and costs nothing to record.
+    const started = op && startOperation(state, op.id, best.rider?.id ?? null, content, now);
+    if (started?.ok) {
+      did('job', {
+        op: op.id,
+        crewed: !!started.run.chimeraId,
+        won: started.run.outcome.success,
+        pay: started.run.outcome.funds,
+      });
+    }
   }
   // The ring. The hardest garrison you hold pays the most xp per charge.
   // Rationed: the bucket refills three charges every half hour, so a walker
@@ -2555,6 +2596,12 @@ export function voiceDiet(lines, content) {
     topShare: total ? +(ranked[0]?.[1] ?? 0) / total : 0,
     topLine: ranked[0]?.[0] ?? null,
     over5pct: ranked.filter(([, n]) => n / total > 0.05).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(3) })),
+    // R116 — THE LEAGUE TABLE, not just its top row. This entry's Done-when is
+    // written about the TEN most frequent phrasings ("came to nothing" has to
+    // leave them), and `topLine` plus a 5% filter can answer neither where a
+    // line sits nor what it is competing with. Twenty rows, because a rule
+    // about the top ten needs to see the ones just outside it move.
+    top20: ranked.slice(0, 20).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(4) })),
     // Authored in data/news.json and never once said in 180 days. R57/R58's
     // shape: content with no reader is content nobody wrote.
     //
@@ -2977,6 +3024,29 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       if (e.kind === 'splice' && e.frame) tally[e.frame] = (tally[e.frame] ?? 0) + 1;
       return tally;
     }, {}),
+    // R116 — THE BUSIEST VERB IN THE GAME, broken out. `job` was one tally
+    // in `verbs`, which is the level of detail at which "the board is a slot
+    // machine" and "the board is fine and the WALKER only ever taps one
+    // button" look identical. Per-op, crewed-vs-solo, paid and won, plus the
+    // rate the Done-when is written in — launches per day.
+    jobs: (() => {
+      const runs = (state.__walkLog ?? []).filter((e) => e.kind === 'job');
+      const byOp = {};
+      for (const r of runs) byOp[r.op] = (byOp[r.op] ?? 0) + 1;
+      const crewed = runs.filter((r) => r.crewed).length;
+      const won = runs.filter((r) => r.won).length;
+      return {
+        launches: runs.length,
+        perDay: +(runs.length / days).toFixed(2),
+        crewed,
+        crewedPerDay: +(crewed / days).toFixed(2),
+        solo: runs.length - crewed,
+        won,
+        winPct: runs.length ? +(100 * won / runs.length).toFixed(1) : null,
+        paid: runs.reduce((n, r) => n + (r.pay ?? 0), 0),
+        byOp,
+      };
+    })(),
     duels: (state.__walkLog ?? []).filter((e) => e.kind === 'rival').length,
     breakouts: (state.__walkLog ?? []).filter((e) => e.kind === 'breakout').length,
     // R93 — THE LATE GAME, WHICH IS THE PART NOTHING MEASURED.

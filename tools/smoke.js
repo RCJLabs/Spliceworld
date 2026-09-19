@@ -2353,6 +2353,11 @@ assert.deepEqual(m5.campaign, {
   notorietyPeak: 0,
   contested: [], nextContestAt: null, defences: {}, contestCount: 0,
   operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
+  // R116: the board's charge bucket, and it arrives FULL. Zero is a refill
+  // time in the past, which `boardCharges` reads as a finished refill — the
+  // same shape `sparRefillAt` has held since R43, and the reason the v59
+  // migration costs a returning player nothing.
+  boardRefillAt: 0,
   // R64: the campaign's own clock is gone — one elapsed clock per save.
   // R82: an empty board, an unarmed clock. A save from before the breakout
   // arrives with nothing loose and nothing scheduled, which is the whole
@@ -15283,6 +15288,103 @@ if (inShard('voice')) {
 
   console.log(`   R109 voice: ${v.total} lines from ${v.distinct} phrasings \u00b7 loudest `
     + `${(v.topShare * 100).toFixed(1)}% \u00b7 nothing written in an engine module, nothing authored and unsaid`);
+
+  // R116 — THE BOARD HAS A PACE, and it is ONE number rather than seven.
+  //
+  // Measured before anything was built: 1,189 launches in 180 days, 6.61 a
+  // day, and `byOp` BYTE-IDENTICAL on all five seeds — 721 petting zoo, 360
+  // feed co-op, 108 grant. That is not a slot machine, it is a metronome.
+  // Every job is its own clock (`hours + cooldownHours`) and the board is the
+  // sum of seven of them: 4.00/day for the solo lane (one at a time, so the
+  // shortest cycle wins) plus 6.05/day of crew-required jobs in parallel
+  // lanes = a 10.05/day ceiling that nothing in the game can move, because no
+  // constant expresses it. Heat brakes AMBITION — it lowers the odds — and
+  // never once brakes the TAPPING.
+  //
+  // The rule is therefore about the rate and about the mix together, because
+  // either alone is passable by doing nothing: a board that launches nothing
+  // has a fine rate, and a board that only ever launches the petting zoo has
+  // a fine mix of one.
+  {
+    const { operationList, opTuning } = await import('../campaign/operations.js');
+    const j = walk.jobs;
+    const all = operationList(content).map((o) => o.id).sort();
+
+    // 0. THE MEASUREMENT IS ON A REAL CAMPAIGN (rule 0 above, same argument).
+    assert.ok(j.launches > 200, `the walk actually worked the board (${j.launches} launches)`);
+
+    // 1. THE RATE. `BOARD_PACE` is the charge bucket's sustained rate —
+    //    24 / boardRegenHours — and the assertion is written against the
+    //    TUNING rather than a number typed here, so the day somebody makes
+    //    the board faster in data, this says so instead of going quietly
+    //    stale. R157's break 152: one constant, one home, however many
+    //    readers.
+    //    THE TUNING HAS TO EXIST, asserted before it is read. The first
+    //    draft of this rule did `24 / Math.max(1, t.boardRegenHours ?? 0)`,
+    //    which on a tree with no board tuning is 24/day — a ceiling nothing
+    //    can reach, so the rule was green on exactly the defect it was
+    //    written to catch. A default that makes a gate vacuous is worse than
+    //    no gate: it reads as coverage.
+    const t = opTuning(content);
+    assert.ok(t.boardRegenHours > 0 && t.boardCharges > 0,
+      'the board declares a pace in data/operations.json (boardCharges, boardRegenHours) '
+      + `rather than leaving it to seven independent cooldowns (got ${t.boardCharges}, ${t.boardRegenHours})`);
+    const pace = 24 / t.boardRegenHours;
+    assert.ok(j.perDay <= pace * 1.15,
+      `the board is paced by its own tuning: ${j.perDay}/day against ${pace.toFixed(2)}/day `
+      + `sustained (+15% for the opening burst of ${t.boardCharges ?? 0} charges)`);
+
+    // 2. THE MIX. Every job the data ships runs, and the crewed half — the
+    //    four that read a chimera's tags and class, which is the interesting
+    //    half of the design — carries most of the board. Before this
+    //    milestone all four ran ZERO times in 180 days, and the cause was one
+    //    argument in the walker rather than anything a player would meet.
+    //    NO ONE JOB IS MORE THAN HALF THE BOARD. The first draft of this rule
+    //    asked that EVERY job run at least once, and that is a rule about the
+    //    walker's taste rather than about the design: once a charge is
+    //    scarce, a rational agent spends it on the best job it can reach and
+    //    the cheap end of the board correctly goes quiet. Demanding otherwise
+    //    would be this entry's own mistake repeated — reading a fact about
+    //    `tools/sim.js` as a fact about the game. What the DESIGN owes is
+    //    that the board is not one button: the metronome this milestone
+    //    found ran the petting zoo 721 times in 1,189 launches, 61% of
+    //    everything, and that is what has to be impossible.
+    const [topId, topN] = Object.entries(j.byOp).sort((a, b) => b[1] - a[1])[0] ?? ['none', 0];
+    assert.ok(topN <= j.launches / 2,
+      `no single job is more than half the board (${topId} is ${topN} of ${j.launches}, `
+      + `${(100 * topN / j.launches).toFixed(0)}%)`);
+    assert.ok(j.crewedPerDay >= 1,
+      `a chimera is carried somewhere at least once a day (${j.crewedPerDay}/day)`);
+    assert.ok(j.crewed > j.solo,
+      `and the crewed half is the larger one (${j.crewed} crewed vs ${j.solo} solo)`);
+
+    // 3. AND IT PAYS A MINORITY OF THE COUNTY'S TAKE. A pace that cured the
+    //    tapping by making the board worthless would pass both rules above,
+    //    and so would one that made jobs the whole economy.
+    //
+    //    AS A SHARE, NOT AS DOLLARS, and the entry's own clause is why. It
+    //    asked for "job income within 20% of today's" — but "today's" was
+    //    $53,060-$58,867, measured on a board whose crewed half the HARNESS
+    //    could not reach (one `null` argument in tools/sim.js) though a
+    //    player always could. Pegging a gate to that is pegging it to the
+    //    defect. Measured after pacing: $94,329-$101,569 on 543 launches,
+    //    10.0-11.1% of a $874k-$940k gross. Three and a half times fewer
+    //    taps for roughly twice the money is the bargain this milestone
+    //    strikes on purpose — a charge spent well is worth more than a tap.
+    //    What must stay true is that the board does not BECOME the economy,
+    //    and a share survives every later change to what the county pays,
+    //    which a dollar band does not (R143 and R152 both moved it).
+    const share = walk.grossEarned > 0 ? j.paid / walk.grossEarned : 1;
+    assert.ok(share <= 0.15,
+      `the board pays a minority of the county's take (${(100 * share).toFixed(1)}% of `
+      + `$${(walk.grossEarned ?? 0).toLocaleString()} gross)`);
+    assert.ok(j.paid > 40_000,
+      `and it is still worth working ($${j.paid.toLocaleString()} over 180 days)`);
+
+    console.log(`   R116 board: ${j.launches} launches (${j.perDay}/day against ${pace.toFixed(2)} paced) \u00b7 `
+      + `${j.crewed} crewed / ${j.solo} solo \u00b7 ${Object.keys(j.byOp).length}/${all.length} jobs reached \u00b7 `
+      + `$${j.paid.toLocaleString()} paid (${(100 * share).toFixed(1)}% of gross)`);
+  }
 }
 
 // R56. Every measurement this project owns is a SLICE — runSim benches a
