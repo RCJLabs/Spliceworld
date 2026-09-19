@@ -31,6 +31,9 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 // R81 — the driver moved to its own module so tools/boot.js could use it too.
 import { sleep, serve, findChrome, connect, CHROME_CANDIDATES } from './cdp.js';
+// R115 — the boot-failure pass drives the future-save branch, which needs to
+// know what "one version ahead" is. Read off the engine, never typed twice.
+import { SAVE_VERSION } from '../save/save.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FLOOR = 40;          // px, both dimensions
@@ -1993,6 +1996,57 @@ async function main() {
     }
     await evaluate(`document.querySelector('#set-close')?.click()`);
     await sleep(300);
+
+    // 6i. R115 — THE BOOT-FAILURE CARD, AND THE ASCENT RULE IT ENFORCES.
+    //     `renderBootFailure` replaces the whole body — R71's rule, so a
+    //     half-live shell cannot leave tabs a player can tap that do nothing
+    //     — and it had never run. It is the screen a player sees on the worst
+    //     day the game has, and no floor, gutter or contrast rule had ever
+    //     been applied to it.
+    //
+    //     Driven through the FUTURE-SAVE branch, which is the one worth
+    //     proving: a save from a newer build must be REFUSED AND LEFT ALONE.
+    //     That is the Ascent rule at the one moment it can be broken by
+    //     accident, and this asserts it byte-for-byte rather than trusting
+    //     that nothing in the failure path writes.
+    //
+    //     LAST IN THE WALK, because it destroys the document.
+    {
+      const future = JSON.parse(fixture);
+      future.saveVersion = SAVE_VERSION + 1;
+      const futureText = JSON.stringify(future);
+      await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(futureText)})`);
+      await send('Page.navigate', { url });
+      await sleep(2200);
+      const boot = await evaluate(`(() => ({
+        card: !!document.querySelector('.boot-fail-card'),
+        heading: document.querySelector('.boot-fail-card h1')?.textContent ?? '',
+        reload: !!document.getElementById('boot-reload'),
+        shell: !!document.getElementById('tabs'),
+        buttons: [...document.querySelectorAll('.boot-fail-card button')].map((b) => b.textContent.trim()),
+        saved: localStorage.getItem('spliceworld_save'),
+      }))()`);
+      if (!boot.card) {
+        note(`a save one version ahead did not reach the boot-failure card (heading "${boot.heading}")`);
+      } else {
+        await collect('boot-failure');
+        if (!/newer build/i.test(boot.heading)) {
+          note(`a save from a newer build reached the wrong failure card ("${boot.heading}")`);
+        }
+        if (!boot.reload) note('the boot-failure card offers no way to reload');
+        if (boot.shell) note('the boot-failure card left the tab bar standing over a main that will never render');
+        // R71: every failure offers a reload and NOTHING else. A reset here
+        // is a second, worse way to lose a save on top of whatever already
+        // went wrong.
+        const offersReset = boot.buttons.filter((b) => /reset|new run|start over|clear/i.test(b));
+        if (offersReset.length) {
+          note(`the boot-failure card offers ${offersReset.join(', ')} — a reset here is a second way to lose the save`);
+        }
+        if (boot.saved !== futureText) {
+          note('THE FUTURE SAVE WAS MODIFIED by a build that cannot read it — the Ascent rule is broken');
+        }
+      }
+    }
 
     // ---- everything measured across every view, now that the walk is done -
     const controls = [...seen.values()].sort((a, b) => Math.min(a.h, a.w) - Math.min(b.h, b.w));
