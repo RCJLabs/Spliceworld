@@ -62,13 +62,6 @@ function sheetKeys(host) {
 
 // groups: [{ label, options: [{ id, label, sub, mark, disabled, badge }] }]
 // A group with a null label renders its options ungrouped.
-//
-// R115 — `onPick` IS OPTIONAL, because a sheet whose every row is disabled is
-// a real and deliberate use of this chrome: the Dex opens one to LIST the
-// parts of a combo, found and unfound, and nothing in it can be pressed. It
-// was passing `onPick: () => {}` to satisfy a required field, which is a
-// callback that can never run, sitting in the middle of a file the coverage
-// gate reads. A default of "no chooser" says the same thing and says it once.
 export function openPicker({ title, subtitle, groups, selectedId, onPick }) {
   closePicker();
   const host = document.querySelector('#picker');

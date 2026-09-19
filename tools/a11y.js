@@ -153,16 +153,25 @@ export async function fixtureSave() {
   {
     // The herd ships juvenile, and two consenting adults are what the pen
     // asks for. `growthHours.adult` is the threshold, so birth that far back.
+    //
+    // A MATCHED PAIR, not the first two. The first draft aged whichever two
+    // animals came first and called them adults — which on this herd is a goat
+    // and a bear. Parent A's picker filled; Parent B's is "same species,
+    // opposite sex" and had nobody in it, so its sheet opened empty and its
+    // `onPick` stayed the last uncalled function in the game. A fixture that
+    // gives a screen two of something the screen cannot pair is a fixture that
+    // looks like coverage and is not.
     const { speciesOf: sp } = await import('../data/catalog.js');
-    let adults = 0;
-    for (const animal of s.ranch.stock) {
-      if (adults >= 2) break;
-      const hours = sp(content, animal.species)?.growthHours?.adult;
-      if (!hours) continue;
-      animal.birthAt = now - Math.round((hours + 1) * 3600000);
-      adults += 1;
-    }
-    if (adults < 2) throw new Error(`the fixture could only age ${adults} animals to adulthood`);
+    const grown = (a) => {
+      const hours = sp(content, a.species)?.growthHours?.adult;
+      return hours ? now - Math.round((hours + 1) * 3600000) : null;
+    };
+    const pair = s.ranch.stock.flatMap((a, i) =>
+      s.ranch.stock.slice(i + 1)
+        .filter((b) => b.species === a.species && b.sex !== a.sex && grown(a) && grown(b))
+        .map((b) => [a, b]))[0];
+    if (!pair) throw new Error('the fixture has no same-species, opposite-sex pair to age into a breeding pen');
+    for (const animal of pair) animal.birthAt = grown(animal);
 
     // …and a gestation running, started the way the Pens starts one.
     const { startVat } = await import('../splice/chaos.js');
