@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**5 entries queued.** R115, R116, R117, R118, R176.
+**4 entries queued.** R116, R117, R118, R176.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4626,30 +4626,71 @@ suite can check.
   huge numbers, injected strings) must each import or refuse and render
   every screen without a console error. *Done when: the injection save
   renders as text on every screen and the fuzz gate passes.*
-- **R115 — Every shipped function has run under a gate.** V8 coverage
-  merged across smoke, handlers, sim, roadmap, scopecheck and a Chromium
-  walk of every screen on three saves: **538 of 9,733 code lines (5.5%)
-  never ran, and 50 named functions were never called.** Among them the
-  **graduation ceremony** — `runExtraction`, `playCeremony`, `showResults`,
-  `close`: 66 of `extract-ui.js`'s 76 lines, the first ceremony a new player
-  sees — `showVariantCeremony`, `showSpliceResult`, 47 lines of `main.js`
-  (`renderBootFailure`, the future-save branch, the dialog's Tab trap),
-  `ui/live.js`'s `say`, the audio context, and `sw.js`, which **no gate has
-  ever loaded**. The handlers gate fires 1,485 handlers but hands every
-  screen an `onExtract` stub, so the ceremony behind the Graduate button is
-  the one thing it cannot reach. Alongside: **19 exports imported by
-  nothing**, 67 used only by tools, `spliceCount` never written,
-  `species.archetype` on 40 species read by no code, and the philosophy
-  `rehab` slot authored five times and never spoken. Proposed, medium:
-  `tools/coverage.js` (the merge is a hundred lines, zero dependencies)
-  that runs the suite under `NODE_V8_COVERAGE`, takes precise coverage
-  from the a11y walk itself, and **fails on a never-called function outside
-  an allowlist that carries a reason**, on an export nothing imports, and
-  on a JSON key nothing reads; first use pays the list down — the three
-  ceremonies walked in the browser, a boot-failure fixture, a Node test of
-  the worker's fetch handler against a stub cache, and the dead things
-  removed. *Done when: `npm run coverage` passes with an allowlist under
-  ten entries, each with a reason.*
+- **R115 — Every shipped function has run under a gate.** ✅
+  *Shipped. The entry's headline held — about fifty named functions had never
+  been called — and almost everything it proposed doing about them was aimed
+  at the wrong target, because six of the loudest "dead" functions were not
+  dead and the gate that was supposed to find them was throwing away a whole
+  lane of evidence.*
+
+  **THE ENTRY'S NUMBERS, RE-MEASURED.** 538 of 9,733 lines (5.5%) became
+  **794 of 13,248 (6.1%)** on a tree three audits larger; **50 named
+  functions** measured **51**, which is the closest a stated number has come
+  in this section. Three claims had gone stale: `npm run coverage` was
+  already taken (R92's walker-reach gate, renamed `npm run diet` here),
+  `spliceCount` no longer exists, and `sw.js` IS loaded — R100 shipped the
+  offline gate two milestones after this entry was written.
+
+  **SIX OF THE DEAD FUNCTIONS HAD LIVE CALLERS.** `whatDecidedIt`,
+  `threatRung`, `vatRemainingMs`, `developingPortrait`, `programmeHtml` and
+  `alreadyCounters` all read as dead exports and all but one are called by
+  shipped code. They are **live features on states no gate reaches** — a
+  fight sent rather than watched, a portrait mid-fetch, a rehab programme
+  running. Deleting them, which is what "the dead things removed" asked for,
+  would have deleted working features. The plan inverted: **reach the states,
+  do not cut the code.**
+
+  **AND THE MERGE WAS DROPPING A LANE.** `tools/handlers.js` renders each of
+  its 85 surfaces against a module imported FRESH — `campaign/ui.js?run=230`
+  — so the third handler never runs against what the first two did. V8 files
+  each of those 260-odd imports under its own url, the merge kept the
+  `?run=` on the path, `readSrc` missed, and every one was discarded. Cost:
+  **307 lines and eight functions** reported dead that run on every suite,
+  among them `programmeHtml`, `beginFight` and the vat's donor pickers. The
+  gate's own output looked fine; it simply asked for more work than existed.
+  Dead lines **658 → 351** on the same capture, from one `.replace()`.
+
+  **WHAT THE MILESTONE ACTUALLY DID.** `tools/coverage.js` merges
+  `NODE_V8_COVERAGE` across the suite with CDP precise coverage taken from
+  the a11y walk itself, and judges **named functions only** — 117 of the 168
+  never-called functions are anonymous arrows in lookup tables, which are
+  real misses and also unactionable, so the report prints the count beside
+  the verdict and the rule stays on what a person can act on. The a11y walk
+  gained a graduation ceremony, a boot-failure pass that proves a
+  newer-build save is never overwritten, a picker sweep that opens **every**
+  picker on every screen and commits an **enabled** row, and Settings' own
+  four. `tools/handlers.js` now **answers the sheet a press opens** — 175 of
+  them — because opening a picker is half a press and every `onPick` body in
+  the game sat behind the other half. `tools/worker.js` proves the service
+  worker's seven promises against a stubbed cache in 0.1s.
+
+  **THE LIST IS EIGHT, AND IT HAS A RULE OF ITS OWN.** An entry that excuses
+  nothing any more is **deleted** — an exemption for code that has since been
+  reached is exactly the rot the list exists to prevent — and the gate goes
+  red on one. The exemptions that remain are measured rather than shrugged:
+  `alreadyCounters` expresses a preference inside a sort comparator over
+  candidates filtered to `i > 0 && i < waves.length - 1`, and **all 26
+  authored encounters have 2 or 3 waves**, so the list never holds two and a
+  one-element sort never calls its comparator. It comes alive the day
+  somebody authors a 4-wave fight.
+
+  **`threatRung` IS GONE** — the first thing this gate found that the scope
+  check structurally cannot. Zero call sites; its dead import was removed
+  from the War Room in Session 148 and the function survived, kept alive to
+  every static reader by a re-export that nothing imports either.
+
+  *Done when: `node tools/coverage.js` passes with an allowlist under ten
+  entries, each with a reason — **met, at eight**.*
 - **R116 — The jobs board is a slot machine.** Over 180 days the walker
   launched **1,188 jobs — 6.6 a day, more than every fight it fought
   combined (964)** — every one of them **solo**: the four jobs that ask for

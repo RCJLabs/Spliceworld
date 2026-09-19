@@ -1,5 +1,99 @@
 # PROGRESS
 
+## Session 199 — R115: every shipped function has run under a gate ✅
+
+**The entry asked for a gate that finds code nothing runs, and then asked for
+the dead things to be removed. The gate got built. The removing was almost
+entirely the wrong instruction, and the gate's own first draft was lying.**
+
+### Six "dead" functions with live callers
+
+The first thing the merge printed was a list of never-called exports:
+`whatDecidedIt`, `threatRung`, `vatRemainingMs`, `developingPortrait`,
+`programmeHtml`, `alreadyCounters`. Five of the six are called by shipped
+code. They are **live features on states no gate reaches** — a fight sent
+rather than watched, a portrait while its shapes are still in flight, a rehab
+programme running in a containment bay, an adaptation the director makes when
+it has two slots to choose between.
+
+"First use pays the list down — the dead things removed" would have deleted
+working features. The plan inverted on the first measurement: **reach the
+states, do not cut the code.**
+
+### The merge was throwing away a whole lane
+
+`tools/handlers.js` walks 85 surfaces and renders each against a module
+imported FRESH — `campaign/ui.js?run=230` — because a handler fired against
+the state two earlier handlers already changed is a sequence no player can
+produce. V8 reports each of those 260-odd imports under its own url. The merge
+kept the `?run=` on the path, `readSrc` missed, and the lane was discarded.
+
+    dead lines   658 (5.0%)  ->  351 (2.6%)     one .replace()
+    named misses  33         ->   22
+
+`programmeHtml`, `beginFight`, `me-identity`, the vat's donor pickers,
+`lastMsg` on two screens — eight functions that RUN every suite, all of them
+queued for a session of chasing. The gate's own output looked fine. It just
+asked for more work than there was.
+
+### Opening a picker is half a press
+
+Every `onPick`/`onSubmit` body in the game — dismantle, rename, sign in a
+visitor, launch an operation, pick a parent — sat behind the half the gates
+stopped at. `tools/handlers.js` now answers the sheet a press opens (**175**
+answered) and takes the first **enabled** row; the a11y sweep had the same bug
+in the browser, pressing `.pick-row` when a disabled button swallows a
+synthesised click without a word, and counting picks it had not made.
+
+### And the last one was the fixture, not the walk
+
+`breed-b`'s `onPick` survived two rounds of chasing. `fixtureSave` aged
+whichever two animals came first and called them adults — on this herd a goat
+and a bear. Parent A's picker filled from every adult and looked right; Parent
+B's is "same species, opposite sex" and had nobody in it.
+
+**A fixture that hands a screen two of something the screen cannot pair is a
+fixture that looks like coverage and is not.**
+
+### What shipped
+
+| | |
+|---|---|
+| `tools/coverage.js` | the merge (Node + CDP), judged on named functions; `--use`, `--report`, `--self` |
+| `tools/worker.js` | the service worker's seven promises against a stubbed cache, 0.1s |
+| `tools/diet.js` | R92's walker-reach gate, renamed out of the way |
+| allowlist | **8** entries, cap 10, each with a reason — and an entry that excuses nothing is now deleted by rule |
+| breaks | **375–382**, eight caught |
+| deleted | `threatRung` (zero call sites), the Dex's `onPick: () => {}` |
+
+The three coverage breaks aim at the three defects this milestone shipped and
+then found. Its `--self` mode makes that affordable: collection is ten minutes
+of I/O and is proven by the gate's own green run, but the merge is arithmetic,
+and arithmetic deserves arithmetic tests.
+
+**Its own first draft was wrong in the same family as what it tests.** The
+across-process case put the larger count LAST, so an overwrite merge still
+landed on the right answer and the check passed while the arithmetic was
+broken. Two pairs now, in opposite orders — green or red by `readdirSync`
+enumeration is not a gate.
+
+### Known issues
+
+- **Two picker conventions.** Screens wire `bindPickers`/`data-picker`;
+  Settings wires named ids (`#set-volume`, `#set-theme`, `#set-speed`,
+  `[data-rename-slot]`). Every sweep has to know both. Deserves its own
+  milestone.
+- **The collection is ten minutes** and stays out of `npm test`. Only
+  `--self` rides a lane.
+- `stripComments` has a brace bug; `content.voice` reads `{}` in the browser;
+  `cleanSave`'s `shape()` wipes the ranch. All filed, none fixed.
+
+### Next session's first task
+
+R116 — the jobs board is a slot machine. Verify its premises before building:
+1,188 jobs over 180 days, every one of them solo, the four crewed jobs run
+zero times. Check those counts on today's walker first.
+
 ## Session 198 — R113: the 12px type floor, and three things it uncovered ✅
 
 **78 declarations in `style.css` set text under 12px, the worst at 8.32px.
