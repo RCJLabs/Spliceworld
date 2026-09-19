@@ -1881,6 +1881,66 @@ async function main() {
       if (before === '') note('the rename prompt opened with no name in it');
     }
 
+    // 6f. R115 — AND THE HALF OF R80'S RULE NOBODY HAD RUN. The pass above
+    //     proves Enter on ✕ CANCELS, which is the bug R80 fixed. It never
+    //     proved the other direction: that the sheet's own commit button
+    //     commits. `submit` in ui/picker.js, and every `onSubmit` behind it,
+    //     had never been called by anything — so a rename sheet that silently
+    //     dropped the name would have passed every gate in this repo.
+    const commitPrompt = await evaluate(`(() => {
+      const b = document.querySelector('#screen-ranch .rename-btn:not([disabled])');
+      if (!b) return false; b.click(); return true;
+    })()`);
+    if (!commitPrompt) note('no rename prompt could be opened, so committing one is untested');
+    else {
+      await sleep(400);
+      await evaluate(`(() => { const i = document.querySelector('.prompt-input'); if (i) i.value = 'Gerald Prime'; })()`);
+      await evaluate(`document.querySelector('#picker #prompt-go')?.click()`);
+      await sleep(600);
+      const after = await evaluate(`(() => ({
+        hidden: document.getElementById('picker').hidden,
+        named: document.body.innerHTML.includes('Gerald Prime'),
+      }))()`);
+      if (!after.hidden) note('pressing the rename sheet\'s commit button left the sheet open');
+      if (!after.named) note('pressing the rename sheet\'s commit button did not apply the new name');
+    }
+
+    // 6g. R115 — AND AN OPTION PICKER, COMMITTED. Same shape, other sheet:
+    //     the walk opened pickers to measure them and never chose anything,
+    //     so every `onPick` in the game — the vat's two donors, the breeding
+    //     pen's two parents, the dossier's identity and philosophy, three in
+    //     Settings — was a callback nothing had ever fired.
+    let picked = false;
+    for (const screen of ['pens', 'ranch', 'theater']) {
+      await evaluate(`document.querySelector('#tabs button[data-screen="${screen}"]')?.click()`);
+      await sleep(500);
+      await evaluate(OPEN_DETAILS);
+      for (const id of await evaluate(FOLD_IDS(screen)) ?? []) {
+        await evaluate(`(() => { const b = document.querySelector('#screen-${screen} button[data-fold="${id}"]');
+          if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); })()`);
+        await sleep(250);
+        if (await evaluate(`!!document.querySelector('#screen-${screen} button[data-picker]:not([disabled])')`)) break;
+      }
+      if (!await evaluate(`(() => { const b = document.querySelector('#screen-${screen} button[data-picker]:not([disabled])');
+        if (!b) return false; b.click(); return true; })()`)) continue;
+      await sleep(500);
+      const rows = await evaluate(`document.querySelectorAll('#picker .pick-row').length`);
+      if (!rows) {
+        // An empty sheet is a real state and not this one. Close it and move on.
+        await evaluate(`document.querySelector('#picker .pick-close')?.click()`);
+        await sleep(250);
+        continue;
+      }
+      await evaluate(`document.querySelector('#picker .pick-row').click()`);
+      await sleep(600);
+      if (!await evaluate(`document.getElementById('picker').hidden`)) {
+        note(`${screen}: choosing a row left the picker sheet open`);
+      }
+      picked = true;
+      break;
+    }
+    if (!picked) note('no option picker on any screen offered a row to choose, so nothing committed a pick');
+
     // ---- everything measured across every view, now that the walk is done -
     const controls = [...seen.values()].sort((a, b) => Math.min(a.h, a.w) - Math.min(b.h, b.w));
     const under = controls.filter((c) => c.h < FLOOR || c.w < FLOOR);
