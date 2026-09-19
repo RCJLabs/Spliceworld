@@ -107,7 +107,7 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   const { renderArena } = await import('../battle/ui.js');
   const { openSettings } = await import('../save/settings-ui.js');
   const { WAR_TABS } = await import('../campaign/warroom.js');
-  const { operationList } = await import('../campaign/operations.js');
+  const { operationList, signContract, contractList } = await import('../campaign/operations.js');
   const { rivalTeam, rivalList } = await import('../campaign/rivals.js');
   const { tickBreakouts } = await import('../campaign/breakout.js');
 
@@ -224,6 +224,16 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     // fixture only runs three, so arming from `t0` would leave the board
     // empty and the Hunt button unpainted.
     tickBreakouts(s, content, now, t0 - 24 * HOUR);
+
+    // R116 — a standing arrangement running, so the Jobs subtab paints BOTH
+    // halves of the retainer card: the rows that offer one, and the button
+    // that ends the one you hold. `data-contract-end` exists only while a
+    // contract is held, so a fixture without one leaves it painted-by-nobody
+    // and this gate rightly says so.
+    {
+      const retainer = contractList(content)[0];
+      if (retainer) signContract(s, retainer.id, content, now);
+    }
 
     // R108 — a visitor signed in at the gate, so the War Room paints its
     // Answer and Show-it-out buttons. Built by exporting one of the fixture's

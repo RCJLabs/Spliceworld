@@ -5254,6 +5254,7 @@ if (inShard('curve')) {
   const {
     operationList, opTuning, opOdds, startOperation, abortOperation,
     tickOperations, opReady, opCooldownEndsAt, activeOp, heatNow, addHeat, heatPenalty,
+    contractList, contractPerHour, signContract, activeContract, settleContracts, boardOps,
   } = await import('../campaign/operations.js');
   const ot = opTuning(content);
   const ops = operationList(content);
@@ -5297,21 +5298,45 @@ if (inShard('curve')) {
   const GOAT = ['goat_head', 'goat_forelimbs', 'goat_hindlimbs', 'goat_hide', 'goat_organ'];
   const SHARK = ['shark_head', 'shark_forelimbs', 'shark_hindlimbs', 'shark_hide', 'shark_organ'];
 
-  // RULE 1 — something is ALWAYS runnable. No territory, no notoriety, no
-  // chimera, no anatomy. This is the floor, and it is the whole point.
+  // RULE 1 — A PLAYER WITH NOTHING CAN STILL EARN. No territory, no
+  // notoriety, no chimera, no anatomy. This is the floor, it predates A4,
+  // and it is the whole point.
+  //
+  // R116 CHANGED THE MECHANISM AND NOT THE FLOOR. Until this milestone the
+  // rule was "something is always RUNNABLE", and the three jobs that needed
+  // nobody carried anywhere were what satisfied it. Those three are standing
+  // arrangements now — the board is the crewed half, paced by charges — so
+  // an empty lab does not launch anything. It SIGNS something, which pays
+  // while the player is stuck rather than asking them to tap first, and is a
+  // strictly kinder floor than the one it replaces.
+  //
+  // Asserted as the money, not as the button: what a broke player is owed is
+  // a way back, and the shape of the control is this milestone's business
+  // while the floor is A4's.
   {
     const broke = lab(801, { funds: 0 });
     broke.chimeras = [];
     assert.deepEqual(broke.campaign.heldNodes, [], 'no territory');
-    const runnable = ops.filter((op) => !opOdds(broke, op, null, content, t0).blocked);
-    assert.ok(runnable.length >= 2, `a player with nothing can still run ${runnable.length} job(s)`);
-    for (const op of runnable) {
-      const odds = opOdds(broke, op, null, content, t0);
-      assert.ok(odds.chance >= 0.4, `${op.id} is worth attempting solo (${odds.chance.toFixed(2)})`);
+
+    const offers = contractList(content);
+    assert.ok(offers.length >= 2, `a player with nothing is offered ${offers.length} standing arrangement(s)`);
+    for (const op of offers) {
+      assert.ok(contractPerHour(op, content) > 0, `${op.id} pays something per hour on a retainer`);
     }
-    const started = startOperation(broke, runnable[0].id, null, content, t0);
-    assert.ok(started.ok, started.msg);
-    assert.ok(activeOp(broke), 'and it is under way');
+
+    const signed = signContract(broke, offers[0].id, content, t0);
+    assert.ok(signed.ok, signed.msg);
+    assert.equal(activeContract(broke)?.opId, offers[0].id, 'and it is the standing arrangement');
+
+    const before = broke.funds;
+    settleContracts(broke, content, t0 + 24 * 3600000);
+    assert.ok(broke.funds > before,
+      `a day on a retainer pays a lab with nothing ($${(broke.funds - before).toFixed(0)})`);
+
+    // AND ONLY ONE AT A TIME, which is what makes it a choice rather than a
+    // row of switches to turn all on.
+    signContract(broke, offers[1].id, content, t0 + 24 * 3600000);
+    assert.equal(activeContract(broke)?.opId, offers[1].id, 'signing replaces rather than adds');
   }
 
   // RULE 2 — failure never costs a creature. You cannot punish a losing
@@ -5354,12 +5379,19 @@ if (inShard('curve')) {
   // RULE 4 — heat is the price, and it is a mechanic rather than a nerf:
   // it only bites the player running jobs back to back.
   {
+    // R116 — ON A BOARD JOB, because the petting zoo this used to launch is a
+    // standing arrangement now and a retainer heats nothing: it is the
+    // DRIVING somewhere that the county notices. `boardOps` is the list that
+    // can still be launched, so this reads the rule off the data rather than
+    // naming a job that may move again.
     const s = lab(805, { chimera: GOAT });
+    const rider = s.chimeras[0];
+    const job = boardOps(content)[0];
     assert.equal(heatNow(s, content, t0), 0, 'a fresh county is calm');
-    const cold = opOdds(s, content.operations.feed_coop, null, content, t0).chance;
-    startOperation(s, 'petting_zoo', null, content, t0);
+    const cold = opOdds(s, job, rider, content, t0).chance;
+    assert.ok(startOperation(s, job.id, rider.id, content, t0).ok, 'a job goes out');
     assert.ok(heatNow(s, content, t0) > 0, 'a job leaves the county twitchy');
-    const hot = opOdds(s, content.operations.feed_coop, null, content, t0).chance;
+    const hot = opOdds(s, job, rider, content, t0).chance;
     assert.ok(hot < cold, 'which costs you on the next one');
     // …and it decays in real time, exponentially, so it settles at a level
     // that scales with how hard you are pushing instead of pinning to the
@@ -5389,17 +5421,22 @@ if (inShard('curve')) {
   // One job at a time, cooldowns hold, and calling one off costs the
   // cooldown but nothing else.
   {
+    // R116 — READ OFF `boardOps`, because the two jobs this block used to
+    // name are standing arrangements now. What it is really asserting is the
+    // lane rule and the cooldown, neither of which cares which job it is.
     const s = lab(807, { chimera: GOAT });
-    assert.ok(startOperation(s, 'feed_coop', null, content, t0).ok);
-    assert.ok(!startOperation(s, 'petting_zoo', null, content, t0).ok, 'one job at a time');
+    const rider = s.chimeras[0];
+    const job = boardOps(content)[0];
+    assert.ok(startOperation(s, job.id, rider.id, content, t0).ok);
+    assert.ok(!startOperation(s, job.id, rider.id, content, t0).ok, 'one job at a time');
     const funds = s.funds;
     assert.ok(abortOperation(s, content, null, t0).ok);
     assert.equal(activeOp(s), null);
     assert.equal(s.funds, funds, 'calling it off costs no money');
     assert.equal(s.chimeras.length, 1, 'and no creature');
-    assert.ok(!opReady(s, 'feed_coop', t0), 'but the job goes quiet for a while');
-    assert.ok(!startOperation(s, 'feed_coop', null, content, t0).ok, 'and refuses to restart');
-    assert.ok(opReady(s, 'feed_coop', opCooldownEndsAt(s, 'feed_coop')), 'until the cooldown is up');
+    assert.ok(!opReady(s, job.id, t0), 'but the job goes quiet for a while');
+    assert.ok(!startOperation(s, job.id, rider.id, content, t0).ok, 'and refuses to restart');
+    assert.ok(opReady(s, job.id, opCooldownEndsAt(s, job.id)), 'until the cooldown is up');
   }
 
   // ACCEPTANCE: a player who never wins a battle can still reach the
@@ -8036,7 +8073,10 @@ if (inShard('regions')) {
 // measures the bank balance.
 {
   const { agenda, agendaShape, AGENDA } = await import('../ranch/agenda.js');
-  const { startOperation, activeOps, jobSlots, crewedOps, opTuning: opTune, tickOperations: tickOps } =
+  const {
+    startOperation, activeOps, jobSlots, crewedOps, opTuning: opTune, tickOperations: tickOps,
+    contractList, signContract, settleContracts,
+  } =
     await import('../campaign/operations.js');
   const { extractAnimal } = await import('../splice/extract.js');
 
@@ -8093,6 +8133,8 @@ if (inShard('regions')) {
     // tab, which is why the gauntlet row carries a subtab and the raid
     // row does not.
     raid: 'data-raid=', gauntlet: 'data-gauntlet=',
+    // R116 — the retainer card sits above the board on the Jobs subtab.
+    contract: 'data-contract=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
@@ -8151,15 +8193,22 @@ if (inShard('regions')) {
   assert.ok(shape.productive >= 1,
     `at least one of them makes something rather than spending (${listed})`);
 
-  // Rule 1 of the jobs board, which A4 broke and then fixed: something is
-  // ALWAYS runnable. Slots scale with the creatures fit to work, so a stable
-  // entirely in the Infirmary has none — and the crewless job must not need
-  // one, or the guarantee dies exactly where it is needed.
+  // Rule 1 of the jobs board, which A4 broke and then fixed: a player with
+  // nobody fit to work still has something to do. Slots scale with the
+  // creatures fit, so a stable entirely in the Infirmary has none.
+  //
+  // R116 — AND THE ANSWER IS NOW A RETAINER RATHER THAN PAPERWORK. The
+  // crewless jobs left the board and became standing arrangements, which
+  // holds the guarantee in the place it was written for and holds it harder:
+  // a lab with every creature in the Infirmary is not asked to tap anything,
+  // it is simply paid.
   assert.equal(jobSlots(lost, content, now), 0, 'a stable in the Infirmary crews nothing');
-  assert.ok(shape.open.some((i) => i.id === 'job'), 'and paperwork is still on the board');
-  const paper = startOperation(lost, 'grant_application', null, content, now);
-  assert.ok(paper.ok, `the crewless job actually starts: ${paper.msg}`);
-  assert.equal(activeOps(lost).length, 2, 'alongside the one already out');
+  const retainer = contractList(content)[0];
+  const paper = signContract(lost, retainer.id, content, now);
+  assert.ok(paper.ok, `the crewless lab can still arrange something: ${paper.msg}`);
+  const owed = lost.funds;
+  settleContracts(lost, content, now + 24 * 3600000);
+  assert.ok(lost.funds > owed, 'and it pays while every creature is laid up');
 
   // THE POINT: a thing you can do produces a NEXT thing to do. Before A4 the
   // husbandry loop — graduate a donor, splice what comes out — was shut for
@@ -12820,8 +12869,14 @@ if (inShard('spar')) {
   {
     const st = { ...newGameState(), seed: 75, funds: 3000 };
     st.lastTickAt = t0;
-    const row = agenda(st, content, t0).find((i) => i.id === 'job');
-    assert.ok(row, 'the job entry is open on a fresh save');
+    // R116 — THE ROW IS THE RETAINER'S NOW ON A FRESH SAVE. What this block
+    // asserts is that `subtab` survives `agenda()`'s named field list, and
+    // what it needs for that is any Jobs row at all. A brand-new lab has no
+    // creature to carry and so no crewed job to run; the board's other half
+    // is what greets it, which is the same A4 floor one door along.
+    const row = agenda(st, content, t0).find((i) => i.subtab === 'jobs');
+    assert.ok(row, 'a Jobs entry is open on a fresh save');
+    assert.equal(row.id, 'contract', 'and on a lab with no creatures it is the retainer');
     assert.equal(row.subtab, 'jobs', 'and the shape the Ranch renders still carries the tab');
   }
 

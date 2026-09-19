@@ -101,12 +101,12 @@
     "{creature} is in somebody else's bay. {hours} hours to fetch it.",
     "{creature} has been booked in elsewhere. The window is {hours} hours.",
     "{creature} taken. {hours} hours, and then the diagrams start.",
-    "{creature} is being \u201cassessed\u201d. You have {hours} hours to object.",
+    "{creature} is being “assessed”. You have {hours} hours to object.",
     "{creature} is on a stranger's clipboard. {hours} hours.",
     "They took {creature}. {hours} hours before it becomes a footnote.",
     "{creature} is gone. {hours} hours before anyone starts sketching.",
     "They have {creature} and {hours} hours of goodwill.",
-    "{creature} has been taken for \u201cassessment\u201d. {hours} hours.",
+    "{creature} has been taken for “assessment”. {hours} hours.",
     "{creature} is on somebody's schedule. You have {hours} hours to rearrange it.",
     "{creature} taken. The clock says {hours} hours and it is not slowing.",
     "{creature} is in a strange bay. {hours} hours to make that temporary.",
@@ -141,12 +141,12 @@
     "{creature} graduates the Reorientation Wing, reformed and unrepentant.",
     "{creature} is out of the Wing and into the good pen.",
     "{creature} finishes the programme early. The staff are relieved.",
-    "{creature} graduates. The Wing describes the outcome as \u201cencouraging\u201d.",
+    "{creature} graduates. The Wing describes the outcome as “encouraging”.",
     "{creature} finishes the programme and asks about lunch.",
     "{creature} is out of the Wing and pretending it never went in.",
     "{creature} graduates. The certificate is already slightly chewed.",
     "{creature} leaves the Wing reformed, or at least better rested.",
-    "{creature} completes the course. The staff describe it as \u201cvery nearly gentle\u201d."
+    "{creature} completes the course. The staff describe it as “very nearly gentle”."
   ],
   "news.specimen_loose.lines": [
     "{lab} has misplaced a chimera. It is {sighting} and it is not coming when called.",
@@ -155,7 +155,7 @@
     "Something belonging to {lab} was seen {sighting}. It did not stop.",
     "{lab} has lost track of a specimen. It was last seen {sighting}.",
     "A {lab} animal is out. The county has been advised to look busy.",
-    "{lab} confirms an \u201cunscheduled departure\u201d. It was {sighting}.",
+    "{lab} confirms an “unscheduled departure”. It was {sighting}.",
     "One of {lab}'s is loose and was {sighting} an hour ago.",
     "{lab} would like everyone to know this is fine. It is {sighting}.",
     "A specimen has left {lab} without signing out. Seen {sighting}.",
@@ -189,7 +189,7 @@
     "{creature} netted cleanly. {lab} will be informed eventually.",
     "{creature} is in custody. {lab} has been left a message.",
     "{creature} collected without a scratch. {lab} owes somebody a fence.",
-    "{creature} contained. {lab} is drafting a word stronger than \u201cconcerned\u201d.",
+    "{creature} contained. {lab} is drafting a word stronger than “concerned”.",
     "{creature} is in a bay with a blanket. {lab} may collect it, in writing.",
     "One {creature} bagged. {lab} disputes the paperwork and not the outcome.",
     "{creature} secured and settled. {lab} is being very quiet.",
@@ -228,11 +228,11 @@
     "County-wide advisory: rival stock is loose in numbers, in combinations nobody filed paperwork for, and some of it is carrying things that were not on the manifest."
   ],
   "news.op_failed.lines": [
-    "{op} is filed under \u201cattempted\u201d. The crew are already blaming the van.",
+    "{op} is filed under “attempted”. The crew are already blaming the van.",
     "{op} produced no money and one strongly worded receipt.",
     "{op} did not go to plan. It did not go to a plan, exactly. It went.",
     "Nothing came back from {op} except the crew, eventually.",
-    "{op} is being described internally as \u201ca learning experience\u201d.",
+    "{op} is being described internally as “a learning experience”.",
     "{op} returned the van, the crew and nothing else.",
     "{op} went quiet around midnight and stayed that way.",
     "No takings from {op}. The crew have questions about the map.",
@@ -242,7 +242,7 @@
     "{op} ends with a shrug and a mileage claim.",
     "Whatever {op} was going to be, it was not this.",
     "{op}: nothing doing. The crew send their regards and an invoice.",
-    "{op} has been written up as \u201cinconclusive\u201d by somebody being kind.",
+    "{op} has been written up as “inconclusive” by somebody being kind.",
     "{op} got as far as the car park.",
     "{op} is a story the crew will tell better than it went.",
     "Nothing from {op}. The night was pleasant, at least.",
@@ -261,10 +261,10 @@
   "news.op_paid.lines": [
     "{op} cleared ${funds}, and nobody has asked how.",
     "{op} came good: ${funds}, counted twice because the first count was better.",
-    "${funds} from {op}. The paperwork says \u201cconsultancy\u201d.",
+    "${funds} from {op}. The paperwork says “consultancy”.",
     "{op} settled up at ${funds}. The crew would like this noted in their file.",
     "{op} banked ${funds} and a small amount of goodwill.",
-    "{op} returns ${funds}. The ledger calls it \u201cmiscellaneous\u201d.",
+    "{op} returns ${funds}. The ledger calls it “miscellaneous”.",
     "${funds} in from {op}, in notes, in a bag, in the van.",
     "{op} paid ${funds} and the crew took the long way home.",
     "{op} is good for ${funds}. Nobody is asking for a receipt.",
@@ -277,7 +277,7 @@
     "${funds} out of {op}. The crew are already planning the next one.",
     "{op} paid. ${funds}, in an envelope, in a glovebox.",
     "{op} good for ${funds} and no follow-up questions.",
-    "{op}: ${funds}. The books call it \u201cconsultancy\u201d again.",
+    "{op}: ${funds}. The books call it “consultancy” again.",
     "${funds} from {op}. The van needs a wash and has earned one.",
     "{op} cleared ${funds} without anybody raising their voice.",
     "{op} banked ${funds}. Somebody is buying the good feed this week.",
@@ -309,9 +309,9 @@
     "{op}: ${funds}, and {creature} asleep across the back seat."
   ],
   "news.rival_first_defeat.lines": [
-    "{rival} defeated. A polite notice goes up about \u201ctemporary rescheduling of all demonstrations\u201d.",
+    "{rival} defeated. A polite notice goes up about “temporary rescheduling of all demonstrations”.",
     "{rival} defeated, and the loading bay at their facility has been very busy since.",
-    "{rival} defeated. Somebody over there is drafting the word \u201canomaly\u201d."
+    "{rival} defeated. Somebody over there is drafting the word “anomaly”."
   ],
   "news.rival_won.lines": [
     "{rival} takes the exchange, then takes a photograph of themselves taking it.",
@@ -331,18 +331,18 @@
     "{rival} wins the exchange and immediately schedules a briefing about it."
   ],
   "ticker": [
-    "Area geneticist \u201cjust asking questions\u201d about eagle wingspans.",
+    "Area geneticist “just asking questions” about eagle wingspans.",
     "Hardware store sells out of googly eyes. No one is asking why.",
-    "Weather service issues advisory for \u201cunusually confident livestock.\u201d",
+    "Weather service issues advisory for “unusually confident livestock.”",
     "City council votes to pretend everything is normal.",
     "Ethics board postpones meeting indefinitely, cites scheduling.",
     "Mysterious kazoo noises reported near old barn. Investigation pending.",
-    "Ornithologists puzzled by goat seen \u201cfiling a flight plan.\u201d",
+    "Ornithologists puzzled by goat seen “filing a flight plan.”",
     "County fair cancels livestock category. Offers no replacement and no comment.",
-    "Barn cat unionises. Demands are described as \u201cmodest but firm\u201d.",
-    "Veterinary college quietly adds a module called \u201cAdvanced Improvisation\u201d.",
+    "Barn cat unionises. Demands are described as “modest but firm”.",
+    "Veterinary college quietly adds a module called “Advanced Improvisation”.",
     "Local man insists his dog said good morning. Dog unavailable for comment.",
-    "Agricultural inspector requests transfer. Gives \u201cthe barn\u201d as the reason."
+    "Agricultural inspector requests transfer. Gives “the barn” as the reason."
   ],
   "philosophies.improver.monologue.capture": [
     "The {creature} has been referred for improvement. It did not ask to be.",
@@ -457,5 +457,23 @@
   "resequencerLines.artefactStat": [
     "Resequencing artefact: {stat} has come back higher than it went in. No notes were taken.",
     "The {stat} readings are up and the machine is refusing to explain itself."
+  ],
+  "news.op_contract.lines": [
+    "Regional ledger notes a recurring line item. The line item declines to elaborate.",
+    "{op} files its quarterly return early. Auditors describe the paperwork as \"aggressively tidy\".",
+    "A standing arrangement continues. Nobody at {op} can recall agreeing to it.",
+    "{op} reports steady throughput and one persistent draught nobody can locate.",
+    "Accountancy quarterly praises {op} for consistency. Consistency is doing a lot of work in that sentence.",
+    "The retainer clears again. Somewhere a form is stamped by someone who has stopped reading.",
+    "{op} posts another uneventful month. The eventlessness is the product.",
+    "A modest and entirely routine payment arrives from {op}. Routine is the whole trick.",
+    "{op} renews without being asked. Institutional memory is a wonderful thing to be without.",
+    "Local bookkeeping shows {op} running a small, cheerful, unexplained surplus.",
+    "{op} continues under existing terms. The terms have never been read aloud.",
+    "The arrangement with {op} ticks over. Ticking over is underrated.",
+    "{op} submits a compliance form with one field left blank. Nobody follows up.",
+    "Payment received. {op} would like it noted that everything is completely normal.",
+    "{op} logs another quiet cycle. The quiet is doing rather well for you.",
+    "A recurring transfer from {op} is flagged, reviewed, and unflagged by the same person."
   ]
 }

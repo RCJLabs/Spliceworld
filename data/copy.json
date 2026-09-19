@@ -92,6 +92,15 @@
     "creed_hint": "Flavour only — your anatomy is where the mechanics live"
   },
   "board": {
-    "no_leads": "No leads left. The county has to forget you a little before anyone talks again."
+    "no_leads": "No leads left. The county has to forget you a little before anyone talks again.",
+    "signed": "{op} is on a retainer now. Nobody has to go anywhere; the money simply arrives, which is the best kind.",
+    "ended": "The standing arrangement lapses. Everyone shakes hands. Nobody means it.",
+    "not_contract": "That one is not the sort of thing you can put on a retainer.",
+    "already": "{op} is already the standing arrangement.",
+    "none": "There is no standing arrangement to end.",
+    "not_outing": "That one is a standing arrangement, not an outing.",
+    "agenda_hint": "Pays while you are elsewhere, up to {best} a day.",
+    "card_blurb": "One arrangement at a time. It needs no crew and no lead, and it pays whether or not you open the app.",
+    "agenda_label": "Put something on a retainer"
   }
 }

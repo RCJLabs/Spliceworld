@@ -40,6 +40,7 @@
 
 import { rngStream, pick } from '../util/rng.js';
 import { pickPooled, fill } from './monologue.js';
+import { newsFor } from './wire.js';
 import { analyze } from '../splice/physiology.js';
 import { isSettled } from '../splice/chimera.js';
 import { createAnimal } from '../ranch/ranch.js';
@@ -47,6 +48,11 @@ import { infirmaryGrants } from '../splice/facility.js';
 import { applyInjury } from '../battle/statblock.js';
 
 const HOUR = 3600000;
+const DAY = 24 * HOUR;
+// A fortnight away is a fortnight of news, and then it stops. Without a
+// ceiling a save opened after a month abroad would push thirty headlines into
+// a wire that keeps twelve, which is a digest nobody can read.
+const CONTRACT_LINES_MAX = 14;
 
 const DEFAULTS = {
   soloPenalty: 0.18,
@@ -75,6 +81,125 @@ export function opTuning(content) {
 
 export function operationList(content) {
   return Object.values(content.operations ?? {});
+}
+
+// R116 — THE BOARD AND THE CONTRACTS ARE TWO DIFFERENT THINGS NOW, and which
+// is which is a field in the data rather than a rule in here.
+//
+// The board is what you WORK: a charge, a creature, a decision about which of
+// them goes where. A contract is what you ARRANGE: it pays while you are not
+// looking and asks nothing of the roster.
+//
+// The split is the cure for a defect the charge bucket created. One shared
+// scarce charge makes a lower-purse job strictly dominated — measured, the
+// petting zoo, the feed co-op and the county fair ran 0, 2 and 6 times in a
+// 180-day campaign, and the same at day 20, so it was not an early-game
+// argument either. Pricing a charge by the purse inverts it exactly (the
+// cheap jobs then take 1,079 of 1,081 launches). The jobs that lost were the
+// three that need nobody carried anywhere — which is precisely the set that
+// did not want to be a tap in the first place.
+export function boardOps(content) {
+  return operationList(content).filter((op) => !op.contract);
+}
+
+export function contractList(content) {
+  return operationList(content).filter((op) => op.contract);
+}
+
+// What a standing arrangement pays an hour. DERIVED from the job's own
+// numbers — purse, odds and the cycle it used to run on — so a contract can
+// never drift away from the job it replaced, and adding one is still a JSON
+// object rather than an engine edit.
+//
+// `contractRate` is the discount, and it is the whole bargain: a contract
+// earns about half what working the job earned, in exchange for costing no
+// charge, no creature and no visit. A player with an empty roster can still
+// sign one, which is the rule the solo lane existed for and predates A4.
+export function contractPerHour(op, content) {
+  const t = opTuning(content);
+  const purse = ((op.funds?.[0] ?? 0) + (op.funds?.[1] ?? 0)) / 2;
+  const cycle = Math.max(1, (op.hours ?? 1) + (op.cooldownHours ?? 0));
+  return (purse * (op.baseChance ?? 0) / cycle) * (t.contractRate ?? 0.5);
+}
+
+export function activeContract(state) {
+  return state.campaign?.contract ?? null;
+}
+
+// ONE AT A TIME, which is what makes it a choice rather than a list of
+// switches to turn all on. Signing over the top of one is allowed and is not
+// a refusal: the old arrangement is settled to this moment first, so no
+// player is ever charged for a swap.
+export function signContract(state, opId, content, now) {
+  const op = content.operations?.[opId];
+  if (!op?.contract) return { ok: false, msg: fill(content.copy?.board?.not_contract, {}) };
+  const had = activeContract(state);
+  if (had?.opId === opId) return { ok: false, msg: fill(content.copy?.board?.already, { op: op.name }) };
+  // Settled to this moment first, so a swap never costs a player the hours
+  // they had already earned under the old arrangement.
+  settleContracts(state, content, now);
+  state.campaign.contract = { opId, signedAt: now, paidThrough: now };
+  return { ok: true, op, replaced: had?.opId ?? null, msg: fill(content.copy?.board?.signed, { op: op.name }) };
+}
+
+export function cancelContract(state, content, now) {
+  if (!activeContract(state)) return { ok: false, msg: fill(content.copy?.board?.none, {}) };
+  const { paid } = settleContracts(state, content, now);
+  state.campaign.contract = null;
+  return { ok: true, paid, msg: fill(content.copy?.board?.ended, {}) };
+}
+
+// Settled on the elapsed clock like every other timer in this game: nothing
+// runs in the background, so the money is computed from `paidThrough` to
+// `now` whenever anybody asks. A week away pays a week.
+export function settleContracts(state, content, now) {
+  const c = activeContract(state);
+  if (!c) return { paid: 0, news: [] };
+  const op = content.operations?.[c.opId];
+  if (!op) { state.campaign.contract = null; return { paid: 0, news: [] }; }
+  const hours = Math.max(0, now - (c.paidThrough ?? c.signedAt ?? now)) / HOUR;
+  const paid = contractPerHour(op, content) * hours;
+  c.paidThrough = now;
+  if (paid > 0) state.funds = (state.funds ?? 0) + paid;
+
+  // R116 — ONE LEDGER LINE A DAY, which is the entry's own third clause and
+  // turns out to be load-bearing for R109 rather than decoration. Taking the
+  // three quiet jobs off the board silenced their headline pools completely
+  // and the wire fell to 381 distinct phrasings, below R109's floor of 400 —
+  // the county stopped noticing the missing goats because nobody was driving
+  // to fetch them. A retainer is still a thing that happens in public.
+  //
+  // DAY-STAMPED, NOT TICK-STAMPED. The wire is fed off `contractDay`, the
+  // whole days that have elapsed, so a player who opens the app six times an
+  // hour hears the arrangement once a day and a player who was away a week
+  // hears it as the week it was — never once per visit, which is how a
+  // passive line becomes the loudest thing in the county.
+  const news = [];
+  const day = Math.floor(now / DAY);
+  const last = c.saidOn ?? Math.floor((c.signedAt ?? now) / DAY) - 1;
+  for (let d = last + 1; d <= day && news.length < CONTRACT_LINES_MAX; d++) {
+    // TWO POOLS, ALTERNATING. The job's own headline keeps the county
+    // noticing the goats — that is the pool that went silent when these
+    // three left the board — and `op_contract` is the ledger line the entry
+    // asked for, which is a different KIND of sentence: a heist is an event,
+    // a retainer is a line item, and one pool cannot be both without the
+    // tone gate noticing.
+    // The ledger line goes through `newsFor` like every other event in the
+    // game rather than reaching into the pool by hand. Two reasons, and the
+    // second is the one that bit: it is the shared emitter, so pooling,
+    // rotation and `fill` all behave the way R109 built them — and the wire
+    // gate scans the SOURCE for emitter calls by name, so an event reached
+    // any other way reads as authored-and-never-said. (Spelling the example
+    // out here is not idle: the first draft of this comment quoted the call
+    // shape verbatim and the scanner counted the COMMENT as an emitter of an
+    // event called `id`.)
+    const headline = d % 2
+      ? fill(pickPooled(state, `op:${op.id}`, op.news), { op: op.name })
+      : newsFor(state, content, 'op_contract', { op: op.name });
+    if (headline) news.push(headline);
+  }
+  c.saidOn = day;
+  return { paid, news };
 }
 
 // Every job currently in flight. `operations` is the v27 shape; a save that
@@ -323,7 +448,7 @@ export function runnableOps(state, content, now, crew = null) {
   // places deciding the same thing and disagreeing.
   const bucket = boardCharges(state, content, now);
   if (!bucket.ready) return [];
-  return operationList(content).filter((op) => {
+  return boardOps(content).filter((op) => {
     if (running.some((r) => r.opId === op.id)) return false;
     if (!opReady(state, op.id, now)) return false;
     // Two lanes: go yourself (rider null) or send a creature. Runnable if
@@ -341,6 +466,7 @@ export function startOperation(state, opId, chimeraId, content, now) {
   const t = opTuning(content);
   const op = content.operations?.[opId];
   if (!op) return { ok: false, msg: 'No such job.' };
+  if (op.contract) return { ok: false, msg: fill(content.copy?.board?.not_outing, {}) };
   const running = activeOps(state);
   if (running.some((r) => r.opId === opId)) return { ok: false, msg: 'That job is already under way.' };
 
@@ -438,6 +564,10 @@ export function abortOperation(state, content, opId = null, now = state.lastTick
 export function tickOperations(state, content, now) {
   const news = [];
   const results = [];
+  // R116 — the standing arrangement pays first, and it pays on the elapsed
+  // clock rather than per tick, so a player who was away for a week is paid
+  // for the week rather than for the one tick they came back on.
+  news.push(...settleContracts(state, content, now).news);
   for (const run of activeOps(state).filter((r) => now >= r.until).sort((a, b) => a.until - b.until)) {
     const one = resolveOperation(state, content, now, run);
     news.push(...one.news);

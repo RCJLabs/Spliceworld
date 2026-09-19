@@ -20,7 +20,7 @@ import { autoResolve, canSend, whatDecidedIt } from '../battle/autoplay.js';
 import { isSettled } from '../splice/chimera.js';
 import { fmtDuration } from '../ranch/ui.js';
 // R112 — the philosophy prompt's words, out of data/copy.json (R110's rule).
-import { copy, fmtMoney } from '../util/text.js';
+import { copy, fmtMoney, fill } from '../util/text.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { activeRaid, raidRemainingMs, levyOf, raidEncounter } from './taskforce.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen, esc } from '../ui/cards.js';
@@ -51,6 +51,7 @@ import { speciesOf, classOf, enemyOf, rivalOf } from '../data/catalog.js';
 import { looseSpecimens, looseById, released, releaseTuning, packOf } from './breakout.js';
 import {
   operationList, freeCrew, startOperation, abortOperation, opOdds,
+  contractList, contractPerHour, activeContract, signContract, cancelContract, boardOps,
 } from './operations.js';
 import { profileOf } from './monologue.js';
 import {
@@ -880,8 +881,8 @@ const pct = (n) => `${Math.round(n * 100)}%`;
 
 function jobsCard(state, ctx, t) {
   const { content } = ctx;
-  const jobs = operationList(content);
-  if (!jobs.length) return '';
+  const jobs = boardOps(content);
+  if (!jobs.length && !contractList(content).length) return '';
   const { runs, slots, crewsOut, youOut, heat, report } = jobsModel(state, content, t);
   const crewLine = [
     slots ? `${slots - crewsOut} of ${slots} ${slots === 1 ? 'crew' : 'crews'} free` : 'no crews fit to work',
@@ -895,6 +896,30 @@ function jobsCard(state, ctx, t) {
         ? 'somebody has started noticing a pattern.'
         : 'nobody is looking for you. Yet.'
   }</p>`;
+
+  // R116 — THE STANDING ARRANGEMENT, above the board because it is the half
+  // that needs no crew and no lead: a player with everything in the Infirmary
+  // and an empty bucket still has this. One at a time, so the list is a
+  // choice rather than a row of switches, and the one you hold is marked.
+  const held = activeContract(state);
+  const retainers = contractList(content);
+  const contractCard = retainers.length ? `
+      <section class="card jobs-card">
+        <h3>${renderIcon('handshake')} Standing Arrangement</h3>
+        <p class="fine-print">${fill(content.copy?.board?.card_blurb, {})}</p>
+        ${retainers.map((op) => {
+    const mine = held?.opId === op.id;
+    const perDay = Math.round(contractPerHour(op, content) * 24);
+    return `
+          <div class="op-row${mine ? ' is-selected' : ''}">
+            <strong>${op.name}</strong>
+            <p class="fine-print">${fmtMoney(perDay)} a day${mine ? ' · running' : ''}</p>
+            <button type="button" data-contract="${op.id}"${mine ? ' disabled' : ''}>${
+      mine ? 'On retainer' : 'Put on retainer'}</button>
+          </div>`;
+  }).join('')}
+        ${held ? '<button type="button" data-contract-end="1">End the arrangement</button>' : ''}
+      </section>` : '';
 
   // A job in flight no longer hides the board. It used to return here, so
   // launching one thing removed the only screen that showed you what else
@@ -957,6 +982,7 @@ function jobsCard(state, ctx, t) {
 
   return `
     ${liveCard}
+    ${contractCard}
     <section class="card jobs-card">
       <h3>${renderIcon('briefcase')} Jobs</h3>
       <p class="fine-print job-slots">${crewLine}</p>
@@ -975,6 +1001,20 @@ function bindJobs(root, ctx, redraw) {
   root.querySelectorAll('button[data-abort]').forEach((btn) => {
     btn.addEventListener('click', () => {
       lastAftermath = abortOperation(state, content, btn.dataset.abort, ctx.now()).msg;
+      ctx.save();
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-contract]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      lastAftermath = signContract(state, btn.dataset.contract, content, ctx.now()).msg;
+      ctx.save();
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-contract-end]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      lastAftermath = cancelContract(state, content, ctx.now()).msg;
       ctx.save();
       redraw();
     });

@@ -1157,7 +1157,10 @@ import { MOVE_SLOTS } from '../battle/moves.js';
 import { feralStatus } from '../splice/feral.js';
 import { activeVat, vatPlan, startVat } from '../splice/chaos.js';
 import { activeResequence, resequencePlan, startResequence } from '../splice/resequencer.js';
-import { startOperation, operationList, opReady, laneFree, runnableOps, freeCrew, opOdds } from '../campaign/operations.js';
+import {
+  startOperation, operationList, opReady, laneFree, runnableOps, freeCrew, opOdds,
+  contractList, contractPerHour, activeContract, signContract,
+} from '../campaign/operations.js';
 import { startSpar, canSpar, sparEncounter, sparPartners } from '../campaign/sparring.js';
 import { levelOf } from '../battle/veterancy.js';
 import { regionStates } from '../campaign/campaign.js';
@@ -1919,6 +1922,21 @@ function walkAct(state, content, now, open, opts = {}) {
     // takes the best expected payout. Solo stays in the running — it is a
     // rider of `null` like any other — so a campaign with nobody free still
     // works the board exactly as it did.
+    // R116 — THE STANDING ARRANGEMENT, signed once and then left alone. It
+    // costs no charge and asks for nobody, so the only decision is which one,
+    // and the walker takes the best-paying it can see. Re-checked each time
+    // rather than signed on day one, because `contractPerHour` is derived
+    // from the job and a later milestone may change what one is worth.
+    {
+      const best = contractList(content)
+        .map((op) => ({ op, rate: contractPerHour(op, content) }))
+        .sort((a, b) => b.rate - a.rate)[0];
+      const held = activeContract(state);
+      if (best && held?.opId !== best.op.id && signContract(state, best.op.id, content, now).ok) {
+        did('contract', { op: best.op.id });
+      }
+    }
+
     // `runnableOps` returns [] on an empty bucket, so the walker inherits the
     // board's pace without knowing the mechanic exists.
     const meanPay = (o) => (o.funds[0] + o.funds[1]) / 2;
