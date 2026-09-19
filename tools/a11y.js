@@ -139,6 +139,44 @@ export async function fixtureSave() {
       sample: { potential, genotype: {} },
       outcome: { succeeded: true, mutated: false, potential, genotype: {}, mutationNote: null } };
   }
+  // R115 — A GESTATING VAT AND A BREEDABLE HERD, because two whole cards
+  // were unreachable on this fixture and a rule with nothing to look at
+  // passes. The vat's countdown (`vatRemainingMs`, and the second donor
+  // picker behind it) and the breeding pen's two parent pickers had never
+  // been rendered by any gate — not disabled, never drawn.
+  //
+  // Both are made by CALLING THE GAME rather than by hand-writing the state.
+  // A vat's `conception` is sealed at the moment it starts so a reload
+  // cannot reroll it; a fixture that forged one would be asserting against a
+  // shape the game does not actually write, which is how a gate ends up
+  // green on a save no player can have.
+  {
+    // The herd ships juvenile, and two consenting adults are what the pen
+    // asks for. `growthHours.adult` is the threshold, so birth that far back.
+    const { speciesOf: sp } = await import('../data/catalog.js');
+    let adults = 0;
+    for (const animal of s.ranch.stock) {
+      if (adults >= 2) break;
+      const hours = sp(content, animal.species)?.growthHours?.adult;
+      if (!hours) continue;
+      animal.birthAt = now - Math.round((hours + 1) * 3600000);
+      adults += 1;
+    }
+    if (adults < 2) throw new Error(`the fixture could only age ${adults} animals to adulthood`);
+
+    // …and a gestation running, started the way the Pens starts one.
+    const { startVat } = await import('../splice/chaos.js');
+    const settled = s.chimeras.filter((c) => c.settleUntil <= now);
+    if (settled.length >= 2) {
+      const started = startVat(s, settled[0].id, settled[1].id, content, now);
+      if (!started.ok) throw new Error(`the fixture could not start a vat: ${started.msg}`);
+      // Half-run, so the card shows a countdown rather than a decant.
+      s.vat.startedAt = now - Math.round((s.vat.until - now) / 2);
+    } else {
+      throw new Error(`the fixture has ${settled.length} settled chimeras; a vat needs two`);
+    }
+  }
+
   // R82 — one loose specimen, so the Labs tab paints its Hunt button and
   // this gate measures it like every other control. Built the way the world
   // builds one: a lab that has lost to you, and a clock dated far enough
