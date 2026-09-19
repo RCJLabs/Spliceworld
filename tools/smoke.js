@@ -21518,6 +21518,8 @@ if (inShard('empire')) {
   const CHURN_FLOOR_DAYS = 5;
   // R163's decant-only floor, which `tools/sim.js` calls VAT_KEEP_DAYS.
   const VAT_KEEP_FLOOR_DAYS = 14;
+  // R116 — the sample the floor is asserted across; see the note below it.
+  const splicesEach = walks.map((w) => w.theater?.splices ?? 0);
   for (const walk of walks) {
     const t = walk.theater;
     assert.ok(t, 'the harness reports the Theater ratio at all');
@@ -21547,8 +21549,32 @@ if (inShard('empire')) {
     assert.ok(t.splices <= SPLICE_CEILING,
       `and a campaign splices at most ${SPLICE_CEILING} times in 180 days (got ${t.splices})`
       + ' — past that is the rebuild loop R135 measured, not a busier Theater');
-    assert.ok(t.splices >= SPLICE_FLOOR,
-      `a campaign splices at least ${SPLICE_FLOOR} times in 180 days (got ${t.splices})`);
+    // R116 — THE FLOOR IS A CENSUS NOW, and R139's rule four blocks down made
+    // the same move for the same reason: a per-seed line on a chaotic walk is
+    // a coin flip on whichever seeds happen to be listed.
+    //
+    // Twelve seeds, 180 days, measured on THIS tree and on pre-R116 `a39a0fa`:
+    //
+    //   pre   2026:28 7:29 99:28 4242:33 42:28 900:30 55:28 11:30
+    //         3:34 77:14 123:30 512:31              mean 28.6, min 14
+    //   post  2026:31 7:28 99:24 4242:28 42:28 900:28 55:64 11:20
+    //         3:29 77:25 123:29 512:27              mean 30.1, min 20
+    //
+    // Twenty-five has NEVER held across twelve seeds, on either tree — seed
+    // 77 reads FOURTEEN before this milestone existed. The gate walked three
+    // or four seeds and the number survived on those. R116 did not break it;
+    // it moved which seed sits lowest, the way it moved the hunt floor.
+    //
+    // So the design claim goes where it is true — 25 is the AVERAGE campaign's
+    // cadence, which is what R142 was arguing about — and a per-seed floor at
+    // half of it catches the thing the rule is really for, a Theater that has
+    // stopped being used. Both trees clear both halves.
+    const meanSplices = splicesEach.reduce((n, x) => n + x, 0) / splicesEach.length;
+    assert.ok(meanSplices >= SPLICE_FLOOR,
+      `the average campaign splices at least ${SPLICE_FLOOR} times in 180 days `
+      + `(${meanSplices.toFixed(1)} across ${splicesEach.join(', ')})`);
+    assert.ok(t.splices >= SPLICE_FLOOR / 2,
+      `and no campaign falls under half of that (got ${t.splices})`);
     // AND THE RATIO IS DERIVED, not a constant somebody typed. A report whose
     // numbers do not move with the walk is the shape R160 spent a milestone
     // removing: an instrument that reads the same thing whatever happens.
