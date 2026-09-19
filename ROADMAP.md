@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 58
+- save version: 59
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**4 entries queued.** R116, R117, R118, R176.
+**7 entries queued.** R116, R117, R118, R176, R179, R180, R181.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6220,6 +6220,92 @@ triangle working, and each region genuinely asks a different question)*.
   it.* 554 and 1026, from 564 and 1036; both ledgers name `campaign/director.js`
   and say why the data-key option could only ever have paid half.
 
+
+### 9.30 Three new verbs (R179–R181) — asked for directly
+
+The game has eleven verbs and almost all of them resolve to combat power:
+raise, breed, extract, splice, train, fight, capture, rehabilitate, conquer,
+defend, work a job. R116 found what that costs — a board that offered 1,189
+launches in 180 days and still asked nothing of the player, because every
+one of them was the same decision. These three phases add verbs that are
+*not* a fight and not a splice, and each is written so that the thing it
+adds is a CHOICE rather than another button that is always available.
+
+- **R179 — Expeditions, and the first creature money cannot buy.** Today the
+  catalogue is the whole world: **all 41 species carry a `mailOrderPrice`**,
+  so there is nothing alive in this game a player cannot simply order, and
+  the only scarcity is cash. That is why R95 had to build a content-reach
+  gate — a campaign settles on four species and never learns the rest exists.
+  Proposed, LARGE, and it wants splitting across sessions:
+  **(1)** species gain a **rarity tier** in data — common (the 41 that ship,
+  orderable), uncommon, rare, unique — and everything above common has NO
+  `mailOrderPrice`; **(2)** an **expedition engine**: send crew to a region
+  for real-world hours, seeded roll against that region's own table, results
+  computed on the elapsed clock like every other timer here; **(3)** the
+  content itself — new species, whose parts arrive through
+  `tools/gen-parts.js` (R127 made the generator the authority, so this is
+  JSON rather than an engine edit) and therefore bring new parts, new
+  **combos** against the 27 that exist, and new keywords against the 29.
+  A **unique** is one per run, carries a name rather than a species, and is
+  the obvious thing to hand R102's run boundary.
+  *The decision this has to create:* which of 5 regions, for how long, and
+  with whom — and the crew is unavailable for jobs and fights the whole
+  time, so an expedition is paid for in the things R116 just made scarce.
+  *The trap to avoid:* a rare that is simply BETTER is power creep wearing a
+  costume. R6 made every variant a sidegrade by contract and asserted it in
+  smoke; a rare should buy a build that was previously impossible rather
+  than a bigger number.
+  *Done when: an uncommon is reachable only by expedition and a campaign
+  that never runs one never sees it; every shipped tier's parts reach the
+  Dex and at least one new combo; no rare's win rate at equal grade beats a
+  common's by more than the noise floor; and the walker runs expeditions as
+  a policy rather than a tap.*
+
+- **R180 — Espionage, sabotage, and unscheduled urban renewal.** The rival
+  ladder is five labs the player can only ever FIGHT. Three escalating
+  missions that use them without a battle, each priced differently:
+  **(1) Espionage** — infiltrate, steal research or intel. Resolved on
+  Camo, speed and low mass, which is the half of the stat sheet combat
+  under-rewards: R148 and R149 both shipped because the Rumbler and the
+  Scamper had no reason to be built, and an infiltrator is a reason.
+  **(2) Sabotage** — break something of theirs; your creature can be CAUGHT,
+  and a caught creature lands in *their* containment, which is the mirror of
+  R8's Reorientation Wing. They can talk it round and field it against you.
+  **(3) Unscheduled urban renewal** — release a chimera into a city node.
+  It leaves the roster permanently and joins the loose board the breakout
+  engine already runs (`maxLoose` is 4), so the price of the mission is a
+  complication you will meet again.
+  *The tone constraint is load-bearing and needs saying out loud:* CLAUDE.md
+  forbids death language, so a flattened city is **evacuated, condemned and
+  rezoned**, buildings "retire loudly" the way vehicles already do, and the
+  only casualties are an insurance adjuster's afternoon and several
+  municipal bylaws. Every line of this goes through the R110 tone gate.
+  *Done when: a mission resolves without a battle and reads as a decision
+  rather than a dice roll; a creature caught on sabotage appears in that
+  rival's roster and can be met in a later fight; a released chimera appears
+  on the loose board and can be hunted back; and the tone gate passes on
+  every word of it.*
+
+- **R181 — Henchmen, and the end of being one person.** Every lane in this
+  game is capped because the player is a single pair of hands: the solo job
+  lane is "exactly one, always", and R116 turned the rest of the board into
+  a charge bucket for the same reason. Hires are the way out, and they cost
+  something other than money. Proposed, medium: named staff with a
+  speciality, a wage, quirks that cut both ways — a vet who halves infirmary
+  time and refuses anything unstable, a hand who never misses a feed and
+  reliably overfeeds — each holding ONE standing duty while the player is
+  away. Settled on the elapsed clock from a timestamp, exactly the shape
+  R116's `settleContracts` uses, so nothing runs in the background and a
+  week away pays a week. Their reports are what R107's welcome-back digest
+  was built to carry. A henchman can also run an R180 mission, which is how
+  espionage stops costing a chimera.
+  *The decision:* slots are few, wages scale with the empire (R152's lesson
+  — a cost that does not grow is a cost that stops mattering), and every
+  quirk is a real trade rather than a flat bonus.
+  *Done when: a week away is settled from timestamps alone with nothing
+  running in between; every henchman's quirk is legible in the digest; the
+  wage bill tracks the size of the operation; and no hire is strictly better
+  than another at the same price.*
 
 ### 9.29 The ceiling was the map (R152) — queued out of R138
 
