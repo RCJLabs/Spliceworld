@@ -1953,11 +1953,21 @@ async function main() {
     //     would be measured under settings this pass chose.
     await evaluate(`document.querySelector('#settings').click()`);
     await sleep(500);
-    const setPickers = await evaluate(`[...document.querySelectorAll('#overlay button[data-picker]:not([disabled])')].map((b) => b.dataset.picker)`);
-    if (!setPickers.length) note('the settings panel offered no picker, so none of its choices were committed');
+    //     THE PANEL DOES NOT USE `data-picker`. Screens wire their pickers
+    //     through `bindPickers`, which reads that attribute; Settings wires
+    //     four NAMED buttons by id and calls `openPicker`/`openPrompt`
+    //     directly. The first draft of this pass queried the screen
+    //     convention inside the panel and reported that it offered no picker
+    //     at all. Two conventions for "a button that opens a picker" is worth
+    //     a milestone of its own; this one just has to know about both.
+    const setPickers = await evaluate(`[
+      ...['#set-volume', '#set-theme', '#set-speed'],
+      ...[...document.querySelectorAll('#overlay [data-rename-slot]')].slice(0, 1).map(() => '[data-rename-slot]'),
+    ].filter((sel) => { const b = document.querySelector('#overlay ' + sel); return b && !b.disabled; })`);
+    if (!setPickers.length) note('the settings panel offered none of its four choices, so none were committed');
     let committed = 0;
-    for (const id of setPickers) {
-      await evaluate(`document.querySelector('#overlay button[data-picker="${id}"]')?.click()`);
+    for (const sel of setPickers) {
+      await evaluate(`document.querySelector('#overlay ${sel}')?.click()`);
       await sleep(450);
       const kind = await evaluate(`(() => {
         if (document.querySelector('#picker .prompt-input')) return 'prompt';
