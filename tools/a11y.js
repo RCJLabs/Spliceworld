@@ -1983,14 +1983,23 @@ async function main() {
             if (!b) return false; b.click(); return true; })()`)) continue;
           await sleep(450);
           offered += 1;
-          const rows = await evaluate(`document.querySelectorAll('#picker .pick-row').length`);
+          // AN ENABLED ROW, not the first one. A `.pick-row` carries the
+          // `disabled` attribute when the option is offered-but-refused — the
+          // juvenile in the breeding pen, the injured chimera in the briefing
+          // — and a disabled button swallows a synthesised click without a
+          // word. So the sweep pressed rows that could not be pressed and
+          // counted it as a pick: `breed-b`'s and the dismantle sheet's
+          // `onPick` both stayed uncalled while this reported success.
+          const rows = await evaluate(`document.querySelectorAll('#picker .pick-row:not([disabled])').length`);
           if (!rows) {
-            // An empty sheet is a real state and not this one.
+            // A sheet with nothing choosable is a real state — the Dex's
+            // catalogue sheets are ALL disabled rows on purpose — and not
+            // this one.
             await evaluate(`document.querySelector('#picker .pick-close')?.click()`);
             await sleep(200);
             continue;
           }
-          await evaluate(`document.querySelector('#picker .pick-row').click()`);
+          await evaluate(`document.querySelector('#picker .pick-row:not([disabled])').click()`);
           await sleep(500);
           if (!await evaluate(`document.getElementById('picker').hidden`)) {
             note(`${screen}/${pid}: choosing a row left the picker sheet open`);

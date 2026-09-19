@@ -78,14 +78,6 @@ const ALLOWED = [
       + 'synthesised click. Both are unreachable BECAUSE of rules this repo chose.',
   },
   {
-    file: 'splice/pens-ui.js', fn: /^(rows|vat-a|vat-b)$/,
-    why: 'The chaos vat\'s two donor pickers and the roster they build from. The fixture runs a '
-      + 'GESTATION so the countdown card and `vatRemainingMs` exist — and a vat that is running '
-      + 'is exactly when its donor pickers are disabled. The two states are mutually exclusive '
-      + 'in one save, and the countdown is the larger half. A second save shape would reach '
-      + 'them; it would also double this walk.',
-  },
-  {
     file: 'battle/autoplay.js', fn: 'whatDecidedIt',
     why: 'The aftermath line for a fight SENT rather than watched. R88\'s "Send them without me" '
       + 'only appears when the forecast calls a fight a walkover, and the walk needs its one '
@@ -118,7 +110,16 @@ function mergeDir(dir) {
     procs += 1;
     for (const r of d.result ?? []) {
       if (!r.url.startsWith(`file://${root}`)) continue;
-      const rel = r.url.slice(`file://${root}/`.length);
+      // The QUERY COMES OFF FIRST. tools/handlers.js renders each surface
+      // against a module imported fresh — `campaign/ui.js?run=230` — because a
+      // handler fired against the state two earlier handlers already changed is
+      // a sequence no player can produce (see its header). V8 reports each of
+      // those 260-odd imports under its own url, and the first draft of this
+      // merge kept the `?run=` on the path, failed to find the file, and threw
+      // the whole lane away. The cost was not a rounding error: `programmeHtml`,
+      // `signIn` and `beginFight` all RUN there, and all three were about to be
+      // reported as dead code to go and reach.
+      const rel = r.url.slice(`file://${root}/`.length).replace(/[?#].*$/, '');
       if (rel.includes('node_modules/') || !rel.endsWith('.js')) continue;
       const text = readSrc(rel);
       if (text === null) continue;
@@ -199,7 +200,13 @@ export function judge(dir) {
   const hit = (pat, value) => (pat instanceof RegExp ? pat.test(value) : pat === value);
   const excused = (m) => ALLOWED.find((a) => hit(a.file, m.rel) && hit(a.fn, m.name));
   const failures = misses.filter((m) => !excused(m)).sort((a, b) => a.rel.localeCompare(b.rel) || a.line - b.line);
-  return { procs, shipped, code, dead, anon, named, misses, unloaded, failures };
+  // An entry that excuses NOTHING is the rot this list exists to prevent: it
+  // reads as a live argument for skipping something that has since been
+  // reached, and the next person to shrink the list has to re-derive which
+  // half of it still means anything. Deleting a used one goes red as a
+  // failure; leaving a spent one goes red here.
+  const idle = ALLOWED.filter((a) => !misses.some((m) => hit(a.file, m.rel) && hit(a.fn, m.name)));
+  return { procs, shipped, code, dead, anon, named, misses, unloaded, failures, idle };
 }
 
 function collect() {
@@ -224,12 +231,13 @@ async function main() {
   // 2. Every NAMED function is called, or excused in writing.
   for (const f of r.failures) problems.push(`${f.rel}:${f.line} ${f.name}() is never called — ${f.decl}`);
 
-  // 3. The allowlist stays small and stays argued. The criterion is the size.
+  // 3. The allowlist stays small, stays argued, and carries nothing spent.
   const CAP = 10;
   if (ALLOWED.length >= CAP) problems.push(`the allowlist carries ${ALLOWED.length} entries, at or over the cap of ${CAP}`);
   for (const a of ALLOWED) {
     if (!a.why || a.why.length < 20) problems.push(`an allowlist entry for ${a.file} carries no reason`);
   }
+  for (const a of r.idle) problems.push(`the allowlist entry for ${a.file} ${a.fn} excuses nothing any more — delete it`);
 
   if (REPORT) {
     for (const m of r.misses.sort((a, b) => a.rel.localeCompare(b.rel) || a.line - b.line)) {

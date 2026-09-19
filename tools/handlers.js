@@ -319,6 +319,8 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   const firedBySelector = new Set();    // attributes a handler was BOUND BY
   const failures = [];
   let totalFired = 0;
+  // R115 — how many of those presses opened a sheet that then got an answer.
+  let sheetsAnswered = 0;
 
   // A handler's identity across renders: what it listens for, what selected
   // it, what it carries, and which of its identical siblings it is.
@@ -453,8 +455,34 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     const bySel = selectorAttr(h.sel);
     if (bySel && carried.has(bySel)) firedBySelector.add(bySel);
     totalFired++;
+    const sheetBefore = picker.bound.length;
     try { h.fn(fakeEvent(h.el)); } catch (err) {
       failures.push(`${surface.name}: ${h.sel} [${h.type}] threw ${err.constructor.name}: ${err.message}`);
+    }
+    // R115 — AND IF IT OPENED A SHEET, ANSWER IT. Opening a picker is half a
+    // press: the half that matters to the player is the row they choose, and
+    // every `onPick`/`onSubmit` body in the game — dismantle, rename, sign in
+    // a visitor, launch an operation, pick a parent — sat behind the half
+    // this gate stopped at. They read as dead code under V8 while the
+    // controls that open them counted as covered, which is the worst of both
+    // readings: green here, red there, and the bodies never run.
+    //
+    // The first ENABLED row, because a `.pick-row` carries `disabled` when
+    // the option is offered-but-refused, and firing that one commits a choice
+    // the sheet is telling the player they cannot make. A sheet whose every
+    // row is disabled is a catalogue rather than a chooser (the Dex opens
+    // one) and correctly commits nothing.
+    for (const b of picker.bound.slice(sheetBefore)) {
+      const el = b.el ?? {};
+      const row = b.type === 'click' && el.dataset?.value !== undefined && !el.disabled;
+      const go = b.type === 'click' && el.id === 'prompt-go';
+      if (!row && !go) continue;
+      try { b.fn(fakeEvent(el)); } catch (err) {
+        failures.push(`${surface.name}: ${h.sel} opened a sheet whose ${row ? 'row' : 'commit'} threw `
+          + `${err.constructor.name}: ${err.message}`);
+      }
+      sheetsAnswered++;
+      break;
     }
     return { live, root, ctx, keys };
   };
@@ -632,6 +660,7 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   return {
     failures: [...new Set(failures)],
     totalFired,
+    sheetsAnswered,
     surfaces: SURFACES.filter((f) => !f.fanout).length,
     denominator: [...denominator].sort(),
     controls,
@@ -649,5 +678,5 @@ if (isMain) {
   for (const m of r.missed) console.error(`handlers ✗  data-${m} is painted and nothing ever fired for it`);
   const bad = r.failures.length + r.missed.length;
   if (bad) { console.error(`\nhandlers ✗  ${bad} problem${bad === 1 ? '' : 's'} (${Date.now() - started}ms)`); process.exit(1); }
-  console.log(`handlers ✓  ${r.totalFired} fired across ${r.surfaces} surfaces · ${r.controls.length} controls pressed, ${r.parameters.length} parameters carried (${Date.now() - started}ms)`);
+  console.log(`handlers ✓  ${r.totalFired} fired across ${r.surfaces} surfaces · ${r.controls.length} controls pressed, ${r.parameters.length} parameters carried, ${r.sheetsAnswered} sheets answered (${Date.now() - started}ms)`);
 }
