@@ -3958,10 +3958,19 @@ const BREAKS = [
     // the launch rate goes straight back to the metronome this milestone
     // was written to break: seven independent cooldowns summing to 10.05 a
     // day that no constant can move.
+    //
+    // AIMED AT `runnableOps`, AND THE FIRST DRAFT WAS NOT. It patched the
+    // refusal inside `startOperation` instead and came back MISSED, because
+    // nothing that measures the PACE ever reaches that line: the walker asks
+    // `runnableOps` what it may launch, gets an empty list on an empty
+    // bucket, and never calls `startOperation` at all. The refusal down
+    // there is a real second line — a player can tap a board that was
+    // rendered before the bucket emptied — but it is belt to this brace, and
+    // a break has to patch the line that actually moves the number.
     n: 383, gate: SHARD_D, name: 'the board stops charging for a launch, and goes back to a metronome',
     file: 'campaign/operations.js',
-    anchor: '  if (!bucket.ready) return { ok: false, msg: fill(content.copy?.board?.no_leads, {}) };',
-    to: '  if (false) return { ok: false, msg: fill(content.copy?.board?.no_leads, {}) };',
+    anchor: '  const bucket = boardCharges(state, content, now);\n  if (!bucket.ready) return [];',
+    to: '  const bucket = boardCharges(state, content, now);\n  if (false) return [];',
   },
   {
     // …AND THE SAME DEFECT FROM THE OTHER END. The check stays, the spend

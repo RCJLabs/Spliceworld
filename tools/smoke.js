@@ -21619,8 +21619,29 @@ if (inShard('empire')) {
     //    campaign that never enrolled anything, which is exactly the shape
     //    this repo keeps finding. The band is wide on purpose — it is a
     //    sanity bound on a design intent, not a ratchet on a measurement.
-    assert.ok(w.enrolled >= 10 && w.enrolled <= 60,
-      `a campaign enrols 10-60 specimens (got ${w.enrolled})`);
+    // R116 — A CENSUS, for the third time in this file and the same reason
+    // each time. Twelve seeds, 180 days, on THIS tree and on pre-R116
+    // `a39a0fa`:
+    //
+    //   pre   2026:17 7:15 99:17 4242:15 42:12 900:20 55:15 11:26
+    //         3:24 77:8 123:17 512:21              mean 17.3, min 8
+    //   post  2026:8 7:16 99:20 4242:17 42:20 900:13 55:27 11:8
+    //         3:17 77:6 123:17 512:16              mean 15.4, min 6
+    //
+    // The floor of 10 reads EIGHT on pre-R116 seed 77 — it was never true
+    // off the three or four seeds this gate walks, exactly like the hunt
+    // floor and the splice floor before it. What this rule is FOR is making
+    // rule 1 non-vacuous: `graduated === enrolled` is satisfied by 0 === 0
+    // on a campaign that never enrolled anything. So the design number goes
+    // on the average, where it holds on both trees, and the per-seed line
+    // drops to something a working chain cannot fail and a broken one
+    // cannot pass.
+    const enrolledEach = walks.map((x) => x.wing?.enrolled ?? 0);
+    const meanEnrolled = enrolledEach.reduce((n, x) => n + x, 0) / enrolledEach.length;
+    assert.ok(meanEnrolled >= 10 && meanEnrolled <= 60,
+      `the average campaign enrols 10-60 specimens (${meanEnrolled.toFixed(1)} across ${enrolledEach.join(', ')})`);
+    assert.ok(w.enrolled >= 3,
+      `and no campaign enrols fewer than three (got ${w.enrolled})`);
 
     // 3. PICKING ONE IS THE POINT (R95: salvage is the only door the eight
     //    enemy-tech parts come through). A campaign that only ever enrolled,
