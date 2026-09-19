@@ -43,11 +43,14 @@ const JOBS = [
   { name: 'vault', file: 'tools/vault.js', env: {} },
   // R92 — the walk plays every system, and says so. R95 — and can a player
   // reach the content? The two gates ask about the SAME seven 180-day
-  // campaigns, so they share one lane and one set of walks: coverage runs
+  // campaigns, so they share one lane and one set of walks: diet runs
   // first and fills the walk cache, reach reads it. Split across two lanes
   // they walked fourteen campaigns for seven and put the suite 16s over
   // budget.
   { name: 'walks', files: ['tools/diet.js', 'tools/reach.js'], env: {} },
+  // R115 — the service worker, run against a stubbed cache. A second of
+  // arithmetic over promises; it rides the cheapest lane.
+  { name: 'worker', files: ['tools/worker.js'], env: {} },
 ];
 
 // R95 — LONGEST FIRST, FROM A NUMBER RATHER THAN FROM THE ARRAY ORDER.
@@ -60,7 +63,7 @@ const JOBS = [
 // seconds costs nothing: it decides order, never anything else.
 const COST = {
   'smoke:a': 111, 'smoke:b': 104, 'smoke:c': 132, 'smoke:d': 134,
-  walks: 77, vault: 24, handlers: 24, scopecheck: 2, roadmap: 1, saves: 1,
+  walks: 77, vault: 24, handlers: 24, scopecheck: 2, roadmap: 1, saves: 1, worker: 1,
 };
 const picked = (only ? JOBS.filter((j) => j.name === only || j.name.startsWith(`${only}:`)) : JOBS)
   .slice().sort((a, b) => (COST[b.name] ?? 0) - (COST[a.name] ?? 0));
