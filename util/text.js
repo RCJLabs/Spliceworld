@@ -28,6 +28,11 @@ export function copy(content, id, vars = {}) {
   return typeof at === 'string' ? fill(at, vars) : null;
 }
 
+export function fmtMoney(n) {
+  const v = Math.round(Number(n) || 0);
+  return `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString('en-US')}`;
+}
+
 // R114 — THE ONE CLEANER AND THE ONE ESCAPER, and the only place either is
 // explained. The tree had FIVE escapers and THREE copies of the strip rule;
 // they disagreed, and the weakest of each was the one with the most callers.

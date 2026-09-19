@@ -17,6 +17,7 @@ import { rngStream, pick } from '../util/rng.js';
 import { infirmaryGrants } from './facility.js';
 import { attend } from './feral.js';
 import { rushPrice } from './rush.js';
+import { fmtMoney } from '../util/text.js';
 
 const HOUR = 3600000;
 
@@ -117,7 +118,7 @@ export function treatInjury(state, chimeraId, content, now) {
     return { ok: false, msg: 'Too late — that one has already healed, one way or the other.' };
   }
   const cost = treatmentCost(chimera, content, now, state);
-  if (state.funds < cost) return { ok: false, msg: `Short by $${Math.ceil(cost - state.funds)}. The Infirmary does not take promises.` };
+  if (state.funds < cost) return { ok: false, msg: `Short by ${fmtMoney(Math.ceil(cost - state.funds))}. The Infirmary does not take promises.` };
 
   state.funds -= cost;
   const name = chimera.injury.name;

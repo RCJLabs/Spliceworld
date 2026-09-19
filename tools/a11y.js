@@ -34,6 +34,22 @@ import { sleep, serve, findChrome, connect, CHROME_CANDIDATES } from './cdp.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FLOOR = 40;          // px, both dimensions
+// R113 - THE TYPE FLOOR. 12px is the smallest text this game is allowed to
+// print, measured on the element that OWNS the sentence rather than on the
+// stylesheet: a rule at 0.72rem is 11.52px only until something nests it
+// inside a shrunken parent, and what a player squints at is the computed
+// value. Rides the contrast walk, so it is checked on every screen, in every
+// theme, at every save shape, for the cost of one extra field.
+//
+// Measured before it was written: 78 declarations in style.css under 12px,
+// the worst of them `.mode-tag` at 8.32px. Flooring all 78 costs +15px on one
+// screen (dex:foes) and breaks only the battle arena, which is the one screen
+// that does not scroll - 7 failures, all there. See ROADMAP R113.
+const TYPE_FLOOR = 12;     // px, the smallest computed font-size allowed
+// R113 - the two things a phone does to a layout that a desktop headless
+// browser never will: a reader who has turned their text up, and a cutout.
+const TEXT_SCALE = 1.5;    // 150% text, the accessibility setting people use
+const CUTOUT = 47;         // px, a notch the header has to clear
 const GUTTER = 6;          // px, between two adjacent controls
 const RAG = 1;             // px, how far into its own line a full-width row may start
 const BAND_TOP = 420;      // px, the wide end of the stylesheet's phone media query
@@ -324,7 +340,7 @@ const CONTRAST = `(() => {
     const px = parseFloat(cs.fontSize);
     const name = el.tagName.toLowerCase()
       + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
-    if (!grounds) { out.push({ sel: name, txt: txt.replace(/\\s+/g, ' ').slice(0, 34), unmeasured: true }); continue; }
+    if (!grounds) { out.push({ sel: name, txt: txt.replace(/\\s+/g, ' ').slice(0, 34), px, unmeasured: true }); continue; }
     // The worst ground it passes over: text that is legible on four stops of
     // five is text you cannot read a fifth of.
     let bg = grounds[0];
@@ -334,6 +350,7 @@ const CONTRAST = `(() => {
     out.push({
       sel: name,
       txt: txt.replace(/\\s+/g, ' ').slice(0, 34),
+      px,
       ratio: Math.round(worst * 100) / 100,
       need: large ? 3 : 4.5,
       color: cs.color,
@@ -740,6 +757,7 @@ async function main() {
     const seen = new Map();
     const pairs = new Map();
     const dim = new Map();
+    const small = new Map();
     const unpainted = new Map();
     const seeThrough = new Map();
     const cards = new Map();
@@ -773,6 +791,14 @@ async function main() {
         if (!c.opaque) seeThrough.set(`${c.host}|${c.sel}`, { ...c, where });
       }
       for (const t of await evaluate(CONTRAST)) {
+        // R113 - the type floor is judged on EVERY text node the walk sees,
+        // including the ones whose contrast cannot be read off a painted
+        // background. Being on a gradient is a reason not to know the ratio;
+        // it is not a reason to be allowed to print 9px.
+        if (t.px < TYPE_FLOOR) {
+          const key = `${t.sel}|${t.px}`;
+          if (!small.has(key)) small.set(key, { ...t, where });
+        }
         if (t.unmeasured) { unpainted.set(t.sel, { ...t, where }); continue; }
         // Keyed by what is WRONG (this selector, this pair of colours) and
         // not by the sentence, so one bad rule reports once however many
@@ -949,6 +975,12 @@ async function main() {
     // This is what keeps the gutter fix honest: Retreat stopped crowding
     // the settings gear by taking ten more pixels of footer, and in a
     // locked-height layout ten pixels come out of something else.
+    // R113 - AND IT SAYS WHAT THE COLUMN IS MADE OF. A failure that reports
+    // "clips 14px" tells you the size of the problem and nothing about where
+    // to take the 14px from; three separate fixes were aimed at this message
+    // by guesswork and all three were no-ops. The breakdown is the diagnosis:
+    // the chrome above and below, then every child of the arena with the
+    // height it actually took.
     const arenaFits = async (where) => {
       const over = await evaluate(`(() => {
         if (!document.body.classList.contains('in-battle')) return null;
@@ -957,13 +989,66 @@ async function main() {
           const el = document.querySelector(sel);
           if (!el) continue;
           const spill = el.scrollHeight - el.clientHeight;
-          if (spill > 1) out.push(sel + ' clips ' + Math.round(spill) + 'px of its own content');
+          if (spill > 1) {
+            let why = '';
+            if (sel === '.arena') {
+              const kids = [...el.children].map((k) => (k.className || k.tagName).toString().trim().split(/\\s+/)[0]
+                + ' ' + Math.round(k.getBoundingClientRect().height)).join(', ');
+              const box = (q) => { const n = document.querySelector(q); return n ? Math.round(n.getBoundingClientRect().height) : 0; };
+              why = ' [' + innerHeight + 'dvh = header ' + box('header') + ' + footer ' + box('footer')
+                + ' + main ' + box('main') + '; column: ' + kids + ']';
+            }
+            out.push(sel + ' clips ' + Math.round(spill) + 'px of its own content' + why);
+          }
         }
         return out;
       })()`);
       if (over === null) note(`${where}: the War Room did not enter battle mode, so nothing checked that the arena fits`);
       else for (const x of over) note(`${where}: the arena does not scroll, and ${x}`);
     };
+
+    // ---- 1i. R113 - AND THE HEADER CLEARS A CUTOUT -----------------------
+    //
+    //      `viewport-fit=cover` lets the page paint under a notch; the insets
+    //      are what stop it painting the GAME there. A headless desktop
+    //      browser has no notch, so style.css reads each inset as
+    //      `var(--safe-*, env(safe-area-inset-*))` - the env is what ships,
+    //      the variable is what this sets. Asking whether the rule exists in
+    //      the source would pass on a rule that resolves to nothing.
+    {
+      await evaluate(`document.documentElement.style.setProperty('--safe-top', '${CUTOUT}px')`);
+      await sleep(300);
+      const clears = await evaluate(`(() => {
+        const header = document.querySelector('header');
+        if (!header) return null;
+        const cs = getComputedStyle(header);
+        const box = header.getBoundingClientRect();
+        // The header's CONTENT box, not its first child: the settings gear is
+        // absolutely positioned at the top of the header and reports a rect
+        // top of 0 whatever the padding does, which is a true fact about a
+        // decoration and a useless one about the layout.
+        const content = box.top + parseFloat(cs.paddingTop);
+        // …and the in-flow children, which is what a player reads.
+        const flowed = [...header.children]
+          .filter((el) => getComputedStyle(el).position !== 'absolute')
+          .map((el) => el.getBoundingClientRect())
+          .filter((r) => r.height > 0);
+        return {
+          pad: parseFloat(cs.paddingTop),
+          content: Math.round(content),
+          first: flowed.length ? Math.round(Math.min(...flowed.map((r) => r.top))) : null,
+        };
+      })()`);
+      if (!clears) note('there is no header, so nothing checked that it clears a cutout');
+      else if (clears.content < CUTOUT) {
+        note(`with a ${CUTOUT}px cutout the header's content box starts at ${clears.content}px, under the notch`
+          + ` (padding-top resolved to ${clears.pad}px)`);
+      } else if (clears.first !== null && clears.first < CUTOUT) {
+        note(`with a ${CUTOUT}px cutout the header pads correctly but its first line still starts at ${clears.first}px`);
+      }
+      await evaluate(`document.documentElement.style.removeProperty('--safe-top')`);
+      await sleep(200);
+    }
 
     // R99 — the source half of the reduced-motion rule. No browser needed:
     // it asks whether every moving thing HAS an off-switch, which is the only
@@ -1680,7 +1765,6 @@ async function main() {
       if (before === '') note('the rename prompt opened with no name in it');
     }
 
-
     // ---- everything measured across every view, now that the walk is done -
     const controls = [...seen.values()].sort((a, b) => Math.min(a.h, a.w) - Math.min(b.h, b.w));
     const under = controls.filter((c) => c.h < FLOOR || c.w < FLOOR);
@@ -1706,6 +1790,151 @@ async function main() {
       note(`${p.where}: ${p.a} sits ${p.gap}px from ${p.b}, under the ${GUTTER}px gutter`);
     }
 
+    // ---- 1d2. R113 - AND EVERY SAVE SHAPE, not just the one this gate
+    //      builds. The lab fixture above is a mid-game save with everything
+    //      alive, which is the right shape for measuring CONTROLS. It is the
+    //      wrong shape for measuring TYPE AND COLOUR, because what a screen
+    //      prints depends on what the save holds: a fresh save is all empty
+    //      states and first-run prose, and a day-180 one is grades, badges and
+    //      lists nothing else reaches. R113's criterion names both by name.
+    //
+    //      Only the CONTRAST walk is repeated - it carries the type floor too
+    //      - because the 40px floor and the 6px gutter are properties of the
+    //      stylesheet and do not move with the save. Two reloads and a lap of
+    //      the tab bar each, rather than two more full walks.
+    //      IT DOES NOT CALL `foundingPass`. The first draft did, to get past
+    //      the picker, and `foundingPass` ends by writing the LAB FIXTURE back
+    //      and reloading — so both passes measured the same mid-game save the
+    //      walk had already measured, twice, and reported clean. The battery
+    //      is what said so: a contrast break on `.tier-S`, a badge only a
+    //      180-day campaign can print, went MISSED. Clearing both stores and
+    //      pressing a lab is four lines; borrowing a helper that puts the
+    //      state back was one, and it silently answered a different question.
+    const shapeSeen = new Map();
+    const shapePass = async (label, setup) => {
+      // Both stores, per R100: localStorage alone means "evicted player" and
+      // the campaign comes back out of IndexedDB.
+      await evaluate(`(async () => {
+        localStorage.clear();
+        await new Promise((r) => { const q = indexedDB.deleteDatabase('spliceworld'); q.onsuccess = r; q.onerror = r; q.onblocked = r; });
+      })()`);
+      await setup();
+      await send('Page.navigate', { url });
+      await sleep(2200);
+      // A save-less browser opens on the founding choice; pick a lab and take
+      // whatever the first splice puts up, because what this pass is for is
+      // the screens BEHIND that, which no other pass reaches on a fresh save.
+      if (await evaluate(`!!document.querySelector('.founding .lab-pick')`)) {
+        await evaluate(`document.querySelector('.founding .lab-pick').click()`);
+        await sleep(1400);
+        for (let i = 0; i < 3; i++) {
+          if (await evaluate(`document.querySelector('#overlay').hidden`)) break;
+          await evaluate(`(() => { const b = document.querySelector('#overlay button'); if (b) b.click(); })()`);
+          await sleep(700);
+        }
+      }
+      if (await evaluate(`!!document.querySelector('.founding')`)) {
+        note(`${label}: the founding picker never closed, so nothing behind it was measured`);
+        return;
+      }
+      const tabs = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
+      if (!tabs.length) { note(`${label}: the shell painted no tabs, so nothing was measured on it`); return; }
+      const saw = new Set();
+      for (const sc of tabs) {
+        await evaluate(`document.querySelector('#tabs button[data-screen="${sc}"]')?.click()`);
+        await sleep(500);
+        await evaluate(OPEN_DETAILS);
+        await sleep(300);
+        for (const t of await evaluate(CONTRAST)) {
+          saw.add(t.sel);
+          if (t.px < TYPE_FLOOR) {
+            const key = `${label}|${t.sel}|${t.px}`;
+            if (!small.has(key)) small.set(key, { ...t, where: `${label}:${sc}` });
+          }
+          if (t.unmeasured) continue;
+          const key = `${label}|${t.sel}|${t.color}|${t.bg}`;
+          if (!dim.has(key) || dim.get(key).ratio > t.ratio) dim.set(key, { ...t, where: `${label}:${sc}` });
+        }
+      }
+      shapeSeen.set(label, saw);
+    };
+    await shapePass('fresh', async () => {});
+    {
+      const { walkedSave } = await import('./fixtures.js');
+      const day180 = walkedSave({ days: 180 });
+      await shapePass('day180', async () => {
+        await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(day180))})`);
+      });
+    }
+    // AND THE TWO SHAPES HAVE TO BE TWO SHAPES. This is the assertion the
+    // first draft needed and did not have: if a save fails to load, or a
+    // helper quietly puts another one back, both laps measure the same screens
+    // and report clean for the wrong reason. A fresh save and a 180-day
+    // campaign each print things the other never does — a locked node and an
+    // S-tier badge are the extremes of it — so if either set is a subset of
+    // the other, one of these passes did not happen.
+    {
+      const a = shapeSeen.get('fresh');
+      const b = shapeSeen.get('day180');
+      if (a && b) {
+        const onlyA = [...a].filter((x) => !b.has(x));
+        const onlyB = [...b].filter((x) => !a.has(x));
+        if (!onlyA.length || !onlyB.length) {
+          note(`the fresh and day-180 laps drew the same ${a.size} and ${b.size} selectors`
+            + ` (${onlyA.length} and ${onlyB.length} of their own), so one of the two saves never loaded`);
+        }
+      }
+    }
+
+    // ---- 1h. R113 - AND IT SURVIVES A READER WHO TURNED THE TEXT UP ------
+    //
+    //      Everything in this stylesheet is sized in `rem`, so the OS text
+    //      setting scales the whole layout rather than one paragraph of it.
+    //      That is the right way round, and it is also the way that overflows.
+    //      Measured by moving the root size and asking the SAME containment
+    //      question the 100% pass asks.
+    //
+    //      IT IS A LAP OF THE TAB BAR, NOT ONE READING, and that is the whole
+    //      value of it. The first draft of this probe scaled the text and
+    //      measured whatever screen the walk happened to be standing on. It
+    //      reported zero, which is how R113's entry came to record "150% text
+    //      overflows nothing" as already true. It was not: a held node row on
+    //      the War Room ran 86px past its card, because `.encounter` is a
+    //      flex row that does not wrap and a held node puts THREE children in
+    //      it. One screen out of six is not an answer about the layout.
+    //
+    //      Runs on the day-180 save the pass above just loaded - the busiest
+    //      shape the game has, and the only one with held territory in it.
+    {
+      await evaluate(`document.documentElement.style.fontSize = '${16 * TEXT_SCALE}px'`);
+      await sleep(400);
+      const spilt = new Map();
+      const tabs = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
+      for (const sc of tabs.length ? tabs : [null]) {
+        if (sc) {
+          await evaluate(`document.querySelector('#tabs button[data-screen="${sc}"]')?.click()`);
+          await sleep(500);
+          await evaluate(OPEN_DETAILS);
+          await sleep(300);
+        }
+        for (const o of await evaluate(CONTAINED)) {
+          const worst = Math.max(o.right, o.left, o.past);
+          if (worst > 1) {
+            const key = `${sc}|${o.sel}`;
+            if (!spilt.has(key) || spilt.get(key).worst < worst) spilt.set(key, { ...o, sc, worst });
+          }
+        }
+      }
+      for (const o of [...spilt.values()].sort((a, b) => b.worst - a.worst)) {
+        note(`at ${Math.round(TEXT_SCALE * 100)}% text on ${o.sc}: ${o.sel} "${o.label}"`
+          + ` leaves its ${o.card} or the phone by ${Math.round(o.worst)}px`);
+      }
+      await evaluate(`document.documentElement.style.fontSize = ''`);
+      await sleep(300);
+    }
+
+    // Nothing reads the DOM after this, so there is no need to navigate back.
+
     // ---- 1f. and every word of it can be read off the screen -------------
     const contrast = [...dim.values()].sort((a, b) => a.ratio - b.ratio);
     if (REPORT) {
@@ -1716,6 +1945,18 @@ async function main() {
     }
     for (const t of contrast.filter((x) => x.ratio < x.need)) {
       note(`${t.where}: ${t.sel} "${t.txt}" reads ${t.ratio}:1 against what is behind it, under the ${t.need}:1 floor (${t.color} on ${t.bg})`);
+    }
+
+    // ---- 1f2. R113 - and is big enough to read at all --------------------
+    const tiny = [...small.values()].sort((a, b) => a.px - b.px);
+    if (REPORT) {
+      for (const t of tiny.slice(0, 40)) {
+        console.log(`  ${String(t.px).padStart(6)}px  ${t.where.padEnd(14)} ${t.sel}  "${t.txt}"`);
+      }
+      console.log('');
+    }
+    for (const t of tiny) {
+      note(`${t.where}: ${t.sel} "${t.txt}" prints at ${t.px}px, under the ${TYPE_FLOOR}px type floor`);
     }
     if (REPORT) {
       for (const c of cards.values()) {
@@ -1864,7 +2105,7 @@ async function main() {
     for (const p of problems) console.error(`  · ${p}`);
     process.exit(1);
   }
-  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor · every full-width row starts at the left of it · every dialog card paints its own ground · an unchanged tick touches nothing · a tap rebuilds one card · a screen you left costs nothing · the Dex paints what you can see · a week away says what it did · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
+  console.log(`a11y ✓  every control clears ${FLOOR}px and sits ${GUTTER}px from its neighbour · nothing sits on top of anything else · nothing leaves its card or the phone · every word clears the contrast floor, in every theme and on a fresh save and a day-180 one · nothing prints under ${TYPE_FLOOR}px · nothing leaves its card at ${Math.round(TEXT_SCALE * 100)}% text · the header clears a ${CUTOUT}px cutout · every full-width row starts at the left of it · every dialog card paints its own ground · an unchanged tick touches nothing · a tap rebuilds one card · a screen you left costs nothing · the Dex paints what you can see · a week away says what it did · focus visible · focus survives a repaint · wire live · nav current · both modals are dialogs · nothing moves when the OS asks it not to · the game is playable from the keyboard`);
 }
 
 // R88 — only when RUN, not when imported. This module owns the one fixture

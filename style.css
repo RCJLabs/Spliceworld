@@ -1,3 +1,33 @@
+/* R113 - THE CUTOUT AND THE ROUNDED CORNERS.
+   `viewport-fit=cover` in index.html lets the page paint under a notch and a
+   home indicator; these insets are what stop it painting the GAME there. The
+   header, main and footer each add `env(safe-area-inset-*)` to the padding
+   they already had, so on a phone with no cutout every value resolves to 0 and
+   nothing moves. The arena carries its own pair because `body.in-battle`
+   overrides both.
+
+   Every inset reads `var(--safe-*, env(safe-area-inset-*))`. The env is the
+   real thing and is what ships; the variable exists so tools/a11y.js can set a
+   47px cutout and measure that the header actually clears it, which a headless
+   desktop browser has no notch to produce on its own. A rule nobody can test
+   is a rule nobody knows works.
+
+   The other half is in tools/smoke.js, because the simulation passes whether
+   or not the env behind the variable ever resolves - and it resolves to ZERO
+   on every device without `viewport-fit=cover`. Smoke reads the shell for that
+   attribute and this file for the var() form. See ROADMAP R113. */
+
+/* R113 - THE 12px TYPE FLOOR.
+   Nothing in this file may declare a font-size under 0.75rem. 78 rules did,
+   the worst at 0.52rem (8.32px), and 58% of the text on a fresh screen was
+   under 12px. tools/a11y.js measures the COMPUTED size on every text node,
+   on every screen, in every theme, so a new rule under the floor fails the
+   build rather than waiting for somebody to squint at it.
+
+   The hierarchy that size used to carry is carried by colour, weight and
+   style instead - .lineage is italic and muted, .fine-print is muted, a
+   badge is a filled pill. Those still read at 12px; 8.32px did not read at
+   all. See ROADMAP R113. */
 /* Spliceworld — mad-lab theme. Mobile-first: must hold together at 380px. */
 
 :root {
@@ -132,7 +162,7 @@ body {
   min-height: 100vh;
 }
 
-header { text-align: center; padding: 14px 12px 4px; }
+header { text-align: center; padding: calc(14px + var(--safe-top, env(safe-area-inset-top))) calc(12px + var(--safe-right, env(safe-area-inset-right))) 4px calc(12px + var(--safe-left, env(safe-area-inset-left))); }
 
 h1 {
   margin: 0;
@@ -162,7 +192,7 @@ h1 span { color: var(--zap); }
   border-bottom: none;
   border-radius: 10px 10px 0 0;
   padding: 10px 2px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -275,7 +305,7 @@ main {
   width: 100%;
   max-width: 560px;
   margin: 0 auto;
-  padding: 10px 12px 20px;
+  padding: 10px calc(12px + var(--safe-right, env(safe-area-inset-right))) 20px calc(12px + var(--safe-left, env(safe-area-inset-left)));
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -323,10 +353,10 @@ main {
 .boot-fail-card { width: 100%; max-width: 420px; text-align: center; }
 .boot-fail-card h1 { margin: 0 0 8px; font-size: 1.05rem; color: var(--danger-soft); text-transform: none; letter-spacing: 0; }
 .boot-fail-card p { margin: 0 0 4px; font-size: 0.82rem; color: var(--text); line-height: 1.4; }
-.boot-fail-card code { background: var(--well); padding: 1px 4px; border-radius: 4px; font-size: 0.88em; }
+.boot-fail-card code { background: var(--well); padding: 1px 4px; border-radius: 4px; font-size: 0.82rem; }
 .boot-fail-card .big-btn { margin-top: 14px; }
 
-.save-info { margin: 8px 0 0; font-size: 0.7rem; color: var(--muted); }
+.save-info { margin: 8px 0 0; font-size: 0.75rem; color: var(--muted); }
 
 .frame-picker { display: flex; flex-wrap: wrap; gap: 6px; }
 .frame-picker button {
@@ -355,7 +385,7 @@ main {
 
 .slot { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .slot span {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
@@ -411,7 +441,7 @@ main {
 }
 .econ-row .econ-label {
   display: block;
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
@@ -445,7 +475,7 @@ main {
 .animal-info { flex: 1; min-width: 0; }
 .animal-info h4 { margin: 0; font-size: 1rem; color: var(--goo); }
 .animal-info .sex { color: var(--zap); font-weight: 400; }
-.animal-info .meta { margin: 2px 0; font-size: 0.68rem; color: var(--muted); }
+.animal-info .meta { margin: 2px 0; font-size: 0.75rem; color: var(--muted); }
 
 .cond-bar {
   height: 10px;
@@ -459,7 +489,7 @@ main {
 .tier-gleaming { background: var(--goo); }
 .tier-fine { background: var(--sta); }
 .tier-scruffy { background: var(--danger-2); }
-.cond-label { margin: 0 0 4px; font-size: 0.68rem; color: var(--muted); }
+.cond-label { margin: 0 0 4px; font-size: 0.75rem; color: var(--muted); }
 
 .care-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
 .care-row button {
@@ -469,7 +499,7 @@ main {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 7px 4px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 .care-row button:disabled { opacity: 0.6; cursor: default; }
@@ -512,7 +542,7 @@ main {
   display: inline-block;
   padding: 1px 7px;
   border-radius: 999px;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -560,7 +590,7 @@ main {
 .ceremony h3 { margin: 0 0 8px; font-size: 1.05rem; color: var(--goo); text-transform: none; letter-spacing: 0; }
 .grad-portrait { max-width: 220px; margin: 0 auto; }
 .grad-portrait svg { width: 100%; height: auto; }
-.fine-print { font-size: 0.72rem; color: var(--muted); }
+.fine-print { font-size: 0.75rem; color: var(--muted); }
 .ceremony-btns { display: flex; gap: 8px; margin-top: 10px; }
 .ceremony-btns .big-btn { margin-top: 0; flex: 2; }
 .ceremony-btns #grad-no {
@@ -578,7 +608,7 @@ main {
 .settings-card h3 { text-align: center; }
 .settings-heading {
   margin: 12px 0 4px;
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
@@ -601,7 +631,7 @@ main {
 .slot-row.is-active { border-color: var(--goo); }
 .slot-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 140px; }
 .slot-badge {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--on-accent);
@@ -611,7 +641,7 @@ main {
   vertical-align: middle;
 }
 .slot-actions { display: flex; gap: 6px; flex: 0 0 auto; }
-.slot-actions .care-train, .slot-actions .pen-dismantle { margin: 0; padding: 5px 8px; font-size: 0.68rem; }
+.slot-actions .care-train, .slot-actions .pen-dismantle { margin: 0; padding: 5px 8px; font-size: 0.75rem; }
 
 /* R75 — was `infinite`. The element is replaced by the poof at 0.55 ×
    CEREMONY_MS (1155 ms), so nine iterations of 0.14 s cover the whole window
@@ -656,13 +686,13 @@ main {
   gap: 8px;
 }
 .phys-head span {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
 }
 .phys-head strong { font-size: 0.85rem; color: var(--goo); text-align: right; }
-.phys-row p { margin: 3px 0 0; font-size: 0.74rem; color: var(--text); opacity: 0.85; }
+.phys-row p { margin: 3px 0 0; font-size: 0.75rem; color: var(--text); opacity: 0.85; }
 
 .settle { margin: 4px 0; font-size: 0.75rem; color: var(--zap); }
 .settle.settled { color: var(--goo); }
@@ -688,6 +718,21 @@ main {
 
 .encounter {
   display: flex;
+  /* R113: a HELD node puts three children in this row — the description, the
+     HELD tag and the Spar button — where every other status puts two, and the
+     button is `flex: 0 0 auto`. At 150% text the row ran 86px past its card
+     rather than giving way. Wrapping costs nothing at 100%, where it already
+     fits, and at 150% the tag and the button drop under the description
+     instead of squeezing it.
+
+     `.encounter > div { flex: 1 1 auto; min-width: 0 }` was shipped beside
+     this and then taken back out: measured against the exact stylesheet of
+     the commit before, EITHER one alone brings the row from 86px over to
+     12px inside. Two rules for one defect means a break aimed at either is
+     caught by the other, which is a rule nothing can go red for. Wrapping is
+     the one kept because it is one declaration and because it keeps the
+     description readable rather than shrinking it. */
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
@@ -716,24 +761,33 @@ main {
    message box under the field and the command menu under that. The shell
    goes fixed-height in battle mode so nothing can push the menu off. */
 
+/* R113 - THE ARENA PAYS FOR THE TYPE FLOOR OUT OF ITS CHROME.
+   This is the one screen in the game that does not scroll: `100dvh` with
+   `overflow: hidden`, so every pixel the 12px floor added to the tab bar, the
+   ticker and the unit tiles had to come off something or be clipped. It was
+   clipped - 30px of the arena's own content, measured.
+   The 30px comes back from PADDING AND GAPS, not from `.stage`, whose
+   `min-height` is the creature you are looking at. Header 6->4, main 8/6->6/4,
+   footer 12->8, the column gap 8->6 and each unit tile 8->6. Nothing the
+   player reads got smaller; the space around it did. See ROADMAP R113. */
 body.in-battle { height: 100dvh; overflow: hidden; }
-body.in-battle header { padding: 6px 12px 0; }
+body.in-battle header { padding: calc(4px + var(--safe-top, env(safe-area-inset-top))) calc(12px + var(--safe-right, env(safe-area-inset-right))) 0 calc(12px + var(--safe-left, env(safe-area-inset-left))); }
 body.in-battle h1 { font-size: 1.15rem; letter-spacing: 0.1em; }
 body.in-battle .tagline { display: none; }
 body.in-battle .tabs { margin-top: 4px; }
-body.in-battle .tabs button { padding: 6px 2px; font-size: 0.66rem; }
-body.in-battle main { padding: 8px 10px 6px; overflow: hidden; min-height: 0; }
+body.in-battle .tabs button { padding: 6px 2px; font-size: 0.75rem; }
+body.in-battle main { padding: 6px 10px 4px; overflow: hidden; min-height: 0; }
 body.in-battle .screen { min-height: 0; height: 100%; }
 /* R80 — Retreat used to end 1.5px above the settings gear. Battle mode
    squeezes every band in the shell, and the two it squeezed together belong
    to different systems: one ends the fight, one opens the options. */
-body.in-battle footer { padding: 12px 8px 2px; }
-body.in-battle .ticker { font-size: 0.66rem; }
+body.in-battle footer { padding: 8px calc(8px + var(--safe-right, env(safe-area-inset-right))) calc(2px + var(--safe-bottom, env(safe-area-inset-bottom))) calc(8px + var(--safe-left, env(safe-area-inset-left))); }
+body.in-battle .ticker { font-size: 0.75rem; }
 
 .arena {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   height: 100%;
   min-height: 0;
 }
@@ -742,7 +796,12 @@ body.in-battle .ticker { font-size: 0.66rem; }
 
 .stage {
   position: relative;
-  flex: 1 1 auto;
+  /* R113 - `flex: 1 1 auto` -> `1 1 0`. A flexible element in a height-locked
+     column should take what the others leave, and with an `auto` basis this
+     one took its CONTENT height instead. It was not what pinned the stage at
+     280px - the `min-height: 760px` query below was - but it is the rule that
+     makes the column shrink predictably now that the floor has room. */
+  flex: 1 1 0;
   min-height: 210px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -767,7 +826,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .turn-badge {
   background: var(--goo);
   color: var(--on-accent);
-  font-size: 0.56rem;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   padding: 2px 7px;
@@ -776,14 +835,14 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .stage-title {
   flex: 1;
   min-width: 0;
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .mode-tag {
-  font-size: 0.52rem;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.09em;
   padding: 2px 6px;
@@ -857,7 +916,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 }
 .cls-chip {
   flex: 0 0 auto;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   line-height: 1;
   padding: 2px 4px;
   border-radius: 5px;
@@ -899,15 +958,15 @@ body.in-battle .ticker { font-size: 0.66rem; }
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .st-row { display: flex; gap: 3px; margin-left: auto; }
-.st { font-style: normal; font-size: 0.6rem; }
+.st { font-style: normal; font-size: 0.75rem; }
 .st-bad { color: var(--danger-soft); }
 .st-good { color: var(--goo); }
 
-.sta-line, .cannon-line { display: flex; align-items: center; gap: 6px; font-size: 0.58rem; color: var(--muted); }
+.sta-line, .cannon-line { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--muted); }
 .sta-line .meter, .cannon-line .meter { flex: 1; margin: 3px 0 0; height: 5px; }
 .cannon-line.is-idle { display: none; }
 
@@ -993,7 +1052,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   white-space: nowrap;
   max-width: 100%;
 }
-.mv-sub { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 0.62rem; color: var(--muted); }
+.mv-sub { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 0.75rem; color: var(--muted); }
 .mv-sub b { color: var(--danger-soft); }
 .mv-sub i { font-style: normal; }
 .mv-more, .mv-swap { border-color: var(--zap); }
@@ -1001,7 +1060,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .mv-empty { border: 1px dashed var(--line); background: transparent; opacity: 0.35; border-radius: 10px; }
 
 .fx {
-  font-size: 0.55rem;
+  font-size: 0.75rem;
   font-weight: 800;
   padding: 0 4px;
   border-radius: 999px;
@@ -1017,7 +1076,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 /* Parenthesised and spaced on purpose: "~84" next to "95%" with a hairline
    gap renders as "8495%", which is exactly the unreadable thing this phase
    exists to remove. */
-.mv-acc { font-size: 0.82em; color: var(--muted); margin-left: 0.35em; }
+.mv-acc { font-size: 0.75rem; color: var(--muted); margin-left: 0.35em; }
 /* A finisher is good news for the player, so it is not a red cross — that
    reads as "unavailable" and means the opposite of what it says. */
 .mv-lethal { color: var(--goo); margin-left: 0.3em; font-weight: 700; }
@@ -1025,13 +1084,13 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .util-row { display: grid; grid-auto-flow: column; gap: 6px; }
 .ut {
   min-width: 0;
-  padding: 8px 4px;
+  padding: 6px 4px;
   background: var(--panel);
   color: var(--muted);
   border: 1px solid var(--line);
   border-radius: 10px;
   font: inherit;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 .ut b { color: var(--text); font-size: 0.8rem; }
@@ -1043,7 +1102,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   padding: 20px;
   text-align: center;
   font: inherit;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   letter-spacing: 0.1em;
   color: var(--muted);
   background: transparent;
@@ -1107,11 +1166,11 @@ body.in-battle .ticker { font-size: 0.66rem; }
   background: var(--well);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   max-height: 46vh;
   overflow-y: auto;
 }
-.battle-log p { margin: 0 0 4px; font-size: 0.72rem; color: var(--text); opacity: 0.9; }
+.battle-log p { margin: 0 0 4px; font-size: 0.75rem; color: var(--text); opacity: 0.9; }
 .battle-log p:last-child { color: var(--goo); opacity: 1; }
 .battle-log .log-bark { color: var(--zap); font-style: italic; }
 
@@ -1143,7 +1202,12 @@ body.in-battle .ticker { font-size: 0.66rem; }
 }
 
 /* Taller phones get a roomier field; short ones keep the menu reachable. */
-@media (min-height: 760px) { .stage { min-height: 280px; } .mv { min-height: 54px; } }
+/* R113 - 280px -> 260px. THIS is the floor the arena was resting on, not the
+   base rule: the gate measures at 780dvh, so this query applies and pinned the
+   stage at exactly 280px through three fixes aimed at the wrong number. With
+   12px type the chrome above and below is taller, and 280 is 14px more than a
+   780px phone has left to give. */
+@media (min-height: 760px) { .stage { min-height: 260px; } .mv { min-height: 54px; } }
 @media (max-height: 640px) {
   .msg-box { min-height: 44px; }
   .mv { min-height: 40px; padding: 5px 8px; }
@@ -1186,7 +1250,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 
 .held-tag, .locked-tag {
   flex: 0 0 auto;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   padding: 4px 8px;
@@ -1198,7 +1262,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .node-locked { opacity: 0.5; }
 .captive { border-color: var(--zap); }
 .captive .countdown { color: var(--zap); }
-.news-feed p { margin: 0 0 5px; font-size: 0.74rem; color: var(--text); opacity: 0.9; }
+.news-feed p { margin: 0 0 5px; font-size: 0.75rem; color: var(--text); opacity: 0.9; }
 .cannon-bar { margin-top: 5px; }
 .act-capture { border-color: var(--zap) !important; color: var(--zap); font-weight: 700; }
 
@@ -1219,7 +1283,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .encounter.contested button { background: var(--danger); color: var(--on-accent); }
 .contested-tag {
   flex: 0 0 auto;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   padding: 4px 8px;
@@ -1232,13 +1296,13 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .contest-intel { color: var(--danger-soft); }
 .econ-suspended {
   display: block;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--danger-soft);
 }
 .econ-next {
   display: block;
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--muted);
   letter-spacing: 0.02em;
@@ -1255,7 +1319,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   gap: 8px;
 }
 .region-progress {
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--muted);
@@ -1271,7 +1335,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   border-left: 3px solid var(--accent);
   background: var(--well);
   border-radius: 0 6px 6px 0;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1.45;
   color: var(--text);
 }
@@ -1279,7 +1343,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .region-card.is-locked h3 { color: var(--muted); }
 .region-locked {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--warn);
 }
@@ -1367,7 +1431,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -1418,14 +1482,14 @@ body.in-battle .ticker { font-size: 0.66rem; }
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--muted);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .fold-summary {
   margin: -4px 0 12px;
   padding-left: 22px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .fold-summary strong { color: var(--accent); }
@@ -1441,7 +1505,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   padding: 1px 7px;
   margin: 1px 2px 1px 0;
   border-radius: 999px;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
   border: 1px solid var(--line);
   background: var(--panel-2);
@@ -1464,7 +1528,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 }
 .pairing-forecast .econ-label {
   margin: 0 0 6px;
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
@@ -1474,12 +1538,12 @@ body.in-battle .ticker { font-size: 0.66rem; }
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 2px 10px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   padding: 3px 0;
   border-top: 1px solid var(--line);
 }
 .pairing-row:first-of-type { border-top: 0; }
-.pairing-row em { font-style: normal; color: var(--muted); font-size: 0.66rem; }
+.pairing-row em { font-style: normal; color: var(--muted); font-size: 0.75rem; }
 .pairing-odds { color: var(--muted); font-variant-numeric: tabular-nums; }
 .pairing-odds strong { color: var(--text); }
 
@@ -1558,7 +1622,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   border-radius: 999px;
   background: var(--well);
   color: var(--muted);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 .dex-chip strong { color: var(--text); font-variant-numeric: tabular-nums; }
@@ -1566,7 +1630,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
 .dex-chip-done strong { color: var(--goo); }
 .list-group {
   margin: 10px 0 3px;
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -1588,7 +1652,7 @@ body.in-battle .ticker { font-size: 0.66rem; }
   border: 1px solid var(--goo);
   border-radius: 8px;
   padding: 7px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 .settings-rule {
@@ -1633,13 +1697,13 @@ footer { position: relative; padding-right: 46px !important; }
   border-radius: 8px;
   font-size: 0.78rem;
 }
-.lineage { color: var(--muted); font-size: 0.68rem; font-style: italic; }
+.lineage { color: var(--muted); font-size: 0.75rem; font-style: italic; }
 .vial { width: 15px; height: 22px; flex: 0 0 auto; }
 
 footer {
   border-top: 1px solid var(--line);
   background: var(--well);
-  padding: 8px 12px;
+  padding: 8px calc(12px + var(--safe-right, env(safe-area-inset-right))) calc(8px + var(--safe-bottom, env(safe-area-inset-bottom))) calc(12px + var(--safe-left, env(safe-area-inset-left)));
 }
 .ticker {
   margin: 0;
@@ -1655,7 +1719,7 @@ footer {
   margin: 2px 0 6px;
   padding: 5px 10px;
   border-radius: 999px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   display: inline-block;
@@ -1720,7 +1784,7 @@ footer {
 }
 .vault-species > .bay-head .fold-caret { color: var(--muted); }
 .vault-species .token-list { margin-top: 0; }
-.vault-species .token-list li { background: var(--panel); font-size: 0.74rem; }
+.vault-species .token-list li { background: var(--panel); font-size: 0.75rem; }
 /* R52 — a vial fold ranks by its best donor the way a token fold ranks by
    its best grade. Borrowing .grade-badge for stars would have been a lie
    about what the number is. */
@@ -1729,7 +1793,7 @@ footer {
   border-radius: 999px;
   background: var(--accent-2-dim);
   color: var(--accent-2);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 
@@ -1740,7 +1804,7 @@ footer {
 
 .pick-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .pick-label {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
@@ -1768,13 +1832,13 @@ footer {
 .pick-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pick-hint {
   grid-column: 1;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pick-caret { grid-column: 2; grid-row: 1 / span 2; color: var(--goo); font-size: 0.7rem; }
+.pick-caret { grid-column: 2; grid-row: 1 / span 2; color: var(--goo); font-size: 0.75rem; }
 .catalog .pick-field { flex: 1; min-width: 0; }
 
 .picker-host {
@@ -1834,7 +1898,7 @@ footer {
 .pick-group + .pick-group { margin-top: 10px; }
 .pick-group h4 {
   margin: 0 0 4px;
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--muted);
@@ -1870,9 +1934,9 @@ footer {
 .pick-row.is-selected { border-color: var(--goo); box-shadow: inset 3px 0 0 var(--goo); }
 .pick-row-main { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .pick-row-label { font-weight: 700; }
-.pick-row-sub { font-size: 0.68rem; color: var(--muted); }
+.pick-row-sub { font-size: 0.75rem; color: var(--muted); }
 .pick-mark { font-size: 0.9rem; }
-.pick-price { font-size: 0.7rem; color: var(--goo); font-weight: 700; }
+.pick-price { font-size: 0.75rem; color: var(--goo); font-weight: 700; }
 .pick-price.too-rich { color: var(--danger); }
 
 .toggle-row {
@@ -1911,7 +1975,7 @@ footer {
   border-radius: 5px;
   background: var(--panel);
   color: var(--on-accent);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 .toggle-row.is-on .toggle-box { background: var(--goo); border-color: var(--goo); }
@@ -2033,7 +2097,7 @@ footer {
 .bark-next {
   display: block;
   margin-top: 3px;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--goo);
@@ -2076,7 +2140,7 @@ footer {
 .vat-price {
   margin: 10px 0 4px;
   padding: 8px 10px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   line-height: 1.4;
   color: var(--warn);
   background: var(--warn-dim);
@@ -2125,7 +2189,7 @@ footer {
 }
 .subtab-icon { font-size: 0.95rem; line-height: 1; }
 .subtab-label {
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -2138,17 +2202,17 @@ footer {
   height: 14px;
   padding: 0 3px;
   border-radius: 99px;
-  font-size: 0.56rem;
+  font-size: 0.75rem;
   font-weight: 700;
   line-height: 14px;
   text-align: center;
 }
 .badge-alert { background: var(--danger); color: var(--on-accent); }
 .badge-count { background: var(--accent-2); color: var(--on-accent-2); }
-.badge-busy { background: transparent; font-size: 0.6rem; }
+.badge-busy { background: transparent; font-size: 0.75rem; }
 
 @media (max-width: 340px) {
-  .subtab-label { font-size: 0.56rem; letter-spacing: 0.02em; }
+  .subtab-label { font-size: 0.75rem; letter-spacing: 0.02em; }
 }
 
 /* --- Jobs board ----------------------------------------------------------
@@ -2247,13 +2311,13 @@ footer {
 }
 .facility-goto:hover, .facility-goto:focus-visible { color: var(--accent); }
 .locked-note { color: var(--warn); }
-.tier-line { font-size: 0.7rem; color: var(--muted); margin: 2px 0 8px; }
+.tier-line { font-size: 0.75rem; color: var(--muted); margin: 2px 0 8px; }
 .frame-picker button.locked { opacity: 0.4; cursor: default; }
 
 /* --- Variants (§3.2) ---------------------------------------------------- */
 
 .variant-badge {
-  font-size: 0.58rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   padding: 2px 7px;
@@ -2275,7 +2339,7 @@ footer {
    on a desktop, which is where it will mostly be read. */
 .agenda-head {
   margin: 10px 0 4px;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2307,7 +2371,7 @@ footer {
   border-radius: 999px;
   color: inherit;
   font: inherit;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 .agenda-chip:hover, .agenda-chip:focus-visible { border-color: var(--accent); }
@@ -2318,7 +2382,7 @@ footer {
   background: var(--panel-2);
   border: 1px solid var(--line);
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 /* A4: the crew/solo lane line under the Jobs header. */
@@ -2331,7 +2395,7 @@ footer {
   background: var(--panel-2);
   border: 1px solid var(--line);
   color: var(--accent-2);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 /* A7: what this team's obedience costs against this encounter. */
@@ -2390,7 +2454,7 @@ ul.move-effects li { font-size: 0.92rem; line-height: 1.45; }
   padding: 6px 8px;
 }
 .dossier-label {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
@@ -2406,7 +2470,7 @@ ul.move-effects li { font-size: 0.92rem; line-height: 1.45; }
 }
 .dossier-note {
   grid-column: 1 / -1;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1.35;
   color: var(--muted);
 }
@@ -2424,7 +2488,7 @@ ul.move-effects li { font-size: 0.92rem; line-height: 1.45; }
   gap: 3px;
 }
 .foe-tags li {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1.3;
   color: var(--muted);
   background: var(--panel-2);
@@ -2434,7 +2498,7 @@ ul.move-effects li { font-size: 0.92rem; line-height: 1.45; }
 }
 .matchup {
   display: inline-block;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   line-height: 1.3;
   margin: 2px 4px 0 0;
   padding: 1px 6px;
@@ -2482,7 +2546,7 @@ button.dex-cell:focus-visible {
    chip is the hook that makes a card worth reading twice; the outlook line
    under it is what the player acts on. */
 .headroom {
-  font-size: 0.75em;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 0.05rem 0.3rem;
   border-radius: 0.5rem;
@@ -2529,7 +2593,7 @@ button.dex-cell:focus-visible {
    the chassis line so building and seasoning read as the two halves of the
    same creature. The rename pencil is quiet — the name is the feature. */
 .level-chip {
-  font-size: 0.72em;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 0.05rem 0.35rem;
   border-radius: 0.5rem;
@@ -2548,7 +2612,7 @@ button.dex-cell:focus-visible {
   vertical-align: middle;
 }
 .xp-fill { display: block; height: 100%; background: var(--accent); }
-.xp-cap { font-size: 0.72em; font-weight: 700; color: var(--accent); letter-spacing: 0.08em; }
+.xp-cap { font-size: 0.75rem; font-weight: 700; color: var(--accent); letter-spacing: 0.08em; }
 /* R73 — this sat at 15x21, the smallest control in the game, and it opens a
    destructive-ish flow (renaming a creature you have grown attached to).
    It lives INSIDE an <h4>, so it cannot take a 40px box in the flow without
@@ -2625,7 +2689,7 @@ button.dex-cell:focus-visible {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 10px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .spar-line strong { color: var(--text); font-variant-numeric: tabular-nums; }
@@ -2639,7 +2703,7 @@ button.dex-cell:focus-visible {
   border-radius: 999px;
   color: inherit;
   font: inherit;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 .spar-goto:hover, .spar-goto:focus-visible { border-color: var(--accent); }
@@ -2680,7 +2744,7 @@ button.dex-cell:focus-visible {
    and the scroll is inside the panel rather than the page. */
 .founding { width: 100%; max-width: 34rem; max-height: 88vh; overflow-y: auto; }
 .founding-lede { margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45; color: var(--muted); }
-.founding-foot { margin: 10px 0 0; font-size: 0.74rem; color: var(--muted); }
+.founding-foot { margin: 10px 0 0; font-size: 0.75rem; color: var(--muted); }
 .lab-list {
   list-style: none;
   margin: 0;
@@ -2817,7 +2881,7 @@ button.dex-cell:focus-visible {
   align-items: flex-start;
   gap: 7px;
   margin: 6px 0 2px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: var(--text);
 }
 .tier-lever { margin: 2px 0 0; }
@@ -2826,7 +2890,7 @@ button.dex-cell:focus-visible {
   align-items: center;
   gap: 7px;
   margin: 4px 0 0;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 

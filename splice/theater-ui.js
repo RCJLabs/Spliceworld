@@ -20,7 +20,7 @@ import { speciesOf, classOf } from '../data/catalog.js';
 // graph exactly as R169 left it.
 import { rollIdentities, setIdentity } from '../campaign/identity.js';
 // R112 — every word the ceremony says lives in data/copy.json (R110's rule).
-import { copy } from '../util/text.js';
+import { copy, fmtMoney } from '../util/text.js';
 
 const SLOT_LABELS = {
   head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
@@ -215,7 +215,7 @@ export function renderTheaterScreen(root, ctx) {
         // purchase HERE without touching the sentence pointing away from it.
         // The card directly above sells it now, so this line names the price
         // and stops giving directions.
-        return up ? ` · next: ${up.level.name} — $${up.level.cost}` : ' · fully equipped';
+        return up ? ` · next: ${up.level.name} — ${fmtMoney(up.level.cost)}` : ' · fully equipped';
       })()}</p>
       <h3>Frame</h3>
       <div class="frame-picker" id="thtr-frames">${frameBtns}</div>

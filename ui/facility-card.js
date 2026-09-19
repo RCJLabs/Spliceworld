@@ -7,6 +7,7 @@ import { tracks, facilityLevel, levelData, nextUpgrade, buyUpgrade, spanOf } fro
 import { nodeName } from '../campaign/map.js';
 import { collapsibleCard, isOpen } from './cards.js';
 import { renderIcon } from './icons.js';
+import { fmtMoney } from '../util/text.js';
 
 // R128b — THE SCREEN'S OWN NAME, NOT ITS ID. The roll-up printed `theater`
 // and `battle` at the player, and neither is a word this game shows anybody:
@@ -67,10 +68,10 @@ function trackRow(state, content, track) {
               <p class="fine-print">${up.level.blurb}</p>
               ${delta.length ? `<p class="fine-print facility-delta">${delta.join(' · ')}</p>` : ''}
               ${blockedNode ? `<p class="fine-print locked-note">Needs ${nodeName(content, blockedNode.nodeId)} held.</p>` : ''}
-              ${short ? `<p class="fine-print locked-note">Short by $${short.short}.</p>` : ''}
+              ${short ? `<p class="fine-print locked-note">Short by ${fmtMoney(short.short)}.</p>` : ''}
             </div>
             <button type="button" data-act="upgrade" data-track="${track.id}" ${up.affordable ? '' : 'disabled'}>
-              $${up.level.cost}
+              ${fmtMoney(up.level.cost)}
             </button>
           </div>` : ''}
       </div>`;
@@ -94,7 +95,7 @@ export function facilityCard(state, content, screen) {
   const level = solo ? levelData(content, solo.id, facilityLevel(state, solo.id))?.name : null;
   const summary = upgrades.length
     ? `${level ? `${level}. ` : ''}${affordable.length ? `<strong>${affordable.length} ready to buy</strong> · ` : ''}${
-        upgrades.length} upgrade${upgrades.length === 1 ? '' : 's'} left, from $${cheapest}.`
+        upgrades.length} upgrade${upgrades.length === 1 ? '' : 's'} left, from ${fmtMoney(cheapest)}.`
     : `${level ? `${level}. ` : ''}Maxed. There is nothing left to buy and that is its own kind of sad.`;
   return collapsibleCard({
     id: `facility-${screen}`,
@@ -127,7 +128,7 @@ export function tablePointer(state, content) {
   // happens. Quoting the splice clock here would answer a question the
   // player standing on this screen is not asking.
   return `<p class="fine-print facility-elsewhere">${renderIcon('derelict-house')} Dismantling takes the Surgery Theater's table. <strong>${
-    up.level.name}</strong> cuts it to ${spanOf(hours)} for $${up.level.cost}, on <button type="button" class="facility-goto" data-goto="theater">${
+    up.level.name}</strong> cuts it to ${spanOf(hours)} for ${fmtMoney(up.level.cost)}, on <button type="button" class="facility-goto" data-goto="theater">${
     screenName('theater')}</button>.</p>`;
 }
 

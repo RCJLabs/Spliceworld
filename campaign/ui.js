@@ -20,7 +20,7 @@ import { autoResolve, canSend, whatDecidedIt } from '../battle/autoplay.js';
 import { isSettled } from '../splice/chimera.js';
 import { fmtDuration } from '../ranch/ui.js';
 // R112 — the philosophy prompt's words, out of data/copy.json (R110's rule).
-import { copy } from '../util/text.js';
+import { copy, fmtMoney } from '../util/text.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { activeRaid, raidRemainingMs, levyOf, raidEncounter } from './taskforce.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen, esc } from '../ui/cards.js';
@@ -117,8 +117,8 @@ function upkeepBreakdown(upkeep, parts) {
     ['stock', parts?.stock], ['stable', parts?.chimeras],
     ['garrisons', parts?.territory], ['plant', parts?.facility],
   ].filter(([, v]) => v > 0);
-  if (named.length < 2) return `after $${Math.round(upkeep)} upkeep`;
-  return `after $${Math.round(upkeep)} upkeep — ${named.map(([k, v]) => `$${v} ${k}`).join(', ')}`;
+  if (named.length < 2) return `after ${fmtMoney(upkeep)} upkeep`;
+  return `after ${fmtMoney(upkeep)} upkeep — ${named.map(([k, v]) => `${fmtMoney(v)} ${k}`).join(', ')}`;
 }
 
 export function renderWarRoomScreen(root, ctx) {
@@ -258,14 +258,14 @@ function renderMap(root, ctx) {
         status === 'available'
           ? `<button type="button" data-node="${node.id}"${canFight ? '' : ' disabled'}>${canFight ? 'Assault' : noneFit}</button>`
           : status === 'held'
-            ? `<span class="held-tag">HELD +$${node.incomePerDay}/d</span>
+            ? `<span class="held-tag">HELD +${fmtMoney(node.incomePerDay)}/d</span>
                <button type="button" class="spar-btn" data-spar="${node.id}" ${sparGate.ok ? '' : 'disabled'}>${renderIcon('boxing-glove')} ${sparLabel}</button>`
             : status === 'contested'
-              ? `<span class="contested-tag">CONTESTED −$${node.incomePerDay}/d</span>`
+              ? `<span class="contested-tag">CONTESTED −${fmtMoney(node.incomePerDay)}/d</span>`
               : `<span class="locked-tag">${(node.threatGen ?? 1) > gen ? `needs Threat Gen ${node.threatGen}` : 'locked'}</span>`;
       return `
         <div class="encounter node-${status}">
-          <div><strong>${node.name}</strong>${node.boss ? ` ${renderIcon('crown')}` : ''} <span class="lineage">${encounter.waves.length} waves · $${encounter.reward}</span><br>
+          <div><strong>${node.name}</strong>${node.boss ? ` ${renderIcon('crown')}` : ''} <span class="lineage">${encounter.waves.length} waves · ${fmtMoney(encounter.reward)}</span><br>
           <span class="fine-print">${node.blurb}</span></div>
           ${btn}
         </div>`;
@@ -279,11 +279,11 @@ function renderMap(root, ctx) {
     // for more than the node it took.
     const bonusState = stripState(state, content, region, contestedHere);
     const strip = bonusState === 'paying'
-      ? ` Strip bonus +$${region.completionBonus}/day.`
+      ? ` Strip bonus +${fmtMoney(region.completionBonus)}/day.`
       : bonusState === 'suspended'
-        ? ` Strip bonus of $${region.completionBonus}/day suspended.`
+        ? ` Strip bonus of ${fmtMoney(region.completionBonus)}/day suspended.`
         : bonusState === 'available'
-          ? ` Take the strip for +$${region.completionBonus}/day.`
+          ? ` Take the strip for +${fmtMoney(region.completionBonus)}/day.`
           : '';
     const summary = open
       ? held === region.nodes.length
@@ -307,8 +307,8 @@ function renderMap(root, ctx) {
   const contests = contestAlerts(state, content, t).map((a) => `
     <div class="encounter contested">
       <div><strong>${a.name}</strong> <span class="lineage">counter-offensive</span><br>
-      <span class="fine-print"><strong class="countdown">${fmtDuration(a.remainingMs)}</strong> to hold the line · <strong>$${a.nodeIncome + a.bonusAtRisk}/day</strong> suspended until you do${
-        a.bonusAtRisk ? ` (the node plus ${a.stripName}'s $${a.bonusAtRisk} strip bonus)` : ''
+      <span class="fine-print"><strong class="countdown">${fmtDuration(a.remainingMs)}</strong> to hold the line · <strong>${fmtMoney(a.nodeIncome + a.bonusAtRisk)}/day</strong> suspended until you do${
+        a.bonusAtRisk ? ` (the node plus ${a.stripName}'s ${fmtMoney(a.bonusAtRisk)} strip bonus)` : ''
       }${
         a.stripAlsoDown ? ` (the node — ${a.stripName}'s strip bonus is already counted against ${a.stripCountedOn})` : ''
       }${
@@ -333,7 +333,7 @@ function renderMap(root, ctx) {
       <div><strong>Unmarked vans at the gate</strong>${
         enc?.escalation ? ` <span class="lineage">${Math.round(enc.escalation * 100)}% strength</span>` : ''
       }<br>
-      <span class="fine-print"><strong class="countdown">${fmtDuration(raidRemainingMs(raid, t))}</strong> before they serve papers and leave with <strong>$${levy.fine}</strong>${
+      <span class="fine-print"><strong class="countdown">${fmtDuration(raidRemainingMs(raid, t))}</strong> before they serve papers and leave with <strong>${fmtMoney(levy.fine)}</strong>${
         levy.stock ? ` and ${levy.stock} of the herd` : ''
       }. Nothing in the Pens is on the table.</span></div>
       <button type="button" data-raid="${raid.id}"${canFight ? '' : ' disabled'}>${renderIcon('shield')} ${canFight ? 'Defend the ranch' : noneFit}</button>
@@ -383,7 +383,7 @@ function renderMap(root, ctx) {
             locked
               ? `<span class="locked-tag">${need.join(' · ')}</span>`
               : `<button type="button" data-rival="${rival.id}"${canFight ? '' : ' disabled'}>${
-                  !canFight ? noneFit : status === 'rematch' ? `Rematch — $${preview.reward}` : `Challenge — $${preview.reward}`
+                  !canFight ? noneFit : status === 'rematch' ? `Rematch — ${fmtMoney(preview.reward)}` : `Challenge — ${fmtMoney(preview.reward)}`
                 }</button>`
           }
         </div>
@@ -445,7 +445,7 @@ function renderMap(root, ctx) {
                 ? `Was ${lab.name}'s. It has not been eating what ${lab.name} issued. `
                 : `${lab.name}'s, and no longer ${lab.name}'s. `) : ''}`}Last seen ${one.sighting}.</span></div>
             <button type="button" data-breakout="${one.id}"${canFight ? '' : ' disabled'}>${
-              canFight ? `Hunt — $${one.reward}` : noneFit
+              canFight ? `Hunt — ${fmtMoney(one.reward)}` : noneFit
             }</button>
           </div>`;
         }).join('')}
@@ -540,7 +540,7 @@ function renderMap(root, ctx) {
     ? (() => {
         const rows = gauntletState(state, content).map(({ stage, status }) => `
           <div class="encounter gauntlet-${status}">
-            <div><strong>${stage.name}</strong>${status === 'beaten' ? ` ${renderIcon('trophy')}` : ''} <span class="lineage">${stage.escorts.length + 1} waves · $${stage.reward}</span><br>
+            <div><strong>${stage.name}</strong>${status === 'beaten' ? ` ${renderIcon('trophy')}` : ''} <span class="lineage">${stage.escorts.length + 1} waves · ${fmtMoney(stage.reward)}</span><br>
             <span class="fine-print">${status === 'locked' ? 'The card goes in order.' : stage.blurb}</span></div>
             ${status === 'open' ? `<button type="button" data-gauntlet="${stage.id}"${canFight ? '' : ' disabled'}>${canFight ? 'Answer' : noneFit}</button>` : status === 'beaten' ? '<span class="held-tag">BEATEN</span>' : '<span class="locked-tag">locked</span>'}
           </div>`).join('');
@@ -564,14 +564,14 @@ function renderMap(root, ctx) {
         <div><span class="econ-label">Threat Gen</span><strong>${gen}</strong>${
           nextRung ? `<span class="econ-next">Gen ${nextRung.gen} at ${nextRung.at}</span>` : ''
         }</div>
-        <div><span class="econ-label">Territory</span><strong>+$${income}/day</strong>${
-          bonus ? `<span class="econ-next">incl. +$${bonus} strip bonus</span>` : ''
+        <div><span class="econ-label">Territory</span><strong>+${fmtMoney(income)}/day</strong>${
+          bonus ? `<span class="econ-next">incl. +${fmtMoney(bonus)} strip bonus</span>` : ''
         }${
-          suspended ? `<span class="econ-suspended">−$${suspended} contested</span>` : ''
+          suspended ? `<span class="econ-suspended">−${fmtMoney(suspended)} contested</span>` : ''
         }</div>
         <div><span class="econ-label">Net</span><strong class="${net < 0 ? 'net-negative' : 'net-positive'}">${
           net < 0 ? '−' : '+'
-        }$${Math.abs(net)}/day</strong><span class="econ-next">${upkeepBreakdown(upkeep, upkeepParts)}</span></div>
+        }${fmtMoney(Math.abs(net))}/day</strong><span class="econ-next">${upkeepBreakdown(upkeep, upkeepParts)}</span></div>
         <div><span class="econ-label">Record</span><strong>${state.warRecord.wins}W–${state.warRecord.losses}L</strong></div>
       </div>
     </section>
@@ -921,7 +921,7 @@ function jobsCard(state, ctx, t) {
     // title and a long string turns the row into one word per line at 380px.
     const { out, cooling, ready, odds, noSlot, cooldownEndsAt } = jobRow(state, content, op, t, liveRuns, free);
     const loot = [
-      `$${op.funds[0]}–${op.funds[1]}`,
+      `${fmtMoney(op.funds[0])}–${op.funds[1]}`,
       op.livestock ? `${pct(op.livestock.chance)} livestock` : null,
     ].filter(Boolean).join(' · ');
     // The blurb is good writing and it lives in the crew sheet, not here:
@@ -946,7 +946,7 @@ function jobsCard(state, ctx, t) {
   const reportHtml = report
     ? `<div class="encounter job-report ${report.success ? 'is-win' : 'is-bust'}">
         <div><strong>${report.success ? '✔' : '✘'} ${report.name}</strong><br>
-        <span class="fine-print">${report.msg}${report.funds ? ` <strong>+$${report.funds}</strong>.` : ''}${
+        <span class="fine-print">${report.msg}${report.funds ? ` <strong>+${fmtMoney(report.funds)}</strong>.` : ''}${
           report.animal ? ` <strong>${report.animal.name}</strong> the ${speciesOf(content, report.animal.species).name} is in the pens.` : ''
         }${report.overCapacity ? ' The pens are over capacity and everyone is cross about it.' : ''}${
           report.injured ? ` ${report.injured} is in the Infirmary, sulking.` : ''
@@ -1077,13 +1077,13 @@ function offerHtml(state, entry, plan, unit, content) {
   return `
     <p class="fine-print">${renderIcon('wrench')} <strong>Salvage</strong> → ${salvageList || 'nothing recoverable'}</p>
     ${plan.possible
-      ? `<p class="fine-print">${renderIcon('handshake')} <strong>Rehabilitate</strong> → joins the roster whole, on a ${content.frames[unit.genome.frame]?.name ?? unit.genome.frame} chassis, at the grades its old lab raised. ${plan.hours}h · $${plan.fee} · arrives settled but wary (instability ${plan.instability}, bond 0).</p>`
+      ? `<p class="fine-print">${renderIcon('handshake')} <strong>Rehabilitate</strong> → joins the roster whole, on a ${content.frames[unit.genome.frame]?.name ?? unit.genome.frame} chassis, at the grades its old lab raised. ${plan.hours}h · ${fmtMoney(plan.fee)} · arrives settled but wary (instability ${plan.instability}, bond 0).</p>`
       : `<p class="fine-print locked-note">${plan.reason}</p>`}
     <div class="bay-btns">
       <button type="button" data-salvage="${entry.id}">${renderIcon('wrench')} Salvage</button>
       ${plan.possible
         ? plan.enabled
-          ? `<button type="button" class="bay-rehab" data-rehab="${entry.id}" ${state.funds >= plan.fee ? '' : 'disabled'}>${renderIcon('handshake')} Rehabilitate — $${plan.fee}</button>`
+          ? `<button type="button" class="bay-rehab" data-rehab="${entry.id}" ${state.funds >= plan.fee ? '' : 'disabled'}>${renderIcon('handshake')} Rehabilitate — ${fmtMoney(plan.fee)}</button>`
           : '<span class="locked-tag">needs the Reorientation Wing — Ranch › Facility</span>'
         : ''}
     </div>`;
@@ -1104,7 +1104,7 @@ function programmeHtml(state, entry, unit, content, t) {
         maxed
           ? 'Curriculum complete'
           : ready
-            ? `${renderIcon('target')} Enrichment session ($${tune.sessionCost})`
+            ? `${renderIcon('target')} Enrichment session (${fmtMoney(tune.sessionCost)})`
             : `Next session in ${fmtDuration(readyAt - t)}`
       }</button>
       <button type="button" class="bay-cancel" data-cancel="${entry.id}">End programme</button>
@@ -1265,7 +1265,7 @@ function renderBriefing(root, ctx) {
       <h3>${draftTarget.label}</h3>
       <p class="${draftTarget.kind === 'rival' ? 'rival-quote' : 'fine-print'}">${
         draftTarget.kind === 'rival' ? `&ldquo;${encounter.blurb}&rdquo;` : encounter.blurb
-      } <span class="fine-print">(${encounter.waves.length} ${draftTarget.kind === 'rival' ? 'specimens' : 'waves'}${encounter.reward ? ` · $${encounter.reward}` : ''})</span></p>
+      } <span class="fine-print">(${encounter.waves.length} ${draftTarget.kind === 'rival' ? 'specimens' : 'waves'}${encounter.reward ? ` · ${fmtMoney(encounter.reward)}` : ''})</span></p>
       <p class="fine-print">Opposition: ${foeLine}${
         foeClasses.size > 1 && encounter.counterClass ? ' — one of them was built to answer your stable' : ''
       }</p>
