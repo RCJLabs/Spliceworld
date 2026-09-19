@@ -77,6 +77,25 @@ landed on the right answer and the check passed while the arithmetic was
 broken. Two pairs now, in opposite orders — green or red by `readdirSync`
 enumeration is not a gate.
 
+### Verification
+
+    battery --anchors     375 anchors, each matching exactly once
+    battery --baseline    every gate passes on a pristine tree
+    battery --only 375-382    8 breaks, 8 caught
+    npm test (alone)      11 jobs, 807 CPU-seconds of 1150 budgeted
+    battery (full)        375 breaks, 375 caught, 0 missed · BATTERY_EXIT=0
+    coverage              92/92 modules · 2.5% dead · 9 of 10 allowed
+
+The full battery ran because R115 **changes existing gates' logic** rather than
+only adding one — `handlers.js` answers sheets, `a11y.js`'s sweep commits an
+enabled row, `suite.js` spawns with flags. That is the first of the four
+documented triggers, and it came back clean at 375.
+
+Twice during verification the release gate went red for the same predictable
+reason: the shell changed and `CACHE` had not. Both times the fix was
+`npm run release -- --fix`. The second was `ui/picker.js` losing a comment to
+the prose budget — a stylesheet-sized edit that still moves the shell hash.
+
 ### Known issues
 
 - **Two picker conventions.** Screens wire `bindPickers`/`data-picker`;
