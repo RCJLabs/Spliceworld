@@ -324,7 +324,19 @@ const BUDGET = {
   //
   // The number this milestone is judged on is the OTHER one. R97's criterion
   // is "Foes under two screens folded"; it is 764px shut, against 1,560.
-  'dex:foes':     { folded: 2500,  tallest: 6100, opens: 4 },
+  // R113 - 6100 -> 6150, measured at 6115. THE TYPE FLOOR HAS TO LAND
+  // SOMEWHERE, and this is the only one of the nine screens it pushed over.
+  // Flooring 78 declarations at 12px was measured against every budget in this
+  // table before it was applied: eight screens absorbed it, including
+  // `dex:roster` and `dex:variants`, which run at exactly their budget and did
+  // not move because what they draw is portraits rather than small print. This
+  // tab is the opposite - it is the longest list of fine print in the game,
+  // 42 units and 5 rivals, so it is where 0.5px per line adds up to 15.
+  //
+  // 35px of slack over the measurement, which is the smallest number that is
+  // not the measurement itself. The shut number, which is what R97's criterion
+  // is actually judged on, did not move: 764px against 2,500.
+  'dex:foes':     { folded: 2500,  tallest: 6150, opens: 4 },
 };
 
 // R98 — AND WHAT IT SAYS, not only how tall it is.

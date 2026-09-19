@@ -46,6 +46,10 @@ const FLOOR = 40;          // px, both dimensions
 // screen (dex:foes) and breaks only the battle arena, which is the one screen
 // that does not scroll - 7 failures, all there. See ROADMAP R113.
 const TYPE_FLOOR = 12;     // px, the smallest computed font-size allowed
+// R113 - the two things a phone does to a layout that a desktop headless
+// browser never will: a reader who has turned their text up, and a cutout.
+const TEXT_SCALE = 1.5;    // 150% text, the accessibility setting people use
+const CUTOUT = 47;         // px, a notch the header has to clear
 const GUTTER = 6;          // px, between two adjacent controls
 const RAG = 1;             // px, how far into its own line a full-width row may start
 const BAND_TOP = 420;      // px, the wide end of the stylesheet's phone media query
@@ -1003,6 +1007,70 @@ async function main() {
       else for (const x of over) note(`${where}: the arena does not scroll, and ${x}`);
     };
 
+    // ---- 1h. R113 - AND IT SURVIVES A READER WHO TURNED THE TEXT UP ------
+    //
+    //      Everything in this stylesheet is sized in `rem`, so the OS text
+    //      setting scales the whole layout rather than one paragraph of it.
+    //      That is the right way round, and it is also the way that overflows:
+    //      at 150% the Ranch and Pens used to spill 70px past the edge of the
+    //      phone, at 200% 216px. Measured by moving the root size and asking
+    //      the SAME containment question the 100% pass asks.
+    {
+      await evaluate(`document.documentElement.style.fontSize = '${16 * TEXT_SCALE}px'`);
+      await sleep(400);
+      for (const o of await evaluate(CONTAINED)) {
+        const worst = Math.max(o.right, o.left, o.past);
+        if (worst > 1) {
+          note(`at ${Math.round(TEXT_SCALE * 100)}% text: ${o.sel} leaves its card or the phone by ${Math.round(worst)}px`);
+        }
+      }
+      await evaluate(`document.documentElement.style.fontSize = ''`);
+      await sleep(300);
+    }
+
+    // ---- 1i. R113 - AND THE HEADER CLEARS A CUTOUT -----------------------
+    //
+    //      `viewport-fit=cover` lets the page paint under a notch; the insets
+    //      are what stop it painting the GAME there. A headless desktop
+    //      browser has no notch, so style.css reads each inset as
+    //      `var(--safe-*, env(safe-area-inset-*))` - the env is what ships,
+    //      the variable is what this sets. Asking whether the rule exists in
+    //      the source would pass on a rule that resolves to nothing.
+    {
+      await evaluate(`document.documentElement.style.setProperty('--safe-top', '${CUTOUT}px')`);
+      await sleep(300);
+      const clears = await evaluate(`(() => {
+        const header = document.querySelector('header');
+        if (!header) return null;
+        const cs = getComputedStyle(header);
+        const box = header.getBoundingClientRect();
+        // The header's CONTENT box, not its first child: the settings gear is
+        // absolutely positioned at the top of the header and reports a rect
+        // top of 0 whatever the padding does, which is a true fact about a
+        // decoration and a useless one about the layout.
+        const content = box.top + parseFloat(cs.paddingTop);
+        // …and the in-flow children, which is what a player reads.
+        const flowed = [...header.children]
+          .filter((el) => getComputedStyle(el).position !== 'absolute')
+          .map((el) => el.getBoundingClientRect())
+          .filter((r) => r.height > 0);
+        return {
+          pad: parseFloat(cs.paddingTop),
+          content: Math.round(content),
+          first: flowed.length ? Math.round(Math.min(...flowed.map((r) => r.top))) : null,
+        };
+      })()`);
+      if (!clears) note('there is no header, so nothing checked that it clears a cutout');
+      else if (clears.content < CUTOUT) {
+        note(`with a ${CUTOUT}px cutout the header's content box starts at ${clears.content}px, under the notch`
+          + ` (padding-top resolved to ${clears.pad}px)`);
+      } else if (clears.first !== null && clears.first < CUTOUT) {
+        note(`with a ${CUTOUT}px cutout the header pads correctly but its first line still starts at ${clears.first}px`);
+      }
+      await evaluate(`document.documentElement.style.removeProperty('--safe-top')`);
+      await sleep(200);
+    }
+
     // R99 — the source half of the reduced-motion rule. No browser needed:
     // it asks whether every moving thing HAS an off-switch, which is the only
     // form of the question that can reach the ten arena effects that exist
@@ -1217,6 +1285,8 @@ async function main() {
     }
     await evaluate(`delete document.documentElement.dataset.theme`);
     await sleep(200);
+
+
 
     // R122 — the readings are taken here but JUDGED at the end of the run,
     // because `collect` is called again further down: the keyboard walk opens
@@ -1743,6 +1813,52 @@ async function main() {
     for (const p of crowded.filter((x) => x.gap < GUTTER)) {
       note(`${p.where}: ${p.a} sits ${p.gap}px from ${p.b}, under the ${GUTTER}px gutter`);
     }
+
+    // ---- 1d2. R113 - AND EVERY SAVE SHAPE, not just the one this gate
+    //      builds. The lab fixture above is a mid-game save with everything
+    //      alive, which is the right shape for measuring CONTROLS. It is the
+    //      wrong shape for measuring TYPE AND COLOUR, because what a screen
+    //      prints depends on what the save holds: a fresh save is all empty
+    //      states and first-run prose, and a day-180 one is grades, badges and
+    //      lists nothing else reaches. R113's criterion names both by name.
+    //
+    //      Only the CONTRAST walk is repeated - it carries the type floor too
+    //      - because the 40px floor and the 6px gutter are properties of the
+    //      stylesheet and do not move with the save. Two reloads and a lap of
+    //      the tab bar each, rather than two more full walks.
+    const shapePass = async (label, setup) => {
+      await evaluate(`localStorage.clear()`);
+      await setup();
+      await send('Page.navigate', { url });
+      await sleep(2200);
+      await foundingPass();
+      const tabs = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
+      if (!tabs.length) { note(`${label}: the shell painted no tabs, so nothing was measured on it`); return; }
+      for (const sc of tabs) {
+        await evaluate(`document.querySelector('#tabs button[data-screen="${sc}"]')?.click()`);
+        await sleep(500);
+        await evaluate(OPEN_DETAILS);
+        await sleep(300);
+        for (const t of await evaluate(CONTRAST)) {
+          if (t.px < TYPE_FLOOR) {
+            const key = `${label}|${t.sel}|${t.px}`;
+            if (!small.has(key)) small.set(key, { ...t, where: `${label}:${sc}` });
+          }
+          if (t.unmeasured) continue;
+          const key = `${label}|${t.sel}|${t.color}|${t.bg}`;
+          if (!dim.has(key) || dim.get(key).ratio > t.ratio) dim.set(key, { ...t, where: `${label}:${sc}` });
+        }
+      }
+    };
+    await shapePass('fresh', async () => {});
+    {
+      const { walkedSave } = await import('./fixtures.js');
+      const day180 = walkedSave({ days: 180 });
+      await shapePass('day180', async () => {
+        await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(day180))})`);
+      });
+    }
+    // Nothing reads the DOM after this, so there is no need to navigate back.
 
     // ---- 1f. and every word of it can be read off the screen -------------
     const contrast = [...dim.values()].sort((a, b) => a.ratio - b.ratio);
