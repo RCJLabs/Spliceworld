@@ -79,26 +79,67 @@ fixture. 3.7 KB of R116 prose moved into `data/notes/operations.md`.
     npm test              4 of 11 failed (was 6 of 11)
     full battery          not run
 
+### The twenty-four-walk census, which is the expensive thing this session bought
+
+Twelve seeds, 180 days, `stopAtDominion: false`, on THIS tree and on pre-R116
+`a39a0fa`. It separates what R116 moved from what was already un-earned, which
+is the distinction the hunt floor taught this session to insist on.
+
+                     pre-R116     post-R116    the gate asks for
+    splices            14-34        20-51      floor 25, ceiling 45
+    chaos vats          1-12         0-8       diet: at least one
+    Wing enrolled       8-26         8-25      band 10-60
+    ranch.stock        15-67       19-112      vault bound 80
+
+    post  2026:25s/0v  7:29/1  99:24/1  4242:30/6  42:23/1  900:26/7
+          55:51/6  11:20/0  3:24/0  77:32/1  123:33/2  512:27/8
+    pre   2026:28s/6v  7:29/1  99:28/3  4242:33/4  42:28/5  900:30/7
+          55:28/3  11:30/4  3:34/7  77:14/3  123:30/2  512:31/12
+
+**Two of the five were stale before this milestone.** The splice FLOOR of 25
+reads 14 on pre-R116 seed 77, and the Wing's band floor of 10 reads 8 on seed
+77 on BOTH trees. Neither is R116's doing; both were measured on three or four
+seeds and never re-checked, exactly like the hunt floor.
+
+**Three are R116's and want a cause, not a number.** The splice CEILING was
+clean pre-R116 (max 34) and reads 51 post on seed 55. The chaos vat never once
+read zero pre-R116 and reads zero on three of twelve seeds now. And
+`ranch.stock` tops out at 112 where it topped out at 67 — that one is R182,
+filed.
+
 ### Next session's first task
 
-**Finish the cascade, then merge.** In order:
+**The collection got narrower, and that is one finding wearing two hats.**
+`reach` reads 5.15 of 6 variant lines — and R177's own note records 5.15 as
+the reading WITH R95's pair-ordering deleted, which is the broken value rather
+than a drift, so that floor must not be lowered. The height gate, re-run alone
+on an idle box so it is not R159's false red, says `dex:combos declares 3
+folds to walk and the gate got into 2`. Fewer variant lines and fewer openable
+combo bands are the same campaign owning fewer halves. Start there: the walker
+buys ~1,300-1,600 where it bought 1,772, and the question is which of its four
+buy priorities (`freshAnswers`, `fresh`, `mates`, `incomplete`) lost its turn.
 
-1. `SPLICE_FLOOR` 25 against a measured 24, 25, 29, 30 — re-derive from a
-   census, do not nudge.
-2. The walker runs the chaos vat 0, 1, 1, 6 times across the four seeds and
-   `diet` wants at least one on its own. Pre-R116 seed 2026 ran 6 with MORE
-   resequencing, so `clockRoom` contention is a guess and not yet the answer.
-3. `reach` variant lines 5.15 of 6 against a floor of 5.5 — up from 4.77
-   before the shelf fix, so the remaining gap may be the same cause not fully
-   paid off.
-4. The eager budgets: `PROSE_CAP` 251 against 255.4 and `KB_CAP` 322 against
-   325.5 after 3.7 KB was already moved out, plus `FIRST_PAINT_KB` 1085
-   against 1095. Pay what can be paid, and argue whatever is left.
-5. The Pens' word budget, the agenda's `sitting` rule, `ranch.stock`'s bound
-   against seed 4242's full shelf, and `npm run release -- --fix` LAST.
-6. Then: `--only 383-389`, baseline, npm test alone, the FULL battery (R116
-   changes existing gates' logic), ROADMAP R116 to ✅ and the queue 7 -> 6,
-   merge, restart the branch from the new `main`.
+Then, in order:
+
+1. The splice band. The floor of 25 is stale on both trees (pre-R116 seed 77
+   reads 14) and the CEILING at 51 is new. Both ends moved, which is what a
+   charge-bucket economy would do to cadence — re-derive the band from the
+   census above rather than nudging one end.
+2. The chaos vat. Zero on three seeds where pre-R116 was never zero. Not
+   `clockRoom` contention: seed 2026 ran 6 vats pre-R116 with MORE
+   resequencing than it does now.
+3. The Wing's band floor of 10, stale on both trees at 8.
+4. `npm run release -- --fix` LAST, after every other file has settled.
+5. Then: `--only 383-389`, baseline, `npm test` alone, the FULL battery (R116
+   changes existing gates' logic — the first of the four documented triggers),
+   ROADMAP R116 to the tick and the queue 8 -> 7, merge, restart the branch
+   from the new `main`.
+
+**Already closed since this section was first written:** the three eager
+budgets (paid down 4.6 KB into `data/notes/operations.md` first, then moved
+with accountings), the `sitting` gate's crewless probe, the Pens' word budget
+(the shelf fix took it from 458 words to under 456 by itself), `vault`,
+`saves`, `scopecheck`, `roadmap` and `smoke:c`.
 
 Also outstanding: the `/tmp/pre116` worktree is still checked out and wants
 removing once it has stopped being useful.
