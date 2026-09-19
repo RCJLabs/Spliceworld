@@ -413,7 +413,7 @@ const CACHEBUMP = ['node', 'tools/release.js'];
 // is a system whose balance has never been measured. Four of the eight R92
 // named had quietly been closed by other milestones and nobody noticed,
 // because there was nothing watching either way.
-const COVERAGE = ['node', 'tools/coverage.js'];
+const DIET = ['node', 'tools/diet.js'];
 
 // R95 — CAN A PLAYER ACTUALLY GET TO THE CONTENT? Three rules of one gate:
 // every species is reachable by a mechanism that resolves, a 180-day walk
@@ -1950,7 +1950,7 @@ const BREAKS = [
   // results cross over. The fix is still in `tools/sim.js` and still right —
   // what is gone is the gate's ability to see it, and a break that only goes
   // red by luck teaches this battery to lie about its own coverage. The
-  // numbers are in tools/coverage.js.
+  // numbers are in tools/diet.js.
   {
     // RULE 1 — the route table. A species nobody can obtain is content that
     // does not exist, and the only reason none ships today is that nothing
@@ -2007,7 +2007,7 @@ const BREAKS = [
     to: '    if (true) continue;',
   },
   {
-    n: 151, gate: COVERAGE, name: 'the planner stops weighing combos, so a campaign never discovers one again',
+    n: 151, gate: DIET, name: 'the planner stops weighing combos, so a campaign never discovers one again',
     file: 'tools/sim.js',
     anchor: '  const rank = (t) => (completable.has(t.partId) ? 30 : 0)',
     to: '  const rank = (t) => (false ? 30 : 0)',
@@ -2018,7 +2018,7 @@ const BREAKS = [
     // the reservation away AND raised the ceiling from nine to twelve, the two
     // cancelled, and the break came back MISSED. It aims at the clocks' own
     // predicate instead, which is the rule its name describes.
-    n: 152, gate: COVERAGE, name: 'the Wing and the vat take every stall again, and the Surgery Theater never gets one',
+    n: 152, gate: DIET, name: 'the Wing and the vat take every stall again, and the Surgery Theater never gets one',
     file: 'tools/sim.js',
     anchor: 'const clockRoom = (state, content) => stableRoom(state, content).free > THEATER_STALLS;',
     to: 'const clockRoom = () => true;',
@@ -2027,7 +2027,7 @@ const BREAKS = [
     // R154 — the paddock stops buying stable room, and "Expand the pens" goes
     // back to meaning only livestock. Aimed at the derivation rather than at
     // the data, because a ratio of zero would read as a content choice.
-    n: 251, gate: COVERAGE, name: 'a pen stops buying a stall, so the Pens screen and the pen button mean different things again',
+    n: 251, gate: DIET, name: 'a pen stops buying a stall, so the Pens screen and the pen button mean different things again',
     file: 'splice/facility.js',
     anchor: '  return (state.ranch?.penCapacity ?? 0) - (meta.freePens ?? 0);',
     to: '  return 0;',
@@ -2038,7 +2038,7 @@ const BREAKS = [
     // a stall the roster never fills is the feature shipping as a number on a
     // screen. R157 could not write this break at all — at a fixed grant the
     // walker lands in the same place whichever way the constant reads.
-    n: 252, gate: COVERAGE, name: 'the stable grows and the roster does not, so a bought stall stands empty',
+    n: 252, gate: DIET, name: 'the stable grows and the roster does not, so a bought stall stands empty',
     file: 'tools/sim.js',
     anchor: '      const cap = Math.min(room.cap - THEATER_STALLS, opts.stableCap ?? Infinity);',
     to: '      const cap = Math.min(12 - THEATER_STALLS, opts.stableCap ?? Infinity);',
@@ -2191,7 +2191,7 @@ const BREAKS = [
     // R157's lesson is the reason this break exists rather than a comment: one
     // constant with three readers goes stale in two of them, and the only way
     // to keep the planner honest is to make a private copy FAIL.
-    n: 272, gate: COVERAGE, name: 'the build planner keeps its own socket list again, and the second organ bay dies',
+    n: 272, gate: DIET, name: 'the build planner keeps its own socket list again, and the second organ bay dies',
     file: 'tools/sim.js',
     anchor: '    const granted = theaterGrants(state, content, frameId).sockets;',
     to: "    const granted = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];",
@@ -2203,7 +2203,7 @@ const BREAKS = [
     // slot differ by one character. The list is right and the fill is wrong —
     // which is how the original could have been "fixed" by adding organ2 to
     // CHASSIS_SLOTS and still shipped a dead bay.
-    n: 273, gate: COVERAGE, name: 'sockets are matched by name rather than by the slot they take',
+    n: 273, gate: DIET, name: 'sockets are matched by name rather than by the slot they take',
     file: 'tools/sim.js',
     anchor: '        const socketId = granted.find((sid) => slotOfSocket(sid) === part.slot && !slots[sid]);',
     to: '        const socketId = granted.find((sid) => sid === part.slot && !slots[sid]);',
@@ -2383,31 +2383,31 @@ const BREAKS = [
     // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
     // the rule that stops the splice policy taking it. Break it and the walker
     // splices to the whole grant, both clocks starve, and coverage says so.
-    n: 249, gate: COVERAGE, name: 'the splice policy takes the whole grant again, so the vat and the Wing never get a stall',
+    n: 249, gate: DIET, name: 'the splice policy takes the whole grant again, so the vat and the Wing never get a stall',
     file: 'tools/sim.js',
     anchor: '      const cap = Math.min(room.cap - THEATER_STALLS, opts.stableCap ?? Infinity);',
     to: '      const cap = Math.min(room.cap, opts.stableCap ?? Infinity);',
   },
   {
-    n: 153, gate: COVERAGE, name: 'the walker stops running the Resequencer, so what a vial is worth goes back to being unmeasured',
+    n: 153, gate: DIET, name: 'the walker stops running the Resequencer, so what a vial is worth goes back to being unmeasured',
     file: 'tools/sim.js',
     anchor: "      did('resequence', { species: best.species, stars: best.stars });",
     to: '      void 0;',
   },
   {
-    n: 154, gate: COVERAGE, name: 'the chaos vat goes back to being the one agenda row with nothing behind it',
+    n: 154, gate: DIET, name: 'the chaos vat goes back to being the one agenda row with nothing behind it',
     file: 'tools/sim.js',
     anchor: "        if (startVat(state, a.id, b.id, content, now).ok) { did('vat', { sire: a.id, dam: b.id }); ran = true; }",
     to: '        ran = true;',
   },
   {
-    n: 155, gate: COVERAGE, name: 'a moveset retrain stops being logged, so four slots are exercised and nothing says so',
+    n: 155, gate: DIET, name: 'a moveset retrain stops being logged, so four slots are exercised and nothing says so',
     file: 'tools/sim.js',
     anchor: "      if (setMoveset(state, c.id, pick, known, now, content).ok) did('moveset', { who: c.id });",
     to: '      setMoveset(state, c.id, pick, known, now, content);',
   },
   {
-    n: 156, gate: COVERAGE, name: 'an agenda row is added that no walker verb answers, and the coverage rule lets it through',
+    n: 156, gate: DIET, name: 'an agenda row is added that no walker verb answers, and the coverage rule lets it through',
     file: 'ranch/agenda.js',
     anchor: "    id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',",
     to: "    id: 'audit', kind: 'spend', screen: 'ranch', label: 'Audit the paperwork',\n    hint: () => 'x', ready: () => true,\n  },\n  {\n    id: 'pens', kind: 'spend', screen: 'ranch', label: 'Expand the pens',",
@@ -5767,7 +5767,7 @@ if (process.argv.includes('--anchors')) {
 // 63.9s — against a baseline that already spends about 1,700 across four
 // lanes. That is the whole argument: the cheapest three gates in the tree were
 // the three nobody ran.
-const BASELINE = [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, COVERAGE, CACHEBUMP, OFFLINE, DURABLE];
+const BASELINE = [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, DIET, CACHEBUMP, OFFLINE, DURABLE];
 
 const baselineLabel = (gate) => (
   gate === CACHEBUMP ? 'the worker precaches a shell that is actually there'

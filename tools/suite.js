@@ -47,7 +47,7 @@ const JOBS = [
   // first and fills the walk cache, reach reads it. Split across two lanes
   // they walked fourteen campaigns for seven and put the suite 16s over
   // budget.
-  { name: 'walks', files: ['tools/coverage.js', 'tools/reach.js'], env: {} },
+  { name: 'walks', files: ['tools/diet.js', 'tools/reach.js'], env: {} },
 ];
 
 // R95 — LONGEST FIRST, FROM A NUMBER RATHER THAN FROM THE ARRAY ORDER.
