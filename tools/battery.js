@@ -414,6 +414,11 @@ const CACHEBUMP = ['node', 'tools/release.js'];
 // named had quietly been closed by other milestones and nobody noticed,
 // because there was nothing watching either way.
 const DIET = ['node', 'tools/diet.js'];
+// R115 — the service worker against a stubbed cache, and the coverage merge
+// against itself. Both are arithmetic and both run in under a second, which
+// is the only reason a gate this load-bearing can afford eight breaks.
+const WORKER = ['node', 'tools/worker.js'];
+const COVSELF = ['node', 'tools/coverage.js', '--self'];
 
 // R95 — CAN A PLAYER ACTUALLY GET TO THE CONTENT? Three rules of one gate:
 // every species is reachable by a mechanism that resolves, a 180-day walk
@@ -3853,6 +3858,91 @@ const BREAKS = [
     to: '.tier-S { background: var(--accent); color: var(--text); border-color: var(--accent); }',
   },
 
+  // R115 — the worker, and the merge that reads what the gates ran.
+  {
+    // A 502 BRICKS THE APP UNTIL THE NEXT RELEASE. The background revalidation
+    // writes whatever comes back, so one proxy error page lands in the cache
+    // under `index.html` and every cold open after it serves the error — with
+    // no network needed to keep serving it. The cache-first read still works,
+    // the offline open still works, and the app is dead.
+    n: 375, gate: WORKER, name: 'a proxy error page is cached over the shell and the app never recovers',
+    file: 'sw.js',
+    anchor: '    if (response && response.ok) {\n      const copy = response.clone();\n      return caches.open(CACHE).then((cache) => cache.put(request, copy)).then(() => response);',
+    to: '    if (response) {\n      const copy = response.clone();\n      return caches.open(CACHE).then((cache) => cache.put(request, copy)).then(() => response);',
+  },
+  {
+    // THE REVALIDATION STOPS BEING CONDITIONAL. R100's whole argument for
+    // checking after the paint rather than before it is that the check costs
+    // one 304. Drop `no-cache` and it is a full download of every shell entry
+    // on every visit, silently — the page still paints from cache, so nothing
+    // a user or a screenshot can see says so.
+    n: 376, gate: WORKER, name: 'the background check refetches the whole shell instead of asking if it changed',
+    file: 'sw.js',
+    anchor: "const revalidate = (request) => fetch(request, { cache: 'no-cache' })",
+    to: 'const revalidate = (request) => fetch(request)',
+  },
+  {
+    // THE OLD CACHES ARE NEVER SWEPT. Every `CACHE` bump leaves its
+    // predecessor on disk forever, which on a phone is the app quietly growing
+    // without limit — and nothing about the current release looks wrong.
+    n: 377, gate: WORKER, name: 'activate stops evicting the caches it replaced, so every release leaks one',
+    file: 'sw.js',
+    anchor: 'Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))',
+    to: 'Promise.all(keys.filter((k) => k === null).map((k) => caches.delete(k)))',
+  },
+  {
+    // THE NEW WORKER WAITS FOR EVERY TAB TO CLOSE. Without `skipWaiting` a
+    // release reaches a player who keeps the app open only when they finally
+    // shut every copy of it — which, for a TWA on a phone, can be never.
+    n: 378, gate: WORKER, name: 'a new build sits in waiting instead of taking over',
+    file: 'sw.js',
+    anchor: '.then(() => self.skipWaiting())',
+    to: '.then(() => undefined)',
+  },
+  {
+    // A POST GOES THROUGH THE CACHE. `caches.match` on a non-GET is a
+    // guaranteed miss, so it falls to the network path — and then tries to
+    // `cache.put` the response, which throws on any method but GET. The
+    // failure is asynchronous and swallowed, so it shows up as nothing at all.
+    n: 379, gate: WORKER, name: 'the worker stops passing non-GET requests straight through',
+    file: 'sw.js',
+    anchor: "  if (event.request.method !== 'GET') return;",
+    to: "  if (event.request.method === 'NEVER') return;",
+  },
+  {
+    // THE QUERY STAYS ON THE PATH — the defect this milestone shipped and then
+    // found. tools/handlers.js imports each screen module as `…/ui.js?run=230`
+    // so every surface renders fresh; keeping the query means `readSrc` misses
+    // and the whole lane is discarded. It cost 307 lines and eight functions
+    // read as dead that run on every suite, and nothing about the gate's own
+    // output looked wrong — it simply reported more work to do.
+    n: 380, gate: COVSELF, name: 'a cache-busted import is filed under a path no file has, and its lane is dropped',
+    file: 'tools/coverage.js',
+    anchor: "const rel = r.url.slice(`file://${root}/`.length).replace(/[?#].*$/, '');",
+    to: 'const rel = r.url.slice(`file://${root}/`.length);',
+  },
+  {
+    // AN UNRUN BRANCH READS AS RUN. V8 says "this block did not execute" with
+    // a zero-count range INSIDE a called function's range, so within one
+    // process the inner range has to overwrite its parent. Take the max here
+    // instead and every function that was called anywhere reads as fully
+    // covered: the first draft of this merge reported the tree 0.0% dead.
+    n: 381, gate: COVSELF, name: 'a dead branch inside a live function is painted with its parent count',
+    file: 'tools/coverage.js',
+    anchor: 'for (let i = rg.startOffset; i < rg.endOffset && i < local.length; i++) local[i] = rg.count;',
+    to: 'for (let i = rg.startOffset; i < rg.endOffset && i < local.length; i++) local[i] = Math.max(local[i], rg.count);',
+  },
+  {
+    // AND ACROSS PROCESSES THE LAST LANE WINS. Thirty-seven processes report on
+    // the same files; a lane that imported a module without calling into it
+    // would erase the lane that exercised it, and which one that is depends on
+    // directory order. Green or red by filesystem enumeration is not a gate.
+    n: 382, gate: COVSELF, name: 'a lane that skipped a function erases the lane that ran it',
+    file: 'tools/coverage.js',
+    anchor: 'arr[i] = arr[i] === -1 ? local[i] : Math.max(arr[i], local[i]);',
+    to: 'arr[i] = local[i];',
+  },
+
   // R175 — the stable says how big it is and what makes it bigger.
   {
     // THE MAIN SCREEN STOPS SAYING HOW FULL THE STABLE IS, which is the state
@@ -5767,7 +5857,7 @@ if (process.argv.includes('--anchors')) {
 // 63.9s — against a baseline that already spends about 1,700 across four
 // lanes. That is the whole argument: the cheapest three gates in the tree were
 // the three nobody ran.
-const BASELINE = [SCOPE, HANDLERS, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, DIET, CACHEBUMP, OFFLINE, DURABLE];
+const BASELINE = [SCOPE, HANDLERS, WORKER, COVSELF, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, DIET, CACHEBUMP, OFFLINE, DURABLE];
 
 const baselineLabel = (gate) => (
   gate === CACHEBUMP ? 'the worker precaches a shell that is actually there'

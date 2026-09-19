@@ -23,7 +23,7 @@
 // you cannot put "(anonymous)" on an allowlist and mean anything by it. What a
 // person can act on is a function with a name, so that is the rule, and the
 // report prints the anonymous count beside it so the exclusion stays visible.
-import { readdirSync, readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -78,10 +78,30 @@ const ALLOWED = [
       + 'synthesised click. Both are unreachable BECAUSE of rules this repo chose.',
   },
   {
-    file: 'battle/autoplay.js', fn: 'whatDecidedIt',
-    why: 'The aftermath line for a fight SENT rather than watched. R88\'s "Send them without me" '
-      + 'only appears when the forecast calls a fight a walkover, and the walk needs its one '
-      + 'battle in progress for the arena. Sending it would spend the arena pass.',
+    file: /^battle\/(autoplay|engine)\.js$/, fn: /^whatDecidedIt$|^get length$/,
+    why: 'The aftermath line for a fight SENT rather than watched, and the `length` getter on the '
+      + 'event log it reads. R88\'s "Send them without me" only appears when the forecast calls a '
+      + 'fight a walkover, and the walk needs its one battle in progress for the arena. Sending it '
+      + 'would spend the arena pass. One path, two ends of it: nothing else asks the log how long '
+      + 'it is.',
+  },
+  {
+    file: 'campaign/director.js', fn: 'alreadyCounters',
+    why: 'MEASURED UNREACHABLE, not merely unreached. The director prefers to replace a slot that '
+      + 'is not already an answer to this profile, and it expresses that preference inside a sort '
+      + 'comparator. `expendable` keeps only slots with `i > 0 && i < waves.length - 1`, so a '
+      + '3-wave encounter yields exactly one candidate and a 2-wave encounter none — and all 26 '
+      + 'authored encounters have 2 or 3 waves (16 and 10). A one-element sort never calls its '
+      + 'comparator. The rule comes alive the day somebody authors a 4-wave fight; until then it '
+      + 'is content that does not exist, not code that is wrong.',
+  },
+  {
+    file: 'render/renderer.js', fn: 'developingPortrait',
+    why: 'The crate a creature stands in while its shapes are still in flight — drawn only when '
+      + 'the genome is known and `hasGeometry` is false, which is true for exactly as long as one '
+      + 'fetch. R81 made the shapes lazy on purpose and every gate waits for the page to settle '
+      + '(R159, also on purpose), so the two rules this repo chose are what close the window. '
+      + 'Reaching it means serving the shape files slowly, which is a network gate, not this one.',
   },
   {
     file: 'ranch/ui.js', fn: /^(showVariantCeremony|breed-b)$/,
@@ -218,7 +238,99 @@ function collect() {
   return dir;
 }
 
+// ---------------------------------------------------------------------------
+// THE MERGE, CHECKED AGAINST ITSELF (`--self`). Collection is ten minutes of
+// I/O and is proven by this gate's own green run; the MERGE is arithmetic, and
+// arithmetic deserves arithmetic tests. Every case below is a defect this
+// milestone actually shipped and then found, so a break aimed here is aimed at
+// something that has already gone wrong once.
+//
+// It writes a two-process capture over a real module and reads the verdict
+// back, which is why it needs no fixture on disk and runs in milliseconds.
+function selfCheck() {
+  const rel = 'util/text.js';
+  const text = readFileSync(join(root, rel), 'utf8');
+  const url = `file://${root}/${rel}`;
+  const dir = mkdtempSync(join(tmpdir(), 'sw-coverage-self-'));
+  const write = (name, result) => writeFileSync(join(dir, name), JSON.stringify({ result }));
+  const fn = (functionName, ranges) => ({ functionName, isBlockCoverage: true, ranges });
+  const bad = [];
+  const say = (ok, what) => { if (!ok) bad.push(what); };
+
+  // THE QUERY. tools/handlers.js imports a screen module as `…/ui.js?run=230`
+  // so each surface renders fresh. Keeping the query on the path made every
+  // one of those 260-odd imports miss `readSrc` and vanish; 307 lines and
+  // eight functions read as dead that run on every suite.
+  write('a.json', [{ scriptId: '1', url: `${url}?run=7`, functions: [
+    fn('selfQuery', [{ startOffset: 0, endOffset: 40, count: 3 }]),
+  ] }]);
+  // WITHIN a process an inner range OVERWRITES its parent: a zero-count block
+  // inside a called function is the only way V8 says "this branch did not
+  // run". Taking the max here instead reported the whole tree 0.0% dead.
+  write('b.json', [{ scriptId: '1', url, functions: [
+    fn('selfOuter', [{ startOffset: 40, endOffset: 90, count: 1 },
+      { startOffset: 50, endOffset: 70, count: 0 }]),
+  ] }]);
+  // ACROSS processes the max wins, or a lane that skipped a function would
+  // erase the lane that ran it. TWO PAIRS, IN OPPOSITE ORDERS, because
+  // `readdirSync` promises no ordering and the first draft of this case put
+  // the larger count last — so an overwrite merge still landed on 4 and the
+  // check passed while the arithmetic was wrong. Whichever way the directory
+  // enumerates, one of these two pairs ends on its smaller count.
+  write('c.json', [{ scriptId: '1', url, functions: [
+    fn('selfShared', [{ startOffset: 90, endOffset: 120, count: 0 }]),
+  ] }]);
+  write('d.json', [{ scriptId: '1', url, functions: [
+    fn('selfShared', [{ startOffset: 90, endOffset: 120, count: 4 }]),
+  ] }]);
+  write('e.json', [{ scriptId: '1', url, functions: [
+    fn('selfMirror', [{ startOffset: 120, endOffset: 150, count: 4 }]),
+  ] }]);
+  write('f.json', [{ scriptId: '1', url, functions: [
+    fn('selfMirror', [{ startOffset: 120, endOffset: 150, count: 0 }]),
+  ] }]);
+
+  const { paint, fns } = mergeDir(dir);
+  rmSync(dir, { recursive: true, force: true });
+  const arr = paint.get(rel);
+  const seen = fns.get(rel);
+  say(!!arr, 'a capture whose urls carry a `?query` never reached the file it belongs to');
+  if (arr) {
+    say(arr[10] === 3, 'a query-string url did not paint the module it is a copy of');
+    say(arr[45] === 1, 'a called function did not paint as run');
+    say(arr[60] === 0, 'an inner zero-count block did not overwrite its parent within one process');
+    say(arr[100] === 4 && arr[130] === 4,
+      'a function run in one process and skipped in another did not merge to the larger count');
+  }
+  say(seen?.get('selfQuery@0') === true, 'a function called under a `?query` url did not count as called');
+  say(seen?.get('selfShared@90') === true && seen?.get('selfMirror@120') === true,
+    'a function called in only one process did not count as called');
+  say(seen?.get('selfOuter@40') === true, 'a function whose body has a dead branch did not count as called');
+
+  // AND THE LIST ITSELF. An entry that excuses nothing is rot; an entry that
+  // excuses something must stop it failing.
+  const mine = [{ file: rel, name: 'selfDead', line: 1, decl: '' }];
+  const probe = (list) => {
+    const h = (pat, v) => (pat instanceof RegExp ? pat.test(v) : pat === v);
+    const used = (a) => mine.some((m) => h(a.file, m.rel ?? rel) && h(a.fn, m.name));
+    return { covered: list.some(used), idle: list.filter((a) => !used(a)).length };
+  };
+  say(probe([{ file: rel, fn: /^selfDead$/ }]).covered, 'an allowlist entry matching a miss did not excuse it');
+  say(probe([{ file: rel, fn: 'selfAlive' }]).idle === 1, 'an allowlist entry matching nothing was not reported idle');
+  return bad;
+}
+
 async function main() {
+  if (process.argv.includes('--self')) {
+    const bad = selfCheck();
+    if (bad.length) {
+      console.error(`coverage ✗  the merge is wrong in ${bad.length} way${bad.length === 1 ? '' : 's'}`);
+      for (const b of bad) console.error(`  · ${b}`);
+      process.exit(1);
+    }
+    console.log('coverage ✓  the merge strips queries, overwrites within a process, takes the max across them, and the allowlist answers');
+    return;
+  }
   let dir = USE;
   let temp = null;
   if (!dir) { dir = collect(); temp = dir; }

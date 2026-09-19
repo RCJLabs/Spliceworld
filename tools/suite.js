@@ -48,9 +48,12 @@ const JOBS = [
   // they walked fourteen campaigns for seven and put the suite 16s over
   // budget.
   { name: 'walks', files: ['tools/diet.js', 'tools/reach.js'], env: {} },
-  // R115 — the service worker, run against a stubbed cache. A second of
-  // arithmetic over promises; it rides the cheapest lane.
-  { name: 'worker', files: ['tools/worker.js'], env: {} },
+  // R115 — the service worker, run against a stubbed cache, and the coverage
+  // merge checked against itself. Both are arithmetic rather than walks — a
+  // second between them — so they ride the cheapest lane. The coverage gate's
+  // COLLECTION is ten minutes and stays out of the suite; what is in here is
+  // the part that can be wrong quietly.
+  { name: 'worker', files: ['tools/worker.js', 'tools/coverage.js --self'], env: {} },
 ];
 
 // R95 — LONGEST FIRST, FROM A NUMBER RATHER THAN FROM THE ARRAY ORDER.
@@ -109,8 +112,13 @@ const results = [];
 // each paid for their own set — 14 walks for 7 campaigns, and the suite went
 // 196s against a 180s budget. Sequenced on one lane, the second reads the
 // walk cache the first just wrote and costs almost nothing.
+// R115 — a tool may carry FLAGS. `tools/coverage.js --self` checks the
+// coverage merge's arithmetic without paying for its ten-minute collection,
+// and a lane entry that cannot say `--self` would have meant a second file
+// existing only to pass one argument.
 const spawnOne = (file, env) => new Promise((resolve) => {
-  const p = spawn('node', [file], { cwd: root, env: { ...process.env, ...env } });
+  const [bin, ...args] = String(file).split(/\s+/);
+  const p = spawn('node', [bin, ...args], { cwd: root, env: { ...process.env, ...env } });
   let out = '';
   p.stdout.on('data', (d) => { out += d; });
   p.stderr.on('data', (d) => { out += d; });
