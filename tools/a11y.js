@@ -50,6 +50,9 @@ const TYPE_FLOOR = 12;     // px, the smallest computed font-size allowed
 // browser never will: a reader who has turned their text up, and a cutout.
 const TEXT_SCALE = 1.5;    // 150% text, the accessibility setting people use
 const CUTOUT = 47;         // px, a notch the header has to clear
+// R115 — `CEREMONY_MS` in splice/extract-ui.js is 2100. Waiting it out plus
+// a margin is the whole trick: the results card does not exist until it ends.
+const CEREMONY_WAIT = 3000;
 const GUTTER = 6;          // px, between two adjacent controls
 const RAG = 1;             // px, how far into its own line a full-width row may start
 const BAND_TOP = 420;      // px, the wide end of the stylesheet's phone media query
@@ -1098,7 +1101,62 @@ async function main() {
         + ' moving things still gets this one');
     }
 
+    // R115 — THE GRADUATION CEREMONY, PLAYED. `runExtraction` is reached by
+    //      every gate that fires handlers; the three functions BEHIND it are
+    //      reached by none. `tools/handlers.js` hands every screen an
+    //      `onExtract` stub, which is the only honest thing it can do from
+    //      Node — the ceremony is a lazy import, an overlay, a 2.1-second
+    //      animation and a second card — so the first ceremony a new player
+    //      sees had never run anywhere. 66 of this module's lines, measured.
+    //
+    //      It is also a screen, so it is COLLECTED as one: two cards with
+    //      controls on them that no floor, gutter or contrast rule had ever
+    //      been applied to.
+    const ceremonyPass = async () => {
+      await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]')?.click()`);
+      await sleep(600);
+      const opened = await evaluate(`(() => {
+        const b = document.querySelector('#screen-ranch button.extract-btn:not([disabled])');
+        if (!b) return false; b.click(); return true;
+      })()`);
+      if (!opened) { note('the Ranch offered nobody to graduate, so the ceremony was never measured'); return; }
+      await sleep(900);
+      if (!await evaluate(`!!document.querySelector('#overlay #grad-go')`)) {
+        note('pressing Graduate did not open the ceremony, so nothing behind it ran');
+        return;
+      }
+      await collect('ceremony/confirm');
+      await evaluate(`document.querySelector('#overlay #grad-go').click()`);
+      // The animation is presentation-only and 2.1s of it; the results card
+      // is what the next assertion needs, so this waits it out rather than
+      // racing it.
+      await sleep(CEREMONY_WAIT);
+      // A refusal is a different card with a different button. It is a real
+      // screen too, and it is NOT the one this pass exists to reach, so say
+      // so rather than reporting a ceremony that never played.
+      if (await evaluate(`!!document.querySelector('#overlay #grad-back')`)) {
+        note('the graduation was refused, so the ceremony and its results never played');
+        await evaluate(`document.querySelector('#overlay #grad-back').click()`);
+        return;
+      }
+      if (!await evaluate(`!!document.querySelector('#overlay #grad-done')`)) {
+        note('the ceremony never reached its results card');
+        return;
+      }
+      await collect('ceremony/results');
+      await evaluate(`document.querySelector('#overlay #grad-done').click()`);
+      await sleep(600);
+      if (!await evaluate(`document.querySelector('#overlay').hidden`)) {
+        note('collecting the essence left the ceremony overlay on screen');
+      }
+      // Put the fixture back: a graduation spends an animal and writes a save.
+      await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
+      await send('Page.navigate', { url });
+      await sleep(2200);
+    };
+
     await foundingPass();
+    await ceremonyPass();
     await briefingPass();
     await collect('shell');
     const screens = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
