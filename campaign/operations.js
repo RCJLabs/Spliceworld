@@ -39,7 +39,7 @@
 // on a timer, with the authorities taking an interest.
 
 import { rngStream, pick } from '../util/rng.js';
-import { pickPooled } from './monologue.js';
+import { pickPooled, fill } from './monologue.js';
 import { analyze } from '../splice/physiology.js';
 import { isSettled } from '../splice/chimera.js';
 import { createAnimal } from '../ranch/ranch.js';
@@ -231,18 +231,14 @@ export function boardCharges(state, content, now) {
 // stops being "which job pays most" and becomes "which job can I actually
 // do" — anatomy, class and who is free, which is the decision the demands
 // were written for.
-export function opCost() {
-  return 1;
-}
-
 // Spending one. Kept beside the reader so the pair cannot drift, and written
 // the way `spendSparCharge` is: `max(refillAt, now)` so a bucket that has
 // been full for a week starts its first regen from NOW rather than from
 // whenever it last emptied.
-function spendBoardCharge(state, content, now, cost = 1) {
+function spendBoardCharge(state, content, now) {
   const regen = Math.max(1, opTuning(content).boardRegenHours ?? 8) * HOUR;
   const refillAt = state.campaign.boardRefillAt ?? 0;
-  state.campaign.boardRefillAt = Math.max(refillAt, now) + regen * cost;
+  state.campaign.boardRefillAt = Math.max(refillAt, now) + regen;
 }
 
 export function opRemainingMs(state, now, opId = null) {
@@ -328,7 +324,6 @@ export function runnableOps(state, content, now, crew = null) {
   const bucket = boardCharges(state, content, now);
   if (!bucket.ready) return [];
   return operationList(content).filter((op) => {
-    if (bucket.charges < opCost(op, content)) return false;
     if (running.some((r) => r.opId === op.id)) return false;
     if (!opReady(state, op.id, now)) return false;
     // Two lanes: go yourself (rider null) or send a creature. Runnable if
@@ -367,14 +362,9 @@ export function startOperation(state, opId, chimeraId, content, now) {
   // R116 — and the board's own pace, checked LAST so a launch that was going
   // to be refused for a better reason still says the better reason.
   const bucket = boardCharges(state, content, now);
-  const cost = opCost(op, content);
-  if (bucket.charges < cost) {
-    return { ok: false, msg: cost > 1
-      ? `That one takes ${cost} leads and you have ${bucket.charges}. The big jobs want groundwork.`
-      : 'No leads left. The county has to forget you a little before anyone talks again.' };
-  }
+  if (!bucket.ready) return { ok: false, msg: fill(content.copy?.board?.no_leads, {}) };
 
-  spendBoardCharge(state, content, now, cost);
+  spendBoardCharge(state, content, now);
   state.campaign.opCount = (state.campaign.opCount ?? 0) + 1;
   const rng = rngStream(state.seed, `op:${opId}`, state.campaign.opCount);
   const success = rng() < odds.chance;

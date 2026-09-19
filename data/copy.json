@@ -90,5 +90,8 @@
     "creed_label": "Philosophy",
     "creed_empty": "Decide later",
     "creed_hint": "Flavour only — your anatomy is where the mechanics live"
+  },
+  "board": {
+    "no_leads": "No leads left. The county has to forget you a little before anyone talks again."
   }
 }
