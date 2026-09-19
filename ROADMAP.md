@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**7 entries queued.** R116, R117, R118, R176, R179, R180, R181.
+**8 entries queued.** R116, R117, R118, R176, R179, R180, R181, R182.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6220,6 +6220,37 @@ triangle working, and each region genuinely asks a different question)*.
   it.* 554 and 1026, from 564 and 1036; both ledgers name `campaign/director.js`
   and say why the data-key option could only ever have paid half.
 
+
+### 9.31 A vault full of treasure has no exit (R182) — found closing R116
+
+- **R182 — The Vault's only button refuses to help when it is most needed.**
+  Found while re-deriving R116's cascade, and it is not R116's doing: R116 is
+  simply the milestone that makes the state common. `extractAnimal` refuses
+  into a full vault on purpose (R91: a yield is something the player ASKED
+  for, so nothing is rendered at the door), and the refusal says *"Render
+  something down, or buy shelf space from the Extractor."* Both halves can be
+  unavailable at once. `surplusParts` spares one of each anatomy and skips
+  anything carrying traits, so a shelf of singletons and trait-carriers has
+  NOTHING it will offer; and the Extractor's shelf tops out at 400.
+  **Measured on seed 4242 at day 180: 396 parts of 400, 193 distinct, 31 ids
+  with a duplicate, 162 singletons, 233 carrying traits, `surplusParts`
+  returns ZERO, and every graduation is refused** — so the pens fill to 112
+  head against a paddock of 40 and there is no move the screen will accept.
+  That is not junk jamming the shelf. It is a very good campaign with nowhere
+  to put the next animal, and the game's answer is a button that is greyed
+  out in spirit.
+  Proposed, small-to-medium, and the shape is a DECISION rather than a bigger
+  number: raising the shelf again only moves the wall. Candidates — let the
+  player render a CHOSEN part (the Vault screen has no per-part control at
+  all today, which is why the walker cannot do what a player would); let a
+  part retire into the Dex the way `admitVial` already retires a vial, so the
+  anatomy is remembered when the token is gone; or give the pens a way to
+  rehome an animal that does not go through the Extractor. Whichever it is,
+  the refusal's own sentence has to become true again.
+  *Done when: on a save with a full shelf and no `surplusParts`, the Vault
+  offers a move the player can actually take; a 180-day walk on every seed
+  ends with the pens inside the design ceiling the vault gate states; and the
+  refusal text names something that exists.*
 
 ### 9.30 Three new verbs (R179–R181) — asked for directly
 

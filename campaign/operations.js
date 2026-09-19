@@ -1,42 +1,11 @@
 // Operations — the Jobs board (non-combat missions). Pure and DOM-free.
 //
-// WHY THIS EXISTS. Before it, every route to money and to new fauna ran
-// through winning battles: held nodes paid the income, battles paid the
-// purses, and `unlocksFauna` gated the Mail-Order catalog behind conquest.
-// A player who kept losing therefore had $22/day, a catalog containing
-// exactly two species — Goat and Ram — and no path at all to Water or Air
-// anatomy, which is precisely what the class triangle says you need in
-// order to stop losing. That is a spiral with no floor.
-//
-// So four rules, and all four are load-bearing:
-//
-//   1. Something is ALWAYS runnable. The floor jobs need no territory, no
-//      notoriety, no chimera and no particular anatomy.
-//   2. Failure costs time and a bruise, never a creature. You cannot
-//      punish a losing player for trying to stop losing.
-//   3. `demands` improve the odds; they never gate the job. Requiring
-//      Aquatic anatomy before you may rob the aquarium that would GIVE
-//      you Aquatic anatomy is the same circle in a smaller hat.
-//   4. A job needs a CREW, so the board runs as wide as your stable does
-//      (A4). It used to be one job at a time, full stop, which meant a
-//      session was: check timers, launch the one job, fight once, wait —
-//      and if the fight was lost, there was nothing left but four different
-//      ways to spend money. Slots now scale with the creatures who are fit
-//      to work, floored at one so the crewless paperwork job is ALWAYS
-//      runnable (rule 1) and capped so a large stable does not turn the
-//      board into an idle-game payout tap. Growing a stable was already the
-//      answer to A1's solo cliff; this makes it the answer to the empty
-//      evening as well.
-//   5. Heat is the price, and it is a MECHANIC rather than a nerf. Every
-//      job leaves the county twitchy; heat decays in real time and, while
-//      it lasts, subtracts from the odds of everything. Trimming payouts
-//      to cap the ceiling would have punished exactly the broke player
-//      this board exists for. Heat only ever bites the player running
-//      jobs back to back — check in once a day and you will never see it.
-//
-// Conquest stays the better deal: it puts a species in the catalog to buy
-// instantly and repeatedly, where a job hands you one animal, sometimes,
-// on a timer, with the authorities taking an interest.
+// WHY IT EXISTS and the five rules it is built on — always something
+// runnable, failure never costs a creature, demands improve the odds rather
+// than gating, a job needs a crew so the board runs as wide as your stable,
+// and heat is the price — are in data/notes/operations.md, beside the data
+// they are rules ABOUT. They were duplicated here almost word for word,
+// which is 2.3 KB every player downloads to read the same argument twice.
 
 import { rngStream, pick } from '../util/rng.js';
 import { pickPooled, fill } from './monologue.js';

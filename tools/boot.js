@@ -390,7 +390,17 @@ const REPORT = process.argv.includes('--report');
 // R174 claimed. THE NEXT MILESTONE TO WANT THIS SHOULD RE-MEASURE FIRST and
 // write the reading down, because the lesson of this raise is that half of it
 // was invisible.
-const FIRST_PAINT_KB = 1085;
+//
+// R116 — 1085 -> 1099, AND THE NOTE ABOVE'S INSTRUCTION WAS FOLLOWED: measured
+// first at 1095, paid down to 1090 by moving 4.6 KB of `operations.js`'s
+// comments into `data/notes/operations.md` (prose ships uncompiled, so a note
+// is a genuine saving and not an accounting trick), and 1099 is that reading
+// plus the nine kilobytes of slack R169 asked for and R112 restored. What the
+// rest of it buys: a charge bucket and a contract ledger in the engine, the
+// retainer's copy in `data/copy.json`, and 16 new `op_contract` phrasings in
+// `data/voice-pools.json` — which are the thing that kept R109's wire above
+// its floor when three job pools went quiet.
+const FIRST_PAINT_KB = 1099;
 
 // R169 — AND IT STAYS AT 1034, measured at 1016. Every previous milestone
 // either raised this number or brought it down to sit just above the

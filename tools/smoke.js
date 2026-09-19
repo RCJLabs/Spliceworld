@@ -23228,7 +23228,21 @@ if (inShard('wire')) {
 // one-line comment introducing `fmtMoney`; PROSE_CAP was also at exactly its
 // cap, so the line came out and the explanation is in ROADMAP R113, where the
 // argument for the function already had to be written anyway.
-const KB_CAP = 322;        // CODE only, measured at 321.1
+// R116 — 322 -> 326, measured at 325.6. FOUR AND A HALF KILOBYTES OF ENGINE,
+// and this is the case the cap was written for rather than the case it was
+// written against: a charge bucket (`boardCharges`, `spendBoardCharge`) and a
+// contract ledger (`boardOps`, `contractList`, `contractPerHour`,
+// `contractPerDay`, `activeContract`, `signContract`, `cancelContract`,
+// `settleContracts`) are a subsystem, not a screen re-entering the graph by
+// accident. R171 put this cap here to catch the latter, and it is declared
+// rather than smuggled.
+//
+// The PROSE half was PAID, not raised alongside it — see below. `operations.js`
+// gave 4.6 KB back to `data/notes/operations.md`, which is more than R116's
+// own prose cost, and 2.3 of it was the module header repeating the note it
+// sits beside almost word for word. One block was explaining `opCost`, a
+// function this milestone deleted rather than shipped dead.
+const KB_CAP = 326;        // CODE only, measured at 325.6
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
@@ -23292,7 +23306,19 @@ const KB_CAP = 322;        // CODE only, measured at 321.1
 // of prose with it. Prose is 44% of the eager graph and R171 measured that it
 // does not compress away, so the only real move left is fewer eager modules —
 // and MODULE_CAP is at 50 of 50 with no headroom at all.
-const PROSE_CAP = 251;
+// R116 — 251 -> 255, measured at 254.5, AND THE TAX WAS PAID FIRST, which is
+// the only thing that makes a raise different from a shrug. `operations.js`
+// went from 15.9 KB of comments to 11.3: the file header duplicated
+// `data/notes/operations.md` almost word for word (2.3 KB every player
+// downloads to read the same argument twice), the metronome derivation and
+// the two rejected charge pricings went to the note beside the data they are
+// rules about, and a block describing `opCost` went entirely because the
+// function did. What is LEFT in the module is local — why an empty bucket
+// refuses in `runnableOps` rather than at three callers, why the pace is
+// checked last so a better refusal still wins, why the ledger line must go
+// through the shared emitter — and those belong next to the code they
+// explain. The 3.6 KB over is what a new subsystem costs to explain at all.
+const PROSE_CAP = 255;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(codeKb <= KB_CAP,

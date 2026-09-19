@@ -1257,10 +1257,18 @@ const SITTING = ['node', '-e', `
   {
     const s2 = { ...newGameState(), seed: 4242 };
     foundLab(s2, content, 'bramble_barn', t0);
+    // R116 — AND THE PROBE NEEDS A CREW NOW. Every job left on the board
+    // requires one (the three that needed nobody carried anywhere became
+    // standing contracts), so a fixture with an empty roster launches
+    // NOTHING, the row correctly does not appear, and the hint check reads
+    // an empty string and fails on a rule that is working. Zero is the right
+    // answer to the wrong question: this block exists to prove the row's
+    // number is the number that launches, and at zero there is no number.
+    s2.chimeras = [{ id: 'c0', name: 'Chompers', tokens: {}, frame: 'M', settleUntil: 0, bond: 50, xp: 0 }];
     let launches = 0;
     for (const op of operationList(content)) {
       const probe = JSON.parse(JSON.stringify(s2));
-      if (startOperation(probe, op.id, null, content, t0).ok) launches++;
+      if (startOperation(probe, op.id, 'c0', content, t0).ok) launches++;
     }
     const claimed = runnableOps(s2, content, t0).length;
     if (claimed !== launches) {
