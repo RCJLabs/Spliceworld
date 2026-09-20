@@ -122,8 +122,16 @@ try {
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: 900, deviceScaleFactor: 1, mobile: w < 700 });
     await send('Page.navigate', { url });
     await sleep(700);
-    if (!await settle('#screen-ranch', { deadline: 20000 })) {
-      fails.push(`the Ranch never painted and went quiet within 20s at ${w}px`);
+    // R117 — SETTLE ON `main`, NOT ON A NAMED SCREEN. The first draft waited
+    // for `#screen-ranch` and reported "the Ranch never painted" at 900, 1280
+    // and 1920 on a tree where it paints fine: the app restores the screen you
+    // were last on, this loop leaves it on the Vault, and a hidden element's
+    // signature is the empty string, which never equals itself twice. That is
+    // a gate asking a question the page cannot answer — the same fault this
+    // milestone found in `.agenda` (not a class) and `splice` (not a screen).
+    // `main` is in the shell from the first byte and is never hidden.
+    if (!await settle('main', { deadline: 20000 })) {
+      fails.push(`the shell never painted and went quiet within 20s at ${w}px`);
       continue;
     }
     const shell = JSON.parse(await evaluate(`JSON.stringify((() => {
