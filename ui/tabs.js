@@ -15,7 +15,7 @@ import { renderIcon } from './icons.js';
 // that only ever fits one screen's tabs.
 export function subtabBar({ tabs, active, attr, badgeFor = () => null, id = '' }) {
   return `
-    <nav class="subtabs" style="--subtab-n:${tabs.length}"${id ? ` id="${id}"` : ''}>
+    <nav class="subtabs${tabs.length > 5 ? ' is-crowded' : ''}" style="--subtab-n:${tabs.length}"${id ? ` id="${id}"` : ''}>
       ${tabs.map((tab) => {
         const badge = badgeFor(tab.id);
         return `

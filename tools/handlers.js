@@ -295,6 +295,14 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   SURFACES.push({ name: 'pens:card', file: 'splice/pens-ui.js', fn: 'renderPensScreen',
     path: [{ sel: '[data-fold]' }], fanout: '[data-pen-tab]' });
 
+  // R117 — THE WIDE-SCREEN RAIL IS A SURFACE. It paints `data-goto` and
+  // `data-open-fold`, both of which the Ranch also paints, so the
+  // denominator would have been satisfied without this and the rail's own
+  // binder — the one that has to shut the sibling folds by hand because
+  // nothing clicked a fold head — would never have run once. A panel only
+  // wide screens can see is exactly the panel a gate forgets.
+  SURFACES.push({ name: 'rail', file: 'ui/rail.js', fn: 'renderRail', path: [] });
+
   // A picker sheet per field, on every screen that has one. `path` stays
   // EMPTY here: the fanout is what presses the field, and a surface that
   // consumed its own control in the path would probe zero of them.

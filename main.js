@@ -233,6 +233,53 @@ function tick({ force = false } = {}) {
   const name = state.activeScreen;
   const root = $(`#screen-${name}`);
   if (root && !root.hidden) SCREENS[name](root);
+  paintRail();
+}
+
+// R117 — THE WIDE-SCREEN RAIL. Two lines of shell and everything else in
+// `ui/rail.js`, which is imported the first time the media query matches and
+// never on a phone: `MODULE_CAP` is at 50 eager modules of 50, and a column
+// that only exists above 900px has no business in the boot graph. The import
+// is fired once and remembered; a failed one is forgotten so the next paint
+// can try again rather than leaving the rail dark forever.
+const wide = () => window.matchMedia('(min-width: 900px)').matches;
+let rail = null;
+let railPending = false;
+function paintRail() {
+  const host = $('#rail');
+  if (!host) return;
+  if (!wide()) {
+    // Emptied, not merely hidden — R104's rule for the screens, and the same
+    // reason: nodes behind `display: none` are nodes every style
+    // recalculation still walks.
+    if (host.childElementCount) host.replaceChildren();
+    return;
+  }
+  if (rail) { rail.renderRail(host, ctx, wireLines()); return; }
+  if (railPending) return;
+  railPending = true;
+  import('./ui/rail.js')
+    .then((m) => { rail = m; railPending = false; paintRail(); })
+    .catch(() => { railPending = false; });
+}
+
+// R117 — WHAT THE COUNTY IS SAYING, ONCE. The footer ticker reads the last
+// line of this and the rail reads the last few, and before this milestone the
+// footer was the only reader, so the pick lived inside `updateTicker`. Two
+// readers of one list is a function; two copies of the filler arithmetic is
+// R174's finding all over again.
+function wireLines(limit = 6) {
+  // R109 — the filler lines are data now (news.json `ticker`), and they
+  // ROTATE. They used to be eleven literals in this file picked by
+  // `seed % 11`, which is not a choice that ever changes: a save met one of
+  // them on its first morning and never saw the other ten. Keyed on the day
+  // as well as the seed, so the county has a different thing to say on
+  // Tuesday, and still the same thing all Tuesday.
+  if (state.news.length) return state.news.slice(-limit);
+  const filler = content?.ticker ?? [];
+  if (!filler.length) return [];
+  const day = Math.floor((Date.now() - (state.createdAt ?? 0)) / 86400000);
+  return [filler[Math.abs(state.seed + day) % filler.length]];
 }
 
 // Latest news leads; otherwise a seeded deadpan default.
@@ -243,14 +290,13 @@ function updateTicker() {
   // them on its first morning and never saw the other ten. Keyed on the day
   // as well as the seed, so the county has a different thing to say on
   // Tuesday, and still the same thing all Tuesday.
-  const filler = content?.ticker ?? [];
-  const day = Math.floor((Date.now() - (state.createdAt ?? 0)) / 86400000);
-  const line = state.news.length
-    ? state.news[state.news.length - 1]
-    : (filler.length ? filler[Math.abs(state.seed + day) % filler.length] : '');
+  const line = wireLines(1)[0] ?? '';
   const ticker = $('#ticker');
   ticker.innerHTML = `${renderIcon('satellite', { size: 13 })}<span class="ticker-lead">BREAKING: </span>`;
   ticker.append(line);
+  // The rail carries the same wire, further up the page. A line pushed
+  // outside a tick (`ctx.pushNews`) has to reach both.
+  paintRail();
 }
 
 // R71 — a boot that cannot proceed gets ONE screen that says so, replacing
@@ -435,6 +481,9 @@ async function boot() {
   // time the dialog controller looks, focus is already back where the
   // player left it and its guard correctly does nothing.
   installFocusKeeper([...Object.keys(SCREENS).map((s) => $(`#screen-${s}`)), $('#overlay')].filter(Boolean));
+  // R117 — a window dragged across 900px is a layout change, not a state
+  // one, so nothing else in the shell would have repainted for it.
+  window.matchMedia('(min-width: 900px)').addEventListener('change', () => paintRail());
   // R107 — the only tick that spans a gap is the first after a load, and it
   // published the pair it diffed. COPIED before `showScreen`, which ticks
   // again and would leave `lastTick` describing a zero-width gap.

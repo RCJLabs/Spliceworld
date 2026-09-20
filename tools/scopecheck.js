@@ -1511,12 +1511,19 @@ const COPY_BUDGET = {
   'data/catalog.js': 28,
   'data/loader.js': 3,
   'main.js': 105,
-  'ranch/agenda.js': 213,
+  // R117: the three agenda buckets moved here from `ranch/ui.js`, which is
+  // where the wide-screen rail also reads them from. 213 -> 217; the same
+  // four words came off `ranch/ui.js` below.
+  'ranch/agenda.js': 217,
   'ranch/breeding.js': 104,
   'ranch/founding-ui.js': 73,
   'ranch/onboarding.js': 122,
   'ranch/ranch.js': 129,
-  'ranch/ui.js': 203,   // R175: the Stable label, beside the Pens one
+  // R175: the Stable label, beside the Pens one. R117: 203 -> 185 — the
+  // bucket headings went to `ranch/agenda.js` (4), and the two lines the
+  // Right Now card shares with the rail went to `data/copy.json` (14):
+  // "Nothing is open..." and "and {n} more of these."
+  'ranch/ui.js': 185,
   'render/renderer.js': 11,
   'save/save.js': 35,
   'save/settings-ui.js': 261,

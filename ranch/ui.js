@@ -23,13 +23,13 @@ import { speciesOf } from '../data/catalog.js';
 import { incomePerDay } from '../campaign/campaign.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen } from '../ui/cards.js';
 import { facilityCard, facilityElsewhere, bindFacility } from '../ui/facility-card.js';
-import { agendaShape } from './agenda.js';
+import { agendaShape, AGENDA_KINDS } from './agenda.js';
 import { banded, bandedHtml } from '../ui/roster.js';
 import { paginate, pagerRow, bindPager, trimPages } from '../ui/pager.js';
 import { renderIcon } from '../ui/icons.js';
 import { rushQuote, rushButton, bindRush } from '../splice/rush.js';
 import { calendarLine } from '../campaign/calendar.js';
-import { fmtMoney } from '../util/text.js';
+import { fmtMoney, copy } from '../util/text.js';
 
 const STAGE_LABELS = { juvenile: 'Juvenile', adult: 'Adult', prime: 'Prime', elder: 'Elder' };
 const STAGE_SCALE = { juvenile: 0.72, adult: 0.92, prime: 1, elder: 0.96 };
@@ -190,17 +190,19 @@ export function renderRanchScreen(root, ctx) {
   // this phase was not that a losing player had nothing to do; it was that
   // everything they had was a way to spend money.
   const shape = agendaShape(state, content, t);
-  const KINDS = [
-    ['work', `${renderIcon('test-tube')} Make something`],
-    ['campaign', `${renderIcon('map')} Push on the world`],
-    ['spend', `${renderIcon('money-wings')} Spend money`],
-  ];
+  // R117 — the buckets come from the agenda module now, so this card and the
+  // wide-screen rail cannot drift apart about what they are called.
+  const KINDS = AGENDA_KINDS.map((k) => [k.kind, `${renderIcon(k.icon)} ${k.heading}`]);
   // R47: decided above the body, for the same reason the Breeding Pen is —
   // a shut fold must not build what it is not showing, and this is the
   // biggest card on the screen.
   const rightNowOpen = isOpen(state, 'right-now', !pathOwnsScreen(state));
   const rightNow = collapsibleCard({
     id: 'right-now',
+    // R117 — named so the wide layout can take it down. At 900px and up the
+    // rail carries the same agenda beside every screen, and two Right Nows
+    // one above the other on the Ranch is worse than either.
+    extraClass: 'right-now-card',
     title: '☑ Right Now',
     badge: `<span class="pill">${shape.count} open</span>`,
     summary: shape.productive
@@ -248,8 +250,10 @@ export function renderRanchScreen(root, ctx) {
           <span class="agenda-label">${i.label}</span>
           <span class="fine-print">${i.hint}</span>
         </button>`).join('') + (rest > 0
-        ? `<p class="fine-print">and ${rest} more of these.</p>` : '');
-    }).join('') || '<p class="fine-print">Nothing is open. Everything is on a timer — come back shortly.</p>',
+        ? `<p class="fine-print">${copy(content, 'rail.more', { n: rest })}</p>` : '');
+    // R117 — the two lines this card and the wide-screen rail both need live
+    // in `data/copy.json` now, so neither can say it a little differently.
+    }).join('') || `<p class="fine-print">${copy(content, 'rail.idle')}</p>`,
   });
 
   // R47. Income, Upkeep and Net were three cells showing one subtraction —

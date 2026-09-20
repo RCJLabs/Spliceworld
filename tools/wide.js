@@ -1,28 +1,36 @@
-// R117 — THE GAME IS A 560px COLUMN AT EVERY WIDTH.
+// R117 — THE GAME WAS A 560px COLUMN AT EVERY WIDTH.
 //
 // `main { max-width: 560px }` and, before this milestone, not one `min-width`
-// rule in the whole stylesheet: every width breakpoint style.css carries is a
+// rule in the whole stylesheet: every width breakpoint style.css carried was a
 // `max-width` (400, 430, 420, 400, 340), so the layout could only ever get
-// NARROWER. Measured on the day-180 save, the screens are byte-identical at
-// 900, 1,280 and 1,920px and the gutters simply grow:
+// NARROWER. Measured on the day-180 save, the screens were byte-identical at
+// 900, 1,280 and 1,920px and the gutters simply grew:
 //
 //     380px   main 380 at x=0     0px dark each side  (100% of the viewport)
 //     900px   main 560 at x=163   163px dark each side       (62.2%)
 //   1,280px   main 560 at x=353   353px dark each side       (43.8%)
 //   1,920px   main 560 at x=673   673px dark each side       (29.2%)
 //
-// GitHub Pages serves laptops. On a 1,920px one the player reads a column
-// that uses under a third of the glass.
+// GitHub Pages serves laptops. On a 1,920px one the player read a column that
+// used under a third of the glass.
 //
-// AND THE WIRE IS BELOW THE FOLD AT EVERY WIDTH, which is the finding the
+// AND THE WIRE WAS BELOW THE FOLD AT EVERY WIDTH, which is the finding the
 // entry did not have. `#ticker` lives in `<footer>`, AFTER `main`, and `main`
-// is 1,700-2,700px tall on every screen — so the county's voice is never on
-// screen unless the player scrolls to the bottom of whatever they are doing.
+// is 1,700-2,700px tall on every screen — so the county's voice was never on
+// screen unless the player scrolled to the bottom of whatever they were doing.
 // (The entry claimed the one-line ticker was the only place the wire is read.
-// It is not: `campaign/warroom.js` ships a Wire tab. What is true, and worse,
-// is that neither reader is ever in front of you.) The agenda is narrower
-// still: `.agenda-head` is drawn by `ranch/ui.js` alone, so "Right Now" exists
-// on the Ranch and nowhere else.
+// It is not: `campaign/warroom.js` ships a Wire tab. What was true, and worse,
+// is that neither reader was ever in front of you.) The agenda was narrower
+// still: `.agenda-head` was drawn by `ranch/ui.js` alone, so "Right Now"
+// existed on the Ranch and nowhere else.
+//
+// WHAT IT READS NOW, on the same fixture: a two-column shell at 900px and up
+// with the agenda and the wire docked in a rail, the tabs as a left rail at
+// 1,200px, and 61.6% of a 1,280px viewport in use (main 788px). Past tense
+// above is deliberate — a gate whose header still describes the defect in the
+// present tense is a gate the next reader trusts about a tree that no longer
+// exists, and this project has been bitten twice by a live anchor sitting on
+// a dead meaning.
 //
 // So this gate asks the criterion's three questions, at the two widths that
 // matter, on a real campaign:
@@ -159,7 +167,17 @@ try {
             && b.top < window.innerHeight && b.bottom > 0
             && b.left < window.innerWidth && b.right > 0;
         };
-        const agenda = document.querySelector('.agenda-head');
+        // ANY agenda heading that is in the glass, not the FIRST one in
+        // document order. The distinction is the whole rule once the layout
+        // has two places an agenda can live: at 900px and up the Ranch's own
+        // Right Now card stands down (display none) and the rail carries it,
+        // and a querySelector would have gone on reading the stood-down copy
+        // -- a rect of zero height -- and called the Ranch blind on the one
+        // screen that never has been. The criterion asks whether the player
+        // can SEE the agenda, so the question is whether any of them is on
+        // screen. (No backticks in here: this block is inside a template
+        // literal the page evaluates, and one would end it early.)
+        const agendas = [...document.querySelectorAll('.agenda-head')];
         const wire = document.querySelector('#ticker');
         // The widest thing that runs past the screen's own right edge, so a
         // failure names the offender instead of printing a number.
@@ -175,7 +193,7 @@ try {
           }
         }
         return { h: Math.round(el.scrollHeight),
-                 agendaOn: onScreen(agenda), agendaAnywhere: !!agenda,
+                 agendaOn: agendas.some(onScreen), agendaAnywhere: agendas.length > 0,
                  wireOn: onScreen(wire),
                  hscroll: el.scrollWidth > el.clientWidth + 1, worst };
       })())`));
