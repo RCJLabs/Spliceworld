@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**7 entries queued.** R117, R118, R176, R179, R180, R181, R182.
+**8 entries queued.** R117, R118, R176, R179, R180, R181, R182, R183.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4788,6 +4788,27 @@ suite can check.
   *Done when: on the walker's diet launches fall under one a day with job
   income within 20% of today's, crewed launches run at least one a day, and
   "came to nothing" leaves the ten most frequent phrasings.*
+- **R183 — Every job says the same sentence, every time.** Found closing
+  R116, by a break that could not fire. All seven entries in
+  `data/operations.json` carry a **single** `news` string, so
+  `pickPooled(state, `op:${op.id}`, op.news)` rotates a one-item list and
+  returns the same headline forever. Over 180 days the walker launches **542
+  jobs across four board ops** — so the wire prints those same four sentences
+  542 times between them, and the petting zoo's line is now a contract's
+  daily ledger entry rather than a launch. That is precisely the complaint
+  R109 was filed about ("one `capture` line, 684 tellings, 14.6% of
+  everything the world said"), surviving in the one place R109 did not reach:
+  R109 pooled the philosophies and the news events, and the jobs kept their
+  single strings. The engine is already right — `pickPooled` is the reader
+  and would rotate a pool the moment one existed — so this is content, not
+  code: **three or four phrasings per job**, in data, no engine edit. The
+  break that should have caught it (327) was retired closing R116 because a
+  one-item pool makes its patch a no-op; whoever ships this should write it
+  back, aimed at the same line, and it will mean something. *Done when: every
+  operation in `data/operations.json` carries at least three headlines, no
+  job's sentence is more than 1% of the wire on the day-180 walk, and a break
+  that freezes `op.news` to its first line goes red.*
+
 - **R117 — Wide screens.** The game is a **560 px column at every width**:
   `main { max-width: 560px }` and not one layout rule above 430 px, so on a
   1,920 px laptop it sits at x = 673 with 1,360 px of dark on either side —

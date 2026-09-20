@@ -3494,15 +3494,32 @@ const BREAKS = [
     anchor: "      if (!extra.success) emitNews(state, content, 'op_failed', { op: extra.name });",
     to: "      if (!extra.success) pushNews(state, `${extra.name} came to nothing, which happens.`);",
   },
-  {
-    // A JOB STOPS ROTATING ITS HEADLINE. One operation, one sentence, 274
-    // tellings — 5.8% of the wire from a single job the player happens to
-    // like. The pool is still authored; it is simply not read.
-    n: 327, gate: SHARD_D, name: 'a job stops rotating its headline, so one sentence is 5% of the wire again',
-    file: 'campaign/operations.js',
-    anchor: '    const headline = pickPooled(state, `op:${op.id}`, op.news);',
-    to: '    const headline = Array.isArray(op.news) ? op.news[0] : op.news;',
-  },
+  // R116 — BREAK 327 RETIRED, BECAUSE IT COULD NEVER HAVE FIRED.
+  //
+  // It read: "a job stops rotating its headline, so one sentence is 5% of the
+  // wire again", and patched `pickPooled(state, 'op:'+op.id, op.news)` to
+  // `Array.isArray(op.news) ? op.news[0] : op.news`. Its note said "the pool
+  // is still authored; it is simply not read."
+  //
+  // The pool is not authored. EVERY `news` in data/operations.json is a
+  // single string — seven jobs, seven sentences — and `pickPooled` on a
+  // one-item list returns that item, so the patch and the original compute
+  // the same value. Even the cursor is inert: `wireAt` advances by
+  // `(at + 1) % 1`, which is zero. It is a perfect no-op, and `--anchors`
+  // could not say so because the anchor matched perfectly; only the meaning
+  // was empty. No commit touching that data file in the last 25 has ever
+  // carried an array there, so this was not something R116 broke.
+  //
+  // It is not re-aimable either. `node_seized` (3 phrasings) is the ONLY
+  // multi-line pool in the game, and smoke.js already asserts its rotation by
+  // name — "the pool actually varies" — while break 325 above kills rotation
+  // globally at `wireAt` and is caught. The rule is covered twice over; what
+  // 327 added was coverage of a mechanism the content never had.
+  //
+  // What it found instead is a CONTENT gap, and a real one: 542 launches
+  // across four board jobs with one sentence each means job news repeats
+  // verbatim for a whole campaign, which is the complaint R109 exists to
+  // answer. Filed as R183 rather than papered over with a break that passes.
   {
     // AN EVENT LOSES ITS EMITTER. The pool stays in news.json, fully
     // authored, and nothing in the game can ever say it — R57/R58's shape,
