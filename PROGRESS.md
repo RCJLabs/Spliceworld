@@ -49,14 +49,61 @@ evidence are deleted. Three things the change forced:
 both; **at 50 the control's turns go negative on all six salts** and the
 discriminator is gone.
 
+### The suite refused the cost twice, once in each of its units
+
+Both refusals were right and only one of them was mine.
+
+**Seconds — not this milestone, and I blamed it anyway, twice.** `npm test`
+came in 79 CPU-seconds over 1,150. I read R117's "1,126 of 1,342 budgeted" as
+216s of headroom (192 of it was a cold walk allowance; real headroom 24) and
+then priced cell-runs uncontended when R155 had measured ~3x contention. Both
+errors pointed at my code. The gate PRINTS the A/B that settles this and I ran
+it last:
+
+    R117's tree (d2ec4a1), today's box, warm    1170   <- no R118 in it
+    R118's tree, same box, same hour, warm      1229
+
+The old tree is 20s over with none of this milestone in it. `CPU_BUDGET_S`
+1150 -> **1425** (1229 + R170's 15% band). 59 of the 79 seconds were mine.
+
+**Battles — host-invariant, and this half was mine.** 1,010,051 against a
+budget of 940,000, caught on a run where the seconds rule had already gone
+green. That is R170's whole argument, made against the milestone that tripped
+it. Measured both sides, and derived from the code to the battle:
+
+                   OLD (2 families, 200/cell)   NEW (6 salts, 100/cell)
+    shard a   control + 12 genes  108,000       3 genes + control 108,000
+    shard b   nothing                   0       3 genes            86,400
+    shard c   nothing                   0       3 genes            86,400
+    shard d   control + 12 genes  108,000       3 genes            86,400
+                                  -------                          -------
+                                  216,000                          367,200
+
+367,200 - 216,000 = **151,200**, against 858,851 -> 1,010,051 measured; shard
+a is byte-identical either way (269,942). `BATTLE_BUDGET` -> **1,110,000**,
+`BATTLE_FLOOR` -> **910,000**, same +-10% band. Neither end went blind: break
+262 still reads 2,224,259 (2x the ceiling), a blind sweep 605,315 (2/3 of the
+floor). Fitting under the old number would have meant cutting builds 9 -> 7,
+which takes the probe from holding 36/36 subsets to 30/36 -- paying for a
+budget with the gate the budget exists to protect.
+
+**Left standing, on purpose:** the probe moving from two shards to four put
+`smoke:b` at 23.2% of the suite against 19.5% declared, and `smoke:a` at 25.6%
+against 28.3%. Inside `SHARE_BAND` 6, rule green, so the table is NOT
+re-declared -- but b now spends 3.7pp of a 6pp band for a known permanent
+reason. Next milestone to touch the shards should re-measure it.
+
 ### Verification
 
     smoke (unsharded)           GATE_EXIT=0, all 12 genes + the control
     battery --anchors           390 anchors match exactly once
-    breaks 395-398              4 caught, 0 missed · BATTERY_EXIT=0
     FULL BATTERY (gate change)  390 caught, 0 missed, four chunks EXIT=0
                                 25m + 81m + 152m + 65m = 323m
-    npm test                    see below
+    breaks 261,262,300,395-398  7 caught, 0 missed · BATTERY_EXIT=0 · 42m
+                                baseline green in the same run (15 gates)
+                                261/262/300 re-run because the budget numbers
+                                they bite on MOVED; all three still bite
+    npm test                    1254 CPU-s of 1425, 334s wall, EXIT=0
 
 **The full battery cost 5h23m, not the ~3.1h CLAUDE.md recorded** — 4h55m for
 one uninterrupted run once three redundant baselines come out. That is the
@@ -66,6 +113,11 @@ LATER numbering: chunk 1 (25m) would have predicted a 100-minute battery and
 chunk 3 alone cost 152.
 
 ### Known issues / next session's first task
+
+**`smoke:b` is spending 3.7pp of a 6pp share band for a known reason** -- the
+probe moved from two shards to four. The rule is green so the table was not
+re-declared here; the next milestone that touches the shards should re-measure
+`SHARE` rather than spend the rest of that band.
 
 Queue 8: R176, R179, R180, R181, R182, R183, R184, R185. R184 still needs a
 first-paint KB budget before it can add a CSS rule -- R117 left that at

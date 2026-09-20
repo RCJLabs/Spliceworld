@@ -147,9 +147,12 @@ export function shareProblems(jobs, want = SHARE, band = SHARE_BAND) {
 //
 // 1,110,000 is 1,010,051 plus 10%, the same band on the same reasoning: the
 // headroom is for CONTENT, not for the next sampling change. And widening it
-// has not blinded it — break 262 still reads 2,224,259, twice the new
-// ceiling, because quadrupling the sweep moves in multiples and this does
-// not.
+// has not blinded it: breaks 261, 262 and 300 were all re-run against these
+// numbers and all three still go red. Break 300 MEASURES the sweep on this
+// tree at 404,736 — blinding it reads 605,315, and 1,010,051 - 605,315 is
+// the same count R170 read — so break 262, which quadruples it, lands at
+// 1,010,051 + 3 x 404,736 = 2,224,259, twice the new ceiling. Sampling moves
+// in multiples; a milestone's worth of content does not.
 export const BATTLE_BUDGET = 1_110_000;
 
 // AND A FLOOR, which matters more than the ceiling and exists because R170
@@ -162,7 +165,7 @@ export const BATTLE_BUDGET = 1_110_000;
 // a falling number under a ceiling is indistinguishable from good news. This
 // is the same failure R168's share rule had and R170's first draft repeated:
 // a rule that can only ever pass. 910,000 is 1,010,051 minus 10%; losing the
-// sweep alone reads 605,315 on this tree, two thirds of the floor.
+// sweep alone MEASURES 605,315 on this tree, two thirds of the floor.
 export const BATTLE_FLOOR = 910_000;
 
 export function battleProblem(byJob, budget = BATTLE_BUDGET, floor = BATTLE_FLOOR) {

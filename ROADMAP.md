@@ -5021,7 +5021,62 @@ suite can check.
   cutting: at 100 every gene still holds and the control is still mixed on
   both statistics; **at 50 the control's `turns` comes out negative on all
   six salts** and the discriminator is gone. 100 is the floor plus a
-  doubling. Net cost ≈132s CPU against 73s, inside the suite's headroom.
+  doubling.
+
+  **THE COST, AND THE TWO BUDGETS IT MOVED.** "≈132s CPU, inside the suite's
+  headroom" was this entry's last wrong number, and the suite refused it
+  twice — once in each of its two units, which is exactly the design R170
+  argued for.
+
+  *The seconds budget was not this milestone's fault, and I attributed it
+  here anyway, twice.* `npm test` came in 79 CPU-seconds over. I read R117's
+  "1,126 of 1,342 budgeted" as 216s of headroom — 192 of it was a cold walk
+  allowance, so the real warm headroom was 24 — and then costed cell-runs at
+  their uncontended price when R155 had already measured contention at ~3×.
+  Both errors pointed at my code. The gate prints the A/B that settles it and
+  I ran it last instead of first:
+
+      R117's tree (d2ec4a1), today's box, warm     1170   ← no R118 in it
+      R118's tree, same box, same hour, warm       1229
+
+  The old tree is 20 seconds over the old budget with none of this
+  milestone's code in it. The host has moved again — up 57% on the 743 R170
+  read two milestones ago — so `CPU_BUDGET_S` 1150 → **1425**, which is 1229
+  plus R170's own 15% band. Of the 79 seconds, **59 were mine and 20 were
+  never**.
+
+  *The battle count, which is host-invariant, caught the half that was.*
+  1,010,051 battles against a budget of 940,000, on a run where the seconds
+  rule had already gone green. Measured either side and derived from the
+  code, the delta is the probe to the battle:
+
+                         OLD (2 families, 200/cell)   NEW (6 salts, 100/cell)
+      shard a       control + 12 genes   108,000      3 genes + control 108,000
+      shard b       nothing                    0      3 genes            86,400
+      shard c       nothing                    0      3 genes            86,400
+      shard d       control + 12 genes   108,000      3 genes            86,400
+                                         -------                        -------
+                                         216,000                        367,200
+
+  367,200 − 216,000 = **151,200**, against 858,851 → 1,010,051 measured.
+  Shard a's count is byte-identical either way (269,942). `BATTLE_BUDGET`
+  940,000 → **1,110,000** and `BATTLE_FLOOR` 770,000 → **910,000**, the same
+  ±10% band on the same reasoning — and widening has not blinded either end.
+  Breaks 261, 262 and 300 were re-run against the new numbers and all three
+  still go red. Blinding the sweep **measures 605,315**, two thirds of the new
+  floor, which pins the sweep at 404,736 — the same count R170 read — so
+  262's quadrupling of it lands at 2,224,259, twice the new ceiling.
+
+  The alternative was to fit under the old number by cutting builds from 9 to
+  7, which takes the probe from holding **36/36** subsets to **30/36** —
+  paying for a budget with the gate the budget exists to protect.
+
+  *One thing left standing rather than fixed:* moving the probe from two
+  shards to four moved `smoke:b` from 19.5% of the suite to 23.2% and
+  `smoke:a` from 28.3% to 25.6%. That is inside `SHARE_BAND` 6 and the rule
+  is green, so the table is **not** re-declared here — but b now sits 3.7pp
+  into a 6pp band for a known, permanent reason, and the next milestone to
+  touch the shards should re-measure it rather than spend the rest.
 
   *Done when: every gene in the pool moves both `turns` and `left` in one
   direction across at least six independent salts; an unpaired reseed does
