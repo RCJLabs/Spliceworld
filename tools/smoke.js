@@ -15402,6 +15402,52 @@ if (inShard('voice')) {
   console.log(`   R109 voice: ${v.total} lines from ${v.distinct} phrasings \u00b7 loudest `
     + `${(v.topShare * 100).toFixed(1)}% \u00b7 nothing written in an engine module, nothing authored and unsaid`);
 
+  // 5. R183 — AND NO ONE JOB'S HEADLINE IS A DRUMBEAT.
+  //
+  //    Rule 2's 5% is the ceiling for the whole voice. A job is the case that
+  //    needs a tighter one, because the board is the most REPEATED verb in
+  //    the game: the walker launches 542 jobs in 180 days and every success
+  //    says its job's line, so a single string is heard ~360 times whatever
+  //    else happens. Rule 2 cannot see it — three separate job lines at 3%
+  //    each are three passes and one problem.
+  //
+  //    JOB_NEWS_MIN IS FOUR, AND THE ENTRY ASKED FOR THREE. Measured on the
+  //    pre-R183 tree, the loudest job line by seed: 3.35% (2026, aquarium),
+  //    3.24% (4242, county_fair), 3.33% (77, aquarium). `pickPooled` walks a
+  //    pool evenly, so N phrasings divide that by N — and 3.35/3 = 1.12%,
+  //    which is still OVER the 1% this rule wants. Three headlines cannot
+  //    satisfy the criterion they were written beside; four gives 0.84% and
+  //    clears it with a quarter to spare. The two halves of a Done-when have
+  //    to be checked against each other, and this one was not.
+  //
+  //    BOTH HALVES, because either alone is passable by doing nothing: a job
+  //    nobody runs has a fine share, and a pool of four identical strings
+  //    would too. The first rule reads the DATA (is the pool authored?), the
+  //    second reads the WALK (is it heard?).
+  const JOB_NEWS_MIN = 4;
+  {
+    const { operationList } = await import('../campaign/operations.js');
+    const jobs = operationList(content);
+    assert.ok(jobs.length >= 7, `there are jobs to check (${jobs.length})`);
+    const poolOf = (o) => (Array.isArray(o.news) ? o.news : [o.news]).filter(Boolean);
+
+    const thin = jobs.filter((o) => poolOf(o).length < JOB_NEWS_MIN)
+      .map((o) => `${o.id} has ${poolOf(o).length}`);
+    assert.deepEqual(thin, [],
+      `every job in data/operations.json carries at least ${JOB_NEWS_MIN} headlines, `
+      + `so running it twice does not print the same sentence twice (${thin.join(', ')})`);
+
+    // A pool of duplicates is a pool of one wearing four hats.
+    const dupes = jobs.filter((o) => new Set(poolOf(o)).size < poolOf(o).length).map((o) => o.id);
+    assert.deepEqual(dupes, [], `and no job's headlines repeat each other (${dupes.join(', ')})`);
+
+    const loud = jobs.flatMap((o) => poolOf(o).map((t) => ({ id: o.id, t, n: v.heard[t] ?? 0 })))
+      .filter((r) => r.n / v.total > 0.01)
+      .map((r) => `${r.id} ${(100 * r.n / v.total).toFixed(2)}% (${r.n} of ${v.total})`);
+    assert.deepEqual(loud, [],
+      `no job's sentence is more than 1% of the wire over 180 days (${loud.join(', ')})`);
+  }
+
   // R116 — THE BOARD HAS A PACE, and it is ONE number rather than seven.
   //
   // Measured before anything was built: 1,189 launches in 180 days, 6.61 a

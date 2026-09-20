@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**8 entries queued.** R176, R179, R180, R181, R182, R183, R184, R185.
+**7 entries queued.** R176, R179, R180, R181, R182, R184, R185.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4788,26 +4788,67 @@ suite can check.
   *Done when: on the walker's diet launches fall under one a day with job
   income within 20% of today's, crewed launches run at least one a day, and
   "came to nothing" leaves the ten most frequent phrasings.*
-- **R183 — Every job says the same sentence, every time.** Found closing
-  R116, by a break that could not fire. All seven entries in
-  `data/operations.json` carry a **single** `news` string, so
-  `pickPooled(state, `op:${op.id}`, op.news)` rotates a one-item list and
-  returns the same headline forever. Over 180 days the walker launches **542
-  jobs across four board ops** — so the wire prints those same four sentences
-  542 times between them, and the petting zoo's line is now a contract's
-  daily ledger entry rather than a launch. That is precisely the complaint
-  R109 was filed about ("one `capture` line, 684 tellings, 14.6% of
-  everything the world said"), surviving in the one place R109 did not reach:
-  R109 pooled the philosophies and the news events, and the jobs kept their
-  single strings. The engine is already right — `pickPooled` is the reader
-  and would rotate a pool the moment one existed — so this is content, not
-  code: **three or four phrasings per job**, in data, no engine edit. The
-  break that should have caught it (327) was retired closing R116 because a
-  one-item pool makes its patch a no-op; whoever ships this should write it
-  back, aimed at the same line, and it will mean something. *Done when: every
-  operation in `data/operations.json` carries at least three headlines, no
-  job's sentence is more than 1% of the wire on the day-180 walk, and a break
-  that freezes `op.news` to its first line goes red.*
+- **R183 — Every job says the same sentence, every time.** ✅ *Shipped — and
+  the headline number was exactly right while the example beside it was not
+  said once.*
+
+  **Confirmed.** 542 launches in 180 days across **four** board jobs, on every
+  seed, and `byOp` names exactly those four. All seven jobs carried a single
+  `news` string. `pickPooled` on a one-item list returns that item forever and
+  even the cursor is inert — `(at + 1) % 1` is zero.
+
+  **Wrong, and worth the twenty minutes it took to find.** The entry says the
+  wire prints those four sentences *542 times*; only a **win** says a job's
+  line, so it is **361** at seed 2026 — 8.84% of everything the county said,
+  with the loudest single line at **3.35%**. And it names the petting zoo as
+  the example: the walker never launches the petting zoo at all, and its
+  sentence is heard **zero** times. R109's "274 tellings, 5.8%" is four
+  milestones stale. The loud ones are aquarium (3.35%), aviary (3.01%) and
+  reptile_house (2.23%).
+
+  **The entry described one call site; there are two.** A job's own success in
+  `resolveOperation`, and a retainer's daily ledger line in `settleContracts`,
+  which alternates `op.news` with `op_contract`. The quiet half of the board
+  speaks entirely through the second one — `grant_application` is never
+  launched and is still heard 90 times.
+
+  **And the mechanism was already built.** `data/voice-pools.json` is keyed by
+  the path into indexed content, and **three of the seven jobs already had
+  pools** of five and six lines — the contract half. The board half never got
+  one. So this was not "the engine is right, somebody has to write content":
+  it was a file half-filled in, which is a smaller and more embarrassing
+  defect than the one the entry describes.
+
+  **The Done-when contradicted itself, and the measurement is what says so.**
+  It asked for "at least three headlines" *and* "no more than 1% of the wire".
+  `pickPooled` walks a pool evenly, so three phrasings divide 3.35% into
+  **1.12%** — still over. Four gives 0.84%. **Four is the floor the criterion's
+  own target implies**, and the gate asserts four while the data ships five.
+
+  **Shipped:** sixteen headlines, four per board job, in `voice-pools.json`.
+  No engine edit, exactly as the entry predicted. Measured over three seeds:
+
+  | | before | after |
+  |---|---|---|
+  | loudest job line | 3.35% | **0.69%** |
+  | loudest phrasing in the whole wire | 3.4% | **2.0%** |
+  | distinct phrasings heard | 403 | 419 |
+
+  The job headlines were the loudest thing in the game; something else is now.
+
+  Three breaks. **399** is R116's retired 327, restored and meaning something
+  at last — it freezes `op.news` to its first entry, which was a perfect no-op
+  against seven single strings and is a 3% drumbeat against pools. **400**
+  aims at the ledger line the entry missed. **401** trims a pool to three,
+  which break 329 cannot see: the section-reach gate matches an authored block
+  as a prefix or suffix of the live array, so a *shortened* pool still
+  matches. The id 327 stays retired — a number whose history reads "could
+  never fire" should not be quietly reissued.
+
+  *Done when: every operation carries at least four headlines (three cannot
+  satisfy the clause it was written beside), no job's sentence is more than 1%
+  of the wire on the day-180 walk, and a break that freezes `op.news` to its
+  first line goes red.*
 
 - **R184 — The room inside `main`.** Cut out of R117 rather than deferred by
   accident, and named here so it is a decision instead of an omission. R117
