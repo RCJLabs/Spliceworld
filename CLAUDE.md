@@ -98,8 +98,12 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327 are
 retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-390 NOW — R117 added 390-394 for the width gate and R118 added 395-398 for
-the gene probe.), on these triggers only:**
+393 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+gene probe, and R183 added 399-401 for the job headline. R183's own
+`--only` run is the standing example of why BATTERY_EXIT is the verdict: it
+read "3 breaks, 3 caught, 0 missed" on top of a RED baseline, because
+changing a precached data file without bumping the worker's CACHE is a
+release-gate failure and not a break failure.), on these triggers only:**
 - A milestone that **changes an existing gate's logic** rather than adding one.
 - Before a release, or any push to `main` that is not a single milestone.
 - Every ~5 milestones, as a rot check, whether or not anything looks wrong.

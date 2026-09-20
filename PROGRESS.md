@@ -1,5 +1,82 @@
 # PROGRESS
 
+## Session 203 — R183: every job says the same sentence, every time ✅
+
+**The board is the most repeated verb in the game — 542 launches in 180 days
+— and the four jobs the walker actually runs had one sentence each. The
+headline number in the entry was exactly right; the example beside it was
+never said once.**
+
+### What the entry got right, and what it got wrong
+
+    542 launches, four board ops, byOp names exactly those four   CONFIRMED
+    every `news` in operations.json a single string               CONFIRMED
+    `pickPooled` on a one-item list, cursor inert ((at+1) % 1)    CONFIRMED
+
+    "the wire prints those four sentences 542 times"
+        only a WIN says a job's line -- 361 at seed 2026, 8.84% of the
+        wire between them, loudest single line 3.35%
+
+    "the petting zoo's line is now a contract's daily ledger entry"
+        the walker never launches the petting zoo. Its sentence is heard
+        ZERO times. R109's "274 tellings, 5.8%" is four milestones stale.
+
+    one call site
+        TWO. A job's success in resolveOperation, and a retainer's daily
+        ledger line in settleContracts. The quiet half of the board speaks
+        entirely through the second: grant_application is never launched
+        and is still heard 90 times.
+
+### The mechanism was already there, half filled in
+
+`data/voice-pools.json` is keyed by the path into indexed content, and
+**three of the seven jobs already had pools** -- five and six lines each, the
+CONTRACT half. The board half never got one. Not "the engine is right,
+somebody write content": a file half-completed.
+
+### The Done-when contradicted itself
+
+It asked for at least THREE headlines and no more than 1% of the wire.
+`pickPooled` walks a pool evenly, so 3.35% / 3 = **1.12%**, still over. Four
+gives 0.84%. Four is the floor the criterion's own target implies; the gate
+asserts four and the data ships five.
+
+### Shipped
+
+Sixteen headlines, four per board job, in `voice-pools.json`. No engine edit.
+Measured over seeds 2026, 4242 and 77:
+
+    loudest job line                      3.35%  ->  0.69%
+    loudest phrasing in the whole wire      3.4%  ->  2.0%
+    distinct phrasings heard                403   ->  419
+
+The job headlines were the loudest thing in the game. Something else is now.
+
+Three breaks: **399** is R116's retired 327 restored and finally meaningful
+(a perfect no-op against seven strings, a 3% drumbeat against pools); **400**
+aims at the ledger line the entry missed; **401** trims a pool to three, which
+break 329 CANNOT see -- the section-reach gate matches an authored block as a
+prefix or suffix of the live array, so a shortened pool still matches. 327
+stays retired rather than reissued.
+
+### Verification
+
+    smoke shard d (voice)       RED before, GREEN after, GATE_EXIT=0
+    battery --anchors           393 anchors match exactly once
+    breaks 399-401              3 caught, 0 missed · BATTERY_EXIT=0
+                                baseline green in the same run
+    npm test                    see below
+
+### Known issues / next session's first task
+
+**`smoke:b` is still spending 3.7pp of a 6pp share band** for R118's reason --
+the gene probe moved from two shards to four. Unchanged by this milestone and
+still worth re-measuring the day somebody touches the shards.
+
+Queue 7: R176, R179, R180, R181, R182, R184, R185. R185 is the closest
+neighbour to this one -- the height gate walks five of the Dex's six tabs, and
+the Yearbook has never been measured.
+
 ## Session 202 — R118: the gene probe asks which way, not how far ✅
 
 **The milestone's own entry was wrong about the defect, wrong about the
