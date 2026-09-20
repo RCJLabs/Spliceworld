@@ -190,8 +190,7 @@ export function renderRanchScreen(root, ctx) {
   // this phase was not that a losing player had nothing to do; it was that
   // everything they had was a way to spend money.
   const shape = agendaShape(state, content, t);
-  // R117 — the buckets come from the agenda module now, so this card and the
-  // wide-screen rail cannot drift apart about what they are called.
+  // R117 — the buckets come from the agenda module.
   const KINDS = AGENDA_KINDS.map((k) => [k.kind, `${renderIcon(k.icon)} ${k.heading}`]);
   // R47: decided above the body, for the same reason the Breeding Pen is —
   // a shut fold must not build what it is not showing, and this is the
@@ -199,9 +198,7 @@ export function renderRanchScreen(root, ctx) {
   const rightNowOpen = isOpen(state, 'right-now', !pathOwnsScreen(state));
   const rightNow = collapsibleCard({
     id: 'right-now',
-    // R117 — named so the wide layout can take it down. At 900px and up the
-    // rail carries the same agenda beside every screen, and two Right Nows
-    // one above the other on the Ranch is worse than either.
+    // R117 — named so the wide layout can take it down; the rail has it.
     extraClass: 'right-now-card',
     title: '☑ Right Now',
     badge: `<span class="pill">${shape.count} open</span>`,
@@ -251,8 +248,6 @@ export function renderRanchScreen(root, ctx) {
           <span class="fine-print">${i.hint}</span>
         </button>`).join('') + (rest > 0
         ? `<p class="fine-print">${copy(content, 'rail.more', { n: rest })}</p>` : '');
-    // R117 — the two lines this card and the wide-screen rail both need live
-    // in `data/copy.json` now, so neither can say it a little differently.
     }).join('') || `<p class="fine-print">${copy(content, 'rail.idle')}</p>`,
   });
 

@@ -260,7 +260,16 @@ const BUDGET = {
   // 260-part cap, and that is what actually bounds this screen.
   vault:          { folded: 2560,  tallest: 4140, opens: 20 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
-  'dex:variants': { folded: 1100,  tallest: 1100 },
+  // R117 — 1100 -> 1150, and `dex:genes` below by the same 50, which is the
+  // SHARED CHROME rather than the tab: the Dex's six-tab bar goes to two
+  // rows of three under 430px, because `1fr` is `minmax(auto, 1fr)` and the
+  // widest label needed 80px in a 52px cell, so the strip ran 7px off the
+  // right of a 380px phone on all six tabs. A second row is 44px of button
+  // and 6px of gap; nine px of uppercase was the alternative. Every other
+  // Dex tab absorbed the same 50 inside the headroom it already had — these
+  // two are the ones that did not, and they keep the headroom they had
+  // (variants 48, genes 18) rather than gaining any.
+  'dex:variants': { folded: 1150,  tallest: 1150 },
 
   // R136 FOLDS IT, which R95 first said was owed and R135 ratcheted around
   // one more time. This is the LAST tab in the game with no fold at all, and
@@ -312,7 +321,7 @@ const BUDGET = {
   // Same answer R89 gave the Foes tab and for the same reason: the field
   // guide is looked things up in, not read, so the shut number is the one
   // that matters and the open one is a ratchet a reader pays deliberately.
-  'dex:genes':    { folded: 400,   tallest: 1250, opens: 1 },
+  'dex:genes':    { folded: 400,   tallest: 1300, opens: 1 },   // R117: +50, the second tab row
   // R89's criterion names 2,500 for the Foes tab, and that is a budget on
   // how it PRESENTS: 4,113px shut was five and a half screens of reference
   // material nobody had asked for. Folded it is 664.

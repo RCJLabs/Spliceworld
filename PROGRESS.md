@@ -1,5 +1,101 @@
 # PROGRESS
 
+## Session 201 — R117: wide screens ✅
+
+**The game stopped being a 560px column on a laptop. At 1,280px `main` was
+560px at x=353 using 43.8% of the glass; it is 788px using 61.6%, with the
+Right Now agenda and the county wire docked beside every screen instead of
+one screen and a footer.**
+
+### What was actually wrong
+
+Two of the three things the criterion names were not "hard to find on a
+laptop" — they were not on the screen at all, at any width:
+
+    .agenda-head   drawn by ranch/ui.js alone     -> one screen of six
+    #ticker        in <footer>, after a <main>
+                   1,700-2,700px tall             -> below the fold at 380 too
+
+And the shell could only ever get narrower: every width rule the stylesheet
+carried was a `max-width` (400, 430, 420, 400, 340), so the six screens were
+byte-identical at 900, 1,280 and 1,920px and only the dark gutters grew.
+
+    width     main        before  ->  after
+    380px     380 @ x=0   100%    ->  100%        (untouched)
+    900px     560 @ 163   62.2%   ->  564 @ 0     62.7%
+    1,280px   560 @ 353   43.8%   ->  788 @ 156   61.6%
+    1,920px   560 @ 673   29.2%   ->  1108 @ 316  57.7%
+
+### What shipped
+
+A two-column grid at 900px and up with a FIXED height — the shape
+`body.in-battle` already used on a phone. Header, tabs and footer are
+furniture; `main` scrolls in its own cell, the rail in its own. That second
+half is what makes the criterion hold without a magic number: the rail is
+exactly as tall as its row, so its foot is always in the glass. The agenda
+scrolls above the wire and the wire is `flex: 0 0 auto`, because an agenda
+with thirty things open must not be able to push the county's voice off the
+bottom. At 1,200px the tabs become the left rail.
+
+`ui/rail.js` is lazy and wide-only — `MODULE_CAP` is at 50 eager modules of
+50 — and is a handler surface, because it paints `data-goto` and
+`data-open-fold` that the Ranch also paints, so the denominator would have
+been satisfied without it and its own binder would never have run once.
+
+Three things went to one home rather than being copied: `AGENDA_KINDS` to
+`ranch/agenda.js`, two sentences to `data/copy.json` under `rail`, and the
+wire's line pick to `wireLines()` in the shell. The Ranch's own Right Now
+card stands down at 900px and up.
+
+### The gate found a defect at 380px on its own
+
+`1fr` is `minmax(auto, 1fr)` and `auto` is min-content, so the Dex's six-tab
+bar — YEARBOOK needs 80px in a 52px cell — pushed the grid **7px past a
+380px phone on all six tabs**. `minmax(0, 1fr)` removes that floor and a bar
+with more than five tabs goes to two rows of three under 430px. Dex 2,195 ->
+2,253px at 380, inside budget. Only the Dex is crowded today.
+
+### Two of the entry's own claims were wrong
+
+- "1,360px of dark on either side" at 1,920 was the TOTAL. It is 673 each
+  side (1,346 between them; the missing 14 is the scrollbar).
+- "The one-line ticker is the only place the wire is read" is false twice:
+  `campaign/warroom.js` ships a Wire tab, and the ticker is two lines at
+  380px (28px), not one.
+
+Both are recorded in the ROADMAP entry rather than quietly corrected.
+
+### Three gate bugs of my own, all the same family
+
+A gate that asks a question the page cannot answer:
+
+- `.agenda` is not a class (it is `.agenda-head`) and `splice` is not a
+  screen (it is `theater`) — my first probe reported "no agenda" everywhere
+  and measured five screens of six without saying so.
+- `settle('#screen-ranch')` returns `''` for a hidden element, and the app
+  restores the screen you were last on, so the boot check waited 20s at
+  three of four widths for a screen that was not showing. Settles on `main`
+  now.
+- `querySelector('.agenda-head')` finds the FIRST one in document order,
+  which at 900px and up is the Ranch's stood-down copy. The rule asks
+  whether ANY agenda heading is in the glass now, which is the question the
+  criterion actually asks.
+
+### Verification
+
+    tools/wide.js               EXIT 0, six screens at four widths
+    tools/battery.js --anchors  386 anchors match exactly once
+    tools/battery.js --baseline see below
+    breaks 390-394              one per rule that can regress
+    npm test                    see below
+
+### Known issues / next session's first task
+
+R184 is filed: what is inside `main` is still the phone's layout, one column
+of cards made wider. The open card beside the list on the Pens, and the
+arena — which R117 measured only as a War Room, never as a fight in
+progress. **Measure a fight at 380 and 1,280 before designing anything.**
+
 ## Session 200 — R116: standing contracts, and the cascade behind them ✅
 
 **The board is fixed, its gate is green, and the expensive half of the session

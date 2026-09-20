@@ -540,14 +540,8 @@ export function agendaShape(state, content, now) {
   };
 }
 
-// R117 — THE THREE BUCKETS, AND ONE HOME FOR THEM. The Ranch's Right Now card
-// grouped the agenda by kind with the heading and the icon written into
-// `ranch/ui.js`; the wide-screen rail groups it the same way, and a second
-// copy of this table is how the two halves of one panel start disagreeing
-// about what `campaign` is called. It lives here rather than in either
-// screen for the reason the rest of this module does: it is a fact about the
-// agenda, not about a layout. The icon is named, not drawn — nothing in this
-// file may touch the DOM.
+// R117 — the three buckets, one home: the Ranch's card and the wide-screen
+// rail group the agenda the same way. The icon is NAMED, not drawn.
 export const AGENDA_KINDS = [
   { kind: 'work', icon: 'test-tube', heading: 'Make something' },
   { kind: 'campaign', icon: 'map', heading: 'Push on the world' },

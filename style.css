@@ -2187,12 +2187,9 @@ footer {
   top: 0;
   z-index: 6;
   display: grid;
-  /* R117 — `1fr` is `minmax(auto, 1fr)`, and `auto` is MIN-CONTENT: a track
-     whose widest label will not fit pushes the whole grid past its own
-     container rather than squashing. That is why the Dex ran 7px off the
-     right of a 380px phone on every one of its six tabs — YEARBOOK is 80px
-     of uppercase in a 52px cell. `minmax(0, 1fr)` takes the floor away, and
-     the rule below gives the crowded bars somewhere to put the words. */
+  /* R117 — `1fr` is `minmax(auto, 1fr)` and `auto` is MIN-CONTENT, so a
+     track whose widest label will not fit pushes the grid past its own
+     container: the Dex ran 7px off a 380px phone on all six tabs. */
   grid-template-columns: repeat(var(--subtab-n, 5), minmax(0, 1fr));
   gap: 6px;  /* R80 — the tightest strip in the game was the one with the most buttons in it. */
   margin: 0 0 10px;
@@ -2249,12 +2246,8 @@ footer {
   .subtab-label { font-size: 0.75rem; letter-spacing: 0.02em; }
 }
 
-/* R117 — SIX TABS DO NOT FIT ON A PHONE IN ONE ROW, and the answer is a
-   second row rather than smaller type. Fitting YEARBOOK into a 52px cell
-   needs about 9px of uppercase, which is below the size anything else in
-   this game is set at; three columns gives every label 105px and keeps
-   R73's 44px touch target untouched. Only bars with more than five tabs
-   change — the War Room's five and the Vault's stay exactly as they were. */
+/* R117 — six tabs do not fit on a phone in one row, and the answer is a
+   second row rather than ~9px type. Only bars with more than five change. */
 @media (max-width: 430px) {
   .subtabs.is-crowded { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -2991,29 +2984,16 @@ header > *:not(.sky-layer) { position: relative; z-index: 1; }
   .sky-layer { opacity: calc(var(--sky-alpha, 0) * 0.5); }
 }
 
-/* ==========================================================================
-   R117 — WIDE SCREENS. The first `min-width` rules this stylesheet has ever
-   carried.
-   ==========================================================================
-   Before this milestone every width breakpoint in the file was a `max-width`
-   (400, 430, 420, 400, 340), so the layout could only ever get NARROWER than
-   the 560px column `main` is capped at. Measured on the day-180 save, the six
-   screens were byte-identical at 900, 1,280 and 1,920px and only the dark
-   gutters grew: 62.2% of the glass used at 900, 43.8% at 1,280, 29.2% at
-   1,920. GitHub Pages serves laptops.
+/* R117 — WIDE SCREENS: the first `min-width` rules this file has carried.
+   Every width breakpoint before this was a `max-width` (400, 430, 420, 400,
+   340), so the layout could only get narrower than its 560px column, and at
+   1,280px the game used 43.8% of the glass with the agenda drawn on one
+   screen of six and the wire in a footer below the fold. The argument is in
+   ui/rail.js and ROADMAP R117; what a reader of this file needs is that at
+   900px the shell becomes a two-column grid AND becomes fixed-height, the
+   way `body.in-battle` already is on a phone — that second half is what
+   keeps the rail's foot in the glass without a magic number. -------------- */
 
-   Two things change at 900px and nothing changes below it. The shell becomes
-   a GRID with a second column — the rail — and it becomes FIXED-HEIGHT, the
-   way `body.in-battle` already is on a phone: header and tabs and footer are
-   furniture, `main` scrolls inside its own cell, and the rail scrolls inside
-   its own. That second half is what makes the criterion hold without a magic
-   number: the rail is exactly as tall as the row it sits in, so its foot is
-   always in the glass, and "the wire is on screen without scrolling" is a
-   fact about the layout rather than a bet on how tall the agenda happened to
-   be today. At 1,200px the tabs leave the top and become the left rail. */
-
-/* The rail is a wide-screen organ. Under 900px `ui/rail.js` is never even
-   imported, so this is belt and braces for the empty element. */
 .rail { display: none; }
 
 @media (min-width: 900px) {
@@ -3027,10 +3007,8 @@ header > *:not(.sky-layer) { position: relative; z-index: 1; }
       "main rail"
       "foot foot";
     column-gap: 16px;
-    /* Centred rather than full-bleed: past 1,600px a reading column that
-       keeps growing is not better, it is just further from the next word.
-       `background` propagates from body to the canvas, so the margins are
-       still the game's ink and not the browser's white. */
+    /* Centred past 1,600px. `background` propagates from body to the
+       canvas, so the margins stay the game's ink. */
     max-width: 1600px;
     margin-inline: auto;
     height: 100dvh;
@@ -3058,15 +3036,10 @@ header > *:not(.sky-layer) { position: relative; z-index: 1; }
     padding: 10px 12px 10px 0;
     box-sizing: border-box;
   }
-  /* The agenda takes whatever room is left and scrolls; the wire is pinned
-     to the foot of the rail and never is. An agenda with thirty things open
-     must not be able to push the county's voice off the bottom of the
-     screen — that is the defect this milestone exists to close, and a
-     `flex: 0 0 auto` says so in one line. */
+  /* The agenda takes what is left and scrolls; the wire is pinned to the
+     foot of the rail and never does. */
   .rail-agenda { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-  /* The Ranch's own Right Now card stands down: the rail is carrying it on
-     this screen and every other one, and the alternative is the same list
-     printed twice on the one screen that already had it. */
+  /* The Ranch's own Right Now card stands down; the rail carries it. */
   .right-now-card { display: none; }
   .rail-wire { flex: 0 0 auto; }
   .rail .card { padding: 10px 12px; }
@@ -3092,14 +3065,9 @@ header > *:not(.sky-layer) { position: relative; z-index: 1; }
   .wire-line:first-of-type { color: var(--goo); border-left-color: var(--goo); }
   .wire-line:last-child { margin-bottom: 0; }
 
-  /* The room, used, one level down. A `main` of 788px at 1,280px is 61.6%
-     of the glass, and the screens are a column of cards that simply get
-     wider — which is right for a stat card and wrong for a LIST, where the
-     row is short and the line length is the whole cost. The two list shapes
-     that carry many short rows (the Vault's tokens and vials, the Pens'
-     manifest) flow into as many columns as fit instead. `auto-fill` and not
-     `auto-fit`: with `auto-fit` a vault holding one token would stretch that
-     one row across the whole 788px, which is the same complaint again. */
+  /* A wider card is right; a wider LIST ROW is not — the row is short and
+     the line length is the whole cost. `auto-fill`, not `auto-fit`: one
+     token must not stretch across the whole of `main`. */
   .token-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -3118,8 +3086,7 @@ header > *:not(.sky-layer) { position: relative; z-index: 1; }
       "tabs main rail"
       "foot foot foot";
   }
-  /* The tabs stop being a strip over the game and become the rail beside it.
-     Every one of them keeps R73's 40px floor by being taller, not wider. */
+  /* The tabs become the rail beside the game, keeping R73's 40px floor. */
   .tabs {
     flex-direction: column;
     align-content: start;

@@ -270,6 +270,15 @@ const STALE = ['node', 'tools/stale.js'];
 // ten chimeras and it was 16,657 for nine. A budget nobody runs is a note.
 const HEIGHT = ['node', 'tools/height.js'];
 
+// R117 — WHAT DOES THE GAME LOOK LIKE ON A LAPTOP? The same question HEIGHT
+// asks about a phone, in the other axis and at the other end of the range.
+// Every width rule the stylesheet carried was a `max-width`, so the layout
+// could only get narrower than its 560px column: 43.8% of a 1,280px viewport
+// used, the agenda drawn on one screen of six, and the wire in a footer
+// 1,700-2,700px below the fold at every width including 380. None of it was
+// visible to any gate, because every gate this project owns measures a phone.
+const WIDE = ['node', 'tools/wide.js'];
+
 // R90 — THE SUITE ITSELF, UNDER ITS OWN BUDGET. npm test was 621s; it is
 // 172s. Most of that came from deleting duplicated work rather than from
 // parallelism, and both are easy to undo by accident: an unguarded block
@@ -5926,6 +5935,78 @@ const BREAKS = [
     anchor: '    save.campaign.released ??= null;',
     to: '',
   },
+
+  // --- gate: wide (R117 — the game on a laptop) ----------------------------
+  {
+    // RULE 5, AND THE COMPLAINT ITSELF. `main` goes back to the 560px cap it
+    // carried at every width, so the two-column shell is still there and the
+    // rail still works — and the game is a narrow ribbon with 353px of dark
+    // on either side again. Aimed at the override rather than at the base
+    // rule, because that is the shape the regression takes: somebody tidies
+    // away a `max-width: none` that looks redundant.
+    n: 390, gate: WIDE, name: 'the column goes back to 560px on a laptop, and the glass is 44% used',
+    file: 'style.css',
+    anchor: '    grid-area: main;\n    max-width: none;',
+    to: '    grid-area: main;\n    max-width: 560px;',
+  },
+  {
+    // RULES 3 AND 4. The rail is imported, the media query matches, the host
+    // is there — and nothing is drawn into it. This is the failure mode a
+    // lazy panel actually has, and it is SILENT: no error, no empty box, just
+    // a column of dark where the agenda and the wire were. Five screens lose
+    // an agenda they never had before this milestone, and the Ranch loses one
+    // too, because its own card stands down at this width.
+    n: 391, gate: WIDE, name: 'the rail renders nothing, and the agenda and the wire are off screen again',
+    file: 'main.js',
+    anchor: '  if (rail) { rail(host, ctx, wireLines()); return; }',
+    to: '  if (rail) { return; }',
+  },
+  {
+    // RULE 4 ON ITS OWN. The shell stops being fixed-height and goes back to
+    // a page that scrolls, which is what it was before this milestone: the
+    // rail then stretches down a grid row as tall as the screen beside it —
+    // 1,700 to 2,700px — and the wire, pinned to its foot, is nowhere near
+    // the glass. That is the mechanism the whole layout rests on, and it is
+    // one property of one rule.
+    //
+    // THE BREAK THIS REPLACES was `.rail-agenda { flex: 0 0 auto }` — take
+    // the agenda's own scroll away and let it push the wire out — and it
+    // went MISSED at R117: on the day-180 fixture the agenda is about 700px
+    // and the rail's row is about 750, so it fits and the wire stays on
+    // screen. The rule is right and the break was not: a fixture where it
+    // would fire is a fixture with a longer agenda, which is not a thing
+    // this gate gets to choose. Recorded rather than deleted, because the
+    // next person to look at `.rail-agenda` should know it was tried.
+    n: 392, gate: WIDE, name: 'the shell stops being fixed-height, and the wire falls down a 2,400px rail',
+    file: 'style.css',
+    anchor: '    height: 100dvh;\n    min-height: 0;\n    overflow: hidden;',
+    to: '    min-height: 100vh;',
+  },
+  {
+    // RULE 1, AND THE 380px FLOOR THE CRITERION NAMES. The six-tab bar loses
+    // the class that gives it a second row, so YEARBOOK is back in a 52px
+    // cell and the Dex runs off the right of a phone. Aimed at `ui/tabs.js`
+    // rather than at the stylesheet because the bar is the thing that knows
+    // how many tabs it has — and because a milestone that adds a seventh Dex
+    // tab will touch this line.
+    n: 393, gate: WIDE, name: 'a six-tab bar goes back to one row, and the Dex runs off a 380px phone',
+    file: 'ui/tabs.js',
+    anchor: "    <nav class=\"subtabs${tabs.length > 5 ? ' is-crowded' : ''}\"",
+    to: '    <nav class="subtabs"',
+  },
+  {
+    // RULE 0, WHICH IS THE ONE THAT KEEPS THE OTHER FIVE HONEST. The walk
+    // writes the campaign to a key the game does not read, so every screen
+    // measured is a FRESH save — short, mostly empty, and passing rules 1
+    // through 5 by having almost no layout to get wrong. R157's worn floor
+    // and R163's median both shipped as rules a dead fixture satisfied; this
+    // is that failure aimed at this gate, and it has to be caught by the
+    // "tallest screen" check rather than by luck.
+    n: 394, gate: WIDE, name: 'the width gate measures a fresh save and every rule passes on an empty game',
+    file: 'tools/wide.js',
+    anchor: "  await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(save))})`);",
+    to: "  await evaluate(`localStorage.setItem('spliceworld_notasave', ${JSON.stringify(JSON.stringify(save))})`);",
+  },
 ];
 
 const pristine = {};
@@ -6029,7 +6110,13 @@ if (process.argv.includes('--anchors')) {
 // 63.9s — against a baseline that already spends about 1,700 across four
 // lanes. That is the whole argument: the cheapest three gates in the tree were
 // the three nobody ran.
-const BASELINE = [SCOPE, HANDLERS, WORKER, COVSELF, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, UNION, FACILITY, VAULT, TABLE, DIET, CACHEBUMP, OFFLINE, DURABLE];
+// R117 — WIDE joins on the day it is written, which is R178's finding applied
+// before it can bite again: `release`, the offline cold open and the IndexedDB
+// round-trip were wired to breaks but to NEITHER tier, so the whole TWA story
+// was only ever checked in the go-red direction and a real regression sat on
+// `main` until somebody ran the gate by hand. A gate that no tier runs is a
+// gate that has never passed.
+const BASELINE = [SCOPE, HANDLERS, WORKER, COVSELF, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, WIDE, UNION, FACILITY, VAULT, TABLE, DIET, CACHEBUMP, OFFLINE, DURABLE];
 
 const baselineLabel = (gate) => (
   gate === CACHEBUMP ? 'the worker precaches a shell that is actually there'
@@ -6061,6 +6148,7 @@ const baselineLabel = (gate) => (
                 : gate === GENSAVES ? 'every save fixture is what that version of the game actually wrote'
                 : gate === STALE ? 'a real old save still opens the game in a browser, quietly'
                 : gate === HEIGHT ? 'no screen outgrows its budget on a day-180 save'
+                : gate === WIDE ? 'the agenda and the wire are on a laptop screen, and the game uses it'
                 : gate === UNION ? 'every sharded block is owned by exactly one shard'
                 : gate === FACILITY ? 'every facility track is bought where its system lives'
                 : gate === TABLE ? 'the Surgery Theater does one operation at a time'

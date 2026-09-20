@@ -61,6 +61,10 @@ const SCREENS = ['ranch', 'pens', 'battle', 'theater', 'dex', 'vault'];
 
 const save = walkedSave({ days: 180 });
 const PINNED_NOW = save.lastTickAt;
+// R117 — what a WALKED campaign is, in two numbers the page can hand back.
+// Rule 0 compares these against what the browser actually loaded; see below
+// for why a height floor could not do that job on its own.
+const WALKED = { stock: save.ranch.stock.length, news: save.news.length };
 
 const { server, port } = await serve();
 const chrome = findChrome();
@@ -145,8 +149,15 @@ try {
     const shell = JSON.parse(await evaluate(`JSON.stringify((() => {
       const m = document.querySelector('main');
       const r = m.getBoundingClientRect();
+      // What the PAGE is holding, not what this process walked. The two are
+      // the same thing only if the save reached the browser.
+      let loaded = { stock: 0, news: 0 };
+      try {
+        const s = JSON.parse(localStorage.getItem('spliceworld_save') || '{}');
+        loaded = { stock: s.ranch?.stock?.length ?? 0, news: s.news?.length ?? 0 };
+      } catch { /* a save that will not parse is a save that did not arrive */ }
       return { mainW: Math.round(r.width), mainX: Math.round(r.left),
-               share: +(100 * r.width / window.innerWidth).toFixed(1) };
+               share: +(100 * r.width / window.innerWidth).toFixed(1), loaded };
     })())`));
 
     for (const sc of SCREENS) {
@@ -208,10 +219,26 @@ try {
 
 if (!rows.length && !fails.length) fails.push('the walk measured nothing at all');
 
-// 0. THE MEASUREMENT IS ON A REAL CAMPAIGN. R157's worn floor and R163's
-//    median both shipped as rules a dead fixture satisfied; a screen that
-//    painted nothing has no overflow and no frozen column either.
+// 0. THE MEASUREMENT IS ON A REAL CAMPAIGN, and it is checked by ASKING THE
+//    PAGE rather than by looking at how tall it got. R157's worn floor and
+//    R163's median both shipped as rules a dead fixture satisfied, so this
+//    gate was written with a height floor against exactly that — and the
+//    break that proved it (394: write the save under a key the game does not
+//    read) went MISSED, because a FRESH save still paints screens well over
+//    800px of chrome. A proxy for "is this a campaign" was not one. So the
+//    rule compares the herd and the wire the browser is holding against the
+//    fixture this process walked; only the real save can match. The height
+//    floor stays as a second clause, for a campaign that loaded and then
+//    failed to paint.
 {
+  const shell = rows[0];
+  if (!shell) {
+    fails.push('the walk measured no shell at all');
+  } else if (shell.loaded.stock !== WALKED.stock || shell.loaded.news !== WALKED.news) {
+    fails.push(`the browser is not holding the walked campaign: it has `
+      + `${shell.loaded.stock} animals and ${shell.loaded.news} wire lines, `
+      + `the fixture walked ${WALKED.stock} and ${WALKED.news}`);
+  }
   const tallest = Math.max(0, ...rows.map((r) => r.h));
   if (tallest < 800) {
     fails.push(`the campaign never painted: tallest screen across every width is ${tallest}px`);
