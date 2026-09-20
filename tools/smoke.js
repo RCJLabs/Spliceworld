@@ -987,7 +987,15 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
     assert.ok(content.encounters[enc].waves.every((w) => !(content.enemies[w].tags ?? []).includes('Vehicle')),
       `${enc} is organic, so a gene that only works on the living can show`);
   }
-  const GENE_N = 200;
+  // R118 — 200 -> 100, and the money went on SALTS instead. The old rule
+  // asked how far a gene moved the fight and wanted the sample large enough
+  // to out-shout a noisy floor; the new one asks which way, on six salts
+  // rather than two, and direction survives a smaller sample where magnitude
+  // would not. Measured both ways before cutting it: at 100 every gene still
+  // holds one direction on both statistics and the control is still mixed on
+  // both; at 50 the control's turns come out negative on all six salts and
+  // the discriminator is gone. 100 is the floor plus a doubling, not a guess.
+  const GENE_N = 100;
   // R90 — MEMOISED, and it is not a micro-optimisation. `geneEffect` runs a
   // plain arm and a gene arm for every build and encounter, and the PLAIN
   // arm depends on (sp, enc, salt) alone — so it was recomputed identically
@@ -1031,7 +1039,10 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
     }
     return { turns: turns / GENE_N, left: left / GENE_N };
   };
-  // How far a gene moves the fight: 9 builds × 4 encounters × 200 an arm.
+  // R118 — WHICH WAY a gene moves the fight, not how far. 9 builds × 4
+  // encounters × GENE_N an arm, kept SIGNED, because the sign is the half
+  // the old unsigned ratio threw away and the only half that separates a
+  // gene from a reseed. See the block below for the measurement.
   const geneEffect = (traitId, saltA, saltB = saltA) => {
     let pt = 0, gt = 0, ph = 0, gh = 0;
     for (const sp of GENE_BUILDS) {
@@ -1041,74 +1052,101 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
         pt += plain.turns; gt += with_.turns; ph += plain.left; gh += with_.left;
       }
     }
-    return Math.max(Math.abs((gt - pt) / pt), Math.abs((gh - ph) / ph));
+    return { turns: (gt - pt) / pt, left: (gh - ph) / ph };
   };
+  const oneWay = (rows, key) => new Set(rows.map((r) => Math.sign(r[key]))).size === 1;
+  const show = (rows, key) => rows.map((r) => (r[key] >= 0 ? '+' : '') + (r[key] * 100).toFixed(2)).join(' ');
 
-  // R90 — SPLIT BY FAMILY, for the same reason the balance sweep splits by
-  // pool: left whole this was 73s in one shard and that shard was the
-  // critical path at 195s against a 180s budget, while another finished at
-  // 124s and sat idle. The two families are independent salts — the floor
-  // and the twelve genes are measured separately under each — so a shard
-  // taking one is the same claim, made about half the evidence, and the
-  // union across shards is the pair the single loop checked.
-  const GENE_FAMILY_SHARD = { t24: 'a', q7: 'd' };
-  const families = process.env.GENE_FAMILIES
-    ? process.env.GENE_FAMILIES.split(',')
-    : ['t24', 'q7'].filter((f) => !SHARD || GENE_FAMILY_SHARD[f] === SHARD);
-  for (const family of families) {
-    // The control first: no gene either side, only the seed differs. This is
-    // what the harness cannot tell apart, and so what a gene has to beat.
-    const floor = Math.max(...['A', 'B'].map((salt) => geneEffect(null, family, family + salt)));
-    assert.ok(floor < 0.02,
-      `[${family}] the probe can see: 3600 fights against themselves move only ${(floor * 100).toFixed(2)}%`);
+  // R118 — THE PROBE ASKS WHICH WAY, NOT HOW FAR.
+  //
+  // What this replaced: `max(|Δturns|, |Δleft|) / floor >= 1.5`, where the
+  // floor was the larger of TWO control arms. It carried a named exemption
+  // — `venom_gland` — and the exemption's own evidence said the bar "was
+  // never robust for this one gene".
+  //
+  // MEASURED, and the entry that queued this was wrong about why. Its four
+  // readings (0.56x, 0.89x, 0.90x, 1.18x) do not reproduce: on this tree the
+  // same gene reads 3.80x, 1.32x, 0.56x and 2.87x, two of four already over
+  // the bar. And the two third measures it proposed are both worse than what
+  // they would have joined — "damage dealt to the player's team" is what
+  // `left` already counts, and the turn the first creature falls carries a
+  // 0.49% control floor against `turns`' 0.21%, so it drags EVERY gene's
+  // ratio down rather than lifting this one's.
+  //
+  // THE DEFECT IS THE DENOMINATOR, and it is a design asymmetry. A gene arm
+  // and its plain arm share seeds, so that comparison is PAIRED. The control
+  // is an UNPAIRED reseed. The floor therefore measures noise the gene
+  // comparison never incurs: across 24 control arms it spans 0.03% to 0.77%,
+  // a 26x swing, while venom's own effect spans 1.9x. The gene was steadier
+  // than the ruler.
+  //
+  // Magnitude cannot fix it either, which is worth saying plainly because it
+  // rules out the obvious patch: the control reaches 0.77% and venom's
+  // SMALLEST signed effect is 0.35%. No absolute floor separates them. Only
+  // the direction does, and it separates them completely:
+  //
+  //   venom_gland   turns +0.63 +0.36 +0.35 +0.83 +0.63 +0.64   one way
+  //                 left  -0.55 -0.46 -0.33 -0.58 -0.49 -0.67   one way
+  //   (control)     turns -0.59 -0.54 -0.30 +0.01 -0.06 +0.40   mixed
+  //                 left  +0.90 -0.02 +0.90 -0.30 -0.28 -0.43   mixed
+  //
+  // So the rule is reproducibility: a gene moves the fight the SAME WAY on
+  // every salt, and re-seeding does not. Everything here is seeded, so this
+  // is a fact about the tree rather than a die roll — the 2^(1-salts) figure
+  // below is the chance a FUTURE engine change slips past, not a flake rate.
+  const GENE_SALTS = process.env.GENE_SALTS
+    ? process.env.GENE_SALTS.split(',')
+    : ['t24', 'q7', 'z1', 'm5', 'k9', 'w3'];
 
-    const effects = traits.map((t) => [t.id, geneEffect(t.id, family)]);
-    const mean = effects.reduce((a, [, e]) => a + e, 0) / effects.length;
-    assert.ok(mean >= floor * 4,
-      `[${family}] the gene pool moves the fight far more than reshuffling the seed does `
-        + `(${(mean * 100).toFixed(2)}% mean against a ${(floor * 100).toFixed(2)}% floor)`);
+  // R118 — SHARDED BY GENE, NOT BY SALT, and the change is forced: the claim
+  // is "one direction across every salt", so a shard holding one salt cannot
+  // evaluate it at all. R90's split was by family and was right for a rule
+  // asserted per family; this rule is not. Each shard re-pays the six shared
+  // plain arms (216 cell-runs), which is the honest price of making the
+  // claim checkable. GENE_N came 200 -> 100 to pay for the extra salts: at
+  // 100 every gene still holds and the control is still mixed on BOTH
+  // statistics, and at 50 it is NOT — the control's turns go all six
+  // negative, so the discriminator quietly stops discriminating. That is the
+  // floor under this number and it is why it is not lower.
+  const GENE_SHARD = {
+    densebones: 'a', hollowbones: 'a', deeplungs: 'a',
+    thickhide: 'b', hyperthyroid: 'b', secondwind: 'b',
+    glassjaw: 'c', venomgland: 'c', barbedskin: 'c',
+    keeneye: 'd', clottingfactor: 'd', packinstinct: 'd',
+  };
+  const shardKey = (id) => id.replace(/_/g, '');
+  // R50's rule, one level down: a gene added tomorrow must say which lane it
+  // runs in, or it runs in NONE and this block gets quietly cheaper and
+  // emptier. The old family table had the same hazard and no such check.
+  {
+    const undeclared = traits.map((t) => t.id).filter((id) => !(shardKey(id) in GENE_SHARD)).sort();
+    assert.deepEqual(undeclared, [],
+      `every gene names the shard it runs in (undeclared: ${undeclared.join(', ')})`);
+  }
+  const mine = traits.filter((t) => !SHARD || GENE_SHARD[shardKey(t.id)] === SHARD);
 
-    // THE PER-GENE CLAIM: every trait in the pool, not just the loud ones.
-    // 1.5x is not a number picked to fit — the weakest reading measured
-    // across both families (venom_gland, 1.81x) clears it with margin, and
-    // the strongest floor-adjacent case before barbed_skin's fix (0.12x)
-    // fails it by an order of magnitude, so the bar separates a real gene
-    // from a masked one rather than sitting on either one's edge.
-    const ratios = effects.map(([id, e]) => `${id} ${(e / floor).toFixed(2)}x`).join(' ');
-    // R103 — ONE GENE THIS PROBE CANNOT RESOLVE, and the exemption is
-    // evidenced rather than convenient.
-    //
-    // The bar above says it was derived from "the weakest reading measured
-    // across both families (venom_gland, 1.81x)". That derivation was taken
-    // on two salts, and it does not hold on a third: re-salting the SAME
-    // UNCHANGED engine reads venom_gland at 1.81x on q7 and 0.50x on z1. So
-    // this assertion was never robust for this one gene — it passed because
-    // the two families it happened to use both landed on the lucky side, and
-    // R103's reordering of the battle's RNG stream simply moved q7 to the
-    // other one. (Measured across four salts after the change: 0.56x, 0.89x,
-    // 0.90x, 1.18x. Every OTHER gene reads between 5.2x and 75x on every
-    // salt, before and after.)
-    //
-    // The reason is the probe, not the gene: it scores a fight by turns
-    // taken and hp left, and venom is a slow trickle that changes neither
-    // aggregate much while changing WHEN a creature falls. Teaching the
-    // probe to see a damage-over-time gene is a real job and it is not this
-    // milestone's — it is queued as R118. Exempting it silently would be the
-    // worse of the two, so it is named here and it is one gene.
-    //
-    // `GENE_FAMILIES` is what proved all of the above, and it stays: a probe
-    // whose verdict depends on its salt should be easy to re-salt.
-    const UNRESOLVED_BY_THIS_PROBE = new Set(['venom_gland']);
-    for (const [id, e] of effects) {
-      if (UNRESOLVED_BY_THIS_PROBE.has(id)) continue;
-      assert.ok(e >= floor * 1.5,
-        `[${family}] ${id} is plainly there (${(e * 100).toFixed(2)}% against a ${(floor * 100).toFixed(2)}% floor)`
-          + ` — all: ${ratios}`);
+  // 1. THE PROBE CAN TELL A GENE FROM A RESEED. Run in one lane because it
+  //    is a statement about the probe rather than about any gene, and it is
+  //    the assertion that keeps rule 2 from being satisfiable by a dead
+  //    engine: if re-seeding alone held a direction, "holds a direction"
+  //    would mean nothing.
+  if (!SHARD || SHARD === 'a') {
+    const ctl = GENE_SALTS.map((salt) => geneEffect(null, salt, `${salt}A`));
+    assert.ok(!(oneWay(ctl, 'turns') && oneWay(ctl, 'left')),
+      `re-seeding alone must NOT hold a direction, or holding one proves nothing `
+        + `— turns ${show(ctl, 'turns')} | left ${show(ctl, 'left')}`);
+  }
+
+  // 2. EVERY GENE MOVES THE FIGHT THE SAME WAY ON EVERY SALT — both halves,
+  //    because a gene that flipped one of them is a gene whose direction
+  //    depends on the seed, which is the thing this probe exists to catch.
+  for (const t of mine) {
+    const per = GENE_SALTS.map((salt) => geneEffect(t.id, salt));
+    for (const key of ['turns', 'left']) {
+      assert.ok(oneWay(per, key),
+        `[${t.id}] moves ${key} both ways across ${GENE_SALTS.length} salts, so its direction `
+          + `is a property of the seed rather than of the gene — ${show(per, key)}`);
     }
-    // …and the exemption must stay ONE gene. If a second falls to the floor,
-    // that is the engine changing, not a probe blind spot, and it fails here.
-    const alsoQuiet = effects.filter(([id, e]) => !UNRESOLVED_BY_THIS_PROBE.has(id) && e < floor * 1.5);
-    assert.equal(alsoQuiet.length, 0, `[${family}] only venom_gland is below this probe's resolution (${ratios})`);
   }
 
   // And the harness must be able to SEE traits, which for four sessions it
