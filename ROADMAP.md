@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**9 entries queued.** R118, R176, R179, R180, R181, R182, R183, R184, R185.
+**8 entries queued.** R176, R179, R180, R181, R182, R183, R184, R185.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4955,25 +4955,79 @@ suite can check.
   pass in the a11y gate" was built as a gate of its own instead, which
   measures four widths and six screens rather than one more width on a gate
   that asks about touch targets.
-- **R118 — The gene probe cannot see a damage-over-time gene.** Found while
-  shipping R103, and it is not R103's doing: the trait probe in `smoke.js`
-  scores a gene by how far it moves TURNS TAKEN and HP LEFT, and
-  `venom_gland` is a slow trickle that changes neither aggregate much while
-  changing *when* a creature falls. Measured on the **unchanged** engine by
-  re-salting the probe, it reads **1.81× the noise floor on one salt and
-  0.50× on another** — so the 1.5× bar it was supposed to clear was never
-  robust for this gene, and the derivation written beside that bar ("the
-  weakest reading measured … venom_gland, 1.81x") was taken on the two salts
-  that happened to land well. After R103 reordered the battle's RNG stream it
-  reads 0.56×, 0.89×, 0.90× and 1.18× across four salts. Every *other* gene
-  reads 5.2–75× on every salt, before and after, so this is one gene and one
-  blind spot rather than a bar that is too high. It is exempted by name in
-  the suite, with a second assertion that the exemption stays at exactly one
-  gene. Proposed, medium: give the probe a third measure that a DoT actually
-  moves — total damage dealt to the player's team, or the turn the first
-  creature falls — and retire the exemption. *Done when: `venom_gland` clears
-  the same 1.5× bar as every other gene on at least four independent salts,
-  and `UNRESOLVED_BY_THIS_PROBE` is empty.*
+- **R118 — The gene probe asks how far, and should ask which way.** ✅
+  *Shipped — and the entry's diagnosis, its four readings and both of its
+  proposed fixes were wrong. All of it is recorded rather than quietly
+  replaced, because the wrong diagnosis is the interesting part.*
+
+  **The readings do not reproduce.** The entry records `venom_gland` at
+  0.56×, 0.89×, 0.90× and 1.18× across four salts. On today's tree the same
+  gene reads **3.80×, 1.32×, 0.56× and 2.87×** — two of four already clear
+  the 1.5× bar it was supposed to fail. The gene was never uniformly
+  invisible; it was **erratic**, which is a different defect with a different
+  cause.
+
+  **Both proposed measures are worse than what they would have joined.** The
+  entry asks for "a third measure that a DoT actually moves — total damage
+  dealt to the player's team, or the turn the first creature falls". The
+  first is what `left` already counts. The second was measured, with the
+  waves cleared beside it, and both carry *higher* control floors than the
+  statistics already in use — 0.49% and 0.32% against `turns`' 0.21% — so
+  they drag every gene's ratio **down**. Under them venom reads 0.70× and
+  0.66×, and `barbed_skin`, which the probe resolves fine, falls to 0.64×.
+
+  **The defect is the denominator, and it is a design asymmetry.** A gene arm
+  and its plain arm share seeds, so that comparison is **paired**; the
+  control is an **unpaired reseed**. The floor therefore measures noise the
+  gene comparison never incurs. Across 24 control arms it spans **0.03% to
+  0.77% — a 26× swing** — while venom's own effect spans 1.9×. *The gene was
+  steadier than the ruler.* Stabilising the denominator is not enough either:
+  with a mean-of-six floor venom still reads 0.94× on one salt, because there
+  the control runs high and the gene runs low at once.
+
+  And magnitude cannot patch it, which rules out the obvious repair: the
+  control reaches **0.77%** and venom's smallest signed effect is **0.35%**.
+  No absolute threshold separates them. Only direction does — completely:
+
+      venom_gland   turns +0.63 +0.36 +0.35 +0.83 +0.63 +0.64   one way
+                    left  -0.55 -0.46 -0.33 -0.58 -0.49 -0.67   one way
+      (control)     turns -0.59 -0.54 -0.30 +0.01 -0.06 +0.40   mixed
+                    left  +0.90 -0.02 +0.90 -0.30 -0.28 -0.43   mixed
+
+  Venom makes fights **longer** and leaves you with **less** HP, every time —
+  exactly right for a gene that trades −2 power for a slow trickle, and a
+  sidegrade rather than the invisible passenger the entry describes.
+
+  **Shipped:** the ratio is gone. Every gene must move both `turns` and
+  `left` the same way on **six** salts, and re-seeding must not — the second
+  rule being the tripwire that stops the first being satisfiable by a dead
+  engine. `UNRESOLVED_BY_THIS_PROBE` is deleted along with the 25 lines of
+  evidence that justified it. Three things the change forced:
+
+  - **Sharded by gene, not by salt.** A cross-salt claim cannot be evaluated
+    by a shard holding one salt. R90's split by family was right for a rule
+    asserted per family; this one is not. Each lane re-pays the six shared
+    plain arms — the price of making the claim checkable at all.
+  - **Every gene declares its lane**, or it runs in none and the block gets
+    quietly cheaper and emptier. The old family table had that hazard and no
+    such check.
+  - **`GENE_MIN_SALTS`**, found by writing the break: cutting the list back
+    to R90's two families left every other assertion **green**, because the
+    control is same-signed on `turns` across those two and only `left` was
+    saving it. A gate that cannot defend its own sample size is one edit from
+    meaning nothing.
+
+  `GENE_N` 200 → **100**, and the money went on salts. Measured before
+  cutting: at 100 every gene still holds and the control is still mixed on
+  both statistics; **at 50 the control's `turns` comes out negative on all
+  six salts** and the discriminator is gone. 100 is the floor plus a
+  doubling. Net cost ≈132s CPU against 73s, inside the suite's headroom.
+
+  *Done when: every gene in the pool moves both `turns` and `left` in one
+  direction across at least six independent salts; an unpaired reseed does
+  not; the salt count is itself asserted; and `UNRESOLVED_BY_THIS_PROBE` is
+  gone. (This replaces the original "clears the same 1.5× bar", which the
+  measurement above showed to be the defect rather than the test.)*
 
 - **R173 — The reach gate misses a break by a rounding hair, and does not
   assert the thing it prints.** ✅ *Shipped — and the search for a break that

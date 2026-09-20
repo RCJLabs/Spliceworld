@@ -311,6 +311,17 @@ const UNION = ['node', 'tools/smoke.js'];
 const FACILITY = ['node', '-e',
   "process.env.SW_SHARD = 'c'; await import('./tools/smoke.js');"];
 
+// R118 — THE GENE PROBE, in the two lanes its rules live in. Lane A carries
+// the discriminator (re-seeding must NOT hold a direction), the salt-count
+// floor and the declare-yourself table; lane C carries `venom_gland`, which
+// is the gene the old ratio bar could not resolve and the one a regression
+// here would quieten first. Named separately from FACILITY and SHARD_A for
+// R129's reason: a break that aims at one block should not read as another.
+const GENEPROBE_A = ['node', '-e',
+  "process.env.SW_SHARD = 'a'; await import('./tools/smoke.js');"];
+const GENEPROBE_C = ['node', '-e',
+  "process.env.SW_SHARD = 'c'; await import('./tools/smoke.js');"];
+
 // R129 — the release block: the phase fires, the anatomy widens, the trait
 // rides out through the Wing into the Vault. Shard a, per SHARD_OF.
 const RELEASE = ['node', '-e',
@@ -6006,6 +6017,52 @@ const BREAKS = [
     file: 'tools/wide.js',
     anchor: "  await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(save))})`);",
     to: "  await evaluate(`localStorage.setItem('spliceworld_notasave', ${JSON.stringify(JSON.stringify(save))})`);",
+  },
+
+  // --- gate: the gene probe (R118 — which way, not how far) ----------------
+  {
+    // THE EFFECT GOES BACK TO UNSIGNED, which is the shape the probe had for
+    // fifteen milestones and the one a tidy-up would restore: `Math.abs` on
+    // both halves reads like harmless normalisation. It is the whole rule.
+    // Every direction becomes positive, so every gene "holds one direction"
+    // for free — AND SO DOES THE CONTROL, which is what makes this catchable
+    // rather than silently weaker. Rule 1 is the tripwire under rule 2.
+    n: 395, gate: GENEPROBE_A, name: 'the gene effect goes unsigned again, so re-seeding holds a direction too',
+    file: 'tools/smoke.js',
+    anchor: '    return { turns: (gt - pt) / pt, left: (gh - ph) / ph };',
+    to: '    return { turns: Math.abs((gt - pt) / pt), left: Math.abs((gh - ph) / ph) };',
+  },
+  {
+    // THE SALT LIST GOES BACK TO R90's TWO FAMILIES. This break is the reason
+    // `GENE_MIN_SALTS` exists: written first, it found that cutting the list
+    // to two left every other assertion GREEN — the control is same-signed on
+    // turns across t24 and q7, and only `left` was saving it. The gate could
+    // not defend its own sample size, which is 50% odds that a dead gene
+    // holds a direction by luck rather than 3%.
+    n: 396, gate: GENEPROBE_A, name: 'the sign test drops to two salts, where a dead gene passes half the time',
+    file: 'tools/smoke.js',
+    anchor: "    : ['t24', 'q7', 'z1', 'm5', 'k9', 'w3'];",
+    to: "    : ['t24', 'q7'];",
+  },
+  {
+    // A GENE STOPS BEING DECLARED, so it runs in no lane at all and the block
+    // gets quietly cheaper and emptier — R90's union failure one level down,
+    // in a table that had no such check before this milestone.
+    n: 397, gate: GENEPROBE_A, name: 'a gene names no shard, so nothing measures it and the block gets cheaper',
+    file: 'tools/smoke.js',
+    anchor: "    glassjaw: 'c', venomgland: 'c', barbedskin: 'c',",
+    to: "    glassjaw: 'c', barbedskin: 'c',",
+  },
+  {
+    // AND THE GAME ITSELF: a gene's stat bonus stops reaching the creature.
+    // `splice/physiology.js` is where a trait becomes numbers, so this is the
+    // regression the probe exists for rather than one aimed at the probe.
+    // Eight of the twelve genes are stat-only — they go to nothing, and a
+    // gene that does nothing cannot hold a direction.
+    n: 398, gate: GENEPROBE_C, name: "a gene's stat bonus stops reaching the creature, and eight genes go quiet",
+    file: 'splice/physiology.js',
+    anchor: '      for (const [stat, v] of Object.entries(content.traits?.[traitId]?.statBonus ?? {})) {',
+    to: '      for (const [stat, v] of Object.entries({})) {',
   },
 ];
 

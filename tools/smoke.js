@@ -1125,6 +1125,19 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
   }
   const mine = traits.filter((t) => !SHARD || GENE_SHARD[shardKey(t.id)] === SHARD);
 
+  // 0. AND THE SALT COUNT IS ITSELF A CHECKED NUMBER. A null holds one
+  //    direction with probability 2^(1-salts) per statistic, so the count IS
+  //    the gate's strength: at six that is 3%, at two it is 50% and this
+  //    block would be theatre. Found by trying to write the break: cutting
+  //    the list back to R90's two families left every assertion below GREEN,
+  //    because the control happens to be same-signed on turns across those
+  //    two and only `left` saves it. A gate that cannot defend its own
+  //    sample size is one edit from meaning nothing.
+  const GENE_MIN_SALTS = 6;
+  assert.ok(GENE_SALTS.length >= GENE_MIN_SALTS,
+    `the sign test needs at least ${GENE_MIN_SALTS} salts to mean anything `
+      + `(2^(1-n) is the chance a dead gene holds a direction by luck); got ${GENE_SALTS.length}`);
+
   // 1. THE PROBE CAN TELL A GENE FROM A RESEED. Run in one lane because it
   //    is a statement about the probe rather than about any gene, and it is
   //    the assertion that keeps rule 2 from being satisfiable by a dead

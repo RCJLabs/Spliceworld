@@ -1,5 +1,60 @@
 # PROGRESS
 
+## Session 202 — R118: the gene probe asks which way, not how far ✅
+
+**The milestone's own entry was wrong about the defect, wrong about the
+numbers, and wrong about both proposed fixes. The probe was never blind to
+`venom_gland`; it was dividing a steady signal by a wobbling ruler.**
+
+### What the entry said, and what is actually there
+
+    entry: venom reads 0.56x 0.89x 0.90x 1.18x across four salts
+    today:              3.80x 1.32x 0.56x 2.87x   -- two already clear the bar
+
+    entry: add "damage dealt to the player's team, or the turn the first
+           creature falls"
+    first is what `left` already counts; the second carries a 0.49% control
+    floor against `turns`' 0.21%, so it lowers EVERY gene's ratio. Under it
+    venom reads 0.70x and barbed_skin -- which the probe resolves fine --
+    falls to 0.64x.
+
+### The real defect: the denominator, and a design asymmetry
+
+A gene arm and its plain arm share seeds, so that comparison is **paired**.
+The control is an **unpaired reseed**. The floor measures noise the gene
+comparison never incurs:
+
+    24 control arms      0.03% .. 0.77%   a 26x swing
+    venom's own effect   0.43% .. 0.81%   a 1.9x swing
+
+The gene was steadier than the ruler. A mean-of-six floor does not fix it
+either (venom still 0.94x on one salt), and magnitude cannot: the control
+reaches 0.77% and venom's smallest signed effect is 0.35%. Only direction
+separates them, and it does so completely -- venom holds +turns/-left on six
+of six, the control is mixed on both.
+
+### Shipped
+
+Reproducibility instead of a ratio. Every gene moves both statistics the same
+way on six salts; re-seeding does not. The exemption and its 25 lines of
+evidence are deleted. Three things the change forced:
+
+- **sharded by gene, not salt** -- a cross-salt claim cannot be evaluated by
+  a shard holding one salt;
+- **every gene declares its lane**, or it runs in none;
+- **`GENE_MIN_SALTS`**, found by writing the break: cutting to two salts left
+  every other assertion green.
+
+`GENE_N` 200 -> 100. At 100 every gene holds and the control is mixed on
+both; **at 50 the control's turns go negative on all six salts** and the
+discriminator is gone.
+
+### Known issues / next session's first task
+
+Queue 8: R176, R179, R180, R181, R182, R183, R184, R185. R184 still needs a
+first-paint KB budget before it can add a CSS rule -- R117 left that at
+1,099 of 1,099.
+
 ## Session 201 — R117: wide screens ✅
 
 **The game stopped being a 560px column on a laptop. At 1,280px `main` was
