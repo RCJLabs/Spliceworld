@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**8 entries queued.** R118, R176, R179, R180, R181, R182, R183, R184.
+**9 entries queued.** R118, R176, R179, R180, R181, R182, R183, R184, R185.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4833,6 +4833,24 @@ suite can check.
   those numbers, `tools/wide.js` is still green at every width, and a break
   that forces the Pens back to the single-column layout goes red.*
 
+- **R185 — The height gate walks five of the Dex's six tabs.** Found closing
+  R117, by counting which tabs a 50px change had landed on. `splice/dex-ui.js`
+  ships **six**: Roster, Variants, Combos, Genes, Foes and **Yearbook**. The
+  walk in `tools/height.js` loops
+  `['roster', 'variants', 'combos', 'genes', 'foes']` and the `BUDGET` table
+  names the same five, so the Yearbook has **never been measured** — it has
+  no folded budget, no tallest budget and no word budget, and R89's whole
+  argument (a screen that outgrows a phone is a screen nobody reads) has
+  never been applied to it. This is R39's finding exactly — "the gate that
+  checked five of six screens" — one level down, and it is not R117's doing:
+  R117 only made it visible by adding 50px of shared chrome to a tab nothing
+  was watching. The list should be READ FROM THE SCREEN the way
+  `tools/wide.js` reads its widths, so a seventh tab is measured the day it
+  lands rather than the day somebody remembers. *Done when: the Yearbook
+  carries a folded, tallest and word budget derived from a day-180 save, the
+  tab list in `tools/height.js` is not a literal, and a break that adds a tab
+  the table does not name goes red.*
+
 - **R117 — Wide screens.** ✅ *Shipped — and two of the entry's own claims
   were wrong, which is recorded here rather than quietly corrected.*
 
@@ -4901,10 +4919,32 @@ suite can check.
   **The gate.** `tools/wide.js`, six rules at 380/900/1,280/1,920px on a
   walked day-180 save, in the **baseline** tier on the day it was written
   (R178's finding, applied before it could bite again). Breaks **390–394**,
-  one per rule that can regress: the 560px cap comes back, the rail draws
-  nothing, a long agenda pushes the wire out, the six-tab bar loses its
-  second row, and — rule 0 — the gate measures a fresh save and passes
-  everything by having no layout to get wrong.
+  one per rule that can regress. **Two of the five missed on the first pass
+  and both findings were about the gate, not the tree.** 392 took the
+  agenda's own scroll away so it would push the wire out — but on this
+  fixture the agenda is ~700px and the rail's row ~750, so it fits; re-aimed
+  at the **fixed-height shell**, which is the mechanism the layout actually
+  rests on, and the old aim is recorded beside the new one. 394 wrote the
+  save under a key the game does not read, and rule 0's "tallest screen over
+  800px" did not notice, because a FRESH save still paints well over 800px
+  of chrome: a proxy for "is this a campaign" was not one. Rule 0 now asks
+  the page what it is holding and compares the **herd and the wire** against
+  the fixture this process walked.
+
+  **Five budgets moved, and each says why.** `KB_CAP` 326 → 327 (measured
+  326.4) and `PROSE_CAP` 255 → 256 (255.3) — the tax was paid first, the
+  milestone's eager comments going from +1,462 bytes to +816 by moving the
+  argument into `ui/rail.js`, which a phone never downloads. First paint was
+  1,103 KB against a 1,099 budget, all of it stylesheet, and trimming the new
+  CSS comments from 2.6 KB to 0.6 brought it to **1,099 exactly — passing
+  with no headroom at all**, which R184 will have to deal with before it adds
+  a rule. And `dex:variants` 1100 → 1150, `dex:genes` 1250 → 1300,
+  `dex:foes` 6150 → 6200: not the tabs but the SHARED CHROME, the second tab
+  row being 44px of button and 6px of gap on every Dex tab. Each keeps
+  exactly the headroom it had rather than gaining any; `dex:roster` and
+  `dex:combos` absorbed the same 50 inside theirs. The **Yearbook** absorbed
+  nothing, because nothing measures it — see R185, which this milestone found
+  while counting which tabs the 50px landed on.
 
   **Cut inside the milestone, and named rather than deferred:** the entry
   also proposed the open card beside the list on the Pens and the Ranch and

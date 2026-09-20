@@ -355,7 +355,7 @@ const BUDGET = {
   // 35px of slack over the measurement, which is the smallest number that is
   // not the measurement itself. The shut number, which is what R97's criterion
   // is actually judged on, did not move: 764px against 2,500.
-  'dex:foes':     { folded: 2500,  tallest: 6150, opens: 4 },
+  'dex:foes':     { folded: 2500,  tallest: 6200, opens: 4 },   // R117: +50, the second tab row
 };
 
 // R98 — AND WHAT IT SAYS, not only how tall it is.

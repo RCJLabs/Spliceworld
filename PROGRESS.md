@@ -81,20 +81,59 @@ A gate that asks a question the page cannot answer:
   whether ANY agenda heading is in the glass now, which is the question the
   criterion actually asks.
 
+### Two of my five breaks missed, and both findings were about the gate
+
+- **392** took the agenda's own scroll away so it would push the wire out of
+  the rail. On this fixture the agenda is ~700px and the rail's row ~750, so
+  it fits and nothing moves. Re-aimed at the **fixed-height shell**, which is
+  the mechanism the layout actually rests on: without it the rail stretches
+  down a 2,400px row and the wire goes with it. The old aim is recorded
+  beside the new one, because the next person to look at `.rail-agenda`
+  should know it was tried.
+- **394** wrote the save under a key the game does not read, and rule 0's
+  "tallest screen over 800px" did not notice — a FRESH save still paints well
+  over 800px of chrome. A proxy for "is this a campaign" was not one. Rule 0
+  now asks the page what it is holding and compares the herd and the wire
+  against the fixture this process walked. Only the real save can match.
+
+### Five budgets moved, and the boot budget has no headroom left
+
+    KB_CAP         326 -> 327   measured 326.4
+    PROSE_CAP      255 -> 256   measured 255.3, and the tax was paid first
+    dex:variants  1100 -> 1150  the second tab row, not the tab
+    dex:genes     1250 -> 1300  "
+    dex:foes      6150 -> 6200  "
+    first paint   1103 -> 1099  under a 1099 budget, with ZERO headroom
+
+The eager comments went from +1,462 bytes to +816 by moving the argument into
+`ui/rail.js`, which is lazy and wide-only, so a phone downloads none of it.
+The stylesheet's new comments came down from 2.6 KB to 0.6 to get first paint
+back under budget — **which it now meets exactly**. R184 cannot add a CSS rule
+without dealing with that.
+
+### Found while counting which tabs the 50px landed on
+
+**R185 is filed: the height gate walks five of the Dex's six tabs.** The
+Yearbook has no folded budget, no tallest budget and no word budget, and
+never has. This is R39's "gate that checked five of six screens" one level
+down; R117 only made it visible.
+
 ### Verification
 
     tools/wide.js               EXIT 0, six screens at four widths
+    tools/height.js             EXIT 0, 9 screens, 129 folds
     tools/battery.js --anchors  386 anchors match exactly once
-    tools/battery.js --baseline see below
-    breaks 390-394              one per rule that can regress
-    npm test                    see below
+    tools/battery.js --baseline every gate green
+    breaks 390-394              5 of 5 caught
+    npm test                    green
 
 ### Known issues / next session's first task
 
 R184 is filed: what is inside `main` is still the phone's layout, one column
 of cards made wider. The open card beside the list on the Pens, and the
 arena — which R117 measured only as a War Room, never as a fight in
-progress. **Measure a fight at 380 and 1,280 before designing anything.**
+progress. **Measure a fight at 380 and 1,280 before designing anything**, and
+find the KB for it before writing the CSS.
 
 ## Session 200 — R116: standing contracts, and the cascade behind them ✅
 
