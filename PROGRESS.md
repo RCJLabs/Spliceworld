@@ -63,9 +63,24 @@ stays retired rather than reissued.
 
     smoke shard d (voice)       RED before, GREEN after, GATE_EXIT=0
     battery --anchors           393 anchors match exactly once
-    breaks 399-401              3 caught, 0 missed · BATTERY_EXIT=0
-                                baseline green in the same run
-    npm test                    see below
+    breaks 399-401              3 caught, 0 missed -- but BATTERY_EXIT=1
+                                on a RED baseline (see below), 17m
+    battery --baseline          every gate passes on a pristine tree, EXIT 0
+    release                     CACHE names the shell it holds (134 files)
+    npm test                    1444 CPU-s of 1521, 475s wall, EXIT 0
+    roadmap                     25 stated numbers match the data
+    scopecheck                  129 modules, 4611 words of 4625
+
+**The break run is the standing example of why BATTERY_EXIT is the verdict.**
+It printed "3 breaks, 3 caught, 0 missed" on top of a failing gate: sixteen
+headlines went into a PRECACHED data file, so the worker's CACHE no longer
+named the shell it holds and a returning player would have kept the old shell
+and never heard one of them. `spliceworld-v59-d3ed576c` -> `-b79f079b`.
+
+The suite reading is a FIRST run after source changes -- 6 walks rebuilt, so
+it carries a 96s allowance (1425 base + 96) and the `walks` job reads 214.7s
+against its usual ~46. The warm number for this tree was not taken and is not
+claimed.
 
 ### Known issues / next session's first task
 
