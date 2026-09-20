@@ -1771,6 +1771,17 @@ footer {
      inherits it — the a11y gate measured this one starting 98px into its own
      348px line. A ragged left edge on a list you scan by name. */
   justify-content: flex-start;
+  /* R116 — AND IT WRAPS AT 150% TEXT. This row carries a caret, a species
+     name, a count, a star badge and a grade badge, and none of them can
+     shrink: a `.grade-badge` is an inline-block of uppercase letters with
+     letter-spacing. At 100% they fit; at 150% "PRISMATIC" left the card by
+     30px and the a11y gate said so. Nothing changes at 100% — there is
+     nothing to wrap — and at 150% the badge drops to a second line inside
+     the card instead of over its edge.
+     Found by R116 because the milestone changed what a day-180 vault HOLDS,
+     not how it draws: a campaign that now collects all 244 parts shows a
+     prismatic shelf where it used to show a shorter word. */
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
   min-height: 40px;
