@@ -1,5 +1,128 @@
 # PROGRESS
 
+## Session 202 — R118: the gene probe asks which way, not how far ✅
+
+**The milestone's own entry was wrong about the defect, wrong about the
+numbers, and wrong about both proposed fixes. The probe was never blind to
+`venom_gland`; it was dividing a steady signal by a wobbling ruler.**
+
+### What the entry said, and what is actually there
+
+    entry: venom reads 0.56x 0.89x 0.90x 1.18x across four salts
+    today:              3.80x 1.32x 0.56x 2.87x   -- two already clear the bar
+
+    entry: add "damage dealt to the player's team, or the turn the first
+           creature falls"
+    first is what `left` already counts; the second carries a 0.49% control
+    floor against `turns`' 0.21%, so it lowers EVERY gene's ratio. Under it
+    venom reads 0.70x and barbed_skin -- which the probe resolves fine --
+    falls to 0.64x.
+
+### The real defect: the denominator, and a design asymmetry
+
+A gene arm and its plain arm share seeds, so that comparison is **paired**.
+The control is an **unpaired reseed**. The floor measures noise the gene
+comparison never incurs:
+
+    24 control arms      0.03% .. 0.77%   a 26x swing
+    venom's own effect   0.43% .. 0.81%   a 1.9x swing
+
+The gene was steadier than the ruler. A mean-of-six floor does not fix it
+either (venom still 0.94x on one salt), and magnitude cannot: the control
+reaches 0.77% and venom's smallest signed effect is 0.35%. Only direction
+separates them, and it does so completely -- venom holds +turns/-left on six
+of six, the control is mixed on both.
+
+### Shipped
+
+Reproducibility instead of a ratio. Every gene moves both statistics the same
+way on six salts; re-seeding does not. The exemption and its 25 lines of
+evidence are deleted. Three things the change forced:
+
+- **sharded by gene, not salt** -- a cross-salt claim cannot be evaluated by
+  a shard holding one salt;
+- **every gene declares its lane**, or it runs in none;
+- **`GENE_MIN_SALTS`**, found by writing the break: cutting to two salts left
+  every other assertion green.
+
+`GENE_N` 200 -> 100. At 100 every gene holds and the control is mixed on
+both; **at 50 the control's turns go negative on all six salts** and the
+discriminator is gone.
+
+### The suite refused the cost twice, once in each of its units
+
+Both refusals were right and only one of them was mine.
+
+**Seconds — not this milestone, and I blamed it anyway, twice.** `npm test`
+came in 79 CPU-seconds over 1,150. I read R117's "1,126 of 1,342 budgeted" as
+216s of headroom (192 of it was a cold walk allowance; real headroom 24) and
+then priced cell-runs uncontended when R155 had measured ~3x contention. Both
+errors pointed at my code. The gate PRINTS the A/B that settles this and I ran
+it last:
+
+    R117's tree (d2ec4a1), today's box, warm    1170   <- no R118 in it
+    R118's tree, same box, same hour, warm      1229
+
+The old tree is 20s over with none of this milestone in it. `CPU_BUDGET_S`
+1150 -> **1425** (1229 + R170's 15% band). 59 of the 79 seconds were mine.
+
+**Battles — host-invariant, and this half was mine.** 1,010,051 against a
+budget of 940,000, caught on a run where the seconds rule had already gone
+green. That is R170's whole argument, made against the milestone that tripped
+it. Measured both sides, and derived from the code to the battle:
+
+                   OLD (2 families, 200/cell)   NEW (6 salts, 100/cell)
+    shard a   control + 12 genes  108,000       3 genes + control 108,000
+    shard b   nothing                   0       3 genes            86,400
+    shard c   nothing                   0       3 genes            86,400
+    shard d   control + 12 genes  108,000       3 genes            86,400
+                                  -------                          -------
+                                  216,000                          367,200
+
+367,200 - 216,000 = **151,200**, against 858,851 -> 1,010,051 measured; shard
+a is byte-identical either way (269,942). `BATTLE_BUDGET` -> **1,110,000**,
+`BATTLE_FLOOR` -> **910,000**, same +-10% band. Neither end went blind: break
+262 still reads 2,224,259 (2x the ceiling), a blind sweep 605,315 (2/3 of the
+floor). Fitting under the old number would have meant cutting builds 9 -> 7,
+which takes the probe from holding 36/36 subsets to 30/36 -- paying for a
+budget with the gate the budget exists to protect.
+
+**Left standing, on purpose:** the probe moving from two shards to four put
+`smoke:b` at 23.2% of the suite against 19.5% declared, and `smoke:a` at 25.6%
+against 28.3%. Inside `SHARE_BAND` 6, rule green, so the table is NOT
+re-declared -- but b now spends 3.7pp of a 6pp band for a known permanent
+reason. Next milestone to touch the shards should re-measure it.
+
+### Verification
+
+    smoke (unsharded)           GATE_EXIT=0, all 12 genes + the control
+    battery --anchors           390 anchors match exactly once
+    FULL BATTERY (gate change)  390 caught, 0 missed, four chunks EXIT=0
+                                25m + 81m + 152m + 65m = 323m
+    breaks 261,262,300,395-398  7 caught, 0 missed · BATTERY_EXIT=0 · 42m
+                                baseline green in the same run (15 gates)
+                                261/262/300 re-run because the budget numbers
+                                they bite on MOVED; all three still bite
+    npm test                    1254 CPU-s of 1425, 334s wall, EXIT=0
+
+**The full battery cost 5h23m, not the ~3.1h CLAUDE.md recorded** — 4h55m for
+one uninterrupted run once three redundant baselines come out. That is the
+fourth reading of that number and the third time it was wrong, so the file now
+says to treat it as stale by default. The expensive breaks cluster in the
+LATER numbering: chunk 1 (25m) would have predicted a 100-minute battery and
+chunk 3 alone cost 152.
+
+### Known issues / next session's first task
+
+**`smoke:b` is spending 3.7pp of a 6pp share band for a known reason** -- the
+probe moved from two shards to four. The rule is green so the table was not
+re-declared here; the next milestone that touches the shards should re-measure
+`SHARE` rather than spend the rest of that band.
+
+Queue 8: R176, R179, R180, R181, R182, R183, R184, R185. R184 still needs a
+first-paint KB budget before it can add a CSS rule -- R117 left that at
+1,099 of 1,099.
+
 ## Session 201 — R117: wide screens ✅
 
 **The game stopped being a 560px column on a laptop. At 1,280px `main` was

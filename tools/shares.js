@@ -106,7 +106,54 @@ export function shareProblems(jobs, want = SHARE, band = SHARE_BAND) {
 // 940,000 is 855,308 plus 10%. The headroom is for CONTENT — a new species or
 // a new enemy adds fights to the benches that iterate the catalogue — and not
 // for sampling, which moves in multiples and would blow this by 100% or more.
-export const BATTLE_BUDGET = 940_000;
+// R118 — 940,000 -> 1,110,000, AND THE RULE WORKED EXACTLY AS BUILT.
+//
+// R118 reshaped the gene probe: the old one asked how FAR a gene moves the
+// fight, on two salt families at 200 battles a cell; the new one asks WHICH
+// WAY, on six salts at 100. That is a sampling change, which is the one thing
+// this budget was written to refuse quietly — so it did not go quietly. The
+// suite came in at 1,010,051 and this rule stopped it, on a run where the
+// seconds budget had already been satisfied. That is the whole argument for
+// a host-invariant count, made against the milestone that wrote it.
+//
+// So it is answered with arithmetic rather than a wider number. Measured, two
+// warm runs each, same box, same hour:
+//
+//   R117's tree (d2ec4a1)      858,851 battles
+//   R118's tree              1,010,051 battles      +151,200
+//
+// And the delta is the probe, to the battle. `geneRun` is memoised on
+// (sp, traitId, enc, salt), so the count is countable:
+//
+//                        OLD (2 families, 200/cell)   NEW (6 salts, 100/cell)
+//   shard a    control + 12 genes    108,000          3 genes + control  108,000
+//   shard b    nothing                     0          3 genes             86,400
+//   shard c    nothing                     0          3 genes             86,400
+//   shard d    control + 12 genes    108,000          3 genes             86,400
+//                                    -------                             -------
+//                                    216,000                             367,200
+//
+// 367,200 - 216,000 = 151,200, against 151,200 measured. Nothing else in the
+// suite moved: shard a's count is byte-identical either way (269,942), which
+// is what you would expect of a shard whose gene work happens to cost the
+// same before and after.
+//
+// THE COST IS BOUGHT, NOT SPENT. Halving the cell paid for a third of the
+// salts; the rest buys the gate's strength, which IS the salt count — a dead
+// gene holds one direction with probability 2^(1-n), so six salts is 3% and
+// the old two were 50%. Cutting builds from 9 to 7 would fit under the old
+// number and take the probe from holding 36/36 subsets to 30/36, which is
+// paying for a budget with the gate the budget exists to protect.
+//
+// 1,110,000 is 1,010,051 plus 10%, the same band on the same reasoning: the
+// headroom is for CONTENT, not for the next sampling change. And widening it
+// has not blinded it: breaks 261, 262 and 300 were all re-run against these
+// numbers and all three still go red. Break 300 MEASURES the sweep on this
+// tree at 404,736 — blinding it reads 605,315, and 1,010,051 - 605,315 is
+// the same count R170 read — so break 262, which quadruples it, lands at
+// 1,010,051 + 3 x 404,736 = 2,224,259, twice the new ceiling. Sampling moves
+// in multiples; a milestone's worth of content does not.
+export const BATTLE_BUDGET = 1_110_000;
 
 // AND A FLOOR, which matters more than the ceiling and exists because R170
 // shipped the defect it catches. `tools/pool.js` ends the balance sweep with
@@ -117,9 +164,9 @@ export const BATTLE_BUDGET = 940_000;
 // A ceiling cannot see that. A counter going blind makes its number FALL, and
 // a falling number under a ceiling is indistinguishable from good news. This
 // is the same failure R168's share rule had and R170's first draft repeated:
-// a rule that can only ever pass. 770,000 is 855,308 minus 10%; losing the
-// sweep alone reads 450,572, less than half the floor.
-export const BATTLE_FLOOR = 770_000;
+// a rule that can only ever pass. 910,000 is 1,010,051 minus 10%; losing the
+// sweep alone MEASURES 605,315 on this tree, two thirds of the floor.
+export const BATTLE_FLOOR = 910_000;
 
 export function battleProblem(byJob, budget = BATTLE_BUDGET, floor = BATTLE_FLOOR) {
   const counted = [...byJob].filter(([name]) => name !== 'walks');
