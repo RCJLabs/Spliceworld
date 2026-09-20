@@ -7208,6 +7208,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'battle/move-text.js': null,
   'render/mood.js': null,
   'ui/patch.js': null,
+    // R117 — the wide-screen rail. Exempt because it teaches NOTHING NEW: it
+    // is the Right Now agenda and the county wire, both of which the player
+    // already meets on the Ranch and in the footer, moved into a column that
+    // only exists at 900px and up. A field guide about a panel most of this
+    // game's players (it ships as a TWA) can never see would be a note
+    // written for the developer.
+    'ui/rail.js': null,
     'battle/forecast.js': null,
     'battle/readout.js': null,
     'battle/tagtext.js': null,
@@ -23297,7 +23304,15 @@ if (inShard('wire')) {
 // own prose cost, and 2.3 of it was the module header repeating the note it
 // sits beside almost word for word. One block was explaining `opCost`, a
 // function this milestone deleted rather than shipped dead.
-const KB_CAP = 326;        // CODE only, measured at 325.6
+// R117 — 326 -> 327, measured at 326.4. The milestone puts a SECOND LAYOUT
+// in the shell, and what the eager graph pays for is only the switch and the
+// table both readers share: `paintRail` and the media query in main.js,
+// `wireLines` (which replaced an inline pick, so it is nearly free), and
+// `AGENDA_KINDS` in ranch/agenda.js. The rail itself — 100 lines of panel —
+// is NOT in this number, because it is imported the first time the query
+// matches and a phone never asks. That is the shape a wide-screen feature
+// should have, and 0.8 KB is what it costs to have it.
+const KB_CAP = 327;        // CODE only, measured at 326.4
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
@@ -23373,7 +23388,15 @@ const KB_CAP = 326;        // CODE only, measured at 325.6
 // checked last so a better refusal still wins, why the ledger line must go
 // through the shared emitter — and those belong next to the code they
 // explain. The 3.6 KB over is what a new subsystem costs to explain at all.
-const PROSE_CAP = 255;
+// R117 — 255 -> 256, measured at 255.3, AND THE TAX WAS PAID FIRST. The
+// milestone's eager comments started at +1,462 bytes and are +816: the
+// argument for the rail moved into `ui/rail.js`, which is lazy and
+// wide-only, so a phone downloads none of it; the width story moved into
+// ROADMAP R117 and a trimmed `style.css` header; and what is left in the
+// eager modules is local — why the rail is destructured on import, why the
+// buckets live in `agenda.js`, why the Ranch's card is named. 0.3 KB over,
+// and the panel it explains is free.
+const PROSE_CAP = 256;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(codeKb <= KB_CAP,

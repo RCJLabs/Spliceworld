@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**8 entries queued.** R117, R118, R176, R179, R180, R181, R182, R183.
+**9 entries queued.** R118, R176, R179, R180, R181, R182, R183, R184, R185.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4809,18 +4809,152 @@ suite can check.
   job's sentence is more than 1% of the wire on the day-180 walk, and a break
   that freezes `op.news` to its first line goes red.*
 
-- **R117 — Wide screens.** The game is a **560 px column at every width**:
-  `main { max-width: 560px }` and not one layout rule above 430 px, so on a
-  1,920 px laptop it sits at x = 673 with 1,360 px of dark on either side —
-  and GitHub Pages serves laptops. The one-line ticker is the only place the
-  wire is read. Proposed, medium: at **900 px and up**, a second column
-  docking the Right Now agenda and a readable wire beside the active
-  screen; on the Pens and Ranch the open card beside the list; the arena's
-  stage growing into the room; the tabs as a left rail at 1,200 px; and a
-  1,280 px pass in the a11y gate so nothing regresses at 380. *Done when:
-  at 1,280 px the agenda and the wire are visible without scrolling on every
-  screen, the 380 px floor and gutter still hold, and the day-180 Pens
-  needs no horizontal scroll at either width.*
+- **R184 — The room inside `main`.** Cut out of R117 rather than deferred by
+  accident, and named here so it is a decision instead of an omission. R117
+  gave the game a second column and grew `main` from a 560px cap to **788px
+  at 1,280px and 1,108px at 1,920px** — but what is inside `main` is still
+  the phone's layout, one column of cards made wider. The entry proposed two
+  things for that room and neither is in its Done-when: **the open card
+  beside the list** on the Pens and the Ranch (today the open dossier pushes
+  the rest of the roster down, which is right at 380px and wasteful at 1,108),
+  and **the arena's stage growing into it**. The arena is the honest unknown
+  here: R117 measured the War Room at every width but never a fight in
+  progress, so what a 788px arena actually looks like is unverified. What is
+  known from the source is that `.stage` is `flex: 1 1 0` with a
+  `min-height` of 210px (260 above a 760px viewport) inside a `100dvh`
+  column, so it answers to HEIGHT and to `main`'s width and to nothing else —
+  the moves and the two stat blocks still stack under it in one column,
+  which is the phone's arrangement. **Measure it before designing it.** The
+  `.token-list` rule R117 did ship — as many columns as fit, `auto-fill` so
+  one token does not stretch across the whole of `main` — is the pattern the
+  rest should follow. *Done when: at 1,280px on a day-180 save the Pens shows
+  the open card beside the list rather than above it, a fight in progress has
+  been measured at 380 and 1,280px and its layout at 1,280 is argued for from
+  those numbers, `tools/wide.js` is still green at every width, and a break
+  that forces the Pens back to the single-column layout goes red.*
+
+- **R185 — The height gate walks five of the Dex's six tabs.** Found closing
+  R117, by counting which tabs a 50px change had landed on. `splice/dex-ui.js`
+  ships **six**: Roster, Variants, Combos, Genes, Foes and **Yearbook**. The
+  walk in `tools/height.js` loops
+  `['roster', 'variants', 'combos', 'genes', 'foes']` and the `BUDGET` table
+  names the same five, so the Yearbook has **never been measured** — it has
+  no folded budget, no tallest budget and no word budget, and R89's whole
+  argument (a screen that outgrows a phone is a screen nobody reads) has
+  never been applied to it. This is R39's finding exactly — "the gate that
+  checked five of six screens" — one level down, and it is not R117's doing:
+  R117 only made it visible by adding 50px of shared chrome to a tab nothing
+  was watching. The list should be READ FROM THE SCREEN the way
+  `tools/wide.js` reads its widths, so a seventh tab is measured the day it
+  lands rather than the day somebody remembers. *Done when: the Yearbook
+  carries a folded, tallest and word budget derived from a day-180 save, the
+  tab list in `tools/height.js` is not a literal, and a break that adds a tab
+  the table does not name goes red.*
+
+- **R117 — Wide screens.** ✅ *Shipped — and two of the entry's own claims
+  were wrong, which is recorded here rather than quietly corrected.*
+
+  **The arithmetic.** "1,360 px of dark on either side" at 1,920px was the
+  TOTAL: 1,920 − 560 = 1,360, so it is **673px each side** (1,346 between
+  them; the missing 14 is the scrollbar). **The ticker.** "The one-line ticker
+  is the only place the wire is read" is false twice — `campaign/warroom.js`
+  ships a Wire tab, and the ticker is **two lines at 380px** (28px), not one.
+  What was true, and worse than the entry said, is that **neither reader was
+  ever in front of you**: `#ticker` sits in `<footer>` under a `main` that is
+  1,700–2,700px tall on every screen, so the county's voice was below the fold
+  at **every width including a phone's**, and `.agenda-head` was drawn by
+  `ranch/ui.js` alone, so Right Now existed on **one screen of six**.
+
+  **Measured on the day-180 save, before:**
+
+  |   width | `main` |     x | glass used |
+  |--------:|-------:|------:|-----------:|
+  |   380px |  380px |     0 |       100% |
+  |   900px |  560px |   163 |      62.2% |
+  | 1,280px |  560px |   353 |      43.8% |
+  | 1,920px |  560px |   673 |      29.2% |
+
+  The six screens were **byte-identical** at 900, 1,280 and 1,920px: every
+  width rule the stylesheet carried was a `max-width` (400, 430, 420, 400,
+  340), so the layout could only ever get narrower than its 560px column.
+
+  **After:** 380px is untouched. 900px `main` 564 at x=0 (62.7%), 1,280px
+  **788 at x=156 (61.6%)**, 1,920px 1,108 at x=316 (57.7%).
+
+  **Shipped.** At 900px and up the shell is a two-column grid with a FIXED
+  height — the shape `body.in-battle` already used on a phone. Header, tabs
+  and footer are furniture; `main` scrolls in its own cell and the rail
+  scrolls in its own. That second half is what makes the criterion hold
+  without a magic number: the rail is exactly as tall as its row, so its foot
+  is always in the glass, and "the wire is on screen without scrolling" is a
+  fact about the layout rather than a bet on how tall the agenda happened to
+  be. The agenda scrolls ABOVE the wire and the wire is `flex: 0 0 auto`,
+  because an agenda with thirty things open must not be able to push the
+  county's voice off the bottom. At 1,200px the tabs leave the top of the page
+  and become the left rail.
+
+  `ui/rail.js` is imported the first time the media query matches and **never
+  on a phone**: `MODULE_CAP` is at 50 eager modules of 50 and a column only a
+  wide screen can see has no business in the boot graph. It is also a
+  **handler surface**, because it paints `data-goto` and `data-open-fold` that
+  the Ranch also paints — the denominator would have been satisfied without
+  it and the rail's own binder would never have run once.
+
+  Three things went to one home rather than being copied: the three agenda
+  buckets to `ranch/agenda.js` (`AGENDA_KINDS`), read by the Ranch card and
+  the rail; "Nothing is open…" and "and {n} more of these." to
+  `data/copy.json` under `rail`, read by both; and the wire's line pick to
+  `wireLines()` in the shell, read by the footer ticker (last line) and the
+  rail (last six). The Ranch's own Right Now card **stands down** at 900px and
+  up, or the one screen that already had an agenda would print it twice.
+
+  **And a defect the new gate found on its own, at 380px.** `1fr` is
+  `minmax(auto, 1fr)` and `auto` is min-content, so the Dex's six-tab bar —
+  whose widest label needs 80px in a 52px cell — pushed the whole grid 7px
+  past a 380px phone, on **all six tabs**. `minmax(0, 1fr)` takes that floor
+  away and a bar with more than five tabs goes to **two rows of three** under
+  430px: a second row rather than 9px type. Only the Dex is crowded today.
+  The Dex grew 2,195 → 2,253px at 380px, inside its budget.
+
+  **The gate.** `tools/wide.js`, six rules at 380/900/1,280/1,920px on a
+  walked day-180 save, in the **baseline** tier on the day it was written
+  (R178's finding, applied before it could bite again). Breaks **390–394**,
+  one per rule that can regress. **Two of the five missed on the first pass
+  and both findings were about the gate, not the tree.** 392 took the
+  agenda's own scroll away so it would push the wire out — but on this
+  fixture the agenda is ~700px and the rail's row ~750, so it fits; re-aimed
+  at the **fixed-height shell**, which is the mechanism the layout actually
+  rests on, and the old aim is recorded beside the new one. 394 wrote the
+  save under a key the game does not read, and rule 0's "tallest screen over
+  800px" did not notice, because a FRESH save still paints well over 800px
+  of chrome: a proxy for "is this a campaign" was not one. Rule 0 now asks
+  the page what it is holding and compares the **herd and the wire** against
+  the fixture this process walked.
+
+  **Five budgets moved, and each says why.** `KB_CAP` 326 → 327 (measured
+  326.4) and `PROSE_CAP` 255 → 256 (255.3) — the tax was paid first, the
+  milestone's eager comments going from +1,462 bytes to +816 by moving the
+  argument into `ui/rail.js`, which a phone never downloads. First paint was
+  1,103 KB against a 1,099 budget, all of it stylesheet, and trimming the new
+  CSS comments from 2.6 KB to 0.6 brought it to **1,099 exactly — passing
+  with no headroom at all**, which R184 will have to deal with before it adds
+  a rule. And `dex:variants` 1100 → 1150, `dex:genes` 1250 → 1300,
+  `dex:foes` 6150 → 6200: not the tabs but the SHARED CHROME, the second tab
+  row being 44px of button and 6px of gap on every Dex tab. Each keeps
+  exactly the headroom it had rather than gaining any; `dex:roster` and
+  `dex:combos` absorbed the same 50 inside theirs. The **Yearbook** absorbed
+  nothing, because nothing measures it — see R185, which this milestone found
+  while counting which tabs the 50px landed on.
+
+  **Cut inside the milestone, and named rather than deferred:** the entry
+  also proposed the open card beside the list on the Pens and the Ranch and
+  the arena's stage growing into the room. Neither is in the Done-when, both
+  are work inside `main` rather than work on the shell, and the room is
+  already used — `main` grows from 560 to 788/1,108px and the token lists
+  flow into as many columns as fit. Filed as **R184**. The proposed "1,280px
+  pass in the a11y gate" was built as a gate of its own instead, which
+  measures four widths and six screens rather than one more width on a gate
+  that asks about touch targets.
 - **R118 — The gene probe cannot see a damage-over-time gene.** Found while
   shipping R103, and it is not R103's doing: the trait probe in `smoke.js`
   scores a gene by how far it moves TURNS TAKEN and HP LEFT, and

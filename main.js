@@ -233,6 +233,41 @@ function tick({ force = false } = {}) {
   const name = state.activeScreen;
   const root = $(`#screen-${name}`);
   if (root && !root.hidden) SCREENS[name](root);
+  paintRail();
+}
+
+// R117 — the wide-screen rail. Lazy and wide-only; the argument is in
+// ui/rail.js, which a phone never downloads. Emptied rather than hidden
+// below 900px (R104), and destructured on import so the dead-export scanner
+// can see the reader.
+const wide = () => window.matchMedia('(min-width: 900px)').matches;
+let rail = null;
+let railPending = false;
+function paintRail() {
+  const host = $('#rail');
+  if (!host) return;
+  if (!wide()) {
+    if (host.childElementCount) host.replaceChildren();
+    return;
+  }
+  if (rail) { rail(host, ctx, wireLines()); return; }
+  if (railPending) return;
+  railPending = true;
+  import('./ui/rail.js')
+    .then(({ renderRail }) => { rail = renderRail; railPending = false; paintRail(); })
+    .catch(() => { railPending = false; });
+}
+
+// R117 — what the county is saying, once: the footer reads the last line,
+// the rail the last few. R109 — the filler is data (news.json `ticker`) and
+// rotates on the day as well as the seed; `seed % 11` meant a save met one
+// line on its first morning and never saw the other ten.
+function wireLines(limit = 6) {
+  if (state.news.length) return state.news.slice(-limit);
+  const filler = content?.ticker ?? [];
+  if (!filler.length) return [];
+  const day = Math.floor((Date.now() - (state.createdAt ?? 0)) / 86400000);
+  return [filler[Math.abs(state.seed + day) % filler.length]];
 }
 
 // Latest news leads; otherwise a seeded deadpan default.
@@ -243,14 +278,11 @@ function updateTicker() {
   // them on its first morning and never saw the other ten. Keyed on the day
   // as well as the seed, so the county has a different thing to say on
   // Tuesday, and still the same thing all Tuesday.
-  const filler = content?.ticker ?? [];
-  const day = Math.floor((Date.now() - (state.createdAt ?? 0)) / 86400000);
-  const line = state.news.length
-    ? state.news[state.news.length - 1]
-    : (filler.length ? filler[Math.abs(state.seed + day) % filler.length] : '');
+  const line = wireLines(1)[0] ?? '';
   const ticker = $('#ticker');
   ticker.innerHTML = `${renderIcon('satellite', { size: 13 })}<span class="ticker-lead">BREAKING: </span>`;
   ticker.append(line);
+  paintRail();   // the rail carries the same wire
 }
 
 // R71 — a boot that cannot proceed gets ONE screen that says so, replacing
@@ -435,6 +467,7 @@ async function boot() {
   // time the dialog controller looks, focus is already back where the
   // player left it and its guard correctly does nothing.
   installFocusKeeper([...Object.keys(SCREENS).map((s) => $(`#screen-${s}`)), $('#overlay')].filter(Boolean));
+  window.matchMedia('(min-width: 900px)').addEventListener('change', () => paintRail());
   // R107 — the only tick that spans a gap is the first after a load, and it
   // published the pair it diffed. COPIED before `showScreen`, which ticks
   // again and would leave `lastTick` describing a zero-width gap.

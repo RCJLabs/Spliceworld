@@ -36,6 +36,11 @@
     <div id="screen-dex" class="screen" hidden></div>
   </main>
 
+  <!-- R117: the second column. Empty and `display: none` under 900px — the
+       module that fills it (ui/rail.js) is never imported on a phone, so a
+       narrow screen pays nothing for the element being here. -->
+  <aside id="rail" class="rail" aria-label="Right now, and the wire"></aside>
+
   <div id="overlay" class="overlay" role="dialog" aria-modal="true" hidden></div>
   <div id="picker" class="picker-host" hidden></div>
 

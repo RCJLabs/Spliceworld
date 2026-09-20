@@ -2187,7 +2187,10 @@ footer {
   top: 0;
   z-index: 6;
   display: grid;
-  grid-template-columns: repeat(var(--subtab-n, 5), 1fr);
+  /* R117 — `1fr` is `minmax(auto, 1fr)` and `auto` is MIN-CONTENT, so a
+     track whose widest label will not fit pushes the grid past its own
+     container: the Dex ran 7px off a 380px phone on all six tabs. */
+  grid-template-columns: repeat(var(--subtab-n, 5), minmax(0, 1fr));
   gap: 6px;  /* R80 — the tightest strip in the game was the one with the most buttons in it. */
   margin: 0 0 10px;
   padding: 6px;
@@ -2241,6 +2244,12 @@ footer {
 
 @media (max-width: 340px) {
   .subtab-label { font-size: 0.75rem; letter-spacing: 0.02em; }
+}
+
+/* R117 — six tabs do not fit on a phone in one row, and the answer is a
+   second row rather than ~9px type. Only bars with more than five change. */
+@media (max-width: 430px) {
+  .subtabs.is-crowded { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 /* --- Jobs board ----------------------------------------------------------
@@ -2973,4 +2982,124 @@ header > *:not(.sky-layer) { position: relative; z-index: 1; }
   /* Nothing here animates, but the sky is decoration and a viewer who has
      asked for less can have less of it. R99's pass. */
   .sky-layer { opacity: calc(var(--sky-alpha, 0) * 0.5); }
+}
+
+/* R117 — WIDE SCREENS: the first `min-width` rules this file has carried.
+   Every width breakpoint before this was a `max-width` (400, 430, 420, 400,
+   340), so the layout could only get narrower than its 560px column, and at
+   1,280px the game used 43.8% of the glass with the agenda drawn on one
+   screen of six and the wire in a footer below the fold. The argument is in
+   ui/rail.js and ROADMAP R117; what a reader of this file needs is that at
+   900px the shell becomes a two-column grid AND becomes fixed-height, the
+   way `body.in-battle` already is on a phone — that second half is what
+   keeps the rail's foot in the glass without a magic number. -------------- */
+
+.rail { display: none; }
+
+@media (min-width: 900px) {
+  body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--rail-w, 320px);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "head head"
+      "tabs tabs"
+      "main rail"
+      "foot foot";
+    column-gap: 16px;
+    /* Centred past 1,600px. `background` propagates from body to the
+       canvas, so the margins stay the game's ink. */
+    max-width: 1600px;
+    margin-inline: auto;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  header { grid-area: head; }
+  .tabs { grid-area: tabs; max-width: none; margin-inline: 0; }
+  main {
+    grid-area: main;
+    max-width: none;
+    margin-inline: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  footer { grid-area: foot; }
+
+  .rail {
+    grid-area: rail;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    padding: 10px 12px 10px 0;
+    box-sizing: border-box;
+  }
+  /* The agenda takes what is left and scrolls; the wire is pinned to the
+     foot of the rail and never does. */
+  .rail-agenda { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  /* The Ranch's own Right Now card stands down; the rail carries it. */
+  .right-now-card { display: none; }
+  .rail-wire { flex: 0 0 auto; }
+  .rail .card { padding: 10px 12px; }
+  .rail-title {
+    margin: 0 0 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .rail-title .pill { margin-left: auto; }
+  .wire-line {
+    margin: 0 0 6px;
+    padding-left: 10px;
+    border-left: 2px solid var(--line);
+    font-size: 0.75rem;
+    color: var(--text);
+  }
+  .wire-line:first-of-type { color: var(--goo); border-left-color: var(--goo); }
+  .wire-line:last-child { margin-bottom: 0; }
+
+  /* A wider card is right; a wider LIST ROW is not — the row is short and
+     the line length is the whole cost. `auto-fill`, not `auto-fit`: one
+     token must not stretch across the whole of `main`. */
+  .token-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 5px;
+    align-items: start;
+  }
+  .token-list li { margin-bottom: 0; }
+}
+
+@media (min-width: 1200px) {
+  body {
+    grid-template-columns: 140px minmax(0, 1fr) var(--rail-w, 320px);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "head head head"
+      "tabs main rail"
+      "foot foot foot";
+  }
+  /* The tabs become the rail beside the game, keeping R73's 40px floor. */
+  .tabs {
+    flex-direction: column;
+    align-content: start;
+    padding: 10px 0 10px 12px;
+    margin: 0;
+    overflow-y: auto;
+  }
+  .tabs button {
+    flex: 0 0 auto;
+    padding: 12px 8px;
+    text-align: left;
+    border: 1px solid var(--line);
+    border-right: none;
+    border-radius: 10px 0 0 10px;
+  }
 }

@@ -539,3 +539,11 @@ export function agendaShape(state, content, now) {
     productive: open.filter((i) => i.kind !== 'spend').length,
   };
 }
+
+// R117 — the three buckets, one home: the Ranch's card and the wide-screen
+// rail group the agenda the same way. The icon is NAMED, not drawn.
+export const AGENDA_KINDS = [
+  { kind: 'work', icon: 'test-tube', heading: 'Make something' },
+  { kind: 'campaign', icon: 'map', heading: 'Push on the world' },
+  { kind: 'spend', icon: 'money-wings', heading: 'Spend money' },
+];
