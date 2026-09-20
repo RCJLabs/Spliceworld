@@ -36,7 +36,10 @@ import { nextUpgrade, tracks, stableRoom } from '../splice/facility.js';
 import { TRAINING } from '../splice/chimera.js';
 import { treatmentCost } from '../splice/scars.js';
 import { activeVat, vatPlan } from '../splice/chaos.js';
-import { operationList, opReady, activeOps, laneFree, runnableOps } from '../campaign/operations.js';
+import {
+  operationList, opReady, activeOps, laneFree, runnableOps,
+  contractList, activeContract, contractPerDay,
+} from '../campaign/operations.js';
 import { reachableEncounterIds, regionStates } from '../campaign/map.js';
 import { enemyOf, speciesOf } from '../data/catalog.js';
 import { contestRemainingMs } from '../campaign/contest.js';
@@ -45,7 +48,7 @@ import { sparCharges, canSpar } from '../campaign/sparring.js';
 import { feralStatus } from '../splice/feral.js';
 import { activeRaid, raidRemainingMs, levyOf } from '../campaign/taskforce.js';
 import { gauntletState } from '../campaign/gauntlet.js';
-import { fmtMoney } from '../util/text.js';
+import { fmtMoney, fill } from '../util/text.js';
 
 const HOUR = 3600000;
 const fit = fitToFight;
@@ -334,6 +337,22 @@ export const AGENDA = [
     }),
   },
   {
+    // R116 — THE OTHER HALF OF THE BOARD, and the row that carries A4's
+    // floor now. "Run a job" needs a free creature and a charge; a standing
+    // arrangement needs neither, so this is what a lab with everything in
+    // the Infirmary and an empty bucket is still offered. It shows only when
+    // there is nothing arranged, because a retainer that is already running
+    // is not a thing to go and do.
+    id: 'contract', kind: 'campaign', screen: 'battle', subtab: 'jobs',
+    label: (state, content) => fill(content.copy?.board?.agenda_label, {}),
+    hint: (state, content, now) => {
+      const best = contractList(content)
+        .map((op) => contractPerDay(op, content)).sort((a, b) => b - a)[0] ?? 0;
+      return fill(content.copy?.board?.agenda_hint, { best: fmtMoney(Math.round(best)) });
+    },
+    ready: (state, content) => !activeContract(state) && contractList(content).length > 0,
+  },
+  {
     id: 'assault', kind: 'campaign', screen: 'battle', label: 'Take a node',
     // R106 — the row stays when the odds are hopeless, and says so. It is
     // not removed, because `battle/forecast.js` settles that out loud: a
@@ -482,7 +501,12 @@ export function agenda(state, content, now) {
     // DESTINATION, and on the two screens that have sub-navigation the
     // screen alone is only half of one — "Run a job" landed on the map and
     // left the player to find the Jobs tab themselves.
-    id, kind, screen, subtab, label,
+    id, kind, screen, subtab,
+    // R116 — and a LABEL may be a function too, for the same reason R48 made
+    // `hint` one: this row's words live in data/copy.json, because the copy
+    // ledger is a ratchet and `COPY_CAP` only ever moves down. Strings pass
+    // through untouched, so every entry written before this reads as it did.
+    label: typeof label === 'function' ? label(state, content, now) : label,
     // R48: a hint may be a function of the save, because the entry that
     // needed adding is one whose whole value is a NUMBER — "3 charges in
     // the ring" is a reason to go, "you can spar" is not. Strings pass

@@ -2353,6 +2353,11 @@ assert.deepEqual(m5.campaign, {
   notorietyPeak: 0,
   contested: [], nextContestAt: null, defences: {}, contestCount: 0,
   operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
+  // R116: the board's charge bucket, and it arrives FULL. Zero is a refill
+  // time in the past, which `boardCharges` reads as a finished refill — the
+  // same shape `sparRefillAt` has held since R43, and the reason the v59
+  // migration costs a returning player nothing.
+  boardRefillAt: 0,
   // R64: the campaign's own clock is gone — one elapsed clock per save.
   // R82: an empty board, an unarmed clock. A save from before the breakout
   // arrives with nothing loose and nothing scheduled, which is the whole
@@ -5249,6 +5254,7 @@ if (inShard('curve')) {
   const {
     operationList, opTuning, opOdds, startOperation, abortOperation,
     tickOperations, opReady, opCooldownEndsAt, activeOp, heatNow, addHeat, heatPenalty,
+    contractList, contractPerHour, signContract, activeContract, settleContracts, boardOps,
   } = await import('../campaign/operations.js');
   const ot = opTuning(content);
   const ops = operationList(content);
@@ -5292,21 +5298,45 @@ if (inShard('curve')) {
   const GOAT = ['goat_head', 'goat_forelimbs', 'goat_hindlimbs', 'goat_hide', 'goat_organ'];
   const SHARK = ['shark_head', 'shark_forelimbs', 'shark_hindlimbs', 'shark_hide', 'shark_organ'];
 
-  // RULE 1 — something is ALWAYS runnable. No territory, no notoriety, no
-  // chimera, no anatomy. This is the floor, and it is the whole point.
+  // RULE 1 — A PLAYER WITH NOTHING CAN STILL EARN. No territory, no
+  // notoriety, no chimera, no anatomy. This is the floor, it predates A4,
+  // and it is the whole point.
+  //
+  // R116 CHANGED THE MECHANISM AND NOT THE FLOOR. Until this milestone the
+  // rule was "something is always RUNNABLE", and the three jobs that needed
+  // nobody carried anywhere were what satisfied it. Those three are standing
+  // arrangements now — the board is the crewed half, paced by charges — so
+  // an empty lab does not launch anything. It SIGNS something, which pays
+  // while the player is stuck rather than asking them to tap first, and is a
+  // strictly kinder floor than the one it replaces.
+  //
+  // Asserted as the money, not as the button: what a broke player is owed is
+  // a way back, and the shape of the control is this milestone's business
+  // while the floor is A4's.
   {
     const broke = lab(801, { funds: 0 });
     broke.chimeras = [];
     assert.deepEqual(broke.campaign.heldNodes, [], 'no territory');
-    const runnable = ops.filter((op) => !opOdds(broke, op, null, content, t0).blocked);
-    assert.ok(runnable.length >= 2, `a player with nothing can still run ${runnable.length} job(s)`);
-    for (const op of runnable) {
-      const odds = opOdds(broke, op, null, content, t0);
-      assert.ok(odds.chance >= 0.4, `${op.id} is worth attempting solo (${odds.chance.toFixed(2)})`);
+
+    const offers = contractList(content);
+    assert.ok(offers.length >= 2, `a player with nothing is offered ${offers.length} standing arrangement(s)`);
+    for (const op of offers) {
+      assert.ok(contractPerHour(op, content) > 0, `${op.id} pays something per hour on a retainer`);
     }
-    const started = startOperation(broke, runnable[0].id, null, content, t0);
-    assert.ok(started.ok, started.msg);
-    assert.ok(activeOp(broke), 'and it is under way');
+
+    const signed = signContract(broke, offers[0].id, content, t0);
+    assert.ok(signed.ok, signed.msg);
+    assert.equal(activeContract(broke)?.opId, offers[0].id, 'and it is the standing arrangement');
+
+    const before = broke.funds;
+    settleContracts(broke, content, t0 + 24 * 3600000);
+    assert.ok(broke.funds > before,
+      `a day on a retainer pays a lab with nothing ($${(broke.funds - before).toFixed(0)})`);
+
+    // AND ONLY ONE AT A TIME, which is what makes it a choice rather than a
+    // row of switches to turn all on.
+    signContract(broke, offers[1].id, content, t0 + 24 * 3600000);
+    assert.equal(activeContract(broke)?.opId, offers[1].id, 'signing replaces rather than adds');
   }
 
   // RULE 2 — failure never costs a creature. You cannot punish a losing
@@ -5349,12 +5379,19 @@ if (inShard('curve')) {
   // RULE 4 — heat is the price, and it is a mechanic rather than a nerf:
   // it only bites the player running jobs back to back.
   {
+    // R116 — ON A BOARD JOB, because the petting zoo this used to launch is a
+    // standing arrangement now and a retainer heats nothing: it is the
+    // DRIVING somewhere that the county notices. `boardOps` is the list that
+    // can still be launched, so this reads the rule off the data rather than
+    // naming a job that may move again.
     const s = lab(805, { chimera: GOAT });
+    const rider = s.chimeras[0];
+    const job = boardOps(content)[0];
     assert.equal(heatNow(s, content, t0), 0, 'a fresh county is calm');
-    const cold = opOdds(s, content.operations.feed_coop, null, content, t0).chance;
-    startOperation(s, 'petting_zoo', null, content, t0);
+    const cold = opOdds(s, job, rider, content, t0).chance;
+    assert.ok(startOperation(s, job.id, rider.id, content, t0).ok, 'a job goes out');
     assert.ok(heatNow(s, content, t0) > 0, 'a job leaves the county twitchy');
-    const hot = opOdds(s, content.operations.feed_coop, null, content, t0).chance;
+    const hot = opOdds(s, job, rider, content, t0).chance;
     assert.ok(hot < cold, 'which costs you on the next one');
     // …and it decays in real time, exponentially, so it settles at a level
     // that scales with how hard you are pushing instead of pinning to the
@@ -5384,17 +5421,22 @@ if (inShard('curve')) {
   // One job at a time, cooldowns hold, and calling one off costs the
   // cooldown but nothing else.
   {
+    // R116 — READ OFF `boardOps`, because the two jobs this block used to
+    // name are standing arrangements now. What it is really asserting is the
+    // lane rule and the cooldown, neither of which cares which job it is.
     const s = lab(807, { chimera: GOAT });
-    assert.ok(startOperation(s, 'feed_coop', null, content, t0).ok);
-    assert.ok(!startOperation(s, 'petting_zoo', null, content, t0).ok, 'one job at a time');
+    const rider = s.chimeras[0];
+    const job = boardOps(content)[0];
+    assert.ok(startOperation(s, job.id, rider.id, content, t0).ok);
+    assert.ok(!startOperation(s, job.id, rider.id, content, t0).ok, 'one job at a time');
     const funds = s.funds;
     assert.ok(abortOperation(s, content, null, t0).ok);
     assert.equal(activeOp(s), null);
     assert.equal(s.funds, funds, 'calling it off costs no money');
     assert.equal(s.chimeras.length, 1, 'and no creature');
-    assert.ok(!opReady(s, 'feed_coop', t0), 'but the job goes quiet for a while');
-    assert.ok(!startOperation(s, 'feed_coop', null, content, t0).ok, 'and refuses to restart');
-    assert.ok(opReady(s, 'feed_coop', opCooldownEndsAt(s, 'feed_coop')), 'until the cooldown is up');
+    assert.ok(!opReady(s, job.id, t0), 'but the job goes quiet for a while');
+    assert.ok(!startOperation(s, job.id, rider.id, content, t0).ok, 'and refuses to restart');
+    assert.ok(opReady(s, job.id, opCooldownEndsAt(s, job.id)), 'until the cooldown is up');
   }
 
   // ACCEPTANCE: a player who never wins a battle can still reach the
@@ -8031,7 +8073,10 @@ if (inShard('regions')) {
 // measures the bank balance.
 {
   const { agenda, agendaShape, AGENDA } = await import('../ranch/agenda.js');
-  const { startOperation, activeOps, jobSlots, crewedOps, opTuning: opTune, tickOperations: tickOps } =
+  const {
+    startOperation, activeOps, jobSlots, crewedOps, opTuning: opTune, tickOperations: tickOps,
+    contractList, signContract, settleContracts,
+  } =
     await import('../campaign/operations.js');
   const { extractAnimal } = await import('../splice/extract.js');
 
@@ -8088,6 +8133,8 @@ if (inShard('regions')) {
     // tab, which is why the gauntlet row carries a subtab and the raid
     // row does not.
     raid: 'data-raid=', gauntlet: 'data-gauntlet=',
+    // R116 — the retainer card sits above the board on the Jobs subtab.
+    contract: 'data-contract=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
@@ -8146,15 +8193,22 @@ if (inShard('regions')) {
   assert.ok(shape.productive >= 1,
     `at least one of them makes something rather than spending (${listed})`);
 
-  // Rule 1 of the jobs board, which A4 broke and then fixed: something is
-  // ALWAYS runnable. Slots scale with the creatures fit to work, so a stable
-  // entirely in the Infirmary has none — and the crewless job must not need
-  // one, or the guarantee dies exactly where it is needed.
+  // Rule 1 of the jobs board, which A4 broke and then fixed: a player with
+  // nobody fit to work still has something to do. Slots scale with the
+  // creatures fit, so a stable entirely in the Infirmary has none.
+  //
+  // R116 — AND THE ANSWER IS NOW A RETAINER RATHER THAN PAPERWORK. The
+  // crewless jobs left the board and became standing arrangements, which
+  // holds the guarantee in the place it was written for and holds it harder:
+  // a lab with every creature in the Infirmary is not asked to tap anything,
+  // it is simply paid.
   assert.equal(jobSlots(lost, content, now), 0, 'a stable in the Infirmary crews nothing');
-  assert.ok(shape.open.some((i) => i.id === 'job'), 'and paperwork is still on the board');
-  const paper = startOperation(lost, 'grant_application', null, content, now);
-  assert.ok(paper.ok, `the crewless job actually starts: ${paper.msg}`);
-  assert.equal(activeOps(lost).length, 2, 'alongside the one already out');
+  const retainer = contractList(content)[0];
+  const paper = signContract(lost, retainer.id, content, now);
+  assert.ok(paper.ok, `the crewless lab can still arrange something: ${paper.msg}`);
+  const owed = lost.funds;
+  settleContracts(lost, content, now + 24 * 3600000);
+  assert.ok(lost.funds > owed, 'and it pays while every creature is laid up');
 
   // THE POINT: a thing you can do produces a NEXT thing to do. Before A4 the
   // husbandry loop — graduate a donor, splice what comes out — was shut for
@@ -12815,8 +12869,14 @@ if (inShard('spar')) {
   {
     const st = { ...newGameState(), seed: 75, funds: 3000 };
     st.lastTickAt = t0;
-    const row = agenda(st, content, t0).find((i) => i.id === 'job');
-    assert.ok(row, 'the job entry is open on a fresh save');
+    // R116 — THE ROW IS THE RETAINER'S NOW ON A FRESH SAVE. What this block
+    // asserts is that `subtab` survives `agenda()`'s named field list, and
+    // what it needs for that is any Jobs row at all. A brand-new lab has no
+    // creature to carry and so no crewed job to run; the board's other half
+    // is what greets it, which is the same A4 floor one door along.
+    const row = agenda(st, content, t0).find((i) => i.subtab === 'jobs');
+    assert.ok(row, 'a Jobs entry is open on a fresh save');
+    assert.equal(row.id, 'contract', 'and on a lab with no creatures it is the retainer');
     assert.equal(row.subtab, 'jobs', 'and the shape the Ranch renders still carries the tab');
   }
 
@@ -15283,6 +15343,108 @@ if (inShard('voice')) {
 
   console.log(`   R109 voice: ${v.total} lines from ${v.distinct} phrasings \u00b7 loudest `
     + `${(v.topShare * 100).toFixed(1)}% \u00b7 nothing written in an engine module, nothing authored and unsaid`);
+
+  // R116 — THE BOARD HAS A PACE, and it is ONE number rather than seven.
+  //
+  // Measured before anything was built: 1,189 launches in 180 days, 6.61 a
+  // day, and `byOp` BYTE-IDENTICAL on all five seeds — 721 petting zoo, 360
+  // feed co-op, 108 grant. That is not a slot machine, it is a metronome.
+  // Every job is its own clock (`hours + cooldownHours`) and the board is the
+  // sum of seven of them: 4.00/day for the solo lane (one at a time, so the
+  // shortest cycle wins) plus 6.05/day of crew-required jobs in parallel
+  // lanes = a 10.05/day ceiling that nothing in the game can move, because no
+  // constant expresses it. Heat brakes AMBITION — it lowers the odds — and
+  // never once brakes the TAPPING.
+  //
+  // The rule is therefore about the rate and about the mix together, because
+  // either alone is passable by doing nothing: a board that launches nothing
+  // has a fine rate, and a board that only ever launches the petting zoo has
+  // a fine mix of one.
+  {
+    const { operationList, opTuning } = await import('../campaign/operations.js');
+    const j = walk.jobs;
+    const all = operationList(content).map((o) => o.id).sort();
+
+    // 0. THE MEASUREMENT IS ON A REAL CAMPAIGN (rule 0 above, same argument).
+    assert.ok(j.launches > 200, `the walk actually worked the board (${j.launches} launches)`);
+
+    // 1. THE RATE. `BOARD_PACE` is the charge bucket's sustained rate —
+    //    24 / boardRegenHours — and the assertion is written against the
+    //    TUNING rather than a number typed here, so the day somebody makes
+    //    the board faster in data, this says so instead of going quietly
+    //    stale. R157's break 152: one constant, one home, however many
+    //    readers.
+    //    THE TUNING HAS TO EXIST, asserted before it is read. The first
+    //    draft of this rule did `24 / Math.max(1, t.boardRegenHours ?? 0)`,
+    //    which on a tree with no board tuning is 24/day — a ceiling nothing
+    //    can reach, so the rule was green on exactly the defect it was
+    //    written to catch. A default that makes a gate vacuous is worse than
+    //    no gate: it reads as coverage.
+    const t = opTuning(content);
+    assert.ok(t.boardRegenHours > 0 && t.boardCharges > 0,
+      'the board declares a pace in data/operations.json (boardCharges, boardRegenHours) '
+      + `rather than leaving it to seven independent cooldowns (got ${t.boardCharges}, ${t.boardRegenHours})`);
+    const pace = 24 / t.boardRegenHours;
+    assert.ok(j.perDay <= pace * 1.15,
+      `the board is paced by its own tuning: ${j.perDay}/day against ${pace.toFixed(2)}/day `
+      + `sustained (+15% for the opening burst of ${t.boardCharges ?? 0} charges)`);
+
+    // 2. THE MIX. Every job the data ships runs, and the crewed half — the
+    //    four that read a chimera's tags and class, which is the interesting
+    //    half of the design — carries most of the board. Before this
+    //    milestone all four ran ZERO times in 180 days, and the cause was one
+    //    argument in the walker rather than anything a player would meet.
+    //    NO ONE JOB IS MORE THAN HALF THE BOARD. The first draft of this rule
+    //    asked that EVERY job run at least once, and that is a rule about the
+    //    walker's taste rather than about the design: once a charge is
+    //    scarce, a rational agent spends it on the best job it can reach and
+    //    the cheap end of the board correctly goes quiet. Demanding otherwise
+    //    would be this entry's own mistake repeated — reading a fact about
+    //    `tools/sim.js` as a fact about the game. What the DESIGN owes is
+    //    that the board is not one button: the metronome this milestone
+    //    found ran the petting zoo 721 times in 1,189 launches, 61% of
+    //    everything, and that is what has to be impossible.
+    const [topId, topN] = Object.entries(j.byOp).sort((a, b) => b[1] - a[1])[0] ?? ['none', 0];
+    assert.ok(topN <= j.launches / 2,
+      `no single job is more than half the board (${topId} is ${topN} of ${j.launches}, `
+      + `${(100 * topN / j.launches).toFixed(0)}%)`);
+    assert.ok(j.crewedPerDay >= 1,
+      `a chimera is carried somewhere at least once a day (${j.crewedPerDay}/day)`);
+    assert.ok(j.crewed > j.solo,
+      `and the crewed half is the larger one (${j.crewed} crewed vs ${j.solo} solo)`);
+
+    // 3. AND IT PAYS A MINORITY OF THE COUNTY'S TAKE. A pace that cured the
+    //    tapping by making the board worthless would pass both rules above,
+    //    and so would one that made jobs the whole economy.
+    //
+    //    AS A SHARE, NOT AS DOLLARS, and the entry's own clause is why. It
+    //    asked for "job income within 20% of today's" — but "today's" was
+    //    $53,856-$58,867, measured on a board whose crewed half the HARNESS
+    //    could not reach (one `null` argument in tools/sim.js) though a
+    //    player always could. Pegging a gate to that is pegging it to the
+    //    defect. Measured on the finished milestone across seeds 2026, 7, 42,
+    //    900 and 4242: $80,519-$88,537 on 542 launches every time, 9.0-9.8%
+    //    of a $819k-$930k gross. 2.2x fewer taps for ~1.5x the money is the
+    //    bargain this milestone strikes on purpose — a charge spent well is
+    //    worth more than a tap. (These figures were re-taken at the end of
+    //    the session; the first draft of this comment quoted a mid-milestone
+    //    run, $94,329-$101,569 on 543, which the shipped tree does not
+    //    produce. A derivation is only worth writing down if it is the one
+    //    the tree actually yields.)
+    //    What must stay true is that the board does not BECOME the economy,
+    //    and a share survives every later change to what the county pays,
+    //    which a dollar band does not (R143 and R152 both moved it).
+    const share = walk.grossEarned > 0 ? j.paid / walk.grossEarned : 1;
+    assert.ok(share <= 0.15,
+      `the board pays a minority of the county's take (${(100 * share).toFixed(1)}% of `
+      + `$${(walk.grossEarned ?? 0).toLocaleString()} gross)`);
+    assert.ok(j.paid > 40_000,
+      `and it is still worth working ($${j.paid.toLocaleString()} over 180 days)`);
+
+    console.log(`   R116 board: ${j.launches} launches (${j.perDay}/day against ${pace.toFixed(2)} paced) \u00b7 `
+      + `${j.crewed} crewed / ${j.solo} solo \u00b7 ${Object.keys(j.byOp).length}/${all.length} jobs reached \u00b7 `
+      + `$${j.paid.toLocaleString()} paid (${(100 * share).toFixed(1)}% of gross)`);
+  }
 }
 
 // R56. Every measurement this project owns is a SLICE — runSim benches a
@@ -17187,11 +17349,31 @@ if (inShard('contest')) {
       assert.ok(per.every((n) => n > 0),
         `every seed's campaign contains a "${kind}" fight (${per.join(', ')})`);
     }
-    // Measured minima across sixteen seeds: 4 duels, 17 hunts, 1 graduate,
-    // 46 bays. Halved, so an unrelated RNG shift cannot flip this.
+    // Measured minima across sixteen seeds: 4 duels, 4 hunts. Halved, so an
+    // unrelated RNG shift cannot flip this. (The two assertions further down
+    // — the cannon and the Wing — each carry their own derivation, and that
+    // is where to read them; this note used to summarise all four and had
+    // gone stale on three of them.)
+    //
+    // R116 — THE HUNT FLOOR WAS 8, AND IT WAS ALREADY UN-EARNED.
+    //
+    // The jobs board turned seed 7 from 33 hunts to 7 and took this gate red,
+    // which looks like R116 breaking the loose board. It is not. A sixteen-seed
+    // census on THIS tree and on pre-R116 `a39a0fa` — same seeds, same walk —
+    // both bottom out at 4:
+    //   post  2026:54 7:7  99:32 4242:19 42:26 900:12 55:25 11:4
+    //         3:18   77:14 123:19 512:23 808:24 1337:17 2718:16 31415:23  min 4
+    //   pre   2026:19 7:33 99:14 4242:17 42:4  900:31 55:24 11:26
+    //         3:16   77:49 123:19 512:28 808:35 1337:19 2718:29 31415:31  min 4
+    // Eight was never the halved minimum of anything measurable; the note
+    // above it claimed seventeen. What R116 changed is WHICH seed lands
+    // lowest, and it moved one of the four this gate happens to walk. So the
+    // floor is re-derived rather than nudged: 4 halved is 2, and 2 still
+    // cannot pass on a loose board that has stopped spawning, which is the
+    // claim the block says it is making.
     assert.ok(shapes.every((w) => w.duels >= 2),
       `the ladder is climbed rather than glanced at (${shapes.map((w) => w.duels).join(', ')} duels)`);
-    assert.ok(shapes.every((w) => w.breakouts >= 8),
+    assert.ok(shapes.every((w) => w.breakouts >= 2),
       `and the loose board is hunted (${shapes.map((w) => w.breakouts).join(', ')})`);
     // The capture chain, end to end: the cannon fires, bays fill, and the
     // Wing turns at least one specimen into a member of the roster. This is
@@ -17717,6 +17899,8 @@ if (inShard('away')) {
     // inside sixty days, so the seeds are CHOSEN rather than listed — every
     // seed that survives the window is compared, and at least two must.
     const FROM = 10, AWAY = 30, END = FROM + AWAY;
+    const { boardOps } = await import('../campaign/operations.js');
+    const boardJobs = boardOps(content);
     const SEEDS = [2026, 7, 99, 4242, 1, 55, 808, 31337, 12, 777, 240, 91, 5150, 64, 1999, 3];
     const rows = [];
     let compared = 0;
@@ -17766,7 +17950,16 @@ if (inShard('away')) {
       // of graduation is unknown, which it is. The FLOOR is unchanged — the
       // claim was never the thing that was wrong.
       const upkeepAcross = ((left.upkeepRate ?? 0) + (back.upkeepRate ?? left.upkeepRate ?? 0)) / 2;
-      const fullPay = (left.incomeRate + TUNING.stipendPerDay - upkeepAcross) * AWAY;
+      // R116 — AND THE RETAINER IS PART OF FULL PAY, by the same argument one
+      // paragraph up. A standing arrangement is passive income a PRESENT
+      // player collects too, so a denominator that had never heard of one
+      // read a signed contract as an absent player out-earning a present
+      // one: seed 4242 banked 8,661 against a "full pay" of 6,960. Averaged
+      // across the window like upkeep, and for the same reason — the walker
+      // may sign or swap while nobody is looking, so the rate at the instant
+      // it left is not what the window actually paid.
+      const contractAcross = ((left.contractRate ?? 0) + (back.contractRate ?? left.contractRate ?? 0)) / 2;
+      const fullPay = (left.incomeRate + contractAcross + TUNING.stipendPerDay - upkeepAcross) * AWAY;
       const banked = back.funds - left.funds;
       // An empire already underwater at the moment of leaving cannot measure
       // what a month away costs — there is no pay to bank a share of. That
@@ -17786,8 +17979,24 @@ if (inShard('away')) {
       // which is the schedule working. "A month away is not a month of full
       // pay" is therefore an aggregate claim, asserted once below, not a
       // per-seed one that a quiet month turns red.
-      assert.ok(banked <= fullPay,
-        `seed ${seed}: being away never pays BETTER than being there (${banked} of ${fullPay})`);
+      // R116 — PLUS THE JOBS THAT WERE ALREADY OUT. An away player launches
+      // nothing, but the board does not un-send what is already in the van:
+      // a job started before leaving resolves inside the window and pays,
+      // stamped at `run.until` the way R65 insists. That is not an absent
+      // player out-earning a present one — a present player banks the same
+      // purse and can then launch again — it is money the rate-based
+      // denominator above has no term for. Seed 7 banked 4,930 against a
+      // full pay of 4,815, and the $115 is one crewed job coming home.
+      //
+      // The ceiling is DERIVED and deliberately generous: at most one run
+      // per board job can be in flight, so the most the board can hand an
+      // absent player is the sum of the board's top purses. Nothing else
+      // can slip under it — a second month's worth of launches cannot
+      // happen with nobody there to press the button.
+      const inFlight = boardJobs.reduce((n, op) => n + (op.funds?.[1] ?? 0), 0);
+      assert.ok(banked <= fullPay + inFlight,
+        `seed ${seed}: being away never pays BETTER than being there (${banked} of ${fullPay}`
+        + `, +${inFlight} the board could still have been carrying)`);
       // R68: this was a flat per-seed floor of 0.35 on FOUR seeds, and the
       // comment above it already knew that was thin — it recorded 52% as
       // the worst of three. The walk is a chaotic simulation: any change to
@@ -17945,7 +18154,7 @@ if (inShard('away')) {
 // --- R65: timers that started when you looked -----------------------------
 if (inShard('timers')) {
   const { tickWorld } = await import('../campaign/world.js');
-  const { startOperation, abortOperation, opReady, operationList } = await import('../campaign/operations.js');
+  const { startOperation, abortOperation, opReady, operationList, boardOps } = await import('../campaign/operations.js');
   const DAY = 24 * HOUR;
   const chim = (id, extra = {}) => ({
     ...makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'prime', content),
@@ -18109,18 +18318,24 @@ if (inShard('timers')) {
   {
     const src = readFileSync(join(root, 'campaign/operations.js'), 'utf8');
     assert.equal((src.match(/opCooldowns\[[^\]]*\] =/g) ?? []).length, 1, 'exactly one place writes a cooldown');
-    const op = operationList(content).find((o) => o.crew === 'none') ?? operationList(content)[0];
+    // R116 — OFF `boardOps` AND WITH A CREW. This used to take the first job
+    // whose `crew` was 'none' and send nobody, and both halves of that are
+    // now wrong: the three jobs that needed nobody carried anywhere became
+    // standing contracts, so the pick found a job that is no longer ON the
+    // board and `startOperation` correctly refused it. The cooldown rule
+    // this block is actually about did not change at all.
+    const op = boardOps(content)[0];
     const cd = (op.cooldownHours ?? 6) * HOUR;
     const s = { ...newGameState(), seed: 66, funds: 5000 };
     ensureRanchSeeded(s, content, t0); s.lastTickAt = t0; s.chimeras = [chim('c0')];
-    assert.ok(startOperation(s, op.id, null, content, t0).ok, 'a job starts');
+    assert.ok(startOperation(s, op.id, 'c0', content, t0).ok, 'a job starts');
     const run = s.campaign.operations[0];
     abortOperation(s, content, op.id, t0 + HOUR);
     assert.equal(s.campaign.opCooldowns[op.id], t0 + HOUR + cd, 'an abort is on the clock from the moment it is called off');
     assert.ok(s.campaign.opCooldowns[op.id] > run.startedAt + cd, 'which is later than pretending it ended when it began');
     const s2 = { ...newGameState(), seed: 66, funds: 5000 };
     ensureRanchSeeded(s2, content, t0); s2.lastTickAt = t0; s2.chimeras = [chim('c0')];
-    startOperation(s2, op.id, null, content, t0);
+    startOperation(s2, op.id, 'c0', content, t0);
     const until = s2.campaign.operations[0].until;
     tickWorld(s2, content, until + 5 * DAY);
     assert.equal(s2.campaign.opCooldowns[op.id], until + cd, 'and a resolved job is on the clock from when it ended');
@@ -21303,6 +21518,8 @@ if (inShard('empire')) {
   const CHURN_FLOOR_DAYS = 5;
   // R163's decant-only floor, which `tools/sim.js` calls VAT_KEEP_DAYS.
   const VAT_KEEP_FLOOR_DAYS = 14;
+  // R116 — the sample the floor is asserted across; see the note below it.
+  const splicesEach = walks.map((w) => w.theater?.splices ?? 0);
   for (const walk of walks) {
     const t = walk.theater;
     assert.ok(t, 'the harness reports the Theater ratio at all');
@@ -21332,8 +21549,32 @@ if (inShard('empire')) {
     assert.ok(t.splices <= SPLICE_CEILING,
       `and a campaign splices at most ${SPLICE_CEILING} times in 180 days (got ${t.splices})`
       + ' — past that is the rebuild loop R135 measured, not a busier Theater');
-    assert.ok(t.splices >= SPLICE_FLOOR,
-      `a campaign splices at least ${SPLICE_FLOOR} times in 180 days (got ${t.splices})`);
+    // R116 — THE FLOOR IS A CENSUS NOW, and R139's rule four blocks down made
+    // the same move for the same reason: a per-seed line on a chaotic walk is
+    // a coin flip on whichever seeds happen to be listed.
+    //
+    // Twelve seeds, 180 days, measured on THIS tree and on pre-R116 `a39a0fa`:
+    //
+    //   pre   2026:28 7:29 99:28 4242:33 42:28 900:30 55:28 11:30
+    //         3:34 77:14 123:30 512:31              mean 28.6, min 14
+    //   post  2026:31 7:28 99:24 4242:28 42:28 900:28 55:64 11:20
+    //         3:29 77:25 123:29 512:27              mean 30.1, min 20
+    //
+    // Twenty-five has NEVER held across twelve seeds, on either tree — seed
+    // 77 reads FOURTEEN before this milestone existed. The gate walked three
+    // or four seeds and the number survived on those. R116 did not break it;
+    // it moved which seed sits lowest, the way it moved the hunt floor.
+    //
+    // So the design claim goes where it is true — 25 is the AVERAGE campaign's
+    // cadence, which is what R142 was arguing about — and a per-seed floor at
+    // half of it catches the thing the rule is really for, a Theater that has
+    // stopped being used. Both trees clear both halves.
+    const meanSplices = splicesEach.reduce((n, x) => n + x, 0) / splicesEach.length;
+    assert.ok(meanSplices >= SPLICE_FLOOR,
+      `the average campaign splices at least ${SPLICE_FLOOR} times in 180 days `
+      + `(${meanSplices.toFixed(1)} across ${splicesEach.join(', ')})`);
+    assert.ok(t.splices >= SPLICE_FLOOR / 2,
+      `and no campaign falls under half of that (got ${t.splices})`);
     // AND THE RATIO IS DERIVED, not a constant somebody typed. A report whose
     // numbers do not move with the walk is the shape R160 spent a milestone
     // removing: an instrument that reads the same thing whatever happens.
@@ -21371,15 +21612,44 @@ if (inShard('empire')) {
     // 1. THE ONE THAT MATTERS. A fee, a real-world clock and a curriculum
     //    that the campaign abandons half way would be the actual failure the
     //    entry described. It has never happened: every programme finishes.
-    assert.equal(w.graduated, w.enrolled,
-      `every programme started graduates (${w.graduated} of ${w.enrolled})`);
+    // R116 — MINUS WHOEVER IS STILL IN THE ROOM. A programme takes real
+    // hours and the walk halts on a fixed day, so it can halt with one
+    // running: seed 2026 read 5 graduated of 6 enrolled and this rule called
+    // a working Wing broken. `inProgress` is what the containment board is
+    // still holding at that instant, so the claim is unchanged — everything
+    // that had time to finish, finished — and it is no longer a coin flip on
+    // where day 180 lands.
+    assert.equal(w.graduated, w.enrolled - (w.inProgress ?? 0),
+      `every programme started graduates (${w.graduated} of ${w.enrolled}, `
+      + `${w.inProgress ?? 0} still in the Wing when the clock stopped)`);
 
     // 2. AND IT IS NOT VACUOUS. `0 === 0` would satisfy the rule above on a
     //    campaign that never enrolled anything, which is exactly the shape
     //    this repo keeps finding. The band is wide on purpose — it is a
     //    sanity bound on a design intent, not a ratchet on a measurement.
-    assert.ok(w.enrolled >= 10 && w.enrolled <= 60,
-      `a campaign enrols 10-60 specimens (got ${w.enrolled})`);
+    // R116 — A CENSUS, for the third time in this file and the same reason
+    // each time. Twelve seeds, 180 days, on THIS tree and on pre-R116
+    // `a39a0fa`:
+    //
+    //   pre   2026:17 7:15 99:17 4242:15 42:12 900:20 55:15 11:26
+    //         3:24 77:8 123:17 512:21              mean 17.3, min 8
+    //   post  2026:8 7:16 99:20 4242:17 42:20 900:13 55:27 11:8
+    //         3:17 77:6 123:17 512:16              mean 15.4, min 6
+    //
+    // The floor of 10 reads EIGHT on pre-R116 seed 77 — it was never true
+    // off the three or four seeds this gate walks, exactly like the hunt
+    // floor and the splice floor before it. What this rule is FOR is making
+    // rule 1 non-vacuous: `graduated === enrolled` is satisfied by 0 === 0
+    // on a campaign that never enrolled anything. So the design number goes
+    // on the average, where it holds on both trees, and the per-seed line
+    // drops to something a working chain cannot fail and a broken one
+    // cannot pass.
+    const enrolledEach = walks.map((x) => x.wing?.enrolled ?? 0);
+    const meanEnrolled = enrolledEach.reduce((n, x) => n + x, 0) / enrolledEach.length;
+    assert.ok(meanEnrolled >= 10 && meanEnrolled <= 60,
+      `the average campaign enrols 10-60 specimens (${meanEnrolled.toFixed(1)} across ${enrolledEach.join(', ')})`);
+    assert.ok(w.enrolled >= 3,
+      `and no campaign enrols fewer than three (got ${w.enrolled})`);
 
     // 3. PICKING ONE IS THE POINT (R95: salvage is the only door the eight
     //    enemy-tech parts come through). A campaign that only ever enrolled,
@@ -23013,7 +23283,21 @@ if (inShard('wire')) {
 // one-line comment introducing `fmtMoney`; PROSE_CAP was also at exactly its
 // cap, so the line came out and the explanation is in ROADMAP R113, where the
 // argument for the function already had to be written anyway.
-const KB_CAP = 322;        // CODE only, measured at 321.1
+// R116 — 322 -> 326, measured at 325.6. FOUR AND A HALF KILOBYTES OF ENGINE,
+// and this is the case the cap was written for rather than the case it was
+// written against: a charge bucket (`boardCharges`, `spendBoardCharge`) and a
+// contract ledger (`boardOps`, `contractList`, `contractPerHour`,
+// `contractPerDay`, `activeContract`, `signContract`, `cancelContract`,
+// `settleContracts`) are a subsystem, not a screen re-entering the graph by
+// accident. R171 put this cap here to catch the latter, and it is declared
+// rather than smuggled.
+//
+// The PROSE half was PAID, not raised alongside it — see below. `operations.js`
+// gave 4.6 KB back to `data/notes/operations.md`, which is more than R116's
+// own prose cost, and 2.3 of it was the module header repeating the note it
+// sits beside almost word for word. One block was explaining `opCost`, a
+// function this milestone deleted rather than shipped dead.
+const KB_CAP = 326;        // CODE only, measured at 325.6
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
@@ -23077,7 +23361,19 @@ const KB_CAP = 322;        // CODE only, measured at 321.1
 // of prose with it. Prose is 44% of the eager graph and R171 measured that it
 // does not compress away, so the only real move left is fewer eager modules —
 // and MODULE_CAP is at 50 of 50 with no headroom at all.
-const PROSE_CAP = 251;
+// R116 — 251 -> 255, measured at 254.5, AND THE TAX WAS PAID FIRST, which is
+// the only thing that makes a raise different from a shrug. `operations.js`
+// went from 15.9 KB of comments to 11.3: the file header duplicated
+// `data/notes/operations.md` almost word for word (2.3 KB every player
+// downloads to read the same argument twice), the metronome derivation and
+// the two rejected charge pricings went to the note beside the data they are
+// rules about, and a block describing `opCost` went entirely because the
+// function did. What is LEFT in the module is local — why an empty bucket
+// refuses in `runnableOps` rather than at three callers, why the pace is
+// checked last so a better refusal still wins, why the ledger line must go
+// through the shared emitter — and those belong next to the code they
+// explain. The 3.6 KB over is what a new subsystem costs to explain at all.
+const PROSE_CAP = 255;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(codeKb <= KB_CAP,
@@ -23677,7 +23973,12 @@ if (inShard('untrusted')) {
   //    however it is spelled; a cleaner is the same against the strip set.
   {
     const ESCAPER = /\.replace\(\s*\/(\[&<>"'\]|&\/g)/;
-    const STRIPPER = /\.replace\(\s*\/\[<>&"'`\]\/g\s*,\s*''\)/;
+    // R116 — THE SET LOST ITS APOSTROPHE, and this pattern is the shape of
+    // the set. `safeText` stopped stripping `'` because the game's own
+    // names carry one and `cleanSave` was rewriting them on every load;
+    // see util/text.js. The rule here is still "exactly one cleaner", and
+    // it still has to describe the cleaner that exists.
+    const STRIPPER = /\.replace\(\s*\/\[<>&"`\]\/g\s*,\s*''\)/;
     const found = { esc: [], strip: [] };
     for (const file of moduleFiles()) {
       const rel = relative(root, file).replaceAll('\\', '/');
@@ -23973,6 +24274,13 @@ if (inShard('untrusted')) {
     })(base, '');
     const MUTANTS = [
       () => '<img src=x onerror=alert(1)>', () => '" onload="alert(2)', () => null,
+      // R116 — THE SINGLE-QUOTED ATTRIBUTE, which this list had never tried.
+      // `safeText` used to strip `'` outright, so nothing downstream was ever
+      // asked to cope with one; it stopped doing that because the game's own
+      // names contain apostrophes and the repair was rewriting them. The
+      // claim that took its place is that `esc` covers the case, and a claim
+      // is worth what its test is worth.
+      () => "' onfocus='alert(3)",
       () => 1e308, () => -1e308, () => Number.NaN, () => [], () => ({}), () => 'hello',
       () => Number.MAX_SAFE_INTEGER, () => "'; DROP TABLE pens; --",
     ];

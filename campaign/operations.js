@@ -1,45 +1,15 @@
 // Operations — the Jobs board (non-combat missions). Pure and DOM-free.
 //
-// WHY THIS EXISTS. Before it, every route to money and to new fauna ran
-// through winning battles: held nodes paid the income, battles paid the
-// purses, and `unlocksFauna` gated the Mail-Order catalog behind conquest.
-// A player who kept losing therefore had $22/day, a catalog containing
-// exactly two species — Goat and Ram — and no path at all to Water or Air
-// anatomy, which is precisely what the class triangle says you need in
-// order to stop losing. That is a spiral with no floor.
-//
-// So four rules, and all four are load-bearing:
-//
-//   1. Something is ALWAYS runnable. The floor jobs need no territory, no
-//      notoriety, no chimera and no particular anatomy.
-//   2. Failure costs time and a bruise, never a creature. You cannot
-//      punish a losing player for trying to stop losing.
-//   3. `demands` improve the odds; they never gate the job. Requiring
-//      Aquatic anatomy before you may rob the aquarium that would GIVE
-//      you Aquatic anatomy is the same circle in a smaller hat.
-//   4. A job needs a CREW, so the board runs as wide as your stable does
-//      (A4). It used to be one job at a time, full stop, which meant a
-//      session was: check timers, launch the one job, fight once, wait —
-//      and if the fight was lost, there was nothing left but four different
-//      ways to spend money. Slots now scale with the creatures who are fit
-//      to work, floored at one so the crewless paperwork job is ALWAYS
-//      runnable (rule 1) and capped so a large stable does not turn the
-//      board into an idle-game payout tap. Growing a stable was already the
-//      answer to A1's solo cliff; this makes it the answer to the empty
-//      evening as well.
-//   5. Heat is the price, and it is a MECHANIC rather than a nerf. Every
-//      job leaves the county twitchy; heat decays in real time and, while
-//      it lasts, subtracts from the odds of everything. Trimming payouts
-//      to cap the ceiling would have punished exactly the broke player
-//      this board exists for. Heat only ever bites the player running
-//      jobs back to back — check in once a day and you will never see it.
-//
-// Conquest stays the better deal: it puts a species in the catalog to buy
-// instantly and repeatedly, where a job hands you one animal, sometimes,
-// on a timer, with the authorities taking an interest.
+// WHY IT EXISTS and the five rules it is built on — always something
+// runnable, failure never costs a creature, demands improve the odds rather
+// than gating, a job needs a crew so the board runs as wide as your stable,
+// and heat is the price — are in data/notes/operations.md, beside the data
+// they are rules ABOUT. They were duplicated here almost word for word,
+// which is 2.3 KB every player downloads to read the same argument twice.
 
 import { rngStream, pick } from '../util/rng.js';
-import { pickPooled } from './monologue.js';
+import { pickPooled, fill } from './monologue.js';
+import { newsFor } from './wire.js';
 import { analyze } from '../splice/physiology.js';
 import { isSettled } from '../splice/chimera.js';
 import { createAnimal } from '../ranch/ranch.js';
@@ -47,6 +17,11 @@ import { infirmaryGrants } from '../splice/facility.js';
 import { applyInjury } from '../battle/statblock.js';
 
 const HOUR = 3600000;
+const DAY = 24 * HOUR;
+// A fortnight away is a fortnight of news, and then it stops. Without a
+// ceiling a save opened after a month abroad would push thirty headlines into
+// a wire that keeps twelve, which is a digest nobody can read.
+const CONTRACT_LINES_MAX = 14;
 
 const DEFAULTS = {
   soloPenalty: 0.18,
@@ -75,6 +50,100 @@ export function opTuning(content) {
 
 export function operationList(content) {
   return Object.values(content.operations ?? {});
+}
+
+// R116 — the board is what you WORK and a contract is what you ARRANGE, and
+// which a job is is `contract: true` in the data rather than a rule in here.
+// Why the set splits where it does, and the two charge pricings that were
+// tried and rejected first: data/notes/operations.md, `operations[]`.
+export function boardOps(content) {
+  return operationList(content).filter((op) => !op.contract);
+}
+
+export function contractList(content) {
+  return operationList(content).filter((op) => op.contract);
+}
+
+// What a standing arrangement pays an hour. DERIVED from the job's own
+// numbers — purse, odds and the cycle it used to run on — so a contract can
+// never drift away from the job it replaced, and adding one is still a JSON
+// object rather than an engine edit.
+//
+// `contractRate` is the discount and it is the whole bargain; the note has
+// the argument.
+export function contractPerHour(op, content) {
+  const t = opTuning(content);
+  const purse = ((op.funds?.[0] ?? 0) + (op.funds?.[1] ?? 0)) / 2;
+  const cycle = Math.max(1, (op.hours ?? 1) + (op.cooldownHours ?? 0));
+  return (purse * (op.baseChance ?? 0) / cycle) * (t.contractRate ?? 0.5);
+}
+
+// A DAY OF IT, which is the unit every reader wanted and three of them were
+// hand-rolling. R174's rule: one home, however many readers.
+export function contractPerDay(op, content) {
+  return contractPerHour(op, content) * 24;
+}
+
+export function activeContract(state) {
+  return state.campaign?.contract ?? null;
+}
+
+// ONE AT A TIME, which is what makes it a choice rather than a list of
+// switches to turn all on. Signing over the top of one is allowed and is not
+// a refusal: the old arrangement is settled to this moment first, so no
+// player is ever charged for a swap.
+export function signContract(state, opId, content, now) {
+  const op = content.operations?.[opId];
+  if (!op?.contract) return { ok: false, msg: fill(content.copy?.board?.not_contract, {}) };
+  const had = activeContract(state);
+  if (had?.opId === opId) return { ok: false, msg: fill(content.copy?.board?.already, { op: op.name }) };
+  // Settled to this moment first, so a swap never costs a player the hours
+  // they had already earned under the old arrangement.
+  settleContracts(state, content, now);
+  state.campaign.contract = { opId, signedAt: now, paidThrough: now };
+  return { ok: true, op, replaced: had?.opId ?? null, msg: fill(content.copy?.board?.signed, { op: op.name }) };
+}
+
+export function cancelContract(state, content, now) {
+  if (!activeContract(state)) return { ok: false, msg: fill(content.copy?.board?.none, {}) };
+  const { paid } = settleContracts(state, content, now);
+  state.campaign.contract = null;
+  return { ok: true, paid, msg: fill(content.copy?.board?.ended, {}) };
+}
+
+// Settled on the elapsed clock like every other timer in this game: nothing
+// runs in the background, so the money is computed from `paidThrough` to
+// `now` whenever anybody asks. A week away pays a week.
+export function settleContracts(state, content, now) {
+  const c = activeContract(state);
+  if (!c) return { paid: 0, news: [] };
+  const op = content.operations?.[c.opId];
+  if (!op) { state.campaign.contract = null; return { paid: 0, news: [] }; }
+  const hours = Math.max(0, now - (c.paidThrough ?? c.signedAt ?? now)) / HOUR;
+  const paid = contractPerHour(op, content) * hours;
+  c.paidThrough = now;
+  if (paid > 0) state.funds = (state.funds ?? 0) + paid;
+
+  // R116 — ONE LEDGER LINE A DAY, DAY-STAMPED AND NOT TICK-STAMPED, so six
+  // visits an hour hear the arrangement once and a week away hears it as the
+  // week it was. Why the wire depends on this at all: the note, `operations[]`.
+  const news = [];
+  const day = Math.floor(now / DAY);
+  const last = c.saidOn ?? Math.floor((c.signedAt ?? now) / DAY) - 1;
+  for (let d = last + 1; d <= day && news.length < CONTRACT_LINES_MAX; d++) {
+    // TWO POOLS, ALTERNATING — a heist is an event and a retainer is a line
+    // item, and one pool cannot be both. The ledger line goes through the
+    // shared emitter rather than reaching into the pool by hand, because the
+    // wire gate scans the SOURCE for emitter calls by name and anything
+    // reached another way reads as authored-and-never-said. Do not quote the
+    // call shape in a comment here: the scanner counts that as an emitter.
+    const headline = d % 2
+      ? fill(pickPooled(state, `op:${op.id}`, op.news), { op: op.name })
+      : newsFor(state, content, 'op_contract', { op: op.name });
+    if (headline) news.push(headline);
+  }
+  c.saidOn = day;
+  return { paid, news };
 }
 
 // Every job currently in flight. `operations` is the v27 shape; a save that
@@ -176,6 +245,39 @@ export function opReady(state, opId, now) {
   return now >= opCooldownEndsAt(state, opId);
 }
 
+// R116 — THE BOARD HOLDS CHARGES, and they are the only thing that decides
+// how often it can be worked. Deliberately the SAME SHAPE as R43's
+// `sparCharges` — one timestamp, everything derived off it, a refill time in
+// the past meaning simply full — because a player who has learned the ring
+// has already learned this. The metronome it replaces is measured in
+// data/notes/operations.md, `tuning`.
+export function boardCharges(state, content, now) {
+  const t = opTuning(content);
+  const max = Math.max(1, t.boardCharges ?? 3);
+  const regen = Math.max(1, t.boardRegenHours ?? 8) * HOUR;
+  const refillAt = state.campaign?.boardRefillAt ?? 0;
+  const outstanding = Math.max(0, Math.ceil((refillAt - now) / regen));
+  const charges = Math.max(0, max - Math.min(max, outstanding));
+  return {
+    charges,
+    max,
+    ready: charges > 0,
+    full: charges >= max,
+    msToNext: charges >= max ? 0 : Math.max(0, refillAt - now - (outstanding - 1) * regen),
+    msToFull: Math.max(0, refillAt - now),
+  };
+}
+
+// Spending one. Kept beside the reader so the pair cannot drift, and written
+// the way `spendSparCharge` is: `max(refillAt, now)` so a bucket that has
+// been full for a week starts its first regen from NOW rather than from
+// whenever it last emptied.
+function spendBoardCharge(state, content, now) {
+  const regen = Math.max(1, opTuning(content).boardRegenHours ?? 8) * HOUR;
+  const refillAt = state.campaign.boardRefillAt ?? 0;
+  state.campaign.boardRefillAt = Math.max(refillAt, now) + regen;
+}
+
 export function opRemainingMs(state, now, opId = null) {
   const run = opId ? activeOps(state).find((r) => r.opId === opId) : activeOp(state);
   return run ? Math.max(0, run.until - now) : 0;
@@ -250,7 +352,15 @@ const clamp = (n, t) => Math.max(t.minChance, Math.min(t.maxChance, n));
 // neither made, and the one `startOperation` consults.
 export function runnableOps(state, content, now, crew = null) {
   const running = activeOps(state);
-  return operationList(content).filter((op) => {
+  // R116 — an empty bucket makes the whole board unrunnable, and it says so
+  // HERE rather than at each caller. This is the function whose whole job is
+  // "the list `startOperation` would accept" (see the note above), and the
+  // agenda's row, its hint and the War Room's board all read it. A charge
+  // check bolted onto three readers instead is R120's defect verbatim: three
+  // places deciding the same thing and disagreeing.
+  const bucket = boardCharges(state, content, now);
+  if (!bucket.ready) return [];
+  return boardOps(content).filter((op) => {
     if (running.some((r) => r.opId === op.id)) return false;
     if (!opReady(state, op.id, now)) return false;
     // Two lanes: go yourself (rider null) or send a creature. Runnable if
@@ -268,6 +378,7 @@ export function startOperation(state, opId, chimeraId, content, now) {
   const t = opTuning(content);
   const op = content.operations?.[opId];
   if (!op) return { ok: false, msg: 'No such job.' };
+  if (op.contract) return { ok: false, msg: fill(content.copy?.board?.not_outing, {}) };
   const running = activeOps(state);
   if (running.some((r) => r.opId === opId)) return { ok: false, msg: 'That job is already under way.' };
 
@@ -286,7 +397,12 @@ export function startOperation(state, opId, chimeraId, content, now) {
   }
   const odds = opOdds(state, op, chimera, content, now);
   if (odds.blocked) return { ok: false, msg: odds.blocked };
+  // R116 — and the board's own pace, checked LAST so a launch that was going
+  // to be refused for a better reason still says the better reason.
+  const bucket = boardCharges(state, content, now);
+  if (!bucket.ready) return { ok: false, msg: fill(content.copy?.board?.no_leads, {}) };
 
+  spendBoardCharge(state, content, now);
   state.campaign.opCount = (state.campaign.opCount ?? 0) + 1;
   const rng = rngStream(state.seed, `op:${opId}`, state.campaign.opCount);
   const success = rng() < odds.chance;
@@ -360,6 +476,10 @@ export function abortOperation(state, content, opId = null, now = state.lastTick
 export function tickOperations(state, content, now) {
   const news = [];
   const results = [];
+  // R116 — the standing arrangement pays first, and it pays on the elapsed
+  // clock rather than per tick, so a player who was away for a week is paid
+  // for the week rather than for the one tick they came back on.
+  news.push(...settleContracts(state, content, now).news);
   for (const run of activeOps(state).filter((r) => now >= r.until).sort((a, b) => a.until - b.until)) {
     const one = resolveOperation(state, content, now, run);
     news.push(...one.news);

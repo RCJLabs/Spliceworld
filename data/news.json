@@ -137,6 +137,11 @@
       "lines": [
         "{rival} wins the exchange and issues a press release about it. Rude."
       ]
+    },
+    "op_contract": {
+      "lines": [
+        "{op} pays out again, quietly, the way an arrangement should."
+      ]
     }
   },
   "ticker": [

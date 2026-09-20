@@ -1257,10 +1257,18 @@ const SITTING = ['node', '-e', `
   {
     const s2 = { ...newGameState(), seed: 4242 };
     foundLab(s2, content, 'bramble_barn', t0);
+    // R116 — AND THE PROBE NEEDS A CREW NOW. Every job left on the board
+    // requires one (the three that needed nobody carried anywhere became
+    // standing contracts), so a fixture with an empty roster launches
+    // NOTHING, the row correctly does not appear, and the hint check reads
+    // an empty string and fails on a rule that is working. Zero is the right
+    // answer to the wrong question: this block exists to prove the row's
+    // number is the number that launches, and at zero there is no number.
+    s2.chimeras = [{ id: 'c0', name: 'Chompers', tokens: {}, frame: 'M', settleUntil: 0, bond: 50, xp: 0 }];
     let launches = 0;
     for (const op of operationList(content)) {
       const probe = JSON.parse(JSON.stringify(s2));
-      if (startOperation(probe, op.id, null, content, t0).ok) launches++;
+      if (startOperation(probe, op.id, 'c0', content, t0).ok) launches++;
     }
     const claimed = runnableOps(s2, content, t0).length;
     if (claimed !== launches) {
@@ -1268,6 +1276,45 @@ const SITTING = ['node', '-e', `
     }
     const hint = (agenda(s2, content, t0).find((r) => r.id === 'job') ?? {}).hint ?? '';
     if (!hint.includes(String(launches))) bad.push('and the hint does not say ' + launches + ': ' + hint);
+  }
+
+  // 3b. R116 — AND ZERO IS A NUMBER THE ROW HAS TO GET RIGHT TOO.
+  //
+  // Rule 3 above proves the row counts correctly when a job CAN start. It
+  // cannot prove the row refuses when one cannot, and after R116 that half
+  // stopped being covered at all: every job left on the board requires a
+  // crew, so the fixture's one free creature makes the go-yourself lane and
+  // the send-a-creature lane agree on every op, and a rule that only ever
+  // asks a permissive fixture agrees with a broken one.
+  //
+  // Measured: break 106 (\`runnableOps\` counts lanes again instead of asking
+  // \`opOdds().blocked\`) went MISSED against rule 3 alone, because clean and
+  // broken both answered 4. With the only crew already carrying a job the
+  // two answers separate — clean says 0, lanes-only says 3 — which is the
+  // defect the break is named for: a row that promises jobs that will not
+  // start. The bucket holds 3 charges, so spending one leaves the board
+  // runnable and the rule is measuring the crew check rather than the pace.
+  {
+    const s3 = { ...newGameState(), seed: 4242 };
+    foundLab(s3, content, 'bramble_barn', t0);
+    s3.chimeras = [{ id: 'c0', name: 'Chompers', tokens: {}, frame: 'M', settleUntil: 0, bond: 50, xp: 0 }];
+    const first = operationList(content)
+      .find((op) => startOperation(JSON.parse(JSON.stringify(s3)), op.id, 'c0', content, t0).ok);
+    if (!first) {
+      bad.push('the zero-crew fixture could not start a single job to occupy the crew with');
+    } else {
+      startOperation(s3, first.id, 'c0', content, t0);
+      let busyLaunches = 0;
+      for (const op of operationList(content)) {
+        const probe = JSON.parse(JSON.stringify(s3));
+        if (startOperation(probe, op.id, 'c0', content, t0).ok) busyLaunches++;
+      }
+      const busyClaimed = runnableOps(s3, content, t0).length;
+      if (busyClaimed !== busyLaunches) {
+        bad.push('with its only crew already carrying a job the row claims '
+          + busyClaimed + ' runnable, ' + busyLaunches + ' actually launch');
+      }
+    }
   }
 
   if (bad.length) { console.error('sitting \u2717  ' + bad.join('; ')); process.exit(1); }
@@ -3447,15 +3494,32 @@ const BREAKS = [
     anchor: "      if (!extra.success) emitNews(state, content, 'op_failed', { op: extra.name });",
     to: "      if (!extra.success) pushNews(state, `${extra.name} came to nothing, which happens.`);",
   },
-  {
-    // A JOB STOPS ROTATING ITS HEADLINE. One operation, one sentence, 274
-    // tellings — 5.8% of the wire from a single job the player happens to
-    // like. The pool is still authored; it is simply not read.
-    n: 327, gate: SHARD_D, name: 'a job stops rotating its headline, so one sentence is 5% of the wire again',
-    file: 'campaign/operations.js',
-    anchor: '    const headline = pickPooled(state, `op:${op.id}`, op.news);',
-    to: '    const headline = Array.isArray(op.news) ? op.news[0] : op.news;',
-  },
+  // R116 — BREAK 327 RETIRED, BECAUSE IT COULD NEVER HAVE FIRED.
+  //
+  // It read: "a job stops rotating its headline, so one sentence is 5% of the
+  // wire again", and patched `pickPooled(state, 'op:'+op.id, op.news)` to
+  // `Array.isArray(op.news) ? op.news[0] : op.news`. Its note said "the pool
+  // is still authored; it is simply not read."
+  //
+  // The pool is not authored. EVERY `news` in data/operations.json is a
+  // single string — seven jobs, seven sentences — and `pickPooled` on a
+  // one-item list returns that item, so the patch and the original compute
+  // the same value. Even the cursor is inert: `wireAt` advances by
+  // `(at + 1) % 1`, which is zero. It is a perfect no-op, and `--anchors`
+  // could not say so because the anchor matched perfectly; only the meaning
+  // was empty. No commit touching that data file in the last 25 has ever
+  // carried an array there, so this was not something R116 broke.
+  //
+  // It is not re-aimable either. `node_seized` (3 phrasings) is the ONLY
+  // multi-line pool in the game, and smoke.js already asserts its rotation by
+  // name — "the pool actually varies" — while break 325 above kills rotation
+  // globally at `wireAt` and is caught. The rule is covered twice over; what
+  // 327 added was coverage of a mechanism the content never had.
+  //
+  // What it found instead is a CONTENT gap, and a real one: 542 launches
+  // across four board jobs with one sentence each means job news repeats
+  // verbatim for a whole campaign, which is the complaint R109 exists to
+  // answer. Filed as R183 rather than papered over with a break that passes.
   {
     // AN EVENT LOSES ITS EMITTER. The pool stays in news.json, fully
     // authored, and nothing in the game can ever say it — R57/R58's shape,
@@ -3943,6 +4007,99 @@ const BREAKS = [
     to: 'arr[i] = local[i];',
   },
 
+  // R116 — the board has a pace, a mix, and a half that is not a tap.
+  {
+    // THE BUCKET STOPS REFUSING. Every other rule about the board still
+    // holds — jobs cost money, lanes are limited, heat still climbs — and
+    // the launch rate goes straight back to the metronome this milestone
+    // was written to break: seven independent cooldowns summing to 10.05 a
+    // day that no constant can move.
+    //
+    // AIMED AT THE ARITHMETIC, AND TWO EARLIER DRAFTS WERE NOT. Patching
+    // either REFUSAL comes back MISSED, and the reason is worth keeping: the
+    // bucket is guarded twice — `runnableOps` returns an empty list and
+    // `startOperation` refuses by name — so removing one leaves the other
+    // holding the pace. That redundancy is deliberate (a player can tap a
+    // board rendered before the bucket emptied) but it means no single
+    // refusal is load-bearing, and a break has to patch the line that
+    // actually decides the number. `outstanding` is that line: it is how
+    // many refills are still owed, and without it the bucket reads full
+    // forever however recently it was spent.
+    n: 383, gate: SHARD_D, name: 'the bucket stops reading its own refill clock, and the board is always full',
+    file: 'campaign/operations.js',
+    anchor: '  const outstanding = Math.max(0, Math.ceil((refillAt - now) / regen));',
+    to: '  const outstanding = 0;',
+  },
+  {
+    // …AND THE SAME DEFECT FROM THE OTHER END. The check stays, the spend
+    // does not, so the bucket reads full forever. A pace that is enforced
+    // but never paid for is not a pace, and a gate that only watched the
+    // refusal would call this clean.
+    n: 384, gate: SHARD_D, name: 'a launch never spends the lead it used, so the bucket never empties',
+    file: 'campaign/operations.js',
+    anchor: '  state.campaign.boardRefillAt = Math.max(refillAt, now) + regen;',
+    to: '  state.campaign.boardRefillAt = Math.max(refillAt, now);',
+  },
+  {
+    // THE WALKER STOPS CARRYING ANYBODY — the defect this whole milestone
+    // was found by. One argument. `opOdds` blocks a crew-required job with
+    // no rider, so the four jobs that read a chimera's tags and class go
+    // back to running ZERO times in 180 days, and the harness goes back to
+    // reporting that as a fact about the game.
+    n: 385, gate: SHARD_D, name: 'the walker passes null as the crew again, and the crewed half of the board dies',
+    file: 'tools/sim.js',
+    anchor: 'const started = op && startOperation(state, op.id, best.rider?.id ?? null, content, now);',
+    to: 'const started = op && startOperation(state, op.id, null, content, now);',
+  },
+  {
+    // CHARGES SET THE PACE; COOLDOWNS SET THE SPREAD. Take the per-job
+    // cooldown away and the pace rule still passes — the bucket is doing
+    // its job — while the single best-value job takes every charge the
+    // board has. That is the metronome again wearing a different hat, and
+    // only the MIX rule sees it.
+    n: 386, gate: SHARD_D, name: 'a job never goes quiet, so the best one takes the whole board',
+    file: 'campaign/operations.js',
+    anchor: "  state.campaign.opCooldowns[opId] = endedAt + Math.round((op?.cooldownHours ?? 6) * HOUR);",
+    to: '  state.campaign.opCooldowns[opId] = endedAt;',
+  },
+  {
+    // THE RETAINER PAYS NOTHING. A4's floor is that a player with no
+    // territory, no money and no creatures still has a way back, and since
+    // this milestone that way is a standing arrangement rather than a job
+    // they can tap. Money in, or the floor is a button that does nothing.
+    n: 387, gate: SHARD_B, name: 'a standing arrangement stops paying, and a lab with nothing has no way back',
+    file: 'campaign/operations.js',
+    anchor: '  if (paid > 0) state.funds = (state.funds ?? 0) + paid;',
+    to: '  if (paid > 0) state.funds = (state.funds ?? 0);',
+  },
+  {
+    // AND THE LEDGER LINE STOPS REACHING THE WIRE. This one is here because
+    // it is the coupling the milestone did not predict: taking three jobs
+    // off the board silenced their headline pools, and the county's voice
+    // fell from 411 distinct phrasings to 381, under R109's floor of 400.
+    // The daily line is what pays that back, so a gate that watched only
+    // the board would never know the wire depended on it.
+    n: 388, gate: SHARD_D, name: 'the retainer stops filing its daily line, and the county runs out of things to say',
+    file: 'campaign/operations.js',
+    anchor: '    if (headline) news.push(headline);\n  }\n  c.saidOn = day;',
+    to: '    if (headline) news.length = news.length;\n  }\n  c.saidOn = day;',
+  },
+  {
+    // THE ONBOARDING WALKS THE RIVAL MAP RAW AGAIN — the line R116 found by
+    // accident. `campaign.rivals` is untrusted input, and `Object.values` of
+    // it hands the predicate whatever is in the save: a null entry and the
+    // Ranch stops rendering. This is not a new rule, it is R114's fuzz doing
+    // its job, and it only fired because R116 added a key to `campaign` and
+    // moved the seeded sample onto `campaign.rivals.mantissa`. The break is
+    // here so the next shift in that sample is not what re-finds it: every
+    // other reader in the game goes through `rivalRecord`, which defaults a
+    // missing or junk record, and this one now does too.
+    n: 389, gate: SHARD_B, name: 'the guide reads the rival map raw, and one junk record stops the Ranch rendering',
+    file: 'ranch/onboarding.js',
+    anchor: '  rivalBeaten: (state, content) => rivalStatus(state, content).some((r) => r.record.defeats > 0),',
+    to: '  rivalBeaten: (state) => Object.values(state.campaign.rivals ?? {}).some((r) => (r.defeats ?? 0) > 0),',
+  },
+
   // R175 — the stable says how big it is and what makes it bigger.
   {
     // THE MAIN SCREEN STOPS SAYING HOW FULL THE STABLE IS, which is the state
@@ -4220,10 +4377,25 @@ const BREAKS = [
   {
     // §9.0 is the queue a session reads. A tick added without the list being
     // told is the drift that makes it worth reading at all.
+    // R116 — AND THIS BREAK MUST BE RE-AIMED THE DAY ITS TARGET SHIPS, which
+    // is the trap R167 wrote up in 277 below and this one still walked into.
+    // It pointed at R116 while R116 was queued. R116 shipping left the anchor
+    // matching perfectly and the PATCH meaningless: appending a second tick to
+    // an entry that is already, correctly, ticked and already gone from §9.0
+    // leaves a consistent document, so the gate passed and the break went
+    // MISSED in R116's own full battery.
+    //
+    // `--anchors` CANNOT catch this, which is the whole danger and the reason
+    // this note is long: a stale anchor is loud, a stale MEANING behind a live
+    // anchor is silent. 277 escaped it by patching the LIST instead of a named
+    // entry; this rule cannot, because the failure it models is exactly "an
+    // ENTRY says shipped while the queue still lists it", so it has to name
+    // one. Whoever ships R181: move this to another entry §9.0 still queues,
+    // and do not wait for `--anchors` to remind you, because it will not.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R116 — The jobs board is a slot machine.**',
-    to: '- **R116 — The jobs board is a slot machine.** ✅',
+    anchor: '- **R181 — Henchmen, and the end of being one person.**',
+    to: '- **R181 — Henchmen, and the end of being one person.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.

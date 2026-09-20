@@ -22,6 +22,21 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R116 — the jobs board's charge bucket. One timestamp, exactly the shape
+  // `sparRefillAt` has held since R43.
+  //
+  // IT ARRIVES FULL, and that is the whole reason this is a safe change to
+  // make to a live save. `boardCharges` reads a refill time in the past as
+  // "full", so an absent field would already have behaved correctly — but an
+  // absent field is a shape the schema does not declare, and the Ascent rule
+  // is that a schema change is never silent. Writing the zero makes every
+  // save the same shape and costs a player nothing: whatever they were in the
+  // middle of, they come back to a board they can work three times over.
+  59: (save) => {
+    save.campaign ??= {};
+    save.campaign.boardRefillAt ??= 0;
+    return save;
+  },
   // R112 — THE ONE MIGRATION THAT DELETES A FIELD, and the reason it is safe
   // to is that the field has never held anything. `spliceCount` was declared
   // in `newGameState` at M0 and no line of game code has written it since:

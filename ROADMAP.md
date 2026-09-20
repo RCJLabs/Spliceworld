@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 58
+- save version: 59
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**4 entries queued.** R116, R117, R118, R176.
+**8 entries queued.** R117, R118, R176, R179, R180, R181, R182, R183.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4691,23 +4691,124 @@ suite can check.
 
   *Done when: `node tools/coverage.js` passes with an allowlist under ten
   entries, each with a reason — **met, at eight**.*
-- **R116 — The jobs board is a slot machine.** Over 180 days the walker
-  launched **1,188 jobs — 6.6 a day, more than every fight it fought
-  combined (964)** — every one of them **solo**: the four jobs that ask for
-  a chimera's tags and class, the interesting half of the design, ran
-  **zero** times. They succeeded 43% of the time and paid **$58,800, which
-  is 6.7% of the $882k the county paid in income**; the petting zoo ran 720
-  times at $23 a run. Those launches are **670 of the wire's lines**. Heat is
-  the only brake and it brakes ambition, not taps. Proposed, medium: the
-  solo jobs become **standing contracts** — one passive, auto-renewing
-  arrangement at a time, settled at the tick like income, no launch — and
-  the board keeps the **crewed** jobs, which become where a chimera earns
-  while the ring cools; the walker learns to crew them (a policy per
-  demand, closing another R92 blind spot); and job outcomes reach the wire
-  as **one ledger line a day** (shared with R109). *Done when: on the
-  walker's diet launches fall under one a day with job income within 20% of
-  today's, crewed launches run at least one a day, and "came to nothing"
-  leaves the ten most frequent phrasings.*
+- **R116 — The jobs board is a slot machine.** ✅ *Shipped — and two of the
+  four clauses in the criterion below were falsified rather than met, which
+  is recorded here instead of quietly restated.*
+
+  **The measurement that opened it held.** 1,189 launches in 180 days, 6.61 a
+  day, more than every fight the walk fought combined (964). What the entry
+  got wrong was the cause: `byOp` was **byte-identical on all five seeds** —
+  721 petting zoo, 360 feed co-op, 108 grant — so the board was not a slot
+  machine, it was a **metronome**. Seven independent `hours + cooldownHours`
+  clocks summing to a 10.05/day ceiling that no constant in the game
+  expressed. Heat brakes ambition (it lowers the odds) and never once brakes
+  the tapping.
+
+  **Shipped:** one **charge bucket** for the whole board (`boardCharges`,
+  `boardRegenHours` in `data/operations.json`, R43's `sparCharges` pattern —
+  one timestamp, everything derived, a refill in the past means full); the
+  three jobs that carried nobody anywhere became **standing contracts**, one
+  at a time, settled from `paidThrough` at the tick like income; the four
+  crewed jobs stayed on the board and the walker learned to crew them.
+  `SAVE_VERSION` **59**.
+
+      launches      1,189 (6.61/day)  ->  542 (3.01/day, against 3.00 paced)
+      crewed            0             ->  542 (3.01/day)
+      solo          1,189             ->  0
+      biggest job   721 of 1,189 (61%) ->  33%
+      paid          $53,856-$58,867   ->  $80,519-$88,537, 9.0-9.8% of gross
+      wire          411 phrasings     ->  404, loudest 3.8%
+
+  **AND THE CRITERION DID NOT SURVIVE CONTACT.** Both of the clauses it got
+  wrong are worth naming, because both are the same mistake — reading a fact
+  about `tools/sim.js` as a fact about the game:
+
+  - *"launches fall under one a day"* and *"crewed launches run at least one
+    a day"* **cannot both hold** once every remaining launch is crewed, which
+    is what the design does. Read as **solo** launches — the taps the entry
+    was actually counting — it is 6.61/day → **0.00/day**, and the shipped
+    rule asserts the rate against `24 / boardRegenHours` from the tuning
+    rather than against a number typed into the gate.
+  - *"job income within 20% of today's"* is pegged to a defect. "Today's" was
+    $53,856-$58,867, measured on a board whose crewed half the harness could
+    not reach — one `null` rider argument in `tools/sim.js`, though a player
+    always could reach it. The gate asserts a **share** instead: the board
+    pays ≤15% of the county's gross (measured 9.0-9.8%) and still clears
+    $40k. A share survives later changes to what the county pays; R143 and
+    R152 both moved the dollars.
+  - *"'came to nothing' leaves the ten most frequent phrasings"* was already
+    true — **R109 retired it** — so it was vacuous before this session
+    started.
+
+  **The expensive finding was not the board.** Four calibrated numbers went
+  red at once — `ranch.stock`, the Pens' word budget, R177's variant lines
+  and the Wing's enrolment band — and all four had **one** cause. Seed 2026
+  at day 180, pre-R116, ends with the vault at 330/400 and 8 renderable
+  species; post-R116 it ends at **259/260, tight, 0 renderable**.
+  `extractAnimal` refuses into a full vault on purpose (R91), so every
+  graduation failed, the pens filled to 115 head, and the walker's buy gate —
+  which counts the whole pen against a limit meant for animals it *chose* —
+  bought 265 where it used to buy 1,772. The walker now reads the refusal the
+  game hands it and, while the vault is tight, buys shelf space or buys
+  nothing. `stock` reads 18-20 on all twelve seeds. The reach loss had a
+  second half: R116 removed the game's ram and skunk supply (the petting zoo
+  ran 721 times rolling {goat, ram} at 40% and became a contract), and none of
+  the walker's four buy priorities could start a line from zero, because
+  `mates` required `heldOf === 1`. `heldOf < 2` restored it.
+
+  **Three floors turned out stale on BOTH trees**, each measured once on three
+  or four seeds and never re-checked. A twelve-seed census on this tree *and*
+  on pre-R116 `a39a0fa` is now written beside each: the hunt floor of 8 (both
+  trees bottom out at 4 — now 2), the splice floor of 25 (pre-R116 seed 77
+  reads 14) and the Wing's enrolment floor of 10 (seed 77 reads 8 on both).
+  None of the three was R116's doing.
+
+  **Two shipped bugs, neither of them R116's.** A null rival record stopped
+  the Ranch rendering — `ranch/onboarding.js` walked `campaign.rivals` raw
+  where every other reader goes through `rivalStatus`, found the moment R116
+  added a key and R114's seeded fuzz moved onto it. And `cleanSave` was
+  **renaming chimeras on every load**: `safeText` stripped `'` and the game's
+  own generator produces `Ol' Thrashbasket`, so a repair was editing a healthy
+  save. The apostrophe stays; `esc` covers the single-quoted attribute and the
+  fuzz now carries a single-quote mutant.
+
+  **One a11y regression that IS ours, and the height it cost.** A vault that
+  now collects all 244 parts prints a Prismatic shelf where it used to print a
+  shorter word, and at 150% text the badge left its card by 30px. `flex-wrap:
+  wrap` fixed that and quietly cost **36px of shut Vault at 100%** — three
+  bays at 54px instead of 42 — which the height gate caught at 4,141px against
+  a 4,140px budget. A wrapping flex line breaks on an item's max-content
+  width, so `.lineage` stopped wrapping its own text and pushed the badge down
+  instead. `.lineage { flex: 1 1 0 }` gives the 36px back (shut shelf 2,538 →
+  2,502, the same number `nowrap` gives) with the 150% fix intact.
+
+  Breaks **383-389**. `ranch.stock` topping out at 112 where it topped out at
+  67 is filed as **R182**, not fixed here.
+
+  *Done when: on the walker's diet launches fall under one a day with job
+  income within 20% of today's, crewed launches run at least one a day, and
+  "came to nothing" leaves the ten most frequent phrasings.*
+- **R183 — Every job says the same sentence, every time.** Found closing
+  R116, by a break that could not fire. All seven entries in
+  `data/operations.json` carry a **single** `news` string, so
+  `pickPooled(state, `op:${op.id}`, op.news)` rotates a one-item list and
+  returns the same headline forever. Over 180 days the walker launches **542
+  jobs across four board ops** — so the wire prints those same four sentences
+  542 times between them, and the petting zoo's line is now a contract's
+  daily ledger entry rather than a launch. That is precisely the complaint
+  R109 was filed about ("one `capture` line, 684 tellings, 14.6% of
+  everything the world said"), surviving in the one place R109 did not reach:
+  R109 pooled the philosophies and the news events, and the jobs kept their
+  single strings. The engine is already right — `pickPooled` is the reader
+  and would rotate a pool the moment one existed — so this is content, not
+  code: **three or four phrasings per job**, in data, no engine edit. The
+  break that should have caught it (327) was retired closing R116 because a
+  one-item pool makes its patch a no-op; whoever ships this should write it
+  back, aimed at the same line, and it will mean something. *Done when: every
+  operation in `data/operations.json` carries at least three headlines, no
+  job's sentence is more than 1% of the wire on the day-180 walk, and a break
+  that freezes `op.news` to its first line goes red.*
+
 - **R117 — Wide screens.** The game is a **560 px column at every width**:
   `main { max-width: 560px }` and not one layout rule above 430 px, so on a
   1,920 px laptop it sits at x = 673 with 1,360 px of dark on either side —
@@ -6220,6 +6321,123 @@ triangle working, and each region genuinely asks a different question)*.
   it.* 554 and 1026, from 564 and 1036; both ledgers name `campaign/director.js`
   and say why the data-key option could only ever have paid half.
 
+
+### 9.31 A vault full of treasure has no exit (R182) — found closing R116
+
+- **R182 — The Vault's only button refuses to help when it is most needed.**
+  Found while re-deriving R116's cascade, and it is not R116's doing: R116 is
+  simply the milestone that makes the state common. `extractAnimal` refuses
+  into a full vault on purpose (R91: a yield is something the player ASKED
+  for, so nothing is rendered at the door), and the refusal says *"Render
+  something down, or buy shelf space from the Extractor."* Both halves can be
+  unavailable at once. `surplusParts` spares one of each anatomy and skips
+  anything carrying traits, so a shelf of singletons and trait-carriers has
+  NOTHING it will offer; and the Extractor's shelf tops out at 400.
+  **Measured on seed 4242 at day 180: 396 parts of 400, 193 distinct, 31 ids
+  with a duplicate, 162 singletons, 233 carrying traits, `surplusParts`
+  returns ZERO, and every graduation is refused** — so the pens fill to 112
+  head against a paddock of 40 and there is no move the screen will accept.
+  That is not junk jamming the shelf. It is a very good campaign with nowhere
+  to put the next animal, and the game's answer is a button that is greyed
+  out in spirit.
+  Proposed, small-to-medium, and the shape is a DECISION rather than a bigger
+  number: raising the shelf again only moves the wall. Candidates — let the
+  player render a CHOSEN part (the Vault screen has no per-part control at
+  all today, which is why the walker cannot do what a player would); let a
+  part retire into the Dex the way `admitVial` already retires a vial, so the
+  anatomy is remembered when the token is gone; or give the pens a way to
+  rehome an animal that does not go through the Extractor. Whichever it is,
+  the refusal's own sentence has to become true again.
+  *Done when: on a save with a full shelf and no `surplusParts`, the Vault
+  offers a move the player can actually take; a 180-day walk on every seed
+  ends with the pens inside the design ceiling the vault gate states; and the
+  refusal text names something that exists.*
+
+### 9.30 Three new verbs (R179–R181) — asked for directly
+
+The game has eleven verbs and almost all of them resolve to combat power:
+raise, breed, extract, splice, train, fight, capture, rehabilitate, conquer,
+defend, work a job. R116 found what that costs — a board that offered 1,189
+launches in 180 days and still asked nothing of the player, because every
+one of them was the same decision. These three phases add verbs that are
+*not* a fight and not a splice, and each is written so that the thing it
+adds is a CHOICE rather than another button that is always available.
+
+- **R179 — Expeditions, and the first creature money cannot buy.** Today the
+  catalogue is the whole world: **all 41 species carry a `mailOrderPrice`**,
+  so there is nothing alive in this game a player cannot simply order, and
+  the only scarcity is cash. That is why R95 had to build a content-reach
+  gate — a campaign settles on four species and never learns the rest exists.
+  Proposed, LARGE, and it wants splitting across sessions:
+  **(1)** species gain a **rarity tier** in data — common (the 41 that ship,
+  orderable), uncommon, rare, unique — and everything above common has NO
+  `mailOrderPrice`; **(2)** an **expedition engine**: send crew to a region
+  for real-world hours, seeded roll against that region's own table, results
+  computed on the elapsed clock like every other timer here; **(3)** the
+  content itself — new species, whose parts arrive through
+  `tools/gen-parts.js` (R127 made the generator the authority, so this is
+  JSON rather than an engine edit) and therefore bring new parts, new
+  **combos** against the 27 that exist, and new keywords against the 29.
+  A **unique** is one per run, carries a name rather than a species, and is
+  the obvious thing to hand R102's run boundary.
+  *The decision this has to create:* which of 5 regions, for how long, and
+  with whom — and the crew is unavailable for jobs and fights the whole
+  time, so an expedition is paid for in the things R116 just made scarce.
+  *The trap to avoid:* a rare that is simply BETTER is power creep wearing a
+  costume. R6 made every variant a sidegrade by contract and asserted it in
+  smoke; a rare should buy a build that was previously impossible rather
+  than a bigger number.
+  *Done when: an uncommon is reachable only by expedition and a campaign
+  that never runs one never sees it; every shipped tier's parts reach the
+  Dex and at least one new combo; no rare's win rate at equal grade beats a
+  common's by more than the noise floor; and the walker runs expeditions as
+  a policy rather than a tap.*
+
+- **R180 — Espionage, sabotage, and unscheduled urban renewal.** The rival
+  ladder is five labs the player can only ever FIGHT. Three escalating
+  missions that use them without a battle, each priced differently:
+  **(1) Espionage** — infiltrate, steal research or intel. Resolved on
+  Camo, speed and low mass, which is the half of the stat sheet combat
+  under-rewards: R148 and R149 both shipped because the Rumbler and the
+  Scamper had no reason to be built, and an infiltrator is a reason.
+  **(2) Sabotage** — break something of theirs; your creature can be CAUGHT,
+  and a caught creature lands in *their* containment, which is the mirror of
+  R8's Reorientation Wing. They can talk it round and field it against you.
+  **(3) Unscheduled urban renewal** — release a chimera into a city node.
+  It leaves the roster permanently and joins the loose board the breakout
+  engine already runs (`maxLoose` is 4), so the price of the mission is a
+  complication you will meet again.
+  *The tone constraint is load-bearing and needs saying out loud:* CLAUDE.md
+  forbids death language, so a flattened city is **evacuated, condemned and
+  rezoned**, buildings "retire loudly" the way vehicles already do, and the
+  only casualties are an insurance adjuster's afternoon and several
+  municipal bylaws. Every line of this goes through the R110 tone gate.
+  *Done when: a mission resolves without a battle and reads as a decision
+  rather than a dice roll; a creature caught on sabotage appears in that
+  rival's roster and can be met in a later fight; a released chimera appears
+  on the loose board and can be hunted back; and the tone gate passes on
+  every word of it.*
+
+- **R181 — Henchmen, and the end of being one person.** Every lane in this
+  game is capped because the player is a single pair of hands: the solo job
+  lane is "exactly one, always", and R116 turned the rest of the board into
+  a charge bucket for the same reason. Hires are the way out, and they cost
+  something other than money. Proposed, medium: named staff with a
+  speciality, a wage, quirks that cut both ways — a vet who halves infirmary
+  time and refuses anything unstable, a hand who never misses a feed and
+  reliably overfeeds — each holding ONE standing duty while the player is
+  away. Settled on the elapsed clock from a timestamp, exactly the shape
+  R116's `settleContracts` uses, so nothing runs in the background and a
+  week away pays a week. Their reports are what R107's welcome-back digest
+  was built to carry. A henchman can also run an R180 mission, which is how
+  espionage stops costing a chimera.
+  *The decision:* slots are few, wages scale with the empire (R152's lesson
+  — a cost that does not grow is a cost that stops mattering), and every
+  quirk is a real trade rather than a flat bonus.
+  *Done when: a week away is settled from timestamps alone with nothing
+  running in between; every henchman's quirk is legible in the digest; the
+  wage bill tracks the size of the operation; and no hire is strictly better
+  than another at the same price.*
 
 ### 9.29 The ceiling was the map (R152) — queued out of R138
 

@@ -292,7 +292,17 @@ const BUDGET = {
   // halves". 2,950 is the same ~4% headroom over the measurement that 2,700
   // was over 2,606 — if a later milestone finds it at 2,900, the answer is
   // to page the tab the way R131 paged the Vault, not to move this again.
-  'dex:combos':   { folded: 550,   tallest: 2950, opens: 3 },
+  // R116 — `opens` 3 -> 2, AND IT IS THE FIXTURE THAT CHANGED, not the tab.
+  // `combosView` renders a band only when its list is non-empty, and the
+  // three are found / both-halves-in-hand / still-to-find. Measured on this
+  // gate's own day-180 save after R116's buy fix: found 16, ready 11,
+  // rumoured ZERO — because `dex.parts` reads 244 of 244. A campaign that
+  // has collected the whole game has nothing left to find, so the third band
+  // does not exist to be opened and the declaration was asking for a fold
+  // that cannot be there. `foldVerdict` treats `opens` as a MINIMUM, so a
+  // mid-campaign save that still has rumoured pairings opens three and
+  // passes unchanged.
+  'dex:combos':   { folded: 550,   tallest: 2950, opens: 2 },
   // R129 FOLDS IT, WHICH BRINGS THE SHUT HALF DOWN AND BUDGETS THE FOLD:
   // 1100/1100 -> 400 shut (measured 291) and 1250 open (measured 1185).
   // Twelve genes could only be learned by breeding for them, so this tab

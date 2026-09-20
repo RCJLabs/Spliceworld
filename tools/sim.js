@@ -1157,7 +1157,10 @@ import { MOVE_SLOTS } from '../battle/moves.js';
 import { feralStatus } from '../splice/feral.js';
 import { activeVat, vatPlan, startVat } from '../splice/chaos.js';
 import { activeResequence, resequencePlan, startResequence } from '../splice/resequencer.js';
-import { startOperation, operationList, opReady, laneFree } from '../campaign/operations.js';
+import {
+  startOperation, operationList, opReady, laneFree, runnableOps, freeCrew, opOdds,
+  contractList, contractPerDay, activeContract, signContract,
+} from '../campaign/operations.js';
 import { startSpar, canSpar, sparEncounter, sparPartners } from '../campaign/sparring.js';
 import { levelOf } from '../battle/veterancy.js';
 import { regionStates } from '../campaign/campaign.js';
@@ -1905,8 +1908,64 @@ function walkAct(state, content, now, open, opts = {}) {
     // landed in opReady's `now`, so the comparison was against an object and
     // every job read as on cooldown — the walker has never run one. laneFree
     // was never reached to throw.
-    const op = operationList(content).find((o) => opReady(state, o.id, now) && laneFree(state, content, now, o, null));
-    if (op && startOperation(state, op.id, null, content, now).ok) did('job', { op: op.id });
+    // R116 — THE WALKER CAN CARRY SOMEBODY. Until now it passed `null` as the
+    // crew on every launch it ever made, which is not a preference the
+    // campaign expressed — it is the only call the walker knew how to make.
+    // `opOdds` returns `blocked: 'Somebody has to actually go. Send a
+    // chimera.'` for a crew-required job with no rider, so the four crewed
+    // jobs could not start, and "the crewed half of the board ran zero times"
+    // was a fact about this line rather than about the design.
+    //
+    // A POLICY PER DEMAND, as R116 asks: `runnableOps` is the list
+    // `startOperation` would actually accept, every free creature is priced
+    // against every job on it by the game's own `opOdds`, and the walker
+    // takes the best expected payout. Solo stays in the running — it is a
+    // rider of `null` like any other — so a campaign with nobody free still
+    // works the board exactly as it did.
+    // R116 — THE STANDING ARRANGEMENT, signed once and then left alone. It
+    // costs no charge and asks for nobody, so the only decision is which one,
+    // and the walker takes the best-paying it can see. Re-checked each time
+    // rather than signed on day one, because `contractPerDay` is derived
+    // from the job and a later milestone may change what one is worth.
+    {
+      const best = contractList(content)
+        .map((op) => ({ op, rate: contractPerDay(op, content) }))
+        .sort((a, b) => b.rate - a.rate)[0];
+      const held = activeContract(state);
+      if (best && held?.opId !== best.op.id && signContract(state, best.op.id, content, now).ok) {
+        did('contract', { op: best.op.id });
+      }
+    }
+
+    // `runnableOps` returns [] on an empty bucket, so the walker inherits the
+    // board's pace without knowing the mechanic exists.
+    const meanPay = (o) => (o.funds[0] + o.funds[1]) / 2;
+    const riders = [null, ...freeCrew(state, now)];
+    const best = runnableOps(state, content, now)
+      .flatMap((o) => riders.map((rider) => {
+        if (!laneFree(state, content, now, o, rider)) return null;
+        const odds = opOdds(state, o, rider, content, now);
+        return odds.blocked ? null : { o, rider, ev: odds.chance * meanPay(o) };
+      }))
+      .filter(Boolean)
+      .sort((a, b) => b.ev - a.ev)[0];
+    const op = best?.o;
+    // R116 — WHAT THE JOB WAS, not just that one happened. The board is the
+    // busiest verb in the game (1,189 launches on seed 2026, against 28
+    // splices) and the walk reported a single tally under `job`, so which
+    // job, whether anybody was carried, and what it paid all had to be
+    // re-derived by hand every time somebody asked. `startOperation` seals
+    // the outcome at launch — see campaign/operations.js — so the answer is
+    // already in the result and costs nothing to record.
+    const started = op && startOperation(state, op.id, best.rider?.id ?? null, content, now);
+    if (started?.ok) {
+      did('job', {
+        op: op.id,
+        crewed: !!started.run.chimeraId,
+        won: started.run.outcome.success,
+        pay: started.run.outcome.funds,
+      });
+    }
   }
   // The ring. The hardest garrison you hold pays the most xp per charge.
   // Rationed: the bucket refills three charges every half hour, so a walker
@@ -2069,7 +2128,44 @@ function walkAct(state, content, now, open, opts = {}) {
       .map((id) => ({ id, next: nextUpgrade(state, content, id) }))
       .filter((o) => o.next?.affordable)
       .sort((a, b) => a.next.level.cost - b.next.level.cost);
-    const pick2 = offers.find((o) => canSpend(o.next.level.cost));
+    // R116 — EXCEPT WHEN THE VAULT IS FULL, in which case the game has
+    // already told the player which upgrade to buy and cheapest-first is not
+    // listening. `extractionFit`'s own refusal reads "Render something down,
+    // or buy shelf space from the Extractor", and once `surplusParts` is
+    // empty — every part on the shelf a singleton, which is what a board of
+    // exotic fauna produces — the first half of that advice is not available
+    // and the second half is the only way out.
+    //
+    // Measured on seed 2026 over 180 days without this. Pre-R116 the walker
+    // finished on a 400-part shelf holding 330, not tight, 8 renderable and
+    // every graduation fitting. Post-R116 it finished on a 260-part shelf
+    // holding 259, tight, ZERO renderable and every graduation refused — so
+    // the pens filled to 115 head, the buy gate (which counts the whole pen)
+    // stopped buying at 265 against 1,772, and R177's variant lines went
+    // with it. One unbought shelf upgrade, and the whole ranch conveyor
+    // seized behind it.
+    //
+    // Found BY track rather than by name: whichever track grants shelf space
+    // is the one the refusal is about, and a typed id here would go stale
+    // the day the facility file is rearranged.
+    // AND IT SAVES FOR IT. Preferring the shelf only when it happens to be
+    // affordable fixed two of four seeds and left 2026 and 4242 jammed at
+    // 260 of 260: cheapest-first kept spending the money on something else
+    // before the shelf was ever reachable. A player told to buy shelf space
+    // stops buying other things. So while the vault is tight and a shelf
+    // upgrade still exists, this visit buys the shelf or buys nothing.
+    const shelfOf = (o) => (o.next?.level?.grants?.vaultParts ?? 0) > 0;
+    const tight = vaultPressure(state, content).tight;
+    // ONLY IF MONEY IS THE ONLY THING IN THE WAY. A shelf gated on a node
+    // the campaign has not taken is not something saving up reaches, and
+    // holding out for it would stop the walker buying ANY upgrade for the
+    // rest of the run — which is what the first draft did on seed 2026:
+    // facility stuck at 12 levels where the others reached 15.
+    const wantsShelf = tight && Object.keys(content.facility ?? {})
+      .map((id) => ({ id, next: nextUpgrade(state, content, id) }))
+      .some((o) => o.next && shelfOf(o) && !o.next.blockers.some((b) => b.kind !== 'funds'));
+    const shelf = wantsShelf && offers.find((o) => shelfOf(o) && canSpend(o.next.level.cost));
+    const pick2 = shelf || (wantsShelf ? null : offers.find((o) => canSpend(o.next.level.cost)));
     if (pick2 && buyUpgrade(state, content, pick2.id).ok) did('facility', { track: pick2.id });
   }
 
@@ -2386,8 +2482,23 @@ function walkAct(state, content, now, open, opts = {}) {
     // So when a line still owes the Dex a variant and the pens hold only one
     // of it, buy the mate. It is the cheapest thing on this list to want and
     // the only way those 34 parts exist.
+    // R116 — UP TO A PAIR, not the second of one. This read `heldOf === 1`,
+    // which buys the mate for a line you happen to be holding and NEVER buys
+    // the first of one you are not. That gap was invisible for as long as the
+    // board kept handing them over: five of the six variant species — ram,
+    // skunk, eagle, cobra, tortoise — are livestock on a job, and the petting
+    // zoo alone ran 721 times in 180 days rolling {goat, ram} at 40%. R116
+    // turned the petting zoo into a standing contract, which pays money and
+    // nothing else, and the only board job left carrying ram or skunk is the
+    // county fair — the least-run job on the board. Measured after that: ram
+    // bought TWICE in a campaign, skunk ZERO, and `alpine_ram` and
+    // `glider_skunk` are the two lines R177's gate reports missing.
+    //
+    // A player working the Splice-Dex for `glider_skunk` buys two skunks.
+    // Neither of the lists above reaches them: `fresh` is species never held
+    // at all, and ram and skunk have been in the Dex since the first hour.
     const heldOf = (id) => state.ranch.stock.filter((a) => a.species === id).length;
-    const mates = affordable.filter((sp) => heldOf(sp.id) === 1
+    const mates = affordable.filter((sp) => heldOf(sp.id) < 2
       && variantsOf(sp.id, content).some((v) => Object.values(content.parts)
         .some((p) => p.species === v.id && !(state.dex.parts ?? []).includes(p.id))));
     // R95 — one extraction is not six parts. An Extractor run yields a
@@ -2555,6 +2666,12 @@ export function voiceDiet(lines, content) {
     topShare: total ? +(ranked[0]?.[1] ?? 0) / total : 0,
     topLine: ranked[0]?.[0] ?? null,
     over5pct: ranked.filter(([, n]) => n / total > 0.05).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(3) })),
+    // R116 — THE LEAGUE TABLE, not just its top row. This entry's Done-when is
+    // written about the TEN most frequent phrasings ("came to nothing" has to
+    // leave them), and `topLine` plus a 5% filter can answer neither where a
+    // line sits nor what it is competing with. Twenty rows, because a rule
+    // about the top ten needs to see the ones just outside it move.
+    top20: ranked.slice(0, 20).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(4) })),
     // Authored in data/news.json and never once said in 180 days. R57/R58's
     // shape: content with no reader is content nobody wrote.
     //
@@ -2642,6 +2759,13 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     lastGen = g;
   };
 
+  // What the standing arrangement pays a day, or nothing if none is signed.
+  const contractDayRate = (s, c) => {
+    const held = activeContract(s);
+    const op = held && c.operations?.[held.opId];
+    return op ? contractPerDay(op, c) : 0;
+  };
+
   const snapshots = {};
   const snap = (day) => ({
     day,
@@ -2651,7 +2775,17 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     contestCount: state.campaign.contestCount ?? 0,
     income: Math.round(state.__walkIncome ?? 0),
     // The daily rates at this moment: what a month of full pay would be.
+    // R116 — AND THE RETAINER IS ONE OF THEM. `incomePerDay` is territory,
+    // and it is the number `tickWorld` actually pays with, so a standing
+    // arrangement must not be folded into it or the player is paid twice.
+    // But a contract is still passive income a PRESENT player collects, and
+    // the away rule compares what a month away banked against what a month
+    // of full pay would have been. Leaving it out of that denominator makes
+    // a signed retainer look like an absent player out-earning a present
+    // one — which is what it did: seed 4242 banked 8,661 against a 6,960
+    // that had never heard of contracts.
     incomeRate: Math.round(incomePerDay(state, content)),
+    contractRate: Math.round(contractDayRate(state, content)),
     upkeepRate: Math.round(upkeepPerDay(state, content)),
     captives: (state.campaign.captives ?? []).length,
     dissections: (state.directorStats?.dissections ?? []).length,
@@ -2977,6 +3111,29 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       if (e.kind === 'splice' && e.frame) tally[e.frame] = (tally[e.frame] ?? 0) + 1;
       return tally;
     }, {}),
+    // R116 — THE BUSIEST VERB IN THE GAME, broken out. `job` was one tally
+    // in `verbs`, which is the level of detail at which "the board is a slot
+    // machine" and "the board is fine and the WALKER only ever taps one
+    // button" look identical. Per-op, crewed-vs-solo, paid and won, plus the
+    // rate the Done-when is written in — launches per day.
+    jobs: (() => {
+      const runs = (state.__walkLog ?? []).filter((e) => e.kind === 'job');
+      const byOp = {};
+      for (const r of runs) byOp[r.op] = (byOp[r.op] ?? 0) + 1;
+      const crewed = runs.filter((r) => r.crewed).length;
+      const won = runs.filter((r) => r.won).length;
+      return {
+        launches: runs.length,
+        perDay: +(runs.length / days).toFixed(2),
+        crewed,
+        crewedPerDay: +(crewed / days).toFixed(2),
+        solo: runs.length - crewed,
+        won,
+        winPct: runs.length ? +(100 * won / runs.length).toFixed(1) : null,
+        paid: runs.reduce((n, r) => n + (r.pay ?? 0), 0),
+        byOp,
+      };
+    })(),
     duels: (state.__walkLog ?? []).filter((e) => e.kind === 'rival').length,
     breakouts: (state.__walkLog ?? []).filter((e) => e.kind === 'breakout').length,
     // R93 — THE LATE GAME, WHICH IS THE PART NOTHING MEASURED.
@@ -3038,6 +3195,11 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       enrolled: verbs['rehab-start'] ?? 0,
       sessions: verbs['rehab-session'] ?? 0,
       graduated: rehabEver.size,
+      // R116 — AND THE ONE STILL IN THE ROOM WHEN THE CLOCK STOPPED. A
+      // programme takes real hours, so a walk that halts on a fixed day can
+      // halt with one running; R139's "every programme started graduates"
+      // then reads 5 of 6 and calls a working Wing broken.
+      inProgress: (state.campaign.containment ?? []).filter((b) => b.rehab).length,
       retained: state.chimeras.filter((c) => c.rehabilitated).length,
       bays: (state.campaign.containment ?? []).length,
       cap: rehabGrants(state, content).bays,
