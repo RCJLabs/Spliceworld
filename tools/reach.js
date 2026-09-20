@@ -221,6 +221,10 @@ const WORN_FLOOR = 0.50;   // R158 — R140's design floor, no longer chasing a 
 // a campaign that stops rolling for them loses content the part floor cannot
 // see — 95.1% still clears 95%.
 const VARIANT_LINE_FLOOR = 5.5;
+// R116 — how many of the seeds must reach every variant line. The mean above
+// stopped separating break 347 once the walker could start a line from zero;
+// this is what replaced it. Derived beside the rule, not here.
+const VARIANT_FULL_SEEDS = 10;
 const TOTAL_PARTS = Object.keys(content.parts).length;
 {
   const per = [];
@@ -357,6 +361,29 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
   // The mean sits with room on both sides: 0.42 above clean, 0.35 below the
   // break, and it tolerates five seeds each losing a line before it fires.
   //
+  // R116 — AND THE MEAN STOPPED SEPARATING, so the seed COUNT is what holds
+  // this rule up now. Break 347 went MISSED in R116's full battery. Nothing
+  // is wrong with the break and nothing is wrong with the walker; the
+  // milestone simply made the campaign better at variant lines. `mates`
+  // widened from `heldOf === 1` to `heldOf < 2` so a line can be started from
+  // zero, which is what fixed R116's own reach loss — and it recovers most of
+  // what the pair-sort used to guarantee. Re-measured on this tree:
+  //
+  //                      clean      pair-sort deleted
+  //     mean lines       5.85/6     5.54/6      (was 5.92 / 5.15)
+  //     seeds at 6/6     12 of 13    8 of 13    (was 12 / 4)
+  //
+  // The break's cost in mean lines fell from 0.77 to 0.31, and 5.54 clears
+  // the 5.5 floor by four hundredths. A floor inside a 0.31-wide window is
+  // the zero-headroom trap this note rejected for the minimum three
+  // paragraphs up, so the mean does not move: it stays as a backstop against
+  // a collapse, and it is written down here that it no longer sees 347.
+  //
+  // The seed count is the statistic that still has room — twelve clean
+  // against eight broken, and the clean twelve is exactly what R177 measured.
+  // A floor of ten tolerates two seeds losing a line to content churn and
+  // still fires on a break that costs four.
+  //
   // The union is NOT asserted here, because it does not separate: both trees
   // reach all six lines across thirteen seeds. Saying so is cheaper than
   // letting the next reader assume it is covered.
@@ -371,11 +398,18 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
       console.log(`  variant lines: ${perLines.map((r) => `${r.seed}: ${r.lines.size}`).join(', ')}`);
       console.log(`  mean ${meanLines.toFixed(2)} of ${ALL_LINES.length} lines`);
     }
+    const short = perLines.filter((r) => r.lines.size < ALL_LINES.length)
+      .map((r) => `${r.seed} missed ${ALL_LINES.filter((l) => !r.lines.has(l)).join('/')}`);
     if (meanLines < VARIANT_LINE_FLOOR) {
-      const short = perLines.filter((r) => r.lines.size < ALL_LINES.length)
-        .map((r) => `${r.seed} missed ${ALL_LINES.filter((l) => !r.lines.has(l)).join('/')}`);
       fails.push(`variant lines: the average campaign rolls for ${meanLines.toFixed(2)} of`
         + ` ${ALL_LINES.length} variant lines (under ${VARIANT_LINE_FLOOR})`
+        + ` — ${short.join('; ')}`);
+    }
+    // R116 — the rule the mean can no longer carry; see the note above.
+    const fullSeeds = perLines.filter((r) => r.lines.size === ALL_LINES.length).length;
+    if (fullSeeds < VARIANT_FULL_SEEDS) {
+      fails.push(`variant lines: only ${fullSeeds} of ${perLines.length} campaigns roll for all`
+        + ` ${ALL_LINES.length} lines (under ${VARIANT_FULL_SEEDS})`
         + ` — ${short.join('; ')}`);
     }
   }
