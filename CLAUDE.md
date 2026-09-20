@@ -47,7 +47,12 @@ the session.
   tier, so the whole TWA story was only ever checked in the go-red direction.
   They cost 72 CPU-seconds between them; the rest of the rise is lane packing.
 - `node tools/battery.js --only <the breaks this milestone added>` — the new rules go red on demand.
-- `npm test` — **~4 min wall, ~900 CPU-seconds on four lanes, run alone.**
+- `npm test` — **~4 min wall on a warm walk cache, ~1,130 CPU-seconds on four
+  lanes, run alone.** R117 read 449s wall / 1,126 CPU-s of 1,342 budgeted, and
+  192s of that was the rebuild allowance for twelve walks the milestone's own
+  source changes invalidated — so a milestone that touches the engine pays
+  that on its first run and not on its second. Budget the COLD number (~7.5
+  min) when planning an evening, not the warm one.
   Run it BEFORE or AFTER the battery, never alongside it. R154 followed the old
   "~3 min, runs in parallel" advice and starved the height gate's fold walk into
   a false red (`pens declares 20 folds to walk and the gate got into 1`), and
@@ -57,7 +62,7 @@ the session.
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~3.1h at 382 breaks, MEASURED at R116 rather than
+**The full battery (~3.1h, MEASURED at R116 rather than
 extrapolated, and run in four `--only` chunks: 98 breaks in 19m, 95 in 49m,
 95 in 96m, 98 in 52m — 216 minutes including three redundant baselines, so
 one uninterrupted run is a little over three hours. Per-break cost varies by
@@ -72,8 +77,10 @@ whose partial results survive a container restart. Two full runs were lost at
 R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327 are
-retired) and `seq` makes the run refuse with "no break numbered".), on these
-triggers only:**
+retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
+386 NOW — R116 retired 327 and R117 added 390-394 for the width gate — so the
+3.1h above is a reading taken over a slightly shorter list and is a floor,
+not a quote.), on these triggers only:**
 - A milestone that **changes an existing gate's logic** rather than adding one.
 - Before a release, or any push to `main` that is not a single milestone.
 - Every ~5 milestones, as a rot check, whether or not anything looks wrong.
