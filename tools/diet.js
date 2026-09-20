@@ -152,6 +152,10 @@ for (const [name, { key, what, min }] of Object.entries(SYSTEMS)) {
 // it is removed rather than left to go MISSED. Break 151 — the planner not
 // weighing combos at all — separates 32.6% from 1.2% and stays.
 const COMBO_SEEDS = [2026, 7, 101, 4242, 55, 900, 31];
+// R116 — the share of kept chimeras that must wear each bay the Theater
+// sells. One home, so the rule below and its failure text read the same
+// number; see the derivation beside that rule.
+const BAY_FLOOR = 1 / 3;
 // Measured 32.6%; break 151 puts it at 1.2%. The floor sits between them and
 // near enough to today's number that drift fails.
 const COMBO_REACH = 0.22;
@@ -207,7 +211,43 @@ const COMBO_REACH = 0.22;
   // asks the question for all of them at once.
   //
   // Counted over kept chimeras, which is the population every other statistic
-  // is drawn from. Today: 68 of 96 wear a second organ, 9-11 per seed.
+  // is drawn from.
+  //
+  // R116 — AND IT IS A SHARE, NOT AN EXISTENCE CHECK, which is the whole
+  // difference between a rule and a rule-shaped comment. This shipped asking
+  // whether the count was greater than ZERO, on a population its own note had
+  // already measured at "68 of 96". R116's full battery found what that costs:
+  // breaks 272 and 273 patch the planner so it can never fill `organ2`, and
+  // the gate stayed GREEN through both.
+  //
+  //     clean tree        67 of 94 kept chimeras wear organ2   71.3%
+  //     under break 272    2 of 93                              2.2%
+  //
+  // Two survivors are enough to satisfy `> 0`, and they do not come from the
+  // planner at all: `campaign/rehab.js` lands a captured donor's second organ
+  // in `organ2` on its way into the roster, so a bay the Theater sells and the
+  // build planner cannot reach still reads "alive" on the strength of two
+  // creatures somebody else built. R157's worn floor, exactly — a check that
+  // stops tracking the number it was written about.
+  //
+  // THE FLOOR IS A THIRD, and it is derived from the spread rather than fitted
+  // to the break. Per seed on the clean tree, 180 days:
+  //
+  //     2026 8/13   7 9/13   101 10/13   4242 8/13
+  //       55 11/14  900 11/14   31 10/14
+  //     worst 61.5%   median 71.4%   best 78.6%   pooled 67/94 = 71.3%
+  //
+  // A third sits 28 points under the WORST clean seed, so neither content
+  // churn nor a change in the walker's taste can false-red it (R158's lesson
+  // that a flaky floor is worse than a loose one), while a planner that cannot
+  // reach the bay reads 2.2% and fires by a factor of fifteen. Zero is still
+  // the loudest case and still fails, so nothing R147 caught is given up.
+  //
+  // It stays a rule about SOCKETS rather than about `organ2`, which is R147's
+  // design: the next bay the Theater sells is covered with no edit. If that
+  // bay is meant to be rare — worn by a tenth of a roster by design — the
+  // answer is to give the floor a per-socket exception with its own
+  // derivation, not to lower it for everything.
   {
     const worn = new Map();
     let bodies = 0;
@@ -225,17 +265,20 @@ const COMBO_REACH = 0.22;
     const sellable = new Set(
       (content.facility?.theater?.levels ?? []).flatMap((lv) => lv.grants?.sockets ?? [])
     );
-    const dead = [...sellable].filter((socketId) => !(worn.get(socketId) > 0));
+    const share = (socketId) => (bodies ? (worn.get(socketId) ?? 0) / bodies : 0);
+    const starved = [...sellable].filter((socketId) => share(socketId) < BAY_FLOOR);
     if (REPORT) {
       console.log(`
 sockets across ${bodies} kept chimeras: `
-        + [...sellable].map((k) => `${k} ${worn.get(k) ?? 0}`).join(', '));
+        + [...sellable].map((k) => `${k} ${worn.get(k) ?? 0} (${(100 * share(k)).toFixed(1)}%)`).join(', '));
     }
-    if (dead.length) {
-      fails.push(`dead bay: the Surgery Theater sells ${dead.join(', ')} and not one of the`
-        + ` ${bodies} chimeras these campaigns kept is wearing it`
-        + ' — a bay the balance model cannot fill makes every number it derives'
-        + ' a measurement of a different game');
+    if (starved.length) {
+      fails.push('starved bay: the Surgery Theater sells '
+        + starved.map((k) => `${k} (${worn.get(k) ?? 0} of ${bodies}, `
+          + `${(100 * share(k)).toFixed(1)}%)`).join(', ')
+        + ` and under ${(100 * BAY_FLOOR).toFixed(0)}% of the chimeras these campaigns kept`
+        + ' is wearing it — a bay the balance model cannot fill makes every number it'
+        + ' derives a measurement of a different game');
     }
   }
 }
