@@ -3959,18 +3959,20 @@ const BREAKS = [
     // was written to break: seven independent cooldowns summing to 10.05 a
     // day that no constant can move.
     //
-    // AIMED AT `runnableOps`, AND THE FIRST DRAFT WAS NOT. It patched the
-    // refusal inside `startOperation` instead and came back MISSED, because
-    // nothing that measures the PACE ever reaches that line: the walker asks
-    // `runnableOps` what it may launch, gets an empty list on an empty
-    // bucket, and never calls `startOperation` at all. The refusal down
-    // there is a real second line — a player can tap a board that was
-    // rendered before the bucket emptied — but it is belt to this brace, and
-    // a break has to patch the line that actually moves the number.
-    n: 383, gate: SHARD_D, name: 'the board stops charging for a launch, and goes back to a metronome',
+    // AIMED AT THE ARITHMETIC, AND TWO EARLIER DRAFTS WERE NOT. Patching
+    // either REFUSAL comes back MISSED, and the reason is worth keeping: the
+    // bucket is guarded twice — `runnableOps` returns an empty list and
+    // `startOperation` refuses by name — so removing one leaves the other
+    // holding the pace. That redundancy is deliberate (a player can tap a
+    // board rendered before the bucket emptied) but it means no single
+    // refusal is load-bearing, and a break has to patch the line that
+    // actually decides the number. `outstanding` is that line: it is how
+    // many refills are still owed, and without it the bucket reads full
+    // forever however recently it was spent.
+    n: 383, gate: SHARD_D, name: 'the bucket stops reading its own refill clock, and the board is always full',
     file: 'campaign/operations.js',
-    anchor: '  const bucket = boardCharges(state, content, now);\n  if (!bucket.ready) return [];',
-    to: '  const bucket = boardCharges(state, content, now);\n  if (false) return [];',
+    anchor: '  const outstanding = Math.max(0, Math.ceil((refillAt - now) / regen));',
+    to: '  const outstanding = 0;',
   },
   {
     // …AND THE SAME DEFECT FROM THE OTHER END. The check stays, the spend

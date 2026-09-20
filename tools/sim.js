@@ -3195,6 +3195,11 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       enrolled: verbs['rehab-start'] ?? 0,
       sessions: verbs['rehab-session'] ?? 0,
       graduated: rehabEver.size,
+      // R116 — AND THE ONE STILL IN THE ROOM WHEN THE CLOCK STOPPED. A
+      // programme takes real hours, so a walk that halts on a fixed day can
+      // halt with one running; R139's "every programme started graduates"
+      // then reads 5 of 6 and calls a working Wing broken.
+      inProgress: (state.campaign.containment ?? []).filter((b) => b.rehab).length,
       retained: state.chimeras.filter((c) => c.rehabilitated).length,
       bays: (state.campaign.containment ?? []).length,
       cap: rehabGrants(state, content).bays,

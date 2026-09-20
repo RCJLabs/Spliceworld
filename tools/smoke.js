@@ -21612,8 +21612,16 @@ if (inShard('empire')) {
     // 1. THE ONE THAT MATTERS. A fee, a real-world clock and a curriculum
     //    that the campaign abandons half way would be the actual failure the
     //    entry described. It has never happened: every programme finishes.
-    assert.equal(w.graduated, w.enrolled,
-      `every programme started graduates (${w.graduated} of ${w.enrolled})`);
+    // R116 — MINUS WHOEVER IS STILL IN THE ROOM. A programme takes real
+    // hours and the walk halts on a fixed day, so it can halt with one
+    // running: seed 2026 read 5 graduated of 6 enrolled and this rule called
+    // a working Wing broken. `inProgress` is what the containment board is
+    // still holding at that instant, so the claim is unchanged — everything
+    // that had time to finish, finished — and it is no longer a coin flip on
+    // where day 180 lands.
+    assert.equal(w.graduated, w.enrolled - (w.inProgress ?? 0),
+      `every programme started graduates (${w.graduated} of ${w.enrolled}, `
+      + `${w.inProgress ?? 0} still in the Wing when the clock stopped)`);
 
     // 2. AND IT IS NOT VACUOUS. `0 === 0` would satisfy the rule above on a
     //    campaign that never enrolled anything, which is exactly the shape
