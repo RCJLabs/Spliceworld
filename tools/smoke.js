@@ -1133,7 +1133,7 @@ assert.ok(myLine !== -1 && (foeLine === -1 || myLine < foeLine), 'priority move 
   //    because the control happens to be same-signed on turns across those
   //    two and only `left` saves it. A gate that cannot defend its own
   //    sample size is one edit from meaning nothing.
-  const GENE_MIN_SALTS = Number(process.env.GENE_MIN_SALTS || 6);
+  const GENE_MIN_SALTS = 6;
   assert.ok(GENE_SALTS.length >= GENE_MIN_SALTS,
     `the sign test needs at least ${GENE_MIN_SALTS} salts to mean anything `
       + `(2^(1-n) is the chance a dead gene holds a direction by luck); got ${GENE_SALTS.length}`);

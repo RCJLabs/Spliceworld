@@ -336,7 +336,36 @@ if (failed.length) {
 // and the BATTLE COUNT for a sample growing against nothing at all. R168
 // wrote the first and R170 found it could not see a proportional change; the
 // second is the one that catches break 262, at 2.4x against a 10% band.
-const CPU_BUDGET_S = 1150;
+// R118 — 1150 -> 1425, AND THE A/B IS THE WHOLE OF THE ARGUMENT.
+//
+// R118 came in 79 CPU-seconds over and I spent an hour attributing that to
+// the milestone's own gate, wrongly and twice — once by reading R117's
+// "1,126 of 1,342 budgeted" as 216s of headroom when 192 of it was a cold
+// walk allowance, and once by costing cell-runs at their uncontended price
+// when R155 had already measured contention at ~3x. Both errors pointed the
+// same way: at my code. The A/B this gate prints five lines below settles it
+// in twenty minutes, and it should have been the FIRST thing run, not the
+// last:
+//
+//   R117's tree (d2ec4a1), today's box, warm      1170   <- no R118 in it
+//   R118's tree, same box, same hour, warm        1229
+//
+// The old tree is over the old budget by 20 CPU-seconds with none of this
+// milestone's code in it. The host has moved again — up 57% on the 743 R170
+// read two milestones ago, and past the 998 that 1150 was built to ceiling.
+// The gene probe's six salts cost 59 CPU-seconds of the 79, which is 5%, and
+// the other 20 were never mine.
+//
+// 1425 is 1229 plus 15%, rounded up to the nearest 25 — R170's arithmetic on
+// R170's band, applied to the slowest host yet observed. What it does NOT do
+// is loosen the thing R168 warned about: the two breaks that need this number
+// to bite are 261 and 262, and neither lives in the margin. 261 (the shard
+// filter fails open, so all four shards run the whole of smoke) reads about
+// 4,600 on this box, three times the new ceiling. 262 is already not a
+// seconds catch at all — R170 measured it fitting under 1150 — and is held by
+// the BATTLE COUNT below, which is the rule a proportional change cannot
+// hide from. Both were re-run red against this number before it shipped.
+const CPU_BUDGET_S = 1425;
 // Measured twice, two ways: 15.4s from this suite's own cold-minus-warm
 // delta over 13 walks, and 16.4s for one walk timed alone twenty times. 16
 // is the middle of the two, not a cushion.
