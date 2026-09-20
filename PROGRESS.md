@@ -121,11 +121,16 @@ down; R117 only made it visible.
 ### Verification
 
     tools/wide.js               EXIT 0, six screens at four widths
-    tools/height.js             EXIT 0, 9 screens, 129 folds
+    tools/height.js             EXIT 0, 9 screens, 129 folds, every budget
     tools/battery.js --anchors  386 anchors match exactly once
-    tools/battery.js --baseline every gate green
-    breaks 390-394              5 of 5 caught
-    npm test                    green
+    tools/battery.js --baseline 40 gates PASS, 0 FAIL
+    breaks 390-394              5 caught, 0 missed · BATTERY_EXIT=0
+    npm test                    1,126 CPU-s of 1,342 · 449s wall · EXIT 0
+    npm run release             CACHE names the shell it holds (134 files)
+    rail on a FRESH save        1,280px: two cards, no null, no console error
+
+The per-milestone tier — anchors, baseline and `--only` over five breaks —
+was 10m41s with `wide` now in the baseline list.
 
 ### Known issues / next session's first task
 

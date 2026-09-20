@@ -46,6 +46,10 @@ the session.
   and the IndexedDB round-trip — which had been wired to breaks but to neither
   tier, so the whole TWA story was only ever checked in the go-red direction.
   They cost 72 CPU-seconds between them; the rest of the rise is lane packing.
+  R117 added `tools/wide.js` to the list on the day it was written, for the
+  same reason, and the whole per-milestone tier — anchors, baseline and
+  `--only` over five breaks — read **10m41s** on that tree. The baseline was
+  not isolated inside that, so 583s remains the last clean reading of it.
 - `node tools/battery.js --only <the breaks this milestone added>` — the new rules go red on demand.
 - `npm test` — **~4 min wall on a warm walk cache, ~1,130 CPU-seconds on four
   lanes, run alone.** R117 read 449s wall / 1,126 CPU-s of 1,342 budgeted, and
