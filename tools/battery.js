@@ -3540,6 +3540,10 @@ const BREAKS = [
   // across four board jobs with one sentence each means job news repeats
   // verbatim for a whole campaign, which is the complaint R109 exists to
   // answer. Filed as R183 rather than papered over with a break that passes.
+  //
+  // R183 SHIPPED THE CONTENT AND THE RULE RETURNED AS BREAK 399, where it
+  // goes red on demand. The id stays retired: 327's history is "could never
+  // fire", and a number carrying that should not be quietly reissued.
   {
     // AN EVENT LOSES ITS EMITTER. The pool stays in news.json, fully
     // authored, and nothing in the game can ever say it — R57/R58's shape,
@@ -6063,6 +6067,56 @@ const BREAKS = [
     file: 'splice/physiology.js',
     anchor: '      for (const [stat, v] of Object.entries(content.traits?.[traitId]?.statBonus ?? {})) {',
     to: '      for (const [stat, v] of Object.entries({})) {',
+  },
+
+  // --- gate: the job headline (R183 — one sentence, 542 launches) ----------
+  //
+  // BREAK 327, BACK, AND MEANING SOMETHING THIS TIME. R116 retired it as a
+  // perfect no-op: it patched `pickPooled` on `op.news` to take the first
+  // entry, and every `news` in the data was a single STRING, so the patch and
+  // the original computed the same value. The id stays retired — the rule
+  // returns here rather than reusing a number whose history says "could never
+  // fire". Now that the four board jobs carry pools, the same patch takes a
+  // job back to one sentence and the 1% rule says so.
+  {
+    // THE SUCCESS HEADLINE, which is the line the entry is about: the walker
+    // launches 542 jobs in 180 days and every win says its job's line, so
+    // freezing the pool puts one sentence at ~3.4% of everything the county
+    // says. Caught by the 1% rule, not by rule 2's 5% ceiling — which is the
+    // whole reason this milestone wrote a tighter one.
+    n: 399, gate: SHARD_D, name: 'a job stops rotating its headline, so one sentence is 3% of the wire again',
+    file: 'campaign/operations.js',
+    anchor: '    const headline = pickPooled(state, `op:${op.id}`, op.news);',
+    to: '    const headline = Array.isArray(op.news) ? op.news[0] : op.news;',
+  },
+  {
+    // AND THE SECOND READER, which R183's entry did not know about. The same
+    // pool is read from TWO places — a job's success, and a retainer's daily
+    // ledger line in `settleContracts`, which alternates with `op_contract`.
+    // The entry described one call site and named the petting zoo as its
+    // example; the petting zoo is never launched by the walker at all, and
+    // what it actually says comes through THIS line. A rule that only covered
+    // the success path would have left the contract half frozen and green.
+    n: 400, gate: SHARD_D, name: "a retainer's ledger line stops rotating, and the quiet half of the board repeats",
+    file: 'campaign/operations.js',
+    anchor: '      ? fill(pickPooled(state, `op:${op.id}`, op.news), { op: op.name })',
+    to: '      ? fill(Array.isArray(op.news) ? op.news[0] : op.news, { op: op.name })',
+  },
+  {
+    // THE AUTHORING HALF, and it needs its own break because the WALK cannot
+    // see it. Break 329 catches a pool whose path stops resolving, via the
+    // section-reach gate; it does NOT catch a pool that is merely trimmed,
+    // because the reach gate matches the authored block as a prefix or suffix
+    // of the live array and a shorter block still matches. So: cut two lines
+    // out of a job's pool as somebody tidying near-duplicates would, leaving
+    // three headlines where the rule asks four. Nothing else in the tree goes
+    // red on this.
+    n: 401, gate: SHARD_D, name: 'a job pool is trimmed to three headlines, under the count the 1% rule needs',
+    file: 'data/voice-pools.json',
+    anchor: '    "Reptile house completes a full recount and arrives at a different, worse number.",\n'
+      + '    "Reptile house reports one vivarium empty and its catch entirely undamaged.",\n'
+      + '    "Keeper insists the reptile house door was shut. The door agrees, in writing.",',
+    to: '    "Reptile house completes a full recount and arrives at a different, worse number.",',
   },
 ];
 

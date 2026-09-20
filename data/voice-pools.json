@@ -421,6 +421,30 @@
     "Innovation fund reports a successful placement and a mild headache.",
     "Regional fund's quarterly report includes one line item and no photograph."
   ],
+  "operations.county_fair.news": [
+    "County fair's Grand Champion is not in its pen. The rosette is, which organisers call \"a courtesy\".",
+    "County fair reschedules the livestock parade around a gap in the livestock.",
+    "Fair committee reports one prize animal relocated by parties describing themselves as \"enthusiasts\".",
+    "County fair's champion pen stands open and immaculate. Judges note the excellent grooming."
+  ],
+  "operations.aquarium.news": [
+    "Municipal aquarium reports a vacancy in the big tank and a very wet corridor.",
+    "Aquarium closes the viewing tunnel pending a headcount it has already finished.",
+    "Aquarium staff describe the missing exhibit as \"rehomed, in a manner of speaking\".",
+    "Municipal aquarium orders a second lid. Marine experts question the premise."
+  ],
+  "operations.aviary.news": [
+    "Aviary confirms the skylight now opens from the inside. Nobody built it that way.",
+    "Aviary down one raptor. The remaining birds are described as \"smug\".",
+    "Ornithological society asks the aviary to stop calling it a migration.",
+    "Aviary reports the top perch empty and the lock thoughtfully undone."
+  ],
+  "operations.reptile_house.news": [
+    "Reptile house completes a full recount and arrives at a different, worse number.",
+    "Reptile house reports one vivarium empty and its catch entirely undamaged.",
+    "Keeper insists the reptile house door was shut. The door agrees, in writing.",
+    "Reptile house asks the public not to approach anything unusually charming."
+  ],
   "campaignMeta.contestation.news.opened": [
     "COUNTER-OFFENSIVE: vehicles on the road to {node}. Revenue is suspended while everyone shouts.",
     "A convoy is rolling on {node}. The coalition has remembered it owns trucks.",

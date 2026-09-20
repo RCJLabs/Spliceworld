@@ -2694,6 +2694,13 @@ export function voiceDiet(lines, content) {
       return [...t.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40).map(([line, n]) => ({ line, n }));
     })(),
     top: ranked.slice(0, 120).map(([t, n]) => ({ t, n, share: +(n / total).toFixed(3) })),
+    // R183 — THE WHOLE TALLY, because a rule about ONE NAMED PHRASING cannot
+    // read a top-N list. `top` is ranked, so a job headline that has just been
+    // split four ways drops out of it — and a rule that reads a leaderboard
+    // then cannot tell "quiet now" from "off the end of the list", which is
+    // the same failure mode as a gate that passes by measuring nothing. Keyed
+    // by the template itself so a caller asks about the line it is holding.
+    heard: Object.fromEntries(ranked),
   };
 }
 
