@@ -115,6 +115,43 @@ home (three sites were hand-rolling `x 24`). The cooldown block picked a job
 that is no longer on the board. `v59` has a fixture. 4.6 KB of R116 prose moved
 into `data/notes/operations.md` and paid for the three eager budgets.
 
+### The full battery found a rule that counted to one
+
+Breaks **272 and 273** went MISSED. Both patch the walker's build planner so
+it can never fill `organ2`; R147's rule stayed green through both, because it
+asked whether the count was greater than ZERO on a population its own note
+recorded as "68 of 96".
+
+    clean tree        67 of 94 kept chimeras wear organ2   71.3%
+    under break 272    2 of 93                              2.2%
+
+The break destroys 97% of the effect the rule protects, and two survivors
+satisfy `> 0`. **Those two are not planner output at all** —
+`campaign/rehab.js` lands a captured donor's second organ in `organ2` on its
+way into the roster, so a bay the Theater sells and the planner cannot reach
+read "alive" on the strength of two creatures somebody else built.
+
+**Not R116's doing, and measured rather than assumed:** the clean tree reads
+67/94 where R147 recorded 68/96. Nothing this milestone did moved it. The rule
+was this weak the day it shipped, and the R105 session where these two breaks
+briefly came back was luck rather than sensitivity — back then the rehab path
+happened to yield zero.
+
+`BAY_FLOOR` is a third, derived from the seven-seed spread (worst 61.5%,
+median 71.4%, best 78.6%) rather than fitted to the break: 28 points under the
+worst clean seed so churn cannot false-red it, and fifteen times the broken
+reading. Zero still fails. Both breaks now go red; `BATTERY_EXIT=0` on the
+baseline plus 272/273.
+
+### The battery's own clock, measured again
+
+R173 read 8,277s for 339 breaks warm. This session measured **roughly one
+break per minute** with the walk cache warm — 21 breaks in ~20 minutes of
+break time after a ~10 minute baseline — which puts 389 breaks at **five to
+six hours**, not the 2h20m the note quotes. CLAUDE.md already warns the figure
+has gone stale three times and to treat any number in it as a floor. This is
+the fourth time; the note now says five to six.
+
 ### The twenty-four-walk census, which is the expensive thing this session bought
 
 Twelve seeds, 180 days, `stopAtDominion: false`, on THIS tree and on pre-R116
@@ -137,9 +174,11 @@ and not fixed here — a vault full of treasure has no exit.
     npm test              suite ✓ 11 jobs, 978 CPU-s of 1246, 327s wall ALONE
     height / a11y         both ✓, each run alone on an idle box
     roadmap               ✓ 25 numbers, 7 queued and §9.0 lists exactly those
+    battery --only 272,273  BATTERY_EXIT=0, both caught after the floor fix
     full battery          TIER TRIGGER: this milestone changes existing gates'
                           logic (the hunt, splice and Wing floors, the away
-                          rule, the cooldown block and R114's fuzz)
+                          rule, the cooldown block, R114's fuzz and now the
+                          Theater's bay rule)
 
 R178's release gate earned its place in the tier here: the first `--only` run
 came back `BATTERY_EXIT=1` on a green break score, because the stylesheet had
