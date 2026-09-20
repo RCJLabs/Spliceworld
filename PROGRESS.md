@@ -49,6 +49,22 @@ evidence are deleted. Three things the change forced:
 both; **at 50 the control's turns go negative on all six salts** and the
 discriminator is gone.
 
+### Verification
+
+    smoke (unsharded)           GATE_EXIT=0, all 12 genes + the control
+    battery --anchors           390 anchors match exactly once
+    breaks 395-398              4 caught, 0 missed · BATTERY_EXIT=0
+    FULL BATTERY (gate change)  390 caught, 0 missed, four chunks EXIT=0
+                                25m + 81m + 152m + 65m = 323m
+    npm test                    see below
+
+**The full battery cost 5h23m, not the ~3.1h CLAUDE.md recorded** — 4h55m for
+one uninterrupted run once three redundant baselines come out. That is the
+fourth reading of that number and the third time it was wrong, so the file now
+says to treat it as stale by default. The expensive breaks cluster in the
+LATER numbering: chunk 1 (25m) would have predicted a 100-minute battery and
+chunk 3 alone cost 152.
+
 ### Known issues / next session's first task
 
 Queue 8: R176, R179, R180, R181, R182, R183, R184, R185. R184 still needs a

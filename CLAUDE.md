@@ -66,14 +66,19 @@ the session.
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~3.1h, MEASURED at R116 rather than
-extrapolated, and run in four `--only` chunks: 98 breaks in 19m, 95 in 49m,
-95 in 96m, 98 in 52m — 216 minutes including three redundant baselines, so
-one uninterrupted run is a little over three hours. Per-break cost varies by
-more than an order of magnitude between gates, so ANY breaks-per-minute
-figure taken from a slice is wrong: this line has now been wrong in BOTH
-directions, ~2h20m when stale and ~5-6h when extrapolated from twenty-one
-expensive breaks. Re-measure the total; never scale a sample.
+**The full battery (~4h55m, RE-MEASURED at R118 over all 390 breaks in four
+`--only` chunks: 98 in 25m, 98 in 81m, 98 in 152m, 96 in 65m — 323 minutes
+including four baselines, so one uninterrupted run is a little under five
+hours. R116 read 216 minutes for the same shape of run and this line said
+~3.1h; it is now the FOURTH reading and the third time the number was wrong,
+so treat any figure here as stale by default and re-measure before planning
+an evening around it. Per-break cost varies by more than an order of
+magnitude between gates and the expensive ones cluster in the LATER
+numbering — chunk 1 would have predicted a 100-minute battery and chunk 3
+alone cost more than that. ANY breaks-per-minute figure taken from a slice is
+wrong: this line has been wrong in both directions, ~2h20m when stale and
+~5-6h when extrapolated from twenty-one expensive breaks. Re-measure the
+total; never scale a sample.
 
 CHUNK IT. `--only` re-runs the whole baseline each time — about ten minutes a
 chunk, thirty wasted across four — and that is the right price for a run
@@ -82,9 +87,8 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327 are
 retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-386 NOW — R116 retired 327 and R117 added 390-394 for the width gate — so the
-3.1h above is a reading taken over a slightly shorter list and is a floor,
-not a quote.), on these triggers only:**
+390 NOW — R117 added 390-394 for the width gate and R118 added 395-398 for
+the gene probe.), on these triggers only:**
 - A milestone that **changes an existing gate's logic** rather than adding one.
 - Before a release, or any push to `main` that is not a single milestone.
 - Every ~5 milestones, as a rot check, whether or not anything looks wrong.
