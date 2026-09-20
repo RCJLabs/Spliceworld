@@ -4360,10 +4360,25 @@ const BREAKS = [
   {
     // §9.0 is the queue a session reads. A tick added without the list being
     // told is the drift that makes it worth reading at all.
+    // R116 — AND THIS BREAK MUST BE RE-AIMED THE DAY ITS TARGET SHIPS, which
+    // is the trap R167 wrote up in 277 below and this one still walked into.
+    // It pointed at R116 while R116 was queued. R116 shipping left the anchor
+    // matching perfectly and the PATCH meaningless: appending a second tick to
+    // an entry that is already, correctly, ticked and already gone from §9.0
+    // leaves a consistent document, so the gate passed and the break went
+    // MISSED in R116's own full battery.
+    //
+    // `--anchors` CANNOT catch this, which is the whole danger and the reason
+    // this note is long: a stale anchor is loud, a stale MEANING behind a live
+    // anchor is silent. 277 escaped it by patching the LIST instead of a named
+    // entry; this rule cannot, because the failure it models is exactly "an
+    // ENTRY says shipped while the queue still lists it", so it has to name
+    // one. Whoever ships R181: move this to another entry §9.0 still queues,
+    // and do not wait for `--anchors` to remind you, because it will not.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R116 — The jobs board is a slot machine.**',
-    to: '- **R116 — The jobs board is a slot machine.** ✅',
+    anchor: '- **R181 — Henchmen, and the end of being one person.**',
+    to: '- **R181 — Henchmen, and the end of being one person.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.
