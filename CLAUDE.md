@@ -57,17 +57,23 @@ the session.
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~5-6h warm at 389 breaks — measured at R116 as roughly ONE
-BREAK PER MINUTE with the walk cache warm: 21 breaks in ~20 minutes of break
-time, after a ~10 minute baseline. Budget six hours, and do not start one you
-cannot let finish. Every earlier figure in this note turned out to be a floor:
-~47 min, then R159's ~1h29m for 258, then ~2h20m warm / ~3h cold at 339 —
-R173's single run was 8,277s with the cache warm; R114's was ~2h58m across two
-runs with it cold, the first cut off by its own 9,000s timeout. That is FOUR
-times this line has gone stale in the same direction, so treat whatever it
-says as a lower bound and re-measure rather than plan against it. The CACHE
-STATE still moves the number more than the break count does, so warm it
-first.), on these triggers only:**
+**The full battery (~3.1h at 382 breaks, MEASURED at R116 rather than
+extrapolated, and run in four `--only` chunks: 98 breaks in 19m, 95 in 49m,
+95 in 96m, 98 in 52m — 216 minutes including three redundant baselines, so
+one uninterrupted run is a little over three hours. Per-break cost varies by
+more than an order of magnitude between gates, so ANY breaks-per-minute
+figure taken from a slice is wrong: this line has now been wrong in BOTH
+directions, ~2h20m when stale and ~5-6h when extrapolated from twenty-one
+expensive breaks. Re-measure the total; never scale a sample.
+
+CHUNK IT. `--only` re-runs the whole baseline each time — about ten minutes a
+chunk, thirty wasted across four — and that is the right price for a run
+whose partial results survive a container restart. Two full runs were lost at
+R116 before chunking: one to a tree edited underneath it, one to a restart
+twenty-five minutes in. Build the id list from the file, because break
+numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327 are
+retired) and `seq` makes the run refuse with "no break numbered".), on these
+triggers only:**
 - A milestone that **changes an existing gate's logic** rather than adding one.
 - Before a release, or any push to `main` that is not a single milestone.
 - Every ~5 milestones, as a rot check, whether or not anything looks wrong.

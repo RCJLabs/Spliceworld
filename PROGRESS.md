@@ -152,6 +152,67 @@ six hours**, not the 2h20m the note quotes. CLAUDE.md already warns the figure
 has gone stale three times and to treat any number in it as a floor. This is
 the fourth time; the note now says five to six.
 
+### The full battery, and the five gates that had stopped asking
+
+382 breaks, run in four `--only` chunks because the container restarted under
+the first two attempts. **Six misses, all closed.**
+
+    272/273  the bay rule asked "> 0" on a population it measured at 68/96
+    106      the job row's fixture only ever asked the permissive question
+    276      the queue tick was aimed at the entry this milestone shipped
+    347      the variant-line mean stopped separating a better walker
+    327      could never have fired at all — retired, filed as R183
+
+**Only 272/273 was rot.** 106 was mine, from the fixture edit earlier this
+same session. 276, 347 and (indirectly) 327 are R116's cascade — and in two
+of those the game got BETTER and the rule simply stopped binding:
+
+- **347.** `mates` widened to `heldOf < 2` so a variant line can start from
+  zero — R116's own reach fix — and that recovers most of what R95's
+  pair-sort guaranteed. The break's cost fell from 0.77 mean lines to 0.31,
+  clearing the 5.5 floor by four hundredths. The mean stays as a backstop and
+  the SEED COUNT carries the rule now: 12 of 13 clean, 8 of 13 broken, floor
+  10. R177 measured that statistic and did not use it.
+- **276.** It ticks a QUEUED entry to prove §9.0 notices, and it named R116.
+  Shipping R116 made the patch a no-op on a consistent document.
+
+**A live anchor can hide a dead patch, and `--anchors` cannot see it.** That
+is the session's most reusable finding, and it bit twice (276, 327). A stale
+anchor is loud — the run stops and names it. A stale MEANING behind a live
+anchor is silent and reads as a green tick. R167 had already learned this on
+break 277 and solved it by patching the list rather than a named entry; 276
+cannot borrow that fix and now carries a warning instead.
+
+**327 is the one that was never real.** Every `news` in operations.json is a
+single string; `pickPooled` on a one-item list is the identity, and the
+cursor advances by `(at + 1) % 1`. Patch and original compute the same value.
+It is not R116's (no commit touching that file in the last 25 carried an
+array) and not re-aimable (`node_seized` is the only multi-line pool in the
+game and smoke already asserts its rotation by name). Retired with the
+evidence; the content gap behind it — 542 launches printing four sentences
+all campaign — is filed as **R183**.
+
+### What the battery actually costs, measured
+
+    chunk 1  98 breaks   19m08s      chunk 3  95 breaks   96m00s
+    chunk 2  95 breaks   48m48s      chunk 4  98 breaks   52m28s
+    four chunks 216m24s, minus three redundant baselines -> ~3.1h for one run
+
+Per-break cost varies by more than an order of magnitude between gates, so
+ANY "breaks per minute" figure extrapolated from a slice is wrong. This
+session proved that twice in one night: 2h20m was stale, and the ~5-6h that
+replaced it was extrapolated from 21 expensive breaks and was wrong the other
+way. The honest number is the measured total.
+
+**Chunk it.** `--only` re-runs the whole baseline each time (~10 min a chunk,
+30 minutes wasted across four), and that is the correct price for a run whose
+partial results survive a container restart. Two full runs were lost tonight
+— one to a tree I edited underneath it, one to a restart at the ~25 minute
+mark — before chunking made progress durable. Break ids are NOT contiguous
+(157, 164, 208, 250, 256, 257, 298 are retired, 327 now too), so build the
+list from the file rather than `seq`, or the run refuses with "no break
+numbered".
+
 ### The twenty-four-walk census, which is the expensive thing this session bought
 
 Twelve seeds, 180 days, `stopAtDominion: false`, on THIS tree and on pre-R116
@@ -174,11 +235,9 @@ and not fixed here — a vault full of treasure has no exit.
     npm test              suite ✓ 11 jobs, 978 CPU-s of 1246, 327s wall ALONE
     height / a11y         both ✓, each run alone on an idle box
     roadmap               ✓ 25 numbers, 7 queued and §9.0 lists exactly those
-    battery --only 272,273  BATTERY_EXIT=0, both caught after the floor fix
-    full battery          TIER TRIGGER: this milestone changes existing gates'
-                          logic (the hunt, splice and Wing floors, the away
-                          rule, the cooldown block, R114's fuzz and now the
-                          Theater's bay rule)
+    full battery          382 breaks in four chunks · 6 missed, all closed
+    battery (confirm)     11 breaks re-run on the finished tree, 11 caught
+    npm test (final)      suite ✓ 11 jobs, 837 CPU-s of 1150, 219s wall ALONE
 
 R178's release gate earned its place in the tier here: the first `--only` run
 came back `BATTERY_EXIT=1` on a green break score, because the stylesheet had
@@ -190,6 +249,10 @@ them alone. Judge by `BATTERY_EXIT`, never the summary line.
 
 R117 — wide screens. The game is a 560px column at every width and GitHub
 Pages serves laptops.
+
+**R183 is the one finding here that is about the GAME rather than the
+harness**, and it is cheap: three or four headlines per job, in data, no
+engine edit. The engine already rotates them.
 
 Housekeeping: the `/tmp/pre116` worktree is checked out at `a39a0fa` for the
 both-trees censuses and wants removing.
