@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**8 entries queued.** R116, R117, R118, R176, R179, R180, R181, R182.
+**7 entries queued.** R117, R118, R176, R179, R180, R181, R182.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4691,23 +4691,103 @@ suite can check.
 
   *Done when: `node tools/coverage.js` passes with an allowlist under ten
   entries, each with a reason — **met, at eight**.*
-- **R116 — The jobs board is a slot machine.** Over 180 days the walker
-  launched **1,188 jobs — 6.6 a day, more than every fight it fought
-  combined (964)** — every one of them **solo**: the four jobs that ask for
-  a chimera's tags and class, the interesting half of the design, ran
-  **zero** times. They succeeded 43% of the time and paid **$58,800, which
-  is 6.7% of the $882k the county paid in income**; the petting zoo ran 720
-  times at $23 a run. Those launches are **670 of the wire's lines**. Heat is
-  the only brake and it brakes ambition, not taps. Proposed, medium: the
-  solo jobs become **standing contracts** — one passive, auto-renewing
-  arrangement at a time, settled at the tick like income, no launch — and
-  the board keeps the **crewed** jobs, which become where a chimera earns
-  while the ring cools; the walker learns to crew them (a policy per
-  demand, closing another R92 blind spot); and job outcomes reach the wire
-  as **one ledger line a day** (shared with R109). *Done when: on the
-  walker's diet launches fall under one a day with job income within 20% of
-  today's, crewed launches run at least one a day, and "came to nothing"
-  leaves the ten most frequent phrasings.*
+- **R116 — The jobs board is a slot machine.** ✅ *Shipped — and two of the
+  four clauses in the criterion below were falsified rather than met, which
+  is recorded here instead of quietly restated.*
+
+  **The measurement that opened it held.** 1,189 launches in 180 days, 6.61 a
+  day, more than every fight the walk fought combined (964). What the entry
+  got wrong was the cause: `byOp` was **byte-identical on all five seeds** —
+  721 petting zoo, 360 feed co-op, 108 grant — so the board was not a slot
+  machine, it was a **metronome**. Seven independent `hours + cooldownHours`
+  clocks summing to a 10.05/day ceiling that no constant in the game
+  expressed. Heat brakes ambition (it lowers the odds) and never once brakes
+  the tapping.
+
+  **Shipped:** one **charge bucket** for the whole board (`boardCharges`,
+  `boardRegenHours` in `data/operations.json`, R43's `sparCharges` pattern —
+  one timestamp, everything derived, a refill in the past means full); the
+  three jobs that carried nobody anywhere became **standing contracts**, one
+  at a time, settled from `paidThrough` at the tick like income; the four
+  crewed jobs stayed on the board and the walker learned to crew them.
+  `SAVE_VERSION` **59**.
+
+      launches      1,189 (6.61/day)  ->  542 (3.01/day, against 3.00 paced)
+      crewed            0             ->  542 (3.01/day)
+      solo          1,189             ->  0
+      biggest job   721 of 1,189 (61%) ->  33%
+      paid          $53,856-$58,867   ->  $80,519-$88,537, 9.0-9.8% of gross
+      wire          411 phrasings     ->  404, loudest 3.8%
+
+  **AND THE CRITERION DID NOT SURVIVE CONTACT.** Both of the clauses it got
+  wrong are worth naming, because both are the same mistake — reading a fact
+  about `tools/sim.js` as a fact about the game:
+
+  - *"launches fall under one a day"* and *"crewed launches run at least one
+    a day"* **cannot both hold** once every remaining launch is crewed, which
+    is what the design does. Read as **solo** launches — the taps the entry
+    was actually counting — it is 6.61/day → **0.00/day**, and the shipped
+    rule asserts the rate against `24 / boardRegenHours` from the tuning
+    rather than against a number typed into the gate.
+  - *"job income within 20% of today's"* is pegged to a defect. "Today's" was
+    $53,856-$58,867, measured on a board whose crewed half the harness could
+    not reach — one `null` rider argument in `tools/sim.js`, though a player
+    always could reach it. The gate asserts a **share** instead: the board
+    pays ≤15% of the county's gross (measured 9.0-9.8%) and still clears
+    $40k. A share survives later changes to what the county pays; R143 and
+    R152 both moved the dollars.
+  - *"'came to nothing' leaves the ten most frequent phrasings"* was already
+    true — **R109 retired it** — so it was vacuous before this session
+    started.
+
+  **The expensive finding was not the board.** Four calibrated numbers went
+  red at once — `ranch.stock`, the Pens' word budget, R177's variant lines
+  and the Wing's enrolment band — and all four had **one** cause. Seed 2026
+  at day 180, pre-R116, ends with the vault at 330/400 and 8 renderable
+  species; post-R116 it ends at **259/260, tight, 0 renderable**.
+  `extractAnimal` refuses into a full vault on purpose (R91), so every
+  graduation failed, the pens filled to 115 head, and the walker's buy gate —
+  which counts the whole pen against a limit meant for animals it *chose* —
+  bought 265 where it used to buy 1,772. The walker now reads the refusal the
+  game hands it and, while the vault is tight, buys shelf space or buys
+  nothing. `stock` reads 18-20 on all twelve seeds. The reach loss had a
+  second half: R116 removed the game's ram and skunk supply (the petting zoo
+  ran 721 times rolling {goat, ram} at 40% and became a contract), and none of
+  the walker's four buy priorities could start a line from zero, because
+  `mates` required `heldOf === 1`. `heldOf < 2` restored it.
+
+  **Three floors turned out stale on BOTH trees**, each measured once on three
+  or four seeds and never re-checked. A twelve-seed census on this tree *and*
+  on pre-R116 `a39a0fa` is now written beside each: the hunt floor of 8 (both
+  trees bottom out at 4 — now 2), the splice floor of 25 (pre-R116 seed 77
+  reads 14) and the Wing's enrolment floor of 10 (seed 77 reads 8 on both).
+  None of the three was R116's doing.
+
+  **Two shipped bugs, neither of them R116's.** A null rival record stopped
+  the Ranch rendering — `ranch/onboarding.js` walked `campaign.rivals` raw
+  where every other reader goes through `rivalStatus`, found the moment R116
+  added a key and R114's seeded fuzz moved onto it. And `cleanSave` was
+  **renaming chimeras on every load**: `safeText` stripped `'` and the game's
+  own generator produces `Ol' Thrashbasket`, so a repair was editing a healthy
+  save. The apostrophe stays; `esc` covers the single-quoted attribute and the
+  fuzz now carries a single-quote mutant.
+
+  **One a11y regression that IS ours, and the height it cost.** A vault that
+  now collects all 244 parts prints a Prismatic shelf where it used to print a
+  shorter word, and at 150% text the badge left its card by 30px. `flex-wrap:
+  wrap` fixed that and quietly cost **36px of shut Vault at 100%** — three
+  bays at 54px instead of 42 — which the height gate caught at 4,141px against
+  a 4,140px budget. A wrapping flex line breaks on an item's max-content
+  width, so `.lineage` stopped wrapping its own text and pushed the badge down
+  instead. `.lineage { flex: 1 1 0 }` gives the 36px back (shut shelf 2,538 →
+  2,502, the same number `nowrap` gives) with the 150% fix intact.
+
+  Breaks **383-389**. `ranch.stock` topping out at 112 where it topped out at
+  67 is filed as **R182**, not fixed here.
+
+  *Done when: on the walker's diet launches fall under one a day with job
+  income within 20% of today's, crewed launches run at least one a day, and
+  "came to nothing" leaves the ten most frequent phrasings.*
 - **R117 — Wide screens.** The game is a **560 px column at every width**:
   `main { max-width: 560px }` and not one layout rule above 430 px, so on a
   1,920 px laptop it sits at x = 673 with 1,360 px of dark on either side —

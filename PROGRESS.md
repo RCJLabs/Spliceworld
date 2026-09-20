@@ -1,40 +1,46 @@
 # PROGRESS
 
-## Session 200 — R116: standing contracts, and the cascade behind them ⚠️ not merged
+## Session 200 — R116: standing contracts, and the cascade behind them ✅
 
-**The board is fixed and its gate is green. What is not finished is the
-cascade: R116 changes what a campaign DOES, and a dozen calibrated numbers
-were measured against what it used to do.**
+**The board is fixed, its gate is green, and the expensive half of the session
+was the cascade: R116 changes what a campaign DOES, and a dozen calibrated
+numbers had been measured against what it used to do. Three of them turned out
+to have been stale before this milestone started.**
 
 ### The milestone itself
 
     launches      1,189 (6.61/day)  ->  542 (3.01/day, against 3.00 paced)
     crewed            0             ->  542 (3.01/day)
-    biggest job   61% of the board  ->  33%
+    solo          1,189             ->  0
+    biggest job   721 of 1,189 (61%) ->  33%
     paid          $53,856-$58,867   ->  $80,519-$88,537, 9.0-9.8% of gross
     wire          411 phrasings     ->  404, loudest 3.8%
 
-Charge bucket for the pace, standing contracts for the three jobs that needed
-nobody carried anywhere, the crewed four left on the board. `SAVE_VERSION` 59.
-The R116 board gate passes on every rule it states.
+One charge bucket for the whole board, standing contracts for the three jobs
+that carried nobody anywhere, the crewed four left on the board for a chimera
+to work while the ring cools. `SAVE_VERSION` 59.
 
-### Two of the entry's own claims did not survive re-measurement
+### Two of the entry's claims and two of the criterion's clauses did not survive
 
-"The four crewed jobs ran zero times" was a fact about `tools/sim.js`, which
-passed `null` as the rider — the game always offered them. "Came to nothing"
-had already left the top ten in R109. What WAS wrong is that the board was a
-metronome: `byOp` byte-identical on all five seeds, a 10.05/day ceiling that
-no constant expressed.
+The same mistake four times: reading a fact about `tools/sim.js` as a fact
+about the game.
 
-### Three stale derivations, two of them mine
+- "The four crewed jobs ran zero times" was true of the harness, which passed
+  `null` as the rider. The game always offered them.
+- "Came to nothing" had already left the top ten in R109.
+- **"Launches fall under one a day"** and **"crewed launches run at least one
+  a day"** cannot both hold once every remaining launch is crewed, which is
+  what the design does. Read as SOLO launches — the taps being counted — it is
+  6.61/day -> 0.00/day.
+- **"Job income within 20% of today's"** is pegged to the defect: "today's"
+  was measured on a board whose crewed half the harness could not reach. The
+  gate asserts a SHARE instead (<=15% of gross, measured 9.0-9.8%) plus a
+  $40k floor, because a share survives the next price change and a dollar band
+  does not — R143 and R152 both moved it.
 
-- **The hunt floor of 8** was never the halved minimum of anything. Sixteen
-  seeds on this tree AND on pre-R116 `a39a0fa` both bottom out at 4. R116 only
-  moved which seed lands lowest. Now 2, with both censuses written beside it.
-- **The board gate's own income range** quoted a mid-milestone run
-  ($94,329-$101,569 on 543). The shipped tree gives $80,519-$88,537 on 542.
-- **`ranch.stock`, the Pens' words, R177's variant lines and the Wing's
-  enrolment** all went red at once, and all four had ONE cause (below).
+What WAS wrong about the board is that it was a metronome, not a slot machine:
+`byOp` byte-identical on all five seeds, a 10.05/day ceiling no constant
+expressed.
 
 ### The interesting one: a conveyor that seized behind an unbought shelf
 
@@ -44,105 +50,110 @@ no constant expressed.
 `extractAnimal` refuses into a full vault on purpose (R91). Once it refuses,
 every graduation fails, the pens fill to 115 head, and the walker's buy gate —
 which counts the WHOLE pen against a limit meant for animals it CHOSE — stops
-buying: 265 where it used to buy 1,772. R177's reach went with the buying.
-The walker now reads the refusal the game gives it and, while the vault is
-tight, buys shelf space or buys nothing. Three of four seeds are back to 20
-head and ~1,500 buys. Seed 4242 fills the 400-part shelf as well and that one
-is not a defect: 396 parts, 193 distinct, 233 carrying traits.
+buying: 265 where it used to buy 1,772. That single stall failed `ranch.stock`,
+the Pens' word budget, R177's variant lines and the Wing's enrolment band at
+once. The walker now reads the refusal the game gives it and, while the vault
+is tight, buys shelf space or buys nothing. `stock` reads 18-20 on all twelve
+seeds.
 
-### Two real bugs, neither of them R116's
+The reach loss had a second half. R116 removed the game's ram and skunk supply
+— the petting zoo ran 721 times rolling {goat, ram} at 40% and became a
+contract — and none of the walker's four buy priorities could start a line
+from zero, because `mates` required `heldOf === 1`. `heldOf < 2` restored it,
+and `dex:combos` went from three openable bands to two because the campaign
+now reads 244 of 244 parts and has nothing left to find.
 
-- **A null rival record stopped the Ranch rendering.** R114's fuzz found it
-  the moment R116 added a key to `campaign` and the seeded sample moved onto
-  `campaign.rivals.mantissa`. `ranch/onboarding.js` walked the map raw where
-  every other reader goes through `rivalRecord`. Break **389**.
+### Three floors were stale on BOTH trees
+
+Each had been measured once on three or four seeds and never re-checked. All
+three are now censuses with the twelve-seed both-trees numbers written beside
+them: the hunt floor of 8 (both trees bottom out at 4 — now 2), the splice
+floor of 25 (pre-R116 seed 77 reads 14) and the Wing's enrolment floor of 10
+(seed 77 reads 8 on both). **None of the three was R116's doing.** The hunt
+floor is the one that taught the session to insist on the distinction.
+
+### Two shipped bugs, neither of them R116's
+
+- **A null rival record stopped the Ranch rendering.** `ranch/onboarding.js`
+  walked `campaign.rivals` raw where every other reader goes through
+  `rivalStatus`. R114's seeded fuzz found it the moment R116 added a key to
+  `campaign` and moved the sample onto `campaign.rivals.mantissa`. Break 389.
 - **`cleanSave` was renaming chimeras on every load.** `safeText` stripped
-  `'`, and the game's own generator produces `Ol' Thrashbasket` — a repair
-  that edits a healthy save, which is what R114's gate calls a bug rather
-  than a guard. The apostrophe stays; `esc` covers the single-quoted
-  attribute, and the fuzz now carries a single-quote mutant so that claim is
-  tested rather than asserted.
+  `'` and the game's own generator produces `Ol' Thrashbasket`, so a repair
+  was editing a healthy save. The apostrophe stays; `esc` covers the
+  single-quoted attribute and the fuzz now carries a single-quote mutant, so
+  that claim is tested rather than asserted.
+
+### One a11y regression that IS ours, and the height it cost
+
+A vault that now collects all 244 parts prints a Prismatic shelf where it used
+to print a shorter word, and at 150% text the badge left its card by 30px.
+`flex-wrap: wrap` fixed that and quietly cost 36px of shut Vault at 100% —
+the height gate read 4,141px against a 4,140px budget, and it reproduced alone
+on an idle box, so it was not R159's false red.
+
+A wrapping flex line breaks on an item's MAX-CONTENT width, so `.lineage`
+stopped wrapping its own text and pushed the badge down instead: three bays at
+54px rather than 42. `.lineage { flex: 1 1 0 }` gives it back.
+
+    100% shipped (wrap)              shut shelf 2,538   3 bays at 54px
+    100% wrap + lineage flex:1 1 0   shut shelf 2,502   3 bays at 42px
+    100% nowrap (pre-fix)            shut shelf 2,502   3 bays at 42px
+    150% wrap + lineage flex:1 1 0   0 leaks
+    150% nowrap (pre-fix)            2 leaks - "Prismatic" by 9px and 30px
+
+The comment shipped beside the first fix claimed "nothing changes at 100% —
+there is nothing to wrap". The height gate falsified that in the same hour,
+and the correction is written where the claim was.
 
 ### Also fixed
 
 R83's away rule had no term for a standing arrangement, so a signed contract
-read as an absent player out-earning a present one; it now carries the
-retainer AND a derived ceiling for the jobs that were already in the van.
-`contractPerDay` has one home (three sites were hand-rolling `x 24`). The
-cooldown block picked a job that is no longer on the board. `v59` has a
-fixture. 3.7 KB of R116 prose moved into `data/notes/operations.md`.
-
-### Verification
-
-    battery --anchors     382 anchors, each matching exactly once
-    battery --baseline    RED — see below
-    npm test              4 of 11 failed (was 6 of 11)
-    full battery          not run
+read as an absent player out-earning a present one; it now carries the retainer
+AND a derived ceiling for the jobs already in the van. `contractPerDay` has one
+home (three sites were hand-rolling `x 24`). The cooldown block picked a job
+that is no longer on the board. `v59` has a fixture. 4.6 KB of R116 prose moved
+into `data/notes/operations.md` and paid for the three eager budgets.
 
 ### The twenty-four-walk census, which is the expensive thing this session bought
 
 Twelve seeds, 180 days, `stopAtDominion: false`, on THIS tree and on pre-R116
-`a39a0fa`. It separates what R116 moved from what was already un-earned, which
-is the distinction the hunt floor taught this session to insist on.
+`a39a0fa`. It is what separates what R116 moved from what was never earned.
 
                      pre-R116     post-R116    the gate asks for
-    splices            14-34        20-51      floor 25, ceiling 45
+    splices            14-34        20-51      census, floor/2 per campaign
     chaos vats          1-12         0-8       diet: at least one
-    Wing enrolled       8-26         8-25      band 10-60
+    Wing enrolled       8-26         8-25      census, >=3 per campaign
     ranch.stock        15-67       19-112      vault bound 80
 
-    post  2026:25s/0v  7:29/1  99:24/1  4242:30/6  42:23/1  900:26/7
-          55:51/6  11:20/0  3:24/0  77:32/1  123:33/2  512:27/8
-    pre   2026:28s/6v  7:29/1  99:28/3  4242:33/4  42:28/5  900:30/7
-          55:28/3  11:30/4  3:34/7  77:14/3  123:30/2  512:31/12
+`ranch.stock` topping out at 112 where it topped out at 67 is filed as **R182**
+and not fixed here — a vault full of treasure has no exit.
 
-**Two of the five were stale before this milestone.** The splice FLOOR of 25
-reads 14 on pre-R116 seed 77, and the Wing's band floor of 10 reads 8 on seed
-77 on BOTH trees. Neither is R116's doing; both were measured on three or four
-seeds and never re-checked, exactly like the hunt floor.
+### Verification
 
-**Three are R116's and want a cause, not a number.** The splice CEILING was
-clean pre-R116 (max 34) and reads 51 post on seed 55. The chaos vat never once
-read zero pre-R116 and reads zero on three of twelve seeds now. And
-`ranch.stock` tops out at 112 where it topped out at 67 — that one is R182,
-filed.
+    battery --anchors     every anchor matching exactly once
+    battery --only 383-389  7 breaks, 7 caught, 0 missed
+    battery --baseline    green (after the release cache; see below)
+    npm test              suite ✓ 11 jobs, 978 CPU-s of 1246, 327s wall ALONE
+    height / a11y         both ✓, each run alone on an idle box
+    roadmap               ✓ 25 numbers, 7 queued and §9.0 lists exactly those
+    full battery          TIER TRIGGER: this milestone changes existing gates'
+                          logic (the hunt, splice and Wing floors, the away
+                          rule, the cooldown block and R114's fuzz)
+
+R178's release gate earned its place in the tier here: the first `--only` run
+came back `BATTERY_EXIT=1` on a green break score, because the stylesheet had
+moved and `CACHE` had not. A returning player would have been served the old
+stylesheet out of the service worker and the 36px would have come back for
+them alone. Judge by `BATTERY_EXIT`, never the summary line.
 
 ### Next session's first task
 
-**The collection got narrower, and that is one finding wearing two hats.**
-`reach` reads 5.15 of 6 variant lines — and R177's own note records 5.15 as
-the reading WITH R95's pair-ordering deleted, which is the broken value rather
-than a drift, so that floor must not be lowered. The height gate, re-run alone
-on an idle box so it is not R159's false red, says `dex:combos declares 3
-folds to walk and the gate got into 2`. Fewer variant lines and fewer openable
-combo bands are the same campaign owning fewer halves. Start there: the walker
-buys ~1,300-1,600 where it bought 1,772, and the question is which of its four
-buy priorities (`freshAnswers`, `fresh`, `mates`, `incomplete`) lost its turn.
+R117 — wide screens. The game is a 560px column at every width and GitHub
+Pages serves laptops.
 
-Then, in order:
-
-1. The splice band. The floor of 25 is stale on both trees (pre-R116 seed 77
-   reads 14) and the CEILING at 51 is new. Both ends moved, which is what a
-   charge-bucket economy would do to cadence — re-derive the band from the
-   census above rather than nudging one end.
-2. The chaos vat. Zero on three seeds where pre-R116 was never zero. Not
-   `clockRoom` contention: seed 2026 ran 6 vats pre-R116 with MORE
-   resequencing than it does now.
-3. The Wing's band floor of 10, stale on both trees at 8.
-4. `npm run release -- --fix` LAST, after every other file has settled.
-5. Then: `--only 383-389`, baseline, `npm test` alone, the FULL battery (R116
-   changes existing gates' logic — the first of the four documented triggers),
-   ROADMAP R116 to the tick and the queue 8 -> 7, merge, restart the branch
-   from the new `main`.
-
-**Already closed since this section was first written:** the three eager
-budgets (paid down 4.6 KB into `data/notes/operations.md` first, then moved
-with accountings), the `sitting` gate's crewless probe, the Pens' word budget
-(the shelf fix took it from 458 words to under 456 by itself), `vault`,
-`saves`, `scopecheck`, `roadmap` and `smoke:c`.
-
-Also outstanding: the `/tmp/pre116` worktree is still checked out and wants
-removing once it has stopped being useful.
+Housekeeping: the `/tmp/pre116` worktree is checked out at `a39a0fa` for the
+both-trees censuses and wants removing.
 
 ## Session 199 — R115: every shipped function has run under a gate ✅
 
