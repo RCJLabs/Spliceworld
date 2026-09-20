@@ -1278,6 +1278,45 @@ const SITTING = ['node', '-e', `
     if (!hint.includes(String(launches))) bad.push('and the hint does not say ' + launches + ': ' + hint);
   }
 
+  // 3b. R116 — AND ZERO IS A NUMBER THE ROW HAS TO GET RIGHT TOO.
+  //
+  // Rule 3 above proves the row counts correctly when a job CAN start. It
+  // cannot prove the row refuses when one cannot, and after R116 that half
+  // stopped being covered at all: every job left on the board requires a
+  // crew, so the fixture's one free creature makes the go-yourself lane and
+  // the send-a-creature lane agree on every op, and a rule that only ever
+  // asks a permissive fixture agrees with a broken one.
+  //
+  // Measured: break 106 (\`runnableOps\` counts lanes again instead of asking
+  // \`opOdds().blocked\`) went MISSED against rule 3 alone, because clean and
+  // broken both answered 4. With the only crew already carrying a job the
+  // two answers separate — clean says 0, lanes-only says 3 — which is the
+  // defect the break is named for: a row that promises jobs that will not
+  // start. The bucket holds 3 charges, so spending one leaves the board
+  // runnable and the rule is measuring the crew check rather than the pace.
+  {
+    const s3 = { ...newGameState(), seed: 4242 };
+    foundLab(s3, content, 'bramble_barn', t0);
+    s3.chimeras = [{ id: 'c0', name: 'Chompers', tokens: {}, frame: 'M', settleUntil: 0, bond: 50, xp: 0 }];
+    const first = operationList(content)
+      .find((op) => startOperation(JSON.parse(JSON.stringify(s3)), op.id, 'c0', content, t0).ok);
+    if (!first) {
+      bad.push('the zero-crew fixture could not start a single job to occupy the crew with');
+    } else {
+      startOperation(s3, first.id, 'c0', content, t0);
+      let busyLaunches = 0;
+      for (const op of operationList(content)) {
+        const probe = JSON.parse(JSON.stringify(s3));
+        if (startOperation(probe, op.id, 'c0', content, t0).ok) busyLaunches++;
+      }
+      const busyClaimed = runnableOps(s3, content, t0).length;
+      if (busyClaimed !== busyLaunches) {
+        bad.push('with its only crew already carrying a job the row claims '
+          + busyClaimed + ' runnable, ' + busyLaunches + ' actually launch');
+      }
+    }
+  }
+
   if (bad.length) { console.error('sitting \u2717  ' + bad.join('; ')); process.exit(1); }
   console.log('sitting \u2713  every row reads the save, says a number, and the job count is the number that launches');
 `];
