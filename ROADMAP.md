@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**6 entries queued.** R176, R179, R180, R181, R182, R184.
+**5 entries queued.** R179, R180, R181, R182, R184.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -5409,21 +5409,73 @@ suite can check.
   the subtraction `stallsFromPens` already had; break 251 started matching in
   two places and said so. One `pensPastFree`, two readers (R61).
 
-- **R176 — The fiftieth module, and the one that should have left instead.**
-  R174 took `MODULE_CAP` 49 -> 50 for `util/text.js` because nothing could be
-  evicted to pay for it, and named the candidate rather than leaving the raise
-  as a settled account. **`campaign/monologue.js` is 4.0 KB and reads IDLE on
-  both first paints.** It is in the eager graph only because `campaign.js`,
-  `rehab.js` and `rivals.js` import `playerLine` and `rivalLine` at module
-  level — and those are called during BATTLE RESOLUTION, which is not boot.
-  That is R153's director shape exactly: seven dependency-free lines held 11.9
-  KB in the graph until somebody moved them to the caller, and the whole module
-  left. If it works here, `util/text.js` is paid for and the count returns to
-  49. Proposed, small-to-medium, and it is a measurement first: establish
-  whether anything on the boot path actually calls those two before moving
-  them. *Done when: `MODULE_CAP` is back to 49 with a ledger line naming what
-  left, or the attempt is written up saying why the two cannot move.*
+- **R176 — The fiftieth module, and the one that should have left instead.** ✅
+  *Shipped — and the module this entry named could never have left. The one
+  the title promised did.*
 
+  **The proposed move is impossible, and the answer was already written down.**
+  The entry says `campaign/monologue.js` is eager "only because `campaign.js`,
+  `rehab.js` and `rivals.js` import `playerLine` and `rivalLine`… and those are
+  called during BATTLE RESOLUTION, not during boot". Both halves are true and
+  the conclusion does not follow:
+
+  - **`campaign/wire.js` is eager at 37ms**, in the first wave before first
+    paint, and imports three *different* exports — `fill`, `pickPooled`,
+    `DEFAULT_PHILOSOPHY`. Six eager modules read **five of the seven** exports.
+    Delete `playerLine` and `rivalLine` outright and the module does not move.
+  - There are **four** importers of those two, not three — `campaign/identity.js`
+    as well.
+  - And the call sites are **synchronous** (`tickCampaign`, `resolveBattle`,
+    `announceDominion`), so there is no `await import()` to reach for without
+    making the battle path async and breaking CLAUDE.md's DOM-free harness rule.
+
+  **R169 found this first** and wrote it into `campaign/identity.js`: *"moving
+  it anywhere eager would save nothing at all."* The exemption list in
+  `tools/boot.js` has carried the correct reason — wire.js included — the whole
+  time. This entry and the `MODULE_CAP` comment both read past it, which is how
+  one impossible move got proposed **three times**. Both now say so, where the
+  next session will look. The bill is not owed; it is unpayable.
+
+  **So the module the repo named twice left instead.** `audio/sfx.js` is 9.5 KB
+  of oscillators that cannot make a noise until `initAudio()` runs, and that is
+  behind a gesture. It was eager for one reason: main.js imported `watchSignals`
+  and `cuesFor` from it. Those are pure functions over state scalars — no
+  context, no mute, no stinger table — so they moved to `campaign/world.js`,
+  beside the `worldSnapshot`/`changesBetween` pair already there. A sound module
+  should not own state-diffing. (The two pairs are now visibly redundant;
+  collapsing them is a milestone of its own and is not this one.)
+
+  | | before | after |
+  |---|---|---|
+  | eager modules | 50 | **49** |
+  | eager KB | 581.7 | **576.7** |
+  | of it code | 326.4 | **321.5** |
+
+  **The subtle part is a haptic, and it is why this is not the obvious
+  refactor.** `buzz` checks `haptics` and `muted` and **not** the AudioContext,
+  so a cue on the first tick — a job that came back while you were away —
+  buzzes the phone today with no context at all. The obvious way to lazy-load a
+  synth is to fetch it on the first gesture, and that would have deleted this
+  silently: no gesture, no module, no buzz, and **every gate in the file still
+  green**, because a stinger is inaudible before a gesture anyway. So the
+  loader is not gesture-gated — it is one cached promise that applies the four
+  preferences as the module arrives, which is the first moment any of them can
+  be observed. `startAmbience` *is* gated, because it is a no-op without a
+  context and a navigation must not fetch the synth to discover there is
+  nothing to play. A new assertion says the cue path is not gated on the
+  context, and break 406 is that one-line mistake.
+
+  **Four existing gates caught the refactor as it went**, and every one was
+  re-derived rather than loosened: the stale import of the moved functions, the
+  cue call shape, R111's boot-preferences rule — now asserted *inside* the
+  loader, because a bare `applyAudioSettings` in some unrelated handler would
+  satisfy a whole-file match while leaving every boot preference unapplied —
+  and the two ambience sites. Breaks 174 and 355 were re-aimed for the same
+  reason, not retired.
+
+  *Done when: `MODULE_CAP` is back to 49 with a ledger line naming what left,
+  or the attempt is written up saying why the two cannot move. (Both: the
+  attempt is written up, and a different module paid the cap.)*
 - **R178 — The release gate is in no tier, and a comment can empty the cache.** ✅
   Found in R111, by hand, one command after `npm test` came back green.
   `node tools/release.js` is **not in the battery's `BASELINE` list and not in

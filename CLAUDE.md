@@ -104,9 +104,9 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327 are
 retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-396 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
-gene probe, R183 added 399-401 for the job headline, and R185 added 402-404
-for the Dex tab list. R183's own
+399 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+gene probe, R183 added 399-401 for the job headline, R185 added 402-404 for
+the Dex tab list, and R176 added 405-407 for the lazy synth. R183's own
 `--only` run is the standing example of why BATTERY_EXIT is the verdict: it
 read "3 breaks, 3 caught, 0 missed" on top of a RED baseline, because
 changing a precached data file without bumping the worker's CACHE is a

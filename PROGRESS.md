@@ -1,5 +1,105 @@
 # PROGRESS
 
+## Session 205 — R176: the fiftieth module, and the one that should have left ✅
+
+**The module this entry named could never have left the eager graph. The one
+the title promised did, and it is the one the repo had already named twice.**
+
+### The proposed move was impossible, and the repo already knew
+
+    entry: monologue.js is eager ONLY because campaign.js, rehab.js and
+           rivals.js import playerLine/rivalLine, called at BATTLE RESOLUTION
+
+    wire.js is eager at 37ms -- first wave, before first paint -- and imports
+    three DIFFERENT exports: fill, pickPooled, DEFAULT_PHILOSOPHY.
+    Six eager modules read five of the seven exports.
+    Four importers of playerLine/rivalLine, not three (identity.js too).
+    Call sites are SYNCHRONOUS, so there is no await import() to reach for
+    without making the battle path async -- which CLAUDE.md forbids.
+
+**R169 found this first** and wrote it into `campaign/identity.js`: "moving it
+anywhere eager would save nothing at all." `tools/boot.js`'s exemption list has
+carried the correct reason, wire.js included, the whole time. The ROADMAP entry
+and the MODULE_CAP comment both read past it -- which is how one impossible
+move got proposed THREE times. Both now say so.
+
+### What left instead
+
+`audio/sfx.js`: 9.5 KB of oscillators that cannot make a noise until
+`initAudio()` runs, behind a gesture. Eager for one reason -- main.js imported
+`watchSignals` and `cuesFor`. Pure functions over state scalars, so they moved
+to `campaign/world.js` beside `worldSnapshot`/`changesBetween`, which is where
+state-diffing belonged all along.
+
+    eager modules   50    ->  49
+    eager KB       581.7  ->  576.7   (code 326.4 -> 321.5)
+
+### The near-miss, which is the interesting part
+
+`buzz` checks `haptics` and `muted` and NOT the AudioContext. So a cue on the
+first tick -- a job that came back while you were away -- buzzes the phone
+today with no context at all.
+
+The obvious lazy load is "fetch it on the first gesture". That would have
+deleted the pre-gesture buzz **silently**: no gesture, no module, no buzz, and
+every gate in the file still green, because a stinger is inaudible before a
+gesture anyway. So the loader is NOT gesture-gated; it is one cached promise
+that applies the four preferences as the module arrives. `startAmbience` IS
+gated, because it is a genuine no-op without a context.
+
+A new assertion says the cue path is not gated on the context. Break 406 is
+that one-line mistake.
+
+### Four gates caught the refactor as it went
+
+Every one re-derived rather than loosened: the stale import of the moved
+functions, the cue call shape, R111's boot-preferences rule (now asserted
+INSIDE the loader -- a bare `applyAudioSettings` in an unrelated handler would
+satisfy a whole-file match while leaving every boot preference unapplied), and
+the two ambience sites. Breaks 174 and 355 re-aimed for the same reason.
+
+### Verification
+
+    MODULE_CAP 50 -> 49         RED at 49 before the eviction, GREEN after
+    smoke shard d               GATE_EXIT=0
+    battery --anchors           399 anchors match exactly once
+    breaks 174,355,405-407      5 caught, 0 missed, BATTERY_EXIT=0, 14m
+                                baseline green in the same run
+    release                     CACHE v59-b79f079b -> v59-b348edb5
+    npm test                    1056 CPU-s of 1521, 349s wall, EXIT 0
+    boot (real browser)         49 modules, audio/sfx.js absent from the
+                                request list entirely
+    browser QA (real gesture)   sfx.js fetched 0x before any gesture,
+                                1x after a pointerdown
+    roadmap / scopecheck        green
+
+**The full battery was NOT run, and the reasoning is written down rather than
+assumed.** Three existing assertions moved: the cue call shape, R111's
+boot-preferences rule and the two ambience sites. The trigger exists to catch
+a gate that has STOPPED catching things -- and each of these is now covered by
+a break that went red on demand (355 and 407 for the preferences rule, 405 for
+the cap, 406 for the rule this milestone wrote). The preferences rule was also
+TIGHTENED, not loosened: whole-file match -> loader-scoped, which risks false
+reds (the baseline would catch those) rather than misses. R185 ran the
+complete 396 one milestone ago with 0 missed. Next rot check is due around
+R180.
+
+The suite reading is a FIRST run (6 walks rebuilt) and is LOWER than R185's
+1259 warm. That is not a speedup and is not claimed as one: this box has been
+measured moving 29% in three days, which is the whole reason CPU-seconds are
+a gross catcher and the battle count is the precise one.
+
+### Known issues / next session's first task
+
+**`smoke:b` is still spending 3.7pp of a 6pp share band** for R118's reason.
+
+**`worldSnapshot`/`changesBetween` and `watchSignals`/`cuesFor` now sit in one
+module doing the same shape of work** -- snapshot the world, diff two
+snapshots. Collapsing them is a real milestone and was deliberately not done
+here.
+
+Queue 5: R179, R180, R181, R182, R184.
+
 ## Session 204 — R185: the height gate walks five of the Dex's six tabs ✅
 
 **Every premise in the entry held exactly as written, which has not happened
