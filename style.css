@@ -359,6 +359,11 @@ main {
 .save-info { margin: 8px 0 0; font-size: 0.75rem; color: var(--muted); }
 
 .frame-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+/* R179 — the expedition launcher's three chip rows. A gap rather than a
+   margin, so the wrap at 380px cannot put two chips flush against each
+   other: `tools/a11y.js` measures the gutter between neighbouring controls
+   and 0px is a thumb hitting the wrong one. */
+.exp-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .frame-picker button {
   flex: 1 1 140px;
   min-width: 0;

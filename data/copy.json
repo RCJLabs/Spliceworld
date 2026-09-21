@@ -133,6 +133,7 @@
     "unpacking": "unpacking for {left}",
     "priced": "Odds {odds} · {funds} if it lands · {n} on the table{more}",
     "reaches": " · longer and fuller would also reach {list}",
-    "overfull": "The pens are over capacity and everyone is cross about it."
+    "overfull": "The pens are over capacity and everyone is cross about it.",
+    "pick_crew": "Pick who goes."
   }
 }

@@ -966,7 +966,14 @@ function expeditionCard(state, ctx, t) {
   })}</p>
       ${resting
     ? `<span class="locked-tag">${fill(content.copy?.expedition?.unpacking, { left: fmtDuration(resting) })}</span>`
-    : `<button type="button" data-exp-go="1"${crew.length ? '' : ' disabled'}>${fill(content.copy?.expedition?.send, {})}</button>`}
+    : crew.length
+      // R161 — A REFUSAL IS NOT A CEREMONY, and a greyed button is a refusal
+      // that will not say what it wants. Before a crew is picked there is
+      // nothing to send, so the card says so in words instead of dimming the
+      // control to 2.69:1 and waiting — which is what `tools/a11y.js` read it
+      // as, correctly.
+      ? `<button type="button" data-exp-go="1">${fill(content.copy?.expedition?.send, {})}</button>`
+      : `<span class="locked-tag">${fill(content.copy?.expedition?.pick_crew, {})}</span>`}
     </section>`;
 }
 
