@@ -13,9 +13,7 @@ import { renderRanchScreen } from './ranch/ui.js';
 // pull in the whole campaign module, and the director, the rehab wing and
 // the gauntlet behind it, for a five-line function that appends to an array.
 import { pushNews } from './campaign/wire.js';
-import { tickWorld, lastTick } from './campaign/world.js';
-import * as sfx from './audio/sfx.js';
-import { watchSignals, cuesFor } from './audio/sfx.js';
+import { watchSignals, cuesFor, tickWorld, lastTick } from './campaign/world.js';
 import { renderIcon } from './ui/icons.js';
 import { installFocusKeeper } from './ui/focus.js';
 import { skyOf } from './campaign/calendar.js';
@@ -193,7 +191,7 @@ function showScreen(name, subtab) {
   }
   // R111 — one call per navigation. A no-op when the bed is already the right
   // one, so this cannot restart the barn every time a card opens.
-  sfx.startAmbience(name, content);
+  if (audioOpen) audio().then((m) => m?.startAmbience(name, content));
   document.querySelectorAll('#tabs button').forEach((b) => {
     const on = b.dataset.screen === name;
     b.classList.toggle('active', on);
@@ -203,6 +201,33 @@ function showScreen(name, subtab) {
   });
   tick({ force: true });
 }
+
+// R176 — THE SYNTH IS FETCHED, NOT COMPILED. `audio/sfx.js` is 9.5 KB of
+// oscillators that cannot make a noise until `initAudio()` runs, and that is
+// behind a gesture; it used to be eager because main.js imported two pure
+// functions from it. Those moved to campaign/world.js, so what is left is
+// loaded the first time the game has something to say.
+//
+// ONE PROMISE, CACHED, AND THE SETTINGS RIDE IN ON IT. The four preferences
+// were applied at boot; they are applied the first time the module arrives
+// instead, which is the first moment any of them can be observed. A repeated
+// dynamic import of one specifier is already one fetch and one instance, but
+// the promise is held so the settings are applied exactly once.
+//
+// IT IS NOT GATED ON THE GESTURE, and `buzz` is why: haptics check `haptics`
+// and `muted` and NOT the AudioContext, so a cue on the first tick — a job
+// that came back while you were away — buzzes the phone today with no
+// context at all. Gating this on pointerdown would have deleted that
+// silently. The import resolves a frame later than the old direct call; a
+// buzz and a stinger are both already asynchronous, so nothing waits on it.
+let audioAt = null;
+const audio = () => (audioAt ??= import('./audio/sfx.js')
+  .then((m) => { m.applyAudioSettings(state.settings); return m; })
+  .catch(() => null));
+// Has the context been opened? `startAmbience` is a no-op without one, so a
+// navigation before the first gesture must not fetch the synth to discover
+// there is nothing to play.
+let audioOpen = false;
 
 // Timestamps, not intervals: recompute elapsed effects on load, on focus,
 // and on a slow display refresh (settling countdowns, care cooldowns).
@@ -226,8 +251,7 @@ function tick({ force = false } = {}) {
   // patterns, so the rest pass through silently: what deserves a buzz is one
   // decision in data, beside what deserves a sound.
   for (const cue of cuesFor(beforeCues, watchSignals(state))) {
-    sfx.play(cue);
-    sfx.buzz(cue, content);
+    audio().then((m) => { m?.play(cue); m?.buzz(cue, content); });
   }
   if (!changed) return;
   const name = state.activeScreen;
@@ -520,12 +544,17 @@ async function boot() {
   // Audio: context on first gesture (autoplay policy), settings persisted.
   // R111 — all four preferences through one call, so the boot cannot apply the
   // mute and forget the volume, which is what it did until this milestone.
-  sfx.applyAudioSettings(state.settings);
   // No context before a gesture, so the first gesture starts the room the
-  // player is already in rather than making them navigate to hear it.
+  // player is already in rather than making them navigate to hear it. The
+  // settings are applied by `audio()` itself, on whichever call gets there
+  // first — this one, or a cue that fired before anybody touched anything.
   document.addEventListener('pointerdown', () => {
-    sfx.initAudio();
-    sfx.startAmbience(state.activeScreen, content);
+    audio().then((m) => {
+      if (!m) return;
+      m.initAudio();
+      audioOpen = true;
+      m.startAmbience(state.activeScreen, content);
+    });
   }, { once: true });
 
   const settingsBtn = $('#settings');

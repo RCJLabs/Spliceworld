@@ -133,34 +133,6 @@ const STINGERS = {
 // deserves a sound" is one decision and four copies of it drift. A snapshot of
 // scalars, so it is DOM-free and the suite asserts every cue without a browser.
 //
-// THE RULE these four share: a sound marks a change in your POSITION —
-// something arrived, completed, or was taken from you. Navigation and taps are
-// not events. R111's `buzz` reads the same cues for the same reason; the story
-// of what was silent before either is in `data/notes/voice.md`.
-export function watchSignals(state) {
-  return {
-    nodes: state?.campaign?.heldNodes?.length ?? 0,
-    contested: state?.campaign?.contested?.length ?? 0,
-    report: state?.campaign?.opReport ? 1 : 0,
-    stock: state?.ranch?.stock?.length ?? 0,
-    resequencing: state?.resequencer ? 1 : 0,
-  };
-}
-
-export function cuesFor(before, after) {
-  if (!before || !after) return [];
-  const cues = [];
-  // The alarm comes first because it is the only one with a deadline: a
-  // contested node is lost if it is not defended in its window.
-  if (after.contested > before.contested) cues.push('alarm');
-  if (after.nodes > before.nodes) cues.push('conquest');
-  if (after.report > before.report) cues.push('report');
-  // A run that ended WITH an animal arriving decanted; one that ended
-  // without is an abort, which the player did on purpose and already saw.
-  if (before.resequencing && !after.resequencing && after.stock > before.stock) cues.push('decant');
-  return cues;
-}
-
 // R111 — A TONE AS WELL AS A NAME, because a creature's voice is built rather
 // than written down. `speak` hands its tone here instead of growing a door of
 // its own: R59's "exactly one function reaches the synth" is what stops a new

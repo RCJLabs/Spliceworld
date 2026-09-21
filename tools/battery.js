@@ -2681,7 +2681,7 @@ const BREAKS = [
     n: 174, gate: FACILITY, name: 'the Ranch keeps the buy button and loses the handler behind it',
     file: 'ranch/ui.js',
     anchor: `  bindFacility(root, ctx, again, (r) => {
-    if (r.ok) sfx.play('splice');
+    if (r.ok) cue('splice');
     lastMsg = r.msg;
   });`,
     to: '',
@@ -3727,14 +3727,20 @@ const BREAKS = [
     to: '      state.settings.haptics = state.settings.haptics === false;\n      sfx.applyAudioSettings(state.settings);',
   },
   {
-    // AND THE BOOT GOES BACK TO APPLYING THE MUTE AND NOTHING ELSE. This is
+    // AND THE SHELL GOES BACK TO APPLYING THE MUTE AND NOTHING ELSE. This is
     // the pre-R111 shell exactly: three of the four preferences are honoured
     // only once the panel has been opened, so a player who set the volume
     // last session gets full volume until they go looking for the gear.
-    n: 355, gate: SHARD_D, name: 'the boot applies the mute and forgets the other three preferences',
+    //
+    // R176 — RE-AIMED, NOT RETIRED. The call moved from the boot into the
+    // loader when the synth stopped being compiled on boot; the defect it
+    // describes is unchanged and so is the rule. Break 407 beside it takes
+    // the call away entirely; this one keeps a call and narrows it, which is
+    // the version that actually shipped once.
+    n: 355, gate: SHARD_D, name: 'the shell applies the mute and forgets the other three preferences',
     file: 'main.js',
-    anchor: '  sfx.applyAudioSettings(state.settings);',
-    to: '  sfx.setMuted(state.settings.muted);',
+    anchor: '  .then((m) => { m.applyAudioSettings(state.settings); return m; })',
+    to: '  .then((m) => { m.setMuted(state.settings.muted); return m; })',
   },
   {
     // AND THE ORGAN GOES BACK TO BEING TWO ORGANS. This is not a hypothetical:
@@ -6156,6 +6162,42 @@ const BREAKS = [
     file: 'tools/height.js',
     anchor: "    [...document.querySelectorAll('#screen-dex nav.subtabs#dex-subtabs button[data-dex-tab]')]",
     to: "    [...document.querySelectorAll('#screen-dex nav.subtabs#dex-subtabs button[data-dex-tabs]')]",
+  },
+  // --- gate: the synth is not compiled on boot (R176) ---------------------
+  {
+    // THE MODULE COMES BACK. A static import in main.js is all it ever took:
+    // the whole eviction is that `watchSignals` and `cuesFor` moved out, and
+    // one `import * as sfx` puts 9.5 KB of oscillators back in front of the
+    // first paint. Caught by MODULE_CAP, which is the number this milestone
+    // paid back to 49.
+    n: 405, gate: SHARD_D, name: 'the synth is statically imported again, and the boot compiles 9.5 KB it cannot use',
+    file: 'main.js',
+    anchor: "import { watchSignals, cuesFor, tickWorld",
+    to: "import * as sfx from './audio/sfx.js';\nimport { watchSignals, cuesFor, tickWorld",
+  },
+  {
+    // THE ONE THIS MILESTONE NEARLY SHIPPED. Gate the cue path on the
+    // gesture and the lazy load looks perfect: stingers are inaudible before
+    // a gesture anyway, so nothing sounds different. What dies is the BUZZ —
+    // `buzz` never checks the context, so a job that came back while you were
+    // away shakes the phone today and would stop. Every other rule in the
+    // file stays green through it, which is why R176 wrote one that does not.
+    n: 406, gate: SHARD_D, name: 'the cue path waits for a gesture, and the phone stops buzzing for a job that came back',
+    file: 'main.js',
+    anchor: "    audio().then((m) => { m?.play(cue); m?.buzz(cue, content); });",
+    to: "    if (audioOpen) audio().then((m) => { m?.play(cue); m?.buzz(cue, content); });",
+  },
+  {
+    // AND THE PREFERENCES STOP RIDING IN. R111's rule was "the boot applies
+    // every audio preference, not just the mute"; R176 moved WHEN without
+    // moving WHETHER. Drop the call from the loader and the volume, the
+    // ambience toggle and the haptics toggle are all honoured only once the
+    // panel has been opened — the exact defect R111 was filed about, back
+    // through a door R176 opened.
+    n: 407, gate: SHARD_D, name: 'the synth arrives without the settings, and three preferences wait for the panel',
+    file: 'main.js',
+    anchor: "  .then((m) => { m.applyAudioSettings(state.settings); return m; })",
+    to: "  .then((m) => m)",
   },
 ];
 
