@@ -1,5 +1,76 @@
 # PROGRESS
 
+## Session 204 — R185: the height gate walks five of the Dex's six tabs ✅
+
+**Every premise in the entry held exactly as written, which has not happened
+in four milestones. The Yearbook had shipped since R112 with no folded budget,
+no tallest budget and no word budget, because the gate's tab list was typed in
+the gate instead of read off the screen.**
+
+### The rules that should have caught it already existed
+
+`has no height budget -- a new screen has to declare one` and its word-budget
+twin both fail loudly, and both have for milestones. They had nothing to look
+at: a tab the gate never visits cannot fail a rule about the tabs it visits.
+So the fix is one READ, not a new rule -- and the proof is that the existing
+rule goes red the moment it has a sixth tab to see.
+
+    dex:yearbook   919px shut / 1454px open   139 / 253 words   4 of 5 folds
+
+The 4-of-5 is not a flake: `yearbookView` renders one collapsible card per
+section with the FIRST open on arrival (R133's rule), so the walk opens the
+other four every time.
+
+### Its headroom is for content, not for a campaign
+
+Every other Dex tab grows with the save. `yearbook()` maps
+`content.yearbook.sections` **unconditionally and filters nothing**, so this
+tab is 5 sections and 22 rows on a fresh save and on a day-180 one -- what
+changes is the numbers inside, not how many there are. So 1000/1600 is sized
+against a SIXTH SECTION being authored (~180px of card, which would fail it)
+rather than against a longer campaign.
+
+### The DOM read brought a hazard a literal did not have
+
+A selector that stops matching returns `[]`, the loop walks nothing, and the
+gate goes GREEN having measured no tab at all -- the failure shape this project
+has shipped more than any other. So it ships with a UNION: every declared
+`dex:*` budget must also have been walked. One direction catches a tab the
+table does not name; the other catches a budget nothing reached. Neither side
+is a literal.
+
+Three breaks, one per failure mode: **402** lands a seventh tab with no budget
+(the one the entry asked for), **403** puts the list back to a literal and is
+caught by the union, **404** breaks the selector and is caught by the floor.
+
+### Verification
+
+    height gate                 RED before (dex:yearbook has no height
+                                budget), GREEN after -- 10 screens, was 9
+    battery --anchors           396 anchors match exactly once
+    breaks 402-404              3 caught, 0 missed, BATTERY_EXIT=0, 16m
+                                baseline green in the same run
+    npm test                    1259 CPU-s of 1425, 336s wall, WARM, EXIT 0
+    roadmap                     25 stated numbers match the data
+    FULL BATTERY (gate change)  see below
+
+The suite reading is WARM (cache warm, nothing rebuilt), so it is directly
+comparable with R118's 1254: R183 and R185 cost about 5 CPU-seconds between
+them.
+
+**The full battery is triggered** -- this milestone CHANGES an existing gate's
+logic rather than adding one. Four chunks of 99, id list built from the file
+because 157, 164, 208, 250, 256, 257, 298 and 327 are retired and `seq` would
+refuse.
+
+### Known issues / next session's first task
+
+**`smoke:b` is still spending 3.7pp of a 6pp share band** for R118's reason.
+Unchanged by this milestone and still worth re-measuring the day somebody
+touches the shards.
+
+Queue 6: R176, R179, R180, R181, R182, R184.
+
 ## Session 203 — R183: every job says the same sentence, every time ✅
 
 **The board is the most repeated verb in the game — 542 launches in 180 days

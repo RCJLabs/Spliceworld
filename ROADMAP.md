@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**7 entries queued.** R176, R179, R180, R181, R182, R184, R185.
+**6 entries queued.** R176, R179, R180, R181, R182, R184.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4874,23 +4874,58 @@ suite can check.
   those numbers, `tools/wide.js` is still green at every width, and a break
   that forces the Pens back to the single-column layout goes red.*
 
-- **R185 — The height gate walks five of the Dex's six tabs.** Found closing
-  R117, by counting which tabs a 50px change had landed on. `splice/dex-ui.js`
-  ships **six**: Roster, Variants, Combos, Genes, Foes and **Yearbook**. The
-  walk in `tools/height.js` loops
-  `['roster', 'variants', 'combos', 'genes', 'foes']` and the `BUDGET` table
-  names the same five, so the Yearbook has **never been measured** — it has
-  no folded budget, no tallest budget and no word budget, and R89's whole
-  argument (a screen that outgrows a phone is a screen nobody reads) has
-  never been applied to it. This is R39's finding exactly — "the gate that
-  checked five of six screens" — one level down, and it is not R117's doing:
-  R117 only made it visible by adding 50px of shared chrome to a tab nothing
-  was watching. The list should be READ FROM THE SCREEN the way
-  `tools/wide.js` reads its widths, so a seventh tab is measured the day it
-  lands rather than the day somebody remembers. *Done when: the Yearbook
-  carries a folded, tallest and word budget derived from a day-180 save, the
-  tab list in `tools/height.js` is not a literal, and a break that adds a tab
-  the table does not name goes red.*
+- **R185 — The height gate walks five of the Dex's six tabs.** ✅ *Shipped —
+  and for once every premise in the entry held exactly as written.*
+
+  **Confirmed, all four.** `splice/dex-ui.js` ships six tabs; `tools/height.js`
+  looped `['roster', 'variants', 'combos', 'genes', 'foes']`; `BUDGET` and
+  `WORDS` named the same five; the Yearbook had no folded budget, no tallest
+  budget and no word budget, and R89's argument had never been applied to it.
+
+  **But the rules that should have caught it already existed.** `has no height
+  budget — a new screen has to declare one` and its word-budget twin both fail
+  loudly, and both have for milestones. They had nothing to look at: the list
+  of tabs was **typed in the gate** rather than read off the screen, so a tab
+  the gate never visited could not fail a rule about tabs it visits. That is
+  the whole defect, and it makes the fix one read rather than a new rule.
+
+  **Measured for the first time since R112 shipped the tab,** day-180 save at
+  380px:
+
+  | | shut | open | words | folds |
+  |---|---|---|---|---|
+  | `dex:yearbook` | 919px | 1454px | 139 / 253 | 4 of 5 |
+
+  The 4-of-5 is not a flake. `yearbookView` renders one collapsible card per
+  section with the **first open on arrival** — R133's rule for a screen of
+  cards — so the walk opens the other four every time.
+
+  **And its headroom is for content, not for a campaign.** Every other tab here
+  grows with the save: more species seen, more foes met, more combos found.
+  `yearbook()` maps `content.yearbook.sections` **unconditionally and filters
+  nothing**, so this tab is 5 sections and 22 rows on a fresh save and on a
+  day-180 one — what changes is the numbers inside, not how many there are. So
+  the budget is sized against a **sixth section being authored** rather than a
+  longer campaign: 1000/1600 is ~9% and ~10% over measured, the band
+  `dex:genes` and `dex:combos` already carry, and a new section is about 180px
+  of card — it would fail this, which is the point.
+
+  **The DOM read brought a hazard a literal did not have,** so it ships with a
+  union. A selector that stops matching returns `[]`, the loop walks nothing,
+  and the gate goes green having measured no tab at all — the failure shape
+  this project has shipped more than any other. So: every `dex:*` budget that
+  is declared must also have been **walked**. One direction catches a tab the
+  table does not name; the other catches a budget nothing reached. Neither
+  side is a literal.
+
+  Three breaks, one per failure mode — **402** lands a seventh tab with no
+  budget (the one this entry asked for), **403** puts the list back to a
+  literal and is caught by the union, **404** breaks the selector and is
+  caught by the floor.
+
+  *Done when: the Yearbook carries a folded, tallest and word budget derived
+  from a day-180 save, the tab list in `tools/height.js` is not a literal, and
+  a break that adds a tab the table does not name goes red.*
 
 - **R117 — Wide screens.** ✅ *Shipped — and two of the entry's own claims
   were wrong, which is recorded here rather than quietly corrected.*
