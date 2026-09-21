@@ -86,21 +86,25 @@ export function recallExpedition(state, content, now = state.lastTickAt ?? 0) {
 // Tuesday hands back an animal that has been growing since Tuesday (R65).
 export function tickExpeditions(state, content, now) {
   const run = activeExpedition(state);
-  if (!run || now < run.until) return { result: null };
+  if (!run || !(now >= run.until)) return { result: null };
   const endedAt = run.until;
   const region = content.regions?.[run.regionId];
   state.campaign.expedition = null;
   state.campaign.expeditionReadyAt = endedAt + Math.round(expTuning(content).cooldownHours * HOUR);
 
-  const { success, funds, species } = run.outcome;
-  state.funds = (state.funds ?? 0) + funds;
+  // R114 — A SAVE IS UNTRUSTED INPUT, and this one is a slot a hand-edited
+  // file can put anything in. Every field is read defensively, so a party
+  // with no crew list or no sealed outcome resolves to nothing rather than
+  // throwing on the first render after load.
+  const { success, funds, species } = run.outcome ?? {};
+  state.funds = (state.funds ?? 0) + (Number.isFinite(funds) ? funds : 0);
   const result = {
     regionId: run.regionId,
     region: region?.name ?? run.regionId,
     hours: run.hours,
-    crew: run.crew.length,
-    success,
-    funds,
+    crew: (run.crew ?? []).length,
+    success: !!success,
+    funds: Number.isFinite(funds) ? funds : 0,
     animal: null,
     overCapacity: false,
   };

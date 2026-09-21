@@ -919,7 +919,7 @@ function expeditionCard(state, ctx, t) {
         <div class="encounter job-live">
           <div><strong>${esc(region?.name ?? out.regionId)}</strong><br>
           <span class="fine-print">${fill(content.copy?.expedition?.out, {
-      crew: out.crew.length,
+      crew: (out.crew ?? []).length,
       region: esc(region?.name ?? out.regionId),
       left: `<strong class="countdown">${fmtDuration(expeditionRemainingMs(state, t))}</strong>`,
       odds: pct(out.chance),

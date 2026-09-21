@@ -19533,10 +19533,18 @@ if (inShard('preview')) {
   //    excluded, and checks the variants stay excluded in the other
   //    direction right below it.
   {
+    // R179 — AND A REGION'S EXPEDITION TABLE IS THE THIRD WAY IN. The rule
+    // is "at least one route", and until this milestone there were two; a
+    // species the Drowned Quarter stocks is obtainable by crossing that
+    // region exactly as a node unlock is, and is not a shortcut around the
+    // breeding line the paragraph below protects. Read off the tables, not
+    // named here, for the same reason as everything else in this file.
     const unlocked = new Set();
     for (const r of regions) for (const f of unlocksIn(r)) unlocked.add(f);
+    const tabled = new Set(regions.flatMap((r) => (r.expedition?.finds ?? []).map((f) => f.species)));
     const orphans = Object.values(content.species)
-      .filter((s) => !s.synthetic && !s.variantOf && !s.mailOrderPrice && !unlocked.has(s.id))
+      .filter((s) => !s.synthetic && !s.variantOf && !s.mailOrderPrice)
+      .filter((s) => !unlocked.has(s.id) && !tabled.has(s.id))
       .map((s) => s.id).sort();
     assert.deepEqual(orphans, [], `every ordinary species can be obtained (${orphans.join(', ')})`);
     // The sidegrade contract, the other way round: a variant must not
@@ -22405,11 +22413,38 @@ if (inShard('empire')) {
 
     // A stable the lab can actually read. `scoutStable` is R27's own recorder,
     // so this is the file a real duel would have written.
-    const read = buildLab(walks[0].save.chimeras.slice(0, 3));
     const classesOf = (one) => one.pack.map((u) => u.class).join(',');
-    assert.notEqual(classesOf(read), classesOf(blind),
-      'a lab that has watched your stable sends a different pack than one that has not — '
-      + `read ${classesOf(read) || '(none)'} vs blind ${classesOf(blind) || '(none)'}`);
+
+    // R179 — AND THE COMPARISON IS READ-AGAINST-READ, NOT READ-AGAINST-BLIND.
+    //
+    // It used to scout with `chimeras.slice(0, 3)` and assert the pack
+    // differed from the blind lab's. That is a coin flip on whatever stable
+    // the walk happens to produce: the counter of a particular read can
+    // legitimately BE the blind default, and then a live wire reads as a dead
+    // one. Measured on this tree, seed 2026's first three are air/water/water,
+    // whose counter is ground — and ground is exactly what the blind lab
+    // sends. The wire was working the whole time: a read of `air` alone
+    // produces water, and `air,water` produces water, so the pack does track
+    // the file.
+    //
+    // So the claim is stated as the wiring question it actually is — the pack
+    // FOLLOWS the read — and asked by scouting the same lab with one stable
+    // per class and checking the answers are not all the same. A coincidence
+    // with one default cannot hide that, and break 281's cut wire makes every
+    // read produce the identical pack, which is precisely what goes red here.
+    const byClass = new Map();
+    for (const c of walks[0].save.chimeras) {
+      const tokens = Object.values(c.tokens ?? {});
+      if (!tokens.length) continue;
+      const cls = analyze(c.frame, tokens, content).creatureClass;
+      if (!byClass.has(cls)) byClass.set(cls, c);
+    }
+    assert.ok(byClass.size >= 2,
+      `the walked stable has more than one class for the lab to read (${[...byClass.keys()].join(', ')})`);
+    const packs = [...byClass.entries()].map(([cls, c]) => `${cls}=>${classesOf(buildLab([c]))}`);
+    assert.ok(new Set(packs.map((p) => p.split('=>')[1])).size >= 2,
+      'the pack a lab sends follows what it has read off your stable, not just its own defaults — '
+      + `reads produced ${packs.join(' · ')} (blind sends ${classesOf(blind) || '(none)'})`);
   }
 
     // R138 — THE MIDDLE OF THE LEVEL CURVE.
