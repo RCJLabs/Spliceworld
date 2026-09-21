@@ -1169,7 +1169,9 @@ import { contestEncounter } from '../campaign/contest.js';
 import { looseSpecimens, breakoutEncounter } from '../campaign/breakout.js';
 import { rehabPlan, startRehab, rehabSession, sessionReadyAt, rehabGrants } from '../campaign/rehab.js';
 import { seasonOf } from '../campaign/calendar.js';
-import { expTuning, expeditionHours, expeditionRegions, expeditionCandidates } from '../campaign/expedition.js';
+import {
+  expTuning, expeditionHours, expeditionRegions, expeditionCandidates, expeditionCrew,
+} from '../campaign/expedition.js';
 import { findsFor, expeditionOdds, startExpedition } from '../campaign/outfit.js';
 
 const WALK_HOUR = 3600000;
@@ -1531,7 +1533,13 @@ function walkAct(state, content, now, open, opts = {}) {
   // What a player reads off the Pens: level first, then the grades on the
   // card. The A-team is the best three whether or not they are fit.
   const quality = (c) => lvl(c) * 10 + Object.values(c.tokens ?? {}).reduce((n, t) => n + GRADE_ORDER.indexOf(t.grade), 0);
-  const isFit = (c) => !c.injury || c.injury.until <= now;
+  // R179 — AND ABROAD IS NOT FIT, here as well as in the game. The walker
+  // builds its teams off this predicate, so without the party in it the
+  // harness would field a creature that is in the Drowned Quarter — which is
+  // the price the whole verb is paid in, un-paid in the one place that
+  // measures whether it was.
+  const away = () => expeditionCrew(state);
+  const isFit = (c) => (!c.injury || c.injury.until <= now) && !away().has(c.id);
   const fitAll = () => state.chimeras.filter(isFit).sort((x, y) => quality(y) - quality(x));
   const fitTeam = () => fitAll().slice(0, 3);
   const fullTeam = () => Math.min(3, state.chimeras.length);
@@ -1987,8 +1995,17 @@ function walkAct(state, content, now, open, opts = {}) {
     //      the long trip reaches something the short one cannot; otherwise
     //      the short one wins on crew-hours, which is the trade the tuning
     //      is built around.
+    //   0. AND IT NEEDS SOMEWHERE TO PUT WHAT IT BRINGS BACK. A successful
+    //      trip hands over an animal, and a party sent out every other day
+    //      is an animal faucet: measured without this, seed 2026 came home
+    //      to 182 head against 28 pens and `tools/vault.js` said so. A player
+    //      reading the Pens does not keep fetching mouths they have to feed,
+    //      so the walker stops at the same herd limit its shopping does.
+    const roomAtHome = state.ranch.stock.length < Math.min(state.ranch.penCapacity, WORKING_HERD);
     const busyIds = new Set(activeOps(state).map((r) => r.chimeraId).filter(Boolean));
-    const bench = expeditionCandidates(state, now, busyIds).sort((a, b) => quality(a) - quality(b));
+    const bench = roomAtHome
+      ? expeditionCandidates(state, now, busyIds).sort((a, b) => quality(a) - quality(b))
+      : [];
     const spare = bench.slice(0, Math.max(0, bench.length - fullTeam()));
     const crewMax = expTuning(content).crewMax;
     const options = [];

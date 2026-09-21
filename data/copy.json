@@ -117,7 +117,7 @@
     "none": "Nobody is in the field.",
     "recalled": "Party recalled. Everyone comes home damp and empty-handed, which is nobody’s favourite.",
     "agenda_label": "Mount an expedition",
-    "agenda_hint": "{regions} regions open. A long trip with a full crew reaches what a short one cannot.",
+    "agenda_hint": "{regions} regions open. Longer and fuller reaches more.",
     "card_blurb": "One party at a time. They are away for real hours and unavailable for jobs and fights the whole time — that is what an expedition costs.",
     "out": "{crew} out in {region}, back in {left} · odds were {odds}.",
     "found": "{creature} is in the back of the van and appears to be enjoying it.",

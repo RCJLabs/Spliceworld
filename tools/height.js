@@ -311,7 +311,12 @@ const BUDGET = {
   // that cannot be there. `foldVerdict` treats `opens` as a MINIMUM, so a
   // mid-campaign save that still has rumoured pairings opens three and
   // passes unchanged.
-  'dex:combos':   { folded: 550,   tallest: 2950, opens: 2 },
+  // R179 — 2950 -> 3100 open, measured at 3036. The twenty-eighth combo:
+  // the open half of this tab is one row per combo, so it is a
+  // multiplication and a content milestone moves it by exactly one row.
+  // The SHUT half is untouched at 550 — the folds are what keep this tab
+  // flat against a list that grows, and they still do.
+  'dex:combos':   { folded: 550,   tallest: 3100, opens: 2 },
   // R129 FOLDS IT, WHICH BRINGS THE SHUT HALF DOWN AND BUDGETS THE FOLD:
   // 1100/1100 -> 400 shut (measured 291) and 1250 open (measured 1185).
   // Twelve genes could only be learned by breeding for them, so this tab
@@ -372,7 +377,12 @@ const BUDGET = {
   // a longer campaign: 1000/1600 is ~9% over shut and ~10% over open, which is
   // the band `dex:genes` and `dex:combos` carry, and a new section would be
   // about 180px of card — it would fail this, which is the point.
-  'dex:yearbook': { folded: 1000,  tallest: 1600, opens: 4 },
+  // R179 — 1000 -> 1050 shut, measured at 1002. One more counter on the
+  // Yearbook's War section, which is R112's rule working: a tally that is
+  // not on this page is a tally nobody can see, so a new verb arrives with
+  // a row and the row has a height. Fifty pixels is a row and its
+  // subtitle, which is what the next one will cost too.
+  'dex:yearbook': { folded: 1050,  tallest: 1600, opens: 4 },
 };
 
 // R98 — AND WHAT IT SAYS, not only how tall it is.
