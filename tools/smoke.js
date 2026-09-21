@@ -528,6 +528,60 @@ assert.ok(buyPenUpgrade(econ).ok && econ.ranch.penCapacity === 6);
     'a species the build does not have is not new anatomy to chase');
 }
 
+// R179 — RARITY IS DECLARED, NOT INFERRED FROM AN ABSENT PRICE.
+//
+// The entry said "all 41 species carry a `mailOrderPrice`, so there is
+// nothing alive in this game a player cannot simply order". Measured: 34 do.
+// SEVEN do not — `salvage`, which is Enemy Tech and `synthetic: true`, and
+// the six R6 variants, which are bred and never bought BY CONTRACT. The
+// title's "first creature money cannot buy" is not first; R6 shipped six of
+// them, and `catalogFor` has filtered on `s.mailOrderPrice &&` ever since
+// while `buyMailOrder` refuses one outright.
+//
+// So what was missing was never the unbuyability. It was that the tier was
+// an ABSENCE rather than a declaration — a species is unbuyable today by
+// having no price, which is indistinguishable from a species somebody forgot
+// to price. That is the exact shape this project keeps getting caught by
+// (R50's declare-yourself, R174's "an exemption is a place a cost goes to
+// stop being questioned"), and it is what has to exist before an expedition
+// can have a table to roll on.
+//
+// SALVAGE IS EXEMPT BY BEING SYNTHETIC, not by carrying a made-up tier. It is
+// not fauna, nothing hatches it, and giving it a rarity would be inventing an
+// answer to a question it does not ask.
+{
+  const RARITIES = ['common', 'uncommon', 'rare', 'unique'];
+  const fauna = Object.values(content.species).filter((sp) => !sp.synthetic);
+  assert.ok(fauna.length >= 40, `there is a roster to check (${fauna.length} non-synthetic species)`);
+
+  const undeclared = fauna.filter((sp) => !RARITIES.includes(sp.rarity)).map((sp) => sp.id);
+  assert.deepEqual(undeclared, [],
+    `every non-synthetic species declares a rarity from ${RARITIES.join('/')} `
+    + `(undeclared: ${undeclared.join(', ')})`);
+
+  // THE TIER AND THE PRICE ARE ONE FACT, ASSERTED BOTH WAYS. A common with no
+  // price is a species nobody can reach; an uncommon with a price is the
+  // whole milestone undone by one JSON edit.
+  const pricedNotCommon = fauna.filter((sp) => sp.mailOrderPrice > 0 && sp.rarity !== 'common').map((sp) => sp.id);
+  assert.deepEqual(pricedNotCommon, [],
+    `nothing above common carries a mail-order price (${pricedNotCommon.join(', ')})`);
+  const commonNotPriced = fauna.filter((sp) => sp.rarity === 'common' && !(sp.mailOrderPrice > 0)).map((sp) => sp.id);
+  assert.deepEqual(commonNotPriced, [],
+    `and every common is orderable (${commonNotPriced.join(', ')})`);
+
+  // AND THE TWO READERS AGREE WITH THE DATA. The catalog and the till are
+  // where "unbuyable" actually has to bite, and both have filtered on the
+  // price since long before there was a tier — so this says the tier and the
+  // behaviour cannot drift apart.
+  const open = freshRanchState();
+  open.campaign = { ...(open.campaign ?? {}), heldNodes: Object.values(content.regions).flatMap((r) => r.nodes.map((n) => n.id)) };
+  const offered = catalogFor(open, content);
+  const offeredHigh = offered.filter((sp) => sp.rarity !== 'common').map((sp) => sp.id);
+  assert.deepEqual(offeredHigh, [],
+    `the catalog never offers anything above common, even with every node held (${offeredHigh.join(', ')})`);
+  assert.ok(offered.length > 20, `and it still offers the commons (${offered.length})`);
+}
+
 // Determinism: same seed → identical starter herd.
 const herdA = freshRanchState();
 const herdB = freshRanchState();

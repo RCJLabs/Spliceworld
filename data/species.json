@@ -4,6 +4,7 @@
       "id": "bear",
       "name": "Bear",
       "role": "Power",
+      "rarity": "common",
       "tags": [],
       "palette": {
         "primary": "#9c6b3f",
@@ -43,6 +44,7 @@
       "id": "tiger",
       "name": "Tiger",
       "role": "Striker",
+      "rarity": "common",
       "tags": [],
       "palette": {
         "primary": "#e08a2e",
@@ -82,6 +84,7 @@
       "id": "wolf",
       "name": "Wolf",
       "role": "Pack",
+      "rarity": "common",
       "tags": [
         "Sonic"
       ],
@@ -123,6 +126,7 @@
       "id": "crocodile",
       "name": "Crocodile",
       "role": "Bruiser",
+      "rarity": "common",
       "tags": [
         "Aquatic"
       ],
@@ -164,6 +168,7 @@
       "id": "gorilla",
       "name": "Gorilla",
       "role": "Grappler",
+      "rarity": "common",
       "tags": [],
       "palette": {
         "primary": "#4a4550",
@@ -203,6 +208,7 @@
       "id": "rhino",
       "name": "Rhino",
       "role": "Charger",
+      "rarity": "common",
       "tags": [
         "Armored"
       ],
@@ -244,6 +250,7 @@
       "id": "pangolin",
       "name": "Pangolin",
       "role": "Tank",
+      "rarity": "common",
       "tags": [
         "Armored"
       ],
@@ -285,6 +292,7 @@
       "id": "tortoise",
       "name": "Tortoise",
       "role": "Wall",
+      "rarity": "common",
       "tags": [
         "Armored",
         "Aquatic"
@@ -327,6 +335,7 @@
       "id": "rhino_beetle",
       "name": "Rhino Beetle",
       "role": "Lifter",
+      "rarity": "common",
       "tags": [
         "Armored"
       ],
@@ -369,6 +378,7 @@
       "id": "ram",
       "name": "Ram",
       "role": "Breaker",
+      "rarity": "common",
       "tags": [],
       "palette": {
         "primary": "#c8b39a",
@@ -409,6 +419,7 @@
       "id": "eagle",
       "name": "Eagle",
       "role": "Aerial Striker",
+      "rarity": "common",
       "tags": [
         "Airborne"
       ],
@@ -450,6 +461,7 @@
       "id": "bat",
       "name": "Bat",
       "role": "Disruptor",
+      "rarity": "common",
       "tags": [
         "Airborne",
         "Sonic"
@@ -492,6 +504,7 @@
       "id": "dragonfly",
       "name": "Dragonfly",
       "role": "Speedster",
+      "rarity": "common",
       "tags": [
         "Airborne"
       ],
@@ -533,6 +546,7 @@
       "id": "shark",
       "name": "Shark",
       "role": "Finisher",
+      "rarity": "common",
       "tags": [
         "Aquatic"
       ],
@@ -574,6 +588,7 @@
       "id": "octopus",
       "name": "Octopus",
       "role": "Controller",
+      "rarity": "common",
       "tags": [
         "Aquatic",
         "Gas"
@@ -616,6 +631,7 @@
       "id": "electric_eel",
       "name": "Electric Eel",
       "role": "Mage",
+      "rarity": "common",
       "tags": [
         "Electric",
         "Aquatic"
@@ -659,6 +675,7 @@
       "id": "anglerfish",
       "name": "Anglerfish",
       "role": "Taunter",
+      "rarity": "common",
       "tags": [
         "Aquatic"
       ],
@@ -703,6 +720,7 @@
       "id": "frog",
       "name": "Frog",
       "role": "Mobility",
+      "rarity": "common",
       "tags": [
         "Aquatic"
       ],
@@ -744,6 +762,7 @@
       "id": "goat",
       "name": "Goat",
       "role": "Economy",
+      "rarity": "common",
       "tags": [],
       "palette": {
         "primary": "#ddd6c7",
@@ -783,6 +802,7 @@
       "id": "chameleon",
       "name": "Chameleon",
       "role": "Ghost",
+      "rarity": "common",
       "tags": [
         "Camo"
       ],
@@ -824,6 +844,7 @@
       "id": "skunk",
       "name": "Skunk",
       "role": "Debuffer",
+      "rarity": "common",
       "tags": [
         "Gas"
       ],
@@ -865,6 +886,7 @@
       "id": "porcupine",
       "name": "Porcupine",
       "role": "Punisher",
+      "rarity": "common",
       "tags": [],
       "palette": {
         "primary": "#6b5a48",
@@ -904,6 +926,7 @@
       "id": "mantis",
       "name": "Mantis",
       "role": "Duelist",
+      "rarity": "common",
       "tags": [],
       "palette": {
         "primary": "#86c232",
@@ -944,6 +967,7 @@
       "id": "cobra",
       "name": "Cobra",
       "role": "Poisoner",
+      "rarity": "common",
       "tags": [
         "Venomous"
       ],
@@ -985,6 +1009,7 @@
       "id": "scorpion",
       "name": "Scorpion",
       "role": "Hybrid",
+      "rarity": "common",
       "tags": [
         "Venomous",
         "Armored"
@@ -1030,6 +1055,7 @@
       "id": "goose",
       "name": "Sentry Goose",
       "role": "Taunter",
+      "rarity": "common",
       "tags": [
         "Airborne",
         "Sonic"
@@ -1072,6 +1098,7 @@
       "id": "moth",
       "name": "Atlas Moth",
       "role": "Debuffer",
+      "rarity": "common",
       "tags": [
         "Airborne",
         "Gas"
@@ -1114,6 +1141,7 @@
       "id": "heron",
       "name": "Marsh Heron",
       "role": "Finisher",
+      "rarity": "common",
       "tags": [
         "Airborne"
       ],
@@ -1156,6 +1184,7 @@
       "id": "owl",
       "name": "Barn Owl",
       "role": "Ghost",
+      "rarity": "common",
       "tags": [
         "Airborne",
         "Sonic"
@@ -1199,6 +1228,7 @@
       "id": "falcon",
       "name": "Peregrine Falcon",
       "role": "Aerial Striker",
+      "rarity": "common",
       "tags": [
         "Airborne"
       ],
@@ -1240,6 +1270,7 @@
       "id": "jellyfish",
       "name": "Moon Jelly",
       "role": "Poisoner",
+      "rarity": "common",
       "tags": [
         "Aquatic",
         "Venomous"
@@ -1283,6 +1314,7 @@
       "id": "pufferfish",
       "name": "Pufferfish",
       "role": "Punisher",
+      "rarity": "common",
       "tags": [
         "Aquatic",
         "Venomous",
@@ -1326,6 +1358,7 @@
       "id": "otter",
       "name": "River Otter",
       "role": "Mobility",
+      "rarity": "common",
       "tags": [
         "Aquatic"
       ],
@@ -1367,6 +1400,7 @@
       "id": "armadillo",
       "name": "Screaming Armadillo",
       "role": "Wall",
+      "rarity": "common",
       "tags": [
         "Armored",
         "Sonic"
@@ -1446,6 +1480,7 @@
       "name": "Alpine Ram",
       "variantOf": "ram",
       "role": "Punisher",
+      "rarity": "uncommon",
       "tags": [
         "Armored"
       ],
@@ -1500,6 +1535,7 @@
       "name": "Abyssal Shark",
       "variantOf": "shark",
       "role": "Punisher",
+      "rarity": "uncommon",
       "tags": [
         "Aquatic"
       ],
@@ -1557,6 +1593,7 @@
       "name": "Thunderhead Eagle",
       "variantOf": "eagle",
       "role": "Aerial Striker",
+      "rarity": "uncommon",
       "tags": [
         "Airborne",
         "Electric"
@@ -1611,6 +1648,7 @@
       "name": "Glider Skunk",
       "variantOf": "skunk",
       "role": "Mobility",
+      "rarity": "uncommon",
       "tags": [
         "Gas",
         "Airborne"
@@ -1679,6 +1717,7 @@
       "name": "Iron Tortoise",
       "variantOf": "tortoise",
       "role": "Wall",
+      "rarity": "uncommon",
       "tags": [
         "Armored",
         "Aquatic"
@@ -1731,6 +1770,7 @@
       "name": "Pale Cobra",
       "variantOf": "cobra",
       "role": "Poisoner",
+      "rarity": "uncommon",
       "tags": [
         "Venomous"
       ],
