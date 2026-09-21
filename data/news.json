@@ -142,6 +142,16 @@
       "lines": [
         "{op} pays out again, quietly, the way an arrangement should."
       ]
+    },
+    "expedition_found": {
+      "lines": [
+        "The {region} party is back, and {creature} came with them."
+      ]
+    },
+    "expedition_empty": {
+      "lines": [
+        "The {region} party is back. They send their regards and an expenses claim."
+      ]
     }
   },
   "ticker": [

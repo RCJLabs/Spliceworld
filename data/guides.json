@@ -883,6 +883,28 @@
           "default": 0
         }
       ]
+    },
+    {
+      "id": "expeditions",
+      "screen": "battle",
+      "order": 69,
+      "icon": "map",
+      "title": "Some animals are not for sale",
+      "body": "An expedition sends crew into a region you hold for real hours. They come back with money and, if the trip was long enough and crewed enough, with something the catalog has never stocked — the price is that nobody you send can work a job or fight until they are home.",
+      "reachable": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "campaign.expeditionCount",
+          "min": 1,
+          "default": 0
+        }
+      ]
     }
   ]
 }

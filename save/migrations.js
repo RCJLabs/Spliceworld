@@ -22,6 +22,20 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R179 — the expedition slot. It arrives EMPTY and READY, which is the
+  // only shape that costs a live save nothing: `expeditionReadyAt` of zero
+  // is a van that finished unpacking in 1970, so whatever a player was in
+  // the middle of, they come back able to mount one immediately. Four fields
+  // rather than three, because the report is what the War Room badges and an
+  // absent key is a shape the schema does not declare.
+  60: (save) => {
+    save.campaign ??= {};
+    save.campaign.expedition ??= null;
+    save.campaign.expeditionReadyAt ??= 0;
+    save.campaign.expeditionCount ??= 0;
+    save.campaign.expeditionReport ??= null;
+    return save;
+  },
   // R116 — the jobs board's charge bucket. One timestamp, exactly the shape
   // `sparRefillAt` has held since R43.
   //

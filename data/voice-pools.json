@@ -499,5 +499,17 @@
     "Payment received. {op} would like it noted that everything is completely normal.",
     "{op} logs another quiet cycle. The quiet is doing rather well for you.",
     "A recurring transfer from {op} is flagged, reviewed, and unflagged by the same person."
+  ],
+  "news.expedition_found.lines": [
+    "Field team returns from {region} with {creature} and an unusually long silence.",
+    "{creature} has been logged, photographed and fed. {region} is quieter for it.",
+    "The {region} expedition files one line of paperwork: {creature}.",
+    "Something came back from {region}. It is called {creature} and it has opinions."
+  ],
+  "news.expedition_empty.lines": [
+    "The {region} party returns with nothing but a strong sense of having been outside.",
+    "Expedition to {region} concludes. Findings: weather.",
+    "{region} declined to produce anything today. The crew took it personally.",
+    "Nothing from {region}. The van smells of pond, which is the only evidence."
   ]
 }

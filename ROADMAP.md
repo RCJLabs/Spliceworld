@@ -131,20 +131,20 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
      engine at test time, never typed twice. If you change content, this
      block is what tells you the prose above it has gone stale. -->
 
-- species: 41
-- parts: 244
+- species: 42
+- parts: 249
 - frames: 4
 - regions: 5
 - nodes: 23
 - keywords: 29
-- combos: 27
+- combos: 28
 - grades: 4
 - grade multipliers: 1/1.2/1.4/1.65
 - grade move bonus percent: 12
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 59
+- save version: 60
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40

@@ -106,7 +106,36 @@
         }
       ],
       "benchGrade": "standard",
-      "completionBonus": 150
+      "completionBonus": 150,
+      "expedition": {
+        "brief": "Ditches, hedgerows and one municipal pond. Nobody out here will even ask what you are doing.",
+        "finds": [
+          {
+            "species": "goat",
+            "weight": 5
+          },
+          {
+            "species": "ram",
+            "weight": 4
+          },
+          {
+            "species": "porcupine",
+            "weight": 3
+          },
+          {
+            "species": "skunk",
+            "weight": 3
+          },
+          {
+            "species": "mantis",
+            "weight": 2
+          },
+          {
+            "species": "armadillo",
+            "weight": 2
+          }
+        ]
+      }
     },
     {
       "id": "kestrel",
@@ -174,7 +203,44 @@
         }
       ],
       "benchGrade": "prime",
-      "completionBonus": 180
+      "completionBonus": 180,
+      "expedition": {
+        "brief": "Thermals, pylons and a quarry full of nesting sites. Bring somebody who likes heights.",
+        "finds": [
+          {
+            "species": "eagle",
+            "weight": 4
+          },
+          {
+            "species": "falcon",
+            "weight": 3
+          },
+          {
+            "species": "owl",
+            "weight": 3
+          },
+          {
+            "species": "goose",
+            "weight": 3
+          },
+          {
+            "species": "heron",
+            "weight": 3
+          },
+          {
+            "species": "bat",
+            "weight": 2
+          },
+          {
+            "species": "moth",
+            "weight": 2
+          },
+          {
+            "species": "dragonfly",
+            "weight": 2
+          }
+        ]
+      }
     },
     {
       "id": "drowned",
@@ -242,7 +308,52 @@
         }
       ],
       "benchGrade": "prime",
-      "completionBonus": 220
+      "completionBonus": 220,
+      "expedition": {
+        "brief": "Flooded streets, a sunken multi-storey car park, and something with a wingspan under the pier.",
+        "finds": [
+          {
+            "species": "otter",
+            "weight": 4
+          },
+          {
+            "species": "frog",
+            "weight": 3
+          },
+          {
+            "species": "crocodile",
+            "weight": 3
+          },
+          {
+            "species": "octopus",
+            "weight": 3
+          },
+          {
+            "species": "shark",
+            "weight": 2
+          },
+          {
+            "species": "jellyfish",
+            "weight": 2
+          },
+          {
+            "species": "pufferfish",
+            "weight": 2
+          },
+          {
+            "species": "electric_eel",
+            "weight": 2
+          },
+          {
+            "species": "anglerfish",
+            "weight": 2
+          },
+          {
+            "species": "manta",
+            "weight": 1
+          }
+        ]
+      }
     },
     {
       "id": "foundry",
@@ -306,7 +417,36 @@
         }
       ],
       "benchGrade": "apex",
-      "completionBonus": 270
+      "completionBonus": 270,
+      "expedition": {
+        "brief": "Slag heaps, warm pipework and a decommissioned rolling mill that something has moved into.",
+        "finds": [
+          {
+            "species": "rhino_beetle",
+            "weight": 4
+          },
+          {
+            "species": "pangolin",
+            "weight": 3
+          },
+          {
+            "species": "scorpion",
+            "weight": 3
+          },
+          {
+            "species": "chameleon",
+            "weight": 3
+          },
+          {
+            "species": "tortoise",
+            "weight": 2
+          },
+          {
+            "species": "rhino",
+            "weight": 2
+          }
+        ]
+      }
     },
     {
       "id": "spire",
@@ -389,7 +529,36 @@
         }
       ],
       "benchGrade": "apex",
-      "completionBonus": 390
+      "completionBonus": 390,
+      "expedition": {
+        "brief": "The atrium menagerie, the executive roof garden, and whatever got loose in facilities management.",
+        "finds": [
+          {
+            "species": "wolf",
+            "weight": 3
+          },
+          {
+            "species": "cobra",
+            "weight": 3
+          },
+          {
+            "species": "chameleon",
+            "weight": 3
+          },
+          {
+            "species": "tiger",
+            "weight": 2
+          },
+          {
+            "species": "bear",
+            "weight": 2
+          },
+          {
+            "species": "gorilla",
+            "weight": 2
+          }
+        ]
+      }
     }
   ],
   "contestation": {
@@ -420,5 +589,28 @@
     "rescue_impound",
     "air_patrol",
     "harbor_watch"
-  ]
+  ],
+  "expeditions": {
+    "crewMax": 3,
+    "hourOptions": [
+      4,
+      12,
+      24
+    ],
+    "baseChance": 0.24,
+    "perCrew": 0.1,
+    "perHour": 0.01,
+    "answerBonus": 0.12,
+    "minChance": 0.08,
+    "maxChance": 0.88,
+    "cooldownHours": 9,
+    "fundsPerCrewHour": 9,
+    "consolation": 0.3,
+    "rarityFloor": {
+      "uncommon": {
+        "hours": 24,
+        "crew": 2
+      }
+    }
+  }
 }

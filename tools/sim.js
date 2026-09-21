@@ -1159,7 +1159,7 @@ import { activeVat, vatPlan, startVat } from '../splice/chaos.js';
 import { activeResequence, resequencePlan, startResequence } from '../splice/resequencer.js';
 import {
   startOperation, operationList, opReady, laneFree, runnableOps, freeCrew, opOdds,
-  contractList, contractPerDay, activeContract, signContract,
+  contractList, contractPerDay, activeContract, signContract, activeOps,
 } from '../campaign/operations.js';
 import { startSpar, canSpar, sparEncounter, sparPartners } from '../campaign/sparring.js';
 import { levelOf } from '../battle/veterancy.js';
@@ -1169,6 +1169,8 @@ import { contestEncounter } from '../campaign/contest.js';
 import { looseSpecimens, breakoutEncounter } from '../campaign/breakout.js';
 import { rehabPlan, startRehab, rehabSession, sessionReadyAt, rehabGrants } from '../campaign/rehab.js';
 import { seasonOf } from '../campaign/calendar.js';
+import { expTuning, expeditionHours, expeditionRegions, expeditionCandidates } from '../campaign/expedition.js';
+import { findsFor, expeditionOdds, startExpedition } from '../campaign/outfit.js';
 
 const WALK_HOUR = 3600000;
 const WALK_DAY = 24 * WALK_HOUR;
@@ -1964,6 +1966,55 @@ function walkAct(state, content, now, open, opts = {}) {
         crewed: !!started.run.chimeraId,
         won: started.run.outcome.success,
         pay: started.run.outcome.funds,
+      });
+    }
+  }
+  if (has('expedition')) {
+    // R179 — A POLICY, NOT A TAP, which is what the entry's Done-when asks
+    // for and is the whole difference between this verb and a button. Three
+    // rules, and each of them is a thing a player reading the screen would
+    // also do:
+    //
+    //   1. THE A-TEAM STAYS HOME. An expedition takes its crew out of jobs
+    //      and fights for the whole trip, so the walker sends the bench and
+    //      only the bench — a stable of three has nobody spare and mounts
+    //      nothing, which is the price being real rather than nominal.
+    //   2. IT GOES FOR WHAT IT HAS NEVER HELD. Every (region, length) pair
+    //      is scored by how many species on the resulting table are new to
+    //      the Dex, because a trip that can only bring back a fourth goat is
+    //      not worth a day of the roster.
+    //   3. IT PAYS FOR THE FLOOR IT NEEDS. The long trip is only taken when
+    //      the long trip reaches something the short one cannot; otherwise
+    //      the short one wins on crew-hours, which is the trade the tuning
+    //      is built around.
+    const busyIds = new Set(activeOps(state).map((r) => r.chimeraId).filter(Boolean));
+    const bench = expeditionCandidates(state, now, busyIds).sort((a, b) => quality(a) - quality(b));
+    const spare = bench.slice(0, Math.max(0, bench.length - fullTeam()));
+    const crewMax = expTuning(content).crewMax;
+    const options = [];
+    for (const region of expeditionRegions(state, content)) {
+      for (const hours of expeditionHours(content)) {
+        for (let n = 1; n <= Math.min(crewMax, spare.length); n++) {
+          const crew = spare.slice(0, n);
+          const table = findsFor(content, region, hours, n);
+          const fresh = table.filter((f) => isNewToDex(state, content, f.species)).length;
+          if (!fresh) continue;
+          const odds = expeditionOdds(state, content, region, hours, crew);
+          // Fresh species per crew-hour: the long trip only wins when the
+          // long trip is the only way to reach what it is reaching for.
+          options.push({ region, hours, crew, score: (fresh * odds.chance) / (n * hours) });
+        }
+      }
+    }
+    const best = options.sort((a, b) => b.score - a.score)[0];
+    const sent = best && startExpedition(state, content, now, best.region.id, best.crew.map((c) => c.id), best.hours);
+    if (sent?.ok) {
+      did('expedition', {
+        region: best.region.id,
+        hours: best.hours,
+        crew: best.crew.length,
+        won: sent.run.outcome.success,
+        found: sent.run.outcome.species ?? null,
       });
     }
   }

@@ -106,5 +106,33 @@
   "rail": {
     "idle": "Nothing is open. Everything is on a timer — come back shortly.",
     "more": "and {n} more of these."
+  },
+  "expedition": {
+    "already": "You already have a party in the field. One at a time; you only own the one van.",
+    "resting": "The last party is still unpacking, still damp, and still telling the story.",
+    "no_region": "You have no business out there yet. Open the region first.",
+    "no_hours": "Pick how long they are going for. Vagueness is how people get left behind.",
+    "no_crew": "Somebody has to actually go. Pick a crew who are fit and not already out on a job.",
+    "too_many": "That is more crew than the van seats, and the van is not negotiable.",
+    "none": "Nobody is in the field.",
+    "recalled": "Party recalled. Everyone comes home damp and empty-handed, which is nobody’s favourite.",
+    "agenda_label": "Mount an expedition",
+    "agenda_hint": "{regions} regions open. A long trip with a full crew reaches what a short one cannot.",
+    "card_blurb": "One party at a time. They are away for real hours and unavailable for jobs and fights the whole time — that is what an expedition costs.",
+    "out": "{crew} out in {region}, back in {left} · odds were {odds}.",
+    "found": "{creature} is in the back of the van and appears to be enjoying it.",
+    "empty": "They came back with photographs. Lovely photographs.",
+    "heading": "Expedition",
+    "heading_out": "In The Field",
+    "where": "Where",
+    "how_long": "How long",
+    "who": "Who (up to {max})",
+    "nobody": "nobody is free to go",
+    "send": "Send them",
+    "recall": "Call them home",
+    "unpacking": "unpacking for {left}",
+    "priced": "Odds {odds} · {funds} if it lands · {n} on the table{more}",
+    "reaches": " · longer and fuller would also reach {list}",
+    "overfull": "The pens are over capacity and everyone is cross about it."
   }
 }

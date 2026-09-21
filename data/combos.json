@@ -559,6 +559,29 @@
           "accDown": 1
         }
       }
+    },
+    {
+      "id": "tidewalker",
+      "name": "Tidewalker",
+      "parts": [
+        "manta_forelimbs",
+        "manta_hide"
+      ],
+      "keyword": "Priority",
+      "desc": "Airborne and Aquatic at once, which no other move in the county manages. It goes first, and it is the softest punch on the whole combo list.",
+      "move": {
+        "power": 48,
+        "cost": 20,
+        "acc": 100,
+        "tags": [
+          "Airborne",
+          "Aquatic"
+        ],
+        "keywords": {
+          "priority": true,
+          "evasionUp": 1
+        }
+      }
     }
   ]
 }

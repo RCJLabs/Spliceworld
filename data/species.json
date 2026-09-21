@@ -386,7 +386,7 @@
         "accent": "#e8dcc8"
       },
       "frame": "M",
-      "bulk": 1.0,
+      "bulk": 1,
       "class": "ground",
       "archetype": "horned",
       "diet": "Hillside buffet",
@@ -661,7 +661,7 @@
       "incubationMinutes": 38,
       "setBonus": {
         "name": "Overcharge",
-        "desc": "+25% Power, \u221215% Stamina",
+        "desc": "+25% Power, −15% Stamina",
         "effect": {
           "stats": {
             "power": 1.25,
@@ -1170,7 +1170,7 @@
       "incubationMinutes": 33,
       "setBonus": {
         "name": "Standing Still",
-        "desc": "+20% Power, \u221210% Speed",
+        "desc": "+20% Power, −10% Speed",
         "effect": {
           "stats": {
             "power": 1.2,
@@ -1756,7 +1756,7 @@
       },
       "flavor": "Mineralised. Slowly. On purpose, it insists.",
       "statMult": {
-        "armor": 2.0,
+        "armor": 2,
         "hp": 1.4,
         "speed": 0.45,
         "stamina": 0.8
@@ -1818,6 +1818,51 @@
           "fangs": true
         }
       }
+    },
+    {
+      "id": "manta",
+      "name": "Manta",
+      "role": "Glider",
+      "rarity": "uncommon",
+      "tags": [
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#4a6b8a",
+        "secondary": "#9fd0ff",
+        "accent": "#e6f2ff"
+      },
+      "frame": "A",
+      "bulk": 0.8,
+      "class": "water",
+      "archetype": "ray",
+      "diet": "Plankton, by the cubic metre",
+      "feedCost": 7,
+      "upkeepPerDay": 7,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 9,
+        "prime": 26,
+        "elder": 84
+      },
+      "thermal": [
+        4,
+        28
+      ],
+      "incubationMinutes": 34,
+      "setBonus": {
+        "name": "Open Water",
+        "desc": "+10% evasion, and Evasion Up rises two stages",
+        "effect": {
+          "perks": {
+            "evasion": 0.1
+          },
+          "keywords": {
+            "evasionUp": 2
+          }
+        }
+      },
+      "flavor": "Files no flight plan. Arrives anyway."
     }
   ]
 }

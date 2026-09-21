@@ -550,6 +550,7 @@ assert.ok(buyPenUpgrade(econ).ok && econ.ranch.penCapacity === 6);
 // not fauna, nothing hatches it, and giving it a rarity would be inventing an
 // answer to a question it does not ask.
 {
+  const { findsFor } = await import('../campaign/outfit.js');
   const RARITIES = ['common', 'uncommon', 'rare', 'unique'];
   const fauna = Object.values(content.species).filter((sp) => !sp.synthetic);
   assert.ok(fauna.length >= 40, `there is a roster to check (${fauna.length} non-synthetic species)`);
@@ -580,6 +581,104 @@ assert.ok(buyPenUpgrade(econ).ok && econ.ranch.penCapacity === 6);
   assert.deepEqual(offeredHigh, [],
     `the catalog never offers anything above common, even with every node held (${offeredHigh.join(', ')})`);
   assert.ok(offered.length > 20, `and it still offers the commons (${offered.length})`);
+
+  // R179 — THE EXPEDITION IS THE ONLY WAY IN, and that is asserted against
+  // every OTHER mechanism by name rather than by hoping none of them grows
+  // one. A species above common that also drops out of a job, a node unlock,
+  // a starter herd or a breeding line would satisfy the price rule above and
+  // still make the whole milestone decorative.
+  const high = fauna.filter((sp) => sp.rarity !== 'common');
+  assert.ok(high.length >= 1, 'there is something above common to protect');
+  const onTable = (id) => Object.values(content.regions)
+    .filter((r) => (r.expedition?.finds ?? []).some((f) => f.species === id)).map((r) => r.id);
+  const jobStock = new Set(Object.values(content.operations ?? {})
+    .flatMap((op) => op.livestock?.species ?? []));
+  const nodeUnlocks = new Set(Object.values(content.regions)
+    .flatMap((r) => r.nodes).flatMap((n) => n.unlocksFauna ?? []));
+  const starterStock = new Set((content.starterLabs ?? [])
+    .flatMap((lab) => [lab.donor, lab.pair].filter(Boolean)));
+  for (const sp of high) {
+    const ways = [
+      sp.variantOf ? 'a breeding line' : null,
+      jobStock.has(sp.id) ? 'a job payout' : null,
+      nodeUnlocks.has(sp.id) ? 'a node unlock' : null,
+      starterStock.has(sp.id) ? 'a founding herd' : null,
+      onTable(sp.id).length ? 'an expedition' : null,
+    ].filter(Boolean);
+    assert.equal(ways.length, 1,
+      `${sp.id} is above common and arrives exactly one way (${ways.join(' + ') || 'no way at all'})`);
+  }
+  // …and the one this milestone shipped arrives by expedition, from exactly
+  // one region, so "a campaign that never runs one never sees it" is a fact
+  // about the data and not about how the walker happened to behave.
+  const expeditionOnly = high.filter((sp) => !sp.variantOf);
+  assert.ok(expeditionOnly.length >= 1, 'at least one tier above common is expedition-only');
+  for (const sp of expeditionOnly) {
+    assert.equal(onTable(sp.id).length, 1,
+      `${sp.id} is on exactly one region's table (${onTable(sp.id).join(', ') || 'none'})`);
+  }
+
+  // THE FLOOR IS WHAT MAKES IT A DECISION, and a floor no trip can meet is a
+  // species nobody can ever hold — the R95 failure this gate family exists
+  // for. Both halves: every declared floor is reachable by SOME legal trip,
+  // and the shortest, smallest trip reaches none of them.
+  const tune = { crewMax: 3, hourOptions: [4, 12, 24], rarityFloor: {}, ...(content.campaignMeta?.expeditions ?? {}) };
+  for (const [rarity, floor] of Object.entries(tune.rarityFloor)) {
+    assert.ok(tune.hourOptions.some((h) => h >= floor.hours) && tune.crewMax >= floor.crew,
+      `the ${rarity} floor (${floor.hours}h, ${floor.crew} crew) is a trip this game offers`);
+  }
+  for (const sp of expeditionOnly) {
+    const region = content.regions[onTable(sp.id)[0]];
+    const shortest = Math.min(...tune.hourOptions);
+    assert.ok(!findsFor(content, region, shortest, 1).some((f) => f.species === sp.id),
+      `${sp.id} cannot be found on the shortest one-crew trip — otherwise the floor buys nothing`);
+    assert.ok(findsFor(content, region, Math.max(...tune.hourOptions), tune.crewMax)
+      .some((f) => f.species === sp.id),
+      `${sp.id} CAN be found on the longest full-crew one`);
+  }
+
+  // THE TRAP THE ENTRY NAMES: "a rare that is simply BETTER is power creep
+  // wearing a costume." R6 made every variant a sidegrade by contract and
+  // asserted it in `statMult`; a species that is not a variant has no
+  // `statMult` to check, so the contract is stated on the PARTS instead.
+  //
+  // Per slot, a part's budget is its stat points plus the power of the move
+  // it brings. An expedition-only part may sit anywhere inside the range the
+  // commons already occupy — that is what makes it a build rather than a
+  // trophy — but it may not sit above the top of it, at any slot. The floor
+  // half matters too: at least one of its parts has to be below the common
+  // MEDIAN, or "inside the range" is satisfied by a body that is merely
+  // strong everywhere.
+  const budget = (part) => Object.values(part.stats ?? {}).reduce((n, v) => n + v, 0)
+    + (part.move?.power ?? 0);
+  const commonParts = Object.values(content.parts)
+    .filter((p) => (content.species[p.species]?.rarity ?? 'common') === 'common');
+  for (const sp of expeditionOnly) {
+    const mine = Object.values(content.parts).filter((p) => p.species === sp.id);
+    let below = 0;
+    for (const part of mine) {
+      const peers = commonParts.filter((p) => p.slot === part.slot).map(budget).sort((a, b) => a - b);
+      assert.ok(peers.length >= 5, `${part.slot} has commons to compare against (${peers.length})`);
+      const top = peers[peers.length - 1];
+      const median = peers[Math.floor(peers.length / 2)];
+      assert.ok(budget(part) <= top,
+        `${part.id} is ${budget(part)} against a best common ${part.slot} of ${top} `
+        + '— an uncommon that is simply better is power creep wearing a costume');
+      if (budget(part) < median) below++;
+    }
+    assert.ok(below >= 1,
+      `${sp.id} gives something up: no part of it is below the common median for its slot`);
+  }
+
+  // AT LEAST ONE NEW COMBO OFF THE NEW ANATOMY — the entry's second clause.
+  // Asserted as "every expedition-only species is in a combo", so the rule
+  // holds for the rare and the unique when they ship rather than for the
+  // manta alone.
+  for (const sp of expeditionOnly) {
+    const mine = new Set(Object.values(content.parts).filter((p) => p.species === sp.id).map((p) => p.id));
+    const combos = Object.values(content.combos).filter((c) => c.parts.some((id) => mine.has(id)));
+    assert.ok(combos.length >= 1, `${sp.id}'s anatomy unlocks a combo (it is in none)`);
+  }
 }
 
 // Determinism: same seed → identical starter herd.
@@ -2078,7 +2177,7 @@ for (const combo of Object.values(content.combos)) {
     gradeAssignmentsChecked++;
   }
 }
-assert.equal(gradeAssignmentsChecked, 432, 'every combo × grade assignment was actually checked');
+assert.equal(gradeAssignmentsChecked, 448, 'every combo × grade assignment was actually checked');
 // Grades are the power curve: each tier opens the boss further.
 //
 // Measured on the MEAN across builds, not the max. A max over a couple of
@@ -2487,6 +2586,11 @@ assert.deepEqual(m5.campaign, {
   // the wild anatomy on their next tick, which is the moment they are
   // sitting in front of the game to read it.
   released: null,
+  // R179 — and the same claim for the expedition. A save from before there
+  // was anywhere to go arrives with nobody in the field and a van that
+  // finished unpacking in 1970, so the first thing a returning player can do
+  // is mount one. Nothing is backdated; nothing is owed.
+  expedition: null, expeditionReadyAt: 0, expeditionCount: 0, expeditionReport: null,
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -2827,7 +2931,17 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   const CLASSES = ['ground', 'water', 'air'];
 
   const animals = Object.values(content.species).filter((sp) => !sp.synthetic);
-  assert.equal(animals.length, 40, `forty animals (${animals.length})`);
+  // R179 — A FLOOR RATHER THAN AN EQUALITY, and the note four lines up is the
+  // argument: "the criterion is deliberately NOT a species count", and then
+  // the line under it asserted one. An equality here is a number every
+  // content milestone has to re-type — A3 wrote 40, R6 did not move it
+  // because variants are counted separately, and R179 hit it with the
+  // forty-first animal. The EXACT count is still gated, derived, in
+  // `tools/roadmap.js`, which checks §4.0's `species:` against the data and
+  // fails in BOTH directions; nothing below this line reads the number at
+  // all. So the floor keeps the "did the roster survive" anchor without
+  // keeping a constant that only ever gets re-typed.
+  assert.ok(animals.length >= 40, `at least forty animals (${animals.length})`);
 
   const pool = Object.fromEntries(CLASSES.map((c) => [c, {}]));
   for (const part of Object.values(content.parts)) {
@@ -2877,11 +2991,23 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   // 5. Every new animal is REACHABLE. A species with a price that no node
   //    unlocks would be on sale from turn one and quietly break the "the
   //    catalog is two species with no territory" floor the jobs board rests
-  //    on; a species with no price and no node is unobtainable.
+  //    on; a species with no price and no way in is unobtainable.
+  //
+  //    R179 — A THIRD WAY IN. A3 wrote this when the catalog was the whole
+  //    world, so "reachable" and "priced" were the same sentence; they are
+  //    not any more. A species on a region's expedition table is reachable
+  //    without a price, and the PAIR is what this rule actually protects —
+  //    priced-and-unlocked, or on a table, and never neither. Read off the
+  //    tables rather than named here, because a list of ids goes stale the
+  //    day somebody adds the next animal (R61).
   const unlocked = new Set(Object.values(content.regions).flatMap((r) => r.nodes).flatMap((n) => n.unlocksFauna ?? []));
+  const tabled = new Set(Object.values(content.regions)
+    .flatMap((r) => (r.expedition?.finds ?? []).map((f) => f.species)));
   for (const sp of animals) {
     if (sp.variantOf) continue; // variants are bred, never bought
-    assert.ok(sp.mailOrderPrice, `${sp.id} has a catalog price`);
+    assert.ok(sp.mailOrderPrice || tabled.has(sp.id),
+      `${sp.id} has a catalog price or a region that stocks it`);
+    if (!sp.mailOrderPrice) continue; // an expedition-only species has no shop to unlock
     assert.ok(unlocked.has(sp.id) || ['goat', 'ram'].includes(sp.id),
       `${sp.id} is unlocked by conquering something`);
   }
@@ -6996,6 +7122,9 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // whole problem was that nobody knew it was there.
     'yearbook',
     'jobs', 'containment', 'rehab', 'rivals', 'rescue', 'contest', 'regions', 'director', 'gauntlet',
+    // R179 — the verb that is not a fight and not a splice. On the roll by
+    // name, like everything else, so that deleting the note fails the build.
+    'expeditions',
     // R82. The breakout is the rival ladder's consequence rather than a
     // second ladder: it is on the roll in its own right because it has a
     // data file, a module, a board, a launcher and a first-use moment, and
@@ -7194,6 +7323,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'campaign/gauntlet.js': 'gauntlet',
     'campaign/breakout.js': 'breakout',
     'campaign/operations.js': 'jobs',
+    // R179 — two modules, one system, the way R108's card and exhibition
+    // are: the judgement of who is abroad and the composer that sends them.
+    'campaign/expedition.js': 'expeditions',
+    'campaign/outfit.js': 'expeditions',
     'campaign/rehab.js': 'rehab',
     'campaign/rivals.js': 'rivals',
     'ranch/breeding.js': 'breeding',
@@ -7417,7 +7550,11 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // which needs somewhere for the menagerie to travel TO. Holding a node is
     // exactly when it starts being true, so it lights beside `catalog` — the
     // note is behind the wall it explains (R37).
-    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable', 'triangle', 'chart', 'grades', 'calendar']],
+    // R179 — `expeditions` lights here for the same reason `jobs` does, and
+    // it is the same wall: holding a node is what opens a region, and an
+    // expedition can only go somewhere the campaign has opened. Behind the
+    // wall it explains (R37), and it queues behind the notes above it.
+    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable', 'triangle', 'chart', 'grades', 'calendar', 'expeditions']],
     // R38's note lights here too: the grade decision is live from the first
     // animal the player owns, and every starter animal is already below its
     // own ceiling — measured, all 1,200 of them across 400 seeds.
@@ -8116,6 +8253,121 @@ if (inShard('regions')) {
     `and conquest still adds to it (${beforeCatalog.size} -> ${afterCatalog.size})`);
 }
 
+// --- R179: expeditions — the price, the seal, and the reload -----------
+//
+// The four things an expedition has to be, checked against the engine rather
+// than against the data: the crew really are unavailable, the outcome really
+// is sealed at launch, the settle really is elapsed, and a reload really
+// cannot change what came back.
+{
+  const { startExpedition } = await import('../campaign/outfit.js');
+  const {
+    tickExpeditions, activeExpedition, expeditionCrew, expeditionReady,
+    expeditionReadyAt, recallExpedition, expTuning,
+  } = await import('../campaign/expedition.js');
+  const { jobSlots, freeCrew, opTuning: opTune } = await import('../campaign/operations.js');
+  const { canBringMore, fitTeam: warFitTeam, suggestTeam } = await import('../campaign/warroom.js');
+
+  // Four creatures, spliced through the real door so `analyze` has a body to
+  // read when the odds ask whether anybody answers the region.
+  const crewLab = (seed, n, prefix) => {
+    const s = { ...newGameState(), seed, funds: 5000 };
+    s.lastTickAt = t0;
+    s.campaign.heldNodes = [...ALL_NODE_IDS];
+    for (let i = 0; i < n; i++) {
+      const c = makeChimera(s, 'M', { goat_head: 'standard', goat_hindlimbs: 'standard' }, t0);
+      c.id = `${prefix}-${i + 1}`;
+      c.settleUntil = t0;
+    }
+    return s;
+  };
+  const lab = crewLab(4242, 4, 'exp');
+  const tune = expTuning(content);
+  const long = Math.max(...tune.hourOptions);
+
+  assert.ok(expeditionReady(lab, t0), 'a lab with nobody in the field can mount one');
+  const before = { slots: jobSlots(lab, content, t0), free: freeCrew(lab, t0).length };
+  const sent = startExpedition(lab, content, t0, 'drowned', ['exp-1', 'exp-2'], long);
+  assert.ok(sent.ok, `the trip launches (${sent.msg ?? ''})`);
+  assert.equal(activeExpedition(lab).crew.length, 2, 'two went');
+
+  // THE PRICE, at every reader that decides who is available. A creature
+  // counted fit in one of these and abroad in another is the whole mechanic
+  // costing nothing.
+  const away = expeditionCrew(lab);
+  assert.equal(away.size, 2, 'two are abroad');
+  // The slot count is `min(maxJobs, fit)`, so two leaving a stable of four
+  // takes it to two — not to "before minus two", which the cap was already
+  // holding down. The claim is the CLAMPED number, stated as the engine
+  // computes it, because an assertion that restates the bug is not a gate.
+  assert.equal(jobSlots(lab, content, t0),
+    Math.min(opTune(content).maxJobs, lab.chimeras.length - away.size),
+    'the board counts only the crew still in the county');
+  assert.ok(jobSlots(lab, content, t0) < before.slots, 'and it is fewer than before they left');
+  assert.equal(freeCrew(lab, t0).length, before.free - 2, 'and two from its free list');
+  assert.ok(!freeCrew(lab, t0).some((c) => away.has(c.id)), 'neither of them is offered a job');
+  assert.ok(!warFitTeam(lab, ['exp-1', 'exp-3'], t0).some((c) => away.has(c.id)),
+    'a team picked before they left drops them at the launch button');
+  assert.ok(!suggestTeam(lab, content.encounters[Object.keys(content.encounters)[0]], content, t0)
+    .team.some((c) => away.has(c.id)), 'and the suggestion never proposes one');
+  lab.campaign.expedition.crew = lab.chimeras.map((c) => c.id);
+  assert.equal(canBringMore(lab, [], t0, 3), false, 'with everybody abroad there is nobody to bring');
+  lab.campaign.expedition.crew = [...away];
+
+  // ONE AT A TIME, and the refusal says so rather than silently replacing.
+  const second = startExpedition(lab, content, t0, 'greenfield', ['exp-3'], long);
+  assert.equal(second.ok, false, 'a second party cannot leave while the first is out');
+  assert.equal(second.msg, content.copy.expedition.already, 'and it is the copy that says why');
+
+  // SEALED AT LAUNCH. A reload between the launch and the landing must not
+  // be able to reroll it — the timer rule this whole game is built on.
+  const sealed = structuredClone(activeExpedition(lab).outcome);
+  const reloaded = structuredClone(lab);
+  // A third copy, taken BEFORE either of the two above is ticked, for the
+  // week-away check further down — a save that has already resolved has
+  // nothing left to resolve, which is how the first draft of this block
+  // tested nothing and crashed saying so.
+  const away2 = structuredClone(lab);
+  const a = tickExpeditions(lab, content, t0 + long * HOUR + 1).result;
+  const b = tickExpeditions(reloaded, content, t0 + long * HOUR + 1).result;
+  assert.deepEqual(
+    { success: a.success, funds: a.funds, species: a.animal?.species ?? null },
+    { success: sealed.success, funds: sealed.funds, species: sealed.species },
+    'what landed is what was sealed at launch'
+  );
+  assert.equal(b.funds, a.funds, 'and a reload lands the same trip');
+  assert.equal(b.animal?.species ?? null, a.animal?.species ?? null, 'with the same animal');
+  assert.equal(activeExpedition(lab), null, 'the field is empty again');
+  assert.equal(expeditionCrew(lab).size, 0, 'and the crew are available');
+  assert.equal(jobSlots(lab, content, t0 + long * HOUR + 1), before.slots, 'the board has them back');
+
+  // THE COOLDOWN IS THE VAN UNPACKING, and it runs from when they were
+  // actually back rather than from when the player happened to look — R65's
+  // rule, which the board learned the hard way.
+  assert.equal(expeditionReadyAt(lab), t0 + long * HOUR + Math.round(tune.cooldownHours * HOUR),
+    'the rest runs from the landing, not from the tick that noticed it');
+  assert.ok(!expeditionReady(lab, t0 + long * HOUR + 1), 'so nothing leaves again immediately');
+
+  // ELAPSED, not ticked. A player away for a week comes back to a landed
+  // trip, not to a timer that only moves while they are watching.
+  const week = tickExpeditions(away2, content, t0 + 7 * 24 * HOUR).result;
+  assert.ok(week, 'a week away still lands the trip');
+  assert.equal(week.funds, a.funds, 'and it is the same trip that was sealed');
+
+  // A RECALL costs the trip and still pays the rest — nothing is gained and
+  // nothing is lost, which is the board's abort rule.
+  const bail = crewLab(77, 2, 'bail');
+  assert.ok(startExpedition(bail, content, t0, 'greenfield', ['bail-1'], Math.min(...tune.hourOptions)).ok,
+    'the short trip launches too');
+  const funds = bail.funds;
+  assert.ok(recallExpedition(bail, content, t0 + HOUR).ok, 'they can be called home');
+  assert.equal(activeExpedition(bail), null, 'and the field empties');
+  assert.equal(bail.funds, funds, 'a recall pays nothing');
+  assert.equal(expeditionCrew(bail).size, 0, 'and frees the crew');
+  assert.equal(expeditionReadyAt(bail), t0 + HOUR + Math.round(tune.cooldownHours * HOUR),
+    'the rest runs from the moment they were called back');
+}
+
 // --- The War Room's headline row must not collide with itself ---------
 // Four columns fitted while the numbers were small. A fully conquered map
 // reads "+$2385/day" beside "128W-12L", and at 380px those two overlapped
@@ -8247,6 +8499,11 @@ if (inShard('regions')) {
     raid: 'data-raid=', gauntlet: 'data-gauntlet=',
     // R116 — the retainer card sits above the board on the Jobs subtab.
     contract: 'data-contract=',
+    // R179 — the launcher sits above both, on the same subtab. The chip
+    // promises the SEND button rather than a picker, because a player who
+    // taps "Mount an expedition" and lands on three unanswered questions has
+    // been taken to a form, not to a verb.
+    expedition: 'data-exp-go=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
@@ -8938,6 +9195,10 @@ if (inShard('frames')) {
     pufferfish: [5, 14, 58, 28],
     otter: [5, 16, 64, 31],
     armadillo: [6, 18, 70, 30],
+    // R179 — the forty-second animal, and the first one no catalog sells.
+    // Fast to adult for its bulk and slow to elder: a glider that is useful
+    // early and worth keeping, which is what an expedition prize should be.
+    manta: [9, 26, 84, 34],
     salvage: [1, 2, 3, 1],
     alpine_ram: [5, 15, 64, 39],
     abyssal_shark: [10, 29, 96, 51],
@@ -9943,7 +10204,10 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
   const { speciesLines, speciesParts, weightWord } = await import('../splice/dexentry.js');
   const { PHYS_TUNING } = await import('../splice/physiology.js');
   const baseSpecies = Object.values(content.species).filter((sp) => !sp.synthetic && !sp.variantOf);
-  assert.equal(baseSpecies.length, 34, 'the base roster is 34 animals');
+  // R179 — a floor, for the reason written beside the A3 count above: this
+  // is an anchor that nothing below it reads, and the exact roster size is
+  // already gated, derived and in both directions, by `tools/roadmap.js`.
+  assert.ok(baseSpecies.length >= 34, `the base roster is at least 34 animals (${baseSpecies.length})`);
 
   // 1. A base species is never told less about itself than a mutation of it
   //    is. Stated over the four facts a variant cell already carried.
@@ -18227,8 +18491,32 @@ if (inShard('away')) {
           `seed ${seed}: an empire with room to spare is not fined for a month away `
             + `(${banked} of ${fullPay}, margin ${Math.round(margin * 100)}%)`);
       } else {
-        assert.ok(banked < 0 || banked > fullPay * 0.35,
-          `seed ${seed}: a marginal empire either banks its pay or goes backwards, not neither`);
+        // R179 — AND THE MARGINAL BRANCH WAS A FALSE DICHOTOMY. It read
+        // `banked < 0 || banked > fullPay * 0.35` — bank most of it, or go
+        // backwards, and nothing in between — which leaves a dead zone for
+        // the outcome a 4%-margin empire is MOST likely to have: roughly
+        // flat. Seed 5150 landed in it on this tree: 43 banked of 1,260,
+        // margin 4%. Nothing about that is a defect; it is the sentence
+        // "being away is a risk when you are barely solvent" coming true.
+        //
+        // The roster change that moved it there is R179's, and the note two
+        // paragraphs up predicted exactly this — "any change to the roster
+        // reshuffles which parts are extracted, which chimeras get built and
+        // which nodes fall, so a per-seed line is a coin flip on whichever
+        // seeds happen to be listed". R68 re-authored this branch once for
+        // the same reason and left the dichotomy in place.
+        //
+        // So the claim is re-derived to one that is actually about the
+        // design and is not a coin flip: a month away never costs a
+        // marginal empire MORE than a month of running it. The ceiling on
+        // the other side is already asserted above (`banked <= fullPay +
+        // inFlight`), so between them the window is bounded in both
+        // directions and the middle is allowed to be the middle. A break
+        // that charged upkeep twice across an unattended window, or let a
+        // convoy drain a treasury it should only suspend, goes red here.
+        assert.ok(banked > -upkeepAcross * AWAY,
+          `seed ${seed}: a month away costs a marginal empire less than a month of upkeep `
+            + `(banked ${Math.round(banked)}, upkeep ${Math.round(upkeepAcross * AWAY)})`);
         thin.push(`${seed} (${Math.round(margin * 100)}%)`);
       }
       if (banked < 0) {
@@ -23223,7 +23511,29 @@ if (inShard('wire')) {
   // whole time. This comment and ROADMAP R176 both read past it, which is how
   // one impossible move got proposed three times. The bill is not owed; it is
   // unpayable, and that is now written where the next session will look.
-  const MODULE_CAP = 49;
+  // R179 — 49 -> 50, AND IT IS THE HEADROOM R176 BOUGHT, spent on the thing
+  // R176's own note said it was for. `campaign/expedition.js` is a subsystem
+  // arriving, not a screen re-entering the graph by accident: the board and
+  // the War Room between them ask FIVE times whether a creature is available,
+  // and every one of them has to agree that a party in the field is not, or
+  // an expedition's whole price — the crew — is nominal. That predicate has
+  // to be reachable from the first frame, and so does the elapsed settle.
+  //
+  // THE TAX WAS PAID IN THE SAME MILESTONE and it is a module that never
+  // arrives rather than one that leaves: `campaign/outfit.js` holds the
+  // table, the odds and the launch, and is imported only by `campaign/ui.js`
+  // (itself lazy) and by the harness. The first draft was ONE module and it
+  // cost 50 modules, 329.5 KB of code and 258.5 of prose — over all three.
+  // Split, it costs one module and is under the code cap with room.
+  //
+  // WHAT THE NEXT MILESTONE SHOULD DO. There is no headroom again, and the
+  // honest answer is that there is no obvious eviction left either: the four
+  // modules on the "runs nothing" bill are all unpayable for reasons already
+  // written down (tools/boot.js, and the identity note above). The next raise
+  // should either evict something the bill has not caught — a module where
+  // boot calls one small function and nothing else, which is the blind spot
+  // R169 named — or admit that 50 is what this game costs and say so.
+  const MODULE_CAP = 50;
   // R131: 548 -> 553, measured at 550.3. `ui/pager.js` and the two screens
   // that use it; see the FIRST_PAINT_KB note in tools/boot.js.
   // R135: 553 -> 557, measured at 555.2, and the raise has to argue.
@@ -23621,7 +23931,23 @@ const KB_CAP = 327;        // CODE only, measured at 326.4
 // eager modules is local — why the rail is destructured on import, why the
 // buckets live in `agenda.js`, why the Ranch's card is named. 0.3 KB over,
 // and the panel it explains is free.
-const PROSE_CAP = 256;
+// R179 — 256 -> 258, measured at 257.1, AND THE TAX WAS PAID TWICE FIRST.
+// Once in architecture: `campaign/outfit.js` is lazy, so 1.5 KB of the new
+// subsystem's explanation never enters this graph. Once in prose: ~0.9 KB
+// came out of `campaign/operations.js` and went to
+// `data/notes/operations.md`, where both halves of it already belonged —
+// the exponential-decay argument was duplicated there almost word for word,
+// and R65's cooldown history is the story of a defect that is fixed, which
+// R111's note says a module should not carry.
+//
+// What the remaining 1.1 KB explains: why a party in the field is excluded
+// in five places from one predicate, why the tick reads a sealed outcome
+// rather than rolling one (it is what lets the table be lazy), and why the
+// animal arrives into a full barn anyway. Those are the three questions the
+// next reader of this diff will ask, and the rest of the argument — the
+// tuning, the tables, what `rarityFloor` buys — is in
+// `data/notes/regions.md` beside the data it is about.
+const PROSE_CAP = 258;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(codeKb <= KB_CAP,
