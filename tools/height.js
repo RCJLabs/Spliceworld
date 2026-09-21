@@ -356,6 +356,23 @@ const BUDGET = {
   // not the measurement itself. The shut number, which is what R97's criterion
   // is actually judged on, did not move: 764px against 2,500.
   'dex:foes':     { folded: 2500,  tallest: 6200, opens: 4 },   // R117: +50, the second tab row
+  // R185 — THE SIXTH TAB, measured for the first time since R112 shipped it.
+  //
+  // Day-180 save at 380px: 919px shut, 1454px open, 4 of 5 folds walked. The
+  // fold count is not luck and not a flake — `yearbookView` renders one
+  // collapsible card per section with the FIRST one open on arrival (R133's
+  // rule for a screen of cards), so the walk opens the other four every time.
+  //
+  // AND ITS HEADROOM IS FOR CONTENT, NOT FOR A CAMPAIGN. Every other tab here
+  // grows with the save — more species seen, more foes met, more combos
+  // found. `yearbook()` maps `content.yearbook.sections` unconditionally and
+  // filters nothing, so this tab is 5 sections and 22 rows on a fresh save and
+  // on a day-180 one; what changes is the numbers inside, not how many. So the
+  // budget is sized against a SIXTH SECTION being authored rather than against
+  // a longer campaign: 1000/1600 is ~9% over shut and ~10% over open, which is
+  // the band `dex:genes` and `dex:combos` carry, and a new section would be
+  // about 180px of card — it would fail this, which is the point.
+  'dex:yearbook': { folded: 1000,  tallest: 1600, opens: 4 },
 };
 
 // R98 — AND WHAT IT SAYS, not only how tall it is.
@@ -438,6 +455,11 @@ const WORDS = {
   // they are now behind the fold that holds them.
   'dex:genes':    { folded: 100,  open: 250 },
   'dex:foes':     { folded: 150,  open: 900 },
+  // R185 — measured at 139 shut and 253 open on the day-180 save. The same
+  // content-not-campaign argument as the heights above: 22 authored rows and
+  // five blurbs, so the slack is for a row somebody writes, not for a ranch
+  // that grows.
+  'dex:yearbook': { folded: 150,  open: 300 },
 };
 
 // R90 — one walked-save recipe, in tools/fixtures.js, and cached on disk.
@@ -924,7 +946,33 @@ try {
     }
   }
   await show('dex');
-  for (const tab of ['roster', 'variants', 'combos', 'genes', 'foes']) {
+  // R185 — THE LIST COMES OFF THE BAR, NOT OUT OF THIS FILE.
+  //
+  // It was `['roster', 'variants', 'combos', 'genes', 'foes']` and the Dex has
+  // shipped SIX tabs since R112: the Yearbook had no folded budget, no tallest
+  // budget and no word budget, and R89's whole argument — a screen that
+  // outgrows a phone is a screen nobody reads — had never once been applied to
+  // it. That is R39's finding ("the gate that checked five of six screens")
+  // one level down, and it is not R117's doing; R117 only made it visible by
+  // adding 50px of shared chrome to a tab nothing was watching.
+  //
+  // A literal list is a second place to remember, and the second place is
+  // always the one that goes stale. `tools/wide.js` reads its widths off the
+  // page for the same reason, and `innerTabs` above has read the OTHER bars
+  // off the page since R154 — the Dex's own bar was the one exclusion.
+  const dexTabs = JSON.parse(await evaluate(`JSON.stringify(
+    [...document.querySelectorAll('#screen-dex nav.subtabs#dex-subtabs button[data-dex-tab]')]
+      .map((b) => b.dataset.dexTab).filter(Boolean))`));
+  // AND THE READ HAS TO HAVE FOUND SOMETHING. A selector that stops matching
+  // returns [], the loop below walks nothing, and the gate goes GREEN having
+  // measured no tab at all — which is the exact failure this rule exists to
+  // end, reintroduced one level further up. Two is the floor because a bar
+  // with one tab is not a bar; the real check is the union after the loop.
+  if (dexTabs.length < 2) {
+    problems.push(`the Dex tab bar reads ${dexTabs.length} tabs off the page — the walk found no bar`
+      + ' to cycle, so every Dex budget below is unmeasured rather than met');
+  }
+  for (const tab of dexTabs) {
     await evaluate(`document.querySelector('#screen-dex [data-dex-tab="${tab}"]')?.click()`);
     // R159 — the Dex tabs rebuild the whole panel, so this was the longest
     // fixed sleep in the file and still the one most likely to be short.
@@ -936,6 +984,19 @@ try {
     const wordsShut = await wordsOf('#screen-dex');
     const tallest = await tallestOf('#screen-dex', 40, `dex:${tab}`, BUDGET[`dex:${tab}`]?.opens ?? 0);
     rows.push({ id: `dex:${tab}`, folded, tallest, opened, moved: stillMoving, foldsPainted, wordsShut, wordsOpen: await wordsOf('#screen-dex') });
+  }
+  // THE UNION, WHICH IS WHAT MAKES THE DOM READ SAFE. Reading the list off the
+  // page catches a tab the table does not name (the `!b` rule below). This
+  // catches the other direction: a declared budget that nothing walked,
+  // because the selector went blind or a tab quietly left the bar. Neither
+  // side is a literal, and a rule that can only ever pass is the shape R90's
+  // shard union was written against.
+  const walked = new Set(dexTabs.map((t) => `dex:${t}`));
+  for (const id of Object.keys(BUDGET).filter((k) => k.startsWith('dex:'))) {
+    if (!walked.has(id)) {
+      problems.push(`${id} declares a height budget and the walk never reached it`
+        + ` — the bar offered ${[...walked].join(', ') || 'nothing'}`);
+    }
   }
 } finally {
   proc.kill();
