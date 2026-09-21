@@ -52,7 +52,8 @@ caught by the union, **404** breaks the selector and is caught by the floor.
                                 baseline green in the same run
     npm test                    1259 CPU-s of 1425, 336s wall, WARM, EXIT 0
     roadmap                     25 stated numbers match the data
-    FULL BATTERY (gate change)  see below
+    FULL BATTERY (gate change)  396 caught, 0 missed, four chunks EXIT=0
+                                25m + 82m + 151m + 67m = 325m
 
 The suite reading is WARM (cache warm, nothing rebuilt), so it is directly
 comparable with R118's 1254: R183 and R185 cost about 5 CPU-seconds between
@@ -61,7 +62,15 @@ them.
 **The full battery is triggered** -- this milestone CHANGES an existing gate's
 logic rather than adding one. Four chunks of 99, id list built from the file
 because 157, 164, 208, 250, 256, 257, 298 and 327 are retired and `seq` would
-refuse.
+refuse. **396 breaks, 396 caught, 0 missed, every chunk BATTERY_EXIT=0.**
+
+**And the clock held for the first time in five readings.** R118 measured 25m
+/ 81m / 152m / 65m = 323m over 390 breaks; R185 read 25m / 82m / 151m / 67m =
+325m over 396. Every chunk is within a minute of its predecessor. That says
+the per-break costs are stable and the drift this figure kept suffering was
+re-measurement on a moved host rather than a suite growing unpredictably --
+the same lesson R118 learned the hard way about the seconds budget, arriving
+from the other direction.
 
 ### Known issues / next session's first task
 
